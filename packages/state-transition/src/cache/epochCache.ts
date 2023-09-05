@@ -29,7 +29,7 @@ import {computeEpochShuffling, EpochShuffling} from "../util/epochShuffling.js";
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
 import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements.js";
-import {Index2PubkeyCache, PubkeyIndexMap, UnfinalizedPubkeyIndexMap, syncPubkeys, toMemoryEfficientHexStr, newUnfinalizedPubkeyIndexMap} from "./pubkeyCache.js";
+import {Index2PubkeyCache, PubkeyIndexMap, UnfinalizedPubkeyIndexMap, syncPubkeys, toMemoryEfficientHexStr, newUnfinalizedPubkeyIndexMap, PubkeyHex} from "./pubkeyCache.js";
 import {BeaconStateAllForks, BeaconStateAltair} from "./types.js";
 import {
   computeSyncCommitteeCache,
@@ -750,7 +750,7 @@ export class EpochCache {
     return this.globalIndex2pubkey[index];
   }
 
-  getPubkeyIndex(pubkey: Uint8Array): ValidatorIndex | undefined {
+  getValidatorIndex(pubkey: Uint8Array | PubkeyHex): ValidatorIndex | undefined {
     return this.globalPubkey2index.get(pubkey) || this.unfinalizedPubkey2index.get(toMemoryEfficientHexStr(pubkey));
   }
 

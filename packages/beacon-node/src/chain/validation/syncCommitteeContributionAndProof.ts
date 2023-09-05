@@ -74,7 +74,7 @@ export async function validateSyncCommitteeGossipContributionAndProof(
   // > Checked in validateGossipSyncCommitteeExceptSig()
 
   const participantPubkeys = syncCommitteeParticipantIndices.map(
-    (validatorIndex) => headState.epochCtx.index2pubkey[validatorIndex]
+    (validatorIndex) => headState.epochCtx.getPubkey(validatorIndex)
   );
   const signatureSets = [
     // [REJECT] The contribution_and_proof.selection_proof is a valid signature of the SyncAggregatorSelectionData

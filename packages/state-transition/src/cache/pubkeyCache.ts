@@ -7,7 +7,7 @@ import {BeaconStateAllForks} from "./types.js";
 export type Index2PubkeyCache = PublicKey[];
 export type UnfinalizedPubkeyIndexMap = immutable.Map<PubkeyHex, ValidatorIndex>;
 
-type PubkeyHex = string;
+export type PubkeyHex = string;
 
 /**
  * toHexString() creates hex strings via string concatenation, which are very memory inneficient.

@@ -24,7 +24,7 @@ export function getAttestationWithIndicesSignatureSet(
   attestingIndices: number[]
 ): ISignatureSet {
   return createAggregateSignatureSetFromComponents(
-    attestingIndices.map((i) => state.epochCtx.index2pubkey[i]),
+    attestingIndices.map((i) => state.epochCtx.getPubkey(i)),
     getAttestationDataSigningRoot(state, attestation.data),
     attestation.signature
   );

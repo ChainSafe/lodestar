@@ -111,7 +111,7 @@ export function toValidatorResponse(
 export function filterStateValidatorsByStatus(
   statuses: string[],
   state: BeaconStateAllForks,
-  pubkey2index: PubkeyIndexMap,
+  pubkey2index: (arg: BLSPubkey) => number | undefined,
   currentEpoch: Epoch
 ): routes.beacon.ValidatorResponse[] {
   const responses: routes.beacon.ValidatorResponse[] = [];
@@ -136,7 +136,7 @@ type StateValidatorIndexResponse = {valid: true; validatorIndex: number} | {vali
 export function getStateValidatorIndex(
   id: routes.beacon.ValidatorId | BLSPubkey,
   state: BeaconStateAllForks,
-  pubkey2index: PubkeyIndexMap
+  pubkey2indexFn: (arg: BLSPubkey) => number | undefined,
 ): StateValidatorIndexResponse {
   let validatorIndex: ValidatorIndex | undefined;
   if (typeof id === "string") {
@@ -161,7 +161,7 @@ export function getStateValidatorIndex(
   }
 
   // typeof id === Uint8Array
-  validatorIndex = pubkey2index.get(id as BLSPubkey);
+  validatorIndex = pubkey2indexFn(id as BLSPubkey);
   if (validatorIndex === undefined) {
     return {valid: false, code: 404, reason: "Validator pubkey not found in state"};
   }

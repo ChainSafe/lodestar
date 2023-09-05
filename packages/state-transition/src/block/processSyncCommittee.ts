@@ -104,7 +104,7 @@ export function getSyncCommitteeSignatureSet(
 
   return {
     type: SignatureSetType.aggregate,
-    pubkeys: participantIndices.map((i) => epochCtx.index2pubkey[i]),
+    pubkeys: participantIndices.map((i) => epochCtx.getPubkey(i)),
     signingRoot: computeSigningRoot(ssz.Root, rootSigned, domain),
     signature,
   };

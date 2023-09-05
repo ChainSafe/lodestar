@@ -59,12 +59,12 @@ export function getBeaconStateApi({
       const {state, executionOptimistic} = await resolveStateId(chain, stateId);
       const currentEpoch = getCurrentEpoch(state);
       const {validators, balances} = state; // Get the validators sub tree once for all the loop
-      const {pubkey2index} = chain.getHeadState().epochCtx;
+      const pubkey2indexFn = chain.getHeadState().epochCtx.getValidatorIndex;
 
       const validatorResponses: routes.beacon.ValidatorResponse[] = [];
       if (filters?.id) {
         for (const id of filters.id) {
-          const resp = getStateValidatorIndex(id, state, pubkey2index);
+          const resp = getStateValidatorIndex(id, state, pubkey2indexFn);
           if (resp.valid) {
             const validatorIndex = resp.validatorIndex;
             const validator = validators.getReadonly(validatorIndex);
@@ -85,7 +85,7 @@ export function getBeaconStateApi({
           data: validatorResponses,
         };
       } else if (filters?.status) {
-        const validatorsByStatus = filterStateValidatorsByStatus(filters.status, state, pubkey2index, currentEpoch);
+        const validatorsByStatus = filterStateValidatorsByStatus(filters.status, state, pubkey2indexFn, currentEpoch);
         return {
           executionOptimistic,
           data: validatorsByStatus,
@@ -108,9 +108,9 @@ export function getBeaconStateApi({
 
     async getStateValidator(stateId, validatorId) {
       const {state, executionOptimistic} = await resolveStateId(chain, stateId);
-      const {pubkey2index} = chain.getHeadState().epochCtx;
+      const pubkey2indexFn = chain.getHeadState().epochCtx.getValidatorIndex;
 
-      const resp = getStateValidatorIndex(validatorId, state, pubkey2index);
+      const resp = getStateValidatorIndex(validatorId, state, pubkey2indexFn);
       if (!resp.valid) {
         throw new ApiError(resp.code, resp.reason);
       }
@@ -140,7 +140,7 @@ export function getBeaconStateApi({
             }
             balances.push({index: id, balance: state.balances.get(id)});
           } else {
-            const index = headState.epochCtx.pubkey2index.get(id);
+            const index = headState.epochCtx.getValidatorIndex(id);
             if (index != null && index <= state.validators.length) {
               balances.push({index, balance: state.balances.get(index)});
             }

@@ -107,39 +107,39 @@ describe("beacon state api utils", function () {
 
   describe("getStateValidatorIndex", async function () {
     const state = generateCachedAltairState();
-    const pubkey2index = state.epochCtx.pubkey2index;
+    const pubkey2indexFn = state.epochCtx.getValidatorIndex;
 
     it("should return valid: false on invalid input", () => {
-      expect(getStateValidatorIndex("foo", state, pubkey2index).valid, "invalid validator id number").to.equal(false);
-      expect(getStateValidatorIndex("0xfoo", state, pubkey2index).valid, "invalid hex").to.equal(false);
+      expect(getStateValidatorIndex("foo", state, pubkey2indexFn).valid, "invalid validator id number").to.equal(false);
+      expect(getStateValidatorIndex("0xfoo", state, pubkey2indexFn).valid, "invalid hex").to.equal(false);
     });
 
     it("should return valid: false on validator indices / pubkeys not in the state", () => {
       expect(
-        getStateValidatorIndex(String(state.validators.length), state, pubkey2index).valid,
+        getStateValidatorIndex(String(state.validators.length), state, pubkey2indexFn).valid,
         "validator id not in state"
       ).to.equal(false);
-      expect(getStateValidatorIndex("0xabcd", state, pubkey2index).valid, "validator pubkey not in state").to.equal(
+      expect(getStateValidatorIndex("0xabcd", state, pubkey2indexFn).valid, "validator pubkey not in state").to.equal(
         false
       );
     });
 
     it("should return valid: true on validator indices / pubkeys in the state", () => {
       const index = state.validators.length - 1;
-      const resp1 = getStateValidatorIndex(String(index), state, pubkey2index);
+      const resp1 = getStateValidatorIndex(String(index), state, pubkey2indexFn);
       if (resp1.valid) {
         expect(resp1.validatorIndex).to.equal(index);
       } else {
         expect.fail("validator index should be found - validator index input");
       }
       const pubkey = state.validators.get(index).pubkey;
-      const resp2 = getStateValidatorIndex(pubkey, state, pubkey2index);
+      const resp2 = getStateValidatorIndex(pubkey, state, pubkey2indexFn);
       if (resp2.valid) {
         expect(resp2.validatorIndex).to.equal(index);
       } else {
         expect.fail("validator index should be found - Uint8Array input");
       }
-      const resp3 = getStateValidatorIndex(toHexString(pubkey), state, pubkey2index);
+      const resp3 = getStateValidatorIndex(toHexString(pubkey), state, pubkey2indexFn);
       if (resp3.valid) {
         expect(resp3.validatorIndex).to.equal(index);
       } else {
