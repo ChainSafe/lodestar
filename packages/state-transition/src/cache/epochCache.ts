@@ -29,7 +29,7 @@ import {computeEpochShuffling, EpochShuffling} from "../util/epochShuffling.js";
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
 import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements.js";
-import {Index2PubkeyCache, PubkeyIndexMap, UnfinalizedPubkeyIndexMap, newUnfinalizedPubkeyIndexMap, syncPubkeys, toMemoryEfficientHexStr} from "./pubkeyCache.js";
+import {Index2PubkeyCache, PubkeyIndexMap, UnfinalizedPubkeyIndexMap, syncPubkeys, toMemoryEfficientHexStr, newUnfinalizedPubkeyIndexMap} from "./pubkeyCache.js";
 import {BeaconStateAllForks, BeaconStateAltair} from "./types.js";
 import {
   computeSyncCommitteeCache,

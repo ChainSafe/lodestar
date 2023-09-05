@@ -28,6 +28,15 @@ export function toMemoryEfficientHexStr(hex: Uint8Array | string): string {
   return Buffer.from(hex).toString("hex");
 }
 
+/**
+ * 
+ * A wrapper for calling immutable.js
+ * 
+ */
+export function newUnfinalizedPubkeyIndexMap(): UnfinalizedPubkeyIndexMap {
+  return immutable.Map<PubkeyHex, ValidatorIndex>();
+}
+
 
 export class PubkeyIndexMap {
   // We don't really need the full pubkey. We could just use the first 20 bytes like an Ethereum address
