@@ -43,7 +43,7 @@ export function processDeposit(fork: ForkSeq, state: CachedBeaconStateAllForks, 
 
   const pubkey = deposit.data.pubkey; // Drop tree
   const amount = deposit.data.amount;
-  const cachedIndex = epochCtx.pubkey2index.get(pubkey);
+  const cachedIndex = epochCtx.getPubkeyIndex(pubkey);
   if (cachedIndex === undefined || !Number.isSafeInteger(cachedIndex) || cachedIndex >= validators.length) {
     // verify the deposit signature (proof of posession) which is not checked by the deposit contract
     const depositMessage = {

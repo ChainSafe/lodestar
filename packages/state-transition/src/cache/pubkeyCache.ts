@@ -5,6 +5,7 @@ import {ValidatorIndex} from "@lodestar/types";
 import {BeaconStateAllForks} from "./types.js";
 
 export type Index2PubkeyCache = PublicKey[];
+export type UnfinalizedPubkeyIndexMap = immutable.Map<PubkeyHex, ValidatorIndex>;
 
 type PubkeyHex = string;
 
@@ -16,7 +17,7 @@ type PubkeyHex = string;
  *
  * See https://github.com/ChainSafe/lodestar/issues/3446
  */
-function toMemoryEfficientHexStr(hex: Uint8Array | string): string {
+export function toMemoryEfficientHexStr(hex: Uint8Array | string): string {
   if (typeof hex === "string") {
     if (hex.startsWith("0x")) {
       hex = hex.slice(2);
@@ -48,22 +49,6 @@ export class PubkeyIndexMap {
   }
 }
 
-export class UnfinalizedPubkeyIndexMap {
-   private map = immutable.Map<PubkeyHex, ValidatorIndex>();
-
-   get(key: Uint8Array | PubkeyHex): ValidatorIndex | undefined {
-     return this.map.get(toMemoryEfficientHexStr(key));
-   }
-
-   set(key: Uint8Array, value: ValidatorIndex): void {
-     this.map = this.map.set(toMemoryEfficientHexStr(key), value);
-   }
-
-   delete(key: Uint8Array): void {
-    this.map = this.map.delete(toMemoryEfficientHexStr(key));
-   }
-
-}
 
 /**
  * Checks the pubkey indices against a state and adds missing pubkeys
@@ -71,6 +56,8 @@ export class UnfinalizedPubkeyIndexMap {
  * Mutates `pubkey2index` and `index2pubkey`
  *
  * If pubkey caches are empty: SLOW CODE - 🐢
+ * 
+ * TODO: Deal with this
  */
 export function syncPubkeys(
   state: BeaconStateAllForks,

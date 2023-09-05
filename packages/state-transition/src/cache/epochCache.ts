@@ -1,4 +1,4 @@
-import {CoordType} from "@chainsafe/bls/types";
+import {CoordType, PublicKey} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
 import {BLSSignature, CommitteeIndex, Epoch, Slot, ValidatorIndex, phase0, SyncPeriod} from "@lodestar/types";
 import {createBeaconConfig, BeaconConfig, ChainConfig} from "@lodestar/config";
@@ -29,7 +29,7 @@ import {computeEpochShuffling, EpochShuffling} from "../util/epochShuffling.js";
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
 import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements.js";
-import {Index2PubkeyCache, PubkeyIndexMap, UnfinalizedPubkeyIndexMap, syncPubkeys} from "./pubkeyCache.js";
+import {Index2PubkeyCache, PubkeyIndexMap, UnfinalizedPubkeyIndexMap, newUnfinalizedPubkeyIndexMap, syncPubkeys, toMemoryEfficientHexStr} from "./pubkeyCache.js";
 import {BeaconStateAllForks, BeaconStateAltair} from "./types.js";
 import {
   computeSyncCommitteeCache,
@@ -198,8 +198,8 @@ export class EpochCache {
 
   constructor(data: {
     config: BeaconConfig;
-    pubkey2index: PubkeyIndexMap;
-    index2pubkey: Index2PubkeyCache;
+    globalPubkey2index: PubkeyIndexMap;
+    globalIndex2pubkey: Index2PubkeyCache;
     unfinalizedIndex2pubkey: UnfinalizedPubkeyIndexMap;
     proposers: number[];
     proposersPrevEpoch: number[] | null;
@@ -223,8 +223,8 @@ export class EpochCache {
     syncPeriod: SyncPeriod;
   }) {
     this.config = data.config;
-    this.pubkey2index = data.pubkey2index;
-    this.index2pubkey = data.index2pubkey;
+    this.globalPubkey2index = data.globalPubkey2index;
+    this.globalIndex2pubkey = data.globalIndex2pubkey;
     this.unfinalizedPubkey2Index = data.unfinalizedIndex2pubkey;
     this.proposers = data.proposers;
     this.proposersPrevEpoch = data.proposersPrevEpoch;
@@ -265,7 +265,7 @@ export class EpochCache {
       syncPubkeys(state, pubkey2index, index2pubkey);
     }
 
-    const unfinalizedIndex2pubkey = new UnfinalizedPubkeyIndexMap();
+    const unfinalizedIndex2pubkey = newUnfinalizedPubkeyIndexMap(); // TODO: Figure out how to populate it
 
     const currentEpoch = computeEpochAtSlot(state.slot);
     const isGenesis = currentEpoch === GENESIS_EPOCH;
@@ -402,8 +402,8 @@ export class EpochCache {
 
     return new EpochCache({
       config,
-      pubkey2index,
-      index2pubkey,
+      globalPubkey2index: pubkey2index,
+      globalIndex2pubkey: index2pubkey,
       unfinalizedIndex2pubkey,
       proposers,
       // On first epoch, set to null to prevent unnecessary work since this is only used for metrics
@@ -439,8 +439,8 @@ export class EpochCache {
     return new EpochCache({
       config: this.config,
       // Common append-only structures shared with all states, no need to clone
-      pubkey2index: this.pubkey2index,
-      index2pubkey: this.index2pubkey,
+      globalPubkey2index: this.globalPubkey2index,
+      globalIndex2pubkey: this.globalIndex2pubkey,
       // Fork-aware cache needs to be cloned. But by the virtue of it being persistent, we don't need to do anything here
       unfinalizedIndex2pubkey: this.unfinalizedPubkey2Index,
       // Immutable data
@@ -743,15 +743,12 @@ export class EpochCache {
     return isAggregatorFromCommitteeLength(committee.length, slotSignature);
   }
 
-  // addPubkey(index: ValidatorIndex, pubkey: Uint8Array): void {
-  //   this.pubkey2index.set(pubkey, index);
-  //   this.index2pubkey[index] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian); // Optimize for aggregation
-  // }
-
   getPubkey(index: ValidatorIndex): PublicKey {
+    return this.globalIndex2pubkey[index];
   }
 
-  getPubkeyIndex(pubkey: Uint8Array): ValidatorIndex | null {
+  getPubkeyIndex(pubkey: Uint8Array): ValidatorIndex | undefined {
+    return this.globalPubkey2index.get(pubkey) || this.unfinalizedPubkey2Index.get(toMemoryEfficientHexStr(pubkey));
   }
 
   /**
@@ -759,7 +756,8 @@ export class EpochCache {
    * Add unfinalized pubkeys
    * 
    */
-  addPubkey(pubkey: Uint8Array, index: ValidatorIndex): void {
+  addPubkey(index: ValidatorIndex, pubkey: Uint8Array): void {
+    this.unfinalizedPubkey2Index.set(toMemoryEfficientHexStr(pubkey), index); 
   }
 
   /**
@@ -771,7 +769,7 @@ export class EpochCache {
     this.globalPubkey2index.set(pubkey, index);
     this.globalIndex2pubkey[index] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian); 
 
-    this.unfinalizedPubkey2Index.delete(pubkey);
+    this.unfinalizedPubkey2Index.delete(toMemoryEfficientHexStr(pubkey));
   }
 
   getShufflingAtSlot(slot: Slot): EpochShuffling {
