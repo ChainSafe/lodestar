@@ -1,5 +1,5 @@
 import {BeaconConfig} from "@lodestar/config";
-import {EpochCache, EpochCacheImmutableData, EpochCacheOpts} from "./epochCache.js";
+import {CarryoverData, EpochCache, EpochCacheImmutableData, EpochCacheOpts} from "./epochCache.js";
 import {
   BeaconStateAllForks,
   BeaconStateExecutions,
@@ -138,11 +138,12 @@ export type CachedBeaconStateExecutions = CachedBeaconState<BeaconStateExecution
 export function createCachedBeaconState<T extends BeaconStateAllForks>(
   state: T,
   immutableData: EpochCacheImmutableData,
+  carryoverData: CarryoverData,
   opts?: EpochCacheOpts
 ): T & BeaconStateCache {
   return getCachedBeaconState(state, {
     config: immutableData.config,
-    epochCtx: EpochCache.createFromState(state, immutableData, opts),
+    epochCtx: EpochCache.createFromState(state, immutableData, carryoverData, opts),
     clonedCount: 0,
     clonedCountWithTransferCache: 0,
     createdWithTransferCache: false,

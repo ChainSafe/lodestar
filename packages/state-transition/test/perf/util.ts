@@ -20,6 +20,7 @@ import {
   newFilledArray,
   createCachedBeaconState,
   computeCommitteeCount,
+  createEmptyCarryoverData,
 } from "../../src/index.js";
 import {
   CachedBeaconStateAllForks,
@@ -129,7 +130,7 @@ export function generatePerfTestCachedStatePhase0(opts?: {goBackOneSlot: boolean
       config: createBeaconConfig(config, state.genesisValidatorsRoot),
       pubkey2index,
       index2pubkey,
-    });
+    }, createEmptyCarryoverData());
 
     const currentEpoch = computeEpochAtSlot(state.slot - 1);
     const previousEpoch = currentEpoch - 1;
@@ -227,7 +228,7 @@ export function generatePerfTestCachedStateAltair(opts?: {goBackOneSlot: boolean
       config: createBeaconConfig(altairConfig, state.genesisValidatorsRoot),
       pubkey2index,
       index2pubkey,
-    });
+    }, createEmptyCarryoverData());
   }
   if (!altairCachedState23638) {
     altairCachedState23638 = processSlots(
@@ -428,5 +429,5 @@ export function generateTestCachedBeaconStateOnlyValidators({
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
     pubkey2index,
     index2pubkey,
-  });
+  }, createEmptyCarryoverData());
 }

@@ -75,6 +75,7 @@ import {BlockAttributes, produceBlockBody} from "./produceBlock/produceBlockBody
 import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
 import {BlockInput} from "./blocks/types.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
+import { createEmptyCarryoverData } from "@lodestar/state-transition/src/cache/epochCache.js";
 
 /**
  * Arbitrary constants, blobs should be consumed immediately in the same slot they are produced.
@@ -224,7 +225,7 @@ export class BeaconChain implements IBeaconChain {
             config,
             pubkey2index: new PubkeyIndexMap(),
             index2pubkey: [],
-          });
+          }, createEmptyCarryoverData());
 
     // Persist single global instance of state caches
     this.pubkey2index = cachedState.epochCtx.pubkey2index;

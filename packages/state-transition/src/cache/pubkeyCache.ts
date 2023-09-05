@@ -30,7 +30,7 @@ export function toMemoryEfficientHexStr(hex: Uint8Array | string): string {
 
 /**
  * 
- * A wrapper for calling immutable.js
+ * A wrapper for calling immutable.js. To abstract the initialization of UnfinalizedPubkeyIndexMap
  * 
  */
 export function newUnfinalizedPubkeyIndexMap(): UnfinalizedPubkeyIndexMap {

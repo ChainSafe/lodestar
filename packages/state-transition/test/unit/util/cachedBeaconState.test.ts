@@ -1,7 +1,7 @@
 import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
-import {createCachedBeaconState, PubkeyIndexMap} from "../../../src/index.js";
+import {createCachedBeaconState, PubkeyIndexMap, createEmptyCarryoverData} from "../../../src/index.js";
 
 describe("CachedBeaconState", () => {
   it("Create empty CachedBeaconState", () => {
@@ -11,6 +11,6 @@ describe("CachedBeaconState", () => {
       config: createBeaconConfig(config, emptyState.genesisValidatorsRoot),
       pubkey2index: new PubkeyIndexMap(),
       index2pubkey: [],
-    });
+    }, createEmptyCarryoverData());
   });
 });

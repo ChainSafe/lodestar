@@ -21,7 +21,7 @@ import {
   PubkeyIndexMap,
 } from "../../src/index.js";
 import {BeaconStateCache} from "../../src/cache/stateCache.js";
-import {EpochCacheOpts} from "../../src/cache/epochCache.js";
+import {EpochCacheOpts, createEmptyCarryoverData} from "../../src/cache/epochCache.js";
 
 /**
  * Copy of BeaconState, but all fields are marked optional to allow for swapping out variables as needed.
@@ -94,7 +94,7 @@ export function generateCachedState(
     // This is a test state, there's no need to have a global shared cache of keys
     pubkey2index: new PubkeyIndexMap(),
     index2pubkey: [],
-  });
+  }, createEmptyCarryoverData());
 }
 
 export function createCachedBeaconStateTest<T extends BeaconStateAllForks>(
@@ -110,6 +110,7 @@ export function createCachedBeaconStateTest<T extends BeaconStateAllForks>(
       pubkey2index: new PubkeyIndexMap(),
       index2pubkey: [],
     },
+    createEmptyCarryoverData(),
     opts
   );
 }

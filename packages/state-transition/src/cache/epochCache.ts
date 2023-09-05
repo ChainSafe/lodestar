@@ -47,6 +47,10 @@ export type EpochCacheImmutableData = {
   index2pubkey: Index2PubkeyCache;
 };
 
+export type CarryoverData = {
+  unfinalizedPubkey2index: UnfinalizedPubkeyIndexMap;
+}
+
 export type EpochCacheOpts = {
   skipSyncCommitteeCache?: boolean;
   skipSyncPubkeys?: boolean;
@@ -257,6 +261,7 @@ export class EpochCache {
   static createFromState(
     state: BeaconStateAllForks,
     {config, pubkey2index, index2pubkey}: EpochCacheImmutableData,
+    {unfinalizedPubkey2index}: CarryoverData,
     opts?: EpochCacheOpts
   ): EpochCache {
     // syncPubkeys here to ensure EpochCacheImmutableData is popualted before computing the rest of caches
@@ -264,8 +269,6 @@ export class EpochCache {
     if (!opts?.skipSyncPubkeys) {
       syncPubkeys(state, pubkey2index, index2pubkey);
     }
-
-    const unfinalizedIndex2pubkey = newUnfinalizedPubkeyIndexMap(); // TODO: Figure out how to populate it
 
     const currentEpoch = computeEpochAtSlot(state.slot);
     const isGenesis = currentEpoch === GENESIS_EPOCH;
@@ -890,5 +893,11 @@ export function createEmptyEpochCacheImmutableData(
     // This is a test state, there's no need to have a global shared cache of keys
     pubkey2index: new PubkeyIndexMap(),
     index2pubkey: [],
+  };
+}
+
+export function createEmptyCarryoverData() {
+  return {
+    unfinalizedPubkey2index: newUnfinalizedPubkeyIndexMap()
   };
 }

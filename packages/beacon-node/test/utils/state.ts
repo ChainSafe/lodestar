@@ -7,6 +7,7 @@ import {
   PubkeyIndexMap,
   CachedBeaconStateBellatrix,
   BeaconStateBellatrix,
+  createEmptyCarryoverData,
 } from "@lodestar/state-transition";
 import {allForks, altair, bellatrix, ssz} from "@lodestar/types";
 import {createBeaconConfig, ChainForkConfig} from "@lodestar/config";
@@ -104,7 +105,7 @@ export function generateCachedState(opts?: TestBeaconState): CachedBeaconStateAl
     // This is a performance test, there's no need to have a global shared cache of keys
     pubkey2index: new PubkeyIndexMap(),
     index2pubkey: [],
-  });
+  }, createEmptyCarryoverData());
 }
 
 /**
@@ -118,7 +119,7 @@ export function generateCachedAltairState(opts?: TestBeaconState, altairForkEpoc
     // This is a performance test, there's no need to have a global shared cache of keys
     pubkey2index: new PubkeyIndexMap(),
     index2pubkey: [],
-  });
+  }, createEmptyCarryoverData());
 }
 
 /**
@@ -132,5 +133,5 @@ export function generateCachedBellatrixState(opts?: TestBeaconState): CachedBeac
     // This is a performance test, there's no need to have a global shared cache of keys
     pubkey2index: new PubkeyIndexMap(),
     index2pubkey: [],
-  });
+  }, createEmptyCarryoverData());
 }
