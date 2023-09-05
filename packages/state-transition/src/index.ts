@@ -30,7 +30,12 @@ export {
   isStateBalancesNodesPopulated,
   isStateValidatorsNodesPopulated,
 } from "./cache/stateCache.js";
-export {EpochCache, EpochCacheImmutableData, createEmptyEpochCacheImmutableData, createEmptyCarryoverData} from "./cache/epochCache.js";
+export {
+  EpochCache,
+  EpochCacheImmutableData,
+  createEmptyEpochCacheImmutableData,
+  createEmptyCarryoverData,
+} from "./cache/epochCache.js";
 export {EpochTransitionCache, beforeProcessEpoch} from "./cache/epochTransitionCache.js";
 
 // Aux data-structures

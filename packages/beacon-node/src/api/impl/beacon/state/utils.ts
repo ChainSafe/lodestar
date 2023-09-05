@@ -1,7 +1,7 @@
 import {fromHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {FAR_FUTURE_EPOCH, GENESIS_SLOT} from "@lodestar/params";
-import {BeaconStateAllForks, PubkeyIndexMap} from "@lodestar/state-transition";
+import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {BLSPubkey, phase0} from "@lodestar/types";
 import {Epoch, ValidatorIndex} from "@lodestar/types";
 import {IBeaconChain, StateGetOpts} from "../../../../chain/index.js";
@@ -136,7 +136,7 @@ type StateValidatorIndexResponse = {valid: true; validatorIndex: number} | {vali
 export function getStateValidatorIndex(
   id: routes.beacon.ValidatorId | BLSPubkey,
   state: BeaconStateAllForks,
-  pubkey2indexFn: (arg: BLSPubkey) => number | undefined,
+  pubkey2indexFn: (arg: BLSPubkey) => number | undefined
 ): StateValidatorIndexResponse {
   let validatorIndex: ValidatorIndex | undefined;
   if (typeof id === "string") {

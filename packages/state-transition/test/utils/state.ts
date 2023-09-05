@@ -89,12 +89,16 @@ export function generateCachedState(
   opts: TestBeaconState = {}
 ): CachedBeaconStateAllForks {
   const state = generateState(opts);
-  return createCachedBeaconState(state, {
-    config: createBeaconConfig(config, state.genesisValidatorsRoot),
-    // This is a test state, there's no need to have a global shared cache of keys
-    pubkey2index: new PubkeyIndexMap(),
-    index2pubkey: [],
-  }, createEmptyCarryoverData());
+  return createCachedBeaconState(
+    state,
+    {
+      config: createBeaconConfig(config, state.genesisValidatorsRoot),
+      // This is a test state, there's no need to have a global shared cache of keys
+      pubkey2index: new PubkeyIndexMap(),
+      index2pubkey: [],
+    },
+    createEmptyCarryoverData()
+  );
 }
 
 export function createCachedBeaconStateTest<T extends BeaconStateAllForks>(

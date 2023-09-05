@@ -9,8 +9,6 @@ import {
   BeaconStateCapella,
   BeaconStateDeneb,
 } from "./types.js";
-import {PublicKey} from "@chainsafe/bls/types";
-import {ValidatorIndex} from "@lodestar/types";
 
 export type BeaconStateCache = {
   config: BeaconConfig;

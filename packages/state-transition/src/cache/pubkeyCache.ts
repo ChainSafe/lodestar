@@ -29,14 +29,13 @@ export function toMemoryEfficientHexStr(hex: Uint8Array | string): string {
 }
 
 /**
- * 
+ *
  * A wrapper for calling immutable.js. To abstract the initialization of UnfinalizedPubkeyIndexMap
- * 
+ *
  */
 export function newUnfinalizedPubkeyIndexMap(): UnfinalizedPubkeyIndexMap {
   return immutable.Map<PubkeyHex, ValidatorIndex>();
 }
-
 
 export class PubkeyIndexMap {
   // We don't really need the full pubkey. We could just use the first 20 bytes like an Ethereum address
@@ -58,14 +57,13 @@ export class PubkeyIndexMap {
   }
 }
 
-
 /**
  * Checks the pubkey indices against a state and adds missing pubkeys
  *
  * Mutates `pubkey2index` and `index2pubkey`
  *
  * If pubkey caches are empty: SLOW CODE - 🐢
- * 
+ *
  * TODO: Deal with this
  */
 export function syncPubkeys(

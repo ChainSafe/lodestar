@@ -31,6 +31,7 @@ import {ProcessShutdownCallback} from "@lodestar/validator";
 import {Logger, isErrorAborted, pruneSetToMax, sleep, toHex} from "@lodestar/utils";
 import {ForkSeq, SLOTS_PER_EPOCH, MAX_BLOBS_PER_BLOCK} from "@lodestar/params";
 
+import {createEmptyCarryoverData} from "@lodestar/state-transition/src/cache/epochCache.js";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {Metrics} from "../metrics/index.js";
@@ -75,7 +76,6 @@ import {BlockAttributes, produceBlockBody} from "./produceBlock/produceBlockBody
 import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
 import {BlockInput} from "./blocks/types.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
-import { createEmptyCarryoverData } from "@lodestar/state-transition/src/cache/epochCache.js";
 
 /**
  * Arbitrary constants, blobs should be consumed immediately in the same slot they are produced.
@@ -221,15 +221,19 @@ export class BeaconChain implements IBeaconChain {
     const cachedState =
       isCachedBeaconState(anchorState) && opts.skipCreateStateCacheIfAvailable
         ? anchorState
-        : createCachedBeaconState(anchorState, {
-            config,
-            pubkey2index: new PubkeyIndexMap(),
-            index2pubkey: [],
-          }, createEmptyCarryoverData());
+        : createCachedBeaconState(
+            anchorState,
+            {
+              config,
+              pubkey2index: new PubkeyIndexMap(),
+              index2pubkey: [],
+            },
+            createEmptyCarryoverData()
+          );
 
     // Persist single global instance of state caches
-    this.pubkey2index = cachedState.epochCtx.pubkey2index;
-    this.index2pubkey = cachedState.epochCtx.index2pubkey;
+    this.pubkey2index = cachedState.epochCtx.globalPubkey2index; // TODO: Double check if these two are correct
+    this.index2pubkey = cachedState.epochCtx.globalIndex2pubkey;
 
     const stateCache = new StateContextCache({metrics});
     const checkpointStateCache = new CheckpointStateCache({metrics});
@@ -486,7 +490,7 @@ export class BeaconChain implements IBeaconChain {
     );
     const parentBlockRoot = fromHexString(head.blockRoot);
     const proposerIndex = state.epochCtx.getBeaconProposer(slot);
-    const proposerPubKey = state.epochCtx.index2pubkey[proposerIndex].toBytes();
+    const proposerPubKey = state.epochCtx.getPubkey(proposerIndex).toBytes();
 
     const {body, blobs, blockValue} = await produceBlockBody.call(this, blockType, state, {
       randaoReveal,
