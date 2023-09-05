@@ -106,7 +106,7 @@ export class EpochCache {
    * Unique pubkey registry shared in the same fork. There should only exist one for the fork.
    * 
    */
-  unfinalizedPubkey2Index: UnfinalizedPubkeyIndexMap;
+  unfinalizedPubkey2index: UnfinalizedPubkeyIndexMap;
 
 
   /**
@@ -204,7 +204,7 @@ export class EpochCache {
     config: BeaconConfig;
     globalPubkey2index: PubkeyIndexMap;
     globalIndex2pubkey: Index2PubkeyCache;
-    unfinalizedIndex2pubkey: UnfinalizedPubkeyIndexMap;
+    unfinalizedPubkey2index: UnfinalizedPubkeyIndexMap;
     proposers: number[];
     proposersPrevEpoch: number[] | null;
     proposersNextEpoch: ProposersDeferred;
@@ -229,7 +229,7 @@ export class EpochCache {
     this.config = data.config;
     this.globalPubkey2index = data.globalPubkey2index;
     this.globalIndex2pubkey = data.globalIndex2pubkey;
-    this.unfinalizedPubkey2Index = data.unfinalizedIndex2pubkey;
+    this.unfinalizedPubkey2index = data.unfinalizedPubkey2index;
     this.proposers = data.proposers;
     this.proposersPrevEpoch = data.proposersPrevEpoch;
     this.proposersNextEpoch = data.proposersNextEpoch;
@@ -407,7 +407,7 @@ export class EpochCache {
       config,
       globalPubkey2index: pubkey2index,
       globalIndex2pubkey: index2pubkey,
-      unfinalizedIndex2pubkey,
+      unfinalizedPubkey2index,
       proposers,
       // On first epoch, set to null to prevent unnecessary work since this is only used for metrics
       proposersPrevEpoch: null,
@@ -445,7 +445,7 @@ export class EpochCache {
       globalPubkey2index: this.globalPubkey2index,
       globalIndex2pubkey: this.globalIndex2pubkey,
       // Fork-aware cache needs to be cloned. But by the virtue of it being persistent, we don't need to do anything here
-      unfinalizedIndex2pubkey: this.unfinalizedPubkey2Index,
+      unfinalizedPubkey2index: this.unfinalizedPubkey2index,
       // Immutable data
       proposers: this.proposers,
       proposersPrevEpoch: this.proposersPrevEpoch,
@@ -751,7 +751,7 @@ export class EpochCache {
   }
 
   getPubkeyIndex(pubkey: Uint8Array): ValidatorIndex | undefined {
-    return this.globalPubkey2index.get(pubkey) || this.unfinalizedPubkey2Index.get(toMemoryEfficientHexStr(pubkey));
+    return this.globalPubkey2index.get(pubkey) || this.unfinalizedPubkey2index.get(toMemoryEfficientHexStr(pubkey));
   }
 
   /**
@@ -760,7 +760,7 @@ export class EpochCache {
    * 
    */
   addPubkey(index: ValidatorIndex, pubkey: Uint8Array): void {
-    this.unfinalizedPubkey2Index.set(toMemoryEfficientHexStr(pubkey), index); 
+    this.unfinalizedPubkey2index.set(toMemoryEfficientHexStr(pubkey), index); 
   }
 
   /**
@@ -772,7 +772,7 @@ export class EpochCache {
     this.globalPubkey2index.set(pubkey, index);
     this.globalIndex2pubkey[index] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian); 
 
-    this.unfinalizedPubkey2Index.delete(toMemoryEfficientHexStr(pubkey));
+    this.unfinalizedPubkey2index.delete(toMemoryEfficientHexStr(pubkey));
   }
 
   getShufflingAtSlot(slot: Slot): EpochShuffling {
