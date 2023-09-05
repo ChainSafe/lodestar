@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import {ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
-import {createCachedBeaconState, PubkeyIndexMap} from "@lodestar/state-transition";
+import {createCachedBeaconState, PubkeyIndexMap, createEmptyCarryoverData} from "@lodestar/state-transition";
 import {createBeaconConfig, ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {config as chainConfig} from "@lodestar/config/default";
 
@@ -18,6 +18,7 @@ describe("upgradeState", () => {
         pubkey2index: new PubkeyIndexMap(),
         index2pubkey: [],
       },
+      createEmptyCarryoverData(),
       {skipSyncCommitteeCache: true}
     );
     const newState = upgradeStateToDeneb(stateView);

@@ -35,7 +35,7 @@ describe("api / impl / validator", () => {
       noThreshold: true,
       fn: () => {
         for (let i = 0; i < reqCount; i++) {
-          const pubkey = state.epochCtx.index2pubkey[i];
+          const pubkey = state.epochCtx.getPubkey(i);
           pubkey.toBytes(PointFormat.compressed);
         }
       },
