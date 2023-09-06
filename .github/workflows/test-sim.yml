@@ -68,11 +68,9 @@ jobs:
         run: yarn test:sim:backup_eth_provider
         working-directory: packages/cli
 
-      # Enable these tests after fixing the following issue
-      # https://github.com/ChainSafe/lodestar/issues/5553
-      # - name: Sim tests multi client
-      #   run: DEBUG='${{github.event.inputs.debug}}' yarn test:sim:multiclient
-      #   working-directory: packages/cli
+      - name: Sim tests multi client
+        run: DEBUG='${{github.event.inputs.debug}}' yarn test:sim:multiclient
+        working-directory: packages/cli
 
       - name: Upload debug log test files for "packages/cli"
         if: ${{ always() }}
