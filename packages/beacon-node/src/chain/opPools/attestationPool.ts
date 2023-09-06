@@ -94,6 +94,7 @@ export class AttestationPool {
    * - Valid data
    */
   add(attestation: phase0.Attestation, attDataRootHex: RootHex): InsertOutcome {
+    console.log("attDataRootHex in add", attDataRootHex);
     const slot = attestation.data.slot;
     const lowestPermissibleSlot = this.lowestPermissibleSlot;
 
@@ -109,6 +110,7 @@ export class AttestationPool {
 
     // Limit object per slot
     const aggregateByRoot = this.attestationByRootBySlot.getOrDefault(slot);
+    console.log("aggregateByRoot", aggregateByRoot);
     if (aggregateByRoot.size >= MAX_ATTESTATIONS_PER_SLOT) {
       throw new OpPoolError({code: OpPoolErrorCode.REACHED_MAX_PER_SLOT});
     }
@@ -116,11 +118,13 @@ export class AttestationPool {
     // Pre-aggregate the contribution with existing items
     const aggregate = aggregateByRoot.get(attDataRootHex);
     if (aggregate) {
+      console.log("aggregate exists", aggregate);
       // Aggregate mutating
       return aggregateAttestationInto(aggregate, attestation);
     } else {
       // Create new aggregate
       aggregateByRoot.set(attDataRootHex, attestationToAggregate(attestation));
+      console.log("created new aggregate", aggregateByRoot);
       return InsertOutcome.NewData;
     }
   }
@@ -130,6 +134,8 @@ export class AttestationPool {
    */
   getAggregate(slot: Slot, dataRoot: Root): phase0.Attestation {
     const dataRootHex = toHexString(dataRoot);
+    console.log("dataRootHex in getAggregate", dataRootHex);
+    console.log("attestationByRootBySlot in getAggregate", this.attestationByRootBySlot);
     const aggregate = this.attestationByRootBySlot.get(slot)?.get(dataRootHex);
     if (!aggregate) {
       // TODO: Add metric for missing aggregates
