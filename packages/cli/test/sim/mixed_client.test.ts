@@ -35,8 +35,8 @@ const ttd = getEstimatedTTD({
 
 const env = await SimulationEnvironment.initWithDefaults(
   {
-    id: "multi-clients",
-    logsDir: path.join(logFilesDir, "multi-clients"),
+    id: "mixed-clients",
+    logsDir: path.join(logFilesDir, "mixed-clients"),
     chainConfig: {
       ALTAIR_FORK_EPOCH: altairForkEpoch,
       BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,

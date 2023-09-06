@@ -68,8 +68,8 @@ jobs:
         run: yarn test:sim:backup_eth_provider
         working-directory: packages/cli
 
-      - name: Sim tests multi client
-        run: DEBUG='${{github.event.inputs.debug}}' yarn test:sim:multiclient
+      - name: Sim tests mixed client
+        run: DEBUG='${{github.event.inputs.debug}}' yarn test:sim:mixedclient
         working-directory: packages/cli
 
       - name: Upload debug log test files for "packages/cli"
