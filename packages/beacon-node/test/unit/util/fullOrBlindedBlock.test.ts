@@ -1,13 +1,13 @@
 import {expect} from "chai";
 import {ForkInfo, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {allForks, capella} from "@lodestar/types";
-import {isForkExecution} from "@lodestar/params";
+import {ForkSeq, isForkExecution} from "@lodestar/params";
 import {
   blindedOrFullSignedBlockToBlinded,
   blindedOrFullSignedBlockToBlindedBytes,
   deserializeFullOrBlindedSignedBeaconBlock,
   isSerializedBlinded,
-  reassembleBlindedBlockBytesToFullBytes,
+  reassembleBlindedOrFullToFullBytes,
   serializeFullOrBlindedSignedBeaconBlock,
 } from "../../../src/util/fullOrBlindedBlock.js";
 import {mockBlocks} from "../../utils/mocks/block.js";
@@ -56,8 +56,7 @@ describe("blindedOrFullSignedBlockToBlinded", () => {
       const blinded = blindedOrFullSignedBlockToBlinded(config, block);
       const isEqual = isForkExecution(name)
         ? config.getBlindedForkTypes(block.message.slot).SignedBeaconBlock.equals(blinded, expected)
-        : config.
-        getForkTypes(block.message.slot).SignedBeaconBlock.equals(blinded, expected);
+        : config.getForkTypes(block.message.slot).SignedBeaconBlock.equals(blinded, expected);
       expect(isEqual).to.be.true;
     });
     it(`should convert blinded ${name} to blinded block`, () => {
@@ -70,33 +69,34 @@ describe("blindedOrFullSignedBlockToBlinded", () => {
   }
 });
 
-describe("blindedOrFullSignedBlockToBlindedBytes", () => {
-  for (const [{name}, serializedFull, full, serializedBlinded, blinded] of mockBlocks) {
+describe("blindedOrFullSignedBlockToBlindedBytes", function () {
+  this.timeout(60000);
+  for (const [{name}, serializedFull, full, serializedBlinded, blindBlock] of mockBlocks) {
     it(`should convert full ${name} to blinded block`, () => {
-      expect(byteArrayEquals(blindedOrFullSignedBlockToBlindedBytes(config, full, serializedFull), serializedBlinded))
-        .to.be.true;
+      const blinded = blindedOrFullSignedBlockToBlindedBytes(config, full, serializedFull);
+      expect(byteArrayEquals(blinded, serializedBlinded)).to.be.true;
     });
     it(`should convert blinded ${name} to blinded block`, () => {
-      expect(
-        byteArrayEquals(blindedOrFullSignedBlockToBlindedBytes(config, blinded, serializedBlinded), serializedBlinded)
-      ).to.be.true;
+      const blinded = blindedOrFullSignedBlockToBlindedBytes(config, blindBlock, serializedBlinded);
+      expect(byteArrayEquals(blinded, serializedBlinded)).to.be.true;
     });
   }
 });
 
-describe("reassembleBlindedBlockBytesToFullBytes", () => {
+describe("reassembleBlindedOrFullToFullBytes", () => {
   for (const [{name, seq}, serializedFull, full, serializedBlinded] of mockBlocks) {
     const transactions = (full as capella.SignedBeaconBlock).message.body.executionPayload?.transactions;
     const withdrawals = (full as capella.SignedBeaconBlock).message.body.executionPayload?.withdrawals;
-    let result: Buffer = Buffer.from([]);
     it(`should reassemble serialized blinded ${name} to serialized full block`, async () => {
-      for await (const chunk of reassembleBlindedBlockBytesToFullBytes(
+      const chunks: Uint8Array[] = [];
+      for await (const chunk of reassembleBlindedOrFullToFullBytes(
         seq,
         serializedBlinded,
         Promise.resolve({transactions, withdrawals})
       )) {
-        result = Buffer.concat([result, chunk]);
+        chunks.push(chunk);
       }
+      const result = Uint8Array.from(Buffer.concat(chunks));
       expect(byteArrayEquals(result, serializedFull)).to.be.true;
     });
   }
