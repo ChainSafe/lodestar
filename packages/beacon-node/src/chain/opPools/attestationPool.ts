@@ -110,7 +110,6 @@ export class AttestationPool {
 
     // Limit object per slot
     const aggregateByRoot = this.attestationByRootBySlot.getOrDefault(slot);
-    console.log("aggregateByRoot", aggregateByRoot);
     if (aggregateByRoot.size >= MAX_ATTESTATIONS_PER_SLOT) {
       throw new OpPoolError({code: OpPoolErrorCode.REACHED_MAX_PER_SLOT});
     }
@@ -118,13 +117,13 @@ export class AttestationPool {
     // Pre-aggregate the contribution with existing items
     const aggregate = aggregateByRoot.get(attDataRootHex);
     if (aggregate) {
-      console.log("aggregate exists", aggregate);
+      console.log("aggregate exists", attDataRootHex);
       // Aggregate mutating
       return aggregateAttestationInto(aggregate, attestation);
     } else {
       // Create new aggregate
       aggregateByRoot.set(attDataRootHex, attestationToAggregate(attestation));
-      console.log("created new aggregate", aggregateByRoot);
+      console.log("created new aggregate", attDataRootHex);
       return InsertOutcome.NewData;
     }
   }
