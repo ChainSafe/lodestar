@@ -46,6 +46,7 @@ export function getBeaconPoolApi({
     },
 
     async submitPoolAttestations(attestations) {
+      console.log("called submitPoolAttestations");
       const seenTimestampSec = Date.now() / 1000;
       const errors: Error[] = [];
 
@@ -66,8 +67,12 @@ export function getBeaconPoolApi({
               slot,
               beaconBlockRoot
             );
+            console.log("submitted att root", attDataRootHex);
 
-            if (network.shouldAggregate(subnet, slot)) {
+            const shouldAggregate = network.shouldAggregate(subnet, slot);
+            console.log("shouldAggregate", shouldAggregate);
+
+            if (shouldAggregate) {
               const insertOutcome = chain.attestationPool.add(attestation, attDataRootHex);
               metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
             }

@@ -275,6 +275,7 @@ export class Network implements INetwork {
   }
 
   shouldAggregate(subnet: number, slot: number): boolean {
+    console.log("aggregatorTracker", this.aggregatorTracker);
     return this.aggregatorTracker.shouldAggregate(subnet, slot);
   }
 
