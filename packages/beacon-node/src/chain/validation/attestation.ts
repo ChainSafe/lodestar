@@ -224,9 +224,7 @@ export async function validateAttestation(
         code: AttestationErrorCode.BAD_TARGET_EPOCH,
       });
     } else {
-      throw new AttestationError(GossipAction.IGNORE, {
-        code: AttestationErrorCode.INVALID_SIGNATURE,
-      });
+      throw err;
     }
   }
 }
