@@ -63,6 +63,6 @@
   "devDependencies": {
     "bigint-buffer": "^1.1.5",
     "rimraf": "^4.4.1",
-    "testcontainers": "^9.4.0"
+    "testcontainers": "^10.2.1"
   }
 }
