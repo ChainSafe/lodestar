@@ -53,14 +53,29 @@ export function isLocalMultiAddr(multiaddr: Multiaddr | undefined): boolean {
   return false;
 }
 
-export function overwriteEnrWithCliArgs(enr: SignableENR, args: BeaconArgs, logger: Logger): void {
+/**
+ * Only update the enr if the value has changed
+ */
+function maybeUpdateEnr<T extends "ip" | "tcp" | "udp" | "ip6" | "tcp6" | "udp6">(
+  enr: SignableENR,
+  key: T,
+  value: SignableENR[T] | undefined
+): void {
+  if (enr[key] !== value) {
+    enr[key] = value;
+  }
+}
+
+export function overwriteEnrWithCliArgs(enr: SignableENR, args: BeaconArgs, logger: Logger, bootnode?: boolean): void {
   const {port, discoveryPort, port6, discoveryPort6} = parseListenArgs(args);
-  enr.ip = args["enr.ip"] ?? enr.ip;
-  enr.tcp = args["enr.tcp"] ?? port ?? enr.tcp;
-  enr.udp = args["enr.udp"] ?? discoveryPort ?? enr.udp;
-  enr.ip6 = args["enr.ip6"] ?? enr.ip6;
-  enr.tcp6 = args["enr.tcp6"] ?? port6 ?? enr.tcp6;
-  enr.udp6 = args["enr.udp6"] ?? discoveryPort6 ?? enr.udp6;
+  maybeUpdateEnr(enr, "ip", args["enr.ip"] ?? enr.ip);
+  maybeUpdateEnr(enr, "ip6", args["enr.ip6"] ?? enr.ip6);
+  maybeUpdateEnr(enr, "udp", args["enr.udp"] ?? discoveryPort ?? enr.udp);
+  maybeUpdateEnr(enr, "udp6", args["enr.udp6"] ?? discoveryPort6 ?? enr.udp6);
+  if (!bootnode) {
+    maybeUpdateEnr(enr, "tcp", args["enr.tcp"] ?? port ?? enr.tcp);
+    maybeUpdateEnr(enr, "tcp6", args["enr.tcp6"] ?? port6 ?? enr.tcp6);
+  }
 
   function testMultiaddrForLocal(mu: Multiaddr, ip4: boolean): void {
     const isLocal = isLocalMultiAddr(mu);
@@ -101,7 +116,8 @@ export function overwriteEnrWithCliArgs(enr: SignableENR, args: BeaconArgs, logg
 export async function initPeerIdAndEnr(
   args: BeaconArgs,
   beaconDir: string,
-  logger: Logger
+  logger: Logger,
+  bootnode?: boolean
 ): Promise<{peerId: PeerId; enr: SignableENR}> {
   const {persistNetworkIdentity} = args;
 
@@ -146,14 +162,17 @@ export async function initPeerIdAndEnr(
     const enrFile = path.join(beaconDir, "enr");
     const peerIdFile = path.join(beaconDir, "peer-id.json");
     const {peerId, enr} = await readPersistedPeerIdAndENR(peerIdFile, enrFile);
-    overwriteEnrWithCliArgs(enr, args, logger);
+    overwriteEnrWithCliArgs(enr, args, logger, bootnode);
     // Re-persist peer-id and enr
     writeFile600Perm(peerIdFile, exportToJSON(peerId));
     writeFile600Perm(enrFile, enr.encodeTxt());
     return {peerId, enr};
   } else {
     const {peerId, enr} = await newPeerIdAndENR();
-    overwriteEnrWithCliArgs(enr, args, logger);
+    overwriteEnrWithCliArgs(enr, args, logger, bootnode);
+    // Since the enr is newly created, its sequence number can be set to 1
+    // It's especially clean for fully configured bootnodes whose enrs never change
+    enr.seq = BigInt(1);
     return {peerId, enr};
   }
 }
