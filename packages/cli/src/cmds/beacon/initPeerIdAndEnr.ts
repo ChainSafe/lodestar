@@ -66,13 +66,19 @@ function maybeUpdateEnr<T extends "ip" | "tcp" | "udp" | "ip6" | "tcp6" | "udp6"
   }
 }
 
-export function overwriteEnrWithCliArgs(enr: SignableENR, args: BeaconArgs, logger: Logger, bootnode?: boolean): void {
+export function overwriteEnrWithCliArgs(
+  enr: SignableENR,
+  args: BeaconArgs,
+  logger: Logger,
+  opts?: {newEnr?: boolean; bootnode?: boolean}
+): void {
+  const preSeq = enr.seq;
   const {port, discoveryPort, port6, discoveryPort6} = parseListenArgs(args);
   maybeUpdateEnr(enr, "ip", args["enr.ip"] ?? enr.ip);
   maybeUpdateEnr(enr, "ip6", args["enr.ip6"] ?? enr.ip6);
   maybeUpdateEnr(enr, "udp", args["enr.udp"] ?? discoveryPort ?? enr.udp);
   maybeUpdateEnr(enr, "udp6", args["enr.udp6"] ?? discoveryPort6 ?? enr.udp6);
-  if (!bootnode) {
+  if (!opts?.bootnode) {
     maybeUpdateEnr(enr, "tcp", args["enr.tcp"] ?? port ?? enr.tcp);
     maybeUpdateEnr(enr, "tcp6", args["enr.tcp6"] ?? port6 ?? enr.tcp6);
   }
@@ -108,6 +114,19 @@ export function overwriteEnrWithCliArgs(enr: SignableENR, args: BeaconArgs, logg
   if (udpMultiaddr6) {
     testMultiaddrForLocal(udpMultiaddr6, false);
   }
+
+  if (enr.seq !== preSeq) {
+    // If the enr is newly created, its sequence number can be set to 1
+    // It's especially clean for fully configured bootnodes whose enrs never change
+    // Otherwise, we can increment the sequence number as little as possible
+    if (opts?.newEnr) {
+      enr.seq = BigInt(1);
+    } else {
+      enr.seq = preSeq + BigInt(1);
+    }
+    // invalidate cached signature
+    delete enr["_signature"];
+  }
 }
 
 /**
@@ -130,7 +149,7 @@ export async function initPeerIdAndEnr(
   const readPersistedPeerIdAndENR = async (
     peerIdFile: string,
     enrFile: string
-  ): Promise<{peerId: PeerId; enr: SignableENR; usePersisted: boolean}> => {
+  ): Promise<{peerId: PeerId; enr: SignableENR; newEnr: boolean}> => {
     let peerId: PeerId;
     let enr: SignableENR;
 
@@ -139,7 +158,7 @@ export async function initPeerIdAndEnr(
       peerId = await readPeerId(peerIdFile);
     } catch (e) {
       logger.warn("Unable to read peerIdFile, creating a new peer id");
-      return {...(await newPeerIdAndENR()), usePersisted: false};
+      return {...(await newPeerIdAndENR()), newEnr: true};
     }
     // attempt to read stored enr
     try {
@@ -147,37 +166,29 @@ export async function initPeerIdAndEnr(
     } catch (e) {
       logger.warn("Unable to decode stored local ENR, creating a new ENR");
       enr = SignableENR.createV4(createKeypairFromPeerId(peerId));
-      return {peerId, enr, usePersisted: false};
+      return {peerId, enr, newEnr: true};
     }
     // check stored peer id against stored enr
     if (!peerId.equals(await enr.peerId())) {
       logger.warn("Stored local ENR doesn't match peerIdFile, creating a new ENR");
       enr = SignableENR.createV4(createKeypairFromPeerId(peerId));
-      return {peerId, enr, usePersisted: false};
+      return {peerId, enr, newEnr: true};
     }
-    return {peerId, enr, usePersisted: true};
+    return {peerId, enr, newEnr: false};
   };
 
   if (persistNetworkIdentity) {
     const enrFile = path.join(beaconDir, "enr");
     const peerIdFile = path.join(beaconDir, "peer-id.json");
-    const {peerId, enr, usePersisted} = await readPersistedPeerIdAndENR(peerIdFile, enrFile);
-    overwriteEnrWithCliArgs(enr, args, logger, bootnode);
-    // If the enr is newly created, its sequence number can be set to 1
-    // It's especially clean for fully configured bootnodes whose enrs never change
-    if (!usePersisted) {
-      enr.seq = BigInt(1);
-    }
+    const {peerId, enr, newEnr} = await readPersistedPeerIdAndENR(peerIdFile, enrFile);
+    overwriteEnrWithCliArgs(enr, args, logger, {newEnr, bootnode});
     // Re-persist peer-id and enr
     writeFile600Perm(peerIdFile, exportToJSON(peerId));
     writeFile600Perm(enrFile, enr.encodeTxt());
     return {peerId, enr};
   } else {
     const {peerId, enr} = await newPeerIdAndENR();
-    overwriteEnrWithCliArgs(enr, args, logger, bootnode);
-    // Since the enr is newly created, its sequence number can be set to 1
-    // It's especially clean for fully configured bootnodes whose enrs never change
-    enr.seq = BigInt(1);
+    overwriteEnrWithCliArgs(enr, args, logger, {newEnr: true, bootnode});
     return {peerId, enr};
   }
 }
