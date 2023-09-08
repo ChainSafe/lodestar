@@ -12,7 +12,7 @@ import {phase0} from "@lodestar/types";
 import {Metrics} from "../../metrics/index.js";
 import {AsyncIterableBridgeCaller, AsyncIterableBridgeHandler} from "../../util/asyncIterableToEvents.js";
 import {peerIdFromString} from "../../util/peerId.js";
-import {wireEventsOnMainThread} from "../../util/workerEvents.js";
+import {terminateWorkerThread, wireEventsOnMainThread} from "../../util/workerEvents.js";
 import {NetworkEventBus, NetworkEventData, networkEventDirection} from "../events.js";
 import {NetworkOptions} from "../options.js";
 import {PeerAction, PeerScoreStats} from "../peers/index.js";
@@ -50,6 +50,9 @@ type WorkerNetworkCoreModules = WorkerNetworkCoreInitModules & {
   networkApiThread: ModuleThread<NetworkWorkerApi>;
   worker: Worker;
 };
+
+const networkWorkerExitTimeoutMs = 1000;
+const networkWorkerExitRetryCount = 3;
 
 /**
  * NetworkCore implementation using a Worker thread
@@ -145,7 +148,12 @@ export class WorkerNetworkCore implements INetworkCore {
   async close(): Promise<void> {
     await this.getApi().close();
     this.modules.logger.debug("terminating network worker");
-    await Thread.terminate(this.getApi() as unknown as Thread);
+    await terminateWorkerThread({
+      worker: this.getApi(),
+      retryCount: networkWorkerExitRetryCount,
+      retryMs: networkWorkerExitTimeoutMs,
+      logger: this.modules.logger,
+    });
     this.modules.logger.debug("terminated network worker");
   }
 
@@ -235,7 +243,7 @@ export class WorkerNetworkCore implements INetworkCore {
     return this.getApi().writeDiscv5Profile(durationMs, dirpath);
   }
 
-  private getApi(): NetworkWorkerApi {
+  private getApi(): ModuleThread<NetworkWorkerApi> {
     return this.modules.networkApiThread;
   }
 }
