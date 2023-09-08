@@ -47,12 +47,12 @@ export type WorkerNetworkCoreInitModules = {
 };
 
 type WorkerNetworkCoreModules = WorkerNetworkCoreInitModules & {
-  networkApiThread: ModuleThread<NetworkWorkerApi>;
+  networkThreadApi: ModuleThread<NetworkWorkerApi>;
   worker: Worker;
 };
 
-const networkWorkerExitTimeoutMs = 1000;
-const networkWorkerExitRetryCount = 3;
+const NETWORK_WORKER_EXIT_TIMEOUT_MS = 1000;
+const NETWORK_WORKER_EXIT_RETRY_COUNT = 3;
 
 /**
  * NetworkCore implementation using a Worker thread
@@ -84,8 +84,8 @@ export class WorkerNetworkCore implements INetworkCore {
       reqRespBridgeEventDirection
     );
 
-    Thread.errors(modules.networkApiThread).subscribe((err) => {
-      this.modules.logger.error("Network worker thread error", undefined, err);
+    Thread.errors(modules.networkThreadApi).subscribe((err) => {
+      this.modules.logger.error("Network worker thread error", {}, err);
     });
 
     const {metrics} = modules;
@@ -131,7 +131,7 @@ export class WorkerNetworkCore implements INetworkCore {
     } as ConstructorParameters<typeof Worker>[1]);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const networkApiThread = (await spawn<any>(worker, {
+    const networkThreadApi = (await spawn<any>(worker, {
       // A Lodestar Node may do very expensive task at start blocking the event loop and causing
       // the initialization to timeout. The number below is big enough to almost disable the timeout
       timeout: 5 * 60 * 1000,
@@ -140,7 +140,7 @@ export class WorkerNetworkCore implements INetworkCore {
 
     return new WorkerNetworkCore({
       ...modules,
-      networkApiThread,
+      networkThreadApi,
       worker,
     });
   }
@@ -150,8 +150,8 @@ export class WorkerNetworkCore implements INetworkCore {
     this.modules.logger.debug("terminating network worker");
     await terminateWorkerThread({
       worker: this.getApi(),
-      retryCount: networkWorkerExitRetryCount,
-      retryMs: networkWorkerExitTimeoutMs,
+      retryCount: NETWORK_WORKER_EXIT_RETRY_COUNT,
+      retryMs: NETWORK_WORKER_EXIT_TIMEOUT_MS,
       logger: this.modules.logger,
     });
     this.modules.logger.debug("terminated network worker");
@@ -244,6 +244,6 @@ export class WorkerNetworkCore implements INetworkCore {
   }
 
   private getApi(): ModuleThread<NetworkWorkerApi> {
-    return this.modules.networkApiThread;
+    return this.modules.networkThreadApi;
   }
 }
