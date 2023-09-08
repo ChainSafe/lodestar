@@ -1,21 +1,18 @@
-import worker from "node:worker_threads";
 import fs from "node:fs";
 import path from "node:path";
-import {createFromProtobuf} from "@libp2p/peer-id-factory";
+import worker from "node:worker_threads";
+import type {ModuleThread} from "@chainsafe/threads";
 import {expose} from "@chainsafe/threads/worker";
-import type {WorkerModule} from "@chainsafe/threads/dist/types/worker.js";
+import {createFromProtobuf} from "@libp2p/peer-id-factory";
 import {chainConfigFromJson, createBeaconConfig} from "@lodestar/config";
 import {getNodeLogger} from "@lodestar/logger/node";
-import {collectNodeJSMetrics, RegistryMetricCreator} from "../../metrics/index.js";
+import {RegistryMetricCreator, collectNodeJSMetrics} from "../../metrics/index.js";
 import {AsyncIterableBridgeCaller, AsyncIterableBridgeHandler} from "../../util/asyncIterableToEvents.js";
 import {Clock} from "../../util/clock.js";
-import {wireEventsOnWorkerThread} from "../../util/workerEvents.js";
-import {NetworkEventBus, NetworkEventData, networkEventDirection} from "../events.js";
 import {peerIdToString} from "../../util/peerId.js";
 import {profileNodeJS} from "../../util/profile.js";
-import {getNetworkCoreWorkerMetrics} from "./metrics.js";
-import {NetworkWorkerApi, NetworkWorkerData} from "./types.js";
-import {NetworkCore} from "./networkCore.js";
+import {NetworkEventBus, NetworkEventData, networkEventDirection} from "../events.js";
+import {wireEventsOnWorkerThread} from "../../util/workerEvents.js";
 import {
   NetworkWorkerThreadEventType,
   ReqRespBridgeEventBus,
@@ -24,8 +21,11 @@ import {
   getReqRespBridgeRespEvents,
   reqRespBridgeEventDirection,
 } from "./events.js";
+import {getNetworkCoreWorkerMetrics} from "./metrics.js";
+import {NetworkCore} from "./networkCore.js";
+import {NetworkWorkerApi, NetworkWorkerData} from "./types.js";
 
-// Cloned data from instatiation
+// Cloned data from instantiation
 const workerData = worker.workerData as NetworkWorkerData;
 const parentPort = worker.parentPort;
 // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
@@ -120,9 +120,9 @@ wireEventsOnWorkerThread<ReqRespBridgeEventData>(
 );
 
 const libp2pWorkerApi: NetworkWorkerApi = {
-  close: () => {
+  close: async () => {
     abortController.abort();
-    return core.close();
+    await core.close();
   },
   scrapeMetrics: () => core.scrapeMetrics(),
 
@@ -162,4 +162,4 @@ const libp2pWorkerApi: NetworkWorkerApi = {
   },
 };
 
-expose(libp2pWorkerApi as WorkerModule<keyof NetworkWorkerApi>);
+expose(libp2pWorkerApi as ModuleThread<NetworkWorkerApi>);

@@ -1,4 +1,7 @@
 import {MessagePort, Worker} from "node:worker_threads";
+import {Thread} from "@chainsafe/threads";
+import {Logger} from "@lodestar/logger";
+import {sleep} from "@lodestar/utils";
 import {StrictEventEmitterSingleArg} from "./strictEvents.js";
 
 export type WorkerBridgeEvent<EventData> = {
@@ -84,4 +87,35 @@ export function wireEventsOnMainThread<EventData>(
       });
     }
   }
+}
+
+export async function terminateWorkerThread({
+  worker,
+  retryMs,
+  retryCount,
+  logger,
+}: {
+  worker: Thread;
+  retryMs: number;
+  retryCount: number;
+  logger?: Logger;
+}): Promise<void> {
+  const terminated = new Promise((resolve) => {
+    Thread.events(worker).subscribe((event) => {
+      if (event.type === "termination") {
+        resolve(true);
+      }
+    });
+  });
+
+  for (let i = 0; i < retryCount; i++) {
+    await Thread.terminate(worker);
+    const result = await Promise.race([terminated, sleep(retryMs).then(() => false)]);
+
+    if (result) return;
+
+    logger?.warn("Worker thread failed to terminate, retrying...");
+  }
+
+  throw new Error(`Worker thread failed to terminate in ${retryCount * retryMs}ms.`);
 }
