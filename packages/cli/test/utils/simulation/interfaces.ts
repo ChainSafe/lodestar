@@ -29,12 +29,12 @@ export type SimulationOptions = {
 };
 
 export enum BeaconClient {
-  Lodestar = "beacon_loadstar",
+  Lodestar = "beacon_lodestar",
   Lighthouse = "beacon_lighthouse",
 }
 
 export enum ValidatorClient {
-  Lodestar = "validator_loadstar",
+  Lodestar = "validator_lodestar",
   Lighthouse = "validator_lighthouse",
 }
 
