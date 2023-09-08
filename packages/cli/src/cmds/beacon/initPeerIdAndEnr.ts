@@ -130,7 +130,7 @@ export async function initPeerIdAndEnr(
   const readPersistedPeerIdAndENR = async (
     peerIdFile: string,
     enrFile: string
-  ): Promise<{peerId: PeerId; enr: SignableENR}> => {
+  ): Promise<{peerId: PeerId; enr: SignableENR; usePersisted: boolean}> => {
     let peerId: PeerId;
     let enr: SignableENR;
 
@@ -139,7 +139,7 @@ export async function initPeerIdAndEnr(
       peerId = await readPeerId(peerIdFile);
     } catch (e) {
       logger.warn("Unable to read peerIdFile, creating a new peer id");
-      return newPeerIdAndENR();
+      return {...(await newPeerIdAndENR()), usePersisted: false};
     }
     // attempt to read stored enr
     try {
@@ -147,22 +147,27 @@ export async function initPeerIdAndEnr(
     } catch (e) {
       logger.warn("Unable to decode stored local ENR, creating a new ENR");
       enr = SignableENR.createV4(createKeypairFromPeerId(peerId));
-      return {peerId, enr};
+      return {peerId, enr, usePersisted: false};
     }
     // check stored peer id against stored enr
     if (!peerId.equals(await enr.peerId())) {
       logger.warn("Stored local ENR doesn't match peerIdFile, creating a new ENR");
       enr = SignableENR.createV4(createKeypairFromPeerId(peerId));
-      return {peerId, enr};
+      return {peerId, enr, usePersisted: false};
     }
-    return {peerId, enr};
+    return {peerId, enr, usePersisted: true};
   };
 
   if (persistNetworkIdentity) {
     const enrFile = path.join(beaconDir, "enr");
     const peerIdFile = path.join(beaconDir, "peer-id.json");
-    const {peerId, enr} = await readPersistedPeerIdAndENR(peerIdFile, enrFile);
+    const {peerId, enr, usePersisted} = await readPersistedPeerIdAndENR(peerIdFile, enrFile);
     overwriteEnrWithCliArgs(enr, args, logger, bootnode);
+    // If the enr is newly created, its sequence number can be set to 1
+    // It's especially clean for fully configured bootnodes whose enrs never change
+    if (!usePersisted) {
+      enr.seq = BigInt(1);
+    }
     // Re-persist peer-id and enr
     writeFile600Perm(peerIdFile, exportToJSON(peerId));
     writeFile600Perm(enrFile, enr.encodeTxt());

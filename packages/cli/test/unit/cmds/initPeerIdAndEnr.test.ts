@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import tmp from "tmp";
 import {expect} from "chai";
 import {initPeerIdAndEnr} from "../../../src/cmds/beacon/initPeerIdAndEnr.js";
@@ -12,7 +13,7 @@ describe("initPeerIdAndEnr", () => {
   });
 
   afterEach(() => {
-    tmpDir.removeCallback();
+    fs.rmSync(tmpDir.name, {recursive: true});
   });
 
   it("first time should create a new enr and peer id", async () => {
@@ -25,6 +26,9 @@ describe("initPeerIdAndEnr", () => {
     expect((await enr.peerId()).toString(), "enr peer id doesn't equal the returned peer id").to.equal(
       peerId.toString()
     );
+    expect(enr.seq).to.equal(BigInt(1));
+    expect(enr.tcp).to.equal(undefined);
+    expect(enr.tcp6).to.equal(undefined);
   });
 
   it("second time should use ths existing enr and peer id", async () => {
