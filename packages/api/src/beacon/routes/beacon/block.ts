@@ -52,6 +52,26 @@ export enum BroadcastValidation {
   consensusAndEquivocation = "consensus_and_equivocation",
 }
 
+export type BlockResponse<T extends ResponseFormat = "json"> = T extends "ssz"
+  ? ApiClientResponse<{[HttpStatusCode.OK]: Uint8Array}, HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND>
+  : ApiClientResponse<
+      {[HttpStatusCode.OK]: {data: allForks.SignedBeaconBlock}},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
+    >;
+
+export type BlockV2Response<T extends ResponseFormat = "json"> = T extends "ssz"
+  ? ApiClientResponse<{[HttpStatusCode.OK]: Uint8Array}, HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND>
+  : ApiClientResponse<
+      {
+        [HttpStatusCode.OK]: {
+          data: allForks.SignedBeaconBlock;
+          executionOptimistic: ExecutionOptimistic;
+          version: ForkName;
+        };
+      },
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
+    >;
+
 export type Api = {
   /**
    * Get block
@@ -61,16 +81,7 @@ export type Api = {
    * @param blockId Block identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
    */
-  getBlock<T extends ResponseFormat = "json">(
-    blockId: BlockId,
-    format?: T
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: allForks.SignedBeaconBlock}},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND,
-      T
-    >
-  >;
+  getBlock<T extends ResponseFormat = "json">(blockId: BlockId, format?: T): Promise<BlockResponse<T>>;
 
   /**
    * Get block
@@ -78,22 +89,7 @@ export type Api = {
    * @param blockId Block identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
    */
-  getBlockV2<T extends ResponseFormat = "json">(
-    blockId: BlockId,
-    format?: T
-  ): Promise<
-    ApiClientResponse<
-      {
-        [HttpStatusCode.OK]: {
-          data: allForks.SignedBeaconBlock;
-          executionOptimistic: ExecutionOptimistic;
-          version: ForkName;
-        };
-      },
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND,
-      T
-    >
-  >;
+  getBlockV2<T extends ResponseFormat = "json">(blockId: BlockId, format?: T): Promise<BlockV2Response<T>>;
 
   /**
    * Get block attestations

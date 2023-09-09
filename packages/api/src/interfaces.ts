@@ -7,10 +7,10 @@ export type ResponseFormat = "json" | "ssz";
 export type APIClientHandler = (...args: any) => PromiseLike<ApiClientResponse>;
 export type APIServerHandler = (...args: any) => PromiseLike<unknown>;
 
-export type ApiClientSuccessResponse<S extends keyof any, R, T> = {
+export type ApiClientSuccessResponse<S extends keyof any, R> = {
   ok: true;
   status: S;
-  response: T extends "ssz" ? Uint8Array : R;
+  response: R;
   error?: never;
 };
 export type ApiClientErrorResponse<S extends Exclude<HttpStatusCode, HttpSuccessCodes>> = {
@@ -22,9 +22,8 @@ export type ApiClientErrorResponse<S extends Exclude<HttpStatusCode, HttpSuccess
 export type ApiClientResponse<
   S extends Partial<{[K in HttpSuccessCodes]: unknown}> = {[K in HttpSuccessCodes]: unknown},
   E extends Exclude<HttpStatusCode, HttpSuccessCodes> = Exclude<HttpStatusCode, HttpSuccessCodes>,
-  T extends ResponseFormat = "json",
 > =
-  | {[K in keyof S]: ApiClientSuccessResponse<K, S[K], T>}[keyof S]
+  | {[K in keyof S]: ApiClientSuccessResponse<K, S[K]>}[keyof S]
   | {[K in E]: ApiClientErrorResponse<K>}[E]
   | ApiClientErrorResponse<HttpStatusCode.INTERNAL_SERVER_ERROR>;
 
