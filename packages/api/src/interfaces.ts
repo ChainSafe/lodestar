@@ -7,12 +7,7 @@ export type ResponseFormat = "json" | "ssz";
 export type APIClientHandler = (...args: any) => PromiseLike<ApiClientResponse>;
 export type APIServerHandler = (...args: any) => PromiseLike<unknown>;
 
-export type ApiClientSuccessResponse<S extends keyof any, R> = {
-  ok: true;
-  status: S;
-  response: R;
-  error?: never;
-};
+export type ApiClientSuccessResponse<S extends keyof any, T> = {ok: true; status: S; response: T; error?: never};
 export type ApiClientErrorResponse<S extends Exclude<HttpStatusCode, HttpSuccessCodes>> = {
   ok: false;
   status: S;

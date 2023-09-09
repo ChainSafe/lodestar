@@ -246,9 +246,7 @@ export function getBeaconBlockApi({
     async getBlock(blockId, format?: ResponseFormat) {
       const {block} = await resolveBlockId(chain, blockId);
       if (format === "ssz") {
-        // Casting to any otherwise Typescript doesn't like the multi-type return
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
-        return config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block) as any;
+        return config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block);
       }
       return {
         data: block,
@@ -258,9 +256,7 @@ export function getBeaconBlockApi({
     async getBlockV2(blockId, format?: ResponseFormat) {
       const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
       if (format === "ssz") {
-        // Casting to any otherwise Typescript doesn't like the multi-type return
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
-        return config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block) as any;
+        return config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block);
       }
       return {
         executionOptimistic,
