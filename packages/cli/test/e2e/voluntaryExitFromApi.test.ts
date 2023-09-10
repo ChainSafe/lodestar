@@ -49,17 +49,8 @@ describe("voluntary exit from api", function () {
       }
     });
 
-    // To cleanup the event stream connection
-    const httpClientController = new AbortController();
-
-    const beaconClient = getClient(
-      {baseUrl: `http://127.0.0.1:${beaconPort}`, getAbortSignal: () => httpClientController.signal},
-      {config}
-    ).beacon;
-    const keymanagerClient = getKeymanagerClient(
-      {baseUrl: `http://127.0.0.1:${keymanagerPort}`, getAbortSignal: () => httpClientController.signal},
-      {config}
-    );
+    const beaconClient = getClient({baseUrl: `http://127.0.0.1:${beaconPort}`}, {config}).beacon;
+    const keymanagerClient = getKeymanagerClient({baseUrl: `http://127.0.0.1:${keymanagerPort}`}, {config});
 
     // Wait for beacon node API to be available + genesis
     await retry(
@@ -102,8 +93,5 @@ describe("voluntary exit from api", function () {
       },
       {retryDelay: 1000, retries: 20}
     );
-
-    // Disconnect the event stream for the client
-    httpClientController.abort();
   });
 });
