@@ -1,6 +1,5 @@
 import path from "node:path";
 import {expect} from "chai";
-import {rimraf} from "rimraf";
 import {ApiError, getClient} from "@lodestar/api";
 import {getClient as getKeymanagerClient} from "@lodestar/api/keymanager";
 import {config} from "@lodestar/config/default";
@@ -14,12 +13,6 @@ describe("voluntary exit from api", function () {
   const testContext = getMochaContext(this);
   this.timeout("60s");
 
-  const dataDir = path.join(testFilesDir, "voluntary-exit-api-test");
-
-  before("Clean dataDir", () => {
-    rimraf.sync(dataDir);
-  });
-
   it("Perform a voluntary exit", async () => {
     // Start dev node with keymanager
     const keymanagerPort = 38012;
@@ -30,7 +23,7 @@ describe("voluntary exit from api", function () {
       [
         // ⏎
         "dev",
-        `--dataDir=${dataDir}`,
+        `--dataDir=${path.join(testFilesDir, "voluntary-exit-api-test")}`,
         "--genesisValidators=8",
         "--startValidators=0..7",
         "--rest",
