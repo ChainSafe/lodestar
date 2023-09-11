@@ -8,6 +8,8 @@ import {
   getAttestationDataSigningRoot,
   createSingleSignatureSetFromComponents,
   SingleSignatureSet,
+  EpochCacheError,
+  EpochCacheErrorCode,
 } from "@lodestar/state-transition";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC} from "../../constants/index.js";
@@ -202,18 +204,28 @@ export async function validateAttestation(
   subnet: number | null,
   prioritizeBls = false
 ): Promise<AttestationValidationResult> {
-  const step0Result = await validateGossipAttestationNoSignatureCheck(fork, chain, attestationOrBytes, subnet);
-  const {attestation, signatureSet, validatorIndex} = step0Result;
-  const isValid = await chain.bls.verifySignatureSets([signatureSet], {batchable: true, priority: prioritizeBls});
+  try {
+    const step0Result = await validateGossipAttestationNoSignatureCheck(fork, chain, attestationOrBytes, subnet);
+    const {attestation, signatureSet, validatorIndex} = step0Result;
+    const isValid = await chain.bls.verifySignatureSets([signatureSet], {batchable: true, priority: prioritizeBls});
 
-  if (isValid) {
-    const targetEpoch = attestation.data.target.epoch;
-    chain.seenAttesters.add(targetEpoch, validatorIndex);
-    return step0Result;
-  } else {
-    throw new AttestationError(GossipAction.IGNORE, {
-      code: AttestationErrorCode.INVALID_SIGNATURE,
-    });
+    if (isValid) {
+      const targetEpoch = attestation.data.target.epoch;
+      chain.seenAttesters.add(targetEpoch, validatorIndex);
+      return step0Result;
+    } else {
+      throw new AttestationError(GossipAction.IGNORE, {
+        code: AttestationErrorCode.INVALID_SIGNATURE,
+      });
+    }
+  } catch (err) {
+    if (err instanceof EpochCacheError && err.type.code === EpochCacheErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE) {
+      throw new AttestationError(GossipAction.IGNORE, {
+        code: AttestationErrorCode.BAD_TARGET_EPOCH,
+      });
+    } else {
+      throw err;
+    }
   }
 }
 
