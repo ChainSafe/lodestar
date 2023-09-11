@@ -8,7 +8,17 @@ import {createNoise} from "../../../../src/network/libp2p/noise.js";
 describe("network / noise / sendData", () => {
   const numberOfMessages = 1000;
 
-  for (const messageLength of [2 ** 8, 2 ** 9, 2 ** 10, 2 ** 11, 2 ** 12, 2 ** 14, 2 ** 16]) {
+  for (const messageLength of [
+    //
+    2 ** 8,
+    2 ** 9,
+    2 ** 10,
+    1200,
+    2 ** 11,
+    2 ** 12,
+    2 ** 14,
+    2 ** 16,
+  ]) {
     itBench({
       id: `send data - ${numberOfMessages} ${messageLength}B messages`,
       beforeEach: async () => {
