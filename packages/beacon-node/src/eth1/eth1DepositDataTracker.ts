@@ -164,6 +164,7 @@ export class Eth1DepositDataTracker {
 
     while (!this.signal.aborted) {
       lastRunMs = Date.now();
+      const oldState = this.eth1Provider.getState();
 
       try {
         const hasCaughtUp = await this.update();
@@ -179,7 +180,8 @@ export class Eth1DepositDataTracker {
         if (e instanceof HttpRpcError && e.status === 429) {
           this.logger.debug("Eth1 provider rate limited", {}, e);
           await sleep(RATE_LIMITED_WAIT_MS, this.signal);
-        } else if (!isErrorAborted(e)) {
+          // only log error if state switched from online to some other state
+        } else if (!isErrorAborted(e) && this.eth1Provider.getState() !== oldState) {
           this.logger.error("Error updating eth1 chain cache", {}, e as Error);
           await sleep(MIN_WAIT_ON_ERROR_MS, this.signal);
         }

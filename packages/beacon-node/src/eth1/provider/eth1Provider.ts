@@ -1,15 +1,24 @@
 import {toHexString} from "@chainsafe/ssz";
 import {phase0} from "@lodestar/types";
 import {ChainConfig} from "@lodestar/config";
-import {fromHex} from "@lodestar/utils";
+import {fromHex, isErrorAborted} from "@lodestar/utils";
 
+import {FetchError, isFetchError} from "@lodestar/api";
 import {linspace} from "../../util/numpy.js";
 import {depositEventTopics, parseDepositLog} from "../utils/depositContract.js";
-import {Eth1Block, IEth1Provider} from "../interface.js";
+import {Eth1Block, Eth1ProviderState, IEth1Provider} from "../interface.js";
 import {DEFAULT_PROVIDER_URLS, Eth1Options} from "../options.js";
 import {isValidAddress} from "../../util/address.js";
 import {EthJsonRpcBlockRaw} from "../interface.js";
-import {JsonRpcHttpClient, JsonRpcHttpClientMetrics, ReqOpts} from "./jsonRpcHttpClient.js";
+import {HTTP_CONNECTION_ERROR_CODES, HTTP_FATAL_ERROR_CODES} from "../../execution/engine/utils.js";
+import {
+  ErrorJsonRpcResponse,
+  HttpRpcError,
+  JsonRpcHttpClient,
+  JsonRpcHttpClientEvent,
+  JsonRpcHttpClientMetrics,
+  ReqOpts,
+} from "./jsonRpcHttpClient.js";
 import {isJsonRpcTruncatedError, quantityToNum, numToQuantity, dataToBytes} from "./utils.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -46,6 +55,8 @@ export class Eth1Provider implements IEth1Provider {
   readonly deployBlock: number;
   private readonly depositContractAddress: string;
   private readonly rpc: JsonRpcHttpClient;
+  // The default state is ONLINE, it will be updated to offline if we receive a http error
+  private state: Eth1ProviderState = Eth1ProviderState.ONLINE;
 
   constructor(
     config: Pick<ChainConfig, "DEPOSIT_CONTRACT_ADDRESS">,
@@ -62,6 +73,36 @@ export class Eth1Provider implements IEth1Provider {
       jwtSecret: opts.jwtSecretHex ? fromHex(opts.jwtSecretHex) : undefined,
       metrics: metrics,
     });
+
+    this.rpc.emitter.on(JsonRpcHttpClientEvent.RESPONSE, () => {
+      this.state = Eth1ProviderState.ONLINE;
+    });
+
+    this.rpc.emitter.on(JsonRpcHttpClientEvent.ERROR, ({error}) => {
+      if (isErrorAborted(error)) {
+        this.state = Eth1ProviderState.ONLINE;
+        return;
+      }
+
+      if ((error as unknown) instanceof HttpRpcError || (error as unknown) instanceof ErrorJsonRpcResponse) {
+        this.state = Eth1ProviderState.ERROR;
+        return;
+      }
+
+      if (error && isFetchError(error) && HTTP_FATAL_ERROR_CODES.includes((error as FetchError).code)) {
+        this.state = Eth1ProviderState.OFFLINE;
+        return;
+      }
+
+      if (error && isFetchError(error) && HTTP_CONNECTION_ERROR_CODES.includes((error as FetchError).code)) {
+        this.state = Eth1ProviderState.AUTH_FAILED;
+        return;
+      }
+    });
+  }
+
+  getState(): Eth1ProviderState {
+    return this.state;
   }
 
   async validateContract(): Promise<void> {

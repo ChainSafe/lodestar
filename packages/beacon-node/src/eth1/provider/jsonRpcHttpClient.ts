@@ -1,8 +1,33 @@
+import {EventEmitter} from "events";
+import StrictEventEmitter from "strict-event-emitter-types";
 import {fetch} from "@lodestar/api";
 import {ErrorAborted, TimeoutError, isValidHttpUrl, retry} from "@lodestar/utils";
 import {IGauge, IHistogram} from "../../metrics/interface.js";
 import {IJson, RpcPayload} from "../interface.js";
 import {encodeJwtToken} from "./jwt.js";
+
+export const enum JsonRpcHttpClientEvent {
+  /**
+   * When registered this event will be emitted before the client throws an error.
+   * This is useful for defining the error behavior in a common place at the time of declaration of the client.
+   */
+  ERROR = "jsonRpcHttpClient:error",
+  /**
+   * When registered this event will be emitted before the client returns the valid response to the caller.
+   * This is useful for defining some common behavior for each request/response cycle
+   */
+  RESPONSE = "jsonRpcHttpClient:response",
+}
+
+export type JsonRpcHttpClientEvents = {
+  [JsonRpcHttpClientEvent.ERROR]: (event: {payload?: unknown; error: Error}) => void;
+  [JsonRpcHttpClientEvent.RESPONSE]: (event: {payload?: unknown; response: unknown}) => void;
+};
+
+export class JsonRpcHttpClientEventEmitter extends (EventEmitter as {
+  new (): StrictEventEmitter<EventEmitter, JsonRpcHttpClientEvents>;
+}) {}
+
 /**
  * Limits the amount of response text printed with RPC or parsing errors
  */
@@ -46,6 +71,7 @@ export interface IJsonRpcHttpClient {
   fetch<R, P = IJson[]>(payload: RpcPayload<P>, opts?: ReqOpts): Promise<R>;
   fetchWithRetries<R, P = IJson[]>(payload: RpcPayload<P>, opts?: ReqOpts): Promise<R>;
   fetchBatch<R>(rpcPayloadArr: RpcPayload[], opts?: ReqOpts): Promise<R[]>;
+  emitter: JsonRpcHttpClientEventEmitter;
 }
 
 export class JsonRpcHttpClient implements IJsonRpcHttpClient {
@@ -58,6 +84,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
    */
   private readonly jwtSecret?: Uint8Array;
   private readonly metrics: JsonRpcHttpClientMetrics | null;
+  readonly emitter = new JsonRpcHttpClientEventEmitter();
 
   constructor(
     private readonly urls: string[],
@@ -107,31 +134,38 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
    * Perform RPC request
    */
   async fetch<R, P = IJson[]>(payload: RpcPayload<P>, opts?: ReqOpts): Promise<R> {
-    const res: RpcResponse<R> = await this.fetchJson({jsonrpc: "2.0", id: this.id++, ...payload}, opts);
-    return parseRpcResponse(res, payload);
+    return this.wrapWithEvents(
+      async () => {
+        const res: RpcResponse<R> = await this.fetchJson({jsonrpc: "2.0", id: this.id++, ...payload}, opts);
+        return parseRpcResponse(res, payload);
+      },
+      {payload}
+    );
   }
 
   /**
    * Perform RPC request with retry
    */
   async fetchWithRetries<R, P = IJson[]>(payload: RpcPayload<P>, opts?: ReqOpts): Promise<R> {
-    const routeId = opts?.routeId ?? "unknown";
+    return this.wrapWithEvents(async () => {
+      const routeId = opts?.routeId ?? "unknown";
 
-    const res = await retry<RpcResponse<R>>(
-      async (attempt) => {
-        /** If this is a retry, increment the retry counter for this method */
-        if (attempt > 1) {
-          this.opts?.metrics?.retryCount.inc({routeId});
+      const res = await retry<RpcResponse<R>>(
+        async (attempt) => {
+          /** If this is a retry, increment the retry counter for this method */
+          if (attempt > 1) {
+            this.opts?.metrics?.retryCount.inc({routeId});
+          }
+          return this.fetchJson({jsonrpc: "2.0", id: this.id++, ...payload}, opts);
+        },
+        {
+          retries: opts?.retryAttempts ?? this.opts?.retryAttempts ?? 1,
+          retryDelay: opts?.retryDelay ?? this.opts?.retryDelay ?? 0,
+          shouldRetry: opts?.shouldRetry,
         }
-        return this.fetchJson({jsonrpc: "2.0", id: this.id++, ...payload}, opts);
-      },
-      {
-        retries: opts?.retryAttempts ?? this.opts?.retryAttempts ?? 1,
-        retryDelay: opts?.retryDelay ?? this.opts?.retryDelay ?? 0,
-        shouldRetry: opts?.shouldRetry,
-      }
-    );
-    return parseRpcResponse(res, payload);
+      );
+      return parseRpcResponse(res, payload);
+    }, payload);
   }
 
   /**
@@ -139,26 +173,41 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
    * Type-wise assumes all requests results have the same type
    */
   async fetchBatch<R>(rpcPayloadArr: RpcPayload[], opts?: ReqOpts): Promise<R[]> {
-    if (rpcPayloadArr.length === 0) return [];
+    return this.wrapWithEvents(async () => {
+      if (rpcPayloadArr.length === 0) return [];
 
-    const resArr: RpcResponse<R>[] = await this.fetchJson(
-      rpcPayloadArr.map(({method, params}) => ({jsonrpc: "2.0", method, params, id: this.id++})),
-      opts
-    );
+      const resArr: RpcResponse<R>[] = await this.fetchJson(
+        rpcPayloadArr.map(({method, params}) => ({jsonrpc: "2.0", method, params, id: this.id++})),
+        opts
+      );
 
-    if (!Array.isArray(resArr)) {
-      // Nethermind may reply to batch request with a JSON RPC error
-      if ((resArr as RpcResponseError).error !== undefined) {
-        throw new ErrorJsonRpcResponse(resArr as RpcResponseError, "batch");
+      if (!Array.isArray(resArr)) {
+        // Nethermind may reply to batch request with a JSON RPC error
+        if ((resArr as RpcResponseError).error !== undefined) {
+          throw new ErrorJsonRpcResponse(resArr as RpcResponseError, "batch");
+        }
+
+        throw Error(`expected array of results, got ${resArr} - ${jsonSerializeTry(resArr)}`);
       }
 
-      throw Error(`expected array of results, got ${resArr} - ${jsonSerializeTry(resArr)}`);
-    }
+      return resArr.map((res, i) => parseRpcResponse(res, rpcPayloadArr[i]));
+    }, rpcPayloadArr);
+  }
 
-    return resArr.map((res, i) => parseRpcResponse(res, rpcPayloadArr[i]));
+  private async wrapWithEvents<T>(func: () => Promise<T>, payload?: unknown): Promise<T> {
+    try {
+      const response = await func();
+      this.emitter.emit(JsonRpcHttpClientEvent.RESPONSE, {payload, response});
+      return response;
+    } catch (error) {
+      this.emitter.emit(JsonRpcHttpClientEvent.ERROR, {payload, error: error as Error});
+      throw error;
+    }
   }
 
   private async fetchJson<R, T = unknown>(json: T, opts?: ReqOpts): Promise<R> {
+    if (this.urls.length === 0) throw Error("No url provided");
+
     const routeId = opts?.routeId ?? "unknown";
     let lastError: Error | null = null;
 
@@ -170,21 +219,13 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
       try {
         return await this.fetchJsonOneUrl<R, T>(this.urls[i], json, opts);
       } catch (e) {
-        if (this.opts?.shouldNotFallback?.(e as Error)) {
-          throw e;
-        }
-
         lastError = e as Error;
+        if (this.opts?.shouldNotFallback?.(e as Error)) {
+          break;
+        }
       }
     }
-
-    if (lastError !== null) {
-      throw lastError;
-    } else if (this.urls.length === 0) {
-      throw Error("No url provided");
-    } else {
-      throw Error("Unknown error");
-    }
+    throw lastError ?? Error("Unknown error");
   }
 
   /**
