@@ -66,7 +66,7 @@
   "dependencies": {
     "@chainsafe/bls": "7.1.1",
     "@chainsafe/persistent-merkle-tree": "^0.5.0",
-    "@chainsafe/ssz": "^0.10.2",
+    "@chainsafe/ssz": "^0.12.0",
     "@lodestar/api": "^1.11.1",
     "@lodestar/config": "^1.11.1",
     "@lodestar/params": "^1.11.1",

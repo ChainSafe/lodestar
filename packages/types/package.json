@@ -67,7 +67,7 @@
   },
   "types": "lib/index.d.ts",
   "dependencies": {
-    "@chainsafe/ssz": "^0.10.2",
+    "@chainsafe/ssz": "^0.12.0",
     "@lodestar/params": "^1.11.1"
   },
   "keywords": [
