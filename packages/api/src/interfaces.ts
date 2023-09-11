@@ -3,6 +3,7 @@ import {Resolves} from "./utils/types.js";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+export type ResponseFormat = "json" | "ssz";
 export type APIClientHandler = (...args: any) => PromiseLike<ApiClientResponse>;
 export type APIServerHandler = (...args: any) => PromiseLike<unknown>;
 

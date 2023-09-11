@@ -18,7 +18,7 @@ import {
   ContainerData,
 } from "../../../utils/index.js";
 import {HttpStatusCode} from "../../../utils/client/httpStatusCode.js";
-import {ApiClientResponse} from "../../../interfaces.js";
+import {ApiClientResponse, ResponseFormat} from "../../../interfaces.js";
 import {
   SignedBlockContents,
   SignedBlindedBlockContents,
@@ -31,6 +31,7 @@ import {
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
 export type BlockId = RootHex | Slot | "head" | "genesis" | "finalized";
+export const mimeTypeSSZ = "application/octet-stream";
 
 /**
  * True if the response references an unverified execution payload. Optimistic information may be invalidated at
@@ -51,6 +52,26 @@ export enum BroadcastValidation {
   consensusAndEquivocation = "consensus_and_equivocation",
 }
 
+export type BlockResponse<T extends ResponseFormat = "json"> = T extends "ssz"
+  ? ApiClientResponse<{[HttpStatusCode.OK]: Uint8Array}, HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND>
+  : ApiClientResponse<
+      {[HttpStatusCode.OK]: {data: allForks.SignedBeaconBlock}},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
+    >;
+
+export type BlockV2Response<T extends ResponseFormat = "json"> = T extends "ssz"
+  ? ApiClientResponse<{[HttpStatusCode.OK]: Uint8Array}, HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND>
+  : ApiClientResponse<
+      {
+        [HttpStatusCode.OK]: {
+          data: allForks.SignedBeaconBlock;
+          executionOptimistic: ExecutionOptimistic;
+          version: ForkName;
+        };
+      },
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
+    >;
+
 export type Api = {
   /**
    * Get block
@@ -60,7 +81,7 @@ export type Api = {
    * @param blockId Block identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
    */
-  getBlock(blockId: BlockId): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: allForks.SignedBeaconBlock}}>>;
+  getBlock<T extends ResponseFormat = "json">(blockId: BlockId, format?: T): Promise<BlockResponse<T>>;
 
   /**
    * Get block
@@ -68,18 +89,7 @@ export type Api = {
    * @param blockId Block identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
    */
-  getBlockV2(blockId: BlockId): Promise<
-    ApiClientResponse<
-      {
-        [HttpStatusCode.OK]: {
-          data: allForks.SignedBeaconBlock;
-          executionOptimistic: ExecutionOptimistic;
-          version: ForkName;
-        };
-      },
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
-    >
-  >;
+  getBlockV2<T extends ResponseFormat = "json">(blockId: BlockId, format?: T): Promise<BlockV2Response<T>>;
 
   /**
    * Get block attestations
@@ -246,11 +256,12 @@ export const routesData: RoutesData<Api> = {
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
+type GetBlockReq = {params: {block_id: string}; headers: {accept?: string}};
 type BlockIdOnlyReq = {params: {block_id: string}};
 
 export type ReqTypes = {
-  getBlock: BlockIdOnlyReq;
-  getBlockV2: BlockIdOnlyReq;
+  getBlock: GetBlockReq;
+  getBlockV2: GetBlockReq;
   getBlockAttestations: BlockIdOnlyReq;
   getBlockHeader: BlockIdOnlyReq;
   getBlockHeaders: {query: {slot?: number; parent_root?: string}};
@@ -263,9 +274,18 @@ export type ReqTypes = {
 };
 
 export function getReqSerializers(config: ChainForkConfig): ReqSerializers<Api, ReqTypes> {
-  const blockIdOnlyReq: ReqSerializer<Api["getBlock"], BlockIdOnlyReq> = {
+  const blockIdOnlyReq: ReqSerializer<Api["getBlockHeader"], BlockIdOnlyReq> = {
     writeReq: (block_id) => ({params: {block_id: String(block_id)}}),
     parseReq: ({params}) => [params.block_id],
+    schema: {params: {block_id: Schema.StringRequired}},
+  };
+
+  const getBlockReq: ReqSerializer<Api["getBlock"], GetBlockReq> = {
+    writeReq: (block_id, format) => ({
+      params: {block_id: String(block_id)},
+      headers: {accept: format === "ssz" ? mimeTypeSSZ : "application/json"},
+    }),
+    parseReq: ({params, headers}) => [params.block_id, headers.accept === mimeTypeSSZ ? "ssz" : "json"],
     schema: {params: {block_id: Schema.StringRequired}},
   };
 
@@ -304,8 +324,8 @@ export function getReqSerializers(config: ChainForkConfig): ReqSerializers<Api, 
     };
 
   return {
-    getBlock: blockIdOnlyReq,
-    getBlockV2: blockIdOnlyReq,
+    getBlock: getBlockReq,
+    getBlockV2: getBlockReq,
     getBlockAttestations: blockIdOnlyReq,
     getBlockHeader: blockIdOnlyReq,
     getBlockHeaders: {
