@@ -5,7 +5,7 @@ import {sleep} from "@lodestar/utils";
 import {IEth1Provider} from "../../../src/index.js";
 import {ZERO_HASH} from "../../../src/constants/index.js";
 import {Eth1MergeBlockTracker, StatusCode, toPowBlock} from "../../../src/eth1/eth1MergeBlockTracker.js";
-import {EthJsonRpcBlockRaw} from "../../../src/eth1/interface.js";
+import {Eth1ProviderState, EthJsonRpcBlockRaw} from "../../../src/eth1/interface.js";
 import {testLogger} from "../../utils/logger.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -57,6 +57,7 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
       validateContract: async (): Promise<any> => {
         throw Error("Not implemented");
       },
+      getState: () => Eth1ProviderState.ONLINE,
     };
 
     const eth1MergeBlockTracker = new Eth1MergeBlockTracker(
@@ -133,6 +134,7 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
       validateContract: async (): Promise<any> => {
         throw Error("Not implemented");
       },
+      getState: () => Eth1ProviderState.ONLINE,
     };
 
     await runFindMergeBlockTest(eth1Provider, blocks[blocks.length - 1]);
@@ -216,6 +218,7 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
       validateContract: async (): Promise<any> => {
         throw Error("Not implemented");
       },
+      getState: () => Eth1ProviderState.ONLINE,
     };
   }
 

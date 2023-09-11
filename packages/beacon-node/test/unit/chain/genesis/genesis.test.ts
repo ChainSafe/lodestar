@@ -10,7 +10,7 @@ import {ErrorAborted} from "@lodestar/utils";
 import {GenesisBuilder} from "../../../../src/chain/genesis/genesis.js";
 import {testLogger} from "../../../utils/logger.js";
 import {ZERO_HASH_HEX} from "../../../../src/constants/index.js";
-import {EthJsonRpcBlockRaw, IEth1Provider} from "../../../../src/eth1/interface.js";
+import {Eth1ProviderState, EthJsonRpcBlockRaw, IEth1Provider} from "../../../../src/eth1/interface.js";
 
 describe("genesis builder", function () {
   const logger = testLogger();
@@ -62,6 +62,7 @@ describe("genesis builder", function () {
       validateContract: async () => {
         return;
       },
+      getState: () => Eth1ProviderState.ONLINE,
       ...eth1Provider,
     };
   }
