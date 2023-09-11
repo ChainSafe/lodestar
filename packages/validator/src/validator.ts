@@ -1,5 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
-import {BLSPubkey, ssz} from "@lodestar/types";
+import {BLSPubkey, phase0, ssz} from "@lodestar/types";
 import {createBeaconConfig, BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {Genesis} from "@lodestar/types/phase0";
 import {Logger} from "@lodestar/utils";
@@ -245,6 +245,17 @@ export class Validator {
    * Perform a voluntary exit for the given validator by its key.
    */
   async voluntaryExit(publicKey: string, exitEpoch?: number): Promise<void> {
+    const signedVoluntaryExit = await this.signVoluntaryExit(publicKey, exitEpoch);
+
+    ApiError.assert(await this.api.beacon.submitPoolVoluntaryExit(signedVoluntaryExit));
+
+    this.logger.info(`Submitted voluntary exit for ${publicKey} to the network`);
+  }
+
+  /**
+   * Create a signed voluntary exit message for the given validator by its key.
+   */
+  async signVoluntaryExit(publicKey: string, exitEpoch?: number): Promise<phase0.SignedVoluntaryExit> {
     const res = await this.api.beacon.getStateValidators("head", {id: [publicKey]});
     ApiError.assert(res, "Can not fetch state validators from beacon node");
 
@@ -258,10 +269,7 @@ export class Validator {
       exitEpoch = computeEpochAtSlot(getCurrentSlot(this.config, this.clock.genesisTime));
     }
 
-    const signedVoluntaryExit = await this.validatorStore.signVoluntaryExit(publicKey, stateValidator.index, exitEpoch);
-    ApiError.assert(await this.api.beacon.submitPoolVoluntaryExit(signedVoluntaryExit));
-
-    this.logger.info(`Submitted voluntary exit for ${publicKey} to the network`);
+    return this.validatorStore.signVoluntaryExit(publicKey, stateValidator.index, exitEpoch);
   }
 
   private async fetchBeaconHealth(): Promise<BeaconHealth> {
