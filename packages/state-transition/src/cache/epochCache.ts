@@ -206,6 +206,7 @@ export class EpochCache {
   // TODO: Helper stats
   epoch: Epoch;
   syncPeriod: SyncPeriod;
+  isAfterEIP6110: boolean;
 
   constructor(data: {
     config: BeaconConfig;
@@ -232,6 +233,7 @@ export class EpochCache {
     nextSyncCommitteeIndexed: SyncCommitteeCache;
     epoch: Epoch;
     syncPeriod: SyncPeriod;
+    isAfterEIP6110: boolean;
   }) {
     this.config = data.config;
     this.globalPubkey2index = data.globalPubkey2index;
@@ -257,6 +259,7 @@ export class EpochCache {
     this.nextSyncCommitteeIndexed = data.nextSyncCommitteeIndexed;
     this.epoch = data.epoch;
     this.syncPeriod = data.syncPeriod;
+    this.isAfterEIP6110 = data.isAfterEIP6110;
   }
 
   /**
@@ -436,6 +439,7 @@ export class EpochCache {
       nextSyncCommitteeIndexed,
       epoch: currentEpoch,
       syncPeriod: computeSyncPeriodAtEpoch(currentEpoch),
+      isAfterEIP6110: currentEpoch >= (config.EIP6110_FORK_EPOCH ?? Infinity),
     });
   }
 
@@ -477,6 +481,7 @@ export class EpochCache {
       nextSyncCommitteeIndexed: this.nextSyncCommitteeIndexed,
       epoch: this.epoch,
       syncPeriod: this.syncPeriod,
+      isAfterEIP6110: this.isAfterEIP6110,
     });
   }
 
@@ -503,18 +508,6 @@ export class EpochCache {
       epochTransitionCache.nextEpochShufflingActiveValidatorIndices,
       nextEpoch
     );
-
-    // To populate finalized cache and prune unfinalized cache with validators that just entered the activation queue
-    const expectedActivationEligibilityEpoch = prevEpoch + 1;
-    const validators = state.validators;
-    for (const index of epochTransitionCache.indicesEligibleForActivationQueue) {
-      const validator = validators.getReadonly(index);
-      if (validator.activationEpoch == expectedActivationEligibilityEpoch) {
-        this.addFinalizedPubkey(validator.pubkey, index);
-      } else {
-        break;
-      }
-    }
 
     // Roll current proposers into previous proposers for metrics
     this.proposersPrevEpoch = this.proposers;
@@ -568,6 +561,21 @@ export class EpochCache {
     // ```
     this.epoch = computeEpochAtSlot(state.slot);
     this.syncPeriod = computeSyncPeriodAtEpoch(this.epoch);
+    this.isAfterEIP6110 = this.epoch >= (this.config.EIP6110_FORK_EPOCH ?? Infinity);
+
+    // To populate finalized cache and prune unfinalized cache with validators that just entered the activation queue
+    if (this.isAfterEIP6110) {
+      const expectedActivationEligibilityEpoch = prevEpoch + 1;
+      const validators = state.validators;
+      for (const index of epochTransitionCache.indicesEligibleForActivationQueue) {
+        const validator = validators.getReadonly(index);
+        if (validator.activationEpoch == expectedActivationEligibilityEpoch) {
+          this.addFinalizedPubkey(validator.pubkey, index);
+        } else {
+          break;
+        }
+      }
+    }
   }
 
   beforeEpochTransition(): void {
@@ -758,7 +766,10 @@ export class EpochCache {
   }
 
   getValidatorIndex(pubkey: Uint8Array | PubkeyHex): ValidatorIndex | undefined {
-    return this.globalPubkey2index.get(pubkey) || this.unfinalizedPubkey2index.get(toMemoryEfficientHexStr(pubkey));
+    if (this.isAfterEIP6110) {
+      return this.globalPubkey2index.get(pubkey) || this.unfinalizedPubkey2index.get(toMemoryEfficientHexStr(pubkey));
+    }
+    return this.globalPubkey2index.get(pubkey);
   }
 
   /**
@@ -766,8 +777,13 @@ export class EpochCache {
    * Add unfinalized pubkeys
    *
    */
-  addPubkey(index: ValidatorIndex, pubkey: Uint8Array): void {
-    this.unfinalizedPubkey2index.set(toMemoryEfficientHexStr(pubkey), index);
+  addPubkey(pubkey: Uint8Array, index: ValidatorIndex): void {
+    if (this.isAfterEIP6110) {
+      this.unfinalizedPubkey2index.set(toMemoryEfficientHexStr(pubkey), index);
+    } else {
+      this.globalPubkey2index.set(pubkey, index);
+      this.globalIndex2pubkey[index] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian); 
+    }
   }
 
   /**
@@ -776,10 +792,18 @@ export class EpochCache {
    *
    */
   addFinalizedPubkey(pubkey: Uint8Array, index: ValidatorIndex): void {
+    if (!this.isAfterEIP6110) {
+      throw new Error("addFInalizedPubkey is not available pre EIP-6110")
+    }
+
+    if (this.globalPubkey2index.get(pubkey)) {
+      return; // Repeated insert. Should not happen except 6110 activation
+    }
+
     this.globalPubkey2index.set(pubkey, index);
     this.globalIndex2pubkey[index] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian);
 
-    this.unfinalizedPubkey2index.delete(toMemoryEfficientHexStr(pubkey));
+    this.unfinalizedPubkey2index = this.unfinalizedPubkey2index.delete(toMemoryEfficientHexStr(pubkey));
   }
 
   getShufflingAtSlot(slot: Slot): EpochShuffling {

@@ -113,7 +113,7 @@ function addValidatorToRegistry(fork: ForkSeq, state: CachedBeaconStateAllForks,
     epochCtx.effectiveBalanceIncrementsSet(validatorIndex, effectiveBalance);
 
     // now that there is a new validator, update the epoch context with the new pubkey
-    epochCtx.addPubkey(validatorIndex, pubkey);
+    epochCtx.addPubkey(pubkey, validatorIndex);
 
     // Only after altair:
     if (fork >= ForkSeq.altair) {
