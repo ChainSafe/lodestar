@@ -206,6 +206,11 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
       help: "Total count of instances the attester duties dependant root changed",
     }),
 
+    attesterDutiesNextSlot: register.gauge({
+      name: "vc_attestation_duty_slot",
+      help: "Slot of next scheduled attestation duty",
+    }),
+
     // BlockProposingService
 
     blocksProduced: register.gauge({

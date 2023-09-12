@@ -63,12 +63,25 @@ export class AttestationDutiesService {
 
     if (metrics) {
       metrics.attesterDutiesCount.addCollect(() => {
+        const currentSlot = this.clock.getCurrentSlot();
         let duties = 0;
-        for (const attDutiesAtEpoch of this.dutiesByIndexByEpoch.values()) {
+        let nextDutySlot = null;
+        for (const [epoch, attDutiesAtEpoch] of this.dutiesByIndexByEpoch.entries()) {
           duties += attDutiesAtEpoch.dutiesByIndex.size;
+
+          // Historical epochs can be skipped when determining next duty slot
+          if (epoch < this.clock.currentEpoch) continue;
+
+          for (const {duty} of attDutiesAtEpoch.dutiesByIndex.values()) {
+            // Set next duty slot to the closest future slot found in all duties
+            if (duty.slot > currentSlot && (nextDutySlot === null || duty.slot < nextDutySlot)) {
+              nextDutySlot = duty.slot;
+            }
+          }
         }
         metrics.attesterDutiesCount.set(duties);
         metrics.attesterDutiesEpochCount.set(this.dutiesByIndexByEpoch.size);
+        if (nextDutySlot !== null) metrics.attesterDutiesNextSlot.set(nextDutySlot);
       });
     }
   }
