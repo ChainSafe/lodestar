@@ -89,13 +89,30 @@ function getBlsToExecutionChangeOffset(blockBytes: DataView): number {
     BEACON_BLOCK_COMPENSATION_LENGTH
   );
 }
+function setBlsToExecutionChangeOffset(blockBytes: DataView, newOffset: number): void {
+  blockBytes.setUint32(
+    LOCATION_OF_BLS_TO_EXECUTION_CHANGE_OFFSET +
+      SIGNED_BEACON_BLOCK_COMPENSATION_LENGTH +
+      BEACON_BLOCK_COMPENSATION_LENGTH,
+    newOffset,
+    true
+  );
+}
 
 const LOCATION_OF_BLOB_KZG_COMMITMENTS_OFFSET = LOCATION_OF_BLS_TO_EXECUTION_CHANGE_OFFSET + VARIABLE_FIELD_OFFSET;
 function getBlobKzgCommitmentsOffset(blockBytes: DataView): number {
   return getOffsetWithinBeaconBlockBody(blockBytes, LOCATION_OF_BLOB_KZG_COMMITMENTS_OFFSET);
 }
+function setBlobKzgCommitmentsOffset(blockBytes: DataView, newOffset: number): void {
+  blockBytes.setUint32(
+    LOCATION_OF_BLOB_KZG_COMMITMENTS_OFFSET +
+      SIGNED_BEACON_BLOCK_COMPENSATION_LENGTH +
+      BEACON_BLOCK_COMPENSATION_LENGTH,
+    newOffset,
+    true
+  );
+}
 
-const BEACON_BLOCK_BODY_COMPENSATION_LENGTH = LOCATION_OF_BLOB_KZG_COMMITMENTS_OFFSET + VARIABLE_FIELD_OFFSET;
 /**
  * class ExecutionPayload(Container) or class ExecutionPayloadHeader(Container)
  *     parentHash:                  [fixed -  32 bytes]
@@ -264,7 +281,7 @@ export function blindedOrFullSignedBlockToBlinded(
     return block;
   }
 
-  return {
+  const blinded = {
     signature: block.signature,
     message: {
       ...block.message,
@@ -280,11 +297,25 @@ export function blindedOrFullSignedBlockToBlinded(
         syncAggregate: (block.message.body as bellatrix.BeaconBlockBody).syncAggregate,
         executionPayloadHeader: executionPayloadToPayloadHeader(
           forkSeq,
-          (block.message.body as bellatrix.BeaconBlockBody).executionPayload
+          (block.message.body as deneb.BeaconBlockBody).executionPayload
         ),
       },
     },
   };
+
+  if (forkSeq >= ForkSeq.capella) {
+    (blinded as capella.SignedBlindedBeaconBlock).message.body.blsToExecutionChanges = (
+      block as capella.SignedBeaconBlock
+    ).message.body.blsToExecutionChanges;
+  }
+
+  if (forkSeq >= ForkSeq.deneb) {
+    (blinded as deneb.SignedBlindedBeaconBlock).message.body.blobKzgCommitments = (
+      block as deneb.SignedBeaconBlock
+    ).message.body.blobKzgCommitments;
+  }
+
+  return blinded;
 }
 
 function executionPayloadHeaderToPayload(
@@ -374,19 +405,24 @@ export function blindedOrFullSignedBlockToBlindedBytes(
 
   // take apart the block to get the offsets
   const dv = new DataView(blockBytes.buffer, blockBytes.byteOffset, blockBytes.byteLength);
-  const executionPayloadOffset = dv.getUint32(LOCATION_OF_EXECUTION_PAYLOAD_OFFSET, true);
-  const extraDataFixedOffset = executionPayloadOffset + LOCATION_OF_EXTRA_DATA_OFFSET_WITHIN_EXECUTION_PAYLOAD;
-  let extraDataVariableOffset = dv.getUint32(extraDataFixedOffset, true);
-  const transactionsFixedOffset = executionPayloadOffset + LOCATION_OF_TRANSACTIONS_OFFSET_WITHIN_EXECUTION_PAYLOAD;
-  const transactionsVariableOffset = dv.getUint32(transactionsFixedOffset, true);
+  const executionPayloadOffset = getExecutionPayloadOffset(dv);
+  const extraDataOffset = getExtraDataOffset(dv);
+  const transactionsOffset = getTransactionsOffset(dv);
 
-  // data for reassembly
-  const preamble = Uint8Array.prototype.slice.call(blockBytes, 0, transactionsFixedOffset);
-  const preambleDataView = new DataView(preamble.buffer, preamble.byteOffset, preamble.byteLength);
-  const extraData = Uint8Array.prototype.slice.call(blockBytes, extraDataVariableOffset, transactionsVariableOffset);
+  // bellatrix data for reassembly
+  // slice firstChunk at end of blockHash / before transactions
+  const firstChunk = Uint8Array.prototype.slice.call(
+    blockBytes,
+    0,
+    executionPayloadOffset + LOCATION_OF_TRANSACTIONS_OFFSET_WITHIN_EXECUTION_PAYLOAD
+  );
   const transactionsRoot = ssz.bellatrix.Transactions.hashTreeRoot(
     (block as bellatrix.SignedBeaconBlock).message.body.executionPayload.transactions
   );
+  const extraData = Uint8Array.prototype.slice.call(blockBytes, extraDataOffset, transactionsOffset);
+  // create DataView to set new offsets
+  const firstChunkDataView = new DataView(firstChunk.buffer, firstChunk.byteOffset, firstChunk.byteLength);
+  let executionPayloadFixedDataLength = LOCATION_OF_TRANSACTIONS_OFFSET_WITHIN_EXECUTION_PAYLOAD + ROOT_SIZE;
 
   /**
    * Bellatrix:
@@ -400,20 +436,19 @@ export function blindedOrFullSignedBlockToBlindedBytes(
    *   extraData: Variable Length Data
    */
   if (forkSeq === ForkSeq.bellatrix) {
-    // update variable offsets
-    preambleDataView.setUint32(extraDataFixedOffset, transactionsFixedOffset + ROOT_SIZE, true);
-    // build new data
-    return Uint8Array.of(...preamble, ...transactionsRoot, ...extraData);
+    setExtraDataOffset(firstChunkDataView, executionPayloadOffset + executionPayloadFixedDataLength);
+    const result = Buffer.concat([firstChunk, transactionsRoot, extraData]);
+    return result;
   }
 
-  let blsToExecutionChangeVariableOffset = dv.getUint32(LOCATION_OF_BLS_TO_EXECUTION_CHANGE_OFFSET, true);
-  const blsChangeAndMaybeCommitmentsData = Uint8Array.prototype.slice.call(
-    blockBytes,
-    blsToExecutionChangeVariableOffset
-  );
+  // capella data for reassembly
   const withdrawalsRoot = ssz.capella.Withdrawals.hashTreeRoot(
     (block as capella.SignedBeaconBlock).message.body.executionPayload.withdrawals
   );
+  const blsToExecutionChangeOffset = getBlsToExecutionChangeOffset(dv);
+  const blsChangeAndMaybeCommitmentsData = Uint8Array.prototype.slice.call(blockBytes, blsToExecutionChangeOffset);
+  executionPayloadFixedDataLength += ROOT_SIZE;
+  let executionPayloadLength = executionPayloadFixedDataLength + extraData.length;
 
   /**
    * Capella:
@@ -431,32 +466,30 @@ export function blindedOrFullSignedBlockToBlindedBytes(
    *   blsToExecutionChanges: Variable Length Data
    */
   if (forkSeq === ForkSeq.capella) {
-    // build variable offsets
-    extraDataVariableOffset = transactionsFixedOffset + 2 * ROOT_SIZE;
-    blsToExecutionChangeVariableOffset = extraDataVariableOffset + extraData.length;
     // update variable offsets
-    preambleDataView.setUint32(extraDataFixedOffset, extraDataVariableOffset, true);
-    preambleDataView.setUint32(LOCATION_OF_BLS_TO_EXECUTION_CHANGE_OFFSET, blsToExecutionChangeVariableOffset, true);
-    // build new data
-    return Uint8Array.of(
-      ...preamble,
-      ...transactionsRoot,
-      ...withdrawalsRoot,
-      ...extraData,
-      ...blsChangeAndMaybeCommitmentsData
+    setExtraDataOffset(firstChunkDataView, executionPayloadOffset + executionPayloadFixedDataLength);
+    setBlsToExecutionChangeOffset(
+      firstChunkDataView,
+      executionPayloadOffset - // this offset is from beginning of block not BeaconBlockBody
+        SIGNED_BEACON_BLOCK_COMPENSATION_LENGTH -
+        BEACON_BLOCK_COMPENSATION_LENGTH +
+        executionPayloadLength
     );
+    // build new data
+    return Buffer.concat([firstChunk, transactionsRoot, withdrawalsRoot, extraData, blsChangeAndMaybeCommitmentsData]);
   }
 
-  // fields that are common to forks after Deneb
-  const startDataGasUsed = transactionsFixedOffset + 2 * VARIABLE_FIELD_OFFSET;
+  // get data for deneb offsets
+  const startDataGasUsed = transactionsOffset + 2 * VARIABLE_FIELD_OFFSET;
+  executionPayloadLength += 2 * 8;
+  const blobCommitmentsOffset = getBlobKzgCommitmentsOffset(dv);
+  const blsToExecutionChangeLength = blobCommitmentsOffset - blsToExecutionChangeOffset;
+  // deneb data for reassembly
   const dataGasUsedAndExcessDataGas = Uint8Array.prototype.slice.call(
     blockBytes,
     startDataGasUsed,
     startDataGasUsed + 2 * 8
   );
-
-  let blobCommitmentsVariableOffset = dv.getUint32(LOCATION_OF_BLOB_KZG_COMMITMENTS_OFFSET, true);
-  const blsToExecutionChangeLength = blobCommitmentsVariableOffset - blsToExecutionChangeVariableOffset;
   /**
    * Deneb:
    *   transactions: Variable Offset
@@ -478,23 +511,19 @@ export function blindedOrFullSignedBlockToBlindedBytes(
    *   blobKzgCommitments: Variable Length Data
    */
   if (forkSeq === ForkSeq.deneb) {
-    // build variable offsets
-    extraDataVariableOffset = transactionsFixedOffset + 2 * (ROOT_SIZE + 8);
-    blsToExecutionChangeVariableOffset = extraDataVariableOffset + extraData.length;
-    blobCommitmentsVariableOffset = blsToExecutionChangeVariableOffset + blsToExecutionChangeLength;
     // update variable offsets
-    preambleDataView.setUint32(extraDataFixedOffset, extraDataVariableOffset, true);
-    preambleDataView.setUint32(LOCATION_OF_BLS_TO_EXECUTION_CHANGE_OFFSET, blsToExecutionChangeVariableOffset, true);
-    preambleDataView.setUint32(LOCATION_OF_BLOB_KZG_COMMITMENTS_OFFSET, blobCommitmentsVariableOffset, true);
+    setExtraDataOffset(firstChunkDataView, extraDataOffset);
+    setBlsToExecutionChangeOffset(firstChunkDataView, blsToExecutionChangeOffset);
+    setBlobKzgCommitmentsOffset(firstChunkDataView, executionPayloadLength + blsToExecutionChangeLength);
     // build new data
-    return Uint8Array.of(
-      ...preamble,
-      ...transactionsRoot,
-      ...withdrawalsRoot,
-      ...dataGasUsedAndExcessDataGas,
-      ...extraData,
-      ...blsChangeAndMaybeCommitmentsData
-    );
+    return Buffer.concat([
+      firstChunk,
+      transactionsRoot,
+      withdrawalsRoot,
+      dataGasUsedAndExcessDataGas,
+      extraData,
+      blsChangeAndMaybeCommitmentsData,
+    ]);
   }
 
   throw new Error("unknown forkSeq, cannot un-blind");
@@ -561,19 +590,23 @@ export async function* reassembleBlindedOrFullToFullBytes(
   }
 
   // start sending data across the wire
+  const firstChunk = Uint8Array.prototype.slice.call(block, 0, lengthOfFirstChunk);
   if (forkSeq === ForkSeq.bellatrix) {
     // update extraData offset to be 28 bytes closer to start (32 byte root - 4 byte offset = 28 byte difference)
-    setExtraDataOffset(dv, extraDataOffset - 28);
+    setExtraDataOffset(
+      new DataView(firstChunk.buffer, firstChunk.byteOffset, firstChunk.byteLength),
+      extraDataOffset - 28
+    );
 
     yield Buffer.concat([
-      Uint8Array.prototype.slice.call(block, 0, lengthOfFirstChunk),
+      firstChunk,
       buildVariableOffset(
         LOCATION_OF_TRANSACTIONS_OFFSET_WITHIN_EXECUTION_PAYLOAD + VARIABLE_FIELD_OFFSET + extraData.length
       ),
       extraData,
     ]);
   } else {
-    yield Uint8Array.prototype.slice.call(block, 0, lengthOfFirstChunk);
+    yield firstChunk;
   }
 
   // await getting transactions and withdrawals
