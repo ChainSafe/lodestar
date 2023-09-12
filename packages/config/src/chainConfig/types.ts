@@ -40,6 +40,9 @@ export type ChainConfig = {
   // DENEB
   DENEB_FORK_VERSION: Uint8Array;
   DENEB_FORK_EPOCH: number;
+  // EIP6110 - Experimental fork
+  EIP6110_FORK_VERSION?: Uint8Array,
+  EIP6110_FORK_EPOCH?: number,
 
   // Time parameters
   SECONDS_PER_SLOT: number;
@@ -92,6 +95,9 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   // DENEB
   DENEB_FORK_VERSION: "bytes",
   DENEB_FORK_EPOCH: "number",
+  // EIP6110
+  EIP6110_FORK_VERSION: "bytes",
+  EIP6110_FORK_EPOCH: "number",
 
   // Time parameters
   SECONDS_PER_SLOT: "number",

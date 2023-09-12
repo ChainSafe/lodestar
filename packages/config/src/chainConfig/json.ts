@@ -8,8 +8,9 @@ export function chainConfigToJson(config: ChainConfig): Record<string, string> {
 
   for (const key of Object.keys(chainConfigTypes) as (keyof ChainConfig)[]) {
     const value = config[key];
-    if (value !== undefined) {
-      json[key] = serializeSpecValue(value, chainConfigTypes[key]);
+    const targetType = chainConfigTypes[key];
+    if (value !== undefined && targetType) {
+      json[key] = serializeSpecValue(value, targetType);
     }
   }
 
@@ -21,8 +22,9 @@ export function chainConfigFromJson(json: Record<string, unknown>): ChainConfig 
 
   for (const key of Object.keys(chainConfigTypes) as (keyof ChainConfig)[]) {
     const value = json[key];
-    if (value !== undefined) {
-      config[key] = deserializeSpecValue(json[key], chainConfigTypes[key], key) as never;
+    const targetType = chainConfigTypes[key];
+    if (value !== undefined && targetType) {
+      config[key] = deserializeSpecValue(json[key], targetType, key) as never;
     }
   }
 
