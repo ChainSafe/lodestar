@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import {ForkInfo, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {allForks, capella, ssz} from "@lodestar/types";
-import {ForkName, ForkSeq, isForkExecution} from "@lodestar/params";
+import {allForks, capella} from "@lodestar/types";
+import {isForkExecution} from "@lodestar/params";
 import {mainnetPreset} from "@lodestar/params/presets/mainnet";
 import {minimalPreset} from "@lodestar/params/presets/minimal";
 import {mainnetChainConfig} from "@lodestar/config/presets";

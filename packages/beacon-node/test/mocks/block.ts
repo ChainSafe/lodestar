@@ -69,8 +69,6 @@ export const bellatrixSerializedSignedBeaconBlock =
 export const capellaSerializedSignedBeaconBlock = ssz.capella.SignedBeaconBlock.serialize(capellaSignedBeaconBlock);
 // export const denebSerializedSignedBeaconBlock = ssz.deneb.SignedBeaconBlock.serialize(denebSignedBeaconBlock);
 
-console.log(ssz.capella.Withdrawals.hashTreeRoot(capellaSignedBeaconBlock.message.body.executionPayload.withdrawals));
-
 export const bellatrixSerializedBlindedSignedBeaconBlock = ssz.bellatrix.SignedBlindedBeaconBlock.serialize(
   bellatrixSignedBlindedBeaconBlock
 );

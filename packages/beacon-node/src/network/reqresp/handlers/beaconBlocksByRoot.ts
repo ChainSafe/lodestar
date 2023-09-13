@@ -42,10 +42,13 @@ export async function* onBeaconBlocksByRoot(
       // It's a bis sus that deleting this line will still let the code compile..
       // This code MUST include tests to ensure ReqResp works with full or blinded blocks
       const {name, seq} = chain.config.getForkInfo(slot);
-      blockBytes = await chain.blindedBlockToFullBytes(seq, blockBytes);
+      const chunks: Uint8Array[] = [];
+      for await (const chunk of chain.blindedOrFullToFullBytes(seq, blockBytes)) {
+        chunks.push(chunk);
+      }
 
       yield {
-        data: blockBytes,
+        data: Buffer.concat(chunks),
         fork: name,
       };
     }
