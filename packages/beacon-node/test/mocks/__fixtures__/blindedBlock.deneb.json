@@ -2195,7 +2195,7 @@
             "deposits": [],
             "voluntary_exits": [],
             "sync_aggregate": {
-                "sync_committee_bits": "0xffffffffff7effffffffffffffffffffffbffffbfffbdffffffffffffffffffffffffffbfffffffbfffffbffffffffffffffffffffffffffffffffffffffffff",
+                "sync_committee_bits": "0xffffffff",
                 "sync_committee_signature": "0xb496fad8398cb9de33eeff6b036c5b3d94e7cd41df7bb9dc3054a48e0b88e49506b82c16e3ec7a6741c3a63cb95483ba0391fd4230af628551f7fe79a2d9381c30658a5974fe48631b627b1dadef42ffb5c1ed4e14924d0bc0a3121f41a5b54a"
             },
             "execution_payload_header": {
@@ -2213,7 +2213,7 @@
                 "base_fee_per_gas": "17130960083",
                 "block_hash": "0xd3fe3f0c8b3ca99ddba497ac277c6975c999a41c2cca179652eff9a71ea729c9",
                 "transactions_root": "0x8e21473be52d74a45dba662244d95930ac203a9434b85aed465012974b408a6d",
-                "withdrawals_root": "0x0c251968f55f388e1469043da5a7e4581c8e7db97678489e32c931d1790b2652"
+                "withdrawals_root": "0x7dcd5f17f55d8788174aaeb744a125ae20c2997d929f9baefb58b4a45dd148fc"
             },
             "bls_to_execution_changes": []
         }

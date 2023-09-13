@@ -2195,7 +2195,7 @@
             "deposits": [],
             "voluntary_exits": [],
             "sync_aggregate": {
-                "sync_committee_bits": "0xffffffffff7effffffffffffffffffffffbffffbfffbdffffffffffffffffffffffffffbfffffffbfffffbffffffffffffffffffffffffffffffffffffffffff",
+                "sync_committee_bits": "0xffffffff",
                 "sync_committee_signature": "0xb496fad8398cb9de33eeff6b036c5b3d94e7cd41df7bb9dc3054a48e0b88e49506b82c16e3ec7a6741c3a63cb95483ba0391fd4230af628551f7fe79a2d9381c30658a5974fe48631b627b1dadef42ffb5c1ed4e14924d0bc0a3121f41a5b54a"
             },
             "execution_payload": {
@@ -2353,6 +2353,78 @@
                         "validator_index": "8044",
                         "address": "0xf146b3fde61adbd9bff4f8f1196bcde182debc3a",
                         "amount": "15707042"
+                    },
+                    {
+                        "index": "15618741",
+                        "validator_index": "8045",
+                        "address": "0xf146b3fde61adbd9bff4f8f1196bcde182debc3a",
+                        "amount": "15735291"
+                    },
+                    {
+                        "index": "15618742",
+                        "validator_index": "8046",
+                        "address": "0xf146b3fde61adbd9bff4f8f1196bcde182debc3a",
+                        "amount": "166046858"
+                    },
+                    {
+                        "index": "15618743",
+                        "validator_index": "8047",
+                        "address": "0xf146b3fde61adbd9bff4f8f1196bcde182debc3a",
+                        "amount": "15680567"
+                    },
+                    {
+                        "index": "15618744",
+                        "validator_index": "8048",
+                        "address": "0xf146b3fde61adbd9bff4f8f1196bcde182debc3a",
+                        "amount": "15659048"
+                    },
+                    {
+                        "index": "15618745",
+                        "validator_index": "8049",
+                        "address": "0xf146b3fde61adbd9bff4f8f1196bcde182debc3a",
+                        "amount": "15661454"
+                    },
+                    {
+                        "index": "15618746",
+                        "validator_index": "8050",
+                        "address": "0xf146b3fde61adbd9bff4f8f1196bcde182debc3a",
+                        "amount": "15691465"
+                    },
+                    {
+                        "index": "15618747",
+                        "validator_index": "8051",
+                        "address": "0xf146b3fde61adbd9bff4f8f1196bcde182debc3a",
+                        "amount": "54258427"
+                    },
+                    {
+                        "index": "15618748",
+                        "validator_index": "8052",
+                        "address": "0xf146b3fde61adbd9bff4f8f1196bcde182debc3a",
+                        "amount": "15717626"
+                    },
+                    {
+                        "index": "15618749",
+                        "validator_index": "8053",
+                        "address": "0xf146b3fde61adbd9bff4f8f1196bcde182debc3a",
+                        "amount": "15740848"
+                    },
+                    {
+                        "index": "15618750",
+                        "validator_index": "8054",
+                        "address": "0xf146b3fde61adbd9bff4f8f1196bcde182debc3a",
+                        "amount": "15713910"
+                    },
+                    {
+                        "index": "15618751",
+                        "validator_index": "8055",
+                        "address": "0xf146b3fde61adbd9bff4f8f1196bcde182debc3a",
+                        "amount": "15673276"
+                    },
+                    {
+                        "index": "15618752",
+                        "validator_index": "8056",
+                        "address": "0xf146b3fde61adbd9bff4f8f1196bcde182debc3a",
+                        "amount": "15702332"
                     }
                 ]
             },
