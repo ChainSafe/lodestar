@@ -59,10 +59,10 @@ function getOffsetWithinBeaconBlockBody(blockBytes: DataView, offset: number): n
 }
 
 const LOCATION_OF_ETH1_BLOCK_HASH = 96 + 32 + 8;
-export function getEth1BlockHashFromSerializedBlock(block: Uint8Array): string {
+export function getEth1BlockHashFromSerializedBlock(block: Uint8Array): Uint8Array {
   const firstByte =
     SIGNED_BEACON_BLOCK_COMPENSATION_LENGTH + BEACON_BLOCK_COMPENSATION_LENGTH + LOCATION_OF_ETH1_BLOCK_HASH;
-  return Buffer.from(block.slice(firstByte, firstByte + ROOT_SIZE)).toString("hex");
+  return block.slice(firstByte, firstByte + ROOT_SIZE);
 }
 
 const LOCATION_OF_PROPOSER_SLASHINGS_OFFSET = LOCATION_OF_ETH1_BLOCK_HASH + 32 + 32;

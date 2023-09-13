@@ -35,6 +35,7 @@ import {ProcessShutdownCallback} from "@lodestar/validator";
 import {Logger, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toHex} from "@lodestar/utils";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 
+import {toHexString} from "@lodestar/utils";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {Metrics} from "../metrics/index.js";
@@ -587,12 +588,11 @@ export class BeaconChain implements IBeaconChain {
 
   async blindedBlockToFull(block: allForks.FullOrBlindedSignedBeaconBlock): Promise<allForks.SignedBeaconBlock> {
     const info = this.config.getForkInfo(block.message.slot);
-    const blockHash = Buffer.from(block.message.body.eth1Data.blockHash).toString("hex");
     return blindedOrFullToFull(
       this.config,
       info.seq,
       block,
-      await this.getTransactionsAndWithdrawals(info.seq, blockHash)
+      await this.getTransactionsAndWithdrawals(info.seq, toHexString(block.message.body.eth1Data.blockHash))
     );
   }
 
@@ -600,7 +600,7 @@ export class BeaconChain implements IBeaconChain {
     return reassembleBlindedOrFullToFullBytes(
       forkSeq,
       block,
-      this.getTransactionsAndWithdrawals(forkSeq, getEth1BlockHashFromSerializedBlock(block))
+      this.getTransactionsAndWithdrawals(forkSeq, toHexString(getEth1BlockHashFromSerializedBlock(block)))
     );
   }
 
