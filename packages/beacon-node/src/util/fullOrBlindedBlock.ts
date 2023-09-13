@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ssz, allForks, bellatrix, capella, deneb} from "@lodestar/types";
-import {BYTES_PER_LOGS_BLOOM, ForkSeq, SYNC_COMMITTEE_SIZE, isForkExecution} from "@lodestar/params";
+import {BYTES_PER_LOGS_BLOOM, ForkSeq, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {executionPayloadToPayloadHeader} from "@lodestar/state-transition";
 import {ROOT_SIZE, VARIABLE_FIELD_OFFSET, getSlotFromSignedBeaconBlockSerialized} from "./sszBytes.js";
 
@@ -58,7 +58,14 @@ function getOffsetWithinBeaconBlockBody(blockBytes: DataView, offset: number): n
   return blockBytes.getUint32(readAt, true);
 }
 
-const LOCATION_OF_PROPOSER_SLASHINGS_OFFSET = 96 + 32 + 8 + 32 + 32;
+const LOCATION_OF_ETH1_BLOCK_HASH = 96 + 32 + 8;
+export function getEth1BlockHashFromSerializedBlock(block: Uint8Array): string {
+  const firstByte =
+    SIGNED_BEACON_BLOCK_COMPENSATION_LENGTH + BEACON_BLOCK_COMPENSATION_LENGTH + LOCATION_OF_ETH1_BLOCK_HASH;
+  return Buffer.from(block.slice(firstByte, firstByte + ROOT_SIZE)).toString("hex");
+}
+
+const LOCATION_OF_PROPOSER_SLASHINGS_OFFSET = LOCATION_OF_ETH1_BLOCK_HASH + 32 + 32;
 function getProposerSlashingsOffsetWithinBeaconBlockBody(blockBytes: DataView): number {
   return getOffsetWithinBeaconBlockBody(blockBytes, LOCATION_OF_PROPOSER_SLASHINGS_OFFSET);
 }
@@ -168,10 +175,6 @@ const LOCATION_OF_TRANSACTIONS_OFFSET_WITHIN_EXECUTION_PAYLOAD =
 
 function getTransactionsOffset(blockBytes: DataView): number {
   return getOffsetWithinExecutionPayload(blockBytes, LOCATION_OF_TRANSACTIONS_OFFSET_WITHIN_EXECUTION_PAYLOAD);
-}
-
-function getTransactionsRootOffset(executionPayloadOffset: number): number {
-  return executionPayloadOffset + LOCATION_OF_TRANSACTIONS_OFFSET_WITHIN_EXECUTION_PAYLOAD;
 }
 
 /**
