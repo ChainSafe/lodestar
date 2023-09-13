@@ -77,6 +77,7 @@ If no `pubkeys` are provided, it will exit all validators that have been importe
     const exitEpoch = args.exitEpoch ?? computeEpochAtSlot(getCurrentSlot(config, genesisTime));
 
     // Select signers to exit
+    args.force = true;
     const signers = await getSignersFromArgs(args, network, {logger: console, signal: new AbortController().signal});
     if (signers.length === 0) {
       throw new YargsError(`No local keystores found with current args.
