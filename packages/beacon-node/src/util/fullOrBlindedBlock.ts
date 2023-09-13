@@ -253,8 +253,10 @@ export function serializeFullOrBlindedSignedBeaconBlock(
   value: allForks.FullOrBlindedSignedBeaconBlock
 ): Uint8Array {
   return isBlinded(value)
-    ? config.getBlindedForkTypes(value.message.slot).SignedBeaconBlock.serialize(value)
-    : config.getForkTypes(value.message.slot).SignedBeaconBlock.serialize(value);
+    ? config
+        .getBlindedForkTypes(value.message.slot)
+        .SignedBeaconBlock.serialize(value as allForks.SignedBlindedBeaconBlock)
+    : config.getForkTypes(value.message.slot).SignedBeaconBlock.serialize(value as allForks.SignedBeaconBlock);
 }
 
 export function deserializeFullOrBlindedSignedBeaconBlock(
@@ -275,13 +277,9 @@ export function blindedOrFullSignedBlockToBlinded(
   config: ChainForkConfig,
   block: allForks.FullOrBlindedSignedBeaconBlock
 ): allForks.SignedBlindedBeaconBlock {
-  if (isBlinded(block)) {
-    return block;
-  }
-
   const forkSeq = config.getForkSeq(block.message.slot);
-  if (forkSeq < ForkSeq.bellatrix) {
-    return block;
+  if (isBlinded(block) || forkSeq < ForkSeq.bellatrix) {
+    return block as allForks.SignedBlindedBeaconBlock;
   }
 
   const blinded = {
