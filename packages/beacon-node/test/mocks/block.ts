@@ -17,7 +17,9 @@ const loadBlock = (blockName: string): any => {
   if (isMinimal && block.message.body.sync_aggregate?.sync_committee_bits) {
     block.message.body.sync_aggregate.sync_committee_bits = block.message.body.sync_aggregate.sync_committee_bits.slice(
       0,
-      10
+      // convert syncCommitteeBits to correct hex length before conversion
+      // 2 for "0x" and then 2 char per byte
+      2 + 2 * (minimalPreset.SYNC_COMMITTEE_SIZE / 8)
     );
   }
   return block;
