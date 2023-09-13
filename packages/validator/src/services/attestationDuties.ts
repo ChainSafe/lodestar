@@ -72,6 +72,13 @@ export class AttestationDutiesService {
           // Historical epochs can be skipped when determining next duty slot
           if (epoch < this.clock.currentEpoch) continue;
 
+          // There is no need to check every single duty at a certain amount
+          // of validators, next duty slot will almost always be the next slot
+          if (attDutiesAtEpoch.dutiesByIndex.size >= 64) {
+            nextDutySlot = currentSlot + 1;
+            continue;
+          }
+
           for (const {duty} of attDutiesAtEpoch.dutiesByIndex.values()) {
             // Set next duty slot to the closest future slot found in all duties
             if (duty.slot > currentSlot && (nextDutySlot === null || duty.slot < nextDutySlot)) {
