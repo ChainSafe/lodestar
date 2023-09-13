@@ -66,7 +66,7 @@ export class AttestationDutiesService {
         const currentSlot = this.clock.getCurrentSlot();
         let duties = 0;
         let nextDutySlot = null;
-        for (const [epoch, attDutiesAtEpoch] of this.dutiesByIndexByEpoch.entries()) {
+        for (const [epoch, attDutiesAtEpoch] of this.dutiesByIndexByEpoch) {
           duties += attDutiesAtEpoch.dutiesByIndex.size;
 
           // Historical epochs can be skipped when determining next duty slot
