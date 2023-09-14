@@ -214,6 +214,7 @@ export function initializeBeaconStateFromEth1(
     | typeof ssz.bellatrix.ExecutionPayloadHeader
     | typeof ssz.capella.ExecutionPayloadHeader
     | typeof ssz.deneb.ExecutionPayloadHeader
+    | typeof ssz.eip6110.ExecutionPayloadHeader
   >
 ): CachedBeaconStateAllForks {
   const stateView = getGenesisBeaconState(

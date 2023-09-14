@@ -73,6 +73,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
   const bellatrixForkRelevant = localConfig.BELLATRIX_FORK_EPOCH < Infinity;
   const capellaForkRelevant = localConfig.CAPELLA_FORK_EPOCH < Infinity;
   const denebForkRelevant = localConfig.DENEB_FORK_EPOCH < Infinity;
+  const eip6110ForkRelevant = localConfig.EIP6110_FORK_EPOCH < Infinity;
 
   return {
     // # Config
@@ -105,6 +106,9 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     // Deneb
     DENEB_FORK_VERSION: denebForkRelevant,
     DENEB_FORK_EPOCH: denebForkRelevant,
+    // EIP6110
+    EIP6110_FORK_VERSION: denebForkRelevant,
+    EIP6110_FORK_EPOCH: denebForkRelevant,
 
     // Time parameters
     SECONDS_PER_SLOT: true,
@@ -209,5 +213,8 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     FIELD_ELEMENTS_PER_BLOB: denebForkRelevant,
     MAX_BLOBS_PER_BLOCK: denebForkRelevant,
     MAX_BLOB_COMMITMENTS_PER_BLOCK: denebForkRelevant,
+
+    // EIP6110
+    MAX_DEPOSIT_RECEIPTS_PER_PAYLOAD: eip6110ForkRelevant,
   };
 }
