@@ -24,6 +24,7 @@ import {
   computeSyncPeriodAtEpoch,
   getSeed,
   computeProposers,
+  getActivationChurnLimit,
 } from "../util/index.js";
 import {computeEpochShuffling, EpochShuffling} from "../util/epochShuffling.js";
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
@@ -204,6 +205,7 @@ export class EpochCache {
     baseRewardPerIncrement: number;
     totalActiveBalanceIncrements: number;
     churnLimit: number;
+    activationChurnLimit: number;
     exitQueueEpoch: Epoch;
     exitQueueChurn: number;
     currentTargetUnslashedBalanceIncrements: number;
@@ -405,6 +407,7 @@ export class EpochCache {
       baseRewardPerIncrement,
       totalActiveBalanceIncrements,
       churnLimit,
+      activationChurnLimit,
       exitQueueEpoch,
       exitQueueChurn,
       previousTargetUnslashedBalanceIncrements,
@@ -444,6 +447,7 @@ export class EpochCache {
       baseRewardPerIncrement: this.baseRewardPerIncrement,
       totalActiveBalanceIncrements: this.totalActiveBalanceIncrements,
       churnLimit: this.churnLimit,
+      activationChurnLimit: this.activationChurnLimit,
       exitQueueEpoch: this.exitQueueEpoch,
       exitQueueChurn: this.exitQueueChurn,
       previousTargetUnslashedBalanceIncrements: this.previousTargetUnslashedBalanceIncrements,
@@ -503,6 +507,7 @@ export class EpochCache {
     // the first block of the epoch process_block() call. So churnLimit must be computed at the end of the before epoch
     // transition and the result is valid until the end of the next epoch transition
     this.churnLimit = getChurnLimit(this.config, this.currentShuffling.activeIndices.length);
+    this.activationChurnLimit = getActivationChurnLimit(this.config, this.config.getForkSeq(state.slot), this.currentShuffling.activeIndices.length);
 
     // Maybe advance exitQueueEpoch at the end of the epoch if there haven't been any exists for a while
     const exitQueueEpoch = computeActivationExitEpoch(currEpoch);

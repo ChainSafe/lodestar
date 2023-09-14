@@ -53,6 +53,7 @@ export type ChainConfig = {
   INACTIVITY_SCORE_RECOVERY_RATE: number;
   EJECTION_BALANCE: number;
   MIN_PER_EPOCH_CHURN_LIMIT: number;
+  MAX_PER_EPOCH_CHURN_LIMIT: number;
   CHURN_LIMIT_QUOTIENT: number;
 
   // Proposer boost

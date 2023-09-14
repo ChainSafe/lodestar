@@ -2,6 +2,7 @@ import {Epoch, phase0, ValidatorIndex} from "@lodestar/types";
 import {intDiv} from "@lodestar/utils";
 import {ChainForkConfig} from "@lodestar/config";
 import {BeaconStateAllForks} from "../types.js";
+import { ForkSeq } from "@lodestar/params";
 
 /**
  * Check if [[validator]] is active
@@ -33,6 +34,14 @@ export function getActiveValidatorIndices(state: BeaconStateAllForks, epoch: Epo
   }
 
   return indices;
+}
+
+export function getActivationChurnLimit(config: ChainForkConfig, fork: ForkSeq, activeValidatorCount: number): number {
+  if (fork >= ForkSeq.deneb) {
+    return Math.min(config.MAX_PER_EPOCH_CHURN_LIMIT, getChurnLimit(config, activeValidatorCount));
+  } else {
+    return getChurnLimit(config, activeValidatorCount);
+  }
 }
 
 export function getChurnLimit(config: ChainForkConfig, activeValidatorCount: number): number {
