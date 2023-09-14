@@ -393,7 +393,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     const response = await this.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
-    >({method, params: blockHashes});
+    >({method, params: [blockHashes]});
     return response.map(deserializeExecutionPayloadBody);
   }
 
