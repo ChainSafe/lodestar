@@ -1,4 +1,4 @@
-import {allForks, capella, deneb, Wei, bellatrix, Root} from "@lodestar/types";
+import {allForks, capella, deneb, Wei, bellatrix, Root, eip6110} from "@lodestar/types";
 import {
   BYTES_PER_LOGS_BLOOM,
   FIELD_ELEMENTS_PER_BLOB,
@@ -17,7 +17,7 @@ import {
   quantityToBigint,
 } from "../../eth1/provider/utils.js";
 import {ExecutionPayloadStatus, BlobsBundle, PayloadAttributes, VersionedHashes} from "./interface.js";
-import {WithdrawalV1} from "./payloadIdCache.js";
+import {WithdrawalV1, DepositReceiptV1} from "./payloadIdCache.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -28,6 +28,7 @@ export type EngineApiRpcParamTypes = {
   engine_newPayloadV1: [ExecutionPayloadRpc];
   engine_newPayloadV2: [ExecutionPayloadRpc];
   engine_newPayloadV3: [ExecutionPayloadRpc, VersionedHashesRpc, DATA];
+  engine_newPayloadV6110: [ExecutionPayloadRpc, VersionedHashesRpc, DATA];
   /**
    * 1. Object - Payload validity status with respect to the consensus rules:
    *   - blockHash: DATA, 32 Bytes - block hash value of the payload
@@ -51,6 +52,7 @@ export type EngineApiRpcParamTypes = {
   engine_getPayloadV1: [QUANTITY];
   engine_getPayloadV2: [QUANTITY];
   engine_getPayloadV3: [QUANTITY];
+  engine_getPayloadV6110: [QUANTITY];
 
   /**
    * 1. Array of DATA - Array of block_hash field values of the ExecutionPayload structure
@@ -78,6 +80,7 @@ export type EngineApiRpcReturnTypes = {
   engine_newPayloadV1: PayloadStatus;
   engine_newPayloadV2: PayloadStatus;
   engine_newPayloadV3: PayloadStatus;
+  engine_newPayloadV6110: PayloadStatus;
   engine_forkchoiceUpdatedV1: {
     payloadStatus: PayloadStatus;
     payloadId: QUANTITY | null;
@@ -96,6 +99,7 @@ export type EngineApiRpcReturnTypes = {
   engine_getPayloadV1: ExecutionPayloadRpc;
   engine_getPayloadV2: ExecutionPayloadResponse;
   engine_getPayloadV3: ExecutionPayloadResponse;
+  engine_getPayloadV6110: ExecutionPayloadResponse;
 
   engine_getPayloadBodiesByHashV1: (ExecutionPayloadBodyRpc | null)[];
 
@@ -109,9 +113,9 @@ type ExecutionPayloadRpcWithBlockValue = {
 };
 type ExecutionPayloadResponse = ExecutionPayloadRpc | ExecutionPayloadRpcWithBlockValue;
 
-export type ExecutionPayloadBodyRpc = {transactions: DATA[]; withdrawals: WithdrawalV1[] | null};
+export type ExecutionPayloadBodyRpc = {transactions: DATA[]; withdrawals: WithdrawalV1[] | null; depositReceipts: DepositReceiptV1[] | null};
 
-export type ExecutionPayloadBody = {transactions: bellatrix.Transaction[]; withdrawals: capella.Withdrawals | null};
+export type ExecutionPayloadBody = {transactions: bellatrix.Transaction[]; withdrawals: capella.Withdrawals | null; depositReceipts: eip6110.DepositReceipts | null};
 
 export type ExecutionPayloadRpc = {
   parentHash: DATA; // 32 bytes
@@ -132,6 +136,7 @@ export type ExecutionPayloadRpc = {
   blobGasUsed?: QUANTITY; // DENEB
   excessBlobGas?: QUANTITY; // DENEB
   parentBeaconBlockRoot?: QUANTITY; // DENEB
+  depositReceipts?: DepositReceiptRpc[]; // EIP6110
 };
 
 export type WithdrawalRpc = {
@@ -139,6 +144,14 @@ export type WithdrawalRpc = {
   validatorIndex: QUANTITY;
   address: DATA;
   amount: QUANTITY;
+};
+
+export type DepositReceiptRpc = {
+  pubkey: DATA;
+  withdrawalCredentials: DATA;
+  amount: QUANTITY;
+  signature: DATA;
+  index: QUANTITY;
 };
 
 export type VersionedHashesRpc = DATA[];
@@ -186,10 +199,16 @@ export function serializeExecutionPayload(fork: ForkName, data: allForks.Executi
   }
 
   // DENEB adds blobGasUsed & excessBlobGas to the ExecutionPayload
-  if (ForkSeq[fork] >= ForkSeq.deneb) {
+  if (ForkSeq[fork] >= ForkSeq.deneb) { 
     const {blobGasUsed, excessBlobGas} = data as deneb.ExecutionPayload;
     payload.blobGasUsed = numToQuantity(blobGasUsed);
     payload.excessBlobGas = numToQuantity(excessBlobGas);
+  }
+
+  // EIP6110 adds depositReceipts to the ExecutionPayload
+  if (ForkSeq[fork] >= ForkSeq.eip6110) {
+    const {depositReceipts} = data as eip6110.ExecutionPayload;
+    payload.depositReceipts = depositReceipts.map(serializeDepositReceipt);
   }
 
   return payload;
@@ -268,6 +287,17 @@ export function parseExecutionPayload(
     (executionPayload as deneb.ExecutionPayload).excessBlobGas = quantityToBigint(excessBlobGas);
   }
 
+  if (ForkSeq[fork] >= ForkSeq.eip6110) {
+    const {depositReceipts} = data;
+    // Geth can also reply with null
+    if (depositReceipts == null) {
+      throw Error(
+        `depositReceipts missing for ${fork} >= eip6110 executionPayload number=${executionPayload.blockNumber} hash=${data.blockHash}`
+      );
+    }
+    (executionPayload as eip6110.ExecutionPayload).depositReceipts = depositReceipts.map((d) => deserializeDepositReceipts(d));
+  }
+
   return {executionPayload, blockValue, blobsBundle};
 }
 
@@ -334,11 +364,32 @@ export function deserializeWithdrawal(serialized: WithdrawalRpc): capella.Withdr
   } as capella.Withdrawal;
 }
 
+export function serializeDepositReceipt(depositReceipt: eip6110.DepositReceipt): DepositReceiptRpc {
+  return {
+    pubkey: bytesToData(depositReceipt.pubkey),
+    withdrawalCredentials: bytesToData(depositReceipt.withdrawalCredentials),
+    amount: numToQuantity(depositReceipt.amount),
+    signature: bytesToData(depositReceipt.signature),
+    index: numToQuantity(depositReceipt.index),
+  };
+}
+
+export function deserializeDepositReceipts(serialized: DepositReceiptRpc): eip6110.DepositReceipt {
+  return {
+    pubkey: dataToBytes(serialized.pubkey, 48),
+    withdrawalCredentials: dataToBytes(serialized.withdrawalCredentials, 32),
+    amount: quantityToBigint(serialized.amount),
+    signature: dataToBytes(serialized.signature, 96),
+    index: quantityToNum(serialized.index),
+  } as eip6110.DepositReceipt;
+}
+
 export function deserializeExecutionPayloadBody(data: ExecutionPayloadBodyRpc | null): ExecutionPayloadBody | null {
   return data
     ? {
         transactions: data.transactions.map((tran) => dataToBytes(tran, null)),
         withdrawals: data.withdrawals ? data.withdrawals.map(deserializeWithdrawal) : null,
+        depositReceipts: data.depositReceipts ? data.depositReceipts.map(deserializeDepositReceipts) : null,
       }
     : null;
 }
@@ -348,6 +399,7 @@ export function serializeExecutionPayloadBody(data: ExecutionPayloadBody | null)
     ? {
         transactions: data.transactions.map((tran) => bytesToData(tran)),
         withdrawals: data.withdrawals ? data.withdrawals.map(serializeWithdrawal) : null,
+        depositReceipts: data.depositReceipts ? data.depositReceipts.map(serializeDepositReceipt) : null,
       }
     : null;
 }
