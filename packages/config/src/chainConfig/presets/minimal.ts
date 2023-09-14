@@ -42,6 +42,9 @@ export const chainConfig: ChainConfig = {
   // Deneb
   DENEB_FORK_VERSION: b("0x04000001"),
   DENEB_FORK_EPOCH: Infinity,
+  // EIP-6110
+  EIP6110_FORK_VERSION: b("0x05000000"),
+  EIP6110_FORK_EPOCH: Infinity,
 
   // Time parameters
   // ---------------------------------------------------------------
