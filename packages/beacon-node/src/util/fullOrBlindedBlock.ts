@@ -367,7 +367,7 @@ export function blindedOrFullToFull(
   if (
     !isBlinded(block) || // already full
     forkSeq < ForkSeq.bellatrix || // no execution payload
-    (block.message as bellatrix.BeaconBlock).body.executionPayload.timestamp === 0 // before merge
+    (block.message as bellatrix.BeaconBlock).body.executionPayload?.timestamp === 0 // before merge
   ) {
     return block;
   }
