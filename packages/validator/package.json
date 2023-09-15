@@ -49,7 +49,7 @@
   ],
   "dependencies": {
     "@chainsafe/bls": "7.1.1",
-    "@chainsafe/ssz": "^0.12.0",
+    "@chainsafe/ssz": "^0.13.0",
     "@lodestar/api": "^1.11.1",
     "@lodestar/config": "^1.11.1",
     "@lodestar/db": "^1.11.1",
