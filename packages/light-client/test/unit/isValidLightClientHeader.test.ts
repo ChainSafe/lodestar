@@ -94,10 +94,10 @@ describe("isValidLightClientHeader", function () {
     executionBranch: capellaLCHeader.executionBranch,
   };
 
-  const denebLCHeader = { // TODO-6110: Find a denebLCHeader
+  const denebLCHeader = { // TODO 6110: Find a denebLCHeader
   };
 
-  const denebUpgradedEIP6110Header = { // TODO-6110: Find a denebLCHeader
+  const denebUpgradedEIP6110Header = { // TODO 6110: Find a denebLCHeader
 
   }
 

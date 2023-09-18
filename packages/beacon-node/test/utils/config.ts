@@ -24,7 +24,7 @@ export function getConfig(fork: ForkName, forkEpoch = 0): ChainForkConfig {
         BELLATRIX_FORK_EPOCH: 0,
         CAPELLA_FORK_EPOCH: forkEpoch,
       });
-    case ForkName.deneb: // TODO
+    case ForkName.deneb:
       return createChainForkConfig({
         ALTAIR_FORK_EPOCH: 0,
         BELLATRIX_FORK_EPOCH: 0,

@@ -97,8 +97,10 @@ function getTransitionConfig(fork: ForkName, forkEpoch: number): Partial<ChainCo
       return {ALTAIR_FORK_EPOCH: 0, BELLATRIX_FORK_EPOCH: forkEpoch};
     case ForkName.capella:
       return {ALTAIR_FORK_EPOCH: 0, BELLATRIX_FORK_EPOCH: 0, CAPELLA_FORK_EPOCH: forkEpoch};
-    case ForkName.deneb:
+    case ForkName.deneb: 
       return {ALTAIR_FORK_EPOCH: 0, BELLATRIX_FORK_EPOCH: 0, CAPELLA_FORK_EPOCH: 0, DENEB_FORK_EPOCH: forkEpoch};
+    case ForkName.eip6110: 
+      return {ALTAIR_FORK_EPOCH: 0, BELLATRIX_FORK_EPOCH: 0, CAPELLA_FORK_EPOCH: 0, DENEB_FORK_EPOCH: 0, EIP6110_FORK_EPOCH: forkEpoch};
   }
 }
 
