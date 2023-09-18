@@ -10,6 +10,54 @@ export interface TransactionsAndWithdrawals {
 }
 
 /**
+ * Bellatrix:
+ *   preamble: Fixed Length Data
+ *   transactionsRoot: Root
+ *   extraData: Variable Length Data
+ *   - to -
+ *   preamble: Fixed Length Data
+ *   transactions: Variable Offset
+ *   extraData: Variable Length Data
+ *   transactions: Variable Length Data
+ *
+ * Capella:
+ *   preamble: Fixed Length Data
+ *   transactionsRoot: Root
+ *   withdrawalsRoot: Root
+ *   extraData: Variable Length Data
+ *   blsToExecutionChanges: Variable Length Data
+ *   - to -
+ *   preamble: Fixed Length Data
+ *   transactions: Variable Offset
+ *   withdrawals: Variable Offset // cant know this offset until have transactions
+ *   extraData: Variable Length Data
+ *   transactions: Variable Length Data
+ *   withdrawals: Variable Length Data
+ *   blsToExecutionChanges: Variable Length Data
+ *
+ * Deneb:
+ *   preamble: Fixed Length Data
+ *   transactionsRoot: Root
+ *   withdrawalsRoot: Root
+ *   dataGasUsed: UintBn64
+ *   excessDataGas: UintBn64
+ *   extraData: Variable Length Data
+ *   blsToExecutionChanges: Variable Length Data
+ *   blobKzgCommitments: Variable Length Data
+ *   - to -
+ *   preamble: Fixed Length Data
+ *   transactions: Variable Offset
+ *   withdrawals: Variable Offset // cant know this offset until have transactions
+ *   dataGasUsed: UintBn64
+ *   excessDataGas: UintBn64
+ *   extraData: Variable Length Data
+ *   transactions: Variable Length Data
+ *   withdrawals: Variable Length Data
+ *   blsToExecutionChanges: Variable Length Data
+ *   blobKzgCommitments: Variable Length Data
+ */
+
+/**
  *  * class SignedBeaconBlock(Container):
  *   message: BeaconBlock [offset - 4 bytes]
  *   signature: BLSSignature [fixed - 96 bytes]
@@ -177,55 +225,57 @@ function getTransactionsOffset(blockBytes: DataView): number {
   return getOffsetWithinExecutionPayload(blockBytes, LOCATION_OF_TRANSACTIONS_OFFSET_WITHIN_EXECUTION_PAYLOAD);
 }
 
-/**
- * Bellatrix:
- *   preamble: Fixed Length Data
- *   transactionsRoot: Root
- *   extraData: Variable Length Data
- *   - to -
- *   preamble: Fixed Length Data
- *   transactions: Variable Offset
- *   extraData: Variable Length Data
- *   transactions: Variable Length Data
- *
- * Capella:
- *   preamble: Fixed Length Data
- *   transactionsRoot: Root
- *   withdrawalsRoot: Root
- *   extraData: Variable Length Data
- *   blsToExecutionChanges: Variable Length Data
- *   - to -
- *   preamble: Fixed Length Data
- *   transactions: Variable Offset
- *   withdrawals: Variable Offset // cant know this offset until have transactions
- *   extraData: Variable Length Data
- *   transactions: Variable Length Data
- *   withdrawals: Variable Length Data
- *   blsToExecutionChanges: Variable Length Data
- *
- * Deneb:
- *   preamble: Fixed Length Data
- *   transactionsRoot: Root
- *   withdrawalsRoot: Root
- *   dataGasUsed: UintBn64
- *   excessDataGas: UintBn64
- *   extraData: Variable Length Data
- *   blsToExecutionChanges: Variable Length Data
- *   blobKzgCommitments: Variable Length Data
- *   - to -
- *   preamble: Fixed Length Data
- *   transactions: Variable Offset
- *   withdrawals: Variable Offset // cant know this offset until have transactions
- *   dataGasUsed: UintBn64
- *   excessDataGas: UintBn64
- *   extraData: Variable Length Data
- *   transactions: Variable Length Data
- *   withdrawals: Variable Length Data
- *   blsToExecutionChanges: Variable Length Data
- *   blobKzgCommitments: Variable Length Data
- */
+function buildVariableOffset(value: number): Uint8Array {
+  const offset = new Uint8Array(VARIABLE_FIELD_OFFSET);
+  new DataView(offset.buffer).setUint32(0, value, true);
+  return offset;
+}
 
-export function isSerializedBlinded(forkSeq: ForkSeq, blockBytes: Uint8Array): boolean {
+function executionPayloadHeaderToPayload(
+  forkSeq: ForkSeq,
+  header: allForks.ExecutionPayloadHeader,
+  {transactions, withdrawals}: TransactionsAndWithdrawals
+): allForks.ExecutionPayload {
+  const bellatrixPayloadFields: allForks.ExecutionPayload = {
+    parentHash: header.parentHash,
+    feeRecipient: header.feeRecipient,
+    stateRoot: header.stateRoot,
+    receiptsRoot: header.receiptsRoot,
+    logsBloom: header.logsBloom,
+    prevRandao: header.prevRandao,
+    blockNumber: header.blockNumber,
+    gasLimit: header.gasLimit,
+    gasUsed: header.gasUsed,
+    timestamp: header.timestamp,
+    extraData: header.extraData,
+    baseFeePerGas: header.baseFeePerGas,
+    blockHash: header.blockHash,
+    transactions: transactions ?? [],
+  };
+
+  if (forkSeq >= ForkSeq.capella) {
+    (bellatrixPayloadFields as capella.ExecutionPayload).withdrawals = withdrawals ?? [];
+  }
+
+  if (forkSeq >= ForkSeq.deneb) {
+    // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#process_execution_payload
+    (bellatrixPayloadFields as deneb.ExecutionPayload).blobGasUsed = (
+      header as deneb.ExecutionPayloadHeader
+    ).blobGasUsed;
+    (bellatrixPayloadFields as deneb.ExecutionPayload).excessBlobGas = (
+      header as deneb.ExecutionPayloadHeader
+    ).excessBlobGas;
+  }
+
+  return bellatrixPayloadFields;
+}
+
+// same as isBlindedSignedBeaconBlock but without type narrowing
+export function isBlinded(block: allForks.FullOrBlindedSignedBeaconBlock): boolean {
+  return (block as bellatrix.SignedBlindedBeaconBlock).message.body.executionPayloadHeader !== undefined;
+}
+
+export function isBlindedBytes(forkSeq: ForkSeq, blockBytes: Uint8Array): boolean {
   if (forkSeq < ForkSeq.bellatrix) {
     return false;
   }
@@ -235,17 +285,6 @@ export function isSerializedBlinded(forkSeq: ForkSeq, blockBytes: Uint8Array): b
   const readAt = LOCATION_OF_EXTRA_DATA_OFFSET_WITHIN_EXECUTION_PAYLOAD + executionPayloadOffset;
   const firstByte = dv.getUint32(readAt, true) + executionPayloadOffset;
   return firstByte - readAt > 93;
-}
-
-function buildVariableOffset(value: number): Uint8Array {
-  const offset = new Uint8Array(VARIABLE_FIELD_OFFSET);
-  new DataView(offset.buffer).setUint32(0, value, true);
-  return offset;
-}
-
-// same as isBlindedSignedBeaconBlock but without type narrowing
-export function isBlinded(block: allForks.FullOrBlindedSignedBeaconBlock): boolean {
-  return (block as bellatrix.SignedBlindedBeaconBlock).message.body.executionPayloadHeader !== undefined;
 }
 
 export function serializeFullOrBlindedSignedBeaconBlock(
@@ -268,12 +307,12 @@ export function deserializeFullOrBlindedSignedBeaconBlock(
     throw Error("getSignedBlockTypeFromBytes: invalid bytes");
   }
 
-  return isSerializedBlinded(config.getForkSeq(slot), bytes)
+  return isBlindedBytes(config.getForkSeq(slot), bytes)
     ? config.getBlindedForkTypes(slot).SignedBeaconBlock.deserialize(bytes)
     : config.getForkTypes(slot).SignedBeaconBlock.deserialize(bytes);
 }
 
-export function blindedOrFullSignedBlockToBlinded(
+export function blindedOrFullBlockToBlinded(
   config: ChainForkConfig,
   block: allForks.FullOrBlindedSignedBeaconBlock
 ): allForks.SignedBlindedBeaconBlock {
@@ -319,76 +358,7 @@ export function blindedOrFullSignedBlockToBlinded(
   return blinded;
 }
 
-function executionPayloadHeaderToPayload(
-  forkSeq: ForkSeq,
-  header: allForks.ExecutionPayloadHeader,
-  {transactions, withdrawals}: TransactionsAndWithdrawals
-): allForks.ExecutionPayload {
-  const bellatrixPayloadFields: allForks.ExecutionPayload = {
-    parentHash: header.parentHash,
-    feeRecipient: header.feeRecipient,
-    stateRoot: header.stateRoot,
-    receiptsRoot: header.receiptsRoot,
-    logsBloom: header.logsBloom,
-    prevRandao: header.prevRandao,
-    blockNumber: header.blockNumber,
-    gasLimit: header.gasLimit,
-    gasUsed: header.gasUsed,
-    timestamp: header.timestamp,
-    extraData: header.extraData,
-    baseFeePerGas: header.baseFeePerGas,
-    blockHash: header.blockHash,
-    transactions: transactions ?? [],
-  };
-
-  if (forkSeq >= ForkSeq.capella) {
-    (bellatrixPayloadFields as capella.ExecutionPayload).withdrawals = withdrawals ?? [];
-  }
-
-  if (forkSeq >= ForkSeq.deneb) {
-    // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#process_execution_payload
-    (bellatrixPayloadFields as deneb.ExecutionPayload).blobGasUsed = (
-      header as deneb.ExecutionPayloadHeader
-    ).blobGasUsed;
-    (bellatrixPayloadFields as deneb.ExecutionPayload).excessBlobGas = (
-      header as deneb.ExecutionPayloadHeader
-    ).excessBlobGas;
-  }
-
-  return bellatrixPayloadFields;
-}
-
-export function blindedOrFullToFull(
-  config: ChainForkConfig,
-  forkSeq: ForkSeq,
-  block: allForks.FullOrBlindedSignedBeaconBlock,
-  transactionsAndWithdrawals: TransactionsAndWithdrawals
-): allForks.SignedBeaconBlock {
-  if (
-    !isBlinded(block) || // already full
-    forkSeq < ForkSeq.bellatrix || // no execution payload
-    (block.message as bellatrix.BeaconBlock).body.executionPayload?.timestamp === 0 // before merge
-  ) {
-    return block;
-  }
-
-  return config.getForkTypes(block.message.slot).SignedBeaconBlock.clone({
-    signature: block.signature,
-    message: {
-      ...block.message,
-      body: {
-        ...(block.message.body as bellatrix.BeaconBlockBody),
-        executionPayload: executionPayloadHeaderToPayload(
-          forkSeq,
-          (block.message.body as bellatrix.BlindedBeaconBlockBody).executionPayloadHeader,
-          transactionsAndWithdrawals
-        ),
-      },
-    },
-  });
-}
-
-export function blindedOrFullSignedBlockToBlindedBytes(
+export function blindedOrFullBlockToBlindedBytes(
   config: ChainForkConfig,
   block: allForks.FullOrBlindedSignedBeaconBlock,
   blockBytes: Uint8Array
@@ -530,6 +500,36 @@ export function blindedOrFullSignedBlockToBlindedBytes(
   throw new Error("unknown forkSeq, cannot un-blind");
 }
 
+export function blindedOrFullToFull(
+  config: ChainForkConfig,
+  forkSeq: ForkSeq,
+  block: allForks.FullOrBlindedSignedBeaconBlock,
+  transactionsAndWithdrawals: TransactionsAndWithdrawals
+): allForks.SignedBeaconBlock {
+  if (
+    !isBlinded(block) || // already full
+    forkSeq < ForkSeq.bellatrix || // no execution payload
+    (block.message as bellatrix.BeaconBlock).body.executionPayload?.timestamp === 0 // before merge
+  ) {
+    return block;
+  }
+
+  return config.getForkTypes(block.message.slot).SignedBeaconBlock.clone({
+    signature: block.signature,
+    message: {
+      ...block.message,
+      body: {
+        ...(block.message.body as bellatrix.BeaconBlockBody),
+        executionPayload: executionPayloadHeaderToPayload(
+          forkSeq,
+          (block.message.body as bellatrix.BlindedBeaconBlockBody).executionPayloadHeader,
+          transactionsAndWithdrawals
+        ),
+      },
+    },
+  });
+}
+
 /**
  * Builds the full block in two chunks so that the first piece can be sent immediately
  * while the transactions and withdrawals are being fetched. All forks allow for
@@ -544,7 +544,7 @@ export function blindedOrFullSignedBlockToBlindedBytes(
  * chunk is from the start of the blsToExecutionChanges offset to the end of the
  * block.
  */
-export async function* reassembleBlindedOrFullToFullBytes(
+export async function* blindedOrFullToFullBytes(
   forkSeq: ForkSeq,
   block: Uint8Array,
   transactionsAndWithdrawals: Promise<TransactionsAndWithdrawals>
@@ -555,7 +555,7 @@ export async function* reassembleBlindedOrFullToFullBytes(
    * Altair:
    *   return same data
    */
-  if (forkSeq < ForkSeq.bellatrix || !isSerializedBlinded(forkSeq, block)) {
+  if (forkSeq < ForkSeq.bellatrix || !isBlindedBytes(forkSeq, block)) {
     yield block;
     return;
   }

@@ -1,8 +1,8 @@
 import {toHex} from "@lodestar/utils";
 import {BeaconChain} from "../chain.js";
 import {
-  blindedOrFullSignedBlockToBlinded,
-  blindedOrFullSignedBlockToBlindedBytes,
+  blindedOrFullBlockToBlinded,
+  blindedOrFullBlockToBlindedBytes,
 } from "../../util/fullOrBlindedBlock.js";
 import {BlockInput, BlockInputType} from "./types.js";
 
@@ -26,12 +26,12 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInput: BlockI
       fnPromises.push(
         this.db.block.putBinary(
           this.db.block.getId(block),
-          blindedOrFullSignedBlockToBlindedBytes(this.config, block, blockBytes)
+          blindedOrFullBlockToBlindedBytes(this.config, block, blockBytes)
         )
       );
     } else {
       this.metrics?.importBlock.persistBlockNoSerializedDataCount.inc();
-      fnPromises.push(this.db.block.add(blindedOrFullSignedBlockToBlinded(this.config, block)));
+      fnPromises.push(this.db.block.add(blindedOrFullBlockToBlinded(this.config, block)));
     }
     this.logger.debug("Persist block to hot DB", {
       slot: block.message.slot,
