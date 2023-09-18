@@ -146,6 +146,10 @@ export class EpochCache {
    */
   churnLimit: number;
   /**
+   * Modified ("limited") churn limit as per the fork dependent activation of EIP-7514
+   */
+  activationChurnLimit: number;
+  /**
    * Closest epoch with available churn for validators to exit at. May be updated every block as validators are
    * initiateValidatorExit(). This value may vary on each fork of the state.
    *
@@ -213,6 +217,7 @@ export class EpochCache {
     epoch: Epoch;
     syncPeriod: SyncPeriod;
   }) {
+    this.epoch = data.epoch;
     this.config = data.config;
     this.pubkey2index = data.pubkey2index;
     this.index2pubkey = data.index2pubkey;
@@ -227,14 +232,19 @@ export class EpochCache {
     this.syncProposerReward = data.syncProposerReward;
     this.baseRewardPerIncrement = data.baseRewardPerIncrement;
     this.totalActiveBalanceIncrements = data.totalActiveBalanceIncrements;
+
     this.churnLimit = data.churnLimit;
+    this.activationChurnLimit =
+      this.epoch >= this.config.DENEB_FORK_EPOCH
+        ? Math.min(this.config.MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT, this.churnLimit)
+        : this.churnLimit;
+
     this.exitQueueEpoch = data.exitQueueEpoch;
     this.exitQueueChurn = data.exitQueueChurn;
     this.currentTargetUnslashedBalanceIncrements = data.currentTargetUnslashedBalanceIncrements;
     this.previousTargetUnslashedBalanceIncrements = data.previousTargetUnslashedBalanceIncrements;
     this.currentSyncCommitteeIndexed = data.currentSyncCommitteeIndexed;
     this.nextSyncCommitteeIndexed = data.nextSyncCommitteeIndexed;
-    this.epoch = data.epoch;
     this.syncPeriod = data.syncPeriod;
   }
 
@@ -503,6 +513,10 @@ export class EpochCache {
     // the first block of the epoch process_block() call. So churnLimit must be computed at the end of the before epoch
     // transition and the result is valid until the end of the next epoch transition
     this.churnLimit = getChurnLimit(this.config, this.currentShuffling.activeIndices.length);
+    this.activationChurnLimit =
+      this.config.DENEB_FORK_EPOCH >= this.epoch
+        ? Math.min(this.config.MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT, this.churnLimit)
+        : this.churnLimit;
 
     // Maybe advance exitQueueEpoch at the end of the epoch if there haven't been any exists for a while
     const exitQueueEpoch = computeActivationExitEpoch(currEpoch);

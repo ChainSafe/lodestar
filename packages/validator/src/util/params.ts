@@ -119,6 +119,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     EJECTION_BALANCE: true,
     MIN_PER_EPOCH_CHURN_LIMIT: true,
     CHURN_LIMIT_QUOTIENT: true,
+    MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT: denebForkRelevant,
 
     // Proposer boost
     PROPOSER_SCORE_BOOST: false, // Ignored as it's changing https://github.com/ethereum/consensus-specs/pull/2895

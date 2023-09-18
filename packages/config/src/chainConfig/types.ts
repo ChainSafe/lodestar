@@ -54,6 +54,7 @@ export type ChainConfig = {
   EJECTION_BALANCE: number;
   MIN_PER_EPOCH_CHURN_LIMIT: number;
   CHURN_LIMIT_QUOTIENT: number;
+  MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT: number;
 
   // Proposer boost
   PROPOSER_SCORE_BOOST: number;
@@ -106,6 +107,7 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   EJECTION_BALANCE: "number",
   MIN_PER_EPOCH_CHURN_LIMIT: "number",
   CHURN_LIMIT_QUOTIENT: "number",
+  MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT: "number",
 
   // Proposer boost
   PROPOSER_SCORE_BOOST: "number",

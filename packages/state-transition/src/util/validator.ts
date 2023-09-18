@@ -38,3 +38,8 @@ export function getActiveValidatorIndices(state: BeaconStateAllForks, epoch: Epo
 export function getChurnLimit(config: ChainForkConfig, activeValidatorCount: number): number {
   return Math.max(config.MIN_PER_EPOCH_CHURN_LIMIT, intDiv(activeValidatorCount, config.CHURN_LIMIT_QUOTIENT));
 }
+
+// Just for completeness sake, epochCtx directly uses churnLimit to get the final churn limit
+export function getctivationChurnLimit(config: ChainForkConfig, activeValidatorCount: number): number {
+  return Math.min(config.MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT, getChurnLimit(config, activeValidatorCount));
+}
