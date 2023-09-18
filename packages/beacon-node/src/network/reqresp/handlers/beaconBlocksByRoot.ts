@@ -43,7 +43,7 @@ export async function* onBeaconBlocksByRoot(
       // This code MUST include tests to ensure ReqResp works with full or blinded blocks
       const {name, seq} = chain.config.getForkInfo(slot);
       const chunks: Uint8Array[] = [];
-      for await (const chunk of chain.blindedOrFullToFullBytes(seq, blockBytes)) {
+      for await (const chunk of chain.blindedOrFullBlockToFullBytes(seq, blockBytes)) {
         chunks.push(chunk);
       }
 

@@ -48,7 +48,7 @@ import {BufferPool} from "../util/bufferPool.js";
 import {
   blindedOrFullToFull,
   getEth1BlockHashFromSerializedBlock,
-  reassembleBlindedOrFullToFullBytes,
+  reassembleblindedOrFullBlockToFullBytes,
   TransactionsAndWithdrawals,
 } from "../util/fullOrBlindedBlock.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
@@ -515,7 +515,7 @@ export class BeaconChain implements IBeaconChain {
         const data = await this.db.block.get(fromHexString(block.blockRoot));
         if (data) {
           return {
-            block: await this.blindedBlockToFull(data),
+            block: await this.blindedOrFullBlockToFull(data),
             executionOptimistic: isOptimisticBlock(block),
             finalized: false,
           };
@@ -527,7 +527,7 @@ export class BeaconChain implements IBeaconChain {
     }
 
     const data = await this.db.blockArchive.get(slot);
-    return data && {block: await this.blindedBlockToFull(data), executionOptimistic: false, finalized: true};
+    return data && {block: await this.blindedOrFullBlockToFull(data), executionOptimistic: false, finalized: true};
   }
 
   async getBlockByRoot(
@@ -538,7 +538,7 @@ export class BeaconChain implements IBeaconChain {
       const data = await this.db.block.get(fromHexString(root));
       if (data) {
         return {
-          block: await this.blindedBlockToFull(data),
+          block: await this.blindedOrFullBlockToFull(data),
           executionOptimistic: isOptimisticBlock(block),
           finalized: false,
         };
@@ -586,7 +586,7 @@ export class BeaconChain implements IBeaconChain {
     return this.produceBlockWrapper<BlockType.Blinded>(BlockType.Blinded, blockAttributes);
   }
 
-  async blindedBlockToFull(block: allForks.FullOrBlindedSignedBeaconBlock): Promise<allForks.SignedBeaconBlock> {
+  async blindedOrFullBlockToFull(block: allForks.FullOrBlindedSignedBeaconBlock): Promise<allForks.SignedBeaconBlock> {
     const info = this.config.getForkInfo(block.message.slot);
     return blindedOrFullToFull(
       this.config,
@@ -596,8 +596,8 @@ export class BeaconChain implements IBeaconChain {
     );
   }
 
-  blindedOrFullToFullBytes(forkSeq: ForkSeq, block: Uint8Array): AsyncIterable<Uint8Array> {
-    return reassembleBlindedOrFullToFullBytes(
+  blindedOrFullBlockToFullBytes(forkSeq: ForkSeq, block: Uint8Array): AsyncIterable<Uint8Array> {
+    return reassembleblindedOrFullBlockToFullBytes(
       forkSeq,
       block,
       this.getTransactionsAndWithdrawals(forkSeq, toHexString(getEth1BlockHashFromSerializedBlock(block)))
