@@ -23,7 +23,8 @@ describe("chain / lightclient", function () {
   const maxLcHeadTrackingDiffSlots = 4;
   const validatorCount = 8;
   const validatorClientCount = 4;
-  const targetSyncCommittee = 3;
+  // Reduced from 3 to 1, so test can complete in 10 epoch vs 27 epoch
+  const targetSyncCommittee = 1;
   /** N sync committee periods + 1 epoch of margin */
   const finalizedEpochToReach = targetSyncCommittee * EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1;
   /** Given 100% participation the fastest epoch to reach finalization is +2 epochs. -1 for margin */
