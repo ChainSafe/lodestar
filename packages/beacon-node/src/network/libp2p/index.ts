@@ -84,7 +84,8 @@ export async function createNodeJsLibp2p(
           // To stop and start listening based on a fixed number of connections
           // would make it brittle to the order in which connections are established.
           // Instead, we stop listening when the number of connections is below the target peers
-          // given that target peers and max peers have a reasonable gap between them.
+          // given that target peers and max peers have a reasonable gap between them and
+          // target peers are always less than the max peers
           listenBelow: networkOpts.targetPeers ?? -Infinity,
         },
       }),
