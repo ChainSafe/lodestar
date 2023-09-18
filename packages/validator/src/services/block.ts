@@ -385,6 +385,7 @@ export class BlockProposingService {
       }
 
       case ForkName.deneb:
+      case ForkName.eip6110:
       default: {
         const res = await this.api.validator.produceBlockV2(slot, randaoReveal, graffiti, expectedFeeRecipient);
         ApiError.assert(res, "Failed to produce block: validator.produceBlockV2");
@@ -427,6 +428,7 @@ export class BlockProposingService {
       }
 
       case ForkName.deneb:
+      case ForkName.eip6110:
       default: {
         if (!isBlindedBlockContents(response.data)) {
           throw Error(`Expected BlockContents response at fork=${fork}`);
