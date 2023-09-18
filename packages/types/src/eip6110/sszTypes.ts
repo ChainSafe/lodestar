@@ -31,7 +31,7 @@ export const DepositReceipt = new ContainerType( //good
   {
     pubkey: BLSPubkey,
     withdrawalCredentials: Bytes32,
-    amount: Gwei,
+    amount: UintNum64,
     signature: BLSSignature,
     index: DepositIndex,
     validatorIndex: ValidatorIndex,

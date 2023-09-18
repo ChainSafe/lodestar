@@ -1,13 +1,14 @@
-import {allForks, capella} from "@lodestar/types";
+import {allForks, capella, eip6110} from "@lodestar/types";
 import {ForkSeq, MAX_DEPOSITS} from "@lodestar/params";
 
-import {CachedBeaconStateAllForks, CachedBeaconStateCapella} from "../types.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateCapella, CachedBeaconStateEIP6110} from "../types.js";
 import {processAttestations} from "./processAttestations.js";
 import {processProposerSlashing} from "./processProposerSlashing.js";
 import {processAttesterSlashing} from "./processAttesterSlashing.js";
 import {processDeposit} from "./processDeposit.js";
 import {processVoluntaryExit} from "./processVoluntaryExit.js";
 import {processBlsToExecutionChange} from "./processBlsToExecutionChange.js";
+import {processDepositReceipt} from "./processDepositReceipt.js";
 import {ProcessBlockOpts} from "./types.js";
 
 export {
@@ -52,6 +53,12 @@ export function processOperations(
   if (fork >= ForkSeq.capella) {
     for (const blsToExecutionChange of (body as capella.BeaconBlockBody).blsToExecutionChanges) {
       processBlsToExecutionChange(state as CachedBeaconStateCapella, blsToExecutionChange);
+    }
+  }
+
+  if (fork >= ForkSeq.eip6110) {
+    for (const depositReceipt of (body as eip6110.BeaconBlockBody).executionPayload.depositReceipts) {
+      processDepositReceipt(fork, state as CachedBeaconStateEIP6110, depositReceipt);
     }
   }
 }
