@@ -8,12 +8,13 @@ import {
   BLOCK_BODY_EXECUTION_PAYLOAD_DEPTH as EXECUTION_PAYLOAD_DEPTH,
   BLOCK_BODY_EXECUTION_PAYLOAD_INDEX as EXECUTION_PAYLOAD_INDEX,
 } from "@lodestar/params";
-import {altair, phase0, ssz, allForks, capella, deneb, Slot} from "@lodestar/types";
+import {altair, phase0, ssz, allForks, capella, deneb, Slot, eip6110} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 
 import {isValidMerkleBranch, computeSyncPeriodAtSlot} from "../utils/index.js";
 import {LightClientStore} from "./store.js";
+import { Root } from "@lodestar/types/lib/sszTypes.js";
 
 export const GENESIS_SLOT = 0;
 export const ZERO_HASH = new Uint8Array(32);
@@ -105,6 +106,14 @@ export function upgradeLightClientHeader(
 
       // Break if no further upgradation is required else fall through
       if (ForkSeq[targetFork] <= ForkSeq.deneb) break;
+
+    // eslint-disable-next-line no-fallthrough
+    case ForkName.eip6110:
+      (upgradedHeader as eip6110.LightClientHeader).execution.depositReceiptsRoot =
+        ssz.eip6110.LightClientHeader.fields.execution.fields.depositReceiptsRoot.defaultValue();
+
+      // Break if no further upgradation is required else fall through
+      if (ForkSeq[targetFork] <= ForkSeq.eip6110) break;
   }
   return upgradedHeader;
 }
@@ -134,6 +143,14 @@ export function isValidLightClientHeader(config: ChainForkConfig, header: allFor
       ((header as deneb.LightClientHeader).execution.excessBlobGas &&
         (header as deneb.LightClientHeader).execution.excessBlobGas !== BigInt(0))
     ) {
+      return false;
+    }
+  }
+
+  if (epoch < config.EIP6110_FORK_EPOCH) {
+    if (
+      (header as eip6110.LightClientHeader).execution.depositReceiptsRoot &&
+        (header as eip6110.LightClientHeader).execution.depositReceiptsRoot !== Root.defaultValue()) {
       return false;
     }
   }
