@@ -31,7 +31,7 @@ describe("lightclient api", function () {
   let validators: Validator[];
   const afterEachCallbacks: (() => Promise<unknown> | void)[] = [];
 
-  this.beforeEach(async () => {
+  before(async () => {
     bn = await getDevBeaconNode({
       params: chainConfig,
       options: {
@@ -41,7 +41,7 @@ describe("lightclient api", function () {
           rest: {
             enabled: true,
             port: restPort,
-            api: ["lightclient"],
+            // api: ["lightclient"],
           },
         },
         chain: {blsVerifyAllMainThread: true},
@@ -64,7 +64,7 @@ describe("lightclient api", function () {
     afterEachCallbacks.push(() => Promise.all(validators.map((validator) => validator.close())));
   });
 
-  afterEach(async () => {
+  after(async () => {
     while (afterEachCallbacks.length > 0) {
       const callback = afterEachCallbacks.pop();
       if (callback) await callback();
@@ -120,10 +120,9 @@ describe("lightclient api", function () {
   it("getCommitteeRoot() for the 1st period", async function () {
     await waitForBestUpdate();
 
-    const lightclient = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).lightclient;
+    const {lightclient, beacon: client} = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config});
     const committeeRes = await lightclient.getCommitteeRoot(0, 1);
     ApiError.assert(committeeRes);
-    const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).beacon;
     const validatorResponse = await client.getStateValidators("head");
     ApiError.assert(validatorResponse);
     const pubkeys = validatorResponse.response.data.map((v) => v.validator.pubkey);

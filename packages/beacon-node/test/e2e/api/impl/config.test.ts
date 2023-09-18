@@ -17,8 +17,6 @@ const CONSTANT_NAMES_SKIP_LIST = new Set([
 ]);
 
 describe("api / impl / config", function () {
-  this.timeout(60 * 1000);
-
   it("Ensure all constants are exposed", async () => {
     const constantNames = await downloadRemoteConstants(ethereumConsensusSpecsTests.specVersion);
 

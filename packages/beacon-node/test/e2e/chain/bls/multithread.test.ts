@@ -78,6 +78,7 @@ describe("chain / bls / multithread queue", function () {
         expect(isValid).to.deep.equal([true, true, true], `sig set ${i} returned invalid`);
       }
     }
+    await pool.close();
   }
 
   for (const priority of [true, false]) {
@@ -122,6 +123,7 @@ describe("chain / bls / multithread queue", function () {
       for (const [i, isValid] of isValidArr.entries()) {
         expect(isValid).to.equal(true, `sig set ${i} returned invalid`);
       }
+      await pool.close();
     });
   }
 });
