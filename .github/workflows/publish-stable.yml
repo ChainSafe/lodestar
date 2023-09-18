@@ -62,6 +62,7 @@ jobs:
         with:
           node-version: 20
           check-latest: true
+          cache: yarn          
       - name: Node.js version
         id: node
         run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT
