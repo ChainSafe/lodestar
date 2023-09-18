@@ -9,6 +9,7 @@ import {
   CachedBeaconStateAltair,
   CachedBeaconStateBellatrix,
   CachedBeaconStateCapella,
+  CachedBeaconStateDeneb,
 } from "./types.js";
 import {computeEpochAtSlot} from "./util/index.js";
 import {verifyProposerSignature} from "./signatureSets/index.js";
@@ -18,6 +19,7 @@ import {
   upgradeStateToBellatrix,
   upgradeStateToCapella,
   upgradeStateToDeneb,
+  upgradeStateToEIP6110,
 } from "./slot/index.js";
 import {processBlock} from "./block/index.js";
 import {processEpoch} from "./epoch/index.js";
@@ -195,6 +197,9 @@ function processSlotsWithTransientCache(
       }
       if (stateSlot === config.DENEB_FORK_EPOCH) {
         postState = upgradeStateToDeneb(postState as CachedBeaconStateCapella) as CachedBeaconStateAllForks;
+      }
+      if (stateSlot === config.EIP6110_FORK_EPOCH) {
+        postState = upgradeStateToEIP6110(postState as CachedBeaconStateDeneb) as CachedBeaconStateAllForks;
       }
     } else {
       postState.slot++;

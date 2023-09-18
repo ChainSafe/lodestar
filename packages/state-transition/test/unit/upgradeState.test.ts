@@ -6,6 +6,7 @@ import {createBeaconConfig, ChainForkConfig, createChainForkConfig} from "@lodes
 import {config as chainConfig} from "@lodestar/config/default";
 
 import {upgradeStateToDeneb} from "../../src/slot/upgradeStateToDeneb.js";
+import { upgradeStateToEIP6110 } from "../../src/slot/upgradeStateToEIP6110.js";
 
 describe("upgradeState", () => {
   it("upgradeStateToDeneb", () => {
@@ -22,6 +23,22 @@ describe("upgradeState", () => {
       {skipSyncCommitteeCache: true}
     );
     const newState = upgradeStateToDeneb(stateView);
+    expect(() => newState.toValue()).to.not.throw();
+  });
+  it("upgradeStateToEIP6110", () => {
+    const denebState = ssz.deneb.BeaconState.defaultViewDU();
+    const config = getConfig(ForkName.deneb);
+    const stateView = createCachedBeaconState(
+      denebState,
+      {
+        config: createBeaconConfig(config, denebState.genesisValidatorsRoot),
+        pubkey2index: new PubkeyIndexMap(),
+        index2pubkey: [],
+      },
+      createEmptyCarryoverData(),
+      {skipSyncCommitteeCache: true}
+    );
+    const newState = upgradeStateToEIP6110(stateView);
     expect(() => newState.toValue()).to.not.throw();
   });
 });
@@ -48,12 +65,20 @@ function getConfig(fork: ForkName, forkEpoch = 0): ChainForkConfig {
         BELLATRIX_FORK_EPOCH: 0,
         CAPELLA_FORK_EPOCH: forkEpoch,
       });
-    case ForkName.deneb:
+    case ForkName.deneb: // TODO
       return createChainForkConfig({
         ALTAIR_FORK_EPOCH: 0,
         BELLATRIX_FORK_EPOCH: 0,
         CAPELLA_FORK_EPOCH: 0,
         DENEB_FORK_EPOCH: forkEpoch,
+      });
+    case ForkName.eip6110:
+      return createChainForkConfig({
+        ALTAIR_FORK_EPOCH: 0,
+        BELLATRIX_FORK_EPOCH: 0,
+        CAPELLA_FORK_EPOCH: 0,
+        DENEB_FORK_EPOCH: 0,
+        EIP6110_FORK_EPOCH: forkEpoch,
       });
   }
 }

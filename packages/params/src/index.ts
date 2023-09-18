@@ -247,3 +247,6 @@ export const INTERVALS_PER_SLOT = 3;
 export const BYTES_PER_FIELD_ELEMENT = 32;
 export const BLOB_TX_TYPE = 0x03;
 export const VERSIONED_HASH_VERSION_KZG = 0x01;
+
+// EIP-6110 Misc
+export const UNSET_DEPOSIT_RECEIPTS_START_INDEX =  2 ** 64 - 1;

@@ -287,6 +287,15 @@ export function initializeBeaconStateFromEth1(
       ssz.deneb.ExecutionPayloadHeader.defaultViewDU();
   }
 
+  if (GENESIS_SLOT >= config.EIP6110_FORK_EPOCH) {
+    const stateEIP6110 = state as CompositeViewDU<typeof ssz.eip6110.BeaconState>;
+    stateEIP6110.fork.previousVersion = config.EIP6110_FORK_VERSION;
+    stateEIP6110.fork.currentVersion = config.EIP6110_FORK_VERSION;
+    stateEIP6110.latestExecutionPayloadHeader =
+      (executionPayloadHeader as CompositeViewDU<typeof ssz.eip6110.ExecutionPayloadHeader>) ??
+      ssz.eip6110.ExecutionPayloadHeader.defaultViewDU();
+  }
+
   state.commit();
 
   return state;
