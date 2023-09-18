@@ -80,7 +80,7 @@
     "test:unit:minimal": "nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'",
     "test:unit:mainnet": "LODESTAR_PRESET=mainnet nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit-mainnet/**/*.test.ts'",
     "test:unit": "yarn test:unit:minimal && yarn test:unit:mainnet",
-    "test:e2e": "LOG_LEVEL=debug LODESTAR_PRESET=minimal mocha 'test/e2e/**/*.test.ts'",
+    "test:e2e": "LODESTAR_PRESET=minimal mocha 'test/e2e/**/*.test.ts'",
     "test:sim": "mocha 'test/sim/**/*.test.ts'",
     "test:sim:merge-interop": "mocha 'test/sim/merge-interop.test.ts'",
     "test:sim:mergemock": "mocha 'test/sim/mergemock.test.ts'",
