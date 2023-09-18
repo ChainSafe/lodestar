@@ -1,6 +1,6 @@
 import bls from "@chainsafe/bls";
 import {CoordType} from "@chainsafe/bls/types";
-import {phase0, ssz} from "@lodestar/types";
+import {BLSPubkey, BLSSignature, Bytes32, UintNum64, phase0, ssz} from "@lodestar/types";
 import {verifyMerkleBranch} from "@lodestar/utils";
 
 import {
@@ -23,7 +23,6 @@ import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../types.js";
  * PERF: Work depends on number of Deposit per block. On regular networks the average is 0 / block.
  */
 export function processDeposit(fork: ForkSeq, state: CachedBeaconStateAllForks, deposit: phase0.Deposit): void {
-  const {config, validators, epochCtx} = state;
 
   // verify the merkle branch
   if (
@@ -41,15 +40,32 @@ export function processDeposit(fork: ForkSeq, state: CachedBeaconStateAllForks, 
   // deposits must be processed in order
   state.eth1DepositIndex += 1;
 
-  const pubkey = deposit.data.pubkey; // Drop tree
-  const amount = deposit.data.amount;
+  applyDeposit(
+    fork,
+    state,
+    deposit.data.pubkey,
+    deposit.data.withdrawalCredentials,
+    deposit.data.amount,
+    deposit.data.signature
+  )
+
+}
+
+/**
+ * Adds a new validator into the registry. Or increase balance if already exist.
+ * Follows applyDeposit() in consensus spec. Will be used by processDeposit() and processDepositReceipt()
+ *  
+ */
+export function applyDeposit(fork: ForkSeq, state: CachedBeaconStateAllForks, pubkey: BLSPubkey, withdrawalCredentials: Bytes32, amount: UintNum64, signature: BLSSignature): void {
+  const {config, validators, epochCtx} = state;
+
   const cachedIndex = epochCtx.getValidatorIndex(pubkey);
   if (cachedIndex === undefined || !Number.isSafeInteger(cachedIndex) || cachedIndex >= validators.length) {
     // verify the deposit signature (proof of posession) which is not checked by the deposit contract
     const depositMessage = {
-      pubkey: deposit.data.pubkey, // Retain tree for hashing
-      withdrawalCredentials: deposit.data.withdrawalCredentials, // Retain tree for hashing
-      amount: deposit.data.amount,
+      pubkey,
+      withdrawalCredentials,
+      amount,
     };
     // fork-agnostic domain since deposits are valid across forks
     const domain = computeDomain(DOMAIN_DEPOSIT, config.GENESIS_FORK_VERSION, ZERO_HASH);
@@ -57,20 +73,28 @@ export function processDeposit(fork: ForkSeq, state: CachedBeaconStateAllForks, 
     try {
       // Pubkeys must be checked for group + inf. This must be done only once when the validator deposit is processed
       const publicKey = bls.PublicKey.fromBytes(pubkey, CoordType.affine, true);
-      const signature = bls.Signature.fromBytes(deposit.data.signature, CoordType.affine, true);
-      if (!signature.verify(publicKey, signingRoot)) {
+      const computedSignature = bls.Signature.fromBytes(signature, CoordType.affine, true);
+      if (!computedSignature.verify(publicKey, signingRoot)) {
         return;
       }
     } catch (e) {
       return; // Catch all BLS errors: failed key validation, failed signature validation, invalid signature
     }
+    addValidatorToRegistry(fork, state, pubkey, withdrawalCredentials, amount);
+  } else {
+    // increase balance by deposit amount
+    increaseBalance(state, cachedIndex, amount);
+  }
+}
 
+function addValidatorToRegistry(fork: ForkSeq, state: CachedBeaconStateAllForks, pubkey: BLSPubkey, withdrawalCredentials: Bytes32, amount: UintNum64) : void {
+    const {validators, epochCtx} = state;
     // add validator and balance entries
     const effectiveBalance = Math.min(amount - (amount % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE);
     validators.push(
       ssz.phase0.Validator.toViewDU({
         pubkey,
-        withdrawalCredentials: deposit.data.withdrawalCredentials,
+        withdrawalCredentials,
         activationEligibilityEpoch: FAR_FUTURE_EPOCH,
         activationEpoch: FAR_FUTURE_EPOCH,
         exitEpoch: FAR_FUTURE_EPOCH,
@@ -101,8 +125,4 @@ export function processDeposit(fork: ForkSeq, state: CachedBeaconStateAllForks, 
       stateAltair.previousEpochParticipation.push(0);
       stateAltair.currentEpochParticipation.push(0);
     }
-  } else {
-    // increase balance by deposit amount
-    increaseBalance(state, cachedIndex, amount);
-  }
 }
