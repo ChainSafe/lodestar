@@ -1,3 +1,7 @@
+// eslint-disable-next-line no-restricted-imports, import/no-extraneous-dependencies
+import {hasher} from "@chainsafe/persistent-merkle-tree/lib/hasher/as-sha256.js";
+// eslint-disable-next-line no-restricted-imports, import/no-extraneous-dependencies
+import {setHasher} from "@chainsafe/persistent-merkle-tree/lib/hasher/index.js";
 // Must not use `* as yargs`, see https://github.com/yargs/yargs/issues/1131
 import yargs from "yargs";
 import {hideBin} from "yargs/helpers";
@@ -5,6 +9,9 @@ import {registerCommandToYargs} from "../utils/command.js";
 import {getVersionData} from "../utils/version.js";
 import {cmds} from "./cmds/index.js";
 import {globalOptions} from "./options.js";
+
+// without setting this first, persistent-merkle-tree will use noble instead
+setHasher(hasher);
 
 const {version} = getVersionData();
 const topBanner = `🌟 Lodestar Prover Proxy: Ethereum RPC proxy for RPC responses, verified against the trusted block hashes.
