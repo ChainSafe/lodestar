@@ -1,3 +1,3 @@
-export {Db, DbReqOpts, DatabaseController, FilterOptions, KeyValue} from "./interface.js";
+export type {Db, DbReqOpts, DatabaseController, FilterOptions, KeyValue} from "./interface.js";
 export {LevelDbController} from "./level.js";
-export {LevelDbControllerMetrics} from "./metrics.js";
+export type {LevelDbControllerMetrics} from "./metrics.js";

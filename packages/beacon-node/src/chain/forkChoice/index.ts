@@ -21,7 +21,7 @@ import {ChainEventEmitter} from "../emitter.js";
 import {ChainEvent} from "../emitter.js";
 import {GENESIS_SLOT} from "../../constants/index.js";
 
-export {ForkChoiceOpts};
+export type {ForkChoiceOpts};
 
 /**
  * Fork Choice extended with a ChainEventEmitter

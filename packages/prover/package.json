@@ -53,9 +53,9 @@
     "lint:fix": "yarn run lint --fix",
     "pretest": "yarn run check-types",
     "test": "yarn test:unit && yarn test:e2e",
-    "test:unit": "nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'",
+    "test:unit": "TS_NODE_TRANSPILE_ONLY=true nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'",
     "test:browsers": "yarn karma start karma.config.cjs",
-    "test:e2e": "LODESTAR_PRESET=minimal mocha 'test/e2e/**/*.test.ts'",
+    "test:e2e": "TS_NODE_TRANSPILE_ONLY=true LODESTAR_PRESET=minimal mocha 'test/e2e/**/*.test.ts'",
     "check-readme": "typescript-docs-verifier",
     "generate-fixtures": "node --loader ts-node/esm scripts/generate_fixtures.ts"
   },

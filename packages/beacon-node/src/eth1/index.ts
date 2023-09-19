@@ -6,7 +6,8 @@ import {Eth1DepositDataTracker, Eth1DepositDataTrackerModules} from "./eth1Depos
 import {Eth1MergeBlockTracker, Eth1MergeBlockTrackerModules} from "./eth1MergeBlockTracker.js";
 import {Eth1Options} from "./options.js";
 import {Eth1Provider} from "./provider/eth1Provider.js";
-export {IEth1ForBlockProduction, IEth1Provider, Eth1Provider};
+export {Eth1Provider};
+export type {IEth1ForBlockProduction, IEth1Provider};
 
 // This module encapsulates all consumer functionality to the execution node (formerly eth1). The execution client
 // has to:
