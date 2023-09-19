@@ -1,11 +1,18 @@
 #!/usr/bin/env node
 
-// MUST import first to apply preset from args
-import "./applyPreset.js";
-import {YargsError} from "./util/index.js";
-import {getLodestarCli, yarg} from "./cli.js";
+// eslint-disable-next-line no-restricted-imports, import/no-extraneous-dependencies
+import {hasher} from "@chainsafe/persistent-merkle-tree/lib/hasher/as-sha256.js";
+// eslint-disable-next-line no-restricted-imports, import/no-extraneous-dependencies
+import {setHasher} from "@chainsafe/persistent-merkle-tree/lib/hasher/index.js";
 import "source-map-support/register.js";
 
+// without setting this first, persistent-merkle-tree will use noble instead
+setHasher(hasher);
+
+// MUST import second to apply preset from args
+await import("./applyPreset.js");
+const {YargsError} = await import("./util/index.js");
+const {getLodestarCli, yarg} = await import("./cli.js");
 const lodestar = getLodestarCli();
 
 void lodestar
