@@ -31,7 +31,7 @@ export const fork: TestRunnerFn<ForkStateCase, BeaconStateAllForks> = (forkNext)
           return slotFns.upgradeStateToBellatrix(preState as CachedBeaconStateAltair);
         case ForkName.capella:
           return slotFns.upgradeStateToCapella(preState as CachedBeaconStateBellatrix);
-        case ForkName.deneb: 
+        case ForkName.deneb:
           return slotFns.upgradeStateToDeneb(preState as CachedBeaconStateCapella);
         case ForkName.eip6110:
           return slotFns.upgradeStateToEIP6110(preState as CachedBeaconStateDeneb);

@@ -12,9 +12,9 @@ import {altair, phase0, ssz, allForks, capella, deneb, Slot, eip6110} from "@lod
 import {ChainForkConfig} from "@lodestar/config";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 
+import {Root} from "@lodestar/types/lib/sszTypes.js";
 import {isValidMerkleBranch, computeSyncPeriodAtSlot} from "../utils/index.js";
 import {LightClientStore} from "./store.js";
-import { Root } from "@lodestar/types/lib/sszTypes.js";
 
 export const GENESIS_SLOT = 0;
 export const ZERO_HASH = new Uint8Array(32);
@@ -150,7 +150,8 @@ export function isValidLightClientHeader(config: ChainForkConfig, header: allFor
   if (epoch < config.EIP6110_FORK_EPOCH) {
     if (
       (header as eip6110.LightClientHeader).execution.depositReceiptsRoot &&
-        (header as eip6110.LightClientHeader).execution.depositReceiptsRoot !== Root.defaultValue()) {
+      (header as eip6110.LightClientHeader).execution.depositReceiptsRoot != Root.defaultValue()
+    ) {
       return false;
     }
   }

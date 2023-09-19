@@ -3,9 +3,9 @@ import {toHexString} from "@chainsafe/ssz";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
 import {FilterOptions} from "@lodestar/db";
+import {getEth1DepositCount} from "@lodestar/state-transition";
 import {Eth1Error, Eth1ErrorCode} from "../errors.js";
 import {DepositTree} from "../../db/repositories/depositDataRoot.js";
-import { getEth1DepositCount } from "@lodestar/state-transition";
 
 export type DepositGetter<T> = (indexRange: FilterOptions<number>, eth1Data: phase0.Eth1Data) => Promise<T[]>;
 

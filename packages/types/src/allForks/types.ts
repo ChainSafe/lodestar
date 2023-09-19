@@ -46,10 +46,18 @@ export type BeaconState =
 export type Metadata = phase0.Metadata | altair.Metadata;
 
 // For easy reference in the assemble block for building payloads
-export type ExecutionBlockBody = bellatrix.BeaconBlockBody | capella.BeaconBlockBody | deneb.BeaconBlockBody | eip6110.BeaconBlockBody;
+export type ExecutionBlockBody =
+  | bellatrix.BeaconBlockBody
+  | capella.BeaconBlockBody
+  | deneb.BeaconBlockBody
+  | eip6110.BeaconBlockBody;
 
 // These two additional types will also change bellatrix forward
-export type ExecutionPayload = bellatrix.ExecutionPayload | capella.ExecutionPayload | deneb.ExecutionPayload | eip6110.ExecutionPayload;
+export type ExecutionPayload =
+  | bellatrix.ExecutionPayload
+  | capella.ExecutionPayload
+  | deneb.ExecutionPayload
+  | eip6110.ExecutionPayload;
 export type ExecutionPayloadHeader =
   | bellatrix.ExecutionPayloadHeader
   | capella.ExecutionPayloadHeader
@@ -62,7 +70,11 @@ export type BlindedBeaconBlockBody =
   | capella.BlindedBeaconBlockBody
   | deneb.BlindedBeaconBlockBody
   | eip6110.BlindedBeaconBlockBody;
-export type BlindedBeaconBlock = bellatrix.BlindedBeaconBlock | capella.BlindedBeaconBlock | deneb.BlindedBeaconBlock | eip6110.BlindedBeaconBlock;
+export type BlindedBeaconBlock =
+  | bellatrix.BlindedBeaconBlock
+  | capella.BlindedBeaconBlock
+  | deneb.BlindedBeaconBlock
+  | eip6110.BlindedBeaconBlock;
 export type SignedBlindedBeaconBlock =
   | bellatrix.SignedBlindedBeaconBlock
   | capella.SignedBlindedBeaconBlock
@@ -77,21 +89,33 @@ export type FullOrBlindedBeaconBlockBody = BeaconBlockBody | BlindedBeaconBlockB
 export type FullOrBlindedBeaconBlock = BeaconBlock | BlindedBeaconBlock;
 export type FullOrBlindedSignedBeaconBlock = SignedBeaconBlock | SignedBlindedBeaconBlock;
 
-export type FullOrBlindedBlobSidecar = deneb.BlobSidecar | deneb.BlindedBlobSidecar ;
+export type FullOrBlindedBlobSidecar = deneb.BlobSidecar | deneb.BlindedBlobSidecar;
 export type FullOrBlindedSignedBlobSidecar = deneb.SignedBlobSidecar | deneb.SignedBlindedBlobSidecar;
 
 export type FullOrBlindedBlobSidecars = deneb.BlobSidecars | deneb.BlindedBlobSidecars;
 
 export type BuilderBid = bellatrix.BuilderBid | capella.BuilderBid | deneb.BuilderBid | eip6110.BuilderBid;
-export type SignedBuilderBid = bellatrix.SignedBuilderBid | capella.SignedBuilderBid | deneb.SignedBuilderBid | eip6110.SignedBuilderBid;
+export type SignedBuilderBid =
+  | bellatrix.SignedBuilderBid
+  | capella.SignedBuilderBid
+  | deneb.SignedBuilderBid
+  | eip6110.SignedBuilderBid;
 
-export type LightClientHeader = altair.LightClientHeader | capella.LightClientHeader | deneb.LightClientHeader | eip6110.LightClientHeader;
+export type LightClientHeader =
+  | altair.LightClientHeader
+  | capella.LightClientHeader
+  | deneb.LightClientHeader
+  | eip6110.LightClientHeader;
 export type LightClientBootstrap =
   | altair.LightClientBootstrap
   | capella.LightClientBootstrap
   | deneb.LightClientBootstrap
   | eip6110.LightClientBootstrap;
-export type LightClientUpdate = altair.LightClientUpdate | capella.LightClientUpdate | deneb.LightClientUpdate | eip6110.LightClientUpdate;
+export type LightClientUpdate =
+  | altair.LightClientUpdate
+  | capella.LightClientUpdate
+  | deneb.LightClientUpdate
+  | eip6110.LightClientUpdate;
 export type LightClientFinalityUpdate =
   | altair.LightClientFinalityUpdate
   | capella.LightClientFinalityUpdate
@@ -102,7 +126,11 @@ export type LightClientOptimisticUpdate =
   | capella.LightClientOptimisticUpdate
   | deneb.LightClientOptimisticUpdate
   | eip6110.LightClientOptimisticUpdate;
-export type LightClientStore = altair.LightClientStore | capella.LightClientStore | deneb.LightClientStore | eip6110.LightClientStore;
+export type LightClientStore =
+  | altair.LightClientStore
+  | capella.LightClientStore
+  | deneb.LightClientStore
+  | eip6110.LightClientStore;
 
 export type SSEPayloadAttributes =
   | bellatrix.SSEPayloadAttributes
@@ -133,7 +161,12 @@ export type AllForksBlindedTypes = {
 };
 
 export type AllForksLightClient = {
-  BeaconBlock: altair.BeaconBlock | bellatrix.BeaconBlock | capella.BeaconBlock | deneb.BeaconBlock | eip6110.BeaconBlock;
+  BeaconBlock:
+    | altair.BeaconBlock
+    | bellatrix.BeaconBlock
+    | capella.BeaconBlock
+    | deneb.BeaconBlock
+    | eip6110.BeaconBlock;
   LightClientHeader: LightClientHeader;
   LightClientBootstrap: LightClientBootstrap;
   LightClientUpdate: LightClientUpdate;
@@ -144,7 +177,11 @@ export type AllForksLightClient = {
 
 export type AllForksExecution = {
   BeaconBlock: bellatrix.BeaconBlock | capella.BeaconBlock | deneb.BeaconBlock | eip6110.BeaconBlock;
-  BeaconBlockBody: bellatrix.BeaconBlockBody | capella.BeaconBlockBody | deneb.BeaconBlockBody | eip6110.BeaconBlockBody;
+  BeaconBlockBody:
+    | bellatrix.BeaconBlockBody
+    | capella.BeaconBlockBody
+    | deneb.BeaconBlockBody
+    | eip6110.BeaconBlockBody;
 };
 
 /**
@@ -214,19 +251,34 @@ export type AllForksSSZTypes = {
 
 export type AllForksExecutionSSZTypes = {
   BeaconBlockBody: AllForksTypeOf<
-    typeof bellatrixSsz.BeaconBlockBody | typeof capellaSsz.BeaconBlockBody | typeof denebSsz.BeaconBlockBody | typeof eip6110Ssz.BeaconBlockBody
+    | typeof bellatrixSsz.BeaconBlockBody
+    | typeof capellaSsz.BeaconBlockBody
+    | typeof denebSsz.BeaconBlockBody
+    | typeof eip6110Ssz.BeaconBlockBody
   >;
   BeaconBlock: AllForksTypeOf<
-    typeof bellatrixSsz.BeaconBlock | typeof capellaSsz.BeaconBlock | typeof denebSsz.BeaconBlock | typeof eip6110Ssz.BeaconBlock
+    | typeof bellatrixSsz.BeaconBlock
+    | typeof capellaSsz.BeaconBlock
+    | typeof denebSsz.BeaconBlock
+    | typeof eip6110Ssz.BeaconBlock
   >;
   SignedBeaconBlock: AllForksTypeOf<
-    typeof bellatrixSsz.SignedBeaconBlock | typeof capellaSsz.SignedBeaconBlock | typeof denebSsz.SignedBeaconBlock | typeof eip6110Ssz.SignedBeaconBlock
+    | typeof bellatrixSsz.SignedBeaconBlock
+    | typeof capellaSsz.SignedBeaconBlock
+    | typeof denebSsz.SignedBeaconBlock
+    | typeof eip6110Ssz.SignedBeaconBlock
   >;
   BeaconState: AllForksTypeOf<
-    typeof bellatrixSsz.BeaconState | typeof capellaSsz.BeaconState | typeof denebSsz.BeaconState | typeof eip6110Ssz.BeaconState
+    | typeof bellatrixSsz.BeaconState
+    | typeof capellaSsz.BeaconState
+    | typeof denebSsz.BeaconState
+    | typeof eip6110Ssz.BeaconState
   >;
   ExecutionPayload: AllForksTypeOf<
-    typeof bellatrixSsz.ExecutionPayload | typeof capellaSsz.ExecutionPayload | typeof denebSsz.ExecutionPayload | typeof eip6110Ssz.ExecutionPayload
+    | typeof bellatrixSsz.ExecutionPayload
+    | typeof capellaSsz.ExecutionPayload
+    | typeof denebSsz.ExecutionPayload
+    | typeof eip6110Ssz.ExecutionPayload
   >;
   ExecutionPayloadHeader: AllForksTypeOf<
     | typeof bellatrixSsz.ExecutionPayloadHeader
@@ -235,10 +287,16 @@ export type AllForksExecutionSSZTypes = {
     | typeof eip6110Ssz.ExecutionPayloadHeader
   >;
   BuilderBid: AllForksTypeOf<
-    typeof bellatrixSsz.BuilderBid | typeof capellaSsz.BuilderBid | typeof denebSsz.BuilderBid | typeof eip6110Ssz.BuilderBid
+    | typeof bellatrixSsz.BuilderBid
+    | typeof capellaSsz.BuilderBid
+    | typeof denebSsz.BuilderBid
+    | typeof eip6110Ssz.BuilderBid
   >;
   SignedBuilderBid: AllForksTypeOf<
-    typeof bellatrixSsz.SignedBuilderBid | typeof capellaSsz.SignedBuilderBid | typeof denebSsz.SignedBuilderBid | typeof eip6110Ssz.SignedBuilderBid
+    | typeof bellatrixSsz.SignedBuilderBid
+    | typeof capellaSsz.SignedBuilderBid
+    | typeof denebSsz.SignedBuilderBid
+    | typeof eip6110Ssz.SignedBuilderBid
   >;
   SSEPayloadAttributes: AllForksTypeOf<
     | typeof bellatrixSsz.SSEPayloadAttributes
@@ -256,7 +314,10 @@ export type AllForksBlindedSSZTypes = {
     | typeof eip6110Ssz.BlindedBeaconBlock
   >;
   BeaconBlock: AllForksTypeOf<
-    typeof bellatrixSsz.BlindedBeaconBlock | typeof capellaSsz.BlindedBeaconBlock | typeof denebSsz.BlindedBeaconBlock | typeof eip6110Ssz.BlindedBeaconBlock
+    | typeof bellatrixSsz.BlindedBeaconBlock
+    | typeof capellaSsz.BlindedBeaconBlock
+    | typeof denebSsz.BlindedBeaconBlock
+    | typeof eip6110Ssz.BlindedBeaconBlock
   >;
   SignedBeaconBlock: AllForksTypeOf<
     | typeof bellatrixSsz.SignedBlindedBeaconBlock
@@ -282,7 +343,10 @@ export type AllForksLightClientSSZTypes = {
     | typeof eip6110Ssz.BeaconBlockBody
   >;
   LightClientHeader: AllForksTypeOf<
-    typeof altairSsz.LightClientHeader | typeof capellaSsz.LightClientHeader | typeof denebSsz.LightClientHeader | typeof eip6110Ssz.LightClientHeader
+    | typeof altairSsz.LightClientHeader
+    | typeof capellaSsz.LightClientHeader
+    | typeof denebSsz.LightClientHeader
+    | typeof eip6110Ssz.LightClientHeader
   >;
   LightClientBootstrap: AllForksTypeOf<
     | typeof altairSsz.LightClientBootstrap
@@ -291,7 +355,10 @@ export type AllForksLightClientSSZTypes = {
     | typeof eip6110Ssz.LightClientBootstrap
   >;
   LightClientUpdate: AllForksTypeOf<
-    typeof altairSsz.LightClientUpdate | typeof capellaSsz.LightClientUpdate | typeof denebSsz.LightClientUpdate | typeof eip6110Ssz.LightClientUpdate
+    | typeof altairSsz.LightClientUpdate
+    | typeof capellaSsz.LightClientUpdate
+    | typeof denebSsz.LightClientUpdate
+    | typeof eip6110Ssz.LightClientUpdate
   >;
   LightClientFinalityUpdate: AllForksTypeOf<
     | typeof altairSsz.LightClientFinalityUpdate
@@ -306,7 +373,10 @@ export type AllForksLightClientSSZTypes = {
     | typeof eip6110Ssz.LightClientOptimisticUpdate
   >;
   LightClientStore: AllForksTypeOf<
-    typeof altairSsz.LightClientStore | typeof capellaSsz.LightClientStore | typeof denebSsz.LightClientStore | typeof eip6110Ssz.LightClientStore
+    | typeof altairSsz.LightClientStore
+    | typeof capellaSsz.LightClientStore
+    | typeof denebSsz.LightClientStore
+    | typeof eip6110Ssz.LightClientStore
   >;
 };
 

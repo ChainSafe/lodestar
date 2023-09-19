@@ -1,7 +1,7 @@
 import {ssz} from "@lodestar/types";
+import {UNSET_DEPOSIT_RECEIPTS_START_INDEX} from "@lodestar/params";
 import {CachedBeaconStateDeneb} from "../types.js";
 import {CachedBeaconStateEIP6110, getCachedBeaconState} from "../cache/stateCache.js";
-import { UNSET_DEPOSIT_RECEIPTS_START_INDEX } from "@lodestar/params";
 
 /**
  * Upgrade a state from Capella to Deneb.
@@ -19,8 +19,6 @@ export function upgradeStateToEIP6110(stateDeneb: CachedBeaconStateDeneb): Cache
     currentVersion: config.EIP6110_FORK_VERSION,
     epoch: stateDeneb.epochCtx.epoch,
   });
-
-
 
   // latestExecutionPayloadHeader's depositReceiptsRoot set to zeros by default
   // default value of depositReceiptsStartIndex is UNSET_DEPOSIT_RECEIPTS_START_INDEX

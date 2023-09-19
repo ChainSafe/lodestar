@@ -24,7 +24,7 @@ export type DepositReceiptV1 = {
   amount: QUANTITY;
   signature: DATA;
   index: QUANTITY;
-}
+};
 
 type FcuAttributes = {headBlockHash: DATA; finalizedBlockHash: DATA} & Omit<PayloadAttributesRpc, "withdrawals">;
 

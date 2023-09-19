@@ -13,19 +13,8 @@ import {ssz as bellatrixSsz} from "../bellatrix/index.js";
 import {ssz as capellaSsz} from "../capella/index.js";
 import {ssz as denebSsz} from "../deneb/index.js";
 
-const {
-  UintNum64,
-  Slot,
-  Root,
-  BLSSignature,
-  UintBn256,
-  Bytes32,
-  BLSPubkey,
-  ValidatorIndex,
-  DepositIndex,
-  Gwei,
-} = primitiveSsz;
-
+const {UintNum64, Slot, Root, BLSSignature, UintBn256, Bytes32, BLSPubkey, ValidatorIndex, DepositIndex} =
+  primitiveSsz;
 
 export const DepositReceipt = new ContainerType( //good
   {
@@ -41,8 +30,7 @@ export const DepositReceipt = new ContainerType( //good
 
 export const DepositReceipts = new ListCompositeType(DepositReceipt, MAX_DEPOSIT_RECEIPTS_PER_PAYLOAD);
 
-
-export const ExecutionPayload = new ContainerType( // good
+export const ExecutionPayload = new ContainerType( 
   {
     ...denebSsz.ExecutionPayload.fields,
     depositReceipts: DepositReceipts, // New in EIP6110
@@ -50,7 +38,7 @@ export const ExecutionPayload = new ContainerType( // good
   {typeName: "ExecutionPayload", jsonCase: "eth2"}
 );
 
-export const ExecutionPayloadHeader = new ContainerType( // good
+export const ExecutionPayloadHeader = new ContainerType( 
   {
     ...denebSsz.ExecutionPayloadHeader.fields,
     depositReceiptsRoot: Root, // New in EIP6110
@@ -59,17 +47,17 @@ export const ExecutionPayloadHeader = new ContainerType( // good
 );
 
 // We have to preserve Fields ordering while changing the type of ExecutionPayload
-export const BeaconBlockBody = new ContainerType( // good
+export const BeaconBlockBody = new ContainerType( 
   {
     ...altairSsz.BeaconBlockBody.fields,
     executionPayload: ExecutionPayload, // Modified in EIP6110
     blsToExecutionChanges: denebSsz.BeaconBlockBody.fields.blsToExecutionChanges,
-    blobKzgCommitments: denebSsz.BeaconBlockBody.fields.blobKzgCommitments, 
+    blobKzgCommitments: denebSsz.BeaconBlockBody.fields.blobKzgCommitments,
   },
   {typeName: "BeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
-export const BeaconBlock = new ContainerType( // good
+export const BeaconBlock = new ContainerType( 
   {
     ...denebSsz.BeaconBlock.fields,
     body: BeaconBlockBody, // Modified in EIP6110
@@ -77,7 +65,7 @@ export const BeaconBlock = new ContainerType( // good
   {typeName: "BeaconBlock", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
-export const SignedBeaconBlock = new ContainerType( // good
+export const SignedBeaconBlock = new ContainerType( 
   {
     message: BeaconBlock, // Modified in EIP6110
     signature: BLSSignature,
@@ -85,16 +73,7 @@ export const SignedBeaconBlock = new ContainerType( // good
   {typeName: "SignedBeaconBlock", jsonCase: "eth2"}
 );
 
-
-export const SignedBeaconBlockAndBlobSidecars = new ContainerType( // good
-  {
-    beaconBlock: SignedBeaconBlock, // Modified in EIP6110
-    blobSidecars: denebSsz.SignedBeaconBlockAndBlobSidecars.fields.blobSidecars,
-  },
-  {typeName: "SignedBeaconBlockAndBlobSidecars", jsonCase: "eth2"}
-);
-
-export const BlindedBeaconBlockBody = new ContainerType( // good
+export const BlindedBeaconBlockBody = new ContainerType( 
   {
     ...altairSsz.BeaconBlockBody.fields,
     executionPayloadHeader: ExecutionPayloadHeader, // Modified in EIP6110
@@ -104,7 +83,7 @@ export const BlindedBeaconBlockBody = new ContainerType( // good
   {typeName: "BlindedBeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
-export const BlindedBeaconBlock = new ContainerType( // good
+export const BlindedBeaconBlock = new ContainerType( 
   {
     ...denebSsz.BlindedBeaconBlock.fields,
     body: BlindedBeaconBlockBody, // Modified in EIP6110
@@ -112,7 +91,7 @@ export const BlindedBeaconBlock = new ContainerType( // good
   {typeName: "BlindedBeaconBlock", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
-export const SignedBlindedBeaconBlock = new ContainerType( // good
+export const SignedBlindedBeaconBlock = new ContainerType( 
   {
     message: BlindedBeaconBlock, // Modified in EIP6110
     signature: BLSSignature,
@@ -120,7 +99,7 @@ export const SignedBlindedBeaconBlock = new ContainerType( // good
   {typeName: "SignedBlindedBeaconBlock", jsonCase: "eth2"}
 );
 
-export const BuilderBid = new ContainerType( // good
+export const BuilderBid = new ContainerType( 
   {
     header: ExecutionPayloadHeader, // Modified in EIP6110
     value: UintBn256,
@@ -130,7 +109,7 @@ export const BuilderBid = new ContainerType( // good
   {typeName: "BuilderBid", jsonCase: "eth2"}
 );
 
-export const SignedBuilderBid = new ContainerType( // good
+export const SignedBuilderBid = new ContainerType( 
   {
     message: BuilderBid,
     signature: BLSSignature,
@@ -140,7 +119,7 @@ export const SignedBuilderBid = new ContainerType( // good
 
 // We don't spread deneb.BeaconState fields since we need to replace
 // latestExecutionPayloadHeader and we cannot keep order doing that
-export const BeaconState = new ContainerType( // good
+export const BeaconState = new ContainerType( 
   {
     genesisTime: UintNum64,
     genesisValidatorsRoot: Root,
@@ -187,7 +166,7 @@ export const BeaconState = new ContainerType( // good
   {typeName: "BeaconState", jsonCase: "eth2"}
 );
 
-export const LightClientHeader = new ContainerType( // good
+export const LightClientHeader = new ContainerType( 
   {
     beacon: phase0Ssz.BeaconBlockHeader,
     execution: ExecutionPayloadHeader, // Modified in EIP6110
@@ -196,7 +175,7 @@ export const LightClientHeader = new ContainerType( // good
   {typeName: "LightClientHeader", jsonCase: "eth2"}
 );
 
-export const LightClientBootstrap = new ContainerType( // good
+export const LightClientBootstrap = new ContainerType( 
   {
     header: LightClientHeader,
     currentSyncCommittee: altairSsz.SyncCommittee,
@@ -205,7 +184,7 @@ export const LightClientBootstrap = new ContainerType( // good
   {typeName: "LightClientBootstrap", jsonCase: "eth2"}
 );
 
-export const LightClientUpdate = new ContainerType( // good
+export const LightClientUpdate = new ContainerType( 
   {
     attestedHeader: LightClientHeader,
     nextSyncCommittee: altairSsz.SyncCommittee,
@@ -218,7 +197,7 @@ export const LightClientUpdate = new ContainerType( // good
   {typeName: "LightClientUpdate", jsonCase: "eth2"}
 );
 
-export const LightClientFinalityUpdate = new ContainerType( // good
+export const LightClientFinalityUpdate = new ContainerType( 
   {
     attestedHeader: LightClientHeader,
     finalizedHeader: LightClientHeader,

@@ -784,7 +784,7 @@ export class EpochCache {
       this.unfinalizedPubkey2index.set(toMemoryEfficientHexStr(pubkey), index);
     } else {
       this.globalPubkey2index.set(pubkey, index);
-      this.globalIndex2pubkey[index] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian); 
+      this.globalIndex2pubkey[index] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian);
     }
   }
 
@@ -795,7 +795,7 @@ export class EpochCache {
    */
   addFinalizedPubkey(pubkey: Uint8Array, index: ValidatorIndex): void {
     if (!this.isAfterEIP6110) {
-      throw new Error("addFInalizedPubkey is not available pre EIP-6110")
+      throw new Error("addFInalizedPubkey is not available pre EIP-6110");
     }
 
     if (this.globalPubkey2index.get(pubkey)) {

@@ -2,8 +2,8 @@ import {expect} from "chai";
 import {fromHexString} from "@chainsafe/ssz";
 import {ssz, allForks} from "@lodestar/types";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {Root} from "@lodestar/types/lib/sszTypes.js";
 import {isValidLightClientHeader} from "../../src/spec/utils.js";
-import { Root } from "@lodestar/types/lib/sszTypes.js";
 
 describe("isValidLightClientHeader", function () {
   /* eslint-disable @typescript-eslint/naming-convention */
@@ -94,12 +94,13 @@ describe("isValidLightClientHeader", function () {
     executionBranch: capellaLCHeader.executionBranch,
   };
 
-  const denebLCHeader = { // TODO 6110: Find a denebLCHeader
+  const denebLCHeader = {
+    // TODO 6110: Find a denebLCHeader
   };
 
-  const denebUpgradedEIP6110Header = { // TODO 6110: Find a denebLCHeader
-
-  }
+  const denebUpgradedEIP6110Header = {
+    // TODO 6110: Find a denebLCHeader
+  };
 
   const testCases: [string, allForks.LightClientHeader][] = [
     ["altair LC header", altairLCHeader],

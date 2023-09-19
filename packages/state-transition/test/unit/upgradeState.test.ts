@@ -6,7 +6,7 @@ import {createBeaconConfig, ChainForkConfig, createChainForkConfig} from "@lodes
 import {config as chainConfig} from "@lodestar/config/default";
 
 import {upgradeStateToDeneb} from "../../src/slot/upgradeStateToDeneb.js";
-import { upgradeStateToEIP6110 } from "../../src/slot/upgradeStateToEIP6110.js";
+import {upgradeStateToEIP6110} from "../../src/slot/upgradeStateToEIP6110.js";
 
 describe("upgradeState", () => {
   it("upgradeStateToDeneb", () => {

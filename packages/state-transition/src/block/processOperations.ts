@@ -1,7 +1,8 @@
 import {allForks, capella, eip6110} from "@lodestar/types";
-import {ForkSeq, MAX_DEPOSITS} from "@lodestar/params";
+import {ForkSeq} from "@lodestar/params";
 
 import {CachedBeaconStateAllForks, CachedBeaconStateCapella, CachedBeaconStateEIP6110} from "../types.js";
+import {getEth1DepositCount} from "../util/deposit.js";
 import {processAttestations} from "./processAttestations.js";
 import {processProposerSlashing} from "./processProposerSlashing.js";
 import {processAttesterSlashing} from "./processAttesterSlashing.js";
@@ -10,7 +11,6 @@ import {processVoluntaryExit} from "./processVoluntaryExit.js";
 import {processBlsToExecutionChange} from "./processBlsToExecutionChange.js";
 import {processDepositReceipt} from "./processDepositReceipt.js";
 import {ProcessBlockOpts} from "./types.js";
-import { getEth1DepositCount } from "../util/deposit.js";
 
 export {
   processProposerSlashing,

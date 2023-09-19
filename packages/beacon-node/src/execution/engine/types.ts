@@ -113,9 +113,17 @@ type ExecutionPayloadRpcWithBlockValue = {
 };
 type ExecutionPayloadResponse = ExecutionPayloadRpc | ExecutionPayloadRpcWithBlockValue;
 
-export type ExecutionPayloadBodyRpc = {transactions: DATA[]; withdrawals: WithdrawalV1[] | null; depositReceipts: DepositReceiptV1[] | null};
+export type ExecutionPayloadBodyRpc = {
+  transactions: DATA[];
+  withdrawals: WithdrawalV1[] | null;
+  depositReceipts: DepositReceiptV1[] | null;
+};
 
-export type ExecutionPayloadBody = {transactions: bellatrix.Transaction[]; withdrawals: capella.Withdrawals | null; depositReceipts: eip6110.DepositReceipts | null};
+export type ExecutionPayloadBody = {
+  transactions: bellatrix.Transaction[];
+  withdrawals: capella.Withdrawals | null;
+  depositReceipts: eip6110.DepositReceipts | null;
+};
 
 export type ExecutionPayloadRpc = {
   parentHash: DATA; // 32 bytes
@@ -199,7 +207,7 @@ export function serializeExecutionPayload(fork: ForkName, data: allForks.Executi
   }
 
   // DENEB adds blobGasUsed & excessBlobGas to the ExecutionPayload
-  if (ForkSeq[fork] >= ForkSeq.deneb) { 
+  if (ForkSeq[fork] >= ForkSeq.deneb) {
     const {blobGasUsed, excessBlobGas} = data as deneb.ExecutionPayload;
     payload.blobGasUsed = numToQuantity(blobGasUsed);
     payload.excessBlobGas = numToQuantity(excessBlobGas);
@@ -295,7 +303,9 @@ export function parseExecutionPayload(
         `depositReceipts missing for ${fork} >= eip6110 executionPayload number=${executionPayload.blockNumber} hash=${data.blockHash}`
       );
     }
-    (executionPayload as eip6110.ExecutionPayload).depositReceipts = depositReceipts.map((d) => deserializeDepositReceipts(d));
+    (executionPayload as eip6110.ExecutionPayload).depositReceipts = depositReceipts.map((d) =>
+      deserializeDepositReceipts(d)
+    );
   }
 
   return {executionPayload, blockValue, blobsBundle};

@@ -23,7 +23,6 @@ import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../types.js";
  * PERF: Work depends on number of Deposit per block. On regular networks the average is 0 / block.
  */
 export function processDeposit(fork: ForkSeq, state: CachedBeaconStateAllForks, deposit: phase0.Deposit): void {
-
   // verify the merkle branch
   if (
     !verifyMerkleBranch(
@@ -47,16 +46,22 @@ export function processDeposit(fork: ForkSeq, state: CachedBeaconStateAllForks, 
     deposit.data.withdrawalCredentials,
     deposit.data.amount,
     deposit.data.signature
-  )
-
+  );
 }
 
 /**
  * Adds a new validator into the registry. Or increase balance if already exist.
  * Follows applyDeposit() in consensus spec. Will be used by processDeposit() and processDepositReceipt()
- *  
+ *
  */
-export function applyDeposit(fork: ForkSeq, state: CachedBeaconStateAllForks, pubkey: BLSPubkey, withdrawalCredentials: Bytes32, amount: UintNum64, signature: BLSSignature): void {
+export function applyDeposit(
+  fork: ForkSeq,
+  state: CachedBeaconStateAllForks,
+  pubkey: BLSPubkey,
+  withdrawalCredentials: Bytes32,
+  amount: UintNum64,
+  signature: BLSSignature
+): void {
   const {config, validators, epochCtx} = state;
 
   const cachedIndex = epochCtx.getValidatorIndex(pubkey);
@@ -87,42 +92,48 @@ export function applyDeposit(fork: ForkSeq, state: CachedBeaconStateAllForks, pu
   }
 }
 
-function addValidatorToRegistry(fork: ForkSeq, state: CachedBeaconStateAllForks, pubkey: BLSPubkey, withdrawalCredentials: Bytes32, amount: UintNum64) : void {
-    const {validators, epochCtx} = state;
-    // add validator and balance entries
-    const effectiveBalance = Math.min(amount - (amount % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE);
-    validators.push(
-      ssz.phase0.Validator.toViewDU({
-        pubkey,
-        withdrawalCredentials,
-        activationEligibilityEpoch: FAR_FUTURE_EPOCH,
-        activationEpoch: FAR_FUTURE_EPOCH,
-        exitEpoch: FAR_FUTURE_EPOCH,
-        withdrawableEpoch: FAR_FUTURE_EPOCH,
-        effectiveBalance,
-        slashed: false,
-      })
-    );
-    state.balances.push(amount);
+function addValidatorToRegistry(
+  fork: ForkSeq,
+  state: CachedBeaconStateAllForks,
+  pubkey: BLSPubkey,
+  withdrawalCredentials: Bytes32,
+  amount: UintNum64
+): void {
+  const {validators, epochCtx} = state;
+  // add validator and balance entries
+  const effectiveBalance = Math.min(amount - (amount % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE);
+  validators.push(
+    ssz.phase0.Validator.toViewDU({
+      pubkey,
+      withdrawalCredentials,
+      activationEligibilityEpoch: FAR_FUTURE_EPOCH,
+      activationEpoch: FAR_FUTURE_EPOCH,
+      exitEpoch: FAR_FUTURE_EPOCH,
+      withdrawableEpoch: FAR_FUTURE_EPOCH,
+      effectiveBalance,
+      slashed: false,
+    })
+  );
+  state.balances.push(amount);
 
-    const validatorIndex = validators.length - 1;
-    // Updating here is better than updating at once on epoch transition
-    // - Simplify genesis fn applyDeposits(): effectiveBalanceIncrements is populated immediately
-    // - Keep related code together to reduce risk of breaking this cache
-    // - Should have equal performance since it sets a value in a flat array
-    epochCtx.effectiveBalanceIncrementsSet(validatorIndex, effectiveBalance);
+  const validatorIndex = validators.length - 1;
+  // Updating here is better than updating at once on epoch transition
+  // - Simplify genesis fn applyDeposits(): effectiveBalanceIncrements is populated immediately
+  // - Keep related code together to reduce risk of breaking this cache
+  // - Should have equal performance since it sets a value in a flat array
+  epochCtx.effectiveBalanceIncrementsSet(validatorIndex, effectiveBalance);
 
-    // now that there is a new validator, update the epoch context with the new pubkey
-    epochCtx.addPubkey(pubkey, validatorIndex);
+  // now that there is a new validator, update the epoch context with the new pubkey
+  epochCtx.addPubkey(pubkey, validatorIndex);
 
-    // Only after altair:
-    if (fork >= ForkSeq.altair) {
-      const stateAltair = state as CachedBeaconStateAltair;
+  // Only after altair:
+  if (fork >= ForkSeq.altair) {
+    const stateAltair = state as CachedBeaconStateAltair;
 
-      stateAltair.inactivityScores.push(0);
+    stateAltair.inactivityScores.push(0);
 
-      // add participation caches
-      stateAltair.previousEpochParticipation.push(0);
-      stateAltair.currentEpochParticipation.push(0);
-    }
+    // add participation caches
+    stateAltair.previousEpochParticipation.push(0);
+    stateAltair.currentEpochParticipation.push(0);
+  }
 }
