@@ -32,7 +32,7 @@ jobs:
         id: node
         run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT
       - name: Restore build
-        uses: actions/cache@master
+        uses: actions/cache/restore@v3
         id: cache-build-restore
         with:
           path: |
@@ -40,6 +40,7 @@ jobs:
             packages/*/node_modules
             lib/
             packages/*/lib
+            packages/*/.git-data.json
           key: ${{ runner.os }}-${{ matrix.node }}-${{ github.event.pull_request.head.sha }}
       - name: Install & build
         if: steps.cache-build-restore.outputs.cache-hit != 'true'
@@ -64,6 +65,7 @@ jobs:
             packages/*/node_modules
             lib/
             packages/*/lib
+            packages/*/.git-data.json            
           key: ${{ runner.os }}-${{ matrix.node }}-${{ github.event.pull_request.head.sha }}
 
   lint:
@@ -86,6 +88,7 @@ jobs:
             packages/*/node_modules
             lib/
             packages/*/lib
+            packages/*/.git-data.json            
           key: ${{ runner.os }}-20-${{ github.event.pull_request.head.sha }}
       - name: Assert yarn prints no warnings
         run: scripts/assert_no_yarn_warnings.sh          
@@ -118,6 +121,7 @@ jobs:
             packages/*/node_modules
             lib/
             packages/*/lib
+            packages/*/.git-data.json            
           key: ${{ runner.os }}-20-${{ github.event.pull_request.head.sha }}
 
       - name: Check Types
@@ -150,6 +154,7 @@ jobs:
             packages/*/node_modules
             lib/
             packages/*/lib
+            packages/*/.git-data.json            
           key: ${{ runner.os }}-${{ matrix.node }}-${{ github.event.pull_request.head.sha }}
       # Cache validator slashing protection data tests
       - name: Restore spec tests cache
@@ -188,6 +193,7 @@ jobs:
             packages/*/node_modules
             lib/
             packages/*/lib
+            packages/*/.git-data.json            
           key: ${{ runner.os }}-${{ matrix.node }}-${{ github.event.pull_request.head.sha }}
 
       - name: Run the e2e test environment
@@ -233,6 +239,7 @@ jobs:
             packages/*/node_modules
             lib/
             packages/*/lib
+            packages/*/.git-data.json            
           key: ${{ runner.os }}-${{ matrix.node }}-${{ github.event.pull_request.head.sha }}
 
       - name: Browser tests
@@ -243,7 +250,7 @@ jobs:
 
   spec-tests:
     name: Spec tests
-    needs: type-checks
+    needs: build
     runs-on: buildjet-4vcpu-ubuntu-2204
     strategy:
       fail-fast: false
@@ -265,6 +272,7 @@ jobs:
             packages/*/node_modules
             lib/
             packages/*/lib
+            packages/*/.git-data.json            
           key: ${{ runner.os }}-${{ matrix.node }}-${{ github.event.pull_request.head.sha }}
       # Download spec tests with cache
       - name: Restore spec tests cache
