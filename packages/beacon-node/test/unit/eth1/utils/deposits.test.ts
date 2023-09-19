@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import {phase0, ssz} from "@lodestar/types";
-import {MAX_DEPOSITS} from "@lodestar/params";
+import {MAX_DEPOSITS, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {verifyMerkleBranch} from "@lodestar/utils";
 import {filterBy} from "../../../utils/db.js";
 import {Eth1ErrorCode} from "../../../../src/eth1/errors.js";
@@ -8,6 +8,7 @@ import {generateState} from "../../../utils/state.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {getDeposits, getDepositsWithProofs, DepositGetter} from "../../../../src/eth1/utils/deposits.js";
 import {DepositTree} from "../../../../src/db/repositories/depositDataRoot.js";
+import { minimalChainConfig } from "@lodestar/config/lib/presets.js";
 
 describe("eth1 / util / deposits", function () {
   describe("getDeposits", () => {
@@ -18,6 +19,7 @@ describe("eth1 / util / deposits", function () {
       depositIndexes: number[];
       expectedReturnedIndexes?: number[];
       error?: Eth1ErrorCode;
+      post6110? : boolean;
     };
 
     const testCases: TestCase[] = [
@@ -70,12 +72,38 @@ describe("eth1 / util / deposits", function () {
         depositIndexes: [],
         expectedReturnedIndexes: [],
       },
+      {
+        id: "No deposits to be included post 6110 after deposit_receipts_start_index",
+        depositCount: 2030,
+        eth1DepositIndex: 2025,
+        depositIndexes: Array.from({length: 2030}, (_, i) => i),
+        expectedReturnedIndexes: [],
+        post6110: true,
+      },
+      {
+        id: "Should return deposits post 6110 before deposit_receipts_start_index",
+        depositCount: 2022,
+        eth1DepositIndex: 2018,
+        depositIndexes: Array.from({length: 2022}, (_, i) => i),
+        expectedReturnedIndexes: [2018, 2019, 2020, 2021, 2022],
+        post6110: true,
+      },
+      {
+        id: "Should return deposits less than MAX_DEPOSITS post 6110 before deposit_receipts_start_index",
+        depositCount: 10 * MAX_DEPOSITS,
+        eth1DepositIndex: 0,
+        depositIndexes: Array.from({length: 10 * MAX_DEPOSITS}, (_, i) => i),
+        expectedReturnedIndexes: Array.from({length: MAX_DEPOSITS}, (_, i) => i),
+        post6110: true,
+      }
     ];
 
+    const post6110Slot = minimalChainConfig.EIP6110_FORK_EPOCH * SLOTS_PER_EPOCH + 1;
+
     for (const testCase of testCases) {
-      const {id, depositIndexes, eth1DepositIndex, depositCount, expectedReturnedIndexes, error} = testCase;
+      const {id, depositIndexes, eth1DepositIndex, depositCount, expectedReturnedIndexes, error, post6110} = testCase;
       it(id, async function () {
-        const state = generateState({eth1DepositIndex});
+        const state = (post6110) ? generateState({slot: post6110Slot, eth1DepositIndex}) : generateState({eth1DepositIndex});
         const eth1Data = generateEth1Data(depositCount);
         const deposits = depositIndexes.map((index) => generateDepositEvent(index));
         const depositsGetter: DepositGetter<phase0.DepositEvent> = async (indexRange) =>

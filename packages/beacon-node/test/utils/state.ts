@@ -9,7 +9,7 @@ import {
   BeaconStateBellatrix,
   createEmptyCarryoverData,
 } from "@lodestar/state-transition";
-import {allForks, altair, bellatrix, ssz} from "@lodestar/types";
+import {allForks, altair, bellatrix, eip6110, ssz} from "@lodestar/types";
 import {createBeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {FAR_FUTURE_EPOCH, ForkName, ForkSeq, MAX_EFFECTIVE_BALANCE, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 
@@ -89,6 +89,11 @@ export function generateState(
       ...ssz.bellatrix.ExecutionPayloadHeader.defaultValue(),
       blockNumber: 2022,
     };
+  }
+
+  if (forkSeq >= ForkSeq.eip6110) {
+    const stateEIP6110 = state as eip6110.BeaconState;
+    stateEIP6110.depositReceiptsStartIndex = 2023;
   }
 
   return config.getForkTypes(stateSlot).BeaconState.toViewDU(state);
