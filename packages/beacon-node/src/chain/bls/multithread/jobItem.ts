@@ -4,6 +4,7 @@ import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {VerifySignatureOpts} from "../interface.js";
 import {getAggregatedPubkey} from "../utils.js";
 import {LinkedList} from "../../../util/array.js";
+import {Metrics} from "../../../metrics/metrics.js";
 import {BlsWorkReq} from "./types.js";
 
 export type JobQueueItem = JobQueueItemDefault | JobQueueItemSameMessage;
@@ -48,7 +49,7 @@ export function jobItemSigSets(job: JobQueueItem): number {
  * Prepare BlsWorkReq from JobQueueItem
  * WARNING: May throw with untrusted user input
  */
-export function jobItemWorkReq(job: JobQueueItem, format: PointFormat): BlsWorkReq {
+export function jobItemWorkReq(job: JobQueueItem, format: PointFormat, metrics: Metrics | null): BlsWorkReq {
   switch (job.type) {
     case JobQueueItemType.default:
       return {
@@ -60,20 +61,29 @@ export function jobItemWorkReq(job: JobQueueItem, format: PointFormat): BlsWorkR
           message: set.signingRoot,
         })),
       };
-    case JobQueueItemType.sameMessage:
+    case JobQueueItemType.sameMessage: {
+      // validate signature = true, this is slow code on main thread so should only run with network thread mode (useWorker=true)
+      // For a node subscribing to all subnets, with 1 signature per validator per epoch it takes around 80s
+      // to deserialize 750_000 signatures per epoch
+      // cpu profile on main thread has 250s idle so this only works until we reach 3M validators
+      // However, for normal node with only 2 to 7 subnet subscriptions per epoch this works until 27M validators
+      // and not a problem in the near future
+      // this is monitored on v1.11.0 https://github.com/ChainSafe/lodestar/pull/5912#issuecomment-1700320307
+      const timer = metrics?.blsThreadPool.signatureDeserializationMainThreadDuration.startTimer();
+      const signatures = job.sets.map((set) => bls.Signature.fromBytes(set.signature, CoordType.affine, true));
+      timer?.();
+
       return {
         opts: job.opts,
         sets: [
           {
             publicKey: bls.PublicKey.aggregate(job.sets.map((set) => set.publicKey)).toBytes(format),
-            signature: bls.Signature.aggregate(
-              // validate signature = true
-              job.sets.map((set) => bls.Signature.fromBytes(set.signature, CoordType.affine, true))
-            ).toBytes(format),
+            signature: bls.Signature.aggregate(signatures).toBytes(format),
             message: job.message,
           },
         ],
       };
+    }
   }
 }
 

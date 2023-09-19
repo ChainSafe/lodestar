@@ -1,21 +1,31 @@
 import sinon, {SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
 import {BitArray} from "@chainsafe/ssz";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {computeEpochAtSlot, computeStartSlotAtEpoch, processSlots} from "@lodestar/state-transition";
+import type {PublicKey, SecretKey} from "@chainsafe/bls/types";
+import bls from "@chainsafe/bls";
+import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {defaultChainConfig, createChainForkConfig, BeaconConfig} from "@lodestar/config";
-import {Slot, ssz} from "@lodestar/types";
 import {ProtoBlock} from "@lodestar/fork-choice";
+// eslint-disable-next-line import/no-relative-packages
+import {SignatureSetType, computeEpochAtSlot, computeStartSlotAtEpoch, processSlots} from "@lodestar/state-transition";
+import {Slot, ssz} from "@lodestar/types";
 // eslint-disable-next-line import/no-relative-packages
 import {generateTestCachedBeaconStateOnlyValidators} from "../../../../../state-transition/test/perf/util.js";
 import {IBeaconChain} from "../../../../src/chain/index.js";
-import {AttestationErrorCode, GossipErrorCode} from "../../../../src/chain/errors/index.js";
+import {
+  AttestationError,
+  AttestationErrorCode,
+  GossipAction,
+  GossipErrorCode,
+} from "../../../../src/chain/errors/index.js";
 import {
   ApiAttestation,
   GossipAttestation,
   getStateForAttestationVerification,
   validateApiAttestation,
-  validateGossipAttestation,
+  Step0Result,
+  validateAttestation,
+  validateGossipAttestationsSameAttData,
 } from "../../../../src/chain/validation/index.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {memoOnce} from "../../../utils/cache.js";
@@ -25,7 +35,123 @@ import {StateRegenerator} from "../../../../src/chain/regen/regen.js";
 import {ZERO_HASH_HEX} from "../../../../src/constants/constants.js";
 import {QueuedStateRegenerator} from "../../../../src/chain/regen/queued.js";
 
-describe("chain / validation / attestation", () => {
+import {BlsSingleThreadVerifier} from "../../../../src/chain/bls/singleThread.js";
+import {SeenAttesters} from "../../../../src/chain/seenCache/seenAttesters.js";
+import {getAttDataBase64FromAttestationSerialized} from "../../../../src/util/sszBytes.js";
+
+describe("validateGossipAttestationsSameAttData", () => {
+  // phase0Result specifies whether the attestation is valid in phase0
+  // phase1Result specifies signature verification
+  const testCases: {phase0Result: boolean[]; phase1Result: boolean[]; seenAttesters: number[]}[] = [
+    {
+      phase0Result: [true, true, true, true, true],
+      phase1Result: [true, true, true, true, true],
+      seenAttesters: [0, 1, 2, 3, 4],
+    },
+    {
+      phase0Result: [false, true, true, true, true],
+      phase1Result: [true, false, true, true, true],
+      seenAttesters: [2, 3, 4],
+    },
+    {
+      phase0Result: [false, false, true, true, true],
+      phase1Result: [true, false, false, true, true],
+      seenAttesters: [3, 4],
+    },
+    {
+      phase0Result: [false, false, true, true, true],
+      phase1Result: [true, false, false, true, false],
+      seenAttesters: [3],
+    },
+    {
+      phase0Result: [false, false, true, true, true],
+      phase1Result: [true, true, false, false, false],
+      seenAttesters: [],
+    },
+  ];
+
+  type Keypair = {publicKey: PublicKey; secretKey: SecretKey};
+  const keypairs = new Map<number, Keypair>();
+  function getKeypair(i: number): Keypair {
+    let keypair = keypairs.get(i);
+    if (!keypair) {
+      const bytes = new Uint8Array(32);
+      const dataView = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+      dataView.setUint32(0, i + 1, true);
+      const secretKey = bls.SecretKey.fromBytes(bytes);
+      const publicKey = secretKey.toPublicKey();
+      keypair = {secretKey, publicKey};
+      keypairs.set(i, keypair);
+    }
+    return keypair;
+  }
+
+  let chain: IBeaconChain;
+  const signingRoot = Buffer.alloc(32, 1);
+
+  beforeEach(() => {
+    chain = {
+      bls: new BlsSingleThreadVerifier({metrics: null}),
+      seenAttesters: new SeenAttesters(),
+      opts: {
+        minSameMessageSignatureSetsToBatch: 2,
+      } as IBeaconChain["opts"],
+    } as Partial<IBeaconChain> as IBeaconChain;
+  });
+
+  for (const [testCaseIndex, testCase] of testCases.entries()) {
+    const {phase0Result, phase1Result, seenAttesters} = testCase;
+    it(`test case ${testCaseIndex}`, async () => {
+      const phase0Results: Promise<Step0Result>[] = [];
+      for (const [i, isValid] of phase0Result.entries()) {
+        const signatureSet = {
+          type: SignatureSetType.single,
+          pubkey: getKeypair(i).publicKey,
+          signingRoot,
+          signature: getKeypair(i).secretKey.sign(signingRoot).toBytes(),
+        };
+        if (isValid) {
+          if (!phase1Result[i]) {
+            // invalid signature
+            signatureSet.signature = getKeypair(2023).secretKey.sign(signingRoot).toBytes();
+          }
+          phase0Results.push(
+            Promise.resolve({
+              attestation: ssz.phase0.Attestation.defaultValue(),
+              signatureSet,
+              validatorIndex: i,
+            } as Partial<Step0Result> as Step0Result)
+          );
+        } else {
+          phase0Results.push(
+            Promise.reject(
+              new AttestationError(GossipAction.REJECT, {
+                code: AttestationErrorCode.BAD_TARGET_EPOCH,
+              })
+            )
+          );
+        }
+      }
+
+      let callIndex = 0;
+      const phase0ValidationFn = (): Promise<Step0Result> => {
+        const result = phase0Results[callIndex];
+        callIndex++;
+        return result;
+      };
+      await validateGossipAttestationsSameAttData(ForkName.phase0, chain, new Array(5).fill({}), 0, phase0ValidationFn);
+      for (let validatorIndex = 0; validatorIndex < phase0Result.length; validatorIndex++) {
+        if (seenAttesters.includes(validatorIndex)) {
+          expect(chain.seenAttesters.isKnown(0, validatorIndex)).to.be.true;
+        } else {
+          expect(chain.seenAttesters.isKnown(0, validatorIndex)).to.be.false;
+        }
+      }
+    }); // end test case
+  }
+});
+
+describe("validateAttestation", () => {
   const vc = 64;
   const stateSlot = 100;
 
@@ -60,7 +186,7 @@ describe("chain / validation / attestation", () => {
     const {chain, subnet} = getValidData();
     await expectGossipError(
       chain,
-      {attestation: null, serializedData: Buffer.alloc(0), attSlot: 0},
+      {attestation: null, serializedData: Buffer.alloc(0), attSlot: 0, attDataBase64: "invalid"},
       subnet,
       GossipErrorCode.INVALID_SERIALIZED_BYTES_ERROR_CODE
     );
@@ -76,7 +202,12 @@ describe("chain / validation / attestation", () => {
     await expectApiError(chain, {attestation, serializedData: null}, AttestationErrorCode.BAD_TARGET_EPOCH);
     await expectGossipError(
       chain,
-      {attestation: null, serializedData, attSlot: attestation.data.slot},
+      {
+        attestation: null,
+        serializedData,
+        attSlot: attestation.data.slot,
+        attDataBase64: getAttDataBase64FromAttestationSerialized(serializedData),
+      },
       subnet,
       AttestationErrorCode.BAD_TARGET_EPOCH
     );
@@ -90,7 +221,12 @@ describe("chain / validation / attestation", () => {
     await expectApiError(chain, {attestation, serializedData: null}, AttestationErrorCode.PAST_SLOT);
     await expectGossipError(
       chain,
-      {attestation: null, serializedData, attSlot: attestation.data.slot},
+      {
+        attestation: null,
+        serializedData,
+        attSlot: attestation.data.slot,
+        attDataBase64: getAttDataBase64FromAttestationSerialized(serializedData),
+      },
       subnet,
       AttestationErrorCode.PAST_SLOT
     );
@@ -104,7 +240,12 @@ describe("chain / validation / attestation", () => {
     await expectApiError(chain, {attestation, serializedData: null}, AttestationErrorCode.FUTURE_SLOT);
     await expectGossipError(
       chain,
-      {attestation: null, serializedData, attSlot: attestation.data.slot},
+      {
+        attestation: null,
+        serializedData,
+        attSlot: attestation.data.slot,
+        attDataBase64: getAttDataBase64FromAttestationSerialized(serializedData),
+      },
       subnet,
       AttestationErrorCode.FUTURE_SLOT
     );
@@ -124,7 +265,12 @@ describe("chain / validation / attestation", () => {
     );
     await expectGossipError(
       chain,
-      {attestation: null, serializedData, attSlot: attestation.data.slot},
+      {
+        attestation: null,
+        serializedData,
+        attSlot: attestation.data.slot,
+        attDataBase64: getAttDataBase64FromAttestationSerialized(serializedData),
+      },
       subnet,
       AttestationErrorCode.NOT_EXACTLY_ONE_AGGREGATION_BIT_SET
     );
@@ -139,7 +285,12 @@ describe("chain / validation / attestation", () => {
 
     await expectGossipError(
       chain,
-      {attestation: null, serializedData, attSlot: attestation.data.slot},
+      {
+        attestation: null,
+        serializedData,
+        attSlot: attestation.data.slot,
+        attDataBase64: getAttDataBase64FromAttestationSerialized(serializedData),
+      },
       subnet,
       AttestationErrorCode.NOT_EXACTLY_ONE_AGGREGATION_BIT_SET
     );
@@ -158,7 +309,12 @@ describe("chain / validation / attestation", () => {
     );
     await expectGossipError(
       chain,
-      {attestation: null, serializedData, attSlot: attestation.data.slot},
+      {
+        attestation: null,
+        serializedData,
+        attSlot: attestation.data.slot,
+        attDataBase64: getAttDataBase64FromAttestationSerialized(serializedData),
+      },
       subnet,
       AttestationErrorCode.UNKNOWN_OR_PREFINALIZED_BEACON_BLOCK_ROOT
     );
@@ -173,7 +329,12 @@ describe("chain / validation / attestation", () => {
     await expectApiError(chain, {attestation, serializedData: null}, AttestationErrorCode.INVALID_TARGET_ROOT);
     await expectGossipError(
       chain,
-      {attestation: null, serializedData, attSlot: attestation.data.slot},
+      {
+        attestation: null,
+        serializedData,
+        attSlot: attestation.data.slot,
+        attDataBase64: getAttDataBase64FromAttestationSerialized(serializedData),
+      },
       subnet,
       AttestationErrorCode.INVALID_TARGET_ROOT
     );
@@ -197,7 +358,12 @@ describe("chain / validation / attestation", () => {
     );
     await expectGossipError(
       chain,
-      {attestation: null, serializedData, attSlot: attestation.data.slot},
+      {
+        attestation: null,
+        serializedData,
+        attSlot: attestation.data.slot,
+        attDataBase64: getAttDataBase64FromAttestationSerialized(serializedData),
+      },
       subnet,
       AttestationErrorCode.NO_COMMITTEE_FOR_SLOT_AND_INDEX
     );
@@ -219,7 +385,12 @@ describe("chain / validation / attestation", () => {
     );
     await expectGossipError(
       chain,
-      {attestation: null, serializedData, attSlot: attestation.data.slot},
+      {
+        attestation: null,
+        serializedData,
+        attSlot: attestation.data.slot,
+        attDataBase64: getAttDataBase64FromAttestationSerialized(serializedData),
+      },
       subnet,
       AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS
     );
@@ -233,7 +404,12 @@ describe("chain / validation / attestation", () => {
 
     await expectGossipError(
       chain,
-      {attestation: null, serializedData, attSlot: attestation.data.slot},
+      {
+        attestation: null,
+        serializedData,
+        attSlot: attestation.data.slot,
+        attDataBase64: getAttDataBase64FromAttestationSerialized(serializedData),
+      },
       invalidSubnet,
       AttestationErrorCode.INVALID_SUBNET_ID
     );
@@ -248,7 +424,12 @@ describe("chain / validation / attestation", () => {
     await expectApiError(chain, {attestation, serializedData: null}, AttestationErrorCode.ATTESTATION_ALREADY_KNOWN);
     await expectGossipError(
       chain,
-      {attestation: null, serializedData, attSlot: attestation.data.slot},
+      {
+        attestation: null,
+        serializedData,
+        attSlot: attestation.data.slot,
+        attDataBase64: getAttDataBase64FromAttestationSerialized(serializedData),
+      },
       subnet,
       AttestationErrorCode.ATTESTATION_ALREADY_KNOWN
     );
@@ -265,7 +446,12 @@ describe("chain / validation / attestation", () => {
     await expectApiError(chain, {attestation, serializedData: null}, AttestationErrorCode.INVALID_SIGNATURE);
     await expectGossipError(
       chain,
-      {attestation: null, serializedData, attSlot: attestation.data.slot},
+      {
+        attestation: null,
+        serializedData,
+        attSlot: attestation.data.slot,
+        attDataBase64: getAttDataBase64FromAttestationSerialized(serializedData),
+      },
       subnet,
       AttestationErrorCode.INVALID_SIGNATURE
     );
@@ -288,10 +474,7 @@ describe("chain / validation / attestation", () => {
     errorCode: string
   ): Promise<void> {
     const fork = chain.config.getForkName(stateSlot);
-    await expectRejectedWithLodestarError(
-      validateGossipAttestation(fork, chain, attestationOrBytes, subnet),
-      errorCode
-    );
+    await expectRejectedWithLodestarError(validateAttestation(fork, chain, attestationOrBytes, subnet), errorCode);
   }
 });
 

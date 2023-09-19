@@ -1,5 +1,6 @@
 export * from "./yaml/index.js";
 export * from "./assert.js";
+export * from "./base64.js";
 export * from "./bytes.js";
 export * from "./err.js";
 export * from "./errors.js";
@@ -14,6 +15,7 @@ export * from "./sleep.js";
 export * from "./sort.js";
 export * from "./timeout.js";
 export {RecursivePartial, bnToNum} from "./types.js";
+export * from "./validation.js";
 export * from "./verifyMerkleBranch.js";
 export * from "./promise.js";
 export * from "./waitFor.js";

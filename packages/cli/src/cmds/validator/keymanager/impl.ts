@@ -15,7 +15,9 @@ import {
 } from "@lodestar/api/keymanager";
 import {Interchange, SignerType, Validator} from "@lodestar/validator";
 import {ServerApi} from "@lodestar/api";
-import {getPubkeyHexFromKeystore, isValidatePubkeyHex, isValidHttpUrl} from "../../../util/format.js";
+import {Epoch} from "@lodestar/types";
+import {isValidHttpUrl} from "@lodestar/utils";
+import {getPubkeyHexFromKeystore, isValidatePubkeyHex} from "../../../util/format.js";
 import {parseFeeRecipient} from "../../../util/index.js";
 import {DecryptKeystoresThreadPool} from "./decryptKeystores/index.js";
 import {IPersistedKeysBackend} from "./interface.js";
@@ -361,6 +363,16 @@ export class KeymanagerApi implements Api {
     return {
       data: results,
     };
+  }
+
+  /**
+   * Create and sign a voluntary exit message for an active validator
+   */
+  async signVoluntaryExit(pubkey: PubkeyHex, epoch?: Epoch): ReturnType<Api["signVoluntaryExit"]> {
+    if (!isValidatePubkeyHex(pubkey)) {
+      throw Error(`Invalid pubkey ${pubkey}`);
+    }
+    return {data: await this.validator.signVoluntaryExit(pubkey, epoch)};
   }
 }
 

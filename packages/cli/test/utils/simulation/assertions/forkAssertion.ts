@@ -15,7 +15,7 @@ export function createForkAssertion(fork: ForkName, epoch: Epoch): SimulationAss
     assert: async ({node, slot, forkConfig}) => {
       const errors: AssertionResult[] = [];
 
-      const res = await node.cl.api.debug.getStateV2("head");
+      const res = await node.beacon.api.debug.getStateV2("head");
       ApiError.assert(res);
       const expectedForkVersion = toHexString(forkConfig.getForkInfo(slot).version);
       const currentForkVersion = toHexString(res.response.data.fork.currentVersion);

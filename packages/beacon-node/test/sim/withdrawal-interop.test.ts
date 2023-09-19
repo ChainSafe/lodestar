@@ -6,7 +6,7 @@ import {TimestampFormatCode} from "@lodestar/logger";
 import {SLOTS_PER_EPOCH, ForkName} from "@lodestar/params";
 import {ChainConfig} from "@lodestar/config";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {Epoch, capella, Slot} from "@lodestar/types";
+import {Epoch, capella, Slot, allForks} from "@lodestar/types";
 import {ValidatorProposerConfig} from "@lodestar/validator";
 
 import {ExecutionPayloadStatus, PayloadAttributes} from "../../src/execution/engine/interface.js";
@@ -369,7 +369,10 @@ async function retrieveCanonicalWithdrawals(bn: BeaconNode, fromSlot: Slot, toSl
     });
 
     if (block) {
-      if ((block.data as capella.SignedBeaconBlock).message.body.executionPayload?.withdrawals.length > 0) {
+      if (
+        ((block as {data: allForks.SignedBeaconBlock}).data as capella.SignedBeaconBlock).message.body.executionPayload
+          ?.withdrawals.length > 0
+      ) {
         withdrawalsBlocks++;
       }
     }

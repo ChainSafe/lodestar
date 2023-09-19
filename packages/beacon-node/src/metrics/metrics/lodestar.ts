@@ -38,9 +38,9 @@ export function createLodestarMetrics(
         help: "Count of total gossip validation queue length",
         labelNames: ["topic"],
       }),
-      dropRatio: register.gauge<"topic">({
-        name: "lodestar_gossip_validation_queue_current_drop_ratio",
-        help: "Current drop ratio of gossip validation queue",
+      keySize: register.gauge<"topic">({
+        name: "lodestar_gossip_validation_queue_key_size",
+        help: "Count of total gossip validation queue key size",
         labelNames: ["topic"],
       }),
       droppedJobs: register.gauge<"topic">({
@@ -64,6 +64,17 @@ export function createLodestarMetrics(
         name: "lodestar_gossip_validation_queue_concurrency",
         help: "Current count of jobs being run on network processor for topic",
         labelNames: ["topic"],
+      }),
+      // this metric links to the beacon_attestation topic only as this is the only topics that are batch
+      keyAge: register.histogram({
+        name: "lodestar_gossip_validation_queue_key_age_seconds",
+        help: "Age of the first item of each key in the indexed queues in seconds",
+        buckets: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 5],
+      }),
+      queueTime: register.histogram({
+        name: "lodestar_gossip_validation_queue_time_seconds",
+        help: "Total time an item stays in queue until it is processed in seconds",
+        buckets: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 5],
       }),
     },
 
@@ -436,6 +447,10 @@ export function createLodestarMetrics(
         name: "lodestar_bls_thread_pool_batchable_sig_sets_total",
         help: "Count of total batchable signature sets",
       }),
+      signatureDeserializationMainThreadDuration: register.gauge({
+        name: "lodestar_bls_thread_pool_signature_deserialization_main_thread_time_seconds",
+        help: "Total time spent deserializing signatures on main thread",
+      }),
     },
 
     // BLS time on single thread mode
@@ -574,6 +589,15 @@ export function createLodestarMetrics(
         help: "Slot distance between clock slot and attestation slot",
         labelNames: ["caller"],
         buckets: [0, 1, 2, 4, 8, 16, 32, 64],
+      }),
+      attestationBatchHistogram: register.histogram({
+        name: "lodestar_gossip_attestation_verified_in_batch_histogram",
+        help: "Number of attestations verified in batch",
+        buckets: [1, 2, 4, 8, 16, 32, 64, 128],
+      }),
+      attestationNonBatchCount: register.gauge({
+        name: "lodestar_gossip_attestation_verified_non_batch_count",
+        help: "Count of attestations NOT verified in batch",
       }),
     },
 

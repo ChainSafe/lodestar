@@ -1,5 +1,5 @@
 import {Connection} from "@libp2p/interface/connection";
-import {CustomEvent} from "@libp2p/interfaces/events";
+import {CustomEvent} from "@libp2p/interface/events";
 import sinon from "sinon";
 import {expect} from "chai";
 import {BitArray} from "@chainsafe/ssz";

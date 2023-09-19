@@ -1,22 +1,18 @@
-import worker from "node:worker_threads";
 import fs from "node:fs";
 import path from "node:path";
-import {createFromProtobuf} from "@libp2p/peer-id-factory";
+import worker from "node:worker_threads";
+import type {ModuleThread} from "@chainsafe/threads";
 import {expose} from "@chainsafe/threads/worker";
-import type {WorkerModule} from "@chainsafe/threads/dist/types/worker.js";
+import {createFromProtobuf} from "@libp2p/peer-id-factory";
 import {chainConfigFromJson, createBeaconConfig} from "@lodestar/config";
 import {getNodeLogger} from "@lodestar/logger/node";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {collectNodeJSMetrics, RegistryMetricCreator} from "../../metrics/index.js";
+import {RegistryMetricCreator, collectNodeJSMetrics} from "../../metrics/index.js";
 import {AsyncIterableBridgeCaller, AsyncIterableBridgeHandler} from "../../util/asyncIterableToEvents.js";
 import {Clock} from "../../util/clock.js";
-import {wireEventsOnWorkerThread} from "../../util/workerEvents.js";
-import {NetworkEventBus, NetworkEventData, networkEventDirection} from "../events.js";
 import {peerIdToString} from "../../util/peerId.js";
 import {profileNodeJS} from "../../util/profile.js";
-import {getNetworkCoreWorkerMetrics} from "./metrics.js";
-import {NetworkWorkerApi, NetworkWorkerData} from "./types.js";
-import {NetworkCore} from "./networkCore.js";
+import {NetworkEventBus, NetworkEventData, networkEventDirection} from "../events.js";
+import {wireEventsOnWorkerThread} from "../../util/workerEvents.js";
 import {
   NetworkWorkerThreadEventType,
   ReqRespBridgeEventBus,
@@ -25,8 +21,11 @@ import {
   getReqRespBridgeRespEvents,
   reqRespBridgeEventDirection,
 } from "./events.js";
+import {getNetworkCoreWorkerMetrics} from "./metrics.js";
+import {NetworkCore} from "./networkCore.js";
+import {NetworkWorkerApi, NetworkWorkerData} from "./types.js";
 
-// Cloned data from instatiation
+// Cloned data from instantiation
 const workerData = worker.workerData as NetworkWorkerData;
 const parentPort = worker.parentPort;
 // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
@@ -36,7 +35,6 @@ if (!parentPort) throw Error("parentPort must be defined");
 
 const config = createBeaconConfig(chainConfigFromJson(workerData.chainConfigJson), workerData.genesisValidatorsRoot);
 const peerId = await createFromProtobuf(workerData.peerIdProto);
-const DEFAULT_PROFILE_DURATION = SLOTS_PER_EPOCH * config.SECONDS_PER_SLOT * 1000;
 
 // TODO: Pass options from main thread for logging
 // TODO: Logging won't be visible in file loggers
@@ -122,9 +120,9 @@ wireEventsOnWorkerThread<ReqRespBridgeEventData>(
 );
 
 const libp2pWorkerApi: NetworkWorkerApi = {
-  close: () => {
+  close: async () => {
     abortController.abort();
-    return core.close();
+    await core.close();
   },
   scrapeMetrics: () => core.scrapeMetrics(),
 
@@ -153,12 +151,15 @@ const libp2pWorkerApi: NetworkWorkerApi = {
   dumpGossipPeerScoreStats: () => core.dumpGossipPeerScoreStats(),
   dumpDiscv5KadValues: () => core.dumpDiscv5KadValues(),
   dumpMeshPeers: () => core.dumpMeshPeers(),
-  writeProfile: async (durationMs = DEFAULT_PROFILE_DURATION, dirpath = ".") => {
+  writeProfile: async (durationMs: number, dirpath: string) => {
     const profile = await profileNodeJS(durationMs);
     const filePath = path.join(dirpath, `network_thread_${new Date().toISOString()}.cpuprofile`);
     fs.writeFileSync(filePath, profile);
     return filePath;
   },
+  writeDiscv5Profile: async (durationMs: number, dirpath: string) => {
+    return core.writeDiscv5Profile(durationMs, dirpath);
+  },
 };
 
-expose(libp2pWorkerApi as WorkerModule<keyof NetworkWorkerApi>);
+expose(libp2pWorkerApi as ModuleThread<NetworkWorkerApi>);

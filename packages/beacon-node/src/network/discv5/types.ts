@@ -62,6 +62,9 @@ export type Discv5WorkerApi = {
 
   /** Prometheus metrics string */
   scrapeMetrics(): Promise<string>;
+
+  /** write profile to disc */
+  writeProfile(durationMs: number, dirpath: string): Promise<string>;
   /** tear down discv5 resources */
   close(): Promise<void>;
 };

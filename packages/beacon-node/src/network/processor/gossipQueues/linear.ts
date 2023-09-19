@@ -38,6 +38,11 @@ export class LinearGossipQueue<T> implements GossipQueue<T> {
     return 1;
   }
 
+  // not implemented for this gossip queue
+  getDataAgeMs(): number[] {
+    return [];
+  }
+
   get dropRatio(): number {
     return this._dropRatio;
   }

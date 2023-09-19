@@ -440,6 +440,7 @@ export function generateTestCachedBeaconStateOnlyValidators({
       pubkey2index,
       index2pubkey,
     },
-    createEmptyCarryoverData()
+    createEmptyCarryoverData(),
+    {skipSyncPubkeys: true}
   );
 }

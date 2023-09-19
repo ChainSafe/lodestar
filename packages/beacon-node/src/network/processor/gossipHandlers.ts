@@ -6,7 +6,6 @@ import {ForkName, ForkSeq} from "@lodestar/params";
 import {routes} from "@lodestar/api";
 import {Metrics} from "../../metrics/index.js";
 import {OpSource} from "../../metrics/validatorMonitor.js";
-import {IBeaconChain} from "../../chain/index.js";
 import {
   AttestationError,
   AttestationErrorCode,
@@ -17,10 +16,15 @@ import {
   GossipActionError,
   SyncCommitteeError,
 } from "../../chain/errors/index.js";
-import {GossipHandlers, GossipType} from "../gossip/interface.js";
+import {
+  BatchGossipHandlers,
+  DefaultGossipHandlers,
+  GossipHandlerParamGeneric,
+  GossipHandlers,
+  GossipType,
+} from "../gossip/interface.js";
 import {
   validateGossipAggregateAndProof,
-  validateGossipAttestation,
   validateGossipAttesterSlashing,
   validateGossipBlock,
   validateGossipProposerSlashing,
@@ -28,8 +32,11 @@ import {
   validateSyncCommitteeGossipContributionAndProof,
   validateGossipVoluntaryExit,
   validateGossipBlsToExecutionChange,
-  AttestationValidationResult,
   AggregateAndProofValidationResult,
+  validateGossipAttestationsSameAttData,
+  validateGossipAttestation,
+  AttestationOrBytes,
+  AttestationValidationResult,
 } from "../../chain/validation/index.js";
 import {NetworkEvent, NetworkEventBus} from "../events.js";
 import {PeerAction} from "../peers/index.js";
@@ -40,6 +47,7 @@ import {BlockInput, BlockSource, getBlockInput, GossipedInputType} from "../../c
 import {sszDeserialize} from "../gossip/topic.js";
 import {INetworkCore} from "../core/index.js";
 import {INetwork} from "../interface.js";
+import {IBeaconChain} from "../../chain/interface.js";
 import {AggregatorTracker} from "./aggregatorTracker.js";
 
 /**
@@ -48,6 +56,8 @@ import {AggregatorTracker} from "./aggregatorTracker.js";
 export type GossipHandlerOpts = {
   /** By default pass gossip attestations to forkchoice */
   dontSendGossipAttestationsToForkchoice?: boolean;
+  /** By default don't validate gossip attestations in batch */
+  beaconAttestationBatchValidation?: boolean;
 };
 
 export type ValidatorFnsModules = {
@@ -77,6 +87,19 @@ const MAX_UNKNOWN_BLOCK_ROOT_RETRIES = 1;
  * - Ethereum Consensus gossipsub protocol strictly defined a single topic for message
  */
 export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): GossipHandlers {
+  const defaultHandlers = getDefaultHandlers(modules, options);
+  if (options.beaconAttestationBatchValidation) {
+    const batchHandlers = getBatchHandlers(modules, options);
+    return {...defaultHandlers, ...batchHandlers};
+  }
+  return defaultHandlers;
+}
+
+/**
+ * Default handlers validate gossip messages one by one.
+ * We only have a choice to do batch validation for beacon_attestation topic.
+ */
+function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): DefaultGossipHandlers {
   const {chain, config, metrics, events, logger, core, aggregatorTracker} = modules;
 
   async function validateBeaconBlock(
@@ -243,7 +266,14 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
   }
 
   return {
-    [GossipType.beacon_block]: async ({serializedData}, topic, peerIdStr, seenTimestampSec) => {
+    [GossipType.beacon_block]: async ({
+      gossipData,
+      topic,
+      peerIdStr,
+      seenTimestampSec,
+    }: GossipHandlerParamGeneric<GossipType.beacon_block>) => {
+      const {serializedData} = gossipData;
+
       const signedBlock = sszDeserialize(topic, serializedData);
       const blockInput = await validateBeaconBlock(
         signedBlock,
@@ -263,7 +293,13 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       }
     },
 
-    [GossipType.blob_sidecar]: async ({serializedData}, topic, peerIdStr, seenTimestampSec) => {
+    [GossipType.blob_sidecar]: async ({
+      gossipData,
+      topic,
+      peerIdStr,
+      seenTimestampSec,
+    }: GossipHandlerParamGeneric<GossipType.blob_sidecar>) => {
+      const {serializedData} = gossipData;
       const signedBlob = sszDeserialize(topic, serializedData);
       if (config.getForkSeq(signedBlob.message.slot) < ForkSeq.deneb) {
         throw new GossipActionError(GossipAction.REJECT, {code: "PRE_DENEB_BLOCK"});
@@ -280,7 +316,12 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       }
     },
 
-    [GossipType.beacon_aggregate_and_proof]: async ({serializedData}, topic, _peer, seenTimestampSec) => {
+    [GossipType.beacon_aggregate_and_proof]: async ({
+      gossipData,
+      topic,
+      seenTimestampSec,
+    }: GossipHandlerParamGeneric<GossipType.beacon_aggregate_and_proof>) => {
+      const {serializedData} = gossipData;
       let validationResult: AggregateAndProofValidationResult;
       const signedAggregateAndProof = sszDeserialize(topic, serializedData);
       const {fork} = topic;
@@ -320,8 +361,12 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
 
       chain.emitter.emit(routes.events.EventType.attestation, signedAggregateAndProof.message.aggregate);
     },
-
-    [GossipType.beacon_attestation]: async ({serializedData, msgSlot}, topic, _peer, seenTimestampSec) => {
+    [GossipType.beacon_attestation]: async ({
+      gossipData,
+      topic,
+      seenTimestampSec,
+    }: GossipHandlerParamGeneric<GossipType.beacon_attestation>): Promise<void> => {
+      const {serializedData, msgSlot} = gossipData;
       if (msgSlot == undefined) {
         throw Error("msgSlot is undefined for beacon_attestation topic");
       }
@@ -369,7 +414,11 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       chain.emitter.emit(routes.events.EventType.attestation, attestation);
     },
 
-    [GossipType.attester_slashing]: async ({serializedData}, topic) => {
+    [GossipType.attester_slashing]: async ({
+      gossipData,
+      topic,
+    }: GossipHandlerParamGeneric<GossipType.attester_slashing>) => {
+      const {serializedData} = gossipData;
       const attesterSlashing = sszDeserialize(topic, serializedData);
       await validateGossipAttesterSlashing(chain, attesterSlashing);
 
@@ -383,7 +432,11 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       }
     },
 
-    [GossipType.proposer_slashing]: async ({serializedData}, topic) => {
+    [GossipType.proposer_slashing]: async ({
+      gossipData,
+      topic,
+    }: GossipHandlerParamGeneric<GossipType.proposer_slashing>) => {
+      const {serializedData} = gossipData;
       const proposerSlashing = sszDeserialize(topic, serializedData);
       await validateGossipProposerSlashing(chain, proposerSlashing);
 
@@ -396,7 +449,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       }
     },
 
-    [GossipType.voluntary_exit]: async ({serializedData}, topic) => {
+    [GossipType.voluntary_exit]: async ({gossipData, topic}: GossipHandlerParamGeneric<GossipType.voluntary_exit>) => {
+      const {serializedData} = gossipData;
       const voluntaryExit = sszDeserialize(topic, serializedData);
       await validateGossipVoluntaryExit(chain, voluntaryExit);
 
@@ -411,7 +465,11 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       chain.emitter.emit(routes.events.EventType.voluntaryExit, voluntaryExit);
     },
 
-    [GossipType.sync_committee_contribution_and_proof]: async ({serializedData}, topic) => {
+    [GossipType.sync_committee_contribution_and_proof]: async ({
+      gossipData,
+      topic,
+    }: GossipHandlerParamGeneric<GossipType.sync_committee_contribution_and_proof>) => {
+      const {serializedData} = gossipData;
       const contributionAndProof = sszDeserialize(topic, serializedData);
       const {syncCommitteeParticipantIndices} = await validateSyncCommitteeGossipContributionAndProof(
         chain,
@@ -435,7 +493,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       chain.emitter.emit(routes.events.EventType.contributionAndProof, contributionAndProof);
     },
 
-    [GossipType.sync_committee]: async ({serializedData}, topic) => {
+    [GossipType.sync_committee]: async ({gossipData, topic}: GossipHandlerParamGeneric<GossipType.sync_committee>) => {
+      const {serializedData} = gossipData;
       const syncCommittee = sszDeserialize(topic, serializedData);
       const {subnet} = topic;
       let indexInSubcommittee = 0;
@@ -458,18 +517,30 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       }
     },
 
-    [GossipType.light_client_finality_update]: async ({serializedData}, topic) => {
+    [GossipType.light_client_finality_update]: async ({
+      gossipData,
+      topic,
+    }: GossipHandlerParamGeneric<GossipType.light_client_finality_update>) => {
+      const {serializedData} = gossipData;
       const lightClientFinalityUpdate = sszDeserialize(topic, serializedData);
       validateLightClientFinalityUpdate(config, chain, lightClientFinalityUpdate);
     },
 
-    [GossipType.light_client_optimistic_update]: async ({serializedData}, topic) => {
+    [GossipType.light_client_optimistic_update]: async ({
+      gossipData,
+      topic,
+    }: GossipHandlerParamGeneric<GossipType.light_client_optimistic_update>) => {
+      const {serializedData} = gossipData;
       const lightClientOptimisticUpdate = sszDeserialize(topic, serializedData);
       validateLightClientOptimisticUpdate(config, chain, lightClientOptimisticUpdate);
     },
 
     // blsToExecutionChange is to be generated and validated against GENESIS_FORK_VERSION
-    [GossipType.bls_to_execution_change]: async ({serializedData}, topic) => {
+    [GossipType.bls_to_execution_change]: async ({
+      gossipData,
+      topic,
+    }: GossipHandlerParamGeneric<GossipType.bls_to_execution_change>) => {
+      const {serializedData} = gossipData;
       const blsToExecutionChange = sszDeserialize(topic, serializedData);
       await validateGossipBlsToExecutionChange(chain, blsToExecutionChange);
 
@@ -481,6 +552,79 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       }
 
       chain.emitter.emit(routes.events.EventType.blsToExecutionChange, blsToExecutionChange);
+    },
+  };
+}
+
+/**
+ * For now, only beacon_attestation topic is batched.
+ */
+function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): Partial<BatchGossipHandlers> {
+  const {chain, metrics, logger, aggregatorTracker} = modules;
+  return {
+    [GossipType.beacon_attestation]: async (
+      gossipHandlerParams: GossipHandlerParamGeneric<GossipType.beacon_attestation>[]
+    ): Promise<(null | AttestationError)[]> => {
+      const results: (null | AttestationError)[] = [];
+      const attestationCount = gossipHandlerParams.length;
+      if (attestationCount === 0) {
+        return results;
+      }
+      // all attestations should have same attestation data as filtered by network processor
+      const {subnet, fork} = gossipHandlerParams[0].topic;
+      const validationParams = gossipHandlerParams.map((param) => ({
+        attestation: null,
+        serializedData: param.gossipData.serializedData,
+        attSlot: param.gossipData.msgSlot,
+        attDataBase64: param.gossipData.indexed,
+      })) as AttestationOrBytes[];
+      const {results: validationResults, batchableBls} = await validateGossipAttestationsSameAttData(
+        fork,
+        chain,
+        validationParams,
+        subnet
+      );
+      for (const [i, validationResult] of validationResults.entries()) {
+        if (validationResult.err) {
+          results.push(validationResult.err as AttestationError);
+          continue;
+        }
+        // null means no error
+        results.push(null);
+
+        // Handler
+        const {indexedAttestation, attDataRootHex, attestation} = validationResult.result;
+        metrics?.registerGossipUnaggregatedAttestation(gossipHandlerParams[i].seenTimestampSec, indexedAttestation);
+
+        try {
+          // Node may be subscribe to extra subnets (long-lived random subnets). For those, validate the messages
+          // but don't add to attestation pool, to save CPU and RAM
+          if (aggregatorTracker.shouldAggregate(subnet, indexedAttestation.data.slot)) {
+            const insertOutcome = chain.attestationPool.add(attestation, attDataRootHex);
+            metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
+          }
+        } catch (e) {
+          logger.error("Error adding unaggregated attestation to pool", {subnet}, e as Error);
+        }
+
+        if (!options.dontSendGossipAttestationsToForkchoice) {
+          try {
+            chain.forkChoice.onAttestation(indexedAttestation, attDataRootHex);
+          } catch (e) {
+            logger.debug("Error adding gossip unaggregated attestation to forkchoice", {subnet}, e as Error);
+          }
+        }
+
+        chain.emitter.emit(routes.events.EventType.attestation, attestation);
+      }
+
+      if (batchableBls) {
+        metrics?.gossipAttestation.attestationBatchHistogram.observe(attestationCount);
+      } else {
+        metrics?.gossipAttestation.attestationNonBatchCount.inc(attestationCount);
+      }
+
+      return results;
     },
   };
 }

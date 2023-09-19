@@ -26,6 +26,7 @@ export type IChainOptions = BlockProcessOpts &
     /** Option to load a custom kzg trusted setup in txt format */
     trustedSetup?: string;
     broadcastValidationStrictness?: string;
+    minSameMessageSignatureSetsToBatch: number;
   };
 
 export type BlockProcessOpts = {
@@ -83,4 +84,8 @@ export const defaultChainOptions: IChainOptions = {
   // for attestation validation, having this value ensures we don't have to regen states most of the time
   maxSkipSlots: 32,
   broadcastValidationStrictness: "warn",
+  // should be less than or equal to MIN_SIGNATURE_SETS_TO_BATCH_VERIFY
+  // batching too much may block the I/O thread so if useWorker=false, suggest this value to be 32
+  // since this batch attestation work is designed to work with useWorker=true, make this the lowest value
+  minSameMessageSignatureSetsToBatch: 2,
 };

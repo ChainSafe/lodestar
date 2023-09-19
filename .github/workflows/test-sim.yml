@@ -15,7 +15,7 @@ on:
       debug:
         description: Runtime DEBUG value
         required: false
-        default: ''
+        default: ""
 
 env:
   GETH_DOCKER_IMAGE: ethereum/client-go:v1.11.6
@@ -68,9 +68,13 @@ jobs:
         run: yarn test:sim:backup_eth_provider
         working-directory: packages/cli
 
+      - name: Sim tests mixed client
+        run: DEBUG='${{github.event.inputs.debug}}' yarn test:sim:mixedclient
+        working-directory: packages/cli
+
       - name: Upload debug log test files for "packages/cli"
         if: ${{ always() }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: debug-test-logs-cli
           path: packages/cli/test-logs

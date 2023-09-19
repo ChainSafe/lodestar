@@ -35,9 +35,10 @@ Based on the parameters passed to `SimulationEnvironment.initWithDefaults` the f
 
 ```bash
 # Here multi-fork is the simulation id
+# The `client` suffixed `beacon_`, `validator_` or `execution_`
 /tmp/random-directory/multi-fork
   /node-1
-    /cl-${client}
+    /${client}
       genesis.ssz
       jwtsecret.txt
       /validators
@@ -49,16 +50,16 @@ Based on the parameters passed to `SimulationEnvironment.initWithDefaults` the f
         /keystores
           # Public key prefixed with 0x, EIP-2335 keystore file
           0x18302981aadffccc123313.json
-    /el-${client}
+    /${client}
       genesis.json
       jwtsecret.txt
 
 # Here multi-fork is the simulation id
 $logsDir/multi-fork/
   docker_runner.log
-  node-1-cl-${client}.log
-  node-1-cl-${client}-validator.log
-  node-1-el-${client}.log
+  node-1-${client}.log
+  node-1-${client}.log
+  node-1-${client}.log
 ```
 
 ### Running a client in docker

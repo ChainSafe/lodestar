@@ -37,6 +37,9 @@ export type BlsMultiThreadWorkerPoolOptions = {
   blsVerifyAllMultiThread?: boolean;
 };
 
+// 1 worker for the main thread
+const blsPoolSize = Math.max(defaultPoolSize - 1, 1);
+
 /**
  * Split big signature sets into smaller sets so they can be sent to multiple workers.
  *
@@ -133,7 +136,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     // THe worker is not able to deserialize from uncompressed
     // `Error: err _wrapDeserialize`
     this.format = implementation === "blst-native" ? PointFormat.uncompressed : PointFormat.compressed;
-    this.workers = this.createWorkers(implementation, defaultPoolSize);
+    this.workers = this.createWorkers(implementation, blsPoolSize);
 
     if (metrics) {
       metrics.blsThreadPool.queueLength.addCollect(() => {
@@ -145,7 +148,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
 
   canAcceptWork(): boolean {
     return (
-      this.workersBusy < defaultPoolSize &&
+      this.workersBusy < blsPoolSize &&
       // TODO: Should also bound the jobs queue?
       this.jobs.length < MAX_JOBS_CAN_ACCEPT_WORK
     );
@@ -388,7 +391,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
         try {
           // Note: This can throw, must be handled per-job.
           // Pubkey and signature aggregation is defered here
-          workReq = jobItemWorkReq(job, this.format);
+          workReq = jobItemWorkReq(job, this.format, this.metrics);
         } catch (e) {
           this.metrics?.blsThreadPool.errorAggregateSignatureSetsCount.inc({type: job.type});
 
@@ -429,10 +432,13 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       // If the job, metrics or any code below throws: the job will reject never going stale.
       // Only downside is the the job promise may be resolved twice, but that's not an issue
 
-      const jobStartNs = process.hrtime.bigint();
+      const [jobStartSec, jobStartNs] = process.hrtime();
       const workResult = await workerApi.verifyManySignatureSets(workReqs);
-      const jobEndNs = process.hrtime.bigint();
-      const {workerId, batchRetries, batchSigsSuccess, workerStartNs, workerEndNs, results} = workResult;
+      const [jobEndSec, jobEndNs] = process.hrtime();
+      const {workerId, batchRetries, batchSigsSuccess, workerStartTime, workerEndTime, results} = workResult;
+
+      const [workerStartSec, workerStartNs] = workerStartTime;
+      const [workerEndSec, workerEndNs] = workerEndTime;
 
       let successCount = 0;
       let errorCount = 0;
@@ -474,9 +480,9 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
         }
       }
 
-      const workerJobTimeSec = Number(workerEndNs - workerStartNs) / 1e9;
-      const latencyToWorkerSec = Number(workerStartNs - jobStartNs) / 1e9;
-      const latencyFromWorkerSec = Number(jobEndNs - workerEndNs) / 1e9;
+      const workerJobTimeSec = workerEndSec - workerStartSec + (workerEndNs - workerStartNs) / 1e9;
+      const latencyToWorkerSec = workerStartSec - jobStartSec + (workerStartNs - jobStartNs) / 1e9;
+      const latencyFromWorkerSec = jobEndSec - workerEndSec + Number(jobEndNs - workerEndNs) / 1e9;
 
       this.metrics?.blsThreadPool.timePerSigSet.observe(workerJobTimeSec / startedSigSets);
       this.metrics?.blsThreadPool.jobsWorkerTime.inc({workerId}, workerJobTimeSec);

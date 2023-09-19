@@ -20,6 +20,7 @@ import {
   pruneOldFilesInDir,
 } from "../../util/index.js";
 import {getVersionData} from "../../util/version.js";
+import {LogArgs} from "../../options/logOptions.js";
 import {BeaconArgs} from "./options.js";
 import {getBeaconPaths} from "./paths.js";
 import {initBeaconState} from "./initBeaconState.js";
@@ -205,8 +206,13 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   return {config, options, beaconPaths, network, version, commit, peerId, logger};
 }
 
-export function initLogger(args: BeaconArgs, dataDir: string, config: ChainForkConfig): LoggerNode {
-  const defaultLogFilepath = path.join(dataDir, "beacon.log");
+export function initLogger(
+  args: LogArgs & Pick<GlobalArgs, "dataDir">,
+  dataDir: string,
+  config: ChainForkConfig,
+  fileName = "beacon.log"
+): LoggerNode {
+  const defaultLogFilepath = path.join(dataDir, fileName);
   const logger = getNodeLogger(parseLoggerArgs(args, {defaultLogFilepath}, config));
   try {
     cleanOldLogFiles(args, {defaultLogFilepath});

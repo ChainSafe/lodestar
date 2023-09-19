@@ -1,4 +1,4 @@
-export type GossipQueueOpts<T> = LinearGossipQueueOpts | IndexedGossipQueueOpts<T>;
+export type GossipQueueOpts<T> = LinearGossipQueueOpts | IndexedGossipQueueOpts<T> | IndexedGossipQueueMinSizeOpts<T>;
 
 export type LinearGossipQueueOpts = {
   type: QueueType;
@@ -37,6 +37,7 @@ export function isIndexedGossipQueueAvgTimeOpts<T>(opts: GossipQueueOpts<T>): op
 export interface GossipQueue<T> {
   length: number;
   keySize: number;
+  getDataAgeMs(): number[];
   clear: () => void;
   next: () => T | T[] | null;
   add: (item: T) => number;

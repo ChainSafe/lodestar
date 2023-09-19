@@ -3,7 +3,7 @@ import path from "node:path";
 import {sleep, toHex, toHexString} from "@lodestar/utils";
 import {ApiError} from "@lodestar/api";
 import {CLIQUE_SEALING_PERIOD, SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/constants.js";
-import {AssertionMatch, CLClient, ELClient} from "../utils/simulation/interfaces.js";
+import {AssertionMatch, BeaconClient, ExecutionClient} from "../utils/simulation/interfaces.js";
 import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
 import {getEstimatedTimeInSecForRun, getEstimatedTTD, logFilesDir} from "../utils/simulation/utils/index.js";
 import {
@@ -56,10 +56,10 @@ const env = await SimulationEnvironment.initWithDefaults(
     },
   },
   [
-    {id: "node-1", cl: CLClient.Lodestar, el: ELClient.Geth, keysCount: 32, mining: true},
-    {id: "node-2", cl: CLClient.Lodestar, el: ELClient.Nethermind, keysCount: 32, remote: true},
-    {id: "node-3", cl: CLClient.Lodestar, el: ELClient.Nethermind, keysCount: 32},
-    {id: "node-4", cl: CLClient.Lighthouse, el: ELClient.Geth, keysCount: 32},
+    {id: "node-1", beacon: BeaconClient.Lodestar, execution: ExecutionClient.Geth, keysCount: 32, mining: true},
+    {id: "node-2", beacon: BeaconClient.Lodestar, execution: ExecutionClient.Nethermind, keysCount: 32, remote: true},
+    {id: "node-3", beacon: BeaconClient.Lodestar, execution: ExecutionClient.Nethermind, keysCount: 32},
+    {id: "node-4", beacon: BeaconClient.Lighthouse, execution: ExecutionClient.Geth, keysCount: 32},
   ]
 );
 
@@ -98,36 +98,36 @@ await waitForSlot(env.clock.getLastSlotOfEpoch(lastForkEpoch + 1), env.nodes, {
 
 // Range Sync
 // ========================================================
-const headForRangeSync = await env.nodes[0].cl.api.beacon.getBlockHeader("head");
+const headForRangeSync = await env.nodes[0].beacon.api.beacon.getBlockHeader("head");
 ApiError.assert(headForRangeSync);
 const rangeSync = await env.createNodePair({
   id: "range-sync-node",
-  cl: CLClient.Lodestar,
-  el: ELClient.Geth,
+  beacon: BeaconClient.Lodestar,
+  execution: ExecutionClient.Geth,
   keysCount: 0,
 });
 
 // Checkpoint sync involves Weak Subjectivity Checkpoint
 // ========================================================
-const res = await env.nodes[0].cl.api.beacon.getStateFinalityCheckpoints("head");
+const res = await env.nodes[0].beacon.api.beacon.getStateFinalityCheckpoints("head");
 ApiError.assert(res);
 const headForCheckpointSync = res.response.data.finalized;
 const checkpointSync = await env.createNodePair({
   id: "checkpoint-sync-node",
-  cl: {
-    type: CLClient.Lodestar,
+  beacon: {
+    type: BeaconClient.Lodestar,
     options: {clientOptions: {wssCheckpoint: `${toHex(headForCheckpointSync.root)}:${headForCheckpointSync.epoch}`}},
   },
-  el: ELClient.Geth,
+  execution: ExecutionClient.Geth,
   keysCount: 0,
 });
 
-await rangeSync.el.job.start();
-await rangeSync.cl.job.start();
+await rangeSync.execution.job.start();
+await rangeSync.beacon.job.start();
 await connectNewNode(rangeSync, env.nodes);
 
-await checkpointSync.el.job.start();
-await checkpointSync.cl.job.start();
+await checkpointSync.execution.job.start();
+await checkpointSync.beacon.job.start();
 await connectNewNode(checkpointSync, env.nodes);
 
 await Promise.all([
@@ -141,25 +141,25 @@ await Promise.all([
   }),
 ]);
 
-await rangeSync.cl.job.stop();
-await rangeSync.el.job.stop();
-await checkpointSync.cl.job.stop();
-await checkpointSync.el.job.stop();
+await rangeSync.beacon.job.stop();
+await rangeSync.execution.job.stop();
+await checkpointSync.beacon.job.stop();
+await checkpointSync.execution.job.stop();
 
 // Unknown block sync
 // ========================================================
 const unknownBlockSync = await env.createNodePair({
   id: "unknown-block-sync-node",
-  cl: {
-    type: CLClient.Lodestar,
+  beacon: {
+    type: BeaconClient.Lodestar,
     options: {clientOptions: {"network.allowPublishToZeroPeers": true, "sync.disableRangeSync": true}},
   },
-  el: ELClient.Geth,
+  execution: ExecutionClient.Geth,
   keysCount: 0,
 });
-await unknownBlockSync.el.job.start();
-await unknownBlockSync.cl.job.start();
-const headForUnknownBlockSync = await env.nodes[0].cl.api.beacon.getBlockV2("head");
+await unknownBlockSync.execution.job.start();
+await unknownBlockSync.beacon.job.start();
+const headForUnknownBlockSync = await env.nodes[0].beacon.api.beacon.getBlockV2("head");
 ApiError.assert(headForUnknownBlockSync);
 await connectNewNode(unknownBlockSync, env.nodes);
 
@@ -167,7 +167,7 @@ await connectNewNode(unknownBlockSync, env.nodes);
 await sleep(5000);
 
 try {
-  ApiError.assert(await unknownBlockSync.cl.api.beacon.publishBlock(headForUnknownBlockSync.response.data));
+  ApiError.assert(await unknownBlockSync.beacon.api.beacon.publishBlock(headForUnknownBlockSync.response.data));
 
   env.tracker.record({
     message: "Publishing unknown block should fail",

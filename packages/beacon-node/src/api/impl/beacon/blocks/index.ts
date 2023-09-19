@@ -1,5 +1,5 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {routes, ServerApi, isSignedBlockContents, isSignedBlindedBlockContents} from "@lodestar/api";
+import {routes, ServerApi, isSignedBlockContents, isSignedBlindedBlockContents, ResponseFormat} from "@lodestar/api";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {sleep, toHex} from "@lodestar/utils";
@@ -243,15 +243,21 @@ export function getBeaconBlockApi({
       };
     },
 
-    async getBlock(blockId) {
+    async getBlock(blockId, format?: ResponseFormat) {
       const {block} = await resolveBlockId(chain, blockId);
+      if (format === "ssz") {
+        return config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block);
+      }
       return {
         data: block,
       };
     },
 
-    async getBlockV2(blockId) {
+    async getBlockV2(blockId, format?: ResponseFormat) {
       const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
+      if (format === "ssz") {
+        return config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block);
+      }
       return {
         executionOptimistic,
         data: block,

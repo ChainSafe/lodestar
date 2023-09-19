@@ -592,7 +592,12 @@ export class ForkChoice implements IForkChoice {
    * Returns `true` if the block is known **and** a descendant of the finalized root.
    */
   hasBlockHex(blockRoot: RootHex): boolean {
-    return this.protoArray.hasBlock(blockRoot) && this.isDescendantOfFinalized(blockRoot);
+    const node = this.protoArray.getNode(blockRoot);
+    if (node === undefined) {
+      return false;
+    }
+
+    return this.protoArray.isFinalizedRootOrDescendant(node);
   }
 
   /**
@@ -610,20 +615,21 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
-   * Returns a `ProtoBlock` if the block is known **and** a descendant of the finalized root.
+   * Returns a MUTABLE `ProtoBlock` if the block is known **and** a descendant of the finalized root.
    */
   getBlockHex(blockRoot: RootHex): ProtoBlock | null {
-    const block = this.protoArray.getBlock(blockRoot);
-    if (!block) {
+    const node = this.protoArray.getNode(blockRoot);
+    if (!node) {
       return null;
     }
-    // If available, use the parent_root to perform the lookup since it will involve one
-    // less lookup. This involves making the assumption that the finalized block will
-    // always have `block.parent_root` of `None`.
-    if (!this.isDescendantOfFinalized(blockRoot)) {
+
+    if (!this.protoArray.isFinalizedRootOrDescendant(node)) {
       return null;
     }
-    return block;
+
+    return {
+      ...node,
+    };
   }
 
   getJustifiedBlock(): ProtoBlock {
@@ -649,13 +655,6 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
-   * Return `true` if `block_root` is equal to the finalized root, or a known descendant of it.
-   */
-  isDescendantOfFinalized(blockRoot: RootHex): boolean {
-    return this.protoArray.isDescendant(this.fcStore.finalizedCheckpoint.rootHex, blockRoot);
-  }
-
-  /**
    * Returns true if the `descendantRoot` has an ancestor with `ancestorRoot`.
    *
    * Always returns `false` if either input roots are unknown.
@@ -671,7 +670,8 @@ export class ForkChoice implements IForkChoice {
   prune(finalizedRoot: RootHex): ProtoBlock[] {
     const prunedNodes = this.protoArray.maybePrune(finalizedRoot);
     const prunedCount = prunedNodes.length;
-    for (const vote of this.votes) {
+    for (let i = 0; i < this.votes.length; i++) {
+      const vote = this.votes[i];
       // validator has never voted
       if (vote === undefined) {
         continue;

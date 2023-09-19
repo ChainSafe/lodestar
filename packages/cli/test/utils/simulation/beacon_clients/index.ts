@@ -1,27 +1,27 @@
 import {writeFile} from "node:fs/promises";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
-import {SHARED_JWT_SECRET, SHARED_VALIDATOR_PASSWORD, EL_ENGINE_BASE_PORT} from "../constants.js";
-import {AtLeast, CLClient, CLClientGeneratorOptions, CLNode, IRunner} from "../interfaces.js";
+import {EL_ENGINE_BASE_PORT, SHARED_JWT_SECRET} from "../constants.js";
+import {AtLeast, BeaconClient, BeaconGeneratorOptions, BeaconNode} from "../interfaces.js";
 import {makeUniqueArray} from "../utils/index.js";
-import {createKeystores} from "../utils/keys.js";
-import {createCLNodePaths} from "../utils/paths.js";
+import {ensureDirectories} from "../utils/paths.js";
 import {generateLighthouseBeaconNode} from "./lighthouse.js";
 import {generateLodestarBeaconNode} from "./lodestar.js";
 
-export async function createCLNode<C extends CLClient>(
-  client: C,
-  options: AtLeast<CLClientGeneratorOptions<C>, "id" | "paths" | "config" | "paths" | "nodeIndex" | "genesisTime"> & {
+export async function createBeaconNode<B extends BeaconClient>(
+  client: B,
+  options: AtLeast<
+    BeaconGeneratorOptions<B>,
+    "id" | "paths" | "forkConfig" | "nodeIndex" | "genesisTime" | "runner"
+  > & {
     genesisState?: BeaconStateAllForks;
-    runner: IRunner;
   }
-): Promise<CLNode> {
-  const {runner, config, genesisState} = options;
-  const clId = `${options.id}-cl-${client}`;
+): Promise<BeaconNode> {
+  const {runner, forkConfig: config, genesisState} = options;
+  const clId = `${options.id}-${client}`;
 
-  const opts: CLClientGeneratorOptions = {
+  const opts: BeaconGeneratorOptions = {
     ...options,
     id: clId,
-    keys: options.keys ?? {type: "no-keys"},
     genesisTime: options.genesisTime + config.GENESIS_DELAY,
     engineMock: options.engineMock ?? false,
     clientOptions: options.clientOptions ?? {},
@@ -38,10 +38,8 @@ export async function createCLNode<C extends CLClient>(
     };
   }
 
-  await createCLNodePaths(opts.paths);
-  await createKeystores(opts.paths, opts.keys);
+  await ensureDirectories(opts.paths);
   await writeFile(opts.paths.jwtsecretFilePath, SHARED_JWT_SECRET);
-  await writeFile(opts.paths.keystoresSecretFilePath, SHARED_VALIDATOR_PASSWORD);
 
   // We have to wite the genesis state but can't do that without starting up
   // at least one EL node and getting ETH_HASH, so will do in startup
@@ -52,7 +50,7 @@ export async function createCLNode<C extends CLClient>(
   }
 
   switch (client) {
-    case CLClient.Lodestar: {
+    case BeaconClient.Lodestar: {
       return generateLodestarBeaconNode(
         {
           ...opts,
@@ -65,7 +63,7 @@ export async function createCLNode<C extends CLClient>(
         runner
       );
     }
-    case CLClient.Lighthouse: {
+    case BeaconClient.Lighthouse: {
       return generateLighthouseBeaconNode(
         {
           ...opts,
@@ -79,6 +77,6 @@ export async function createCLNode<C extends CLClient>(
       );
     }
     default:
-      throw new Error(`CL Client "${client}" not supported`);
+      throw new Error(`Beacon Client "${client}" not supported`);
   }
 }

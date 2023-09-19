@@ -616,9 +616,11 @@ export class EpochCache {
   getBeaconProposer(slot: Slot): ValidatorIndex {
     const epoch = computeEpochAtSlot(slot);
     if (epoch !== this.currentShuffling.epoch) {
-      throw new Error(
-        `Requesting beacon proposer for different epoch current shuffling: ${epoch} != ${this.currentShuffling.epoch}`
-      );
+      throw new EpochCacheError({
+        code: EpochCacheErrorCode.PROPOSER_EPOCH_MISMATCH,
+        currentEpoch: this.currentShuffling.epoch,
+        requestedEpoch: epoch,
+      });
     }
     return this.proposers[slot % SLOTS_PER_EPOCH];
   }
@@ -819,7 +821,11 @@ export class EpochCache {
   getShufflingAtEpoch(epoch: Epoch): EpochShuffling {
     const shuffling = this.getShufflingAtEpochOrNull(epoch);
     if (shuffling === null) {
-      throw new Error(`Requesting slot committee out of range epoch: ${epoch} current: ${this.currentShuffling.epoch}`);
+      throw new EpochCacheError({
+        code: EpochCacheErrorCode.COMMITTEE_EPOCH_OUT_OF_RANGE,
+        currentEpoch: this.currentShuffling.epoch,
+        requestedEpoch: epoch,
+      });
     }
 
     return shuffling;
@@ -859,7 +865,7 @@ export class EpochCache {
       case this.syncPeriod + 1:
         return this.nextSyncCommitteeIndexed;
       default:
-        throw new Error(`No sync committee for epoch ${epoch}`);
+        throw new EpochCacheError({code: EpochCacheErrorCode.NO_SYNC_COMMITTEE, epoch});
     }
   }
 
@@ -904,13 +910,31 @@ type AttesterDuty = {
 
 export enum EpochCacheErrorCode {
   COMMITTEE_INDEX_OUT_OF_RANGE = "EPOCH_CONTEXT_ERROR_COMMITTEE_INDEX_OUT_OF_RANGE",
+  COMMITTEE_EPOCH_OUT_OF_RANGE = "EPOCH_CONTEXT_ERROR_COMMITTEE_EPOCH_OUT_OF_RANGE",
+  NO_SYNC_COMMITTEE = "EPOCH_CONTEXT_ERROR_NO_SYNC_COMMITTEE",
+  PROPOSER_EPOCH_MISMATCH = "EPOCH_CONTEXT_ERROR_PROPOSER_EPOCH_MISMATCH",
 }
 
-type EpochCacheErrorType = {
-  code: EpochCacheErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE;
-  index: number;
-  maxIndex: number;
-};
+type EpochCacheErrorType =
+  | {
+      code: EpochCacheErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE;
+      index: number;
+      maxIndex: number;
+    }
+  | {
+      code: EpochCacheErrorCode.COMMITTEE_EPOCH_OUT_OF_RANGE;
+      requestedEpoch: Epoch;
+      currentEpoch: Epoch;
+    }
+  | {
+      code: EpochCacheErrorCode.NO_SYNC_COMMITTEE;
+      epoch: Epoch;
+    }
+  | {
+      code: EpochCacheErrorCode.PROPOSER_EPOCH_MISMATCH;
+      requestedEpoch: Epoch;
+      currentEpoch: Epoch;
+    };
 
 export class EpochCacheError extends LodestarError<EpochCacheErrorType> {}
 

@@ -35,6 +35,8 @@ export {
   EpochCacheImmutableData,
   createEmptyEpochCacheImmutableData,
   createEmptyCarryoverData,
+  EpochCacheError,
+  EpochCacheErrorCode,
 } from "./cache/epochCache.js";
 export {EpochTransitionCache, beforeProcessEpoch} from "./cache/epochTransitionCache.js";
 

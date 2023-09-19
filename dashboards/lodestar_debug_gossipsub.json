@@ -1717,10 +1717,12 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
           "exemplar": false,
           "expr": "sum(\n  rate(gossipsub_mesh_peer_inclusion_events_total[$rate_interval])\n) by (topic)",
           "interval": "",
           "legendFormat": "+ {{topic}}",
+          "range": true,
           "refId": "A"
         },
         {
@@ -1728,11 +1730,13 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
           "exemplar": false,
           "expr": "- sum(\n  rate(gossipsub_peer_churn_events_total [$rate_interval])\n) by (topic)",
           "hide": false,
           "interval": "",
           "legendFormat": "- {{topic}}",
+          "range": true,
           "refId": "B"
         }
       ],
@@ -1809,23 +1813,120 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": false,
-          "expr": "sum(\n  rate(gossipsub_mesh_peer_inclusion_events_total[$rate_interval])\n) by (reason)",
+          "editorMode": "code",
+          "expr": "sum(rate(gossipsub_mesh_peer_inclusion_events_fanout_total[$rate_interval]))",
           "hide": false,
-          "interval": "",
-          "legendFormat": "+ {{reason}}",
-          "refId": "B"
+          "legendFormat": "+ fanout",
+          "range": true,
+          "refId": "C"
         },
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": false,
-          "expr": "- sum(\n  rate(gossipsub_peer_churn_events_total [$rate_interval])\n) by (reason)",
-          "interval": "",
-          "legendFormat": "- {{reason}}",
-          "refId": "A"
+          "editorMode": "code",
+          "expr": "sum(rate(gossipsub_mesh_peer_inclusion_events_random_total[$rate_interval]))",
+          "hide": false,
+          "legendFormat": "+ random",
+          "range": true,
+          "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(gossipsub_mesh_peer_inclusion_events_subscribed_total[$rate_interval]))",
+          "hide": false,
+          "legendFormat": "+ subscribed",
+          "range": true,
+          "refId": "E"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(gossipsub_mesh_peer_inclusion_events_outbound_total[$rate_interval]))",
+          "hide": false,
+          "legendFormat": "+ outbound",
+          "range": true,
+          "refId": "F"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(gossipsub_mesh_peer_inclusion_events_not_enough_total[$rate_interval]))",
+          "hide": false,
+          "legendFormat": "+ not_enough",
+          "range": true,
+          "refId": "G"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(gossipsub_mesh_peer_inclusion_events_opportunistic_total[$rate_interval]))",
+          "hide": false,
+          "legendFormat": "+ opportunistic",
+          "range": true,
+          "refId": "H"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "- sum(rate(gossipsub_peer_churn_events_disconnected_total[$rate_interval]))",
+          "hide": false,
+          "legendFormat": "- disconnected",
+          "range": true,
+          "refId": "I"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "- sum(rate(gossipsub_peer_churn_events_bad_score_total[$rate_interval]))",
+          "hide": false,
+          "legendFormat": "- bad_score",
+          "range": true,
+          "refId": "J"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "- sum(rate(gossipsub_peer_churn_events_prune_total[$rate_interval]))",
+          "hide": false,
+          "legendFormat": "- prune",
+          "range": true,
+          "refId": "K"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "- sum(rate(gossipsub_peer_churn_events_excess_total[$rate_interval]))",
+          "hide": false,
+          "legendFormat": "- excess",
+          "range": true,
+          "refId": "L"
         }
       ],
       "title": "Mesh inclusion (+) / churn (-) events - sum by reason",
@@ -2414,10 +2515,12 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
           "exemplar": false,
-          "expr": "(sum(rate(gossipsub_async_validation_result_total{acceptance=\"ignore\"} [32m])) by (topic))\n/\n(sum(rate(gossipsub_async_validation_result_total[32m])) by (topic))",
+          "expr": "(sum(rate(gossipsub_ignored_messages_total[32m])) by (topic))\n/\n(\n    sum(rate(gossipsub_msg_received_prevalidation_total[32m])) by (topic)\n)",
           "interval": "",
           "legendFormat": "IGNORE {{topic}}",
+          "range": true,
           "refId": "A"
         },
         {
@@ -2425,12 +2528,26 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
           "exemplar": false,
-          "expr": "(sum(rate(gossipsub_async_validation_result_total{acceptance=\"reject\"} [32m])) by (topic))\n/\n(sum(rate(gossipsub_async_validation_result_total[32m])) by (topic))",
+          "expr": "(sum(rate(gossipsub_rejected_messages_total[32m])) by (topic))\n/\n(\n    sum(rate(gossipsub_msg_received_prevalidation_total[32m])) by (topic)\n)",
           "hide": false,
           "interval": "",
           "legendFormat": "REJECT {{topic}}",
+          "range": true,
           "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(sum(rate(gossipsub_unknown_validation_results_total[32m])) by (topic))\n/\n(\n    sum(rate(gossipsub_msg_received_prevalidation_total[32m])) by (topic)\n)",
+          "hide": false,
+          "legendFormat": "UNKNOWN {{topic}}",
+          "range": true,
+          "refId": "C"
         }
       ],
       "title": "Async validation result - IGNORE / REJECT rates",

@@ -17,7 +17,7 @@ export const missedBlocksAssertion: SimulationAssertion<"missedBlocks", number[]
 
     for (let slot = startSlot; slot < endSlot; slot++) {
       // If some value of head is present for that slot then it was not missed
-      if (isNullish(dependantStores[headAssertion.id][node.cl.id][slot])) {
+      if (isNullish(dependantStores[headAssertion.id][node.beacon.id][slot])) {
         missedBlocks.push(slot);
       }
     }
@@ -31,7 +31,7 @@ export const missedBlocksAssertion: SimulationAssertion<"missedBlocks", number[]
     // For first node we don't need to match
     if (node.id === nodes[0].id) return errors;
 
-    const missedBlocksOnFirstNode = dependantStores["missedBlocks" as const][nodes[0].cl.id][slot];
+    const missedBlocksOnFirstNode = dependantStores["missedBlocks" as const][nodes[0].beacon.id][slot];
 
     const missedBlocks = store[slot];
 
