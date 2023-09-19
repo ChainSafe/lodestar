@@ -280,7 +280,9 @@ jobs:
         with:
           path: packages/beacon-node/spec-tests
           key: spec-test-data-${{ hashFiles('packages/beacon-node/test/spec/specTestVersioning.ts') }}
-
+      - name: Download spec tests	
+        run: yarn download-spec-tests	
+        working-directory: packages/beacon-node
       # Run them in different steps to quickly identifying which command failed
       # Otherwise just doing `yarn test:spec` you can't tell which specific suite failed
       # many of the suites have identical names for minimal and mainnet
