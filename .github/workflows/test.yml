@@ -211,7 +211,7 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@v3
         with:
-          name: debug-e2e-test-logs
+          name: debug-e2e-test-logs-node-${{matrix.node}}
           path: test-logs/e2e-test-env
       
   browser-tests:
