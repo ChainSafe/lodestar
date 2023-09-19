@@ -1,11 +1,11 @@
 import {toGindex, Tree} from "@chainsafe/persistent-merkle-tree";
 import {toHexString} from "@chainsafe/ssz";
-import {MAX_DEPOSITS} from "@lodestar/params";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
 import {FilterOptions} from "@lodestar/db";
 import {Eth1Error, Eth1ErrorCode} from "../errors.js";
 import {DepositTree} from "../../db/repositories/depositDataRoot.js";
+import { getEth1DepositCount } from "@lodestar/state-transition";
 
 export type DepositGetter<T> = (indexRange: FilterOptions<number>, eth1Data: phase0.Eth1Data) => Promise<T[]>;
 
@@ -22,9 +22,7 @@ export async function getDeposits<T>(
     throw new Eth1Error({code: Eth1ErrorCode.DEPOSIT_INDEX_TOO_HIGH, depositIndex, depositCount});
   }
 
-  // Spec v0.12.2
-  // assert len(body.deposits) == min(MAX_DEPOSITS, state.eth1_data.deposit_count - state.eth1_deposit_index)
-  const depositsLen = Math.min(MAX_DEPOSITS, depositCount - depositIndex);
+  const depositsLen = getEth1DepositCount(state);
 
   const indexRange = {gte: depositIndex, lt: depositIndex + depositsLen};
   const deposits = await depositsGetter(indexRange, eth1Data);

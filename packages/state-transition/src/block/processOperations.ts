@@ -10,6 +10,7 @@ import {processVoluntaryExit} from "./processVoluntaryExit.js";
 import {processBlsToExecutionChange} from "./processBlsToExecutionChange.js";
 import {processDepositReceipt} from "./processDepositReceipt.js";
 import {ProcessBlockOpts} from "./types.js";
+import { getEth1DepositCount } from "../util/deposit.js";
 
 export {
   processProposerSlashing,
@@ -27,7 +28,7 @@ export function processOperations(
   opts: ProcessBlockOpts = {verifySignatures: true}
 ): void {
   // verify that outstanding deposits are processed up to the maximum number of deposits
-  const maxDeposits = Math.min(MAX_DEPOSITS, state.eth1Data.depositCount - state.eth1DepositIndex);
+  const maxDeposits = getEth1DepositCount(state);
   if (body.deposits.length !== maxDeposits) {
     throw new Error(
       `Block contains incorrect number of deposits: depositCount=${body.deposits.length} expected=${maxDeposits}`

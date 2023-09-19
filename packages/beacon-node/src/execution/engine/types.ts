@@ -378,7 +378,7 @@ export function deserializeDepositReceipts(serialized: DepositReceiptRpc): eip61
   return {
     pubkey: dataToBytes(serialized.pubkey, 48),
     withdrawalCredentials: dataToBytes(serialized.withdrawalCredentials, 32),
-    amount: quantityToBigint(serialized.amount),
+    amount: quantityToNum(serialized.amount),
     signature: dataToBytes(serialized.signature, 96),
     index: quantityToNum(serialized.index),
   } as eip6110.DepositReceipt;
