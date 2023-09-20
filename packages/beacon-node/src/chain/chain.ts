@@ -11,6 +11,7 @@ import {
   isCachedBeaconState,
   Index2PubkeyCache,
   PubkeyIndexMap,
+  newUnfinalizedPubkeyIndexMap,
 } from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
 import {
@@ -31,7 +32,6 @@ import {ProcessShutdownCallback} from "@lodestar/validator";
 import {Logger, isErrorAborted, pruneSetToMax, sleep, toHex} from "@lodestar/utils";
 import {ForkSeq, SLOTS_PER_EPOCH, MAX_BLOBS_PER_BLOCK} from "@lodestar/params";
 
-import {createEmptyCarryoverData} from "@lodestar/state-transition/src/cache/epochCache.js";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {Metrics} from "../metrics/index.js";
@@ -228,7 +228,7 @@ export class BeaconChain implements IBeaconChain {
               finalizedPubkey2index: new PubkeyIndexMap(),
               finalizedIndex2pubkey: [],
             },
-            createEmptyCarryoverData()
+            newUnfinalizedPubkeyIndexMap(),
           );
 
     // Persist single global instance of state caches

@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import {ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
-import {createCachedBeaconState, PubkeyIndexMap, createEmptyCarryoverData} from "@lodestar/state-transition";
+import {createCachedBeaconState, newUnfinalizedPubkeyIndexMap, PubkeyIndexMap} from "@lodestar/state-transition";
 import {createBeaconConfig, ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {config as chainConfig} from "@lodestar/config/default";
 
@@ -16,10 +16,10 @@ describe("upgradeState", () => {
       capellaState,
       {
         config: createBeaconConfig(config, capellaState.genesisValidatorsRoot),
-        pubkey2index: new PubkeyIndexMap(),
-        index2pubkey: [],
+        finalizedPubkey2index: new PubkeyIndexMap(),
+        finalizedIndex2pubkey: [],
       },
-      createEmptyCarryoverData(),
+      newUnfinalizedPubkeyIndexMap(),
       {skipSyncCommitteeCache: true}
     );
     const newState = upgradeStateToDeneb(stateView);
@@ -32,10 +32,10 @@ describe("upgradeState", () => {
       denebState,
       {
         config: createBeaconConfig(config, denebState.genesisValidatorsRoot),
-        pubkey2index: new PubkeyIndexMap(),
-        index2pubkey: [],
+        finalizedPubkey2index: new PubkeyIndexMap(),
+        finalizedIndex2pubkey: [],
       },
-      createEmptyCarryoverData(),
+      newUnfinalizedPubkeyIndexMap(),
       {skipSyncCommitteeCache: true}
     );
     const newState = upgradeStateToEIP6110(stateView);

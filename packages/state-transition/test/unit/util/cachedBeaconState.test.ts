@@ -1,7 +1,7 @@
 import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
-import {createCachedBeaconState, PubkeyIndexMap, createEmptyCarryoverData} from "../../../src/index.js";
+import {createCachedBeaconState, PubkeyIndexMap, newUnfinalizedPubkeyIndexMap} from "../../../src/index.js";
 
 describe("CachedBeaconState", () => {
   it("Create empty CachedBeaconState", () => {
@@ -14,7 +14,7 @@ describe("CachedBeaconState", () => {
         finalizedPubkey2index: new PubkeyIndexMap(),
         finalizedIndex2pubkey: [],
       },
-      createEmptyCarryoverData()
+      newUnfinalizedPubkeyIndexMap()
     );
   });
 });

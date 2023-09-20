@@ -13,7 +13,7 @@ import {
   BeaconStateAllForks,
   createEmptyEpochCacheImmutableData,
   getActiveValidatorIndices,
-  createEmptyCarryoverData,
+  newUnfinalizedPubkeyIndexMap,
 } from "@lodestar/state-transition";
 import {Logger} from "@lodestar/utils";
 import {IEth1Provider} from "../../eth1/index.js";
@@ -90,7 +90,7 @@ export class GenesisBuilder implements IGenesisBuilder {
     this.state = createCachedBeaconState(
       stateView,
       createEmptyEpochCacheImmutableData(config, stateView),
-      createEmptyCarryoverData()
+      newUnfinalizedPubkeyIndexMap(),
     );
     this.config = this.state.config;
     this.activatedValidatorCount = getActiveValidatorIndices(stateView, GENESIS_EPOCH).length;

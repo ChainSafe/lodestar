@@ -34,14 +34,13 @@ export {
   EpochCache,
   EpochCacheImmutableData,
   createEmptyEpochCacheImmutableData,
-  createEmptyCarryoverData,
   EpochCacheError,
   EpochCacheErrorCode,
 } from "./cache/epochCache.js";
 export {EpochTransitionCache, beforeProcessEpoch} from "./cache/epochTransitionCache.js";
 
 // Aux data-structures
-export {PubkeyIndexMap, Index2PubkeyCache, UnfinalizedPubkeyIndexMap} from "./cache/pubkeyCache.js";
+export {PubkeyIndexMap, Index2PubkeyCache, UnfinalizedPubkeyIndexMap, newUnfinalizedPubkeyIndexMap} from "./cache/pubkeyCache.js";
 
 export {
   EffectiveBalanceIncrements,

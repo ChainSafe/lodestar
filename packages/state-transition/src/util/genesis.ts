@@ -12,13 +12,14 @@ import {Bytes32, phase0, Root, ssz, TimeSeconds} from "@lodestar/types";
 
 import {CachedBeaconStateAllForks, BeaconStateAllForks} from "../types.js";
 import {createCachedBeaconState} from "../cache/stateCache.js";
-import {EpochCacheImmutableData, createEmptyCarryoverData} from "../cache/epochCache.js";
+import {EpochCacheImmutableData} from "../cache/epochCache.js";
 import {processDeposit} from "../block/processDeposit.js";
 import {computeEpochAtSlot} from "./epoch.js";
 import {getActiveValidatorIndices} from "./validator.js";
 import {getTemporaryBlockHeader} from "./blockRoot.js";
 import {newFilledArray} from "./array.js";
 import {getNextSyncCommittee} from "./syncCommittee.js";
+import { newUnfinalizedPubkeyIndexMap } from "../cache/pubkeyCache.js";
 
 type DepositDataRootListType = ListCompositeType<typeof ssz.Root>;
 type DepositDataRootViewDU = CompositeViewDU<DepositDataRootListType>;
@@ -233,7 +234,7 @@ export function initializeBeaconStateFromEth1(
   // - 3. interop state: Only supports starting from genesis at phase0 fork
   // So it's okay to skip syncing the sync committee cache here and expect it to be
   // populated latter when the altair fork happens for cases 2, 3.
-  const state = createCachedBeaconState(stateView, immutableData, createEmptyCarryoverData(), {
+  const state = createCachedBeaconState(stateView, immutableData, newUnfinalizedPubkeyIndexMap(), {
     skipSyncCommitteeCache: true,
   });
 

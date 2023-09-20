@@ -20,7 +20,7 @@ import {
   newFilledArray,
   createCachedBeaconState,
   computeCommitteeCount,
-  createEmptyCarryoverData,
+  newUnfinalizedPubkeyIndexMap,
 } from "../../src/index.js";
 import {
   CachedBeaconStateAllForks,
@@ -133,7 +133,7 @@ export function generatePerfTestCachedStatePhase0(opts?: {goBackOneSlot: boolean
         finalizedPubkey2index: pubkey2index,
         finalizedIndex2pubkey: index2pubkey,
       },
-      createEmptyCarryoverData()
+      newUnfinalizedPubkeyIndexMap(),
     );
 
     const currentEpoch = computeEpochAtSlot(state.slot - 1);
@@ -235,7 +235,7 @@ export function generatePerfTestCachedStateAltair(opts?: {goBackOneSlot: boolean
         finalizedPubkey2index: pubkey2index,
         finalizedIndex2pubkey: index2pubkey,
       },
-      createEmptyCarryoverData()
+      newUnfinalizedPubkeyIndexMap(),
     );
   }
   if (!altairCachedState23638) {
@@ -440,7 +440,7 @@ export function generateTestCachedBeaconStateOnlyValidators({
       finalizedPubkey2index: pubkey2index,
       finalizedIndex2pubkey: index2pubkey,
     },
-    createEmptyCarryoverData(),
+    newUnfinalizedPubkeyIndexMap(),
     {skipSyncPubkeys: true}
   );
 }

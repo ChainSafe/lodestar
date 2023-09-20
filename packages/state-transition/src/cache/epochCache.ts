@@ -55,10 +55,6 @@ export type EpochCacheImmutableData = {
   finalizedIndex2pubkey: Index2PubkeyCache;
 };
 
-export type CarryoverData = {
-  unfinalizedPubkey2index: UnfinalizedPubkeyIndexMap;
-};
-
 export type EpochCacheOpts = {
   skipSyncCommitteeCache?: boolean;
   skipSyncPubkeys?: boolean;
@@ -270,7 +266,7 @@ export class EpochCache {
   static createFromState(
     state: BeaconStateAllForks,
     {config, finalizedPubkey2index, finalizedIndex2pubkey}: EpochCacheImmutableData,
-    {unfinalizedPubkey2index}: CarryoverData,
+    unfinalizedPubkey2index: UnfinalizedPubkeyIndexMap,
     opts?: EpochCacheOpts
   ): EpochCache {
     // syncPubkeys here to ensure EpochCacheImmutableData is popualted before computing the rest of caches
@@ -947,11 +943,5 @@ export function createEmptyEpochCacheImmutableData(
     // This is a test state, there's no need to have a global shared cache of keys
     finalizedPubkey2index: new PubkeyIndexMap(),
     finalizedIndex2pubkey: [],
-  };
-}
-
-export function createEmptyCarryoverData(): CarryoverData {
-  return {
-    unfinalizedPubkey2index: newUnfinalizedPubkeyIndexMap(),
   };
 }
