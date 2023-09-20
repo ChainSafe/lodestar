@@ -14,7 +14,7 @@ import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
  * - Fork Choice: the chain's fork choice is updated
  * - Checkpointing: the chain processes epoch boundaries
  */
-export const enum ChainEvent {
+export enum ChainEvent {
   /**
    * This event signals that the chain has processed (or reprocessed) a checkpoint.
    *
