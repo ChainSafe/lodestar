@@ -16,9 +16,6 @@ export function processDepositReceipt(
   applyDeposit(
     fork,
     state,
-    depositReceipt.pubkey,
-    depositReceipt.withdrawalCredentials,
-    depositReceipt.amount,
-    depositReceipt.signature
+    depositReceipt
   );
 }

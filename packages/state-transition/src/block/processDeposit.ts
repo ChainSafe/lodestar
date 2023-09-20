@@ -15,6 +15,8 @@ import {
 import {ZERO_HASH} from "../constants/index.js";
 import {computeDomain, computeSigningRoot, increaseBalance} from "../util/index.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../types.js";
+import { DepositData } from "@lodestar/types/lib/phase0/types.js";
+import { DepositReceipt } from "@lodestar/types/lib/eip6110/types.js";
 
 /**
  * Process a Deposit operation. Potentially adds a new validator to the registry. Mutates the validators and balances
@@ -42,10 +44,7 @@ export function processDeposit(fork: ForkSeq, state: CachedBeaconStateAllForks, 
   applyDeposit(
     fork,
     state,
-    deposit.data.pubkey,
-    deposit.data.withdrawalCredentials,
-    deposit.data.amount,
-    deposit.data.signature
+    deposit.data
   );
 }
 
@@ -57,12 +56,10 @@ export function processDeposit(fork: ForkSeq, state: CachedBeaconStateAllForks, 
 export function applyDeposit(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,
-  pubkey: BLSPubkey,
-  withdrawalCredentials: Bytes32,
-  amount: UintNum64,
-  signature: BLSSignature
+  deposit: DepositData | DepositReceipt
 ): void {
   const {config, validators, epochCtx} = state;
+  const {pubkey, withdrawalCredentials, amount} = deposit;
 
   const cachedIndex = epochCtx.getValidatorIndex(pubkey);
   if (cachedIndex === undefined || !Number.isSafeInteger(cachedIndex) || cachedIndex >= validators.length) {
@@ -78,8 +75,8 @@ export function applyDeposit(
     try {
       // Pubkeys must be checked for group + inf. This must be done only once when the validator deposit is processed
       const publicKey = bls.PublicKey.fromBytes(pubkey, CoordType.affine, true);
-      const computedSignature = bls.Signature.fromBytes(signature, CoordType.affine, true);
-      if (!computedSignature.verify(publicKey, signingRoot)) {
+      const signature = bls.Signature.fromBytes(deposit.signature, CoordType.affine, true);
+      if (!signature.verify(publicKey, signingRoot)) {
         return;
       }
     } catch (e) {
