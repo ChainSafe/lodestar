@@ -94,8 +94,7 @@ export const options: CliCommandOptions<ApiArgs> = {
 
   "rest.swaggerUI": {
     type: "boolean",
-    description:
-      "Enable Swagger UI for API exploration at http://{address}:{port}/documentation. This should not be used in production.",
+    description: "Enable Swagger UI for API exploration at http://{address}:{port}/documentation",
     default: Boolean(defaultOptions.api.rest.swaggerUI),
     group: "api",
   },
