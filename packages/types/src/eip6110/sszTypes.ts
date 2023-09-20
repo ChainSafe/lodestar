@@ -16,7 +16,7 @@ import {ssz as denebSsz} from "../deneb/index.js";
 const {UintNum64, Slot, Root, BLSSignature, UintBn256, Bytes32, BLSPubkey, ValidatorIndex, DepositIndex} =
   primitiveSsz;
 
-export const DepositReceipt = new ContainerType( //good
+export const DepositReceipt = new ContainerType( 
   {
     pubkey: BLSPubkey,
     withdrawalCredentials: Bytes32,
@@ -208,7 +208,7 @@ export const LightClientFinalityUpdate = new ContainerType(
   {typeName: "LightClientFinalityUpdate", jsonCase: "eth2"}
 );
 
-export const LightClientOptimisticUpdate = new ContainerType( //good
+export const LightClientOptimisticUpdate = new ContainerType( 
   {
     attestedHeader: LightClientHeader,
     syncAggregate: altairSsz.SyncAggregate,
@@ -217,7 +217,7 @@ export const LightClientOptimisticUpdate = new ContainerType( //good
   {typeName: "LightClientOptimisticUpdate", jsonCase: "eth2"}
 );
 
-export const LightClientStore = new ContainerType( //good
+export const LightClientStore = new ContainerType( 
   {
     snapshot: LightClientBootstrap,
     validUpdates: new ListCompositeType(LightClientUpdate, EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH),
@@ -226,7 +226,7 @@ export const LightClientStore = new ContainerType( //good
 );
 
 // PayloadAttributes primarily for SSE event
-export const PayloadAttributes = new ContainerType( //good
+export const PayloadAttributes = new ContainerType( 
   {
     ...capellaSsz.PayloadAttributes.fields,
     parentBeaconBlockRoot: Root,
@@ -234,7 +234,7 @@ export const PayloadAttributes = new ContainerType( //good
   {typeName: "PayloadAttributes", jsonCase: "eth2"}
 );
 
-export const SSEPayloadAttributes = new ContainerType( //good
+export const SSEPayloadAttributes = new ContainerType( 
   {
     ...bellatrixSsz.SSEPayloadAttributesCommon.fields,
     payloadAttributes: PayloadAttributes,
