@@ -1226,6 +1226,11 @@
     "@ethersproject/properties" "^5.7.0"
     "@ethersproject/strings" "^5.7.0"
 
+"@fastify/accept-negotiator@^1.0.0":
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/@fastify/accept-negotiator/-/accept-negotiator-1.1.0.tgz#c1c66b3b771c09742a54dd5bc87c582f6b0630ff"
+  integrity sha512-OIHZrb2ImZ7XG85HXOONLcJWGosv7sIvM2ifAPQVhg9Lv7qdmMBNVaai4QTdyuaqbKM5eO6sLSQOYI7wEQeCJQ==
+
 "@fastify/ajv-compiler@^3.5.0":
   version "3.5.0"
   resolved "https://registry.yarnpkg.com/@fastify/ajv-compiler/-/ajv-compiler-3.5.0.tgz#459bff00fefbf86c96ec30e62e933d2379e46670"
@@ -1266,6 +1271,51 @@
   integrity sha512-aZAXGYo6m22Fk1zZzEUKBvut/CIIQe/BapEORnxiD5Qr0kPHqqI69NtEMCme74h+at72sPhbkb4ZrLd1W3KRLA==
   dependencies:
     fast-json-stringify "^5.7.0"
+
+"@fastify/send@^2.0.0":
+  version "2.1.0"
+  resolved "https://registry.yarnpkg.com/@fastify/send/-/send-2.1.0.tgz#1aa269ccb4b0940a2dadd1f844443b15d8224ea0"
+  integrity sha512-yNYiY6sDkexoJR0D8IDy3aRP3+L4wdqCpvx5WP+VtEU58sn7USmKynBzDQex5X42Zzvw2gNzzYgP90UfWShLFA==
+  dependencies:
+    "@lukeed/ms" "^2.0.1"
+    escape-html "~1.0.3"
+    fast-decode-uri-component "^1.0.1"
+    http-errors "2.0.0"
+    mime "^3.0.0"
+
+"@fastify/static@^6.0.0":
+  version "6.11.2"
+  resolved "https://registry.yarnpkg.com/@fastify/static/-/static-6.11.2.tgz#1fe40c40daf055a28d29db807b459fcff431d9b6"
+  integrity sha512-EH7mh7q4MfNdT7N07ZVlwsX/ObngMvQ7KBP0FXAuPov99Fjn80KSJMdxQhhYKAKWW1jXiFdrk8X7d6uGWdZFxg==
+  dependencies:
+    "@fastify/accept-negotiator" "^1.0.0"
+    "@fastify/send" "^2.0.0"
+    content-disposition "^0.5.3"
+    fastify-plugin "^4.0.0"
+    glob "^8.0.1"
+    p-limit "^3.1.0"
+
+"@fastify/swagger-ui@^1.9.3":
+  version "1.9.3"
+  resolved "https://registry.yarnpkg.com/@fastify/swagger-ui/-/swagger-ui-1.9.3.tgz#1ec03ea2595cb2e7d6de6ae7c949bebcff8370a5"
+  integrity sha512-YYqce4CydjDIEry6Zo4JLjVPe5rjS8iGnk3fHiIQnth9sFSLeyG0U1DCH+IyYmLddNDg1uWJOuErlVqnu/jI3w==
+  dependencies:
+    "@fastify/static" "^6.0.0"
+    fastify-plugin "^4.0.0"
+    openapi-types "^12.0.2"
+    rfdc "^1.3.0"
+    yaml "^2.2.2"
+
+"@fastify/swagger@^8.10.0":
+  version "8.10.0"
+  resolved "https://registry.yarnpkg.com/@fastify/swagger/-/swagger-8.10.0.tgz#d978ae9f2d802ab652955d02be7a125f7f6d9f05"
+  integrity sha512-0o6nd0qWpJbVSv/vbK4bzHSYe7l+PTGPqrQVwWIXVGd7CvXr585SBx+h8EgrMOY80bcOnGreqnjYFOV0osGP5A==
+  dependencies:
+    fastify-plugin "^4.0.0"
+    json-schema-resolver "^2.0.0"
+    openapi-types "^12.0.0"
+    rfdc "^1.3.0"
+    yaml "^2.2.2"
 
 "@gar/promisify@^1.0.1", "@gar/promisify@^1.1.3":
   version "1.1.3"
@@ -1731,6 +1781,11 @@
     it-stream-types "^2.0.1"
     private-ip "^3.0.0"
     uint8arraylist "^2.4.3"
+
+"@lukeed/ms@^2.0.1":
+  version "2.0.1"
+  resolved "https://registry.yarnpkg.com/@lukeed/ms/-/ms-2.0.1.tgz#3c2bbc258affd9cc0e0cc7828477383c73afa6ee"
+  integrity sha512-Xs/4RZltsAL7pkvaNStUQt7netTkyxrS0K+RILcVr3TRMS/ToOg4I6uNfhB9SlGsnWBym4U+EaXq0f0cEMNkHA==
 
 "@multiformats/mafmt@^12.1.2":
   version "12.1.6"
@@ -5119,6 +5174,13 @@ constants-browserify@^1.0.0:
   version "1.0.0"
   resolved "https://registry.npmjs.org/constants-browserify/-/constants-browserify-1.0.0.tgz"
   integrity sha1-wguW2MYXdIqvHBYCF2DNJ/y4y3U=
+
+content-disposition@^0.5.3:
+  version "0.5.4"
+  resolved "https://registry.yarnpkg.com/content-disposition/-/content-disposition-0.5.4.tgz#8b82b4efac82512a02bb0b1dcec9d2c5e8eb5bfe"
+  integrity sha512-FveZTNuGw04cxlAiWbzi6zTAL/lhehaWbTtgluJh4/E95DqMwTmha3KZN1aAWA8cFIhHzMZUvLevkw5Rqk+tSQ==
+  dependencies:
+    safe-buffer "5.2.1"
 
 content-type@~1.0.4:
   version "1.0.4"
@@ -8742,6 +8804,15 @@ json-parse-even-better-errors@^3.0.0:
   resolved "https://registry.yarnpkg.com/json-parse-even-better-errors/-/json-parse-even-better-errors-3.0.0.tgz#2cb2ee33069a78870a0c7e3da560026b89669cf7"
   integrity sha512-iZbGHafX/59r39gPwVPRBGw0QQKnA7tte5pSMrhWOW7swGsVvVTjmfyAV9pNqk8YGT7tRCdxRu8uzcgZwoDooA==
 
+json-schema-resolver@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/json-schema-resolver/-/json-schema-resolver-2.0.0.tgz#d17fdf53560e6bc9af084b930fee27f6ce4a03b6"
+  integrity sha512-pJ4XLQP4Q9HTxl6RVDLJ8Cyh1uitSs0CzDBAz1uoJ4sRD/Bk7cFSXL1FUXDW3zJ7YnfliJx6eu8Jn283bpZ4Yg==
+  dependencies:
+    debug "^4.1.1"
+    rfdc "^1.1.4"
+    uri-js "^4.2.2"
+
 json-schema-traverse@^0.4.1:
   version "0.4.1"
   resolved "https://registry.yarnpkg.com/json-schema-traverse/-/json-schema-traverse-0.4.1.tgz#69f6a87d9513ab8bb8fe63bdb0979c448e684660"
@@ -9673,6 +9744,11 @@ mime@2.6.0, mime@^2.5.2:
   version "2.6.0"
   resolved "https://registry.yarnpkg.com/mime/-/mime-2.6.0.tgz#a2a682a95cd4d0cb1d6257e28f83da7e35800367"
   integrity sha512-USPkMeET31rOMiarsBNIHZKLGgvKc/LrjofAnBlOttf5ajRvqiRA8QsenbcooctK6d6Ts6aqZXBA+XbkKthiQg==
+
+mime@^3.0.0:
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/mime/-/mime-3.0.0.tgz#b374550dca3a0c18443b0c950a6a58f1931cf7a7"
+  integrity sha512-jSCU7/VB1loIWBZe14aEYHU/+1UMEHoaO7qxCOVJOw9GgH72VAWppxNcjU+x9a2k3GSIBXNKxXQFqRvvZ7vr3A==
 
 mimic-fn@^2.1.0:
   version "2.1.0"
@@ -10773,6 +10849,11 @@ open@^9.1.0:
     is-inside-container "^1.0.0"
     is-wsl "^2.2.0"
 
+openapi-types@^12.0.0, openapi-types@^12.0.2:
+  version "12.1.3"
+  resolved "https://registry.yarnpkg.com/openapi-types/-/openapi-types-12.1.3.tgz#471995eb26c4b97b7bd356aacf7b91b73e777dd3"
+  integrity sha512-N4YtSYJqghVu4iek2ZUvcN/0aqH1kRDuNqzcycDxhOUpg7GdvLa2F3DgS6yBNhInhv2r/6I0Flkn7CqL8+nIcw==
+
 optionator@^0.9.3:
   version "0.9.3"
   resolved "https://registry.yarnpkg.com/optionator/-/optionator-0.9.3.tgz#007397d44ed1872fdc6ed31360190f81814e2c64"
@@ -10859,7 +10940,7 @@ p-limit@^2.2.0:
   dependencies:
     p-try "^2.0.0"
 
-p-limit@^3.0.2:
+p-limit@^3.0.2, p-limit@^3.1.0:
   version "3.1.0"
   resolved "https://registry.npmjs.org/p-limit/-/p-limit-3.1.0.tgz"
   integrity sha512-TYOanM3wGwNGsZN2cVTYPArw454xnXj5qmWF1bEoAc4+cU/ol7GVh7odevjp1FNHduHc3KZMcFduxU5Xc6uJRQ==
@@ -12005,7 +12086,7 @@ rewiremock@^3.14.5:
     wipe-node-cache "^2.1.2"
     wipe-webpack-cache "^2.1.0"
 
-rfdc@^1.2.0, rfdc@^1.3.0:
+rfdc@^1.1.4, rfdc@^1.2.0, rfdc@^1.3.0:
   version "1.3.0"
   resolved "https://registry.npmjs.org/rfdc/-/rfdc-1.3.0.tgz"
   integrity sha512-V2hovdzFbOi77/WajaSMXk2OLm+xNIeQdMMuB7icj7bk6zi2F8GGAxigcnDFpJHbNyNcgyJDiP+8nOrY5cZGrA==
@@ -12103,7 +12184,7 @@ rxjs@^7.8.0:
   dependencies:
     tslib "^2.1.0"
 
-safe-buffer@^5.0.1, safe-buffer@^5.1.0, safe-buffer@^5.1.1, safe-buffer@^5.1.2, safe-buffer@^5.2.0, safe-buffer@~5.2.0:
+safe-buffer@5.2.1, safe-buffer@^5.0.1, safe-buffer@^5.1.0, safe-buffer@^5.1.1, safe-buffer@^5.1.2, safe-buffer@^5.2.0, safe-buffer@~5.2.0:
   version "5.2.1"
   resolved "https://registry.npmjs.org/safe-buffer/-/safe-buffer-5.2.1.tgz"
   integrity sha512-rp3So07KcdmmKbGvgaNxQSJr7bGVSVk5S9Eq1F+ppbRo70+YeaDxkw5Dd8NPN+GD6bjnYm2VuPuCXmpuYvmCXQ==
