@@ -112,7 +112,6 @@ export class EpochCache {
   globalIndex2pubkey: Index2PubkeyCache;
   /**
    * Unique pubkey registry shared in the same fork. There should only exist one for the fork.
-   *
    */
   unfinalizedPubkey2index: UnfinalizedPubkeyIndexMap;
 
