@@ -1,8 +1,7 @@
 import {expect} from "chai";
-import {fromHexString} from "@chainsafe/ssz";
+import {ByteVectorType, fromHexString} from "@chainsafe/ssz";
 import {ssz, allForks} from "@lodestar/types";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {Root} from "@lodestar/types/lib/sszTypes.js";
 import {isValidLightClientHeader} from "../../src/spec/utils.js";
 
 describe("isValidLightClientHeader", function () {
@@ -37,7 +36,7 @@ describe("isValidLightClientHeader", function () {
 
   const altairUpgradedDenebLCHeader = {
     beacon: altairLCHeader.beacon,
-    execution: ssz.deneb.LightClientHeader.fields.execution.defaultValue(), // TODO
+    execution: ssz.deneb.LightClientHeader.fields.execution.defaultValue(),
     executionBranch: ssz.deneb.LightClientHeader.fields.executionBranch.defaultValue(),
   };
 
@@ -90,7 +89,7 @@ describe("isValidLightClientHeader", function () {
 
   const capellaUpgradedEIP6110Header = {
     beacon: capellaLCHeader.beacon,
-    execution: {...capellaLCHeader.execution, blobGasUsed: 0, excessBlobGas: 0, depositReceiptsRoot: Root.defaultValue},
+    execution: {...capellaLCHeader.execution, blobGasUsed: 0, excessBlobGas: 0, depositReceiptsRoot: new ByteVectorType(32)},
     executionBranch: capellaLCHeader.executionBranch,
   };
 
