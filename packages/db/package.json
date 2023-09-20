@@ -33,7 +33,7 @@
     "lint:fix": "yarn run lint --fix",
     "pretest": "yarn run check-types",
     "test": "yarn test:unit",
-    "test:unit": "TS_NODE_TRANSPILE_ONLY=true mocha 'test/unit/**/*.test.ts'",
+    "test:unit": "mocha 'test/unit/**/*.test.ts'",
     "check-readme": "typescript-docs-verifier"
   },
   "dependencies": {

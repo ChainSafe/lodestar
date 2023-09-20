@@ -65,7 +65,7 @@
     "lint:fix": "yarn run lint --fix",
     "pretest": "yarn run check-types",
     "test": "yarn test:unit && yarn test:e2e",
-    "test:unit": "TS_NODE_TRANSPILE_ONLY=true nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'",
+    "test:unit": "nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'",
     "check-readme": "typescript-docs-verifier"
   },
   "dependencies": {

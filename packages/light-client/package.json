@@ -60,7 +60,7 @@
     "pretest": "yarn run check-types",
     "test": "yarn test:unit && yarn test:e2e",
     "test:browsers": "yarn karma start karma.config.cjs",
-    "test:unit": "TS_NODE_TRANSPILE_ONLY=true LODESTAR_PRESET=minimal nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'",
+    "test:unit": "LODESTAR_PRESET=minimal nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'",
     "check-readme": "typescript-docs-verifier"
   },
   "dependencies": {

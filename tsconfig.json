@@ -8,5 +8,8 @@
     "noEmit": true,
     // To be used in the test fixtures
     "resolveJsonModule": true
+  },
+  "ts-node": {
+    "transpileOnly": true
   }
 }
