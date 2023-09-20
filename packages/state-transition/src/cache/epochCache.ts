@@ -201,7 +201,6 @@ export class EpochCache {
   // TODO: Helper stats
   epoch: Epoch;
   syncPeriod: SyncPeriod;
-  isAfterEIP6110: boolean;
 
   constructor(data: {
     config: BeaconConfig;
@@ -228,7 +227,6 @@ export class EpochCache {
     nextSyncCommitteeIndexed: SyncCommitteeCache;
     epoch: Epoch;
     syncPeriod: SyncPeriod;
-    isAfterEIP6110: boolean;
   }) {
     this.config = data.config;
     this.finalizedPubkey2index = data.finalizedPubkey2index;
@@ -254,7 +252,6 @@ export class EpochCache {
     this.nextSyncCommitteeIndexed = data.nextSyncCommitteeIndexed;
     this.epoch = data.epoch;
     this.syncPeriod = data.syncPeriod;
-    this.isAfterEIP6110 = data.isAfterEIP6110;
   }
 
   /**
@@ -434,7 +431,6 @@ export class EpochCache {
       nextSyncCommitteeIndexed,
       epoch: currentEpoch,
       syncPeriod: computeSyncPeriodAtEpoch(currentEpoch),
-      isAfterEIP6110: currentEpoch >= (config.EIP6110_FORK_EPOCH ?? Infinity),
     });
   }
 
@@ -476,7 +472,6 @@ export class EpochCache {
       nextSyncCommitteeIndexed: this.nextSyncCommitteeIndexed,
       epoch: this.epoch,
       syncPeriod: this.syncPeriod,
-      isAfterEIP6110: this.isAfterEIP6110,
     });
   }
 
@@ -556,10 +551,9 @@ export class EpochCache {
     // ```
     this.epoch = computeEpochAtSlot(state.slot);
     this.syncPeriod = computeSyncPeriodAtEpoch(this.epoch);
-    this.isAfterEIP6110 = this.epoch >= (this.config.EIP6110_FORK_EPOCH ?? Infinity);
 
     // To populate finalized cache and prune unfinalized cache with validators that just entered the activation queue
-    if (this.isAfterEIP6110) {
+    if (this.isAfterEIP6110()) {
       const expectedActivationEligibilityEpoch = prevEpoch + 1;
       const validators = state.validators;
       for (const index of epochTransitionCache.indicesEligibleForActivationQueue) {
@@ -763,7 +757,7 @@ export class EpochCache {
   }
 
   getValidatorIndex(pubkey: Uint8Array | PubkeyHex): ValidatorIndex | undefined {
-    if (this.isAfterEIP6110) {
+    if (this.isAfterEIP6110()) {
       return this.finalizedPubkey2index.get(pubkey) || this.unfinalizedPubkey2index.get(toMemoryEfficientHexStr(pubkey));
     } else {
       return this.finalizedPubkey2index.get(pubkey);
@@ -776,7 +770,7 @@ export class EpochCache {
    *
    */
   addPubkey(pubkey: Uint8Array, index: ValidatorIndex): void {
-    if (this.isAfterEIP6110) {
+    if (this.isAfterEIP6110()) {
       this.unfinalizedPubkey2index.set(toMemoryEfficientHexStr(pubkey), index);
     } else {
       this.finalizedPubkey2index.set(pubkey, index);
@@ -790,7 +784,7 @@ export class EpochCache {
    *
    */
   addFinalizedPubkey(pubkey: Uint8Array, index: ValidatorIndex): void {
-    if (!this.isAfterEIP6110) {
+    if (!this.isAfterEIP6110()) {
       throw new Error("addFInalizedPubkey is not available pre EIP-6110");
     }
 
@@ -887,7 +881,11 @@ export class EpochCache {
 
     this.effectiveBalanceIncrements[index] = Math.floor(effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
   }
-}
+
+  isAfterEIP6110(): boolean {
+    return this.epoch >= (this.config.EIP6110_FORK_EPOCH ?? Infinity);
+  }
+ }
 
 function getEffectiveBalanceIncrementsByteLen(validatorCount: number): number {
   // TODO: Research what's the best number to minimize both memory cost and copy costs
