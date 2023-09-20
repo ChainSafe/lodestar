@@ -192,7 +192,6 @@ export const allForksBlobs = {
     BlindedBlobSidecar: deneb.BlindedBlobSidecar,
   },
   eip6110: {
-    SignedBeaconBlockAndBlobSidecars: eip6110.SignedBeaconBlockAndBlobSidecars,
     BlobSidecar: deneb.BlobSidecar,
     BlindedBlobSidecar: deneb.BlindedBlobSidecar,
   },
