@@ -91,6 +91,10 @@ const externalOptionsOverrides: Partial<Record<"network" | keyof typeof beaconNo
     defaultDescription: undefined,
     default: true,
   },
+  "rest.swaggerUI": {
+    ...beaconNodeOptions["rest.swaggerUI"],
+    default: true,
+  },
 };
 
 export const devOptions = {
