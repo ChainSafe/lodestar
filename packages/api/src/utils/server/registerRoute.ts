@@ -11,7 +11,7 @@ export function registerRoute(
     method: route.method,
     handler: route.handler,
     // append the namespace as a tag for downstream consumption of our API schema, eg: for swagger UI
-    schema: {...route.schema, ...(namespace ? {tags: [namespace]} : undefined)},
+    schema: {...route.schema, ...(namespace ? {tags: [namespace]} : undefined), operationId: route.id},
     config: {operationId: route.id} as RouteConfig,
   });
 }
