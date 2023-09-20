@@ -130,8 +130,8 @@ export function generatePerfTestCachedStatePhase0(opts?: {goBackOneSlot: boolean
       state,
       {
         config: createBeaconConfig(config, state.genesisValidatorsRoot),
-        pubkey2index,
-        index2pubkey,
+        finalizedPubkey2index: pubkey2index,
+        finalizedIndex2pubkey: index2pubkey,
       },
       createEmptyCarryoverData()
     );
@@ -232,8 +232,8 @@ export function generatePerfTestCachedStateAltair(opts?: {goBackOneSlot: boolean
       state,
       {
         config: createBeaconConfig(altairConfig, state.genesisValidatorsRoot),
-        pubkey2index,
-        index2pubkey,
+        finalizedPubkey2index: pubkey2index,
+        finalizedIndex2pubkey: index2pubkey,
       },
       createEmptyCarryoverData()
     );
@@ -437,8 +437,8 @@ export function generateTestCachedBeaconStateOnlyValidators({
     state,
     {
       config: createBeaconConfig(config, state.genesisValidatorsRoot),
-      pubkey2index,
-      index2pubkey,
+      finalizedPubkey2index: pubkey2index,
+      finalizedIndex2pubkey: index2pubkey,
     },
     createEmptyCarryoverData(),
     {skipSyncPubkeys: true}

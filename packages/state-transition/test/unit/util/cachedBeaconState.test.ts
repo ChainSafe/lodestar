@@ -11,8 +11,8 @@ describe("CachedBeaconState", () => {
       emptyState,
       {
         config: createBeaconConfig(config, emptyState.genesisValidatorsRoot),
-        pubkey2index: new PubkeyIndexMap(),
-        index2pubkey: [],
+        finalizedPubkey2index: new PubkeyIndexMap(),
+        finalizedIndex2pubkey: [],
       },
       createEmptyCarryoverData()
     );

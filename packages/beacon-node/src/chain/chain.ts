@@ -225,15 +225,15 @@ export class BeaconChain implements IBeaconChain {
             anchorState,
             {
               config,
-              pubkey2index: new PubkeyIndexMap(),
-              index2pubkey: [],
+              finalizedPubkey2index: new PubkeyIndexMap(),
+              finalizedIndex2pubkey: [],
             },
             createEmptyCarryoverData()
           );
 
     // Persist single global instance of state caches
-    this.pubkey2index = cachedState.epochCtx.globalPubkey2index; // TODO: Double check if these two are correct
-    this.index2pubkey = cachedState.epochCtx.globalIndex2pubkey;
+    this.pubkey2index = cachedState.epochCtx.finalizedPubkey2index; // TODO: Double check if these two are correct
+    this.index2pubkey = cachedState.epochCtx.finalizedIndex2pubkey;
 
     const stateCache = new StateContextCache({metrics});
     const checkpointStateCache = new CheckpointStateCache({metrics});

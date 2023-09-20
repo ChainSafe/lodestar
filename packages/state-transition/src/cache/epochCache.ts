@@ -51,8 +51,8 @@ export const PROPOSER_WEIGHT_FACTOR = PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PR
 
 export type EpochCacheImmutableData = {
   config: BeaconConfig;
-  pubkey2index: PubkeyIndexMap;
-  index2pubkey: Index2PubkeyCache;
+  finalizedPubkey2index: PubkeyIndexMap;
+  finalizedIndex2pubkey: Index2PubkeyCache;
 };
 
 export type CarryoverData = {
@@ -101,7 +101,7 @@ export class EpochCache {
    *
    * $VALIDATOR_COUNT x 192 char String -> Number Map
    */
-  globalPubkey2index: PubkeyIndexMap;
+  finalizedPubkey2index: PubkeyIndexMap;
   /**
    * Unique globally shared pubkey registry. There should only exist one for the entire application.
    *
@@ -109,7 +109,7 @@ export class EpochCache {
    *
    * $VALIDATOR_COUNT x BLST deserialized pubkey (Jacobian coordinates)
    */
-  globalIndex2pubkey: Index2PubkeyCache;
+  finalizedIndex2pubkey: Index2PubkeyCache;
   /**
    * Unique pubkey registry shared in the same fork. There should only exist one for the fork.
    */
@@ -209,8 +209,8 @@ export class EpochCache {
 
   constructor(data: {
     config: BeaconConfig;
-    globalPubkey2index: PubkeyIndexMap;
-    globalIndex2pubkey: Index2PubkeyCache;
+    finalizedPubkey2index: PubkeyIndexMap;
+    finalizedIndex2pubkey: Index2PubkeyCache;
     unfinalizedPubkey2index: UnfinalizedPubkeyIndexMap;
     proposers: number[];
     proposersPrevEpoch: number[] | null;
@@ -235,8 +235,8 @@ export class EpochCache {
     isAfterEIP6110: boolean;
   }) {
     this.config = data.config;
-    this.globalPubkey2index = data.globalPubkey2index;
-    this.globalIndex2pubkey = data.globalIndex2pubkey;
+    this.finalizedPubkey2index = data.finalizedPubkey2index;
+    this.finalizedIndex2pubkey = data.finalizedIndex2pubkey;
     this.unfinalizedPubkey2index = data.unfinalizedPubkey2index;
     this.proposers = data.proposers;
     this.proposersPrevEpoch = data.proposersPrevEpoch;
@@ -269,14 +269,14 @@ export class EpochCache {
    */
   static createFromState(
     state: BeaconStateAllForks,
-    {config, pubkey2index, index2pubkey}: EpochCacheImmutableData,
+    {config, finalizedPubkey2index, finalizedIndex2pubkey}: EpochCacheImmutableData,
     {unfinalizedPubkey2index}: CarryoverData,
     opts?: EpochCacheOpts
   ): EpochCache {
     // syncPubkeys here to ensure EpochCacheImmutableData is popualted before computing the rest of caches
     // - computeSyncCommitteeCache() needs a fully populated pubkey2index cache
     if (!opts?.skipSyncPubkeys) {
-      syncPubkeys(state, pubkey2index, index2pubkey);
+      syncPubkeys(state, finalizedPubkey2index, finalizedIndex2pubkey);
     }
 
     const currentEpoch = computeEpochAtSlot(state.slot);
@@ -366,8 +366,8 @@ export class EpochCache {
     // Allow to skip populating sync committee for initializeBeaconStateFromEth1()
     if (afterAltairFork && !opts?.skipSyncCommitteeCache) {
       const altairState = state as BeaconStateAltair;
-      currentSyncCommitteeIndexed = computeSyncCommitteeCache(altairState.currentSyncCommittee, pubkey2index);
-      nextSyncCommitteeIndexed = computeSyncCommitteeCache(altairState.nextSyncCommittee, pubkey2index);
+      currentSyncCommitteeIndexed = computeSyncCommitteeCache(altairState.currentSyncCommittee, finalizedPubkey2index);
+      nextSyncCommitteeIndexed = computeSyncCommitteeCache(altairState.nextSyncCommittee, finalizedPubkey2index);
     } else {
       currentSyncCommitteeIndexed = new SyncCommitteeCacheEmpty();
       nextSyncCommitteeIndexed = new SyncCommitteeCacheEmpty();
@@ -414,8 +414,8 @@ export class EpochCache {
 
     return new EpochCache({
       config,
-      globalPubkey2index: pubkey2index,
-      globalIndex2pubkey: index2pubkey,
+      finalizedPubkey2index,
+      finalizedIndex2pubkey,
       unfinalizedPubkey2index,
       proposers,
       // On first epoch, set to null to prevent unnecessary work since this is only used for metrics
@@ -452,8 +452,8 @@ export class EpochCache {
     return new EpochCache({
       config: this.config,
       // Common append-only structures shared with all states, no need to clone
-      globalPubkey2index: this.globalPubkey2index,
-      globalIndex2pubkey: this.globalIndex2pubkey,
+      finalizedPubkey2index: this.finalizedPubkey2index,
+      finalizedIndex2pubkey: this.finalizedIndex2pubkey,
       // Fork-aware cache needs to be cloned. But by the virtue of it being persistent, we don't need to do anything here
       unfinalizedPubkey2index: this.unfinalizedPubkey2index,
       // Immutable data
@@ -763,14 +763,14 @@ export class EpochCache {
   }
 
   getPubkey(index: ValidatorIndex): PublicKey {
-    return this.globalIndex2pubkey[index];
+    return this.finalizedIndex2pubkey[index];
   }
 
   getValidatorIndex(pubkey: Uint8Array | PubkeyHex): ValidatorIndex | undefined {
     if (this.isAfterEIP6110) {
-      return this.globalPubkey2index.get(pubkey) || this.unfinalizedPubkey2index.get(toMemoryEfficientHexStr(pubkey));
+      return this.finalizedPubkey2index.get(pubkey) || this.unfinalizedPubkey2index.get(toMemoryEfficientHexStr(pubkey));
     } else {
-      return this.globalPubkey2index.get(pubkey);
+      return this.finalizedPubkey2index.get(pubkey);
     }
   }
 
@@ -783,8 +783,8 @@ export class EpochCache {
     if (this.isAfterEIP6110) {
       this.unfinalizedPubkey2index.set(toMemoryEfficientHexStr(pubkey), index);
     } else {
-      this.globalPubkey2index.set(pubkey, index);
-      this.globalIndex2pubkey[index] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian);
+      this.finalizedPubkey2index.set(pubkey, index);
+      this.finalizedIndex2pubkey[index] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian); 
     }
   }
 
@@ -798,12 +798,12 @@ export class EpochCache {
       throw new Error("addFInalizedPubkey is not available pre EIP-6110");
     }
 
-    if (this.globalPubkey2index.get(pubkey)) {
+    if (this.finalizedPubkey2index.get(pubkey)) {
       return; // Repeated insert. Should not happen except 6110 activation
     }
 
-    this.globalPubkey2index.set(pubkey, index);
-    this.globalIndex2pubkey[index] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian);
+    this.finalizedPubkey2index.set(pubkey, index);
+    this.finalizedIndex2pubkey[index] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian);
 
     this.unfinalizedPubkey2index = this.unfinalizedPubkey2index.delete(toMemoryEfficientHexStr(pubkey));
   }
@@ -910,17 +910,17 @@ type AttesterDuty = {
 
 export enum EpochCacheErrorCode {
   COMMITTEE_INDEX_OUT_OF_RANGE = "EPOCH_CONTEXT_ERROR_COMMITTEE_INDEX_OUT_OF_RANGE",
-  COMMITTEE_EPOCH_OUT_OF_RANGE = "EPOCH_CONTEXT_ERROR_COMMITTEE_EPOCH_OUT_OF_RANGE",
+COMMITTEE_EPOCH_OUT_OF_RANGE = "EPOCH_CONTEXT_ERROR_COMMITTEE_EPOCH_OUT_OF_RANGE",
   NO_SYNC_COMMITTEE = "EPOCH_CONTEXT_ERROR_NO_SYNC_COMMITTEE",
   PROPOSER_EPOCH_MISMATCH = "EPOCH_CONTEXT_ERROR_PROPOSER_EPOCH_MISMATCH",
 }
 
 type EpochCacheErrorType =
   | {
-      code: EpochCacheErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE;
-      index: number;
-      maxIndex: number;
-    }
+  code: EpochCacheErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE;
+  index: number;
+  maxIndex: number;
+}
   | {
       code: EpochCacheErrorCode.COMMITTEE_EPOCH_OUT_OF_RANGE;
       requestedEpoch: Epoch;
@@ -934,7 +934,7 @@ type EpochCacheErrorType =
       code: EpochCacheErrorCode.PROPOSER_EPOCH_MISMATCH;
       requestedEpoch: Epoch;
       currentEpoch: Epoch;
-    };
+};
 
 export class EpochCacheError extends LodestarError<EpochCacheErrorType> {}
 
@@ -945,8 +945,8 @@ export function createEmptyEpochCacheImmutableData(
   return {
     config: createBeaconConfig(chainConfig, state.genesisValidatorsRoot),
     // This is a test state, there's no need to have a global shared cache of keys
-    pubkey2index: new PubkeyIndexMap(),
-    index2pubkey: [],
+    finalizedPubkey2index: new PubkeyIndexMap(),
+    finalizedIndex2pubkey: [],
   };
 }
 
