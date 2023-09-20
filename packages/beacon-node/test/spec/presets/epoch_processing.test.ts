@@ -1,3 +1,4 @@
+import path from "node:path";
 import {expect} from "chai";
 import {
   CachedBeaconStateAllForks,
@@ -7,11 +8,14 @@ import {
 } from "@lodestar/state-transition";
 import * as epochFns from "@lodestar/state-transition/epoch";
 import {ssz} from "@lodestar/types";
+import {ACTIVE_PRESET} from "@lodestar/params";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {getConfig} from "../../utils/config.js";
-import {TestRunnerFn} from "../utils/types.js";
+import {RunnerType, TestRunnerFn} from "../utils/types.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
+import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
+import {specTestIterator} from "../utils/specTestIterator.js";
 
 export type EpochTransitionFn = (state: CachedBeaconStateAllForks, epochTransitionCache: EpochTransitionCache) => void;
 
@@ -47,7 +51,7 @@ type EpochTransitionCacheingTestCase = {
  * @param fork
  * @param epochTransitionFns Describe with which function to run each directory of tests
  */
-export const epochProcessing =
+const epochProcessing =
   (skipTestNames?: string[]): TestRunnerFn<EpochTransitionCacheingTestCase, BeaconStateAllForks> =>
   (fork, testName) => {
     const config = getConfig(fork);
@@ -92,3 +96,15 @@ export const epochProcessing =
       },
     };
   };
+
+specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
+  epoch_processing: {
+    type: RunnerType.default,
+    fn: epochProcessing([
+      // TODO: invalid_large_withdrawable_epoch asserts an overflow on a u64 for its exit epoch.
+      // Currently unable to reproduce in Lodestar, skipping for now
+      // https://github.com/ethereum/consensus-specs/blob/3212c419f6335e80ed825b4855a071f76bef70c3/tests/core/pyspec/eth2spec/test/phase0/epoch_processing/test_process_registry_updates.py#L349
+      "invalid_large_withdrawable_epoch",
+    ]),
+  },
+});

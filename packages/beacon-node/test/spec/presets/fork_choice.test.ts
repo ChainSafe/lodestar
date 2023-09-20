@@ -1,3 +1,4 @@
+import path from "node:path";
 import {expect} from "chai";
 import {toHexString} from "@chainsafe/ssz";
 import {BeaconStateAllForks, isExecutionStateType} from "@lodestar/state-transition";
@@ -6,13 +7,13 @@ import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
 import {phase0, allForks, bellatrix, ssz, RootHex} from "@lodestar/types";
 import {bnToNum} from "@lodestar/utils";
 import {createBeaconConfig} from "@lodestar/config";
-import {ForkSeq, isForkBlobs} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkSeq, isForkBlobs} from "@lodestar/params";
 import {BeaconChain} from "../../../src/chain/index.js";
 import {ClockEvent} from "../../../src/util/clock.js";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {testLogger} from "../../utils/logger.js";
 import {getConfig} from "../../utils/config.js";
-import {TestRunnerFn} from "../utils/types.js";
+import {RunnerType, TestRunnerFn} from "../utils/types.js";
 import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";
 import {getExecutionEngineFromBackend} from "../../../src/execution/index.js";
 import {ExecutionPayloadStatus} from "../../../src/execution/engine/interface.js";
@@ -25,6 +26,8 @@ import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
 import {PowMergeBlock} from "../../../src/eth1/interface.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
 import {initCKZG, loadEthereumTrustedSetup} from "../../../src/util/kzg.js";
+import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
+import {specTestIterator} from "../utils/specTestIterator.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -37,7 +40,7 @@ const ATTESTER_SLASHING_FILE_NAME = "^(attester_slashing)_([0-9a-zA-Z])+$";
 
 const logger = testLogger("spec-test");
 
-export const forkChoiceTest =
+const forkChoiceTest =
   (opts: {onlyPredefinedResponses: boolean}): TestRunnerFn<ForkChoiceTestCase, void> =>
   (fork) => {
     return {
@@ -460,3 +463,8 @@ class Eth1ForBlockProductionMock extends Eth1ForBlockProductionDisabled {
     });
   }
 }
+
+specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
+  fork_choice: {type: RunnerType.default, fn: forkChoiceTest({onlyPredefinedResponses: false})},
+  sync: {type: RunnerType.default, fn: forkChoiceTest({onlyPredefinedResponses: true})},
+});

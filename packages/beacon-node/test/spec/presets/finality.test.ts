@@ -1,3 +1,4 @@
+import path from "node:path";
 import {
   BeaconStateAllForks,
   DataAvailableStatus,
@@ -5,16 +6,18 @@ import {
   stateTransition,
 } from "@lodestar/state-transition";
 import {altair, bellatrix, ssz} from "@lodestar/types";
-import {ForkName} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
-import {shouldVerify, TestRunnerFn} from "../utils/types.js";
+import {RunnerType, shouldVerify, TestRunnerFn} from "../utils/types.js";
 import {getConfig} from "../../utils/config.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
+import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
+import {specTestIterator} from "../utils/specTestIterator.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
-export const finality: TestRunnerFn<FinalityTestCase, BeaconStateAllForks> = (fork) => {
+const finality: TestRunnerFn<FinalityTestCase, BeaconStateAllForks> = (fork) => {
   return {
     testFunction: (testcase) => {
       let state = createCachedBeaconStateTest(testcase.pre, getConfig(fork));
@@ -80,3 +83,7 @@ type FinalityTestCase = {
   pre: BeaconStateAllForks;
   post?: BeaconStateAllForks;
 };
+
+specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
+  finality: {type: RunnerType.default, fn: finality},
+});

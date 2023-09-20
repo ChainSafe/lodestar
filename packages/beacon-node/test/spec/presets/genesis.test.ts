@@ -1,3 +1,4 @@
+import path from "node:path";
 import {expect} from "chai";
 import {phase0, Root, ssz, TimeSeconds, allForks, deneb} from "@lodestar/types";
 import {InputType} from "@lodestar/spec-test-util";
@@ -10,15 +11,20 @@ import {
 import {bnToNum} from "@lodestar/utils";
 import {ForkName} from "@lodestar/params";
 
+import {ACTIVE_PRESET} from "@lodestar/params";
 import {expectEqualBeaconState} from "../utils/expectEqualBeaconState.js";
 import {TestRunnerFn} from "../utils/types.js";
 import {getConfig} from "../../utils/config.js";
+
+import {RunnerType} from "../utils/types.js";
+import {specTestIterator} from "../utils/specTestIterator.js";
+import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 // The aim of the genesis tests is to provide a baseline to test genesis-state initialization and test if the
 // proposed genesis-validity conditions are working.
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
-export const genesis: TestRunnerFn<any, any> = (fork, testName, testSuite) => {
+const genesis: TestRunnerFn<any, any> = (fork, testName, testSuite) => {
   const testFn = genesisTestFns[testName];
   if (testFn === undefined) {
     throw Error(`Unknown genesis test ${testName}`);
@@ -145,3 +151,7 @@ type GenesisInitCase = {
 };
 
 type ExecutionFork = Exclude<ForkName, ForkName.phase0 | ForkName.altair>;
+
+specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
+  genesis: {type: RunnerType.default, fn: genesis},
+});

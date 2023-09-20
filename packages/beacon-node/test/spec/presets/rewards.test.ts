@@ -1,19 +1,23 @@
+import path from "node:path";
 import {expect} from "chai";
 import {VectorCompositeType} from "@chainsafe/ssz";
 import {BeaconStateAllForks, beforeProcessEpoch} from "@lodestar/state-transition";
 import {getRewardsAndPenalties} from "@lodestar/state-transition/epoch";
 import {ssz} from "@lodestar/types";
+import {ACTIVE_PRESET} from "@lodestar/params";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {getConfig} from "../../utils/config.js";
-import {TestRunnerFn} from "../utils/types.js";
+import {RunnerType, TestRunnerFn} from "../utils/types.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
+import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
+import {specTestIterator} from "../utils/specTestIterator.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
 const deltasType = new VectorCompositeType(ssz.phase0.Balances, 2);
 
-export const rewards: TestRunnerFn<RewardTestCase, Deltas> = (fork) => {
+const rewards: TestRunnerFn<RewardTestCase, Deltas> = (fork) => {
   return {
     testFunction: (testcase) => {
       const config = getConfig(fork);
@@ -85,3 +89,7 @@ function sumDeltas(deltasArr: Deltas[]): Deltas {
   }
   return totalDeltas;
 }
+
+specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
+  rewards: {type: RunnerType.default, fn: rewards},
+});
