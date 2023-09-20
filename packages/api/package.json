@@ -61,6 +61,7 @@
     "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\"",
     "check-types": "tsc",
     "coverage": "codecov -F lodestar-api",
+    "download-beacon-api-schema": "node --loader ts-node/esm download-beacon-api-schema.ts",
     "lint": "eslint --color --ext .ts src/ test/",
     "lint:fix": "yarn run lint --fix",
     "pretest": "yarn run check-types",
