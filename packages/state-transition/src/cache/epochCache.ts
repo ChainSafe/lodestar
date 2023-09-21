@@ -325,11 +325,17 @@ export class EpochCache {
       throw Error("totalActiveBalanceIncrements >= Number.MAX_SAFE_INTEGER. MAX_EFFECTIVE_BALANCE is too low.");
     }
 
-    const currentShuffling = opts?.skipComputeShuffling ? currentShufflingIn : computeEpochShuffling(state, currentActiveIndices, currentEpoch);
-    const previousShuffling = opts?.skipComputeShuffling ? previousShufflingIn : isGenesis
+    const currentShuffling = opts?.skipComputeShuffling
+      ? currentShufflingIn
+      : computeEpochShuffling(state, currentActiveIndices, currentEpoch);
+    const previousShuffling = opts?.skipComputeShuffling
+      ? previousShufflingIn
+      : isGenesis
       ? currentShuffling
       : computeEpochShuffling(state, previousActiveIndices, previousEpoch);
-    const nextShuffling = opts?.skipComputeShuffling ? nextShufflingIn : computeEpochShuffling(state, nextActiveIndices, nextEpoch);
+    const nextShuffling = opts?.skipComputeShuffling
+      ? nextShufflingIn
+      : computeEpochShuffling(state, nextActiveIndices, nextEpoch);
 
     if (!previousShuffling || !currentShuffling || !nextShuffling) {
       // should not happen

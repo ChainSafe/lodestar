@@ -1,43 +1,28 @@
-import fs from "fs";
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
 import {expect} from "chai";
 import bls from "@chainsafe/bls";
 import {CoordType} from "@chainsafe/blst";
+import {fromHexString} from "@chainsafe/ssz";
+import {itBench} from "@dapplion/benchmark";
 import {ssz} from "@lodestar/types";
 import {config as defaultChainConfig} from "@lodestar/config/default";
 import {createBeaconConfig} from "@lodestar/config";
-import {migrateState} from "../../../src/util/migrateState.js";
+import {loadState} from "../../../src/util/loadState.js";
 import {createCachedBeaconState} from "../../../src/cache/stateCache.js";
 import {Index2PubkeyCache, PubkeyIndexMap} from "../../../src/cache/pubkeyCache.js";
-import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {itBench} from "@dapplion/benchmark";
 
-describe("migrateState", function () {
+describe("loadState", function () {
   this.timeout(0);
   const stateType = ssz.capella.BeaconState;
 
   const folder = "/Users/tuyennguyen/tuyen/state_migration";
   const data = Uint8Array.from(fs.readFileSync(path.join(folder, "mainnet_state_7335296.ssz")));
-  console.log("@@@ number of bytes", data.length);
-  let startTime = Date.now();
-  const heapUsed = process.memoryUsage().heapUsed;
 
   const seedState = stateType.deserializeToViewDU(data);
-  console.log(
-    "@@@ loaded state slot",
-    seedState.slot,
-    "to TreeViewDU in",
-    Date.now() - startTime,
-    "ms",
-    "heapUse",
-    bytesToSize(process.memoryUsage().heapUsed - heapUsed)
-  );
-  startTime = Date.now();
   // cache all HashObjects
   seedState.hashTreeRoot();
-  console.log("@@@ hashTreeRoot of seed state in", Date.now() - startTime, "ms");
   const config = createBeaconConfig(defaultChainConfig, seedState.genesisValidatorsRoot);
-  startTime = Date.now();
   // TODO: EIP-6110 - need to create 2 separate caches?
   const pubkey2index = new PubkeyIndexMap();
   const index2pubkey: Index2PubkeyCache = [];
@@ -46,7 +31,6 @@ describe("migrateState", function () {
     pubkey2index,
     index2pubkey,
   });
-  console.log("@@@ createCachedBeaconState in", Date.now() - startTime, "ms");
 
   const newStateBytes = Uint8Array.from(fs.readFileSync(path.join(folder, "mainnet_state_7335360.ssz")));
   // const stateRoot6543072 = fromHexString("0xcf0e3c93b080d1c870b9052031f77e08aecbbbba5e4e7b1898b108d76c981a31");
@@ -69,14 +53,8 @@ describe("migrateState", function () {
    * - 1 day: 113.49 MB
    */
   itBench(`migrate state from slot ${seedState.slot} 64 slots difference`, () => {
-    let startTime = Date.now();
-    const modifiedValidators: number[] = [];
-    const migratedState = migrateState(seedState, newStateBytes, modifiedValidators);
-    console.log("@@@ migrate state in", Date.now() - startTime, "ms");
-    startTime = Date.now();
+    const {state: migratedState, modifiedValidators} = loadState(config, seedState, newStateBytes);
     expect(ssz.Root.equals(migratedState.hashTreeRoot(), newStateRoot)).to.be.true;
-    console.log("@@@ hashTreeRoot of new state in", Date.now() - startTime, "ms");
-    startTime = Date.now();
     // Get the validators sub tree once for all the loop
     const validators = migratedState.validators;
     for (const validatorIndex of modifiedValidators) {
@@ -96,17 +74,7 @@ describe("migrateState", function () {
         currentShuffling: cachedSeedState.epochCtx.currentShuffling,
         nextShuffling: cachedSeedState.epochCtx.nextShuffling,
       },
-      // TODO: skip sync commitee cache in some conditions
       {skipSyncPubkeys: true, skipComputeShuffling: true}
     );
   });
-
 });
-
-function bytesToSize(bytes: number): string {
-  const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
-  if (bytes === 0) return "0 Byte";
-  const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  const size = (bytes / Math.pow(1024, i)).toFixed(2);
-  return `${size} ${sizes[i]}`;
-}
