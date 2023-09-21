@@ -242,15 +242,15 @@ export class Lightclient {
           await new Promise((r) => setTimeout(r, ON_ERROR_RETRY_MS));
           continue;
         }
+      }
 
-        // Fetch latest optimistic head to prevent a potential 12 seconds lag between syncing and getting the first head,
-        // Don't retry, this is a non-critical UX improvement
-        try {
-          const update = await this.transport.getOptimisticUpdate();
-          this.processOptimisticUpdate(update.data);
-        } catch (e) {
-          this.logger.error("Error fetching getLatestHeadUpdate", {currentPeriod}, e as Error);
-        }
+      // Fetch latest optimistic head to prevent a potential 12 seconds lag between syncing and getting the first head,
+      // Don't retry, this is a non-critical UX improvement
+      try {
+        const update = await this.transport.getOptimisticUpdate();
+        this.processOptimisticUpdate(update.data);
+      } catch (e) {
+        this.logger.error("Error fetching getLatestHeadUpdate", {currentPeriod}, e as Error);
       }
 
       // After successfully syncing, track head if not already
