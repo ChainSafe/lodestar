@@ -244,20 +244,20 @@ export class Lightclient {
         }
       }
 
-      // Fetch latest optimistic head to prevent a potential 12 seconds lag between syncing and getting the first head,
-      // Don't retry, this is a non-critical UX improvement
-      try {
-        const update = await this.transport.getOptimisticUpdate();
-        this.processOptimisticUpdate(update.data);
-      } catch (e) {
-        this.logger.error("Error fetching getLatestHeadUpdate", {currentPeriod}, e as Error);
-      }
-
       // After successfully syncing, track head if not already
       if (this.runStatus.code !== RunStatusCode.started) {
         const controller = new AbortController();
         this.updateRunStatus({code: RunStatusCode.started, controller});
         this.logger.debug("Started tracking the head");
+
+        // Fetch latest optimistic head to prevent a potential 12 seconds lag between syncing and getting the first head,
+        // Don't retry, this is a non-critical UX improvement
+        try {
+          const update = await this.transport.getOptimisticUpdate();
+          this.processOptimisticUpdate(update.data);
+        } catch (e) {
+          this.logger.error("Error fetching getLatestHeadUpdate", {currentPeriod}, e as Error);
+        }
 
         this.transport.onOptimisticUpdate(this.processOptimisticUpdate.bind(this));
         this.transport.onFinalityUpdate(this.processFinalizedUpdate.bind(this));
