@@ -52,7 +52,7 @@ export function registerRoutes(
     }
 
     for (const route of Object.values(routes())) {
-      registerRoute(server, route);
+      registerRoute(server, route, namespace);
     }
   }
 }

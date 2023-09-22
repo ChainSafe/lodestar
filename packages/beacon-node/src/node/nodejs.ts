@@ -288,6 +288,7 @@ export class BeaconNode {
       metrics: metrics ? metrics.apiRest : null,
     });
     if (opts.api.rest.enabled) {
+      await restApi.registerRoutes(opts.api.version);
       await restApi.listen();
     }
 

@@ -109,6 +109,8 @@
     "@ethersproject/abi": "^5.7.0",
     "@fastify/bearer-auth": "^9.0.0",
     "@fastify/cors": "^8.2.1",
+    "@fastify/swagger": "^8.10.0",
+    "@fastify/swagger-ui": "^1.9.3",
     "@libp2p/bootstrap": "^9.0.2",
     "@libp2p/interface": "^0.1.1",
     "@libp2p/mdns": "^9.0.2",
