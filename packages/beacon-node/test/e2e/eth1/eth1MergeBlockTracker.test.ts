@@ -15,6 +15,7 @@ import {getGoerliRpcUrl} from "../../testParams.js";
 // This test is constantly failing. We must unblock PR so this issue is a TODO to debug it and re-enable latter.
 // It's OKAY to disable temporarily since this functionality is tested indirectly by the sim merge tests.
 // See https://github.com/ChainSafe/lodestar/issues/4197
+// https://github.com/ChainSafe/lodestar/issues/5967
 describe.skip("eth1 / Eth1MergeBlockTracker", function () {
   this.timeout("2 min");
 

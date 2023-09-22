@@ -1,3 +1,4 @@
+import path from "node:path";
 import {
   BeaconStateAllForks,
   CachedBeaconStateBellatrix,
@@ -7,13 +8,15 @@ import {
 } from "@lodestar/state-transition";
 import * as slotFns from "@lodestar/state-transition/slot";
 import {phase0, ssz} from "@lodestar/types";
-import {ForkName} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 import {createChainForkConfig, ChainForkConfig} from "@lodestar/config";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
-import {TestRunnerFn} from "../utils/types.js";
+import {RunnerType, TestRunnerFn} from "../utils/types.js";
+import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
+import {specTestIterator} from "../utils/specTestIterator.js";
 
-export const fork: TestRunnerFn<ForkStateCase, BeaconStateAllForks> = (forkNext) => {
+const fork: TestRunnerFn<ForkStateCase, BeaconStateAllForks> = (forkNext) => {
   const config = createChainForkConfig({});
   const forkPrev = getPreviousFork(config, forkNext);
 
@@ -66,3 +69,7 @@ export function getPreviousFork(config: ChainForkConfig, fork: ForkName): ForkNa
   }
   return config.forksAscendingEpochOrder[forkIndex - 1].name;
 }
+
+specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
+  fork: {type: RunnerType.default, fn: fork},
+});

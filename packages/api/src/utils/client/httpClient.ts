@@ -3,7 +3,7 @@ import {ReqGeneric, RouteDef} from "../index.js";
 import {ApiClientResponse, ApiClientSuccessResponse} from "../../interfaces.js";
 import {fetch, isFetchError} from "./fetch.js";
 import {stringifyQuery, urlJoin} from "./format.js";
-import {Metrics} from "./metrics.js";
+import type {Metrics} from "./metrics.js";
 import {HttpStatusCode} from "./httpStatusCode.js";
 
 /** A higher default timeout, validator will sets its own shorter timeoutMs */

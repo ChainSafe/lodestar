@@ -38,8 +38,7 @@ describe("api / impl / validator", function () {
       const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
       const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
 
-      const testLoggerOpts: TestLoggerOpts = {level: LogLevel.info};
-      const loggerNodeA = testLogger("Node-A", testLoggerOpts);
+      const loggerNodeA = testLogger("Node-A");
 
       const bn = await getDevBeaconNode({
         params: testParams,

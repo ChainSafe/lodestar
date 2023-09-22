@@ -1,17 +1,14 @@
-export {Validator, ValidatorOptions} from "./validator.js";
-export {
-  ValidatorStore,
-  SignerType,
+export {Validator, type ValidatorOptions} from "./validator.js";
+export {ValidatorStore, SignerType, defaultOptions, BuilderSelection} from "./services/validatorStore.js";
+export type {
   Signer,
   SignerLocal,
   SignerRemote,
   ValidatorProposerConfig,
-  defaultOptions,
   ProposerConfig,
-  BuilderSelection,
 } from "./services/validatorStore.js";
 export {waitForGenesis} from "./genesis.js";
-export {getMetrics, Metrics, MetricsRegister} from "./metrics.js";
+export {getMetrics, type Metrics, type MetricsRegister} from "./metrics.js";
 
 // Remote signer client
 export {
@@ -21,7 +18,7 @@ export {
 } from "./util/externalSignerClient.js";
 
 // Types
-export {ProcessShutdownCallback} from "./types.js";
+export type {ProcessShutdownCallback} from "./types.js";
 
 export * from "./slashingProtection/index.js";
 export * from "./repositories/index.js";

@@ -1,3 +1,4 @@
+import path from "node:path";
 import {expect} from "chai";
 import {ProofType, SingleProof, Tree} from "@chainsafe/persistent-merkle-tree";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
@@ -5,11 +6,14 @@ import {ssz} from "@lodestar/types";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {InputType} from "@lodestar/spec-test-util";
 import {verifyMerkleBranch} from "@lodestar/utils";
-import {TestRunnerFn} from "../utils/types.js";
+import {ACTIVE_PRESET} from "@lodestar/params";
+import {RunnerType, TestRunnerFn} from "../utils/types.js";
+import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
+import {specTestIterator} from "../utils/specTestIterator.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
-export const merkle: TestRunnerFn<MerkleTestCase, IProof> = (fork) => {
+const merkle: TestRunnerFn<MerkleTestCase, IProof> = (fork) => {
   return {
     testFunction: (testcase) => {
       const {proof: specTestProof, state} = testcase;
@@ -62,3 +66,7 @@ interface IProof {
   leaf_index: bigint;
   branch: string[];
 }
+
+specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
+  merkle: {type: RunnerType.default, fn: merkle},
+});
