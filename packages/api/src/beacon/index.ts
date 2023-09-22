@@ -1,4 +1,4 @@
-import {Api} from "./routes/index.js";
+import type {Api} from "./routes/index.js";
 
 // NOTE: Don't export server here so it's not bundled to all consumers
 

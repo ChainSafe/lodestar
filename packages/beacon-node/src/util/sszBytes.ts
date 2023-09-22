@@ -1,4 +1,4 @@
-import {BitArray} from "@chainsafe/ssz";
+import {BitArray, deserializeUint8ArrayBitListFromBytes} from "@chainsafe/ssz";
 import {BLSSignature, RootHex, Slot} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 
@@ -209,40 +209,4 @@ function getSlotFromOffset(data: Uint8Array, offset: number): Slot {
   const dv = new DataView(data.buffer, data.byteOffset, data.byteLength);
   // Read only the first 4 bytes of Slot, max value is 4,294,967,295 will be reached 1634 years after genesis
   return dv.getUint32(offset, true);
-}
-
-type BitArrayDeserialized = {uint8Array: Uint8Array; bitLen: number};
-
-/**
- * This is copied from ssz bitList.ts
- * TODO: export this util from there
- */
-function deserializeUint8ArrayBitListFromBytes(data: Uint8Array, start: number, end: number): BitArrayDeserialized {
-  if (end > data.length) {
-    throw Error(`BitList attempting to read byte ${end} of data length ${data.length}`);
-  }
-
-  const lastByte = data[end - 1];
-  const size = end - start;
-
-  if (lastByte === 0) {
-    throw new Error("Invalid deserialized bitlist, padding bit required");
-  }
-
-  if (lastByte === 1) {
-    // Buffer.prototype.slice does not copy memory, Enforce Uint8Array usage https://github.com/nodejs/node/issues/28087
-    const uint8Array = Uint8Array.prototype.slice.call(data, start, end - 1);
-    const bitLen = (size - 1) * 8;
-    return {uint8Array, bitLen};
-  }
-
-  // the last byte is > 1, so a padding bit will exist in the last byte and need to be removed
-  // Buffer.prototype.slice does not copy memory, Enforce Uint8Array usage https://github.com/nodejs/node/issues/28087
-  const uint8Array = Uint8Array.prototype.slice.call(data, start, end);
-  // mask lastChunkByte
-  const lastByteBitLength = lastByte.toString(2).length - 1;
-  const bitLen = (size - 1) * 8 + lastByteBitLength;
-  const mask = 0xff >> (8 - lastByteBitLength);
-  uint8Array[size - 1] &= mask;
-  return {uint8Array, bitLen};
 }

@@ -22,8 +22,9 @@ import {SlashingProtectionBlock, SlashingProtectionAttestation} from "./types.js
 
 export {InvalidAttestationError, InvalidAttestationErrorCode} from "./attestation/index.js";
 export {InvalidBlockError, InvalidBlockErrorCode} from "./block/index.js";
-export {InterchangeError, InterchangeErrorErrorCode, Interchange, InterchangeFormat} from "./interchange/index.js";
-export {ISlashingProtection, InterchangeFormatVersion, SlashingProtectionBlock, SlashingProtectionAttestation};
+export {InterchangeError, InterchangeErrorErrorCode} from "./interchange/index.js";
+export type {Interchange, InterchangeFormat} from "./interchange/index.js";
+export type {ISlashingProtection, InterchangeFormatVersion, SlashingProtectionBlock, SlashingProtectionAttestation};
 /**
  * Handles slashing protection for validator proposer and attester duties as well as slashing protection
  * during a validator interchange import/export process.

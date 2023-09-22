@@ -1,9 +1,13 @@
+import path from "node:path";
 import {unshuffleList} from "@lodestar/state-transition";
 import {InputType} from "@lodestar/spec-test-util";
 import {bnToNum, fromHex} from "@lodestar/utils";
-import {TestRunnerFn} from "../utils/types.js";
+import {ACTIVE_PRESET} from "@lodestar/params";
+import {RunnerType, TestRunnerFn} from "../utils/types.js";
+import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
+import {specTestIterator} from "../utils/specTestIterator.js";
 
-export const shuffling: TestRunnerFn<ShufflingTestCase, number[]> = () => {
+const shuffling: TestRunnerFn<ShufflingTestCase, number[]> = () => {
   return {
     testFunction: (testcase) => {
       const seed = fromHex(testcase.mapping.seed);
@@ -28,3 +32,7 @@ type ShufflingTestCase = {
     mapping: bigint[];
   };
 };
+
+specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
+  shuffling: {type: RunnerType.default, fn: shuffling},
+});

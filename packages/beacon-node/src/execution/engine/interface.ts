@@ -6,7 +6,7 @@ import {DATA, QUANTITY} from "../../eth1/provider/utils.js";
 import {PayloadIdCache, PayloadId, WithdrawalV1} from "./payloadIdCache.js";
 import {ExecutionPayloadBody} from "./types.js";
 
-export {PayloadIdCache, PayloadId, WithdrawalV1};
+export {PayloadIdCache, type PayloadId, type WithdrawalV1};
 
 export enum ExecutionPayloadStatus {
   /** given payload is valid */

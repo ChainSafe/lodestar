@@ -17,7 +17,7 @@ import * as validator from "./validator.js";
 export {ApiError};
 
 // Re-export for convenience
-export {RouteConfig};
+export type {RouteConfig};
 
 export function registerRoutes(
   server: ServerInstance,
