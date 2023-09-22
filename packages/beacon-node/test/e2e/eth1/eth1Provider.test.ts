@@ -8,6 +8,7 @@ import {Eth1Provider, parseEth1Block} from "../../../src/eth1/provider/eth1Provi
 import {Eth1Block} from "../../../src/eth1/interface.js";
 import {getGoerliRpcUrl} from "../../testParams.js";
 
+// https://github.com/ChainSafe/lodestar/issues/5967
 describe.skip("eth1 / Eth1Provider", function () {
   this.timeout("2 min");
 

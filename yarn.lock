@@ -644,10 +644,10 @@
     "@chainsafe/as-sha256" "^0.4.1"
     "@chainsafe/persistent-merkle-tree" "^0.6.1"
 
-"@chainsafe/ssz@^0.12.0":
-  version "0.12.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.12.0.tgz#60dbbd855d2d39d3bc032f44d18a094c364501ae"
-  integrity sha512-FZUvB7NsQBQc+/3+QSCaqHjKMAXs+M4NiFsskOcRVm1G2FN19u/Er+783YeIpX8Ld9mLplvn2qv33vQedcul0w==
+"@chainsafe/ssz@^0.13.0":
+  version "0.13.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.13.0.tgz#0bd11af6abe023d4cc24067a46889dcabbe573e5"
+  integrity sha512-73PF5bFXE9juLD1+dkmYV/CMO/5ip0TmyzgYw87vAn8Cn+CbwCOp/HyNNdYCmdl104a2bqcORFJzirCvvc+nNw==
   dependencies:
     "@chainsafe/as-sha256" "^0.4.1"
     "@chainsafe/persistent-merkle-tree" "^0.6.1"
@@ -5019,6 +5019,11 @@ commander@^2.20.0:
   resolved "https://registry.yarnpkg.com/commander/-/commander-2.20.3.tgz#fd485e84c03eb4881c20722ba48035e8531aeb33"
   integrity sha512-GpVkmM8vF2vQUkj2LvZmD35JxeJOLCwJ9cUkugyk2nuhbv3+mJvpLYYt+0+USMxE+oj+ey/lJEnhZw75x/OMcQ==
 
+commander@^9.3.0:
+  version "9.5.0"
+  resolved "https://registry.yarnpkg.com/commander/-/commander-9.5.0.tgz#bc08d1eb5cedf7ccb797a96199d41c7bc3e60d30"
+  integrity sha512-KRs7WVDKg86PWiuAqhDrAQnTXZKraVcCc6vFdL14qrZ/DcWwuRo7VoiYXalXO7S5GKpqYiVEwCbgFDfxNHKJBQ==
+
 commander@~2.9.0:
   version "2.9.0"
   resolved "https://registry.yarnpkg.com/commander/-/commander-2.9.0.tgz#9c99094176e12240cb22d6c5146098400fe0f7d4"
@@ -8499,6 +8504,11 @@ it-drain@^3.0.1, it-drain@^3.0.2:
   version "3.0.2"
   resolved "https://registry.yarnpkg.com/it-drain/-/it-drain-3.0.2.tgz#4fb2ab30119072268c68a895fa5b9f2037942c44"
   integrity sha512-0hJvS/4Ktt9wT/bktmovjjMAY8r6FCsXqpL3zjqBBNwoL21VgQfguEnwbLSGuCip9Zq1vfU43cbHkmaRZdBfOg==
+
+it-drain@^3.0.3:
+  version "3.0.3"
+  resolved "https://registry.yarnpkg.com/it-drain/-/it-drain-3.0.3.tgz#f80719d3d0d7e7d02dc298d86ca9d0e7f7bd666b"
+  integrity sha512-l4s+izxUpFAR2axprpFiCaq0EtxK1QMd0LWbEtau5b+OegiZ5xdRtz35iJyh6KZY9QtuwEiQxydiOfYJc7stoA==
 
 it-filter@^3.0.0, it-filter@^3.0.1:
   version "3.0.2"
@@ -13795,6 +13805,15 @@ void-elements@^2.0.0:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/void-elements/-/void-elements-2.0.1.tgz#c066afb582bb1cb4128d60ea92392e94d5e9dbec"
   integrity sha512-qZKX4RnBzH2ugr8Lxa7x+0V6XD9Sb/ouARtiasEQCHB1EVU4NXtmHsDDrx1dO4ne5fc3J6EW05BP1Dl0z0iung==
+
+wait-port@^1.0.4:
+  version "1.0.4"
+  resolved "https://registry.yarnpkg.com/wait-port/-/wait-port-1.0.4.tgz#6f9474645ddbf7701ac100ab6762438edf6e5689"
+  integrity sha512-w8Ftna3h6XSFWWc2JC5gZEgp64nz8bnaTp5cvzbJSZ53j+omktWTDdwXxEF0jM8YveviLgFWvNGrSvRHnkyHyw==
+  dependencies:
+    chalk "^4.1.2"
+    commander "^9.3.0"
+    debug "^4.3.4"
 
 walk-up-path@^1.0.0:
   version "1.0.0"

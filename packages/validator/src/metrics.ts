@@ -206,6 +206,14 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
       help: "Total count of instances the attester duties dependant root changed",
     }),
 
+    attesterDutiesNextSlot: register.gauge({
+      // Metric is used by Rocket Pool dashboard (18391) to determine seconds until next attestation.
+      // It works without requiring any modification to the dashboard as the metric name is the
+      // same as Lighthouse uses for this.
+      name: "vc_attestation_duty_slot",
+      help: "Slot of next scheduled attestation duty",
+    }),
+
     // BlockProposingService
 
     blocksProduced: register.gauge({

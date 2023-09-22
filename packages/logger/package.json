@@ -58,7 +58,7 @@
     "pretest": "yarn run check-types",
     "test:unit": "mocha 'test/unit/**/*.test.ts'",
     "test:browsers": "yarn karma start karma.config.cjs",
-    "test:e2e": "mocha 'test/e2e/**/*.test.ts'",
+    "test:e2e": "LODESTAR_PRESET=minimal mocha 'test/e2e/**/*.test.ts'",
     "check-readme": "typescript-docs-verifier"
   },
   "types": "lib/index.d.ts",

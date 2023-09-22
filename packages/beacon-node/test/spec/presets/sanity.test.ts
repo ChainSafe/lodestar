@@ -1,3 +1,4 @@
+import path from "node:path";
 import {InputType} from "@lodestar/spec-test-util";
 import {
   BeaconStateAllForks,
@@ -7,17 +8,19 @@ import {
   stateTransition,
 } from "@lodestar/state-transition";
 import {allForks, deneb, ssz} from "@lodestar/types";
-import {ForkName} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 import {bnToNum} from "@lodestar/utils";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
-import {shouldVerify, TestRunnerFn} from "../utils/types.js";
+import {RunnerType, shouldVerify, TestRunnerFn} from "../utils/types.js";
 import {getConfig} from "../../utils/config.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
+import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
+import {specTestIterator} from "../utils/specTestIterator.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
-export const sanity: TestRunnerFn<any, BeaconStateAllForks> = (fork, testName, testSuite) => {
+const sanity: TestRunnerFn<any, BeaconStateAllForks> = (fork, testName, testSuite) => {
   switch (testName) {
     case "slots":
       return sanitySlots(fork, testName, testSuite);
@@ -55,7 +58,7 @@ const sanitySlots: TestRunnerFn<SanitySlotsTestCase, BeaconStateAllForks> = (for
   };
 };
 
-export const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllForks> = (fork) => {
+const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllForks> = (fork) => {
   return {
     testFunction: (testcase) => {
       const stateTB = testcase.pre;
@@ -119,3 +122,8 @@ type SanitySlotsTestCase = {
   post?: BeaconStateAllForks;
   slots: bigint;
 };
+
+specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
+  sanity: {type: RunnerType.default, fn: sanity},
+  random: {type: RunnerType.default, fn: sanityBlocks},
+});

@@ -32,6 +32,7 @@ jobs:
         with:
           node-version: 20
           check-latest: true
+          cache: yarn          
       - name: Node.js version
         id: node
         run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT
@@ -91,7 +92,7 @@ jobs:
 
       - name: Upload debug log test files
         if: ${{ always() }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: debug-test-logs
           path: packages/beacon-node/test-logs
@@ -143,7 +144,7 @@ jobs:
 
       - name: Upload debug log test files
         if: ${{ always() }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: debug-test-logs
           path: packages/beacon-node/test-logs

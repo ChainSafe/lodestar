@@ -5,7 +5,7 @@ import {
   ServerRoutes,
   getGenericJsonServer,
   registerRoute,
-  RouteConfig,
+  type RouteConfig,
 } from "../../utils/server/index.js";
 import {Api, ReqTypes, routesData, getReturnTypes, getReqSerializers} from "../routes.js";
 
