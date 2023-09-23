@@ -86,7 +86,9 @@ export function pollBuilderValidatorRegistration(
     const pubkeyHexes = validatorStore
       .getAllLocalIndices()
       .map((index) => validatorStore.getPubkeyOfIndex(index))
-      .filter((pubkeyHex) => pubkeyHex !== undefined && validatorStore.isBuilderEnabled(pubkeyHex));
+      .filter(
+        (pubkeyHex): pubkeyHex is string => pubkeyHex !== undefined && validatorStore.isBuilderEnabled(pubkeyHex)
+      );
 
     if (pubkeyHexes.length > 0) {
       const pubkeyHexesChunks = batchItems(pubkeyHexes, {batchSize: REGISTRATION_CHUNK_SIZE});
@@ -95,11 +97,6 @@ export function pollBuilderValidatorRegistration(
         try {
           const registrations = await Promise.all(
             pubkeyHexes.map((pubkeyHex): Promise<bellatrix.SignedValidatorRegistrationV1> => {
-              // Just to make typescript happy as it can't figure out we have filtered
-              // undefined pubkeys above
-              if (pubkeyHex === undefined) {
-                throw Error("All undefined pubkeys should have been filtered out");
-              }
               const feeRecipient = validatorStore.getFeeRecipient(pubkeyHex);
               const gasLimit = validatorStore.getGasLimit(pubkeyHex);
               return validatorStore.getValidatorRegistration(pubkeyHex, {feeRecipient, gasLimit}, slot);
