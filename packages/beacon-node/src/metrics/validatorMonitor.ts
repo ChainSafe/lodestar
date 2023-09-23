@@ -968,8 +968,8 @@ function renderBlockProposalSummary(
   }
 
   if (rootCache.getBlockRootAtSlot(proposalSlot) === proposal.blockRoot) {
-    // Cannonical state includes our block
-    return "cannonical";
+    // Canonical state includes our block
+    return "canonical";
   }
 
   let out = "orphaned";

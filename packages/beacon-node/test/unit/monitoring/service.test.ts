@@ -210,7 +210,7 @@ describe("monitoring / service", () => {
 
       await service.send();
 
-      assertError({message: new TimeoutError(`reached for request to ${remoteServiceUrl.host}`).message});
+      assertError({message: new TimeoutError("request").message});
     });
 
     it("should abort pending requests if monitoring service is closed", (done) => {
@@ -219,7 +219,7 @@ describe("monitoring / service", () => {
 
       service.send().finally(() => {
         try {
-          assertError({message: new ErrorAborted(`request to ${remoteServiceUrl.host}`).message});
+          assertError({message: new ErrorAborted("request").message});
           done();
         } catch (e) {
           done(e);

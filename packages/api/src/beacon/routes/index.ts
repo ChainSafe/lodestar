@@ -45,7 +45,7 @@ export type Api = {
 // In our case we define the client in the exact same interface as the API executor layer.
 // Therefore we only need to define how to translate args <-> request, and return <-> response.
 //
-// All files in the /routes directory provide succint definitions to do those transformations plus:
+// All files in the /routes directory provide succinct definitions to do those transformations plus:
 // - URL + method, for each route ID
 // - Runtime schema, for each route ID
 //
@@ -54,14 +54,14 @@ export type Api = {
 // routes that need non-JSON serialization (like debug.getState and lightclient.getProof)
 //
 // With this approach Typescript help us ensure that the client and server are compatible at build
-// time, ensure there are tests for all routes and makes it very cheap to mantain and add new routes.
+// time, ensure there are tests for all routes and makes it very cheap to maintain and add new routes.
 //
 //
 // How to add new routes
 // =====================
 //
 // 1. Add the route function signature to the `Api` type. The function name MUST match the routeId from the spec.
-//    The arguments should use spec types if approapriate. Non-spec types MUST be defined in before the Api type
+//    The arguments should use spec types if appropriate. Non-spec types MUST be defined in before the Api type
 //    so they are scoped by routes namespace. The all arguments MUST use camelCase casing.
 // 2. Add URL + METHOD in `routesData` matching the spec.
 // 3. Declare request serializers in `getReqSerializers()`. You MAY use `RouteReqTypeGenerator` to declare the

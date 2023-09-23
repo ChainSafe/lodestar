@@ -17,7 +17,7 @@ import {importKeystoreDefinitionsFromExternalDir, readPassphraseOrPrompt} from "
 const KEYSTORE_IMPORT_PROGRESS_MS = 10000;
 
 /**
- * Options processing heriarchy
+ * Options processing hierarchy
  * --interopIndexes
  * --fromMnemonic, then requires --mnemonicIndexes
  * --importKeystores, then requires --importKeystoresPassword
@@ -31,7 +31,7 @@ const KEYSTORE_IMPORT_PROGRESS_MS = 10000;
  * - Remote: a URL that supports EIP-3030 (BLS Remote Signer HTTP API)
  *
  *  Local secret keys can be gathered from:
- * - Local keystores existant on disk
+ * - Local keystores existent on disk
  * - Local keystores imported via keymanager api
  * - Derived from a mnemonic (TESTING ONLY)
  * - Derived from interop keys (TESTING ONLY)
