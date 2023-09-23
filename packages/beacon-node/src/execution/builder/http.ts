@@ -84,7 +84,10 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
   }
 
   async registerValidator(registrations: bellatrix.SignedValidatorRegistrationV1[]): Promise<void> {
-    ApiError.assert(await this.api.registerValidator(registrations));
+    ApiError.assert(
+      await this.api.registerValidator(registrations),
+      "Failed to submit validator registrations to builder"
+    );
   }
 
   async getHeader(

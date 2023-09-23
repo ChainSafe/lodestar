@@ -838,7 +838,12 @@ export function getValidatorApi({
         );
       });
 
-      return chain.executionBuilder?.registerValidator(filteredRegistrations);
+      if (chain.executionBuilder) {
+        await chain.executionBuilder.registerValidator(filteredRegistrations);
+        logger.debug("Submitted validator registrations to builder", {
+          count: filteredRegistrations.length,
+        });
+      }
     },
   };
 }
