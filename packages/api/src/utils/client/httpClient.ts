@@ -41,7 +41,11 @@ export class ApiError extends Error {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   static assert(res: ApiClientResponse, message?: string): asserts res is ApiClientSuccessResponse<any, unknown> {
     if (!res.ok) {
-      throw new ApiError([message, res.error.message].join(" - "), res.error.code, res.error.operationId);
+      throw new ApiError(
+        [message, res.error.message].filter(Boolean).join(" - "),
+        res.error.code,
+        res.error.operationId
+      );
     }
   }
 
