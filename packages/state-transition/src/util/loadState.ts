@@ -119,9 +119,11 @@ function loadInactivityScores(state: BeaconStateAltair, inactivityScoresBytes: U
       );
     }
   } else {
-    // TODO: next version of ssz https://github.com/ChainSafe/ssz/pull/336
-    // or implement a tmp type in lodestar with sliceTo
-    // state.inactivityScores = state.inactivityScores.sliceTo(newValidator - 1);
+    if (newValidator - 1 < 0) {
+      state.inactivityScores = ssz.altair.InactivityScores.defaultViewDU();
+    } else {
+      state.inactivityScores = state.inactivityScores.sliceTo(newValidator - 1);
+    }
   }
 }
 
