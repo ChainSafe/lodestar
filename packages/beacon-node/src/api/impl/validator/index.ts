@@ -844,7 +844,7 @@ export function getValidatorApi({
 
       await chain.executionBuilder.registerValidator(filteredRegistrations);
 
-      logger.debug("Submitted validator registrations to builder", {
+      logger.debug("Forwarded validator registrations to connected builder", {
         count: filteredRegistrations.length,
       });
     },

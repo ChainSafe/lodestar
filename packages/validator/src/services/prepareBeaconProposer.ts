@@ -106,9 +106,9 @@ export function pollBuilderValidatorRegistration(
             })
           );
           ApiError.assert(await api.validator.registerValidator(registrations));
-          logger.info("Published validator registrations to builder", {epoch, count: registrations.length});
+          logger.info("Published validator registrations to the builder network", {epoch, count: registrations.length});
         } catch (e) {
-          logger.error("Failed to publish validator registrations to builder", {epoch}, e as Error);
+          logger.error("Failed to publish validator registrations to the builder network", {epoch}, e as Error);
         }
       }
     }
