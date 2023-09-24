@@ -8,13 +8,14 @@ import {formatsTestCases} from "../fixtures/loggerFormats.js";
 describe("node logger", () => {
   describe("format and options", () => {
     for (const testCase of formatsTestCases) {
-      const {id, message, context, error, output} = typeof testCase === "function" ? testCase() : testCase;
+      const {id, opts, message, context, error, output} = typeof testCase === "function" ? testCase() : testCase;
       for (const format of logFormats) {
         it(`${id} ${format} output`, async () => {
           const logger = stubLoggerForProcessStd(
             getNodeLogger({
               level: LogLevel.info,
               format,
+              module: opts?.module,
               timestampFormat: {format: TimestampFormatCode.Hidden},
             })
           );
