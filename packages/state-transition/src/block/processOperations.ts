@@ -19,6 +19,7 @@ export {
   processDeposit,
   processVoluntaryExit,
   processBlsToExecutionChange,
+  processDepositReceipt,
 };
 
 export function processOperations(
