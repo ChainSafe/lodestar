@@ -1,4 +1,4 @@
-import {BitArray, byteArrayEquals} from "@chainsafe/ssz";
+import {BitArray, ByteVectorType, byteArrayEquals} from "@chainsafe/ssz";
 
 import {
   FINALIZED_ROOT_DEPTH,
@@ -12,7 +12,6 @@ import {altair, phase0, ssz, allForks, capella, deneb, Slot, eip6110} from "@lod
 import {ChainForkConfig} from "@lodestar/config";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 
-import {Root} from "@lodestar/types/lib/sszTypes.js";
 import {isValidMerkleBranch, computeSyncPeriodAtSlot} from "../utils/index.js";
 import {LightClientStore} from "./store.js";
 
@@ -150,7 +149,7 @@ export function isValidLightClientHeader(config: ChainForkConfig, header: allFor
   if (epoch < config.EIP6110_FORK_EPOCH) {
     if (
       (header as eip6110.LightClientHeader).execution.depositReceiptsRoot &&
-      (header as eip6110.LightClientHeader).execution.depositReceiptsRoot != Root.defaultValue()
+      (header as eip6110.LightClientHeader).execution.depositReceiptsRoot != new ByteVectorType(32).defaultValue()
     ) {
       return false;
     }
