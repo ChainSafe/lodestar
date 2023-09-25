@@ -1,8 +1,6 @@
 import fs from "node:fs";
 import {promisify} from "node:util";
 
-// TODO: use @lodestar/util instead
-
 /** Ensure a directory exists */
 export async function ensureDir(path: string): Promise<void> {
   try {
@@ -23,5 +21,16 @@ export async function writeIfNotExist(filepath: string, bytes: Uint8Array): Prom
     // not exists
     await promisify(fs.writeFile)(filepath, bytes);
     return true;
+  }
+}
+
+/** Remove a file if it exists */
+export async function removeFile(path: string): Promise<boolean> {
+  try {
+    await promisify(fs.unlink)(path);
+    return true;
+  } catch (_) {
+    // may not exists
+    return false;
   }
 }

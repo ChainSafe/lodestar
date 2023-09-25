@@ -78,8 +78,8 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     return this.checkpointStateCache.getLatest(head.blockRoot, Infinity) || this.stateCache.get(head.stateRoot);
   }
 
-  pruneOnCheckpoint(finalizedEpoch: Epoch, justifiedEpoch: Epoch, headStateRoot: RootHex): void {
-    this.checkpointStateCache.prune(finalizedEpoch, justifiedEpoch);
+  pruneOnCheckpoint(headStateRoot: RootHex): void {
+    // no need to prune checkpointStateCache, it handles in its add() function which happen at the last 1/3 slot of epoch
     this.stateCache.prune(headStateRoot);
   }
 

@@ -4,6 +4,7 @@ export * from "./base64.js";
 export * from "./bytes.js";
 export * from "./err.js";
 export * from "./errors.js";
+export * from "./file.js";
 export * from "./format.js";
 export * from "./logger.js";
 export * from "./map.js";

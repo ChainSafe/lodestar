@@ -103,6 +103,35 @@ describe("LinkedList", () => {
     expect(list.last()).to.be.equal(98);
   });
 
+  describe("moveToHead", () => {
+    let list: LinkedList<number>;
+
+    beforeEach(() => {
+      list = new LinkedList<number>();
+      list.push(1);
+      list.push(2);
+      list.push(3);
+    });
+
+    it("item is head", () => {
+      list.moveToHead(1);
+      expect(list.toArray()).to.be.deep.equal([1, 2, 3]);
+      expect(list.first()).to.be.equal(1);
+    });
+
+    it("item is middle", () => {
+      list.moveToHead(2);
+      expect(list.toArray()).to.be.deep.equal([2, 1, 3]);
+      expect(list.first()).to.be.equal(2);
+    });
+
+    it("item is tail", () => {
+      list.moveToHead(3);
+      expect(list.toArray()).to.be.deep.equal([3, 1, 2]);
+      expect(list.first()).to.be.equal(3);
+    });
+  });
+
   it("values", () => {
     expect(Array.from(list.values())).to.be.deep.equal([]);
     const count = 100;
