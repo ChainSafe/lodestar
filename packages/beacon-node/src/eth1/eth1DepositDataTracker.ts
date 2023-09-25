@@ -1,6 +1,6 @@
 import {phase0, ssz} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
-import {BeaconStateAllForks, becomesNewEth1Data} from "@lodestar/state-transition";
+import {BeaconStateAllForks, CachedBeaconStateAllForks, becomesNewEth1Data} from "@lodestar/state-transition";
 import {ErrorAborted, TimeoutError, fromHex, Logger, isErrorAborted, sleep} from "@lodestar/utils";
 
 import {IBeaconDb} from "../db/index.js";
@@ -112,7 +112,7 @@ export class Eth1DepositDataTracker {
   /**
    * Return eth1Data and deposits ready for block production for a given state
    */
-  async getEth1DataAndDeposits(state: BeaconStateAllForks): Promise<Eth1DataAndDeposits> {
+  async getEth1DataAndDeposits(state: CachedBeaconStateAllForks): Promise<Eth1DataAndDeposits> {
     const eth1Data = this.forcedEth1DataVote ?? (await this.getEth1Data(state));
     const deposits = await this.getDeposits(state, eth1Data);
     return {eth1Data, deposits};
@@ -141,7 +141,7 @@ export class Eth1DepositDataTracker {
    * Returns deposits to be included for a given state and eth1Data vote.
    * Requires internal caches to be updated regularly to return good results
    */
-  private async getDeposits(state: BeaconStateAllForks, eth1DataVote: phase0.Eth1Data): Promise<phase0.Deposit[]> {
+  private async getDeposits(state: CachedBeaconStateAllForks, eth1DataVote: phase0.Eth1Data): Promise<phase0.Deposit[]> {
     // No new deposits have to be included, continue
     if (eth1DataVote.depositCount === state.eth1DepositIndex) {
       return [];

@@ -9,6 +9,8 @@ import {generateState} from "../../../utils/state.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {getDeposits, getDepositsWithProofs, DepositGetter} from "../../../../src/eth1/utils/deposits.js";
 import {DepositTree} from "../../../../src/db/repositories/depositDataRoot.js";
+import { createCachedBeaconStateTest } from "../../../utils/cachedBeaconState.js";
+import { createChainForkConfig } from "@lodestar/config";
 
 describe("eth1 / util / deposits", function () {
   describe("getDeposits", () => {
@@ -106,12 +108,13 @@ describe("eth1 / util / deposits", function () {
         const state = post6110
           ? generateState({slot: post6110Slot, eth1DepositIndex})
           : generateState({eth1DepositIndex});
+        const cachedState = createCachedBeaconStateTest(state, createChainForkConfig({}));
         const eth1Data = generateEth1Data(depositCount);
         const deposits = depositIndexes.map((index) => generateDepositEvent(index));
         const depositsGetter: DepositGetter<phase0.DepositEvent> = async (indexRange) =>
           filterBy(deposits, indexRange, (deposit) => deposit.index);
 
-        const resultPromise = getDeposits(state, eth1Data, depositsGetter);
+        const resultPromise = getDeposits(cachedState, eth1Data, depositsGetter);
 
         if (expectedReturnedIndexes) {
           const result = await resultPromise;

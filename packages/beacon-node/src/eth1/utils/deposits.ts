@@ -1,6 +1,6 @@
 import {toGindex, Tree} from "@chainsafe/persistent-merkle-tree";
 import {toHexString} from "@chainsafe/ssz";
-import {BeaconStateAllForks} from "@lodestar/state-transition";
+import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
 import {FilterOptions} from "@lodestar/db";
 import {getEth1DepositCount} from "@lodestar/state-transition";
@@ -11,7 +11,7 @@ export type DepositGetter<T> = (indexRange: FilterOptions<number>, eth1Data: pha
 
 export async function getDeposits<T>(
   // eth1_deposit_index represents the next deposit index to be added
-  state: BeaconStateAllForks,
+  state: CachedBeaconStateAllForks,
   eth1Data: phase0.Eth1Data,
   depositsGetter: DepositGetter<T>
 ): Promise<T[]> {
