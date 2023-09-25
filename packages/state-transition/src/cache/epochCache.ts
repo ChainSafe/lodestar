@@ -771,7 +771,7 @@ export class EpochCache {
    */
   addPubkey(pubkey: Uint8Array, index: ValidatorIndex): void {
     if (this.isAfterEIP6110()) {
-      this.unfinalizedPubkey2index.set(toMemoryEfficientHexStr(pubkey), index);
+      this.unfinalizedPubkey2index = this.unfinalizedPubkey2index.set(toMemoryEfficientHexStr(pubkey), index);
     } else {
       this.finalizedPubkey2index.set(pubkey, index);
       this.finalizedIndex2pubkey[index] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian); 
