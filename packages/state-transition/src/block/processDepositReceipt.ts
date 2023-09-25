@@ -10,7 +10,7 @@ export function processDepositReceipt(
   depositReceipt: eip6110.DepositReceipt
 ): void {
   if (state.depositReceiptsStartIndex === UNSET_DEPOSIT_RECEIPTS_START_INDEX) {
-    state.depositReceiptsStartIndex = depositReceipt.index;
+    state.depositReceiptsStartIndex = BigInt(depositReceipt.index);
   }
 
   applyDeposit(

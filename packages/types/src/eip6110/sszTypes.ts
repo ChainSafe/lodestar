@@ -13,7 +13,7 @@ import {ssz as bellatrixSsz} from "../bellatrix/index.js";
 import {ssz as capellaSsz} from "../capella/index.js";
 import {ssz as denebSsz} from "../deneb/index.js";
 
-const {UintNum64, Slot, Root, BLSSignature, UintBn256, Bytes32, BLSPubkey, ValidatorIndex, DepositIndex} =
+const {UintNum64, Slot, Root, BLSSignature, UintBn256, Bytes32, BLSPubkey, ValidatorIndex, DepositIndex, UintBn64} =
   primitiveSsz;
 
 export const DepositReceipt = new ContainerType( 
@@ -160,7 +160,7 @@ export const BeaconState = new ContainerType(
     nextWithdrawalValidatorIndex: capellaSsz.BeaconState.fields.nextWithdrawalValidatorIndex,
     // Deep history valid from Capella onwards
     historicalSummaries: capellaSsz.BeaconState.fields.historicalSummaries,
-    depositReceiptsStartIndex: UintNum64, // New in EIP6110
+    depositReceiptsStartIndex: UintBn64, // New in EIP6110
   },
   {typeName: "BeaconState", jsonCase: "eth2"}
 );

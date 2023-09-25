@@ -249,4 +249,4 @@ export const BLOB_TX_TYPE = 0x03;
 export const VERSIONED_HASH_VERSION_KZG = 0x01;
 
 // EIP-6110 Misc
-export const UNSET_DEPOSIT_RECEIPTS_START_INDEX = Infinity;
+export const UNSET_DEPOSIT_RECEIPTS_START_INDEX = 2n ** 64n - 1n;
