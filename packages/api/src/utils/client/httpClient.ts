@@ -94,7 +94,7 @@ export type HttpClientModules = {
   metrics?: Metrics;
 };
 
-export {Metrics};
+export type {Metrics};
 
 export class HttpClient implements IHttpClient {
   private readonly globalTimeoutMs: number;
