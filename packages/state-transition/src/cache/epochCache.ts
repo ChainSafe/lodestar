@@ -758,7 +758,7 @@ export class EpochCache {
 
   getValidatorIndex(pubkey: Uint8Array | PubkeyHex): ValidatorIndex | undefined {
     if (this.isAfterEIP6110()) {
-      return this.finalizedPubkey2index.get(pubkey) || this.unfinalizedPubkey2index.get(toMemoryEfficientHexStr(pubkey));
+      return this.finalizedPubkey2index.get(pubkey) ?? this.unfinalizedPubkey2index.get(toMemoryEfficientHexStr(pubkey));
     } else {
       return this.finalizedPubkey2index.get(pubkey);
     }

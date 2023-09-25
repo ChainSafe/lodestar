@@ -124,5 +124,5 @@ export const minimalPreset: BeaconPreset = {
   MAX_BLOBS_PER_BLOCK: 6,
 
   // EIP6110
-  MAX_DEPOSIT_RECEIPTS_PER_PAYLOAD: 8192,
+  MAX_DEPOSIT_RECEIPTS_PER_PAYLOAD: 4,
 };
