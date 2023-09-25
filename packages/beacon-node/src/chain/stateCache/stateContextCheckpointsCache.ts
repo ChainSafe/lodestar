@@ -17,7 +17,7 @@ export type CheckpointHex = {epoch: Epoch; rootHex: RootHex};
 export type PersistentApis = {
   writeIfNotExist: (filepath: string, bytes: Uint8Array) => Promise<boolean>;
   removeFile: (path: string) => Promise<boolean>;
-  readFileSync: (path: string) => Uint8Array;
+  readFile: (path: string) => Promise<Uint8Array>;
   ensureDir: (path: string) => Promise<void>;
 };
 
@@ -25,7 +25,7 @@ export type PersistentApis = {
 const FILE_APIS: PersistentApis = {
   writeIfNotExist,
   removeFile,
-  readFileSync: fs.readFileSync,
+  readFile: fs.promises.readFile,
   ensureDir,
 };
 
@@ -108,37 +108,32 @@ export class CheckpointStateCache {
   }
 
   /**
-   * Get a state from cache, if shouldReload = true, it will reload from disk
+   * Get a state from cache, it will reload from disk.
+   * This is expensive api, should only be called in some important flows:
+   * - Validate a gossip block
+   * - Get block for processing
+   * - Regen head state
    */
-  get(cp: CheckpointHex, shouldReload = false): CachedBeaconStateAllForks | null {
-    this.metrics?.lookups.inc();
+  async getOrReload(cp: CheckpointHex): Promise<CachedBeaconStateAllForks | null> {
     const cpKey = toCheckpointKey(cp);
-    const item = this.cache.get(cpKey);
+    const inMemoryState = this.get(cpKey);
+    if (inMemoryState) {
+      return inMemoryState;
+    }
 
-    if (item === undefined) {
+    const filePath = this.cache.get(cpKey);
+    if (filePath === undefined) {
       return null;
     }
 
-    this.metrics?.hits.inc();
-
-    if (cpKey === this.preComputedCheckpoint) {
-      this.preComputedCheckpointHits = (this.preComputedCheckpointHits ?? 0) + 1;
-    }
-
-    if (typeof item !== "string") {
-      this.metrics?.stateClonedCount.observe(item.clonedCount);
-      this.inMemoryKeyOrder.moveToHead(cpKey);
-      return item;
-    }
-
-    if (!shouldReload) {
-      return null;
+    if (typeof filePath !== "string") {
+      // should not happen, in-memory state is handled above
+      throw new Error("Expected file path");
     }
 
     // reload from disk based on closest checkpoint
-    // TODO: use async
-    const newStateBytes = this.persistentApis.readFileSync(item);
-    void this.persistentApis.removeFile(item);
+    const newStateBytes = await this.persistentApis.readFile(filePath);
+    void this.persistentApis.removeFile(filePath);
     this.metrics?.stateFilesRemoveCount.inc({reason: RemoveFileReason.reload});
     this.metrics?.stateReloadSecFromSlot.observe(this.clock?.secFromSlot(this.clock?.currentSlot ?? 0) ?? 0);
     const closestState = findClosestCheckpointState(cp, this.cache);
@@ -151,6 +146,57 @@ export class CheckpointStateCache {
     this.inMemoryKeyOrder.unshift(cpKey);
     this.pruneFromMemory();
     return newCachedState;
+  }
+
+  /**
+   * Return either state or state bytes without reloading from disk.
+   */
+  async getStateOrBytes(cp: CheckpointHex): Promise<CachedBeaconStateAllForks | Uint8Array | null> {
+    const cpKey = toCheckpointKey(cp);
+    const inMemoryState = this.get(cpKey);
+    if (inMemoryState) {
+      return inMemoryState;
+    }
+
+    const filePath = this.cache.get(cpKey);
+    if (filePath === undefined) {
+      return null;
+    }
+
+    if (typeof filePath !== "string") {
+      // should not happen, in-memory state is handled above
+      throw new Error("Expected file path");
+    }
+
+    // do not reload from disk
+    return this.persistentApis.readFile(filePath);
+  }
+
+  /**
+   * Similar to get() api without reloading from disk
+   */
+  get(cpOrKey: CheckpointHex | string): CachedBeaconStateAllForks | null {
+    this.metrics?.lookups.inc();
+    const cpKey = typeof cpOrKey === "string" ? cpOrKey : toCheckpointKey(cpOrKey);
+    const stateOrFilePath = this.cache.get(cpKey);
+
+    if (stateOrFilePath === undefined) {
+      return null;
+    }
+
+    this.metrics?.hits.inc();
+
+    if (cpKey === this.preComputedCheckpoint) {
+      this.preComputedCheckpointHits = (this.preComputedCheckpointHits ?? 0) + 1;
+    }
+
+    if (typeof stateOrFilePath !== "string") {
+      this.metrics?.stateClonedCount.observe(stateOrFilePath.clonedCount);
+      this.inMemoryKeyOrder.moveToHead(cpKey);
+      return stateOrFilePath;
+    }
+
+    return null;
   }
 
   /**
@@ -182,17 +228,42 @@ export class CheckpointStateCache {
   }
 
   /**
-   * Searches for the latest cached state with a `root`, starting with `epoch` and descending
-   * TODO: change consumers with this shouldReload flag
+   * Searches in-memory state for the latest cached state with a `root` without reload, starting with `epoch` and descending
    */
-  getLatest(rootHex: RootHex, maxEpoch: Epoch, shouldReload = false): CachedBeaconStateAllForks | null {
+  getLatest(rootHex: RootHex, maxEpoch: Epoch): CachedBeaconStateAllForks | null {
     // sort epochs in descending order, only consider epochs lte `epoch`
     const epochs = Array.from(this.epochIndex.keys())
       .sort((a, b) => b - a)
       .filter((e) => e <= maxEpoch);
     for (const epoch of epochs) {
       if (this.epochIndex.get(epoch)?.has(rootHex)) {
-        return this.get({rootHex, epoch}, shouldReload);
+        const inMemoryState = this.get({rootHex, epoch});
+        if (inMemoryState) {
+          return inMemoryState;
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Searches state for the latest cached state with a `root`, reload if needed, starting with `epoch` and descending
+   * This is expensive api, should only be called in some important flows:
+   * - Validate a gossip block
+   * - Get block for processing
+   * - Regen head state
+   */
+  async getOrReloadLatest(rootHex: RootHex, maxEpoch: Epoch): Promise<CachedBeaconStateAllForks | null> {
+    // sort epochs in descending order, only consider epochs lte `epoch`
+    const epochs = Array.from(this.epochIndex.keys())
+      .sort((a, b) => b - a)
+      .filter((e) => e <= maxEpoch);
+    for (const epoch of epochs) {
+      if (this.epochIndex.get(epoch)?.has(rootHex)) {
+        const state = await this.getOrReload({rootHex, epoch});
+        if (state) {
+          return state;
+        }
       }
     }
     return null;
@@ -205,12 +276,6 @@ export class CheckpointStateCache {
   updatePreComputedCheckpoint(rootHex: RootHex, epoch: Epoch): number | null {
     const previousHits = this.preComputedCheckpointHits;
     this.preComputedCheckpoint = toCheckpointKey({rootHex, epoch});
-    const cpState = this.get({rootHex, epoch});
-    if (!cpState) {
-      // should not happen
-      throw new Error(`Could not find precomputed checkpoint state for ${rootHex} at epoch ${epoch}`);
-    }
-
     this.preComputedCheckpointHits = 0;
     return previousHits;
   }

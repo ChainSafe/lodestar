@@ -42,7 +42,7 @@ describe("CheckpointStateCache", function () {
         }
         return Promise.resolve(false);
       },
-      readFileSync: (filePath) => fileApisBuffer.get(filePath) || Buffer.alloc(0),
+      readFile: (filePath) => Promise.resolve(fileApisBuffer.get(filePath) || Buffer.alloc(0)),
       ensureDir: () => Promise.resolve(),
     };
     cache = new CheckpointStateCache({maxStatesInMemory: 2, persistentApis});
@@ -117,7 +117,7 @@ describe("CheckpointStateCache", function () {
     cpKeyPersisted2,
     stateBytesPersisted2,
   } of reloadTestCases) {
-    it(name, function () {
+    it(name, async function () {
       expect(fileApisBuffer.size).to.be.equal(0);
       // use cpHexGet to move it to head,
       cache.get(cpHexGet);
@@ -127,14 +127,16 @@ describe("CheckpointStateCache", function () {
       const persistedKey0 = toTmpFilePath(toCheckpointKey(cpKeyPersisted));
       expect(Array.from(fileApisBuffer.keys())).to.be.deep.equal([persistedKey0]);
       expect(fileApisBuffer.get(persistedKey0)).to.be.deep.equal(stateBytesPersisted);
+      expect(await cache.getStateOrBytes(cpKeyPersisted)).to.be.deep.equal(stateBytesPersisted);
       // simple get() does not reload from disk
       expect(cache.get(cpKeyPersisted)).to.be.null;
       // reload cpKeyPersisted from disk
-      expect(cache.get(cpKeyPersisted, true)?.serialize()).to.be.deep.equal(stateBytesPersisted);
+      expect((await cache.getOrReload(cpKeyPersisted))?.serialize()).to.be.deep.equal(stateBytesPersisted);
       // check the 2nd persisted checkpoint
       const persistedKey2 = toTmpFilePath(toCheckpointKey(cpKeyPersisted2));
       expect(Array.from(fileApisBuffer.keys())).to.be.deep.equal([persistedKey2]);
       expect(fileApisBuffer.get(persistedKey2)).to.be.deep.equal(stateBytesPersisted2);
+      expect(await cache.getStateOrBytes(cpKeyPersisted2)).to.be.deep.equal(stateBytesPersisted2);
     });
   }
 
