@@ -23,7 +23,6 @@ export const DepositReceipt = new ContainerType(
     amount: UintNum64,
     signature: BLSSignature,
     index: DepositIndex,
-    validatorIndex: ValidatorIndex,
   },
   {typeName: "DepositReceipt", jsonCase: "eth2"}
 );
