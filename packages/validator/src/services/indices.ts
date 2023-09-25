@@ -85,9 +85,13 @@ export class IndicesService {
 
     this.pollValidatorIndicesPromise = this.pollValidatorIndicesInternal(pubkeysHex);
     // Once the pollValidatorIndicesInternal() resolves or rejects null the cached promise so it can be called again.
-    this.pollValidatorIndicesPromise.finally(() => {
-      this.pollValidatorIndicesPromise = null;
-    });
+    this.pollValidatorIndicesPromise
+      .catch((err) => {
+        this.logger.error("Error polling validator indices", {}, err);
+      })
+      .finally(() => {
+        this.pollValidatorIndicesPromise = null;
+      });
     return this.pollValidatorIndicesPromise;
   }
 
