@@ -7,6 +7,7 @@ import {
   GENESIS_EPOCH,
   GENESIS_SLOT,
   MAX_EFFECTIVE_BALANCE,
+  UNSET_DEPOSIT_RECEIPTS_START_INDEX,
 } from "@lodestar/params";
 import {Bytes32, phase0, Root, ssz, TimeSeconds} from "@lodestar/types";
 
@@ -295,6 +296,7 @@ export function initializeBeaconStateFromEth1(
     stateEIP6110.latestExecutionPayloadHeader =
       (executionPayloadHeader as CompositeViewDU<typeof ssz.eip6110.ExecutionPayloadHeader>) ??
       ssz.eip6110.ExecutionPayloadHeader.defaultViewDU();
+    stateEIP6110.depositReceiptsStartIndex = UNSET_DEPOSIT_RECEIPTS_START_INDEX;
   }
 
   state.commit();
