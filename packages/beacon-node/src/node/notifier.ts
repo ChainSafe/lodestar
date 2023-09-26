@@ -148,7 +148,12 @@ function timeToNextHalfSlot(config: BeaconConfig, chain: IBeaconChain, isFirstTi
   const msPerSlot = config.SECONDS_PER_SLOT * 1000;
   const msPerHalfSlot = msPerSlot / 2;
   const msFromGenesis = Date.now() - chain.genesisTime * 1000;
-  const msToNextSlot = msPerSlot - (msFromGenesis % msPerSlot);
+  const msToNextSlot =
+    msFromGenesis < 0
+      ? // For future genesis time, calculate time left in the slot
+        -msFromGenesis % msPerSlot
+      : // For past genesis time, calculate time until the next slot
+        msPerSlot - (msFromGenesis % msPerSlot);
   if (isFirstTime) {
     // at the 1st time we may miss middle of the current clock slot
     return msToNextSlot > msPerHalfSlot ? msToNextSlot - msPerHalfSlot : msToNextSlot + msPerHalfSlot;
