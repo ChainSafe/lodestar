@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import {ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
-import {createCachedBeaconState, newUnfinalizedPubkeyIndexMap, PubkeyIndexMap} from "@lodestar/state-transition";
+import {createCachedBeaconState, PubkeyIndexMap} from "@lodestar/state-transition";
 import {createBeaconConfig, ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {config as chainConfig} from "@lodestar/config/default";
 

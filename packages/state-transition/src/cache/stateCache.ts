@@ -10,7 +10,7 @@ import {
   BeaconStateDeneb,
   BeaconStateEIP6110,
 } from "./types.js";
-import { UnfinalizedPubkeyIndexMap, newUnfinalizedPubkeyIndexMap} from "./pubkeyCache.js";
+import {newUnfinalizedPubkeyIndexMap} from "./pubkeyCache.js";
 
 export type BeaconStateCache = {
   config: BeaconConfig;

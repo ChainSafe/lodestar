@@ -1,6 +1,6 @@
 import bls from "@chainsafe/bls";
 import {CoordType} from "@chainsafe/bls/types";
-import {BLSPubkey, BLSSignature, Bytes32, UintNum64, phase0, ssz} from "@lodestar/types";
+import {BLSPubkey, Bytes32, UintNum64, phase0, ssz} from "@lodestar/types";
 import {verifyMerkleBranch} from "@lodestar/utils";
 
 import {
@@ -12,11 +12,11 @@ import {
   MAX_EFFECTIVE_BALANCE,
 } from "@lodestar/params";
 
+import {DepositData} from "@lodestar/types/lib/phase0/types.js";
+import {DepositReceipt} from "@lodestar/types/lib/eip6110/types.js";
 import {ZERO_HASH} from "../constants/index.js";
 import {computeDomain, computeSigningRoot, increaseBalance} from "../util/index.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../types.js";
-import { DepositData } from "@lodestar/types/lib/phase0/types.js";
-import { DepositReceipt } from "@lodestar/types/lib/eip6110/types.js";
 
 /**
  * Process a Deposit operation. Potentially adds a new validator to the registry. Mutates the validators and balances
@@ -41,11 +41,7 @@ export function processDeposit(fork: ForkSeq, state: CachedBeaconStateAllForks, 
   // deposits must be processed in order
   state.eth1DepositIndex += 1;
 
-  applyDeposit(
-    fork,
-    state,
-    deposit.data
-  );
+  applyDeposit(fork, state, deposit.data);
 }
 
 /**

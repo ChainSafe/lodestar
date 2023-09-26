@@ -19,7 +19,6 @@ import {
   BeaconStateAllForks,
   createCachedBeaconState,
   PubkeyIndexMap,
-  newUnfinalizedPubkeyIndexMap,
 } from "../../src/index.js";
 import {BeaconStateCache} from "../../src/cache/stateCache.js";
 import {EpochCacheOpts} from "../../src/cache/epochCache.js";
@@ -90,15 +89,12 @@ export function generateCachedState(
   opts: TestBeaconState = {}
 ): CachedBeaconStateAllForks {
   const state = generateState(opts);
-  return createCachedBeaconState(
-    state,
-    {
-      config: createBeaconConfig(config, state.genesisValidatorsRoot),
-      // This is a test state, there's no need to have a global shared cache of keys
-      finalizedPubkey2index: new PubkeyIndexMap(),
-      finalizedIndex2pubkey: [],
-    }
-  );
+  return createCachedBeaconState(state, {
+    config: createBeaconConfig(config, state.genesisValidatorsRoot),
+    // This is a test state, there's no need to have a global shared cache of keys
+    finalizedPubkey2index: new PubkeyIndexMap(),
+    finalizedIndex2pubkey: [],
+  });
 }
 
 export function createCachedBeaconStateTest<T extends BeaconStateAllForks>(

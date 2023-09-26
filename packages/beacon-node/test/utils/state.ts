@@ -7,7 +7,6 @@ import {
   PubkeyIndexMap,
   CachedBeaconStateBellatrix,
   BeaconStateBellatrix,
-  newUnfinalizedPubkeyIndexMap,
 } from "@lodestar/state-transition";
 import {allForks, altair, bellatrix, eip6110, ssz} from "@lodestar/types";
 import {createBeaconConfig, ChainForkConfig} from "@lodestar/config";
@@ -105,15 +104,12 @@ export function generateState(
 export function generateCachedState(opts?: TestBeaconState): CachedBeaconStateAllForks {
   const config = getConfig(ForkName.phase0);
   const state = generateState(opts, config);
-  return createCachedBeaconState(
-    state,
-    {
-      config: createBeaconConfig(config, state.genesisValidatorsRoot),
-      // This is a performance test, there's no need to have a global shared cache of keys
-      finalizedPubkey2index: new PubkeyIndexMap(),
-      finalizedIndex2pubkey: [],
-    }
-  );
+  return createCachedBeaconState(state, {
+    config: createBeaconConfig(config, state.genesisValidatorsRoot),
+    // This is a performance test, there's no need to have a global shared cache of keys
+    finalizedPubkey2index: new PubkeyIndexMap(),
+    finalizedIndex2pubkey: [],
+  });
 }
 
 /**
@@ -122,15 +118,12 @@ export function generateCachedState(opts?: TestBeaconState): CachedBeaconStateAl
 export function generateCachedAltairState(opts?: TestBeaconState, altairForkEpoch = 0): CachedBeaconStateAllForks {
   const config = getConfig(ForkName.altair, altairForkEpoch);
   const state = generateState(opts, config);
-  return createCachedBeaconState(
-    state,
-    {
-      config: createBeaconConfig(config, state.genesisValidatorsRoot),
-      // This is a performance test, there's no need to have a global shared cache of keys
-      finalizedPubkey2index: new PubkeyIndexMap(),
-      finalizedIndex2pubkey: [],
-    }
-  );
+  return createCachedBeaconState(state, {
+    config: createBeaconConfig(config, state.genesisValidatorsRoot),
+    // This is a performance test, there's no need to have a global shared cache of keys
+    finalizedPubkey2index: new PubkeyIndexMap(),
+    finalizedIndex2pubkey: [],
+  });
 }
 
 /**
@@ -139,13 +132,10 @@ export function generateCachedAltairState(opts?: TestBeaconState, altairForkEpoc
 export function generateCachedBellatrixState(opts?: TestBeaconState): CachedBeaconStateBellatrix {
   const config = getConfig(ForkName.bellatrix);
   const state = generateState(opts, config);
-  return createCachedBeaconState(
-    state as BeaconStateBellatrix,
-    {
-      config: createBeaconConfig(config, state.genesisValidatorsRoot),
-      // This is a performance test, there's no need to have a global shared cache of keys
-      finalizedPubkey2index: new PubkeyIndexMap(),
-      finalizedIndex2pubkey: [],
-    }
-  );
+  return createCachedBeaconState(state as BeaconStateBellatrix, {
+    config: createBeaconConfig(config, state.genesisValidatorsRoot),
+    // This is a performance test, there's no need to have a global shared cache of keys
+    finalizedPubkey2index: new PubkeyIndexMap(),
+    finalizedIndex2pubkey: [],
+  });
 }

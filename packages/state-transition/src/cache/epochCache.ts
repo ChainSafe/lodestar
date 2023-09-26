@@ -35,7 +35,6 @@ import {
   UnfinalizedPubkeyIndexMap,
   syncPubkeys,
   toMemoryEfficientHexStr,
-  newUnfinalizedPubkeyIndexMap,
   PubkeyHex,
 } from "./pubkeyCache.js";
 import {BeaconStateAllForks, BeaconStateAltair} from "./types.js";
@@ -758,7 +757,9 @@ export class EpochCache {
 
   getValidatorIndex(pubkey: Uint8Array | PubkeyHex): ValidatorIndex | undefined {
     if (this.isAfterEIP6110()) {
-      return this.finalizedPubkey2index.get(pubkey) ?? this.unfinalizedPubkey2index.get(toMemoryEfficientHexStr(pubkey));
+      return (
+        this.finalizedPubkey2index.get(pubkey) ?? this.unfinalizedPubkey2index.get(toMemoryEfficientHexStr(pubkey))
+      );
     } else {
       return this.finalizedPubkey2index.get(pubkey);
     }
@@ -774,7 +775,7 @@ export class EpochCache {
       this.unfinalizedPubkey2index = this.unfinalizedPubkey2index.set(toMemoryEfficientHexStr(pubkey), index);
     } else {
       this.finalizedPubkey2index.set(pubkey, index);
-      this.finalizedIndex2pubkey[index] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian); 
+      this.finalizedIndex2pubkey[index] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian);
     }
   }
 
@@ -788,7 +789,7 @@ export class EpochCache {
       throw new Error("addFInalizedPubkey is not available pre EIP-6110");
     }
 
-    if (this.finalizedPubkey2index.get(pubkey)) {
+    if (this.finalizedPubkey2index.get(pubkey) !== undefined) {
       return; // Repeated insert. Should not happen except 6110 activation
     }
 
@@ -885,7 +886,7 @@ export class EpochCache {
   isAfterEIP6110(): boolean {
     return this.epoch >= (this.config.EIP6110_FORK_EPOCH ?? Infinity);
   }
- }
+}
 
 function getEffectiveBalanceIncrementsByteLen(validatorCount: number): number {
   // TODO: Research what's the best number to minimize both memory cost and copy costs
@@ -904,17 +905,17 @@ type AttesterDuty = {
 
 export enum EpochCacheErrorCode {
   COMMITTEE_INDEX_OUT_OF_RANGE = "EPOCH_CONTEXT_ERROR_COMMITTEE_INDEX_OUT_OF_RANGE",
-COMMITTEE_EPOCH_OUT_OF_RANGE = "EPOCH_CONTEXT_ERROR_COMMITTEE_EPOCH_OUT_OF_RANGE",
+  COMMITTEE_EPOCH_OUT_OF_RANGE = "EPOCH_CONTEXT_ERROR_COMMITTEE_EPOCH_OUT_OF_RANGE",
   NO_SYNC_COMMITTEE = "EPOCH_CONTEXT_ERROR_NO_SYNC_COMMITTEE",
   PROPOSER_EPOCH_MISMATCH = "EPOCH_CONTEXT_ERROR_PROPOSER_EPOCH_MISMATCH",
 }
 
 type EpochCacheErrorType =
   | {
-  code: EpochCacheErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE;
-  index: number;
-  maxIndex: number;
-}
+      code: EpochCacheErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE;
+      index: number;
+      maxIndex: number;
+    }
   | {
       code: EpochCacheErrorCode.COMMITTEE_EPOCH_OUT_OF_RANGE;
       requestedEpoch: Epoch;
@@ -928,7 +929,7 @@ type EpochCacheErrorType =
       code: EpochCacheErrorCode.PROPOSER_EPOCH_MISMATCH;
       requestedEpoch: Epoch;
       currentEpoch: Epoch;
-};
+    };
 
 export class EpochCacheError extends LodestarError<EpochCacheErrorType> {}
 

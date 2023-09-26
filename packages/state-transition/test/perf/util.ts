@@ -20,7 +20,6 @@ import {
   newFilledArray,
   createCachedBeaconState,
   computeCommitteeCount,
-  newUnfinalizedPubkeyIndexMap,
 } from "../../src/index.js";
 import {
   CachedBeaconStateAllForks,
@@ -126,14 +125,11 @@ export function generatePerfTestCachedStatePhase0(opts?: {goBackOneSlot: boolean
   if (!phase0CachedState23637) {
     const state = phase0State.clone();
     state.slot -= 1;
-    phase0CachedState23637 = createCachedBeaconState(
-      state,
-      {
-        config: createBeaconConfig(config, state.genesisValidatorsRoot),
-        finalizedPubkey2index: pubkey2index,
-        finalizedIndex2pubkey: index2pubkey,
-      }
-    );
+    phase0CachedState23637 = createCachedBeaconState(state, {
+      config: createBeaconConfig(config, state.genesisValidatorsRoot),
+      finalizedPubkey2index: pubkey2index,
+      finalizedIndex2pubkey: index2pubkey,
+    });
 
     const currentEpoch = computeEpochAtSlot(state.slot - 1);
     const previousEpoch = currentEpoch - 1;
@@ -227,14 +223,11 @@ export function generatePerfTestCachedStateAltair(opts?: {goBackOneSlot: boolean
   if (!altairCachedState23637) {
     const state = origState.clone();
     state.slot -= 1;
-    altairCachedState23637 = createCachedBeaconState(
-      state,
-      {
-        config: createBeaconConfig(altairConfig, state.genesisValidatorsRoot),
-        finalizedPubkey2index: pubkey2index,
-        finalizedIndex2pubkey: index2pubkey,
-      }
-    );
+    altairCachedState23637 = createCachedBeaconState(state, {
+      config: createBeaconConfig(altairConfig, state.genesisValidatorsRoot),
+      finalizedPubkey2index: pubkey2index,
+      finalizedIndex2pubkey: index2pubkey,
+    });
   }
   if (!altairCachedState23638) {
     altairCachedState23638 = processSlots(

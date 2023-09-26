@@ -9,7 +9,7 @@ import {
   generateTestCachedBeaconStateOnlyValidators,
   getSecretKeyFromIndexCached,
   // eslint-disable-next-line import/no-relative-packages
-} from "../../../../state-transition/test/perf/util.js";
+} from "@lodestar/state-transition";
 import {IBeaconChain} from "../../../src/chain/index.js";
 import {IStateRegenerator} from "../../../src/chain/regen/index.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../../src/constants/index.js";
@@ -131,7 +131,7 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
       ? new BlsSingleThreadVerifier({metrics: null})
       : new BlsMultiThreadWorkerPool({}, {logger: testLogger(), metrics: null}),
     waitForBlock: () => Promise.resolve(false),
-    index2pubkey: state.epochCtx.index2pubkey,
+    index2pubkey: state.epochCtx.finalizedIndex2pubkey,
     opts: defaultChainOptions,
   } as Partial<IBeaconChain> as IBeaconChain;
 

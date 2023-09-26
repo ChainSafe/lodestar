@@ -20,7 +20,6 @@ import {getActiveValidatorIndices} from "./validator.js";
 import {getTemporaryBlockHeader} from "./blockRoot.js";
 import {newFilledArray} from "./array.js";
 import {getNextSyncCommittee} from "./syncCommittee.js";
-import { newUnfinalizedPubkeyIndexMap } from "../cache/pubkeyCache.js";
 
 type DepositDataRootListType = ListCompositeType<typeof ssz.Root>;
 type DepositDataRootViewDU = CompositeViewDU<DepositDataRootListType>;

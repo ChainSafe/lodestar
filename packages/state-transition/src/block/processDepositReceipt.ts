@@ -13,9 +13,5 @@ export function processDepositReceipt(
     state.depositReceiptsStartIndex = BigInt(depositReceipt.index);
   }
 
-  applyDeposit(
-    fork,
-    state,
-    depositReceipt
-  );
+  applyDeposit(fork, state, depositReceipt);
 }

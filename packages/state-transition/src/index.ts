@@ -42,7 +42,12 @@ export {
 export {EpochTransitionCache, beforeProcessEpoch} from "./cache/epochTransitionCache.js";
 
 // Aux data-structures
-export {PubkeyIndexMap, Index2PubkeyCache, UnfinalizedPubkeyIndexMap, newUnfinalizedPubkeyIndexMap} from "./cache/pubkeyCache.js";
+export {
+  PubkeyIndexMap,
+  Index2PubkeyCache,
+  UnfinalizedPubkeyIndexMap,
+  newUnfinalizedPubkeyIndexMap,
+} from "./cache/pubkeyCache.js";
 
 export {
   EffectiveBalanceIncrements,

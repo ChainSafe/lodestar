@@ -89,7 +89,12 @@ describe("isValidLightClientHeader", function () {
 
   const capellaUpgradedEIP6110Header = {
     beacon: capellaLCHeader.beacon,
-    execution: {...capellaLCHeader.execution, blobGasUsed: 0, excessBlobGas: 0, depositReceiptsRoot: new ByteVectorType(32)},
+    execution: {
+      ...capellaLCHeader.execution,
+      blobGasUsed: 0,
+      excessBlobGas: 0,
+      depositReceiptsRoot: new ByteVectorType(32),
+    },
     executionBranch: capellaLCHeader.executionBranch,
   };
 

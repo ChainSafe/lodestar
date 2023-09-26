@@ -11,7 +11,6 @@ import {
   isCachedBeaconState,
   Index2PubkeyCache,
   PubkeyIndexMap,
-  newUnfinalizedPubkeyIndexMap,
 } from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
 import {
@@ -221,14 +220,11 @@ export class BeaconChain implements IBeaconChain {
     const cachedState =
       isCachedBeaconState(anchorState) && opts.skipCreateStateCacheIfAvailable
         ? anchorState
-        : createCachedBeaconState(
-            anchorState,
-            {
-              config,
-              finalizedPubkey2index: new PubkeyIndexMap(),
-              finalizedIndex2pubkey: [],
-            }
-          );
+        : createCachedBeaconState(anchorState, {
+            config,
+            finalizedPubkey2index: new PubkeyIndexMap(),
+            finalizedIndex2pubkey: [],
+          });
 
     // Persist single global instance of state caches
     this.pubkey2index = cachedState.epochCtx.finalizedPubkey2index; // TODO: Double check if these two are correct

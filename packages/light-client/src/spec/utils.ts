@@ -1,4 +1,4 @@
-import {BitArray, ByteVectorType, byteArrayEquals} from "@chainsafe/ssz";
+import {BitArray, byteArrayEquals} from "@chainsafe/ssz";
 
 import {
   FINALIZED_ROOT_DEPTH,
@@ -147,10 +147,7 @@ export function isValidLightClientHeader(config: ChainForkConfig, header: allFor
   }
 
   if (epoch < config.EIP6110_FORK_EPOCH) {
-    if (
-      (header as eip6110.LightClientHeader).execution.depositReceiptsRoot &&
-      (header as eip6110.LightClientHeader).execution.depositReceiptsRoot != new ByteVectorType(32).defaultValue()
-    ) {
+    if ((header as eip6110.LightClientHeader).execution.depositReceiptsRoot !== undefined) {
       return false;
     }
   }
