@@ -10,7 +10,7 @@ import {
   BeaconStateDeneb,
   BeaconStateEIP6110,
 } from "./types.js";
-import { UnfinalizedPubkeyIndexMap} from "./pubkeyCache.js";
+import { UnfinalizedPubkeyIndexMap, newUnfinalizedPubkeyIndexMap} from "./pubkeyCache.js";
 
 export type BeaconStateCache = {
   config: BeaconConfig;
@@ -139,12 +139,11 @@ export type CachedBeaconStateExecutions = CachedBeaconState<BeaconStateExecution
 export function createCachedBeaconState<T extends BeaconStateAllForks>(
   state: T,
   immutableData: EpochCacheImmutableData,
-  unfinalizedPubkey2index: UnfinalizedPubkeyIndexMap,
   opts?: EpochCacheOpts
 ): T & BeaconStateCache {
   return getCachedBeaconState(state, {
     config: immutableData.config,
-    epochCtx: EpochCache.createFromState(state, immutableData, unfinalizedPubkey2index, opts),
+    epochCtx: EpochCache.createFromState(state, immutableData, newUnfinalizedPubkeyIndexMap(), opts),
     clonedCount: 0,
     clonedCountWithTransferCache: 0,
     createdWithTransferCache: false,

@@ -235,7 +235,7 @@ export function initializeBeaconStateFromEth1(
   // - 3. interop state: Only supports starting from genesis at phase0 fork
   // So it's okay to skip syncing the sync committee cache here and expect it to be
   // populated latter when the altair fork happens for cases 2, 3.
-  const state = createCachedBeaconState(stateView, immutableData, newUnfinalizedPubkeyIndexMap(), {
+  const state = createCachedBeaconState(stateView, immutableData, {
     skipSyncCommitteeCache: true,
   });
 

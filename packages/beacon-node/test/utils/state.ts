@@ -112,8 +112,7 @@ export function generateCachedState(opts?: TestBeaconState): CachedBeaconStateAl
       // This is a performance test, there's no need to have a global shared cache of keys
       finalizedPubkey2index: new PubkeyIndexMap(),
       finalizedIndex2pubkey: [],
-    },
-    newUnfinalizedPubkeyIndexMap()
+    }
   );
 }
 
@@ -130,8 +129,7 @@ export function generateCachedAltairState(opts?: TestBeaconState, altairForkEpoc
       // This is a performance test, there's no need to have a global shared cache of keys
       finalizedPubkey2index: new PubkeyIndexMap(),
       finalizedIndex2pubkey: [],
-    },
-    newUnfinalizedPubkeyIndexMap()
+    }
   );
 }
 
@@ -148,7 +146,6 @@ export function generateCachedBellatrixState(opts?: TestBeaconState): CachedBeac
       // This is a performance test, there's no need to have a global shared cache of keys
       finalizedPubkey2index: new PubkeyIndexMap(),
       finalizedIndex2pubkey: [],
-    },
-    newUnfinalizedPubkeyIndexMap()
+    }
   );
 }

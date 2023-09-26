@@ -19,7 +19,6 @@ describe("upgradeState", () => {
         finalizedPubkey2index: new PubkeyIndexMap(),
         finalizedIndex2pubkey: [],
       },
-      newUnfinalizedPubkeyIndexMap(),
       {skipSyncCommitteeCache: true}
     );
     const newState = upgradeStateToDeneb(stateView);
@@ -35,7 +34,6 @@ describe("upgradeState", () => {
         finalizedPubkey2index: new PubkeyIndexMap(),
         finalizedIndex2pubkey: [],
       },
-      newUnfinalizedPubkeyIndexMap(),
       {skipSyncCommitteeCache: true}
     );
     const newState = upgradeStateToEIP6110(stateView);

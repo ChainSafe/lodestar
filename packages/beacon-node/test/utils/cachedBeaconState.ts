@@ -13,7 +13,6 @@ export function createCachedBeaconStateTest<T extends BeaconStateAllForks>(
 ): T & BeaconStateCache {
   return createCachedBeaconState<T>(
     state,
-    createEmptyEpochCacheImmutableData(chainConfig, state),
-    newUnfinalizedPubkeyIndexMap(),
+    createEmptyEpochCacheImmutableData(chainConfig, state)
   );
 }

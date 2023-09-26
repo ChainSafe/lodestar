@@ -227,8 +227,7 @@ export class BeaconChain implements IBeaconChain {
               config,
               finalizedPubkey2index: new PubkeyIndexMap(),
               finalizedIndex2pubkey: [],
-            },
-            newUnfinalizedPubkeyIndexMap(),
+            }
           );
 
     // Persist single global instance of state caches

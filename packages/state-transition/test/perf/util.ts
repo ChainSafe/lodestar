@@ -132,8 +132,7 @@ export function generatePerfTestCachedStatePhase0(opts?: {goBackOneSlot: boolean
         config: createBeaconConfig(config, state.genesisValidatorsRoot),
         finalizedPubkey2index: pubkey2index,
         finalizedIndex2pubkey: index2pubkey,
-      },
-      newUnfinalizedPubkeyIndexMap(),
+      }
     );
 
     const currentEpoch = computeEpochAtSlot(state.slot - 1);
@@ -234,8 +233,7 @@ export function generatePerfTestCachedStateAltair(opts?: {goBackOneSlot: boolean
         config: createBeaconConfig(altairConfig, state.genesisValidatorsRoot),
         finalizedPubkey2index: pubkey2index,
         finalizedIndex2pubkey: index2pubkey,
-      },
-      newUnfinalizedPubkeyIndexMap(),
+      }
     );
   }
   if (!altairCachedState23638) {
@@ -440,7 +438,6 @@ export function generateTestCachedBeaconStateOnlyValidators({
       finalizedPubkey2index: pubkey2index,
       finalizedIndex2pubkey: index2pubkey,
     },
-    newUnfinalizedPubkeyIndexMap(),
     {skipSyncPubkeys: true}
   );
 }
