@@ -31,7 +31,7 @@ describe("StateContextCache", function () {
 
   beforeEach(function () {
     // max 2 items
-    cache = new StateContextCache({maxStates: 2});
+    cache = new StateContextCache({maxStates: 2}, {});
     cache.add(state1);
     cache.add(state2);
   });

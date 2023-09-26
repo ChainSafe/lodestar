@@ -34,11 +34,6 @@ const CHECKPOINT_STATES_FOLDER = "./unfinalized_checkpoint_states";
 
 export type StateFile = string;
 
-/**
- * Keep max n states in memory, persist the rest to disk
- */
-const MAX_EPOCHS_IN_MEMORY = 2;
-
 enum CacheType {
   state = "state",
   file = "file",
@@ -50,6 +45,11 @@ enum RemoveFileReason {
   reload = "reload",
   stateUpdate = "state_update",
 }
+
+export type CheckpointStateCacheOpts = {
+  // Keep max n states in memory, persist the rest to disk
+  maxEpochsInMemory: number;
+};
 
 /**
  * Cache of CachedBeaconState belonging to checkpoint
@@ -73,19 +73,20 @@ export class CheckpointStateCache {
   private readonly persistentApis: PersistentApis;
   private readonly shufflingCache: ShufflingCache;
 
-  constructor({
-    metrics,
-    clock,
-    maxEpochsInMemory,
-    shufflingCache,
-    persistentApis,
-  }: {
-    metrics?: Metrics | null;
-    clock?: IClock | null;
-    maxEpochsInMemory?: number;
-    shufflingCache: ShufflingCache;
-    persistentApis?: PersistentApis;
-  }) {
+  constructor(
+    {
+      metrics,
+      clock,
+      shufflingCache,
+      persistentApis,
+    }: {
+      metrics?: Metrics | null;
+      clock?: IClock | null;
+      shufflingCache: ShufflingCache;
+      persistentApis?: PersistentApis;
+    },
+    opts: CheckpointStateCacheOpts
+  ) {
     this.cache = new MapTracker(metrics?.cpStateCache);
     if (metrics) {
       this.metrics = metrics.cpStateCache;
@@ -105,7 +106,7 @@ export class CheckpointStateCache {
       metrics.cpStateCache.epochSize.addCollect(() => metrics.cpStateCache.epochSize.set(this.epochIndex.size));
     }
     this.clock = clock;
-    this.maxEpochsInMemory = maxEpochsInMemory ?? MAX_EPOCHS_IN_MEMORY;
+    this.maxEpochsInMemory = opts.maxEpochsInMemory;
     // Specify different persistentApis for testing
     this.persistentApis = persistentApis ?? FILE_APIS;
     this.shufflingCache = shufflingCache;

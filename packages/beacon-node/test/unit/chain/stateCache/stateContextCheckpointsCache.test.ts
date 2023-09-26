@@ -46,7 +46,7 @@ describe("CheckpointStateCache", function () {
       readFile: (filePath) => Promise.resolve(fileApisBuffer.get(filePath) || Buffer.alloc(0)),
       ensureDir: () => Promise.resolve(),
     };
-    cache = new CheckpointStateCache({maxStatesInMemory: 2, persistentApis, shufflingCache: new ShufflingCache()});
+    cache = new CheckpointStateCache({persistentApis, shufflingCache: new ShufflingCache()}, {maxEpochsInMemory: 2});
     cache.add(cp0, states[0]);
     cache.add(cp1, states[1]);
   });

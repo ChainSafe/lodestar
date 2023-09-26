@@ -233,8 +233,11 @@ export class BeaconChain implements IBeaconChain {
     this.pubkey2index = cachedState.epochCtx.pubkey2index;
     this.index2pubkey = cachedState.epochCtx.index2pubkey;
 
-    const stateCache = new StateContextCache({metrics});
-    const checkpointStateCache = new CheckpointStateCache({metrics, clock, shufflingCache: this.shufflingCache});
+    const stateCache = new StateContextCache(this.opts, {metrics});
+    const checkpointStateCache = new CheckpointStateCache(
+      {metrics, clock, shufflingCache: this.shufflingCache},
+      this.opts
+    );
 
     const {checkpoint} = computeAnchorCheckpoint(config, anchorState);
     stateCache.add(cachedState);

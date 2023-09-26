@@ -13,7 +13,7 @@ describe("CheckpointStateCache perf tests", function () {
   let checkpointStateCache: CheckpointStateCache;
 
   before(() => {
-    checkpointStateCache = new CheckpointStateCache({shufflingCache: new ShufflingCache()});
+    checkpointStateCache = new CheckpointStateCache({shufflingCache: new ShufflingCache()}, {maxEpochsInMemory: 2});
     state = generateCachedState();
     checkpoint = ssz.phase0.Checkpoint.defaultValue();
   });

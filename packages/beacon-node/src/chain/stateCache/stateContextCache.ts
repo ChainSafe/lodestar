@@ -6,8 +6,9 @@ import {Metrics} from "../../metrics/index.js";
 import {LinkedList} from "../../util/array.js";
 import {MapTracker} from "./mapMetrics.js";
 
-// Since Sep 2023, only cache up to 32 states by default. If a big reorg happens it'll load checkpoint state from disk and regen from there.
-const DEFAULT_MAX_STATES = 32;
+export type StateContextCacheOpts = {
+  maxStates: number;
+};
 
 /**
  * In memory cache of CachedBeaconState, this is LRU like cache except that we only track the last added time, not the last used time
@@ -28,8 +29,8 @@ export class StateContextCache {
   private readonly keyOrder: LinkedList<string>;
   private readonly metrics: Metrics["stateCache"] | null | undefined;
 
-  constructor({maxStates = DEFAULT_MAX_STATES, metrics}: {maxStates?: number; metrics?: Metrics | null}) {
-    this.maxStates = maxStates;
+  constructor(opts: StateContextCacheOpts, {metrics}: {maxStates?: number; metrics?: Metrics | null}) {
+    this.maxStates = opts.maxStates;
     this.cache = new MapTracker(metrics?.stateCache);
     if (metrics) {
       this.metrics = metrics.stateCache;
