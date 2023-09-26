@@ -9,6 +9,7 @@ import {loadCachedBeaconState} from "@lodestar/state-transition";
 import {Metrics} from "../../metrics/index.js";
 import {LinkedList} from "../../util/array.js";
 import {IClock} from "../../util/clock.js";
+import {ShufflingCache} from "../shufflingCache.js";
 import {MapTracker} from "./mapMetrics.js";
 
 export type CheckpointHex = {epoch: Epoch; rootHex: RootHex};
@@ -70,16 +71,19 @@ export class CheckpointStateCache {
   private preComputedCheckpointHits: number | null = null;
   private readonly maxStatesInMemory: number;
   private readonly persistentApis: PersistentApis;
+  private readonly shufflingCache: ShufflingCache;
 
   constructor({
     metrics,
     clock,
     maxStatesInMemory,
+    shufflingCache,
     persistentApis,
   }: {
     metrics?: Metrics | null;
     clock?: IClock | null;
     maxStatesInMemory?: number;
+    shufflingCache: ShufflingCache;
     persistentApis?: PersistentApis;
   }) {
     this.cache = new MapTracker(metrics?.cpStateCache);
@@ -104,6 +108,7 @@ export class CheckpointStateCache {
     this.maxStatesInMemory = maxStatesInMemory ?? MAX_STATES_IN_MEMORY;
     // Specify different persistentApis for testing
     this.persistentApis = persistentApis ?? FILE_APIS;
+    this.shufflingCache = shufflingCache;
     this.inMemoryKeyOrder = new LinkedList<string>();
     void ensureDir(CHECKPOINT_STATES_FOLDER);
   }
@@ -140,7 +145,9 @@ export class CheckpointStateCache {
     const closestState = findClosestCheckpointState(cp, this.cache);
     this.metrics?.stateReloadEpochDiff.observe(Math.abs(closestState.epochCtx.epoch - cp.epoch));
     const timer = this.metrics?.stateReloadDuration.startTimer();
-    const newCachedState = loadCachedBeaconState(closestState, newStateBytes);
+    const newCachedState = loadCachedBeaconState(closestState, newStateBytes, {
+      shufflingGetter: this.shufflingCache.get.bind(this.shufflingCache),
+    });
     timer?.();
     this.cache.set(cpKey, newCachedState);
     // since item is file path, cpKey is not in inMemoryKeyOrder

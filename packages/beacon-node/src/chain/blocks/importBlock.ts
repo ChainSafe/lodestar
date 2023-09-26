@@ -62,6 +62,7 @@ export async function importBlock(
   const blockRootHex = toHexString(blockRoot);
   const currentEpoch = computeEpochAtSlot(this.forkChoice.getTime());
   const blockEpoch = computeEpochAtSlot(block.message.slot);
+  const parentEpoch = computeEpochAtSlot(parentBlockSlot);
   const prevFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
   const blockDelaySec = (fullyVerifiedBlock.seenTimestampSec - postState.genesisTime) % this.config.SECONDS_PER_SLOT;
 
@@ -202,7 +203,7 @@ export async function importBlock(
     }
   }
 
-  // 5. Compute head. If new head, immediately stateCache.setHeadState()
+  // 5. Compute head, always add to state cache so that it'll not be pruned soon
 
   const oldHead = this.forkChoice.getHead();
   const newHead = this.recomputeForkChoiceHead();
@@ -330,7 +331,10 @@ export async function importBlock(
     this.logger.verbose("After importBlock caching postState without SSZ cache", {slot: postState.slot});
   }
 
-  if (block.message.slot % SLOTS_PER_EPOCH === 0) {
+  if (parentEpoch < blockEpoch) {
+    this.shufflingCache.processState(postState);
+    this.logger.verbose("Processed shuffling for next epoch", {parentEpoch, blockEpoch, slot: block.message.slot});
+
     // Cache state to preserve epoch transition work
     const checkpointState = postState;
     const cp = getCheckpointFromState(checkpointState);

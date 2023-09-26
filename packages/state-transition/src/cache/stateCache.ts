@@ -179,12 +179,8 @@ export function loadCachedBeaconState<T extends BeaconStateAllForks & BeaconStat
       config: cachedSeedState.config,
       pubkey2index,
       index2pubkey,
-      // TODO: maintain a ShufflingCache given an epoch and dependentRoot to avoid recompute shuffling
-      previousShuffling: cachedSeedState.epochCtx.previousShuffling,
-      currentShuffling: cachedSeedState.epochCtx.currentShuffling,
-      nextShuffling: cachedSeedState.epochCtx.nextShuffling,
     },
-    {...(opts ?? {}), ...{skipSyncPubkeys: true, skipComputeShuffling: true}}
+    {...(opts ?? {}), ...{skipSyncPubkeys: true}}
   ) as T;
 }
 

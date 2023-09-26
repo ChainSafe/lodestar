@@ -25,12 +25,12 @@ import {
   getSeed,
   computeProposers,
 } from "../util/index.js";
-import {computeEpochShuffling, EpochShuffling} from "../util/epochShuffling.js";
+import {computeEpochShuffling, EpochShuffling, getShufflingDecisionBlock} from "../util/epochShuffling.js";
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
 import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements.js";
 import {Index2PubkeyCache, PubkeyIndexMap, syncPubkeys} from "./pubkeyCache.js";
-import {BeaconStateAllForks, BeaconStateAltair} from "./types.js";
+import {BeaconStateAllForks, BeaconStateAltair, ShufflingGetter} from "./types.js";
 import {
   computeSyncCommitteeCache,
   getSyncCommitteeCache,
@@ -45,15 +45,12 @@ export type EpochCacheImmutableData = {
   config: BeaconConfig;
   pubkey2index: PubkeyIndexMap;
   index2pubkey: Index2PubkeyCache;
-  previousShuffling?: EpochShuffling;
-  currentShuffling?: EpochShuffling;
-  nextShuffling?: EpochShuffling;
 };
 
 export type EpochCacheOpts = {
   skipSyncCommitteeCache?: boolean;
   skipSyncPubkeys?: boolean;
-  skipComputeShuffling?: boolean;
+  shufflingGetter?: ShufflingGetter;
 };
 
 /** Defers computing proposers by persisting only the seed, and dropping it once indexes are computed */
@@ -250,19 +247,9 @@ export class EpochCache {
    */
   static createFromState(
     state: BeaconStateAllForks,
-    {
-      config,
-      pubkey2index,
-      index2pubkey,
-      previousShuffling: previousShufflingIn,
-      currentShuffling: currentShufflingIn,
-      nextShuffling: nextShufflingIn,
-    }: EpochCacheImmutableData,
+    {config, pubkey2index, index2pubkey}: EpochCacheImmutableData,
     opts?: EpochCacheOpts
   ): EpochCache {
-    if (opts?.skipComputeShuffling && (!previousShufflingIn || !currentShufflingIn || !nextShufflingIn)) {
-      throw Error("skipComputeShuffling requires previousShuffling, currentShuffling, nextShuffling");
-    }
     // syncPubkeys here to ensure EpochCacheImmutableData is popualted before computing the rest of caches
     // - computeSyncCommitteeCache() needs a fully populated pubkey2index cache
     if (!opts?.skipSyncPubkeys) {
@@ -286,24 +273,29 @@ export class EpochCache {
     const currentActiveIndices: ValidatorIndex[] = [];
     const nextActiveIndices: ValidatorIndex[] = [];
 
+    const previousShufflingDecisionBlock = getShufflingDecisionBlock(state, previousEpoch);
+    const previousShufflingIn = opts?.shufflingGetter?.(previousEpoch, previousShufflingDecisionBlock);
+    const currentShufflingDecisionBlock = getShufflingDecisionBlock(state, currentEpoch);
+    const currentShufflingIn = opts?.shufflingGetter?.(currentEpoch, currentShufflingDecisionBlock);
+    const nextShufflingDecisionBlock = getShufflingDecisionBlock(state, nextEpoch);
+    const nextShufflingIn = opts?.shufflingGetter?.(nextEpoch, nextShufflingDecisionBlock);
+
     for (let i = 0; i < validatorCount; i++) {
       const validator = validators[i];
 
       // Note: Not usable for fork-choice balances since in-active validators are not zero'ed
       effectiveBalanceIncrements[i] = Math.floor(validator.effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
 
-      if (!opts?.skipComputeShuffling) {
-        if (isActiveValidator(validator, previousEpoch)) {
-          previousActiveIndices.push(i);
-        }
-        if (isActiveValidator(validator, currentEpoch)) {
-          currentActiveIndices.push(i);
-          // We track totalActiveBalanceIncrements as ETH to fit total network balance in a JS number (53 bits)
-          totalActiveBalanceIncrements += effectiveBalanceIncrements[i];
-        }
-        if (isActiveValidator(validator, nextEpoch)) {
-          nextActiveIndices.push(i);
-        }
+      if (previousShufflingIn === undefined && isActiveValidator(validator, previousEpoch)) {
+        previousActiveIndices.push(i);
+      }
+      if (currentShufflingIn === undefined && isActiveValidator(validator, currentEpoch)) {
+        currentActiveIndices.push(i);
+        // We track totalActiveBalanceIncrements as ETH to fit total network balance in a JS number (53 bits)
+        totalActiveBalanceIncrements += effectiveBalanceIncrements[i];
+      }
+      if (nextShufflingIn === undefined && isActiveValidator(validator, nextEpoch)) {
+        nextActiveIndices.push(i);
       }
 
       const {exitEpoch} = validator;
@@ -325,22 +317,12 @@ export class EpochCache {
       throw Error("totalActiveBalanceIncrements >= Number.MAX_SAFE_INTEGER. MAX_EFFECTIVE_BALANCE is too low.");
     }
 
-    const currentShuffling = opts?.skipComputeShuffling
-      ? currentShufflingIn
-      : computeEpochShuffling(state, currentActiveIndices, currentEpoch);
-    const previousShuffling = opts?.skipComputeShuffling
-      ? previousShufflingIn
-      : isGenesis
-      ? currentShuffling
-      : computeEpochShuffling(state, previousActiveIndices, previousEpoch);
-    const nextShuffling = opts?.skipComputeShuffling
-      ? nextShufflingIn
-      : computeEpochShuffling(state, nextActiveIndices, nextEpoch);
-
-    if (!previousShuffling || !currentShuffling || !nextShuffling) {
-      // should not happen
-      throw Error("Shuffling is not defined");
-    }
+    const currentShuffling = currentShufflingIn ?? computeEpochShuffling(state, currentActiveIndices, currentEpoch);
+    const previousShuffling =
+      previousShufflingIn !== undefined ?? isGenesis
+        ? currentShuffling
+        : computeEpochShuffling(state, previousActiveIndices, previousEpoch);
+    const nextShuffling = nextShufflingIn ?? computeEpochShuffling(state, nextActiveIndices, nextEpoch);
 
     const currentProposerSeed = getSeed(state, currentEpoch, DOMAIN_BEACON_PROPOSER);
 

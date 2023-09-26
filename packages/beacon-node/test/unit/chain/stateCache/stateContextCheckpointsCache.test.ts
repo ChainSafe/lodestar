@@ -13,6 +13,7 @@ import {
   toTmpFilePath,
 } from "../../../../src/chain/stateCache/stateContextCheckpointsCache.js";
 import {generateCachedState} from "../../../utils/state.js";
+import {ShufflingCache} from "../../../../src/chain/shufflingCache.js";
 
 describe("CheckpointStateCache", function () {
   let cache: CheckpointStateCache;
@@ -45,7 +46,7 @@ describe("CheckpointStateCache", function () {
       readFile: (filePath) => Promise.resolve(fileApisBuffer.get(filePath) || Buffer.alloc(0)),
       ensureDir: () => Promise.resolve(),
     };
-    cache = new CheckpointStateCache({maxStatesInMemory: 2, persistentApis});
+    cache = new CheckpointStateCache({maxStatesInMemory: 2, persistentApis, shufflingCache: new ShufflingCache()});
     cache.add(cp0, states[0]);
     cache.add(cp1, states[1]);
   });

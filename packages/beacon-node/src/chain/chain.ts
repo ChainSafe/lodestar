@@ -75,6 +75,7 @@ import {BlockAttributes, produceBlockBody} from "./produceBlock/produceBlockBody
 import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
 import {BlockInput} from "./blocks/types.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
+import {ShufflingCache} from "./shufflingCache.js";
 
 /**
  * Arbitrary constants, blobs should be consumed immediately in the same slot they are produced.
@@ -130,6 +131,7 @@ export class BeaconChain implements IBeaconChain {
 
   readonly beaconProposerCache: BeaconProposerCache;
   readonly checkpointBalancesCache: CheckpointBalancesCache;
+  readonly shufflingCache: ShufflingCache;
   // TODO DENEB: Prune data structure every time period, for both old entries
   /** Map keyed by executionPayload.blockHash of the block for those blobs */
   readonly producedBlobSidecarsCache = new Map<BlockHash, {blobSidecars: deneb.BlobSidecars; slot: Slot}>();
@@ -211,6 +213,7 @@ export class BeaconChain implements IBeaconChain {
 
     this.beaconProposerCache = new BeaconProposerCache(opts);
     this.checkpointBalancesCache = new CheckpointBalancesCache();
+    this.shufflingCache = new ShufflingCache();
 
     // Restore state caches
     // anchorState may already by a CachedBeaconState. If so, don't create the cache again, since deserializing all
@@ -231,7 +234,7 @@ export class BeaconChain implements IBeaconChain {
     this.index2pubkey = cachedState.epochCtx.index2pubkey;
 
     const stateCache = new StateContextCache({metrics});
-    const checkpointStateCache = new CheckpointStateCache({metrics, clock});
+    const checkpointStateCache = new CheckpointStateCache({metrics, clock, shufflingCache: this.shufflingCache});
 
     const {checkpoint} = computeAnchorCheckpoint(config, anchorState);
     stateCache.add(cachedState);
