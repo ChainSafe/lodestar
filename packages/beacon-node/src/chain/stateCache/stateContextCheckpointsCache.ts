@@ -37,7 +37,7 @@ export type StateFile = string;
 /**
  * Keep max n states in memory, persist the rest to disk
  */
-const MAX_STATES_IN_MEMORY = 2;
+const MAX_EPOCHS_IN_MEMORY = 2;
 
 enum CacheType {
   state = "state",
@@ -69,20 +69,20 @@ export class CheckpointStateCache {
   private readonly clock: IClock | null | undefined;
   private preComputedCheckpoint: string | null = null;
   private preComputedCheckpointHits: number | null = null;
-  private readonly maxStatesInMemory: number;
+  private readonly maxEpochsInMemory: number;
   private readonly persistentApis: PersistentApis;
   private readonly shufflingCache: ShufflingCache;
 
   constructor({
     metrics,
     clock,
-    maxStatesInMemory,
+    maxEpochsInMemory,
     shufflingCache,
     persistentApis,
   }: {
     metrics?: Metrics | null;
     clock?: IClock | null;
-    maxStatesInMemory?: number;
+    maxEpochsInMemory?: number;
     shufflingCache: ShufflingCache;
     persistentApis?: PersistentApis;
   }) {
@@ -105,7 +105,7 @@ export class CheckpointStateCache {
       metrics.cpStateCache.epochSize.addCollect(() => metrics.cpStateCache.epochSize.set(this.epochIndex.size));
     }
     this.clock = clock;
-    this.maxStatesInMemory = maxStatesInMemory ?? MAX_STATES_IN_MEMORY;
+    this.maxEpochsInMemory = maxEpochsInMemory ?? MAX_EPOCHS_IN_MEMORY;
     // Specify different persistentApis for testing
     this.persistentApis = persistentApis ?? FILE_APIS;
     this.shufflingCache = shufflingCache;
@@ -333,14 +333,16 @@ export class CheckpointStateCache {
    * This happens at the last 1/3 slot of the last slot of an epoch so hopefully it's not a big deal
    */
   private pruneFromMemory(): void {
-    while (this.inMemoryKeyOrder.length > this.maxStatesInMemory) {
-      const key = this.inMemoryKeyOrder.pop();
+    while (this.inMemoryKeyOrder.length > 0 && this.countEpochsInMemory() > this.maxEpochsInMemory) {
+      const key = this.inMemoryKeyOrder.last();
       if (!key) {
         // should not happen
         throw new Error("No key");
       }
       const stateOrFilePath = this.cache.get(key);
       if (stateOrFilePath !== undefined && typeof stateOrFilePath !== "string") {
+        // should always be the case
+        this.inMemoryKeyOrder.pop();
         // do not update epochIndex
         const filePath = toTmpFilePath(key);
         this.metrics?.statePersistSecFromSlot.observe(this.clock?.secFromSlot(this.clock?.currentSlot ?? 0) ?? 0);
@@ -350,6 +352,14 @@ export class CheckpointStateCache {
         this.cache.set(key, filePath);
       }
     }
+  }
+
+  private countEpochsInMemory(): number {
+    const epochs = new Set<Epoch>();
+    for (const key of this.inMemoryKeyOrder) {
+      epochs.add(fromCheckpointKey(key).epoch);
+    }
+    return epochs.size;
   }
 
   clear(): void {
