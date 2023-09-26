@@ -29,9 +29,10 @@ const FILE_APIS: PersistentApis = {
   ensureDir,
 };
 
-const TMP_STATES_FOLDER = "./tmpStates";
+const CHECKPOINT_STATES_FOLDER = "./unfinalized_checkpoint_states";
 
 export type StateFile = string;
+
 /**
  * Keep max n states in memory, persist the rest to disk
  */
@@ -104,7 +105,7 @@ export class CheckpointStateCache {
     // Specify different persistentApis for testing
     this.persistentApis = persistentApis ?? FILE_APIS;
     this.inMemoryKeyOrder = new LinkedList<string>();
-    void ensureDir(TMP_STATES_FOLDER);
+    void ensureDir(CHECKPOINT_STATES_FOLDER);
   }
 
   /**
@@ -415,5 +416,5 @@ export function fromCheckpointKey(key: string): CheckpointHex {
 }
 
 export function toTmpFilePath(key: string): string {
-  return path.join(TMP_STATES_FOLDER, key);
+  return path.join(CHECKPOINT_STATES_FOLDER, key);
 }

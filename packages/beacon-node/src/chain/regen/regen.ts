@@ -210,8 +210,10 @@ export class StateRegenerator implements IStateRegeneratorInternal {
           null
         );
 
-        // TODO: Persist states, note that regen could be triggered by old states.
-        // Should those take a place in the cache?
+        if (shouldReload) {
+          // also with shouldReload flag, we "reload" it to the state cache too
+          this.modules.stateCache.add(state);
+        }
 
         // this avoids keeping our node busy processing blocks
         await sleep(0);

@@ -82,11 +82,6 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     return this.checkpointStateCache.getLatest(head.blockRoot, Infinity) || this.stateCache.get(head.stateRoot);
   }
 
-  pruneOnCheckpoint(headStateRoot: RootHex): void {
-    // no need to prune checkpointStateCache, it handles in its add() function which happen at the last 1/3 slot of epoch
-    this.stateCache.prune(headStateRoot);
-  }
-
   pruneOnFinalized(finalizedEpoch: number): void {
     this.checkpointStateCache.pruneFinalized(finalizedEpoch);
     this.stateCache.deleteAllBeforeEpoch(finalizedEpoch);
@@ -107,17 +102,16 @@ export class QueuedStateRegenerator implements IStateRegenerator {
         : this.stateCache.get(newHeadStateRoot);
 
     if (headState) {
-      this.stateCache.setHeadState(headState);
+      // this move the headState to the front of the queue so it'll not be pruned right away
+      this.stateCache.add(headState);
     } else {
       // Trigger regen on head change if necessary
       this.logger.warn("Head state not available, triggering regen", {stateRoot: newHeadStateRoot});
-      // head has changed, so the existing cached head state is no longer useful. Set strong reference to null to free
-      // up memory for regen step below. During regen, node won't be functional but eventually head will be available
-      this.stateCache.setHeadState(null);
       // it's important to reload state to regen head state here
       const shouldReload = true;
       this.regen.getState(newHeadStateRoot, RegenCaller.processBlock, shouldReload).then(
-        (headStateRegen) => this.stateCache.setHeadState(headStateRegen),
+        // this move the headState to the front of the queue so it'll not be pruned right away
+        (headStateRegen) => this.stateCache.add(headStateRegen),
         (e) => this.logger.error("Error on head state regen", {}, e)
       );
     }

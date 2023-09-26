@@ -235,7 +235,6 @@ export class BeaconChain implements IBeaconChain {
 
     const {checkpoint} = computeAnchorCheckpoint(config, anchorState);
     stateCache.add(cachedState);
-    stateCache.setHeadState(cachedState);
     checkpointStateCache.add(checkpoint, cachedState);
 
     const forkChoice = initializeForkChoice(

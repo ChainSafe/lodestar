@@ -54,13 +54,11 @@ export class Archiver {
 
     if (!opts.disableArchiveOnCheckpoint) {
       this.chain.emitter.on(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
-      this.chain.emitter.on(ChainEvent.checkpoint, this.onCheckpoint);
 
       signal.addEventListener(
         "abort",
         () => {
           this.chain.emitter.off(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
-          this.chain.emitter.off(ChainEvent.checkpoint, this.onCheckpoint);
         },
         {once: true}
       );
@@ -74,11 +72,6 @@ export class Archiver {
 
   private onFinalizedCheckpoint = async (finalized: CheckpointWithHex): Promise<void> => {
     return this.jobQueue.push(finalized);
-  };
-
-  private onCheckpoint = (): void => {
-    const headStateRoot = this.chain.forkChoice.getHead().stateRoot;
-    this.chain.regen.pruneOnCheckpoint(headStateRoot);
   };
 
   private processFinalizedCheckpoint = async (finalized: CheckpointWithHex): Promise<void> => {
