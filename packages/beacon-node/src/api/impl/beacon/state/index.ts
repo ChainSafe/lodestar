@@ -59,12 +59,12 @@ export function getBeaconStateApi({
       const {state, executionOptimistic} = await resolveStateId(chain, stateId);
       const currentEpoch = getCurrentEpoch(state);
       const {validators, balances} = state; // Get the validators sub tree once for all the loop
-      const pubkey2indexFn = chain.getHeadState().epochCtx.getValidatorIndex;
+      const epochCache = chain.getHeadState().epochCtx;
 
       const validatorResponses: routes.beacon.ValidatorResponse[] = [];
       if (filters?.id) {
         for (const id of filters.id) {
-          const resp = getStateValidatorIndex(id, state, pubkey2indexFn);
+          const resp = getStateValidatorIndex(id, state, epochCache);
           if (resp.valid) {
             const validatorIndex = resp.validatorIndex;
             const validator = validators.getReadonly(validatorIndex);
@@ -85,7 +85,7 @@ export function getBeaconStateApi({
           data: validatorResponses,
         };
       } else if (filters?.status) {
-        const validatorsByStatus = filterStateValidatorsByStatus(filters.status, state, pubkey2indexFn, currentEpoch);
+        const validatorsByStatus = filterStateValidatorsByStatus(filters.status, state, epochCache, currentEpoch);
         return {
           executionOptimistic,
           data: validatorsByStatus,
@@ -108,9 +108,9 @@ export function getBeaconStateApi({
 
     async getStateValidator(stateId, validatorId) {
       const {state, executionOptimistic} = await resolveStateId(chain, stateId);
-      const pubkey2indexFn = chain.getHeadState().epochCtx.getValidatorIndex;
+      const epochCache = chain.getHeadState().epochCtx;
 
-      const resp = getStateValidatorIndex(validatorId, state, pubkey2indexFn);
+      const resp = getStateValidatorIndex(validatorId, state, epochCache);
       if (!resp.valid) {
         throw new ApiError(resp.code, resp.reason);
       }

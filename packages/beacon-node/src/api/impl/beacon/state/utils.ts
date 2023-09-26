@@ -7,6 +7,7 @@ import {Epoch, ValidatorIndex} from "@lodestar/types";
 import {IBeaconChain, StateGetOpts} from "../../../../chain/index.js";
 import {ApiError, ValidationError} from "../../errors.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
+import { EpochCache } from "@lodestar/state-transition/src/types.js";
 
 export async function resolveStateId(
   chain: IBeaconChain,
@@ -111,7 +112,7 @@ export function toValidatorResponse(
 export function filterStateValidatorsByStatus(
   statuses: string[],
   state: BeaconStateAllForks,
-  pubkey2index: (arg: BLSPubkey) => number | undefined,
+  epochCache: EpochCache,
   currentEpoch: Epoch
 ): routes.beacon.ValidatorResponse[] {
   const responses: routes.beacon.ValidatorResponse[] = [];
@@ -121,7 +122,7 @@ export function filterStateValidatorsByStatus(
   for (const validator of validatorsArr) {
     const validatorStatus = getValidatorStatus(validator, currentEpoch);
 
-    const resp = getStateValidatorIndex(validator.pubkey, state, pubkey2index);
+    const resp = getStateValidatorIndex(validator.pubkey, state, epochCache);
     if (resp.valid && statusSet.has(validatorStatus)) {
       responses.push(
         toValidatorResponse(resp.validatorIndex, validator, state.balances.get(resp.validatorIndex), currentEpoch)
@@ -136,7 +137,7 @@ type StateValidatorIndexResponse = {valid: true; validatorIndex: number} | {vali
 export function getStateValidatorIndex(
   id: routes.beacon.ValidatorId | BLSPubkey,
   state: BeaconStateAllForks,
-  pubkey2indexFn: (arg: BLSPubkey) => number | undefined
+  epochCache: EpochCache,
 ): StateValidatorIndexResponse {
   let validatorIndex: ValidatorIndex | undefined;
   if (typeof id === "string") {
@@ -161,7 +162,7 @@ export function getStateValidatorIndex(
   }
 
   // typeof id === Uint8Array
-  validatorIndex = pubkey2indexFn(id as BLSPubkey);
+  validatorIndex = epochCache.getValidatorIndex(id as BLSPubkey);
   if (validatorIndex === undefined) {
     return {valid: false, code: 404, reason: "Validator pubkey not found in state"};
   }
