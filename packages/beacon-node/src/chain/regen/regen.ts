@@ -117,8 +117,8 @@ export class StateRegenerator implements IStateRegeneratorInternal {
       });
     }
     const getLatestApi = shouldReload
-      ? this.modules.checkpointStateCache.getOrReloadLatest
-      : this.modules.checkpointStateCache.getLatest;
+      ? this.modules.checkpointStateCache.getOrReloadLatest.bind(this.modules.checkpointStateCache)
+      : this.modules.checkpointStateCache.getLatest.bind(this.modules.checkpointStateCache);
     const latestCheckpointStateCtx = await getLatestApi(blockRoot, computeEpochAtSlot(slot));
 
     // If a checkpoint state exists with the given checkpoint root, it either is in requested epoch
@@ -156,8 +156,8 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     const blocksToReplay = [block];
     let state: CachedBeaconStateAllForks | null = null;
     const getLatestApi = shouldReload
-      ? this.modules.checkpointStateCache.getOrReloadLatest
-      : this.modules.checkpointStateCache.getLatest;
+      ? this.modules.checkpointStateCache.getOrReloadLatest.bind(this.modules.checkpointStateCache)
+      : this.modules.checkpointStateCache.getLatest.bind(this.modules.checkpointStateCache);
     for (const b of this.modules.forkChoice.iterateAncestorBlocks(block.parentRoot)) {
       state = this.modules.stateCache.get(b.stateRoot);
       if (state) {
