@@ -1,8 +1,8 @@
 import {Epoch, phase0, ValidatorIndex} from "@lodestar/types";
 import {intDiv} from "@lodestar/utils";
 import {ChainForkConfig} from "@lodestar/config";
+import {ForkSeq} from "@lodestar/params";
 import {BeaconStateAllForks} from "../types.js";
-import { ForkSeq } from "@lodestar/params";
 
 /**
  * Check if [[validator]] is active

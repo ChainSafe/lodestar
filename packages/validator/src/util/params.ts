@@ -118,6 +118,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     INACTIVITY_SCORE_RECOVERY_RATE: true,
     EJECTION_BALANCE: true,
     MIN_PER_EPOCH_CHURN_LIMIT: true,
+    MAX_PER_EPOCH_CHURN_LIMIT: denebForkRelevant,
     CHURN_LIMIT_QUOTIENT: true,
 
     // Proposer boost
