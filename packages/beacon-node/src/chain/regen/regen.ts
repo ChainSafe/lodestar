@@ -33,6 +33,10 @@ export type RegenModules = {
 
 /**
  * Regenerates states that have already been processed by the fork choice
+ * Since Sep 2023, we support reloading checkpoint state from disk via shouldReload flag. Due to its performance impact
+ * this flag is only used in this case:
+ *   - getPreState: this is for block processing, this is imporant for long unfinalized chain
+ *   - updateHeadState: rarely happen, but it's important to make sure we always can regen head state
  */
 export class StateRegenerator implements IStateRegeneratorInternal {
   constructor(private readonly modules: RegenModules) {}
@@ -41,6 +45,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
    * Get the state to run with `block`. May be:
    * - If parent is in same epoch -> Exact state at `block.parentRoot`
    * - If parent is in prev epoch -> State after `block.parentRoot` dialed forward through epoch transition
+   * - It's imporant to reload state if needed in this flow
    */
   async getPreState(
     block: allForks.BeaconBlock,
@@ -57,6 +62,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
 
     const parentEpoch = computeEpochAtSlot(parentBlock.slot);
     const blockEpoch = computeEpochAtSlot(block.slot);
+    const shouldReload = true;
 
     // This may save us at least one epoch transition.
     // If the requested state crosses an epoch boundary
@@ -64,11 +70,11 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     // We may have the checkpoint state with parent root inside the checkpoint state cache
     // through gossip validation.
     if (parentEpoch < blockEpoch) {
-      return this.getCheckpointState({root: block.parentRoot, epoch: blockEpoch}, opts, rCaller);
+      return this.getCheckpointState({root: block.parentRoot, epoch: blockEpoch}, opts, rCaller, shouldReload);
     }
 
-    // Otherwise, get the state normally.
-    return this.getState(parentBlock.stateRoot, rCaller);
+    // Otherwise, get the state normally
+    return this.getState(parentBlock.stateRoot, rCaller, shouldReload);
   }
 
   /**
@@ -77,20 +83,23 @@ export class StateRegenerator implements IStateRegeneratorInternal {
   async getCheckpointState(
     cp: phase0.Checkpoint,
     opts: StateCloneOpts,
-    rCaller: RegenCaller
+    rCaller: RegenCaller,
+    shouldReload = false
   ): Promise<CachedBeaconStateAllForks> {
     const checkpointStartSlot = computeStartSlotAtEpoch(cp.epoch);
-    return this.getBlockSlotState(toHexString(cp.root), checkpointStartSlot, opts, rCaller);
+    return this.getBlockSlotState(toHexString(cp.root), checkpointStartSlot, opts, rCaller, shouldReload);
   }
 
   /**
    * Get state after block `blockRoot` dialed forward to `slot`
+   *   - shouldReload should be used with care, as it will cause the state to be reloaded from disk
    */
   async getBlockSlotState(
     blockRoot: RootHex,
     slot: Slot,
     opts: StateCloneOpts,
-    rCaller: RegenCaller
+    rCaller: RegenCaller,
+    shouldReload = false
   ): Promise<CachedBeaconStateAllForks> {
     const block = this.modules.forkChoice.getBlockHex(blockRoot);
     if (!block) {
@@ -107,8 +116,10 @@ export class StateRegenerator implements IStateRegeneratorInternal {
         blockSlot: block.slot,
       });
     }
-
-    const latestCheckpointStateCtx = this.modules.checkpointStateCache.getLatest(blockRoot, computeEpochAtSlot(slot));
+    const getLatestApi = shouldReload
+      ? this.modules.checkpointStateCache.getOrReloadLatest
+      : this.modules.checkpointStateCache.getLatest;
+    const latestCheckpointStateCtx = await getLatestApi(blockRoot, computeEpochAtSlot(slot));
 
     // If a checkpoint state exists with the given checkpoint root, it either is in requested epoch
     // or needs to have empty slots processed until the requested epoch
@@ -119,15 +130,16 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     // Otherwise, use the fork choice to get the stateRoot from block at the checkpoint root
     // regenerate that state,
     // then process empty slots until the requested epoch
-    const blockStateCtx = await this.getState(block.stateRoot, rCaller);
+    const blockStateCtx = await this.getState(block.stateRoot, rCaller, shouldReload);
     return processSlotsByCheckpoint(this.modules, blockStateCtx, slot, opts);
   }
 
   /**
    * Get state by exact root. If not in cache directly, requires finding the block that references the state from the
    * forkchoice and replaying blocks to get to it.
+   *   - shouldReload should be used with care, as it will cause the state to be reloaded from disk
    */
-  async getState(stateRoot: RootHex, _rCaller: RegenCaller): Promise<CachedBeaconStateAllForks> {
+  async getState(stateRoot: RootHex, _rCaller: RegenCaller, shouldReload = false): Promise<CachedBeaconStateAllForks> {
     // Trivial case, state at stateRoot is already cached
     const cachedStateCtx = this.modules.stateCache.get(stateRoot);
     if (cachedStateCtx) {
@@ -143,15 +155,15 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     // gets reversed when replayed
     const blocksToReplay = [block];
     let state: CachedBeaconStateAllForks | null = null;
+    const getLatestApi = shouldReload
+      ? this.modules.checkpointStateCache.getOrReloadLatest
+      : this.modules.checkpointStateCache.getLatest;
     for (const b of this.modules.forkChoice.iterateAncestorBlocks(block.parentRoot)) {
       state = this.modules.stateCache.get(b.stateRoot);
       if (state) {
         break;
       }
-      state = this.modules.checkpointStateCache.getLatest(
-        b.blockRoot,
-        computeEpochAtSlot(blocksToReplay[blocksToReplay.length - 1].slot - 1)
-      );
+      state = await getLatestApi(b.blockRoot, computeEpochAtSlot(blocksToReplay[blocksToReplay.length - 1].slot - 1));
       if (state) {
         break;
       }

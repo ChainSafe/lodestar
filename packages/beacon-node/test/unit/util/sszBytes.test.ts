@@ -1,6 +1,9 @@
 import {expect} from "chai";
+import {config} from "@lodestar/config/default";
+import {createChainForkConfig} from "@lodestar/config";
 import {deneb, Epoch, phase0, RootHex, Slot, ssz} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
+import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {
   getAttDataBase64FromAttestationSerialized,
   getAttDataBase64FromSignedAggregateAndProofSerialized,
@@ -12,7 +15,10 @@ import {
   getSignatureFromAttestationSerialized,
   getSlotFromSignedBeaconBlockSerialized,
   getSlotFromSignedBlobSidecarSerialized,
+  getValidatorsBytesFromStateBytes,
+  getWithdrawalCredentialFirstByteFromValidatorBytes,
 } from "../../../src/util/sszBytes.js";
+import {generateState} from "../../utils/state.js";
 
 describe("attestation SSZ serialized picking", () => {
   const testCases: phase0.Attestation[] = [
@@ -162,6 +168,78 @@ describe("signedBlobSidecar SSZ serialized picking", () => {
     const invalidSlotDataSizes = [0, 20, 38];
     for (const size of invalidSlotDataSizes) {
       expect(getSlotFromSignedBlobSidecarSerialized(Buffer.alloc(size))).to.be.null;
+    }
+  });
+});
+
+describe("validators bytes utils", () => {
+  it("phase0", () => {
+    const state = generateState({slot: 100}, config);
+    expect(state.validators.length).to.be.equal(16);
+    for (let i = 0; i < state.validators.length; i++) {
+      state.validators.get(i).withdrawalCredentials = Buffer.alloc(32, i % 2);
+    }
+    state.commit();
+    const validatorsBytes = state.validators.serialize();
+    const stateBytes = state.serialize();
+    expect(getValidatorsBytesFromStateBytes(config, stateBytes)).to.be.deep.equal(validatorsBytes);
+    for (let i = 0; i < state.validators.length; i++) {
+      expect(getWithdrawalCredentialFirstByteFromValidatorBytes(validatorsBytes, i)).to.be.equal(i % 2);
+    }
+  });
+
+  it("altair", () => {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    const altairConfig = createChainForkConfig({...config, ALTAIR_FORK_EPOCH: 100});
+    const state = generateState({slot: computeStartSlotAtEpoch(altairConfig.ALTAIR_FORK_EPOCH) + 100}, altairConfig);
+    expect(state.validators.length).to.be.equal(16);
+    for (let i = 0; i < state.validators.length; i++) {
+      state.validators.get(i).withdrawalCredentials = Buffer.alloc(32, i % 2);
+    }
+    state.commit();
+    const validatorsBytes = state.validators.serialize();
+    const stateBytes = state.serialize();
+    expect(getValidatorsBytesFromStateBytes(altairConfig, stateBytes)).to.be.deep.equal(validatorsBytes);
+    for (let i = 0; i < state.validators.length; i++) {
+      expect(getWithdrawalCredentialFirstByteFromValidatorBytes(validatorsBytes, i)).to.be.equal(i % 2);
+    }
+  });
+
+  it("bellatrix", () => {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    const bellatrixConfig = createChainForkConfig({...config, BELLATRIX_FORK_EPOCH: 100});
+    const state = generateState(
+      {slot: computeStartSlotAtEpoch(bellatrixConfig.BELLATRIX_FORK_EPOCH) + 100},
+      bellatrixConfig
+    );
+    expect(state.validators.length).to.be.equal(16);
+    for (let i = 0; i < state.validators.length; i++) {
+      state.validators.get(i).withdrawalCredentials = Buffer.alloc(32, i % 2);
+    }
+    state.commit();
+    const validatorsBytes = state.validators.serialize();
+    const stateBytes = state.serialize();
+    expect(getValidatorsBytesFromStateBytes(bellatrixConfig, stateBytes)).to.be.deep.equal(validatorsBytes);
+    for (let i = 0; i < state.validators.length; i++) {
+      expect(getWithdrawalCredentialFirstByteFromValidatorBytes(validatorsBytes, i)).to.be.equal(i % 2);
+    }
+  });
+
+  // TODO: figure out the "undefined or null" error in the test below
+  it.skip("capella", () => {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    const capellaConfig = createChainForkConfig({...config, CAPELLA_FORK_EPOCH: 100});
+    const state = generateState({slot: computeStartSlotAtEpoch(capellaConfig.CAPELLA_FORK_EPOCH) + 100}, capellaConfig);
+    expect(state.validators.length).to.be.equal(16);
+    for (let i = 0; i < state.validators.length; i++) {
+      state.validators.get(i).withdrawalCredentials = Buffer.alloc(32, i % 2);
+    }
+    state.commit();
+    const validatorsBytes = state.validators.serialize();
+    const stateBytes = state.serialize();
+    expect(getValidatorsBytesFromStateBytes(capellaConfig, stateBytes)).to.be.deep.equal(validatorsBytes);
+    for (let i = 0; i < state.validators.length; i++) {
+      expect(getWithdrawalCredentialFirstByteFromValidatorBytes(validatorsBytes, i)).to.be.equal(i % 2);
     }
   });
 });

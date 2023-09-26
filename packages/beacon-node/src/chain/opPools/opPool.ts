@@ -14,8 +14,13 @@ import {
   BLS_WITHDRAWAL_PREFIX,
 } from "@lodestar/params";
 import {Epoch, phase0, capella, ssz, ValidatorIndex} from "@lodestar/types";
+import {ChainForkConfig} from "@lodestar/config";
 import {IBeaconDb} from "../../db/index.js";
 import {SignedBLSToExecutionChangeVersioned} from "../../util/types.js";
+import {
+  getValidatorsBytesFromStateBytes,
+  getWithdrawalCredentialFirstByteFromValidatorBytes,
+} from "../../util/sszBytes.js";
 import {isValidBlsToExecutionChangeForBlockInclusion} from "./utils.js";
 
 type HexRoot = string;
@@ -270,11 +275,11 @@ export class OpPool {
   /**
    * Prune all types of transactions given the latest head state
    */
-  pruneAll(headState: CachedBeaconStateAllForks, finalizedState: CachedBeaconStateAllForks | null): void {
+  pruneAll(headState: CachedBeaconStateAllForks, finalizedState: CachedBeaconStateAllForks | Uint8Array): void {
     this.pruneAttesterSlashings(headState);
     this.pruneProposerSlashings(headState);
     this.pruneVoluntaryExits(headState);
-    this.pruneBlsToExecutionChanges(headState, finalizedState);
+    this.pruneBlsToExecutionChanges(headState.config, finalizedState);
   }
 
   /**
@@ -344,17 +349,34 @@ export class OpPool {
    * credentials
    */
   private pruneBlsToExecutionChanges(
-    headState: CachedBeaconStateAllForks,
-    finalizedState: CachedBeaconStateAllForks | null
+    config: ChainForkConfig,
+    finalizedStateOrBytes: CachedBeaconStateAllForks | Uint8Array
   ): void {
+    const validatorBytes =
+      finalizedStateOrBytes instanceof Uint8Array
+        ? getValidatorsBytesFromStateBytes(config, finalizedStateOrBytes)
+        : null;
+
     for (const [key, blsToExecutionChange] of this.blsToExecutionChanges.entries()) {
-      // TODO CAPELLA: We need the finalizedState to safely prune BlsToExecutionChanges. Finalized state may not be
-      // available in the cache, so it can be null. Once there's a head only prunning strategy, change
-      if (finalizedState !== null) {
-        const validator = finalizedState.validators.getReadonly(blsToExecutionChange.data.message.validatorIndex);
-        if (validator.withdrawalCredentials[0] !== BLS_WITHDRAWAL_PREFIX) {
-          this.blsToExecutionChanges.delete(key);
+      // there are at least finalied state bytes
+      let withDrawableCredentialFirstByte: number | null;
+      const validatorIndex = blsToExecutionChange.data.message.validatorIndex;
+      if (finalizedStateOrBytes instanceof Uint8Array) {
+        if (!validatorBytes) {
+          throw Error(
+            "Not able to extract validator bytes from finalized state bytes with length " + finalizedStateOrBytes.length
+          );
         }
+        withDrawableCredentialFirstByte = getWithdrawalCredentialFirstByteFromValidatorBytes(
+          validatorBytes,
+          validatorIndex
+        );
+      } else {
+        const validator = finalizedStateOrBytes.validators.getReadonly(validatorIndex);
+        withDrawableCredentialFirstByte = validator.withdrawalCredentials[0];
+      }
+      if (withDrawableCredentialFirstByte !== BLS_WITHDRAWAL_PREFIX) {
+        this.blsToExecutionChanges.delete(key);
       }
     }
   }

@@ -70,6 +70,10 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     return this.stateCache.get(stateRoot);
   }
 
+  async getCheckpointStateOrBytes(cp: CheckpointHex): Promise<CachedBeaconStateAllForks | Uint8Array | null> {
+    return this.checkpointStateCache.getStateOrBytes(cp);
+  }
+
   getCheckpointStateSync(cp: CheckpointHex): CachedBeaconStateAllForks | null {
     return this.checkpointStateCache.get(cp);
   }
@@ -110,7 +114,9 @@ export class QueuedStateRegenerator implements IStateRegenerator {
       // head has changed, so the existing cached head state is no longer useful. Set strong reference to null to free
       // up memory for regen step below. During regen, node won't be functional but eventually head will be available
       this.stateCache.setHeadState(null);
-      this.regen.getState(newHeadStateRoot, RegenCaller.processBlock).then(
+      // it's important to reload state to regen head state here
+      const shouldReload = true;
+      this.regen.getState(newHeadStateRoot, RegenCaller.processBlock, shouldReload).then(
         (headStateRegen) => this.stateCache.setHeadState(headStateRegen),
         (e) => this.logger.error("Error on head state regen", {}, e)
       );
