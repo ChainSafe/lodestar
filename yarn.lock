@@ -446,7 +446,7 @@
   resolved "https://registry.npmjs.org/@chainsafe/as-sha256/-/as-sha256-0.3.1.tgz"
   integrity sha512-hldFFYuf49ed7DAakWVXSJODuq3pzJEguD8tQ7h+sGkM18vja+OFoJI9krnGmgzyuZC2ETX0NOIcCTy31v2Mtg==
 
-"@chainsafe/as-sha256@^0.4.1":
+"@chainsafe/as-sha256@^0.4.1", "@chainsafe/as-sha256@workspace:^":
   version "0.4.1"
   resolved "https://registry.yarnpkg.com/@chainsafe/as-sha256/-/as-sha256-0.4.1.tgz#cfc0737e25f8c206767bdb6703e7943e5d44513e"
   integrity sha512-IqeeGwQihK6Y2EYLFofqs2eY2ep1I2MvQXHzOAI+5iQN51OZlUkrLgyAugu2x86xZewDk5xas7lNczkzFzF62w==
@@ -618,7 +618,7 @@
   dependencies:
     "@chainsafe/as-sha256" "^0.3.1"
 
-"@chainsafe/persistent-merkle-tree@^0.6.1":
+"@chainsafe/persistent-merkle-tree@^0.6.1", "@chainsafe/persistent-merkle-tree@workspace:^":
   version "0.6.1"
   resolved "https://registry.yarnpkg.com/@chainsafe/persistent-merkle-tree/-/persistent-merkle-tree-0.6.1.tgz#37bde25cf6cbe1660ad84311aa73157dc86ec7f2"
   integrity sha512-gcENLemRR13+1MED2NeZBMA7FRS0xQPM7L2vhMqvKkjqtFT4YfjSVADq5U0iLuQLhFUJEMVuA8fbv5v+TN6O9A==
@@ -636,18 +636,16 @@
   resolved "https://registry.yarnpkg.com/@chainsafe/prometheus-gc-stats/-/prometheus-gc-stats-1.0.2.tgz#585f8f1555251db156d7e50ef8c86dd4f3e78f70"
   integrity sha512-h3mFKduSX85XMVbOdWOYvx9jNq99jGcRVNyW5goGOqju1CsI+ZJLhu5z4zBb/G+ksL0R4uLVulu/mIMe7Y0rNg==
 
+"@chainsafe/ssz@../ssz/packages/ssz":
+  version "0.13.0"
+  dependencies:
+    "@chainsafe/as-sha256" "workspace:^"
+    "@chainsafe/persistent-merkle-tree" "workspace:^"
+
 "@chainsafe/ssz@^0.11.1":
   version "0.11.1"
   resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.11.1.tgz#d4aec883af2ec5196ae67b96242c467da20b2476"
   integrity sha512-cB8dBkgGN6ZoeOKuk+rIRHKN0L5i9JLGeC0Lui71QX0TuLcQKwgbfkUexpyJxnGFatWf8yeJxlOjozMn/OTP0g==
-  dependencies:
-    "@chainsafe/as-sha256" "^0.4.1"
-    "@chainsafe/persistent-merkle-tree" "^0.6.1"
-
-"@chainsafe/ssz@^0.13.0":
-  version "0.13.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.13.0.tgz#0bd11af6abe023d4cc24067a46889dcabbe573e5"
-  integrity sha512-73PF5bFXE9juLD1+dkmYV/CMO/5ip0TmyzgYw87vAn8Cn+CbwCOp/HyNNdYCmdl104a2bqcORFJzirCvvc+nNw==
   dependencies:
     "@chainsafe/as-sha256" "^0.4.1"
     "@chainsafe/persistent-merkle-tree" "^0.6.1"
