@@ -15,6 +15,7 @@ import {ChainConfig, ChainForkConfig} from "@lodestar/config";
 import {ForkSeq, INTERVALS_PER_SLOT, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Epoch, Slot, ValidatorIndex} from "@lodestar/types";
 import {IndexedAttestation, SignedAggregateAndProof} from "@lodestar/types/phase0";
+import {GENESIS_SLOT} from "../constants/constants.js";
 import {LodestarMetrics} from "./metrics/lodestar.js";
 
 /** The validator monitor collects per-epoch data about each monitored validator.
@@ -607,6 +608,11 @@ export function createValidatorMonitor(
     // To guard against short re-orgs it will track the status of epoch N at the end of epoch N+1.
     // This function **SHOULD** be called at the last slot of an epoch to have max possible information.
     onceEveryEndOfEpoch(headState) {
+      if (headState.slot <= GENESIS_SLOT) {
+        // Before genesis, there won't be any validator activity
+        return;
+      }
+
       // Prune validators not seen in a while
       for (const [index, validator] of validators.entries()) {
         if (Date.now() - validator.lastRegisteredTimeMs > RETAIN_REGISTERED_VALIDATORS_MS) {
