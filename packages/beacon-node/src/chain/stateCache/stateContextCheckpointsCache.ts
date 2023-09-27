@@ -301,7 +301,9 @@ export class CheckpointStateCache {
    * For testing only
    */
   delete(cp: phase0.Checkpoint): void {
-    this.cache.delete(toCheckpointKey(toCheckpointHex(cp)));
+    const key = toCheckpointKey(toCheckpointHex(cp));
+    this.cache.delete(key);
+    this.inMemoryKeyOrder.deleteFirst(key);
     const epochKey = toHexString(cp.root);
     const value = this.epochIndex.get(cp.epoch);
     if (value) {
@@ -323,7 +325,10 @@ export class CheckpointStateCache {
         void this.persistentApis.removeFile(stateOrFilePath);
         this.metrics?.stateFilesRemoveCount.inc({reason: RemoveFileReason.pruneFinalized});
       }
+      // this could be improved by looping through inMemoryKeyOrder once
+      // however with this.maxEpochsInMemory = 2, the list is 6 maximum so it's not a big deal now
       this.cache.delete(key);
+      this.inMemoryKeyOrder.deleteFirst(key);
     }
     this.epochIndex.delete(epoch);
   }

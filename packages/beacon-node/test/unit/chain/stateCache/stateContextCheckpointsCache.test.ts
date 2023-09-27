@@ -160,6 +160,25 @@ describe("CheckpointStateCache", function () {
     expect(fileApisBuffer.size).to.be.equal(0);
     expect(cache.get(cp1Hex)).to.be.null;
     expect(cache.get(cp2Hex)).to.be.not.null;
+    // suspended
+    cache.pruneFromMemory();
+  });
+
+  /**
+   * This is to reproduce the issue that pruneFromMemory() takes forever
+   */
+  it("pruneFinalized 2", function () {
+    cache.add(cp0, states[0]);
+    cache.add(cp1, states[1]);
+    cache.add(cp2, states[2]);
+    expect(fileApisBuffer.size).to.be.equal(0);
+    // finalize epoch cp2
+    cache.pruneFinalized(cp2.epoch);
+    expect(fileApisBuffer.size).to.be.equal(0);
+    expect(cache.get(cp0Hex)).to.be.null;
+    expect(cache.get(cp1Hex)).to.be.null;
+    expect(cache.get(cp2Hex)).to.be.not.null;
+    cache.pruneFromMemory();
   });
 
   describe("findClosestCheckpointState", function () {
