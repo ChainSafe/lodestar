@@ -218,7 +218,7 @@ describe("CheckpointStateCache", function () {
       it(name, function () {
         const cpHex = toCheckpointHex({epoch, root: Buffer.alloc(32)});
         const state = findClosestCheckpointState(cpHex, cacheMap);
-        expect(state.hashTreeRoot()).to.be.deep.equal(expectedState.hashTreeRoot());
+        expect(state?.hashTreeRoot()).to.be.deep.equal(expectedState.hashTreeRoot());
       });
     }
   });

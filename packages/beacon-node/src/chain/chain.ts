@@ -235,7 +235,7 @@ export class BeaconChain implements IBeaconChain {
 
     const stateCache = new StateContextCache(this.opts, {metrics});
     const checkpointStateCache = new CheckpointStateCache(
-      {metrics, clock, shufflingCache: this.shufflingCache},
+      {metrics, clock, shufflingCache: this.shufflingCache, getHeadState: this.getHeadState.bind(this)},
       this.opts
     );
 

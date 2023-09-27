@@ -46,6 +46,8 @@ enum RemoveFileReason {
   stateUpdate = "state_update",
 }
 
+type GetHeadStateFn = () => CachedBeaconStateAllForks;
+
 export type CheckpointStateCacheOpts = {
   // Keep max n states in memory, persist the rest to disk
   maxEpochsInMemory: number;
@@ -72,17 +74,20 @@ export class CheckpointStateCache {
   private readonly maxEpochsInMemory: number;
   private readonly persistentApis: PersistentApis;
   private readonly shufflingCache: ShufflingCache;
+  private readonly getHeadState?: GetHeadStateFn;
 
   constructor(
     {
       metrics,
       clock,
       shufflingCache,
+      getHeadState,
       persistentApis,
     }: {
       metrics?: Metrics | null;
       clock?: IClock | null;
       shufflingCache: ShufflingCache;
+      getHeadState?: GetHeadStateFn;
       persistentApis?: PersistentApis;
     },
     opts: CheckpointStateCacheOpts
@@ -110,6 +115,7 @@ export class CheckpointStateCache {
     // Specify different persistentApis for testing
     this.persistentApis = persistentApis ?? FILE_APIS;
     this.shufflingCache = shufflingCache;
+    this.getHeadState = getHeadState;
     this.inMemoryKeyOrder = new LinkedList<string>();
     void ensureDir(CHECKPOINT_STATES_FOLDER);
   }
@@ -143,7 +149,10 @@ export class CheckpointStateCache {
     void this.persistentApis.removeFile(filePath);
     this.metrics?.stateFilesRemoveCount.inc({reason: RemoveFileReason.reload});
     this.metrics?.stateReloadSecFromSlot.observe(this.clock?.secFromSlot(this.clock?.currentSlot ?? 0) ?? 0);
-    const closestState = findClosestCheckpointState(cp, this.cache);
+    const closestState = findClosestCheckpointState(cp, this.cache) ?? this.getHeadState?.();
+    if (closestState == null) {
+      throw new Error("No closest state found for cp " + toCheckpointKey(cp));
+    }
     this.metrics?.stateReloadEpochDiff.observe(Math.abs(closestState.epochCtx.epoch - cp.epoch));
     const timer = this.metrics?.stateReloadDuration.startTimer();
     const newCachedState = loadCachedBeaconState(closestState, newStateBytes, {
@@ -398,12 +407,16 @@ export class CheckpointStateCache {
   }
 }
 
+/**
+ * Find closest state from cache to provided checkpoint.
+ * Note that in 0-historical state configuration, this could return null and we should get head state in that case.
+ */
 export function findClosestCheckpointState(
   cp: CheckpointHex,
   cache: Map<string, CachedBeaconStateAllForks | StateFile>
-): CachedBeaconStateAllForks {
+): CachedBeaconStateAllForks | null {
   let smallestEpochDiff = Infinity;
-  let closestState: CachedBeaconStateAllForks | undefined;
+  let closestState: CachedBeaconStateAllForks | null = null;
   for (const [key, value] of cache.entries()) {
     // ignore entries with StateFile
     if (typeof value === "string") {
@@ -414,10 +427,6 @@ export function findClosestCheckpointState(
       smallestEpochDiff = epochDiff;
       closestState = value;
     }
-  }
-
-  if (closestState === undefined) {
-    throw new Error("No closest state found for cp " + toCheckpointKey(cp));
   }
 
   return closestState;
