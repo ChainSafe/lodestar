@@ -38,7 +38,7 @@ export function getActiveValidatorIndices(state: BeaconStateAllForks, epoch: Epo
 
 export function getActivationChurnLimit(config: ChainForkConfig, fork: ForkSeq, activeValidatorCount: number): number {
   if (fork >= ForkSeq.deneb) {
-    return Math.min(config.MAX_PER_EPOCH_CHURN_LIMIT, getChurnLimit(config, activeValidatorCount));
+    return Math.min(config.MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT, getChurnLimit(config, activeValidatorCount));
   } else {
     return getChurnLimit(config, activeValidatorCount);
   }
