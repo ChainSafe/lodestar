@@ -335,10 +335,11 @@ export async function importBlock(
     this.shufflingCache.processState(postState);
     this.logger.verbose("Processed shuffling for next epoch", {parentEpoch, blockEpoch, slot: block.message.slot});
 
-    // Cache state to preserve epoch transition work
+    // This is the real check point state per spec because the root is in current epoch
+    // it's important to add this to cache, when chain is finalized we'll query this state later
     const checkpointState = postState;
     const cp = getCheckpointFromState(checkpointState);
-    // this is not a real checkpoint state, no need to add to cache or emit checkpoint state
+    this.regen.addCheckpointState(cp, checkpointState);
 
     // Note: in-lined code from previos handler of ChainEvent.checkpoint
     this.logger.verbose("Checkpoint processed", toCheckpointHex(cp));

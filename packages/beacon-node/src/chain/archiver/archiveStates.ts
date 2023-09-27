@@ -1,3 +1,4 @@
+import {toHexString} from "@chainsafe/ssz";
 import {Logger} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Slot, Epoch} from "@lodestar/types";
@@ -86,17 +87,18 @@ export class StatesArchiver {
   async archiveState(finalized: CheckpointWithHex): Promise<void> {
     // the finalized state could be from to disk
     const finalizedStateOrBytes = await this.regen.getCheckpointStateOrBytes(finalized);
+    const {rootHex} = finalized;
     if (!finalizedStateOrBytes) {
-      throw Error("No state in cache for finalized checkpoint state epoch #" + finalized.epoch);
+      throw Error(`No state in cache for finalized checkpoint state epoch #${finalized.epoch} root ${rootHex}`);
     }
     if (finalizedStateOrBytes instanceof Uint8Array) {
       const slot = getStateSlotFromBytes(finalizedStateOrBytes);
       await this.db.stateArchive.putBinary(slot, finalizedStateOrBytes);
-      this.logger.verbose("Archived finalized state bytes", {finalizedEpoch: finalized.epoch, slot});
+      this.logger.verbose("Archived finalized state bytes", {finalizedEpoch: finalized.epoch, slot, root: rootHex});
     } else {
       // state
       await this.db.stateArchive.put(finalizedStateOrBytes.slot, finalizedStateOrBytes);
-      this.logger.verbose("Archived finalized state", {finalizedEpoch: finalized.epoch});
+      this.logger.verbose("Archived finalized state", {epoch: finalized.epoch, root: rootHex});
     }
     // don't delete states before the finalized state, auto-prune will take care of it
   }

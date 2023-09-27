@@ -116,9 +116,11 @@ export class StateRegenerator implements IStateRegeneratorInternal {
         blockSlot: block.slot,
       });
     }
+
+    const {checkpointStateCache} = this.modules;
     const getLatestApi = shouldReload
-      ? this.modules.checkpointStateCache.getOrReloadLatest.bind(this.modules.checkpointStateCache)
-      : this.modules.checkpointStateCache.getLatest.bind(this.modules.checkpointStateCache);
+      ? checkpointStateCache.getOrReloadLatest.bind(checkpointStateCache)
+      : checkpointStateCache.getLatest.bind(checkpointStateCache);
     const latestCheckpointStateCtx = await getLatestApi(blockRoot, computeEpochAtSlot(slot));
 
     // If a checkpoint state exists with the given checkpoint root, it either is in requested epoch
@@ -155,9 +157,10 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     // gets reversed when replayed
     const blocksToReplay = [block];
     let state: CachedBeaconStateAllForks | null = null;
+    const {checkpointStateCache} = this.modules;
     const getLatestApi = shouldReload
-      ? this.modules.checkpointStateCache.getOrReloadLatest.bind(this.modules.checkpointStateCache)
-      : this.modules.checkpointStateCache.getLatest.bind(this.modules.checkpointStateCache);
+      ? checkpointStateCache.getOrReloadLatest.bind(checkpointStateCache)
+      : checkpointStateCache.getLatest.bind(checkpointStateCache);
     for (const b of this.modules.forkChoice.iterateAncestorBlocks(block.parentRoot)) {
       state = this.modules.stateCache.get(b.stateRoot);
       if (state) {
@@ -277,7 +280,7 @@ async function processSlotsToNearestCheckpoint(
   const postSlot = slot;
   const preEpoch = computeEpochAtSlot(preSlot);
   let postState = preState;
-  const {checkpointStateCache, emitter, metrics} = modules;
+  const {emitter, metrics} = modules;
 
   for (
     let nextEpochSlot = computeStartSlotAtEpoch(preEpoch + 1);
@@ -287,10 +290,13 @@ async function processSlotsToNearestCheckpoint(
     // processSlots calls .clone() before mutating
     postState = processSlots(postState, nextEpochSlot, opts, metrics);
 
-    // Cache state to preserve epoch transition work
+    // Non-spec checkpoint state because the root is of previous epoch
     const checkpointState = postState;
     const cp = getCheckpointFromState(checkpointState);
-    checkpointStateCache.add(cp, checkpointState);
+    // as of Sep 2023, it's not worth to add to cache to save time to persist to disk on every epoch
+    // since we rarely use it and this is not exactly justified/finalized state
+    // TODO: monitor on mainnet, if it takes > 1 epoch transition per epoch then add this to cache but maybe do not persist to disk
+    // checkpointStateCache.add(cp, checkpointState);
     emitter.emit(ChainEvent.checkpoint, cp, checkpointState);
 
     // this avoids keeping our node busy processing blocks
