@@ -285,7 +285,7 @@ jobs:
             lib/
             packages/*/lib
             packages/*/.git-data.json            
-          key: ${{ runner.os }}-${{ matrix.node }}-${{ github.event.pull_request.head.sha }}
+          key: ${{ runner.os }}-${{ matrix.node }}-${{ github.sha }}
       # Download spec tests with cache
       - name: Restore spec tests cache
         uses: actions/cache@master
