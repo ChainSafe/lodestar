@@ -280,7 +280,7 @@ async function processSlotsToNearestCheckpoint(
   const postSlot = slot;
   const preEpoch = computeEpochAtSlot(preSlot);
   let postState = preState;
-  const {emitter, metrics} = modules;
+  const {emitter, metrics, checkpointStateCache} = modules;
 
   for (
     let nextEpochSlot = computeStartSlotAtEpoch(preEpoch + 1);
@@ -291,12 +291,12 @@ async function processSlotsToNearestCheckpoint(
     postState = processSlots(postState, nextEpochSlot, opts, metrics);
 
     // Non-spec checkpoint state because the root is of previous epoch
+    // this is usually added when we validate gossip block at the start of an epoch
+    // then when we process block, we don't have to do state transition again
+    // TODO: figure out if it's worth to persist this state to disk
     const checkpointState = postState;
     const cp = getCheckpointFromState(checkpointState);
-    // as of Sep 2023, it's not worth to add to cache to save time to persist to disk on every epoch
-    // since we rarely use it and this is not exactly justified/finalized state
-    // TODO: monitor on mainnet, if it takes > 1 epoch transition per epoch then add this to cache but maybe do not persist to disk
-    // checkpointStateCache.add(cp, checkpointState);
+    checkpointStateCache.add(cp, checkpointState);
     emitter.emit(ChainEvent.checkpoint, cp, checkpointState);
 
     // this avoids keeping our node busy processing blocks
