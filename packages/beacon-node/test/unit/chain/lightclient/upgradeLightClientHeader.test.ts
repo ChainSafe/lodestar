@@ -15,7 +15,7 @@ describe("UpgradeLightClientHeader", function () {
     BELLATRIX_FORK_EPOCH: 2,
     CAPELLA_FORK_EPOCH: 3,
     DENEB_FORK_EPOCH: 4,
-    EIP6110_FORK_EPOCH: 4,
+    EIP6110_FORK_EPOCH: 5,
   });
 
   const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
