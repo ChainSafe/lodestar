@@ -77,6 +77,7 @@ describe("CheckpointStateCache", function () {
       // use cpHexGet to move it to head,
       cache.get(cpHexGet);
       cache.add(cp2, states[2]);
+      cache.pruneFromMemory();
       expect(cache.get(cp2Hex)?.hashTreeRoot()).to.be.deep.equal(states[2].hashTreeRoot());
       expect(fileApisBuffer.size).to.be.equal(1);
       expect(Array.from(fileApisBuffer.keys())).to.be.deep.equal([cpKeyPersisted]);
@@ -123,19 +124,21 @@ describe("CheckpointStateCache", function () {
       // use cpHexGet to move it to head,
       cache.get(cpHexGet);
       cache.add(cp2, states[2]);
+      expect(cache.pruneFromMemory()).to.be.equal(1);
       expect(cache.get(cp2Hex)?.hashTreeRoot()).to.be.deep.equal(states[2].hashTreeRoot());
       expect(fileApisBuffer.size).to.be.equal(1);
       const persistedKey0 = toTmpFilePath(toCheckpointKey(cpKeyPersisted));
-      expect(Array.from(fileApisBuffer.keys())).to.be.deep.equal([persistedKey0]);
+      expect(Array.from(fileApisBuffer.keys())).to.be.deep.equal([persistedKey0], "incorrect persisted keys");
       expect(fileApisBuffer.get(persistedKey0)).to.be.deep.equal(stateBytesPersisted);
       expect(await cache.getStateOrBytes(cpKeyPersisted)).to.be.deep.equal(stateBytesPersisted);
       // simple get() does not reload from disk
       expect(cache.get(cpKeyPersisted)).to.be.null;
       // reload cpKeyPersisted from disk
       expect((await cache.getOrReload(cpKeyPersisted))?.serialize()).to.be.deep.equal(stateBytesPersisted);
+      expect(cache.pruneFromMemory()).to.be.equal(1);
       // check the 2nd persisted checkpoint
       const persistedKey2 = toTmpFilePath(toCheckpointKey(cpKeyPersisted2));
-      expect(Array.from(fileApisBuffer.keys())).to.be.deep.equal([persistedKey2]);
+      expect(Array.from(fileApisBuffer.keys())).to.be.deep.equal([persistedKey2], "incorrect persisted keys");
       expect(fileApisBuffer.get(persistedKey2)).to.be.deep.equal(stateBytesPersisted2);
       expect(await cache.getStateOrBytes(cpKeyPersisted2)).to.be.deep.equal(stateBytesPersisted2);
     });
@@ -144,6 +147,7 @@ describe("CheckpointStateCache", function () {
   it("pruneFinalized", function () {
     cache.add(cp1, states[1]);
     cache.add(cp2, states[2]);
+    cache.pruneFromMemory();
     // cp0 is persisted
     expect(fileApisBuffer.size).to.be.equal(1);
     expect(Array.from(fileApisBuffer.keys())).to.be.deep.equal([toTmpFilePath(cp0Key)]);

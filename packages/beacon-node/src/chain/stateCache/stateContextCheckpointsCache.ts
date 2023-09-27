@@ -153,7 +153,7 @@ export class CheckpointStateCache {
     this.cache.set(cpKey, newCachedState);
     // since item is file path, cpKey is not in inMemoryKeyOrder
     this.inMemoryKeyOrder.unshift(cpKey);
-    this.pruneFromMemory();
+    // don't prune from memory here, call it at the last 1/3 of slot 0 of an epoch
     return newCachedState;
   }
 
@@ -233,7 +233,7 @@ export class CheckpointStateCache {
     this.cache.set(key, state);
     this.inMemoryKeyOrder.unshift(key);
     this.epochIndex.getOrDefault(cp.epoch).add(cpHex.rootHex);
-    this.pruneFromMemory();
+    // don't prune from memory here, call it at the last 1/3 of slot 0 of an epoch
   }
 
   /**
@@ -329,11 +329,12 @@ export class CheckpointStateCache {
   }
 
   /**
-   * This is slow code because it involves serializing the whole state to disk which takes ~1.2s as of Sep 2023
-   * However this is mostly consumed from add() function which is called in PrepareNextSlotScheduler
-   * This happens at the last 1/3 slot of the last slot of an epoch so hopefully it's not a big deal
+   * This is slow code because it involves serializing the whole state to disk which takes 600ms as of Sep 2023
+   * The add() is called after we process 1st block of an epoch, we don't want to pruneFromMemory at that time since it's the hot time
+   * Call this code at the last 1/3 slot of slot 0 of an epoch
    */
-  private pruneFromMemory(): void {
+  pruneFromMemory(): number {
+    let count = 0;
     while (this.inMemoryKeyOrder.length > 0 && this.countEpochsInMemory() > this.maxEpochsInMemory) {
       const key = this.inMemoryKeyOrder.last();
       if (!key) {
@@ -351,8 +352,11 @@ export class CheckpointStateCache {
         void this.persistentApis.writeIfNotExist(filePath, stateOrFilePath.serialize());
         timer?.();
         this.cache.set(key, filePath);
+        count++;
       }
     }
+
+    return count;
   }
 
   private countEpochsInMemory(): number {

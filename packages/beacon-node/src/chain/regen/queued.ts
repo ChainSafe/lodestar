@@ -95,6 +95,10 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     this.checkpointStateCache.add(cp, item);
   }
 
+  pruneCheckpointStateCache(): number {
+    return this.checkpointStateCache.pruneFromMemory();
+  }
+
   updateHeadState(newHeadStateRoot: RootHex, maybeHeadState: CachedBeaconStateAllForks): void {
     const headState =
       newHeadStateRoot === toHexString(maybeHeadState.hashTreeRoot())

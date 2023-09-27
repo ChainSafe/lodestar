@@ -173,6 +173,12 @@ export class PrepareNextSlotScheduler {
           this.chain.emitter.emit(routes.events.EventType.payloadAttributes, {data, version: fork});
         }
       }
+
+      if (clockSlot % SLOTS_PER_EPOCH === 0) {
+        // Don't let the checkpoint state cache to prune on its own, prune at the last 1/3 slot of slot 0 of each epoch
+        const pruneCount = this.chain.regen.pruneCheckpointStateCache();
+        this.logger.verbose("Pruned checkpoint state cache", {clockSlot, nextEpoch, pruneCount});
+      }
     } catch (e) {
       if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
         this.metrics?.precomputeNextEpochTransition.count.inc({result: "error"}, 1);
