@@ -45,13 +45,13 @@ jobs:
             lib/
             packages/*/lib
             packages/*/.git-data.json
-          key: ${{ runner.os }}-${{ matrix.node }}-${{ github.event.pull_request.head.sha }}
+          key: ${{ runner.os }}-node-${{ matrix.node }}-${{ github.sha }}
       - name: Install & build
         if: steps.cache-build-restore.outputs.cache-hit != 'true'
         run: yarn install --frozen-lockfile && yarn build
       - name: Build
-        run: yarn build
         if: steps.cache-build-restore.outputs.cache-hit == 'true'
+        run: yarn build
       - name: Check Build
         run: yarn check-build      
       - name: Test root binary exists
@@ -70,17 +70,21 @@ jobs:
             lib/
             packages/*/lib
             packages/*/.git-data.json            
-          key: ${{ runner.os }}-${{ matrix.node }}-${{ github.event.pull_request.head.sha }}
+          key: ${{ runner.os }}-node-${{ matrix.node }}-${{ github.sha }}
 
   lint:
     name: Lint
     needs: build
     runs-on: 'ubuntu-latest'
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20]    
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
-          node-version: 20
+          node-version: ${{ matrix.node }}
           check-latest: true
           cache: yarn
       - name: Restore build cache
@@ -93,7 +97,7 @@ jobs:
             lib/
             packages/*/lib
             packages/*/.git-data.json            
-          key: ${{ runner.os }}-20-${{ github.event.pull_request.head.sha }}
+          key: ${{ runner.os }}-node-${{ matrix.node }}-${{ github.sha }}
       - name: Assert yarn prints no warnings
         run: scripts/assert_no_yarn_warnings.sh          
       - name: Lint Code
@@ -109,11 +113,15 @@ jobs:
     name: Type Checks
     needs: build
     runs-on: 'ubuntu-latest'
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20]        
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
-          node-version: 20
+          node-version: ${{ matrix.node }}
           check-latest: true
           cache: yarn
       - name: Restore build cache
@@ -126,7 +134,7 @@ jobs:
             lib/
             packages/*/lib
             packages/*/.git-data.json            
-          key: ${{ runner.os }}-20-${{ github.event.pull_request.head.sha }}
+          key: ${{ runner.os }}-node-${{ matrix.node }}-${{ github.sha }}
 
       - name: Check Types
         run: yarn check-types
@@ -159,7 +167,7 @@ jobs:
             lib/
             packages/*/lib
             packages/*/.git-data.json            
-          key: ${{ runner.os }}-${{ matrix.node }}-${{ github.event.pull_request.head.sha }}
+          key: ${{ runner.os }}-node-${{ matrix.node }}-${{ github.sha }}
       # Cache validator slashing protection data tests
       - name: Restore spec tests cache
         uses: actions/cache@master
@@ -198,7 +206,7 @@ jobs:
             lib/
             packages/*/lib
             packages/*/.git-data.json            
-          key: ${{ runner.os }}-${{ matrix.node }}-${{ github.event.pull_request.head.sha }}
+          key: ${{ runner.os }}-node-${{ matrix.node }}-${{ github.sha }}
 
       - name: Run the e2e test environment
         run: scripts/run_e2e_env.sh start
@@ -244,7 +252,7 @@ jobs:
             lib/
             packages/*/lib
             packages/*/.git-data.json            
-          key: ${{ runner.os }}-${{ matrix.node }}-${{ github.event.pull_request.head.sha }}
+          key: ${{ runner.os }}-node-${{ matrix.node }}-${{ github.sha }}
 
       - name: Browser tests
         run: |
