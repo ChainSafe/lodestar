@@ -98,6 +98,7 @@ jobs:
             packages/*/lib
             packages/*/.git-data.json            
           key: ${{ runner.os }}-node-${{ matrix.node }}-${{ github.sha }}
+          fail-on-cache-miss: true
       - name: Assert yarn prints no warnings
         run: scripts/assert_no_yarn_warnings.sh          
       - name: Lint Code
@@ -135,6 +136,7 @@ jobs:
             packages/*/lib
             packages/*/.git-data.json            
           key: ${{ runner.os }}-node-${{ matrix.node }}-${{ github.sha }}
+          fail-on-cache-miss: true
 
       - name: Check Types
         run: yarn check-types
@@ -168,6 +170,8 @@ jobs:
             packages/*/lib
             packages/*/.git-data.json            
           key: ${{ runner.os }}-node-${{ matrix.node }}-${{ github.sha }}
+          fail-on-cache-miss: true
+
       # Cache validator slashing protection data tests
       - name: Restore spec tests cache
         uses: actions/cache@master
@@ -207,6 +211,7 @@ jobs:
             packages/*/lib
             packages/*/.git-data.json            
           key: ${{ runner.os }}-node-${{ matrix.node }}-${{ github.sha }}
+          fail-on-cache-miss: true
 
       - name: Run the e2e test environment
         run: scripts/run_e2e_env.sh start
@@ -253,6 +258,7 @@ jobs:
             packages/*/lib
             packages/*/.git-data.json            
           key: ${{ runner.os }}-node-${{ matrix.node }}-${{ github.sha }}
+          fail-on-cache-miss: true
 
       - name: Browser tests
         run: |
@@ -285,7 +291,9 @@ jobs:
             lib/
             packages/*/lib
             packages/*/.git-data.json            
-          key: ${{ runner.os }}-${{ matrix.node }}-${{ github.sha }}
+          key: ${{ runner.os }}-node-${{ matrix.node }}-${{ github.sha }}
+          fail-on-cache-miss: true
+          
       # Download spec tests with cache
       - name: Restore spec tests cache
         uses: actions/cache@master
