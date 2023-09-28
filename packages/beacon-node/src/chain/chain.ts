@@ -761,6 +761,9 @@ export class BeaconChain implements IBeaconChain {
     metrics.forkChoice.balancesLength.set(forkChoiceMetrics.balancesLength);
     metrics.forkChoice.nodes.set(forkChoiceMetrics.nodes);
     metrics.forkChoice.indices.set(forkChoiceMetrics.indices);
+
+    const headState = this.getHeadState();
+    metrics.headState.unfinalizedPubkeyCacheSize.set(headState.epochCtx.unfinalizedPubkey2index.size);
   }
 
   private onClockSlot(slot: Slot): void {
