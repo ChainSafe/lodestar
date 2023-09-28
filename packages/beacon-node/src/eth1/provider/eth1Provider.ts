@@ -1,7 +1,8 @@
 import {toHexString} from "@chainsafe/ssz";
 import {phase0} from "@lodestar/types";
 import {ChainConfig} from "@lodestar/config";
-import {fromHex, isErrorAborted} from "@lodestar/utils";
+import {fromHex, isErrorAborted, waitForElapsedTime} from "@lodestar/utils";
+import {Logger} from "@lodestar/logger";
 
 import {FetchError, isFetchError} from "@lodestar/api";
 import {linspace} from "../../util/numpy.js";
@@ -51,19 +52,23 @@ const getBlockByHashOpts: ReqOpts = {routeId: "getBlockByHash"};
 const getBlockNumberOpts: ReqOpts = {routeId: "getBlockNumber"};
 const getLogsOpts: ReqOpts = {routeId: "getLogs"};
 
+const ifOneMinutePassed = waitForElapsedTime({minElapsedTime: 60_000});
+
 export class Eth1Provider implements IEth1Provider {
   readonly deployBlock: number;
   private readonly depositContractAddress: string;
   private readonly rpc: JsonRpcHttpClient;
   // The default state is ONLINE, it will be updated to offline if we receive a http error
   private state: Eth1ProviderState = Eth1ProviderState.ONLINE;
+  private logger: Logger;
 
   constructor(
     config: Pick<ChainConfig, "DEPOSIT_CONTRACT_ADDRESS">,
-    opts: Pick<Eth1Options, "depositContractDeployBlock" | "providerUrls" | "jwtSecretHex">,
+    opts: Pick<Eth1Options, "depositContractDeployBlock" | "providerUrls" | "jwtSecretHex"> & {logger: Logger},
     signal?: AbortSignal,
     metrics?: JsonRpcHttpClientMetrics | null
   ) {
+    this.logger = opts.logger;
     this.deployBlock = opts.depositContractDeployBlock ?? 0;
     this.depositContractAddress = toHexString(config.DEPOSIT_CONTRACT_ADDRESS);
     this.rpc = new JsonRpcHttpClient(opts.providerUrls ?? DEFAULT_PROVIDER_URLS, {
@@ -75,28 +80,36 @@ export class Eth1Provider implements IEth1Provider {
     });
 
     this.rpc.emitter.on(JsonRpcHttpClientEvent.RESPONSE, () => {
+      const oldState = this.state;
       this.state = Eth1ProviderState.ONLINE;
+
+      if (oldState !== Eth1ProviderState.ONLINE) {
+        this.logger.info("Eth1Provider is back online", {oldState, newState: this.state});
+      }
     });
 
     this.rpc.emitter.on(JsonRpcHttpClientEvent.ERROR, ({error}) => {
       if (isErrorAborted(error)) {
         this.state = Eth1ProviderState.ONLINE;
-        return;
-      }
-
-      if ((error as unknown) instanceof HttpRpcError || (error as unknown) instanceof ErrorJsonRpcResponse) {
+      } else if ((error as unknown) instanceof HttpRpcError || (error as unknown) instanceof ErrorJsonRpcResponse) {
         this.state = Eth1ProviderState.ERROR;
-        return;
-      }
-
-      if (error && isFetchError(error) && HTTP_FATAL_ERROR_CODES.includes((error as FetchError).code)) {
+      } else if (error && isFetchError(error) && HTTP_FATAL_ERROR_CODES.includes((error as FetchError).code)) {
         this.state = Eth1ProviderState.OFFLINE;
-        return;
+      } else if (error && isFetchError(error) && HTTP_CONNECTION_ERROR_CODES.includes((error as FetchError).code)) {
+        this.state = Eth1ProviderState.AUTH_FAILED;
       }
 
-      if (error && isFetchError(error) && HTTP_CONNECTION_ERROR_CODES.includes((error as FetchError).code)) {
-        this.state = Eth1ProviderState.AUTH_FAILED;
-        return;
+      if (this.state !== Eth1ProviderState.ONLINE) {
+        ifOneMinutePassed(({msSinceLastCall, now}) => {
+          this.logger.error(
+            "Eth1Provider faced error",
+            {
+              state: this.state,
+              lastErrorAt: msSinceLastCall !== undefined ? new Date(now - msSinceLastCall).toLocaleTimeString() : "N/A",
+            },
+            error
+          );
+        });
       }
     });
   }
