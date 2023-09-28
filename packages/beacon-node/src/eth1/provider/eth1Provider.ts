@@ -60,11 +60,11 @@ export class Eth1Provider implements IEth1Provider {
   private readonly rpc: JsonRpcHttpClient;
   // The default state is ONLINE, it will be updated to offline if we receive a http error
   private state: Eth1ProviderState = Eth1ProviderState.ONLINE;
-  private logger: Logger;
+  private logger?: Logger;
 
   constructor(
     config: Pick<ChainConfig, "DEPOSIT_CONTRACT_ADDRESS">,
-    opts: Pick<Eth1Options, "depositContractDeployBlock" | "providerUrls" | "jwtSecretHex"> & {logger: Logger},
+    opts: Pick<Eth1Options, "depositContractDeployBlock" | "providerUrls" | "jwtSecretHex"> & {logger?: Logger},
     signal?: AbortSignal,
     metrics?: JsonRpcHttpClientMetrics | null
   ) {
@@ -84,7 +84,7 @@ export class Eth1Provider implements IEth1Provider {
       this.state = Eth1ProviderState.ONLINE;
 
       if (oldState !== Eth1ProviderState.ONLINE) {
-        this.logger.info("Eth1Provider is back online", {oldState, newState: this.state});
+        this.logger?.info("Eth1Provider is back online", {oldState, newState: this.state});
       }
     });
 
@@ -101,7 +101,7 @@ export class Eth1Provider implements IEth1Provider {
 
       if (this.state !== Eth1ProviderState.ONLINE) {
         ifOneMinutePassed(({msSinceLastCall, now}) => {
-          this.logger.error(
+          this.logger?.error(
             "Eth1Provider faced error",
             {
               state: this.state,
