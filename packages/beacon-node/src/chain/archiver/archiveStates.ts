@@ -5,6 +5,7 @@ import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-trans
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {IBeaconDb} from "../../db/index.js";
 import {IStateRegenerator} from "../regen/interface.js";
+import {getStateSlotFromBytes} from "../../util/multifork.js";
 
 /**
  * Minimum number of epochs between single temp archived states
@@ -83,13 +84,22 @@ export class StatesArchiver {
    * Only the new finalized state is stored to disk
    */
   async archiveState(finalized: CheckpointWithHex): Promise<void> {
-    const finalizedState = this.regen.getCheckpointStateSync(finalized);
-    if (!finalizedState) {
-      throw Error("No state in cache for finalized checkpoint state epoch #" + finalized.epoch);
+    // the finalized state could be from to disk
+    const finalizedStateOrBytes = await this.regen.getCheckpointStateOrBytes(finalized);
+    const {rootHex} = finalized;
+    if (!finalizedStateOrBytes) {
+      throw Error(`No state in cache for finalized checkpoint state epoch #${finalized.epoch} root ${rootHex}`);
     }
-    await this.db.stateArchive.put(finalizedState.slot, finalizedState);
+    if (finalizedStateOrBytes instanceof Uint8Array) {
+      const slot = getStateSlotFromBytes(finalizedStateOrBytes);
+      await this.db.stateArchive.putBinary(slot, finalizedStateOrBytes);
+      this.logger.verbose("Archived finalized state bytes", {finalizedEpoch: finalized.epoch, slot, root: rootHex});
+    } else {
+      // state
+      await this.db.stateArchive.put(finalizedStateOrBytes.slot, finalizedStateOrBytes);
+      this.logger.verbose("Archived finalized state", {epoch: finalized.epoch, root: rootHex});
+    }
     // don't delete states before the finalized state, auto-prune will take care of it
-    this.logger.verbose("Archived finalized state", {finalizedEpoch: finalized.epoch});
   }
 }
 

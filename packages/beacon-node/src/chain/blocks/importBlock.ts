@@ -15,7 +15,7 @@ import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {toCheckpointHex} from "../stateCache/index.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
-import {ChainEvent, ReorgEventData} from "../emitter.js";
+import {ReorgEventData} from "../emitter.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
 import type {BeaconChain} from "../chain.js";
 import {FullyVerifiedBlock, ImportBlockOpts, AttestationImportOpt} from "./types.js";
@@ -62,6 +62,7 @@ export async function importBlock(
   const blockRootHex = toHexString(blockRoot);
   const currentEpoch = computeEpochAtSlot(this.forkChoice.getTime());
   const blockEpoch = computeEpochAtSlot(block.message.slot);
+  const parentEpoch = computeEpochAtSlot(parentBlockSlot);
   const prevFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
   const blockDelaySec = (fullyVerifiedBlock.seenTimestampSec - postState.genesisTime) % this.config.SECONDS_PER_SLOT;
 
@@ -202,16 +203,15 @@ export async function importBlock(
     }
   }
 
-  // 5. Compute head. If new head, immediately stateCache.setHeadState()
+  // 5. Compute head, always add to state cache so that it'll not be pruned soon
 
   const oldHead = this.forkChoice.getHead();
   const newHead = this.recomputeForkChoiceHead();
   const currFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
 
+  // always set head state so it'll never be pruned from state cache
+  this.regen.updateHeadState(newHead.stateRoot, postState);
   if (newHead.blockRoot !== oldHead.blockRoot) {
-    // Set head state as strong reference
-    this.regen.updateHeadState(newHead.stateRoot, postState);
-
     this.emitter.emit(routes.events.EventType.head, {
       block: newHead.blockRoot,
       epochTransition: computeStartSlotAtEpoch(computeEpochAtSlot(newHead.slot)) === newHead.slot,
@@ -331,12 +331,15 @@ export async function importBlock(
     this.logger.verbose("After importBlock caching postState without SSZ cache", {slot: postState.slot});
   }
 
-  if (block.message.slot % SLOTS_PER_EPOCH === 0) {
-    // Cache state to preserve epoch transition work
+  if (parentEpoch < blockEpoch) {
+    this.shufflingCache.processState(postState);
+    this.logger.verbose("Processed shuffling for next epoch", {parentEpoch, blockEpoch, slot: block.message.slot});
+
+    // This is the real check point state per spec because the root is in current epoch
+    // it's important to add this to cache, when chain is finalized we'll query this state later
     const checkpointState = postState;
     const cp = getCheckpointFromState(checkpointState);
     this.regen.addCheckpointState(cp, checkpointState);
-    this.emitter.emit(ChainEvent.checkpoint, cp, checkpointState);
 
     // Note: in-lined code from previos handler of ChainEvent.checkpoint
     this.logger.verbose("Checkpoint processed", toCheckpointHex(cp));

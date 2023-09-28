@@ -3,12 +3,16 @@ import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {ArchiverOpts} from "./archiver/index.js";
 import {ForkChoiceOpts} from "./forkChoice/index.js";
 import {LightClientServerOpts} from "./lightClient/index.js";
+import {CheckpointStateCacheOpts} from "./stateCache/stateContextCheckpointsCache.js";
+import {StateContextCacheOpts} from "./stateCache/stateContextCache.js";
 
 export type IChainOptions = BlockProcessOpts &
   PoolOpts &
   SeenCacheOpts &
   ForkChoiceOpts &
   ArchiverOpts &
+  StateContextCacheOpts &
+  CheckpointStateCacheOpts &
   LightClientServerOpts & {
     blsVerifyAllMainThread?: boolean;
     blsVerifyAllMultiThread?: boolean;
@@ -88,4 +92,7 @@ export const defaultChainOptions: IChainOptions = {
   // batching too much may block the I/O thread so if useWorker=false, suggest this value to be 32
   // since this batch attestation work is designed to work with useWorker=true, make this the lowest value
   minSameMessageSignatureSetsToBatch: 2,
+  // since Sep 2023, only cache up to 32 states by default. If a big reorg happens it'll load checkpoint state from disk and regen from there.
+  maxStates: 32,
+  maxEpochsInMemory: 2,
 };

@@ -25,12 +25,12 @@ import {
   getSeed,
   computeProposers,
 } from "../util/index.js";
-import {computeEpochShuffling, EpochShuffling} from "../util/epochShuffling.js";
+import {computeEpochShuffling, EpochShuffling, getShufflingDecisionBlock} from "../util/epochShuffling.js";
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
 import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements.js";
 import {Index2PubkeyCache, PubkeyIndexMap, syncPubkeys} from "./pubkeyCache.js";
-import {BeaconStateAllForks, BeaconStateAltair} from "./types.js";
+import {BeaconStateAllForks, BeaconStateAltair, ShufflingGetter} from "./types.js";
 import {
   computeSyncCommitteeCache,
   getSyncCommitteeCache,
@@ -50,6 +50,7 @@ export type EpochCacheImmutableData = {
 export type EpochCacheOpts = {
   skipSyncCommitteeCache?: boolean;
   skipSyncPubkeys?: boolean;
+  shufflingGetter?: ShufflingGetter;
 };
 
 /** Defers computing proposers by persisting only the seed, and dropping it once indexes are computed */
@@ -272,21 +273,28 @@ export class EpochCache {
     const currentActiveIndices: ValidatorIndex[] = [];
     const nextActiveIndices: ValidatorIndex[] = [];
 
+    const previousShufflingDecisionBlock = getShufflingDecisionBlock(state, previousEpoch);
+    const previousShufflingIn = opts?.shufflingGetter?.(previousEpoch, previousShufflingDecisionBlock);
+    const currentShufflingDecisionBlock = getShufflingDecisionBlock(state, currentEpoch);
+    const currentShufflingIn = opts?.shufflingGetter?.(currentEpoch, currentShufflingDecisionBlock);
+    const nextShufflingDecisionBlock = getShufflingDecisionBlock(state, nextEpoch);
+    const nextShufflingIn = opts?.shufflingGetter?.(nextEpoch, nextShufflingDecisionBlock);
+
     for (let i = 0; i < validatorCount; i++) {
       const validator = validators[i];
 
       // Note: Not usable for fork-choice balances since in-active validators are not zero'ed
       effectiveBalanceIncrements[i] = Math.floor(validator.effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
 
-      if (isActiveValidator(validator, previousEpoch)) {
+      if (previousShufflingIn === undefined && isActiveValidator(validator, previousEpoch)) {
         previousActiveIndices.push(i);
       }
-      if (isActiveValidator(validator, currentEpoch)) {
+      if (currentShufflingIn === undefined && isActiveValidator(validator, currentEpoch)) {
         currentActiveIndices.push(i);
         // We track totalActiveBalanceIncrements as ETH to fit total network balance in a JS number (53 bits)
         totalActiveBalanceIncrements += effectiveBalanceIncrements[i];
       }
-      if (isActiveValidator(validator, nextEpoch)) {
+      if (nextShufflingIn === undefined && isActiveValidator(validator, nextEpoch)) {
         nextActiveIndices.push(i);
       }
 
@@ -309,11 +317,12 @@ export class EpochCache {
       throw Error("totalActiveBalanceIncrements >= Number.MAX_SAFE_INTEGER. MAX_EFFECTIVE_BALANCE is too low.");
     }
 
-    const currentShuffling = computeEpochShuffling(state, currentActiveIndices, currentEpoch);
-    const previousShuffling = isGenesis
-      ? currentShuffling
-      : computeEpochShuffling(state, previousActiveIndices, previousEpoch);
-    const nextShuffling = computeEpochShuffling(state, nextActiveIndices, nextEpoch);
+    const currentShuffling = currentShufflingIn ?? computeEpochShuffling(state, currentActiveIndices, currentEpoch);
+    const previousShuffling =
+      previousShufflingIn !== undefined ?? isGenesis
+        ? currentShuffling
+        : computeEpochShuffling(state, previousActiveIndices, previousEpoch);
+    const nextShuffling = nextShufflingIn ?? computeEpochShuffling(state, nextActiveIndices, nextEpoch);
 
     const currentProposerSeed = getSeed(state, currentEpoch, DOMAIN_BEACON_PROPOSER);
 

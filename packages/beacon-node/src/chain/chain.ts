@@ -75,6 +75,7 @@ import {BlockAttributes, produceBlockBody} from "./produceBlock/produceBlockBody
 import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
 import {BlockInput} from "./blocks/types.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
+import {ShufflingCache} from "./shufflingCache.js";
 
 /**
  * Arbitrary constants, blobs should be consumed immediately in the same slot they are produced.
@@ -130,6 +131,7 @@ export class BeaconChain implements IBeaconChain {
 
   readonly beaconProposerCache: BeaconProposerCache;
   readonly checkpointBalancesCache: CheckpointBalancesCache;
+  readonly shufflingCache: ShufflingCache;
   // TODO DENEB: Prune data structure every time period, for both old entries
   /** Map keyed by executionPayload.blockHash of the block for those blobs */
   readonly producedBlobSidecarsCache = new Map<BlockHash, {blobSidecars: deneb.BlobSidecars; slot: Slot}>();
@@ -211,6 +213,7 @@ export class BeaconChain implements IBeaconChain {
 
     this.beaconProposerCache = new BeaconProposerCache(opts);
     this.checkpointBalancesCache = new CheckpointBalancesCache();
+    this.shufflingCache = new ShufflingCache();
 
     // Restore state caches
     // anchorState may already by a CachedBeaconState. If so, don't create the cache again, since deserializing all
@@ -230,12 +233,14 @@ export class BeaconChain implements IBeaconChain {
     this.pubkey2index = cachedState.epochCtx.pubkey2index;
     this.index2pubkey = cachedState.epochCtx.index2pubkey;
 
-    const stateCache = new StateContextCache({metrics});
-    const checkpointStateCache = new CheckpointStateCache({metrics});
+    const stateCache = new StateContextCache(this.opts, {metrics});
+    const checkpointStateCache = new CheckpointStateCache(
+      {metrics, logger, clock, shufflingCache: this.shufflingCache, getHeadState: this.getHeadState.bind(this)},
+      this.opts
+    );
 
     const {checkpoint} = computeAnchorCheckpoint(config, anchorState);
     stateCache.add(cachedState);
-    stateCache.setHeadState(cachedState);
     checkpointStateCache.add(checkpoint, cachedState);
 
     const forkChoice = initializeForkChoice(
@@ -841,15 +846,19 @@ export class BeaconChain implements IBeaconChain {
     this.logger.verbose("Fork choice justified", {epoch: cp.epoch, root: cp.rootHex});
   }
 
-  private onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWithHex): void {
+  private async onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWithHex): Promise<void> {
     this.logger.verbose("Fork choice finalized", {epoch: cp.epoch, root: cp.rootHex});
     this.seenBlockProposers.prune(computeStartSlotAtEpoch(cp.epoch));
 
     // TODO: Improve using regen here
     const headState = this.regen.getStateSync(this.forkChoice.getHead().stateRoot);
-    const finalizedState = this.regen.getCheckpointStateSync(cp);
+    // the finalized state could be from disk
+    const finalizedStateOrBytes = await this.regen.getCheckpointStateOrBytes(cp);
+    if (!finalizedStateOrBytes) {
+      throw Error("No state in cache for finalized checkpoint state epoch #" + cp.epoch);
+    }
     if (headState) {
-      this.opPool.pruneAll(headState, finalizedState);
+      this.opPool.pruneAll(headState, finalizedStateOrBytes);
     }
   }
 

@@ -1,9 +1,13 @@
 import {BitArray, deserializeUint8ArrayBitListFromBytes} from "@chainsafe/ssz";
-import {BLSSignature, RootHex, Slot} from "@lodestar/types";
+import {ChainForkConfig} from "@lodestar/config";
+import {BLSSignature, RootHex, Slot, ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
+import {getStateTypeFromBytes} from "./multifork.js";
 
 export type BlockRootHex = RootHex;
 export type AttDataBase64 = string;
+
+// TODO: deduplicate with packages/state-transition/src/util/sszBytes.ts
 
 // class Attestation(Container):
 //   aggregation_bits: Bitlist[MAX_VALIDATORS_PER_COMMITTEE] - offset 4
@@ -202,6 +206,52 @@ export function getSlotFromSignedBlobSidecarSerialized(data: Uint8Array): Slot |
   }
 
   return getSlotFromOffset(data, SLOT_BYTES_POSITION_IN_SIGNED_BLOB_SIDECAR);
+}
+
+type BeaconStateType =
+  | typeof ssz.phase0.BeaconState
+  | typeof ssz.altair.BeaconState
+  | typeof ssz.bellatrix.BeaconState
+  | typeof ssz.capella.BeaconState
+  | typeof ssz.deneb.BeaconState;
+
+export function getValidatorsBytesFromStateBytes(config: ChainForkConfig, stateBytes: Uint8Array): Uint8Array {
+  const stateType = getStateTypeFromBytes(config, stateBytes) as BeaconStateType;
+  const dataView = new DataView(stateBytes.buffer, stateBytes.byteOffset, stateBytes.byteLength);
+  const fieldRanges = stateType.getFieldRanges(dataView, 0, stateBytes.length);
+  const allFields = Object.keys(stateType.fields);
+  const validatorsFieldIndex = allFields.indexOf("validators");
+  const validatorsRange = fieldRanges[validatorsFieldIndex];
+  return stateBytes.slice(validatorsRange.start, validatorsRange.end);
+}
+
+/**
+ * 48 + 32 + 8 + 1 + 8 + 8 + 8 + 8 = 121
+ * ```
+ * class Validator(Container):
+    pubkey: BLSPubkey [fixed - 48 bytes]
+    withdrawal_credentials: Bytes32 [fixed - 32 bytes]
+    effective_balance: Gwei [fixed - 8 bytes]
+    slashed: boolean [fixed - 1 byte]
+    # Status epochs
+    activation_eligibility_epoch: Epoch [fixed - 8 bytes]
+    activation_epoch: Epoch [fixed - 8 bytes]
+    exit_epoch: Epoch [fixed - 8 bytes]
+    withdrawable_epoch: Epoch [fixed - 8 bytes]
+  ```
+ */
+const VALIDATOR_BYTES_SIZE = 121;
+const BLS_PUBKEY_SIZE = 48;
+
+export function getWithdrawalCredentialFirstByteFromValidatorBytes(
+  validatorBytes: Uint8Array,
+  validatorIndex: number
+): number | null {
+  if (validatorBytes.length < VALIDATOR_BYTES_SIZE * (validatorIndex + 1)) {
+    return null;
+  }
+
+  return validatorBytes[VALIDATOR_BYTES_SIZE * validatorIndex + BLS_PUBKEY_SIZE];
 }
 
 function getSlotFromOffset(data: Uint8Array, offset: number): Slot {

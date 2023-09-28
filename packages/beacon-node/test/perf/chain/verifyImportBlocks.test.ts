@@ -89,6 +89,8 @@ describe.skip("verify+import blocks - range sync perf test", () => {
           skipCreateStateCacheIfAvailable: true,
           archiveStateEpochFrequency: 1024,
           minSameMessageSignatureSetsToBatch: 32,
+          maxStates: 32,
+          maxEpochsInMemory: 2,
         },
         {
           config: state.config,

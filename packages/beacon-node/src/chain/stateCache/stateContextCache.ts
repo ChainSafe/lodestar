@@ -3,12 +3,16 @@ import {Epoch, RootHex} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {routes} from "@lodestar/api";
 import {Metrics} from "../../metrics/index.js";
+import {LinkedList} from "../../util/array.js";
 import {MapTracker} from "./mapMetrics.js";
 
-const MAX_STATES = 3 * 32;
+export type StateContextCacheOpts = {
+  maxStates: number;
+};
 
 /**
- * In memory cache of CachedBeaconState
+ * In memory cache of CachedBeaconState, this is LRU like cache except that we only track the last added time, not the last used time
+ * because state could be fetched from multiple places, but we only care about the last added time.
  *
  * Similar API to Repository
  */
@@ -21,25 +25,23 @@ export class StateContextCache {
   private readonly cache: MapTracker<string, CachedBeaconStateAllForks>;
   /** Epoch -> Set<blockRoot> */
   private readonly epochIndex = new Map<Epoch, Set<string>>();
+  // key order to implement LRU like cache
+  private readonly keyOrder: LinkedList<string>;
   private readonly metrics: Metrics["stateCache"] | null | undefined;
-  /**
-   * Strong reference to prevent head state from being pruned.
-   * null if head state is being regen and not available at the moment.
-   */
-  private head: {state: CachedBeaconStateAllForks; stateRoot: RootHex} | null = null;
 
-  constructor({maxStates = MAX_STATES, metrics}: {maxStates?: number; metrics?: Metrics | null}) {
-    this.maxStates = maxStates;
+  constructor(opts: StateContextCacheOpts, {metrics}: {maxStates?: number; metrics?: Metrics | null}) {
+    this.maxStates = opts.maxStates;
     this.cache = new MapTracker(metrics?.stateCache);
     if (metrics) {
       this.metrics = metrics.stateCache;
       metrics.stateCache.size.addCollect(() => metrics.stateCache.size.set(this.cache.size));
     }
+    this.keyOrder = new LinkedList();
   }
 
   get(rootHex: RootHex): CachedBeaconStateAllForks | null {
     this.metrics?.lookups.inc();
-    const item = this.head?.stateRoot === rootHex ? this.head.state : this.cache.get(rootHex);
+    const item = this.cache.get(rootHex);
     if (!item) {
       return null;
     }
@@ -53,6 +55,8 @@ export class StateContextCache {
   add(item: CachedBeaconStateAllForks): void {
     const key = toHexString(item.hashTreeRoot());
     if (this.cache.get(key)) {
+      this.keyOrder.moveToHead(key);
+      // same size, no prune
       return;
     }
     this.metrics?.adds.inc();
@@ -64,15 +68,8 @@ export class StateContextCache {
     } else {
       this.epochIndex.set(epoch, new Set([key]));
     }
-  }
-
-  setHeadState(item: CachedBeaconStateAllForks | null): void {
-    if (item) {
-      const key = toHexString(item.hashTreeRoot());
-      this.head = {state: item, stateRoot: key};
-    } else {
-      this.head = null;
-    }
+    this.keyOrder.unshift(key);
+    this.prune();
   }
 
   clear(): void {
@@ -85,21 +82,21 @@ export class StateContextCache {
   }
 
   /**
-   * TODO make this more robust.
-   * Without more thought, this currently breaks our assumptions about recent state availablity
+   * If a recent state is not available, regen from the checkpoint state.
+   * Given state 0 => 1 => ... => n, if regen adds back state 0 we should not remove it right away.
+   * The LRU-like cache helps with this.
    */
-  prune(headStateRootHex: RootHex): void {
-    const keys = Array.from(this.cache.keys());
-    if (keys.length > this.maxStates) {
-      // object keys are stored in insertion order, delete keys starting from the front
-      for (const key of keys.slice(0, keys.length - this.maxStates)) {
-        if (key !== headStateRootHex) {
-          const item = this.cache.get(key);
-          if (item) {
-            this.epochIndex.get(item.epochCtx.epoch)?.delete(key);
-            this.cache.delete(key);
-          }
-        }
+  prune(): void {
+    while (this.keyOrder.length > this.maxStates) {
+      const key = this.keyOrder.pop();
+      if (!key) {
+        // should not happen
+        throw new Error("No key");
+      }
+      const item = this.cache.get(key);
+      if (item) {
+        this.epochIndex.get(item.epochCtx.epoch)?.delete(key);
+        this.cache.delete(key);
       }
     }
   }

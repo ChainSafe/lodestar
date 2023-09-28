@@ -45,6 +45,9 @@ export class LinkedList<T> {
     return this._length;
   }
 
+  /**
+   * Add to the end of the list
+   */
   push(data: T): void {
     if (this._length === 0) {
       this.tail = this.head = new Node(data);
@@ -64,6 +67,9 @@ export class LinkedList<T> {
     this._length++;
   }
 
+  /**
+   * Add to the beginning of the list
+   */
   unshift(data: T): void {
     if (this._length === 0) {
       this.tail = this.head = new Node(data);
@@ -171,6 +177,22 @@ export class LinkedList<T> {
     }
 
     return false;
+  }
+
+  /**
+   * Move an existing item to the head of the list.
+   * If the item is not found, do nothing.
+   */
+  moveToHead(item: T): void {
+    // if this is head, do nothing
+    if (this.head?.data === item) {
+      return;
+    }
+
+    const found = this.deleteFirst(item);
+    if (found) {
+      this.unshift(item);
+    }
   }
 
   next(): IteratorResult<T> {

@@ -70,17 +70,16 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     return this.stateCache.get(stateRoot);
   }
 
+  async getCheckpointStateOrBytes(cp: CheckpointHex): Promise<CachedBeaconStateAllForks | Uint8Array | null> {
+    return this.checkpointStateCache.getStateOrBytes(cp);
+  }
+
   getCheckpointStateSync(cp: CheckpointHex): CachedBeaconStateAllForks | null {
     return this.checkpointStateCache.get(cp);
   }
 
   getClosestHeadState(head: ProtoBlock): CachedBeaconStateAllForks | null {
     return this.checkpointStateCache.getLatest(head.blockRoot, Infinity) || this.stateCache.get(head.stateRoot);
-  }
-
-  pruneOnCheckpoint(finalizedEpoch: Epoch, justifiedEpoch: Epoch, headStateRoot: RootHex): void {
-    this.checkpointStateCache.prune(finalizedEpoch, justifiedEpoch);
-    this.stateCache.prune(headStateRoot);
   }
 
   pruneOnFinalized(finalizedEpoch: number): void {
@@ -96,6 +95,10 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     this.checkpointStateCache.add(cp, item);
   }
 
+  pruneCheckpointStateCache(): number {
+    return this.checkpointStateCache.pruneFromMemory();
+  }
+
   updateHeadState(newHeadStateRoot: RootHex, maybeHeadState: CachedBeaconStateAllForks): void {
     const headState =
       newHeadStateRoot === toHexString(maybeHeadState.hashTreeRoot())
@@ -103,15 +106,16 @@ export class QueuedStateRegenerator implements IStateRegenerator {
         : this.stateCache.get(newHeadStateRoot);
 
     if (headState) {
-      this.stateCache.setHeadState(headState);
+      // this move the headState to the front of the queue so it'll not be pruned right away
+      this.stateCache.add(headState);
     } else {
       // Trigger regen on head change if necessary
       this.logger.warn("Head state not available, triggering regen", {stateRoot: newHeadStateRoot});
-      // head has changed, so the existing cached head state is no longer useful. Set strong reference to null to free
-      // up memory for regen step below. During regen, node won't be functional but eventually head will be available
-      this.stateCache.setHeadState(null);
-      this.regen.getState(newHeadStateRoot, RegenCaller.processBlock).then(
-        (headStateRegen) => this.stateCache.setHeadState(headStateRegen),
+      // it's important to reload state to regen head state here
+      const shouldReload = true;
+      this.regen.getState(newHeadStateRoot, RegenCaller.processBlock, shouldReload).then(
+        // this move the headState to the front of the queue so it'll not be pruned right away
+        (headStateRegen) => this.stateCache.add(headStateRegen),
         (e) => this.logger.error("Error on head state regen", {}, e)
       );
     }

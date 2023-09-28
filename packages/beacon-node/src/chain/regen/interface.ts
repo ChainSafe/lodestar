@@ -35,12 +35,13 @@ export interface IStateRegenerator extends IStateRegeneratorInternal {
   dropCache(): void;
   dumpCacheSummary(): routes.lodestar.StateCacheItem[];
   getStateSync(stateRoot: RootHex): CachedBeaconStateAllForks | null;
+  getCheckpointStateOrBytes(cp: CheckpointHex): Promise<CachedBeaconStateAllForks | Uint8Array | null>;
   getCheckpointStateSync(cp: CheckpointHex): CachedBeaconStateAllForks | null;
   getClosestHeadState(head: ProtoBlock): CachedBeaconStateAllForks | null;
-  pruneOnCheckpoint(finalizedEpoch: Epoch, justifiedEpoch: Epoch, headStateRoot: RootHex): void;
   pruneOnFinalized(finalizedEpoch: Epoch): void;
   addPostState(postState: CachedBeaconStateAllForks): void;
   addCheckpointState(cp: phase0.Checkpoint, item: CachedBeaconStateAllForks): void;
+  pruneCheckpointStateCache(): number;
   updateHeadState(newHeadStateRoot: RootHex, maybeHeadState: CachedBeaconStateAllForks): void;
   updatePreComputedCheckpoint(rootHex: RootHex, epoch: Epoch): number | null;
 }
