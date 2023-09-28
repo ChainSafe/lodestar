@@ -4,8 +4,8 @@ import {toHexString} from "@chainsafe/ssz";
 import {BeaconStateAllForks, isExecutionStateType} from "@lodestar/state-transition";
 import {InputType} from "@lodestar/spec-test-util";
 import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
-import {phase0, allForks, bellatrix, ssz, RootHex} from "@lodestar/types";
-import {bnToNum} from "@lodestar/utils";
+import {phase0, allForks, bellatrix, ssz, RootHex, deneb} from "@lodestar/types";
+import {bnToNum, fromHex} from "@lodestar/utils";
 import {createBeaconConfig} from "@lodestar/config";
 import {ACTIVE_PRESET, ForkSeq, isForkBlobs} from "@lodestar/params";
 import {BeaconChain} from "../../../src/chain/index.js";
@@ -34,6 +34,7 @@ import {specTestIterator} from "../utils/specTestIterator.js";
 const ANCHOR_STATE_FILE_NAME = "anchor_state";
 const ANCHOR_BLOCK_FILE_NAME = "anchor_block";
 const BLOCK_FILE_NAME = "^(block)_([0-9a-zA-Z]+)$";
+const BLOBS_FILE_NAME = "^(blobs)_([0-9a-zA-Z]+)$";
 const POW_BLOCK_FILE_NAME = "^(pow_block)_([0-9a-zA-Z]+)$";
 const ATTESTATION_FILE_NAME = "^(attestation)_([0-9a-zA-Z])+$";
 const ATTESTER_SLASHING_FILE_NAME = "^(attester_slashing)_([0-9a-zA-Z])+$";
@@ -147,6 +148,15 @@ const forkChoiceTest =
                 throw Error(`No block ${step.block}`);
               }
 
+              let blobs: deneb.Blob[] | undefined;
+              let proofs: deneb.KZGProof[] | undefined;
+              if (step.blobs !== undefined) {
+                blobs = testcase.blobs.get(step.blobs);
+              }
+              if (step.proofs !== undefined) {
+                proofs = step.proofs.map((proof) => ssz.deneb.KZGProof.deserialize(fromHex(proof)));
+              }
+
               const {slot} = signedBlock.message;
               // Log the BeaconBlock root instead of the SignedBeaconBlock root, forkchoice references BeaconBlock roots
               const blockRoot = config
@@ -160,19 +170,50 @@ const forkChoiceTest =
                 isValid,
               });
 
-              const blockImport =
-                config.getForkSeq(slot) < ForkSeq.deneb
-                  ? getBlockInput.preDeneb(config, signedBlock, BlockSource.gossip, null)
-                  : getBlockInput.postDeneb(
-                      config,
-                      signedBlock,
-                      BlockSource.gossip,
-                      ssz.deneb.BlobSidecars.defaultValue(),
-                      null,
-                      [null]
-                    );
-
               try {
+                let blockImport;
+                if (config.getForkSeq(slot) >= ForkSeq.deneb) {
+                  if (blobs === undefined) {
+                    // seems like some deneb tests don't have this and we are supposed to assume empty
+                    // throw Error("Missing blobs for the deneb+ block");
+                    blobs = [];
+                  }
+                  if (proofs === undefined) {
+                    // seems like some deneb tests don't have this and we are supposed to assume empty
+                    // throw Error("proofs for the deneb+ block");
+                    proofs = [];
+                  }
+                  // the kzg lib for validation of minimal setup is not yet integrated, lets just verify lengths
+                  // post integration use validateBlobsAndProofs
+                  const commitments = (signedBlock as deneb.SignedBeaconBlock).message.body.blobKzgCommitments;
+                  if (blobs.length !== commitments.length || proofs.length !== commitments.length) {
+                    throw Error("Invalid blobs or proofs lengths");
+                  }
+
+                  const blockRoot = config
+                    .getForkTypes(signedBlock.message.slot)
+                    .BeaconBlock.hashTreeRoot(signedBlock.message);
+                  const blobSidecars: deneb.BlobSidecars = blobs.map((blob, index) => {
+                    return {
+                      blockRoot,
+                      index,
+                      slot,
+                      blob,
+                      // proofs isn't undefined here but typescript(check types) can't figure it out
+                      kzgProof: (proofs ?? [])[index],
+                      kzgCommitment: commitments[index],
+                      blockParentRoot: signedBlock.message.parentRoot,
+                      proposerIndex: signedBlock.message.proposerIndex,
+                    };
+                  });
+
+                  blockImport = getBlockInput.postDeneb(config, signedBlock, BlockSource.gossip, blobSidecars, null, [
+                    null,
+                  ]);
+                } else {
+                  blockImport = getBlockInput.preDeneb(config, signedBlock, BlockSource.gossip, null);
+                }
+
                 await chain.processBlock(blockImport, {
                   seenTimestampSec: tickTime,
                   validBlobSidecars: true,
@@ -276,6 +317,7 @@ const forkChoiceTest =
           [ANCHOR_STATE_FILE_NAME]: ssz[fork].BeaconState,
           [ANCHOR_BLOCK_FILE_NAME]: ssz[fork].BeaconBlock,
           [BLOCK_FILE_NAME]: ssz[fork].SignedBeaconBlock,
+          [BLOBS_FILE_NAME]: ssz.deneb.Blobs,
           [POW_BLOCK_FILE_NAME]: ssz.bellatrix.PowBlock,
           [ATTESTATION_FILE_NAME]: ssz.phase0.Attestation,
           [ATTESTER_SLASHING_FILE_NAME]: ssz.phase0.AttesterSlashing,
@@ -283,6 +325,7 @@ const forkChoiceTest =
         mapToTestCase: (t: Record<string, any>) => {
           // t has input file name as key
           const blocks = new Map<string, allForks.SignedBeaconBlock>();
+          const blobs = new Map<string, deneb.Blobs>();
           const powBlocks = new Map<string, bellatrix.PowBlock>();
           const attestations = new Map<string, phase0.Attestation>();
           const attesterSlashings = new Map<string, phase0.AttesterSlashing>();
@@ -290,6 +333,10 @@ const forkChoiceTest =
             const blockMatch = key.match(BLOCK_FILE_NAME);
             if (blockMatch) {
               blocks.set(key, t[key]);
+            }
+            const blobsMatch = key.match(BLOBS_FILE_NAME);
+            if (blobsMatch) {
+              blobs.set(key, t[key]);
             }
             const powBlockMatch = key.match(POW_BLOCK_FILE_NAME);
             if (powBlockMatch) {
@@ -310,6 +357,7 @@ const forkChoiceTest =
             anchorBlock: t[ANCHOR_BLOCK_FILE_NAME] as ForkChoiceTestCase["anchorBlock"],
             steps: t["steps"] as ForkChoiceTestCase["steps"],
             blocks,
+            blobs,
             powBlocks,
             attestations,
             attesterSlashings,
@@ -319,6 +367,13 @@ const forkChoiceTest =
         // eslint-disable-next-line @typescript-eslint/no-empty-function
         expectFunc: () => {},
         // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
+        // EXCEPTION : this test skipped here because prefix match can't be don't for this particular test
+        // as testId for the entire directory is same : `deneb/fork_choice/on_block/pyspec_tests` and
+        // we just want to skip this one particular test because we don't have minimal kzg lib integrated
+        //
+        // This skip can be removed once c-kzg lib with run-time minimal blob size setup is released and
+        // integrated
+        shouldSkip: (_testcase, name, _index) => name.includes("invalid_incorrect_proof"),
       },
     };
   };
@@ -364,6 +419,8 @@ type OnAttesterSlashing = {
 type OnBlock = {
   /** the name of the `block_<32-byte-root>.ssz_snappy` file. To execute `on_block(store, block)` */
   block: string;
+  blobs?: string;
+  proofs?: string[];
   /** optional, default to `true`. */
   valid?: number;
 };
@@ -412,6 +469,7 @@ type ForkChoiceTestCase = {
   anchorBlock: allForks.BeaconBlock;
   steps: Step[];
   blocks: Map<string, allForks.SignedBeaconBlock>;
+  blobs: Map<string, deneb.Blobs>;
   powBlocks: Map<string, bellatrix.PowBlock>;
   attestations: Map<string, phase0.Attestation>;
   attesterSlashings: Map<string, phase0.AttesterSlashing>;

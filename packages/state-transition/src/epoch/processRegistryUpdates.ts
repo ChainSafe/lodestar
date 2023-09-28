@@ -38,7 +38,7 @@ export function processRegistryUpdates(state: CachedBeaconStateAllForks, cache: 
 
   const finalityEpoch = state.finalizedCheckpoint.epoch;
   // dequeue validators for activation up to churn limit
-  for (const index of cache.indicesEligibleForActivation.slice(0, epochCtx.churnLimit)) {
+  for (const index of cache.indicesEligibleForActivation.slice(0, epochCtx.activationChurnLimit)) {
     const validator = validators.get(index);
     // placement in queue is finalized
     if (validator.activationEligibilityEpoch > finalityEpoch) {

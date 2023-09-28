@@ -65,7 +65,8 @@ export const chainConfig: ChainConfig = {
   // 2**4 * 10**9 (= 16,000,000,000) Gwei
   EJECTION_BALANCE: 16000000000,
   // 2**2 (= 4)
-  MIN_PER_EPOCH_CHURN_LIMIT: 4,
+  MIN_PER_EPOCH_CHURN_LIMIT: 2,
+  MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT: 4,
   // [customized] scale queue churn at much lower validator counts for testing
   CHURN_LIMIT_QUOTIENT: 32,
   PROPOSER_SCORE_BOOST: 40,
