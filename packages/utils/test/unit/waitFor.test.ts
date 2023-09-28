@@ -1,7 +1,9 @@
 import "../setup.js";
 import {expect} from "chai";
-import {waitFor} from "../../src/waitFor.js";
+import sinon from "sinon";
+import {waitFor, waitForElapsedTime} from "../../src/waitFor.js";
 import {ErrorAborted, TimeoutError} from "../../src/errors.js";
+import {sleep} from "../../src/sleep.js";
 
 describe("waitFor", () => {
   const interval = 10;
@@ -33,5 +35,58 @@ describe("waitFor", () => {
     const controller = new AbortController();
     controller.abort();
     await expect(waitFor(() => true, {interval, timeout, signal: controller.signal})).to.be.rejectedWith(ErrorAborted);
+  });
+});
+
+describe("waitForElapsedTime", () => {
+  it("should call the function for the first time", () => {
+    const callIfTimePassed = waitForElapsedTime({minElapsedTime: 1000});
+    const fn = sinon.spy();
+    callIfTimePassed(fn);
+
+    expect(fn).to.have.been.calledOnce;
+  });
+
+  it("should call the function after the minElapsedTime has passed", async () => {
+    const callIfTimePassed = waitForElapsedTime({minElapsedTime: 100});
+    const fn = sinon.spy();
+    callIfTimePassed(fn);
+
+    await sleep(150);
+    callIfTimePassed(fn);
+
+    expect(fn).to.have.been.calledTwice;
+  });
+
+  it("should not call the function before the minElapsedTime has passed", () => {
+    const callIfTimePassed = waitForElapsedTime({minElapsedTime: 100});
+    const fn = sinon.spy();
+    callIfTimePassed(fn);
+    callIfTimePassed(fn);
+
+    expect(fn).to.have.been.calledOnce;
+  });
+
+  it("should call the onError if the function is called before the minElapsedTime has passed", () => {
+    const fn = sinon.spy();
+    const err = sinon.spy();
+    const callIfTimePassed = waitForElapsedTime({minElapsedTime: 100, onError: err});
+    callIfTimePassed(fn);
+    callIfTimePassed(fn);
+
+    expect(err).to.have.been.calledOnce;
+  });
+
+  it("should not call the onError if the function is called after the minElapsedTime has passed", async () => {
+    const fn = sinon.spy();
+    const err = sinon.spy();
+    const callIfTimePassed = waitForElapsedTime({minElapsedTime: 100, onError: err});
+    callIfTimePassed(fn);
+
+    await sleep(100);
+
+    callIfTimePassed(fn);
+
+    expect(err).to.have.been.callCount(0);
   });
 });
