@@ -590,7 +590,14 @@ export async function getStateForAttestationVerification(
     if (isSameFork && headStateHasTargetEpochCommmittee) {
       // most of the time it should just use head state
       chain.metrics?.gossipAttestation.useHeadBlockState.inc({caller: regenCaller});
-      return await chain.regen.getState(attHeadBlock.stateRoot, regenCaller);
+      // return await chain.regen.getState(attHeadBlock.stateRoot, regenCaller);
+      // we don't want to do a lot of regen here because the state cache may be very small
+      // TODO: use the ShufflingCache
+      const cachedState = chain.regen.getStateSync(attHeadBlock.stateRoot);
+      if (!cachedState) {
+        throw Error("Head state not found in cache");
+      }
+      return cachedState;
     }
 
     // at fork boundary we should dial head state to target epoch
