@@ -388,7 +388,7 @@ export class CheckpointStateCache {
 
   /** ONLY FOR DEBUGGING PURPOSES. For lodestar debug API */
   dumpSummary(): routes.lodestar.StateCacheItem[] {
-    return Array.from(this.cache.keys()).map(([key]) => {
+    return Array.from(this.cache.keys()).map((key) => {
       const cp = fromCheckpointKey(key);
       return {
         slot: computeStartSlotAtEpoch(cp.epoch),
@@ -396,7 +396,7 @@ export class CheckpointStateCache {
         reads: this.cache.readCount.get(key) ?? 0,
         lastRead: this.cache.lastRead.get(key) ?? 0,
         checkpointState: true,
-        // TODO: also return state or file path
+        filePath: typeof this.cache.get(key) === "string" ? (this.cache.get(key) as string) : undefined,
       };
     });
   }
