@@ -4,6 +4,7 @@ import {ssz, phase0} from "@lodestar/types";
 import {generateCachedState} from "../../../utils/state.js";
 import {CheckpointStateCache, toCheckpointHex} from "../../../../src/chain/stateCache/index.js";
 import {ShufflingCache} from "../../../../src/chain/shufflingCache.js";
+import {testLogger} from "../../../utils/logger.js";
 
 describe("CheckpointStateCache perf tests", function () {
   setBenchOpts({noThreshold: true});
@@ -13,7 +14,10 @@ describe("CheckpointStateCache perf tests", function () {
   let checkpointStateCache: CheckpointStateCache;
 
   before(() => {
-    checkpointStateCache = new CheckpointStateCache({shufflingCache: new ShufflingCache()}, {maxEpochsInMemory: 2});
+    checkpointStateCache = new CheckpointStateCache(
+      {logger: testLogger(), shufflingCache: new ShufflingCache()},
+      {maxEpochsInMemory: 2}
+    );
     state = generateCachedState();
     checkpoint = ssz.phase0.Checkpoint.defaultValue();
   });

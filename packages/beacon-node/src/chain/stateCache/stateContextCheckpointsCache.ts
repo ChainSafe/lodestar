@@ -3,7 +3,7 @@ import fs from "node:fs";
 import {toHexString} from "@chainsafe/ssz";
 import {phase0, Epoch, RootHex} from "@lodestar/types";
 import {CachedBeaconStateAllForks, computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {MapDef, ensureDir, removeFile, writeIfNotExist} from "@lodestar/utils";
+import {Logger, MapDef, ensureDir, removeFile, writeIfNotExist} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
 import {loadCachedBeaconState} from "@lodestar/state-transition";
 import {Metrics} from "../../metrics/index.js";
@@ -46,11 +46,20 @@ enum RemoveFileReason {
   stateUpdate = "state_update",
 }
 
-type GetHeadStateFn = () => CachedBeaconStateAllForks;
+export type GetHeadStateFn = () => CachedBeaconStateAllForks;
 
 export type CheckpointStateCacheOpts = {
   // Keep max n states in memory, persist the rest to disk
   maxEpochsInMemory: number;
+};
+
+export type CheckpointStateCacheModules = {
+  metrics?: Metrics | null;
+  logger: Logger;
+  clock?: IClock | null;
+  shufflingCache: ShufflingCache;
+  getHeadState?: GetHeadStateFn;
+  persistentApis?: PersistentApis;
 };
 
 /**
@@ -68,6 +77,7 @@ export class CheckpointStateCache {
   /** Epoch -> Set<blockRoot> */
   private readonly epochIndex = new MapDef<Epoch, Set<string>>(() => new Set<string>());
   private readonly metrics: Metrics["cpStateCache"] | null | undefined;
+  private readonly logger: Logger;
   private readonly clock: IClock | null | undefined;
   private preComputedCheckpoint: string | null = null;
   private preComputedCheckpointHits: number | null = null;
@@ -77,19 +87,7 @@ export class CheckpointStateCache {
   private readonly getHeadState?: GetHeadStateFn;
 
   constructor(
-    {
-      metrics,
-      clock,
-      shufflingCache,
-      getHeadState,
-      persistentApis,
-    }: {
-      metrics?: Metrics | null;
-      clock?: IClock | null;
-      shufflingCache: ShufflingCache;
-      getHeadState?: GetHeadStateFn;
-      persistentApis?: PersistentApis;
-    },
+    {metrics, logger, clock, shufflingCache, getHeadState, persistentApis}: CheckpointStateCacheModules,
     opts: CheckpointStateCacheOpts
   ) {
     this.cache = new MapTracker(metrics?.cpStateCache);
@@ -110,6 +108,7 @@ export class CheckpointStateCache {
       });
       metrics.cpStateCache.epochSize.addCollect(() => metrics.cpStateCache.epochSize.set(this.epochIndex.size));
     }
+    this.logger = logger;
     this.clock = clock;
     this.maxEpochsInMemory = opts.maxEpochsInMemory;
     // Specify different persistentApis for testing
@@ -145,7 +144,9 @@ export class CheckpointStateCache {
     }
 
     // reload from disk based on closest checkpoint
+    this.logger.verbose("Reload: read state from disk", {filePath});
     const newStateBytes = await this.persistentApis.readFile(filePath);
+    this.logger.verbose("Reload: read state from disk successfully", {filePath});
     void this.persistentApis.removeFile(filePath);
     this.metrics?.stateFilesRemoveCount.inc({reason: RemoveFileReason.reload});
     this.metrics?.stateReloadSecFromSlot.observe(this.clock?.secFromSlot(this.clock?.currentSlot ?? 0) ?? 0);
@@ -154,11 +155,17 @@ export class CheckpointStateCache {
       throw new Error("No closest state found for cp " + toCheckpointKey(cp));
     }
     this.metrics?.stateReloadEpochDiff.observe(Math.abs(closestState.epochCtx.epoch - cp.epoch));
+    this.logger.verbose("Reload: found closest state", {filePath, seedSlot: closestState.slot});
     const timer = this.metrics?.stateReloadDuration.startTimer();
     const newCachedState = loadCachedBeaconState(closestState, newStateBytes, {
       shufflingGetter: this.shufflingCache.get.bind(this.shufflingCache),
     });
     timer?.();
+    this.logger.verbose("Reload state successfully from disk", {
+      filePath,
+      stateSlot: newCachedState.slot,
+      seedSlot: closestState.slot,
+    });
     this.cache.set(cpKey, newCachedState);
     // since item is file path, cpKey is not in inMemoryKeyOrder
     this.inMemoryKeyOrder.unshift(cpKey);

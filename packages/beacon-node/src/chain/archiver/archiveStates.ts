@@ -1,4 +1,3 @@
-import {toHexString} from "@chainsafe/ssz";
 import {Logger} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Slot, Epoch} from "@lodestar/types";
