@@ -148,13 +148,12 @@ const forkChoiceTest =
                 throw Error(`No block ${step.block}`);
               }
 
-              let blobs: deneb.Blobs = [];
-              let proofs: deneb.KZGProofs = [];
+              let blobs: deneb.Blob[] | undefined;
+              let proofs: deneb.KZGProof[] | undefined;
               if (step.blobs !== undefined) {
                 blobs = testcase.blobs.get(step.blobs);
-                if (blobs === undefined) {
-                  throw Error(`Blobs not loaded ${step.blobs}`);
-                }
+              }
+              if (step.proofs !== undefined) {
                 proofs = step.proofs.map((proof) => ssz.deneb.KZGProof.deserialize(fromHex(proof)));
               }
 
@@ -171,19 +170,48 @@ const forkChoiceTest =
                 isValid,
               });
 
-              const blockImport =
-                config.getForkSeq(slot) < ForkSeq.deneb
-                  ? getBlockInput.preDeneb(config, signedBlock, BlockSource.gossip, null)
-                  : getBlockInput.postDeneb(config, signedBlock, BlockSource.gossip, blobs, null, [null]);
-
               try {
+                let blockImport;
                 if (config.getForkSeq(slot) >= ForkSeq.deneb) {
+                  if (blobs === undefined) {
+                    // seems like some deneb tests don't have this and we are supposed to assume empty
+                    // throw Error("Missing blobs for the deneb+ block");
+                    blobs = [];
+                  }
+                  if (proofs === undefined) {
+                    // seems like some deneb tests don't have this and we are supposed to assume empty
+                    // throw Error("proofs for the deneb+ block");
+                    proofs = [];
+                  }
                   // the kzg lib for validation of minimal setup is not yet integrated, lets just verify lengths
                   // post integration use validateBlobsAndProofs
                   const commitments = (signedBlock as deneb.SignedBeaconBlock).message.body.blobKzgCommitments;
                   if (blobs.length !== commitments.length || proofs.length !== commitments.length) {
                     throw Error("Invalid blobs or proofs lengths");
                   }
+
+                  const blockRoot = config
+                    .getForkTypes(signedBlock.message.slot)
+                    .BeaconBlock.hashTreeRoot(signedBlock.message);
+                  const blobSidecars: deneb.BlobSidecars = blobs.map((blob, index) => {
+                    return {
+                      blockRoot,
+                      index,
+                      slot,
+                      blob,
+                      // proofs isn't undefined here but typescript(check types) can't figure it out
+                      kzgProof: (proofs ?? [])[index],
+                      kzgCommitment: commitments[index],
+                      blockParentRoot: signedBlock.message.parentRoot,
+                      proposerIndex: signedBlock.message.proposerIndex,
+                    };
+                  });
+
+                  blockImport = getBlockInput.postDeneb(config, signedBlock, BlockSource.gossip, blobSidecars, null, [
+                    null,
+                  ]);
+                } else {
+                  blockImport = getBlockInput.preDeneb(config, signedBlock, BlockSource.gossip, null);
                 }
 
                 await chain.processBlock(blockImport, {
