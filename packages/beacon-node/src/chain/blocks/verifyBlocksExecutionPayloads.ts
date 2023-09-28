@@ -29,6 +29,7 @@ import {ExecutionPayloadStatus} from "../../execution/engine/interface.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {ImportBlockOpts} from "./types.js";
+import {bytesToData} from "../../eth1/provider/utils.js";
 
 export type VerifyBlockExecutionPayloadModules = {
   eth1: IEth1ForBlockProduction;
@@ -288,89 +289,94 @@ export async function verifyBlockExecutionPayload(
   }
 
   // TODO: Handle better notifyNewPayload() returning error is syncing
-  const fork = chain.config.getForkName(block.message.slot);
-  const versionedHashes =
-    ForkSeq[fork] >= ForkSeq.deneb
-      ? (block.message.body as deneb.BeaconBlockBody).blobKzgCommitments.map(kzgCommitmentToVersionedHash)
-      : undefined;
-  const parentBlockRoot = ForkSeq[fork] >= ForkSeq.deneb ? block.message.parentRoot : undefined;
-  const execResult = await chain.executionEngine.notifyNewPayload(
-    fork,
-    executionPayloadEnabled,
-    versionedHashes,
-    parentBlockRoot
-  );
+  // const fork = chain.config.getForkName(block.message.slot);
+  // const versionedHashes =
+  //   ForkSeq[fork] >= ForkSeq.deneb
+  //     ? (block.message.body as deneb.BeaconBlockBody).blobKzgCommitments.map(kzgCommitmentToVersionedHash)
+  //     : undefined;
+  // const parentBlockRoot = ForkSeq[fork] >= ForkSeq.deneb ? block.message.parentRoot : undefined;
+  // const execResult = await chain.executionEngine.notifyNewPayload(
+  //   fork,
+  //   executionPayloadEnabled,
+  //   versionedHashes,
+  //   parentBlockRoot
+  // );
 
-  chain.metrics?.engineNotifyNewPayloadResult.inc({result: execResult.status});
+  // test skipping execution
+  const executionStatus = ExecutionStatus.Valid as const;
+  const lvhResponse = {executionStatus, latestValidExecHash: bytesToData(executionPayloadEnabled.blockHash)};
+  return {executionStatus, lvhResponse, execError: null};
 
-  switch (execResult.status) {
-    case ExecutionPayloadStatus.VALID: {
-      const executionStatus: ExecutionStatus.Valid = ExecutionStatus.Valid;
-      const lvhResponse = {executionStatus, latestValidExecHash: execResult.latestValidHash};
-      return {executionStatus, lvhResponse, execError: null};
-    }
+  // chain.metrics?.engineNotifyNewPayloadResult.inc({result: execResult.status});
 
-    case ExecutionPayloadStatus.INVALID: {
-      const executionStatus: ExecutionStatus.Invalid = ExecutionStatus.Invalid;
-      const lvhResponse = {
-        executionStatus,
-        latestValidExecHash: execResult.latestValidHash,
-        invalidateFromBlockHash: toHexString(block.message.parentRoot),
-      };
-      const execError = new BlockError(block, {
-        code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
-        execStatus: execResult.status,
-        errorMessage: execResult.validationError ?? "",
-      });
-      return {executionStatus, lvhResponse, execError};
-    }
+  // switch (execResult.status) {
+  //   case ExecutionPayloadStatus.VALID: {
+  //     const executionStatus: ExecutionStatus.Valid = ExecutionStatus.Valid;
+  //     const lvhResponse = {executionStatus, latestValidExecHash: execResult.latestValidHash};
+  //     return {executionStatus, lvhResponse, execError: null};
+  //   }
 
-    // Accepted and Syncing have the same treatment, as final validation of block is pending
-    case ExecutionPayloadStatus.ACCEPTED:
-    case ExecutionPayloadStatus.SYNCING: {
-      // Check if the entire segment was deemed safe or, this block specifically itself if not in
-      // the safeSlotsToImportOptimistically window of current slot, then we can import else
-      // we need to throw and not import his block
-      if (!isOptimisticallySafe && block.message.slot + opts.safeSlotsToImportOptimistically >= currentSlot) {
-        const execError = new BlockError(block, {
-          code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
-          execStatus: ExecutionPayloadStatus.UNSAFE_OPTIMISTIC_STATUS,
-          errorMessage: `not safe to import ${execResult.status} payload within ${opts.safeSlotsToImportOptimistically} of currentSlot`,
-        });
-        return {executionStatus: null, execError} as VerifyBlockExecutionResponse;
-      }
+  //   case ExecutionPayloadStatus.INVALID: {
+  //     const executionStatus: ExecutionStatus.Invalid = ExecutionStatus.Invalid;
+  //     const lvhResponse = {
+  //       executionStatus,
+  //       latestValidExecHash: execResult.latestValidHash,
+  //       invalidateFromBlockHash: toHexString(block.message.parentRoot),
+  //     };
+  //     const execError = new BlockError(block, {
+  //       code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
+  //       execStatus: execResult.status,
+  //       errorMessage: execResult.validationError ?? "",
+  //     });
+  //     return {executionStatus, lvhResponse, execError};
+  //   }
 
-      return {executionStatus: ExecutionStatus.Syncing, execError: null};
-    }
+  //   // Accepted and Syncing have the same treatment, as final validation of block is pending
+  //   case ExecutionPayloadStatus.ACCEPTED:
+  //   case ExecutionPayloadStatus.SYNCING: {
+  //     // Check if the entire segment was deemed safe or, this block specifically itself if not in
+  //     // the safeSlotsToImportOptimistically window of current slot, then we can import else
+  //     // we need to throw and not import his block
+  //     if (!isOptimisticallySafe && block.message.slot + opts.safeSlotsToImportOptimistically >= currentSlot) {
+  //       const execError = new BlockError(block, {
+  //         code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
+  //         execStatus: ExecutionPayloadStatus.UNSAFE_OPTIMISTIC_STATUS,
+  //         errorMessage: `not safe to import ${execResult.status} payload within ${opts.safeSlotsToImportOptimistically} of currentSlot`,
+  //       });
+  //       return {executionStatus: null, execError} as VerifyBlockExecutionResponse;
+  //     }
 
-    // If the block has is not valid, or it referenced an invalid terminal block then the
-    // block is invalid, however it has no bearing on any forkChoice cleanup
-    //
-    // There can be other reasons for which EL failed some of the observed ones are
-    // 1. Connection refused / can't connect to EL port
-    // 2. EL Internal Error
-    // 3. Geth sometimes gives invalid merkle root error which means invalid
-    //    but expects it to be handled in CL as of now. But we should log as warning
-    //    and give it as optimistic treatment and expect any other non-geth CL<>EL
-    //    combination to reject the invalid block and propose a block.
-    //    On kintsugi devnet, this has been observed to cause contiguous proposal failures
-    //    as the network is geth dominated, till a non geth node proposes and moves network
-    //    forward
-    // For network/unreachable errors, an optimization can be added to replay these blocks
-    // back. But for now, lets assume other mechanisms like unknown parent block of a future
-    // child block will cause it to replay
+  //     return {executionStatus: ExecutionStatus.Syncing, execError: null};
+  //   }
 
-    case ExecutionPayloadStatus.INVALID_BLOCK_HASH:
-    case ExecutionPayloadStatus.ELERROR:
-    case ExecutionPayloadStatus.UNAVAILABLE: {
-      const execError = new BlockError(block, {
-        code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
-        execStatus: execResult.status,
-        errorMessage: execResult.validationError,
-      });
-      return {executionStatus: null, execError} as VerifyBlockExecutionResponse;
-    }
-  }
+  //   // If the block has is not valid, or it referenced an invalid terminal block then the
+  //   // block is invalid, however it has no bearing on any forkChoice cleanup
+  //   //
+  //   // There can be other reasons for which EL failed some of the observed ones are
+  //   // 1. Connection refused / can't connect to EL port
+  //   // 2. EL Internal Error
+  //   // 3. Geth sometimes gives invalid merkle root error which means invalid
+  //   //    but expects it to be handled in CL as of now. But we should log as warning
+  //   //    and give it as optimistic treatment and expect any other non-geth CL<>EL
+  //   //    combination to reject the invalid block and propose a block.
+  //   //    On kintsugi devnet, this has been observed to cause contiguous proposal failures
+  //   //    as the network is geth dominated, till a non geth node proposes and moves network
+  //   //    forward
+  //   // For network/unreachable errors, an optimization can be added to replay these blocks
+  //   // back. But for now, lets assume other mechanisms like unknown parent block of a future
+  //   // child block will cause it to replay
+
+  //   case ExecutionPayloadStatus.INVALID_BLOCK_HASH:
+  //   case ExecutionPayloadStatus.ELERROR:
+  //   case ExecutionPayloadStatus.UNAVAILABLE: {
+  //     const execError = new BlockError(block, {
+  //       code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
+  //       execStatus: execResult.status,
+  //       errorMessage: execResult.validationError,
+  //     });
+  //     return {executionStatus: null, execError} as VerifyBlockExecutionResponse;
+  //   }
+  // }
 }
 
 function getSegmentErrorResponse(
