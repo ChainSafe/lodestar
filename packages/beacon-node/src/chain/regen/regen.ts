@@ -233,7 +233,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
 
   private findFirstStateBlock(stateRoot: RootHex): ProtoBlock {
     for (const block of this.modules.forkChoice.forwarditerateAncestorBlocks()) {
-      if (block !== undefined) {
+      if (block.stateRoot === stateRoot) {
         return block;
       }
     }

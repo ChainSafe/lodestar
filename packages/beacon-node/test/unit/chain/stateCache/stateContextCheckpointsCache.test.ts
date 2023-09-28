@@ -51,6 +51,37 @@ describe("CheckpointStateCache", function () {
     cache.add(cp1, states[1]);
   });
 
+  it("getLatest", () => {
+    // cp0
+    expect(cache.getLatest(cp0Hex.rootHex, cp0.epoch)?.hashTreeRoot()).to.be.deep.equal(states[0].hashTreeRoot());
+    expect(cache.getLatest(cp0Hex.rootHex, cp0.epoch + 1)?.hashTreeRoot()).to.be.deep.equal(states[0].hashTreeRoot());
+    expect(cache.getLatest(cp0Hex.rootHex, cp0.epoch - 1)?.hashTreeRoot()).to.be.undefined;
+
+    // cp1
+    expect(cache.getLatest(cp1Hex.rootHex, cp1.epoch)?.hashTreeRoot()).to.be.deep.equal(states[1].hashTreeRoot());
+    expect(cache.getLatest(cp1Hex.rootHex, cp1.epoch + 1)?.hashTreeRoot()).to.be.deep.equal(states[1].hashTreeRoot());
+    expect(cache.getLatest(cp1Hex.rootHex, cp1.epoch - 1)?.hashTreeRoot()).to.be.undefined;
+
+    // cp2
+    expect(cache.getLatest(cp2Hex.rootHex, cp2.epoch)?.hashTreeRoot()).to.be.undefined;
+  });
+
+  it("getOrReloadLatest", async () => {
+    cache.add(cp2, states[2]);
+    expect(cache.pruneFromMemory()).to.be.equal(1);
+    // cp0 is persisted
+    expect(fileApisBuffer.size).to.be.equal(1);
+    expect(Array.from(fileApisBuffer.keys())).to.be.deep.equal([toTmpFilePath(cp0Key)]);
+
+    // getLatest() does not reload from disk
+    expect(cache.getLatest(cp0Hex.rootHex, cp0.epoch)?.hashTreeRoot()).to.be.undefined;
+
+    // but getOrReloadLatest() does
+    expect((await cache.getOrReloadLatest(cp0Hex.rootHex, cp0.epoch))?.serialize()).to.be.deep.equal(stateBytes[0]);
+    expect((await cache.getOrReloadLatest(cp0Hex.rootHex, cp0.epoch + 1))?.serialize()).to.be.deep.equal(stateBytes[0]);
+    expect((await cache.getOrReloadLatest(cp0Hex.rootHex, cp0.epoch - 1))?.serialize()).to.be.undefined;
+  });
+
   const pruneTestCases: {
     name: string;
     cpHexGet: CheckpointHex;
@@ -58,13 +89,13 @@ describe("CheckpointStateCache", function () {
     stateBytesPersisted: Uint8Array;
   }[] = [
     {
-      name: "should prune cp0 from memory and persist to disk",
+      name: "pruneFromMemory: should prune cp0 from memory and persist to disk",
       cpHexGet: cp1Hex,
       cpKeyPersisted: toTmpFilePath(cp0Key),
       stateBytesPersisted: stateBytes[0],
     },
     {
-      name: "should prune cp1 from memory and persist to disk",
+      name: "pruneFromMemory: should prune cp1 from memory and persist to disk",
       cpHexGet: cp0Hex,
       cpKeyPersisted: toTmpFilePath(cp1Key),
       stateBytesPersisted: stateBytes[1],
@@ -94,7 +125,7 @@ describe("CheckpointStateCache", function () {
     stateBytesPersisted2: Uint8Array;
   }[] = [
     {
-      name: "reload cp0 from disk",
+      name: "getOrReload cp0 from disk",
       cpHexGet: cp1Hex,
       cpKeyPersisted: cp0Hex,
       stateBytesPersisted: stateBytes[0],
@@ -102,7 +133,7 @@ describe("CheckpointStateCache", function () {
       stateBytesPersisted2: stateBytes[1],
     },
     {
-      name: "reload cp1 from disk",
+      name: "getOrReload cp1 from disk",
       cpHexGet: cp0Hex,
       cpKeyPersisted: cp1Hex,
       stateBytesPersisted: stateBytes[1],
