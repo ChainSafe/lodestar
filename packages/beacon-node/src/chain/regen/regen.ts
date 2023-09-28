@@ -161,7 +161,8 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     const getLatestApi = shouldReload
       ? checkpointStateCache.getOrReloadLatest.bind(checkpointStateCache)
       : checkpointStateCache.getLatest.bind(checkpointStateCache);
-    for (const b of this.modules.forkChoice.iterateAncestorBlocks(block.parentRoot)) {
+    // iterateAncestorBlocks only returns ancestor blocks, not the block itself
+    for (const b of this.modules.forkChoice.iterateAncestorBlocks(block.blockRoot)) {
       state = this.modules.stateCache.get(b.stateRoot);
       if (state) {
         break;
