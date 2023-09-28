@@ -84,7 +84,7 @@ export function executionPayloadToPayloadHeader(
 ): allForks.ExecutionPayloadHeader {
   const transactionsRoot = ssz.bellatrix.Transactions.hashTreeRoot(payload.transactions);
 
-  const bellatrixPayloadFields: allForks.ExecutionPayloadHeader = {
+  const payloadFields: allForks.ExecutionPayloadHeader = { // Starts off with bellatrix payload fields as the base
     parentHash: payload.parentHash,
     feeRecipient: payload.feeRecipient,
     stateRoot: payload.stateRoot,
@@ -100,8 +100,6 @@ export function executionPayloadToPayloadHeader(
     blockHash: payload.blockHash,
     transactionsRoot,
   };
-
-  const payloadFields = bellatrixPayloadFields;
 
   if (fork >= ForkSeq.capella) {
     (payloadFields as capella.ExecutionPayloadHeader).withdrawalsRoot = ssz.capella.Withdrawals.hashTreeRoot(
