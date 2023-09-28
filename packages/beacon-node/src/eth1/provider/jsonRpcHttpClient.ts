@@ -6,7 +6,7 @@ import {IGauge, IHistogram} from "../../metrics/interface.js";
 import {IJson, RpcPayload} from "../interface.js";
 import {encodeJwtToken} from "./jwt.js";
 
-export const enum JsonRpcHttpClientEvent {
+export enum JsonRpcHttpClientEvent {
   /**
    * When registered this event will be emitted before the client throws an error.
    * This is useful for defining the error behavior in a common place at the time of declaration of the client.
