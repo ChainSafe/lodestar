@@ -5,13 +5,13 @@ import {
   ErrorJsonRpcResponse,
   HttpRpcError,
   IJsonRpcHttpClient,
+  JsonRpcHttpClientEvent,
   ReqOpts,
 } from "../../eth1/provider/jsonRpcHttpClient.js";
 import {Metrics} from "../../metrics/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {EPOCHS_PER_BATCH} from "../../sync/constants.js";
 import {numToQuantity} from "../../eth1/provider/utils.js";
-import {IJson, RpcPayload} from "../../eth1/interface.js";
 import {
   ExecutionPayloadStatus,
   ExecutePayloadResponse,
@@ -110,7 +110,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   private readonly rpcFetchQueue: JobItemQueue<[EngineRequest], EngineResponse>;
 
   private jobQueueProcessor = async ({method, params, methodOpts}: EngineRequest): Promise<EngineResponse> => {
-    return this.fetchWithRetries<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>(
+    return this.rpc.fetchWithRetries<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>(
       {method, params},
       methodOpts
     );
@@ -126,22 +126,14 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       metrics?.engineHttpProcessorQueue
     );
     this.logger = logger;
-  }
 
-  protected async fetchWithRetries<R, P = IJson[]>(payload: RpcPayload<P>, opts?: ReqOpts): Promise<R> {
-    try {
-      const res = await this.rpc.fetchWithRetries<R, P>(payload, opts);
+    this.rpc.emitter.on(JsonRpcHttpClientEvent.ERROR, ({error}) => {
+      this.updateEngineState(getExecutionEngineState({payloadError: error, oldState: this.state}));
+    });
+
+    this.rpc.emitter.on(JsonRpcHttpClientEvent.RESPONSE, () => {
       this.updateEngineState(getExecutionEngineState({targetState: ExecutionEngineState.ONLINE, oldState: this.state}));
-      return res;
-    } catch (err) {
-      this.updateEngineState(getExecutionEngineState({payloadError: err, oldState: this.state}));
-
-      /*
-       * TODO: For some error cases as abort, we may not want to escalate the error to the caller
-       * But for now the higher level code handles such cases so we can just rethrow the error
-       */
-      throw err;
-    }
+    });
   }
 
   /**
@@ -370,7 +362,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         : ForkSeq[fork] >= ForkSeq.capella
         ? "engine_getPayloadV2"
         : "engine_getPayloadV1";
-    const payloadResponse = await this.fetchWithRetries<
+    const payloadResponse = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
     >(
@@ -390,7 +382,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   async getPayloadBodiesByHash(blockHashes: RootHex[]): Promise<(ExecutionPayloadBody | null)[]> {
     const method = "engine_getPayloadBodiesByHashV1";
     assertReqSizeLimit(blockHashes.length, 32);
-    const response = await this.fetchWithRetries<
+    const response = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
     >({method, params: [blockHashes]});
@@ -405,7 +397,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     assertReqSizeLimit(blockCount, 32);
     const start = numToQuantity(startBlockNumber);
     const count = numToQuantity(blockCount);
-    const response = await this.fetchWithRetries<
+    const response = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
     >({method, params: [start, count]});

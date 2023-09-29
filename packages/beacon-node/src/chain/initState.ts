@@ -87,7 +87,7 @@ export async function initStateFromEth1({
 
   const builder = new GenesisBuilder({
     config,
-    eth1Provider: new Eth1Provider(config, opts, signal),
+    eth1Provider: new Eth1Provider(config, {...opts, logger}, signal),
     logger,
     signal,
     pendingStatus:
