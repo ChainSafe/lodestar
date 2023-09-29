@@ -51,10 +51,7 @@ export class DoppelgangerService {
       metrics.doppelganger.statusCount.addCollect(() => this.onScrapeMetrics(metrics));
     }
 
-    this.logger.info("Doppelganger protection enabled", {
-      currentEpoch: this.clock.currentEpoch,
-      detectionEpochs: DEFAULT_REMAINING_DETECTION_EPOCHS,
-    });
+    this.logger.info("Doppelganger protection enabled", {detectionEpochs: DEFAULT_REMAINING_DETECTION_EPOCHS});
   }
 
   registerValidator(pubkeyHex: PubkeyHex): void {
@@ -103,7 +100,7 @@ export class DoppelgangerService {
     const indicesToCheckMap = new Map<ValidatorIndex, PubkeyHex>();
 
     for (const [pubkeyHex, state] of this.doppelgangerStateByPubkey.entries()) {
-      if (state.remainingEpochs > 0) {
+      if (state.remainingEpochs > 0 && state.nextEpochToCheck <= currentEpoch) {
         const index = this.indicesService.pubkey2index.get(pubkeyHex);
         if (index !== undefined) {
           indicesToCheckMap.set(index, pubkeyHex);
@@ -226,11 +223,11 @@ export class DoppelgangerService {
           state.nextEpochToCheck = currentEpoch;
           this.metrics?.doppelganger.epochsChecked.inc(1);
 
-          const {remainingEpochs} = state;
+          const {remainingEpochs, nextEpochToCheck} = state;
           if (remainingEpochs <= 0) {
             this.logger.info("Doppelganger detection complete", {index: response.index});
           } else {
-            this.logger.info("Found no doppelganger", {remainingEpochs, index: response.index});
+            this.logger.info("Found no doppelganger", {remainingEpochs, nextEpochToCheck, index: response.index});
           }
         }
       }
