@@ -9,7 +9,7 @@ import {
   getBlockRootAtSlot,
   ParticipationFlags,
 } from "@lodestar/state-transition";
-import {Logger, MapDef, MapDefMax, toHex} from "@lodestar/utils";
+import {LogData, LogHandler, LogLevel, Logger, MapDef, MapDefMax, toHex} from "@lodestar/utils";
 import {RootHex, allForks, altair, deneb} from "@lodestar/types";
 import {ChainConfig, ChainForkConfig} from "@lodestar/config";
 import {ForkSeq, INTERVALS_PER_SLOT, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -77,6 +77,11 @@ export type ValidatorMonitor = {
   scrapeMetrics(slotClock: Slot): void;
 };
 
+export type ValidatorMonitorOpts = {
+  /** Log validator monitor events as info */
+  validatorMonitorLogs?: boolean;
+};
+
 /** Information required to reward some validator during the current and previous epoch. */
 type ValidatorStatus = {
   /** True if the validator has been slashed, ever. */
@@ -137,7 +142,7 @@ type EpochSummary = {
   /** The delay between when the attestation should have been produced and when it was observed. */
   attestationMinDelay: Seconds | null;
   /** The number of times a validators attestation was seen in an aggregate. */
-  attestationAggregateIncusions: number;
+  attestationAggregateInclusions: number;
   /** The number of times a validators attestation was seen in a block. */
   attestationBlockInclusions: number;
   /** The minimum observed inclusion distance for an attestation for this epoch.. */
@@ -177,7 +182,7 @@ function getEpochSummary(validator: MonitoredValidator, epoch: Epoch): EpochSumm
     summary = {
       attestations: 0,
       attestationMinDelay: null,
-      attestationAggregateIncusions: 0,
+      attestationAggregateInclusions: 0,
       attestationBlockInclusions: 0,
       attestationMinBlockInclusionDistance: null,
       blocks: 0,
@@ -240,8 +245,14 @@ export function createValidatorMonitor(
   metrics: LodestarMetrics,
   config: ChainForkConfig,
   genesisTime: number,
-  logger: Logger
+  logger: Logger,
+  opts: ValidatorMonitorOpts
 ): ValidatorMonitor {
+  const log: LogHandler = (message: string, context?: LogData) => {
+    const logLevel = opts.validatorMonitorLogs ? LogLevel.info : LogLevel.debug;
+    logger[logLevel](message, context);
+  };
+
   /** The validators that require additional monitoring. */
   const validators = new MapDef<ValidatorIndex, MonitoredValidator>(() => ({
     summaries: new Map<Epoch, EpochSummary>(),
@@ -346,8 +357,8 @@ export function createValidatorMonitor(
         }
 
         if (!summary.isPrevSourceAttester || !summary.isPrevTargetAttester || !summary.isPrevHeadAttester) {
-          logger.debug("Failed attestation in previous epoch", {
-            validatorIndex: index,
+          log("Failed attestation in previous epoch", {
+            validator: index,
             prevEpoch: currentEpoch - 1,
             isPrevSourceAttester: summary.isPrevSourceAttester,
             isPrevHeadAttester: summary.isPrevHeadAttester,
@@ -412,13 +423,13 @@ export function createValidatorMonitor(
         if (validator) {
           metrics.validatorMonitor.unaggregatedAttestationSubmittedSentPeers.observe(sentPeers);
           metrics.validatorMonitor.unaggregatedAttestationDelaySeconds.observe({src: OpSource.api}, delaySec);
-          logger.debug("Local validator published unaggregated attestation", {
-            validatorIndex: index,
+          log("Published unaggregated attestation", {
+            validator: index,
             slot: data.slot,
             committeeIndex: data.index,
             subnet,
             sentPeers,
-            delaySec,
+            delaySec: delaySec.toFixed(4),
           });
 
           const attestationSummary = validator.attestations
@@ -462,12 +473,12 @@ export function createValidatorMonitor(
         const validator = validators.get(index);
         if (validator) {
           metrics.validatorMonitor.aggregatedAttestationDelaySeconds.observe({src: OpSource.api}, delaySec);
-          logger.debug("Local validator published aggregated attestation", {
-            validatorIndex: index,
+          log("Published aggregated attestation", {
+            validator: index,
             slot: data.slot,
             committeeIndex: data.index,
             sentPeers,
-            delaySec,
+            delaySec: delaySec.toFixed(4),
           });
 
           validator.attestations
@@ -482,15 +493,15 @@ export function createValidatorMonitor(
       const src = OpSource.gossip;
       const data = indexedAttestation.data;
       const epoch = computeEpochAtSlot(data.slot);
-      // Returns the duration between when a `AggregateAndproof` with `data` could be produced (2/3rd through the slot) and `seenTimestamp`.
+      // Returns the duration between when a `AggregateAndProof` with `data` could be produced (2/3rd through the slot) and `seenTimestamp`.
       const delaySec = seenTimestampSec - (genesisTime + (data.slot + 2 / 3) * config.SECONDS_PER_SLOT);
 
       const aggregatorIndex = signedAggregateAndProof.message.aggregatorIndex;
-      const validtorAggregator = validators.get(aggregatorIndex);
-      if (validtorAggregator) {
+      const validatorAggregator = validators.get(aggregatorIndex);
+      if (validatorAggregator) {
         metrics.validatorMonitor.aggregatedAttestationTotal.inc({src});
         metrics.validatorMonitor.aggregatedAttestationDelaySeconds.observe({src}, delaySec);
-        const summary = getEpochSummary(validtorAggregator, epoch);
+        const summary = getEpochSummary(validatorAggregator, epoch);
         summary.aggregates += 1;
         summary.aggregateMinDelay = Math.min(delaySec, summary.aggregateMinDelay ?? Infinity);
       }
@@ -501,11 +512,12 @@ export function createValidatorMonitor(
           metrics.validatorMonitor.attestationInAggregateTotal.inc({src});
           metrics.validatorMonitor.attestationInAggregateDelaySeconds.observe({src}, delaySec);
           const summary = getEpochSummary(validator, epoch);
-          summary.attestationAggregateIncusions += 1;
-          logger.debug("Local validator attestation is included in AggregatedAndProof", {
-            validatorIndex: index,
+          summary.attestationAggregateInclusions += 1;
+          log("Attestation is included in aggregate", {
+            validator: index,
             slot: data.slot,
             committeeIndex: data.index,
+            aggregatorIndex,
           });
 
           validator.attestations
@@ -563,8 +575,8 @@ export function createValidatorMonitor(
               attestationSlot: indexedAttestation.data.slot,
             });
 
-          logger.debug("Local validator attestation is included in block", {
-            validatorIndex: index,
+          log("Attestation is included in block", {
+            validator: index,
             slot: data.slot,
             committeeIndex: data.index,
             inclusionDistance,
@@ -633,8 +645,12 @@ export function createValidatorMonitor(
         for (const [index, validator] of validators.entries()) {
           const flags = parseParticipationFlags(previousEpochParticipation.get(index));
           const attestationSummary = validator.attestations.get(prevEpoch)?.get(prevEpochTargetRoot);
-          metrics.validatorMonitor.prevEpochAttestationSummary.inc({
-            summary: renderAttestationSummary(config, rootCache, attestationSummary, flags),
+          const summary = renderAttestationSummary(config, rootCache, attestationSummary, flags);
+          metrics.validatorMonitor.prevEpochAttestationSummary.inc({summary});
+          log("Previous epoch attestation", {
+            validator: index,
+            epoch: prevEpoch,
+            summary,
           });
         }
       }
@@ -645,9 +661,15 @@ export function createValidatorMonitor(
           const validator = validators.get(validatorIndex);
           if (validator) {
             // If expected proposer is a tracked validator
-            const summary = validator.summaries.get(prevEpoch);
-            metrics.validatorMonitor.prevEpochBlockProposalSummary.inc({
-              summary: renderBlockProposalSummary(config, rootCache, summary, SLOTS_PER_EPOCH * prevEpoch + slotIndex),
+            const epochSummary = validator.summaries.get(prevEpoch);
+            const proposalSlot = SLOTS_PER_EPOCH * prevEpoch + slotIndex;
+            const summary = renderBlockProposalSummary(config, rootCache, epochSummary, proposalSlot);
+            metrics.validatorMonitor.prevEpochBlockProposalSummary.inc({summary});
+            log("Previous epoch block proposal", {
+              validator: validatorIndex,
+              slot: proposalSlot,
+              epoch: prevEpoch,
+              summary,
             });
           }
         }
@@ -704,7 +726,9 @@ export function createValidatorMonitor(
         metrics.validatorMonitor.prevEpochAttestations.observe(summary.attestations);
         if (summary.attestationMinDelay !== null)
           metrics.validatorMonitor.prevEpochAttestationsMinDelaySeconds.observe(summary.attestationMinDelay);
-        metrics.validatorMonitor.prevEpochAttestationAggregateInclusions.observe(summary.attestationAggregateIncusions);
+        metrics.validatorMonitor.prevEpochAttestationAggregateInclusions.observe(
+          summary.attestationAggregateInclusions
+        );
         metrics.validatorMonitor.prevEpochAttestationBlockInclusions.observe(summary.attestationBlockInclusions);
         if (summary.attestationMinBlockInclusionDistance !== null) {
           metrics.validatorMonitor.prevEpochAttestationBlockMinInclusionDistance.observe(
