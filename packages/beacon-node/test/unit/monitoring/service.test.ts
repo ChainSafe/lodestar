@@ -217,7 +217,7 @@ describe("monitoring / service", () => {
       const endpoint = `${baseUrl}${remoteServiceRoutes.pending}`;
       service = new MonitoringService("beacon", {endpoint, collectSystemStats: false}, {register, logger});
 
-      service.send().finally(() => {
+      void service.send().finally(() => {
         try {
           assertError({message: new ErrorAborted("request").message});
           done();

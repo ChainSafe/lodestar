@@ -806,7 +806,7 @@ export class BeaconChain implements IBeaconChain {
       sleep((1000 * this.config.SECONDS_PER_SLOT) / 2)
         .then(() => metrics.onceEveryEndOfEpoch(this.getHeadState()))
         .catch((e) => {
-          if (!isErrorAborted(e)) this.logger.error("error on validator monitor onceEveryEndOfEpoch", {slot}, e);
+          if (!isErrorAborted(e)) this.logger.error("Error on validator monitor onceEveryEndOfEpoch", {slot}, e);
         });
     }
   }
