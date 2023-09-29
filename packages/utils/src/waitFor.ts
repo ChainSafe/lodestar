@@ -63,7 +63,7 @@ export interface ElapsedTimeTracker {
  * @param durationMs
  * @returns
  */
-export function waitForElapsedTime({minElapsedTime}: {minElapsedTime: number}): ElapsedTimeTracker {
+export function createElapsedTimeTracker({minElapsedTime}: {minElapsedTime: number}): ElapsedTimeTracker {
   // Initialized with undefined as the function has not been called yet
   let lastTimeCalled: number | undefined = undefined;
 

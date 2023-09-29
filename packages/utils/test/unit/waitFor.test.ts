@@ -1,6 +1,6 @@
 import "../setup.js";
 import {expect} from "chai";
-import {waitFor, waitForElapsedTime} from "../../src/waitFor.js";
+import {waitFor, createElapsedTimeTracker} from "../../src/waitFor.js";
 import {ErrorAborted, TimeoutError} from "../../src/errors.js";
 import {sleep} from "../../src/sleep.js";
 
@@ -39,13 +39,13 @@ describe("waitFor", () => {
 
 describe("waitForElapsedTime", () => {
   it("should true for the first time", () => {
-    const callIfTimePassed = waitForElapsedTime({minElapsedTime: 1000});
+    const callIfTimePassed = createElapsedTimeTracker({minElapsedTime: 1000});
 
     expect(callIfTimePassed()).to.be.true;
   });
 
   it("should return true after the minElapsedTime has passed", async () => {
-    const callIfTimePassed = waitForElapsedTime({minElapsedTime: 100});
+    const callIfTimePassed = createElapsedTimeTracker({minElapsedTime: 100});
     callIfTimePassed();
 
     await sleep(150);
@@ -54,7 +54,7 @@ describe("waitForElapsedTime", () => {
   });
 
   it("should return false before the minElapsedTime has passed", async () => {
-    const callIfTimePassed = waitForElapsedTime({minElapsedTime: 100});
+    const callIfTimePassed = createElapsedTimeTracker({minElapsedTime: 100});
     callIfTimePassed();
 
     await sleep(10);

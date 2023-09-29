@@ -1,7 +1,7 @@
 import {toHexString} from "@chainsafe/ssz";
 import {phase0} from "@lodestar/types";
 import {ChainConfig} from "@lodestar/config";
-import {fromHex, isErrorAborted, waitForElapsedTime} from "@lodestar/utils";
+import {fromHex, isErrorAborted, createElapsedTimeTracker} from "@lodestar/utils";
 import {Logger} from "@lodestar/logger";
 
 import {FetchError, isFetchError} from "@lodestar/api";
@@ -52,7 +52,7 @@ const getBlockByHashOpts: ReqOpts = {routeId: "getBlockByHash"};
 const getBlockNumberOpts: ReqOpts = {routeId: "getBlockNumber"};
 const getLogsOpts: ReqOpts = {routeId: "getLogs"};
 
-const isOneMinutePassed = waitForElapsedTime({minElapsedTime: 60_000});
+const isOneMinutePassed = createElapsedTimeTracker({minElapsedTime: 60_000});
 
 export class Eth1Provider implements IEth1Provider {
   readonly deployBlock: number;
