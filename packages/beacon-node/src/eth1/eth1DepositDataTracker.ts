@@ -164,7 +164,6 @@ export class Eth1DepositDataTracker {
 
     while (!this.signal.aborted) {
       lastRunMs = Date.now();
-      const oldState = this.eth1Provider.getState();
 
       try {
         const hasCaughtUp = await this.update();
