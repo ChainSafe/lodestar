@@ -52,19 +52,10 @@ export function waitFor(condition: () => boolean, opts: WaitForOpts = {}): Promi
   });
 }
 
-interface ElapsedTimeTrackerAttributes {
-  msSinceLastError?: number;
-  msSinceLastCall?: number;
-  now: number;
+export interface ElapsedTimeTracker {
+  (): boolean;
+  msSinceLastCall: number;
 }
-
-interface ElapsedTimeTrackerOptions {
-  minElapsedTime: number;
-  onError?: (data: ElapsedTimeTrackerAttributes) => void;
-}
-
-type ElapsedTimeTrackerCaller = (data: ElapsedTimeTrackerAttributes) => void;
-export type ElapsedTimeTracker = (fn: ElapsedTimeTrackerCaller) => void;
 
 /**
  * Create a tracker which keeps track of the last time a function was called
@@ -72,24 +63,21 @@ export type ElapsedTimeTracker = (fn: ElapsedTimeTrackerCaller) => void;
  * @param durationMs
  * @returns
  */
-export function waitForElapsedTime({minElapsedTime, onError}: ElapsedTimeTrackerOptions): ElapsedTimeTracker {
+export function waitForElapsedTime({minElapsedTime}: {minElapsedTime: number}): ElapsedTimeTracker {
   // Initialized with undefined as the function has not been called yet
   let lastTimeCalled: number | undefined = undefined;
-  let lastTimeError: number | undefined = undefined;
 
-  return function elapsedTimeTracker(fn: ElapsedTimeTrackerCaller): void {
+  function elapsedTimeTracker(): boolean {
     const now = Date.now();
-
-    const msSinceLastCall = lastTimeCalled === undefined ? undefined : now - lastTimeCalled;
-    const msSinceLastError = lastTimeError === undefined ? undefined : now - lastTimeError;
-
-    if (msSinceLastCall !== undefined && msSinceLastCall < minElapsedTime) {
-      if (onError) onError({now, msSinceLastError, msSinceLastCall});
-      lastTimeError = now;
-      return;
-    }
-
-    fn({now, msSinceLastCall, msSinceLastError});
+    const msSinceLastCall = now - (lastTimeCalled ?? 0);
     lastTimeCalled = now;
-  };
+
+    return msSinceLastCall > minElapsedTime;
+  }
+
+  return Object.assign(elapsedTimeTracker, {
+    get msSinceLastCall() {
+      return Date.now() - (lastTimeCalled ?? 0);
+    },
+  });
 }

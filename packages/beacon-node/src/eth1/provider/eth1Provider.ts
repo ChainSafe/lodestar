@@ -52,7 +52,7 @@ const getBlockByHashOpts: ReqOpts = {routeId: "getBlockByHash"};
 const getBlockNumberOpts: ReqOpts = {routeId: "getBlockNumber"};
 const getLogsOpts: ReqOpts = {routeId: "getLogs"};
 
-const ifOneMinutePassed = waitForElapsedTime({minElapsedTime: 60_000});
+const isOneMinutePassed = waitForElapsedTime({minElapsedTime: 60_000});
 
 export class Eth1Provider implements IEth1Provider {
   readonly deployBlock: number;
@@ -100,16 +100,16 @@ export class Eth1Provider implements IEth1Provider {
       }
 
       if (this.state !== Eth1ProviderState.ONLINE) {
-        ifOneMinutePassed(({msSinceLastCall, now}) => {
+        if (isOneMinutePassed()) {
           this.logger?.error(
             "Eth1Provider faced error",
             {
               state: this.state,
-              lastErrorAt: msSinceLastCall !== undefined ? new Date(now - msSinceLastCall).toLocaleTimeString() : "N/A",
+              lastErrorAt: new Date(Date.now() - isOneMinutePassed.msSinceLastCall).toLocaleTimeString(),
             },
             error
           );
-        });
+        }
       }
     });
   }
