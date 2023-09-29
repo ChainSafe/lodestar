@@ -56,7 +56,7 @@ export const formatsTestCases: (TestCase | (() => TestCase))[] = [
       message: "foo bar",
       error: error,
       output: {
-        human: `[test]             \u001b[33mwarn\u001b[39m: foo bar code=SAMPLE_ERROR, data=foo=bar\n${error.stack}`,
+        human: `[test]             \u001b[33mwarn\u001b[39m: foo bar - code=SAMPLE_ERROR, data=foo=bar\n${error.stack}`,
         json: '{"error":{"code":"SAMPLE_ERROR","data":{"foo":"bar"},"stack":"$STACK"},"level":"warn","message":"foo bar","module":"test"}',
       },
     };

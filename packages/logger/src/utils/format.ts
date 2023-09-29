@@ -88,6 +88,6 @@ function humanReadableTemplateFn(_info: {[key: string]: any; level: string; mess
   str += `[${infoString}] ${info.level.padStart(infoPad)}: ${info.message}`;
 
   if (info.context !== undefined) str += " " + logCtxToString(info.context);
-  if (info.error !== undefined) str += (info.error instanceof LodestarError ? " " : " - ") + logCtxToString(info.error);
+  if (info.error !== undefined) str += " - " + logCtxToString(info.error);
   return str;
 }
