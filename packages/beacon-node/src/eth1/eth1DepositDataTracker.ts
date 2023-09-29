@@ -183,7 +183,7 @@ export class Eth1DepositDataTracker {
           this.logger.debug("Eth1 provider rate limited", {}, e);
           await sleep(RATE_LIMITED_WAIT_MS, this.signal);
           // only log error if state switched from online to some other state
-        } else if (!isErrorAborted(e) && this.eth1Provider.getState() !== oldState) {
+        } else if (!isErrorAborted(e)) {
           await sleep(MIN_WAIT_ON_ERROR_MS, this.signal);
         }
       }
