@@ -89,5 +89,6 @@ function humanReadableTemplateFn(_info: {[key: string]: any; level: string; mess
 
   if (info.context !== undefined) str += " " + logCtxToString(info.context);
   if (info.error !== undefined) str += " - " + logCtxToString(info.error);
+
   return str;
 }
