@@ -248,8 +248,8 @@ export function createValidatorMonitor(
   logger: Logger,
   opts: ValidatorMonitorOpts
 ): ValidatorMonitor {
+  const logLevel = opts.validatorMonitorLogs ? LogLevel.info : LogLevel.debug;
   const log: LogHandler = (message: string, context?: LogData) => {
-    const logLevel = opts.validatorMonitorLogs ? LogLevel.info : LogLevel.debug;
     logger[logLevel](message, context);
   };
 
