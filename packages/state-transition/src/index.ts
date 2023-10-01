@@ -26,7 +26,7 @@ export {
 export {
   createCachedBeaconState,
   loadCachedBeaconState,
-  BeaconStateCache,
+  type BeaconStateCache,
   isCachedBeaconState,
   isStateBalancesNodesPopulated,
   isStateValidatorsNodesPopulated,
