@@ -310,6 +310,7 @@ export class ValidatorStore {
     const proposerConfig = (valProposerConfig?.proposerConfig ?? {})[pubkey];
 
     if (!this.validators.has(pubkey)) {
+      // Doppelganger registration must be done before adding validator to signers
       await this.doppelgangerService?.registerValidator(pubkey);
 
       this.pubkeysToDiscover.push(pubkey);
