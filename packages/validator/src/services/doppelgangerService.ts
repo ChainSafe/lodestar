@@ -67,21 +67,26 @@ export class DoppelgangerService {
 
     // Log here to alert that validation won't be active until remainingEpochs == 0
     if (remainingEpochs > 0) {
-      const prevEpoch = currentEpoch - 1;
+      const previousEpoch = currentEpoch - 1;
       const attestedInPreviousEpoch = await this.slashingProtection.hasAttestedInEpoch(
         fromHexString(pubkeyHex),
-        prevEpoch
+        previousEpoch
       );
 
       if (attestedInPreviousEpoch) {
         remainingEpochs = REMAINING_EPOCHS_IF_SKIPPED;
-        this.logger.info("Previous epoch attestation in slashing protection db, doppelganger detection skipped", {
-          prevEpoch,
+        this.logger.info("Doppelganger detection skipped, previous epoch attestation exists in database", {
+          previousEpoch,
           pubkeyHex,
         });
       } else {
         this.logger.info("Registered validator for doppelganger", {remainingEpochs, nextEpochToCheck, pubkeyHex});
       }
+    } else {
+      this.logger.info("Doppelganger detection skipped, validator initialized before genesis", {
+        currentEpoch,
+        pubkeyHex,
+      });
     }
 
     this.doppelgangerStateByPubkey.set(pubkeyHex, {
