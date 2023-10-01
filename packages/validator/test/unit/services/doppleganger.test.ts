@@ -5,9 +5,9 @@ import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Api, HttpStatusCode} from "@lodestar/api";
 import {DoppelgangerService, DoppelgangerStatus} from "../../../src/services/doppelgangerService.js";
 import {IndicesService} from "../../../src/services/indices.js";
+import {SlashingProtectionMock} from "../../utils/slashingProtectionMock.js";
 import {testLogger} from "../../utils/logger.js";
 import {ClockMock} from "../../utils/clock.js";
-import {SlashingProtectionMock} from "../../utils/slashingProtectionMock.js";
 
 // At genesis start validating immediately
 

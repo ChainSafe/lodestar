@@ -24,10 +24,10 @@ describe("BlockDutiesService", function () {
   let validatorStore: ValidatorStore;
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
 
-  before(() => {
+  before(async () => {
     const secretKeys = Array.from({length: 3}, (_, i) => bls.SecretKey.fromBytes(toBufferBE(BigInt(i + 1), 32)));
     pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
-    validatorStore = initValidatorStore(secretKeys, api);
+    validatorStore = await initValidatorStore(secretKeys, api);
   });
 
   let controller: AbortController; // To stop clock

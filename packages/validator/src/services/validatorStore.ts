@@ -97,6 +97,14 @@ export type ValidatorProposerConfig = {
   defaultConfig: ProposerConfig;
 };
 
+export type ValidatorStoreModules = {
+  config: BeaconConfig;
+  slashingProtection: ISlashingProtection;
+  indicesService: IndicesService;
+  doppelgangerService: DoppelgangerService | null;
+  metrics: Metrics | null;
+};
+
 /**
  * This cache stores SignedValidatorRegistrationV1 data for a validator so that
  * we do not create and send new registration objects to avoid DOSing the builder
@@ -130,21 +138,25 @@ export const defaultOptions = {
  * Service that sets up and handles validator attester duties.
  */
 export class ValidatorStore {
+  private readonly config: BeaconConfig;
+  private readonly slashingProtection: ISlashingProtection;
+  private readonly indicesService: IndicesService;
+  private readonly doppelgangerService: DoppelgangerService | null;
+  private readonly metrics: Metrics | null;
+
   private readonly validators = new Map<PubkeyHex, ValidatorData>();
   /** Initially true because there are no validators */
   private pubkeysToDiscover: PubkeyHex[] = [];
   private readonly defaultProposerConfig: DefaultProposerConfig;
 
-  constructor(
-    private readonly config: BeaconConfig,
-    private readonly slashingProtection: ISlashingProtection,
-    private readonly indicesService: IndicesService,
-    private readonly doppelgangerService: DoppelgangerService | null,
-    private readonly metrics: Metrics | null,
-    initialSigners: Signer[],
-    valProposerConfig: ValidatorProposerConfig = {defaultConfig: {}, proposerConfig: {}},
-    private readonly genesisValidatorRoot: Root
-  ) {
+  constructor(modules: ValidatorStoreModules, valProposerConfig: ValidatorProposerConfig) {
+    const {config, slashingProtection, indicesService, doppelgangerService, metrics} = modules;
+    this.config = config;
+    this.slashingProtection = slashingProtection;
+    this.indicesService = indicesService;
+    this.doppelgangerService = doppelgangerService;
+    this.metrics = metrics;
+
     const defaultConfig = valProposerConfig.defaultConfig;
     this.defaultProposerConfig = {
       graffiti: defaultConfig.graffiti ?? "",
@@ -157,13 +169,24 @@ export class ValidatorStore {
       },
     };
 
-    for (const signer of initialSigners) {
-      this.addSigner(signer, valProposerConfig);
-    }
-
     if (metrics) {
       metrics.signers.addCollect(() => metrics.signers.set(this.validators.size));
     }
+  }
+
+  /**
+   * Create a validator store with initial signers
+   */
+  static async init(
+    modules: ValidatorStoreModules,
+    initialSigners: Signer[],
+    valProposerConfig: ValidatorProposerConfig = {defaultConfig: {}, proposerConfig: {}}
+  ): Promise<ValidatorStore> {
+    const validatorStore = new ValidatorStore(modules, valProposerConfig);
+
+    await Promise.all(initialSigners.map((signer) => validatorStore.addSigner(signer, valProposerConfig)));
+
+    return validatorStore;
   }
 
   /** Return all known indices from the validatorStore pubkeys */
