@@ -134,6 +134,44 @@ describe("doppelganger service", () => {
       }
     });
   }
+
+  it("attested in prev epoch", async () => {
+    const index = 0;
+    const pubkeyHex = "0x" + "aa".repeat(48);
+
+    const beaconApi = getMockBeaconApi(new Map());
+    const logger = testLogger();
+
+    // Register validator to IndicesService for doppelganger to resolve pubkey -> index
+    const indicesService = new IndicesService(logger, beaconApi, null);
+    indicesService.index2pubkey.set(index, pubkeyHex);
+    indicesService.pubkey2index.set(pubkeyHex, index);
+
+    // Initial epoch must be > 0 else doppelganger detection is skipped due to pre-genesis
+    const initialEpoch = 1;
+    const clock = new ClockMockMsToSlot(initialEpoch);
+
+    const slashingProtection = new SlashingProtectionMock();
+    // Previous epoch attestation exists in slashing protection db
+    slashingProtection.hasAttestedInEpoch = async () => true;
+
+    const doppelganger = new DoppelgangerService(
+      logger,
+      clock,
+      beaconApi,
+      indicesService,
+      slashingProtection,
+      noop,
+      null
+    );
+
+    // Add validator to doppelganger
+    await doppelganger.registerValidator(pubkeyHex);
+
+    // Assert doppelganger status right away
+    const status = doppelganger.getStatus(pubkeyHex);
+    expect(status).equal(DoppelgangerStatus.VerifiedSafe);
+  });
 });
 
 class MapDef<K, V> extends Map<K, V> {
