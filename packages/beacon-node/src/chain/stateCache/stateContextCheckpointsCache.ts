@@ -147,7 +147,6 @@ export class CheckpointStateCache {
     this.logger.verbose("Reload: read state from disk", {filePath});
     const newStateBytes = await this.persistentApis.readFile(filePath);
     this.logger.verbose("Reload: read state from disk successfully", {filePath});
-    void this.persistentApis.removeFile(filePath);
     this.metrics?.stateFilesRemoveCount.inc({reason: RemoveFileReason.reload});
     this.metrics?.stateReloadSecFromSlot.observe(this.clock?.secFromSlot(this.clock?.currentSlot ?? 0) ?? 0);
     const closestState = findClosestCheckpointState(cp, this.cache) ?? this.getHeadState?.();
@@ -157,20 +156,29 @@ export class CheckpointStateCache {
     this.metrics?.stateReloadEpochDiff.observe(Math.abs(closestState.epochCtx.epoch - cp.epoch));
     this.logger.verbose("Reload: found closest state", {filePath, seedSlot: closestState.slot});
     const timer = this.metrics?.stateReloadDuration.startTimer();
-    const newCachedState = loadCachedBeaconState(closestState, newStateBytes, {
-      shufflingGetter: this.shufflingCache.get.bind(this.shufflingCache),
-    });
-    timer?.();
-    this.logger.verbose("Reload state successfully from disk", {
-      filePath,
-      stateSlot: newCachedState.slot,
-      seedSlot: closestState.slot,
-    });
-    this.cache.set(cpKey, newCachedState);
-    // since item is file path, cpKey is not in inMemoryKeyOrder
-    this.inMemoryKeyOrder.unshift(cpKey);
-    // don't prune from memory here, call it at the last 1/3 of slot 0 of an epoch
-    return newCachedState;
+
+    try {
+      const newCachedState = loadCachedBeaconState(closestState, newStateBytes, {
+        shufflingGetter: this.shufflingCache.get.bind(this.shufflingCache),
+      });
+      timer?.();
+      this.logger.verbose("Reload state successfully from disk", {
+        filePath,
+        stateSlot: newCachedState.slot,
+        seedSlot: closestState.slot,
+      });
+      // only remove file once we reload successfully
+      void this.persistentApis.removeFile(filePath);
+      this.cache.set(cpKey, newCachedState);
+      // since item is file path, cpKey is not in inMemoryKeyOrder
+      this.inMemoryKeyOrder.unshift(cpKey);
+      // don't prune from memory here, call it at the last 1/3 of slot 0 of an epoch
+      return newCachedState;
+    } catch (e) {
+      this.logger.debug("Error reloading state from disk", {filePath}, e as Error);
+      return null;
+    }
+    return null;
   }
 
   /**
@@ -285,9 +293,13 @@ export class CheckpointStateCache {
       .filter((e) => e <= maxEpoch);
     for (const epoch of epochs) {
       if (this.epochIndex.get(epoch)?.has(rootHex)) {
-        const state = await this.getOrReload({rootHex, epoch});
-        if (state) {
-          return state;
+        try {
+          const state = await this.getOrReload({rootHex, epoch});
+          if (state) {
+            return state;
+          }
+        } catch (e) {
+          this.logger.debug("Error get or reload state", {epoch, rootHex}, e as Error);
         }
       }
     }
@@ -360,12 +372,12 @@ export class CheckpointStateCache {
       const key = this.inMemoryKeyOrder.last();
       if (!key) {
         // should not happen
-        throw new Error("No key");
+        throw new Error(`No key ${key} found in inMemoryKeyOrder}`);
       }
       const stateOrFilePath = this.cache.get(key);
+      // even if stateOrFilePath is undefined or string, we still need to pop the key
+      this.inMemoryKeyOrder.pop();
       if (stateOrFilePath !== undefined && typeof stateOrFilePath !== "string") {
-        // should always be the case
-        this.inMemoryKeyOrder.pop();
         // do not update epochIndex
         const filePath = toTmpFilePath(key);
         this.metrics?.statePersistSecFromSlot.observe(this.clock?.secFromSlot(this.clock?.currentSlot ?? 0) ?? 0);
@@ -374,6 +386,10 @@ export class CheckpointStateCache {
         timer?.();
         this.cache.set(key, filePath);
         count++;
+        this.logger.verbose("Persist state to disk", {filePath, stateSlot: stateOrFilePath.slot});
+      } else {
+        // should not happen, log anyway
+        this.logger.debug(`Unexpected stateOrFilePath ${stateOrFilePath} for key ${key}`);
       }
     }
 
