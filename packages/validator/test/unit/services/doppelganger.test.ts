@@ -152,7 +152,7 @@ describe("doppelganger service", () => {
     const clock = new ClockMockMsToSlot(initialEpoch);
 
     const slashingProtection = new SlashingProtectionMock();
-    // Previous epoch attestation exists in slashing protection db
+    // Attestation from previous epoch exists in slashing protection db
     slashingProtection.hasAttestedInEpoch = async () => true;
 
     const doppelganger = new DoppelgangerService(

@@ -75,22 +75,19 @@ export class DoppelgangerService {
 
       if (attestedInPreviousEpoch) {
         remainingEpochs = REMAINING_EPOCHS_IF_SKIPPED;
-        this.logger.info(
-          "Doppelganger detection skipped for validator, previous epoch attestation exists in database",
-          {
-            pubkey: prettyBytes(pubkeyHex),
-            previousEpoch,
-          }
-        );
+        this.logger.info("Doppelganger detection skipped, attestation from previous epoch exists in database", {
+          pubkey: prettyBytes(pubkeyHex),
+          previousEpoch,
+        });
       } else {
-        this.logger.info("Registered validator for doppelganger", {
+        this.logger.info("Registered validator for doppelganger detection", {
           pubkey: prettyBytes(pubkeyHex),
           remainingEpochs,
           nextEpochToCheck,
         });
       }
     } else {
-      this.logger.info("Doppelganger detection skipped for validator, initialized before genesis", {
+      this.logger.info("Doppelganger detection skipped, validator initialized before genesis", {
         pubkey: prettyBytes(pubkeyHex),
         currentEpoch,
       });
