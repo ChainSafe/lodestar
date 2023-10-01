@@ -143,7 +143,7 @@ export class Validator {
   }
 
   /**
-   * Initialize and start a validator client and its varied sub-component services
+   * Initialize and start a validator client
    */
   static async init(opts: ValidatorOptions, genesis: Genesis, metrics: Metrics | null = null): Promise<Validator> {
     const {db, config: chainConfig, logger, slashingProtection, signers, valProposerConfig} = opts;
