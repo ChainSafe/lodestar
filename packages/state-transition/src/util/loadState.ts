@@ -3,7 +3,7 @@ import {ssz} from "@lodestar/types";
 import {ForkSeq} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
 import {BeaconStateAllForks, BeaconStateAltair, BeaconStatePhase0} from "../types.js";
-import {VALIDATOR_BYTES_SIZE, getForkFromStateBytes, getStateSlotFromBytes, getStateTypeFromBytes} from "./sszBytes.js";
+import {VALIDATOR_BYTES_SIZE, getForkFromStateBytes, getStateTypeFromBytes} from "./sszBytes.js";
 
 type BeaconStateType =
   | typeof ssz.phase0.BeaconState
@@ -12,7 +12,6 @@ type BeaconStateType =
   | typeof ssz.capella.BeaconState
   | typeof ssz.deneb.BeaconState;
 
-type BytesRange = {start: number; end: number};
 type MigrateStateOutput = {state: BeaconStateAllForks; modifiedValidators: number[]};
 
 /**
@@ -28,45 +27,38 @@ export function loadState(
   seedState: BeaconStateAllForks,
   stateBytes: Uint8Array
 ): MigrateStateOutput {
-  const seedStateType = config.getForkTypes(seedState.slot).BeaconState as BeaconStateType;
   const stateType = getStateTypeFromBytes(config, stateBytes) as BeaconStateType;
-  if (stateType !== seedStateType) {
-    // TODO: how can we reload state with different type?
-    throw new Error(
-      `Cannot migrate state of different forks, seedSlot=${seedState.slot}, newSlot=${getStateSlotFromBytes(
-        stateBytes
-      )}`
-    );
-  }
   const dataView = new DataView(stateBytes.buffer, stateBytes.byteOffset, stateBytes.byteLength);
   const fieldRanges = stateType.getFieldRanges(dataView, 0, stateBytes.length);
   const allFields = Object.keys(stateType.fields);
   const validatorsFieldIndex = allFields.indexOf("validators");
-  const modifiedValidators: number[] = [];
-  const clonedState = loadValidators(seedState, fieldRanges, validatorsFieldIndex, stateBytes, modifiedValidators);
-  // genesisTime, could skip
-  // genesisValidatorsRoot, could skip
-  // validators is loaded above
+  const migratedState = stateType.defaultViewDU();
+  // validators is rarely changed
+  const validatorsRange = fieldRanges[validatorsFieldIndex];
+  const modifiedValidators = loadValidators(
+    migratedState,
+    seedState,
+    stateBytes.subarray(validatorsRange.start, validatorsRange.end)
+  );
   // inactivityScores
-  // this takes ~500 to hashTreeRoot, should we only update individual field?
+  // this takes ~500 to hashTreeRoot while this field is rarely changed
   const fork = getForkFromStateBytes(config, stateBytes);
-  if (fork >= ForkSeq.altair) {
+  const seedFork = config.getForkSeq(seedState.slot);
+
+  let loadedInactivityScores = false;
+  if (fork >= ForkSeq.altair && seedFork >= ForkSeq.altair) {
+    loadedInactivityScores = true;
     const inactivityScoresIndex = allFields.indexOf("inactivityScores");
     const inactivityScoresRange = fieldRanges[inactivityScoresIndex];
     loadInactivityScores(
-      clonedState as BeaconStateAltair,
+      migratedState as BeaconStateAltair,
+      seedState as BeaconStateAltair,
       stateBytes.subarray(inactivityScoresRange.start, inactivityScoresRange.end)
     );
   }
   for (const [fieldName, typeUnknown] of Object.entries(stateType.fields)) {
-    if (
-      // same to all states
-      fieldName === "genesisTime" ||
-      fieldName === "genesisValidatorsRoot" ||
-      // loaded above
-      fieldName === "validators" ||
-      fieldName === "inactivityScores"
-    ) {
+    // loaded above
+    if (fieldName === "validators" || (loadedInactivityScores && fieldName === "inactivityScores")) {
       continue;
     }
     const field = fieldName as Exclude<keyof BeaconStatePhase0, "type" | "cache" | "node">;
@@ -74,28 +66,34 @@ export function loadState(
     const fieldIndex = allFields.indexOf(field);
     const fieldRange = fieldRanges[fieldIndex];
     if (type.isBasic) {
-      (clonedState as BeaconStatePhase0)[field] = type.deserialize(
+      (migratedState as BeaconStatePhase0)[field] = type.deserialize(
         stateBytes.subarray(fieldRange.start, fieldRange.end)
       ) as never;
     } else {
-      (clonedState as BeaconStatePhase0)[field] = (type as CompositeTypeAny).deserializeToViewDU(
+      (migratedState as BeaconStatePhase0)[field] = (type as CompositeTypeAny).deserializeToViewDU(
         stateBytes.subarray(fieldRange.start, fieldRange.end)
       ) as never;
     }
   }
-  clonedState.commit();
+  migratedState.commit();
 
-  return {state: clonedState, modifiedValidators};
+  return {state: migratedState, modifiedValidators};
 }
 
 // state store inactivity scores of old seed state, we need to update it
 // this value rarely changes even after 3 months of data as monitored on mainnet in Sep 2023
-function loadInactivityScores(state: BeaconStateAltair, inactivityScoresBytes: Uint8Array): void {
-  const oldValidator = state.inactivityScores.length;
+function loadInactivityScores(
+  migratedState: BeaconStateAltair,
+  seedState: BeaconStateAltair,
+  inactivityScoresBytes: Uint8Array
+): void {
+  // migratedState starts with the same inactivityScores to seed state
+  migratedState.inactivityScores = seedState.inactivityScores.clone();
+  const oldValidator = migratedState.inactivityScores.length;
   // UintNum64 = 8 bytes
   const newValidator = inactivityScoresBytes.length / 8;
   const minValidator = Math.min(oldValidator, newValidator);
-  const oldInactivityScores = state.inactivityScores.serialize();
+  const oldInactivityScores = migratedState.inactivityScores.serialize();
   const isMoreValidator = newValidator >= oldValidator;
   const modifiedValidators: number[] = [];
   findModifiedInactivityScores(
@@ -105,7 +103,7 @@ function loadInactivityScores(state: BeaconStateAltair, inactivityScoresBytes: U
   );
 
   for (const validatorIndex of modifiedValidators) {
-    state.inactivityScores.set(
+    migratedState.inactivityScores.set(
       validatorIndex,
       ssz.UintNum64.deserialize(inactivityScoresBytes.subarray(validatorIndex * 8, (validatorIndex + 1) * 8))
     );
@@ -114,64 +112,63 @@ function loadInactivityScores(state: BeaconStateAltair, inactivityScoresBytes: U
   if (isMoreValidator) {
     // add new inactivityScores
     for (let validatorIndex = oldValidator; validatorIndex < newValidator; validatorIndex++) {
-      state.inactivityScores.push(
+      migratedState.inactivityScores.push(
         ssz.UintNum64.deserialize(inactivityScoresBytes.subarray(validatorIndex * 8, (validatorIndex + 1) * 8))
       );
     }
   } else {
     if (newValidator - 1 < 0) {
-      state.inactivityScores = ssz.altair.InactivityScores.defaultViewDU();
+      migratedState.inactivityScores = ssz.altair.InactivityScores.defaultViewDU();
     } else {
-      state.inactivityScores = state.inactivityScores.sliceTo(newValidator - 1);
+      migratedState.inactivityScores = migratedState.inactivityScores.sliceTo(newValidator - 1);
     }
   }
 }
 
 function loadValidators(
+  migratedState: BeaconStateAllForks,
   seedState: BeaconStateAllForks,
-  fieldRanges: BytesRange[],
-  validatorsFieldIndex: number,
-  data: Uint8Array,
-  modifiedValidators: number[] = []
-): BeaconStateAllForks {
-  const validatorsRange = fieldRanges[validatorsFieldIndex];
-  const oldValidatorCount = seedState.validators.length;
-  const newValidatorCount = (validatorsRange.end - validatorsRange.start) / VALIDATOR_BYTES_SIZE;
-  const isMoreValidator = newValidatorCount >= oldValidatorCount;
-  const minValidatorCount = Math.min(oldValidatorCount, newValidatorCount);
-  // new state now have same validators to seed state
-  const newState = seedState.clone();
-  const validatorsBytes = seedState.validators.serialize();
-  const validatorsBytes2 = data.slice(validatorsRange.start, validatorsRange.end);
+  newValidatorsBytes: Uint8Array
+): number[] {
+  const seedValidatorCount = seedState.validators.length;
+  const newValidatorCount = Math.floor(newValidatorsBytes.length / VALIDATOR_BYTES_SIZE);
+  const isMoreValidator = newValidatorCount >= seedValidatorCount;
+  const minValidatorCount = Math.min(seedValidatorCount, newValidatorCount);
+  // migrated state starts with the same validators to seed state
+  migratedState.validators = seedState.validators.clone();
+  const seedValidatorsBytes = seedState.validators.serialize();
+  const modifiedValidators: number[] = [];
   findModifiedValidators(
-    isMoreValidator ? validatorsBytes : validatorsBytes.subarray(0, minValidatorCount * VALIDATOR_BYTES_SIZE),
-    isMoreValidator ? validatorsBytes2.subarray(0, minValidatorCount * VALIDATOR_BYTES_SIZE) : validatorsBytes2,
+    isMoreValidator ? seedValidatorsBytes : seedValidatorsBytes.subarray(0, minValidatorCount * VALIDATOR_BYTES_SIZE),
+    isMoreValidator ? newValidatorsBytes.subarray(0, minValidatorCount * VALIDATOR_BYTES_SIZE) : newValidatorsBytes,
     modifiedValidators
   );
   for (const i of modifiedValidators) {
-    newState.validators.set(
+    migratedState.validators.set(
       i,
       ssz.phase0.Validator.deserializeToViewDU(
-        validatorsBytes2.subarray(i * VALIDATOR_BYTES_SIZE, (i + 1) * VALIDATOR_BYTES_SIZE)
+        newValidatorsBytes.subarray(i * VALIDATOR_BYTES_SIZE, (i + 1) * VALIDATOR_BYTES_SIZE)
       )
     );
   }
 
-  if (newValidatorCount >= oldValidatorCount) {
+  if (newValidatorCount >= seedValidatorCount) {
     // add new validators
-    for (let validatorIndex = oldValidatorCount; validatorIndex < newValidatorCount; validatorIndex++) {
-      newState.validators.push(
+    for (let validatorIndex = seedValidatorCount; validatorIndex < newValidatorCount; validatorIndex++) {
+      migratedState.validators.push(
         ssz.phase0.Validator.deserializeToViewDU(
-          validatorsBytes2.subarray(validatorIndex * VALIDATOR_BYTES_SIZE, (validatorIndex + 1) * VALIDATOR_BYTES_SIZE)
+          newValidatorsBytes.subarray(
+            validatorIndex * VALIDATOR_BYTES_SIZE,
+            (validatorIndex + 1) * VALIDATOR_BYTES_SIZE
+          )
         )
       );
       modifiedValidators.push(validatorIndex);
     }
   } else {
-    newState.validators = newState.validators.sliceTo(newValidatorCount - 1);
+    migratedState.validators = migratedState.validators.sliceTo(newValidatorCount - 1);
   }
-  newState.commit();
-  return newState;
+  return modifiedValidators;
 }
 
 function findModifiedValidators(
