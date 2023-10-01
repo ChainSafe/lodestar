@@ -1,7 +1,7 @@
 import {fromHexString} from "@chainsafe/ssz";
 import {Epoch, ValidatorIndex} from "@lodestar/types";
 import {Api, ApiError, routes} from "@lodestar/api";
-import {Logger, sleep} from "@lodestar/utils";
+import {Logger, prettyBytes, sleep} from "@lodestar/utils";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ISlashingProtection} from "../slashingProtection/index.js";
 import {ProcessShutdownCallback, PubkeyHex} from "../types.js";
@@ -77,15 +77,19 @@ export class DoppelgangerService {
         remainingEpochs = REMAINING_EPOCHS_IF_SKIPPED;
         this.logger.info("Doppelganger detection skipped, previous epoch attestation exists in database", {
           previousEpoch,
-          pubkeyHex,
+          pubkey: prettyBytes(pubkeyHex),
         });
       } else {
-        this.logger.info("Registered validator for doppelganger", {remainingEpochs, nextEpochToCheck, pubkeyHex});
+        this.logger.info("Registered validator for doppelganger", {
+          remainingEpochs,
+          nextEpochToCheck,
+          pubkey: prettyBytes(pubkeyHex),
+        });
       }
     } else {
       this.logger.info("Doppelganger detection skipped, validator initialized before genesis", {
         currentEpoch,
-        pubkeyHex,
+        pubkey: prettyBytes(pubkeyHex),
       });
     }
 
