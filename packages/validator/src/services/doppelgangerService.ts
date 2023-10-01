@@ -12,7 +12,7 @@ import {IndicesService} from "./indices.js";
 // The number of epochs that must be checked before we assume that there are
 // no other duplicate validators on the network
 const DEFAULT_REMAINING_DETECTION_EPOCHS = 1;
-const REMAINING_EPOCHS_IF_DOPPLEGANGER = Infinity;
+const REMAINING_EPOCHS_IF_DOPPELGANGER = Infinity;
 const REMAINING_EPOCHS_IF_SKIPPED = 0;
 
 /** Liveness responses for a given epoch */
@@ -198,7 +198,7 @@ export class DoppelgangerService {
         }
 
         if (state.nextEpochToCheck <= epoch) {
-          // Doppleganger detected
+          // Doppelganger detected
           violators.push(response.index);
         }
       }
@@ -207,7 +207,7 @@ export class DoppelgangerService {
     if (violators.length > 0) {
       // If a single doppelganger is detected, enable doppelganger checks on all validators forever
       for (const state of this.doppelgangerStateByPubkey.values()) {
-        state.remainingEpochs = REMAINING_EPOCHS_IF_DOPPLEGANGER;
+        state.remainingEpochs = REMAINING_EPOCHS_IF_DOPPELGANGER;
       }
 
       this.logger.error(
@@ -271,7 +271,7 @@ function getStatus(state: DoppelgangerState | undefined): DoppelgangerStatus {
     return DoppelgangerStatus.Unknown;
   } else if (state.remainingEpochs <= 0) {
     return DoppelgangerStatus.VerifiedSafe;
-  } else if (state.remainingEpochs === REMAINING_EPOCHS_IF_DOPPLEGANGER) {
+  } else if (state.remainingEpochs === REMAINING_EPOCHS_IF_DOPPELGANGER) {
     return DoppelgangerStatus.DoppelgangerDetected;
   } else {
     return DoppelgangerStatus.Unverified;
