@@ -17,13 +17,11 @@ import {
   ContainerData,
 } from "../../utils/index.js";
 import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
-import {ApiClientResponse} from "../../interfaces.js";
+import {parseAcceptHeader, writeAcceptHeader} from "../../utils/acceptHeader.js";
+import {ApiClientResponse, ResponseFormat} from "../../interfaces.js";
 import {ExecutionOptimistic, StateId} from "./beacon/state.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
-
-export type StateFormat = "json" | "ssz";
-export const mimeTypeSSZ = "application/octet-stream";
 
 const stringType = new StringType();
 const protoNodeSszType = new ContainerType(
@@ -91,7 +89,7 @@ export type Api = {
   getState(stateId: StateId, format: "ssz"): Promise<ApiClientResponse<{[HttpStatusCode.OK]: Uint8Array}>>;
   getState(
     stateId: StateId,
-    format?: StateFormat
+    format?: ResponseFormat
   ): Promise<
     ApiClientResponse<{
       [HttpStatusCode.OK]: Uint8Array | {data: allForks.BeaconState; executionOptimistic: ExecutionOptimistic};
@@ -117,7 +115,7 @@ export type Api = {
   getStateV2(stateId: StateId, format: "ssz"): Promise<ApiClientResponse<{[HttpStatusCode.OK]: Uint8Array}>>;
   getStateV2(
     stateId: StateId,
-    format?: StateFormat
+    format?: ResponseFormat
   ): Promise<
     ApiClientResponse<{
       [HttpStatusCode.OK]:
@@ -149,9 +147,9 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
   const getState: ReqSerializer<Api["getState"], ReqTypes["getState"]> = {
     writeReq: (state_id, format) => ({
       params: {state_id: String(state_id)},
-      headers: {accept: format === "ssz" ? mimeTypeSSZ : "application/json"},
+      headers: {accept: writeAcceptHeader(format)},
     }),
-    parseReq: ({params, headers}) => [params.state_id, headers.accept === mimeTypeSSZ ? "ssz" : "json"],
+    parseReq: ({params, headers}) => [params.state_id, parseAcceptHeader(headers.accept)],
     schema: {params: {state_id: Schema.StringRequired}},
   };
 
