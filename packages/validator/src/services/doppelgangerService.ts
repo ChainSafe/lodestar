@@ -77,7 +77,7 @@ export class DoppelgangerService {
         // It is safe to skip doppelganger detection
         // https://github.com/ChainSafe/lodestar/issues/5856
         remainingEpochs = REMAINING_EPOCHS_IF_SKIPPED;
-        this.logger.info("Doppelganger detection skipped, attestation from previous epoch exists in database", {
+        this.logger.info("Doppelganger detection skipped for validator because restart was detected", {
           pubkey: truncBytes(pubkeyHex),
           previousEpoch,
         });
@@ -89,7 +89,7 @@ export class DoppelgangerService {
         });
       }
     } else {
-      this.logger.info("Doppelganger detection skipped, validator initialized before genesis", {
+      this.logger.info("Doppelganger detection skipped for validator initialized before genesis", {
         pubkey: truncBytes(pubkeyHex),
         currentEpoch,
       });
