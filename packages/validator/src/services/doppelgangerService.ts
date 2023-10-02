@@ -74,6 +74,8 @@ export class DoppelgangerService {
       );
 
       if (attestedInPreviousEpoch) {
+        // It is safe to skip doppelganger detection
+        // https://github.com/ChainSafe/lodestar/issues/5856
         remainingEpochs = REMAINING_EPOCHS_IF_SKIPPED;
         this.logger.info("Doppelganger detection skipped, attestation from previous epoch exists in database", {
           pubkey: truncBytes(pubkeyHex),
