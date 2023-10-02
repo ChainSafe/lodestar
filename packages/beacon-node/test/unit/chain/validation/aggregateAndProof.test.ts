@@ -111,6 +111,7 @@ describe("chain / validation / aggregateAndProof", () => {
     await expectError(chain, signedAggregateAndProof, AttestationErrorCode.INVALID_TARGET_ROOT);
   });
 
+  // TODO: address when using ShufflingCache
   it("NO_COMMITTEE_FOR_SLOT_AND_INDEX", async () => {
     const {chain, signedAggregateAndProof} = getValidData();
     // slot is out of the commitee range

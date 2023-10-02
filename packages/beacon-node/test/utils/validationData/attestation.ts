@@ -117,6 +117,8 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
   // Add state to regen
   const regen = {
     getState: async () => state,
+    // TODO: remove this once we have a better way to get state
+    getStateSync: () => state,
   } as Partial<IStateRegenerator> as IStateRegenerator;
 
   const chain = {

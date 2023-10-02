@@ -3,21 +3,19 @@ import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {Epoch} from "@lodestar/types";
 import {
-  CheckpointHex,
-  CheckpointStateCache,
-  PersistentApis,
-  StateFile,
+  PersistentCheckpointStateCache,
   findClosestCheckpointState,
   toCheckpointHex,
   toCheckpointKey,
   toTmpFilePath,
-} from "../../../../src/chain/stateCache/stateContextCheckpointsCache.js";
+} from "../../../../src/chain/stateCache/persistentCheckpointsCache.js";
 import {generateCachedState} from "../../../utils/state.js";
 import {ShufflingCache} from "../../../../src/chain/shufflingCache.js";
 import {testLogger} from "../../../utils/logger.js";
+import {PersistentApis, CheckpointHex, StateFile} from "../../../../src/chain/stateCache/types.js";
 
-describe("CheckpointStateCache", function () {
-  let cache: CheckpointStateCache;
+describe("PersistentCheckpointStateCache", function () {
+  let cache: PersistentCheckpointStateCache;
   let fileApisBuffer: Map<string, Uint8Array>;
   const cp0 = {epoch: 20, root: Buffer.alloc(32)};
   const cp1 = {epoch: 21, root: Buffer.alloc(32, 1)};
@@ -47,7 +45,7 @@ describe("CheckpointStateCache", function () {
       readFile: (filePath) => Promise.resolve(fileApisBuffer.get(filePath) || Buffer.alloc(0)),
       ensureDir: () => Promise.resolve(),
     };
-    cache = new CheckpointStateCache(
+    cache = new PersistentCheckpointStateCache(
       {persistentApis, logger: testLogger(), shufflingCache: new ShufflingCache()},
       {maxEpochsInMemory: 2}
     );

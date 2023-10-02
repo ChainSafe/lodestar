@@ -39,7 +39,7 @@ import {IExecutionEngine, IExecutionBuilder} from "../execution/index.js";
 import {Clock, ClockEvent, IClock} from "../util/clock.js";
 import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
-import {CheckpointStateCache, StateContextCache} from "./stateCache/index.js";
+import {PersistentCheckpointStateCache, StateContextCache} from "./stateCache/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {ChainEventEmitter, ChainEvent} from "./emitter.js";
 import {IBeaconChain, ProposerPreparationData, BlockHash, StateGetOpts} from "./interface.js";
@@ -76,6 +76,7 @@ import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
 import {BlockInput} from "./blocks/types.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {ShufflingCache} from "./shufflingCache.js";
+import {MemoryCheckpointStateCache} from "./stateCache/memoryCheckpointsCache.js";
 
 /**
  * Arbitrary constants, blobs should be consumed immediately in the same slot they are produced.
@@ -234,10 +235,12 @@ export class BeaconChain implements IBeaconChain {
     this.index2pubkey = cachedState.epochCtx.index2pubkey;
 
     const stateCache = new StateContextCache(this.opts, {metrics});
-    const checkpointStateCache = new CheckpointStateCache(
-      {metrics, logger, clock, shufflingCache: this.shufflingCache, getHeadState: this.getHeadState.bind(this)},
-      this.opts
-    );
+    const checkpointStateCache = this.opts.persistentCheckpointStateCache
+      ? new PersistentCheckpointStateCache(
+          {metrics, logger, clock, shufflingCache: this.shufflingCache, getHeadState: this.getHeadState.bind(this)},
+          this.opts
+        )
+      : new MemoryCheckpointStateCache({metrics});
 
     const {checkpoint} = computeAnchorCheckpoint(config, anchorState);
     stateCache.add(cachedState);

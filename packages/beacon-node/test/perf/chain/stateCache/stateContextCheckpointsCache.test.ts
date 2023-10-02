@@ -2,7 +2,11 @@ import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {ssz, phase0} from "@lodestar/types";
 import {generateCachedState} from "../../../utils/state.js";
-import {CheckpointStateCache, toCheckpointHex} from "../../../../src/chain/stateCache/index.js";
+import {
+  CheckpointStateCache,
+  PersistentCheckpointStateCache,
+  toCheckpointHex,
+} from "../../../../src/chain/stateCache/index.js";
 import {ShufflingCache} from "../../../../src/chain/shufflingCache.js";
 import {testLogger} from "../../../utils/logger.js";
 
@@ -14,7 +18,7 @@ describe("CheckpointStateCache perf tests", function () {
   let checkpointStateCache: CheckpointStateCache;
 
   before(() => {
-    checkpointStateCache = new CheckpointStateCache(
+    checkpointStateCache = new PersistentCheckpointStateCache(
       {logger: testLogger(), shufflingCache: new ShufflingCache()},
       {maxEpochsInMemory: 2}
     );
