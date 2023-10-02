@@ -23,6 +23,7 @@ import {
   StateFile,
   CheckpointStateCache,
 } from "./types.js";
+import {from} from "multiformats/dist/types/src/bases/base.js";
 
 /**
  * Cache of CachedBeaconState belonging to checkpoint
@@ -58,17 +59,23 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       metrics.cpStateCache.size.addCollect(() => {
         let fileCount = 0;
         let stateCount = 0;
-        for (const value of this.cache.values()) {
+        const memoryEpochs = new Set<Epoch>();
+        const persistentEpochs = new Set<Epoch>();
+        for (const [key, value] of this.cache.entries()) {
+          const {epoch} = fromCheckpointKey(key);
           if (typeof value === "string") {
             fileCount++;
+            memoryEpochs.add(epoch);
           } else {
             stateCount++;
+            persistentEpochs.add(epoch);
           }
         }
         metrics.cpStateCache.size.set({type: CacheType.file}, fileCount);
         metrics.cpStateCache.size.set({type: CacheType.state}, stateCount);
+        metrics.cpStateCache.epochSize.set({type: CacheType.file}, persistentEpochs.size);
+        metrics.cpStateCache.epochSize.set({type: CacheType.state}, memoryEpochs.size);
       });
-      metrics.cpStateCache.epochSize.addCollect(() => metrics.cpStateCache.epochSize.set(this.epochIndex.size));
     }
     this.logger = logger;
     this.clock = clock;
