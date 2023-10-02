@@ -340,6 +340,7 @@ describe("validateAttestation", () => {
     );
   });
 
+  // TODO: address when using ShufflingCache
   it("NO_COMMITTEE_FOR_SLOT_AND_INDEX", async () => {
     const {chain, attestation, subnet} = getValidData();
     // slot is out of the commitee range
@@ -512,6 +513,7 @@ describe("getStateForAttestationVerification", () => {
       headSlot: forkSlot + 1,
       regenCall: "getBlockSlotState",
     },
+    // TODO: address when using ShufflingCache
     {
       id: "should call getState if 1 epoch difference",
       attSlot: forkSlot + 2 * SLOTS_PER_EPOCH,

@@ -1,9 +1,8 @@
 import path from "node:path";
-import fs from "node:fs";
 import {toHexString} from "@chainsafe/ssz";
 import {phase0, Epoch, RootHex} from "@lodestar/types";
 import {CachedBeaconStateAllForks, computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {Logger, MapDef, ensureDir, removeFile, writeIfNotExist} from "@lodestar/utils";
+import {Logger, MapDef, ensureDir} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
 import {loadCachedBeaconState} from "@lodestar/state-transition";
 import {Metrics} from "../../metrics/index.js";
@@ -11,56 +10,19 @@ import {LinkedList} from "../../util/array.js";
 import {IClock} from "../../util/clock.js";
 import {ShufflingCache} from "../shufflingCache.js";
 import {MapTracker} from "./mapMetrics.js";
-
-export type CheckpointHex = {epoch: Epoch; rootHex: RootHex};
-
-// Make this generic to support testing
-export type PersistentApis = {
-  writeIfNotExist: (filepath: string, bytes: Uint8Array) => Promise<boolean>;
-  removeFile: (path: string) => Promise<boolean>;
-  readFile: (path: string) => Promise<Uint8Array>;
-  ensureDir: (path: string) => Promise<void>;
-};
-
-// Default persistent api for a regular node, use other persistent apis for testing
-const FILE_APIS: PersistentApis = {
-  writeIfNotExist,
-  removeFile,
-  readFile: fs.promises.readFile,
-  ensureDir,
-};
-
-const CHECKPOINT_STATES_FOLDER = "./unfinalized_checkpoint_states";
-
-export type StateFile = string;
-
-enum CacheType {
-  state = "state",
-  file = "file",
-}
-
-// Reason to remove a state file from disk
-enum RemoveFileReason {
-  pruneFinalized = "prune_finalized",
-  reload = "reload",
-  stateUpdate = "state_update",
-}
-
-export type GetHeadStateFn = () => CachedBeaconStateAllForks;
-
-export type CheckpointStateCacheOpts = {
-  // Keep max n states in memory, persist the rest to disk
-  maxEpochsInMemory: number;
-};
-
-export type CheckpointStateCacheModules = {
-  metrics?: Metrics | null;
-  logger: Logger;
-  clock?: IClock | null;
-  shufflingCache: ShufflingCache;
-  getHeadState?: GetHeadStateFn;
-  persistentApis?: PersistentApis;
-};
+import {
+  CHECKPOINT_STATES_FOLDER,
+  CacheType,
+  CheckpointHex,
+  PersistentCheckpointStateCacheModules,
+  PersistentCheckpointStateCacheOpts,
+  FILE_APIS,
+  GetHeadStateFn,
+  PersistentApis,
+  RemoveFileReason,
+  StateFile,
+  CheckpointStateCache,
+} from "./types.js";
 
 /**
  * Cache of CachedBeaconState belonging to checkpoint
@@ -70,7 +32,7 @@ export type CheckpointStateCacheModules = {
  *
  * Similar API to Repository
  */
-export class CheckpointStateCache {
+export class PersistentCheckpointStateCache implements CheckpointStateCache {
   private readonly cache: MapTracker<string, CachedBeaconStateAllForks | StateFile>;
   // key order of in memory items to implement LRU cache
   private readonly inMemoryKeyOrder: LinkedList<string>;
@@ -87,8 +49,8 @@ export class CheckpointStateCache {
   private readonly getHeadState?: GetHeadStateFn;
 
   constructor(
-    {metrics, logger, clock, shufflingCache, getHeadState, persistentApis}: CheckpointStateCacheModules,
-    opts: CheckpointStateCacheOpts
+    {metrics, logger, clock, shufflingCache, getHeadState, persistentApis}: PersistentCheckpointStateCacheModules,
+    opts: PersistentCheckpointStateCacheOpts
   ) {
     this.cache = new MapTracker(metrics?.cpStateCache);
     if (metrics) {
