@@ -21,6 +21,7 @@ import {BeaconNode} from "../../../src/node/index.js";
 //
 // Attempting to do both 1. and 2. in this e2e test more expensive than necessary.
 // Unit tests in the validator cover 2., so some test in lodestar package should cover 1.
+// https://github.com/ChainSafe/lodestar/issues/5967
 describe.skip("doppelganger / doppelganger test", function () {
   const afterEachCallbacks: (() => Promise<unknown> | void)[] = [];
   afterEach(async () => {

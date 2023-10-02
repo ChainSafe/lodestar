@@ -35,7 +35,7 @@ import * as protocols from "./protocols.js";
 import {collectExactOneTyped} from "./utils/collect.js";
 
 export {getReqRespHandlers} from "./handlers/index.js";
-export {ReqRespMethod, RequestTypedContainer} from "./types.js";
+export {ReqRespMethod, type RequestTypedContainer} from "./types.js";
 
 export interface ReqRespBeaconNodeModules {
   libp2p: Libp2p;

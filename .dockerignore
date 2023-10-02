@@ -5,7 +5,9 @@
 node_modules
 
 # Docs
-assets
+# assets are useful for swagger-ui and relatively lightweight
+# https://github.com/ChainSafe/lodestar/pull/5970#discussion_r1334420451
+# assets
 supporting-docs
 docs
 typedocs

@@ -210,16 +210,16 @@ describe("monitoring / service", () => {
 
       await service.send();
 
-      assertError({message: new TimeoutError(`reached for request to ${remoteServiceUrl.host}`).message});
+      assertError({message: new TimeoutError("request").message});
     });
 
     it("should abort pending requests if monitoring service is closed", (done) => {
       const endpoint = `${baseUrl}${remoteServiceRoutes.pending}`;
       service = new MonitoringService("beacon", {endpoint, collectSystemStats: false}, {register, logger});
 
-      service.send().finally(() => {
+      void service.send().finally(() => {
         try {
-          assertError({message: new ErrorAborted(`request to ${remoteServiceUrl.host}`).message});
+          assertError({message: new ErrorAborted("request").message});
           done();
         } catch (e) {
           done(e);

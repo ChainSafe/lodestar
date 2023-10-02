@@ -40,7 +40,7 @@ api.beacon
 
 ## What you need
 
-You will need to go over the [specification](https://github.com/ethereum/beacon-apis). You will also need to have a [basic understanding of sharding](https://eth.wiki/sharding/Sharding-FAQs).
+You will need to go over the [specification](https://github.com/ethereum/beacon-apis).
 
 ## Getting started
 

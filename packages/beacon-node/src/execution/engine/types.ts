@@ -55,7 +55,7 @@ export type EngineApiRpcParamTypes = {
   /**
    * 1. Array of DATA - Array of block_hash field values of the ExecutionPayload structure
    *  */
-  engine_getPayloadBodiesByHashV1: DATA[];
+  engine_getPayloadBodiesByHashV1: DATA[][];
 
   /**
    *  1. start: QUANTITY, 64 bits - Starting block number

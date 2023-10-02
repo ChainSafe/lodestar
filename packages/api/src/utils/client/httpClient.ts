@@ -3,7 +3,7 @@ import {ReqGeneric, RouteDef} from "../index.js";
 import {ApiClientResponse, ApiClientSuccessResponse} from "../../interfaces.js";
 import {fetch, isFetchError} from "./fetch.js";
 import {stringifyQuery, urlJoin} from "./format.js";
-import {Metrics} from "./metrics.js";
+import type {Metrics} from "./metrics.js";
 import {HttpStatusCode} from "./httpStatusCode.js";
 
 /** A higher default timeout, validator will sets its own shorter timeoutMs */
@@ -41,7 +41,11 @@ export class ApiError extends Error {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   static assert(res: ApiClientResponse, message?: string): asserts res is ApiClientSuccessResponse<any, unknown> {
     if (!res.ok) {
-      throw new ApiError([message, res.error.message].join(" - "), res.error.code, res.error.operationId);
+      throw new ApiError(
+        [message, res.error.message].filter(Boolean).join(" - "),
+        res.error.code,
+        res.error.operationId
+      );
     }
   }
 
@@ -90,7 +94,7 @@ export type HttpClientModules = {
   metrics?: Metrics;
 };
 
-export {Metrics};
+export type {Metrics};
 
 export class HttpClient implements IHttpClient {
   private readonly globalTimeoutMs: number;

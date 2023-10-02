@@ -4,7 +4,7 @@ import {IBeaconParamsUnparsed} from "../config/types.js";
 import {ObjectKeys, CliCommandOptions} from "../util/index.js";
 
 // No options are statically declared
-// If an arbitraty key notation is used, it removes typesafety on most of this CLI arg parsing code.
+// If an arbitrary key notation is used, it removes type safety on most of this CLI arg parsing code.
 // Params will be parsed from an args object assuming to contain the required keys
 
 export type ITerminalPowArgs = {

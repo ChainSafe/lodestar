@@ -186,9 +186,9 @@ export class MonitoringService {
 
       // error was thrown by abort signal
       if (signal.reason === FetchAbortReason.Close) {
-        throw new ErrorAborted(`request to ${this.remoteServiceHost}`);
+        throw new ErrorAborted("request");
       } else if (signal.reason === FetchAbortReason.Timeout) {
-        throw new TimeoutError(`reached for request to ${this.remoteServiceHost}`);
+        throw new TimeoutError("request");
       } else {
         throw e;
       }

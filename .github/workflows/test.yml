@@ -11,10 +11,14 @@ on:
     branches: [unstable, stable]
   pull_request:
   workflow_dispatch:
-
+    
+env:
+  GETH_DOCKER_IMAGE: ethereum/client-go:v1.11.6
+  NETHERMIND_DOCKER_IMAGE: nethermind/nethermind:1.18.0
+  
 jobs:
-  tests-main:
-    name: Tests
+  build:
+    name: Build
     runs-on: buildjet-4vcpu-ubuntu-2204
     strategy:
       fail-fast: false
@@ -27,24 +31,146 @@ jobs:
         with:
           node-version: ${{matrix.node}}
           check-latest: true
+          cache: yarn
       - name: Node.js version
         id: node
         run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT
-      - name: Restore dependencies
-        uses: actions/cache@master
-        id: cache-deps
+      - name: Restore build
+        uses: actions/cache/restore@v3
+        id: cache-build-restore
         with:
           path: |
             node_modules
             packages/*/node_modules
-          key: ${{ runner.os }}-${{ steps.node.outputs.v8CppApiVersion }}-${{ hashFiles('**/yarn.lock', '**/package.json') }}
+            lib/
+            packages/*/lib
+            packages/*/.git-data.json
+          key: ${{ runner.os }}-node-${{ matrix.node }}-${{ github.sha }}
       - name: Install & build
-        if: steps.cache-deps.outputs.cache-hit != 'true'
+        if: steps.cache-build-restore.outputs.cache-hit != 'true'
         run: yarn install --frozen-lockfile && yarn build
       - name: Build
+        if: steps.cache-build-restore.outputs.cache-hit == 'true'
         run: yarn build
-        if: steps.cache-deps.outputs.cache-hit == 'true'
-      # </common-build>
+      - name: Check Build
+        run: yarn check-build      
+      - name: Test root binary exists
+        run: ./lodestar --version 
+      - name: Reject yarn.lock changes
+        run: .github/workflows/scripts/reject_yarn_lock_changes.sh
+        # Run only on forks
+        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
+      - name: Cache build artifacts
+        uses: actions/cache@master
+        id: cache-build
+        with:
+          path: |
+            node_modules
+            packages/*/node_modules
+            lib/
+            packages/*/lib
+            packages/*/.git-data.json            
+          key: ${{ runner.os }}-node-${{ matrix.node }}-${{ github.sha }}
+
+  lint:
+    name: Lint
+    needs: build
+    runs-on: 'ubuntu-latest'
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20]    
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node }}
+          check-latest: true
+          cache: yarn
+      - name: Restore build cache
+        id: cache-primes-restore
+        uses: actions/cache/restore@v3
+        with:
+          path: |
+            node_modules
+            packages/*/node_modules
+            lib/
+            packages/*/lib
+            packages/*/.git-data.json            
+          key: ${{ runner.os }}-node-${{ matrix.node }}-${{ github.sha }}
+          fail-on-cache-miss: true
+      - name: Assert yarn prints no warnings
+        run: scripts/assert_no_yarn_warnings.sh          
+      - name: Lint Code
+        run: yarn lint 
+      - name: Lint Grafana dashboards
+        run: scripts/validate-grafana-dashboards.sh        
+      - name: Assert ESM module exports
+        run: node scripts/assert_exports.mjs
+      - name: Assert eslintrc rules sorted
+        run: scripts/assert_eslintrc_sorted.mjs
+
+  type-checks: 
+    name: Type Checks
+    needs: build
+    runs-on: 'ubuntu-latest'
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20]        
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node }}
+          check-latest: true
+          cache: yarn
+      - name: Restore build cache
+        id: cache-primes-restore
+        uses: actions/cache/restore@v3
+        with:
+          path: |
+            node_modules
+            packages/*/node_modules
+            lib/
+            packages/*/lib
+            packages/*/.git-data.json            
+          key: ${{ runner.os }}-node-${{ matrix.node }}-${{ github.sha }}
+          fail-on-cache-miss: true
+
+      - name: Check Types
+        run: yarn check-types
+  
+      - name: README check
+        run: yarn check-readme
+          
+  unit-tests:
+    name: Unit Tests
+    needs: type-checks
+    runs-on: buildjet-4vcpu-ubuntu-2204
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: ${{matrix.node}}
+          check-latest: true
+          cache: yarn
+      - name: Restore build cache
+        id: cache-primes-restore
+        uses: actions/cache/restore@v3
+        with:
+          path: |
+            node_modules
+            packages/*/node_modules
+            lib/
+            packages/*/lib
+            packages/*/.git-data.json            
+          key: ${{ runner.os }}-node-${{ matrix.node }}-${{ github.sha }}
+          fail-on-cache-miss: true
 
       # Cache validator slashing protection data tests
       - name: Restore spec tests cache
@@ -53,34 +179,139 @@ jobs:
           path: packages/validator/spec-tests
           key: spec-test-data-${{ hashFiles('packages/validator/test/spec/params.ts') }}
 
-      - name: Assert yarn prints no warnings
-        run: scripts/assert_no_yarn_warnings.sh
-
-      # Misc sanity checks
-      - name: Lint Grafana dashboards
-        run: scripts/validate-grafana-dashboards.sh
-      - name: Test root binary exists
-        run: ./lodestar --version
-      - name: Reject yarn.lock changes
-        run: .github/workflows/scripts/reject_yarn_lock_changes.sh
-        # Run only on forks
-        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
-      - name: Assert ESM module exports
-        run: node scripts/assert_exports.mjs
-      - name: Assert eslintrc rules sorted
-        run: scripts/assert_eslintrc_sorted.mjs
-
-      - name: Check Types
-        run: yarn check-types
-
-      - name: README check
-        run: yarn check-readme
-
-      - name: Lint
-        run: yarn lint
-      - name: Check Build
-        run: yarn check-build
       - name: Unit tests
         run: yarn test:unit
       - name: Upload coverage data
         run: yarn coverage
+
+  e2e-tests:
+    name: E2E Tests
+    runs-on: buildjet-4vcpu-ubuntu-2204
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20]
+    steps:
+      # <common-build> - Uses YAML anchors in the future
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: ${{matrix.node}}
+          check-latest: true
+          cache: yarn          
+      - name: Restore build cache
+        id: cache-primes-restore
+        uses: actions/cache/restore@v3
+        with:
+          path: |
+            node_modules
+            packages/*/node_modules
+            lib/
+            packages/*/lib
+            packages/*/.git-data.json            
+          key: ${{ runner.os }}-node-${{ matrix.node }}-${{ github.sha }}
+          fail-on-cache-miss: true
+
+      - name: Run the e2e test environment
+        run: scripts/run_e2e_env.sh start
+
+      - name: E2E tests
+        run: yarn test:e2e
+        env:
+          GOERLI_RPC_URL: ${{ secrets.GOERLI_RPC_URL!=0 && secrets.GOERLI_RPC_URL || env.GOERLI_RPC_DEFAULT_URL }}
+
+      - name: Stop the e2e test environment
+        run: scripts/run_e2e_env.sh stop
+
+      - name: Upload debug log test for test env
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: debug-e2e-test-logs-node-${{matrix.node}}
+          path: test-logs/e2e-test-env
+      
+  browser-tests:
+    name: Browser Tests
+    runs-on: buildjet-4vcpu-ubuntu-2204
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20]
+    steps:
+      # <common-build> - Uses YAML anchors in the future
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: ${{matrix.node}}
+          check-latest: true
+          cache: yarn          
+      - name: Restore build cache
+        id: cache-primes-restore
+        uses: actions/cache/restore@v3
+        with:
+          path: |
+            node_modules
+            packages/*/node_modules
+            lib/
+            packages/*/lib
+            packages/*/.git-data.json            
+          key: ${{ runner.os }}-node-${{ matrix.node }}-${{ github.sha }}
+          fail-on-cache-miss: true
+
+      - name: Browser tests
+        run: |
+          export DISPLAY=':99.0'
+          Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
+          yarn test:browsers
+
+  spec-tests:
+    name: Spec tests
+    needs: build
+    runs-on: buildjet-4vcpu-ubuntu-2204
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: ${{matrix.node}}
+          check-latest: true
+          cache: yarn
+      - name: Restore build cache
+        id: cache-primes-restore
+        uses: actions/cache/restore@v3
+        with:
+          path: |
+            node_modules
+            packages/*/node_modules
+            lib/
+            packages/*/lib
+            packages/*/.git-data.json            
+          key: ${{ runner.os }}-node-${{ matrix.node }}-${{ github.sha }}
+          fail-on-cache-miss: true
+          
+      # Download spec tests with cache
+      - name: Restore spec tests cache
+        uses: actions/cache@master
+        with:
+          path: packages/beacon-node/spec-tests
+          key: spec-test-data-${{ hashFiles('packages/beacon-node/test/spec/specTestVersioning.ts') }}
+      - name: Download spec tests	
+        run: yarn download-spec-tests	
+        working-directory: packages/beacon-node
+      # Run them in different steps to quickly identifying which command failed
+      # Otherwise just doing `yarn test:spec` you can't tell which specific suite failed
+      # many of the suites have identical names for minimal and mainnet
+      - name: Spec tests bls-general
+        run: yarn test:spec-bls-general
+        working-directory: packages/beacon-node
+      - name: Spec tests minimal
+        run: yarn test:spec-minimal
+        working-directory: packages/beacon-node
+      - name: Spec tests mainnet
+        run: NODE_OPTIONS='--max-old-space-size=4096' yarn test:spec-mainnet
+        working-directory: packages/beacon-node

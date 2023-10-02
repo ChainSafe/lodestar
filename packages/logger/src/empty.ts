@@ -17,8 +17,5 @@ export function getEmptyLogger(): Logger {
     debug: function debug(): void {
       // Do nothing
     },
-    trace: function trace(): void {
-      // Do nothing
-    },
   };
 }

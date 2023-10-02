@@ -51,3 +51,33 @@ export function waitFor(condition: () => boolean, opts: WaitForOpts = {}): Promi
     };
   });
 }
+
+export interface ElapsedTimeTracker {
+  (): boolean;
+  msSinceLastCall: number;
+}
+
+/**
+ * Create a tracker which keeps track of the last time a function was called
+ *
+ * @param durationMs
+ * @returns
+ */
+export function createElapsedTimeTracker({minElapsedTime}: {minElapsedTime: number}): ElapsedTimeTracker {
+  // Initialized with undefined as the function has not been called yet
+  let lastTimeCalled: number | undefined = undefined;
+
+  function elapsedTimeTracker(): boolean {
+    const now = Date.now();
+    const msSinceLastCall = now - (lastTimeCalled ?? 0);
+    lastTimeCalled = now;
+
+    return msSinceLastCall > minElapsedTime;
+  }
+
+  return Object.assign(elapsedTimeTracker, {
+    get msSinceLastCall() {
+      return Date.now() - (lastTimeCalled ?? 0);
+    },
+  });
+}

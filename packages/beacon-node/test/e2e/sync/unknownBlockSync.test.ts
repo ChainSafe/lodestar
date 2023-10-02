@@ -47,7 +47,7 @@ describe("sync / unknown block sync", function () {
       this.timeout("10 min");
 
       // the node needs time to transpile/initialize bls worker threads
-      const genesisSlotsDelay = 16;
+      const genesisSlotsDelay = 7;
       const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
       const testLoggerOpts: TestLoggerOpts = {
         level: LogLevel.info,

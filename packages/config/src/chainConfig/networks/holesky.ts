@@ -14,22 +14,22 @@ export const holeskyChainConfig: ChainConfig = {
   // Genesis
   // ---------------------------------------------------------------
   MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: 16384,
-  // Sep-15-2023 14:55:00 +UTC
-  MIN_GENESIS_TIME: 1694786100,
+  // Sep-28-2023 11:55:00 +UTC
+  MIN_GENESIS_TIME: 1695902100,
   GENESIS_DELAY: 300,
-  GENESIS_FORK_VERSION: b("0x00017000"),
+  GENESIS_FORK_VERSION: b("0x01017000"),
 
   // Forking
   // ---------------------------------------------------------------
   // # Altair
-  ALTAIR_FORK_VERSION: b("0x10017000"),
+  ALTAIR_FORK_VERSION: b("0x02017000"),
   ALTAIR_FORK_EPOCH: 0,
   // # Merge
-  BELLATRIX_FORK_VERSION: b("0x20017000"),
+  BELLATRIX_FORK_VERSION: b("0x03017000"),
   BELLATRIX_FORK_EPOCH: 0,
   TERMINAL_TOTAL_DIFFICULTY: BigInt("0"),
   // Capella
-  CAPELLA_FORK_VERSION: b("0x30017000"),
+  CAPELLA_FORK_VERSION: b("0x04017000"),
   CAPELLA_FORK_EPOCH: 256,
 
   // # 28,000,000,000 Gwei to ensure quicker ejection

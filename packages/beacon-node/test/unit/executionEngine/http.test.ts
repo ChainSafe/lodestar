@@ -168,8 +168,10 @@ describe("ExecutionEngine / http", () => {
   it("getPayloadBodiesByHash", async () => {
     /**
      *  curl -X GET -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"engine_getPayloadBodiesByHashV1","params":[
-        "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
-        "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
+        [
+          "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
+          "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
+        ]
       ],"id":67}' http://localhost:8545
      */
     const response = {
@@ -210,7 +212,7 @@ describe("ExecutionEngine / http", () => {
     const request = {
       jsonrpc: "2.0",
       method: "engine_getPayloadBodiesByHashV1",
-      params: reqBlockHashes,
+      params: [reqBlockHashes],
     };
 
     returnValue = response;
