@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.11.1",
+  "version": "1.11.3",
   "type": "module",
   "exports": {
     ".": {
@@ -56,9 +56,9 @@
   "dependencies": {
     "@chainsafe/fast-crc32c": "^4.1.1",
     "@libp2p/interface": "^0.1.1",
-    "@lodestar/config": "^1.11.1",
-    "@lodestar/params": "^1.11.1",
-    "@lodestar/utils": "^1.11.1",
+    "@lodestar/config": "^1.11.3",
+    "@lodestar/params": "^1.11.3",
+    "@lodestar/utils": "^1.11.3",
     "it-all": "^3.0.2",
     "it-pipe": "^3.0.1",
     "snappy": "^7.2.2",
@@ -67,8 +67,8 @@
     "uint8arraylist": "^2.4.3"
   },
   "devDependencies": {
-    "@lodestar/logger": "^1.11.1",
-    "@lodestar/types": "^1.11.1",
+    "@lodestar/logger": "^1.11.3",
+    "@lodestar/types": "^1.11.3",
     "libp2p": "0.46.3"
   },
   "peerDependencies": {

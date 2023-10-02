@@ -1,7 +1,8 @@
 {
   "packages": ["packages/*"],
   "npmClient": "yarn",
-  "version": "1.11.1",
+  "useNx": true,
+  "version": "1.11.3",
   "stream": true,
   "command": {
     "version": {
