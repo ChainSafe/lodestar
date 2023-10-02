@@ -148,12 +148,14 @@ describe("doppelganger service", () => {
     indicesService.pubkey2index.set(pubkeyHex, index);
 
     // Initial epoch must be > 0 else doppelganger detection is skipped due to pre-genesis
-    const initialEpoch = 1;
+    const initialEpoch = 10;
     const clock = new ClockMockMsToSlot(initialEpoch);
 
     const slashingProtection = new SlashingProtectionMock();
     // Attestation from previous epoch exists in slashing protection db
-    slashingProtection.hasAttestedInEpoch = async () => true;
+    slashingProtection.hasAttestedInEpoch = async (_, epoch: Epoch) => {
+      return epoch === initialEpoch - 1;
+    };
 
     const doppelganger = new DoppelgangerService(
       logger,
