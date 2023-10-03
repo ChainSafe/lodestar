@@ -241,7 +241,8 @@ export class AttestationDutiesService {
 
     this.logger.debug("Downloaded attester duties", {epoch, dependentRoot, count: relevantDuties.length});
 
-    const priorDependentRoot = this.dutiesByIndexByEpoch.get(epoch)?.dependentRoot;
+    const dutiesAtEpoch = this.dutiesByIndexByEpoch.get(epoch);
+    const priorDependentRoot = dutiesAtEpoch?.dependentRoot;
     const dependentRootChanged = priorDependentRoot !== undefined && priorDependentRoot !== dependentRoot;
 
     if (!priorDependentRoot || dependentRootChanged) {
@@ -251,15 +252,34 @@ export class AttestationDutiesService {
         dutiesByIndex.set(duty.validatorIndex, dutyAndProof);
       }
       this.dutiesByIndexByEpoch.set(epoch, {dependentRoot, dutiesByIndex});
-    }
 
-    if (priorDependentRoot && dependentRootChanged) {
-      this.metrics?.attesterDutiesReorg.inc();
-      this.logger.warn("Attester duties re-org. This may happen from time to time", {
-        priorDependentRoot: priorDependentRoot,
-        dependentRoot: dependentRoot,
-        epoch,
-      });
+      if (priorDependentRoot && dependentRootChanged) {
+        this.metrics?.attesterDutiesReorg.inc();
+        this.logger.warn("Attester duties re-org. This may happen from time to time", {
+          priorDependentRoot: priorDependentRoot,
+          dependentRoot: dependentRoot,
+          epoch,
+        });
+      }
+    } else {
+      const existingDuties = dutiesAtEpoch.dutiesByIndex;
+      const existingDutiesCount = existingDuties.size;
+      const discoveredNewDuties = relevantDuties.length > existingDutiesCount;
+
+      if (discoveredNewDuties) {
+        for (const duty of relevantDuties) {
+          if (!existingDuties.has(duty.validatorIndex)) {
+            const dutyAndProof = await this.getDutyAndProof(duty);
+            existingDuties.set(duty.validatorIndex, dutyAndProof);
+          }
+        }
+
+        this.logger.debug("Discovered new attester duties", {
+          epoch,
+          dependentRoot,
+          count: relevantDuties.length - existingDutiesCount,
+        });
+      }
     }
   }
 
