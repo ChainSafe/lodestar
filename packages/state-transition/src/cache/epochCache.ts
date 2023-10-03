@@ -319,9 +319,8 @@ export class EpochCache {
 
     const currentShuffling = currentShufflingIn ?? computeEpochShuffling(state, currentActiveIndices, currentEpoch);
     const previousShuffling =
-      previousShufflingIn !== undefined ?? isGenesis
-        ? currentShuffling
-        : computeEpochShuffling(state, previousActiveIndices, previousEpoch);
+      previousShufflingIn ??
+      (isGenesis ? currentShuffling : computeEpochShuffling(state, previousActiveIndices, previousEpoch));
     const nextShuffling = nextShufflingIn ?? computeEpochShuffling(state, nextActiveIndices, nextEpoch);
 
     const currentProposerSeed = getSeed(state, currentEpoch, DOMAIN_BEACON_PROPOSER);
