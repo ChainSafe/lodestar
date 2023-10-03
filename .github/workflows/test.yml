@@ -218,7 +218,7 @@ jobs:
 
       - name: E2E tests
         # E2E tests are sometimes stalling until timeout is reached but we know that
-        # after ~10 minutes those should have passed already if there are no failed test cases.
+        # after 15 minutes those should have passed already if there are no failed test cases.
         # In this case, just set the job status to passed as there was likely no actual issue.
         # See https://github.com/ChainSafe/lodestar/issues/5913
         run: timeout 15m yarn test:e2e || { test $? -eq 124 || exit 1; }
