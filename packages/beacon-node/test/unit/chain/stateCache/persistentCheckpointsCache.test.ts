@@ -1,7 +1,8 @@
 import {expect} from "chai";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {Epoch} from "@lodestar/types";
+import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {CachedBeaconStateAllForks, computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {Epoch, phase0} from "@lodestar/types";
+import {mapValues} from "@lodestar/utils";
 import {
   PersistentCheckpointStateCache,
   findClosestCheckpointState,
@@ -12,18 +13,37 @@ import {
 import {generateCachedState} from "../../../utils/state.js";
 import {ShufflingCache} from "../../../../src/chain/shufflingCache.js";
 import {testLogger} from "../../../utils/logger.js";
-import {PersistentApis, CheckpointHex, StateFile} from "../../../../src/chain/stateCache/types.js";
+import {CheckpointHex, PersistentApis, StateFile} from "../../../../src/chain/stateCache/types.js";
 
 describe("PersistentCheckpointStateCache", function () {
   let cache: PersistentCheckpointStateCache;
   let fileApisBuffer: Map<string, Uint8Array>;
-  const cp0 = {epoch: 20, root: Buffer.alloc(32)};
+  const root0a = Buffer.alloc(32);
+  const root0b = Buffer.alloc(32);
+  root0b[31] = 1;
+  // root0a is of the last slot of epoch 19
+  const cp0a = {epoch: 20, root: root0a};
+  // root0b is of the first slot of epoch 20
+  const cp0b = {epoch: 20, root: root0b};
   const cp1 = {epoch: 21, root: Buffer.alloc(32, 1)};
   const cp2 = {epoch: 22, root: Buffer.alloc(32, 2)};
-  const [cp0Hex, cp1Hex, cp2Hex] = [cp0, cp1, cp2].map((cp) => toCheckpointHex(cp));
-  const [cp0Key, cp1Key, cp2Key] = [cp0Hex, cp1Hex, cp2Hex].map((cp) => toCheckpointKey(cp));
-  const states = [cp0, cp1, cp2].map((cp) => generateCachedState({slot: cp.epoch * SLOTS_PER_EPOCH}));
-  const stateBytes = states.map((state) => state.serialize());
+  const [cp0aHex, cp0bHex, cp1Hex, cp2Hex] = [cp0a, cp0b, cp1, cp2].map((cp) => toCheckpointHex(cp));
+  const [cp0aKey, cp0bKey, cp1Key, cp2Key] = [cp0aHex, cp0bHex, cp1Hex, cp2Hex].map((cp) => toCheckpointKey(cp));
+  const allStates = [cp0a, cp0b, cp1, cp2]
+    .map((cp) => generateCachedState({slot: cp.epoch * SLOTS_PER_EPOCH}))
+    .map((state) => {
+      const startSlotEpoch20 = computeStartSlotAtEpoch(20);
+      state.blockRoots.set((startSlotEpoch20 - 1) % SLOTS_PER_HISTORICAL_ROOT, root0a);
+      state.blockRoots.set(startSlotEpoch20 % SLOTS_PER_HISTORICAL_ROOT, root0b);
+      return state;
+    });
+  const states = {
+    cp0a: allStates[0],
+    cp0b: allStates[1],
+    cp1: allStates[2],
+    cp2: allStates[3],
+  };
+  const stateBytes = mapValues(states, (state) => state.serialize());
 
   beforeEach(() => {
     fileApisBuffer = new Map();
@@ -49,19 +69,26 @@ describe("PersistentCheckpointStateCache", function () {
       {persistentApis, logger: testLogger(), shufflingCache: new ShufflingCache()},
       {maxEpochsInMemory: 2}
     );
-    cache.add(cp0, states[0]);
-    cache.add(cp1, states[1]);
+    cache.add(cp0a, states["cp0a"]);
+    cache.add(cp0b, states["cp0b"]);
+    cache.add(cp1, states["cp1"]);
   });
 
   it("getLatest", () => {
     // cp0
-    expect(cache.getLatest(cp0Hex.rootHex, cp0.epoch)?.hashTreeRoot()).to.be.deep.equal(states[0].hashTreeRoot());
-    expect(cache.getLatest(cp0Hex.rootHex, cp0.epoch + 1)?.hashTreeRoot()).to.be.deep.equal(states[0].hashTreeRoot());
-    expect(cache.getLatest(cp0Hex.rootHex, cp0.epoch - 1)?.hashTreeRoot()).to.be.undefined;
+    expect(cache.getLatest(cp0aHex.rootHex, cp0a.epoch)?.hashTreeRoot()).to.be.deep.equal(
+      states["cp0a"].hashTreeRoot()
+    );
+    expect(cache.getLatest(cp0aHex.rootHex, cp0a.epoch + 1)?.hashTreeRoot()).to.be.deep.equal(
+      states["cp0a"].hashTreeRoot()
+    );
+    expect(cache.getLatest(cp0aHex.rootHex, cp0a.epoch - 1)?.hashTreeRoot()).to.be.undefined;
 
     // cp1
-    expect(cache.getLatest(cp1Hex.rootHex, cp1.epoch)?.hashTreeRoot()).to.be.deep.equal(states[1].hashTreeRoot());
-    expect(cache.getLatest(cp1Hex.rootHex, cp1.epoch + 1)?.hashTreeRoot()).to.be.deep.equal(states[1].hashTreeRoot());
+    expect(cache.getLatest(cp1Hex.rootHex, cp1.epoch)?.hashTreeRoot()).to.be.deep.equal(states["cp1"].hashTreeRoot());
+    expect(cache.getLatest(cp1Hex.rootHex, cp1.epoch + 1)?.hashTreeRoot()).to.be.deep.equal(
+      states["cp1"].hashTreeRoot()
+    );
     expect(cache.getLatest(cp1Hex.rootHex, cp1.epoch - 1)?.hashTreeRoot()).to.be.undefined;
 
     // cp2
@@ -69,49 +96,70 @@ describe("PersistentCheckpointStateCache", function () {
   });
 
   it("getOrReloadLatest", async () => {
-    cache.add(cp2, states[2]);
+    cache.add(cp2, states["cp2"]);
     expect(cache.pruneFromMemory()).to.be.equal(1);
-    // cp0 is persisted
+    // cp0b is persisted
     expect(fileApisBuffer.size).to.be.equal(1);
-    expect(Array.from(fileApisBuffer.keys())).to.be.deep.equal([toTmpFilePath(cp0Key)]);
+    expect(Array.from(fileApisBuffer.keys())).to.be.deep.equal([toTmpFilePath(cp0bKey)]);
 
     // getLatest() does not reload from disk
-    expect(cache.getLatest(cp0Hex.rootHex, cp0.epoch)?.hashTreeRoot()).to.be.undefined;
+    expect(cache.getLatest(cp0aHex.rootHex, cp0a.epoch)).to.be.null;
+    expect(cache.getLatest(cp0bHex.rootHex, cp0b.epoch)).to.be.null;
 
-    // but getOrReloadLatest() does
-    expect((await cache.getOrReloadLatest(cp0Hex.rootHex, cp0.epoch))?.serialize()).to.be.deep.equal(stateBytes[0]);
-    expect((await cache.getOrReloadLatest(cp0Hex.rootHex, cp0.epoch + 1))?.serialize()).to.be.deep.equal(stateBytes[0]);
-    expect((await cache.getOrReloadLatest(cp0Hex.rootHex, cp0.epoch - 1))?.serialize()).to.be.undefined;
+    // cp0a has the root from previous epoch so we only prune it from db
+    expect(await cache.getOrReloadLatest(cp0aHex.rootHex, cp0a.epoch)).to.be.null;
+    // but getOrReloadLatest() does for cp0b
+    expect((await cache.getOrReloadLatest(cp0bHex.rootHex, cp0b.epoch))?.serialize()).to.be.deep.equal(
+      stateBytes["cp0b"]
+    );
+    expect((await cache.getOrReloadLatest(cp0bHex.rootHex, cp0b.epoch + 1))?.serialize()).to.be.deep.equal(
+      stateBytes["cp0b"]
+    );
+    expect((await cache.getOrReloadLatest(cp0bHex.rootHex, cp0b.epoch - 1))?.serialize()).to.be.undefined;
   });
 
   const pruneTestCases: {
     name: string;
-    cpHexGet: CheckpointHex;
+    cpDelete: phase0.Checkpoint | null;
     cpKeyPersisted: string;
     stateBytesPersisted: Uint8Array;
   }[] = [
+    /**
+     * This replicates the scenario that 1st slot of epoch is NOT skipped
+     * - cp0a has the root from previous epoch so we only prune it from db
+     * - cp0b has the root of 1st slot of epoch 20 so we prune it from db and persist to disk
+     */
     {
-      name: "pruneFromMemory: should prune cp0 from memory and persist to disk",
-      cpHexGet: cp1Hex,
-      cpKeyPersisted: toTmpFilePath(cp0Key),
-      stateBytesPersisted: stateBytes[0],
+      name: "pruneFromMemory: should prune epoch 20 states from memory and persist cp0b to disk",
+      cpDelete: null,
+      cpKeyPersisted: toTmpFilePath(cp0bKey),
+      stateBytesPersisted: stateBytes["cp0b"],
     },
+    /**
+     * This replicates the scenario that 1st slot of epoch is skipped
+     * - cp0a has the root from previous epoch but since 1st slot of epoch 20 is skipped, it's the checkpoint state
+     * and we want to prune it from memory and persist to disk
+     */
     {
-      name: "pruneFromMemory: should prune cp1 from memory and persist to disk",
-      cpHexGet: cp0Hex,
-      cpKeyPersisted: toTmpFilePath(cp1Key),
-      stateBytesPersisted: stateBytes[1],
+      name: "pruneFromMemory: should prune epoch 20 states from memory and persist cp0a to disk",
+      cpDelete: cp0b,
+      cpKeyPersisted: toTmpFilePath(cp0aKey),
+      stateBytesPersisted: stateBytes["cp0a"],
     },
   ];
 
-  for (const {name, cpHexGet, cpKeyPersisted, stateBytesPersisted} of pruneTestCases) {
+  for (const {name, cpDelete, cpKeyPersisted, stateBytesPersisted} of pruneTestCases) {
     it(name, function () {
       expect(fileApisBuffer.size).to.be.equal(0);
-      // use cpHexGet to move it to head,
-      cache.get(cpHexGet);
-      cache.add(cp2, states[2]);
+      expect(cache.get(cp0aHex)).to.be.not.null;
+      expect(cache.get(cp0bHex)).to.be.not.null;
+      if (cpDelete) cache.delete(cpDelete);
+      cache.add(cp2, states["cp2"]);
       cache.pruneFromMemory();
-      expect(cache.get(cp2Hex)?.hashTreeRoot()).to.be.deep.equal(states[2].hashTreeRoot());
+      expect(cache.get(cp0aHex)).to.be.null;
+      expect(cache.get(cp0bHex)).to.be.null;
+      expect(cache.get(cp1Hex)?.hashTreeRoot()).to.be.deep.equal(states["cp1"].hashTreeRoot());
+      expect(cache.get(cp2Hex)?.hashTreeRoot()).to.be.deep.equal(states["cp2"].hashTreeRoot());
       expect(fileApisBuffer.size).to.be.equal(1);
       expect(Array.from(fileApisBuffer.keys())).to.be.deep.equal([cpKeyPersisted]);
       expect(fileApisBuffer.get(cpKeyPersisted)).to.be.deep.equal(stateBytesPersisted);
@@ -120,45 +168,46 @@ describe("PersistentCheckpointStateCache", function () {
 
   const reloadTestCases: {
     name: string;
-    cpHexGet: CheckpointHex;
+    cpDelete: phase0.Checkpoint | null;
     cpKeyPersisted: CheckpointHex;
     stateBytesPersisted: Uint8Array;
     cpKeyPersisted2: CheckpointHex;
     stateBytesPersisted2: Uint8Array;
   }[] = [
+    // both cp0a and cp0b are from lowest epoch but only cp0b is persisted because it has the root of 1st slot of epoch 20
     {
-      name: "getOrReload cp0 from disk",
-      cpHexGet: cp1Hex,
-      cpKeyPersisted: cp0Hex,
-      stateBytesPersisted: stateBytes[0],
+      name: "getOrReload cp0b from disk",
+      cpDelete: null,
+      cpKeyPersisted: cp0bHex,
+      stateBytesPersisted: stateBytes["cp0b"],
       cpKeyPersisted2: cp1Hex,
-      stateBytesPersisted2: stateBytes[1],
+      stateBytesPersisted2: stateBytes["cp1"],
     },
+    // although cp0a has the root of previous epoch, it's the checkpoint state so we want to reload it from disk
     {
-      name: "getOrReload cp1 from disk",
-      cpHexGet: cp0Hex,
-      cpKeyPersisted: cp1Hex,
-      stateBytesPersisted: stateBytes[1],
-      cpKeyPersisted2: cp0Hex,
-      stateBytesPersisted2: stateBytes[0],
+      name: "getOrReload cp0a from disk",
+      cpDelete: cp0b,
+      cpKeyPersisted: cp0aHex,
+      stateBytesPersisted: stateBytes["cp0a"],
+      cpKeyPersisted2: cp1Hex,
+      stateBytesPersisted2: stateBytes["cp1"],
     },
   ];
 
   for (const {
     name,
-    cpHexGet,
+    cpDelete,
     cpKeyPersisted,
     stateBytesPersisted,
     cpKeyPersisted2,
     stateBytesPersisted2,
   } of reloadTestCases) {
     it(name, async function () {
+      if (cpDelete) cache.delete(cpDelete);
       expect(fileApisBuffer.size).to.be.equal(0);
-      // use cpHexGet to move it to head,
-      cache.get(cpHexGet);
-      cache.add(cp2, states[2]);
+      cache.add(cp2, states["cp2"]);
       expect(cache.pruneFromMemory()).to.be.equal(1);
-      expect(cache.get(cp2Hex)?.hashTreeRoot()).to.be.deep.equal(states[2].hashTreeRoot());
+      expect(cache.get(cp2Hex)?.hashTreeRoot()).to.be.deep.equal(states["cp2"].hashTreeRoot());
       expect(fileApisBuffer.size).to.be.equal(1);
       const persistedKey0 = toTmpFilePath(toCheckpointKey(cpKeyPersisted));
       expect(Array.from(fileApisBuffer.keys())).to.be.deep.equal([persistedKey0], "incorrect persisted keys");
@@ -178,12 +227,11 @@ describe("PersistentCheckpointStateCache", function () {
   }
 
   it("pruneFinalized", function () {
-    cache.add(cp1, states[1]);
-    cache.add(cp2, states[2]);
+    cache.add(cp2, states["cp2"]);
     cache.pruneFromMemory();
     // cp0 is persisted
     expect(fileApisBuffer.size).to.be.equal(1);
-    expect(Array.from(fileApisBuffer.keys())).to.be.deep.equal([toTmpFilePath(cp0Key)]);
+    expect(Array.from(fileApisBuffer.keys())).to.be.deep.equal([toTmpFilePath(cp0bKey)]);
     // cp1 is in memory
     expect(cache.get(cp1Hex)).to.be.not.null;
     // cp2 is in memory
@@ -193,57 +241,39 @@ describe("PersistentCheckpointStateCache", function () {
     expect(fileApisBuffer.size).to.be.equal(0);
     expect(cache.get(cp1Hex)).to.be.null;
     expect(cache.get(cp2Hex)).to.be.not.null;
-    // suspended
-    cache.pruneFromMemory();
-  });
-
-  /**
-   * This is to reproduce the issue that pruneFromMemory() takes forever
-   */
-  it("pruneFinalized 2", function () {
-    cache.add(cp0, states[0]);
-    cache.add(cp1, states[1]);
-    cache.add(cp2, states[2]);
-    expect(fileApisBuffer.size).to.be.equal(0);
-    // finalize epoch cp2
-    cache.pruneFinalized(cp2.epoch);
-    expect(fileApisBuffer.size).to.be.equal(0);
-    expect(cache.get(cp0Hex)).to.be.null;
-    expect(cache.get(cp1Hex)).to.be.null;
-    expect(cache.get(cp2Hex)).to.be.not.null;
     cache.pruneFromMemory();
   });
 
   describe("findClosestCheckpointState", function () {
     const cacheMap = new Map<string, CachedBeaconStateAllForks | StateFile>();
-    cacheMap.set(cp0Key, states[0]);
-    cacheMap.set(cp1Key, states[1]);
-    cacheMap.set(cp2Key, states[2]);
+    cacheMap.set(cp0aKey, states["cp0a"]);
+    cacheMap.set(cp1Key, states["cp1"]);
+    cacheMap.set(cp2Key, states["cp2"]);
     const testCases: {name: string; epoch: Epoch; expectedState: CachedBeaconStateAllForks}[] = [
       {
         name: "should return cp0 for epoch less than cp0",
         epoch: 19,
-        expectedState: states[0],
+        expectedState: states["cp0a"],
       },
       {
         name: "should return cp0 for epoch same to cp0",
         epoch: 20,
-        expectedState: states[0],
+        expectedState: states["cp0a"],
       },
       {
         name: "should return cp1 for epoch same to cp1",
         epoch: 21,
-        expectedState: states[1],
+        expectedState: states["cp1"],
       },
       {
         name: "should return cp2 for epoch same to cp2",
         epoch: 22,
-        expectedState: states[2],
+        expectedState: states["cp2"],
       },
       {
         name: "should return cp2 for epoch greater than cp2",
         epoch: 23,
-        expectedState: states[2],
+        expectedState: states["cp2"],
       },
     ];
 
