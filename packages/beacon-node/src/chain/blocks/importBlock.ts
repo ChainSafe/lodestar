@@ -339,7 +339,9 @@ export async function importBlock(
     // it's important to add this to cache, when chain is finalized we'll query this state later
     const checkpointState = postState;
     const cp = getCheckpointFromState(checkpointState);
-    this.regen.addCheckpointState(cp, checkpointState);
+    if (block.message.slot % SLOTS_PER_EPOCH === 0) {
+      this.regen.addCheckpointState(cp, checkpointState);
+    }
 
     // Note: in-lined code from previos handler of ChainEvent.checkpoint
     this.logger.verbose("Checkpoint processed", toCheckpointHex(cp));

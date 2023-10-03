@@ -1048,6 +1048,10 @@ export function createLodestarMetrics(
         help: "Histogram of time to persist state to memory",
         buckets: [0.5, 1, 2, 4],
       }),
+      statePruneFromMemoryCount: register.gauge({
+        name: "lodestar_cp_state_cache_state_prune_from_memory_count",
+        help: "Total number of states pruned from memory",
+      }),
       statePersistSecFromSlot: register.histogram({
         name: "lodestar_cp_state_cache_state_persist_seconds_from_slot",
         help: "Histogram of time to persist state to memory from slot",
