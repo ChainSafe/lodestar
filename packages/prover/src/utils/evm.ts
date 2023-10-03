@@ -63,7 +63,7 @@ export async function getVMWithState({
   }) as ELTransaction;
   const response = await rpc.request("eth_createAccessList", [accessListTx, blockHashHex], {raiseError: false});
 
-  if (!isValidResponse(response) || response.result.error) {
+  if (!isValidResponse(response) || (response.result.error && response.result.error !== "execution reverted")) {
     throw new Error(`Invalid response from RPC. method: eth_createAccessList, params: ${JSON.stringify(tx)}`);
   }
 
