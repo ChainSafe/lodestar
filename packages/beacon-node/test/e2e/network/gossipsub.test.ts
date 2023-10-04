@@ -7,9 +7,9 @@ import {Network} from "../../../src/network/index.js";
 import {GossipType, GossipHandlers, GossipHandlerParamGeneric} from "../../../src/network/gossip/index.js";
 import {connect, onPeerConnect, getNetworkForTest} from "../../utils/network.js";
 
-// describe("gossipsub / main thread", function () {
-//   runTests.bind(this)({useWorker: false});
-// });
+describe("gossipsub / main thread", function () {
+  runTests.bind(this)({useWorker: false});
+});
 
 describe("gossipsub / worker", function () {
   runTests.bind(this)({useWorker: true});
