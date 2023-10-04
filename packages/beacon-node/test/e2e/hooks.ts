@@ -5,13 +5,20 @@ import {dump} from "wtfnode";
 const LEAK_TIMEOUT_MS = 10_000;
 
 function registerLeakDetection(): void {
-  console.info("Registering leak detection hooks");
-
-  const timeout = Date.now() + LEAK_TIMEOUT_MS;
+  const now = Date.now();
+  const timeout = now + LEAK_TIMEOUT_MS;
+  console.info(`Registering leak detection hooks. now='${new Date(now).toLocaleString()}'`);
   const timer: NodeJS.Timeout = setInterval(detectLeak, 100);
 
   function detectLeak(): void {
-    if (Date.now() > timeout) {
+    const now = Date.now();
+    console.info(
+      `Detecting resource leaks. now='${new Date(now).toLocaleString()}' timeout='${new Date(
+        timeout
+      ).toLocaleString()}'`
+    );
+
+    if (now > timeout) {
       clearInterval(timer);
 
       console.error("Process did not terminate, dumping remaining handles and exiting");
@@ -24,6 +31,8 @@ function registerLeakDetection(): void {
       const activeHandles = (process as NodeJS.Process & {_getActiveHandles: () => {fd: number}[]})
         ._getActiveHandles()
         .filter((h) => typeof h.fd !== "number" || h.fd > 2); // Filter out stdio handles
+
+      console.info("Active handles:", activeHandles.length);
 
       // Allow this timer to be running
       if (activeHandles.length <= 1) {
