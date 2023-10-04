@@ -5,6 +5,8 @@ import runCommand from "mocha/lib/cli/run.js";
 import collectFiles from "mocha/lib/cli/collect-files.js";
 import {dump} from "wtfnode";
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 // Consider it a leak if process does not exit within this time
 const LEAK_TIMEOUT_MS = 10_000;
 
@@ -13,9 +15,9 @@ async function exitScenarioHandler(code) {
   const now = Date.now();
   const timeout = now + LEAK_TIMEOUT_MS;
   console.info(`Leak detection after mocha finishes. code=${code} now='${new Date(now).toLocaleString()}'`);
-  const timer = setInterval(detectLeak, 100);
+  const timer = setInterval(detectLeak, 1000);
 
-  function detectLeak() {
+  async function detectLeak() {
     const now = Date.now();
     console.info(
       `Detecting resource leaks. now='${new Date(now).toLocaleString()}' timeout='${new Date(
@@ -30,7 +32,17 @@ async function exitScenarioHandler(code) {
       dump();
 
       process.removeAllListeners("exit");
-      process.exit(-1);
+
+      // Process does not seems to exit with one `process.exit(-1)`, so we try a few times
+      for (let i = 0; i < 5; i++) {
+        process.exit(-1);
+        await sleep(100);
+      }
+
+      // If process still does not exit, we try to kill with signals
+      for (const signal of ["SIGINT", "SIGTERM", "SIGQUIT"]) {
+        process.kill(signal);
+      }
     } else {
       const activeHandles = process._getActiveHandles().filter((h) => typeof h.fd !== "number" || h.fd > 2); // Filter out stdio handles
 
