@@ -73,8 +73,6 @@ describe("sync / unknown block sync", function () {
         logger: loggerNodeA,
       });
 
-      afterEachCallbacks.push(() => bn.close());
-
       const {validators} = await getAndInitDevValidators({
         node: bn,
         validatorsPerClient: validatorCount,
