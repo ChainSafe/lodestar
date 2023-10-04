@@ -28,14 +28,12 @@ async function exitScenarioHandler(failCount) {
 
       process.removeAllListeners("exit");
 
-      if (failCount > 0) {
-        process.exit(0);
-      } else {
-        // Observed that process.exit(1) is not exiting the process
-        // If process still does not exit, we try to kill with signals
-        for (const signal of ["SIGTERM", "SIGQUIT", "SIGKILL"]) {
-          process.kill(signal);
-        }
+      // This is not working, process still does not exit
+      // process.exit(failCount > 0 ? 0 : 1);
+
+      // If process still does not exit, we try to kill with signals
+      for (const signal of ["SIGTERM", "SIGQUIT", "SIGKILL"]) {
+        process.kill(signal);
       }
     } else {
       const activeHandles = process._getActiveHandles().filter((h) => typeof h.fd !== "number" || h.fd > 2); // Filter out stdio handles
