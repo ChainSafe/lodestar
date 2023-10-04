@@ -11,19 +11,14 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const LEAK_TIMEOUT_MS = 10_000;
 
 // Code is typically the number of failures
-async function exitScenarioHandler(code) {
+async function exitScenarioHandler(failCount) {
   const now = Date.now();
   const timeout = now + LEAK_TIMEOUT_MS;
-  console.info(`Leak detection after mocha finishes. code=${code} now='${new Date(now).toLocaleString()}'`);
+  console.info(`Leak detection after mocha finishes. failures=${failCount} now='${new Date(now).toLocaleString()}'`);
   const timer = setInterval(detectLeak, 1000);
 
   async function detectLeak() {
     const now = Date.now();
-    console.info(
-      `Detecting resource leaks. now='${new Date(now).toLocaleString()}' timeout='${new Date(
-        timeout
-      ).toLocaleString()}'`
-    );
 
     if (now > timeout) {
       clearInterval(timer);
@@ -33,25 +28,23 @@ async function exitScenarioHandler(code) {
 
       process.removeAllListeners("exit");
 
-      // Process does not seems to exit with one `process.exit(-1)`, so we try a few times
-      for (let i = 0; i < 5; i++) {
-        // If there are some failures in the test, we exit with -1
-        process.exit(code > 0 ? -1 : 0);
-        await sleep(100);
-      }
+      process.exit(failCount > 0 ? 1 : 0);
 
       // If process still does not exit, we try to kill with signals
-      for (const signal of ["SIGINT", "SIGTERM", "SIGQUIT"]) {
+      for (const signal of ["SIGTERM", "SIGQUIT", "SIGKILL"]) {
         process.kill(signal);
       }
     } else {
       const activeHandles = process._getActiveHandles().filter((h) => typeof h.fd !== "number" || h.fd > 2); // Filter out stdio handles
-
-      console.info("Active handles:", activeHandles.length);
+      console.info(
+        `Detecting resource leaks. now='${new Date(now).toLocaleString()}' timeout='${new Date(
+          timeout
+        ).toLocaleString()}' activeHandlers: ${activeHandles.length}`
+      );
 
       // Allow this timer to be running
       if (activeHandles.length <= 1) {
-        console.info("Seems no leak found. Clearing leak detection hooks.");
+        console.info("Seems there is no leak. Clearing leak detection hooks.");
         clearInterval(timer);
       }
     }
