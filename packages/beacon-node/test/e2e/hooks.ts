@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import {dump} from "wtfnode";
 
 // Consider it a leak if process does not exit within this time

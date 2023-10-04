@@ -29,7 +29,6 @@ describe("network / reqresp / worker", function () {
 
 function runTests(this: Mocha.Suite, {useWorker}: {useWorker: boolean}): void {
   if (this.timeout() < 60_000) this.timeout(60_000);
-  this.retries(2); // This test fail sometimes, with a 5% rate.
 
   // Schedule ALTAIR_FORK_EPOCH to trigger registering lightclient ReqResp protocols immediately
   const config = createChainForkConfig({

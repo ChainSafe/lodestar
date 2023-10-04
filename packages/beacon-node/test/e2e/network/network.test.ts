@@ -21,7 +21,6 @@ describe("network / worker", function () {
 
 function runTests(this: Mocha.Suite, {useWorker}: {useWorker: boolean}): void {
   this.timeout(50000);
-  this.retries(2); // This test fail sometimes, with a 5% rate.
 
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
   afterEach(async () => {
