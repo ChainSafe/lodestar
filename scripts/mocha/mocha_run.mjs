@@ -35,7 +35,8 @@ async function exitScenarioHandler(code) {
 
       // Process does not seems to exit with one `process.exit(-1)`, so we try a few times
       for (let i = 0; i < 5; i++) {
-        process.exit(-1);
+        // If there are some failures in the test, we exit with -1
+        process.exit(code > 0 ? -1 : 0);
         await sleep(100);
       }
 
