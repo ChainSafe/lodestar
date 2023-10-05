@@ -120,7 +120,7 @@ describe.skip("mdns", function () {
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async function createTestNodesAB() {
-    return Promise.all([createTestNode("A"), createTestNode("B")]);
+    return Promise.all([createTestNode("mdns-A"), createTestNode("mdns-B")]);
   }
 
   it("should connect two peers on a LAN", async function () {

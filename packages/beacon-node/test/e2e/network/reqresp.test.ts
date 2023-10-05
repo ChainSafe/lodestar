@@ -55,8 +55,14 @@ function runTests(this: Mocha.Suite, {useWorker}: {useWorker: boolean}): void {
     getReqRespHandler?: GetReqRespHandlerFn,
     opts?: ReqRespBeaconNodeOpts
   ): Promise<[Network, Network, PeerIdStr, PeerIdStr]> {
-    const [netA, closeA] = await getNetworkForTest("A", config, {getReqRespHandler, opts: {...opts, useWorker}});
-    const [netB, closeB] = await getNetworkForTest("B", config, {getReqRespHandler, opts: {...opts, useWorker}});
+    const [netA, closeA] = await getNetworkForTest(`reqresp-${useWorker ? "worker" : "main"}-A`, config, {
+      getReqRespHandler,
+      opts: {...opts, useWorker},
+    });
+    const [netB, closeB] = await getNetworkForTest(`reqresp-${useWorker ? "worker" : "main"}-B`, config, {
+      getReqRespHandler,
+      opts: {...opts, useWorker},
+    });
 
     afterEachCallbacks.push(async () => {
       await closeA();
