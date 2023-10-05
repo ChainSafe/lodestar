@@ -162,6 +162,7 @@ describe.skip("doppelganger / doppelganger test", function () {
     });
 
     const {validators: validator0WithoutDoppelganger} = await getAndInitDevValidators({
+      logPrefix: "doppelganger2",
       node: bn,
       validatorsPerClient: validatorCount,
       validatorClientCount: 1,
