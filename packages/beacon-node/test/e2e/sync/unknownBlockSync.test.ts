@@ -75,6 +75,7 @@ describe("sync / unknown block sync", function () {
 
       const {validators} = await getAndInitDevValidators({
         node: bn,
+        logPrefix: "UnknownSync",
         validatorsPerClient: validatorCount,
         validatorClientCount: 1,
         startIndex: 0,
