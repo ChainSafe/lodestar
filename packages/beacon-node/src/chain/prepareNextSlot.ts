@@ -196,7 +196,7 @@ export class PrepareNextSlotScheduler {
     // although it can survive during syncing if we prune per epoch, it's better to prune at the last 1/3 of every slot
     // at synced time, it's likely we only prune at the 1st slot of epoch, all other prunes are no-op
     const nextEpoch = computeEpochAtSlot(clockSlot) + 1;
-    const pruneCount = this.chain.regen.pruneCheckpointStateCache();
+    const pruneCount = await this.chain.regen.pruneCheckpointStateCache();
     this.logger.verbose("Pruned checkpoint state cache", {clockSlot, nextEpoch, pruneCount});
   };
 }

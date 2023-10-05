@@ -43,9 +43,9 @@ export class MemoryCheckpointStateCache implements CheckpointStateCache {
     return this.getLatest(rootHex, maxEpoch);
   }
 
-  pruneFromMemory(): number {
+  pruneFromMemory(): Promise<number> {
     // do nothing, this method does not support pruning
-    return 0;
+    return Promise.resolve(0);
   }
 
   get(cp: CheckpointHex): CachedBeaconStateAllForks | null {

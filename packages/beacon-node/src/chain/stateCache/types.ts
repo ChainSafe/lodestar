@@ -1,11 +1,11 @@
-import fs from "node:fs";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {Epoch, RootHex, phase0} from "@lodestar/types";
-import {Logger, removeFile, writeIfNotExist, ensureDir} from "@lodestar/utils";
+import {Logger} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
 import {Metrics} from "../../metrics/index.js";
 import {IClock} from "../../util/clock.js";
 import {ShufflingCache} from "../shufflingCache.js";
+import {CPStatePersistentApis} from "./persistent/types.js";
 
 export type CheckpointHex = {epoch: Epoch; rootHex: RootHex};
 
@@ -19,30 +19,16 @@ export interface CheckpointStateCache {
   updatePreComputedCheckpoint(rootHex: RootHex, epoch: Epoch): number | null;
   pruneFinalized(finalizedEpoch: Epoch): void;
   delete(cp: phase0.Checkpoint): void;
-  pruneFromMemory(): number;
+  pruneFromMemory(): Promise<number>;
   clear(): void;
   dumpSummary(): routes.lodestar.StateCacheItem[];
 }
 
-// Make this generic to support testing
-export type PersistentApis = {
-  writeIfNotExist: (filepath: string, bytes: Uint8Array) => Promise<boolean>;
-  removeFile: (path: string) => Promise<boolean>;
-  readFile: (path: string) => Promise<Uint8Array>;
-  ensureDir: (path: string) => Promise<void>;
-};
-
-// Default persistent api for a regular node, use other persistent apis for testing
-export const FILE_APIS: PersistentApis = {
-  writeIfNotExist,
-  removeFile,
-  readFile: fs.promises.readFile,
-  ensureDir,
-};
-
 export const CHECKPOINT_STATES_FOLDER = "./unfinalized_checkpoint_states";
 
 export type StateFile = string;
+
+export type CheckpointKey = string;
 
 export enum CacheType {
   state = "state",
@@ -68,6 +54,6 @@ export type PersistentCheckpointStateCacheModules = {
   logger: Logger;
   clock?: IClock | null;
   shufflingCache: ShufflingCache;
+  persistentApis: CPStatePersistentApis;
   getHeadState?: GetHeadStateFn;
-  persistentApis?: PersistentApis;
 };
