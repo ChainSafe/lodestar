@@ -59,8 +59,8 @@ describe("sync / unknown block sync", function () {
         },
       };
 
-      const loggerNodeA = testLogger("Node-A", testLoggerOpts);
-      const loggerNodeB = testLogger("Node-B", testLoggerOpts);
+      const loggerNodeA = testLogger("UnknownSync-Node-A", testLoggerOpts);
+      const loggerNodeB = testLogger("UnknownSync-Node-B", testLoggerOpts);
 
       const bn = await getDevBeaconNode({
         params: testParams,
