@@ -9,6 +9,7 @@ import {
 } from "../../../../src/chain/stateCache/index.js";
 import {ShufflingCache} from "../../../../src/chain/shufflingCache.js";
 import {testLogger} from "../../../utils/logger.js";
+import {getTestPersistentApi} from "../../../utils/persistent.js";
 
 describe("CheckpointStateCache perf tests", function () {
   setBenchOpts({noThreshold: true});
@@ -19,7 +20,7 @@ describe("CheckpointStateCache perf tests", function () {
 
   before(() => {
     checkpointStateCache = new PersistentCheckpointStateCache(
-      {logger: testLogger(), shufflingCache: new ShufflingCache()},
+      {logger: testLogger(), shufflingCache: new ShufflingCache(), persistentApis: getTestPersistentApi(new Map())},
       {maxEpochsInMemory: 2}
     );
     state = generateCachedState();

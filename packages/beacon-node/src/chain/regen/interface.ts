@@ -41,7 +41,7 @@ export interface IStateRegenerator extends IStateRegeneratorInternal {
   pruneOnFinalized(finalizedEpoch: Epoch): void;
   addPostState(postState: CachedBeaconStateAllForks): void;
   addCheckpointState(cp: phase0.Checkpoint, item: CachedBeaconStateAllForks): void;
-  pruneCheckpointStateCache(): number;
+  pruneCheckpointStateCache(): Promise<number>;
   updateHeadState(newHeadStateRoot: RootHex, maybeHeadState: CachedBeaconStateAllForks): void;
   updatePreComputedCheckpoint(rootHex: RootHex, epoch: Epoch): number | null;
 }

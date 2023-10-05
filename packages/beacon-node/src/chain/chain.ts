@@ -39,7 +39,7 @@ import {IExecutionEngine, IExecutionBuilder} from "../execution/index.js";
 import {Clock, ClockEvent, IClock} from "../util/clock.js";
 import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
-import {PersistentCheckpointStateCache, StateContextCache} from "./stateCache/index.js";
+import {CHECKPOINT_STATES_FOLDER, PersistentCheckpointStateCache, StateContextCache} from "./stateCache/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {ChainEventEmitter, ChainEvent} from "./emitter.js";
 import {IBeaconChain, ProposerPreparationData, BlockHash, StateGetOpts} from "./interface.js";
@@ -77,6 +77,7 @@ import {BlockInput} from "./blocks/types.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {ShufflingCache} from "./shufflingCache.js";
 import {MemoryCheckpointStateCache} from "./stateCache/memoryCheckpointsCache.js";
+import {FilePersistentApis} from "./stateCache/persistent/file.js";
 
 /**
  * Arbitrary constants, blobs should be consumed immediately in the same slot they are produced.
@@ -235,9 +236,18 @@ export class BeaconChain implements IBeaconChain {
     this.index2pubkey = cachedState.epochCtx.index2pubkey;
 
     const stateCache = new StateContextCache(this.opts, {metrics});
+    // TODO: chain option to switch persistent
+    const filePersistent = new FilePersistentApis(CHECKPOINT_STATES_FOLDER);
     const checkpointStateCache = this.opts.persistentCheckpointStateCache
       ? new PersistentCheckpointStateCache(
-          {metrics, logger, clock, shufflingCache: this.shufflingCache, getHeadState: this.getHeadState.bind(this)},
+          {
+            metrics,
+            logger,
+            clock,
+            shufflingCache: this.shufflingCache,
+            getHeadState: this.getHeadState.bind(this),
+            persistentApis: filePersistent,
+          },
           this.opts
         )
       : new MemoryCheckpointStateCache({metrics});

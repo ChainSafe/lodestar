@@ -1,8 +1,7 @@
-import path from "node:path";
 import {toHexString} from "@chainsafe/ssz";
 import {phase0, Epoch, RootHex} from "@lodestar/types";
 import {CachedBeaconStateAllForks, computeStartSlotAtEpoch, getBlockRootAtSlot} from "@lodestar/state-transition";
-import {Logger, MapDef, ensureDir} from "@lodestar/utils";
+import {Logger, MapDef} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
 import {loadCachedBeaconState} from "@lodestar/state-transition";
 import {Metrics} from "../../metrics/index.js";
@@ -10,18 +9,17 @@ import {IClock} from "../../util/clock.js";
 import {ShufflingCache} from "../shufflingCache.js";
 import {MapTracker} from "./mapMetrics.js";
 import {
-  CHECKPOINT_STATES_FOLDER,
   CacheType,
   CheckpointHex,
   PersistentCheckpointStateCacheModules,
   PersistentCheckpointStateCacheOpts,
-  FILE_APIS,
   GetHeadStateFn,
-  PersistentApis,
   RemoveFileReason,
   StateFile,
   CheckpointStateCache,
+  CheckpointKey,
 } from "./types.js";
+import {CPStatePersistentApis} from "./persistent/types.js";
 
 /**
  * Cache of CachedBeaconState belonging to checkpoint
@@ -43,12 +41,12 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   private preComputedCheckpoint: string | null = null;
   private preComputedCheckpointHits: number | null = null;
   private readonly maxEpochsInMemory: number;
-  private readonly persistentApis: PersistentApis;
+  private readonly persistentApis: CPStatePersistentApis;
   private readonly shufflingCache: ShufflingCache;
   private readonly getHeadState?: GetHeadStateFn;
 
   constructor(
-    {metrics, logger, clock, shufflingCache, getHeadState, persistentApis}: PersistentCheckpointStateCacheModules,
+    {metrics, logger, clock, shufflingCache, persistentApis, getHeadState}: PersistentCheckpointStateCacheModules,
     opts: PersistentCheckpointStateCacheOpts
   ) {
     this.cache = new MapTracker(metrics?.cpStateCache);
@@ -82,11 +80,10 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     }
     this.maxEpochsInMemory = opts.maxEpochsInMemory;
     // Specify different persistentApis for testing
-    this.persistentApis = persistentApis ?? FILE_APIS;
+    this.persistentApis = persistentApis;
     this.shufflingCache = shufflingCache;
     this.getHeadState = getHeadState;
     this.inMemoryEpochs = new Set();
-    void ensureDir(CHECKPOINT_STATES_FOLDER);
   }
 
   /**
@@ -103,20 +100,20 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       return inMemoryState;
     }
 
-    const filePath = this.cache.get(cpKey);
-    if (filePath === undefined) {
+    const persistentKey = this.cache.get(cpKey);
+    if (persistentKey === undefined) {
       return null;
     }
 
-    if (typeof filePath !== "string") {
+    if (typeof persistentKey !== "string") {
       // should not happen, in-memory state is handled above
       throw new Error("Expected file path");
     }
 
-    // reload from disk based on closest checkpoint
-    this.logger.verbose("Reload: read state from disk", {filePath});
-    const newStateBytes = await this.persistentApis.readFile(filePath);
-    this.logger.verbose("Reload: read state from disk successfully", {filePath});
+    // reload from disk or db based on closest checkpoint
+    this.logger.verbose("Reload: read state", {filePath: persistentKey});
+    const newStateBytes = await this.persistentApis.read(persistentKey);
+    this.logger.verbose("Reload: read state successfully", {filePath: persistentKey});
     this.metrics?.stateFilesRemoveCount.inc({reason: RemoveFileReason.reload});
     this.metrics?.stateReloadSecFromSlot.observe(this.clock?.secFromSlot(this.clock?.currentSlot ?? 0) ?? 0);
     const closestState = findClosestCheckpointState(cp, this.cache) ?? this.getHeadState?.();
@@ -124,7 +121,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       throw new Error("No closest state found for cp " + toCheckpointKey(cp));
     }
     this.metrics?.stateReloadEpochDiff.observe(Math.abs(closestState.epochCtx.epoch - cp.epoch));
-    this.logger.verbose("Reload: found closest state", {filePath, seedSlot: closestState.slot});
+    this.logger.verbose("Reload: found closest state", {filePath: persistentKey, seedSlot: closestState.slot});
     const timer = this.metrics?.stateReloadDuration.startTimer();
 
     try {
@@ -132,19 +129,19 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
         shufflingGetter: this.shufflingCache.get.bind(this.shufflingCache),
       });
       timer?.();
-      this.logger.verbose("Reload state successfully from disk", {
-        filePath,
+      this.logger.verbose("Reload state successfully", {
+        persistentKey,
         stateSlot: newCachedState.slot,
         seedSlot: closestState.slot,
       });
       // only remove file once we reload successfully
-      void this.persistentApis.removeFile(filePath);
+      void this.persistentApis.remove(persistentKey);
       this.cache.set(cpKey, newCachedState);
       this.inMemoryEpochs.add(cp.epoch);
       // don't prune from memory here, call it at the last 1/3 of slot 0 of an epoch
       return newCachedState;
     } catch (e) {
-      this.logger.debug("Error reloading state from disk", {filePath}, e as Error);
+      this.logger.debug("Error reloading state from disk", {filePath: persistentKey}, e as Error);
       return null;
     }
     return null;
@@ -160,18 +157,17 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       return inMemoryState;
     }
 
-    const filePath = this.cache.get(cpKey);
-    if (filePath === undefined) {
+    const persistentKey = this.cache.get(cpKey);
+    if (persistentKey === undefined) {
       return null;
     }
 
-    if (typeof filePath !== "string") {
+    if (typeof persistentKey !== "string") {
       // should not happen, in-memory state is handled above
       throw new Error("Expected file path");
     }
 
-    // do not reload from disk
-    return this.persistentApis.readFile(filePath);
+    return this.persistentApis.read(persistentKey);
   }
 
   /**
@@ -206,13 +202,13 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   add(cp: phase0.Checkpoint, state: CachedBeaconStateAllForks): void {
     const cpHex = toCheckpointHex(cp);
     const key = toCheckpointKey(cpHex);
-    const stateOrFilePath = this.cache.get(key);
+    const stateOrPersistentKey = this.cache.get(key);
     this.inMemoryEpochs.add(cp.epoch);
-    if (stateOrFilePath !== undefined) {
-      if (typeof stateOrFilePath === "string") {
+    if (stateOrPersistentKey !== undefined) {
+      if (typeof stateOrPersistentKey === "string") {
         // was persisted to disk, set back to memory
         this.cache.set(key, state);
-        void this.persistentApis.removeFile(stateOrFilePath);
+        void this.persistentApis.remove(stateOrPersistentKey);
         this.metrics?.stateFilesRemoveCount.inc({reason: RemoveFileReason.stateUpdate});
       }
       return;
@@ -283,7 +279,9 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   pruneFinalized(finalizedEpoch: Epoch): void {
     for (const epoch of this.epochIndex.keys()) {
       if (epoch < finalizedEpoch) {
-        this.deleteAllEpochItems(epoch);
+        this.deleteAllEpochItems(epoch).catch((e) =>
+          this.logger.debug("Error delete all epoch items", {epoch, finalizedEpoch}, e as Error)
+        );
       }
     }
   }
@@ -321,20 +319,20 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   /**
    * Delete all items of an epoch from disk and memory
    */
-  deleteAllEpochItems(epoch: Epoch): void {
+  async deleteAllEpochItems(epoch: Epoch): Promise<void> {
     for (const rootHex of this.epochIndex.get(epoch) || []) {
       const key = toCheckpointKey({rootHex, epoch});
-      const stateOrFilePath = this.cache.get(key);
-      if (stateOrFilePath !== undefined && typeof stateOrFilePath === "string") {
-        void this.persistentApis.removeFile(stateOrFilePath);
+      const stateOrPersistentKey = this.cache.get(key);
+      if (stateOrPersistentKey !== undefined && typeof stateOrPersistentKey === "string") {
+        await this.persistentApis.remove(stateOrPersistentKey);
         this.metrics?.stateFilesRemoveCount.inc({reason: RemoveFileReason.pruneFinalized});
       }
-      // this could be improved by looping through inMemoryKeyOrder once
-      // however with this.maxEpochsInMemory = 2, the list is 6 maximum so it's not a big deal now
       this.cache.delete(key);
     }
     this.inMemoryEpochs.delete(epoch);
     this.epochIndex.delete(epoch);
+
+    // also delete files from previous runs
   }
 
   /**
@@ -342,7 +340,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
    * The add() is called after we process 1st block of an epoch, we don't want to pruneFromMemory at that time since it's the hot time
    * Call this code at the last 1/3 slot of slot 0 of an epoch
    */
-  pruneFromMemory(): number {
+  async pruneFromMemory(): Promise<number> {
     let count = 0;
     while (this.inMemoryEpochs.size > this.maxEpochsInMemory) {
       let firstEpoch: Epoch | undefined;
@@ -387,15 +385,14 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
         if (stateOrFilePath !== undefined && typeof stateOrFilePath !== "string") {
           if (toPersist) {
             // do not update epochIndex
-            const filePath = toTmpFilePath(cpKey);
             this.metrics?.statePersistSecFromSlot.observe(this.clock?.secFromSlot(this.clock?.currentSlot ?? 0) ?? 0);
             const timer = this.metrics?.statePersistDuration.startTimer();
-            void this.persistentApis.writeIfNotExist(filePath, stateOrFilePath.serialize());
+            const persistentKey = await this.persistentApis.write(cpKey, stateOrFilePath.serialize());
             timer?.();
-            this.cache.set(cpKey, filePath);
+            this.cache.set(cpKey, persistentKey);
             count++;
             this.logger.verbose("Prune checkpoint state from memory and persist to disk", {
-              filePath,
+              persistentKey,
               stateSlot: stateOrFilePath.slot,
               rootHex,
             });
@@ -428,7 +425,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
         reads: this.cache.readCount.get(key) ?? 0,
         lastRead: this.cache.lastRead.get(key) ?? 0,
         checkpointState: true,
-        filePath: typeof this.cache.get(key) === "string" ? (this.cache.get(key) as string) : undefined,
+        persistentKey: typeof this.cache.get(key) === "string" ? (this.cache.get(key) as string) : undefined,
       };
     });
   }
@@ -471,18 +468,14 @@ export function toCheckpointHex(checkpoint: phase0.Checkpoint): CheckpointHex {
   };
 }
 
-export function toCheckpointKey(cp: CheckpointHex): string {
+export function toCheckpointKey(cp: CheckpointHex): CheckpointKey {
   return `${cp.rootHex}_${cp.epoch}`;
 }
 
-export function fromCheckpointKey(key: string): CheckpointHex {
+export function fromCheckpointKey(key: CheckpointKey): CheckpointHex {
   const [rootHex, epoch] = key.split("_");
   return {
     rootHex,
     epoch: Number(epoch),
   };
-}
-
-export function toTmpFilePath(key: string): string {
-  return path.join(CHECKPOINT_STATES_FOLDER, key);
 }

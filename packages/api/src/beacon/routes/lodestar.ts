@@ -68,7 +68,7 @@ export type StateCacheItem = {
   /** Unix timestamp (ms) of the last read */
   lastRead: number;
   checkpointState: boolean;
-  filePath?: string;
+  persistentKey?: string;
 };
 
 export type LodestarNodePeer = NodePeer & {

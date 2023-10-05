@@ -95,7 +95,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     this.checkpointStateCache.add(cp, item);
   }
 
-  pruneCheckpointStateCache(): number {
+  pruneCheckpointStateCache(): Promise<number> {
     return this.checkpointStateCache.pruneFromMemory();
   }
 

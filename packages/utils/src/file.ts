@@ -34,3 +34,8 @@ export async function removeFile(path: string): Promise<boolean> {
     return false;
   }
 }
+
+/** Read all file names in a folder */
+export async function readAllFileNames(folderPath: string): Promise<string[]> {
+  return promisify(fs.readdir)(folderPath);
+}
