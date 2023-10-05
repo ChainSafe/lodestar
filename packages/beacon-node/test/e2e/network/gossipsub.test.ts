@@ -40,7 +40,7 @@ function runTests(this: Mocha.Suite, {useWorker}: {useWorker: boolean}): void {
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async function mockModules(gossipHandlersPartial?: Partial<GossipHandlers>) {
-    const [netA] = await getNetworkForTest(`gossipsub-${useWorker ? "worker" : "main"}-A`, config, {
+    const [netA, closeA] = await getNetworkForTest(`gossipsub-${useWorker ? "worker" : "main"}-A`, config, {
       opts: {useWorker},
       gossipHandlersPartial,
     });
@@ -50,7 +50,7 @@ function runTests(this: Mocha.Suite, {useWorker}: {useWorker: boolean}): void {
     });
 
     afterEachCallbacks.push(async () => {
-      // await closeA();
+      await closeA();
       await closeB();
     });
 
