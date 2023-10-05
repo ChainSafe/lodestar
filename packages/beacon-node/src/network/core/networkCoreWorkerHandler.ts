@@ -146,6 +146,7 @@ export class WorkerNetworkCore implements INetworkCore {
   }
 
   async close(): Promise<void> {
+    this.modules.logger.debug("closing network core in worker");
     await this.getApi().close();
     this.modules.logger.debug("terminating network worker");
     await terminateWorkerThread({

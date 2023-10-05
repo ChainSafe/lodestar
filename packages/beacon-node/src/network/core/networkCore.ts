@@ -253,25 +253,28 @@ export class NetworkCore implements INetworkCore {
   /** Destroy this instance. Can only be called once. */
   async close(): Promise<void> {
     if (this.closed) return;
+    try {
+      this.clock.off(ClockEvent.epoch, this.onEpoch);
 
-    this.clock.off(ClockEvent.epoch, this.onEpoch);
+      // Must goodbye and disconnect before stopping libp2p
+      await this.peerManager.goodbyeAndDisconnectAllPeers();
+      this.logger.debug("network sent goodbye to all peers");
+      await this.peerManager.close();
+      this.logger.debug("network peerManager closed");
+      await this.gossip.stop();
+      this.logger.debug("network gossip closed");
+      await this.reqResp.stop();
+      await this.reqResp.unregisterAllProtocols();
+      this.logger.debug("network reqResp closed");
+      this.attnetsService.close();
+      this.syncnetsService.close();
+      await this.libp2p.stop();
+      this.logger.debug("network lib2p closed");
 
-    // Must goodbye and disconnect before stopping libp2p
-    await this.peerManager.goodbyeAndDisconnectAllPeers();
-    this.logger.debug("network sent goodbye to all peers");
-    await this.peerManager.close();
-    this.logger.debug("network peerManager closed");
-    await this.gossip.stop();
-    this.logger.debug("network gossip closed");
-    await this.reqResp.stop();
-    await this.reqResp.unregisterAllProtocols();
-    this.logger.debug("network reqResp closed");
-    this.attnetsService.close();
-    this.syncnetsService.close();
-    await this.libp2p.stop();
-    this.logger.debug("network lib2p closed");
-
-    this.closed = true;
+      this.closed = true;
+    } catch (err) {
+      this.logger.error("Error on NetworkCore.close()", {}, err as Error);
+    }
   }
 
   async scrapeMetrics(): Promise<string> {
