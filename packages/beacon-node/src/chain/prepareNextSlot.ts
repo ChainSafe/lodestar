@@ -84,7 +84,7 @@ export class PrepareNextSlotScheduler {
           clockSlot,
         });
         // It's important to still do this to get through Holesky unfinality time of low resouce nodes
-        await this.pruneAtSlot0OfEpoch(clockSlot);
+        await this.prunePerSlot(clockSlot);
         return;
       }
 
@@ -176,7 +176,7 @@ export class PrepareNextSlotScheduler {
       }
 
       // do this after all as it's the lowest priority task
-      await this.pruneAtSlot0OfEpoch(clockSlot);
+      await this.prunePerSlot(clockSlot);
     } catch (e) {
       if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
         this.metrics?.precomputeNextEpochTransition.count.inc({result: "error"}, 1);
@@ -188,14 +188,15 @@ export class PrepareNextSlotScheduler {
   /**
    * Pruning at the last 1/3 slot of epoch is the safest time because all epoch transitions already use the checkpoint states cached
    * one down side of this is when `inMemoryEpochs = 0` and gossip block hasn't come yet then we have to reload state we added 2/3 slot ago
-   * however, it's not likely `inMemoryEpochs` is configured as 0, and this scenario is rarely happen
+   * however, it's not likely `inMemoryEpochs` is configured as 0, and this scenario rarely happen
    * since we only use `inMemoryEpochs = 0` for testing, if it happens it's a good thing because it helps us test the reload flow
    */
-  private pruneAtSlot0OfEpoch = async (clockSlot: Slot): Promise<void> => {
-    if (clockSlot % SLOTS_PER_EPOCH === 0) {
-      const nextEpoch = computeEpochAtSlot(clockSlot) + 1;
-      const pruneCount = this.chain.regen.pruneCheckpointStateCache();
-      this.logger.verbose("Pruned checkpoint state cache", {clockSlot, nextEpoch, pruneCount});
-    }
-  }
+  private prunePerSlot = async (clockSlot: Slot): Promise<void> => {
+    // a contabo vpss can have 10-12 holesky epoch transitions per epoch when syncing, stronger node may have more
+    // although it can survive during syncing if we prune per epoch, it's better to prune at the last 1/3 of every slot
+    // at synced time, it's likely we only prune at the 1st slot of epoch, all other prunes are no-op
+    const nextEpoch = computeEpochAtSlot(clockSlot) + 1;
+    const pruneCount = this.chain.regen.pruneCheckpointStateCache();
+    this.logger.verbose("Pruned checkpoint state cache", {clockSlot, nextEpoch, pruneCount});
+  };
 }
