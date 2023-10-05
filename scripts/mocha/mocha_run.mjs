@@ -39,17 +39,20 @@ async function exitScenarioHandler(failCount) {
 
       process.abort();
     } else {
-      const activeHandles = process._getActiveHandles().filter((h) => typeof h.fd !== "number" || h.fd > 2); // Filter out stdio handles
+      const resources = process.getActiveResourcesInfo();
+      const uniqueResources = new Set(resources);
       console.info(
         `Detecting resource leaks. now='${new Date(now).toLocaleString()}' timeout='${new Date(
           timeout
-        ).toLocaleString()}' activeHandlers: ${activeHandles.length}`
+        ).toLocaleString()}' activeResources: ${resources}`
       );
 
-      // Allow this timer to be running
-      if (activeHandles.length <= 1) {
+      // There must be at least TTY used by mocha
+      if (uniqueResources.size <= 1) {
         console.info("Seems there is no leak. Clearing leak detection hooks.");
         clearInterval(timer);
+        // Dumping resources for debugging purposes
+        dump();
       }
     }
   }
