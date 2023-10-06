@@ -201,6 +201,7 @@ export class PeerManager {
   }
 
   async close(): Promise<void> {
+    this.logger.info("Closing peer mananger from inside");
     await this.discovery?.stop();
     this.libp2p.services.components.events.removeEventListener(Libp2pEvent.connectionOpen, this.onLibp2pPeerConnect);
     this.libp2p.services.components.events.removeEventListener(
@@ -209,6 +210,7 @@ export class PeerManager {
     );
     this.networkEventBus.off(NetworkEvent.reqRespRequest, this.onRequest);
     for (const interval of this.intervals) clearInterval(interval);
+    this.logger.info("Closed peer mananger from inside");
   }
 
   /**
@@ -639,7 +641,9 @@ export class PeerManager {
 
   private async disconnect(peer: PeerId): Promise<void> {
     try {
+      this.logger.info("Disconnecting peer", {peer: prettyPrintPeerId(peer)});
       await this.libp2p.hangUp(peer);
+      this.logger.info("Disconnected", {peer: prettyPrintPeerId(peer)});
     } catch (e) {
       this.logger.debug("Unclean disconnect", {peer: prettyPrintPeerId(peer)}, e as Error);
     }
@@ -647,6 +651,7 @@ export class PeerManager {
 
   private async goodbyeAndDisconnect(peer: PeerId, goodbye: GoodByeReasonCode): Promise<void> {
     try {
+      this.logger.info("Sending goodbye", {peer: prettyPrintPeerId(peer), goodbye});
       const reason = GOODBYE_KNOWN_CODES[goodbye.toString()] || "";
       this.metrics?.peerGoodbyeSent.inc({reason});
 
@@ -657,10 +662,11 @@ export class PeerManager {
 
       // Wrap with shorter timeout than regular ReqResp requests to speed up shutdown
       await withTimeout(() => this.reqResp.sendGoodbye(peer, BigInt(goodbye)), 1_000);
+      this.logger.info("Sent goodbye", {peer: prettyPrintPeerId(peer), goodbye});
     } catch (e) {
       this.logger.verbose("Failed to send goodbye", {peer: prettyPrintPeerId(peer)}, e as Error);
     } finally {
-      await this.disconnect(peer);
+      void this.disconnect(peer);
     }
   }
 
