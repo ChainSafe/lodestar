@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {computeStateSlotsToDelete} from "../../../../src/chain/archiver/archiveStates.js";
 
@@ -40,7 +39,7 @@ describe("state archiver task", () => {
       it(id, () => {
         const storedStateSlots = storedEpochs.map((epoch) => computeStartSlotAtEpoch(epoch));
         const stateSlotsToDelete = epochsToDelete.map((epoch) => computeStartSlotAtEpoch(epoch));
-        expect(computeStateSlotsToDelete(storedStateSlots, persistEveryEpochs)).to.deep.equal(stateSlotsToDelete);
+        expect(computeStateSlotsToDelete(storedStateSlots, persistEveryEpochs)).toEqual(stateSlotsToDelete);
       });
     }
   });

@@ -1,5 +1,4 @@
 import EventEmitter from "node:events";
-import {expect} from "chai";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {toHexString} from "@chainsafe/ssz";
 import {config as minimalConfig} from "@lodestar/config/default";
@@ -145,7 +144,9 @@ describe("sync by UnknownBlockSync", () => {
       const forkChoiceKnownRoots = new Set([blockRootHex0]);
       const forkChoice: Pick<IForkChoice, "hasBlock" | "getFinalizedBlock"> = {
         hasBlock: (root) => forkChoiceKnownRoots.has(toHexString(root)),
-        getFinalizedBlock: () => ({slot: finalizedSlot}) as ProtoBlock,
+        getFinalizedBlock: () => (({
+          slot: finalizedSlot
+        }) as ProtoBlock),
       };
       const seenBlockProposers: Pick<SeenBlockProposers, "isKnown"> = {
         // only return seenBlock for blockC
@@ -196,35 +197,29 @@ describe("sync by UnknownBlockSync", () => {
         const [_, requestedRoots] = await sendBeaconBlocksByRootPromise;
         await sleep(200);
         // should not send the invalid root block to chain
-        expect(processBlockSpy.called).to.be.false;
+        expect(processBlockSpy.called).toBe(false);
         for (const requestedRoot of requestedRoots) {
-          expect(syncService["pendingBlocks"].get(toHexString(requestedRoot))?.downloadAttempts).to.be.deep.equal(1);
+          expect(syncService["pendingBlocks"].get(toHexString(requestedRoot))?.downloadAttempts).toEqual(1);
         }
       } else if (reportPeer) {
         const err = await reportPeerPromise;
-        expect(err[0]).equal(peer);
-        expect([err[1], err[2]]).to.be.deep.equal([PeerAction.LowToleranceError, "BadBlockByRoot"]);
+        expect(err[0]).toBe(peer);
+        expect([err[1], err[2]]).toEqual([PeerAction.LowToleranceError, "BadBlockByRoot"]);
       } else if (maxPendingBlocks === 1) {
         await blockAProcessed;
         // not able to process blockB and blockC because maxPendingBlocks is 1
-        expect(Array.from(forkChoiceKnownRoots.values())).to.deep.equal(
-          [blockRootHex0, blockRootHexA],
-          "Wrong blocks in mock ForkChoice"
-        );
+        expect(Array.from(forkChoiceKnownRoots.values())).toEqual([blockRootHex0, blockRootHexA]);
       } else {
         // Wait for all blocks to be in ForkChoice store
         await blockCProcessed;
         if (seenBlock) {
-          expect(setTimeoutSpy).to.have.been.calledWithMatch({}, (slotSec / 3) * 1000);
+          expect(setTimeoutSpy).toHaveBeenCalledWith(expect.objectContaining({}), (slotSec / 3) * 1000);
         } else {
-          expect(setTimeoutSpy).to.be.not.called;
+          expect(setTimeoutSpy).not.toHaveBeenCalled();
         }
 
         // After completing the sync, all blocks should be in the ForkChoice
-        expect(Array.from(forkChoiceKnownRoots.values())).to.deep.equal(
-          [blockRootHex0, blockRootHexA, blockRootHexB, blockRootHexC],
-          "Wrong blocks in mock ForkChoice"
-        );
+        expect(Array.from(forkChoiceKnownRoots.values())).toEqual([blockRootHex0, blockRootHexA, blockRootHexB, blockRootHexC]);
       }
 
       syncService.close();
@@ -277,13 +272,13 @@ describe("UnknownBlockSync", function () {
         }
 
         if (expected) {
-          expect(events.listenerCount(NetworkEvent.unknownBlock)).to.be.equal(1);
-          expect(events.listenerCount(NetworkEvent.unknownBlockParent)).to.be.equal(1);
-          expect(service.isSubscribedToNetwork()).to.be.true;
+          expect(events.listenerCount(NetworkEvent.unknownBlock)).toBe(1);
+          expect(events.listenerCount(NetworkEvent.unknownBlockParent)).toBe(1);
+          expect(service.isSubscribedToNetwork()).toBe(true);
         } else {
-          expect(events.listenerCount(NetworkEvent.unknownBlock)).to.be.equal(0);
-          expect(events.listenerCount(NetworkEvent.unknownBlockParent)).to.be.equal(0);
-          expect(service.isSubscribedToNetwork()).to.be.false;
+          expect(events.listenerCount(NetworkEvent.unknownBlock)).toBe(0);
+          expect(events.listenerCount(NetworkEvent.unknownBlockParent)).toBe(0);
+          expect(service.isSubscribedToNetwork()).toBe(false);
         }
       });
     }

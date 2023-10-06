@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import sinon from "sinon";
 import {routes} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
@@ -49,9 +48,9 @@ describe("Events api impl", function () {
       chainEventEmmitter.emit(routes.events.EventType.attestation, ssz.phase0.Attestation.defaultValue());
       chainEventEmmitter.emit(routes.events.EventType.head, headEventData);
 
-      expect(events).to.have.length(1, "Wrong num of received events");
-      expect(events[0].type).to.equal(routes.events.EventType.head);
-      expect(events[0].message).to.not.be.null;
+      expect(events).toHaveLength(1);
+      expect(events[0].type).toBe(routes.events.EventType.head);
+      expect(events[0].message).not.toBeNull();
     });
   });
 });

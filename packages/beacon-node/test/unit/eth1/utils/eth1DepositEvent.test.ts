@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import {assertConsecutiveDeposits} from "../../../../src/eth1/utils/eth1DepositEvent.js";
 
 describe("eth1 / util / assertConsecutiveDeposits", function () {
@@ -39,7 +38,7 @@ describe("eth1 / util / assertConsecutiveDeposits", function () {
       if (ok) {
         assertConsecutiveDeposits(depositEvents);
       } else {
-        expect(() => assertConsecutiveDeposits(depositEvents)).to.throw();
+        expect(() => assertConsecutiveDeposits(depositEvents)).toThrow();
       }
     });
   }

@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import {wrapError} from "../../../src/util/wrapError.js";
 
 describe("util / wrapError", () => {
@@ -18,15 +17,15 @@ describe("util / wrapError", () => {
     const resErr = await wrapError(throwNoAwait(true));
     const resOk = await wrapError(throwNoAwait(false));
 
-    expect(resErr).to.deep.equal({err: error}, "Wrong resErr");
-    expect(resOk).to.deep.equal({err: null, result: true}, "Wrong resOk");
+    expect(resErr).toEqual({err: error});
+    expect(resOk).toEqual({err: null, result: true});
   });
 
   it("Handle error and result with throwAwait", async () => {
     const resErr = await wrapError(throwAwait(true));
     const resOk = await wrapError(throwAwait(false));
 
-    expect(resErr).to.deep.equal({err: error}, "Wrong resErr");
-    expect(resOk).to.deep.equal({err: null, result: true}, "Wrong resOk");
+    expect(resErr).toEqual({err: error});
+    expect(resOk).toEqual({err: null, result: true});
   });
 });

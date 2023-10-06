@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import {config} from "@lodestar/config/default";
 import {getConfigApi, renderJsonSpec} from "../../../../../src/api/impl/config/index.js";
 
@@ -12,15 +11,15 @@ describe("config api implementation", function () {
   describe("getForkSchedule", function () {
     it("should get known scheduled forks", async function () {
       const {data: forkSchedule} = await api.getForkSchedule();
-      expect(forkSchedule.length).to.equal(Object.keys(config.forks).length);
+      expect(forkSchedule.length).toBe(Object.keys(config.forks).length);
     });
   });
 
   describe("getDepositContract", function () {
     it("should get the deposit contract from config", async function () {
       const {data: depositContract} = await api.getDepositContract();
-      expect(depositContract.address).to.equal(config.DEPOSIT_CONTRACT_ADDRESS);
-      expect(depositContract.chainId).to.equal(config.DEPOSIT_CHAIN_ID);
+      expect(depositContract.address).toBe(config.DEPOSIT_CONTRACT_ADDRESS);
+      expect(depositContract.chainId).toBe(config.DEPOSIT_CHAIN_ID);
     });
   });
 
@@ -32,11 +31,8 @@ describe("config api implementation", function () {
     it("should get the spec", async function () {
       const {data: specJson} = await api.getSpec();
 
-      expect(specJson.SECONDS_PER_ETH1_BLOCK).to.equal("14", "Wrong SECONDS_PER_ETH1_BLOCK");
-      expect(specJson.DEPOSIT_CONTRACT_ADDRESS).to.equal(
-        "0x1234567890123456789012345678901234567890",
-        "Wrong DEPOSIT_CONTRACT_ADDRESS"
-      );
+      expect(specJson.SECONDS_PER_ETH1_BLOCK).toBe("14");
+      expect(specJson.DEPOSIT_CONTRACT_ADDRESS).toBe("0x1234567890123456789012345678901234567890");
     });
   });
 });

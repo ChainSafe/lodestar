@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import {toHexString} from "@chainsafe/ssz";
 import {EpochShuffling} from "@lodestar/state-transition";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -32,20 +31,22 @@ describe("StateContextCache", function () {
   });
 
   it("should prune", function () {
-    expect(cache.size).to.be.equal(2, "Size must be same as initial 2");
+    expect(cache.size).toBe(2);
     const state3 = generateCachedState({slot: 2 * SLOTS_PER_EPOCH});
     state3.epochCtx.currentShuffling = {...shuffling, epoch: 2};
 
     cache.add(state3);
-    expect(cache.size).to.be.equal(3, "Size must be 2+1 after .add()");
+    expect(cache.size).toBe(3);
     cache.prune(toHexString(ZERO_HASH));
-    expect(cache.size).to.be.equal(2, "Size should reduce to initial 2 after prunning");
-    expect(cache.get(toHexString(key1)), "must have key1").to.be.not.undefined;
-    expect(cache.get(toHexString(key2)), "must have key2").to.be.not.undefined;
+    expect(cache.size).toBe(2);
+    // "must have key1"
+    expect(cache.get(toHexString(key1))).toBeDefined();
+    // "must have key2"
+    expect(cache.get(toHexString(key2))).toBeDefined();
   });
 
   it("should deleteAllBeforeEpoch", function () {
     cache.deleteAllBeforeEpoch(2);
-    expect(cache.size).to.be.equal(0, "size must be 0 after delete all");
+    expect(cache.size).toBe(0);
   });
 });

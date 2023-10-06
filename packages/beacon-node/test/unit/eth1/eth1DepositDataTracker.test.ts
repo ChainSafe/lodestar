@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import sinon from "sinon";
 import {config} from "@lodestar/config/default";
 import {TimeoutError} from "@lodestar/utils";
@@ -43,53 +42,53 @@ describe("Eth1DepositDataTracker", function () {
   const getBlocksByNumberStub = sinon.stub(eth1Provider, "getBlocksByNumber");
   const getDepositEventsStub = sinon.stub(eth1Provider, "getDepositEvents");
 
-  after(() => {
+  afterAll(() => {
     sandbox.restore();
   });
 
   it("Should dynamically adjust blocks batch size", async function () {
     let expectedSize = 1000;
-    expect(eth1DepositDataTracker["eth1GetBlocksBatchSizeDynamic"]).to.be.equal(expectedSize);
+    expect(eth1DepositDataTracker["eth1GetBlocksBatchSizeDynamic"]).toBe(expectedSize);
 
     // If there are timeerrors or parse errors then batch size should reduce
     getBlocksByNumberStub.throws(new TimeoutError("timeout error"));
     for (let i = 0; i < 10; i++) {
       expectedSize = Math.max(Math.floor(expectedSize / 2), 10);
       await eth1DepositDataTracker["updateBlockCache"](3000).catch((_e) => void 0);
-      expect(eth1DepositDataTracker["eth1GetBlocksBatchSizeDynamic"]).to.be.equal(expectedSize);
+      expect(eth1DepositDataTracker["eth1GetBlocksBatchSizeDynamic"]).toBe(expectedSize);
     }
-    expect(expectedSize).to.be.equal(10);
+    expect(expectedSize).toBe(10);
 
     getBlocksByNumberStub.resolves([]);
     // Should take a whole longer to get back to the orignal batch size
     for (let i = 0; i < 100; i++) {
       expectedSize = Math.min(expectedSize + 10, 1000);
       await eth1DepositDataTracker["updateBlockCache"](3000);
-      expect(eth1DepositDataTracker["eth1GetBlocksBatchSizeDynamic"]).to.be.equal(expectedSize);
+      expect(eth1DepositDataTracker["eth1GetBlocksBatchSizeDynamic"]).toBe(expectedSize);
     }
-    expect(expectedSize).to.be.equal(1000);
+    expect(expectedSize).toBe(1000);
   });
 
   it("Should dynamically adjust logs batch size", async function () {
     let expectedSize = 1000;
-    expect(eth1DepositDataTracker["eth1GetLogsBatchSizeDynamic"]).to.be.equal(expectedSize);
+    expect(eth1DepositDataTracker["eth1GetLogsBatchSizeDynamic"]).toBe(expectedSize);
 
     // If there are timeerrors or parse errors then batch size should reduce
     getDepositEventsStub.throws(new TimeoutError("timeout error"));
     for (let i = 0; i < 10; i++) {
       expectedSize = Math.max(Math.floor(expectedSize / 2), 10);
       await eth1DepositDataTracker["updateDepositCache"](3000).catch((_e) => void 0);
-      expect(eth1DepositDataTracker["eth1GetLogsBatchSizeDynamic"]).to.be.equal(expectedSize);
+      expect(eth1DepositDataTracker["eth1GetLogsBatchSizeDynamic"]).toBe(expectedSize);
     }
-    expect(expectedSize).to.be.equal(10);
+    expect(expectedSize).toBe(10);
 
     getDepositEventsStub.resolves([]);
     // Should take a whole longer to get back to the orignal batch size
     for (let i = 0; i < 100; i++) {
       expectedSize = Math.min(expectedSize + 10, 1000);
       await eth1DepositDataTracker["updateDepositCache"](3000);
-      expect(eth1DepositDataTracker["eth1GetLogsBatchSizeDynamic"]).to.be.equal(expectedSize);
+      expect(eth1DepositDataTracker["eth1GetLogsBatchSizeDynamic"]).toBe(expectedSize);
     }
-    expect(expectedSize).to.be.equal(1000);
+    expect(expectedSize).toBe(1000);
   });
 });

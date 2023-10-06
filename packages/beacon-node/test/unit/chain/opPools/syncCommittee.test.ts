@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import sinon, {SinonStubbedInstance} from "sinon";
 import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
@@ -17,7 +16,7 @@ describe("chain / opPools / SyncCommitteeMessagePool", function () {
   let clockStub: SinonStubbedInstance<Clock>;
   const cutOffTime = 1;
 
-  before("Init BLS", async () => {
+  beforeAll("Init BLS", async () => {
     const sk = bls.SecretKey.fromBytes(Buffer.alloc(32, 1));
     syncCommittee = {
       slot,
@@ -40,7 +39,7 @@ describe("chain / opPools / SyncCommitteeMessagePool", function () {
   it("should preaggregate SyncCommitteeContribution", () => {
     clockStub.secFromSlot.returns(0);
     let contribution = cache.getContribution(subcommitteeIndex, syncCommittee.slot, syncCommittee.beaconBlockRoot);
-    expect(contribution).to.be.not.null;
+    expect(contribution).not.toBeNull();
     const newSecretKey = bls.SecretKey.fromBytes(Buffer.alloc(32, 2));
     const newSyncCommittee: altair.SyncCommitteeMessage = {
       slot: syncCommittee.slot,
@@ -52,15 +51,15 @@ describe("chain / opPools / SyncCommitteeMessagePool", function () {
     const newIndicesInSubSyncCommittee = [1];
     cache.add(subcommitteeIndex, newSyncCommittee, newIndicesInSubSyncCommittee[0]);
     contribution = cache.getContribution(subcommitteeIndex, syncCommittee.slot, syncCommittee.beaconBlockRoot);
-    expect(contribution).to.be.not.null;
+    expect(contribution).not.toBeNull();
     if (contribution) {
-      expect(contribution.slot).to.be.equal(syncCommittee.slot);
-      expect(toHexString(contribution.beaconBlockRoot)).to.be.equal(toHexString(syncCommittee.beaconBlockRoot));
-      expect(contribution.subcommitteeIndex).to.be.equal(subcommitteeIndex);
+      expect(contribution.slot).toBe(syncCommittee.slot);
+      expect(toHexString(contribution.beaconBlockRoot)).toBe(toHexString(syncCommittee.beaconBlockRoot));
+      expect(contribution.subcommitteeIndex).toBe(subcommitteeIndex);
       const newIndices = [...newIndicesInSubSyncCommittee, indexInSubcommittee];
       const aggregationBits = contribution.aggregationBits;
       for (let index = 0; index < aggregationBits.bitLen; index++) {
-        expect(aggregationBits.get(index)).to.equal(newIndices.includes(index), `Wrong bit value index ${index}`);
+        expect(aggregationBits.get(index)).toBe(newIndices.includes(index));
       }
     }
   });

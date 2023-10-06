@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import {bigIntToBytes} from "@lodestar/utils";
 import {ATTESTATION_SUBNET_PREFIX_BITS, NODE_ID_BITS} from "@lodestar/params";
 import {getNodeIdPrefix, getNodeOffset} from "../../../../src/network/subnets/util.js";
@@ -22,7 +21,7 @@ describe("getNodeIdPrefix", () => {
       const nodeIdBigInt = BigInt(nodeId);
       // nodeId is of type uint256, which is 32 bytes
       const nodeIdBytes = bigIntToBytes(nodeIdBigInt, 32, "be");
-      expect(getNodeIdPrefix(nodeIdBytes)).to.equal(
+      expect(getNodeIdPrefix(nodeIdBytes)).toBe(
         Number(nodeIdBigInt >> BigInt(NODE_ID_BITS - ATTESTATION_SUBNET_PREFIX_BITS))
       );
     });
@@ -35,7 +34,7 @@ describe("getNodeOffset", () => {
       const nodeIdBigInt = BigInt(nodeId);
       // nodeId is of type uint256, which is 32 bytes
       const nodeIdBytes = bigIntToBytes(nodeIdBigInt, 32, "be");
-      expect(getNodeOffset(nodeIdBytes)).to.equal(Number(nodeIdBigInt % BigInt(256)));
+      expect(getNodeOffset(nodeIdBytes)).toBe(Number(nodeIdBigInt % BigInt(256)));
     });
   }
 });

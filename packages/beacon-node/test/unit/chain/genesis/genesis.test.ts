@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import {expect} from "chai";
-import type {SecretKey, PublicKey} from "@chainsafe/bls/types";
+import type { SecretKey, PublicKey } from "@chainsafe/bls/types";
 import {toHexString} from "@chainsafe/ssz";
 import {DOMAIN_DEPOSIT, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
 import {config} from "@lodestar/config/default";
@@ -80,10 +79,8 @@ describe("genesis builder", function () {
 
     const {state} = await genesisBuilder.waitForGenesis();
 
-    expect(state.validators.length).to.be.equal(schlesiConfig.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT);
-    expect(toHexString(state.eth1Data.blockHash)).to.be.equal(
-      mockData.blocks[schlesiConfig.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT - 1].hash
-    );
+    expect(state.validators.length).toBe(schlesiConfig.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT);
+    expect(toHexString(state.eth1Data.blockHash)).toBe(mockData.blocks[schlesiConfig.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT - 1].hash);
   });
 
   it("should abort building genesis state", async () => {

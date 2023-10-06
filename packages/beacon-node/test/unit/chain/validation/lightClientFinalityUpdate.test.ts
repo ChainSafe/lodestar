@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import sinon from "sinon";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {altair, ssz} from "@lodestar/types";
@@ -54,10 +53,7 @@ describe("Light Client Finality Update validation", function () {
 
     expect(() => {
       validateLightClientFinalityUpdate(config, chain, lightclientFinalityUpdate);
-    }).to.throw(
-      LightClientErrorCode.FINALITY_UPDATE_ALREADY_FORWARDED,
-      "Expected LightClientErrorCode.FINALITY_UPDATE_ALREADY_FORWARDED to be thrown"
-    );
+    }).toThrow(LightClientErrorCode.FINALITY_UPDATE_ALREADY_FORWARDED);
   });
 
   it("should return invalid - finality update received too early", async () => {
@@ -76,10 +72,7 @@ describe("Light Client Finality Update validation", function () {
 
     expect(() => {
       validateLightClientFinalityUpdate(config, chain, lightClientFinalityUpdate);
-    }).to.throw(
-      LightClientErrorCode.FINALITY_UPDATE_RECEIVED_TOO_EARLY,
-      "Expected LightClientErrorCode.FINALITY_UPDATE_RECEIVED_TOO_EARLY to be thrown"
-    );
+    }).toThrow(LightClientErrorCode.FINALITY_UPDATE_RECEIVED_TOO_EARLY);
   });
 
   it("should return invalid - finality update not matching local", async () => {
@@ -104,10 +97,7 @@ describe("Light Client Finality Update validation", function () {
 
     expect(() => {
       validateLightClientFinalityUpdate(config, chain, lightClientFinalityUpdate);
-    }).to.throw(
-      LightClientErrorCode.FINALITY_UPDATE_NOT_MATCHING_LOCAL,
-      "Expected LightClientErrorCode.FINALITY_UPDATE_NOT_MATCHING_LOCAL to be thrown"
-    );
+    }).toThrow(LightClientErrorCode.FINALITY_UPDATE_NOT_MATCHING_LOCAL);
   });
 
   it("should return invalid - not matching local when no local finality update yet", async () => {
@@ -130,10 +120,7 @@ describe("Light Client Finality Update validation", function () {
 
     expect(() => {
       validateLightClientFinalityUpdate(config, chain, lightClientFinalityUpdate);
-    }).to.throw(
-      LightClientErrorCode.FINALITY_UPDATE_NOT_MATCHING_LOCAL,
-      "Expected LightClientErrorCode.FINALITY_UPDATE_NOT_MATCHING_LOCAL to be thrown"
-    );
+    }).toThrow(LightClientErrorCode.FINALITY_UPDATE_NOT_MATCHING_LOCAL);
   });
 
   it("should not throw for valid update", async () => {
@@ -169,6 +156,6 @@ describe("Light Client Finality Update validation", function () {
 
     expect(() => {
       validateLightClientFinalityUpdate(config, chain, lightClientFinalityUpdate);
-    }).to.not.throw("Expected validateLightClientFinalityUpdate not to throw");
+    }).not.toThrow("Expected validateLightClientFinalityUpdate not to throw");
   });
 });

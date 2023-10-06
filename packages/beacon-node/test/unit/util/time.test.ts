@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import {prettyTimeDiffSec} from "../../../src/util/time.js";
 
 describe("util / time / prettyTimeDiffSec", () => {
@@ -15,7 +14,7 @@ describe("util / time / prettyTimeDiffSec", () => {
 
   for (const {diffSec, res} of testCases) {
     it(`pretty ${diffSec}`, () => {
-      expect(prettyTimeDiffSec(diffSec)).to.equal(res);
+      expect(prettyTimeDiffSec(diffSec)).toBe(res);
     });
   }
 });

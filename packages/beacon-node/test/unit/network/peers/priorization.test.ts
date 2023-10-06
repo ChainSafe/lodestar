@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import {PeerId} from "@libp2p/interface/peer-id";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {BitArray} from "@chainsafe/ssz";
@@ -237,7 +236,7 @@ describe("network / peers / priorization", async () => {
   for (const {id, connectedPeers, activeAttnets, activeSyncnets, opts, expectedResult} of testCases) {
     it(id, () => {
       const result = prioritizePeers(connectedPeers, toReqSubnet(activeAttnets), toReqSubnet(activeSyncnets), opts);
-      expect(cleanResult(result)).to.deep.equal(cleanResult(expectedResult));
+      expect(cleanResult(result)).toEqual(cleanResult(expectedResult));
     });
   }
 
@@ -291,7 +290,7 @@ describe("sortPeersToPrune", async function () {
       [connectedPeers[3], 0],
     ]);
 
-    expect(sortPeersToPrune(connectedPeers, dutiesByPeer).map((p) => p.id.toString())).to.be.deep.equals([
+    expect(sortPeersToPrune(connectedPeers, dutiesByPeer).map((p) => p.id.toString())).toEqual([
       // peer-0 is the worse and has the most chance to prune
       "peer-0",
       // peer-1 is better than peer-0 in terms of score

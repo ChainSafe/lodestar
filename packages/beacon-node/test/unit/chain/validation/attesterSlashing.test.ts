@@ -30,7 +30,7 @@ describe("GossipMessageValidator", () => {
     chainStub.getHeadState.returns(state);
   });
 
-  after(() => {
+  afterAll(() => {
     sandbox.restore();
   });
 

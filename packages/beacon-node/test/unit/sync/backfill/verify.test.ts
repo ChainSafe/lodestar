@@ -1,7 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
-import {expect} from "chai";
 import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {phase0, ssz} from "@lodestar/types";
@@ -32,9 +31,7 @@ describe("backfill sync - verify block sequence", function () {
     const blocks = getBlocks();
 
     const wrongAncorRoot = ssz.Root.defaultValue();
-    expect(() => verifyBlockSequence(beaconConfig, blocks, wrongAncorRoot)).to.throw(
-      BackfillSyncErrorCode.NOT_ANCHORED
-    );
+    expect(() => verifyBlockSequence(beaconConfig, blocks, wrongAncorRoot)).toThrow(BackfillSyncErrorCode.NOT_ANCHORED);
   });
 
   it("should fail with sequence not linear", function () {
@@ -47,7 +44,7 @@ describe("backfill sync - verify block sequence", function () {
         blocks[blocks.length - 1].data.message.parentRoot
       );
       if (error != null) throw new BackfillSyncError({code: error});
-    }).to.throw(BackfillSyncErrorCode.NOT_LINEAR);
+    }).toThrow(BackfillSyncErrorCode.NOT_LINEAR);
   });
 
   //first 4 mainnet blocks

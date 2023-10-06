@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import {clientFromAgentVersion, ClientKind} from "../../../../src/network/peers/client.js";
 
 describe("clientFromAgentVersion", () => {
@@ -32,7 +31,7 @@ describe("clientFromAgentVersion", () => {
 
   for (const {name, agentVersion, client} of testCases) {
     it(name, () => {
-      expect(clientFromAgentVersion(agentVersion)).to.be.equal(client, `cannot parse ${name} agent version`);
+      expect(clientFromAgentVersion(agentVersion)).toBe(client);
     });
   }
 });

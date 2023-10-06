@@ -1,6 +1,5 @@
 import sinon from "sinon";
 import {SinonStubbedInstance} from "sinon";
-import {expect} from "chai";
 import {toHexString} from "@chainsafe/ssz";
 import {altair, Epoch, Slot} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -34,12 +33,12 @@ describe("Sync Committee Signature validation", function () {
   // all validators have same pubkey
   const validatorIndexInSyncCommittee = 15;
 
-  before(async function () {
+  beforeAll(async function () {
     altairForkEpochBk = config.ALTAIR_FORK_EPOCH;
     config.ALTAIR_FORK_EPOCH = altairForkEpoch;
   });
 
-  after(function () {
+  afterAll(function () {
     config.ALTAIR_FORK_EPOCH = altairForkEpochBk;
   });
 
@@ -141,12 +140,10 @@ describe("Sync Committee Signature validation", function () {
 
     chain.getHeadState.returns(headState);
     chain.bls = new BlsVerifierMock(true);
-    expect(chain.seenSyncCommitteeMessages.get(slot, subnet, validatorIndex), "should be null").to.be.null;
+    // "should be null"
+    expect(chain.seenSyncCommitteeMessages.get(slot, subnet, validatorIndex)).toBeNull();
     await validateGossipSyncCommittee(chain, syncCommittee, subnet);
-    expect(chain.seenSyncCommitteeMessages.get(slot, subnet, validatorIndex)).to.be.equal(
-      toHexString(syncCommittee.beaconBlockRoot),
-      "should add message root to seenSyncCommitteeMessages"
-    );
+    expect(chain.seenSyncCommitteeMessages.get(slot, subnet, validatorIndex)).toBe(toHexString(syncCommittee.beaconBlockRoot));
 
     // receive same message again
     await expectRejectedWithLodestarError(
@@ -166,18 +163,12 @@ describe("Sync Committee Signature validation", function () {
     const {slot, validatorIndex} = syncCommittee;
     const prevRoot = "0x1234";
     chain.seenSyncCommitteeMessages.add(slot, subnet, validatorIndex, prevRoot);
-    expect(chain.seenSyncCommitteeMessages.get(slot, subnet, validatorIndex)).to.be.equal(
-      prevRoot,
-      "cache should return prevRoot"
-    );
+    expect(chain.seenSyncCommitteeMessages.get(slot, subnet, validatorIndex)).toBe(prevRoot);
     // but forkchoice head is message root
     forkchoiceStub.getHeadRoot.returns(toHexString(syncCommittee.beaconBlockRoot));
     await validateGossipSyncCommittee(chain, syncCommittee, subnet);
     // should accept the message and overwrite prevRoot
-    expect(chain.seenSyncCommitteeMessages.get(slot, subnet, validatorIndex)).to.be.equal(
-      toHexString(syncCommittee.beaconBlockRoot),
-      "should add message root to seenSyncCommitteeMessages"
-    );
+    expect(chain.seenSyncCommitteeMessages.get(slot, subnet, validatorIndex)).toBe(toHexString(syncCommittee.beaconBlockRoot));
 
     // receive same message again
     await expectRejectedWithLodestarError(

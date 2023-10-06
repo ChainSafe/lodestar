@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import {chunkifyMaximizeChunkSize} from "../../../../src/chain/bls/multithread/utils.js";
 import {linspace} from "../../../../src/util/numpy.js";
 
@@ -28,7 +27,7 @@ describe("chain / bls / utils / chunkifyMaximizeChunkSize", () => {
     it(`array len ${i + 1}`, () => {
       const arr = linspace(0, i);
       const chunks = chunkifyMaximizeChunkSize(arr, minPerChunk);
-      expect(chunks).to.deep.equal(testCase);
+      expect(chunks).toEqual(testCase);
     });
   }
 });

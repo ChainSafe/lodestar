@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import {binarySearchLte, ErrorNoValues, ErrorNoValueMinValue} from "../../../src/util/binarySearch.js";
 
 describe("util / binarySearch", () => {
@@ -73,9 +72,9 @@ describe("util / binarySearch", () => {
       it(id, () => {
         if (expectedId) {
           const result = binarySearchLte(items, value, getter);
-          expect(result.id).to.equal(expectedId);
+          expect(result.id).toBe(expectedId);
         } else if (error) {
-          expect(() => binarySearchLte(items, value, getter)).to.throw(error);
+          expect(() => binarySearchLte(items, value, getter)).toThrow(error);
         } else {
           throw Error("Test case must have 'expectedId' or 'error'");
         }
@@ -87,7 +86,7 @@ describe("util / binarySearch", () => {
       const items = Array.from({length}, (_, i) => i);
       for (let i = 0; i < length; i++) {
         const result = binarySearchLte(items, i, (n) => n);
-        expect(result).to.equal(i);
+        expect(result).toBe(i);
       }
     });
   });

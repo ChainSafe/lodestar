@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import {TimeSeries} from "../../../src/util/timeSeries.js";
 
 // Even with rounding to 3 decimals, the test still breaks sometimes...
@@ -35,7 +34,7 @@ describe.skip("util / TimeSeries", () => {
    * Fixed point math in Javascript is inexact, round results to prevent this test from randomly failing
    */
   function expectEqualPrecision(value: number, expected: number, decimals: number, message?: string): void {
-    expect(roundExp(value, decimals)).to.equals(roundExp(expected, decimals), message);
+    expect(roundExp(value, decimals)).toBe(roundExp(expected, decimals));
   }
 
   function roundExp(value: number, decimals: number): number {

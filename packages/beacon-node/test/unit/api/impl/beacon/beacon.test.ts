@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import {expect} from "chai";
-import {config} from "@lodestar/config/default";
+import { config } from "@lodestar/config/default";
 import {getBeaconApi} from "../../../../../src/api/impl/beacon/index.js";
 import {StubbedBeaconDb} from "../../../../utils/stub/index.js";
 import {setupApiImplTestServer, ApiImplTestModules} from "../index.test.js";
@@ -11,7 +10,7 @@ describe("beacon api implementation", function () {
   let dbStub: StubbedBeaconDb;
   let server: ApiImplTestModules;
 
-  before(function () {
+  beforeAll(function () {
     server = setupApiImplTestServer();
     dbStub = new StubbedBeaconDb();
   });
@@ -32,9 +31,9 @@ describe("beacon api implementation", function () {
       (server.chainStub as any).genesisValidatorsRoot = Buffer.alloc(32);
       const {data: genesis} = await api.getGenesis();
       if (genesis === null || genesis === undefined) throw Error("Genesis is nullish");
-      expect(genesis.genesisForkVersion).to.not.be.undefined;
-      expect(genesis.genesisTime).to.not.be.undefined;
-      expect(genesis.genesisValidatorsRoot).to.not.be.undefined;
+      expect(genesis.genesisForkVersion).toBeDefined();
+      expect(genesis.genesisTime).toBeDefined();
+      expect(genesis.genesisValidatorsRoot).toBeDefined();
     });
   });
 });

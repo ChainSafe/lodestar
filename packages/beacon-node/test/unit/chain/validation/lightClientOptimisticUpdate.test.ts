@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import sinon from "sinon";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {altair, ssz} from "@lodestar/types";
@@ -56,10 +55,7 @@ describe("Light Client Optimistic Update validation", function () {
 
     expect(() => {
       validateLightClientOptimisticUpdate(config, chain, lightclientOptimisticUpdate);
-    }).to.throw(
-      LightClientErrorCode.OPTIMISTIC_UPDATE_ALREADY_FORWARDED,
-      "Expected LightClientErrorCode.OPTIMISTIC_UPDATE_ALREADY_FORWARDED to be thrown"
-    );
+    }).toThrow(LightClientErrorCode.OPTIMISTIC_UPDATE_ALREADY_FORWARDED);
   });
 
   it("should return invalid - optimistic update received too early", async () => {
@@ -77,10 +73,7 @@ describe("Light Client Optimistic Update validation", function () {
 
     expect(() => {
       validateLightClientOptimisticUpdate(config, chain, lightclientOptimisticUpdate);
-    }).to.throw(
-      LightClientErrorCode.OPTIMISTIC_UPDATE_RECEIVED_TOO_EARLY,
-      "Expected LightClientErrorCode.OPTIMISTIC_UPDATE_RECEIVED_TOO_EARLY to be thrown"
-    );
+    }).toThrow(LightClientErrorCode.OPTIMISTIC_UPDATE_RECEIVED_TOO_EARLY);
   });
 
   it("should return invalid - optimistic update not matching local", async () => {
@@ -103,10 +96,7 @@ describe("Light Client Optimistic Update validation", function () {
 
     expect(() => {
       validateLightClientOptimisticUpdate(config, chain, lightclientOptimisticUpdate);
-    }).to.throw(
-      LightClientErrorCode.OPTIMISTIC_UPDATE_NOT_MATCHING_LOCAL,
-      "Expected LightClientErrorCode.OPTIMISTIC_UPDATE_NOT_MATCHING_LOCAL to be thrown"
-    );
+    }).toThrow(LightClientErrorCode.OPTIMISTIC_UPDATE_NOT_MATCHING_LOCAL);
   });
 
   it("should return invalid - not matching local when no local optimistic update yet", async () => {
@@ -126,10 +116,7 @@ describe("Light Client Optimistic Update validation", function () {
     // latestForwardedOptimisticSlot will be -1
     expect(() => {
       validateLightClientOptimisticUpdate(config, chain, lightclientOptimisticUpdate);
-    }).to.throw(
-      LightClientErrorCode.OPTIMISTIC_UPDATE_NOT_MATCHING_LOCAL,
-      "Expected LightClientErrorCode.OPTIMISTIC_UPDATE_NOT_MATCHING_LOCAL to be thrown"
-    );
+    }).toThrow(LightClientErrorCode.OPTIMISTIC_UPDATE_NOT_MATCHING_LOCAL);
   });
 
   it("should not throw for valid update", async () => {
@@ -157,6 +144,6 @@ describe("Light Client Optimistic Update validation", function () {
 
     expect(() => {
       validateLightClientOptimisticUpdate(config, chain, lightclientOptimisticUpdate);
-    }).to.not.throw("Expected validateLightclientOptimisticUpdate not to throw");
+    }).not.toThrow("Expected validateLightclientOptimisticUpdate not to throw");
   });
 });

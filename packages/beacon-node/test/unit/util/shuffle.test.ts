@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import {shuffle} from "../../../src/util/shuffle.js";
 
 describe("util / shuffle", () => {
@@ -25,8 +24,8 @@ describe("util / shuffle", () => {
 
     const randArr = shuffleUntilDifferent(arr);
 
-    expect(randArr).to.not.deep.equal(arr, "randArr must not equal arr");
-    expect(randArr.sort()).to.deep.equal(arr, "randArr.sort() must equal arr");
-    expect(arr).to.deep.equal(arrCopy, "Original array was mutated");
+    expect(randArr).not.toEqual(arr);
+    expect(randArr.sort()).toEqual(arr);
+    expect(arr).toEqual(arrCopy);
   });
 });

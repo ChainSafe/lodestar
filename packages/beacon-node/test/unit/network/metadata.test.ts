@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import {toHex} from "@lodestar/utils";
 import {ssz} from "@lodestar/types";
 import {getENRForkID} from "../../../src/network/metadata.js";
@@ -10,11 +9,11 @@ describe("network / metadata / getENRForkID", function () {
   const enrForkID = getENRForkID(config, currentEpoch);
 
   it("enrForkID.nextForkVersion", () => {
-    expect(toHex(enrForkID.nextForkVersion)).equals(toHex(config.ALTAIR_FORK_VERSION));
+    expect(toHex(enrForkID.nextForkVersion)).toBe(toHex(config.ALTAIR_FORK_VERSION));
   });
 
   it("enrForkID.nextForkEpoch", () => {
-    expect(enrForkID.nextForkEpoch).equals(config.ALTAIR_FORK_EPOCH);
+    expect(enrForkID.nextForkEpoch).toBe(config.ALTAIR_FORK_EPOCH);
   });
 
   it("it's possible to serialize enr fork id", () => {

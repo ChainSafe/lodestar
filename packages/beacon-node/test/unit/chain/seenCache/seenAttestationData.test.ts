@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import {InsertOutcome} from "../../../../src/chain/opPools/types.js";
 import {AttestationDataCacheEntry, SeenAttestationDatas} from "../../../../src/chain/seenCache/seenAttestationData.js";
 
@@ -29,7 +28,7 @@ describe("SeenAttestationDatas", () => {
         cache.add(testCase.slot, testCase.attDataBase64, {
           attDataRootHex: testCase.attDataBase64,
         } as AttestationDataCacheEntry)
-      ).to.equal(testCase.expected);
+      ).toBe(testCase.expected);
     });
   }
 
@@ -44,9 +43,9 @@ describe("SeenAttestationDatas", () => {
       testCase.expectedNull ? "null" : "not null"
     }`, () => {
       if (testCase.expectedNull) {
-        expect(cache.get(testCase.slot, testCase.attDataBase64)).to.be.null;
+        expect(cache.get(testCase.slot, testCase.attDataBase64)).toBeNull();
       } else {
-        expect(cache.get(testCase.slot, testCase.attDataBase64)).to.not.be.null;
+        expect(cache.get(testCase.slot, testCase.attDataBase64)).not.toBeNull();
       }
     });
   }

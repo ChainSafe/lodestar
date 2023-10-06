@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import {LevelDatastore} from "datastore-level";
 import {Key} from "interface-datastore";
 import sinon from "sinon";
@@ -21,52 +20,52 @@ describe("Eth2PeerDataStore", () => {
 
   it("should persist to db after threshold put", async () => {
     await eth2Datastore.put(new Key("k1"), Buffer.from("1"));
-    expect(dbDatastoreStub.batch).not.to.be.calledOnce;
+    expect(dbDatastoreStub.batch).not.toHaveBeenCalledTimes(1);
     await eth2Datastore.put(new Key("k2"), Buffer.from("2"));
-    expect(dbDatastoreStub.batch).to.be.calledOnce;
+    expect(dbDatastoreStub.batch).toHaveBeenCalledTimes(1);
   });
 
   it("should persist to db the oldest item after max", async () => {
     // oldest item
     await eth2Datastore.put(new Key("k1"), Buffer.from("1"));
-    expect(await eth2Datastore.get(new Key("k1"))).to.be.deep.equal(Buffer.from("1"));
+    expect(await eth2Datastore.get(new Key("k1"))).toEqual(Buffer.from("1"));
     sandbox.clock.tick(1000);
 
     // 2nd, not call dbDatastoreStub.put yet
     await eth2Datastore.put(new Key("k2"), Buffer.from("2"));
-    expect(await eth2Datastore.get(new Key("k1"))).to.be.deep.equal(Buffer.from("1"));
-    expect(dbDatastoreStub.put).not.to.be.calledOnce;
+    expect(await eth2Datastore.get(new Key("k1"))).toEqual(Buffer.from("1"));
+    expect(dbDatastoreStub.put).not.toHaveBeenCalledTimes(1);
     // 3rd item, not call dbDatastoreStub.put yet
     await eth2Datastore.put(new Key("k3"), Buffer.from("3"));
-    expect(await eth2Datastore.get(new Key("k3"))).to.be.deep.equal(Buffer.from("3"));
-    expect(dbDatastoreStub.put).not.to.be.calledOnce;
+    expect(await eth2Datastore.get(new Key("k3"))).toEqual(Buffer.from("3"));
+    expect(dbDatastoreStub.put).not.toHaveBeenCalledTimes(1);
 
     // 4th item, should evict 1st item since it's oldest
     await eth2Datastore.put(new Key("k4"), Buffer.from("4"));
-    expect(await eth2Datastore.get(new Key("k4"))).to.be.deep.equal(Buffer.from("4"));
+    expect(await eth2Datastore.get(new Key("k4"))).toEqual(Buffer.from("4"));
     expect(dbDatastoreStub.put).to.be.calledOnceWith(new Key("/k1"), Buffer.from("1"));
 
     // still able to get k1 from datastore
-    expect(dbDatastoreStub.get).not.to.be.calledOnce;
+    expect(dbDatastoreStub.get).not.toHaveBeenCalledTimes(1);
     dbDatastoreStub.get.resolves(Buffer.from("1"));
-    expect(await eth2Datastore.get(new Key("k1"))).to.be.deep.equal(Buffer.from("1"));
-    expect(dbDatastoreStub.get).to.be.calledOnce;
+    expect(await eth2Datastore.get(new Key("k1"))).toEqual(Buffer.from("1"));
+    expect(dbDatastoreStub.get).toHaveBeenCalledTimes(1);
 
     // access k1 again, should not query db
-    expect(await eth2Datastore.get(new Key("k1"))).to.be.deep.equal(Buffer.from("1"));
-    expect(dbDatastoreStub.get).to.be.calledOnce;
-    expect(dbDatastoreStub.get).not.to.be.calledTwice;
+    expect(await eth2Datastore.get(new Key("k1"))).toEqual(Buffer.from("1"));
+    expect(dbDatastoreStub.get).toHaveBeenCalledTimes(1);
+    expect(dbDatastoreStub.get).not.toHaveBeenCalledTimes(2);
   });
 
   it("should put to memory cache if item was found from db", async () => {
     dbDatastoreStub.get.resolves(Buffer.from("1"));
     // query db for the first time
-    expect(await eth2Datastore.get(new Key("k1"))).to.be.deep.equal(Buffer.from("1"));
-    expect(dbDatastoreStub.get).to.be.calledOnce;
+    expect(await eth2Datastore.get(new Key("k1"))).toEqual(Buffer.from("1"));
+    expect(dbDatastoreStub.get).toHaveBeenCalledTimes(1);
 
     // this time it should not query from db
-    expect(await eth2Datastore.get(new Key("k1"))).to.be.deep.equal(Buffer.from("1"));
-    expect(dbDatastoreStub.get).to.be.calledOnce;
-    expect(dbDatastoreStub.get).not.to.be.calledTwice;
+    expect(await eth2Datastore.get(new Key("k1"))).toEqual(Buffer.from("1"));
+    expect(dbDatastoreStub.get).toHaveBeenCalledTimes(1);
+    expect(dbDatastoreStub.get).not.toHaveBeenCalledTimes(2);
   });
 });

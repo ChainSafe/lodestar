@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import {IntersectResult, intersectUint8Arrays} from "../../../src/util/bitArray.js";
 
 describe("util / bitArray / intersectUint8Arrays", () => {
@@ -60,7 +59,7 @@ describe("util / bitArray / intersectUint8Arrays", () => {
       const bUA = new Uint8Array(b);
 
       // Use IntersectResult[] to get the actual name of IntersectResult
-      expect(IntersectResult[intersectUint8Arrays(aUA, bUA)]).to.equal(IntersectResult[res]);
+      expect(IntersectResult[intersectUint8Arrays(aUA, bUA)]).toBe(IntersectResult[res]);
     });
   }
 });

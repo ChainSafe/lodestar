@@ -82,9 +82,11 @@ describe.skip("get proposers api impl", function () {
     const stubGetBeaconProposer = sinon.stub(cachedState.epochCtx, "getBeaconProposer");
     stubGetNextBeaconProposer.returns([1]);
     const {data: result} = await api.getProposerDuties(1);
-    expect(result.length).to.be.equal(SLOTS_PER_EPOCH, "result should be equals to slots per epoch");
-    expect(stubGetNextBeaconProposer, "stubGetBeaconProposer function should not have been called").to.be.called;
-    expect(stubGetBeaconProposer, "stubGetBeaconProposer function should have been called").not.to.be.called;
+    expect(result.length).toBe(SLOTS_PER_EPOCH);
+    // "stubGetBeaconProposer function should not have been called"
+    expect(stubGetNextBeaconProposer).toHaveBeenCalled();
+    // "stubGetBeaconProposer function should have been called"
+    expect(stubGetBeaconProposer).not.toHaveBeenCalled();
   });
 
   it("should have different proposer for current and next epoch", async function () {
@@ -110,7 +112,7 @@ describe.skip("get proposers api impl", function () {
     stubGetBeaconProposer.returns(1);
     const {data: currentProposers} = await api.getProposerDuties(0);
     const {data: nextProposers} = await api.getProposerDuties(1);
-    expect(currentProposers).to.not.deep.equal(nextProposers, "current proposer and next proposer should be different");
+    expect(currentProposers).not.toEqual(nextProposers);
   });
 
   it("should not get proposers for more than one epoch in the future", async function () {

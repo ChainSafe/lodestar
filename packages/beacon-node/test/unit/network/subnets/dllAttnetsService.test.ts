@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {createBeaconConfig} from "@lodestar/config";
 import {ZERO_HASH} from "@lodestar/state-transition";
@@ -60,47 +59,47 @@ describe("DLLAttnetsService", () => {
   });
 
   it("should subscribe to deterministic long lived subnets on constructor", () => {
-    expect(gossipStub.subscribeTopic.calledTwice).to.be.true;
+    expect(gossipStub.subscribeTopic.calledTwice).toBe(true);
   });
 
   it("should change long lived subnets after EPOCHS_PER_SUBNET_SUBSCRIPTION", () => {
-    expect(gossipStub.subscribeTopic.calledTwice).to.be.true;
-    expect(gossipStub.subscribeTopic.callCount).to.be.equal(SUBNETS_PER_NODE);
+    expect(gossipStub.subscribeTopic.calledTwice).toBe(true);
+    expect(gossipStub.subscribeTopic.callCount).toBe(SUBNETS_PER_NODE);
     sandbox.clock.tick(config.SECONDS_PER_SLOT * SLOTS_PER_EPOCH * EPOCHS_PER_SUBNET_SUBSCRIPTION * 1000);
     // SUBNETS_PER_NODE = 2 => 2 more calls
-    expect(gossipStub.subscribeTopic.callCount).to.be.equal(2 * SUBNETS_PER_NODE);
+    expect(gossipStub.subscribeTopic.callCount).toBe(2 * SUBNETS_PER_NODE);
   });
 
   it("should subscribe to new fork 2 epochs before ALTAIR_FORK_EPOCH", () => {
-    expect(gossipStub.subscribeTopic.calledWithMatch({fork: ForkName.phase0})).to.be.true;
-    expect(gossipStub.subscribeTopic.calledWithMatch({fork: ForkName.altair})).to.be.false;
-    expect(gossipStub.subscribeTopic.calledTwice).to.be.true;
+    expect(gossipStub.subscribeTopic.calledWithMatch({fork: ForkName.phase0})).toBe(true);
+    expect(gossipStub.subscribeTopic.calledWithMatch({fork: ForkName.altair})).toBe(false);
+    expect(gossipStub.subscribeTopic.calledTwice).toBe(true);
     const firstSubnet = (gossipStub.subscribeTopic.args[0][0] as unknown as {subnet: number}).subnet;
     const secondSubnet = (gossipStub.subscribeTopic.args[1][0] as unknown as {subnet: number}).subnet;
-    expect(gossipStub.subscribeTopic.callCount).to.be.equal(SUBNETS_PER_NODE);
+    expect(gossipStub.subscribeTopic.callCount).toBe(SUBNETS_PER_NODE);
     sandbox.clock.tick(config.SECONDS_PER_SLOT * SLOTS_PER_EPOCH * (ALTAIR_FORK_EPOCH - 2) * 1000);
     service.subscribeSubnetsToNextFork(ForkName.altair);
     // SUBNETS_PER_NODE = 2 => 2 more calls
     // same subnets were called
-    expect(gossipStub.subscribeTopic.calledWithMatch({fork: ForkName.altair, subnet: firstSubnet})).to.be.true;
-    expect(gossipStub.subscribeTopic.calledWithMatch({fork: ForkName.altair, subnet: secondSubnet})).to.be.true;
-    expect(gossipStub.subscribeTopic.callCount).to.be.equal(2 * SUBNETS_PER_NODE);
+    expect(gossipStub.subscribeTopic.calledWithMatch({fork: ForkName.altair, subnet: firstSubnet})).toBe(true);
+    expect(gossipStub.subscribeTopic.calledWithMatch({fork: ForkName.altair, subnet: secondSubnet})).toBe(true);
+    expect(gossipStub.subscribeTopic.callCount).toBe(2 * SUBNETS_PER_NODE);
     // 2 epochs after the fork
     sandbox.clock.tick(config.SECONDS_PER_SLOT * 4 * 1000);
     service.unsubscribeSubnetsFromPrevFork(ForkName.phase0);
-    expect(gossipStub.unsubscribeTopic.calledWithMatch({fork: ForkName.phase0, subnet: firstSubnet})).to.be.true;
-    expect(gossipStub.unsubscribeTopic.calledWithMatch({fork: ForkName.phase0, subnet: secondSubnet})).to.be.true;
-    expect(gossipStub.unsubscribeTopic.callCount).to.be.equal(ATTESTATION_SUBNET_COUNT);
+    expect(gossipStub.unsubscribeTopic.calledWithMatch({fork: ForkName.phase0, subnet: firstSubnet})).toBe(true);
+    expect(gossipStub.unsubscribeTopic.calledWithMatch({fork: ForkName.phase0, subnet: secondSubnet})).toBe(true);
+    expect(gossipStub.unsubscribeTopic.callCount).toBe(ATTESTATION_SUBNET_COUNT);
   });
 
   it("should not subscribe to new short lived subnet if not aggregator", () => {
-    expect(gossipStub.subscribeTopic.callCount).to.be.equal(SUBNETS_PER_NODE);
+    expect(gossipStub.subscribeTopic.callCount).toBe(SUBNETS_PER_NODE);
     const firstSubnet = (gossipStub.subscribeTopic.args[0][0] as unknown as {subnet: number}).subnet;
     const secondSubnet = (gossipStub.subscribeTopic.args[1][0] as unknown as {subnet: number}).subnet;
     // should subscribe to new short lived subnet
     const newSubnet = 63;
-    expect(newSubnet).to.be.not.equal(firstSubnet);
-    expect(newSubnet).to.be.not.equal(secondSubnet);
+    expect(newSubnet).not.toBe(firstSubnet);
+    expect(newSubnet).not.toBe(secondSubnet);
     const subscription: CommitteeSubscription = {
       validatorIndex: 2023,
       subnet: newSubnet,
@@ -109,17 +108,17 @@ describe("DLLAttnetsService", () => {
     };
     service.addCommitteeSubscriptions([subscription]);
     // no new subscription
-    expect(gossipStub.subscribeTopic.callCount).to.be.equal(SUBNETS_PER_NODE);
+    expect(gossipStub.subscribeTopic.callCount).toBe(SUBNETS_PER_NODE);
   });
 
   it("should subscribe to new short lived subnet if aggregator", () => {
-    expect(gossipStub.subscribeTopic.callCount).to.be.equal(SUBNETS_PER_NODE);
+    expect(gossipStub.subscribeTopic.callCount).toBe(SUBNETS_PER_NODE);
     const firstSubnet = (gossipStub.subscribeTopic.args[0][0] as unknown as {subnet: number}).subnet;
     const secondSubnet = (gossipStub.subscribeTopic.args[1][0] as unknown as {subnet: number}).subnet;
     // should subscribe to new short lived subnet
     const newSubnet = 63;
-    expect(newSubnet).to.be.not.equal(firstSubnet);
-    expect(newSubnet).to.be.not.equal(secondSubnet);
+    expect(newSubnet).not.toBe(firstSubnet);
+    expect(newSubnet).not.toBe(secondSubnet);
     const subscription: CommitteeSubscription = {
       validatorIndex: 2023,
       subnet: newSubnet,
@@ -128,17 +127,17 @@ describe("DLLAttnetsService", () => {
     };
     service.addCommitteeSubscriptions([subscription]);
     // it does not subscribe immediately
-    expect(gossipStub.subscribeTopic.callCount).to.be.equal(SUBNETS_PER_NODE);
+    expect(gossipStub.subscribeTopic.callCount).toBe(SUBNETS_PER_NODE);
     sandbox.clock.tick(config.SECONDS_PER_SLOT * (subscription.slot - 2) * 1000);
     // then subscribe 2 slots before dutied slot
-    expect(gossipStub.subscribeTopic.callCount).to.be.equal(SUBNETS_PER_NODE + 1);
+    expect(gossipStub.subscribeTopic.callCount).toBe(SUBNETS_PER_NODE + 1);
     // then unsubscribe after the expiration
     sandbox.clock.tick(config.SECONDS_PER_SLOT * (subscription.slot + 1) * 1000);
-    expect(gossipStub.unsubscribeTopic.calledWithMatch({subnet: newSubnet})).to.be.true;
+    expect(gossipStub.unsubscribeTopic.calledWithMatch({subnet: newSubnet})).toBe(true);
   });
 
   it("should not subscribe to existing short lived subnet if aggregator", () => {
-    expect(gossipStub.subscribeTopic.callCount).to.be.equal(SUBNETS_PER_NODE);
+    expect(gossipStub.subscribeTopic.callCount).toBe(SUBNETS_PER_NODE);
     const firstSubnet = (gossipStub.subscribeTopic.args[0][0] as unknown as {subnet: number}).subnet;
     // should not subscribe to existing short lived subnet
     const subscription: CommitteeSubscription = {
@@ -148,9 +147,9 @@ describe("DLLAttnetsService", () => {
       isAggregator: true,
     };
     service.addCommitteeSubscriptions([subscription]);
-    expect(gossipStub.subscribeTopic.callCount).to.be.equal(SUBNETS_PER_NODE);
+    expect(gossipStub.subscribeTopic.callCount).toBe(SUBNETS_PER_NODE);
     // then should not subscribe after the expiration
     sandbox.clock.tick(config.SECONDS_PER_SLOT * (subscription.slot + 1) * 1000);
-    expect(gossipStub.unsubscribeTopic.called).to.be.false;
+    expect(gossipStub.unsubscribeTopic.called).toBe(false);
   });
 });

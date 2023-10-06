@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import {BeaconStateAltair} from "@lodestar/state-transition";
 import {SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {altair, ssz} from "@lodestar/types";
@@ -16,7 +15,7 @@ describe("chain / lightclient / proof", () => {
   const currentSyncCommittee = fillSyncCommittee(Buffer.alloc(48, 0xbb));
   const nextSyncCommittee = fillSyncCommittee(Buffer.alloc(48, 0xcc));
 
-  before("random state", () => {
+  beforeAll("random state", () => {
     state = ssz.altair.BeaconState.defaultViewDU();
     state.currentSyncCommittee = ssz.altair.SyncCommittee.toViewDU(currentSyncCommittee);
     state.nextSyncCommittee = ssz.altair.SyncCommittee.toViewDU(nextSyncCommittee);
@@ -38,7 +37,7 @@ describe("chain / lightclient / proof", () => {
         ...fromGindex(syncCommitteesGindex),
         stateRoot
       )
-    ).to.equal(true, "Invalid proof");
+    ).toBe(true);
   });
 
   it("currentSyncCommittee proof", () => {
@@ -52,7 +51,7 @@ describe("chain / lightclient / proof", () => {
         ...fromGindex(currentSyncCommitteeGindex),
         stateRoot
       )
-    ).to.equal(true, "Invalid proof");
+    ).toBe(true);
   });
 
   it("nextSyncCommittee proof", () => {
@@ -66,7 +65,7 @@ describe("chain / lightclient / proof", () => {
         ...fromGindex(nextSyncCommitteeGindex),
         stateRoot
       )
-    ).to.equal(true, "Invalid proof");
+    ).toBe(true);
   });
 });
 

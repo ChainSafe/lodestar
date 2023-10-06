@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import {BitArray} from "@chainsafe/ssz";
 import {
   AggregationInfo,
@@ -56,7 +55,7 @@ describe("SeenAggregatedAttestations.isKnown", function () {
       for (const {bits, isKnown} of checkAttestingBits) {
         // expect(cache.participantsKnown(subsetContribution)).to.equal(isKnown);
         const toCheckAggBits = new BitArray(new Uint8Array(bits), 8);
-        expect(cache.isKnown(targetEpoch, attDataRoot, toCheckAggBits)).to.be.equal(isKnown);
+        expect(cache.isKnown(targetEpoch, attDataRoot, toCheckAggBits)).toBe(isKnown);
       }
     });
   }
@@ -102,7 +101,7 @@ describe("insertDesc", function () {
       const seenAggregationInfoArr = arr.map(toAggregationBits);
 
       insertDesc(seenAggregationInfoArr, toAggregationBits(bits));
-      expect(seenAggregationInfoArr).to.be.deep.equal(result.map(toAggregationBits));
+      expect(seenAggregationInfoArr).toEqual(result.map(toAggregationBits));
     });
   }
 });

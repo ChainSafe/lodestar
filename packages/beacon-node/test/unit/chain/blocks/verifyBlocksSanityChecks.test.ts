@@ -1,5 +1,4 @@
 import sinon, {SinonStubbedInstance} from "sinon";
-import {expect} from "chai";
 
 import {config} from "@lodestar/config/default";
 import {ForkChoice, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
@@ -73,9 +72,9 @@ describe("chain / blocks / verifyBlocksSanityChecks", function () {
 
     const {relevantBlocks, parentSlots} = verifyBlocksSanityChecks(modules, blocksToProcess, {ignoreIfKnown: true});
 
-    expect(relevantBlocks).to.deep.equal([blocks[1], blocks[2]], "Wrong relevantBlocks");
+    expect(relevantBlocks).toEqual([blocks[1], blocks[2]]);
     // Also check parentSlots
-    expect(parentSlots).to.deep.equal(slots([blocks[0], blocks[1]]), "Wrong parentSlots");
+    expect(parentSlots).toEqual(slots([blocks[0], blocks[1]]));
   });
 
   it("[ALREADY_KNOWN, OK, OK]", () => {
@@ -199,5 +198,5 @@ function expectBlocks(
     return blocks.map((block) => allBlocks.indexOf(block));
   }
 
-  expect(indexOfBlocks(actualBlocks)).to.deep.equal(indexOfBlocks(expectedBlocks), `${message} - of block indexes`);
+  expect(indexOfBlocks(actualBlocks)).toEqual(indexOfBlocks(expectedBlocks));
 }

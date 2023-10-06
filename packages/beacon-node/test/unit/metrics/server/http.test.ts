@@ -17,7 +17,7 @@ describe("HttpMetricsServer", () => {
     await res.text();
   });
 
-  after(async () => {
+  afterAll(async () => {
     if (server) await server.close();
   });
 });

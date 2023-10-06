@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import {toHexString} from "@chainsafe/ssz";
 import {ChainConfig} from "@lodestar/config";
 import {sleep} from "@lodestar/utils";
@@ -78,13 +77,10 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
     }
 
     // Status should acknowlege merge block is found
-    expect(eth1MergeBlockTracker["status"].code).to.equal(StatusCode.FOUND, "Wrong StatusCode");
+    expect(eth1MergeBlockTracker["status"].code).toBe(StatusCode.FOUND);
 
     // Given the total difficulty offset the block that has TTD is the `difficultyOffset`nth block
-    expect(await eth1MergeBlockTracker.getTerminalPowBlock()).to.deep.equal(
-      terminalPowBlock,
-      "Wrong found terminal pow block"
-    );
+    expect(await eth1MergeBlockTracker.getTerminalPowBlock()).toEqual(terminalPowBlock);
   });
 
   it("Should find terminal pow block polling future 'latest' blocks", async () => {
@@ -244,13 +240,10 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
     }
 
     // Status should acknowlege merge block is found
-    expect(eth1MergeBlockTracker["status"].code).to.equal(StatusCode.FOUND, "Wrong StatusCode");
+    expect(eth1MergeBlockTracker["status"].code).toBe(StatusCode.FOUND);
 
     // Given the total difficulty offset the block that has TTD is the `difficultyOffset`nth block
-    expect(await eth1MergeBlockTracker.getTerminalPowBlock()).to.deep.equal(
-      toPowBlock(expectedMergeBlock),
-      "Wrong found terminal pow block"
-    );
+    expect(await eth1MergeBlockTracker.getTerminalPowBlock()).toEqual(toPowBlock(expectedMergeBlock));
   }
 });
 

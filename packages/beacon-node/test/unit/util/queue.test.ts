@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import {sleep} from "@lodestar/utils";
 
 import {JobFnQueue, QueueError, QueueErrorCode, QueueType} from "../../../src/util/queue/index.js";
@@ -103,10 +102,10 @@ describe("Job queue", () => {
         const jobResults = await Promise.allSettled(jobPromises);
 
         for (const [i, jobResult] of jobResults.entries()) {
-          expect(jobResult.status).to.equal("fulfilled", `Job ${i} rejected`);
+          expect(jobResult.status).toBe("fulfilled");
         }
 
-        expect(results).to.deep.equal(expectedResults, "Wrong results");
+        expect(results).toEqual(expectedResults);
       });
     }
   });

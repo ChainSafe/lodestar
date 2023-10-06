@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import {ssz, allForks} from "@lodestar/types";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
@@ -48,7 +47,7 @@ describe("UpgradeLightClientHeader", function () {
         lcHeaderByFork[toFork].beacon.slot = testSlots[fromFork];
 
         const updatedHeader = upgradeLightClientHeader(config, toFork, lcHeaderByFork[fromFork]);
-        expect(updatedHeader).to.deep.equal(lcHeaderByFork[toFork], `${fromFork} -> ${toFork}`);
+        expect(updatedHeader).toEqual(lcHeaderByFork[toFork]);
       });
     }
   }
@@ -64,7 +63,9 @@ describe("UpgradeLightClientHeader", function () {
 
         expect(() => {
           upgradeLightClientHeader(config, toFork, lcHeaderByFork[fromFork]);
-        }).to.throw(`Invalid upgrade request from headerFork=${fromFork} to targetFork=${toFork}`);
+        }).toThrow(
+          `Invalid upgrade request from headerFork=${fromFork} to targetFork=${toFork}`
+        );
       });
     }
   }

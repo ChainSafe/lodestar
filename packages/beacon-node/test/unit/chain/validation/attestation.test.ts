@@ -1,5 +1,4 @@
 import sinon, {SinonStubbedInstance} from "sinon";
-import {expect} from "chai";
 import {BitArray} from "@chainsafe/ssz";
 import type {PublicKey, SecretKey} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
@@ -142,9 +141,9 @@ describe("validateGossipAttestationsSameAttData", () => {
       await validateGossipAttestationsSameAttData(ForkName.phase0, chain, new Array(5).fill({}), 0, phase0ValidationFn);
       for (let validatorIndex = 0; validatorIndex < phase0Result.length; validatorIndex++) {
         if (seenAttesters.includes(validatorIndex)) {
-          expect(chain.seenAttesters.isKnown(0, validatorIndex)).to.be.true;
+          expect(chain.seenAttesters.isKnown(0, validatorIndex)).toBe(true);
         } else {
-          expect(chain.seenAttesters.isKnown(0, validatorIndex)).to.be.false;
+          expect(chain.seenAttesters.isKnown(0, validatorIndex)).toBe(false);
         }
       }
     }); // end test case
@@ -534,7 +533,7 @@ describe("getStateForAttestationVerification", () => {
         stateRoot: ZERO_HASH_HEX,
         blockRoot: ZERO_HASH_HEX,
       } as Partial<ProtoBlock> as ProtoBlock;
-      expect(regenStub[regenCall].callCount).to.equal(0);
+      expect(regenStub[regenCall].callCount).toBe(0);
       await getStateForAttestationVerification(
         chain,
         attSlot,
@@ -542,7 +541,7 @@ describe("getStateForAttestationVerification", () => {
         attHeadBlock,
         RegenCaller.validateGossipAttestation
       );
-      expect(regenStub[regenCall].callCount).to.equal(1);
+      expect(regenStub[regenCall].callCount).toBe(1);
     });
   }
 });

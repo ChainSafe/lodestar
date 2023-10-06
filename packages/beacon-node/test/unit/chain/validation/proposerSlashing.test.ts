@@ -30,7 +30,7 @@ describe("validate proposer slashing", () => {
     chainStub.getHeadState.returns(state);
   });
 
-  after(() => {
+  afterAll(() => {
     sandbox.restore();
   });
 

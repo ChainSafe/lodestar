@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import {
   QUANTITY,
   quantityToBytes,
@@ -61,20 +60,20 @@ describe("eth1 / hex encoding", () => {
 
     for (const {quantity, bytes, num, bigint} of testCases) {
       it(`quantityToBytes - ${quantity}`, () => {
-        expect(Buffer.from(quantityToBytes(quantity)).toString("hex")).to.equal(bytes);
+        expect(Buffer.from(quantityToBytes(quantity)).toString("hex")).toBe(bytes);
       });
       it(`quantityToBigint - ${quantity}`, () => {
-        expect(quantityToBigint(quantity)).to.equal(bigint);
+        expect(quantityToBigint(quantity)).toBe(bigint);
       });
       it(`bytesToQuantity - ${bytes}`, () => {
-        expect(bytesToQuantity(Buffer.from(bytes, "hex"))).to.equal(quantity);
+        expect(bytesToQuantity(Buffer.from(bytes, "hex"))).toBe(quantity);
       });
       if (num !== undefined) {
         it(`quantityToNum - ${quantity}`, () => {
-          expect(quantityToNum(quantity)).to.equal(num);
+          expect(quantityToNum(quantity)).toBe(num);
         });
         it(`numToQuantity - ${num}`, () => {
-          expect(numToQuantity(num)).to.equal(quantity);
+          expect(numToQuantity(num)).toBe(quantity);
         });
       }
     }

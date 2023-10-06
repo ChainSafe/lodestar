@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import {createMetricsTest} from "./utils.js";
 
 describe("Metrics", () => {
@@ -6,7 +5,7 @@ describe("Metrics", () => {
     const metrics = createMetricsTest();
     const metricsAsArray = metrics.register.getMetricsAsArray();
     const metricsAsText = await metrics.register.metrics();
-    expect(metricsAsArray.length).to.be.gt(0);
-    expect(metricsAsText).to.not.equal("");
+    expect(metricsAsArray.length).toBeGreaterThan(0);
+    expect(metricsAsText).not.toBe("");
   });
 });

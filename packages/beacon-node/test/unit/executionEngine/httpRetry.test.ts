@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import {fastify} from "fastify";
 import {fromHexString} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
@@ -10,7 +9,7 @@ import {IExecutionEngine, initializeExecutionEngine, PayloadAttributes} from "..
 
 describe("ExecutionEngine / http ", () => {
   const afterCallbacks: (() => Promise<void> | void)[] = [];
-  after(async () => {
+  afterAll(async () => {
     while (afterCallbacks.length > 0) {
       const callback = afterCallbacks.pop();
       if (callback) await callback();
@@ -24,7 +23,7 @@ describe("ExecutionEngine / http ", () => {
   let errorResponsesBeforeSuccess = 0;
   let controller: AbortController;
 
-  before("Prepare server", async () => {
+  beforeAll("Prepare server", async () => {
     controller = new AbortController();
     const server = fastify({logger: false});
 
@@ -72,7 +71,7 @@ describe("ExecutionEngine / http ", () => {
         result: {payloadStatus: {status: "VALID", latestValidHash: null, validationError: null}, payloadId: "0x"},
       };
 
-      expect(errorResponsesBeforeSuccess).to.be.equal(2, "errorResponsesBeforeSuccess should be 2 before request");
+      expect(errorResponsesBeforeSuccess).toBe(2);
       try {
         await executionEngine.notifyForkchoiceUpdate(
           ForkName.bellatrix,
@@ -81,12 +80,9 @@ describe("ExecutionEngine / http ", () => {
           forkChoiceHeadData.finalizedBlockHash
         );
       } catch (err) {
-        expect(err).to.be.instanceOf(Error);
+        expect(err).toBeInstanceOf(Error);
       }
-      expect(errorResponsesBeforeSuccess).to.be.equal(
-        1,
-        "errorResponsesBeforeSuccess no retry should be decremented once"
-      );
+      expect(errorResponsesBeforeSuccess).toBe(1);
     });
 
     it("notifyForkchoiceUpdate with retry when pay load attributes", async function () {
@@ -125,10 +121,7 @@ describe("ExecutionEngine / http ", () => {
         },
       };
 
-      expect(errorResponsesBeforeSuccess).to.not.be.equal(
-        0,
-        "errorResponsesBeforeSuccess should not be zero before request"
-      );
+      expect(errorResponsesBeforeSuccess).not.toBe(0);
       await executionEngine.notifyForkchoiceUpdate(
         ForkName.bellatrix,
         forkChoiceHeadData.headBlockHash,
@@ -137,11 +130,8 @@ describe("ExecutionEngine / http ", () => {
         payloadAttributes
       );
 
-      expect(reqJsonRpcPayload).to.deep.equal(request, "Wrong request JSON RPC payload");
-      expect(errorResponsesBeforeSuccess).to.be.equal(
-        0,
-        "errorResponsesBeforeSuccess should be zero after request with retries"
-      );
+      expect(reqJsonRpcPayload).toEqual(request);
+      expect(errorResponsesBeforeSuccess).toBe(0);
     });
   });
 });

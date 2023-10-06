@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import {toHexString} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
 import {generateProtoBlock, generateSignedBlockAtSlot} from "../../../../../utils/typeGenerator.js";
@@ -33,19 +32,19 @@ describe("api - beacon - getBlockHeaders", function () {
 
     server.dbStub.blockArchive.get.resolves(null);
     const {data: blockHeaders} = await server.blockApi.getBlockHeaders({});
-    expect(blockHeaders).to.not.be.null;
-    expect(blockHeaders.length).to.be.equal(2);
-    expect(blockHeaders.filter((header) => header.canonical).length).to.be.equal(1);
-    expect(server.forkChoiceStub.getHead).to.be.calledOnce;
-    expect(server.chainStub.getCanonicalBlockAtSlot).to.be.calledOnce;
-    expect(server.forkChoiceStub.getBlockSummariesAtSlot).to.be.calledOnce;
-    expect(server.dbStub.block.get).to.be.calledOnce;
+    expect(blockHeaders).not.toBeNull();
+    expect(blockHeaders.length).toBe(2);
+    expect(blockHeaders.filter((header) => header.canonical).length).toBe(1);
+    expect(server.forkChoiceStub.getHead).toHaveBeenCalledTimes(1);
+    expect(server.chainStub.getCanonicalBlockAtSlot).toHaveBeenCalledTimes(1);
+    expect(server.forkChoiceStub.getBlockSummariesAtSlot).toHaveBeenCalledTimes(1);
+    expect(server.dbStub.block.get).toHaveBeenCalledTimes(1);
   });
 
   it("future slot", async function () {
     server.forkChoiceStub.getHead.returns(generateProtoBlock({slot: 1}));
     const {data: blockHeaders} = await server.blockApi.getBlockHeaders({slot: 2});
-    expect(blockHeaders.length).to.be.equal(0);
+    expect(blockHeaders.length).toBe(0);
   });
 
   it("finalized slot", async function () {
@@ -55,15 +54,15 @@ describe("api - beacon - getBlockHeaders", function () {
       .resolves({block: ssz.phase0.SignedBeaconBlock.defaultValue(), executionOptimistic: false});
     server.forkChoiceStub.getBlockSummariesAtSlot.withArgs(0).returns([]);
     const {data: blockHeaders} = await server.blockApi.getBlockHeaders({slot: 0});
-    expect(blockHeaders.length).to.be.equal(1);
-    expect(blockHeaders[0].canonical).to.equal(true);
+    expect(blockHeaders.length).toBe(1);
+    expect(blockHeaders[0].canonical).toBe(true);
   });
 
   it("skip slot", async function () {
     server.forkChoiceStub.getHead.returns(generateProtoBlock({slot: 2}));
     server.chainStub.getCanonicalBlockAtSlot.withArgs(0).resolves(null);
     const {data: blockHeaders} = await server.blockApi.getBlockHeaders({slot: 0});
-    expect(blockHeaders.length).to.be.equal(0);
+    expect(blockHeaders.length).toBe(0);
   });
 
   it.skip("parent root filter - both finalized and non finalized results", async function () {
@@ -80,8 +79,8 @@ describe("api - beacon - getBlockHeaders", function () {
     server.dbStub.block.get.onFirstCall().resolves(generateSignedBlockAtSlot(1));
     server.dbStub.block.get.onSecondCall().resolves(generateSignedBlockAtSlot(2));
     const {data: blockHeaders} = await server.blockApi.getBlockHeaders({parentRoot});
-    expect(blockHeaders.length).to.equal(3);
-    expect(blockHeaders.filter((b) => b.canonical).length).to.equal(2);
+    expect(blockHeaders.length).toBe(3);
+    expect(blockHeaders.filter((b) => b.canonical).length).toBe(2);
   });
 
   it("parent root - no finalized block", async function () {
@@ -90,14 +89,14 @@ describe("api - beacon - getBlockHeaders", function () {
     server.forkChoiceStub.getCanonicalBlockAtSlot.withArgs(1).returns(generateProtoBlock());
     server.dbStub.block.get.resolves(generateSignedBlockAtSlot(1));
     const {data: blockHeaders} = await server.blockApi.getBlockHeaders({parentRoot});
-    expect(blockHeaders.length).to.equal(1);
+    expect(blockHeaders.length).toBe(1);
   });
 
   it("parent root - no non finalized blocks", async function () {
     server.dbStub.blockArchive.getByParentRoot.resolves(ssz.phase0.SignedBeaconBlock.defaultValue());
     server.forkChoiceStub.getBlockSummariesByParentRoot.returns([]);
     const {data: blockHeaders} = await server.blockApi.getBlockHeaders({parentRoot});
-    expect(blockHeaders.length).to.equal(1);
+    expect(blockHeaders.length).toBe(1);
   });
 
   it("parent root + slot filter", async function () {
@@ -117,6 +116,6 @@ describe("api - beacon - getBlockHeaders", function () {
       parentRoot: toHexString(Buffer.alloc(32, 1)),
       slot: 1,
     });
-    expect(blockHeaders.length).to.equal(1);
+    expect(blockHeaders.length).toBe(1);
   });
 });

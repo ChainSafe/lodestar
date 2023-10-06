@@ -33,7 +33,7 @@ describe("validate voluntary exit", () => {
   let signedVoluntaryExit: phase0.SignedVoluntaryExit;
   let opPool: OpPool & SinonStubbedInstance<OpPool>;
 
-  before(() => {
+  beforeAll(() => {
     const sk = bls.SecretKey.fromKeygen();
 
     const stateEmpty = ssz.phase0.BeaconState.defaultValue();

@@ -125,7 +125,7 @@ describe("api/validator - produceBlockV2", function () {
         slot,
         feeRecipient: expectedFeeRecipient,
       })
-    ).to.be.true;
+    ).toBe(true);
 
     // check that no feeRecipient is passed to produceBlock so that produceBlockBody will
     // pick it from beaconProposerCache
@@ -137,7 +137,7 @@ describe("api/validator - produceBlockV2", function () {
         slot,
         feeRecipient: undefined,
       })
-    ).to.be.true;
+    ).toBe(true);
   });
 
   it("correctly use passed feeRecipient in notifyForkchoiceUpdate", async () => {
@@ -188,7 +188,7 @@ describe("api/validator - produceBlockV2", function () {
           suggestedFeeRecipient: expectedFeeRecipient,
         }
       )
-    ).to.be.true;
+    ).toBe(true);
 
     // use fee recipient set in beaconProposerCacheStub if none passed
     beaconProposerCacheStub.getOrDefault.returns("0x fee recipient address");
@@ -214,6 +214,6 @@ describe("api/validator - produceBlockV2", function () {
           suggestedFeeRecipient: "0x fee recipient address",
         }
       )
-    ).to.be.true;
+    ).toBe(true);
   });
 });

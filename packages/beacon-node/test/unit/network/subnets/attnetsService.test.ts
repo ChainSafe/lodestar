@@ -1,5 +1,4 @@
 import sinon, {SinonStubbedInstance} from "sinon";
-import {expect} from "chai";
 import {
   ATTESTATION_SUBNET_COUNT,
   EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION,
@@ -84,53 +83,53 @@ describe("AttnetsService", function () {
 
   it("should not subscribe when there is no active validator", () => {
     clock.emit(ClockEvent.slot, 1);
-    expect(gossipStub.subscribeTopic).to.be.not.called;
+    expect(gossipStub.subscribeTopic).not.toHaveBeenCalled();
   });
 
   it("should subscribe to RANDOM_SUBNETS_PER_VALIDATOR per 1 validator", () => {
     service.addCommitteeSubscriptions([subscription]);
-    expect(gossipStub.subscribeTopic).to.be.calledOnce;
-    expect(metadata.seqNumber).to.be.equal(BigInt(1));
+    expect(gossipStub.subscribeTopic).toHaveBeenCalledTimes(1);
+    expect(metadata.seqNumber).toBe(BigInt(1));
     // subscribe with a different validator
     subscription.validatorIndex = 2022;
     service.addCommitteeSubscriptions([subscription]);
-    expect(gossipStub.subscribeTopic).to.be.calledTwice;
-    expect(metadata.seqNumber).to.be.equal(BigInt(2));
+    expect(gossipStub.subscribeTopic).toHaveBeenCalledTimes(2);
+    expect(metadata.seqNumber).toBe(BigInt(2));
     // subscribe with same validator
     subscription.validatorIndex = 2021;
     service.addCommitteeSubscriptions([subscription]);
-    expect(gossipStub.subscribeTopic).to.be.calledTwice;
-    expect(metadata.seqNumber).to.be.equal(BigInt(2));
+    expect(gossipStub.subscribeTopic).toHaveBeenCalledTimes(2);
+    expect(metadata.seqNumber).toBe(BigInt(2));
   });
 
   it("should handle validator expiry", async () => {
     service.addCommitteeSubscriptions([subscription]);
-    expect(metadata.seqNumber).to.be.equal(BigInt(1));
-    expect(EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION * SLOTS_PER_EPOCH).to.be.gt(150);
+    expect(metadata.seqNumber).toBe(BigInt(1));
+    expect(EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION * SLOTS_PER_EPOCH).toBeGreaterThan(150);
     sandbox.clock.tick(150 * SLOTS_PER_EPOCH * SECONDS_PER_SLOT * 1000);
-    expect(gossipStub.unsubscribeTopic).to.be.called;
+    expect(gossipStub.unsubscribeTopic).toHaveBeenCalled();
     // subscribe then unsubscribe
-    expect(metadata.seqNumber).to.be.equal(BigInt(2));
+    expect(metadata.seqNumber).toBe(BigInt(2));
   });
 
   it("should change subnet subscription after 2*EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION", async () => {
     service.addCommitteeSubscriptions([subscription]);
-    expect(gossipStub.subscribeTopic.calledOnce).to.be.true;
-    expect(metadata.seqNumber).to.be.equal(BigInt(1));
+    expect(gossipStub.subscribeTopic.calledOnce).toBe(true);
+    expect(metadata.seqNumber).toBe(BigInt(1));
     for (let numEpoch = 0; numEpoch <= numEpochRandomSubscription; numEpoch++) {
       // avoid known validator expiry
       service.addCommitteeSubscriptions([subscription]);
       sandbox.clock.tick(SLOTS_PER_EPOCH * SECONDS_PER_SLOT * 1000);
     }
     // may call 2 times, 1 for committee subnet, 1 for random subnet
-    expect(gossipStub.unsubscribeTopic).to.be.called;
+    expect(gossipStub.unsubscribeTopic).toHaveBeenCalled();
     // rebalance twice
-    expect(metadata.seqNumber).to.be.equal(BigInt(2));
+    expect(metadata.seqNumber).toBe(BigInt(2));
   });
 
   // Reproduce issue https://github.com/ChainSafe/lodestar/issues/4929
   it("should NOT unsubscribe any subnet if there are 64 known validators", async () => {
-    expect(clock.currentSlot).to.be.equal(startSlot, "incorrect start slot");
+    expect(clock.currentSlot).toBe(startSlot);
     // after random subnet expiration but before the next epoch
     const tcSubscription = {
       ...subscription,
@@ -151,10 +150,7 @@ describe("AttnetsService", function () {
     // tick 3 next slots to expect an attempt to expire committee subscription
     sandbox.clock.tick(3 * SECONDS_PER_SLOT * 1000);
     // should not unsubscribe any subnet topics as we have ATTESTATION_SUBNET_COUNT subscription
-    expect(gossipStub.unsubscribeTopic.called).to.be.equal(
-      false,
-      "should not unsubscribe any subnet topic if full random subnet subscriptions"
-    );
+    expect(gossipStub.unsubscribeTopic.called).toBe(false);
   });
 
   it("should prepare for a hard fork", async () => {
@@ -181,7 +177,8 @@ describe("AttnetsService", function () {
     }
 
     for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
-      expect(unsubbedPhase0Subnets.has(subnet), `Must unsubscribe from all subnets, missing subnet ${subnet}`).true;
+      // Must unsubscribe from all subnets, missing subnet ${subnet}
+      expect(unsubbedPhase0Subnets.has(subnet)).toBe(true);
     }
   });
 
@@ -190,20 +187,20 @@ describe("AttnetsService", function () {
     randomSubnet = COMMITTEE_SUBNET_SUBSCRIPTION;
     const aggregatorSubscription: CommitteeSubscription = {...subscription, isAggregator: true};
     service.addCommitteeSubscriptions([aggregatorSubscription]);
-    expect(service.shouldProcess(subscription.subnet, subscription.slot)).to.be.true;
-    expect(service.getActiveSubnets()).to.be.deep.equal([{subnet: COMMITTEE_SUBNET_SUBSCRIPTION, toSlot: 101}]);
+    expect(service.shouldProcess(subscription.subnet, subscription.slot)).toBe(true);
+    expect(service.getActiveSubnets()).toEqual([{subnet: COMMITTEE_SUBNET_SUBSCRIPTION, toSlot: 101}]);
     // committee subnet is same to random subnet
-    expect(gossipStub.subscribeTopic).to.be.calledOnce;
-    expect(metadata.seqNumber).to.be.equal(BigInt(1));
+    expect(gossipStub.subscribeTopic).toHaveBeenCalledTimes(1);
+    expect(metadata.seqNumber).toBe(BigInt(1));
     // pass through subscription slot
     sandbox.clock.tick((aggregatorSubscription.slot + 2) * SECONDS_PER_SLOT * 1000);
     // don't unsubscribe bc random subnet is still there
-    expect(gossipStub.unsubscribeTopic).to.be.not.called;
+    expect(gossipStub.unsubscribeTopic).not.toHaveBeenCalled();
   });
 
   it("should not process if no aggregator at dutied slot", () => {
-    expect(subscription.isAggregator).to.be.false;
+    expect(subscription.isAggregator).toBe(false);
     service.addCommitteeSubscriptions([subscription]);
-    expect(service.shouldProcess(subscription.subnet, subscription.slot)).to.be.false;
+    expect(service.shouldProcess(subscription.subnet, subscription.slot)).toBe(false);
   });
 });

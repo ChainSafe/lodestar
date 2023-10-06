@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import {ClientStats} from "../../../src/monitoring/types.js";
 import {createClientStats} from "../../../src/monitoring/clientStats.js";
 import {BEACON_NODE_STATS_SCHEMA, ClientStatsSchema, SYSTEM_STATS_SCHEMA, VALIDATOR_STATS_SCHEMA} from "./schemas.js";
@@ -8,7 +7,7 @@ describe("monitoring / clientStats", () => {
     it("should contain all required keys", () => {
       const beaconNodeStats = createClientStats("beacon")[0];
 
-      expect(getJsonKeys(beaconNodeStats)).to.have.all.members(getSchemaKeys(BEACON_NODE_STATS_SCHEMA));
+      expect(getJsonKeys(beaconNodeStats)).toEqual(getSchemaKeys(BEACON_NODE_STATS_SCHEMA));
     });
   });
 
@@ -16,7 +15,7 @@ describe("monitoring / clientStats", () => {
     it("should contain all required keys", () => {
       const validatorNodeStats = createClientStats("validator")[0];
 
-      expect(getJsonKeys(validatorNodeStats)).to.have.all.members(getSchemaKeys(VALIDATOR_STATS_SCHEMA));
+      expect(getJsonKeys(validatorNodeStats)).toEqual(getSchemaKeys(VALIDATOR_STATS_SCHEMA));
     });
   });
 
@@ -24,7 +23,7 @@ describe("monitoring / clientStats", () => {
     it("should contain all required keys", () => {
       const systemStats = createClientStats("beacon", true)[1];
 
-      expect(getJsonKeys(systemStats)).to.have.all.members(getSchemaKeys(SYSTEM_STATS_SCHEMA));
+      expect(getJsonKeys(systemStats)).toEqual(getSchemaKeys(SYSTEM_STATS_SCHEMA));
     });
   });
 });

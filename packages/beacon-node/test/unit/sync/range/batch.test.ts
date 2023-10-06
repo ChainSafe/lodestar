@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
@@ -17,7 +16,7 @@ describe("sync / range / batch", async () => {
 
   it("Should return correct blockByRangeRequest", () => {
     const batch = new Batch(startEpoch, config);
-    expect(batch.request).to.deep.equal({
+    expect(batch.request).toEqual({
       startSlot: 0,
       count: SLOTS_PER_EPOCH * EPOCHS_PER_BATCH,
       step: 1,
@@ -28,31 +27,31 @@ describe("sync / range / batch", async () => {
     const batch = new Batch(startEpoch, config);
 
     // Instantion: AwaitingDownload
-    expect(batch.state.status).to.equal(BatchStatus.AwaitingDownload, "Wrong status on instantiation");
+    expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
 
     // startDownloading: AwaitingDownload -> Downloading
     batch.startDownloading(peer);
-    expect(batch.state.status).to.equal(BatchStatus.Downloading, "Wrong status on startDownloading");
+    expect(batch.state.status).toBe(BatchStatus.Downloading);
 
     // downloadingError: Downloading -> AwaitingDownload
     batch.downloadingError();
-    expect(batch.state.status).to.equal(BatchStatus.AwaitingDownload, "Wrong status on downloadingError");
-    expect(batch.getFailedPeers()[0]).to.equal(peer, "getFailedPeers must returned peer from previous request");
+    expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
+    expect(batch.getFailedPeers()[0]).toBe(peer);
 
     // retry download: AwaitingDownload -> Downloading
     // downloadingSuccess: Downloading -> AwaitingProcessing
     batch.startDownloading(peer);
     batch.downloadingSuccess(blocksDownloaded);
-    expect(batch.state.status).to.equal(BatchStatus.AwaitingProcessing, "Wrong status on downloadingSuccess");
+    expect(batch.state.status).toBe(BatchStatus.AwaitingProcessing);
 
     // startProcessing: AwaitingProcessing -> Processing
     const blocksToProcess = batch.startProcessing();
-    expect(batch.state.status).to.equal(BatchStatus.Processing, "Wrong status on startProcessing");
-    expect(blocksToProcess).to.equal(blocksDownloaded, "Blocks to process should be the same downloaded");
+    expect(batch.state.status).toBe(BatchStatus.Processing);
+    expect(blocksToProcess).toBe(blocksDownloaded);
 
     // processingError: Processing -> AwaitingDownload
     batch.processingError(new Error());
-    expect(batch.state.status).to.equal(BatchStatus.AwaitingDownload, "Wrong status on processingError");
+    expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
 
     // retry download + processing: AwaitingDownload -> Downloading -> AwaitingProcessing -> Processing
     // processingSuccess: Processing -> AwaitingValidation
@@ -60,18 +59,18 @@ describe("sync / range / batch", async () => {
     batch.downloadingSuccess(blocksDownloaded);
     batch.startProcessing();
     batch.processingSuccess();
-    expect(batch.state.status).to.equal(BatchStatus.AwaitingValidation, "Wrong status on processingSuccess");
+    expect(batch.state.status).toBe(BatchStatus.AwaitingValidation);
 
     // validationError: AwaitingValidation -> AwaitingDownload
     batch.validationError(new Error());
-    expect(batch.state.status).to.equal(BatchStatus.AwaitingDownload, "Wrong status on validationError");
+    expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
 
     // retry download + processing + validation: AwaitingDownload -> Downloading -> AwaitingProcessing -> Processing -> AwaitingValidation
     batch.startDownloading(peer);
     batch.downloadingSuccess(blocksDownloaded);
     batch.startProcessing();
     batch.processingSuccess();
-    expect(batch.state.status).to.equal(BatchStatus.AwaitingValidation, "Wrong status on final processingSuccess");
+    expect(batch.state.status).toBe(BatchStatus.AwaitingValidation);
     // On validationSuccess() the batch will just be dropped and garbage collected
   });
 

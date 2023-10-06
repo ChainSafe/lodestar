@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import {ReprocessController} from "../../../src/chain/reprocess.js";
 
 describe("ReprocessController", function () {
@@ -11,14 +10,14 @@ describe("ReprocessController", function () {
   it("Block not found after 1 slot - returns false", async () => {
     const promise = controller.waitForBlockOfAttestation(100, "A");
     controller.onSlot(101);
-    expect(await promise).to.be.equal(false);
+    expect(await promise).toBe(false);
   });
 
   it("Block found too late - returns false", async () => {
     const promise = controller.waitForBlockOfAttestation(100, "A");
     controller.onBlockImported({slot: 100, root: "A"}, 101);
     controller.onSlot(101);
-    expect(await promise).to.be.equal(false);
+    expect(await promise).toBe(false);
   });
 
   it("Too many promises - returns false", async () => {
@@ -26,12 +25,12 @@ describe("ReprocessController", function () {
       void controller.waitForBlockOfAttestation(100, "A");
     }
     const promise = controller.waitForBlockOfAttestation(100, "A");
-    expect(await promise).to.be.equal(false);
+    expect(await promise).toBe(false);
   });
 
   it("Block comes on time - returns true", async () => {
     const promise = controller.waitForBlockOfAttestation(100, "A");
     controller.onBlockImported({slot: 100, root: "A"}, 100);
-    expect(await promise).to.be.equal(true);
+    expect(await promise).toBe(true);
   });
 });

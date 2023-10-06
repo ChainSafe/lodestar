@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import {phase0, ssz} from "@lodestar/types";
 import {MAX_DEPOSITS} from "@lodestar/params";
 import {verifyMerkleBranch} from "@lodestar/utils";
@@ -85,7 +84,7 @@ describe("eth1 / util / deposits", function () {
 
         if (expectedReturnedIndexes) {
           const result = await resultPromise;
-          expect(result.map((deposit) => deposit.index)).to.deep.equal(expectedReturnedIndexes);
+          expect(result.map((deposit) => deposit.index)).toEqual(expectedReturnedIndexes);
         } else if (error != null) {
           await expectRejectedWithLodestarError(resultPromise, error);
         } else {
@@ -103,7 +102,7 @@ describe("eth1 / util / deposits", function () {
       const eth1Data = generateEth1Data(depositCount, depositRootTree);
 
       const deposits = getDepositsWithProofs([], depositRootTree, eth1Data);
-      expect(deposits).to.be.deep.equal([]);
+      expect(deposits).toEqual([]);
     });
 
     it("return deposits with valid proofs", function () {
@@ -126,20 +125,18 @@ describe("eth1 / util / deposits", function () {
       const deposits = getDepositsWithProofs(depositEvents, depositRootTree, eth1Data);
 
       // Should not return all deposits
-      expect(deposits.length).to.be.equal(2);
+      expect(deposits.length).toBe(2);
 
       // Verify each individual merkle root
       for (const [index, deposit] of deposits.entries()) {
-        expect(
-          verifyMerkleBranch(
-            ssz.phase0.DepositData.hashTreeRoot(deposit.data),
-            Array.from(deposit.proof).map((p) => p),
-            33,
-            index,
-            eth1Data.depositRoot
-          ),
-          `Wrong merkle proof on deposit ${index}`
-        ).to.equal(true);
+        // Wrong merkle proof on deposit ${index}
+        expect(verifyMerkleBranch(
+          ssz.phase0.DepositData.hashTreeRoot(deposit.data),
+          Array.from(deposit.proof).map((p) => p),
+          33,
+          index,
+          eth1Data.depositRoot
+        )).toBe(true);
       }
     });
   });

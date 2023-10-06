@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import {toHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
 import {CheckpointWithHex, ExecutionStatus, ForkChoice} from "@lodestar/fork-choice";
@@ -49,7 +48,7 @@ describe("LodestarForkChoice", function () {
 
   let state: CachedBeaconStateAllForks;
 
-  before(() => {
+  beforeAll(() => {
     state = createCachedBeaconStateTest(anchorState, config);
   });
 
@@ -87,22 +86,22 @@ describe("LodestarForkChoice", function () {
       const orphanedBlockHex = ssz.phase0.BeaconBlock.hashTreeRoot(orphanedBlock.message);
       // forkchoice tie-break condition is based on root hex
       // eslint-disable-next-line chai-expect/no-inner-compare
-      expect(orphanedBlockHex > parentBlockHex).to.equal(true);
+      expect(orphanedBlockHex > parentBlockHex).toBe(true);
       const currentSlot = childBlock.message.slot;
       forkChoice.updateTime(currentSlot);
 
       forkChoice.onBlock(targetBlock.message, targetState, blockDelaySec, currentSlot, executionStatus);
       forkChoice.onBlock(orphanedBlock.message, orphanedState, blockDelaySec, currentSlot, executionStatus);
       let head = forkChoice.getHead();
-      expect(head.slot).to.be.equal(orphanedBlock.message.slot);
+      expect(head.slot).toBe(orphanedBlock.message.slot);
       forkChoice.onBlock(parentBlock.message, parentState, blockDelaySec, currentSlot, executionStatus);
       // tie break condition causes head to be orphaned block (based on hex root comparison)
       head = forkChoice.getHead();
-      expect(head.slot).to.be.equal(orphanedBlock.message.slot);
+      expect(head.slot).toBe(orphanedBlock.message.slot);
       forkChoice.onBlock(childBlock.message, childState, blockDelaySec, currentSlot, executionStatus);
       head = forkChoice.getHead();
       // without vote, head gets stuck at orphaned block
-      expect(head.slot).to.be.equal(orphanedBlock.message.slot);
+      expect(head.slot).toBe(orphanedBlock.message.slot);
       const source: phase0.Checkpoint = {
         root: finalizedRoot,
         epoch: computeEpochAtSlot(blockHeader.slot),
@@ -115,7 +114,7 @@ describe("LodestarForkChoice", function () {
       forkChoice.onAttestation(attestation2, toHexString(ssz.phase0.AttestationData.hashTreeRoot(attestation2.data)));
       head = forkChoice.getHead();
       // with votes, head becomes the child block
-      expect(head.slot).to.be.equal(childBlock.message.slot);
+      expect(head.slot).toBe(childBlock.message.slot);
     });
 
     /**
@@ -164,32 +163,20 @@ describe("LodestarForkChoice", function () {
       forkChoice.onBlock(block20.message, state20, blockDelaySec, currentSlot, executionStatus);
       forkChoice.onBlock(block24.message, state24, blockDelaySec, currentSlot, executionStatus);
       forkChoice.onBlock(block28.message, state28, blockDelaySec, currentSlot, executionStatus);
-      expect(forkChoice.getAllAncestorBlocks(hashBlock(block16.message)).length).to.be.equal(
-        3,
-        "getAllAncestorBlocks should return 3 blocks"
-      );
-      expect(forkChoice.getAllAncestorBlocks(hashBlock(block24.message)).length).to.be.equal(
-        5,
-        "getAllAncestorBlocks should return 5 blocks"
-      );
-      expect(forkChoice.getBlockHex(hashBlock(block08.message))).to.be.not.null;
-      expect(forkChoice.getBlockHex(hashBlock(block12.message))).to.be.not.null;
-      expect(forkChoice.hasBlockHex(hashBlock(block08.message))).to.equal(true);
-      expect(forkChoice.hasBlockHex(hashBlock(block12.message))).to.equal(true);
+      expect(forkChoice.getAllAncestorBlocks(hashBlock(block16.message)).length).toBe(3);
+      expect(forkChoice.getAllAncestorBlocks(hashBlock(block24.message)).length).toBe(5);
+      expect(forkChoice.getBlockHex(hashBlock(block08.message))).not.toBeNull();
+      expect(forkChoice.getBlockHex(hashBlock(block12.message))).not.toBeNull();
+      expect(forkChoice.hasBlockHex(hashBlock(block08.message))).toBe(true);
+      expect(forkChoice.hasBlockHex(hashBlock(block12.message))).toBe(true);
       forkChoice.onBlock(block32.message, state32, blockDelaySec, currentSlot, executionStatus);
       forkChoice.prune(hashBlock(block16.message));
-      expect(forkChoice.getAllAncestorBlocks(hashBlock(block16.message)).length).to.be.equal(
-        0,
-        "getAllAncestorBlocks should not return finalized block"
-      );
-      expect(forkChoice.getAllAncestorBlocks(hashBlock(block24.message)).length).to.be.equal(
-        2,
-        "getAllAncestorBlocks should return 2 blocks"
-      );
-      expect(forkChoice.getBlockHex(hashBlock(block08.message))).to.equal(null);
-      expect(forkChoice.getBlockHex(hashBlock(block12.message))).to.equal(null);
-      expect(forkChoice.hasBlockHex(hashBlock(block08.message))).to.equal(false);
-      expect(forkChoice.hasBlockHex(hashBlock(block12.message))).to.equal(false);
+      expect(forkChoice.getAllAncestorBlocks(hashBlock(block16.message)).length).toBe(0);
+      expect(forkChoice.getAllAncestorBlocks(hashBlock(block24.message)).length).toBe(2);
+      expect(forkChoice.getBlockHex(hashBlock(block08.message))).toBe(null);
+      expect(forkChoice.getBlockHex(hashBlock(block12.message))).toBe(null);
+      expect(forkChoice.hasBlockHex(hashBlock(block08.message))).toBe(false);
+      expect(forkChoice.hasBlockHex(hashBlock(block12.message))).toBe(false);
     });
 
     /**
@@ -222,7 +209,7 @@ describe("LodestarForkChoice", function () {
             summary.slot < childBlock.message.slot && !forkChoice.isDescendant(summary.blockRoot, childBlockRoot)
         );
       // compare to getAllNonAncestorBlocks api
-      expect(forkChoice.getAllNonAncestorBlocks(childBlockRoot)).to.be.deep.equal(nonCanonicalSummaries);
+      expect(forkChoice.getAllNonAncestorBlocks(childBlockRoot)).toEqual(nonCanonicalSummaries);
     });
 
     /**
@@ -298,10 +285,7 @@ describe("LodestarForkChoice", function () {
       forkChoice.onBlock(blockZ.message, stateZ, blockDelaySec, blockZ.message.slot, executionStatus);
 
       const head = forkChoice.updateHead();
-      expect(head.blockRoot).to.be.equal(
-        toHexString(ssz.phase0.BeaconBlock.hashTreeRoot(blockY.message)),
-        "blockY should be new head as it's a potential head and has same unrealized justified checkpoints & more attestations"
-      );
+      expect(head.blockRoot).toBe(toHexString(ssz.phase0.BeaconBlock.hashTreeRoot(blockY.message)));
     });
   });
 });

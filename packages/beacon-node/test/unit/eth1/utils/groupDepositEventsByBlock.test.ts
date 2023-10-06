@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import {phase0} from "@lodestar/types";
 import {groupDepositEventsByBlock} from "../../../../src/eth1/utils/groupDepositEventsByBlock.js";
 
@@ -25,7 +24,7 @@ describe("eth1 / util / groupDepositEventsByBlock", function () {
       deposits: blockEvent.depositEvents.map((deposit) => deposit.index),
     }));
 
-    expect(blockEventsIndexOnly).to.deep.equal([
+    expect(blockEventsIndexOnly).toEqual([
       {blockNumber: 1, deposits: [0]},
       {blockNumber: 2, deposits: [1, 2]},
       {blockNumber: 3, deposits: [3, 4]},

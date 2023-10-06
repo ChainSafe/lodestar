@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
@@ -47,25 +46,21 @@ describe("block archiver task", function () {
       currentEpoch
     );
 
-    expect(dbStub.blockArchive.batchPutBinary.getCall(0).args[0]).to.deep.equal(
-      canonicalBlocks.map((summary) => ({
-        key: summary.slot,
-        value: blockBytes,
-        slot: summary.slot,
-        blockRoot: fromHexString(summary.blockRoot),
-        parentRoot: fromHexString(summary.parentRoot),
-      })),
-      "blockArchive.batchPutBinary called with wrong args"
-    );
+    expect(dbStub.blockArchive.batchPutBinary.getCall(0).args[0]).toEqual(canonicalBlocks.map((summary) => ({
+      key: summary.slot,
+      value: blockBytes,
+      slot: summary.slot,
+      blockRoot: fromHexString(summary.blockRoot),
+      parentRoot: fromHexString(summary.parentRoot),
+    })));
 
     // delete canonical blocks
     expect(
       dbStub.block.batchDelete.calledWith(
         [blocks[4], blocks[3], blocks[1], blocks[0]].map((summary) => fromHexString(summary.blockRoot))
       )
-    ).to.equal(true);
+    ).toBe(true);
     // delete non canonical blocks
-    expect(dbStub.block.batchDelete.calledWith([blocks[2]].map((summary) => fromHexString(summary.blockRoot)))).to.be
-      .true;
+    expect(dbStub.block.batchDelete.calledWith([blocks[2]].map((summary) => fromHexString(summary.blockRoot)))).toBe(true);
   });
 });

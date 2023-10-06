@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import {sortBy} from "../../../src/util/sortBy.js";
 
 describe("util / sortBy", () => {
@@ -47,8 +46,8 @@ describe("util / sortBy", () => {
     it(id, () => {
       const _inputArr = [...inputArr]; // Copy to test immutability
       const _sortedArr = sortBy(inputArr, ...conditions);
-      expect(_sortedArr).to.deep.equal(sortedArr, "Wrong sortedArr");
-      expect(inputArr).to.deep.equal(_inputArr, "inputArr was mutated");
+      expect(_sortedArr).toEqual(sortedArr);
+      expect(inputArr).toEqual(_inputArr);
     });
   }
 });

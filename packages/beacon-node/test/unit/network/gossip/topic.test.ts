@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import {ForkName} from "@lodestar/params";
 import {GossipType, GossipEncoding, GossipTopicMap} from "../../../../src/network/gossip/index.js";
 import {parseGossipTopic, stringifyGossipTopic} from "../../../../src/network/gossip/topic.js";
@@ -89,12 +88,12 @@ describe("network / gossip / topic", function () {
     for (const {topic, topicStr} of topics) {
       it(`should encode gossip topic ${topic.type} ${topic.fork} ${topic.encoding}`, async () => {
         const topicStrRes = stringifyGossipTopic(config, topic);
-        expect(topicStrRes).to.equal(topicStr);
+        expect(topicStrRes).toBe(topicStr);
       });
 
       it(`should decode gossip topic ${topicStr}`, async () => {
         const outputTopic = parseGossipTopic(config, topicStr);
-        expect(outputTopic).to.deep.equal(topic);
+        expect(outputTopic).toEqual(topic);
       });
     }
   }
@@ -116,7 +115,8 @@ describe("network / gossip / topic", function () {
   ];
   for (const topicStr of badTopicStrings) {
     it(`should fail to decode invalid gossip topic string ${topicStr}`, async () => {
-      expect(() => parseGossipTopic(config, topicStr), topicStr).to.throw();
+      // topicStr
+      expect(() => parseGossipTopic(config, topicStr)).toThrow();
     });
   }
 });

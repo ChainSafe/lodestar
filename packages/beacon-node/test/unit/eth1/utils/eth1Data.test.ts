@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import pick from "lodash/pick.js";
 import {Root, phase0, ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
@@ -108,7 +107,7 @@ describe("eth1 / util / getEth1DataForBlocks", function () {
       if (expectedEth1Data) {
         const eth1Datas = await eth1DatasPromise;
         const eth1DatasPartial = eth1Datas.map((eth1Data) => pick(eth1Data, Object.keys(expectedEth1Data[0])));
-        expect(eth1DatasPartial).to.deep.equal(expectedEth1Data);
+        expect(eth1DatasPartial).toEqual(expectedEth1Data);
       } else if (error != null) {
         await expectRejectedWithLodestarError(eth1DatasPromise, error);
       } else {
@@ -188,7 +187,7 @@ describe("eth1 / util / getDepositsByBlockNumber", function () {
         toBlock, // Simulate a descending stream reading from DB
         iteratorFromArray(deposits.reverse())
       );
-      expect(result).to.deep.equal(expectedResult);
+      expect(result).toEqual(expectedResult);
     });
   }
 });
@@ -246,7 +245,7 @@ describe("eth1 / util / getDepositRootByDepositCount", function () {
     const {id, depositCounts, depositRootTree, expectedMap} = testCase();
     it(id, function () {
       const map = getDepositRootByDepositCount(depositCounts, depositRootTree);
-      expect(renderDepositRootByDepositCount(map)).to.deep.equal(renderDepositRootByDepositCount(expectedMap));
+      expect(renderDepositRootByDepositCount(map)).toEqual(renderDepositRootByDepositCount(expectedMap));
     });
   }
 });

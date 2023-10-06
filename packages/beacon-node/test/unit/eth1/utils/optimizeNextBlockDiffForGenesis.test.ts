@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import {optimizeNextBlockDiffForGenesis} from "../../../../src/eth1/utils/optimizeNextBlockDiffForGenesis.js";
 import {Eth1Block} from "../../../../src/eth1/interface.js";
 
@@ -38,7 +37,7 @@ describe("eth1 / utils / optimizeNextBlockDiffForGenesis", function () {
     }
 
     // Make sure the returned diffs converge to genesis time fast
-    expect(diffRecord).to.deep.equal([
+    expect(diffRecord).toEqual([
       {number: 106171, blockDiff: 6171},
       {number: 109256, blockDiff: 3085},
       {number: 110799, blockDiff: 1543},

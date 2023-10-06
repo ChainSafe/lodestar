@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import sinon, {SinonSpy} from "sinon";
 import {ErrorAborted, Logger, TimeoutError} from "@lodestar/utils";
 import {RegistryMetricCreator} from "../../../src/index.js";
@@ -22,7 +21,7 @@ describe("monitoring / service", () => {
     logger = createStubbedLogger();
   });
 
-  after(() => {
+  afterAll(() => {
     sandbox.restore();
   });
 
@@ -36,15 +35,15 @@ describe("monitoring / service", () => {
     it("should return an instance of the monitoring service", () => {
       service = new MonitoringService("beacon", {endpoint}, {register, logger});
 
-      expect(service.close).to.be.a("function");
-      expect(service.send).to.be.a("function");
+      expect(service.close).toBeInstanceOf(Function);
+      expect(service.send).toBeInstanceOf(Function);
     });
 
     it("should register metrics for collecting and sending data", () => {
       service = new MonitoringService("beacon", {endpoint}, {register, logger});
 
-      expect(register.getSingleMetric("lodestar_monitoring_collect_data_seconds")).to.be.instanceOf(HistogramExtra);
-      expect(register.getSingleMetric("lodestar_monitoring_send_data_seconds")).to.be.instanceOf(HistogramExtra);
+      expect(register.getSingleMetric("lodestar_monitoring_collect_data_seconds")).toBeInstanceOf(HistogramExtra);
+      expect(register.getSingleMetric("lodestar_monitoring_send_data_seconds")).toBeInstanceOf(HistogramExtra);
     });
 
     it("should log a warning message if insecure monitoring endpoint is provided ", () => {
@@ -52,29 +51,25 @@ describe("monitoring / service", () => {
 
       service = new MonitoringService("beacon", {endpoint: insecureEndpoint}, {register, logger});
 
-      expect(logger.warn).to.have.been.calledWith(
+      expect(logger.warn).toHaveBeenCalledWith(
         "Insecure monitoring endpoint, please make sure to always use a HTTPS connection in production"
       );
     });
 
     it("should throw an error if monitoring endpoint is not provided", () => {
       const endpoint = "";
-      expect(() => new MonitoringService("beacon", {endpoint}, {register, logger})).to.throw(
-        `Monitoring endpoint is empty or undefined: ${endpoint}`
-      );
+      expect(() => new MonitoringService("beacon", {endpoint}, {register, logger})).toThrow(`Monitoring endpoint is empty or undefined: ${endpoint}`);
     });
 
     it("should throw an error if monitoring endpoint is not a valid URL", () => {
       const endpoint = "invalid";
-      expect(() => new MonitoringService("beacon", {endpoint}, {register, logger})).to.throw(
-        `Monitoring endpoint must be a valid URL: ${endpoint}`
-      );
+      expect(() => new MonitoringService("beacon", {endpoint}, {register, logger})).toThrow(`Monitoring endpoint must be a valid URL: ${endpoint}`);
     });
 
     it("should have the status set to started", async () => {
       const service = await stubbedMonitoringService();
 
-      expect(service["status"]).to.equal("started");
+      expect(service["status"]).toBe("started");
     });
 
     it("should set interval to continuously send client stats", async () => {
@@ -83,14 +78,14 @@ describe("monitoring / service", () => {
 
       const service = await stubbedMonitoringService({interval});
 
-      expect(setTimeout).to.have.been.calledWithMatch({}, interval);
-      expect(service["monitoringInterval"]).to.be.an("object");
+      expect(setTimeout).toHaveBeenCalledWith(expect.objectContaining({}), interval);
+      expect(service["monitoringInterval"]).toBeInstanceOf(Object);
     });
 
     it("should send client stats after initial delay", async () => {
       const service = await stubbedMonitoringService();
 
-      expect(service.send).to.have.been.calledOnce;
+      expect(service.send).toHaveBeenCalledTimes(1);
     });
 
     it("should send client stats after interval", async () => {
@@ -101,20 +96,20 @@ describe("monitoring / service", () => {
       // wait for interval to be executed
       await sleep(interval);
 
-      expect(service.send).to.have.been.calledTwice;
+      expect(service.send).toHaveBeenCalledTimes(2);
     });
 
     it("should log an info message that service was started", async () => {
       await stubbedMonitoringService();
 
-      expect(logger.info).to.have.been.calledWith("Started monitoring service");
+      expect(logger.info).toHaveBeenCalledWith("Started monitoring service");
     });
   });
 
   describe("MonitoringService - close", () => {
     let clearTimeout: SinonSpy;
 
-    before(() => {
+    beforeAll(() => {
       clearTimeout = sandbox.spy(global, "clearTimeout");
     });
 
@@ -123,7 +118,7 @@ describe("monitoring / service", () => {
 
       service.close();
 
-      expect(service["status"]).to.equal("closed");
+      expect(service["status"]).toBe("closed");
     });
 
     it("should clear the monitoring interval", async () => {
@@ -131,7 +126,7 @@ describe("monitoring / service", () => {
 
       service.close();
 
-      expect(clearTimeout).to.have.been.calledWith(service["monitoringInterval"]);
+      expect(clearTimeout).toHaveBeenCalledWith(service["monitoringInterval"]);
     });
 
     it("should clear the initial delay timeout", async () => {
@@ -139,7 +134,7 @@ describe("monitoring / service", () => {
 
       service.close();
 
-      expect(clearTimeout).to.have.been.calledWith(service["initialDelayTimeout"]);
+      expect(clearTimeout).toHaveBeenCalledWith(service["initialDelayTimeout"]);
     });
 
     it("should abort pending requests", async () => {
@@ -148,7 +143,7 @@ describe("monitoring / service", () => {
 
       service.close();
 
-      expect(service["fetchAbortController"]?.abort).to.have.been.calledOnce;
+      expect(service["fetchAbortController"]?.abort).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -157,7 +152,7 @@ describe("monitoring / service", () => {
     let remoteServiceUrl: URL;
     let baseUrl: string;
 
-    before(async () => {
+    beforeAll(async () => {
       ({baseUrl: remoteServiceUrl} = await startRemoteService());
       // get base URL from origin to remove trailing slash
       baseUrl = remoteServiceUrl.origin;
@@ -177,7 +172,7 @@ describe("monitoring / service", () => {
         // Validation of sent data happens inside the mocked remote service
         // which returns a 500 error if data does not match expected schema.
         // Fail test if warning was logged due to a 500 response.
-        expect(logger.warn).to.not.have.been.calledWithMatch("Failed to send client stats");
+        expect(logger.warn).not.toHaveBeenCalledWith("Failed to send client stats");
       });
     });
 
@@ -232,7 +227,10 @@ describe("monitoring / service", () => {
 
     function assertError(error: {message: string}): void {
       // errors are not thrown and need to be asserted based on the log
-      expect(logger.warn).to.have.been.calledWithMatch("Failed to send client stats", {reason: error.message});
+      expect(logger.warn).toHaveBeenCalledWith(
+        "Failed to send client stats",
+        expect.objectContaining({reason: error.message})
+      );
     }
   });
 
@@ -248,7 +246,7 @@ describe("monitoring / service", () => {
     // wait for initial monitoring interval
     await waitForInterval();
 
-    after(service.close);
+    afterAll(service.close);
 
     return service;
   }
