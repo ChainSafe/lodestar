@@ -1,4 +1,5 @@
 import {IBeaconDb} from "../../../src/db/index.js";
+import {CheckpointStateRepository} from "../../../src/db/repositories/checkpointState.js";
 import {
   AttesterSlashingRepository,
   BlockArchiveRepository,
@@ -38,6 +39,7 @@ export function getStubbedBeaconDb(): IBeaconDb {
 
     // finalized states
     stateArchive: createStubInstance(StateArchiveRepository),
+    checkpointState: createStubInstance(CheckpointStateRepository),
 
     // op pool
     voluntaryExit: createStubInstance(VoluntaryExitRepository),

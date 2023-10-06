@@ -1072,9 +1072,9 @@ export function createLodestarMetrics(
         help: "Histogram of time to load state from disk from slot",
         buckets: [0, 4, 8, 12],
       }),
-      stateFilesRemoveCount: register.gauge<"reason">({
-        name: "lodestar_cp_state_cache_state_files_remove_count",
-        help: "Total number of state files removed from disk",
+      stateRemoveCount: register.gauge<"reason">({
+        name: "lodestar_cp_state_cache_state_remove_count",
+        help: "Total number of persisted states removed",
         labelNames: ["reason"],
       }),
     },

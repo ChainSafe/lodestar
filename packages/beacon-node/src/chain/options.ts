@@ -31,7 +31,10 @@ export type IChainOptions = BlockProcessOpts &
     trustedSetup?: string;
     broadcastValidationStrictness?: string;
     minSameMessageSignatureSetsToBatch: number;
+    // TODO: change to n_historical_states
     persistentCheckpointStateCache?: boolean;
+    /** by default persist checkpoint state to db */
+    persistCheckpointStatesToFile?: boolean;
   };
 
 export type BlockProcessOpts = {
@@ -95,6 +98,9 @@ export const defaultChainOptions: IChainOptions = {
   minSameMessageSignatureSetsToBatch: 2,
   // TODO: change to false, leaving here to ease testing
   persistentCheckpointStateCache: true,
+  // TODO: change to false, leaving here to ease testing
+  persistCheckpointStatesToFile: true,
+
   // since Sep 2023, only cache up to 32 states by default. If a big reorg happens it'll load checkpoint state from disk and regen from there.
   // TODO: change to 128, leaving here to ease testing
   maxStates: 32,

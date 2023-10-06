@@ -78,6 +78,7 @@ import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {ShufflingCache} from "./shufflingCache.js";
 import {MemoryCheckpointStateCache} from "./stateCache/memoryCheckpointsCache.js";
 import {FilePersistentApis} from "./stateCache/persistent/file.js";
+import {DbPersistentApis} from "./stateCache/persistent/db.js";
 
 /**
  * Arbitrary constants, blobs should be consumed immediately in the same slot they are produced.
@@ -236,8 +237,9 @@ export class BeaconChain implements IBeaconChain {
     this.index2pubkey = cachedState.epochCtx.index2pubkey;
 
     const stateCache = new StateContextCache(this.opts, {metrics});
-    // TODO: chain option to switch persistent
-    const filePersistent = new FilePersistentApis(CHECKPOINT_STATES_FOLDER);
+    const persistentApis = this.opts.persistCheckpointStatesToFile
+      ? new FilePersistentApis(CHECKPOINT_STATES_FOLDER)
+      : new DbPersistentApis(this.db);
     const checkpointStateCache = this.opts.persistentCheckpointStateCache
       ? new PersistentCheckpointStateCache(
           {
@@ -246,7 +248,7 @@ export class BeaconChain implements IBeaconChain {
             clock,
             shufflingCache: this.shufflingCache,
             getHeadState: this.getHeadState.bind(this),
-            persistentApis: filePersistent,
+            persistentApis,
           },
           this.opts
         )

@@ -26,17 +26,15 @@ export interface CheckpointStateCache {
 
 export const CHECKPOINT_STATES_FOLDER = "./unfinalized_checkpoint_states";
 
-export type StateFile = string;
-
 export type CheckpointKey = string;
 
 export enum CacheType {
   state = "state",
-  file = "file",
+  persistence = "persistence",
 }
 
-// Reason to remove a state file from disk
-export enum RemoveFileReason {
+// Reason to remove a checkpoint state from file/db
+export enum RemovePersistedStateReason {
   pruneFinalized = "prune_finalized",
   reload = "reload",
   stateUpdate = "state_update",
