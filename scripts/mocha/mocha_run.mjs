@@ -5,7 +5,7 @@ import runCommand from "mocha/lib/cli/run.js";
 import collectFiles from "mocha/lib/cli/collect-files.js";
 import {dump} from "wtfnode";
 
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const ignoredResources = ["MessagePort", "Timeout", "PipeWrap", "TTYWrap"];
 
 // Consider it a leak if process does not exit within this time
 const LEAK_TIMEOUT_MS = 10_000;
@@ -40,7 +40,7 @@ async function exitScenarioHandler(failCount) {
       process.abort();
     } else {
       const resources = process.getActiveResourcesInfo();
-      const uniqueResources = new Set(resources);
+      const uniqueResources = [...new Set(resources)].filter((r) => !ignoredResources.includes(r));
       console.info(
         `Detecting resource leaks. now='${new Date(now).toLocaleString()}' timeout='${new Date(
           timeout
@@ -48,7 +48,7 @@ async function exitScenarioHandler(failCount) {
       );
 
       // There must be at least TTY used by mocha
-      if (uniqueResources.size <= 1) {
+      if (uniqueResources.length === 0) {
         console.info("Seems there is no leak. Clearing leak detection hooks.");
         clearInterval(timer);
         // Dumping resources for debugging purposes
