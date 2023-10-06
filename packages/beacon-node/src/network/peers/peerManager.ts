@@ -666,7 +666,7 @@ export class PeerManager {
     } catch (e) {
       this.logger.verbose("Failed to send goodbye", {peer: prettyPrintPeerId(peer)}, e as Error);
     } finally {
-      void this.disconnect(peer);
+      await this.disconnect(peer);
     }
   }
 
