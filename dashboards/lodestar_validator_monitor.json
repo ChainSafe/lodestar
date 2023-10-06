@@ -89,7 +89,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "9.3.2",
+      "pluginVersion": "10.1.1",
       "targets": [
         {
           "datasource": {
@@ -140,9 +140,10 @@
           "fields": "",
           "values": false
         },
-        "showUnfilled": true
+        "showUnfilled": true,
+        "valueMode": "color"
       },
-      "pluginVersion": "9.3.2",
+      "pluginVersion": "10.1.1",
       "targets": [
         {
           "datasource": {
@@ -184,6 +185,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -251,7 +253,9 @@
           },
           "custom": {
             "align": "auto",
-            "displayMode": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
             "inspect": false
           },
           "mappings": []
@@ -266,7 +270,9 @@
       },
       "id": 4,
       "options": {
+        "cellHeight": "sm",
         "footer": {
+          "countRows": false,
           "fields": "",
           "reducer": [
             "sum"
@@ -276,7 +282,7 @@
         "frameIndex": 0,
         "showHeader": true
       },
-      "pluginVersion": "9.3.2",
+      "pluginVersion": "10.1.1",
       "targets": [
         {
           "datasource": {
@@ -384,7 +390,7 @@
           "unit": "s"
         }
       },
-      "pluginVersion": "9.3.2",
+      "pluginVersion": "10.1.1",
       "targets": [
         {
           "datasource": {
@@ -429,6 +435,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -512,6 +519,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -592,6 +600,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -686,6 +695,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 4,
@@ -793,6 +803,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -953,7 +964,7 @@
           "unit": "short"
         }
       },
-      "pluginVersion": "9.3.2",
+      "pluginVersion": "10.1.1",
       "reverseYBuckets": false,
       "targets": [
         {
@@ -1011,6 +1022,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1195,7 +1207,7 @@
           "unit": "short"
         }
       },
-      "pluginVersion": "9.3.2",
+      "pluginVersion": "10.1.1",
       "reverseYBuckets": false,
       "targets": [
         {
@@ -1253,6 +1265,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1351,6 +1364,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1446,6 +1460,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1625,6 +1640,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1682,10 +1698,91 @@
       ],
       "title": "Unaggregated attestations submitted to zero peers",
       "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Metric based on formula used by rated.network",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 57
+      },
+      "id": 33,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "5/8\n*\n(\n  1 -\n  sum(rate(validator_monitor_prev_epoch_on_chain_source_attester_miss_total[$rate_interval]))\n  /\n  sum(\n    rate(validator_monitor_prev_epoch_on_chain_source_attester_miss_total[$rate_interval])\n    +\n    rate(validator_monitor_prev_epoch_on_chain_source_attester_hit_total[$rate_interval])\n  )\n)\n*\n(\n  (\n    1 -\n    sum(rate(validator_monitor_prev_epoch_on_chain_head_attester_miss_total[$rate_interval]))\n    /\n    sum(\n      rate(validator_monitor_prev_epoch_on_chain_head_attester_miss_total[$rate_interval])\n      +\n      rate(validator_monitor_prev_epoch_on_chain_head_attester_hit_total[$rate_interval])\n    )\n  ) \n  + \n  (\n    1 -\n    sum(rate(validator_monitor_prev_epoch_on_chain_target_attester_miss_total[$rate_interval]))\n    /\n    sum(\n      rate(validator_monitor_prev_epoch_on_chain_target_attester_miss_total[$rate_interval])\n      +\n      rate(validator_monitor_prev_epoch_on_chain_target_attester_hit_total[$rate_interval])\n    )\n  )\n  +\n  (\n    1\n    -\n    sum(rate(validator_monitor_prev_epoch_on_chain_source_attester_miss_total[$rate_interval]))\n    /\n    sum(\n      rate(validator_monitor_prev_epoch_on_chain_source_attester_miss_total[$rate_interval])\n      +\n      rate(validator_monitor_prev_epoch_on_chain_source_attester_hit_total[$rate_interval])\n    )\n  )\n) \n*\n1/3\n*\n1/(\n  sum(rate(validator_monitor_prev_epoch_on_chain_inclusion_distance_sum[$rate_interval]))\n  /\n  sum(rate(validator_monitor_prev_epoch_on_chain_inclusion_distance_count[$rate_interval]))\n)\n+\n3/8 * 1 - 0.17/100",
+          "legendFormat": "Effectiveness Rating",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "rated.network score",
+      "type": "timeseries"
     }
   ],
   "refresh": "10s",
-  "schemaVersion": 37,
+  "schemaVersion": 38,
   "style": "dark",
   "tags": [
     "lodestar"
