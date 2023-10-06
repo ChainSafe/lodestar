@@ -220,7 +220,7 @@ jobs:
         run: yarn test:e2e
         env:
           GOERLI_RPC_URL: ${{ secrets.GOERLI_RPC_URL!=0 && secrets.GOERLI_RPC_URL || env.GOERLI_RPC_DEFAULT_URL }}
-          DEBUG: 1
+          DEBUG: threads:*
           LOG_LEVEL: debug
 
       - name: Stop the e2e test environment
