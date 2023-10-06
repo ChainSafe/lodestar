@@ -453,7 +453,8 @@
               "mode": "off"
             }
           },
-          "mappings": []
+          "mappings": [],
+          "unit": "percentunit"
         },
         "overrides": []
       },
