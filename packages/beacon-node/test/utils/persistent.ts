@@ -2,9 +2,9 @@ import {CPStatePersistentApis} from "../../src/chain/stateCache/persistent/types
 
 export function getTestPersistentApi(fileApisBuffer: Map<string, Uint8Array>): CPStatePersistentApis {
   const persistentApis: CPStatePersistentApis = {
-    write: (cpKey, bytes) => {
+    write: (cpKey, state) => {
       if (!fileApisBuffer.has(cpKey)) {
-        fileApisBuffer.set(cpKey, bytes);
+        fileApisBuffer.set(cpKey, state.serialize());
       }
       return Promise.resolve(cpKey);
     },

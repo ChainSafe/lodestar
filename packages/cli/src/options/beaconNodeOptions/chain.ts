@@ -25,6 +25,7 @@ export type ChainArgs = {
   broadcastValidationStrictness?: string;
   "chain.minSameMessageSignatureSetsToBatch"?: number;
   "chain.persistentCheckpointStateCache"?: boolean;
+  "chain.persistCheckpointStatesToFile"?: boolean;
   "chain.maxStates"?: number;
   "chain.maxEpochsInMemory"?: number;
 };
@@ -54,6 +55,7 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
       args["chain.minSameMessageSignatureSetsToBatch"] ?? defaultOptions.chain.minSameMessageSignatureSetsToBatch,
     persistentCheckpointStateCache:
       args["chain.persistentCheckpointStateCache"] ?? defaultOptions.chain.persistentCheckpointStateCache,
+    persistCheckpointStatesToFile: args["chain.persistCheckpointStatesToFile"] ?? defaultOptions.chain.persistCheckpointStatesToFile,
     maxStates: args["chain.maxStates"] ?? defaultOptions.chain.maxStates,
     maxEpochsInMemory: args["chain.maxEpochsInMemory"] ?? defaultOptions.chain.maxEpochsInMemory,
   };
@@ -206,6 +208,14 @@ Will double processing times. Use only for debugging purposes.",
     description: "Use persistent checkpoint state cache or not",
     type: "number",
     default: defaultOptions.chain.persistentCheckpointStateCache,
+    group: "chain",
+  },
+
+  "chain.persistCheckpointStatesToFile": {
+    hidden: true,
+    description: "Persist checkpoint states to file or not",
+    type: "number",
+    default: defaultOptions.chain.persistCheckpointStatesToFile,
     group: "chain",
   },
 

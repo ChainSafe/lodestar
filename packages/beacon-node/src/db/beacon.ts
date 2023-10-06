@@ -21,6 +21,7 @@ import {
   BLSToExecutionChangeRepository,
 } from "./repositories/index.js";
 import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single/index.js";
+import {CheckpointStateRepository} from "./repositories/checkpointState.js";
 
 export type BeaconDbModules = {
   config: ChainForkConfig;
@@ -35,6 +36,7 @@ export class BeaconDb implements IBeaconDb {
   blobSidecarsArchive: BlobSidecarsArchiveRepository;
 
   stateArchive: StateArchiveRepository;
+  checkpointState: CheckpointStateRepository;
 
   voluntaryExit: VoluntaryExitRepository;
   proposerSlashing: ProposerSlashingRepository;
@@ -67,6 +69,7 @@ export class BeaconDb implements IBeaconDb {
     this.blobSidecarsArchive = new BlobSidecarsArchiveRepository(config, db);
 
     this.stateArchive = new StateArchiveRepository(config, db);
+    this.checkpointState = new CheckpointStateRepository(config, db);
     this.voluntaryExit = new VoluntaryExitRepository(config, db);
     this.blsToExecutionChange = new BLSToExecutionChangeRepository(config, db);
     this.proposerSlashing = new ProposerSlashingRepository(config, db);
