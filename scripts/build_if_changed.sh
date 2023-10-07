@@ -38,11 +38,16 @@ else
     SHOULD_BUILD=true
 fi
 
+# Ansible checks for this exit code to determine if the build was run
+EXIT_CODE=0
+
 # If there are changes, build
 if [ "$SHOULD_BUILD" = true ]; then
     npm run build
+    EXIT_CODE=1
 fi
 
 # Persist current time after a successful build
 echo $CURRENT_UNIXSEC > $LAST_BUILD_FILEPATH
 
+exit $EXIT_CODE
