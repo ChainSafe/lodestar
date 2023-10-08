@@ -14,6 +14,7 @@ import {
   AggregateAndProofValidDataOpts,
 } from "../../../utils/validationData/aggregateAndProof.js";
 import {IStateRegenerator} from "../../../../src/chain/regen/interface.js";
+import {ShufflingCache} from "../../../../src/chain/shufflingCache.js";
 
 describe("chain / validation / aggregateAndProof", () => {
   const vc = 64;
@@ -111,7 +112,6 @@ describe("chain / validation / aggregateAndProof", () => {
     await expectError(chain, signedAggregateAndProof, AttestationErrorCode.INVALID_TARGET_ROOT);
   });
 
-  // TODO: address when using ShufflingCache
   it("NO_COMMITTEE_FOR_SLOT_AND_INDEX", async () => {
     const {chain, signedAggregateAndProof} = getValidData();
     // slot is out of the commitee range
@@ -124,6 +124,12 @@ describe("chain / validation / aggregateAndProof", () => {
     (chain as {regen: IStateRegenerator}).regen = {
       getState: async () => committeeState,
     } as Partial<IStateRegenerator> as IStateRegenerator;
+    class NoOpShufflingCache extends ShufflingCache {
+      processState(): void {
+        // do nothing
+      }
+    }
+    (chain as {shufflingCache: ShufflingCache}).shufflingCache = new NoOpShufflingCache();
 
     await expectError(chain, signedAggregateAndProof, AttestationErrorCode.NO_COMMITTEE_FOR_SLOT_AND_INDEX);
   });

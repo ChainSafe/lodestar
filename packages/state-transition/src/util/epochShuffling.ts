@@ -2,6 +2,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {Epoch, RootHex, ValidatorIndex} from "@lodestar/types";
 import {intDiv} from "@lodestar/utils";
 import {
+  ATTESTATION_SUBNET_COUNT,
   DOMAIN_BEACON_ATTESTER,
   MAX_COMMITTEES_PER_SLOT,
   SLOTS_PER_EPOCH,

@@ -584,6 +584,26 @@ export function createLodestarMetrics(
         labelNames: ["caller"],
         buckets: [0, 1, 2, 4, 8, 16, 32, 64],
       }),
+      shufflingHit: register.gauge<"caller">({
+        name: "lodestar_gossip_attestation_shuffling_hit_count",
+        help: "Count of gossip attestation verification shuffling hit",
+        labelNames: ["caller"],
+      }),
+      shufflingMiss: register.gauge<"caller">({
+        name: "lodestar_gossip_attestation_shuffling_miss_count",
+        help: "Count of gossip attestation verification shuffling miss",
+        labelNames: ["caller"],
+      }),
+      shufflingRegenHit: register.gauge<"caller">({
+        name: "lodestar_gossip_attestation_shuffling_regen_hit_count",
+        help: "Count of gossip attestation verification shuffling regen hit",
+        labelNames: ["caller"],
+      }),
+      shufflingRegenMiss: register.gauge<"caller">({
+        name: "lodestar_gossip_attestation_shuffling_regen_miss_count",
+        help: "Count of gossip attestation verification shuffling regen miss",
+        labelNames: ["caller"],
+      }),
       attestationSlotToClockSlot: register.histogram<"caller">({
         name: "lodestar_gossip_attestation_attestation_slot_to_clock_slot",
         help: "Slot distance between clock slot and attestation slot",
