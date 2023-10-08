@@ -332,7 +332,8 @@ export async function importBlock(
   }
 
   if (parentEpoch < blockEpoch) {
-    this.shufflingCache.processState(postState);
+    // current epoch and previous epoch are likely cached in previous states
+    this.shufflingCache.processState(postState, postState.epochCtx.nextShuffling.epoch);
     this.logger.verbose("Processed shuffling for next epoch", {parentEpoch, blockEpoch, slot: block.message.slot});
 
     // This is the real check point state per spec because the root is in current epoch

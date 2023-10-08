@@ -12,8 +12,9 @@ import {
 import {generateCachedState} from "../../../utils/state.js";
 import {ShufflingCache} from "../../../../src/chain/shufflingCache.js";
 import {testLogger} from "../../../utils/logger.js";
-import {CheckpointHex, StateFile} from "../../../../src/chain/stateCache/types.js";
+import {CheckpointHex} from "../../../../src/chain/stateCache/types.js";
 import {getTestPersistentApi} from "../../../utils/persistent.js";
+import {PersistentKey} from "../../../../src/chain/stateCache/persistent/types.js";
 
 describe("PersistentCheckpointStateCache", function () {
   let cache: PersistentCheckpointStateCache;
@@ -229,7 +230,7 @@ describe("PersistentCheckpointStateCache", function () {
   });
 
   describe("findClosestCheckpointState", function () {
-    const cacheMap = new Map<string, CachedBeaconStateAllForks | StateFile>();
+    const cacheMap = new Map<string, CachedBeaconStateAllForks | PersistentKey>();
     cacheMap.set(cp0aKey, states["cp0a"]);
     cacheMap.set(cp1Key, states["cp1"]);
     cacheMap.set(cp2Key, states["cp2"]);

@@ -32,7 +32,5 @@ export class DbPersistentApis implements CPStatePersistentApis {
  */
 async function cleanBucket(db: IBeaconDb): Promise<void> {
   const keys = await db.checkpointState.keys();
-  for (const key of keys) {
-    await db.checkpointState.delete(key);
-  }
+  await db.checkpointState.batchDelete(keys);
 }
