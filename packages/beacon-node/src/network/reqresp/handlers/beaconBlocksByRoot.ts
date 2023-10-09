@@ -38,9 +38,6 @@ export async function* onBeaconBlocksByRoot(
         slot = slotFromBytes;
       }
 
-      // TODO: (matthewkeil)
-      // It's a bis sus that deleting this line will still let the code compile..
-      // This code MUST include tests to ensure ReqResp works with full or blinded blocks
       const {name, seq} = chain.config.getForkInfo(slot);
       const chunks: Uint8Array[] = [];
       for await (const chunk of chain.blindedOrFullBlockToFullBytes(seq, blockBytes)) {
