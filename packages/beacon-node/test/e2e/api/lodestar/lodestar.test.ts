@@ -24,6 +24,7 @@ describe("api / impl / validator", function () {
     const timeout = (SLOTS_PER_EPOCH + genesisSlotsDelay) * testParams.SECONDS_PER_SLOT * 1000;
 
     const afterEachCallbacks: (() => Promise<unknown> | void)[] = [];
+
     afterEach(async () => {
       while (afterEachCallbacks.length > 0) {
         const callback = afterEachCallbacks.pop();
@@ -48,7 +49,9 @@ describe("api / impl / validator", function () {
         validatorCount,
         logger: loggerNodeA,
       });
-      afterEachCallbacks.push(() => bn.close());
+      afterEachCallbacks.push(async () => {
+        await bn.close();
+      });
 
       // live indices at epoch of consideration, epoch 0
       bn.chain.seenBlockProposers.add(0, 1);
@@ -97,7 +100,9 @@ describe("api / impl / validator", function () {
           validatorCount,
           logger: loggerNodeA,
         });
-        afterEachCallbacks.push(() => bn.close());
+        afterEachCallbacks.push(async () => {
+          await bn.close();
+        });
 
         await waitForEvent<phase0.Checkpoint>(bn.chain.clock, ClockEvent.epoch, timeout); // wait for epoch 1
         await waitForEvent<phase0.Checkpoint>(bn.chain.clock, ClockEvent.epoch, timeout); // wait for epoch 2
