@@ -1,3 +1,4 @@
+import {describe, it, expect} from "vitest";
 import {getValidPeerId} from "../../../utils/peer.js";
 import {peerIdFromString} from "../../../../src/util/peerId.js";
 

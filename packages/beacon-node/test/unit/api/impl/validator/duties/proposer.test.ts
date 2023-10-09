@@ -1,6 +1,5 @@
+import {describe, it, expect, beforeEach} from "vitest";
 import sinon, {SinonStubbedInstance} from "sinon";
-import {use, expect} from "chai";
-import chaiAsPromised from "chai-as-promised";
 import {config} from "@lodestar/config/default";
 import {ForkChoice} from "@lodestar/fork-choice";
 
@@ -14,12 +13,10 @@ import {generateState} from "../../../../../utils/state.js";
 import {IBeaconSync} from "../../../../../../src/sync/index.js";
 import {generateValidators} from "../../../../../utils/validator.js";
 import {StubbedBeaconDb, StubbedChainMutable} from "../../../../../utils/stub/index.js";
-import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test.js";
+import {setupApiImplTestServer, ApiImplTestModules} from "../../../../../__mocks__/apiMocks.js";
 import {testLogger} from "../../../../../utils/logger.js";
 import {createCachedBeaconStateTest} from "../../../../../utils/cachedBeaconState.js";
 import {zeroProtoBlock} from "../../../../../utils/mocks/chain.js";
-
-use(chaiAsPromised);
 
 describe.skip("get proposers api impl", function () {
   const logger = testLogger();
@@ -39,7 +36,7 @@ describe.skip("get proposers api impl", function () {
     chainStub.clock = server.sandbox.createStubInstance(Clock);
     const forkChoice = server.sandbox.createStubInstance(ForkChoice);
     chainStub.forkChoice = forkChoice;
-    chainStub.getCanonicalBlockAtSlot.resolves({
+    chainStub.getCanonicalBlockAtSlot.mockResolvedValue({
       block: ssz.phase0.SignedBeaconBlock.defaultValue(),
       executionOptimistic: false,
     });
@@ -55,14 +52,14 @@ describe.skip("get proposers api impl", function () {
     };
     api = getValidatorApi(modules);
 
-    forkChoice.getHead.returns(zeroProtoBlock);
+    forkChoice.getHead.mockReturnValue(zeroProtoBlock);
   });
 
   it("should get proposers for next epoch", async function () {
-    syncStub.isSynced.returns(true);
+    syncStub.isSynced.mockReturnValue(true);
     server.sandbox.stub(chainStub.clock, "currentEpoch").get(() => 0);
     server.sandbox.stub(chainStub.clock, "currentSlot").get(() => 0);
-    dbStub.block.get.resolves({message: {stateRoot: Buffer.alloc(32)}} as any);
+    dbStub.block.get.mockResolvedValue({message: {stateRoot: Buffer.alloc(32)}} as any);
     const state = generateState(
       {
         slot: 0,
@@ -77,10 +74,10 @@ describe.skip("get proposers api impl", function () {
     );
 
     const cachedState = createCachedBeaconStateTest(state, config);
-    chainStub.getHeadStateAtCurrentEpoch.resolves(cachedState);
+    chainStub.getHeadStateAtCurrentEpoch.mockResolvedValue(cachedState);
     const stubGetNextBeaconProposer = sinon.stub(cachedState.epochCtx, "getBeaconProposersNextEpoch");
     const stubGetBeaconProposer = sinon.stub(cachedState.epochCtx, "getBeaconProposer");
-    stubGetNextBeaconProposer.returns([1]);
+    stubGetNextBeaconProposer.mockReturnValue([1]);
     const {data: result} = await api.getProposerDuties(1);
     expect(result.length).toBe(SLOTS_PER_EPOCH);
     // "stubGetBeaconProposer function should not have been called"
@@ -90,10 +87,10 @@ describe.skip("get proposers api impl", function () {
   });
 
   it("should have different proposer for current and next epoch", async function () {
-    syncStub.isSynced.returns(true);
+    syncStub.isSynced.mockReturnValue(true);
     server.sandbox.stub(chainStub.clock, "currentEpoch").get(() => 0);
     server.sandbox.stub(chainStub.clock, "currentSlot").get(() => 0);
-    dbStub.block.get.resolves({message: {stateRoot: Buffer.alloc(32)}} as any);
+    dbStub.block.get.mockResolvedValue({message: {stateRoot: Buffer.alloc(32)}} as any);
     const state = generateState(
       {
         slot: 0,
@@ -107,19 +104,19 @@ describe.skip("get proposers api impl", function () {
       config
     );
     const cachedState = createCachedBeaconStateTest(state, config);
-    chainStub.getHeadStateAtCurrentEpoch.resolves(cachedState);
+    chainStub.getHeadStateAtCurrentEpoch.mockResolvedValue(cachedState);
     const stubGetBeaconProposer = sinon.stub(cachedState.epochCtx, "getBeaconProposer");
-    stubGetBeaconProposer.returns(1);
+    stubGetBeaconProposer.mockReturnValue(1);
     const {data: currentProposers} = await api.getProposerDuties(0);
     const {data: nextProposers} = await api.getProposerDuties(1);
     expect(currentProposers).not.toEqual(nextProposers);
   });
 
   it("should not get proposers for more than one epoch in the future", async function () {
-    syncStub.isSynced.returns(true);
+    syncStub.isSynced.mockReturnValue(true);
     server.sandbox.stub(chainStub.clock, "currentEpoch").get(() => 0);
     server.sandbox.stub(chainStub.clock, "currentSlot").get(() => 0);
-    dbStub.block.get.resolves({message: {stateRoot: Buffer.alloc(32)}} as any);
+    dbStub.block.get.mockResolvedValue({message: {stateRoot: Buffer.alloc(32)}} as any);
     const state = generateState(
       {
         slot: 0,
@@ -133,9 +130,9 @@ describe.skip("get proposers api impl", function () {
       config
     );
     const cachedState = createCachedBeaconStateTest(state, config);
-    chainStub.getHeadStateAtCurrentEpoch.resolves(cachedState);
+    chainStub.getHeadStateAtCurrentEpoch.mockResolvedValue(cachedState);
     const stubGetBeaconProposer = sinon.stub(cachedState.epochCtx, "getBeaconProposer");
     stubGetBeaconProposer.throws();
-    expect(api.getProposerDuties(2), "calling getProposerDuties should throw").to.eventually.throws;
+    await expect(api.getProposerDuties(2), "calling getProposerDuties should throw").rejects.toThrow();
   });
 });

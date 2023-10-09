@@ -1,6 +1,7 @@
 import bls from "@chainsafe/bls";
 import {CoordType} from "@chainsafe/blst";
 import {PublicKey} from "@chainsafe/bls/types";
+import {describe, it, expect, beforeEach} from "vitest";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {BlsSingleThreadVerifier} from "../../../../src/chain/bls/singleThread.js";
 import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/multithread/index.js";
@@ -8,7 +9,6 @@ import {testLogger} from "../../../utils/logger.js";
 
 describe("BlsVerifier ", function () {
   // take time for creating thread pool
-  this.timeout(60 * 1000);
   const numKeys = 3;
   const secretKeys = Array.from({length: numKeys}, (_, i) => bls.SecretKey.fromKeygen(Buffer.alloc(32, i)));
   const verifiers = [

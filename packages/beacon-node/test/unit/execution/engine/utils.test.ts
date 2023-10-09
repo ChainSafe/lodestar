@@ -1,3 +1,4 @@
+import {describe, it, expect} from "vitest";
 import {ErrorAborted} from "@lodestar/utils";
 import {FetchError} from "@lodestar/api";
 import {ExecutionPayloadStatus, ExecutionEngineState} from "../../../../src/execution/index.js";

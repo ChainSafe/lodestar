@@ -1,3 +1,4 @@
+import {describe, it, expect, beforeEach} from "vitest";
 import {ReprocessController} from "../../../src/chain/reprocess.js";
 
 describe("ReprocessController", function () {

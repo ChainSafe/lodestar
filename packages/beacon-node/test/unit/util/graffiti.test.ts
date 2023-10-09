@@ -1,3 +1,4 @@
+import {describe, it, expect} from "vitest";
 import {toGraffitiBuffer} from "../../../src/util/graffiti.js";
 
 describe("Graffiti helper", () => {

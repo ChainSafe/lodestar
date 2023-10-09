@@ -1,4 +1,5 @@
 import {fastify} from "fastify";
+import {describe, it, expect, beforeAll, afterAll} from "vitest";
 import {ForkName} from "@lodestar/params";
 import {Logger} from "@lodestar/logger";
 import {defaultExecutionEngineHttpOpts} from "../../../src/execution/engine/http.js";
@@ -23,7 +24,7 @@ describe("ExecutionEngine / http", () => {
   let returnValue: unknown = {};
   let reqJsonRpcPayload: unknown = {};
 
-  beforeAll("Prepare server", async () => {
+  beforeAll(async () => {
     const controller = new AbortController();
     const server = fastify({logger: false});
 
@@ -277,7 +278,7 @@ describe("ExecutionEngine / http", () => {
     const response = {jsonrpc: "2.0", id: 67, error: {code: 5, message: "unknown payload"}};
     returnValue = response;
 
-    await expect(executionEngine.getPayload(ForkName.bellatrix, request.params[0])).to.be.rejectedWith(
+    await expect(executionEngine.getPayload(ForkName.bellatrix, request.params[0])).rejects.toThrow(
       "JSON RPC error: unknown payload, engine_getPayload"
     );
   });

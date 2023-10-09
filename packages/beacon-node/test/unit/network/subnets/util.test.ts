@@ -1,3 +1,4 @@
+import {describe, it, expect} from "vitest";
 import {bigIntToBytes} from "@lodestar/utils";
 import {ATTESTATION_SUBNET_PREFIX_BITS, NODE_ID_BITS} from "@lodestar/params";
 import {getNodeIdPrefix, getNodeOffset} from "../../../../src/network/subnets/util.js";

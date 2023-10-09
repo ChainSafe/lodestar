@@ -1,4 +1,5 @@
 import pick from "lodash/pick.js";
+import {describe, it, expect} from "vitest";
 import {Root, phase0, ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {iteratorFromArray} from "../../../utils/interator.js";

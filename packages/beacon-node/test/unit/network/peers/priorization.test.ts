@@ -1,6 +1,7 @@
 import {PeerId} from "@libp2p/interface/peer-id";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {BitArray} from "@chainsafe/ssz";
+import {describe, it, expect} from "vitest";
 import {ATTESTATION_SUBNET_COUNT} from "@lodestar/params";
 import {
   ExcessPeerDisconnectReason,

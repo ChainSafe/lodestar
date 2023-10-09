@@ -1,7 +1,6 @@
-import sinon, {SinonStubbedInstance} from "sinon";
-
+import {describe, it, expect, beforeEach} from "vitest";
 import {config} from "@lodestar/config/default";
-import {ForkChoice, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {toHex} from "@lodestar/utils";
 import {ChainForkConfig} from "@lodestar/config";
@@ -12,9 +11,10 @@ import {expectThrowsLodestarError} from "../../../utils/errors.js";
 import {IClock} from "../../../../src/util/clock.js";
 import {ClockStopped} from "../../../utils/mocks/clock.js";
 import {BlockSource, getBlockInput} from "../../../../src/chain/blocks/types.js";
+import {MockedBeaconChain, getMockedBeaconChain} from "../../../__mocks__/mockedBeaconChain.js";
 
 describe("chain / blocks / verifyBlocksSanityChecks", function () {
-  let forkChoice: SinonStubbedInstance<ForkChoice>;
+  let forkChoice: MockedBeaconChain["forkChoice"];
   let clock: ClockStopped;
   let modules: {forkChoice: IForkChoice; clock: IClock; config: ChainForkConfig};
   let block: allForks.SignedBeaconBlock;
@@ -24,16 +24,16 @@ describe("chain / blocks / verifyBlocksSanityChecks", function () {
     block = ssz.phase0.SignedBeaconBlock.defaultValue();
     block.message.slot = currentSlot;
 
-    forkChoice = sinon.createStubInstance(ForkChoice);
-    forkChoice.getFinalizedCheckpoint.returns({epoch: 0, root: Buffer.alloc(32), rootHex: ""});
+    forkChoice = getMockedBeaconChain().forkChoice;
+    forkChoice.getFinalizedCheckpoint.mockReturnValue({epoch: 0, root: Buffer.alloc(32), rootHex: ""});
     clock = new ClockStopped(currentSlot);
     modules = {config, forkChoice, clock} as {forkChoice: IForkChoice; clock: IClock; config: ChainForkConfig};
     // On first call, parentRoot is known
-    forkChoice.getBlockHex.returns({} as ProtoBlock);
+    forkChoice.getBlockHex.mockReturnValue({} as ProtoBlock);
   });
 
   it("PARENT_UNKNOWN", () => {
-    forkChoice.getBlockHex.returns(null);
+    forkChoice.getBlockHex.mockReturnValue(null);
     expectThrowsLodestarError(() => verifyBlocksSanityChecks(modules, [block], {}), BlockErrorCode.PARENT_UNKNOWN);
   });
 
@@ -43,12 +43,12 @@ describe("chain / blocks / verifyBlocksSanityChecks", function () {
   });
 
   it("ALREADY_KNOWN", () => {
-    forkChoice.hasBlockHex.returns(true);
+    forkChoice.hasBlockHex.mockReturnValue(true);
     expectThrowsLodestarError(() => verifyBlocksSanityChecks(modules, [block], {}), BlockErrorCode.ALREADY_KNOWN);
   });
 
   it("WOULD_REVERT_FINALIZED_SLOT", () => {
-    forkChoice.getFinalizedCheckpoint.returns({epoch: 5, root: Buffer.alloc(32), rootHex: ""});
+    forkChoice.getFinalizedCheckpoint.mockReturnValue({epoch: 5, root: Buffer.alloc(32), rootHex: ""});
     expectThrowsLodestarError(
       () => verifyBlocksSanityChecks(modules, [block], {}),
       BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT

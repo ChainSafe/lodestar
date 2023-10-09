@@ -1,4 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
+import {describe, it, expect, beforeEach} from "vitest";
 import {EpochShuffling} from "@lodestar/state-transition";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Root} from "@lodestar/types";

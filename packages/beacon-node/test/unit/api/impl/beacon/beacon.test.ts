@@ -1,18 +1,19 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import { config } from "@lodestar/config/default";
+import {describe, it, expect, beforeAll} from "vitest";
+import {config} from "@lodestar/config/default";
 import {getBeaconApi} from "../../../../../src/api/impl/beacon/index.js";
-import {StubbedBeaconDb} from "../../../../utils/stub/index.js";
-import {setupApiImplTestServer, ApiImplTestModules} from "../index.test.js";
+import {setupApiImplTestServer, ApiImplTestModules} from "../../../../__mocks__/apiMocks.js";
 import {testLogger} from "../../../../utils/logger.js";
+import {MockedBeaconDb} from "../../../../__mocks__/mockedBeaconDb.js";
 
 describe("beacon api implementation", function () {
   const logger = testLogger();
-  let dbStub: StubbedBeaconDb;
+  let dbStub: MockedBeaconDb;
   let server: ApiImplTestModules;
 
   beforeAll(function () {
     server = setupApiImplTestServer();
-    dbStub = new StubbedBeaconDb();
+    dbStub = new MockedBeaconDb();
   });
 
   describe("getGenesis", function () {

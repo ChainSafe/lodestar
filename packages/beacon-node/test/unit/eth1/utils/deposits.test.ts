@@ -1,3 +1,4 @@
+import {describe, it, expect} from "vitest";
 import {phase0, ssz} from "@lodestar/types";
 import {MAX_DEPOSITS} from "@lodestar/params";
 import {verifyMerkleBranch} from "@lodestar/utils";
@@ -130,13 +131,15 @@ describe("eth1 / util / deposits", function () {
       // Verify each individual merkle root
       for (const [index, deposit] of deposits.entries()) {
         // Wrong merkle proof on deposit ${index}
-        expect(verifyMerkleBranch(
-          ssz.phase0.DepositData.hashTreeRoot(deposit.data),
-          Array.from(deposit.proof).map((p) => p),
-          33,
-          index,
-          eth1Data.depositRoot
-        )).toBe(true);
+        expect(
+          verifyMerkleBranch(
+            ssz.phase0.DepositData.hashTreeRoot(deposit.data),
+            Array.from(deposit.proof).map((p) => p),
+            33,
+            index,
+            eth1Data.depositRoot
+          )
+        ).toBe(true);
       }
     });
   });

@@ -1,3 +1,4 @@
+import {describe, it, expect} from "vitest";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 
 import {byteArrayEquals} from "../../../src/util/bytes.js";

@@ -1,3 +1,4 @@
+import {describe, it, expect} from "vitest";
 import {chunkifyInclusiveRange} from "../../../src/util/chunkify.js";
 
 describe("chunkifyInclusiveRange", () => {

@@ -1,3 +1,4 @@
+import {describe, it, expect} from "vitest";
 import {clientFromAgentVersion, ClientKind} from "../../../../src/network/peers/client.js";
 
 describe("clientFromAgentVersion", () => {

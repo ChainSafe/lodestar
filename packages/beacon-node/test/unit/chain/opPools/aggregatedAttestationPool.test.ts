@@ -1,12 +1,10 @@
-import {SinonStubbedInstance} from "sinon";
-import sinon from "sinon";
 import type {SecretKey} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
 import {BitArray, fromHexString, toHexString} from "@chainsafe/ssz";
+import {describe, it, expect, beforeEach, beforeAll, afterEach, vi} from "vitest";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz, phase0} from "@lodestar/types";
-import {ForkChoice, IForkChoice} from "@lodestar/fork-choice";
 import {
   AggregatedAttestationPool,
   aggregateInto,
@@ -19,6 +17,7 @@ import {generateCachedAltairState} from "../../../utils/state.js";
 import {renderBitArray} from "../../../utils/render.js";
 import {ZERO_HASH_HEX} from "../../../../src/constants/constants.js";
 import {generateProtoBlock} from "../../../utils/typeGenerator.js";
+import {MockedBeaconChain, getMockedBeaconChain} from "../../../__mocks__/mockedBeaconChain.js";
 
 /** Valid signature of random data to prevent BLS errors */
 const validSignature = fromHexString(
@@ -39,17 +38,16 @@ describe("AggregatedAttestationPool", function () {
   const attDataRootHex = toHexString(ssz.phase0.AttestationData.hashTreeRoot(attestation.data));
 
   const committee = [0, 1, 2, 3];
-  let forkchoiceStub: SinonStubbedInstance<IForkChoice>;
-  const sandbox = sinon.createSandbox();
+  let forkchoiceStub: MockedBeaconChain["forkChoice"];
 
   beforeEach(() => {
     pool = new AggregatedAttestationPool();
     altairState = originalState.clone();
-    forkchoiceStub = sandbox.createStubInstance(ForkChoice);
+    forkchoiceStub = getMockedBeaconChain().forkChoice;
   });
 
-  this.afterEach(() => {
-    sandbox.restore();
+  afterEach(() => {
+    vi.clearAllMocks();
   });
 
   it("getParticipationFn", () => {
@@ -77,8 +75,8 @@ describe("AggregatedAttestationPool", function () {
         aggregationBits.getTrueBitIndexes().length,
         committee
       );
-      forkchoiceStub.getBlockHex.returns(generateProtoBlock());
-      forkchoiceStub.getDependentRoot.returns(ZERO_HASH_HEX);
+      forkchoiceStub.getBlockHex.mockReturnValue(generateProtoBlock());
+      forkchoiceStub.getDependentRoot.mockReturnValue(ZERO_HASH_HEX);
       if (isReturned) {
         expect(pool.getAttestationsForBlock(forkchoiceStub, altairState).length).toBeGreaterThan(0);
       } else {
@@ -103,8 +101,8 @@ describe("AggregatedAttestationPool", function () {
     // all attesters are not seen
     const attestingIndices = [2, 3];
     pool.add(attestation, attDataRootHex, attestingIndices.length, committee);
-    forkchoiceStub.getBlockHex.returns(generateProtoBlock());
-    forkchoiceStub.getDependentRoot.returns("0xWeird");
+    forkchoiceStub.getBlockHex.mockReturnValue(generateProtoBlock());
+    forkchoiceStub.getDependentRoot.mockReturnValue("0xWeird");
     expect(pool.getAttestationsForBlock(forkchoiceStub, altairState)).toEqual([]);
     // "forkchoice should be called to check pivot block"
     expect(forkchoiceStub.getDependentRoot).toHaveBeenCalledTimes(1);
@@ -252,7 +250,7 @@ describe("MatchingDataAttestationGroup aggregateInto", function () {
   let sk1: SecretKey;
   let sk2: SecretKey;
 
-  beforeAll("Init BLS", async () => {
+  beforeAll(async () => {
     sk1 = bls.SecretKey.fromBytes(Buffer.alloc(32, 1));
     sk2 = bls.SecretKey.fromBytes(Buffer.alloc(32, 2));
     attestation1.signature = sk1.sign(attestationDataRoot).toBytes();
@@ -266,8 +264,6 @@ describe("MatchingDataAttestationGroup aggregateInto", function () {
 
     expect(renderBitArray(attWithIndex1.attestation.aggregationBits)).toEqual(renderBitArray(mergedBitArray));
     const aggregatedSignature = bls.Signature.fromBytes(attWithIndex1.attestation.signature, undefined, true);
-    expect(
-      aggregatedSignature.verifyAggregate([sk1.toPublicKey(), sk2.toPublicKey()], attestationDataRoot)
-    ).toBe(true);
+    expect(aggregatedSignature.verifyAggregate([sk1.toPublicKey(), sk2.toPublicKey()], attestationDataRoot)).toBe(true);
   });
 });

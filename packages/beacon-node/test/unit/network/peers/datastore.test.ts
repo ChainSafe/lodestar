@@ -1,21 +1,25 @@
 import {LevelDatastore} from "datastore-level";
 import {Key} from "interface-datastore";
-import sinon from "sinon";
+import {describe, it, expect, beforeEach, afterEach, vi, MockedObject} from "vitest";
 import {Eth2PeerDataStore} from "../../../../src/network/peers/datastore.js";
+
+vi.mock("datastore-level");
 
 describe("Eth2PeerDataStore", () => {
   let eth2Datastore: Eth2PeerDataStore;
-  let dbDatastoreStub: sinon.SinonStubbedInstance<LevelDatastore> & LevelDatastore;
-  const sandbox = sinon.createSandbox();
+  let dbDatastoreStub: MockedObject<LevelDatastore>;
 
   beforeEach(() => {
-    sandbox.useFakeTimers();
-    dbDatastoreStub = sandbox.createStubInstance(LevelDatastore);
+    vi.useFakeTimers({now: Date.now()});
+
+    dbDatastoreStub = vi.mocked(new LevelDatastore({} as any));
     eth2Datastore = new Eth2PeerDataStore(dbDatastoreStub, {threshold: 2, maxMemoryItems: 3});
+
+    vi.spyOn(dbDatastoreStub, "put").mockResolvedValue({} as any);
   });
 
   afterEach(() => {
-    sandbox.restore();
+    vi.clearAllMocks();
   });
 
   it("should persist to db after threshold put", async () => {
@@ -29,7 +33,7 @@ describe("Eth2PeerDataStore", () => {
     // oldest item
     await eth2Datastore.put(new Key("k1"), Buffer.from("1"));
     expect(await eth2Datastore.get(new Key("k1"))).toEqual(Buffer.from("1"));
-    sandbox.clock.tick(1000);
+    vi.advanceTimersByTime(1000);
 
     // 2nd, not call dbDatastoreStub.put yet
     await eth2Datastore.put(new Key("k2"), Buffer.from("2"));
@@ -43,11 +47,12 @@ describe("Eth2PeerDataStore", () => {
     // 4th item, should evict 1st item since it's oldest
     await eth2Datastore.put(new Key("k4"), Buffer.from("4"));
     expect(await eth2Datastore.get(new Key("k4"))).toEqual(Buffer.from("4"));
-    expect(dbDatastoreStub.put).to.be.calledOnceWith(new Key("/k1"), Buffer.from("1"));
+    expect(dbDatastoreStub.put).toHaveBeenCalledTimes(1);
+    expect(dbDatastoreStub.put).toHaveBeenCalledWith(new Key("/k1"), Buffer.from("1"));
 
     // still able to get k1 from datastore
     expect(dbDatastoreStub.get).not.toHaveBeenCalledTimes(1);
-    dbDatastoreStub.get.resolves(Buffer.from("1"));
+    dbDatastoreStub.get.mockResolvedValue(Buffer.from("1"));
     expect(await eth2Datastore.get(new Key("k1"))).toEqual(Buffer.from("1"));
     expect(dbDatastoreStub.get).toHaveBeenCalledTimes(1);
 
@@ -58,7 +63,7 @@ describe("Eth2PeerDataStore", () => {
   });
 
   it("should put to memory cache if item was found from db", async () => {
-    dbDatastoreStub.get.resolves(Buffer.from("1"));
+    dbDatastoreStub.get.mockResolvedValue(Buffer.from("1"));
     // query db for the first time
     expect(await eth2Datastore.get(new Key("k1"))).toEqual(Buffer.from("1"));
     expect(dbDatastoreStub.get).toHaveBeenCalledTimes(1);

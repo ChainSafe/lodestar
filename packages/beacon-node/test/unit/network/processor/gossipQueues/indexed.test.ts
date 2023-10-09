@@ -1,4 +1,4 @@
-import sinon from "sinon";
+import {describe, it, expect, beforeEach, afterEach, vi} from "vitest";
 import {IndexedGossipQueueMinSize} from "../../../../../src/network/processor/gossipQueues/indexed.js";
 
 type Item = {
@@ -23,10 +23,8 @@ describe("IndexedGossipQueueMinSize", () => {
     maxChunkSize: 3,
   });
 
-  const sandbox = sinon.createSandbox();
-
   beforeEach(() => {
-    sandbox.useFakeTimers();
+    vi.useFakeTimers({now: 0});
     gossipQueue.clear();
     for (const letter of ["a", "b", "c"]) {
       for (let i = 0; i < 4; i++) {
@@ -36,7 +34,8 @@ describe("IndexedGossipQueueMinSize", () => {
   });
 
   afterEach(() => {
-    sandbox.restore();
+    vi.clearAllMocks();
+    vi.clearAllTimers();
   });
 
   it("should return items with minChunkSize", () => {
@@ -48,9 +47,9 @@ describe("IndexedGossipQueueMinSize", () => {
     expect(gossipQueue.length).toBe(3);
     // no more keys with min chunk size but not enough wait time
     expect(gossipQueue.next()).toBeNull();
-    sandbox.clock.tick(20);
+    vi.advanceTimersByTime(20);
     expect(gossipQueue.next()).toBeNull();
-    sandbox.clock.tick(30);
+    vi.advanceTimersByTime(30);
     // should pick items of the last key
     expect(gossipQueue.next()).toEqual(["c0"].map(toIndexedItem));
     expect(gossipQueue.length).toBe(2);

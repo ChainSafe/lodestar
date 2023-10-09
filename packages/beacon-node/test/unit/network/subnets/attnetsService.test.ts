@@ -1,4 +1,4 @@
-import sinon, {SinonStubbedInstance} from "sinon";
+import {describe, it, expect, beforeEach, afterEach, vi, MockedObject} from "vitest";
 import {
   ATTESTATION_SUBNET_COUNT,
   EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION,
@@ -16,6 +16,8 @@ import {ZERO_HASH} from "../../../../src/constants/index.js";
 import {IClock} from "../../../../src/util/clock.js";
 import {Clock} from "../../../../src/util/clock.js";
 
+vi.mock("../../../../src/network/gossip/index.js");
+
 describe("AttnetsService", function () {
   const COMMITTEE_SUBNET_SUBSCRIPTION = 10;
   const ALTAIR_FORK_EPOCH = 1 * EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION;
@@ -25,8 +27,7 @@ describe("AttnetsService", function () {
 
   let service: AttnetsService;
 
-  const sandbox = sinon.createSandbox();
-  let gossipStub: SinonStubbedInstance<Eth2Gossipsub> & Eth2Gossipsub;
+  let gossipStub: MockedObject<Eth2Gossipsub>;
   let metadata: MetadataController;
 
   let clock: IClock;
@@ -44,8 +45,11 @@ describe("AttnetsService", function () {
   let randomSubnet = 0;
 
   beforeEach(function () {
-    sandbox.useFakeTimers(Date.now());
-    gossipStub = sandbox.createStubInstance(Eth2Gossipsub) as SinonStubbedInstance<Eth2Gossipsub> & Eth2Gossipsub;
+    vi.useFakeTimers({now: Date.now()});
+    gossipStub = vi.mocked(new Eth2Gossipsub({} as any, {} as any));
+    vi.spyOn(gossipStub, "subscribeTopic").mockReturnValue();
+    vi.spyOn(gossipStub, "unsubscribeTopic").mockReturnValue();
+
     const randBetweenFn = (min: number, max: number): number => {
       if (min === EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION && max === 2 * EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION) {
         return numEpochRandomSubscription;
@@ -77,8 +81,9 @@ describe("AttnetsService", function () {
 
   afterEach(() => {
     service.close();
-    sandbox.restore();
     randomSubnet = 0;
+    vi.clearAllMocks();
+    vi.clearAllTimers();
   });
 
   it("should not subscribe when there is no active validator", () => {
@@ -106,7 +111,7 @@ describe("AttnetsService", function () {
     service.addCommitteeSubscriptions([subscription]);
     expect(metadata.seqNumber).toBe(BigInt(1));
     expect(EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION * SLOTS_PER_EPOCH).toBeGreaterThan(150);
-    sandbox.clock.tick(150 * SLOTS_PER_EPOCH * SECONDS_PER_SLOT * 1000);
+    vi.advanceTimersByTime(150 * SLOTS_PER_EPOCH * SECONDS_PER_SLOT * 1000);
     expect(gossipStub.unsubscribeTopic).toHaveBeenCalled();
     // subscribe then unsubscribe
     expect(metadata.seqNumber).toBe(BigInt(2));
@@ -114,12 +119,12 @@ describe("AttnetsService", function () {
 
   it("should change subnet subscription after 2*EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION", async () => {
     service.addCommitteeSubscriptions([subscription]);
-    expect(gossipStub.subscribeTopic.calledOnce).toBe(true);
+    expect(gossipStub.subscribeTopic).toBeCalledTimes(1);
     expect(metadata.seqNumber).toBe(BigInt(1));
     for (let numEpoch = 0; numEpoch <= numEpochRandomSubscription; numEpoch++) {
       // avoid known validator expiry
       service.addCommitteeSubscriptions([subscription]);
-      sandbox.clock.tick(SLOTS_PER_EPOCH * SECONDS_PER_SLOT * 1000);
+      vi.advanceTimersByTime(SLOTS_PER_EPOCH * SECONDS_PER_SLOT * 1000);
     }
     // may call 2 times, 1 for committee subnet, 1 for random subnet
     expect(gossipStub.unsubscribeTopic).toHaveBeenCalled();
@@ -145,12 +150,12 @@ describe("AttnetsService", function () {
     for (let numEpoch = 0; numEpoch < numEpochRandomSubscription; numEpoch++) {
       // avoid known validator expiry
       service.addCommitteeSubscriptions(subscriptions);
-      sandbox.clock.tick(SLOTS_PER_EPOCH * SECONDS_PER_SLOT * 1000);
+      vi.advanceTimersByTime(SLOTS_PER_EPOCH * SECONDS_PER_SLOT * 1000);
     }
     // tick 3 next slots to expect an attempt to expire committee subscription
-    sandbox.clock.tick(3 * SECONDS_PER_SLOT * 1000);
+    vi.advanceTimersByTime(3 * SECONDS_PER_SLOT * 1000);
     // should not unsubscribe any subnet topics as we have ATTESTATION_SUBNET_COUNT subscription
-    expect(gossipStub.unsubscribeTopic.called).toBe(false);
+    expect(gossipStub.unsubscribeTopic).not.toBeCalled();
   });
 
   it("should prepare for a hard fork", async () => {
@@ -160,7 +165,7 @@ describe("AttnetsService", function () {
     service.subscribeSubnetsToNextFork(ForkName.altair);
 
     // Should have already subscribed to both forks
-    const forkTransitionSubscribeCalls = gossipStub.subscribeTopic.getCalls().map((call) => call.args[0]);
+    const forkTransitionSubscribeCalls = gossipStub.subscribeTopic.mock.calls.map((call) => call[0]);
     const subToPhase0 = forkTransitionSubscribeCalls.find((topic) => topic.fork === ForkName.phase0);
     const subToAltair = forkTransitionSubscribeCalls.find((topic) => topic.fork === ForkName.altair);
     if (!subToPhase0) throw Error("Must subscribe to one subnet on phase0");
@@ -169,7 +174,7 @@ describe("AttnetsService", function () {
     // Advance through the fork transition so it un-subscribes from all phase0 subs
     service.unsubscribeSubnetsFromPrevFork(ForkName.phase0);
 
-    const forkTransitionUnSubscribeCalls = gossipStub.unsubscribeTopic.getCalls().map((call) => call.args[0]);
+    const forkTransitionUnSubscribeCalls = gossipStub.unsubscribeTopic.mock.calls.map((call) => call[0]);
     const unsubbedPhase0Subnets = new Set<number>();
     for (const topic of forkTransitionUnSubscribeCalls) {
       if (topic.fork === ForkName.phase0 && topic.type === GossipType.beacon_attestation)
@@ -183,7 +188,7 @@ describe("AttnetsService", function () {
   });
 
   it("handle committee subnet the same to random subnet", () => {
-    // randomUtil.withArgs(0, ATTESTATION_SUBNET_COUNT).returns(COMMITTEE_SUBNET_SUBSCRIPTION);
+    // randomUtil.withArgs(0, ATTESTATION_SUBNET_COUNT).mockReturnValue(COMMITTEE_SUBNET_SUBSCRIPTION);
     randomSubnet = COMMITTEE_SUBNET_SUBSCRIPTION;
     const aggregatorSubscription: CommitteeSubscription = {...subscription, isAggregator: true};
     service.addCommitteeSubscriptions([aggregatorSubscription]);
@@ -193,7 +198,7 @@ describe("AttnetsService", function () {
     expect(gossipStub.subscribeTopic).toHaveBeenCalledTimes(1);
     expect(metadata.seqNumber).toBe(BigInt(1));
     // pass through subscription slot
-    sandbox.clock.tick((aggregatorSubscription.slot + 2) * SECONDS_PER_SLOT * 1000);
+    vi.advanceTimersByTime((aggregatorSubscription.slot + 2) * SECONDS_PER_SLOT * 1000);
     // don't unsubscribe bc random subnet is still there
     expect(gossipStub.unsubscribeTopic).not.toHaveBeenCalled();
   });

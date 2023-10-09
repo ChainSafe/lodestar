@@ -1,3 +1,4 @@
+import {describe, it, expect, beforeEach} from "vitest";
 import {ssz, allForks} from "@lodestar/types";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
@@ -63,9 +64,7 @@ describe("UpgradeLightClientHeader", function () {
 
         expect(() => {
           upgradeLightClientHeader(config, toFork, lcHeaderByFork[fromFork]);
-        }).toThrow(
-          `Invalid upgrade request from headerFork=${fromFork} to targetFork=${toFork}`
-        );
+        }).toThrow(`Invalid upgrade request from headerFork=${fromFork} to targetFork=${toFork}`);
       });
     }
   }

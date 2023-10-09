@@ -1,3 +1,4 @@
+import {describe, it, expect} from "vitest";
 import {rejectFirstInvalidResolveAllValid} from "../../../../src/chain/blocks/verifyBlocksSignatures.js";
 
 /* eslint-disable @typescript-eslint/explicit-function-return-type */

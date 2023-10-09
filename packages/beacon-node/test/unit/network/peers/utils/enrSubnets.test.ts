@@ -1,4 +1,5 @@
 import {BitArray} from "@chainsafe/ssz";
+import {describe, it, expect} from "vitest";
 import {SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
@@ -18,7 +19,9 @@ describe("ENR syncnets", () => {
     it(`Deserialize syncnet ${bytes}`, () => {
       const bytesBuf = Buffer.from(bytes, "hex");
 
-      expect(toHex(ssz.altair.SyncSubnets.deserialize(bytesBuf).uint8Array)).toEqual(toHex(BitArray.fromBoolArray(bools).uint8Array));
+      expect(toHex(ssz.altair.SyncSubnets.deserialize(bytesBuf).uint8Array)).toEqual(
+        toHex(BitArray.fromBoolArray(bools).uint8Array)
+      );
 
       expect(
         deserializeEnrSubnets(bytesBuf, SYNC_COMMITTEE_SUBNET_COUNT).slice(0, SYNC_COMMITTEE_SUBNET_COUNT)
@@ -104,9 +107,9 @@ describe("ENR syncnets", () => {
   for (const {bytes, bools} of attnetTestCases) {
     const bytesBuf = Buffer.from(bytes, "hex");
     it(`Deserialize attnet ${bytes}`, () => {
-      expect(
-        deserializeEnrSubnets(bytesBuf, ATTESTATION_SUBNET_COUNT).slice(0, ATTESTATION_SUBNET_COUNT)
-      ).toEqual(bools);
+      expect(deserializeEnrSubnets(bytesBuf, ATTESTATION_SUBNET_COUNT).slice(0, ATTESTATION_SUBNET_COUNT)).toEqual(
+        bools
+      );
     });
   }
 });

@@ -1,3 +1,4 @@
+import {describe, it, expect} from "vitest";
 import {phase0} from "@lodestar/types";
 import {assertPeerRelevance, IrrelevantPeerCode} from "../../../../../src/network/peers/utils/assertPeerRelevance.js";
 

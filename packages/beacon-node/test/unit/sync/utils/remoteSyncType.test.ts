@@ -1,4 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
+import {describe, it, expect} from "vitest";
 import {IForkChoice} from "@lodestar/fork-choice";
 import {Root, phase0} from "@lodestar/types";
 import {ZERO_HASH} from "../../../../src/constants/index.js";

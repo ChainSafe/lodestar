@@ -1,4 +1,5 @@
 import {BitArray} from "@chainsafe/ssz";
+import {describe, it, expect} from "vitest";
 import {ssz} from "@lodestar/types";
 import {SeenSyncCommitteeMessages, SeenContributionAndProof} from "../../../../src/chain/seenCache/index.js";
 

@@ -1,3 +1,4 @@
+import {describe, it, expect, beforeAll} from "vitest";
 import {ssz, deneb} from "@lodestar/types";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 
@@ -9,7 +10,6 @@ import {ZERO_HASH} from "../../../src/constants/constants.js";
 
 describe("beaconBlocksMaybeBlobsByRange", () => {
   beforeAll(async function () {
-    this.timeout(10000); // Loading trusted setup is slow
     await initCKZG();
     loadEthereumTrustedSetup();
   });

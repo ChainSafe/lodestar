@@ -1,32 +1,38 @@
-import sinon, {SinonStubbedInstance} from "sinon";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {describe, it, expect, beforeEach, vi, afterEach} from "vitest";
 import {ssz} from "@lodestar/types";
-import {ForkChoice} from "@lodestar/fork-choice";
 import {config} from "@lodestar/config/default";
 import {ZERO_HASH_HEX} from "../../../../src/constants/index.js";
 import {generateProtoBlock} from "../../../utils/typeGenerator.js";
-import {StubbedBeaconDb} from "../../../utils/stub/index.js";
 import {testLogger} from "../../../utils/logger.js";
 import {archiveBlocks} from "../../../../src/chain/archiver/archiveBlocks.js";
-import {LightClientServer} from "../../../../src/chain/lightClient/index.js";
+import {MockedBeaconDb, getMockedBeaconDb} from "../../../__mocks__/mockedBeaconDb.js";
+import {MockedBeaconChain, getMockedBeaconChain} from "../../../__mocks__/mockedBeaconChain.js";
 
 describe("block archiver task", function () {
   const logger = testLogger();
 
-  let dbStub: StubbedBeaconDb;
-  let forkChoiceStub: SinonStubbedInstance<ForkChoice>;
-  let lightclientServer: SinonStubbedInstance<LightClientServer> & LightClientServer;
+  let dbStub: MockedBeaconDb;
+  let forkChoiceStub: MockedBeaconChain["forkChoice"];
+  let lightclientServer: MockedBeaconChain["lightClientServer"];
 
   beforeEach(function () {
-    dbStub = new StubbedBeaconDb();
-    forkChoiceStub = sinon.createStubInstance(ForkChoice);
-    lightclientServer = sinon.createStubInstance(LightClientServer) as SinonStubbedInstance<LightClientServer> &
-      LightClientServer;
+    const chain = getMockedBeaconChain();
+    dbStub = getMockedBeaconDb();
+    forkChoiceStub = chain.forkChoice;
+    lightclientServer = chain.lightClientServer;
+
+    vi.spyOn(dbStub.blockArchive, "batchPutBinary");
+    vi.spyOn(dbStub.block, "batchDelete");
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
   });
 
   it("should archive finalized blocks", async function () {
     const blockBytes = ssz.phase0.SignedBeaconBlock.serialize(ssz.phase0.SignedBeaconBlock.defaultValue());
-    dbStub.block.getBinary.resolves(Buffer.from(blockBytes));
+    vi.spyOn(dbStub.block, "getBinary").mockResolvedValue(Buffer.from(blockBytes));
     // block i has slot i+1
     const blocks = Array.from({length: 5}, (_, i) =>
       generateProtoBlock({slot: i + 1, blockRoot: toHexString(Buffer.alloc(32, i + 1))})
@@ -34,8 +40,8 @@ describe("block archiver task", function () {
     const canonicalBlocks = [blocks[4], blocks[3], blocks[1], blocks[0]];
     const nonCanonicalBlocks = [blocks[2]];
     const currentEpoch = 8;
-    forkChoiceStub.getAllAncestorBlocks.returns(canonicalBlocks);
-    forkChoiceStub.getAllNonAncestorBlocks.returns(nonCanonicalBlocks);
+    vi.spyOn(forkChoiceStub, "getAllAncestorBlocks").mockReturnValue(canonicalBlocks);
+    vi.spyOn(forkChoiceStub, "getAllNonAncestorBlocks").mockReturnValue(nonCanonicalBlocks);
     await archiveBlocks(
       config,
       dbStub,
@@ -46,21 +52,27 @@ describe("block archiver task", function () {
       currentEpoch
     );
 
-    expect(dbStub.blockArchive.batchPutBinary.getCall(0).args[0]).toEqual(canonicalBlocks.map((summary) => ({
-      key: summary.slot,
-      value: blockBytes,
-      slot: summary.slot,
-      blockRoot: fromHexString(summary.blockRoot),
-      parentRoot: fromHexString(summary.parentRoot),
-    })));
+    const expectedData = canonicalBlocks
+      .map((summary) => ({
+        key: summary.slot,
+        value: blockBytes,
+        slot: summary.slot,
+        blockRoot: fromHexString(summary.blockRoot),
+        parentRoot: fromHexString(summary.parentRoot),
+      }))
+      .map((data) => ({
+        ...data,
+        value: Buffer.from(data.value),
+        parentRoot: Buffer.from(data.parentRoot),
+      }));
+
+    expect(dbStub.blockArchive.batchPutBinary).toHaveBeenNthCalledWith(1, expectedData);
 
     // delete canonical blocks
-    expect(
-      dbStub.block.batchDelete.calledWith(
-        [blocks[4], blocks[3], blocks[1], blocks[0]].map((summary) => fromHexString(summary.blockRoot))
-      )
-    ).toBe(true);
+    expect(dbStub.block.batchDelete).toBeCalledWith(
+      [blocks[4], blocks[3], blocks[1], blocks[0]].map((summary) => fromHexString(summary.blockRoot))
+    );
     // delete non canonical blocks
-    expect(dbStub.block.batchDelete.calledWith([blocks[2]].map((summary) => fromHexString(summary.blockRoot)))).toBe(true);
+    expect(dbStub.block.batchDelete).toBeCalledWith([blocks[2]].map((summary) => fromHexString(summary.blockRoot)));
   });
 });

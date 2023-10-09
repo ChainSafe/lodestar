@@ -1,7 +1,6 @@
-import sinon, {SinonStubbedInstance} from "sinon";
-
 import bls from "@chainsafe/bls";
 import {PointFormat} from "@chainsafe/bls/types";
+import {describe, it, beforeEach, beforeAll, vi, afterEach} from "vitest";
 import {config} from "@lodestar/config/default";
 import {
   CachedBeaconStateAllForks,
@@ -9,29 +8,21 @@ import {
   computeDomain,
   computeSigningRoot,
 } from "@lodestar/state-transition";
-import {ForkChoice} from "@lodestar/fork-choice";
 import {phase0, ssz} from "@lodestar/types";
-
 import {DOMAIN_VOLUNTARY_EXIT, FAR_FUTURE_EPOCH, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {createBeaconConfig} from "@lodestar/config";
-import {BeaconChain} from "../../../../src/chain/index.js";
-import {StubbedChainMutable} from "../../../utils/stub/index.js";
 import {generateState} from "../../../utils/state.js";
 import {validateGossipVoluntaryExit} from "../../../../src/chain/validation/voluntaryExit.js";
 import {VoluntaryExitErrorCode} from "../../../../src/chain/errors/voluntaryExitError.js";
-import {OpPool} from "../../../../src/chain/opPools/index.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState.js";
-import {BlsVerifierMock} from "../../../utils/mocks/bls.js";
-
-type StubbedChain = StubbedChainMutable<"forkChoice" | "bls">;
+import {MockedBeaconChain, getMockedBeaconChain} from "../../../__mocks__/mockedBeaconChain.js";
 
 describe("validate voluntary exit", () => {
-  const sandbox = sinon.createSandbox();
-  let chainStub: StubbedChain;
+  let chainStub: MockedBeaconChain;
   let state: CachedBeaconStateAllForks;
   let signedVoluntaryExit: phase0.SignedVoluntaryExit;
-  let opPool: OpPool & SinonStubbedInstance<OpPool>;
+  let opPool: MockedBeaconChain["opPool"];
 
   beforeAll(() => {
     const sk = bls.SecretKey.fromKeygen();
@@ -71,17 +62,15 @@ describe("validate voluntary exit", () => {
   });
 
   beforeEach(() => {
-    chainStub = sandbox.createStubInstance(BeaconChain) as StubbedChain;
-    chainStub.forkChoice = sandbox.createStubInstance(ForkChoice);
-    opPool = sandbox.createStubInstance(OpPool) as OpPool & SinonStubbedInstance<OpPool>;
-    (chainStub as {opPool: OpPool}).opPool = opPool;
-    chainStub.getHeadStateAtCurrentEpoch.resolves(state);
-    // TODO: Use actual BLS verification
-    chainStub.bls = new BlsVerifierMock(true);
+    chainStub = getMockedBeaconChain();
+    opPool = chainStub.opPool;
+    vi.spyOn(chainStub, "getHeadStateAtCurrentEpoch").mockResolvedValue(state);
+    vi.spyOn(opPool, "hasSeenBlsToExecutionChange");
+    vi.spyOn(opPool, "hasSeenVoluntaryExit");
   });
 
   afterEach(() => {
-    sandbox.restore();
+    vi.clearAllMocks();
   });
 
   it("should return invalid Voluntary Exit - existing", async () => {
@@ -91,7 +80,7 @@ describe("validate voluntary exit", () => {
     };
 
     // Return SignedVoluntaryExit known
-    opPool.hasSeenVoluntaryExit.returns(true);
+    opPool.hasSeenVoluntaryExit.mockReturnValue(true);
 
     await expectRejectedWithLodestarError(
       validateGossipVoluntaryExit(chainStub, signedVoluntaryExitInvalidSig),

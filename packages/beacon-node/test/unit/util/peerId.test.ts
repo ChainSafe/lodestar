@@ -1,3 +1,4 @@
+import {describe, it, expect} from "vitest";
 import {peerIdFromString, peerIdToString} from "../../../src/util/peerId.js";
 
 describe("network peerid", () => {

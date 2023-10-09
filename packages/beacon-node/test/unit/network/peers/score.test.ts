@@ -1,4 +1,4 @@
-import sinon from "sinon";
+import {describe, it, expect, beforeEach, afterEach, vi} from "vitest";
 import {MapDef} from "@lodestar/utils";
 import {peerIdFromString} from "../../../../src/util/peerId.js";
 import {
@@ -8,6 +8,16 @@ import {
   updateGossipsubScores,
   RealScore,
 } from "../../../../src/network/peers/score/index.js";
+
+vi.mock("../../../../src/network/peers/score/index.js", async (requireActual) => {
+  const mod = await requireActual<typeof import("../../../../src/network/peers/score/index.js")>();
+
+  mod.PeerRpcScoreStore.prototype.updateGossipsubScore = vi.fn();
+
+  return {
+    ...mod,
+  };
+});
 
 describe("simple block provider score tracking", function () {
   const peer = peerIdFromString("Qma9T5YraSnpRDZqRR4krcSJabThc8nwZuJV3LercPHufi");
@@ -69,14 +79,14 @@ describe("simple block provider score tracking", function () {
 });
 
 describe("updateGossipsubScores", function () {
-  const sandbox = sinon.createSandbox();
   let peerRpcScoresStub: PeerRpcScoreStore;
+
   beforeEach(() => {
-    peerRpcScoresStub = sandbox.createStubInstance(PeerRpcScoreStore);
+    peerRpcScoresStub = vi.mocked(new PeerRpcScoreStore());
   });
 
-  this.afterEach(() => {
-    sandbox.restore();
+  afterEach(() => {
+    vi.clearAllMocks();
   });
 
   const testCases: {name: string; peerScores: [string, number, boolean][]; maxIgnore: number}[] = [

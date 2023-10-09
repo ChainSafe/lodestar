@@ -1,4 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
+import {describe, it, expect, beforeEach, afterEach} from "vitest";
 import {ChainConfig} from "@lodestar/config";
 import {sleep} from "@lodestar/utils";
 import {IEth1Provider} from "../../../src/index.js";

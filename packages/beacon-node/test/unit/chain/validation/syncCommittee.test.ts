@@ -1,29 +1,22 @@
-import sinon from "sinon";
-import {SinonStubbedInstance} from "sinon";
 import {toHexString} from "@chainsafe/ssz";
+import {describe, it, expect, afterEach, beforeEach, beforeAll, afterAll, vi} from "vitest";
 import {altair, Epoch, Slot} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {ForkChoice, IForkChoice} from "@lodestar/fork-choice";
-import {BeaconChain} from "../../../../src/chain/index.js";
-import {Clock} from "../../../../src/util/clock.js";
 import {SyncCommitteeErrorCode} from "../../../../src/chain/errors/syncCommitteeError.js";
 import {validateGossipSyncCommittee} from "../../../../src/chain/validation/syncCommittee.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {generateCachedAltairState} from "../../../utils/state.js";
 import {SeenSyncCommitteeMessages} from "../../../../src/chain/seenCache/index.js";
-import {BlsVerifierMock} from "../../../utils/mocks/bls.js";
-import {StubbedChainMutable} from "../../../utils/stub/index.js";
+import {BlsVerifierMock} from "../../../__mocks__/mockedBls.js";
 import {ZERO_HASH} from "../../../../src/constants/constants.js";
-
-type StubbedChain = StubbedChainMutable<"clock" | "bls">;
+import {MockedBeaconChain, getMockedBeaconChain} from "../../../__mocks__/mockedBeaconChain.js";
 
 // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/altair/p2p-interface.md
 describe("Sync Committee Signature validation", function () {
-  const sandbox = sinon.createSandbox();
-  let chain: StubbedChain;
-  let clockStub: SinonStubbedInstance<Clock>;
-  let forkchoiceStub: SinonStubbedInstance<ForkChoice>;
+  let chain: MockedBeaconChain;
+  let clockStub: MockedBeaconChain["clock"];
+  let forkchoiceStub: MockedBeaconChain["forkChoice"];
   // let computeSubnetsForSyncCommitteeStub: SinonStubFn<typeof syncCommitteeUtils["computeSubnetsForSyncCommittee"]>;
   let altairForkEpochBk: Epoch;
   const altairForkEpoch = 2020;
@@ -43,26 +36,24 @@ describe("Sync Committee Signature validation", function () {
   });
 
   beforeEach(function () {
-    chain = sandbox.createStubInstance(BeaconChain) as typeof chain;
+    chain = getMockedBeaconChain();
     (
       chain as {
         seenSyncCommitteeMessages: SeenSyncCommitteeMessages;
       }
     ).seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
-    clockStub = sandbox.createStubInstance(Clock);
-    chain.clock = clockStub;
-    clockStub.isCurrentSlotGivenGossipDisparity.returns(true);
-    forkchoiceStub = sandbox.createStubInstance(ForkChoice);
-    (chain as {forkChoice: IForkChoice}).forkChoice = forkchoiceStub;
+    clockStub = chain.clock;
+    forkchoiceStub = chain.forkChoice;
+    vi.spyOn(clockStub, "isCurrentSlotGivenGossipDisparity").mockReturnValue(true);
   });
 
   afterEach(function () {
-    sandbox.restore();
+    vi.clearAllMocks();
   });
 
   it("should throw error - the signature's slot is in the past", async function () {
-    clockStub.isCurrentSlotGivenGossipDisparity.returns(false);
-    sandbox.stub(clockStub, "currentSlot").get(() => 100);
+    clockStub.isCurrentSlotGivenGossipDisparity.mockReturnValue(false);
+    vi.spyOn(clockStub, "currentSlot", "get").mockReturnValue(100);
 
     const syncCommittee = getSyncCommitteeSignature(1, 0);
     await expectRejectedWithLodestarError(
@@ -74,7 +65,7 @@ describe("Sync Committee Signature validation", function () {
   it("should throw error - messageRoot is same to prevRoot", async function () {
     const syncCommittee = getSyncCommitteeSignature(currentSlot, validatorIndexInSyncCommittee);
     const headState = generateCachedAltairState({slot: currentSlot}, altairForkEpoch);
-    chain.getHeadState.returns(headState);
+    chain.getHeadState.mockReturnValue(headState);
     chain.seenSyncCommitteeMessages.get = () => toHexString(syncCommittee.beaconBlockRoot);
     await expectRejectedWithLodestarError(
       validateGossipSyncCommittee(chain, syncCommittee, 0),
@@ -85,10 +76,10 @@ describe("Sync Committee Signature validation", function () {
   it("should throw error - messageRoot is different to prevRoot but not forkchoice head", async function () {
     const syncCommittee = getSyncCommitteeSignature(currentSlot, validatorIndexInSyncCommittee);
     const headState = generateCachedAltairState({slot: currentSlot}, altairForkEpoch);
-    chain.getHeadState.returns(headState);
+    chain.getHeadState.mockReturnValue(headState);
     const prevRoot = "0x1234";
     chain.seenSyncCommitteeMessages.get = () => prevRoot;
-    forkchoiceStub.getHeadRoot.returns(prevRoot);
+    forkchoiceStub.getHeadRoot.mockReturnValue(prevRoot);
     await expectRejectedWithLodestarError(
       validateGossipSyncCommittee(chain, syncCommittee, 0),
       SyncCommitteeErrorCode.SYNC_COMMITTEE_MESSAGE_KNOWN
@@ -98,7 +89,7 @@ describe("Sync Committee Signature validation", function () {
   it("should throw error - the validator is not part of the current sync committee", async function () {
     const syncCommittee = getSyncCommitteeSignature(currentSlot, 100);
     const headState = generateCachedAltairState({slot: currentSlot}, altairForkEpoch);
-    chain.getHeadState.returns(headState);
+    chain.getHeadState.mockReturnValue(headState);
 
     await expectRejectedWithLodestarError(
       validateGossipSyncCommittee(chain, syncCommittee, 0),
@@ -113,7 +104,7 @@ describe("Sync Committee Signature validation", function () {
   it.skip("should throw error - incorrect subnet", async function () {
     const syncCommittee = getSyncCommitteeSignature(currentSlot, 1);
     const headState = generateCachedAltairState({slot: currentSlot}, altairForkEpoch);
-    chain.getHeadState.returns(headState);
+    chain.getHeadState.mockReturnValue(headState);
     await expectRejectedWithLodestarError(
       validateGossipSyncCommittee(chain, syncCommittee, 0),
       SyncCommitteeErrorCode.INVALID_SUBCOMMITTEE_INDEX
@@ -124,7 +115,7 @@ describe("Sync Committee Signature validation", function () {
     const syncCommittee = getSyncCommitteeSignature(currentSlot, validatorIndexInSyncCommittee);
     const headState = generateCachedAltairState({slot: currentSlot}, altairForkEpoch);
 
-    chain.getHeadState.returns(headState);
+    chain.getHeadState.mockReturnValue(headState);
     chain.bls = new BlsVerifierMock(false);
     await expectRejectedWithLodestarError(
       validateGossipSyncCommittee(chain, syncCommittee, 0),
@@ -138,12 +129,14 @@ describe("Sync Committee Signature validation", function () {
     const {slot, validatorIndex} = syncCommittee;
     const headState = generateCachedAltairState({slot: currentSlot}, altairForkEpoch);
 
-    chain.getHeadState.returns(headState);
+    chain.getHeadState.mockReturnValue(headState);
     chain.bls = new BlsVerifierMock(true);
     // "should be null"
     expect(chain.seenSyncCommitteeMessages.get(slot, subnet, validatorIndex)).toBeNull();
     await validateGossipSyncCommittee(chain, syncCommittee, subnet);
-    expect(chain.seenSyncCommitteeMessages.get(slot, subnet, validatorIndex)).toBe(toHexString(syncCommittee.beaconBlockRoot));
+    expect(chain.seenSyncCommitteeMessages.get(slot, subnet, validatorIndex)).toBe(
+      toHexString(syncCommittee.beaconBlockRoot)
+    );
 
     // receive same message again
     await expectRejectedWithLodestarError(
@@ -156,7 +149,7 @@ describe("Sync Committee Signature validation", function () {
     const syncCommittee = getSyncCommitteeSignature(currentSlot, validatorIndexInSyncCommittee);
     const headState = generateCachedAltairState({slot: currentSlot}, altairForkEpoch);
 
-    chain.getHeadState.returns(headState);
+    chain.getHeadState.mockReturnValue(headState);
     chain.bls = new BlsVerifierMock(true);
 
     const subnet = 3;
@@ -165,10 +158,12 @@ describe("Sync Committee Signature validation", function () {
     chain.seenSyncCommitteeMessages.add(slot, subnet, validatorIndex, prevRoot);
     expect(chain.seenSyncCommitteeMessages.get(slot, subnet, validatorIndex)).toBe(prevRoot);
     // but forkchoice head is message root
-    forkchoiceStub.getHeadRoot.returns(toHexString(syncCommittee.beaconBlockRoot));
+    forkchoiceStub.getHeadRoot.mockReturnValue(toHexString(syncCommittee.beaconBlockRoot));
     await validateGossipSyncCommittee(chain, syncCommittee, subnet);
     // should accept the message and overwrite prevRoot
-    expect(chain.seenSyncCommitteeMessages.get(slot, subnet, validatorIndex)).toBe(toHexString(syncCommittee.beaconBlockRoot));
+    expect(chain.seenSyncCommitteeMessages.get(slot, subnet, validatorIndex)).toBe(
+      toHexString(syncCommittee.beaconBlockRoot)
+    );
 
     // receive same message again
     await expectRejectedWithLodestarError(

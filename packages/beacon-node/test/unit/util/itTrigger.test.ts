@@ -1,4 +1,5 @@
 import all from "it-all";
+import {describe, it, expect} from "vitest";
 import {ItTrigger} from "../../../src/util/itTrigger.js";
 
 describe("util / itTrigger", () => {
@@ -42,7 +43,7 @@ describe("util / itTrigger", () => {
       }, 5);
     }, 5);
 
-    await expect(all(itTrigger)).to.be.rejectedWith(testError);
+    await expect(all(itTrigger)).rejects.toThrow(testError);
   });
 
   it("ItTrigger as a single thread processor", async () => {

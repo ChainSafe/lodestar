@@ -1,22 +1,23 @@
-import sinon, {SinonStubbedInstance} from "sinon";
 import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
+import {describe, it, expect, beforeEach, beforeAll, afterEach, vi, MockedObject} from "vitest";
 import {altair} from "@lodestar/types";
 import {SyncCommitteeMessagePool} from "../../../../src/chain/opPools/index.js";
 import {Clock} from "../../../../src/util/clock.js";
 
+vi.mock("../../../../src/util/clock.js");
+
 describe("chain / opPools / SyncCommitteeMessagePool", function () {
-  const sandbox = sinon.createSandbox();
   let cache: SyncCommitteeMessagePool;
   const subcommitteeIndex = 2;
   const indexInSubcommittee = 3;
   const beaconBlockRoot = Buffer.alloc(32, 1);
   const slot = 10;
   let syncCommittee: altair.SyncCommitteeMessage;
-  let clockStub: SinonStubbedInstance<Clock>;
+  let clockStub: MockedObject<Clock>;
   const cutOffTime = 1;
 
-  beforeAll("Init BLS", async () => {
+  beforeAll(async () => {
     const sk = bls.SecretKey.fromBytes(Buffer.alloc(32, 1));
     syncCommittee = {
       slot,
@@ -27,17 +28,18 @@ describe("chain / opPools / SyncCommitteeMessagePool", function () {
   });
 
   beforeEach(() => {
-    clockStub = sandbox.createStubInstance(Clock);
+    clockStub = vi.mocked(new Clock({} as any));
     cache = new SyncCommitteeMessagePool(clockStub, cutOffTime);
     cache.add(subcommitteeIndex, syncCommittee, indexInSubcommittee);
   });
 
   afterEach(function () {
-    sandbox.restore();
+    vi.clearAllTimers();
+    vi.clearAllMocks();
   });
 
   it("should preaggregate SyncCommitteeContribution", () => {
-    clockStub.secFromSlot.returns(0);
+    clockStub.secFromSlot.mockReturnValue(0);
     let contribution = cache.getContribution(subcommitteeIndex, syncCommittee.slot, syncCommittee.beaconBlockRoot);
     expect(contribution).not.toBeNull();
     const newSecretKey = bls.SecretKey.fromBytes(Buffer.alloc(32, 2));

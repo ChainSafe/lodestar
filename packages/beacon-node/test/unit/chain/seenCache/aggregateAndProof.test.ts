@@ -1,4 +1,5 @@
 import {BitArray} from "@chainsafe/ssz";
+import {describe, it, expect} from "vitest";
 import {
   AggregationInfo,
   insertDesc,

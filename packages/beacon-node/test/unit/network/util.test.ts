@@ -1,3 +1,4 @@
+import {describe, it, expect, afterEach} from "vitest";
 import {config} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
 import {getDiscv5Multiaddrs} from "../../../src/network/libp2p/index.js";
@@ -34,7 +35,6 @@ describe("getCurrentAndNextFork", function () {
 
 describe("getDiscv5Multiaddrs", () => {
   it("should extract bootMultiaddrs from enr with tcp", async function () {
-    this.timeout(0);
     const enrWithTcp = [
       "enr:-LK4QDiPGwNomqUqNDaM3iHYvtdX7M5qngson6Qb2xGIg1LwC8-Nic0aQwO0rVbJt5xp32sRE3S1YqvVrWO7OgVNv0kBh2F0dG5ldHOIAAAAAAAAAACEZXRoMpA7CIeVAAAgCf__________gmlkgnY0gmlwhBKNA4qJc2VjcDI1NmsxoQKbBS4ROQ_sldJm5tMgi36qm5I5exKJFb4C8dDVS_otAoN0Y3CCIyiDdWRwgiMo",
     ];
@@ -46,7 +46,6 @@ describe("getDiscv5Multiaddrs", () => {
   });
 
   it("should not extract bootMultiaddrs from enr without tcp", async function () {
-    this.timeout(0);
     const enrWithoutTcp = [
       "enr:-Ku4QCFQW96tEDYPjtaueW3WIh1CB0cJnvw_ibx5qIFZGqfLLj-QajMX6XwVs2d4offuspwgH3NkIMpWtCjCytVdlywGh2F0dG5ldHOIEAIAAgABAUyEZXRoMpCi7FS9AQAAAAAiAQAAAAAAgmlkgnY0gmlwhFA4VK6Jc2VjcDI1NmsxoQNGH1sJJS86-0x9T7qQewz9Wn9zlp6bYxqqrR38JQ49yIN1ZHCCIyg",
     ];

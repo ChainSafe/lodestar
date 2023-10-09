@@ -1,11 +1,30 @@
-import sinon, {SinonStubbedInstance} from "sinon";
 import all from "it-all";
-
 import {ContainerType} from "@chainsafe/ssz";
+import {describe, it, expect, beforeEach, vi, afterEach, MockedObject} from "vitest";
 import {Bytes32, ssz} from "@lodestar/types";
 import {config} from "@lodestar/config/default";
 import {Db, LevelDbController, Repository} from "@lodestar/db";
 import {Bucket} from "../../../../src/db/buckets.js";
+
+vi.mock("@lodestar/db", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("@lodestar/db")>();
+
+  return {
+    ...mod,
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    LevelDbController: vi.spyOn(mod, "LevelDbController").mockImplementation(() => {
+      return {
+        get: vi.fn(),
+        put: vi.fn(),
+        delete: vi.fn(),
+        values: vi.fn(),
+        valuesStream: vi.fn(),
+        batchDelete: vi.fn(),
+        batchPut: vi.fn(),
+      } as unknown as LevelDbController;
+    }),
+  };
+});
 
 interface TestType {
   bool: boolean;
@@ -25,25 +44,27 @@ class TestRepository extends Repository<string, TestType> {
 }
 
 describe("database repository", function () {
-  const sandbox = sinon.createSandbox();
-
-  let repository: TestRepository, controller: SinonStubbedInstance<LevelDbController>;
+  let repository: TestRepository, controller: MockedObject<LevelDbController>;
 
   beforeEach(function () {
-    controller = sandbox.createStubInstance(LevelDbController);
-    repository = new TestRepository(controller);
+    controller = vi.mocked(new LevelDbController());
+    repository = new TestRepository(controller as unknown as LevelDbController);
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
   });
 
   it("should get single item", async function () {
     const item = {bool: true, bytes: Buffer.alloc(32)};
-    controller.get.resolves(TestSSZType.serialize(item) as Buffer);
+    controller.get.mockResolvedValue(TestSSZType.serialize(item) as Buffer);
     const result = await repository.get("id");
-    expect(result).toEqual(item);
+    expect(item).toEqual({...result, bytes: Buffer.from(result?.bytes)});
     expect(controller.get).toHaveBeenCalledTimes(1);
   });
 
   it("should return null if item not found", async function () {
-    controller.get.resolves(null);
+    controller.get.mockResolvedValue(null);
     const result = await repository.get("id");
     expect(result).toEqual(null);
     expect(controller.get).toHaveBeenCalledTimes(1);
@@ -51,14 +72,14 @@ describe("database repository", function () {
 
   it("should return true if item exists", async function () {
     const item = {bool: true, bytes: Buffer.alloc(32)};
-    controller.get.resolves(TestSSZType.serialize(item) as Buffer);
+    controller.get.mockResolvedValue(TestSSZType.serialize(item) as Buffer);
     const result = await repository.has("id");
     expect(result).toBe(true);
     expect(controller.get).toHaveBeenCalledTimes(1);
   });
 
   it("should return false if item doesnt exists", async function () {
-    controller.get.resolves(null);
+    controller.get.mockResolvedValue(null);
     const result = await repository.has("id");
     expect(result).toBe(false);
     expect(controller.get).toHaveBeenCalledTimes(1);
@@ -66,18 +87,18 @@ describe("database repository", function () {
 
   it("should store with hashTreeRoot as id", async function () {
     const item = {bool: true, bytes: Buffer.alloc(32)};
-    await expect(repository.add(item)).to.not.be.rejected;
+    expect(repository.add(item)).not.rejects;
     expect(controller.put).toHaveBeenCalledTimes(1);
   });
 
   it("should store with given id", async function () {
     const item = {bool: true, bytes: Buffer.alloc(32)};
-    await expect(repository.put("1", item)).to.not.be.rejected;
+    expect(repository.put("1", item)).not.rejects;
     expect(controller.put).toHaveBeenCalledTimes(1);
   });
 
   it("should delete", async function () {
-    await expect(repository.delete("1")).to.not.be.rejected;
+    expect(repository.delete("1")).not.rejects;
     expect(controller.delete).toHaveBeenCalledTimes(1);
   });
 
@@ -85,8 +106,8 @@ describe("database repository", function () {
     const item = {bool: true, bytes: Buffer.alloc(32)};
     const itemSerialized = TestSSZType.serialize(item);
     const items = [itemSerialized, itemSerialized, itemSerialized];
-    controller.values.resolves(items as Buffer[]);
-    const result = await repository.values();
+    controller.values.mockResolvedValue(items as Buffer[]);
+    const result = (await repository.values()).map((v) => ({...v, bytes: Buffer.from(v.bytes)}));
     expect(result).toEqual([item, item, item]);
     expect(controller.values).toHaveBeenCalledTimes(1);
   });
@@ -98,13 +119,14 @@ describe("database repository", function () {
 
   it("should delete given items", async function () {
     await repository.batchDelete(["1", "2", "3"]);
-    expect(controller.batchDelete).to.be.calledOnceWith(sinon.match((criteria: unknown[]) => criteria.length === 3));
+    expect(controller.batchDelete.mock.calls[0][0]).toHaveLength(3);
   });
 
   it("should delete given items by value", async function () {
     const item = {bool: true, bytes: Buffer.alloc(32)};
     await repository.batchRemove([item, item]);
-    expect(controller.batchDelete).to.be.calledOnceWith(sinon.match((criteria: unknown[]) => criteria.length === 2));
+
+    expect(controller.batchDelete.mock.calls[0][0]).toHaveLength(2);
   });
 
   it("should add multiple values", async function () {
@@ -112,7 +134,8 @@ describe("database repository", function () {
       {bool: true, bytes: Buffer.alloc(32)},
       {bool: false, bytes: Buffer.alloc(32)},
     ]);
-    expect(controller.batchPut).to.be.calledOnceWith(sinon.match((criteria: unknown[]) => criteria.length === 2));
+
+    expect(controller.batchPut.mock.calls[0][0]).toHaveLength(2);
   });
 
   it("should fetch values stream", async function () {
@@ -121,8 +144,7 @@ describe("database repository", function () {
       yield TestSSZType.serialize({bool: false, bytes: Buffer.alloc(32)}) as Buffer;
     }
 
-    controller.valuesStream.returns(sample());
-
+    controller.valuesStream.mockReturnValue(sample());
     const result = await all(repository.valuesStream());
     expect(result.length).toBe(2);
   });

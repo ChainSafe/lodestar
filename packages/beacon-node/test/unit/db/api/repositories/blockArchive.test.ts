@@ -1,5 +1,5 @@
 import {rimraf} from "rimraf";
-import sinon from "sinon";
+import {describe, it, expect, beforeEach, afterEach, vi} from "vitest";
 import {ssz} from "@lodestar/types";
 import {config} from "@lodestar/config/default";
 import {intToBytes} from "@lodestar/utils";
@@ -107,39 +107,49 @@ describe("block archive repository", function () {
   });
 
   it("should store indexes when adding single block", async function () {
-    const spy = sinon.spy(db, "put");
+    const spy = vi.spyOn(db, "put");
     const block = ssz.phase0.SignedBeaconBlock.defaultValue();
     await blockArchive.add(block);
-    expect(
-      spy.withArgs(
-        encodeKey(Bucket.index_blockArchiveRootIndex, ssz.phase0.BeaconBlock.hashTreeRoot(block.message)),
-        intToBytes(block.message.slot, 8, "be")
-      )
-    ).toHaveBeenCalledTimes(1);
-    expect(
-      spy.withArgs(
-        encodeKey(Bucket.index_blockArchiveParentRootIndex, block.message.parentRoot),
-        intToBytes(block.message.slot, 8, "be")
-      )
-    ).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenCalledWith(
+      encodeKey(Bucket.index_blockArchiveRootIndex, ssz.phase0.BeaconBlock.hashTreeRoot(block.message)),
+      intToBytes(block.message.slot, 8, "be")
+    );
+    expect(spy).toHaveBeenCalledWith(
+      encodeKey(Bucket.index_blockArchiveParentRootIndex, block.message.parentRoot),
+      intToBytes(block.message.slot, 8, "be")
+    );
   });
 
   it("should store indexes when block batch", async function () {
-    const spy = sinon.spy(db, "put");
+    const spy = vi.spyOn(db, "put");
     const blocks = [ssz.phase0.SignedBeaconBlock.defaultValue(), ssz.phase0.SignedBeaconBlock.defaultValue()];
     await blockArchive.batchAdd(blocks);
-    expect(
-      spy.withArgs(
-        encodeKey(Bucket.index_blockArchiveRootIndex, ssz.phase0.BeaconBlock.hashTreeRoot(blocks[0].message)),
-        intToBytes(blocks[0].message.slot, 8, "be")
-      ).calledTwice
-    ).toBe(true);
-    expect(
-      spy.withArgs(
-        encodeKey(Bucket.index_blockArchiveParentRootIndex, blocks[0].message.parentRoot),
-        intToBytes(blocks[0].message.slot, 8, "be")
-      ).calledTwice
-    ).toBe(true);
+
+    // TODO: Need to improve these assertions
+    expect(spy.mock.calls).toStrictEqual(
+      expect.arrayContaining([
+        [
+          encodeKey(Bucket.index_blockArchiveRootIndex, ssz.phase0.BeaconBlock.hashTreeRoot(blocks[0].message)),
+          intToBytes(blocks[0].message.slot, 8, "be"),
+        ],
+        [
+          encodeKey(Bucket.index_blockArchiveRootIndex, ssz.phase0.BeaconBlock.hashTreeRoot(blocks[0].message)),
+          intToBytes(blocks[0].message.slot, 8, "be"),
+        ],
+      ])
+    );
+    expect(spy.mock.calls).toStrictEqual(
+      expect.arrayContaining([
+        [
+          encodeKey(Bucket.index_blockArchiveParentRootIndex, blocks[0].message.parentRoot),
+          intToBytes(blocks[0].message.slot, 8, "be"),
+        ],
+        [
+          encodeKey(Bucket.index_blockArchiveParentRootIndex, blocks[0].message.parentRoot),
+          intToBytes(blocks[0].message.slot, 8, "be"),
+        ],
+      ])
+    );
   });
 
   it("should get slot by root", async function () {

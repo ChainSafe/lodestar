@@ -1,3 +1,4 @@
+import {describe, it, expect, beforeEach} from "vitest";
 import {config} from "@lodestar/config/default";
 import {getConfigApi, renderJsonSpec} from "../../../../../src/api/impl/config/index.js";
 

@@ -1,3 +1,4 @@
+import {describe, it, expect} from "vitest";
 import {ForkName} from "@lodestar/params";
 import {GossipType, GossipEncoding, GossipTopicMap} from "../../../../src/network/gossip/index.js";
 import {parseGossipTopic, stringifyGossipTopic} from "../../../../src/network/gossip/topic.js";

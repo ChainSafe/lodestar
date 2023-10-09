@@ -1,28 +1,27 @@
-import sinon, {SinonSpy} from "sinon";
-import {ErrorAborted, Logger, TimeoutError} from "@lodestar/utils";
+import {describe, it, expect, beforeEach, beforeAll, afterAll, vi, afterEach, SpyInstance} from "vitest";
+import {ErrorAborted, TimeoutError} from "@lodestar/utils";
 import {RegistryMetricCreator} from "../../../src/index.js";
 import {HistogramExtra} from "../../../src/metrics/utils/histogram.js";
 import {MonitoringService} from "../../../src/monitoring/service.js";
-import {createStubbedLogger} from "../../utils/mocks/logger.js";
 import {MonitoringOptions} from "../../../src/monitoring/options.js";
 import {sleep} from "../../utils/sleep.js";
+import {MockedLogger, getMockedLogger} from "../../__mocks__/loggerMock.js";
 import {startRemoteService, remoteServiceRoutes, remoteServiceError} from "./remoteService.js";
 
 describe("monitoring / service", () => {
-  const sandbox = sinon.createSandbox();
   const endpoint = "https://test.example.com/api/v1/client/metrics";
 
   let register: RegistryMetricCreator;
-  let logger: Logger;
+  let logger: MockedLogger;
 
   beforeEach(() => {
     // recreate to avoid "metric has already been registered" errors
     register = new RegistryMetricCreator();
-    logger = createStubbedLogger();
+    logger = getMockedLogger();
   });
 
-  afterAll(() => {
-    sandbox.restore();
+  afterEach(() => {
+    vi.clearAllMocks();
   });
 
   describe("MonitoringService - constructor", () => {
@@ -58,12 +57,16 @@ describe("monitoring / service", () => {
 
     it("should throw an error if monitoring endpoint is not provided", () => {
       const endpoint = "";
-      expect(() => new MonitoringService("beacon", {endpoint}, {register, logger})).toThrow(`Monitoring endpoint is empty or undefined: ${endpoint}`);
+      expect(() => new MonitoringService("beacon", {endpoint}, {register, logger})).toThrow(
+        `Monitoring endpoint is empty or undefined: ${endpoint}`
+      );
     });
 
     it("should throw an error if monitoring endpoint is not a valid URL", () => {
       const endpoint = "invalid";
-      expect(() => new MonitoringService("beacon", {endpoint}, {register, logger})).toThrow(`Monitoring endpoint must be a valid URL: ${endpoint}`);
+      expect(() => new MonitoringService("beacon", {endpoint}, {register, logger})).toThrow(
+        `Monitoring endpoint must be a valid URL: ${endpoint}`
+      );
     });
 
     it("should have the status set to started", async () => {
@@ -73,7 +76,7 @@ describe("monitoring / service", () => {
     });
 
     it("should set interval to continuously send client stats", async () => {
-      const setTimeout = sandbox.spy(global, "setTimeout");
+      const setTimeout = vi.spyOn(global, "setTimeout");
       const interval = 1000;
 
       const service = await stubbedMonitoringService({interval});
@@ -102,15 +105,18 @@ describe("monitoring / service", () => {
     it("should log an info message that service was started", async () => {
       await stubbedMonitoringService();
 
-      expect(logger.info).toHaveBeenCalledWith("Started monitoring service");
+      expect(logger.info).toHaveBeenCalledWith(
+        "Started monitoring service",
+        expect.objectContaining({interval: expect.any(Number), machine: null, remote: expect.any(String)})
+      );
     });
   });
 
   describe("MonitoringService - close", () => {
-    let clearTimeout: SinonSpy;
+    let clearTimeout: SpyInstance;
 
     beforeAll(() => {
-      clearTimeout = sandbox.spy(global, "clearTimeout");
+      clearTimeout = vi.spyOn(global, "clearTimeout");
     });
 
     it("should set the status to closed", async () => {
@@ -208,27 +214,28 @@ describe("monitoring / service", () => {
       assertError({message: new TimeoutError("request").message});
     });
 
-    it("should abort pending requests if monitoring service is closed", (done) => {
-      const endpoint = `${baseUrl}${remoteServiceRoutes.pending}`;
-      service = new MonitoringService("beacon", {endpoint, collectSystemStats: false}, {register, logger});
+    it("should abort pending requests if monitoring service is closed", () =>
+      new Promise<void>((done, error) => {
+        const endpoint = `${baseUrl}${remoteServiceRoutes.pending}`;
+        service = new MonitoringService("beacon", {endpoint, collectSystemStats: false}, {register, logger});
 
-      void service.send().finally(() => {
-        try {
-          assertError({message: new ErrorAborted("request").message});
-          done();
-        } catch (e) {
-          done(e);
-        }
-      });
+        void service.send().finally(() => {
+          try {
+            assertError({message: new ErrorAborted("request").message});
+            done();
+          } catch (e) {
+            error(e);
+          }
+        });
 
-      // wait for request to be sent before closing
-      setTimeout(() => service?.close(), 10);
-    });
+        // wait for request to be sent before closing
+        setTimeout(() => service?.close(), 10);
+      }));
 
     function assertError(error: {message: string}): void {
       // errors are not thrown and need to be asserted based on the log
       expect(logger.warn).toHaveBeenCalledWith(
-        "Failed to send client stats",
+        expect.stringContaining("Failed to send client stats"),
         expect.objectContaining({reason: error.message})
       );
     }
@@ -240,13 +247,16 @@ describe("monitoring / service", () => {
       {endpoint, initialDelay: 0, ...options},
       {register: new RegistryMetricCreator(), logger}
     );
-    service.send = sandbox.stub();
-    service["fetchAbortController"] = sandbox.createStubInstance(AbortController);
+    service["fetchAbortController"] = new AbortController();
+    vi.spyOn(service["fetchAbortController"], "abort");
+    vi.spyOn(service, "send").mockResolvedValue(undefined);
 
     // wait for initial monitoring interval
     await waitForInterval();
 
-    afterAll(service.close);
+    afterAll(() => {
+      service.close;
+    });
 
     return service;
   }

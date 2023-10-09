@@ -1,4 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
+import {describe, it, expect, beforeEach, beforeAll} from "vitest";
 import {config} from "@lodestar/config/default";
 import {CheckpointWithHex, ExecutionStatus, ForkChoice} from "@lodestar/fork-choice";
 import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";

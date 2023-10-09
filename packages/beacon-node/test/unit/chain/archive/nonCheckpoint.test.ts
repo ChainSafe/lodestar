@@ -1,9 +1,10 @@
+import {describe, it, expect, beforeAll} from "vitest";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
 import {getNonCheckpointBlocks} from "../../../../src/chain/archiver/archiveBlocks.js";
 
 describe("chain / archive / getNonCheckpointBlocks", () => {
-  beforeAll("Correct params", () => {
+  beforeAll(() => {
     expect(SLOTS_PER_EPOCH).toBe(8);
   });
 

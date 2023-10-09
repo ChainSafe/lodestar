@@ -1,3 +1,4 @@
+import {describe, it, expect, beforeEach} from "vitest";
 import {OrderedMap} from "../../../src/util/map.js";
 
 describe("OrderedMap", () => {

@@ -1,3 +1,4 @@
+import {describe, it, expect} from "vitest";
 import {deneb, Epoch, phase0, RootHex, Slot, ssz} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
 import {
@@ -30,7 +31,9 @@ describe("attestation SSZ serialized picking", () => {
 
       expect(getSlotFromAttestationSerialized(bytes)).toBe(attestation.data.slot);
       expect(getBlockRootFromAttestationSerialized(bytes)).toBe(toHex(attestation.data.beaconBlockRoot));
-      expect(getAggregationBitsFromAttestationSerialized(bytes)?.toBoolArray()).toEqual(attestation.aggregationBits.toBoolArray());
+      expect(getAggregationBitsFromAttestationSerialized(bytes)?.toBoolArray()).toEqual(
+        attestation.aggregationBits.toBoolArray()
+      );
       expect(getSignatureFromAttestationSerialized(bytes)).toEqual(attestation.signature);
 
       const attDataBase64 = ssz.phase0.AttestationData.serialize(attestation.data);
@@ -89,11 +92,17 @@ describe("aggregateAndProof SSZ serialized picking", () => {
     it(`signedAggregateAndProof ${i}`, () => {
       const bytes = ssz.phase0.SignedAggregateAndProof.serialize(signedAggregateAndProof);
 
-      expect(getSlotFromSignedAggregateAndProofSerialized(bytes)).toBe(signedAggregateAndProof.message.aggregate.data.slot);
-      expect(getBlockRootFromSignedAggregateAndProofSerialized(bytes)).toBe(toHex(signedAggregateAndProof.message.aggregate.data.beaconBlockRoot));
+      expect(getSlotFromSignedAggregateAndProofSerialized(bytes)).toBe(
+        signedAggregateAndProof.message.aggregate.data.slot
+      );
+      expect(getBlockRootFromSignedAggregateAndProofSerialized(bytes)).toBe(
+        toHex(signedAggregateAndProof.message.aggregate.data.beaconBlockRoot)
+      );
 
       const attDataBase64 = ssz.phase0.AttestationData.serialize(signedAggregateAndProof.message.aggregate.data);
-      expect(getAttDataBase64FromSignedAggregateAndProofSerialized(bytes)).toBe(Buffer.from(attDataBase64).toString("base64"));
+      expect(getAttDataBase64FromSignedAggregateAndProofSerialized(bytes)).toBe(
+        Buffer.from(attDataBase64).toString("base64")
+      );
     });
   }
 

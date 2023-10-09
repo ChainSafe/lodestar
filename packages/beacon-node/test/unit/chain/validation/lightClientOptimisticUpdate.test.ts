@@ -1,16 +1,13 @@
-import sinon from "sinon";
+import {describe, it, expect, beforeEach, afterEach, vi} from "vitest";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {altair, ssz} from "@lodestar/types";
-
 import {computeTimeAtSlot} from "@lodestar/state-transition";
-import {getMockBeaconChain} from "../../../utils/mocks/chain.js";
 import {validateLightClientOptimisticUpdate} from "../../../../src/chain/validation/lightClientOptimisticUpdate.js";
 import {LightClientErrorCode} from "../../../../src/chain/errors/lightClientError.js";
 import {IBeaconChain} from "../../../../src/chain/index.js";
-import {LightClientServer} from "../../../../src/chain/lightClient/index.js";
+import {getMockedBeaconChain} from "../../../__mocks__/mockedBeaconChain.js";
 
 describe("Light Client Optimistic Update validation", function () {
-  let fakeClock: sinon.SinonFakeTimers;
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
   // eslint-disable-next-line @typescript-eslint/naming-convention
   const config = createChainForkConfig({
@@ -22,10 +19,12 @@ describe("Light Client Optimistic Update validation", function () {
   });
 
   beforeEach(() => {
-    fakeClock = sinon.useFakeTimers();
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
   });
+
   afterEach(async () => {
-    fakeClock.restore();
+    vi.clearAllTimers();
     while (afterEachCallbacks.length > 0) {
       const callback = afterEachCallbacks.pop();
       if (callback) await callback();
@@ -33,9 +32,9 @@ describe("Light Client Optimistic Update validation", function () {
   });
 
   function mockChain(): IBeaconChain {
-    const chain = getMockBeaconChain<"lightClientServer" | "config" | "genesisTime">();
-    chain.lightClientServer = sinon.createStubInstance(LightClientServer);
-    chain.genesisTime = 0;
+    const chain = getMockedBeaconChain({config});
+    vi.spyOn(chain, "genesisTime", "get").mockReturnValue(0);
+    vi.spyOn(chain.lightClientServer, "getOptimisticUpdate");
     return chain;
   }
 
@@ -46,12 +45,12 @@ describe("Light Client Optimistic Update validation", function () {
     lightclientOptimisticUpdate.attestedHeader.beacon.slot = 2;
 
     const chain = mockChain();
-    chain.lightClientServer.getOptimisticUpdate = () => {
+    vi.spyOn(chain.lightClientServer, "getOptimisticUpdate").mockImplementation(() => {
       const defaultValue = ssz.altair.LightClientOptimisticUpdate.defaultValue();
       // make the local slot higher than gossiped
       defaultValue.attestedHeader.beacon.slot = lightclientOptimisticUpdate.attestedHeader.beacon.slot + 1;
       return defaultValue;
-    };
+    });
 
     expect(() => {
       validateLightClientOptimisticUpdate(config, chain, lightclientOptimisticUpdate);
@@ -65,11 +64,9 @@ describe("Light Client Optimistic Update validation", function () {
     lightclientOptimisticUpdate.signatureSlot = 4;
 
     const chain = mockChain();
-    chain.lightClientServer.getOptimisticUpdate = () => {
-      const defaultValue = ssz.altair.LightClientOptimisticUpdate.defaultValue();
-      defaultValue.attestedHeader.beacon.slot = 1;
-      return defaultValue;
-    };
+    const defaultValue = ssz.altair.LightClientOptimisticUpdate.defaultValue();
+    defaultValue.attestedHeader.beacon.slot = 1;
+    vi.spyOn(chain.lightClientServer, "getOptimisticUpdate").mockReturnValue(defaultValue);
 
     expect(() => {
       validateLightClientOptimisticUpdate(config, chain, lightclientOptimisticUpdate);
@@ -85,7 +82,7 @@ describe("Light Client Optimistic Update validation", function () {
 
     const timeAtSignatureSlot =
       computeTimeAtSlot(config, lightclientOptimisticUpdate.signatureSlot, chain.genesisTime) * 1000;
-    fakeClock.tick(timeAtSignatureSlot + (1 / 3) * (config.SECONDS_PER_SLOT + 1) * 1000);
+    vi.advanceTimersByTime(timeAtSignatureSlot + (1 / 3) * (config.SECONDS_PER_SLOT + 1) * 1000);
 
     // make lightclientserver return another update with different value from gossiped
     chain.lightClientServer.getOptimisticUpdate = () => {
@@ -109,7 +106,7 @@ describe("Light Client Optimistic Update validation", function () {
 
     const timeAtSignatureSlot =
       computeTimeAtSlot(config, lightclientOptimisticUpdate.signatureSlot, chain.genesisTime) * 1000;
-    fakeClock.tick(timeAtSignatureSlot + (1 / 3) * (config.SECONDS_PER_SLOT + 1) * 1000);
+    vi.advanceTimersByTime(timeAtSignatureSlot + (1 / 3) * (config.SECONDS_PER_SLOT + 1) * 1000);
 
     // chain getOptimisticUpdate not mocked.
     // localOptimisticUpdate will be null
@@ -134,7 +131,7 @@ describe("Light Client Optimistic Update validation", function () {
     // (SECONDS_PER_SLOT / INTERVALS_PER_SLOT seconds after the start of the slot, with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
     const timeAtSignatureSlot =
       computeTimeAtSlot(config, lightclientOptimisticUpdate.signatureSlot, chain.genesisTime) * 1000;
-    fakeClock.tick(timeAtSignatureSlot + (1 / 3) * (config.SECONDS_PER_SLOT + 1) * 1000);
+    vi.advanceTimersByTime(timeAtSignatureSlot + (1 / 3) * (config.SECONDS_PER_SLOT + 1) * 1000);
 
     // satisfy:
     // [IGNORE] The received optimistic_update matches the locally computed one exactly

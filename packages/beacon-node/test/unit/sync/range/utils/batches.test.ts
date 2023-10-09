@@ -1,3 +1,4 @@
+import {describe, it, expect} from "vitest";
 import {config} from "@lodestar/config/default";
 import {Epoch, Slot} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";

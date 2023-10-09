@@ -1,3 +1,4 @@
+import {describe, it, expect, beforeAll} from "vitest";
 import {BeaconStateAltair} from "@lodestar/state-transition";
 import {SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {altair, ssz} from "@lodestar/types";
@@ -15,7 +16,7 @@ describe("chain / lightclient / proof", () => {
   const currentSyncCommittee = fillSyncCommittee(Buffer.alloc(48, 0xbb));
   const nextSyncCommittee = fillSyncCommittee(Buffer.alloc(48, 0xcc));
 
-  beforeAll("random state", () => {
+  beforeAll(() => {
     state = ssz.altair.BeaconState.defaultViewDU();
     state.currentSyncCommittee = ssz.altair.SyncCommittee.toViewDU(currentSyncCommittee);
     state.nextSyncCommittee = ssz.altair.SyncCommittee.toViewDU(nextSyncCommittee);

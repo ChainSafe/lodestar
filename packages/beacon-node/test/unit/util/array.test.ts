@@ -1,3 +1,4 @@
+import {describe, it, expect, beforeEach} from "vitest";
 import {findLastIndex, LinkedList} from "../../../src/util/array.js";
 
 describe("findLastIndex", () => {

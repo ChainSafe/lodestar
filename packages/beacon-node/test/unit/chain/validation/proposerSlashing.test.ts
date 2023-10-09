@@ -1,42 +1,31 @@
-import sinon, {SinonStubbedInstance} from "sinon";
-
-import {ForkChoice} from "@lodestar/fork-choice";
+import {describe, it, beforeEach, afterEach, vi} from "vitest";
 import {phase0, ssz} from "@lodestar/types";
-
-import {BeaconChain} from "../../../../src/chain/index.js";
-import {StubbedChainMutable} from "../../../utils/stub/index.js";
 import {generateCachedState} from "../../../utils/state.js";
 import {ProposerSlashingErrorCode} from "../../../../src/chain/errors/proposerSlashingError.js";
 import {validateGossipProposerSlashing} from "../../../../src/chain/validation/proposerSlashing.js";
-import {OpPool} from "../../../../src/chain/opPools/index.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
-import {BlsVerifierMock} from "../../../utils/mocks/bls.js";
-
-type StubbedChain = StubbedChainMutable<"forkChoice" | "bls">;
+import {MockedBeaconChain, getMockedBeaconChain} from "../../../__mocks__/mockedBeaconChain.js";
 
 describe("validate proposer slashing", () => {
-  const sandbox = sinon.createSandbox();
-  let chainStub: StubbedChain;
-  let opPool: OpPool & SinonStubbedInstance<OpPool>;
+  let chainStub: MockedBeaconChain;
+  let opPool: MockedBeaconChain["opPool"];
 
   beforeEach(() => {
-    chainStub = sandbox.createStubInstance(BeaconChain) as StubbedChain;
-    chainStub.forkChoice = sandbox.createStubInstance(ForkChoice);
-    chainStub.bls = new BlsVerifierMock(true);
-    opPool = sandbox.createStubInstance(OpPool) as OpPool & SinonStubbedInstance<OpPool>;
-    (chainStub as {opPool: OpPool}).opPool = opPool;
+    chainStub = getMockedBeaconChain();
+    opPool = chainStub.opPool;
 
     const state = generateCachedState();
-    chainStub.getHeadState.returns(state);
+    vi.spyOn(chainStub, "getHeadState").mockReturnValue(state);
+    vi.spyOn(opPool, "hasSeenProposerSlashing");
   });
 
-  afterAll(() => {
-    sandbox.restore();
+  afterEach(() => {
+    vi.clearAllMocks();
   });
 
   it("should return invalid proposer slashing - existing", async () => {
     const proposerSlashing = ssz.phase0.ProposerSlashing.defaultValue();
-    opPool.hasSeenProposerSlashing.returns(true);
+    opPool.hasSeenProposerSlashing.mockReturnValue(true);
 
     await expectRejectedWithLodestarError(
       validateGossipProposerSlashing(chainStub, proposerSlashing),

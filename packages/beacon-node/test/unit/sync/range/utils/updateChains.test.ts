@@ -1,3 +1,4 @@
+import {describe, it, expect} from "vitest";
 import {updateChains} from "../../../../../src/sync/range/utils/updateChains.js";
 import {SyncChain} from "../../../../../src/sync/range/chain.js";
 import {RangeSyncType} from "../../../../../src/sync/utils/remoteSyncType.js";

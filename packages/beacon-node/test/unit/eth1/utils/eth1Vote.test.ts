@@ -1,3 +1,4 @@
+import {describe, it, expect} from "vitest";
 import {config} from "@lodestar/config/default";
 import {phase0, ssz} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";

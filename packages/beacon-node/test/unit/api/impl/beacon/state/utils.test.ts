@@ -1,10 +1,7 @@
-import chaiAsPromised from "chai-as-promised";
 import {toHexString} from "@chainsafe/ssz";
 import {phase0} from "@lodestar/types";
 import {getValidatorStatus, getStateValidatorIndex} from "../../../../../../src/api/impl/beacon/state/utils.js";
 import {generateCachedAltairState} from "../../../../../utils/state.js";
-
-use(chaiAsPromised);
 
 describe("beacon state api utils", function () {
   describe("getValidatorStatus", function () {
@@ -117,9 +114,7 @@ describe("beacon state api utils", function () {
 
     it("should return valid: false on validator indices / pubkeys not in the state", () => {
       // "validator id not in state"
-      expect(
-        getStateValidatorIndex(String(state.validators.length), state, pubkey2index).valid
-      ).toBe(false);
+      expect(getStateValidatorIndex(String(state.validators.length), state, pubkey2index).valid).toBe(false);
       // "validator pubkey not in state"
       expect(getStateValidatorIndex("0xabcd", state, pubkey2index).valid).toBe(false);
     });
@@ -148,3 +143,4 @@ describe("beacon state api utils", function () {
     });
   });
 });
+import {describe, it, expect, beforeEach, beforeAll} from "vitest";

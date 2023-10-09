@@ -1,7 +1,7 @@
 import {fastify} from "fastify";
 import {fromHexString} from "@chainsafe/ssz";
+import {describe, it, expect, beforeAll, afterAll} from "vitest";
 import {ForkName} from "@lodestar/params";
-
 import {Logger} from "@lodestar/logger";
 import {defaultExecutionEngineHttpOpts} from "../../../src/execution/engine/http.js";
 import {bytesToData, numToQuantity} from "../../../src/eth1/provider/utils.js";
@@ -23,7 +23,7 @@ describe("ExecutionEngine / http ", () => {
   let errorResponsesBeforeSuccess = 0;
   let controller: AbortController;
 
-  beforeAll("Prepare server", async () => {
+  beforeAll(async () => {
     controller = new AbortController();
     const server = fastify({logger: false});
 
@@ -86,8 +86,6 @@ describe("ExecutionEngine / http ", () => {
     });
 
     it("notifyForkchoiceUpdate with retry when pay load attributes", async function () {
-      this.timeout("10 min");
-
       errorResponsesBeforeSuccess = defaultExecutionEngineHttpOpts.retryAttempts - 1;
       const forkChoiceHeadData = {
         headBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",

@@ -1,3 +1,4 @@
+import {describe, it, expect} from "vitest";
 import {sortBy} from "../../../src/util/sortBy.js";
 
 describe("util / sortBy", () => {

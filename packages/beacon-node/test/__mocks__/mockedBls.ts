@@ -1,5 +1,5 @@
 import {PublicKey} from "@chainsafe/bls/types";
-import {IBlsVerifier} from "../../../src/chain/bls/index.js";
+import {IBlsVerifier} from "../../src/chain/bls/index.js";
 
 export class BlsVerifierMock implements IBlsVerifier {
   constructor(private readonly isValidResult: boolean) {}

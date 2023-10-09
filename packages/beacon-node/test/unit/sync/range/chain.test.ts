@@ -1,3 +1,4 @@
+import {describe, it, afterEach} from "vitest";
 import {config} from "@lodestar/config/default";
 import {Logger} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";

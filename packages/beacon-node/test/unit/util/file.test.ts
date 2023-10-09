@@ -1,9 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
+import {describe, it, expect, beforeAll, afterAll} from "vitest";
 import {ensureDir, writeIfNotExist} from "../../../src/util/file.js";
 
 describe("file util", function () {
-  this.timeout(3000);
   const dirPath = path.join(".", "keys/toml/test_config.toml");
 
   describe("ensureDir", function () {
