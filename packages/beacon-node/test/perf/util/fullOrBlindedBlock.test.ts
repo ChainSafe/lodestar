@@ -7,12 +7,12 @@ import {minimalPreset} from "@lodestar/params/presets/minimal";
 import {ForkSeq} from "@lodestar/params";
 import {mockBlocks} from "../../utils/mocks/block.js";
 import {
-  TransactionsAndWithdrawals,
   blindedOrFullBlockToBlinded,
   blindedOrFullBlockToBlindedBytes,
   blindedOrFullBlockToFull,
   blindedOrFullBlockToFullBytes,
 } from "../../../src/util/fullOrBlindedBlock.js";
+import {ExecutionPayloadBody} from "../../../src/execution/engine/types.js";
 
 // calculate slot ratio so that getForkTypes and getBlindedForkTypes return correct fork for minimal configuration
 const slotPerEpochRatio =
@@ -37,7 +37,7 @@ describe("fullOrBlindedBlock", () => {
         itBench({
           id: `${forkInfo.name} to full - deserialize first`,
           beforeEach: () => {
-            const transactionsAndWithdrawals: TransactionsAndWithdrawals = {};
+            const transactionsAndWithdrawals: Partial<ExecutionPayloadBody> = {};
             if (forkInfo.seq > ForkSeq.bellatrix) {
               transactionsAndWithdrawals.transactions = (
                 full.message.body as bellatrix.BeaconBlockBody
@@ -58,7 +58,7 @@ describe("fullOrBlindedBlock", () => {
         itBench({
           id: `${forkInfo.name} to full - convert serialized`,
           beforeEach: () => {
-            const transactionsAndWithdrawals: TransactionsAndWithdrawals = {};
+            const transactionsAndWithdrawals: Partial<ExecutionPayloadBody> = {};
             if (forkInfo.seq > ForkSeq.bellatrix) {
               transactionsAndWithdrawals.transactions = (
                 full.message.body as bellatrix.BeaconBlockBody

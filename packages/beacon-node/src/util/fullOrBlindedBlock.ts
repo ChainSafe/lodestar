@@ -2,12 +2,8 @@ import {ChainForkConfig} from "@lodestar/config";
 import {ssz, allForks, bellatrix, capella, deneb} from "@lodestar/types";
 import {BYTES_PER_LOGS_BLOOM, ForkSeq, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {executionPayloadToPayloadHeader} from "@lodestar/state-transition";
+import {ExecutionPayloadBody} from "../execution/engine/types.js";
 import {ROOT_SIZE, VARIABLE_FIELD_OFFSET, getSlotFromSignedBeaconBlockSerialized} from "./sszBytes.js";
-
-export interface TransactionsAndWithdrawals {
-  transactions?: Uint8Array[];
-  withdrawals?: capella.Withdrawals;
-}
 
 /**
  * Bellatrix:
@@ -234,7 +230,7 @@ function buildVariableOffset(value: number): Uint8Array {
 function executionPayloadHeaderToPayload(
   forkSeq: ForkSeq,
   header: allForks.ExecutionPayloadHeader,
-  {transactions, withdrawals}: TransactionsAndWithdrawals
+  {transactions, withdrawals}: Partial<ExecutionPayloadBody>
 ): allForks.ExecutionPayload {
   const bellatrixPayloadFields: allForks.ExecutionPayload = {
     parentHash: header.parentHash,
@@ -504,7 +500,7 @@ export function blindedOrFullBlockToFull(
   config: ChainForkConfig,
   forkSeq: ForkSeq,
   block: allForks.FullOrBlindedSignedBeaconBlock,
-  transactionsAndWithdrawals: TransactionsAndWithdrawals
+  transactionsAndWithdrawals: Partial<ExecutionPayloadBody>
 ): allForks.SignedBeaconBlock {
   if (
     !isBlinded(block) || // already full
@@ -547,7 +543,7 @@ export function blindedOrFullBlockToFull(
 export async function* blindedOrFullBlockToFullBytes(
   forkSeq: ForkSeq,
   block: Uint8Array,
-  transactionsAndWithdrawals: Promise<TransactionsAndWithdrawals>
+  transactionsAndWithdrawals: Promise<Partial<ExecutionPayloadBody>>
 ): AsyncIterable<Uint8Array> {
   /**
    * Phase0:
