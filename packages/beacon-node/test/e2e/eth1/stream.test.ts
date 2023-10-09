@@ -1,5 +1,4 @@
-import "mocha";
-import {expect} from "chai";
+import {describe, it, expect, beforeEach, afterEach} from "vitest";
 import {getTestnetConfig, medallaTestnetConfig} from "../../utils/testnet.js";
 import {getDepositsStream, getDepositsAndBlockStreamForGenesis} from "../../../src/eth1/stream.js";
 import {Eth1Provider} from "../../../src/eth1/provider/eth1Provider.js";
@@ -8,8 +7,6 @@ import {Eth1Options} from "../../../src/eth1/options.js";
 
 // https://github.com/ChainSafe/lodestar/issues/5967
 describe.skip("Eth1 streams", function () {
-  this.timeout("2 min");
-
   let controller: AbortController;
   beforeEach(() => (controller = new AbortController()));
   afterEach(() => controller.abort());
@@ -47,7 +44,7 @@ describe.skip("Eth1 streams", function () {
       }
     }
 
-    expect(depositCount).to.be.greaterThan(depositsToFetch, "Not enough deposits were fetched");
+    expect(depositCount).toBeGreaterThan(depositsToFetch);
   });
 
   it(`Should fetch ${depositsToFetch} deposits with getDepositsAndBlockStreamForGenesis`, async function () {
@@ -66,6 +63,6 @@ describe.skip("Eth1 streams", function () {
       }
     }
 
-    expect(depositCount).to.be.greaterThan(depositsToFetch, "Not enough deposits were fetched");
+    expect(depositCount).toBeGreaterThan(depositsToFetch);
   });
 });

@@ -1,5 +1,4 @@
-import sinon from "sinon";
-import {expect} from "chai";
+import {describe, it, expect, afterEach, beforeEach, vi} from "vitest";
 import {PeerId} from "@libp2p/interface/peer-id";
 import {config} from "@lodestar/config/default";
 import {phase0} from "@lodestar/types";
@@ -9,20 +8,25 @@ import {GoodByeReasonCode} from "../../../src/constants/index.js";
 import {connect, disconnect, onPeerConnect, onPeerDisconnect, getNetworkForTest} from "../../utils/network.js";
 import {getValidPeerId} from "../../utils/peer.js";
 
-describe("network / main thread", function () {
-  runTests.bind(this)({useWorker: false});
-});
+describe(
+  "network / main thread",
+  function () {
+    runTests({useWorker: false});
+  },
+  {timeout: 3000}
+);
 
-describe("network / worker", function () {
-  runTests.bind(this)({useWorker: true});
-});
+describe(
+  "network / worker",
+  function () {
+    runTests({useWorker: true});
+  },
+  {timeout: 10_000}
+);
 
 /* eslint-disable mocha/no-top-level-hooks */
 
-function runTests(this: Mocha.Suite, {useWorker}: {useWorker: boolean}): void {
-  this.timeout(50000);
-  this.retries(2); // This test fail sometimes, with a 5% rate.
-
+function runTests({useWorker}: {useWorker: boolean}): void {
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
   afterEach(async () => {
     await Promise.all(afterEachCallbacks.map((cb) => cb()));
@@ -39,7 +43,6 @@ function runTests(this: Mocha.Suite, {useWorker}: {useWorker: boolean}): void {
 
     afterEachCallbacks.push(async () => {
       await closeAll();
-      sinon.restore();
     });
 
     return network;
@@ -58,14 +61,14 @@ function runTests(this: Mocha.Suite, {useWorker}: {useWorker: boolean}): void {
   it("return getNetworkIdentity", async () => {
     const network = await createTestNode("A");
     const networkIdentity = await network.getNetworkIdentity();
-    expect(networkIdentity.peerId).equals(network.peerId.toString());
+    expect(networkIdentity.peerId).toBe(network.peerId.toString());
   });
 
   it("should create a peer on connect", async function () {
     const [netA, netB] = await createTestNodesAB();
     await Promise.all([onPeerConnect(netA), onPeerConnect(netB), connect(netA, netB)]);
-    expect(netA.getConnectedPeerCount()).to.equal(1);
-    expect(netB.getConnectedPeerCount()).to.equal(1);
+    expect(netA.getConnectedPeerCount()).toBe(1);
+    expect(netB.getConnectedPeerCount()).toBe(1);
   });
 
   it("should delete a peer on disconnect", async function () {
@@ -81,8 +84,8 @@ function runTests(this: Mocha.Suite, {useWorker}: {useWorker: boolean}): void {
     await disconnection;
     await sleep(400);
 
-    expect(netA.getConnectedPeerCount()).to.equal(0);
-    expect(netB.getConnectedPeerCount()).to.equal(0);
+    expect(netA.getConnectedPeerCount()).toBe(0);
+    expect(netB.getConnectedPeerCount()).toBe(0);
   });
 
   // Current implementation of discv5 consumer doesn't allow to deterministically force a peer to be found
@@ -101,11 +104,11 @@ function runTests(this: Mocha.Suite, {useWorker}: {useWorker: boolean}): void {
 
     // NetworkEvent.reqRespRequest does not work on worker thread
     // so we only test the peerDisconnected event
-    const onGoodbyeNetB = useWorker ? null : sinon.stub<[phase0.Goodbye, PeerId]>();
+    const onGoodbyeNetB = useWorker ? null : vi.fn<[phase0.Goodbye, PeerId]>();
     netB.events.on(NetworkEvent.reqRespRequest, ({request, peer}) => {
       if (request.method === ReqRespMethod.Goodbye && onGoodbyeNetB) onGoodbyeNetB(request.body, peer);
     });
-    const onDisconnectNetB = sinon.stub<[string]>();
+    const onDisconnectNetB = vi.fn<[string]>();
     netB.events.on(NetworkEvent.peerDisconnected, ({peer}) => {
       onDisconnectNetB(peer);
     });
@@ -115,22 +118,22 @@ function runTests(this: Mocha.Suite, {useWorker}: {useWorker: boolean}): void {
 
     if (onGoodbyeNetB) {
       // this only works on main thread mode
-      expect(onGoodbyeNetB.callCount).to.equal(1, "netB must receive 1 goodbye");
-      const [goodbye, peer] = onGoodbyeNetB.getCall(0).args;
-      expect(peer.toString()).to.equal(netA.peerId.toString(), "netA must be the goodbye requester");
-      expect(goodbye).to.equal(BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN), "goodbye reason must be CLIENT_SHUTDOWN");
+      expect(onGoodbyeNetB).toHaveBeenCalledOnce();
+      const [goodbye, peer] = onGoodbyeNetB.mock.calls[0];
+      expect(peer.toString()).toBe(netA.peerId.toString());
+      expect(goodbye).toBe(BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN));
     }
-    const [peer] = onDisconnectNetB.getCall(0).args;
-    expect(peer).to.equal(netA.peerId.toString(), "netA must be the goodbye requester");
+    const [peer] = onDisconnectNetB.mock.calls[0];
+    expect(peer).toBe(netA.peerId.toString());
   });
 
   it("Should subscribe to gossip core topics on demand", async () => {
     const netA = await createTestNode("A");
 
-    expect(await getTopics(netA)).deep.equals([]);
+    expect(await getTopics(netA)).toEqual([]);
 
     await netA.subscribeGossipCoreTopics();
-    expect(await getTopics(netA)).deep.equals([
+    expect(await getTopics(netA)).toEqual([
       "/eth2/18ae4ccb/beacon_block/ssz_snappy",
       "/eth2/18ae4ccb/beacon_aggregate_and_proof/ssz_snappy",
       "/eth2/18ae4ccb/voluntary_exit/ssz_snappy",
@@ -139,7 +142,7 @@ function runTests(this: Mocha.Suite, {useWorker}: {useWorker: boolean}): void {
     ]);
 
     await netA.unsubscribeGossipCoreTopics();
-    expect(await getTopics(netA)).deep.equals([]);
+    expect(await getTopics(netA)).toEqual([]);
   });
 }
 

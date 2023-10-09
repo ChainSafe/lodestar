@@ -1,5 +1,4 @@
-import "mocha";
-import {expect} from "chai";
+import {describe, it, expect, beforeEach, afterEach} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
 import {Eth1Options} from "../../../src/eth1/options.js";
 import {getTestnetConfig} from "../../utils/testnet.js";
@@ -10,8 +9,6 @@ import {getGoerliRpcUrl} from "../../testParams.js";
 
 // https://github.com/ChainSafe/lodestar/issues/5967
 describe.skip("eth1 / Eth1Provider", function () {
-  this.timeout("2 min");
-
   let controller: AbortController;
   beforeEach(() => (controller = new AbortController()));
   afterEach(() => controller.abort());
@@ -35,7 +32,7 @@ describe.skip("eth1 / Eth1Provider", function () {
 
   it("Should get latest block number", async function () {
     const blockNumber = await getEth1Provider().getBlockNumber();
-    expect(blockNumber).to.be.greaterThan(0);
+    expect(blockNumber).toBeGreaterThan(0);
   });
 
   it("Should get a specific block by number", async function () {
@@ -45,7 +42,7 @@ describe.skip("eth1 / Eth1Provider", function () {
       timestamp: 1548854791,
     };
     const block = await getEth1Provider().getBlockByNumber(goerliGenesisBlock.blockNumber);
-    expect(block && parseEth1Block(block)).to.deep.equal(goerliGenesisBlock);
+    expect(block && parseEth1Block(block)).toEqual(goerliGenesisBlock);
   });
 
   it("Should get deposits events for a block range", async function () {
@@ -53,7 +50,7 @@ describe.skip("eth1 / Eth1Provider", function () {
     const fromBlock = Math.min(...blockNumbers);
     const toBlock = Math.min(...blockNumbers);
     const depositEvents = await getEth1Provider().getDepositEvents(fromBlock, toBlock);
-    expect(depositEvents).to.deep.equal(goerliTestnetDepositEvents);
+    expect(depositEvents).toEqual(goerliTestnetDepositEvents);
   });
 
   //
@@ -79,23 +76,23 @@ describe.skip("eth1 / Eth1Provider", function () {
     const fromBlock = firstGoerliBlocks[0].blockNumber;
     const toBlock = firstGoerliBlocks[firstGoerliBlocks.length - 1].blockNumber;
     const blocks = await getEth1Provider().getBlocksByNumber(fromBlock, toBlock);
-    expect(blocks.map(parseEth1Block)).to.deep.equal(firstGoerliBlocks);
+    expect(blocks.map(parseEth1Block)).toEqual(firstGoerliBlocks);
   });
 
   it("getBlockByNumber: Should fetch a single block", async function () {
     const firstGoerliBlock = firstGoerliBlocks[0];
     const block = await getEth1Provider().getBlockByNumber(firstGoerliBlock.blockNumber);
-    expect(block && parseEth1Block(block)).to.deep.equal(firstGoerliBlock);
+    expect(block && parseEth1Block(block)).toEqual(firstGoerliBlock);
   });
 
   it("getBlockNumber: Should fetch latest block number", async function () {
     const blockNumber = await getEth1Provider().getBlockNumber();
-    expect(blockNumber).to.be.a("number");
-    expect(blockNumber).to.be.greaterThan(0);
+    expect(blockNumber).toBeInstanceOf(Number);
+    expect(blockNumber).toBeGreaterThan(0);
   });
 
   it("getCode: Should fetch code for a contract", async function () {
     const code = await getEth1Provider().getCode(goerliSampleContract.address);
-    expect(code).to.include(goerliSampleContract.code);
+    expect(code).toEqual(expect.arrayContaining([goerliSampleContract.code]));
   });
 });

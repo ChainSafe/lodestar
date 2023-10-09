@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, beforeAll, expect, beforeEach, afterEach} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
 import {ChainConfig} from "@lodestar/config";
 import {sleep} from "@lodestar/utils";
@@ -17,8 +17,6 @@ import {getGoerliRpcUrl} from "../../testParams.js";
 // See https://github.com/ChainSafe/lodestar/issues/4197
 // https://github.com/ChainSafe/lodestar/issues/5967
 describe.skip("eth1 / Eth1MergeBlockTracker", function () {
-  this.timeout("2 min");
-
   const logger = testLogger();
 
   function getConfig(ttd: bigint): ChainConfig {
@@ -35,7 +33,7 @@ describe.skip("eth1 / Eth1MergeBlockTracker", function () {
 
   // Compute lazily since getGoerliRpcUrl() throws if GOERLI_RPC_URL is not set
   let eth1Options: Eth1Options;
-  before("Get eth1Options", () => {
+  beforeAll(() => {
     eth1Options = {
       enabled: true,
       providerUrls: [getGoerliRpcUrl()],
@@ -72,15 +70,12 @@ describe.skip("eth1 / Eth1MergeBlockTracker", function () {
     }
 
     // Status should acknowlege merge block is found
-    expect(eth1MergeBlockTracker["status"]).to.equal(StatusCode.FOUND, "Wrong StatusCode");
+    expect(eth1MergeBlockTracker["status"]).toBe(StatusCode.FOUND);
 
     // Given the total difficulty offset the block that has TTD is the `difficultyOffset`nth block
     const mergeBlock = await eth1MergeBlockTracker.getTerminalPowBlock();
     if (!mergeBlock) throw Error("terminal pow block not found");
-    expect(mergeBlock.totalDifficulty).to.equal(
-      quantityToBigint(latestBlock.totalDifficulty),
-      "terminalPowBlock.totalDifficulty is not correct"
-    );
+    expect(mergeBlock.totalDifficulty).toBe(quantityToBigint(latestBlock.totalDifficulty));
   });
 
   it("Should find merge block polling future 'latest' blocks", async () => {
@@ -108,15 +103,15 @@ describe.skip("eth1 / Eth1MergeBlockTracker", function () {
     }
 
     // Status should acknowlege merge block is found
-    expect(eth1MergeBlockTracker["status"]).to.equal(StatusCode.FOUND, "Wrong StatusCode");
+    expect(eth1MergeBlockTracker["status"]).toBe(StatusCode.FOUND);
 
     // Given the total difficulty offset the block that has TTD is the `difficultyOffset`nth block
     const mergeBlock = await eth1MergeBlockTracker.getTerminalPowBlock();
     if (!mergeBlock) throw Error("mergeBlock not found");
     // Chai does not support bigint comparison
     // eslint-disable-next-line chai-expect/no-inner-compare
-    expect(mergeBlock.totalDifficulty >= terminalTotalDifficulty, "mergeBlock.totalDifficulty is not >= TTD").to.be
-      .true;
+    // "mergeBlock.totalDifficulty is not >= TTD"
+    expect(mergeBlock.totalDifficulty >= terminalTotalDifficulty).toBe(true);
   });
 
   it("Should find merge block fetching past blocks", async () => {
@@ -144,14 +139,14 @@ describe.skip("eth1 / Eth1MergeBlockTracker", function () {
     }
 
     // Status should acknowlege merge block is found
-    expect(eth1MergeBlockTracker["status"]).to.equal(StatusCode.FOUND, "Wrong StatusCode");
+    expect(eth1MergeBlockTracker["status"]).toBe(StatusCode.FOUND);
 
     // Given the total difficulty offset the block that has TTD is the `difficultyOffset`nth block
     const mergeBlock = await eth1MergeBlockTracker.getTerminalPowBlock();
     if (!mergeBlock) throw Error("mergeBlock not found");
     // Chai does not support bigint comparison
     // eslint-disable-next-line chai-expect/no-inner-compare
-    expect(mergeBlock.totalDifficulty >= terminalTotalDifficulty, "mergeBlock.totalDifficulty is not >= TTD").to.be
-      .true;
+    // "mergeBlock.totalDifficulty is not >= TTD"
+    expect(mergeBlock.totalDifficulty >= terminalTotalDifficulty).toBe(true);
   });
 });

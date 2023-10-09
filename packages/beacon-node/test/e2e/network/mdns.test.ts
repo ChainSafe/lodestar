@@ -1,6 +1,4 @@
-import sinon from "sinon";
-import {expect} from "chai";
-
+import {describe, it, afterEach, beforeEach} from "vitest";
 import {PeerId} from "@libp2p/interface/peer-id";
 import {multiaddr} from "@multiformats/multiaddr";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
@@ -16,7 +14,6 @@ import {defaultNetworkOptions, NetworkOptions} from "../../../src/network/option
 import {getMockBeaconChain, zeroProtoBlock} from "../../utils/mocks/chain.js";
 import {createNetworkModules, onPeerConnect} from "../../utils/network.js";
 import {generateState} from "../../utils/state.js";
-import {StubbedBeaconDb} from "../../utils/stub/index.js";
 import {testLogger} from "../../utils/logger.js";
 import {GossipHandlers} from "../../../src/network/gossip/index.js";
 import {memoOnce} from "../../utils/cache.js";
@@ -27,9 +24,6 @@ const mu = "/ip4/127.0.0.1/tcp/0";
 // https://github.com/ChainSafe/lodestar/issues/5967
 // eslint-disable-next-line mocha/no-skipped-tests
 describe.skip("mdns", function () {
-  this.timeout(50000);
-  this.retries(2); // This test fail sometimes, with a 5% rate.
-
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
   afterEach(async () => {
     await Promise.all(afterEachCallbacks.map((cb) => cb()));
@@ -127,7 +121,7 @@ describe.skip("mdns", function () {
   it("should connect two peers on a LAN", async function () {
     const [{network: netA}, {network: netB}] = await createTestNodesAB();
     await Promise.all([onPeerConnect(netA), onPeerConnect(netB)]);
-    expect(netA.getConnectedPeerCount()).to.equal(1);
-    expect(netB.getConnectedPeerCount()).to.equal(1);
+    expect(netA.getConnectedPeerCount()).toBe(1);
+    expect(netB.getConnectedPeerCount()).toBe(1);
   });
 });
