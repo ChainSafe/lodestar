@@ -96,7 +96,7 @@
     "webpack": "^5.88.2",
     "wait-port": "^1.1.0",
     "vitest": "^0.34.6",
-    "vitest-when": "^0.1.2"
+    "vitest-when": "^0.2.0"
   },
   "resolutions": {
     "dns-over-http-resolver": "^2.1.1"

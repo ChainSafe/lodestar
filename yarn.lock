@@ -13901,10 +13901,10 @@ vite-node@0.34.6:
   optionalDependencies:
     fsevents "~2.3.2"
 
-vitest-when@^0.1.2:
-  version "0.1.2"
-  resolved "https://registry.yarnpkg.com/vitest-when/-/vitest-when-0.1.2.tgz#a19dd119d862d50edfad7c9eeccdbf74f736bffb"
-  integrity sha512-skMFHBsMZ1Dd0Q7Pw0CVF7+3TyQo4b0aogVd1R0cMhdeULE/Uk40Cxf6bouU5bur+tJriVJArWhk0olSHfmh7A==
+vitest-when@^0.2.0:
+  version "0.2.0"
+  resolved "https://registry.yarnpkg.com/vitest-when/-/vitest-when-0.2.0.tgz#3b3234efa6be0f976616f54e35357b56ed5e5f5f"
+  integrity sha512-BS1+L6HPwV3cMQB+pGa1Zr7gFkKX1TG8GbdgzpTlyW19nvWBmqDZW5GucS79K/lEu0ULWOUceHM56dnr8P/ajg==
 
 vitest@^0.34.6:
   version "0.34.6"
