@@ -68,7 +68,7 @@ describe("deserializeFullOrBlindedSignedBeaconBlock", () => {
         isForkExecution(name) && fullOrBlinded === "blinded"
           ? config.getBlindedForkTypes(block.message.slot).SignedBeaconBlock
           : config.getForkTypes(block.message.slot).SignedBeaconBlock;
-      expect(type.equals(deserialized, block)).to.be.true;
+      expect(type.equals(deserialized as any, block as any)).to.be.true;
     });
   }
 });
