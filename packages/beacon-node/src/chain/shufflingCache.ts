@@ -1,5 +1,6 @@
 import {CachedBeaconStateAllForks, EpochShuffling, getShufflingDecisionBlock} from "@lodestar/state-transition";
 import {Epoch, RootHex} from "@lodestar/types";
+import {Metrics} from "../metrics/metrics.js";
 
 /**
  * Same value to CheckpointBalancesCache, with the assumption that we don't have to use it for old epochs. In the worse case:
@@ -21,6 +22,12 @@ type ShufflingCacheItem = {
  */
 export class ShufflingCache {
   private readonly items: ShufflingCacheItem[] = [];
+
+  constructor(metrics: Metrics | null = null) {
+    if (metrics) {
+      metrics.shufflingCache.size.addCollect(() => metrics.shufflingCache.size.set(this.items.length));
+    }
+  }
 
   processState(state: CachedBeaconStateAllForks, shufflingEpoch: Epoch): void {
     const decisionBlockHex = getShufflingDecisionBlock(state, shufflingEpoch);

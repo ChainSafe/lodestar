@@ -1115,6 +1115,13 @@ export function createLodestarMetrics(
       }),
     },
 
+    shufflingCache: {
+      size: register.gauge({
+        name: "lodestar_shuffling_cache_size",
+        help: "Shuffling cache size",
+      }),
+    },
+
     seenCache: {
       aggregatedAttestations: {
         superSetCheckTotal: register.histogram({
