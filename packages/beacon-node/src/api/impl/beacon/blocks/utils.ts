@@ -12,12 +12,12 @@ export function toBeaconHeaderResponse(
   block: allForks.FullOrBlindedSignedBeaconBlock,
   canonical = false
 ): routes.beacon.BlockHeaderResponse {
+  // need to have ts-ignore below to pull type here so it only happens once and
+  // gets used twice
   const types = isBlinded(block)
     ? config.getBlindedForkTypes(block.message.slot)
     : config.getForkTypes(block.message.slot);
   return {
-    // there is no way to get this error to go away in a typesafe way without
-    // pulling the type twice
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     root: types.BeaconBlock.hashTreeRoot(block.message),
