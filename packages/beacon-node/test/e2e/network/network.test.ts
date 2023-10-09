@@ -28,9 +28,12 @@ describe(
 
 function runTests({useWorker}: {useWorker: boolean}): void {
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
+
   afterEach(async () => {
-    await Promise.all(afterEachCallbacks.map((cb) => cb()));
-    afterEachCallbacks.splice(0, afterEachCallbacks.length);
+    while (afterEachCallbacks.length > 0) {
+      const callback = afterEachCallbacks.pop();
+      if (callback) await callback();
+    }
   });
 
   let controller: AbortController;

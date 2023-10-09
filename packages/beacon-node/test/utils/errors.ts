@@ -47,7 +47,7 @@ export function expectLodestarError<T extends {code: string}>(err1: LodestarErro
 
   const errMeta1 = getErrorMetadata(err1);
   const errMeta2 = getErrorMetadata(err2);
-  expect(errMeta1).to.deep.equal(errMeta2, "Wrong LodestarError metadata");
+  expect(errMeta1).toEqual(errMeta2);
 }
 
 export function getErrorMetadata<T extends {code: string}>(err: LodestarError<T> | Error | unknown): unknown {
