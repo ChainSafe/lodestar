@@ -186,17 +186,16 @@ export class PrepareNextSlotScheduler {
   };
 
   /**
-   * Pruning at the last 1/3 slot of epoch is the safest time because all epoch transitions already use the checkpoint states cached
+   * Pruning at the last 1/3 slot of first slot of epoch is the safest time because all epoch transitions already use the checkpoint states cached
    * one down side of this is when `inMemoryEpochs = 0` and gossip block hasn't come yet then we have to reload state we added 2/3 slot ago
-   * however, it's not likely `inMemoryEpochs` is configured as 0, and this scenario rarely happen
+   * However, it's not likely `inMemoryEpochs` is configured as 0, and this scenario rarely happen
    * since we only use `inMemoryEpochs = 0` for testing, if it happens it's a good thing because it helps us test the reload flow
    */
   private prunePerSlot = async (clockSlot: Slot): Promise<void> => {
     // a contabo vpss can have 10-12 holesky epoch transitions per epoch when syncing, stronger node may have more
-    // although it can survive during syncing if we prune per epoch, it's better to prune at the last 1/3 of every slot
+    // it's better to prune at the last 1/3 of every slot in order not to cache a lot of checkpoint states
     // at synced time, it's likely we only prune at the 1st slot of epoch, all other prunes are no-op
-    const nextEpoch = computeEpochAtSlot(clockSlot) + 1;
     const pruneCount = await this.chain.regen.pruneCheckpointStateCache();
-    this.logger.verbose("Pruned checkpoint state cache", {clockSlot, nextEpoch, pruneCount});
+    this.logger.verbose("Pruned checkpoint state cache", {clockSlot, pruneCount});
   };
 }
