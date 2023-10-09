@@ -500,7 +500,7 @@ export function blindedOrFullBlockToBlindedBytes(
   throw new Error("unknown forkSeq, cannot un-blind");
 }
 
-export function blindedOrFullToFull(
+export function blindedOrFullBlockToFull(
   config: ChainForkConfig,
   forkSeq: ForkSeq,
   block: allForks.FullOrBlindedSignedBeaconBlock,
@@ -544,7 +544,7 @@ export function blindedOrFullToFull(
  * chunk is from the start of the blsToExecutionChanges offset to the end of the
  * block.
  */
-export async function* blindedOrFullToFullBytes(
+export async function* blindedOrFullBlockToFullBytes(
   forkSeq: ForkSeq,
   block: Uint8Array,
   transactionsAndWithdrawals: Promise<TransactionsAndWithdrawals>

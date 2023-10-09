@@ -10,8 +10,8 @@ import {
   TransactionsAndWithdrawals,
   blindedOrFullBlockToBlinded,
   blindedOrFullBlockToBlindedBytes,
-  blindedOrFullToFull,
-  blindedOrFullToFullBytes,
+  blindedOrFullBlockToFull,
+  blindedOrFullBlockToFullBytes,
 } from "../../../src/util/fullOrBlindedBlock.js";
 
 // calculate slot ratio so that getForkTypes and getBlindedForkTypes return correct fork for minimal configuration
@@ -28,76 +28,82 @@ const config = createChainForkConfig({
 });
 /* eslint-enable @typescript-eslint/naming-convention */
 
-describe("blindedOrFullToFull", () => {
+describe("fullOrBlindedBlock", () => {
   setBenchOpts({noThreshold: true});
 
-  for (const {forkInfo, full, fullSerialized} of mockBlocks) {
-    describe(`${forkInfo.name} fullOrBlinded to full`, () => {
-      itBench({
-        id: "deserialize first then convert",
-        beforeEach: () => {
-          const transactionsAndWithdrawals: TransactionsAndWithdrawals = {};
-          if (forkInfo.seq > ForkSeq.bellatrix) {
-            transactionsAndWithdrawals.transactions = (
-              full.message.body as bellatrix.BeaconBlockBody
-            ).executionPayload.transactions;
-          }
-          if (forkInfo.seq > ForkSeq.capella) {
-            transactionsAndWithdrawals.withdrawals = (
-              full.message.body as capella.BeaconBlockBody
-            ).executionPayload.withdrawals;
-          }
-          return transactionsAndWithdrawals;
-        },
-        fn: (transactionsAndWithdrawals) => {
-          const deserialized = ssz[forkInfo.name].SignedBeaconBlock.deserialize(fullSerialized);
-          blindedOrFullToFull(config, forkInfo.seq, deserialized, transactionsAndWithdrawals);
-        },
+  describe("BlindedOrFull to full", () => {
+    for (const {forkInfo, full, fullSerialized} of mockBlocks) {
+      describe(forkInfo.name, () => {
+        itBench({
+          id: `${forkInfo.name} to full - deserialize first`,
+          beforeEach: () => {
+            const transactionsAndWithdrawals: TransactionsAndWithdrawals = {};
+            if (forkInfo.seq > ForkSeq.bellatrix) {
+              transactionsAndWithdrawals.transactions = (
+                full.message.body as bellatrix.BeaconBlockBody
+              ).executionPayload.transactions;
+            }
+            if (forkInfo.seq > ForkSeq.capella) {
+              transactionsAndWithdrawals.withdrawals = (
+                full.message.body as capella.BeaconBlockBody
+              ).executionPayload.withdrawals;
+            }
+            return transactionsAndWithdrawals;
+          },
+          fn: (transactionsAndWithdrawals) => {
+            const deserialized = ssz[forkInfo.name].SignedBeaconBlock.deserialize(fullSerialized);
+            blindedOrFullBlockToFull(config, forkInfo.seq, deserialized, transactionsAndWithdrawals);
+          },
+        });
+        itBench({
+          id: `${forkInfo.name} to full - convert serialized`,
+          beforeEach: () => {
+            const transactionsAndWithdrawals: TransactionsAndWithdrawals = {};
+            if (forkInfo.seq > ForkSeq.bellatrix) {
+              transactionsAndWithdrawals.transactions = (
+                full.message.body as bellatrix.BeaconBlockBody
+              ).executionPayload.transactions;
+            }
+            if (forkInfo.seq > ForkSeq.capella) {
+              transactionsAndWithdrawals.withdrawals = (
+                full.message.body as capella.BeaconBlockBody
+              ).executionPayload.withdrawals;
+            }
+            return transactionsAndWithdrawals;
+          },
+          fn: async (transactionsAndWithdrawals) => {
+            const chunks: Uint8Array[] = [];
+            for await (const chunk of blindedOrFullBlockToFullBytes(
+              forkInfo.seq,
+              fullSerialized,
+              Promise.resolve(transactionsAndWithdrawals)
+            )) {
+              chunks.push(chunk);
+            }
+          },
+        });
       });
-      itBench({
-        id: "convert serialized",
-        beforeEach: () => {
-          const transactionsAndWithdrawals: TransactionsAndWithdrawals = {};
-          if (forkInfo.seq > ForkSeq.bellatrix) {
-            transactionsAndWithdrawals.transactions = (
-              full.message.body as bellatrix.BeaconBlockBody
-            ).executionPayload.transactions;
-          }
-          if (forkInfo.seq > ForkSeq.capella) {
-            transactionsAndWithdrawals.withdrawals = (
-              full.message.body as capella.BeaconBlockBody
-            ).executionPayload.withdrawals;
-          }
-          return transactionsAndWithdrawals;
-        },
-        fn: async (transactionsAndWithdrawals) => {
-          const chunks: Uint8Array[] = [];
-          for await (const chunk of blindedOrFullToFullBytes(
-            forkInfo.seq,
-            fullSerialized,
-            Promise.resolve(transactionsAndWithdrawals)
-          )) {
-            chunks.push(chunk);
-          }
-        },
-      });
-    });
+    }
+  });
 
-    describe(`${forkInfo.name} fullOrBlinded to blinded`, () => {
-      itBench({
-        id: "deserialize first then convert",
-        fn: () => {
-          const deserialized = ssz[forkInfo.name].SignedBeaconBlock.deserialize(fullSerialized);
-          blindedOrFullBlockToBlinded(config, deserialized);
-        },
-      });
+  describe("BlindedOrFull to blinded", () => {
+    for (const {forkInfo, full, fullSerialized} of mockBlocks) {
+      describe(forkInfo.name, () => {
+        itBench({
+          id: `${forkInfo.name} to blinded - deserialize first`,
+          fn: () => {
+            const deserialized = ssz[forkInfo.name].SignedBeaconBlock.deserialize(fullSerialized);
+            blindedOrFullBlockToBlinded(config, deserialized);
+          },
+        });
 
-      itBench({
-        id: "convert serialized",
-        fn: () => {
-          blindedOrFullBlockToBlindedBytes(config, full, fullSerialized);
-        },
+        itBench({
+          id: `${forkInfo.name} to blinded - convert serialized`,
+          fn: () => {
+            blindedOrFullBlockToBlindedBytes(config, full, fullSerialized);
+          },
+        });
       });
-    });
-  }
+    }
+  });
 });

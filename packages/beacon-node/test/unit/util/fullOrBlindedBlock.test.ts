@@ -10,7 +10,7 @@ import {
   blindedOrFullBlockToBlindedBytes,
   deserializeFullOrBlindedSignedBeaconBlock,
   isBlindedBytes,
-  blindedOrFullToFullBytes,
+  blindedOrFullBlockToFullBytes,
   serializeFullOrBlindedSignedBeaconBlock,
 } from "../../../src/util/fullOrBlindedBlock.js";
 import {mockBlocks} from "../../utils/mocks/block.js";
@@ -122,7 +122,7 @@ describe("blindedOrFullBlockToBlindedBytes", function () {
   }
 });
 
-describe("blindedOrFullToFullBytes", () => {
+describe("blindedOrFullBlockToFullBytes", () => {
   for (const {
     forkInfo: {seq, name},
     full,
@@ -133,7 +133,7 @@ describe("blindedOrFullToFullBytes", () => {
     const withdrawals = (full as capella.SignedBeaconBlock).message.body.executionPayload?.withdrawals;
     it(`should reassemble serialized blinded ${name} to serialized full block`, async () => {
       const chunks: Uint8Array[] = [];
-      for await (const chunk of blindedOrFullToFullBytes(
+      for await (const chunk of blindedOrFullBlockToFullBytes(
         seq,
         (isForkExecution(name) ? blindedSerialized : fullSerialized) as Uint8Array,
         Promise.resolve({transactions, withdrawals})
