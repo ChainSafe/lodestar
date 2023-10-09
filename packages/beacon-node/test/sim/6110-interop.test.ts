@@ -6,7 +6,7 @@ import {TimestampFormatCode} from "@lodestar/logger";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ChainConfig} from "@lodestar/config";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {Epoch, Slot} from "@lodestar/types";
+import {capella, eip6110, Epoch, Slot} from "@lodestar/types";
 import {ValidatorProposerConfig} from "@lodestar/validator";
 
 import {ChainEvent} from "../../src/chain/index.js";
@@ -86,33 +86,85 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       {signal: controller.signal, logger: testLogger("executionEngine")}
     );
 
-    const depositReceiptsVector = [
+    const depositReceipt = 
       {
-        amount: 320000000000,
-        index: 0n,
-        pubkey: "0x96a96086cff07df17668f35f7418ef8798079167e3f4f9b72ecde17b28226137cf454ab1dd20ef5d924786ab3483c2f9",
-        signature: "0xb1acdb2c4d3df3f1b8d3bfd33421660df358d84d78d16c4603551935f4b67643373e7eb63dcb16ec359be0ec41fee33b03a16e80745f2374ff1d3c352508ac5d857c6476d3c3bcf7e6ca37427c9209f17be3af5264c0e2132b3dd1156c28b4e9",
-        withdrawalCredentials: "0x003f5102dabe0a27b1746098d1dc17a5d3fbd478759fea9287e4e419b3c3cef2"
-      }
-    ]
-
-    const deposits = depositReceiptsVector.map((testVec) => ({
-      pubkey: dataToBytes(testVec.pubkey, 48),
-      withdrawalCredentials: dataToBytes(testVec.withdrawalCredentials, 32),
-      amount: testVec.amount,
-      signature: dataToBytes(testVec.signature, 96),
-      index: testVec.index,
-    }));
-
-    const depositTransaction = "0x02f9021c8217de808459682f008459682f0e830271009442424242424242424242424242424242424242428901bc16d674ec800000b901a422895118000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000120749715de5d1226545c6b3790f515d551a5cc5bf1d49c87a696860554d2fc4f14000000000000000000000000000000000000000000000000000000000000003096a96086cff07df17668f35f7418ef8798079167e3f4f9b72ecde17b28226137cf454ab1dd20ef5d924786ab3483c2f9000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020003f5102dabe0a27b1746098d1dc17a5d3fbd478759fea9287e4e419b3c3cef20000000000000000000000000000000000000000000000000000000000000060b1acdb2c4d3df3f1b8d3bfd33421660df358d84d78d16c4603551935f4b67643373e7eb63dcb16ec359be0ec41fee33b03a16e80745f2374ff1d3c352508ac5d857c6476d3c3bcf7e6ca37427c9209f17be3af5264c0e2132b3dd1156c28b4e9c080a09f597089338d7f44f5c59f8230bb38f243849228a8d4e9d2e2956e6050f5b2c7a076486996c7e62802b8f95eee114783e4b403fd11093ba96286ff42c595f24452";
-
+        amount: 32000000000,
+        index: 0,
+        pubkey: dataToBytes("0x96a96086cff07df17668f35f7418ef8798079167e3f4f9b72ecde17b28226137cf454ab1dd20ef5d924786ab3483c2f9", 48),
+        signature: dataToBytes("0xb1acdb2c4d3df3f1b8d3bfd33421660df358d84d78d16c4603551935f4b67643373e7eb63dcb16ec359be0ec41fee33b03a16e80745f2374ff1d3c352508ac5d857c6476d3c3bcf7e6ca37427c9209f17be3af5264c0e2132b3dd1156c28b4e9", 96),
+        withdrawalCredentials: dataToBytes("0x003f5102dabe0a27b1746098d1dc17a5d3fbd478759fea9287e4e419b3c3cef2", 32),
+      };
+    
     // TODO 6110: Do the following
     // 1. Send raw deposit transaction
-    // 2. Prepare a payload
-      // With depositReceipts
+    const depositTransaction = "0x02f9021c8217de808459682f008459682f0e830271009442424242424242424242424242424242424242428901bc16d674ec800000b901a422895118000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000120749715de5d1226545c6b3790f515d551a5cc5bf1d49c87a696860554d2fc4f14000000000000000000000000000000000000000000000000000000000000003096a96086cff07df17668f35f7418ef8798079167e3f4f9b72ecde17b28226137cf454ab1dd20ef5d924786ab3483c2f9000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020003f5102dabe0a27b1746098d1dc17a5d3fbd478759fea9287e4e419b3c3cef20000000000000000000000000000000000000000000000000000000000000060b1acdb2c4d3df3f1b8d3bfd33421660df358d84d78d16c4603551935f4b67643373e7eb63dcb16ec359be0ec41fee33b03a16e80745f2374ff1d3c352508ac5d857c6476d3c3bcf7e6ca37427c9209f17be3af5264c0e2132b3dd1156c28b4e9c080a09f597089338d7f44f5c59f8230bb38f243849228a8d4e9d2e2956e6050f5b2c7a076486996c7e62802b8f95eee114783e4b403fd11093ba96286ff42c595f24452";
+    sendRawTransactionBig(ethRpcUrl, depositTransaction, `${dataPath}/deposit.json`)
+      .catch((e) => {
+        throw Error(`Fail to send raw deposit transaction: ${e.message}`);
+      });
+
+    // 2. Create a payload with depositReceipts
+    const newPayload = {
+      parentHash: dataToBytes("0xb9203a1bb9ed08e8160522c78039f4b83c7c932012fc3068db7dc9be537f1673", 32),
+      feeRecipient: dataToBytes("0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b", 20),
+      stateRoot: dataToBytes("0xa78bb828a9a90729de2d236a057a415fc635ef98e3209a634285713b34d278e8", 32),
+      logsBloom: dataToBytes("0x10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000400000000000000000000000020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008000000000000000000000000", 256),
+      prevRandao: dataToBytes("0x0", 32),
+      gasLimit: 30000000,
+      gasUsed: 84846,
+      timestamp: 20,
+      extraData: dataToBytes("0x", 32),
+      baseFeePerGas: 7n,
+      excessBlobGas : 0n,
+      transactions: [
+        dataToBytes(depositTransaction, 1073741824)
+      ],
+      withdrawals: [],
+      depositReceipts : [depositReceipt],
+      blockNumber: 2,
+      blockHash: dataToBytes("0xd1ba8d4c47dd83ea145f39e27ef680ee3db132af6f71727e291bfd34dda66ce4", 32),
+      receiptsRoot: dataToBytes("0x79ee3424eb720a3ad4b1c5a372bb8160580cbe4d893778660f34213c685627a9", 32),
+      blobGasUsed : 0n
+    }
+    const payloadResult = await executionEngine.notifyNewPayload(ForkName.eip6110, newPayload, [], dataToBytes("0x0", 32));
+    if (payloadResult.status !== ExecutionPayloadStatus.VALID) {
+      throw Error("getPayload returned payload that notifyNewPayload deems invalid");
+    }
+
     // 3. Update fork choice
-    // 4. Get the payload
-      // Check depositReceipts field contains deposit
+    const finalizedBlockHash = "0xd1ba8d4c47dd83ea145f39e27ef680ee3db132af6f71727e291bfd34dda66ce4";
+    const preparePayloadParams: PayloadAttributes = {
+      // Note: this is created with a pre-defined genesis.json
+      timestamp: 30,
+      prevRandao: dataToBytes("0x0", 32),
+      suggestedFeeRecipient: "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b",
+      withdrawals: [],
+      parentBeaconBlockRoot: dataToBytes("0x0", 32),
+    };
+
+    const payloadId = await executionEngine.notifyForkchoiceUpdate(
+      ForkName.eip6110,
+      finalizedBlockHash,
+      //use finalizedBlockHash as safeBlockHash
+      finalizedBlockHash,
+      finalizedBlockHash,
+      preparePayloadParams
+    );
+    if (!payloadId) throw Error("InvalidPayloadId");
+
+
+    // 4. Get the payload. Check depositReceipts field contains deposit
+    const payloadAndBlockValue = await executionEngine.getPayload(ForkName.eip6110, payloadId);
+    const payload = payloadAndBlockValue.executionPayload as eip6110.ExecutionPayload;
+    
+    if (payload.transactions[0] !== dataToBytes(depositTransaction, 1073741824)) {
+      throw Error("Missing transaction")
+    }
+
+    if (payload.depositReceipts[0] !== depositReceipt) {
+      throw Error("Missing deposit")
+    }
+
   });
 
   it("Post-merge, run for a few blocks", async function () {
