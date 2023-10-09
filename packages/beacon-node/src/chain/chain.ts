@@ -39,7 +39,7 @@ import {IExecutionEngine, IExecutionBuilder} from "../execution/index.js";
 import {Clock, ClockEvent, IClock} from "../util/clock.js";
 import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
-import {CHECKPOINT_STATES_FOLDER, PersistentCheckpointStateCache, StateContextCache} from "./stateCache/index.js";
+import {CHECKPOINT_STATES_FOLDER, PersistentCheckpointStateCache, LRUBlockStateCache} from "./stateCache/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {ChainEventEmitter, ChainEvent} from "./emitter.js";
 import {IBeaconChain, ProposerPreparationData, BlockHash, StateGetOpts} from "./interface.js";
@@ -79,6 +79,7 @@ import {ShufflingCache} from "./shufflingCache.js";
 import {MemoryCheckpointStateCache} from "./stateCache/memoryCheckpointsCache.js";
 import {FilePersistentApis} from "./stateCache/persistent/file.js";
 import {DbPersistentApis} from "./stateCache/persistent/db.js";
+import {StateContextCache} from "./stateCache/stateContextCache.js";
 
 /**
  * Arbitrary constants, blobs should be consumed immediately in the same slot they are produced.
@@ -236,11 +237,13 @@ export class BeaconChain implements IBeaconChain {
     this.pubkey2index = cachedState.epochCtx.pubkey2index;
     this.index2pubkey = cachedState.epochCtx.index2pubkey;
 
-    const stateCache = new StateContextCache(this.opts, {metrics});
+    const stateCache = this.opts.nHistoricalStates
+      ? new LRUBlockStateCache(this.opts, {metrics})
+      : new StateContextCache({metrics});
     const persistentApis = this.opts.persistCheckpointStatesToFile
       ? new FilePersistentApis(CHECKPOINT_STATES_FOLDER)
       : new DbPersistentApis(this.db);
-    const checkpointStateCache = this.opts.persistentCheckpointStateCache
+    const checkpointStateCache = this.opts.nHistoricalStates
       ? new PersistentCheckpointStateCache(
           {
             metrics,
@@ -256,6 +259,8 @@ export class BeaconChain implements IBeaconChain {
 
     const {checkpoint} = computeAnchorCheckpoint(config, anchorState);
     stateCache.add(cachedState);
+    // TODO: remove once we go with n-historical states
+    stateCache.setHeadState(cachedState);
     checkpointStateCache.add(checkpoint, cachedState);
 
     const forkChoice = initializeForkChoice(

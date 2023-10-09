@@ -2,7 +2,7 @@ import {CachedBeaconStateAllForks, EpochShuffling, getShufflingDecisionBlock} fr
 import {Epoch, RootHex} from "@lodestar/types";
 
 /**
- * Same value to CheckpointBalancesCache, with the assumption that we don't have to use it old epochs. In the worse case:
+ * Same value to CheckpointBalancesCache, with the assumption that we don't have to use it for old epochs. In the worse case:
  * - when loading state bytes from disk, we need to compute shuffling for all epochs (~1s as of Sep 2023)
  * - don't have shuffling to verify attestations, need to do 1 epoch transition to add shuffling to this cache. This never happens
  * with default chain option of maxSkipSlots = 32

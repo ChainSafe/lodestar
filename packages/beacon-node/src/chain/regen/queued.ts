@@ -4,7 +4,7 @@ import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
 import {Logger} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
-import {CheckpointHex, CheckpointStateCache, StateContextCache, toCheckpointHex} from "../stateCache/index.js";
+import {CheckpointHex, CheckpointStateCache, BlockStateCache, toCheckpointHex} from "../stateCache/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {IStateRegenerator, IStateRegeneratorInternal, RegenCaller, RegenFnName, StateCloneOpts} from "./interface.js";
@@ -34,7 +34,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
   private readonly regen: StateRegenerator;
 
   private readonly forkChoice: IForkChoice;
-  private readonly stateCache: StateContextCache;
+  private readonly stateCache: BlockStateCache;
   private readonly checkpointStateCache: CheckpointStateCache;
   private readonly metrics: Metrics | null;
   private readonly logger: Logger;
@@ -82,6 +82,12 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     return this.checkpointStateCache.getLatest(head.blockRoot, Infinity) || this.stateCache.get(head.stateRoot);
   }
 
+  // TODO: remove this once we go with n-historical state
+  pruneOnCheckpoint(finalizedEpoch: Epoch, justifiedEpoch: Epoch, headStateRoot: RootHex): void {
+    this.checkpointStateCache.prune(finalizedEpoch, justifiedEpoch);
+    this.stateCache.prune(headStateRoot);
+  }
+
   pruneOnFinalized(finalizedEpoch: number): void {
     this.checkpointStateCache.pruneFinalized(finalizedEpoch);
     this.stateCache.deleteAllBeforeEpoch(finalizedEpoch);
@@ -106,16 +112,20 @@ export class QueuedStateRegenerator implements IStateRegenerator {
         : this.stateCache.get(newHeadStateRoot);
 
     if (headState) {
-      // this move the headState to the front of the queue so it'll not be pruned right away
-      this.stateCache.add(headState);
+      // TODO: use add() api instead once we go with n-historical state
+      this.stateCache.setHeadState(headState);
     } else {
       // Trigger regen on head change if necessary
       this.logger.warn("Head state not available, triggering regen", {stateRoot: newHeadStateRoot});
       // it's important to reload state to regen head state here
       const shouldReload = true;
+      // head has changed, so the existing cached head state is no longer useful. Set strong reference to null to free
+      // up memory for regen step below. During regen, node won't be functional but eventually head will be available
+      // TODO: remove this once we go with n-historical state
+      this.stateCache.setHeadState(null);
       this.regen.getState(newHeadStateRoot, RegenCaller.processBlock, shouldReload).then(
         // this move the headState to the front of the queue so it'll not be pruned right away
-        (headStateRegen) => this.stateCache.add(headStateRegen),
+        (headStateRegen) => this.stateCache.setHeadState(headStateRegen),
         (e) => this.logger.error("Error on head state regen", {}, e)
       );
     }

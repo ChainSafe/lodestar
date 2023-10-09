@@ -38,6 +38,8 @@ export interface IStateRegenerator extends IStateRegeneratorInternal {
   getCheckpointStateOrBytes(cp: CheckpointHex): Promise<CachedBeaconStateAllForks | Uint8Array | null>;
   getCheckpointStateSync(cp: CheckpointHex): CachedBeaconStateAllForks | null;
   getClosestHeadState(head: ProtoBlock): CachedBeaconStateAllForks | null;
+  // TODO: remove once we go with n-historical state cache
+  pruneOnCheckpoint(finalizedEpoch: Epoch, justifiedEpoch: Epoch, headStateRoot: RootHex): void;
   pruneOnFinalized(finalizedEpoch: Epoch): void;
   addPostState(postState: CachedBeaconStateAllForks): void;
   addCheckpointState(cp: phase0.Checkpoint, item: CachedBeaconStateAllForks): void;

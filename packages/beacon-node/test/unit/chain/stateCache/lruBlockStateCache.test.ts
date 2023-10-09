@@ -4,11 +4,11 @@ import {EpochShuffling} from "@lodestar/state-transition";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Root} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition/src/types.js";
-import {StateContextCache} from "../../../../src/chain/stateCache/index.js";
+import {LRUBlockStateCache} from "../../../../src/chain/stateCache/index.js";
 import {generateCachedState} from "../../../utils/state.js";
 
-describe("StateContextCache", function () {
-  let cache: StateContextCache;
+describe("LRUBlockStateCache", function () {
+  let cache: LRUBlockStateCache;
   const shuffling: EpochShuffling = {
     epoch: 0,
     activeIndices: [],
@@ -31,7 +31,7 @@ describe("StateContextCache", function () {
 
   beforeEach(function () {
     // max 2 items
-    cache = new StateContextCache({maxStates: 2}, {});
+    cache = new LRUBlockStateCache({maxStates: 2}, {});
     cache.add(state1);
     cache.add(state2);
   });
