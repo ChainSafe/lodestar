@@ -4,14 +4,14 @@ import {ArchiverOpts} from "./archiver/index.js";
 import {ForkChoiceOpts} from "./forkChoice/index.js";
 import {LightClientServerOpts} from "./lightClient/index.js";
 import {PersistentCheckpointStateCacheOpts} from "./stateCache/types.js";
-import {StateContextCacheOpts} from "./stateCache/stateContextCache.js";
+import {LRUBlockStateCacheOpts} from "./stateCache/lruBlockStateCache.js";
 
 export type IChainOptions = BlockProcessOpts &
   PoolOpts &
   SeenCacheOpts &
   ForkChoiceOpts &
   ArchiverOpts &
-  StateContextCacheOpts &
+  LRUBlockStateCacheOpts &
   PersistentCheckpointStateCacheOpts &
   LightClientServerOpts & {
     blsVerifyAllMainThread?: boolean;
@@ -31,8 +31,7 @@ export type IChainOptions = BlockProcessOpts &
     trustedSetup?: string;
     broadcastValidationStrictness?: string;
     minSameMessageSignatureSetsToBatch: number;
-    // TODO: change to n_historical_states
-    persistentCheckpointStateCache?: boolean;
+    nHistoricalStates?: boolean;
     /** by default persist checkpoint state to db */
     persistCheckpointStatesToFile?: boolean;
   };
@@ -97,12 +96,12 @@ export const defaultChainOptions: IChainOptions = {
   // since this batch attestation work is designed to work with useWorker=true, make this the lowest value
   minSameMessageSignatureSetsToBatch: 2,
   // TODO: change to false, leaving here to ease testing
-  persistentCheckpointStateCache: true,
+  nHistoricalStates: true,
   // by default, persist checkpoint states to db
   persistCheckpointStatesToFile: false,
 
   // since Sep 2023, only cache up to 32 states by default. If a big reorg happens it'll load checkpoint state from disk and regen from there.
-  // TODO: change to 128, leaving here to ease testing
+  // TODO: change to 128 which is the old StateCache config, only change back to 32 when we enable n-historical state, leaving here to ease testing
   maxStates: 32,
   // only used when persistentCheckpointStateCache = true
   maxEpochsInMemory: 2,

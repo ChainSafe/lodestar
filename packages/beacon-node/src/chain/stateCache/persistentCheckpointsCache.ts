@@ -21,12 +21,39 @@ import {
 import {CPStatePersistentApis, PersistentKey} from "./persistent/types.js";
 
 /**
- * Cache of CachedBeaconState belonging to checkpoint
- * - If it's more than MAX_STATES_IN_MEMORY epochs old, it will be persisted to disk following LRU cache
+ * An implementation of CheckpointStateCache that keep up to n epoch checkpoint states in memory and persist the rest to disk
+ * - If it's more than `maxEpochsInMemory` epochs old, it will be persisted to disk following LRU cache
  * - Once a chain gets finalized we'll prune all states from memory and disk for epochs < finalizedEpoch
- * - In get*() apis if shouldReload is true, it will reload from disk
+ * - In get*() apis if shouldReload is true, it will reload from disk. The reload() api is expensive (as with Holesky, it takes ~1.5s to load and could be
+ * up 2s-3s in total for the hashTreeRoot() ) and should only be called in some important flows:
+ *   - Get state for block processing
+ *   - updateHeadState
+ *   - as with any cache, the state could be evicted from memory at any time, so we should always check if the state is in memory or not
+ * - For each epoch, we only persist exactly 1 (official) checkpoint state and prune the other one because it's enough for the regen. The persisted (official)
+ * checkpoint state could be finalized and used later in archive task. The "official" checkpoint state is defined at: https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.2/specs/phase0/beacon-chain.md
  *
- * Similar API to Repository
+ *   - If there is Current Root Checkpoint State, we persist that state to disk and delete the Previous Root Checkpoint State
+ *        epoch:       (n-2)   (n-1)     n     (n+1)
+ *               |-------|-------|-------|-------|
+ *        root      ---------------------^
+ *
+ *   - If there is no Current Root Checkpoint State, we persist the Previous Root Checkpoint State to disk
+ *        epoch:       (n-2)   (n-1)     n     (n+1)
+ *               |-------|-------|-------|-------|
+ *        root     ---------------------^
+ *
+ * The below diagram shows Previous Root Checkpoint State is persisted for epoch (n-2) and Current Root Checkpoint State is persisted for epoch (n-1)
+ * while at epoch (n) and (n+1) we have both of them in memory
+ *
+ * ╔════════════════════════════════════╗═══════════════╗
+ * ║      persisted to db or fs         ║   in memory   ║
+ * ║        reload if needed            ║               ║
+ * ║ -----------------------------------║---------------║
+ * ║        epoch:       (n-2)   (n-1)  ║  n     (n+1)  ║
+ * ║               |-------|-------|----║--|-------|----║
+ * ║                      ^        ^    ║ ^       ^     ║
+ * ║                                    ║  ^       ^    ║
+ * ╚════════════════════════════════════╝═══════════════╝
  */
 export class PersistentCheckpointStateCache implements CheckpointStateCache {
   private readonly cache: MapTracker<string, CachedBeaconStateAllForks | PersistentKey>;
@@ -279,6 +306,13 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     return previousHits;
   }
 
+  /**
+   * This is just to conform to the old implementation
+   */
+  prune(): void {
+    // do nothing
+  }
+
   pruneFinalized(finalizedEpoch: Epoch): void {
     for (const epoch of this.epochIndex.keys()) {
       if (epoch < finalizedEpoch) {
@@ -337,7 +371,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   }
 
   /**
-   * This is slow code because it involves serializing the whole state to disk which takes 600ms to 900ms as of Sep 2023
+   * This is slow code because it involves serializing the whole state to disk which takes 600ms to 900ms on Holesky as of Sep 2023
    * The add() is called after we process 1st block of an epoch, we don't want to pruneFromMemory at that time since it's the hot time
    * Call this code at the last 1/3 slot of slot 0 of an epoch
    */
@@ -369,8 +403,10 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
         }
       }
 
-      // if found firstSlotBlockRoot it means it's a checkpoint state and we should only persist that checkpoint, delete the other
-      // if not found firstSlotBlockRoot, first slot of state is skipped, we should persist the other checkpoint state, with the root is the last slot of pervious epoch
+      // if found firstSlotBlockRoot it means it's Current Root Checkpoint State and we should only persist that checkpoint as it's the state
+      // that will be justified/finalized later, delete the Previous Root Checkpoint State
+      // if not found firstSlotBlockRoot, first slot of state is skipped, we should persist the Previous Root Checkpoint State, where the root
+      // is the last block slot root of pervious epoch. In this case Previous Root Checkpoint State would become the justified/finalized state.
       for (const rootHex of this.epochIndex.get(firstEpoch) ?? []) {
         let toPersist = false;
         let toDelete = false;
