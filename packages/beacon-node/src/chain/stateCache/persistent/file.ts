@@ -6,7 +6,7 @@ import {CheckpointKey} from "../types.js";
 import {CPStatePersistentApis, PersistentKey} from "./types.js";
 
 /**
- * Implementation of CPStatePersistentApis using file system.
+ * Implementation of CPStatePersistentApis using file system, this is beneficial for debugging.
  */
 export class FilePersistentApis implements CPStatePersistentApis {
   constructor(private readonly folderPath: string) {

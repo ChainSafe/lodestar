@@ -291,12 +291,10 @@ async function processSlotsToNearestCheckpoint(
     // processSlots calls .clone() before mutating
     postState = processSlots(postState, nextEpochSlot, opts, metrics);
 
-    // this is usually added when we validate gossip block at the start of an epoch
-    // then when we process block, we don't have to do state transition again
-    // note that this state could be real checkpoint state or just a state after processing empty slots
-    // - if the 1st block of the epoch is skipped, it's a checkpoint state
-    // - if the 1st block of the epoch is processed, it's NOT a checkpoint state
-    // however we still need to add this state to cache to preserve epoch transitions
+    // this is usually added when we prepare for next slot or validate gossip block
+    // then when we process the 1st block of epoch, we don't have to do state transition again
+    // This adds Previous Root Checkpoint State to the checkpoint state cache
+    // This may becomes the "official" checkpoint state if the 1st block of epoch is skipped
     const checkpointState = postState;
     const cp = getCheckpointFromState(checkpointState);
     checkpointStateCache.add(cp, checkpointState);
