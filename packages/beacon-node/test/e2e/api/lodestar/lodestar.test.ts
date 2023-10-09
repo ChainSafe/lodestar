@@ -8,9 +8,11 @@ import {LogLevel, testLogger, TestLoggerOpts} from "../../../utils/logger.js";
 import {getDevBeaconNode} from "../../../utils/node/beacon.js";
 import {waitForEvent} from "../../../utils/events/resolver.js";
 import {ClockEvent} from "../../../../src/util/clock.js";
+import {BeaconNode} from "../../../../src/index.js";
 
 describe("api / impl / validator", function () {
   describe("getLiveness endpoint", function () {
+    let bn: BeaconNode | undefined;
     const SECONDS_PER_SLOT = 2;
     const ALTAIR_FORK_EPOCH = 0;
     const validatorCount = 8;
@@ -23,13 +25,8 @@ describe("api / impl / validator", function () {
     const genesisSlotsDelay = 5;
     const timeout = (SLOTS_PER_EPOCH + genesisSlotsDelay) * testParams.SECONDS_PER_SLOT * 1000;
 
-    const afterEachCallbacks: (() => Promise<unknown> | void)[] = [];
-
     afterEach(async () => {
-      while (afterEachCallbacks.length > 0) {
-        const callback = afterEachCallbacks.pop();
-        if (callback) await callback();
-      }
+      if (bn) await bn.close();
     });
 
     it("Should return validator indices that are live", async function () {
@@ -39,7 +36,7 @@ describe("api / impl / validator", function () {
 
       const loggerNodeA = testLogger("Node-A");
 
-      const bn = await getDevBeaconNode({
+      bn = await getDevBeaconNode({
         params: testParams,
         options: {
           sync: {isSingleNode: true},
@@ -48,9 +45,6 @@ describe("api / impl / validator", function () {
         },
         validatorCount,
         logger: loggerNodeA,
-      });
-      afterEachCallbacks.push(async () => {
-        await bn.close();
       });
 
       // live indices at epoch of consideration, epoch 0
@@ -90,7 +84,7 @@ describe("api / impl / validator", function () {
         const testLoggerOpts: TestLoggerOpts = {level: LogLevel.info};
         const loggerNodeA = testLogger("Node-A", testLoggerOpts);
 
-        const bn = await getDevBeaconNode({
+        bn = await getDevBeaconNode({
           params: testParams,
           options: {
             sync: {isSingleNode: true},
@@ -99,9 +93,6 @@ describe("api / impl / validator", function () {
           },
           validatorCount,
           logger: loggerNodeA,
-        });
-        afterEachCallbacks.push(async () => {
-          await bn.close();
         });
 
         await waitForEvent<phase0.Checkpoint>(bn.chain.clock, ClockEvent.epoch, timeout); // wait for epoch 1
