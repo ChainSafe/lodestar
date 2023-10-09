@@ -626,10 +626,10 @@ export async function getShufflingForAttestationVerification(
   let shuffling = chain.shufflingCache.get(attEpoch, shufflingDependentRoot);
   if (shuffling) {
     // most of the time, we should get the shuffling from cache
-    chain.metrics?.gossipAttestation.shufflingHit.inc();
+    chain.metrics?.gossipAttestation.shufflingHit.inc({caller: regenCaller});
     return shuffling;
   }
-  chain.metrics?.gossipAttestation.shufflingMiss.inc();
+  chain.metrics?.gossipAttestation.shufflingMiss.inc({caller: regenCaller});
 
   let state: CachedBeaconStateAllForks;
   try {
@@ -664,10 +664,10 @@ export async function getShufflingForAttestationVerification(
   chain.shufflingCache.processState(state, attEpoch);
   shuffling = chain.shufflingCache.get(attEpoch, shufflingDependentRoot);
   if (shuffling) {
-    chain.metrics?.gossipAttestation.shufflingRegenHit.inc();
+    chain.metrics?.gossipAttestation.shufflingRegenHit.inc({caller: regenCaller});
     return shuffling;
   } else {
-    chain.metrics?.gossipAttestation.shufflingRegenMiss.inc();
+    chain.metrics?.gossipAttestation.shufflingRegenMiss.inc({caller: regenCaller});
     return null;
   }
 }
