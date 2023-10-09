@@ -62,7 +62,7 @@ describe("beacon node api", function () {
       expect(res.response.data.elOffline).toEqual(false);
     });
 
-    it.only(
+    it(
       "should return 'el_offline' as 'true' when EL not available",
       async () => {
         const portElOffline = 9597;
