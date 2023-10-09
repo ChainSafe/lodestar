@@ -1,4 +1,4 @@
-import {describe, it, beforeAll, afterAll} from "vitest";
+import {describe, it, beforeAll, afterAll, expect} from "vitest";
 import {TopicValidatorResult} from "@libp2p/interface/pubsub";
 import {BitArray} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";

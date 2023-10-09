@@ -10,7 +10,9 @@ import {getGoerliRpcUrl} from "../../testParams.js";
 // https://github.com/ChainSafe/lodestar/issues/5967
 describe.skip("eth1 / Eth1Provider", function () {
   let controller: AbortController;
-  beforeEach(() => (controller = new AbortController()));
+  beforeEach(() => {
+    controller = new AbortController();
+  });
   afterEach(() => controller.abort());
 
   const config = getTestnetConfig();

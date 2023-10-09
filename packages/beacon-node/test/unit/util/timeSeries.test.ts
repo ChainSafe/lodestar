@@ -15,7 +15,7 @@ describe.skip("util / TimeSeries", () => {
 
     const valuePerSec = timeSeries.computeLinearSpeed();
 
-    expectEqualPrecision(valuePerSec, 1, decimals, "Wrong valuePerSec");
+    expectEqualPrecision(valuePerSec, 1, decimals);
   });
 
   it("Should correctly do a linear regression", () => {
@@ -28,13 +28,13 @@ describe.skip("util / TimeSeries", () => {
     }
 
     const valuePerSec = timeSeries.computeLinearSpeed();
-    expectEqualPrecision(valuePerSec, 1, decimals, "Wrong valuePerSec");
+    expectEqualPrecision(valuePerSec, 1, decimals);
   });
 
   /**
    * Fixed point math in Javascript is inexact, round results to prevent this test from randomly failing
    */
-  function expectEqualPrecision(value: number, expected: number, decimals: number, message?: string): void {
+  function expectEqualPrecision(value: number, expected: number, decimals: number): void {
     expect(roundExp(value, decimals)).toBe(roundExp(expected, decimals));
   }
 

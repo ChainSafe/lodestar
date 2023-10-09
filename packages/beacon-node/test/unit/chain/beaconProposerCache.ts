@@ -1,3 +1,4 @@
+import {expect} from "vitest";
 import {BeaconProposerCache} from "../../../src/chain/beaconProposerCache.js";
 
 const suggestedFeeRecipient = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";

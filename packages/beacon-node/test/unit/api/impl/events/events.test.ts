@@ -30,13 +30,15 @@ describe("Events api impl", function () {
     let api: ReturnType<typeof getEventsApi>;
 
     beforeEach(function () {
-      chainStub = vi.mocked(new BeaconChain(), {partial: true, deep: false});
+      chainStub = vi.mocked(new BeaconChain({} as any, {} as any), {partial: true, deep: false});
       chainEventEmmitter = chainStub.emitter;
       api = getEventsApi({config, chain: chainStub});
     });
 
     let controller: AbortController;
-    beforeEach(() => (controller = new AbortController()));
+    beforeEach(() => {
+      controller = new AbortController();
+    });
     afterEach(() => controller.abort());
 
     function getEvents(topics: routes.events.EventType[]): routes.events.BeaconEvent[] {

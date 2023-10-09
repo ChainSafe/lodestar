@@ -43,7 +43,9 @@ describe.skip("eth1 / Eth1MergeBlockTracker", function () {
   });
 
   let controller: AbortController;
-  beforeEach(() => (controller = new AbortController()));
+  beforeEach(() => {
+    controller = new AbortController();
+  });
   afterEach(() => controller.abort());
 
   it("Should find terminal pow block through TERMINAL_BLOCK_HASH", async () => {
@@ -111,7 +113,7 @@ describe.skip("eth1 / Eth1MergeBlockTracker", function () {
     // Chai does not support bigint comparison
     // eslint-disable-next-line chai-expect/no-inner-compare
     // "mergeBlock.totalDifficulty is not >= TTD"
-    expect(mergeBlock.totalDifficulty >= terminalTotalDifficulty).toBe(true);
+    expect(mergeBlock.totalDifficulty).toBeGreaterThanOrEqual(terminalTotalDifficulty);
   });
 
   it("Should find merge block fetching past blocks", async () => {
@@ -147,6 +149,6 @@ describe.skip("eth1 / Eth1MergeBlockTracker", function () {
     // Chai does not support bigint comparison
     // eslint-disable-next-line chai-expect/no-inner-compare
     // "mergeBlock.totalDifficulty is not >= TTD"
-    expect(mergeBlock.totalDifficulty >= terminalTotalDifficulty).toBe(true);
+    expect(mergeBlock.totalDifficulty).toBeGreaterThanOrEqual(terminalTotalDifficulty);
   });
 });

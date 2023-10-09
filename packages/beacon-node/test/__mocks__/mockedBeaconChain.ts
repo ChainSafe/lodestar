@@ -78,8 +78,8 @@ vi.mock("../../src/chain/index.js", async (requireActual) => {
       processBlock: vi.fn(),
       close: vi.fn(),
       logger: getMockedLogger(),
-      regen: new QueuedStateRegenerator(),
-      lightClientServer: new LightClientServer(),
+      regen: new QueuedStateRegenerator({} as any),
+      lightClientServer: new LightClientServer({} as any, {} as any),
       bls: {
         verifySignatureSets: vi.fn().mockResolvedValue(true),
         verifySignatureSetsSameMessage: vi.fn().mockResolvedValue([true]),

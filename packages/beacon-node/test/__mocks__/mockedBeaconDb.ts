@@ -43,21 +43,21 @@ export class MockedBeaconDb extends BeaconDb {
   constructor(config = minimalConfig) {
     // eslint-disable-next-line
     super(config, {} as any);
-    this.block = vi.mocked(new BlockRepository());
-    this.blockArchive = vi.mocked(new BlockArchiveRepository());
-    this.stateArchive = vi.mocked(new StateArchiveRepository());
+    this.block = vi.mocked(new BlockRepository({} as any, {} as any));
+    this.blockArchive = vi.mocked(new BlockArchiveRepository({} as any, {} as any));
+    this.stateArchive = vi.mocked(new StateArchiveRepository({} as any, {} as any));
 
-    this.voluntaryExit = vi.mocked(new VoluntaryExitRepository());
-    this.blsToExecutionChange = vi.mocked(new BLSToExecutionChangeRepository());
-    this.proposerSlashing = vi.mocked(new ProposerSlashingRepository());
-    this.attesterSlashing = vi.mocked(new AttesterSlashingRepository());
-    this.depositEvent = vi.mocked(new DepositEventRepository());
+    this.voluntaryExit = vi.mocked(new VoluntaryExitRepository({} as any, {} as any));
+    this.blsToExecutionChange = vi.mocked(new BLSToExecutionChangeRepository({} as any, {} as any));
+    this.proposerSlashing = vi.mocked(new ProposerSlashingRepository({} as any, {} as any));
+    this.attesterSlashing = vi.mocked(new AttesterSlashingRepository({} as any, {} as any));
+    this.depositEvent = vi.mocked(new DepositEventRepository({} as any, {} as any));
 
-    this.depositDataRoot = vi.mocked(new DepositDataRootRepository());
-    this.eth1Data = vi.mocked(new Eth1DataRepository());
+    this.depositDataRoot = vi.mocked(new DepositDataRootRepository({} as any, {} as any));
+    this.eth1Data = vi.mocked(new Eth1DataRepository({} as any, {} as any));
 
-    this.blobSidecars = vi.mocked(new BlobSidecarsRepository());
-    this.blobSidecarsArchive = vi.mocked(new BlobSidecarsArchiveRepository());
+    this.blobSidecars = vi.mocked(new BlobSidecarsRepository({} as any, {} as any));
+    this.blobSidecarsArchive = vi.mocked(new BlobSidecarsArchiveRepository({} as any, {} as any));
   }
 }
 

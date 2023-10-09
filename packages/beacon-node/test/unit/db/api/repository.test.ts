@@ -47,7 +47,7 @@ describe("database repository", function () {
   let repository: TestRepository, controller: MockedObject<LevelDbController>;
 
   beforeEach(function () {
-    controller = vi.mocked(new LevelDbController());
+    controller = vi.mocked(new LevelDbController({} as any, {} as any, {} as any));
     repository = new TestRepository(controller as unknown as LevelDbController);
   });
 
@@ -59,7 +59,7 @@ describe("database repository", function () {
     const item = {bool: true, bytes: Buffer.alloc(32)};
     controller.get.mockResolvedValue(TestSSZType.serialize(item) as Buffer);
     const result = await repository.get("id");
-    expect(item).toEqual({...result, bytes: Buffer.from(result?.bytes)});
+    expect(item).toEqual({...result, bytes: Buffer.from(result?.bytes ?? [])});
     expect(controller.get).toHaveBeenCalledTimes(1);
   });
 

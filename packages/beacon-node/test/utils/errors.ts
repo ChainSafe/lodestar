@@ -36,7 +36,7 @@ export function expectLodestarErrorCode<T extends {code: string}>(err: LodestarE
   if (!(err instanceof LodestarError)) throw Error(`err not instanceof LodestarError: ${(err as Error).stack}`);
 
   const code = err.type.code;
-  expect(code).toEqual(expectedCode, "Wrong LodestarError code");
+  expect(code).toEqual(expectedCode);
 }
 
 export function expectLodestarError<T extends {code: string}>(err1: LodestarError<T>, err2: LodestarError<T>): void {

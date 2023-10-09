@@ -1,5 +1,5 @@
 import {promisify} from "node:util";
-import {describe, it, beforeAll, afterAll} from "vitest";
+import {describe, it, beforeAll, afterAll, expect} from "vitest";
 import leveldown from "leveldown";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {sleep} from "@lodestar/utils";

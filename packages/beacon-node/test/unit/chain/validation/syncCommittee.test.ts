@@ -1,5 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
-import {describe, it, expect, afterEach, beforeEach, beforeAll, afterAll, vi} from "vitest";
+import {describe, it, expect, afterEach, beforeEach, beforeAll, afterAll, vi, Mock} from "vitest";
 import {altair, Epoch, Slot} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
@@ -8,7 +8,6 @@ import {validateGossipSyncCommittee} from "../../../../src/chain/validation/sync
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {generateCachedAltairState} from "../../../utils/state.js";
 import {SeenSyncCommitteeMessages} from "../../../../src/chain/seenCache/index.js";
-import {BlsVerifierMock} from "../../../__mocks__/mockedBls.js";
 import {ZERO_HASH} from "../../../../src/constants/constants.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../../__mocks__/mockedBeaconChain.js";
 
@@ -52,7 +51,7 @@ describe("Sync Committee Signature validation", function () {
   });
 
   it("should throw error - the signature's slot is in the past", async function () {
-    clockStub.isCurrentSlotGivenGossipDisparity.mockReturnValue(false);
+    (clockStub.isCurrentSlotGivenGossipDisparity as Mock).mockReturnValue(false);
     vi.spyOn(clockStub, "currentSlot", "get").mockReturnValue(100);
 
     const syncCommittee = getSyncCommitteeSignature(1, 0);
@@ -116,7 +115,6 @@ describe("Sync Committee Signature validation", function () {
     const headState = generateCachedAltairState({slot: currentSlot}, altairForkEpoch);
 
     chain.getHeadState.mockReturnValue(headState);
-    chain.bls = new BlsVerifierMock(false);
     await expectRejectedWithLodestarError(
       validateGossipSyncCommittee(chain, syncCommittee, 0),
       SyncCommitteeErrorCode.INVALID_SIGNATURE
@@ -130,7 +128,6 @@ describe("Sync Committee Signature validation", function () {
     const headState = generateCachedAltairState({slot: currentSlot}, altairForkEpoch);
 
     chain.getHeadState.mockReturnValue(headState);
-    chain.bls = new BlsVerifierMock(true);
     // "should be null"
     expect(chain.seenSyncCommitteeMessages.get(slot, subnet, validatorIndex)).toBeNull();
     await validateGossipSyncCommittee(chain, syncCommittee, subnet);
@@ -150,7 +147,6 @@ describe("Sync Committee Signature validation", function () {
     const headState = generateCachedAltairState({slot: currentSlot}, altairForkEpoch);
 
     chain.getHeadState.mockReturnValue(headState);
-    chain.bls = new BlsVerifierMock(true);
 
     const subnet = 3;
     const {slot, validatorIndex} = syncCommittee;

@@ -1,3 +1,4 @@
+import {describe, it, expect} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {phase0} from "@lodestar/types";
 import {getValidatorStatus, getStateValidatorIndex} from "../../../../../../src/api/impl/beacon/state/utils.js";
@@ -143,4 +144,3 @@ describe("beacon state api utils", function () {
     });
   });
 });
-import {describe, it, expect, beforeEach, beforeAll} from "vitest";

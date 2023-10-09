@@ -1,4 +1,4 @@
-import {describe, afterEach, it} from "vitest";
+import {describe, afterEach, it, expect} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api/beacon";
 import {BLSPubkey, Epoch, phase0, Slot, ssz} from "@lodestar/types";
@@ -78,8 +78,6 @@ describe.skip("doppelganger / doppelganger test", function () {
   }
 
   it("should not have doppelganger protection if started before genesis", async function () {
-    this.timeout("10 min");
-
     const committeeIndex = 0;
     const validatorIndex = 0;
 
@@ -112,8 +110,6 @@ describe.skip("doppelganger / doppelganger test", function () {
   });
 
   it("should shut down validator if same key is active and started after genesis", async function () {
-    this.timeout("10 min");
-
     // set genesis time to allow at least an epoch
     const genesisTime = Math.floor(Date.now() / 1000) - SLOTS_PER_EPOCH * beaconParams.SECONDS_PER_SLOT;
 
@@ -138,8 +134,6 @@ describe.skip("doppelganger / doppelganger test", function () {
   });
 
   it("should shut down validator if same key is active with same BN and started after genesis", async function () {
-    this.timeout("10 min");
-
     const doppelgangerProtection = true;
     const testLoggerOpts: TestLoggerOpts = {level: LogLevel.info};
 
@@ -172,8 +166,6 @@ describe.skip("doppelganger / doppelganger test", function () {
   });
 
   it("should not shut down validator if key is different", async function () {
-    this.timeout("10 min");
-
     const doppelgangerProtection = true;
 
     const {beaconNode: bn, validators: validatorsWithDoppelganger} = await createBNAndVC({
@@ -195,8 +187,6 @@ describe.skip("doppelganger / doppelganger test", function () {
   });
 
   it("should not sign block if doppelganger period has not passed and not started at genesis", async function () {
-    this.timeout("10 min");
-
     const doppelgangerProtection = true;
 
     // set genesis time to allow at least an epoch
@@ -228,8 +218,6 @@ describe.skip("doppelganger / doppelganger test", function () {
   });
 
   it("should not sign attestations if doppelganger period has not passed and started after genesis", async function () {
-    this.timeout("10 min");
-
     const doppelgangerProtection = true;
 
     // set genesis time to allow at least an epoch

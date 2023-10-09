@@ -102,7 +102,7 @@ describe("Job queue", () => {
 
         const jobResults = await Promise.allSettled(jobPromises);
 
-        for (const [i, jobResult] of jobResults.entries()) {
+        for (const [_, jobResult] of jobResults.entries()) {
           expect(jobResult.status).toBe("fulfilled");
         }
 

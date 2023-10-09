@@ -43,5 +43,5 @@ export function generateProtoBlock(overrides: Partial<ProtoBlock> = {}): ProtoBl
     ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
 
     ...overrides,
-  };
+  } as ProtoBlock;
 }

@@ -92,7 +92,7 @@ describe("chain / blocks / verifyBlocksSanityChecks", function () {
       ignoreIfKnown: true,
     });
 
-    expectBlocks(relevantBlocks, [blocks[2], blocks[3]], blocks, "Wrong relevantBlocks");
+    expectBlocks(relevantBlocks, [blocks[2], blocks[3]], blocks);
   });
 
   it("[WOULD_REVERT_FINALIZED_SLOT, OK, OK]", () => {
@@ -112,7 +112,7 @@ describe("chain / blocks / verifyBlocksSanityChecks", function () {
       ignoreIfFinalized: true,
     });
 
-    expectBlocks(relevantBlocks, [blocks[2], blocks[3]], blocks, "Wrong relevantBlocks");
+    expectBlocks(relevantBlocks, [blocks[2], blocks[3]], blocks);
   });
 });
 
@@ -191,8 +191,7 @@ function slots(blocks: allForks.SignedBeaconBlock[]): Slot[] {
 function expectBlocks(
   expectedBlocks: allForks.SignedBeaconBlock[],
   actualBlocks: allForks.SignedBeaconBlock[],
-  allBlocks: allForks.SignedBeaconBlock[],
-  message: string
+  allBlocks: allForks.SignedBeaconBlock[]
 ): void {
   function indexOfBlocks(blocks: allForks.SignedBeaconBlock[]): number[] {
     return blocks.map((block) => allBlocks.indexOf(block));

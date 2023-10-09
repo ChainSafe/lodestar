@@ -1,5 +1,5 @@
 import fastify from "fastify";
-import {afterAll} from "vitest";
+import {afterAll, expect} from "vitest";
 import {RemoteServiceError} from "../../../src/monitoring/service.js";
 import {ProcessType} from "../../../src/monitoring/types.js";
 import {BEACON_NODE_STATS_SCHEMA, ClientStatsSchema, SYSTEM_STATS_SCHEMA, VALIDATOR_STATS_SCHEMA} from "./schemas.js";
@@ -54,7 +54,7 @@ export async function startRemoteService(): Promise<{baseUrl: URL}> {
     server.close().catch(console.log);
   });
 
-  return {baseUrl: new URL(baseUrl), server};
+  return {baseUrl: new URL(baseUrl)};
 }
 
 function validateRequestData(data: ReceivedData): void {

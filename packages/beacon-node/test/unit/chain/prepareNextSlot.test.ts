@@ -1,4 +1,4 @@
-import {describe, it, expect, beforeEach, afterEach, vi, SpyInstance} from "vitest";
+import {describe, it, expect, beforeEach, afterEach, vi, SpyInstance, Mock} from "vitest";
 import {config} from "@lodestar/config/default";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {routes} from "@lodestar/api";
@@ -71,7 +71,7 @@ describe("PrepareNextSlot scheduler", () => {
   it("pre bellatrix - should run regen.getBlockSlotState", async () => {
     getForkStub.mockReturnValue(ForkName.phase0);
     chainStub.recomputeForkChoiceHead.mockReturnValue({slot: SLOTS_PER_EPOCH - 1} as ProtoBlock);
-    regenStub.getBlockSlotState.mockResolvedValue();
+    (regenStub.getBlockSlotState as Mock).mockResolvedValue(undefined);
     await Promise.all([
       scheduler.prepareForNextSlot(SLOTS_PER_EPOCH - 1),
       vi.advanceTimersByTimeAsync((config.SECONDS_PER_SLOT * 1000 * 2) / 3),

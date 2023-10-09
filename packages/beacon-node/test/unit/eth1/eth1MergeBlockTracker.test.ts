@@ -16,7 +16,9 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
   const terminalTotalDifficulty = 1000;
   let config: ChainConfig;
   let controller: AbortController;
-  beforeEach(() => (controller = new AbortController()));
+  beforeEach(() => {
+    controller = new AbortController();
+  });
   afterEach(() => controller.abort());
   beforeEach(() => {
     config = {

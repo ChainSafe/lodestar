@@ -25,7 +25,7 @@ describe("api - beacon - getBlockHeaders", function () {
     server.forkChoiceStub.getHead.mockReturnValue(generateProtoBlock({slot: 1}));
     when(server.chainStub.getCanonicalBlockAtSlot)
       .calledWith(1)
-      .thenReturn({block: ssz.phase0.SignedBeaconBlock.defaultValue(), executionOptimistic: false});
+      .thenResolve({block: ssz.phase0.SignedBeaconBlock.defaultValue(), executionOptimistic: false});
     when(server.forkChoiceStub.getBlockSummariesAtSlot)
       .calledWith(1)
       .thenReturn([
@@ -62,7 +62,7 @@ describe("api - beacon - getBlockHeaders", function () {
     server.forkChoiceStub.getHead.mockReturnValue(generateProtoBlock({slot: 2}));
     when(server.chainStub.getCanonicalBlockAtSlot)
       .calledWith(0)
-      .thenReturn({block: ssz.phase0.SignedBeaconBlock.defaultValue(), executionOptimistic: false});
+      .thenResolve({block: ssz.phase0.SignedBeaconBlock.defaultValue(), executionOptimistic: false});
     when(server.forkChoiceStub.getBlockSummariesAtSlot).calledWith(0).thenReturn([]);
     const {data: blockHeaders} = await server.blockApi.getBlockHeaders({slot: 0});
     expect(blockHeaders.length).toBe(1);

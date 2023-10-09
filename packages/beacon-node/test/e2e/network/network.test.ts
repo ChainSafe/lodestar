@@ -34,7 +34,9 @@ function runTests({useWorker}: {useWorker: boolean}): void {
   });
 
   let controller: AbortController;
-  beforeEach(() => (controller = new AbortController()));
+  beforeEach(() => {
+    controller = new AbortController();
+  });
   afterEach(() => controller.abort());
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type

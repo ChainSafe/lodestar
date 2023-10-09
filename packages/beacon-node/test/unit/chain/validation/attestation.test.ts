@@ -2,7 +2,7 @@ import {BitArray} from "@chainsafe/ssz";
 import type {PublicKey, SecretKey} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
 import {describe, it, expect, beforeEach, afterEach, vi} from "vitest";
-import {ForkName, SLOTS_PER_EPOCH, activePreset} from "@lodestar/params";
+import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {defaultChainConfig, createChainForkConfig} from "@lodestar/config";
 import {ProtoBlock} from "@lodestar/fork-choice";
 // eslint-disable-next-line import/no-relative-packages

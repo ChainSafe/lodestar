@@ -10,7 +10,9 @@ describe("chain / bls / multithread queue", function () {
   const logger = testLogger();
 
   let controller: AbortController;
-  beforeEach(() => (controller = new AbortController()));
+  beforeEach(() => {
+    controller = new AbortController();
+  });
   afterEach(() => controller.abort());
 
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
@@ -119,7 +121,7 @@ describe("chain / bls / multithread queue", function () {
       expect(await isInvalidPromise).toBe(false);
 
       const isValidArr = await Promise.all(isValidPromiseArr);
-      for (const [i, isValid] of isValidArr.entries()) {
+      for (const [_, isValid] of isValidArr.entries()) {
         expect(isValid).toBe(true);
       }
       await pool.close();

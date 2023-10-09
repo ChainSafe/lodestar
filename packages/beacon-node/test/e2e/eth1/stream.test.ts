@@ -8,7 +8,9 @@ import {Eth1Options} from "../../../src/eth1/options.js";
 // https://github.com/ChainSafe/lodestar/issues/5967
 describe.skip("Eth1 streams", function () {
   let controller: AbortController;
-  beforeEach(() => (controller = new AbortController()));
+  beforeEach(() => {
+    controller = new AbortController();
+  });
   afterEach(() => controller.abort());
 
   const config = getTestnetConfig();

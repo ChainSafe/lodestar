@@ -1,4 +1,4 @@
-import {describe, it, afterEach, beforeEach} from "vitest";
+import {describe, it, afterEach, beforeEach, expect, vi} from "vitest";
 import {PeerId} from "@libp2p/interface/peer-id";
 import {multiaddr} from "@multiformats/multiaddr";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
@@ -10,13 +10,14 @@ import {ssz} from "@lodestar/types";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Network, NetworkInitModules, getReqRespHandlers} from "../../../src/network/index.js";
 import {defaultNetworkOptions, NetworkOptions} from "../../../src/network/options.js";
-
-import {getMockBeaconChain, zeroProtoBlock} from "../../utils/mocks/chain.js";
+import {zeroProtoBlock} from "../../utils/mocks/chain.js";
 import {createNetworkModules, onPeerConnect} from "../../utils/network.js";
 import {generateState} from "../../utils/state.js";
 import {testLogger} from "../../utils/logger.js";
 import {GossipHandlers} from "../../../src/network/gossip/index.js";
 import {memoOnce} from "../../utils/cache.js";
+import {getMockedBeaconChain} from "../../__mocks__/mockedBeaconChain.js";
+import {getMockedBeaconDb} from "../../__mocks__/mockedBeaconDb.js";
 
 let port = 9000;
 const mu = "/ip4/127.0.0.1/tcp/0";
@@ -31,7 +32,9 @@ describe.skip("mdns", function () {
   });
 
   let controller: AbortController;
-  beforeEach(() => (controller = new AbortController()));
+  beforeEach(() => {
+    controller = new AbortController();
+  });
   afterEach(() => controller.abort());
 
   async function getOpts(peerId: PeerId): Promise<NetworkOptions> {
@@ -71,16 +74,14 @@ describe.skip("mdns", function () {
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async function createTestNode(nodeName: string) {
     const {config} = getStaticData();
-    const chain = getMockBeaconChain();
+    const chain = getMockedBeaconChain();
 
-    chain.forkChoice.getHead = () => {
-      return {
-        ...zeroProtoBlock,
-        slot: computeStartSlotAtEpoch(config.ALTAIR_FORK_EPOCH),
-      };
-    };
+    vi.spyOn(chain.forkChoice, "getHead").mockReturnValue({
+      ...zeroProtoBlock,
+      slot: computeStartSlotAtEpoch(config.ALTAIR_FORK_EPOCH),
+    });
 
-    const db = new StubbedBeaconDb(config);
+    const db = getMockedBeaconDb();
     const gossipHandlers = {} as GossipHandlers;
 
     const peerId = await createSecp256k1PeerId();
@@ -107,7 +108,7 @@ describe.skip("mdns", function () {
       await chain.close();
       await network.close();
       controller.abort();
-      sinon.restore();
+      vi.clearAllMocks();
     });
 
     return {network, chain};

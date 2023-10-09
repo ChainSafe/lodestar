@@ -51,7 +51,9 @@ function runTests({useWorker}: {useWorker: boolean}): void {
   });
 
   let controller: AbortController;
-  beforeEach(() => (controller = new AbortController()));
+  beforeEach(() => {
+    controller = new AbortController();
+  });
   afterEach(() => controller.abort());
   async function sleep(ms: number): Promise<void> {
     await _sleep(ms, controller.signal);

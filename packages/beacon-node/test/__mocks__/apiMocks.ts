@@ -3,7 +3,7 @@ import {config} from "@lodestar/config/default";
 import {ChainForkConfig} from "@lodestar/config";
 import {getBeaconBlockApi} from "../../src/api/impl/beacon/blocks/index.js";
 import {getMockedBeaconChain, MockedBeaconChain} from "./mockedBeaconChain.js";
-import {MockedBeaconSync, getMockedBeaconSync} from "./mockedBeaconSync.js";
+import {MockedBeaconSync, getMockedBeaconSync} from "./beaconSyncMock.js";
 import {MockedBeaconDb, getMockedBeaconDb} from "./mockedBeaconDb.js";
 import {MockedNetwork, getMockedNetwork} from "./mockedNetwork.js";
 
