@@ -1,10 +1,7 @@
 import {expect} from "chai";
-import {ForkInfo, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {ForkInfo} from "@lodestar/config";
 import {allForks, capella} from "@lodestar/types";
 import {isForkExecution} from "@lodestar/params";
-import {mainnetPreset} from "@lodestar/params/presets/mainnet";
-import {minimalPreset} from "@lodestar/params/presets/minimal";
-import {mainnetChainConfig} from "@lodestar/config/presets";
 import {
   blindedOrFullBlockToBlinded,
   blindedOrFullBlockToBlindedBytes,
@@ -13,22 +10,8 @@ import {
   blindedOrFullBlockToFullBytes,
   serializeFullOrBlindedSignedBeaconBlock,
 } from "../../../src/util/fullOrBlindedBlock.js";
-import {mockBlocks} from "../../utils/mocks/block.js";
+import {chainConfig, mockBlocks} from "../../utils/mocks/block.js";
 import {byteArrayEquals} from "../../../src/util/bytes.js";
-
-// calculate slot ratio so that getForkTypes and getBlindedForkTypes return correct fork for minimal configuration
-const slotPerEpochRatio =
-  defaultChainConfig.CONFIG_NAME === "minimal" ? mainnetPreset.SLOTS_PER_EPOCH / minimalPreset.SLOTS_PER_EPOCH : 1;
-
-/* eslint-disable @typescript-eslint/naming-convention */
-const config = createChainForkConfig({
-  ...defaultChainConfig,
-  ALTAIR_FORK_EPOCH: mainnetChainConfig.ALTAIR_FORK_EPOCH * slotPerEpochRatio,
-  BELLATRIX_FORK_EPOCH: mainnetChainConfig.BELLATRIX_FORK_EPOCH * slotPerEpochRatio,
-  CAPELLA_FORK_EPOCH: mainnetChainConfig.CAPELLA_FORK_EPOCH * slotPerEpochRatio,
-  DENEB_FORK_EPOCH: mainnetChainConfig.DENEB_FORK_EPOCH * slotPerEpochRatio,
-});
-/* eslint-enable @typescript-eslint/naming-convention */
 
 type FullOrBlind = "full" | "blinded";
 type FullOrBlindBlock = [FullOrBlind, ForkInfo, allForks.FullOrBlindedSignedBeaconBlock, Uint8Array];
@@ -54,7 +37,7 @@ describe("isBlindedBytes", () => {
 describe("serializeFullOrBlindedSignedBeaconBlock", () => {
   for (const [fullOrBlinded, {name}, block, expected] of fullOrBlindedBlocks) {
     it(`should serialize ${fullOrBlinded} ${name} block`, () => {
-      const serialized = serializeFullOrBlindedSignedBeaconBlock(config, block);
+      const serialized = serializeFullOrBlindedSignedBeaconBlock(chainConfig, block);
       expect(byteArrayEquals(serialized, expected)).to.be.true;
     });
   }
@@ -63,11 +46,11 @@ describe("serializeFullOrBlindedSignedBeaconBlock", () => {
 describe("deserializeFullOrBlindedSignedBeaconBlock", () => {
   for (const [fullOrBlinded, {name}, block, serialized] of fullOrBlindedBlocks) {
     it(`should deserialize ${fullOrBlinded} ${name} block`, () => {
-      const deserialized = deserializeFullOrBlindedSignedBeaconBlock(config, serialized);
+      const deserialized = deserializeFullOrBlindedSignedBeaconBlock(chainConfig, serialized);
       const type =
         isForkExecution(name) && fullOrBlinded === "blinded"
-          ? config.getBlindedForkTypes(block.message.slot).SignedBeaconBlock
-          : config.getForkTypes(block.message.slot).SignedBeaconBlock;
+          ? chainConfig.getBlindedForkTypes(block.message.slot).SignedBeaconBlock
+          : chainConfig.getForkTypes(block.message.slot).SignedBeaconBlock;
       expect(type.equals(deserialized as any, block as any)).to.be.true;
     });
   }
@@ -80,21 +63,21 @@ describe("blindedOrFullBlockToBlinded", function () {
     blinded,
   } of mockBlocks) {
     it(`should convert full ${name} to blinded block`, () => {
-      const result = blindedOrFullBlockToBlinded(config, full);
+      const result = blindedOrFullBlockToBlinded(chainConfig, full);
       const isExecution = isForkExecution(name);
       const isEqual = isExecution
         ? // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-          config.getBlindedForkTypes(full.message.slot).SignedBeaconBlock.equals(result, blinded!)
+          chainConfig.getBlindedForkTypes(full.message.slot).SignedBeaconBlock.equals(result, blinded!)
         : // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-          config.getForkTypes(full.message.slot).SignedBeaconBlock.equals(result, isExecution ? blinded! : full);
+          chainConfig.getForkTypes(full.message.slot).SignedBeaconBlock.equals(result, isExecution ? blinded! : full);
       expect(isEqual).to.be.true;
     });
     if (!blinded) continue;
     it(`should convert blinded ${name} to blinded block`, () => {
-      const result = blindedOrFullBlockToBlinded(config, blinded);
+      const result = blindedOrFullBlockToBlinded(chainConfig, blinded);
       const isEqual = isForkExecution(name)
-        ? config.getBlindedForkTypes(full.message.slot).SignedBeaconBlock.equals(result, blinded)
-        : config.getForkTypes(full.message.slot).SignedBeaconBlock.equals(result, blinded);
+        ? chainConfig.getBlindedForkTypes(full.message.slot).SignedBeaconBlock.equals(result, blinded)
+        : chainConfig.getForkTypes(full.message.slot).SignedBeaconBlock.equals(result, blinded);
       expect(isEqual).to.be.true;
     });
   }
@@ -110,12 +93,12 @@ describe("blindedOrFullBlockToBlindedBytes", function () {
   } of mockBlocks) {
     const expected = (isForkExecution(name) ? blindedSerialized : fullSerialized) as Uint8Array;
     it(`should convert full ${name} to blinded block`, () => {
-      const result = blindedOrFullBlockToBlindedBytes(config, full, fullSerialized);
+      const result = blindedOrFullBlockToBlindedBytes(chainConfig, full, fullSerialized);
       expect(byteArrayEquals(result, expected)).to.be.true;
     });
     if (blinded && blindedSerialized) {
       it(`should convert blinded ${name} to blinded block`, () => {
-        const result = blindedOrFullBlockToBlindedBytes(config, blinded, blindedSerialized);
+        const result = blindedOrFullBlockToBlindedBytes(chainConfig, blinded, blindedSerialized);
         expect(byteArrayEquals(result, expected)).to.be.true;
       });
     }

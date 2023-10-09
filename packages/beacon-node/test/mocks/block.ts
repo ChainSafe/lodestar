@@ -32,7 +32,8 @@ const loadBlock = (blockName: string): any => {
 const slotPerEpochRatio = isMinimal ? mainnetPreset.SLOTS_PER_EPOCH / minimalPreset.SLOTS_PER_EPOCH : 1;
 
 /* eslint-disable @typescript-eslint/naming-convention */
-const config = createChainForkConfig({
+// export this chainConfig for use in tests that consume the mock blocks
+export const chainConfig = createChainForkConfig({
   ...defaultChainConfig,
   ALTAIR_FORK_EPOCH: mainnetChainConfig.ALTAIR_FORK_EPOCH * slotPerEpochRatio,
   BELLATRIX_FORK_EPOCH: mainnetChainConfig.BELLATRIX_FORK_EPOCH * slotPerEpochRatio,
@@ -78,10 +79,10 @@ export const capellaSerializedSignedBlindedBeaconBlock = ssz.capella.SignedBlind
 // export const denebSerializedSignedBlindedBeaconBlock =
 //   ssz.deneb.SignedBlindedBeaconBlock.serialize(denebSignedBlindedBeaconBlock);
 
-const phase0ForkInfo = config.getForkInfo(phase0SignedBeaconBlock.message.slot);
-const altairForkInfo = config.getForkInfo(altairSignedBeaconBlock.message.slot);
-const bellatrixForkInfo = config.getForkInfo(bellatrixSignedBeaconBlock.message.slot);
-const capellaForkInfo = config.getForkInfo(capellaSignedBeaconBlock.message.slot);
+const phase0ForkInfo = chainConfig.getForkInfo(phase0SignedBeaconBlock.message.slot);
+const altairForkInfo = chainConfig.getForkInfo(altairSignedBeaconBlock.message.slot);
+const bellatrixForkInfo = chainConfig.getForkInfo(bellatrixSignedBeaconBlock.message.slot);
+const capellaForkInfo = chainConfig.getForkInfo(capellaSignedBeaconBlock.message.slot);
 // const denebForkInfo = config.getForkInfo(denebSignedBeaconBlock.message.slot);
 
 interface MockBlock {
