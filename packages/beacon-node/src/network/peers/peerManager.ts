@@ -201,7 +201,6 @@ export class PeerManager {
   }
 
   async close(): Promise<void> {
-    this.logger.info("Closing peer mananger from inside");
     await this.discovery?.stop();
     this.libp2p.services.components.events.removeEventListener(Libp2pEvent.connectionOpen, this.onLibp2pPeerConnect);
     this.libp2p.services.components.events.removeEventListener(
@@ -210,7 +209,6 @@ export class PeerManager {
     );
     this.networkEventBus.off(NetworkEvent.reqRespRequest, this.onRequest);
     for (const interval of this.intervals) clearInterval(interval);
-    this.logger.info("Closed peer mananger from inside");
   }
 
   /**

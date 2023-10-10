@@ -80,7 +80,7 @@
     "test:unit:minimal": "nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'",
     "test:unit:mainnet": "LODESTAR_PRESET=mainnet nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit-mainnet/**/*.test.ts'",
     "test:unit": "yarn test:unit:minimal && yarn test:unit:mainnet",
-    "test:e2e": "LODESTAR_PRESET=minimal ../../scripts/mocha/mocha_failover.mjs 'test/e2e/**/*.test.ts'",
+    "test:e2e": "LODESTAR_PRESET=minimal mocha 'test/e2e/**/*.test.ts'",
     "test:sim": "mocha 'test/sim/**/*.test.ts'",
     "test:sim:merge-interop": "mocha 'test/sim/merge-interop.test.ts'",
     "test:sim:mergemock": "mocha 'test/sim/mergemock.test.ts'",
@@ -161,15 +161,13 @@
     "@types/qs": "^6.9.7",
     "@types/supertest": "^2.0.12",
     "@types/tmp": "^0.2.3",
-    "@types/wtfnode": "^0.7.1",
     "eventsource": "^2.0.2",
     "it-pair": "^2.0.6",
     "it-drain": "^3.0.3",
     "leveldown": "^6.1.1",
     "rewiremock": "^3.14.5",
     "rimraf": "^4.4.1",
-    "tmp": "^0.2.1",
-    "wtfnode": "^0.9.1"
+    "tmp": "^0.2.1"
   },
   "keywords": [
     "ethereum",
