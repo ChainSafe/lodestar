@@ -6,8 +6,10 @@ export default defineConfig({
     reporters: ["default", "hanging-process"],
     coverage: {
       clean: true,
+      all: false,
+      extension: [".ts"],
       provider: "v8",
-      reporter: [["lcovonly", {projectRoot: "./src", file: "lcov.info"}], ["json", {file: "coverage.json"}], ["text"]],
+      reporter: [["lcovonly", {file: "lcov.info"}], ["text"]],
       reportsDirectory: "./coverage",
       exclude: [
         "**/*.d.ts",
