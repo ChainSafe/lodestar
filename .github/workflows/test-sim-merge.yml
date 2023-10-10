@@ -13,8 +13,8 @@ on:
   workflow_dispatch:
 
 env:
-  GETH_IMAGE: ethereum/client-go:v1.10.25
-  NETHERMIND_IMAGE: nethermind/nethermind:1.14.3
+  GETH_IMAGE: ethereum/client-go:v1.13.2
+  NETHERMIND_IMAGE: nethermind/nethermind:1.21.0
   MERGEMOCK_IMAGE: g11tech/mergemock:latest
   GETH_WITHDRAWALS_IMAGE: g11tech/geth:withdrawalsfeb8
   ETHEREUMJS_WITHDRAWALS_IMAGE: g11tech/ethereumjs:blobs-b6b63
