@@ -4,10 +4,10 @@ import {FAR_FUTURE_EPOCH, GENESIS_SLOT} from "@lodestar/params";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {BLSPubkey, phase0} from "@lodestar/types";
 import {Epoch, ValidatorIndex} from "@lodestar/types";
+import {EpochCache} from "@lodestar/state-transition/src/types.js";
 import {IBeaconChain, StateGetOpts} from "../../../../chain/index.js";
 import {ApiError, ValidationError} from "../../errors.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
-import { EpochCache } from "@lodestar/state-transition/src/types.js";
 
 export async function resolveStateId(
   chain: IBeaconChain,
@@ -137,7 +137,7 @@ type StateValidatorIndexResponse = {valid: true; validatorIndex: number} | {vali
 export function getStateValidatorIndex(
   id: routes.beacon.ValidatorId | BLSPubkey,
   state: BeaconStateAllForks,
-  epochCache: EpochCache,
+  epochCache: EpochCache
 ): StateValidatorIndexResponse {
   let validatorIndex: ValidatorIndex | undefined;
   if (typeof id === "string") {

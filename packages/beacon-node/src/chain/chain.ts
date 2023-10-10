@@ -227,7 +227,7 @@ export class BeaconChain implements IBeaconChain {
           });
 
     // Persist single global instance of state caches
-    this.pubkey2index = cachedState.epochCtx.finalizedPubkey2index; 
+    this.pubkey2index = cachedState.epochCtx.finalizedPubkey2index;
     this.index2pubkey = cachedState.epochCtx.finalizedIndex2pubkey;
 
     const stateCache = new StateContextCache({metrics});
