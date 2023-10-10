@@ -9,7 +9,7 @@ import {MonitoringOptions} from "../../../src/monitoring/options.js";
 import {sleep} from "../../utils/sleep.js";
 import {startRemoteService, remoteServiceRoutes, remoteServiceError} from "./remoteService.js";
 
-describe.skip("monitoring / service", () => {
+describe("monitoring / service", () => {
   const sandbox = sinon.createSandbox();
   const endpoint = "https://test.example.com/api/v1/client/metrics";
 

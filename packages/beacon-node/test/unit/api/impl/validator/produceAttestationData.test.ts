@@ -32,11 +32,10 @@ describe("api - validator - produceAttestationData", function () {
     };
   });
 
-  it.only("Should throw when node is not synced", async function () {
+  it("Should throw when node is not synced", async function () {
     // Set the node's state to way back from current slot
     const currentSlot = 100000;
     const headSlot = 0;
-    console.log(server.chainStub);
     server.chainStub.clock = {currentSlot} as IClock;
     sinon.replaceGetter(syncStub, "state", () => SyncState.SyncingFinalized);
     server.forkChoiceStub.getHead.returns({slot: headSlot} as ProtoBlock);
