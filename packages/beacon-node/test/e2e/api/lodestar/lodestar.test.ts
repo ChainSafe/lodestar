@@ -74,62 +74,61 @@ describe("api / impl / validator", function () {
       });
     });
 
-    it(
-      "Should return only for previous, current and next epoch",
-      async function () {
-        const chainConfig: ChainConfig = {...chainConfigDef, SECONDS_PER_SLOT, ALTAIR_FORK_EPOCH};
-        const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
-        const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
+    // To make the code review easy for code block below
+    /* prettier-ignore */
+    it("Should return only for previous, current and next epoch", async function () {
+      const chainConfig: ChainConfig = {...chainConfigDef, SECONDS_PER_SLOT, ALTAIR_FORK_EPOCH};
+      const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
+      const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
 
-        const testLoggerOpts: TestLoggerOpts = {level: LogLevel.info};
-        const loggerNodeA = testLogger("Node-A", testLoggerOpts);
+      const testLoggerOpts: TestLoggerOpts = {level: LogLevel.info};
+      const loggerNodeA = testLogger("Node-A", testLoggerOpts);
 
-        bn = await getDevBeaconNode({
-          params: testParams,
-          options: {
-            sync: {isSingleNode: true},
-            api: {rest: {enabled: true, api: ["lodestar"], port: restPort}},
-            chain: {blsVerifyAllMainThread: true},
-          },
-          validatorCount,
-          logger: loggerNodeA,
-        });
+      bn = await getDevBeaconNode({
+        params: testParams,
+        options: {
+          sync: {isSingleNode: true},
+          api: {rest: {enabled: true, api: ["lodestar"], port: restPort}},
+          chain: {blsVerifyAllMainThread: true},
+        },
+        validatorCount,
+        logger: loggerNodeA,
+      });
 
-        await waitForEvent<phase0.Checkpoint>(bn.chain.clock, ClockEvent.epoch, timeout); // wait for epoch 1
-        await waitForEvent<phase0.Checkpoint>(bn.chain.clock, ClockEvent.epoch, timeout); // wait for epoch 2
+      await waitForEvent<phase0.Checkpoint>(bn.chain.clock, ClockEvent.epoch, timeout); // wait for epoch 1
+      await waitForEvent<phase0.Checkpoint>(bn.chain.clock, ClockEvent.epoch, timeout); // wait for epoch 2
 
-        bn.chain.seenBlockProposers.add(bn.chain.clock.currentEpoch, 1);
+      bn.chain.seenBlockProposers.add(bn.chain.clock.currentEpoch, 1);
 
-        const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config});
+      const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config});
 
-        const currentEpoch = bn.chain.clock.currentEpoch;
-        const nextEpoch = currentEpoch + 1;
-        const previousEpoch = currentEpoch - 1;
+      const currentEpoch = bn.chain.clock.currentEpoch;
+      const nextEpoch = currentEpoch + 1;
+      const previousEpoch = currentEpoch - 1;
 
-        // current epoch is fine
-        await expect(client.validator.getLiveness(currentEpoch, [1])).resolves.toBeDefined();
-        // next epoch is fine
-        await expect(client.validator.getLiveness(nextEpoch, [1])).resolves.toBeDefined();
-        // previous epoch is fine
-        await expect(client.validator.getLiveness(previousEpoch, [1])).resolves.toBeDefined();
-        // more than next epoch is not fine
-        const res1 = await client.validator.getLiveness(currentEpoch + 2, [1]);
-        expect(res1.ok).toBe(false);
-        expect(res1.error?.message).toEqual(
-          expect.stringContaining(
-            `Request epoch ${currentEpoch + 2} is more than one epoch before or after the current epoch ${currentEpoch}`
-          )
-        );
-        // more than previous epoch is not fine
-        const res2 = await client.validator.getLiveness(currentEpoch - 2, [1]);
-        expect(res2.ok).toBe(false);
-        expect(res2.error?.message).toEqual(
-          expect.stringContaining(
-            `Request epoch ${currentEpoch - 2} is more than one epoch before or after the current epoch ${currentEpoch}`
-          )
-        );
-      },
-      {timeout: 60_000}
-    );
+      // current epoch is fine
+      await expect(client.validator.getLiveness(currentEpoch, [1])).resolves.toBeDefined();
+      // next epoch is fine
+      await expect(client.validator.getLiveness(nextEpoch, [1])).resolves.toBeDefined();
+      // previous epoch is fine
+      await expect(client.validator.getLiveness(previousEpoch, [1])).resolves.toBeDefined();
+      // more than next epoch is not fine
+      const res1 = await client.validator.getLiveness(currentEpoch + 2, [1]);
+      expect(res1.ok).toBe(false);
+      expect(res1.error?.message).toEqual(
+        expect.stringContaining(
+          `Request epoch ${currentEpoch + 2} is more than one epoch before or after the current epoch ${currentEpoch}`
+        )
+      );
+      // more than previous epoch is not fine
+      const res2 = await client.validator.getLiveness(currentEpoch - 2, [1]);
+      expect(res2.ok).toBe(false);
+      expect(res2.error?.message).toEqual(
+        expect.stringContaining(
+          `Request epoch ${currentEpoch - 2} is more than one epoch before or after the current epoch ${currentEpoch}`
+        )
+      );
+    },
+    {timeout: 60_000});
   });
 });

@@ -62,55 +62,54 @@ describe("beacon node api", function () {
       expect(res.response.data.elOffline).toEqual(false);
     });
 
-    it(
-      "should return 'el_offline' as 'true' when EL not available",
-      async () => {
-        const portElOffline = 9597;
-        const bnElOffline = await getDevBeaconNode({
-          params: {
-            ...chainConfigDef,
-            // eslint-disable-next-line @typescript-eslint/naming-convention
-            ALTAIR_FORK_EPOCH: 0,
-            // eslint-disable-next-line @typescript-eslint/naming-convention
-            BELLATRIX_FORK_EPOCH: 0,
-          },
-          options: {
-            sync: {isSingleNode: true},
-            network: {allowPublishToZeroPeers: true},
-            executionEngine: {mode: "http", urls: ["http://not-available-engine:9999"]},
-            api: {
-              rest: {
-                enabled: true,
-                port: portElOffline,
-              },
+    // To make the code review easy for code block below
+    /* prettier-ignore */
+    it("should return 'el_offline' as 'true' when EL not available", async () => {
+      const portElOffline = 9597;
+      const bnElOffline = await getDevBeaconNode({
+        params: {
+          ...chainConfigDef,
+          // eslint-disable-next-line @typescript-eslint/naming-convention
+          ALTAIR_FORK_EPOCH: 0,
+          // eslint-disable-next-line @typescript-eslint/naming-convention
+          BELLATRIX_FORK_EPOCH: 0,
+        },
+        options: {
+          sync: {isSingleNode: true},
+          network: {allowPublishToZeroPeers: true},
+          executionEngine: {mode: "http", urls: ["http://not-available-engine:9999"]},
+          api: {
+            rest: {
+              enabled: true,
+              port: portElOffline,
             },
-            chain: {blsVerifyAllMainThread: true},
           },
-          validatorCount: 5,
-          logger: testLogger("Node-EL-Offline", {level: LogLevel.info}),
-        });
-        const clientElOffline = getClient({baseUrl: `http://127.0.0.1:${portElOffline}`}, {config});
-        // To make BN communicate with EL, it needs to produce some blocks and for that need validators
-        const {validators} = await getAndInitDevValidators({
-          node: bnElOffline,
-          validatorClientCount: 1,
-          validatorsPerClient: validatorCount,
-          startIndex: 0,
-        });
+          chain: {blsVerifyAllMainThread: true},
+        },
+        validatorCount: 5,
+        logger: testLogger("Node-EL-Offline", {level: LogLevel.info}),
+      });
+      const clientElOffline = getClient({baseUrl: `http://127.0.0.1:${portElOffline}`}, {config});
+      // To make BN communicate with EL, it needs to produce some blocks and for that need validators
+      const {validators} = await getAndInitDevValidators({
+        node: bnElOffline,
+        validatorClientCount: 1,
+        validatorsPerClient: validatorCount,
+        startIndex: 0,
+      });
 
-        // Give node sometime to communicate with EL
-        await sleep(chainConfigDef.SECONDS_PER_SLOT * 2 * 1000);
+      // Give node sometime to communicate with EL
+      await sleep(chainConfigDef.SECONDS_PER_SLOT * 2 * 1000);
 
-        const res = await clientElOffline.node.getSyncingStatus();
-        ApiError.assert(res);
+      const res = await clientElOffline.node.getSyncingStatus();
+      ApiError.assert(res);
 
-        expect(res.response.data.elOffline).toEqual(true);
+      expect(res.response.data.elOffline).toEqual(true);
 
-        await Promise.all(validators.map((v) => v.close()));
-        await bnElOffline.close();
-      },
-      {timeout: 60_000}
-    );
+      await Promise.all(validators.map((v) => v.close()));
+      await bnElOffline.close();
+    },
+    {timeout: 60_000});
   });
 
   describe("getHealth", () => {
