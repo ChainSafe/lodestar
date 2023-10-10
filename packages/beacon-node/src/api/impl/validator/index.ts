@@ -342,16 +342,13 @@ export function getValidatorApi({
     produceBlindedBlock,
 
     async produceAttestationData(committeeIndex, slot) {
-      console.log("%%%%%% produceAttestationData");
       notWhileSyncing();
-      console.log("%%%%%% produceAttestationData 2");
 
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
       // This needs a state in the same epoch as `slot` such that state.currentJustifiedCheckpoint is correct.
       // Note: This may trigger an epoch transition if there skipped slots at the beginning of the epoch.
       const headState = chain.getHeadState();
-      console.log({chain, headState});
       const headSlot = headState.slot;
       const attEpoch = computeEpochAtSlot(slot);
       const headBlockRootHex = chain.forkChoice.getHead().blockRoot;

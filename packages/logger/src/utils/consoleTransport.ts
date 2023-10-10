@@ -1,5 +1,5 @@
 import {Logger, transports} from "winston";
-// import {LEVEL, LogLevel, WinstonLogInfo} from "../interface.js";
+import {LEVEL, LogLevel, WinstonLogInfo} from "../interface.js";
 import {LogLevel} from "../interface.js";
 
 export class ConsoleDynamicLevel extends transports.Console {
@@ -16,7 +16,7 @@ export class ConsoleDynamicLevel extends transports.Console {
     this.defaultLevel = opts.defaultLevel;
 
     // Set level and parent to undefined so that underlying transport logs everything
-    // this.level = undefined;
+    this.level = undefined;
   }
 
   setModuleLevel(module: string, level: LogLevel): void {
@@ -27,21 +27,21 @@ export class ConsoleDynamicLevel extends transports.Console {
     return this.levelByModule.delete(module);
   }
 
-  // _write(info: WinstonLogInfo, enc: BufferEncoding, callback: (error?: Error | null | undefined) => void): void {
-  //   const moduleLevel = this.levelByModule.get(info.module) ?? this.defaultLevel;
+  _write(info: WinstonLogInfo, enc: BufferEncoding, callback: (error?: Error | null | undefined) => void): void {
+    const moduleLevel = this.levelByModule.get(info.module) ?? this.defaultLevel;
 
-  //   // Min number is highest prio log level
-  //   // levels = {error: 0, warn: 1, info: 2, ...}
+    // Min number is highest prio log level
+    // levels = {error: 0, warn: 1, info: 2, ...}
 
-  //   if (this.levels[moduleLevel] >= this.levels[info[LEVEL]]) {
-  //     // Set level and parent to undefined so that underlying transport logs everything
-  //     if (this.parent) {
-  //       this.parent = undefined;
-  //     }
+    if (this.levels[moduleLevel] >= this.levels[info[LEVEL]]) {
+      // Set level and parent to undefined so that underlying transport logs everything
+      if (this.parent) {
+        this.parent = undefined;
+      }
 
-  //     super._write(info, enc, callback);
-  //   } else {
-  //     callback(null);
-  //   }
-  // }
+      super._write(info, enc, callback);
+    } else {
+      callback(null);
+    }
+  }
 }
