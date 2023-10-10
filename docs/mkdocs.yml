@@ -1,0 +1,146 @@
+site_name: Lodestar Documentation
+site_description: Lodestar Documentation - Typescript Ethereum Consensus client
+site_url: https://chainsafe.github.io/lodestar
+
+repo_name: chainsafe/lodestar
+repo_url: https://github.com/chainsafe/lodestar
+
+docs_dir: pages
+
+# Configuration
+theme:
+  name: material
+  logo: assets/lodestar_icon_300.png
+  favicon: assets/round-icon.ico
+  nav_style: dark
+  palette:
+    - scheme: preference
+      media: "(prefers-color-scheme: light)"
+      primary: black
+      accent: deep purple
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - scheme: slate
+      media: "(prefers-color-scheme: dark)"
+      primary: black
+      accent: deep purple
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+plugins:
+  - search
+  - mermaid2:
+      version: 8.6.4
+      arguments:
+        theme: |
+          ^(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light'
+
+markdown_extensions:
+  - meta
+  - codehilite:
+      guess_lang: false
+  - admonition
+  - toc:
+      permalink: true
+  - pymdownx.superfences:
+      # make exceptions to highlighting of code (for mermaid):
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:mermaid2.fence_mermaid
+
+extra_css:
+  - stylesheets/extras.css
+
+# Socials
+extra:
+  social:
+    - icon: fontawesome/brands/github-alt
+      link: https://github.com/ChainSafe/lodestar
+    - icon: fontawesome/brands/twitter
+      link: https://twitter.com/ChainSafeth
+    - icon: fontawesome/brands/discord
+      link: https://discord.gg/yjyvFRP
+    - icon: fontawesome/brands/medium
+      link: https://blog.chainsafe.io
+
+# Customize left navigation menu
+nav:
+  - Home: index.md
+  - Introduction: introduction.md
+  - Getting Started:
+    - Quick Start: getting-started/quick-start.md
+    - Installation: getting-started/installation.md
+    # - Creating a JWT: getting-started/creating-a-jwt.md
+    - Starting a Node: getting-started/starting-a-node.md
+  - Beacon Node:
+    - Configuration: beacon-management/configuration.md
+    - Networking: beacon-management/networking.md
+    - MEV and Builder Integration: beacon-management/mev-and-builder-integration.md
+    - Database: beacon-management/database.md
+    - Syncing: beacon-management/syncing.md
+  - Validator:
+    - Configuration: validator-management/configuration.md
+    - Key Management: validator-management/key-management.md
+    - Withdrawals: validator-management/withdrawals.md
+    - Multiple and Fall-Back Validation: validator-management/multiple-and-fallback-validation.md
+  - Light Client: light-client.md
+  - Prover: prover.md
+  - Logging and Metrics:
+    - Log Management: logging-and-metrics/log-management.md
+    - Metrics Management: logging-and-metrics/metrics-management.md
+    - Dashboards: logging-and-metrics/dashboards.md
+  - Api:
+    - Using the API: api/using-the-api.md
+    - API Reference: api/api-reference.md
+  - Troubleshooting: trouble-shooting.md
+    # - Installation Issues: troubleshooting/installation-issues.md
+    # - Syncing Issues: troubleshooting/syncing-issues.md
+    # - Validation Issues: troubleshooting/validation-issues.md
+    # - Execution Layer Issues: troubleshooting/execution-layer-issues.md
+  - Supporting Libraries:
+    - libp2p: supporting-libraries/libp2p.md
+    - "@chainsafe/ssz": supporting-libraries/ssz.md
+    - "@chainsafe/blst": supporting-libraries/blst.md
+    - "@chainsafe/libp2p-gossipsub": supporting-libraries/gossipsub.md
+  - Contributing:
+    - Getting Started: contributing/getting-started.md
+    - Bug Reports: contributing/bug-reports.md
+    - Repo: contributing/repo.md
+    - Testing:
+      - Overview: contributing/testing/overview.md
+      - Unit Testing: contributing/testing/unit-testing.md
+      - Spec Testing: contributing/testing/spec-testing.md
+      - e2e Testing: contributing/testing/e2e-testing.md
+      - Simulation Testing: contributing/testing/simulation-testing.md
+      - Performance Testing: contributing/testing/performance-testing.md
+    - PR Submission: contributing/pr-submission.md
+  - Tools:
+    - Debugging: tools/debugging.md
+    - perf: tools/perf.md
+    - Flame Graphs: tools/flame-graphs.md
+    - Core Dumps: tools/core-dumps.md
+  - Advanced Topics:
+    - Migrating from Other Clients: advanced-topics/migrating-from-other-clients.md
+    - Block Exploration: getting-started/block-exploration.md
+    - Slashing Protection: advanced-topics/slashing-protection.md
+    - Setting Up a Testnet: advanced-topics/setting-up-a-testnet.md
+    - Doppelganger Detection: advanced-topics/doppelganger-detection.md
+    - Weak Subjectivity: advanced-topics/weak-subjectivity.md
+
+
+  # - Using Lodestar:
+  #     - Beacon management: usage/beacon-management.md
+  #     - Local testnet: usage/local.md
+  #     - Validator management: usage/validator-management.md
+  #     - Prometheus & Grafana Setup: usage/prometheus-grafana.md
+  #     - MEV Builder Integration: usage/mev-integration.md 
+  #     - Client monitoring: usage/client-monitoring.md
+  # - Reference:
+  #     - Command line: reference/cli.md
+  # - Libraries: libraries/index.md
+  # - Design:
+  #     - Lodestar package structure: design/depgraph.md
+  # - Contributing: contributing.md

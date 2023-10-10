@@ -11,9 +11,9 @@ export function renderMarkdownSections(sections: MarkdownSection[], level = 1): 
   return sections
     .map((section) => {
       const parts = section.title ? [`${"\n" + "#".repeat(level)} ${section.title}`] : [""];
-      if (section.body) {
-        parts.push(Array.isArray(section.body) ? section.body.join("\n\n") : section.body);
-      }
+
+      parts.push(Array.isArray(section.body) ? section.body.join("\n\n") : section.body);
+
       if (section.subsections) {
         parts.push(renderMarkdownSections(section.subsections, level + 1));
       }
