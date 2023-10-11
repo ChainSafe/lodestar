@@ -214,6 +214,7 @@ function getEpochSummary(validator: MonitoredValidator, epoch: Epoch): EpochSumm
 // To uniquely identify an attestation:
 // `index=$validator_index target=$target_epoch:$target_root
 type AttestationSummary = {
+  attestationSlot: Slot | null;
   poolSubmitDelayMinSec: number | null;
   poolSubmitSentPeers: number | null;
   aggregateInclusionDelaysSec: number[];
@@ -261,6 +262,7 @@ export function createValidatorMonitor(
       () =>
         new MapDefMax(
           () => ({
+            attestationSlot: null,
             poolSubmitDelayMinSec: null,
             poolSubmitSentPeers: null,
             aggregateInclusionDelaysSec: [],
@@ -440,6 +442,9 @@ export function createValidatorMonitor(
             attestationSummary.poolSubmitDelayMinSec > delaySec
           ) {
             attestationSummary.poolSubmitDelayMinSec = delaySec;
+          }
+          if (attestationSummary.attestationSlot === null) {
+            attestationSummary.attestationSlot = data.slot;
           }
         }
       }
@@ -649,6 +654,8 @@ export function createValidatorMonitor(
           metrics.validatorMonitor.prevEpochAttestationSummary.inc({summary});
           log("Previous epoch attestation", {
             validator: index,
+            // TODO: attestationSummary might be undefined, omit slot in that case?
+            slot: attestationSummary?.attestationSlot,
             epoch: prevEpoch,
             summary,
           });
