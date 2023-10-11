@@ -1,4 +1,4 @@
-import {Logger} from "@lodestar/utils";
+import {Logger, retry} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
 import {INetwork, NetworkEvent, NetworkEventData} from "../network/index.js";
@@ -63,8 +63,23 @@ export class BeaconSync implements IBeaconSync {
       this.logger.debug("RangeSync disabled.");
     }
 
-    // TODO: It's okay to start this on initial sync?
-    this.chain.clock.on(ClockEvent.epoch, this.onClockEpoch);
+    // In case node is started with `rangeSync` disabled and `unknownBlockSync` is enabled.
+    // If the epoch boundary happens right away the `onClockEpoch` will check for the `syncDiff` and if
+    // it's more than 2 epoch will disable the disabling the `unknownBlockSync` as well.
+    // This will result into node hanging on the head slot and not syncing any blocks.
+    // This was the scenario in the test case `Unknown block sync` in `packages/cli/test/sim/multi_fork.test.ts`
+    // So we are adding a particular delay to ensure that the `unknownBlockSync` is enabled.
+    const syncStartSlot = this.chain.clock.currentSlot;
+    // Having one epoch time for the node to connect to peers and start a syncing process
+    const epochCheckFotSyncSlot = syncStartSlot + SLOTS_PER_EPOCH;
+    const initiateEpochCheckForSync = (): void => {
+      if (epochCheckFotSyncSlot >= this.chain.clock.currentSlot) {
+        this.logger.info("Initiating epoch check for sync progress");
+        this.chain.clock.off(ClockEvent.slot, initiateEpochCheckForSync);
+        this.chain.clock.on(ClockEvent.epoch, this.onClockEpoch);
+      }
+    };
+    this.chain.clock.on(ClockEvent.slot, initiateEpochCheckForSync);
 
     if (metrics) {
       metrics.syncStatus.addCollect(() => this.scrapeMetrics(metrics));
