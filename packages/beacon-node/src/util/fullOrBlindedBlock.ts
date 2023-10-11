@@ -607,24 +607,18 @@ export async function* blindedOrFullBlockToFullBytes(
   }
 
   // await getting transactions and withdrawals
-  // need transactions length to calculate remaining offsets
   const {transactions, withdrawals} = await transactionsAndWithdrawals;
-  if (!transactions) {
-    throw new Error("must supply transactions");
-  }
+  const serializedTransactions = ssz.bellatrix.Transactions.serialize(transactions ?? []);
 
-  const serializedTransactions = ssz.bellatrix.Transactions.serialize(transactions);
   // For bellatrix already calculated the offset and sent extraData. just need
   // to send transactions
   if (forkSeq === ForkSeq.bellatrix) {
     yield serializedTransactions;
     return;
   }
-  // only capella blocks and after past here
 
-  if (!withdrawals) {
-    throw new Error("must supply withdrawals");
-  }
+  // only capella blocks and after past here
+  // need transactions length to calculate remaining offsets
 
   /**
    *
@@ -651,7 +645,7 @@ export async function* blindedOrFullBlockToFullBytes(
     dataGasUsedAndExcessDataGas ?? Uint8Array.from([]),
     extraData,
     serializedTransactions,
-    ssz.capella.Withdrawals.serialize(withdrawals),
+    ssz.capella.Withdrawals.serialize(withdrawals ?? []),
   ]);
   new DataView(executionPayload.buffer, executionPayload.byteOffset, executionPayload.byteLength).setUint32(
     LOCATION_OF_EXTRA_DATA_OFFSET_WITHIN_EXECUTION_PAYLOAD,
