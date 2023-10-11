@@ -75,6 +75,7 @@ import {BlockAttributes, produceBlockBody} from "./produceBlock/produceBlockBody
 import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
 import {BlockInput} from "./blocks/types.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
+import {HistoricalStateRegen} from "./historicalState/index.js";
 
 /**
  * Arbitrary constants, blobs should be consumed immediately in the same slot they are produced.
@@ -105,6 +106,7 @@ export class BeaconChain implements IBeaconChain {
   readonly regen: QueuedStateRegenerator;
   readonly lightClientServer: LightClientServer;
   readonly reprocessController: ReprocessController;
+  readonly historicalStateRegen: HistoricalStateRegen;
 
   // Ops pool
   readonly attestationPool: AttestationPool;
@@ -162,6 +164,7 @@ export class BeaconChain implements IBeaconChain {
       eth1,
       executionEngine,
       executionBuilder,
+      historicalStateRegen,
     }: {
       config: BeaconConfig;
       db: IBeaconDb;
@@ -174,6 +177,7 @@ export class BeaconChain implements IBeaconChain {
       eth1: IEth1ForBlockProduction;
       executionEngine: IExecutionEngine;
       executionBuilder?: IExecutionBuilder;
+      historicalStateRegen: HistoricalStateRegen;
     }
   ) {
     this.opts = opts;
@@ -188,6 +192,7 @@ export class BeaconChain implements IBeaconChain {
     this.eth1 = eth1;
     this.executionEngine = executionEngine;
     this.executionBuilder = executionBuilder;
+    this.historicalStateRegen = historicalStateRegen;
     const signal = this.abortController.signal;
     const emitter = new ChainEventEmitter();
     // by default, verify signatures on both main threads and worker threads
@@ -390,11 +395,13 @@ export class BeaconChain implements IBeaconChain {
         return state && {state, executionOptimistic: isOptimisticBlock(block)};
       }
     } else {
-      // request for finalized state
+      // request for finalized state using historical state regen
+      const stateSerialized = await this.historicalStateRegen.getHistoricalState(slot);
+      const state = this.config
+        .getForkTypes(slot)
+        .BeaconState.deserialize(stateSerialized) as unknown as BeaconStateAllForks;
 
-      // do not attempt regen, just check if state is already in DB
-      const state = await this.db.stateArchive.get(slot);
-      return state && {state, executionOptimistic: false};
+      return {state, executionOptimistic: false};
     }
   }
 

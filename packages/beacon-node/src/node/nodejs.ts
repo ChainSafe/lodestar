@@ -21,6 +21,7 @@ import {getApi, BeaconRestApiServer} from "../api/index.js";
 import {initializeExecutionEngine, initializeExecutionBuilder} from "../execution/index.js";
 import {initializeEth1ForBlockProduction} from "../eth1/index.js";
 import {initCKZG, loadEthereumTrustedSetup, TrustedFileMode} from "../util/kzg.js";
+import {HistoricalStateRegen} from "../chain/historicalState/index.js";
 import {IBeaconNodeOptions} from "./options.js";
 import {runNodeNotifier} from "./notifier.js";
 
@@ -218,6 +219,15 @@ export class BeaconNode {
       executionBuilder: opts.executionBuilder.enabled
         ? initializeExecutionBuilder(opts.executionBuilder, config, metrics)
         : undefined,
+      historicalStateRegen: await HistoricalStateRegen.init({
+        opts: {
+          genesisTime: anchorState.genesisTime,
+          dbLocation: opts.db.name,
+        },
+        config,
+        metrics,
+        logger: logger.child({module: LoggerModule.chain}),
+      }),
     });
 
     // Load persisted data from disk to in-memory caches
