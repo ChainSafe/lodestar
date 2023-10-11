@@ -8,13 +8,101 @@ The evolution of light clients is emblematic of the broader trajectory of Ethere
 
 ## Requirements for Running a Light-Client
 
-Access to an beacon node that supports the light client specification is necessary.
+Access to an beacon node that supports the light client specification is necessary. The client must support the following routes from the [consensus API spec](https://github.com/ethereum/consensus-specs/tree/dev):
+
+- `/eth/v1/beacon/light_client/updates`
+- `/eth/v1/beacon/light_client/optimistic_update`
+- `/eth/v1/beacon/light_client/finality_update`
+- `/eth/v1/beacon/light_client/bootstrap/{block_root}`
+- `/eth/v0/beacon/light_client/committee_root`
 
 System requirements are quite low so its possible to run a light client in the browser as part of a website. There are a few examples of this on github that you can use as reference, our [prover](./prover.md) being one of them.
 
-## Light-Client Flags
+## Light-Client CLI Example
 
+It is possible to start up the light-client as a standalone process.
 
+```bash
+lodestar lightclient \
+    --network mainnet \
+    --beacon-api-url https://beacon-node.your-domain.com \
+    --checkpoint-root "0xccaff4b99986a7b05e06738f1828a32e40799b277fd9f9ff069be55341fe0229"
+```
 
-## Notes (DELETE THESE BEFORE MERGING) 
-RPC calls to verify transactions.  To communicate with the execution client one either needs a valid access JWT or an unrestricted node.  As an example our [prover](./prover.md) communicates with MetaMask to make RPC calls.
+## Light-Client Programmatic Example
+
+For this example we will assume there is a running beacon node at `https://beacon-node.your-domain.com`
+
+```ts
+import {Api} from "@lodestar/api/beacon";
+import {ApiError} from "@lodestar/api";
+import {Bytes32} from "@lodestar/types";
+import {createChainForkConfig} from "@lodestar/config";
+import {networksChainConfig} from "@lodestar/config/networks";
+import {
+    GenesisData,
+    Lightclient,
+    LightclientEvent,
+    RunStatusCode,
+    getLcLoggerConsole
+} from `@lodestar/lightclient`;
+
+async function getGenesisData(api: Pick<Api, "beacon">): Promise<GenesisData> {
+    const res = await api.beacon.getGenesis();
+    ApiError.assert(res);
+
+    return {
+        genesisTime: Number(res.response.data.genesisTime),
+        genesisValidatorsRoot: res.response.data.genesisValidatorsRoot,
+    };
+}
+
+async function getSyncCheckpoint(api: Pick<Api, "beacon">): Promise<Bytes32> {
+    const res = await api.beacon.getStateFinalityCheckpoints("head");
+    ApiError.assert(res);
+    return res.response.data.finalized.root;
+}
+
+const config = createChainForkConfig(networksChainConfig.mainnet);
+
+const logger = getLcLoggerConsole({logDebug: Boolean(process.env.DEBUG)});
+
+const api = getClient({urls: ["https://beacon-node.your-domain.com"]}, {config});
+
+const transport = new LightClientRestTransport(api);
+
+const lightclient = await Lightclient.initializeFromCheckpointRoot({
+    config,
+    logger,
+    transport,
+    genesisData: await getGenesisData(api),
+    checkpointRoot: await getSyncCheckpoint(api),
+    opts: {
+        allowForcedUpdates: true,
+        updateHeadersOnForcedUpdate: true,
+    }
+});
+
+// Wait for the lightclient to start
+await new Promise<void>((resolve) => {
+    const lightClientStarted = (status: RunStatusCode): void => {
+        if (status === RunStatusCode.started) {
+            this.lightClient?.emitter.off(LightclientEvent.statusChange, lightClientStarted);
+            resolve();
+        }
+    };
+    lightClient?.emitter.on(LightclientEvent.statusChange, lightClientStarted);
+    logger.info("Initiating lightclient");
+    lightClient?.start();
+});
+
+logger.info("Lightclient synced");
+
+lightClient.emitter.on(LightclientEvent.lightClientFinalityHeader, async (finalityUpdate) => {
+    console.log(finalityUpdate);
+});
+
+lightClient.emitter.on(LightclientEvent.lightClientOptimisticHeader, async (optimisticUpdate) => {
+    console.log(optimisticUpdate);
+});
+```
