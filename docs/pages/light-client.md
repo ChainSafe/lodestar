@@ -85,24 +85,24 @@ const lightclient = await Lightclient.initializeFromCheckpointRoot({
 
 // Wait for the lightclient to start
 await new Promise<void>((resolve) => {
-    const lightClientStarted = (status: RunStatusCode): void => {
+    const lightclientStarted = (status: RunStatusCode): void => {
         if (status === RunStatusCode.started) {
-            this.lightClient?.emitter.off(LightclientEvent.statusChange, lightClientStarted);
+            this.lightclient?.emitter.off(LightclientEvent.statusChange, lightclientStarted);
             resolve();
         }
     };
-    lightClient?.emitter.on(LightclientEvent.statusChange, lightClientStarted);
+    lightclient?.emitter.on(LightclientEvent.statusChange, lightclientStarted);
     logger.info("Initiating lightclient");
-    lightClient?.start();
+    lightclient?.start();
 });
 
 logger.info("Lightclient synced");
 
-lightClient.emitter.on(LightclientEvent.lightClientFinalityHeader, async (finalityUpdate) => {
+lightclient.emitter.on(LightclientEvent.lightClientFinalityHeader, async (finalityUpdate) => {
     console.log(finalityUpdate);
 });
 
-lightClient.emitter.on(LightclientEvent.lightClientOptimisticHeader, async (optimisticUpdate) => {
+lightclient.emitter.on(LightclientEvent.lightClientOptimisticHeader, async (optimisticUpdate) => {
     console.log(optimisticUpdate);
 });
 ```
