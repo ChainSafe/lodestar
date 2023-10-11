@@ -1,4 +1,4 @@
-import {Logger, retry} from "@lodestar/utils";
+import {Logger} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
 import {INetwork, NetworkEvent, NetworkEventData} from "../network/index.js";
