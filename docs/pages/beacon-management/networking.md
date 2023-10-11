@@ -24,6 +24,7 @@ Some of the important Lodestar flags related to networking are:
 - [`--enr.tcp6`](./configuration.md#--enr.tcp6)
 - [`--enr.udp6`](./configuration.md#--enr.udp6)
 - [`--nat`](./configuration.md#--nat)
+- [``--private``](./configuration.md#`--private`)
 
 ## Peer Discovery (Discv5)
 
