@@ -197,6 +197,16 @@ export class BeaconNode {
         )
       : null;
 
+    const historicalStateRegen = await HistoricalStateRegen.init({
+      opts: {
+        genesisTime: anchorState.genesisTime,
+        dbLocation: opts.db.name,
+      },
+      config,
+      metrics,
+      logger: logger.child({module: LoggerModule.chain}),
+    });
+
     const chain = new BeaconChain(opts.chain, {
       config,
       db,
@@ -219,15 +229,7 @@ export class BeaconNode {
       executionBuilder: opts.executionBuilder.enabled
         ? initializeExecutionBuilder(opts.executionBuilder, config, metrics)
         : undefined,
-      historicalStateRegen: await HistoricalStateRegen.init({
-        opts: {
-          genesisTime: anchorState.genesisTime,
-          dbLocation: opts.db.name,
-        },
-        config,
-        metrics,
-        logger: logger.child({module: LoggerModule.chain}),
-      }),
+      historicalStateRegen,
     });
 
     // Load persisted data from disk to in-memory caches
@@ -286,7 +288,7 @@ export class BeaconNode {
     const metricsServer = opts.metrics.enabled
       ? await getHttpMetricsServer(opts.metrics, {
           register: (metrics as Metrics).register,
-          getOtherMetrics: () => network.scrapeMetrics(),
+          getOtherMetrics: async () => Promise.all([network.scrapeMetrics(), historicalStateRegen.scrapeMetrics()]),
           logger: logger.child({module: LoggerModule.metrics}),
         })
       : null;
