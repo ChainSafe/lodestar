@@ -143,7 +143,7 @@ export function createCachedBeaconState<T extends BeaconStateAllForks>(
 ): T & BeaconStateCache {
   return getCachedBeaconState(state, {
     config: immutableData.config,
-    epochCtx: EpochCache.createFromState(state, immutableData, newUnfinalizedPubkeyIndexMap(), opts),
+    epochCtx: EpochCache.createFromState(state, immutableData, opts),
     clonedCount: 0,
     clonedCountWithTransferCache: 0,
     createdWithTransferCache: false,

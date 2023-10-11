@@ -36,6 +36,7 @@ import {
   syncPubkeys,
   toMemoryEfficientHexStr,
   PubkeyHex,
+  newUnfinalizedPubkeyIndexMap,
 } from "./pubkeyCache.js";
 import {BeaconStateAllForks, BeaconStateAltair} from "./types.js";
 import {
@@ -262,7 +263,6 @@ export class EpochCache {
   static createFromState(
     state: BeaconStateAllForks,
     {config, finalizedPubkey2index, finalizedIndex2pubkey}: EpochCacheImmutableData,
-    unfinalizedPubkey2index: UnfinalizedPubkeyIndexMap,
     opts?: EpochCacheOpts
   ): EpochCache {
     // syncPubkeys here to ensure EpochCacheImmutableData is popualted before computing the rest of caches
@@ -408,7 +408,8 @@ export class EpochCache {
       config,
       finalizedPubkey2index,
       finalizedIndex2pubkey,
-      unfinalizedPubkey2index,
+      // `createFromState()` creates cache with empty unfinalizedPubkey2index. Be cautious to only pass in finalized state
+      unfinalizedPubkey2index: newUnfinalizedPubkeyIndexMap(),
       proposers,
       // On first epoch, set to null to prevent unnecessary work since this is only used for metrics
       proposersPrevEpoch: null,
@@ -445,7 +446,7 @@ export class EpochCache {
       // Common append-only structures shared with all states, no need to clone
       finalizedPubkey2index: this.finalizedPubkey2index,
       finalizedIndex2pubkey: this.finalizedIndex2pubkey,
-      // Fork-aware cache needs to be cloned. But by the virtue of it being persistent, we don't need to do anything here
+      // No need to clone this reference. On each mutation the `unfinalizedPubkey2index` reference is replaced, @see `addPubkey`
       unfinalizedPubkey2index: this.unfinalizedPubkey2index,
       // Immutable data
       proposers: this.proposers,
