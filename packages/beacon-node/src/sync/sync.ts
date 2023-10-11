@@ -73,7 +73,7 @@ export class BeaconSync implements IBeaconSync {
     // Having one epoch time for the node to connect to peers and start a syncing process
     const epochCheckFotSyncSlot = syncStartSlot + SLOTS_PER_EPOCH;
     const initiateEpochCheckForSync = (): void => {
-      if (epochCheckFotSyncSlot >= this.chain.clock.currentSlot) {
+      if (this.chain.clock.currentSlot > epochCheckFotSyncSlot) {
         this.logger.info("Initiating epoch check for sync progress");
         this.chain.clock.off(ClockEvent.slot, initiateEpochCheckForSync);
         this.chain.clock.on(ClockEvent.epoch, this.onClockEpoch);
