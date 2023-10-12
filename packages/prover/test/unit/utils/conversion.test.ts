@@ -73,14 +73,14 @@ describe("utils/conversion", () => {
       it(`should chunkify data when "${title}"`, async () => {
         expect(chunkIntoN(input.data, input.n)).to.be.deep.eq(output);
       });
-
-      it("should not change the order of elements", () => {
-        expect(chunkIntoN([6, 5, 4, 3, 2, 1], 2)).to.be.deep.eq([
-          [6, 5],
-          [4, 3],
-          [2, 1],
-        ]);
-      });
     }
+
+    it("should not change the order of elements", () => {
+      expect(chunkIntoN([6, 5, 4, 3, 2, 1], 2)).to.be.deep.eq([
+        [6, 5],
+        [4, 3],
+        [2, 1],
+      ]);
+    });
   });
 });
