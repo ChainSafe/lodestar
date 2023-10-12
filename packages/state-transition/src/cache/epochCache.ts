@@ -558,7 +558,7 @@ export class EpochCache {
       const validators = state.validators;
       for (const index of epochTransitionCache.indicesEligibleForActivationQueue) {
         const validator = validators.getReadonly(index);
-        if (validator.activationEpoch == expectedActivationEligibilityEpoch) {
+        if (validator.activationEligibilityEpoch == expectedActivationEligibilityEpoch) {
           this.addFinalizedPubkey(validator.pubkey, index);
         } else {
           break;
