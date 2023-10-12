@@ -70,7 +70,7 @@ describe("utils/conversion", () => {
     ];
 
     for (const {title, input, output} of testCases) {
-      it(`should chunkify data when "${title}"`, async () => {
+      it(`should chunkify data when ${title}`, async () => {
         expect(chunkIntoN(input.data, input.n)).to.be.deep.eq(output);
       });
     }
