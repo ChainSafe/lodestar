@@ -49,27 +49,27 @@ describe("beacon state api", function () {
       ApiError.assert(res);
       const epochCommittees = res.response.data;
 
-      expect(epochCommittees.length).toBe(committeeCount);
+      expect(epochCommittees).toHaveLength(committeeCount);
 
       const slotCount: Record<string, number> = {};
       const indexCount: Record<string, number> = {};
 
       for (const committee of epochCommittees) {
-        expect(committee.index).toBeGreaterThanOrEqual(0);
-        expect(committee.index).toBeLessThanOrEqual(committeeCount - 1);
-        expect(committee.slot).toBeGreaterThanOrEqual(0);
-        expect(committee.slot).toBeLessThanOrEqual(SLOTS_PER_EPOCH - 1);
-        expect(committee.validators.length).toBe(validatorsPerCommittee);
+        expect(committee).toBeValidEpochCommittee({
+          committeeCount,
+          validatorsPerCommittee,
+          slotsPerEpoch: SLOTS_PER_EPOCH,
+        });
         slotCount[committee.slot] = (slotCount[committee.slot] || 0) + 1;
         indexCount[committee.index] = (indexCount[committee.index] || 0) + 1;
       }
 
       for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
-        expect(slotCount[i]).toBe(committeesPerSlot);
+        expect(slotCount[i]).toBeWithMessage(committeesPerSlot, `Incorrect number of committees with slot ${i}`);
       }
 
       for (let i = 0; i < committeesPerSlot; i++) {
-        expect(indexCount[i]).toBe(SLOTS_PER_EPOCH);
+        expect(indexCount[i]).toBeWithMessage(SLOTS_PER_EPOCH, `Incorrect number of committees with index ${i}`);
       }
     });
 
@@ -78,9 +78,9 @@ describe("beacon state api", function () {
       const res = await client.getEpochCommittees("head", {index});
       ApiError.assert(res);
       const epochCommittees = res.response.data;
-      expect(epochCommittees.length).toBe(SLOTS_PER_EPOCH);
+      expect(epochCommittees).toHaveLength(SLOTS_PER_EPOCH);
       for (const committee of epochCommittees) {
-        expect(committee.index).toBe(index);
+        expect(committee.index).toBeWithMessage(index, "Committee index does not match supplied index");
       }
     });
 
@@ -89,9 +89,9 @@ describe("beacon state api", function () {
       const res = await client.getEpochCommittees("head", {slot});
       ApiError.assert(res);
       const epochCommittees = res.response.data;
-      expect(epochCommittees.length).toBe(committeesPerSlot);
+      expect(epochCommittees).toHaveLength(committeesPerSlot);
       for (const committee of epochCommittees) {
-        expect(committee.slot).toBe(slot);
+        expect(committee.slot).toBeWithMessage(slot, "Committee slot does not match supplied slot");
       }
     });
   });

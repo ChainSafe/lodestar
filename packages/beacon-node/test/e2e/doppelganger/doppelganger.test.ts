@@ -124,13 +124,25 @@ describe.skip("doppelganger / doppelganger test", function () {
 
     await connect(bn2.network, bn.network);
 
-    expect(validators[0].isRunning).toBe(true);
-    expect(validatorsWithDoppelganger[0].isRunning).toBe(true);
+    expect(validators[0].isRunning).toBeWithMessage(
+      true,
+      "validator without doppelganger protection should be running"
+    );
+    expect(validatorsWithDoppelganger[0].isRunning).toBeWithMessage(
+      true,
+      "validator with doppelganger protection should be running before first epoch"
+    );
     await waitForEvent<phase0.Checkpoint>(bn2.chain.clock, ClockEvent.epoch, timeout);
     // After first epoch doppelganger protection should have stopped the validatorsWithDoppelganger
-    expect(validators[0].isRunning).toBe(true);
+    expect(validators[0].isRunning).toBeWithMessage(
+      true,
+      "validator without doppelganger protection should still be running after first epoch"
+    );
     const pubkeyOfIndex: PubkeyHex = validatorsWithDoppelganger[0].validatorStore.getPubkeyOfIndex(0) as PubkeyHex;
-    expect(validatorsWithDoppelganger[0].validatorStore.isDoppelgangerSafe(pubkeyOfIndex)).toBe(false);
+    expect(validatorsWithDoppelganger[0].validatorStore.isDoppelgangerSafe(pubkeyOfIndex)).toBeWithMessage(
+      false,
+      "validator with doppelganger protection should be stopped after first epoch"
+    );
   });
 
   it("should shut down validator if same key is active with same BN and started after genesis", async function () {
@@ -156,13 +168,25 @@ describe.skip("doppelganger / doppelganger test", function () {
     });
     afterEachCallbacks.push(() => Promise.all(validator0WithoutDoppelganger.map((v) => v.close())));
 
-    expect(validator0WithDoppelganger[0].isRunning).toBe(true);
-    expect(validator0WithoutDoppelganger[0].isRunning).toBe(true);
+    expect(validator0WithDoppelganger[0].isRunning).toBeWithMessage(
+      true,
+      "validator with doppelganger protection should be running"
+    );
+    expect(validator0WithoutDoppelganger[0].isRunning).toBeWithMessage(
+      true,
+      "validator without doppelganger protection should be running before first epoch"
+    );
     await waitForEvent<phase0.Checkpoint>(bn.chain.clock, ClockEvent.epoch, timeout);
     //After first epoch doppelganger protection should have stopped the validator0WithDoppelganger
-    expect(validator0WithoutDoppelganger[0].isRunning).toBe(true);
+    expect(validator0WithoutDoppelganger[0].isRunning).toBeWithMessage(
+      true,
+      "validator without doppelganger protection should still be running after first epoch"
+    );
     const pubkeyOfIndex: PubkeyHex = validator0WithDoppelganger[0].validatorStore.getPubkeyOfIndex(0) as PubkeyHex;
-    expect(validator0WithDoppelganger[0].validatorStore.isDoppelgangerSafe(pubkeyOfIndex)).toBe(false);
+    expect(validator0WithDoppelganger[0].validatorStore.isDoppelgangerSafe(pubkeyOfIndex)).toBeWithMessage(
+      false,
+      "validator with doppelganger protection should be stopped after first epoch"
+    );
   });
 
   it("should not shut down validator if key is different", async function () {
@@ -179,11 +203,23 @@ describe.skip("doppelganger / doppelganger test", function () {
 
     await connect(bn2.network, bn.network);
 
-    expect(validators[0].isRunning).toBe(true);
-    expect(validatorsWithDoppelganger[0].isRunning).toBe(true);
+    expect(validators[0].isRunning).toBeWithMessage(
+      true,
+      "validator without doppelganger protection should be running"
+    );
+    expect(validatorsWithDoppelganger[0].isRunning).toBeWithMessage(
+      true,
+      "validator with doppelganger protection should be running before first epoch"
+    );
     await waitForEvent<phase0.Checkpoint>(bn2.chain.clock, ClockEvent.epoch, timeout);
-    expect(validators[0].isRunning).toBe(true);
-    expect(validatorsWithDoppelganger[0].isRunning).toBe(true);
+    expect(validators[0].isRunning).toBeWithMessage(
+      true,
+      "validator without doppelganger protection should still be running after first epoch"
+    );
+    expect(validatorsWithDoppelganger[0].isRunning).toBeWithMessage(
+      true,
+      "validator with doppelganger protection should still be active after first epoch"
+    );
   });
 
   it("should not sign block if doppelganger period has not passed and not started at genesis", async function () {
