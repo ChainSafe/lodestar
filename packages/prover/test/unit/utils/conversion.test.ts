@@ -5,7 +5,7 @@ describe("utils/conversion", () => {
   describe("chunkIntoN", () => {
     const testCases = [
       {
-        title: "even number of chunks",
+        title: "when even number of chunks",
         input: {
           data: [1, 2, 3, 4, 5, 6],
           n: 2,
@@ -17,7 +17,7 @@ describe("utils/conversion", () => {
         ],
       },
       {
-        title: "even number of chunks with additional element",
+        title: "when even number of chunks with additional element",
         input: {
           data: [1, 2, 3, 4, 5, 6, 7],
           n: 2,
@@ -25,7 +25,7 @@ describe("utils/conversion", () => {
         output: [[1, 2], [3, 4], [5, 6], [7]],
       },
       {
-        title: "odd number of chunks",
+        title: "when odd number of chunks",
         input: {
           data: [1, 2, 3, 4, 5, 6],
           n: 3,
@@ -36,7 +36,7 @@ describe("utils/conversion", () => {
         ],
       },
       {
-        title: "odd number of chunks with additional element",
+        title: "when odd number of chunks with additional element",
         input: {
           data: [1, 2, 3, 4, 5, 6, 7],
           n: 3,
@@ -44,7 +44,7 @@ describe("utils/conversion", () => {
         output: [[1, 2, 3], [4, 5, 6], [7]],
       },
       {
-        title: "data less than chunk size",
+        title: "when data less than chunk size",
         input: {
           data: [1],
           n: 3,
@@ -52,7 +52,7 @@ describe("utils/conversion", () => {
         output: [[1]],
       },
       {
-        title: "data 1 less than chunk size",
+        title: "when data 1 less than chunk size",
         input: {
           data: [1, 2],
           n: 3,
@@ -60,7 +60,7 @@ describe("utils/conversion", () => {
         output: [[1, 2]],
       },
       {
-        title: "data 1 extra than chunk size",
+        title: "when data 1 extra than chunk size",
         input: {
           data: [1, 2, 3, 4],
           n: 3,
@@ -82,7 +82,7 @@ describe("utils/conversion", () => {
     ];
 
     for (const {title, input, output} of testCases) {
-      it(`should split the chunks correctly for "${title}"`, async () => {
+      it(title, async () => {
         expect(chunkIntoN(input.data, input.n)).to.be.deep.eq(output);
       });
     }
