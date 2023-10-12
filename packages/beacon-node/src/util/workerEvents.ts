@@ -11,7 +11,7 @@ const NANO_TO_SECOND_CONVERSION = 1e9;
 export type WorkerBridgeEvent<EventData> = {
   type: string;
   event: keyof EventData;
-  posted: bigint;
+  posted: [number, number];
   data: EventData[keyof EventData];
 };
 
@@ -43,9 +43,11 @@ export function wireEventsOnWorkerThread<EventData>(
       // This check is not necessary but added for safety in case of improper implemented events
       isWorkerToMain[data.event] === EventDirection.mainToWorker
     ) {
+      const [sec, nanoSec] = process.hrtime(data.posted);
+      const networkWorkerLatency = sec + nanoSec / NANO_TO_SECOND_CONVERSION;
       metrics?.networkWorkerWireEventsOnWorkerThreadLatencySec.observe(
         {eventName: data.event as string},
-        Number(process.hrtime.bigint() - data.posted) / NANO_TO_SECOND_CONVERSION
+        networkWorkerLatency
       );
       events.emit(data.event, data.data);
     }
@@ -58,7 +60,7 @@ export function wireEventsOnWorkerThread<EventData>(
         const workerEvent: WorkerBridgeEvent<EventData> = {
           type: mainEventName,
           event: eventName,
-          posted: process.hrtime.bigint(),
+          posted: process.hrtime(),
           data,
         };
         parentPort.postMessage(workerEvent);
@@ -82,9 +84,11 @@ export function wireEventsOnMainThread<EventData>(
       // This check is not necessary but added for safety in case of improper implemented events
       isWorkerToMain[data.event] === EventDirection.workerToMain
     ) {
+      const [sec, nanoSec] = process.hrtime(data.posted);
+      const networkWorkerLatency = sec + nanoSec / NANO_TO_SECOND_CONVERSION;
       metrics?.networkWorkerWireEventsOnMainThreadLatencySec.observe(
         {eventName: data.event as string},
-        Number(process.hrtime.bigint() - data.posted) / NANO_TO_SECOND_CONVERSION
+        networkWorkerLatency
       );
       events.emit(data.event, data.data);
     }
@@ -97,7 +101,7 @@ export function wireEventsOnMainThread<EventData>(
         const workerEvent: WorkerBridgeEvent<EventData> = {
           type: mainEventName,
           event: eventName,
-          posted: process.hrtime.bigint(),
+          posted: process.hrtime(),
           data,
         };
         worker.postMessage(workerEvent);
