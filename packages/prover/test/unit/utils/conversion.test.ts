@@ -17,7 +17,7 @@ describe("utils/conversion", () => {
         ],
       },
       {
-        title: "when even number of chunks with additional element",
+        title: "even number of chunks with additional element",
         input: {
           data: [1, 2, 3, 4, 5, 6, 7],
           n: 2,
@@ -25,7 +25,7 @@ describe("utils/conversion", () => {
         output: [[1, 2], [3, 4], [5, 6], [7]],
       },
       {
-        title: "when odd number of chunks",
+        title: "odd number of chunks",
         input: {
           data: [1, 2, 3, 4, 5, 6],
           n: 3,
@@ -36,7 +36,7 @@ describe("utils/conversion", () => {
         ],
       },
       {
-        title: "when odd number of chunks with additional element",
+        title: "odd number of chunks with additional element",
         input: {
           data: [1, 2, 3, 4, 5, 6, 7],
           n: 3,
@@ -44,7 +44,7 @@ describe("utils/conversion", () => {
         output: [[1, 2, 3], [4, 5, 6], [7]],
       },
       {
-        title: "when data less than chunk size",
+        title: "data less than chunk size",
         input: {
           data: [1],
           n: 3,
@@ -52,7 +52,7 @@ describe("utils/conversion", () => {
         output: [[1]],
       },
       {
-        title: "when data 1 less than chunk size",
+        title: "data 1 less than chunk size",
         input: {
           data: [1, 2],
           n: 3,
@@ -60,30 +60,26 @@ describe("utils/conversion", () => {
         output: [[1, 2]],
       },
       {
-        title: "when data 1 extra than chunk size",
+        title: "data 1 extra than chunk size",
         input: {
           data: [1, 2, 3, 4],
           n: 3,
         },
         output: [[1, 2, 3], [4]],
       },
-      {
-        title: "when data have different order",
-        input: {
-          data: [6, 5, 4, 3, 2, 1],
-          n: 2,
-        },
-        output: [
-          [6, 5],
-          [4, 3],
-          [2, 1],
-        ],
-      },
     ];
 
     for (const {title, input, output} of testCases) {
-      it(title, async () => {
+      it(`should chunkify data when "${title}"`, async () => {
         expect(chunkIntoN(input.data, input.n)).to.be.deep.eq(output);
+      });
+
+      it("should not change the order of elements", () => {
+        expect(chunkIntoN([6, 5, 4, 3, 2, 1], 2)).to.be.deep.eq([
+          [6, 5],
+          [4, 3],
+          [2, 1],
+        ]);
       });
     }
   });
