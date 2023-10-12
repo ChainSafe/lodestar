@@ -12,5 +12,5 @@ mv packages/cli/docs/cli.md $DOCS_DIR/pages/reference/cli.md
 cp CONTRIBUTING.md $DOCS_DIR/pages/contribution/getting-started.md
 
 # Copy visual assets
-rm -rf $DOCS_DIR/assets
-cp -r assets $DOCS_DIR/assets
+rm -rf $DOCS_DIR/pages/assets
+cp -r $DOCS_DIR/assets $DOCS_DIR/pages/assets
