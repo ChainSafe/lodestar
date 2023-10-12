@@ -75,12 +75,14 @@ export class WorkerNetworkCore implements INetworkCore {
       NetworkWorkerThreadEventType.networkEvent,
       modules.events,
       modules.worker as unknown as worker_threads.Worker,
+      modules.metrics,
       networkEventDirection
     );
     wireEventsOnMainThread<ReqRespBridgeEventData>(
       NetworkWorkerThreadEventType.reqRespBridgeEvents,
       this.reqRespBridgeEventBus,
       modules.worker as unknown as worker_threads.Worker,
+      modules.metrics,
       reqRespBridgeEventDirection
     );
 
