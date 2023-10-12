@@ -5,7 +5,7 @@ describe("utils/conversion", () => {
   describe("chunkIntoN", () => {
     const testCases = [
       {
-        title: "when even number of chunks",
+        title: "even number of chunks",
         input: {
           data: [1, 2, 3, 4, 5, 6],
           n: 2,
