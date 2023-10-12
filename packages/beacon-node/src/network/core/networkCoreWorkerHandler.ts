@@ -135,7 +135,7 @@ export class WorkerNetworkCore implements INetworkCore {
       // A Lodestar Node may do very expensive task at start blocking the event loop and causing
       // the initialization to timeout. The number below is big enough to almost disable the timeout
       timeout: 5 * 60 * 1000,
-      // TODO: types are broken on spawn, which claims that `NetworkWorkerApi` does not satifies its contrains
+      // TODO: types are broken on spawn, which claims that `NetworkWorkerApi` does not satisfies its contrains
     })) as unknown as ModuleThread<NetworkWorkerApi>;
 
     return new WorkerNetworkCore({
