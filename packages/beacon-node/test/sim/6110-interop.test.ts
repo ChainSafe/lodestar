@@ -1,27 +1,27 @@
 import fs from "node:fs";
 import {Context} from "mocha";
 import _ from "lodash";
+import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {LogLevel, sleep} from "@lodestar/utils";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {eip6110, Epoch} from "@lodestar/types";
 import {ValidatorProposerConfig} from "@lodestar/validator";
 
+import {ChainConfig} from "@lodestar/config";
+import {TimestampFormatCode} from "@lodestar/logger";
 import {initializeExecutionEngine} from "../../src/execution/index.js";
 import {ExecutionPayloadStatus, PayloadAttributes} from "../../src/execution/engine/interface.js";
 
 import {testLogger, TestLoggerOpts} from "../utils/logger.js";
 import {runEL, ELStartMode, ELClient, sendRawTransactionBig} from "../utils/runEl.js";
 import {defaultExecutionEngineHttpOpts} from "../../src/execution/engine/http.js";
-import {shell} from "./shell.js";
 import {getDevBeaconNode} from "../utils/node/beacon.js";
-import { ChainConfig } from "@lodestar/config";
-import { logFilesDir } from "./params.js";
-import { TimestampFormatCode } from "@lodestar/logger";
-import { BeaconRestApiServerOpts } from "../../src/api/index.js";
-import { fromHexString, toHexString } from "@chainsafe/ssz";
-import { simTestInfoTracker } from "../utils/node/simTest.js";
-import { getAndInitDevValidators } from "../utils/node/validator.js";
-import { ClockEvent } from "../../src/util/clock.js";
+import {BeaconRestApiServerOpts} from "../../src/api/index.js";
+import {simTestInfoTracker} from "../utils/node/simTest.js";
+import {getAndInitDevValidators} from "../utils/node/validator.js";
+import {ClockEvent} from "../../src/util/clock.js";
+import {logFilesDir} from "./params.js";
+import {shell} from "./shell.js";
 
 // NOTE: How to run
 // DEV_RUN=true EL_BINARY_DIR=hyperledger/besu:23.7.3 EL_SCRIPT_DIR=besudocker yarn mocha test/sim/6110-interop.test.ts
@@ -34,7 +34,6 @@ import { ClockEvent } from "../../src/util/clock.js";
 const jwtSecretHex = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
 const retryAttempts = defaultExecutionEngineHttpOpts.retryAttempts;
 const retryDelay = defaultExecutionEngineHttpOpts.retryDelay;
-
 describe("executionEngine / ExecutionEngineHttp", function () {
   if (!process.env.EL_BINARY_DIR || !process.env.EL_SCRIPT_DIR) {
     throw Error(
@@ -132,11 +131,11 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       withdrawalCredentials: fromHexString("0x001db70c485b6264692f26b8aeaab5b0c384180df8e2184a21a808a3ec8e86ca"),
     };
 
-    sendRawTransactionBig(ethRpcUrl, depositTransactionA, `${dataPath}/deposit.json`).catch((e) => {
+    sendRawTransactionBig(ethRpcUrl, depositTransactionA, `${dataPath}/deposit.json`).catch((e: Error) => {
       throw Error(`Fail to send raw deposit transaction A: ${e.message}`);
     });
 
-    sendRawTransactionBig(ethRpcUrl, depositTransactionB, `${dataPath}/deposit.json`).catch((e) => {
+    sendRawTransactionBig(ethRpcUrl, depositTransactionB, `${dataPath}/deposit.json`).catch((e: Error) => {
       throw Error(`Fail to send raw deposit transaction B: ${e.message}`);
     });
 
@@ -242,11 +241,11 @@ describe("executionEngine / ExecutionEngineHttp", function () {
   });
 
   // Want to test 2 things:
-  
+
   /**
    * Want to test two things:
    * 1) Send two raw deposit transactions, and see if two new validators with corrent balances show up in the state.validators and unfinalized cache
-   * 2) Upon state-transition, see if the two new validators move from unfinalized cache to finalized cache 
+   * 2) Upon state-transition, see if the two new validators move from unfinalized cache to finalized cache
    */
   async function runNodeWithEL(
     this: Context,
@@ -270,8 +269,6 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
     // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
     const genesisSlotsDelay = 8;
-
-    const expectedDepositBlocks = 4;
 
     const timeout =
       ((epochsOfMargin + expectedEpochsToFinish) * SLOTS_PER_EPOCH + genesisSlotsDelay) *
@@ -346,13 +343,13 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       valProposerConfig,
     });
 
-
     bn.chain.clock.on(ClockEvent.slot, (slot) => {
       // send raw tx at slot 1
       console.log(slot);
       if (slot === 1) {
-        const depositTransactionA = "0x02f9021c8217de808459682f008459682f0e830271009442424242424242424242424242424242424242428901bc16d674ec800000b901a422895118000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000120749715de5d1226545c6b3790f515d551a5cc5bf1d49c87a696860554d2fc4f14000000000000000000000000000000000000000000000000000000000000003096a96086cff07df17668f35f7418ef8798079167e3f4f9b72ecde17b28226137cf454ab1dd20ef5d924786ab3483c2f9000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020003f5102dabe0a27b1746098d1dc17a5d3fbd478759fea9287e4e419b3c3cef20000000000000000000000000000000000000000000000000000000000000060b1acdb2c4d3df3f1b8d3bfd33421660df358d84d78d16c4603551935f4b67643373e7eb63dcb16ec359be0ec41fee33b03a16e80745f2374ff1d3c352508ac5d857c6476d3c3bcf7e6ca37427c9209f17be3af5264c0e2132b3dd1156c28b4e9c080a09f597089338d7f44f5c59f8230bb38f243849228a8d4e9d2e2956e6050f5b2c7a076486996c7e62802b8f95eee114783e4b403fd11093ba96286ff42c595f24452";
-        sendRawTransactionBig(ethRpcUrl, depositTransactionA, `${dataPath}/deposit.json`).catch((e) => {
+        const depositTransactionA =
+          "0x02f9021c8217de808459682f008459682f0e830271009442424242424242424242424242424242424242428901bc16d674ec800000b901a422895118000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000120749715de5d1226545c6b3790f515d551a5cc5bf1d49c87a696860554d2fc4f14000000000000000000000000000000000000000000000000000000000000003096a96086cff07df17668f35f7418ef8798079167e3f4f9b72ecde17b28226137cf454ab1dd20ef5d924786ab3483c2f9000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020003f5102dabe0a27b1746098d1dc17a5d3fbd478759fea9287e4e419b3c3cef20000000000000000000000000000000000000000000000000000000000000060b1acdb2c4d3df3f1b8d3bfd33421660df358d84d78d16c4603551935f4b67643373e7eb63dcb16ec359be0ec41fee33b03a16e80745f2374ff1d3c352508ac5d857c6476d3c3bcf7e6ca37427c9209f17be3af5264c0e2132b3dd1156c28b4e9c080a09f597089338d7f44f5c59f8230bb38f243849228a8d4e9d2e2956e6050f5b2c7a076486996c7e62802b8f95eee114783e4b403fd11093ba96286ff42c595f24452";
+        sendRawTransactionBig(ethRpcUrl, depositTransactionA, `${dataPath}/deposit.json`).catch((e: Error) => {
           throw Error(`Fail to send raw deposit transaction A: ${e.message}`);
         });
       }
@@ -360,7 +357,9 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       if (slot === 5) {
         const headState = bn.chain.getHeadState();
         const epochCtx = headState.epochCtx;
-        console.log(`At slot 5: ${headState.validators.length}, ${headState.balances.length}, ${epochCtx.finalizedIndex2pubkey.length}, ${epochCtx.finalizedPubkey2index.size}, ${epochCtx.unfinalizedPubkey2index.size}`);
+        console.log(
+          `At slot 5: ${headState.validators.length}, ${headState.balances.length}, ${epochCtx.finalizedIndex2pubkey.length}, ${epochCtx.finalizedPubkey2index.size}, ${epochCtx.unfinalizedPubkey2index.size}`
+        );
         if (headState.validators.length !== 33 || headState.balances.length !== 33) {
           throw Error("New validator is not reflected in the beacon state.");
         }
@@ -368,7 +367,9 @@ describe("executionEngine / ExecutionEngineHttp", function () {
           throw Error("Finalized cache is modified.");
         }
         if (epochCtx.unfinalizedPubkey2index.size !== 1) {
-          throw Error(`Unfinalized cache is missing the expected validator. Size: ${epochCtx.unfinalizedPubkey2index.size}`)
+          throw Error(
+            `Unfinalized cache is missing the expected validator. Size: ${epochCtx.unfinalizedPubkey2index.size}`
+          );
         }
       }
     });
@@ -396,7 +397,9 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     // Check if new validator is in finalized cache
     const headState = bn.chain.getHeadState();
     const epochCtx = headState.epochCtx;
-    console.log(`At slot 8: ${headState.validators.length}, ${headState.balances.length}, ${epochCtx.finalizedIndex2pubkey.length}, ${epochCtx.finalizedPubkey2index.size}, ${epochCtx.unfinalizedPubkey2index.size}`);
+    console.log(
+      `At slot 8: ${headState.validators.length}, ${headState.balances.length}, ${epochCtx.finalizedIndex2pubkey.length}, ${epochCtx.finalizedPubkey2index.size}, ${epochCtx.unfinalizedPubkey2index.size}`
+    );
 
     if (headState.validators.length !== 33 || headState.balances.length !== 33) {
       throw Error("New validator is not reflected in the beacon state.");
@@ -405,7 +408,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       throw Error("New validator is not in finalized cache");
     }
     if (!epochCtx.unfinalizedPubkey2index.isEmpty()) {
-      throw Error(`Unfinalized cache still contains new validator`);
+      throw Error("Unfinalized cache still contains new validator");
     }
 
     // wait for 1 slot to print current epoch stats
