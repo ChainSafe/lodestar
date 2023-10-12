@@ -6,7 +6,7 @@ import {Metrics} from "../metrics/metrics.js";
 import {NetworkCoreWorkerMetrics} from "../network/core/metrics.js";
 import {StrictEventEmitterSingleArg} from "./strictEvents.js";
 
-const nanoToSecondConversion = 1e9;
+const NANO_TO_SECOND_CONVERSION = 1e9;
 
 export type WorkerBridgeEvent<EventData> = {
   type: string;
@@ -45,7 +45,7 @@ export function wireEventsOnWorkerThread<EventData>(
     ) {
       metrics?.networkWorkerWireEventsOnWorkerThreadLatencySec.observe(
         {eventName: data.event as string},
-        Number(process.hrtime.bigint() - data.posted) / nanoToSecondConversion
+        Number(process.hrtime.bigint() - data.posted) / NANO_TO_SECOND_CONVERSION
       );
       events.emit(data.event, data.data);
     }
@@ -84,7 +84,7 @@ export function wireEventsOnMainThread<EventData>(
     ) {
       metrics?.networkWorkerWireEventsOnMainThreadLatencySec.observe(
         {eventName: data.event as string},
-        Number(process.hrtime.bigint() - data.posted) / nanoToSecondConversion
+        Number(process.hrtime.bigint() - data.posted) / NANO_TO_SECOND_CONVERSION
       );
       events.emit(data.event, data.data);
     }
