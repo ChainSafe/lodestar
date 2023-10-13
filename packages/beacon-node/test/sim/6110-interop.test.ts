@@ -3,7 +3,7 @@ import {Context} from "mocha";
 import _ from "lodash";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {LogLevel, sleep} from "@lodestar/utils";
-import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkName, SLOTS_PER_EPOCH, UNSET_DEPOSIT_RECEIPTS_START_INDEX} from "@lodestar/params";
 import {eip6110, Epoch} from "@lodestar/types";
 import {ValidatorProposerConfig} from "@lodestar/validator";
 
@@ -22,6 +22,7 @@ import {getAndInitDevValidators} from "../utils/node/validator.js";
 import {ClockEvent} from "../../src/util/clock.js";
 import {logFilesDir} from "./params.js";
 import {shell} from "./shell.js";
+import { CachedBeaconStateEIP6110 } from "@lodestar/state-transition";
 
 // NOTE: How to run
 // DEV_RUN=true EL_BINARY_DIR=hyperledger/besu:23.7.3 EL_SCRIPT_DIR=besudocker yarn mocha test/sim/6110-interop.test.ts
@@ -395,7 +396,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     await sleep(500);
 
     // Check if new validator is in finalized cache
-    const headState = bn.chain.getHeadState();
+    const headState = bn.chain.getHeadState() as CachedBeaconStateEIP6110;
     const epochCtx = headState.epochCtx;
     console.log(
       `At slot 8: ${headState.validators.length}, ${headState.balances.length}, ${epochCtx.finalizedIndex2pubkey.length}, ${epochCtx.finalizedPubkey2index.size}, ${epochCtx.unfinalizedPubkey2index.size}`
@@ -409,6 +410,11 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     }
     if (!epochCtx.unfinalizedPubkey2index.isEmpty()) {
       throw Error("Unfinalized cache still contains new validator");
+    }
+
+    console.log(`${headState.depositReceiptsStartIndex} === ${UNSET_DEPOSIT_RECEIPTS_START_INDEX}`);
+    if (headState.depositReceiptsStartIndex === UNSET_DEPOSIT_RECEIPTS_START_INDEX) {
+      throw Error("state.depositReceiptsStartIndex is not set upon processing new deposit receipt");
     }
 
     // wait for 1 slot to print current epoch stats
