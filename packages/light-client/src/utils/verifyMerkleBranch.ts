@@ -1,5 +1,5 @@
 import {byteArrayEquals} from "@chainsafe/ssz";
-import {hash} from "@chainsafe/persistent-merkle-tree";
+import {hasher} from "@chainsafe/persistent-merkle-tree";
 
 export const SYNC_COMMITTEES_DEPTH = 4;
 export const SYNC_COMMITTEES_INDEX = 11;
@@ -20,9 +20,9 @@ export function isValidMerkleBranch(
   let value = leaf;
   for (let i = 0; i < depth; i++) {
     if (Math.floor(index / 2 ** i) % 2) {
-      value = hash(proof[i], value);
+      value = hasher.digest64(proof[i], value);
     } else {
-      value = hash(value, proof[i]);
+      value = hasher.digest64(value, proof[i]);
     }
   }
   return byteArrayEquals(value, root);

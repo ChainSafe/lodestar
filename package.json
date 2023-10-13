@@ -18,7 +18,7 @@
     "lint:fix": "yarn lint --fix",
     "lint-docs": "prettier '**/*.md' --check",
     "lint-docs:fix": "prettier '**/*.md' --write",
-    "lint-dashboards": "scripts/validate-grafana-dashboards.sh",
+    "lint-dashboards": "node scripts/lint-grafana-dashboards.mjs ./dashboards",
     "check-build": "lerna run check-build",
     "check-readme": "lerna run check-readme",
     "check-types": "lerna run check-types",

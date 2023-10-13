@@ -64,6 +64,7 @@
     "@libp2p/crypto": "^2.0.4",
     "@libp2p/peer-id": "^3.0.2",
     "@libp2p/peer-id-factory": "^3.0.4",
+    "@chainsafe/persistent-merkle-tree": "^0.6.1",
     "@lodestar/api": "^1.11.3",
     "@lodestar/beacon-node": "^1.11.3",
     "@lodestar/config": "^1.11.3",

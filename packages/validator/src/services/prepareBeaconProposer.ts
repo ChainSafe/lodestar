@@ -45,17 +45,14 @@ export function pollPrepareBeaconProposer(
           })
         );
         ApiError.assert(await api.validator.prepareBeaconProposer(proposers));
+        logger.debug("Registered proposers with beacon node", {epoch, count: proposers.length});
       } catch (e) {
-        logger.error("Failed to register proposers with beacon", {epoch}, e as Error);
+        logger.error("Failed to register proposers with beacon node", {epoch}, e as Error);
       }
     }
   }
 
   clock.runEveryEpoch(prepareBeaconProposer);
-  // Since the registration of the validators to the BN as well as to builder (if enabled)
-  // is scheduled every epoch, there could be some time since the first scheduled run,
-  // so fire one registration right away as well
-  void prepareBeaconProposer(clock.getCurrentEpoch());
 }
 
 /**
@@ -81,7 +78,7 @@ export function pollBuilderValidatorRegistration(
     // registerValidator is not as time sensitive as attesting.
     // Poll indices first, then call api.validator.registerValidator once
     await validatorStore.pollValidatorIndices().catch((e: Error) => {
-      logger.error("Error on pollValidatorIndices for prepareBeaconProposer", {epoch}, e);
+      logger.error("Error on pollValidatorIndices for registerValidator", {epoch}, e);
     });
     const pubkeyHexes = validatorStore
       .getAllLocalIndices()
@@ -103,17 +100,13 @@ export function pollBuilderValidatorRegistration(
             })
           );
           ApiError.assert(await api.validator.registerValidator(registrations));
-          logger.info("Published validator registrations to builder network", {epoch, count: registrations.length});
+          logger.info("Published validator registrations to builder", {epoch, count: registrations.length});
         } catch (e) {
-          logger.error("Failed to publish validator registrations to builder network", {epoch}, e as Error);
+          logger.error("Failed to publish validator registrations to builder", {epoch}, e as Error);
         }
       }
     }
   }
 
   clock.runEveryEpoch(registerValidator);
-  // Since the registration of the validators to the BN as well as to builder (if enabled)
-  // is scheduled every epoch, there could be some time since the first scheduled run,
-  // so fire one registration right away as well
-  void registerValidator(clock.getCurrentEpoch());
 }
