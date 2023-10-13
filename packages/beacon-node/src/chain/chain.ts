@@ -106,7 +106,7 @@ export class BeaconChain implements IBeaconChain {
   readonly regen: QueuedStateRegenerator;
   readonly lightClientServer: LightClientServer;
   readonly reprocessController: ReprocessController;
-  readonly historicalStateRegen: HistoricalStateRegen;
+  readonly historicalStateRegen?: HistoricalStateRegen;
 
   // Ops pool
   readonly attestationPool: AttestationPool;
@@ -177,7 +177,7 @@ export class BeaconChain implements IBeaconChain {
       eth1: IEth1ForBlockProduction;
       executionEngine: IExecutionEngine;
       executionBuilder?: IExecutionBuilder;
-      historicalStateRegen: HistoricalStateRegen;
+      historicalStateRegen?: HistoricalStateRegen;
     }
   ) {
     this.opts = opts;
@@ -396,7 +396,10 @@ export class BeaconChain implements IBeaconChain {
       }
     } else {
       // request for finalized state using historical state regen
-      const stateSerialized = await this.historicalStateRegen.getHistoricalState(slot);
+      const stateSerialized = await this.historicalStateRegen?.getHistoricalState(slot);
+      if (!stateSerialized) {
+        return null;
+      }
       const state = this.config
         .getForkTypes(slot)
         .BeaconState.deserialize(stateSerialized) as unknown as BeaconStateAllForks;
