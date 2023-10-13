@@ -46,8 +46,14 @@ function runTests({useWorker}: {useWorker: boolean}): void {
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async function mockModules(gossipHandlersPartial?: Partial<GossipHandlers>) {
-    const [netA, closeA] = await getNetworkForTest("A", config, {opts: {useWorker}, gossipHandlersPartial});
-    const [netB, closeB] = await getNetworkForTest("B", config, {opts: {useWorker}, gossipHandlersPartial});
+    const [netA, closeA] = await getNetworkForTest(`gossipsub-${useWorker ? "worker" : "main"}-A`, config, {
+      opts: {useWorker},
+      gossipHandlersPartial,
+    });
+    const [netB, closeB] = await getNetworkForTest(`gossipsub-${useWorker ? "worker" : "main"}-B`, config, {
+      opts: {useWorker},
+      gossipHandlersPartial,
+    });
 
     afterEachCallbacks.push(async () => {
       await closeA();

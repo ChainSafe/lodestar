@@ -2,11 +2,16 @@ import {MessagePort, Worker} from "node:worker_threads";
 import {Thread} from "@chainsafe/threads";
 import {Logger} from "@lodestar/logger";
 import {sleep} from "@lodestar/utils";
+import {Metrics} from "../metrics/metrics.js";
+import {NetworkCoreWorkerMetrics} from "../network/core/metrics.js";
 import {StrictEventEmitterSingleArg} from "./strictEvents.js";
+
+const NANO_TO_SECOND_CONVERSION = 1e9;
 
 export type WorkerBridgeEvent<EventData> = {
   type: string;
   event: keyof EventData;
+  posted: [number, number];
   data: EventData[keyof EventData];
 };
 
@@ -27,6 +32,7 @@ export function wireEventsOnWorkerThread<EventData>(
   mainEventName: string,
   events: StrictEventEmitterSingleArg<EventData>,
   parentPort: MessagePort,
+  metrics: NetworkCoreWorkerMetrics | null,
   isWorkerToMain: {[K in keyof EventData]: EventDirection}
 ): void {
   // Subscribe to events from main thread
@@ -37,6 +43,12 @@ export function wireEventsOnWorkerThread<EventData>(
       // This check is not necessary but added for safety in case of improper implemented events
       isWorkerToMain[data.event] === EventDirection.mainToWorker
     ) {
+      const [sec, nanoSec] = process.hrtime(data.posted);
+      const networkWorkerLatency = sec + nanoSec / NANO_TO_SECOND_CONVERSION;
+      metrics?.networkWorkerWireEventsOnWorkerThreadLatency.observe(
+        {eventName: data.event as string},
+        networkWorkerLatency
+      );
       events.emit(data.event, data.data);
     }
   });
@@ -48,6 +60,7 @@ export function wireEventsOnWorkerThread<EventData>(
         const workerEvent: WorkerBridgeEvent<EventData> = {
           type: mainEventName,
           event: eventName,
+          posted: process.hrtime(),
           data,
         };
         parentPort.postMessage(workerEvent);
@@ -60,6 +73,7 @@ export function wireEventsOnMainThread<EventData>(
   mainEventName: string,
   events: StrictEventEmitterSingleArg<EventData>,
   worker: Pick<Worker, "on" | "postMessage">,
+  metrics: Metrics | null,
   isWorkerToMain: {[K in keyof EventData]: EventDirection}
 ): void {
   // Subscribe to events from main thread
@@ -70,6 +84,12 @@ export function wireEventsOnMainThread<EventData>(
       // This check is not necessary but added for safety in case of improper implemented events
       isWorkerToMain[data.event] === EventDirection.workerToMain
     ) {
+      const [sec, nanoSec] = process.hrtime(data.posted);
+      const networkWorkerLatency = sec + nanoSec / NANO_TO_SECOND_CONVERSION;
+      metrics?.networkWorkerWireEventsOnMainThreadLatency.observe(
+        {eventName: data.event as string},
+        networkWorkerLatency
+      );
       events.emit(data.event, data.data);
     }
   });
@@ -81,6 +101,7 @@ export function wireEventsOnMainThread<EventData>(
         const workerEvent: WorkerBridgeEvent<EventData> = {
           type: mainEventName,
           event: eventName,
+          posted: process.hrtime(),
           data,
         };
         worker.postMessage(workerEvent);

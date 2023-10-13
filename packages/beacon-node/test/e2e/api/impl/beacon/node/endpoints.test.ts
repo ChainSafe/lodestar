@@ -92,6 +92,7 @@ describe("beacon node api", function () {
       const clientElOffline = getClient({baseUrl: `http://127.0.0.1:${portElOffline}`}, {config});
       // To make BN communicate with EL, it needs to produce some blocks and for that need validators
       const {validators} = await getAndInitDevValidators({
+        logPrefix: "Offline-BN",
         node: bnElOffline,
         validatorClientCount: 1,
         validatorsPerClient: validatorCount,

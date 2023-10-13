@@ -47,7 +47,7 @@ describe.skip("doppelganger / doppelganger test", function () {
 
   async function createBNAndVC(config?: TestConfig): Promise<{beaconNode: BeaconNode; validators: Validator[]}> {
     const testLoggerOpts: TestLoggerOpts = {level: LogLevel.info};
-    const loggerNodeA = testLogger("Node-A", testLoggerOpts);
+    const loggerNodeA = testLogger("doppelganger", testLoggerOpts);
 
     const bn = await getDevBeaconNode({
       params: beaconParams,
@@ -65,6 +65,7 @@ describe.skip("doppelganger / doppelganger test", function () {
 
     const {validators: validatorsWithDoppelganger} = await getAndInitDevValidators({
       node: bn,
+      logPrefix: "doppelganger",
       validatorsPerClient: validatorCount,
       validatorClientCount: 1,
       startIndex: 0,
@@ -158,6 +159,7 @@ describe.skip("doppelganger / doppelganger test", function () {
     });
 
     const {validators: validator0WithoutDoppelganger} = await getAndInitDevValidators({
+      logPrefix: "doppelganger2",
       node: bn,
       validatorsPerClient: validatorCount,
       validatorClientCount: 1,

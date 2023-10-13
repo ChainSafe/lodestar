@@ -22,7 +22,7 @@ describe("lightclient api", function () {
   const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
   const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
   const testLoggerOpts: TestLoggerOpts = {level: LogLevel.info};
-  const loggerNodeA = testLogger("Node-A", testLoggerOpts);
+  const loggerNodeA = testLogger("lightclient-api", testLoggerOpts);
   const validatorCount = 2;
 
   let bn: BeaconNode;
@@ -52,6 +52,7 @@ describe("lightclient api", function () {
     validators = (
       await getAndInitDevValidators({
         node: bn,
+        logPrefix: "lightclient-api",
         validatorsPerClient: validatorCount,
         validatorClientCount: 1,
         startIndex: 0,

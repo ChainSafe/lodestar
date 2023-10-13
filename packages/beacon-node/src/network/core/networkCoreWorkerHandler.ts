@@ -79,12 +79,14 @@ export class WorkerNetworkCore implements INetworkCore {
       NetworkWorkerThreadEventType.networkEvent,
       modules.events,
       modules.worker as unknown as worker_threads.Worker,
+      modules.metrics,
       networkEventDirection
     );
     wireEventsOnMainThread<ReqRespBridgeEventData>(
       NetworkWorkerThreadEventType.reqRespBridgeEvents,
       this.reqRespBridgeEventBus,
       modules.worker as unknown as worker_threads.Worker,
+      modules.metrics,
       reqRespBridgeEventDirection
     );
 
@@ -150,6 +152,7 @@ export class WorkerNetworkCore implements INetworkCore {
   }
 
   async close(): Promise<void> {
+    this.modules.logger.debug("closing network core running in network worker");
     await this.getApi().close();
     this.modules.logger.debug("terminating network worker");
     await terminateWorkerThread({

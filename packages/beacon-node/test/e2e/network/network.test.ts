@@ -37,6 +37,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
   });
 
   let controller: AbortController;
+
   beforeEach(() => {
     controller = new AbortController();
   });
@@ -53,18 +54,20 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     return network;
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async function createTestNodesAB() {
-    return Promise.all([createTestNode("A"), createTestNode("B")]);
+  async function createTestNodesAB(): Promise<[Network, Network]> {
+    return Promise.all([
+      createTestNode(`network-${useWorker ? "worker" : "main"}-A`),
+      createTestNode(`network-${useWorker ? "worker" : "main"}-A`),
+    ]);
   }
 
   it("Disconnect peer", async () => {
-    const network = await createTestNode("A");
+    const network = await createTestNode(`network-${useWorker ? "worker" : "main"}-DP`);
     await network.disconnectPeer(getValidPeerId().toString());
   });
 
   it("return getNetworkIdentity", async () => {
-    const network = await createTestNode("A");
+    const network = await createTestNode(`network-${useWorker ? "worker" : "main"}-NI`);
     const networkIdentity = await network.getNetworkIdentity();
     expect(networkIdentity.peerId).toBe(network.peerId.toString());
   });
@@ -133,7 +136,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
   });
 
   it("Should subscribe to gossip core topics on demand", async () => {
-    const netA = await createTestNode("A");
+    const netA = await createTestNode(`network-${useWorker ? "worker" : "main"}-CT`);
 
     expect(await getTopics(netA)).toEqual([]);
 
