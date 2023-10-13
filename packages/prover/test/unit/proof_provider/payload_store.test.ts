@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect, beforeEach} from "vitest";
 import chai from "chai";
 import sinon from "sinon";
 import sinonChai from "sinon-chai";
@@ -82,7 +82,7 @@ describe("proof_provider/payload_store", function () {
       const payload = buildPayload({blockNumber: 10});
       store.set(payload, true);
 
-      expect(store.finalized).to.eql(payload);
+      expect(store.finalized).toEqual(payload);
     });
 
     it("should return highest finalized payload", () => {
@@ -91,7 +91,7 @@ describe("proof_provider/payload_store", function () {
       store.set(payload1, true);
       store.set(payload2, true);
 
-      expect(store.finalized).to.eql(payload2);
+      expect(store.finalized).toEqual(payload2);
     });
   });
 
@@ -106,7 +106,7 @@ describe("proof_provider/payload_store", function () {
       store.set(payload1, true);
       store.set(payload2, true);
 
-      expect(store.latest).to.eql(payload2);
+      expect(store.latest).toEqual(payload2);
     });
 
     it("should return latest payload if not finalized", () => {
@@ -115,7 +115,7 @@ describe("proof_provider/payload_store", function () {
       store.set(payload1, false);
       store.set(payload2, false);
 
-      expect(store.latest).to.eql(payload2);
+      expect(store.latest).toEqual(payload2);
     });
   });
 
@@ -208,7 +208,7 @@ describe("proof_provider/payload_store", function () {
         expect(api.beacon.getBlockV2 as sinon.SinonStub).calledTwice;
         expect(api.beacon.getBlockV2 as sinon.SinonStub).calledWith(blockNumber);
         expect(api.beacon.getBlockV2 as sinon.SinonStub).calledWith(unavailableBlockNumber);
-        expect(result).to.eql(unavailablePayload);
+        expect(result).toEqual(unavailablePayload);
       });
     });
   });
@@ -220,7 +220,7 @@ describe("proof_provider/payload_store", function () {
 
       // Unfinalized blocks are not indexed by block hash
       await expect(store.get(toHexString(payload1.blockHash))).to.eventually.eql(payload1);
-      expect(store.finalized).to.eql(undefined);
+      expect(store.finalized).toEqual(undefined);
     });
 
     it("should set the payload for finalized blocks", async () => {
@@ -228,7 +228,7 @@ describe("proof_provider/payload_store", function () {
       store.set(payload1, true);
 
       await expect(store.get(payload1.blockNumber.toString())).to.eventually.eql(payload1);
-      expect(store.finalized).to.eql(payload1);
+      expect(store.finalized).toEqual(payload1);
     });
   });
 
@@ -251,7 +251,7 @@ describe("proof_provider/payload_store", function () {
 
         expect(api.beacon.getBlockV2).calledOnce;
         expect(api.beacon.getBlockV2).calledWith(20);
-        expect(store.finalized).to.eql(executionPayload);
+        expect(store.finalized).toEqual(executionPayload);
       });
 
       it("should process lightclient header for finalized block which exists as un-finalized in store", async () => {
@@ -272,7 +272,7 @@ describe("proof_provider/payload_store", function () {
 
         // Called only once when we process unfinalized
         expect(api.beacon.getBlockV2).to.be.calledOnce;
-        expect(store.finalized).to.eql(executionPayload);
+        expect(store.finalized).toEqual(executionPayload);
       });
     });
 
@@ -330,11 +330,11 @@ describe("proof_provider/payload_store", function () {
         store.set(buildPayload({blockNumber: i}), true);
       }
 
-      expect(store["payloads"].size).to.equal(numberOfPayloads);
+      expect(store["payloads"].size).toEqual(numberOfPayloads);
 
       store.prune();
 
-      expect(store["payloads"].size).to.equal(MAX_PAYLOAD_HISTORY);
+      expect(store["payloads"].size).toEqual(MAX_PAYLOAD_HISTORY);
     });
 
     it("should not prune the existing payloads if equal to MAX_PAYLOAD_HISTORY", () => {
@@ -344,11 +344,11 @@ describe("proof_provider/payload_store", function () {
         store.set(buildPayload({blockNumber: i}), true);
       }
 
-      expect(store["payloads"].size).to.equal(MAX_PAYLOAD_HISTORY);
+      expect(store["payloads"].size).toEqual(MAX_PAYLOAD_HISTORY);
 
       store.prune();
 
-      expect(store["payloads"].size).to.equal(MAX_PAYLOAD_HISTORY);
+      expect(store["payloads"].size).toEqual(MAX_PAYLOAD_HISTORY);
     });
 
     it("should not prune the existing payloads if less than MAX_PAYLOAD_HISTORY", () => {
@@ -358,11 +358,11 @@ describe("proof_provider/payload_store", function () {
         store.set(buildPayload({blockNumber: i}), true);
       }
 
-      expect(store["payloads"].size).to.equal(numberOfPayloads);
+      expect(store["payloads"].size).toEqual(numberOfPayloads);
 
       store.prune();
 
-      expect(store["payloads"].size).to.equal(numberOfPayloads);
+      expect(store["payloads"].size).toEqual(numberOfPayloads);
     });
 
     it("should prune finalized roots", () => {
@@ -372,11 +372,11 @@ describe("proof_provider/payload_store", function () {
         store.set(buildPayload({blockNumber: i}), true);
       }
 
-      expect(store["finalizedRoots"].size).to.equal(numberOfPayloads);
+      expect(store["finalizedRoots"].size).toEqual(numberOfPayloads);
 
       store.prune();
 
-      expect(store["finalizedRoots"].size).to.equal(MAX_PAYLOAD_HISTORY);
+      expect(store["finalizedRoots"].size).toEqual(MAX_PAYLOAD_HISTORY);
     });
 
     it("should prune unfinalized roots", async () => {
@@ -391,14 +391,14 @@ describe("proof_provider/payload_store", function () {
       }
 
       // Because all payloads are unfinalized, they are not pruned
-      expect(store["unfinalizedRoots"].size).to.equal(numberOfPayloads);
+      expect(store["unfinalizedRoots"].size).toEqual(numberOfPayloads);
 
       // Let make some payloads finalized
       await store.processLCHeader(buildLCHeader({blockNumber: 500 + 1, slot: 1}), true);
       await store.processLCHeader(buildLCHeader({blockNumber: 500 + 2, slot: 2}), true);
 
       // store.processLCHeader will call the prune method internally and clean the unfinalized roots
-      expect(store["unfinalizedRoots"].size).to.equal(numberOfPayloads - 2);
+      expect(store["unfinalizedRoots"].size).toEqual(numberOfPayloads - 2);
     });
   });
 });

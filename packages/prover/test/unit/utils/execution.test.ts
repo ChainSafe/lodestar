@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 import deepmerge from "deepmerge";
@@ -30,7 +30,7 @@ describe("uitls/execution", () => {
           stateRoot: validStateRoot,
           logger,
         })
-      ).eventually.to.be.true;
+      ).resolves.toBe(true);
     });
 
     it("should fail with error if proof is valid but address is wrong", async () => {
@@ -48,7 +48,7 @@ describe("uitls/execution", () => {
           stateRoot,
           logger,
         })
-      ).eventually.to.be.false;
+      ).resolves.toBe(false);
     });
 
     it("should fail with error if account is not valid", async () => {
@@ -62,7 +62,7 @@ describe("uitls/execution", () => {
           stateRoot,
           logger,
         })
-      ).eventually.to.be.false;
+      ).resolves.toBe(false);
     });
   });
 
@@ -76,7 +76,7 @@ describe("uitls/execution", () => {
           storageKeys,
           logger,
         })
-      ).eventually.to.be.true;
+      ).resolves.toBe(true);
     });
 
     it("should fail with error for a wrong proof", async () => {
@@ -88,7 +88,7 @@ describe("uitls/execution", () => {
           proof: invalidStorageProof,
           storageKeys,
         })
-      ).eventually.to.be.false;
+      ).resolves.toBe(false);
     });
 
     it("should fail with error for a non existance key", async () => {
@@ -110,7 +110,7 @@ describe("uitls/execution", () => {
           storageKeys,
           logger,
         })
-      ).eventually.to.be.false;
+      ).resolves.toBe(false);
     });
 
     it("should return true empty keys", async () => {
@@ -126,7 +126,7 @@ describe("uitls/execution", () => {
           storageKeys,
           logger,
         })
-      ).eventually.to.be.true;
+      ).resolves.toBe(true);
     });
   });
 });

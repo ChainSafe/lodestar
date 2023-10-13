@@ -1,7 +1,7 @@
 import childProcess from "node:child_process";
 import {writeFile, mkdir} from "node:fs/promises";
 import path from "node:path";
-import {expect} from "chai";
+import {describe, it, expect, beforeAll, afterAll} from "vitest";
 import Web3 from "web3";
 import {runCliCommand, spawnCliCommand, stopChildProcess} from "@lodestar/test-utils";
 import {sleep} from "@lodestar/utils";
@@ -15,7 +15,7 @@ describe("prover/start", () => {
   it("should show help", async () => {
     const output = await runCliCommand(cli, ["start", "--help"]);
 
-    expect(output).contains("Show help");
+    expect(output).toEqual(expect.arrayContaining(["Show help"]));
   });
 
   it("should fail when --executionRpcUrl is missing", async () => {
@@ -47,8 +47,7 @@ describe("prover/start", () => {
     const paramsFilePath = path.join("/tmp", "e2e-test-env", "params.json");
     const web3: Web3 = new Web3(proxyUrl);
 
-    before(async function () {
-      this.timeout(50000);
+    beforeAll(async function () {
       await waitForCapellaFork();
       await mkdir(path.dirname(paramsFilePath), {recursive: true});
       await writeFile(paramsFilePath, JSON.stringify(chainConfigToJson(config as ChainConfig)));
@@ -72,22 +71,22 @@ describe("prover/start", () => {
       );
       // Give sometime to the prover to start proxy server
       await sleep(3000);
-    });
+    }, 50000);
 
-    after(async () => {
+    afterAll(async () => {
       await stopChildProcess(proc);
     });
 
     it("should respond to verified calls", async () => {
       const accounts = await web3.eth.getAccounts();
 
-      expect(accounts.length).to.be.gt(0);
-      await expect(web3.eth.getBalance(accounts[0])).eventually.not.null;
+      expect(accounts.length).toBeGreaterThan(0);
+      await expect(web3.eth.getBalance(accounts[0])).not.toBeNull();
     });
 
     it("should respond to unverified calls", async () => {
       // Because web3 latest version return numbers as bigint by default
-      await expect(web3.eth.getChainId()).eventually.eql(BigInt(chainId));
+      await expect(web3.eth.getChainId()).toEqual(BigInt(chainId));
     });
   });
 });

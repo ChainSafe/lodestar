@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect, afterEach} from "vitest";
 import Web3 from "web3";
 import {ethers} from "ethers";
 import sinon from "sinon";
@@ -27,8 +27,8 @@ describe("web3_provider", () => {
           }
         );
 
-        expect(provider).be.instanceof(Web3.providers.HttpProvider);
-        expect(proofProvider).be.instanceOf(ProofProvider);
+        expect(provider).toBeInstanceOf(Web3.providers.HttpProvider);
+        expect(proofProvider).toBeInstanceOf(ProofProvider);
       });
     });
 
@@ -46,8 +46,8 @@ describe("web3_provider", () => {
           }
         );
 
-        expect(provider).be.instanceof(ethers.JsonRpcProvider);
-        expect(proofProvider).be.instanceOf(ProofProvider);
+        expect(provider).toBeInstanceOf(ethers.JsonRpcProvider);
+        expect(proofProvider).toBeInstanceOf(ProofProvider);
       });
     });
   });
