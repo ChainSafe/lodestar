@@ -62,9 +62,7 @@ describe("PrepareNextSlot scheduler", () => {
       scheduler.prepareForNextSlot(2 * SLOTS_PER_EPOCH - 1),
       vi.advanceTimersByTimeAsync((config.SECONDS_PER_SLOT * 1000 * 2) / 3),
     ]);
-    // "expect updateHead to be called"
     expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalled();
-    // "expect regen.getBlockSlotState not to be called"
     expect(regenStub.getBlockSlotState).not.toHaveBeenCalled();
   });
 
@@ -76,9 +74,7 @@ describe("PrepareNextSlot scheduler", () => {
       scheduler.prepareForNextSlot(SLOTS_PER_EPOCH - 1),
       vi.advanceTimersByTimeAsync((config.SECONDS_PER_SLOT * 1000 * 2) / 3),
     ]);
-    // "expect updateHead to be called"
     expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalled();
-    // "expect regen.getBlockSlotState to be called"
     expect(regenStub.getBlockSlotState).toHaveBeenCalled();
   });
 
@@ -91,11 +87,8 @@ describe("PrepareNextSlot scheduler", () => {
       scheduler.prepareForNextSlot(SLOTS_PER_EPOCH - 1),
       vi.advanceTimersByTimeAsync((config.SECONDS_PER_SLOT * 1000 * 2) / 3),
     ]);
-    // "expect updateHead to be called"
     expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalled();
-    // "expect regen.getBlockSlotState to be called"
     expect(regenStub.getBlockSlotState).toHaveBeenCalled();
-    // "expect log error on rejected regen.getBlockSlotState"
     expect(loggerStub.error).toHaveBeenCalledTimes(1);
   });
 
@@ -106,9 +99,7 @@ describe("PrepareNextSlot scheduler", () => {
       scheduler.prepareForNextSlot(2 * SLOTS_PER_EPOCH - 1),
       vi.advanceTimersByTimeAsync((config.SECONDS_PER_SLOT * 1000 * 2) / 3),
     ]);
-    // "expect updateHead to be called"
     expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalled();
-    // "expect regen.getBlockSlotState not to be called"
     expect(regenStub.getBlockSlotState).not.toHaveBeenCalled();
   });
 
@@ -121,9 +112,7 @@ describe("PrepareNextSlot scheduler", () => {
       scheduler.prepareForNextSlot(SLOTS_PER_EPOCH - 1),
       vi.advanceTimersByTimeAsync((config.SECONDS_PER_SLOT * 1000 * 2) / 3),
     ]);
-    // "expect updateHead to be called"
     expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalled();
-    // "expect regen.getBlockSlotState to be called"
     expect(regenStub.getBlockSlotState).toHaveBeenCalled();
   });
 
@@ -146,17 +135,11 @@ describe("PrepareNextSlot scheduler", () => {
       vi.advanceTimersByTimeAsync((config.SECONDS_PER_SLOT * 1000 * 2) / 3),
     ]);
 
-    // "expect updateHead to be called"
     expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalled();
-    // "expect regen.getBlockSlotState to be called"
     expect(regenStub.getBlockSlotState).toHaveBeenCalled();
-    // "expect updateBuilderStatus to be called"
     expect(updateBuilderStatus).toHaveBeenCalled();
-    // "expect forkChoice.getJustifiedBlock to be called"
     expect(forkChoiceStub.getJustifiedBlock).toHaveBeenCalled();
-    // "expect forkChoice.getFinalizedBlock to be called"
     expect(forkChoiceStub.getFinalizedBlock).toHaveBeenCalled();
-    // "expect executionEngine.notifyForkchoiceUpdate to be called"
     expect(executionEngineStub.notifyForkchoiceUpdate).toHaveBeenCalledTimes(1);
     expect(spy).toHaveBeenCalledTimes(1);
   });

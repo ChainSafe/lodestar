@@ -164,16 +164,19 @@ describe("LodestarForkChoice", function () {
       forkChoice.onBlock(block20.message, state20, blockDelaySec, currentSlot, executionStatus);
       forkChoice.onBlock(block24.message, state24, blockDelaySec, currentSlot, executionStatus);
       forkChoice.onBlock(block28.message, state28, blockDelaySec, currentSlot, executionStatus);
-      expect(forkChoice.getAllAncestorBlocks(hashBlock(block16.message)).length).toBe(3);
-      expect(forkChoice.getAllAncestorBlocks(hashBlock(block24.message)).length).toBe(5);
+      expect(forkChoice.getAllAncestorBlocks(hashBlock(block16.message))).toHaveLength(3);
+      expect(forkChoice.getAllAncestorBlocks(hashBlock(block24.message))).toHaveLength(5);
       expect(forkChoice.getBlockHex(hashBlock(block08.message))).not.toBeNull();
       expect(forkChoice.getBlockHex(hashBlock(block12.message))).not.toBeNull();
       expect(forkChoice.hasBlockHex(hashBlock(block08.message))).toBe(true);
       expect(forkChoice.hasBlockHex(hashBlock(block12.message))).toBe(true);
       forkChoice.onBlock(block32.message, state32, blockDelaySec, currentSlot, executionStatus);
       forkChoice.prune(hashBlock(block16.message));
-      expect(forkChoice.getAllAncestorBlocks(hashBlock(block16.message)).length).toBe(0);
-      expect(forkChoice.getAllAncestorBlocks(hashBlock(block24.message)).length).toBe(2);
+      expect(forkChoice.getAllAncestorBlocks(hashBlock(block16.message)).length).toBeWithMessage(
+        0,
+        "getAllAncestorBlocks should not return finalized block"
+      );
+      expect(forkChoice.getAllAncestorBlocks(hashBlock(block24.message))).toHaveLength(2);
       expect(forkChoice.getBlockHex(hashBlock(block08.message))).toBe(null);
       expect(forkChoice.getBlockHex(hashBlock(block12.message))).toBe(null);
       expect(forkChoice.hasBlockHex(hashBlock(block08.message))).toBe(false);
@@ -286,7 +289,10 @@ describe("LodestarForkChoice", function () {
       forkChoice.onBlock(blockZ.message, stateZ, blockDelaySec, blockZ.message.slot, executionStatus);
 
       const head = forkChoice.updateHead();
-      expect(head.blockRoot).toBe(toHexString(ssz.phase0.BeaconBlock.hashTreeRoot(blockY.message)));
+      expect(head.blockRoot).toBeWithMessage(
+        toHexString(ssz.phase0.BeaconBlock.hashTreeRoot(blockY.message)),
+        "blockY should be new head as it's a potential head and has same unrealized justified checkpoints & more attestations"
+      );
     });
   });
 });
