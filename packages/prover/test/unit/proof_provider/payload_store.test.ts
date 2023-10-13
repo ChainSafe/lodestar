@@ -1,7 +1,5 @@
-import {describe, it, expect, beforeEach} from "vitest";
-import chai from "chai";
-import sinon from "sinon";
-import sinonChai from "sinon-chai";
+import {describe, it, expect, beforeEach, vi, MockedObject} from "vitest";
+import {when} from "vitest-when";
 import {Api} from "@lodestar/api";
 import {hash} from "@lodestar/utils";
 import {Logger} from "@lodestar/logger";
@@ -9,8 +7,6 @@ import {allForks, capella} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
 import {PayloadStore} from "../../../src/proof_provider/payload_store.js";
 import {MAX_PAYLOAD_HISTORY} from "../../../src/constants.js";
-
-chai.use(sinonChai);
 
 const createHash = (input: string): Uint8Array => hash(Buffer.from(input, "utf8"));
 
@@ -57,12 +53,12 @@ const buildBlockResponse = ({
 });
 
 describe("proof_provider/payload_store", function () {
-  let api: Api;
+  let api: Api & {beacon: MockedObject<Api["beacon"]>};
   let logger: Logger;
   let store: PayloadStore;
 
   beforeEach(() => {
-    api = {beacon: {getBlockV2: sinon.stub()}} as unknown as Api;
+    api = {beacon: {getBlockV2: vi.fn()}} as unknown as Api & {beacon: MockedObject<Api["beacon"]>};
     logger = console as unknown as Logger;
     store = new PayloadStore({api, logger});
   });
@@ -193,21 +189,21 @@ describe("proof_provider/payload_store", function () {
         const availablePayload = buildPayload({blockNumber});
         const unavailablePayload = buildPayload({blockNumber: unavailableBlockNumber});
 
-        (api.beacon.getBlockV2 as sinon.SinonStub)
-          .withArgs(blockNumber)
-          .resolves(buildBlockResponse({blockNumber, slot: blockNumber}));
+        when(api.beacon.getBlockV2)
+          .calledWith(blockNumber)
+          .thenResolve(buildBlockResponse({blockNumber, slot: blockNumber}));
 
-        (api.beacon.getBlockV2 as sinon.SinonStub)
-          .withArgs(unavailableBlockNumber)
-          .resolves(buildBlockResponse({blockNumber: unavailableBlockNumber, slot: unavailableBlockNumber}));
+        when(api.beacon.getBlockV2)
+          .calledWith(unavailableBlockNumber)
+          .thenResolve(buildBlockResponse({blockNumber: unavailableBlockNumber, slot: unavailableBlockNumber}));
 
         store.set(availablePayload, true);
 
         const result = await store.get(unavailablePayload.blockNumber);
 
-        expect(api.beacon.getBlockV2 as sinon.SinonStub).calledTwice;
-        expect(api.beacon.getBlockV2 as sinon.SinonStub).calledWith(blockNumber);
-        expect(api.beacon.getBlockV2 as sinon.SinonStub).calledWith(unavailableBlockNumber);
+        expect(api.beacon.getBlockV2).toHaveBeenCalledTimes(2);
+        expect(api.beacon.getBlockV2).toHaveBeenCalledWith(blockNumber);
+        expect(api.beacon.getBlockV2).toHaveBeenCalledWith(unavailableBlockNumber);
         expect(result).toEqual(unavailablePayload);
       });
     });
@@ -245,12 +241,12 @@ describe("proof_provider/payload_store", function () {
         const blockResponse = buildBlockResponse({blockNumber, slot});
         const executionPayload = (blockResponse.response.data as capella.SignedBeaconBlock).message.body
           .executionPayload;
-        (api.beacon.getBlockV2 as sinon.SinonStub).resolves(blockResponse);
+        api.beacon.getBlockV2.mockResolvedValue(blockResponse);
 
         await store.processLCHeader(header, true);
 
-        expect(api.beacon.getBlockV2).calledOnce;
-        expect(api.beacon.getBlockV2).calledWith(20);
+        expect(api.beacon.getBlockV2).toHaveBeenCalledOnce();
+        expect(api.beacon.getBlockV2).toHaveBeenCalledWith(20);
         expect(store.finalized).toEqual(executionPayload);
       });
 
@@ -261,7 +257,7 @@ describe("proof_provider/payload_store", function () {
         const blockResponse = buildBlockResponse({blockNumber, slot});
         const executionPayload = (blockResponse.response.data as capella.SignedBeaconBlock).message.body
           .executionPayload;
-        (api.beacon.getBlockV2 as sinon.SinonStub).resolves(blockResponse);
+        api.beacon.getBlockV2.mockResolvedValue(blockResponse);
 
         expect(store.finalized).to.undefined;
         // First process as unfinalized
@@ -271,7 +267,7 @@ describe("proof_provider/payload_store", function () {
         await store.processLCHeader(header, true);
 
         // Called only once when we process unfinalized
-        expect(api.beacon.getBlockV2).to.be.calledOnce;
+        expect(api.beacon.getBlockV2).to.be.toHaveBeenCalledOnce();
         expect(store.finalized).toEqual(executionPayload);
       });
     });
@@ -280,19 +276,19 @@ describe("proof_provider/payload_store", function () {
       const blockNumber = 10;
       const slot = 20;
       const header = buildLCHeader({slot, blockNumber});
-      (api.beacon.getBlockV2 as sinon.SinonStub).resolves(buildBlockResponse({blockNumber, slot}));
+      api.beacon.getBlockV2.mockResolvedValue(buildBlockResponse({blockNumber, slot}));
 
       await store.processLCHeader(header);
 
-      expect(api.beacon.getBlockV2).calledOnce;
-      expect(api.beacon.getBlockV2).calledWith(20);
+      expect(api.beacon.getBlockV2).toHaveBeenCalledOnce();
+      expect(api.beacon.getBlockV2).toHaveBeenCalledWith(20);
     });
 
     it("should not fetch existing payload for lightclient header", async () => {
       const blockNumber = 10;
       const slot = 20;
       const header = buildLCHeader({slot, blockNumber});
-      (api.beacon.getBlockV2 as sinon.SinonStub).resolves(buildBlockResponse({blockNumber, slot}));
+      api.beacon.getBlockV2.mockResolvedValue(buildBlockResponse({blockNumber, slot}));
 
       await store.processLCHeader(header);
 
@@ -300,21 +296,21 @@ describe("proof_provider/payload_store", function () {
       await store.processLCHeader(header);
 
       // The network fetch should be done once
-      expect(api.beacon.getBlockV2).calledOnce;
-      expect(api.beacon.getBlockV2).calledWith(20);
+      expect(api.beacon.getBlockV2).toHaveBeenCalledOnce();
+      expect(api.beacon.getBlockV2).toHaveBeenCalledWith(20);
     });
 
     it("should prune the existing payloads", async () => {
       const blockNumber = 10;
       const slot = 20;
       const header = buildLCHeader({slot, blockNumber});
-      (api.beacon.getBlockV2 as sinon.SinonStub).resolves(buildBlockResponse({blockNumber, slot}));
+      api.beacon.getBlockV2.mockResolvedValue(buildBlockResponse({blockNumber, slot}));
 
-      sinon.spy(store, "prune");
+      vi.spyOn(store, "prune");
 
       await store.processLCHeader(header);
 
-      expect(store.prune).to.be.calledOnce;
+      expect(store.prune).toHaveBeenCalledOnce();
     });
   });
 
@@ -383,9 +379,9 @@ describe("proof_provider/payload_store", function () {
       const numberOfPayloads = MAX_PAYLOAD_HISTORY + 2;
 
       for (let i = 1; i <= numberOfPayloads; i++) {
-        (api.beacon.getBlockV2 as sinon.SinonStub)
-          .withArgs(i)
-          .resolves(buildBlockResponse({blockNumber: 500 + i, slot: i}));
+        when(api.beacon.getBlockV2)
+          .calledWith(i)
+          .thenResolve(buildBlockResponse({blockNumber: 500 + i, slot: i}));
 
         await store.processLCHeader(buildLCHeader({blockNumber: 500 + i, slot: i}), false);
       }

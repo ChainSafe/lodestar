@@ -81,12 +81,12 @@ describe("prover/start", () => {
       const accounts = await web3.eth.getAccounts();
 
       expect(accounts.length).toBeGreaterThan(0);
-      await expect(web3.eth.getBalance(accounts[0])).not.toBeNull();
+      await expect(web3.eth.getBalance(accounts[0])).resolves.not.toBeNull();
     });
 
     it("should respond to unverified calls", async () => {
       // Because web3 latest version return numbers as bigint by default
-      await expect(web3.eth.getChainId()).toEqual(BigInt(chainId));
+      await expect(web3.eth.getChainId()).resolves.toEqual(BigInt(chainId));
     });
   });
 });
