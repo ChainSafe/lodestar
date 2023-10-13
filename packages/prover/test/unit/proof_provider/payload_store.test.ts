@@ -121,14 +121,14 @@ describe("proof_provider/payload_store", function () {
 
   describe("get", () => {
     it("should return undefined for an empty store", async () => {
-      await expect(store.get(10)).to.eventually.undefined;
+      await expect(store.get(10)).resolves.toBeUndefined();
     });
 
     it("should return undefined for non existing block id", async () => {
       const payload1 = buildPayload({blockNumber: 10});
       store.set(payload1, false);
 
-      await expect(store.get(11)).to.eventually.undefined;
+      await expect(store.get(11)).resolves.toBeUndefined();
     });
 
     it("should return undefined for non existing block hash", async () => {
@@ -136,7 +136,7 @@ describe("proof_provider/payload_store", function () {
       store.set(payload1, false);
       const nonExistingBlockHash = createHash("non-existing-block-hash");
 
-      await expect(store.get(toHexString(nonExistingBlockHash))).to.eventually.undefined;
+      await expect(store.get(toHexString(nonExistingBlockHash))).resolves.toBeUndefined();
     });
 
     describe("block hash as blockId", () => {
@@ -144,7 +144,7 @@ describe("proof_provider/payload_store", function () {
         const payload1 = buildPayload({blockNumber: 10});
         store.set(payload1, false);
 
-        await expect(store.get(toHexString(payload1.blockHash))).to.eventually.eql(payload1);
+        await expect(store.get(toHexString(payload1.blockHash))).resolves.toEqual(payload1);
       });
     });
 
@@ -153,7 +153,7 @@ describe("proof_provider/payload_store", function () {
         const finalizedPayload = buildPayload({blockNumber: 10});
         store.set(finalizedPayload, true);
 
-        await expect(store.get(11)).to.rejectedWith(
+        await expect(store.get(11)).rejects.toThrow(
           "Block number 11 is higher than the latest finalized block number. We recommend to use block hash for unfinalized blocks."
         );
       });
@@ -162,28 +162,28 @@ describe("proof_provider/payload_store", function () {
         const payload1 = buildPayload({blockNumber: 10});
         store.set(payload1, false);
 
-        await expect(store.get(10)).to.eventually.undefined;
+        await expect(store.get(10)).resolves.toBeUndefined();
       });
 
       it("should return payload for a block number in hex", async () => {
         const payload1 = buildPayload({blockNumber: 10});
         store.set(payload1, true);
 
-        await expect(store.get(`0x${payload1.blockNumber.toString(16)}`)).to.eventually.eql(payload1);
+        await expect(store.get(`0x${payload1.blockNumber.toString(16)}`)).resolves.toEqual(payload1);
       });
 
       it("should return payload for a block number as string", async () => {
         const payload1 = buildPayload({blockNumber: 10});
         store.set(payload1, true);
 
-        await expect(store.get(payload1.blockNumber.toString())).to.eventually.eql(payload1);
+        await expect(store.get(payload1.blockNumber.toString())).resolves.toEqual(payload1);
       });
 
       it("should return payload for a block number as integer", async () => {
         const payload1 = buildPayload({blockNumber: 10});
         store.set(payload1, true);
 
-        await expect(store.get(10)).to.eventually.eql(payload1);
+        await expect(store.get(10)).resolves.toEqual(payload1);
       });
 
       it("should fetch the finalized payload from API if payload root not exists", async () => {
@@ -219,7 +219,7 @@ describe("proof_provider/payload_store", function () {
       store.set(payload1, false);
 
       // Unfinalized blocks are not indexed by block hash
-      await expect(store.get(toHexString(payload1.blockHash))).to.eventually.eql(payload1);
+      await expect(store.get(toHexString(payload1.blockHash))).resolves.toEqual(payload1);
       expect(store.finalized).toEqual(undefined);
     });
 
@@ -227,7 +227,7 @@ describe("proof_provider/payload_store", function () {
       const payload1 = buildPayload({blockNumber: 10});
       store.set(payload1, true);
 
-      await expect(store.get(payload1.blockNumber.toString())).to.eventually.eql(payload1);
+      await expect(store.get(payload1.blockNumber.toString())).resolves.toEqual(payload1);
       expect(store.finalized).toEqual(payload1);
     });
   });
