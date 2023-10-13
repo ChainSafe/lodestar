@@ -253,6 +253,7 @@ export class NetworkCore implements INetworkCore {
   /** Destroy this instance. Can only be called once. */
   async close(): Promise<void> {
     if (this.closed) return;
+
     this.clock.off(ClockEvent.epoch, this.onEpoch);
 
     // Must goodbye and disconnect before stopping libp2p
