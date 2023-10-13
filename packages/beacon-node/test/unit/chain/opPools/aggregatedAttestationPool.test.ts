@@ -1,13 +1,10 @@
-import {expect} from "chai";
-import {SinonStubbedInstance} from "sinon";
-import sinon from "sinon";
 import type {SecretKey} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
 import {BitArray, fromHexString, toHexString} from "@chainsafe/ssz";
+import {describe, it, expect, beforeEach, beforeAll, afterEach, vi} from "vitest";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz, phase0} from "@lodestar/types";
-import {ForkChoice, IForkChoice} from "@lodestar/fork-choice";
 import {
   AggregatedAttestationPool,
   aggregateInto,
@@ -20,6 +17,7 @@ import {generateCachedAltairState} from "../../../utils/state.js";
 import {renderBitArray} from "../../../utils/render.js";
 import {ZERO_HASH_HEX} from "../../../../src/constants/constants.js";
 import {generateProtoBlock} from "../../../utils/typeGenerator.js";
+import {MockedBeaconChain, getMockedBeaconChain} from "../../../__mocks__/mockedBeaconChain.js";
 
 /** Valid signature of random data to prevent BLS errors */
 const validSignature = fromHexString(
@@ -40,17 +38,16 @@ describe("AggregatedAttestationPool", function () {
   const attDataRootHex = toHexString(ssz.phase0.AttestationData.hashTreeRoot(attestation.data));
 
   const committee = [0, 1, 2, 3];
-  let forkchoiceStub: SinonStubbedInstance<IForkChoice>;
-  const sandbox = sinon.createSandbox();
+  let forkchoiceStub: MockedBeaconChain["forkChoice"];
 
   beforeEach(() => {
     pool = new AggregatedAttestationPool();
     altairState = originalState.clone();
-    forkchoiceStub = sandbox.createStubInstance(ForkChoice);
+    forkchoiceStub = getMockedBeaconChain().forkChoice;
   });
 
-  this.afterEach(() => {
-    sandbox.restore();
+  afterEach(() => {
+    vi.clearAllMocks();
   });
 
   it("getParticipationFn", () => {
@@ -58,7 +55,7 @@ describe("AggregatedAttestationPool", function () {
     // 0 and 1 are fully participated
     const participationFn = getParticipationFn(altairState);
     const participation = participationFn(currentEpoch, committee);
-    expect(participation).to.deep.equal(new Set([0, 1]), "Wrong participation set");
+    expect(participation).toEqual(new Set([0, 1]));
   });
 
   // previousEpochParticipation and currentEpochParticipation is created inside generateCachedState
@@ -78,17 +75,15 @@ describe("AggregatedAttestationPool", function () {
         aggregationBits.getTrueBitIndexes().length,
         committee
       );
-      forkchoiceStub.getBlockHex.returns(generateProtoBlock());
-      forkchoiceStub.getDependentRoot.returns(ZERO_HASH_HEX);
+      forkchoiceStub.getBlockHex.mockReturnValue(generateProtoBlock());
+      forkchoiceStub.getDependentRoot.mockReturnValue(ZERO_HASH_HEX);
       if (isReturned) {
-        expect(pool.getAttestationsForBlock(forkchoiceStub, altairState).length).to.be.above(
-          0,
-          "Wrong attestation isReturned"
-        );
+        expect(pool.getAttestationsForBlock(forkchoiceStub, altairState).length).toBeGreaterThan(0);
       } else {
-        expect(pool.getAttestationsForBlock(forkchoiceStub, altairState).length).to.eql(0);
+        expect(pool.getAttestationsForBlock(forkchoiceStub, altairState).length).toEqual(0);
       }
-      expect(forkchoiceStub.getDependentRoot, "forkchoice should be called to check pivot block").to.be.calledOnce;
+      // "forkchoice should be called to check pivot block"
+      expect(forkchoiceStub.getDependentRoot).toHaveBeenCalledTimes(1);
     });
   }
 
@@ -97,24 +92,20 @@ describe("AggregatedAttestationPool", function () {
     // all attesters are not seen
     const attestingIndices = [2, 3];
     pool.add(attestation, attDataRootHex, attestingIndices.length, committee);
-    expect(pool.getAttestationsForBlock(forkchoiceStub, altairState)).to.be.deep.equal(
-      [],
-      "no attestation since incorrect source"
-    );
-    expect(forkchoiceStub.iterateAncestorBlocks, "forkchoice should not be called").to.not.be.calledOnce;
+    expect(pool.getAttestationsForBlock(forkchoiceStub, altairState)).toEqual([]);
+    // "forkchoice should not be called"
+    expect(forkchoiceStub.iterateAncestorBlocks).not.toHaveBeenCalledTimes(1);
   });
 
   it("incompatible shuffling - incorrect pivot block root", function () {
     // all attesters are not seen
     const attestingIndices = [2, 3];
     pool.add(attestation, attDataRootHex, attestingIndices.length, committee);
-    forkchoiceStub.getBlockHex.returns(generateProtoBlock());
-    forkchoiceStub.getDependentRoot.returns("0xWeird");
-    expect(pool.getAttestationsForBlock(forkchoiceStub, altairState)).to.be.deep.equal(
-      [],
-      "no attestation since incorrect pivot block root"
-    );
-    expect(forkchoiceStub.getDependentRoot, "forkchoice should be called to check pivot block").to.be.calledOnce;
+    forkchoiceStub.getBlockHex.mockReturnValue(generateProtoBlock());
+    forkchoiceStub.getDependentRoot.mockReturnValue("0xWeird");
+    expect(pool.getAttestationsForBlock(forkchoiceStub, altairState)).toEqual([]);
+    // "forkchoice should be called to check pivot block"
+    expect(forkchoiceStub.getDependentRoot).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -171,18 +162,15 @@ describe("MatchingDataAttestationGroup.add()", () => {
         attestationGroup.add({attestation, trueBitsCount: attestation.aggregationBits.getTrueBitIndexes().length})
       );
 
-      expect(results).to.deep.equal(
-        attestationsToAdd.map((e) => e.res),
-        "Wrong InsertOutcome results"
-      );
+      expect(results).toEqual(attestationsToAdd.map((e) => e.res));
 
       const attestationsAfterAdding = attestationGroup.getAttestations();
 
       for (const [i, {isKept}] of attestationsToAdd.entries()) {
         if (isKept) {
-          expect(attestationsAfterAdding.indexOf(attestations[i])).to.be.gte(0, `Right attestation ${i} missed.`);
+          expect(attestationsAfterAdding.indexOf(attestations[i])).toBeGreaterThanOrEqual(0);
         } else {
-          expect(attestationsAfterAdding.indexOf(attestations[i])).to.be.eql(-1, `Wrong attestation ${i} is kept.`);
+          expect(attestationsAfterAdding.indexOf(attestations[i])).toEqual(-1);
         }
       }
     });
@@ -247,10 +235,7 @@ describe("MatchingDataAttestationGroup.getAttestationsForBlock", () => {
       for (const [i, {notSeenAttesterCount}] of attestationsToAdd.entries()) {
         const attestation = attestationsForBlock.find((a) => a.attestation === attestations[i]);
         // If notSeenAttesterCount === 0 the attestation is not returned
-        expect(attestation ? attestation.notSeenAttesterCount : 0).to.equal(
-          notSeenAttesterCount,
-          `attestation ${i} wrong returned notSeenAttesterCount`
-        );
+        expect(attestation ? attestation.notSeenAttesterCount : 0).toBe(notSeenAttesterCount);
       }
     });
   }
@@ -265,7 +250,7 @@ describe("MatchingDataAttestationGroup aggregateInto", function () {
   let sk1: SecretKey;
   let sk2: SecretKey;
 
-  before("Init BLS", async () => {
+  beforeAll(async () => {
     sk1 = bls.SecretKey.fromBytes(Buffer.alloc(32, 1));
     sk2 = bls.SecretKey.fromBytes(Buffer.alloc(32, 2));
     attestation1.signature = sk1.sign(attestationDataRoot).toBytes();
@@ -277,13 +262,8 @@ describe("MatchingDataAttestationGroup aggregateInto", function () {
     const attWithIndex2 = {attestation: attestation2, trueBitsCount: 1};
     aggregateInto(attWithIndex1, attWithIndex2);
 
-    expect(renderBitArray(attWithIndex1.attestation.aggregationBits)).to.be.deep.equal(
-      renderBitArray(mergedBitArray),
-      "invalid aggregationBits"
-    );
+    expect(renderBitArray(attWithIndex1.attestation.aggregationBits)).toEqual(renderBitArray(mergedBitArray));
     const aggregatedSignature = bls.Signature.fromBytes(attWithIndex1.attestation.signature, undefined, true);
-    expect(
-      aggregatedSignature.verifyAggregate([sk1.toPublicKey(), sk2.toPublicKey()], attestationDataRoot)
-    ).to.be.equal(true, "invalid aggregated signature");
+    expect(aggregatedSignature.verifyAggregate([sk1.toPublicKey(), sk2.toPublicKey()], attestationDataRoot)).toBe(true);
   });
 });

@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {rejectFirstInvalidResolveAllValid} from "../../../../src/chain/blocks/verifyBlocksSignatures.js";
 
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
@@ -22,7 +22,7 @@ describe("chain / blocks / rejectFirstInvalidResolveAllValid", () => {
     resolves[0](false);
     await tick();
 
-    expect(logStrs).deep.equals(["2_true", "1_false", "invalid_1", "0_false"]);
+    expect(logStrs).toEqual(["2_true", "1_false", "invalid_1", "0_false"]);
   });
 
   it("Resolve when all isValid = true", async () => {
@@ -35,7 +35,7 @@ describe("chain / blocks / rejectFirstInvalidResolveAllValid", () => {
       await tick();
     }
 
-    expect(logStrs).deep.equals(["0_true", "1_true", "2_true", "all_valid"]);
+    expect(logStrs).toEqual(["0_true", "1_true", "2_true", "all_valid"]);
   });
 });
 

@@ -1,10 +1,9 @@
-import sinon, {SinonStubbedInstance} from "sinon";
 import {digest} from "@chainsafe/as-sha256";
 import bls from "@chainsafe/bls";
 import {PointFormat} from "@chainsafe/bls/types";
+import {describe, it, beforeEach, afterEach, vi} from "vitest";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {computeSigningRoot} from "@lodestar/state-transition";
-import {ForkChoice} from "@lodestar/fork-choice";
 import {capella, ssz} from "@lodestar/types";
 import {
   BLS_WITHDRAWAL_PREFIX,
@@ -16,22 +15,16 @@ import {
 } from "@lodestar/params";
 import {createBeaconConfig} from "@lodestar/config";
 
-import {BeaconChain} from "../../../../src/chain/index.js";
-import {StubbedChainMutable} from "../../../utils/stub/index.js";
 import {generateState} from "../../../utils/state.js";
 import {validateGossipBlsToExecutionChange} from "../../../../src/chain/validation/blsToExecutionChange.js";
 import {BlsToExecutionChangeErrorCode} from "../../../../src/chain/errors/blsToExecutionChangeError.js";
-import {OpPool} from "../../../../src/chain/opPools/index.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState.js";
-import {BlsVerifierMock} from "../../../utils/mocks/bls.js";
-
-type StubbedChain = StubbedChainMutable<"forkChoice" | "bls">;
+import {MockedBeaconChain, getMockedBeaconChain} from "../../../__mocks__/mockedBeaconChain.js";
 
 describe("validate bls to execution change", () => {
-  const sandbox = sinon.createSandbox();
-  let chainStub: StubbedChain;
-  let opPool: OpPool & SinonStubbedInstance<OpPool>;
+  let chainStub: MockedBeaconChain;
+  let opPool: MockedBeaconChain["opPool"];
 
   const stateEmpty = ssz.phase0.BeaconState.defaultValue();
   // Validator has to be active for long enough
@@ -92,17 +85,15 @@ describe("validate bls to execution change", () => {
   const signedBlsToExecChange = {message: blsToExecutionChange, signature: wsk.sign(signingRoot).toBytes()};
 
   beforeEach(() => {
-    chainStub = sandbox.createStubInstance(BeaconChain) as StubbedChain;
-    chainStub.forkChoice = sandbox.createStubInstance(ForkChoice);
-    opPool = sandbox.createStubInstance(OpPool) as OpPool & SinonStubbedInstance<OpPool>;
-    (chainStub as {opPool: OpPool}).opPool = opPool;
-    chainStub.getHeadState.returns(state);
-    // TODO: Use actual BLS verification
-    chainStub.bls = new BlsVerifierMock(true);
+    chainStub = getMockedBeaconChain();
+    opPool = chainStub.opPool;
+    vi.spyOn(chainStub, "getHeadState").mockReturnValue(state);
+    vi.spyOn(chainStub, "getHeadStateAtCurrentEpoch");
+    vi.spyOn(opPool, "hasSeenBlsToExecutionChange");
   });
 
   afterEach(() => {
-    sandbox.restore();
+    vi.clearAllMocks();
   });
 
   it("should return invalid bls to execution Change - existing", async () => {
@@ -112,7 +103,7 @@ describe("validate bls to execution change", () => {
     };
 
     // Return BlsToExecutionChange known
-    opPool.hasSeenBlsToExecutionChange.returns(true);
+    opPool.hasSeenBlsToExecutionChange.mockReturnValue(true);
 
     await expectRejectedWithLodestarError(
       validateGossipBlsToExecutionChange(chainStub, signedBlsToExecChangeInvalid),

@@ -121,6 +121,12 @@ export function createLodestarMetrics(
         help: "Current count of pending items in reqRespBridgeReqCaller data structure",
       }),
     },
+    networkWorkerWireEventsOnMainThreadLatency: register.histogram<"eventName">({
+      name: "lodestar_network_worker_wire_events_on_main_thread_latency_seconds",
+      help: "Latency in seconds to transmit network events to main thread across worker port",
+      labelNames: ["eventName"],
+      buckets: [0.001, 0.003, 0.01, 0.03, 0.1],
+    }),
 
     regenQueue: {
       length: register.gauge({

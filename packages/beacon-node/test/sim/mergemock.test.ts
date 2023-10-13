@@ -192,6 +192,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     } as ValidatorProposerConfig;
 
     const {validators} = await getAndInitDevValidators({
+      logPrefix: "mergemock",
       node: bn,
       validatorsPerClient,
       validatorClientCount,

@@ -1,19 +1,19 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import {expect} from "chai";
+import {describe, it, expect, beforeAll} from "vitest";
 import {config} from "@lodestar/config/default";
 import {getBeaconApi} from "../../../../../src/api/impl/beacon/index.js";
-import {StubbedBeaconDb} from "../../../../utils/stub/index.js";
-import {setupApiImplTestServer, ApiImplTestModules} from "../index.test.js";
+import {setupApiImplTestServer, ApiImplTestModules} from "../../../../__mocks__/apiMocks.js";
 import {testLogger} from "../../../../utils/logger.js";
+import {MockedBeaconDb} from "../../../../__mocks__/mockedBeaconDb.js";
 
 describe("beacon api implementation", function () {
   const logger = testLogger();
-  let dbStub: StubbedBeaconDb;
+  let dbStub: MockedBeaconDb;
   let server: ApiImplTestModules;
 
-  before(function () {
+  beforeAll(function () {
     server = setupApiImplTestServer();
-    dbStub = new StubbedBeaconDb();
+    dbStub = new MockedBeaconDb();
   });
 
   describe("getGenesis", function () {
@@ -32,9 +32,9 @@ describe("beacon api implementation", function () {
       (server.chainStub as any).genesisValidatorsRoot = Buffer.alloc(32);
       const {data: genesis} = await api.getGenesis();
       if (genesis === null || genesis === undefined) throw Error("Genesis is nullish");
-      expect(genesis.genesisForkVersion).to.not.be.undefined;
-      expect(genesis.genesisTime).to.not.be.undefined;
-      expect(genesis.genesisValidatorsRoot).to.not.be.undefined;
+      expect(genesis.genesisForkVersion).toBeDefined();
+      expect(genesis.genesisTime).toBeDefined();
+      expect(genesis.genesisValidatorsRoot).toBeDefined();
     });
   });
 });

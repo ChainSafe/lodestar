@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {encodeJwtToken, decodeJwtToken} from "../../../src/eth1/provider/jwt.js";
 
 describe("ExecutionEngine / jwt", () => {
@@ -7,7 +7,7 @@ describe("ExecutionEngine / jwt", () => {
     const claim = {iat: Math.floor(new Date().getTime() / 1000)};
     const token = encodeJwtToken(claim, jwtSecret);
     const decoded = decodeJwtToken(token, jwtSecret);
-    expect(decoded).to.be.deep.equal(claim, "Invalid encoding/decoding of claim");
+    expect(decoded).toEqual(claim);
   });
 
   it("encode a claim correctly from a hex key", () => {
@@ -15,9 +15,8 @@ describe("ExecutionEngine / jwt", () => {
     const jwtSecret = Buffer.from(jwtSecretHex, "hex");
     const claim = {iat: 1645551452};
     const token = encodeJwtToken(claim, jwtSecret);
-    expect(token).to.be.equal(
-      "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE2NDU1NTE0NTJ9.nUDaIyGPgRX76tQ_kDlcIGj4uyFA4lFJGKsD_GHIEzM",
-      "Invalid encoding of claim"
+    expect(token).toBe(
+      "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE2NDU1NTE0NTJ9.nUDaIyGPgRX76tQ_kDlcIGj4uyFA4lFJGKsD_GHIEzM"
     );
   });
 });
