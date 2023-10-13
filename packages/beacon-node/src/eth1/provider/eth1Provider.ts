@@ -1,15 +1,25 @@
 import {toHexString} from "@chainsafe/ssz";
 import {phase0} from "@lodestar/types";
 import {ChainConfig} from "@lodestar/config";
-import {fromHex} from "@lodestar/utils";
+import {fromHex, isErrorAborted, createElapsedTimeTracker} from "@lodestar/utils";
+import {Logger} from "@lodestar/logger";
 
+import {FetchError, isFetchError} from "@lodestar/api";
 import {linspace} from "../../util/numpy.js";
 import {depositEventTopics, parseDepositLog} from "../utils/depositContract.js";
-import {Eth1Block, IEth1Provider} from "../interface.js";
+import {Eth1Block, Eth1ProviderState, IEth1Provider} from "../interface.js";
 import {DEFAULT_PROVIDER_URLS, Eth1Options} from "../options.js";
 import {isValidAddress} from "../../util/address.js";
 import {EthJsonRpcBlockRaw} from "../interface.js";
-import {JsonRpcHttpClient, JsonRpcHttpClientMetrics, ReqOpts} from "./jsonRpcHttpClient.js";
+import {HTTP_CONNECTION_ERROR_CODES, HTTP_FATAL_ERROR_CODES} from "../../execution/engine/utils.js";
+import {
+  ErrorJsonRpcResponse,
+  HttpRpcError,
+  JsonRpcHttpClient,
+  JsonRpcHttpClientEvent,
+  JsonRpcHttpClientMetrics,
+  ReqOpts,
+} from "./jsonRpcHttpClient.js";
 import {isJsonRpcTruncatedError, quantityToNum, numToQuantity, dataToBytes} from "./utils.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -42,17 +52,23 @@ const getBlockByHashOpts: ReqOpts = {routeId: "getBlockByHash"};
 const getBlockNumberOpts: ReqOpts = {routeId: "getBlockNumber"};
 const getLogsOpts: ReqOpts = {routeId: "getLogs"};
 
+const isOneMinutePassed = createElapsedTimeTracker({minElapsedTime: 60_000});
+
 export class Eth1Provider implements IEth1Provider {
   readonly deployBlock: number;
   private readonly depositContractAddress: string;
   private readonly rpc: JsonRpcHttpClient;
+  // The default state is ONLINE, it will be updated to offline if we receive a http error
+  private state: Eth1ProviderState = Eth1ProviderState.ONLINE;
+  private logger?: Logger;
 
   constructor(
     config: Pick<ChainConfig, "DEPOSIT_CONTRACT_ADDRESS">,
-    opts: Pick<Eth1Options, "depositContractDeployBlock" | "providerUrls" | "jwtSecretHex">,
+    opts: Pick<Eth1Options, "depositContractDeployBlock" | "providerUrls" | "jwtSecretHex"> & {logger?: Logger},
     signal?: AbortSignal,
     metrics?: JsonRpcHttpClientMetrics | null
   ) {
+    this.logger = opts.logger;
     this.deployBlock = opts.depositContractDeployBlock ?? 0;
     this.depositContractAddress = toHexString(config.DEPOSIT_CONTRACT_ADDRESS);
     this.rpc = new JsonRpcHttpClient(opts.providerUrls ?? DEFAULT_PROVIDER_URLS, {
@@ -62,6 +78,44 @@ export class Eth1Provider implements IEth1Provider {
       jwtSecret: opts.jwtSecretHex ? fromHex(opts.jwtSecretHex) : undefined,
       metrics: metrics,
     });
+
+    this.rpc.emitter.on(JsonRpcHttpClientEvent.RESPONSE, () => {
+      const oldState = this.state;
+      this.state = Eth1ProviderState.ONLINE;
+
+      if (oldState !== Eth1ProviderState.ONLINE) {
+        this.logger?.info("Eth1Provider is back online", {oldState, newState: this.state});
+      }
+    });
+
+    this.rpc.emitter.on(JsonRpcHttpClientEvent.ERROR, ({error}) => {
+      if (isErrorAborted(error)) {
+        this.state = Eth1ProviderState.ONLINE;
+      } else if ((error as unknown) instanceof HttpRpcError || (error as unknown) instanceof ErrorJsonRpcResponse) {
+        this.state = Eth1ProviderState.ERROR;
+      } else if (error && isFetchError(error) && HTTP_FATAL_ERROR_CODES.includes((error as FetchError).code)) {
+        this.state = Eth1ProviderState.OFFLINE;
+      } else if (error && isFetchError(error) && HTTP_CONNECTION_ERROR_CODES.includes((error as FetchError).code)) {
+        this.state = Eth1ProviderState.AUTH_FAILED;
+      }
+
+      if (this.state !== Eth1ProviderState.ONLINE) {
+        if (isOneMinutePassed()) {
+          this.logger?.error(
+            "Eth1Provider faced error",
+            {
+              state: this.state,
+              lastErrorAt: new Date(Date.now() - isOneMinutePassed.msSinceLastCall).toLocaleTimeString(),
+            },
+            error
+          );
+        }
+      }
+    });
+  }
+
+  getState(): Eth1ProviderState {
+    return this.state;
   }
 
   async validateContract(): Promise<void> {

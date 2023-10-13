@@ -357,7 +357,9 @@ export class ForkChoice implements IForkChoice {
     if (
       this.opts?.proposerBoostEnabled &&
       this.fcStore.currentSlot === slot &&
-      blockDelaySec < this.config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT
+      blockDelaySec < this.config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT &&
+      // only boost the first block we see
+      this.proposerBoostRoot === null
     ) {
       this.proposerBoostRoot = blockRootHex;
     }

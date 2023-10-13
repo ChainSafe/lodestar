@@ -1,7 +1,7 @@
 /**
  * Interface of a generic Lodestar logger. For implementations, see `@lodestar/logger`
  */
-export type Logger = Record<LogLevel, LogHandler>;
+export type Logger = Record<Exclude<LogLevel, LogLevel.trace>, LogHandler>;
 
 export enum LogLevel {
   error = "error",

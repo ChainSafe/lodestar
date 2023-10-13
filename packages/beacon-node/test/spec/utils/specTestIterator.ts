@@ -20,6 +20,53 @@ export interface SkipOpts {
 }
 
 /**
+ * Because we want to execute the spec tests in parallel so one or two runners will be executed
+ * in isolation at a time and would not be available how many runners are there in total.
+ * This list is curated manually and should be updated when new runners are added.
+ * It will make sure if specs introduce new runner, we should cover in our spec tests.
+ */
+const coveredTestRunners = [
+  "light_client",
+  "epoch_processing",
+  "finality",
+  "fork",
+  "fork_choice",
+  "sync",
+  "fork",
+  "genesis",
+  "merkle",
+  "operations",
+  "rewards",
+  "sanity",
+  "random",
+  "shuffling",
+  "ssz_static",
+  "transition",
+];
+
+// NOTE: You MUST always provide a detailed reason of why a spec test is skipped plus link
+// to an issue marking it as pending to re-enable and an aproximate timeline of when it will
+// be fixed.
+// NOTE: Comment the minimum set of test necessary to unblock PRs: For example, instead of
+// skipping all `bls_to_execution_change` tests, just skip for a fork setting:
+// ```
+// skippedPrefixes: [
+//    // Skipped since this only test that withdrawals are de-activated
+//    "eip4844/operations/bls_to_execution_change",
+// ],
+// ```
+export const defaultSkipOpts: SkipOpts = {
+  skippedForks: ["eip6110"],
+  // TODO: capella
+  // BeaconBlockBody proof in lightclient is the new addition in v1.3.0-rc.2-hotfix
+  // Skip them for now to enable subsequently
+  skippedPrefixes: [
+    "capella/light_client/single_merkle_proof/BeaconBlockBody",
+    "deneb/light_client/single_merkle_proof/BeaconBlockBody",
+  ],
+};
+
+/**
  * This helper ensures that strictly all tests are run. There's no hardcoded value beyond "config".
  * Any additional unknown fork, testRunner, testHandler, or testSuite will result in an error.
  *
@@ -48,7 +95,7 @@ export interface SkipOpts {
 export function specTestIterator(
   configDirpath: string,
   testRunners: Record<string, TestRunner>,
-  opts?: SkipOpts
+  opts: SkipOpts = defaultSkipOpts
 ): void {
   for (const forkStr of readdirSyncSpec(configDirpath)) {
     if (opts?.skippedForks?.includes(forkStr)) {
@@ -65,6 +112,17 @@ export function specTestIterator(
       const testRunnerDirpath = path.join(forkDirpath, testRunnerName);
       const testRunner = testRunners[testRunnerName];
 
+      if (testRunner === undefined && coveredTestRunners.includes(testRunnerName)) {
+        // That runner is not part of the current call to specTestIterator
+        continue;
+      }
+
+      if (testRunner === undefined && !coveredTestRunners.includes(testRunnerName)) {
+        throw new Error(
+          `No test runner for ${testRunnerName}. Please make sure it is covered in "coveredTestRunners" if you added new runner.`
+        );
+      }
+
       for (const testHandler of readdirSyncSpec(testRunnerDirpath)) {
         if (opts?.skippedHandlers?.includes(testHandler)) {
           continue;
@@ -78,8 +136,6 @@ export function specTestIterator(
             displaySkipTest(testId);
           } else if (fork === undefined) {
             displayFailTest(testId, `Unknown fork ${forkStr}`);
-          } else if (testRunner === undefined) {
-            displayFailTest(testId, `No test runner for ${testRunnerName}`);
           } else {
             const testSuiteDirpath = path.join(testHandlerDirpath, testSuite);
             // Specific logic for ssz_static since it has one extra level of directories

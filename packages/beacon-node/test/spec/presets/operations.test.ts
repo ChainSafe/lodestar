@@ -1,3 +1,4 @@
+import path from "node:path";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
@@ -11,12 +12,14 @@ import {
 import * as blockFns from "@lodestar/state-transition/block";
 import {ssz, phase0, altair, bellatrix, capella, eip6110} from "@lodestar/types";
 import {InputType} from "@lodestar/spec-test-util";
-import {ForkName} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {getConfig} from "../../utils/config.js";
-import {BaseSpecTest, shouldVerify, TestRunnerFn} from "../utils/types.js";
+import {BaseSpecTest, RunnerType, shouldVerify, TestRunnerFn} from "../utils/types.js";
+import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
+import {specTestIterator} from "../utils/specTestIterator.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -101,7 +104,7 @@ export type OperationsTestCase = {
   execution: {execution_valid: boolean};
 };
 
-export const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork, testName) => {
+const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork, testName) => {
   const operationFn = operationFns[testName];
   if (operationFn === undefined) {
     throw Error(`No operationFn for ${testName}`);
@@ -151,3 +154,7 @@ export const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> =
 };
 
 type ExecutionFork = Exclude<ForkName, ForkName.phase0 | ForkName.altair>;
+
+specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
+  operations: {type: RunnerType.default, fn: operations},
+});

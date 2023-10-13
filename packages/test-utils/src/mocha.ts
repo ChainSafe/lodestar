@@ -1,7 +1,7 @@
 import type {Suite} from "mocha";
 import {Logger} from "@lodestar/utils";
 import {TestContext} from "./interfaces.js";
-export {TestContext} from "./interfaces.js";
+export type {TestContext} from "./interfaces.js";
 
 /**
  * Create a Mocha context object that can be used to register callbacks that will be executed

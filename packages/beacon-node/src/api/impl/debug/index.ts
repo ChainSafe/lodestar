@@ -1,4 +1,4 @@
-import {routes, ServerApi} from "@lodestar/api";
+import {routes, ServerApi, ResponseFormat} from "@lodestar/api";
 import {resolveStateId} from "../beacon/state/utils.js";
 import {ApiModules} from "../types.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
@@ -36,7 +36,7 @@ export function getDebugApi({chain, config}: Pick<ApiModules, "chain" | "config"
       return {data: nodes};
     },
 
-    async getState(stateId: string | number, format?: routes.debug.StateFormat) {
+    async getState(stateId: string | number, format?: ResponseFormat) {
       const {state} = await resolveStateId(chain, stateId, {allowRegen: true});
       if (format === "ssz") {
         // Casting to any otherwise Typescript doesn't like the multi-type return
@@ -47,7 +47,7 @@ export function getDebugApi({chain, config}: Pick<ApiModules, "chain" | "config"
       }
     },
 
-    async getStateV2(stateId: string | number, format?: routes.debug.StateFormat) {
+    async getStateV2(stateId: string | number, format?: ResponseFormat) {
       const {state} = await resolveStateId(chain, stateId, {allowRegen: true});
       if (format === "ssz") {
         // Casting to any otherwise Typescript doesn't like the multi-type return

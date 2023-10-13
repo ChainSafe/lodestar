@@ -23,7 +23,8 @@ describe("chain / lightclient", function () {
   const maxLcHeadTrackingDiffSlots = 4;
   const validatorCount = 8;
   const validatorClientCount = 4;
-  const targetSyncCommittee = 3;
+  // Reduced from 3 to 1, so test can complete in 10 epoch vs 27 epoch
+  const targetSyncCommittee = 1;
   /** N sync committee periods + 1 epoch of margin */
   const finalizedEpochToReach = targetSyncCommittee * EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1;
   /** Given 100% participation the fastest epoch to reach finalization is +2 epochs. -1 for margin */
@@ -53,7 +54,7 @@ describe("chain / lightclient", function () {
 
     // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
     // also delay to allow bls workers to be transpiled/initialized
-    const genesisSlotsDelay = 16;
+    const genesisSlotsDelay = 7;
     const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
 
     const testLoggerOpts: TestLoggerOpts = {

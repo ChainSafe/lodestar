@@ -18,6 +18,7 @@ import {
   ContainerData,
 } from "../../../utils/index.js";
 import {HttpStatusCode} from "../../../utils/client/httpStatusCode.js";
+import {parseAcceptHeader, writeAcceptHeader} from "../../../utils/acceptHeader.js";
 import {ApiClientResponse, ResponseFormat} from "../../../interfaces.js";
 import {
   SignedBlockContents,
@@ -31,7 +32,6 @@ import {
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
 export type BlockId = RootHex | Slot | "head" | "genesis" | "finalized";
-export const mimeTypeSSZ = "application/octet-stream";
 
 /**
  * True if the response references an unverified execution payload. Optimistic information may be invalidated at
@@ -283,9 +283,9 @@ export function getReqSerializers(config: ChainForkConfig): ReqSerializers<Api, 
   const getBlockReq: ReqSerializer<Api["getBlock"], GetBlockReq> = {
     writeReq: (block_id, format) => ({
       params: {block_id: String(block_id)},
-      headers: {accept: format === "ssz" ? mimeTypeSSZ : "application/json"},
+      headers: {accept: writeAcceptHeader(format)},
     }),
-    parseReq: ({params, headers}) => [params.block_id, headers.accept === mimeTypeSSZ ? "ssz" : "json"],
+    parseReq: ({params, headers}) => [params.block_id, parseAcceptHeader(headers.accept)],
     schema: {params: {block_id: Schema.StringRequired}},
   };
 

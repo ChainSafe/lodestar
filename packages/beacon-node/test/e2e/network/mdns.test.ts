@@ -24,6 +24,7 @@ import {memoOnce} from "../../utils/cache.js";
 let port = 9000;
 const mu = "/ip4/127.0.0.1/tcp/0";
 
+// https://github.com/ChainSafe/lodestar/issues/5967
 // eslint-disable-next-line mocha/no-skipped-tests
 describe.skip("mdns", function () {
   this.timeout(50000);

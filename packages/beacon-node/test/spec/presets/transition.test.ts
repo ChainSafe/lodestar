@@ -1,3 +1,4 @@
+import path from "node:path";
 import {
   BeaconStateAllForks,
   DataAvailableStatus,
@@ -6,16 +7,18 @@ import {
 } from "@lodestar/state-transition";
 import {allForks, ssz} from "@lodestar/types";
 import {createChainForkConfig, ChainConfig} from "@lodestar/config";
-import {ForkName} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 import {bnToNum} from "@lodestar/utils";
 import {config} from "@lodestar/config/default";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
-import {TestRunnerFn} from "../utils/types.js";
+import {RunnerType, TestRunnerFn} from "../utils/types.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
-import {getPreviousFork} from "./fork.js";
+import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
+import {specTestIterator} from "../utils/specTestIterator.js";
+import {getPreviousFork} from "./fork.test.js";
 
-export const transition =
+const transition =
   (skipTestNames?: string[]): TestRunnerFn<TransitionTestCase, BeaconStateAllForks> =>
   (forkNext) => {
     if (forkNext === ForkName.phase0) {
@@ -124,3 +127,10 @@ type TransitionTestCase = {
   pre: BeaconStateAllForks;
   post: BeaconStateAllForks;
 };
+
+specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
+  transition: {
+    type: RunnerType.default,
+    fn: transition(),
+  },
+});

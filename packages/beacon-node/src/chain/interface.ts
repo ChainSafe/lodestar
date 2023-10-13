@@ -37,8 +37,8 @@ import {IChainOptions} from "./options.js";
 import {AssembledBlockType, BlockAttributes, BlockType} from "./produceBlock/produceBlockBody.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 
-export {BlockType, AssembledBlockType};
-export {ProposerPreparationData};
+export {BlockType, type AssembledBlockType};
+export {type ProposerPreparationData};
 export type BlockHash = RootHex;
 
 export type StateGetOpts = {

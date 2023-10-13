@@ -6,6 +6,9 @@ import {ACTIVE_PRESET, ForkName, ForkLightClient} from "@lodestar/params";
 import {replaceUintTypeWithUintBigintType} from "../utils/replaceUintTypeWithUintBigintType.js";
 import {parseSszStaticTestcase} from "../utils/sszTestCaseParser.js";
 import {runValidSszTest} from "../utils/runValidSszTest.js";
+import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
+import {specTestIterator} from "../utils/specTestIterator.js";
+import {RunnerType} from "../utils/types.js";
 
 // ssz_static
 // | Attestation
@@ -26,7 +29,7 @@ type Types = Record<string, Type<any>>;
 // tests / mainnet / altair / ssz_static       / Validator    / ssz_random   / case_0/roots.yaml
 //
 
-export const sszStatic =
+const sszStatic =
   (skippedTypes?: string[]) =>
   (fork: ForkName, typeName: string, testSuite: string, testSuiteDirpath: string): void => {
     // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
@@ -64,3 +67,11 @@ export const sszStatic =
       });
     }
   };
+
+specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  ssz_static: {
+    type: RunnerType.custom,
+    fn: sszStatic(),
+  },
+});

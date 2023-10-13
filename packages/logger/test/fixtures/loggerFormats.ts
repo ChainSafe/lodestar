@@ -3,6 +3,7 @@ import {LogData, LogFormat} from "../../src/index.js";
 
 type TestCase = {
   id: string;
+  opts?: {module?: string};
   message: string;
   context?: LogData;
   error?: Error;
@@ -32,16 +33,31 @@ export const formatsTestCases: (TestCase | (() => TestCase))[] = [
   },
 
   () => {
+    const error = new Error("err message");
+    error.stack = "$STACK";
+    return {
+      id: "regular log with error",
+      opts: {module: "test"},
+      message: "foo bar",
+      error: error,
+      output: {
+        human: `[test]             \u001b[33mwarn\u001b[39m: foo bar - err message\n${error.stack}`,
+        json: '{"error":{"message":"err message","stack":"$STACK"},"level":"warn","message":"foo bar","module":"test"}',
+      },
+    };
+  },
+
+  () => {
     const error = new LodestarError({code: "SAMPLE_ERROR", data: {foo: "bar"}});
     error.stack = "$STACK";
     return {
       id: "error with metadata",
-      opts: {format: "human", module: "SAMPLE"},
+      opts: {module: "test"},
       message: "foo bar",
       error: error,
       output: {
-        human: `[]                 \u001b[33mwarn\u001b[39m: foo bar code=SAMPLE_ERROR, data=foo=bar\n${error.stack}`,
-        json: '{"error":{"code":"SAMPLE_ERROR","data":{"foo":"bar"},"stack":"$STACK"},"level":"warn","message":"foo bar","module":""}',
+        human: `[test]             \u001b[33mwarn\u001b[39m: foo bar - code=SAMPLE_ERROR, data=foo=bar\n${error.stack}`,
+        json: '{"error":{"code":"SAMPLE_ERROR","data":{"foo":"bar"},"stack":"$STACK"},"level":"warn","message":"foo bar","module":"test"}',
       },
     };
   },

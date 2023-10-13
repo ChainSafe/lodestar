@@ -8,11 +8,16 @@ import {getBrowserLogger} from "../../src/browser.js";
 describe("browser logger", () => {
   describe("format and options", () => {
     for (const testCase of formatsTestCases) {
-      const {id, message, context, error, output} = typeof testCase === "function" ? testCase() : testCase;
+      const {id, opts, message, context, error, output} = typeof testCase === "function" ? testCase() : testCase;
       for (const format of logFormats) {
         it(`${id} ${format} output`, async () => {
           const logger = stubLoggerForConsole(
-            getBrowserLogger({level: LogLevel.info, format, timestampFormat: {format: TimestampFormatCode.Hidden}})
+            getBrowserLogger({
+              level: LogLevel.info,
+              format,
+              module: opts?.module,
+              timestampFormat: {format: TimestampFormatCode.Hidden},
+            })
           );
 
           logger.warn(message, context, error);

@@ -32,7 +32,7 @@ export class DecryptKeystoresThreadPool {
     this.terminatePoolHandler = () => {
       void this.pool.terminate(true);
     };
-    signal.addEventListener("abort", this.terminatePoolHandler);
+    signal.addEventListener("abort", this.terminatePoolHandler, {once: true});
   }
 
   /**

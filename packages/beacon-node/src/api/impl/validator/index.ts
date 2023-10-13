@@ -816,6 +816,10 @@ export function getValidatorApi({
     },
 
     async registerValidator(registrations) {
+      if (!chain.executionBuilder) {
+        throw Error("Execution builder not enabled");
+      }
+
       // should only send active or pending validator to builder
       // Spec: https://ethereum.github.io/builder-specs/#/Builder/registerValidator
       const headState = chain.getHeadState();
@@ -838,7 +842,12 @@ export function getValidatorApi({
         );
       });
 
-      return chain.executionBuilder?.registerValidator(filteredRegistrations);
+      await chain.executionBuilder.registerValidator(filteredRegistrations);
+
+      logger.debug("Forwarded validator registrations to connected builder", {
+        epoch: currentEpoch,
+        count: filteredRegistrations.length,
+      });
     },
   };
 }

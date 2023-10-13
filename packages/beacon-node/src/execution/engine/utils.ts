@@ -1,7 +1,13 @@
 import {isFetchError} from "@lodestar/api";
 import {isErrorAborted} from "@lodestar/utils";
 import {IJson, RpcPayload} from "../../eth1/interface.js";
-import {IJsonRpcHttpClient, ErrorJsonRpcResponse, HttpRpcError} from "../../eth1/provider/jsonRpcHttpClient.js";
+import {
+  IJsonRpcHttpClient,
+  ErrorJsonRpcResponse,
+  HttpRpcError,
+  JsonRpcHttpClientEventEmitter,
+  JsonRpcHttpClientEvent,
+} from "../../eth1/provider/jsonRpcHttpClient.js";
 import {isQueueErrorAborted} from "../../util/queue/errors.js";
 import {ExecutionPayloadStatus, ExecutionEngineState} from "./interface.js";
 
@@ -11,16 +17,20 @@ export type JsonRpcBackend = {
 };
 
 export class ExecutionEngineMockJsonRpcClient implements IJsonRpcHttpClient {
+  readonly emitter = new JsonRpcHttpClientEventEmitter();
+
   constructor(private readonly backend: JsonRpcBackend) {}
 
   async fetch<R, P = IJson[]>(payload: RpcPayload<P>): Promise<R> {
-    const handler = this.backend.handlers[payload.method];
-    if (handler === undefined) {
-      throw Error(`Unknown method ${payload.method}`);
-    }
+    return this.wrapWithEvents(async () => {
+      const handler = this.backend.handlers[payload.method];
+      if (handler === undefined) {
+        throw Error(`Unknown method ${payload.method}`);
+      }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return handler(...(payload.params as any[])) as R;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return handler(...(payload.params as any[])) as R;
+    }, payload);
   }
 
   fetchWithRetries<R, P = IJson[]>(payload: RpcPayload<P>): Promise<R> {
@@ -29,6 +39,17 @@ export class ExecutionEngineMockJsonRpcClient implements IJsonRpcHttpClient {
 
   fetchBatch<R>(rpcPayloadArr: RpcPayload<IJson[]>[]): Promise<R[]> {
     return Promise.all(rpcPayloadArr.map((payload) => this.fetch<R>(payload)));
+  }
+
+  private async wrapWithEvents<T>(func: () => Promise<T>, payload?: unknown): Promise<T> {
+    try {
+      const response = await func();
+      this.emitter.emit(JsonRpcHttpClientEvent.RESPONSE, {payload, response});
+      return response;
+    } catch (error) {
+      this.emitter.emit(JsonRpcHttpClientEvent.ERROR, {payload, error: error as Error});
+      throw error;
+    }
   }
 }
 

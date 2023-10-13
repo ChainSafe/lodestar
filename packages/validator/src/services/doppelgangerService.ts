@@ -51,7 +51,7 @@ export class DoppelgangerService {
       metrics.doppelganger.statusCount.addCollect(() => this.onScrapeMetrics(metrics));
     }
 
-    this.logger.info("doppelganger protection enabled", {detectionEpochs: DEFAULT_REMAINING_DETECTION_EPOCHS});
+    this.logger.info("Doppelganger protection enabled", {detectionEpochs: DEFAULT_REMAINING_DETECTION_EPOCHS});
   }
 
   registerValidator(pubkeyHex: PubkeyHex): void {
@@ -59,14 +59,15 @@ export class DoppelgangerService {
     // Disable doppelganger protection when the validator was initialized before genesis.
     // There's no activity before genesis, so doppelganger is pointless.
     const remainingEpochs = currentEpoch <= 0 ? 0 : DEFAULT_REMAINING_DETECTION_EPOCHS;
+    const nextEpochToCheck = currentEpoch + 1;
 
     // Log here to alert that validation won't be active until remainingEpochs == 0
     if (remainingEpochs > 0) {
-      this.logger.info("Registered validator for doppelganger", {remainingEpochs, pubkeyHex});
+      this.logger.info("Registered validator for doppelganger", {remainingEpochs, nextEpochToCheck, pubkeyHex});
     }
 
     this.doppelgangerStateByPubkey.set(pubkeyHex, {
-      nextEpochToCheck: this.clock.currentEpoch + 1,
+      nextEpochToCheck,
       remainingEpochs,
     });
   }
@@ -99,7 +100,7 @@ export class DoppelgangerService {
     const indicesToCheckMap = new Map<ValidatorIndex, PubkeyHex>();
 
     for (const [pubkeyHex, state] of this.doppelgangerStateByPubkey.entries()) {
-      if (state.remainingEpochs > 0) {
+      if (state.remainingEpochs > 0 && state.nextEpochToCheck <= currentEpoch) {
         const index = this.indicesService.pubkey2index.get(pubkeyHex);
         if (index !== undefined) {
           indicesToCheckMap.set(index, pubkeyHex);
@@ -118,10 +119,11 @@ export class DoppelgangerService {
       }
     }
 
-    this.logger.debug("doppelganger pollLiveness", {currentEpoch, indicesCount: indicesToCheckMap.size});
     if (indicesToCheckMap.size === 0) {
       return;
     }
+
+    this.logger.info("Doppelganger liveness check", {currentEpoch, indicesCount: indicesToCheckMap.size});
 
     // in the current epoch also request for liveness check for past epoch in case a validator index was live
     // in the remaining 25% of the last slot of the previous epoch
@@ -221,11 +223,11 @@ export class DoppelgangerService {
           state.nextEpochToCheck = currentEpoch;
           this.metrics?.doppelganger.epochsChecked.inc(1);
 
-          const {remainingEpochs} = state;
+          const {remainingEpochs, nextEpochToCheck} = state;
           if (remainingEpochs <= 0) {
             this.logger.info("Doppelganger detection complete", {index: response.index});
           } else {
-            this.logger.info("Found no doppelganger", {remainingEpochs, index: response.index});
+            this.logger.info("Found no doppelganger", {remainingEpochs, nextEpochToCheck, index: response.index});
           }
         }
       }

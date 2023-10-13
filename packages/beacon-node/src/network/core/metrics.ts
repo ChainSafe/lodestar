@@ -333,12 +333,20 @@ export function createNetworkCoreMetrics(register: RegistryMetricCreator) {
   };
 }
 
+export type NetworkCoreWorkerMetrics = ReturnType<typeof getNetworkCoreWorkerMetrics>;
+
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function getNetworkCoreWorkerMetrics(register: RegistryMetricCreator) {
   return {
     reqRespBridgeRespCallerPending: register.gauge({
       name: "lodestar_network_worker_reqresp_bridge_caller_pending_count",
       help: "Current count of pending elements in respBridgeCaller",
+    }),
+    networkWorkerWireEventsOnWorkerThreadLatency: register.histogram<"eventName">({
+      name: "lodestar_network_worker_wire_events_on_worker_thread_latency_seconds",
+      help: "Latency in seconds to transmit network events to worker thread across parent port",
+      labelNames: ["eventName"],
+      buckets: [0.001, 0.003, 0.01, 0.03, 0.1],
     }),
   };
 }

@@ -10,7 +10,7 @@ export type UnfinalizedPubkeyIndexMap = immutable.Map<PubkeyHex, ValidatorIndex>
 export type PubkeyHex = string;
 
 /**
- * toHexString() creates hex strings via string concatenation, which are very memory inneficient.
+ * toHexString() creates hex strings via string concatenation, which are very memory inefficient.
  * Memory benchmarks show that Buffer.toString("hex") produces strings with 10x less memory.
  *
  * Does not prefix to save memory, thus the prefix is removed from an already string representation.

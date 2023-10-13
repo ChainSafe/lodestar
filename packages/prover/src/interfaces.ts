@@ -5,7 +5,7 @@ import {ProofProvider} from "./proof_provider/proof_provider.js";
 import {JsonRpcRequest, JsonRpcRequestOrBatch, JsonRpcResponse, JsonRpcResponseOrBatch} from "./types.js";
 import {ELRpc} from "./utils/rpc.js";
 
-export {NetworkName} from "@lodestar/config/networks";
+export type {NetworkName} from "@lodestar/config/networks";
 export enum LCTransport {
   Rest = "Rest",
   P2P = "P2P",

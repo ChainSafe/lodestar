@@ -1,12 +1,12 @@
 {
   "__inputs": [
     {
-      "description": "",
-      "label": "Prometheus",
       "name": "DS_PROMETHEUS",
+      "type": "datasource",
+      "label": "Prometheus",
+      "description": "",
       "pluginId": "prometheus",
-      "pluginName": "Prometheus",
-      "type": "datasource"
+      "pluginName": "Prometheus"
     }
   ],
   "annotations": {
@@ -937,7 +937,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "(\n  sum(rate(\n    lodestar_network_worker_wire_events_on_worker_thread_latency_sum[$rate_interval]\n  )) \n  +\n  sum(rate(\n    lodestar_network_worker_wire_events_on_main_thread_latency_sum[$rate_interval]\n  ))\n)\n/\n(\n  sum(rate(\n    lodestar_network_worker_wire_events_on_worker_thread_latency_count[$rate_interval]\n  ))\n  +\n  sum(rate(\n    lodestar_network_worker_wire_events_on_main_thread_latency_count[$rate_interval]\n  ))\n)",
+          "expr": "(\n  sum(rate(\n    lodestar_network_worker_wire_events_on_worker_thread_latency_seconds_sum[$rate_interval]\n  )) \n  +\n  sum(rate(\n    lodestar_network_worker_wire_events_on_main_thread_latency_seconds_sum[$rate_interval]\n  ))\n)\n/\n(\n  sum(rate(\n    lodestar_network_worker_wire_events_on_worker_thread_latency_seconds_count[$rate_interval]\n  ))\n  +\n  sum(rate(\n    lodestar_network_worker_wire_events_on_main_thread_latency_seconds_count[$rate_interval]\n  ))\n)",
           "hide": false,
           "interval": "",
           "legendFormat": "Average",
@@ -951,7 +951,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "avg(rate(lodestar_network_worker_wire_events_on_worker_thread_latency_sum[$rate_interval])/rate(lodestar_network_worker_wire_events_on_worker_thread_latency_count[$rate_interval]))",
+          "expr": "avg(rate(lodestar_network_worker_wire_events_on_worker_thread_latency_seconds_sum[$rate_interval])/rate(lodestar_network_worker_wire_events_on_worker_thread_latency_seconds_count[$rate_interval]))",
           "hide": false,
           "interval": "",
           "legendFormat": "Worker to Main",
@@ -964,7 +964,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "avg(rate(lodestar_network_worker_wire_events_on_main_thread_latency_sum[$rate_interval])/rate(lodestar_network_worker_wire_events_on_main_thread_latency_count[$rate_interval]))",
+          "expr": "avg(rate(lodestar_network_worker_wire_events_on_main_thread_latency_seconds_sum[$rate_interval])/rate(lodestar_network_worker_wire_events_on_main_thread_latency_seconds_count[$rate_interval]))",
           "hide": false,
           "legendFormat": "Main to Worker",
           "range": true,
@@ -1051,7 +1051,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "avg(rate(lodestar_network_worker_wire_events_on_main_thread_latency_sum[$rate_interval])/rate(lodestar_network_worker_wire_events_on_main_thread_latency_count[$rate_interval]))",
+          "expr": "avg(rate(lodestar_network_worker_wire_events_on_main_thread_latency_seconds_sum[$rate_interval])/rate(lodestar_network_worker_wire_events_on_main_thread_latency_seconds_count[$rate_interval]))",
           "hide": true,
           "interval": "",
           "legendFormat": "Average to Main",
@@ -1065,7 +1065,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "rate(lodestar_network_worker_wire_events_on_main_thread_latency_sum[$rate_interval])/rate(lodestar_network_worker_wire_events_on_main_thread_latency_count[$rate_interval])",
+          "expr": "rate(lodestar_network_worker_wire_events_on_main_thread_latency_seconds_sum[$rate_interval])/rate(lodestar_network_worker_wire_events_on_main_thread_latency_seconds_count[$rate_interval])",
           "interval": "",
           "legendFormat": "{{eventName}}",
           "range": true,
@@ -1077,7 +1077,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(lodestar_network_worker_wire_events_on_worker_thread_latency_sum[$rate_interval])/rate(lodestar_network_worker_wire_events_on_worker_thread_latency_count[$rate_interval])",
+          "expr": "rate(lodestar_network_worker_wire_events_on_worker_thread_latency_seconds_sum[$rate_interval])/rate(lodestar_network_worker_wire_events_on_worker_thread_latency_seconds_count[$rate_interval])",
           "hide": false,
           "legendFormat": "{{eventName}}",
           "range": true,
