@@ -2,7 +2,7 @@ import worker from "node:worker_threads";
 import {expose} from "@chainsafe/threads";
 import {createBeaconConfig, chainConfigFromJson} from "@lodestar/config";
 import {getNodeLogger} from "@lodestar/logger/node";
-import {BeaconStateTransitionMetrics} from "@lodestar/state-transition";
+import {BeaconStateTransitionMetrics, PubkeyIndexMap} from "@lodestar/state-transition";
 import {LevelDbController} from "@lodestar/db";
 import {RegistryMetricCreator, collectNodeJSMetrics} from "../../metrics/index.js";
 import {JobFnQueue} from "../../util/queue/fnQueue.js";
@@ -143,6 +143,8 @@ const queue = new JobFnQueue(
   queueMetrics
 );
 
+const pubkey2index = new PubkeyIndexMap();
+
 const api: HistoricalStateWorkerApi = {
   async close() {
     abortController.abort();
@@ -151,7 +153,7 @@ const api: HistoricalStateWorkerApi = {
     return metricsRegister?.metrics() ?? "";
   },
   async getHistoricalState(slot) {
-    return queue.push(() => _getHistoricalState(slot, config, db, stateTransitionMetrics));
+    return queue.push(() => _getHistoricalState(slot, config, db, pubkey2index, stateTransitionMetrics));
   },
 };
 
