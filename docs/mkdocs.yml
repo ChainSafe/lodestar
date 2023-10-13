@@ -106,17 +106,17 @@ nav:
     - "@chainsafe/blst": supporting-libraries/blst.md
     - "@chainsafe/libp2p-gossipsub": supporting-libraries/gossipsub.md
   - Contributing:
-    - Getting Started: contributing/getting-started.md
-    - Bug Reports: contributing/bug-reports.md
-    - Repo: contributing/repo.md
+    - Getting Started: contribution/getting-started.md
+    - Bug Reports: contribution/bug-reports.md
+    - Repo: contribution/repo.md
     - Testing:
-      - Overview: contributing/testing/overview.md
-      - Unit Testing: contributing/testing/unit-testing.md
-      - Spec Testing: contributing/testing/spec-testing.md
-      - e2e Testing: contributing/testing/e2e-testing.md
-      - Simulation Testing: contributing/testing/simulation-testing.md
-      - Performance Testing: contributing/testing/performance-testing.md
-    - PR Submission: contributing/pr-submission.md
+      - Overview: contribution/testing/overview.md
+      - Unit Testing: contribution/testing/unit-testing.md
+      - Spec Testing: contribution/testing/spec-testing.md
+      - e2e Testing: contribution/testing/e2e-testing.md
+      - Simulation Testing: contribution/testing/simulation-testing.md
+      - Performance Testing: contribution/testing/performance-testing.md
+    - PR Submission: contribution/pr-submission.md
   - Tools:
     - Debugging: tools/debugging.md
     - perf: tools/perf.md
