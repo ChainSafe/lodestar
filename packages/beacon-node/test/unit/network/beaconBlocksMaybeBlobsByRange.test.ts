@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect, beforeAll} from "vitest";
 import {ssz, deneb} from "@lodestar/types";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 
@@ -9,8 +9,7 @@ import {INetwork} from "../../../src/network/interface.js";
 import {ZERO_HASH} from "../../../src/constants/constants.js";
 
 describe("beaconBlocksMaybeBlobsByRange", () => {
-  before(async function () {
-    this.timeout(10000); // Loading trusted setup is slow
+  beforeAll(async function () {
     await initCKZG();
     loadEthereumTrustedSetup();
   });
@@ -110,7 +109,7 @@ describe("beaconBlocksMaybeBlobsByRange", () => {
       } as Partial<INetwork> as INetwork;
 
       const response = await beaconBlocksMaybeBlobsByRange(config, network, peerId, rangeRequest, 0);
-      expect(response).to.be.deep.equal(expectedResponse);
+      expect(response).toEqual(expectedResponse);
     });
   });
 });

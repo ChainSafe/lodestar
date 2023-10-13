@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {RootHex} from "@lodestar/types";
 import {PendingBlock, PendingBlockStatus, UnknownAndAncestorBlocks} from "../../../../src/sync/index.js";
 import {
@@ -61,18 +61,18 @@ describe("sync / pendingBlocksTree", () => {
     describe(testCase.id, () => {
       for (const {block, res} of testCase.getAllDescendantBlocks) {
         it(`getAllDescendantBlocks(${block})`, () => {
-          expect(toRes(getAllDescendantBlocks(block, blocks))).to.deep.equal(res);
+          expect(toRes(getAllDescendantBlocks(block, blocks))).toEqual(res);
         });
       }
 
       for (const {block, res} of testCase.getDescendantBlocks) {
         it(`getDescendantBlocks(${block})`, () => {
-          expect(toRes(getDescendantBlocks(block, blocks))).to.deep.equal(res);
+          expect(toRes(getDescendantBlocks(block, blocks))).toEqual(res);
         });
       }
 
       it("getUnknownBlocks", () => {
-        expect(toRes2(getUnknownAndAncestorBlocks(blocks))).to.deep.equal(testCase.getUnknownOrAncestorBlocks);
+        expect(toRes2(getUnknownAndAncestorBlocks(blocks))).toEqual(testCase.getUnknownOrAncestorBlocks);
       });
     });
   }

@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {BeaconConfig, ForkInfo} from "@lodestar/config";
 import {getCurrentAndNextFork, getActiveForks} from "../../../src/network/forks.js";
@@ -144,11 +144,11 @@ for (const testScenario of testScenarios) {
         currentFork,
         nextFork,
       })}, getActiveForks: ${activeForks.join(",")}`, () => {
-        expect(getCurrentAndNextFork(forkConfig, epoch)).to.deep.equal({
+        expect(getCurrentAndNextFork(forkConfig, epoch)).toEqual({
           currentFork: forks[currentFork as ForkName],
           nextFork: (nextFork && forks[nextFork as ForkName]) ?? undefined,
         });
-        expect(getActiveForks(forkConfig, epoch)).to.deep.equal(activeForks);
+        expect(getActiveForks(forkConfig, epoch)).toEqual(activeForks);
       });
     }
   });

@@ -1,11 +1,11 @@
-import {expect} from "chai";
+import {describe, it, expect, beforeAll} from "vitest";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
 import {getNonCheckpointBlocks} from "../../../../src/chain/archiver/archiveBlocks.js";
 
 describe("chain / archive / getNonCheckpointBlocks", () => {
-  before("Correct params", () => {
-    expect(SLOTS_PER_EPOCH).to.equal(8, "Wrong SLOTS_PER_EPOCH");
+  beforeAll(() => {
+    expect(SLOTS_PER_EPOCH).toBe(8);
   });
 
   const testCases: {id: string; blocks: Slot[]; maybeCheckpointSlots: Slot[]}[] = [
@@ -36,7 +36,7 @@ describe("chain / archive / getNonCheckpointBlocks", () => {
       // ProtoArray.getAllAncestorNodes
       const nonAncestorBlocks = getNonCheckpointBlocks(blocks.reverse().map(toProtoBlock));
 
-      expect(sort(nonAncestorBlocks.map((block) => block.slot))).to.deep.equal(sort(nonCheckpointSlots));
+      expect(sort(nonAncestorBlocks.map((block) => block.slot))).toEqual(sort(nonCheckpointSlots));
     });
   }
 });

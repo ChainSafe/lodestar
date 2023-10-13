@@ -1,5 +1,5 @@
+import {describe, it, afterEach, expect} from "vitest";
 import all from "it-all";
-import {expect} from "chai";
 import {Libp2p, createLibp2p} from "libp2p";
 import {tcp} from "@libp2p/tcp";
 import {mplex} from "@libp2p/mplex";
@@ -98,7 +98,7 @@ describe("reqresp encoder", () => {
     const chunks = await all(stream.source);
     const join = (c: string[]): string => c.join("").replace(/0x/g, "");
     const chunksHex = chunks.map((chunk) => toHex(chunk.slice(0, chunk.byteLength)));
-    expect(join(chunksHex)).deep.equals(join(expectedChunks), `not expected response to ${protocol}`);
+    expect(join(chunksHex)).toEqual(join(expectedChunks));
   }
 
   it("assert correct handler switch between metadata v2 and v1", async () => {

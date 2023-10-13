@@ -4,7 +4,7 @@ import {BitArray} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {BeaconConfig} from "@lodestar/config";
 import {allForks, altair, phase0} from "@lodestar/types";
-import {withTimeout} from "@lodestar/utils";
+import {retry, withTimeout} from "@lodestar/utils";
 import {LoggerNode} from "@lodestar/logger/node";
 import {GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent} from "../../constants/index.js";
 import {IClock} from "../../util/clock.js";
@@ -610,14 +610,19 @@ export class PeerManager {
     // AgentVersion was set in libp2p IdentifyService, 'peer:connect' event handler
     // since it's not possible to handle it async, we have to wait for a while to set AgentVersion
     // See https://github.com/libp2p/js-libp2p/pull/1168
-    setTimeout(async () => {
-      const agentVersionBytes = (await this.libp2p.peerStore.get(peerData.peerId)).metadata.get("AgentVersion");
-      if (agentVersionBytes) {
-        const agentVersion = new TextDecoder().decode(agentVersionBytes) || "N/A";
-        peerData.agentVersion = agentVersion;
-        peerData.agentClient = clientFromAgentVersion(agentVersion);
-      }
-    }, 1000);
+    retry(
+      async () => {
+        const agentVersionBytes = (await this.libp2p.peerStore.get(peerData.peerId)).metadata.get("AgentVersion");
+        if (agentVersionBytes) {
+          const agentVersion = new TextDecoder().decode(agentVersionBytes) || "N/A";
+          peerData.agentVersion = agentVersion;
+          peerData.agentClient = clientFromAgentVersion(agentVersion);
+        }
+      },
+      {retries: 3, retryDelay: 1000}
+    ).catch((err) => {
+      this.logger.error("Error setting agentVersion for the peer", {peerId: peerData.peerId.toString()}, err);
+    });
   };
 
   /**

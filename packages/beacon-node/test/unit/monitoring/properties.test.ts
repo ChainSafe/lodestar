@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect, beforeAll} from "vitest";
 import {Metrics} from "../../../src/metrics/index.js";
 import {DynamicProperty, MetricProperty, StaticProperty} from "../../../src/monitoring/properties.js";
 import {JsonType} from "../../../src/monitoring/types.js";
@@ -14,8 +14,8 @@ describe("monitoring / properties", () => {
 
       const jsonRecord = staticProperty.getRecord();
 
-      expect(jsonRecord.key).to.equal(jsonKey);
-      expect(jsonRecord.value).to.equal(value);
+      expect(jsonRecord.key).toBe(jsonKey);
+      expect(jsonRecord.value).toBe(value);
     });
   });
 
@@ -25,15 +25,15 @@ describe("monitoring / properties", () => {
 
       const jsonRecord = dynamicProperty.getRecord();
 
-      expect(jsonRecord.key).to.equal(jsonKey);
-      expect(jsonRecord.value).to.equal(value);
+      expect(jsonRecord.key).toBe(jsonKey);
+      expect(jsonRecord.value).toBe(value);
     });
   });
 
   describe("MetricProperty", () => {
     let metrics: Metrics;
 
-    before(() => {
+    beforeAll(() => {
       metrics = createMetricsTest();
     });
 
@@ -50,8 +50,8 @@ describe("monitoring / properties", () => {
 
       const jsonRecord = await metricProperty.getRecord(metrics.register);
 
-      expect(jsonRecord.key).to.equal(jsonKey);
-      expect(jsonRecord.value).to.equal(headSlot);
+      expect(jsonRecord.key).toBe(jsonKey);
+      expect(jsonRecord.value).toBe(headSlot);
     });
 
     it("should return the default value if metric with name does not exist", async () => {
@@ -64,7 +64,7 @@ describe("monitoring / properties", () => {
         defaultValue,
       });
 
-      expect((await metricProperty.getRecord(metrics.register)).value).to.equal(defaultValue);
+      expect((await metricProperty.getRecord(metrics.register)).value).toBe(defaultValue);
     });
 
     it("should get the value from label instead of metric value if fromLabel is defined", async () => {
@@ -82,7 +82,7 @@ describe("monitoring / properties", () => {
         defaultValue: "",
       });
 
-      expect((await metricProperty.getRecord(metrics.register)).value).to.equal(labelValue);
+      expect((await metricProperty.getRecord(metrics.register)).value).toBe(labelValue);
     });
 
     it("should get the value from metric with label if withLabel is defined", async () => {
@@ -103,7 +103,7 @@ describe("monitoring / properties", () => {
         defaultValue: 0,
       });
 
-      expect((await metricProperty.getRecord(metrics.register)).value).to.equal(metricValue);
+      expect((await metricProperty.getRecord(metrics.register)).value).toBe(metricValue);
     });
 
     it("should return the same value on consecutive calls if cacheResult is set to true", async () => {
@@ -122,14 +122,14 @@ describe("monitoring / properties", () => {
       });
 
       // initial call which will cache the result
-      expect((await metricProperty.getRecord(metrics.register)).value).to.equal(initialValue);
+      expect((await metricProperty.getRecord(metrics.register)).value).toBe(initialValue);
 
       // set different value
       metric.set(initialValue + 1);
 
       // ensure consecutive calls still return initial value
-      expect((await metricProperty.getRecord(metrics.register)).value).to.equal(initialValue);
-      expect((await metricProperty.getRecord(metrics.register)).value).to.equal(initialValue);
+      expect((await metricProperty.getRecord(metrics.register)).value).toBe(initialValue);
+      expect((await metricProperty.getRecord(metrics.register)).value).toBe(initialValue);
     });
 
     it("should convert the metric value to a string if jsonType is JsonType.String", async () => {
@@ -145,7 +145,7 @@ describe("monitoring / properties", () => {
       });
 
       metric.set(10);
-      expect((await metricProperty.getRecord(metrics.register)).value).to.equal("10");
+      expect((await metricProperty.getRecord(metrics.register)).value).toBe("10");
     });
 
     it("should round the metric value to the nearest integer if jsonType is JsonType.Number", async () => {
@@ -161,7 +161,7 @@ describe("monitoring / properties", () => {
       });
 
       metric.set(1.49);
-      expect((await metricProperty.getRecord(metrics.register)).value).to.equal(1);
+      expect((await metricProperty.getRecord(metrics.register)).value).toBe(1);
     });
 
     it("should convert the metric value to a boolean if jsonType is JsonType.Boolean", async () => {
@@ -178,11 +178,11 @@ describe("monitoring / properties", () => {
 
       metric.set(0);
       // metric value of 0 should be converted to false
-      expect((await metricProperty.getRecord(metrics.register)).value).to.equal(false);
+      expect((await metricProperty.getRecord(metrics.register)).value).toBe(false);
 
       metric.set(1);
       // metric value > 0 should be converted to true
-      expect((await metricProperty.getRecord(metrics.register)).value).to.equal(true);
+      expect((await metricProperty.getRecord(metrics.register)).value).toBe(true);
     });
 
     it("should convert the metric value to true if the specified rangeValue is matched", async () => {
@@ -201,11 +201,11 @@ describe("monitoring / properties", () => {
 
       metric.set(rangeValue + 1);
       // value does not match range value and should be converted to false
-      expect((await metricProperty.getRecord(metrics.register)).value).to.equal(false);
+      expect((await metricProperty.getRecord(metrics.register)).value).toBe(false);
 
       metric.set(rangeValue);
       // value matches range value and should be converted to true
-      expect((await metricProperty.getRecord(metrics.register)).value).to.equal(true);
+      expect((await metricProperty.getRecord(metrics.register)).value).toBe(true);
     });
 
     it("should convert the metric value to true if value is greater than or equal to threshold", async () => {
@@ -224,15 +224,15 @@ describe("monitoring / properties", () => {
 
       metric.set(threshold - 1);
       // value is below threshold and should be converted to false
-      expect((await metricProperty.getRecord(metrics.register)).value).to.equal(false);
+      expect((await metricProperty.getRecord(metrics.register)).value).toBe(false);
 
       metric.set(threshold);
       // value is equal to threshold and should be converted to true
-      expect((await metricProperty.getRecord(metrics.register)).value).to.equal(true);
+      expect((await metricProperty.getRecord(metrics.register)).value).toBe(true);
 
       metric.set(threshold + 1);
       // value is greater than threshold and should be converted to true
-      expect((await metricProperty.getRecord(metrics.register)).value).to.equal(true);
+      expect((await metricProperty.getRecord(metrics.register)).value).toBe(true);
     });
 
     it("should apply the defined formatter to the metric value", async () => {
@@ -250,7 +250,7 @@ describe("monitoring / properties", () => {
       });
 
       metric.set(metricValue);
-      expect((await metricProperty.getRecord(metrics.register)).value).to.equal(`prefix_${metricValue}`);
+      expect((await metricProperty.getRecord(metrics.register)).value).toBe(`prefix_${metricValue}`);
     });
   });
 });

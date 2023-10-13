@@ -1,11 +1,8 @@
-import {expect, use} from "chai";
-import chaiAsPromised from "chai-as-promised";
+import {describe, it, expect} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {phase0} from "@lodestar/types";
 import {getValidatorStatus, getStateValidatorIndex} from "../../../../../../src/api/impl/beacon/state/utils.js";
 import {generateCachedAltairState} from "../../../../../utils/state.js";
-
-use(chaiAsPromised);
 
 describe("beacon state api utils", function () {
   describe("getValidatorStatus", function () {
@@ -16,7 +13,7 @@ describe("beacon state api utils", function () {
       } as phase0.Validator;
       const currentEpoch = 0;
       const status = getValidatorStatus(validator, currentEpoch);
-      expect(status).to.be.equal("pending_initialized");
+      expect(status).toBe("pending_initialized");
     });
     it("should return PENDING_QUEUED", function () {
       const validator = {
@@ -25,7 +22,7 @@ describe("beacon state api utils", function () {
       } as phase0.Validator;
       const currentEpoch = 0;
       const status = getValidatorStatus(validator, currentEpoch);
-      expect(status).to.be.equal("pending_queued");
+      expect(status).toBe("pending_queued");
     });
     it("should return ACTIVE_ONGOING", function () {
       const validator = {
@@ -34,7 +31,7 @@ describe("beacon state api utils", function () {
       } as phase0.Validator;
       const currentEpoch = 1;
       const status = getValidatorStatus(validator, currentEpoch);
-      expect(status).to.be.equal("active_ongoing");
+      expect(status).toBe("active_ongoing");
     });
     it("should return ACTIVE_SLASHED", function () {
       const validator = {
@@ -44,7 +41,7 @@ describe("beacon state api utils", function () {
       } as phase0.Validator;
       const currentEpoch = 1;
       const status = getValidatorStatus(validator, currentEpoch);
-      expect(status).to.be.equal("active_slashed");
+      expect(status).toBe("active_slashed");
     });
     it("should return ACTIVE_EXITING", function () {
       const validator = {
@@ -54,7 +51,7 @@ describe("beacon state api utils", function () {
       } as phase0.Validator;
       const currentEpoch = 1;
       const status = getValidatorStatus(validator, currentEpoch);
-      expect(status).to.be.equal("active_exiting");
+      expect(status).toBe("active_exiting");
     });
     it("should return EXITED_SLASHED", function () {
       const validator = {
@@ -64,7 +61,7 @@ describe("beacon state api utils", function () {
       } as phase0.Validator;
       const currentEpoch = 2;
       const status = getValidatorStatus(validator, currentEpoch);
-      expect(status).to.be.equal("exited_slashed");
+      expect(status).toBe("exited_slashed");
     });
     it("should return EXITED_UNSLASHED", function () {
       const validator = {
@@ -74,7 +71,7 @@ describe("beacon state api utils", function () {
       } as phase0.Validator;
       const currentEpoch = 2;
       const status = getValidatorStatus(validator, currentEpoch);
-      expect(status).to.be.equal("exited_unslashed");
+      expect(status).toBe("exited_unslashed");
     });
     it("should return WITHDRAWAL_POSSIBLE", function () {
       const validator = {
@@ -83,7 +80,7 @@ describe("beacon state api utils", function () {
       } as phase0.Validator;
       const currentEpoch = 1;
       const status = getValidatorStatus(validator, currentEpoch);
-      expect(status).to.be.equal("withdrawal_possible");
+      expect(status).toBe("withdrawal_possible");
     });
     it("should return WITHDRAWAL_DONE", function () {
       const validator = {
@@ -92,7 +89,7 @@ describe("beacon state api utils", function () {
       } as phase0.Validator;
       const currentEpoch = 1;
       const status = getValidatorStatus(validator, currentEpoch);
-      expect(status).to.be.equal("withdrawal_done");
+      expect(status).toBe("withdrawal_done");
     });
     it("should error", function () {
       const validator = {} as phase0.Validator;
@@ -100,7 +97,7 @@ describe("beacon state api utils", function () {
       try {
         getValidatorStatus(validator, currentEpoch);
       } catch (error) {
-        expect(error).to.have.property("message", "ValidatorStatus unknown");
+        expect(error).toHaveProperty("message", "ValidatorStatus unknown");
       }
     });
   });
@@ -110,38 +107,37 @@ describe("beacon state api utils", function () {
     const pubkey2index = state.epochCtx.pubkey2index;
 
     it("should return valid: false on invalid input", () => {
-      expect(getStateValidatorIndex("foo", state, pubkey2index).valid, "invalid validator id number").to.equal(false);
-      expect(getStateValidatorIndex("0xfoo", state, pubkey2index).valid, "invalid hex").to.equal(false);
+      // "invalid validator id number"
+      expect(getStateValidatorIndex("foo", state, pubkey2index).valid).toBe(false);
+      // "invalid hex"
+      expect(getStateValidatorIndex("0xfoo", state, pubkey2index).valid).toBe(false);
     });
 
     it("should return valid: false on validator indices / pubkeys not in the state", () => {
-      expect(
-        getStateValidatorIndex(String(state.validators.length), state, pubkey2index).valid,
-        "validator id not in state"
-      ).to.equal(false);
-      expect(getStateValidatorIndex("0xabcd", state, pubkey2index).valid, "validator pubkey not in state").to.equal(
-        false
-      );
+      // "validator id not in state"
+      expect(getStateValidatorIndex(String(state.validators.length), state, pubkey2index).valid).toBe(false);
+      // "validator pubkey not in state"
+      expect(getStateValidatorIndex("0xabcd", state, pubkey2index).valid).toBe(false);
     });
 
     it("should return valid: true on validator indices / pubkeys in the state", () => {
       const index = state.validators.length - 1;
       const resp1 = getStateValidatorIndex(String(index), state, pubkey2index);
       if (resp1.valid) {
-        expect(resp1.validatorIndex).to.equal(index);
+        expect(resp1.validatorIndex).toBe(index);
       } else {
         expect.fail("validator index should be found - validator index input");
       }
       const pubkey = state.validators.get(index).pubkey;
       const resp2 = getStateValidatorIndex(pubkey, state, pubkey2index);
       if (resp2.valid) {
-        expect(resp2.validatorIndex).to.equal(index);
+        expect(resp2.validatorIndex).toBe(index);
       } else {
         expect.fail("validator index should be found - Uint8Array input");
       }
       const resp3 = getStateValidatorIndex(toHexString(pubkey), state, pubkey2index);
       if (resp3.valid) {
-        expect(resp3.validatorIndex).to.equal(index);
+        expect(resp3.validatorIndex).toBe(index);
       } else {
         expect.fail("validator index should be found - Uint8Array input");
       }

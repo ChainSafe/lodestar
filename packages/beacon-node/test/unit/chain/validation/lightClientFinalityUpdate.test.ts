@@ -1,17 +1,13 @@
-import {expect} from "chai";
-import sinon from "sinon";
+import {describe, it, expect, beforeEach, afterEach, vi} from "vitest";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {altair, ssz} from "@lodestar/types";
-
 import {computeTimeAtSlot} from "@lodestar/state-transition";
-import {getMockBeaconChain} from "../../../utils/mocks/chain.js";
 import {validateLightClientFinalityUpdate} from "../../../../src/chain/validation/lightClientFinalityUpdate.js";
 import {LightClientErrorCode} from "../../../../src/chain/errors/lightClientError.js";
 import {IBeaconChain} from "../../../../src/chain/index.js";
-import {LightClientServer} from "../../../../src/chain/lightClient/index.js";
+import {getMockedBeaconChain} from "../../../__mocks__/mockedBeaconChain.js";
 
 describe("Light Client Finality Update validation", function () {
-  let fakeClock: sinon.SinonFakeTimers;
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
   const config = createChainForkConfig({
     ...defaultChainConfig,
@@ -22,10 +18,12 @@ describe("Light Client Finality Update validation", function () {
   });
 
   beforeEach(() => {
-    fakeClock = sinon.useFakeTimers();
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
   });
+
   afterEach(async () => {
-    fakeClock.restore();
+    vi.clearAllTimers();
     while (afterEachCallbacks.length > 0) {
       const callback = afterEachCallbacks.pop();
       if (callback) await callback();
@@ -33,9 +31,8 @@ describe("Light Client Finality Update validation", function () {
   });
 
   function mockChain(): IBeaconChain {
-    const chain = getMockBeaconChain<"lightClientServer" | "config" | "genesisTime">();
-    chain.lightClientServer = sinon.createStubInstance(LightClientServer);
-    chain.genesisTime = 0;
+    const chain = getMockedBeaconChain();
+    vi.spyOn(chain, "genesisTime", "get").mockReturnValue(0);
     return chain;
   }
 
@@ -45,19 +42,16 @@ describe("Light Client Finality Update validation", function () {
     lightclientFinalityUpdate.finalizedHeader.beacon.slot = 2;
 
     const chain = mockChain();
-    chain.lightClientServer.getFinalityUpdate = () => {
+    vi.spyOn(chain.lightClientServer, "getFinalityUpdate").mockImplementation(() => {
       const defaultValue = ssz.altair.LightClientFinalityUpdate.defaultValue();
       // make the local slot higher than gossiped
       defaultValue.finalizedHeader.beacon.slot = lightclientFinalityUpdate.finalizedHeader.beacon.slot + 1;
       return defaultValue;
-    };
+    });
 
     expect(() => {
       validateLightClientFinalityUpdate(config, chain, lightclientFinalityUpdate);
-    }).to.throw(
-      LightClientErrorCode.FINALITY_UPDATE_ALREADY_FORWARDED,
-      "Expected LightClientErrorCode.FINALITY_UPDATE_ALREADY_FORWARDED to be thrown"
-    );
+    }).toThrow(LightClientErrorCode.FINALITY_UPDATE_ALREADY_FORWARDED);
   });
 
   it("should return invalid - finality update received too early", async () => {
@@ -68,18 +62,13 @@ describe("Light Client Finality Update validation", function () {
     lightClientFinalityUpdate.signatureSlot = 4;
 
     const chain = mockChain();
-    chain.lightClientServer.getFinalityUpdate = () => {
-      const defaultValue = ssz.altair.LightClientFinalityUpdate.defaultValue();
-      defaultValue.finalizedHeader.beacon.slot = 1;
-      return defaultValue;
-    };
+    const defaultValue = ssz.altair.LightClientFinalityUpdate.defaultValue();
+    defaultValue.finalizedHeader.beacon.slot = 1;
+    vi.spyOn(chain.lightClientServer, "getFinalityUpdate").mockReturnValue(defaultValue);
 
     expect(() => {
       validateLightClientFinalityUpdate(config, chain, lightClientFinalityUpdate);
-    }).to.throw(
-      LightClientErrorCode.FINALITY_UPDATE_RECEIVED_TOO_EARLY,
-      "Expected LightClientErrorCode.FINALITY_UPDATE_RECEIVED_TOO_EARLY to be thrown"
-    );
+    }).toThrow(LightClientErrorCode.FINALITY_UPDATE_RECEIVED_TOO_EARLY);
   });
 
   it("should return invalid - finality update not matching local", async () => {
@@ -91,23 +80,20 @@ describe("Light Client Finality Update validation", function () {
     const chain = mockChain();
 
     // make lightclientserver return another update with different value from gossiped
-    chain.lightClientServer.getFinalityUpdate = () => {
+    vi.spyOn(chain.lightClientServer, "getFinalityUpdate").mockImplementation(() => {
       const defaultValue = ssz.altair.LightClientFinalityUpdate.defaultValue();
       defaultValue.finalizedHeader.beacon.slot = 41;
       return defaultValue;
-    };
+    });
 
     // make update not too early
     const timeAtSignatureSlot =
       computeTimeAtSlot(config, lightClientFinalityUpdate.signatureSlot, chain.genesisTime) * 1000;
-    fakeClock.tick(timeAtSignatureSlot + (1 / 3) * (config.SECONDS_PER_SLOT + 1) * 1000);
+    vi.advanceTimersByTime(timeAtSignatureSlot + (1 / 3) * (config.SECONDS_PER_SLOT + 1) * 1000);
 
     expect(() => {
       validateLightClientFinalityUpdate(config, chain, lightClientFinalityUpdate);
-    }).to.throw(
-      LightClientErrorCode.FINALITY_UPDATE_NOT_MATCHING_LOCAL,
-      "Expected LightClientErrorCode.FINALITY_UPDATE_NOT_MATCHING_LOCAL to be thrown"
-    );
+    }).toThrow(LightClientErrorCode.FINALITY_UPDATE_NOT_MATCHING_LOCAL);
   });
 
   it("should return invalid - not matching local when no local finality update yet", async () => {
@@ -117,12 +103,14 @@ describe("Light Client Finality Update validation", function () {
     lightClientFinalityUpdate.attestedHeader.beacon.slot = lightClientFinalityUpdate.finalizedHeader.beacon.slot + 1;
 
     const chain = mockChain();
-    chain.lightClientServer.getFinalityUpdate = () => ssz.altair.LightClientFinalityUpdate.defaultValue();
+    vi.spyOn(chain.lightClientServer, "getFinalityUpdate").mockImplementation(() => {
+      return ssz.altair.LightClientFinalityUpdate.defaultValue();
+    });
 
     // make update not too early
     const timeAtSignatureSlot =
       computeTimeAtSlot(config, lightClientFinalityUpdate.signatureSlot, chain.genesisTime) * 1000;
-    fakeClock.tick(timeAtSignatureSlot + (1 / 3) * (config.SECONDS_PER_SLOT + 1) * 1000);
+    vi.advanceTimersByTime(timeAtSignatureSlot + (1 / 3) * (config.SECONDS_PER_SLOT + 1) * 1000);
 
     // chain's getFinalityUpdate not mocked.
     // localFinalityUpdate will be null
@@ -130,10 +118,7 @@ describe("Light Client Finality Update validation", function () {
 
     expect(() => {
       validateLightClientFinalityUpdate(config, chain, lightClientFinalityUpdate);
-    }).to.throw(
-      LightClientErrorCode.FINALITY_UPDATE_NOT_MATCHING_LOCAL,
-      "Expected LightClientErrorCode.FINALITY_UPDATE_NOT_MATCHING_LOCAL to be thrown"
-    );
+    }).toThrow(LightClientErrorCode.FINALITY_UPDATE_NOT_MATCHING_LOCAL);
   });
 
   it("should not throw for valid update", async () => {
@@ -146,11 +131,11 @@ describe("Light Client Finality Update validation", function () {
     lightClientFinalityUpdate.finalizedHeader.beacon.slot = 2;
     lightClientFinalityUpdate.signatureSlot = lightClientFinalityUpdate.finalizedHeader.beacon.slot + 1;
 
-    chain.lightClientServer.getFinalityUpdate = () => {
+    vi.spyOn(chain.lightClientServer, "getFinalityUpdate").mockImplementation(() => {
       const defaultValue = ssz.altair.LightClientFinalityUpdate.defaultValue();
       defaultValue.finalizedHeader.beacon.slot = 1;
       return defaultValue;
-    };
+    });
 
     // satisfy:
     // [IGNORE] The finality_update is received after the block at signature_slot was given enough time to propagate
@@ -159,16 +144,16 @@ describe("Light Client Finality Update validation", function () {
     // const currentTime = computeTimeAtSlot(config, chain.clock.currentSlotWithGossipDisparity, chain.genesisTime);
     const timeAtSignatureSlot =
       computeTimeAtSlot(config, lightClientFinalityUpdate.signatureSlot, chain.genesisTime) * 1000;
-    fakeClock.tick(timeAtSignatureSlot + (1 / 3) * (config.SECONDS_PER_SLOT + 1) * 1000);
+    vi.advanceTimersByTime(timeAtSignatureSlot + (1 / 3) * (config.SECONDS_PER_SLOT + 1) * 1000);
 
     // satisfy:
     // [IGNORE] The received finality_update matches the locally computed one exactly
-    chain.lightClientServer.getFinalityUpdate = () => {
+    vi.spyOn(chain.lightClientServer, "getFinalityUpdate").mockImplementation(() => {
       return lightClientFinalityUpdate;
-    };
+    });
 
     expect(() => {
       validateLightClientFinalityUpdate(config, chain, lightClientFinalityUpdate);
-    }).to.not.throw("Expected validateLightClientFinalityUpdate not to throw");
+    }).not.toThrow("Expected validateLightClientFinalityUpdate not to throw");
   });
 });

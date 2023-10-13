@@ -1,5 +1,5 @@
-import {expect} from "chai";
 import {toHexString} from "@chainsafe/ssz";
+import {describe, it, expect, beforeEach, afterEach} from "vitest";
 import {ChainConfig} from "@lodestar/config";
 import {sleep} from "@lodestar/utils";
 import {IEth1Provider} from "../../../src/index.js";
@@ -16,7 +16,9 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
   const terminalTotalDifficulty = 1000;
   let config: ChainConfig;
   let controller: AbortController;
-  beforeEach(() => (controller = new AbortController()));
+  beforeEach(() => {
+    controller = new AbortController();
+  });
   afterEach(() => controller.abort());
   beforeEach(() => {
     config = {
@@ -78,13 +80,10 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
     }
 
     // Status should acknowlege merge block is found
-    expect(eth1MergeBlockTracker["status"].code).to.equal(StatusCode.FOUND, "Wrong StatusCode");
+    expect(eth1MergeBlockTracker["status"].code).toBe(StatusCode.FOUND);
 
     // Given the total difficulty offset the block that has TTD is the `difficultyOffset`nth block
-    expect(await eth1MergeBlockTracker.getTerminalPowBlock()).to.deep.equal(
-      terminalPowBlock,
-      "Wrong found terminal pow block"
-    );
+    expect(await eth1MergeBlockTracker.getTerminalPowBlock()).toEqual(terminalPowBlock);
   });
 
   it("Should find terminal pow block polling future 'latest' blocks", async () => {
@@ -244,13 +243,10 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
     }
 
     // Status should acknowlege merge block is found
-    expect(eth1MergeBlockTracker["status"].code).to.equal(StatusCode.FOUND, "Wrong StatusCode");
+    expect(eth1MergeBlockTracker["status"].code).toBe(StatusCode.FOUND);
 
     // Given the total difficulty offset the block that has TTD is the `difficultyOffset`nth block
-    expect(await eth1MergeBlockTracker.getTerminalPowBlock()).to.deep.equal(
-      toPowBlock(expectedMergeBlock),
-      "Wrong found terminal pow block"
-    );
+    expect(await eth1MergeBlockTracker.getTerminalPowBlock()).toEqual(toPowBlock(expectedMergeBlock));
   }
 });
 
