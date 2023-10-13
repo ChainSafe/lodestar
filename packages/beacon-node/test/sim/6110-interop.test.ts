@@ -25,7 +25,8 @@ import {shell} from "./shell.js";
 import { CachedBeaconStateEIP6110 } from "@lodestar/state-transition";
 
 // NOTE: How to run
-// DEV_RUN=true EL_BINARY_DIR=hyperledger/besu:23.7.3 EL_SCRIPT_DIR=besudocker yarn mocha test/sim/6110-interop.test.ts
+// DEV_RUN=true EL_BINARY_DIR=hyperledger/besu:develop EL_SCRIPT_DIR=besudocker yarn mocha test/sim/6110-interop.test.ts
+// TODO: Use a personal docker image instead of develop image from hyperledger
 // or
 // DEV_RUN=true EL_BINARY_DIR=/Volumes/fast_boi/navie/Documents/workspace/besu/build/install/besu/bin EL_SCRIPT_DIR=besu yarn mocha test/sim/6110-interop.test.ts
 // ```
@@ -256,10 +257,8 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     const validatorClientCount = 1;
     const validatorsPerClient = 32;
 
-    const testParams: Pick<ChainConfig, "SECONDS_PER_SLOT" | "GENESIS_FORK_VERSION" | "EIP6110_FORK_VERSION"> = {
+    const testParams: Pick<ChainConfig, "SECONDS_PER_SLOT" > = {
       SECONDS_PER_SLOT: 2,
-      GENESIS_FORK_VERSION: fromHexString("0x00000000"),
-      EIP6110_FORK_VERSION: fromHexString("0x60000060"),
     };
 
     // Just finish the run within first epoch as we only need to test if withdrawals started
@@ -412,7 +411,6 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       throw Error("Unfinalized cache still contains new validator");
     }
 
-    console.log(`${headState.depositReceiptsStartIndex} === ${UNSET_DEPOSIT_RECEIPTS_START_INDEX}`);
     if (headState.depositReceiptsStartIndex === UNSET_DEPOSIT_RECEIPTS_START_INDEX) {
       throw Error("state.depositReceiptsStartIndex is not set upon processing new deposit receipt");
     }
