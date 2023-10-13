@@ -67,7 +67,7 @@ describe("chain / lightclient", function () {
       },
     };
 
-    const loggerNodeA = testLogger("Node", testLoggerOpts);
+    const loggerNodeA = testLogger("lightclientNode", testLoggerOpts);
     const loggerLC = testLogger("LC", {...testLoggerOpts, level: LogLevel.debug});
 
     const bn = await getDevBeaconNode({
@@ -89,6 +89,7 @@ describe("chain / lightclient", function () {
 
     const {validators} = await getAndInitDevValidators({
       node: bn,
+      logPrefix: "lightclientNode",
       validatorsPerClient: validatorCount,
       validatorClientCount,
       startIndex: 0,

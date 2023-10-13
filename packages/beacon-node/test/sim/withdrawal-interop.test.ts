@@ -285,6 +285,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     } as ValidatorProposerConfig;
 
     const {validators} = await getAndInitDevValidators({
+      logPrefix: "withdrawal-interop",
       node: bn,
       validatorsPerClient,
       validatorClientCount,

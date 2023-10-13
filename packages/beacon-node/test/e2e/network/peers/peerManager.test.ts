@@ -20,7 +20,7 @@ import {IAttnetsService} from "../../../../src/network/subnets/index.js";
 import {Clock} from "../../../../src/util/clock.js";
 import {LocalStatusCache} from "../../../../src/network/statusCache.js";
 
-const logger = testLogger();
+const logger = testLogger("peerManager");
 
 describe("network / peers / PeerManager", function () {
   const peerId1 = getValidPeerId();
@@ -92,6 +92,10 @@ describe("network / peers / PeerManager", function () {
       },
       null
     );
+
+    afterEachCallbacks.push(async () => {
+      await peerManager.close();
+    });
 
     return {statusCache, clock, libp2p, reqResp, peerManager, networkEventBus};
   }

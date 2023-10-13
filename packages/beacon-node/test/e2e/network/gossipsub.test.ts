@@ -19,7 +19,6 @@ describe("gossipsub / worker", function () {
 
 function runTests(this: Mocha.Suite, {useWorker}: {useWorker: boolean}): void {
   if (this.timeout() < 20 * 1000) this.timeout(150 * 1000);
-  this.retries(2); // This test fail sometimes, with a 5% rate.
 
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
   afterEach(async () => {
@@ -41,8 +40,14 @@ function runTests(this: Mocha.Suite, {useWorker}: {useWorker: boolean}): void {
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async function mockModules(gossipHandlersPartial?: Partial<GossipHandlers>) {
-    const [netA, closeA] = await getNetworkForTest("A", config, {opts: {useWorker}, gossipHandlersPartial});
-    const [netB, closeB] = await getNetworkForTest("B", config, {opts: {useWorker}, gossipHandlersPartial});
+    const [netA, closeA] = await getNetworkForTest(`gossipsub-${useWorker ? "worker" : "main"}-A`, config, {
+      opts: {useWorker},
+      gossipHandlersPartial,
+    });
+    const [netB, closeB] = await getNetworkForTest(`gossipsub-${useWorker ? "worker" : "main"}-B`, config, {
+      opts: {useWorker},
+      gossipHandlersPartial,
+    });
 
     afterEachCallbacks.push(async () => {
       await closeA();

@@ -55,7 +55,7 @@
   },
   "dependencies": {
     "@chainsafe/fast-crc32c": "^4.1.1",
-    "@libp2p/interface": "^0.1.1",
+    "@libp2p/interface": "^0.1.2",
     "@lodestar/config": "^1.11.3",
     "@lodestar/params": "^1.11.3",
     "@lodestar/utils": "^1.11.3",
@@ -69,10 +69,10 @@
   "devDependencies": {
     "@lodestar/logger": "^1.11.3",
     "@lodestar/types": "^1.11.3",
-    "libp2p": "0.46.3"
+    "libp2p": "0.46.12"
   },
   "peerDependencies": {
-    "libp2p": "~0.46.3"
+    "libp2p": "~0.46.12"
   },
   "keywords": [
     "ethereum",

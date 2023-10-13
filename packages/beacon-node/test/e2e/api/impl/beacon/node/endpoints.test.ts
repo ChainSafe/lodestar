@@ -93,6 +93,7 @@ describe("beacon node api", function () {
 
       // To make BN communicate with EL, it needs to produce some blocks and for that need validators
       const {validators} = await getAndInitDevValidators({
+        logPrefix: "Offline-BN",
         node: bnElOffline,
         validatorClientCount: 1,
         validatorsPerClient: validatorCount,

@@ -28,7 +28,6 @@ const mu = "/ip4/127.0.0.1/tcp/0";
 // eslint-disable-next-line mocha/no-skipped-tests
 describe.skip("mdns", function () {
   this.timeout(50000);
-  this.retries(2); // This test fail sometimes, with a 5% rate.
 
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
   afterEach(async () => {
@@ -121,7 +120,7 @@ describe.skip("mdns", function () {
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async function createTestNodesAB() {
-    return Promise.all([createTestNode("A"), createTestNode("B")]);
+    return Promise.all([createTestNode("mdns-A"), createTestNode("mdns-B")]);
   }
 
   it("should connect two peers on a LAN", async function () {

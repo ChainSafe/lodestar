@@ -59,8 +59,8 @@ describe("sync / unknown block sync", function () {
         },
       };
 
-      const loggerNodeA = testLogger("Node-A", testLoggerOpts);
-      const loggerNodeB = testLogger("Node-B", testLoggerOpts);
+      const loggerNodeA = testLogger("UnknownSync-Node-A", testLoggerOpts);
+      const loggerNodeB = testLogger("UnknownSync-Node-B", testLoggerOpts);
 
       const bn = await getDevBeaconNode({
         params: testParams,
@@ -73,10 +73,9 @@ describe("sync / unknown block sync", function () {
         logger: loggerNodeA,
       });
 
-      afterEachCallbacks.push(() => bn.close());
-
       const {validators} = await getAndInitDevValidators({
         node: bn,
+        logPrefix: "UnknownSync",
         validatorsPerClient: validatorCount,
         validatorClientCount: 1,
         startIndex: 0,
