@@ -71,9 +71,9 @@ export class BeaconSync implements IBeaconSync {
       // So we are adding a particular delay to ensure that the `unknownBlockSync` is enabled.
       const syncStartSlot = this.chain.clock.currentSlot;
       // Having one epoch time for the node to connect to peers and start a syncing process
-      const epochCheckFotSyncSlot = syncStartSlot + SLOTS_PER_EPOCH;
+      const epochCheckForSyncSlot = syncStartSlot + SLOTS_PER_EPOCH;
       const initiateEpochCheckForSync = (): void => {
-        if (this.chain.clock.currentSlot > epochCheckFotSyncSlot) {
+        if (this.chain.clock.currentSlot > epochCheckForSyncSlot) {
           this.logger.info("Initiating epoch check for sync progress");
           this.chain.clock.off(ClockEvent.slot, initiateEpochCheckForSync);
           this.chain.clock.on(ClockEvent.epoch, this.onClockEpoch);
