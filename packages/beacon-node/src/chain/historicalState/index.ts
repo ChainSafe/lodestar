@@ -1,16 +1,12 @@
-import {ModuleThread, spawn} from "@chainsafe/threads";
+import {ModuleThread, Thread, spawn} from "@chainsafe/threads";
 import {chainConfigToJson} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
-import {terminateWorkerThread} from "../../util/workerEvents.js";
 import {
   HistoricalStateRegenInitModules,
   HistoricalStateRegenModules,
   HistoricalStateWorkerApi,
   HistoricalStateWorkerData,
 } from "./types.js";
-
-const HISTORICAL_STATE_WORKER_EXIT_RETRY_COUNT = 3;
-const HISTORICAL_STATE_WORKER_EXIT_TIMEOUT_MS = 1000;
 
 /**
  * HistoricalStateRegen limits the damage from recreating historical states
@@ -57,12 +53,7 @@ export class HistoricalStateRegen implements HistoricalStateWorkerApi {
   async close(): Promise<void> {
     await this.api.close();
     this.logger.debug("Terminating historical state worker");
-    await terminateWorkerThread({
-      worker: this.api,
-      retryCount: HISTORICAL_STATE_WORKER_EXIT_RETRY_COUNT,
-      retryMs: HISTORICAL_STATE_WORKER_EXIT_TIMEOUT_MS,
-      logger: this.logger,
-    });
+    await Thread.terminate(this.api);
     this.logger.debug("Terminated historical state worker");
   }
 
