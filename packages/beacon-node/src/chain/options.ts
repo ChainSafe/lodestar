@@ -3,12 +3,14 @@ import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {ArchiverOpts} from "./archiver/index.js";
 import {ForkChoiceOpts} from "./forkChoice/index.js";
 import {LightClientServerOpts} from "./lightClient/index.js";
+import {ShufflingCacheOpts} from "./shufflingCache.js";
 
 export type IChainOptions = BlockProcessOpts &
   PoolOpts &
   SeenCacheOpts &
   ForkChoiceOpts &
   ArchiverOpts &
+  ShufflingCacheOpts &
   LightClientServerOpts & {
     blsVerifyAllMainThread?: boolean;
     blsVerifyAllMultiThread?: boolean;
