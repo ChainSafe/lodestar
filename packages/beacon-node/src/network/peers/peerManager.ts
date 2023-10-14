@@ -61,7 +61,7 @@ const ALLOWED_NEGATIVE_GOSSIPSUB_FACTOR = 0.1;
 
 // TODO:
 // maxPeers and targetPeers should be dynamic on the num of validators connected
-// The Node should compute a recomended value every interval and log a warning
+// The Node should compute a recommended value every interval and log a warning
 // to terminal if it deviates significantly from the user's settings
 
 export type PeerManagerOpts = {
@@ -119,7 +119,7 @@ enum RelevantPeerStatus {
 }
 
 /**
- * Performs all peer managment functionality in a single grouped class:
+ * Performs all peer management functionality in a single grouped class:
  * - Ping peers every `PING_INTERVAL_MS`
  * - Status peers every `STATUS_INTERVAL_MS`
  * - Execute discovery query if under target peers

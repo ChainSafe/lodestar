@@ -287,7 +287,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
       } else {
         // TODO DENEB:
         //
-        // If block + blobs not fully recieved in the slot within some deadline, we should trigger block/blob
+        // If block + blobs not fully received in the slot within some deadline, we should trigger block/blob
         // pull using req/resp by root pre-emptively even though it will be trigged on seeing any block/blob
         // gossip on next slot via missing parent checks
       }
@@ -310,7 +310,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
       } else {
         // TODO DENEB:
         //
-        // If block + blobs not fully recieved in the slot within some deadline, we should trigger block/blob
+        // If block + blobs not fully received in the slot within some deadline, we should trigger block/blob
         // pull using req/resp by root pre-emptively even though it will be trigged on seeing any block/blob
         // gossip on next slot via missing parent checks
       }

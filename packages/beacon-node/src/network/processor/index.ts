@@ -50,7 +50,7 @@ const MAX_UNKNOWN_ROOTS_SLOT_CACHE_SIZE = 3;
  * If message slots are withint this window, it'll likely to be filtered by gossipsub seenCache.
  * This is mainly for DOS protection, see https://github.com/ChainSafe/lodestar/issues/5393
  */
-const EARLIEST_PERMISSABLE_SLOT_DISTANCE = 32;
+const EARLIEST_PERMISSIBLE_SLOT_DISTANCE = 32;
 
 type WorkOpts = {
   bypassQueue?: boolean;
@@ -249,7 +249,7 @@ export class NetworkProcessor {
       if (slotRoot) {
         // DOS protection: avoid processing messages that are too old
         const {slot, root} = slotRoot;
-        if (slot < this.chain.clock.currentSlot - EARLIEST_PERMISSABLE_SLOT_DISTANCE) {
+        if (slot < this.chain.clock.currentSlot - EARLIEST_PERMISSIBLE_SLOT_DISTANCE) {
           // TODO: Should report the dropped job to gossip? It will be eventually pruned from the mcache
           this.metrics?.networkProcessor.gossipValidationError.inc({
             topic: topicType,

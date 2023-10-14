@@ -56,7 +56,7 @@ export class BeaconRestApiServer extends RestApiServer {
   }
 
   protected shouldIgnoreError(err: Error): boolean {
-    // Don't log ErrorAborted errors, they happen on node shutdown and are not usefull
+    // Don't log ErrorAborted errors, they happen on node shutdown and are not useful
     // Don't log NodeISSyncing errors, they happen very frequently while syncing and the validator polls duties
     return err instanceof ErrorAborted || err instanceof NodeIsSyncing;
   }
