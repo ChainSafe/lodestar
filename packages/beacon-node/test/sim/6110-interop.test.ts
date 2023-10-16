@@ -1,7 +1,6 @@
 import fs from "node:fs";
 import {Context} from "mocha";
 import _ from "lodash";
-import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {LogLevel, sleep} from "@lodestar/utils";
 import {ForkName, SLOTS_PER_EPOCH, UNSET_DEPOSIT_RECEIPTS_START_INDEX} from "@lodestar/params";
 import {eip6110, Epoch} from "@lodestar/types";
@@ -23,6 +22,8 @@ import {ClockEvent} from "../../src/util/clock.js";
 import {logFilesDir} from "./params.js";
 import {shell} from "./shell.js";
 import { CachedBeaconStateEIP6110 } from "@lodestar/state-transition";
+import { dataToBytes } from "../../src/eth1/provider/utils.js";
+import { bytesToData } from "../../lib/eth1/provider/utils.js";
 
 // NOTE: How to run
 // DEV_RUN=true EL_BINARY_DIR=hyperledger/besu:develop EL_SCRIPT_DIR=besudocker yarn mocha test/sim/6110-interop.test.ts
@@ -89,10 +90,10 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     const preparePayloadParams: PayloadAttributes = {
       // Note: this is created with a pre-defined genesis.json
       timestamp: 10,
-      prevRandao: fromHexString("0x0000000000000000000000000000000000000000000000000000000000000000"),
+      prevRandao: dataToBytes("0x0000000000000000000000000000000000000000000000000000000000000000", 32),
       suggestedFeeRecipient: "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b",
       withdrawals: [],
-      parentBeaconBlockRoot: fromHexString("0x0000000000000000000000000000000000000000000000000000000000000000"),
+      parentBeaconBlockRoot: dataToBytes("0x0000000000000000000000000000000000000000000000000000000000000000", 32),
     };
     const payloadId = await executionEngine.notifyForkchoiceUpdate(
       ForkName.eip6110,
@@ -110,13 +111,15 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     const depositReceiptA = {
       amount: 32000000000,
       index: 0,
-      pubkey: fromHexString(
-        "0x96a96086cff07df17668f35f7418ef8798079167e3f4f9b72ecde17b28226137cf454ab1dd20ef5d924786ab3483c2f9"
+      pubkey: dataToBytes(
+        "0x96a96086cff07df17668f35f7418ef8798079167e3f4f9b72ecde17b28226137cf454ab1dd20ef5d924786ab3483c2f9",
+        48
       ),
-      signature: fromHexString(
-        "0xb1acdb2c4d3df3f1b8d3bfd33421660df358d84d78d16c4603551935f4b67643373e7eb63dcb16ec359be0ec41fee33b03a16e80745f2374ff1d3c352508ac5d857c6476d3c3bcf7e6ca37427c9209f17be3af5264c0e2132b3dd1156c28b4e9"
+      signature: dataToBytes(
+        "0xb1acdb2c4d3df3f1b8d3bfd33421660df358d84d78d16c4603551935f4b67643373e7eb63dcb16ec359be0ec41fee33b03a16e80745f2374ff1d3c352508ac5d857c6476d3c3bcf7e6ca37427c9209f17be3af5264c0e2132b3dd1156c28b4e9",
+        96
       ),
-      withdrawalCredentials: fromHexString("0x003f5102dabe0a27b1746098d1dc17a5d3fbd478759fea9287e4e419b3c3cef2"),
+      withdrawalCredentials: dataToBytes("0x003f5102dabe0a27b1746098d1dc17a5d3fbd478759fea9287e4e419b3c3cef2", 32),
     };
 
     const depositTransactionB =
@@ -124,13 +127,15 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     const depositReceiptB = {
       amount: 32000000000,
       index: 1,
-      pubkey: fromHexString(
-        "0xa5c85a60ba2905c215f6a12872e62b1ee037051364244043a5f639aa81b04a204c55e7cc851f29c7c183be253ea1510b"
+      pubkey: dataToBytes(
+        "0xa5c85a60ba2905c215f6a12872e62b1ee037051364244043a5f639aa81b04a204c55e7cc851f29c7c183be253ea1510b",
+        48
       ),
-      signature: fromHexString(
-        "0x9561731785b48cf1886412234531e4940064584463e96ac63a1a154320227e333fb51addc4a89b7e0d3f862d7c1fd4ea03bd8eb3d8806f1e7daf591cbbbb92b0beb74d13c01617f22c5026b4f9f9f294a8a7c32db895de3b01bee0132c9209e1"
+      signature: dataToBytes(
+        "0x9561731785b48cf1886412234531e4940064584463e96ac63a1a154320227e333fb51addc4a89b7e0d3f862d7c1fd4ea03bd8eb3d8806f1e7daf591cbbbb92b0beb74d13c01617f22c5026b4f9f9f294a8a7c32db895de3b01bee0132c9209e1",
+        96
       ),
-      withdrawalCredentials: fromHexString("0x001db70c485b6264692f26b8aeaab5b0c384180df8e2184a21a808a3ec8e86ca"),
+      withdrawalCredentials: dataToBytes("0x001db70c485b6264692f26b8aeaab5b0c384180df8e2184a21a808a3ec8e86ca", 32),
     };
 
     sendRawTransactionBig(ethRpcUrl, depositTransactionA, `${dataPath}/deposit.json`).catch((e: Error) => {
@@ -144,28 +149,29 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     // 3. Import new payload with tx A and deposit receipt A
     const newPayloadBlockHash = "0xfd1189e6ea0814b7d40d4e50b31ae5feabbb2acff39399457bbdda7cb5ccd490";
     const newPayload = {
-      parentHash: fromHexString("0x26118cf71453320edcebbc4ebb34af5b578087a32385b80108bf691fa23efc42"),
-      feeRecipient: fromHexString("0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b"),
-      stateRoot: fromHexString("0x14208ac0e218167936e220b72d5d5887a963cb858ea2f2d268518f014a3da3fa"),
-      logsBloom: fromHexString(
-        "0x10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000400000000000000000000000020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008000000000000000000000000"
+      parentHash: dataToBytes("0x26118cf71453320edcebbc4ebb34af5b578087a32385b80108bf691fa23efc42", 32),
+      feeRecipient: dataToBytes("0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b", 20),
+      stateRoot: dataToBytes("0x14208ac0e218167936e220b72d5d5887a963cb858ea2f2d268518f014a3da3fa", 32),
+      logsBloom: dataToBytes(
+        "0x10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000400000000000000000000000020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008000000000000000000000000",
+        256
       ),
-      prevRandao: fromHexString("0x0000000000000000000000000000000000000000000000000000000000000000"),
+      prevRandao: dataToBytes("0x0000000000000000000000000000000000000000000000000000000000000000", 32),
       gasLimit: 30000000,
       gasUsed: 84846,
       timestamp: 16,
-      extraData: fromHexString("0x"),
+      extraData: dataToBytes("0x", 0),
       baseFeePerGas: 7n,
       excessBlobGas: 0n,
-      transactions: [fromHexString(depositTransactionA)],
+      transactions: [dataToBytes(depositTransactionA, null)],
       withdrawals: [],
       depositReceipts: [depositReceiptA],
       blockNumber: 1,
-      blockHash: fromHexString(newPayloadBlockHash),
-      receiptsRoot: fromHexString("0x79ee3424eb720a3ad4b1c5a372bb8160580cbe4d893778660f34213c685627a9"),
+      blockHash: dataToBytes(newPayloadBlockHash, 32),
+      receiptsRoot: dataToBytes("0x79ee3424eb720a3ad4b1c5a372bb8160580cbe4d893778660f34213c685627a9", 32),
       blobGasUsed: 0n,
     };
-    const parentBeaconBlockRoot = fromHexString("0x0000000000000000000000000000000000000000000000000000000000000000");
+    const parentBeaconBlockRoot = dataToBytes("0x0000000000000000000000000000000000000000000000000000000000000000", 32);
     const payloadResult = await executionEngine.notifyNewPayload(
       ForkName.eip6110,
       newPayload,
@@ -179,10 +185,10 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     // 4. Update fork choice
     const preparePayloadParams2: PayloadAttributes = {
       timestamp: 48,
-      prevRandao: fromHexString("0x0000000000000000000000000000000000000000000000000000000000000000"),
+      prevRandao: dataToBytes("0x0000000000000000000000000000000000000000000000000000000000000000", 32),
       suggestedFeeRecipient: "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b",
       withdrawals: [],
-      parentBeaconBlockRoot: fromHexString("0x0000000000000000000000000000000000000000000000000000000000000000"),
+      parentBeaconBlockRoot: dataToBytes("0x0000000000000000000000000000000000000000000000000000000000000000", 32),
     };
 
     const payloadId2 = await executionEngine.notifyForkchoiceUpdate(
@@ -205,7 +211,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     if (payload.transactions.length !== 1) {
       throw Error(`Number of transactions mismatched. Expected: 1, actual: ${payload.transactions.length}`);
     } else {
-      const actualTransaction = toHexString(payload.transactions[0]);
+      const actualTransaction = bytesToData(payload.transactions[0]);
 
       if (actualTransaction !== depositTransactionB) {
         throw Error(`Transaction mismatched. Expected: ${depositTransactionB}, actual: ${actualTransaction}`);
@@ -241,8 +247,6 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       testName: "post-merge",
     });
   });
-
-  // Want to test 2 things:
 
   /**
    * Want to test two things:
@@ -316,7 +320,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       validatorCount: validatorClientCount * validatorsPerClient,
       logger: loggerNodeA,
       genesisTime,
-      eth1BlockHash: fromHexString(genesisBlockHash),
+      eth1BlockHash: dataToBytes(genesisBlockHash, 32),
       withEth1Credentials: true,
     });
 
@@ -345,7 +349,6 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
     bn.chain.clock.on(ClockEvent.slot, (slot) => {
       // send raw tx at slot 1
-      console.log(slot);
       if (slot === 1) {
         const depositTransactionA =
           "0x02f9021e8217de8085012a05f20085019254d380830271009442424242424242424242424242424242424242428901bc16d674ec800000b901a422895118000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000120ef950826b191ebea0bbafa92a2c6bffa8239c6f456d92891ce2852b8360f0d30000000000000000000000000000000000000000000000000000000000000003095e4f91aea91a9e00387fad9d60997cff6cbf68d42d1b6629a7b248cdef255f94a2a2381e5d4125273fe42da5f7aa0e1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020003f5102dabe0a27b1746098d1dc17a5d3fbd478759fea9287e4e419b3c3cef20000000000000000000000000000000000000000000000000000000000000060b6c06e65228046268aa918baf78e072c25e65aa0bcf258cefcac3371c47df81bc4d43ca942f5fc28f9a563e925fd9c5010bc8c300add3faf3af0d61fabaaf03694020feaafb03e47c1bc4fcf082684c7ed3f7d5839d1722214b24f95ad2b226cc080a0be1161617492e4ca2fcb89edcadf5e71e8cac0d6447d18cfde9b55e5a8412417a07ec8c47dd484036c745049bb2e2980d44e38d4dacac50dc4a14a2f23c52f2e5f";
@@ -357,9 +360,6 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       if (slot === 5) {
         const headState = bn.chain.getHeadState();
         const epochCtx = headState.epochCtx;
-        console.log(
-          `At slot 5: ${headState.validators.length}, ${headState.balances.length}, ${epochCtx.finalizedIndex2pubkey.length}, ${epochCtx.finalizedPubkey2index.size}, ${epochCtx.unfinalizedPubkey2index.size}`
-        );
         if (headState.validators.length !== 33 || headState.balances.length !== 33) {
           throw Error("New validator is not reflected in the beacon state.");
         }
@@ -397,9 +397,6 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     // Check if new validator is in finalized cache
     const headState = bn.chain.getHeadState() as CachedBeaconStateEIP6110;
     const epochCtx = headState.epochCtx;
-    console.log(
-      `At slot 8: ${headState.validators.length}, ${headState.balances.length}, ${epochCtx.finalizedIndex2pubkey.length}, ${epochCtx.finalizedPubkey2index.size}, ${epochCtx.unfinalizedPubkey2index.size}`
-    );
 
     if (headState.validators.length !== 33 || headState.balances.length !== 33) {
       throw Error("New validator is not reflected in the beacon state.");
