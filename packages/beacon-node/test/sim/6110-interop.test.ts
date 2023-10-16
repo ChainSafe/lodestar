@@ -8,6 +8,7 @@ import {ValidatorProposerConfig} from "@lodestar/validator";
 
 import {ChainConfig} from "@lodestar/config";
 import {TimestampFormatCode} from "@lodestar/logger";
+import {CachedBeaconStateEIP6110} from "@lodestar/state-transition";
 import {initializeExecutionEngine} from "../../src/execution/index.js";
 import {ExecutionPayloadStatus, PayloadAttributes} from "../../src/execution/engine/interface.js";
 
@@ -19,11 +20,10 @@ import {BeaconRestApiServerOpts} from "../../src/api/index.js";
 import {simTestInfoTracker} from "../utils/node/simTest.js";
 import {getAndInitDevValidators} from "../utils/node/validator.js";
 import {ClockEvent} from "../../src/util/clock.js";
+import {dataToBytes} from "../../src/eth1/provider/utils.js";
+import {bytesToData} from "../../lib/eth1/provider/utils.js";
 import {logFilesDir} from "./params.js";
 import {shell} from "./shell.js";
-import { CachedBeaconStateEIP6110 } from "@lodestar/state-transition";
-import { dataToBytes } from "../../src/eth1/provider/utils.js";
-import { bytesToData } from "../../lib/eth1/provider/utils.js";
 
 // NOTE: How to run
 // DEV_RUN=true EL_BINARY_DIR=hyperledger/besu:develop EL_SCRIPT_DIR=besudocker yarn mocha test/sim/6110-interop.test.ts
@@ -263,7 +263,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     const validatorClientCount = 1;
     const validatorsPerClient = 32;
 
-    const testParams: Pick<ChainConfig, "SECONDS_PER_SLOT" > = {
+    const testParams: Pick<ChainConfig, "SECONDS_PER_SLOT"> = {
       SECONDS_PER_SLOT: 2,
     };
 
@@ -374,7 +374,11 @@ describe("executionEngine / ExecutionEngineHttp", function () {
             reject(Error("Finalized cache is modified."));
           }
           if (epochCtx.unfinalizedPubkey2index.size !== 1) {
-            reject(Error(`Unfinalized cache is missing the expected validator. Size: ${epochCtx.unfinalizedPubkey2index.size}`));
+            reject(
+              Error(
+                `Unfinalized cache is missing the expected validator. Size: ${epochCtx.unfinalizedPubkey2index.size}`
+              )
+            );
           }
         }
       });
