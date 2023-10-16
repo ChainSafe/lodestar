@@ -6,59 +6,11 @@ import {ExecutionPayloadBody} from "../execution/engine/types.js";
 import {ROOT_SIZE, getSlotFromSignedBeaconBlockSerialized} from "./sszBytes.js";
 
 /**
- * Bellatrix:
- *   preamble: Fixed Length Data
- *   transactionsRoot: Root
- *   extraData: Variable Length Data
- *   - to -
- *   preamble: Fixed Length Data
- *   transactions: Variable Offset
- *   extraData: Variable Length Data
- *   transactions: Variable Length Data
- *
- * Capella:
- *   preamble: Fixed Length Data
- *   transactionsRoot: Root
- *   withdrawalsRoot: Root
- *   extraData: Variable Length Data
- *   blsToExecutionChanges: Variable Length Data
- *   - to -
- *   preamble: Fixed Length Data
- *   transactions: Variable Offset
- *   withdrawals: Variable Offset // cant know this offset until have transactions
- *   extraData: Variable Length Data
- *   transactions: Variable Length Data
- *   withdrawals: Variable Length Data
- *   blsToExecutionChanges: Variable Length Data
- *
- * Deneb:
- *   preamble: Fixed Length Data
- *   transactionsRoot: Root
- *   withdrawalsRoot: Root
- *   dataGasUsed: UintBn64
- *   excessDataGas: UintBn64
- *   extraData: Variable Length Data
- *   blsToExecutionChanges: Variable Length Data
- *   blobKzgCommitments: Variable Length Data
- *   - to -
- *   preamble: Fixed Length Data
- *   transactions: Variable Offset
- *   withdrawals: Variable Offset // cant know this offset until have transactions
- *   dataGasUsed: UintBn64
- *   excessDataGas: UintBn64
- *   extraData: Variable Length Data
- *   transactions: Variable Length Data
- *   withdrawals: Variable Length Data
- *   blsToExecutionChanges: Variable Length Data
- *   blobKzgCommitments: Variable Length Data
- */
-
-/**
  *  * class SignedBeaconBlock(Container):
  *   message: BeaconBlock [offset - 4 bytes]
  *   signature: BLSSignature [fixed - 96 bytes]
  */
-const SIGNED_BEACON_BLOCK_COMPENSATION_LENGTH = 4 + 96;
+const SIGNED_BEACON_BLOCK_FIXED_LENGTH = 4 + 96;
 /**
  * class BeaconBlock(Container) or class BlindedBeaconBlock(Container):
  *   slot: Slot                      [fixed - 8 bytes]
@@ -67,7 +19,7 @@ const SIGNED_BEACON_BLOCK_COMPENSATION_LENGTH = 4 + 96;
  *   state_root: Root                [fixed - 32 bytes]
  *   body: MaybeBlindBeaconBlockBody [offset - 4 bytes]
  */
-const BEACON_BLOCK_COMPENSATION_LENGTH = 8 + 8 + 32 + 32 + 4;
+const BEACON_BLOCK_FIXED_LENGTH = 8 + 8 + 32 + 32 + 4;
 /**
  * class BeaconBlockBody(Container) or class BlindedBeaconBlockBody(Container):
  *
@@ -97,30 +49,15 @@ const BEACON_BLOCK_COMPENSATION_LENGTH = 8 + 8 + 32 + 32 + 4;
  * Deneb:
  *   blobKzgCommitments             [offset -  4 bytes]
  */
-function getOffsetWithinBeaconBlockBody(blockBytes: DataView, offset: number): number {
-  const readAt = offset + SIGNED_BEACON_BLOCK_COMPENSATION_LENGTH + BEACON_BLOCK_COMPENSATION_LENGTH;
-  return blockBytes.getUint32(readAt, true);
-}
 
 const LOCATION_OF_ETH1_BLOCK_HASH = 96 + 32 + 8;
 export function getEth1BlockHashFromSerializedBlock(block: Uint8Array): Uint8Array {
-  const firstByte =
-    SIGNED_BEACON_BLOCK_COMPENSATION_LENGTH + BEACON_BLOCK_COMPENSATION_LENGTH + LOCATION_OF_ETH1_BLOCK_HASH;
+  const firstByte = SIGNED_BEACON_BLOCK_FIXED_LENGTH + BEACON_BLOCK_FIXED_LENGTH + LOCATION_OF_ETH1_BLOCK_HASH;
   return block.slice(firstByte, firstByte + ROOT_SIZE);
 }
 
-const LOCATION_OF_PROPOSER_SLASHINGS_OFFSET = LOCATION_OF_ETH1_BLOCK_HASH + 32 + 32;
-
 const LOCATION_OF_EXECUTION_PAYLOAD_OFFSET =
-  LOCATION_OF_PROPOSER_SLASHINGS_OFFSET + 4 + 4 + 4 + 4 + 4 + SYNC_COMMITTEE_SIZE / 8 + 96;
-
-function getExecutionPayloadOffset(blockBytes: DataView): number {
-  return (
-    getOffsetWithinBeaconBlockBody(blockBytes, LOCATION_OF_EXECUTION_PAYLOAD_OFFSET) +
-    SIGNED_BEACON_BLOCK_COMPENSATION_LENGTH +
-    BEACON_BLOCK_COMPENSATION_LENGTH
-  );
-}
+  LOCATION_OF_ETH1_BLOCK_HASH + 32 + 32 + 4 + 4 + 4 + 4 + 4 + SYNC_COMMITTEE_SIZE / 8 + 96;
 
 /**
  * class ExecutionPayload(Container) or class ExecutionPayloadHeader(Container)
@@ -155,60 +92,34 @@ function getExecutionPayloadOffset(blockBytes: DataView): number {
 const LOCATION_OF_EXTRA_DATA_OFFSET_WITHIN_EXECUTION_PAYLOAD =
   32 + 20 + 32 + 32 + BYTES_PER_LOGS_BLOOM + 32 + 8 + 8 + 8 + 8;
 
-function executionPayloadHeaderToPayload(
-  forkSeq: ForkSeq,
-  header: allForks.ExecutionPayloadHeader,
-  {transactions, withdrawals}: Partial<ExecutionPayloadBody>
-): allForks.ExecutionPayload {
-  const bellatrixPayloadFields: allForks.ExecutionPayload = {
-    parentHash: header.parentHash,
-    feeRecipient: header.feeRecipient,
-    stateRoot: header.stateRoot,
-    receiptsRoot: header.receiptsRoot,
-    logsBloom: header.logsBloom,
-    prevRandao: header.prevRandao,
-    blockNumber: header.blockNumber,
-    gasLimit: header.gasLimit,
-    gasUsed: header.gasUsed,
-    timestamp: header.timestamp,
-    extraData: header.extraData,
-    baseFeePerGas: header.baseFeePerGas,
-    blockHash: header.blockHash,
-    transactions: transactions ?? [],
-  };
-
-  if (forkSeq >= ForkSeq.capella) {
-    (bellatrixPayloadFields as capella.ExecutionPayload).withdrawals = withdrawals ?? [];
-  }
-
-  if (forkSeq >= ForkSeq.deneb) {
-    // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#process_execution_payload
-    (bellatrixPayloadFields as deneb.ExecutionPayload).blobGasUsed = (
-      header as deneb.ExecutionPayloadHeader
-    ).blobGasUsed;
-    (bellatrixPayloadFields as deneb.ExecutionPayload).excessBlobGas = (
-      header as deneb.ExecutionPayloadHeader
-    ).excessBlobGas;
-  }
-
-  return bellatrixPayloadFields;
-}
-
-// same as isBlindedSignedBeaconBlock but without type narrowing
-export function isBlinded(block: allForks.FullOrBlindedSignedBeaconBlock): boolean {
-  return (block as bellatrix.SignedBlindedBeaconBlock).message.body.executionPayloadHeader !== undefined;
-}
-
 export function isBlindedBytes(forkSeq: ForkSeq, blockBytes: Uint8Array): boolean {
   if (forkSeq < ForkSeq.bellatrix) {
     return false;
   }
 
   const dv = new DataView(blockBytes.buffer, blockBytes.byteOffset, blockBytes.byteLength);
-  const executionPayloadOffset = getExecutionPayloadOffset(dv);
-  const readAt = LOCATION_OF_EXTRA_DATA_OFFSET_WITHIN_EXECUTION_PAYLOAD + executionPayloadOffset;
-  const firstByte = dv.getUint32(readAt, true) + executionPayloadOffset;
-  return firstByte - readAt > 93;
+
+  // read the executionPayload offset, encoded as offset from start of BeaconBlockBody and compensate with the fixed
+  // data length of the SignedBeaconBlock and BeaconBlock to get absolute offset from start of bytes
+  const readExecutionPayloadOffsetAt =
+    LOCATION_OF_EXECUTION_PAYLOAD_OFFSET + SIGNED_BEACON_BLOCK_FIXED_LENGTH + BEACON_BLOCK_FIXED_LENGTH;
+  const executionPayloadOffset =
+    dv.getUint32(readExecutionPayloadOffsetAt, true) + SIGNED_BEACON_BLOCK_FIXED_LENGTH + BEACON_BLOCK_FIXED_LENGTH;
+
+  // read the extraData offset, encoded as offset from start of ExecutionPayload and compensate with absolute offset of
+  // executionPayload to get location of first byte of extraData
+  const readExtraDataOffsetAt = LOCATION_OF_EXTRA_DATA_OFFSET_WITHIN_EXECUTION_PAYLOAD + executionPayloadOffset;
+  const firstByte = dv.getUint32(readExtraDataOffsetAt, true) + executionPayloadOffset;
+
+  // compare first byte of extraData with location of the offset of the extraData.  In full blocks the distance between
+  // the offset and first byte is at maximum 4 + 32 + 32 + 4 + 4 + 8 + 8 = 92.  In blinded blocks the distance at minimum
+  // is 4 + 32 + 32 + 4 + 4 + 32 = 108.  Therefore if the distance is 93 or greater it must be blinded
+  return firstByte - readExtraDataOffsetAt > 92;
+}
+
+// same as isBlindedSignedBeaconBlock but without type narrowing
+export function isBlinded(block: allForks.FullOrBlindedSignedBeaconBlock): boolean {
+  return (block as bellatrix.SignedBlindedBeaconBlock).message.body.executionPayloadHeader !== undefined;
 }
 
 export function serializeFullOrBlindedSignedBeaconBlock(
@@ -280,6 +191,45 @@ export function blindedOrFullBlockToBlinded(
   }
 
   return blinded;
+}
+
+function executionPayloadHeaderToPayload(
+  forkSeq: ForkSeq,
+  header: allForks.ExecutionPayloadHeader,
+  {transactions, withdrawals}: Partial<ExecutionPayloadBody>
+): allForks.ExecutionPayload {
+  const bellatrixPayloadFields: allForks.ExecutionPayload = {
+    parentHash: header.parentHash,
+    feeRecipient: header.feeRecipient,
+    stateRoot: header.stateRoot,
+    receiptsRoot: header.receiptsRoot,
+    logsBloom: header.logsBloom,
+    prevRandao: header.prevRandao,
+    blockNumber: header.blockNumber,
+    gasLimit: header.gasLimit,
+    gasUsed: header.gasUsed,
+    timestamp: header.timestamp,
+    extraData: header.extraData,
+    baseFeePerGas: header.baseFeePerGas,
+    blockHash: header.blockHash,
+    transactions: transactions ?? [],
+  };
+
+  if (forkSeq >= ForkSeq.capella) {
+    (bellatrixPayloadFields as capella.ExecutionPayload).withdrawals = withdrawals ?? [];
+  }
+
+  if (forkSeq >= ForkSeq.deneb) {
+    // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#process_execution_payload
+    (bellatrixPayloadFields as deneb.ExecutionPayload).blobGasUsed = (
+      header as deneb.ExecutionPayloadHeader
+    ).blobGasUsed;
+    (bellatrixPayloadFields as deneb.ExecutionPayload).excessBlobGas = (
+      header as deneb.ExecutionPayloadHeader
+    ).excessBlobGas;
+  }
+
+  return bellatrixPayloadFields;
 }
 
 export function blindedOrFullBlockToFull(
