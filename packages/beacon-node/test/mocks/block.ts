@@ -15,7 +15,8 @@ export const chainConfig = createChainForkConfig({
   ALTAIR_FORK_EPOCH: mainnetChainConfig.ALTAIR_FORK_EPOCH * 4,
   BELLATRIX_FORK_EPOCH: mainnetChainConfig.BELLATRIX_FORK_EPOCH * 4,
   CAPELLA_FORK_EPOCH: mainnetChainConfig.CAPELLA_FORK_EPOCH * 4,
-  DENEB_FORK_EPOCH: mainnetChainConfig.DENEB_FORK_EPOCH * 4,
+  // mainnet DENEB_FORK_EPOCH is Infinity at time of writing this
+  DENEB_FORK_EPOCH: mainnetChainConfig.CAPELLA_FORK_EPOCH * 2 * 4,
 });
 /* eslint-enable @typescript-eslint/naming-convention */
 
@@ -29,10 +30,10 @@ export const phase0SerializedSignedBeaconBlock = loadSerialized("block.phase0.ss
 export const altairSerializedSignedBeaconBlock = loadSerialized("block.altair.ssz");
 export const bellatrixSerializedSignedBeaconBlock = loadSerialized("block.bellatrix.ssz");
 export const capellaSerializedSignedBeaconBlock = loadSerialized("block.capella.ssz");
-// export const denebSerializedSignedBeaconBlock = loadSerialized("block.deneb.ssz");
+export const denebSerializedSignedBeaconBlock = loadSerialized("block.deneb.ssz");
 export const bellatrixSerializedSignedBlindedBeaconBlock = loadSerialized("blindedBlock.bellatrix.ssz");
 export const capellaSerializedSignedBlindedBeaconBlock = loadSerialized("blindedBlock.capella.ssz");
-// export const denebSerializedSignedBlindedBeaconBlock = loadSerialized("blindedBlock.deneb.ssz");
+export const denebSerializedSignedBlindedBeaconBlock = loadSerialized("blindedBlock.deneb.ssz");
 
 export const phase0SignedBeaconBlock = ssz.phase0.SignedBeaconBlock.deserialize(phase0SerializedSignedBeaconBlock);
 export const altairSignedBeaconBlock = ssz.altair.SignedBeaconBlock.deserialize(altairSerializedSignedBeaconBlock);
@@ -40,7 +41,7 @@ export const bellatrixSignedBeaconBlock = ssz.bellatrix.SignedBeaconBlock.deseri
   bellatrixSerializedSignedBeaconBlock
 );
 export const capellaSignedBeaconBlock = ssz.capella.SignedBeaconBlock.deserialize(capellaSerializedSignedBeaconBlock);
-// export const denebSignedBeaconBlock = ssz.deneb.SignedBeaconBlock.deserialize(denebSerializedSignedBeaconBlock);
+export const denebSignedBeaconBlock = ssz.deneb.SignedBeaconBlock.deserialize(denebSerializedSignedBeaconBlock);
 
 export const bellatrixSignedBlindedBeaconBlock = ssz.bellatrix.SignedBlindedBeaconBlock.deserialize(
   bellatrixSerializedSignedBlindedBeaconBlock
@@ -48,9 +49,9 @@ export const bellatrixSignedBlindedBeaconBlock = ssz.bellatrix.SignedBlindedBeac
 export const capellaSignedBlindedBeaconBlock = ssz.capella.SignedBlindedBeaconBlock.deserialize(
   capellaSerializedSignedBlindedBeaconBlock
 );
-// export const denebSignedBlindedBeaconBlock = ssz.deneb.SignedBlindedBeaconBlock.deserialize(
-//   denebSerializedSignedBlindedBeaconBlock
-// );
+export const denebSignedBlindedBeaconBlock = ssz.deneb.SignedBlindedBeaconBlock.deserialize(
+  denebSerializedSignedBlindedBeaconBlock
+);
 
 interface MockBlock {
   forkInfo: ForkInfo;
@@ -85,11 +86,11 @@ export const mockBlocks: MockBlock[] = [
     blinded: capellaSignedBlindedBeaconBlock,
     blindedSerialized: capellaSerializedSignedBlindedBeaconBlock,
   },
-  // {
-  //   forkInfo: chainConfig.getForkInfo(denebSignedBeaconBlock.message.slot),
-  //   full: denebSignedBeaconBlock,
-  //   fullSerialized: denebSerializedSignedBeaconBlock,
-  //   blinded: denebSignedBlindedBeaconBlock,
-  //   blindedSerialized: denebSerializedSignedBlindedBeaconBlock,
-  // },
+  {
+    forkInfo: chainConfig.getForkInfo(denebSignedBeaconBlock.message.slot),
+    full: denebSignedBeaconBlock,
+    fullSerialized: denebSerializedSignedBeaconBlock,
+    blinded: denebSignedBlindedBeaconBlock,
+    blindedSerialized: denebSerializedSignedBlindedBeaconBlock,
+  },
 ];

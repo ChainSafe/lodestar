@@ -46,8 +46,9 @@ import {isOptimisticBlock} from "../util/forkChoice.js";
 import {BufferPool} from "../util/bufferPool.js";
 import {
   blindedOrFullBlockToFull,
-  blindedOrFullBlockToFullBytes,
+  deserializeFullOrBlindedSignedBeaconBlock,
   getEth1BlockHashFromSerializedBlock,
+  serializeFullOrBlindedSignedBeaconBlock,
 } from "../util/fullOrBlindedBlock.js";
 import {ExecutionPayloadBody} from "../execution/engine/types.js";
 import {Eth1Error, Eth1ErrorCode} from "../eth1/errors.js";
@@ -596,11 +597,15 @@ export class BeaconChain implements IBeaconChain {
     );
   }
 
-  blindedOrFullBlockToFullBytes(forkSeq: ForkSeq, block: Uint8Array): AsyncIterable<Uint8Array> {
-    return blindedOrFullBlockToFullBytes(
-      forkSeq,
-      block,
-      this.getTransactionsAndWithdrawals(forkSeq, toHexString(getEth1BlockHashFromSerializedBlock(block)))
+  async blindedOrFullBlockToFullBytes(forkSeq: ForkSeq, block: Uint8Array): Promise<Uint8Array> {
+    return serializeFullOrBlindedSignedBeaconBlock(
+      this.config,
+      blindedOrFullBlockToFull(
+        this.config,
+        forkSeq,
+        deserializeFullOrBlindedSignedBeaconBlock(this.config, block),
+        await this.getTransactionsAndWithdrawals(forkSeq, toHexString(getEth1BlockHashFromSerializedBlock(block)))
+      )
     );
   }
 

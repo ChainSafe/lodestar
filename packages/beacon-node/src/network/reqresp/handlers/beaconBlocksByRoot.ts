@@ -39,13 +39,9 @@ export async function* onBeaconBlocksByRoot(
       }
 
       const {name, seq} = chain.config.getForkInfo(slot);
-      const chunks: Uint8Array[] = [];
-      for await (const chunk of chain.blindedOrFullBlockToFullBytes(seq, blockBytes)) {
-        chunks.push(chunk);
-      }
 
       yield {
-        data: Buffer.concat(chunks),
+        data: await chain.blindedOrFullBlockToFullBytes(seq, blockBytes),
         fork: name,
       };
     }

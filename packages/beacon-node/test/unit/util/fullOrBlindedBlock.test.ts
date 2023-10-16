@@ -4,10 +4,9 @@ import {allForks, capella} from "@lodestar/types";
 import {isForkExecution} from "@lodestar/params";
 import {
   blindedOrFullBlockToBlinded,
-  blindedOrFullBlockToBlindedBytes,
+  blindedOrFullBlockToFull,
   deserializeFullOrBlindedSignedBeaconBlock,
   isBlindedBytes,
-  blindedOrFullBlockToFullBytes,
   serializeFullOrBlindedSignedBeaconBlock,
 } from "../../../src/util/fullOrBlindedBlock.js";
 import {chainConfig, mockBlocks} from "../../utils/mocks/block.js";
@@ -83,48 +82,24 @@ describe("blindedOrFullBlockToBlinded", function () {
   }
 });
 
-describe("blindedOrFullBlockToBlindedBytes", function () {
+describe("blindedOrFullBlockToFull", function () {
   for (const {
-    forkInfo: {name},
+    forkInfo: {name, seq},
     full,
-    fullSerialized,
     blinded,
-    blindedSerialized,
   } of mockBlocks) {
-    const expected = (isForkExecution(name) ? blindedSerialized : fullSerialized) as Uint8Array;
-    it(`should convert full ${name} to blinded block`, () => {
-      const result = blindedOrFullBlockToBlindedBytes(chainConfig, full, fullSerialized);
-      expect(byteArrayEquals(result, expected)).to.be.true;
+    const transactionsAndWithdrawals = {
+      transactions: (full as capella.SignedBeaconBlock).message.body.executionPayload?.transactions ?? [],
+      withdrawals: (full as capella.SignedBeaconBlock).message.body.executionPayload?.withdrawals ?? [],
+    };
+    it(`should convert full ${name} to full block`, () => {
+      const result = blindedOrFullBlockToFull(chainConfig, seq, full, transactionsAndWithdrawals);
+      expect(chainConfig.getForkTypes(full.message.slot).SignedBeaconBlock.equals(result, full)).to.be.true;
     });
-    if (blinded && blindedSerialized) {
-      it(`should convert blinded ${name} to blinded block`, () => {
-        const result = blindedOrFullBlockToBlindedBytes(chainConfig, blinded, blindedSerialized);
-        expect(byteArrayEquals(result, expected)).to.be.true;
-      });
-    }
-  }
-});
-
-describe("blindedOrFullBlockToFullBytes", () => {
-  for (const {
-    forkInfo: {seq, name},
-    full,
-    fullSerialized,
-    blindedSerialized,
-  } of mockBlocks) {
-    const transactions = (full as capella.SignedBeaconBlock).message.body.executionPayload?.transactions;
-    const withdrawals = (full as capella.SignedBeaconBlock).message.body.executionPayload?.withdrawals;
-    it(`should reassemble serialized blinded ${name} to serialized full block`, async () => {
-      const chunks: Uint8Array[] = [];
-      for await (const chunk of blindedOrFullBlockToFullBytes(
-        seq,
-        (isForkExecution(name) ? blindedSerialized : fullSerialized) as Uint8Array,
-        Promise.resolve({transactions, withdrawals})
-      )) {
-        chunks.push(chunk);
-      }
-      const result = Uint8Array.from(Buffer.concat(chunks));
-      expect(byteArrayEquals(result, fullSerialized)).to.be.true;
+    if (!blinded) continue;
+    it(`should convert blinded ${name} to full block`, () => {
+      const result = blindedOrFullBlockToFull(chainConfig, seq, blinded, transactionsAndWithdrawals);
+      expect(chainConfig.getForkTypes(full.message.slot).SignedBeaconBlock.equals(result, full)).to.be.true;
     });
   }
 });
