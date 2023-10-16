@@ -81,9 +81,11 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     const {genesisBlockHash, engineRpcUrl, ethRpcUrl} = elClient;
     console.log({genesisBlockHash});
 
+    const loggerExecutionEngine = testLogger("executionEngine");
+
     const executionEngine = initializeExecutionEngine(
       {mode: "http", urls: [engineRpcUrl], jwtSecretHex, retryAttempts, retryDelay},
-      {signal: controller.signal, logger: testLogger("executionEngine")}
+      {signal: controller.signal, logger: loggerExecutionEngine}
     );
 
     // 1. Prepare payload
@@ -139,11 +141,11 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     };
 
     sendRawTransactionBig(ethRpcUrl, depositTransactionA, `${dataPath}/deposit.json`).catch((e: Error) => {
-      throw Error(`Fail to send raw deposit transaction A: ${e.message}`);
+      loggerExecutionEngine.error("Fail to send raw deposit transaction A", undefined, e);
     });
 
     sendRawTransactionBig(ethRpcUrl, depositTransactionB, `${dataPath}/deposit.json`).catch((e: Error) => {
-      throw Error(`Fail to send raw deposit transaction B: ${e.message}`);
+      loggerExecutionEngine.error("Fail to send raw deposit transaction B", undefined, e);
     });
 
     // 3. Import new payload with tx A and deposit receipt A
@@ -347,38 +349,35 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       valProposerConfig,
     });
 
-    bn.chain.clock.on(ClockEvent.slot, (slot) => {
-      // send raw tx at slot 1
-      if (slot === 1) {
-        const depositTransaction =
-          "0x02f9021e8217de8085012a05f20085019254d380830271009442424242424242424242424242424242424242428901bc16d674ec800000b901a422895118000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000120ef950826b191ebea0bbafa92a2c6bffa8239c6f456d92891ce2852b8360f0d30000000000000000000000000000000000000000000000000000000000000003095e4f91aea91a9e00387fad9d60997cff6cbf68d42d1b6629a7b248cdef255f94a2a2381e5d4125273fe42da5f7aa0e1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020003f5102dabe0a27b1746098d1dc17a5d3fbd478759fea9287e4e419b3c3cef20000000000000000000000000000000000000000000000000000000000000060b6c06e65228046268aa918baf78e072c25e65aa0bcf258cefcac3371c47df81bc4d43ca942f5fc28f9a563e925fd9c5010bc8c300add3faf3af0d61fabaaf03694020feaafb03e47c1bc4fcf082684c7ed3f7d5839d1722214b24f95ad2b226cc080a0be1161617492e4ca2fcb89edcadf5e71e8cac0d6447d18cfde9b55e5a8412417a07ec8c47dd484036c745049bb2e2980d44e38d4dacac50dc4a14a2f23c52f2e5f";
-        sendRawTransactionBig(ethRpcUrl, depositTransaction, `${dataPath}/deposit.json`).catch((e: Error) => {
-          throw Error(`Fail to send raw deposit transaction: ${e.message}`);
-        });
-      }
-      // Expect new validator to be in unfinalized cache, in state.validators and not in finalized cache
-      if (slot === 5) {
-        const headState = bn.chain.getHeadState();
-        const epochCtx = headState.epochCtx;
-        if (headState.validators.length !== 33 || headState.balances.length !== 33) {
-          throw Error("New validator is not reflected in the beacon state.");
-        }
-        if (epochCtx.finalizedIndex2pubkey.length !== 32 || epochCtx.finalizedPubkey2index.size !== 32) {
-          throw Error("Finalized cache is modified.");
-        }
-        if (epochCtx.unfinalizedPubkey2index.size !== 1) {
-          throw Error(
-            `Unfinalized cache is missing the expected validator. Size: ${epochCtx.unfinalizedPubkey2index.size}`
-          );
-        }
-      }
-    });
-
     afterEachCallbacks.push(async function () {
       await Promise.all(validators.map((v) => v.close()));
     });
 
-    await new Promise<void>((resolve, _reject) => {
+    await new Promise<void>((resolve, reject) => {
+      bn.chain.clock.on(ClockEvent.slot, (slot) => {
+        // send raw tx at slot 1
+        if (slot === 1) {
+          const depositTransaction =
+            "0x02f9021e8217de8085012a05f20085019254d380830271009442424242424242424242424242424242424242428901bc16d674ec800000b901a422895118000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000120ef950826b191ebea0bbafa92a2c6bffa8239c6f456d92891ce2852b8360f0d30000000000000000000000000000000000000000000000000000000000000003095e4f91aea91a9e00387fad9d60997cff6cbf68d42d1b6629a7b248cdef255f94a2a2381e5d4125273fe42da5f7aa0e1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020003f5102dabe0a27b1746098d1dc17a5d3fbd478759fea9287e4e419b3c3cef20000000000000000000000000000000000000000000000000000000000000060b6c06e65228046268aa918baf78e072c25e65aa0bcf258cefcac3371c47df81bc4d43ca942f5fc28f9a563e925fd9c5010bc8c300add3faf3af0d61fabaaf03694020feaafb03e47c1bc4fcf082684c7ed3f7d5839d1722214b24f95ad2b226cc080a0be1161617492e4ca2fcb89edcadf5e71e8cac0d6447d18cfde9b55e5a8412417a07ec8c47dd484036c745049bb2e2980d44e38d4dacac50dc4a14a2f23c52f2e5f";
+          sendRawTransactionBig(ethRpcUrl, depositTransaction, `${dataPath}/deposit.json`).catch((e: Error) => {
+            loggerNodeA.error("Fail to send raw deposit transaction", undefined, e);
+          });
+        }
+        // Expect new validator to be in unfinalized cache, in state.validators and not in finalized cache
+        if (slot === 5) {
+          const headState = bn.chain.getHeadState();
+          const epochCtx = headState.epochCtx;
+          if (headState.validators.length !== 33 || headState.balances.length !== 33) {
+            reject(Error("New validator is not reflected in the beacon state."));
+          }
+          if (epochCtx.finalizedIndex2pubkey.length !== 32 || epochCtx.finalizedPubkey2index.size !== 32) {
+            reject(Error("Finalized cache is modified."));
+          }
+          if (epochCtx.unfinalizedPubkey2index.size !== 1) {
+            reject(Error(`Unfinalized cache is missing the expected validator. Size: ${epochCtx.unfinalizedPubkey2index.size}`));
+          }
+        }
+      });
       bn.chain.clock.on(ClockEvent.epoch, (epoch) => {
         // Resolve only if the finalized checkpoint includes execution payload
         if (epoch >= expectedEpochsToFinish) {
