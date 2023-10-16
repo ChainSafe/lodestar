@@ -1,7 +1,10 @@
+import {toHexString} from "@chainsafe/ssz";
 import {CachedBeaconStateAllForks, EpochShuffling, getShufflingDecisionBlock} from "@lodestar/state-transition";
-import {Epoch, RootHex} from "@lodestar/types";
+import {Epoch, RootHex, ssz} from "@lodestar/types";
 import {MapDef, pruneSetToMax} from "@lodestar/utils";
+import {GENESIS_SLOT} from "@lodestar/params";
 import {Metrics} from "../metrics/metrics.js";
+import {computeAnchorCheckpoint} from "./initState.js";
 
 /**
  * Same value to CheckpointBalancesCache, with the assumption that we don't have to use it for old epochs. In the worse case:
@@ -72,7 +75,7 @@ export class ShufflingCache {
    * Extract shuffling from state and add to cache
    */
   processState(state: CachedBeaconStateAllForks, shufflingEpoch: Epoch): EpochShuffling {
-    const decisionBlockHex = getShufflingDecisionBlock(state, shufflingEpoch);
+    const decisionBlockHex = getDecisionBlock(state, shufflingEpoch);
     let shuffling: EpochShuffling;
     switch (shufflingEpoch) {
       case state.epochCtx.nextShuffling.epoch:
@@ -177,4 +180,15 @@ function isShufflingCacheItem(item: CacheItem): item is ShufflingCacheItem {
 
 function isPromiseCacheItem(item: CacheItem): item is PromiseCacheItem {
   return item.type === CacheItemType.promise;
+}
+
+/**
+ * Get the shuffling decision block root for the given epoch of given state
+ *   - Special case close to genesis block, return the genesis block root
+ *   - This is similar to forkchoice.getDependentRoot() function, otherwise we cannot get cached shuffing in attestation verification when syncing from genesis.
+ */
+function getDecisionBlock(state: CachedBeaconStateAllForks, epoch: Epoch): RootHex {
+  return state.slot > GENESIS_SLOT
+    ? getShufflingDecisionBlock(state, epoch)
+    : toHexString(ssz.phase0.BeaconBlockHeader.hashTreeRoot(computeAnchorCheckpoint(state.config, state).blockHeader));
 }
