@@ -1,9 +1,9 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ssz, allForks, bellatrix, capella, deneb} from "@lodestar/types";
+import {allForks, bellatrix, capella, deneb} from "@lodestar/types";
 import {BYTES_PER_LOGS_BLOOM, ForkSeq, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {executionPayloadToPayloadHeader} from "@lodestar/state-transition";
 import {ExecutionPayloadBody} from "../execution/engine/types.js";
-import {ROOT_SIZE, VARIABLE_FIELD_OFFSET, getSlotFromSignedBeaconBlockSerialized} from "./sszBytes.js";
+import {ROOT_SIZE, getSlotFromSignedBeaconBlockSerialized} from "./sszBytes.js";
 
 /**
  * Bellatrix:
