@@ -36,10 +36,10 @@ describe("AttestationDutiesService", function () {
     validator: ssz.phase0.Validator.defaultValue(),
   };
 
-  before(() => {
+  before(async () => {
     const secretKeys = [bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32))];
     pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
-    validatorStore = initValidatorStore(secretKeys, api, chainConfig);
+    validatorStore = await initValidatorStore(secretKeys, api, chainConfig);
   });
 
   let controller: AbortController; // To stop clock

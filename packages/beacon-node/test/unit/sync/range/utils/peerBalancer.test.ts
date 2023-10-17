@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {config} from "@lodestar/config/default";
 import {Batch} from "../../../../../src/sync/range/batch.js";
 import {ChainPeersBalancer} from "../../../../../src/sync/range/utils/peerBalancer.js";
@@ -23,17 +23,11 @@ describe("sync / range / peerBalancer", () => {
 
       const peerBalancer = new ChainPeersBalancer([peer1, peer2, peer3], [batch0, batch1]);
 
-      expect(peerBalancer.bestPeerToRetryBatch(batch0)).to.equal(
-        peer3,
-        "peer1 has a failed attempt, and peer2 is busy, best peer to retry batch0 must be peer3"
-      );
+      expect(peerBalancer.bestPeerToRetryBatch(batch0)).toBe(peer3);
 
       batch0.startDownloading(peer3);
       batch0.downloadingError();
-      expect(peerBalancer.bestPeerToRetryBatch(batch0)).to.equal(
-        peer2,
-        "If peer3 also has a failed attempt for batch0, peer2 must become the best"
-      );
+      expect(peerBalancer.bestPeerToRetryBatch(batch0)).toBe(peer2);
     }
   });
 
@@ -57,7 +51,7 @@ describe("sync / range / peerBalancer", () => {
 
       const idlePeersIds = idlePeers.map((p) => p.toString()).sort();
       const expectedIds = [peer3, peer4].map((p) => p.toString()).sort();
-      expect(idlePeersIds).to.deep.equal(expectedIds, "Wrong idlePeers (encoded as B58String)");
+      expect(idlePeersIds).toEqual(expectedIds);
     }
   });
 });

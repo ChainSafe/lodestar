@@ -1,27 +1,22 @@
-import sinon, {SinonStubbedInstance} from "sinon";
+import {Mock, MockedObject, beforeEach, describe, it, vi} from "vitest";
 import {config} from "@lodestar/config/default";
-import {ForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {allForks, ssz} from "@lodestar/types";
+import {ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName} from "@lodestar/params";
-import {BeaconChain} from "../../../../src/chain/index.js";
-import {Clock} from "../../../../src/util/clock.js";
-import {QueuedStateRegenerator} from "../../../../src/chain/regen/index.js";
-import {validateGossipBlock} from "../../../../src/chain/validation/index.js";
-import {generateCachedState} from "../../../utils/state.js";
+import {allForks, ssz} from "@lodestar/types";
 import {BlockErrorCode} from "../../../../src/chain/errors/index.js";
-import {SinonStubFn} from "../../../utils/types.js";
-import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
+import {QueuedStateRegenerator} from "../../../../src/chain/regen/index.js";
 import {SeenBlockProposers} from "../../../../src/chain/seenCache/index.js";
+import {validateGossipBlock} from "../../../../src/chain/validation/index.js";
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../../../src/constants/index.js";
-import {StubbedChainMutable} from "../../../utils/stub/index.js";
-
-type StubbedChain = StubbedChainMutable<"clock" | "forkChoice" | "regen" | "bls">;
+import {MockedBeaconChain, getMockedBeaconChain} from "../../../__mocks__/mockedBeaconChain.js";
+import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
+import {generateCachedState} from "../../../utils/state.js";
 
 describe("gossip block validation", function () {
-  let chain: StubbedChain;
-  let forkChoice: SinonStubbedInstance<ForkChoice>;
-  let regen: SinonStubbedInstance<QueuedStateRegenerator>;
-  let verifySignature: SinonStubFn<() => Promise<boolean>>;
+  let chain: MockedBeaconChain;
+  let forkChoice: MockedBeaconChain["forkChoice"];
+  let regen: MockedObject<QueuedStateRegenerator>;
+  let verifySignature: Mock<[boolean]>;
   let job: allForks.SignedBeaconBlock;
   const proposerIndex = 0;
   const clockSlot = 32;
@@ -31,27 +26,19 @@ describe("gossip block validation", function () {
   const maxSkipSlots = 10;
 
   beforeEach(function () {
-    chain = sinon.createStubInstance(BeaconChain) as typeof chain;
-    chain.clock = sinon.createStubInstance(Clock);
-    sinon.stub(chain.clock, "currentSlotWithGossipDisparity").get(() => clockSlot);
-    forkChoice = sinon.createStubInstance(ForkChoice);
-    forkChoice.getBlockHex.returns(null);
+    chain = getMockedBeaconChain();
+    vi.spyOn(chain.clock, "currentSlotWithGossipDisparity", "get").mockReturnValue(clockSlot);
+    forkChoice = chain.forkChoice;
+    forkChoice.getBlockHex.mockReturnValue(null);
     chain.forkChoice = forkChoice;
-    regen = chain.regen = sinon.createStubInstance(QueuedStateRegenerator);
+    regen = chain.regen;
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     (chain as any).opts = {maxSkipSlots};
 
-    verifySignature = sinon.stub();
-    verifySignature.resolves(true);
-    chain.bls = {
-      verifySignatureSets: verifySignature,
-      verifySignatureSetsSameMessage: () => Promise.resolve([true]),
-      close: () => Promise.resolve(),
-      canAcceptWork: () => true,
-    };
-
-    forkChoice.getFinalizedCheckpoint.returns({epoch: 0, root: ZERO_HASH, rootHex: ""});
+    verifySignature = chain.bls.verifySignatureSets;
+    verifySignature.mockResolvedValue(true);
+    forkChoice.getFinalizedCheckpoint.mockReturnValue({epoch: 0, root: ZERO_HASH, rootHex: ""});
 
     // Reset seen cache
     (
@@ -75,7 +62,7 @@ describe("gossip block validation", function () {
 
   it("WOULD_REVERT_FINALIZED_SLOT", async function () {
     // Set finalized epoch to be greater than block's epoch
-    forkChoice.getFinalizedCheckpoint.returns({epoch: Infinity, root: ZERO_HASH, rootHex: ""});
+    forkChoice.getFinalizedCheckpoint.mockReturnValue({epoch: Infinity, root: ZERO_HASH, rootHex: ""});
 
     await expectRejectedWithLodestarError(
       validateGossipBlock(config, chain, job, ForkName.phase0),
@@ -85,7 +72,7 @@ describe("gossip block validation", function () {
 
   it("ALREADY_KNOWN", async function () {
     // Make the fork choice return a block summary for the proposed block
-    forkChoice.getBlockHex.returns({} as ProtoBlock);
+    forkChoice.getBlockHex.mockReturnValue({} as ProtoBlock);
 
     await expectRejectedWithLodestarError(
       validateGossipBlock(config, chain, job, ForkName.phase0),
@@ -105,9 +92,9 @@ describe("gossip block validation", function () {
 
   it("PARENT_UNKNOWN (fork-choice)", async function () {
     // Return not known for proposed block
-    forkChoice.getBlockHex.onCall(0).returns(null);
+    forkChoice.getBlockHex.mockReturnValueOnce(null);
     // Return not known for parent block too
-    forkChoice.getBlockHex.onCall(1).returns(null);
+    forkChoice.getBlockHex.mockReturnValueOnce(null);
 
     await expectRejectedWithLodestarError(
       validateGossipBlock(config, chain, job, ForkName.phase0),
@@ -117,9 +104,9 @@ describe("gossip block validation", function () {
 
   it("TOO_MANY_SKIPPED_SLOTS", async function () {
     // Return not known for proposed block
-    forkChoice.getBlockHex.onCall(0).returns(null);
+    forkChoice.getBlockHex.mockReturnValueOnce(null);
     // Return parent block with 1 slot way back than maxSkipSlots
-    forkChoice.getBlockHex.onCall(1).returns({slot: block.slot - (maxSkipSlots + 1)} as ProtoBlock);
+    forkChoice.getBlockHex.mockReturnValueOnce({slot: block.slot - (maxSkipSlots + 1)} as ProtoBlock);
 
     await expectRejectedWithLodestarError(
       validateGossipBlock(config, chain, job, ForkName.phase0),
@@ -129,9 +116,9 @@ describe("gossip block validation", function () {
 
   it("NOT_LATER_THAN_PARENT", async function () {
     // Return not known for proposed block
-    forkChoice.getBlockHex.onCall(0).returns(null);
+    forkChoice.getBlockHex.mockReturnValueOnce(null);
     // Returned parent block is latter than proposed block
-    forkChoice.getBlockHex.onCall(1).returns({slot: clockSlot + 1} as ProtoBlock);
+    forkChoice.getBlockHex.mockReturnValueOnce({slot: clockSlot + 1} as ProtoBlock);
 
     await expectRejectedWithLodestarError(
       validateGossipBlock(config, chain, job, ForkName.phase0),
@@ -141,11 +128,11 @@ describe("gossip block validation", function () {
 
   it("PARENT_UNKNOWN (regen)", async function () {
     // Return not known for proposed block
-    forkChoice.getBlockHex.onCall(0).returns(null);
+    forkChoice.getBlockHex.mockReturnValueOnce(null);
     // Returned parent block is latter than proposed block
-    forkChoice.getBlockHex.onCall(1).returns({slot: clockSlot - 1} as ProtoBlock);
+    forkChoice.getBlockHex.mockReturnValueOnce({slot: clockSlot - 1} as ProtoBlock);
     // Regen not able to get the parent block state
-    regen.getBlockSlotState.rejects();
+    regen.getBlockSlotState.mockRejectedValue(undefined);
 
     await expectRejectedWithLodestarError(
       validateGossipBlock(config, chain, job, ForkName.phase0),
@@ -155,13 +142,13 @@ describe("gossip block validation", function () {
 
   it("PROPOSAL_SIGNATURE_INVALID", async function () {
     // Return not known for proposed block
-    forkChoice.getBlockHex.onCall(0).returns(null);
+    forkChoice.getBlockHex.mockReturnValueOnce(null);
     // Returned parent block is latter than proposed block
-    forkChoice.getBlockHex.onCall(1).returns({slot: clockSlot - 1} as ProtoBlock);
+    forkChoice.getBlockHex.mockReturnValueOnce({slot: clockSlot - 1} as ProtoBlock);
     // Regen returns some state
-    regen.getBlockSlotState.resolves(generateCachedState());
+    regen.getBlockSlotState.mockResolvedValue(generateCachedState());
     // BLS signature verifier returns invalid
-    verifySignature.resolves(false);
+    verifySignature.mockResolvedValue(false);
 
     await expectRejectedWithLodestarError(
       validateGossipBlock(config, chain, job, ForkName.phase0),
@@ -171,16 +158,16 @@ describe("gossip block validation", function () {
 
   it("INCORRECT_PROPOSER", async function () {
     // Return not known for proposed block
-    forkChoice.getBlockHex.onCall(0).returns(null);
+    forkChoice.getBlockHex.mockReturnValueOnce(null);
     // Returned parent block is latter than proposed block
-    forkChoice.getBlockHex.onCall(1).returns({slot: clockSlot - 1} as ProtoBlock);
+    forkChoice.getBlockHex.mockReturnValueOnce({slot: clockSlot - 1} as ProtoBlock);
     // Regen returns some state
     const state = generateCachedState();
-    regen.getBlockSlotState.resolves(state);
+    regen.getBlockSlotState.mockResolvedValue(state);
     // BLS signature verifier returns valid
-    verifySignature.resolves(true);
+    verifySignature.mockResolvedValue(true);
     // Force proposer shuffling cache to return wrong value
-    sinon.stub(state.epochCtx, "getBeaconProposer").returns(proposerIndex + 1);
+    vi.spyOn(state.epochCtx, "getBeaconProposer").mockReturnValue(proposerIndex + 1);
 
     await expectRejectedWithLodestarError(
       validateGossipBlock(config, chain, job, ForkName.phase0),
@@ -190,16 +177,16 @@ describe("gossip block validation", function () {
 
   it("valid", async function () {
     // Return not known for proposed block
-    forkChoice.getBlockHex.onCall(0).returns(null);
+    forkChoice.getBlockHex.mockReturnValueOnce(null);
     // Returned parent block is latter than proposed block
-    forkChoice.getBlockHex.onCall(1).returns({slot: clockSlot - 1} as ProtoBlock);
+    forkChoice.getBlockHex.mockReturnValueOnce({slot: clockSlot - 1} as ProtoBlock);
     // Regen returns some state
     const state = generateCachedState();
-    regen.getBlockSlotState.resolves(state);
+    regen.getBlockSlotState.mockResolvedValue(state);
     // BLS signature verifier returns valid
-    verifySignature.resolves(true);
+    verifySignature.mockResolvedValue(true);
     // Force proposer shuffling cache to return wrong value
-    sinon.stub(state.epochCtx, "getBeaconProposer").returns(proposerIndex);
+    vi.spyOn(state.epochCtx, "getBeaconProposer").mockReturnValue(proposerIndex);
 
     await validateGossipBlock(config, chain, job, ForkName.phase0);
   });

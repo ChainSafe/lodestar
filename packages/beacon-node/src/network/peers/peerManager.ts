@@ -4,7 +4,7 @@ import {BitArray} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {BeaconConfig} from "@lodestar/config";
 import {allForks, altair, phase0} from "@lodestar/types";
-import {withTimeout} from "@lodestar/utils";
+import {retry, withTimeout} from "@lodestar/utils";
 import {LoggerNode} from "@lodestar/logger/node";
 import {GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent} from "../../constants/index.js";
 import {IClock} from "../../util/clock.js";
@@ -61,7 +61,7 @@ const ALLOWED_NEGATIVE_GOSSIPSUB_FACTOR = 0.1;
 
 // TODO:
 // maxPeers and targetPeers should be dynamic on the num of validators connected
-// The Node should compute a recomended value every interval and log a warning
+// The Node should compute a recommended value every interval and log a warning
 // to terminal if it deviates significantly from the user's settings
 
 export type PeerManagerOpts = {
@@ -119,7 +119,7 @@ enum RelevantPeerStatus {
 }
 
 /**
- * Performs all peer managment functionality in a single grouped class:
+ * Performs all peer management functionality in a single grouped class:
  * - Ping peers every `PING_INTERVAL_MS`
  * - Status peers every `STATUS_INTERVAL_MS`
  * - Execute discovery query if under target peers
@@ -610,14 +610,19 @@ export class PeerManager {
     // AgentVersion was set in libp2p IdentifyService, 'peer:connect' event handler
     // since it's not possible to handle it async, we have to wait for a while to set AgentVersion
     // See https://github.com/libp2p/js-libp2p/pull/1168
-    setTimeout(async () => {
-      const agentVersionBytes = (await this.libp2p.peerStore.get(peerData.peerId)).metadata.get("AgentVersion");
-      if (agentVersionBytes) {
-        const agentVersion = new TextDecoder().decode(agentVersionBytes) || "N/A";
-        peerData.agentVersion = agentVersion;
-        peerData.agentClient = clientFromAgentVersion(agentVersion);
-      }
-    }, 1000);
+    retry(
+      async () => {
+        const agentVersionBytes = (await this.libp2p.peerStore.get(peerData.peerId)).metadata.get("AgentVersion");
+        if (agentVersionBytes) {
+          const agentVersion = new TextDecoder().decode(agentVersionBytes) || "N/A";
+          peerData.agentVersion = agentVersion;
+          peerData.agentClient = clientFromAgentVersion(agentVersion);
+        }
+      },
+      {retries: 3, retryDelay: 1000}
+    ).catch((err) => {
+      this.logger.error("Error setting agentVersion for the peer", {peerId: peerData.peerId.toString()}, err);
+    });
   };
 
   /**
@@ -660,7 +665,7 @@ export class PeerManager {
     } catch (e) {
       this.logger.verbose("Failed to send goodbye", {peer: prettyPrintPeerId(peer)}, e as Error);
     } finally {
-      void this.disconnect(peer);
+      await this.disconnect(peer);
     }
   }
 

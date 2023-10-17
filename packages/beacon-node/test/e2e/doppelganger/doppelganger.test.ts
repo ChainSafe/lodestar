@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, afterEach, it, expect} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api/beacon";
 import {BLSPubkey, Epoch, phase0, Slot, ssz} from "@lodestar/types";
@@ -47,7 +47,7 @@ describe.skip("doppelganger / doppelganger test", function () {
 
   async function createBNAndVC(config?: TestConfig): Promise<{beaconNode: BeaconNode; validators: Validator[]}> {
     const testLoggerOpts: TestLoggerOpts = {level: LogLevel.info};
-    const loggerNodeA = testLogger("Node-A", testLoggerOpts);
+    const loggerNodeA = testLogger("doppelganger", testLoggerOpts);
 
     const bn = await getDevBeaconNode({
       params: beaconParams,
@@ -65,6 +65,7 @@ describe.skip("doppelganger / doppelganger test", function () {
 
     const {validators: validatorsWithDoppelganger} = await getAndInitDevValidators({
       node: bn,
+      logPrefix: "doppelganger",
       validatorsPerClient: validatorCount,
       validatorClientCount: 1,
       startIndex: 0,
@@ -78,8 +79,6 @@ describe.skip("doppelganger / doppelganger test", function () {
   }
 
   it("should not have doppelganger protection if started before genesis", async function () {
-    this.timeout("10 min");
-
     const committeeIndex = 0;
     const validatorIndex = 0;
 
@@ -112,8 +111,6 @@ describe.skip("doppelganger / doppelganger test", function () {
   });
 
   it("should shut down validator if same key is active and started after genesis", async function () {
-    this.timeout("10 min");
-
     // set genesis time to allow at least an epoch
     const genesisTime = Math.floor(Date.now() / 1000) - SLOTS_PER_EPOCH * beaconParams.SECONDS_PER_SLOT;
 
@@ -128,27 +125,28 @@ describe.skip("doppelganger / doppelganger test", function () {
 
     await connect(bn2.network, bn.network);
 
-    expect(validators[0].isRunning).to.be.equal(true, "validator without doppelganger protection should be running");
-    expect(validatorsWithDoppelganger[0].isRunning).to.be.equal(
+    expect(validators[0].isRunning).toBeWithMessage(
+      true,
+      "validator without doppelganger protection should be running"
+    );
+    expect(validatorsWithDoppelganger[0].isRunning).toBeWithMessage(
       true,
       "validator with doppelganger protection should be running before first epoch"
     );
     await waitForEvent<phase0.Checkpoint>(bn2.chain.clock, ClockEvent.epoch, timeout);
     // After first epoch doppelganger protection should have stopped the validatorsWithDoppelganger
-    expect(validators[0].isRunning).to.be.equal(
+    expect(validators[0].isRunning).toBeWithMessage(
       true,
       "validator without doppelganger protection should still be running after first epoch"
     );
     const pubkeyOfIndex: PubkeyHex = validatorsWithDoppelganger[0].validatorStore.getPubkeyOfIndex(0) as PubkeyHex;
-    expect(validatorsWithDoppelganger[0].validatorStore.isDoppelgangerSafe(pubkeyOfIndex)).to.be.equal(
+    expect(validatorsWithDoppelganger[0].validatorStore.isDoppelgangerSafe(pubkeyOfIndex)).toBeWithMessage(
       false,
       "validator with doppelganger protection should be stopped after first epoch"
     );
   });
 
   it("should shut down validator if same key is active with same BN and started after genesis", async function () {
-    this.timeout("10 min");
-
     const doppelgangerProtection = true;
     const testLoggerOpts: TestLoggerOpts = {level: LogLevel.info};
 
@@ -161,6 +159,7 @@ describe.skip("doppelganger / doppelganger test", function () {
     });
 
     const {validators: validator0WithoutDoppelganger} = await getAndInitDevValidators({
+      logPrefix: "doppelganger2",
       node: bn,
       validatorsPerClient: validatorCount,
       validatorClientCount: 1,
@@ -171,30 +170,28 @@ describe.skip("doppelganger / doppelganger test", function () {
     });
     afterEachCallbacks.push(() => Promise.all(validator0WithoutDoppelganger.map((v) => v.close())));
 
-    expect(validator0WithDoppelganger[0].isRunning).to.be.equal(
+    expect(validator0WithDoppelganger[0].isRunning).toBeWithMessage(
       true,
       "validator with doppelganger protection should be running"
     );
-    expect(validator0WithoutDoppelganger[0].isRunning).to.be.equal(
+    expect(validator0WithoutDoppelganger[0].isRunning).toBeWithMessage(
       true,
       "validator without doppelganger protection should be running before first epoch"
     );
     await waitForEvent<phase0.Checkpoint>(bn.chain.clock, ClockEvent.epoch, timeout);
     //After first epoch doppelganger protection should have stopped the validator0WithDoppelganger
-    expect(validator0WithoutDoppelganger[0].isRunning).to.be.equal(
+    expect(validator0WithoutDoppelganger[0].isRunning).toBeWithMessage(
       true,
       "validator without doppelganger protection should still be running after first epoch"
     );
     const pubkeyOfIndex: PubkeyHex = validator0WithDoppelganger[0].validatorStore.getPubkeyOfIndex(0) as PubkeyHex;
-    expect(validator0WithDoppelganger[0].validatorStore.isDoppelgangerSafe(pubkeyOfIndex)).to.be.equal(
+    expect(validator0WithDoppelganger[0].validatorStore.isDoppelgangerSafe(pubkeyOfIndex)).toBeWithMessage(
       false,
       "validator with doppelganger protection should be stopped after first epoch"
     );
   });
 
   it("should not shut down validator if key is different", async function () {
-    this.timeout("10 min");
-
     const doppelgangerProtection = true;
 
     const {beaconNode: bn, validators: validatorsWithDoppelganger} = await createBNAndVC({
@@ -208,25 +205,26 @@ describe.skip("doppelganger / doppelganger test", function () {
 
     await connect(bn2.network, bn.network);
 
-    expect(validators[0].isRunning).to.be.equal(true, "validator without doppelganger protection should be running");
-    expect(validatorsWithDoppelganger[0].isRunning).to.be.equal(
+    expect(validators[0].isRunning).toBeWithMessage(
+      true,
+      "validator without doppelganger protection should be running"
+    );
+    expect(validatorsWithDoppelganger[0].isRunning).toBeWithMessage(
       true,
       "validator with doppelganger protection should be running before first epoch"
     );
     await waitForEvent<phase0.Checkpoint>(bn2.chain.clock, ClockEvent.epoch, timeout);
-    expect(validators[0].isRunning).to.be.equal(
+    expect(validators[0].isRunning).toBeWithMessage(
       true,
       "validator without doppelganger protection should still be running after first epoch"
     );
-    expect(validatorsWithDoppelganger[0].isRunning).to.be.equal(
+    expect(validatorsWithDoppelganger[0].isRunning).toBeWithMessage(
       true,
       "validator with doppelganger protection should still be active after first epoch"
     );
   });
 
   it("should not sign block if doppelganger period has not passed and not started at genesis", async function () {
-    this.timeout("10 min");
-
     const doppelgangerProtection = true;
 
     // set genesis time to allow at least an epoch
@@ -258,8 +256,6 @@ describe.skip("doppelganger / doppelganger test", function () {
   });
 
   it("should not sign attestations if doppelganger period has not passed and started after genesis", async function () {
-    this.timeout("10 min");
-
     const doppelgangerProtection = true;
 
     // set genesis time to allow at least an epoch

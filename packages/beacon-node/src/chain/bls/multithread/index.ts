@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/strict-boolean-expressions */
+import path from "node:path";
 import {spawn, Worker} from "@chainsafe/threads";
 // `threads` library creates self global variable which breaks `timeout-abort-controller` https://github.com/jacobheun/timeout-abort-controller/issues/9
 // Don't add an eslint disable here as a reminder that this has to be fixed eventually
@@ -27,6 +28,9 @@ import {
   jobItemSigSets,
   jobItemWorkReq,
 } from "./jobItem.js";
+
+// Worker constructor consider the path relative to the current working directory
+const workerDir = process.env.NODE_ENV === "test" ? "../../../../lib/chain/bls/multithread" : "./";
 
 export type BlsMultiThreadWorkerPoolModules = {
   logger: Logger;
@@ -263,7 +267,9 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
 
     for (let i = 0; i < poolSize; i++) {
       const workerData: WorkerData = {implementation, workerId: i};
-      const worker = new Worker("./worker.js", {workerData} as ConstructorParameters<typeof Worker>[1]);
+      const worker = new Worker(path.join(workerDir, "worker.js"), {
+        workerData,
+      } as ConstructorParameters<typeof Worker>[1]);
 
       const workerDescriptor: WorkerDescriptor = {
         worker,

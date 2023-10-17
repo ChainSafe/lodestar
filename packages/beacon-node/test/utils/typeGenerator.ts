@@ -25,8 +25,6 @@ export function generateSignedBlockAtSlot(slot: Slot): phase0.SignedBeaconBlock 
 
 export function generateProtoBlock(overrides: Partial<ProtoBlock> = {}): ProtoBlock {
   return {
-    ...overrides,
-
     slot: 0,
     blockRoot: ZERO_HASH_HEX,
     parentRoot: ZERO_HASH_HEX,
@@ -43,5 +41,7 @@ export function generateProtoBlock(overrides: Partial<ProtoBlock> = {}): ProtoBl
     unrealizedFinalizedRoot: ZERO_HASH_HEX,
 
     ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
-  };
+
+    ...overrides,
+  } as ProtoBlock;
 }

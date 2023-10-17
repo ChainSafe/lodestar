@@ -1,3 +1,4 @@
+import path from "node:path";
 import worker_threads from "node:worker_threads";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/dist/src/score/peer-score.js";
 import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
@@ -27,6 +28,9 @@ import {
   reqRespBridgeEventDirection,
 } from "./events.js";
 import {INetworkCore, MultiaddrStr, NetworkWorkerApi, NetworkWorkerData, PeerIdStr} from "./types.js";
+
+// Worker constructor consider the path relative to the current working directory
+const workerDir = process.env.NODE_ENV === "test" ? "../../../lib/network/core/" : "./";
 
 export type WorkerNetworkCoreOpts = NetworkOptions & {
   metricsEnabled: boolean;
@@ -116,7 +120,7 @@ export class WorkerNetworkCore implements INetworkCore {
       loggerOpts: modules.logger.toOpts(),
     };
 
-    const worker = new Worker("./networkCoreWorker.js", {
+    const worker = new Worker(path.join(workerDir, "networkCoreWorker.js"), {
       workerData,
       /**
        * maxYoungGenerationSizeMb defaults to 152mb through the cli option defaults.
@@ -137,7 +141,7 @@ export class WorkerNetworkCore implements INetworkCore {
       // A Lodestar Node may do very expensive task at start blocking the event loop and causing
       // the initialization to timeout. The number below is big enough to almost disable the timeout
       timeout: 5 * 60 * 1000,
-      // TODO: types are broken on spawn, which claims that `NetworkWorkerApi` does not satifies its contrains
+      // TODO: types are broken on spawn, which claims that `NetworkWorkerApi` does not satisfies its contrains
     })) as unknown as ModuleThread<NetworkWorkerApi>;
 
     return new WorkerNetworkCore({
@@ -148,6 +152,7 @@ export class WorkerNetworkCore implements INetworkCore {
   }
 
   async close(): Promise<void> {
+    this.modules.logger.debug("closing network core running in network worker");
     await this.getApi().close();
     this.modules.logger.debug("terminating network worker");
     await terminateWorkerThread({

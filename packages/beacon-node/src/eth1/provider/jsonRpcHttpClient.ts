@@ -162,6 +162,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
           retries: opts?.retryAttempts ?? this.opts?.retryAttempts ?? 1,
           retryDelay: opts?.retryDelay ?? this.opts?.retryDelay ?? 0,
           shouldRetry: opts?.shouldRetry,
+          signal: this.opts?.signal,
         }
       );
       return parseRpcResponse(res, payload);
@@ -279,7 +280,6 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
       return bodyJson;
     } catch (e) {
       this.metrics?.requestErrors.inc({routeId});
-
       if (controller.signal.aborted) {
         // controller will abort on both parent signal abort + timeout of this specific request
         if (this.opts?.signal?.aborted) {

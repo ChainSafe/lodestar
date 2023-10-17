@@ -17,3 +17,13 @@ export function prettyBytesShort(root: Uint8Array | string): string {
   const str = typeof root === "string" ? root : toHexString(root);
   return `${str.slice(0, 6)}…`;
 }
+
+/**
+ * Truncate and format bytes as `0x123456789abc`
+ * 6 bytes is sufficient to avoid collisions and it allows to easily look up
+ * values on explorers like beaconcha.in while improving readability of logs
+ */
+export function truncBytes(root: Uint8Array | string): string {
+  const str = typeof root === "string" ? root : toHexString(root);
+  return str.slice(0, 14);
+}

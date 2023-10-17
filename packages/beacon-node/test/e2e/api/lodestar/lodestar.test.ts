@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, afterEach, expect} from "vitest";
 import {createBeaconConfig, ChainConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {phase0} from "@lodestar/types";
@@ -8,9 +8,11 @@ import {LogLevel, testLogger, TestLoggerOpts} from "../../../utils/logger.js";
 import {getDevBeaconNode} from "../../../utils/node/beacon.js";
 import {waitForEvent} from "../../../utils/events/resolver.js";
 import {ClockEvent} from "../../../../src/util/clock.js";
+import {BeaconNode} from "../../../../src/index.js";
 
 describe("api / impl / validator", function () {
   describe("getLiveness endpoint", function () {
+    let bn: BeaconNode | undefined;
     const SECONDS_PER_SLOT = 2;
     const ALTAIR_FORK_EPOCH = 0;
     const validatorCount = 8;
@@ -23,24 +25,18 @@ describe("api / impl / validator", function () {
     const genesisSlotsDelay = 5;
     const timeout = (SLOTS_PER_EPOCH + genesisSlotsDelay) * testParams.SECONDS_PER_SLOT * 1000;
 
-    const afterEachCallbacks: (() => Promise<unknown> | void)[] = [];
     afterEach(async () => {
-      while (afterEachCallbacks.length > 0) {
-        const callback = afterEachCallbacks.pop();
-        if (callback) await callback();
-      }
+      if (bn) await bn.close();
     });
 
     it("Should return validator indices that are live", async function () {
-      this.timeout("10 min");
-
       const chainConfig: ChainConfig = {...chainConfigDef, SECONDS_PER_SLOT, ALTAIR_FORK_EPOCH};
       const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
       const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
 
       const loggerNodeA = testLogger("Node-A");
 
-      const bn = await getDevBeaconNode({
+      bn = await getDevBeaconNode({
         params: testParams,
         options: {
           sync: {isSingleNode: true},
@@ -50,7 +46,6 @@ describe("api / impl / validator", function () {
         validatorCount,
         logger: loggerNodeA,
       });
-      afterEachCallbacks.push(() => bn.close());
 
       // live indices at epoch of consideration, epoch 0
       bn.chain.seenBlockProposers.add(0, 1);
@@ -64,27 +59,24 @@ describe("api / impl / validator", function () {
 
       const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config});
 
-      await expect(client.validator.getLiveness(0, [1, 2, 3, 4, 5])).to.eventually.deep.equal(
-        {
-          response: {
-            data: [
-              {index: 1, isLive: true},
-              {index: 2, isLive: true},
-              {index: 3, isLive: true},
-              {index: 4, isLive: true},
-              {index: 5, isLive: false},
-            ],
-          },
-          ok: true,
-          status: HttpStatusCode.OK,
+      await expect(client.validator.getLiveness(0, [1, 2, 3, 4, 5])).resolves.toEqual({
+        response: {
+          data: [
+            {index: 1, isLive: true},
+            {index: 2, isLive: true},
+            {index: 3, isLive: true},
+            {index: 4, isLive: true},
+            {index: 5, isLive: false},
+          ],
         },
-        "Wrong liveness data returned"
-      );
+        ok: true,
+        status: HttpStatusCode.OK,
+      });
     });
 
+    // To make the code review easy for code block below
+    /* prettier-ignore */
     it("Should return only for previous, current and next epoch", async function () {
-      this.timeout("10 min");
-
       const chainConfig: ChainConfig = {...chainConfigDef, SECONDS_PER_SLOT, ALTAIR_FORK_EPOCH};
       const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
       const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
@@ -92,7 +84,7 @@ describe("api / impl / validator", function () {
       const testLoggerOpts: TestLoggerOpts = {level: LogLevel.info};
       const loggerNodeA = testLogger("Node-A", testLoggerOpts);
 
-      const bn = await getDevBeaconNode({
+      bn = await getDevBeaconNode({
         params: testParams,
         options: {
           sync: {isSingleNode: true},
@@ -102,7 +94,6 @@ describe("api / impl / validator", function () {
         validatorCount,
         logger: loggerNodeA,
       });
-      afterEachCallbacks.push(() => bn.close());
 
       await waitForEvent<phase0.Checkpoint>(bn.chain.clock, ClockEvent.epoch, timeout); // wait for epoch 1
       await waitForEvent<phase0.Checkpoint>(bn.chain.clock, ClockEvent.epoch, timeout); // wait for epoch 2
@@ -116,23 +107,28 @@ describe("api / impl / validator", function () {
       const previousEpoch = currentEpoch - 1;
 
       // current epoch is fine
-      await expect(client.validator.getLiveness(currentEpoch, [1])).to.not.be.rejected;
+      await expect(client.validator.getLiveness(currentEpoch, [1])).resolves.toBeDefined();
       // next epoch is fine
-      await expect(client.validator.getLiveness(nextEpoch, [1])).to.not.be.rejected;
+      await expect(client.validator.getLiveness(nextEpoch, [1])).resolves.toBeDefined();
       // previous epoch is fine
-      await expect(client.validator.getLiveness(previousEpoch, [1])).to.not.be.rejected;
+      await expect(client.validator.getLiveness(previousEpoch, [1])).resolves.toBeDefined();
       // more than next epoch is not fine
       const res1 = await client.validator.getLiveness(currentEpoch + 2, [1]);
-      expect(res1.ok).to.be.false;
-      expect(res1.error?.message).to.include(
-        `Request epoch ${currentEpoch + 2} is more than one epoch before or after the current epoch ${currentEpoch}`
+      expect(res1.ok).toBe(false);
+      expect(res1.error?.message).toEqual(
+        expect.stringContaining(
+          `Request epoch ${currentEpoch + 2} is more than one epoch before or after the current epoch ${currentEpoch}`
+        )
       );
       // more than previous epoch is not fine
       const res2 = await client.validator.getLiveness(currentEpoch - 2, [1]);
-      expect(res2.ok).to.be.false;
-      expect(res2.error?.message).to.include(
-        `Request epoch ${currentEpoch - 2} is more than one epoch before or after the current epoch ${currentEpoch}`
+      expect(res2.ok).toBe(false);
+      expect(res2.error?.message).toEqual(
+        expect.stringContaining(
+          `Request epoch ${currentEpoch - 2} is more than one epoch before or after the current epoch ${currentEpoch}`
+        )
       );
-    });
+    },
+    {timeout: 60_000});
   });
 });

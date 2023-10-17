@@ -1,5 +1,5 @@
-import {expect} from "chai";
 import fastify from "fastify";
+import {afterAll, expect} from "vitest";
 import {RemoteServiceError} from "../../../src/monitoring/service.js";
 import {ProcessType} from "../../../src/monitoring/types.js";
 import {BEACON_NODE_STATS_SCHEMA, ClientStatsSchema, SYSTEM_STATS_SCHEMA, VALIDATOR_STATS_SCHEMA} from "./schemas.js";
@@ -49,7 +49,7 @@ export async function startRemoteService(): Promise<{baseUrl: URL}> {
   // and use IPv4 localhost "127.0.0.1" to avoid known IPv6 issues
   const baseUrl = await server.listen({host: "127.0.0.1", port: 0});
 
-  after(() => {
+  afterAll(() => {
     // there is no need to wait for server to be closed
     server.close().catch(console.log);
   });
@@ -76,7 +76,7 @@ function validateRequestData(data: ReceivedData): void {
 function validateClientStats(data: ReceivedData, schema: ClientStatsSchema): void {
   schema.forEach((s) => {
     try {
-      expect(data[s.key]).to.be.a(s.type);
+      expect(data[s.key]).toBeInstanceOf(s.type);
     } catch {
       throw new Error(
         `Validation of property "${s.key}" failed. Expected type "${s.type}" but received "${typeof data[s.key]}".`

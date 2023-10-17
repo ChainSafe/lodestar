@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {toGraffitiBuffer} from "../../../src/util/graffiti.js";
 
 describe("Graffiti helper", () => {
@@ -22,7 +22,7 @@ describe("Graffiti helper", () => {
     ];
     for (const {input, result} of cases) {
       it(`Convert graffiti UTF8 ${input} to Buffer`, () => {
-        expect(toGraffitiBuffer(input).toString("hex")).to.equal(result);
+        expect(toGraffitiBuffer(input).toString("hex")).toBe(result);
       });
     }
   });
