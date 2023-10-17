@@ -1,5 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
-import {BLSPubkey, Root} from "@lodestar/types";
+import {BLSPubkey, Epoch, Root} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {LodestarValidatorDatabaseController} from "../types.js";
 import {uniqueVectorArr} from "../slashingProtection/utils.js";
@@ -54,6 +54,10 @@ export class SlashingProtection implements ISlashingProtection {
 
   async checkAndInsertAttestation(pubKey: BLSPubkey, attestation: SlashingProtectionAttestation): Promise<void> {
     await this.attestationService.checkAndInsertAttestation(pubKey, attestation);
+  }
+
+  async hasAttestedInEpoch(pubKey: BLSPubkey, epoch: Epoch): Promise<boolean> {
+    return (await this.attestationService.getAttestationForEpoch(pubKey, epoch)) !== null;
   }
 
   async importInterchange(interchange: Interchange, genesisValidatorsRoot: Root, logger?: Logger): Promise<void> {

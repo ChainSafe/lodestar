@@ -5,6 +5,7 @@ import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Api, HttpStatusCode} from "@lodestar/api";
 import {DoppelgangerService, DoppelgangerStatus} from "../../../src/services/doppelgangerService.js";
 import {IndicesService} from "../../../src/services/indices.js";
+import {SlashingProtectionMock} from "../../utils/slashingProtectionMock.js";
 import {testLogger} from "../../utils/logger.js";
 import {ClockMock} from "../../utils/clock.js";
 
@@ -96,10 +97,20 @@ describe("doppelganger service", () => {
       const initialEpoch = 1;
       const clock = new ClockMockMsToSlot(initialEpoch);
 
-      const doppelganger = new DoppelgangerService(logger, clock, beaconApi, indicesService, noop, null);
+      const slashingProtection = new SlashingProtectionMock();
+
+      const doppelganger = new DoppelgangerService(
+        logger,
+        clock,
+        beaconApi,
+        indicesService,
+        slashingProtection,
+        noop,
+        null
+      );
 
       // Add validator to doppelganger
-      doppelganger.registerValidator(pubkeyHex);
+      await doppelganger.registerValidator(pubkeyHex);
 
       // Go step by step
       for (const [step, [isLivePrev, isLiveCurr, expectedStatus]] of testCase.entries()) {
@@ -123,6 +134,46 @@ describe("doppelganger service", () => {
       }
     });
   }
+
+  it("attested in prev epoch", async () => {
+    const index = 0;
+    const pubkeyHex = "0x" + "aa".repeat(48);
+
+    const beaconApi = getMockBeaconApi(new Map());
+    const logger = testLogger();
+
+    // Register validator to IndicesService for doppelganger to resolve pubkey -> index
+    const indicesService = new IndicesService(logger, beaconApi, null);
+    indicesService.index2pubkey.set(index, pubkeyHex);
+    indicesService.pubkey2index.set(pubkeyHex, index);
+
+    // Initial epoch must be > 0 else doppelganger detection is skipped due to pre-genesis
+    const initialEpoch = 10;
+    const clock = new ClockMockMsToSlot(initialEpoch);
+
+    const slashingProtection = new SlashingProtectionMock();
+    // Attestation from previous epoch exists in slashing protection db
+    slashingProtection.hasAttestedInEpoch = async (_, epoch: Epoch) => {
+      return epoch === initialEpoch - 1;
+    };
+
+    const doppelganger = new DoppelgangerService(
+      logger,
+      clock,
+      beaconApi,
+      indicesService,
+      slashingProtection,
+      noop,
+      null
+    );
+
+    // Add validator to doppelganger
+    await doppelganger.registerValidator(pubkeyHex);
+
+    // Assert doppelganger status right away
+    const status = doppelganger.getStatus(pubkeyHex);
+    expect(status).equal(DoppelgangerStatus.VerifiedSafe);
+  });
 });
 
 class MapDef<K, V> extends Map<K, V> {
