@@ -2,6 +2,7 @@
 
 # Lodestar Ethereum Consensus Implementation
 
+[![Twitter Follow](https://img.shields.io/twitter/follow/lodestar_eth)](https://twitter.com/lodestar_eth)
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/chainsafe/lodestar?label=Github)](https://github.com/ChainSafe/lodestar/releases/latest)
 [![npm](https://img.shields.io/npm/v/@chainsafe/lodestar)](https://www.npmjs.com/package/@chainsafe/lodestar)
 [![Docker Image Version (latest by date)](https://img.shields.io/docker/v/chainsafe/lodestar?color=blue&label=Docker&sort=semver)](https://hub.docker.com/r/chainsafe/lodestar)
