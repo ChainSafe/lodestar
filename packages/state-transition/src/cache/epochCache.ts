@@ -94,7 +94,8 @@ export class EpochCache {
    * TODO: this is a hack, we need a safety mechanism in case a bad eth1 majority vote is in,
    * or handle non finalized data differently, or use an immutable.js structure for cheap copies
    *
-   * New: This would include only validators whose activation_eligibility_epoch is finalized and hence it is insert only. Validators may still be in the activation queue.
+   * New: This would include only validators whose activation_eligibility_epoch != FAR_FUTURE_EPOCH and hence it is 
+   * insert only. Validators could be 1) Active 2) In the activation queue 3) Initialized but pending queued
    *
    * $VALIDATOR_COUNT x 192 char String -> Number Map
    */
@@ -102,7 +103,8 @@ export class EpochCache {
   /**
    * Unique globally shared pubkey registry. There should only exist one for the entire application.
    *
-   * New: This would include only validators whose activation_eligibility_epoch is finalized and hence it is insert only. Validators may still be in the activation queue.
+   * New: This would include only validators whose activation_eligibility_epoch != FAR_FUTURE_EPOCH and hence it is 
+   * insert only. Validators could be 1) Active 2) In the activation queue 3) Initialized but pending queued
    *
    * $VALIDATOR_COUNT x BLST deserialized pubkey (Jacobian coordinates)
    */

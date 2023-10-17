@@ -62,7 +62,6 @@ export class PubkeyIndexMap {
  *
  * If pubkey caches are empty: SLOW CODE - 🐢
  *
- * TODO: Deal with this
  */
 export function syncPubkeys(
   state: BeaconStateAllForks,
