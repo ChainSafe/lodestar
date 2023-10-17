@@ -115,8 +115,8 @@ type ExecutionPayloadResponse = ExecutionPayloadRpc | ExecutionPayloadRpcWithBlo
 
 export type ExecutionPayloadBodyRpc = {
   transactions: DATA[];
-  withdrawals: WithdrawalV1[] | null;
-  depositReceipts: DepositReceiptV1[] | null;
+  withdrawals: WithdrawalV1[] | null | undefined;
+  depositReceipts: DepositReceiptV1[] | null | undefined;
 };
 
 export type ExecutionPayloadBody = {
