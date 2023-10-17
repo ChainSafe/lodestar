@@ -506,7 +506,6 @@ export class EpochCache {
   ): void {
     this.previousShuffling = this.currentShuffling;
     this.currentShuffling = this.nextShuffling;
-    const prevEpoch = this.previousShuffling.epoch;
     const currEpoch = this.currentShuffling.epoch;
     const nextEpoch = currEpoch + 1;
 
@@ -574,17 +573,13 @@ export class EpochCache {
     this.epoch = computeEpochAtSlot(state.slot);
     this.syncPeriod = computeSyncPeriodAtEpoch(this.epoch);
 
-    // To populate finalized cache and prune unfinalized cache with validators that just entered the activation queue
+    // To populate finalized cache and prune unfinalized cache with validators that are just initialized
     if (this.isAfterEIP6110()) {
-      const expectedActivationEligibilityEpoch = prevEpoch + 1;
+      const expectedActivationEligibilityEpoch = currEpoch;
       const validators = state.validators;
       for (const index of epochTransitionCache.indicesEligibleForActivationQueue) {
         const validator = validators.getReadonly(index);
-        if (validator.activationEligibilityEpoch == expectedActivationEligibilityEpoch) {
-          this.addFinalizedPubkey(validator.pubkey, index);
-        } else {
-          break;
-        }
+        this.addFinalizedPubkey(validator.pubkey, index);
       }
     }
   }
