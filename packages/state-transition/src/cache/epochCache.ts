@@ -575,7 +575,6 @@ export class EpochCache {
 
     // To populate finalized cache and prune unfinalized cache with validators that are just initialized
     if (this.isAfterEIP6110()) {
-      const expectedActivationEligibilityEpoch = currEpoch;
       const validators = state.validators;
       for (const index of epochTransitionCache.indicesEligibleForActivationQueue) {
         const validator = validators.getReadonly(index);
@@ -799,7 +798,7 @@ export class EpochCache {
 
   /**
    *
-   * Given a validator whose activation_epoch has just been set, we move its pubkey from unfinalized cache to finalized cache
+   * Given a validator whose activationEligibilityEpoch has just been set, we move its pubkey from unfinalized cache to finalized cache
    *
    */
   addFinalizedPubkey(pubkey: Uint8Array, index: ValidatorIndex): void {
@@ -807,8 +806,18 @@ export class EpochCache {
       throw new Error("addFInalizedPubkey is not available pre EIP-6110");
     }
 
-    if (this.finalizedPubkey2index.get(pubkey) !== undefined) {
-      return; // Repeated insert. Should not happen except 6110 activation
+    const existingIndex = this.finalizedPubkey2index.get(pubkey);
+
+    if (existingIndex != undefined) {
+      if (existingIndex === index){
+        // Repeated insert. Should not happen except during the first few epochs of 6110 activation
+        // Unfinalized validator added to finalizedPubkey2index pre-6110 by calling addPubkey()
+        // when it become finalized in post-6110, addFinalizedPubkey() is called to cause repeated insert
+        return; 
+      } else {
+        // attempt to insert the same pubkey with different index, should never happen.
+        throw Error("inserted existing pubkey into finalizedPubkey2index cache with a different index")
+      }
     }
 
     this.finalizedPubkey2index.set(pubkey, index);
