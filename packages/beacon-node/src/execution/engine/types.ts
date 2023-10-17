@@ -303,9 +303,7 @@ export function parseExecutionPayload(
         `depositReceipts missing for ${fork} >= eip6110 executionPayload number=${executionPayload.blockNumber} hash=${data.blockHash}`
       );
     }
-    (executionPayload as eip6110.ExecutionPayload).depositReceipts = depositReceipts.map((d) =>
-      deserializeDepositReceipts(d)
-    );
+    (executionPayload as eip6110.ExecutionPayload).depositReceipts = depositReceipts.map(deserializeDepositReceipts);
   }
 
   return {executionPayload, blockValue, blobsBundle};
