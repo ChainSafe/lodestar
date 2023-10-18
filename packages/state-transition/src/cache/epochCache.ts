@@ -768,6 +768,12 @@ export class EpochCache {
     return isAggregatorFromCommitteeLength(committee.length, slotSignature);
   }
 
+  /**
+   * Return finalized pubkey given the validator index.
+   * Only finalized pubkey as we do not store unfinalized pubkey because no where in the spec has a 
+   * need to make such enquiry
+   * 
+   */
   getPubkey(index: ValidatorIndex): PublicKey {
     return this.finalizedIndex2pubkey[index];
   }
