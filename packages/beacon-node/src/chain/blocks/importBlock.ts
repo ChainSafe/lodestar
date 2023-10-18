@@ -101,8 +101,8 @@ export async function importBlock(
     });
 
     if (blockInput.type === BlockInputType.postDeneb) {
-      const blobSidecars = blockInput.blobs;
-      blobSidecars.forEach(({index, kzgCommitment}) => {
+      for (const blobSidecar of blockInput.blobs) {
+        const {index, kzgCommitment} = blobSidecar;
         this.emitter.emit(routes.events.EventType.blobSidecar, {
           blockRoot: blockRootHex,
           slot,
@@ -110,7 +110,7 @@ export async function importBlock(
           kzgCommitment: toHexString(kzgCommitment),
           versionedHash: toHexString(kzgCommitmentToVersionedHash(kzgCommitment)),
         });
-      });
+      }
     }
   }, 0);
 
