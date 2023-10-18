@@ -8,7 +8,7 @@ import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
 import {ApiClientResponse} from "../../interfaces.js";
 
 const stringType = new StringType();
-const blobSidecarSSE = new ContainerType(
+export const blobSidecarSSE = new ContainerType(
   {
     blockRoot: stringType,
     index: ssz.BlobIndex,

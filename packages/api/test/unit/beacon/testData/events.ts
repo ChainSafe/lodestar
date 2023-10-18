@@ -1,6 +1,6 @@
 import {ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
-import {Api, EventData, EventType} from "../../../../src/beacon/routes/events.js";
+import {Api, EventData, EventType, blobSidecarSSE} from "../../../../src/beacon/routes/events.js";
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 
 const abortController = new AbortController();
@@ -109,4 +109,5 @@ export const eventTestData: EventData = {
     version: ForkName.bellatrix,
     data: ssz.bellatrix.SSEPayloadAttributes.defaultValue(),
   },
+  [EventType.payloadAttributes]: blobSidecarSSE.defaultValue(),
 };
