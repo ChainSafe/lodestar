@@ -266,11 +266,11 @@ export class EpochCache {
 
   /**
    * Create an epoch cache
-   * @param validators cached validators that matches `state.validators`
+   * @param state a finalized beacon state. Passing in unfinalized state may cause unexpected behaviour eg. empty unfinalized cache
    *
    * SLOW CODE - 🐢
    */
-  static createFromState(
+  static createFromFinalizedState(
     state: BeaconStateAllForks,
     {config, finalizedPubkey2index, finalizedIndex2pubkey}: EpochCacheImmutableData,
     opts?: EpochCacheOpts
@@ -423,7 +423,7 @@ export class EpochCache {
       config,
       finalizedPubkey2index,
       finalizedIndex2pubkey,
-      // `createFromState()` creates cache with empty unfinalizedPubkey2index. Be cautious to only pass in finalized state
+      // `createFromFinalizedState()` creates cache with empty unfinalizedPubkey2index. Be cautious to only pass in finalized state
       unfinalizedPubkey2index: newUnfinalizedPubkeyIndexMap(),
       proposers,
       // On first epoch, set to null to prevent unnecessary work since this is only used for metrics

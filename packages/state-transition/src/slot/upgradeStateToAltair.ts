@@ -99,7 +99,7 @@ export function upgradeStateToAltair(statePhase0: CachedBeaconStatePhase0): Cach
   //       currentTargetUnslashedBalanceIncrements is rotated to previousTargetUnslashedBalanceIncrements
   //
   // Here target balance is computed in full, which is slightly less performant than doing so in the loop
-  // above but gurantees consistency with EpochCache.createFromState(). Note execution order below:
+  // above but gurantees consistency with EpochCache.createFromFinalizedState(). Note execution order below:
   // ```
   // processEpoch()
   // epochCtx.afterProcessEpoch()
