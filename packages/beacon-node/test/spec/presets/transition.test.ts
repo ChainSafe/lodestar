@@ -55,7 +55,7 @@ const transition =
         for (let i = 0; i < meta.blocks_count; i++) {
           const signedBlock = testcase[`blocks_${i}`] as allForks.SignedBeaconBlock;
           state = stateTransition(state, signedBlock, {
-            // TODO DENEB: Should assume valid and available for this test?
+            // Assume valid and available for this test
             executionPayloadStatus: ExecutionPayloadStatus.valid,
             dataAvailableStatus: DataAvailableStatus.available,
             verifyStateRoot: true,

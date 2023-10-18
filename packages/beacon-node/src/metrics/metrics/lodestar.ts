@@ -650,6 +650,13 @@ export function createLodestarMetrics(
         labelNames: ["error"],
       }),
     },
+    gossipBlob: {
+      receivedToGossipValidate: register.histogram({
+        name: "lodestar_gossip_blob_received_to_gossip_validate",
+        help: "Time elapsed between blob received and blob validated",
+        buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
+      }),
+    },
     importBlock: {
       persistBlockNoSerializedDataCount: register.gauge({
         name: "lodestar_import_block_persist_block_no_serialized_data_count",
