@@ -19,7 +19,6 @@ env:
   GETH_WITHDRAWALS_IMAGE: g11tech/geth:withdrawalsfeb8
   ETHEREUMJS_BLOBS_IMAGE: ethpandaops/ethereumjs:master-7b4c229
   NETHERMIND_WITHDRAWALS_IMAGE: nethermindeth/nethermind:withdrawals_yolo
-  ETHEREUMJS_BLOBS_IMAGE: g11tech/ethereumjs:blobs-b6b63
 
 jobs:
   sim-merge-tests:
@@ -107,7 +106,7 @@ jobs:
           EL_BINARY_DIR: ${{ env.GETH_WITHDRAWALS_IMAGE }}
           EL_SCRIPT_DIR: gethdocker
 
-      - name: Pull ethereumjs withdrawals
+      - name: Pull ethereumjs blobs
         run: docker pull $ETHEREUMJS_BLOBS_IMAGE
 
       - name: Test Lodestar <> ethereumjs blobs
@@ -130,18 +129,6 @@ jobs:
       #   env:
       #     EL_BINARY_DIR: ${{ env.NETHERMIND_WITHDRAWALS_IMAGE }}
       #     EL_SCRIPT_DIR: netherminddocker
-
-      # Enable the blob sims when stable images
-      # - name: Pull ethereumjs blobs
-      #   run: docker pull $ETHEREUMJS_BLOBS_IMAGE
-
-      # - name: Test Lodestar <> ethereumjs blobs
-      #   run: yarn test:sim:blobs
-      #   working-directory: packages/beacon-node
-      #   env:
-      #     EL_BINARY_DIR: ${{ env.ETHEREUMJS_BLOBS_IMAGE }}
-      #     EL_SCRIPT_DIR: ethereumjsdocker
-      #     DEV_RUN: true
 
       - name: Upload debug log test files
         if: ${{ always() }}
