@@ -109,5 +109,5 @@ export const eventTestData: EventData = {
     version: ForkName.bellatrix,
     data: ssz.bellatrix.SSEPayloadAttributes.defaultValue(),
   },
-  [EventType.payloadAttributes]: blobSidecarSSE.defaultValue(),
+  [EventType.blobSidecar]: blobSidecarSSE.defaultValue(),
 };
