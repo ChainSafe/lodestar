@@ -1,5 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {Epoch, phase0, deneb, Slot} from "@lodestar/types";
+import {phase0, deneb} from "@lodestar/types";
+import {ForkSeq} from "@lodestar/params";
 import {BlockInput, BlockSource} from "../../chain/blocks/types.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {INetwork} from "../interface.js";
@@ -9,19 +10,21 @@ export async function beaconBlocksMaybeBlobsByRoot(
   config: ChainForkConfig,
   network: INetwork,
   peerId: PeerIdStr,
-  request: phase0.BeaconBlocksByRootRequest,
-  // TODO DENEB: Some validations can be done to see if this is deneb block, ignoring below two for now
-  _currentSlot: Epoch,
-  _finalizedSlot: Slot
+  request: phase0.BeaconBlocksByRootRequest
 ): Promise<BlockInput[]> {
   const allBlocks = await network.sendBeaconBlocksByRoot(peerId, request);
   const blobIdentifiers: deneb.BlobIdentifier[] = [];
 
   for (const block of allBlocks) {
-    const blockRoot = config.getForkTypes(block.data.message.slot).BeaconBlock.hashTreeRoot(block.data.message);
-    const blobKzgCommitmentsLen = (block.data.message.body as deneb.BeaconBlockBody).blobKzgCommitments?.length ?? 0;
-    for (let index = 0; index < blobKzgCommitmentsLen; index++) {
-      blobIdentifiers.push({blockRoot, index});
+    const slot = block.data.message.slot;
+    const blockRoot = config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.data.message);
+    const fork = config.getForkName(slot);
+
+    if (ForkSeq[fork] >= ForkSeq.deneb) {
+      const blobKzgCommitmentsLen = (block.data.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length;
+      for (let index = 0; index < blobKzgCommitmentsLen; index++) {
+        blobIdentifiers.push({blockRoot, index});
+      }
     }
   }
 
