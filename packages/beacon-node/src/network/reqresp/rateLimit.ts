@@ -37,12 +37,12 @@ export const rateLimitQuotas: Record<ReqRespMethod, InboundRateLimitQuota> = {
     getRequestCount: getRequestCountFn(ReqRespMethod.BeaconBlocksByRoot, (req) => req.length),
   },
   [ReqRespMethod.BlobSidecarsByRange]: {
-    // TODO DENEB: For now same value as blobs in BeaconBlocksByRange https://github.com/sigp/lighthouse/blob/bf533c8e42cc73c35730e285c21df8add0195369/beacon_node/lighthouse_network/src/rpc/mod.rs#L118-L130
+    // Rationale: MAX_REQUEST_BLOCKS_DENEB * MAX_BLOBS_PER_BLOCK
     byPeer: {quota: MAX_REQUEST_BLOB_SIDECARS, quotaTimeMs: 10_000},
     getRequestCount: getRequestCountFn(ReqRespMethod.BlobSidecarsByRange, (req) => req.count),
   },
   [ReqRespMethod.BlobSidecarsByRoot]: {
-    // TODO DENEB: For now same value as blobs in  BeaconBlocksByRoot https://github.com/sigp/lighthouse/blob/bf533c8e42cc73c35730e285c21df8add0195369/beacon_node/lighthouse_network/src/rpc/mod.rs#L118-L130
+    // Rationale: quota of BeaconBlocksByRoot * MAX_BLOBS_PER_BLOCK
     byPeer: {quota: 128 * MAX_BLOBS_PER_BLOCK, quotaTimeMs: 10_000},
     getRequestCount: getRequestCountFn(ReqRespMethod.BlobSidecarsByRoot, (req) => req.length),
   },

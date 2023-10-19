@@ -132,7 +132,6 @@ const testScenarios = [
 
 for (const testScenario of testScenarios) {
   const {phase0, altair, bellatrix, capella, testCases} = testScenario;
-  // TODO DENEB: Is it necessary to test?
   const deneb = Infinity;
 
   describe(`network / fork: phase0: ${phase0}, altair: ${altair}, bellatrix: ${bellatrix} capella: ${capella}`, () => {

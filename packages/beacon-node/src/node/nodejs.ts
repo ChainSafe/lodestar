@@ -157,10 +157,8 @@ export class BeaconNode {
     setMaxListeners(Infinity, controller.signal);
     const signal = controller.signal;
 
-    // TODO DENEB, where is the best place to do this?
+    // If deneb is configured, load the trusted setup
     if (config.DENEB_FORK_EPOCH < Infinity) {
-      // TODO DENEB: "c-kzg" is not installed by default, so if the library is not installed this will throw
-      // See "Not able to build lodestar from source" https://github.com/ChainSafe/lodestar/issues/4886
       await initCKZG();
       loadEthereumTrustedSetup(TrustedFileMode.Txt, opts.chain.trustedSetup);
     }

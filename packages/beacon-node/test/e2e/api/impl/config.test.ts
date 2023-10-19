@@ -10,9 +10,6 @@ const CONSTANT_NAMES_SKIP_LIST = new Set([
   // This constant can also be derived from existing constants so it's not critical.
   // PARTICIPATION_FLAG_WEIGHTS = [TIMELY_SOURCE_WEIGHT, TIMELY_TARGET_WEIGHT, TIMELY_HEAD_WEIGHT]
   "PARTICIPATION_FLAG_WEIGHTS",
-  // TODO DENEB: This constant was added then removed on a spec re-write.
-  // When developing DENEB branch the tracked version still doesn't have released the removal
-  "DOMAIN_BLOB_SIDECAR",
   // TODO DENEB: Configure the blob subnets in a followup PR
   "BLOB_SIDECAR_SUBNET_COUNT",
 ]);
