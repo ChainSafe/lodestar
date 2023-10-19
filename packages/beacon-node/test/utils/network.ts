@@ -82,6 +82,7 @@ export async function getNetworkForTest(
       disableArchiveOnCheckpoint: true,
       disableLightClientServerOnImportBlockHead: true,
       disablePrepareNextSlot: true,
+      minSameMessageSignatureSetsToBatch: 32,
     },
     {
       config: beaconConfig,
@@ -130,8 +131,8 @@ export async function getNetworkForTest(
   return [
     network,
     async function closeAll() {
-      await chain.close();
       await network.close();
+      await chain.close();
     },
   ];
 }

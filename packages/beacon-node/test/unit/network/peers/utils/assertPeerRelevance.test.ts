@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {phase0} from "@lodestar/types";
 import {assertPeerRelevance, IrrelevantPeerCode} from "../../../../../src/network/peers/utils/assertPeerRelevance.js";
 
@@ -87,7 +87,7 @@ describe("network / peers / utils / assertPeerRelevance", () => {
         headSlot: 0,
       };
 
-      expect(assertPeerRelevance(remote, local, currentSlot ?? 0)).to.deep.equal(irrelevantType);
+      expect(assertPeerRelevance(remote, local, currentSlot ?? 0)).toEqual(irrelevantType);
     });
   }
 });

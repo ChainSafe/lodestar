@@ -1,3 +1,4 @@
+import {describe, it, afterAll} from "vitest";
 import {fetch} from "@lodestar/api";
 import {getHttpMetricsServer, HttpMetricsServer} from "../../../../src/metrics/index.js";
 import {testLogger} from "../../../utils/logger.js";
@@ -17,7 +18,7 @@ describe("HttpMetricsServer", () => {
     await res.text();
   });
 
-  after(async () => {
+  afterAll(async () => {
     if (server) await server.close();
   });
 });

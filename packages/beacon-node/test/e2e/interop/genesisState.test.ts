@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
@@ -10,7 +10,7 @@ describe("interop / initDevState", () => {
     const deposits = interopDeposits(config, ssz.phase0.DepositDataRootList.defaultViewDU(), 1);
 
     /* eslint-disable @typescript-eslint/naming-convention */
-    expect(deposits.map((deposit) => ssz.phase0.Deposit.toJson(deposit))).to.deep.equal([
+    expect(deposits.map((deposit) => ssz.phase0.Deposit.toJson(deposit))).toEqual([
       {
         proof: [
           "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -66,9 +66,8 @@ describe("interop / initDevState", () => {
       eth1Timestamp: 1644000000,
     });
 
-    expect(toHexString(state.hashTreeRoot())).to.equal(
-      "0x3ef3bda2cee48ebdbb6f7a478046631bad3b5eeda3543e55d9dd39da230425bb",
-      "Wrong genesis state root"
+    expect(toHexString(state.hashTreeRoot())).toBe(
+      "0x3ef3bda2cee48ebdbb6f7a478046631bad3b5eeda3543e55d9dd39da230425bb"
     );
   });
 });

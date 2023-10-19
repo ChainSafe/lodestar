@@ -753,19 +753,12 @@ export class ProtoArray {
     // The finalized and justified checkpoints represent a list of known
     // ancestors of `node` that are likely to coincide with the store's
     // finalized checkpoint.
-    if (node.finalizedEpoch === this.finalizedEpoch && node.finalizedRoot === this.finalizedRoot) {
-      return true;
-    }
-
-    if (node.justifiedEpoch === this.finalizedEpoch && node.justifiedRoot === this.finalizedRoot) {
-      return true;
-    }
-
-    if (node.unrealizedFinalizedEpoch === this.finalizedEpoch && node.unrealizedFinalizedRoot === this.finalizedRoot) {
-      return true;
-    }
-
-    if (node.unrealizedJustifiedEpoch === this.finalizedEpoch && node.unrealizedJustifiedRoot === this.finalizedRoot) {
+    if (
+      (node.finalizedEpoch === this.finalizedEpoch && node.finalizedRoot === this.finalizedRoot) ||
+      (node.justifiedEpoch === this.finalizedEpoch && node.justifiedRoot === this.finalizedRoot) ||
+      (node.unrealizedFinalizedEpoch === this.finalizedEpoch && node.unrealizedFinalizedRoot === this.finalizedRoot) ||
+      (node.unrealizedJustifiedEpoch === this.finalizedEpoch && node.unrealizedJustifiedRoot === this.finalizedRoot)
+    ) {
       return true;
     }
 

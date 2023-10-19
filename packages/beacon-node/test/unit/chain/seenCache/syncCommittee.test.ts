@@ -1,5 +1,5 @@
-import {expect} from "chai";
 import {BitArray} from "@chainsafe/ssz";
+import {describe, it, expect} from "vitest";
 import {ssz} from "@lodestar/types";
 import {SeenSyncCommitteeMessages, SeenContributionAndProof} from "../../../../src/chain/seenCache/index.js";
 
@@ -15,13 +15,17 @@ describe("chain / seenCache / SeenSyncCommittee caches", function () {
     it("should find a sync committee based on same slot and validator index", () => {
       const cache = new SeenSyncCommitteeMessages();
 
-      expect(cache.get(slot, subnet, validatorIndex), "Should not know before adding").to.be.null;
+      // "Should not know before adding"
+      expect(cache.get(slot, subnet, validatorIndex)).toBeNull();
       cache.add(slot, subnet, validatorIndex, rootHex);
-      expect(cache.get(slot, subnet, validatorIndex)).to.equal(rootHex, "Should know before adding");
+      expect(cache.get(slot, subnet, validatorIndex)).toBe(rootHex);
 
-      expect(cache.get(slot + 1, subnet, validatorIndex), "Should not know a diff slot").to.be.null;
-      expect(cache.get(slot, subnet + 1, validatorIndex), "Should not know a diff subnet").to.be.null;
-      expect(cache.get(slot, subnet, validatorIndex + 1), "Should not know a diff index").to.be.null;
+      // "Should not know a diff slot"
+      expect(cache.get(slot + 1, subnet, validatorIndex)).toBeNull();
+      // "Should not know a diff subnet"
+      expect(cache.get(slot, subnet + 1, validatorIndex)).toBeNull();
+      // "Should not know a diff index"
+      expect(cache.get(slot, subnet, validatorIndex + 1)).toBeNull();
     });
 
     it("should prune", () => {
@@ -31,9 +35,10 @@ describe("chain / seenCache / SeenSyncCommittee caches", function () {
         cache.add(slot + i, subnet, validatorIndex, rootHex);
       }
 
-      expect(cache.get(slot, subnet, validatorIndex)).to.equal(rootHex, "Should know before prune");
+      expect(cache.get(slot, subnet, validatorIndex)).toBe(rootHex);
       cache.prune(99);
-      expect(cache.get(slot, subnet, validatorIndex), "Should not know after prune").to.be.null;
+      // "Should not know after prune"
+      expect(cache.get(slot, subnet, validatorIndex)).toBeNull();
     });
   });
 
@@ -50,28 +55,13 @@ describe("chain / seenCache / SeenSyncCommittee caches", function () {
 
       const cache = new SeenContributionAndProof(null);
 
-      expect(cache.isAggregatorKnown(slot, subcommitteeIndex, aggregatorIndex)).to.equal(
-        false,
-        "Should not know before adding"
-      );
+      expect(cache.isAggregatorKnown(slot, subcommitteeIndex, aggregatorIndex)).toBe(false);
       cache.add(contributionAndProof, 0);
-      expect(cache.isAggregatorKnown(slot, subcommitteeIndex, aggregatorIndex)).to.equal(
-        true,
-        "Should know before adding"
-      );
+      expect(cache.isAggregatorKnown(slot, subcommitteeIndex, aggregatorIndex)).toBe(true);
 
-      expect(cache.isAggregatorKnown(slot + 1, subcommitteeIndex, aggregatorIndex)).to.equal(
-        false,
-        "Should not know a diff slot"
-      );
-      expect(cache.isAggregatorKnown(slot, subcommitteeIndex + 1, aggregatorIndex)).to.equal(
-        false,
-        "Should not know a diff subnet"
-      );
-      expect(cache.isAggregatorKnown(slot, subcommitteeIndex, aggregatorIndex + 1)).to.equal(
-        false,
-        "Should not know a diff index"
-      );
+      expect(cache.isAggregatorKnown(slot + 1, subcommitteeIndex, aggregatorIndex)).toBe(false);
+      expect(cache.isAggregatorKnown(slot, subcommitteeIndex + 1, aggregatorIndex)).toBe(false);
+      expect(cache.isAggregatorKnown(slot, subcommitteeIndex, aggregatorIndex + 1)).toBe(false);
     });
 
     it("should prune", () => {
@@ -85,22 +75,13 @@ describe("chain / seenCache / SeenSyncCommittee caches", function () {
         cache.add(contributionAndProof, 0);
       }
 
-      expect(cache.isAggregatorKnown(slot, subcommitteeIndex, aggregatorIndex)).to.equal(
-        true,
-        "Should know before prune"
-      );
-      expect(cache.participantsKnown(contributionAndProof.contribution)).to.equal(true, "Should know participants");
+      expect(cache.isAggregatorKnown(slot, subcommitteeIndex, aggregatorIndex)).toBe(true);
+      expect(cache.participantsKnown(contributionAndProof.contribution)).toBe(true);
 
       cache.prune(99);
 
-      expect(cache.isAggregatorKnown(slot, subcommitteeIndex, aggregatorIndex)).to.equal(
-        false,
-        "Should not know after prune"
-      );
-      expect(cache.participantsKnown(contributionAndProof.contribution)).to.equal(
-        false,
-        "Should not know participants"
-      );
+      expect(cache.isAggregatorKnown(slot, subcommitteeIndex, aggregatorIndex)).toBe(false);
+      expect(cache.participantsKnown(contributionAndProof.contribution)).toBe(false);
     });
 
     const testCases: {
@@ -153,7 +134,7 @@ describe("chain / seenCache / SeenSyncCommittee caches", function () {
             ...contributionAndProof.contribution,
             aggregationBits: new BitArray(new Uint8Array(bits), 8),
           };
-          expect(cache.participantsKnown(subsetContribution)).to.equal(isKnown);
+          expect(cache.participantsKnown(subsetContribution)).toBe(isKnown);
         }
       });
     }

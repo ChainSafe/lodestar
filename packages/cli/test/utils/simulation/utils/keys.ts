@@ -4,7 +4,7 @@ import path from "node:path";
 import yaml from "js-yaml";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {SHARED_VALIDATOR_PASSWORD} from "../constants.js";
-import {CLClientKeys, CLPaths} from "../interfaces.js";
+import {ValidatorClientKeys, ValidatorPaths} from "../interfaces.js";
 
 type KeystoreDefinition = {
   enabled: boolean;
@@ -15,8 +15,8 @@ type KeystoreDefinition = {
 };
 
 export const createKeystores = async (
-  {validatorsDefinitionFilePath, keystoresDir, keystoresSecretsDir}: CLPaths,
-  keys: CLClientKeys
+  {validatorsDefinitionFilePath, keystoresDir, keystoresSecretsDir}: ValidatorPaths,
+  keys: ValidatorClientKeys
 ): Promise<void> => {
   const definition: KeystoreDefinition[] = [];
 

@@ -43,13 +43,13 @@ describe("SyncCommitteeDutiesService", function () {
     validator: ssz.phase0.Validator.defaultValue(),
   };
 
-  before(() => {
+  before(async () => {
     const secretKeys = [
       bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32)),
       bls.SecretKey.fromBytes(toBufferBE(BigInt(99), 32)),
     ];
     pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
-    validatorStore = initValidatorStore(secretKeys, api, altair0Config);
+    validatorStore = await initValidatorStore(secretKeys, api, altair0Config);
   });
 
   let controller: AbortController; // To stop clock

@@ -171,6 +171,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     const {data: bnIdentity} = await bn.api.node.getNetworkIdentity();
 
     const {validators} = await getAndInitDevValidators({
+      logPrefix: "Node-A",
       node: bn,
       validatorsPerClient,
       validatorClientCount,

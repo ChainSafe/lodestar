@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {expect} from "vitest";
 import {Direction, ReadStatus, Stream, StreamStatus, WriteStatus} from "@libp2p/interface/connection";
 import {Uint8ArrayList} from "uint8arraylist";
 import {toHexString} from "@chainsafe/ssz";
@@ -25,8 +25,8 @@ export async function* arrToSource<T>(arr: T[]): AsyncGenerator<T> {
 /**
  * Wrapper for type-safety to ensure and array of Buffers is equal with a diff in hex
  */
-export function expectEqualByteChunks(chunks: Uint8Array[], expectedChunks: Uint8Array[], message?: string): void {
-  expect(chunks.map(toHexString)).to.deep.equal(expectedChunks.map(toHexString), message);
+export function expectEqualByteChunks(chunks: Uint8Array[], expectedChunks: Uint8Array[]): void {
+  expect(chunks.map(toHexString)).toEqual(expectedChunks.map(toHexString));
 }
 
 /**

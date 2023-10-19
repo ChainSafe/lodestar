@@ -105,8 +105,8 @@ describe("web3signer signature test", function () {
     const web3signerUrl = `http://localhost:${startedContainer.getMappedPort(port)}`;
 
     // http://localhost:9000/api/v1/eth2/sign/0x8837af2a7452aff5a8b6906c3e5adefce5690e1bba6d73d870b9e679fece096b97a255bae0978e3a344aa832f68c6b47
-    validatorStoreRemote = getValidatorStore({type: SignerType.Remote, url: web3signerUrl, pubkey});
-    validatorStoreLocal = getValidatorStore({type: SignerType.Local, secretKey});
+    validatorStoreRemote = await getValidatorStore({type: SignerType.Remote, url: web3signerUrl, pubkey});
+    validatorStoreLocal = await getValidatorStore({type: SignerType.Local, secretKey});
 
     const stream = await startedContainer.logs();
     stream
@@ -217,7 +217,7 @@ describe("web3signer signature test", function () {
     }
   }
 
-  function getValidatorStore(signer: Signer): ValidatorStore {
+  async function getValidatorStore(signer: Signer): Promise<ValidatorStore> {
     const logger = testLogger();
     const api = getClient({baseUrl: "http://localhost:9596"}, {config});
     const genesisValidatorsRoot = fromHex(genesisData.mainnet.genesisValidatorsRoot);
@@ -226,15 +226,16 @@ describe("web3signer signature test", function () {
     const valProposerConfig = undefined;
     const indicesService = new IndicesService(logger, api, metrics);
     const slashingProtection = new SlashingProtectionDisabled();
-    return new ValidatorStore(
-      createBeaconConfig(config, genesisValidatorsRoot),
-      slashingProtection,
-      indicesService,
-      doppelgangerService,
-      metrics,
+    return ValidatorStore.init(
+      {
+        config: createBeaconConfig(config, genesisValidatorsRoot),
+        slashingProtection,
+        indicesService,
+        doppelgangerService,
+        metrics,
+      },
       [signer],
-      valProposerConfig,
-      genesisValidatorsRoot
+      valProposerConfig
     );
   }
 });
@@ -246,6 +247,10 @@ class SlashingProtectionDisabled implements ISlashingProtection {
 
   async checkAndInsertAttestation(): Promise<void> {
     //
+  }
+
+  async hasAttestedInEpoch(): Promise<boolean> {
+    return false;
   }
 
   async importInterchange(): Promise<void> {

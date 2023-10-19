@@ -1,5 +1,4 @@
-import {expect} from "chai";
-import sinon from "sinon";
+import {describe, it, expect, beforeEach, afterEach, vi} from "vitest";
 import {MapDef} from "@lodestar/utils";
 import {peerIdFromString} from "../../../../src/util/peerId.js";
 import {
@@ -9,6 +8,16 @@ import {
   updateGossipsubScores,
   RealScore,
 } from "../../../../src/network/peers/score/index.js";
+
+vi.mock("../../../../src/network/peers/score/index.js", async (requireActual) => {
+  const mod = await requireActual<typeof import("../../../../src/network/peers/score/index.js")>();
+
+  mod.PeerRpcScoreStore.prototype.updateGossipsubScore = vi.fn();
+
+  return {
+    ...mod,
+  };
+});
 
 describe("simple block provider score tracking", function () {
   const peer = peerIdFromString("Qma9T5YraSnpRDZqRR4krcSJabThc8nwZuJV3LercPHufi");
@@ -25,7 +34,7 @@ describe("simple block provider score tracking", function () {
   it("Should return default score, without any previous action", function () {
     const {scoreStore} = mockStore();
     const score = scoreStore.getScore(peer);
-    expect(score).to.be.equal(0);
+    expect(score).toBe(0);
   });
 
   const timesToBan: [PeerAction, number][] = [
@@ -39,7 +48,7 @@ describe("simple block provider score tracking", function () {
     it(`Should ban peer after ${times} ${peerAction}`, async () => {
       const {scoreStore} = mockStore();
       for (let i = 0; i < times; i++) scoreStore.applyAction(peer, peerAction, actionName);
-      expect(scoreStore.getScoreState(peer)).to.be.equal(ScoreState.Banned);
+      expect(scoreStore.getScoreState(peer)).toBe(ScoreState.Banned);
     });
 
   const factorForJsBadMath = 1.1;
@@ -58,26 +67,26 @@ describe("simple block provider score tracking", function () {
         peerScore["lodestarScore"] = MIN_SCORE;
       }
       scoreStore.update();
-      expect(scoreStore.getScore(peer)).to.be.greaterThan(minScore);
+      expect(scoreStore.getScore(peer)).toBeGreaterThan(minScore);
     });
 
   it("should not go below min score", function () {
     const {scoreStore} = mockStore();
     scoreStore.applyAction(peer, PeerAction.Fatal, actionName);
     scoreStore.applyAction(peer, PeerAction.Fatal, actionName);
-    expect(scoreStore.getScore(peer)).to.be.gte(MIN_SCORE);
+    expect(scoreStore.getScore(peer)).toBeGreaterThanOrEqual(MIN_SCORE);
   });
 });
 
 describe("updateGossipsubScores", function () {
-  const sandbox = sinon.createSandbox();
   let peerRpcScoresStub: PeerRpcScoreStore;
+
   beforeEach(() => {
-    peerRpcScoresStub = sandbox.createStubInstance(PeerRpcScoreStore);
+    peerRpcScoresStub = vi.mocked(new PeerRpcScoreStore());
   });
 
-  this.afterEach(() => {
-    sandbox.restore();
+  afterEach(() => {
+    vi.clearAllMocks();
   });
 
   const testCases: {name: string; peerScores: [string, number, boolean][]; maxIgnore: number}[] = [
@@ -117,7 +126,7 @@ describe("updateGossipsubScores", function () {
       }
       updateGossipsubScores(peerRpcScoresStub, peerScoreMap, maxIgnore);
       for (const [key, value, ignore] of peerScores) {
-        expect(peerRpcScoresStub.updateGossipsubScore).to.be.calledWith(key, value, ignore);
+        expect(peerRpcScoresStub.updateGossipsubScore).toHaveBeenCalledWith(key, value, ignore);
       }
     });
   }

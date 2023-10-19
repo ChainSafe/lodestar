@@ -237,6 +237,20 @@ export function createNetworkCoreMetrics(register: RegistryMetricCreator) {
         name: "lodestar_attnets_service_committee_subscriptions_total",
         help: "Count of committee subscriptions",
       }),
+      subscriptionsCommitteeMeshPeers: register.histogram<"subnet">({
+        name: "lodestar_attnets_service_committee_subscriptions_mesh_peers",
+        help: "Histogram of mesh peers per committee subscription",
+        labelNames: ["subnet"],
+        // Dlow = 6, D = 8, DHi = 12 plus 2 more buckets
+        buckets: [0, 4, 6, 8, 12],
+      }),
+      subscriptionsCommitteeTimeToStableMesh: register.histogram<"subnet">({
+        name: "lodestar_attnets_service_committee_subscriptions_time_to_stable_mesh_seconds",
+        help: "Histogram of time until committee subscription is considered healthy (>= 6 mesh peers)",
+        labelNames: ["subnet"],
+        // we subscribe 2 slots = 24s before aggregator duty
+        buckets: [0, 6, 12, 18, 24],
+      }),
       subscriptionsRandom: register.gauge({
         name: "lodestar_attnets_service_random_subscriptions_total",
         help: "Count of random subscriptions",
@@ -319,12 +333,20 @@ export function createNetworkCoreMetrics(register: RegistryMetricCreator) {
   };
 }
 
+export type NetworkCoreWorkerMetrics = ReturnType<typeof getNetworkCoreWorkerMetrics>;
+
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function getNetworkCoreWorkerMetrics(register: RegistryMetricCreator) {
   return {
     reqRespBridgeRespCallerPending: register.gauge({
       name: "lodestar_network_worker_reqresp_bridge_caller_pending_count",
       help: "Current count of pending elements in respBridgeCaller",
+    }),
+    networkWorkerWireEventsOnWorkerThreadLatency: register.histogram<"eventName">({
+      name: "lodestar_network_worker_wire_events_on_worker_thread_latency_seconds",
+      help: "Latency in seconds to transmit network events to worker thread across parent port",
+      labelNames: ["eventName"],
+      buckets: [0.001, 0.003, 0.01, 0.03, 0.1],
     }),
   };
 }

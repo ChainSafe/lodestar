@@ -10,6 +10,7 @@ import {testLogger, TestLoggerOpts} from "../logger.js";
 
 export async function getAndInitDevValidators({
   node,
+  logPrefix,
   validatorsPerClient = 8,
   validatorClientCount = 1,
   startIndex = 0,
@@ -20,6 +21,7 @@ export async function getAndInitDevValidators({
   valProposerConfig,
 }: {
   node: BeaconNode;
+  logPrefix: string;
   validatorsPerClient: number;
   validatorClientCount: number;
   startIndex: number;
@@ -36,7 +38,7 @@ export async function getAndInitDevValidators({
   for (let clientIndex = 0; clientIndex < validatorClientCount; clientIndex++) {
     const startIndexVc = startIndex + clientIndex * validatorsPerClient;
     const endIndex = startIndexVc + validatorsPerClient - 1;
-    const logger = testLogger(`Vali ${startIndexVc}-${endIndex}`, testLoggerOpts);
+    const logger = testLogger(`${logPrefix}-VAL-${startIndexVc}-${endIndex}`, testLoggerOpts);
     const tmpDir = tmp.dirSync({unsafeCleanup: true});
     const db = await LevelDbController.create({name: tmpDir.name}, {logger});
     const slashingProtection = new SlashingProtection(db);

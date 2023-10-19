@@ -5,7 +5,7 @@ import {toHex, toHexString} from "@lodestar/utils";
 import {ApiError} from "@lodestar/api";
 import {nodeAssertion} from "../utils/simulation/assertions/nodeAssertion.js";
 import {CLIQUE_SEALING_PERIOD, SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/constants.js";
-import {AssertionMatch, CLClient, ELClient} from "../utils/simulation/interfaces.js";
+import {AssertionMatch, BeaconClient, ExecutionClient} from "../utils/simulation/interfaces.js";
 import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
 import {getEstimatedTimeInSecForRun, getEstimatedTTD, logFilesDir} from "../utils/simulation/utils/index.js";
 import {connectAllNodes, connectNewNode, waitForNodeSync, waitForSlot} from "../utils/simulation/utils/network.js";
@@ -47,8 +47,8 @@ const env = await SimulationEnvironment.initWithDefaults(
     },
   },
   [
-    {id: "node-1", cl: CLClient.Lodestar, el: ELClient.Mock, keysCount: 32},
-    {id: "node-2", cl: CLClient.Lodestar, el: ELClient.Mock, keysCount: 32, remote: true},
+    {id: "node-1", beacon: BeaconClient.Lodestar, execution: ExecutionClient.Mock, keysCount: 32},
+    {id: "node-2", beacon: BeaconClient.Lodestar, execution: ExecutionClient.Mock, keysCount: 32, remote: true},
   ]
 );
 
@@ -71,36 +71,36 @@ await waitForSlot(env.clock.getLastSlotOfEpoch(bellatrixForkEpoch) + activePrese
 
 // Range Sync
 // ========================================================
-const headForRangeSync = await env.nodes[0].cl.api.beacon.getBlockHeader("head");
+const headForRangeSync = await env.nodes[0].beacon.api.beacon.getBlockHeader("head");
 ApiError.assert(headForRangeSync);
 const rangeSync = await env.createNodePair({
   id: "range-sync-node",
-  cl: CLClient.Lodestar,
-  el: ELClient.Geth,
+  beacon: BeaconClient.Lodestar,
+  execution: ExecutionClient.Geth,
   keysCount: 0,
 });
 
 // Checkpoint sync involves Weak Subjectivity Checkpoint
 // ========================================================
-const res = await env.nodes[0].cl.api.beacon.getStateFinalityCheckpoints("head");
+const res = await env.nodes[0].beacon.api.beacon.getStateFinalityCheckpoints("head");
 ApiError.assert(res);
 const headForCheckpointSync = res.response.data.finalized;
 const checkpointSync = await env.createNodePair({
   id: "checkpoint-sync-node",
-  cl: {
-    type: CLClient.Lodestar,
+  beacon: {
+    type: BeaconClient.Lodestar,
     options: {clientOptions: {wssCheckpoint: `${toHex(headForCheckpointSync.root)}:${headForCheckpointSync.epoch}`}},
   },
-  el: ELClient.Geth,
+  execution: ExecutionClient.Geth,
   keysCount: 0,
 });
 
-await rangeSync.el.job.start();
-await rangeSync.cl.job.start();
+await rangeSync.execution.job.start();
+await rangeSync.beacon.job.start();
 await connectNewNode(rangeSync, env.nodes);
 
-await checkpointSync.el.job.start();
-await checkpointSync.cl.job.start();
+await checkpointSync.execution.job.start();
+await checkpointSync.beacon.job.start();
 await connectNewNode(checkpointSync, env.nodes);
 
 await Promise.all([
@@ -114,9 +114,9 @@ await Promise.all([
   }),
 ]);
 
-await rangeSync.cl.job.stop();
-await rangeSync.el.job.stop();
-await checkpointSync.cl.job.stop();
-await checkpointSync.el.job.stop();
+await rangeSync.beacon.job.stop();
+await rangeSync.execution.job.stop();
+await checkpointSync.beacon.job.stop();
+await checkpointSync.execution.job.stop();
 
 await env.stop();

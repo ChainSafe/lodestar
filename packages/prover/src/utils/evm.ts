@@ -166,7 +166,7 @@ export async function executeVMCall({
   executionPayload: allForks.ExecutionPayload;
   network: NetworkName;
 }): Promise<RunTxResult["execResult"]> {
-  const {from, to, gas, gasPrice, maxPriorityFeePerGas, value, data} = tx;
+  const {from, to, gas, gasPrice, maxPriorityFeePerGas, value, data, input} = tx;
   const {result: block} = await rpc.request("eth_getBlockByHash", [bufferToHex(executionPayload.blockHash), true], {
     raiseError: true,
   });
@@ -181,7 +181,7 @@ export async function executeVMCall({
     gasLimit: hexToBigInt(gas ?? block.gasLimit),
     gasPrice: hexToBigInt(gasPrice ?? maxPriorityFeePerGas ?? "0x0"),
     value: hexToBigInt(value ?? "0x0"),
-    data: data ? hexToBuffer(data) : undefined,
+    data: input ? hexToBuffer(input) : data ? hexToBuffer(data) : undefined,
     block: {
       header: getVMBlockHeaderFromELBlock(block, executionPayload, network),
     },

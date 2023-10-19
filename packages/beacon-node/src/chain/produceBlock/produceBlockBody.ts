@@ -329,8 +329,14 @@ export async function produceBlockBody<T extends BlockType>(
     (blockBody as capella.BeaconBlockBody).blsToExecutionChanges = blsToExecutionChanges;
     Object.assign(logMeta, {
       blsToExecutionChanges: blsToExecutionChanges.length,
-      withdrawals: (blockBody as capella.BeaconBlockBody).executionPayload.withdrawals.length,
     });
+
+    // withdrawals are only available in full body
+    if (blockType === BlockType.Full) {
+      Object.assign(logMeta, {
+        withdrawals: (blockBody as capella.BeaconBlockBody).executionPayload.withdrawals.length,
+      });
+    }
   }
 
   Object.assign(logMeta, {blockValue});

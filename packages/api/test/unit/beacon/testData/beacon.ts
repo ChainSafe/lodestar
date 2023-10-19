@@ -30,11 +30,11 @@ export const testData: GenericServerTestCases<Api> = {
   // block
 
   getBlock: {
-    args: ["head"],
+    args: ["head", "json"],
     res: {data: ssz.phase0.SignedBeaconBlock.defaultValue()},
   },
   getBlockV2: {
-    args: ["head"],
+    args: ["head", "json"],
     res: {executionOptimistic: true, data: ssz.bellatrix.SignedBeaconBlock.defaultValue(), version: ForkName.bellatrix},
   },
   getBlockAttestations: {

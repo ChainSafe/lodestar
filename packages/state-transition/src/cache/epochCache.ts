@@ -24,6 +24,7 @@ import {
   computeSyncPeriodAtEpoch,
   getSeed,
   computeProposers,
+  getActivationChurnLimit,
 } from "../util/index.js";
 import {computeEpochShuffling, EpochShuffling} from "../util/epochShuffling.js";
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
@@ -145,6 +146,11 @@ export class EpochCache {
    * change through the epoch. It's used in initiateValidatorExit(). Must be update after changing active indexes.
    */
   churnLimit: number;
+
+  /**
+   * Fork limited actual activationChurnLimit
+   */
+  activationChurnLimit: number;
   /**
    * Closest epoch with available churn for validators to exit at. May be updated every block as validators are
    * initiateValidatorExit(). This value may vary on each fork of the state.
@@ -204,6 +210,7 @@ export class EpochCache {
     baseRewardPerIncrement: number;
     totalActiveBalanceIncrements: number;
     churnLimit: number;
+    activationChurnLimit: number;
     exitQueueEpoch: Epoch;
     exitQueueChurn: number;
     currentTargetUnslashedBalanceIncrements: number;
@@ -228,6 +235,7 @@ export class EpochCache {
     this.baseRewardPerIncrement = data.baseRewardPerIncrement;
     this.totalActiveBalanceIncrements = data.totalActiveBalanceIncrements;
     this.churnLimit = data.churnLimit;
+    this.activationChurnLimit = data.activationChurnLimit;
     this.exitQueueEpoch = data.exitQueueEpoch;
     this.exitQueueChurn = data.exitQueueChurn;
     this.currentTargetUnslashedBalanceIncrements = data.currentTargetUnslashedBalanceIncrements;
@@ -364,6 +372,11 @@ export class EpochCache {
     // the first block of the epoch process_block() call. So churnLimit must be computed at the end of the before epoch
     // transition and the result is valid until the end of the next epoch transition
     const churnLimit = getChurnLimit(config, currentShuffling.activeIndices.length);
+    const activationChurnLimit = getActivationChurnLimit(
+      config,
+      config.getForkSeq(state.slot),
+      currentShuffling.activeIndices.length
+    );
     if (exitQueueChurn >= churnLimit) {
       exitQueueEpoch += 1;
       exitQueueChurn = 0;
@@ -405,6 +418,7 @@ export class EpochCache {
       baseRewardPerIncrement,
       totalActiveBalanceIncrements,
       churnLimit,
+      activationChurnLimit,
       exitQueueEpoch,
       exitQueueChurn,
       previousTargetUnslashedBalanceIncrements,
@@ -444,6 +458,7 @@ export class EpochCache {
       baseRewardPerIncrement: this.baseRewardPerIncrement,
       totalActiveBalanceIncrements: this.totalActiveBalanceIncrements,
       churnLimit: this.churnLimit,
+      activationChurnLimit: this.activationChurnLimit,
       exitQueueEpoch: this.exitQueueEpoch,
       exitQueueChurn: this.exitQueueChurn,
       previousTargetUnslashedBalanceIncrements: this.previousTargetUnslashedBalanceIncrements,
@@ -503,6 +518,11 @@ export class EpochCache {
     // the first block of the epoch process_block() call. So churnLimit must be computed at the end of the before epoch
     // transition and the result is valid until the end of the next epoch transition
     this.churnLimit = getChurnLimit(this.config, this.currentShuffling.activeIndices.length);
+    this.activationChurnLimit = getActivationChurnLimit(
+      this.config,
+      this.config.getForkSeq(state.slot),
+      this.currentShuffling.activeIndices.length
+    );
 
     // Maybe advance exitQueueEpoch at the end of the epoch if there haven't been any exists for a while
     const exitQueueEpoch = computeActivationExitEpoch(currEpoch);
@@ -569,9 +589,11 @@ export class EpochCache {
   getBeaconProposer(slot: Slot): ValidatorIndex {
     const epoch = computeEpochAtSlot(slot);
     if (epoch !== this.currentShuffling.epoch) {
-      throw new Error(
-        `Requesting beacon proposer for different epoch current shuffling: ${epoch} != ${this.currentShuffling.epoch}`
-      );
+      throw new EpochCacheError({
+        code: EpochCacheErrorCode.PROPOSER_EPOCH_MISMATCH,
+        currentEpoch: this.currentShuffling.epoch,
+        requestedEpoch: epoch,
+      });
     }
     return this.proposers[slot % SLOTS_PER_EPOCH];
   }
@@ -732,7 +754,11 @@ export class EpochCache {
   getShufflingAtEpoch(epoch: Epoch): EpochShuffling {
     const shuffling = this.getShufflingAtEpochOrNull(epoch);
     if (shuffling === null) {
-      throw new Error(`Requesting slot committee out of range epoch: ${epoch} current: ${this.currentShuffling.epoch}`);
+      throw new EpochCacheError({
+        code: EpochCacheErrorCode.COMMITTEE_EPOCH_OUT_OF_RANGE,
+        currentEpoch: this.currentShuffling.epoch,
+        requestedEpoch: epoch,
+      });
     }
 
     return shuffling;
@@ -772,7 +798,7 @@ export class EpochCache {
       case this.syncPeriod + 1:
         return this.nextSyncCommitteeIndexed;
       default:
-        throw new Error(`No sync committee for epoch ${epoch}`);
+        throw new EpochCacheError({code: EpochCacheErrorCode.NO_SYNC_COMMITTEE, epoch});
     }
   }
 
@@ -817,13 +843,31 @@ type AttesterDuty = {
 
 export enum EpochCacheErrorCode {
   COMMITTEE_INDEX_OUT_OF_RANGE = "EPOCH_CONTEXT_ERROR_COMMITTEE_INDEX_OUT_OF_RANGE",
+  COMMITTEE_EPOCH_OUT_OF_RANGE = "EPOCH_CONTEXT_ERROR_COMMITTEE_EPOCH_OUT_OF_RANGE",
+  NO_SYNC_COMMITTEE = "EPOCH_CONTEXT_ERROR_NO_SYNC_COMMITTEE",
+  PROPOSER_EPOCH_MISMATCH = "EPOCH_CONTEXT_ERROR_PROPOSER_EPOCH_MISMATCH",
 }
 
-type EpochCacheErrorType = {
-  code: EpochCacheErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE;
-  index: number;
-  maxIndex: number;
-};
+type EpochCacheErrorType =
+  | {
+      code: EpochCacheErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE;
+      index: number;
+      maxIndex: number;
+    }
+  | {
+      code: EpochCacheErrorCode.COMMITTEE_EPOCH_OUT_OF_RANGE;
+      requestedEpoch: Epoch;
+      currentEpoch: Epoch;
+    }
+  | {
+      code: EpochCacheErrorCode.NO_SYNC_COMMITTEE;
+      epoch: Epoch;
+    }
+  | {
+      code: EpochCacheErrorCode.PROPOSER_EPOCH_MISMATCH;
+      requestedEpoch: Epoch;
+      currentEpoch: Epoch;
+    };
 
 export class EpochCacheError extends LodestarError<EpochCacheErrorType> {}
 

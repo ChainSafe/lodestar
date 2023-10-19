@@ -35,6 +35,11 @@ export class IndexedGossipQueueAvgTime<T extends {indexed?: string}> implements 
     this._length = 0;
   }
 
+  // not implemented for this gossip queue
+  getDataAgeMs(): number[] {
+    return [];
+  }
+
   /**
    * Add item to gossip queue. If queue is full, drop first item of first key.
    * Return number of items dropped

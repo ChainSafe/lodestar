@@ -5,18 +5,9 @@ import {gnosisPreset} from "./presets/gnosis.js";
 import {presetStatus} from "./presetStatus.js";
 import {userSelectedPreset, userOverrides} from "./setPreset.js";
 
-export {BeaconPreset} from "./types.js";
-export {
-  ForkName,
-  ForkSeq,
-  ForkLightClient,
-  ForkExecution,
-  ForkBlobs,
-  isForkExecution,
-  isForkWithdrawals,
-  isForkBlobs,
-  isForkLightClient,
-} from "./forkName.js";
+export type {BeaconPreset} from "./types.js";
+export type {ForkLightClient, ForkExecution, ForkBlobs} from "./forkName.js";
+export {ForkName, ForkSeq, isForkExecution, isForkWithdrawals, isForkBlobs, isForkLightClient} from "./forkName.js";
 export {presetToJson} from "./json.js";
 export {PresetName};
 

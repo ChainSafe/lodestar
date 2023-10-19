@@ -56,7 +56,7 @@ export function urlToTokens(path: string): Token[] {
  * Compile a route URL formater with syntax `/path/{var1}/{var2}`.
  * Returns a function that expects an object `{var1: 1, var2: 2}`, and returns`/path/1/2`.
  *
- * It's cheap enough to be neglibible. For the sample input below it costs:
+ * It's cheap enough to be negligible. For the sample input below it costs:
  * - compile: 1010 ns / op
  * - execute: 105 ns / op
  * - execute with template literal: 12 ns / op

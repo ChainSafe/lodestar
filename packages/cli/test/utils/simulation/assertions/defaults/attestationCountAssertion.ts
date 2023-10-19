@@ -45,7 +45,7 @@ export const attestationsCountAssertion: SimulationAssertion<
       const attestationsCount = store[slot] ?? 0;
 
       // Inclusion delay for future slot
-      const nextSlotInclusionDelay = inclusionDelayStore[node.cl.id][slot + 1] ?? 0;
+      const nextSlotInclusionDelay = inclusionDelayStore[node.beacon.id][slot + 1] ?? 0;
 
       // If some attestations are not included, probably will be included in next slot.
       // In that case next slot inclusion delay will be higher than expected.

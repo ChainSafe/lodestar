@@ -92,8 +92,6 @@ export type LightClientOptimisticUpdate =
   | deneb.LightClientOptimisticUpdate;
 export type LightClientStore = altair.LightClientStore | capella.LightClientStore | deneb.LightClientStore;
 
-export type SignedBeaconBlockAndBlobSidecars = deneb.SignedBeaconBlockAndBlobSidecars;
-
 export type SSEPayloadAttributes =
   | bellatrix.SSEPayloadAttributes
   | capella.SSEPayloadAttributes
@@ -113,7 +111,6 @@ export type AllForksTypes = {
   LightClientHeader: LightClientHeader;
   BuilderBid: BuilderBid;
   SignedBuilderBid: SignedBuilderBid;
-  SignedBeaconBlockAndBlobSidecars: SignedBeaconBlockAndBlobSidecars;
 };
 
 export type AllForksBlindedTypes = {
@@ -288,7 +285,6 @@ export type AllForksLightClientSSZTypes = {
 };
 
 export type AllForksBlobsSSZTypes = {
-  SignedBeaconBlockAndBlobSidecars: AllForksTypeOf<typeof denebSsz.SignedBeaconBlockAndBlobSidecars>;
   BlobSidecar: AllForksTypeOf<typeof denebSsz.BlobSidecar>;
   BlindedBlobSidecar: AllForksTypeOf<typeof denebSsz.BlindedBlobSidecar>;
 };

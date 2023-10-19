@@ -61,7 +61,8 @@ export interface INetworkCore extends INetworkCorePublic {
 
   close(): Promise<void>;
   scrapeMetrics(): Promise<string>;
-  writeNetworkThreadProfile(durationMs?: number, dirpath?: string): Promise<string>;
+  writeNetworkThreadProfile(durationMs: number, dirpath: string): Promise<string>;
+  writeDiscv5Profile(durationMs: number, dirpath: string): Promise<string>;
 }
 
 /**
@@ -86,6 +87,9 @@ export type NetworkWorkerData = {
  * API exposed by the libp2p worker
  */
 export type NetworkWorkerApi = INetworkCorePublic & {
+  // To satisfy the constraint of `ModuleThread` type
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [string: string]: (...args: any[]) => Promise<any> | any;
   // Async method through worker boundary
   reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string): Promise<void>;
   reStatusPeers(peers: PeerIdStr[]): Promise<void>;
@@ -100,7 +104,8 @@ export type NetworkWorkerApi = INetworkCorePublic & {
 
   close(): Promise<void>;
   scrapeMetrics(): Promise<string>;
-  writeProfile(durationMs?: number, dirpath?: string): Promise<string>;
+  writeProfile(durationMs: number, dirpath: string): Promise<string>;
+  writeDiscv5Profile(durationMs: number, dirpath: string): Promise<string>;
 
   // TODO: ReqResp outgoing
   // TODO: ReqResp incoming

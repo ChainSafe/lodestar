@@ -35,7 +35,7 @@ import * as protocols from "./protocols.js";
 import {collectExactOneTyped} from "./utils/collect.js";
 
 export {getReqRespHandlers} from "./handlers/index.js";
-export {ReqRespMethod, RequestTypedContainer} from "./types.js";
+export {ReqRespMethod, type RequestTypedContainer} from "./types.js";
 
 export interface ReqRespBeaconNodeModules {
   libp2p: Libp2p;
@@ -147,10 +147,10 @@ export class ReqRespBeaconNode extends ReqResp {
     versions: number[],
     requestData: Uint8Array
   ): AsyncIterable<ResponseIncoming> {
-    // Remember prefered encoding
+    // Remember preferred encoding
     const encoding = this.peersData.getEncodingPreference(peerId.toString()) ?? Encoding.SSZ_SNAPPY;
 
-    // Overwritte placeholder requestData from main thread with correct sequenceNumber
+    // Overwrite placeholder requestData from main thread with correct sequenceNumber
     if (method === ReqRespMethod.Ping) {
       requestData = requestSszTypeByMethod[ReqRespMethod.Ping].serialize(this.metadataController.seqNumber);
     }
@@ -258,12 +258,12 @@ export class ReqRespBeaconNode extends ReqResp {
   protected onIncomingRequestBody(request: RequestTypedContainer, peer: PeerId): void {
     // Allow onRequest to return and close the stream
     // For Goodbye there may be a race condition where the listener of `receivedGoodbye`
-    // disconnects in the same syncronous call, preventing the stream from ending cleanly
+    // disconnects in the same synchronous call, preventing the stream from ending cleanly
     setTimeout(() => this.networkEventBus.emit(NetworkEvent.reqRespRequest, {request, peer}), 0);
   }
 
   protected onIncomingRequest(peerId: PeerId, protocol: ProtocolDescriptor): void {
-    // Remember prefered encoding
+    // Remember preferred encoding
     if (protocol.method === ReqRespMethod.Status) {
       this.peersData.setEncodingPreference(peerId.toString(), protocol.encoding);
     }

@@ -31,7 +31,7 @@ const DB_SIZE_METRIC_INTERVAL_MS = 5 * 60 * 1000;
 export class LevelDbController implements DatabaseController<Uint8Array, Uint8Array> {
   private status = Status.started;
 
-  private dbSizeMetricInterval?: NodeJS.Timer;
+  private dbSizeMetricInterval?: NodeJS.Timeout;
 
   constructor(
     private readonly logger: Logger,

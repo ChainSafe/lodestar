@@ -12,6 +12,7 @@ export type ApiArgs = {
   "rest.port": number;
   "rest.headerLimit"?: number;
   "rest.bodyLimit"?: number;
+  "rest.swaggerUI"?: boolean;
 };
 
 export function parseArgs(args: ApiArgs): IBeaconNodeOptions["api"] {
@@ -25,6 +26,7 @@ export function parseArgs(args: ApiArgs): IBeaconNodeOptions["api"] {
       port: args["rest.port"],
       headerLimit: args["rest.headerLimit"],
       bodyLimit: args["rest.bodyLimit"],
+      swaggerUI: args["rest.swaggerUI"],
     },
   };
 }
@@ -88,5 +90,12 @@ export const options: CliCommandOptions<ApiArgs> = {
     hidden: true,
     type: "number",
     description: "Defines the maximum payload, in bytes, the server is allowed to accept",
+  },
+
+  "rest.swaggerUI": {
+    type: "boolean",
+    description: "Enable Swagger UI for API exploration at http://{address}:{port}/documentation",
+    default: Boolean(defaultOptions.api.rest.swaggerUI),
+    group: "api",
   },
 };

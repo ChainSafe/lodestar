@@ -339,6 +339,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     } as ValidatorProposerConfig;
 
     const {validators} = await getAndInitDevValidators({
+      logPrefix: "Node-A",
       node: bn,
       validatorsPerClient,
       validatorClientCount,

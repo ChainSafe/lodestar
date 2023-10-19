@@ -1,6 +1,6 @@
 {
   "name": "@lodestar/params",
-  "version": "1.10.0",
+  "version": "1.11.3",
   "description": "Chain parameters required for lodestar",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",
@@ -55,7 +55,7 @@
     "test": "yarn run check-types",
     "test:unit": "mocha 'test/unit/**/*.test.ts'",
     "test:browsers": "yarn karma start karma.config.cjs",
-    "test:e2e": "mocha 'test/e2e/**/*.test.ts'",
+    "test:e2e": "LODESTAR_PRESET=minimal mocha 'test/e2e/**/*.test.ts'",
     "check-readme": "typescript-docs-verifier"
   },
   "repository": {

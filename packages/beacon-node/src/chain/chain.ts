@@ -130,7 +130,6 @@ export class BeaconChain implements IBeaconChain {
 
   readonly beaconProposerCache: BeaconProposerCache;
   readonly checkpointBalancesCache: CheckpointBalancesCache;
-  // TODO DENEB: Prune data structure every time period, for both old entries
   /** Map keyed by executionPayload.blockHash of the block for those blobs */
   readonly producedBlobSidecarsCache = new Map<BlockHash, {blobSidecars: deneb.BlobSidecars; slot: Slot}>();
   readonly producedBlindedBlobSidecarsCache = new Map<
@@ -806,7 +805,7 @@ export class BeaconChain implements IBeaconChain {
       sleep((1000 * this.config.SECONDS_PER_SLOT) / 2)
         .then(() => metrics.onceEveryEndOfEpoch(this.getHeadState()))
         .catch((e) => {
-          if (!isErrorAborted(e)) this.logger.error("error on validator monitor onceEveryEndOfEpoch", {slot}, e);
+          if (!isErrorAborted(e)) this.logger.error("Error on validator monitor onceEveryEndOfEpoch", {slot}, e);
         });
     }
   }

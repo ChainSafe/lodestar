@@ -21,7 +21,7 @@ describe("ValidatorStore", function () {
   let valProposerConfig: ValidatorProposerConfig;
   let signValidatorStub: SinonStubFn<ValidatorStore["signValidatorRegistration"]>;
 
-  before(() => {
+  before(async () => {
     valProposerConfig = {
       proposerConfig: {
         [toHexString(pubkeys[0])]: {
@@ -45,7 +45,7 @@ describe("ValidatorStore", function () {
       },
     };
 
-    validatorStore = initValidatorStore(secretKeys, api, chainConfig, valProposerConfig);
+    validatorStore = await initValidatorStore(secretKeys, api, chainConfig, valProposerConfig);
     signValidatorStub = sinon.stub(validatorStore, "signValidatorRegistration");
   });
 
