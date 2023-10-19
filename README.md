@@ -2,7 +2,6 @@
 
 # Lodestar Ethereum Consensus Implementation
 
-[![Twitter Follow](https://img.shields.io/twitter/follow/lodestar_eth)](https://twitter.com/lodestar_eth)
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/chainsafe/lodestar?label=Github)](https://github.com/ChainSafe/lodestar/releases/latest)
 [![npm](https://img.shields.io/npm/v/@chainsafe/lodestar)](https://www.npmjs.com/package/@chainsafe/lodestar)
 [![Docker Image Version (latest by date)](https://img.shields.io/docker/v/chainsafe/lodestar?color=blue&label=Docker&sort=semver)](https://hub.docker.com/r/chainsafe/lodestar)
@@ -22,6 +21,7 @@
 - :spiral_notepad: View the Lodestar [CLI commands and options](https://chainsafe.github.io/lodestar/reference/cli/).
 - :nerd_face: View the [Package and dependency structure](https://chainsafe.github.io/lodestar/design/depgraph/).
 - :memo: Prospective contributors can read the [contributing section](./CONTRIBUTING.md) to understand how we develop and test on Lodestar.
+- :bird: Follow Lodestar on [Twitter](https://twitter.com/lodestar_eth)! [![Twitter Follow](https://img.shields.io/twitter/follow/lodestar_eth)](https://twitter.com/lodestar_eth)
 - :writing_hand: If you have questions [submit an issue](https://github.com/ChainSafe/lodestar/issues/new) or join us on [Discord](https://discord.gg/yjyvFRP)!
   [![Discord](https://img.shields.io/discord/593655374469660673.svg?label=Discord&logo=discord)](https://discord.gg/aMxzVcr)
 - :rotating_light: Please note our [security policy](./SECURITY.md).
