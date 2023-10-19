@@ -36,6 +36,8 @@ export function getExecutionEngineHttp(
     signal: modules.signal,
     metrics: modules.metrics?.executionEnginerHttpClient,
     jwtSecret: opts.jwtSecretHex ? fromHex(opts.jwtSecretHex) : undefined,
+    jwtId: opts.jwtId ?? undefined,
+    jwtVersion: opts.jwtVersion ?? undefined,
   });
   return new ExecutionEngineHttp(rpc, modules);
 }

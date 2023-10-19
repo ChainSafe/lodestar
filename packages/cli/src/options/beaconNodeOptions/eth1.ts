@@ -14,6 +14,9 @@ export type Eth1Args = {
 
 export function parseArgs(args: Eth1Args & Partial<ExecutionEngineArgs>): IBeaconNodeOptions["eth1"] {
   let jwtSecretHex: string | undefined;
+  let jwtId: string | undefined;
+  let jwtVersion: string | undefined;
+
   let providerUrls = args["eth1.providerUrls"];
 
   // If no providerUrls are explicitly provided, we should pick the execution endpoint
@@ -25,12 +28,16 @@ export function parseArgs(args: Eth1Args & Partial<ExecutionEngineArgs>): IBeaco
     jwtSecretHex = args["jwt-secret"]
       ? extractJwtHexSecret(fs.readFileSync(args["jwt-secret"], "utf-8").trim())
       : undefined;
+    jwtId = args["jwt-id"];
+    jwtVersion = args["jwt-version"];
   }
 
   return {
     enabled: args["eth1"],
     providerUrls,
     jwtSecretHex,
+    jwtId,
+    jwtVersion,
     depositContractDeployBlock: args["eth1.depositContractDeployBlock"],
     disableEth1DepositDataTracker: args["eth1.disableEth1DepositDataTracker"],
     unsafeAllowDepositDataOverwrite: args["eth1.unsafeAllowDepositDataOverwrite"],

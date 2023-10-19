@@ -7,6 +7,8 @@ export type Eth1Options = {
    * protected engine endpoints.
    */
   jwtSecretHex?: string;
+  jwtId?: string;
+  jwtVersion?: string;
   depositContractDeployBlock?: number;
   unsafeAllowDepositDataOverwrite?: boolean;
   /**

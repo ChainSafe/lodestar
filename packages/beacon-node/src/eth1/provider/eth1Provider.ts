@@ -64,7 +64,7 @@ export class Eth1Provider implements IEth1Provider {
 
   constructor(
     config: Pick<ChainConfig, "DEPOSIT_CONTRACT_ADDRESS">,
-    opts: Pick<Eth1Options, "depositContractDeployBlock" | "providerUrls" | "jwtSecretHex"> & {logger?: Logger},
+    opts: Pick<Eth1Options, "depositContractDeployBlock" | "providerUrls" | "jwtSecretHex" | "jwtId" | "jwtVersion"> & {logger?: Logger},
     signal?: AbortSignal,
     metrics?: JsonRpcHttpClientMetrics | null
   ) {
@@ -76,6 +76,8 @@ export class Eth1Provider implements IEth1Provider {
       // Don't fallback with is truncated error. Throw early and let the retry on this class handle it
       shouldNotFallback: isJsonRpcTruncatedError,
       jwtSecret: opts.jwtSecretHex ? fromHex(opts.jwtSecretHex) : undefined,
+      jwtId: opts.jwtId ?? undefined,
+      jwtVersion: opts.jwtVersion ?? undefined,
       metrics: metrics,
     });
 
