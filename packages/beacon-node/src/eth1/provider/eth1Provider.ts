@@ -78,8 +78,8 @@ export class Eth1Provider implements IEth1Provider {
       // Don't fallback with is truncated error. Throw early and let the retry on this class handle it
       shouldNotFallback: isJsonRpcTruncatedError,
       jwtSecret: opts.jwtSecretHex ? fromHex(opts.jwtSecretHex) : undefined,
-      jwtId: opts.jwtId ?? undefined,
-      jwtVersion: opts.jwtVersion ?? undefined,
+      jwtId: opts.jwtId,
+      jwtVersion: opts.jwtVersion,
       metrics: metrics,
     });
 

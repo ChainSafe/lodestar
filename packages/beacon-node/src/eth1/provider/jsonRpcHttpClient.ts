@@ -265,8 +265,8 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
          */
         const jwtClaim: JwtClaim = {
           iat: Math.floor(new Date().getTime() / 1000),
-          id: this.jwtId ?? undefined,
-          clv: this.jwtVersion ?? undefined,
+          id: this.jwtId,
+          clv: this.jwtVersion,
         };
 
         const token = encodeJwtToken(jwtClaim, this.jwtSecret);
