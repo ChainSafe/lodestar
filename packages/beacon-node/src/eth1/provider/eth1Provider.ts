@@ -64,7 +64,9 @@ export class Eth1Provider implements IEth1Provider {
 
   constructor(
     config: Pick<ChainConfig, "DEPOSIT_CONTRACT_ADDRESS">,
-    opts: Pick<Eth1Options, "depositContractDeployBlock" | "providerUrls" | "jwtSecretHex" | "jwtId" | "jwtVersion"> & {logger?: Logger},
+    opts: Pick<Eth1Options, "depositContractDeployBlock" | "providerUrls" | "jwtSecretHex" | "jwtId" | "jwtVersion"> & {
+      logger?: Logger;
+    },
     signal?: AbortSignal,
     metrics?: JsonRpcHttpClientMetrics | null
   ) {
