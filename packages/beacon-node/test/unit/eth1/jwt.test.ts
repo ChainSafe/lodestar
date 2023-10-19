@@ -39,17 +39,17 @@ describe("ExecutionEngine / jwt", () => {
 
     const tokenWithId = encodeJwtToken(claimWithId, jwtSecret);
     expect(tokenWithId).toBe(
-      "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE2NDU1NTE0NTIsImlkIjoiNGFjMCJ9.w9l76DePA4ghPlrHlLqZ0q5WyEmdfLjV3NJYQHeQ_c4"
+      "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE2NDU1NTE0NTIsImlkIjoiNGFjMCJ9.g3iKsQk9Q1PSYaGldo9MM0Mds8E59t24K6rHdQ9HXg0"
     );
 
     const tokenWithVersion = encodeJwtToken(claimWithVersion, jwtSecret);
     expect(tokenWithVersion).toBe(
-      "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE2NDU1NTE0NTIsImNsdiI6InYxLjExLjMifQ.4c1iWrLaR9dnE07PRt6bLwGJ5xtZaUWJ4-RVtz-5Uog"
+      "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE2NDU1NTE0NTIsImNsdiI6InYxLjExLjMifQ.s5iLRa04o_rtATWubz6LZc27rVXhE2n9BPpXpnmnR5o"
     );
 
     const tokenWithIdAndVersion = encodeJwtToken(claimWithIdAndVersion, jwtSecret);
     expect(tokenWithIdAndVersion).toBe(
-      "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE2NDU1NTE0NTIsImlkIjoiNGFjMCIsImNsdiI6InYxLjExLjMifQ.tvpnzAUsYpYMdPgauLsISITXzAAP1uuNfHKzVKITNhs"
+      "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE2NDU1NTE0NTIsImlkIjoiNGFjMCIsImNsdiI6InYxLjExLjMifQ.QahIO3hcnMV385ES5jedRudsdECMVDembkoQv4BnSTs"
     );
   });
 });
