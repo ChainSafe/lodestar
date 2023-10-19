@@ -263,10 +263,11 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
          *
          * Jwt auth spec: https://github.com/ethereum/execution-apis/pull/167
          */
-        let jwtClaim: JwtClaim = {
+        const jwtClaim: JwtClaim = {
           iat: Math.floor(new Date().getTime() / 1000),
           id: this.jwtId ?? undefined,
-          clv: this.jwtVersion ?? undefined};
+          clv: this.jwtVersion ?? undefined,
+        };
 
         const token = encodeJwtToken(jwtClaim, this.jwtSecret);
         headers["Authorization"] = `Bearer ${token}`;
