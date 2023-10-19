@@ -55,6 +55,14 @@ export type ExecutionEngineHttpOpts = {
    * +-5 seconds interval.
    */
   jwtSecretHex?: string;
+  /**
+   * A identifier string passed by user in cli arg that will be included in `id` field in jwt claims
+   */
+  jwtId?: string;
+  /**
+   * A version string passed by user in cli arg that will be included in `clv` field in jwt claims
+   */
+  jwtVersion?: string;
 };
 
 export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
