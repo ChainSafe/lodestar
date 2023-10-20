@@ -54,7 +54,10 @@
     "pretest": "yarn run check-types",
     "test": "yarn test:unit && yarn test:e2e",
     "test:unit": "vitest --run --dir test/unit/ --coverage",
-    "test:browsers": "yarn karma start karma.config.cjs",
+    "test:browsers": "test:browsers:chrome && test:browsers:firefox && test:browsers:electron",
+    "test:browsers:chrome": "vitest --run --browser chrome --config ./vitest.browser.config.ts --dir test/unit",
+    "test:browsers:firefox": "vitest --run --browser firefox --config ./vitest.browser.config.ts --dir test/unit",
+    "test:browsers:electron": "echo 'ELectron tests will be introduced back in the future as soon vitest supports electron.'",
     "test:e2e": "LODESTAR_PRESET=minimal vitest --run --single-thread --dir test/e2e",
     "check-readme": "typescript-docs-verifier",
     "generate-fixtures": "node --loader ts-node/esm scripts/generate_fixtures.ts"

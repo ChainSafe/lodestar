@@ -1,16 +1,21 @@
 import path from "node:path";
 import {defineConfig} from "vitest/config";
 const __dirname = new URL(".", import.meta.url).pathname;
-import renderer from "vite-plugin-electron-renderer";
+import {nodePolyfills} from "vite-plugin-node-polyfills";
+import topLevelAwait from "vite-plugin-top-level-await";
 
 export default defineConfig({
-  plugins: [renderer()],
+  plugins: [
+    topLevelAwait(),
+    nodePolyfills({include: ["buffer", "process"], globals: {Buffer: true, process: true}, protocolImports: true}),
+  ],
   test: {
     include: ["**/*.test.ts"],
     exclude: [
-      "**/*.browser.test.ts",
+      "**/*.node.test.ts",
       "**/node_modules/**",
       "**/dist/**",
+      "**/lib/**",
       "**/cypress/**",
       "**/.{idea,git,cache,output,temp}/**",
       "**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build}.config.*",
@@ -18,23 +23,14 @@ export default defineConfig({
     setupFiles: [path.join(__dirname, "./scripts/vitest/customMatchers.ts")],
     reporters: ["default", "hanging-process"],
     coverage: {
-      clean: true,
-      all: false,
-      extension: [".ts"],
-      provider: "v8",
-      reporter: [["lcovonly", {file: "lcov.info"}], ["text"]],
-      reportsDirectory: "./coverage",
-      exclude: [
-        "**/*.d.ts",
-        "**/*.js",
-        "**/lib/**",
-        "**/coverage/**",
-        "**/scripts/**",
-        "**/test/**",
-        "**/types/**",
-        "**/bin/**",
-        "**/node_modules/**",
-      ],
+      enabled: false,
     },
+    browser: {
+      name: "chrome",
+      headless: true,
+      provider: "webdriverio",
+      slowHijackESM: false,
+    },
+    environment: "jsdom",
   },
 });

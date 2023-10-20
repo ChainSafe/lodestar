@@ -1,6 +1,4 @@
 import {describe, it, expect} from "vitest";
-import chai from "chai";
-import chaiAsPromised from "chai-as-promised";
 import deepmerge from "deepmerge";
 import {getEnvLogger} from "@lodestar/logger/env";
 import {ELProof, ELStorageProof} from "../../../src/types.js";
@@ -15,8 +13,6 @@ const validStateRoot = hexToBuffer(eoaProof.beacon.executionPayload.state_root);
 
 const invalidAccountProof = deepmerge(validAccountProof, {});
 delete invalidAccountProof.accountProof[0];
-
-chai.use(chaiAsPromised);
 
 describe("uitls/execution", () => {
   const logger = getEnvLogger();
