@@ -1,18 +1,10 @@
-import {CompositeTypeAny, Type} from "@chainsafe/ssz";
-import {ssz} from "@lodestar/types";
+import {deserializeContainerIgnoreFields, ssz} from "@lodestar/types";
 import {ForkSeq} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
-import {BeaconStateAllForks, BeaconStateAltair, BeaconStatePhase0} from "../../types.js";
+import {BeaconStateAllForks, BeaconStateAltair} from "../../types.js";
 import {VALIDATOR_BYTES_SIZE, getForkFromStateBytes, getStateTypeFromBytes} from "../sszBytes.js";
 import {findModifiedValidators} from "./findModifiedValidators.js";
 import {findModifiedInactivityScores} from "./findModifiedInactivityScores.js";
-
-type BeaconStateType =
-  | typeof ssz.phase0.BeaconState
-  | typeof ssz.altair.BeaconState
-  | typeof ssz.bellatrix.BeaconState
-  | typeof ssz.capella.BeaconState
-  | typeof ssz.deneb.BeaconState;
 
 type MigrateStateOutput = {state: BeaconStateAllForks; modifiedValidators: number[]};
 
@@ -21,7 +13,7 @@ type MigrateStateOutput = {state: BeaconStateAllForks; modifiedValidators: numbe
  * - Have single base tree across the application
  * - Faster to load state
  * - Less memory usage
- * - Ultilize the cached HashObjects in seed state due to a lot of validators are not changed, also the inactivity scores.
+ * - Utilize the cached HashObjects in seed state due to a lot of validators are not changed, also the inactivity scores.
  * @returns the new state and modified validators
  */
 export function loadState(
@@ -29,27 +21,34 @@ export function loadState(
   seedState: BeaconStateAllForks,
   stateBytes: Uint8Array
 ): MigrateStateOutput {
-  const stateType = getStateTypeFromBytes(config, stateBytes) as BeaconStateType;
+  const stateType = getStateTypeFromBytes(config, stateBytes) as typeof ssz.phase0.BeaconState;
   const dataView = new DataView(stateBytes.buffer, stateBytes.byteOffset, stateBytes.byteLength);
   const fieldRanges = stateType.getFieldRanges(dataView, 0, stateBytes.length);
   const allFields = Object.keys(stateType.fields);
   const validatorsFieldIndex = allFields.indexOf("validators");
-  const migratedState = stateType.defaultViewDU();
-  // validators is rarely changed
+  // start with default view has the same performance to start with seed state
+  // however, it is not fork dependent
+  const migratedState = deserializeContainerIgnoreFields(
+    stateType,
+    stateBytes,
+    ["validators, inactivityScores"],
+    fieldRanges
+  ) as BeaconStateAllForks;
+
+  // validators are rarely changed
   const validatorsRange = fieldRanges[validatorsFieldIndex];
   const modifiedValidators = loadValidators(
     migratedState,
     seedState,
     stateBytes.subarray(validatorsRange.start, validatorsRange.end)
   );
-  // inactivityScores
-  // this takes ~500 to hashTreeRoot while this field is rarely changed
+
+  // inactivityScores are rarely changed
+  // this saves ~500ms of hashTreeRoot() time of state
   const fork = getForkFromStateBytes(config, stateBytes);
   const seedFork = config.getForkSeq(seedState.slot);
 
-  let loadedInactivityScores = false;
   if (fork >= ForkSeq.altair && seedFork >= ForkSeq.altair) {
-    loadedInactivityScores = true;
     const inactivityScoresIndex = allFields.indexOf("inactivityScores");
     const inactivityScoresRange = fieldRanges[inactivityScoresIndex];
     loadInactivityScores(
@@ -57,25 +56,6 @@ export function loadState(
       seedState as BeaconStateAltair,
       stateBytes.subarray(inactivityScoresRange.start, inactivityScoresRange.end)
     );
-  }
-  for (const [fieldName, typeUnknown] of Object.entries(stateType.fields)) {
-    // loaded above
-    if (fieldName === "validators" || (loadedInactivityScores && fieldName === "inactivityScores")) {
-      continue;
-    }
-    const field = fieldName as Exclude<keyof BeaconStatePhase0, "type" | "cache" | "node">;
-    const type = typeUnknown as Type<unknown>;
-    const fieldIndex = allFields.indexOf(field);
-    const fieldRange = fieldRanges[fieldIndex];
-    if (type.isBasic) {
-      (migratedState as BeaconStatePhase0)[field] = type.deserialize(
-        stateBytes.subarray(fieldRange.start, fieldRange.end)
-      ) as never;
-    } else {
-      (migratedState as BeaconStatePhase0)[field] = (type as CompositeTypeAny).deserializeToViewDU(
-        stateBytes.subarray(fieldRange.start, fieldRange.end)
-      ) as never;
-    }
   }
   migratedState.commit();
 
@@ -153,7 +133,7 @@ function loadInactivityScores(
  *  - Have single base tree across the application
  *  - Faster to load state
  *  - Less memory usage
- *  - Ultilize the cached HashObjects in seed state due to a lot of validators are not changed
+ *  - Utilize the cached HashObjects in seed state due to a lot of validators are not changed
  *
  * Given the below tree:
  *
