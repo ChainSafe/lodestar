@@ -7,6 +7,7 @@ import {
   computeStartSlotAtEpoch,
   isStateValidatorsNodesPopulated,
   RootCache,
+  kzgCommitmentToVersionedHash,
 } from "@lodestar/state-transition";
 import {routes} from "@lodestar/api";
 import {ForkChoiceError, ForkChoiceErrorCode, EpochDifference, AncestorStatus} from "@lodestar/fork-choice";
@@ -18,7 +19,7 @@ import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {ChainEvent, ReorgEventData} from "../emitter.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
 import type {BeaconChain} from "../chain.js";
-import {FullyVerifiedBlock, ImportBlockOpts, AttestationImportOpt} from "./types.js";
+import {FullyVerifiedBlock, ImportBlockOpts, AttestationImportOpt, BlockInputType} from "./types.js";
 import {getCheckpointFromState} from "./utils/checkpoint.js";
 import {writeBlockInputToDb} from "./writeBlockInputToDb.js";
 
@@ -89,13 +90,28 @@ export async function importBlock(
 
   this.metrics?.importBlock.bySource.inc({source});
   this.logger.verbose("Added block to forkchoice and state cache", {slot: block.message.slot, root: blockRootHex});
+
   // We want to import block asap so call all event handler in the next event loop
   setTimeout(() => {
+    const slot = block.message.slot;
     this.emitter.emit(routes.events.EventType.block, {
-      block: toHexString(this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)),
-      slot: block.message.slot,
+      block: blockRootHex,
+      slot,
       executionOptimistic: blockSummary != null && isOptimisticBlock(blockSummary),
     });
+
+    if (blockInput.type === BlockInputType.postDeneb) {
+      for (const blobSidecar of blockInput.blobs) {
+        const {index, kzgCommitment} = blobSidecar;
+        this.emitter.emit(routes.events.EventType.blobSidecar, {
+          blockRoot: blockRootHex,
+          slot,
+          index,
+          kzgCommitment: toHexString(kzgCommitment),
+          versionedHash: toHexString(kzgCommitmentToVersionedHash(kzgCommitment)),
+        });
+      }
+    }
   }, 0);
 
   // 3. Import attestations to fork choice
