@@ -1,7 +1,7 @@
 import bls from "@chainsafe/bls";
 import {CoordType} from "@chainsafe/blst";
 import {BeaconConfig} from "@lodestar/config";
-import {loadState} from "../util/loadState.js";
+import {loadState} from "../util/loadState/loadState.js";
 import {EpochCache, EpochCacheImmutableData, EpochCacheOpts} from "./epochCache.js";
 import {
   BeaconStateAllForks,

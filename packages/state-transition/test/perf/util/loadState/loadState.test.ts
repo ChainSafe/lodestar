@@ -8,16 +8,17 @@ import {itBench} from "@dapplion/benchmark";
 import {Epoch, RootHex, ssz} from "@lodestar/types";
 import {config as defaultChainConfig} from "@lodestar/config/default";
 import {createBeaconConfig} from "@lodestar/config";
-import {loadState} from "../../../src/util/loadState.js";
-import {createCachedBeaconState} from "../../../src/cache/stateCache.js";
-import {Index2PubkeyCache, PubkeyIndexMap} from "../../../src/cache/pubkeyCache.js";
-import {EpochShuffling, getShufflingDecisionBlock} from "../../../src/util/epochShuffling.js";
+import {loadState} from "../../../../src/util/loadState/loadState.js";
+import {createCachedBeaconState} from "../../../../src/cache/stateCache.js";
+import {Index2PubkeyCache, PubkeyIndexMap} from "../../../../src/cache/pubkeyCache.js";
+import {EpochShuffling, getShufflingDecisionBlock} from "../../../../src/util/epochShuffling.js";
 
 describe("loadState", function () {
   this.timeout(0);
   const stateType = ssz.capella.BeaconState;
 
   const folder = "/Users/tuyennguyen/tuyen/state_migration";
+  // TODO: dapplion's repo or my repo first
   const data = Uint8Array.from(fs.readFileSync(path.join(folder, "mainnet_state_7335296.ssz")));
 
   const seedState = stateType.deserializeToViewDU(data);

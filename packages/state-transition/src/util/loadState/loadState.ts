@@ -2,8 +2,10 @@ import {CompositeTypeAny, Type} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
 import {ForkSeq} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
-import {BeaconStateAllForks, BeaconStateAltair, BeaconStatePhase0} from "../types.js";
-import {VALIDATOR_BYTES_SIZE, getForkFromStateBytes, getStateTypeFromBytes} from "./sszBytes.js";
+import {BeaconStateAllForks, BeaconStateAltair, BeaconStatePhase0} from "../../types.js";
+import {VALIDATOR_BYTES_SIZE, getForkFromStateBytes, getStateTypeFromBytes} from "../sszBytes.js";
+import {findModifiedValidators} from "./findModifiedValidators.js";
+import {findModifiedInactivityScores} from "./findModifiedInactivityScores.js";
 
 type BeaconStateType =
   | typeof ssz.phase0.BeaconState
@@ -80,8 +82,26 @@ export function loadState(
   return {state: migratedState, modifiedValidators};
 }
 
-// state store inactivity scores of old seed state, we need to update it
-// this value rarely changes even after 3 months of data as monitored on mainnet in Sep 2023
+/**
+ * This value is rarely changed as monitored 3 month state diffs on mainnet as of Sep 2023.
+ * Reusing this data helps save hashTreeRoot time of state ~500ms
+ *
+ * Given the below tree:
+ *
+ * seedState.inactivityScores ====>  ROOT
+ *                                 /     \
+ *                            Hash01       Hash23
+ *                           /    \       /    \
+ *                       Sco0    Sco1   Sco2   Sco3
+ *
+ * if score 3 is modified, the new tree looks like this:
+ *
+ * migratedState.inactivityScores ====> ROOTa
+ *                                     /      \
+ *                                Hash01      Hash23a
+ *                               /    \       /    \
+ *                           Sco0    Sco1  Sco2   Sco3a
+ */
 function loadInactivityScores(
   migratedState: BeaconStateAltair,
   seedState: BeaconStateAltair,
@@ -125,6 +145,35 @@ function loadInactivityScores(
   }
 }
 
+/**
+ * As of Sep 2021, common validators of 2 mainnet states are rarely changed. However, the benchmark shows that
+ * 10k modified validators is not an issue. (see packages/state-transition/test/perf/util/loadState/findModifiedValidators.test.ts)
+ *
+ * This method loads validators from bytes given a seed state so that they share the same base tree. This gives some benefits:
+ *  - Have single base tree across the application
+ *  - Faster to load state
+ *  - Less memory usage
+ *  - Ultilize the cached HashObjects in seed state due to a lot of validators are not changed
+ *
+ * Given the below tree:
+ *
+ * seedState.validators ====>  ROOT
+ *                            /     \
+ *                       Hash01       Hash23
+ *                      /    \       /    \
+ *                  Val0    Val1   Val2   Val3
+ *
+ * if validator 3 is modified, the new tree looks like this:
+ *
+ * migratedState.validators ====>  ROOTa
+ *                               /      \
+ *                          Hash01      Hash23a
+ *                         /    \       /    \
+ *                     Val0    Val1   Val2   Val3a
+ *
+ * @param migratedState state to be migrated, the validators are loaded to this state
+ * @returns modified validator indices
+ */
 function loadValidators(
   migratedState: BeaconStateAllForks,
   seedState: BeaconStateAllForks,
@@ -169,83 +218,4 @@ function loadValidators(
     migratedState.validators = migratedState.validators.sliceTo(newValidatorCount - 1);
   }
   return modifiedValidators;
-}
-
-function findModifiedValidators(
-  validatorsBytes: Uint8Array,
-  validatorsBytes2: Uint8Array,
-  modifiedValidators: number[],
-  validatorOffset = 0
-): void {
-  if (validatorsBytes.length !== validatorsBytes2.length) {
-    throw new Error(
-      "validatorsBytes.length !== validatorsBytes2.length " + validatorsBytes.length + " vs " + validatorsBytes2.length
-    );
-  }
-
-  if (Buffer.compare(validatorsBytes, validatorsBytes2) === 0) {
-    return;
-  }
-
-  if (validatorsBytes.length === VALIDATOR_BYTES_SIZE) {
-    modifiedValidators.push(validatorOffset);
-    return;
-  }
-
-  const numValidator = Math.floor(validatorsBytes.length / VALIDATOR_BYTES_SIZE);
-  const halfValidator = Math.floor(numValidator / 2);
-  findModifiedValidators(
-    validatorsBytes.subarray(0, halfValidator * VALIDATOR_BYTES_SIZE),
-    validatorsBytes2.subarray(0, halfValidator * VALIDATOR_BYTES_SIZE),
-    modifiedValidators,
-    validatorOffset
-  );
-  findModifiedValidators(
-    validatorsBytes.subarray(halfValidator * VALIDATOR_BYTES_SIZE),
-    validatorsBytes2.subarray(halfValidator * VALIDATOR_BYTES_SIZE),
-    modifiedValidators,
-    validatorOffset + halfValidator
-  );
-}
-
-// as monitored on mainnet, inactivityScores are not changed much and they are mostly 0
-function findModifiedInactivityScores(
-  inactivityScoresBytes: Uint8Array,
-  inactivityScoresBytes2: Uint8Array,
-  modifiedValidators: number[],
-  validatorOffset = 0
-): void {
-  if (inactivityScoresBytes.length !== inactivityScoresBytes2.length) {
-    throw new Error(
-      "inactivityScoresBytes.length !== inactivityScoresBytes2.length " +
-        inactivityScoresBytes.length +
-        " vs " +
-        inactivityScoresBytes2.length
-    );
-  }
-
-  if (Buffer.compare(inactivityScoresBytes, inactivityScoresBytes2) === 0) {
-    return;
-  }
-
-  // UintNum64 = 8 bytes
-  if (inactivityScoresBytes.length === 8) {
-    modifiedValidators.push(validatorOffset);
-    return;
-  }
-
-  const numValidator = Math.floor(inactivityScoresBytes.length / 8);
-  const halfValidator = Math.floor(numValidator / 2);
-  findModifiedInactivityScores(
-    inactivityScoresBytes.subarray(0, halfValidator * 8),
-    inactivityScoresBytes2.subarray(0, halfValidator * 8),
-    modifiedValidators,
-    validatorOffset
-  );
-  findModifiedInactivityScores(
-    inactivityScoresBytes.subarray(halfValidator * 8),
-    inactivityScoresBytes2.subarray(halfValidator * 8),
-    modifiedValidators,
-    validatorOffset + halfValidator
-  );
 }
