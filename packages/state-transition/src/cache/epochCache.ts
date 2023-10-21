@@ -368,7 +368,7 @@ export class EpochCache {
     // ```
     // So the returned value of is_active_validator(epoch) is guaranteed to not change during `MAX_SEED_LOOKAHEAD` epochs.
     //
-    // activeIndices size is dependant on the state epoch. The epoch is advanced after running the epoch transition, and
+    // activeIndices size is dependent on the state epoch. The epoch is advanced after running the epoch transition, and
     // the first block of the epoch process_block() call. So churnLimit must be computed at the end of the before epoch
     // transition and the result is valid until the end of the next epoch transition
     const churnLimit = getChurnLimit(config, currentShuffling.activeIndices.length);
@@ -514,7 +514,7 @@ export class EpochCache {
     // ```
     // So the returned value of is_active_validator(epoch) is guaranteed to not change during `MAX_SEED_LOOKAHEAD` epochs.
     //
-    // activeIndices size is dependant on the state epoch. The epoch is advanced after running the epoch transition, and
+    // activeIndices size is dependent on the state epoch. The epoch is advanced after running the epoch transition, and
     // the first block of the epoch process_block() call. So churnLimit must be computed at the end of the before epoch
     // transition and the result is valid until the end of the next epoch transition
     this.churnLimit = getChurnLimit(this.config, this.currentShuffling.activeIndices.length);
