@@ -5,6 +5,7 @@ import {BeaconStateAllForks, BeaconStateAltair} from "../../types.js";
 import {VALIDATOR_BYTES_SIZE, getForkFromStateBytes, getStateTypeFromBytes} from "../sszBytes.js";
 import {findModifiedValidators} from "./findModifiedValidators.js";
 import {findModifiedInactivityScores} from "./findModifiedInactivityScores.js";
+import {loadValidator} from "./loadValidator.js";
 
 type MigrateStateOutput = {state: BeaconStateAllForks; modifiedValidators: number[]};
 
@@ -172,13 +173,11 @@ function loadValidators(
     isMoreValidator ? newValidatorsBytes.subarray(0, minValidatorCount * VALIDATOR_BYTES_SIZE) : newValidatorsBytes,
     modifiedValidators
   );
+
   for (const i of modifiedValidators) {
-    migratedState.validators.set(
-      i,
-      ssz.phase0.Validator.deserializeToViewDU(
-        newValidatorsBytes.subarray(i * VALIDATOR_BYTES_SIZE, (i + 1) * VALIDATOR_BYTES_SIZE)
-      )
-    );
+    const seedValidator = seedState.validators.get(i);
+    const newValidatorBytes = newValidatorsBytes.subarray(i * VALIDATOR_BYTES_SIZE, (i + 1) * VALIDATOR_BYTES_SIZE);
+    migratedState.validators.set(i, loadValidator(seedValidator, newValidatorBytes));
   }
 
   if (newValidatorCount >= seedValidatorCount) {
