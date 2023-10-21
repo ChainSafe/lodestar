@@ -5,13 +5,12 @@ import bls from "@chainsafe/bls";
 import {CoordType} from "@chainsafe/blst";
 import {fromHexString} from "@chainsafe/ssz";
 import {itBench} from "@dapplion/benchmark";
-import {Epoch, RootHex, ssz} from "@lodestar/types";
+import {ssz} from "@lodestar/types";
 import {config as defaultChainConfig} from "@lodestar/config/default";
 import {createBeaconConfig} from "@lodestar/config";
 import {loadState} from "../../../../src/util/loadState/loadState.js";
 import {createCachedBeaconState} from "../../../../src/cache/stateCache.js";
 import {Index2PubkeyCache, PubkeyIndexMap} from "../../../../src/cache/pubkeyCache.js";
-import {EpochShuffling, getShufflingDecisionBlock} from "../../../../src/util/epochShuffling.js";
 
 describe("loadState", function () {
   this.timeout(0);
@@ -33,25 +32,6 @@ describe("loadState", function () {
     pubkey2index,
     index2pubkey,
   });
-
-  // TODO: precompute shufflings of state 7335360 to avoid the cost of computing shuffling
-  // as in reality we will have all shufflings
-  const shufflingGetter = (epoch: Epoch, deicisionBlock: RootHex): EpochShuffling | null => {
-    const shufflingCache = new Map<Epoch, Map<RootHex, EpochShuffling>>();
-    const currentEpoch = cachedSeedState.epochCtx.currentShuffling.epoch;
-    const previousEpoch = currentEpoch - 1;
-    const nextEpoch = currentEpoch + 1;
-    const currentEpochDecisionBlock = getShufflingDecisionBlock(seedState, currentEpoch);
-    const previousEpochDecisionBlock = getShufflingDecisionBlock(seedState, previousEpoch);
-    const nextEpochDecisionBlock = getShufflingDecisionBlock(seedState, nextEpoch);
-    shufflingCache.set(currentEpoch, new Map([[currentEpochDecisionBlock, cachedSeedState.epochCtx.currentShuffling]]));
-    shufflingCache.set(
-      previousEpoch,
-      new Map([[previousEpochDecisionBlock, cachedSeedState.epochCtx.previousShuffling]])
-    );
-    shufflingCache.set(nextEpoch, new Map([[nextEpochDecisionBlock, cachedSeedState.epochCtx.nextShuffling]]));
-    return shufflingCache.get(epoch)?.get(deicisionBlock) ?? null;
-  };
 
   const newStateBytes = Uint8Array.from(fs.readFileSync(path.join(folder, "mainnet_state_7335360.ssz")));
   // const stateRoot6543072 = fromHexString("0xcf0e3c93b080d1c870b9052031f77e08aecbbbba5e4e7b1898b108d76c981a31");
@@ -84,6 +64,8 @@ describe("loadState", function () {
       pubkey2index.set(pubkey, validatorIndex);
       index2pubkey[validatorIndex] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian);
     }
+    // skip computimg shuffling in performance test because in reality we have a ShufflingCache
+    const shufflingGetter = () => cachedSeedState.epochCtx.currentShuffling;
     createCachedBeaconState(
       migratedState,
       {

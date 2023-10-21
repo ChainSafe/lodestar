@@ -7,7 +7,7 @@ type BytesRange = {start: number; end: number};
 export function deserializeContainerIgnoreFields<Fields extends Record<string, Type<unknown>>>(
   sszType: ContainerType<Fields>,
   bytes: Uint8Array,
-  ignoreFields: string[],
+  ignoreFields: (keyof Fields)[],
   fieldRanges?: BytesRange[]
 ): CompositeViewDU<typeof sszType> {
   const allFields = Object.keys(sszType.fields);
@@ -22,7 +22,6 @@ export function deserializeContainerIgnoreFields<Fields extends Record<string, T
     if (ignoreFields.includes(field)) {
       continue;
     }
-    // const field = fieldName as Exclude<keyof BeaconStatePhase0, "type" | "cache" | "node">;
     const fieldIndex = allFields.indexOf(field);
     const fieldRange = fieldRanges[fieldIndex];
     if (type.isBasic) {

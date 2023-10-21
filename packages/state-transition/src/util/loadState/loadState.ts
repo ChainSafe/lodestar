@@ -22,17 +22,18 @@ export function loadState(
   seedState: BeaconStateAllForks,
   stateBytes: Uint8Array
 ): MigrateStateOutput {
-  const stateType = getStateTypeFromBytes(config, stateBytes) as typeof ssz.phase0.BeaconState;
+  // casting only to make typescript happy
+  const stateType = getStateTypeFromBytes(config, stateBytes) as typeof ssz.capella.BeaconState;
   const dataView = new DataView(stateBytes.buffer, stateBytes.byteOffset, stateBytes.byteLength);
   const fieldRanges = stateType.getFieldRanges(dataView, 0, stateBytes.length);
   const allFields = Object.keys(stateType.fields);
   const validatorsFieldIndex = allFields.indexOf("validators");
   // start with default view has the same performance to start with seed state
-  // however, it is not fork dependent
+  // and it is not fork dependent
   const migratedState = deserializeContainerIgnoreFields(
     stateType,
     stateBytes,
-    ["validators, inactivityScores"],
+    ["validators", "inactivityScores"],
     fieldRanges
   ) as BeaconStateAllForks;
 
