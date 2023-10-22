@@ -11,7 +11,8 @@ import {
   ValidatorStatus,
   validatorStatusType,
 } from "@lodestar/types";
-import {ApiClientResponse} from "../../../interfaces.js";
+import {ApiClientResponse, ResponseFormat} from "../../../interfaces.js";
+import {parseAcceptHeader, writeAcceptHeader} from "../../../utils/acceptHeader.js";
 import {HttpStatusCode} from "../../../utils/client/httpStatusCode.js";
 import {
   RoutesData,
@@ -76,6 +77,27 @@ export type EpochSyncCommitteeResponse = {
   validatorAggregates: ValidatorIndex[][];
 };
 
+export type ValidatorsResponse<T extends ResponseFormat = "json"> = T extends "ssz"
+  ? ApiClientResponse<{[HttpStatusCode.OK]: Uint8Array}, HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND>
+  : ApiClientResponse<
+      {[HttpStatusCode.OK]: {data: ValidatorResponse[]; executionOptimistic: ExecutionOptimistic}},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
+    >;
+
+// eslint-disable-next-line @typescript-eslint/naming-convention
+const ValidatorResponseType = new ContainerType(
+  {
+    index: ssz.ValidatorIndex,
+    balance: ssz.UintNum64,
+    status: validatorStatusType,
+    validator: ssz.phase0.Validator,
+  },
+  {jsonCase: "eth2"}
+);
+
+// eslint-disable-next-line @typescript-eslint/naming-convention
+export const ValidatorsResponseType = ArrayOf(ValidatorResponseType);
+
 export type Api = {
   /**
    * Get state SSZ HashTreeRoot
@@ -132,15 +154,11 @@ export type Api = {
    * @param id Either hex encoded public key (with 0x prefix) or validator index
    * @param status [Validator status specification](https://hackmd.io/ofFJ5gOmQpu1jjHilHbdQQ)
    */
-  getStateValidators(
+  getStateValidators<T extends ResponseFormat = "json">(
     stateId: StateId,
-    filters?: ValidatorFilters
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: ValidatorResponse[]; executionOptimistic: ExecutionOptimistic}},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
-    >
-  >;
+    filters?: ValidatorFilters,
+    format?: T
+  ): Promise<ValidatorsResponse<T>>;
 
   /**
    * Get validator from state by id
@@ -231,7 +249,11 @@ export type ReqTypes = {
   getStateFork: StateIdOnlyReq;
   getStateRoot: StateIdOnlyReq;
   getStateValidator: {params: {state_id: StateId; validator_id: ValidatorId}};
-  getStateValidators: {params: {state_id: StateId}; query: {id?: ValidatorId[]; status?: ValidatorStatus[]}};
+  getStateValidators: {
+    params: {state_id: StateId};
+    query: {id?: ValidatorId[]; status?: ValidatorStatus[]};
+    headers: {accept?: string};
+  };
   getStateValidatorBalances: {params: {state_id: StateId}; query: {id?: ValidatorId[]}};
 };
 
@@ -274,8 +296,12 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
     },
 
     getStateValidators: {
-      writeReq: (state_id, filters) => ({params: {state_id}, query: filters || {}}),
-      parseReq: ({params, query}) => [params.state_id, query],
+      writeReq: (state_id, filters, format) => ({
+        params: {state_id},
+        query: filters || {},
+        headers: {accept: writeAcceptHeader(format)},
+      }),
+      parseReq: ({params, query, headers}) => [params.state_id, query, parseAcceptHeader(headers.accept)],
       schema: {
         params: {state_id: Schema.StringRequired},
         query: {id: Schema.UintOrStringArray, status: Schema.StringArray},
@@ -303,16 +329,6 @@ export function getReturnTypes(): ReturnTypes<Api> {
       previousJustified: ssz.phase0.Checkpoint,
       currentJustified: ssz.phase0.Checkpoint,
       finalized: ssz.phase0.Checkpoint,
-    },
-    {jsonCase: "eth2"}
-  );
-
-  const ValidatorResponse = new ContainerType(
-    {
-      index: ssz.ValidatorIndex,
-      balance: ssz.UintNum64,
-      status: validatorStatusType,
-      validator: ssz.phase0.Validator,
     },
     {jsonCase: "eth2"}
   );
@@ -346,8 +362,8 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getStateRoot: ContainerDataExecutionOptimistic(RootContainer),
     getStateFork: ContainerDataExecutionOptimistic(ssz.phase0.Fork),
     getStateFinalityCheckpoints: ContainerDataExecutionOptimistic(FinalityCheckpoints),
-    getStateValidators: ContainerDataExecutionOptimistic(ArrayOf(ValidatorResponse)),
-    getStateValidator: ContainerDataExecutionOptimistic(ValidatorResponse),
+    getStateValidators: ContainerDataExecutionOptimistic(ArrayOf(ValidatorResponseType)),
+    getStateValidator: ContainerDataExecutionOptimistic(ValidatorResponseType),
     getStateValidatorBalances: ContainerDataExecutionOptimistic(ArrayOf(ValidatorBalance)),
     getEpochCommittees: ContainerDataExecutionOptimistic(ArrayOf(EpochCommitteeResponse)),
     getEpochSyncCommittees: ContainerDataExecutionOptimistic(EpochSyncCommitteesResponse),

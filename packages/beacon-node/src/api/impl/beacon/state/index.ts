@@ -55,7 +55,7 @@ export function getBeaconStateApi({
       };
     },
 
-    async getStateValidators(stateId, filters) {
+    async getStateValidators(stateId, filters, format) {
       const {state, executionOptimistic} = await resolveStateId(chain, stateId);
       const currentEpoch = getCurrentEpoch(state);
       const {validators, balances} = state; // Get the validators sub tree once for all the loop
@@ -80,16 +80,21 @@ export function getBeaconStateApi({
             validatorResponses.push(validatorResponse);
           }
         }
-        return {
-          executionOptimistic,
-          data: validatorResponses,
-        };
+
+        return format === "ssz"
+          ? routes.beacon.state.ValidatorsResponseType.serialize(validatorResponses)
+          : {
+              executionOptimistic,
+              data: validatorResponses,
+            };
       } else if (filters?.status) {
         const validatorsByStatus = filterStateValidatorsByStatus(filters.status, state, pubkey2index, currentEpoch);
-        return {
-          executionOptimistic,
-          data: validatorsByStatus,
-        };
+        return format === "ssz"
+          ? routes.beacon.state.ValidatorsResponseType.serialize(validatorsByStatus)
+          : {
+              executionOptimistic,
+              data: validatorsByStatus,
+            };
       }
 
       // TODO: This loops over the entire state, it's a DOS vector
@@ -100,10 +105,12 @@ export function getBeaconStateApi({
         resp.push(toValidatorResponse(i, validatorsArr[i], balancesArr[i], currentEpoch));
       }
 
-      return {
-        executionOptimistic,
-        data: resp,
-      };
+      return format === "ssz"
+        ? routes.beacon.state.ValidatorsResponseType.serialize(resp)
+        : {
+            executionOptimistic,
+            data: resp,
+          };
     },
 
     async getStateValidator(stateId, validatorId) {

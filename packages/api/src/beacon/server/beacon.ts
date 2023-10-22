@@ -16,6 +16,18 @@ export function getRoutes(config: ChainForkConfig, api: ServerApi<Api>): ServerR
   return {
     ...serverRoutes,
     // Non-JSON routes. Return JSON or binary depending on "accept" header
+    getStateValidators: {
+      ...serverRoutes.getStateValidators,
+      handler: async (req) => {
+        const response = await api.getStateValidators(...reqSerializers.getStateValidators.parseReq(req));
+        if (response instanceof Uint8Array) {
+          // Fastify 3.x.x will automatically add header `Content-Type: application/octet-stream` if Buffer
+          return Buffer.from(response);
+        } else {
+          return returnTypes.getStateValidators.toJson(response);
+        }
+      },
+    },
     getBlock: {
       ...serverRoutes.getBlock,
       handler: async (req) => {

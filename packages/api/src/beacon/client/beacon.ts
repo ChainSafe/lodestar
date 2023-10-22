@@ -1,8 +1,18 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {Api, ReqTypes, routesData, getReqSerializers, getReturnTypes, BlockId} from "../routes/beacon/index.js";
+import {
+  Api,
+  ReqTypes,
+  routesData,
+  getReqSerializers,
+  getReturnTypes,
+  BlockId,
+  StateId,
+  ValidatorFilters,
+} from "../routes/beacon/index.js";
 import {IHttpClient, generateGenericJsonClient, getFetchOptsSerializers} from "../../utils/client/index.js";
 import {ResponseFormat} from "../../interfaces.js";
 import {BlockResponse, BlockV2Response} from "../routes/beacon/block.js";
+import {ValidatorsResponse} from "../routes/beacon/state.js";
 
 /**
  * REST HTTP client for beacon routes
@@ -16,6 +26,23 @@ export function getClient(config: ChainForkConfig, httpClient: IHttpClient): Api
 
   return {
     ...client,
+    async getStateValidators<T extends ResponseFormat = "json">(
+      stateId: StateId,
+      filters?: ValidatorFilters,
+      format?: T
+    ) {
+      if (format === "ssz") {
+        const res = await httpClient.arrayBuffer({
+          ...fetchOptsSerializer.getStateValidators(stateId, filters, format),
+        });
+        return {
+          ok: true,
+          response: new Uint8Array(res.body),
+          status: res.status,
+        } as ValidatorsResponse<T>;
+      }
+      return client.getStateValidators(stateId, filters, format);
+    },
     async getBlock<T extends ResponseFormat = "json">(blockId: BlockId, format?: T) {
       if (format === "ssz") {
         const res = await httpClient.arrayBuffer({

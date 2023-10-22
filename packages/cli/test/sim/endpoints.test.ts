@@ -95,6 +95,16 @@ await env.tracker.assert(
 );
 
 await env.tracker.assert(
+  "should return validators as SSZ response when getStateValidators is called with format 'ssz'",
+  async () => {
+    const sszRes = await node.api.beacon.getStateValidators("head", {}, "ssz");
+    ApiError.assert(sszRes);
+    const sszStateValidators = routes.beacon.state.ValidatorsResponseType.deserialize(sszRes.response);
+    expect(sszStateValidators).to.deep.equal(stateValidators);
+  }
+);
+
+await env.tracker.assert(
   "should return the validator when getStateValidator is called with the validator index",
   async () => {
     const validatorIndex = 0;
