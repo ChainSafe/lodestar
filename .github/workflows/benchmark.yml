@@ -62,7 +62,7 @@ jobs:
           key: perf-states-${{ hashFiles('packages/state-transition/test/perf/params.ts') }}
 
       - name: Run benchmarks
-        run: yarn benchmark
+        run: NODE_OPTIONS='--max-old-space-size=4096' yarn benchmark
         env:
           # To download content for tests
           INFURA_ETH2_CREDENTIALS: ${{ secrets.INFURA_ETH2_CREDENTIALS }}
