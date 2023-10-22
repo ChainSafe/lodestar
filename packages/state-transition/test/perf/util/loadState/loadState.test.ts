@@ -1,79 +1,98 @@
-import fs from "node:fs";
-import path from "node:path";
-import {expect} from "chai";
 import bls from "@chainsafe/bls";
 import {CoordType} from "@chainsafe/blst";
-import {fromHexString} from "@chainsafe/ssz";
-import {itBench} from "@dapplion/benchmark";
-import {ssz} from "@lodestar/types";
-import {config as defaultChainConfig} from "@lodestar/config/default";
-import {createBeaconConfig} from "@lodestar/config";
+import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {loadState} from "../../../../src/util/loadState/loadState.js";
 import {createCachedBeaconState} from "../../../../src/cache/stateCache.js";
 import {Index2PubkeyCache, PubkeyIndexMap} from "../../../../src/cache/pubkeyCache.js";
+import {generatePerfTestCachedStateAltair} from "../../util.js";
 
+/**
+ * This benchmark shows a stable performance from 2s to 3s on a Mac M1. And it does not really depend on the seed validators,
+ * only the modified and new validators
+ *
+ * - On mainnet, as of Oct 2023, there are ~1M validators
+ *
+ *    ✔ migrate state 1000000 validators, 24 modified, 0 new               0.4475463 ops/s    2.234406  s/op        -          3 runs   62.1 s
+ *    ✔ migrate state 1000000 validators, 1700 modified, 1000 new          0.3663298 ops/s    2.729781  s/op        -         21 runs   62.1 s
+ *    ✔ migrate state 1000000 validators, 3400 modified, 2000 new          0.3413125 ops/s    2.929866  s/op        -         19 runs   60.9 s
+
+ * - On holesky, there are ~1.5M validators
+ *    ✔ migrate state 1500000 validators, 24 modified, 0 new               0.4278145 ops/s    2.337461  s/op        -         24 runs   61.1 s
+ *    ✔ migrate state 1500000 validators, 1700 modified, 1000 new          0.3642085 ops/s    2.745680  s/op        -         20 runs   60.1 s
+ *    ✔ migrate state 1500000 validators, 3400 modified, 2000 new          0.3344296 ops/s    2.990166  s/op        -         19 runs   62.4 s
+ */
 describe("loadState", function () {
   this.timeout(0);
-  const stateType = ssz.capella.BeaconState;
 
-  const folder = "/Users/tuyennguyen/tuyen/state_migration";
-  // TODO: dapplion's repo or my repo first
-  const data = Uint8Array.from(fs.readFileSync(path.join(folder, "mainnet_state_7335296.ssz")));
-
-  const seedState = stateType.deserializeToViewDU(data);
-  // cache all HashObjects
-  seedState.hashTreeRoot();
-  const config = createBeaconConfig(defaultChainConfig, seedState.genesisValidatorsRoot);
-  // TODO: EIP-6110 - need to create 2 separate caches?
-  const pubkey2index = new PubkeyIndexMap();
-  const index2pubkey: Index2PubkeyCache = [];
-  const cachedSeedState = createCachedBeaconState(seedState, {
-    config,
-    pubkey2index,
-    index2pubkey,
+  setBenchOpts({
+    minMs: 60_000,
   });
 
-  const newStateBytes = Uint8Array.from(fs.readFileSync(path.join(folder, "mainnet_state_7335360.ssz")));
-  // const stateRoot6543072 = fromHexString("0xcf0e3c93b080d1c870b9052031f77e08aecbbbba5e4e7b1898b108d76c981a31");
-  // const stateRoot7335296 = fromHexString("0xc63b580b63b78c83693ff2b8897cf0e4fcbc46b8a2eab60a090b78ced36afd93");
-  const stateRoot7335360 = fromHexString("0xaeb2f977a1502967e09394e81b8bcfdd5a077af82b99deea0dcd3698568efbeb");
-  const newStateRoot = stateRoot7335360;
-  // IMPORTANT: should not load a new separate tree (enable the code below) or the number is not correct (too bad)
-  // const newState = stateType.deserializeToViewDU(newStateBytes);
-  // startTime = Date.now();
-  // const newStateRoot = newState.hashTreeRoot();
-  // console.log("state root of state", toHexString(newStateRoot));
-  // console.log("@@@ hashTreeRoot of new state in", Date.now() - startTime, "ms");
+  const testCases: {seedValidators: number; numModifiedValidators: number; numNewValidators: number}[] = [
+    // this 1_000_000 is similar to mainnet state as of Oct 2023
+    // similar to migrating from state 7335296 to state 7335360 on mainnet, this is 2 epochs difference
+    {seedValidators: 1_000_000, numModifiedValidators: 24, numNewValidators: 0},
+    {seedValidators: 1_000_000, numModifiedValidators: 1700, numNewValidators: 1000},
+    // similar to migrating from state 7327776 to state 7335360 on mainnet, this is 237 epochs difference ~ 1 day
+    {seedValidators: 1_000_000, numModifiedValidators: 3400, numNewValidators: 2000},
+    // same tests on holesky with 1_500_000 validators
+    {seedValidators: 1_500_000, numModifiedValidators: 24, numNewValidators: 0},
+    {seedValidators: 1_500_000, numModifiedValidators: 1700, numNewValidators: 1000},
+    {seedValidators: 1_500_000, numModifiedValidators: 3400, numNewValidators: 2000},
+  ];
+  for (const {seedValidators, numModifiedValidators, numNewValidators} of testCases) {
+    itBench({
+      id: `migrate state ${seedValidators} validators, ${numModifiedValidators} modified, ${numNewValidators} new`,
+      before: () => {
+        const seedState = generatePerfTestCachedStateAltair({vc: seedValidators, goBackOneSlot: false});
+        // cache all HashObjects
+        seedState.hashTreeRoot();
+        const newState = seedState.clone();
+        for (let i = 0; i < numModifiedValidators; i++) {
+          const validatorIndex = i * Math.floor((seedState.validators.length - 1) / numModifiedValidators);
+          const modifiedValidator = newState.validators.get(validatorIndex);
+          modifiedValidator.withdrawalCredentials = Buffer.alloc(32, 0x01);
+          newState.inactivityScores.set(validatorIndex, 100);
+        }
 
-  /**
-   * My Mac M1 Pro 17:30 Sep 16 2023
-   * ✔ migrate state from slot 7335296 64 slots difference                0.4225908 ops/s    2.366355  s/op        -         14 runs   35.9 s
-   * ✔ migrate state from slot 7327776 1 day difference                   0.3415936 ops/s    2.927455  s/op        -         17 runs   52.6 s
-   * Memory diff:
-   * - 64 slots: 104.01 MB
-   * - 1 day: 113.49 MB
-   */
-  itBench(`migrate state from slot ${seedState.slot} 64 slots difference`, () => {
-    const {state: migratedState, modifiedValidators} = loadState(config, seedState, newStateBytes);
-    expect(ssz.Root.equals(migratedState.hashTreeRoot(), newStateRoot)).to.be.true;
-    // Get the validators sub tree once for all the loop
-    const validators = migratedState.validators;
-    for (const validatorIndex of modifiedValidators) {
-      const validator = validators.getReadonly(validatorIndex);
-      const pubkey = validator.pubkey;
-      pubkey2index.set(pubkey, validatorIndex);
-      index2pubkey[validatorIndex] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian);
-    }
-    // skip computimg shuffling in performance test because in reality we have a ShufflingCache
-    const shufflingGetter = () => cachedSeedState.epochCtx.currentShuffling;
-    createCachedBeaconState(
-      migratedState,
-      {
-        config,
-        pubkey2index,
-        index2pubkey,
+        for (let i = 0; i < numNewValidators; i++) {
+          newState.validators.push(seedState.validators.get(0).clone());
+          newState.inactivityScores.push(seedState.inactivityScores.get(0));
+          newState.balances.push(seedState.balances.get(0));
+        }
+
+        const newStateBytes = newState.serialize();
+        return {seedState, newStateBytes};
       },
-      {skipSyncPubkeys: true, shufflingGetter}
-    );
-  });
+      beforeEach: ({seedState, newStateBytes}) => {
+        return {seedState: seedState.clone(), newStateBytes};
+      },
+      fn: ({seedState, newStateBytes}) => {
+        const {state: migratedState, modifiedValidators} = loadState(seedState.config, seedState, newStateBytes);
+        migratedState.hashTreeRoot();
+        // Get the validators sub tree once for all the loop
+        const validators = migratedState.validators;
+        const pubkey2index = new PubkeyIndexMap();
+        const index2pubkey: Index2PubkeyCache = [];
+        for (const validatorIndex of modifiedValidators) {
+          const validator = validators.getReadonly(validatorIndex);
+          const pubkey = validator.pubkey;
+          pubkey2index.set(pubkey, validatorIndex);
+          index2pubkey[validatorIndex] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian);
+        }
+        // skip computimg shuffling in performance test because in reality we have a ShufflingCache
+        // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+        const shufflingGetter = () => seedState.epochCtx.currentShuffling;
+        createCachedBeaconState(
+          migratedState,
+          {
+            config: seedState.config,
+            pubkey2index,
+            index2pubkey,
+          },
+          {skipSyncPubkeys: true, skipSyncCommitteeCache: true, shufflingGetter}
+        );
+      },
+    });
+  }
 });

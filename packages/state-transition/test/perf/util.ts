@@ -44,7 +44,7 @@ let altairCachedState23638: CachedBeaconStateAltair | null = null;
 /**
  * Number of validators in prater is 210000 as of May 2021
  */
-export const numValidators = 250000;
+export const numValidators = 932506;
 export const keypairsMod = 100;
 
 /**
@@ -211,8 +211,11 @@ export function cachedStateAltairPopulateCaches(state: CachedBeaconStateAltair):
   state.inactivityScores.getAll();
 }
 
-export function generatePerfTestCachedStateAltair(opts?: {goBackOneSlot: boolean}): CachedBeaconStateAltair {
-  const {pubkeys, pubkeysMod, pubkeysModObj} = getPubkeys();
+export function generatePerfTestCachedStateAltair(opts?: {
+  goBackOneSlot: boolean;
+  vc?: number;
+}): CachedBeaconStateAltair {
+  const {pubkeys, pubkeysMod, pubkeysModObj} = getPubkeys(opts?.vc);
   const {pubkey2index, index2pubkey} = getPubkeyCaches({pubkeys, pubkeysMod, pubkeysModObj});
 
   // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -247,7 +250,7 @@ export function generatePerfTestCachedStateAltair(opts?: {goBackOneSlot: boolean
 export function generatePerformanceStateAltair(pubkeysArg?: Uint8Array[]): BeaconStateAltair {
   if (!altairState) {
     const pubkeys = pubkeysArg || getPubkeys().pubkeys;
-    const statePhase0 = buildPerformanceStatePhase0();
+    const statePhase0 = buildPerformanceStatePhase0(pubkeys);
     const state = statePhase0 as allForks.BeaconState as altair.BeaconState;
 
     state.previousEpochParticipation = newFilledArray(pubkeys.length, 0b111);
