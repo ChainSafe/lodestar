@@ -102,7 +102,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
   private getPayloadBodiesByHash(
     _blockHex: EngineApiRpcParamTypes["engine_getPayloadBodiesByHashV1"][0]
   ): EngineApiRpcReturnTypes["engine_getPayloadBodiesByHashV1"] {
-    return [] as ExecutionPayloadBodyRpc[];
+    return [{transactions: [], withdrawals: []}] as ExecutionPayloadBodyRpc[];
   }
 
   private getPayloadBodiesByRange(

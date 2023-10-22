@@ -7,6 +7,13 @@ import {connectAllNodes, waitForSlot} from "../utils/crucible/utils/network.js";
 import {createBlobsAssertion} from "../utils/crucible/assertions/blobsAssertion.js";
 import {assertCheckpointSync, assertRangeSync} from "../utils/crucible/utils/syncing.js";
 
+const genesisDelaySeconds = 20 * SIM_TESTS_SECONDS_PER_SLOT;
+const altairForkEpoch = 1;
+const bellatrixForkEpoch = 2;
+const capellaForkEpoch = 3;
+const denebForkEpoch = 4;
+// Make sure bellatrix started before TTD reach
+const additionalSlotsForTTD = activePreset.SLOTS_PER_EPOCH - 2;
 const runTillEpoch = 6;
 const syncWaitEpoch = 2;
 
@@ -24,8 +31,17 @@ const env = await Simulation.initWithDefaults(
   {
     id: "deneb",
     logsDir: path.join(logFilesDir, "deneb"),
+    // TODO: (@matthewkeil) this may be a merge conflict
     forkConfig,
     trustedSetup: true,
+    chainConfig: {
+      ALTAIR_FORK_EPOCH: altairForkEpoch,
+      BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
+      CAPELLA_FORK_EPOCH: capellaForkEpoch,
+      DENEB_FORK_EPOCH: denebForkEpoch,
+      GENESIS_DELAY: genesisDelaySeconds,
+      TERMINAL_TOTAL_DIFFICULTY: ttd,
+    },
   },
   [
     {

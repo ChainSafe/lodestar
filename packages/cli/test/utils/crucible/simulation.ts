@@ -285,6 +285,7 @@ export class Simulation {
       genesisState: this.genesisState,
       engineUrls,
       paths: getNodePaths({id, logsDir: this.options.logsDir, client: beaconType, root: this.options.rootDir}),
+      engineMock: executionType === ExecutionClient.Mock,
     });
 
     if (keys.type === "no-keys") {
