@@ -44,7 +44,7 @@ let altairCachedState23638: CachedBeaconStateAltair | null = null;
 /**
  * Number of validators in prater is 210000 as of May 2021
  */
-export const numValidators = 932506;
+export const numValidators = 250000;
 export const keypairsMod = 100;
 
 /**
