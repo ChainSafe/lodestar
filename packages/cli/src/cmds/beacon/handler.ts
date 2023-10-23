@@ -199,6 +199,10 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
     beaconNodeOptions.set({network: {version: version.split("/")[0]}});
     // Add User-Agent header to all builder requests
     beaconNodeOptions.set({executionBuilder: {userAgent: `Lodestar/${version}`}});
+    // Set jwt version with version string
+    beaconNodeOptions.set({executionEngine: {jwtVersion: `Lodestar/${version}`}});
+    // Set jwt version with version string
+    beaconNodeOptions.set({eth1: {jwtVersion: `Lodestar/${version}`}});
   }
 
   // Render final options

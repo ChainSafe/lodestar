@@ -105,9 +105,10 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
        * and it might deny responses to the RPC requests.
        */
       jwtSecret?: Uint8Array;
-      /** If provided, jwtId will be included in JwtClaim.id */
+      /** If jwtSecret and jwtId are provided, jwtId will be included in JwtClaim.id */
       jwtId?: string;
-      /** If provided, jwtVersion will be included in JwtClaim.clv */
+      /** If jwtSecret is provided, jwtVersion will be included in JwtClaim.clv. 
+       *  jwtVersion has default value of empty string */
       jwtVersion?: string;
       /** Retry attempts */
       retryAttempts?: number;
@@ -132,7 +133,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
 
     this.jwtSecret = opts?.jwtSecret;
     this.jwtId = opts?.jwtId;
-    this.jwtVersion = opts?.jwtVersion;
+    this.jwtVersion = opts?.jwtVersion ?? "";
     this.metrics = opts?.metrics ?? null;
 
     this.metrics?.configUrlsCount.set(urls.length);
