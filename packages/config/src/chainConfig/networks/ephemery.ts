@@ -45,7 +45,7 @@ const baseChainConfig: ChainConfig = {
   ETH1_FOLLOW_DISTANCE: 12,
 };
 
-// Reset interval (2 days)
+// Reset interval (7 days)
 const ephemeryResetInterval: number = 604800;
 const iteration = Math.floor(
   (Math.floor((new Date()).getTime() / 1000) - baseChainConfig.MIN_GENESIS_TIME) / ephemeryResetInterval
