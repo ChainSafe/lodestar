@@ -1,4 +1,4 @@
-import {ModuleThread, Thread, spawn} from "@chainsafe/threads";
+import {ModuleThread, Thread, spawn, Worker} from "@chainsafe/threads";
 import {chainConfigToJson} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
 import {

@@ -1,5 +1,5 @@
 import worker from "node:worker_threads";
-import {expose} from "@chainsafe/threads";
+import {expose} from "@chainsafe/threads/worker";
 import {createBeaconConfig, chainConfigFromJson} from "@lodestar/config";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {BeaconStateTransitionMetrics, PubkeyIndexMap} from "@lodestar/state-transition";
