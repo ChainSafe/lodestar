@@ -20,3 +20,17 @@ export enum ProducedBlockSource {
 
 export type SlotRootHex = {slot: Slot; root: RootHex};
 export type SlotOptionalRoot = {slot: Slot; root?: RootHex};
+
+/**
+ * [Validator status specification](https://hackmd.io/ofFJ5gOmQpu1jjHilHbdQQ)
+ */
+export type ValidatorStatus =
+  | "pending_initialized"
+  | "pending_queued"
+  | "active_ongoing"
+  | "active_exiting"
+  | "active_slashed"
+  | "exited_unslashed"
+  | "exited_slashed"
+  | "withdrawal_possible"
+  | "withdrawal_done";

@@ -4,3 +4,5 @@ export * as ssz from "./sszTypes.js";
 export * from "./utils/typeguards.js";
 // String type
 export {StringType, stringType} from "./utils/StringType.js";
+// Validator status type
+export {ValidatorStatusType, validatorStatusType} from "./utils/ValidatorStatusType.js";

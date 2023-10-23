@@ -22,7 +22,6 @@ export type {AttestationFilters} from "./pool.js";
 export type {
   StateId,
   ValidatorId,
-  ValidatorStatus,
   ValidatorFilters,
   CommitteesFilters,
   FinalityCheckpoints,

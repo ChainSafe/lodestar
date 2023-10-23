@@ -1,5 +1,16 @@
 import {ContainerType} from "@chainsafe/ssz";
-import {phase0, CommitteeIndex, Slot, ValidatorIndex, Epoch, Root, ssz, StringType, RootHex} from "@lodestar/types";
+import {
+  phase0,
+  CommitteeIndex,
+  Slot,
+  ValidatorIndex,
+  Epoch,
+  Root,
+  ssz,
+  RootHex,
+  ValidatorStatus,
+  validatorStatusType,
+} from "@lodestar/types";
 import {ApiClientResponse} from "../../../interfaces.js";
 import {HttpStatusCode} from "../../../utils/client/httpStatusCode.js";
 import {
@@ -22,18 +33,6 @@ export type ValidatorId = string | number;
  * a later time. If the field is not present, assume the False value.
  */
 export type ExecutionOptimistic = boolean;
-
-export type ValidatorStatus =
-  | "active"
-  | "pending_initialized"
-  | "pending_queued"
-  | "active_ongoing"
-  | "active_exiting"
-  | "active_slashed"
-  | "exited_unslashed"
-  | "exited_slashed"
-  | "withdrawal_possible"
-  | "withdrawal_done";
 
 export type ValidatorFilters = {
   id?: ValidatorId[];
@@ -312,7 +311,7 @@ export function getReturnTypes(): ReturnTypes<Api> {
     {
       index: ssz.ValidatorIndex,
       balance: ssz.UintNum64,
-      status: new StringType<ValidatorStatus>(),
+      status: validatorStatusType,
       validator: ssz.phase0.Validator,
     },
     {jsonCase: "eth2"}

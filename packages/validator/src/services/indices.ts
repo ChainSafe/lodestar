@@ -1,5 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
-import {ValidatorIndex} from "@lodestar/types";
+import {ValidatorIndex, ValidatorStatus} from "@lodestar/types";
 import {Logger, MapDef} from "@lodestar/utils";
 import {Api, ApiError, routes} from "@lodestar/api";
 import {batchItems} from "../util/index.js";
@@ -17,9 +17,8 @@ type PubkeyHex = string;
 // To assist with logging statuses, we only log the statuses that are not active_exiting or withdrawal_possible
 type SimpleValidatorStatus = "pending" | "active" | "exited" | "withdrawn";
 
-const statusToSimpleStatusMapping = (status: routes.beacon.ValidatorStatus): SimpleValidatorStatus => {
+const statusToSimpleStatusMapping = (status: ValidatorStatus): SimpleValidatorStatus => {
   switch (status) {
-    case "active":
     case "active_exiting":
     case "active_slashed":
     case "active_ongoing":

@@ -2,7 +2,7 @@ import {fromHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {FAR_FUTURE_EPOCH, GENESIS_SLOT} from "@lodestar/params";
 import {BeaconStateAllForks, PubkeyIndexMap} from "@lodestar/state-transition";
-import {BLSPubkey, phase0} from "@lodestar/types";
+import {BLSPubkey, ValidatorStatus, phase0} from "@lodestar/types";
 import {Epoch, ValidatorIndex} from "@lodestar/types";
 import {IBeaconChain, StateGetOpts} from "../../../../chain/index.js";
 import {ApiError, ValidationError} from "../../errors.js";
@@ -66,7 +66,7 @@ async function resolveStateIdOrNull(
  * Get the status of the validator
  * based on conditions outlined in https://hackmd.io/ofFJ5gOmQpu1jjHilHbdQQ
  */
-export function getValidatorStatus(validator: phase0.Validator, currentEpoch: Epoch): routes.beacon.ValidatorStatus {
+export function getValidatorStatus(validator: phase0.Validator, currentEpoch: Epoch): ValidatorStatus {
   // pending
   if (validator.activationEpoch > currentEpoch) {
     if (validator.activationEligibilityEpoch === FAR_FUTURE_EPOCH) {
