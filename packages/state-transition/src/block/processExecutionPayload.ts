@@ -10,7 +10,7 @@ export function processExecutionPayload(
   fork: ForkSeq,
   state: CachedBeaconStateBellatrix | CachedBeaconStateCapella,
   body: allForks.FullOrBlindedBeaconBlockBody,
-  externalData: BlockExternalData
+  externalData: Omit<BlockExternalData, "dataAvailableStatus">
 ): void {
   const payload = getFullOrBlindedPayloadFromBody(body);
   // Verify consistency of the parent hash, block number, base fee per gas and gas limit

@@ -142,8 +142,6 @@ const testScenarios = [
 
 for (const testScenario of testScenarios) {
   const {phase0, altair, bellatrix, capella, testCases} = testScenario;
-  // TODO DENEB: Is it necessary to test?
-  // TODO 6110: Revisit this
   const deneb = Infinity;
   const eip6110 = Infinity;
 

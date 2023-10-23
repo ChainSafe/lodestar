@@ -5,7 +5,6 @@ import {
   CachedBeaconStateBellatrix,
   CachedBeaconStateCapella,
   CachedBeaconStateEIP6110,
-  DataAvailableStatus,
   ExecutionPayloadStatus,
   getBlockRootAtSlot,
 } from "@lodestar/state-transition";
@@ -81,8 +80,6 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
       executionPayloadStatus: testCase.execution.execution_valid
         ? ExecutionPayloadStatus.valid
         : ExecutionPayloadStatus.invalid,
-      // TODO Deneb: Make this value dynamic on fork Deneb
-      dataAvailableStatus: DataAvailableStatus.preDeneb,
     });
   },
 

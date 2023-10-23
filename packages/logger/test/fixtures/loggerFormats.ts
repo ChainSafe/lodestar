@@ -39,10 +39,27 @@ export const formatsTestCases: (TestCase | (() => TestCase))[] = [
       id: "regular log with error",
       opts: {module: "test"},
       message: "foo bar",
+      context: {},
       error: error,
       output: {
         human: `[test]             \u001b[33mwarn\u001b[39m: foo bar - err message\n${error.stack}`,
-        json: '{"error":{"message":"err message","stack":"$STACK"},"level":"warn","message":"foo bar","module":"test"}',
+        json: '{"context":{},"error":{"message":"err message","stack":"$STACK"},"level":"warn","message":"foo bar","module":"test"}',
+      },
+    };
+  },
+
+  () => {
+    const error = new Error("err message");
+    error.stack = "$STACK";
+    return {
+      id: "regular log with error and metadata",
+      opts: {module: "test"},
+      message: "foo bar",
+      context: {meta: "data"},
+      error: error,
+      output: {
+        human: `[test]             \u001b[33mwarn\u001b[39m: foo bar meta=data - err message\n${error.stack}`,
+        json: '{"context":{"meta":"data"},"error":{"message":"err message","stack":"$STACK"},"level":"warn","message":"foo bar","module":"test"}',
       },
     };
   },

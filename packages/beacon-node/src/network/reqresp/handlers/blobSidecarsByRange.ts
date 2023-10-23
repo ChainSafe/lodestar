@@ -14,20 +14,23 @@ export async function* onBlobSidecarsByRange(
   // Non-finalized range of blobs
   const {startSlot, count} = validateBlobSidecarsByRangeRequest(request);
   const endSlot = startSlot + count;
+
+  const finalized = db.blobSidecarsArchive;
+  const unfinalized = db.blobSidecars;
   const finalizedSlot = chain.forkChoice.getFinalizedBlock().slot;
 
   // Finalized range of blobs
-
   if (startSlot <= finalizedSlot) {
     // Chain of blobs won't change
-    for await (const {key, value: blobSideCarsBytesWrapped} of db.blobSidecarsArchive.binaryEntriesStream({
+    for await (const {key, value: blobSideCarsBytesWrapped} of finalized.binaryEntriesStream({
       gte: startSlot,
       lt: endSlot,
     })) {
-      yield* iterateBlobBytesFromWrapper(chain, blobSideCarsBytesWrapped, db.blobSidecarsArchive.decodeKey(key));
+      yield* iterateBlobBytesFromWrapper(chain, blobSideCarsBytesWrapped, finalized.decodeKey(key));
     }
   }
 
+  // Non-finalized range of blobs
   if (endSlot > finalizedSlot) {
     const headRoot = chain.forkChoice.getHeadRoot();
     // TODO DENEB: forkChoice should mantain an array of canonical blocks, and change only on reorg
@@ -44,7 +47,7 @@ export async function* onBlobSidecarsByRange(
         // re-org there's no need to abort the request
         // Spec: https://github.com/ethereum/consensus-specs/blob/a1e46d1ae47dd9d097725801575b46907c12a1f8/specs/eip4844/p2p-interface.md#blobssidecarsbyrange-v1
 
-        const blobSideCarsBytesWrapped = await db.blobSidecars.getBinary(fromHex(block.blockRoot));
+        const blobSideCarsBytesWrapped = await unfinalized.getBinary(fromHex(block.blockRoot));
         if (!blobSideCarsBytesWrapped) {
           // Handle the same to onBeaconBlocksByRange
           throw new ResponseError(RespStatus.SERVER_ERROR, `No item for root ${block.blockRoot} slot ${block.slot}`);
