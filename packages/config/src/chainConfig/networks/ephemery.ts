@@ -3,8 +3,6 @@ import {fromHexString as b} from "@chainsafe/ssz";
 import {ChainConfig} from "../types.js";
 import {chainConfig as mainnet} from "../presets/mainnet.js";
 
-/* eslint-disable max-len */
-
 // Ephemery dynamic beacon chain config:
 // https://github.com/taxmeifyoucan/ephemeral-testnet/blob/master/specs.md
 
