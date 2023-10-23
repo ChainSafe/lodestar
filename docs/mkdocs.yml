@@ -114,11 +114,11 @@ nav:
     - Repo: contribution/repo.md
     - Testing:
       - Overview: contribution/testing/overview.md
-      - Unit Testing: contribution/testing/unit-testing.md
-      - Spec Testing: contribution/testing/spec-testing.md
-      - e2e Testing: contribution/testing/e2e-testing.md
-      - Simulation Testing: contribution/testing/simulation-testing.md
-      - Performance Testing: contribution/testing/performance-testing.md
+      - Unit Tests: contribution/testing/unit-tests.md
+      - Spec Tests: contribution/testing/spec-tests.md
+      - Performance Tests: contribution/testing/performance-tests.md
+      - E2E Tests: contribution/testing/e2e-tests.md
+      - Simulation Tests: contribution/testing/simulation-tests.md
     - PR Submission: contribution/pr-submission.md
   - Tools:
     - Debugging: tools/debugging.md
