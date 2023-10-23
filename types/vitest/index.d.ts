@@ -28,8 +28,15 @@ interface CustomMatchers<R = unknown> {
   toBeWithMessage(expected: unknown, message: string): R;
 }
 
+interface CustomAsymmetricMatchers<R = unknown> extends CustomMatchers<R> {
+  /**
+   * Non-asymmetric matcher already exists, we just need to add asymmetric version
+   */
+  toSatisfy(func: (received: unknown) => boolean): R;
+}
+
 declare module "vitest" {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   interface Assertion<T = any> extends CustomMatchers<T> {}
-  interface AsymmetricMatchersContaining extends CustomMatchers {}
+  interface AsymmetricMatchersContaining extends CustomAsymmetricMatchers {}
 }

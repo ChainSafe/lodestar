@@ -7,7 +7,11 @@ import topLevelAwait from "vite-plugin-top-level-await";
 export default defineConfig({
   plugins: [
     topLevelAwait(),
-    nodePolyfills({include: ["buffer", "process"], globals: {Buffer: true, process: true}, protocolImports: true}),
+    nodePolyfills({
+      include: ["buffer", "process", "util", "string_decoder", "url", "querystring"],
+      globals: {Buffer: true, process: true},
+      protocolImports: true,
+    }),
   ],
   test: {
     include: ["**/*.test.ts"],
@@ -32,5 +36,11 @@ export default defineConfig({
       slowHijackESM: false,
     },
     environment: "jsdom",
+  },
+  resolve: {
+    alias: {
+      "node:perf_hooks": path.join(__dirname, "scripts/vitest/polyfills/perf_hooks.js"),
+      events: "eventemitter3",
+    },
   },
 });
