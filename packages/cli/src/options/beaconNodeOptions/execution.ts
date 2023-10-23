@@ -9,7 +9,7 @@ export type ExecutionEngineArgs = {
   "execution.retryDelay": number;
   "execution.engineMock"?: boolean;
   "jwt-secret"?: string;
-  "jwt-id"?: string;
+  "jwtId"?: string;
 };
 
 export function parseArgs(args: ExecutionEngineArgs): IBeaconNodeOptions["executionEngine"] {
@@ -32,7 +32,7 @@ export function parseArgs(args: ExecutionEngineArgs): IBeaconNodeOptions["execut
     jwtSecretHex: args["jwt-secret"]
       ? extractJwtHexSecret(fs.readFileSync(args["jwt-secret"], "utf-8").trim())
       : undefined,
-    jwtId: args["jwt-id"],
+    jwtId: args["jwtId"],
   };
 }
 
@@ -83,7 +83,7 @@ export const options: CliCommandOptions<ExecutionEngineArgs> = {
     group: "execution",
   },
 
-  "jwt-id": {
+  "jwtId": {
     description:
       "An optional identifier to be included in the id field in the claims of the jwt tokens for authentication with EL client's rpc server hosting engine apis",
     type: "string",

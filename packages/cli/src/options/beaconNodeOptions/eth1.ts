@@ -28,7 +28,7 @@ export function parseArgs(args: Eth1Args & Partial<ExecutionEngineArgs>): IBeaco
     jwtSecretHex = args["jwt-secret"]
       ? extractJwtHexSecret(fs.readFileSync(args["jwt-secret"], "utf-8").trim())
       : undefined;
-    jwtId = args["jwt-id"];
+    jwtId = args["jwtId"];
   }
 
   return {
