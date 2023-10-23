@@ -1,7 +1,7 @@
 import {toHexString} from "@chainsafe/ssz";
 import {ValidatorIndex, ValidatorStatus} from "@lodestar/types";
 import {Logger, MapDef} from "@lodestar/utils";
-import {Api, ApiError, routes} from "@lodestar/api";
+import {Api, ApiError} from "@lodestar/api";
 import {batchItems} from "../util/index.js";
 import {Metrics} from "../metrics.js";
 
