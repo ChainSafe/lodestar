@@ -223,7 +223,7 @@ describe("options / beaconNodeOptions", () => {
     const beaconNodeArgsPartial = {
       eth1: true,
       "execution.urls": ["http://my.node:8551"],
-      "jwt-secret": jwtSecretFile,
+      "jwtSecret": jwtSecretFile,
     } as BeaconNodeArgs;
 
     const expectedOptions: RecursivePartial<IBeaconNodeOptions> = {

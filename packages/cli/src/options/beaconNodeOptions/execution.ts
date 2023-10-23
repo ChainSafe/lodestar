@@ -8,7 +8,7 @@ export type ExecutionEngineArgs = {
   "execution.retryAttempts": number;
   "execution.retryDelay": number;
   "execution.engineMock"?: boolean;
-  "jwt-secret"?: string;
+  "jwtSecret"?: string;
   "jwtId"?: string;
 };
 
@@ -29,8 +29,8 @@ export function parseArgs(args: ExecutionEngineArgs): IBeaconNodeOptions["execut
      * jwtSecret is parsed as hex instead of bytes because the merge with defaults
      * in beaconOptions messes up the bytes array as as index => value object
      */
-    jwtSecretHex: args["jwt-secret"]
-      ? extractJwtHexSecret(fs.readFileSync(args["jwt-secret"], "utf-8").trim())
+    jwtSecretHex: args["jwtSecret"]
+      ? extractJwtHexSecret(fs.readFileSync(args["jwtSecret"], "utf-8").trim())
       : undefined,
     jwtId: args["jwtId"],
   };
@@ -76,7 +76,7 @@ export const options: CliCommandOptions<ExecutionEngineArgs> = {
     group: "execution",
   },
 
-  "jwt-secret": {
+  "jwtSecret": {
     description:
       "File path to a shared hex-encoded jwt secret which will be used to generate and bundle HS256 encoded jwt tokens for authentication with the EL client's rpc server hosting engine apis. Secret to be exactly same as the one used by the corresponding EL client.",
     type: "string",

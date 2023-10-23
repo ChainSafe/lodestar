@@ -25,8 +25,8 @@ export function parseArgs(args: Eth1Args & Partial<ExecutionEngineArgs>): IBeaco
   // jwt auth mechanism.
   if (providerUrls === undefined && args["execution.urls"]) {
     providerUrls = args["execution.urls"];
-    jwtSecretHex = args["jwt-secret"]
-      ? extractJwtHexSecret(fs.readFileSync(args["jwt-secret"], "utf-8").trim())
+    jwtSecretHex = args["jwtSecret"]
+      ? extractJwtHexSecret(fs.readFileSync(args["jwtSecret"], "utf-8").trim())
       : undefined;
     jwtId = args["jwtId"];
   }
