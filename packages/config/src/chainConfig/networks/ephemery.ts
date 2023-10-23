@@ -7,7 +7,7 @@ import {chainConfig as mainnet} from "../presets/mainnet.js";
 // https://github.com/taxmeifyoucan/ephemeral-testnet/blob/master/specs.md
 
 // Iteration 0, "base"-genesis
-const ephemeryBaseChainConfig: ChainConfig = {
+const baseChainConfig: ChainConfig = {
   ...mainnet,
 
   CONFIG_NAME: "ephemery",
@@ -48,13 +48,13 @@ const ephemeryBaseChainConfig: ChainConfig = {
 // Reset interval (2 days)
 const ephemeryResetInterval: number = 604800;
 const iteration = Math.floor(
-  (Math.floor((new Date()).getTime() / 1000) - ephemeryBaseChainConfig.MIN_GENESIS_TIME) / ephemeryResetInterval
+  (Math.floor((new Date()).getTime() / 1000) - baseChainConfig.MIN_GENESIS_TIME) / ephemeryResetInterval
 );
 
 export const ephemeryChainConfig: ChainConfig = {
-  ...ephemeryBaseChainConfig,
+  ...baseChainConfig,
 
-  MIN_GENESIS_TIME: ephemeryResetInterval * iteration + ephemeryBaseChainConfig.MIN_GENESIS_TIME,
-  DEPOSIT_CHAIN_ID: ephemeryBaseChainConfig.DEPOSIT_CHAIN_ID + iteration,
-  DEPOSIT_NETWORK_ID: ephemeryBaseChainConfig.DEPOSIT_NETWORK_ID + iteration,
+  MIN_GENESIS_TIME: ephemeryResetInterval * iteration + baseChainConfig.MIN_GENESIS_TIME,
+  DEPOSIT_CHAIN_ID: baseChainConfig.DEPOSIT_CHAIN_ID + iteration,
+  DEPOSIT_NETWORK_ID: baseChainConfig.DEPOSIT_NETWORK_ID + iteration,
 };
