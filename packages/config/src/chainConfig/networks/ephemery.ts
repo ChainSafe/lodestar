@@ -4,9 +4,9 @@ import {ChainConfig} from "../types.js";
 import {chainConfig as mainnet} from "../presets/mainnet.js";
 
 // Ephemery dynamic beacon chain config:
-// https://github.com/taxmeifyoucan/ephemeral-testnet/blob/master/specs.md
+// https://github.com/taxmeifyoucan/EIPs/blob/d298cdd8eaf47a21e7770e5c6efef870587c924d/EIPS/eip-6916.md
 
-// Iteration 0, "base"-genesis
+// incrementation 0, "base"-genesis
 const baseChainConfig: ChainConfig = {
   ...mainnet,
 
@@ -45,16 +45,17 @@ const baseChainConfig: ChainConfig = {
   ETH1_FOLLOW_DISTANCE: 12,
 };
 
-// Reset interval (7 days)
-const ephemeryResetInterval: number = 604800;
-const iteration = Math.floor(
-  (Math.floor((new Date()).getTime() / 1000) - baseChainConfig.MIN_GENESIS_TIME) / ephemeryResetInterval
+// Reset interval (7 days) in milliseconds, based on ephemery-genesis values.env:
+// https://github.com/ephemery-testnet/ephemery-genesis/blob/9a28fbef950c8547d78785f8a0ea49a95ce19a48/values.env#L5
+const RESET_INTERVAL_MS = 604800000;
+const incrementation = Math.floor(
+  Math.floor(new Date().getTime() - baseChainConfig.MIN_GENESIS_TIME) / RESET_INTERVAL_MS
 );
 
 export const ephemeryChainConfig: ChainConfig = {
   ...baseChainConfig,
 
-  MIN_GENESIS_TIME: ephemeryResetInterval * iteration + baseChainConfig.MIN_GENESIS_TIME,
-  DEPOSIT_CHAIN_ID: baseChainConfig.DEPOSIT_CHAIN_ID + iteration,
-  DEPOSIT_NETWORK_ID: baseChainConfig.DEPOSIT_NETWORK_ID + iteration,
+  MIN_GENESIS_TIME: RESET_INTERVAL_MS * incrementation + baseChainConfig.MIN_GENESIS_TIME,
+  DEPOSIT_CHAIN_ID: baseChainConfig.DEPOSIT_CHAIN_ID + incrementation,
+  DEPOSIT_NETWORK_ID: baseChainConfig.DEPOSIT_NETWORK_ID + incrementation,
 };
