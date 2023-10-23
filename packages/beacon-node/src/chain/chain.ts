@@ -221,13 +221,13 @@ export class BeaconChain implements IBeaconChain {
         ? anchorState
         : createCachedBeaconState(anchorState, {
             config,
-            finalizedPubkey2index: new PubkeyIndexMap(),
-            finalizedIndex2pubkey: [],
+            pubkey2index: new PubkeyIndexMap(),
+            index2pubkey: [],
           });
 
     // Persist single global instance of state caches
-    this.pubkey2index = cachedState.epochCtx.finalizedPubkey2index;
-    this.index2pubkey = cachedState.epochCtx.finalizedIndex2pubkey;
+    this.pubkey2index = cachedState.epochCtx.pubkey2index;
+    this.index2pubkey = cachedState.epochCtx.index2pubkey;
 
     const stateCache = new StateContextCache({metrics});
     const checkpointStateCache = new CheckpointStateCache({metrics});
@@ -484,7 +484,7 @@ export class BeaconChain implements IBeaconChain {
     );
     const parentBlockRoot = fromHexString(head.blockRoot);
     const proposerIndex = state.epochCtx.getBeaconProposer(slot);
-    const proposerPubKey = state.epochCtx.getPubkey(proposerIndex).toBytes();
+    const proposerPubKey = state.epochCtx.index2pubkey[proposerIndex].toBytes();
 
     const {body, blobs, blockValue} = await produceBlockBody.call(this, blockType, state, {
       randaoReveal,

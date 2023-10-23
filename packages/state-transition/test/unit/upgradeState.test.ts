@@ -16,8 +16,8 @@ describe("upgradeState", () => {
       capellaState,
       {
         config: createBeaconConfig(config, capellaState.genesisValidatorsRoot),
-        finalizedPubkey2index: new PubkeyIndexMap(),
-        finalizedIndex2pubkey: [],
+        pubkey2index: new PubkeyIndexMap(),
+        index2pubkey: [],
       },
       {skipSyncCommitteeCache: true}
     );
@@ -31,8 +31,8 @@ describe("upgradeState", () => {
       denebState,
       {
         config: createBeaconConfig(config, denebState.genesisValidatorsRoot),
-        finalizedPubkey2index: new PubkeyIndexMap(),
-        finalizedIndex2pubkey: [],
+        pubkey2index: new PubkeyIndexMap(),
+        index2pubkey: [],
       },
       {skipSyncCommitteeCache: true}
     );

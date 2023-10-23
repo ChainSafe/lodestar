@@ -10,9 +10,8 @@ describe("isValidLightClientHeader", function () {
     ...defaultChainConfig,
     ALTAIR_FORK_EPOCH: 0,
     BELLATRIX_FORK_EPOCH: 0,
-    CAPELLA_FORK_EPOCH: 0,
-    DENEB_FORK_EPOCH: 1,
-    EIP6110_FORK_EPOCH: Infinity,
+    CAPELLA_FORK_EPOCH: 1,
+    DENEB_FORK_EPOCH: Infinity,
   });
 
   const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
@@ -38,12 +37,6 @@ describe("isValidLightClientHeader", function () {
     beacon: altairLCHeader.beacon,
     execution: ssz.deneb.LightClientHeader.fields.execution.defaultValue(),
     executionBranch: ssz.deneb.LightClientHeader.fields.executionBranch.defaultValue(),
-  };
-
-  const altairUpgradedEIP6110LCHeader = {
-    beacon: altairLCHeader.beacon,
-    execution: ssz.eip6110.LightClientHeader.fields.execution.defaultValue(),
-    executionBranch: ssz.eip6110.LightClientHeader.fields.executionBranch.defaultValue(),
   };
 
   const capellaLCHeader = {
@@ -87,35 +80,12 @@ describe("isValidLightClientHeader", function () {
     executionBranch: capellaLCHeader.executionBranch,
   };
 
-  const capellaUpgradedEIP6110Header = {
-    beacon: capellaLCHeader.beacon,
-    execution: {
-      ...capellaLCHeader.execution,
-      blobGasUsed: 0,
-      excessBlobGas: 0,
-      depositReceiptsRoot: new ByteVectorType(32),
-    },
-    executionBranch: capellaLCHeader.executionBranch,
-  };
-
-  const denebLCHeader = {
-    // TODO 6110: Find a denebLCHeader
-  };
-
-  const denebUpgradedEIP6110Header = {
-    // TODO 6110: Find a denebLCHeader
-  };
-
   const testCases: [string, allForks.LightClientHeader][] = [
     ["altair LC header", altairLCHeader],
     ["altair upgraded to capella", altairUpgradedCapellaLCHeader],
     ["altair upgraded to deneb", altairUpgradedDenebLCHeader],
-    ["altair upgraded to eip6110", altairUpgradedDenebLCHeader],
     ["capella LC header", capellaLCHeader],
     ["capella upgraded to deneb LC header", capellaUpgradedDenebHeader],
-    ["capella upgraded to eip6110 LC header", capellaUpgradedEIP6110Header],
-    // ["deneb LC header", denebLCHeader],
-    // ["deneb upgraded to eip6110 LC header", denebUpgradedDenebHeader],
   ];
 
   testCases.forEach(([name, header]: [string, allForks.LightClientHeader]) => {

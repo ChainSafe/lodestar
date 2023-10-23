@@ -27,7 +27,7 @@ export function getRandaoRevealSignatureSet(
 
   return {
     type: SignatureSetType.single,
-    pubkey: epochCtx.getPubkey(block.proposerIndex),
+    pubkey: epochCtx.index2pubkey[block.proposerIndex],
     signingRoot: computeSigningRoot(ssz.Epoch, epoch, domain),
     signature: block.body.randaoReveal,
   };

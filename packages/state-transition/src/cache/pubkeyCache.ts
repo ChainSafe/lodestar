@@ -61,7 +61,6 @@ export class PubkeyIndexMap {
  * Mutates `pubkey2index` and `index2pubkey`
  *
  * If pubkey caches are empty: SLOW CODE - 🐢
- *
  */
 export function syncPubkeys(
   state: BeaconStateAllForks,

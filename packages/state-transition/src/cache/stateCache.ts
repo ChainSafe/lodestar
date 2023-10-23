@@ -15,7 +15,6 @@ import {newUnfinalizedPubkeyIndexMap} from "./pubkeyCache.js";
 export type BeaconStateCache = {
   config: BeaconConfig;
   epochCtx: EpochCache;
-
   /** Count of clones created from this BeaconStateCache instance. readonly to prevent accidental usage downstream */
   readonly clonedCount: number;
   readonly clonedCountWithTransferCache: number;
@@ -143,7 +142,7 @@ export function createCachedBeaconState<T extends BeaconStateAllForks>(
 ): T & BeaconStateCache {
   return getCachedBeaconState(state, {
     config: immutableData.config,
-    epochCtx: EpochCache.createFromFinalizedState(state, immutableData, opts),
+    epochCtx: EpochCache.createFromState(state, immutableData, opts),
     clonedCount: 0,
     clonedCountWithTransferCache: 0,
     createdWithTransferCache: false,

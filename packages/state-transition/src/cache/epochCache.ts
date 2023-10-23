@@ -52,8 +52,8 @@ export const PROPOSER_WEIGHT_FACTOR = PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PR
 
 export type EpochCacheImmutableData = {
   config: BeaconConfig;
-  finalizedPubkey2index: PubkeyIndexMap;
-  finalizedIndex2pubkey: Index2PubkeyCache;
+  pubkey2index: PubkeyIndexMap;
+  index2pubkey: Index2PubkeyCache;
 };
 
 export type EpochCacheOpts = {
@@ -89,7 +89,7 @@ type ProposersDeferred = {computed: false; seed: Uint8Array} | {computed: true; 
 export class EpochCache {
   config: BeaconConfig;
   /**
-   * Unique globally shared pubkey registry. There should only exist one for the entire application.
+   * Unique globally shared finalized pubkey registry. There should only exist one for the entire application.
    *
    * TODO: this is a hack, we need a safety mechanism in case a bad eth1 majority vote is in,
    * or handle non finalized data differently, or use an immutable.js structure for cheap copies
@@ -99,16 +99,16 @@ export class EpochCache {
    *
    * $VALIDATOR_COUNT x 192 char String -> Number Map
    */
-  finalizedPubkey2index: PubkeyIndexMap;
+  pubkey2index: PubkeyIndexMap;
   /**
-   * Unique globally shared pubkey registry. There should only exist one for the entire application.
+   * Unique globally shared finalized pubkey registry. There should only exist one for the entire application.
    *
    * New: This would include only validators whose activation_eligibility_epoch != FAR_FUTURE_EPOCH and hence it is 
    * insert only. Validators could be 1) Active 2) In the activation queue 3) Initialized but pending queued
    *
    * $VALIDATOR_COUNT x BLST deserialized pubkey (Jacobian coordinates)
    */
-  finalizedIndex2pubkey: Index2PubkeyCache;
+  index2pubkey: Index2PubkeyCache;
   /**
    * Unique pubkey registry shared in the same fork. There should only exist one for the fork.
    */
@@ -212,8 +212,8 @@ export class EpochCache {
 
   constructor(data: {
     config: BeaconConfig;
-    finalizedPubkey2index: PubkeyIndexMap;
-    finalizedIndex2pubkey: Index2PubkeyCache;
+    pubkey2index: PubkeyIndexMap;
+    index2pubkey: Index2PubkeyCache;
     unfinalizedPubkey2index: UnfinalizedPubkeyIndexMap;
     proposers: number[];
     proposersPrevEpoch: number[] | null;
@@ -238,8 +238,8 @@ export class EpochCache {
     syncPeriod: SyncPeriod;
   }) {
     this.config = data.config;
-    this.finalizedPubkey2index = data.finalizedPubkey2index;
-    this.finalizedIndex2pubkey = data.finalizedIndex2pubkey;
+    this.pubkey2index = data.pubkey2index;
+    this.index2pubkey = data.index2pubkey;
     this.unfinalizedPubkey2index = data.unfinalizedPubkey2index;
     this.proposers = data.proposers;
     this.proposersPrevEpoch = data.proposersPrevEpoch;
@@ -270,15 +270,15 @@ export class EpochCache {
    *
    * SLOW CODE - 🐢
    */
-  static createFromFinalizedState(
+  static createFromState(
     state: BeaconStateAllForks,
-    {config, finalizedPubkey2index, finalizedIndex2pubkey}: EpochCacheImmutableData,
+    {config, pubkey2index, index2pubkey}: EpochCacheImmutableData,
     opts?: EpochCacheOpts
   ): EpochCache {
     // syncPubkeys here to ensure EpochCacheImmutableData is popualted before computing the rest of caches
     // - computeSyncCommitteeCache() needs a fully populated pubkey2index cache
     if (!opts?.skipSyncPubkeys) {
-      syncPubkeys(state, finalizedPubkey2index, finalizedIndex2pubkey);
+      syncPubkeys(state, pubkey2index, index2pubkey);
     }
 
     const currentEpoch = computeEpochAtSlot(state.slot);
@@ -368,8 +368,8 @@ export class EpochCache {
     // Allow to skip populating sync committee for initializeBeaconStateFromEth1()
     if (afterAltairFork && !opts?.skipSyncCommitteeCache) {
       const altairState = state as BeaconStateAltair;
-      currentSyncCommitteeIndexed = computeSyncCommitteeCache(altairState.currentSyncCommittee, finalizedPubkey2index);
-      nextSyncCommitteeIndexed = computeSyncCommitteeCache(altairState.nextSyncCommittee, finalizedPubkey2index);
+      currentSyncCommitteeIndexed = computeSyncCommitteeCache(altairState.currentSyncCommittee, pubkey2index);
+      nextSyncCommitteeIndexed = computeSyncCommitteeCache(altairState.nextSyncCommittee, pubkey2index);
     } else {
       currentSyncCommitteeIndexed = new SyncCommitteeCacheEmpty();
       nextSyncCommitteeIndexed = new SyncCommitteeCacheEmpty();
@@ -421,8 +421,8 @@ export class EpochCache {
 
     return new EpochCache({
       config,
-      finalizedPubkey2index,
-      finalizedIndex2pubkey,
+      pubkey2index,
+      index2pubkey,
       // `createFromFinalizedState()` creates cache with empty unfinalizedPubkey2index. Be cautious to only pass in finalized state
       unfinalizedPubkey2index: newUnfinalizedPubkeyIndexMap(),
       proposers,
@@ -460,8 +460,8 @@ export class EpochCache {
     return new EpochCache({
       config: this.config,
       // Common append-only structures shared with all states, no need to clone
-      finalizedPubkey2index: this.finalizedPubkey2index,
-      finalizedIndex2pubkey: this.finalizedIndex2pubkey,
+      pubkey2index: this.pubkey2index,
+      index2pubkey: this.index2pubkey,
       // No need to clone this reference. On each mutation the `unfinalizedPubkey2index` reference is replaced, @see `addPubkey`
       unfinalizedPubkey2index: this.unfinalizedPubkey2index,
       // Immutable data
@@ -775,16 +775,16 @@ export class EpochCache {
    * 
    */
   getPubkey(index: ValidatorIndex): PublicKey {
-    return this.finalizedIndex2pubkey[index];
+    return this.index2pubkey[index];
   }
 
   getValidatorIndex(pubkey: Uint8Array | PubkeyHex): ValidatorIndex | undefined {
     if (this.isAfterEIP6110()) {
       return (
-        this.finalizedPubkey2index.get(pubkey) ?? this.unfinalizedPubkey2index.get(toMemoryEfficientHexStr(pubkey))
+        this.pubkey2index.get(pubkey) ?? this.unfinalizedPubkey2index.get(toMemoryEfficientHexStr(pubkey))
       );
     } else {
-      return this.finalizedPubkey2index.get(pubkey);
+      return this.pubkey2index.get(pubkey);
     }
   }
 
@@ -793,12 +793,12 @@ export class EpochCache {
    * Add unfinalized pubkeys
    *
    */
-  addPubkey(pubkey: Uint8Array, index: ValidatorIndex): void {
+  addPubkey(index: ValidatorIndex, pubkey: Uint8Array): void {
     if (this.isAfterEIP6110()) {
       this.unfinalizedPubkey2index = this.unfinalizedPubkey2index.set(toMemoryEfficientHexStr(pubkey), index);
     } else {
-      this.finalizedPubkey2index.set(pubkey, index);
-      this.finalizedIndex2pubkey[index] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian);
+      this.pubkey2index.set(pubkey, index);
+      this.index2pubkey[index] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian);
     }
   }
 
@@ -812,7 +812,7 @@ export class EpochCache {
       throw new Error("addFInalizedPubkey is not available pre EIP-6110");
     }
 
-    const existingIndex = this.finalizedPubkey2index.get(pubkey);
+    const existingIndex = this.pubkey2index.get(pubkey);
 
     if (existingIndex != undefined) {
       if (existingIndex === index){
@@ -826,8 +826,8 @@ export class EpochCache {
       }
     }
 
-    this.finalizedPubkey2index.set(pubkey, index);
-    this.finalizedIndex2pubkey[index] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian);
+    this.pubkey2index.set(pubkey, index);
+    this.index2pubkey[index] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian);
 
     this.unfinalizedPubkey2index = this.unfinalizedPubkey2index.delete(toMemoryEfficientHexStr(pubkey));
   }
@@ -973,7 +973,7 @@ export function createEmptyEpochCacheImmutableData(
   return {
     config: createBeaconConfig(chainConfig, state.genesisValidatorsRoot),
     // This is a test state, there's no need to have a global shared cache of keys
-    finalizedPubkey2index: new PubkeyIndexMap(),
-    finalizedIndex2pubkey: [],
+    pubkey2index: new PubkeyIndexMap(),
+    index2pubkey: [],
   };
 }

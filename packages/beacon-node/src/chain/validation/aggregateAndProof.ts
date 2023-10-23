@@ -185,7 +185,7 @@ async function validateAggregateAndProof(
   // by the validator with index aggregate_and_proof.aggregator_index.
   // [REJECT] The aggregator signature, signed_aggregate_and_proof.signature, is valid.
   // [REJECT] The signature of aggregate is valid.
-  const aggregator = attHeadState.epochCtx.getPubkey(aggregateAndProof.aggregatorIndex);
+  const aggregator = attHeadState.epochCtx.index2pubkey[aggregateAndProof.aggregatorIndex];
   let indexedAttestationSignatureSet: ISignatureSet;
   if (cachedAttData) {
     const {signingRoot} = cachedAttData;

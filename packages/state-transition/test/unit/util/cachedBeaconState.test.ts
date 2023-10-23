@@ -9,8 +9,8 @@ describe("CachedBeaconState", () => {
 
     createCachedBeaconState(emptyState, {
       config: createBeaconConfig(config, emptyState.genesisValidatorsRoot),
-      finalizedPubkey2index: new PubkeyIndexMap(),
-      finalizedIndex2pubkey: [],
+      pubkey2index: new PubkeyIndexMap(),
+      index2pubkey: [],
     });
   });
 });

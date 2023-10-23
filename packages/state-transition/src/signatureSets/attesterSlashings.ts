@@ -32,7 +32,7 @@ export function getIndexedAttestationBigintSignatureSet(
 
   return {
     type: SignatureSetType.aggregate,
-    pubkeys: indexedAttestation.attestingIndices.map((i) => state.epochCtx.getPubkey(i)),
+    pubkeys: indexedAttestation.attestingIndices.map((i) => state.epochCtx.index2pubkey[i]),
     signingRoot: computeSigningRoot(ssz.phase0.AttestationDataBigint, indexedAttestation.data, domain),
     signature: indexedAttestation.signature,
   };

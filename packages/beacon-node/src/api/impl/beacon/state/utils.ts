@@ -1,7 +1,7 @@
 import {fromHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {FAR_FUTURE_EPOCH, GENESIS_SLOT} from "@lodestar/params";
-import {BeaconStateAllForks} from "@lodestar/state-transition";
+import {BeaconStateAllForks, PubkeyIndexMap} from "@lodestar/state-transition";
 import {BLSPubkey, phase0} from "@lodestar/types";
 import {Epoch, ValidatorIndex} from "@lodestar/types";
 import {EpochCache} from "@lodestar/state-transition/src/types.js";
@@ -112,7 +112,7 @@ export function toValidatorResponse(
 export function filterStateValidatorsByStatus(
   statuses: string[],
   state: BeaconStateAllForks,
-  epochCache: EpochCache,
+  pubkey2index: PubkeyIndexMap,
   currentEpoch: Epoch
 ): routes.beacon.ValidatorResponse[] {
   const responses: routes.beacon.ValidatorResponse[] = [];
@@ -122,7 +122,7 @@ export function filterStateValidatorsByStatus(
   for (const validator of validatorsArr) {
     const validatorStatus = getValidatorStatus(validator, currentEpoch);
 
-    const resp = getStateValidatorIndex(validator.pubkey, state, epochCache);
+    const resp = getStateValidatorIndex(validator.pubkey, state, pubkey2index);
     if (resp.valid && statusSet.has(validatorStatus)) {
       responses.push(
         toValidatorResponse(resp.validatorIndex, validator, state.balances.get(resp.validatorIndex), currentEpoch)
@@ -137,7 +137,7 @@ type StateValidatorIndexResponse = {valid: true; validatorIndex: number} | {vali
 export function getStateValidatorIndex(
   id: routes.beacon.ValidatorId | BLSPubkey,
   state: BeaconStateAllForks,
-  epochCache: EpochCache
+  pubkey2index: PubkeyIndexMap
 ): StateValidatorIndexResponse {
   let validatorIndex: ValidatorIndex | undefined;
   if (typeof id === "string") {
@@ -162,7 +162,7 @@ export function getStateValidatorIndex(
   }
 
   // typeof id === Uint8Array
-  validatorIndex = epochCache.getValidatorIndex(id as BLSPubkey);
+  validatorIndex = pubkey2index.get(id as BLSPubkey);
   if (validatorIndex === undefined) {
     return {valid: false, code: 404, reason: "Validator pubkey not found in state"};
   }

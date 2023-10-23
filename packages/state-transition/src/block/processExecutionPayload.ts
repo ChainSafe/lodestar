@@ -84,7 +84,7 @@ export function executionPayloadToPayloadHeader(
 ): allForks.ExecutionPayloadHeader {
   const transactionsRoot = ssz.bellatrix.Transactions.hashTreeRoot(payload.transactions);
 
-  const payloadFields: allForks.ExecutionPayloadHeader = { // Starts off with bellatrix payload fields as the base
+  const bellatrixPayloadFields: allForks.ExecutionPayloadHeader = {
     parentHash: payload.parentHash,
     feeRecipient: payload.feeRecipient,
     stateRoot: payload.stateRoot,
@@ -102,26 +102,26 @@ export function executionPayloadToPayloadHeader(
   };
 
   if (fork >= ForkSeq.capella) {
-    (payloadFields as capella.ExecutionPayloadHeader).withdrawalsRoot = ssz.capella.Withdrawals.hashTreeRoot(
+    (bellatrixPayloadFields as capella.ExecutionPayloadHeader).withdrawalsRoot = ssz.capella.Withdrawals.hashTreeRoot(
       (payload as capella.ExecutionPayload).withdrawals
     );
   }
 
   if (fork >= ForkSeq.deneb) {
     // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#process_execution_payload
-    (payloadFields as deneb.ExecutionPayloadHeader).blobGasUsed = (
+    (bellatrixPayloadFields as deneb.ExecutionPayloadHeader).blobGasUsed = (
       payload as deneb.ExecutionPayloadHeader | deneb.ExecutionPayload
     ).blobGasUsed;
-    (payloadFields as deneb.ExecutionPayloadHeader).excessBlobGas = (
+    (bellatrixPayloadFields as deneb.ExecutionPayloadHeader).excessBlobGas = (
       payload as deneb.ExecutionPayloadHeader | deneb.ExecutionPayload
     ).excessBlobGas;
   }
 
   if (fork >= ForkSeq.eip6110) {
-    (payloadFields as eip6110.ExecutionPayloadHeader).depositReceiptsRoot = ssz.eip6110.DepositReceipts.hashTreeRoot(
+    (bellatrixPayloadFields as eip6110.ExecutionPayloadHeader).depositReceiptsRoot = ssz.eip6110.DepositReceipts.hashTreeRoot(
       (payload as eip6110.ExecutionPayload).depositReceipts
     );
   }
 
-  return payloadFields;
+  return bellatrixPayloadFields;
 }

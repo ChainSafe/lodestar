@@ -39,10 +39,10 @@ describe("CachedBeaconState", () => {
     );
     const index2 = 456;
 
-    state1.epochCtx.addPubkey(pubkey1, index1);
+    state1.epochCtx.addPubkey(index1, pubkey1);
 
     const state2 = state1.clone();
-    state2.epochCtx.addPubkey(pubkey2, index2);
+    state2.epochCtx.addPubkey(index2, pubkey2);
 
     expect(state1.epochCtx.getValidatorIndex(pubkey1)).to.equal(
       index1,
@@ -86,10 +86,10 @@ describe("CachedBeaconState", () => {
     );
     const index2 = 456;
 
-    state1.epochCtx.addPubkey(pubkey1, index1);
+    state1.epochCtx.addPubkey(index1, pubkey1);
 
     const state2 = state1.clone();
-    state2.epochCtx.addPubkey(pubkey2, index2);
+    state2.epochCtx.addPubkey(index2, pubkey2);
 
     expect(state1.epochCtx.getValidatorIndex(pubkey1)).to.equal(
       index1,

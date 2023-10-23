@@ -107,8 +107,8 @@ export function generateCachedState(opts?: TestBeaconState): CachedBeaconStateAl
   return createCachedBeaconState(state, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
     // This is a performance test, there's no need to have a global shared cache of keys
-    finalizedPubkey2index: new PubkeyIndexMap(),
-    finalizedIndex2pubkey: [],
+    pubkey2index: new PubkeyIndexMap(),
+    index2pubkey: [],
   });
 }
 
@@ -121,8 +121,8 @@ export function generateCachedAltairState(opts?: TestBeaconState, altairForkEpoc
   return createCachedBeaconState(state, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
     // This is a performance test, there's no need to have a global shared cache of keys
-    finalizedPubkey2index: new PubkeyIndexMap(),
-    finalizedIndex2pubkey: [],
+    pubkey2index: new PubkeyIndexMap(),
+    index2pubkey: [],
   });
 }
 
@@ -135,7 +135,7 @@ export function generateCachedBellatrixState(opts?: TestBeaconState): CachedBeac
   return createCachedBeaconState(state as BeaconStateBellatrix, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
     // This is a performance test, there's no need to have a global shared cache of keys
-    finalizedPubkey2index: new PubkeyIndexMap(),
-    finalizedIndex2pubkey: [],
+    pubkey2index: new PubkeyIndexMap(),
+    index2pubkey: [],
   });
 }

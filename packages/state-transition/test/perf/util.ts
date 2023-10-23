@@ -127,8 +127,8 @@ export function generatePerfTestCachedStatePhase0(opts?: {goBackOneSlot: boolean
     state.slot -= 1;
     phase0CachedState23637 = createCachedBeaconState(state, {
       config: createBeaconConfig(config, state.genesisValidatorsRoot),
-      finalizedPubkey2index: pubkey2index,
-      finalizedIndex2pubkey: index2pubkey,
+      pubkey2index: pubkey2index,
+      index2pubkey: index2pubkey,
     });
 
     const currentEpoch = computeEpochAtSlot(state.slot - 1);
@@ -225,8 +225,8 @@ export function generatePerfTestCachedStateAltair(opts?: {goBackOneSlot: boolean
     state.slot -= 1;
     altairCachedState23637 = createCachedBeaconState(state, {
       config: createBeaconConfig(altairConfig, state.genesisValidatorsRoot),
-      finalizedPubkey2index: pubkey2index,
-      finalizedIndex2pubkey: index2pubkey,
+      pubkey2index: pubkey2index,
+      index2pubkey: index2pubkey,
     });
   }
   if (!altairCachedState23638) {
@@ -428,8 +428,8 @@ export function generateTestCachedBeaconStateOnlyValidators({
     state,
     {
       config: createBeaconConfig(config, state.genesisValidatorsRoot),
-      finalizedPubkey2index: pubkey2index,
-      finalizedIndex2pubkey: index2pubkey,
+      pubkey2index: pubkey2index,
+      index2pubkey: index2pubkey,
     },
     {skipSyncPubkeys: true}
   );

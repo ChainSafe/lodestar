@@ -7,10 +7,10 @@ export function getEth1DepositCount(state: CachedBeaconStateAllForks): UintNum64
     const eip6110State = state as CachedBeaconStateEIP6110;
     // eth1DataIndexLimit = min(UintNum64, UintBn64) can be safely casted as UintNum64 
     // since the result lies within upper and lower bound of UintNum64
-    const eth1DataIndexLimit =
-      (state.eth1Data.depositCount < eip6110State.depositReceiptsStartIndex
+    const eth1DataIndexLimit: UintNum64 =
+      state.eth1Data.depositCount < eip6110State.depositReceiptsStartIndex
         ? state.eth1Data.depositCount
-        : eip6110State.depositReceiptsStartIndex) as UintNum64; 
+        : Number(eip6110State.depositReceiptsStartIndex); 
 
     if (state.eth1DepositIndex < eth1DataIndexLimit) {
       return Math.min(MAX_DEPOSITS, eth1DataIndexLimit - state.eth1DepositIndex); 
