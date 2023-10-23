@@ -37,7 +37,8 @@ When starting up a Lodestar beacon node in any configuration, ensure you add the
 
 ### Set up and include identifiers in JWT tokens
 
-Lodestar supports sending JWT authentication tokens with customized id `id` and version `clv` strings. This is particularly useful when running multiple consensus-layer clients with the different JWT secrets which makes the execution-layer client difficult to choose which JWT secret to verify against due to the inability to distinguish between the different consensus-layer clients. You can configure the optional identifiers by adding `--jwt-id $JWT_ID` and/or `--jwt-version $JWT_VERSION` flags. By default, without the related flags added, Lodestar will omit `id` and/or `clv` in the JWT token during the tranmissions.
+Lodestar auto-populates `clv` field in the claims of JWT authentication tokens with a non-configurable value `Lodestar/$CLIENT_VERSION` to communicate the client's version. Lodestar also optionally includes `id` field in the claims with value `$JWT_ID` if the appropriate flag `--jwtId $JWT_ID` is added. 
+`id` and `clv` are particularly useful when running multiple consensus-layer clients with the different JWT secrets which makes the execution-layer client difficult to choose which JWT secret to verify against due to the inability to distinguish between the different consensus-layer clients. 
 
 ### Ensure JWT is configured with your execution node
 
