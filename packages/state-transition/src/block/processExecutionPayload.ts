@@ -118,9 +118,8 @@ export function executionPayloadToPayloadHeader(
   }
 
   if (fork >= ForkSeq.eip6110) {
-    (bellatrixPayloadFields as eip6110.ExecutionPayloadHeader).depositReceiptsRoot = ssz.eip6110.DepositReceipts.hashTreeRoot(
-      (payload as eip6110.ExecutionPayload).depositReceipts
-    );
+    (bellatrixPayloadFields as eip6110.ExecutionPayloadHeader).depositReceiptsRoot =
+      ssz.eip6110.DepositReceipts.hashTreeRoot((payload as eip6110.ExecutionPayload).depositReceipts);
   }
 
   return bellatrixPayloadFields;

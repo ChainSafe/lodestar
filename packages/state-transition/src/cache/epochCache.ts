@@ -94,7 +94,7 @@ export class EpochCache {
    * TODO: this is a hack, we need a safety mechanism in case a bad eth1 majority vote is in,
    * or handle non finalized data differently, or use an immutable.js structure for cheap copies
    *
-   * New: This would include only validators whose activation_eligibility_epoch != FAR_FUTURE_EPOCH and hence it is 
+   * New: This would include only validators whose activation_eligibility_epoch != FAR_FUTURE_EPOCH and hence it is
    * insert only. Validators could be 1) Active 2) In the activation queue 3) Initialized but pending queued
    *
    * $VALIDATOR_COUNT x 192 char String -> Number Map
@@ -103,7 +103,7 @@ export class EpochCache {
   /**
    * Unique globally shared finalized pubkey registry. There should only exist one for the entire application.
    *
-   * New: This would include only validators whose activation_eligibility_epoch != FAR_FUTURE_EPOCH and hence it is 
+   * New: This would include only validators whose activation_eligibility_epoch != FAR_FUTURE_EPOCH and hence it is
    * insert only. Validators could be 1) Active 2) In the activation queue 3) Initialized but pending queued
    *
    * $VALIDATOR_COUNT x BLST deserialized pubkey (Jacobian coordinates)
@@ -770,9 +770,9 @@ export class EpochCache {
 
   /**
    * Return finalized pubkey given the validator index.
-   * Only finalized pubkey as we do not store unfinalized pubkey because no where in the spec has a 
+   * Only finalized pubkey as we do not store unfinalized pubkey because no where in the spec has a
    * need to make such enquiry
-   * 
+   *
    */
   getPubkey(index: ValidatorIndex): PublicKey {
     return this.index2pubkey[index];
@@ -780,9 +780,7 @@ export class EpochCache {
 
   getValidatorIndex(pubkey: Uint8Array | PubkeyHex): ValidatorIndex | undefined {
     if (this.isAfterEIP6110()) {
-      return (
-        this.pubkey2index.get(pubkey) ?? this.unfinalizedPubkey2index.get(toMemoryEfficientHexStr(pubkey))
-      );
+      return this.pubkey2index.get(pubkey) ?? this.unfinalizedPubkey2index.get(toMemoryEfficientHexStr(pubkey));
     } else {
       return this.pubkey2index.get(pubkey);
     }
@@ -815,14 +813,14 @@ export class EpochCache {
     const existingIndex = this.pubkey2index.get(pubkey);
 
     if (existingIndex != undefined) {
-      if (existingIndex === index){
+      if (existingIndex === index) {
         // Repeated insert. Should not happen except during the first few epochs of 6110 activation
         // Unfinalized validator added to finalizedPubkey2index pre-6110 by calling addPubkey()
         // when it become finalized in post-6110, addFinalizedPubkey() is called to cause repeated insert
-        return; 
+        return;
       } else {
         // attempt to insert the same pubkey with different index, should never happen.
-        throw Error("inserted existing pubkey into finalizedPubkey2index cache with a different index")
+        throw Error("inserted existing pubkey into finalizedPubkey2index cache with a different index");
       }
     }
 

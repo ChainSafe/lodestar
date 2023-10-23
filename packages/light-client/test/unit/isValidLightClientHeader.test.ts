@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {ByteVectorType, fromHexString} from "@chainsafe/ssz";
+import {fromHexString} from "@chainsafe/ssz";
 import {ssz, allForks} from "@lodestar/types";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {isValidLightClientHeader} from "../../src/spec/utils.js";
