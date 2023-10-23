@@ -104,7 +104,7 @@ describe("beacon state api utils", function () {
 
   describe("getStateValidatorIndex", async function () {
     const state = generateCachedAltairState();
-    const pubkey2index = state.epochCtx.pubkey2index; 
+    const pubkey2index = state.epochCtx.pubkey2index;
 
     it("should return valid: false on invalid input", () => {
       // "invalid validator id number"
