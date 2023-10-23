@@ -29,7 +29,6 @@ export function parseArgs(args: Eth1Args & Partial<ExecutionEngineArgs>): IBeaco
       ? extractJwtHexSecret(fs.readFileSync(args["jwt-secret"], "utf-8").trim())
       : undefined;
     jwtId = args["jwt-id"];
-    jwtVersion = args["jwt-version"];
   }
 
   return {
@@ -37,7 +36,6 @@ export function parseArgs(args: Eth1Args & Partial<ExecutionEngineArgs>): IBeaco
     providerUrls,
     jwtSecretHex,
     jwtId,
-    jwtVersion,
     depositContractDeployBlock: args["eth1.depositContractDeployBlock"],
     disableEth1DepositDataTracker: args["eth1.disableEth1DepositDataTracker"],
     unsafeAllowDepositDataOverwrite: args["eth1.unsafeAllowDepositDataOverwrite"],
