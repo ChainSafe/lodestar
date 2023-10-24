@@ -5,7 +5,7 @@ import {LogLevel, sleep} from "@lodestar/utils";
 import {TimestampFormatCode} from "@lodestar/logger";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ChainConfig} from "@lodestar/config";
-import {Epoch, bellatrix} from "@lodestar/types";
+import {Epoch, allForks, bellatrix} from "@lodestar/types";
 import {ValidatorProposerConfig, BuilderSelection} from "@lodestar/validator";
 import {routes} from "@lodestar/api";
 
@@ -192,6 +192,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     } as ValidatorProposerConfig;
 
     const {validators} = await getAndInitDevValidators({
+      logPrefix: "mergemock",
       node: bn,
       validatorsPerClient,
       validatorClientCount,
@@ -210,7 +211,9 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     let builderBlocks = 0;
     await new Promise<void>((resolve, _reject) => {
       bn.chain.emitter.on(routes.events.EventType.block, async (blockData) => {
-        const {data: fullOrBlindedBlock} = await bn.api.beacon.getBlockV2(blockData.block);
+        const {data: fullOrBlindedBlock} = (await bn.api.beacon.getBlockV2(blockData.block)) as {
+          data: allForks.SignedBeaconBlock;
+        };
         if (fullOrBlindedBlock !== undefined) {
           const blockFeeRecipient = toHexString(
             (fullOrBlindedBlock as bellatrix.SignedBeaconBlock).message.body.executionPayload.feeRecipient

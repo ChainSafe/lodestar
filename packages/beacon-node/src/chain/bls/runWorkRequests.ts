@@ -24,7 +24,7 @@ const BATCHABLE_MIN_PER_CHUNK = 16;
  * Uses worker thread to verify
  */
 export function runWorkRequests(workerId: number, workReqArr: BlsWorkReq[]): BlsWorkResult {
-  const startNs = process.hrtime.bigint();
+  const [startSec, startNs] = process.hrtime();
   const results: WorkResult<boolean>[] = [];
   let batchRetries = 0;
   let batchSigsSuccess = 0;
@@ -92,12 +92,14 @@ export function runWorkRequests(workerId: number, workReqArr: BlsWorkReq[]): Bls
     }
   }
 
+  const [workerEndSec, workerEndNs] = process.hrtime();
+
   return {
     workerId,
     batchRetries,
     batchSigsSuccess,
-    workStartNs: startNs,
-    workEndNs: process.hrtime.bigint(),
+    workerStartTime: [startSec, startNs],
+    workerEndTime: [workerEndSec, workerEndNs],
     results,
   };
 }
@@ -106,7 +108,7 @@ export function runWorkRequests(workerId: number, workReqArr: BlsWorkReq[]): Bls
  * Same as verifyManySignatureSets but uses libuv thread pool instead of worker threads
  */
 export async function asyncRunWorkRequests(workReqArr: BlsWorkReq[]): Promise<BlsWorkResult> {
-  const workStartNs = process.hrtime.bigint();
+  const [startSec, startNs] = process.hrtime();
   const results: WorkResult<boolean>[] = [];
   let batchRetries = 0;
   let batchSigsSuccess = 0;
@@ -176,11 +178,13 @@ export async function asyncRunWorkRequests(workReqArr: BlsWorkReq[]): Promise<Bl
     )
   );
 
+  const [workerEndSec, workerEndNs] = process.hrtime();
+
   return {
     batchRetries,
     batchSigsSuccess,
-    workStartNs,
-    workEndNs: process.hrtime.bigint(),
+    workerStartTime: [startSec, startNs],
+    workerEndTime: [workerEndSec, workerEndNs],
     results,
   };
 }

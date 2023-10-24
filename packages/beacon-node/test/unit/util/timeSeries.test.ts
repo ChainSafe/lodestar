@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {TimeSeries} from "../../../src/util/timeSeries.js";
 
 // Even with rounding to 3 decimals, the test still breaks sometimes...
@@ -15,7 +15,7 @@ describe.skip("util / TimeSeries", () => {
 
     const valuePerSec = timeSeries.computeLinearSpeed();
 
-    expectEqualPrecision(valuePerSec, 1, decimals, "Wrong valuePerSec");
+    expectEqualPrecision(valuePerSec, 1, decimals);
   });
 
   it("Should correctly do a linear regression", () => {
@@ -28,14 +28,14 @@ describe.skip("util / TimeSeries", () => {
     }
 
     const valuePerSec = timeSeries.computeLinearSpeed();
-    expectEqualPrecision(valuePerSec, 1, decimals, "Wrong valuePerSec");
+    expectEqualPrecision(valuePerSec, 1, decimals);
   });
 
   /**
    * Fixed point math in Javascript is inexact, round results to prevent this test from randomly failing
    */
-  function expectEqualPrecision(value: number, expected: number, decimals: number, message?: string): void {
-    expect(roundExp(value, decimals)).to.equals(roundExp(expected, decimals), message);
+  function expectEqualPrecision(value: number, expected: number, decimals: number): void {
+    expect(roundExp(value, decimals)).toBe(roundExp(expected, decimals));
   }
 
   function roundExp(value: number, decimals: number): number {

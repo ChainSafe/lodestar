@@ -16,6 +16,7 @@ export type RestApiServerOpts = {
   bearerToken?: string;
   headerLimit?: number;
   bodyLimit?: number;
+  swaggerUI?: boolean;
 };
 
 export type RestApiServerModules = {
@@ -38,7 +39,7 @@ export class RestApiServer {
   private readonly activeSockets: HttpActiveSocketsTracker;
 
   constructor(
-    private readonly opts: RestApiServerOpts,
+    protected readonly opts: RestApiServerOpts,
     modules: RestApiServerModules
   ) {
     // Apply opts defaults

@@ -1,8 +1,9 @@
-import type {PublicKey, SignatureSet} from "@chainsafe/blst-ts";
+import {PublicKey, SignatureSet} from "@chainsafe/blst-ts";
 import {ISignatureSet} from "@lodestar/state-transition";
 import {VerifySignatureOpts} from "./interface.js";
 
 export type WorkerData = {
+  implementation?: "herumi" | "blst-native";
   workerId: number;
 };
 
@@ -59,10 +60,10 @@ export type BlsWorkResult = {
   batchRetries: number;
   /** Total num of sigs that have been successfully verified with batching */
   batchSigsSuccess: number;
-  /** Time worker function starts - UNIX timestamp in nanoseconds */
-  workStartNs: bigint;
-  /** Time worker function ends - UNIX timestamp in nanoseconds */
-  workEndNs: bigint;
+  /** Time worker function starts - UNIX timestamp in seconds and nanoseconds */
+  workerStartTime: [number, number];
+  /** Time worker function ends - UNIX timestamp in seconds and nanoseconds */
+  workerEndTime: [number, number];
 
   results: WorkResult<boolean>[];
 };

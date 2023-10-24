@@ -186,9 +186,9 @@ export class MonitoringService {
 
       // error was thrown by abort signal
       if (signal.reason === FetchAbortReason.Close) {
-        throw new ErrorAborted(`request to ${this.remoteServiceHost}`);
+        throw new ErrorAborted("request");
       } else if (signal.reason === FetchAbortReason.Timeout) {
-        throw new TimeoutError(`reached for request to ${this.remoteServiceHost}`);
+        throw new TimeoutError("request");
       } else {
         throw e;
       }
@@ -210,7 +210,7 @@ export class MonitoringService {
 
   private parseMonitoringEndpoint(endpoint: string): URL {
     if (!endpoint) {
-      throw new Error("Monitoring endpoint must be provided");
+      throw new Error(`Monitoring endpoint is empty or undefined: ${endpoint}`);
     }
 
     try {
@@ -226,7 +226,7 @@ export class MonitoringService {
 
       return url;
     } catch {
-      throw new Error("Monitoring endpoint must be a valid URL");
+      throw new Error(`Monitoring endpoint must be a valid URL: ${endpoint}`);
     }
   }
 }

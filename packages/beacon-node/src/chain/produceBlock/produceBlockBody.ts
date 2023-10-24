@@ -49,11 +49,12 @@ export type BlockAttributes = {
   randaoReveal: BLSSignature;
   graffiti: Bytes32;
   slot: Slot;
+  feeRecipient?: string;
 };
 
 export enum BlockType {
-  Full,
-  Blinded,
+  Full = "Full",
+  Blinded = "Blinded",
 }
 export type AssembledBodyType<T extends BlockType> = T extends BlockType.Full
   ? allForks.BeaconBlockBody
@@ -80,6 +81,7 @@ export async function produceBlockBody<T extends BlockType>(
     randaoReveal,
     graffiti,
     slot: blockSlot,
+    feeRecipient: requestedFeeRecipient,
     parentSlot,
     parentBlockRoot,
     proposerIndex,
@@ -96,6 +98,14 @@ export async function produceBlockBody<T extends BlockType>(
   // TODO: Does not guarantee that preDeneb enum goes with a preDeneb block
   let blobsResult: BlobsResult;
   let blockValue: Wei;
+  const fork = currentState.config.getForkName(blockSlot);
+
+  const logMeta: Record<string, string | number | bigint> = {
+    fork,
+    blockType,
+    slot: blockSlot,
+  };
+  this.logger.verbose("Producing beacon block body", logMeta);
 
   // TODO:
   // Iterate through the naive aggregation pool and ensure all the attestations from there
@@ -125,8 +135,6 @@ export async function produceBlockBody<T extends BlockType>(
     voluntaryExits,
   };
 
-  this.logger.verbose("Produced phase0 beacon block body", {slot: blockSlot, numAttestations: attestations.length});
-
   const blockEpoch = computeEpochAtSlot(blockSlot);
 
   if (blockEpoch >= this.config.ALTAIR_FORK_EPOCH) {
@@ -137,12 +145,25 @@ export async function produceBlockBody<T extends BlockType>(
     (blockBody as altair.BeaconBlockBody).syncAggregate = syncAggregate;
   }
 
-  const fork = currentState.config.getForkName(blockSlot);
+  Object.assign(logMeta, {
+    attestations: attestations.length,
+    deposits: deposits.length,
+    voluntaryExits: voluntaryExits.length,
+    attesterSlashings: attesterSlashings.length,
+    proposerSlashings: proposerSlashings.length,
+  });
 
   if (isForkExecution(fork)) {
     const safeBlockHash = this.forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
-    const feeRecipient = this.beaconProposerCache.getOrDefault(proposerIndex);
+    const feeRecipient = requestedFeeRecipient ?? this.beaconProposerCache.getOrDefault(proposerIndex);
+    const feeRecipientType = requestedFeeRecipient
+      ? "requested"
+      : this.beaconProposerCache.get(proposerIndex)
+      ? "cached"
+      : "default";
+
+    Object.assign(logMeta, {feeRecipientType, feeRecipient});
 
     if (blockType === BlockType.Blinded) {
       if (!this.executionBuilder) throw Error("Execution Builder not available");
@@ -182,6 +203,8 @@ export async function produceBlockBody<T extends BlockType>(
         }
         (blockBody as deneb.BlindedBeaconBlockBody).blobKzgCommitments = blobKzgCommitments;
         blobsResult = {type: BlobsResultType.blinded};
+
+        Object.assign(logMeta, {blobs: blobKzgCommitments.length});
       } else {
         blobsResult = {type: BlobsResultType.preDeneb};
       }
@@ -212,6 +235,8 @@ export async function produceBlockBody<T extends BlockType>(
           blockValue = BigInt(0);
         } else {
           const {prepType, payloadId} = prepareRes;
+          Object.assign(logMeta, {executionPayloadPrepType: prepType});
+
           if (prepType !== PayloadPreparationType.Cached) {
             // Wait for 500ms to allow EL to add some txs to the payload
             // the pitfalls of this have been put forward here, but 500ms delay for block proposal
@@ -225,6 +250,7 @@ export async function produceBlockBody<T extends BlockType>(
           const {executionPayload, blobsBundle} = engineRes;
           (blockBody as allForks.ExecutionBlockBody).executionPayload = executionPayload;
           blockValue = engineRes.blockValue;
+          Object.assign(logMeta, {transactions: executionPayload.transactions.length});
 
           const fetchedTime = Date.now() / 1000 - computeTimeAtSlot(this.config, blockSlot, this.genesisTime);
           this.metrics?.blockPayload.payloadFetchedTime.observe({prepType}, fetchedTime);
@@ -265,6 +291,8 @@ export async function produceBlockBody<T extends BlockType>(
               return blobSidecar;
             }) as deneb.BlobSidecars;
             blobsResult = {type: BlobsResultType.produced, blobSidecars, blockHash};
+
+            Object.assign(logMeta, {blobs: blobSidecars.length});
           } else {
             blobsResult = {type: BlobsResultType.preDeneb};
           }
@@ -299,7 +327,20 @@ export async function produceBlockBody<T extends BlockType>(
   if (ForkSeq[fork] >= ForkSeq.capella) {
     // TODO: blsToExecutionChanges should be passed in the produceBlock call
     (blockBody as capella.BeaconBlockBody).blsToExecutionChanges = blsToExecutionChanges;
+    Object.assign(logMeta, {
+      blsToExecutionChanges: blsToExecutionChanges.length,
+    });
+
+    // withdrawals are only available in full body
+    if (blockType === BlockType.Full) {
+      Object.assign(logMeta, {
+        withdrawals: (blockBody as capella.BeaconBlockBody).executionPayload.withdrawals.length,
+      });
+    }
   }
+
+  Object.assign(logMeta, {blockValue});
+  this.logger.verbose("Produced beacon block body", logMeta);
 
   return {body: blockBody as AssembledBodyType<T>, blobs: blobsResult, blockValue};
 }

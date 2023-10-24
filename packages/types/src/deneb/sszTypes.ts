@@ -3,7 +3,6 @@ import {
   HISTORICAL_ROOTS_LIMIT,
   MAX_BLOB_COMMITMENTS_PER_BLOCK,
   FIELD_ELEMENTS_PER_BLOB,
-  MAX_BLOBS_PER_BLOCK,
   MAX_REQUEST_BLOB_SIDECARS,
   BYTES_PER_FIELD_ELEMENT,
   BLOCK_BODY_EXECUTION_PAYLOAD_DEPTH as EXECUTION_PAYLOAD_DEPTH,
@@ -48,43 +47,13 @@ export const KZGProof = Bytes48;
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#custom-types
 
 export const Blob = new ByteVectorType(BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB);
-export const Blobs = new ListCompositeType(Blob, MAX_BLOBS_PER_BLOCK);
+export const Blobs = new ListCompositeType(Blob, MAX_BLOB_COMMITMENTS_PER_BLOCK);
 export const BlindedBlob = Bytes32;
-export const BlindedBlobs = new ListCompositeType(BlindedBlob, MAX_BLOBS_PER_BLOCK);
+export const BlindedBlobs = new ListCompositeType(BlindedBlob, MAX_BLOB_COMMITMENTS_PER_BLOCK);
 
 export const VersionedHash = Bytes32;
 export const BlobKzgCommitments = new ListCompositeType(KZGCommitment, MAX_BLOB_COMMITMENTS_PER_BLOCK);
-export const KZGProofs = new ListCompositeType(KZGProof, MAX_BLOBS_PER_BLOCK);
-
-// Constants
-
-// Validator types
-// https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/validator.md
-
-// A polynomial in evaluation form
-export const Polynomial = new ListCompositeType(BLSFieldElement, FIELD_ELEMENTS_PER_BLOB);
-
-// class BlobsAndCommitments(Container):
-//     blobs: List[Blob, MAX_BLOBS_PER_BLOCK]
-//     kzg_commitments: List[KZGCommitment, MAX_BLOBS_PER_BLOCK]
-export const BlobsAndCommitments = new ContainerType(
-  {
-    blobs: Blobs,
-    kzgCommitments: BlobKzgCommitments,
-  },
-  {typeName: "BlobsAndCommitments", jsonCase: "eth2"}
-);
-
-// class PolynomialAndCommitment(Container):
-//     polynomial: Polynomial
-//     kzg_commitment: KZGCommitment
-export const PolynomialAndCommitment = new ContainerType(
-  {
-    polynomial: Polynomial,
-    kzgCommitment: KZGCommitment,
-  },
-  {typeName: "PolynomialAndCommitment", jsonCase: "eth2"}
-);
+export const KZGProofs = new ListCompositeType(KZGProof, MAX_BLOB_COMMITMENTS_PER_BLOCK);
 
 // ReqResp types
 // =============
@@ -169,7 +138,7 @@ export const BlobSidecar = new ContainerType(
   {typeName: "BlobSidecar", jsonCase: "eth2"}
 );
 
-export const BlobSidecars = new ListCompositeType(BlobSidecar, MAX_BLOBS_PER_BLOCK);
+export const BlobSidecars = new ListCompositeType(BlobSidecar, MAX_BLOB_COMMITMENTS_PER_BLOCK);
 
 export const SignedBlobSidecar = new ContainerType(
   {
@@ -178,7 +147,7 @@ export const SignedBlobSidecar = new ContainerType(
   },
   {typeName: "SignedBlobSidecar", jsonCase: "eth2"}
 );
-export const SignedBlobSidecars = new ListCompositeType(SignedBlobSidecar, MAX_BLOBS_PER_BLOCK);
+export const SignedBlobSidecars = new ListCompositeType(SignedBlobSidecar, MAX_BLOB_COMMITMENTS_PER_BLOCK);
 
 export const BlindedBlobSidecar = new ContainerType(
   {
@@ -194,7 +163,7 @@ export const BlindedBlobSidecar = new ContainerType(
   {typeName: "BlindedBlobSidecar", jsonCase: "eth2"}
 );
 
-export const BlindedBlobSidecars = new ListCompositeType(BlindedBlobSidecar, MAX_BLOBS_PER_BLOCK);
+export const BlindedBlobSidecars = new ListCompositeType(BlindedBlobSidecar, MAX_BLOB_COMMITMENTS_PER_BLOCK);
 
 export const SignedBlindedBlobSidecar = new ContainerType(
   {
@@ -204,16 +173,9 @@ export const SignedBlindedBlobSidecar = new ContainerType(
   {typeName: "SignedBlindedBlobSidecar", jsonCase: "eth2"}
 );
 
-export const SignedBlindedBlobSidecars = new ListCompositeType(SignedBlindedBlobSidecar, MAX_BLOBS_PER_BLOCK);
-
-// TODO: deneb cleanup once the builder-api gets rectified for deneb
-// as the type might be used in builder getHeader responses
-export const SignedBeaconBlockAndBlobSidecars = new ContainerType(
-  {
-    beaconBlock: SignedBeaconBlock,
-    blobSidecars: BlobSidecars,
-  },
-  {typeName: "SignedBeaconBlockAndBlobSidecars", jsonCase: "eth2"}
+export const SignedBlindedBlobSidecars = new ListCompositeType(
+  SignedBlindedBlobSidecar,
+  MAX_BLOB_COMMITMENTS_PER_BLOCK
 );
 
 export const BlindedBeaconBlockBody = new ContainerType(

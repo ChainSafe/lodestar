@@ -1,43 +1,32 @@
-import sinon, {SinonStubbedInstance} from "sinon";
-
-import {ForkChoice} from "@lodestar/fork-choice";
+import {describe, it, beforeEach, afterEach, vi} from "vitest";
 import {phase0, ssz} from "@lodestar/types";
-
-import {BeaconChain} from "../../../../src/chain/index.js";
-import {StubbedChainMutable} from "../../../utils/stub/index.js";
 import {generateCachedState} from "../../../utils/state.js";
 import {validateGossipAttesterSlashing} from "../../../../src/chain/validation/attesterSlashing.js";
 import {AttesterSlashingErrorCode} from "../../../../src/chain/errors/attesterSlashingError.js";
-import {OpPool} from "../../../../src/chain/opPools/index.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
-import {BlsVerifierMock} from "../../../utils/mocks/bls.js";
-
-type StubbedChain = StubbedChainMutable<"forkChoice" | "bls">;
+import {MockedBeaconChain, getMockedBeaconChain} from "../../../__mocks__/mockedBeaconChain.js";
 
 describe("GossipMessageValidator", () => {
-  const sandbox = sinon.createSandbox();
-  let chainStub: StubbedChain;
-  let opPool: OpPool & SinonStubbedInstance<OpPool>;
+  let chainStub: MockedBeaconChain;
+  let opPool: MockedBeaconChain["opPool"];
 
   beforeEach(() => {
-    chainStub = sandbox.createStubInstance(BeaconChain) as StubbedChain;
-    chainStub.forkChoice = sandbox.createStubInstance(ForkChoice);
-    chainStub.bls = new BlsVerifierMock(true);
-    opPool = sandbox.createStubInstance(OpPool) as OpPool & SinonStubbedInstance<OpPool>;
-    (chainStub as {opPool: OpPool}).opPool = opPool;
+    chainStub = getMockedBeaconChain();
+    opPool = chainStub.opPool;
 
     const state = generateCachedState();
-    chainStub.getHeadState.returns(state);
+    vi.spyOn(chainStub, "getHeadState").mockReturnValue(state);
+    vi.spyOn(opPool, "hasSeenAttesterSlashing");
   });
 
-  after(() => {
-    sandbox.restore();
+  afterEach(() => {
+    vi.clearAllMocks();
   });
 
   describe("validate attester slashing", () => {
     it("should return invalid attester slashing - already exisits", async () => {
       const attesterSlashing = ssz.phase0.AttesterSlashing.defaultValue();
-      opPool.hasSeenAttesterSlashing.returns(true);
+      opPool.hasSeenAttesterSlashing.mockReturnValue(true);
 
       await expectRejectedWithLodestarError(
         validateGossipAttesterSlashing(chainStub, attesterSlashing),

@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, beforeAll, afterAll, it, expect} from "vitest";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {createBeaconConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
@@ -9,8 +9,6 @@ import {getDevBeaconNode} from "../../../../../utils/node/beacon.js";
 import {BeaconNode} from "../../../../../../src/node/nodejs.js";
 
 describe("beacon state api", function () {
-  this.timeout("30s");
-
   const restPort = 9596;
   const config = createBeaconConfig(chainConfigDef, Buffer.alloc(32, 0xaa));
   const validatorCount = 512;
@@ -21,7 +19,7 @@ describe("beacon state api", function () {
   let bn: BeaconNode;
   let client: Api["beacon"];
 
-  before(async () => {
+  beforeAll(async () => {
     bn = await getDevBeaconNode({
       params: chainConfigDef,
       options: {
@@ -41,7 +39,7 @@ describe("beacon state api", function () {
     client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).beacon;
   });
 
-  after(async () => {
+  afterAll(async () => {
     await bn.close();
   });
 
@@ -51,28 +49,27 @@ describe("beacon state api", function () {
       ApiError.assert(res);
       const epochCommittees = res.response.data;
 
-      expect(epochCommittees.length).to.be.equal(committeeCount, "Incorrect committee count");
+      expect(epochCommittees).toHaveLength(committeeCount);
 
       const slotCount: Record<string, number> = {};
       const indexCount: Record<string, number> = {};
 
       for (const committee of epochCommittees) {
-        expect(committee.index).to.be.within(0, committeeCount - 1, "Committee index out of range");
-        expect(committee.slot).to.be.within(0, SLOTS_PER_EPOCH - 1, "Committee slot out of range");
-        expect(committee.validators.length).to.be.equal(
+        expect(committee).toBeValidEpochCommittee({
+          committeeCount,
           validatorsPerCommittee,
-          "Incorrect number of validators in committee"
-        );
+          slotsPerEpoch: SLOTS_PER_EPOCH,
+        });
         slotCount[committee.slot] = (slotCount[committee.slot] || 0) + 1;
         indexCount[committee.index] = (indexCount[committee.index] || 0) + 1;
       }
 
       for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
-        expect(slotCount[i]).to.be.equal(committeesPerSlot, `Incorrect number of committees with slot ${i}`);
+        expect(slotCount[i]).toBeWithMessage(committeesPerSlot, `Incorrect number of committees with slot ${i}`);
       }
 
       for (let i = 0; i < committeesPerSlot; i++) {
-        expect(indexCount[i]).to.be.equal(SLOTS_PER_EPOCH, `Incorrect number of committees with index ${i}`);
+        expect(indexCount[i]).toBeWithMessage(SLOTS_PER_EPOCH, `Incorrect number of committees with index ${i}`);
       }
     });
 
@@ -81,9 +78,9 @@ describe("beacon state api", function () {
       const res = await client.getEpochCommittees("head", {index});
       ApiError.assert(res);
       const epochCommittees = res.response.data;
-      expect(epochCommittees.length).to.be.equal(SLOTS_PER_EPOCH, `Incorrect committee count for index ${index}`);
+      expect(epochCommittees).toHaveLength(SLOTS_PER_EPOCH);
       for (const committee of epochCommittees) {
-        expect(committee.index).to.equal(index, "Committee index does not match supplied index");
+        expect(committee.index).toBeWithMessage(index, "Committee index does not match supplied index");
       }
     });
 
@@ -92,9 +89,9 @@ describe("beacon state api", function () {
       const res = await client.getEpochCommittees("head", {slot});
       ApiError.assert(res);
       const epochCommittees = res.response.data;
-      expect(epochCommittees.length).to.be.equal(committeesPerSlot, `Incorrect committee count for slot ${slot}`);
+      expect(epochCommittees).toHaveLength(committeesPerSlot);
       for (const committee of epochCommittees) {
-        expect(committee.slot).to.equal(slot, "Committee slot does not match supplied slot");
+        expect(committee.slot).toBeWithMessage(slot, "Committee slot does not match supplied slot");
       }
     });
   });

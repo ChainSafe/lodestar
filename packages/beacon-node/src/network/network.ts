@@ -1,4 +1,4 @@
-import {PeerId} from "@libp2p/interface-peer-id";
+import {PeerId} from "@libp2p/interface/peer-id";
 import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
 import {BeaconConfig} from "@lodestar/config";
@@ -537,8 +537,12 @@ export class Network implements INetwork {
     return this.networkProcessor.dumpGossipQueue(gossipType);
   }
 
-  async writeNetworkThreadProfile(durationMs?: number, dirpath?: string): Promise<string> {
+  async writeNetworkThreadProfile(durationMs: number, dirpath: string): Promise<string> {
     return this.core.writeNetworkThreadProfile(durationMs, dirpath);
+  }
+
+  async writeDiscv5Profile(durationMs: number, dirpath: string): Promise<string> {
+    return this.core.writeDiscv5Profile(durationMs, dirpath);
   }
 
   private onLightClientFinalityUpdate = async (finalityUpdate: allForks.LightClientFinalityUpdate): Promise<void> => {

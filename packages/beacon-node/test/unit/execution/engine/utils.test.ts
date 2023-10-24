@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {ErrorAborted} from "@lodestar/utils";
 import {FetchError} from "@lodestar/api";
 import {ExecutionPayloadStatus, ExecutionEngineState} from "../../../../src/execution/index.js";
@@ -218,7 +218,7 @@ describe("execution / engine / utils", () => {
     for (const payloadStatus of Object.keys(testCasesPayload) as ExecutionPayloadStatus[]) {
       for (const [oldState, newState] of testCasesPayload[payloadStatus]) {
         it(`should transition from "${oldState}" to "${newState}" on payload status "${payloadStatus}"`, () => {
-          expect(getExecutionEngineState({payloadStatus, oldState})).to.equal(newState);
+          expect(getExecutionEngineState({payloadStatus, oldState})).toBe(newState);
         });
       }
     }
@@ -227,7 +227,7 @@ describe("execution / engine / utils", () => {
       const [message, payloadError, errorCases] = testCase;
       for (const [oldState, newState] of errorCases) {
         it(`should transition from "${oldState}" to "${newState}" on error "${message}"`, () => {
-          expect(getExecutionEngineState({payloadError, oldState})).to.equal(newState);
+          expect(getExecutionEngineState({payloadError, oldState})).toBe(newState);
         });
       }
     }
@@ -235,7 +235,7 @@ describe("execution / engine / utils", () => {
     for (const targetState of Object.keys(testCasesTargetState) as ExecutionEngineState[]) {
       for (const [oldState, newState] of testCasesTargetState[targetState]) {
         it(`should transition from "${oldState}" to "${newState}" on when targeting "${targetState}"`, () => {
-          expect(getExecutionEngineState({targetState, oldState})).to.equal(newState);
+          expect(getExecutionEngineState({targetState, oldState})).toBe(newState);
         });
       }
     }

@@ -33,6 +33,7 @@ export class LinkedList<T> {
   private _length: number;
   private head: Node<T> | null;
   private tail: Node<T> | null;
+  private pointer: Node<T> | null = null;
 
   constructor() {
     this._length = 0;
@@ -114,23 +115,86 @@ export class LinkedList<T> {
     return oldHead.data;
   }
 
+  first(): T | null {
+    return this.head?.data ?? null;
+  }
+
+  last(): T | null {
+    return this.tail?.data ?? null;
+  }
+
+  /**
+   * Delete the first item thats search from head
+   */
+  deleteFirst(item: T): boolean {
+    if (item === this.head?.data) {
+      this.shift();
+      return true;
+    }
+
+    let node = this.head;
+    while (node) {
+      if (node.data === item) {
+        if (node === this.tail) this.tail = node.prev;
+        if (node.prev) node.prev.next = node.next;
+        if (node.next) node.next.prev = node.prev;
+        node.prev = node.next = null;
+        this._length--;
+        return true;
+      }
+      node = node.next;
+    }
+
+    return false;
+  }
+
+  /**
+   * Delete the first item search from tail.
+   */
+  deleteLast(item: T): boolean {
+    if (item === this.tail?.data) {
+      this.pop();
+      return true;
+    }
+
+    let node = this.tail;
+    while (node) {
+      if (node.data === item) {
+        if (node === this.head) this.head = node.next;
+        if (node.prev) node.prev.next = node.next;
+        if (node.next) node.next.prev = node.prev;
+        node.prev = node.next = null;
+        this._length--;
+        return true;
+      }
+      node = node.prev;
+    }
+
+    return false;
+  }
+
+  next(): IteratorResult<T> {
+    if (!this.pointer) {
+      return {done: true, value: undefined};
+    }
+    const value = this.pointer.data;
+    this.pointer = this.pointer.next;
+    return {done: false, value};
+  }
+
+  [Symbol.iterator](): IterableIterator<T> {
+    this.pointer = this.head;
+    return this;
+  }
+
+  values(): IterableIterator<T> {
+    this.pointer = this.head;
+    return this;
+  }
+
   clear(): void {
     this.head = this.tail = null;
     this._length = 0;
-  }
-
-  [Symbol.iterator](): Iterator<T> {
-    let node = this.head;
-    return {
-      next(): IteratorResult<T> {
-        if (!node) {
-          return {done: true, value: undefined};
-        }
-        const value = node.data;
-        node = node.next;
-        return {done: false, value};
-      },
-    };
   }
 
   toArray(): T[] {

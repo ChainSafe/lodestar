@@ -1,4 +1,4 @@
-import varint from "varint";
+import {encode as varintEncode} from "uint8-varint";
 import {encodeSnappy} from "./snappyFrames/compress.js";
 
 /**
@@ -15,7 +15,7 @@ export const writeSszSnappyPayload = encodeSszSnappy as (bytes: Uint8Array) => A
  */
 export async function* encodeSszSnappy(bytes: Buffer): AsyncGenerator<Buffer> {
   // MUST encode the length of the raw SSZ bytes, encoded as an unsigned protobuf varint
-  yield Buffer.from(varint.encode(bytes.length));
+  yield Buffer.from(varintEncode(bytes.length));
 
   // By first computing and writing the SSZ byte length, the SSZ encoder can then directly
   // write the chunk contents to the stream. Snappy writer compresses frame by frame

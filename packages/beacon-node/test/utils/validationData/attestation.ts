@@ -14,12 +14,13 @@ import {IBeaconChain} from "../../../src/chain/index.js";
 import {IStateRegenerator} from "../../../src/chain/regen/index.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../../src/constants/index.js";
 import {SeenAttesters} from "../../../src/chain/seenCache/index.js";
-import {BlsSingleThreadVerifier} from "../../../src/chain/bls/index.js";
+import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier} from "../../../src/chain/bls/index.js";
 import {signCached} from "../cache.js";
 import {ClockStatic} from "../clock.js";
 import {SeenAggregatedAttestations} from "../../../src/chain/seenCache/seenAggregateAndProof.js";
 import {SeenAttestationDatas} from "../../../src/chain/seenCache/seenAttestationData.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
+import {testLogger} from "../logger.js";
 
 export type AttestationValidDataOpts = {
   currentSlot?: Slot;
@@ -28,6 +29,7 @@ export type AttestationValidDataOpts = {
   bitIndex?: number;
   targetRoot?: Uint8Array;
   beaconBlockRoot?: Uint8Array;
+  blsVerifyAllMainThread?: boolean;
   state: ReturnType<typeof generateTestCachedBeaconStateOnlyValidators>;
 };
 
@@ -46,6 +48,7 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
   const bitIndex = opts.bitIndex ?? 0;
   const targetRoot = opts.targetRoot ?? ZERO_HASH;
   const beaconBlockRoot = opts.beaconBlockRoot ?? ZERO_HASH;
+  const blsVerifyAllMainThread = opts.blsVerifyAllMainThread ?? true;
   // Create cached state
   const state = opts.state;
 
@@ -124,7 +127,9 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
     seenAttesters: new SeenAttesters(),
     seenAggregatedAttestations: new SeenAggregatedAttestations(null),
     seenAttestationDatas: new SeenAttestationDatas(null, 0, 0),
-    bls: new BlsSingleThreadVerifier({metrics: null}),
+    bls: blsVerifyAllMainThread
+      ? new BlsSingleThreadVerifier({metrics: null})
+      : new BlsMultiThreadWorkerPool({}, {logger: testLogger(), metrics: null}),
     waitForBlock: () => Promise.resolve(false),
     index2pubkey: state.epochCtx.index2pubkey,
     opts: defaultChainOptions,

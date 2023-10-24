@@ -277,7 +277,8 @@ export function getValidatorApi({
   const produceBlockV2: ServerApi<routes.validator.Api>["produceBlockV2"] = async function produceBlockV2(
     slot,
     randaoReveal,
-    graffiti
+    graffiti,
+    feeRecipient
   ) {
     const source = ProducedBlockSource.engine;
     let timer;
@@ -297,6 +298,7 @@ export function getValidatorApi({
         slot,
         randaoReveal,
         graffiti: toGraffitiBuffer(graffiti || ""),
+        feeRecipient,
       });
       metrics?.blockProductionSuccess.inc({source});
       metrics?.blockProductionNumAggregated.observe({source}, block.body.attestations.length);
@@ -326,7 +328,7 @@ export function getValidatorApi({
     randaoReveal,
     graffiti
   ) {
-    const {data, version, blockValue} = await produceBlockV2(slot, randaoReveal, graffiti);
+    const {data, version, blockValue} = await produceBlockV2(slot, randaoReveal, graffiti, undefined);
     if ((data as BlockContents).block !== undefined) {
       throw Error(`Invalid block contents for produceBlock at fork=${version}`);
     } else {
@@ -814,6 +816,10 @@ export function getValidatorApi({
     },
 
     async registerValidator(registrations) {
+      if (!chain.executionBuilder) {
+        throw Error("Execution builder not enabled");
+      }
+
       // should only send active or pending validator to builder
       // Spec: https://ethereum.github.io/builder-specs/#/Builder/registerValidator
       const headState = chain.getHeadState();
@@ -836,7 +842,12 @@ export function getValidatorApi({
         );
       });
 
-      return chain.executionBuilder?.registerValidator(filteredRegistrations);
+      await chain.executionBuilder.registerValidator(filteredRegistrations);
+
+      logger.debug("Forwarded validator registrations to connected builder", {
+        epoch: currentEpoch,
+        count: filteredRegistrations.length,
+      });
     },
   };
 }

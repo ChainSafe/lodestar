@@ -1,13 +1,12 @@
+import {describe, it, expect, beforeEach} from "vitest";
 import {CoordType, PublicKey, SecretKey, Signature} from "@chainsafe/blst-ts";
-import {expect} from "chai";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {BlsSingleThreadVerifier} from "../../../../src/chain/bls/singleThread.js";
-import {BlsMultiThreadWorkerPool} from "../../../../lib/chain/bls/multithread.js";
+import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/multithread.js";
 import {testLogger} from "../../../utils/logger.js";
 
 describe("BlsVerifier ", function () {
   // take time for creating thread pool
-  this.timeout(60 * 1000);
   const numKeys = 3;
   const secretKeys = Array.from({length: numKeys}, (_, i) => SecretKey.fromKeygen(Buffer.alloc(32, i)));
   const verifiers = [
@@ -33,13 +32,13 @@ describe("BlsVerifier ", function () {
       });
 
       it("should verify all signatures", async () => {
-        expect(await verifier.verifySignatureSets(sets)).to.be.true;
+        expect(await verifier.verifySignatureSets(sets)).toBe(true);
       });
 
       it("should return false if at least one signature is invalid", async () => {
         // signature is valid but not respective to the signing root
         sets[1].signingRoot = Buffer.alloc(32, 10);
-        expect(await verifier.verifySignatureSets(sets)).to.be.false;
+        expect(await verifier.verifySignatureSets(sets)).toBe(false);
       });
 
       it("should return false if at least one signature is malformed", async () => {
@@ -47,7 +46,7 @@ describe("BlsVerifier ", function () {
         const malformedSignature = Buffer.alloc(96, 10);
         expect(() => Signature.deserialize(malformedSignature, CoordType.affine)).to.throws();
         sets[1].signature = malformedSignature;
-        expect(await verifier.verifySignatureSets(sets)).to.be.false;
+        expect(await verifier.verifySignatureSets(sets)).toBe(false);
       });
     });
 
@@ -66,13 +65,13 @@ describe("BlsVerifier ", function () {
       });
 
       it("should verify all signatures", async () => {
-        expect(await verifier.verifySignatureSetsSameMessage(sets, signingRoot)).to.deep.equal([true, true, true]);
+        expect(await verifier.verifySignatureSetsSameMessage(sets, signingRoot)).toEqual([true, true, true]);
       });
 
       it("should return false for invalid signature", async () => {
         // signature is valid but not respective to the signing root
         sets[1].signature = secretKeys[1].sign(Buffer.alloc(32)).serialize();
-        expect(await verifier.verifySignatureSetsSameMessage(sets, signingRoot)).to.be.deep.equal([true, false, true]);
+        expect(await verifier.verifySignatureSetsSameMessage(sets, signingRoot)).toEqual([true, false, true]);
       });
 
       it("should return false for malformed signature", async () => {
@@ -80,7 +79,7 @@ describe("BlsVerifier ", function () {
         const malformedSignature = Buffer.alloc(96, 10);
         expect(() => Signature.deserialize(malformedSignature, CoordType.affine)).to.throws();
         sets[1].signature = malformedSignature;
-        expect(await verifier.verifySignatureSetsSameMessage(sets, signingRoot)).to.be.deep.equal([true, false, true]);
+        expect(await verifier.verifySignatureSetsSameMessage(sets, signingRoot)).toEqual([true, false, true]);
       });
     });
   }

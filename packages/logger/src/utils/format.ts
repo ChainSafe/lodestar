@@ -1,4 +1,5 @@
 import winston from "winston";
+import {isEmptyObject} from "@lodestar/utils";
 import {LoggerOptions, TimestampFormatCode} from "../interface.js";
 import {logCtxToJson, logCtxToString, LogData} from "./json.js";
 import {formatEpochSlotTime} from "./timeFormat.js";
@@ -86,8 +87,8 @@ function humanReadableTemplateFn(_info: {[key: string]: any; level: string; mess
 
   str += `[${infoString}] ${info.level.padStart(infoPad)}: ${info.message}`;
 
-  if (info.context !== undefined) str += " " + logCtxToString(info.context);
-  if (info.error !== undefined) str += " " + logCtxToString(info.error);
+  if (info.context !== undefined && !isEmptyObject(info.context)) str += " " + logCtxToString(info.context);
+  if (info.error !== undefined) str += " - " + logCtxToString(info.error);
 
   return str;
 }

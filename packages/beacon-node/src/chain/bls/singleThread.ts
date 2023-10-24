@@ -28,15 +28,13 @@ export class BlsSingleThreadVerifier implements IBlsVerifier {
     }));
 
     // Count time after aggregating
-    const startNs = process.hrtime.bigint();
-
+    const timer = this.metrics?.bls.mainThread.verificationDuration.startTimer();
     const isValid = verifySignatureSets(setsAggregated);
 
     // Don't use a try/catch, only count run without exceptions
-    const endNs = process.hrtime.bigint();
-    const totalSec = Number(startNs - endNs) / 1e9;
-    this.metrics?.bls.mainThread.durationOnThread.observe(totalSec);
-
+    if (timer) {
+      timer();
+    }
     return isValid;
   }
 
@@ -44,7 +42,7 @@ export class BlsSingleThreadVerifier implements IBlsVerifier {
     sets: {publicKey: PublicKey; signature: Uint8Array}[],
     message: Uint8Array
   ): Promise<boolean[]> {
-    const startNs = process.hrtime.bigint();
+    const timer = this.metrics?.bls.mainThread.verificationDuration.startTimer();
     const pubkey = aggregatePublicKeys(sets.map((set) => set.publicKey));
     let isAllValid = true;
     // validate signature = true
@@ -76,9 +74,9 @@ export class BlsSingleThreadVerifier implements IBlsVerifier {
       });
     }
 
-    const endNs = process.hrtime.bigint();
-    const totalSec = Number(startNs - endNs) / 1e9;
-    this.metrics?.bls.mainThread.durationOnThread.observe(totalSec);
+    if (timer) {
+      timer();
+    }
 
     return result;
   }

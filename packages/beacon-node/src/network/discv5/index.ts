@@ -1,5 +1,5 @@
 import EventEmitter from "events";
-import {PeerId} from "@libp2p/interface-peer-id";
+import {PeerId} from "@libp2p/interface/peer-id";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {exportToProtobuf} from "@libp2p/peer-id-factory";
 import {createKeypairFromPeerId, ENR, ENRData, IKeypair, SignableENR} from "@chainsafe/discv5";
@@ -101,6 +101,10 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
 
   scrapeMetrics(): Promise<string> {
     return this.workerApi.scrapeMetrics();
+  }
+
+  async writeProfile(durationMs: number, dirpath: string): Promise<string> {
+    return this.workerApi.writeProfile(durationMs, dirpath);
   }
 
   private decodeEnrs(objs: ENRData[]): ENR[] {

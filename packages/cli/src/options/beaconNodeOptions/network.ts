@@ -3,7 +3,7 @@ import {ENR} from "@chainsafe/discv5";
 import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {CliCommandOptions, YargsError} from "../../util/index.js";
 
-const defaultListenAddress = "0.0.0.0";
+export const defaultListenAddress = "0.0.0.0";
 export const defaultP2pPort = 9000;
 export const defaultP2pPort6 = 9090;
 
@@ -26,6 +26,7 @@ export type NetworkArgs = {
   "network.connectToDiscv5Bootnodes"?: boolean;
   "network.discv5FirstQueryDelayMs"?: number;
   "network.dontSendGossipAttestationsToForkchoice"?: boolean;
+  "network.beaconAttestationBatchValidation"?: boolean;
   "network.allowPublishToZeroPeers"?: boolean;
   "network.gossipsubD"?: number;
   "network.gossipsubDLow"?: number;
@@ -34,6 +35,7 @@ export type NetworkArgs = {
   "network.rateLimitMultiplier"?: number;
   "network.maxGossipTopicConcurrency"?: number;
   "network.useWorker"?: boolean;
+  "network.maxYoungGenerationSizeMb"?: number;
 
   /** @deprecated This option is deprecated and should be removed in next major release. */
   "network.requestCountPeerLimit"?: number;
@@ -142,6 +144,7 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     connectToDiscv5Bootnodes: args["network.connectToDiscv5Bootnodes"],
     discv5FirstQueryDelayMs: args["network.discv5FirstQueryDelayMs"],
     dontSendGossipAttestationsToForkchoice: args["network.dontSendGossipAttestationsToForkchoice"],
+    beaconAttestationBatchValidation: args["network.beaconAttestationBatchValidation"],
     allowPublishToZeroPeers: args["network.allowPublishToZeroPeers"],
     gossipsubD: args["network.gossipsubD"],
     gossipsubDLow: args["network.gossipsubDLow"],
@@ -151,6 +154,7 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     rateLimitMultiplier: args["network.rateLimitMultiplier"],
     maxGossipTopicConcurrency: args["network.maxGossipTopicConcurrency"],
     useWorker: args["network.useWorker"],
+    maxYoungGenerationSizeMb: args["network.maxYoungGenerationSizeMb"],
   };
 }
 
@@ -323,6 +327,13 @@ export const options: CliCommandOptions<NetworkArgs> = {
     group: "network",
   },
 
+  "network.beaconAttestationBatchValidation": {
+    hidden: true,
+    type: "boolean",
+    description: "Validate gossip attestations in batches",
+    group: "network",
+  },
+
   "network.allowPublishToZeroPeers": {
     hidden: true,
     type: "boolean",
@@ -375,5 +386,13 @@ export const options: CliCommandOptions<NetworkArgs> = {
     type: "boolean",
     hidden: true,
     group: "network",
+  },
+
+  "network.maxYoungGenerationSizeMb": {
+    type: "number",
+    hidden: true,
+    group: "network",
+    description: "Max size of young generation in megabytes. Defaults to 152mb",
+    defaultDescription: String(defaultOptions.network.maxYoungGenerationSizeMb),
   },
 };

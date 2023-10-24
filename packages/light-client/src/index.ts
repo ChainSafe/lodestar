@@ -18,7 +18,7 @@ import {LightClientTransport} from "./transport/interface.js";
 
 // Re-export types
 export {LightclientEvent} from "./events.js";
-export {SyncCommitteeFast} from "./types.js";
+export type {SyncCommitteeFast} from "./types.js";
 export {upgradeLightClientFinalityUpdate, upgradeLightClientOptimisticUpdate} from "./spec/utils.js";
 
 export type GenesisData = {
@@ -242,6 +242,13 @@ export class Lightclient {
           await new Promise((r) => setTimeout(r, ON_ERROR_RETRY_MS));
           continue;
         }
+      }
+
+      // After successfully syncing, track head if not already
+      if (this.runStatus.code !== RunStatusCode.started) {
+        const controller = new AbortController();
+        this.updateRunStatus({code: RunStatusCode.started, controller});
+        this.logger.debug("Started tracking the head");
 
         // Fetch latest optimistic head to prevent a potential 12 seconds lag between syncing and getting the first head,
         // Don't retry, this is a non-critical UX improvement
@@ -251,13 +258,6 @@ export class Lightclient {
         } catch (e) {
           this.logger.error("Error fetching getLatestHeadUpdate", {currentPeriod}, e as Error);
         }
-      }
-
-      // After successfully syncing, track head if not already
-      if (this.runStatus.code !== RunStatusCode.started) {
-        const controller = new AbortController();
-        this.updateRunStatus({code: RunStatusCode.started, controller});
-        this.logger.debug("Started tracking the head");
 
         this.transport.onOptimisticUpdate(this.processOptimisticUpdate.bind(this));
         this.transport.onFinalityUpdate(this.processFinalizedUpdate.bind(this));

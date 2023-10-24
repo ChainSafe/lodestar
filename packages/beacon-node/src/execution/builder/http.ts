@@ -84,7 +84,10 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
   }
 
   async registerValidator(registrations: bellatrix.SignedValidatorRegistrationV1[]): Promise<void> {
-    ApiError.assert(await this.api.registerValidator(registrations));
+    ApiError.assert(
+      await this.api.registerValidator(registrations),
+      "Failed to forward validator registrations to connected builder"
+    );
   }
 
   async getHeader(

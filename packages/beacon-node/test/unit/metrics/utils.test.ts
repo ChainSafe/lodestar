@@ -1,5 +1,5 @@
-import {expect} from "chai";
 import {Gauge, Registry} from "prom-client";
+import {describe, it, expect} from "vitest";
 import {GaugeExtra} from "../../../src/metrics/utils/gauge.js";
 
 type MetricValue = {
@@ -26,7 +26,7 @@ describe("Metrics Gauge collect fn", () => {
       registers: [register],
     });
 
-    expect(await getMetric(register)).to.deep.equal([{value: 0, labels: {}}]);
+    expect(await getMetric(register)).toEqual([{value: 0, labels: {}}]);
   });
 
   it("Use collect function in constructor", async () => {
@@ -41,7 +41,7 @@ describe("Metrics Gauge collect fn", () => {
       },
     });
 
-    expect(await getMetric(register)).to.deep.equal([{value: num, labels: {}}]);
+    expect(await getMetric(register)).toEqual([{value: num, labels: {}}]);
   });
 
   it("Override collect function", async () => {
@@ -57,7 +57,7 @@ describe("Metrics Gauge collect fn", () => {
       this.set(num);
     };
 
-    expect(await getMetric(register)).to.deep.equal([{value: num, labels: {}}]);
+    expect(await getMetric(register)).toEqual([{value: num, labels: {}}]);
   });
 
   it("Override collect function with GaugeCollectable", async () => {
@@ -71,6 +71,6 @@ describe("Metrics Gauge collect fn", () => {
 
     gauge.addCollect((g) => g.set(num));
 
-    expect(await getMetric(register)).to.deep.equal([{value: num, labels: {}}]);
+    expect(await getMetric(register)).toEqual([{value: num, labels: {}}]);
   });
 });

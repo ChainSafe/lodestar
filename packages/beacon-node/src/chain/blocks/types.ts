@@ -47,7 +47,6 @@ type BlockInputCacheType = {
 };
 
 const MAX_GOSSIPINPUT_CACHE = 5;
-// TODO deneb: export from types package
 // ssz.deneb.BlobSidecars.elementType.fixedSize;
 const BLOBSIDECAR_FIXED_SIZE = 131256;
 

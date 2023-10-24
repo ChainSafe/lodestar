@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
-import type {PeerId} from "@libp2p/interface-peer-id";
+import type {PeerId} from "@libp2p/interface/peer-id";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {Multiaddr} from "@multiformats/multiaddr";
 import {createKeypairFromPeerId, SignableENR} from "@chainsafe/discv5";
@@ -53,14 +53,35 @@ export function isLocalMultiAddr(multiaddr: Multiaddr | undefined): boolean {
   return false;
 }
 
-export function overwriteEnrWithCliArgs(enr: SignableENR, args: BeaconArgs, logger: Logger): void {
+/**
+ * Only update the enr if the value has changed
+ */
+function maybeUpdateEnr<T extends "ip" | "tcp" | "udp" | "ip6" | "tcp6" | "udp6">(
+  enr: SignableENR,
+  key: T,
+  value: SignableENR[T] | undefined
+): void {
+  if (enr[key] !== value) {
+    enr[key] = value;
+  }
+}
+
+export function overwriteEnrWithCliArgs(
+  enr: SignableENR,
+  args: BeaconArgs,
+  logger: Logger,
+  opts?: {newEnr?: boolean; bootnode?: boolean}
+): void {
+  const preSeq = enr.seq;
   const {port, discoveryPort, port6, discoveryPort6} = parseListenArgs(args);
-  enr.ip = args["enr.ip"] ?? enr.ip;
-  enr.tcp = args["enr.tcp"] ?? port ?? enr.tcp;
-  enr.udp = args["enr.udp"] ?? discoveryPort ?? enr.udp;
-  enr.ip6 = args["enr.ip6"] ?? enr.ip6;
-  enr.tcp6 = args["enr.tcp6"] ?? port6 ?? enr.tcp6;
-  enr.udp6 = args["enr.udp6"] ?? discoveryPort6 ?? enr.udp6;
+  maybeUpdateEnr(enr, "ip", args["enr.ip"] ?? enr.ip);
+  maybeUpdateEnr(enr, "ip6", args["enr.ip6"] ?? enr.ip6);
+  maybeUpdateEnr(enr, "udp", args["enr.udp"] ?? discoveryPort ?? enr.udp);
+  maybeUpdateEnr(enr, "udp6", args["enr.udp6"] ?? discoveryPort6 ?? enr.udp6);
+  if (!opts?.bootnode) {
+    maybeUpdateEnr(enr, "tcp", args["enr.tcp"] ?? port ?? enr.tcp);
+    maybeUpdateEnr(enr, "tcp6", args["enr.tcp6"] ?? port6 ?? enr.tcp6);
+  }
 
   function testMultiaddrForLocal(mu: Multiaddr, ip4: boolean): void {
     const isLocal = isLocalMultiAddr(mu);
@@ -93,6 +114,19 @@ export function overwriteEnrWithCliArgs(enr: SignableENR, args: BeaconArgs, logg
   if (udpMultiaddr6) {
     testMultiaddrForLocal(udpMultiaddr6, false);
   }
+
+  if (enr.seq !== preSeq) {
+    // If the enr is newly created, its sequence number can be set to 1
+    // It's especially clean for fully configured bootnodes whose enrs never change
+    // Otherwise, we can increment the sequence number as little as possible
+    if (opts?.newEnr) {
+      enr.seq = BigInt(1);
+    } else {
+      enr.seq = preSeq + BigInt(1);
+    }
+    // invalidate cached signature
+    delete enr["_signature"];
+  }
 }
 
 /**
@@ -101,7 +135,8 @@ export function overwriteEnrWithCliArgs(enr: SignableENR, args: BeaconArgs, logg
 export async function initPeerIdAndEnr(
   args: BeaconArgs,
   beaconDir: string,
-  logger: Logger
+  logger: Logger,
+  bootnode?: boolean
 ): Promise<{peerId: PeerId; enr: SignableENR}> {
   const {persistNetworkIdentity} = args;
 
@@ -114,7 +149,7 @@ export async function initPeerIdAndEnr(
   const readPersistedPeerIdAndENR = async (
     peerIdFile: string,
     enrFile: string
-  ): Promise<{peerId: PeerId; enr: SignableENR}> => {
+  ): Promise<{peerId: PeerId; enr: SignableENR; newEnr: boolean}> => {
     let peerId: PeerId;
     let enr: SignableENR;
 
@@ -123,7 +158,7 @@ export async function initPeerIdAndEnr(
       peerId = await readPeerId(peerIdFile);
     } catch (e) {
       logger.warn("Unable to read peerIdFile, creating a new peer id");
-      return newPeerIdAndENR();
+      return {...(await newPeerIdAndENR()), newEnr: true};
     }
     // attempt to read stored enr
     try {
@@ -131,29 +166,29 @@ export async function initPeerIdAndEnr(
     } catch (e) {
       logger.warn("Unable to decode stored local ENR, creating a new ENR");
       enr = SignableENR.createV4(createKeypairFromPeerId(peerId));
-      return {peerId, enr};
+      return {peerId, enr, newEnr: true};
     }
     // check stored peer id against stored enr
     if (!peerId.equals(await enr.peerId())) {
       logger.warn("Stored local ENR doesn't match peerIdFile, creating a new ENR");
       enr = SignableENR.createV4(createKeypairFromPeerId(peerId));
-      return {peerId, enr};
+      return {peerId, enr, newEnr: true};
     }
-    return {peerId, enr};
+    return {peerId, enr, newEnr: false};
   };
 
   if (persistNetworkIdentity) {
     const enrFile = path.join(beaconDir, "enr");
     const peerIdFile = path.join(beaconDir, "peer-id.json");
-    const {peerId, enr} = await readPersistedPeerIdAndENR(peerIdFile, enrFile);
-    overwriteEnrWithCliArgs(enr, args, logger);
+    const {peerId, enr, newEnr} = await readPersistedPeerIdAndENR(peerIdFile, enrFile);
+    overwriteEnrWithCliArgs(enr, args, logger, {newEnr, bootnode});
     // Re-persist peer-id and enr
     writeFile600Perm(peerIdFile, exportToJSON(peerId));
     writeFile600Perm(enrFile, enr.encodeTxt());
     return {peerId, enr};
   } else {
     const {peerId, enr} = await newPeerIdAndENR();
-    overwriteEnrWithCliArgs(enr, args, logger);
+    overwriteEnrWithCliArgs(enr, args, logger, {newEnr: true, bootnode});
     return {peerId, enr};
   }
 }

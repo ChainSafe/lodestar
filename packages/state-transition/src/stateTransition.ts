@@ -43,7 +43,7 @@ export function stateTransition(
   state: CachedBeaconStateAllForks,
   signedBlock: allForks.FullOrBlindedSignedBeaconBlock,
   options: StateTransitionOpts = {
-    // TODO DENEB: Review what default values make sense
+    // Assume default to be valid and available
     executionPayloadStatus: ExecutionPayloadStatus.valid,
     dataAvailableStatus: DataAvailableStatus.available,
   },

@@ -78,7 +78,7 @@ Run a local beacon with `--metrics` enabled. Then start Prometheus + Grafana wit
 Unsure where to begin contributing to Lodestar? Here are some ideas!
 
 - :pencil2: See any typos? See any verbiage that should be changed or updated? Go for it! Github makes it easy to make contributions right from the browser.
-- :mag_right: Look through our [outstanding unassigned issues](https://github.com/ChainSafe/lodestar/issues?q=is%3Aopen+is%3Aissue+no%3Aassignee). (Hint: look for issues labeled `meta-good-first-issue` or `meta-help-wanted`!)
+- :mag_right: Look through our [outstanding unassigned issues](https://github.com/ChainSafe/lodestar/issues?q=is%3Aopen+is%3Aissue+no%3Aassignee). (Hint: look for issues labeled `good first issue` or `help-wanted`!)
 - :speech_balloon: Join our [Discord chat](https://discord.gg/aMxzVcr)!
   [![Discord](https://img.shields.io/discord/593655374469660673.svg?label=Discord&logo=discord)](https://discord.gg/aMxzVcr)
 
@@ -151,9 +151,14 @@ We're currently experimenting with hosting the majority of lodestar packages and
   - run `yarn test:unit` from the command line
 - Commenting: If your code does something that is not obvious or deviates from standards, leave a comment for other developers to explain your logic and reasoning.
   - Use `//` commenting format unless it's a comment you want people to see in their IDE.
-  - Use `/** **/` commenting format for documenting a function/variable.
+  - Use `/** */` commenting format for documenting a function/variable.
 - Code white space can be helpful for reading complex code, please add some.
 - For unit tests, we forbid import stubbing when other approaches are feasible.
+- Metrics are a [critical part of Lodestar](https://www.youtube.com/watch?v=49_qQDbLjGU), every large feature should be documented with metrics
+  - Metrics need to follow the [Prometheus Best Practices](https://prometheus.io/docs/practices/naming/)
+  - For metric names, make sure to add the unit as suffix, e.g. `_seconds` or `_bytes`
+  - Metric code variables on the other hand should not be suffixed, i.e. `Sec`-suffix should be omitted
+  - Time-based metrics must use seconds as the unit
 
 ## Tests style guide
 

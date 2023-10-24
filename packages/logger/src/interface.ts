@@ -1,5 +1,9 @@
+// eslint-disable-next-line import/no-extraneous-dependencies
+import {LEVEL, MESSAGE} from "triple-beam";
 import {LogLevel, Logger, LogHandler, LogData} from "@lodestar/utils";
-export {LogLevel, Logger, LogHandler, LogData};
+
+export {LogLevel, LEVEL, MESSAGE};
+export type {Logger, LogHandler, LogData};
 
 export const logLevelNum: {[K in LogLevel]: number} = {
   [LogLevel.error]: 0,
@@ -23,9 +27,9 @@ export type EpochSlotOpts = {
   slotsPerEpoch: number;
 };
 export enum TimestampFormatCode {
-  DateRegular,
-  Hidden,
-  EpochSlot,
+  DateRegular = "regular",
+  Hidden = "hidden",
+  EpochSlot = "epoch",
 }
 export type TimestampFormat =
   | {format: TimestampFormatCode.DateRegular}
@@ -37,4 +41,10 @@ export interface LoggerOptions {
   module?: string;
   format?: LogFormat;
   timestampFormat?: TimestampFormat;
+}
+
+export interface WinstonLogInfo {
+  module: string;
+  [LEVEL]: LogLevel;
+  [MESSAGE]: string;
 }

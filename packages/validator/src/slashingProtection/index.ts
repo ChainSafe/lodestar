@@ -1,5 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
-import {BLSPubkey, Root} from "@lodestar/types";
+import {BLSPubkey, Epoch, Root} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {LodestarValidatorDatabaseController} from "../types.js";
 import {uniqueVectorArr} from "../slashingProtection/utils.js";
@@ -22,8 +22,9 @@ import {SlashingProtectionBlock, SlashingProtectionAttestation} from "./types.js
 
 export {InvalidAttestationError, InvalidAttestationErrorCode} from "./attestation/index.js";
 export {InvalidBlockError, InvalidBlockErrorCode} from "./block/index.js";
-export {InterchangeError, InterchangeErrorErrorCode, Interchange, InterchangeFormat} from "./interchange/index.js";
-export {ISlashingProtection, InterchangeFormatVersion, SlashingProtectionBlock, SlashingProtectionAttestation};
+export {InterchangeError, InterchangeErrorErrorCode} from "./interchange/index.js";
+export type {Interchange, InterchangeFormat} from "./interchange/index.js";
+export type {ISlashingProtection, InterchangeFormatVersion, SlashingProtectionBlock, SlashingProtectionAttestation};
 /**
  * Handles slashing protection for validator proposer and attester duties as well as slashing protection
  * during a validator interchange import/export process.
@@ -53,6 +54,10 @@ export class SlashingProtection implements ISlashingProtection {
 
   async checkAndInsertAttestation(pubKey: BLSPubkey, attestation: SlashingProtectionAttestation): Promise<void> {
     await this.attestationService.checkAndInsertAttestation(pubKey, attestation);
+  }
+
+  async hasAttestedInEpoch(pubKey: BLSPubkey, epoch: Epoch): Promise<boolean> {
+    return (await this.attestationService.getAttestationForEpoch(pubKey, epoch)) !== null;
   }
 
   async importInterchange(interchange: Interchange, genesisValidatorsRoot: Root, logger?: Logger): Promise<void> {

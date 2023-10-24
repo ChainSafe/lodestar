@@ -49,7 +49,7 @@ export class StatesArchiver {
     const lastStoredEpoch = computeEpochAtSlot(lastStoredSlot ?? 0);
     const {archiveStateEpochFrequency} = this.opts;
 
-    if (finalized.epoch - lastStoredEpoch > Math.min(PERSIST_TEMP_STATE_EVERY_EPOCHS, archiveStateEpochFrequency)) {
+    if (finalized.epoch - lastStoredEpoch >= Math.min(PERSIST_TEMP_STATE_EVERY_EPOCHS, archiveStateEpochFrequency)) {
       await this.archiveState(finalized);
 
       // Only check the current and previous intervals

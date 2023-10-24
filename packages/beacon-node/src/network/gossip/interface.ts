@@ -1,5 +1,5 @@
 import {Libp2p} from "libp2p";
-import {Message, TopicValidatorResult} from "@libp2p/interface-pubsub";
+import {Message, TopicValidatorResult} from "@libp2p/interface/pubsub";
 import {PeerIdStr} from "@chainsafe/libp2p-gossipsub/types";
 import {ForkName} from "@lodestar/params";
 import {allForks, altair, capella, deneb, phase0, Slot} from "@lodestar/types";
@@ -7,6 +7,8 @@ import {BeaconConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
+import {AttestationError, AttestationErrorType} from "../../chain/errors/attestationError.js";
+import {GossipActionError} from "../../chain/errors/gossipValidation.js";
 
 export enum GossipType {
   beacon_block = "beacon_block",
@@ -124,13 +126,18 @@ export type GossipModules = {
  *
  * js-libp2p-gossipsub expects validation functions that look like this
  */
-export type GossipValidatorFn = (
-  topic: GossipTopic,
-  msg: Message,
-  propagationSource: PeerIdStr,
-  seenTimestampSec: number,
-  msgSlot: Slot | null
-) => Promise<TopicValidatorResult>;
+export type GossipMessageInfo = {
+  topic: GossipTopic;
+  msg: Message;
+  propagationSource: PeerIdStr;
+  seenTimestampSec: number;
+  msgSlot: Slot | null;
+  indexed?: string;
+};
+
+export type GossipValidatorFn = (messageInfo: GossipMessageInfo) => Promise<TopicValidatorResult>;
+
+export type GossipValidatorBatchFn = (messageInfos: GossipMessageInfo[]) => Promise<TopicValidatorResult[]>;
 
 export type ValidatorFnsByType = {[K in GossipType]: GossipValidatorFn};
 
@@ -141,22 +148,45 @@ export type GossipJobQueues = {
 export type GossipData = {
   serializedData: Uint8Array;
   msgSlot?: Slot | null;
+  indexed?: string;
 };
 
-export type GossipHandlerFn = (
-  gossipData: GossipData,
-  topic: GossipTopicMap[GossipType],
-  peerIdStr: string,
-  seenTimestampSec: number
-) => Promise<void>;
+export type GossipHandlerParam = {
+  gossipData: GossipData;
+  topic: GossipTopicMap[GossipType];
+  peerIdStr: string;
+  seenTimestampSec: number;
+};
+
+export type GossipHandlerFn = (gossipHandlerParam: GossipHandlerParam) => Promise<void>;
+
+export type BatchGossipHandlerFn = (gossipHandlerParam: GossipHandlerParam[]) => Promise<(null | AttestationError)[]>;
+
+export type GossipHandlerParamGeneric<T extends GossipType> = {
+  gossipData: GossipData;
+  topic: GossipTopicMap[T];
+  peerIdStr: string;
+  seenTimestampSec: number;
+};
 
 export type GossipHandlers = {
-  [K in GossipType]: (
-    gossipData: GossipData,
-    topic: GossipTopicMap[K],
-    peerIdStr: string,
-    seenTimestampSec: number
-  ) => Promise<void>;
+  [K in GossipType]: DefaultGossipHandler<K> | BatchGossipHandler<K>;
+};
+
+export type DefaultGossipHandler<K extends GossipType> = (
+  gossipHandlerParam: GossipHandlerParamGeneric<K>
+) => Promise<void>;
+
+export type DefaultGossipHandlers = {
+  [K in GossipType]: DefaultGossipHandler<K>;
+};
+
+export type BatchGossipHandler<K extends GossipType> = (
+  gossipHandlerParams: GossipHandlerParamGeneric<K>[]
+) => Promise<(null | GossipActionError<AttestationErrorType>)[]>;
+
+export type BatchGossipHandlers = {
+  [K in GossipType]?: BatchGossipHandler<K>;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

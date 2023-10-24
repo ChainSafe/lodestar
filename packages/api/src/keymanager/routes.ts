@@ -1,5 +1,5 @@
 import {ContainerType} from "@chainsafe/ssz";
-import {ssz, stringType} from "@lodestar/types";
+import {Epoch, phase0, ssz, stringType} from "@lodestar/types";
 import {ApiClientResponse} from "../interfaces.js";
 import {HttpStatusCode} from "../utils/client/httpStatusCode.js";
 import {
@@ -223,6 +223,27 @@ export type Api = {
       HttpStatusCode.UNAUTHORIZED | HttpStatusCode.FORBIDDEN | HttpStatusCode.NOT_FOUND
     >
   >;
+
+  /**
+   * Create a signed voluntary exit message for an active validator, identified by a public key known to the validator
+   * client. This endpoint returns a `SignedVoluntaryExit` object, which can be used to initiate voluntary exit via the
+   * beacon node's [submitPoolVoluntaryExit](https://ethereum.github.io/beacon-APIs/#/Beacon/submitPoolVoluntaryExit) endpoint.
+   *
+   * @param pubkey Public key of an active validator known to the validator client
+   * @param epoch Minimum epoch for processing exit. Defaults to the current epoch if not set
+   * @returns Signed voluntary exit message
+   *
+   * https://github.com/ethereum/keymanager-APIs/blob/7105e749e11dd78032ea275cc09bf62ecd548fca/keymanager-oapi.yaml
+   */
+  signVoluntaryExit(
+    pubkey: PubkeyHex,
+    epoch?: Epoch
+  ): Promise<
+    ApiClientResponse<
+      {[HttpStatusCode.OK]: {data: phase0.SignedVoluntaryExit}},
+      HttpStatusCode.UNAUTHORIZED | HttpStatusCode.FORBIDDEN | HttpStatusCode.NOT_FOUND
+    >
+  >;
 };
 
 export const routesData: RoutesData<Api> = {
@@ -241,6 +262,8 @@ export const routesData: RoutesData<Api> = {
   getGasLimit: {url: "/eth/v1/validator/{pubkey}/gas_limit", method: "GET"},
   setGasLimit: {url: "/eth/v1/validator/{pubkey}/gas_limit", method: "POST", statusOk: 202},
   deleteGasLimit: {url: "/eth/v1/validator/{pubkey}/gas_limit", method: "DELETE", statusOk: 204},
+
+  signVoluntaryExit: {url: "/eth/v1/validator/{pubkey}/voluntary_exit", method: "POST"},
 };
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -271,6 +294,8 @@ export type ReqTypes = {
   getGasLimit: {params: {pubkey: string}};
   setGasLimit: {params: {pubkey: string}; body: {gas_limit: string}};
   deleteGasLimit: {params: {pubkey: string}};
+
+  signVoluntaryExit: {params: {pubkey: string}; query: {epoch?: number}};
 };
 
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
@@ -344,6 +369,14 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
         params: {pubkey: Schema.StringRequired},
       },
     },
+    signVoluntaryExit: {
+      writeReq: (pubkey, epoch) => ({params: {pubkey}, query: epoch !== undefined ? {epoch} : {}}),
+      parseReq: ({params: {pubkey}, query: {epoch}}) => [pubkey, epoch],
+      schema: {
+        params: {pubkey: Schema.StringRequired},
+        query: {epoch: Schema.Uint},
+      },
+    },
   };
 }
 
@@ -367,6 +400,7 @@ export function getReturnTypes(): ReturnTypes<Api> {
         {jsonCase: "eth2"}
       )
     ),
+    signVoluntaryExit: ContainerData(ssz.phase0.SignedVoluntaryExit),
   };
 }
 

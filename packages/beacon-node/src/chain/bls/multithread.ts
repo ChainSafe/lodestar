@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/strict-boolean-expressions */
+import path from "node:path";
 import {spawn, Worker} from "@chainsafe/threads";
 // `threads` library creates self global variable which breaks `timeout-abort-controller` https://github.com/jacobheun/timeout-abort-controller/issues/9
 // Don't add an eslint disable here as a reminder that this has to be fixed eventually
@@ -34,6 +35,9 @@ import {
   WorkResultError,
 } from "./types.js";
 
+// Worker constructor consider the path relative to the current working directory
+const workerDir = process.env.NODE_ENV === "test" ? "../../../../lib/chain/bls/multithread" : "./";
+
 export type BlsMultiThreadWorkerPoolModules = {
   logger: Logger;
   metrics: Metrics | null;
@@ -43,6 +47,9 @@ export type BlsMultiThreadWorkerPoolOptions = {
   blsVerifyAllInQueue?: boolean;
   blsPoolType?: BlsPoolType;
 };
+
+// 1 worker for the main thread
+let blsPoolSize = Math.max(defaultPoolSize - 1, 1);
 
 /**
  * Split big signature sets into smaller sets so they can be sent to multiple workers.
@@ -137,17 +144,16 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     this.metrics = metrics;
     this.blsVerifyAllInQueue = options.blsVerifyAllInQueue ?? false;
     this.blsPoolType = options.blsPoolType ?? BlsPoolType.workers;
-    this.logger.info(`Starting BLS with blsPoolType: ${this.blsPoolType}`);
-    if (this.blsPoolType === BlsPoolType.libuv) {
-      this.logger.info(`BLS libuv pool size: ${process.env.UV_THREADPOOL_SIZE ?? 4}`);
-    }
 
-    // Use compressed for herumi for now.
-    // THe worker is not able to deserialize from uncompressed
-    // `Error: err _wrapDeserialize`
+    this.logger.info(`Starting BLS with blsPoolType: ${this.blsPoolType}`);
     if (this.blsPoolType === BlsPoolType.workers) {
-      this.workers = this.createWorkers(defaultPoolSize);
+      // Herumi implementation no longer supported
+      this.workers = this.createWorkers(blsPoolSize);
       this.logger.info(`BLS worker pool size: ${this.workers.length}`);
+    } else {
+      const uvThreadPoolSize = Number(process.env.UV_THREADPOOL_SIZE);
+      blsPoolSize = isNaN(uvThreadPoolSize) ? 4 : uvThreadPoolSize;
+      this.logger.info(`BLS libuv pool size: ${blsPoolSize}`);
     }
 
     if (metrics) {
@@ -163,7 +169,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       return true;
     }
     return (
-      this.workersBusy < defaultPoolSize &&
+      this.workersBusy < blsPoolSize &&
       // TODO: Should also bound the jobs queue?
       this.jobsForNextRun.length < MAX_JOBS_CAN_ACCEPT_WORK
     );
@@ -179,11 +185,11 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       this.metrics?.bls.batchableSigSets.inc(sets.length);
     }
     if (opts.verifyOnMainThread) {
-      this.metrics?.bls.mainThreadSigSets.inc(sets.length);
+      this.metrics?.bls.mainThread.sigSets.inc(sets.length);
     }
 
     if (opts.verifyOnMainThread && !this.blsVerifyAllInQueue) {
-      const timer = this.metrics?.bls.mainThread.durationOnThread.startTimer();
+      const timer = this.metrics?.bls.mainThread.verificationDuration.startTimer();
       try {
         // TODO: (matthewkeil) should the block still be on main thread or should this be
         //       the async version?
@@ -287,7 +293,11 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
 
     for (let i = 0; i < poolSize; i++) {
       const workerData: WorkerData = {workerId: i};
-      const worker = new Worker("./worker.js", {workerData} as ConstructorParameters<typeof Worker>[1]);
+      // (matthewkeil) double check this from merge
+      // const workerData: WorkerData = {implementation, workerId: i};
+      const worker = new Worker(path.join(workerDir, "worker.js"), {
+        workerData,
+      } as ConstructorParameters<typeof Worker>[1]);
 
       const workerDescriptor: WorkerDescriptor = {
         worker,
@@ -460,6 +470,15 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
 
     this.metrics?.bls.aggregatedPubkeys.inc(job.sets.length);
     const publicKey = aggregatePublicKeys(job.sets.map((set) => set.publicKey));
+
+    // validate signature = true, this is slow code on main thread so should only run with network thread mode (useWorker=true)
+    // For a node subscribing to all subnets, with 1 signature per validator per epoch it takes around 80s
+    // to deserialize 750_000 signatures per epoch
+    // cpu profile on main thread has 250s idle so this only works until we reach 3M validators
+    // However, for normal node with only 2 to 7 subnet subscriptions per epoch this works until 27M validators
+    // and not a problem in the near future
+    // this is monitored on v1.11.0 https://github.com/ChainSafe/lodestar/pull/5912#issuecomment-1700320307
+    const timer = this.metrics?.bls.mainThread.signatureDeserializationDuration.startTimer();
     const signature = aggregateSignatures(
       job.sets.map((set) => {
         const sig = Signature.deserialize(set.signature, CoordType.affine);
@@ -467,6 +486,8 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
         return sig;
       })
     );
+    if (timer) timer();
+
     return {
       opts: job.opts,
       sets: [
@@ -536,10 +557,13 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       // If the job, metrics or any code below throws: the job will reject never going stale.
       // Only downside is the the job promise may be resolved twice, but that's not an issue
 
-      const jobStartNs = process.hrtime.bigint();
+      const [jobStartSec, jobStartNs] = process.hrtime();
       const workResult = await runWorkRequests(workReqs);
-      const jobEndNs = process.hrtime.bigint();
-      const {workerId, batchRetries, batchSigsSuccess, workStartNs, workEndNs, results} = workResult;
+      const [jobEndSec, jobEndNs] = process.hrtime();
+      const {workerId, batchRetries, batchSigsSuccess, workerStartTime, workerEndTime, results} = workResult;
+
+      const [workerStartSec, workerStartNs] = workerStartTime;
+      const [workerEndSec, workerEndNs] = workerEndTime;
 
       let successCount = 0;
       let errorCount = 0;
@@ -581,9 +605,9 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
         }
       }
 
-      const workerJobTimeSec = Number(workEndNs - workStartNs) / 1e9;
-      const latencyToWorkerSec = Number(workStartNs - jobStartNs) / 1e9;
-      const latencyFromWorkerSec = Number(jobEndNs - workEndNs) / 1e9;
+      const workerJobTimeSec = workerEndSec - workerStartSec + (workerEndNs - workerStartNs) / 1e9;
+      const latencyToWorkerSec = workerStartSec - jobStartSec + (workerStartNs - jobStartNs) / 1e9;
+      const latencyFromWorkerSec = jobEndSec - workerEndSec + Number(jobEndNs - workerEndNs) / 1e9;
 
       this.metrics?.bls.threadPool.timePerSigSet.observe(workerJobTimeSec / startedSigSets);
       this.metrics?.bls.threadPool.successJobsSignatureSetsCount.inc(successCount);

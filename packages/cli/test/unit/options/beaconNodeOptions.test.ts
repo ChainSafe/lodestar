@@ -2,6 +2,7 @@ import fs from "node:fs";
 import {expect} from "chai";
 import {IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {RecursivePartial} from "@lodestar/utils";
+import {BlsPoolType} from "@lodestar/beacon-node/lib/chain/options.js";
 import {parseBeaconNodeArgs, BeaconNodeArgs} from "../../../src/options/beaconNodeOptions/index.js";
 import {getTestdirPath} from "../../utils.js";
 
@@ -20,7 +21,7 @@ describe("options / beaconNodeOptions", () => {
 
       "chain.blsVerifyAllInQueue": true,
       "chain.blsVerifySingleThreaded": true,
-      "chain.blsPoolType": true,
+      "chain.blsPoolType": BlsPoolType.libuv,
       "chain.blsDisableBatchVerify": true,
       "chain.persistInvalidSszObjects": true,
       "chain.proposerBoostEnabled": false,
@@ -34,6 +35,7 @@ describe("options / beaconNodeOptions", () => {
       "safe-slots-to-import-optimistically": 256,
       "chain.archiveStateEpochFrequency": 1024,
       "chain.trustedSetup": "",
+      "chain.minSameMessageSignatureSetsToBatch": 32,
       emitPayloadAttributes: false,
 
       eth1: true,
@@ -87,6 +89,7 @@ describe("options / beaconNodeOptions", () => {
       "network.blockCountPeerLimit": 500,
       "network.rateTrackerTimeoutMs": 60000,
       "network.dontSendGossipAttestationsToForkchoice": true,
+      "network.beaconAttestationBatchValidation": true,
       "network.allowPublishToZeroPeers": true,
       "network.gossipsubD": 4,
       "network.gossipsubDLow": 2,
@@ -95,6 +98,7 @@ describe("options / beaconNodeOptions", () => {
       "network.rateLimitMultiplier": 1,
       "network.maxGossipTopicConcurrency": 64,
       "network.useWorker": true,
+      "network.maxYoungGenerationSizeMb": 152,
 
       "sync.isSingleNode": true,
       "sync.disableProcessAsChainSegment": true,
@@ -118,7 +122,7 @@ describe("options / beaconNodeOptions", () => {
       chain: {
         blsVerifyAllInQueue: true,
         blsVerifySingleThreaded: true,
-        blsPoolType: true,
+        blsPoolType: BlsPoolType.libuv,
         blsDisableBatchVerify: true,
         persistInvalidSszObjects: true,
         proposerBoostEnabled: false,
@@ -133,6 +137,7 @@ describe("options / beaconNodeOptions", () => {
         archiveStateEpochFrequency: 1024,
         emitPayloadAttributes: false,
         trustedSetup: "",
+        minSameMessageSignatureSetsToBatch: 32,
       },
       eth1: {
         enabled: true,
@@ -188,6 +193,7 @@ describe("options / beaconNodeOptions", () => {
         connectToDiscv5Bootnodes: true,
         discv5FirstQueryDelayMs: 1000,
         dontSendGossipAttestationsToForkchoice: true,
+        beaconAttestationBatchValidation: true,
         allowPublishToZeroPeers: true,
         gossipsubD: 4,
         gossipsubDLow: 2,
@@ -197,6 +203,7 @@ describe("options / beaconNodeOptions", () => {
         rateLimitMultiplier: 1,
         maxGossipTopicConcurrency: 64,
         useWorker: true,
+        maxYoungGenerationSizeMb: 152,
       },
       sync: {
         isSingleNode: true,

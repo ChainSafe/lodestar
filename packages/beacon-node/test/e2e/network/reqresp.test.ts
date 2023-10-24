@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect, afterEach, beforeEach} from "vitest";
 import {createChainForkConfig, ChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
@@ -19,18 +19,23 @@ import {PeerIdStr} from "../../../src/util/peerId.js";
     @typescript-eslint/explicit-function-return-type
 */
 
-describe("network / reqresp / main thread", function () {
-  runTests.bind(this)({useWorker: false});
-});
+describe(
+  "network / reqresp / main thread",
+  function () {
+    runTests({useWorker: false});
+  },
+  {timeout: 3000}
+);
 
-describe("network / reqresp / worker", function () {
-  runTests.bind(this)({useWorker: true});
-});
+describe(
+  "network / reqresp / worker",
+  function () {
+    runTests({useWorker: true});
+  },
+  {timeout: 30_000}
+);
 
-function runTests(this: Mocha.Suite, {useWorker}: {useWorker: boolean}): void {
-  if (this.timeout() < 60_000) this.timeout(60_000);
-  this.retries(2); // This test fail sometimes, with a 5% rate.
-
+function runTests({useWorker}: {useWorker: boolean}): void {
   // Schedule ALTAIR_FORK_EPOCH to trigger registering lightclient ReqResp protocols immediately
   const config = createChainForkConfig({
     ...chainConfig,
@@ -46,7 +51,9 @@ function runTests(this: Mocha.Suite, {useWorker}: {useWorker: boolean}): void {
   });
 
   let controller: AbortController;
-  beforeEach(() => (controller = new AbortController()));
+  beforeEach(() => {
+    controller = new AbortController();
+  });
   afterEach(() => controller.abort());
   async function sleep(ms: number): Promise<void> {
     await _sleep(ms, controller.signal);
@@ -56,8 +63,14 @@ function runTests(this: Mocha.Suite, {useWorker}: {useWorker: boolean}): void {
     getReqRespHandler?: GetReqRespHandlerFn,
     opts?: ReqRespBeaconNodeOpts
   ): Promise<[Network, Network, PeerIdStr, PeerIdStr]> {
-    const [netA, closeA] = await getNetworkForTest("A", config, {getReqRespHandler, opts: {...opts, useWorker}});
-    const [netB, closeB] = await getNetworkForTest("B", config, {getReqRespHandler, opts: {...opts, useWorker}});
+    const [netA, closeA] = await getNetworkForTest(`reqresp-${useWorker ? "worker" : "main"}-A`, config, {
+      getReqRespHandler,
+      opts: {...opts, useWorker},
+    });
+    const [netB, closeB] = await getNetworkForTest(`reqresp-${useWorker ? "worker" : "main"}-B`, config, {
+      getReqRespHandler,
+      opts: {...opts, useWorker},
+    });
 
     afterEachCallbacks.push(async () => {
       await closeA();
@@ -141,13 +154,10 @@ function runTests(this: Mocha.Suite, {useWorker}: {useWorker: boolean}): void {
     const returnedBlocks = await netA.sendBeaconBlocksByRange(peerIdB, req);
 
     if (returnedBlocks === null) throw Error("Returned null");
-    expect(returnedBlocks).to.have.length(req.count, "Wrong returnedBlocks length");
+    expect(returnedBlocks).toHaveLength(req.count);
 
     for (const [i, returnedBlock] of returnedBlocks.entries()) {
-      expect(ssz.phase0.SignedBeaconBlock.equals(returnedBlock.data, blocks[i])).to.equal(
-        true,
-        `Wrong returnedBlock[${i}]`
-      );
+      expect(ssz.phase0.SignedBeaconBlock.equals(returnedBlock.data, blocks[i])).toBe(true);
     }
   });
 
@@ -168,7 +178,9 @@ function runTests(this: Mocha.Suite, {useWorker}: {useWorker: boolean}): void {
     );
 
     const returnedValue = await netA.sendLightClientBootstrap(peerIdB, root);
-    expect(returnedValue).to.deep.equal(expectedValue, "Wrong response body");
+    expect(ssz.altair.LightClientBootstrap.toJson(returnedValue)).toEqual(
+      ssz.altair.LightClientBootstrap.toJson(expectedValue)
+    );
   });
 
   it("should send/receive a light client optimistic update message", async function () {
@@ -187,7 +199,9 @@ function runTests(this: Mocha.Suite, {useWorker}: {useWorker: boolean}): void {
     );
 
     const returnedValue = await netA.sendLightClientOptimisticUpdate(peerIdB);
-    expect(returnedValue).to.deep.equal(expectedValue, "Wrong response body");
+    expect(ssz.altair.LightClientOptimisticUpdate.toJson(returnedValue)).toEqual(
+      ssz.altair.LightClientOptimisticUpdate.toJson(expectedValue)
+    );
   });
 
   it("should send/receive a light client finality update message", async function () {
@@ -206,7 +220,9 @@ function runTests(this: Mocha.Suite, {useWorker}: {useWorker: boolean}): void {
     );
 
     const returnedValue = await netA.sendLightClientFinalityUpdate(peerIdB);
-    expect(returnedValue).to.deep.equal(expectedValue, "Wrong response body");
+    expect(ssz.altair.LightClientFinalityUpdate.toJson(returnedValue)).toEqual(
+      ssz.altair.LightClientFinalityUpdate.toJson(expectedValue)
+    );
   });
 
   it("should send/receive a light client update message", async function () {
@@ -233,13 +249,10 @@ function runTests(this: Mocha.Suite, {useWorker}: {useWorker: boolean}): void {
     const returnedUpdates = await netA.sendLightClientUpdatesByRange(peerIdB, req);
 
     if (returnedUpdates === null) throw Error("Returned null");
-    expect(returnedUpdates).to.have.length(2, "Wrong returnedUpdates length");
+    expect(returnedUpdates).toHaveLength(2);
 
     for (const [i, returnedUpdate] of returnedUpdates.entries()) {
-      expect(ssz.altair.LightClientUpdate.serialize(returnedUpdate)).deep.equals(
-        lightClientUpdates[i].data,
-        `Wrong returnedUpdate[${i}]`
-      );
+      expect(ssz.altair.LightClientUpdate.serialize(returnedUpdate)).toEqual(lightClientUpdates[i].data);
     }
   });
 

@@ -1,4 +1,4 @@
-import {PeerId} from "@libp2p/interface-peer-id";
+import {PeerId} from "@libp2p/interface/peer-id";
 import {BeaconConfig, ForkDigestContext} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {LodestarError} from "@lodestar/utils";

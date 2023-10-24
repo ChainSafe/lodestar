@@ -1,3 +1,4 @@
+import {ssz} from "@lodestar/types";
 import {
   Api,
   DeleteRemoteKeyStatus,
@@ -79,5 +80,9 @@ export const testData: GenericServerTestCases<Api> = {
   deleteGasLimit: {
     args: [pubkeyRand],
     res: undefined,
+  },
+  signVoluntaryExit: {
+    args: [pubkeyRand, 1],
+    res: {data: ssz.phase0.SignedVoluntaryExit.defaultValue()},
   },
 };

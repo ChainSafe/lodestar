@@ -1,6 +1,6 @@
 import {setMaxListeners} from "node:events";
-import {Connection, Stream} from "@libp2p/interface-connection";
-import {PeerId} from "@libp2p/interface-peer-id";
+import {Connection, Stream} from "@libp2p/interface/connection";
+import {PeerId} from "@libp2p/interface/peer-id";
 import type {Libp2p} from "libp2p";
 import {Logger} from "@lodestar/utils";
 import {getMetrics, Metrics, MetricsRegister} from "./metrics.js";

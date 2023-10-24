@@ -1,5 +1,3 @@
-import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {ChainForkConfig} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
   EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION,
@@ -8,12 +6,15 @@ import {
 } from "@lodestar/params";
 import {Epoch, Slot, ssz} from "@lodestar/types";
 import {Logger, MapDef} from "@lodestar/utils";
+import {BeaconConfig} from "@lodestar/config";
 import {ClockEvent, IClock} from "../../util/clock.js";
 import {GossipType} from "../gossip/index.js";
 import {MetadataController} from "../metadata.js";
 import {SubnetMap, RequestedSubnet} from "../peers/utils/index.js";
 import {getActiveForks} from "../forks.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";
+import {stringifyGossipTopic} from "../gossip/topic.js";
+import {GOSSIP_D_LOW} from "../gossip/scoringParameters.js";
 import {IAttnetsService, CommitteeSubscription, SubnetsServiceOpts, GossipSubscriber, NodeId} from "./interface.js";
 import {computeSubscribedSubnet} from "./util.js";
 
@@ -23,6 +24,15 @@ enum SubnetSource {
   committee = "committee",
   longLived = "long_lived",
 }
+
+type Subnet = number;
+// map of subnet to time to form stable mesh as seconds, null if not yet formed
+type AggregatorDutyInfo = Map<Subnet, number | null>;
+
+/**
+ * This value means node is not able to form stable mesh.
+ */
+const NOT_ABLE_TO_FORM_STABLE_MESH_SEC = -1;
 
 /**
  * Manage deleterministic long lived (DLL) subnets and short lived subnets.
@@ -42,13 +52,13 @@ export class DLLAttnetsService implements IAttnetsService {
   /** ${SUBNETS_PER_NODE} long lived subscriptions, may overlap with `shortLivedSubscriptions` */
   private longLivedSubscriptions = new Set<number>();
   /**
-   * Map of an aggregator at a slot and subnet
+   * Map of an aggregator at a slot and AggregatorDutyInfo
    * Used to determine if we should process an attestation.
    */
-  private aggregatorSlotSubnet = new MapDef<Slot, Set<number>>(() => new Set());
+  private aggregatorSlotSubnet = new MapDef<Slot, AggregatorDutyInfo>(() => new Map());
 
   constructor(
-    private readonly config: ChainForkConfig,
+    private readonly config: BeaconConfig,
     private readonly clock: IClock,
     private readonly gossip: GossipSubscriber,
     private readonly metadata: MetadataController,
@@ -108,7 +118,7 @@ export class DLLAttnetsService implements IAttnetsService {
       this.committeeSubnets.request({subnet, toSlot: slot + 1});
       if (isAggregator) {
         // need exact slot here
-        this.aggregatorSlotSubnet.getOrDefault(slot).add(subnet);
+        this.aggregatorSlotSubnet.getOrDefault(slot).set(subnet, null);
       }
     }
   }
@@ -154,25 +164,81 @@ export class DLLAttnetsService implements IAttnetsService {
    * Run per slot.
    * - Subscribe to gossip subnets 2 slots in advance
    * - Unsubscribe from expired subnets
+   * - Track time to stable mesh if not yet formed
    */
   private onSlot = (clockSlot: Slot): void => {
     try {
-      for (const [dutiedSlot, subnets] of this.aggregatorSlotSubnet.entries()) {
+      setTimeout(
+        () => {
+          this.onHalfSlot(clockSlot);
+        },
+        this.config.SECONDS_PER_SLOT * 0.5 * 1000
+      );
+
+      for (const [dutiedSlot, dutiedInfo] of this.aggregatorSlotSubnet.entries()) {
         if (dutiedSlot === clockSlot + this.opts.slotsToSubscribeBeforeAggregatorDuty) {
           // Trigger gossip subscription first, in batch
-          if (subnets.size > 0) {
-            this.subscribeToSubnets(Array.from(subnets), SubnetSource.committee);
+          if (dutiedInfo.size > 0) {
+            this.subscribeToSubnets(Array.from(dutiedInfo.keys()), SubnetSource.committee);
           }
           // Then, register the subscriptions
-          Array.from(subnets).map((subnet) => this.shortLivedSubscriptions.request({subnet, toSlot: dutiedSlot}));
+          for (const subnet of dutiedInfo.keys()) {
+            this.shortLivedSubscriptions.request({subnet, toSlot: dutiedSlot});
+          }
         }
+        this.trackTimeToStableMesh(clockSlot, dutiedSlot, dutiedInfo);
       }
 
       this.unsubscribeExpiredCommitteeSubnets(clockSlot);
+      this.pruneExpiredAggregator(clockSlot);
     } catch (e) {
       this.logger.error("Error on AttnetsService.onSlot", {slot: clockSlot}, e as Error);
     }
   };
+
+  private onHalfSlot = (clockSlot: Slot): void => {
+    for (const [dutiedSlot, dutiedInfo] of this.aggregatorSlotSubnet.entries()) {
+      this.trackTimeToStableMesh(clockSlot, dutiedSlot, dutiedInfo);
+    }
+  };
+
+  /**
+   * Track time to form stable mesh if not yet formed
+   */
+  private trackTimeToStableMesh(clockSlot: Slot, dutiedSlot: Slot, dutiedInfo: AggregatorDutyInfo): void {
+    if (dutiedSlot < clockSlot) {
+      // aggregator duty is expired, set timeToStableMesh to some big value so we know this value is not good
+      for (const [subnet, timeToFormMesh] of dutiedInfo.entries()) {
+        if (timeToFormMesh === null) {
+          dutiedInfo.set(subnet, NOT_ABLE_TO_FORM_STABLE_MESH_SEC);
+          this.metrics?.attnetsService.subscriptionsCommitteeTimeToStableMesh.observe(
+            {subnet},
+            NOT_ABLE_TO_FORM_STABLE_MESH_SEC
+          );
+        }
+      }
+    } else if (dutiedSlot <= clockSlot + this.opts.slotsToSubscribeBeforeAggregatorDuty) {
+      // aggregator duty is not expired, track time to stable mesh if this is the 1st time we see mesh peers>=Dlo (6)
+      for (const [subnet, timeToFormMesh] of dutiedInfo.entries()) {
+        if (timeToFormMesh === null) {
+          const topicStr = stringifyGossipTopic(this.config, {
+            type: gossipType,
+            fork: this.config.getForkName(dutiedSlot),
+            subnet,
+          });
+          const numMeshPeers = this.gossip.mesh.get(topicStr)?.size ?? 0;
+          if (numMeshPeers >= GOSSIP_D_LOW) {
+            const timeToStableMeshSec = this.clock.secFromSlot(
+              dutiedSlot - this.opts.slotsToSubscribeBeforeAggregatorDuty
+            );
+            // set to dutiedInfo so we'll not set to metrics again
+            dutiedInfo.set(subnet, timeToStableMeshSec);
+            this.metrics?.attnetsService.subscriptionsCommitteeTimeToStableMesh.observe({subnet}, timeToStableMeshSec);
+          }
+        }
+      }
+    }
+  }
 
   /**
    * Run per epoch, clean-up operations that are not urgent
@@ -183,8 +249,6 @@ export class DLLAttnetsService implements IAttnetsService {
       if (epoch % EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION === 0) {
         this.recomputeLongLivedSubnets();
       }
-      const slot = computeStartSlotAtEpoch(epoch);
-      this.pruneExpiredAggregator(slot);
     } catch (e) {
       this.logger.error("Error on AttnetsService.onEpoch", {epoch}, e as Error);
     }
@@ -245,9 +309,9 @@ export class DLLAttnetsService implements IAttnetsService {
    * @param currentSlot
    */
   private pruneExpiredAggregator(currentSlot: Slot): void {
-    for (const slot of this.aggregatorSlotSubnet.keys()) {
-      if (currentSlot > slot) {
-        this.aggregatorSlotSubnet.delete(slot);
+    for (const dutiedSlot of this.aggregatorSlotSubnet.keys()) {
+      if (currentSlot > dutiedSlot) {
+        this.aggregatorSlotSubnet.delete(dutiedSlot);
       }
     }
   }
@@ -303,6 +367,17 @@ export class DLLAttnetsService implements IAttnetsService {
   private onScrapeLodestarMetrics(metrics: NetworkCoreMetrics): void {
     metrics.attnetsService.committeeSubnets.set(this.committeeSubnets.size);
     metrics.attnetsService.subscriptionsCommittee.set(this.shortLivedSubscriptions.size);
+    // track short lived subnet status, >= 6 (Dlo) means healthy, otherwise unhealthy
+    const currentSlot = this.clock.currentSlot;
+    for (const {subnet} of this.shortLivedSubscriptions.getActiveTtl(currentSlot)) {
+      const topicStr = stringifyGossipTopic(this.config, {
+        type: gossipType,
+        fork: this.config.getForkName(currentSlot),
+        subnet,
+      });
+      const numMeshPeers = this.gossip.mesh.get(topicStr)?.size ?? 0;
+      metrics.attnetsService.subscriptionsCommitteeMeshPeers.observe({subnet}, numMeshPeers);
+    }
     metrics.attnetsService.longLivedSubscriptions.set(this.longLivedSubscriptions.size);
     let aggregatorCount = 0;
     for (const subnets of this.aggregatorSlotSubnet.values()) {

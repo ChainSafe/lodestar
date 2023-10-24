@@ -1,16 +1,17 @@
-import {expect} from "chai";
 import {PublicKey, SecretKey} from "@chainsafe/blst-ts";
+import {describe, it, beforeAll, expect, beforeEach, afterEach} from "vitest";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/multithread.js";
 import {testLogger} from "../../../utils/logger.js";
 import {VerifySignatureOpts} from "../../../../src/chain/bls/interface.js";
 
 describe("chain / bls / multithread queue", function () {
-  this.timeout(60 * 1000);
   const logger = testLogger();
 
   let controller: AbortController;
-  beforeEach(() => (controller = new AbortController()));
+  beforeEach(() => {
+    controller = new AbortController();
+  });
   afterEach(() => controller.abort());
 
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
@@ -25,7 +26,7 @@ describe("chain / bls / multithread queue", function () {
   const sameMessageSets: {publicKey: PublicKey; signature: Uint8Array}[] = [];
   const sameMessage = Buffer.alloc(32, 100);
 
-  before("generate test data", () => {
+  beforeAll(() => {
     for (let i = 0; i < 3; i++) {
       const sk = SecretKey.deserialize(Buffer.alloc(32, i + 1));
       const msg = Buffer.alloc(32, i + 1);
@@ -43,7 +44,7 @@ describe("chain / bls / multithread queue", function () {
       });
       sameMessageSets.push({
         publicKey: pk,
-        signature: sk.sign(sameMessage).toBytes(),
+        signature: sk.sign(sameMessage).serialize(),
       });
     }
   });
@@ -76,11 +77,12 @@ describe("chain / bls / multithread queue", function () {
     const isValidArr = await Promise.all(isValidPromiseArr);
     for (const [i, isValid] of isValidArr.entries()) {
       if (i % 2 === 0) {
-        expect(isValid).to.equal(true, `sig set ${i} returned invalid`);
+        expect(isValid).toBe(true);
       } else {
-        expect(isValid).to.deep.equal([true, true, true], `sig set ${i} returned invalid`);
+        expect(isValid).toEqual([true, true, true]);
       }
     }
+    await pool.close();
   }
 
   for (const priority of [true, false]) {
@@ -119,12 +121,13 @@ describe("chain / bls / multithread queue", function () {
         isValidPromiseArr.push(pool.verifySignatureSets(sets, {batchable: true}));
       }
 
-      expect(await isInvalidPromise).to.be.false;
+      expect(await isInvalidPromise).toBe(false);
 
       const isValidArr = await Promise.all(isValidPromiseArr);
-      for (const [i, isValid] of isValidArr.entries()) {
-        expect(isValid).to.equal(true, `sig set ${i} returned invalid`);
+      for (const [_, isValid] of isValidArr.entries()) {
+        expect(isValid).toBe(true);
       }
+      await pool.close();
     });
   }
 });

@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.4
 
 # Same version as our ansible deployments, to minimize the diff in the dashboard on export
-FROM grafana/grafana:8.5.25
+FROM grafana/grafana:8.5.27
 
 # Datasource URL is configured with ENV variables
 COPY datasource.yml /etc/grafana/provisioning/datasources/datasource.yml

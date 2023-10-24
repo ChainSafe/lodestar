@@ -1,7 +1,7 @@
-import {Connection} from "@libp2p/interface-connection";
-import {CustomEvent} from "@libp2p/interfaces/events";
+import {describe, it, afterEach, expect} from "vitest";
+import {Connection} from "@libp2p/interface/connection";
+import {CustomEvent} from "@libp2p/interface/events";
 import sinon from "sinon";
-import {expect} from "chai";
 import {BitArray} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
 import {altair, phase0, ssz} from "@lodestar/types";
@@ -20,7 +20,7 @@ import {IAttnetsService} from "../../../../src/network/subnets/index.js";
 import {Clock} from "../../../../src/util/clock.js";
 import {LocalStatusCache} from "../../../../src/network/statusCache.js";
 
-const logger = testLogger();
+const logger = testLogger("peerManager");
 
 describe("network / peers / PeerManager", function () {
   const peerId1 = getValidPeerId();
@@ -93,6 +93,10 @@ describe("network / peers / PeerManager", function () {
       null
     );
 
+    afterEachCallbacks.push(async () => {
+      await peerManager.close();
+    });
+
     return {statusCache, clock, libp2p, reqResp, peerManager, networkEventBus};
   }
 
@@ -111,7 +115,8 @@ describe("network / peers / PeerManager", function () {
     await peerManager["onLibp2pPeerConnect"](
       new CustomEvent("evt", {
         detail: {
-          stat: {direction: "inbound", status: "OPEN"},
+          direction: "inbound",
+          status: "open",
           remotePeer: peerId1,
         } as Connection,
       })
@@ -129,8 +134,8 @@ describe("network / peers / PeerManager", function () {
       peer: peerId1,
     });
 
-    expect(reqResp.sendMetadata.callCount).to.equal(1, "reqResp.sendMetadata must be called once");
-    expect(reqResp.sendMetadata.getCall(0).args[0]).to.equal(peerId1, "reqResp.sendMetadata must be called with peer1");
+    expect(reqResp.sendMetadata.callCount).toBe(1);
+    expect(reqResp.sendMetadata.getCall(0).args[0]).toBe(peerId1);
 
     // Allow requestMetadata promise to resolve
     await sleep(0);
@@ -142,11 +147,12 @@ describe("network / peers / PeerManager", function () {
       peer: peerId1,
     });
 
-    expect(reqResp.sendMetadata.callCount).to.equal(0, "reqResp.sendMetadata must not be called again");
+    expect(reqResp.sendMetadata.callCount).toBe(0);
   });
 
   const libp2pConnectionOutboud = {
-    stat: {direction: "outbound", status: "OPEN"},
+    direction: "outbound",
+    status: "open",
     remotePeer: peerId1,
   } as Connection;
 
@@ -157,7 +163,7 @@ describe("network / peers / PeerManager", function () {
     getConnectionsMap(libp2p).set(peerId1.toString(), [libp2pConnectionOutboud]);
 
     // Subscribe to `peerConnected` event, which must fire after checking peer relevance
-    const peerConnectedPromise = waitForEvent(networkEventBus, NetworkEvent.peerConnected, this.timeout() / 2);
+    const peerConnectedPromise = waitForEvent(networkEventBus, NetworkEvent.peerConnected, 2000);
 
     // Send the local status and remote status, which always passes the assertPeerRelevance function
     const remoteStatus = statusCache.get();
@@ -176,7 +182,7 @@ describe("network / peers / PeerManager", function () {
     getConnectionsMap(libp2p).set(peerId1.toString(), [libp2pConnectionOutboud]);
 
     // Subscribe to `peerConnected` event, which must fire after checking peer relevance
-    const peerConnectedPromise = waitForEvent(networkEventBus, NetworkEvent.peerConnected, this.timeout() / 2);
+    const peerConnectedPromise = waitForEvent(networkEventBus, NetworkEvent.peerConnected, 2000);
 
     // Simulate peer1 returning a PING and STATUS message
     const remoteStatus = statusCache.get();
@@ -201,13 +207,10 @@ describe("network / peers / PeerManager", function () {
     // 2. Call reqResp.sendStatus
     // 3. Receive ping result (1) and call reqResp.sendMetadata
     // 4. Receive status result (2) assert peer relevance and emit `PeerManagerEvent.peerConnected`
-    expect(reqResp.sendPing.callCount).to.equal(1, "reqResp.sendPing must be called");
-    expect(reqResp.sendStatus.callCount).to.equal(1, "reqResp.sendStatus must be called");
-    expect(reqResp.sendMetadata.callCount).to.equal(1, "reqResp.sendMetadata must be called");
+    expect(reqResp.sendPing.callCount).toBe(1);
+    expect(reqResp.sendStatus.callCount).toBe(1);
+    expect(reqResp.sendMetadata.callCount).toBe(1);
 
-    expect(peerManager["connectedPeers"].get(peerId1.toString())?.metadata).to.deep.equal(
-      remoteMetadata,
-      "Wrong stored metadata"
-    );
+    expect(peerManager["connectedPeers"].get(peerId1.toString())?.metadata).toEqual(remoteMetadata);
   });
 });

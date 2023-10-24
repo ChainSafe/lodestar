@@ -38,9 +38,9 @@ export function createLodestarMetrics(
         help: "Count of total gossip validation queue length",
         labelNames: ["topic"],
       }),
-      dropRatio: register.gauge<"topic">({
-        name: "lodestar_gossip_validation_queue_current_drop_ratio",
-        help: "Current drop ratio of gossip validation queue",
+      keySize: register.gauge<"topic">({
+        name: "lodestar_gossip_validation_queue_key_size",
+        help: "Count of total gossip validation queue key size",
         labelNames: ["topic"],
       }),
       droppedJobs: register.gauge<"topic">({
@@ -64,6 +64,17 @@ export function createLodestarMetrics(
         name: "lodestar_gossip_validation_queue_concurrency",
         help: "Current count of jobs being run on network processor for topic",
         labelNames: ["topic"],
+      }),
+      // this metric links to the beacon_attestation topic only as this is the only topics that are batch
+      keyAge: register.histogram({
+        name: "lodestar_gossip_validation_queue_key_age_seconds",
+        help: "Age of the first item of each key in the indexed queues in seconds",
+        buckets: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 5],
+      }),
+      queueTime: register.histogram({
+        name: "lodestar_gossip_validation_queue_time_seconds",
+        help: "Total time an item stays in queue until it is processed in seconds",
+        buckets: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 5],
       }),
     },
 
@@ -110,6 +121,12 @@ export function createLodestarMetrics(
         help: "Current count of pending items in reqRespBridgeReqCaller data structure",
       }),
     },
+    networkWorkerWireEventsOnMainThreadLatency: register.histogram<"eventName">({
+      name: "lodestar_network_worker_wire_events_on_main_thread_latency_seconds",
+      help: "Latency in seconds to transmit network events to main thread across worker port",
+      labelNames: ["eventName"],
+      buckets: [0.001, 0.003, 0.01, 0.03, 0.1],
+    }),
 
     regenQueue: {
       length: register.gauge({
@@ -336,46 +353,49 @@ export function createLodestarMetrics(
         help: "Total aggregated pubkeys for BLS validation",
       }),
       totalSigSets: register.gauge({
-        name: "lodestar_bls_sig_sets_total",
+        name: "lodestar_bls_thread_pool_sig_sets_total",
         help: "Count of total signature sets",
       }),
       prioritizedSigSets: register.gauge({
-        name: "lodestar_bls_prioritized_sig_sets_total",
+        name: "lodestar_bls_thread_pool_prioritized_sig_sets_total",
         help: "Count of total prioritized signature sets",
       }),
       batchableSigSets: register.gauge({
-        name: "lodestar_bls_batchable_sig_sets_total",
+        name: "lodestar_bls_thread_pool_batchable_sig_sets_total",
         help: "Count of total batchable signature sets",
       }),
-      mainThreadSigSets: register.gauge({
-        name: "lodestar_bls_main_thread_sig_sets_total",
-        help: "Count of total batchable signature sets",
-      }),
+
       mainThread: {
-        durationOnThread: register.histogram({
-          name: "lodestar_bls_main_thread_time_seconds",
+        sigSets: register.gauge({
+          name: "lodestar_bls_main_thread_sig_sets_total",
+          help: "Count of total batchable signature sets",
+        }),
+        verificationDuration: register.histogram({
+          name: "lodestar_bls_thread_pool_main_thread_time_seconds",
           help: "Time to verify signatures in main thread with thread pool mode",
           // Time can vary significantly, so just track usage ratio
           buckets: [0],
         }),
+        signatureDeserializationDuration: register.gauge({
+          name: "lodestar_bls_thread_pool_signature_deserialization_main_thread_time_seconds",
+          help: "Total time spent deserializing signatures on main thread",
+        }),
       },
+
       threadPool: {
-        errorAggregateSignatureSetsCount: register.gauge<"type">({
-          name: "lodestar_bls_thread_pool_error_aggregate_signature_sets_count",
-          help: "Count of error when aggregating pubkeys or signatures",
-          labelNames: ["type"],
-        }),
-        sameMessageRetryJobs: register.gauge({
-          name: "lodestar_bls_thread_pool_same_message_jobs_retries_total",
-          help: "Count of total same message jobs that failed and had to be verified again.",
-        }),
-        sameMessageRetrySets: register.gauge({
-          name: "lodestar_bls_thread_pool_same_message_sets_retries_total",
-          help: "Count of total same message sets that failed and had to be verified again.",
+        jobsWorkerTime: register.gauge<"workerId">({
+          name: "lodestar_bls_thread_pool_time_seconds_sum",
+          help: "Total time spent verifying signature sets measured on the worker",
+          labelNames: ["workerId"],
         }),
         successJobsSignatureSetsCount: register.gauge({
           name: "lodestar_bls_thread_pool_success_jobs_signature_sets_count",
           help: "Count of total verified signature sets",
+        }),
+        errorAggregateSignatureSetsCount: register.gauge<"type">({
+          name: "lodestar_bls_thread_pool_error_aggregate_signature_sets_count",
+          help: "Count of error when aggregating pubkeys or signatures",
+          labelNames: ["type"],
         }),
         errorJobsSignatureSetsCount: register.gauge({
           name: "lodestar_bls_thread_pool_error_jobs_signature_sets_count",
@@ -398,21 +418,15 @@ export function createLodestarMetrics(
           name: "lodestar_bls_thread_pool_job_groups_started_total",
           help: "Count of total jobs groups started in bls thread pool, job groups include +1 jobs",
         }),
-        totalJobsStarted: register.gauge({
+        totalJobsStarted: register.gauge<"type">({
           name: "lodestar_bls_thread_pool_jobs_started_total",
           help: "Count of total jobs started in bls thread pool, jobs include +1 signature sets",
           labelNames: ["type"],
         }),
-        totalSigSetsStarted: register.gauge({
+        totalSigSetsStarted: register.gauge<"type">({
           name: "lodestar_bls_thread_pool_sig_sets_started_total",
           help: "Count of total signature sets started in bls thread pool, sig sets include 1 pk, msg, sig",
           labelNames: ["type"],
-        }),
-        timePerSigSet: register.histogram({
-          name: "lodestar_bls_worker_thread_time_per_sigset_seconds",
-          help: "Time to verify each sigset with worker thread mode",
-          // Time per sig ~0.9ms on good machines
-          buckets: [0.5e-3, 0.75e-3, 1e-3, 1.5e-3, 2e-3, 5e-3],
         }),
         // Re-verifying a batch means doing double work. This number must be very low or it can be a waste of CPU resources
         batchRetries: register.gauge({
@@ -424,10 +438,13 @@ export function createLodestarMetrics(
           name: "lodestar_bls_thread_pool_batch_sigs_success_total",
           help: "Count of total batches that failed and had to be verified again.",
         }),
-        jobsWorkerTime: register.gauge<"workerId">({
-          name: "lodestar_bls_thread_pool_time_seconds_sum",
-          help: "Total time spent verifying signature sets measured on the worker",
-          labelNames: ["workerId"],
+        sameMessageRetryJobs: register.gauge({
+          name: "lodestar_bls_thread_pool_same_message_jobs_retries_total",
+          help: "Count of total same message jobs that failed and had to be verified again.",
+        }),
+        sameMessageRetrySets: register.gauge({
+          name: "lodestar_bls_thread_pool_same_message_sets_retries_total",
+          help: "Count of total same message sets that failed and had to be verified again.",
         }),
         // To measure the time cost of main thread <-> worker message passing
         latencyToWorker: register.histogram({
@@ -440,22 +457,13 @@ export function createLodestarMetrics(
           help: "Time from the worker sending the result and the main thread receiving it",
           buckets: [0.001, 0.003, 0.01, 0.03, 0.1],
         }),
+        timePerSigSet: register.histogram({
+          name: "lodestar_bls_worker_thread_time_per_sigset_seconds",
+          help: "Time to verify each sigset with worker thread mode",
+          // Time per sig ~0.9ms on good machines
+          buckets: [0.5e-3, 0.75e-3, 1e-3, 1.5e-3, 2e-3, 5e-3],
+        }),
       },
-    },
-
-    // BLS time on single thread mode
-    blsSingleThread: {
-      singleThreadDuration: register.histogram({
-        name: "lodestar_bls_single_thread_time_seconds",
-        help: "Time to verify signatures with single thread mode",
-        buckets: [0],
-      }),
-      timePerSigSet: register.histogram({
-        name: "lodestar_bls_single_thread_time_per_sigset_seconds",
-        help: "Time to verify each sigset with single thread mode",
-        // Time per sig ~0.9ms on good machines
-        buckets: [0.5e-3, 0.75e-3, 1e-3, 1.5e-3, 2e-3, 5e-3],
-      }),
     },
 
     // Sync
@@ -580,6 +588,15 @@ export function createLodestarMetrics(
         labelNames: ["caller"],
         buckets: [0, 1, 2, 4, 8, 16, 32, 64],
       }),
+      attestationBatchHistogram: register.histogram({
+        name: "lodestar_gossip_attestation_verified_in_batch_histogram",
+        help: "Number of attestations verified in batch",
+        buckets: [1, 2, 4, 8, 16, 32, 64, 128],
+      }),
+      attestationNonBatchCount: register.gauge({
+        name: "lodestar_gossip_attestation_verified_non_batch_count",
+        help: "Count of attestations NOT verified in batch",
+      }),
     },
 
     // Gossip block
@@ -623,6 +640,13 @@ export function createLodestarMetrics(
         name: "lodestar_gossip_block_process_block_errors",
         help: "Count of errors, by error type, while processing blocks",
         labelNames: ["error"],
+      }),
+    },
+    gossipBlob: {
+      receivedToGossipValidate: register.histogram({
+        name: "lodestar_gossip_blob_received_to_gossip_validate",
+        help: "Time elapsed between blob received and blob validated",
+        buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
       }),
     },
     importBlock: {

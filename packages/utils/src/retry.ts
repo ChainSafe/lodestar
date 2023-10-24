@@ -15,6 +15,7 @@ export type RetryOptions = {
    * Milliseconds to wait before retrying again
    */
   retryDelay?: number;
+  signal?: AbortSignal;
 };
 
 /**
@@ -36,7 +37,7 @@ export async function retry<A>(fn: (attempt: number) => A | Promise<A>, opts?: R
       if (shouldRetry && !shouldRetry(lastError)) {
         break;
       } else if (opts?.retryDelay !== undefined) {
-        await sleep(opts?.retryDelay);
+        await sleep(opts?.retryDelay, opts?.signal);
       }
     }
   }

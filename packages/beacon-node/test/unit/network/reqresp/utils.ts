@@ -1,5 +1,5 @@
-import {expect} from "chai";
-import {Stream, StreamStat} from "@libp2p/interface-connection";
+import {expect} from "vitest";
+import {Direction, ReadStatus, Stream, StreamStatus, WriteStatus} from "@libp2p/interface/connection";
 import {Uint8ArrayList} from "uint8arraylist";
 import {toHexString} from "@chainsafe/ssz";
 import {Root} from "@lodestar/types";
@@ -25,8 +25,8 @@ export async function* arrToSource<T>(arr: T[]): AsyncGenerator<T> {
 /**
  * Wrapper for type-safety to ensure and array of Buffers is equal with a diff in hex
  */
-export function expectEqualByteChunks(chunks: Uint8Array[], expectedChunks: Uint8Array[], message?: string): void {
-  expect(chunks.map(toHexString)).to.deep.equal(expectedChunks.map(toHexString), message);
+export function expectEqualByteChunks(chunks: Uint8Array[], expectedChunks: Uint8Array[]): void {
+  expect(chunks.map(toHexString)).toEqual(expectedChunks.map(toHexString));
 }
 
 /**
@@ -35,12 +35,13 @@ export function expectEqualByteChunks(chunks: Uint8Array[], expectedChunks: Uint
  */
 export class MockLibP2pStream implements Stream {
   id = "mock";
-  stat = {
-    direction: "inbound",
-    timeline: {
-      open: Date.now(),
-    },
-  } as StreamStat;
+  direction: Direction = "inbound";
+  timeline = {
+    open: Date.now(),
+  };
+  status: StreamStatus = "open";
+  readStatus: ReadStatus = "ready";
+  writeStatus: WriteStatus = "ready";
   metadata = {};
   source: Stream["source"];
   resultChunks: Uint8Array[] = [];
@@ -54,11 +55,10 @@ export class MockLibP2pStream implements Stream {
     }
   };
   // eslint-disable-next-line @typescript-eslint/no-empty-function
-  close: Stream["close"] = () => {};
+  close: Stream["close"] = async () => {};
   // eslint-disable-next-line @typescript-eslint/no-empty-function
-  closeRead = (): void => {};
+  closeRead = async (): Promise<void> => {};
   // eslint-disable-next-line @typescript-eslint/no-empty-function
-  closeWrite = (): void => {};
-  reset: Stream["reset"] = () => this.close();
+  closeWrite = async (): Promise<void> => {};
   abort: Stream["abort"] = () => this.close();
 }

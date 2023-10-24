@@ -11,7 +11,7 @@ import {assertLinearChainSegment} from "./utils/chainSegment.js";
 import {BlockInput, FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
 import {verifyBlocksSanityChecks} from "./verifyBlocksSanityChecks.js";
 import {removeEagerlyPersistedBlockInputs} from "./writeBlockInputToDb.js";
-export {ImportBlockOpts, AttestationImportOpt} from "./types.js";
+export {type ImportBlockOpts, AttestationImportOpt} from "./types.js";
 
 const QUEUE_MAX_LENGTH = 256;
 
