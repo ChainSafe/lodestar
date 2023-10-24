@@ -15,7 +15,6 @@ export type Eth1Args = {
 export function parseArgs(args: Eth1Args & Partial<ExecutionEngineArgs>): IBeaconNodeOptions["eth1"] {
   let jwtSecretHex: string | undefined;
   let jwtId: string | undefined;
-  let jwtVersion: string | undefined;
 
   let providerUrls = args["eth1.providerUrls"];
 

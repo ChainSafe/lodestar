@@ -12,7 +12,7 @@ describe("ExecutionEngine / jwt", () => {
 
   it("encode/decode correctly with id and clv", () => {
     const jwtSecret = Buffer.from(Array.from({length: 32}, () => Math.round(Math.random() * 255)));
-    const claim = {iat: Math.floor(new Date().getTime() / 1000), id: "4ac0", clv: "v1.11.3"};
+    const claim = {iat: Math.floor(new Date().getTime() / 1000), id: "4ac0", clv: "Lodestar/v0.36.0/80c248bb"};
     const token = encodeJwtToken(claim, jwtSecret);
     const decoded = decodeJwtToken(token, jwtSecret);
     expect(decoded).toEqual(claim);

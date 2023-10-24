@@ -107,8 +107,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
       jwtSecret?: Uint8Array;
       /** If jwtSecret and jwtId are provided, jwtId will be included in JwtClaim.id */
       jwtId?: string;
-      /** If jwtSecret is provided, jwtVersion will be included in JwtClaim.clv. 
-       *  jwtVersion has default value of empty string */
+      /** If jwtSecret and jwtVersion are provided, jwtVersion will be included in JwtClaim.clv. */
       jwtVersion?: string;
       /** Retry attempts */
       retryAttempts?: number;
@@ -133,7 +132,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
 
     this.jwtSecret = opts?.jwtSecret;
     this.jwtId = opts?.jwtId;
-    this.jwtVersion = opts?.jwtVersion ?? "";
+    this.jwtVersion = opts?.jwtVersion;
     this.metrics = opts?.metrics ?? null;
 
     this.metrics?.configUrlsCount.set(urls.length);
