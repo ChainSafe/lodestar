@@ -317,10 +317,10 @@ export class BeaconNode {
       this.status = BeaconNodeStatus.closing;
       this.sync.close();
       this.backfillSync?.close();
+      if (this.restApi) await this.restApi.close();
       await this.network.close();
       if (this.metricsServer) await this.metricsServer.close();
       if (this.monitoring) this.monitoring.close();
-      if (this.restApi) await this.restApi.close();
       await this.chain.persistToDisk();
       await this.chain.close();
       if (this.controller) this.controller.abort();
