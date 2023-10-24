@@ -85,7 +85,7 @@ export const options: CliCommandOptions<ExecutionEngineArgs> = {
 
   "jwtId": {
     description:
-      "An optional identifier to be included in the id field in the claims of the jwt tokens for authentication with EL client's rpc server hosting engine apis",
+      "An optional identifier to be set in the id field of the claims included in jwt tokens for authentication with EL client's rpc server hosting engine apis",
     type: "string",
     group: "execution",
   },
