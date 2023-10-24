@@ -8,8 +8,8 @@ export type ExecutionEngineArgs = {
   "execution.retryAttempts": number;
   "execution.retryDelay": number;
   "execution.engineMock"?: boolean;
-  "jwtSecret"?: string;
-  "jwtId"?: string;
+  jwtSecret?: string;
+  jwtId?: string;
 };
 
 export function parseArgs(args: ExecutionEngineArgs): IBeaconNodeOptions["executionEngine"] {
@@ -76,14 +76,14 @@ export const options: CliCommandOptions<ExecutionEngineArgs> = {
     group: "execution",
   },
 
-  "jwtSecret": {
+  jwtSecret: {
     description:
       "File path to a shared hex-encoded jwt secret which will be used to generate and bundle HS256 encoded jwt tokens for authentication with the EL client's rpc server hosting engine apis. Secret to be exactly same as the one used by the corresponding EL client.",
     type: "string",
     group: "execution",
   },
 
-  "jwtId": {
+  jwtId: {
     description:
       "An optional identifier to be set in the id field of the claims included in jwt tokens used for authentication with EL client's rpc server hosting engine apis",
     type: "string",
