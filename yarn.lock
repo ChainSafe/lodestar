@@ -1868,10 +1868,10 @@
     uint8arraylist "^2.4.3"
     uint8arrays "^4.0.4"
 
-"@libp2p/tcp@8.0.8":
-  version "8.0.8"
-  resolved "https://registry.yarnpkg.com/@libp2p/tcp/-/tcp-8.0.8.tgz#e692bbd04f79c37b9a42bc7d51583226c61b1242"
-  integrity sha512-hIjAKWQOP4MCS2yUhWMdfweFK/ykDiaMZSrgIJJ+YEikxi0HihB5fRtk08oLvOew0B52GsGXQsfQg8I9sOncWg==
+"@libp2p/tcp@8.0.7":
+  version "8.0.7"
+  resolved "https://registry.yarnpkg.com/@libp2p/tcp/-/tcp-8.0.7.tgz#f0b698c801b77c2203a8a9599258eb76da6bfff5"
+  integrity sha512-VYfIlxxLr7my8qi/vMenMfYQFNCGT63m5/PnM2lMG1THxswT8uKov3XMEWRHFnOCem6WkVBZgw+OrGyEetPcrw==
   dependencies:
     "@libp2p/interface" "^0.1.2"
     "@libp2p/logger" "^3.0.2"
