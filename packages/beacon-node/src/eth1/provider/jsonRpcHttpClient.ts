@@ -265,7 +265,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
          * Jwt auth spec: https://github.com/ethereum/execution-apis/pull/167
          */
         const jwtClaim: JwtClaim = {
-          iat: Math.floor(new Date().getTime() / 1000),
+          iat: Math.floor(Date.now() / 1000),
           id: this.jwtId,
           clv: this.jwtVersion,
         };
