@@ -60,7 +60,7 @@ export type ExecutionEngineHttpOpts = {
    */
   jwtId?: string;
   /**
-   * A version string passed by user in cli arg that will be included in `clv` field in jwt claims
+   * A version string that will be set in `clv` field of jwt claims
    */
   jwtVersion?: string;
 };
