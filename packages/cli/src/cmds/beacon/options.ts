@@ -117,7 +117,8 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
   },
 
   private: {
-    description: "Do not send implementation details over p2p identify protocol and in builder requests",
+    description:
+      "Do not send implementation details over p2p identify protocol and in builder, execution engine and eth1 requests",
     type: "boolean",
   },
 
