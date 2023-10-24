@@ -35,11 +35,6 @@ You must generate a secret 32-byte (64 characters) hexadecimal string that will 
 
 When starting up a Lodestar beacon node in any configuration, ensure you add the `--jwtSecret $JWT_SECRET_PATH` flag to point to the saved secret key file.
 
-### Set up and include identifiers in JWT tokens
-
-Lodestar auto-populates `clv` field in the claims of JWT authentication tokens with a non-configurable value `Lodestar/$CLIENT_VERSION` eg. `Lodestar/v1.3.0/2d0938e` to communicate the client's version. Lodestar also optionally includes `id` field in the claims with value `$JWT_ID` if the appropriate flag `--jwtId $JWT_ID` is added. 
-`id` and `clv` are particularly useful when running multiple consensus-layer clients with the different JWT secrets which makes the execution-layer client difficult to choose which JWT secret to verify against due to the inability to distinguish between the different consensus-layer clients. 
-
 ### Ensure JWT is configured with your execution node
 
 **For Go Ethereum:**
