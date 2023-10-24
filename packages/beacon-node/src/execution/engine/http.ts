@@ -56,7 +56,7 @@ export type ExecutionEngineHttpOpts = {
    */
   jwtSecretHex?: string;
   /**
-   * A identifier string passed by user in cli arg that will be included in `id` field in jwt claims
+   * An identifier string passed as CLI arg that will be set in `id` field of jwt claims
    */
   jwtId?: string;
   /**
