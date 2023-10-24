@@ -861,7 +861,7 @@ export class ForkChoice implements IForkChoice {
     // The navigation at the end of the while loop will always progress backwards,
     // jumping to a block with a strictly less slot number. So the condition `blockEpoch < atEpoch`
     // is guaranteed to happen. Given the use of target blocks for faster navigation, it will take
-    // at most `2 * (blockEpoch - atEpoch + 1)` iterations to find the dependant root.
+    // at most `2 * (blockEpoch - atEpoch + 1)` iterations to find the dependent root.
 
     const beforeSlot = block.slot - (block.slot % SLOTS_PER_EPOCH) - epochDifference * SLOTS_PER_EPOCH;
 
