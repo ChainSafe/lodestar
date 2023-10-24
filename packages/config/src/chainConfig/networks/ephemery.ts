@@ -4,9 +4,12 @@ import {ChainConfig} from "../types.js";
 import {chainConfig as mainnet} from "../presets/mainnet.js";
 
 // Ephemery dynamic beacon chain config:
+// https://github.com/ephemery-testnet/ephemery-genesis/blob/master/cl-config.yaml
+
+// Ephemery specification:
 // https://github.com/taxmeifyoucan/EIPs/blob/d298cdd8eaf47a21e7770e5c6efef870587c924d/EIPS/eip-6916.md
 
-// incrementation 0, "base"-genesis
+// iteration 0, "base"-genesis
 const baseChainConfig: ChainConfig = {
   ...mainnet,
 
@@ -15,17 +18,17 @@ const baseChainConfig: ChainConfig = {
   // Genesis
   // ---------------------------------------------------------------
   MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: 64,
-  // # Thu Dec 02 2021 19:00:00 GMT+0000
+  // Thu Dec 02 2021 19:00:00 GMT+0000
   MIN_GENESIS_TIME: 1638471600,
   GENESIS_FORK_VERSION: b("0x1000101b"),
   GENESIS_DELAY: 300,
 
   // Forking
   // ---------------------------------------------------------------
-  // # Altair
+  // Altair
   ALTAIR_FORK_VERSION: b("0x2000101b"),
   ALTAIR_FORK_EPOCH: 0,
-  // # Merge
+  // Merge
   BELLATRIX_FORK_VERSION: b("0x3000101b"),
   BELLATRIX_FORK_EPOCH: 0,
   TERMINAL_TOTAL_DIFFICULTY: BigInt("0"),
@@ -41,21 +44,18 @@ const baseChainConfig: ChainConfig = {
   DEPOSIT_NETWORK_ID: 39438000,
   DEPOSIT_CONTRACT_ADDRESS: b("0x4242424242424242424242424242424242424242"),
 
-  // Ephemery settings
   ETH1_FOLLOW_DISTANCE: 12,
 };
 
 // Reset interval (7 days) in milliseconds, based on ephemery-genesis values.env:
 // https://github.com/ephemery-testnet/ephemery-genesis/blob/9a28fbef950c8547d78785f8a0ea49a95ce19a48/values.env#L5
 const RESET_INTERVAL_MS = 604800000;
-const incrementation = Math.floor(
-  Math.floor(new Date().getTime() - baseChainConfig.MIN_GENESIS_TIME) / RESET_INTERVAL_MS
-);
+const iteration = Math.floor(Date.now() - baseChainConfig.MIN_GENESIS_TIME) / RESET_INTERVAL_MS;
 
 export const ephemeryChainConfig: ChainConfig = {
   ...baseChainConfig,
 
-  MIN_GENESIS_TIME: RESET_INTERVAL_MS * incrementation + baseChainConfig.MIN_GENESIS_TIME,
-  DEPOSIT_CHAIN_ID: baseChainConfig.DEPOSIT_CHAIN_ID + incrementation,
-  DEPOSIT_NETWORK_ID: baseChainConfig.DEPOSIT_NETWORK_ID + incrementation,
+  MIN_GENESIS_TIME: RESET_INTERVAL_MS * iteration + baseChainConfig.MIN_GENESIS_TIME,
+  DEPOSIT_CHAIN_ID: baseChainConfig.DEPOSIT_CHAIN_ID + iteration,
+  DEPOSIT_NETWORK_ID: baseChainConfig.DEPOSIT_NETWORK_ID + iteration,
 };
