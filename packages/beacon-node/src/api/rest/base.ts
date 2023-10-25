@@ -1,5 +1,5 @@
 import qs from "qs";
-import fastify, {FastifyInstance} from "fastify";
+import fastify, {FastifyBodyParser, FastifyContentTypeParser, FastifyInstance, FastifyRequest} from "fastify";
 import fastifyCors from "@fastify/cors";
 import bearerAuthPlugin from "@fastify/bearer-auth";
 import {RouteConfig} from "@lodestar/api/beacon/server";
@@ -60,6 +60,14 @@ export class RestApiServer {
       bodyLimit: opts.bodyLimit,
       http: {maxHeaderSize: opts.headerLimit},
     });
+
+    server.addContentTypeParser(
+      "application/octet-stream",
+      {parseAs: "buffer"},
+      async (_request: FastifyRequest, payload: Buffer) => {
+        return payload;
+      }
+    );
 
     this.activeSockets = new HttpActiveSocketsTracker(server.server, metrics);
 
