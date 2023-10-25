@@ -45,7 +45,13 @@ import {PeerAction} from "../peers/index.js";
 import {validateLightClientFinalityUpdate} from "../../chain/validation/lightClientFinalityUpdate.js";
 import {validateLightClientOptimisticUpdate} from "../../chain/validation/lightClientOptimisticUpdate.js";
 import {validateGossipBlobSidecar} from "../../chain/validation/blobSidecar.js";
-import {BlockInput, BlockSource, getBlockInput, GossipedInputType} from "../../chain/blocks/types.js";
+import {
+  BlockInput,
+  BlockSource,
+  getBlockInput,
+  GossipedInputType,
+  BlobSidecarValidation,
+} from "../../chain/blocks/types.js";
 import {sszDeserialize} from "../gossip/topic.js";
 import {INetworkCore} from "../core/index.js";
 import {INetwork} from "../interface.js";
@@ -227,7 +233,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
         // proposer signature already checked in validateBeaconBlock()
         validProposerSignature: true,
         // blobSidecars already checked in validateGossipBlobSidecars()
-        validBlobSidecars: true,
+        validBlobSidecars: BlobSidecarValidation.Individual,
         // It's critical to keep a good number of mesh peers.
         // To do that, the Gossip Job Wait Time should be consistently <3s to avoid the behavior penalties in gossip
         // Gossip Job Wait Time depends on the BLS Job Wait Time
