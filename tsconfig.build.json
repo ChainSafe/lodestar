@@ -23,6 +23,12 @@
     "declaration": true,
     "declarationMap": true,
     "incremental": true,
-    "preserveWatchOutput": true
+    "preserveWatchOutput": true,
+
+
+    // There are two duplicate type definitions included from `chai` and `vitest` packages.
+    // There is one invalid type declaration introduced from `webdriverio -> got` package. 
+    // TODO: Once we completely remove `chai` and upgrade `webdriverio` we can enable this check again.  
+    "skipLibCheck": true,
   }
 }
