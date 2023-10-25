@@ -151,7 +151,8 @@ export function validateBlobSidecars(
   blockSlot: Slot,
   blockRoot: Root,
   expectedKzgCommitments: deneb.BlobKzgCommitments,
-  blobSidecars: deneb.BlobSidecars
+  blobSidecars: deneb.BlobSidecars,
+  opts: {skipProofsCheck: boolean} = {skipProofsCheck: false}
 ): void {
   // assert len(expected_kzg_commitments) == len(blobs)
   if (expectedKzgCommitments.length !== blobSidecars.length) {
@@ -182,7 +183,10 @@ export function validateBlobSidecars(
       blobs.push(blobSidecar.blob);
       proofs.push(blobSidecar.kzgProof);
     }
-    validateBlobsAndProofs(expectedKzgCommitments, blobs, proofs);
+
+    if (!opts.skipProofsCheck) {
+      validateBlobsAndProofs(expectedKzgCommitments, blobs, proofs);
+    }
   }
 }
 
