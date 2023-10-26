@@ -45,7 +45,7 @@ export type PostRequestData<P extends Record<string, string | number>, B> = {
 
 export type SszPostRequestData<P extends PostRequestData<Record<string, string | number>, unknown>> = {
   params: P["params"];
-  body: P["body"] extends undefined ? undefined : Buffer;
+  body: P["body"] extends undefined ? undefined : Uint8Array;
 };
 
 export type EndpointMethod = "GET" | "POST" | "DELETE";
@@ -224,6 +224,7 @@ export const definitions: RouteDefinitions<TestEndpoints> = {
       schema: {params: {state_id: Schema.StringRequired}},
     },
     resp: {
+      // this is an example where respones metadata informs interpretation of the response data
       data: WithVersion((forkName) => ssz[forkName].BeaconState as unknown as Type<allForks.BeaconState>),
       meta: ExecutionOptimisticAndVersionCodec,
     },
@@ -236,10 +237,11 @@ export const definitions: RouteDefinitions<TestEndpoints> = {
       writeReqJson: ({epoch, indices}) => ({params: {epoch}, body: indices.map(String)}),
       parseReqJson: ({params, body}) => ({epoch: params.epoch, indices: body.map(Number)}),
       schema: {params: {epoch: Schema.UintRequired}, body: Schema.StringArray},
-      writeReqSsz: ({epoch, indices}) => ({params: {epoch}, body: Buffer.from(ValidatorIndices.serialize(indices))}),
+      writeReqSsz: ({epoch, indices}) => ({params: {epoch}, body: ValidatorIndices.serialize(indices)}),
       parseReqSsz: ({params, body}) => ({epoch: params.epoch, indices: ValidatorIndices.deserialize(body)}),
     },
     resp: {
+      // A ssz type suffices in cases where the data shape is static
       data: AttesterDuties,
       meta: ExecutionOptimisticAndDependentRootCodec,
     },
