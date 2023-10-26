@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {ContainerType, ListBasicType, ListCompositeType, Type, ValueOf} from "@chainsafe/ssz";
-import {Epoch, Root, allForks, ssz} from "@lodestar/types";
+import {Epoch, Root, StringType, allForks, ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 import {fromHex, toHex} from "@lodestar/utils";
 import {ExecutionOptimistic} from "../beacon/routes/beacon/block.js";
 import {StateId} from "../beacon/routes/beacon/index.js";
 import {AttesterDuty} from "../beacon/routes/validator.js";
+import {NodeHealthOptions} from "../beacon/routes/node.js";
 import {Schema, SchemaDefinition} from "./schema.js";
 
 // ssz types -- assumed to already be defined
@@ -27,9 +28,13 @@ const AttesterDuty = new ContainerType({
   slot: ssz.Slot,
 });
 const AttesterDuties = new ListCompositeType(AttesterDuty, 2 ** 40);
+const NodeVersion = new ContainerType({
+  version: new StringType(),
+});
 
 type ValidatorIndicesType = ValueOf<typeof ValidatorIndices>;
 type AttesterDutiesType = ValueOf<typeof AttesterDuties>;
+type NodeVersionType = ValueOf<typeof NodeVersion>;
 
 // Endpoint
 
@@ -145,6 +150,36 @@ export type RouteDefinition<E extends Endpoint> = {
 
 export type RouteDefinitions<Es extends Record<string, Endpoint>> = {[K in keyof Es]: RouteDefinition<Es[K]>};
 
+// Utility types / codecs
+
+export type EmptyParams = void;
+export type EmptyRequest = Record<string, never>;
+export type EmptyResponseData = void;
+export type EmptyMeta = Record<string, never>;
+
+/** Shortcut for routes that have no params, query nor body */
+export const EmptyRequestCodec: RequestCodec<Endpoint<EndpointMethod, EmptyParams, EmptyRequest>> = {
+  writeReqJson: () => ({}),
+  parseReqJson: () => {},
+  schema: {},
+  writeReqSsz: () => ({}) as SszPostRequestData<Record<string, never>>,
+  parseReqSsz: () => {},
+};
+
+export const EmptyResponseDataCodec: ResponseDataCodec<EmptyResponseData, EmptyMeta> = {
+  toJson: () => ({}),
+  fromJson: () => {},
+  serialize: () => new Uint8Array(),
+  deserialize: () => {},
+};
+
+export const EmptyMetaCodec: ResponseMetadataCodec<EmptyMeta> = {
+  toJson: () => ({}),
+  fromJson: () => ({}),
+  toHeaders: () => new Headers(),
+  fromHeaders: () => ({}),
+};
+
 export function WithVersion<T, M extends {version: ForkName}>(
   getType: (v: ForkName) => Type<T>
 ): ResponseDataCodec<T, M> {
@@ -170,6 +205,9 @@ export const ExecutionOptimisticAndVersionCodec: ResponseMetadataCodec<Execution
   }),
 };
 
+export type ExecutionOptimisticAndVersion = {executionOptimistic: ExecutionOptimistic; version: ForkName};
+export type ExecutionOptimisticAndDependentRoot = {executionOptimistic: ExecutionOptimistic; dependentRoot: Root};
+
 export const ExecutionOptimisticAndDependentRootCodec: ResponseMetadataCodec<ExecutionOptimisticAndDependentRoot> = {
   toJson: ({executionOptimistic, dependentRoot}) => ({executionOptimistic, dependentRoot: toHex(dependentRoot)}),
   fromJson: (val) =>
@@ -187,9 +225,6 @@ export const ExecutionOptimisticAndDependentRootCodec: ResponseMetadataCodec<Exe
     dependentRoot: fromHex(val.get("Dependent-Root")!),
   }),
 };
-
-export type ExecutionOptimisticAndVersion = {executionOptimistic: ExecutionOptimistic; version: ForkName};
-export type ExecutionOptimisticAndDependentRoot = {executionOptimistic: ExecutionOptimistic; dependentRoot: Root};
 
 // Showing some usage of how to define routes - a GET and a POST
 
@@ -210,6 +245,22 @@ export type TestEndpoints = {
     AttesterDutiesType,
     ExecutionOptimisticAndDependentRoot
   >;
+  getNodeVersion: Endpoint<
+    //
+    "GET",
+    EmptyParams,
+    EmptyRequest,
+    NodeVersionType,
+    EmptyMeta
+  >;
+  getHealth: Endpoint<
+    //
+    "GET",
+    {options?: NodeHealthOptions},
+    {query: {syncing_status?: number}},
+    EmptyResponseData,
+    EmptyMeta
+  >;
 };
 
 // Then route definitions
@@ -225,7 +276,7 @@ export const definitions: RouteDefinitions<TestEndpoints> = {
     },
     resp: {
       // this is an example where respones metadata informs interpretation of the response data
-      data: WithVersion((forkName) => ssz[forkName].BeaconState as unknown as Type<allForks.BeaconState>),
+      data: WithVersion((forkName) => ssz[forkName].BeaconState as Type<allForks.BeaconState>),
       meta: ExecutionOptimisticAndVersionCodec,
     },
   },
@@ -244,6 +295,28 @@ export const definitions: RouteDefinitions<TestEndpoints> = {
       // A ssz type suffices in cases where the data shape is static
       data: AttesterDuties,
       meta: ExecutionOptimisticAndDependentRootCodec,
+    },
+  },
+  getNodeVersion: {
+    url: "/eth/v1/node/version",
+    method: "GET",
+    req: EmptyRequestCodec,
+    resp: {
+      data: NodeVersion,
+      meta: EmptyMetaCodec,
+    },
+  },
+  getHealth: {
+    url: "/eth/v1/node/health",
+    method: "GET",
+    req: {
+      parseReqJson: ({query}) => ({options: query.syncing_status as NodeHealthOptions}),
+      writeReqJson: ({options}) => ({query: {syncing_status: options as number}}),
+      schema: {query: {syncing_status: Schema.Uint}},
+    },
+    resp: {
+      data: EmptyResponseDataCodec,
+      meta: EmptyMetaCodec,
     },
   },
 };
