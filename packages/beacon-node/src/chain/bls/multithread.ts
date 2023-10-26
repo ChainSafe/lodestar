@@ -48,9 +48,6 @@ export type BlsMultiThreadWorkerPoolOptions = {
   blsPoolType?: BlsPoolType;
 };
 
-// 1 worker for the main thread
-let blsPoolSize = Math.max(defaultPoolSize - 1, 1);
-
 /**
  * Split big signature sets into smaller sets so they can be sent to multiple workers.
  *
@@ -123,6 +120,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   private readonly metrics: Metrics | null;
   private readonly blsVerifyAllInQueue: boolean;
   private readonly blsPoolType: BlsPoolType;
+  private readonly blsPoolSize: number;
 
   private readonly workers: WorkerDescriptor[] = [];
 
@@ -147,13 +145,14 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
 
     this.logger.info(`Starting BLS with blsPoolType: ${this.blsPoolType}`);
     if (this.blsPoolType === BlsPoolType.workers) {
+      this.blsPoolSize = Math.max(defaultPoolSize - 1, 1);
       // Herumi implementation no longer supported
-      this.workers = this.createWorkers(blsPoolSize);
+      this.workers = this.createWorkers(this.blsPoolSize);
       this.logger.info(`BLS worker pool size: ${this.workers.length}`);
     } else {
       const uvThreadPoolSize = Number(process.env.UV_THREADPOOL_SIZE);
-      blsPoolSize = isNaN(uvThreadPoolSize) ? 4 : uvThreadPoolSize;
-      this.logger.info(`BLS libuv pool size: ${blsPoolSize}`);
+      this.blsPoolSize = isNaN(uvThreadPoolSize) ? 4 : uvThreadPoolSize;
+      this.logger.info(`BLS libuv pool size: ${this.blsPoolSize}`);
     }
 
     if (metrics) {
@@ -165,11 +164,8 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   }
 
   canAcceptWork(): boolean {
-    if (this.blsPoolType === BlsPoolType.libuv) {
-      return true;
-    }
     return (
-      this.workersBusy < blsPoolSize &&
+      this.workersBusy < this.blsPoolSize &&
       // TODO: Should also bound the jobs queue?
       this.jobsForNextRun.length < MAX_JOBS_CAN_ACCEPT_WORK
     );
