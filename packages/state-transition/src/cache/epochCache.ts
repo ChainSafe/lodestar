@@ -573,14 +573,6 @@ export class EpochCache {
     this.epoch = computeEpochAtSlot(state.slot);
     this.syncPeriod = computeSyncPeriodAtEpoch(this.epoch);
 
-    // To populate finalized cache and prune unfinalized cache with validators that are just initialized
-    if (this.isAfterEIP6110()) {
-      const validators = state.validators;
-      for (const index of epochTransitionCache.indicesEligibleForActivationQueue) {
-        const validator = validators.getReadonly(index);
-        this.addFinalizedPubkey(validator.pubkey, index);
-      }
-    }
   }
 
   beforeEpochTransition(): void {
@@ -803,9 +795,10 @@ export class EpochCache {
   /**
    *
    * Given a validator whose activationEligibilityEpoch has just been set, we move its pubkey from unfinalized cache to finalized cache
+   * Since addFinalizedPubkey() primarily takes pubkeys from unfinalized cache, it can take pubkey hex string directly
    *
    */
-  addFinalizedPubkey(pubkey: Uint8Array, index: ValidatorIndex): void {
+  addFinalizedPubkey(index: ValidatorIndex, pubkey: PubkeyHex): void {
     if (!this.isAfterEIP6110()) {
       throw new Error("addFInalizedPubkey is not available pre EIP-6110");
     }
@@ -816,7 +809,7 @@ export class EpochCache {
       if (existingIndex === index) {
         // Repeated insert. Should not happen except during the first few epochs of 6110 activation
         // Unfinalized validator added to finalizedPubkey2index pre-6110 by calling addPubkey()
-        // when it become finalized in post-6110, addFinalizedPubkey() is called to cause repeated insert
+        // when it becomes finalized in post-6110, addFinalizedPubkey() is called to cause repeated insert
         return;
       } else {
         // attempt to insert the same pubkey with different index, should never happen.
@@ -825,9 +818,9 @@ export class EpochCache {
     }
 
     this.pubkey2index.set(pubkey, index);
-    this.index2pubkey[index] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian);
+    this.index2pubkey[index] = bls.PublicKey.fromHex(pubkey);
 
-    this.unfinalizedPubkey2index = this.unfinalizedPubkey2index.delete(toMemoryEfficientHexStr(pubkey));
+    this.unfinalizedPubkey2index = this.unfinalizedPubkey2index.delete(pubkey);
   }
 
   getShufflingAtSlot(slot: Slot): EpochShuffling {

@@ -50,7 +50,7 @@ export class PubkeyIndexMap {
     return this.map.get(toMemoryEfficientHexStr(key));
   }
 
-  set(key: Uint8Array, value: ValidatorIndex): void {
+  set(key: Uint8Array | PubkeyHex, value: ValidatorIndex): void {
     this.map.set(toMemoryEfficientHexStr(key), value);
   }
 }

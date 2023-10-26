@@ -853,6 +853,19 @@ export class BeaconChain implements IBeaconChain {
     if (headState) {
       this.opPool.pruneAll(headState, finalizedState);
     }
+
+    // Populate finalized pubkey cache
+    if (finalizedState?.epochCtx.isAfterEIP6110()) {
+      const pivotValidatorIndex = finalizedState.validators.length;
+      // TODO 6110: If we are not considering EIP-6914 see if there is any 
+      // data structure like OrderedMap in immutabe-js so we can do slicing instead of filter
+      const newFinalizedValidators = finalizedState.epochCtx.unfinalizedPubkey2index.filter((index, _pubkey) => index < pivotValidatorIndex);
+
+      newFinalizedValidators.forEach((index, pubkey) => {
+        finalizedState.epochCtx.addFinalizedPubkey(index, pubkey);
+      })
+      
+    }
   }
 
   async updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void> {
