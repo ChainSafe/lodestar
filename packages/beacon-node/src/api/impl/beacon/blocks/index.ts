@@ -1,9 +1,9 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {routes, ServerApi, isSignedBlockContents, isSignedBlindedBlockContents, ResponseFormat} from "@lodestar/api";
-import {computeTimeAtSlot} from "@lodestar/state-transition";
+import {routes, ServerApi, ResponseFormat} from "@lodestar/api";
+import {computeTimeAtSlot, signedBlindedBlockToFull, signedBlindedBlobSidecarsToFull} from "@lodestar/state-transition";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
-import {sleep, toHex} from "@lodestar/utils";
-import {allForks, deneb} from "@lodestar/types";
+import {sleep, toHex, LogDataBasic} from "@lodestar/utils";
+import {allForks, deneb, isSignedBlockContents, isSignedBlindedBlockContents} from "@lodestar/types";
 import {BlockSource, getBlockInput, ImportBlockOpts, BlockInput} from "../../../../chain/blocks/types.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
@@ -14,6 +14,11 @@ import {ApiModules} from "../../types.js";
 import {resolveBlockId, toBeaconHeaderResponse} from "./utils.js";
 
 type PublishBlockOpts = ImportBlockOpts & {broadcastValidation?: routes.beacon.BroadcastValidation};
+
+type ParsedSignedBlindedBlockOrContents = {
+  signedBlindedBlock: allForks.SignedBlindedBeaconBlock;
+  signedBlindedBlobSidecars: deneb.SignedBlindedBlobSidecars | null;
+};
 
 /**
  * Validator clock may be advanced from beacon's clock. If the validator requests a resource in a
@@ -138,17 +143,37 @@ export function getBeaconBlockApi({
     signedBlindedBlockOrContents,
     opts: PublishBlockOpts = {}
   ) => {
-    const executionBuilder = chain.executionBuilder;
-    if (!executionBuilder) throw Error("exeutionBuilder required to publish SignedBlindedBeaconBlock");
-    // Mechanism for blobs & blocks on builder is not yet finalized
-    if (isSignedBlindedBlockContents(signedBlindedBlockOrContents)) {
-      throw Error("exeutionBuilder not yet implemented for deneb+ forks");
-    } else {
-      const signedBlockOrContents = await executionBuilder.submitBlindedBlock(signedBlindedBlockOrContents);
-      // the full block is published by relay and it's possible that the block is already known to us by gossip
-      // see https://github.com/ChainSafe/lodestar/issues/5404
-      return publishBlock(signedBlockOrContents, {...opts, ignoreIfKnown: true});
-    }
+    const {signedBlindedBlock, signedBlindedBlobSidecars} =
+      parseSignedBlindedBlockOrContents(signedBlindedBlockOrContents);
+
+    const slot = signedBlindedBlock.message.slot;
+    const blockRoot = toHex(
+      chain.config
+        .getBlindedForkTypes(signedBlindedBlock.message.slot)
+        .BeaconBlock.hashTreeRoot(signedBlindedBlock.message)
+    );
+    const logCtx = {blockRoot, slot};
+
+    // Either the payload/blobs are cached from i) engine locally or ii) they are from the builder
+    //
+    // executionPayload can be null or a real payload in locally produced, its only undefined when
+    // the block came from the builder
+    const executionPayload = chain.producedBlockRoot.get(blockRoot);
+    const signedBlockOrContents =
+      executionPayload !== undefined
+        ? reconstructLocalBlockOrContents(
+            chain,
+            {signedBlindedBlock, signedBlindedBlobSidecars},
+            executionPayload,
+            logCtx
+          )
+        : await reconstructBuilderBlockOrContents(chain, signedBlindedBlockOrContents, logCtx);
+
+    // the full block is published by relay and it's possible that the block is already known to us
+    // by gossip
+    //
+    // see: https://github.com/ChainSafe/lodestar/issues/5404
+    return publishBlock(signedBlockOrContents, {...opts, ignoreIfKnown: true});
   };
 
   return {
@@ -338,4 +363,75 @@ export function getBeaconBlockApi({
       };
     },
   };
+}
+
+function parseSignedBlindedBlockOrContents(
+  signedBlindedBlockOrContents: allForks.SignedBlindedBeaconBlockOrContents
+): ParsedSignedBlindedBlockOrContents {
+  if (isSignedBlindedBlockContents(signedBlindedBlockOrContents)) {
+    const signedBlindedBlock = signedBlindedBlockOrContents.signedBlindedBlock;
+    const signedBlindedBlobSidecars = signedBlindedBlockOrContents.signedBlindedBlobSidecars;
+    return {signedBlindedBlock, signedBlindedBlobSidecars};
+  } else {
+    return {signedBlindedBlock: signedBlindedBlockOrContents, signedBlindedBlobSidecars: null};
+  }
+}
+
+function reconstructLocalBlockOrContents(
+  chain: ApiModules["chain"],
+  {signedBlindedBlock, signedBlindedBlobSidecars}: ParsedSignedBlindedBlockOrContents,
+  executionPayload: allForks.ExecutionPayload | null,
+  logCtx: Record<string, LogDataBasic>
+): allForks.SignedBeaconBlockOrContents {
+  const signedBlock = signedBlindedBlockToFull(signedBlindedBlock, executionPayload);
+  if (executionPayload !== null) {
+    Object.assign(logCtx, {transactions: executionPayload.transactions.length});
+  }
+
+  if (signedBlindedBlobSidecars !== null) {
+    if (executionPayload === null) {
+      throw Error("Missing locally produced executionPayload for deneb+ publishBlindedBlock");
+    }
+
+    const blockHash = toHex(executionPayload.blockHash);
+    const blobSidecars = chain.producedBlobSidecarsCache.get(blockHash);
+    if (blobSidecars === undefined) {
+      throw Error("Missing blobSidecars from the local execution cache");
+    }
+    if (blobSidecars.length !== signedBlindedBlobSidecars.length) {
+      throw Error(
+        `Length mismatch signedBlindedBlobSidecars=${signedBlindedBlobSidecars.length} blobSidecars=${blobSidecars.length}`
+      );
+    }
+    const signedBlobSidecars = signedBlindedBlobSidecarsToFull(
+      signedBlindedBlobSidecars,
+      blobSidecars.map((blobSidecar) => blobSidecar.blob)
+    );
+
+    Object.assign(logCtx, {blobs: signedBlindedBlobSidecars.length});
+    chain.logger.verbose("Block & blobs assembled from locally cached payload", logCtx);
+    return {signedBlock, signedBlobSidecars} as allForks.SignedBeaconBlockOrContents;
+  } else {
+    chain.logger.verbose("Block assembled from locally cached payload", logCtx);
+    return signedBlock as allForks.SignedBeaconBlockOrContents;
+  }
+}
+
+async function reconstructBuilderBlockOrContents(
+  chain: ApiModules["chain"],
+  signedBlindedBlockOrContents: allForks.SignedBlindedBeaconBlockOrContents,
+  logCtx: Record<string, LogDataBasic>
+): Promise<allForks.SignedBeaconBlockOrContents> {
+  // Mechanism for blobs & blocks on builder is implemenented separately in a followup deneb-builder PR
+  if (isSignedBlindedBlockContents(signedBlindedBlockOrContents)) {
+    throw Error("exeutionBuilder not yet implemented for deneb+ forks");
+  }
+  const executionBuilder = chain.executionBuilder;
+  if (!executionBuilder) {
+    throw Error("exeutionBuilder required to publish SignedBlindedBeaconBlock");
+  }
+
+  const signedBlockOrContents = await executionBuilder.submitBlindedBlock(signedBlindedBlockOrContents);
+  chain.logger.verbose("Publishing block assembled from the builder", logCtx);
+  return signedBlockOrContents;
 }

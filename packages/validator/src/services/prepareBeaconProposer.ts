@@ -84,7 +84,9 @@ export function pollBuilderValidatorRegistration(
       .getAllLocalIndices()
       .map((index) => validatorStore.getPubkeyOfIndex(index))
       .filter(
-        (pubkeyHex): pubkeyHex is string => pubkeyHex !== undefined && validatorStore.isBuilderEnabled(pubkeyHex)
+        (pubkeyHex): pubkeyHex is string =>
+          pubkeyHex !== undefined &&
+          validatorStore.getBuilderSelection(pubkeyHex) !== routes.validator.BuilderSelection.ExecutionOnly
       );
 
     if (pubkeyHexes.length > 0) {

@@ -96,14 +96,14 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
     proposerPubKey: BLSPubkey
   ): Promise<{
     header: allForks.ExecutionPayloadHeader;
-    blockValue: Wei;
+    executionPayloadValue: Wei;
     blobKzgCommitments?: deneb.BlobKzgCommitments;
   }> {
     const res = await this.api.getHeader(slot, parentHash, proposerPubKey);
     ApiError.assert(res, "execution.builder.getheader");
-    const {header, value: blockValue} = res.response.data.message;
+    const {header, value: executionPayloadValue} = res.response.data.message;
     const {blobKzgCommitments} = res.response.data.message as {blobKzgCommitments?: deneb.BlobKzgCommitments};
-    return {header, blockValue, blobKzgCommitments};
+    return {header, executionPayloadValue, blobKzgCommitments};
   }
 
   async submitBlindedBlock(signedBlock: allForks.SignedBlindedBeaconBlock): Promise<allForks.SignedBeaconBlock> {

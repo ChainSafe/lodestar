@@ -1,4 +1,6 @@
-import {allForks, bellatrix, capella, isBlindedBeaconBlockBody, ssz} from "@lodestar/types";
+import {allForks, bellatrix, capella, deneb, isBlindedBeaconBlockBody, ssz} from "@lodestar/types";
+import {ForkSeq} from "@lodestar/params";
+
 import {
   BeaconStateBellatrix,
   BeaconStateCapella,
@@ -127,4 +129,46 @@ export function isCapellaPayloadHeader(
   payload: capella.FullOrBlindedExecutionPayload
 ): payload is capella.ExecutionPayloadHeader {
   return (payload as capella.ExecutionPayloadHeader).withdrawalsRoot !== undefined;
+}
+
+export function executionPayloadToPayloadHeader(
+  fork: ForkSeq,
+  payload: allForks.ExecutionPayload
+): allForks.ExecutionPayloadHeader {
+  const transactionsRoot = ssz.bellatrix.Transactions.hashTreeRoot(payload.transactions);
+
+  const bellatrixPayloadFields: allForks.ExecutionPayloadHeader = {
+    parentHash: payload.parentHash,
+    feeRecipient: payload.feeRecipient,
+    stateRoot: payload.stateRoot,
+    receiptsRoot: payload.receiptsRoot,
+    logsBloom: payload.logsBloom,
+    prevRandao: payload.prevRandao,
+    blockNumber: payload.blockNumber,
+    gasLimit: payload.gasLimit,
+    gasUsed: payload.gasUsed,
+    timestamp: payload.timestamp,
+    extraData: payload.extraData,
+    baseFeePerGas: payload.baseFeePerGas,
+    blockHash: payload.blockHash,
+    transactionsRoot,
+  };
+
+  if (fork >= ForkSeq.capella) {
+    (bellatrixPayloadFields as capella.ExecutionPayloadHeader).withdrawalsRoot = ssz.capella.Withdrawals.hashTreeRoot(
+      (payload as capella.ExecutionPayload).withdrawals
+    );
+  }
+
+  if (fork >= ForkSeq.deneb) {
+    // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#process_execution_payload
+    (bellatrixPayloadFields as deneb.ExecutionPayloadHeader).blobGasUsed = (
+      payload as deneb.ExecutionPayloadHeader | deneb.ExecutionPayload
+    ).blobGasUsed;
+    (bellatrixPayloadFields as deneb.ExecutionPayloadHeader).excessBlobGas = (
+      payload as deneb.ExecutionPayloadHeader | deneb.ExecutionPayload
+    ).excessBlobGas;
+  }
+
+  return bellatrixPayloadFields;
 }

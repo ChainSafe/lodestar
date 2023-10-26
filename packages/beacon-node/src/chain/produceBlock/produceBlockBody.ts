@@ -92,12 +92,12 @@ export async function produceBlockBody<T extends BlockType>(
     proposerIndex: ValidatorIndex;
     proposerPubKey: BLSPubkey;
   }
-): Promise<{body: AssembledBodyType<T>; blobs: BlobsResult; blockValue: Wei}> {
+): Promise<{body: AssembledBodyType<T>; blobs: BlobsResult; executionPayloadValue: Wei}> {
   // Type-safe for blobs variable. Translate 'null' value into 'preDeneb' enum
   // TODO: Not ideal, but better than just using null.
   // TODO: Does not guarantee that preDeneb enum goes with a preDeneb block
   let blobsResult: BlobsResult;
-  let blockValue: Wei;
+  let executionPayloadValue: Wei;
   const fork = currentState.config.getForkName(blockSlot);
 
   const logMeta: Record<string, string | number | bigint> = {
@@ -194,8 +194,8 @@ export async function produceBlockBody<T extends BlockType>(
         proposerPubKey
       );
       (blockBody as allForks.BlindedBeaconBlockBody).executionPayloadHeader = builderRes.header;
-      blockValue = builderRes.blockValue;
-      this.logger.verbose("Fetched execution payload header from builder", {slot: blockSlot, blockValue});
+      executionPayloadValue = builderRes.executionPayloadValue;
+      this.logger.verbose("Fetched execution payload header from builder", {slot: blockSlot, executionPayloadValue});
       if (ForkSeq[fork] >= ForkSeq.deneb) {
         const {blobKzgCommitments} = builderRes;
         if (blobKzgCommitments === undefined) {
@@ -232,7 +232,7 @@ export async function produceBlockBody<T extends BlockType>(
           (blockBody as allForks.ExecutionBlockBody).executionPayload =
             ssz.allForksExecution[fork].ExecutionPayload.defaultValue();
           blobsResult = {type: BlobsResultType.preDeneb};
-          blockValue = BigInt(0);
+          executionPayloadValue = BigInt(0);
         } else {
           const {prepType, payloadId} = prepareRes;
           Object.assign(logMeta, {executionPayloadPrepType: prepType});
@@ -249,14 +249,14 @@ export async function produceBlockBody<T extends BlockType>(
           const engineRes = await this.executionEngine.getPayload(fork, payloadId);
           const {executionPayload, blobsBundle} = engineRes;
           (blockBody as allForks.ExecutionBlockBody).executionPayload = executionPayload;
-          blockValue = engineRes.blockValue;
+          executionPayloadValue = engineRes.executionPayloadValue;
           Object.assign(logMeta, {transactions: executionPayload.transactions.length});
 
           const fetchedTime = Date.now() / 1000 - computeTimeAtSlot(this.config, blockSlot, this.genesisTime);
           this.metrics?.blockPayload.payloadFetchedTime.observe({prepType}, fetchedTime);
           this.logger.verbose("Fetched execution payload from engine", {
             slot: blockSlot,
-            blockValue,
+            executionPayloadValue,
             prepType,
             payloadId,
             fetchedTime,
@@ -311,7 +311,7 @@ export async function produceBlockBody<T extends BlockType>(
           (blockBody as allForks.ExecutionBlockBody).executionPayload =
             ssz.allForksExecution[fork].ExecutionPayload.defaultValue();
           blobsResult = {type: BlobsResultType.preDeneb};
-          blockValue = BigInt(0);
+          executionPayloadValue = BigInt(0);
         } else {
           // since merge transition is complete, we need a valid payload even if with an
           // empty (transactions) one. defaultValue isn't gonna cut it!
@@ -321,7 +321,7 @@ export async function produceBlockBody<T extends BlockType>(
     }
   } else {
     blobsResult = {type: BlobsResultType.preDeneb};
-    blockValue = BigInt(0);
+    executionPayloadValue = BigInt(0);
   }
 
   if (ForkSeq[fork] >= ForkSeq.capella) {
@@ -339,10 +339,10 @@ export async function produceBlockBody<T extends BlockType>(
     }
   }
 
-  Object.assign(logMeta, {blockValue});
+  Object.assign(logMeta, {executionPayloadValue});
   this.logger.verbose("Produced beacon block body", logMeta);
 
-  return {body: blockBody as AssembledBodyType<T>, blobs: blobsResult, blockValue};
+  return {body: blockBody as AssembledBodyType<T>, blobs: blobsResult, executionPayloadValue};
 }
 
 /**
@@ -442,7 +442,7 @@ async function prepareExecutionPayloadHeader(
   proposerPubKey: BLSPubkey
 ): Promise<{
   header: allForks.ExecutionPayloadHeader;
-  blockValue: Wei;
+  executionPayloadValue: Wei;
   blobKzgCommitments?: deneb.BlobKzgCommitments;
 }> {
   if (!chain.executionBuilder) {

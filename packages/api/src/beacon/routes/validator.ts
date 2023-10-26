@@ -1,5 +1,5 @@
 import {ContainerType, fromHexString, toHexString, Type} from "@chainsafe/ssz";
-import {ForkName, isForkBlobs, isForkExecution} from "@lodestar/params";
+import {ForkName, ForkBlobs, isForkBlobs, isForkExecution, ForkPreBlobs} from "@lodestar/params";
 import {
   allForks,
   altair,
@@ -27,21 +27,45 @@ import {
   ArrayOf,
   Schema,
   WithVersion,
-  WithBlockValue,
+  WithExecutionPayloadValue,
   reqOnlyBody,
   ReqSerializers,
   jsonType,
   ContainerDataExecutionOptimistic,
   ContainerData,
+  TypeJson,
 } from "../../utils/index.js";
 import {fromU64Str, fromGraffitiHex, toU64Str, U64Str, toGraffitiHex} from "../../utils/serdes.js";
-import {
-  BlockContents,
-  BlindedBlockContents,
-  AllForksBlockContentsResSerializer,
-  AllForksBlindedBlockContentsResSerializer,
-} from "../../utils/routes.js";
+import {allForksBlockContentsResSerializer, allForksBlindedBlockContentsResSerializer} from "../../utils/routes.js";
 import {ExecutionOptimistic} from "./beacon/block.js";
+
+export enum BuilderSelection {
+  BuilderAlways = "builderalways",
+  MaxProfit = "maxprofit",
+  /** Only activate builder flow for DVT block proposal protocols */
+  BuilderOnly = "builderonly",
+  /** Only builds execution block*/
+  ExecutionOnly = "executiononly",
+}
+
+export type ExtraProduceBlockOps = {
+  feeRecipient?: string;
+  builderSelection?: BuilderSelection;
+  strictFeeRecipientCheck?: boolean;
+};
+
+export type ProduceBlockOrContentsRes = {executionPayloadValue: Wei} & (
+  | {data: allForks.BeaconBlock; version: ForkPreBlobs}
+  | {data: allForks.BlockContents; version: ForkBlobs}
+);
+export type ProduceBlindedBlockOrContentsRes = {executionPayloadValue: Wei} & (
+  | {data: allForks.BlindedBeaconBlock; version: ForkPreBlobs}
+  | {data: allForks.BlindedBlockContents; version: ForkBlobs}
+);
+
+export type ProduceFullOrBlindedBlockOrContentsRes =
+  | (ProduceBlockOrContentsRes & {executionPayloadBlinded: false})
+  | (ProduceBlindedBlockOrContentsRes & {executionPayloadBlinded: true});
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -201,11 +225,10 @@ export type Api = {
   produceBlock(
     slot: Slot,
     randaoReveal: BLSSignature,
-    graffiti: string,
-    feeRecipient?: string
+    graffiti: string
   ): Promise<
     ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: allForks.BeaconBlock; blockValue: Wei}},
+      {[HttpStatusCode.OK]: {data: allForks.BeaconBlock}},
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
     >
   >;
@@ -223,11 +246,35 @@ export type Api = {
   produceBlockV2(
     slot: Slot,
     randaoReveal: BLSSignature,
-    graffiti: string,
-    feeRecipient?: string
+    graffiti: string
   ): Promise<
     ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: allForks.BeaconBlock | BlockContents; version: ForkName; blockValue: Wei}},
+      {[HttpStatusCode.OK]: ProduceBlockOrContentsRes},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
+    >
+  >;
+
+  /**
+   * Requests a beacon node to produce a valid block, which can then be signed by a validator.
+   * Metadata in the response indicates the type of block produced, and the supported types of block
+   * will be added to as forks progress.
+   * @param slot The slot for which the block should be proposed.
+   * @param randaoReveal The validator's randao reveal value.
+   * @param graffiti Arbitrary data validator wants to include in block.
+   * @returns any Success response
+   * @throws ApiError
+   */
+  produceBlockV3(
+    slot: Slot,
+    randaoReveal: BLSSignature,
+    graffiti: string,
+    skipRandaoVerification?: boolean,
+    opts?: ExtraProduceBlockOps
+  ): Promise<
+    ApiClientResponse<
+      {
+        [HttpStatusCode.OK]: ProduceFullOrBlindedBlockOrContentsRes;
+      },
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
     >
   >;
@@ -235,16 +282,11 @@ export type Api = {
   produceBlindedBlock(
     slot: Slot,
     randaoReveal: BLSSignature,
-    graffiti: string,
-    feeRecipient?: string
+    graffiti: string
   ): Promise<
     ApiClientResponse<
       {
-        [HttpStatusCode.OK]: {
-          data: allForks.BlindedBeaconBlock | BlindedBlockContents;
-          version: ForkName;
-          blockValue: Wei;
-        };
+        [HttpStatusCode.OK]: ProduceBlindedBlockOrContentsRes;
       },
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
     >
@@ -410,6 +452,7 @@ export const routesData: RoutesData<Api> = {
   getSyncCommitteeDuties: {url: "/eth/v1/validator/duties/sync/{epoch}", method: "POST"},
   produceBlock: {url: "/eth/v1/validator/blocks/{slot}", method: "GET"},
   produceBlockV2: {url: "/eth/v2/validator/blocks/{slot}", method: "GET"},
+  produceBlockV3: {url: "/eth/v3/validator/blocks/{slot}", method: "GET"},
   produceBlindedBlock: {url: "/eth/v1/validator/blinded_blocks/{slot}", method: "GET"},
   produceAttestationData: {url: "/eth/v1/validator/attestation_data", method: "GET"},
   produceSyncCommitteeContribution: {url: "/eth/v1/validator/sync_committee_contribution", method: "GET"},
@@ -432,6 +475,17 @@ export type ReqTypes = {
   getSyncCommitteeDuties: {params: {epoch: Epoch}; body: U64Str[]};
   produceBlock: {params: {slot: number}; query: {randao_reveal: string; graffiti: string}};
   produceBlockV2: {params: {slot: number}; query: {randao_reveal: string; graffiti: string; fee_recipient?: string}};
+  produceBlockV3: {
+    params: {slot: number};
+    query: {
+      randao_reveal: string;
+      graffiti: string;
+      skip_randao_verification?: boolean;
+      fee_recipient?: string;
+      builder_selection?: string;
+      strict_fee_recipient_check?: boolean;
+    };
+  };
   produceBlindedBlock: {params: {slot: number}; query: {randao_reveal: string; graffiti: string}};
   produceAttestationData: {query: {slot: number; committee_index: number}};
   produceSyncCommitteeContribution: {query: {slot: number; subcommittee_index: number; beacon_block_root: string}};
@@ -487,20 +541,39 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
     {jsonCase: "eth2"}
   );
 
-  const produceBlock: ReqSerializers<Api, ReqTypes>["produceBlockV2"] = {
-    writeReq: (slot, randaoReveal, graffiti, feeRecipient) => ({
+  const produceBlockV3: ReqSerializers<Api, ReqTypes>["produceBlockV3"] = {
+    writeReq: (slot, randaoReveal, graffiti, skipRandaoVerification, opts) => ({
       params: {slot},
-      query: {randao_reveal: toHexString(randaoReveal), graffiti: toGraffitiHex(graffiti), fee_recipient: feeRecipient},
+      query: {
+        randao_reveal: toHexString(randaoReveal),
+        graffiti: toGraffitiHex(graffiti),
+        fee_recipient: opts?.feeRecipient,
+        skip_randao_verification: skipRandaoVerification,
+        builder_selection: opts?.builderSelection,
+        strict_fee_recipient_check: opts?.strictFeeRecipientCheck,
+      },
     }),
     parseReq: ({params, query}) => [
       params.slot,
       fromHexString(query.randao_reveal),
       fromGraffitiHex(query.graffiti),
-      query.fee_recipient,
+      query.skip_randao_verification,
+      {
+        feeRecipient: query.fee_recipient,
+        builderSelection: query.builder_selection as BuilderSelection,
+        strictFeeRecipientCheck: query.strict_fee_recipient_check,
+      },
     ],
     schema: {
       params: {slot: Schema.UintRequired},
-      query: {randao_reveal: Schema.StringRequired, graffiti: Schema.String, fee_recipient: Schema.String},
+      query: {
+        randao_reveal: Schema.StringRequired,
+        graffiti: Schema.String,
+        fee_recipient: Schema.String,
+        skip_randao_verification: Schema.Boolean,
+        builder_selection: Schema.String,
+        strict_fee_recipient_check: Schema.Boolean,
+      },
     },
   };
 
@@ -531,9 +604,10 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       },
     },
 
-    produceBlock: produceBlock,
-    produceBlockV2: produceBlock,
-    produceBlindedBlock: produceBlock,
+    produceBlock: produceBlockV3 as ReqSerializers<Api, ReqTypes>["produceBlock"],
+    produceBlockV2: produceBlockV3 as ReqSerializers<Api, ReqTypes>["produceBlockV2"],
+    produceBlockV3,
+    produceBlindedBlock: produceBlockV3 as ReqSerializers<Api, ReqTypes>["produceBlindedBlock"],
 
     produceAttestationData: {
       writeReq: (index, slot) => ({query: {slot, committee_index: index}}),
@@ -641,23 +715,50 @@ export function getReturnTypes(): ReturnTypes<Api> {
     {jsonCase: "eth2"}
   );
 
+  const produceBlockOrContents = WithExecutionPayloadValue(
+    WithVersion<allForks.BeaconBlockOrContents>((fork: ForkName) =>
+      isForkBlobs(fork) ? allForksBlockContentsResSerializer(fork) : ssz[fork].BeaconBlock
+    )
+  ) as TypeJson<ProduceBlockOrContentsRes>;
+  const produceBlindedBlockOrContents = WithExecutionPayloadValue(
+    WithVersion<allForks.BlindedBeaconBlockOrContents>((fork: ForkName) =>
+      isForkBlobs(fork)
+        ? allForksBlindedBlockContentsResSerializer(fork)
+        : ssz.allForksBlinded[isForkExecution(fork) ? fork : ForkName.bellatrix].BeaconBlock
+    )
+  ) as TypeJson<ProduceBlindedBlockOrContentsRes>;
+
   return {
     getAttesterDuties: WithDependentRootExecutionOptimistic(ArrayOf(AttesterDuty)),
     getProposerDuties: WithDependentRootExecutionOptimistic(ArrayOf(ProposerDuty)),
     getSyncCommitteeDuties: ContainerDataExecutionOptimistic(ArrayOf(SyncDuty)),
-    produceBlock: WithBlockValue(ContainerData(ssz.phase0.BeaconBlock)),
-    produceBlockV2: WithBlockValue(
-      WithVersion<allForks.BeaconBlock | BlockContents>((fork: ForkName) =>
-        isForkBlobs(fork) ? AllForksBlockContentsResSerializer(() => fork) : ssz[fork].BeaconBlock
-      )
-    ),
-    produceBlindedBlock: WithBlockValue(
-      WithVersion<allForks.BlindedBeaconBlock | BlindedBlockContents>((fork: ForkName) =>
-        isForkBlobs(fork)
-          ? AllForksBlindedBlockContentsResSerializer(() => fork)
-          : ssz.allForksBlinded[isForkExecution(fork) ? fork : ForkName.bellatrix].BeaconBlock
-      )
-    ),
+
+    produceBlock: ContainerData(ssz.phase0.BeaconBlock),
+    produceBlockV2: produceBlockOrContents,
+    produceBlockV3: {
+      toJson: (data) => {
+        if (data.executionPayloadBlinded) {
+          return {
+            execution_payload_blinded: true,
+            ...(produceBlindedBlockOrContents.toJson(data) as Record<string, unknown>),
+          };
+        } else {
+          return {
+            execution_payload_blinded: false,
+            ...(produceBlockOrContents.toJson(data) as Record<string, unknown>),
+          };
+        }
+      },
+      fromJson: (data) => {
+        if ((data as {execution_payload_blinded: true}).execution_payload_blinded) {
+          return {executionPayloadBlinded: true, ...produceBlindedBlockOrContents.fromJson(data)};
+        } else {
+          return {executionPayloadBlinded: false, ...produceBlockOrContents.fromJson(data)};
+        }
+      },
+    },
+    produceBlindedBlock: produceBlindedBlockOrContents,
+
     produceAttestationData: ContainerData(ssz.phase0.AttestationData),
     produceSyncCommitteeContribution: ContainerData(ssz.altair.SyncCommitteeContribution),
     getAggregatedAttestation: ContainerData(ssz.phase0.Attestation),

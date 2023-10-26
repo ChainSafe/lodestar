@@ -60,7 +60,21 @@ const env = await SimulationEnvironment.initWithDefaults(
       keysCount: 32,
       remote: true,
       beacon: BeaconClient.Lighthouse,
-      validator: ValidatorClient.Lodestar,
+      // for cross client make sure lodestar doesn't use v3 for now untill lighthouse supports
+      validator: {
+        type: ValidatorClient.Lodestar,
+        options: {
+          clientOptions: {
+            useProduceBlockV3: false,
+            // this should cause usage of produceBlockV2
+            //
+            // but if blinded production is enabled in lighthouse beacon then this should cause
+            // usage of produce blinded block which should return execution block in blinded format
+            // but only enable that after testing lighthouse beacon
+            "builder.selection": "executiononly",
+          },
+        },
+      },
     },
   ]
 );

@@ -5,6 +5,7 @@ import bls from "@chainsafe/bls";
 import {toHexString, fromHexString} from "@chainsafe/ssz";
 import {chainConfig} from "@lodestar/config/default";
 import {bellatrix} from "@lodestar/types";
+import {routes} from "@lodestar/api";
 
 import {ValidatorStore} from "../../src/services/validatorStore.js";
 import {getApiClientStub} from "../utils/apiStub.js";
@@ -29,8 +30,8 @@ describe("ValidatorStore", function () {
           strictFeeRecipientCheck: true,
           feeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
           builder: {
-            enabled: false,
             gasLimit: 30000000,
+            selection: routes.validator.BuilderSelection.ExecutionOnly,
           },
         },
       },
@@ -39,7 +40,6 @@ describe("ValidatorStore", function () {
         strictFeeRecipientCheck: false,
         feeRecipient: "0xcccccccccccccccccccccccccccccccccccccccc",
         builder: {
-          enabled: true,
           gasLimit: 35000000,
         },
       },
@@ -61,9 +61,6 @@ describe("ValidatorStore", function () {
     expect(validatorStore.getFeeRecipient(toHexString(pubkeys[0]))).to.be.equal(
       valProposerConfig.proposerConfig[toHexString(pubkeys[0])].feeRecipient
     );
-    expect(validatorStore.isBuilderEnabled(toHexString(pubkeys[0]))).to.be.equal(
-      valProposerConfig.proposerConfig[toHexString(pubkeys[0])].builder?.enabled
-    );
     expect(validatorStore.strictFeeRecipientCheck(toHexString(pubkeys[0]))).to.be.equal(
       valProposerConfig.proposerConfig[toHexString(pubkeys[0])].strictFeeRecipientCheck
     );
@@ -75,9 +72,6 @@ describe("ValidatorStore", function () {
     expect(validatorStore.getGraffiti(toHexString(pubkeys[1]))).to.be.equal(valProposerConfig.defaultConfig.graffiti);
     expect(validatorStore.getFeeRecipient(toHexString(pubkeys[1]))).to.be.equal(
       valProposerConfig.defaultConfig.feeRecipient
-    );
-    expect(validatorStore.isBuilderEnabled(toHexString(pubkeys[1]))).to.be.equal(
-      valProposerConfig.defaultConfig.builder?.enabled
     );
     expect(validatorStore.strictFeeRecipientCheck(toHexString(pubkeys[1]))).to.be.equal(
       valProposerConfig.defaultConfig.strictFeeRecipientCheck
