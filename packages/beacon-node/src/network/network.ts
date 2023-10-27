@@ -8,7 +8,7 @@ import {computeStartSlotAtEpoch, computeTimeAtSlot} from "@lodestar/state-transi
 import {phase0, allForks, deneb, altair, Root, capella, SlotRootHex} from "@lodestar/types";
 import {routes} from "@lodestar/api";
 import {ResponseIncoming} from "@lodestar/reqresp";
-import {ForkName, ForkSeq, MAX_BLOBS_PER_BLOCK} from "@lodestar/params";
+import {ForkSeq, MAX_BLOBS_PER_BLOCK} from "@lodestar/params";
 import {Metrics, RegistryMetricCreator} from "../metrics/index.js";
 import {IBeaconChain} from "../chain/index.js";
 import {IBeaconDb} from "../db/interface.js";
@@ -33,6 +33,7 @@ import {GetReqRespHandlerFn, Version, requestSszTypeByMethod, responseSszTypeByM
 import {collectSequentialBlocksInRange} from "./reqresp/utils/collectSequentialBlocksInRange.js";
 import {getGossipSSZType, gossipTopicIgnoreDuplicatePublishError, stringifyGossipTopic} from "./gossip/topic.js";
 import {AggregatorTracker} from "./processor/aggregatorTracker.js";
+import {getActiveForks} from "./forks.js";
 
 type NetworkModules = {
   opts: NetworkOptions;
@@ -323,11 +324,22 @@ export class Network implements INetwork {
   }
 
   async publishBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange): Promise<number> {
-    return this.publishGossip<GossipType.bls_to_execution_change>(
-      {type: GossipType.bls_to_execution_change, fork: ForkName.capella},
-      blsToExecutionChange,
-      {ignoreDuplicatePublishError: true}
-    );
+    const publishChanges = [];
+    for (const fork of getActiveForks(this.config, this.clock.currentEpoch)) {
+      if (ForkSeq[fork] >= ForkSeq.capella) {
+        const publishPromise = this.publishGossip<GossipType.bls_to_execution_change>(
+          {type: GossipType.bls_to_execution_change, fork},
+          blsToExecutionChange,
+          {ignoreDuplicatePublishError: true}
+        );
+        publishChanges.push(publishPromise);
+      }
+    }
+
+    if (publishChanges.length === 0) {
+      throw Error("No capella+ fork active yet to publish blsToExecutionChange");
+    }
+    return Promise.any(publishChanges);
   }
 
   async publishProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<number> {
