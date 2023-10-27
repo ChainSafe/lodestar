@@ -5,7 +5,7 @@ import {config} from "@lodestar/config/default";
 import {createBeaconConfig} from "@lodestar/config";
 import {createCachedBeaconStateTest} from "../utils/state.js";
 import {PubkeyIndexMap} from "../../src/cache/pubkeyCache.js";
-import {createCachedBeaconState, loadCachedBeaconState} from "../../src/cache/stateCache.js";
+import {createCachedBeaconState, loadUnfinalizedCachedBeaconState} from "../../src/cache/stateCache.js";
 import {interopPubkeysCached} from "../utils/interop.js";
 import {modifyStateSameValidator, newStateWithValidators} from "../utils/capella.js";
 
@@ -136,7 +136,7 @@ describe("CachedBeaconState", () => {
 
         // confirm loadState() result
         const stateBytes = state.serialize();
-        const newCachedState = loadCachedBeaconState(seedState, stateBytes, {skipSyncCommitteeCache: true});
+        const newCachedState = loadUnfinalizedCachedBeaconState(seedState, stateBytes, {skipSyncCommitteeCache: true});
         const newStateBytes = newCachedState.serialize();
         expect(newStateBytes).to.be.deep.equal(stateBytes, "loadState: state bytes are not equal");
         expect(newCachedState.hashTreeRoot()).to.be.deep.equal(
@@ -144,7 +144,7 @@ describe("CachedBeaconState", () => {
           "loadState: state root is not equal"
         );
 
-        // confirm loadCachedBeaconState() result
+        // confirm loadUnfinalizedCachedBeaconState() result
         for (let i = 0; i < newCachedState.validators.length; i++) {
           expect(newCachedState.epochCtx.pubkey2index.get(newCachedState.validators.get(i).pubkey)).to.be.equal(i);
           expect(newCachedState.epochCtx.index2pubkey[i].toBytes()).to.be.deep.equal(pubkeys[i]);
