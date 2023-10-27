@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import {itBench} from "@dapplion/benchmark";
 import {byteArrayEquals} from "@chainsafe/ssz";
 import {generateState} from "../../utils/state.js";
@@ -21,36 +22,93 @@ import {generateValidators} from "../../utils/validator.js";
  *    ✔ byteArrayEquals 123687377                                           3.077884 ops/s    324.8985 ms/op        -          1 runs   64.5 s
  *    ✔ Buffer.compare 123687377                                            114.7834 ops/s    8.712061 ms/op        -         13 runs   12.1 s
  */
-describe("compare Uint8Array", () => {
+describe("compare Uint8Array using byteArrayEquals() vs Buffer.compare()", () => {
   const numValidator = 1_000_000;
   const validators = generateValidators(numValidator);
   const state = generateState({validators: validators});
   const stateBytes = state.serialize();
 
   const lengths = [32, 1024, 16384, stateBytes.length];
-  // const lengths = [stateBytes.length];
-  for (const length of lengths) {
-    const runsFactor = length > 16384 ? 100 : 1000;
-    const bytes = stateBytes.subarray(0, length);
-    const bytes2 = bytes.slice();
-    itBench({
-      id: `byteArrayEquals ${length}`,
-      fn: () => {
-        for (let i = 0; i < runsFactor; i++) {
-          byteArrayEquals(bytes, bytes2);
-        }
-      },
-      runsFactor,
-    });
+  describe("same bytes", () => {
+    for (const length of lengths) {
+      const runsFactor = length > 16384 ? 100 : 1000;
+      const bytes = stateBytes.subarray(0, length);
+      const bytes2 = bytes.slice();
+      itBench({
+        id: `byteArrayEquals ${length}`,
+        fn: () => {
+          for (let i = 0; i < runsFactor; i++) {
+            byteArrayEquals(bytes, bytes2);
+          }
+        },
+        runsFactor,
+      });
 
-    itBench({
-      id: `Buffer.compare ${length}`,
-      fn: () => {
-        for (let i = 0; i < runsFactor; i++) {
-          Buffer.compare(bytes, bytes2);
-        }
-      },
-      runsFactor,
-    });
-  }
+      itBench({
+        id: `Buffer.compare ${length}`,
+        fn: () => {
+          for (let i = 0; i < runsFactor; i++) {
+            Buffer.compare(bytes, bytes2);
+          }
+        },
+        runsFactor,
+      });
+    }
+  });
+
+  describe("different at the last byte", () => {
+    for (const length of lengths) {
+      const runsFactor = length > 16384 ? 100 : 1000;
+      const bytes = stateBytes.subarray(0, length);
+      const bytes2 = bytes.slice();
+      bytes2[bytes2.length - 1] = bytes2[bytes2.length - 1] + 1;
+      itBench({
+        id: `byteArrayEquals ${length} - diff last byte`,
+        fn: () => {
+          for (let i = 0; i < runsFactor; i++) {
+            byteArrayEquals(bytes, bytes2);
+          }
+        },
+        runsFactor,
+      });
+
+      itBench({
+        id: `Buffer.compare ${length} - diff last byte`,
+        fn: () => {
+          for (let i = 0; i < runsFactor; i++) {
+            Buffer.compare(bytes, bytes2);
+          }
+        },
+        runsFactor,
+      });
+    }
+  });
+
+  describe("totally different", () => {
+    for (const length of lengths) {
+      const runsFactor = length > 16384 ? 100 : 1000;
+      const bytes = crypto.randomBytes(length);
+      const bytes2 = crypto.randomBytes(length);
+
+      itBench({
+        id: `byteArrayEquals ${length} - random bytes`,
+        fn: () => {
+          for (let i = 0; i < runsFactor; i++) {
+            byteArrayEquals(bytes, bytes2);
+          }
+        },
+        runsFactor,
+      });
+
+      itBench({
+        id: `Buffer.compare ${length} - random bytes`,
+        fn: () => {
+          for (let i = 0; i < runsFactor; i++) {
+            Buffer.compare(bytes, bytes2);
+          }
+        },
+        runsFactor,
+      });
+    }
+  });
 });
