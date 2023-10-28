@@ -859,9 +859,8 @@ export class BeaconChain implements IBeaconChain {
     // In that case implement getCheckpointStateValidatorCount() in regen and use headState instead
     if (finalizedState?.epochCtx.isAfterEIP6110()) {
       const pivotValidatorIndex = finalizedState.validators.length;
-      // TODO 6110: If we are not considering EIP-6914 see if there is any 
-      // data structure like OrderedMap in immutabe-js so we can do slicing instead of filter
-      const newFinalizedValidators = finalizedState.epochCtx.unfinalizedPubkey2index.filter((index, _pubkey) => index < pivotValidatorIndex);
+      // Note EIP-6914 will break this logic
+      const newFinalizedValidators = finalizedState.epochCtx.unfinalizedPubkey2index.takeWhile((index, _pubkey) => index < pivotValidatorIndex);
 
       newFinalizedValidators.forEach((index, pubkey) => {
         finalizedState.epochCtx.addFinalizedPubkey(index, pubkey);

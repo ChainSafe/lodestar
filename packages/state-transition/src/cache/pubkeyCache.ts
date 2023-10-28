@@ -5,7 +5,13 @@ import {ValidatorIndex} from "@lodestar/types";
 import {BeaconStateAllForks} from "./types.js";
 
 export type Index2PubkeyCache = PublicKey[];
-export type UnfinalizedPubkeyIndexMap = immutable.Map<PubkeyHex, ValidatorIndex>;
+/**
+ * OrderedMap preserves the order of entries in which they are `set()`. 
+ * We assume `values()` yields validator indices in strictly increasing order 
+ * as new validator indices are assigned in increasing order.
+ * EIP-6914 will break this assumption.
+ */
+export type UnfinalizedPubkeyIndexMap = immutable.OrderedMap<PubkeyHex, ValidatorIndex>;
 
 export type PubkeyHex = string;
 
