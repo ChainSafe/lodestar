@@ -8,6 +8,8 @@ import {StateId} from "../beacon/routes/beacon/index.js";
 import {AttesterDuty} from "../beacon/routes/validator.js";
 import {NodeHealthOptions} from "../beacon/routes/node.js";
 import {Schema, SchemaDefinition} from "./schema.js";
+import {stringifyQuery, urlJoin} from "./client/format.js";
+import {ApiError} from "./client/httpClient.js";
 
 // ssz types -- assumed to already be defined
 
@@ -141,6 +143,7 @@ export type ResponseCodec<E extends Endpoint> = {
  * - request json schema
  */
 export type RouteDefinition<E extends Endpoint> = {
+  operationId: string;
   url: string;
   method: E["method"];
   statusOk?: number; // only used for keymanager to set non-200 ok
@@ -267,6 +270,7 @@ export type TestEndpoints = {
 
 export const definitions: RouteDefinitions<TestEndpoints> = {
   getState: {
+    operationId: "getState",
     url: "/eth/v2/debug/beacon/states/{state_id}",
     method: "GET",
     req: {
@@ -281,6 +285,7 @@ export const definitions: RouteDefinitions<TestEndpoints> = {
     },
   },
   getAttesterDuties: {
+    operationId: "getAttesterDuties",
     url: "/eth/v1/validator/duties/attester/{epoch}",
     method: "POST",
     // POST request codecs include *Ssz functions to translate to / from ssz bodies
@@ -298,6 +303,7 @@ export const definitions: RouteDefinitions<TestEndpoints> = {
     },
   },
   getNodeVersion: {
+    operationId: "getNodeVersion",
     url: "/eth/v1/node/version",
     method: "GET",
     req: EmptyRequestCodec,
@@ -307,6 +313,7 @@ export const definitions: RouteDefinitions<TestEndpoints> = {
     },
   },
   getHealth: {
+    operationId: "getHealth",
     url: "/eth/v1/node/health",
     method: "GET",
     req: {
@@ -320,3 +327,206 @@ export const definitions: RouteDefinitions<TestEndpoints> = {
     },
   },
 };
+
+// Api client
+
+export enum WireFormat {
+  json = "json",
+  ssz = "ssz",
+}
+
+export type ApiRequestInit = {
+  requestWireFormat?: WireFormat;
+  responseWireFormat?: WireFormat;
+} & RequestInit;
+
+export type CreateRequestInit<E extends Endpoint> = {
+  baseUrl: string;
+  urlFormatter: (args: Record<string, string | number>) => string;
+  definition: RouteDefinition<E>;
+  params: E["params"];
+  init: ApiRequestInit;
+};
+
+export const DEFAULT_REQUEST_WIRE_FORMAT = WireFormat.json;
+export const DEFAULT_RESPONSE_WIRE_FORMAT = WireFormat.ssz;
+
+export function createApiRequest<E extends Endpoint>({
+  baseUrl,
+  urlFormatter,
+  definition,
+  params,
+  init,
+}: CreateRequestInit<E>): Request {
+  const headers = new Headers(init.headers);
+
+  let req: {
+    params?: E["request"]["params"];
+    query?: E["request"]["query"];
+    body?: string | Uint8Array;
+  };
+
+  if (definition.method === "GET") {
+    req = definition.req.writeReqJson(params);
+  } else {
+    const requestWireFormat = init.requestWireFormat ?? DEFAULT_REQUEST_WIRE_FORMAT;
+    switch (requestWireFormat) {
+      case WireFormat.json:
+        req = (definition.req as PostReqCodec<E>).writeReqJson(params);
+        headers.set("content-type", "application/json");
+        break;
+      case WireFormat.ssz:
+        req = (definition.req as PostReqCodec<E>).writeReqSsz(params);
+        headers.set("content-type", "application/octet-stream");
+        break;
+    }
+  }
+  const url = new URL(
+    urlJoin(baseUrl, urlFormatter(req.params ?? {})) + (req.query ? "?" + stringifyQuery(req.query) : "")
+  );
+
+  const responseWireFormat = init.responseWireFormat ?? DEFAULT_REQUEST_WIRE_FORMAT;
+  switch (responseWireFormat) {
+    case WireFormat.json:
+      headers.set("accept", "");
+      break;
+    case WireFormat.ssz:
+      headers.set("accept", "");
+      break;
+  }
+
+  return new Request(url, {
+    ...init,
+    method: definition.method,
+    headers,
+    body: req.body,
+  });
+}
+
+export type RawBody = {type: WireFormat.json; value: unknown} | {type: WireFormat.ssz; value: Uint8Array};
+
+export type SuccessApiResponse<E extends Endpoint> = Response & {
+  ok: true;
+  meta: Promise<E["meta"]>;
+  value: Promise<E["return"]>;
+  ssz: Promise<Uint8Array>;
+};
+
+export type FailureApiResponse = Response & {
+  ok: false;
+  error: Promise<ApiError>;
+};
+
+export type UnknownApiResponse<E extends Endpoint> = SuccessApiResponse<E> | FailureApiResponse;
+
+export class ApiResponse<E extends Endpoint> extends Response {
+  private definition: RouteDefinition<E>;
+  private _rawBody?: RawBody;
+  private _errorBody?: string;
+  private _meta?: E["meta"];
+  private _value?: E["return"];
+
+  constructor(definition: RouteDefinition<E>, body?: BodyInit | null, init?: ResponseInit) {
+    super(body, init);
+    this.definition = definition;
+  }
+
+  wireFormat(): WireFormat {
+    const contentType = this.headers.get("content-type");
+    if (contentType === "application/json") {
+      return WireFormat.json;
+    }
+    if (contentType === "application/octet-stream") {
+      return WireFormat.ssz;
+    }
+    throw new Error(`Unknown response content-type: ${contentType}`);
+  }
+
+  async rawBody(): Promise<RawBody> {
+    if (!this.ok) {
+      throw await this.error();
+    }
+
+    if (!this._rawBody) {
+      switch (this.wireFormat()) {
+        case WireFormat.json:
+          this._rawBody = {
+            type: WireFormat.json,
+            value: await this.json(),
+          };
+          break;
+        case WireFormat.ssz:
+          this._rawBody = {
+            type: WireFormat.ssz,
+            value: new Uint8Array(await this.arrayBuffer()),
+          };
+          break;
+      }
+    }
+    return this._rawBody;
+  }
+
+  async meta(): Promise<E["meta"]> {
+    if (!this._meta) {
+      const rawBody = await this.rawBody();
+      switch (rawBody.type) {
+        case WireFormat.json:
+          this._meta = this.definition.resp.meta.fromJson(rawBody.value);
+          break;
+        case WireFormat.ssz:
+          this._meta = this.definition.resp.meta.fromHeaders(this.headers);
+          break;
+      }
+    }
+    return this._meta;
+  }
+
+  async value(): Promise<E["return"]> {
+    if (!this._value) {
+      const rawBody = await this.rawBody();
+      const meta = await this.meta();
+      switch (rawBody.type) {
+        case WireFormat.json:
+          this._value = this.definition.resp.data.fromJson((rawBody.value as Record<string, unknown>)?.["data"], meta);
+          break;
+        case WireFormat.ssz:
+          this._value = this.definition.resp.data.deserialize(rawBody.value, meta);
+          break;
+      }
+    }
+    return this._value;
+  }
+
+  async ssz(): Promise<Uint8Array> {
+    const rawBody = await this.rawBody();
+    switch (rawBody.type) {
+      case WireFormat.json:
+        return this.definition.resp.data.serialize(await this.value(), await this.meta());
+      case WireFormat.ssz:
+        return rawBody.value;
+    }
+  }
+
+  async error(): Promise<ApiError | undefined> {
+    if (this.ok) {
+      return undefined;
+    }
+    if (!this._errorBody) {
+      this._errorBody = await this.text();
+    }
+    return new ApiError(getErrorMessage(this._errorBody), this.status, this.definition.operationId);
+  }
+}
+
+function getErrorMessage(errBody: string): string {
+  try {
+    const errJson = JSON.parse(errBody) as {message: string};
+    if (errJson.message) {
+      return errJson.message;
+    } else {
+      return errBody;
+    }
+  } catch (e) {
+    return errBody;
+  }
+}
