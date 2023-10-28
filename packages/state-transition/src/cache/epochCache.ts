@@ -793,10 +793,8 @@ export class EpochCache {
   }
 
   /**
-   *
-   * Given a validator whose activationEligibilityEpoch has just been set, we move its pubkey from unfinalized cache to finalized cache
+   * Add finalized validator index and pubkey into finalized cache.
    * Since addFinalizedPubkey() primarily takes pubkeys from unfinalized cache, it can take pubkey hex string directly
-   *
    */
   addFinalizedPubkey(index: ValidatorIndex, pubkey: PubkeyHex): void {
     if (!this.isAfterEIP6110()) {
@@ -820,7 +818,13 @@ export class EpochCache {
     this.pubkey2index.set(pubkey, index);
     this.index2pubkey[index] = bls.PublicKey.fromHex(pubkey);
 
-    this.unfinalizedPubkey2index = this.unfinalizedPubkey2index.delete(pubkey);
+  }
+
+  /**
+   * Delete pubkeys from unfinalized cache
+   */
+  deleteUnfinalizedPubkeys(pubkeys: PubkeyHex[]): void {
+    this.unfinalizedPubkey2index = this.unfinalizedPubkey2index.deleteAll(pubkeys);
   }
 
   getShufflingAtSlot(slot: Slot): EpochShuffling {
