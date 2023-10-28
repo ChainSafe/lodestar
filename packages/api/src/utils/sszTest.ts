@@ -336,24 +336,27 @@ export enum WireFormat {
   ssz = "ssz",
 }
 
-export type ApiRequestInit = {
+export type ExtraRequestInit = {
+  baseUrl?: string;
   requestWireFormat?: WireFormat;
   responseWireFormat?: WireFormat;
-} & RequestInit;
+  timeoutMs?: string;
+};
+
+export type ApiRequestInit = ExtraRequestInit & RequestInit;
+export type ApiRequestInitRequired = Required<ExtraRequestInit> & RequestInit;
 
 export type CreateRequestInit<E extends Endpoint> = {
-  baseUrl: string;
   urlFormatter: (args: Record<string, string | number>) => string;
   definition: RouteDefinition<E>;
   params: E["params"];
-  init: ApiRequestInit;
+  init: ApiRequestInitRequired;
 };
 
 export const DEFAULT_REQUEST_WIRE_FORMAT = WireFormat.json;
 export const DEFAULT_RESPONSE_WIRE_FORMAT = WireFormat.ssz;
 
 export function createApiRequest<E extends Endpoint>({
-  baseUrl,
   urlFormatter,
   definition,
   params,
@@ -370,8 +373,7 @@ export function createApiRequest<E extends Endpoint>({
   if (definition.method === "GET") {
     req = definition.req.writeReqJson(params);
   } else {
-    const requestWireFormat = init.requestWireFormat ?? DEFAULT_REQUEST_WIRE_FORMAT;
-    switch (requestWireFormat) {
+    switch (init.requestWireFormat) {
       case WireFormat.json:
         req = (definition.req as PostReqCodec<E>).writeReqJson(params);
         headers.set("content-type", "application/json");
@@ -383,11 +385,10 @@ export function createApiRequest<E extends Endpoint>({
     }
   }
   const url = new URL(
-    urlJoin(baseUrl, urlFormatter(req.params ?? {})) + (req.query ? "?" + stringifyQuery(req.query) : "")
+    urlJoin(init.baseUrl, urlFormatter(req.params ?? {})) + (req.query ? "?" + stringifyQuery(req.query) : "")
   );
 
-  const responseWireFormat = init.responseWireFormat ?? DEFAULT_REQUEST_WIRE_FORMAT;
-  switch (responseWireFormat) {
+  switch (init.responseWireFormat) {
     case WireFormat.json:
       headers.set("accept", "");
       break;
@@ -533,13 +534,13 @@ function getErrorMessage(errBody: string): string {
 }
 
 export function createApiClientMethod<E extends Endpoint>(
-  baseUrl: string,
   definition: RouteDefinition<E>,
-  globalInit: ApiRequestInit
+  globalInit: ApiRequestInitRequired
 ): (params: E["params"], init: ApiRequestInit) => Promise<UnknownApiResponse<E>> {
   const urlFormatter = compileRouteUrlFormater(definition.url);
-  return async (params, init) => {
-    const request = createApiRequest({baseUrl, urlFormatter, definition, params, init: {...globalInit, ...init}});
+  return async (params, _init) => {
+    const init = {...globalInit, ..._init};
+    const request = createApiRequest({urlFormatter, definition, params, init});
     // TODO metrics, timeout, retries(?) etc
     const response = await fetch(request.url, request);
     return new ApiResponse(definition, response.body, response) as UnknownApiResponse<E>;
