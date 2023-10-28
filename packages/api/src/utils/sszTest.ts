@@ -2,15 +2,16 @@
 import {ContainerType, ListBasicType, ListCompositeType, Type, ValueOf} from "@chainsafe/ssz";
 import {Epoch, Root, StringType, allForks, ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
-import {fromHex, toHex} from "@lodestar/utils";
+import {ErrorAborted, fromHex, toBase64, toHex} from "@lodestar/utils";
 import {ExecutionOptimistic} from "../beacon/routes/beacon/block.js";
 import {StateId} from "../beacon/routes/beacon/index.js";
 import {AttesterDuty} from "../beacon/routes/validator.js";
 import {NodeHealthOptions} from "../beacon/routes/node.js";
 import {Schema, SchemaDefinition} from "./schema.js";
 import {stringifyQuery, urlJoin} from "./client/format.js";
-import {ApiError} from "./client/httpClient.js";
+import {ApiError, isAbortedError} from "./client/httpClient.js";
 import { compileRouteUrlFormater } from "./urlFormat.js";
+import { HttpStatusCode } from "./client/httpStatusCode.js";
 
 // ssz types -- assumed to already be defined
 
@@ -340,11 +341,15 @@ export type ExtraRequestInit = {
   baseUrl?: string;
   requestWireFormat?: WireFormat;
   responseWireFormat?: WireFormat;
-  timeoutMs?: string;
+  timeoutMs?: number;
 };
 
-export type ApiRequestInit = ExtraRequestInit & RequestInit;
-export type ApiRequestInitRequired = Required<ExtraRequestInit> & RequestInit;
+export type OptionalRequestInit = {
+  bearerToken?: string;
+};
+
+export type ApiRequestInit = ExtraRequestInit & OptionalRequestInit & RequestInit;
+export type ApiRequestInitRequired = Required<ExtraRequestInit> & OptionalRequestInit & RequestInit;
 
 export type CreateRequestInit<E extends Endpoint> = {
   urlFormatter: (args: Record<string, string | number>) => string;
@@ -387,13 +392,14 @@ export function createApiRequest<E extends Endpoint>({
   const url = new URL(
     urlJoin(init.baseUrl, urlFormatter(req.params ?? {})) + (req.query ? "?" + stringifyQuery(req.query) : "")
   );
+  setAuthorizationHeader(url, headers, init);
 
   switch (init.responseWireFormat) {
     case WireFormat.json:
-      headers.set("accept", "");
+      headers.set("accept", "application/json;q=1,application/octet-stream;q=0.9");
       break;
     case WireFormat.ssz:
-      headers.set("accept", "");
+      headers.set("accept", "application/octet-stream;q=1,application/json;q=0.9");
       break;
   }
 
@@ -539,10 +545,80 @@ export function createApiClientMethod<E extends Endpoint>(
 ): (params: E["params"], init: ApiRequestInit) => Promise<UnknownApiResponse<E>> {
   const urlFormatter = compileRouteUrlFormater(definition.url);
   return async (params, _init) => {
-    const init = {...globalInit, ..._init};
-    const request = createApiRequest({urlFormatter, definition, params, init});
-    // TODO metrics, timeout, retries(?) etc
-    const response = await fetch(request.url, request);
-    return new ApiResponse(definition, response.body, response) as UnknownApiResponse<E>;
+    // Implement fetch timeout
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), _init.timeoutMs ?? globalInit.timeoutMs);
+
+    // Attach global signal to this request's controller
+    const onGlobalSignalAbort = (): void => controller.abort();
+    globalInit.signal?.addEventListener("abort", onGlobalSignalAbort);
+    _init.signal?.addEventListener("abort", onGlobalSignalAbort);
+
+    try {
+      const init = {
+        ...globalInit,
+        ..._init,
+        headers: mergeHeaders(globalInit.headers, _init.headers),
+        signal: controller.signal,
+      };
+
+      const request = createApiRequest({urlFormatter, definition, params, init});
+      const response = await fetch(request.url, request);
+      return new ApiResponse(definition, response.body, response) as UnknownApiResponse<E>;
+    } catch (e) {
+      if (isAbortedError(e as Error)) {
+        if (globalInit.signal?.aborted || _init.signal?.aborted) {
+          throw new ErrorAborted("REST client");
+        } else if (controller.signal.aborted) {
+          return new ApiResponse(definition, (e as Error).message, {
+            status: HttpStatusCode.INTERNAL_SERVER_ERROR,
+          }) as UnknownApiResponse<E>;
+        } else {
+          throw Error("Unknown aborted error");
+        }
+      }
+      throw e;
+    } finally {
+      clearTimeout(timeout);
+      globalInit.signal?.removeEventListener("abort", onGlobalSignalAbort);
+      _init.signal?.removeEventListener("abort", onGlobalSignalAbort);
+    }
   };
+}
+
+export function setAuthorizationHeader(url: URL, headers: Headers, {bearerToken}: OptionalRequestInit): void {
+  if (bearerToken && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${bearerToken}`);
+  }
+  if (url.username || url.password) {
+    if (!headers.has("Authorization")) {
+      headers.set("Authorization", `Basic ${toBase64(`${url.username}:${url.password}`)}`);
+    }
+    // Remove the username and password from the URL
+    url.username = "";
+    url.password = "";
+  }
+}
+
+export function mergeHeaders(...list: (HeadersInit | undefined)[]): Headers {
+  const headers = new Headers();
+  for (const h of list) {
+    if (!h) {
+      continue;
+    }
+    if (Array.isArray(h)) {
+      for (const [key, value] of h) {
+        headers.set(key, value);
+      }
+    } else if (h instanceof Headers) {
+      for (const [key, value] of h as unknown as Iterable<[string, string]>) {
+        headers.set(key, value);
+      }
+    } else {
+      for (const [key, value] of Object.entries(h)) {
+        headers.set(key, value);
+      }
+    }
+  }
+  return headers;
 }

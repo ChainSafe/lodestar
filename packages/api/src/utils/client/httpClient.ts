@@ -341,7 +341,7 @@ export class HttpClient implements IHttpClient {
   }
 }
 
-function isAbortedError(e: Error): boolean {
+export function isAbortedError(e: Error): boolean {
   return isFetchError(e) && e.type === "aborted";
 }
 
