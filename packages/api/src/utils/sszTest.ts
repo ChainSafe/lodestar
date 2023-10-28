@@ -10,6 +10,7 @@ import {NodeHealthOptions} from "../beacon/routes/node.js";
 import {Schema, SchemaDefinition} from "./schema.js";
 import {stringifyQuery, urlJoin} from "./client/format.js";
 import {ApiError} from "./client/httpClient.js";
+import { compileRouteUrlFormater } from "./urlFormat.js";
 
 // ssz types -- assumed to already be defined
 
@@ -407,14 +408,14 @@ export type RawBody = {type: WireFormat.json; value: unknown} | {type: WireForma
 
 export type SuccessApiResponse<E extends Endpoint> = Response & {
   ok: true;
-  meta: Promise<E["meta"]>;
-  value: Promise<E["return"]>;
-  ssz: Promise<Uint8Array>;
+  meta: () => Promise<E["meta"]>;
+  value: () => Promise<E["return"]>;
+  ssz: () => Promise<Uint8Array>;
 };
 
 export type FailureApiResponse = Response & {
   ok: false;
-  error: Promise<ApiError>;
+  error: () => Promise<ApiError>;
 };
 
 export type UnknownApiResponse<E extends Endpoint> = SuccessApiResponse<E> | FailureApiResponse;
@@ -529,4 +530,18 @@ function getErrorMessage(errBody: string): string {
   } catch (e) {
     return errBody;
   }
+}
+
+export function createApiClientMethod<E extends Endpoint>(
+  baseUrl: string,
+  definition: RouteDefinition<E>,
+  globalInit: ApiRequestInit
+): (params: E["params"], init: ApiRequestInit) => Promise<UnknownApiResponse<E>> {
+  const urlFormatter = compileRouteUrlFormater(definition.url);
+  return async (params, init) => {
+    const request = createApiRequest({baseUrl, urlFormatter, definition, params, init: {...globalInit, ...init}});
+    // TODO metrics, timeout, retries(?) etc
+    const response = await fetch(request.url, request);
+    return new ApiResponse(definition, response.body, response) as UnknownApiResponse<E>;
+  };
 }
