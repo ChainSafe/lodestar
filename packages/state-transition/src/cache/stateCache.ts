@@ -133,6 +133,7 @@ export type CachedBeaconStateAllForks = CachedBeaconState<BeaconStateAllForks>;
 export type CachedBeaconStateExecutions = CachedBeaconState<BeaconStateExecutions>;
 /**
  * Create CachedBeaconState computing a new EpochCache instance
+ * TODO 6110: rename this to createFinalizedCachedBeaconState() as it's intended for finalized state only
  */
 export function createCachedBeaconState<T extends BeaconStateAllForks>(
   state: T,
