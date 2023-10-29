@@ -443,13 +443,17 @@ export class ApiResponse<E extends Endpoint> extends Response {
 
   wireFormat(): WireFormat {
     const contentType = this.headers.get("content-type");
-    if (contentType === "application/json") {
+    if (!contentType) throw Error("No content-type header found");
+
+    const mediaType = contentType.split(";", 1)[0].trim().toLowerCase();
+
+    if (mediaType === "application/json") {
       return WireFormat.json;
     }
-    if (contentType === "application/octet-stream") {
+    if (mediaType === "application/octet-stream") {
       return WireFormat.ssz;
     }
-    throw new Error(`Unknown response content-type: ${contentType}`);
+    throw Error(`Unsupported response media type: ${mediaType}`);
   }
 
   async rawBody(): Promise<RawBody> {
