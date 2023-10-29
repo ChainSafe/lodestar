@@ -552,10 +552,10 @@ export async function fetchApiResponse<E extends Endpoint>(
     return apiResponse;
   }
 
-  logger?.debug("API response success", {routeId: definition.operationId});
   const streamTimer = metrics?.streamTime.startTimer();
   try {
     await apiResponse.rawBody();
+    logger?.debug("API response success", {routeId: definition.operationId});
     return apiResponse;
   } finally {
     streamTimer?.();
