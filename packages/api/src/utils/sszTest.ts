@@ -10,8 +10,8 @@ import {NodeHealthOptions} from "../beacon/routes/node.js";
 import {Schema, SchemaDefinition} from "./schema.js";
 import {stringifyQuery, urlJoin} from "./client/format.js";
 import {ApiError, Metrics, isAbortedError} from "./client/httpClient.js";
-import { compileRouteUrlFormater } from "./urlFormat.js";
-import { HttpStatusCode } from "./client/httpStatusCode.js";
+import {compileRouteUrlFormater} from "./urlFormat.js";
+import {HttpStatusCode} from "./client/httpStatusCode.js";
 
 // ssz types -- assumed to already be defined
 
@@ -209,11 +209,11 @@ export const ExecutionOptimisticAndVersionCodec: ResponseMetadataCodec<Execution
   fromJson: (val) => val as ExecutionOptimisticAndVersion,
   toHeaders: (val) =>
     new Headers([
-      ["Execution-Optimistic", String(val.executionOptimistic)],
+      ["Eth-Execution-Optimistic", String(val.executionOptimistic)],
       ["Eth-Consensus-Version", val.version],
     ]),
   fromHeaders: (val) => ({
-    executionOptimistic: Boolean(val.get("Execution-Optimistic")),
+    executionOptimistic: Boolean(val.get("Eth-Execution-Optimistic")),
     version: val.get("Eth-Consensus-Version")!.toLowerCase() as ForkName,
   }),
 };
@@ -230,12 +230,12 @@ export const ExecutionOptimisticAndDependentRootCodec: ResponseMetadataCodec<Exe
     }) as ExecutionOptimisticAndDependentRoot,
   toHeaders: (val) =>
     new Headers([
-      ["Execution-Optimistic", String(val.executionOptimistic)],
-      ["Dependent-Root", toHex(val.dependentRoot)],
+      ["Eth-Execution-Optimistic", String(val.executionOptimistic)],
+      ["Eth-Consensus-Dependent-Root", toHex(val.dependentRoot)],
     ]),
   fromHeaders: (val) => ({
-    executionOptimistic: Boolean(val.get("Execution-Optimistic")),
-    dependentRoot: fromHex(val.get("Dependent-Root")!),
+    executionOptimistic: Boolean(val.get("Eth-Execution-Optimistic")),
+    dependentRoot: fromHex(val.get("Eth-Consensus-Dependent-Root")!),
   }),
 };
 
