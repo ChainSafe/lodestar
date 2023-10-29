@@ -2,14 +2,14 @@
 import {ContainerType, ListBasicType, ListCompositeType, Type, ValueOf} from "@chainsafe/ssz";
 import {Epoch, Root, StringType, allForks, ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
-import {ErrorAborted, fromHex, toBase64, toHex} from "@lodestar/utils";
+import {ErrorAborted, Logger, fromHex, toBase64, toHex} from "@lodestar/utils";
 import {ExecutionOptimistic} from "../beacon/routes/beacon/block.js";
 import {StateId} from "../beacon/routes/beacon/index.js";
 import {AttesterDuty} from "../beacon/routes/validator.js";
 import {NodeHealthOptions} from "../beacon/routes/node.js";
 import {Schema, SchemaDefinition} from "./schema.js";
 import {stringifyQuery, urlJoin} from "./client/format.js";
-import {ApiError, isAbortedError} from "./client/httpClient.js";
+import {ApiError, Metrics, isAbortedError} from "./client/httpClient.js";
 import { compileRouteUrlFormater } from "./urlFormat.js";
 import { HttpStatusCode } from "./client/httpStatusCode.js";
 
@@ -351,22 +351,15 @@ export type OptionalRequestInit = {
 export type ApiRequestInit = ExtraRequestInit & OptionalRequestInit & RequestInit;
 export type ApiRequestInitRequired = Required<ExtraRequestInit> & OptionalRequestInit & RequestInit;
 
-export type CreateRequestInit<E extends Endpoint> = {
-  urlFormatter: (args: Record<string, string | number>) => string;
-  definition: RouteDefinition<E>;
-  params: E["params"];
-  init: ApiRequestInitRequired;
-};
-
 export const DEFAULT_REQUEST_WIRE_FORMAT = WireFormat.json;
 export const DEFAULT_RESPONSE_WIRE_FORMAT = WireFormat.ssz;
 
-export function createApiRequest<E extends Endpoint>({
-  urlFormatter,
-  definition,
-  params,
-  init,
-}: CreateRequestInit<E>): Request {
+export function createApiRequest<E extends Endpoint>(
+  urlFormatter: (args: Record<string, string | number>) => string,
+  definition: RouteDefinition<E>,
+  params: E["params"],
+  init: ApiRequestInitRequired
+): Request {
   const headers = new Headers(init.headers);
 
   let req: {
@@ -417,6 +410,7 @@ export type SuccessApiResponse<E extends Endpoint> = Response & {
   ok: true;
   meta: () => Promise<E["meta"]>;
   value: () => Promise<E["return"]>;
+  rawBody: () => Promise<RawBody>;
   ssz: () => Promise<Uint8Array>;
 };
 
@@ -539,50 +533,95 @@ function getErrorMessage(errBody: string): string {
   }
 }
 
+export async function fetchApiResponse<E extends Endpoint>(
+  urlFormatter: (args: Record<string, string | number>) => string,
+  definition: RouteDefinition<E>,
+  params: E["params"],
+  init: ApiRequestInitRequired,
+  logger?: Logger,
+  metrics?: Metrics
+): Promise<UnknownApiResponse<E>> {
+  logger?.debug("API request begin", {routeId: definition.operationId});
+  const request = createApiRequest(urlFormatter, definition, params, init);
+  const response = await fetch(request.url, request);
+  const apiResponse = new ApiResponse(definition, response.body, response) as UnknownApiResponse<E>;
+
+  if (!apiResponse.ok) {
+    logger?.debug("API response error", {routeId: definition.operationId});
+    metrics?.requestErrors.inc({routeId: definition.operationId});
+    return apiResponse;
+  }
+
+  logger?.debug("API response success", {routeId: definition.operationId});
+  const streamTimer = metrics?.streamTime.startTimer();
+  try {
+    await apiResponse.rawBody();
+    return apiResponse;
+  } finally {
+    streamTimer?.();
+  }
+}
+
+export async function fetchApiResponseTimed<E extends Endpoint>(
+  urlFormatter: (args: Record<string, string | number>) => string,
+  definition: RouteDefinition<E>,
+  params: E["params"],
+  init: ApiRequestInitRequired,
+  globalSignal?: AbortSignal | null,
+  logger?: Logger,
+  metrics?: Metrics
+): Promise<UnknownApiResponse<E>> {
+  // Implement fetch timeout
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), init.timeoutMs);
+
+  // Attach global signal to this request's controller
+  const onSignalAbort = (): void => controller.abort();
+  const initSignal = init.signal;
+  globalSignal?.addEventListener("abort", onSignalAbort);
+  initSignal?.addEventListener("abort", onSignalAbort);
+  init.signal = controller.signal;
+
+  const timer = metrics?.requestTime.startTimer({routeId: definition.operationId});
+  try {
+    return await fetchApiResponse(urlFormatter, definition, params, init, logger, metrics);
+  } catch (e) {
+    metrics?.requestErrors.inc({routeId: definition.operationId});
+
+    if (isAbortedError(e as Error)) {
+      if (globalSignal?.aborted || initSignal?.aborted) {
+        throw new ErrorAborted("REST client");
+      } else if (controller.signal.aborted) {
+        return new ApiResponse(definition, (e as Error).message, {
+          status: HttpStatusCode.INTERNAL_SERVER_ERROR,
+        }) as UnknownApiResponse<E>;
+      } else {
+        throw Error("Unknown aborted error");
+      }
+    }
+    throw e;
+  } finally {
+    timer?.();
+    clearTimeout(timeout);
+    globalSignal?.removeEventListener("abort", onSignalAbort);
+    initSignal?.removeEventListener("abort", onSignalAbort);
+  }
+}
+
 export function createApiClientMethod<E extends Endpoint>(
   definition: RouteDefinition<E>,
-  globalInit: ApiRequestInitRequired
+  globalInit: ApiRequestInitRequired,
+  logger?: Logger,
+  metrics?: Metrics
 ): (params: E["params"], init: ApiRequestInit) => Promise<UnknownApiResponse<E>> {
   const urlFormatter = compileRouteUrlFormater(definition.url);
   return async (params, _init) => {
-    // Implement fetch timeout
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), _init.timeoutMs ?? globalInit.timeoutMs);
-
-    // Attach global signal to this request's controller
-    const onGlobalSignalAbort = (): void => controller.abort();
-    globalInit.signal?.addEventListener("abort", onGlobalSignalAbort);
-    _init.signal?.addEventListener("abort", onGlobalSignalAbort);
-
-    try {
-      const init = {
-        ...globalInit,
-        ..._init,
-        headers: mergeHeaders(globalInit.headers, _init.headers),
-        signal: controller.signal,
-      };
-
-      const request = createApiRequest({urlFormatter, definition, params, init});
-      const response = await fetch(request.url, request);
-      return new ApiResponse(definition, response.body, response) as UnknownApiResponse<E>;
-    } catch (e) {
-      if (isAbortedError(e as Error)) {
-        if (globalInit.signal?.aborted || _init.signal?.aborted) {
-          throw new ErrorAborted("REST client");
-        } else if (controller.signal.aborted) {
-          return new ApiResponse(definition, (e as Error).message, {
-            status: HttpStatusCode.INTERNAL_SERVER_ERROR,
-          }) as UnknownApiResponse<E>;
-        } else {
-          throw Error("Unknown aborted error");
-        }
-      }
-      throw e;
-    } finally {
-      clearTimeout(timeout);
-      globalInit.signal?.removeEventListener("abort", onGlobalSignalAbort);
-      _init.signal?.removeEventListener("abort", onGlobalSignalAbort);
-    }
+    const init = {
+      ...globalInit,
+      ..._init,
+      headers: mergeHeaders(globalInit.headers, _init.headers),
+    };
+    return fetchApiResponseTimed(urlFormatter, definition, params, init, globalInit.signal, logger, metrics);
   };
 }
 
@@ -600,24 +639,22 @@ export function setAuthorizationHeader(url: URL, headers: Headers, {bearerToken}
   }
 }
 
-export function mergeHeaders(...list: (HeadersInit | undefined)[]): Headers {
-  const headers = new Headers();
-  for (const h of list) {
-    if (!h) {
-      continue;
+export function mergeHeaders(a: HeadersInit | undefined, b: HeadersInit | undefined): Headers {
+  const headers = new Headers(a);
+  if (!b) {
+    return headers;
+  }
+  if (Array.isArray(b)) {
+    for (const [key, value] of b) {
+      headers.set(key, value);
     }
-    if (Array.isArray(h)) {
-      for (const [key, value] of h) {
-        headers.set(key, value);
-      }
-    } else if (h instanceof Headers) {
-      for (const [key, value] of h as unknown as Iterable<[string, string]>) {
-        headers.set(key, value);
-      }
-    } else {
-      for (const [key, value] of Object.entries(h)) {
-        headers.set(key, value);
-      }
+  } else if (b instanceof Headers) {
+    for (const [key, value] of b as unknown as Iterable<[string, string]>) {
+      headers.set(key, value);
+    }
+  } else {
+    for (const [key, value] of Object.entries(b)) {
+      headers.set(key, value);
     }
   }
   return headers;
