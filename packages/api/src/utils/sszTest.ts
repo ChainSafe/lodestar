@@ -136,6 +136,14 @@ export type ResponseMetadataCodec<T> = {
 export type ResponseCodec<E extends Endpoint> = {
   data: ResponseDataCodec<E["return"], E["meta"]>;
   meta: ResponseMetadataCodec<E["meta"]>;
+  /** Occasionally, json responses require an extra transormation to separate the data from metadata */
+  munge?: {
+    toResponse: (data: unknown, meta: unknown) => unknown;
+    fromResponse: (resp: unknown) => {
+      data: unknown;
+      meta: unknown;
+    };
+  };
 };
 
 /**
@@ -472,9 +480,13 @@ export class ApiResponse<E extends Endpoint> extends Response {
     if (!this._meta) {
       const rawBody = await this.rawBody();
       switch (rawBody.type) {
-        case WireFormat.json:
-          this._meta = this.definition.resp.meta.fromJson(rawBody.value);
+        case WireFormat.json: {
+          const metaJson = this.definition.resp.munge
+            ? this.definition.resp.munge.fromResponse(rawBody.value).meta
+            : rawBody.value;
+          this._meta = this.definition.resp.meta.fromJson(metaJson);
           break;
+        }
         case WireFormat.ssz:
           this._meta = this.definition.resp.meta.fromHeaders(this.headers);
           break;
@@ -488,9 +500,13 @@ export class ApiResponse<E extends Endpoint> extends Response {
       const rawBody = await this.rawBody();
       const meta = await this.meta();
       switch (rawBody.type) {
-        case WireFormat.json:
-          this._value = this.definition.resp.data.fromJson((rawBody.value as Record<string, unknown>)?.["data"], meta);
+        case WireFormat.json: {
+          const dataJson = this.definition.resp.munge
+            ? this.definition.resp.munge.fromResponse(rawBody.value).data
+            : (rawBody.value as Record<string, unknown>)?.["data"];
+          this._value = this.definition.resp.data.fromJson(dataJson, meta);
           break;
+        }
         case WireFormat.ssz:
           this._value = this.definition.resp.data.deserialize(rawBody.value, meta);
           break;
