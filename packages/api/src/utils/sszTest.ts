@@ -529,9 +529,9 @@ export class ApiResponse<E extends Endpoint> extends Response {
     }
   }
 
-  async error(): Promise<ApiError | undefined> {
+  async error(): Promise<ApiError | null> {
     if (this.ok) {
-      return undefined;
+      return null;
     }
     if (!this._errorBody) {
       this._errorBody = await this.text();
