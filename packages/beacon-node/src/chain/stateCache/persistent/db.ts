@@ -1,5 +1,6 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
+import {Logger} from "@lodestar/utils";
 import {IBeaconDb} from "../../../db/interface.js";
 import {CPStatePersistentApis, PersistentKey} from "./types.js";
 
@@ -7,7 +8,10 @@ import {CPStatePersistentApis, PersistentKey} from "./types.js";
  * Implementation of CPStatePersistentApis using db.
  */
 export class DbPersistentApis implements CPStatePersistentApis {
-  constructor(private readonly db: IBeaconDb) {}
+  constructor(
+    private readonly db: IBeaconDb,
+    private logger: Logger
+  ) {}
 
   async write(_: string, state: CachedBeaconStateAllForks): Promise<string> {
     const root = state.hashTreeRoot();
@@ -29,9 +33,13 @@ export class DbPersistentApis implements CPStatePersistentApis {
    * Clean all checkpoint state in db at startup time.
    */
   async init(): Promise<void> {
+    const start = Date.now();
     const keyStream = this.db.checkpointState.keysStream();
+    let count = 0;
     for await (const key of keyStream) {
+      count++;
       await this.db.checkpointState.delete(key);
     }
+    this.logger.info("@@@ DbPersistentApis removeFiles", {time: Date.now() - start, numFiles: count});
   }
 }
