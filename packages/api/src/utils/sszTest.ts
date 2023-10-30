@@ -708,7 +708,7 @@ export function createApiClientMethods<Es extends Record<string, Endpoint>>(
 // server
 
 export type ApplicationResponse<E extends Endpoint> = {
-  data: E["return"] | E["return"] extends undefined ? undefined : Uint8Array;
+  data: E["return"] | (E["return"] extends undefined ? undefined : Uint8Array);
   meta: E["meta"];
   statusCode?: number;
 };
@@ -776,7 +776,10 @@ export function createFastifyHandler<E extends Endpoint>(
     switch (responseWireFormat) {
       case WireFormat.json: {
         await resp.header("content-type", "application/json");
-        const data = definition.resp.data.toJson(response.data, response.meta);
+        const data =
+          response.data instanceof Uint8Array
+            ? definition.resp.data.toJson(definition.resp.data.deserialize(response.data, response.meta), response.meta)
+            : definition.resp.data.toJson(response.data, response.meta);
         const meta = definition.resp.meta.toJson(response.meta);
         if (definition.resp.transform) {
           return definition.resp.transform.toResponse(data, meta);
@@ -791,7 +794,10 @@ export function createFastifyHandler<E extends Endpoint>(
         const meta = definition.resp.meta.toHeaders(response.meta);
         meta.set("content-type", "application/octet-stream");
         await resp.headers(headersToObject(meta));
-        const data = definition.resp.data.serialize(response.data, response.meta);
+        const data =
+          response.data instanceof Uint8Array
+            ? response.data
+            : definition.resp.data.serialize(response.data, response.meta);
         wireResponse = Buffer.from(data);
       }
     }
