@@ -854,7 +854,6 @@ export class BeaconChain implements IBeaconChain {
       this.opPool.pruneAll(headState, finalizedState);
     }
 
-    // Populate finalized pubkey cache and remove unfinalized pubkey cache
     // TODO: finalizedState may not be available after https://github.com/ChainSafe/lodestar/issues/5968.
     // In that case implement getCheckpointStateValidatorCount() in regen and use headState instead
     if (finalizedState?.epochCtx.isAfterEIP6110()) {
@@ -862,6 +861,7 @@ export class BeaconChain implements IBeaconChain {
       // Note EIP-6914 will break this logic
       const newFinalizedValidators = finalizedState.epochCtx.unfinalizedPubkey2index.takeWhile((index, _pubkey) => index < pivotValidatorIndex);
       
+      // Populate finalized pubkey cache and remove unfinalized pubkey cache
       this.regen.updateUnfinalizedPubkeys(newFinalizedValidators);
       
     }

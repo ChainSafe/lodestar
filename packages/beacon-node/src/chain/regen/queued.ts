@@ -122,7 +122,8 @@ export class QueuedStateRegenerator implements IStateRegenerator {
   }
 
   /**
-   * Remove validators from unfinalized cache and add them to finalized cache for all related state context cache  
+   * Remove `validators` from all unfinalized cache's epochCtx.UnfinalizedPubkey2Index, 
+   * and add them to epochCtx.pubkey2index and epochCtx.index2pubkey
    */
   updateUnfinalizedPubkeys(validators: UnfinalizedPubkeyIndexMap): void {
     this.checkpointStateCache.updateUnfinalizedPubkeys(validators);
