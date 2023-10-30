@@ -18,7 +18,7 @@ const h64Seed = BigInt(Math.floor(Math.random() * 1e9));
  * The function used to generate a gossipsub message id
  * We use the first 8 bytes of SHA256(data) for content addressing
  */
-export function fastMsgIdFn(rpcMsg: RPC.IMessage): string {
+export function fastMsgIdFn(rpcMsg: RPC.Message): string {
   if (rpcMsg.data) {
     return xxhash.h64Raw(rpcMsg.data, h64Seed).toString(16);
   } else {

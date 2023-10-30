@@ -565,10 +565,9 @@
   resolved "https://registry.yarnpkg.com/@chainsafe/is-ip/-/is-ip-2.0.2.tgz#7311e7403f11d8c5cfa48111f56fcecaac37c9f6"
   integrity sha512-ndGqEMG1W5WkGagaqOZHpPU172AGdxr+LD15sv3WIUvT5oCFUrG1Y0CW/v2Egwj4JXEvSibaIIIqImsm98y1nA==
 
-"@chainsafe/libp2p-gossipsub@^10.1.0":
+"@chainsafe/libp2p-gossipsub@github://tuyennhv/js-libp2p-gossipsub#tuyennhv_protons_7_2":
   version "10.1.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-gossipsub/-/libp2p-gossipsub-10.1.0.tgz#29c2e3da2bbf1dc68ae171c5ac777bce9ca88c2c"
-  integrity sha512-mOVYJAvxYRkh2HeggNFW/7ukEccQDVEI9LPhvlnJk7gnJhyJJ6mhZxUAaytfp3v3qTkmeBRnEL0eJOQBm+MoOA==
+  resolved "https://codeload.github.com/tuyennhv/js-libp2p-gossipsub/tar.gz/acb03d753d2da5de128cfbe70995339568b5abcb"
   dependencies:
     "@libp2p/crypto" "^2.0.0"
     "@libp2p/interface" "^0.1.0"
@@ -583,7 +582,7 @@
     it-pipe "^3.0.1"
     it-pushable "^3.2.0"
     multiformats "^12.0.1"
-    protobufjs "^7.2.4"
+    protons-runtime "^5.1.0"
     uint8arraylist "^2.4.3"
     uint8arrays "^4.0.4"
 
@@ -11561,24 +11560,6 @@ protobufjs@^7.0.0:
     "@types/node" ">=13.7.0"
     long "^5.0.0"
 
-protobufjs@^7.2.4:
-  version "7.2.4"
-  resolved "https://registry.yarnpkg.com/protobufjs/-/protobufjs-7.2.4.tgz#3fc1ec0cdc89dd91aef9ba6037ba07408485c3ae"
-  integrity sha512-AT+RJgD2sH8phPmCf7OUZR8xGdcJRga4+1cOaXJ64hvcSkVhNcRHOwIxUatPH15+nj59WAGTDv3LSGZPEQbJaQ==
-  dependencies:
-    "@protobufjs/aspromise" "^1.1.2"
-    "@protobufjs/base64" "^1.1.2"
-    "@protobufjs/codegen" "^2.0.4"
-    "@protobufjs/eventemitter" "^1.1.0"
-    "@protobufjs/fetch" "^1.1.0"
-    "@protobufjs/float" "^1.0.2"
-    "@protobufjs/inquire" "^1.1.0"
-    "@protobufjs/path" "^1.1.2"
-    "@protobufjs/pool" "^1.1.0"
-    "@protobufjs/utf8" "^1.1.0"
-    "@types/node" ">=13.7.0"
-    long "^5.0.0"
-
 protocols@^2.0.0, protocols@^2.0.1:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/protocols/-/protocols-2.0.1.tgz#8f155da3fc0f32644e83c5782c8e8212ccf70a86"
@@ -11591,6 +11572,14 @@ protons-runtime@^5.0.0:
   dependencies:
     protobufjs "^7.0.0"
     uint8arraylist "^2.4.3"
+
+protons-runtime@^5.1.0:
+  version "5.1.0"
+  resolved "https://registry.yarnpkg.com/protons-runtime/-/protons-runtime-5.1.0.tgz#1a63e409f06e974ff24dd08bf4ab3ce8b99ede75"
+  integrity sha512-9zUaikdZj2u9Z/lFKH+qmtewvQdB1fIKTyN5Iytpdlt0rsHrfw8a14CqXKMWY4ow25HyGuu4D8+7wUbjmI/sdA==
+  dependencies:
+    uint8arraylist "^2.4.3"
+    uint8arrays "^4.0.6"
 
 proxy-addr@^2.0.7:
   version "2.0.7"
