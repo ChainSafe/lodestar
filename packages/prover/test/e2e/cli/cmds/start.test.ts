@@ -15,11 +15,11 @@ describe("prover/start", () => {
   it("should show help", async () => {
     const output = await runCliCommand(cli, ["start", "--help"]);
 
-    expect(output).toEqual(expect.arrayContaining(["Show help"]));
+    expect(output).toEqual(expect.stringContaining("Show help"));
   });
 
   it("should fail when --executionRpcUrl is missing", async () => {
-    await expect(runCliCommand(cli, ["start", "--port", "8088"])).eventually.rejectedWith(
+    await expect(runCliCommand(cli, ["start", "--port", "8088"])).rejects.toThrow(
       "Missing required argument: executionRpcUrl"
     );
   });
@@ -33,13 +33,13 @@ describe("prover/start", () => {
         "--beaconBootnodes",
         "http://localhost:0000",
       ])
-    ).eventually.rejectedWith("Arguments beaconBootnodes and beaconUrls are mutually exclusive");
+    ).rejects.toThrow("Arguments beaconBootnodes and beaconUrls are mutually exclusive");
   });
 
   it("should fail when both of --beaconUrls and --beaconBootnodes are not provided", async () => {
     await expect(
       runCliCommand(cli, ["start", "--port", "8088", "--executionRpcUrl", "http://localhost:3000"])
-    ).eventually.rejectedWith("Either --beaconUrls or --beaconBootnodes must be provided");
+    ).rejects.toThrow("Either --beaconUrls or --beaconBootnodes must be provided");
   });
 
   describe("when started", () => {

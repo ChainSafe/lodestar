@@ -1,10 +1,11 @@
 import {describe, it, expect, beforeEach, vi, MockedObject} from "vitest";
 import {when} from "vitest-when";
-import {Api} from "@lodestar/api";
+import {Api, HttpStatusCode, routes} from "@lodestar/api";
 import {hash} from "@lodestar/utils";
 import {Logger} from "@lodestar/logger";
 import {allForks, capella} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
+import {ForkName} from "@lodestar/params";
 import {PayloadStore} from "../../../src/proof_provider/payload_store.js";
 import {MAX_PAYLOAD_HISTORY} from "../../../src/constants.js";
 
@@ -43,10 +44,11 @@ const buildBlockResponse = ({
 }: {
   slot: number;
   blockNumber: number;
-}): {ok: boolean; response: {version: number; executionOptimistic: boolean; data: allForks.SignedBeaconBlock}} => ({
+}): routes.beacon.block.BlockV2Response<"json"> => ({
   ok: true,
+  status: HttpStatusCode.OK,
   response: {
-    version: 12,
+    version: ForkName.altair,
     executionOptimistic: true,
     data: buildBlock({slot, blockNumber}),
   },
@@ -239,7 +241,7 @@ describe("proof_provider/payload_store", function () {
         const slot = 20;
         const header = buildLCHeader({slot, blockNumber});
         const blockResponse = buildBlockResponse({blockNumber, slot});
-        const executionPayload = (blockResponse.response.data as capella.SignedBeaconBlock).message.body
+        const executionPayload = (blockResponse.response?.data as capella.SignedBeaconBlock).message.body
           .executionPayload;
         api.beacon.getBlockV2.mockResolvedValue(blockResponse);
 
@@ -255,7 +257,7 @@ describe("proof_provider/payload_store", function () {
         const slot = 20;
         const header = buildLCHeader({slot, blockNumber});
         const blockResponse = buildBlockResponse({blockNumber, slot});
-        const executionPayload = (blockResponse.response.data as capella.SignedBeaconBlock).message.body
+        const executionPayload = (blockResponse.response?.data as capella.SignedBeaconBlock).message.body
           .executionPayload;
         api.beacon.getBlockV2.mockResolvedValue(blockResponse);
 
