@@ -10615,6 +10615,14 @@ protons-runtime@^5.0.0:
     protobufjs "^7.0.0"
     uint8arraylist "^2.4.3"
 
+protons-runtime@^5.1.0:
+  version "5.1.0"
+  resolved "https://registry.yarnpkg.com/protons-runtime/-/protons-runtime-5.1.0.tgz#1a63e409f06e974ff24dd08bf4ab3ce8b99ede75"
+  integrity sha512-9zUaikdZj2u9Z/lFKH+qmtewvQdB1fIKTyN5Iytpdlt0rsHrfw8a14CqXKMWY4ow25HyGuu4D8+7wUbjmI/sdA==
+  dependencies:
+    uint8arraylist "^2.4.3"
+    uint8arrays "^4.0.6"
+
 proxy-addr@^2.0.7:
   version "2.0.7"
   resolved "https://registry.yarnpkg.com/proxy-addr/-/proxy-addr-2.0.7.tgz#f19fe69ceab311eeb94b42e70e8c2070f9ba1025"
