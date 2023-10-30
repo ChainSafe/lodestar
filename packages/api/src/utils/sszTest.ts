@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {ContainerType, ListBasicType, ListCompositeType, Type, ValueOf} from "@chainsafe/ssz";
+import type * as fastify from "fastify";
 import {Epoch, Root, StringType, allForks, ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 import {ErrorAborted, Logger, fromHex, mapValues, toBase64, toHex} from "@lodestar/utils";
@@ -439,6 +440,20 @@ export type ApiClientMethod<E extends Endpoint> = (
 
 export type ApiClientMethods<Es extends Record<string, Endpoint>> = {[K in keyof Es]: ApiClientMethod<Es[K]>};
 
+export function getWireFormat(contentType?: string | null): WireFormat {
+  if (!contentType) throw Error("No content-type header found");
+
+  const mediaType = contentType.split(";", 1)[0].trim().toLowerCase();
+
+  if (mediaType === "application/json") {
+    return WireFormat.json;
+  }
+  if (mediaType === "application/octet-stream") {
+    return WireFormat.ssz;
+  }
+  throw Error(`Unsupported response media type: ${mediaType}`);
+}
+
 export class ApiResponse<E extends Endpoint> extends Response {
   private definition: RouteDefinition<E>;
   private _rawBody?: RawBody;
@@ -452,18 +467,7 @@ export class ApiResponse<E extends Endpoint> extends Response {
   }
 
   wireFormat(): WireFormat {
-    const contentType = this.headers.get("content-type");
-    if (!contentType) throw Error("No content-type header found");
-
-    const mediaType = contentType.split(";", 1)[0].trim().toLowerCase();
-
-    if (mediaType === "application/json") {
-      return WireFormat.json;
-    }
-    if (mediaType === "application/octet-stream") {
-      return WireFormat.ssz;
-    }
-    throw Error(`Unsupported response media type: ${mediaType}`);
+    return getWireFormat(this.headers.get("content-type"));
   }
 
   async rawBody(): Promise<RawBody> {
@@ -699,4 +703,88 @@ export function createApiClientMethods<Es extends Record<string, Endpoint>>(
   return mapValues(definitions, (definition) => {
     return createApiClientMethod(definition, globalInit, logger, metrics);
   }) as unknown as ApiClientMethods<Es>;
+}
+
+// server
+
+export type ApplicationResponse<E extends Endpoint> = {
+  data: E["return"] | E["return"] extends undefined ? undefined : Uint8Array;
+  meta: E["meta"];
+};
+
+export type ApplicationError = ApiError | Error;
+
+export type ApplicationMethod<E extends Endpoint> = (args: E["args"]) => Promise<ApplicationResponse<E>>;
+
+export type FastifyHandler<E extends Endpoint> = fastify.RouteHandlerMethod<
+  fastify.RawServerDefault,
+  fastify.RawRequestDefaultExpression<fastify.RawServerDefault>,
+  fastify.RawReplyDefaultExpression<fastify.RawServerDefault>,
+  {
+    Body: E["request"] extends JsonPostRequestData<PathParams, QueryParams, unknown> ? E["request"]["body"] : undefined;
+    Querystring: E["request"]["query"];
+    Params: E["request"]["params"];
+  },
+  fastify.ContextConfigDefault
+>;
+
+export function createFastifyHandler<E extends Endpoint>(
+  definition: RouteDefinition<E>,
+  method: ApplicationMethod<E>
+): FastifyHandler<E> {
+  return async (req, resp) => {
+    let response: ApplicationResponse<E>;
+    if (definition.method === "GET") {
+      response = await method(
+        (definition.req as GetRequestCodec<E>).parseReq(req as GetRequestData<PathParams, QueryParams>)
+      );
+    } else {
+      const requestWireFormat = getWireFormat(req.headers["content-type"]);
+      switch (requestWireFormat) {
+        case WireFormat.json:
+          response = await method(
+            (definition.req as PostRequestCodec<E>).parseReqJson(
+              req as JsonPostRequestData<PathParams, QueryParams, unknown>
+            )
+          );
+          break;
+        case WireFormat.ssz:
+          response = await method(
+            (definition.req as PostRequestCodec<E>).parseReqSsz(req as SszPostRequestData<E["request"]>)
+          );
+          break;
+      }
+    }
+
+    const responseWireFormat = getWireFormat(req.headers.accept ?? DEFAULT_RESPONSE_WIRE_FORMAT);
+    switch (responseWireFormat) {
+      case WireFormat.json: {
+        await resp.header("content-type", "application/json");
+        const data = definition.resp.data.toJson(response.data, response.meta);
+        const meta = definition.resp.meta.toJson(response.meta);
+        if (definition.resp.transform) {
+          return definition.resp.transform.toResponse(data, meta);
+        }
+        return {
+          data,
+          ...(meta as object),
+        };
+      }
+      case WireFormat.ssz: {
+        const meta = definition.resp.meta.toHeaders(response.meta);
+        meta.set("content-type", "application/octet-stream");
+        await resp.headers(headersToObject(meta));
+        const data = definition.resp.data.serialize(response.data, response.meta);
+        return Buffer.from(data);
+      }
+    }
+  };
+}
+
+export function headersToObject(h: Headers): Record<string, string> {
+  const o: Record<string, string> = {};
+  for (const [key, value] of h as unknown as Iterable<[string, string]>) {
+    o[key] = value;
+  }
+  return o;
 }
