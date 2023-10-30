@@ -149,6 +149,15 @@ export const SignedBlobSidecar = new ContainerType(
 );
 export const SignedBlobSidecars = new ListCompositeType(SignedBlobSidecar, MAX_BLOB_COMMITMENTS_PER_BLOCK);
 
+export const BlobsBundle = new ContainerType(
+  {
+    commitments: BlobKzgCommitments,
+    proofs: KZGProofs,
+    blobs: Blobs,
+  },
+  {typeName: "BlobsBundle", jsonCase: "eth2"}
+);
+
 export const BlindedBlobSidecar = new ContainerType(
   {
     blockRoot: Root,
@@ -204,12 +213,21 @@ export const SignedBlindedBeaconBlock = new ContainerType(
   {typeName: "SignedBlindedBeaconBlock", jsonCase: "eth2"}
 );
 
+export const BlindedBlobsBundle = new ContainerType(
+  {
+    commitments: BlobKzgCommitments,
+    proofs: KZGProofs,
+    blobRoots: BlindedBlobs,
+  },
+  {typeName: "BlindedBlobsBundle", jsonCase: "eth2"}
+);
+
 export const BuilderBid = new ContainerType(
   {
     header: ExecutionPayloadHeader,
+    blindedBlobsBundle: BlindedBlobsBundle,
     value: UintBn256,
     pubkey: BLSPubkey,
-    blobKzgCommitments: BlobKzgCommitments,
   },
   {typeName: "BuilderBid", jsonCase: "eth2"}
 );
@@ -220,6 +238,14 @@ export const SignedBuilderBid = new ContainerType(
     signature: BLSSignature,
   },
   {typeName: "SignedBuilderBid", jsonCase: "eth2"}
+);
+
+export const ExecutionPayloadAndBlobsBundle = new ContainerType(
+  {
+    executionPayload: ExecutionPayload,
+    blobsBundle: BlobsBundle,
+  },
+  {typeName: "ExecutionPayloadAndBlobsBundle", jsonCase: "eth2"}
 );
 
 // We don't spread capella.BeaconState fields since we need to replace

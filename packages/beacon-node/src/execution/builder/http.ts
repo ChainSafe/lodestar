@@ -1,8 +1,13 @@
 import {byteArrayEquals, toHexString} from "@chainsafe/ssz";
 import {allForks, bellatrix, Slot, Root, BLSPubkey, ssz, deneb, Wei} from "@lodestar/types";
+import {
+  parseSignedBlindedBlockOrContents,
+  parseExecutionPayloadAndBlobsBundle,
+  reconstructFullBlockOrContents,
+} from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
 import {getClient, Api as BuilderApi} from "@lodestar/api/builder";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {SLOTS_PER_EPOCH, ForkExecution} from "@lodestar/params";
 
 import {ApiError} from "@lodestar/api";
 import {Metrics} from "../../metrics/metrics.js";
@@ -91,27 +96,36 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
   }
 
   async getHeader(
+    fork: ForkExecution,
     slot: Slot,
     parentHash: Root,
     proposerPubKey: BLSPubkey
   ): Promise<{
     header: allForks.ExecutionPayloadHeader;
     executionPayloadValue: Wei;
-    blobKzgCommitments?: deneb.BlobKzgCommitments;
+    blindedBlobsBundle?: deneb.BlindedBlobsBundle;
   }> {
     const res = await this.api.getHeader(slot, parentHash, proposerPubKey);
     ApiError.assert(res, "execution.builder.getheader");
     const {header, value: executionPayloadValue} = res.response.data.message;
-    const {blobKzgCommitments} = res.response.data.message as {blobKzgCommitments?: deneb.BlobKzgCommitments};
-    return {header, executionPayloadValue, blobKzgCommitments};
+    const {blindedBlobsBundle} = res.response.data.message as deneb.BuilderBid;
+    return {header, executionPayloadValue, blindedBlobsBundle};
   }
 
-  async submitBlindedBlock(signedBlock: allForks.SignedBlindedBeaconBlock): Promise<allForks.SignedBeaconBlock> {
-    const res = await this.api.submitBlindedBlock(signedBlock);
+  async submitBlindedBlock(
+    signedBlindedBlockOrContents: allForks.SignedBlindedBeaconBlockOrContents
+  ): Promise<allForks.SignedBeaconBlockOrContents> {
+    const res = await this.api.submitBlindedBlock(signedBlindedBlockOrContents);
     ApiError.assert(res, "execution.builder.submitBlindedBlock");
-    const executionPayload = res.response.data;
-    const expectedTransactionsRoot = signedBlock.message.body.executionPayloadHeader.transactionsRoot;
-    const actualTransactionsRoot = ssz.bellatrix.Transactions.hashTreeRoot(res.response.data.transactions);
+    const {data} = res.response;
+
+    const {executionPayload, blobsBundle} = parseExecutionPayloadAndBlobsBundle(data);
+    const {signedBlindedBlock, signedBlindedBlobSidecars} =
+      parseSignedBlindedBlockOrContents(signedBlindedBlockOrContents);
+
+    // some validations for execution payload
+    const expectedTransactionsRoot = signedBlindedBlock.message.body.executionPayloadHeader.transactionsRoot;
+    const actualTransactionsRoot = ssz.bellatrix.Transactions.hashTreeRoot(executionPayload.transactions);
     if (!byteArrayEquals(expectedTransactionsRoot, actualTransactionsRoot)) {
       throw Error(
         `Invalid transactionsRoot of the builder payload, expected=${toHexString(
@@ -119,10 +133,8 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
         )}, actual=${toHexString(actualTransactionsRoot)}`
       );
     }
-    const fullySignedBlock: bellatrix.SignedBeaconBlock = {
-      ...signedBlock,
-      message: {...signedBlock.message, body: {...signedBlock.message.body, executionPayload}},
-    };
-    return fullySignedBlock;
+
+    const blobs = blobsBundle ? blobsBundle.blobs : null;
+    return reconstructFullBlockOrContents({signedBlindedBlock, signedBlindedBlobSidecars}, {executionPayload, blobs});
   }
 }

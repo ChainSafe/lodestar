@@ -1,8 +1,23 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkSeq} from "@lodestar/params";
-import {allForks, phase0, Root, isBlindedBeaconBlock, isBlindedBlobSidecar, deneb, ssz} from "@lodestar/types";
+import {
+  allForks,
+  phase0,
+  Root,
+  deneb,
+  ssz,
+  isBlindedBeaconBlock,
+  isBlindedBlobSidecar,
+  isSignedBlindedBlockContents,
+  isExecutionPayloadAndBlobsBundle,
+} from "@lodestar/types";
 
 import {executionPayloadToPayloadHeader} from "./execution.js";
+
+type ParsedSignedBlindedBlockOrContents = {
+  signedBlindedBlock: allForks.SignedBlindedBeaconBlock;
+  signedBlindedBlobSidecars: deneb.SignedBlindedBlobSidecars | null;
+};
 
 export function blindedOrFullBlockHashTreeRoot(
   config: ChainForkConfig,
@@ -98,4 +113,56 @@ export function signedBlindedBlobSidecarsToFull(
     return signedBlobSidecar;
   });
   return signedBlobSidecars;
+}
+
+export function parseSignedBlindedBlockOrContents(
+  signedBlindedBlockOrContents: allForks.SignedBlindedBeaconBlockOrContents
+): ParsedSignedBlindedBlockOrContents {
+  if (isSignedBlindedBlockContents(signedBlindedBlockOrContents)) {
+    const signedBlindedBlock = signedBlindedBlockOrContents.signedBlindedBlock;
+    const signedBlindedBlobSidecars = signedBlindedBlockOrContents.signedBlindedBlobSidecars;
+    return {signedBlindedBlock, signedBlindedBlobSidecars};
+  } else {
+    return {signedBlindedBlock: signedBlindedBlockOrContents, signedBlindedBlobSidecars: null};
+  }
+}
+
+export function parseExecutionPayloadAndBlobsBundle(
+  data: allForks.ExecutionPayload | allForks.ExecutionPayloadAndBlobsBundle
+): {executionPayload: allForks.ExecutionPayload; blobsBundle: deneb.BlobsBundle | null} {
+  if (isExecutionPayloadAndBlobsBundle(data)) {
+    return data;
+  } else {
+    return {
+      executionPayload: data,
+      blobsBundle: null,
+    };
+  }
+}
+
+export function reconstructFullBlockOrContents(
+  {signedBlindedBlock, signedBlindedBlobSidecars}: ParsedSignedBlindedBlockOrContents,
+  {executionPayload, blobs}: {executionPayload: allForks.ExecutionPayload | null; blobs: deneb.Blobs | null}
+): allForks.SignedBeaconBlockOrContents {
+  const signedBlock = signedBlindedBlockToFull(signedBlindedBlock, executionPayload);
+
+  if (signedBlindedBlobSidecars !== null) {
+    if (executionPayload === null) {
+      throw Error("Missing locally produced executionPayload for deneb+ publishBlindedBlock");
+    }
+
+    if (blobs === null) {
+      throw Error("Missing blobs from the local execution cache");
+    }
+    if (blobs.length !== signedBlindedBlobSidecars.length) {
+      throw Error(
+        `Length mismatch signedBlindedBlobSidecars=${signedBlindedBlobSidecars.length} blobs=${blobs.length}`
+      );
+    }
+    const signedBlobSidecars = signedBlindedBlobSidecarsToFull(signedBlindedBlobSidecars, blobs);
+
+    return {signedBlock, signedBlobSidecars} as allForks.SignedBeaconBlockOrContents;
+  } else {
+    return signedBlock as allForks.SignedBeaconBlockOrContents;
+  }
 }

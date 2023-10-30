@@ -16,6 +16,8 @@ export type SignedBlobSidecar = ValueOf<typeof ssz.SignedBlobSidecar>;
 export type SignedBlobSidecars = ValueOf<typeof ssz.SignedBlobSidecars>;
 export type SignedBlindedBlobSidecar = ValueOf<typeof ssz.SignedBlindedBlobSidecar>;
 export type SignedBlindedBlobSidecars = ValueOf<typeof ssz.SignedBlindedBlobSidecars>;
+export type ExecutionPayloadAndBlobsBundle = ValueOf<typeof ssz.ExecutionPayloadAndBlobsBundle>;
+export type BlobsBundle = ValueOf<typeof ssz.BlobsBundle>;
 
 export type BlobKzgCommitments = ValueOf<typeof ssz.BlobKzgCommitments>;
 export type KZGProofs = ValueOf<typeof ssz.KZGProofs>;
@@ -40,6 +42,7 @@ export type SignedBlindedBeaconBlock = ValueOf<typeof ssz.SignedBlindedBeaconBlo
 
 export type FullOrBlindedExecutionPayload = ExecutionPayload | ExecutionPayloadHeader;
 
+export type BlindedBlobsBundle = ValueOf<typeof ssz.BlindedBlobsBundle>;
 export type BuilderBid = ValueOf<typeof ssz.BuilderBid>;
 export type SignedBuilderBid = ValueOf<typeof ssz.SignedBuilderBid>;
 export type SSEPayloadAttributes = ValueOf<typeof ssz.SSEPayloadAttributes>;

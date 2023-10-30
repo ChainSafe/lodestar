@@ -35,7 +35,10 @@ import {PayloadId, IExecutionEngine, IExecutionBuilder, PayloadAttributes} from 
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
 import {numToQuantity} from "../../eth1/provider/utils.js";
-import {validateBlobsAndKzgCommitments} from "./validateBlobsAndKzgCommitments.js";
+import {
+  validateBlobsAndKzgCommitments,
+  validateBlindedBlobsAndKzgCommitments,
+} from "./validateBlobsAndKzgCommitments.js";
 
 // Time to provide the EL to generate a payload from new payload id
 const PAYLOAD_GENERATION_TIME_MS = 500;
@@ -70,8 +73,9 @@ export enum BlobsResultType {
 }
 
 export type BlobsResult =
-  | {type: BlobsResultType.preDeneb | BlobsResultType.blinded}
-  | {type: BlobsResultType.produced; blobSidecars: deneb.BlobSidecars; blockHash: RootHex};
+  | {type: BlobsResultType.preDeneb}
+  | {type: BlobsResultType.produced; blobSidecars: deneb.BlobSidecars; blockHash: RootHex}
+  | {type: BlobsResultType.blinded; blobSidecars: deneb.BlindedBlobSidecars; blockHash: RootHex};
 
 export async function produceBlockBody<T extends BlockType>(
   this: BeaconChain,
@@ -195,16 +199,47 @@ export async function produceBlockBody<T extends BlockType>(
       );
       (blockBody as allForks.BlindedBeaconBlockBody).executionPayloadHeader = builderRes.header;
       executionPayloadValue = builderRes.executionPayloadValue;
-      this.logger.verbose("Fetched execution payload header from builder", {slot: blockSlot, executionPayloadValue});
-      if (ForkSeq[fork] >= ForkSeq.deneb) {
-        const {blobKzgCommitments} = builderRes;
-        if (blobKzgCommitments === undefined) {
-          throw Error(`Invalid builder getHeader response for fork=${fork}, missing blobKzgCommitments`);
-        }
-        (blockBody as deneb.BlindedBeaconBlockBody).blobKzgCommitments = blobKzgCommitments;
-        blobsResult = {type: BlobsResultType.blinded};
 
-        Object.assign(logMeta, {blobs: blobKzgCommitments.length});
+      const fetchedTime = Date.now() / 1000 - computeTimeAtSlot(this.config, blockSlot, this.genesisTime);
+      const prepType = "blinded";
+      this.metrics?.blockPayload.payloadFetchedTime.observe({prepType}, fetchedTime);
+      this.logger.verbose("Fetched execution payload header from builder", {
+        slot: blockSlot,
+        executionPayloadValue,
+        prepType,
+        fetchedTime,
+      });
+
+      if (ForkSeq[fork] >= ForkSeq.deneb) {
+        const {blindedBlobsBundle} = builderRes;
+        if (blindedBlobsBundle === undefined) {
+          throw Error(`Invalid builder getHeader response for fork=${fork}, missing blindedBlobsBundle`);
+        }
+
+        // validate blindedBlobsBundle
+        if (this.opts.sanityCheckExecutionEngineBlobs) {
+          validateBlindedBlobsAndKzgCommitments(builderRes.header, blindedBlobsBundle);
+        }
+
+        (blockBody as deneb.BlindedBeaconBlockBody).blobKzgCommitments = blindedBlobsBundle.commitments;
+        const blockHash = toHex(builderRes.header.blockHash);
+
+        const blobSidecars = Array.from({length: blindedBlobsBundle.blobRoots.length}, (_v, index) => {
+          const blobRoot = blindedBlobsBundle.blobRoots[index];
+          const commitment = blindedBlobsBundle.commitments[index];
+          const proof = blindedBlobsBundle.proofs[index];
+          const blindedBlobSidecar = {
+            index,
+            blobRoot,
+            kzgProof: proof,
+            kzgCommitment: commitment,
+          };
+          // Other fields will be injected after postState is calculated
+          return blindedBlobSidecar;
+        }) as deneb.BlindedBlobSidecars;
+        blobsResult = {type: BlobsResultType.blinded, blobSidecars, blockHash};
+
+        Object.assign(logMeta, {blobs: blindedBlobsBundle.commitments.length});
       } else {
         blobsResult = {type: BlobsResultType.preDeneb};
       }
@@ -270,7 +305,7 @@ export async function produceBlockBody<T extends BlockType>(
               throw Error(`Missing blobsBundle response from getPayload at fork=${fork}`);
             }
 
-            // Optionally sanity-check that the KZG commitments match the versioned hashes in the transactions
+            // validate blindedBlobsBundle
             if (this.opts.sanityCheckExecutionEngineBlobs) {
               validateBlobsAndKzgCommitments(executionPayload, blobsBundle);
             }
@@ -288,6 +323,7 @@ export async function produceBlockBody<T extends BlockType>(
                 kzgProof: proof,
                 kzgCommitment: commitment,
               };
+              // Other fields will be injected after postState is calculated
               return blobSidecar;
             }) as deneb.BlobSidecars;
             blobsResult = {type: BlobsResultType.produced, blobSidecars, blockHash};
@@ -443,21 +479,19 @@ async function prepareExecutionPayloadHeader(
 ): Promise<{
   header: allForks.ExecutionPayloadHeader;
   executionPayloadValue: Wei;
-  blobKzgCommitments?: deneb.BlobKzgCommitments;
+  blindedBlobsBundle?: deneb.BlindedBlobsBundle;
 }> {
   if (!chain.executionBuilder) {
     throw Error("executionBuilder required");
   }
 
   const parentHashRes = await getExecutionPayloadParentHash(chain, state);
-
   if (parentHashRes.isPremerge) {
-    // TODO: Is this okay?
     throw Error("Execution builder disabled pre-merge");
   }
 
   const {parentHash} = parentHashRes;
-  return chain.executionBuilder.getHeader(state.slot, parentHash, proposerPubKey);
+  return chain.executionBuilder.getHeader(fork, state.slot, parentHash, proposerPubKey);
 }
 
 export async function getExecutionPayloadParentHash(
