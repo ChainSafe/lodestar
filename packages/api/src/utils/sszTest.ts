@@ -134,7 +134,7 @@ export type ResponseDataCodec<T, M> = {
 export type ResponseMetadataCodec<T> = {
   toJson: (val: T) => unknown; // server
   fromJson: (val: unknown) => T; // client
-  toHeaders: (val: T) => Headers; // server
+  toHeadersObject: (val: T) => Record<string, string>; // server
   fromHeaders: (val: Headers) => T; // server
 };
 
@@ -161,6 +161,7 @@ export type RouteDefinition<E extends Endpoint> = {
   operationId: string;
   url: string;
   method: E["method"];
+  // TODO remove?
   statusOk?: number; // only used for keymanager to set non-200 ok
   req: RequestCodec<E>;
   resp: ResponseCodec<E>;
@@ -193,7 +194,7 @@ export const EmptyResponseDataCodec: ResponseDataCodec<EmptyResponseData, EmptyM
 export const EmptyMetaCodec: ResponseMetadataCodec<EmptyMeta> = {
   toJson: () => ({}),
   fromJson: () => ({}),
-  toHeaders: () => new Headers(),
+  toHeadersObject: () => ({}),
   fromHeaders: () => ({}),
 };
 
@@ -211,11 +212,10 @@ export function WithVersion<T, M extends {version: ForkName}>(
 export const ExecutionOptimisticAndVersionCodec: ResponseMetadataCodec<ExecutionOptimisticAndVersion> = {
   toJson: (val) => val,
   fromJson: (val) => val as ExecutionOptimisticAndVersion,
-  toHeaders: (val) =>
-    new Headers([
-      ["Eth-Execution-Optimistic", String(val.executionOptimistic)],
-      ["Eth-Consensus-Version", val.version],
-    ]),
+  toHeadersObject: (val) => ({
+    "Eth-Execution-Optimistic": String(val.executionOptimistic),
+    "Eth-Consensus-Version": val.version,
+  }),
   fromHeaders: (val) => ({
     executionOptimistic: Boolean(val.get("Eth-Execution-Optimistic")),
     version: val.get("Eth-Consensus-Version")!.toLowerCase() as ForkName,
@@ -232,11 +232,10 @@ export const ExecutionOptimisticAndDependentRootCodec: ResponseMetadataCodec<Exe
       executionOptimistic: (val as any).executionOptimistic as boolean,
       dependentRoot: fromHex((val as any).dependentRoot),
     }) as ExecutionOptimisticAndDependentRoot,
-  toHeaders: (val) =>
-    new Headers([
-      ["Eth-Execution-Optimistic", String(val.executionOptimistic)],
-      ["Eth-Consensus-Dependent-Root", toHex(val.dependentRoot)],
-    ]),
+  toHeadersObject: (val) => ({
+    "Eth-Execution-Optimistic": String(val.executionOptimistic),
+    "Eth-Consensus-Dependent-Root": toHex(val.dependentRoot),
+  }),
   fromHeaders: (val) => ({
     executionOptimistic: Boolean(val.get("Eth-Execution-Optimistic")),
     dependentRoot: fromHex(val.get("Eth-Consensus-Dependent-Root")!),
@@ -791,9 +790,9 @@ export function createFastifyHandler<E extends Endpoint>(
         break;
       }
       case WireFormat.ssz: {
-        const meta = definition.resp.meta.toHeaders(response.meta);
-        meta.set("content-type", "application/octet-stream");
-        await resp.headers(headersToObject(meta));
+        const meta = definition.resp.meta.toHeadersObject(response.meta);
+        meta["content-type"] = "application/octet-stream";
+        await resp.headers(meta);
         const data =
           response.data instanceof Uint8Array
             ? response.data
@@ -806,14 +805,6 @@ export function createFastifyHandler<E extends Endpoint>(
     }
     return wireResponse;
   };
-}
-
-export function headersToObject(h: Headers): Record<string, string> {
-  const o: Record<string, string> = {};
-  for (const [key, value] of h as unknown as Iterable<[string, string]>) {
-    o[key] = value;
-  }
-  return o;
 }
 
 export function createFastifyRoute<E extends Endpoint>(
