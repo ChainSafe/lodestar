@@ -328,8 +328,8 @@ export const definitions: RouteDefinitions<TestEndpoints> = {
     url: "/eth/v1/node/health",
     method: "GET",
     req: {
-      parseReqJson: ({query}) => ({options: query.syncing_status as NodeHealthOptions}),
-      writeReqJson: ({options}) => ({query: {syncing_status: options as number}}),
+      parseReqJson: ({query}) => ({options: {syncingStatus: query.syncing_status}}),
+      writeReqJson: ({options}) => ({query: {syncing_status: options?.syncingStatus}}),
       schema: {query: {syncing_status: Schema.Uint}},
     },
     resp: {
