@@ -50,11 +50,11 @@ export type GetRequestData<P extends PathParams, Q extends QueryParams> = {
   query?: Q;
 };
 
-export type PostRequestData<P extends PathParams, Q extends QueryParams, B> = GetRequestData<P, Q> & {
+export type JsonPostRequestData<P extends PathParams, Q extends QueryParams, B> = GetRequestData<P, Q> & {
   body?: B;
 };
 
-export type SszPostRequestData<P extends PostRequestData<PathParams, QueryParams, unknown>> = Omit<P, "body"> & {
+export type SszPostRequestData<P extends JsonPostRequestData<PathParams, QueryParams, unknown>> = Omit<P, "body"> & {
   body: P["body"] extends undefined ? undefined : Uint8Array;
 };
 
@@ -76,16 +76,16 @@ export type EndpointMethod = "GET" | "POST" | "DELETE";
  */
 export type Endpoint<
   Method extends EndpointMethod = EndpointMethod,
-  ParamsType = unknown,
+  ArgsType = unknown,
   RequestType extends Method extends "GET"
     ? GetRequestData<PathParams, QueryParams>
-    : PostRequestData<PathParams, QueryParams, unknown> = GetRequestData<PathParams, QueryParams>,
+    : JsonPostRequestData<PathParams, QueryParams, unknown> = GetRequestData<PathParams, QueryParams>,
   ReturnType = unknown,
   Meta = unknown,
 > = {
   method: Method;
   /** the parameters the client passes / server app code ingests */
-  params: ParamsType;
+  args: ArgsType;
   /** the parameters in the http request */
   request: RequestType;
   /** the return data */
@@ -97,15 +97,18 @@ export type Endpoint<
 // Request codec
 
 /** Encode / decode requests to & from function params, as well as schema definitions */
-export type GetReqCodec<E extends Endpoint> = {
-  writeReqJson: (p: E["params"]) => E["request"];
-  parseReqJson: (r: E["request"]) => E["params"];
+export type GetRequestCodec<E extends Endpoint> = {
+  writeReq: (p: E["args"]) => E["request"];
+  parseReq: (r: E["request"]) => E["args"];
   schema: SchemaDefinition<E["request"]>;
 };
 
-export type PostReqCodec<E extends Endpoint> = GetReqCodec<E> & {
-  writeReqSsz: (p: E["params"]) => SszPostRequestData<E["request"]>;
-  parseReqSsz: (r: SszPostRequestData<E["request"]>) => E["params"];
+export type PostRequestCodec<E extends Endpoint> = {
+  writeReqJson: (p: E["args"]) => E["request"];
+  parseReqJson: (r: E["request"]) => E["args"];
+  writeReqSsz: (p: E["args"]) => SszPostRequestData<E["request"]>;
+  parseReqSsz: (r: SszPostRequestData<E["request"]>) => E["args"];
+  schema: SchemaDefinition<E["request"]>;
 };
 
 /**
@@ -116,7 +119,7 @@ export type PostReqCodec<E extends Endpoint> = GetReqCodec<E> & {
  * For separate consumption by client and server.
  * Taking this idea to the extreme, Each group of endpoints would have definitions split into three files for nice treeshaking (types, client, server)
  */
-export type RequestCodec<E extends Endpoint> = E["method"] extends "GET" ? GetReqCodec<E> : PostReqCodec<E>;
+export type RequestCodec<E extends Endpoint> = E["method"] extends "GET" ? GetRequestCodec<E> : PostRequestCodec<E>;
 
 // Response codec
 
@@ -138,7 +141,7 @@ export type ResponseCodec<E extends Endpoint> = {
   data: ResponseDataCodec<E["return"], E["meta"]>;
   meta: ResponseMetadataCodec<E["meta"]>;
   /** Occasionally, json responses require an extra transormation to separate the data from metadata */
-  munge?: {
+  transform?: {
     toResponse: (data: unknown, meta: unknown) => unknown;
     fromResponse: (resp: unknown) => {
       data: unknown;
@@ -166,18 +169,17 @@ export type RouteDefinitions<Es extends Record<string, Endpoint>> = {[K in keyof
 
 // Utility types / codecs
 
-export type EmptyParams = void;
+export type EmptyArgs = void;
 export type EmptyRequest = Record<string, never>;
 export type EmptyResponseData = void;
 export type EmptyMeta = Record<string, never>;
 
-/** Shortcut for routes that have no params, query nor body */
-export const EmptyRequestCodec: RequestCodec<Endpoint<EndpointMethod, EmptyParams, EmptyRequest>> = {
-  writeReqJson: () => ({}),
-  parseReqJson: () => {},
+/** Shortcut for routes that have no params, query */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const EmptyGetRequestCodec: GetRequestCodec<Endpoint<"GET", EmptyArgs, EmptyRequest, any, any>> = {
+  writeReq: () => ({}),
+  parseReq: () => {},
   schema: {},
-  writeReqSsz: () => ({}) as SszPostRequestData<Record<string, never>>,
-  parseReqSsz: () => {},
 };
 
 export const EmptyResponseDataCodec: ResponseDataCodec<EmptyResponseData, EmptyMeta> = {
@@ -262,7 +264,7 @@ export type TestEndpoints = {
   getNodeVersion: Endpoint<
     //
     "GET",
-    EmptyParams,
+    EmptyArgs,
     EmptyRequest,
     NodeVersionType,
     EmptyMeta
@@ -285,8 +287,8 @@ export const definitions: RouteDefinitions<TestEndpoints> = {
     url: "/eth/v2/debug/beacon/states/{state_id}",
     method: "GET",
     req: {
-      writeReqJson: ({stateId}) => ({params: {state_id: String(stateId)}}),
-      parseReqJson: ({params}) => ({stateId: params.state_id}),
+      writeReq: ({stateId}) => ({params: {state_id: String(stateId)}}),
+      parseReq: ({params}) => ({stateId: params.state_id}),
       schema: {params: {state_id: Schema.StringRequired}},
     },
     resp: {
@@ -299,13 +301,13 @@ export const definitions: RouteDefinitions<TestEndpoints> = {
     operationId: "getAttesterDuties",
     url: "/eth/v1/validator/duties/attester/{epoch}",
     method: "POST",
-    // POST request codecs include *Ssz functions to translate to / from ssz bodies
+    // POST request codecs include *Json functions to translate to / from json bodies and *Ssz functions to translate to / from ssz bodies
     req: {
-      writeReqJson: ({epoch, indices}) => ({params: {epoch}, body: indices.map(String)}),
-      parseReqJson: ({params, body}) => ({epoch: params.epoch, indices: body.map(Number)}),
-      schema: {params: {epoch: Schema.UintRequired}, body: Schema.StringArray},
+      writeReqJson: ({epoch, indices}) => ({params: {epoch}, body: ValidatorIndices.toJson(indices) as string[]}),
+      parseReqJson: ({params, body}) => ({epoch: params.epoch, indices: ValidatorIndices.fromJson(body)}),
       writeReqSsz: ({epoch, indices}) => ({params: {epoch}, body: ValidatorIndices.serialize(indices)}),
       parseReqSsz: ({params, body}) => ({epoch: params.epoch, indices: ValidatorIndices.deserialize(body)}),
+      schema: {params: {epoch: Schema.UintRequired}, body: Schema.StringArray},
     },
     resp: {
       // A ssz type suffices in cases where the data shape is static
@@ -317,7 +319,7 @@ export const definitions: RouteDefinitions<TestEndpoints> = {
     operationId: "getNodeVersion",
     url: "/eth/v1/node/version",
     method: "GET",
-    req: EmptyRequestCodec,
+    req: EmptyGetRequestCodec,
     resp: {
       data: NodeVersion,
       meta: EmptyMetaCodec,
@@ -328,8 +330,8 @@ export const definitions: RouteDefinitions<TestEndpoints> = {
     url: "/eth/v1/node/health",
     method: "GET",
     req: {
-      parseReqJson: ({query}) => ({options: {syncingStatus: query.syncing_status}}),
-      writeReqJson: ({options}) => ({query: {syncing_status: options?.syncingStatus}}),
+      parseReq: ({query}) => ({options: {syncingStatus: query.syncing_status}}),
+      writeReq: ({options}) => ({query: {syncing_status: options?.syncingStatus}}),
       schema: {query: {syncing_status: Schema.Uint}},
     },
     resp: {
@@ -366,7 +368,7 @@ export const DEFAULT_RESPONSE_WIRE_FORMAT = WireFormat.ssz;
 export function createApiRequest<E extends Endpoint>(
   urlFormatter: (args: Record<string, string | number>) => string,
   definition: RouteDefinition<E>,
-  params: E["params"],
+  params: E["args"],
   init: ApiRequestInitRequired
 ): Request {
   const headers = new Headers(init.headers);
@@ -378,15 +380,15 @@ export function createApiRequest<E extends Endpoint>(
   };
 
   if (definition.method === "GET") {
-    req = definition.req.writeReqJson(params);
+    req = (definition.req as GetRequestCodec<E>).writeReq(params);
   } else {
     switch (init.requestWireFormat) {
       case WireFormat.json:
-        req = (definition.req as PostReqCodec<E>).writeReqJson(params);
+        req = (definition.req as PostRequestCodec<E>).writeReqJson(params);
         headers.set("content-type", "application/json");
         break;
       case WireFormat.ssz:
-        req = (definition.req as PostReqCodec<E>).writeReqSsz(params);
+        req = (definition.req as PostRequestCodec<E>).writeReqSsz(params);
         headers.set("content-type", "application/octet-stream");
         break;
     }
@@ -486,8 +488,8 @@ export class ApiResponse<E extends Endpoint> extends Response {
       const rawBody = await this.rawBody();
       switch (rawBody.type) {
         case WireFormat.json: {
-          const metaJson = this.definition.resp.munge
-            ? this.definition.resp.munge.fromResponse(rawBody.value).meta
+          const metaJson = this.definition.resp.transform
+            ? this.definition.resp.transform.fromResponse(rawBody.value).meta
             : rawBody.value;
           this._meta = this.definition.resp.meta.fromJson(metaJson);
           break;
@@ -506,8 +508,8 @@ export class ApiResponse<E extends Endpoint> extends Response {
       const meta = await this.meta();
       switch (rawBody.type) {
         case WireFormat.json: {
-          const dataJson = this.definition.resp.munge
-            ? this.definition.resp.munge.fromResponse(rawBody.value).data
+          const dataJson = this.definition.resp.transform
+            ? this.definition.resp.transform.fromResponse(rawBody.value).data
             : (rawBody.value as Record<string, unknown>)?.["data"];
           this._value = this.definition.resp.data.fromJson(dataJson, meta);
           break;
@@ -557,7 +559,7 @@ function getErrorMessage(errBody: string): string {
 export async function fetchApiResponse<E extends Endpoint>(
   urlFormatter: (args: Record<string, string | number>) => string,
   definition: RouteDefinition<E>,
-  params: E["params"],
+  params: E["args"],
   init: ApiRequestInitRequired,
   logger?: Logger,
   metrics?: Metrics
@@ -586,7 +588,7 @@ export async function fetchApiResponse<E extends Endpoint>(
 export async function fetchApiResponseTimed<E extends Endpoint>(
   urlFormatter: (args: Record<string, string | number>) => string,
   definition: RouteDefinition<E>,
-  params: E["params"],
+  params: E["args"],
   init: ApiRequestInitRequired,
   globalSignal?: AbortSignal | null,
   logger?: Logger,
@@ -634,7 +636,7 @@ export function createApiClientMethod<E extends Endpoint>(
   globalInit: ApiRequestInitRequired,
   logger?: Logger,
   metrics?: Metrics
-): (params: E["params"], init: ApiRequestInit) => Promise<UnknownApiResponse<E>> {
+): (params: E["args"], init: ApiRequestInit) => Promise<UnknownApiResponse<E>> {
   const urlFormatter = compileRouteUrlFormater(definition.url);
   return async (params, _init) => {
     const init = {
