@@ -26,7 +26,7 @@ describe("web3_provider", function () {
         // `getProof` will always remain the non-verified method
         // as we use it to create proof and verify
         expect(Object.keys(accounts)).not.toHaveLength(0);
-        await expect(web3.eth.getProof(accounts[0], [], "latest")).fulfilled;
+        await expect(web3.eth.getProof(accounts[0], [], "latest")).resolves.toBeDefined();
       });
     });
 
@@ -40,7 +40,7 @@ describe("web3_provider", function () {
         const accounts = await provider.listAccounts();
 
         expect(Object.keys(accounts)).not.toHaveLength(0);
-        await expect(provider.send("eth_getProof", [accounts[0].address, [], "latest"])).fulfilled;
+        await expect(provider.send("eth_getProof", [accounts[0].address, [], "latest"])).resolves.toBeDefined();
       });
     });
   });
