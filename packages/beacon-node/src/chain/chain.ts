@@ -243,9 +243,10 @@ export class BeaconChain implements IBeaconChain {
     const stateCache = this.opts.nHistoricalStates
       ? new LRUBlockStateCache(this.opts, {metrics})
       : new StateContextCache({metrics});
-    const persistentApis = this.opts.persistCheckpointStatesToFile
-      ? new FilePersistentApis(CHECKPOINT_STATES_FOLDER)
-      : new DbPersistentApis(this.db);
+    const persistentApis = new FilePersistentApis(CHECKPOINT_STATES_FOLDER, logger);
+    // const persistentApis = this.opts.persistCheckpointStatesToFile
+    //   ? new FilePersistentApis(CHECKPOINT_STATES_FOLDER)
+    //   : new DbPersistentApis(this.db);
     const checkpointStateCache = this.opts.nHistoricalStates
       ? new PersistentCheckpointStateCache(
           {
@@ -350,7 +351,9 @@ export class BeaconChain implements IBeaconChain {
 
   /** Populate in-memory caches with persisted data. Call at least once on startup */
   async loadFromDisk(): Promise<void> {
+    const start = Date.now();
     await this.regen.init();
+    this.logger.info("@@@ chain loadFromDisk init in", {time: Date.now() - start});
     await this.opPool.fromPersisted(this.db);
   }
 

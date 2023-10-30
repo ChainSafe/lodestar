@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import {removeFile, writeIfNotExist, ensureDir, readAllFileNames} from "@lodestar/utils";
+import {removeFile, writeIfNotExist, ensureDir, readAllFileNames, Logger} from "@lodestar/utils";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {CheckpointKey} from "../types.js";
 import {CPStatePersistentApis, PersistentKey} from "./types.js";
@@ -9,7 +9,10 @@ import {CPStatePersistentApis, PersistentKey} from "./types.js";
  * Implementation of CPStatePersistentApis using file system, this is beneficial for debugging.
  */
 export class FilePersistentApis implements CPStatePersistentApis {
-  constructor(private readonly folderPath: string) {}
+  constructor(
+    private readonly folderPath: string,
+    private logger: Logger
+  ) {}
 
   /**
    * Writing to file name with `${cp.rootHex}_${cp.epoch}` helps debugging.
@@ -37,11 +40,20 @@ export class FilePersistentApis implements CPStatePersistentApis {
 
   async init(): Promise<void> {
     try {
+      let start = Date.now();
       await ensureDir(this.folderPath);
+      this.logger.info("@@@ FilePersistentApis ensureDir", {time: Date.now() - start});
+      start = Date.now();
       const fileNames = await readAllFileNames(this.folderPath);
+      this.logger.info("@@@ FilePersistentApis readAllFileNames", {
+        time: Date.now() - start,
+        numFiles: fileNames.length,
+      });
+      start = Date.now();
       for (const fileName of fileNames) {
         await removeFile(path.join(this.folderPath, fileName));
       }
+      this.logger.info("@@@ FilePersistentApis removeFiles", {time: Date.now() - start, numFiles: fileNames.length});
     } catch (_) {
       // do nothing
     }
