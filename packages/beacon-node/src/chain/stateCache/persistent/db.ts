@@ -29,7 +29,9 @@ export class DbPersistentApis implements CPStatePersistentApis {
    * Clean all checkpoint state in db at startup time.
    */
   async init(): Promise<void> {
-    const keys = await this.db.checkpointState.keys();
-    await this.db.checkpointState.batchDelete(keys);
+    const keyStream = this.db.checkpointState.keysStream();
+    for await (const key of keyStream) {
+      await this.db.checkpointState.delete(key);
+    }
   }
 }
