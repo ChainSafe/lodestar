@@ -673,6 +673,9 @@ export function setAuthorizationHeader(url: URL, headers: Headers, {bearerToken}
 }
 
 export function mergeHeaders(a: HeadersInit | undefined, b: HeadersInit | undefined): Headers {
+  if (!a) {
+    return new Headers(b);
+  }
   const headers = new Headers(a);
   if (!b) {
     return headers;
@@ -800,8 +803,8 @@ export function createFastifyHandler<E extends Endpoint>(
         wireResponse = Buffer.from(data);
       }
     }
-    if (Number.isSafeInteger(response.statusCode)) {
-      await resp.status(response.statusCode as number);
+    if (response.statusCode !== undefined || definition.statusOk !== undefined) {
+      resp.statusCode = response.statusCode ?? (definition.statusOk as number);
     }
     return wireResponse;
   };
