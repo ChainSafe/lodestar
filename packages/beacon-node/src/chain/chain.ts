@@ -862,7 +862,7 @@ export class BeaconChain implements IBeaconChain {
       // Note EIP-6914 will break this logic
       const newFinalizedValidators = finalizedState.epochCtx.unfinalizedPubkey2index.takeWhile((index, _pubkey) => index < pivotValidatorIndex);
       
-      this.regen.updateUnfinalizedPubkeys(newFinalizedValidators, cp.epoch);
+      this.regen.updateUnfinalizedPubkeys(newFinalizedValidators);
       
     }
   }

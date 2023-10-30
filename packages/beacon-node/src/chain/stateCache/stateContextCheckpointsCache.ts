@@ -90,10 +90,8 @@ export class CheckpointStateCache {
     return previousHits;
   }
 
-  updateUnfinalizedPubkeys(validators: UnfinalizedPubkeyIndexMap, epoch: Epoch): void {
-    const cpKeySets = Array.from(this.epochIndex.entries())
-      .filter(([e, _]) => e >= epoch)
-      .map(([_, cpKey]) => cpKey);
+  updateUnfinalizedPubkeys(validators: UnfinalizedPubkeyIndexMap): void {
+    const cpKeySets = Array.from(this.epochIndex.values())
 
     const cpKeys = new Set(function* () {
       for (const cpKeySet of cpKeySets) {
