@@ -2,7 +2,7 @@
 import {ContainerType, ListBasicType, ListCompositeType, Type, ValueOf} from "@chainsafe/ssz";
 import {Epoch, Root, StringType, allForks, ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
-import {ErrorAborted, Logger, fromHex, toBase64, toHex} from "@lodestar/utils";
+import {ErrorAborted, Logger, fromHex, mapValues, toBase64, toHex} from "@lodestar/utils";
 import {ExecutionOptimistic} from "../beacon/routes/beacon/block.js";
 import {StateId} from "../beacon/routes/beacon/index.js";
 import {AttesterDuty} from "../beacon/routes/validator.js";
@@ -58,7 +58,7 @@ export type SszPostRequestData<P extends JsonPostRequestData<PathParams, QueryPa
   body: P["body"] extends undefined ? undefined : Uint8Array;
 };
 
-export type EndpointMethod = "GET" | "POST" | "DELETE";
+export type HttpMethod = "GET" | "POST" | "DELETE";
 
 /**
  * This type describes the general shape of a route
@@ -75,7 +75,7 @@ export type EndpointMethod = "GET" | "POST" | "DELETE";
  *   - this enforces the shape of the returned metadata, used informationally and to help decode the return data
  */
 export type Endpoint<
-  Method extends EndpointMethod = EndpointMethod,
+  Method extends HttpMethod = HttpMethod,
   ArgsType = unknown,
   RequestType extends Method extends "GET"
     ? GetRequestData<PathParams, QueryParams>
@@ -432,6 +432,13 @@ export type FailureApiResponse = Response & {
 
 export type UnknownApiResponse<E extends Endpoint> = SuccessApiResponse<E> | FailureApiResponse;
 
+export type ApiClientMethod<E extends Endpoint> = (
+  args: E["args"],
+  init: ApiRequestInit
+) => Promise<UnknownApiResponse<E>>;
+
+export type ApiClientMethods<Es extends Record<string, Endpoint>> = {[K in keyof Es]: ApiClientMethod<Es[K]>};
+
 export class ApiResponse<E extends Endpoint> extends Response {
   private definition: RouteDefinition<E>;
   private _rawBody?: RawBody;
@@ -636,7 +643,7 @@ export function createApiClientMethod<E extends Endpoint>(
   globalInit: ApiRequestInitRequired,
   logger?: Logger,
   metrics?: Metrics
-): (params: E["args"], init: ApiRequestInit) => Promise<UnknownApiResponse<E>> {
+): ApiClientMethod<E> {
   const urlFormatter = compileRouteUrlFormater(definition.url);
   return async (params, _init) => {
     const init = {
@@ -681,4 +688,15 @@ export function mergeHeaders(a: HeadersInit | undefined, b: HeadersInit | undefi
     }
   }
   return headers;
+}
+
+export function createApiClientMethods<Es extends Record<string, Endpoint>>(
+  definitions: RouteDefinitions<Es>,
+  globalInit: ApiRequestInitRequired,
+  logger?: Logger,
+  metrics?: Metrics
+): ApiClientMethods<Es> {
+  return mapValues(definitions, (definition) => {
+    return createApiClientMethod(definition, globalInit, logger, metrics);
+  }) as unknown as ApiClientMethods<Es>;
 }
