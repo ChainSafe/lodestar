@@ -9,4 +9,5 @@ export interface CPStatePersistentApis {
   write: (cpKey: CheckpointKey, state: CachedBeaconStateAllForks) => Promise<PersistentKey>;
   remove: (persistentKey: PersistentKey) => Promise<boolean>;
   read: (persistentKey: PersistentKey) => Promise<Uint8Array | null>;
+  init: () => Promise<void>;
 }

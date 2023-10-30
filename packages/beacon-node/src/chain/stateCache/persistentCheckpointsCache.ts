@@ -112,6 +112,10 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     this.inMemoryEpochs = new Set();
   }
 
+  async init(): Promise<void> {
+    return this.persistentApis.init();
+  }
+
   /**
    * Get a state from cache, it will reload from disk.
    * This is expensive api, should only be called in some important flows:
