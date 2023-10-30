@@ -1,6 +1,6 @@
 import {toHexString} from "@chainsafe/ssz";
 import {Epoch, RootHex} from "@lodestar/types";
-import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
+import {CachedBeaconStateAllForks, UnfinalizedPubkeyIndexMap} from "@lodestar/state-transition";
 import {routes} from "@lodestar/api";
 import {Metrics} from "../../metrics/index.js";
 import {MapTracker} from "./mapMetrics.js";
@@ -82,6 +82,29 @@ export class StateContextCache {
 
   get size(): number {
     return this.cache.size;
+  }
+
+  /**
+   * 
+   */
+  updateUnfinalizedPubkeys(validators: UnfinalizedPubkeyIndexMap, epoch: Epoch): void {
+    const cpKeySets = Array.from(this.epochIndex.entries())
+      .filter(([e, _]) => e >= epoch)
+      .map(([_, cpKey]) => cpKey);
+
+    const cpKeys = new Set(function* () {
+      for (const cpKeySet of cpKeySets) {
+        yield* cpKeySet;
+      }
+    }());
+
+    for (const cpKey in cpKeys) {
+      const cachedState = this.cache.get(cpKey);
+      if (cachedState) {
+        cachedState.epochCtx.addFinalizedPubkeys(validators);
+        cachedState.epochCtx.deleteUnfinalizedPubkeys(Array.from(validators.keys()));
+      }
+    }
   }
 
   /**

@@ -792,6 +792,10 @@ export class EpochCache {
     }
   }
 
+  addFinalizedPubkeys(pubkeyMap: UnfinalizedPubkeyIndexMap): void {
+    Array.from(pubkeyMap.entries()).forEach(([pubkey, index]) => this.addFinalizedPubkey(index, pubkey));
+  }
+
   /**
    * Add finalized validator index and pubkey into finalized cache.
    * Since addFinalizedPubkey() primarily takes pubkeys from unfinalized cache, it can take pubkey hex string directly

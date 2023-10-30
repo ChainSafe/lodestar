@@ -1,6 +1,6 @@
 import {toHexString} from "@chainsafe/ssz";
 import {phase0, Epoch, RootHex} from "@lodestar/types";
-import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
+import {CachedBeaconStateAllForks, UnfinalizedPubkeyIndexMap} from "@lodestar/state-transition";
 import {MapDef} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
 import {Metrics} from "../../metrics/index.js";
@@ -88,6 +88,26 @@ export class CheckpointStateCache {
     this.preComputedCheckpoint = toCheckpointKey({rootHex, epoch});
     this.preComputedCheckpointHits = 0;
     return previousHits;
+  }
+
+  updateUnfinalizedPubkeys(validators: UnfinalizedPubkeyIndexMap, epoch: Epoch): void {
+    const cpKeySets = Array.from(this.epochIndex.entries())
+      .filter(([e, _]) => e >= epoch)
+      .map(([_, cpKey]) => cpKey);
+
+    const cpKeys = new Set(function* () {
+      for (const cpKeySet of cpKeySets) {
+        yield* cpKeySet;
+      }
+    }());
+
+    for (const cpKey in cpKeys) {
+      const cachedState = this.cache.get(cpKey);
+      if (cachedState) {
+        cachedState.epochCtx.addFinalizedPubkeys(validators);
+        cachedState.epochCtx.deleteUnfinalizedPubkeys(Array.from(validators.keys()));
+      }
+    }
   }
 
   pruneFinalized(finalizedEpoch: Epoch): void {

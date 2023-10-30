@@ -1,7 +1,7 @@
 import {toHexString} from "@chainsafe/ssz";
 import {phase0, Slot, allForks, RootHex, Epoch} from "@lodestar/types";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
+import {CachedBeaconStateAllForks, UnfinalizedPubkeyIndexMap, computeEpochAtSlot} from "@lodestar/state-transition";
 import {Logger} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
 import {CheckpointHex, CheckpointStateCache, StateContextCache, toCheckpointHex} from "../stateCache/index.js";
@@ -119,6 +119,14 @@ export class QueuedStateRegenerator implements IStateRegenerator {
 
   updatePreComputedCheckpoint(rootHex: RootHex, epoch: Epoch): number | null {
     return this.checkpointStateCache.updatePreComputedCheckpoint(rootHex, epoch);
+  }
+
+  /**
+   * Remove validators from unfinalized cache and add them to finalized cache for all related state context cache  
+   */
+  updateUnfinalizedPubkeys(validators: UnfinalizedPubkeyIndexMap, epoch: Epoch): void {
+    this.checkpointStateCache.updateUnfinalizedPubkeys(validators, epoch);
+    this.stateCache.updateUnfinalizedPubkeys(validators, epoch);
   }
 
   /**
