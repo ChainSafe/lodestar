@@ -8,10 +8,10 @@ import {ExecutionOptimistic} from "../beacon/routes/beacon/block.js";
 import {StateId} from "../beacon/routes/beacon/index.js";
 import {AttesterDuty} from "../beacon/routes/validator.js";
 import {NodeHealthOptions} from "../beacon/routes/node.js";
-import {Schema, SchemaDefinition} from "./schema.js";
+import {Schema, SchemaDefinition, getFastifySchema} from "./schema.js";
 import {stringifyQuery, urlJoin} from "./client/format.js";
 import {ApiError, Metrics, isAbortedError} from "./client/httpClient.js";
-import {compileRouteUrlFormater} from "./urlFormat.js";
+import {compileRouteUrlFormater, toColonNotationPath} from "./urlFormat.js";
 import {HttpStatusCode} from "./client/httpStatusCode.js";
 
 // ssz types -- assumed to already be defined
@@ -716,6 +716,7 @@ export type ApplicationResponse<E extends Endpoint> = {
 export type ApplicationError = ApiError | Error;
 
 export type ApplicationMethod<E extends Endpoint> = (args: E["args"]) => Promise<ApplicationResponse<E>>;
+export type ApplicationMethods<Es extends Record<string, Endpoint>> = {[K in keyof Es]: ApplicationMethod<Es[K]>};
 
 export type FastifyHandler<E extends Endpoint> = fastify.RouteHandlerMethod<
   fastify.RawServerDefault,
@@ -728,6 +729,19 @@ export type FastifyHandler<E extends Endpoint> = fastify.RouteHandlerMethod<
   },
   fastify.ContextConfigDefault
 >;
+
+export type FastifyRouteConfig = fastify.FastifyContextConfig & {
+  operationId: string;
+};
+
+export type FastifyRoute<E extends Endpoint> = {
+  url: string;
+  method: fastify.HTTPMethods;
+  handler: FastifyHandler<E>;
+  schema?: fastify.FastifySchema;
+  config: FastifyRouteConfig;
+};
+export type FastifyRoutes<Es extends Record<string, Endpoint>> = {[K in keyof Es]: FastifyRoute<Es[K]>};
 
 export function createFastifyHandler<E extends Endpoint>(
   definition: RouteDefinition<E>,
@@ -794,4 +808,37 @@ export function headersToObject(h: Headers): Record<string, string> {
     o[key] = value;
   }
   return o;
+}
+
+export function createFastifyRoute<E extends Endpoint>(
+  definition: RouteDefinition<E>,
+  method: ApplicationMethod<E>,
+  namespace?: string
+): FastifyRoute<E> {
+  return {
+    url: toColonNotationPath(definition.url),
+    method: definition.method,
+    handler: createFastifyHandler(definition, method),
+    schema: {
+      ...getFastifySchema(definition.req.schema),
+      ...(namespace ? {tags: [namespace]} : undefined),
+      operationId: definition.operationId,
+    } as fastify.FastifySchema,
+    config: {operationId: definition.operationId} as FastifyRouteConfig,
+  };
+}
+
+export function createFastifyRoutes<Es extends Record<string, Endpoint>>(
+  definitions: RouteDefinitions<Es>,
+  methods: ApplicationMethods<Es>,
+  namespace?: string
+): FastifyRoutes<Es> {
+  return mapValues(definitions, (definition, operationId) =>
+    createFastifyRoute(definition, methods[operationId], namespace)
+  );
+}
+
+// we no longer need a registerRoute(s) function
+export function registerRoute(server: fastify.FastifyInstance, route: FastifyRoute<Endpoint>): void {
+  server.route(route);
 }
