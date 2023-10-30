@@ -53,6 +53,12 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     this.logger = modules.logger;
   }
 
+  async init(): Promise<void> {
+    if (this.checkpointStateCache.init) {
+      return this.checkpointStateCache.init();
+    }
+  }
+
   canAcceptWork(): boolean {
     return this.jobQueue.jobLen < REGEN_CAN_ACCEPT_WORK_THRESHOLD;
   }

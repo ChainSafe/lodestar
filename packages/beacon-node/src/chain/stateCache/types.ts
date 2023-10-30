@@ -40,6 +40,7 @@ export interface BlockStateCache {
  *        root      ---------------------^
  */
 export interface CheckpointStateCache {
+  init?: () => Promise<void>;
   getOrReload(cp: CheckpointHex): Promise<CachedBeaconStateAllForks | null>;
   getStateOrBytes(cp: CheckpointHex): Promise<CachedBeaconStateAllForks | Uint8Array | null>;
   get(cpOrKey: CheckpointHex | string): CachedBeaconStateAllForks | null;

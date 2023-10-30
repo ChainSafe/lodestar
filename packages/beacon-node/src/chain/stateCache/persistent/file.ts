@@ -9,11 +9,7 @@ import {CPStatePersistentApis, PersistentKey} from "./types.js";
  * Implementation of CPStatePersistentApis using file system, this is beneficial for debugging.
  */
 export class FilePersistentApis implements CPStatePersistentApis {
-  constructor(private readonly folderPath: string) {
-    // this is very fast and most of the time we don't need to create folder
-    // state files from previous run will be removed asynchronously
-    void ensureEmptyFolder(folderPath);
-  }
+  constructor(private readonly folderPath: string) {}
 
   /**
    * Writing to file name with `${cp.rootHex}_${cp.epoch}` helps debugging.
@@ -39,19 +35,19 @@ export class FilePersistentApis implements CPStatePersistentApis {
     }
   }
 
+  async init(): Promise<void> {
+    try {
+      await ensureDir(this.folderPath);
+      const fileNames = await readAllFileNames(this.folderPath);
+      for (const fileName of fileNames) {
+        await removeFile(path.join(this.folderPath, fileName));
+      }
+    } catch (_) {
+      // do nothing
+    }
+  }
+
   private toPersistentKey(checkpointKey: CheckpointKey): PersistentKey {
     return path.join(this.folderPath, checkpointKey);
-  }
-}
-
-async function ensureEmptyFolder(folderPath: string): Promise<void> {
-  try {
-    await ensureDir(folderPath);
-    const fileNames = await readAllFileNames(folderPath);
-    for (const fileName of fileNames) {
-      await removeFile(path.join(folderPath, fileName));
-    }
-  } catch (_) {
-    // do nothing
   }
 }

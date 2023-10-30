@@ -32,6 +32,7 @@ export type StateCloneOpts = {
 };
 
 export interface IStateRegenerator extends IStateRegeneratorInternal {
+  init(): Promise<void>;
   dropCache(): void;
   dumpCacheSummary(): routes.lodestar.StateCacheItem[];
   getStateSync(stateRoot: RootHex): CachedBeaconStateAllForks | null;
