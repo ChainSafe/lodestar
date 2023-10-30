@@ -710,6 +710,7 @@ export function createApiClientMethods<Es extends Record<string, Endpoint>>(
 export type ApplicationResponse<E extends Endpoint> = {
   data: E["return"] | E["return"] extends undefined ? undefined : Uint8Array;
   meta: E["meta"];
+  statusCode?: number;
 };
 
 export type ApplicationError = ApiError | Error;
@@ -757,6 +758,7 @@ export function createFastifyHandler<E extends Endpoint>(
     }
 
     const responseWireFormat = getWireFormat(req.headers.accept ?? DEFAULT_RESPONSE_WIRE_FORMAT);
+    let wireResponse;
     switch (responseWireFormat) {
       case WireFormat.json: {
         await resp.header("content-type", "application/json");
@@ -765,19 +767,24 @@ export function createFastifyHandler<E extends Endpoint>(
         if (definition.resp.transform) {
           return definition.resp.transform.toResponse(data, meta);
         }
-        return {
+        wireResponse = {
           data,
           ...(meta as object),
         };
+        break;
       }
       case WireFormat.ssz: {
         const meta = definition.resp.meta.toHeaders(response.meta);
         meta.set("content-type", "application/octet-stream");
         await resp.headers(headersToObject(meta));
         const data = definition.resp.data.serialize(response.data, response.meta);
-        return Buffer.from(data);
+        wireResponse = Buffer.from(data);
       }
     }
+    if (Number.isSafeInteger(response.statusCode)) {
+      await resp.status(response.statusCode as number);
+    }
+    return wireResponse;
   };
 }
 
