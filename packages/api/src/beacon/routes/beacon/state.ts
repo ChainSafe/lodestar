@@ -143,6 +143,16 @@ export type Api = {
     >
   >;
 
+  getStateRandao(
+    stateId: StateId,
+    epoch?: Epoch
+  ): Promise<
+    ApiClientResponse<
+      {[HttpStatusCode.OK]: {data: {randao: Root}; executionOptimistic: ExecutionOptimistic}},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
+    >
+  >;
+
   /**
    * Get validator from state by id
    * Returns validator specified by state and id or public key along with status and balance.
@@ -218,6 +228,7 @@ export const routesData: RoutesData<Api> = {
   getStateRoot: {url: "/eth/v1/beacon/states/{state_id}/root", method: "GET"},
   getStateValidator: {url: "/eth/v1/beacon/states/{state_id}/validators/{validator_id}", method: "GET"},
   getStateValidators: {url: "/eth/v1/beacon/states/{state_id}/validators", method: "GET"},
+  getStateRandao: {url: "/eth/v1/beacon/states/{state_id}/randao", method: "GET"},
   getStateValidatorBalances: {url: "/eth/v1/beacon/states/{state_id}/validator_balances", method: "GET"},
 };
 
@@ -233,6 +244,7 @@ export type ReqTypes = {
   getStateRoot: StateIdOnlyReq;
   getStateValidator: {params: {state_id: StateId; validator_id: ValidatorId}};
   getStateValidators: {params: {state_id: StateId}; query: {id?: ValidatorId[]; status?: ValidatorStatus[]}};
+  getStateRandao: {params: {state_id: StateId}; query: {epoch?: number}};
   getStateValidatorBalances: {params: {state_id: StateId}; query: {id?: ValidatorId[]}};
 };
 
@@ -283,6 +295,15 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       },
     },
 
+    getStateRandao: {
+      writeReq: (state_id, epoch) => ({params: {state_id}, query: {epoch}}),
+      parseReq: ({params, query}) => [params.state_id, query.epoch],
+      schema: {
+        params: {state_id: Schema.StringRequired},
+        query: {epoch: Schema.Uint},
+      },
+    },
+
     getStateValidatorBalances: {
       writeReq: (state_id, id) => ({params: {state_id}, query: {id}}),
       parseReq: ({params, query}) => [params.state_id, query.id],
@@ -297,6 +318,10 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 export function getReturnTypes(): ReturnTypes<Api> {
   const RootContainer = new ContainerType({
     root: ssz.Root,
+  });
+
+  const RandaoContainer = new ContainerType({
+    randao: ssz.Root,
   });
 
   const FinalityCheckpoints = new ContainerType(
@@ -349,6 +374,7 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getStateFinalityCheckpoints: ContainerDataExecutionOptimistic(FinalityCheckpoints),
     getStateValidators: ContainerDataExecutionOptimistic(ArrayOf(ValidatorResponse)),
     getStateValidator: ContainerDataExecutionOptimistic(ValidatorResponse),
+    getStateRandao: ContainerDataExecutionOptimistic(RandaoContainer),
     getStateValidatorBalances: ContainerDataExecutionOptimistic(ArrayOf(ValidatorBalance)),
     getEpochCommittees: ContainerDataExecutionOptimistic(ArrayOf(EpochCommitteeResponse)),
     getEpochSyncCommittees: ContainerDataExecutionOptimistic(EpochSyncCommitteesResponse),

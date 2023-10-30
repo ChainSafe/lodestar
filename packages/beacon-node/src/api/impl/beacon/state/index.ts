@@ -127,6 +127,16 @@ export function getBeaconStateApi({
       };
     },
 
+    /**
+     * Retrieves the sync committees for the given state.
+     * @param epoch Fetch sync committees for the given epoch. If not present then the sync committees for the epoch of the state will be obtained.
+     */
+    async getStateRandao(stateId, epoch) {
+      // TODO implement
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
+      return undefined as any;
+    },
+
     async getStateValidatorBalances(stateId, indices) {
       const {state, executionOptimistic} = await resolveStateId(chain, stateId);
 
