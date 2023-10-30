@@ -42,18 +42,19 @@ type NodeVersionType = ValueOf<typeof NodeVersion>;
 
 // Endpoint
 
-export type GetRequestData = {
-  params?: Record<string, string | number>;
-  query?: Record<string, string | number | (string | number)[]>;
+export type RequestParams = Record<string, string | number>;
+export type RequestQuery = Record<string, string | number | (string | number)[]>;
+
+export type GetRequestData<P extends RequestParams, Q extends RequestQuery> = {
+  params?: P;
+  query?: Q;
 };
 
-export type PostRequestData<P extends Record<string, string | number>, B> = {
-  params?: P;
+export type PostRequestData<P extends RequestParams, Q extends RequestQuery, B> = GetRequestData<P, Q> & {
   body?: B;
 };
 
-export type SszPostRequestData<P extends PostRequestData<Record<string, string | number>, unknown>> = {
-  params: P["params"];
+export type SszPostRequestData<P extends PostRequestData<RequestParams, RequestQuery, unknown>> = Omit<P, "body"> & {
   body: P["body"] extends undefined ? undefined : Uint8Array;
 };
 
@@ -77,8 +78,8 @@ export type Endpoint<
   Method extends EndpointMethod = EndpointMethod,
   ParamsType = unknown,
   RequestType extends Method extends "GET"
-    ? GetRequestData
-    : PostRequestData<Record<string, string | number>, unknown> = GetRequestData,
+    ? GetRequestData<RequestParams, RequestQuery>
+    : PostRequestData<RequestParams, RequestQuery, unknown> = GetRequestData<RequestParams, RequestQuery>,
   ReturnType = unknown,
   Meta = unknown,
 > = {
