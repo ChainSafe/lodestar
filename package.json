@@ -107,7 +107,7 @@
   "resolutions": {
     "dns-over-http-resolver": "^2.1.1",
     "chai": "^4.3.10",
-    "vite": "^4.5.0",
+    "vitest-when/vite": "^4.5.0",
     "loupe": "^2.3.6"
   }
 }
