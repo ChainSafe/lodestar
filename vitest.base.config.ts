@@ -1,10 +1,8 @@
 import path from "node:path";
 import {defineConfig} from "vitest/config";
 const __dirname = new URL(".", import.meta.url).pathname;
-import renderer from "vite-plugin-electron-renderer";
 
 export default defineConfig({
-  plugins: [renderer()],
   test: {
     include: ["**/*.test.ts"],
     exclude: [
