@@ -24,6 +24,10 @@ export async function getDeposits<T>(
 
   const depositsLen = getEth1DepositCount(state);
 
+  if (depositsLen === 0) {
+    return []; // If depositsLen === 0, we can return early since no deposit with be returned from depositsGetter
+  }
+
   const indexRange = {gte: depositIndex, lt: depositIndex + depositsLen};
   const deposits = await depositsGetter(indexRange, eth1Data);
 
