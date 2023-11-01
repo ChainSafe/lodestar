@@ -113,6 +113,10 @@ export class Eth1DepositDataTracker {
    * Return eth1Data and deposits ready for block production for a given state
    */
   async getEth1DataAndDeposits(state: CachedBeaconStateAllForks): Promise<Eth1DataAndDeposits> {
+    if (state.epochCtx.isAfterEIP6110() && state.eth1DepositIndex >= (state as CachedBeaconStateEIP6110).depositReceiptsStartIndex) {
+      // No need to poll eth1Data since EIP6110 deprecates the mechanism after depositReceiptsStartIndex is reached
+      return {eth1Data: state.eth1Data, deposits: []};
+    }
     const eth1Data = this.forcedEth1DataVote ?? (await this.getEth1Data(state));
     const deposits = await this.getDeposits(state, eth1Data);
     return {eth1Data, deposits};
