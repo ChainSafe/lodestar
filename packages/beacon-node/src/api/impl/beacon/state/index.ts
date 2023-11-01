@@ -5,6 +5,7 @@ import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   getCurrentEpoch,
+  getRandaoMix,
 } from "@lodestar/state-transition";
 import {ApiError} from "../../errors.js";
 import {ApiModules} from "../../types.js";
@@ -15,6 +16,9 @@ import {
   resolveStateId,
   toValidatorResponse,
 } from "./utils.js";
+
+import {EPOCHS_PER_HISTORICAL_VECTOR} from "@lodestar/params";
+import { bytesToHex } from "../../../../eth1/provider/utils.js";
 
 export function getBeaconStateApi({
   chain,
@@ -132,9 +136,35 @@ export function getBeaconStateApi({
      * @param epoch Fetch sync committees for the given epoch. If not present then the sync committees for the epoch of the state will be obtained.
      */
     async getStateRandao(stateId, epoch) {
-      // TODO implement
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
-      return undefined as any;
+      const {state, executionOptimistic} = await resolveStateId(chain, stateId);
+      const stateEpoch = computeEpochAtSlot(state.slot);
+      const usedEpoch = epoch ?? stateEpoch;
+
+      // TODO is there a way to calculate this by at a specific epoch?
+      const epochsPerHistoricalVector = EPOCHS_PER_HISTORICAL_VECTOR;
+
+      const ret = {
+        executionOptimistic,
+        // TODO how to compute finalized?
+        // finalized: state.finalized,
+        data: {
+          randao: "", // return empty value to denote out-of-bound lookup
+        },
+      };
+
+      if (usedEpoch > stateEpoch) {
+        return ret;
+      } else if (
+        usedEpoch < stateEpoch &&
+        Math.abs(stateEpoch - epochsPerHistoricalVector) > 0 &&
+        Math.abs(stateEpoch - epochsPerHistoricalVector) >= usedEpoch
+      ) {
+        return ret;
+      }
+
+      ret.data.randao = bytesToHex(getRandaoMix(state, usedEpoch));
+
+      return ret;
     },
 
     async getStateValidatorBalances(stateId, indices) {
