@@ -114,7 +114,7 @@ export type PostRequestCodec<E extends Endpoint> = {
 
 /**
  * Previously called ReqSerializer
- * this handles translating between Endpoint["params"] and Endpoint["request"]
+ * this handles translating between Endpoint["args"] and Endpoint["request"]
  *
  * TODO: Should this be split into separate serialize and deserialize + schema objects?
  * For separate consumption by client and server.
@@ -368,7 +368,7 @@ export type RouteDefinitionExtra<E extends Endpoint> = RouteDefinition<E> & {
 
 export function createApiRequest<E extends Endpoint>(
   definition: RouteDefinitionExtra<E>,
-  params: E["args"],
+  args: E["args"],
   init: ApiRequestInitRequired
 ): Request {
   const headers = new Headers(init.headers);
@@ -380,15 +380,15 @@ export function createApiRequest<E extends Endpoint>(
   };
 
   if (definition.method === "GET") {
-    req = (definition.req as GetRequestCodec<E>).writeReq(params);
+    req = (definition.req as GetRequestCodec<E>).writeReq(args);
   } else {
     switch (init.requestWireFormat) {
       case WireFormat.json:
-        req = (definition.req as PostRequestCodec<E>).writeReqJson(params);
+        req = (definition.req as PostRequestCodec<E>).writeReqJson(args);
         headers.set("content-type", "application/json");
         break;
       case WireFormat.ssz:
-        req = (definition.req as PostRequestCodec<E>).writeReqSsz(params);
+        req = (definition.req as PostRequestCodec<E>).writeReqSsz(args);
         headers.set("content-type", "application/octet-stream");
         break;
     }
