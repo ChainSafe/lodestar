@@ -271,7 +271,7 @@ export type TestEndpoints = {
   getHealth: Endpoint<
     //
     "GET",
-    {options?: NodeHealthOptions},
+    NodeHealthOptions,
     {query: {syncing_status?: number}},
     EmptyResponseData,
     EmptyMeta
@@ -325,8 +325,8 @@ export const definitions: RouteDefinitions<TestEndpoints> = {
     url: "/eth/v1/node/health",
     method: "GET",
     req: {
-      parseReq: ({query}) => ({options: {syncingStatus: query.syncing_status}}),
-      writeReq: ({options}) => ({query: {syncing_status: options?.syncingStatus}}),
+      parseReq: ({query}) => ({syncingStatus: query.syncing_status}),
+      writeReq: ({syncingStatus}) => ({query: {syncing_status: syncingStatus}}),
       schema: {query: {syncing_status: Schema.Uint}},
     },
     resp: {
