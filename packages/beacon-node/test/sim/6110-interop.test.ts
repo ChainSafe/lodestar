@@ -340,6 +340,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
     const {validators} = await getAndInitDevValidators({
       node: bn,
+      logPrefix: "Node-A",
       validatorsPerClient,
       validatorClientCount,
       startIndex: 0,
