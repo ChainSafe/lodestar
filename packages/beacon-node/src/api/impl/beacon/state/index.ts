@@ -47,6 +47,42 @@ export function getBeaconStateApi({
       };
     },
 
+    /**
+     * Retrieves the sync committees for the given state.
+     * @param epoch Fetch sync committees for the given epoch. If not present then the sync committees for the epoch of the state will be obtained.
+     */
+    async getStateRandao(stateId, epoch) {
+      const {state, executionOptimistic} = await resolveStateId(chain, stateId);
+      const stateEpoch = computeEpochAtSlot(state.slot);
+      const usedEpoch = epoch ?? stateEpoch;
+
+      // TODO is there a way to calculate this by at a specific epoch?
+      const epochsPerHistoricalVector = EPOCHS_PER_HISTORICAL_VECTOR;
+
+      const ret = {
+        executionOptimistic,
+        // TODO how to compute finalized?
+        // finalized: state.finalized,
+        data: {
+          randao: "", // return empty value to denote out-of-bound lookup
+        },
+      };
+
+      if (usedEpoch > stateEpoch) {
+        return ret;
+      } else if (
+        usedEpoch < stateEpoch &&
+        Math.abs(stateEpoch - epochsPerHistoricalVector) > 0 &&
+        Math.abs(stateEpoch - epochsPerHistoricalVector) >= usedEpoch
+      ) {
+        return ret;
+      }
+
+      ret.data.randao = bytesToHex(getRandaoMix(state, usedEpoch));
+
+      return ret;
+    },
+
     async getStateFinalityCheckpoints(stateId) {
       const {state, executionOptimistic} = await getState(stateId);
       return {
@@ -129,42 +165,6 @@ export function getBeaconStateApi({
           getCurrentEpoch(state)
         ),
       };
-    },
-
-    /**
-     * Retrieves the sync committees for the given state.
-     * @param epoch Fetch sync committees for the given epoch. If not present then the sync committees for the epoch of the state will be obtained.
-     */
-    async getStateRandao(stateId, epoch) {
-      const {state, executionOptimistic} = await resolveStateId(chain, stateId);
-      const stateEpoch = computeEpochAtSlot(state.slot);
-      const usedEpoch = epoch ?? stateEpoch;
-
-      // TODO is there a way to calculate this by at a specific epoch?
-      const epochsPerHistoricalVector = EPOCHS_PER_HISTORICAL_VECTOR;
-
-      const ret = {
-        executionOptimistic,
-        // TODO how to compute finalized?
-        // finalized: state.finalized,
-        data: {
-          randao: "", // return empty value to denote out-of-bound lookup
-        },
-      };
-
-      if (usedEpoch > stateEpoch) {
-        return ret;
-      } else if (
-        usedEpoch < stateEpoch &&
-        Math.abs(stateEpoch - epochsPerHistoricalVector) > 0 &&
-        Math.abs(stateEpoch - epochsPerHistoricalVector) >= usedEpoch
-      ) {
-        return ret;
-      }
-
-      ret.data.randao = bytesToHex(getRandaoMix(state, usedEpoch));
-
-      return ret;
     },
 
     async getStateValidatorBalances(stateId, indices) {

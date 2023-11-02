@@ -109,6 +109,16 @@ export type Api = {
     >
   >;
 
+  getStateRandao(
+    stateId: StateId,
+    epoch?: Epoch
+  ): Promise<
+    ApiClientResponse<
+      {[HttpStatusCode.OK]: {data: {randao: Root}; executionOptimistic: ExecutionOptimistic}},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
+    >
+  >;
+
   /**
    * Get state finality checkpoints
    * Returns finality checkpoints for state with given 'stateId'.
@@ -139,16 +149,6 @@ export type Api = {
   ): Promise<
     ApiClientResponse<
       {[HttpStatusCode.OK]: {data: ValidatorResponse[]; executionOptimistic: ExecutionOptimistic}},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
-    >
-  >;
-
-  getStateRandao(
-    stateId: StateId,
-    epoch?: Epoch
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: {randao: Root}; executionOptimistic: ExecutionOptimistic}},
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
     >
   >;
@@ -226,9 +226,9 @@ export const routesData: RoutesData<Api> = {
   getStateFinalityCheckpoints: {url: "/eth/v1/beacon/states/{state_id}/finality_checkpoints", method: "GET"},
   getStateFork: {url: "/eth/v1/beacon/states/{state_id}/fork", method: "GET"},
   getStateRoot: {url: "/eth/v1/beacon/states/{state_id}/root", method: "GET"},
+  getStateRandao: {url: "/eth/v1/beacon/states/{state_id}/randao", method: "GET"},
   getStateValidator: {url: "/eth/v1/beacon/states/{state_id}/validators/{validator_id}", method: "GET"},
   getStateValidators: {url: "/eth/v1/beacon/states/{state_id}/validators", method: "GET"},
-  getStateRandao: {url: "/eth/v1/beacon/states/{state_id}/randao", method: "GET"},
   getStateValidatorBalances: {url: "/eth/v1/beacon/states/{state_id}/validator_balances", method: "GET"},
 };
 
@@ -242,9 +242,9 @@ export type ReqTypes = {
   getStateFinalityCheckpoints: StateIdOnlyReq;
   getStateFork: StateIdOnlyReq;
   getStateRoot: StateIdOnlyReq;
+  getStateRandao: {params: {state_id: StateId}; query: {epoch?: number}};
   getStateValidator: {params: {state_id: StateId; validator_id: ValidatorId}};
   getStateValidators: {params: {state_id: StateId}; query: {id?: ValidatorId[]; status?: ValidatorStatus[]}};
-  getStateRandao: {params: {state_id: StateId}; query: {epoch?: number}};
   getStateValidatorBalances: {params: {state_id: StateId}; query: {id?: ValidatorId[]}};
 };
 
@@ -278,6 +278,15 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
     getStateFork: stateIdOnlyReq,
     getStateRoot: stateIdOnlyReq,
 
+    getStateRandao: {
+      writeReq: (state_id, epoch) => ({params: {state_id}, query: {epoch}}),
+      parseReq: ({params, query}) => [params.state_id, query.epoch],
+      schema: {
+        params: {state_id: Schema.StringRequired},
+        query: {epoch: Schema.Uint},
+      },
+    },
+
     getStateValidator: {
       writeReq: (state_id, validator_id) => ({params: {state_id, validator_id}}),
       parseReq: ({params}) => [params.state_id, params.validator_id],
@@ -292,15 +301,6 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       schema: {
         params: {state_id: Schema.StringRequired},
         query: {id: Schema.UintOrStringArray, status: Schema.StringArray},
-      },
-    },
-
-    getStateRandao: {
-      writeReq: (state_id, epoch) => ({params: {state_id}, query: {epoch}}),
-      parseReq: ({params, query}) => [params.state_id, query.epoch],
-      schema: {
-        params: {state_id: Schema.StringRequired},
-        query: {epoch: Schema.Uint},
       },
     },
 
@@ -371,10 +371,10 @@ export function getReturnTypes(): ReturnTypes<Api> {
   return {
     getStateRoot: ContainerDataExecutionOptimistic(RootContainer),
     getStateFork: ContainerDataExecutionOptimistic(ssz.phase0.Fork),
+    getStateRandao: ContainerDataExecutionOptimistic(RandaoContainer),
     getStateFinalityCheckpoints: ContainerDataExecutionOptimistic(FinalityCheckpoints),
     getStateValidators: ContainerDataExecutionOptimistic(ArrayOf(ValidatorResponse)),
     getStateValidator: ContainerDataExecutionOptimistic(ValidatorResponse),
-    getStateRandao: ContainerDataExecutionOptimistic(RandaoContainer),
     getStateValidatorBalances: ContainerDataExecutionOptimistic(ArrayOf(ValidatorBalance)),
     getEpochCommittees: ContainerDataExecutionOptimistic(ArrayOf(EpochCommitteeResponse)),
     getEpochSyncCommittees: ContainerDataExecutionOptimistic(EpochSyncCommitteesResponse),
