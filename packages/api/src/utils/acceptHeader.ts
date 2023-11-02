@@ -1,3 +1,5 @@
+// TODO: file can be deleted once all API definitions are updated
+
 import {ResponseFormat} from "../interfaces.js";
 
 enum MediaType {

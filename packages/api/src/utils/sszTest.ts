@@ -3,7 +3,7 @@ import {ContainerType, ListBasicType, ListCompositeType, Type, ValueOf} from "@c
 import type * as fastify from "fastify";
 import {Epoch, Root, StringType, allForks, ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
-import {ErrorAborted, Logger, TimeoutError, fromHex, mapValues, toHex} from "@lodestar/utils";
+import {ErrorAborted, Logger, TimeoutError, fromHex, isValidHttpUrl, mapValues, toHex} from "@lodestar/utils";
 import {ExecutionOptimistic} from "../beacon/routes/beacon/block.js";
 import {StateId} from "../beacon/routes/beacon/index.js";
 import {AttesterDuty} from "../beacon/routes/validator.js";
@@ -13,6 +13,8 @@ import {stringifyQuery, urlJoin} from "./client/format.js";
 import {Metrics} from "./client/httpClient.js";
 import {compileRouteUrlFormater, toColonNotationPath} from "./urlFormat.js";
 import {isFetchError} from "./client/fetch.js";
+import {ApiError as ServerApiError} from "./server/index.js";
+import {MediaType, mergeHeaders, parseAcceptHeader, parseContentTypeHeader, setAuthorizationHeader} from "./headers.js";
 
 // ssz types -- assumed to already be defined
 
@@ -449,18 +451,13 @@ export type ApiClientMethod<E extends Endpoint> = E["args"] extends void
 
 export type ApiClientMethods<Es extends Record<string, Endpoint>> = {[K in keyof Es]: ApiClientMethod<Es[K]>};
 
-export function getWireFormat(contentType?: string | null): WireFormat {
-  if (!contentType) throw Error("No content-type header found");
-
-  const mediaType = contentType.split(";", 1)[0].trim().toLowerCase();
-
-  if (mediaType === "application/json") {
-    return WireFormat.json;
+export function getWireFormat(mediaType: MediaType): WireFormat {
+  switch (mediaType) {
+    case MediaType.json:
+      return WireFormat.json;
+    case MediaType.ssz:
+      return WireFormat.ssz;
   }
-  if (mediaType === "application/octet-stream") {
-    return WireFormat.ssz;
-  }
-  throw Error(`Unsupported response media type: ${mediaType}`);
 }
 
 export class ApiResponse<E extends Endpoint> extends Response {
@@ -476,7 +473,17 @@ export class ApiResponse<E extends Endpoint> extends Response {
   }
 
   wireFormat(): WireFormat {
-    return getWireFormat(this.headers.get("content-type"));
+    const contentType = this.headers.get("content-type");
+    if (contentType === null) {
+      throw Error("No content-type header found in response");
+    }
+
+    const mediaType = parseContentTypeHeader(contentType);
+    if (mediaType === null) {
+      throw Error(`Unsupported response media type: ${contentType.split(";", 1)[0]}`);
+    }
+
+    return getWireFormat(mediaType);
   }
 
   async rawBody(): Promise<RawBody> {
@@ -603,44 +610,6 @@ export function createApiClientMethod<E extends Endpoint>(
   }) as ApiClientMethod<E>;
 }
 
-export function setAuthorizationHeader(url: URL, headers: Headers, {bearerToken}: OptionalRequestInit): void {
-  if (bearerToken && !headers.has("Authorization")) {
-    headers.set("Authorization", `Bearer ${bearerToken}`);
-  }
-  if (url.username || url.password) {
-    if (!headers.has("Authorization")) {
-      headers.set("Authorization", `Basic ${toBase64(`${url.username}:${url.password}`)}`);
-    }
-    // Remove the username and password from the URL
-    url.username = "";
-    url.password = "";
-  }
-}
-
-export function mergeHeaders(a: HeadersInit | undefined, b: HeadersInit | undefined): Headers {
-  if (!a) {
-    return new Headers(b);
-  }
-  const headers = new Headers(a);
-  if (!b) {
-    return headers;
-  }
-  if (Array.isArray(b)) {
-    for (const [key, value] of b) {
-      headers.set(key, value);
-    }
-  } else if (b instanceof Headers) {
-    for (const [key, value] of b as unknown as Iterable<[string, string]>) {
-      headers.set(key, value);
-    }
-  } else {
-    for (const [key, value] of Object.entries(b)) {
-      headers.set(key, value);
-    }
-  }
-  return headers;
-}
-
 export function createApiClientMethods<Es extends Record<string, Endpoint>>(
   definitions: RouteDefinitions<Es>,
   client: HttpClient
@@ -698,7 +667,13 @@ export function createFastifyHandler<E extends Endpoint>(
     if (definition.method === "GET") {
       response = await method((definition.req as GetRequestCodec<E>).parseReq(req as GetRequestData));
     } else {
-      const requestWireFormat = getWireFormat(req.headers["content-type"]);
+      const contentType = req.headers["content-type"];
+      const mediaType = parseContentTypeHeader(contentType);
+      if (mediaType === null) {
+        throw new ServerApiError(415, `Unsupported request media type: ${contentType?.split(";", 1)[0]}`);
+      }
+
+      const requestWireFormat = getWireFormat(mediaType);
       switch (requestWireFormat) {
         case WireFormat.json:
           response = await method((definition.req as PostRequestCodec<E>).parseReqJson(req as JsonPostRequestData));
@@ -711,7 +686,12 @@ export function createFastifyHandler<E extends Endpoint>(
       }
     }
 
-    const responseWireFormat = getWireFormat(req.headers.accept ?? DEFAULT_RESPONSE_WIRE_FORMAT);
+    const mediaType = parseAcceptHeader(req.headers.accept);
+    if (mediaType === null) {
+      throw new ServerApiError(415, `Only unsupported response media types: ${req.headers.accept}`);
+    }
+
+    const responseWireFormat = getWireFormat(mediaType);
     let wireResponse;
     switch (responseWireFormat) {
       case WireFormat.json: {

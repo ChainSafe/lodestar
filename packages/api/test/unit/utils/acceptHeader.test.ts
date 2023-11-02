@@ -2,6 +2,8 @@ import {expect} from "chai";
 import {parseAcceptHeader} from "../../../src/utils/acceptHeader.js";
 import {ResponseFormat} from "../../../src/interfaces.js";
 
+// TODO: update test cases after restructuring
+
 describe("utils / acceptHeader", () => {
   describe("parseAcceptHeader", () => {
     const testCases: {header: string | undefined; expected: ResponseFormat}[] = [
