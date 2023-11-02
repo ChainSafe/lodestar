@@ -667,13 +667,14 @@ export function createFastifyHandler<E extends Endpoint>(
     if (definition.method === "GET") {
       response = await method((definition.req as GetRequestCodec<E>).parseReq(req as GetRequestData));
     } else {
-      const contentType = req.headers["content-type"];
-      const mediaType = parseContentTypeHeader(contentType);
-      if (mediaType === null) {
-        throw new ServerApiError(415, `Unsupported request media type: ${contentType?.split(";", 1)[0]}`);
-      }
+      // const contentType = req.headers["content-type"];
+      const mediaType = parseContentTypeHeader(req.headers["content-type"]);
+      // if (mediaType === null) {
+      //   throw new ServerApiError(415, `Unsupported request media type: ${contentType?.split(";", 1)[0]}`);
+      // }
 
-      const requestWireFormat = getWireFormat(mediaType);
+      // TODO: We might not need to validate request media types as this is already handled by Fastify
+      const requestWireFormat = getWireFormat(mediaType as MediaType);
       switch (requestWireFormat) {
         case WireFormat.json:
           response = await method((definition.req as PostRequestCodec<E>).parseReqJson(req as JsonPostRequestData));
@@ -686,9 +687,14 @@ export function createFastifyHandler<E extends Endpoint>(
       }
     }
 
-    const mediaType = parseAcceptHeader(req.headers.accept);
+    const acceptHeader = req.headers.accept;
+    if (acceptHeader === undefined) {
+      throw new ServerApiError(415, "No accept header found in request");
+    }
+
+    const mediaType = parseAcceptHeader(acceptHeader);
     if (mediaType === null) {
-      throw new ServerApiError(415, `Only unsupported response media types: ${req.headers.accept}`);
+      throw new ServerApiError(415, `Only unsupported media types are accepted: ${acceptHeader}`);
     }
 
     const responseWireFormat = getWireFormat(mediaType);
