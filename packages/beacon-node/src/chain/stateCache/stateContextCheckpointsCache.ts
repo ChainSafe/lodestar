@@ -91,16 +91,18 @@ export class CheckpointStateCache {
   }
 
   updateUnfinalizedPubkeys(validators: UnfinalizedPubkeyIndexMap): void {
-    const cpKeySets = Array.from(this.epochIndex.values())
+    const cpKeySets = Array.from(this.epochIndex.values());
     let totalAddTime = 0;
     let totalDeleteTime = 0;
     let totalNumStatesUpdated = 0;
 
-    const cpKeys = new Set(function* () {
-      for (const cpKeySet of cpKeySets) {
-        yield* cpKeySet;
-      }
-    }());
+    const cpKeys = new Set(
+      (function* () {
+        for (const cpKeySet of cpKeySets) {
+          yield* cpKeySet;
+        }
+      })()
+    );
 
     for (const cpKey in cpKeys) {
       const cachedState = this.cache.get(cpKey);

@@ -121,7 +121,9 @@ export type SignedBuilderBid =
   | capella.SignedBuilderBid
   | deneb.SignedBuilderBid
   | eip6110.SignedBuilderBid;
-export type ExecutionPayloadAndBlobsBundle = deneb.ExecutionPayloadAndBlobsBundle | eip6110.ExecutionPayloadAndBlobsBundle;
+export type ExecutionPayloadAndBlobsBundle =
+  | deneb.ExecutionPayloadAndBlobsBundle
+  | eip6110.ExecutionPayloadAndBlobsBundle;
 
 export type LightClientHeader =
   | altair.LightClientHeader

@@ -1,6 +1,11 @@
 import {phase0, ssz} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
-import {BeaconStateAllForks, CachedBeaconStateAllForks, CachedBeaconStateEIP6110, becomesNewEth1Data} from "@lodestar/state-transition";
+import {
+  BeaconStateAllForks,
+  CachedBeaconStateAllForks,
+  CachedBeaconStateEIP6110,
+  becomesNewEth1Data,
+} from "@lodestar/state-transition";
 import {ErrorAborted, TimeoutError, fromHex, Logger, isErrorAborted, sleep} from "@lodestar/utils";
 
 import {IBeaconDb} from "../db/index.js";
@@ -68,7 +73,7 @@ export class Eth1DepositDataTracker {
   private eth1GetLogsBatchSizeDynamic = MAX_BLOCKS_PER_LOG_QUERY;
   private readonly forcedEth1DataVote: phase0.Eth1Data | null;
   /** To stop `runAutoUpdate()` in addition to AbortSignal */
-  private stopPolling: Boolean = false;
+  private stopPolling: boolean = false;
 
   constructor(
     opts: Eth1Options,
@@ -119,7 +124,10 @@ export class Eth1DepositDataTracker {
    * Return eth1Data and deposits ready for block production for a given state
    */
   async getEth1DataAndDeposits(state: CachedBeaconStateAllForks): Promise<Eth1DataAndDeposits> {
-    if (state.epochCtx.isAfterEIP6110() && state.eth1DepositIndex >= (state as CachedBeaconStateEIP6110).depositReceiptsStartIndex) {
+    if (
+      state.epochCtx.isAfterEIP6110() &&
+      state.eth1DepositIndex >= (state as CachedBeaconStateEIP6110).depositReceiptsStartIndex
+    ) {
       // No need to poll eth1Data since EIP6110 deprecates the mechanism after depositReceiptsStartIndex is reached
       return {eth1Data: state.eth1Data, deposits: []};
     }

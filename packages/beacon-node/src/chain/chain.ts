@@ -879,11 +879,13 @@ export class BeaconChain implements IBeaconChain {
     if (finalizedState?.epochCtx.isAfterEIP6110()) {
       const pivotValidatorIndex = finalizedState.validators.length;
       // Note EIP-6914 will break this logic
-      const newFinalizedValidators = finalizedState.epochCtx.unfinalizedPubkey2index.takeWhile((index, _pubkey) => index < pivotValidatorIndex);
-      
+      const newFinalizedValidators = finalizedState.epochCtx.unfinalizedPubkey2index.takeWhile(
+        (index, _pubkey) => index < pivotValidatorIndex
+      );
+
       // Populate finalized pubkey cache and remove unfinalized pubkey cache
       this.regen.updateUnfinalizedPubkeys(newFinalizedValidators);
-      
+
       if (finalizedState.eth1DepositIndex >= (finalizedState as CachedBeaconStateEIP6110).depositReceiptsStartIndex) {
         // Signal eth1 to stop polling eth1Data
         this.eth1.stopPollingEth1Data();
