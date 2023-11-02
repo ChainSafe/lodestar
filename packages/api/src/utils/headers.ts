@@ -6,10 +6,10 @@ export enum MediaType {
   ssz = "application/octet-stream",
 }
 
-export const mediaTypes = Object.values(MediaType);
+export const supportedMediaTypes = Object.values(MediaType);
 
 function isSupportedMediaType(mediaType: string | null): mediaType is MediaType {
-  return mediaTypes !== null && mediaTypes.includes(mediaType as MediaType);
+  return mediaType !== null && supportedMediaTypes.includes(mediaType as MediaType);
 }
 
 export function parseContentTypeHeader(contentType?: string): MediaType | null {
