@@ -475,7 +475,7 @@ export class ApiResponse<E extends Endpoint> extends Response {
   wireFormat(): WireFormat {
     const contentType = this.headers.get("content-type");
     if (contentType === null) {
-      throw Error("No content-type header found in response");
+      throw Error("No Content-Type header found in response");
     }
 
     const mediaType = parseContentTypeHeader(contentType);
@@ -689,7 +689,7 @@ export function createFastifyHandler<E extends Endpoint>(
 
     const acceptHeader = req.headers.accept;
     if (acceptHeader === undefined) {
-      throw new ServerApiError(415, "No accept header found in request");
+      throw new ServerApiError(415, "No Accept header found in request");
     }
 
     const mediaType = parseAcceptHeader(acceptHeader);
