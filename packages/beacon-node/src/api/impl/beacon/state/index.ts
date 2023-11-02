@@ -64,7 +64,7 @@ export function getBeaconStateApi({
         // TODO how to compute finalized?
         // finalized: state.finalized,
         data: {
-          randao: "", // return empty value to denote out-of-bound lookup
+          randao: new Uint8Array(), // return empty value to denote out-of-bound lookup
         },
       };
 
@@ -78,7 +78,7 @@ export function getBeaconStateApi({
         return ret;
       }
 
-      ret.data.randao = bytesToHex(getRandaoMix(state, usedEpoch));
+      ret.data.randao = getRandaoMix(state, usedEpoch);
 
       return ret;
     },
