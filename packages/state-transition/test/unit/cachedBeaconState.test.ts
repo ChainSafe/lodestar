@@ -3,7 +3,7 @@ import {fromHexString} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
 import {config} from "@lodestar/config/default";
-import {createBeaconConfig} from "@lodestar/config";
+import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {createCachedBeaconStateTest} from "../utils/state.js";
 import {PubkeyIndexMap} from "../../src/cache/pubkeyCache.js";
 import {createCachedBeaconState, loadUnfinalizedCachedBeaconState} from "../../src/cache/stateCache.js";

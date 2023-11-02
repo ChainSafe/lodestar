@@ -100,9 +100,9 @@ export const SignedBlindedBeaconBlock = new ContainerType(
 export const BuilderBid = new ContainerType(
   {
     header: ExecutionPayloadHeader, // Modified in EIP6110
+    blindedBlobsBundle: denebSsz.BlindedBlobsBundle,
     value: UintBn256,
     pubkey: BLSPubkey,
-    blobKzgCommitments: denebSsz.BuilderBid.fields.blobKzgCommitments,
   },
   {typeName: "BuilderBid", jsonCase: "eth2"}
 );
@@ -113,6 +113,14 @@ export const SignedBuilderBid = new ContainerType(
     signature: BLSSignature,
   },
   {typeName: "SignedBuilderBid", jsonCase: "eth2"}
+);
+
+export const ExecutionPayloadAndBlobsBundle = new ContainerType(
+  {
+    executionPayload: ExecutionPayload, // Modified in EIP6110
+    blobsBundle: denebSsz.BlobsBundle,
+  },
+  {typeName: "ExecutionPayloadAndBlobsBundle", jsonCase: "eth2"}
 );
 
 // We don't spread deneb.BeaconState fields since we need to replace
