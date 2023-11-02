@@ -60,8 +60,6 @@ export function getBeaconStateApi({
 
       const ret = {
         executionOptimistic,
-        // TODO how to compute finalized?
-        // finalized: state.finalized,
         data: {
           randao: new Uint8Array(), // return empty value to denote out-of-bound lookup
         },
