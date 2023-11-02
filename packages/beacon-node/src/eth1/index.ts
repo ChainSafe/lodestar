@@ -106,6 +106,10 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
   startPollingMergeBlock(): void {
     return this.eth1MergeBlockTracker.startPollingMergeBlock();
   }
+
+  stopPollingEth1Data(): void {
+    return this.eth1DepositDataTracker?.stopPollingEth1Data();
+  }
 }
 
 /**
@@ -138,6 +142,10 @@ export class Eth1ForBlockProductionDisabled implements IEth1ForBlockProduction {
   }
 
   startPollingMergeBlock(): void {
+    // Ignore
+  }
+
+  stopPollingEth1Data(): void {
     // Ignore
   }
 }

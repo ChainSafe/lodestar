@@ -1,6 +1,6 @@
 import {phase0, ssz} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
-import {BeaconStateAllForks, CachedBeaconStateAllForks, becomesNewEth1Data} from "@lodestar/state-transition";
+import {BeaconStateAllForks, CachedBeaconStateAllForks, CachedBeaconStateEIP6110, becomesNewEth1Data} from "@lodestar/state-transition";
 import {ErrorAborted, TimeoutError, fromHex, Logger, isErrorAborted, sleep} from "@lodestar/utils";
 
 import {IBeaconDb} from "../db/index.js";
@@ -67,6 +67,8 @@ export class Eth1DepositDataTracker {
   /** Dynamically adjusted batch size to fetch deposit logs */
   private eth1GetLogsBatchSizeDynamic = MAX_BLOCKS_PER_LOG_QUERY;
   private readonly forcedEth1DataVote: phase0.Eth1Data | null;
+  /** To stop `runAutoUpdate()` in addition to AbortSignal */
+  private stopPolling: Boolean = false;
 
   constructor(
     opts: Eth1Options,
@@ -107,6 +109,10 @@ export class Eth1DepositDataTracker {
         }
       });
     }
+  }
+
+  stopPollingEth1Data(): void {
+    this.stopPolling = true;
   }
 
   /**
@@ -169,7 +175,7 @@ export class Eth1DepositDataTracker {
   private async runAutoUpdate(): Promise<void> {
     let lastRunMs = 0;
 
-    while (!this.signal.aborted) {
+    while (!this.signal.aborted && !this.stopPolling) {
       lastRunMs = Date.now();
 
       try {
