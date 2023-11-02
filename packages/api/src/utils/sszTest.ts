@@ -45,17 +45,28 @@ type NodeVersionType = ValueOf<typeof NodeVersion>;
 
 export type PathParams = Record<string, string | number>;
 export type QueryParams = Record<string, string | number | (string | number)[]>;
+export type HeaderParams = Record<string, string>;
 
-export type GetRequestData<P extends PathParams, Q extends QueryParams> = {
+export type GetRequestData<
+  P extends PathParams = PathParams,
+  Q extends QueryParams = QueryParams,
+  H extends HeaderParams = HeaderParams,
+> = {
   params?: P;
   query?: Q;
+  headers?: H;
 };
 
-export type JsonPostRequestData<P extends PathParams, Q extends QueryParams, B> = GetRequestData<P, Q> & {
+export type JsonPostRequestData<
+  B = unknown,
+  P extends PathParams = PathParams,
+  Q extends QueryParams = QueryParams,
+  H extends HeaderParams = HeaderParams,
+> = GetRequestData<P, Q, H> & {
   body?: B;
 };
 
-export type SszPostRequestData<P extends JsonPostRequestData<PathParams, QueryParams, unknown>> = Omit<P, "body"> & {
+export type SszPostRequestData<P extends JsonPostRequestData> = Omit<P, "body"> & {
   body: P["body"] extends undefined ? undefined : Uint8Array;
 };
 
@@ -78,9 +89,7 @@ export type HttpMethod = "GET" | "POST" | "DELETE";
 export type Endpoint<
   Method extends HttpMethod = HttpMethod,
   ArgsType = unknown,
-  RequestType extends Method extends "GET"
-    ? GetRequestData<PathParams, QueryParams>
-    : JsonPostRequestData<PathParams, QueryParams, unknown> = GetRequestData<PathParams, QueryParams>,
+  RequestType extends Method extends "GET" ? GetRequestData : JsonPostRequestData = GetRequestData,
   ReturnType = unknown,
   Meta = unknown,
 > = {
@@ -376,6 +385,7 @@ export function createApiRequest<E extends Endpoint>(
   let req: {
     params?: E["request"]["params"];
     query?: E["request"]["query"];
+    headers?: E["request"]["headers"];
     body?: string | Uint8Array;
   };
 
@@ -411,7 +421,7 @@ export function createApiRequest<E extends Endpoint>(
   return new Request(url, {
     ...init,
     method: definition.method,
-    headers,
+    headers: mergeHeaders(headers, req.headers),
     body: req.body,
   });
 }
@@ -658,9 +668,10 @@ export type FastifyHandler<E extends Endpoint> = fastify.RouteHandlerMethod<
   fastify.RawRequestDefaultExpression<fastify.RawServerDefault>,
   fastify.RawReplyDefaultExpression<fastify.RawServerDefault>,
   {
-    Body: E["request"] extends JsonPostRequestData<PathParams, QueryParams, unknown> ? E["request"]["body"] : undefined;
+    Body: E["request"] extends JsonPostRequestData ? E["request"]["body"] : undefined;
     Querystring: E["request"]["query"];
     Params: E["request"]["params"];
+    Headers: E["request"]["headers"];
   },
   fastify.ContextConfigDefault
 >;
@@ -685,18 +696,12 @@ export function createFastifyHandler<E extends Endpoint>(
   return async (req, resp) => {
     let response: ApplicationResponse<E>;
     if (definition.method === "GET") {
-      response = await method(
-        (definition.req as GetRequestCodec<E>).parseReq(req as GetRequestData<PathParams, QueryParams>)
-      );
+      response = await method((definition.req as GetRequestCodec<E>).parseReq(req as GetRequestData));
     } else {
       const requestWireFormat = getWireFormat(req.headers["content-type"]);
       switch (requestWireFormat) {
         case WireFormat.json:
-          response = await method(
-            (definition.req as PostRequestCodec<E>).parseReqJson(
-              req as JsonPostRequestData<PathParams, QueryParams, unknown>
-            )
-          );
+          response = await method((definition.req as PostRequestCodec<E>).parseReqJson(req as JsonPostRequestData));
           break;
         case WireFormat.ssz:
           response = await method(
