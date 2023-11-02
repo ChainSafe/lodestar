@@ -5,6 +5,7 @@ import got from "got";
 import {getClient as keyManagerGetClient} from "@lodestar/api/keymanager";
 import {chainConfigToJson} from "@lodestar/config";
 import {LogLevel} from "@lodestar/utils";
+import {defaultOptions} from "@lodestar/validator";
 import {IValidatorCliArgs} from "../../../../src/cmds/validator/options.js";
 import {GlobalArgs} from "../../../../src/options/globalOptions.js";
 import {LODESTAR_BINARY_PATH} from "../constants.js";
@@ -12,8 +13,9 @@ import {RunnerType, ValidatorClient, ValidatorNodeGenerator} from "../interfaces
 import {getNodePorts} from "../utils/ports.js";
 
 export const generateLodestarValidatorNode: ValidatorNodeGenerator<ValidatorClient.Lodestar> = (opts, runner) => {
-  const {paths, id, keys, forkConfig, genesisTime, nodeIndex, beaconUrls} = opts;
+  const {paths, id, keys, forkConfig, genesisTime, nodeIndex, beaconUrls, clientOptions} = opts;
   const {rootDir, keystoresDir, keystoresSecretFilePath, logFilePath} = paths;
+  const {useProduceBlockV3, "builder.selection": builderSelection} = clientOptions ?? {};
   const ports = getNodePorts(nodeIndex);
   const rcConfigPath = path.join(rootDir, "rc_config.json");
   const paramsPath = path.join(rootDir, "params.json");
@@ -37,6 +39,8 @@ export const generateLodestarValidatorNode: ValidatorNodeGenerator<ValidatorClie
     logFile: "none",
     importKeystores: keystoresDir,
     importKeystoresPassword: keystoresSecretFilePath,
+    useProduceBlockV3: useProduceBlockV3 ?? defaultOptions.useProduceBlockV3,
+    "builder.selection": builderSelection ?? defaultOptions.builderSelection,
   } as unknown as IValidatorCliArgs & GlobalArgs;
 
   const job = runner.create([

@@ -27,7 +27,7 @@ export type ClockEvents = {
 /**
  * Tracks the current chain time, measured in `Slot`s and `Epoch`s
  *
- * The time is dependant on:
+ * The time is dependent on:
  * - `state.genesisTime` - the genesis time
  * - `SECONDS_PER_SLOT` - # of seconds per slot
  * - `SLOTS_PER_EPOCH` - # of slots per epoch

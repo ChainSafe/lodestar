@@ -1,4 +1,7 @@
+import bls from "@chainsafe/bls";
+import {CoordType} from "@chainsafe/blst";
 import {BeaconConfig} from "@lodestar/config";
+import {loadState} from "../util/loadState/loadState.js";
 import {EpochCache, EpochCacheImmutableData, EpochCacheOpts} from "./epochCache.js";
 import {
   BeaconStateAllForks,
@@ -140,13 +143,49 @@ export function createCachedBeaconState<T extends BeaconStateAllForks>(
   immutableData: EpochCacheImmutableData,
   opts?: EpochCacheOpts
 ): T & BeaconStateCache {
-  return getCachedBeaconState(state, {
+  const epochCache = EpochCache.createFromState(state, immutableData, opts);
+  const cachedState = getCachedBeaconState(state, {
     config: immutableData.config,
-    epochCtx: EpochCache.createFromState(state, immutableData, opts),
+    epochCtx: epochCache,
     clonedCount: 0,
     clonedCountWithTransferCache: 0,
     createdWithTransferCache: false,
   });
+
+  return cachedState;
+}
+
+/**
+ * Create a CachedBeaconState given a cached seed state and state bytes
+ * This guarantees that the returned state shares the same tree with the seed state
+ * Check loadState() api for more details
+ * TODO: after EIP-6110 need to provide a pivotValidatorIndex to decide which comes to finalized validators cache, which comes to unfinalized cache
+ */
+export function loadUnfinalizedCachedBeaconState<T extends BeaconStateAllForks & BeaconStateCache>(
+  cachedSeedState: T,
+  stateBytes: Uint8Array,
+  opts?: EpochCacheOpts
+): T {
+  const {state: migratedState, modifiedValidators} = loadState(cachedSeedState.config, cachedSeedState, stateBytes);
+  const {pubkey2index, index2pubkey} = cachedSeedState.epochCtx;
+  // Get the validators sub tree once for all the loop
+  const validators = migratedState.validators;
+  for (const validatorIndex of modifiedValidators) {
+    const validator = validators.getReadonly(validatorIndex);
+    const pubkey = validator.pubkey;
+    pubkey2index.set(pubkey, validatorIndex);
+    index2pubkey[validatorIndex] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian);
+  }
+
+  return createCachedBeaconState(
+    migratedState,
+    {
+      config: cachedSeedState.config,
+      pubkey2index,
+      index2pubkey,
+    },
+    {...(opts ?? {}), ...{skipSyncPubkeys: true}}
+  ) as T;
 }
 
 /**

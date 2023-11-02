@@ -46,6 +46,7 @@ export function getChainCommon(network: string): Common {
     case "ropsten":
     case "sepolia":
     case "holesky":
+    case "ephemery":
       // TODO: Not sure how to detect the fork during runtime
       return new Common({chain: network, hardfork: Hardfork.Shanghai});
     case "minimal":

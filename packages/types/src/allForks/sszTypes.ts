@@ -190,6 +190,7 @@ export const allForksBlobs = {
   deneb: {
     BlobSidecar: deneb.BlobSidecar,
     BlindedBlobSidecar: deneb.BlindedBlobSidecar,
+    ExecutionPayloadAndBlobsBundle: deneb.ExecutionPayloadAndBlobsBundle,
   },
   eip6110: {
     BlobSidecar: deneb.BlobSidecar,

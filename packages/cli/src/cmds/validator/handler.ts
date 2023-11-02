@@ -1,13 +1,8 @@
 import path from "node:path";
 import {setMaxListeners} from "node:events";
 import {LevelDbController} from "@lodestar/db";
-import {
-  ProcessShutdownCallback,
-  SlashingProtection,
-  Validator,
-  ValidatorProposerConfig,
-  BuilderSelection,
-} from "@lodestar/validator";
+import {ProcessShutdownCallback, SlashingProtection, Validator, ValidatorProposerConfig} from "@lodestar/validator";
+import {routes} from "@lodestar/api";
 import {getMetrics, MetricsRegister} from "@lodestar/validator";
 import {
   RegistryMetricCreator,
@@ -167,6 +162,7 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
       disableAttestationGrouping: args.disableAttestationGrouping,
       valProposerConfig,
       distributed: args.distributed,
+      useProduceBlockV3: args.useProduceBlockV3,
     },
     metrics
   );
@@ -219,7 +215,6 @@ function getProposerConfigFromArgs(
     strictFeeRecipientCheck: args.strictFeeRecipientCheck,
     feeRecipient: args.suggestedFeeRecipient ? parseFeeRecipient(args.suggestedFeeRecipient) : undefined,
     builder: {
-      enabled: args.builder,
       gasLimit: args.defaultGasLimit,
       selection: parseBuilderSelection(args["builder.selection"]),
     },
@@ -248,7 +243,7 @@ function getProposerConfigFromArgs(
   return valProposerConfig;
 }
 
-function parseBuilderSelection(builderSelection?: string): BuilderSelection | undefined {
+function parseBuilderSelection(builderSelection?: string): routes.validator.BuilderSelection | undefined {
   if (builderSelection) {
     switch (builderSelection) {
       case "maxprofit":
@@ -257,9 +252,11 @@ function parseBuilderSelection(builderSelection?: string): BuilderSelection | un
         break;
       case "builderonly":
         break;
+      case "executiononly":
+        break;
       default:
         throw Error("Invalid input for builder selection, check help.");
     }
   }
-  return builderSelection as BuilderSelection;
+  return builderSelection as routes.validator.BuilderSelection;
 }

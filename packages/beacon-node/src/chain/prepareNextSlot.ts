@@ -6,7 +6,6 @@ import {Logger, sleep, fromHex, isErrorAborted} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
 import {GENESIS_SLOT, ZERO_HASH_HEX} from "../constants/constants.js";
 import {Metrics} from "../metrics/index.js";
-import {TransitionConfigurationV1} from "../execution/engine/interface.js";
 import {ClockEvent} from "../util/clock.js";
 import {isQueueErrorAborted} from "../util/queue/index.js";
 import {prepareExecutionPayload, getPayloadAttributesForSSE} from "./produceBlock/produceBlockBody.js";
@@ -31,7 +30,6 @@ const PREPARE_EPOCH_LIMIT = 1;
  *
  */
 export class PrepareNextSlotScheduler {
-  private transitionConfig: TransitionConfigurationV1 | null = null;
   constructor(
     private readonly chain: IBeaconChain,
     private readonly config: ChainForkConfig,

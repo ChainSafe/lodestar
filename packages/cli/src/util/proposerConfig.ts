@@ -2,7 +2,9 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import {ValidatorProposerConfig, BuilderSelection} from "@lodestar/validator";
+import {ValidatorProposerConfig} from "@lodestar/validator";
+import {routes} from "@lodestar/api";
+
 import {parseFeeRecipient} from "./feeRecipient.js";
 
 import {readFile} from "./file.js";
@@ -16,9 +18,8 @@ type ProposerConfigFileSection = {
   builder?: {
     // boolean are parse as string by the default schema readFile employs
     // for js-yaml
-    enabled?: string;
     gas_limit?: number;
-    selection?: BuilderSelection;
+    selection?: routes.validator.BuilderSelection;
   };
 };
 
@@ -56,7 +57,7 @@ function parseProposerConfigSection(
   overrideConfig?: ProposerConfig
 ): ProposerConfig {
   const {graffiti, strict_fee_recipient_check, fee_recipient, builder} = proposerFileSection;
-  const {enabled, gas_limit, selection: builderSelection} = builder || {};
+  const {gas_limit, selection: builderSelection} = builder || {};
 
   if (graffiti !== undefined && typeof graffiti !== "string") {
     throw Error("graffiti is not 'string");
@@ -65,13 +66,10 @@ function parseProposerConfigSection(
     strict_fee_recipient_check !== undefined &&
     !(strict_fee_recipient_check === "true" || strict_fee_recipient_check === "false")
   ) {
-    throw Error("enabled is not set to boolean");
+    throw Error("strict_fee_recipient_check is not set to boolean");
   }
   if (fee_recipient !== undefined && typeof fee_recipient !== "string") {
     throw Error("fee_recipient is not 'string");
-  }
-  if (enabled !== undefined && !(enabled === "true" || enabled === "false")) {
-    throw Error("enabled is not set to boolean");
   }
   if (gas_limit !== undefined) {
     if (typeof gas_limit !== "string") {
@@ -89,7 +87,6 @@ function parseProposerConfigSection(
       (strict_fee_recipient_check ? stringtoBool(strict_fee_recipient_check) : undefined),
     feeRecipient: overrideConfig?.feeRecipient ?? (fee_recipient ? parseFeeRecipient(fee_recipient) : undefined),
     builder: {
-      enabled: overrideConfig?.builder?.enabled ?? (enabled ? stringtoBool(enabled) : undefined),
       gasLimit: overrideConfig?.builder?.gasLimit ?? (gas_limit !== undefined ? Number(gas_limit) : undefined),
       selection: overrideConfig?.builder?.selection ?? builderSelection,
     },

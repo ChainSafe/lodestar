@@ -37,7 +37,7 @@
     "check-readme": "typescript-docs-verifier"
   },
   "dependencies": {
-    "@chainsafe/ssz": "^0.13.0",
+    "@chainsafe/ssz": "^0.14.0",
     "@lodestar/config": "^1.11.3",
     "@lodestar/utils": "^1.11.3",
     "@types/levelup": "^4.3.3",

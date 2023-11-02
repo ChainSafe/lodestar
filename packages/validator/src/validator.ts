@@ -16,7 +16,7 @@ import {Interchange, InterchangeFormatVersion, ISlashingProtection} from "./slas
 import {assertEqualParams, getLoggerVc, NotEqualParamsError} from "./util/index.js";
 import {ChainHeaderTracker} from "./services/chainHeaderTracker.js";
 import {ValidatorEventEmitter} from "./services/emitter.js";
-import {ValidatorStore, Signer, ValidatorProposerConfig} from "./services/validatorStore.js";
+import {ValidatorStore, Signer, ValidatorProposerConfig, defaultOptions} from "./services/validatorStore.js";
 import {LodestarValidatorDatabaseController, ProcessShutdownCallback, PubkeyHex} from "./types.js";
 import {BeaconHealth, Metrics} from "./metrics.js";
 import {MetaDataRepository} from "./repositories/metaDataRepository.js";
@@ -56,6 +56,7 @@ export type ValidatorOptions = {
   closed?: boolean;
   valProposerConfig?: ValidatorProposerConfig;
   distributed?: boolean;
+  useProduceBlockV3?: boolean;
 };
 
 // TODO: Extend the timeout, and let it be customizable
@@ -205,7 +206,9 @@ export class Validator {
 
     const chainHeaderTracker = new ChainHeaderTracker(logger, api, emitter);
 
-    const blockProposingService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, metrics);
+    const blockProposingService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, metrics, {
+      useProduceBlockV3: opts.useProduceBlockV3 ?? defaultOptions.useProduceBlockV3,
+    });
 
     const attestationService = new AttestationService(
       loggerVc,

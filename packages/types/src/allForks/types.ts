@@ -93,6 +93,27 @@ export type FullOrBlindedBlobSidecar = deneb.BlobSidecar | deneb.BlindedBlobSide
 export type FullOrBlindedSignedBlobSidecar = deneb.SignedBlobSidecar | deneb.SignedBlindedBlobSidecar;
 
 export type FullOrBlindedBlobSidecars = deneb.BlobSidecars | deneb.BlindedBlobSidecars;
+export type BlockContents = {block: BeaconBlock; blobSidecars: deneb.BlobSidecars};
+export type SignedBlockContents = {
+  signedBlock: SignedBeaconBlock;
+  signedBlobSidecars: deneb.SignedBlobSidecars;
+};
+
+export type BlindedBlockContents = {
+  blindedBlock: BlindedBeaconBlock;
+  blindedBlobSidecars: deneb.BlindedBlobSidecars;
+};
+export type SignedBlindedBlockContents = {
+  signedBlindedBlock: SignedBlindedBeaconBlock;
+  signedBlindedBlobSidecars: deneb.SignedBlindedBlobSidecars;
+};
+
+export type FullOrBlindedBlockContents = BlockContents | BlindedBlockContents;
+export type FullOrBlindedBeaconBlockOrContents = FullOrBlindedBeaconBlock | FullOrBlindedBlockContents;
+export type BeaconBlockOrContents = BeaconBlock | BlockContents;
+export type BlindedBeaconBlockOrContents = BlindedBeaconBlock | BlindedBlockContents;
+export type SignedBeaconBlockOrContents = SignedBeaconBlock | SignedBlockContents;
+export type SignedBlindedBeaconBlockOrContents = SignedBlindedBeaconBlock | SignedBlindedBlockContents;
 
 export type BuilderBid = bellatrix.BuilderBid | capella.BuilderBid | deneb.BuilderBid | eip6110.BuilderBid;
 export type SignedBuilderBid =
@@ -100,6 +121,7 @@ export type SignedBuilderBid =
   | capella.SignedBuilderBid
   | deneb.SignedBuilderBid
   | eip6110.SignedBuilderBid;
+export type ExecutionPayloadAndBlobsBundle = deneb.ExecutionPayloadAndBlobsBundle;
 
 export type LightClientHeader =
   | altair.LightClientHeader
@@ -383,4 +405,5 @@ export type AllForksLightClientSSZTypes = {
 export type AllForksBlobsSSZTypes = {
   BlobSidecar: AllForksTypeOf<typeof denebSsz.BlobSidecar>;
   BlindedBlobSidecar: AllForksTypeOf<typeof denebSsz.BlindedBlobSidecar>;
+  ExecutionPayloadAndBlobsBundle: AllForksTypeOf<typeof denebSsz.ExecutionPayloadAndBlobsBundle>;
 };
