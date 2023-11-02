@@ -56,7 +56,6 @@ export function getBeaconStateApi({
       const stateEpoch = computeEpochAtSlot(state.slot);
       const usedEpoch = epoch ?? stateEpoch;
 
-      // TODO is there a way to calculate this by at a specific epoch?
       const epochsPerHistoricalVector = EPOCHS_PER_HISTORICAL_VECTOR;
 
       const ret = {
