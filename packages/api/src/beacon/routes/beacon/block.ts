@@ -1,39 +1,65 @@
-import {ContainerType} from "@chainsafe/ssz";
-import {ForkName} from "@lodestar/params";
+/* eslint-disable @typescript-eslint/naming-convention */
+import {ContainerType, ListCompositeType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {phase0, allForks, Slot, Root, ssz, RootHex, deneb} from "@lodestar/types";
+import {allForks, Slot, ssz, RootHex, deneb, phase0, altair, bellatrix, capella} from "@lodestar/types";
 
+import {ForkName, ForkSeq} from "@lodestar/params";
+import {Endpoint, RequestCodec, RouteDefinitions, Schema} from "../../../utils/index.js";
 import {
-  Endpoint,
-  Schema,
-} from "../../../utils/index.js";
-import {HttpStatusCode} from "../../../utils/client/httpStatusCode.js";
-import {parseAcceptHeader, writeAcceptHeader} from "../../../utils/acceptHeader.js";
-import {ApiClientResponse, ResponseFormat} from "../../../interfaces.js";
-import {
-  SignedBlockContents,
-  SignedBlindedBlockContents,
-  isSignedBlockContents,
-  isSignedBlindedBlockContents,
-  AllForksSignedBlockContentsReqSerializer,
-  AllForksSignedBlindedBlockContentsReqSerializer,
-} from "../../../utils/routes.js";
+  EmptyMeta,
+  EmptyMetaCodec,
+  EmptyResponseData,
+  EmptyResponseDataCodec,
+  ExecutionOptimisticAndVersionCodec,
+  ExecutionOptimisticAndVersionMeta,
+  ExecutionOptimisticCodec,
+  ExecutionOptimisticMeta,
+  WithVersion,
+} from "../../../utils/codecs.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
+// ssz types
+
+export const BlockHeaderResponseType = new ContainerType({
+  root: ssz.Root,
+  canonical: ssz.Boolean,
+  header: ssz.phase0.SignedBeaconBlockHeader,
+});
+export const BlockHeadersResponseType = new ListCompositeType(BlockHeaderResponseType, 1000);
+export const RootResponseType = new ContainerType({
+  root: ssz.Root,
+});
+export const SignedBlockContentsType = new ContainerType({
+  signedBlock: ssz.deneb.SignedBeaconBlock,
+  signedBlobSidecars: ssz.deneb.SignedBlobSidecars,
+});
+export const SignedBlindedBlockContentsType = new ContainerType({
+  signedBlindedBlock: ssz.deneb.SignedBlindedBeaconBlock,
+  signedBlindedBlobSidecars: ssz.deneb.SignedBlindedBlobSidecars,
+});
+
+export type BlockHeaderResponse = ValueOf<typeof BlockHeaderResponseType>;
+export type BlockHeadersResponse = ValueOf<typeof BlockHeadersResponseType>;
+export type RootResponse = ValueOf<typeof RootResponseType>;
+export type SignedBlockContents = ValueOf<typeof SignedBlockContentsType>;
+export type SignedBlindedBlockContents = ValueOf<typeof SignedBlindedBlockContentsType>;
+
 export type BlockId = RootHex | Slot | "head" | "genesis" | "finalized";
+
+export type PreBlobSignedBeaconBlock =
+  | phase0.SignedBeaconBlock
+  | altair.SignedBeaconBlock
+  | bellatrix.SignedBeaconBlock
+  | capella.SignedBeaconBlock;
+
+export type PreBlobSignedBlindedBeaconBlock = bellatrix.SignedBlindedBeaconBlock | capella.SignedBlindedBeaconBlock;
 
 /**
  * True if the response references an unverified execution payload. Optimistic information may be invalidated at
  * a later time. If the field is not present, assume the False value.
  */
 export type ExecutionOptimistic = boolean;
-
-export type BlockHeaderResponse = {
-  root: Root;
-  canonical: boolean;
-  header: phase0.SignedBeaconBlockHeader;
-};
 
 export enum BroadcastValidation {
   none = "none",
@@ -42,115 +68,93 @@ export enum BroadcastValidation {
   consensusAndEquivocation = "consensus_and_equivocation",
 }
 
-export type BlockResponse<T extends ResponseFormat = "json"> = T extends "ssz"
-  ? ApiClientResponse<{[HttpStatusCode.OK]: Uint8Array}, HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND>
-  : ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: allForks.SignedBeaconBlock}},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
-    >;
-
-export type BlockV2Response<T extends ResponseFormat = "json"> = T extends "ssz"
-  ? ApiClientResponse<{[HttpStatusCode.OK]: Uint8Array}, HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND>
-  : ApiClientResponse<
-      {
-        [HttpStatusCode.OK]: {
-          data: allForks.SignedBeaconBlock;
-          executionOptimistic: ExecutionOptimistic;
-          version: ForkName;
-        };
-      },
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
-    >;
-
 export type Endpoints = {
   /**
    * Get block
    * Returns the complete `SignedBeaconBlock` for a given block ID.
-   * Depending on the `Accept` header it can be returned either as JSON or SSZ-serialized bytes.
    *
-   * @param blockId Block identifier.
+   * param blockId Block identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
    */
-  getBlock: Endpoint (blockId: BlockId, format?: T): Promise<BlockResponse<T>>;
+  getBlock: Endpoint<
+    //
+    "GET",
+    {blockId: BlockId},
+    {params: {block_id: string}},
+    phase0.SignedBeaconBlock,
+    EmptyMeta
+  >;
 
   /**
    * Get block
    * Retrieves block details for given block id.
-   * @param blockId Block identifier.
+   *
+   * param blockId Block identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
    */
-  getBlockV2<T extends ResponseFormat = "json">(blockId: BlockId, format?: T): Promise<BlockV2Response<T>>;
+  getBlockV2: Endpoint<
+    "GET",
+    {blockId: BlockId},
+    {params: {block_id: string}},
+    allForks.SignedBeaconBlock,
+    ExecutionOptimisticAndVersionMeta
+  >;
 
   /**
    * Get block attestations
    * Retrieves attestation included in requested block.
-   * @param blockId Block identifier.
+   *
+   * param blockId Block identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
    */
-  getBlockAttestations(blockId: BlockId): Promise<
-    ApiClientResponse<
-      {
-        [HttpStatusCode.OK]: {
-          data: phase0.Attestation[];
-          executionOptimistic: ExecutionOptimistic;
-        };
-      },
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
-    >
+  getBlockAttestations: Endpoint<
+    "GET",
+    {blockId: BlockId},
+    {params: {block_id: string}},
+    allForks.BeaconBlockBody["attestations"],
+    ExecutionOptimisticMeta
   >;
 
   /**
    * Get block header
    * Retrieves block header for given block id.
-   * @param blockId Block identifier.
+   *
+   * param blockId Block identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
    */
-  getBlockHeader(blockId: BlockId): Promise<
-    ApiClientResponse<
-      {
-        [HttpStatusCode.OK]: {
-          data: BlockHeaderResponse;
-          executionOptimistic: ExecutionOptimistic;
-        };
-      },
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
-    >
+  getBlockHeader: Endpoint<
+    "GET",
+    {blockId: BlockId},
+    {params: {block_id: string}},
+    BlockHeaderResponse,
+    ExecutionOptimisticMeta
   >;
 
   /**
    * Get block headers
    * Retrieves block headers matching given query. By default it will fetch current head slot blocks.
-   * @param slot
-   * @param parentRoot
    */
-  getBlockHeaders(filters: Partial<{slot: Slot; parentRoot: string}>): Promise<
-    ApiClientResponse<
-      {
-        [HttpStatusCode.OK]: {
-          data: BlockHeaderResponse[];
-          executionOptimistic: ExecutionOptimistic;
-        };
-      },
-      HttpStatusCode.BAD_REQUEST
-    >
+  getBlockHeaders: Endpoint<
+    "GET",
+    {filters: Partial<{slot: Slot; parentRoot: string}>},
+    {query: {slot?: number; parent_root?: string}},
+    BlockHeaderResponse[],
+    ExecutionOptimisticMeta
   >;
 
   /**
    * Get block root
    * Retrieves hashTreeRoot of BeaconBlock/BeaconBlockHeader
-   * @param blockId Block identifier.
+   *
+   * param blockId Block identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
    */
-  getBlockRoot(blockId: BlockId): Promise<
-    ApiClientResponse<
-      {
-        [HttpStatusCode.OK]: {
-          data: {root: Root};
-          executionOptimistic: ExecutionOptimistic;
-        };
-      },
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
-    >
+  getBlockRoot: Endpoint<
+    "GET",
+    {blockId: BlockId},
+    {params: {block_id: string}},
+    RootResponse,
+    ExecutionOptimisticMeta
   >;
 
   /**
@@ -162,220 +166,406 @@ export type Endpoints = {
    * therefore validate the block internally, however blocks which fail the validation are still
    * broadcast but a different status code is returned (202)
    *
-   * @param requestBody The `SignedBeaconBlock` object composed of `BeaconBlock` object (produced by beacon node) and validator signature.
-   * @returns any The block was validated successfully and has been broadcast. It has also been integrated into the beacon node's database.
+   * param requestBody The `SignedBeaconBlock` object composed of `BeaconBlock` object (produced by beacon node) and validator signature.
+   * returns The block was validated successfully and has been broadcast. It has also been integrated into the beacon node's database.
    */
-  publishBlock(blockOrContents: allForks.SignedBeaconBlock | SignedBlockContents): Promise<
-    ApiClientResponse<
-      {
-        [HttpStatusCode.OK]: void;
-        [HttpStatusCode.ACCEPTED]: void;
-      },
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
-    >
+  publishBlock: Endpoint<
+    //
+    "POST",
+    {signedBlock: PreBlobSignedBeaconBlock} | SignedBlockContents,
+    {body: unknown; headers: {"Eth-Consensus-Version": ForkName}},
+    EmptyResponseData,
+    EmptyMeta
   >;
 
-  publishBlockV2(
-    blockOrContents: allForks.SignedBeaconBlock | SignedBlockContents,
-    opts: {broadcastValidation?: BroadcastValidation}
-  ): Promise<
-    ApiClientResponse<
-      {
-        [HttpStatusCode.OK]: void;
-        [HttpStatusCode.ACCEPTED]: void;
-      },
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
-    >
+  publishBlockV2: Endpoint<
+    "POST",
+    ({signedBlock: PreBlobSignedBeaconBlock} | SignedBlockContents) & {
+      broadcastValidation?: BroadcastValidation;
+    },
+    {body: unknown; headers: {"Eth-Consensus-Version": ForkName}; query: {broadcast_validation?: string}},
+    EmptyResponseData,
+    EmptyMeta
   >;
 
   /**
    * Publish a signed blinded block by submitting it to the mev relay and patching in the block
    * transactions beacon node gets in response.
    */
-  publishBlindedBlock(blindedBlockOrContents: allForks.SignedBlindedBeaconBlock | SignedBlindedBlockContents): Promise<
-    ApiClientResponse<
-      {
-        [HttpStatusCode.OK]: void;
-        [HttpStatusCode.ACCEPTED]: void;
-      },
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
-    >
+  publishBlindedBlock: Endpoint<
+    "POST",
+    {signedBlindedBlock: PreBlobSignedBlindedBeaconBlock} | SignedBlindedBlockContents,
+    {body: unknown; headers: {"Eth-Consensus-Version": ForkName}},
+    EmptyResponseData,
+    EmptyMeta
   >;
 
-  publishBlindedBlockV2(
-    blindedBlockOrContents: allForks.SignedBlindedBeaconBlock | SignedBlindedBlockContents,
-    opts: {broadcastValidation?: BroadcastValidation}
-  ): Promise<
-    ApiClientResponse<
-      {
-        [HttpStatusCode.OK]: void;
-        [HttpStatusCode.ACCEPTED]: void;
-      },
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
-    >
+  publishBlindedBlockV2: Endpoint<
+    "POST",
+    ({signedBlindedBlock: PreBlobSignedBlindedBeaconBlock} | SignedBlindedBlockContents) & {
+      broadcastValidation?: BroadcastValidation;
+    },
+    {body: unknown; headers: {"Eth-Consensus-Version": ForkName}; query: {broadcast_validation?: string}},
+    EmptyResponseData,
+    EmptyMeta
   >;
+
   /**
    * Get block BlobSidecar
    * Retrieves BlobSidecar included in requested block.
-   * @param blockId Block identifier.
+   *
+   * param blockId Block identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
    */
-  getBlobSidecars(blockId: BlockId): Promise<
-    ApiClientResponse<{
-      [HttpStatusCode.OK]: {executionOptimistic: ExecutionOptimistic; data: deneb.BlobSidecars};
-    }>
+  getBlobSidecars: Endpoint<
+    "GET",
+    {blockId: BlockId},
+    {params: {block_id: string}},
+    deneb.BlobSidecars,
+    ExecutionOptimisticMeta
   >;
 };
 
-/**
- * Define javascript values for each route
- */
-export const routesData: RoutesData<Api> = {
-  getBlock: {url: "/eth/v1/beacon/blocks/{block_id}", method: "GET"},
-  getBlockV2: {url: "/eth/v2/beacon/blocks/{block_id}", method: "GET"},
-  getBlockAttestations: {url: "/eth/v1/beacon/blocks/{block_id}/attestations", method: "GET"},
-  getBlockHeader: {url: "/eth/v1/beacon/headers/{block_id}", method: "GET"},
-  getBlockHeaders: {url: "/eth/v1/beacon/headers", method: "GET"},
-  getBlockRoot: {url: "/eth/v1/beacon/blocks/{block_id}/root", method: "GET"},
-  publishBlock: {url: "/eth/v1/beacon/blocks", method: "POST"},
-  publishBlockV2: {url: "/eth/v2/beacon/blocks", method: "POST"},
-  publishBlindedBlock: {url: "/eth/v1/beacon/blinded_blocks", method: "POST"},
-  publishBlindedBlockV2: {url: "/eth/v2/beacon/blinded_blocks", method: "POST"},
-  getBlobSidecars: {url: "/eth/v1/beacon/blob_sidecars/{block_id}", method: "GET"},
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const blockIdOnlyReq: RequestCodec<Endpoint<"GET", {blockId: BlockId}, {params: {block_id: string}}, any, any>> = {
+  writeReq: (block_id) => ({params: {block_id: String(block_id)}}),
+  parseReq: ({params}) => ({blockId: params.block_id}),
+  schema: {params: {block_id: Schema.StringRequired}},
 };
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
-type GetBlockReq = {params: {block_id: string}; headers: {accept?: string}};
-type BlockIdOnlyReq = {params: {block_id: string}};
-
-export type ReqTypes = {
-  getBlock: GetBlockReq;
-  getBlockV2: GetBlockReq;
-  getBlockAttestations: BlockIdOnlyReq;
-  getBlockHeader: BlockIdOnlyReq;
-  getBlockHeaders: {query: {slot?: number; parent_root?: string}};
-  getBlockRoot: BlockIdOnlyReq;
-  publishBlock: {body: unknown};
-  publishBlockV2: {body: unknown; query: {broadcast_validation?: string}};
-  publishBlindedBlock: {body: unknown};
-  publishBlindedBlockV2: {body: unknown; query: {broadcast_validation?: string}};
-  getBlobSidecars: BlockIdOnlyReq;
-};
-
-export function getReqSerializers(config: ChainForkConfig): ReqSerializers<Api, ReqTypes> {
-  const blockIdOnlyReq: ReqSerializer<Api["getBlockHeader"], BlockIdOnlyReq> = {
-    writeReq: (block_id) => ({params: {block_id: String(block_id)}}),
-    parseReq: ({params}) => [params.block_id],
-    schema: {params: {block_id: Schema.StringRequired}},
-  };
-
-  const getBlockReq: ReqSerializer<Api["getBlock"], GetBlockReq> = {
-    writeReq: (block_id, format) => ({
-      params: {block_id: String(block_id)},
-      headers: {accept: writeAcceptHeader(format)},
-    }),
-    parseReq: ({params, headers}) => [params.block_id, parseAcceptHeader(headers.accept)],
-    schema: {params: {block_id: Schema.StringRequired}},
-  };
-
-  // Compute block type from JSON payload. See https://github.com/ethereum/eth2.0-APIs/pull/142
-  const getSignedBeaconBlockType = (data: allForks.SignedBeaconBlock): allForks.AllForksSSZTypes["SignedBeaconBlock"] =>
-    config.getForkTypes(data.message.slot).SignedBeaconBlock;
-
-  const AllForksSignedBlockOrContents: TypeJson<allForks.SignedBeaconBlock | SignedBlockContents> = {
-    toJson: (data) =>
-      isSignedBlockContents(data)
-        ? AllForksSignedBlockContentsReqSerializer(getSignedBeaconBlockType).toJson(data)
-        : getSignedBeaconBlockType(data).toJson(data),
-
-    fromJson: (data) =>
-      (data as {signed_block: unknown}).signed_block !== undefined
-        ? AllForksSignedBlockContentsReqSerializer(getSignedBeaconBlockType).fromJson(data)
-        : getSignedBeaconBlockType(data as allForks.SignedBeaconBlock).fromJson(data),
-  };
-
-  const getSignedBlindedBeaconBlockType = (
-    data: allForks.SignedBlindedBeaconBlock
-  ): allForks.AllForksBlindedSSZTypes["SignedBeaconBlock"] =>
-    config.getBlindedForkTypes(data.message.slot).SignedBeaconBlock;
-
-  const AllForksSignedBlindedBlockOrContents: TypeJson<allForks.SignedBlindedBeaconBlock | SignedBlindedBlockContents> =
-    {
-      toJson: (data) =>
-        isSignedBlindedBlockContents(data)
-          ? AllForksSignedBlindedBlockContentsReqSerializer(getSignedBlindedBeaconBlockType).toJson(data)
-          : getSignedBlindedBeaconBlockType(data).toJson(data),
-
-      fromJson: (data) =>
-        (data as {signed_blinded_block: unknown}).signed_blinded_block !== undefined
-          ? AllForksSignedBlindedBlockContentsReqSerializer(getSignedBlindedBeaconBlockType).fromJson(data)
-          : getSignedBlindedBeaconBlockType(data as allForks.SignedBlindedBeaconBlock).fromJson(data),
-    };
-
+export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoints> {
   return {
-    getBlock: getBlockReq,
-    getBlockV2: getBlockReq,
-    getBlockAttestations: blockIdOnlyReq,
-    getBlockHeader: blockIdOnlyReq,
+    getBlock: {
+      url: "/eth/v1/beacon/blocks/{block_id}",
+      method: "GET",
+      req: blockIdOnlyReq,
+      resp: {
+        data: ssz.phase0.SignedBeaconBlock,
+        meta: EmptyMetaCodec,
+      },
+    },
+    getBlockV2: {
+      url: "/eth/v2/beacon/blocks/{block_id}",
+      method: "GET",
+      req: blockIdOnlyReq,
+      resp: {
+        data: WithVersion((fork) => ssz[fork].SignedBeaconBlock),
+        meta: ExecutionOptimisticAndVersionCodec,
+      },
+    },
+    getBlockAttestations: {
+      url: "/eth/v1/beacon/blocks/{block_id}/attestations",
+      method: "GET",
+      req: blockIdOnlyReq,
+      resp: {
+        data: ssz.phase0.BeaconBlockBody.fields.attestations,
+        meta: ExecutionOptimisticCodec,
+      },
+    },
+    getBlockHeader: {
+      url: "/eth/v1/beacon/headers/{block_id}",
+      method: "GET",
+      req: blockIdOnlyReq,
+      resp: {
+        data: BlockHeaderResponseType,
+        meta: ExecutionOptimisticCodec,
+      },
+    },
     getBlockHeaders: {
-      writeReq: (filters) => ({query: {slot: filters?.slot, parent_root: filters?.parentRoot}}),
-      parseReq: ({query}) => [{slot: query?.slot, parentRoot: query?.parent_root}],
-      schema: {query: {slot: Schema.Uint, parent_root: Schema.String}},
+      url: "/eth/v1/beacon/headers",
+      method: "GET",
+      req: {
+        writeReq: ({filters}) => ({query: {slot: filters?.slot, parent_root: filters?.parentRoot}}),
+        parseReq: ({query}) => ({filters: {slot: query?.slot, parentRoot: query?.parent_root}}),
+        schema: {query: {slot: Schema.Uint, parent_root: Schema.String}},
+      },
+      resp: {
+        data: BlockHeadersResponseType,
+        meta: ExecutionOptimisticCodec,
+      },
     },
-    getBlockRoot: blockIdOnlyReq,
-    publishBlock: reqOnlyBody(AllForksSignedBlockOrContents, Schema.Object),
+    getBlockRoot: {
+      url: "/eth/v1/beacon/blocks/{block_id}/root",
+      method: "GET",
+      req: blockIdOnlyReq,
+      resp: {
+        data: RootResponseType,
+        meta: ExecutionOptimisticCodec,
+      },
+    },
+    publishBlock: {
+      url: "/eth/v1/beacon/blocks",
+      method: "POST",
+      req: {
+        writeReqJson: (args) => {
+          const slot = args.signedBlock.message.slot;
+          return {
+            body:
+              config.getForkSeq(slot) < ForkSeq.deneb
+                ? config.getForkTypes(slot).SignedBeaconBlock.toJson(args.signedBlock)
+                : SignedBlockContentsType.toJson({
+                    signedBlock: args.signedBlock,
+                    signedBlobSidecars: (args as SignedBlockContents).signedBlobSidecars,
+                  }),
+            headers: {
+              "Eth-Consensus-Version": config.getForkName(slot),
+            },
+          };
+        },
+        parseReqJson: ({body, headers}) => {
+          const forkName = headers["Eth-Consensus-Version"]; // TODO validation
+          const forkSeq = config.forks[forkName].seq;
+          return forkSeq < ForkSeq.deneb
+            ? {
+                signedBlock: ssz[forkName].SignedBeaconBlock.fromJson(body),
+              }
+            : SignedBlockContentsType.fromJson(body);
+        },
+        writeReqSsz: (args) => {
+          const slot = args.signedBlock.message.slot;
+          return {
+            body:
+              config.getForkSeq(slot) < ForkSeq.deneb
+                ? config.getForkTypes(slot).SignedBeaconBlock.serialize(args.signedBlock)
+                : SignedBlockContentsType.serialize({
+                    signedBlock: args.signedBlock,
+                    signedBlobSidecars: (args as SignedBlockContents).signedBlobSidecars,
+                  }),
+            headers: {
+              "Eth-Consensus-Version": config.getForkName(slot),
+            },
+          };
+        },
+        parseReqSsz: ({body, headers}) => {
+          const forkName = headers["Eth-Consensus-Version"]; // TODO validation
+          const forkSeq = config.forks[forkName].seq;
+          return forkSeq < ForkSeq.deneb
+            ? {
+                signedBlock: ssz[forkName].SignedBeaconBlock.deserialize(body),
+              }
+            : SignedBlockContentsType.deserialize(body);
+        },
+        schema: {
+          body: Schema.Object,
+        },
+      },
+      resp: {
+        data: EmptyResponseDataCodec,
+        meta: EmptyMetaCodec,
+      },
+    },
     publishBlockV2: {
-      writeReq: (item, {broadcastValidation}) => ({
-        body: AllForksSignedBlockOrContents.toJson(item),
-        query: {broadcast_validation: broadcastValidation},
-      }),
-      parseReq: ({body, query}) => [
-        AllForksSignedBlockOrContents.fromJson(body),
-        {broadcastValidation: query.broadcast_validation as BroadcastValidation},
-      ],
-      schema: {
-        body: Schema.Object,
-        query: {broadcast_validation: Schema.String},
+      url: "/eth/v2/beacon/blocks",
+      method: "POST",
+      req: {
+        writeReqJson: (args) => {
+          const slot = args.signedBlock.message.slot;
+          return {
+            body:
+              config.getForkSeq(slot) < ForkSeq.deneb
+                ? config.getForkTypes(slot).SignedBeaconBlock.toJson(args.signedBlock)
+                : SignedBlockContentsType.toJson({
+                    signedBlock: args.signedBlock,
+                    signedBlobSidecars: (args as SignedBlockContents).signedBlobSidecars,
+                  }),
+            headers: {
+              "Eth-Consensus-Version": config.getForkName(slot),
+            },
+            query: {broadcast_validation: args.broadcastValidation},
+          };
+        },
+        parseReqJson: ({body, headers, query}) => {
+          const forkName = headers["Eth-Consensus-Version"]; // TODO validation
+          const forkSeq = config.forks[forkName].seq;
+          return {
+            ...(forkSeq < ForkSeq.deneb
+              ? {
+                  signedBlock: ssz[forkName].SignedBeaconBlock.fromJson(body),
+                }
+              : SignedBlockContentsType.fromJson(body)),
+            broadcastValidation: query.broadcast_validation as BroadcastValidation,
+          };
+        },
+        writeReqSsz: (args) => {
+          const slot = args.signedBlock.message.slot;
+          return {
+            body:
+              config.getForkSeq(slot) < ForkSeq.deneb
+                ? config.getForkTypes(slot).SignedBeaconBlock.serialize(args.signedBlock)
+                : SignedBlockContentsType.serialize({
+                    signedBlock: args.signedBlock,
+                    signedBlobSidecars: (args as SignedBlockContents).signedBlobSidecars,
+                  }),
+            headers: {
+              "Eth-Consensus-Version": config.getForkName(slot),
+            },
+            query: {broadcast_validation: args.broadcastValidation},
+          };
+        },
+        parseReqSsz: ({body, headers, query}) => {
+          const forkName = headers["Eth-Consensus-Version"]; // TODO validation
+          const forkSeq = config.forks[forkName].seq;
+          return {
+            ...(forkSeq < ForkSeq.deneb
+              ? {
+                  signedBlock: ssz[forkName].SignedBeaconBlock.deserialize(body),
+                }
+              : SignedBlockContentsType.deserialize(body)),
+            broadcastValidation: query.broadcast_validation as BroadcastValidation,
+          };
+        },
+        schema: {
+          body: Schema.Object,
+          query: {broadcast_validation: Schema.String},
+        },
+      },
+      resp: {
+        data: EmptyResponseDataCodec,
+        meta: EmptyMetaCodec,
       },
     },
-    publishBlindedBlock: reqOnlyBody(AllForksSignedBlindedBlockOrContents, Schema.Object),
+    publishBlindedBlock: {
+      url: "/eth/v1/beacon/blinded_blocks",
+      method: "POST",
+      req: {
+        writeReqJson: (args) => {
+          const slot = args.signedBlindedBlock.message.slot;
+          return {
+            body:
+              config.getForkSeq(slot) < ForkSeq.deneb
+                ? config.getBlindedForkTypes(slot).SignedBeaconBlock.toJson(args.signedBlindedBlock)
+                : SignedBlindedBlockContentsType.toJson({
+                    signedBlindedBlock: args.signedBlindedBlock,
+                    signedBlindedBlobSidecars: (args as SignedBlindedBlockContents).signedBlindedBlobSidecars,
+                  }),
+            headers: {
+              "Eth-Consensus-Version": config.getForkName(slot),
+            },
+          };
+        },
+        parseReqJson: ({body, headers}) => {
+          const forkName = headers["Eth-Consensus-Version"]; // TODO validation
+          const forkSeq = config.forks[forkName].seq;
+          if (forkSeq < ForkSeq.capella) throw new Error("TODO"); // TODO
+          return forkSeq < ForkSeq.deneb
+            ? {
+                signedBlindedBlock: ssz[forkName as "capella"].SignedBlindedBeaconBlock.fromJson(body),
+              }
+            : SignedBlindedBlockContentsType.fromJson(body);
+        },
+        writeReqSsz: (args) => {
+          const slot = args.signedBlindedBlock.message.slot;
+          return {
+            body:
+              config.getForkSeq(slot) < ForkSeq.deneb
+                ? config.getBlindedForkTypes(slot).SignedBeaconBlock.serialize(args.signedBlindedBlock)
+                : SignedBlindedBlockContentsType.serialize({
+                    signedBlindedBlock: args.signedBlindedBlock,
+                    signedBlindedBlobSidecars: (args as SignedBlindedBlockContents).signedBlindedBlobSidecars,
+                  }),
+            headers: {
+              "Eth-Consensus-Version": config.getForkName(slot),
+            },
+          };
+        },
+        parseReqSsz: ({body, headers}) => {
+          const forkName = headers["Eth-Consensus-Version"]; // TODO validation
+          const forkSeq = config.forks[forkName].seq;
+          if (forkSeq < ForkSeq.capella) throw new Error("TODO"); // TODO
+          return forkSeq < ForkSeq.deneb
+            ? {
+                signedBlindedBlock: ssz[forkName as "capella"].SignedBlindedBeaconBlock.deserialize(body),
+              }
+            : SignedBlindedBlockContentsType.deserialize(body);
+        },
+        schema: {
+          body: Schema.Object,
+        },
+      },
+      resp: {
+        data: EmptyResponseDataCodec,
+        meta: EmptyMetaCodec,
+      },
+    },
     publishBlindedBlockV2: {
-      writeReq: (item, {broadcastValidation}) => ({
-        body: AllForksSignedBlindedBlockOrContents.toJson(item),
-        query: {broadcast_validation: broadcastValidation},
-      }),
-      parseReq: ({body, query}) => [
-        AllForksSignedBlindedBlockOrContents.fromJson(body),
-        {broadcastValidation: query.broadcast_validation as BroadcastValidation},
-      ],
-      schema: {
-        body: Schema.Object,
-        query: {broadcast_validation: Schema.String},
+      url: "/eth/v2/beacon/blinded_blocks",
+      method: "POST",
+      req: {
+        writeReqJson: (args) => {
+          const slot = args.signedBlindedBlock.message.slot;
+          return {
+            body:
+              config.getForkSeq(slot) < ForkSeq.deneb
+                ? config.getBlindedForkTypes(slot).SignedBeaconBlock.toJson(args.signedBlindedBlock)
+                : SignedBlindedBlockContentsType.toJson({
+                    signedBlindedBlock: args.signedBlindedBlock,
+                    signedBlindedBlobSidecars: (args as SignedBlindedBlockContents).signedBlindedBlobSidecars,
+                  }),
+            headers: {
+              "Eth-Consensus-Version": config.getForkName(slot),
+            },
+            query: {broadcast_validation: args.broadcastValidation},
+          };
+        },
+        parseReqJson: ({body, headers, query}) => {
+          const forkName = headers["Eth-Consensus-Version"]; // TODO validation
+          const forkSeq = config.forks[forkName].seq;
+          if (forkSeq < ForkSeq.capella) throw new Error("TODO"); // TODO
+          return {
+            ...(forkSeq < ForkSeq.deneb
+              ? {
+                  signedBlindedBlock: ssz[forkName as "capella"].SignedBlindedBeaconBlock.fromJson(body),
+                }
+              : SignedBlindedBlockContentsType.fromJson(body)),
+            broadcastValidation: query.broadcast_validation as BroadcastValidation,
+          };
+        },
+        writeReqSsz: (args) => {
+          const slot = args.signedBlindedBlock.message.slot;
+          return {
+            body:
+              config.getForkSeq(slot) < ForkSeq.deneb
+                ? config.getBlindedForkTypes(slot).SignedBeaconBlock.serialize(args.signedBlindedBlock)
+                : SignedBlindedBlockContentsType.serialize({
+                    signedBlindedBlock: args.signedBlindedBlock,
+                    signedBlindedBlobSidecars: (args as SignedBlindedBlockContents).signedBlindedBlobSidecars,
+                  }),
+            headers: {
+              "Eth-Consensus-Version": config.getForkName(slot),
+            },
+            query: {broadcast_validation: args.broadcastValidation},
+          };
+        },
+        parseReqSsz: ({body, headers, query}) => {
+          const forkName = headers["Eth-Consensus-Version"]; // TODO validation
+          const forkSeq = config.forks[forkName].seq;
+          if (forkSeq < ForkSeq.capella) throw new Error("TODO"); // TODO
+          return {
+            ...(forkSeq < ForkSeq.deneb
+              ? {
+                  signedBlindedBlock: ssz[forkName as "capella"].SignedBlindedBeaconBlock.deserialize(body),
+                }
+              : SignedBlindedBlockContentsType.deserialize(body)),
+            broadcastValidation: query.broadcast_validation as BroadcastValidation,
+          };
+        },
+        schema: {
+          body: Schema.Object,
+        },
+      },
+      resp: {
+        data: EmptyResponseDataCodec,
+        meta: EmptyMetaCodec,
       },
     },
-    getBlobSidecars: blockIdOnlyReq,
-  };
-}
-
-export function getReturnTypes(): ReturnTypes<Api> {
-  const BeaconHeaderResType = new ContainerType({
-    root: ssz.Root,
-    canonical: ssz.Boolean,
-    header: ssz.phase0.SignedBeaconBlockHeader,
-  });
-
-  const RootContainer = new ContainerType({
-    root: ssz.Root,
-  });
-
-  return {
-    getBlock: ContainerData(ssz.phase0.SignedBeaconBlock),
-    getBlockV2: WithExecutionOptimistic(WithVersion((fork) => ssz[fork].SignedBeaconBlock)),
-    getBlockAttestations: ContainerDataExecutionOptimistic(ArrayOf(ssz.phase0.Attestation)),
-    getBlockHeader: ContainerDataExecutionOptimistic(BeaconHeaderResType),
-    getBlockHeaders: ContainerDataExecutionOptimistic(ArrayOf(BeaconHeaderResType)),
-    getBlockRoot: ContainerDataExecutionOptimistic(RootContainer),
-    getBlobSidecars: ContainerDataExecutionOptimistic(ssz.deneb.BlobSidecars),
+    getBlobSidecars: {
+      url: "/eth/v1/beacon/blob_sidecars/{block_id}",
+      method: "GET",
+      req: blockIdOnlyReq,
+      resp: {
+        data: ssz.deneb.BlobSidecars,
+        meta: ExecutionOptimisticCodec,
+      },
+    },
   };
 }

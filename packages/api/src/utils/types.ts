@@ -61,6 +61,9 @@ export type Endpoint<
   meta: Meta;
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type AnyEndpoint = Endpoint<HttpMethod, any, any, any, any>;
+
 // Request codec
 
 /** Encode / decode requests to & from function params, as well as schema definitions */
@@ -123,7 +126,7 @@ export type ResponseCodec<E extends Endpoint> = {
  * - request and response codec
  * - request json schema
  */
-export type RouteDefinition<E extends Endpoint> = {
+export type RouteDefinition<E extends AnyEndpoint> = {
   url: string;
   method: E["method"];
   // TODO remove?
@@ -132,4 +135,4 @@ export type RouteDefinition<E extends Endpoint> = {
   resp: ResponseCodec<E>;
 };
 
-export type RouteDefinitions<Es extends Record<string, Endpoint>> = {[K in keyof Es]: RouteDefinition<Es[K]>};
+export type RouteDefinitions<Es extends Record<string, AnyEndpoint>> = {[K in keyof Es]: RouteDefinition<Es[K]>};

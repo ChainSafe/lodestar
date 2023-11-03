@@ -12,7 +12,11 @@ import {Endpoint, GetRequestCodec, ResponseDataCodec, ResponseMetadataCodec} fro
 export type EmptyArgs = void;
 export type EmptyRequest = Record<string, never>;
 export type EmptyResponseData = void;
+
 export type EmptyMeta = Record<string, never>;
+export type ExecutionOptimisticMeta = {executionOptimistic: ExecutionOptimistic};
+export type ExecutionOptimisticAndVersionMeta = {executionOptimistic: ExecutionOptimistic; version: ForkName};
+export type ExecutionOptimisticAndDependentRootMeta = {executionOptimistic: ExecutionOptimistic; dependentRoot: Root};
 
 /** Shortcut for routes that have no params, query */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -47,9 +51,20 @@ export function WithVersion<T, M extends {version: ForkName}>(
   };
 }
 
-export const ExecutionOptimisticAndVersionCodec: ResponseMetadataCodec<ExecutionOptimisticAndVersion> = {
+export const ExecutionOptimisticCodec: ResponseMetadataCodec<ExecutionOptimisticMeta> = {
   toJson: (val) => val,
-  fromJson: (val) => val as ExecutionOptimisticAndVersion,
+  fromJson: (val) => val as ExecutionOptimisticAndVersionMeta,
+  toHeadersObject: (val) => ({
+    "Eth-Execution-Optimistic": String(val.executionOptimistic),
+  }),
+  fromHeaders: (val) => ({
+    executionOptimistic: Boolean(val.get("Eth-Execution-Optimistic")),
+  }),
+};
+
+export const ExecutionOptimisticAndVersionCodec: ResponseMetadataCodec<ExecutionOptimisticAndVersionMeta> = {
+  toJson: (val) => val,
+  fromJson: (val) => val as ExecutionOptimisticAndVersionMeta,
   toHeadersObject: (val) => ({
     "Eth-Execution-Optimistic": String(val.executionOptimistic),
     "Eth-Consensus-Version": val.version,
@@ -60,16 +75,13 @@ export const ExecutionOptimisticAndVersionCodec: ResponseMetadataCodec<Execution
   }),
 };
 
-export type ExecutionOptimisticAndVersion = {executionOptimistic: ExecutionOptimistic; version: ForkName};
-export type ExecutionOptimisticAndDependentRoot = {executionOptimistic: ExecutionOptimistic; dependentRoot: Root};
-
-export const ExecutionOptimisticAndDependentRootCodec: ResponseMetadataCodec<ExecutionOptimisticAndDependentRoot> = {
+export const ExecutionOptimisticAndDependentRootCodec: ResponseMetadataCodec<ExecutionOptimisticAndDependentRootMeta> = {
   toJson: ({executionOptimistic, dependentRoot}) => ({executionOptimistic, dependentRoot: toHex(dependentRoot)}),
   fromJson: (val) =>
     ({
       executionOptimistic: (val as any).executionOptimistic as boolean,
       dependentRoot: fromHex((val as any).dependentRoot),
-    }) as ExecutionOptimisticAndDependentRoot,
+    }) as ExecutionOptimisticAndDependentRootMeta,
   toHeadersObject: (val) => ({
     "Eth-Execution-Optimistic": String(val.executionOptimistic),
     "Eth-Consensus-Dependent-Root": toHex(val.dependentRoot),

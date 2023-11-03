@@ -14,9 +14,9 @@ import {
   EmptyRequest,
   EmptyResponseData,
   EmptyResponseDataCodec,
-  ExecutionOptimisticAndDependentRoot,
+  ExecutionOptimisticAndDependentRootMeta,
   ExecutionOptimisticAndDependentRootCodec,
-  ExecutionOptimisticAndVersion,
+  ExecutionOptimisticAndVersionMeta,
   ExecutionOptimisticAndVersionCodec,
   WithVersion,
 } from "./codecs.js";
@@ -58,14 +58,14 @@ export type TestEndpoints = {
     {stateId: StateId},
     {params: {state_id: string}},
     allForks.BeaconState,
-    ExecutionOptimisticAndVersion
+    ExecutionOptimisticAndVersionMeta
   >;
   getAttesterDuties: Endpoint<
     "POST",
     {epoch: Epoch; indices: ValidatorIndicesType},
     {params: {epoch: number}; body: string[]},
     AttesterDutiesType,
-    ExecutionOptimisticAndDependentRoot
+    ExecutionOptimisticAndDependentRootMeta
   >;
   getNodeVersion: Endpoint<
     //
