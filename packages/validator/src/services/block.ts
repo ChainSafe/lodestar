@@ -178,7 +178,7 @@ export class BlockProposingService {
       ApiError.assert(
         isBlindedBeaconBlock(signedBlock.message)
           ? await this.api.beacon.publishBlindedBlock(signedBlock as allForks.SignedBlindedBeaconBlock)
-          : await this.api.beacon.publishBlock(signedBlock as allForks.SignedBeaconBlock)
+          : await this.api.beacon.publishBlockV2(signedBlock as allForks.SignedBeaconBlock)
       );
     } else {
       ApiError.assert(
@@ -187,7 +187,7 @@ export class BlockProposingService {
               signedBlindedBlock: signedBlock,
               signedBlindedBlobSidecars: signedBlobSidecars,
             } as allForks.SignedBlindedBlockContents)
-          : await this.api.beacon.publishBlock({signedBlock, signedBlobSidecars} as allForks.SignedBlockContents)
+          : await this.api.beacon.publishBlockV2({signedBlock, signedBlobSidecars} as allForks.SignedBlockContents)
       );
     }
   };
