@@ -233,14 +233,13 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
 
   builder: {
     type: "boolean",
-    description: "Enable execution payload production via a builder for better rewards",
+    description: `An alias for \`--builder.selection ${defaultOptions.builderAliasSelection}\` for the builder flow, ignored if \`--builder.selection\` is explicitly provided`,
     group: "builder",
-    deprecated: "enabling or disabling builder flow is now solely managed by `builder.selection` flag",
   },
 
   "builder.selection": {
     type: "string",
-    description: "Default builder block selection strategy: `maxprofit`, `builderalways`, or `builderonly`",
+    description: "Builder block selection strategy `maxprofit`, `builderalways`, `builderonly` or `executiononly`",
     defaultDescription: `\`${defaultOptions.builderSelection}\``,
     group: "builder",
   },
