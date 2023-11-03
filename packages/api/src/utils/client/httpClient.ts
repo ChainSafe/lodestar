@@ -1,14 +1,15 @@
-import {ErrorAborted, Logger, TimeoutError, isValidHttpUrl, toBase64} from "@lodestar/utils";
-import {ReqGeneric, RouteDef} from "../index.js";
-import {ApiClientResponse, ApiClientSuccessResponse} from "../../interfaces.js";
-import {fetch, isFetchError} from "./fetch.js";
-import {stringifyQuery, urlJoin} from "./format.js";
-import type {Metrics} from "./metrics.js";
-import {HttpStatusCode} from "./httpStatusCode.js";
+import {ErrorAborted, Logger, TimeoutError, isValidHttpUrl} from "@lodestar/utils";
+import {WireFormat, mergeHeaders} from "../headers.js";
+import {Endpoint} from "../types.js";
+import {ApiRequestInit, ApiRequestInitRequired, RouteDefinitionExtra, createApiRequest} from "./request.js";
+import {ApiResponse, UnknownApiResponse} from "./response.js";
+import {Metrics} from "./metrics.js";
+import {isFetchError} from "./fetch.js";
 
 /** A higher default timeout, validator will sets its own shorter timeoutMs */
 const DEFAULT_TIMEOUT_MS = 60_000;
-const DEFAULT_ROUTE_ID = "unknown";
+const DEFAULT_REQUEST_WIRE_FORMAT = WireFormat.json;
+const DEFAULT_RESPONSE_WIRE_FORMAT = WireFormat.ssz;
 
 const URL_SCORE_DELTA_SUCCESS = 1;
 /** Require 2 success to recover from 1 failed request */
@@ -17,74 +18,18 @@ const URL_SCORE_DELTA_ERROR = 2 * URL_SCORE_DELTA_SUCCESS;
 const URL_SCORE_MAX = 10 * URL_SCORE_DELTA_SUCCESS;
 const URL_SCORE_MIN = 0;
 
-export class HttpError extends Error {
-  status: number;
-  url: string;
-
-  constructor(message: string, status: number, url: string) {
-    super(message);
-    this.status = status;
-    this.url = url;
-  }
-}
-
-export class ApiError extends Error {
-  status: number;
-  operationId: string;
-
-  constructor(message: string, status: number, operationId: string) {
-    super(message);
-    this.status = status;
-    this.operationId = operationId;
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  static assert(res: ApiClientResponse, message?: string): asserts res is ApiClientSuccessResponse<any, unknown> {
-    if (!res.ok) {
-      throw new ApiError(
-        [message, res.error.message].filter(Boolean).join(" - "),
-        res.error.code,
-        res.error.operationId
-      );
-    }
-  }
-
-  toString(): string {
-    return `${this.message} (status=${this.status}, operationId=${this.operationId})`;
-  }
-}
-
-export interface URLOpts {
-  baseUrl: string;
-  timeoutMs?: number;
-  bearerToken?: string;
-  extraHeaders?: Record<string, string>;
-}
-
-export type FetchOpts = {
-  url: RouteDef["url"];
-  method: RouteDef["method"];
-  query?: ReqGeneric["query"];
-  body?: ReqGeneric["body"];
-  headers?: ReqGeneric["headers"];
-  /** Optional, for metrics */
-  routeId?: string;
-  timeoutMs?: number;
-};
-
 export interface IHttpClient {
-  baseUrl: string;
-  json<T>(opts: FetchOpts): Promise<{status: HttpStatusCode; body: T}>;
-  request(opts: FetchOpts): Promise<{status: HttpStatusCode; body: void}>;
-  arrayBuffer(opts: FetchOpts): Promise<{status: HttpStatusCode; body: ArrayBuffer}>;
+  readonly baseUrl: string;
+
+  request<E extends Endpoint>(
+    definition: RouteDefinitionExtra<E>,
+    args: E["args"],
+    localInit: ApiRequestInit
+  ): Promise<UnknownApiResponse<E>>;
 }
 
-export type HttpClientOptions = ({baseUrl: string} | {urls: (string | URLOpts)[]}) & {
-  timeoutMs?: number;
-  bearerToken?: string;
-  extraHeaders?: Record<string, string>;
-  /** Return an AbortSignal to be attached to all requests */
-  getAbortSignal?: () => AbortSignal | undefined;
+export type HttpClientOptions = ({baseUrl: string} | {urls: (string | ApiRequestInit)[]}) & {
+  globalInit?: ApiRequestInit;
   /** Override fetch function */
   fetch?: typeof fetch;
 };
@@ -94,65 +39,60 @@ export type HttpClientModules = {
   metrics?: Metrics;
 };
 
-export type {Metrics};
-
 export class HttpClient implements IHttpClient {
-  private readonly globalTimeoutMs: number;
-  private readonly globalBearerToken: string | null;
-  private readonly globalExtraHeaders: Record<string, string> | null;
-  private readonly getAbortSignal?: () => AbortSignal | undefined;
+  readonly urlsInits: ApiRequestInitRequired[] = [];
+
   private readonly fetch: typeof fetch;
   private readonly metrics: null | Metrics;
   private readonly logger: null | Logger;
 
-  private readonly urlsOpts: URLOpts[] = [];
   private readonly urlsScore: number[];
 
   get baseUrl(): string {
-    return this.urlsOpts[0].baseUrl;
+    return this.urlsInits[0].baseUrl;
   }
 
-  /**
-   * timeoutMs = config.params.SECONDS_PER_SLOT * 1000
-   */
   constructor(opts: HttpClientOptions, {logger, metrics}: HttpClientModules = {}) {
     // Cast to all types optional since they are defined with syntax `HttpClientOptions = A | B`
-    const {baseUrl, urls = []} = opts as {baseUrl?: string; urls?: (string | URLOpts)[]};
-
-    // Append to Partial object to not fill urlOpts with properties with value undefined
-    const allUrlOpts: Partial<URLOpts> = {};
-    if (opts.bearerToken) allUrlOpts.bearerToken = opts.bearerToken;
-    if (opts.timeoutMs !== undefined) allUrlOpts.timeoutMs = opts.timeoutMs;
-    if (opts.extraHeaders) allUrlOpts.extraHeaders = opts.extraHeaders;
+    const {baseUrl, urls = []} = opts as {baseUrl?: string; urls?: (string | ApiRequestInit)[]};
+    const globalInit = opts.globalInit;
+    const defaults = {
+      baseUrl: "",
+      timeoutMs: DEFAULT_TIMEOUT_MS,
+      requestWireFormat: DEFAULT_REQUEST_WIRE_FORMAT,
+      responseWireFormat: DEFAULT_RESPONSE_WIRE_FORMAT,
+    };
 
     // opts.baseUrl is equivalent to `urls: [{baseUrl}]`
     // unshift opts.baseUrl to urls, without mutating opts.urls
-    for (const [i, urlOrOpts] of [...(baseUrl ? [baseUrl] : []), ...urls].entries()) {
-      const urlOpts: URLOpts = typeof urlOrOpts === "string" ? {baseUrl: urlOrOpts, ...allUrlOpts} : urlOrOpts;
+    for (const [i, urlOrInit] of [...(baseUrl ? [baseUrl] : []), ...urls].entries()) {
+      const init = typeof urlOrInit === "string" ? {baseUrl: urlOrInit} : urlOrInit;
+      const urlInit: ApiRequestInitRequired = {
+        ...defaults,
+        ...globalInit,
+        ...init,
+        headers: mergeHeaders(globalInit?.headers, init.headers),
+      };
 
-      if (!urlOpts.baseUrl) {
-        throw Error(`HttpClient.urls[${i}] is empty or undefined: ${urlOpts.baseUrl}`);
+      if (!urlInit.baseUrl) {
+        throw Error(`HttpClient.urls[${i}] is empty or undefined: ${urlInit.baseUrl}`);
       }
-      if (!isValidHttpUrl(urlOpts.baseUrl)) {
-        throw Error(`HttpClient.urls[${i}] must be a valid URL: ${urlOpts.baseUrl}`);
+      if (!isValidHttpUrl(urlInit.baseUrl)) {
+        throw Error(`HttpClient.urls[${i}] must be a valid URL: ${urlInit.baseUrl}`);
       }
       // De-duplicate by baseUrl, having two baseUrls with different token or timeouts does not make sense
-      if (!this.urlsOpts.some((opt) => opt.baseUrl === urlOpts.baseUrl)) {
-        this.urlsOpts.push(urlOpts);
+      if (!this.urlsInits.some((opt) => opt.baseUrl === urlInit.baseUrl)) {
+        this.urlsInits.push(urlInit);
       }
     }
 
-    if (this.urlsOpts.length === 0) {
+    if (this.urlsInits.length === 0) {
       throw Error("Must set at least 1 URL in HttpClient opts");
     }
 
     // Initialize scores to max value to only query first URL on start
-    this.urlsScore = this.urlsOpts.map(() => URL_SCORE_MAX);
+    this.urlsScore = this.urlsInits.map(() => URL_SCORE_MAX);
 
-    this.globalTimeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-    this.globalBearerToken = opts.bearerToken ?? null;
-    this.globalExtraHeaders = opts.extraHeaders ?? null;
-    this.getAbortSignal = opts.getAbortSignal;
     this.fetch = opts.fetch ?? fetch;
     this.metrics = metrics ?? null;
     this.logger = logger ?? null;
@@ -166,25 +106,17 @@ export class HttpClient implements IHttpClient {
     }
   }
 
-  async json<T>(opts: FetchOpts): Promise<{status: HttpStatusCode; body: T}> {
-    return this.requestWithBodyWithRetries<T>(opts, (res) => res.json() as Promise<T>);
-  }
-
-  async request(opts: FetchOpts): Promise<{status: HttpStatusCode; body: void}> {
-    return this.requestWithBodyWithRetries<void>(opts, async () => undefined);
-  }
-
-  async arrayBuffer(opts: FetchOpts): Promise<{status: HttpStatusCode; body: ArrayBuffer}> {
-    return this.requestWithBodyWithRetries<ArrayBuffer>(opts, (res) => res.arrayBuffer());
-  }
-
-  private async requestWithBodyWithRetries<T>(
-    opts: FetchOpts,
-    getBody: (res: Response) => Promise<T>
-  ): Promise<{status: HttpStatusCode; body: T}> {
+  /**
+   * Request with possible retries
+   */
+  async request<E extends Endpoint>(
+    definition: RouteDefinitionExtra<E>,
+    args: E["args"],
+    localInit: ApiRequestInit
+  ): Promise<UnknownApiResponse<E>> {
     // Early return when no fallback URLs are setup
-    if (this.urlsOpts.length === 1) {
-      return this.requestWithBody(this.urlsOpts[0], opts, getBody);
+    if (this.urlsInits.length === 1) {
+      return this._request(definition, args, localInit, 0);
     }
 
     let i = 0;
@@ -195,9 +127,9 @@ export class HttpClient implements IHttpClient {
     // - until first server is shown to be reliable again, contact all servers
 
     // First loop: retry in sequence, query next URL only after previous errors
-    for (; i < this.urlsOpts.length; i++) {
+    for (; i < this.urlsInits.length; i++) {
       try {
-        return await new Promise<{status: HttpStatusCode; body: T}>((resolve, reject) => {
+        return await new Promise<UnknownApiResponse<E>>((resolve, reject) => {
           let requestCount = 0;
           let errorCount = 0;
 
@@ -205,10 +137,9 @@ export class HttpClient implements IHttpClient {
           // Score each URL available:
           // - If url[0] is good, only send to 0
           // - If url[0] has recently errored, send to both 0, 1, etc until url[0] does not error for some time
-          for (; i < this.urlsOpts.length; i++) {
-            const urlOpts = this.urlsOpts[i];
-            const {baseUrl} = urlOpts;
-            const routeId = opts.routeId ?? DEFAULT_ROUTE_ID;
+          for (; i < this.urlsInits.length; i++) {
+            const baseUrl = this.urlsInits[i].baseUrl;
+            const routeId = definition.operationId;
 
             if (i > 0) {
               this.metrics?.requestToFallbacks.inc({routeId});
@@ -218,7 +149,7 @@ export class HttpClient implements IHttpClient {
             // eslint-disable-next-line @typescript-eslint/naming-convention
             const i_ = i; // Keep local copy of i variable to index urlScore after requestWithBody() resolves
 
-            this.requestWithBody(urlOpts, opts, getBody).then(
+            this._request(definition, args, localInit, i).then(
               (res) => {
                 this.urlsScore[i_] = Math.min(URL_SCORE_MAX, this.urlsScore[i_] + URL_SCORE_DELTA_SUCCESS);
                 // Resolve immediately on success
@@ -246,7 +177,7 @@ export class HttpClient implements IHttpClient {
           }
         });
       } catch (e) {
-        if (i >= this.urlsOpts.length - 1) {
+        if (i >= this.urlsInits.length - 1) {
           throw e;
         } else {
           this.logger?.debug("Request error, retrying", {}, e as Error);
@@ -257,73 +188,63 @@ export class HttpClient implements IHttpClient {
     throw Error("loop ended without return or rejection");
   }
 
-  private async requestWithBody<T>(
-    urlOpts: URLOpts,
-    opts: FetchOpts,
-    getBody: (res: Response) => Promise<T>
-  ): Promise<{status: HttpStatusCode; body: T}> {
-    const baseUrl = urlOpts.baseUrl;
-    const bearerToken = urlOpts.bearerToken ?? this.globalBearerToken;
-    const extraHeaders = urlOpts.extraHeaders ?? this.globalExtraHeaders;
-    const timeoutMs = opts.timeoutMs ?? urlOpts.timeoutMs ?? this.globalTimeoutMs;
+  async _request<E extends Endpoint>(
+    definition: RouteDefinitionExtra<E>,
+    args: E["args"],
+    localInit: ApiRequestInit,
+    urlIndex = 0
+  ): Promise<UnknownApiResponse<E>> {
+    const globalInit = this.urlsInits[urlIndex];
+    if (globalInit === undefined) {
+      throw new Error(`Url at index ${urlIndex} does not exist`);
+    }
+    const init = {
+      ...globalInit,
+      ...localInit,
+      headers: mergeHeaders(globalInit.headers, localInit.headers),
+    };
 
     // Implement fetch timeout
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), opts.timeoutMs ?? timeoutMs ?? this.globalTimeoutMs);
+    const timeout = setTimeout(() => controller.abort(), init.timeoutMs);
+    init.signal = controller.signal;
 
-    // Attach global signal to this request's controller
+    // Attach global/local signal to this request's controller
     const onGlobalSignalAbort = (): void => controller.abort();
-    const signalGlobal = this.getAbortSignal?.();
+    const signalGlobal = globalInit.signal;
+    const signalLocal = localInit.signal;
     signalGlobal?.addEventListener("abort", onGlobalSignalAbort);
+    signalLocal?.addEventListener("abort", onGlobalSignalAbort);
 
-    const routeId = opts.routeId ?? DEFAULT_ROUTE_ID;
+    const routeId = definition.operationId;
     const timer = this.metrics?.requestTime.startTimer({routeId});
 
     try {
-      const url = new URL(urlJoin(baseUrl, opts.url) + (opts.query ? "?" + stringifyQuery(opts.query) : ""));
+      this.logger?.debug("API request begin", {routeId});
+      const request = createApiRequest(definition, args, init);
+      const response = await this.fetch(request.url, request);
+      const apiResponse = new ApiResponse(definition, response.body, response) as UnknownApiResponse<E>;
 
-      const headers =
-        extraHeaders && opts.headers ? {...extraHeaders, ...opts.headers} : opts.headers || extraHeaders || {};
-      if (opts.body && headers["Content-Type"] === undefined) {
-        headers["Content-Type"] = "application/json";
-      }
-      if (bearerToken && headers["Authorization"] === undefined) {
-        headers["Authorization"] = `Bearer ${bearerToken}`;
-      }
-      if (url.username || url.password) {
-        if (headers["Authorization"] === undefined) {
-          headers["Authorization"] = `Basic ${toBase64(`${url.username}:${url.password}`)}`;
-        }
-        // Remove the username and password from the URL
-        url.username = "";
-        url.password = "";
+      if (!apiResponse.ok) {
+        this.logger?.debug("API response error", {routeId});
+        this.metrics?.requestErrors.inc({routeId});
+        return apiResponse;
       }
 
-      this.logger?.debug("HttpClient request", {routeId});
-
-      const res = await this.fetch(url, {
-        method: opts.method,
-        headers: headers as Record<string, string>,
-        body: opts.body ? JSON.stringify(opts.body) : undefined,
-        signal: controller.signal,
-      });
-
-      if (!res.ok) {
-        const errBody = await res.text();
-        throw new HttpError(`${res.statusText}: ${getErrorMessage(errBody)}`, res.status, url.toString());
+      const streamTimer = this.metrics?.streamTime.startTimer();
+      try {
+        await apiResponse.rawBody();
+        this.logger?.debug("API response success", {routeId});
+        return apiResponse;
+      } finally {
+        streamTimer?.();
       }
-
-      const streamTimer = this.metrics?.streamTime.startTimer({routeId});
-      const body = await getBody(res);
-      streamTimer?.();
-      this.logger?.debug("HttpClient response", {routeId});
-      return {status: res.status, body};
     } catch (e) {
       this.metrics?.requestErrors.inc({routeId});
 
       if (isAbortedError(e as Error)) {
-        if (signalGlobal?.aborted) {
-          throw new ErrorAborted("REST client");
+        if (signalGlobal?.aborted || signalLocal?.aborted) {
+          throw new ErrorAborted("API client");
         } else if (controller.signal.aborted) {
           throw new TimeoutError("request");
         } else {
@@ -337,23 +258,11 @@ export class HttpClient implements IHttpClient {
 
       clearTimeout(timeout);
       signalGlobal?.removeEventListener("abort", onGlobalSignalAbort);
+      signalLocal?.removeEventListener("abort", onGlobalSignalAbort);
     }
   }
 }
 
-export function isAbortedError(e: Error): boolean {
+function isAbortedError(e: Error): boolean {
   return isFetchError(e) && e.type === "aborted";
-}
-
-function getErrorMessage(errBody: string): string {
-  try {
-    const errJson = JSON.parse(errBody) as {message: string};
-    if (errJson.message) {
-      return errJson.message;
-    } else {
-      return errBody;
-    }
-  } catch (e) {
-    return errBody;
-  }
 }

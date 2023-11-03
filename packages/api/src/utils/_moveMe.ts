@@ -1,7 +1,5 @@
-import {allForks, deneb, ssz} from "@lodestar/types";
-import {ForkBlobs} from "@lodestar/params";
-
-import {TypeJson} from "./types.js";
+// TODO these functions should be defined elsewhere
+import {allForks, deneb} from "@lodestar/types";
 
 export type BlockContents = {block: allForks.BeaconBlock; blobSidecars: deneb.BlobSidecars};
 export type SignedBlockContents = {
@@ -41,6 +39,8 @@ export function isSignedBlindedBlockContents(
 }
 
 /* eslint-disable @typescript-eslint/naming-convention */
+
+/*
 
 export function AllForksSignedBlockContentsReqSerializer(
   blockSerializer: (data: allForks.SignedBeaconBlock) => TypeJson<allForks.SignedBeaconBlock>
@@ -103,3 +103,5 @@ export function AllForksBlindedBlockContentsResSerializer(getType: () => ForkBlo
     }),
   };
 }
+
+*/

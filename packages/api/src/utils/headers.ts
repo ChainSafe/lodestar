@@ -1,9 +1,22 @@
 import {toBase64} from "@lodestar/utils";
-import {OptionalRequestInit} from "./sszTest.js";
+
+export enum WireFormat {
+  json = "json",
+  ssz = "ssz",
+}
 
 export enum MediaType {
   json = "application/json",
   ssz = "application/octet-stream",
+}
+
+export function getWireFormat(mediaType: MediaType): WireFormat {
+  switch (mediaType) {
+    case MediaType.json:
+      return WireFormat.json;
+    case MediaType.ssz:
+      return WireFormat.ssz;
+  }
 }
 
 export const supportedMediaTypes = Object.values(MediaType);
@@ -71,7 +84,7 @@ export function parseAcceptHeader(accept?: string): MediaType | null {
     )[1];
 }
 
-export function setAuthorizationHeader(url: URL, headers: Headers, {bearerToken}: OptionalRequestInit): void {
+export function setAuthorizationHeader(url: URL, headers: Headers, {bearerToken}: {bearerToken?: string}): void {
   if (bearerToken && !headers.has("Authorization")) {
     headers.set("Authorization", `Bearer ${bearerToken}`);
   }
