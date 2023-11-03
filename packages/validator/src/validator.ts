@@ -284,6 +284,18 @@ export class Validator {
     await assertEqualGenesis(opts, genesis);
     logger.info("Verified connected beacon node and validator have the same genesisValidatorRoot");
 
+    const {useProduceBlockV3, valProposerConfig} = opts;
+    const defaultBuilderSelection =
+      valProposerConfig?.defaultConfig.builder?.selection ?? defaultOptions.builderSelection;
+    const strictFeeRecipientCheck = valProposerConfig?.defaultConfig.strictFeeRecipientCheck ?? false;
+    const suggestedFeeRecipient = valProposerConfig?.defaultConfig.feeRecipient ?? defaultOptions.suggestedFeeRecipient;
+    logger.info("Initializing validator", {
+      useProduceBlockV3,
+      defaultBuilderSelection,
+      suggestedFeeRecipient,
+      strictFeeRecipientCheck,
+    });
+
     return Validator.init(opts, genesis, metrics);
   }
 
