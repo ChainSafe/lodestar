@@ -233,7 +233,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
 
   builder: {
     type: "boolean",
-    description: `An alias for \`--builder.selection ${defaultOptions.builderAliasSelection}\` for the builder flow, ignored if \`--builder.selection\` explicitly provided`,
+    description: `An alias for \`--builder.selection ${defaultOptions.builderAliasSelection}\` for the builder flow, ignored if \`--builder.selection\` is explicitly provided`,
     group: "builder",
   },
 
