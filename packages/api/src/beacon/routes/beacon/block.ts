@@ -4,18 +4,8 @@ import {ChainForkConfig} from "@lodestar/config";
 import {phase0, allForks, Slot, Root, ssz, RootHex, deneb} from "@lodestar/types";
 
 import {
-  RoutesData,
-  ReturnTypes,
-  ArrayOf,
+  Endpoint,
   Schema,
-  WithVersion,
-  reqOnlyBody,
-  TypeJson,
-  ReqSerializers,
-  ReqSerializer,
-  ContainerDataExecutionOptimistic,
-  WithExecutionOptimistic,
-  ContainerData,
 } from "../../../utils/index.js";
 import {HttpStatusCode} from "../../../utils/client/httpStatusCode.js";
 import {parseAcceptHeader, writeAcceptHeader} from "../../../utils/acceptHeader.js";
@@ -72,7 +62,7 @@ export type BlockV2Response<T extends ResponseFormat = "json"> = T extends "ssz"
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
     >;
 
-export type Api = {
+export type Endpoints = {
   /**
    * Get block
    * Returns the complete `SignedBeaconBlock` for a given block ID.
@@ -81,7 +71,7 @@ export type Api = {
    * @param blockId Block identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
    */
-  getBlock<T extends ResponseFormat = "json">(blockId: BlockId, format?: T): Promise<BlockResponse<T>>;
+  getBlock: Endpoint (blockId: BlockId, format?: T): Promise<BlockResponse<T>>;
 
   /**
    * Get block
