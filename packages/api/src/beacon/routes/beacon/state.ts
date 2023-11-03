@@ -109,6 +109,13 @@ export type Api = {
     >
   >;
 
+  /**
+   * Fetch the RANDAO mix for the requested epoch from the state identified by staetId.
+   *
+   * @param stateId State identifier.
+   * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", "justified", \<slot\>, \<hex encoded stateRoot with 0x prefix\>.
+   * @param epoch Fetch randao mix for the given epoch. If an epoch is not specified then the RANDAO mix for the state's current epoch will be returned.
+   */
   getStateRandao(
     stateId: StateId,
     epoch?: Epoch
