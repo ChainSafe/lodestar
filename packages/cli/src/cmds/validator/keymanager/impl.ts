@@ -66,7 +66,7 @@ export class KeymanagerApi implements Api {
 
   async setGraffiti(pubkeyHex: string, graffiti: string): Promise<void> {
     this.checkIfProposerWriteEnabled();
-    this.validator.validatorStore.setGraffiti(pubkeyHex, parseFeeRecipient(graffiti));
+    this.validator.validatorStore.setGraffiti(pubkeyHex, graffiti);
     this.persistedKeysBackend.writeProposerConfig(
       pubkeyHex,
       this.validator.validatorStore.getProposerConfig(pubkeyHex)

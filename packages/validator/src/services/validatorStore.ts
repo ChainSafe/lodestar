@@ -238,7 +238,6 @@ export class ValidatorStore {
     if (validatorData === undefined) {
       throw Error(`Validator pubkey ${pubkeyHex} not known`);
     }
-    // This should directly modify data in the map
     validatorData.graffiti = graffiti;
   }
 
