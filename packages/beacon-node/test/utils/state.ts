@@ -92,7 +92,7 @@ export function generateState(
 
   if (forkSeq >= ForkSeq.eip6110) {
     const stateEIP6110 = state as eip6110.BeaconState;
-    stateEIP6110.depositReceiptsStartIndex = 2023;
+    stateEIP6110.depositReceiptsStartIndex = 2023n;
   }
 
   return config.getForkTypes(stateSlot).BeaconState.toViewDU(state);
