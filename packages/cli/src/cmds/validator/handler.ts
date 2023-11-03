@@ -1,7 +1,13 @@
 import path from "node:path";
 import {setMaxListeners} from "node:events";
 import {LevelDbController} from "@lodestar/db";
-import {ProcessShutdownCallback, SlashingProtection, Validator, ValidatorProposerConfig} from "@lodestar/validator";
+import {
+  ProcessShutdownCallback,
+  SlashingProtection,
+  Validator,
+  ValidatorProposerConfig,
+  defaultOptions,
+} from "@lodestar/validator";
 import {routes} from "@lodestar/api";
 import {getMetrics, MetricsRegister} from "@lodestar/validator";
 import {
@@ -216,7 +222,9 @@ function getProposerConfigFromArgs(
     feeRecipient: args.suggestedFeeRecipient ? parseFeeRecipient(args.suggestedFeeRecipient) : undefined,
     builder: {
       gasLimit: args.defaultGasLimit,
-      selection: parseBuilderSelection(args["builder.selection"]),
+      selection: parseBuilderSelection(
+        args["builder.selection"] ?? (args["builder"] ? defaultOptions.builderAliasSelection : undefined)
+      ),
     },
   };
 
