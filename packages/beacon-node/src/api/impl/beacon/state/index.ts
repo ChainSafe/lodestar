@@ -55,28 +55,19 @@ export function getBeaconStateApi({
       const {state, executionOptimistic} = await resolveStateId(chain, stateId);
       const stateEpoch = computeEpochAtSlot(state.slot);
       const usedEpoch = epoch ?? stateEpoch;
+      const len = EPOCHS_PER_HISTORICAL_VECTOR;
 
-      const epochsPerHistoricalVector = EPOCHS_PER_HISTORICAL_VECTOR;
+      if (!(stateEpoch < usedEpoch + len && usedEpoch <= stateEpoch)) {
+        throw new ApiError(400, "Requested epoch is out of range");
+      }
 
+      const randao = getRandaoMix(state, usedEpoch);
       const ret = {
         executionOptimistic,
         data: {
-          randao: new Uint8Array(), // return empty value to denote out-of-bound lookup
+          randao,
         },
       };
-
-      if (usedEpoch > stateEpoch) {
-        return ret;
-      } else if (
-        usedEpoch < stateEpoch &&
-        Math.abs(stateEpoch - epochsPerHistoricalVector) > 0 &&
-        Math.abs(stateEpoch - epochsPerHistoricalVector) >= usedEpoch
-      ) {
-        return ret;
-      }
-
-      ret.data.randao = getRandaoMix(state, usedEpoch);
-
       return ret;
     },
 
