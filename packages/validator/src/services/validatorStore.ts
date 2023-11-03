@@ -233,6 +233,22 @@ export class ValidatorStore {
     return this.validators.get(pubkeyHex)?.graffiti ?? this.defaultProposerConfig.graffiti;
   }
 
+  setGraffiti(pubkeyHex: PubkeyHex, graffiti: string): void {
+    const validatorData = this.validators.get(pubkeyHex);
+    if (validatorData === undefined) {
+      throw Error(`Validator pubkey ${pubkeyHex} not known`);
+    }
+    validatorData.graffiti = graffiti;
+  }
+
+  deleteGraffiti(pubkeyHex: PubkeyHex): void {
+    const validatorData = this.validators.get(pubkeyHex);
+    if (validatorData === undefined) {
+      throw Error(`Validator pubkey ${pubkeyHex} not known`);
+    }
+    delete validatorData["graffiti"];
+  }
+
   getBuilderSelection(pubkeyHex: PubkeyHex): routes.validator.BuilderSelection {
     return (this.validators.get(pubkeyHex)?.builder || {}).selection ?? this.defaultProposerConfig.builder.selection;
   }

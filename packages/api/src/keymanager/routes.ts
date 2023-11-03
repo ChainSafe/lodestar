@@ -64,6 +64,10 @@ export type FeeRecipientData = {
   pubkey: string;
   ethaddress: string;
 };
+export type GraffitiData = {
+  pubkey: string;
+  graffiti: string;
+};
 export type GasLimitData = {
   pubkey: string;
   gasLimit: number;
@@ -205,6 +209,25 @@ export type Api = {
     >
   >;
 
+  listGraffiti(pubkey: string): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: GraffitiData}}>>;
+  setGraffiti(
+    pubkey: string,
+    graffiti: string
+  ): Promise<
+    ApiClientResponse<
+      {[HttpStatusCode.OK]: void; [HttpStatusCode.NO_CONTENT]: void},
+      HttpStatusCode.UNAUTHORIZED | HttpStatusCode.FORBIDDEN | HttpStatusCode.NOT_FOUND
+    >
+  >;
+  deleteGraffiti(
+    pubkey: string
+  ): Promise<
+    ApiClientResponse<
+      {[HttpStatusCode.OK]: void; [HttpStatusCode.NO_CONTENT]: void},
+      HttpStatusCode.UNAUTHORIZED | HttpStatusCode.FORBIDDEN | HttpStatusCode.NOT_FOUND
+    >
+  >;
+
   getGasLimit(pubkey: string): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: GasLimitData}}>>;
   setGasLimit(
     pubkey: string,
@@ -259,6 +282,10 @@ export const routesData: RoutesData<Api> = {
   setFeeRecipient: {url: "/eth/v1/validator/{pubkey}/feerecipient", method: "POST", statusOk: 202},
   deleteFeeRecipient: {url: "/eth/v1/validator/{pubkey}/feerecipient", method: "DELETE", statusOk: 204},
 
+  listGraffiti: {url: "/eth/v1/validator/{pubkey}/graffiti", method: "GET"},
+  setGraffiti: {url: "/eth/v1/validator/{pubkey}/graffiti", method: "POST", statusOk: 202},
+  deleteGraffiti: {url: "/eth/v1/validator/{pubkey}/graffiti", method: "DELETE", statusOk: 204},
+
   getGasLimit: {url: "/eth/v1/validator/{pubkey}/gas_limit", method: "GET"},
   setGasLimit: {url: "/eth/v1/validator/{pubkey}/gas_limit", method: "POST", statusOk: 202},
   deleteGasLimit: {url: "/eth/v1/validator/{pubkey}/gas_limit", method: "DELETE", statusOk: 204},
@@ -290,6 +317,10 @@ export type ReqTypes = {
   listFeeRecipient: {params: {pubkey: string}};
   setFeeRecipient: {params: {pubkey: string}; body: {ethaddress: string}};
   deleteFeeRecipient: {params: {pubkey: string}};
+
+  listGraffiti: {params: {pubkey: string}};
+  setGraffiti: {params: {pubkey: string}; body: {graffiti: string}};
+  deleteGraffiti: {params: {pubkey: string}};
 
   getGasLimit: {params: {pubkey: string}};
   setGasLimit: {params: {pubkey: string}; body: {gas_limit: string}};
@@ -347,6 +378,29 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       },
     },
 
+    listGraffiti: {
+      writeReq: (pubkey) => ({params: {pubkey}}),
+      parseReq: ({params: {pubkey}}) => [pubkey],
+      schema: {
+        params: {pubkey: Schema.StringRequired},
+      },
+    },
+    setGraffiti: {
+      writeReq: (pubkey, graffiti) => ({params: {pubkey}, body: {graffiti}}),
+      parseReq: ({params: {pubkey}, body: {graffiti}}) => [pubkey, graffiti],
+      schema: {
+        params: {pubkey: Schema.StringRequired},
+        body: Schema.Object,
+      },
+    },
+    deleteGraffiti: {
+      writeReq: (pubkey) => ({params: {pubkey}}),
+      parseReq: ({params: {pubkey}}) => [pubkey],
+      schema: {
+        params: {pubkey: Schema.StringRequired},
+      },
+    },
+
     getGasLimit: {
       writeReq: (pubkey) => ({params: {pubkey}}),
       parseReq: ({params: {pubkey}}) => [pubkey],
@@ -391,6 +445,7 @@ export function getReturnTypes(): ReturnTypes<Api> {
     deleteRemoteKeys: jsonType("snake"),
 
     listFeeRecipient: jsonType("snake"),
+    listGraffiti: jsonType("snake"),
     getGasLimit: ContainerData(
       new ContainerType(
         {
