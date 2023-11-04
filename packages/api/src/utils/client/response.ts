@@ -5,21 +5,6 @@ import {RouteDefinitionExtra} from "./request.js";
 
 export type RawBody = {type: WireFormat.json; value: unknown} | {type: WireFormat.ssz; value: Uint8Array};
 
-export type SuccessApiResponse<E extends Endpoint> = Response & {
-  ok: true;
-  meta: () => Promise<E["meta"]>;
-  value: () => Promise<E["return"]>;
-  rawBody: () => Promise<RawBody>;
-  ssz: () => Promise<Uint8Array>;
-};
-
-export type FailureApiResponse = Response & {
-  ok: false;
-  error: () => Promise<ApiError>;
-};
-
-export type UnknownApiResponse<E extends Endpoint> = SuccessApiResponse<E> | FailureApiResponse;
-
 export class ApiResponse<E extends Endpoint> extends Response {
   private definition: RouteDefinitionExtra<E>;
   private _rawBody?: RawBody;

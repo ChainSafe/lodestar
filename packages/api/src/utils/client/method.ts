@@ -3,11 +3,11 @@ import {Endpoint, RouteDefinition, RouteDefinitions} from "../types.js";
 import {compileRouteUrlFormater} from "../urlFormat.js";
 import {IHttpClient} from "./httpClient.js";
 import {ApiRequestInit} from "./request.js";
-import {UnknownApiResponse} from "./response.js";
+import {ApiResponse} from "./response.js";
 
 export type ApiClientMethod<E extends Endpoint> = E["args"] extends void
-  ? (init?: ApiRequestInit) => Promise<UnknownApiResponse<E>>
-  : (args: E["args"], init?: ApiRequestInit) => Promise<UnknownApiResponse<E>>;
+  ? (init?: ApiRequestInit) => Promise<ApiResponse<E>>
+  : (args: E["args"], init?: ApiRequestInit) => Promise<ApiResponse<E>>;
 
 export type ApiClientMethods<Es extends Record<string, Endpoint>> = {[K in keyof Es]: ApiClientMethod<Es[K]>};
 

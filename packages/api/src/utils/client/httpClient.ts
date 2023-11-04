@@ -2,7 +2,7 @@ import {ErrorAborted, Logger, TimeoutError, isValidHttpUrl} from "@lodestar/util
 import {WireFormat, mergeHeaders} from "../headers.js";
 import {Endpoint} from "../types.js";
 import {ApiRequestInit, ApiRequestInitRequired, RouteDefinitionExtra, createApiRequest} from "./request.js";
-import {ApiResponse, UnknownApiResponse} from "./response.js";
+import {ApiResponse} from "./response.js";
 import {Metrics} from "./metrics.js";
 import {isFetchError} from "./fetch.js";
 
@@ -25,7 +25,7 @@ export interface IHttpClient {
     definition: RouteDefinitionExtra<E>,
     args: E["args"],
     localInit: ApiRequestInit
-  ): Promise<UnknownApiResponse<E>>;
+  ): Promise<ApiResponse<E>>;
 }
 
 export type HttpClientOptions = ({baseUrl: string} | {urls: (string | ApiRequestInit)[]}) & {
@@ -113,7 +113,7 @@ export class HttpClient implements IHttpClient {
     definition: RouteDefinitionExtra<E>,
     args: E["args"],
     localInit: ApiRequestInit
-  ): Promise<UnknownApiResponse<E>> {
+  ): Promise<ApiResponse<E>> {
     // Early return when no fallback URLs are setup
     if (this.urlsInits.length === 1) {
       return this._request(definition, args, localInit, 0);
@@ -129,7 +129,7 @@ export class HttpClient implements IHttpClient {
     // First loop: retry in sequence, query next URL only after previous errors
     for (; i < this.urlsInits.length; i++) {
       try {
-        return await new Promise<UnknownApiResponse<E>>((resolve, reject) => {
+        return await new Promise<ApiResponse<E>>((resolve, reject) => {
           let requestCount = 0;
           let errorCount = 0;
 
@@ -193,7 +193,7 @@ export class HttpClient implements IHttpClient {
     args: E["args"],
     localInit: ApiRequestInit,
     urlIndex = 0
-  ): Promise<UnknownApiResponse<E>> {
+  ): Promise<ApiResponse<E>> {
     const globalInit = this.urlsInits[urlIndex];
     if (globalInit === undefined) {
       throw new Error(`Url at index ${urlIndex} does not exist`);
@@ -223,7 +223,7 @@ export class HttpClient implements IHttpClient {
       this.logger?.debug("API request begin", {routeId});
       const request = createApiRequest(definition, args, init);
       const response = await this.fetch(request.url, request);
-      const apiResponse = new ApiResponse(definition, response.body, response) as UnknownApiResponse<E>;
+      const apiResponse = new ApiResponse(definition, response.body, response);
 
       if (!apiResponse.ok) {
         this.logger?.debug("API response error", {routeId});
