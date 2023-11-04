@@ -1,8 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {phase0, ssz} from "@lodestar/types";
-import {ApiClientResponse} from "../../../interfaces.js";
-import {HttpStatusCode} from "../../../utils/client/httpStatusCode.js";
-import {RoutesData, ReturnTypes, reqEmpty, ContainerData} from "../../../utils/index.js";
+import {Endpoint} from "../../../utils/types.js";
+import {EmptyArgs, EmptyGetRequestCodec, EmptyMeta, EmptyMetaCodec, EmptyRequest} from "../../../utils/codecs.js";
 import * as block from "./block.js";
 import * as pool from "./pool.js";
 import * as state from "./state.js";
@@ -32,38 +31,33 @@ export type {
   EpochSyncCommitteeResponse,
 } from "./state.js";
 
-export type Api = block.Api &
-  pool.Api &
-  state.Api & {
-    getGenesis(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: phase0.Genesis}}>>;
+export type Endpoints = block.Endpoints &
+  pool.Endpoints &
+  state.Endpoints & {
+    getGenesis: Endpoint<
+      //
+      "GET",
+      EmptyArgs,
+      EmptyRequest,
+      phase0.Genesis,
+      EmptyMeta
+    >;
   };
-
-export const routesData: RoutesData<Api> = {
-  getGenesis: {url: "/eth/v1/beacon/genesis", method: "GET"},
-  ...block.routesData,
-  ...pool.routesData,
-  ...state.routesData,
-};
-
-export type ReqTypes = {
-  [K in keyof ReturnType<typeof getReqSerializers>]: ReturnType<ReturnType<typeof getReqSerializers>[K]["writeReq"]>;
-};
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-export function getReqSerializers(config: ChainForkConfig) {
+export function getDefinitions(config: ChainForkConfig) {
   return {
-    getGenesis: reqEmpty,
-    ...block.getReqSerializers(config),
-    ...pool.getReqSerializers(),
-    ...state.getReqSerializers(),
-  };
-}
-
-export function getReturnTypes(): ReturnTypes<Api> {
-  return {
-    getGenesis: ContainerData(ssz.phase0.Genesis),
-    ...block.getReturnTypes(),
-    ...pool.getReturnTypes(),
-    ...state.getReturnTypes(),
+    getGenesis: {
+      url: "/eth/v1/beacon/genesis",
+      method: "GET",
+      req: EmptyGetRequestCodec,
+      resp: {
+        data: ssz.phase0.Genesis,
+        meta: EmptyMetaCodec,
+      },
+    },
+    ...block.getDefinitions(config),
+    ...pool.definitions,
+    ...state.definitions,
   };
 }
