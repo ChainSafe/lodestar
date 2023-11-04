@@ -67,7 +67,7 @@ describe("BlockDutiesService", function () {
       ok: true,
       status: HttpStatusCode.OK,
     });
-    api.beacon.publishBlock.resolves();
+    api.beacon.publishBlockV2.resolves();
 
     // Trigger block production for slot 1
     const notifyBlockProductionFn = blockService["dutiesService"]["notifyBlockProductionFn"];
@@ -77,7 +77,7 @@ describe("BlockDutiesService", function () {
     await sleep(20, controller.signal);
 
     // Must have submitted the block received on signBlock()
-    expect(api.beacon.publishBlock.callCount).to.equal(1, "publishBlock() must be called once");
-    expect(api.beacon.publishBlock.getCall(0).args).to.deep.equal([signedBlock], "wrong publishBlock() args");
+    expect(api.beacon.publishBlockV2.callCount).to.equal(1, "publishBlock() must be called once");
+    expect(api.beacon.publishBlockV2.getCall(0).args).to.deep.equal([signedBlock], "wrong publishBlock() args");
   });
 });
