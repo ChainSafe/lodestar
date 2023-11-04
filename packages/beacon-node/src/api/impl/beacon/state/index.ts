@@ -7,6 +7,7 @@ import {
   getCurrentEpoch,
   getRandaoMix,
 } from "@lodestar/state-transition";
+import {EPOCHS_PER_HISTORICAL_VECTOR} from "@lodestar/params";
 import {ApiError} from "../../errors.js";
 import {ApiModules} from "../../types.js";
 import {
@@ -16,9 +17,6 @@ import {
   resolveStateId,
   toValidatorResponse,
 } from "./utils.js";
-
-import {EPOCHS_PER_HISTORICAL_VECTOR} from "@lodestar/params";
-import { bytesToHex } from "../../../../eth1/provider/utils.js";
 
 export function getBeaconStateApi({
   chain,
@@ -47,28 +45,23 @@ export function getBeaconStateApi({
       };
     },
 
-    /**
-     * Retrieves the sync committees for the given state.
-     * @param epoch Fetch sync committees for the given epoch. If not present then the sync committees for the epoch of the state will be obtained.
-     */
     async getStateRandao(stateId, epoch) {
-      const {state, executionOptimistic} = await resolveStateId(chain, stateId);
+      const {state, executionOptimistic} = await getState(stateId);
       const stateEpoch = computeEpochAtSlot(state.slot);
       const usedEpoch = epoch ?? stateEpoch;
-      const len = EPOCHS_PER_HISTORICAL_VECTOR;
 
-      if (!(stateEpoch < usedEpoch + len && usedEpoch <= stateEpoch)) {
+      if (!(stateEpoch < usedEpoch + EPOCHS_PER_HISTORICAL_VECTOR && usedEpoch <= stateEpoch)) {
         throw new ApiError(400, "Requested epoch is out of range");
       }
 
       const randao = getRandaoMix(state, usedEpoch);
-      const ret = {
+
+      return {
         executionOptimistic,
         data: {
           randao,
         },
       };
-      return ret;
     },
 
     async getStateFinalityCheckpoints(stateId) {
