@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 
-import {Type} from "@chainsafe/ssz";
+import {ArrayType, ListBasicType, ListCompositeType, Type, isBasicType, isCompositeType} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
 import {Root} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
@@ -40,6 +40,17 @@ export const EmptyMetaCodec: ResponseMetadataCodec<EmptyMeta> = {
   fromHeaders: () => ({}),
 };
 
+/** SSZ factory helper + typed. limit = 1e6 as a big enough random number */
+export function ArrayOf<T>(elementType: Type<T>, limit = Infinity): ArrayType<Type<T>, unknown, unknown> {
+  if (isCompositeType(elementType)) {
+    return new ListCompositeType(elementType, limit) as unknown as ArrayType<Type<T>, unknown, unknown>;
+  } else if (isBasicType(elementType)) {
+    return new ListBasicType(elementType, limit) as unknown as ArrayType<Type<T>, unknown, unknown>;
+  } else {
+    throw Error(`Unknown type ${elementType.typeName}`);
+  }
+}
+
 export function WithVersion<T, M extends {version: ForkName}>(
   getType: (v: ForkName) => Type<T>
 ): ResponseDataCodec<T, M> {
@@ -75,19 +86,20 @@ export const ExecutionOptimisticAndVersionCodec: ResponseMetadataCodec<Execution
   }),
 };
 
-export const ExecutionOptimisticAndDependentRootCodec: ResponseMetadataCodec<ExecutionOptimisticAndDependentRootMeta> = {
-  toJson: ({executionOptimistic, dependentRoot}) => ({executionOptimistic, dependentRoot: toHex(dependentRoot)}),
-  fromJson: (val) =>
-    ({
-      executionOptimistic: (val as any).executionOptimistic as boolean,
-      dependentRoot: fromHex((val as any).dependentRoot),
-    }) as ExecutionOptimisticAndDependentRootMeta,
-  toHeadersObject: (val) => ({
-    "Eth-Execution-Optimistic": String(val.executionOptimistic),
-    "Eth-Consensus-Dependent-Root": toHex(val.dependentRoot),
-  }),
-  fromHeaders: (val) => ({
-    executionOptimistic: Boolean(val.get("Eth-Execution-Optimistic")),
-    dependentRoot: fromHex(val.get("Eth-Consensus-Dependent-Root")!),
-  }),
-};
+export const ExecutionOptimisticAndDependentRootCodec: ResponseMetadataCodec<ExecutionOptimisticAndDependentRootMeta> =
+  {
+    toJson: ({executionOptimistic, dependentRoot}) => ({executionOptimistic, dependentRoot: toHex(dependentRoot)}),
+    fromJson: (val) =>
+      ({
+        executionOptimistic: (val as any).executionOptimistic as boolean,
+        dependentRoot: fromHex((val as any).dependentRoot),
+      }) as ExecutionOptimisticAndDependentRootMeta,
+    toHeadersObject: (val) => ({
+      "Eth-Execution-Optimistic": String(val.executionOptimistic),
+      "Eth-Consensus-Dependent-Root": toHex(val.dependentRoot),
+    }),
+    fromHeaders: (val) => ({
+      executionOptimistic: Boolean(val.get("Eth-Execution-Optimistic")),
+      dependentRoot: fromHex(val.get("Eth-Consensus-Dependent-Root")!),
+    }),
+  };
