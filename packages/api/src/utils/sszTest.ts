@@ -20,6 +20,9 @@ import {
   ExecutionOptimisticAndVersionCodec,
   WithVersion,
 } from "./codecs.js";
+import {createApiClientMethods} from "./client/method.js";
+import {WireFormat} from "./headers.js";
+import {IHttpClient} from "./client/httpClient.js";
 
 // ssz types -- assumed to already be defined
 
@@ -142,3 +145,21 @@ export const definitions: RouteDefinitions<TestEndpoints> = {
     },
   },
 };
+
+// client defines default baseUrl, wire formats, additional headers, timeout, client-level abort-signal, etc.
+const client = undefined as unknown as IHttpClient;
+const testMethods = createApiClientMethods(definitions, client);
+
+const args = {epoch: 0, indices: []};
+
+const controller = new AbortController();
+const resp = await testMethods.getAttesterDuties(args, {
+  // optional request-specific overrides
+  baseUrl: "https://other.com",
+  responseWireFormat: WireFormat.ssz,
+  signal: controller.signal,
+  headers: {extra: "headers"},
+  timeoutMs: 5000,
+});
+
+const _duties = await resp.value();
