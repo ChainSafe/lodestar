@@ -1,11 +1,22 @@
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
-import {Epoch, phase0, capella, Slot, ssz, StringType, RootHex, altair, UintNum64, allForks} from "@lodestar/types";
+import {
+  Epoch,
+  phase0,
+  capella,
+  Slot,
+  ssz,
+  StringType,
+  RootHex,
+  altair,
+  UintNum64,
+  allForks,
+  deneb,
+} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
-import {isForkExecution, ForkName} from "@lodestar/params";
+import {isForkExecution, ForkName, ForkExecution} from "@lodestar/params";
 
-import {RouteDef, TypeJson, WithVersion} from "../../utils/index.js";
-import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
-import {ApiClientResponse} from "../../interfaces.js";
+import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
+import {EmptyMeta, EmptyMetaCodec, EmptyResponseData, EmptyResponseDataCodec} from "../../utils/codecs.js";
 
 const stringType = new StringType();
 export const blobSidecarSSE = new ContainerType(
@@ -116,35 +127,53 @@ export type EventData = {
 
 export type BeaconEvent = {[K in EventType]: {type: K; message: EventData[K]}}[EventType];
 
-export type Api = {
+export type Endpoints = {
   /**
    * Subscribe to beacon node events
    * Provides endpoint to subscribe to beacon node Server-Sent-Events stream.
    * Consumers should use [eventsource](https://html.spec.whatwg.org/multipage/server-sent-events.html#the-eventsource-interface)
    * implementation to listen on those events.
    *
-   * @param topics Event types to subscribe to
-   * @returns Opened SSE stream.
+   * param topics Event types to subscribe to
+   * returns Opened SSE stream.
    */
-  eventstream(
-    topics: EventType[],
-    signal: AbortSignal,
-    onEvent: (event: BeaconEvent) => void
-  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}>>;
+  eventstream: Endpoint<
+    "GET",
+    {
+      topics: EventType[];
+      onEvent: (event: BeaconEvent) => void;
+    },
+    {query: {topics: EventType[]}},
+    EmptyResponseData,
+    EmptyMeta
+  >;
 };
 
-export const routesData: {[K in keyof Api]: RouteDef} = {
-  eventstream: {url: "/eth/v1/events", method: "GET"},
-};
-
-export type ReqTypes = {
+export const routesData: RouteDefinitions<Endpoints> = {
   eventstream: {
-    query: {topics: EventType[]};
-  };
+    url: "/eth/v1/events",
+    method: "GET",
+    req: {
+      writeReq: ({topics}) => ({query: {topics}}),
+      parseReq: ({query}) => ({topics: query.topics, onEvent: () => {}}),
+      schema: {
+        query: {topics: Schema.StringArray},
+      },
+    },
+    resp: {
+      data: EmptyResponseDataCodec,
+      meta: EmptyMetaCodec,
+    },
+  },
 };
 
 // It doesn't make sense to define a getReqSerializers() here given the exotic argument of eventstream()
 // The request is very simple: (topics) => {query: {topics}}, and the test will ensure compatibility server - client
+
+export type TypeJson<T> = {
+  toJson(val: T): unknown;
+  fromJson(json: unknown): T;
+};
 
 export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: TypeJson<EventData[K]>} {
   const getLightClientTypeFromHeader = (data: allForks.LightClientHeader): allForks.AllForksLightClientSSZTypes => {
@@ -203,9 +232,29 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
     ),
 
     [EventType.contributionAndProof]: ssz.altair.SignedContributionAndProof,
-    [EventType.payloadAttributes]: WithVersion((fork) =>
+    [EventType.payloadAttributes]: {
+      toJson: (payloadAttributes) =>
+        isForkExecution(payloadAttributes.version)
+          ? ssz.allForksExecution[payloadAttributes.version].SSEPayloadAttributes.toJson(
+              payloadAttributes.data as deneb.SSEPayloadAttributes
+            )
+          : ssz.bellatrix.SSEPayloadAttributes.toJson(payloadAttributes.data),
+      fromJson: (data) => {
+        const slot = (data as deneb.SSEPayloadAttributes)?.proposalSlot;
+        const version = config.getForkName(slot);
+        return {
+          version,
+          data: ssz.allForksExecution[version as ForkExecution].SSEPayloadAttributes.fromJson(
+            data
+          ) as allForks.SSEPayloadAttributes,
+        };
+      },
+    },
+    /*
+    WithVersion((fork) =>
       isForkExecution(fork) ? ssz.allForksExecution[fork].SSEPayloadAttributes : ssz.bellatrix.SSEPayloadAttributes
     ),
+    */
     [EventType.blobSidecar]: blobSidecarSSE,
 
     [EventType.lightClientOptimisticUpdate]: {
