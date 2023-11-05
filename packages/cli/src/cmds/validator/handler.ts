@@ -30,6 +30,7 @@ import {KeymanagerApi} from "./keymanager/impl.js";
 import {PersistedKeysBackend} from "./keymanager/persistedKeys.js";
 import {IPersistedKeysBackend} from "./keymanager/interface.js";
 import {KeymanagerRestApiServer} from "./keymanager/server.js";
+import {logArguments} from "./logArguments.js";
 
 /**
  * Runs a validator client.
@@ -102,6 +103,7 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
   }
 
   logSigners(logger, signers);
+  logArguments(logger, args);
 
   const db = await LevelDbController.create({name: dbPath}, {metrics: null, logger});
   onGracefulShutdownCbs.push(() => db.close());

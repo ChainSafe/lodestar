@@ -25,6 +25,7 @@ import {BeaconArgs} from "./options.js";
 import {getBeaconPaths} from "./paths.js";
 import {initBeaconState} from "./initBeaconState.js";
 import {initPeerIdAndEnr} from "./initPeerIdAndEnr.js";
+import {logArguments} from "./logArguments.js";
 
 const DEFAULT_RETENTION_SSZ_OBJECTS_HOURS = 15 * 24;
 const HOURS_TO_MS = 3600 * 1000;
@@ -207,6 +208,8 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
 
   // Render final options
   const options = beaconNodeOptions.getWithDefaults();
+
+  logArguments(logger, args);
 
   return {config, options, beaconPaths, network, version, commit, peerId, logger};
 }
