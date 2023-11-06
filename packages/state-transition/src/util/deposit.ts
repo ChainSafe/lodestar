@@ -1,15 +1,16 @@
 import {ForkSeq, MAX_DEPOSITS} from "@lodestar/params";
-import {UintNum64} from "@lodestar/types";
+import {UintNum64, phase0} from "@lodestar/types";
 import {CachedBeaconStateAllForks, CachedBeaconStateEIP6110} from "../types.js";
 
-export function getEth1DepositCount(state: CachedBeaconStateAllForks): UintNum64 {
+export function getEth1DepositCount(state: CachedBeaconStateAllForks, eth1Data?: phase0.Eth1Data): UintNum64 {
+  const eth1DataToUse = eth1Data ?? state.eth1Data;
   if (state.config.getForkSeq(state.slot) >= ForkSeq.eip6110) {
     const eip6110State = state as CachedBeaconStateEIP6110;
     // eth1DataIndexLimit = min(UintNum64, UintBn64) can be safely casted as UintNum64
     // since the result lies within upper and lower bound of UintNum64
     const eth1DataIndexLimit: UintNum64 =
-      state.eth1Data.depositCount < eip6110State.depositReceiptsStartIndex
-        ? state.eth1Data.depositCount
+      eth1DataToUse.depositCount < eip6110State.depositReceiptsStartIndex
+        ? eth1DataToUse.depositCount
         : Number(eip6110State.depositReceiptsStartIndex);
 
     if (state.eth1DepositIndex < eth1DataIndexLimit) {
@@ -18,6 +19,6 @@ export function getEth1DepositCount(state: CachedBeaconStateAllForks): UintNum64
       return 0;
     }
   } else {
-    return Math.min(MAX_DEPOSITS, state.eth1Data.depositCount - state.eth1DepositIndex);
+    return Math.min(MAX_DEPOSITS, eth1DataToUse.depositCount - state.eth1DepositIndex);
   }
 }

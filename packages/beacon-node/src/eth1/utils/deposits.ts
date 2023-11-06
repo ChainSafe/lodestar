@@ -22,7 +22,7 @@ export async function getDeposits<T>(
     throw new Eth1Error({code: Eth1ErrorCode.DEPOSIT_INDEX_TOO_HIGH, depositIndex, depositCount});
   }
 
-  const depositsLen = getEth1DepositCount(state);
+  const depositsLen = getEth1DepositCount(state, eth1Data);
 
   if (depositsLen === 0) {
     return []; // If depositsLen === 0, we can return early since no deposit with be returned from depositsGetter

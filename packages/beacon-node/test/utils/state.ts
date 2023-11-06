@@ -62,6 +62,7 @@ export function generateState(
       : generateValidators(numValidators, validatorOpts));
 
   state.genesisTime = Math.floor(Date.now() / 1000);
+  state.slot = stateSlot;
   state.fork.previousVersion = config.GENESIS_FORK_VERSION;
   state.fork.currentVersion = config.GENESIS_FORK_VERSION;
   state.latestBlockHeader.bodyRoot = ssz.phase0.BeaconBlockBody.hashTreeRoot(ssz.phase0.BeaconBlockBody.defaultValue());
@@ -93,6 +94,7 @@ export function generateState(
   if (forkSeq >= ForkSeq.eip6110) {
     const stateEIP6110 = state as eip6110.BeaconState;
     stateEIP6110.depositReceiptsStartIndex = 2023n;
+    stateEIP6110.latestExecutionPayloadHeader = ssz.eip6110.ExecutionPayloadHeader.defaultValue();
   }
 
   return config.getForkTypes(stateSlot).BeaconState.toViewDU(state);

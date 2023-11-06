@@ -87,7 +87,7 @@ describe("eth1 / util / deposits", function () {
         depositCount: 2022,
         eth1DepositIndex: 2018,
         depositIndexes: Array.from({length: 2022}, (_, i) => i),
-        expectedReturnedIndexes: [2018, 2019, 2020, 2021, 2022],
+        expectedReturnedIndexes: [2018, 2019, 2020, 2021],
         post6110: true,
       },
       {
@@ -100,15 +100,16 @@ describe("eth1 / util / deposits", function () {
       },
     ];
 
-    const post6110Slot = minimalChainConfig.EIP6110_FORK_EPOCH * SLOTS_PER_EPOCH + 1;
+    const post6110Config = createChainForkConfig({ALTAIR_FORK_EPOCH: 1, BELLATRIX_FORK_EPOCH: 2, CAPELLA_FORK_EPOCH: 3, DENEB_FORK_EPOCH: 4, EIP6110_FORK_EPOCH: 5})
+    const post6110Slot = post6110Config.EIP6110_FORK_EPOCH * SLOTS_PER_EPOCH + 1;
 
     for (const testCase of testCases) {
       const {id, depositIndexes, eth1DepositIndex, depositCount, expectedReturnedIndexes, error, post6110} = testCase;
       it(id, async function () {
         const state = post6110
-          ? generateState({slot: post6110Slot, eth1DepositIndex})
+          ? generateState({slot: post6110Slot, eth1DepositIndex}, post6110Config)
           : generateState({eth1DepositIndex});
-        const cachedState = createCachedBeaconStateTest(state, createChainForkConfig({}));
+        const cachedState = createCachedBeaconStateTest(state, post6110 ? post6110Config : createChainForkConfig({}));
         const eth1Data = generateEth1Data(depositCount);
         const deposits = depositIndexes.map((index) => generateDepositEvent(index));
         const depositsGetter: DepositGetter<phase0.DepositEvent> = async (indexRange) =>
