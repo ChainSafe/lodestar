@@ -1,5 +1,4 @@
-import {Level} from "level";
-import type {ClassicLevel} from "classic-level";
+import {ClassicLevel} from "classic-level";
 import {Logger} from "@lodestar/utils";
 import {DbReqOpts, DatabaseController, DatabaseOptions, FilterOptions, KeyValue} from "./interface.js";
 import {LevelDbControllerMetrics} from "./metrics.js";
@@ -12,7 +11,7 @@ enum Status {
 type LevelNodeJS = ClassicLevel<Uint8Array, Uint8Array>;
 
 export interface LevelDBOptions extends DatabaseOptions {
-  db?: Level<Uint8Array, Uint8Array>;
+  db?: ClassicLevel<Uint8Array, Uint8Array>;
 }
 
 export type LevelDbControllerModules = {
@@ -35,7 +34,7 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
 
   constructor(
     private readonly logger: Logger,
-    private readonly db: Level<Uint8Array, Uint8Array>,
+    private readonly db: ClassicLevel<Uint8Array, Uint8Array>,
     private metrics: LevelDbControllerMetrics | null
   ) {
     this.metrics = metrics ?? null;
@@ -46,7 +45,8 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
   }
 
   static async create(opts: LevelDBOptions, {metrics, logger}: LevelDbControllerModules): Promise<LevelDbController> {
-    const db = opts.db || new Level(opts.name || "beaconchain", {keyEncoding: "binary", valueEncoding: "binary"});
+    const db =
+      opts.db || new ClassicLevel(opts.name || "beaconchain", {keyEncoding: "binary", valueEncoding: "binary", allowMultiThreading: true});
 
     try {
       await db.open();
