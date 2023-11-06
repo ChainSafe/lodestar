@@ -584,7 +584,6 @@ export class EpochCache {
     // ```
     this.epoch = computeEpochAtSlot(state.slot);
     this.syncPeriod = computeSyncPeriodAtEpoch(this.epoch);
-
   }
 
   beforeEpochTransition(): void {
@@ -833,7 +832,6 @@ export class EpochCache {
 
     this.pubkey2index.set(pubkey, index);
     this.index2pubkey[index] = bls.PublicKey.fromHex(pubkey);
-
   }
 
   /**

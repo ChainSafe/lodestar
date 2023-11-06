@@ -3,6 +3,7 @@ import {phase0, ssz} from "@lodestar/types";
 import {MAX_DEPOSITS, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {verifyMerkleBranch} from "@lodestar/utils";
 import {createChainForkConfig} from "@lodestar/config";
+import {minimalChainConfig} from "@lodestar/config/presets";
 import {filterBy} from "../../../utils/db.js";
 import {Eth1ErrorCode} from "../../../../src/eth1/errors.js";
 import {generateState} from "../../../utils/state.js";
@@ -10,7 +11,6 @@ import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {getDeposits, getDepositsWithProofs, DepositGetter} from "../../../../src/eth1/utils/deposits.js";
 import {DepositTree} from "../../../../src/db/repositories/depositDataRoot.js";
 import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState.js";
-import { minimalChainConfig } from "@lodestar/config/presets";
 
 describe("eth1 / util / deposits", function () {
   describe("getDeposits", () => {
@@ -100,7 +100,13 @@ describe("eth1 / util / deposits", function () {
       },
     ];
 
-    const post6110Config = createChainForkConfig({ALTAIR_FORK_EPOCH: 1, BELLATRIX_FORK_EPOCH: 2, CAPELLA_FORK_EPOCH: 3, DENEB_FORK_EPOCH: 4, EIP6110_FORK_EPOCH: 5})
+    const post6110Config = createChainForkConfig({
+      ALTAIR_FORK_EPOCH: 1,
+      BELLATRIX_FORK_EPOCH: 2,
+      CAPELLA_FORK_EPOCH: 3,
+      DENEB_FORK_EPOCH: 4,
+      EIP6110_FORK_EPOCH: 5,
+    });
     const post6110Slot = post6110Config.EIP6110_FORK_EPOCH * SLOTS_PER_EPOCH + 1;
 
     for (const testCase of testCases) {
