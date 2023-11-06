@@ -46,7 +46,12 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
 
   static async create(opts: LevelDBOptions, {metrics, logger}: LevelDbControllerModules): Promise<LevelDbController> {
     const db =
-      opts.db || new ClassicLevel(opts.name || "beaconchain", {keyEncoding: "binary", valueEncoding: "binary", allowMultiThreading: true});
+      opts.db ||
+      new ClassicLevel(opts.name || "beaconchain", {
+        keyEncoding: "binary",
+        valueEncoding: "binary",
+        allowMultiThreading: true,
+      });
 
     try {
       await db.open();
