@@ -61,7 +61,9 @@
     "check-types": "tsc",
     "lint": "eslint --color --ext .ts src/ test/",
     "lint:fix": "yarn run lint --fix",
-    "test:unit": "mocha 'test/**/*.test.ts'",
+    "test:unit": "yarn test:constants:minimal && yarn test:constants:mainnet && mocha 'test/unit/**/*.test.ts'",
+    "test:constants:minimal": "LODESTAR_PRESET=minimal mocha 'test/constants/**/*.test.ts'",
+    "test:constants:mainnet": "LODESTAR_PRESET=mainnet mocha 'test/constants/**/*.test.ts'",
     "test:browsers": "yarn karma start karma.config.cjs",
     "check-readme": "typescript-docs-verifier"
   },

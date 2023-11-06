@@ -72,6 +72,7 @@ describe("SeenGossipBlockInput", () => {
       ],
     ],
   ];
+
   // lets start from a random slot to build cases
   let slot = 7456;
   for (const testCase of testCases) {
@@ -86,10 +87,15 @@ describe("SeenGossipBlockInput", () => {
         ssz.deneb.KZGCommitment.defaultValue()
       );
 
-      const blockRoot = ssz.deneb.BeaconBlock.hashTreeRoot(signedBlock.message);
-      const signedBlobSidecars = Array.from({length: numBlobs}, (_val, index) => {
-        const message = {...ssz.deneb.BlobSidecar.defaultValue(), index, blockRoot, slot};
-        return {message, signature: ssz.BLSSignature.defaultValue()};
+      // create a dummy signed block header with matching body root
+      const bodyRoot = ssz.deneb.BeaconBlockBody.hashTreeRoot(signedBlock.message.body);
+      const signedBlockHeader = ssz.phase0.SignedBeaconBlockHeader.defaultValue();
+      signedBlockHeader.message.slot = signedBlock.message.slot;
+      signedBlockHeader.message.bodyRoot = bodyRoot;
+
+      const blobSidecars = Array.from({length: numBlobs}, (_val, index) => {
+        const message = {...ssz.deneb.BlobSidecar.defaultValue(), signedBlockHeader, index};
+        return message;
       });
 
       for (const testEvent of events) {
@@ -114,11 +120,12 @@ describe("SeenGossipBlockInput", () => {
             }
           } else {
             const index = parseInt(inputEvent.split("blob")[1] ?? "0");
-            const signedBlob = signedBlobSidecars[index];
-            expect(signedBlob).not.equal(undefined);
+            const blobSidecar = blobSidecars[index];
+            expect(blobSidecar).not.equal(undefined);
+
             const blockInputRes = seenGossipBlockInput.getGossipBlockInput(config, {
               type: GossipedInputType.blob,
-              signedBlob,
+              blobSidecar,
               blobBytes: null,
             });
 

@@ -88,7 +88,6 @@ import {CheckpointStateCache} from "./stateCache/stateContextCheckpointsCache.js
  * allow some margin if the node overloads.
  */
 const DEFAULT_MAX_CACHED_PRODUCED_ROOTS = 4;
-const DEFAULT_MAX_CACHED_BLOB_SIDECARS = 4;
 
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: UintNum64;
@@ -138,8 +137,7 @@ export class BeaconChain implements IBeaconChain {
   readonly checkpointBalancesCache: CheckpointBalancesCache;
   readonly shufflingCache: ShufflingCache;
   /** Map keyed by executionPayload.blockHash of the block for those blobs */
-  readonly producedBlobSidecarsCache = new Map<BlockHash, deneb.BlobSidecars>();
-  readonly producedBlindedBlobSidecarsCache = new Map<BlockHash, deneb.BlindedBlobSidecars>();
+  readonly producedContentsCache = new Map<BlockHash, deneb.Contents>();
 
   // Cache payload from the local execution so that produceBlindedBlock or produceBlockV3 and
   // send and get signed/published blinded versions which beacon can assemble into full before
@@ -554,32 +552,9 @@ export class BeaconChain implements IBeaconChain {
     // publishing the blinded block's full version
     if (blobs.type === BlobsResultType.produced) {
       // body is of full type here
-      const blockHash = blobs.blockHash;
-      const blobSidecars = blobs.blobSidecars.map((blobSidecar) => ({
-        ...blobSidecar,
-        blockRoot,
-        slot,
-        blockParentRoot: parentBlockRoot,
-        proposerIndex,
-      }));
-
-      this.producedBlobSidecarsCache.set(blockHash, blobSidecars);
-      this.metrics?.blockProductionCaches.producedBlobSidecarsCache.set(this.producedBlobSidecarsCache.size);
-    } else if (blobs.type === BlobsResultType.blinded) {
-      // body is of blinded type here
-      const blockHash = blobs.blockHash;
-      const blindedBlobSidecars = blobs.blobSidecars.map((blindedBlobSidecar) => ({
-        ...blindedBlobSidecar,
-        blockRoot,
-        slot,
-        blockParentRoot: parentBlockRoot,
-        proposerIndex,
-      }));
-
-      this.producedBlindedBlobSidecarsCache.set(blockHash, blindedBlobSidecars);
-      this.metrics?.blockProductionCaches.producedBlindedBlobSidecarsCache.set(
-        this.producedBlindedBlobSidecarsCache.size
-      );
+      const {blockHash, contents} = blobs;
+      this.producedContentsCache.set(blockHash, contents);
+      this.metrics?.blockProductionCaches.producedContentsCache.set(this.producedContentsCache.size);
     }
 
     return {block, executionPayloadValue, consensusBlockValue: proposerReward};
@@ -595,14 +570,14 @@ export class BeaconChain implements IBeaconChain {
    *       kzg_aggregated_proof=compute_proof_from_blobs(blobs),
    *   )
    */
-  getBlobSidecars(beaconBlock: deneb.BeaconBlock): deneb.BlobSidecars {
+  getContents(beaconBlock: deneb.BeaconBlock): deneb.Contents {
     const blockHash = toHex(beaconBlock.body.executionPayload.blockHash);
-    const blobSidecars = this.producedBlobSidecarsCache.get(blockHash);
-    if (!blobSidecars) {
-      throw Error(`No blobSidecars for executionPayload.blockHash ${blockHash}`);
+    const contents = this.producedContentsCache.get(blockHash);
+    if (!contents) {
+      throw Error(`No contents for executionPayload.blockHash ${blockHash}`);
     }
 
-    return blobSidecars;
+    return contents;
   }
 
   async processBlock(block: BlockInput, opts?: ImportBlockOpts): Promise<void> {
@@ -884,19 +859,8 @@ export class BeaconChain implements IBeaconChain {
     this.metrics?.blockProductionCaches.producedBlindedBlockRoot.set(this.producedBlindedBlockRoot.size);
 
     if (this.config.getForkSeq(slot) >= ForkSeq.deneb) {
-      pruneSetToMax(
-        this.producedBlobSidecarsCache,
-        this.opts.maxCachedBlobSidecars ?? DEFAULT_MAX_CACHED_BLOB_SIDECARS
-      );
-      this.metrics?.blockProductionCaches.producedBlobSidecarsCache.set(this.producedBlobSidecarsCache.size);
-
-      pruneSetToMax(
-        this.producedBlindedBlobSidecarsCache,
-        this.opts.maxCachedBlobSidecars ?? DEFAULT_MAX_CACHED_BLOB_SIDECARS
-      );
-      this.metrics?.blockProductionCaches.producedBlindedBlobSidecarsCache.set(
-        this.producedBlindedBlobSidecarsCache.size
-      );
+      pruneSetToMax(this.producedContentsCache, this.opts.maxCachedProducedRoots ?? DEFAULT_MAX_CACHED_PRODUCED_ROOTS);
+      this.metrics?.blockProductionCaches.producedContentsCache.set(this.producedContentsCache.size);
     }
 
     const metrics = this.metrics;

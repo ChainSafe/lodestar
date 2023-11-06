@@ -8,7 +8,7 @@ import {loadConfigYaml} from "../yaml.js";
 // Not e2e, but slow. Run with e2e tests
 
 /** https://github.com/ethereum/consensus-specs/releases */
-const specConfigCommit = "v1.4.0-beta.2";
+const specConfigCommit = "v1.4.0-beta.5";
 
 describe("Ensure config is synced", function () {
   vi.setConfig({testTimeout: 60 * 1000});

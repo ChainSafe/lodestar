@@ -1,5 +1,5 @@
-import {DOMAIN_BEACON_PROPOSER, DOMAIN_BLOB_SIDECAR} from "@lodestar/params";
-import {allForks, isBlindedBeaconBlock, isBlindedBlobSidecar, ssz} from "@lodestar/types";
+import {DOMAIN_BEACON_PROPOSER} from "@lodestar/params";
+import {allForks, isBlindedBeaconBlock, phase0, ssz} from "@lodestar/types";
 import {computeSigningRoot} from "../util/index.js";
 import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../util/signatureSets.js";
 import {CachedBeaconStateAllForks} from "../types.js";
@@ -17,7 +17,7 @@ export function getBlockProposerSignatureSet(
   signedBlock: allForks.FullOrBlindedSignedBeaconBlock
 ): ISignatureSet {
   const {config, epochCtx} = state;
-  const domain = state.config.getDomain(state.slot, DOMAIN_BEACON_PROPOSER, signedBlock.message.slot);
+  const domain = config.getDomain(state.slot, DOMAIN_BEACON_PROPOSER, signedBlock.message.slot);
 
   const blockType = isBlindedBeaconBlock(signedBlock.message)
     ? config.getBlindedForkTypes(signedBlock.message.slot).BeaconBlock
@@ -31,19 +31,17 @@ export function getBlockProposerSignatureSet(
   };
 }
 
-export function getBlobProposerSignatureSet(
+export function getBlockHeaderProposerSignatureSet(
   state: CachedBeaconStateAllForks,
-  signedBlob: allForks.FullOrBlindedSignedBlobSidecar
+  signedBlockHeader: phase0.SignedBeaconBlockHeader
 ): ISignatureSet {
   const {config, epochCtx} = state;
-  const domain = config.getDomain(state.slot, DOMAIN_BLOB_SIDECAR, signedBlob.message.slot);
-
-  const blockType = isBlindedBlobSidecar(signedBlob.message) ? ssz.deneb.BlindedBlobSidecar : ssz.deneb.BlobSidecar;
+  const domain = config.getDomain(state.slot, DOMAIN_BEACON_PROPOSER, signedBlockHeader.message.slot);
 
   return {
     type: SignatureSetType.single,
-    pubkey: epochCtx.index2pubkey[signedBlob.message.proposerIndex],
-    signingRoot: computeSigningRoot(blockType, signedBlob.message, domain),
-    signature: signedBlob.signature,
+    pubkey: epochCtx.index2pubkey[signedBlockHeader.message.proposerIndex],
+    signingRoot: computeSigningRoot(ssz.phase0.BeaconBlockHeader, signedBlockHeader.message, domain),
+    signature: signedBlockHeader.signature,
   };
 }

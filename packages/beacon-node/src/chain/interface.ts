@@ -109,9 +109,8 @@ export interface IBeaconChain {
 
   readonly beaconProposerCache: BeaconProposerCache;
   readonly checkpointBalancesCache: CheckpointBalancesCache;
-  readonly producedBlobSidecarsCache: Map<BlockHash, deneb.BlobSidecars>;
+  readonly producedContentsCache: Map<BlockHash, deneb.Contents>;
   readonly producedBlockRoot: Map<RootHex, allForks.ExecutionPayload | null>;
-  readonly producedBlindedBlobSidecarsCache: Map<BlockHash, deneb.BlindedBlobSidecars>;
   readonly shufflingCache: ShufflingCache;
   readonly producedBlindedBlockRoot: Set<RootHex>;
   readonly opts: IChainOptions;
@@ -153,7 +152,7 @@ export interface IBeaconChain {
    */
   getBlockByRoot(root: RootHex): Promise<{block: allForks.SignedBeaconBlock; executionOptimistic: boolean} | null>;
 
-  getBlobSidecars(beaconBlock: deneb.BeaconBlock): deneb.BlobSidecars;
+  getContents(beaconBlock: deneb.BeaconBlock): deneb.Contents;
 
   produceBlock(
     blockAttributes: BlockAttributes

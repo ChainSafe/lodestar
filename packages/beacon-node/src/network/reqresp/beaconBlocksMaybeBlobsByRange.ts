@@ -78,7 +78,9 @@ export function matchBlockWithBlobs(
       const blobSidecars: deneb.BlobSidecar[] = [];
 
       let blobSidecar: deneb.BlobSidecar;
-      while ((blobSidecar = allBlobSidecars[blobSideCarIndex])?.slot === block.data.message.slot) {
+      while (
+        (blobSidecar = allBlobSidecars[blobSideCarIndex])?.signedBlockHeader.message.slot === block.data.message.slot
+      ) {
         blobSidecars.push(blobSidecar);
         lastMatchedSlot = block.data.message.slot;
         blobSideCarIndex++;
@@ -111,14 +113,14 @@ export function matchBlockWithBlobs(
   if (
     allBlobSidecars[blobSideCarIndex] !== undefined &&
     // If there are no blobs, the blobs request can give 1 block outside the requested range
-    allBlobSidecars[blobSideCarIndex].slot <= endSlot
+    allBlobSidecars[blobSideCarIndex].signedBlockHeader.message.slot <= endSlot
   ) {
     throw Error(
       `Unmatched blobSidecars, blocks=${allBlocks.length}, blobs=${
         allBlobSidecars.length
       } lastMatchedSlot=${lastMatchedSlot}, pending blobSidecars slots=${allBlobSidecars
         .slice(blobSideCarIndex)
-        .map((blb) => blb.slot)
+        .map((blb) => blb.signedBlockHeader.message.slot)
         .join(",")}`
     );
   }

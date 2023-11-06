@@ -1,5 +1,5 @@
 import {ContainerType, fromHexString, toHexString, Type} from "@chainsafe/ssz";
-import {ForkName, ForkBlobs, isForkBlobs, isForkExecution, ForkPreBlobs} from "@lodestar/params";
+import {ForkName, ForkBlobs, isForkBlobs, isForkExecution, ForkPreBlobs, ForkExecution} from "@lodestar/params";
 import {
   allForks,
   altair,
@@ -37,7 +37,7 @@ import {
   TypeJson,
 } from "../../utils/index.js";
 import {fromU64Str, fromGraffitiHex, toU64Str, U64Str, toGraffitiHex} from "../../utils/serdes.js";
-import {allForksBlockContentsResSerializer, allForksBlindedBlockContentsResSerializer} from "../../utils/routes.js";
+import {allForksBlockContentsResSerializer} from "../../utils/routes.js";
 import {ExecutionOptimistic} from "./beacon/block.js";
 
 export enum BuilderSelection {
@@ -59,14 +59,14 @@ export type ProduceBlockOrContentsRes = {executionPayloadValue: Wei; consensusBl
   | {data: allForks.BeaconBlock; version: ForkPreBlobs}
   | {data: allForks.BlockContents; version: ForkBlobs}
 );
-export type ProduceBlindedBlockOrContentsRes = {executionPayloadValue: Wei; consensusBlockValue: Gwei} & (
-  | {data: allForks.BlindedBeaconBlock; version: ForkPreBlobs}
-  | {data: allForks.BlindedBlockContents; version: ForkBlobs}
-);
+export type ProduceBlindedBlockRes = {executionPayloadValue: Wei; consensusBlockValue: Gwei} & {
+  data: allForks.BlindedBeaconBlock;
+  version: ForkExecution;
+};
 
 export type ProduceFullOrBlindedBlockOrContentsRes =
   | (ProduceBlockOrContentsRes & {executionPayloadBlinded: false})
-  | (ProduceBlindedBlockOrContentsRes & {executionPayloadBlinded: true});
+  | (ProduceBlindedBlockRes & {executionPayloadBlinded: true});
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -287,7 +287,7 @@ export type Api = {
   ): Promise<
     ApiClientResponse<
       {
-        [HttpStatusCode.OK]: ProduceBlindedBlockOrContentsRes;
+        [HttpStatusCode.OK]: ProduceBlindedBlockRes;
       },
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
     >
@@ -721,13 +721,11 @@ export function getReturnTypes(): ReturnTypes<Api> {
       isForkBlobs(fork) ? allForksBlockContentsResSerializer(fork) : ssz[fork].BeaconBlock
     )
   ) as TypeJson<ProduceBlockOrContentsRes>;
-  const produceBlindedBlockOrContents = WithBlockValues(
-    WithVersion<allForks.BlindedBeaconBlockOrContents>((fork: ForkName) =>
-      isForkBlobs(fork)
-        ? allForksBlindedBlockContentsResSerializer(fork)
-        : ssz.allForksBlinded[isForkExecution(fork) ? fork : ForkName.bellatrix].BeaconBlock
+  const produceBlindedBlock = WithBlockValues(
+    WithVersion<allForks.BlindedBeaconBlock>(
+      (fork: ForkName) => ssz.allForksBlinded[isForkExecution(fork) ? fork : ForkName.bellatrix].BeaconBlock
     )
-  ) as TypeJson<ProduceBlindedBlockOrContentsRes>;
+  ) as TypeJson<ProduceBlindedBlockRes>;
 
   return {
     getAttesterDuties: WithDependentRootExecutionOptimistic(ArrayOf(AttesterDuty)),
@@ -741,7 +739,7 @@ export function getReturnTypes(): ReturnTypes<Api> {
         if (data.executionPayloadBlinded) {
           return {
             execution_payload_blinded: true,
-            ...(produceBlindedBlockOrContents.toJson(data) as Record<string, unknown>),
+            ...(produceBlindedBlock.toJson(data) as Record<string, unknown>),
           };
         } else {
           return {
@@ -752,13 +750,13 @@ export function getReturnTypes(): ReturnTypes<Api> {
       },
       fromJson: (data) => {
         if ((data as {execution_payload_blinded: true}).execution_payload_blinded) {
-          return {executionPayloadBlinded: true, ...produceBlindedBlockOrContents.fromJson(data)};
+          return {executionPayloadBlinded: true, ...produceBlindedBlock.fromJson(data)};
         } else {
           return {executionPayloadBlinded: false, ...produceBlockOrContents.fromJson(data)};
         }
       },
     },
-    produceBlindedBlock: produceBlindedBlockOrContents,
+    produceBlindedBlock,
 
     produceAttestationData: ContainerData(ssz.phase0.AttestationData),
     produceSyncCommitteeContribution: ContainerData(ssz.altair.SyncCommitteeContribution),
