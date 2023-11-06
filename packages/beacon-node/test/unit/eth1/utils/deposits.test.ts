@@ -2,7 +2,6 @@ import {describe, it, expect} from "vitest";
 import {phase0, ssz} from "@lodestar/types";
 import {MAX_DEPOSITS, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {verifyMerkleBranch} from "@lodestar/utils";
-import {minimalChainConfig} from "@lodestar/config/lib/presets.js";
 import {createChainForkConfig} from "@lodestar/config";
 import {filterBy} from "../../../utils/db.js";
 import {Eth1ErrorCode} from "../../../../src/eth1/errors.js";
@@ -11,6 +10,7 @@ import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {getDeposits, getDepositsWithProofs, DepositGetter} from "../../../../src/eth1/utils/deposits.js";
 import {DepositTree} from "../../../../src/db/repositories/depositDataRoot.js";
 import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState.js";
+import { minimalChainConfig } from "@lodestar/config/presets";
 
 describe("eth1 / util / deposits", function () {
   describe("getDeposits", () => {
