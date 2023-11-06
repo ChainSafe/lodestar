@@ -1,7 +1,8 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {deneb, Root, Slot} from "@lodestar/types";
-import {toHex} from "@lodestar/utils";
-import {getBlobProposerSignatureSet, computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {deneb, Root, Slot, ssz} from "@lodestar/types";
+import {toHex, verifyMerkleBranch} from "@lodestar/utils";
+import {computeStartSlotAtEpoch, getBlockHeaderProposerSignatureSet} from "@lodestar/state-transition";
+import {KZG_COMMITMENT_INCLUSION_PROOF_DEPTH, KZG_COMMITMENT_SUBTREE_INDEX0} from "@lodestar/params";
 
 import {BlobSidecarGossipError, BlobSidecarErrorCode} from "../errors/blobSidecarError.js";
 import {GossipAction} from "../errors/gossipValidation.js";
@@ -13,11 +14,10 @@ import {RegenCaller} from "../regen/index.js";
 export async function validateGossipBlobSidecar(
   config: ChainForkConfig,
   chain: IBeaconChain,
-  signedBlob: deneb.SignedBlobSidecar,
+  blobSidecar: deneb.BlobSidecar,
   gossipIndex: number
 ): Promise<void> {
-  const blobSidecar = signedBlob.message;
-  const blobSlot = blobSidecar.slot;
+  const blobSlot = blobSidecar.signedBlockHeader.message.slot;
 
   // [REJECT] The sidecar is for the correct topic -- i.e. sidecar.index matches the topic {index}.
   if (blobSidecar.index !== gossipIndex) {
@@ -58,9 +58,10 @@ export async function validateGossipBlobSidecar(
   // reboot if the `observed_block_producers` cache is empty. In that case, without this
   // check, we will load the parent and state from disk only to find out later that we
   // already know this block.
-  const blockRoot = toHex(blobSidecar.blockRoot);
-  if (chain.forkChoice.getBlockHex(blockRoot) !== null) {
-    throw new BlobSidecarGossipError(GossipAction.IGNORE, {code: BlobSidecarErrorCode.ALREADY_KNOWN, root: blockRoot});
+  const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blobSidecar.signedBlockHeader.message);
+  const blockHex = toHex(blockRoot);
+  if (chain.forkChoice.getBlockHex(blockHex) !== null) {
+    throw new BlobSidecarGossipError(GossipAction.IGNORE, {code: BlobSidecarErrorCode.ALREADY_KNOWN, root: blockHex});
   }
 
   // TODO: freetheblobs - check for badblock
@@ -69,7 +70,7 @@ export async function validateGossipBlobSidecar(
   // _[IGNORE]_ The blob's block's parent (defined by `sidecar.block_parent_root`) has been seen (via both
   // gossip and non-gossip sources) (a client MAY queue blocks for processing once the parent block is
   // retrieved).
-  const parentRoot = toHex(blobSidecar.blockParentRoot);
+  const parentRoot = toHex(blobSidecar.signedBlockHeader.message.parentRoot);
   const parentBlock = chain.forkChoice.getBlockHex(parentRoot);
   if (parentBlock === null) {
     // If fork choice does *not* consider the parent to be a descendant of the finalized block,
@@ -97,22 +98,29 @@ export async function validateGossipBlobSidecar(
   // getBlockSlotState also checks for whether the current finalized checkpoint is an ancestor of the block.
   // As a result, we throw an IGNORE (whereas the spec says we should REJECT for this scenario).
   // this is something we should change this in the future to make the code airtight to the spec.
-  // _[IGNORE]_ The blob's block's parent (defined by `sidecar.block_parent_root`) has been seen (via both
-  // gossip and non-gossip sources)  // _[REJECT]_ The blob's block's parent (defined by `sidecar.block_parent_root`) passes validation
-  // The above validation will happen while importing
+  // [IGNORE] The block's parent (defined by block.parent_root) has been seen (via both gossip and non-gossip sources) (a client MAY queue blocks for processing once the parent block is retrieved).
+  // [REJECT] The block's parent (defined by block.parent_root) passes validation.
   const blockState = await chain.regen
-    .getBlockSlotState(parentRoot, blobSlot, {dontTransferCache: true}, RegenCaller.validateGossipBlob)
+    .getBlockSlotState(parentRoot, blobSlot, {dontTransferCache: true}, RegenCaller.validateGossipBlock)
     .catch(() => {
       throw new BlobSidecarGossipError(GossipAction.IGNORE, {code: BlobSidecarErrorCode.PARENT_UNKNOWN, parentRoot});
     });
 
-  // _[REJECT]_ The proposer signature, `signed_blob_sidecar.signature`, is valid with respect to the
-  // `sidecar.proposer_index` pubkey.
-  const signatureSet = getBlobProposerSignatureSet(blockState, signedBlob);
+  // [REJECT] The proposer signature, signed_beacon_block.signature, is valid with respect to the proposer_index pubkey.
+  const signatureSet = getBlockHeaderProposerSignatureSet(blockState, blobSidecar.signedBlockHeader);
   // Don't batch so verification is not delayed
   if (!(await chain.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: true}))) {
     throw new BlobSidecarGossipError(GossipAction.REJECT, {
       code: BlobSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID,
+    });
+  }
+
+  // verify if the blob inclusion proof is correct
+  try {
+    validateInclusionProof(config, blobSidecar);
+  } catch (_e) {
+    throw new BlobSidecarGossipError(GossipAction.REJECT, {
+      code: BlobSidecarErrorCode.INCLUSION_PROOF_INVALID,
     });
   }
 
@@ -127,7 +135,7 @@ export async function validateGossipBlobSidecar(
   // If the `proposer_index` cannot immediately be verified against the expected shuffling, the sidecar
   // MAY be queued for later processing while proposers for the block's branch are calculated -- in such
   // a case _do not_ `REJECT`, instead `IGNORE` this message.
-  const proposerIndex = blobSidecar.proposerIndex;
+  const proposerIndex = blobSidecar.signedBlockHeader.message.proposerIndex;
   if (blockState.epochCtx.getBeaconProposer(blobSlot) !== proposerIndex) {
     throw new BlobSidecarGossipError(GossipAction.REJECT, {
       code: BlobSidecarErrorCode.INCORRECT_PROPOSER,
@@ -168,16 +176,18 @@ export function validateBlobSidecars(
     const proofs = [];
     for (let index = 0; index < blobSidecars.length; index++) {
       const blobSidecar = blobSidecars[index];
+      const blobBlockHeader = blobSidecar.signedBlockHeader.message;
+      const blobBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blobBlockHeader);
       if (
-        blobSidecar.slot !== blockSlot ||
-        !byteArrayEquals(blobSidecar.blockRoot, blockRoot) ||
+        blobBlockHeader.slot !== blockSlot ||
+        !byteArrayEquals(blobBlockRoot, blockRoot) ||
         blobSidecar.index !== index ||
         !byteArrayEquals(expectedKzgCommitments[index], blobSidecar.kzgCommitment)
       ) {
         throw new Error(
-          `Invalid blob with slot=${blobSidecar.slot} blockRoot=${toHex(blockRoot)} index=${
+          `Invalid blob with slot=${blobBlockHeader.slot} blobBlockRoot=${toHex(blobBlockRoot)} index=${
             blobSidecar.index
-          } for the block root=${toHex(blockRoot)} slot=${blockSlot} index=${index}`
+          } for the block blockRoot=${toHex(blockRoot)} slot=${blockSlot} index=${index}`
         );
       }
       blobs.push(blobSidecar.blob);
@@ -205,5 +215,19 @@ function validateBlobsAndProofs(
   }
   if (!isProofValid) {
     throw Error("Invalid verifyBlobKzgProofBatch");
+  }
+}
+
+function validateInclusionProof(config: ChainForkConfig, blobSidecar: deneb.BlobSidecar): void {
+  if (
+    !verifyMerkleBranch(
+      ssz.deneb.KZGCommitment.hashTreeRoot(blobSidecar.kzgCommitment),
+      blobSidecar.kzgCommitmentInclusionProof,
+      KZG_COMMITMENT_INCLUSION_PROOF_DEPTH,
+      KZG_COMMITMENT_SUBTREE_INDEX0 + blobSidecar.index,
+      blobSidecar.signedBlockHeader.message.bodyRoot
+    )
+  ) {
+    throw Error("Invalid next sync committee merkle branch");
   }
 }

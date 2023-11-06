@@ -35,10 +35,7 @@ import {PayloadId, IExecutionEngine, IExecutionBuilder, PayloadAttributes} from 
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
 import {numToQuantity} from "../../eth1/provider/utils.js";
-import {
-  validateBlobsAndKzgCommitments,
-  validateBlindedBlobsAndKzgCommitments,
-} from "./validateBlobsAndKzgCommitments.js";
+import {validateBlobsAndKzgCommitments} from "./validateBlobsAndKzgCommitments.js";
 
 // Time to provide the EL to generate a payload from new payload id
 const PAYLOAD_GENERATION_TIME_MS = 500;
@@ -74,8 +71,8 @@ export enum BlobsResultType {
 
 export type BlobsResult =
   | {type: BlobsResultType.preDeneb}
-  | {type: BlobsResultType.produced; blobSidecars: deneb.BlobSidecars; blockHash: RootHex}
-  | {type: BlobsResultType.blinded; blobSidecars: deneb.BlindedBlobSidecars; blockHash: RootHex};
+  | {type: BlobsResultType.produced; contents: deneb.Contents; blockHash: RootHex}
+  | {type: BlobsResultType.blinded};
 
 export async function produceBlockBody<T extends BlockType>(
   this: BeaconChain,
@@ -231,35 +228,14 @@ export async function produceBlockBody<T extends BlockType>(
       });
 
       if (ForkSeq[fork] >= ForkSeq.deneb) {
-        const {blindedBlobsBundle} = builderRes;
-        if (blindedBlobsBundle === undefined) {
-          throw Error(`Invalid builder getHeader response for fork=${fork}, missing blindedBlobsBundle`);
+        const {blobKzgCommitments} = builderRes;
+        if (blobKzgCommitments === undefined) {
+          throw Error(`Invalid builder getHeader response for fork=${fork}, missing blobKzgCommitments`);
         }
 
-        // validate blindedBlobsBundle
-        if (this.opts.sanityCheckExecutionEngineBlobs) {
-          validateBlindedBlobsAndKzgCommitments(builderRes.header, blindedBlobsBundle);
-        }
-
-        (blockBody as deneb.BlindedBeaconBlockBody).blobKzgCommitments = blindedBlobsBundle.commitments;
-        const blockHash = toHex(builderRes.header.blockHash);
-
-        const blobSidecars = Array.from({length: blindedBlobsBundle.blobRoots.length}, (_v, index) => {
-          const blobRoot = blindedBlobsBundle.blobRoots[index];
-          const commitment = blindedBlobsBundle.commitments[index];
-          const proof = blindedBlobsBundle.proofs[index];
-          const blindedBlobSidecar = {
-            index,
-            blobRoot,
-            kzgProof: proof,
-            kzgCommitment: commitment,
-          };
-          // Other fields will be injected after postState is calculated
-          return blindedBlobSidecar;
-        }) as deneb.BlindedBlobSidecars;
-        blobsResult = {type: BlobsResultType.blinded, blobSidecars, blockHash};
-
-        Object.assign(logMeta, {blobs: blindedBlobsBundle.commitments.length});
+        (blockBody as deneb.BlindedBeaconBlockBody).blobKzgCommitments = blobKzgCommitments;
+        blobsResult = {type: BlobsResultType.blinded};
+        Object.assign(logMeta, {blobs: blobKzgCommitments.length});
       } else {
         blobsResult = {type: BlobsResultType.preDeneb};
       }
@@ -332,23 +308,10 @@ export async function produceBlockBody<T extends BlockType>(
 
             (blockBody as deneb.BeaconBlockBody).blobKzgCommitments = blobsBundle.commitments;
             const blockHash = toHex(executionPayload.blockHash);
+            const contents = {kzgProofs: blobsBundle.proofs, blobs: blobsBundle.blobs};
+            blobsResult = {type: BlobsResultType.produced, contents, blockHash};
 
-            const blobSidecars = Array.from({length: blobsBundle.blobs.length}, (_v, index) => {
-              const blob = blobsBundle.blobs[index];
-              const commitment = blobsBundle.commitments[index];
-              const proof = blobsBundle.proofs[index];
-              const blobSidecar = {
-                index,
-                blob,
-                kzgProof: proof,
-                kzgCommitment: commitment,
-              };
-              // Other fields will be injected after postState is calculated
-              return blobSidecar;
-            }) as deneb.BlobSidecars;
-            blobsResult = {type: BlobsResultType.produced, blobSidecars, blockHash};
-
-            Object.assign(logMeta, {blobs: blobSidecars.length});
+            Object.assign(logMeta, {blobs: blobsBundle.commitments.length});
           } else {
             blobsResult = {type: BlobsResultType.preDeneb};
           }
@@ -502,7 +465,7 @@ async function prepareExecutionPayloadHeader(
 ): Promise<{
   header: allForks.ExecutionPayloadHeader;
   executionPayloadValue: Wei;
-  blindedBlobsBundle?: deneb.BlindedBlobsBundle;
+  blobKzgCommitments?: deneb.BlobKzgCommitments;
 }> {
   if (!chain.executionBuilder) {
     throw Error("executionBuilder required");

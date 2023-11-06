@@ -8,6 +8,7 @@ import {
   BLOCK_BODY_EXECUTION_PAYLOAD_DEPTH as EXECUTION_PAYLOAD_DEPTH,
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
   SLOTS_PER_EPOCH,
+  KZG_COMMITMENT_INCLUSION_PROOF_DEPTH,
 } from "@lodestar/params";
 import {ssz as primitiveSsz} from "../primitive/index.js";
 import {ssz as phase0Ssz} from "../phase0/index.js";
@@ -15,20 +16,8 @@ import {ssz as altairSsz} from "../altair/index.js";
 import {ssz as bellatrixSsz} from "../bellatrix/index.js";
 import {ssz as capellaSsz} from "../capella/index.js";
 
-const {
-  UintNum64,
-  Slot,
-  Root,
-  BLSSignature,
-  UintBn64,
-  UintBn256,
-  Bytes32,
-  Bytes48,
-  Bytes96,
-  BLSPubkey,
-  BlobIndex,
-  ValidatorIndex,
-} = primitiveSsz;
+const {UintNum64, Slot, Root, BLSSignature, UintBn64, UintBn256, Bytes32, Bytes48, Bytes96, BLSPubkey, BlobIndex} =
+  primitiveSsz;
 
 // Polynomial commitments
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/polynomial-commitments.md
@@ -124,30 +113,21 @@ export const SignedBeaconBlock = new ContainerType(
   {typeName: "SignedBeaconBlock", jsonCase: "eth2"}
 );
 
+export const KzgCommitmentInclusionProof = new VectorCompositeType(Bytes32, KZG_COMMITMENT_INCLUSION_PROOF_DEPTH);
+
 export const BlobSidecar = new ContainerType(
   {
-    blockRoot: Root,
     index: BlobIndex,
-    slot: Slot,
-    blockParentRoot: Root,
-    proposerIndex: ValidatorIndex,
     blob: Blob,
     kzgCommitment: KZGCommitment,
     kzgProof: KZGProof,
+    signedBlockHeader: phase0Ssz.SignedBeaconBlockHeader,
+    kzgCommitmentInclusionProof: KzgCommitmentInclusionProof,
   },
   {typeName: "BlobSidecar", jsonCase: "eth2"}
 );
 
 export const BlobSidecars = new ListCompositeType(BlobSidecar, MAX_BLOB_COMMITMENTS_PER_BLOCK);
-
-export const SignedBlobSidecar = new ContainerType(
-  {
-    message: BlobSidecar,
-    signature: BLSSignature,
-  },
-  {typeName: "SignedBlobSidecar", jsonCase: "eth2"}
-);
-export const SignedBlobSidecars = new ListCompositeType(SignedBlobSidecar, MAX_BLOB_COMMITMENTS_PER_BLOCK);
 
 export const BlobsBundle = new ContainerType(
   {
@@ -156,35 +136,6 @@ export const BlobsBundle = new ContainerType(
     blobs: Blobs,
   },
   {typeName: "BlobsBundle", jsonCase: "eth2"}
-);
-
-export const BlindedBlobSidecar = new ContainerType(
-  {
-    blockRoot: Root,
-    index: BlobIndex,
-    slot: Slot,
-    blockParentRoot: Root,
-    proposerIndex: ValidatorIndex,
-    blobRoot: BlindedBlob,
-    kzgCommitment: KZGCommitment,
-    kzgProof: KZGProof,
-  },
-  {typeName: "BlindedBlobSidecar", jsonCase: "eth2"}
-);
-
-export const BlindedBlobSidecars = new ListCompositeType(BlindedBlobSidecar, MAX_BLOB_COMMITMENTS_PER_BLOCK);
-
-export const SignedBlindedBlobSidecar = new ContainerType(
-  {
-    message: BlindedBlobSidecar,
-    signature: BLSSignature,
-  },
-  {typeName: "SignedBlindedBlobSidecar", jsonCase: "eth2"}
-);
-
-export const SignedBlindedBlobSidecars = new ListCompositeType(
-  SignedBlindedBlobSidecar,
-  MAX_BLOB_COMMITMENTS_PER_BLOCK
 );
 
 export const BlindedBeaconBlockBody = new ContainerType(
@@ -213,19 +164,10 @@ export const SignedBlindedBeaconBlock = new ContainerType(
   {typeName: "SignedBlindedBeaconBlock", jsonCase: "eth2"}
 );
 
-export const BlindedBlobsBundle = new ContainerType(
-  {
-    commitments: BlobKzgCommitments,
-    proofs: KZGProofs,
-    blobRoots: BlindedBlobs,
-  },
-  {typeName: "BlindedBlobsBundle", jsonCase: "eth2"}
-);
-
 export const BuilderBid = new ContainerType(
   {
     header: ExecutionPayloadHeader,
-    blindedBlobsBundle: BlindedBlobsBundle,
+    blobKzgCommitments: BlobKzgCommitments,
     value: UintBn256,
     pubkey: BLSPubkey,
   },

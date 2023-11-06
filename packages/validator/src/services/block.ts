@@ -4,14 +4,13 @@ import {
   Slot,
   BLSSignature,
   allForks,
-  isBlindedBeaconBlock,
+  isBlindedSignedBeaconBlock,
   ProducedBlockSource,
   deneb,
   isBlockContents,
-  isBlindedBlockContents,
 } from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkPreBlobs, ForkBlobs, ForkSeq} from "@lodestar/params";
+import {ForkPreBlobs, ForkBlobs, ForkSeq, ForkExecution} from "@lodestar/params";
 import {extendError, prettyBytes} from "@lodestar/utils";
 import {Api, ApiError, routes} from "@lodestar/api";
 import {IClock, LoggerVc} from "../util/index.js";
@@ -28,31 +27,27 @@ const MAX_DECIMAL_FACTOR = BigInt("100000");
 // The following combination of blocks and blobs can be produced
 //  i) a full block pre deneb
 //  ii) a full block and full blobs post deneb
-//  iii) a blinded block pre deneb as a result of beacon/execution race
-//  iv) a blinded block + blinded blobs as a result of beacon/execution race
+//  iii) a blinded block post bellatrix
 type FullOrBlindedBlockWithContents =
   | {
       version: ForkPreBlobs;
       block: allForks.BeaconBlock;
-      blobs: null;
+      contents: null;
       executionPayloadBlinded: false;
     }
   | {
       version: ForkBlobs;
       block: allForks.BeaconBlock;
-      blobs: deneb.BlobSidecars;
+      contents: {
+        kzgProofs: deneb.KZGProofs;
+        blobs: deneb.Blobs;
+      };
       executionPayloadBlinded: false;
     }
   | {
-      version: ForkPreBlobs;
+      version: ForkExecution;
       block: allForks.BlindedBeaconBlock;
-      blobs: null;
-      executionPayloadBlinded: true;
-    }
-  | {
-      version: ForkBlobs;
-      block: allForks.BlindedBeaconBlock;
-      blobs: deneb.BlindedBlobSidecars;
+      contents: null;
       executionPayloadBlinded: true;
     };
 
@@ -144,23 +139,8 @@ export class BlockProposingService {
       this.logger.debug("Produced block", {...debugLogCtx, ...blockContents.debugLogCtx});
       this.metrics?.blocksProduced.inc();
 
-      const signedBlockPromise = this.validatorStore.signBlock(pubkey, blockContents.block, slot, this.logger);
-      const signedBlobPromises =
-        blockContents.blobs !== null
-          ? blockContents.blobs.map((blob) => this.validatorStore.signBlob(pubkey, blob, slot))
-          : undefined;
-      let signedBlock: allForks.FullOrBlindedSignedBeaconBlock,
-        signedBlobs: allForks.FullOrBlindedSignedBlobSidecar[] | undefined;
-      if (signedBlobPromises !== undefined) {
-        [signedBlock, ...signedBlobs] = await Promise.all([signedBlockPromise, ...signedBlobPromises]);
-      } else {
-        signedBlock = await signedBlockPromise;
-        signedBlobs = undefined;
-      }
-
-      await this.publishBlockWrapper(signedBlock, signedBlobs, {
-        broadcastValidation: this.opts.broadcastValidation,
-      }).catch((e: Error) => {
+      const signedBlock = await this.validatorStore.signBlock(pubkey, blockContents.block, slot);
+      await this.publishBlockWrapper(signedBlock, blockContents.contents, this.opts).catch((e: Error) => {
         this.metrics?.blockProposingErrors.inc({error: "publish"});
         throw extendError(e, "Failed to publish block");
       });
@@ -174,30 +154,22 @@ export class BlockProposingService {
 
   private publishBlockWrapper = async (
     signedBlock: allForks.FullOrBlindedSignedBeaconBlock,
-    signedBlobSidecars?: allForks.FullOrBlindedSignedBlobSidecar[],
+    contents: {kzgProofs: deneb.KZGProofs; blobs: deneb.Blobs} | null,
     opts: {broadcastValidation?: routes.beacon.BroadcastValidation} = {}
   ): Promise<void> => {
-    if (signedBlobSidecars === undefined) {
-      ApiError.assert(
-        isBlindedBeaconBlock(signedBlock.message)
-          ? await this.api.beacon.publishBlindedBlockV2(signedBlock as allForks.SignedBlindedBeaconBlock, opts)
-          : await this.api.beacon.publishBlockV2(signedBlock as allForks.SignedBeaconBlock, opts)
-      );
+    if (isBlindedSignedBeaconBlock(signedBlock)) {
+      if (contents !== null) {
+        this.logger.warn(
+          "Ignoring contents while publishing blinded block - publishing beacon should assemble it from its local cache or builder"
+        );
+      }
+      ApiError.assert(await this.api.beacon.publishBlindedBlockV2(signedBlock, opts));
     } else {
-      ApiError.assert(
-        isBlindedBeaconBlock(signedBlock.message)
-          ? await this.api.beacon.publishBlindedBlockV2(
-              {
-                signedBlindedBlock: signedBlock,
-                signedBlindedBlobSidecars: signedBlobSidecars,
-              } as allForks.SignedBlindedBlockContents,
-              opts
-            )
-          : await this.api.beacon.publishBlockV2(
-              {signedBlock, signedBlobSidecars} as allForks.SignedBlockContents,
-              opts
-            )
-      );
+      if (contents === null) {
+        ApiError.assert(await this.api.beacon.publishBlockV2(signedBlock, opts));
+      } else {
+        ApiError.assert(await this.api.beacon.publishBlockV2({...contents, signedBlock}, opts));
+      }
     }
   };
 
@@ -270,28 +242,18 @@ function parseProduceBlockResponse(
   debugLogCtx: Record<string, string | boolean | undefined>
 ): FullOrBlindedBlockWithContents & DebugLogCtx {
   if (response.executionPayloadBlinded) {
-    if (isBlindedBlockContents(response.data)) {
-      return {
-        block: response.data.blindedBlock,
-        blobs: response.data.blindedBlobSidecars,
-        version: response.version,
-        executionPayloadBlinded: true,
-        debugLogCtx,
-      } as FullOrBlindedBlockWithContents & DebugLogCtx;
-    } else {
-      return {
-        block: response.data,
-        blobs: null,
-        version: response.version,
-        executionPayloadBlinded: true,
-        debugLogCtx,
-      } as FullOrBlindedBlockWithContents & DebugLogCtx;
-    }
+    return {
+      block: response.data,
+      contents: null,
+      version: response.version,
+      executionPayloadBlinded: true,
+      debugLogCtx,
+    } as FullOrBlindedBlockWithContents & DebugLogCtx;
   } else {
     if (isBlockContents(response.data)) {
       return {
         block: response.data.block,
-        blobs: response.data.blobSidecars,
+        contents: {blobs: response.data.blobs, kzgProofs: response.data.kzgProofs},
         version: response.version,
         executionPayloadBlinded: false,
         debugLogCtx,
@@ -299,7 +261,7 @@ function parseProduceBlockResponse(
     } else {
       return {
         block: response.data,
-        blobs: null,
+        contents: null,
         version: response.version,
         executionPayloadBlinded: false,
         debugLogCtx,

@@ -2,6 +2,7 @@ import {describe, it, expect, afterEach, beforeAll} from "vitest";
 import {bellatrix, deneb, ssz} from "@lodestar/types";
 import {BYTES_PER_FIELD_ELEMENT, BLOB_TX_TYPE} from "@lodestar/params";
 import {kzgCommitmentToVersionedHash} from "@lodestar/state-transition";
+import {computeBlobSidecars} from "@lodestar/state-transition/src/index.js";
 import {loadEthereumTrustedSetup, initCKZG, ckzg, FIELD_ELEMENTS_PER_BLOB_MAINNET} from "../../../src/util/kzg.js";
 import {validateBlobSidecars, validateGossipBlobSidecar} from "../../../src/chain/validation/blobSidecar.js";
 import {getMockedBeaconChain} from "../../__mocks__/mockedBeaconChain.js";
@@ -45,34 +46,17 @@ describe("C-KZG", async () => {
       signedBeaconBlock.message.body.blobKzgCommitments.push(kzgCommitment);
     }
     const blockRoot = ssz.deneb.BeaconBlock.hashTreeRoot(signedBeaconBlock.message);
+    const kzgProofs = blobs.map((blob, index) => ckzg.computeBlobKzgProof(blob, kzgCommitments[index]));
+    const blobSidecars: deneb.BlobSidecars = computeBlobSidecars(signedBeaconBlock, {blobs, kzgProofs});
 
-    const blobSidecars: deneb.BlobSidecars = blobs.map((blob, index) => {
-      return {
-        blockRoot,
-        index,
-        slot,
-        blob,
-        kzgProof: ckzg.computeBlobKzgProof(blob, kzgCommitments[index]),
-        kzgCommitment: kzgCommitments[index],
-        blockParentRoot: Buffer.alloc(32),
-        proposerIndex: 0,
-      };
-    });
-
-    const signedBlobSidecars: deneb.SignedBlobSidecar[] = blobSidecars.map((blobSidecar) => {
-      const signedBlobSidecar = ssz.deneb.SignedBlobSidecar.defaultValue();
-      signedBlobSidecar.message = blobSidecar;
-      return signedBlobSidecar;
-    });
-
-    expect(signedBlobSidecars.length).toBe(2);
+    expect(blobSidecars.length).toBe(2);
 
     // Full validation
     validateBlobSidecars(slot, blockRoot, kzgCommitments, blobSidecars);
 
-    signedBlobSidecars.forEach(async (signedBlobSidecar) => {
+    blobSidecars.forEach(async (blobSidecar) => {
       try {
-        await validateGossipBlobSidecar(chain.config, chain, signedBlobSidecar, signedBlobSidecar.message.index);
+        await validateGossipBlobSidecar(chain.config, chain, blobSidecar, blobSidecar.index);
       } catch (error) {
         // We expect some error from here
         // console.log(error);

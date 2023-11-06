@@ -182,10 +182,6 @@ export function getSlotFromSignedBeaconBlockSerialized(data: Uint8Array): Slot |
 /**
  * 4 + 96 = 100
  * ```
- * class SignedBlobSidecar(Container):
- *   message: BlobSidecar [fixed]
- *   signature: BLSSignature [fixed]
- *
  * class BlobSidecar(Container):
  *   blockRoot: Root [fixed - 32 bytes ],
  *   index: BlobIndex [fixed - 8 bytes ],
@@ -196,7 +192,7 @@ export function getSlotFromSignedBeaconBlockSerialized(data: Uint8Array): Slot |
 
 const SLOT_BYTES_POSITION_IN_SIGNED_BLOB_SIDECAR = 32 + 8;
 
-export function getSlotFromSignedBlobSidecarSerialized(data: Uint8Array): Slot | null {
+export function getSlotFromBlobSidecarSerialized(data: Uint8Array): Slot | null {
   if (data.length < SLOT_BYTES_POSITION_IN_SIGNED_BLOB_SIDECAR + SLOT_SIZE) {
     return null;
   }

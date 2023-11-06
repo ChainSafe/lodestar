@@ -12,11 +12,11 @@ import {
   GossipedInputType,
 } from "../blocks/types.js";
 
-export type GossipedBlockInput =
+type GossipedBlockInput =
   | {type: GossipedInputType.block; signedBlock: allForks.SignedBeaconBlock; blockBytes: Uint8Array | null}
-  | {type: GossipedInputType.blob; signedBlob: deneb.SignedBlobSidecar; blobBytes: Uint8Array | null};
+  | {type: GossipedInputType.blob; blobSidecar: deneb.BlobSidecar; blobBytes: Uint8Array | null};
 
-export type BlockInputCacheType = {
+type BlockInputCacheType = {
   block?: allForks.SignedBeaconBlock;
   blockBytes?: Uint8Array | null;
   blobsCache: BlobsCache;
@@ -26,8 +26,8 @@ export type BlockInputCacheType = {
 };
 
 const MAX_GOSSIPINPUT_CACHE = 5;
-// ssz.deneb.BlobSidecars.elementType.fixedSize, 131256 is size for mainnet preset;
-const BLOBSIDECAR_FIXED_SIZE = ssz.deneb.BlobSidecars.elementType.fixedSize ?? 131256;
+// ssz.deneb.BlobSidecars.elementType.fixedSize, 131928 is size for mainnet preset;
+const BLOBSIDECAR_FIXED_SIZE = ssz.deneb.BlobSidecars.elementType.fixedSize ?? 131928;
 
 /**
  * SeenGossipBlockInput tracks and caches the live blobs and blocks on the network to solve data availability
@@ -68,13 +68,14 @@ export class SeenGossipBlockInput {
       blockCache.block = signedBlock;
       blockCache.blockBytes = blockBytes;
     } else {
-      const {signedBlob, blobBytes} = gossipedInput;
-      blockHex = toHexString(signedBlob.message.blockRoot);
+      const {blobSidecar, blobBytes} = gossipedInput;
+      const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blobSidecar.signedBlockHeader.message);
+      blockHex = toHexString(blockRoot);
       blockCache = this.blockInputCache.get(blockHex) ?? getEmptyBlockInputCacheEntry();
 
       // TODO: freetheblobs check if its the same blob or a duplicate and throw/take actions
-      blockCache.blobsCache.set(signedBlob.message.index, {
-        blobSidecar: signedBlob.message,
+      blockCache.blobsCache.set(blobSidecar.index, {
+        blobSidecar,
         // easily splice out the unsigned message as blob is a fixed length type
         blobBytes: blobBytes?.slice(0, BLOBSIDECAR_FIXED_SIZE) ?? null,
       });

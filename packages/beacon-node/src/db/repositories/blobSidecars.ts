@@ -16,8 +16,8 @@ export const blobSidecarsWrapperSsz = new ContainerType(
 export type BlobSidecarsWrapper = ValueOf<typeof blobSidecarsWrapperSsz>;
 
 export const BLOB_SIDECARS_IN_WRAPPER_INDEX = 44;
-// ssz.deneb.BlobSidecars.elementType.fixedSize;
-export const BLOBSIDECAR_FIXED_SIZE = 131256;
+// preset dependent size with mainnet being 131928
+export const BLOBSIDECAR_FIXED_SIZE = ssz.deneb.BlobSidecar.fixedSize ?? 131928;
 
 /**
  * blobSidecarsWrapper by block root (= hash_tree_root(SignedBeaconBlock.message))

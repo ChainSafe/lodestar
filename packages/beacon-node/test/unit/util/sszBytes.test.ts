@@ -11,7 +11,7 @@ import {
   getSlotFromSignedAggregateAndProofSerialized,
   getSignatureFromAttestationSerialized,
   getSlotFromSignedBeaconBlockSerialized,
-  getSlotFromSignedBlobSidecarSerialized,
+  getSlotFromBlobSidecarSerialized,
 } from "../../../src/util/sszBytes.js";
 
 describe("attestation SSZ serialized picking", () => {
@@ -146,20 +146,20 @@ describe("signedBeaconBlock SSZ serialized picking", () => {
   });
 });
 
-describe("signedBlobSidecar SSZ serialized picking", () => {
-  const testCases = [ssz.deneb.SignedBlobSidecar.defaultValue(), signedBlobSidecarFromValues(1_000_000)];
+describe("BlobSidecar SSZ serialized picking", () => {
+  const testCases = [ssz.deneb.BlobSidecar.defaultValue(), blobSidecarFromValues(1_000_000)];
 
-  for (const [i, signedBlobSidecar] of testCases.entries()) {
-    const bytes = ssz.deneb.SignedBlobSidecar.serialize(signedBlobSidecar);
-    it(`signedBlobSidecar ${i}`, () => {
-      expect(getSlotFromSignedBlobSidecarSerialized(bytes)).toBe(signedBlobSidecar.message.slot);
+  for (const [i, blobSidecar] of testCases.entries()) {
+    const bytes = ssz.deneb.BlobSidecar.serialize(blobSidecar);
+    it(`blobSidecar ${i}`, () => {
+      expect(getSlotFromBlobSidecarSerialized(bytes)).toBe(blobSidecar.slot);
     });
   }
 
-  it("signedBlobSidecar - invalid data", () => {
+  it("blobSidecar - invalid data", () => {
     const invalidSlotDataSizes = [0, 20, 38];
     for (const size of invalidSlotDataSizes) {
-      expect(getSlotFromSignedBlobSidecarSerialized(Buffer.alloc(size))).toBeNull();
+      expect(getSlotFromBlobSidecarSerialized(Buffer.alloc(size))).toBeNull();
     }
   });
 });
@@ -198,8 +198,8 @@ function signedBeaconBlockFromValues(slot: Slot): phase0.SignedBeaconBlock {
   return signedBeaconBlock;
 }
 
-function signedBlobSidecarFromValues(slot: Slot): deneb.SignedBlobSidecar {
-  const signedBlobSidecar = ssz.deneb.SignedBlobSidecar.defaultValue();
-  signedBlobSidecar.message.slot = slot;
-  return signedBlobSidecar;
+function blobSidecarFromValues(slot: Slot): deneb.BlobSidecar {
+  const blobSidecar = ssz.deneb.BlobSidecar.defaultValue();
+  blobSidecar.slot = slot;
+  return blobSidecar;
 }
