@@ -15,7 +15,8 @@ export type EmptyResponseData = void;
 
 export type EmptyMeta = Record<string, never>;
 export type ExecutionOptimisticMeta = {executionOptimistic: ExecutionOptimistic};
-export type ExecutionOptimisticAndVersionMeta = {executionOptimistic: ExecutionOptimistic; version: ForkName};
+export type VersionMeta = {version: ForkName};
+export type ExecutionOptimisticAndVersionMeta = ExecutionOptimisticMeta & VersionMeta;
 export type ExecutionOptimisticAndDependentRootMeta = {executionOptimistic: ExecutionOptimistic; dependentRoot: Root};
 
 /** Shortcut for routes that have no params, query */
@@ -70,6 +71,17 @@ export const ExecutionOptimisticCodec: ResponseMetadataCodec<ExecutionOptimistic
   }),
   fromHeaders: (val) => ({
     executionOptimistic: Boolean(val.get("Eth-Execution-Optimistic")),
+  }),
+};
+
+export const VersionCodec: ResponseMetadataCodec<VersionMeta> = {
+  toJson: (val) => val,
+  fromJson: (val) => val as VersionMeta,
+  toHeadersObject: (val) => ({
+    "Eth-Consensus-Version": val.version,
+  }),
+  fromHeaders: (val) => ({
+    version: val.get("Eth-Consensus-Version")!.toLowerCase() as ForkName,
   }),
 };
 
