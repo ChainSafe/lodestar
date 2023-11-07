@@ -112,6 +112,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
+      "description": "https://hackmd.io/@dapplion/lodestar_attestation_summary",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -166,6 +167,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
+      "description": "https://hackmd.io/@dapplion/lodestar_attestation_summary",
       "fieldConfig": {
         "defaults": {
           "color": {
