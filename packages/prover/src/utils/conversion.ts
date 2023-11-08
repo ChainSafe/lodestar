@@ -23,7 +23,7 @@ export function bufferToHex(buffer: Buffer | Uint8Array): string {
 }
 
 export function hexToBuffer(val: string): Buffer {
-  return Buffer.from(val.replace("0x", ""), "hex");
+  return Buffer.from((val.length % 2 ? '0' : '') + val.replace("0x", ""), "hex");
 }
 
 export function padLeft<T extends Buffer | Uint8Array>(v: T, length: number): T {
