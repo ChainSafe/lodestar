@@ -173,7 +173,15 @@ export function getValidatorApi({
 
   /**
    * This function is called 1s before next epoch, usually at that time PrepareNextSlotScheduler finishes
-   * so we should have checkpoint state, otherwise wait for up to `timeoutMs`.
+   * so we should have checkpoint state, otherwise wait for up to the slot 1 of epoch.
+   *      slot epoch        0            1
+   *           |------------|------------|
+   *                    ^  ^
+   *                    |  |
+   *                    |  |
+   *                    | waitForCheckpointState (1s before slot 0 of epoch, wait until slot 1 of epoch)
+   *                    |
+   *              prepareNextSlot (4s before next slot)
    */
   async function waitForCheckpointState(cpHex: CheckpointHex): Promise<CachedBeaconStateAllForks | null> {
     const cpState = chain.regen.getCheckpointStateSync(cpHex);
@@ -184,8 +192,8 @@ export function getValidatorApi({
       epoch: cpHex.epoch,
       root: fromHexString(cpHex.rootHex),
     };
-    const slot = computeStartSlotAtEpoch(cp.epoch);
-    // if not, wait for ChainEvent.checkpoint event until timeoutMs
+    const slot0 = computeStartSlotAtEpoch(cp.epoch);
+    // if not, wait for ChainEvent.checkpoint event until slot 1 of epoch
     let listener: ((eventCp: phase0.Checkpoint) => void) | null = null;
     const foundCPState = await Promise.race([
       new Promise((resolve) => {
@@ -194,7 +202,9 @@ export function getValidatorApi({
         };
         chain.emitter.once(ChainEvent.checkpoint, listener);
       }),
-      chain.clock.waitForSlot(slot),
+      // in rare case, checkpoint state cache may happen up to 6s of slot 0 of epoch
+      // so we wait for it until the slot 1 of epoch
+      chain.clock.waitForSlot(slot0 + 1),
     ]);
 
     if (listener != null) {
