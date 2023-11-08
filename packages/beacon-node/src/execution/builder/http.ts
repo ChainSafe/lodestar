@@ -6,6 +6,7 @@ import {
   reconstructFullBlockOrContents,
 } from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
+import {Logger} from "@lodestar/logger";
 import {getClient, Api as BuilderApi} from "@lodestar/api/builder";
 import {SLOTS_PER_EPOCH, ForkExecution} from "@lodestar/params";
 
@@ -41,9 +42,15 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
   faultInspectionWindow: number;
   allowedFaults: number;
 
-  constructor(opts: ExecutionBuilderHttpOpts, config: ChainForkConfig, metrics: Metrics | null = null) {
+  constructor(
+    opts: ExecutionBuilderHttpOpts,
+    config: ChainForkConfig,
+    metrics: Metrics | null = null,
+    logger?: Logger
+  ) {
     const baseUrl = opts.urls[0];
     if (!baseUrl) throw Error("No Url provided for executionBuilder");
+    logger?.info("External builder", {urls: opts.urls.toString()});
     this.api = getClient(
       {
         baseUrl,

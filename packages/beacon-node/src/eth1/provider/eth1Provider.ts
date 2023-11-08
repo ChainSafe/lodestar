@@ -73,7 +73,10 @@ export class Eth1Provider implements IEth1Provider {
     this.logger = opts.logger;
     this.deployBlock = opts.depositContractDeployBlock ?? 0;
     this.depositContractAddress = toHexString(config.DEPOSIT_CONTRACT_ADDRESS);
-    this.rpc = new JsonRpcHttpClient(opts.providerUrls ?? DEFAULT_PROVIDER_URLS, {
+
+    const providerUrls = opts.providerUrls ?? DEFAULT_PROVIDER_URLS;
+    this.logger?.info("Eth1 provider", {urls: providerUrls.toString()});
+    this.rpc = new JsonRpcHttpClient(providerUrls, {
       signal,
       // Don't fallback with is truncated error. Throw early and let the retry on this class handle it
       shouldNotFallback: isJsonRpcTruncatedError,
