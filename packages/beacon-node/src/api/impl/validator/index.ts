@@ -32,6 +32,7 @@ import {
   BLSSignature,
   isBlindedBeaconBlock,
   isBlindedBlockContents,
+  phase0,
 } from "@lodestar/types";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {toHex, racePromisesWithCutoff, RaceEvent} from "@lodestar/utils";
@@ -174,10 +175,7 @@ export function getValidatorApi({
    * This function is called 1s before next epoch, usually at that time PrepareNextSlotScheduler finishes
    * so we should have checkpoint state, otherwise wait for up to `timeoutMs`.
    */
-  async function waitForCheckpointState(
-    cpHex: CheckpointHex,
-    timeoutMs: number
-  ): Promise<CachedBeaconStateAllForks | null> {
+  async function waitForCheckpointState(cpHex: CheckpointHex): Promise<CachedBeaconStateAllForks | null> {
     const cpState = chain.regen.getCheckpointStateSync(cpHex);
     if (cpState) {
       return cpState;
@@ -186,16 +184,28 @@ export function getValidatorApi({
       epoch: cpHex.epoch,
       root: fromHexString(cpHex.rootHex),
     };
+    const slot = computeStartSlotAtEpoch(cp.epoch);
     // if not, wait for ChainEvent.checkpoint event until timeoutMs
-    return new Promise<CachedBeaconStateAllForks | null>((resolve) => {
-      const timer = setTimeout(() => resolve(null), timeoutMs);
-      chain.emitter.on(ChainEvent.checkpoint, (eventCp, cpState) => {
-        if (ssz.phase0.Checkpoint.equals(eventCp, cp)) {
-          clearTimeout(timer);
-          resolve(cpState);
-        }
-      });
-    });
+    let listener: ((eventCp: phase0.Checkpoint) => void) | null = null;
+    const foundCPState = await Promise.race([
+      new Promise((resolve) => {
+        listener = (eventCp) => {
+          resolve(ssz.phase0.Checkpoint.equals(eventCp, cp));
+        };
+        chain.emitter.once(ChainEvent.checkpoint, listener);
+      }),
+      chain.clock.waitForSlot(slot),
+    ]);
+
+    if (listener != null) {
+      chain.emitter.off(ChainEvent.checkpoint, listener);
+    }
+
+    if (foundCPState === true) {
+      return chain.regen.getCheckpointStateSync(cpHex);
+    }
+
+    return null;
   }
 
   /**
@@ -721,7 +731,7 @@ export function getValidatorApi({
       // this is to avoid missed block proposal due to 0 epoch look ahead
       if (epoch === nextEpoch && toNextEpochMs < prepareNextSlotLookAheadMs) {
         // wait for maximum 1 slot for cp state which is the timeout of validator api
-        const cpState = await waitForCheckpointState({rootHex: head.blockRoot, epoch}, slotMs);
+        const cpState = await waitForCheckpointState({rootHex: head.blockRoot, epoch});
         if (cpState) {
           state = cpState;
           metrics?.duties.requestNextEpochProposalDutiesHit.inc();
