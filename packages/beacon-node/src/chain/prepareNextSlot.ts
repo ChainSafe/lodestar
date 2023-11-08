@@ -98,7 +98,8 @@ export class PrepareNextSlotScheduler {
       const prepareState = await this.chain.regen.getBlockSlotState(
         headRoot,
         prepareSlot,
-        {dontTransferCache: true},
+        // the 1st slot of next epoch will likely use this Previous Root Checkpoint state so we transfer cache here
+        {dontTransferCache: false},
         RegenCaller.precomputeEpoch
       );
 

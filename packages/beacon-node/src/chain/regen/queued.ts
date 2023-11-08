@@ -149,14 +149,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     if (parentEpoch < blockEpoch) {
       const checkpointState = this.checkpointStateCache.getLatest(parentRoot, blockEpoch);
       if (checkpointState && computeEpochAtSlot(checkpointState.slot) === blockEpoch) {
-        // TODO: Miss-use of checkpointStateCache here
         return checkpointState;
-        // console.error({
-        //   "checkpointState.slot": checkpointState.slot,
-        //   "block.slot": block.slot,
-        //   blockEpoch,
-        //   blockEpochStartSlot: computeStartSlotAtEpoch(blockEpoch),
-        // });
       }
     }
 
