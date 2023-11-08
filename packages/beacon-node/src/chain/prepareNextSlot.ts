@@ -117,6 +117,7 @@ export class PrepareNextSlotScheduler {
           nextEpoch,
           headSlot,
           prepareSlot,
+          previousHits,
         });
       }
 
