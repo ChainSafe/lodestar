@@ -5,7 +5,8 @@ import {ForkName} from "@lodestar/params";
 import {Root} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
 import {ExecutionOptimistic} from "../beacon/routes/beacon/block.js";
-import {Endpoint, GetRequestCodec, ResponseDataCodec, ResponseMetadataCodec} from "./types.js";
+import {AnyEndpoint, AnyGetEndpoint, AnyPostEndpoint, GetRequestCodec, PostRequestCodec, ResponseCodec, ResponseDataCodec, ResponseMetadataCodec} from "./types.js";
+import { WireFormat } from "./headers.js";
 
 // Utility types / codecs
 
@@ -20,10 +21,16 @@ export type ExecutionOptimisticAndVersionMeta = ExecutionOptimisticMeta & Versio
 export type ExecutionOptimisticAndDependentRootMeta = {executionOptimistic: ExecutionOptimistic; dependentRoot: Root};
 
 /** Shortcut for routes that have no params, query */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const EmptyGetRequestCodec: GetRequestCodec<Endpoint<"GET", EmptyArgs, EmptyRequest, any, any>> = {
+export const EmptyGetRequestCodec: GetRequestCodec<AnyGetEndpoint> = {
   writeReq: () => ({}),
   parseReq: () => {},
+  schema: {},
+};
+export const EmptyPostRequestCodec: PostRequestCodec<AnyPostEndpoint> = {
+  writeReqJson: () => ({}),
+  parseReqJson: () => {},
+  writeReqSsz: () => ({body: new Uint8Array()}),
+  parseReqSsz: () => {},
   schema: {},
 };
 
@@ -115,3 +122,23 @@ export const ExecutionOptimisticAndDependentRootCodec: ResponseMetadataCodec<Exe
       dependentRoot: fromHex(val.get("Eth-Consensus-Dependent-Root")!),
     }),
   };
+
+export const EmptyResponseCodec: ResponseCodec<AnyEndpoint> = {
+  data: EmptyResponseDataCodec,
+  meta: EmptyMetaCodec,
+};
+
+export const JsonOnlyResponseCodec: ResponseCodec<AnyEndpoint> = {
+  data: {
+    toJson: (d) => d as unknown,
+    fromJson: (d) => d,
+    serialize: () => {
+      throw new Error("unimplemented");
+    },
+    deserialize: () => {
+      throw new Error("unimplemented");
+    },
+  },
+  meta: EmptyMetaCodec,
+  onlySupport: WireFormat.json,
+};

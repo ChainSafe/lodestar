@@ -1,3 +1,4 @@
+import {WireFormat} from "./headers.js";
 import {SchemaDefinition} from "./schema.js";
 
 export type PathParams = Record<string, string | number>;
@@ -64,12 +65,18 @@ export type Endpoint<
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type AnyEndpoint = Endpoint<HttpMethod, any, any, any, any>;
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type AnyPostEndpoint = Endpoint<"POST", any, any, any, any>;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type AnyGetEndpoint = Endpoint<"GET", any, any, any, any>;
+
 // Request codec
 
 /** Encode / decode requests to & from function params, as well as schema definitions */
 export type GetRequestCodec<E extends Endpoint> = {
-  writeReq: (p: E["args"]) => E["request"];
-  parseReq: (r: E["request"]) => E["args"];
+  writeReq: (p: E["args"]) => E["request"]; // for the client
+  parseReq: (r: E["request"]) => E["args"]; // for the server
   schema: SchemaDefinition<E["request"]>;
 };
 
@@ -118,6 +125,8 @@ export type ResponseCodec<E extends Endpoint> = {
       meta: unknown;
     };
   };
+  /** Support ssz-only or json-only responses */
+  onlySupport?: WireFormat;
 };
 
 /**

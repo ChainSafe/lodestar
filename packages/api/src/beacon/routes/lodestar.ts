@@ -1,16 +1,15 @@
 import {Epoch, RootHex, Slot} from "@lodestar/types";
-import {ApiClientResponse} from "../../interfaces.js";
-import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
+import {Schema, Endpoint, RouteDefinitions, ResponseCodec, AnyPostEndpoint, AnyGetEndpoint} from "../../utils/index.js";
 import {
-  jsonType,
-  ReqEmpty,
-  reqEmpty,
-  ReturnTypes,
-  ReqSerializers,
-  RoutesData,
-  sameType,
-  Schema,
-} from "../../utils/index.js";
+  EmptyArgs,
+  EmptyGetRequestCodec,
+  EmptyMeta,
+  EmptyPostRequestCodec,
+  EmptyRequest,
+  EmptyResponseCodec,
+  EmptyResponseData,
+  JsonOnlyResponseCodec,
+} from "../../utils/codecs.js";
 import {FilterGetPeers, NodePeer, PeerDirection, PeerState} from "./node.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
@@ -76,169 +75,327 @@ export type LodestarNodePeer = NodePeer & {
 
 export type LodestarThreadType = "main" | "network" | "discv5";
 
-export type Api = {
+export type Endpoints = {
   /** Trigger to write a heapdump to disk at `dirpath`. May take > 1min */
-  writeHeapdump(dirpath?: string): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: {filepath: string}}}>>;
+  writeHeapdump: Endpoint<
+    //
+    "POST",
+    {dirpath?: string},
+    {query: {dirpath?: string}},
+    {filepath: string},
+    EmptyMeta
+  >;
   /** Trigger to write 10m network thread profile to disk */
-  writeProfile(
-    thread?: LodestarThreadType,
-    duration?: number,
-    dirpath?: string
-  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: {filepath: string}}}>>;
+  writeProfile: Endpoint<
+    "POST",
+    {
+      thread?: LodestarThreadType;
+      duration?: number;
+      dirpath?: string;
+    },
+    {query: {thread?: LodestarThreadType; duration?: number; dirpath?: string}},
+    {filepath: string},
+    EmptyMeta
+  >;
   /** TODO: description */
-  getLatestWeakSubjectivityCheckpointEpoch(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: Epoch}}>>;
+  getLatestWeakSubjectivityCheckpointEpoch: Endpoint<
+    //
+    "GET",
+    EmptyArgs,
+    EmptyRequest,
+    Epoch,
+    EmptyMeta
+  >;
   /** TODO: description */
-  getSyncChainsDebugState(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: SyncChainDebugState[]}}>>;
+  getSyncChainsDebugState: Endpoint<
+    //
+    "GET",
+    EmptyArgs,
+    EmptyRequest,
+    SyncChainDebugState[],
+    EmptyMeta
+  >;
   /** Dump all items in a gossip queue, by gossipType */
-  getGossipQueueItems(gossipType: string): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: unknown[]}}>>;
+  getGossipQueueItems: Endpoint<
+    //
+    "GET",
+    {gossipType: string},
+    {params: {gossipType: string}},
+    unknown[],
+    EmptyMeta
+  >;
   /** Dump all items in the regen queue */
-  getRegenQueueItems(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: RegenQueueItem[]}}>>;
+  getRegenQueueItems: Endpoint<
+    //
+    "GET",
+    EmptyArgs,
+    EmptyRequest,
+    RegenQueueItem[],
+    EmptyMeta
+  >;
   /** Dump all items in the block processor queue */
-  getBlockProcessorQueueItems(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: BlockProcessorQueueItem[]}}>>;
+  getBlockProcessorQueueItems: Endpoint<
+    //
+    "GET",
+    EmptyArgs,
+    EmptyRequest,
+    BlockProcessorQueueItem[],
+    EmptyMeta
+  >;
   /** Dump a summary of the states in the StateContextCache */
-  getStateCacheItems(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: StateCacheItem[]}}>>;
+  getStateCacheItems: Endpoint<
+    //
+    "GET",
+    EmptyArgs,
+    EmptyRequest,
+    StateCacheItem[],
+    EmptyMeta
+  >;
   /** Dump peer gossip stats by peer */
-  getGossipPeerScoreStats(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: GossipPeerScoreStat[]}}>>;
+  getGossipPeerScoreStats: Endpoint<
+    //
+    "GET",
+    EmptyArgs,
+    EmptyRequest,
+    GossipPeerScoreStat[],
+    EmptyMeta
+  >;
   /** Dump lodestar score stats by peer */
-  getLodestarPeerScoreStats(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: PeerScoreStat[]}}>>;
+  getLodestarPeerScoreStats: Endpoint<
+    //
+    "GET",
+    EmptyArgs,
+    EmptyRequest,
+    PeerScoreStat[],
+    EmptyMeta
+  >;
   /** Run GC with `global.gc()` */
-  runGC(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}>>;
+  runGC: Endpoint<
+    //
+    "POST",
+    EmptyArgs,
+    EmptyRequest,
+    EmptyResponseData,
+    EmptyMeta
+  >;
   /** Drop all states in the state cache */
-  dropStateCache(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}>>;
+  dropStateCache: Endpoint<
+    //
+    "POST",
+    EmptyArgs,
+    EmptyRequest,
+    EmptyResponseData,
+    EmptyMeta
+  >;
 
   /** Connect to peer at this multiaddress */
-  connectPeer(peerId: string, multiaddrStrs: string[]): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}>>;
+  connectPeer: Endpoint<
+    //
+    "POST",
+    {peerId: string; multiaddrs: string[]},
+    {query: {peerId: string; multiaddr: string[]}},
+    EmptyResponseData,
+    EmptyMeta
+  >;
   /** Disconnect peer */
-  disconnectPeer(peerId: string): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}>>;
+  disconnectPeer: Endpoint<
+    //
+    "POST",
+    {peerId: string},
+    {query: {peerId: string}},
+    EmptyResponseData,
+    EmptyMeta
+  >;
   /** Same to node api with new fields */
-  getPeers(
-    filters?: FilterGetPeers
-  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: LodestarNodePeer[]; meta: {count: number}}}>>;
+  getPeers: Endpoint<
+    //
+    "GET",
+    {filters?: FilterGetPeers},
+    {query: {state?: PeerState[]; direction?: PeerDirection[]}},
+    LodestarNodePeer[],
+    {count: number}
+  >;
 
   /** Dump Discv5 Kad values */
-  discv5GetKadValues(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: string[]}}>>;
+  discv5GetKadValues: Endpoint<
+    //
+    "GET",
+    EmptyArgs,
+    EmptyRequest,
+    string[],
+    EmptyMeta
+  >;
 
   /**
    * Dump level-db entry keys for a given Bucket declared in code, or for all buckets.
    * @param bucket must be the string name of a bucket entry: `allForks_blockArchive`
    */
-  dumpDbBucketKeys(bucket: string): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: string[]}}>>;
+  dumpDbBucketKeys: Endpoint<
+    //
+    "GET",
+    {bucket: string},
+    {params: {bucket: string}},
+    string[],
+    EmptyMeta
+  >;
 
   /** Return all entries in the StateArchive index with bucket index_stateArchiveRootIndex */
-  dumpDbStateIndex(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: {root: RootHex; slot: Slot}[]}}>>;
+  dumpDbStateIndex: Endpoint<
+    //
+    "GET",
+    EmptyArgs,
+    EmptyRequest,
+    {root: RootHex; slot: Slot}[],
+    EmptyMeta
+  >;
 };
 
 /**
  * Define javascript values for each route
  */
-export const routesData: RoutesData<Api> = {
-  writeHeapdump: {url: "/eth/v1/lodestar/write_heapdump", method: "POST"},
-  writeProfile: {url: "/eth/v1/lodestar/write_profile", method: "POST"},
-  getLatestWeakSubjectivityCheckpointEpoch: {url: "/eth/v1/lodestar/ws_epoch", method: "GET"},
-  getSyncChainsDebugState: {url: "/eth/v1/lodestar/sync_chains_debug_state", method: "GET"},
-  getGossipQueueItems: {url: "/eth/v1/lodestar/gossip_queue_items/:gossipType", method: "GET"},
-  getRegenQueueItems: {url: "/eth/v1/lodestar/regen_queue_items", method: "GET"},
-  getBlockProcessorQueueItems: {url: "/eth/v1/lodestar/block_processor_queue_items", method: "GET"},
-  getStateCacheItems: {url: "/eth/v1/lodestar/state_cache_items", method: "GET"},
-  getGossipPeerScoreStats: {url: "/eth/v1/lodestar/gossip_peer_score_stats", method: "GET"},
-  getLodestarPeerScoreStats: {url: "/eth/v1/lodestar/lodestar_peer_score_stats", method: "GET"},
-  runGC: {url: "/eth/v1/lodestar/gc", method: "POST"},
-  dropStateCache: {url: "/eth/v1/lodestar/drop_state_cache", method: "POST"},
-  connectPeer: {url: "/eth/v1/lodestar/connect_peer", method: "POST"},
-  disconnectPeer: {url: "/eth/v1/lodestar/disconnect_peer", method: "POST"},
-  getPeers: {url: "/eth/v1/lodestar/peers", method: "GET"},
-  discv5GetKadValues: {url: "/eth/v1/debug/discv5_kad_values", method: "GET"},
-  dumpDbBucketKeys: {url: "/eth/v1/debug/dump_db_bucket_keys/:bucket", method: "GET"},
-  dumpDbStateIndex: {url: "/eth/v1/debug/dump_db_state_index", method: "GET"},
-};
-
-export type ReqTypes = {
-  writeHeapdump: {query: {dirpath?: string}};
-  writeProfile: {query: {thread?: LodestarThreadType; duration?: number; dirpath?: string}};
-  getLatestWeakSubjectivityCheckpointEpoch: ReqEmpty;
-  getSyncChainsDebugState: ReqEmpty;
-  getGossipQueueItems: {params: {gossipType: string}};
-  getRegenQueueItems: ReqEmpty;
-  getBlockProcessorQueueItems: ReqEmpty;
-  getStateCacheItems: ReqEmpty;
-  getGossipPeerScoreStats: ReqEmpty;
-  getLodestarPeerScoreStats: ReqEmpty;
-  runGC: ReqEmpty;
-  dropStateCache: ReqEmpty;
-  connectPeer: {query: {peerId: string; multiaddr: string[]}};
-  disconnectPeer: {query: {peerId: string}};
-  getPeers: {query: {state?: PeerState[]; direction?: PeerDirection[]}};
-  discv5GetKadValues: ReqEmpty;
-  dumpDbBucketKeys: {params: {bucket: string}};
-  dumpDbStateIndex: ReqEmpty;
-};
-
-export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
-  return {
-    writeHeapdump: {
-      writeReq: (dirpath) => ({query: {dirpath}}),
-      parseReq: ({query}) => [query.dirpath],
+export const definitions: RouteDefinitions<Endpoints> = {
+  writeHeapdump: {
+    url: "/eth/v1/lodestar/write_heapdump",
+    method: "POST",
+    req: {
+      writeReqJson: ({dirpath}) => ({query: {dirpath}}),
+      parseReqJson: ({query}) => ({dirpath: query.dirpath}),
+      writeReqSsz: ({dirpath}) => ({query: {dirpath}, body: new Uint8Array()}),
+      parseReqSsz: ({query}) => ({dirpath: query.dirpath}),
       schema: {query: {dirpath: Schema.String}},
     },
-    writeProfile: {
-      writeReq: (thread, duration, dirpath) => ({query: {thread, duration, dirpath}}),
-      parseReq: ({query}) => [query.thread, query.duration, query.dirpath],
+    resp: JsonOnlyResponseCodec as ResponseCodec<AnyPostEndpoint>,
+  },
+  writeProfile: {
+    url: "/eth/v1/lodestar/write_profile",
+    method: "POST",
+    req: {
+      writeReqJson: ({thread, duration, dirpath}) => ({query: {thread, duration, dirpath}}),
+      parseReqJson: ({query}) => ({thread: query.thread, duration: query.duration, dirpath: query.dirpath}),
+      writeReqSsz: ({thread, duration, dirpath}) => ({query: {thread, duration, dirpath}, body: new Uint8Array()}),
+      parseReqSsz: ({query}) => ({thread: query.thread, duration: query.duration, dirpath: query.dirpath}),
       schema: {query: {dirpath: Schema.String}},
     },
-    getLatestWeakSubjectivityCheckpointEpoch: reqEmpty,
-    getSyncChainsDebugState: reqEmpty,
-    getGossipQueueItems: {
-      writeReq: (gossipType) => ({params: {gossipType}}),
-      parseReq: ({params}) => [params.gossipType],
+    resp: JsonOnlyResponseCodec as ResponseCodec<AnyPostEndpoint>,
+  },
+  getLatestWeakSubjectivityCheckpointEpoch: {
+    url: "/eth/v1/lodestar/ws_epoch",
+    method: "GET",
+    req: EmptyGetRequestCodec,
+    resp: JsonOnlyResponseCodec as ResponseCodec<AnyGetEndpoint>,
+  },
+  getSyncChainsDebugState: {
+    url: "/eth/v1/lodestar/sync_chains_debug_state",
+    method: "GET",
+    req: EmptyGetRequestCodec,
+    resp: JsonOnlyResponseCodec as ResponseCodec<AnyGetEndpoint>,
+  },
+  getGossipQueueItems: {
+    url: "/eth/v1/lodestar/gossip_queue_items/:gossipType",
+    method: "GET",
+    req: {
+      writeReq: ({gossipType}) => ({params: {gossipType}}),
+      parseReq: ({params}) => ({gossipType: params.gossipType}),
       schema: {params: {gossipType: Schema.StringRequired}},
     },
-    getRegenQueueItems: reqEmpty,
-    getBlockProcessorQueueItems: reqEmpty,
-    getStateCacheItems: reqEmpty,
-    getGossipPeerScoreStats: reqEmpty,
-    getLodestarPeerScoreStats: reqEmpty,
-    runGC: reqEmpty,
-    dropStateCache: reqEmpty,
-    connectPeer: {
-      writeReq: (peerId, multiaddr) => ({query: {peerId, multiaddr}}),
-      parseReq: ({query}) => [query.peerId, query.multiaddr],
+    resp: JsonOnlyResponseCodec as ResponseCodec<AnyGetEndpoint>,
+  },
+  getRegenQueueItems: {
+    url: "/eth/v1/lodestar/regen_queue_items",
+    method: "GET",
+    req: EmptyGetRequestCodec,
+    resp: JsonOnlyResponseCodec as ResponseCodec<AnyGetEndpoint>,
+  },
+  getBlockProcessorQueueItems: {
+    url: "/eth/v1/lodestar/block_processor_queue_items",
+    method: "GET",
+    req: EmptyGetRequestCodec,
+    resp: JsonOnlyResponseCodec as ResponseCodec<AnyGetEndpoint>,
+  },
+  getStateCacheItems: {
+    url: "/eth/v1/lodestar/state_cache_items",
+    method: "GET",
+    req: EmptyGetRequestCodec,
+    resp: JsonOnlyResponseCodec as ResponseCodec<AnyGetEndpoint>,
+  },
+  getGossipPeerScoreStats: {
+    url: "/eth/v1/lodestar/gossip_peer_score_stats",
+    method: "GET",
+    req: EmptyGetRequestCodec,
+    resp: JsonOnlyResponseCodec as ResponseCodec<AnyGetEndpoint>,
+  },
+  getLodestarPeerScoreStats: {
+    url: "/eth/v1/lodestar/lodestar_peer_score_stats",
+    method: "GET",
+    req: EmptyGetRequestCodec,
+    resp: JsonOnlyResponseCodec as ResponseCodec<AnyGetEndpoint>,
+  },
+  runGC: {
+    url: "/eth/v1/lodestar/gc",
+    method: "POST",
+    req: EmptyPostRequestCodec,
+    resp: EmptyResponseCodec as ResponseCodec<AnyPostEndpoint>,
+  },
+  dropStateCache: {
+    url: "/eth/v1/lodestar/drop_state_cache",
+    method: "POST",
+    req: EmptyPostRequestCodec,
+    resp: EmptyResponseCodec as ResponseCodec<AnyPostEndpoint>,
+  },
+  connectPeer: {
+    url: "/eth/v1/lodestar/connect_peer",
+    method: "POST",
+    req: {
+      writeReqJson: ({peerId, multiaddrs}) => ({query: {peerId, multiaddr: multiaddrs}}),
+      parseReqJson: ({query}) => ({peerId: query.peerId, multiaddrs: query.multiaddr}),
+      writeReqSsz: ({peerId, multiaddrs}) => ({query: {peerId, multiaddr: multiaddrs}, body: new Uint8Array()}),
+      parseReqSsz: ({query}) => ({peerId: query.peerId, multiaddrs: query.multiaddr}),
       schema: {query: {peerId: Schema.StringRequired, multiaddr: Schema.StringArray}},
     },
-    disconnectPeer: {
-      writeReq: (peerId) => ({query: {peerId}}),
-      parseReq: ({query}) => [query.peerId],
+    resp: EmptyResponseCodec as ResponseCodec<AnyPostEndpoint>,
+  },
+  disconnectPeer: {
+    url: "/eth/v1/lodestar/disconnect_peer",
+    method: "POST",
+    req: {
+      writeReqJson: ({peerId}) => ({query: {peerId}}),
+      parseReqJson: ({query}) => ({peerId: query.peerId}),
+      writeReqSsz: ({peerId}) => ({query: {peerId}, body: new Uint8Array()}),
+      parseReqSsz: ({query}) => ({peerId: query.peerId}),
       schema: {query: {peerId: Schema.StringRequired}},
     },
-    getPeers: {
-      writeReq: (filters) => ({query: filters || {}}),
-      parseReq: ({query}) => [query],
+    resp: EmptyResponseCodec as ResponseCodec<AnyPostEndpoint>,
+  },
+  getPeers: {
+    url: "/eth/v1/lodestar/peers",
+    method: "GET",
+    req: {
+      writeReq: ({filters}) => ({query: filters ?? {}}),
+      parseReq: ({query}) => ({filters: query}),
       schema: {query: {state: Schema.StringArray, direction: Schema.StringArray}},
     },
-    discv5GetKadValues: reqEmpty,
-    dumpDbBucketKeys: {
-      writeReq: (bucket) => ({params: {bucket}}),
-      parseReq: ({params}) => [params.bucket],
+    resp: JsonOnlyResponseCodec as ResponseCodec<AnyGetEndpoint>,
+  },
+  discv5GetKadValues: {
+    url: "/eth/v1/debug/discv5_kad_values",
+    method: "GET",
+    req: EmptyGetRequestCodec,
+    resp: JsonOnlyResponseCodec as ResponseCodec<AnyGetEndpoint>,
+  },
+  dumpDbBucketKeys: {
+    url: "/eth/v1/debug/dump_db_bucket_keys/:bucket",
+    method: "GET",
+    req: {
+      writeReq: ({bucket}) => ({params: {bucket}}),
+      parseReq: ({params}) => ({bucket: params.bucket}),
       schema: {params: {bucket: Schema.String}},
     },
-    dumpDbStateIndex: reqEmpty,
-  };
-}
-
-export function getReturnTypes(): ReturnTypes<Api> {
-  return {
-    writeHeapdump: sameType(),
-    writeProfile: sameType(),
-    getLatestWeakSubjectivityCheckpointEpoch: sameType(),
-    getSyncChainsDebugState: jsonType("snake"),
-    getGossipQueueItems: jsonType("snake"),
-    getRegenQueueItems: jsonType("snake"),
-    getBlockProcessorQueueItems: jsonType("snake"),
-    getStateCacheItems: jsonType("snake"),
-    getGossipPeerScoreStats: jsonType("snake"),
-    getLodestarPeerScoreStats: jsonType("snake"),
-    getPeers: jsonType("snake"),
-    discv5GetKadValues: jsonType("snake"),
-    dumpDbBucketKeys: sameType(),
-    dumpDbStateIndex: sameType(),
-  };
-}
+    resp: JsonOnlyResponseCodec as ResponseCodec<AnyGetEndpoint>,
+  },
+  dumpDbStateIndex: {
+    url: "/eth/v1/debug/dump_db_state_index",
+    method: "GET",
+    req: EmptyGetRequestCodec,
+    resp: JsonOnlyResponseCodec as ResponseCodec<AnyGetEndpoint>,
+  },
+};
