@@ -20,7 +20,7 @@
       
       
       <link rel="icon" href="../../assets/round-icon.ico">
-      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.4.2">
+      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.4.8">
     
     
       
@@ -28,10 +28,10 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.d451bc0e.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.4b4a2bd9.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.a5377069.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.356b1318.min.css">
       
       
 
@@ -959,7 +959,7 @@
 <h3 id="generate-a-secret-key">Generate a secret key<a class="headerlink" href="#generate-a-secret-key" title="Permanent link">&para;</a></h3>
 <p>You must generate a secret 32-byte (64 characters) hexadecimal string that will be used to authenticate with an execution node. You can use the following command in most terminals to generate a random secret: <code>openssl rand -hex 32</code>. Or you can use an <a href="https://codebeautify.org/generate-random-hexadecimal-numbers">online generator</a>. Save this secret key into a text file and note where you store this file.</p>
 <h3 id="configure-lodestar-to-locate-the-jwt-secret">Configure Lodestar to locate the JWT secret<a class="headerlink" href="#configure-lodestar-to-locate-the-jwt-secret" title="Permanent link">&para;</a></h3>
-<p>When starting up a Lodestar beacon node in any configuration, ensure you add the <code>--jwt-secret $JWT_SECRET_PATH</code> flag to point to the saved secret key file.</p>
+<p>When starting up a Lodestar beacon node in any configuration, ensure you add the <code>--jwtSecret $JWT_SECRET_PATH</code> flag to point to the saved secret key file.</p>
 <h3 id="ensure-jwt-is-configured-with-your-execution-node">Ensure JWT is configured with your execution node<a class="headerlink" href="#ensure-jwt-is-configured-with-your-execution-node" title="Permanent link">&para;</a></h3>
 <p><strong>For Go Ethereum:</strong>
 Use the <code>--authrpc.jwtsecret /data/jwtsecret</code> flag to configure the secret. Use their documentation <a href="https://geth.ethereum.org/docs/interface/merge">here</a>.</p>
@@ -971,12 +971,12 @@ Use the <code>--engine-jwt-secret=&lt;FILE&gt;</code> flag to configure the secr
 Use the <code>--authrpc.jwtsecret</code> flag to configure the secret. Use their documentation <a href="https://github.com/ledgerwatch/erigon#authentication-api">here</a>.</p>
 <h2 id="run-a-beacon-node">Run a beacon node<a class="headerlink" href="#run-a-beacon-node" title="Permanent link">&para;</a></h2>
 <p>To start a Lodestar beacon run the command:</p>
-<div class="highlight"><pre><span></span><code>./lodestar<span class="w"> </span>beacon<span class="w"> </span>--network<span class="w"> </span><span class="nv">$NETWORK_NAME</span><span class="w"> </span>--jwt-secret<span class="w"> </span><span class="nv">$JWT_SECRET_PATH</span>
+<div class="highlight"><pre><span></span><code>./lodestar<span class="w"> </span>beacon<span class="w"> </span>--network<span class="w"> </span><span class="nv">$NETWORK_NAME</span><span class="w"> </span>--jwtSecret<span class="w"> </span><span class="nv">$JWT_SECRET_PATH</span>
 </code></pre></div>
 <p>This will assume an execution-layer client is available at the default
 location of <code>https://localhost:8545</code>.</p>
 <p>In case execution-layer clients are available at different locations, use <code>--execution.urls</code> to specify these locations in the command:</p>
-<div class="highlight"><pre><span></span><code>./lodestar<span class="w"> </span>beacon<span class="w"> </span>--network<span class="w"> </span><span class="nv">$NETWORK_NAME</span><span class="w"> </span>--jwt-secret<span class="w"> </span><span class="nv">$JWT_SECRET_PATH</span><span class="w"> </span>--execution.urls<span class="w"> </span><span class="nv">$EL_URL1</span><span class="w"> </span><span class="nv">$EL_URL2</span>
+<div class="highlight"><pre><span></span><code>./lodestar<span class="w"> </span>beacon<span class="w"> </span>--network<span class="w"> </span><span class="nv">$NETWORK_NAME</span><span class="w"> </span>--jwtSecret<span class="w"> </span><span class="nv">$JWT_SECRET_PATH</span><span class="w"> </span>--execution.urls<span class="w"> </span><span class="nv">$EL_URL1</span><span class="w"> </span><span class="nv">$EL_URL2</span>
 </code></pre></div>
 <p>Immediately you should see confirmation that the node has started</p>
 <div class="highlight"><pre><span></span><code>pr-20<span class="w"> </span><span class="m">15</span>:12:45.274<span class="o">[]</span><span class="w">                 </span>info:<span class="w"> </span>Lodestar<span class="w"> </span><span class="nv">network</span><span class="o">=</span>mainnet,<span class="w"> </span><span class="nv">version</span><span class="o">=</span>v1.7.2,<span class="w"> </span><span class="nv">commit</span><span class="o">=</span>
@@ -1162,10 +1162,11 @@ Apr-20 15:16:17.017[]                 info: Synced - slot: 6264979 - head: 0xde9
       <div class="md-dialog__inner md-typeset"></div>
     </div>
     
-    <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.a264c092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.f886a092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.726fbb30.min.js"></script>
+      <script src="../../assets/javascripts/bundle.81fa17fe.min.js"></script>
       
     
   </body>

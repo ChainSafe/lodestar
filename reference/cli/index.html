@@ -20,7 +20,7 @@
       
       
       <link rel="icon" href="../../assets/round-icon.ico">
-      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.4.2">
+      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.4.8">
     
     
       
@@ -28,10 +28,10 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.d451bc0e.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.4b4a2bd9.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.a5377069.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.356b1318.min.css">
       
       
 
@@ -1084,7 +1084,13 @@
 <tr>
 <td><code>--private</code></td>
 <td>boolean</td>
-<td>Do not send implementation details over p2p identify protocol and in builder requests</td>
+<td>Do not send implementation details over p2p identify protocol and in builder, execution engine and eth1 requests</td>
+<td></td>
+</tr>
+<tr>
+<td><code>--validatorMonitorLogs</code></td>
+<td>boolean</td>
+<td>Log validator monitor events as info. This requires metrics to be enabled.</td>
 <td></td>
 </tr>
 <tr>
@@ -1142,6 +1148,12 @@
 <td>9596</td>
 </tr>
 <tr>
+<td><code>--rest.swaggerUI</code></td>
+<td>boolean</td>
+<td>Enable Swagger UI for API exploration at http://{address}:{port}/documentation</td>
+<td></td>
+</tr>
+<tr>
 <td><code>--suggestedFeeRecipient</code></td>
 <td>string</td>
 <td>Specify fee recipient default for collecting the EL block fees and rewards (a hex string representing 20 bytes address: ^0x[a-fA-F0-9]{40}$) in case validator fails to update for a validator index before calling <code>produceBlock</code>.</td>
@@ -1190,9 +1202,15 @@
 <td>2000</td>
 </tr>
 <tr>
-<td><code>--jwt-secret</code></td>
+<td><code>--jwtSecret</code></td>
 <td>string</td>
 <td>File path to a shared hex-encoded jwt secret which will be used to generate and bundle HS256 encoded jwt tokens for authentication with the EL client's rpc server hosting engine apis. Secret to be exactly same as the one used by the corresponding EL client.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>--jwtId</code></td>
+<td>string</td>
+<td>An optional identifier to be set in the id field of the claims included in jwt tokens used for authentication with EL client's rpc server hosting engine apis</td>
 <td></td>
 </tr>
 <tr>
@@ -1512,14 +1530,20 @@
 <tr>
 <td><code>--builder</code></td>
 <td>boolean</td>
-<td>Enable execution payload production via a builder for better rewards</td>
+<td>An alias for <code>--builder.selection maxprofit</code> for the builder flow, ignored if <code>--builder.selection</code> is explicitly provided</td>
 <td></td>
 </tr>
 <tr>
 <td><code>--builder.selection</code></td>
 <td>string</td>
-<td>Default builder block selection strategy: <code>maxprofit</code>, <code>builderalways</code>, or <code>builderonly</code></td>
-<td><code>maxprofit</code></td>
+<td>Builder block selection strategy <code>maxprofit</code>, <code>builderalways</code>, <code>builderonly</code> or <code>executiononly</code></td>
+<td><code>executiononly</code></td>
+</tr>
+<tr>
+<td><code>--useProduceBlockV3</code></td>
+<td>boolean</td>
+<td>Enable/disable usage of produceBlockV3 that might not be supported by all beacon clients yet</td>
+<td>false</td>
 </tr>
 <tr>
 <td><code>--importKeystores</code></td>
@@ -1932,8 +1956,14 @@
 <tr>
 <td><code>--builder.selection</code></td>
 <td>string</td>
-<td>Default builder block selection strategy: <code>maxprofit</code>, <code>builderalways</code>, or <code>builderonly</code></td>
-<td><code>maxprofit</code></td>
+<td>Builder block selection strategy <code>maxprofit</code>, <code>builderalways</code>, <code>builderonly</code> or <code>executiononly</code></td>
+<td><code>executiononly</code></td>
+</tr>
+<tr>
+<td><code>--useProduceBlockV3</code></td>
+<td>boolean</td>
+<td>Enable/disable usage of produceBlockV3 that might not be supported by all beacon clients yet</td>
+<td>false</td>
 </tr>
 <tr>
 <td><code>--importKeystores</code></td>
@@ -2235,10 +2265,11 @@
       <div class="md-dialog__inner md-typeset"></div>
     </div>
     
-    <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.a264c092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.f886a092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.726fbb30.min.js"></script>
+      <script src="../../assets/javascripts/bundle.81fa17fe.min.js"></script>
       
     
   </body>

@@ -18,7 +18,7 @@
       
       
       <link rel="icon" href="../assets/round-icon.ico">
-      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.4.2">
+      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.4.8">
     
     
       
@@ -26,10 +26,10 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.d451bc0e.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.4b4a2bd9.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.a5377069.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.356b1318.min.css">
       
       
 
@@ -1262,7 +1262,7 @@
 <p>Unsure where to begin contributing to Lodestar? Here are some ideas!</p>
 <ul>
 <li>:pencil2: See any typos? See any verbiage that should be changed or updated? Go for it! Github makes it easy to make contributions right from the browser.</li>
-<li>:mag_right: Look through our <a href="https://github.com/ChainSafe/lodestar/issues?q=is%3Aopen+is%3Aissue+no%3Aassignee">outstanding unassigned issues</a>. (Hint: look for issues labeled <code>meta-good-first-issue</code> or <code>meta-help-wanted</code>!)</li>
+<li>:mag_right: Look through our <a href="https://github.com/ChainSafe/lodestar/issues?q=is%3Aopen+is%3Aissue+no%3Aassignee">outstanding unassigned issues</a>. (Hint: look for issues labeled <code>good first issue</code> or <code>help-wanted</code>!)</li>
 <li>:speech_balloon: Join our <a href="https://discord.gg/aMxzVcr">Discord chat</a>!
   <a href="https://discord.gg/aMxzVcr"><img alt="Discord" src="https://img.shields.io/discord/593655374469660673.svg?label=Discord&amp;logo=discord" /></a></li>
 </ul>
@@ -1331,9 +1331,14 @@
 <li>run <code>yarn test:unit</code> from the command line</li>
 <li>Commenting: If your code does something that is not obvious or deviates from standards, leave a comment for other developers to explain your logic and reasoning.</li>
 <li>Use <code>//</code> commenting format unless it's a comment you want people to see in their IDE.</li>
-<li>Use <code>/** **/</code> commenting format for documenting a function/variable.</li>
+<li>Use <code>/** */</code> commenting format for documenting a function/variable.</li>
 <li>Code white space can be helpful for reading complex code, please add some.</li>
 <li>For unit tests, we forbid import stubbing when other approaches are feasible.</li>
+<li>Metrics are a <a href="https://www.youtube.com/watch?v=49_qQDbLjGU">critical part of Lodestar</a>, every large feature should be documented with metrics</li>
+<li>Metrics need to follow the <a href="https://prometheus.io/docs/practices/naming/">Prometheus Best Practices</a></li>
+<li>For metric names, make sure to add the unit as suffix, e.g. <code>_seconds</code> or <code>_bytes</code></li>
+<li>Metric code variables on the other hand should not be suffixed, i.e. <code>Sec</code>-suffix should be omitted</li>
+<li>Time-based metrics must use seconds as the unit</li>
 </ul>
 <h2 id="tests-style-guide">Tests style guide<a class="headerlink" href="#tests-style-guide" title="Permanent link">&para;</a></h2>
 <p>Test must not depend on external live resources, such that running tests for a commit must be deterministic:</p>
@@ -1486,10 +1491,11 @@
       <div class="md-dialog__inner md-typeset"></div>
     </div>
     
-    <script id="__config" type="application/json">{"base": "..", "features": [], "search": "../assets/javascripts/workers/search.a264c092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    <script id="__config" type="application/json">{"base": "..", "features": [], "search": "../assets/javascripts/workers/search.f886a092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.726fbb30.min.js"></script>
+      <script src="../assets/javascripts/bundle.81fa17fe.min.js"></script>
       
     
   </body>
