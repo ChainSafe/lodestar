@@ -63,7 +63,7 @@ import {BlockOpts, getBlockPhase0} from "./util.js";
 //   - processVoluntaryExit    : -
 //
 // ### Hashing the state
-// Hashing cost is dependant on how many nodes have been modified in the tree. After mutating the state, just count
+// Hashing cost is dependent on how many nodes have been modified in the tree. After mutating the state, just count
 // how many nodes have no cached _root, then multiply by the cost of hashing.
 //
 

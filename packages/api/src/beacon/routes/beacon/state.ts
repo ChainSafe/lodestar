@@ -33,6 +33,9 @@ export type CommitteesFilters = {
   slot?: Slot;
 };
 
+export const RandaoResponseType = new ContainerType({
+  randao: ssz.Root,
+});
 export const FinalityCheckpointsType = new ContainerType({
   previousJustified: ssz.phase0.Checkpoint,
   currentJustified: ssz.phase0.Checkpoint,
@@ -64,6 +67,7 @@ export const ValidatorResponseListType = ArrayOf(ValidatorResponseType);
 export const EpochCommitteeResponseListType = ArrayOf(EpochCommitteeResponseType);
 export const ValidatorBalanceListType = ArrayOf(ValidatorBalanceType);
 
+export type RandaoResponse = ValueOf<typeof RandaoResponseType>;
 export type FinalityCheckpoints = ValueOf<typeof FinalityCheckpointsType>;
 export type ValidatorResponse = ValueOf<typeof ValidatorResponseType>;
 export type EpochCommitteeResponse = ValueOf<typeof EpochCommitteeResponseType>;
@@ -104,6 +108,21 @@ export type Endpoints = {
     {stateId: StateId},
     {params: {state_id: string}},
     phase0.Fork,
+    ExecutionOptimisticMeta
+  >;
+
+  /**
+   * Fetch the RANDAO mix for the requested epoch from the state identified by 'stateId'.
+   *
+   * @param stateId State identifier.
+   * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", "justified", \<slot\>, \<hex encoded stateRoot with 0x prefix\>.
+   * @param epoch Fetch randao mix for the given epoch. If an epoch is not specified then the RANDAO mix for the state's current epoch will be returned.
+   */
+  getStateRandao: Endpoint<
+    "GET",
+    {stateId: StateId; epoch?: Epoch},
+    {params: {state_id: string}; query: {epoch?: number}},
+    RandaoResponse,
     ExecutionOptimisticMeta
   >;
 
@@ -264,6 +283,22 @@ export const definitions: RouteDefinitions<Endpoints> = {
     req: stateIdOnlyReq,
     resp: {
       data: RootResponseType,
+      meta: ExecutionOptimisticCodec,
+    },
+  },
+  getStateRandao: {
+    url: "/eth/v1/beacon/states/{state_id}/randao",
+    method: "GET",
+    req: {
+      writeReq: ({stateId, epoch}) => ({params: {state_id: String(stateId)}, query: {epoch}}),
+      parseReq: ({params, query}) => ({stateId: params.state_id, epoch: query.epoch}),
+      schema: {
+        params: {state_id: Schema.StringRequired},
+        query: {epoch: Schema.Uint},
+      },
+    },
+    resp: {
+      data: RandaoResponseType,
       meta: ExecutionOptimisticCodec,
     },
   },

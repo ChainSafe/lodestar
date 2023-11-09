@@ -60,6 +60,28 @@ export class KeymanagerApi implements Api {
     );
   }
 
+  async listGraffiti(pubkeyHex: string): ReturnType<Api["listGraffiti"]> {
+    return {data: {pubkey: pubkeyHex, graffiti: this.validator.validatorStore.getGraffiti(pubkeyHex)}};
+  }
+
+  async setGraffiti(pubkeyHex: string, graffiti: string): Promise<void> {
+    this.checkIfProposerWriteEnabled();
+    this.validator.validatorStore.setGraffiti(pubkeyHex, graffiti);
+    this.persistedKeysBackend.writeProposerConfig(
+      pubkeyHex,
+      this.validator.validatorStore.getProposerConfig(pubkeyHex)
+    );
+  }
+
+  async deleteGraffiti(pubkeyHex: string): Promise<void> {
+    this.checkIfProposerWriteEnabled();
+    this.validator.validatorStore.deleteGraffiti(pubkeyHex);
+    this.persistedKeysBackend.writeProposerConfig(
+      pubkeyHex,
+      this.validator.validatorStore.getProposerConfig(pubkeyHex)
+    );
+  }
+
   async getGasLimit(pubkeyHex: string): ReturnType<Api["getGasLimit"]> {
     const gasLimit = this.validator.validatorStore.getGasLimit(pubkeyHex);
     return {data: {pubkey: pubkeyHex, gasLimit}};

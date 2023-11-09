@@ -81,8 +81,8 @@ describe("ExecutionEngine / http", () => {
     };
     returnValue = response;
 
-    const payloadAndBlockValue = await executionEngine.getPayload(ForkName.bellatrix, "0x0");
-    const payload = payloadAndBlockValue.executionPayload;
+    const payloadWithValue = await executionEngine.getPayload(ForkName.bellatrix, "0x0");
+    const payload = payloadWithValue.executionPayload;
 
     expect(serializeExecutionPayload(ForkName.bellatrix, payload)).toEqual(response.result);
     expect(reqJsonRpcPayload).toEqual(request);

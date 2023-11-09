@@ -450,16 +450,16 @@ export function isValidAttestationData(
     throw Error(`Attestation data.beaconBlockRoot ${beaconBlockRootHex} not found in forkchoice`);
   }
 
-  let attestationDependantRoot: string;
+  let attestationDependentRoot: string;
   try {
-    attestationDependantRoot = forkChoice.getDependentRoot(beaconBlock, EpochDifference.previous);
+    attestationDependentRoot = forkChoice.getDependentRoot(beaconBlock, EpochDifference.previous);
   } catch (_) {
     // getDependent root may throw error if the dependent root of attestation data is prior to finalized slot
     // ignore this attestation data in that case since we're not sure it's compatible to the state
     // see https://github.com/ChainSafe/lodestar/issues/4743
     return false;
   }
-  return attestationDependantRoot === stateDependentRoot;
+  return attestationDependentRoot === stateDependentRoot;
 }
 
 function flagIsTimelySource(flag: number): boolean {

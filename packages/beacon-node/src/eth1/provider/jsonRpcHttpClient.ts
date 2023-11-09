@@ -4,7 +4,7 @@ import {fetch} from "@lodestar/api";
 import {ErrorAborted, TimeoutError, isValidHttpUrl, retry} from "@lodestar/utils";
 import {IGauge, IHistogram} from "../../metrics/interface.js";
 import {IJson, RpcPayload} from "../interface.js";
-import {encodeJwtToken} from "./jwt.js";
+import {JwtClaim, encodeJwtToken} from "./jwt.js";
 
 export enum JsonRpcHttpClientEvent {
   /**
@@ -83,6 +83,8 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
    * the token freshness +-5 seconds (via `iat` property of the token claim)
    */
   private readonly jwtSecret?: Uint8Array;
+  private readonly jwtId?: string;
+  private readonly jwtVersion?: string;
   private readonly metrics: JsonRpcHttpClientMetrics | null;
   readonly emitter = new JsonRpcHttpClientEventEmitter();
 
@@ -103,6 +105,10 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
        * and it might deny responses to the RPC requests.
        */
       jwtSecret?: Uint8Array;
+      /** If jwtSecret and jwtId are provided, jwtId will be included in JwtClaim.id */
+      jwtId?: string;
+      /** If jwtSecret and jwtVersion are provided, jwtVersion will be included in JwtClaim.clv. */
+      jwtVersion?: string;
       /** Retry attempts */
       retryAttempts?: number;
       /** Retry delay, only relevant with retry attempts */
@@ -125,6 +131,8 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
     }
 
     this.jwtSecret = opts?.jwtSecret;
+    this.jwtId = opts?.jwtId;
+    this.jwtVersion = opts?.jwtVersion;
     this.metrics = opts?.metrics ?? null;
 
     this.metrics?.configUrlsCount.set(urls.length);
@@ -255,7 +263,13 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
          *
          * Jwt auth spec: https://github.com/ethereum/execution-apis/pull/167
          */
-        const token = encodeJwtToken({iat: Math.floor(new Date().getTime() / 1000)}, this.jwtSecret);
+        const jwtClaim: JwtClaim = {
+          iat: Math.floor(Date.now() / 1000),
+          id: this.jwtId,
+          clv: this.jwtVersion,
+        };
+
+        const token = encodeJwtToken(jwtClaim, this.jwtSecret);
         headers["Authorization"] = `Bearer ${token}`;
       }
 

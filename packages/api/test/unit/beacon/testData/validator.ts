@@ -45,19 +45,38 @@ export const testData: GenericServerTestCases<Api> = {
     },
   },
   produceBlock: {
-    args: [32000, randaoReveal, graffiti, feeRecipient],
-    res: {data: ssz.phase0.BeaconBlock.defaultValue(), blockValue: ssz.Wei.defaultValue()},
+    args: [32000, randaoReveal, graffiti],
+    res: {data: ssz.phase0.BeaconBlock.defaultValue()},
   },
   produceBlockV2: {
-    args: [32000, randaoReveal, graffiti, feeRecipient],
-    res: {data: ssz.altair.BeaconBlock.defaultValue(), version: ForkName.altair, blockValue: ssz.Wei.defaultValue()},
+    args: [32000, randaoReveal, graffiti],
+    res: {
+      data: ssz.altair.BeaconBlock.defaultValue(),
+      version: ForkName.altair,
+      executionPayloadValue: ssz.Wei.defaultValue(),
+    },
+  },
+  produceBlockV3: {
+    args: [
+      32000,
+      randaoReveal,
+      graffiti,
+      true,
+      {feeRecipient, builderSelection: undefined, strictFeeRecipientCheck: undefined},
+    ],
+    res: {
+      data: ssz.altair.BeaconBlock.defaultValue(),
+      version: ForkName.altair,
+      executionPayloadValue: ssz.Wei.defaultValue(),
+      executionPayloadBlinded: false,
+    },
   },
   produceBlindedBlock: {
-    args: [32000, randaoReveal, graffiti, feeRecipient],
+    args: [32000, randaoReveal, graffiti],
     res: {
       data: ssz.bellatrix.BlindedBeaconBlock.defaultValue(),
       version: ForkName.bellatrix,
-      blockValue: ssz.Wei.defaultValue(),
+      executionPayloadValue: ssz.Wei.defaultValue(),
     },
   },
   produceAttestationData: {

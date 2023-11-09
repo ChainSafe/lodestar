@@ -93,9 +93,9 @@ export interface IBeaconChain {
 
   readonly beaconProposerCache: BeaconProposerCache;
   readonly checkpointBalancesCache: CheckpointBalancesCache;
-  readonly producedBlobSidecarsCache: Map<BlockHash, {blobSidecars: deneb.BlobSidecars; slot: Slot}>;
-  readonly producedBlindedBlobSidecarsCache: Map<BlockHash, {blobSidecars: deneb.BlindedBlobSidecars; slot: Slot}>;
-  readonly producedBlockRoot: Set<RootHex>;
+  readonly producedBlobSidecarsCache: Map<BlockHash, deneb.BlobSidecars>;
+  readonly producedBlockRoot: Map<RootHex, allForks.ExecutionPayload | null>;
+  readonly producedBlindedBlobSidecarsCache: Map<BlockHash, deneb.BlindedBlobSidecars>;
   readonly producedBlindedBlockRoot: Set<RootHex>;
   readonly opts: IChainOptions;
 
@@ -138,8 +138,10 @@ export interface IBeaconChain {
 
   getBlobSidecars(beaconBlock: deneb.BeaconBlock): deneb.BlobSidecars;
 
-  produceBlock(blockAttributes: BlockAttributes): Promise<{block: allForks.BeaconBlock; blockValue: Wei}>;
-  produceBlindedBlock(blockAttributes: BlockAttributes): Promise<{block: allForks.BlindedBeaconBlock; blockValue: Wei}>;
+  produceBlock(blockAttributes: BlockAttributes): Promise<{block: allForks.BeaconBlock; executionPayloadValue: Wei}>;
+  produceBlindedBlock(
+    blockAttributes: BlockAttributes
+  ): Promise<{block: allForks.BlindedBeaconBlock; executionPayloadValue: Wei}>;
 
   /** Process a block until complete */
   processBlock(block: BlockInput, opts?: ImportBlockOpts): Promise<void>;

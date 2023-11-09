@@ -195,10 +195,14 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   if (args.private) {
     beaconNodeOptions.set({network: {private: true}});
   } else {
+    const versionStr = `Lodestar/${version}`;
+    const simpleVersionStr = version.split("/")[0];
     // Add simple version string for libp2p agent version
-    beaconNodeOptions.set({network: {version: version.split("/")[0]}});
+    beaconNodeOptions.set({network: {version: simpleVersionStr}});
     // Add User-Agent header to all builder requests
-    beaconNodeOptions.set({executionBuilder: {userAgent: `Lodestar/${version}`}});
+    beaconNodeOptions.set({executionBuilder: {userAgent: versionStr}});
+    // Set jwt version with version string
+    beaconNodeOptions.set({executionEngine: {jwtVersion: versionStr}, eth1: {jwtVersion: versionStr}});
   }
 
   // Render final options

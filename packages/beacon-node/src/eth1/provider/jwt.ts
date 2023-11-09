@@ -4,8 +4,11 @@ import jwt from "jwt-simple";
 
 const {encode, decode} = jwt;
 
-/** jwt token has iat which is issued at unix timestamp, and an optional exp for expiry */
-type JwtClaim = {iat: number; exp?: number};
+/**
+ * jwt token has iat which is issued at unix timestamp, an optional exp for expiry,
+ * an optional id as unique identifier, and an optional clv for client type/version
+ */
+export type JwtClaim = {iat: number; exp?: number; id?: string; clv?: string};
 
 export function encodeJwtToken(
   claim: JwtClaim,

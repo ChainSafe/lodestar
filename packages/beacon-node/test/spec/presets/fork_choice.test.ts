@@ -21,7 +21,12 @@ import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js"
 import {defaultChainOptions} from "../../../src/chain/options.js";
 import {getStubbedBeaconDb} from "../../utils/mocks/db.js";
 import {ClockStopped} from "../../utils/mocks/clock.js";
-import {getBlockInput, AttestationImportOpt, BlockSource} from "../../../src/chain/blocks/types.js";
+import {
+  getBlockInput,
+  AttestationImportOpt,
+  BlockSource,
+  BlobSidecarValidation,
+} from "../../../src/chain/blocks/types.js";
 import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
 import {PowMergeBlock} from "../../../src/eth1/interface.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
@@ -216,7 +221,7 @@ const forkChoiceTest =
 
                 await chain.processBlock(blockImport, {
                   seenTimestampSec: tickTime,
-                  validBlobSidecars: true,
+                  validBlobSidecars: BlobSidecarValidation.Full,
                   importAttestations: AttestationImportOpt.Force,
                 });
                 if (!isValid) throw Error("Expect error since this is a negative test");

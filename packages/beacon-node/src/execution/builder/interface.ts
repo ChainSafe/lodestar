@@ -1,4 +1,5 @@
 import {allForks, bellatrix, Root, Slot, BLSPubkey, deneb, Wei} from "@lodestar/types";
+import {ForkExecution} from "@lodestar/params";
 
 export interface IExecutionBuilder {
   /**
@@ -17,13 +18,16 @@ export interface IExecutionBuilder {
   checkStatus(): Promise<void>;
   registerValidator(registrations: bellatrix.SignedValidatorRegistrationV1[]): Promise<void>;
   getHeader(
+    fork: ForkExecution,
     slot: Slot,
     parentHash: Root,
     proposerPubKey: BLSPubkey
   ): Promise<{
     header: allForks.ExecutionPayloadHeader;
-    blockValue: Wei;
-    blobKzgCommitments?: deneb.BlobKzgCommitments;
+    executionPayloadValue: Wei;
+    blindedBlobsBundle?: deneb.BlindedBlobsBundle;
   }>;
-  submitBlindedBlock(signedBlock: allForks.SignedBlindedBeaconBlock): Promise<allForks.SignedBeaconBlock>;
+  submitBlindedBlock(
+    signedBlock: allForks.SignedBlindedBeaconBlockOrContents
+  ): Promise<allForks.SignedBeaconBlockOrContents>;
 }

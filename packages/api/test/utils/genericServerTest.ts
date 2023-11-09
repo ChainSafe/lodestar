@@ -58,7 +58,13 @@ export function runGenericServerTest<
 
       // Assert server handler called with correct args
       expect(mockApi[routeId].callCount).to.equal(1, `mockApi[${routeId as string}] must be called once`);
-      expect(mockApi[routeId].getCall(0).args).to.deep.equal(testCase.args, `mockApi[${routeId as string}] wrong args`);
+
+      // if mock api args are > testcase args, there may be some undefined extra args parsed towards the end
+      // to obtain a match, ignore the extra args
+      expect(mockApi[routeId].getCall(0).args.slice(0, testCase.args.length)).to.deep.equal(
+        testCase.args,
+        `mockApi[${routeId as string}] wrong args`
+      );
 
       // Assert returned value is correct
       expect(res.response).to.deep.equal(testCase.res, "Wrong returned value");
