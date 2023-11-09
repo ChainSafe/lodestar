@@ -15,11 +15,6 @@ import {
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
-export type AttestationFilters = {
-  slot: Slot;
-  committeeIndex: CommitteeIndex;
-};
-
 const AttestationListType = ArrayOf(ssz.phase0.Attestation);
 const AttesterSlashingListType = ArrayOf(ssz.phase0.AttesterSlashing);
 const ProposerSlashingListType = ArrayOf(ssz.phase0.ProposerSlashing);
@@ -41,7 +36,7 @@ export type Endpoints = {
    */
   getPoolAttestations: Endpoint<
     "GET",
-    {filters?: Partial<AttestationFilters>},
+    {slot?: Slot; committeeIndex?: CommitteeIndex},
     {query: {slot?: number; committee_index?: number}},
     AttestationList,
     EmptyMeta
@@ -181,8 +176,8 @@ export const definitions: RouteDefinitions<Endpoints> = {
     url: "/eth/v1/beacon/pool/attestations",
     method: "GET",
     req: {
-      writeReq: ({filters}) => ({query: {slot: filters?.slot, committee_index: filters?.committeeIndex}}),
-      parseReq: ({query}) => ({filters: {slot: query.slot, committeeIndex: query.committee_index}}),
+      writeReq: ({slot, committeeIndex}) => ({query: {slot: slot, committee_index: committeeIndex}}),
+      parseReq: ({query}) => ({slot: query.slot, committeeIndex: query.committee_index}),
       schema: {query: {slot: Schema.Uint, committee_index: Schema.Uint}},
     },
     resp: {

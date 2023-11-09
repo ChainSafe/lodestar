@@ -16,14 +16,11 @@ export * as pool from "./pool.js";
 export * as state from "./state.js";
 export {BroadcastValidation} from "./block.js";
 export type {BlockId, BlockHeaderResponse} from "./block.js";
-export type {AttestationFilters} from "./pool.js";
 // TODO: Review if re-exporting all these types is necessary
 export type {
   StateId,
   ValidatorId,
   ValidatorStatus,
-  ValidatorFilters,
-  CommitteesFilters,
   FinalityCheckpoints,
   ValidatorResponse,
   ValidatorBalance,

@@ -135,7 +135,7 @@ export type Endpoints = {
    */
   getBlockHeaders: Endpoint<
     "GET",
-    {filters: Partial<{slot: Slot; parentRoot: string}>},
+    {slot?: Slot; parentRoot?: string},
     {query: {slot?: number; parent_root?: string}},
     BlockHeaderResponse[],
     ExecutionOptimisticMeta
@@ -274,8 +274,8 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       url: "/eth/v1/beacon/headers",
       method: "GET",
       req: {
-        writeReq: ({filters}) => ({query: {slot: filters?.slot, parent_root: filters?.parentRoot}}),
-        parseReq: ({query}) => ({filters: {slot: query?.slot, parentRoot: query?.parent_root}}),
+        writeReq: ({slot, parentRoot}) => ({query: {slot, parent_root: parentRoot}}),
+        parseReq: ({query}) => ({slot: query.slot, parentRoot: query.parent_root}),
         schema: {query: {slot: Schema.Uint, parent_root: Schema.String}},
       },
       resp: {

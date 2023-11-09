@@ -23,16 +23,6 @@ export enum ValidatorStatus {
   "withdrawal_done",
 }
 
-export type ValidatorFilters = {
-  id?: ValidatorId[];
-  status?: ValidatorStatus[];
-};
-export type CommitteesFilters = {
-  epoch?: Epoch;
-  index?: CommitteeIndex;
-  slot?: Slot;
-};
-
 export const RandaoResponseType = new ContainerType({
   randao: ssz.Root,
 });
@@ -169,7 +159,7 @@ export type Endpoints = {
   getStateValidators: Endpoint<
     //
     "GET",
-    {stateId: StateId; filters?: ValidatorFilters},
+    {stateId: StateId; id?: ValidatorId[]; status?: ValidatorStatus[]},
     {params: {state_id: string}; query: {id?: ValidatorId[]; status?: ValidatorStatus[]}},
     ValidatorResponseList,
     ExecutionOptimisticMeta
@@ -203,7 +193,7 @@ export type Endpoints = {
   getEpochCommittees: Endpoint<
     //
     "GET",
-    {stateId: StateId; filters?: CommitteesFilters},
+    {stateId: StateId; epoch?: Epoch; index?: CommitteeIndex; slot?: Slot},
     {params: {state_id: string}; query: {slot?: number; epoch?: number; index?: number}},
     EpochCommitteeResponseList,
     ExecutionOptimisticMeta
@@ -231,8 +221,13 @@ export const definitions: RouteDefinitions<Endpoints> = {
     url: "/eth/v1/beacon/states/{state_id}/committees",
     method: "GET",
     req: {
-      writeReq: ({stateId, filters}) => ({params: {state_id: String(stateId)}, query: filters ?? {}}),
-      parseReq: ({params, query}) => ({stateId: params.state_id, filters: query}),
+      writeReq: ({stateId, epoch, index, slot}) => ({params: {state_id: String(stateId)}, query: {epoch, index, slot}}),
+      parseReq: ({params, query}) => ({
+        stateId: params.state_id,
+        epoch: query.epoch,
+        index: query.index,
+        slot: query.slot,
+      }),
       schema: {
         params: {state_id: Schema.StringRequired},
         query: {slot: Schema.Uint, epoch: Schema.Uint, index: Schema.Uint},
@@ -321,8 +316,8 @@ export const definitions: RouteDefinitions<Endpoints> = {
     url: "/eth/v1/beacon/states/{state_id}/validators",
     method: "GET",
     req: {
-      writeReq: ({stateId, filters}) => ({params: {state_id: String(stateId)}, query: filters || {}}),
-      parseReq: ({params, query}) => ({stateId: params.state_id, filters: query}),
+      writeReq: ({stateId, id, status}) => ({params: {state_id: String(stateId)}, query: {id, status}}),
+      parseReq: ({params, query}) => ({stateId: params.state_id, id: query.id, status: query.status}),
       schema: {
         params: {state_id: Schema.StringRequired},
         query: {id: Schema.UintOrStringArray, status: Schema.StringArray},

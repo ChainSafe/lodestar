@@ -81,10 +81,7 @@ export type Endpoints = {
    */
   getCommitteeRoot: Endpoint<
     "GET",
-    {
-      startPeriod: SyncPeriod;
-      count: number;
-    },
+    {startPeriod: SyncPeriod; count: number},
     {query: {start_period: number; count: number}},
     HashList,
     EmptyMeta
