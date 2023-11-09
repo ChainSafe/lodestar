@@ -176,7 +176,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
     url: "/eth/v1/beacon/pool/attestations",
     method: "GET",
     req: {
-      writeReq: ({slot, committeeIndex}) => ({query: {slot: slot, committee_index: committeeIndex}}),
+      writeReq: ({slot, committeeIndex}) => ({query: {slot, committee_index: committeeIndex}}),
       parseReq: ({query}) => ({slot: query.slot, committeeIndex: query.committee_index}),
       schema: {query: {slot: Schema.Uint, committee_index: Schema.Uint}},
     },

@@ -64,20 +64,24 @@ export type Endpoint<
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type AnyEndpoint = Endpoint<HttpMethod, any, any, any, any>;
 
+type RequireNested<T> = {
+  [P in keyof T]: unknown extends T[P] ? T[P] : Required<T[P]>;
+};
+
 // Request codec
 
 /** Encode / decode requests to & from function params, as well as schema definitions */
 export type GetRequestCodec<E extends Endpoint> = {
-  writeReq: (p: E["args"]) => E["request"];
-  parseReq: (r: E["request"]) => E["args"];
+  writeReq: (p: Required<E["args"]>) => RequireNested<E["request"]>;
+  parseReq: (r: RequireNested<E["request"]>) => Required<E["args"]>;
   schema: SchemaDefinition<E["request"]>;
 };
 
 export type PostRequestCodec<E extends Endpoint> = {
-  writeReqJson: (p: E["args"]) => E["request"];
-  parseReqJson: (r: E["request"]) => E["args"];
-  writeReqSsz: (p: E["args"]) => SszPostRequestData<E["request"]>;
-  parseReqSsz: (r: SszPostRequestData<E["request"]>) => E["args"];
+  writeReqJson: (p: Required<E["args"]>) => RequireNested<E["request"]>;
+  parseReqJson: (r: RequireNested<E["request"]>) => Required<E["args"]>;
+  writeReqSsz: (p: Required<E["args"]>) => RequireNested<SszPostRequestData<E["request"]>>;
+  parseReqSsz: (r: RequireNested<SszPostRequestData<E["request"]>>) => Required<E["args"]>;
   schema: SchemaDefinition<E["request"]>;
 };
 
