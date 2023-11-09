@@ -5,8 +5,16 @@ import {IHttpClient} from "./httpClient.js";
 import {ApiRequestInit} from "./request.js";
 import {ApiResponse} from "./response.js";
 
+type HasOnlyOptionalProps<T> = {
+  [K in keyof T]-?: object extends Pick<T, K> ? never : K;
+} extends {[_ in keyof T]: never}
+  ? true
+  : false;
+
 export type ApiClientMethod<E extends Endpoint> = E["args"] extends void
   ? (init?: ApiRequestInit) => Promise<ApiResponse<E>>
+  : HasOnlyOptionalProps<E["args"]> extends true
+  ? (args?: E["args"], init?: ApiRequestInit) => Promise<ApiResponse<E>>
   : (args: E["args"], init?: ApiRequestInit) => Promise<ApiResponse<E>>;
 
 export type ApiClientMethods<Es extends Record<string, Endpoint>> = {[K in keyof Es]: ApiClientMethod<Es[K]>};
@@ -33,7 +41,7 @@ export function createApiClientMethod<E extends Endpoint>(
       return client.request(definitionExtended, undefined, init ?? {});
     }) as ApiClientMethod<E>;
   }
-  return (async (args, init) => {
+  return (async (args?: E["args"], init?: ApiRequestInit) => {
     return client.request(definitionExtended, args, init ?? {});
   }) as ApiClientMethod<E>;
 }

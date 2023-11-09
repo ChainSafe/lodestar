@@ -163,3 +163,6 @@ const resp = await testMethods.getAttesterDuties(args, {
 });
 
 const _duties = await resp.value();
+
+const res = await testMethods.getHealth();
+await res.value();
