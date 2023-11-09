@@ -111,7 +111,7 @@ export function upgradeLightClientHeader(
       (upgradedHeader as eip6110.LightClientHeader).execution.depositReceiptsRoot =
         ssz.eip6110.LightClientHeader.fields.execution.fields.depositReceiptsRoot.defaultValue();
 
-      // Break if no further upgradation is required else fall through
+      // Break if no further upgrades is required else fall through
       if (ForkSeq[targetFork] <= ForkSeq.eip6110) break;
   }
   return upgradedHeader;
