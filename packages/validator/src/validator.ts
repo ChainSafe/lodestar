@@ -266,6 +266,7 @@ export class Validator {
     let api: Api;
     if (typeof opts.api === "string" || Array.isArray(opts.api)) {
       const urls = typeof opts.api === "string" ? [opts.api] : opts.api;
+      logger.info("Beacon node", {urls: urls.toString()});
       // This new api instance can make do with default timeout as a faster timeout is
       // not necessary since this instance won't be used for validator duties
       api = getClient({urls, getAbortSignal: () => opts.abortController.signal}, {config, logger});

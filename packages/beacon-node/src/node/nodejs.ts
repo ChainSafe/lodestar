@@ -214,7 +214,7 @@ export class BeaconNode {
         logger: logger.child({module: LoggerModule.execution}),
       }),
       executionBuilder: opts.executionBuilder.enabled
-        ? initializeExecutionBuilder(opts.executionBuilder, config, metrics)
+        ? initializeExecutionBuilder(opts.executionBuilder, config, metrics, logger)
         : undefined,
     });
 
