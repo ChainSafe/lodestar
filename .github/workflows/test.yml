@@ -182,7 +182,8 @@ jobs:
         with:
           path: packages/validator/spec-tests
           key: spec-test-data-${{ hashFiles('packages/validator/test/spec/params.ts') }}
-
+      - name: Rebuild native modules with debug 
+        run: npm rebuild --debug
       - name: Unit tests
         id: unit_tests
         # Rever to "yarn test:unit" when finished debugging core dumps
