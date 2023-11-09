@@ -29,6 +29,14 @@ export interface IEth1Provider {
   getBlocksByNumber(fromBlock: number, toBlock: number): Promise<EthJsonRpcBlockRaw[]>;
   getDepositEvents(fromBlock: number, toBlock: number): Promise<phase0.DepositEvent[]>;
   validateContract(): Promise<void>;
+  getState(): Eth1ProviderState;
+}
+
+export enum Eth1ProviderState {
+  ONLINE = "ONLINE",
+  OFFLINE = "OFFLINE",
+  ERROR = "ERROR",
+  AUTH_FAILED = "AUTH_FAILED",
 }
 
 export type Eth1DataAndDeposits = {

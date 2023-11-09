@@ -17,7 +17,7 @@ import * as validator from "./validator.js";
 export {ApiError};
 
 // Re-export for convenience
-export {RouteConfig};
+export type {RouteConfig};
 
 export function registerRoutes(
   server: ServerInstance,
@@ -52,7 +52,7 @@ export function registerRoutes(
     }
 
     for (const route of Object.values(routes())) {
-      registerRoute(server, route);
+      registerRoute(server, route, namespace);
     }
   }
 }

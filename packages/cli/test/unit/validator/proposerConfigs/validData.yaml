@@ -4,12 +4,10 @@ proposer_config:
     strict_fee_recipient_check: true
     fee_recipient: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
     builder:
-      enabled: true
       gas_limit: "30000000"
   '0xa4855c83d868f772a579133d9f23818008417b743e8447e235d8eb78b1d8f8a9f63f98c551beb7de254400f89592314d':
     fee_recipient: '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
     builder:
-      enabled: "true"
       gas_limit: "35000000"
       selection: "maxprofit"
 default_config:
@@ -17,6 +15,5 @@ default_config:
   strict_fee_recipient_check: "true"
   fee_recipient: '0xcccccccccccccccccccccccccccccccccccccccc'
   builder:
-    enabled: true
     gas_limit: "30000000"
     selection: "builderalways"

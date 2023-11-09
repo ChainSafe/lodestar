@@ -203,7 +203,15 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
 
     attesterDutiesReorg: register.gauge({
       name: "vc_attestation_duties_reorg_total",
-      help: "Total count of instances the attester duties dependant root changed",
+      help: "Total count of instances the attester duties dependent root changed",
+    }),
+
+    attesterDutiesNextSlot: register.gauge({
+      // Metric is used by Rocket Pool dashboard (18391) to determine seconds until next attestation.
+      // It works without requiring any modification to the dashboard as the metric name is the
+      // same as Lighthouse uses for this.
+      name: "vc_attestation_duty_slot",
+      help: "Slot of next scheduled attestation duty",
     }),
 
     // BlockProposingService
@@ -233,7 +241,7 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
 
     proposerDutiesReorg: register.gauge({
       name: "vc_proposer_duties_reorg_total",
-      help: "Total count of instances the proposer duties dependant root changed",
+      help: "Total count of instances the proposer duties dependent root changed",
     }),
 
     newProposalDutiesDetected: register.gauge({
@@ -279,14 +287,14 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
 
     syncCommitteeDutiesReorg: register.gauge({
       name: "vc_sync_committee_duties_reorg_total",
-      help: "Total count of instances the sync committee duties dependant root changed",
+      help: "Total count of instances the sync committee duties dependent root changed",
     }),
 
     // ValidatorStore
 
     signers: register.gauge({
       name: "vc_signers_count",
-      help: "Total count of instances the sync committee duties dependant root changed",
+      help: "Total count of instances the sync committee duties dependent root changed",
     }),
 
     localSignTime: register.histogram({

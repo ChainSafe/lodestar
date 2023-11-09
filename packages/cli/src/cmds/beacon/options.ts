@@ -20,6 +20,7 @@ type BeaconExtraArgs = {
   peerStoreDir?: string;
   persistNetworkIdentity?: boolean;
   private?: boolean;
+  validatorMonitorLogs?: boolean;
   attachToGlobalThis?: boolean;
 };
 
@@ -116,7 +117,13 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
   },
 
   private: {
-    description: "Do not send implementation details over p2p identify protocol and in builder requests",
+    description:
+      "Do not send implementation details over p2p identify protocol and in builder, execution engine and eth1 requests",
+    type: "boolean",
+  },
+
+  validatorMonitorLogs: {
+    description: "Log validator monitor events as info. This requires metrics to be enabled.",
     type: "boolean",
   },
 

@@ -35,7 +35,6 @@ export function getLoggerVc(logger: Logger, clock: IClock): LoggerVc {
     info: logger.info.bind(logger),
     verbose: logger.verbose.bind(logger),
     debug: logger.debug.bind(logger),
-    trace: logger.trace.bind(logger),
 
     /**
      * Throttle "node is syncing" errors to not pollute the console too much.

@@ -12,6 +12,8 @@ import {
   BlockError,
   BlockErrorCode,
   BlockGossipError,
+  BlobSidecarErrorCode,
+  BlobSidecarGossipError,
   GossipAction,
   GossipActionError,
   SyncCommitteeError,
@@ -43,7 +45,13 @@ import {PeerAction} from "../peers/index.js";
 import {validateLightClientFinalityUpdate} from "../../chain/validation/lightClientFinalityUpdate.js";
 import {validateLightClientOptimisticUpdate} from "../../chain/validation/lightClientOptimisticUpdate.js";
 import {validateGossipBlobSidecar} from "../../chain/validation/blobSidecar.js";
-import {BlockInput, BlockSource, getBlockInput, GossipedInputType} from "../../chain/blocks/types.js";
+import {
+  BlockInput,
+  BlockSource,
+  getBlockInput,
+  GossipedInputType,
+  BlobSidecarValidation,
+} from "../../chain/blocks/types.js";
 import {sszDeserialize} from "../gossip/topic.js";
 import {INetworkCore} from "../core/index.js";
 import {INetwork} from "../interface.js";
@@ -143,19 +151,18 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
 
     try {
       await validateGossipBlock(config, chain, signedBlock, fork);
-      // TODO: freetheblobs add some serialized data
       return blockInput;
     } catch (e) {
       if (e instanceof BlockGossipError) {
         // Don't trigger this yet if full block and blobs haven't arrived yet
-        if (e instanceof BlockGossipError && e.type.code === BlockErrorCode.PARENT_UNKNOWN && blockInput !== null) {
+        if (e.type.code === BlockErrorCode.PARENT_UNKNOWN && blockInput !== null) {
           logger.debug("Gossip block has error", {slot, root: blockHex, code: e.type.code});
           events.emit(NetworkEvent.unknownBlockParent, {blockInput, peer: peerIdStr});
         }
-      }
 
-      if (e instanceof BlockGossipError && e.action === GossipAction.REJECT) {
-        chain.persistInvalidSszValue(forkTypes.SignedBeaconBlock, signedBlock, `gossip_reject_slot_${slot}`);
+        if (e.action === GossipAction.REJECT) {
+          chain.persistInvalidSszValue(forkTypes.SignedBeaconBlock, signedBlock, `gossip_reject_slot_${slot}`);
+        }
       }
 
       throw e;
@@ -180,8 +187,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
       blobBytes,
     });
 
-    // TODO: freetheblobs
-    // metrics?.gossipBlock.receivedToGossipValidate.observe(recvToVal);
+    metrics?.gossipBlob.receivedToGossipValidate.observe(recvToVal);
     logger.verbose("Received gossip blob", {
       slot: slot,
       root: blockHex,
@@ -197,16 +203,16 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
       await validateGossipBlobSidecar(config, chain, signedBlob, gossipIndex);
       return blockInput;
     } catch (e) {
-      if (e instanceof BlockGossipError) {
+      if (e instanceof BlobSidecarGossipError) {
         // Don't trigger this yet if full block and blobs haven't arrived yet
-        if (e instanceof BlockGossipError && e.type.code === BlockErrorCode.PARENT_UNKNOWN && blockInput !== null) {
+        if (e.type.code === BlobSidecarErrorCode.PARENT_UNKNOWN && blockInput !== null) {
           logger.debug("Gossip blob has error", {slot, root: blockHex, code: e.type.code});
           events.emit(NetworkEvent.unknownBlockParent, {blockInput, peer: peerIdStr});
         }
-      }
 
-      if (e instanceof BlockGossipError && e.action === GossipAction.REJECT) {
-        chain.persistInvalidSszValue(ssz.deneb.SignedBlobSidecar, signedBlob, `gossip_reject_slot_${slot}`);
+        if (e.action === GossipAction.REJECT) {
+          chain.persistInvalidSszValue(ssz.deneb.SignedBlobSidecar, signedBlob, `gossip_reject_slot_${slot}`);
+        }
       }
 
       throw e;
@@ -227,7 +233,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
         // proposer signature already checked in validateBeaconBlock()
         validProposerSignature: true,
         // blobSidecars already checked in validateGossipBlobSidecars()
-        validBlobSidecars: true,
+        validBlobSidecars: BlobSidecarValidation.Individual,
         // It's critical to keep a good number of mesh peers.
         // To do that, the Gossip Job Wait Time should be consistently <3s to avoid the behavior penalties in gossip
         // Gossip Job Wait Time depends on the BLS Job Wait Time
@@ -287,7 +293,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
       } else {
         // TODO DENEB:
         //
-        // If block + blobs not fully recieved in the slot within some deadline, we should trigger block/blob
+        // If block + blobs not fully received in the slot within some deadline, we should trigger block/blob
         // pull using req/resp by root pre-emptively even though it will be trigged on seeing any block/blob
         // gossip on next slot via missing parent checks
       }
@@ -310,7 +316,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
       } else {
         // TODO DENEB:
         //
-        // If block + blobs not fully recieved in the slot within some deadline, we should trigger block/blob
+        // If block + blobs not fully received in the slot within some deadline, we should trigger block/blob
         // pull using req/resp by root pre-emptively even though it will be trigged on seeing any block/blob
         // gossip on next slot via missing parent checks
       }

@@ -1,4 +1,4 @@
-import {ContainerType} from "@chainsafe/ssz";
+import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {Epoch, phase0, capella, Slot, ssz, StringType, RootHex, altair, UintNum64, allForks} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {isForkExecution, ForkName} from "@lodestar/params";
@@ -6,6 +6,19 @@ import {isForkExecution, ForkName} from "@lodestar/params";
 import {RouteDef, TypeJson, WithVersion} from "../../utils/index.js";
 import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
 import {ApiClientResponse} from "../../interfaces.js";
+
+const stringType = new StringType();
+export const blobSidecarSSE = new ContainerType(
+  {
+    blockRoot: stringType,
+    index: ssz.BlobIndex,
+    slot: ssz.Slot,
+    kzgCommitment: stringType,
+    versionedHash: stringType,
+  },
+  {typeName: "BlobSidecarSSE", jsonCase: "eth2"}
+);
+type BlobSidecarSSE = ValueOf<typeof blobSidecarSSE>;
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -39,6 +52,8 @@ export enum EventType {
   lightClientUpdate = "light_client_update",
   /** Payload attributes for block proposal */
   payloadAttributes = "payload_attributes",
+  /** The node has received a valid blobSidecar (from P2P or API) */
+  blobSidecar = "blob_sidecar",
 }
 
 export const eventTypes: {[K in EventType]: K} = {
@@ -54,6 +69,7 @@ export const eventTypes: {[K in EventType]: K} = {
   [EventType.lightClientFinalityUpdate]: EventType.lightClientFinalityUpdate,
   [EventType.lightClientUpdate]: EventType.lightClientUpdate,
   [EventType.payloadAttributes]: EventType.payloadAttributes,
+  [EventType.blobSidecar]: EventType.blobSidecar,
 };
 
 export type EventData = {
@@ -95,6 +111,7 @@ export type EventData = {
   [EventType.lightClientFinalityUpdate]: allForks.LightClientFinalityUpdate;
   [EventType.lightClientUpdate]: allForks.LightClientUpdate;
   [EventType.payloadAttributes]: {version: ForkName; data: allForks.SSEPayloadAttributes};
+  [EventType.blobSidecar]: BlobSidecarSSE;
 };
 
 export type BeaconEvent = {[K in EventType]: {type: K; message: EventData[K]}}[EventType];
@@ -130,7 +147,6 @@ export type ReqTypes = {
 // The request is very simple: (topics) => {query: {topics}}, and the test will ensure compatibility server - client
 
 export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: TypeJson<EventData[K]>} {
-  const stringType = new StringType();
   const getLightClientTypeFromHeader = (data: allForks.LightClientHeader): allForks.AllForksLightClientSSZTypes => {
     return config.getLightClientForkTypes(data.beacon.slot);
   };
@@ -190,6 +206,7 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
     [EventType.payloadAttributes]: WithVersion((fork) =>
       isForkExecution(fork) ? ssz.allForksExecution[fork].SSEPayloadAttributes : ssz.bellatrix.SSEPayloadAttributes
     ),
+    [EventType.blobSidecar]: blobSidecarSSE,
 
     [EventType.lightClientOptimisticUpdate]: {
       toJson: (data) =>

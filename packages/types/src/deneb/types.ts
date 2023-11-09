@@ -16,11 +16,11 @@ export type SignedBlobSidecar = ValueOf<typeof ssz.SignedBlobSidecar>;
 export type SignedBlobSidecars = ValueOf<typeof ssz.SignedBlobSidecars>;
 export type SignedBlindedBlobSidecar = ValueOf<typeof ssz.SignedBlindedBlobSidecar>;
 export type SignedBlindedBlobSidecars = ValueOf<typeof ssz.SignedBlindedBlobSidecars>;
+export type ExecutionPayloadAndBlobsBundle = ValueOf<typeof ssz.ExecutionPayloadAndBlobsBundle>;
+export type BlobsBundle = ValueOf<typeof ssz.BlobsBundle>;
 
 export type BlobKzgCommitments = ValueOf<typeof ssz.BlobKzgCommitments>;
 export type KZGProofs = ValueOf<typeof ssz.KZGProofs>;
-export type Polynomial = ValueOf<typeof ssz.Polynomial>;
-export type PolynomialAndCommitment = ValueOf<typeof ssz.PolynomialAndCommitment>;
 export type BLSFieldElement = ValueOf<typeof ssz.BLSFieldElement>;
 
 export type BlobIdentifier = ValueOf<typeof ssz.BlobIdentifier>;
@@ -34,8 +34,6 @@ export type BeaconBlockBody = ValueOf<typeof ssz.BeaconBlockBody>;
 export type BeaconBlock = ValueOf<typeof ssz.BeaconBlock>;
 export type SignedBeaconBlock = ValueOf<typeof ssz.SignedBeaconBlock>;
 
-export type SignedBeaconBlockAndBlobSidecars = ValueOf<typeof ssz.SignedBeaconBlockAndBlobSidecars>;
-
 export type BeaconState = ValueOf<typeof ssz.BeaconState>;
 
 export type BlindedBeaconBlockBody = ValueOf<typeof ssz.BlindedBeaconBlockBody>;
@@ -44,6 +42,7 @@ export type SignedBlindedBeaconBlock = ValueOf<typeof ssz.SignedBlindedBeaconBlo
 
 export type FullOrBlindedExecutionPayload = ExecutionPayload | ExecutionPayloadHeader;
 
+export type BlindedBlobsBundle = ValueOf<typeof ssz.BlindedBlobsBundle>;
 export type BuilderBid = ValueOf<typeof ssz.BuilderBid>;
 export type SignedBuilderBid = ValueOf<typeof ssz.SignedBuilderBid>;
 export type SSEPayloadAttributes = ValueOf<typeof ssz.SSEPayloadAttributes>;

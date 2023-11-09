@@ -45,17 +45,14 @@ export function pollPrepareBeaconProposer(
           })
         );
         ApiError.assert(await api.validator.prepareBeaconProposer(proposers));
+        logger.debug("Registered proposers with beacon node", {epoch, count: proposers.length});
       } catch (e) {
-        logger.error("Failed to register proposers with beacon", {epoch}, e as Error);
+        logger.error("Failed to register proposers with beacon node", {epoch}, e as Error);
       }
     }
   }
 
   clock.runEveryEpoch(prepareBeaconProposer);
-  // Since the registration of the validators to the BN as well as to builder (if enabled)
-  // is scheduled every epoch, there could be some time since the first scheduled run,
-  // so fire one registration right away as well
-  void prepareBeaconProposer(clock.getCurrentEpoch());
 }
 
 /**
@@ -81,12 +78,16 @@ export function pollBuilderValidatorRegistration(
     // registerValidator is not as time sensitive as attesting.
     // Poll indices first, then call api.validator.registerValidator once
     await validatorStore.pollValidatorIndices().catch((e: Error) => {
-      logger.error("Error on pollValidatorIndices for prepareBeaconProposer", {epoch}, e);
+      logger.error("Error on pollValidatorIndices for registerValidator", {epoch}, e);
     });
     const pubkeyHexes = validatorStore
       .getAllLocalIndices()
       .map((index) => validatorStore.getPubkeyOfIndex(index))
-      .filter((pubkeyHex) => pubkeyHex !== undefined && validatorStore.isBuilderEnabled(pubkeyHex));
+      .filter(
+        (pubkeyHex): pubkeyHex is string =>
+          pubkeyHex !== undefined &&
+          validatorStore.getBuilderSelection(pubkeyHex) !== routes.validator.BuilderSelection.ExecutionOnly
+      );
 
     if (pubkeyHexes.length > 0) {
       const pubkeyHexesChunks = batchItems(pubkeyHexes, {batchSize: REGISTRATION_CHUNK_SIZE});
@@ -95,27 +96,19 @@ export function pollBuilderValidatorRegistration(
         try {
           const registrations = await Promise.all(
             pubkeyHexes.map((pubkeyHex): Promise<bellatrix.SignedValidatorRegistrationV1> => {
-              // Just to make typescript happy as it can't figure out we have filtered
-              // undefined pubkeys above
-              if (pubkeyHex === undefined) {
-                throw Error("All undefined pubkeys should have been filtered out");
-              }
               const feeRecipient = validatorStore.getFeeRecipient(pubkeyHex);
               const gasLimit = validatorStore.getGasLimit(pubkeyHex);
               return validatorStore.getValidatorRegistration(pubkeyHex, {feeRecipient, gasLimit}, slot);
             })
           );
           ApiError.assert(await api.validator.registerValidator(registrations));
+          logger.info("Published validator registrations to builder", {epoch, count: registrations.length});
         } catch (e) {
-          logger.error("Failed to register validator registrations with builder", {epoch}, e as Error);
+          logger.error("Failed to publish validator registrations to builder", {epoch}, e as Error);
         }
       }
     }
   }
 
   clock.runEveryEpoch(registerValidator);
-  // Since the registration of the validators to the BN as well as to builder (if enabled)
-  // is scheduled every epoch, there could be some time since the first scheduled run,
-  // so fire one registration right away as well
-  void registerValidator(clock.getCurrentEpoch());
 }

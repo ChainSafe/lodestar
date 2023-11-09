@@ -15,6 +15,7 @@ import {
 } from "@lodestar/api/keymanager";
 import {Interchange, SignerType, Validator} from "@lodestar/validator";
 import {ServerApi} from "@lodestar/api";
+import {Epoch} from "@lodestar/types";
 import {isValidHttpUrl} from "@lodestar/utils";
 import {getPubkeyHexFromKeystore, isValidatePubkeyHex} from "../../../util/format.js";
 import {parseFeeRecipient} from "../../../util/index.js";
@@ -53,6 +54,28 @@ export class KeymanagerApi implements Api {
   async deleteFeeRecipient(pubkeyHex: string): Promise<void> {
     this.checkIfProposerWriteEnabled();
     this.validator.validatorStore.deleteFeeRecipient(pubkeyHex);
+    this.persistedKeysBackend.writeProposerConfig(
+      pubkeyHex,
+      this.validator.validatorStore.getProposerConfig(pubkeyHex)
+    );
+  }
+
+  async listGraffiti(pubkeyHex: string): ReturnType<Api["listGraffiti"]> {
+    return {data: {pubkey: pubkeyHex, graffiti: this.validator.validatorStore.getGraffiti(pubkeyHex)}};
+  }
+
+  async setGraffiti(pubkeyHex: string, graffiti: string): Promise<void> {
+    this.checkIfProposerWriteEnabled();
+    this.validator.validatorStore.setGraffiti(pubkeyHex, graffiti);
+    this.persistedKeysBackend.writeProposerConfig(
+      pubkeyHex,
+      this.validator.validatorStore.getProposerConfig(pubkeyHex)
+    );
+  }
+
+  async deleteGraffiti(pubkeyHex: string): Promise<void> {
+    this.checkIfProposerWriteEnabled();
+    this.validator.validatorStore.deleteGraffiti(pubkeyHex);
     this.persistedKeysBackend.writeProposerConfig(
       pubkeyHex,
       this.validator.validatorStore.getProposerConfig(pubkeyHex)
@@ -148,7 +171,7 @@ export class KeymanagerApi implements Api {
 
         decryptKeystores.queue(
           {keystoreStr, password},
-          (secretKeyBytes: Uint8Array) => {
+          async (secretKeyBytes: Uint8Array) => {
             const secretKey = bls.SecretKey.fromBytes(secretKeyBytes);
 
             // Persist the key to disk for restarts, before adding to in-memory store
@@ -164,7 +187,7 @@ export class KeymanagerApi implements Api {
             });
 
             // Add to in-memory store to start validating immediately
-            this.validator.validatorStore.addSigner({type: SignerType.Local, secretKey});
+            await this.validator.validatorStore.addSigner({type: SignerType.Local, secretKey});
 
             statuses[i] = {status: ImportStatus.imported};
           },
@@ -291,7 +314,7 @@ export class KeymanagerApi implements Api {
   async importRemoteKeys(
     remoteSigners: Pick<SignerDefinition, "pubkey" | "url">[]
   ): ReturnType<Api["importRemoteKeys"]> {
-    const results = remoteSigners.map(({pubkey, url}): ResponseStatus<ImportRemoteKeyStatus> => {
+    const importPromises = remoteSigners.map(async ({pubkey, url}): Promise<ResponseStatus<ImportRemoteKeyStatus>> => {
       try {
         if (!isValidatePubkeyHex(pubkey)) {
           throw Error(`Invalid pubkey ${pubkey}`);
@@ -307,7 +330,7 @@ export class KeymanagerApi implements Api {
 
         // Else try to add it
 
-        this.validator.validatorStore.addSigner({type: SignerType.Remote, pubkey, url});
+        await this.validator.validatorStore.addSigner({type: SignerType.Remote, pubkey, url});
 
         this.persistedKeysBackend.writeRemoteKey({
           pubkey,
@@ -324,7 +347,7 @@ export class KeymanagerApi implements Api {
     });
 
     return {
-      data: results,
+      data: await Promise.all(importPromises),
     };
   }
 
@@ -362,6 +385,16 @@ export class KeymanagerApi implements Api {
     return {
       data: results,
     };
+  }
+
+  /**
+   * Create and sign a voluntary exit message for an active validator
+   */
+  async signVoluntaryExit(pubkey: PubkeyHex, epoch?: Epoch): ReturnType<Api["signVoluntaryExit"]> {
+    if (!isValidatePubkeyHex(pubkey)) {
+      throw Error(`Invalid pubkey ${pubkey}`);
+    }
+    return {data: await this.validator.signVoluntaryExit(pubkey, epoch)};
   }
 }
 

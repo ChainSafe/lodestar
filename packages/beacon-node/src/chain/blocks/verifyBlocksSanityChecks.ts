@@ -6,7 +6,7 @@ import {toHexString} from "@lodestar/utils";
 import {IClock} from "../../util/clock.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {validateBlobSidecars} from "../validation/blobSidecar.js";
-import {BlockInput, BlockInputType, ImportBlockOpts} from "./types.js";
+import {BlockInput, BlockInputType, ImportBlockOpts, BlobSidecarValidation} from "./types.js";
 
 /**
  * Verifies some early cheap sanity checks on the block before running the full state transition.
@@ -123,19 +123,22 @@ function maybeValidateBlobs(
   blockInput: BlockInput,
   opts: ImportBlockOpts
 ): DataAvailableStatus {
-  // TODO Deneb: Make switch verify it's exhaustive
   switch (blockInput.type) {
     case BlockInputType.postDeneb: {
-      if (opts.validBlobSidecars) {
+      if (opts.validBlobSidecars === BlobSidecarValidation.Full) {
         return DataAvailableStatus.available;
       }
 
+      // run full validation
       const {block, blobs} = blockInput;
       const blockSlot = block.message.slot;
       const {blobKzgCommitments} = (block as deneb.SignedBeaconBlock).message.body;
       const beaconBlockRoot = config.getForkTypes(blockSlot).BeaconBlock.hashTreeRoot(block.message);
-      // TODO Deneb: This function throws un-typed errors
-      validateBlobSidecars(blockSlot, beaconBlockRoot, blobKzgCommitments, blobs);
+
+      // if the blob siddecars have been individually verified then we can skip kzg proof check
+      // but other checks to match blobs with block data still need to be performed
+      const skipProofsCheck = opts.validBlobSidecars === BlobSidecarValidation.Individual;
+      validateBlobSidecars(blockSlot, beaconBlockRoot, blobKzgCommitments, blobs, {skipProofsCheck});
 
       return DataAvailableStatus.available;
     }

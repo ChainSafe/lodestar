@@ -4,56 +4,59 @@ import {
   Slot,
   BLSSignature,
   allForks,
-  bellatrix,
-  capella,
   isBlindedBeaconBlock,
-  Wei,
   ProducedBlockSource,
   deneb,
-} from "@lodestar/types";
-import {ChainForkConfig} from "@lodestar/config";
-import {ForkName} from "@lodestar/params";
-import {extendError, prettyBytes, racePromisesWithCutoff, RaceEvent} from "@lodestar/utils";
-import {
-  Api,
-  ApiError,
   isBlockContents,
   isBlindedBlockContents,
-  SignedBlindedBlockContents,
-  SignedBlockContents,
-  BlockContents,
-  BlindedBlockContents,
-} from "@lodestar/api";
+} from "@lodestar/types";
+import {ChainForkConfig} from "@lodestar/config";
+import {ForkPreBlobs, ForkBlobs, ForkSeq} from "@lodestar/params";
+import {extendError, prettyBytes} from "@lodestar/utils";
+import {Api, ApiError, routes} from "@lodestar/api";
 import {IClock, LoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
 import {formatBigDecimal} from "../util/format.js";
-import {ValidatorStore, BuilderSelection} from "./validatorStore.js";
+import {ValidatorStore} from "./validatorStore.js";
 import {BlockDutiesService, GENESIS_SLOT} from "./blockDuties.js";
 
 const ETH_TO_WEI = BigInt("1000000000000000000");
 // display upto 5 decimal places
 const MAX_DECIMAL_FACTOR = BigInt("100000");
 
-/**
- * Cutoff time to wait for execution and builder block production apis to resolve
- * Post this time, race execution and builder to pick whatever resolves first
- *
- * Emprically the builder block resolves in ~1.5+ seconds, and executon should resolve <1 sec.
- * So lowering the cutoff to 2 sec from 3 seconds to publish faster for successful proposal
- * as proposals post 4 seconds into the slot seems to be not being included
- */
-const BLOCK_PRODUCTION_RACE_CUTOFF_MS = 2_000;
-/** Overall timeout for execution and block production apis */
-const BLOCK_PRODUCTION_RACE_TIMEOUT_MS = 12_000;
+// The following combination of blocks and blobs can be produced
+//  i) a full block pre deneb
+//  ii) a full block and full blobs post deneb
+//  iii) a blinded block pre deneb as a result of beacon/execution race
+//  iv) a blinded block + blinded blobs as a result of beacon/execution race
+type FullOrBlindedBlockWithContents =
+  | {
+      version: ForkPreBlobs;
+      block: allForks.BeaconBlock;
+      blobs: null;
+      executionPayloadBlinded: false;
+    }
+  | {
+      version: ForkBlobs;
+      block: allForks.BeaconBlock;
+      blobs: deneb.BlobSidecars;
+      executionPayloadBlinded: false;
+    }
+  | {
+      version: ForkPreBlobs;
+      block: allForks.BlindedBeaconBlock;
+      blobs: null;
+      executionPayloadBlinded: true;
+    }
+  | {
+      version: ForkBlobs;
+      block: allForks.BlindedBeaconBlock;
+      blobs: deneb.BlindedBlobSidecars;
+      executionPayloadBlinded: true;
+    };
 
-type ProduceBlockOpts = {
-  expectedFeeRecipient: string;
-  strictFeeRecipientCheck: boolean;
-  isBuilderEnabled: boolean;
-  builderSelection: BuilderSelection;
-};
-
+type DebugLogCtx = {debugLogCtx: Record<string, string | boolean | undefined>};
 /**
  * Service that sets up and handles validator block proposal duties.
  */
@@ -66,7 +69,8 @@ export class BlockProposingService {
     private readonly api: Api,
     private readonly clock: IClock,
     private readonly validatorStore: ValidatorStore,
-    private readonly metrics: Metrics | null
+    private readonly metrics: Metrics | null,
+    private readonly opts: {useProduceBlockV3: boolean}
   ) {
     this.dutiesService = new BlockDutiesService(
       config,
@@ -115,23 +119,22 @@ export class BlockProposingService {
       const debugLogCtx = {...logCtx, validator: pubkeyHex};
 
       const strictFeeRecipientCheck = this.validatorStore.strictFeeRecipientCheck(pubkeyHex);
-      const isBuilderEnabled = this.validatorStore.isBuilderEnabled(pubkeyHex);
       const builderSelection = this.validatorStore.getBuilderSelection(pubkeyHex);
-      const expectedFeeRecipient = this.validatorStore.getFeeRecipient(pubkeyHex);
+      const feeRecipient = this.validatorStore.getFeeRecipient(pubkeyHex);
 
       this.logger.debug("Producing block", {
         ...debugLogCtx,
-        isBuilderEnabled,
         builderSelection,
-        expectedFeeRecipient,
+        feeRecipient,
         strictFeeRecipientCheck,
+        useProduceBlockV3: this.opts.useProduceBlockV3,
       });
       this.metrics?.proposerStepCallProduceBlock.observe(this.clock.secFromSlot(slot));
 
-      const blockContents = await this.produceBlockWrapper(slot, randaoReveal, graffiti, {
-        expectedFeeRecipient,
+      const produceBlockFn = this.opts.useProduceBlockV3 ? this.produceBlockWrapper : this.produceBlockV2Wrapper;
+      const blockContents = await produceBlockFn(this.config, slot, randaoReveal, graffiti, {
+        feeRecipient,
         strictFeeRecipientCheck,
-        isBuilderEnabled,
         builderSelection,
       }).catch((e: Error) => {
         this.metrics?.blockProposingErrors.inc({error: "produce"});
@@ -143,7 +146,7 @@ export class BlockProposingService {
 
       const signedBlockPromise = this.validatorStore.signBlock(pubkey, blockContents.block, slot);
       const signedBlobPromises =
-        blockContents.blobs !== undefined
+        blockContents.blobs !== null
           ? blockContents.blobs.map((blob) => this.validatorStore.signBlob(pubkey, blob, slot))
           : undefined;
       let signedBlock: allForks.FullOrBlindedSignedBeaconBlock,
@@ -175,7 +178,7 @@ export class BlockProposingService {
       ApiError.assert(
         isBlindedBeaconBlock(signedBlock.message)
           ? await this.api.beacon.publishBlindedBlock(signedBlock as allForks.SignedBlindedBeaconBlock)
-          : await this.api.beacon.publishBlock(signedBlock as allForks.SignedBeaconBlock)
+          : await this.api.beacon.publishBlockV2(signedBlock as allForks.SignedBeaconBlock)
       );
     } else {
       ApiError.assert(
@@ -183,260 +186,109 @@ export class BlockProposingService {
           ? await this.api.beacon.publishBlindedBlock({
               signedBlindedBlock: signedBlock,
               signedBlindedBlobSidecars: signedBlobSidecars,
-            } as SignedBlindedBlockContents)
-          : await this.api.beacon.publishBlock({signedBlock, signedBlobSidecars} as SignedBlockContents)
+            } as allForks.SignedBlindedBlockContents)
+          : await this.api.beacon.publishBlockV2({signedBlock, signedBlobSidecars} as allForks.SignedBlockContents)
       );
     }
   };
 
   private produceBlockWrapper = async (
+    _config: ChainForkConfig,
     slot: Slot,
     randaoReveal: BLSSignature,
     graffiti: string,
-    {expectedFeeRecipient, strictFeeRecipientCheck, isBuilderEnabled, builderSelection}: ProduceBlockOpts
-  ): Promise<
-    {block: allForks.FullOrBlindedBeaconBlock; blobs?: allForks.FullOrBlindedBlobSidecars} & {
-      debugLogCtx: Record<string, string>;
-    }
-  > => {
-    // Start calls for building execution and builder blocks
-    const blindedBlockPromise = isBuilderEnabled ? this.produceBlindedBlock(slot, randaoReveal, graffiti) : null;
-    const fullBlockPromise =
-      // At any point either the builder or execution or both flows should be active.
-      //
-      // Ideally such a scenario should be prevented on startup, but proposerSettingsFile or keymanager
-      // configurations could cause a validator pubkey to have builder disabled with builder selection builder only
-      // (TODO: independently make sure such an options update is not successful for a validator pubkey)
-      //
-      // So if builder is disabled ignore builder selection of builderonly if caused by user mistake
-      !isBuilderEnabled || builderSelection !== BuilderSelection.BuilderOnly
-        ? this.produceBlock(slot, randaoReveal, graffiti, expectedFeeRecipient)
-        : null;
-
-    let blindedBlock, fullBlock;
-    if (blindedBlockPromise !== null && fullBlockPromise !== null) {
-      // reference index of promises in the race
-      const promisesOrder = [ProducedBlockSource.builder, ProducedBlockSource.engine];
-      [blindedBlock, fullBlock] = await racePromisesWithCutoff<{
-        block: allForks.FullOrBlindedBeaconBlock;
-        blobs?: allForks.FullOrBlindedBlobSidecars;
-        blockValue: Wei;
-      }>(
-        [blindedBlockPromise, fullBlockPromise],
-        BLOCK_PRODUCTION_RACE_CUTOFF_MS,
-        BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
-        // Callback to log the race events for better debugging capability
-        (event: RaceEvent, delayMs: number, index?: number) => {
-          const eventRef = index !== undefined ? {source: promisesOrder[index]} : {};
-          this.logger.debug("Block production race (builder vs execution)", {
-            event,
-            ...eventRef,
-            delayMs,
-            cutoffMs: BLOCK_PRODUCTION_RACE_CUTOFF_MS,
-            timeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
-          });
-        }
-      );
-      if (blindedBlock instanceof Error) {
-        // error here means race cutoff exceeded
-        this.logger.error("Failed to produce builder block", {}, blindedBlock);
-        blindedBlock = null;
-      }
-      if (fullBlock instanceof Error) {
-        this.logger.error("Failed to produce execution block", {}, fullBlock);
-        fullBlock = null;
-      }
-    } else if (blindedBlockPromise !== null && fullBlockPromise === null) {
-      blindedBlock = await blindedBlockPromise;
-      fullBlock = null;
-    } else if (blindedBlockPromise === null && fullBlockPromise !== null) {
-      blindedBlock = null;
-      fullBlock = await fullBlockPromise;
-    } else {
-      throw Error(
-        `Internal Error: Neither builder nor execution proposal flow activated isBuilderEnabled=${isBuilderEnabled} builderSelection=${builderSelection}`
-      );
-    }
-
-    const builderBlockValue = blindedBlock?.blockValue ?? BigInt(0);
-    const engineBlockValue = fullBlock?.blockValue ?? BigInt(0);
-
-    const feeRecipientCheck = {expectedFeeRecipient, strictFeeRecipientCheck};
-
-    if (fullBlock && blindedBlock) {
-      let selectedSource: ProducedBlockSource;
-      let selectedBlock;
-      switch (builderSelection) {
-        case BuilderSelection.MaxProfit: {
-          // If blockValues are zero, than choose builder as most likely beacon didn't provide blockValues
-          // and builder blocks are most likely thresholded by a min bid
-          if (engineBlockValue >= builderBlockValue && engineBlockValue !== BigInt(0)) {
-            selectedSource = ProducedBlockSource.engine;
-            selectedBlock = fullBlock;
-          } else {
-            selectedSource = ProducedBlockSource.builder;
-            selectedBlock = blindedBlock;
-          }
-          break;
-        }
-
-        // For everything else just select the builder
-        default: {
-          selectedSource = ProducedBlockSource.builder;
-          selectedBlock = blindedBlock;
-        }
-      }
-      this.logger.debug(`Selected ${selectedSource} block`, {
-        builderSelection,
-        // winston logger doesn't like bigint
-        engineBlockValue: `${engineBlockValue}`,
-        builderBlockValue: `${builderBlockValue}`,
-      });
-      return this.getBlockWithDebugLog(selectedBlock, selectedSource, feeRecipientCheck);
-    } else if (fullBlock && !blindedBlock) {
-      this.logger.debug("Selected engine block: no builder block produced", {
-        // winston logger doesn't like bigint
-        engineBlockValue: `${engineBlockValue}`,
-      });
-      return this.getBlockWithDebugLog(fullBlock, ProducedBlockSource.engine, feeRecipientCheck);
-    } else if (blindedBlock && !fullBlock) {
-      this.logger.debug("Selected builder block: no engine block produced", {
-        // winston logger doesn't like bigint
-        builderBlockValue: `${builderBlockValue}`,
-      });
-      return this.getBlockWithDebugLog(blindedBlock, ProducedBlockSource.builder, feeRecipientCheck);
-    } else {
-      throw Error("Failed to produce engine or builder block");
-    }
-  };
-
-  private getBlockWithDebugLog(
-    fullOrBlindedBlock: {
-      block: allForks.FullOrBlindedBeaconBlock;
-      blockValue: Wei;
-      blobs?: allForks.FullOrBlindedBlobSidecars;
-    },
-    source: ProducedBlockSource,
-    {expectedFeeRecipient, strictFeeRecipientCheck}: {expectedFeeRecipient: string; strictFeeRecipientCheck: boolean}
-  ): {block: allForks.FullOrBlindedBeaconBlock; blobs?: allForks.FullOrBlindedBlobSidecars} & {
-    debugLogCtx: Record<string, string>;
-  } {
-    const debugLogCtx = {
-      source: source,
-      // winston logger doesn't like bigint
-      blockValue: `${formatBigDecimal(fullOrBlindedBlock.blockValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)} ETH`,
-    };
-    const blockFeeRecipient = (fullOrBlindedBlock.block as bellatrix.BeaconBlock).body.executionPayload?.feeRecipient;
-    const feeRecipient = blockFeeRecipient !== undefined ? toHexString(blockFeeRecipient) : undefined;
-
-    if (source === ProducedBlockSource.engine) {
-      if (feeRecipient !== undefined) {
-        if (feeRecipient !== expectedFeeRecipient && strictFeeRecipientCheck) {
-          throw Error(`Invalid feeRecipient=${feeRecipient}, expected=${expectedFeeRecipient}`);
-        }
-      }
-    }
-
-    const transactions = (fullOrBlindedBlock.block as bellatrix.BeaconBlock).body.executionPayload?.transactions
-      ?.length;
-    const withdrawals = (fullOrBlindedBlock.block as capella.BeaconBlock).body.executionPayload?.withdrawals?.length;
-
-    // feeRecipient, transactions or withdrawals can end up undefined
-    Object.assign(
-      debugLogCtx,
-      feeRecipient !== undefined ? {feeRecipient} : {},
-      transactions !== undefined ? {transactions} : {},
-      withdrawals !== undefined ? {withdrawals} : {}
-    );
-    Object.assign(debugLogCtx, fullOrBlindedBlock.blobs !== undefined ? {blobs: fullOrBlindedBlock.blobs.length} : {});
-
-    return {...fullOrBlindedBlock, blobs: fullOrBlindedBlock.blobs, debugLogCtx};
-  }
-
-  /** Wrapper around the API's different methods for producing blocks across forks */
-  private produceBlock = async (
-    slot: Slot,
-    randaoReveal: BLSSignature,
-    graffiti: string,
-    expectedFeeRecipient?: string
-  ): Promise<{block: allForks.BeaconBlock; blobs?: deneb.BlobSidecars; blockValue: Wei}> => {
-    const fork = this.config.getForkName(slot);
-    switch (fork) {
-      case ForkName.phase0: {
-        const res = await this.api.validator.produceBlock(slot, randaoReveal, graffiti);
-        ApiError.assert(res, "Failed to produce block: validator.produceBlock");
-        const {data: block, blockValue} = res.response;
-        return {block, blockValue};
-      }
-
-      // All subsequent forks are expected to use v2 too
-      case ForkName.altair:
-      case ForkName.bellatrix:
-      case ForkName.capella: {
-        const res = await this.api.validator.produceBlockV2(slot, randaoReveal, graffiti, expectedFeeRecipient);
-        ApiError.assert(res, "Failed to produce block: validator.produceBlockV2");
-
-        const {response} = res;
-        if (isBlockContents(response.data)) {
-          throw Error(`Invalid BlockContents response at fork=${fork}`);
-        }
-        const {data: block, blockValue} = response as {data: allForks.BeaconBlock; blockValue: Wei};
-        return {block, blockValue};
-      }
-
-      case ForkName.deneb:
-      default: {
-        const res = await this.api.validator.produceBlockV2(slot, randaoReveal, graffiti, expectedFeeRecipient);
-        ApiError.assert(res, "Failed to produce block: validator.produceBlockV2");
-
-        const {response} = res;
-        if (!isBlockContents(response.data)) {
-          throw Error(`Expected BlockContents response at fork=${fork}`);
-        }
-        const {
-          data: {block, blobSidecars: blobs},
-          blockValue,
-        } = response as {data: BlockContents; blockValue: Wei};
-        return {block, blobs, blockValue};
-      }
-    }
-  };
-
-  private produceBlindedBlock = async (
-    slot: Slot,
-    randaoReveal: BLSSignature,
-    graffiti: string
-  ): Promise<{block: allForks.BlindedBeaconBlock; blockValue: Wei; blobs?: deneb.BlindedBlobSidecars}> => {
-    const res = await this.api.validator.produceBlindedBlock(slot, randaoReveal, graffiti);
-    ApiError.assert(res, "Failed to produce block: validator.produceBlindedBlock");
+    {feeRecipient, strictFeeRecipientCheck, builderSelection}: routes.validator.ExtraProduceBlockOps
+  ): Promise<FullOrBlindedBlockWithContents & DebugLogCtx> => {
+    const res = await this.api.validator.produceBlockV3(slot, randaoReveal, graffiti, false, {
+      feeRecipient,
+      builderSelection,
+      strictFeeRecipientCheck,
+    });
+    ApiError.assert(res, "Failed to produce block: validator.produceBlockV2");
     const {response} = res;
 
-    const fork = this.config.getForkName(slot);
-    switch (fork) {
-      case ForkName.phase0:
-      case ForkName.altair:
-        throw Error(`BlindedBlock functionality not applicable at fork=${fork}`);
+    const debugLogCtx = {
+      source: response.executionPayloadBlinded ? ProducedBlockSource.builder : ProducedBlockSource.engine,
+      // winston logger doesn't like bigint
+      executionPayloadValue: `${formatBigDecimal(response.executionPayloadValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)} ETH`,
+      // TODO PR: should be used in api call instead of adding in log
+      strictFeeRecipientCheck,
+      builderSelection,
+      api: "produceBlockV3",
+    };
 
-      case ForkName.bellatrix:
-      case ForkName.capella: {
-        if (isBlindedBlockContents(response.data)) {
-          throw Error(`Invalid BlockContents response at fork=${fork}`);
-        }
-        const {data: block, blockValue} = response as {data: allForks.BlindedBeaconBlock; blockValue: Wei};
-        return {block, blockValue};
-      }
+    return parseProduceBlockResponse(response, debugLogCtx);
+  };
 
-      case ForkName.deneb:
-      default: {
-        if (!isBlindedBlockContents(response.data)) {
-          throw Error(`Expected BlockContents response at fork=${fork}`);
-        }
-        const {
-          data: {blindedBlock: block, blindedBlobSidecars: blobs},
-          blockValue,
-        } = response as {data: BlindedBlockContents; blockValue: Wei};
-        return {block, blobs, blockValue};
-      }
+  /** a wrapper function used for backward compatibility with the clients who don't have v3 implemented yet */
+  private produceBlockV2Wrapper = async (
+    config: ChainForkConfig,
+    slot: Slot,
+    randaoReveal: BLSSignature,
+    graffiti: string,
+    {builderSelection}: routes.validator.ExtraProduceBlockOps
+  ): Promise<FullOrBlindedBlockWithContents & DebugLogCtx> => {
+    // other clients have always implemented builder vs execution race in produce blinded block
+    // so if builderSelection is executiononly then only we call produceBlockV2 else produceBlockV3 always
+    const debugLogCtx = {builderSelection};
+    const fork = config.getForkName(slot);
+
+    if (ForkSeq[fork] < ForkSeq.bellatrix || builderSelection === routes.validator.BuilderSelection.ExecutionOnly) {
+      Object.assign(debugLogCtx, {api: "produceBlockV2"});
+      const res = await this.api.validator.produceBlockV2(slot, randaoReveal, graffiti);
+      ApiError.assert(res, "Failed to produce block: validator.produceBlockV2");
+      const {response} = res;
+      return parseProduceBlockResponse({executionPayloadBlinded: false, ...response}, debugLogCtx);
+    } else {
+      Object.assign(debugLogCtx, {api: "produceBlindedBlock"});
+      const res = await this.api.validator.produceBlindedBlock(slot, randaoReveal, graffiti);
+      ApiError.assert(res, "Failed to produce block: validator.produceBlockV2");
+      const {response} = res;
+
+      return parseProduceBlockResponse({executionPayloadBlinded: true, ...response}, debugLogCtx);
     }
   };
+}
+
+function parseProduceBlockResponse(
+  response: routes.validator.ProduceFullOrBlindedBlockOrContentsRes,
+  debugLogCtx: Record<string, string | boolean | undefined>
+): FullOrBlindedBlockWithContents & DebugLogCtx {
+  if (response.executionPayloadBlinded) {
+    if (isBlindedBlockContents(response.data)) {
+      return {
+        block: response.data.blindedBlock,
+        blobs: response.data.blindedBlobSidecars,
+        version: response.version,
+        executionPayloadBlinded: true,
+        debugLogCtx,
+      } as FullOrBlindedBlockWithContents & DebugLogCtx;
+    } else {
+      return {
+        block: response.data,
+        blobs: null,
+        version: response.version,
+        executionPayloadBlinded: true,
+        debugLogCtx,
+      } as FullOrBlindedBlockWithContents & DebugLogCtx;
+    }
+  } else {
+    if (isBlockContents(response.data)) {
+      return {
+        block: response.data.block,
+        blobs: response.data.blobSidecars,
+        version: response.version,
+        executionPayloadBlinded: false,
+        debugLogCtx,
+      } as FullOrBlindedBlockWithContents & DebugLogCtx;
+    } else {
+      return {
+        block: response.data,
+        blobs: null,
+        version: response.version,
+        executionPayloadBlinded: false,
+        debugLogCtx,
+      } as FullOrBlindedBlockWithContents & DebugLogCtx;
+    }
+  }
 }

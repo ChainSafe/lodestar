@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/strict-boolean-expressions */
+import path from "node:path";
 import {spawn, Worker} from "@chainsafe/threads";
 // `threads` library creates self global variable which breaks `timeout-abort-controller` https://github.com/jacobheun/timeout-abort-controller/issues/9
 // Don't add an eslint disable here as a reminder that this has to be fixed eventually
@@ -27,6 +28,9 @@ import {
   jobItemSigSets,
   jobItemWorkReq,
 } from "./jobItem.js";
+
+// Worker constructor consider the path relative to the current working directory
+const workerDir = process.env.NODE_ENV === "test" ? "../../../../lib/chain/bls/multithread" : "./";
 
 export type BlsMultiThreadWorkerPoolModules = {
   logger: Logger;
@@ -263,7 +267,9 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
 
     for (let i = 0; i < poolSize; i++) {
       const workerData: WorkerData = {implementation, workerId: i};
-      const worker = new Worker("./worker.js", {workerData} as ConstructorParameters<typeof Worker>[1]);
+      const worker = new Worker(path.join(workerDir, "worker.js"), {
+        workerData,
+      } as ConstructorParameters<typeof Worker>[1]);
 
       const workerDescriptor: WorkerDescriptor = {
         worker,
@@ -391,7 +397,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
         try {
           // Note: This can throw, must be handled per-job.
           // Pubkey and signature aggregation is defered here
-          workReq = jobItemWorkReq(job, this.format);
+          workReq = jobItemWorkReq(job, this.format, this.metrics);
         } catch (e) {
           this.metrics?.blsThreadPool.errorAggregateSignatureSetsCount.inc({type: job.type});
 
@@ -432,10 +438,13 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       // If the job, metrics or any code below throws: the job will reject never going stale.
       // Only downside is the the job promise may be resolved twice, but that's not an issue
 
-      const jobStartNs = process.hrtime.bigint();
+      const [jobStartSec, jobStartNs] = process.hrtime();
       const workResult = await workerApi.verifyManySignatureSets(workReqs);
-      const jobEndNs = process.hrtime.bigint();
-      const {workerId, batchRetries, batchSigsSuccess, workerStartNs, workerEndNs, results} = workResult;
+      const [jobEndSec, jobEndNs] = process.hrtime();
+      const {workerId, batchRetries, batchSigsSuccess, workerStartTime, workerEndTime, results} = workResult;
+
+      const [workerStartSec, workerStartNs] = workerStartTime;
+      const [workerEndSec, workerEndNs] = workerEndTime;
 
       let successCount = 0;
       let errorCount = 0;
@@ -477,9 +486,9 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
         }
       }
 
-      const workerJobTimeSec = Number(workerEndNs - workerStartNs) / 1e9;
-      const latencyToWorkerSec = Number(workerStartNs - jobStartNs) / 1e9;
-      const latencyFromWorkerSec = Number(jobEndNs - workerEndNs) / 1e9;
+      const workerJobTimeSec = workerEndSec - workerStartSec + (workerEndNs - workerStartNs) / 1e9;
+      const latencyToWorkerSec = workerStartSec - jobStartSec + (workerStartNs - jobStartNs) / 1e9;
+      const latencyFromWorkerSec = jobEndSec - workerEndSec + Number(jobEndNs - workerEndNs) / 1e9;
 
       this.metrics?.blsThreadPool.timePerSigSet.observe(workerJobTimeSec / startedSigSets);
       this.metrics?.blsThreadPool.jobsWorkerTime.inc({workerId}, workerJobTimeSec);

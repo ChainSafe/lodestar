@@ -47,7 +47,6 @@ type BlockInputCacheType = {
 };
 
 const MAX_GOSSIPINPUT_CACHE = 5;
-// TODO deneb: export from types package
 // ssz.deneb.BlobSidecars.elementType.fixedSize;
 const BLOBSIDECAR_FIXED_SIZE = 131256;
 
@@ -196,6 +195,17 @@ export enum AttestationImportOpt {
   Force,
 }
 
+export enum BlobSidecarValidation {
+  /** When recieved in gossip the blobs are individually verified before import */
+  Individual,
+  /**
+   * Blobs when recieved in req/resp can be fully verified before import
+   * but currently used in spec tests where blobs come without proofs and assumed
+   * to be valid
+   */
+  Full,
+}
+
 export type ImportBlockOpts = {
   /**
    * TEMP: Review if this is safe, Lighthouse always imports attestations even in finalized sync.
@@ -230,7 +240,7 @@ export type ImportBlockOpts = {
    */
   validSignatures?: boolean;
   /** Set to true if already run `validateBlobSidecars()` sucessfully on the blobs */
-  validBlobSidecars?: boolean;
+  validBlobSidecars?: BlobSidecarValidation;
   /** Seen timestamp seconds */
   seenTimestampSec?: number;
   /** Set to true if persist block right at verification time */

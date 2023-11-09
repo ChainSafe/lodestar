@@ -3,15 +3,12 @@ import {deneb, Root, Slot} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {getBlobProposerSignatureSet, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 
-import {BlobSidecarError, BlobSidecarErrorCode} from "../errors/blobSidecarError.js";
+import {BlobSidecarGossipError, BlobSidecarErrorCode} from "../errors/blobSidecarError.js";
 import {GossipAction} from "../errors/gossipValidation.js";
 import {ckzg} from "../../util/kzg.js";
 import {byteArrayEquals} from "../../util/bytes.js";
 import {IBeaconChain} from "../interface.js";
 import {RegenCaller} from "../regen/index.js";
-
-// TODO: freetheblobs define blobs own gossip error
-import {BlockGossipError, BlockErrorCode} from "../errors/index.js";
 
 export async function validateGossipBlobSidecar(
   config: ChainForkConfig,
@@ -24,7 +21,7 @@ export async function validateGossipBlobSidecar(
 
   // [REJECT] The sidecar is for the correct topic -- i.e. sidecar.index matches the topic {index}.
   if (blobSidecar.index !== gossipIndex) {
-    throw new BlobSidecarError(GossipAction.REJECT, {
+    throw new BlobSidecarGossipError(GossipAction.REJECT, {
       code: BlobSidecarErrorCode.INVALID_INDEX,
       blobIdx: blobSidecar.index,
       gossipIndex,
@@ -36,8 +33,8 @@ export async function validateGossipBlobSidecar(
   // the appropriate slot).
   const currentSlotWithGossipDisparity = chain.clock.currentSlotWithGossipDisparity;
   if (currentSlotWithGossipDisparity < blobSlot) {
-    throw new BlockGossipError(GossipAction.IGNORE, {
-      code: BlockErrorCode.FUTURE_SLOT,
+    throw new BlobSidecarGossipError(GossipAction.IGNORE, {
+      code: BlobSidecarErrorCode.FUTURE_SLOT,
       currentSlot: currentSlotWithGossipDisparity,
       blockSlot: blobSlot,
     });
@@ -48,8 +45,8 @@ export async function validateGossipBlobSidecar(
   const finalizedCheckpoint = chain.forkChoice.getFinalizedCheckpoint();
   const finalizedSlot = computeStartSlotAtEpoch(finalizedCheckpoint.epoch);
   if (blobSlot <= finalizedSlot) {
-    throw new BlockGossipError(GossipAction.IGNORE, {
-      code: BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT,
+    throw new BlobSidecarGossipError(GossipAction.IGNORE, {
+      code: BlobSidecarErrorCode.WOULD_REVERT_FINALIZED_SLOT,
       blockSlot: blobSlot,
       finalizedSlot,
     });
@@ -63,7 +60,7 @@ export async function validateGossipBlobSidecar(
   // already know this block.
   const blockRoot = toHex(blobSidecar.blockRoot);
   if (chain.forkChoice.getBlockHex(blockRoot) !== null) {
-    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRoot});
+    throw new BlobSidecarGossipError(GossipAction.IGNORE, {code: BlobSidecarErrorCode.ALREADY_KNOWN, root: blockRoot});
   }
 
   // TODO: freetheblobs - check for badblock
@@ -85,13 +82,13 @@ export async function validateGossipBlobSidecar(
     //    descend from the finalized root.
     // (Non-Lighthouse): Since we prune all blocks non-descendant from finalized checking the `db.block` database won't be useful to guard
     // against known bad fork blocks, so we throw PARENT_UNKNOWN for cases (1) and (2)
-    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
+    throw new BlobSidecarGossipError(GossipAction.IGNORE, {code: BlobSidecarErrorCode.PARENT_UNKNOWN, parentRoot});
   }
 
   // [REJECT] The blob is from a higher slot than its parent.
   if (parentBlock.slot >= blobSlot) {
-    throw new BlockGossipError(GossipAction.IGNORE, {
-      code: BlockErrorCode.NOT_LATER_THAN_PARENT,
+    throw new BlobSidecarGossipError(GossipAction.IGNORE, {
+      code: BlobSidecarErrorCode.NOT_LATER_THAN_PARENT,
       parentSlot: parentBlock.slot,
       slot: blobSlot,
     });
@@ -106,7 +103,7 @@ export async function validateGossipBlobSidecar(
   const blockState = await chain.regen
     .getBlockSlotState(parentRoot, blobSlot, {dontTransferCache: true}, RegenCaller.validateGossipBlob)
     .catch(() => {
-      throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
+      throw new BlobSidecarGossipError(GossipAction.IGNORE, {code: BlobSidecarErrorCode.PARENT_UNKNOWN, parentRoot});
     });
 
   // _[REJECT]_ The proposer signature, `signed_blob_sidecar.signature`, is valid with respect to the
@@ -114,8 +111,8 @@ export async function validateGossipBlobSidecar(
   const signatureSet = getBlobProposerSignatureSet(blockState, signedBlob);
   // Don't batch so verification is not delayed
   if (!(await chain.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: true}))) {
-    throw new BlockGossipError(GossipAction.REJECT, {
-      code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID,
+    throw new BlobSidecarGossipError(GossipAction.REJECT, {
+      code: BlobSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID,
     });
   }
 
@@ -132,11 +129,21 @@ export async function validateGossipBlobSidecar(
   // a case _do not_ `REJECT`, instead `IGNORE` this message.
   const proposerIndex = blobSidecar.proposerIndex;
   if (blockState.epochCtx.getBeaconProposer(blobSlot) !== proposerIndex) {
-    throw new BlockGossipError(GossipAction.REJECT, {code: BlockErrorCode.INCORRECT_PROPOSER, proposerIndex});
+    throw new BlobSidecarGossipError(GossipAction.REJECT, {
+      code: BlobSidecarErrorCode.INCORRECT_PROPOSER,
+      proposerIndex,
+    });
   }
 
   // blob, proof and commitment as a valid BLS G1 point gets verified in batch validation
-  validateBlobsAndProofs([blobSidecar.kzgCommitment], [blobSidecar.blob], [blobSidecar.kzgProof]);
+  try {
+    validateBlobsAndProofs([blobSidecar.kzgCommitment], [blobSidecar.blob], [blobSidecar.kzgProof]);
+  } catch (_e) {
+    throw new BlobSidecarGossipError(GossipAction.REJECT, {
+      code: BlobSidecarErrorCode.INVALID_KZG_PROOF,
+      blobIdx: blobSidecar.index,
+    });
+  }
 }
 
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#validate_blobs_sidecar
@@ -144,7 +151,8 @@ export function validateBlobSidecars(
   blockSlot: Slot,
   blockRoot: Root,
   expectedKzgCommitments: deneb.BlobKzgCommitments,
-  blobSidecars: deneb.BlobSidecars
+  blobSidecars: deneb.BlobSidecars,
+  opts: {skipProofsCheck: boolean} = {skipProofsCheck: false}
 ): void {
   // assert len(expected_kzg_commitments) == len(blobs)
   if (expectedKzgCommitments.length !== blobSidecars.length) {
@@ -175,7 +183,10 @@ export function validateBlobSidecars(
       blobs.push(blobSidecar.blob);
       proofs.push(blobSidecar.kzgProof);
     }
-    validateBlobsAndProofs(expectedKzgCommitments, blobs, proofs);
+
+    if (!opts.skipProofsCheck) {
+      validateBlobsAndProofs(expectedKzgCommitments, blobs, proofs);
+    }
   }
 }
 

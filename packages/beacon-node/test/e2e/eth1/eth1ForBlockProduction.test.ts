@@ -1,6 +1,5 @@
-import "mocha";
 import {promisify} from "node:util";
-import {expect} from "chai";
+import {describe, it, beforeAll, afterAll, expect} from "vitest";
 import leveldown from "leveldown";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {sleep} from "@lodestar/utils";
@@ -27,9 +26,8 @@ const pyrmontDepositsDataRoot = [
   "0x61cef7d8a3f7c590a2dc066ae1c95def5ce769b3e9471fdb34f36f7a7246965e",
 ];
 
+// https://github.com/ChainSafe/lodestar/issues/5967
 describe.skip("eth1 / Eth1Provider", function () {
-  this.timeout("2 min");
-
   const controller = new AbortController();
 
   const config = getTestnetConfig();
@@ -38,14 +36,14 @@ describe.skip("eth1 / Eth1Provider", function () {
   let db: BeaconDb;
   let interval: NodeJS.Timeout;
 
-  before(async () => {
+  beforeAll(async () => {
     // Nuke DB to make sure it's empty
     await promisify<string>(leveldown.destroy)(dbLocation);
 
     db = new BeaconDb(config, await LevelDbController.create({name: dbLocation}, {logger}));
   });
 
-  after(async () => {
+  afterAll(async () => {
     clearInterval(interval);
     controller.abort();
     await db.close();
@@ -117,9 +115,9 @@ describe.skip("eth1 / Eth1Provider", function () {
     const state = createCachedBeaconStateTest(tbState, config);
 
     const result = await eth1ForBlockProduction.getEth1DataAndDeposits(state);
-    expect(result.eth1Data).to.deep.equal(latestEth1Data, "Wrong eth1Data for block production");
-    expect(
-      result.deposits.map((deposit) => toHexString(ssz.phase0.DepositData.hashTreeRoot(deposit.data)))
-    ).to.deep.equal(pyrmontDepositsDataRoot, "Wrong deposits for for block production");
+    expect(result.eth1Data).toEqual(latestEth1Data);
+    expect(result.deposits.map((deposit) => toHexString(ssz.phase0.DepositData.hashTreeRoot(deposit.data)))).toEqual(
+      pyrmontDepositsDataRoot
+    );
   });
 });

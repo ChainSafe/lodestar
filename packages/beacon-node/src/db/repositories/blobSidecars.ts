@@ -16,7 +16,6 @@ export const blobSidecarsWrapperSsz = new ContainerType(
 export type BlobSidecarsWrapper = ValueOf<typeof blobSidecarsWrapperSsz>;
 
 export const BLOB_SIDECARS_IN_WRAPPER_INDEX = 44;
-// TODO deneb: export from types package
 // ssz.deneb.BlobSidecars.elementType.fixedSize;
 export const BLOBSIDECAR_FIXED_SIZE = 131256;
 

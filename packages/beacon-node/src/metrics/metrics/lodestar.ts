@@ -121,6 +121,12 @@ export function createLodestarMetrics(
         help: "Current count of pending items in reqRespBridgeReqCaller data structure",
       }),
     },
+    networkWorkerWireEventsOnMainThreadLatency: register.histogram<"eventName">({
+      name: "lodestar_network_worker_wire_events_on_main_thread_latency_seconds",
+      help: "Latency in seconds to transmit network events to main thread across worker port",
+      labelNames: ["eventName"],
+      buckets: [0.001, 0.003, 0.01, 0.03, 0.1],
+    }),
 
     regenQueue: {
       length: register.gauge({
@@ -447,6 +453,10 @@ export function createLodestarMetrics(
         name: "lodestar_bls_thread_pool_batchable_sig_sets_total",
         help: "Count of total batchable signature sets",
       }),
+      signatureDeserializationMainThreadDuration: register.gauge({
+        name: "lodestar_bls_thread_pool_signature_deserialization_main_thread_time_seconds",
+        help: "Total time spent deserializing signatures on main thread",
+      }),
     },
 
     // BLS time on single thread mode
@@ -638,6 +648,13 @@ export function createLodestarMetrics(
         name: "lodestar_gossip_block_process_block_errors",
         help: "Count of errors, by error type, while processing blocks",
         labelNames: ["error"],
+      }),
+    },
+    gossipBlob: {
+      receivedToGossipValidate: register.histogram({
+        name: "lodestar_gossip_blob_received_to_gossip_validate",
+        help: "Time elapsed between blob received and blob validated",
+        buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
       }),
     },
     importBlock: {

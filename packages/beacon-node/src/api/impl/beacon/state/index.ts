@@ -5,7 +5,9 @@ import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   getCurrentEpoch,
+  getRandaoMix,
 } from "@lodestar/state-transition";
+import {EPOCHS_PER_HISTORICAL_VECTOR} from "@lodestar/params";
 import {ApiError} from "../../errors.js";
 import {ApiModules} from "../../types.js";
 import {
@@ -40,6 +42,25 @@ export function getBeaconStateApi({
       return {
         executionOptimistic,
         data: state.fork,
+      };
+    },
+
+    async getStateRandao(stateId, epoch) {
+      const {state, executionOptimistic} = await getState(stateId);
+      const stateEpoch = computeEpochAtSlot(state.slot);
+      const usedEpoch = epoch ?? stateEpoch;
+
+      if (!(stateEpoch < usedEpoch + EPOCHS_PER_HISTORICAL_VECTOR && usedEpoch <= stateEpoch)) {
+        throw new ApiError(400, "Requested epoch is out of range");
+      }
+
+      const randao = getRandaoMix(state, usedEpoch);
+
+      return {
+        executionOptimistic,
+        data: {
+          randao,
+        },
       };
     },
 

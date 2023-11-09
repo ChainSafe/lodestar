@@ -1,5 +1,5 @@
 import v8 from "node:v8";
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {RequestError, RequestErrorCode, RespStatus, ResponseError} from "@lodestar/reqresp";
 import {fromThreadBoundaryError, toThreadBoundaryError} from "../../../src/util/error.js";
 
@@ -12,7 +12,7 @@ describe("ThreadBoundaryError", () => {
     const requestError = new RequestError({code: RequestErrorCode.TTFB_TIMEOUT});
     const threadBoundaryError = toThreadBoundaryError(requestError);
     const clonedError = structuredClone(threadBoundaryError);
-    expect(clonedError.error).to.be.null;
+    expect(clonedError.error).toBeNull();
     if (!clonedError.object) {
       // should not happen
       expect.fail("clonedError.object should not be null");
@@ -21,14 +21,14 @@ describe("ThreadBoundaryError", () => {
     if (!(clonedRequestError instanceof RequestError)) {
       expect.fail("clonedRequestError should be instance of RequestError");
     }
-    expect(clonedRequestError.toObject()).to.be.deep.equal(requestError.toObject());
+    expect(clonedRequestError.toObject()).toEqual(requestError.toObject());
   });
 
   it("should clone ResponseError through thread boundary", () => {
     const responseError = new ResponseError(RespStatus.SERVER_ERROR, "internal server error");
     const threadBoundaryError = toThreadBoundaryError(responseError);
     const clonedError = structuredClone(threadBoundaryError);
-    expect(clonedError.error).to.be.null;
+    expect(clonedError.error).toBeNull();
     if (!clonedError.object) {
       // should not happen
       expect.fail("clonedError.object should not be null");
@@ -37,6 +37,6 @@ describe("ThreadBoundaryError", () => {
     if (!(clonedResponseError instanceof ResponseError)) {
       expect.fail("clonedResponseError should be instance of ResponseError");
     }
-    expect(clonedResponseError.toObject()).to.be.deep.equal(responseError.toObject());
+    expect(clonedResponseError.toObject()).toEqual(responseError.toObject());
   });
 });

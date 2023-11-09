@@ -6,18 +6,8 @@ import * as keymanager from "./client.js";
 
 // NOTE: Don't export server here so it's not bundled to all consumers
 
-export {
-  ImportStatus,
-  DeletionStatus,
-  ImportRemoteKeyStatus,
-  DeleteRemoteKeyStatus,
-  ResponseStatus,
-  SignerDefinition,
-  KeystoreStr,
-  SlashingProtectionData,
-  PubkeyHex,
-  Api,
-} from "./routes.js";
+export {ImportStatus, DeletionStatus, ImportRemoteKeyStatus, DeleteRemoteKeyStatus} from "./routes.js";
+export type {ResponseStatus, SignerDefinition, KeystoreStr, SlashingProtectionData, PubkeyHex, Api} from "./routes.js";
 
 type ClientModules = HttpClientModules & {
   config: ChainForkConfig;

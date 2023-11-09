@@ -1,5 +1,5 @@
-import {expect} from "chai";
 import all from "it-all";
+import {describe, it, expect} from "vitest";
 import {ItTrigger} from "../../../src/util/itTrigger.js";
 
 describe("util / itTrigger", () => {
@@ -11,7 +11,7 @@ describe("util / itTrigger", () => {
     itTrigger.end();
 
     const res = await all(itTrigger);
-    expect(res).to.have.length(0, "itTrigger should not yield any time");
+    expect(res).toHaveLength(0);
   });
 
   it("When triggered multiple times syncronously should yield only twice", async () => {
@@ -28,7 +28,7 @@ describe("util / itTrigger", () => {
     }, 5);
 
     const res = await all(itTrigger);
-    expect(res).to.have.length(2, "itTrigger should yield exactly two times");
+    expect(res).toHaveLength(2);
   });
 
   it("Should reject when calling end(Error)", async () => {
@@ -43,7 +43,7 @@ describe("util / itTrigger", () => {
       }, 5);
     }, 5);
 
-    await expect(all(itTrigger)).to.be.rejectedWith(testError);
+    await expect(all(itTrigger)).rejects.toThrow(testError);
   });
 
   it("ItTrigger as a single thread processor", async () => {

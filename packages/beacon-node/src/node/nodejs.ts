@@ -157,10 +157,8 @@ export class BeaconNode {
     setMaxListeners(Infinity, controller.signal);
     const signal = controller.signal;
 
-    // TODO DENEB, where is the best place to do this?
+    // If deneb is configured, load the trusted setup
     if (config.DENEB_FORK_EPOCH < Infinity) {
-      // TODO DENEB: "c-kzg" is not installed by default, so if the library is not installed this will throw
-      // See "Not able to build lodestar from source" https://github.com/ChainSafe/lodestar/issues/4886
       await initCKZG();
       loadEthereumTrustedSetup(TrustedFileMode.Txt, opts.chain.trustedSetup);
     }
@@ -288,6 +286,7 @@ export class BeaconNode {
       metrics: metrics ? metrics.apiRest : null,
     });
     if (opts.api.rest.enabled) {
+      await restApi.registerRoutes(opts.api.version);
       await restApi.listen();
     }
 
@@ -318,10 +317,10 @@ export class BeaconNode {
       this.status = BeaconNodeStatus.closing;
       this.sync.close();
       this.backfillSync?.close();
+      if (this.restApi) await this.restApi.close();
       await this.network.close();
       if (this.metricsServer) await this.metricsServer.close();
       if (this.monitoring) this.monitoring.close();
-      if (this.restApi) await this.restApi.close();
       await this.chain.persistToDisk();
       await this.chain.close();
       if (this.controller) this.controller.abort();

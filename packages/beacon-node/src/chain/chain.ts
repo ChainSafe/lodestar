@@ -29,7 +29,7 @@ import {
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {Logger, isErrorAborted, pruneSetToMax, sleep, toHex} from "@lodestar/utils";
-import {ForkSeq, SLOTS_PER_EPOCH, MAX_BLOBS_PER_BLOCK} from "@lodestar/params";
+import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
@@ -77,13 +77,12 @@ import {BlockInput} from "./blocks/types.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 
 /**
- * Arbitrary constants, blobs should be consumed immediately in the same slot they are produced.
- * A value of 1 would probably be sufficient. However it's sensible to allow some margin if the node overloads.
+ * Arbitrary constants, blobs and payloads should be consumed immediately in the same slot
+ * they are produced. A value of 1 would probably be sufficient. However it's sensible to
+ * allow some margin if the node overloads.
  */
-const DEFAULT_MAX_CACHED_BLOB_SIDECARS = MAX_BLOBS_PER_BLOCK * 2;
-const MAX_RETAINED_SLOTS_CACHED_BLOBS_SIDECAR = 8;
-// we have seen two attempts in a single slot so we factor for four
 const DEFAULT_MAX_CACHED_PRODUCED_ROOTS = 4;
+const DEFAULT_MAX_CACHED_BLOB_SIDECARS = 4;
 
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: UintNum64;
@@ -130,15 +129,14 @@ export class BeaconChain implements IBeaconChain {
 
   readonly beaconProposerCache: BeaconProposerCache;
   readonly checkpointBalancesCache: CheckpointBalancesCache;
-  // TODO DENEB: Prune data structure every time period, for both old entries
   /** Map keyed by executionPayload.blockHash of the block for those blobs */
-  readonly producedBlobSidecarsCache = new Map<BlockHash, {blobSidecars: deneb.BlobSidecars; slot: Slot}>();
-  readonly producedBlindedBlobSidecarsCache = new Map<
-    BlockHash,
-    {blobSidecars: deneb.BlindedBlobSidecars; slot: Slot}
-  >();
+  readonly producedBlobSidecarsCache = new Map<BlockHash, deneb.BlobSidecars>();
+  readonly producedBlindedBlobSidecarsCache = new Map<BlockHash, deneb.BlindedBlobSidecars>();
 
-  readonly producedBlockRoot = new Set<RootHex>();
+  // Cache payload from the local execution so that produceBlindedBlock or produceBlockV3 and
+  // send and get signed/published blinded versions which beacon can assemble into full before
+  // actual publish
+  readonly producedBlockRoot = new Map<RootHex, allForks.ExecutionPayload | null>();
   readonly producedBlindedBlockRoot = new Set<RootHex>();
 
   readonly opts: IChainOptions;
@@ -462,20 +460,20 @@ export class BeaconChain implements IBeaconChain {
     return data && {block: data, executionOptimistic: false};
   }
 
-  produceBlock(blockAttributes: BlockAttributes): Promise<{block: allForks.BeaconBlock; blockValue: Wei}> {
+  produceBlock(blockAttributes: BlockAttributes): Promise<{block: allForks.BeaconBlock; executionPayloadValue: Wei}> {
     return this.produceBlockWrapper<BlockType.Full>(BlockType.Full, blockAttributes);
   }
 
   produceBlindedBlock(
     blockAttributes: BlockAttributes
-  ): Promise<{block: allForks.BlindedBeaconBlock; blockValue: Wei}> {
+  ): Promise<{block: allForks.BlindedBeaconBlock; executionPayloadValue: Wei}> {
     return this.produceBlockWrapper<BlockType.Blinded>(BlockType.Blinded, blockAttributes);
   }
 
   async produceBlockWrapper<T extends BlockType>(
     blockType: T,
     {randaoReveal, graffiti, slot, feeRecipient}: BlockAttributes
-  ): Promise<{block: AssembledBlockType<T>; blockValue: Wei}> {
+  ): Promise<{block: AssembledBlockType<T>; executionPayloadValue: Wei}> {
     const head = this.forkChoice.getHead();
     const state = await this.regen.getBlockSlotState(
       head.blockRoot,
@@ -487,7 +485,7 @@ export class BeaconChain implements IBeaconChain {
     const proposerIndex = state.epochCtx.getBeaconProposer(slot);
     const proposerPubKey = state.epochCtx.index2pubkey[proposerIndex].toBytes();
 
-    const {body, blobs, blockValue} = await produceBlockBody.call(this, blockType, state, {
+    const {body, blobs, executionPayloadValue} = await produceBlockBody.call(this, blockType, state, {
       randaoReveal,
       graffiti,
       slot,
@@ -511,9 +509,13 @@ export class BeaconChain implements IBeaconChain {
     // track the produced block for consensus broadcast validations
     const blockRoot = this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block);
     const blockRootHex = toHex(blockRoot);
-    const producedRootTracker = blockType === BlockType.Full ? this.producedBlockRoot : this.producedBlindedBlockRoot;
-    producedRootTracker.add(blockRootHex);
-    pruneSetToMax(producedRootTracker, this.opts.maxCachedProducedRoots ?? DEFAULT_MAX_CACHED_PRODUCED_ROOTS);
+    if (blockType === BlockType.Full) {
+      this.producedBlockRoot.set(blockRootHex, (block as bellatrix.BeaconBlock).body.executionPayload ?? null);
+      this.metrics?.blockProductionCaches.producedBlockRoot.set(this.producedBlockRoot.size);
+    } else {
+      this.producedBlindedBlockRoot.add(blockRootHex);
+      this.metrics?.blockProductionCaches.producedBlindedBlockRoot.set(this.producedBlindedBlockRoot.size);
+    }
 
     // Cache for latter broadcasting
     //
@@ -521,7 +523,7 @@ export class BeaconChain implements IBeaconChain {
     // publishing the blinded block's full version
     if (blobs.type === BlobsResultType.produced) {
       // body is of full type here
-      const blockHash = toHex((block as bellatrix.BeaconBlock).body.executionPayload.blockHash);
+      const blockHash = blobs.blockHash;
       const blobSidecars = blobs.blobSidecars.map((blobSidecar) => ({
         ...blobSidecar,
         blockRoot,
@@ -530,14 +532,26 @@ export class BeaconChain implements IBeaconChain {
         proposerIndex,
       }));
 
-      this.producedBlobSidecarsCache.set(blockHash, {blobSidecars, slot});
-      pruneSetToMax(
-        this.producedBlobSidecarsCache,
-        this.opts.maxCachedBlobSidecars ?? DEFAULT_MAX_CACHED_BLOB_SIDECARS
+      this.producedBlobSidecarsCache.set(blockHash, blobSidecars);
+      this.metrics?.blockProductionCaches.producedBlobSidecarsCache.set(this.producedBlobSidecarsCache.size);
+    } else if (blobs.type === BlobsResultType.blinded) {
+      // body is of blinded type here
+      const blockHash = blobs.blockHash;
+      const blindedBlobSidecars = blobs.blobSidecars.map((blindedBlobSidecar) => ({
+        ...blindedBlobSidecar,
+        blockRoot,
+        slot,
+        blockParentRoot: parentBlockRoot,
+        proposerIndex,
+      }));
+
+      this.producedBlindedBlobSidecarsCache.set(blockHash, blindedBlobSidecars);
+      this.metrics?.blockProductionCaches.producedBlindedBlobSidecarsCache.set(
+        this.producedBlindedBlobSidecarsCache.size
       );
     }
 
-    return {block, blockValue};
+    return {block, executionPayloadValue};
   }
 
   /**
@@ -552,7 +566,7 @@ export class BeaconChain implements IBeaconChain {
    */
   getBlobSidecars(beaconBlock: deneb.BeaconBlock): deneb.BlobSidecars {
     const blockHash = toHex(beaconBlock.body.executionPayload.blockHash);
-    const {blobSidecars} = this.producedBlobSidecarsCache.get(blockHash) ?? {};
+    const blobSidecars = this.producedBlobSidecarsCache.get(blockHash);
     if (!blobSidecars) {
       throw Error(`No blobSidecars for executionPayload.blockHash ${blockHash}`);
     }
@@ -781,23 +795,27 @@ export class BeaconChain implements IBeaconChain {
     this.seenAttestationDatas.onSlot(slot);
     this.reprocessController.onSlot(slot);
 
-    // Prune old blobSidecars for block production, those are only useful on their slot
-    if (this.config.getForkSeq(slot) >= ForkSeq.deneb) {
-      if (this.producedBlobSidecarsCache.size > 0) {
-        for (const [key, {slot: blobSlot}] of this.producedBlobSidecarsCache) {
-          if (slot > blobSlot + MAX_RETAINED_SLOTS_CACHED_BLOBS_SIDECAR) {
-            this.producedBlobSidecarsCache.delete(key);
-          }
-        }
-      }
+    // Prune old cached block production artifacts, those are only useful on their slot
+    pruneSetToMax(this.producedBlockRoot, this.opts.maxCachedProducedRoots ?? DEFAULT_MAX_CACHED_PRODUCED_ROOTS);
+    this.metrics?.blockProductionCaches.producedBlockRoot.set(this.producedBlockRoot.size);
 
-      if (this.producedBlindedBlobSidecarsCache.size > 0) {
-        for (const [key, {slot: blobSlot}] of this.producedBlindedBlobSidecarsCache) {
-          if (slot > blobSlot + MAX_RETAINED_SLOTS_CACHED_BLOBS_SIDECAR) {
-            this.producedBlindedBlobSidecarsCache.delete(key);
-          }
-        }
-      }
+    pruneSetToMax(this.producedBlindedBlockRoot, this.opts.maxCachedProducedRoots ?? DEFAULT_MAX_CACHED_PRODUCED_ROOTS);
+    this.metrics?.blockProductionCaches.producedBlindedBlockRoot.set(this.producedBlockRoot.size);
+
+    if (this.config.getForkSeq(slot) >= ForkSeq.deneb) {
+      pruneSetToMax(
+        this.producedBlobSidecarsCache,
+        this.opts.maxCachedBlobSidecars ?? DEFAULT_MAX_CACHED_BLOB_SIDECARS
+      );
+      this.metrics?.blockProductionCaches.producedBlobSidecarsCache.set(this.producedBlobSidecarsCache.size);
+
+      pruneSetToMax(
+        this.producedBlindedBlobSidecarsCache,
+        this.opts.maxCachedBlobSidecars ?? DEFAULT_MAX_CACHED_BLOB_SIDECARS
+      );
+      this.metrics?.blockProductionCaches.producedBlindedBlobSidecarsCache.set(
+        this.producedBlindedBlobSidecarsCache.size
+      );
     }
 
     const metrics = this.metrics;
@@ -806,7 +824,7 @@ export class BeaconChain implements IBeaconChain {
       sleep((1000 * this.config.SECONDS_PER_SLOT) / 2)
         .then(() => metrics.onceEveryEndOfEpoch(this.getHeadState()))
         .catch((e) => {
-          if (!isErrorAborted(e)) this.logger.error("error on validator monitor onceEveryEndOfEpoch", {slot}, e);
+          if (!isErrorAborted(e)) this.logger.error("Error on validator monitor onceEveryEndOfEpoch", {slot}, e);
         });
     }
   }

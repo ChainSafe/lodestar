@@ -6,7 +6,7 @@ import {ErrorAborted} from "@lodestar/utils";
 import {computeEpochAtSlot, computeTimeAtSlot, getCurrentSlot} from "@lodestar/state-transition";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../constants/constants.js";
 
-export const enum ClockEvent {
+export enum ClockEvent {
   /**
    * This event signals the start of a new slot, and that subsequent calls to `clock.currentSlot` will equal `slot`.
    * This event is guaranteed to be emitted every `SECONDS_PER_SLOT` seconds.
@@ -27,7 +27,7 @@ export type ClockEvents = {
 /**
  * Tracks the current chain time, measured in `Slot`s and `Epoch`s
  *
- * The time is dependant on:
+ * The time is dependent on:
  * - `state.genesisTime` - the genesis time
  * - `SECONDS_PER_SLOT` - # of seconds per slot
  * - `SLOTS_PER_EPOCH` - # of slots per epoch

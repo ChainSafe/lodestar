@@ -33,6 +33,7 @@ jobs:
         with:
           node-version: 20
           check-latest: true
+          cache: yarn          
       - name: Node.js version
         id: node
         run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT
@@ -68,11 +69,9 @@ jobs:
         run: yarn test:sim:backup_eth_provider
         working-directory: packages/cli
 
-      # Enable these tests after fixing the following issue
-      # https://github.com/ChainSafe/lodestar/issues/5553
-      # - name: Sim tests multi client
-      #   run: DEBUG='${{github.event.inputs.debug}}' yarn test:sim:multiclient
-      #   working-directory: packages/cli
+      - name: Sim tests mixed client
+        run: DEBUG='${{github.event.inputs.debug}}' yarn test:sim:mixedclient
+        working-directory: packages/cli
 
       - name: Upload debug log test files for "packages/cli"
         if: ${{ always() }}

@@ -24,13 +24,14 @@ import {
   computeSyncPeriodAtEpoch,
   getSeed,
   computeProposers,
+  getActivationChurnLimit,
 } from "../util/index.js";
-import {computeEpochShuffling, EpochShuffling} from "../util/epochShuffling.js";
+import {computeEpochShuffling, EpochShuffling, getShufflingDecisionBlock} from "../util/epochShuffling.js";
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
 import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements.js";
 import {Index2PubkeyCache, PubkeyIndexMap, syncPubkeys} from "./pubkeyCache.js";
-import {BeaconStateAllForks, BeaconStateAltair} from "./types.js";
+import {BeaconStateAllForks, BeaconStateAltair, ShufflingGetter} from "./types.js";
 import {
   computeSyncCommitteeCache,
   getSyncCommitteeCache,
@@ -50,6 +51,7 @@ export type EpochCacheImmutableData = {
 export type EpochCacheOpts = {
   skipSyncCommitteeCache?: boolean;
   skipSyncPubkeys?: boolean;
+  shufflingGetter?: ShufflingGetter;
 };
 
 /** Defers computing proposers by persisting only the seed, and dropping it once indexes are computed */
@@ -145,6 +147,11 @@ export class EpochCache {
    * change through the epoch. It's used in initiateValidatorExit(). Must be update after changing active indexes.
    */
   churnLimit: number;
+
+  /**
+   * Fork limited actual activationChurnLimit
+   */
+  activationChurnLimit: number;
   /**
    * Closest epoch with available churn for validators to exit at. May be updated every block as validators are
    * initiateValidatorExit(). This value may vary on each fork of the state.
@@ -204,6 +211,7 @@ export class EpochCache {
     baseRewardPerIncrement: number;
     totalActiveBalanceIncrements: number;
     churnLimit: number;
+    activationChurnLimit: number;
     exitQueueEpoch: Epoch;
     exitQueueChurn: number;
     currentTargetUnslashedBalanceIncrements: number;
@@ -228,6 +236,7 @@ export class EpochCache {
     this.baseRewardPerIncrement = data.baseRewardPerIncrement;
     this.totalActiveBalanceIncrements = data.totalActiveBalanceIncrements;
     this.churnLimit = data.churnLimit;
+    this.activationChurnLimit = data.activationChurnLimit;
     this.exitQueueEpoch = data.exitQueueEpoch;
     this.exitQueueChurn = data.exitQueueChurn;
     this.currentTargetUnslashedBalanceIncrements = data.currentTargetUnslashedBalanceIncrements;
@@ -272,21 +281,32 @@ export class EpochCache {
     const currentActiveIndices: ValidatorIndex[] = [];
     const nextActiveIndices: ValidatorIndex[] = [];
 
+    // BeaconChain could provide a shuffling cache to avoid re-computing shuffling every epoch
+    // in that case, we don't need to compute shufflings again
+    const previousShufflingDecisionBlock = getShufflingDecisionBlock(state, previousEpoch);
+    const cachedPreviousShuffling = opts?.shufflingGetter?.(previousEpoch, previousShufflingDecisionBlock);
+    const currentShufflingDecisionBlock = getShufflingDecisionBlock(state, currentEpoch);
+    const cachedCurrentShuffling = opts?.shufflingGetter?.(currentEpoch, currentShufflingDecisionBlock);
+    const nextShufflingDecisionBlock = getShufflingDecisionBlock(state, nextEpoch);
+    const cachedNextShuffling = opts?.shufflingGetter?.(nextEpoch, nextShufflingDecisionBlock);
+
     for (let i = 0; i < validatorCount; i++) {
       const validator = validators[i];
 
       // Note: Not usable for fork-choice balances since in-active validators are not zero'ed
       effectiveBalanceIncrements[i] = Math.floor(validator.effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
 
-      if (isActiveValidator(validator, previousEpoch)) {
+      // we only need to track active indices for previous, current and next epoch if we have to compute shufflings
+      // skip doing that if we already have cached shufflings
+      if (cachedPreviousShuffling == null && isActiveValidator(validator, previousEpoch)) {
         previousActiveIndices.push(i);
       }
-      if (isActiveValidator(validator, currentEpoch)) {
+      if (cachedCurrentShuffling == null && isActiveValidator(validator, currentEpoch)) {
         currentActiveIndices.push(i);
         // We track totalActiveBalanceIncrements as ETH to fit total network balance in a JS number (53 bits)
         totalActiveBalanceIncrements += effectiveBalanceIncrements[i];
       }
-      if (isActiveValidator(validator, nextEpoch)) {
+      if (cachedNextShuffling == null && isActiveValidator(validator, nextEpoch)) {
         nextActiveIndices.push(i);
       }
 
@@ -309,11 +329,11 @@ export class EpochCache {
       throw Error("totalActiveBalanceIncrements >= Number.MAX_SAFE_INTEGER. MAX_EFFECTIVE_BALANCE is too low.");
     }
 
-    const currentShuffling = computeEpochShuffling(state, currentActiveIndices, currentEpoch);
-    const previousShuffling = isGenesis
-      ? currentShuffling
-      : computeEpochShuffling(state, previousActiveIndices, previousEpoch);
-    const nextShuffling = computeEpochShuffling(state, nextActiveIndices, nextEpoch);
+    const currentShuffling = cachedCurrentShuffling ?? computeEpochShuffling(state, currentActiveIndices, currentEpoch);
+    const previousShuffling =
+      cachedPreviousShuffling ??
+      (isGenesis ? currentShuffling : computeEpochShuffling(state, previousActiveIndices, previousEpoch));
+    const nextShuffling = cachedNextShuffling ?? computeEpochShuffling(state, nextActiveIndices, nextEpoch);
 
     const currentProposerSeed = getSeed(state, currentEpoch, DOMAIN_BEACON_PROPOSER);
 
@@ -360,10 +380,15 @@ export class EpochCache {
     // ```
     // So the returned value of is_active_validator(epoch) is guaranteed to not change during `MAX_SEED_LOOKAHEAD` epochs.
     //
-    // activeIndices size is dependant on the state epoch. The epoch is advanced after running the epoch transition, and
+    // activeIndices size is dependent on the state epoch. The epoch is advanced after running the epoch transition, and
     // the first block of the epoch process_block() call. So churnLimit must be computed at the end of the before epoch
     // transition and the result is valid until the end of the next epoch transition
     const churnLimit = getChurnLimit(config, currentShuffling.activeIndices.length);
+    const activationChurnLimit = getActivationChurnLimit(
+      config,
+      config.getForkSeq(state.slot),
+      currentShuffling.activeIndices.length
+    );
     if (exitQueueChurn >= churnLimit) {
       exitQueueEpoch += 1;
       exitQueueChurn = 0;
@@ -405,6 +430,7 @@ export class EpochCache {
       baseRewardPerIncrement,
       totalActiveBalanceIncrements,
       churnLimit,
+      activationChurnLimit,
       exitQueueEpoch,
       exitQueueChurn,
       previousTargetUnslashedBalanceIncrements,
@@ -444,6 +470,7 @@ export class EpochCache {
       baseRewardPerIncrement: this.baseRewardPerIncrement,
       totalActiveBalanceIncrements: this.totalActiveBalanceIncrements,
       churnLimit: this.churnLimit,
+      activationChurnLimit: this.activationChurnLimit,
       exitQueueEpoch: this.exitQueueEpoch,
       exitQueueChurn: this.exitQueueChurn,
       previousTargetUnslashedBalanceIncrements: this.previousTargetUnslashedBalanceIncrements,
@@ -499,10 +526,15 @@ export class EpochCache {
     // ```
     // So the returned value of is_active_validator(epoch) is guaranteed to not change during `MAX_SEED_LOOKAHEAD` epochs.
     //
-    // activeIndices size is dependant on the state epoch. The epoch is advanced after running the epoch transition, and
+    // activeIndices size is dependent on the state epoch. The epoch is advanced after running the epoch transition, and
     // the first block of the epoch process_block() call. So churnLimit must be computed at the end of the before epoch
     // transition and the result is valid until the end of the next epoch transition
     this.churnLimit = getChurnLimit(this.config, this.currentShuffling.activeIndices.length);
+    this.activationChurnLimit = getActivationChurnLimit(
+      this.config,
+      this.config.getForkSeq(state.slot),
+      this.currentShuffling.activeIndices.length
+    );
 
     // Maybe advance exitQueueEpoch at the end of the epoch if there haven't been any exists for a while
     const exitQueueEpoch = computeActivationExitEpoch(currEpoch);
@@ -569,9 +601,11 @@ export class EpochCache {
   getBeaconProposer(slot: Slot): ValidatorIndex {
     const epoch = computeEpochAtSlot(slot);
     if (epoch !== this.currentShuffling.epoch) {
-      throw new Error(
-        `Requesting beacon proposer for different epoch current shuffling: ${epoch} != ${this.currentShuffling.epoch}`
-      );
+      throw new EpochCacheError({
+        code: EpochCacheErrorCode.PROPOSER_EPOCH_MISMATCH,
+        currentEpoch: this.currentShuffling.epoch,
+        requestedEpoch: epoch,
+      });
     }
     return this.proposers[slot % SLOTS_PER_EPOCH];
   }
@@ -732,7 +766,11 @@ export class EpochCache {
   getShufflingAtEpoch(epoch: Epoch): EpochShuffling {
     const shuffling = this.getShufflingAtEpochOrNull(epoch);
     if (shuffling === null) {
-      throw new Error(`Requesting slot committee out of range epoch: ${epoch} current: ${this.currentShuffling.epoch}`);
+      throw new EpochCacheError({
+        code: EpochCacheErrorCode.COMMITTEE_EPOCH_OUT_OF_RANGE,
+        currentEpoch: this.currentShuffling.epoch,
+        requestedEpoch: epoch,
+      });
     }
 
     return shuffling;
@@ -772,7 +810,7 @@ export class EpochCache {
       case this.syncPeriod + 1:
         return this.nextSyncCommitteeIndexed;
       default:
-        throw new Error(`No sync committee for epoch ${epoch}`);
+        throw new EpochCacheError({code: EpochCacheErrorCode.NO_SYNC_COMMITTEE, epoch});
     }
   }
 
@@ -817,13 +855,31 @@ type AttesterDuty = {
 
 export enum EpochCacheErrorCode {
   COMMITTEE_INDEX_OUT_OF_RANGE = "EPOCH_CONTEXT_ERROR_COMMITTEE_INDEX_OUT_OF_RANGE",
+  COMMITTEE_EPOCH_OUT_OF_RANGE = "EPOCH_CONTEXT_ERROR_COMMITTEE_EPOCH_OUT_OF_RANGE",
+  NO_SYNC_COMMITTEE = "EPOCH_CONTEXT_ERROR_NO_SYNC_COMMITTEE",
+  PROPOSER_EPOCH_MISMATCH = "EPOCH_CONTEXT_ERROR_PROPOSER_EPOCH_MISMATCH",
 }
 
-type EpochCacheErrorType = {
-  code: EpochCacheErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE;
-  index: number;
-  maxIndex: number;
-};
+type EpochCacheErrorType =
+  | {
+      code: EpochCacheErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE;
+      index: number;
+      maxIndex: number;
+    }
+  | {
+      code: EpochCacheErrorCode.COMMITTEE_EPOCH_OUT_OF_RANGE;
+      requestedEpoch: Epoch;
+      currentEpoch: Epoch;
+    }
+  | {
+      code: EpochCacheErrorCode.NO_SYNC_COMMITTEE;
+      epoch: Epoch;
+    }
+  | {
+      code: EpochCacheErrorCode.PROPOSER_EPOCH_MISMATCH;
+      requestedEpoch: Epoch;
+      currentEpoch: Epoch;
+    };
 
 export class EpochCacheError extends LodestarError<EpochCacheErrorType> {}
 

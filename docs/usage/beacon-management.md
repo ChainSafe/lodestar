@@ -33,7 +33,7 @@ You must generate a secret 32-byte (64 characters) hexadecimal string that will 
 
 ### Configure Lodestar to locate the JWT secret
 
-When starting up a Lodestar beacon node in any configuration, ensure you add the `--jwt-secret $JWT_SECRET_PATH` flag to point to the saved secret key file.
+When starting up a Lodestar beacon node in any configuration, ensure you add the `--jwtSecret $JWT_SECRET_PATH` flag to point to the saved secret key file.
 
 ### Ensure JWT is configured with your execution node
 
@@ -54,7 +54,7 @@ Use the `--authrpc.jwtsecret` flag to configure the secret. Use their documentat
 To start a Lodestar beacon run the command:
 
 ```bash
-./lodestar beacon --network $NETWORK_NAME --jwt-secret $JWT_SECRET_PATH
+./lodestar beacon --network $NETWORK_NAME --jwtSecret $JWT_SECRET_PATH
 ```
 
 This will assume an execution-layer client is available at the default
@@ -63,7 +63,7 @@ location of `https://localhost:8545`.
 In case execution-layer clients are available at different locations, use `--execution.urls` to specify these locations in the command:
 
 ```bash
-./lodestar beacon --network $NETWORK_NAME --jwt-secret $JWT_SECRET_PATH --execution.urls $EL_URL1 $EL_URL2
+./lodestar beacon --network $NETWORK_NAME --jwtSecret $JWT_SECRET_PATH --execution.urls $EL_URL1 $EL_URL2
 ```
 
 Immediately you should see confirmation that the node has started
@@ -101,7 +101,7 @@ A young testnet should take a few hours to sync. If you see multiple or consiste
 
 ### Checkpoint Sync
 
-If you are starting your node from a blank db, like starting from genesis, or from the last saved state in db and the network is now far ahead, your node will be susceptible to "long range attacks."  Ethereum's solution to this is via something called weak subjectivity. [Read Vitalik's illuminating post explaining weak subjectivity.](https://blog.ethereum.org/2014/11/25/proof-stake-learned-love-weak-subjectivity/).
+If you are starting your node from a blank db, like starting from genesis, or from the last saved state in db and the network is now far ahead, your node will be susceptible to "long range attacks." Ethereum's solution to this is via something called weak subjectivity. [Read Vitalik's illuminating post explaining weak subjectivity.](https://blog.ethereum.org/2014/11/25/proof-stake-learned-love-weak-subjectivity/).
 
 If you have a synced beacon node available (e.g., your friend's node or an infrastructure provider) and a trusted checkpoint you can rely on, you can start off your beacon node in under a minute! And at the same time kicking the "long range attack" in its butt!
 

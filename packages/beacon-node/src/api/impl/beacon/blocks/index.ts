@@ -1,9 +1,13 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {routes, ServerApi, isSignedBlockContents, isSignedBlindedBlockContents} from "@lodestar/api";
-import {computeTimeAtSlot} from "@lodestar/state-transition";
+import {routes, ServerApi, ResponseFormat} from "@lodestar/api";
+import {
+  computeTimeAtSlot,
+  parseSignedBlindedBlockOrContents,
+  reconstructFullBlockOrContents,
+} from "@lodestar/state-transition";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {sleep, toHex} from "@lodestar/utils";
-import {allForks, deneb} from "@lodestar/types";
+import {allForks, deneb, isSignedBlockContents, ProducedBlockSource} from "@lodestar/types";
 import {BlockSource, getBlockInput, ImportBlockOpts, BlockInput} from "../../../../chain/blocks/types.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
@@ -138,17 +142,38 @@ export function getBeaconBlockApi({
     signedBlindedBlockOrContents,
     opts: PublishBlockOpts = {}
   ) => {
-    const executionBuilder = chain.executionBuilder;
-    if (!executionBuilder) throw Error("exeutionBuilder required to publish SignedBlindedBeaconBlock");
-    // Mechanism for blobs & blocks on builder is not yet finalized
-    if (isSignedBlindedBlockContents(signedBlindedBlockOrContents)) {
-      throw Error("exeutionBuilder not yet implemented for deneb+ forks");
-    } else {
-      const signedBlockOrContents = await executionBuilder.submitBlindedBlock(signedBlindedBlockOrContents);
-      // the full block is published by relay and it's possible that the block is already known to us by gossip
-      // see https://github.com/ChainSafe/lodestar/issues/5404
-      return publishBlock(signedBlockOrContents, {...opts, ignoreIfKnown: true});
-    }
+    const {signedBlindedBlock, signedBlindedBlobSidecars} =
+      parseSignedBlindedBlockOrContents(signedBlindedBlockOrContents);
+
+    const slot = signedBlindedBlock.message.slot;
+    const blockRoot = toHex(
+      chain.config
+        .getBlindedForkTypes(signedBlindedBlock.message.slot)
+        .BeaconBlock.hashTreeRoot(signedBlindedBlock.message)
+    );
+
+    // Either the payload/blobs are cached from i) engine locally or ii) they are from the builder
+    //
+    // executionPayload can be null or a real payload in locally produced so check for presence of root
+    const source = chain.producedBlockRoot.has(blockRoot) ? ProducedBlockSource.engine : ProducedBlockSource.builder;
+
+    const executionPayload = chain.producedBlockRoot.get(blockRoot) ?? null;
+    const blobSidecars = executionPayload
+      ? chain.producedBlobSidecarsCache.get(toHex(executionPayload.blockHash))
+      : undefined;
+    const blobs = blobSidecars ? blobSidecars.map((blobSidecar) => blobSidecar.blob) : null;
+
+    const signedBlockOrContents =
+      source === ProducedBlockSource.engine
+        ? reconstructFullBlockOrContents({signedBlindedBlock, signedBlindedBlobSidecars}, {executionPayload, blobs})
+        : await reconstructBuilderBlockOrContents(chain, signedBlindedBlockOrContents);
+
+    // the full block is published by relay and it's possible that the block is already known to us
+    // by gossip
+    //
+    // see: https://github.com/ChainSafe/lodestar/issues/5404
+    chain.logger.info("Publishing assembled block", {blockRoot, slot, source});
+    return publishBlock(signedBlockOrContents, {...opts, ignoreIfKnown: true});
   };
 
   return {
@@ -243,15 +268,21 @@ export function getBeaconBlockApi({
       };
     },
 
-    async getBlock(blockId) {
+    async getBlock(blockId, format?: ResponseFormat) {
       const {block} = await resolveBlockId(chain, blockId);
+      if (format === "ssz") {
+        return config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block);
+      }
       return {
         data: block,
       };
     },
 
-    async getBlockV2(blockId) {
+    async getBlockV2(blockId, format?: ResponseFormat) {
       const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
+      if (format === "ssz") {
+        return config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block);
+      }
       return {
         executionOptimistic,
         data: block,
@@ -332,4 +363,17 @@ export function getBeaconBlockApi({
       };
     },
   };
+}
+
+async function reconstructBuilderBlockOrContents(
+  chain: ApiModules["chain"],
+  signedBlindedBlockOrContents: allForks.SignedBlindedBeaconBlockOrContents
+): Promise<allForks.SignedBeaconBlockOrContents> {
+  const executionBuilder = chain.executionBuilder;
+  if (!executionBuilder) {
+    throw Error("exeutionBuilder required to publish SignedBlindedBeaconBlock");
+  }
+
+  const signedBlockOrContents = await executionBuilder.submitBlindedBlock(signedBlindedBlockOrContents);
+  return signedBlockOrContents;
 }

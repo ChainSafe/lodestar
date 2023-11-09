@@ -63,21 +63,13 @@ export type SignerRemote = {
   pubkey: PubkeyHex;
 };
 
-export enum BuilderSelection {
-  BuilderAlways = "builderalways",
-  MaxProfit = "maxprofit",
-  /** Only activate builder flow for DVT block proposal protocols */
-  BuilderOnly = "builderonly",
-}
-
 type DefaultProposerConfig = {
   graffiti: string;
   strictFeeRecipientCheck: boolean;
   feeRecipient: Eth1Address;
   builder: {
-    enabled: boolean;
     gasLimit: number;
-    selection: BuilderSelection;
+    selection: routes.validator.BuilderSelection;
   };
 };
 
@@ -86,15 +78,22 @@ export type ProposerConfig = {
   strictFeeRecipientCheck?: boolean;
   feeRecipient?: Eth1Address;
   builder?: {
-    enabled?: boolean;
     gasLimit?: number;
-    selection?: BuilderSelection;
+    selection?: routes.validator.BuilderSelection;
   };
 };
 
 export type ValidatorProposerConfig = {
   proposerConfig: {[index: PubkeyHex]: ProposerConfig};
   defaultConfig: ProposerConfig;
+};
+
+export type ValidatorStoreModules = {
+  config: BeaconConfig;
+  slashingProtection: ISlashingProtection;
+  indicesService: IndicesService;
+  doppelgangerService: DoppelgangerService | null;
+  metrics: Metrics | null;
 };
 
 /**
@@ -123,47 +122,64 @@ type ValidatorData = ProposerConfig & {
 export const defaultOptions = {
   suggestedFeeRecipient: "0x0000000000000000000000000000000000000000",
   defaultGasLimit: 30_000_000,
-  builderSelection: BuilderSelection.MaxProfit,
+  builderSelection: routes.validator.BuilderSelection.ExecutionOnly,
+  builderAliasSelection: routes.validator.BuilderSelection.MaxProfit,
+  // turn it off by default, turn it back on once other clients support v3 api
+  useProduceBlockV3: false,
 };
 
 /**
  * Service that sets up and handles validator attester duties.
  */
 export class ValidatorStore {
+  private readonly config: BeaconConfig;
+  private readonly slashingProtection: ISlashingProtection;
+  private readonly indicesService: IndicesService;
+  private readonly doppelgangerService: DoppelgangerService | null;
+  private readonly metrics: Metrics | null;
+
   private readonly validators = new Map<PubkeyHex, ValidatorData>();
   /** Initially true because there are no validators */
   private pubkeysToDiscover: PubkeyHex[] = [];
   private readonly defaultProposerConfig: DefaultProposerConfig;
 
-  constructor(
-    private readonly config: BeaconConfig,
-    private readonly slashingProtection: ISlashingProtection,
-    private readonly indicesService: IndicesService,
-    private readonly doppelgangerService: DoppelgangerService | null,
-    private readonly metrics: Metrics | null,
-    initialSigners: Signer[],
-    valProposerConfig: ValidatorProposerConfig = {defaultConfig: {}, proposerConfig: {}},
-    private readonly genesisValidatorRoot: Root
-  ) {
+  constructor(modules: ValidatorStoreModules, valProposerConfig: ValidatorProposerConfig) {
+    const {config, slashingProtection, indicesService, doppelgangerService, metrics} = modules;
+    this.config = config;
+    this.slashingProtection = slashingProtection;
+    this.indicesService = indicesService;
+    this.doppelgangerService = doppelgangerService;
+    this.metrics = metrics;
+
     const defaultConfig = valProposerConfig.defaultConfig;
     this.defaultProposerConfig = {
       graffiti: defaultConfig.graffiti ?? "",
       strictFeeRecipientCheck: defaultConfig.strictFeeRecipientCheck ?? false,
       feeRecipient: defaultConfig.feeRecipient ?? defaultOptions.suggestedFeeRecipient,
       builder: {
-        enabled: defaultConfig.builder?.enabled ?? false,
         gasLimit: defaultConfig.builder?.gasLimit ?? defaultOptions.defaultGasLimit,
         selection: defaultConfig.builder?.selection ?? defaultOptions.builderSelection,
       },
     };
 
-    for (const signer of initialSigners) {
-      this.addSigner(signer, valProposerConfig);
-    }
-
     if (metrics) {
       metrics.signers.addCollect(() => metrics.signers.set(this.validators.size));
     }
+  }
+
+  /**
+   * Create a validator store with initial signers
+   */
+  static async init(
+    modules: ValidatorStoreModules,
+    initialSigners: Signer[],
+    valProposerConfig: ValidatorProposerConfig = {defaultConfig: {}, proposerConfig: {}}
+  ): Promise<ValidatorStore> {
+    const validatorStore = new ValidatorStore(modules, valProposerConfig);
+
+    await Promise.all(initialSigners.map((signer) => validatorStore.addSigner(signer, valProposerConfig)));
+
+    return validatorStore;
   }
 
   /** Return all known indices from the validatorStore pubkeys */
@@ -217,11 +233,23 @@ export class ValidatorStore {
     return this.validators.get(pubkeyHex)?.graffiti ?? this.defaultProposerConfig.graffiti;
   }
 
-  isBuilderEnabled(pubkeyHex: PubkeyHex): boolean {
-    return (this.validators.get(pubkeyHex)?.builder || {}).enabled ?? this.defaultProposerConfig.builder.enabled;
+  setGraffiti(pubkeyHex: PubkeyHex, graffiti: string): void {
+    const validatorData = this.validators.get(pubkeyHex);
+    if (validatorData === undefined) {
+      throw Error(`Validator pubkey ${pubkeyHex} not known`);
+    }
+    validatorData.graffiti = graffiti;
   }
 
-  getBuilderSelection(pubkeyHex: PubkeyHex): BuilderSelection {
+  deleteGraffiti(pubkeyHex: PubkeyHex): void {
+    const validatorData = this.validators.get(pubkeyHex);
+    if (validatorData === undefined) {
+      throw Error(`Validator pubkey ${pubkeyHex} not known`);
+    }
+    delete validatorData["graffiti"];
+  }
+
+  getBuilderSelection(pubkeyHex: PubkeyHex): routes.validator.BuilderSelection {
     return (this.validators.get(pubkeyHex)?.builder || {}).selection ?? this.defaultProposerConfig.builder.selection;
   }
 
@@ -274,7 +302,6 @@ export class ValidatorStore {
       graffiti !== undefined ||
       strictFeeRecipientCheck !== undefined ||
       feeRecipient !== undefined ||
-      builder?.enabled !== undefined ||
       builder?.gasLimit !== undefined
     ) {
       proposerConfig = {graffiti, strictFeeRecipientCheck, feeRecipient, builder};
@@ -282,18 +309,19 @@ export class ValidatorStore {
     return proposerConfig;
   }
 
-  addSigner(signer: Signer, valProposerConfig?: ValidatorProposerConfig): void {
+  async addSigner(signer: Signer, valProposerConfig?: ValidatorProposerConfig): Promise<void> {
     const pubkey = getSignerPubkeyHex(signer);
     const proposerConfig = (valProposerConfig?.proposerConfig ?? {})[pubkey];
 
     if (!this.validators.has(pubkey)) {
+      // Doppelganger registration must be done before adding validator to signers
+      await this.doppelgangerService?.registerValidator(pubkey);
+
       this.pubkeysToDiscover.push(pubkey);
       this.validators.set(pubkey, {
         signer,
         ...proposerConfig,
       });
-
-      this.doppelgangerService?.registerValidator(pubkey);
     }
   }
 

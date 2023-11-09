@@ -1,3 +1,4 @@
+import {describe, it} from "vitest";
 import {fetch} from "@lodestar/api";
 import {ForkName, activePreset} from "@lodestar/params";
 import {chainConfig} from "@lodestar/config/default";
@@ -9,16 +10,11 @@ const CONSTANT_NAMES_SKIP_LIST = new Set([
   // This constant can also be derived from existing constants so it's not critical.
   // PARTICIPATION_FLAG_WEIGHTS = [TIMELY_SOURCE_WEIGHT, TIMELY_TARGET_WEIGHT, TIMELY_HEAD_WEIGHT]
   "PARTICIPATION_FLAG_WEIGHTS",
-  // TODO DENEB: This constant was added then removed on a spec re-write.
-  // When developing DENEB branch the tracked version still doesn't have released the removal
-  "DOMAIN_BLOB_SIDECAR",
   // TODO DENEB: Configure the blob subnets in a followup PR
   "BLOB_SIDECAR_SUBNET_COUNT",
 ]);
 
 describe("api / impl / config", function () {
-  this.timeout(60 * 1000);
-
   it("Ensure all constants are exposed", async () => {
     const constantNames = await downloadRemoteConstants(ethereumConsensusSpecsTests.specVersion);
 

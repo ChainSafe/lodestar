@@ -1,24 +1,24 @@
+import path from "node:path";
 import worker_threads from "node:worker_threads";
-import {exportToProtobuf} from "@libp2p/peer-id-factory";
-import {PeerId} from "@libp2p/interface/peer-id";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/dist/src/score/peer-score.js";
 import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
-import {spawn, Thread, Worker} from "@chainsafe/threads";
+import {ModuleThread, Thread, Worker, spawn} from "@chainsafe/threads";
+import {PeerId} from "@libp2p/interface/peer-id";
+import {exportToProtobuf} from "@libp2p/peer-id-factory";
 import {routes} from "@lodestar/api";
-import {phase0} from "@lodestar/types";
-import {ResponseIncoming, ResponseOutgoing} from "@lodestar/reqresp";
 import {BeaconConfig, chainConfigToJson} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
-import {AsyncIterableBridgeCaller, AsyncIterableBridgeHandler} from "../../util/asyncIterableToEvents.js";
-import {wireEventsOnMainThread} from "../../util/workerEvents.js";
+import {ResponseIncoming, ResponseOutgoing} from "@lodestar/reqresp";
+import {phase0} from "@lodestar/types";
 import {Metrics} from "../../metrics/index.js";
-import {IncomingRequestArgs, OutgoingRequestArgs, GetReqRespHandlerFn} from "../reqresp/types.js";
-import {NetworkEventBus, NetworkEventData, networkEventDirection} from "../events.js";
-import {CommitteeSubscription} from "../subnets/interface.js";
-import {PeerAction, PeerScoreStats} from "../peers/index.js";
-import {NetworkOptions} from "../options.js";
+import {AsyncIterableBridgeCaller, AsyncIterableBridgeHandler} from "../../util/asyncIterableToEvents.js";
 import {peerIdFromString} from "../../util/peerId.js";
-import {NetworkWorkerApi, NetworkWorkerData, INetworkCore, MultiaddrStr, PeerIdStr} from "./types.js";
+import {terminateWorkerThread, wireEventsOnMainThread} from "../../util/workerEvents.js";
+import {NetworkEventBus, NetworkEventData, networkEventDirection} from "../events.js";
+import {NetworkOptions} from "../options.js";
+import {PeerAction, PeerScoreStats} from "../peers/index.js";
+import {GetReqRespHandlerFn, IncomingRequestArgs, OutgoingRequestArgs} from "../reqresp/types.js";
+import {CommitteeSubscription} from "../subnets/interface.js";
 import {
   NetworkWorkerThreadEventType,
   ReqRespBridgeEventBus,
@@ -27,6 +27,10 @@ import {
   getReqRespBridgeRespEvents,
   reqRespBridgeEventDirection,
 } from "./events.js";
+import {INetworkCore, MultiaddrStr, NetworkWorkerApi, NetworkWorkerData, PeerIdStr} from "./types.js";
+
+// Worker constructor consider the path relative to the current working directory
+const workerDir = process.env.NODE_ENV === "test" ? "../../../lib/network/core/" : "./";
 
 export type WorkerNetworkCoreOpts = NetworkOptions & {
   metricsEnabled: boolean;
@@ -47,9 +51,12 @@ export type WorkerNetworkCoreInitModules = {
 };
 
 type WorkerNetworkCoreModules = WorkerNetworkCoreInitModules & {
-  workerApi: NetworkWorkerApi;
+  networkThreadApi: ModuleThread<NetworkWorkerApi>;
   worker: Worker;
 };
+
+const NETWORK_WORKER_EXIT_TIMEOUT_MS = 1000;
+const NETWORK_WORKER_EXIT_RETRY_COUNT = 3;
 
 /**
  * NetworkCore implementation using a Worker thread
@@ -72,14 +79,20 @@ export class WorkerNetworkCore implements INetworkCore {
       NetworkWorkerThreadEventType.networkEvent,
       modules.events,
       modules.worker as unknown as worker_threads.Worker,
+      modules.metrics,
       networkEventDirection
     );
     wireEventsOnMainThread<ReqRespBridgeEventData>(
       NetworkWorkerThreadEventType.reqRespBridgeEvents,
       this.reqRespBridgeEventBus,
       modules.worker as unknown as worker_threads.Worker,
+      modules.metrics,
       reqRespBridgeEventDirection
     );
+
+    Thread.errors(modules.networkThreadApi).subscribe((err) => {
+      this.modules.logger.error("Network worker thread error", {}, err);
+    });
 
     const {metrics} = modules;
     if (metrics) {
@@ -107,7 +120,7 @@ export class WorkerNetworkCore implements INetworkCore {
       loggerOpts: modules.logger.toOpts(),
     };
 
-    const worker = new Worker("./networkCoreWorker.js", {
+    const worker = new Worker(path.join(workerDir, "networkCoreWorker.js"), {
       workerData,
       /**
        * maxYoungGenerationSizeMb defaults to 152mb through the cli option defaults.
@@ -124,24 +137,30 @@ export class WorkerNetworkCore implements INetworkCore {
     } as ConstructorParameters<typeof Worker>[1]);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const workerApi = (await spawn<any>(worker, {
+    const networkThreadApi = (await spawn<any>(worker, {
       // A Lodestar Node may do very expensive task at start blocking the event loop and causing
       // the initialization to timeout. The number below is big enough to almost disable the timeout
       timeout: 5 * 60 * 1000,
-      // TODO: types are broken on spawn, which claims that `NetworkWorkerApi` does not satifies its contrains
-    })) as unknown as NetworkWorkerApi;
+      // TODO: types are broken on spawn, which claims that `NetworkWorkerApi` does not satisfies its contrains
+    })) as unknown as ModuleThread<NetworkWorkerApi>;
 
     return new WorkerNetworkCore({
       ...modules,
-      workerApi,
+      networkThreadApi,
       worker,
     });
   }
 
   async close(): Promise<void> {
+    this.modules.logger.debug("closing network core running in network worker");
     await this.getApi().close();
     this.modules.logger.debug("terminating network worker");
-    await Thread.terminate(this.modules.workerApi as unknown as Thread);
+    await terminateWorkerThread({
+      worker: this.getApi(),
+      retryCount: NETWORK_WORKER_EXIT_RETRY_COUNT,
+      retryMs: NETWORK_WORKER_EXIT_TIMEOUT_MS,
+      logger: this.modules.logger,
+    });
     this.modules.logger.debug("terminated network worker");
   }
 
@@ -231,7 +250,7 @@ export class WorkerNetworkCore implements INetworkCore {
     return this.getApi().writeDiscv5Profile(durationMs, dirpath);
   }
 
-  private getApi(): NetworkWorkerApi {
-    return this.modules.workerApi;
+  private getApi(): ModuleThread<NetworkWorkerApi> {
+    return this.modules.networkThreadApi;
   }
 }

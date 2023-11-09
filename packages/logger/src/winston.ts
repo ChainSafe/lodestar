@@ -77,10 +77,6 @@ export class WinstonLogger implements Logger {
     this.createLogEntry(LogLevel.debug, message, context, error);
   }
 
-  trace(message: string, context?: LogData, error?: Error): void {
-    this.createLogEntry(LogLevel.trace, message, context, error);
-  }
-
   private createLogEntry(level: LogLevel, message: string, context?: LogData, error?: Error): void {
     // Note: logger does not run format.transform function unless it will actually write the log to the transport
 

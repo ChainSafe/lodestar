@@ -10,6 +10,7 @@ import {
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 
 const root = Buffer.alloc(32, 1);
+const randao = Buffer.alloc(32, 1);
 const balance = 32e9;
 const pubkeyHex = toHexString(Buffer.alloc(48, 1));
 
@@ -30,11 +31,11 @@ export const testData: GenericServerTestCases<Api> = {
   // block
 
   getBlock: {
-    args: ["head"],
+    args: ["head", "json"],
     res: {data: ssz.phase0.SignedBeaconBlock.defaultValue()},
   },
   getBlockV2: {
-    args: ["head"],
+    args: ["head", "json"],
     res: {executionOptimistic: true, data: ssz.bellatrix.SignedBeaconBlock.defaultValue(), version: ForkName.bellatrix},
   },
   getBlockAttestations: {
@@ -130,6 +131,10 @@ export const testData: GenericServerTestCases<Api> = {
   getStateFork: {
     args: ["head"],
     res: {executionOptimistic: true, data: ssz.phase0.Fork.defaultValue()},
+  },
+  getStateRandao: {
+    args: ["head", 1],
+    res: {executionOptimistic: true, data: {randao}},
   },
   getStateFinalityCheckpoints: {
     args: ["head"],

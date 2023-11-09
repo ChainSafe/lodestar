@@ -17,7 +17,7 @@ export function readPassphraseFile(passphraseFile: string): string {
     if (passphrase.length > 512) throw Error("is really long");
   } catch (e) {
     throw new Error(
-      `passphraseFile ${passphraseFile} ${(e as Error).message}. Is this a well-formated passphraseFile?`
+      `passphraseFile ${passphraseFile} ${(e as Error).message}. Is this a well-formatted passphraseFile?`
     );
   }
 

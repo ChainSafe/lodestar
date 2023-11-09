@@ -1,3 +1,4 @@
+import {describe, it, afterEach} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
 import {ChainConfig} from "@lodestar/config";
 import {phase0} from "@lodestar/types";
@@ -16,6 +17,8 @@ import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger.js";
 import {BlockError, BlockErrorCode} from "../../../src/chain/errors/index.js";
 import {BlockSource, getBlockInput} from "../../../src/chain/blocks/types.js";
 
+// To make the code review easy for code block below
+/* prettier-ignore */
 describe("sync / unknown block sync", function () {
   const validatorCount = 8;
   const testParams: Pick<ChainConfig, "SECONDS_PER_SLOT"> = {
@@ -44,10 +47,8 @@ describe("sync / unknown block sync", function () {
 
   for (const {id, event} of testCases) {
     it(id, async function () {
-      this.timeout("10 min");
-
       // the node needs time to transpile/initialize bls worker threads
-      const genesisSlotsDelay = 16;
+      const genesisSlotsDelay = 7;
       const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
       const testLoggerOpts: TestLoggerOpts = {
         level: LogLevel.info,
@@ -59,8 +60,8 @@ describe("sync / unknown block sync", function () {
         },
       };
 
-      const loggerNodeA = testLogger("Node-A", testLoggerOpts);
-      const loggerNodeB = testLogger("Node-B", testLoggerOpts);
+      const loggerNodeA = testLogger("UnknownSync-Node-A", testLoggerOpts);
+      const loggerNodeB = testLogger("UnknownSync-Node-B", testLoggerOpts);
 
       const bn = await getDevBeaconNode({
         params: testParams,
@@ -73,10 +74,9 @@ describe("sync / unknown block sync", function () {
         logger: loggerNodeA,
       });
 
-      afterEachCallbacks.push(() => bn.close());
-
       const {validators} = await getAndInitDevValidators({
         node: bn,
+        logPrefix: "UnknownSync",
         validatorsPerClient: validatorCount,
         validatorClientCount: 1,
         startIndex: 0,
@@ -147,4 +147,4 @@ describe("sync / unknown block sync", function () {
       await waitForSynced;
     });
   }
-});
+}, {timeout: 30_000});

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import {expect} from "chai";
 import type {SecretKey, PublicKey} from "@chainsafe/bls/types";
 import {toHexString} from "@chainsafe/ssz";
+import {describe, it, expect} from "vitest";
 import {DOMAIN_DEPOSIT, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
 import {config} from "@lodestar/config/default";
 import {computeDomain, computeSigningRoot, interopSecretKey, ZERO_HASH} from "@lodestar/state-transition";
@@ -10,7 +10,7 @@ import {ErrorAborted} from "@lodestar/utils";
 import {GenesisBuilder} from "../../../../src/chain/genesis/genesis.js";
 import {testLogger} from "../../../utils/logger.js";
 import {ZERO_HASH_HEX} from "../../../../src/constants/index.js";
-import {EthJsonRpcBlockRaw, IEth1Provider} from "../../../../src/eth1/interface.js";
+import {Eth1ProviderState, EthJsonRpcBlockRaw, IEth1Provider} from "../../../../src/eth1/interface.js";
 
 describe("genesis builder", function () {
   const logger = testLogger();
@@ -62,6 +62,7 @@ describe("genesis builder", function () {
       validateContract: async () => {
         return;
       },
+      getState: () => Eth1ProviderState.ONLINE,
       ...eth1Provider,
     };
   }
@@ -79,8 +80,8 @@ describe("genesis builder", function () {
 
     const {state} = await genesisBuilder.waitForGenesis();
 
-    expect(state.validators.length).to.be.equal(schlesiConfig.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT);
-    expect(toHexString(state.eth1Data.blockHash)).to.be.equal(
+    expect(state.validators.length).toBe(schlesiConfig.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT);
+    expect(toHexString(state.eth1Data.blockHash)).toBe(
       mockData.blocks[schlesiConfig.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT - 1].hash
     );
   });
@@ -103,7 +104,7 @@ describe("genesis builder", function () {
       maxBlocksPerPoll: 1,
     });
 
-    await expect(genesisBuilder.waitForGenesis()).to.rejectedWith(ErrorAborted);
+    await expect(genesisBuilder.waitForGenesis()).rejects.toThrow(ErrorAborted);
   });
 });
 

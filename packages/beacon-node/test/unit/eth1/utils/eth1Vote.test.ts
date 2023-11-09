@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {config} from "@lodestar/config/default";
 import {phase0, ssz} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
@@ -85,7 +85,7 @@ describe("eth1 / util / eth1Vote", function () {
       it(id, async function () {
         const state = generateState({slot: 5, eth1DataVotes: eth1DataVotesInState});
         const eth1Vote = pickEth1Vote(state, votesToConsider);
-        expect(ssz.phase0.Eth1Data.toJson(eth1Vote)).to.deep.equal(ssz.phase0.Eth1Data.toJson(expectedEth1Vote));
+        expect(ssz.phase0.Eth1Data.toJson(eth1Vote)).toEqual(ssz.phase0.Eth1Data.toJson(expectedEth1Vote));
       });
     }
   });
@@ -133,7 +133,7 @@ describe("eth1 / util / eth1Vote", function () {
 
         const votesToConsider = await getEth1VotesToConsider(config, state, eth1DataGetter);
 
-        expect(votesToConsider.map((eth1Data) => ssz.phase0.Eth1Data.toJson(eth1Data))).to.deep.equal(
+        expect(votesToConsider.map((eth1Data) => ssz.phase0.Eth1Data.toJson(eth1Data))).toEqual(
           expectedVotesToConsider.map((eth1Data) => ssz.phase0.Eth1Data.toJson(eth1Data))
         );
       });

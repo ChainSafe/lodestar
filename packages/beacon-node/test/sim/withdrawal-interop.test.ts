@@ -6,7 +6,7 @@ import {TimestampFormatCode} from "@lodestar/logger";
 import {SLOTS_PER_EPOCH, ForkName} from "@lodestar/params";
 import {ChainConfig} from "@lodestar/config";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {Epoch, capella, Slot} from "@lodestar/types";
+import {Epoch, capella, Slot, allForks} from "@lodestar/types";
 import {ValidatorProposerConfig} from "@lodestar/validator";
 
 import {ExecutionPayloadStatus, PayloadAttributes} from "../../src/execution/engine/interface.js";
@@ -27,7 +27,7 @@ import {logFilesDir} from "./params.js";
 import {shell} from "./shell.js";
 
 // NOTE: How to run
-// EL_BINARY_DIR=g11tech/geth:withdrawals EL_SCRIPT_DIR=gethdocker yarn mocha test/sim/withdrawal-interop.test.ts
+// EL_BINARY_DIR=g11tech/geth:withdrawalsfeb8 EL_SCRIPT_DIR=gethdocker yarn mocha test/sim/withdrawal-interop.test.ts
 // ```
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention */
@@ -160,8 +160,8 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     if (!payloadId) throw Error("InvalidPayloadId");
 
     // 2. Get the payload
-    const payloadAndBlockValue = await executionEngine.getPayload(ForkName.capella, payloadId);
-    const payload = payloadAndBlockValue.executionPayload;
+    const payloadWithValue = await executionEngine.getPayload(ForkName.capella, payloadId);
+    const payload = payloadWithValue.executionPayload;
 
     const stateRoot = toHexString(payload.stateRoot);
     const expectedStateRoot = "0x6160c5b91ea5ded26da07f6655762deddefdbed6ddab2edc60484cfb38ef16be";
@@ -285,6 +285,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     } as ValidatorProposerConfig;
 
     const {validators} = await getAndInitDevValidators({
+      logPrefix: "withdrawal-interop",
       node: bn,
       validatorsPerClient,
       validatorClientCount,
@@ -369,7 +370,10 @@ async function retrieveCanonicalWithdrawals(bn: BeaconNode, fromSlot: Slot, toSl
     });
 
     if (block) {
-      if ((block.data as capella.SignedBeaconBlock).message.body.executionPayload?.withdrawals.length > 0) {
+      if (
+        ((block as {data: allForks.SignedBeaconBlock}).data as capella.SignedBeaconBlock).message.body.executionPayload
+          ?.withdrawals.length > 0
+      ) {
         withdrawalsBlocks++;
       }
     }

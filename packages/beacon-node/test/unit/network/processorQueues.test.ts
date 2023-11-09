@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {sleep} from "@lodestar/utils";
 
 type ValidateOpts = {
@@ -94,7 +94,7 @@ describe("event loop with branching async", () => {
     it(`${JSON.stringify(opts)} Promise.all`, async () => {
       const tracker: string[] = [];
       await Promise.all(jobs.map((job) => validateTest(job, tracker, opts)));
-      expect(tracker).deep.equals(expectedTrackerVoid);
+      expect(tracker).toEqual(expectedTrackerVoid);
     });
 
     it(`${JSON.stringify(opts)} await each`, async () => {
@@ -102,7 +102,7 @@ describe("event loop with branching async", () => {
       for (const job of jobs) {
         await validateTest(job, tracker, opts);
       }
-      expect(tracker).deep.equals(expectedTrackerAwait);
+      expect(tracker).toEqual(expectedTrackerAwait);
     });
   }
 });

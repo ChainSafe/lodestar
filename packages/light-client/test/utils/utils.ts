@@ -1,6 +1,6 @@
 import bls from "@chainsafe/bls/switchable";
 import {PointFormat, PublicKey, SecretKey} from "@chainsafe/bls/types";
-import {hash, Tree} from "@chainsafe/persistent-merkle-tree";
+import {hasher, Tree} from "@chainsafe/persistent-merkle-tree";
 import {BitArray, fromHexString} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {
@@ -235,9 +235,9 @@ export function computeMerkleBranch(
   for (let i = 0; i < depth; i++) {
     proof[i] = Buffer.alloc(32, i);
     if (Math.floor(index / 2 ** i) % 2) {
-      value = hash(proof[i], value);
+      value = hasher.digest64(proof[i], value);
     } else {
-      value = hash(value, proof[i]);
+      value = hasher.digest64(value, proof[i]);
     }
   }
   return {root: value, proof};
