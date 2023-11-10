@@ -56,7 +56,7 @@ export async function getVMWithState({
   const accessListTx = cleanObject({
     to,
     from,
-    data: tx.data,
+    data: tx.input ? tx.input : tx.data,
     value: tx.value,
     gas: tx.gas ? tx.gas : numberToHex(gasLimit),
     gasPrice: "0x0",
