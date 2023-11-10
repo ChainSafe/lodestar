@@ -1,0 +1,50 @@
+name: Build debug node 
+
+on: 
+  workflow_dispatch:
+    inputs:
+      version:
+        required: true
+        description: 'Node.js version'
+
+jobs:
+  build:
+    name: Build Debug version of Node.js
+    runs-on: buildjet-4vcpu-ubuntu-2204
+    strategy:
+      fail-fast: false
+    steps:
+      - name: Install dependencies 
+        run: apt-get install python3 g++ make python3-pip
+
+      - name: Download Node.js source
+        uses: actions/checkout@v4
+        with: 
+          repository: 'nodejs/node'
+          ref: 'v${{ github.event.inputs.version }}'
+          path: 'nodejs'
+
+      - name: Configure nodejs with debug flag 
+        run: ./configure --debug
+        working-directory: 'nodejs'
+
+      - name: Compile the nodejs
+        run: make -j$(nproc --all)
+        working-directory: 'nodejs'
+
+      - name: Verify the build 
+        run: make test-only 
+        working-directory: 'nodejs'
+
+      - name: Create destination folder 
+        run: mkdir -p ${{ github.workspace }}/nodejs-debug-build-${{ github.event.inputs.version }}
+
+      - name: Copy nodejs debug build
+        run: cp out/Debug/node ${{ github.workspace }}/nodejs-debug-build-${{ github.event.inputs.version }}
+        working-directory: 'nodejs'
+
+      - name: Upload build to artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: nodejs-debug-build-${{ github.event.inputs.version }}
+          path: nodejs-debug-build-${{ github.event.inputs.version }}
