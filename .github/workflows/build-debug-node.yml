@@ -40,7 +40,7 @@ jobs:
         run: mkdir -p ${{ github.workspace }}/nodejs-debug-build-${{ github.event.inputs.version }}
 
       - name: Copy nodejs debug build
-        run: cp -r out/Debug/* ${{ github.workspace }}/nodejs-debug-build-${{ github.event.inputs.version }}
+        run: cp out/Debug/node ${{ github.workspace }}/nodejs-debug-build-${{ github.event.inputs.version }}
         working-directory: 'nodejs'
 
       - name: Upload build to artifacts
