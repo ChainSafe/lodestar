@@ -1,4 +1,7 @@
+import segfaultHandler from "segfault-handler";
 import {setActivePreset, PresetName} from "@lodestar/params/setPreset";
+
+segfaultHandler.registerHandler();
 
 export async function setup(): Promise<void> {
   process.env.NODE_ENV = "test";
