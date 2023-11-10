@@ -39,16 +39,12 @@ jobs:
       - name: Create destination folder 
         run: mkdir -p ${{ github.workspace }}/nodejs-debug-build-${{ github.event.inputs.version }}
 
-      - name: Copy nodejs build
-        run: make install 
+      - name: Copy nodejs debug build
+        run: cp -r out/Debug/* ${{ github.workspace }}/nodejs-debug-build-${{ github.event.inputs.version }}
         working-directory: 'nodejs'
-        env: 
-          DESTDIR: ${{ github.workspace }}/nodejs-debug-build-${{ github.event.inputs.version }}
 
       - name: Upload build to artifacts
         uses: actions/upload-artifact@v3
         with:
           name: nodejs-debug-build-${{ github.event.inputs.version }}
           path: nodejs-debug-build-${{ github.event.inputs.version }}
-
-
