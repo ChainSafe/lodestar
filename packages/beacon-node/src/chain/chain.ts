@@ -886,14 +886,16 @@ export class BeaconChain implements IBeaconChain {
       );
 
       // Populate finalized pubkey cache and remove unfinalized pubkey cache
-      this.regen.updateUnfinalizedPubkeys(newFinalizedValidators);
+      if (!newFinalizedValidators.isEmpty()) {
+        this.regen.updateUnfinalizedPubkeys(newFinalizedValidators);
+      }
 
       if (finalizedState.eth1DepositIndex >= (finalizedState as CachedBeaconStateEIP6110).depositReceiptsStartIndex) {
         // Signal eth1 to stop polling eth1Data
         this.eth1.stopPollingEth1Data();
       }
     }
-  }
+      }
 
   async updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void> {
     proposers.forEach((proposer) => {

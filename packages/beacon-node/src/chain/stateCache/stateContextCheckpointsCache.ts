@@ -91,36 +91,26 @@ export class CheckpointStateCache {
   }
 
   updateUnfinalizedPubkeys(validators: UnfinalizedPubkeyIndexMap): void {
-    const cpKeySets = Array.from(this.epochIndex.values());
     let totalAddTime = 0;
     let totalDeleteTime = 0;
     let totalNumStatesUpdated = 0;
 
-    const cpKeys = new Set(
-      (function* () {
-        for (const cpKeySet of cpKeySets) {
-          yield* cpKeySet;
-        }
-      })()
-    );
 
-    for (const cpKey in cpKeys) {
-      const cachedState = this.cache.get(cpKey);
-      if (cachedState) {
-        const addStartTime = Date.now();
-        cachedState.epochCtx.addFinalizedPubkeys(validators);
-        totalAddTime += Date.now() - addStartTime;
 
-        const deleteStartTime = Date.now();
-        cachedState.epochCtx.deleteUnfinalizedPubkeys(Array.from(validators.keys()));
-        totalDeleteTime += Date.now() - deleteStartTime;
+    for (const cachedState of this.cache.values()) {
+      const addStartTime = Date.now();
+      cachedState.epochCtx.addFinalizedPubkeys(validators);
+      totalAddTime += Date.now() - addStartTime;
 
-        totalNumStatesUpdated++;
-      }
+      const deleteStartTime = Date.now();
+      cachedState.epochCtx.deleteUnfinalizedPubkeys(Array.from(validators.keys()));
+      totalDeleteTime += Date.now() - deleteStartTime;
+
+      totalNumStatesUpdated++;
     }
 
     this.metrics?.addPubkeyTime.observe(totalAddTime / 1000);
-    this.metrics?.deletePubkeyTime.observe(totalAddTime / 1000);
+    this.metrics?.deletePubkeyTime.observe(totalDeleteTime / 1000);
     this.metrics?.numStatesUpdated.observe(totalNumStatesUpdated);
   }
 
