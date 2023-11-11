@@ -111,14 +111,18 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         writeReq: ({startPeriod, count, genesisValidatorsRoot}) => {
           // store the beacon config if its a new genesisValidatorsRoot
           if (
-            genesisValidatorsRoot &&
+            genesisValidatorsRoot != null &&
             (beaconConfig === undefined || !byteArrayEquals(beaconConfig.genesisValidatorsRoot, genesisValidatorsRoot))
           ) {
             beaconConfig = createBeaconConfig(config, genesisValidatorsRoot);
           }
           return {query: {start_period: startPeriod, count}};
         },
-        parseReq: ({query}) => ({startPeriod: query.start_period, count: query.count}),
+        parseReq: ({query}) => ({
+          startPeriod: query.start_period,
+          count: query.count,
+          genesisValidatorsRoot: undefined as unknown as Uint8Array,
+        }),
         schema: {query: {start_period: Schema.UintRequired, count: Schema.UintRequired}},
       },
       resp: {
