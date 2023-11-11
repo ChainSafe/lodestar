@@ -1,4 +1,4 @@
-import {allForks, bellatrix, capella, deneb, isBlindedBeaconBlockBody, ssz} from "@lodestar/types";
+import {allForks, bellatrix, capella, deneb, eip6110, isBlindedBeaconBlockBody, ssz} from "@lodestar/types";
 import {ForkSeq} from "@lodestar/params";
 
 import {
@@ -168,6 +168,12 @@ export function executionPayloadToPayloadHeader(
     (bellatrixPayloadFields as deneb.ExecutionPayloadHeader).excessBlobGas = (
       payload as deneb.ExecutionPayloadHeader | deneb.ExecutionPayload
     ).excessBlobGas;
+  }
+
+  if (fork >= ForkSeq.eip6110) {
+    (bellatrixPayloadFields as eip6110.ExecutionPayloadHeader).depositReceiptsRoot = ssz.eip6110.DepositReceipts.hashTreeRoot(
+      (payload as eip6110.ExecutionPayload).depositReceipts
+    );
   }
 
   return bellatrixPayloadFields;
