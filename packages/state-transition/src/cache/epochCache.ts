@@ -820,9 +820,8 @@ export class EpochCache {
 
     if (existingIndex != undefined) {
       if (existingIndex === index) {
-        // Repeated insert. Should not happen except during the first few epochs of 6110 activation
-        // Unfinalized validator added to finalizedPubkey2index pre-6110 by calling addPubkey()
-        // when it becomes finalized in post-6110, addFinalizedPubkey() is called to cause repeated insert
+        // Repeated insert.
+        // TODO: Add metric
         return;
       } else {
         // attempt to insert the same pubkey with different index, should never happen.
