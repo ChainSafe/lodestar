@@ -895,7 +895,7 @@ export class BeaconChain implements IBeaconChain {
         this.eth1.stopPollingEth1Data();
       }
     }
-      }
+  }
 
   async updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void> {
     proposers.forEach((proposer) => {

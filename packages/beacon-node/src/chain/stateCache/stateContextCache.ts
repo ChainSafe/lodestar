@@ -89,7 +89,6 @@ export class StateContextCache {
     let totalDeleteTime = 0;
     let totalNumStatesUpdated = 0;
 
-
     for (const cachedState of this.cache.values()) {
       const addStartTime = Date.now();
       cachedState.epochCtx.addFinalizedPubkeys(validators);
@@ -101,7 +100,6 @@ export class StateContextCache {
 
       totalNumStatesUpdated++;
     }
-
 
     this.metrics?.addPubkeyTime.observe(totalAddTime / 1000);
     this.metrics?.deletePubkeyTime.observe(totalDeleteTime / 1000);

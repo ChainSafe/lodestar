@@ -95,8 +95,6 @@ export class CheckpointStateCache {
     let totalDeleteTime = 0;
     let totalNumStatesUpdated = 0;
 
-
-
     for (const cachedState of this.cache.values()) {
       const addStartTime = Date.now();
       cachedState.epochCtx.addFinalizedPubkeys(validators);

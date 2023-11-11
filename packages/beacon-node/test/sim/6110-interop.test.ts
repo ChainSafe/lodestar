@@ -390,7 +390,6 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       });
     });
 
-
     // Stop chain and un-subscribe events so the execution engine won't update it's head
     // Allow some time to broadcast finalized events and complete the importBlock routine
     await Promise.all(validators.map((v) => v.close()));
