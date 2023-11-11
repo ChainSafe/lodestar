@@ -876,7 +876,9 @@ export class BeaconChain implements IBeaconChain {
 
     // TODO: finalizedState may not be available after https://github.com/ChainSafe/lodestar/issues/5968.
     // In that case implement getCheckpointStateValidatorCount() in regen and use headState instead
-    if (finalizedState?.epochCtx.isAfterEIP6110()) {
+    if (finalizedState === null) {
+      this.logger.verbose("Finalized state is null");
+    } else if (finalizedState.epochCtx.isAfterEIP6110()) {
       const pivotValidatorIndex = finalizedState.validators.length;
       // Note EIP-6914 will break this logic
       const newFinalizedValidators = finalizedState.epochCtx.unfinalizedPubkey2index.takeWhile(

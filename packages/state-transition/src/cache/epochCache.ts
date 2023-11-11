@@ -777,7 +777,7 @@ export class EpochCache {
    * need to make such enquiry
    *
    */
-  getPubkey(index: ValidatorIndex): PublicKey {
+  getPubkey(index: ValidatorIndex): PublicKey | undefined {
     return this.index2pubkey[index];
   }
 
@@ -804,7 +804,7 @@ export class EpochCache {
   }
 
   addFinalizedPubkeys(pubkeyMap: UnfinalizedPubkeyIndexMap): void {
-    Array.from(pubkeyMap.entries()).forEach(([pubkey, index]) => this.addFinalizedPubkey(index, pubkey));
+    pubkeyMap.forEach((index, pubkey) => this.addFinalizedPubkey(index, pubkey));
   }
 
   /**
