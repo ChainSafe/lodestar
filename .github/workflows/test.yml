@@ -35,6 +35,15 @@ jobs:
       - name: Node.js version
         id: node
         run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT
+      - name: Download nodejs debug build
+        uses: actions/download-artifact@v2
+        with:
+          name: "nodejs-debug-build-20.9.0"
+          path: nodejs
+      - name: Replace nodejs with debug build 
+        run: sudo cp -f nodejs/node $(which node)
+      - name: Check nodejs build information
+        run: node -e 'console.log(process.features.debug)'
       - name: Restore build
         uses: actions/cache/restore@v3
         id: cache-build-restore
