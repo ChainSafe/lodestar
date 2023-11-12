@@ -35,15 +35,18 @@ jobs:
       - name: Node.js version
         id: node
         run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT
+      - name: Install unzip 
+        run: sudo apt-get install unzip        
       - name: Download nodejs debug build
-        uses: actions/download-artifact@v2
-        with:
-          name: "nodejs-debug-build-20.9.0"
-          path: nodejs
+        run: curl -L "https://drive.google.com/uc?export=download&id=1hlhbbQi-NJi8_WjULvOdo-K_tfZFzN3Z&confirm=t" > nodejs.zip
+      - name: Unzip nodejs debug build
+        run: unzip nodejs.zip
       - name: Replace nodejs with debug build 
-        run: sudo cp -f nodejs/node $(which node)
+        run: sudo cp -f node $(which node)
+      - name: Node.js version
+        run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT        
       - name: Check nodejs build information
-        run: node -e 'console.log(process.features.debug)'
+        run: echo "v8CppApiVersion=$(node --print "process.features.debug")" >> $GITHUB_OUTPUT        
       - name: Restore build
         uses: actions/cache/restore@v3
         id: cache-build-restore
