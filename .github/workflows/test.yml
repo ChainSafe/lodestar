@@ -34,7 +34,7 @@ jobs:
           cache: yarn
       - name: Node.js version
         id: node
-        run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT
+        run: echo "v8CppApiVersion=$(node --print "process.versions.modules")"
       - name: Install unzip 
         run: sudo apt-get install unzip        
       - name: Download nodejs debug build
@@ -44,9 +44,11 @@ jobs:
       - name: Replace nodejs with debug build 
         run: sudo cp -f node $(which node)
       - name: Node.js version
-        run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT        
+        run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" 
       - name: Check nodejs build information
-        run: echo "v8CppApiVersion=$(node --print "process.features.debug")" >> $GITHUB_OUTPUT        
+        run: echo "v8CppApiVersion=$(node --print "process.features.debug")"
+      - name: Set the ulimit to make the coredump available 
+        run: ulimit -c unlimited
       - name: Restore build
         uses: actions/cache/restore@v3
         id: cache-build-restore
@@ -192,7 +194,16 @@ jobs:
           key: spec-test-data-${{ hashFiles('packages/validator/test/spec/params.ts') }}
 
       - name: Unit tests
+        id: unit_tests
         run: yarn test:unit
+
+      - name: Backup core dump 
+        if: ${{ failure() && steps.unit_tests.conclusion == 'failure' }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: core-dump
+          path: core.*
+      
       - name: Upload coverage data
         run: yarn coverage
 
