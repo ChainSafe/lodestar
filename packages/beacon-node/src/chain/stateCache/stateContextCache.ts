@@ -85,24 +85,29 @@ export class StateContextCache {
   }
 
   updateUnfinalizedPubkeys(validators: UnfinalizedPubkeyIndexMap): void {
-    let totalAddTime = 0;
-    let totalDeleteTime = 0;
     let totalNumStatesUpdated = 0;
 
-    for (const cachedState of this.cache.values()) {
-      const addStartTime = Date.now();
-      cachedState.epochCtx.addFinalizedPubkeys(validators);
-      totalAddTime += Date.now() - addStartTime;
-
-      const deleteStartTime = Date.now();
-      cachedState.epochCtx.deleteUnfinalizedPubkeys(Array.from(validators.keys()));
-      totalDeleteTime += Date.now() - deleteStartTime;
-
-      totalNumStatesUpdated++;
+    const addTimer = this.metrics?.addPubkeyTime.startTimer();
+    try {
+      if (this.cache.size > 0) {
+        const st = this.cache.values().next().value as CachedBeaconStateAllForks;
+        // Only need to insert once since finalized cache is shared across all states globally
+        st.epochCtx.addFinalizedPubkeys(validators);
+      }
+    } finally {
+      addTimer?.();
     }
 
-    this.metrics?.addPubkeyTime.observe(totalAddTime / 1000);
-    this.metrics?.deletePubkeyTime.observe(totalDeleteTime / 1000);
+    const deleteTimer = this.metrics?.deletePubkeyTime.startTimer();
+    try {
+      for (const cachedState of this.cache.values()) {
+        cachedState.epochCtx.deleteUnfinalizedPubkeys(Array.from(validators.keys()));
+        totalNumStatesUpdated++;
+      }
+    } finally {
+      deleteTimer?.();
+    }
+
     this.metrics?.numStatesUpdated.observe(totalNumStatesUpdated);
   }
 

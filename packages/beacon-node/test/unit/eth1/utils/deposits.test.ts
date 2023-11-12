@@ -3,7 +3,6 @@ import {phase0, ssz} from "@lodestar/types";
 import {MAX_DEPOSITS, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {verifyMerkleBranch} from "@lodestar/utils";
 import {createChainForkConfig} from "@lodestar/config";
-import {minimalChainConfig} from "@lodestar/config/presets";
 import {filterBy} from "../../../utils/db.js";
 import {Eth1ErrorCode} from "../../../../src/eth1/errors.js";
 import {generateState} from "../../../utils/state.js";
@@ -100,6 +99,7 @@ describe("eth1 / util / deposits", function () {
       },
     ];
 
+    /* eslint-disable @typescript-eslint/naming-convention */
     const post6110Config = createChainForkConfig({
       ALTAIR_FORK_EPOCH: 1,
       BELLATRIX_FORK_EPOCH: 2,
