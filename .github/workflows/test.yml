@@ -48,7 +48,7 @@ jobs:
       - name: Check nodejs build information
         run: echo "v8CppApiVersion=$(node --print "process.features.debug")"
       - name: Set the ulimit to make the coredump available 
-        run: sudo ulimit -c unlimited
+        run: sudo sh -c "ulimit -c unlimited"
       - name: Restore build
         uses: actions/cache/restore@v3
         id: cache-build-restore
