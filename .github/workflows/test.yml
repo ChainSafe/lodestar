@@ -34,19 +34,7 @@ jobs:
           cache: yarn
       - name: Node.js version
         id: node
-        run: echo $(node --print "process.versions.modules")
-      - name: Install unzip 
-        run: sudo apt-get install unzip        
-      - name: Download nodejs debug build
-        run: curl -L "https://drive.google.com/uc?export=download&id=1hlhbbQi-NJi8_WjULvOdo-K_tfZFzN3Z&confirm=t" > nodejs.zip
-      - name: Unzip nodejs debug build
-        run: unzip nodejs.zip
-      - name: Replace nodejs with debug build 
-        run: sudo cp -f node $(which node)
-      - name: Node.js version
-        run: echo $(node --print "process.versions.modules")
-      - name: Check nodejs build information
-        run: echo $(node --print "process.features.debug")
+        run: echo $(node --print "process.version")
       - name: Restore build
         uses: actions/cache/restore@v3
         id: cache-build-restore
@@ -191,6 +179,14 @@ jobs:
           path: packages/validator/spec-tests
           key: spec-test-data-${{ hashFiles('packages/validator/test/spec/params.ts') }}
 
+      - name: Install unzip 
+        run: sudo apt-get install unzip        
+      - name: Download nodejs debug build
+        run: curl -L "https://drive.google.com/uc?export=download&id=1hlhbbQi-NJi8_WjULvOdo-K_tfZFzN3Z&confirm=t" > nodejs.zip
+      - name: Unzip nodejs debug build
+        run: unzip nodejs.zip
+      - name: Replace nodejs with debug build 
+        run: sudo cp -f node $(which node)
       - name: Node.js version
         run: echo $(node --print "process.versions.modules")
       - name: Check nodejs build information
@@ -199,6 +195,11 @@ jobs:
         run: sudo sh -c "ulimit -c unlimited"        
       - name: Set the core dump file pattern 
         run: sudo sh -c "echo core > /proc/sys/kernel/core_pattern"
+
+      - name: Run yarn once again 
+        run: yarn
+      - name: Rebuild native dependencies
+        run: npm rebuild --debug
 
       - name: Unit tests
         id: unit_tests
