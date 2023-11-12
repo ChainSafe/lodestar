@@ -47,10 +47,6 @@ jobs:
         run: echo $(node --print "process.versions.modules")
       - name: Check nodejs build information
         run: echo $(node --print "process.features.debug")
-      - name: Set the ulimit to make the coredump available 
-        run: sudo sh -c "ulimit -c unlimited"
-      - name: Set the core dump file pattern 
-        run: sudo sh -c "echo core > /proc/sys/kernel/core_pattern"
       - name: Restore build
         uses: actions/cache/restore@v3
         id: cache-build-restore
@@ -195,9 +191,22 @@ jobs:
           path: packages/validator/spec-tests
           key: spec-test-data-${{ hashFiles('packages/validator/test/spec/params.ts') }}
 
+      - name: Node.js version
+        run: echo $(node --print "process.versions.modules")
+      - name: Check nodejs build information
+        run: echo $(node --print "process.features.debug")          
+      - name: Set the ulimit to make the coredump available 
+        run: sudo sh -c "ulimit -c unlimited"        
+      - name: Set the core dump file pattern 
+        run: sudo sh -c "echo core > /proc/sys/kernel/core_pattern"
+
       - name: Unit tests
         id: unit_tests
         run: yarn test:unit
+
+      - name: List down all files 
+        if: ${{ failure() && steps.unit_tests.conclusion == 'failure' }}
+        run: ls -l
 
       - name: Backup core dump 
         if: ${{ failure() && steps.unit_tests.conclusion == 'failure' }}
