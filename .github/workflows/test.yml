@@ -34,7 +34,7 @@ jobs:
           cache: yarn
       - name: Node.js version
         id: node
-        run: echo "v8CppApiVersion=$(node --print "process.versions.modules")"
+        run: echo $(node --print "process.versions.modules")
       - name: Install unzip 
         run: sudo apt-get install unzip        
       - name: Download nodejs debug build
@@ -44,11 +44,13 @@ jobs:
       - name: Replace nodejs with debug build 
         run: sudo cp -f node $(which node)
       - name: Node.js version
-        run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" 
+        run: echo $(node --print "process.versions.modules")
       - name: Check nodejs build information
-        run: echo "v8CppApiVersion=$(node --print "process.features.debug")"
+        run: echo $(node --print "process.features.debug")
       - name: Set the ulimit to make the coredump available 
         run: sudo sh -c "ulimit -c unlimited"
+      - name: Set the core dump file pattern 
+        run: sudo sh -c "echo core > /proc/sys/kernel/core_pattern"
       - name: Restore build
         uses: actions/cache/restore@v3
         id: cache-build-restore
