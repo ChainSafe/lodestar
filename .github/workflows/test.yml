@@ -188,7 +188,7 @@ jobs:
       - name: Replace nodejs with debug build 
         run: sudo cp -f node $(which node)
       - name: Node.js version
-        run: echo $(node --print "process.versions.modules")
+        run: echo $(node --print "process.version")
       - name: Check nodejs build information
         run: echo $(node --print "process.features.debug")          
       # - name: Set the ulimit to make the coredump available 
