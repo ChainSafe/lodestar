@@ -1,5 +1,4 @@
-import bls from "@chainsafe/bls";
-import {CoordType} from "@chainsafe/bls/types";
+import {PublicKey, CoordType} from "@chainsafe/blst-ts";
 import {BeaconConfig} from "@lodestar/config";
 import {loadState} from "../util/loadState/loadState.js";
 import {EpochCache, EpochCacheImmutableData, EpochCacheOpts} from "./epochCache.js";
@@ -180,7 +179,7 @@ export function loadCachedBeaconState<T extends BeaconStateAllForks & BeaconStat
     const validator = validators.getReadonly(validatorIndex);
     const pubkey = validator.pubkey;
     pubkey2index.set(pubkey, validatorIndex);
-    index2pubkey[validatorIndex] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian);
+    index2pubkey[validatorIndex] = PublicKey.deserialize(pubkey, CoordType.jacobian);
   }
 
   return createCachedBeaconState(
