@@ -196,8 +196,8 @@ jobs:
       - name: Set the core dump file pattern 
         run: sudo sh -c "echo core > /proc/sys/kernel/core_pattern"
 
-      - name: Run yarn once again 
-        run: yarn
+      # - name: Run yarn once again 
+      #   run: yarn
       # - name: Rebuild native dependencies
       #   run: npm rebuild --debug
 
