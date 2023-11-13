@@ -197,7 +197,12 @@ async function validateAggregateAndProof(
   ];
   // no need to write to SeenAttestationDatas
 
-  if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true, priority: prioritizeBls}))) {
+  if (
+    !(await chain.bls.verifySignatureSets(signatureSets, {
+      batchable: true,
+      priority: prioritizeBls,
+    }))
+  ) {
     throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_SIGNATURE});
   }
 

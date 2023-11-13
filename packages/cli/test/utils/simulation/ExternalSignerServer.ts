@@ -1,6 +1,6 @@
 import fastify from "fastify";
 import {fromHexString} from "@chainsafe/ssz";
-import type {SecretKey} from "@chainsafe/bls/types";
+import type {SecretKey} from "@chainsafe/blst-ts";
 import {EXTERNAL_SIGNER_BASE_PORT} from "./constants.js";
 
 /* eslint-disable no-console */

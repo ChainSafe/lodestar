@@ -1,4 +1,4 @@
-import type {PublicKey} from "@chainsafe/bls/types";
+import type {PublicKey} from "@chainsafe/blst-ts";
 import {DOMAIN_SELECTION_PROOF} from "@lodestar/params";
 import {phase0, Slot, ssz} from "@lodestar/types";
 import {computeSigningRoot, createSingleSignatureSetFromComponents, ISignatureSet} from "@lodestar/state-transition";

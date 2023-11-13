@@ -1,8 +1,7 @@
+import {PublicKey, SecretKey} from "@chainsafe/blst-ts";
 import {describe, it, beforeAll, expect, beforeEach, afterEach} from "vitest";
-import bls from "@chainsafe/bls";
-import {PublicKey} from "@chainsafe/bls/types";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
-import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/multithread/index.js";
+import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/multithread.js";
 import {testLogger} from "../../../utils/logger.js";
 import {VerifySignatureOpts} from "../../../../src/chain/bls/interface.js";
 
@@ -29,7 +28,7 @@ describe("chain / bls / multithread queue", function () {
 
   beforeAll(() => {
     for (let i = 0; i < 3; i++) {
-      const sk = bls.SecretKey.fromBytes(Buffer.alloc(32, i + 1));
+      const sk = SecretKey.deserialize(Buffer.alloc(32, i + 1));
       const msg = Buffer.alloc(32, i + 1);
       const pk = sk.toPublicKey();
       const sig = sk.sign(msg);
@@ -37,11 +36,15 @@ describe("chain / bls / multithread queue", function () {
         type: SignatureSetType.single,
         pubkey: pk,
         signingRoot: msg,
-        signature: sig.toBytes(),
+        signature: sig.serialize(),
       });
       sameMessageSets.push({
         publicKey: pk,
-        signature: sk.sign(sameMessage).toBytes(),
+        signature: sk.sign(sameMessage).serialize(),
+      });
+      sameMessageSets.push({
+        publicKey: pk,
+        signature: sk.sign(sameMessage).serialize(),
       });
     }
   });

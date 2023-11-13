@@ -1,4 +1,4 @@
-import bls from "@chainsafe/bls";
+import {SecretKey} from "@chainsafe/blst-ts";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {fromHexString} from "@chainsafe/ssz";
 import {
@@ -172,7 +172,7 @@ export class KeymanagerApi implements Api {
         decryptKeystores.queue(
           {keystoreStr, password},
           async (secretKeyBytes: Uint8Array) => {
-            const secretKey = bls.SecretKey.fromBytes(secretKeyBytes);
+            const secretKey = SecretKey.deserialize(secretKeyBytes);
 
             // Persist the key to disk for restarts, before adding to in-memory store
             // If the keystore exist and has a lock it will throw

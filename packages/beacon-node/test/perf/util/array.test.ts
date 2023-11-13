@@ -70,3 +70,43 @@ describe("LinkedList vs Regular Array", () => {
     });
   }
 });
+
+describe("for (obj of objs) Array.push(obj) vs Array.push(...objs)", () => {
+  setBenchOpts({noThreshold: true});
+
+  const arrayLengths = [1, 3, 5, 8, 10, 20, 30, 40, 50, 80, 100];
+
+  for (const length of arrayLengths) {
+    itBench({
+      id: `array of ${length} items, for/of push(obj)`,
+      beforeEach: () =>
+        Array.from({length}, () => ({
+          msg: Uint8Array.from(Buffer.from("hello world")),
+          publicKey: Uint8Array.from(Buffer.alloc(96, "*")),
+          signature: Uint8Array.from(Buffer.alloc(192, "*")),
+        })),
+      fn: (sets) => {
+        const arr = [];
+        for (const set of sets) {
+          arr.push(set);
+        }
+      },
+      runsFactor: 1000,
+    });
+
+    itBench({
+      id: `array of ${length} items, push(...objs)`,
+      beforeEach: () =>
+        Array.from({length}, () => ({
+          msg: Uint8Array.from(Buffer.from("hello world")),
+          publicKey: Uint8Array.from(Buffer.alloc(96, "*")),
+          signature: Uint8Array.from(Buffer.alloc(192, "*")),
+        })),
+      fn: (sets) => {
+        const arr = [];
+        arr.push(...sets);
+      },
+      runsFactor: 1000,
+    });
+  }
+});

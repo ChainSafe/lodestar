@@ -1,4 +1,4 @@
-import {SecretKey} from "@chainsafe/bls/types";
+import {SecretKey} from "@chainsafe/blst-ts";
 import {Api} from "@lodestar/api";
 import {chainConfig} from "@lodestar/config/default";
 import {createBeaconConfig, ChainConfig} from "@lodestar/config";

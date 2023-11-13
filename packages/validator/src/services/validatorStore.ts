@@ -1,5 +1,5 @@
-import type {SecretKey} from "@chainsafe/bls/types";
 import {BitArray, fromHexString, toHexString} from "@chainsafe/ssz";
+import type {SecretKey} from "@chainsafe/blst-ts";
 import {
   computeEpochAtSlot,
   computeSigningRoot,
@@ -721,7 +721,7 @@ export class ValidatorStore {
     switch (signer.type) {
       case SignerType.Local: {
         const timer = this.metrics?.localSignTime.startTimer();
-        const signature = signer.secretKey.sign(signingRoot).toBytes();
+        const signature = signer.secretKey.sign(signingRoot).serialize();
         timer?.();
         return signature;
       }
@@ -781,7 +781,7 @@ export class ValidatorStore {
 function getSignerPubkeyHex(signer: Signer): PubkeyHex {
   switch (signer.type) {
     case SignerType.Local:
-      return toHexString(signer.secretKey.toPublicKey().toBytes());
+      return toHexString(signer.secretKey.toPublicKey().serialize());
 
     case SignerType.Remote:
       if (!isValidatePubkeyHex(signer.pubkey)) {

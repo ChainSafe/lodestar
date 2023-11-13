@@ -1,5 +1,4 @@
-import bls from "@chainsafe/bls";
-import {CoordType} from "@chainsafe/blst";
+import {PublicKey} from "@chainsafe/blst-ts";
 import {fromHexString} from "@chainsafe/ssz";
 
 /**
@@ -52,7 +51,8 @@ export function parseRange(range: string): number[] {
 export function assertValidPubkeysHex(pubkeysHex: string[]): void {
   for (const pubkeyHex of pubkeysHex) {
     const pubkeyBytes = fromHexString(pubkeyHex);
-    bls.PublicKey.fromBytes(pubkeyBytes, CoordType.jacobian, true);
+    const pk = PublicKey.deserialize(pubkeyBytes);
+    pk.keyValidate();
   }
 }
 

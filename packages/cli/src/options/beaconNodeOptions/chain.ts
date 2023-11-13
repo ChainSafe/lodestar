@@ -1,5 +1,6 @@
 import * as path from "node:path";
 import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
+import {BlsPoolType, BLS_POOL_TYPES} from "@lodestar/beacon-node/chain";
 import {CliCommandOptions} from "../../util/index.js";
 
 export type ChainArgs = {
@@ -8,6 +9,7 @@ export type ChainArgs = {
   "chain.blsVerifyAllMainThread"?: boolean;
   "chain.disableBlsBatchVerify"?: boolean;
   "chain.persistProducedBlocks"?: boolean;
+  "chain.blsPoolType"?: BlsPoolType;
   "chain.persistInvalidSszObjects"?: boolean;
   // No need to define chain.persistInvalidSszObjects as part of ChainArgs
   // as this is defined as part of BeaconPaths
@@ -35,6 +37,7 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     blsVerifyAllMainThread: args["chain.blsVerifyAllMainThread"],
     disableBlsBatchVerify: args["chain.disableBlsBatchVerify"],
     persistProducedBlocks: args["chain.persistProducedBlocks"],
+    blsPoolType: args["chain.blsPoolType"],
     persistInvalidSszObjects: args["chain.persistInvalidSszObjects"],
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
     persistInvalidSszObjectsDir: undefined as any,
@@ -102,6 +105,14 @@ Will double processing times. Use only for debugging purposes.",
     hidden: true,
     type: "boolean",
     description: "Persist produced blocks or not for debugging purpose",
+    group: "chain",
+  },
+
+  "chain.blsPoolType": {
+    hidden: true,
+    choices: BLS_POOL_TYPES,
+    type: "string",
+    description: "Selects between using a Worker pool or using the native libuv thread pool for BLS verification",
     group: "chain",
   },
 

@@ -1,4 +1,4 @@
-import bls from "@chainsafe/bls";
+import {aggregateSignatures} from "@chainsafe/blst-ts";
 import {toHexString} from "@chainsafe/ssz";
 import {
   ForkName,
@@ -328,7 +328,7 @@ export function aggregateInto(attestation1: AttestationWithIndex, attestation2: 
 
   const signature1 = signatureFromBytesNoCheck(attestation1.attestation.signature);
   const signature2 = signatureFromBytesNoCheck(attestation2.attestation.signature);
-  attestation1.attestation.signature = bls.Signature.aggregate([signature1, signature2]).toBytes();
+  attestation1.attestation.signature = aggregateSignatures([signature1, signature2]).serialize();
 }
 
 /**

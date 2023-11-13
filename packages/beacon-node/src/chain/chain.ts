@@ -194,7 +194,7 @@ export class BeaconChain implements IBeaconChain {
     const signal = this.abortController.signal;
     const emitter = new ChainEventEmitter();
     // by default, verify signatures on both main threads and worker threads
-    const bls = opts.blsVerifyAllMainThread
+    const bls = opts.blsVerifySingleThreaded
       ? new BlsSingleThreadVerifier({metrics})
       : new BlsMultiThreadWorkerPool(opts, {logger, metrics});
 
@@ -529,7 +529,7 @@ export class BeaconChain implements IBeaconChain {
     );
     const parentBlockRoot = fromHexString(head.blockRoot);
     const proposerIndex = state.epochCtx.getBeaconProposer(slot);
-    const proposerPubKey = state.epochCtx.index2pubkey[proposerIndex].toBytes();
+    const proposerPubKey = state.epochCtx.index2pubkey[proposerIndex].serialize();
 
     const {body, blobs, executionPayloadValue, shouldOverrideBuilder} = await produceBlockBody.call(
       this,

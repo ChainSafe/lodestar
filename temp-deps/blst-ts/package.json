@@ -1,0 +1,83 @@
+{
+  "name": "@chainsafe/blst-ts",
+  "version": "0.0.1",
+  "description": "Typescript wrapper for supranational/blst native bindings, a highly performant BLS12-381 signature library",
+  "gypfile": true,
+  "private": false,
+  "files": [
+    "binding.gyp",
+    "deps",
+    "lib",
+    "src"
+  ],
+  "type": "module",
+  "main": "./import/index.mjs",
+  "module": "./import/index.mjs",
+  "types": "./import/index.d.ts",
+  "exports": {
+    ".": "./import/index.mjs"
+  },
+  "typesVersions": {
+    "*": {
+      "*": [
+        "./import/index.d.ts"
+      ]
+    }
+  },
+  "publishConfig": {
+    "exports": {
+      ".": "./import/index.mjs"
+    },
+    "types": "./import/index.d.ts"
+  },
+  "scripts": {
+    "clean": "npm run clean:dist; npm run clean:build",
+    "clean:dist": "rm -rf dist",
+    "clean:build": "node-gyp clean && node-gyp configure",
+    "dev": "ts-node tools/dev",
+    "prebuild": "yarn && node-gyp configure",
+    "build": "node-gyp build",
+    "build:clean": "npm run clean && npm run build",
+    "build:debug": "node-gyp build --debug",
+    "lint": "eslint --color --ext .ts lib/ test/",
+    "test": "yarn test:unit",
+    "test:unit": "mocha test/unit/**/*.test.ts",
+    "test:spec": "mocha 'test/spec/**/*.test.ts'",
+    "download-spec-tests": "node -r ts-node/register test/spec/downloadTests.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ChainSafe/blst-ts.git"
+  },
+  "keywords": [],
+  "author": "ChainSafe Systems",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/ChainSafe/blst-ts/issues"
+  },
+  "homepage": "https://github.com/ChainSafe/blst-ts#readme",
+  "devDependencies": {
+    "@types/chai": "^4.3.4",
+    "@types/mocha": "^10.0.1",
+    "@types/node": "^18.15.11",
+    "@typescript-eslint/eslint-plugin": "^5.58.0",
+    "@typescript-eslint/parser": "^5.58.0",
+    "chai": "^4.3.7",
+    "chokidar": "^3.5.3",
+    "eslint": "^8.38.0",
+    "eslint-plugin-import": "^2.27.5",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-prettier": "^4.2.1",
+    "mocha": "^10.2.0",
+    "node-fetch": "2.6.6",
+    "prettier": "^2.8.7",
+    "tar": "^6.1.14",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.0.4"
+  },
+  "dependencies": {
+    "bindings": "^1.5.0",
+    "node-addon-api": "^6.1.0",
+    "node-gyp": "^9.3.1"
+  }
+}

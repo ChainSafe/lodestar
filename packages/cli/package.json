@@ -54,12 +54,11 @@
   ],
   "dependencies": {
     "@chainsafe/as-sha256": "^0.3.1",
-    "@chainsafe/bls": "7.1.1",
     "@chainsafe/bls-keygen": "^0.3.0",
     "@chainsafe/bls-keystore": "^3.0.0",
-    "@chainsafe/blst": "^0.2.9",
     "@chainsafe/discv5": "^7.1.0",
     "@chainsafe/enr": "^2.0.2",
+    "@chainsafe/blst-ts": "file:../../temp-deps/blst-ts",
     "@chainsafe/persistent-merkle-tree": "^0.6.1",
     "@chainsafe/ssz": "^0.14.0",
     "@chainsafe/threads": "^1.11.1",
@@ -103,6 +102,7 @@
     "@types/got": "^9.6.12",
     "@types/inquirer": "^9.0.3",
     "@types/lodash": "^4.14.192",
-    "@types/yargs": "^17.0.24"
+    "@types/yargs": "^17.0.24",
+    "@lodestar/test-utils": "^1.9.2"
   }
 }

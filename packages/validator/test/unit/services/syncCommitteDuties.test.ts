@@ -1,7 +1,7 @@
 import {describe, it, expect, beforeAll, beforeEach, afterEach} from "vitest";
 import {when} from "vitest-when";
 import {toBufferBE} from "bigint-buffer";
-import bls from "@chainsafe/bls";
+import {SecretKey} from "@chainsafe/blst-ts";
 import {toHexString} from "@chainsafe/ssz";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as mainnetConfig} from "@lodestar/config/default";
@@ -43,10 +43,10 @@ describe("SyncCommitteeDutiesService", function () {
 
   beforeAll(async () => {
     const secretKeys = [
-      bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32)),
-      bls.SecretKey.fromBytes(toBufferBE(BigInt(99), 32)),
+      SecretKey.deserialize(toBufferBE(BigInt(98), 32)),
+      SecretKey.deserialize(toBufferBE(BigInt(99), 32)),
     ];
-    pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
+    pubkeys = secretKeys.map((sk) => sk.toPublicKey().serialize());
     validatorStore = await initValidatorStore(secretKeys, api, altair0Config);
   });
 

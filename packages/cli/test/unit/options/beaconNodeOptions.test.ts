@@ -2,6 +2,7 @@ import fs from "node:fs";
 import {describe, it, expect} from "vitest";
 import {IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {RecursivePartial} from "@lodestar/utils";
+import {BlsPoolType} from "@lodestar/beacon-node/lib/chain/options.js";
 import {parseBeaconNodeArgs, BeaconNodeArgs} from "../../../src/options/beaconNodeOptions/index.js";
 import {getTestdirPath} from "../../utils.js";
 
@@ -22,6 +23,7 @@ describe("options / beaconNodeOptions", () => {
       "chain.blsVerifyAllMainThread": true,
       "chain.disableBlsBatchVerify": true,
       "chain.persistProducedBlocks": true,
+      "chain.blsPoolType": BlsPoolType.libuv,
       "chain.persistInvalidSszObjects": true,
       "chain.proposerBoostEnabled": false,
       "chain.disableImportExecutionFcU": false,
@@ -124,6 +126,7 @@ describe("options / beaconNodeOptions", () => {
         blsVerifyAllMainThread: true,
         disableBlsBatchVerify: true,
         persistProducedBlocks: true,
+        blsPoolType: BlsPoolType.libuv,
         persistInvalidSszObjects: true,
         proposerBoostEnabled: false,
         disableImportExecutionFcU: false,

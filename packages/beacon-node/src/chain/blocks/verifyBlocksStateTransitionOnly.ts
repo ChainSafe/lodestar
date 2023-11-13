@@ -40,7 +40,7 @@ export async function verifyBlocksStateTransitionOnly(
 
     // STFN - per_slot_processing() + per_block_processing()
     // NOTE: `regen.getPreState()` should have dialed forward the state already caching checkpoint states
-    const useBlsBatchVerify = !opts?.disableBlsBatchVerify;
+    const useBlsBatchVerify = !opts?.blsDisableBatchVerify;
     const postState = stateTransition(
       preState,
       block,

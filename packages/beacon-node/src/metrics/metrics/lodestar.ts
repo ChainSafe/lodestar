@@ -375,95 +375,6 @@ export function createLodestarMetrics(
         name: "lodestar_bls_aggregated_pubkeys_total",
         help: "Total aggregated pubkeys for BLS validation",
       }),
-    },
-
-    blsThreadPool: {
-      jobsWorkerTime: register.gauge<{workerId: number}>({
-        name: "lodestar_bls_thread_pool_time_seconds_sum",
-        help: "Total time spent verifying signature sets measured on the worker",
-        labelNames: ["workerId"],
-      }),
-      successJobsSignatureSetsCount: register.gauge({
-        name: "lodestar_bls_thread_pool_success_jobs_signature_sets_count",
-        help: "Count of total verified signature sets",
-      }),
-      errorAggregateSignatureSetsCount: register.gauge<{type: JobQueueItemType}>({
-        name: "lodestar_bls_thread_pool_error_aggregate_signature_sets_count",
-        help: "Count of error when aggregating pubkeys or signatures",
-        labelNames: ["type"],
-      }),
-      errorJobsSignatureSetsCount: register.gauge({
-        name: "lodestar_bls_thread_pool_error_jobs_signature_sets_count",
-        help: "Count of total error-ed signature sets",
-      }),
-      jobWaitTime: register.histogram({
-        name: "lodestar_bls_thread_pool_queue_job_wait_time_seconds",
-        help: "Time from job added to the queue to starting the job in seconds",
-        buckets: [0.01, 0.02, 0.5, 0.1, 0.3, 1],
-      }),
-      queueLength: register.gauge({
-        name: "lodestar_bls_thread_pool_queue_length",
-        help: "Count of total block processor queue length",
-      }),
-      workersBusy: register.gauge({
-        name: "lodestar_bls_thread_pool_workers_busy",
-        help: "Count of current busy workers",
-      }),
-      totalJobsGroupsStarted: register.gauge({
-        name: "lodestar_bls_thread_pool_job_groups_started_total",
-        help: "Count of total jobs groups started in bls thread pool, job groups include +1 jobs",
-      }),
-      totalJobsStarted: register.gauge<{type: JobQueueItemType}>({
-        name: "lodestar_bls_thread_pool_jobs_started_total",
-        help: "Count of total jobs started in bls thread pool, jobs include +1 signature sets",
-        labelNames: ["type"],
-      }),
-      totalSigSetsStarted: register.gauge<{type: JobQueueItemType}>({
-        name: "lodestar_bls_thread_pool_sig_sets_started_total",
-        help: "Count of total signature sets started in bls thread pool, sig sets include 1 pk, msg, sig",
-        labelNames: ["type"],
-      }),
-      // Re-verifying a batch means doing double work. This number must be very low or it can be a waste of CPU resources
-      batchRetries: register.gauge({
-        name: "lodestar_bls_thread_pool_batch_retries_total",
-        help: "Count of total batches that failed and had to be verified again.",
-      }),
-      // To count how many sigs are being validated with the optimization of batching them
-      batchSigsSuccess: register.gauge({
-        name: "lodestar_bls_thread_pool_batch_sigs_success_total",
-        help: "Count of total batches that failed and had to be verified again.",
-      }),
-      sameMessageRetryJobs: register.gauge({
-        name: "lodestar_bls_thread_pool_same_message_jobs_retries_total",
-        help: "Count of total same message jobs that failed and had to be verified again.",
-      }),
-      sameMessageRetrySets: register.gauge({
-        name: "lodestar_bls_thread_pool_same_message_sets_retries_total",
-        help: "Count of total same message sets that failed and had to be verified again.",
-      }),
-      // To measure the time cost of main thread <-> worker message passing
-      latencyToWorker: register.histogram({
-        name: "lodestar_bls_thread_pool_latency_to_worker",
-        help: "Time from sending the job to the worker and the worker receiving it",
-        buckets: [0.001, 0.003, 0.01, 0.03, 0.1],
-      }),
-      latencyFromWorker: register.histogram({
-        name: "lodestar_bls_thread_pool_latency_from_worker",
-        help: "Time from the worker sending the result and the main thread receiving it",
-        buckets: [0.001, 0.003, 0.01, 0.03, 0.1],
-      }),
-      mainThreadDurationInThreadPool: register.histogram({
-        name: "lodestar_bls_thread_pool_main_thread_time_seconds",
-        help: "Time to verify signatures in main thread with thread pool mode",
-        // Time can vary significantly, so just track usage ratio
-        buckets: [0],
-      }),
-      timePerSigSet: register.histogram({
-        name: "lodestar_bls_worker_thread_time_per_sigset_seconds",
-        help: "Time to verify each sigset with worker thread mode",
-        // Time per sig ~0.9ms on good machines
-        buckets: [0.5e-3, 0.75e-3, 1e-3, 1.5e-3, 2e-3, 5e-3],
-      }),
       totalSigSets: register.gauge({
         name: "lodestar_bls_thread_pool_sig_sets_total",
         help: "Count of total signature sets",
@@ -476,31 +387,111 @@ export function createLodestarMetrics(
         name: "lodestar_bls_thread_pool_batchable_sig_sets_total",
         help: "Count of total batchable signature sets",
       }),
-      signatureDeserializationMainThreadDuration: register.histogram({
-        name: "lodestar_bls_thread_pool_signature_deserialization_main_thread_time_seconds",
-        help: "Total time spent deserializing signatures on main thread",
-        buckets: [0.001, 0.005, 0.01, 0.1],
-      }),
-      pubkeysAggregationMainThreadDuration: register.histogram({
-        name: "lodestar_bls_thread_pool_pubkeys_aggregation_main_thread_time_seconds",
-        help: "Total time spent aggregating pubkeys on main thread",
-        buckets: [0.001, 0.005, 0.01, 0.1],
-      }),
-    },
 
-    // BLS time on single thread mode
-    blsSingleThread: {
-      singleThreadDuration: register.histogram({
-        name: "lodestar_bls_single_thread_time_seconds",
-        help: "Time to verify signatures with single thread mode",
-        buckets: [0],
-      }),
-      timePerSigSet: register.histogram({
-        name: "lodestar_bls_single_thread_time_per_sigset_seconds",
-        help: "Time to verify each sigset with single thread mode",
-        // Time per sig ~0.9ms on good machines
-        buckets: [0.5e-3, 0.75e-3, 1e-3, 1.5e-3, 2e-3, 5e-3],
-      }),
+      mainThread: {
+        sigSets: register.gauge({
+          name: "lodestar_bls_main_thread_sig_sets_total",
+          help: "Count of total batchable signature sets",
+        }),
+        verificationDuration: register.histogram({
+          name: "lodestar_bls_thread_pool_main_thread_time_seconds",
+          help: "Time to verify signatures in main thread with thread pool mode",
+          // Time can vary significantly, so just track usage ratio
+          buckets: [0],
+        }),
+        signatureDeserializationDuration: register.gauge({
+          name: "lodestar_bls_thread_pool_signature_deserialization_main_thread_time_seconds",
+          help: "Total time spent deserializing signatures on main thread",
+        }),
+        pubkeysAggregationMainThreadDuration: register.histogram({
+          name: "lodestar_bls_thread_pool_pubkeys_aggregation_main_thread_time_seconds",
+          help: "Total time spent aggregating pubkeys on main thread",
+          buckets: [0.001, 0.005, 0.01, 0.1],
+        }),
+      },
+
+      threadPool: {
+        jobsWorkerTime: register.gauge<{workerId: number}>({
+          name: "lodestar_bls_thread_pool_time_seconds_sum",
+          help: "Total time spent verifying signature sets measured on the worker",
+          labelNames: ["workerId"],
+        }),
+        successJobsSignatureSetsCount: register.gauge({
+          name: "lodestar_bls_thread_pool_success_jobs_signature_sets_count",
+          help: "Count of total verified signature sets",
+        }),
+        errorAggregateSignatureSetsCount: register.gauge<{type: JobQueueItemType}>({
+          name: "lodestar_bls_thread_pool_error_aggregate_signature_sets_count",
+          help: "Count of error when aggregating pubkeys or signatures",
+          labelNames: ["type"],
+        }),
+        errorJobsSignatureSetsCount: register.gauge({
+          name: "lodestar_bls_thread_pool_error_jobs_signature_sets_count",
+          help: "Count of total error-ed signature sets",
+        }),
+        jobWaitTime: register.histogram({
+          name: "lodestar_bls_thread_pool_queue_job_wait_time_seconds",
+          help: "Time from job added to the queue to starting the job in seconds",
+          buckets: [0.01, 0.02, 0.5, 0.1, 0.3, 1],
+        }),
+        queueLength: register.gauge({
+          name: "lodestar_bls_thread_pool_queue_length",
+          help: "Count of total block processor queue length",
+        }),
+        workersBusy: register.gauge({
+          name: "lodestar_bls_thread_pool_workers_busy",
+          help: "Count of current busy workers",
+        }),
+        totalJobsGroupsStarted: register.gauge({
+          name: "lodestar_bls_thread_pool_job_groups_started_total",
+          help: "Count of total jobs groups started in bls thread pool, job groups include +1 jobs",
+        }),
+        totalJobsStarted: register.gauge<{type: JobQueueItemType}>({
+          name: "lodestar_bls_thread_pool_jobs_started_total",
+          help: "Count of total jobs started in bls thread pool, jobs include +1 signature sets",
+          labelNames: ["type"],
+        }),
+        totalSigSetsStarted: register.gauge<{type: JobQueueItemType}>({
+          name: "lodestar_bls_thread_pool_sig_sets_started_total",
+          help: "Count of total signature sets started in bls thread pool, sig sets include 1 pk, msg, sig",
+          labelNames: ["type"],
+        }),
+        // Re-verifying a batch means doing double work. This number must be very low or it can be a waste of CPU resources
+        batchRetries: register.gauge({
+          name: "lodestar_bls_thread_pool_batch_retries_total",
+          help: "Count of total batches that failed and had to be verified again.",
+        }),
+        // To count how many sigs are being validated with the optimization of batching them
+        batchSigsSuccess: register.gauge({
+          name: "lodestar_bls_thread_pool_batch_sigs_success_total",
+          help: "Count of total batches that failed and had to be verified again.",
+        }),
+        sameMessageRetryJobs: register.gauge({
+          name: "lodestar_bls_thread_pool_same_message_jobs_retries_total",
+          help: "Count of total same message jobs that failed and had to be verified again.",
+        }),
+        sameMessageRetrySets: register.gauge({
+          name: "lodestar_bls_thread_pool_same_message_sets_retries_total",
+          help: "Count of total same message sets that failed and had to be verified again.",
+        }),
+        // To measure the time cost of main thread <-> worker message passing
+        latencyToWorker: register.histogram({
+          name: "lodestar_bls_thread_pool_latency_to_worker",
+          help: "Time from sending the job to the worker and the worker receiving it",
+          buckets: [0.001, 0.003, 0.01, 0.03, 0.1],
+        }),
+        latencyFromWorker: register.histogram({
+          name: "lodestar_bls_thread_pool_latency_from_worker",
+          help: "Time from the worker sending the result and the main thread receiving it",
+          buckets: [0.001, 0.003, 0.01, 0.03, 0.1],
+        }),
+        timePerSigSet: register.histogram({
+          name: "lodestar_bls_worker_thread_time_per_sigset_seconds",
+          help: "Time to verify each sigset with worker thread mode",
+          // Time per sig ~0.9ms on good machines
+          buckets: [0.5e-3, 0.75e-3, 1e-3, 1.5e-3, 2e-3, 5e-3],
+        }),
+      },
     },
 
     // Sync

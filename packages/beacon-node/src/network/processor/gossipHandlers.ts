@@ -349,6 +349,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
       const signedAggregateAndProof = sszDeserialize(topic, serializedData);
       const {fork} = topic;
 
+      // Validate incoming aggregate and proof for a block
       try {
         validationResult = await validateGossipAggregateAndProof(fork, chain, signedAggregateAndProof, serializedData);
       } catch (e) {
@@ -358,11 +359,12 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
         throw e;
       }
 
-      // Handler
+      // Handle aggregated, proven attestations appropriately
       const {indexedAttestation, committeeIndices, attDataRootHex} = validationResult;
       metrics?.registerGossipAggregatedAttestation(seenTimestampSec, signedAggregateAndProof, indexedAttestation);
       const aggregatedAttestation = signedAggregateAndProof.message.aggregate;
 
+      // Add validated, aggregated attestation to others in attestationGroup
       chain.aggregatedAttestationPool.add(
         aggregatedAttestation,
         attDataRootHex,
@@ -371,6 +373,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
       );
 
       if (!options.dontSendGossipAttestationsToForkchoice) {
+        // Add vote for block to forkChoice
         try {
           chain.forkChoice.onAttestation(indexedAttestation, attDataRootHex);
         } catch (e) {
@@ -411,13 +414,14 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
         throw e;
       }
 
-      // Handler
+      // Handle attestation appropriately
       const {indexedAttestation, attDataRootHex, attestation} = validationResult;
       metrics?.registerGossipUnaggregatedAttestation(seenTimestampSec, indexedAttestation);
 
       try {
-        // Node may be subscribe to extra subnets (long-lived random subnets). For those, validate the messages
-        // but don't add to attestation pool, to save CPU and RAM
+        // Optionally add attestation to attestationPool. Node may be subscribe to extra subnets
+        // (long-lived random subnets). For those, validate the messages but don't add to
+        // the attestation pool to save CPU and RAM.
         if (aggregatorTracker.shouldAggregate(subnet, indexedAttestation.data.slot)) {
           const insertOutcome = chain.attestationPool.add(attestation, attDataRootHex);
           metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
@@ -427,6 +431,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
       }
 
       if (!options.dontSendGossipAttestationsToForkchoice) {
+        // Add vote for block to forkChoice
         try {
           chain.forkChoice.onAttestation(indexedAttestation, attDataRootHex);
         } catch (e) {

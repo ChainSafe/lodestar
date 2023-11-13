@@ -1,4 +1,4 @@
-import bls from "@chainsafe/bls";
+import {aggregatePublicKeys} from "@chainsafe/blst-ts";
 import {
   BASE_REWARD_FACTOR,
   EFFECTIVE_BALANCE_INCREMENT,
@@ -26,13 +26,14 @@ export function getNextSyncCommittee(
   const indices = getNextSyncCommitteeIndices(state, activeValidatorIndices, effectiveBalanceIncrements);
 
   // Using the index2pubkey cache is slower because it needs the serialized pubkey.
+  // TODO: (matthewkeil) see if this can be optimized for the new library
   const pubkeys = indices.map((index) => state.validators.getReadonly(index).pubkey);
 
   return {
     indices,
     syncCommittee: {
       pubkeys,
-      aggregatePubkey: bls.aggregatePublicKeys(pubkeys),
+      aggregatePubkey: aggregatePublicKeys(pubkeys).serialize(),
     },
   };
 }

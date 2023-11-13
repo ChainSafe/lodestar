@@ -33,6 +33,16 @@ export class JsonRpcHttpClientEventEmitter extends (EventEmitter as {
 const maxStringLengthToPrint = 500;
 const REQUEST_TIMEOUT = 30 * 1000;
 
+// As we are using `cross-fetch` which does not support for types for errors
+// We can't use `node-fetch` for browser compatibility
+export type FetchError = {
+  errno: string;
+  code: string;
+};
+
+export const isFetchError = (error: unknown): error is FetchError =>
+  (error as FetchError) !== undefined && "code" in (error as FetchError) && "errno" in (error as FetchError);
+
 interface RpcResponse<R> extends RpcResponseError {
   result?: R;
 }

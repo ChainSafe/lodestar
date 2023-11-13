@@ -1,4 +1,4 @@
-import {PublicKey} from "@chainsafe/bls/types";
+import {PublicKey} from "@chainsafe/blst-ts";
 import {IBlsVerifier} from "../../src/chain/bls/index.js";
 
 export class BlsVerifierMock implements IBlsVerifier {

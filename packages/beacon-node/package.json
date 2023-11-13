@@ -66,7 +66,9 @@
     "*.js"
   ],
   "scripts": {
+    "preinstall": "cd ../../temp-deps/blst-ts; yarn",
     "clean": "rm -rf lib && rm -f *.tsbuildinfo",
+    "prebuild": "cd ../../temp-deps/blst-ts; yarn build",
     "build": "tsc -p tsconfig.build.json",
     "build:watch": "yarn run build --watch",
     "build:release": "yarn clean && yarn run build",
@@ -97,12 +99,11 @@
   "dependencies": {
     "@chainsafe/as-chacha20poly1305": "^0.1.0",
     "@chainsafe/as-sha256": "^0.3.1",
-    "@chainsafe/bls": "7.1.1",
-    "@chainsafe/blst": "^0.2.9",
     "@chainsafe/discv5": "^7.1.0",
     "@chainsafe/enr": "^2.0.2",
     "@chainsafe/libp2p-gossipsub": "^11.1.0",
     "@chainsafe/libp2p-noise": "^14.1.0",
+    "@chainsafe/blst-ts": "file:../../temp-deps/blst-ts",
     "@chainsafe/persistent-merkle-tree": "^0.6.1",
     "@chainsafe/prometheus-gc-stats": "^1.0.0",
     "@chainsafe/ssz": "^0.14.0",

@@ -1,5 +1,5 @@
+import {aggregatePublicKeys} from "@chainsafe/blst-ts";
 import {describe, it, beforeEach, afterEach, expect} from "vitest";
-import bls from "@chainsafe/bls";
 import {createBeaconConfig, ChainConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {ApiError, getClient, routes} from "@lodestar/api";
@@ -42,7 +42,7 @@ describe("lightclient api", function () {
             api: ["lightclient"],
           },
         },
-        chain: {blsVerifyAllMainThread: true},
+        chain: {blsVerifySingleThreaded: true},
       },
       validatorCount,
       logger: loggerNodeA,
@@ -131,7 +131,7 @@ describe("lightclient api", function () {
     const committeePubkeys = Array.from({length: SYNC_COMMITTEE_SIZE}, (_, i) =>
       i % 2 === 0 ? pubkeys[0] : pubkeys[1]
     );
-    const aggregatePubkey = bls.aggregatePublicKeys(committeePubkeys);
+    const aggregatePubkey = aggregatePublicKeys(committeePubkeys).serialize();
     // single committe hash since we requested for the first period
     expect(committeeRes.response.data).toEqual([
       ssz.altair.SyncCommittee.hashTreeRoot({
