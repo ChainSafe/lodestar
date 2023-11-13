@@ -113,7 +113,7 @@ ${validatorsToExit.map((v) => `${v.pubkey} ${v.index} ${v.status}`).join("\n")}`
       ApiError.assert(
         await client.beacon.submitPoolVoluntaryExit({
           message: voluntaryExit,
-          signature: signer.secretKey.sign(signingRoot).toBytes(),
+          signature: signer.secretKey.sign(signingRoot).serialize(),
         })
       );
 

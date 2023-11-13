@@ -2,6 +2,7 @@ import fs from "node:fs";
 import {expect} from "chai";
 import {IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {RecursivePartial} from "@lodestar/utils";
+import {BlsPoolType} from "@lodestar/beacon-node/lib/chain/options.js";
 import {parseBeaconNodeArgs, BeaconNodeArgs} from "../../../src/options/beaconNodeOptions/index.js";
 import {getTestdirPath} from "../../utils.js";
 
@@ -18,9 +19,10 @@ describe("options / beaconNodeOptions", () => {
       "rest.headerLimit": 16384,
       "rest.bodyLimit": 30e6,
 
-      "chain.blsVerifyAllMultiThread": true,
-      "chain.blsVerifyAllMainThread": true,
-      "chain.disableBlsBatchVerify": true,
+      "chain.blsVerifyAllInQueue": true,
+      "chain.blsVerifySingleThreaded": true,
+      "chain.blsPoolType": BlsPoolType.libuv,
+      "chain.blsDisableBatchVerify": true,
       "chain.persistInvalidSszObjects": true,
       "chain.proposerBoostEnabled": false,
       "chain.disableImportExecutionFcU": false,
@@ -118,9 +120,10 @@ describe("options / beaconNodeOptions", () => {
         },
       },
       chain: {
-        blsVerifyAllMultiThread: true,
-        blsVerifyAllMainThread: true,
-        disableBlsBatchVerify: true,
+        blsVerifyAllInQueue: true,
+        blsVerifySingleThreaded: true,
+        blsPoolType: BlsPoolType.libuv,
+        blsDisableBatchVerify: true,
         persistInvalidSszObjects: true,
         proposerBoostEnabled: false,
         disableImportExecutionFcU: false,

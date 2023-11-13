@@ -5,7 +5,7 @@ import {expect} from "chai";
 import chainAsPromised from "chai-as-promised";
 import chai from "chai";
 import {Keystore} from "@chainsafe/bls-keystore";
-import bls from "@chainsafe/bls";
+import {SecretKey} from "@chainsafe/blst-ts";
 import {interopSecretKey} from "@lodestar/state-transition";
 import {SignerLocal, SignerType} from "@lodestar/validator";
 import {loadKeystoreCache, writeKeystoreCache} from "../../../../../src/cmds/validator/keymanager/keystoreCache.js";
@@ -31,13 +31,13 @@ describe("keystoreCache", () => {
     keystoreCacheFile = tmp.tmpNameSync({postfix: ".cache"});
 
     for (let i = 0; i < numberOfSigners; i++) {
-      const secretKey = bls.SecretKey.fromBytes(interopSecretKey(i).toBytes());
+      const secretKey = SecretKey.deserialize(interopSecretKey(i).serialize());
       const keystorePath = tmp.tmpNameSync({postfix: ".json"});
       const password = secretKey.toHex();
       const keystore = await Keystore.create(
         password,
-        secretKey.toBytes(),
-        secretKey.toPublicKey().toBytes(),
+        secretKey.serialize(),
+        secretKey.toPublicKey().serialize(),
         keystorePath,
         "test-keystore",
         // To make the test efficient we use a low iteration count
@@ -53,7 +53,7 @@ describe("keystoreCache", () => {
       // Use secretkey hex as password
       definitions.push({password: secretKey.toHex(), keystorePath});
       passwords.push(password);
-      secretKeys.push(secretKey.toBytes());
+      secretKeys.push(secretKey.serialize());
     }
   });
 
@@ -75,7 +75,7 @@ describe("keystoreCache", () => {
       await writeKeystoreCache(keystoreCacheFile, signers, passwords);
       const result = await loadKeystoreCache(keystoreCacheFile, definitions);
 
-      expect(result.map((r) => r.secretKey.toBytes())).to.eql(secretKeys);
+      expect(result.map((r) => r.secretKey.serialize())).to.eql(secretKeys);
     });
 
     it("should raise error for mismatch public key", async () => {

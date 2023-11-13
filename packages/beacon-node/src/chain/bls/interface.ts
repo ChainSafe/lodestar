@@ -1,4 +1,4 @@
-import {PublicKey} from "@chainsafe/bls/types";
+import {PublicKey} from "@chainsafe/blst-ts";
 import {ISignatureSet} from "@lodestar/state-transition";
 
 export type VerifySignatureOpts = {
@@ -16,6 +16,7 @@ export type VerifySignatureOpts = {
    * Ignore the batchable option if this is true.
    */
   verifyOnMainThread?: boolean;
+
   /**
    * Some signature sets are more important than others, and should be verified first.
    */

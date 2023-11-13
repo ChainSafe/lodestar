@@ -4,7 +4,7 @@ import tmp from "tmp";
 import {expect} from "chai";
 import {GenericContainer, Wait, StartedTestContainer} from "testcontainers";
 import {Keystore} from "@chainsafe/bls-keystore";
-import bls from "@chainsafe/bls";
+import {SecretKey} from "@chainsafe/blst-ts";
 import {fromHex, toHex} from "@lodestar/utils";
 import {config} from "@lodestar/config/default";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
@@ -77,7 +77,7 @@ describe("web3signer signature test", function () {
     fs.writeFileSync(path.join(configDirPathHost, "keystore.json"), keystoreStr);
     fs.writeFileSync(path.join(configDirPathHost, passwordFilename), password);
 
-    const secretKey = bls.SecretKey.fromBytes(await Keystore.parse(keystoreStr).decrypt(password));
+    const secretKey = SecretKey.deserialize(await Keystore.parse(keystoreStr).decrypt(password));
 
     const port = 9000;
 

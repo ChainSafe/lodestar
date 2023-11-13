@@ -1,7 +1,15 @@
-import bls from "@chainsafe/bls";
-import {CoordType} from "@chainsafe/bls/types";
+import {
+  CoordType,
+  PublicKey,
+  SecretKey,
+  Signature,
+  verify as VERIFY,
+  aggregateSignatures,
+  aggregateVerify,
+  fastAggregateVerify,
+  verifyMultipleAggregateSignatures,
+} from "@chainsafe/blst-ts";
 import {fromHexString} from "@chainsafe/ssz";
-import {toHexString} from "@lodestar/utils";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -31,7 +39,7 @@ export const testFnByType: Record<string, "skip" | ((data: any) => any)> = {
  */
 function aggregate_verify(input: {pubkeys: string[]; messages: string[]; signature: string}): boolean {
   const {pubkeys, messages, signature} = input;
-  return bls.verifyMultiple(pubkeys.map(fromHexString), messages.map(fromHexString), fromHexString(signature));
+  return aggregateVerify(messages.map(fromHexString), pubkeys.map(fromHexString), fromHexString(signature));
 }
 
 /**
@@ -41,8 +49,8 @@ function aggregate_verify(input: {pubkeys: string[]; messages: string[]; signatu
  * ```
  */
 function aggregate(input: string[]): string {
-  const pks = input.map((pkHex) => bls.Signature.fromHex(pkHex));
-  const agg = bls.Signature.aggregate(pks);
+  const pks = input.map((pkHex) => Signature.deserialize(Buffer.from(pkHex)));
+  const agg = aggregateSignatures(pks);
   return agg.toHex();
 }
 
@@ -58,10 +66,14 @@ function aggregate(input: string[]): string {
 function fast_aggregate_verify(input: {pubkeys: string[]; message: string; signature: string}): boolean | null {
   const {pubkeys, message, signature} = input;
   try {
-    return bls.Signature.fromBytes(fromHexString(signature), undefined, true).verifyAggregate(
-      pubkeys.map((hex) => bls.PublicKey.fromBytes(fromHexString(hex), CoordType.jacobian, true)),
-      fromHexString(message)
-    );
+    const sig = Signature.deserialize(fromHexString(signature));
+    const pks = pubkeys.map((hex) => {
+      const pk = PublicKey.deserialize(fromHexString(hex), CoordType.jacobian);
+      pk.keyValidate();
+      return pk;
+    });
+    sig.sigValidate();
+    return fastAggregateVerify(fromHexString(message), pks, sig);
   } catch (e) {
     return false;
   }
@@ -80,11 +92,11 @@ function fast_aggregate_verify(input: {pubkeys: string[]; message: string; signa
 function batch_verify(input: {pubkeys: string[]; messages: string[]; signatures: string[]}): boolean | null {
   const {pubkeys, messages, signatures} = input;
   try {
-    return bls.Signature.verifyMultipleSignatures(
+    return verifyMultipleAggregateSignatures(
       pubkeys.map((pubkey, i) => ({
-        publicKey: bls.PublicKey.fromBytes(fromHexString(pubkey), CoordType.jacobian, true),
+        publicKey: fromHexString(pubkey),
         message: fromHexString(messages[i]),
-        signature: bls.Signature.fromBytes(fromHexString(signatures[i]), undefined, true),
+        signature: fromHexString(signatures[i]),
       }))
     );
   } catch (e) {
@@ -103,8 +115,8 @@ function batch_verify(input: {pubkeys: string[]; messages: string[]; signatures:
  */
 function sign(input: {privkey: string; message: string}): string | null {
   const {privkey, message} = input;
-  const signature = bls.sign(fromHexString(privkey), fromHexString(message));
-  return toHexString(signature);
+  const sk = SecretKey.deserialize(fromHexString(privkey));
+  return sk.sign(fromHexString(message)).toHex();
 }
 
 /**
@@ -118,8 +130,12 @@ function sign(input: {privkey: string; message: string}): string | null {
  * https://github.com/ethereum/bls12-381-tests/blob/master/formats/verify.md
  */
 function verify(input: {pubkey: string; message: string; signature: string}): boolean {
-  const {pubkey, message, signature} = input;
-  return bls.verify(fromHexString(pubkey), fromHexString(message), fromHexString(signature));
+  try {
+    const {pubkey, message, signature} = input;
+    return VERIFY(fromHexString(message), fromHexString(pubkey), fromHexString(signature));
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -131,7 +147,8 @@ function verify(input: {pubkey: string; message: string; signature: string}): bo
  */
 function deserialization_G1(input: {pubkey: string}): boolean {
   try {
-    bls.PublicKey.fromBytes(fromHexString(input.pubkey), CoordType.jacobian, true);
+    const pk = PublicKey.deserialize(fromHexString(input.pubkey), CoordType.jacobian);
+    pk.keyValidate();
     return true;
   } catch (e) {
     return false;
@@ -147,7 +164,7 @@ function deserialization_G1(input: {pubkey: string}): boolean {
  */
 function deserialization_G2(input: {signature: string}): boolean {
   try {
-    bls.Signature.fromBytes(fromHexString(input.signature), undefined, true);
+    Signature.deserialize(fromHexString(input.signature));
     return true;
   } catch (e) {
     return false;

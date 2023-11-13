@@ -1,5 +1,4 @@
-import {PointFormat, Signature} from "@chainsafe/bls/types";
-import bls from "@chainsafe/bls";
+import {type Signature, aggregateSignatures} from "@chainsafe/blst-ts";
 import {BitArray, toHexString} from "@chainsafe/ssz";
 import {phase0, Slot, Root, RootHex} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
@@ -192,10 +191,7 @@ function aggregateAttestationInto(aggregate: AggregateFast, attestation: phase0.
   }
 
   aggregate.aggregationBits.set(bitIndex, true);
-  aggregate.signature = bls.Signature.aggregate([
-    aggregate.signature,
-    signatureFromBytesNoCheck(attestation.signature),
-  ]);
+  aggregate.signature = aggregateSignatures([aggregate.signature, signatureFromBytesNoCheck(attestation.signature)]);
   return InsertOutcome.Aggregated;
 }
 
@@ -218,6 +214,6 @@ function fastToAttestation(aggFast: AggregateFast): phase0.Attestation {
   return {
     data: aggFast.data,
     aggregationBits: aggFast.aggregationBits,
-    signature: aggFast.signature.toBytes(PointFormat.compressed),
+    signature: aggFast.signature.serialize(true),
   };
 }

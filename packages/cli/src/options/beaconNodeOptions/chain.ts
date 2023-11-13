@@ -1,12 +1,14 @@
 import * as path from "node:path";
 import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
+import {BlsPoolType, BLS_POOL_TYPES} from "@lodestar/beacon-node/chain";
 import {CliCommandOptions} from "../../util/index.js";
 
 export type ChainArgs = {
   suggestedFeeRecipient: string;
-  "chain.blsVerifyAllMultiThread"?: boolean;
-  "chain.blsVerifyAllMainThread"?: boolean;
-  "chain.disableBlsBatchVerify"?: boolean;
+  "chain.blsVerifyAllInQueue"?: boolean;
+  "chain.blsVerifySingleThreaded"?: boolean;
+  "chain.blsPoolType"?: BlsPoolType;
+  "chain.blsDisableBatchVerify"?: boolean;
   "chain.persistInvalidSszObjects"?: boolean;
   // No need to define chain.persistInvalidSszObjects as part of ChainArgs
   // as this is defined as part of BeaconPaths
@@ -29,9 +31,10 @@ export type ChainArgs = {
 export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
   return {
     suggestedFeeRecipient: args["suggestedFeeRecipient"],
-    blsVerifyAllMultiThread: args["chain.blsVerifyAllMultiThread"],
-    blsVerifyAllMainThread: args["chain.blsVerifyAllMainThread"],
-    disableBlsBatchVerify: args["chain.disableBlsBatchVerify"],
+    blsVerifyAllInQueue: args["chain.blsVerifyAllInQueue"],
+    blsVerifySingleThreaded: args["chain.blsVerifySingleThreaded"],
+    blsPoolType: args["chain.blsPoolType"],
+    blsDisableBatchVerify: args["chain.blsDisableBatchVerify"],
     persistInvalidSszObjects: args["chain.persistInvalidSszObjects"],
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
     persistInvalidSszObjectsDir: undefined as any,
@@ -68,29 +71,37 @@ export const options: CliCommandOptions<ChainArgs> = {
     group: "chain",
   },
 
-  "chain.blsVerifyAllMultiThread": {
+  "chain.blsVerifyAllInQueue": {
     hidden: true,
     type: "boolean",
     description: "Always use worker threads for BLS verification",
-    defaultDescription: String(defaultOptions.chain.blsVerifyAllMultiThread),
+    defaultDescription: String(defaultOptions.chain.blsVerifyAllInQueue),
     group: "chain",
   },
 
-  "chain.blsVerifyAllMainThread": {
+  "chain.blsPoolType": {
+    hidden: true,
+    choices: BLS_POOL_TYPES,
+    type: "string",
+    description: "Selects between using a Worker pool or using the native libuv thread pool for BLS verification",
+    group: "chain",
+  },
+
+  "chain.blsVerifySingleThreaded": {
     hidden: true,
     type: "boolean",
     description: "Always use main threads for BLS verification",
-    defaultDescription: String(defaultOptions.chain.blsVerifyAllMainThread),
+    defaultDescription: String(defaultOptions.chain.blsVerifySingleThreaded),
     group: "chain",
   },
 
-  "chain.disableBlsBatchVerify": {
+  "chain.blsDisableBatchVerify": {
     hidden: true,
     type: "boolean",
     description:
       "Do not use BLS batch verify to validate all block signatures at once. \
 Will double processing times. Use only for debugging purposes.",
-    defaultDescription: String(defaultOptions.chain.blsVerifyAllMultiThread),
+    defaultDescription: String(defaultOptions.chain.blsVerifyAllInQueue),
     group: "chain",
   },
 

@@ -1,8 +1,7 @@
-import {CoordType, PublicKey, SecretKey} from "@chainsafe/bls/types";
-import bls from "@chainsafe/bls";
+import {CoordType, PublicKey, SecretKey} from "@chainsafe/blst-ts";
 import {BitArray, fromHexString} from "@chainsafe/ssz";
-import {allForks, phase0, ssz, Slot, altair} from "@lodestar/types";
 import {config} from "@lodestar/config/default";
+import {allForks, phase0, ssz, Slot, altair} from "@lodestar/types";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {
   EPOCHS_PER_ETH1_VOTING_PERIOD,
@@ -63,7 +62,7 @@ export const perfStateEpoch = epoch;
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function getPubkeys(vc = numValidators) {
   const pubkeysMod = interopPubkeysCached(keypairsMod);
-  const pubkeysModObj = pubkeysMod.map((pk) => bls.PublicKey.fromBytes(pk, CoordType.jacobian));
+  const pubkeysModObj = pubkeysMod.map((pk) => PublicKey.deserialize(pk, CoordType.jacobian));
   const pubkeys = Array.from({length: vc}, (_, i) => pubkeysMod[i % keypairsMod]);
   return {pubkeysMod, pubkeysModObj, pubkeys};
 }

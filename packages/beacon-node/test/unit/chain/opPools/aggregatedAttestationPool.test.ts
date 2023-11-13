@@ -1,5 +1,4 @@
-import type {SecretKey} from "@chainsafe/bls/types";
-import bls from "@chainsafe/bls";
+import {SecretKey, Signature, fastAggregateVerify} from "@chainsafe/blst-ts";
 import {BitArray, fromHexString, toHexString} from "@chainsafe/ssz";
 import {describe, it, expect, beforeEach, beforeAll, afterEach, vi} from "vitest";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
@@ -251,10 +250,10 @@ describe("MatchingDataAttestationGroup aggregateInto", function () {
   let sk2: SecretKey;
 
   beforeAll(async () => {
-    sk1 = bls.SecretKey.fromBytes(Buffer.alloc(32, 1));
-    sk2 = bls.SecretKey.fromBytes(Buffer.alloc(32, 2));
-    attestation1.signature = sk1.sign(attestationDataRoot).toBytes();
-    attestation2.signature = sk2.sign(attestationDataRoot).toBytes();
+    sk1 = SecretKey.deserialize(Buffer.alloc(32, 1));
+    sk2 = SecretKey.deserialize(Buffer.alloc(32, 2));
+    attestation1.signature = sk1.sign(attestationDataRoot).serialize();
+    attestation2.signature = sk2.sign(attestationDataRoot).serialize();
   });
 
   it("should aggregate 2 attestations", () => {
@@ -263,7 +262,10 @@ describe("MatchingDataAttestationGroup aggregateInto", function () {
     aggregateInto(attWithIndex1, attWithIndex2);
 
     expect(renderBitArray(attWithIndex1.attestation.aggregationBits)).toEqual(renderBitArray(mergedBitArray));
-    const aggregatedSignature = bls.Signature.fromBytes(attWithIndex1.attestation.signature, undefined, true);
-    expect(aggregatedSignature.verifyAggregate([sk1.toPublicKey(), sk2.toPublicKey()], attestationDataRoot)).toBe(true);
+    const aggregatedSignature = Signature.deserialize(attWithIndex1.attestation.signature);
+    aggregatedSignature.sigValidate();
+    expect(fastAggregateVerify(attestationDataRoot, [sk1.toPublicKey(), sk2.toPublicKey()], aggregatedSignature)).toBe(
+      true
+    );
   });
 });

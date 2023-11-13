@@ -1,4 +1,4 @@
-import type {SecretKey} from "@chainsafe/bls/types";
+import type {SecretKey} from "@chainsafe/blst-ts";
 import {BLSPubkey} from "@lodestar/types";
 import {DatabaseController} from "@lodestar/db";
 

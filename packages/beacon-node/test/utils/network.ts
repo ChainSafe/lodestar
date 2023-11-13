@@ -77,7 +77,7 @@ export async function getNetworkForTest(
       safeSlotsToImportOptimistically: 0,
       archiveStateEpochFrequency: 0,
       suggestedFeeRecipient: "",
-      blsVerifyAllMainThread: true,
+      blsVerifySingleThreaded: true,
       disableOnBlockError: true,
       disableArchiveOnCheckpoint: true,
       disableLightClientServerOnImportBlockHead: true,

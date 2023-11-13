@@ -1,19 +1,19 @@
 {
   "__inputs": [
     {
-      "description": "",
-      "label": "Prometheus",
       "name": "DS_PROMETHEUS",
+      "type": "datasource",
+      "label": "Prometheus",
+      "description": "",
       "pluginId": "prometheus",
-      "pluginName": "Prometheus",
-      "type": "datasource"
+      "pluginName": "Prometheus"
     },
     {
-      "description": "",
-      "label": "Beacon node job name",
       "name": "VAR_BEACON_JOB",
       "type": "constant",
-      "value": "beacon"
+      "label": "Beacon node job name",
+      "value": "beacon",
+      "description": ""
     }
   ],
   "annotations": {

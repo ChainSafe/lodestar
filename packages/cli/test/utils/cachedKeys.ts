@@ -1,9 +1,9 @@
 // // Uncomment code below to re-generate the keys
-// import bls from "@chainsafe/bls";
+// import {SecretKey} from "@chainsafe/blst-ts";
 // const sks: string[] = [];
 // const pks: string[] = [];
 // for (let i = 0; i < 4; i++) {
-//   const sk = bls.SecretKey.fromKeygen(Buffer.alloc(32, 0xaa + i));
+//   const sk = SecretKey.fromKeygen(Buffer.alloc(32, 0xaa + i));
 //   sks.push(sk.toHex());
 //   pks.push(sk.toPublicKey().toHex());
 // }

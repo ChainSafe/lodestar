@@ -4,14 +4,22 @@ import {ArchiverOpts} from "./archiver/index.js";
 import {ForkChoiceOpts} from "./forkChoice/index.js";
 import {LightClientServerOpts} from "./lightClient/index.js";
 
+export enum BlsPoolType {
+  workers = "workers",
+  libuv = "libuv",
+}
+
+export const BLS_POOL_TYPES = Object.values(BlsPoolType);
+
 export type IChainOptions = BlockProcessOpts &
   PoolOpts &
   SeenCacheOpts &
   ForkChoiceOpts &
   ArchiverOpts &
   LightClientServerOpts & {
-    blsVerifyAllMainThread?: boolean;
-    blsVerifyAllMultiThread?: boolean;
+    blsVerifySingleThreaded?: boolean;
+    blsVerifyAllInQueue?: boolean;
+    blsPoolType?: BlsPoolType;
     persistInvalidSszObjects?: boolean;
     persistInvalidSszObjectsDir?: string;
     skipCreateStateCacheIfAvailable?: boolean;
@@ -34,7 +42,7 @@ export type BlockProcessOpts = {
    * Do not use BLS batch verify to validate all block signatures at once.
    * Will double processing times. Use only for debugging purposes.
    */
-  disableBlsBatchVerify?: boolean;
+  blsDisableBatchVerify?: boolean;
   /**
    * Override SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY
    */
@@ -70,9 +78,10 @@ export type SeenCacheOpts = {
 };
 
 export const defaultChainOptions: IChainOptions = {
-  blsVerifyAllMainThread: false,
-  blsVerifyAllMultiThread: false,
-  disableBlsBatchVerify: false,
+  blsVerifySingleThreaded: false,
+  blsVerifyAllInQueue: false,
+  blsPoolType: BlsPoolType.workers,
+  blsDisableBatchVerify: false,
   proposerBoostEnabled: true,
   computeUnrealized: true,
   safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,

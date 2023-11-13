@@ -1,7 +1,7 @@
 import {toBufferBE} from "bigint-buffer";
 import {expect} from "chai";
 import sinon from "sinon";
-import bls from "@chainsafe/bls";
+import {SecretKey} from "@chainsafe/blst-ts";
 import {toHexString} from "@chainsafe/ssz";
 import {chainConfig} from "@lodestar/config/default";
 import {HttpStatusCode, routes} from "@lodestar/api";
@@ -37,8 +37,8 @@ describe("AttestationDutiesService", function () {
   };
 
   before(async () => {
-    const secretKeys = [bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32))];
-    pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
+    const secretKeys = [SecretKey.deserialize(toBufferBE(BigInt(98), 32))];
+    pubkeys = secretKeys.map((sk) => sk.toPublicKey().serialize());
     validatorStore = await initValidatorStore(secretKeys, api, chainConfig);
   });
 
