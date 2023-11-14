@@ -1,6 +1,6 @@
 import "../setup.js";
 import {assert, expect} from "chai";
-import {intToBytes, bytesToInt, toHex} from "../../src/index.js";
+import {intToBytes, bytesToInt, toHex, fromHex} from "../../src/index.js";
 
 describe("intToBytes", () => {
   const zeroedArray = (length: number): number[] => Array.from({length}, () => 0);
@@ -85,5 +85,38 @@ describe("toHex function", () => {
     const expected = "0x";
 
     expect(result).to.equal(expected);
+  });
+});
+
+describe("fromHex function", () => {
+  it("should convert hex string to Uint8Array", () => {
+    const hexString = "0x48656c6c6f2c20576f726c6421";
+    const result = fromHex(hexString);
+    const expected = new Uint8Array([72, 101, 108, 108, 111, 44, 32, 87, 111, 114, 108, 100, 33]);
+
+    expect(result).to.deep.equal(expected);
+  });
+
+  it("should handle hex string without 0x prefix", () => {
+    const hexString = "48656c6c6f2c20576f726c6421";
+    const result = fromHex(hexString);
+    const expected = new Uint8Array([72, 101, 108, 108, 111, 44, 32, 87, 111, 114, 108, 100, 33]);
+
+    expect(result).to.deep.equal(expected);
+  });
+
+  it("should handle empty hex string", () => {
+    const hexString = "0x";
+    const result = fromHex(hexString);
+    const expected = new Uint8Array([]);
+
+    expect(result).to.deep.equal(expected);
+  });
+
+  it("should throw an error for invalid hex string", () => {
+    const hexString = "invalidHex";
+
+    // Expect an error to be thrown
+    expect(() => fromHex(hexString)).to.throw();
   });
 });
