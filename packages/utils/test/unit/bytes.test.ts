@@ -1,6 +1,6 @@
 import "../setup.js";
 import {assert, expect} from "chai";
-import {intToBytes, bytesToInt, toHex, fromHex} from "../../src/index.js";
+import {intToBytes, bytesToInt, toHex, fromHex, toHexString} from "../../src/index.js";
 
 describe("intToBytes", () => {
   const zeroedArray = (length: number): number[] => Array.from({length}, () => 0);
@@ -115,8 +115,56 @@ describe("fromHex function", () => {
 
   it("should throw an error for invalid hex string", () => {
     const hexString = "invalidHex";
-
-    // Expect an error to be thrown
     expect(() => fromHex(hexString)).to.throw();
+  });
+});
+
+describe("toHexString function", () => {
+  it("should convert Uint8Array to hex string", () => {
+    const bytes = new Uint8Array([72, 101, 108, 108, 111]);
+    const result = toHexString(bytes);
+    const expected = "0x48656c6c6f";
+
+    expect(result).to.equal(expected);
+  });
+
+  it("should handle Uint8Array with single-digit bytes", () => {
+    const bytes = new Uint8Array([1, 2, 3]);
+    const result = toHexString(bytes);
+    const expected = "0x010203";
+
+    expect(result).to.equal(expected);
+  });
+
+  it("should handle Uint8Array with zero-length", () => {
+    const bytes = new Uint8Array([]);
+    const result = toHexString(bytes);
+    const expected = "0x";
+
+    expect(result).to.equal(expected);
+  });
+
+  it("should handle Uint8Array with all zeros", () => {
+    const bytes = new Uint8Array([0, 0, 0, 0]);
+    const result = toHexString(bytes);
+    const expected = "0x00000000";
+
+    expect(result).to.equal(expected);
+  });
+
+  it("should handle Uint8Array with mixed single and double-digit bytes", () => {
+    const bytes = new Uint8Array([15, 255, 16, 0, 127]);
+    const result = toHexString(bytes);
+    const expected = "0x0fff10007f";
+
+    expect(result).to.equal(expected);
+  });
+
+  it("should handle large Uint8Array", () => {
+    const bytes = new Uint8Array(1000).fill(255);
+    const result = toHexString(bytes);
+    const expected = "0xff".repeat(1000);
+
+    expect(result).to.equal(expected);
   });
 });
