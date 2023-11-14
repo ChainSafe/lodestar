@@ -191,8 +191,8 @@ jobs:
         run: echo $(node --print "process.version")
       - name: Check nodejs build information
         run: echo $(node --print "process.features.debug")       
-      # - name: Set the ulimit to make the coredump available 
-      #   run: sudo sh -c "ulimit -c unlimited"                
+      - name: Set the ulimit to make the coredump available 
+        run: sudo sh -c "ulimit -c unlimited"                
       - name: Set the core dump file pattern 
         run: sudo sh -c "echo core > /proc/sys/kernel/core_pattern"
 
