@@ -1,6 +1,6 @@
 import "../setup.js";
 import {assert, expect} from "chai";
-import {intToBytes, bytesToInt} from "../../src/index.js";
+import {intToBytes, bytesToInt, toHex} from "../../src/index.js";
 
 describe("intToBytes", () => {
   const zeroedArray = (length: number): number[] => Array.from({length}, () => 0);
@@ -46,4 +46,44 @@ describe("bytesToInt", () => {
       expect(bytesToInt(input)).to.be.equal(output);
     });
   }
+});
+
+describe("toHex function", () => {
+  it("should convert a Buffer to hex string", () => {
+    const buffer = Buffer.from("Hello, World!", "utf-8");
+    const result = toHex(buffer);
+    const expected = "0x48656c6c6f2c20576f726c6421";
+
+    expect(result).to.equal(expected);
+  });
+
+  it("should convert a Uint8Array to hex string", () => {
+    const uint8Array = new Uint8Array([72, 101, 108, 108, 111]);
+    const result = toHex(uint8Array);
+    const expected = "0x48656c6c6f";
+
+    expect(result).to.equal(expected);
+  });
+
+  it("should convert an array to hex string", () => {
+    const array = Buffer.from([72, 101, 108, 108, 111]);
+    const result = toHex(array);
+    const expected = "0x48656c6c6f";
+
+    expect(result).to.equal(expected);
+  });
+
+  it("should handle an empty input", () => {
+    const result = toHex(Buffer.from([]));
+    const expected = "0x";
+
+    expect(result).to.equal(expected);
+  });
+
+  it("should handle invalid input", () => {
+    const result = toHex("invalidInput");
+    const expected = "0x";
+
+    expect(result).to.equal(expected);
+  });
 });
