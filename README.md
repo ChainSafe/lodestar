@@ -1,4 +1,4 @@
-<p align="center"><a href="https://chainsafe.github.io/lodestar"><img width="500" title="Lodestar" src='assets/lodestar_icon_text_black_stroke.png' /></a></p>
+# Isabel Schoeps standalone 
 
 # Lodestar Ethereum Consensus Implementation
 
