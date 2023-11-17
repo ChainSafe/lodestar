@@ -7,7 +7,7 @@ import {CheckpointStateCache, StateContextCache} from "../../../../src/chain/sta
 import {OrderedMap} from "immutable";
 import { interopPubkeysCached } from "../../../../../state-transition/test/utils/interop.js";
 
-describe("CheckpointStateCache perf tests", function () {
+describe("updateUnfinalizedPubkeys perf tests", function () {
   setBenchOpts({noThreshold: true});
 
   const numPubkeysToBeFinalizedCases = [10, 100, 1000]
