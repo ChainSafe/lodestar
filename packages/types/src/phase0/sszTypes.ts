@@ -28,7 +28,7 @@ import {
   VALIDATOR_REGISTRY_LIMIT,
 } from "@lodestar/params";
 import * as primitiveSsz from "../primitive/sszTypes.js";
-import {Bytes8} from "../primitive/sszTypes.js";
+import {Bytes8UintJson as Bytes8} from "../primitive/sszTypes.js";
 
 const {
   Boolean,

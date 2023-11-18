@@ -1,5 +1,6 @@
 import {expect} from "chai";
 import {ssz} from "../../src/index.js";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 
 describe("size", function () {
   it("should calculate correct minSize and maxSize", () => {
@@ -13,18 +14,23 @@ describe("size", function () {
 
 describe("container serialization/deserialization field casing(s)", function () {
   it("AttesterSlashing", function () {
-    const test = {
-      attestation1: ssz.phase0.IndexedAttestationBytes8.defaultValue(),
-      attestation2: ssz.phase0.IndexedAttestationBytes8.defaultValue(),
-    };
-    const json = {
-      attestation_1: ssz.phase0.IndexedAttestationBytes8.toJson(test.attestation1),
-      attestation_2: ssz.phase0.IndexedAttestationBytes8.toJson(test.attestation2),
-    };
-
-    const result = ssz.phase0.AttesterSlashing.fromJson(json);
-    const back = ssz.phase0.AttesterSlashing.toJson(result);
-    expect(back).to.be.deep.equal(json);
+    const epochs = [0, 10, 1_000_000];
+    for (const epoch of epochs) {
+      const test = {
+        attestation1: ssz.phase0.IndexedAttestation.defaultValue(),
+        attestation2: ssz.phase0.IndexedAttestation.defaultValue(),
+      };
+      test.attestation1.data.slot = epoch * SLOTS_PER_EPOCH;
+      test.attestation1.data.source.epoch = epoch;
+      test.attestation1.data.target.epoch = epoch + 1;
+      const json = {
+        attestation_1: ssz.phase0.IndexedAttestation.toJson(test.attestation1),
+        attestation_2: ssz.phase0.IndexedAttestation.toJson(test.attestation2),
+      };
+      const result = ssz.phase0.AttesterSlashing.fromJson(json);
+      const back = ssz.phase0.AttesterSlashing.toJson(result);
+      expect(back).to.be.deep.equal(json);
+    }
   });
 
   it("ProposerSlashing", function () {

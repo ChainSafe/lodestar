@@ -1,4 +1,5 @@
 import {ByteVectorType, UintNumberType, UintBigintType, BooleanType} from "@chainsafe/ssz";
+import {bytesToBigInt, intToBytes} from "@lodestar/utils";
 
 export const Boolean = new BooleanType();
 export const Byte = new UintNumberType(1);
@@ -62,3 +63,25 @@ export const BLSSignature = Bytes96;
 export const Domain = Bytes32;
 export const ParticipationFlags = new UintNumberType(1, {setBitwiseOR: true});
 export const ExecutionAddress = Bytes20;
+
+/**
+ * Custom implementation of ByteVectorType supporting uint type json.
+ * This is mainly for the spec test where numbers are used in AttesterSlashing but we model them as Uint8Array instead.
+ */
+export class ByteVectorTypeUintJson extends ByteVectorType {
+  fromJson(json: unknown): Uint8Array {
+    if (typeof json === "number" || typeof json === "bigint") {
+      return intToBytes(json, this.fixedSize);
+    } else if (typeof json === "string") {
+      const num = parseInt(json, 10);
+      return intToBytes(num, this.fixedSize);
+    }
+    throw new Error(`Invalid json type ${typeof json}`);
+  }
+
+  toJson(value: Uint8Array): unknown {
+    return bytesToBigInt(value).toString();
+  }
+}
+
+export const Bytes8UintJson = new ByteVectorTypeUintJson(8);
