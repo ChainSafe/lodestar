@@ -5,6 +5,7 @@ import {BitArray} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
 import {phase0, capella, ValidatorIndex, BLSSignature, ssz} from "@lodestar/types";
 import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
+import {intToBytes} from "@lodestar/utils";
 import {ZERO_HASH} from "../../../src/constants/index.js";
 import {getBlockSignatureSets} from "../../../src/signatureSets/index.js";
 import {generateCachedState} from "../../utils/state.js";
@@ -116,15 +117,15 @@ type IndexAttestationData = {
 
 function getMockAttesterSlashings(data1: IndexAttestationData, data2: IndexAttestationData): phase0.AttesterSlashing {
   return {
-    attestation1: getMockIndexAttestationBn(data1),
-    attestation2: getMockIndexAttestationBn(data2),
+    attestation1: getMockIndexAttestationBytes8(data1),
+    attestation2: getMockIndexAttestationBytes8(data2),
   };
 }
 
-function getMockIndexAttestationBn(data: IndexAttestationData): phase0.IndexedAttestationBigint {
+function getMockIndexAttestationBytes8(data: IndexAttestationData): phase0.IndexedAttestationBytes8 {
   return {
     attestingIndices: data.attestingIndices,
-    data: getAttestationDataBigint(),
+    data: getAttestationDataBytes8(),
     signature: data.signature,
   };
 }
@@ -139,13 +140,13 @@ function getAttestationData(): phase0.AttestationData {
   };
 }
 
-function getAttestationDataBigint(): phase0.AttestationDataBigint {
+function getAttestationDataBytes8(): phase0.AttestationDataBytes8 {
   return {
-    slot: BigInt(0),
-    index: BigInt(0),
+    slot: intToBytes(0, 8),
+    index: intToBytes(0, 8),
     beaconBlockRoot: ZERO_HASH,
-    source: {epoch: BigInt(0), root: ZERO_HASH},
-    target: {epoch: BigInt(0), root: ZERO_HASH},
+    source: {epoch: intToBytes(0, 8), root: ZERO_HASH},
+    target: {epoch: intToBytes(0, 8), root: ZERO_HASH},
   };
 }
 

@@ -46,6 +46,23 @@ export function bytesToBigInt(value: Uint8Array, endianness: Endianness = "le"):
   throw new Error("endianness must be either 'le' or 'be'");
 }
 
+/**
+ * Compare two byte arrays in LE.
+ * Instead of calling `a < b`, use `compareBytesLe(a, b) < 0`.
+ */
+export function compareBytesLe(a: Uint8Array, b: Uint8Array): number {
+  if (a.length !== b.length) {
+    throw new Error(`Lengths must be equal: ${a.length} !== ${b.length}`);
+  }
+  // Cannot use Buffer.compare() since this is LE
+  for (let i = a.length - 1; i >= 0; i--) {
+    if (a[i] !== b[i]) {
+      return a[i] < b[i] ? -1 : 1;
+    }
+  }
+  return 0;
+}
+
 export function toHex(buffer: Uint8Array | Parameters<typeof Buffer.from>[0]): string {
   if (Buffer.isBuffer(buffer)) {
     return "0x" + buffer.toString("hex");

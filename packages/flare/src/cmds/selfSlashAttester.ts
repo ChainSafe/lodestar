@@ -5,7 +5,7 @@ import {phase0, ssz} from "@lodestar/types";
 import {config as chainConfig} from "@lodestar/config/default";
 import {createBeaconConfig, BeaconConfig} from "@lodestar/config";
 import {DOMAIN_BEACON_ATTESTER, MAX_VALIDATORS_PER_COMMITTEE} from "@lodestar/params";
-import {toHexString} from "@lodestar/utils";
+import {bytesToInt, intToBytes, toHexString} from "@lodestar/utils";
 import {computeSigningRoot} from "@lodestar/state-transition";
 import {CliCommand} from "../util/command.js";
 import {deriveSecretKeys, SecretKeysArgs, secretKeysOptions} from "../util/deriveSecretKeys.js";
@@ -51,7 +51,7 @@ export const selfSlashAttester: CliCommand<SelfSlashArgs, Record<never, never>, 
 export async function selfSlashAttesterHandler(args: SelfSlashArgs): Promise<void> {
   const sksAll = deriveSecretKeys(args);
 
-  const slot = BigInt(args.slot); // Throws if not valid
+  const slot = Number(args.slot); // Throws if not valid
   const batchSize = parseInt(args.batchSize);
 
   if (isNaN(batchSize)) throw Error(`Invalid arg batchSize ${args.batchSize}`);
@@ -107,31 +107,31 @@ export async function selfSlashAttesterHandler(args: SelfSlashArgs): Promise<voi
 
     // Trigers a double vote, same target epoch different data (beaconBlockRoot)
     // TODO: Allow to create double-votes
-    const data1: phase0.AttestationDataBigint = {
-      slot,
-      index: BigInt(0),
+    const data1: phase0.AttestationDataBytes8 = {
+      slot: intToBytes(slot, 8),
+      index: intToBytes(0, 8),
       beaconBlockRoot: rootA,
-      source: {epoch: BigInt(0), root: rootA},
-      target: {epoch: BigInt(0), root: rootB},
+      source: {epoch: intToBytes(0, 8), root: rootA},
+      target: {epoch: intToBytes(0, 8), root: rootB},
     };
-    const data2: phase0.AttestationDataBigint = {
-      slot,
-      index: BigInt(0),
+    const data2: phase0.AttestationDataBytes8 = {
+      slot: intToBytes(slot, 8),
+      index: intToBytes(0, 8),
       beaconBlockRoot: rootB,
-      source: {epoch: BigInt(0), root: rootA},
-      target: {epoch: BigInt(0), root: rootB},
+      source: {epoch: intToBytes(0, 8), root: rootA},
+      target: {epoch: intToBytes(0, 8), root: rootB},
     };
 
     const attesterSlashing: phase0.AttesterSlashing = {
       attestation1: {
         attestingIndices,
         data: data1,
-        signature: signAttestationDataBigint(config, sks, data1),
+        signature: signAttestationDataBytes8(config, sks, data1),
       },
       attestation2: {
         attestingIndices,
         data: data2,
-        signature: signAttestationDataBigint(config, sks, data2),
+        signature: signAttestationDataBytes8(config, sks, data2),
       },
     };
 
@@ -143,14 +143,14 @@ export async function selfSlashAttesterHandler(args: SelfSlashArgs): Promise<voi
   }
 }
 
-function signAttestationDataBigint(
+function signAttestationDataBytes8(
   config: BeaconConfig,
   sks: SecretKey[],
-  data: phase0.AttestationDataBigint
+  data: phase0.AttestationDataBytes8
 ): Uint8Array {
-  const slot = Number(data.slot as bigint);
+  const slot = bytesToInt(data.slot);
   const proposerDomain = config.getDomain(slot, DOMAIN_BEACON_ATTESTER);
-  const signingRoot = computeSigningRoot(ssz.phase0.AttestationDataBigint, data, proposerDomain);
+  const signingRoot = computeSigningRoot(ssz.phase0.AttestationDataBytes8, data, proposerDomain);
 
   const sigs = sks.map((sk) => sk.sign(signingRoot));
   return bls.Signature.aggregate(sigs).toBytes();

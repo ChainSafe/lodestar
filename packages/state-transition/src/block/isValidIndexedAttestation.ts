@@ -2,7 +2,7 @@ import {MAX_VALIDATORS_PER_COMMITTEE} from "@lodestar/params";
 import {phase0} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "../types.js";
 import {verifySignatureSet} from "../util/index.js";
-import {getIndexedAttestationBigintSignatureSet, getIndexedAttestationSignatureSet} from "../signatureSets/index.js";
+import {getIndexedAttestationBytes8SignatureSet, getIndexedAttestationSignatureSet} from "../signatureSets/index.js";
 
 /**
  * Check if `indexedAttestation` has sorted and unique indices and a valid aggregate signature.
@@ -23,9 +23,9 @@ export function isValidIndexedAttestation(
   }
 }
 
-export function isValidIndexedAttestationBigint(
+export function isValidIndexedAttestationBytes8(
   state: CachedBeaconStateAllForks,
-  indexedAttestation: phase0.IndexedAttestationBigint,
+  indexedAttestation: phase0.IndexedAttestationBytes8,
   verifySignature: boolean
 ): boolean {
   if (!isValidIndexedAttestationIndices(state, indexedAttestation.attestingIndices)) {
@@ -33,7 +33,7 @@ export function isValidIndexedAttestationBigint(
   }
 
   if (verifySignature) {
-    return verifySignatureSet(getIndexedAttestationBigintSignatureSet(state, indexedAttestation));
+    return verifySignatureSet(getIndexedAttestationBytes8SignatureSet(state, indexedAttestation));
   } else {
     return true;
   }

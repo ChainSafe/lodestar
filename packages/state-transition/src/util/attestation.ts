@@ -1,18 +1,23 @@
 import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {phase0, Slot, ssz, ValidatorIndex} from "@lodestar/types";
+import {compareBytesLe} from "@lodestar/utils";
 
 /**
  * Check if [[data1]] and [[data2]] are slashable according to Casper FFG rules.
  */
 export function isSlashableAttestationData(
-  data1: phase0.AttestationDataBigint,
-  data2: phase0.AttestationDataBigint
+  data1: phase0.AttestationDataBytes8,
+  data2: phase0.AttestationDataBytes8
 ): boolean {
   return (
     // Double vote
-    (!ssz.phase0.AttestationDataBigint.equals(data1, data2) && data1.target.epoch === data2.target.epoch) ||
+    (!ssz.phase0.AttestationDataBytes8.equals(data1, data2) &&
+    // data1.target.epoch == data2.target.epoch
+      compareBytesLe(data1.target.epoch, data2.target.epoch) === 0) ||
     // Surround vote
-    (data1.source.epoch < data2.source.epoch && data2.target.epoch < data1.target.epoch)
+    // (data1.source.epoch < data2.source.epoch && data2.target.epoch < data1.target.epoch)
+    (compareBytesLe(data1.source.epoch, data2.source.epoch) < 0 &&
+      compareBytesLe(data2.target.epoch, data1.target.epoch) < 0)
   );
 }
 

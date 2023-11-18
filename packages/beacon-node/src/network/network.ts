@@ -2,7 +2,7 @@ import {PeerId} from "@libp2p/interface/peer-id";
 import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
 import {BeaconConfig} from "@lodestar/config";
-import {sleep} from "@lodestar/utils";
+import {bytesToInt, sleep} from "@lodestar/utils";
 import {LoggerNode} from "@lodestar/logger/node";
 import {computeStartSlotAtEpoch, computeTimeAtSlot} from "@lodestar/state-transition";
 import {phase0, allForks, deneb, altair, Root, capella, SlotRootHex} from "@lodestar/types";
@@ -351,7 +351,8 @@ export class Network implements INetwork {
   }
 
   async publishAttesterSlashing(attesterSlashing: phase0.AttesterSlashing): Promise<number> {
-    const fork = this.config.getForkName(Number(attesterSlashing.attestation1.data.slot as bigint));
+    const slot = attesterSlashing.attestation1.data.slot;
+    const fork = this.config.getForkName(bytesToInt(slot));
     return this.publishGossip<GossipType.attester_slashing>(
       {type: GossipType.attester_slashing, fork},
       attesterSlashing

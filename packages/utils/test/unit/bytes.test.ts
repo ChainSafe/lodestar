@@ -1,6 +1,6 @@
 import "../setup.js";
 import {assert, expect} from "chai";
-import {intToBytes, bytesToInt} from "../../src/index.js";
+import {intToBytes, bytesToInt, compareBytesLe} from "../../src/index.js";
 
 describe("intToBytes", () => {
   const zeroedArray = (length: number): number[] => Array.from({length}, () => 0);
@@ -44,6 +44,24 @@ describe("bytesToInt", () => {
   for (const {input, output} of testCases) {
     it(`should produce ${output}`, () => {
       expect(bytesToInt(input)).to.be.equal(output);
+    });
+  }
+});
+
+describe("compareBytesLe", () => {
+  const testCases: {a: number; b: number; expected: number}[] = [
+    {a: 0, b: 0, expected: 0},
+    {a: 0, b: 1, expected: -1},
+    {a: 0, b: 1_000_000_000, expected: -1},
+    {a: 10_000, b: 1_000_000_000, expected: -1},
+    {a: 1, b: 0, expected: 1},
+    {a: 1_000_000_000, b: 0, expected: 1},
+    {a: 1_000_000_000, b: 10_000, expected: 1},
+  ];
+
+  for (const {a, b, expected} of testCases) {
+    it(`should return ${expected} for ${a} and ${b}`, () => {
+      expect(compareBytesLe(intToBytes(a, 8), intToBytes(b, 8))).to.be.equal(expected);
     });
   }
 });

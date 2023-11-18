@@ -14,12 +14,12 @@ describe("size", function () {
 describe("container serialization/deserialization field casing(s)", function () {
   it("AttesterSlashing", function () {
     const test = {
-      attestation1: ssz.phase0.IndexedAttestation.defaultValue(),
-      attestation2: ssz.phase0.IndexedAttestation.defaultValue(),
+      attestation1: ssz.phase0.IndexedAttestationBytes8.defaultValue(),
+      attestation2: ssz.phase0.IndexedAttestationBytes8.defaultValue(),
     };
     const json = {
-      attestation_1: ssz.phase0.IndexedAttestation.toJson(test.attestation1),
-      attestation_2: ssz.phase0.IndexedAttestation.toJson(test.attestation2),
+      attestation_1: ssz.phase0.IndexedAttestationBytes8.toJson(test.attestation1),
+      attestation_2: ssz.phase0.IndexedAttestationBytes8.toJson(test.attestation2),
     };
 
     const result = ssz.phase0.AttesterSlashing.fromJson(json);

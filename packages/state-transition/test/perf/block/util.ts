@@ -71,22 +71,25 @@ export function getBlockPhase0(
     const startIndex = attesterSlashingStartIndex + i * bitsLen * exitedIndexStep;
     const attestingIndices = linspace(startIndex, bitsLen, exitedIndexStep);
 
-    const attData: phase0.AttestationDataBigint = {
-      slot: BigInt(attSlot),
-      index: BigInt(0),
+    const attData: phase0.AttestationData = {
+      slot: attSlot,
+      index: 0,
       beaconBlockRoot: rootA,
-      source: {epoch: BigInt(stateEpoch - 3), root: rootC},
-      target: {epoch: BigInt(attEpoch), root: rootA},
+      source: {epoch: stateEpoch - 3, root: rootC},
+      target: {epoch: attEpoch, root: rootA},
     };
+    // deserialization similar to the real scenario where we receive data from gossipsub
+    const attDataBytes8 = ssz.phase0.AttestationDataBytes8.deserialize(ssz.phase0.AttestationData.serialize(attData));
+
     attesterSlashings.push({
       attestation1: {
         attestingIndices,
-        data: attData,
+        data: attDataBytes8,
         signature: emptySig,
       },
       attestation2: {
         attestingIndices,
-        data: {...attData, beaconBlockRoot: rootB},
+        data: {...attDataBytes8, beaconBlockRoot: rootB},
         signature: emptySig,
       },
     });

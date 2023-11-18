@@ -1,5 +1,6 @@
 import {describe, it, beforeEach, afterEach, vi} from "vitest";
 import {phase0, ssz} from "@lodestar/types";
+import {intToBytes} from "@lodestar/utils";
 import {generateCachedState} from "../../../utils/state.js";
 import {validateGossipAttesterSlashing} from "../../../../src/chain/validation/attesterSlashing.js";
 import {AttesterSlashingErrorCode} from "../../../../src/chain/errors/attesterSlashingError.js";
@@ -44,7 +45,7 @@ describe("GossipMessageValidator", () => {
     });
 
     it("should return valid attester slashing", async () => {
-      const attestationData = ssz.phase0.AttestationDataBigint.defaultValue();
+      const attestationData = ssz.phase0.AttestationDataBytes8.defaultValue();
       const attesterSlashing: phase0.AttesterSlashing = {
         attestation1: {
           data: attestationData,
@@ -52,7 +53,7 @@ describe("GossipMessageValidator", () => {
           attestingIndices: [0],
         },
         attestation2: {
-          data: {...attestationData, slot: BigInt(1)}, // Make it different so it's slashable
+          data: {...attestationData, slot: intToBytes(1, 8)}, // Make it different so it's slashable
           signature: Buffer.alloc(96, 0),
           attestingIndices: [0],
         },

@@ -28,6 +28,7 @@ import {
   VALIDATOR_REGISTRY_LIMIT,
 } from "@lodestar/params";
 import * as primitiveSsz from "../primitive/sszTypes.js";
+import {Bytes8} from "../primitive/sszTypes.js";
 
 const {
   Boolean,
@@ -104,9 +105,9 @@ export const Checkpoint = new ContainerType(
 );
 
 /** Checkpoint where epoch is NOT bounded by the clock, so must be a bigint */
-export const CheckpointBigint = new ContainerType(
+export const CheckpointBytes8 = new ContainerType(
   {
-    epoch: UintBn64,
+    epoch: Bytes8,
     root: Root,
   },
   {typeName: "Checkpoint", jsonCase: "eth2"}
@@ -264,14 +265,14 @@ export const AttestationData = new ContainerType(
   {typeName: "AttestationData", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
-/** Same as `AttestationData` but epoch, slot and index are not bounded and must be a bigint */
-export const AttestationDataBigint = new ContainerType(
+/** Same as `AttestationData` but epoch, slot and index are not bounded and must be a Uint8Array of 8 bytes */
+export const AttestationDataBytes8 = new ContainerType(
   {
-    slot: UintBn64,
-    index: UintBn64,
+    slot: Bytes8,
+    index: Bytes8,
     beaconBlockRoot: Root,
-    source: CheckpointBigint,
-    target: CheckpointBigint,
+    source: CheckpointBytes8,
+    target: CheckpointBytes8,
   },
   {typeName: "AttestationData", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
@@ -285,11 +286,11 @@ export const IndexedAttestation = new ContainerType(
   {typeName: "IndexedAttestation", jsonCase: "eth2"}
 );
 
-/** Same as `IndexedAttestation` but epoch, slot and index are not bounded and must be a bigint */
-export const IndexedAttestationBigint = new ContainerType(
+/** Same as `IndexedAttestation` but epoch, slot and index are not bounded and must be a Uint8Array of 8 bytes */
+export const IndexedAttestationBytes8 = new ContainerType(
   {
     attestingIndices: CommitteeIndices,
-    data: AttestationDataBigint,
+    data: AttestationDataBytes8,
     signature: BLSSignature,
   },
   {typeName: "IndexedAttestation", jsonCase: "eth2"}
@@ -330,8 +331,8 @@ export const AttesterSlashing = new ContainerType(
     // In state transition, AttesterSlashing attestations are only partially validated. Their slot and epoch could
     // be higher than the clock and the slashing would still be valid. Same applies to attestation data index, which
     // can be any arbitrary value. Must use bigint variants to hash correctly to all possible values
-    attestation1: IndexedAttestationBigint,
-    attestation2: IndexedAttestationBigint,
+    attestation1: IndexedAttestationBytes8,
+    attestation2: IndexedAttestationBytes8,
   },
   {typeName: "AttesterSlashing", jsonCase: "eth2"}
 );

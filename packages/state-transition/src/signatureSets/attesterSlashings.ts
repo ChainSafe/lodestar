@@ -2,6 +2,7 @@ import {allForks, phase0, ssz} from "@lodestar/types";
 import {DOMAIN_BEACON_ATTESTER} from "@lodestar/params";
 import {computeSigningRoot, computeStartSlotAtEpoch, ISignatureSet, SignatureSetType} from "../util/index.js";
 import {CachedBeaconStateAllForks} from "../types.js";
+import {bytesToInt} from "@lodestar/utils";
 
 /** Get signature sets from all AttesterSlashing objects in a block */
 export function getAttesterSlashingsSignatureSets(
@@ -19,22 +20,23 @@ export function getAttesterSlashingSignatureSets(
   attesterSlashing: phase0.AttesterSlashing
 ): ISignatureSet[] {
   return [attesterSlashing.attestation1, attesterSlashing.attestation2].map((attestation) =>
-    getIndexedAttestationBigintSignatureSet(state, attestation)
+    getIndexedAttestationBytes8SignatureSet(state, attestation)
   );
 }
 
-export function getIndexedAttestationBigintSignatureSet(
+export function getIndexedAttestationBytes8SignatureSet(
   state: CachedBeaconStateAllForks,
-  indexedAttestation: phase0.IndexedAttestationBigint
+  indexedAttestation: phase0.IndexedAttestationBytes8
 ): ISignatureSet {
   const {index2pubkey} = state.epochCtx;
-  const slot = computeStartSlotAtEpoch(Number(indexedAttestation.data.target.epoch as bigint));
+  const targetEpoch = indexedAttestation.data.target.epoch;
+  const slot = computeStartSlotAtEpoch(bytesToInt(targetEpoch));
   const domain = state.config.getDomain(state.slot, DOMAIN_BEACON_ATTESTER, slot);
 
   return {
     type: SignatureSetType.aggregate,
     pubkeys: indexedAttestation.attestingIndices.map((i) => index2pubkey[i]),
-    signingRoot: computeSigningRoot(ssz.phase0.AttestationDataBigint, indexedAttestation.data, domain),
+    signingRoot: computeSigningRoot(ssz.phase0.AttestationDataBytes8, indexedAttestation.data, domain),
     signature: indexedAttestation.signature,
   };
 }

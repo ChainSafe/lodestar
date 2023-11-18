@@ -2,6 +2,7 @@ import {assert} from "chai";
 
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Epoch, phase0, ssz} from "@lodestar/types";
+import {intToBytes} from "@lodestar/utils";
 import {isSlashableAttestationData} from "../../../src/util/index.js";
 import {randBetween} from "../../utils/misc.js";
 
@@ -69,9 +70,9 @@ describe("isSlashableAttestationData", () => {
   });
 });
 
-function getAttestationDataAt(sourceEpoch: Epoch, targetEpoch: Epoch): phase0.AttestationDataBigint {
-  const data = ssz.phase0.AttestationDataBigint.defaultValue();
-  data.source.epoch = BigInt(sourceEpoch);
-  data.target.epoch = BigInt(targetEpoch);
+function getAttestationDataAt(sourceEpoch: Epoch, targetEpoch: Epoch): phase0.AttestationDataBytes8 {
+  const data = ssz.phase0.AttestationDataBytes8.defaultValue();
+  data.source.epoch = intToBytes(sourceEpoch, 8);
+  data.target.epoch = intToBytes(targetEpoch, 8);
   return data;
 }
