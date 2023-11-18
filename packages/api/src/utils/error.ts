@@ -2,13 +2,9 @@ export class ApiError extends Error {
   status: number;
   operationId?: string;
 
-  constructor(message: string, status: number, operationId?: string) {
-    super(message);
-    this.status = status;
+  constructor(message: string, status: number, operationId: string) {
+    super(`${message} status=${status}, operationId=${operationId}`);
     this.operationId = operationId;
-  }
-
-  toString(): string {
-    return `${this.message} (status=${this.status}, operationId=${this.operationId ?? "unknown"})`;
+    this.status = status;
   }
 }

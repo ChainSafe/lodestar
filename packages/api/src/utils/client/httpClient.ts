@@ -242,11 +242,11 @@ export class HttpClient implements IHttpClient {
     } catch (e) {
       this.metrics?.requestErrors.inc({routeId});
 
-      if (isAbortedError(e as Error)) {
+      if (isAbortedError(e)) {
         if (signalGlobal?.aborted || signalLocal?.aborted) {
-          throw new ErrorAborted("API client");
+          throw new ErrorAborted(`request operationId=${definition.operationId}`);
         } else if (controller.signal.aborted) {
-          throw new TimeoutError("request");
+          throw new TimeoutError(`request operationId=${definition.operationId}`);
         } else {
           throw Error("Unknown aborted error");
         }
@@ -263,6 +263,6 @@ export class HttpClient implements IHttpClient {
   }
 }
 
-function isAbortedError(e: Error): boolean {
+function isAbortedError(e: unknown): boolean {
   return isFetchError(e) && e.type === "aborted";
 }
