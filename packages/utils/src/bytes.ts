@@ -18,6 +18,32 @@ export function toHexString(bytes: Uint8Array): string {
  * Return a byte array from a number or BigInt
  */
 export function intToBytes(value: bigint | number, length: number, endianness: Endianness = "le"): Buffer {
+  if (typeof value === "number") {
+    // this is to avoid using BigInt
+    if (length === 2 || length === 4) {
+      const result = Buffer.alloc(length);
+      const dataView = new DataView(result.buffer, result.byteOffset, result.byteLength);
+      if (length === 2) {
+        dataView.setUint16(0, value, endianness === "le");
+      } else {
+        dataView.setUint32(0, value, endianness === "le");
+      }
+      return result;
+    } else if (length === 8) {
+      const result = Buffer.alloc(8);
+      const dataView = new DataView(result.buffer, result.byteOffset, result.byteLength);
+      const leastSignificant = (value & 0xffffffff) >>> 0;
+      const mostSignificant = value > 0xffffffff ? Math.floor((value - leastSignificant) / 0xffffffff) : 0;
+      if (endianness === "le") {
+        dataView.setUint32(0, leastSignificant, true);
+        dataView.setUint32(4, mostSignificant, true);
+      } else {
+        dataView.setUint32(0, mostSignificant, false);
+        dataView.setUint32(4, leastSignificant, false);
+      }
+      return result;
+    }
+  }
   return bigIntToBytes(BigInt(value), length, endianness);
 }
 
@@ -25,7 +51,19 @@ export function intToBytes(value: bigint | number, length: number, endianness: E
  * Convert byte array in LE to integer.
  */
 export function bytesToInt(value: Uint8Array, endianness: Endianness = "le"): number {
-  return Number(bytesToBigInt(value, endianness));
+  let result = 0;
+  if (endianness === "le") {
+    for (let i = 0; i < value.length; i++) {
+      // result += (value[i] << (8 * i)) >>> 0;
+      result += value[i] * Math.pow(2, 8 * i);
+    }
+  } else {
+    for (let i = 0; i < value.length; i++) {
+      result += (value[i] << (8 * (value.length - 1 - i))) >>> 0;
+    }
+  }
+
+  return result;
 }
 
 export function bigIntToBytes(value: bigint, length: number, endianness: Endianness = "le"): Buffer {

@@ -24,12 +24,24 @@ describe("intToBytes", () => {
     {input: [BigInt(65535), 96], output: Buffer.from([255, 255, ...zeroedArray(96 - 2)])},
   ];
   for (const {input, output} of testCases) {
-    const type = typeof input;
+    const type = typeof input[0];
     const length = input[1];
     it(`should correctly serialize ${type} to bytes length ${length}`, () => {
       assert(intToBytes(input[0], input[1]).equals(output));
     });
   }
+
+  it("random check 10_000 numbers", () => {
+    for (let i = 0; i < 10_000; i++) {
+      const value = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
+      for (const length of [2, 4, 8]) {
+        assert(
+          intToBytes(value, length).equals(intToBytes(BigInt(value), length)),
+          `failed at value ${value} and length ${length}`
+        );
+      }
+    }
+  });
 });
 
 describe("bytesToInt", () => {
@@ -46,6 +58,15 @@ describe("bytesToInt", () => {
       expect(bytesToInt(input)).to.be.equal(output);
     });
   }
+
+  it("random check 10_000 numbers", () => {
+    for (let i = 0; i < 10_000; i++) {
+      const value = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
+      const length = 8;
+      const bytes = intToBytes(value, length);
+      expect(bytesToInt(bytes)).to.be.equal(value, `failed at value ${value} and length ${length}`);
+    }
+  });
 });
 
 describe("compareBytesLe", () => {
