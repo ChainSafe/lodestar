@@ -7,6 +7,10 @@ import {CheckpointStateCache, StateContextCache} from "../../../../src/chain/sta
 import {OrderedMap} from "immutable";
 import { interopPubkeysCached } from "../../../../../state-transition/test/utils/interop.js";
 
+// Benchmark date from Mon Nov 21 2023 - Intel Core i7-9750H @ 2.60Ghz
+//     ✔ updateUnfinalizedPubkeys - updating 10 pubkeys                      795.3254 ops/s    1.257347 ms/op        -         63 runs   2.86 s
+//     ✔ updateUnfinalizedPubkeys - updating 100 pubkeys                     92.20117 ops/s    10.84585 ms/op        -         36 runs   1.73 s
+//     ✔ updateUnfinalizedPubkeys - updating 1000 pubkeys                    3.881592 ops/s    257.6262 ms/op        -         16 runs   5.19 s
 describe("updateUnfinalizedPubkeys perf tests", function () {
   setBenchOpts({noThreshold: true});
 
