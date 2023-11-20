@@ -27,8 +27,7 @@ import {logFilesDir} from "./params.js";
 import {shell} from "./shell.js";
 
 // NOTE: How to run
-// DEV_RUN=true EL_BINARY_DIR=hyperledger/besu:develop EL_SCRIPT_DIR=besudocker yarn mocha test/sim/6110-interop.test.ts
-// TODO: Use a personal docker image instead of develop image from hyperledger
+// DEV_RUN=true EL_BINARY_DIR=naviechan/besu:v6110 EL_SCRIPT_DIR=besudocker yarn mocha test/sim/6110-interop.test.ts
 // or
 // DEV_RUN=true EL_BINARY_DIR=/Volumes/fast_boi/navie/Documents/workspace/besu/build/install/besu/bin EL_SCRIPT_DIR=besu yarn mocha test/sim/6110-interop.test.ts
 // ```
