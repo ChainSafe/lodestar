@@ -7,6 +7,8 @@ import {
   PubkeyIndexMap,
   CachedBeaconStateBellatrix,
   BeaconStateBellatrix,
+  CachedBeaconStateEIP6110,
+  BeaconStateEIP6110,
 } from "@lodestar/state-transition";
 import {allForks, altair, bellatrix, eip6110, ssz} from "@lodestar/types";
 import {createBeaconConfig, ChainForkConfig} from "@lodestar/config";
@@ -137,6 +139,19 @@ export function generateCachedBellatrixState(opts?: TestBeaconState): CachedBeac
   return createCachedBeaconState(state as BeaconStateBellatrix, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
     // This is a performance test, there's no need to have a global shared cache of keys
+    pubkey2index: new PubkeyIndexMap(),
+    index2pubkey: [],
+  });
+}
+
+/**
+ * This generates state with default pubkey
+ */
+export function generateCached6110State(opts?: TestBeaconState): CachedBeaconStateEIP6110 {
+  const config = getConfig(ForkName.eip6110);
+  const state = generateState(opts, config);
+  return createCachedBeaconState(state as BeaconStateEIP6110, {
+    config: createBeaconConfig(config, state.genesisValidatorsRoot),
     pubkey2index: new PubkeyIndexMap(),
     index2pubkey: [],
   });

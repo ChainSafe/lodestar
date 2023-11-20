@@ -11,8 +11,8 @@ describe("updateUnfinalizedPubkeys perf tests", function () {
   setBenchOpts({noThreshold: true});
 
   const numPubkeysToBeFinalizedCases = [10, 100, 1000]
-  const numCheckpointStateCache = 10;
-  const numStateCache = 100;
+  const numCheckpointStateCache = 8;
+  const numStateCache = 3 * 32;
 
   let baseState: CachedBeaconStateAllForks;
   let checkpointStateCache: CheckpointStateCache;
