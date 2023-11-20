@@ -8,9 +8,9 @@ import {Map} from "immutable";
 import { interopPubkeysCached } from "../../../../../state-transition/test/utils/interop.js";
 
 // Benchmark date from Mon Nov 21 2023 - Intel Core i7-9750H @ 2.60Ghz
-// ✔ updateUnfinalizedPubkeys - updating 10 pubkeys                      998.9062 ops/s    1.001095 ms/op        -        645 runs   5.25 s
-// ✔ updateUnfinalizedPubkeys - updating 100 pubkeys                     158.0052 ops/s    6.328905 ms/op        -         97 runs   1.97 s
-// ✔ updateUnfinalizedPubkeys - updating 1000 pubkeys                    9.148975 ops/s    109.3019 ms/op        -         20 runs   3.14 s
+// ✔ updateUnfinalizedPubkeys - updating 10 pubkeys                      1496.612 ops/s    668.1760 us/op        -        276 runs   3.39 s
+// ✔ updateUnfinalizedPubkeys - updating 100 pubkeys                     174.9926 ops/s    5.714528 ms/op        -        142 runs   2.19 s
+// ✔ updateUnfinalizedPubkeys - updating 1000 pubkeys                    10.17848 ops/s    98.24650 ms/op        -         28 runs   3.75 s
 describe("updateUnfinalizedPubkeys perf tests", function () {
   setBenchOpts({noThreshold: true});
 

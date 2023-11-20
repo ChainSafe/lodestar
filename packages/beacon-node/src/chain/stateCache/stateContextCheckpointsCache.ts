@@ -107,7 +107,7 @@ export class CheckpointStateCache {
     const deleteTimer = this.metrics?.deletePubkeyTime.startTimer();
     try {
       for (const cachedState of this.cache.values()) {
-        cachedState.epochCtx.deleteUnfinalizedPubkeys(Array.from(validators.keys()));
+        cachedState.epochCtx.deleteUnfinalizedPubkeys(validators.keys());
         totalNumStatesUpdated++;
       }
     } finally {
