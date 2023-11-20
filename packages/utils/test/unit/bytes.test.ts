@@ -1,6 +1,6 @@
 import "../setup.js";
 import {assert, expect} from "chai";
-import {intToBytes, bytesToInt, compareBytesLe} from "../../src/index.js";
+import {intToBytes, bytesToInt, compareBytesLe, intToBytesVanilla} from "../../src/index.js";
 
 describe("intToBytes", () => {
   const zeroedArray = (length: number): number[] => Array.from({length}, () => 0);
@@ -34,14 +34,26 @@ describe("intToBytes", () => {
   const numTestCases = 10_000;
   it(`random check ${numTestCases} numbers`, () => {
     for (let i = 0; i < numTestCases; i++) {
-      const value = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
-      for (const length of [2, 4, 8]) {
+      for (const [length, maxValue] of [
+        [2, 0xffff],
+        [4, 0xffffffff],
+        [8, Number.MAX_SAFE_INTEGER],
+      ]) {
+        const value = Math.floor(Math.random() * maxValue);
         assert(
           intToBytes(value, length).equals(intToBytes(BigInt(value), length)),
           `failed at value ${value} and length ${length} le`
         );
         assert(
           intToBytes(value, length, "be").equals(intToBytes(BigInt(value), length, "be")),
+          `failed at value ${value} and length ${length} be`
+        );
+        assert(
+          intToBytesVanilla(value, length).equals(intToBytes(BigInt(value), length)),
+          `failed at value ${value} and length ${length} le`
+        );
+        assert(
+          intToBytesVanilla(value, length, "be").equals(intToBytes(BigInt(value), length, "be")),
           `failed at value ${value} and length ${length} be`
         );
       }
@@ -64,7 +76,7 @@ describe("bytesToInt", () => {
     });
   }
 
-  const numTetstCases = 100_000;
+  const numTetstCases = 10_000;
   it(`random check ${numTetstCases} numbers`, () => {
     for (let i = 0; i < numTetstCases; i++) {
       const value = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);

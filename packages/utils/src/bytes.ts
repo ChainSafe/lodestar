@@ -18,8 +18,33 @@ export function toHexString(bytes: Uint8Array): string {
  * Return a byte array from a number or BigInt
  */
 export function intToBytes(value: bigint | number, length: number, endianness: Endianness = "le"): Buffer {
+  // Buffer api only support up to 6 bytes
+  // otherwise got "RangeError [ERR_OUT_OF_RANGE]: The value of "value" is out of range. It must be >= 0 and < 2 ** 48"
+  if (typeof value === "number" && value < Math.pow(2, 48)) {
+    const buffer = Buffer.alloc(length);
+    if (endianness === "le") {
+      // writeUintLE only supports 1 to 6 byteLength
+      buffer.writeUintLE(value, 0, Math.min(length, 6));
+    } else {
+      // writeUintBE only supports 1 to 6 byteLength
+      const bytesLength = Math.min(length, 6);
+      const offset = Math.max(0, length - bytesLength);
+      buffer.writeUintBE(value, offset, Math.min(length, 6));
+    }
+    return buffer;
+  }
+
+  return intToBytesVanilla(value, length, endianness);
+}
+
+/**
+ * Same function to intToBytes but we compute ourself if possible to avoid using BigInt.
+ * See https://github.com/ChainSafe/lodestar/issues/5892
+ * Do not use this function directly, it's separated for testing only
+ */
+export function intToBytesVanilla(value: bigint | number, length: number, endianness: Endianness = "le"): Buffer {
   if (typeof value === "number" && (length === 2 || length === 4 || length === 8)) {
-    // this is to avoid using BigInt
+    // compute ourself if possible
     const result = Buffer.alloc(length);
     const dataView = new DataView(result.buffer, result.byteOffset, result.byteLength);
     if (length === 2) {
@@ -38,11 +63,10 @@ export function intToBytes(value: bigint | number, length: number, endianness: E
         dataView.setUint32(4, leastSignificant, false);
       }
     }
-
     return result;
   }
 
-  // only fallback to bigIntToBytes to avoid having to use BigInt
+  // only fallback to bigIntToBytes to avoid having to use BigInt if possible
   return bigIntToBytes(BigInt(value), length, endianness);
 }
 
@@ -50,10 +74,26 @@ export function intToBytes(value: bigint | number, length: number, endianness: E
  * Convert byte array in LE to integer.
  */
 export function bytesToInt(value: Uint8Array, endianness: Endianness = "le"): number {
+  // use Buffer api if possible since it's the fastest
+  // it only supports up to 6 bytes through
+  if (endianness === "le") {
+    const buffer = Buffer.from(value.buffer, value.byteOffset, value.byteLength);
+    if (value.length <= 8 && value[6] === 0 && value[7] === 0) {
+      return buffer.readUintLE(0, Math.min(value.length, 6));
+    }
+  } else {
+    const buffer = Buffer.from(value.buffer, value.byteOffset, value.byteLength);
+    if (value.length <= 8 && value[0] === 0 && value[1] === 0) {
+      const bytesLength = Math.min(value.length, 6);
+      const offset = Math.max(0, length - bytesLength);
+      return buffer.readUintBE(offset, bytesLength);
+    }
+  }
+
+  // otherwise compute manually
   let result = 0;
   if (endianness === "le") {
     for (let i = 0; i < value.length; i++) {
-      // result += (value[i] << (8 * i)) >>> 0;
       result += value[i] * Math.pow(2, 8 * i);
     }
   } else {
