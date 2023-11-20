@@ -351,8 +351,10 @@ export class Network implements INetwork {
   }
 
   async publishAttesterSlashing(attesterSlashing: phase0.AttesterSlashing): Promise<number> {
-    const slot = attesterSlashing.attestation1.data.slot;
-    const fork = this.config.getForkName(bytesToInt(slot));
+    const slotBuffer = attesterSlashing.attestation1.data.slot;
+    // Buffer representation of Number.MAX_SAFE_INTEGER is <Buffer ff ff ff ff ff ff 1f 00>
+    const slot = slotBuffer[6] >= 0x1f ? Number.MAX_SAFE_INTEGER : bytesToInt(slotBuffer);
+    const fork = this.config.getForkName(slot);
     return this.publishGossip<GossipType.attester_slashing>(
       {type: GossipType.attester_slashing, fork},
       attesterSlashing

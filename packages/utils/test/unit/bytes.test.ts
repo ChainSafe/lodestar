@@ -31,13 +31,18 @@ describe("intToBytes", () => {
     });
   }
 
-  it("random check 10_000 numbers", () => {
-    for (let i = 0; i < 10_000; i++) {
+  const numTestCases = 10_000;
+  it(`random check ${numTestCases} numbers`, () => {
+    for (let i = 0; i < numTestCases; i++) {
       const value = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
       for (const length of [2, 4, 8]) {
         assert(
           intToBytes(value, length).equals(intToBytes(BigInt(value), length)),
-          `failed at value ${value} and length ${length}`
+          `failed at value ${value} and length ${length} le`
+        );
+        assert(
+          intToBytes(value, length, "be").equals(intToBytes(BigInt(value), length, "be")),
+          `failed at value ${value} and length ${length} be`
         );
       }
     }
@@ -59,8 +64,9 @@ describe("bytesToInt", () => {
     });
   }
 
-  it("random check 10_000 numbers", () => {
-    for (let i = 0; i < 10_000; i++) {
+  const numTetstCases = 100_000;
+  it(`random check ${numTetstCases} numbers`, () => {
+    for (let i = 0; i < numTetstCases; i++) {
       const value = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
       const length = 8;
       const bytes = intToBytes(value, length);

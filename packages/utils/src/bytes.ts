@@ -18,20 +18,16 @@ export function toHexString(bytes: Uint8Array): string {
  * Return a byte array from a number or BigInt
  */
 export function intToBytes(value: bigint | number, length: number, endianness: Endianness = "le"): Buffer {
-  if (typeof value === "number") {
+  if (typeof value === "number" && (length === 2 || length === 4 || length === 8)) {
     // this is to avoid using BigInt
-    if (length === 2 || length === 4) {
-      const result = Buffer.alloc(length);
-      const dataView = new DataView(result.buffer, result.byteOffset, result.byteLength);
-      if (length === 2) {
-        dataView.setUint16(0, value, endianness === "le");
-      } else {
-        dataView.setUint32(0, value, endianness === "le");
-      }
-      return result;
-    } else if (length === 8) {
-      const result = Buffer.alloc(8);
-      const dataView = new DataView(result.buffer, result.byteOffset, result.byteLength);
+    const result = Buffer.alloc(length);
+    const dataView = new DataView(result.buffer, result.byteOffset, result.byteLength);
+    if (length === 2) {
+      dataView.setUint16(0, value, endianness === "le");
+    } else if (length === 4) {
+      dataView.setUint32(0, value, endianness === "le");
+    } else {
+      // length === 8
       const leastSignificant = (value & 0xffffffff) >>> 0;
       const mostSignificant = value > 0xffffffff ? Math.floor((value - leastSignificant) / 0xffffffff) : 0;
       if (endianness === "le") {
@@ -41,9 +37,12 @@ export function intToBytes(value: bigint | number, length: number, endianness: E
         dataView.setUint32(0, mostSignificant, false);
         dataView.setUint32(4, leastSignificant, false);
       }
-      return result;
     }
+
+    return result;
   }
+
+  // only fallback to bigIntToBytes to avoid having to use BigInt
   return bigIntToBytes(BigInt(value), length, endianness);
 }
 
