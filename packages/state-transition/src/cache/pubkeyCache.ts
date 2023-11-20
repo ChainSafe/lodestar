@@ -11,7 +11,7 @@ export type Index2PubkeyCache = PublicKey[];
  * as new validator indices are assigned in increasing order.
  * EIP-6914 will break this assumption.
  */
-export type UnfinalizedPubkeyIndexMap = immutable.OrderedMap<PubkeyHex, ValidatorIndex>;
+export type UnfinalizedPubkeyIndexMap = immutable.Map<PubkeyHex, ValidatorIndex>;
 
 export type PubkeyHex = string;
 

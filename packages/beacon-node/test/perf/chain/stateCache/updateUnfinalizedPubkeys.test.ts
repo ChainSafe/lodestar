@@ -4,13 +4,13 @@ import {ssz} from "@lodestar/types";
 import {generateCached6110State} from "../../../utils/state.js";
 import {CheckpointStateCache, StateContextCache} from "../../../../src/chain/stateCache/index.js";
 
-import {OrderedMap} from "immutable";
+import {Map} from "immutable";
 import { interopPubkeysCached } from "../../../../../state-transition/test/utils/interop.js";
 
 // Benchmark date from Mon Nov 21 2023 - Intel Core i7-9750H @ 2.60Ghz
-//     ✔ updateUnfinalizedPubkeys - updating 10 pubkeys                      795.3254 ops/s    1.257347 ms/op        -         63 runs   2.86 s
-//     ✔ updateUnfinalizedPubkeys - updating 100 pubkeys                     92.20117 ops/s    10.84585 ms/op        -         36 runs   1.73 s
-//     ✔ updateUnfinalizedPubkeys - updating 1000 pubkeys                    3.881592 ops/s    257.6262 ms/op        -         16 runs   5.19 s
+// ✔ updateUnfinalizedPubkeys - updating 10 pubkeys                      998.9062 ops/s    1.001095 ms/op        -        645 runs   5.25 s
+// ✔ updateUnfinalizedPubkeys - updating 100 pubkeys                     158.0052 ops/s    6.328905 ms/op        -         97 runs   1.97 s
+// ✔ updateUnfinalizedPubkeys - updating 1000 pubkeys                    9.148975 ops/s    109.3019 ms/op        -         20 runs   3.14 s
 describe("updateUnfinalizedPubkeys perf tests", function () {
   setBenchOpts({noThreshold: true});
 
@@ -32,7 +32,7 @@ describe("updateUnfinalizedPubkeys perf tests", function () {
         baseState = generateCached6110State();
       },
       beforeEach: async() => {
-        baseState.epochCtx.unfinalizedPubkey2index = OrderedMap(unfinalizedPubkey2Index.map);
+        baseState.epochCtx.unfinalizedPubkey2index = Map(unfinalizedPubkey2Index.map);
         baseState.epochCtx.pubkey2index = new PubkeyIndexMap();
         baseState.epochCtx.index2pubkey = [];
 
@@ -56,9 +56,7 @@ describe("updateUnfinalizedPubkeys perf tests", function () {
         }
       },
       fn: async() => {
-        const newFinalizedValidators = baseState.epochCtx.unfinalizedPubkey2index.takeWhile(
-          (index, _pubkey) => index < numPubkeysToBeFinalized
-        );
+        const newFinalizedValidators = baseState.epochCtx.unfinalizedPubkey2index.filter((index, _pubkey) => index < numPubkeysToBeFinalized);
         checkpointStateCache.updateUnfinalizedPubkeys(newFinalizedValidators);
         stateCache.updateUnfinalizedPubkeys(newFinalizedValidators);
       }});
