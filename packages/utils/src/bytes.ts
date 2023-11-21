@@ -77,15 +77,15 @@ export function bytesToInt(value: Uint8Array, endianness: Endianness = "le"): nu
   // use Buffer api if possible since it's the fastest
   // it only supports up to 6 bytes through
   if (endianness === "le") {
-    const buffer = Buffer.from(value.buffer, value.byteOffset, value.byteLength);
     if (value.length <= 8 && value[6] === 0 && value[7] === 0) {
+      const buffer = Buffer.from(value);
       return buffer.readUintLE(0, Math.min(value.length, 6));
     }
   } else {
-    const buffer = Buffer.from(value.buffer, value.byteOffset, value.byteLength);
     if (value.length <= 8 && value[0] === 0 && value[1] === 0) {
+      const buffer = Buffer.from(value);
       const bytesLength = Math.min(value.length, 6);
-      const offset = Math.max(0, length - bytesLength);
+      const offset = Math.max(0, value.length - bytesLength);
       return buffer.readUintBE(offset, bytesLength);
     }
   }
@@ -97,8 +97,8 @@ export function bytesToInt(value: Uint8Array, endianness: Endianness = "le"): nu
       result += value[i] * Math.pow(2, 8 * i);
     }
   } else {
-    for (let i = 0; i < value.length; i++) {
-      result += (value[i] << (8 * (value.length - 1 - i))) >>> 0;
+    for (let i = value.length - 1; i >= 0; i--) {
+      result += value[i] * Math.pow(2, 8 * (value.length - 1 - i));
     }
   }
 

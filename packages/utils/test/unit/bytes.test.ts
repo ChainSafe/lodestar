@@ -81,8 +81,10 @@ describe("bytesToInt", () => {
     for (let i = 0; i < numTetstCases; i++) {
       const value = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
       const length = 8;
-      const bytes = intToBytes(value, length);
-      expect(bytesToInt(bytes)).to.be.equal(value, `failed at value ${value} and length ${length}`);
+      const bytesLE = intToBytes(value, length);
+      expect(bytesToInt(bytesLE)).to.be.equal(value, `le - failed at value ${value} and length ${length}`);
+      const bytesBE = intToBytes(value, length, "be");
+      expect(bytesToInt(bytesBE, "be")).to.be.equal(value, `be - failed at value ${value} and length ${length}`);
     }
   });
 });
