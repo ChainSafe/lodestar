@@ -1,6 +1,6 @@
 import {expect} from "chai";
-import {ssz} from "../../src/index.js";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ssz} from "../../src/index.js";
 
 describe("size", function () {
   it("should calculate correct minSize and maxSize", () => {
