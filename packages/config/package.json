@@ -66,6 +66,7 @@
   "dependencies": {
     "@chainsafe/ssz": "^0.14.0",
     "@lodestar/params": "^1.12.0",
+    "@lodestar/utils": "^1.12.0",
     "@lodestar/types": "^1.12.0"
   }
 }

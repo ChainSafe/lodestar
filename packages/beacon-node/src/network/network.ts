@@ -2,7 +2,7 @@ import {PeerId} from "@libp2p/interface/peer-id";
 import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
 import {BeaconConfig} from "@lodestar/config";
-import {bytesToInt, sleep} from "@lodestar/utils";
+import {sleep} from "@lodestar/utils";
 import {LoggerNode} from "@lodestar/logger/node";
 import {computeStartSlotAtEpoch, computeTimeAtSlot} from "@lodestar/state-transition";
 import {phase0, allForks, deneb, altair, Root, capella, SlotRootHex} from "@lodestar/types";
@@ -343,7 +343,7 @@ export class Network implements INetwork {
   }
 
   async publishProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<number> {
-    const fork = this.config.getForkName(Number(proposerSlashing.signedHeader1.message.slot as bigint));
+    const fork = this.config.getForkNameBytes8(proposerSlashing.signedHeader1.message.slot);
     return this.publishGossip<GossipType.proposer_slashing>(
       {type: GossipType.proposer_slashing, fork},
       proposerSlashing
@@ -351,10 +351,7 @@ export class Network implements INetwork {
   }
 
   async publishAttesterSlashing(attesterSlashing: phase0.AttesterSlashing): Promise<number> {
-    const slotBuffer = attesterSlashing.attestation1.data.slot;
-    // Buffer representation of Number.MAX_SAFE_INTEGER is <Buffer ff ff ff ff ff ff 1f 00>
-    const slot = slotBuffer[6] >= 0x1f ? Number.MAX_SAFE_INTEGER : bytesToInt(slotBuffer);
-    const fork = this.config.getForkName(slot);
+    const fork = this.config.getForkNameBytes8(attesterSlashing.attestation1.data.slot);
     return this.publishGossip<GossipType.attester_slashing>(
       {type: GossipType.attester_slashing, fork},
       attesterSlashing

@@ -12,7 +12,7 @@ export function isSlashableAttestationData(
   return (
     // Double vote
     (!ssz.phase0.AttestationDataBytes8.equals(data1, data2) &&
-    // data1.target.epoch == data2.target.epoch
+      // data1.target.epoch == data2.target.epoch
       compareBytesLe(data1.target.epoch, data2.target.epoch) === 0) ||
     // Surround vote
     // (data1.source.epoch < data2.source.epoch && data2.target.epoch < data1.target.epoch)

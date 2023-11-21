@@ -1,5 +1,6 @@
 import {describe, it, beforeEach, afterEach, vi} from "vitest";
 import {phase0, ssz} from "@lodestar/types";
+import {intToBytes} from "@lodestar/utils";
 import {generateCachedState} from "../../../utils/state.js";
 import {ProposerSlashingErrorCode} from "../../../../src/chain/errors/proposerSlashingError.js";
 import {validateGossipProposerSlashing} from "../../../../src/chain/validation/proposerSlashing.js";
@@ -36,8 +37,8 @@ describe("validate proposer slashing", () => {
   it("should return invalid proposer slashing - invalid", async () => {
     const proposerSlashing = ssz.phase0.ProposerSlashing.defaultValue();
     // Make it invalid
-    proposerSlashing.signedHeader1.message.slot = BigInt(1);
-    proposerSlashing.signedHeader2.message.slot = BigInt(0);
+    proposerSlashing.signedHeader1.message.slot = intToBytes(1, 8);
+    proposerSlashing.signedHeader2.message.slot = intToBytes(0, 8);
 
     await expectRejectedWithLodestarError(
       validateGossipProposerSlashing(chainStub, proposerSlashing),
@@ -46,8 +47,8 @@ describe("validate proposer slashing", () => {
   });
 
   it("should return valid proposer slashing", async () => {
-    const signedHeader1 = ssz.phase0.SignedBeaconBlockHeaderBigint.defaultValue();
-    const signedHeader2 = ssz.phase0.SignedBeaconBlockHeaderBigint.defaultValue();
+    const signedHeader1 = ssz.phase0.SignedBeaconBlockHeaderBytes8.defaultValue();
+    const signedHeader2 = ssz.phase0.SignedBeaconBlockHeaderBytes8.defaultValue();
     // Make it different, so slashable
     signedHeader2.message.stateRoot = Buffer.alloc(32, 1);
 

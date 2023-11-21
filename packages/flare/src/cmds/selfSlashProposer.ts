@@ -4,7 +4,7 @@ import {phase0, ssz} from "@lodestar/types";
 import {config as chainConfig} from "@lodestar/config/default";
 import {createBeaconConfig, BeaconConfig} from "@lodestar/config";
 import {DOMAIN_BEACON_PROPOSER} from "@lodestar/params";
-import {toHexString} from "@lodestar/utils";
+import {intToBytes, toHexString} from "@lodestar/utils";
 import {computeSigningRoot} from "@lodestar/state-transition";
 import {CliCommand} from "../util/command.js";
 import {deriveSecretKeys, SecretKeysArgs, secretKeysOptions} from "../util/deriveSecretKeys.js";
@@ -99,15 +99,15 @@ export async function selfSlashProposerHandler(args: SelfSlashArgs): Promise<voi
             console.log(`Warning: validator index ${index} is already slashed`);
           }
 
-          const header1: phase0.BeaconBlockHeaderBigint = {
-            slot,
+          const header1: phase0.BeaconBlockHeaderBytes8 = {
+            slot: intToBytes(slot, 8),
             proposerIndex: index,
             parentRoot: rootA,
             stateRoot: rootA,
             bodyRoot: rootA,
           };
-          const header2: phase0.BeaconBlockHeaderBigint = {
-            slot,
+          const header2: phase0.BeaconBlockHeaderBytes8 = {
+            slot: intToBytes(slot, 8),
             proposerIndex: index,
             parentRoot: rootB,
             stateRoot: rootB,
@@ -117,11 +117,11 @@ export async function selfSlashProposerHandler(args: SelfSlashArgs): Promise<voi
           const proposerSlashing: phase0.ProposerSlashing = {
             signedHeader1: {
               message: header1,
-              signature: signHeaderBigint(config, sk, header1),
+              signature: signHeaderBytes8(config, sk, header1),
             },
             signedHeader2: {
               message: header2,
-              signature: signHeaderBigint(config, sk, header2),
+              signature: signHeaderBytes8(config, sk, header2),
             },
           };
 
@@ -136,9 +136,9 @@ export async function selfSlashProposerHandler(args: SelfSlashArgs): Promise<voi
   }
 }
 
-function signHeaderBigint(config: BeaconConfig, sk: SecretKey, header: phase0.BeaconBlockHeaderBigint): Uint8Array {
-  const slot = Number(header.slot as bigint);
-  const proposerDomain = config.getDomain(slot, DOMAIN_BEACON_PROPOSER);
-  const signingRoot = computeSigningRoot(ssz.phase0.BeaconBlockHeaderBigint, header, proposerDomain);
+function signHeaderBytes8(config: BeaconConfig, sk: SecretKey, header: phase0.BeaconBlockHeaderBytes8): Uint8Array {
+  const fork = config.getForkNameBytes8(header.slot);
+  const proposerDomain = config.getDomainAtFork(fork, DOMAIN_BEACON_PROPOSER);
+  const signingRoot = computeSigningRoot(ssz.phase0.BeaconBlockHeaderBytes8, header, proposerDomain);
   return sk.sign(signingRoot).toBytes();
 }

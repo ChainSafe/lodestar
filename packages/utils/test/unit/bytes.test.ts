@@ -1,6 +1,7 @@
 import "../setup.js";
 import {assert, expect} from "chai";
-import {intToBytes, bytesToInt, compareBytesLe, intToBytesVanilla} from "../../src/index.js";
+import {intToBytes, bytesToInt, compareBytesLe, intToBytesVanilla, bytesToIntOrMaxInt} from "../../src/index.js";
+import {bigIntToBytes} from "../../lib/bytes.js";
 
 describe("intToBytes", () => {
   const zeroedArray = (length: number): number[] => Array.from({length}, () => 0);
@@ -59,6 +60,37 @@ describe("intToBytes", () => {
       }
     }
   });
+});
+
+describe("bytesToIntOrMaxInt", () => {
+  const testCases: {input: Buffer; output: number}[] = [
+    {input: Buffer.from([0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0x1f, 0x00]), output: Number.MAX_SAFE_INTEGER - 1},
+    {input: Buffer.from([0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x1f, 0x00]), output: Number.MAX_SAFE_INTEGER},
+    {input: Buffer.from([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x20, 0x00]), output: Number.MAX_SAFE_INTEGER},
+  ];
+
+  for (const [i, {input, output}] of testCases.entries()) {
+    it(`Test case ${i}, Buffer to int - should produce ${output}`, () => {
+      expect(bytesToIntOrMaxInt(input)).to.be.equal(output);
+    });
+  }
+
+  const testCases2: {input: bigint; output: number}[] = [
+    {input: BigInt(Number.MAX_SAFE_INTEGER) - BigInt(1), output: Number.MAX_SAFE_INTEGER - 1},
+    {input: BigInt(Number.MAX_SAFE_INTEGER), output: Number.MAX_SAFE_INTEGER},
+    {input: BigInt(Number.MAX_SAFE_INTEGER) + BigInt(1), output: Number.MAX_SAFE_INTEGER},
+    {input: BigInt(Number.MAX_SAFE_INTEGER) + BigInt(1000), output: Number.MAX_SAFE_INTEGER},
+    {input: BigInt(Number.MAX_SAFE_INTEGER) + BigInt(10000), output: Number.MAX_SAFE_INTEGER},
+  ];
+
+  for (const [i, {input, output}] of testCases2.entries()) {
+    it(`Test case ${i}, BigInt to int - should produce ${output}`, () => {
+      const bufferLE = bigIntToBytes(input, 8);
+      expect(bytesToIntOrMaxInt(bufferLE)).to.be.equal(output);
+      const bufferBE = bigIntToBytes(input, 8, "be");
+      expect(bytesToIntOrMaxInt(bufferBE, "be")).to.be.equal(output);
+    });
+  }
 });
 
 describe("bytesToInt", () => {

@@ -7,7 +7,8 @@ import {
   isForkExecution,
   isForkBlobs,
 } from "@lodestar/params";
-import {Slot, allForks, Version, ssz} from "@lodestar/types";
+import {Slot, allForks, Version, ssz, Bytes8} from "@lodestar/types";
+import {bytesToIntOrMaxInt} from "@lodestar/utils";
 import {ChainConfig} from "../chainConfig/index.js";
 import {ForkConfig, ForkInfo} from "./types.js";
 
@@ -80,6 +81,10 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     },
     getForkName(slot: Slot): ForkName {
       return this.getForkInfo(slot).name;
+    },
+    getForkNameBytes8(slotBufferLE: Bytes8): ForkName {
+      const slot = bytesToIntOrMaxInt(slotBufferLE);
+      return this.getForkName(slot);
     },
     getForkSeq(slot: Slot): ForkSeq {
       return this.getForkInfo(slot).seq;

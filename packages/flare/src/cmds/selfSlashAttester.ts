@@ -5,7 +5,7 @@ import {phase0, ssz} from "@lodestar/types";
 import {config as chainConfig} from "@lodestar/config/default";
 import {createBeaconConfig, BeaconConfig} from "@lodestar/config";
 import {DOMAIN_BEACON_ATTESTER, MAX_VALIDATORS_PER_COMMITTEE} from "@lodestar/params";
-import {bytesToInt, intToBytes, toHexString} from "@lodestar/utils";
+import {intToBytes, toHexString} from "@lodestar/utils";
 import {computeSigningRoot} from "@lodestar/state-transition";
 import {CliCommand} from "../util/command.js";
 import {deriveSecretKeys, SecretKeysArgs, secretKeysOptions} from "../util/deriveSecretKeys.js";
@@ -51,7 +51,7 @@ export const selfSlashAttester: CliCommand<SelfSlashArgs, Record<never, never>, 
 export async function selfSlashAttesterHandler(args: SelfSlashArgs): Promise<void> {
   const sksAll = deriveSecretKeys(args);
 
-  const slot = Number(args.slot); // Throws if not valid
+  const slot = BigInt(args.slot); // Throws if not valid
   const batchSize = parseInt(args.batchSize);
 
   if (isNaN(batchSize)) throw Error(`Invalid arg batchSize ${args.batchSize}`);
@@ -148,8 +148,8 @@ function signAttestationDataBytes8(
   sks: SecretKey[],
   data: phase0.AttestationDataBytes8
 ): Uint8Array {
-  const slot = bytesToInt(data.slot);
-  const proposerDomain = config.getDomain(slot, DOMAIN_BEACON_ATTESTER);
+  const fork = config.getForkNameBytes8(data.slot);
+  const proposerDomain = config.getDomainAtFork(fork, DOMAIN_BEACON_ATTESTER);
   const signingRoot = computeSigningRoot(ssz.phase0.AttestationDataBytes8, data, proposerDomain);
 
   const sigs = sks.map((sk) => sk.sign(signingRoot));

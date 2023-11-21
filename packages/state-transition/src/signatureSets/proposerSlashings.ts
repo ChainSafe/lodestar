@@ -16,16 +16,13 @@ export function getProposerSlashingSignatureSets(
   // In state transition, ProposerSlashing headers are only partially validated. Their slot could be higher than the
   // clock and the slashing would still be valid. Must use bigint variants to hash correctly to all possible values
   return [proposerSlashing.signedHeader1, proposerSlashing.signedHeader2].map((signedHeader): ISignatureSet => {
-    const domain = state.config.getDomain(
-      state.slot,
-      DOMAIN_BEACON_PROPOSER,
-      Number(signedHeader.message.slot as bigint)
-    );
+    const fork = state.config.getForkNameBytes8(signedHeader.message.slot);
+    const domain = state.config.getDomainAtFork(fork, DOMAIN_BEACON_PROPOSER);
 
     return {
       type: SignatureSetType.single,
       pubkey,
-      signingRoot: computeSigningRoot(ssz.phase0.BeaconBlockHeaderBigint, signedHeader.message, domain),
+      signingRoot: computeSigningRoot(ssz.phase0.BeaconBlockHeaderBytes8, signedHeader.message, domain),
       signature: signedHeader.signature,
     };
   });

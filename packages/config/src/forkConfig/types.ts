@@ -1,5 +1,5 @@
 import {ForkName, ForkSeq} from "@lodestar/params";
-import {allForks, Epoch, Slot, Version} from "@lodestar/types";
+import {allForks, Bytes8, Epoch, Slot, Version} from "@lodestar/types";
 
 export type ForkInfo = {
   name: ForkName;
@@ -24,6 +24,8 @@ export type ForkConfig = {
 
   /** Get the hard-fork name at a given slot */
   getForkName(slot: Slot): ForkName;
+  /** Get the hard-fork name at a given Uint8ArrayLE slot */
+  getForkNameBytes8(slot: Bytes8): ForkName;
   /** Get the hard-fork sequence number at a given slot */
   getForkSeq(slot: Slot): ForkSeq;
   /** Get the hard-fork version at a given slot */

@@ -1,8 +1,7 @@
 import {allForks, phase0, ssz} from "@lodestar/types";
 import {DOMAIN_BEACON_ATTESTER} from "@lodestar/params";
-import {computeSigningRoot, computeStartSlotAtEpoch, ISignatureSet, SignatureSetType} from "../util/index.js";
+import {computeSigningRoot, ISignatureSet, SignatureSetType} from "../util/index.js";
 import {CachedBeaconStateAllForks} from "../types.js";
-import {bytesToInt} from "@lodestar/utils";
 
 /** Get signature sets from all AttesterSlashing objects in a block */
 export function getAttesterSlashingsSignatureSets(
@@ -29,9 +28,8 @@ export function getIndexedAttestationBytes8SignatureSet(
   indexedAttestation: phase0.IndexedAttestationBytes8
 ): ISignatureSet {
   const {index2pubkey} = state.epochCtx;
-  const targetEpoch = indexedAttestation.data.target.epoch;
-  const slot = computeStartSlotAtEpoch(bytesToInt(targetEpoch));
-  const domain = state.config.getDomain(state.slot, DOMAIN_BEACON_ATTESTER, slot);
+  const fork = state.config.getForkNameBytes8(indexedAttestation.data.slot);
+  const domain = state.config.getDomainAtFork(fork, DOMAIN_BEACON_ATTESTER);
 
   return {
     type: SignatureSetType.aggregate,

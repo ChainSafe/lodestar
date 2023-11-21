@@ -3,9 +3,9 @@ import * as ssz from "./sszTypes.js";
 
 export type AttestationSubnets = ValueOf<typeof ssz.AttestationSubnets>;
 export type BeaconBlockHeader = ValueOf<typeof ssz.BeaconBlockHeader>;
-export type BeaconBlockHeaderBigint = ValueOf<typeof ssz.BeaconBlockHeaderBigint>;
+export type BeaconBlockHeaderBytes8 = ValueOf<typeof ssz.BeaconBlockHeaderBytes8>;
 export type SignedBeaconBlockHeader = ValueOf<typeof ssz.SignedBeaconBlockHeader>;
-export type SignedBeaconBlockHeaderBigint = ValueOf<typeof ssz.SignedBeaconBlockHeaderBigint>;
+export type SignedBeaconBlockHeaderBytes8 = ValueOf<typeof ssz.SignedBeaconBlockHeaderBytes8>;
 export type Checkpoint = ValueOf<typeof ssz.Checkpoint>;
 export type DepositMessage = ValueOf<typeof ssz.DepositMessage>;
 export type DepositData = ValueOf<typeof ssz.DepositData>;

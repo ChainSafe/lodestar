@@ -4,6 +4,7 @@ import {BitArray} from "@chainsafe/ssz";
 import {altair, phase0, ssz} from "@lodestar/types";
 import {DOMAIN_DEPOSIT, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {config} from "@lodestar/config/default";
+import {intToBytes} from "@lodestar/utils/src/bytes.js";
 import {
   computeDomain,
   computeEpochAtSlot,
@@ -53,11 +54,11 @@ export function getBlockPhase0(
     const proposerIndex = proposerSlashingStartIndex + i * exitedIndexStep;
     proposerSlashings.push({
       signedHeader1: {
-        message: {slot: BigInt(1_800_000), proposerIndex, parentRoot: rootA, stateRoot: rootB, bodyRoot: rootC},
+        message: {slot: intToBytes(1_800_000, 8), proposerIndex, parentRoot: rootA, stateRoot: rootB, bodyRoot: rootC},
         signature: emptySig,
       },
       signedHeader2: {
-        message: {slot: BigInt(1_800_000), proposerIndex, parentRoot: rootC, stateRoot: rootA, bodyRoot: rootB},
+        message: {slot: intToBytes(1_800_000, 8), proposerIndex, parentRoot: rootC, stateRoot: rootA, bodyRoot: rootB},
         signature: emptySig,
       },
     });

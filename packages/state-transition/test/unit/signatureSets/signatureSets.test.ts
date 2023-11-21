@@ -92,15 +92,15 @@ type BlockProposerData = {
 
 function getMockProposerSlashings(data1: BlockProposerData, data2: BlockProposerData): phase0.ProposerSlashing {
   return {
-    signedHeader1: getMockSignedBeaconBlockHeaderBigint(data1),
-    signedHeader2: getMockSignedBeaconBlockHeaderBigint(data2),
+    signedHeader1: getMockSignedBeaconBlockHeaderBytes8(data1),
+    signedHeader2: getMockSignedBeaconBlockHeaderBytes8(data2),
   };
 }
 
-function getMockSignedBeaconBlockHeaderBigint(data: BlockProposerData): phase0.SignedBeaconBlockHeaderBigint {
+function getMockSignedBeaconBlockHeaderBytes8(data: BlockProposerData): phase0.SignedBeaconBlockHeaderBytes8 {
   return {
     message: {
-      slot: BigInt(0),
+      slot: intToBytes(0, 8),
       proposerIndex: data.proposerIndex,
       parentRoot: ZERO_HASH,
       stateRoot: ZERO_HASH,

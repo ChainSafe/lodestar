@@ -1,5 +1,6 @@
 import {phase0, ssz} from "@lodestar/types";
 import {ForkSeq} from "@lodestar/params";
+import {bytesToInt} from "@lodestar/utils";
 import {isSlashableValidator} from "../util/index.js";
 import {verifySignatureSet} from "../util/signatureSets.js";
 import {CachedBeaconStateAllForks} from "../types.js";
@@ -32,8 +33,10 @@ export function assertValidProposerSlashing(
   const header2 = proposerSlashing.signedHeader2.message;
 
   // verify header slots match
-  if (header1.slot !== header2.slot) {
-    throw new Error(`ProposerSlashing slots do not match: slot1=${header1.slot} slot2=${header2.slot}`);
+  if (Buffer.compare(header1.slot, header2.slot) !== 0) {
+    throw new Error(
+      `ProposerSlashing slots do not match: slot1=${bytesToInt(header1.slot)} slot2=${bytesToInt(header2.slot)}`
+    );
   }
 
   // verify header proposer indices match
@@ -44,7 +47,7 @@ export function assertValidProposerSlashing(
   }
 
   // verify headers are different
-  if (ssz.phase0.BeaconBlockHeaderBigint.equals(header1, header2)) {
+  if (ssz.phase0.BeaconBlockHeaderBytes8.equals(header1, header2)) {
     throw new Error("ProposerSlashing headers are equal");
   }
 

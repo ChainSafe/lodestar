@@ -71,7 +71,27 @@ export function intToBytesVanilla(value: bigint | number, length: number, endian
 }
 
 /**
- * Convert byte array in LE to integer.
+ * Convert byte array to integer.
+ * If the value is greater than Number.MAX_SAFE_INTEGER, return Number.MAX_SAFE_INTEGER.
+ */
+export function bytesToIntOrMaxInt(value: Uint8Array, endianness: Endianness = "le"): number {
+  if (endianness === "le") {
+    // Buffer representation of Number.MAX_SAFE_INTEGER in le is <Buffer ff ff ff ff ff ff 1f 00>
+    if (value.length >= 7 && value[6] > 0x1f) {
+      return Number.MAX_SAFE_INTEGER;
+    }
+    return bytesToInt(value, "le");
+  }
+
+  // Buffer representation of Number.MAX_SAFE_INTEGER in be is <Buffer 00 1f ff ff ff ff ff ff>
+  if (value.length >= 7 && value[value.length - 7] > 0x1f) {
+    return Number.MAX_SAFE_INTEGER;
+  }
+  return bytesToInt(value, "be");
+}
+
+/**
+ * Convert byte array to integer.
  */
 export function bytesToInt(value: Uint8Array, endianness: Endianness = "le"): number {
   // use Buffer api if possible since it's the fastest
