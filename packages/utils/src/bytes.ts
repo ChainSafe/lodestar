@@ -20,20 +20,19 @@ export function toHexString(bytes: Uint8Array): string {
 export function intToBytes(value: bigint | number, length: number, endianness: Endianness = "le"): Buffer {
   // Buffer api only support up to 6 bytes
   // otherwise got "RangeError [ERR_OUT_OF_RANGE]: The value of "value" is out of range. It must be >= 0 and < 2 ** 48"
-  // always use vanilla version to see if it's an issue
-  // if (typeof value === "number" && value < Math.pow(2, 48)) {
-  //   const buffer = Buffer.alloc(length);
-  //   if (endianness === "le") {
-  //     // writeUintLE only supports 1 to 6 byteLength
-  //     buffer.writeUintLE(value, 0, Math.min(length, 6));
-  //   } else {
-  //     // writeUintBE only supports 1 to 6 byteLength
-  //     const bytesLength = Math.min(length, 6);
-  //     const offset = Math.max(0, length - bytesLength);
-  //     buffer.writeUintBE(value, offset, Math.min(length, 6));
-  //   }
-  //   return buffer;
-  // }
+  if (typeof value === "number" && value < Math.pow(2, 48)) {
+    const buffer = Buffer.alloc(length);
+    if (endianness === "le") {
+      // writeUintLE only supports 1 to 6 byteLength
+      buffer.writeUintLE(value, 0, Math.min(length, 6));
+    } else {
+      // writeUintBE only supports 1 to 6 byteLength
+      const bytesLength = Math.min(length, 6);
+      const offset = Math.max(0, length - bytesLength);
+      buffer.writeUintBE(value, offset, Math.min(length, 6));
+    }
+    return buffer;
+  }
 
   return intToBytesVanilla(value, length, endianness);
 }
@@ -77,20 +76,19 @@ export function intToBytesVanilla(value: bigint | number, length: number, endian
 export function bytesToInt(value: Uint8Array, endianness: Endianness = "le"): number {
   // use Buffer api if possible since it's the fastest
   // it only supports up to 6 bytes through
-  // use vainilla version to debug
-  // if (endianness === "le") {
-  //   const buffer = Buffer.from(value.buffer, value.byteOffset, value.byteLength);
-  //   if (value.length <= 8 && value[6] === 0 && value[7] === 0) {
-  //     return buffer.readUintLE(0, Math.min(value.length, 6));
-  //   }
-  // } else {
-  //   const buffer = Buffer.from(value.buffer, value.byteOffset, value.byteLength);
-  //   if (value.length <= 8 && value[0] === 0 && value[1] === 0) {
-  //     const bytesLength = Math.min(value.length, 6);
-  //     const offset = Math.max(0, length - bytesLength);
-  //     return buffer.readUintBE(offset, bytesLength);
-  //   }
-  // }
+  if (endianness === "le") {
+    if (value.length <= 8 && value[6] === 0 && value[7] === 0) {
+      const buffer = Buffer.from(value);
+      return buffer.readUintLE(0, Math.min(value.length, 6));
+    }
+  } else {
+    if (value.length <= 8 && value[0] === 0 && value[1] === 0) {
+      const buffer = Buffer.from(value);
+      const bytesLength = Math.min(value.length, 6);
+      const offset = Math.max(0, value.length - bytesLength);
+      return buffer.readUintBE(offset, bytesLength);
+    }
+  }
 
   // otherwise compute manually
   let result = 0;
@@ -99,8 +97,8 @@ export function bytesToInt(value: Uint8Array, endianness: Endianness = "le"): nu
       result += value[i] * Math.pow(2, 8 * i);
     }
   } else {
-    for (let i = 0; i < value.length; i++) {
-      result += (value[i] << (8 * (value.length - 1 - i))) >>> 0;
+    for (let i = value.length - 1; i >= 0; i--) {
+      result += value[i] * Math.pow(2, 8 * (value.length - 1 - i));
     }
   }
 
