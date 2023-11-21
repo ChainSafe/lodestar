@@ -836,7 +836,7 @@ export class EpochCache {
   /**
    * Delete pubkeys from unfinalized cache
    */
-  deleteUnfinalizedPubkeys(pubkeys: PubkeyHex[]): void {
+  deleteUnfinalizedPubkeys(pubkeys: Iterable<PubkeyHex>): void {
     this.unfinalizedPubkey2index = this.unfinalizedPubkey2index.deleteAll(pubkeys);
   }
 
