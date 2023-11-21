@@ -4,7 +4,7 @@ import {BitArray} from "@chainsafe/ssz";
 import {altair, phase0, ssz} from "@lodestar/types";
 import {DOMAIN_DEPOSIT, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {config} from "@lodestar/config/default";
-import {intToBytes} from "@lodestar/utils/src/bytes.js";
+import {intToBytes} from "@lodestar/utils";
 import {
   computeDomain,
   computeEpochAtSlot,
