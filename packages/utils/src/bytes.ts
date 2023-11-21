@@ -20,19 +20,20 @@ export function toHexString(bytes: Uint8Array): string {
 export function intToBytes(value: bigint | number, length: number, endianness: Endianness = "le"): Buffer {
   // Buffer api only support up to 6 bytes
   // otherwise got "RangeError [ERR_OUT_OF_RANGE]: The value of "value" is out of range. It must be >= 0 and < 2 ** 48"
-  if (typeof value === "number" && value < Math.pow(2, 48)) {
-    const buffer = Buffer.alloc(length);
-    if (endianness === "le") {
-      // writeUintLE only supports 1 to 6 byteLength
-      buffer.writeUintLE(value, 0, Math.min(length, 6));
-    } else {
-      // writeUintBE only supports 1 to 6 byteLength
-      const bytesLength = Math.min(length, 6);
-      const offset = Math.max(0, length - bytesLength);
-      buffer.writeUintBE(value, offset, Math.min(length, 6));
-    }
-    return buffer;
-  }
+  // always use vanilla version to see if it's an issue
+  // if (typeof value === "number" && value < Math.pow(2, 48)) {
+  //   const buffer = Buffer.alloc(length);
+  //   if (endianness === "le") {
+  //     // writeUintLE only supports 1 to 6 byteLength
+  //     buffer.writeUintLE(value, 0, Math.min(length, 6));
+  //   } else {
+  //     // writeUintBE only supports 1 to 6 byteLength
+  //     const bytesLength = Math.min(length, 6);
+  //     const offset = Math.max(0, length - bytesLength);
+  //     buffer.writeUintBE(value, offset, Math.min(length, 6));
+  //   }
+  //   return buffer;
+  // }
 
   return intToBytesVanilla(value, length, endianness);
 }
