@@ -154,7 +154,7 @@ jobs:
         node: [20]
     steps:
       - uses: actions/checkout@v3      
-      - uses: ./actions/setup-debug-node
+      - uses: .github/actions/setup-debug-node
         with: 
           node-version: ${{matrix.node}}
           debug: true
@@ -183,7 +183,7 @@ jobs:
         id: unit_tests
         run: yarn test:unit
       
-      - uses: './actions/core-dump'
+      - uses: './.github/actions/core-dump'
         if: ${{ failure() && steps.unit_tests.conclusion == 'failure' }}
 
       - name: Upload coverage data
