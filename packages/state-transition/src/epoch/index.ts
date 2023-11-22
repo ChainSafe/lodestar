@@ -47,9 +47,13 @@ export function processEpoch(fork: ForkSeq, state: CachedBeaconStateAllForks, ca
   if (fork >= ForkSeq.altair) {
     processInactivityUpdates(state as CachedBeaconStateAltair, cache);
   }
-  processRewardsAndPenalties(state, cache);
+  // processRewardsAndPenalties() is 2nd step on the specs, we optimize to do it
+  // after processSlashings() to update balances only once
+  // processRewardsAndPenalties(state, cache);
   processRegistryUpdates(state, cache);
-  processSlashings(state, cache);
+  // accumulate slashing penalties and only update balances once in processRewardsAndPenalties()
+  const slashingPenalties = processSlashings(state, cache, false);
+  processRewardsAndPenalties(state, cache, slashingPenalties);
   processEth1DataReset(state, cache);
   processEffectiveBalanceUpdates(state, cache);
   processSlashingsReset(state, cache);

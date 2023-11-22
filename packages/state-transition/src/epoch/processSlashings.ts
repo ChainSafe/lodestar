@@ -12,6 +12,9 @@ import {CachedBeaconStateAllForks, EpochTransitionCache} from "../types.js";
 
 /**
  * Update validator registry for validators that activate + exit
+ * updateBalance is an optimization:
+ * - For spec test, it's true
+ * - For processEpoch flow, it's false, i.e to only update balances once in processRewardsAndPenalties()
  *
  * PERF: Cost 'proportional' to only validators that are slashed. For mainnet conditions:
  * - indicesToSlash: max len is 8704. But it's very unlikely since it would require all validators on the same
@@ -19,10 +22,14 @@ import {CachedBeaconStateAllForks, EpochTransitionCache} from "../types.js";
  *
  * - On normal mainnet conditions indicesToSlash = 0
  */
-export function processSlashings(state: CachedBeaconStateAllForks, cache: EpochTransitionCache): void {
+export function processSlashings(
+  state: CachedBeaconStateAllForks,
+  cache: EpochTransitionCache,
+  updateBalance = true
+): number[] {
   // No need to compute totalSlashings if there no index to slash
   if (cache.indicesToSlash.length === 0) {
-    return;
+    return [];
   }
   // TODO: have the regular totalBalance in EpochTransitionCache too?
   const totalBalance = BigInt(cache.totalActiveStakeByIncrement) * BigInt(EFFECTIVE_BALANCE_INCREMENT);
@@ -46,10 +53,24 @@ export function processSlashings(state: CachedBeaconStateAllForks, cache: EpochT
   const {effectiveBalanceIncrements} = state.epochCtx;
   const adjustedTotalSlashingBalance = bigIntMin(totalSlashings * BigInt(proportionalSlashingMultiplier), totalBalance);
   const increment = EFFECTIVE_BALANCE_INCREMENT;
+  const penalties: number[] = [];
+  const penaltiesByEffectiveBalanceIncrement = new Map<number, number>();
   for (const index of cache.indicesToSlash) {
     const effectiveBalanceIncrement = effectiveBalanceIncrements[index];
-    const penaltyNumerator = BigInt(effectiveBalanceIncrement) * adjustedTotalSlashingBalance;
-    const penalty = Number(penaltyNumerator / totalBalance) * increment;
-    decreaseBalance(state, index, penalty);
+    let penalty = penaltiesByEffectiveBalanceIncrement.get(effectiveBalanceIncrement);
+    if (penalty === undefined) {
+      const penaltyNumerator = BigInt(effectiveBalanceIncrement) * adjustedTotalSlashingBalance;
+      penalty = Number(penaltyNumerator / totalBalance) * increment;
+      penaltiesByEffectiveBalanceIncrement.set(effectiveBalanceIncrement, penalty);
+    }
+
+    if (updateBalance) {
+      // for spec test only
+      decreaseBalance(state, index, penalty);
+    } else {
+      // do it later in processRewardsAndPenalties()
+      penalties[index] = penalty;
+    }
   }
+  return penalties;
 }
