@@ -157,7 +157,7 @@ jobs:
       - uses: './.github/actions/setup-debug-node'
         with: 
           node-version: ${{matrix.node}}
-          debug: true
+          debug: 'true'
 
       - name: Restore build cache
         id: cache-primes-restore
