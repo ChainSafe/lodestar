@@ -881,7 +881,9 @@ export class BeaconChain implements IBeaconChain {
     } else if (finalizedState.epochCtx.isAfterEIP6110()) {
       const pivotValidatorIndex = finalizedState.validators.length;
       // Note EIP-6914 will break this logic
-      const newFinalizedValidators = finalizedState.epochCtx.unfinalizedPubkey2index.filter((index, _pubkey) => index < pivotValidatorIndex);
+      const newFinalizedValidators = finalizedState.epochCtx.unfinalizedPubkey2index.filter(
+        (index, _pubkey) => index < pivotValidatorIndex
+      );
 
       // Populate finalized pubkey cache and remove unfinalized pubkey cache
       if (!newFinalizedValidators.isEmpty()) {

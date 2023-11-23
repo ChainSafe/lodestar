@@ -1,9 +1,8 @@
-
 import crypto from "node:crypto";
+import {Map} from "immutable";
+import {ValidatorIndex} from "@lodestar/types";
+import {toMemoryEfficientHexStr} from "@lodestar/state-transition/src/cache/pubkeyCache.js";
 import {testRunnerMemory} from "./testRunnerMemory.js";
-import { Map } from "immutable";
-import { ValidatorIndex } from "@lodestar/types";
-import { toMemoryEfficientHexStr } from "../../../state-transition/src/cache/pubkeyCache.js";
 
 // Results in MacOS Nov 2023
 //
@@ -13,26 +12,26 @@ import { toMemoryEfficientHexStr } from "../../../state-transition/src/cache/pub
 
 testRunnerMemoryBpi([
   {
-    id: `UnfinalizedPubkey2Index 1000 keys`,
+    id: "UnfinalizedPubkey2Index 1000 keys",
     getInstance: () => getRandomMap(1000, () => toMemoryEfficientHexStr(crypto.randomBytes(48))),
   },
   {
-    id: `UnfinalizedPubkey2Index 10000 keys`,
+    id: "UnfinalizedPubkey2Index 10000 keys",
     getInstance: () => getRandomMap(10000, () => toMemoryEfficientHexStr(crypto.randomBytes(48))),
   },
   {
-    id: `UnfinalizedPubkey2Index 100000 keys`,
+    id: "UnfinalizedPubkey2Index 100000 keys",
     getInstance: () => getRandomMap(100000, () => toMemoryEfficientHexStr(crypto.randomBytes(48))),
   },
 ]);
 
 function getRandomMap(n: number, getKey: (i: number) => string): Map<string, unknown> {
-  let map = Map<string, ValidatorIndex>();
+  const map = Map<string, ValidatorIndex>();
 
-  return map.withMutations(m => {
+  return map.withMutations((m) => {
     for (let i = 0; i < n; i++) {
       m.set(getKey(i), i);
-    }    
+    }
   });
 }
 

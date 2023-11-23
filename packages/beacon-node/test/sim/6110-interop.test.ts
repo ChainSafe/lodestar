@@ -203,8 +203,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     );
     if (!payloadId2) throw Error("InvalidPayloadId");
 
-    // 4. Get the payload.  Check depositReceipts field contains deposit
-
+    // 5. Get the payload.  Check depositReceipts field contains deposit
     // Wait a bit first for besu to pick up tx from the tx pool.
     await sleep(1000);
     const payloadAndBlockValue = await executionEngine.getPayload(ForkName.eip6110, payloadId2);

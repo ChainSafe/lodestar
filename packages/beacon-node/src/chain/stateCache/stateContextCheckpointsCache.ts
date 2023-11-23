@@ -1,6 +1,6 @@
 import {toHexString} from "@chainsafe/ssz";
 import {phase0, Epoch, RootHex} from "@lodestar/types";
-import {CachedBeaconStateAllForks, UnfinalizedPubkeyIndexMap} from "@lodestar/state-transition";
+import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {MapDef} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
 import {Metrics} from "../../metrics/index.js";
