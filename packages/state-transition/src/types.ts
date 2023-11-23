@@ -9,7 +9,7 @@ export type {
   CachedBeaconStateBellatrix,
   CachedBeaconStateCapella,
   CachedBeaconStateDeneb,
-  CachedBeaconStateVerge,
+  CachedBeaconStateElectra,
 } from "./cache/stateCache.js";
 
 export type {
@@ -20,5 +20,5 @@ export type {
   BeaconStateBellatrix,
   BeaconStateCapella,
   BeaconStateDeneb,
-  BeaconStateVerge,
+  BeaconStateElectra,
 } from "./cache/types.js";

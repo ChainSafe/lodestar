@@ -3,7 +3,7 @@ import {ssz as altair} from "../altair/index.js";
 import {ssz as bellatrix} from "../bellatrix/index.js";
 import {ssz as capella} from "../capella/index.js";
 import {ssz as deneb} from "../deneb/index.js";
-import {ssz as verge} from "../verge/index.js";
+import {ssz as electra} from "../electra/index.js";
 
 /**
  * Index the ssz types that differ by fork
@@ -45,11 +45,11 @@ export const allForks = {
     BeaconState: deneb.BeaconState,
     Metadata: altair.Metadata,
   },
-  verge: {
-    BeaconBlockBody: verge.BeaconBlockBody,
-    BeaconBlock: verge.BeaconBlock,
-    SignedBeaconBlock: verge.SignedBeaconBlock,
-    BeaconState: verge.BeaconState,
+  electra: {
+    BeaconBlockBody: electra.BeaconBlockBody,
+    BeaconBlock: electra.BeaconBlock,
+    SignedBeaconBlock: electra.SignedBeaconBlock,
+    BeaconState: electra.BeaconState,
     Metadata: altair.Metadata,
   },
 };
@@ -93,13 +93,13 @@ export const allForksExecution = {
     SignedBuilderBid: deneb.SignedBuilderBid,
     SSEPayloadAttributes: deneb.SSEPayloadAttributes,
   },
-  verge: {
-    BeaconBlockBody: verge.BeaconBlockBody,
-    BeaconBlock: verge.BeaconBlock,
-    SignedBeaconBlock: verge.SignedBeaconBlock,
-    BeaconState: verge.BeaconState,
-    ExecutionPayload: verge.ExecutionPayload,
-    ExecutionPayloadHeader: verge.ExecutionPayloadHeader,
+  electra: {
+    BeaconBlockBody: electra.BeaconBlockBody,
+    BeaconBlock: electra.BeaconBlock,
+    SignedBeaconBlock: electra.SignedBeaconBlock,
+    BeaconState: electra.BeaconState,
+    ExecutionPayload: electra.ExecutionPayload,
+    ExecutionPayloadHeader: electra.ExecutionPayloadHeader,
     BuilderBid: deneb.BuilderBid,
     SignedBuilderBid: deneb.SignedBuilderBid,
     SSEPayloadAttributes: deneb.SSEPayloadAttributes,
@@ -126,10 +126,10 @@ export const allForksBlinded = {
     BeaconBlock: deneb.BlindedBeaconBlock,
     SignedBeaconBlock: deneb.SignedBlindedBeaconBlock,
   },
-  verge: {
-    BeaconBlockBody: verge.BlindedBeaconBlockBody,
-    BeaconBlock: verge.BlindedBeaconBlock,
-    SignedBeaconBlock: verge.SignedBlindedBeaconBlock,
+  electra: {
+    BeaconBlockBody: electra.BlindedBeaconBlockBody,
+    BeaconBlock: electra.BlindedBeaconBlock,
+    SignedBeaconBlock: electra.SignedBlindedBeaconBlock,
   },
 };
 
@@ -174,15 +174,15 @@ export const allForksLightClient = {
     LightClientOptimisticUpdate: deneb.LightClientOptimisticUpdate,
     LightClientStore: deneb.LightClientStore,
   },
-  verge: {
-    BeaconBlock: verge.BeaconBlock,
-    BeaconBlockBody: verge.BeaconBlockBody,
-    LightClientHeader: verge.LightClientHeader,
-    LightClientBootstrap: verge.LightClientBootstrap,
-    LightClientUpdate: verge.LightClientUpdate,
-    LightClientFinalityUpdate: verge.LightClientFinalityUpdate,
-    LightClientOptimisticUpdate: verge.LightClientOptimisticUpdate,
-    LightClientStore: verge.LightClientStore,
+  electra: {
+    BeaconBlock: electra.BeaconBlock,
+    BeaconBlockBody: electra.BeaconBlockBody,
+    LightClientHeader: electra.LightClientHeader,
+    LightClientBootstrap: electra.LightClientBootstrap,
+    LightClientUpdate: electra.LightClientUpdate,
+    LightClientFinalityUpdate: electra.LightClientFinalityUpdate,
+    LightClientOptimisticUpdate: electra.LightClientOptimisticUpdate,
+    LightClientStore: electra.LightClientStore,
   },
 };
 
@@ -191,8 +191,8 @@ export const allForksBlobs = {
     BlobSidecar: deneb.BlobSidecar,
     ExecutionPayloadAndBlobsBundle: deneb.ExecutionPayloadAndBlobsBundle,
   },
-  verge: {
-    BlobSidecar: deneb.BlobSidecar,
-    BlindedBlobSidecar: deneb.BlindedBlobSidecar,
-  },
+  // electra: {
+  //   BlobSidecar: deneb.BlobSidecar,
+  //   ExecutionPayloadAndBlobsBundle: electra.ExecutionPayloadAndBlobsBundle,
+  // },
 };

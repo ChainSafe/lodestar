@@ -7,7 +7,7 @@ export enum ForkName {
   bellatrix = "bellatrix",
   capella = "capella",
   deneb = "deneb",
-  verge = "verge",
+  electra = "electra",
 }
 
 /**
@@ -18,8 +18,8 @@ export enum ForkSeq {
   altair = 1,
   bellatrix = 2,
   capella = 3,
-  // Verge is scheduled after capella for now
-  verge = 4,
+  // Electra is scheduled after capella for now
+  electra = 4,
   deneb = 5,
 }
 
@@ -47,8 +47,8 @@ export function isForkVerge(fork: ForkName): fork is ForkVerge {
   return isForkWithdrawals(fork) && fork !== ForkName.capella;
 }
 
-export type ForkPreBlobs = ForkPreVerge | ForkName.verge;
+export type ForkPreBlobs = ForkPreVerge | ForkName.electra;
 export type ForkBlobs = Exclude<ForkName, ForkPreBlobs>;
 export function isForkBlobs(fork: ForkName): fork is ForkBlobs {
-  return isForkVerge(fork) && fork !== ForkName.verge;
+  return isForkVerge(fork) && fork !== ForkName.electra;
 }

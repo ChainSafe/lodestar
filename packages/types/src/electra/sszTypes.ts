@@ -109,7 +109,7 @@ export const ExecutionWitness = new ContainerType(
 export const ExecutionPayload = new ContainerType(
   {
     ...capellaSsz.ExecutionPayload.fields,
-    executionWitness: ExecutionWitness, // New in verge
+    executionWitness: ExecutionWitness, // New in electra
   },
   {typeName: "ExecutionPayload", jsonCase: "eth2"}
 );
@@ -117,7 +117,7 @@ export const ExecutionPayload = new ContainerType(
 export const ExecutionPayloadHeader = new ContainerType(
   {
     ...capellaSsz.ExecutionPayloadHeader.fields,
-    executionWitnessRoot: Root, // New in verge
+    executionWitnessRoot: Root, // New in electra
   },
   {typeName: "ExecutionPayloadHeader", jsonCase: "eth2"}
 );
@@ -126,7 +126,7 @@ export const ExecutionPayloadHeader = new ContainerType(
 export const BeaconBlockBody = new ContainerType(
   {
     ...altairSsz.BeaconBlockBody.fields,
-    executionPayload: ExecutionPayload, // Modified in verge
+    executionPayload: ExecutionPayload, // Modified in electra
     blsToExecutionChanges: capellaSsz.BeaconBlockBody.fields.blsToExecutionChanges,
     // blobKzgCommitments: denebSsz.BlobKzgCommitments,
   },
@@ -136,14 +136,14 @@ export const BeaconBlockBody = new ContainerType(
 export const BeaconBlock = new ContainerType(
   {
     ...capellaSsz.BeaconBlock.fields,
-    body: BeaconBlockBody, // Modified in verge
+    body: BeaconBlockBody, // Modified in electra
   },
   {typeName: "BeaconBlock", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
 export const SignedBeaconBlock = new ContainerType(
   {
-    message: BeaconBlock, // Modified in verge
+    message: BeaconBlock, // Modified in electra
     signature: BLSSignature,
   },
   {typeName: "SignedBeaconBlock", jsonCase: "eth2"}
@@ -152,7 +152,7 @@ export const SignedBeaconBlock = new ContainerType(
 export const BlindedBeaconBlockBody = new ContainerType(
   {
     ...altairSsz.BeaconBlockBody.fields,
-    executionPayloadHeader: ExecutionPayloadHeader, // Modified in verge
+    executionPayloadHeader: ExecutionPayloadHeader, // Modified in electra
     blsToExecutionChanges: capellaSsz.BeaconBlockBody.fields.blsToExecutionChanges,
     // blobKzgCommitments: denebSsz.BlobKzgCommitments,
   },
@@ -213,7 +213,7 @@ export const BeaconState = new ContainerType(
     currentSyncCommittee: altairSsz.SyncCommittee,
     nextSyncCommittee: altairSsz.SyncCommittee,
     // Execution
-    latestExecutionPayloadHeader: ExecutionPayloadHeader, // Modified in verge
+    latestExecutionPayloadHeader: ExecutionPayloadHeader, // Modified in electra
     // Withdrawals
     nextWithdrawalIndex: capellaSsz.BeaconState.fields.nextWithdrawalIndex,
     nextWithdrawalValidatorIndex: capellaSsz.BeaconState.fields.nextWithdrawalValidatorIndex,

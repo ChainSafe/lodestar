@@ -4,7 +4,7 @@ export {ssz as altair} from "./altair/index.js";
 export {ssz as bellatrix} from "./bellatrix/index.js";
 export {ssz as capella} from "./capella/index.js";
 export {ssz as deneb} from "./deneb/index.js";
-export {ssz as verge} from "./verge/index.js";
+export {ssz as electra} from "./electra/index.js";
 
 import {ssz as allForksSsz} from "./allForks/index.js";
 export const allForks = allForksSsz.allForks;

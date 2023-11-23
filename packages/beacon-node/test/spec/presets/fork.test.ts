@@ -36,8 +36,8 @@ const fork: TestRunnerFn<ForkStateCase, BeaconStateAllForks> = (forkNext) => {
           return slotFns.upgradeStateToCapella(preState as CachedBeaconStateBellatrix);
         case ForkName.deneb:
           return slotFns.upgradeStateToDeneb(preState as CachedBeaconStateCapella);
-        case ForkName.verge:
-          return slotFns.upgradeStateToVerge(preState as CachedBeaconStateDeneb);
+        case ForkName.electra:
+          return slotFns.upgradeStateToElectra(preState as CachedBeaconStateDeneb);
       }
     },
     options: {

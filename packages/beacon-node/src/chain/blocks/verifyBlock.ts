@@ -18,6 +18,7 @@ import {BlockInput, ImportBlockOpts, BlockInputType} from "./types.js";
 import {POS_PANDA_MERGE_TRANSITION_BANNER} from "./utils/pandaMergeTransitionBanner.js";
 import {CAPELLA_OWL_BANNER} from "./utils/ownBanner.js";
 import {DENEB_BLOWFISH_BANNER} from "./utils/blowfishBanner.js";
+import {ELECTRA_ELEPHANTWITHWINGS_BANNER} from "./utils/elephantWithWings.js";
 import {verifyBlocksStateTransitionOnly} from "./verifyBlocksStateTransitionOnly.js";
 import {verifyBlocksSignatures} from "./verifyBlocksSignatures.js";
 import {verifyBlocksExecutionPayload, SegmentExecStatus} from "./verifyBlocksExecutionPayloads.js";
@@ -150,6 +151,11 @@ export async function verifyBlocksInEpoch(
           case ForkName.capella:
             this.logger.info(CAPELLA_OWL_BANNER);
             this.logger.info("Activating withdrawals", {epoch: this.config.CAPELLA_FORK_EPOCH});
+            break;
+
+          case ForkName.electra:
+            this.logger.info(ELECTRA_ELEPHANTWITHWINGS_BANNER);
+            this.logger.info("Activating verkle", {epoch: this.config.ELECTRA_FORK_EPOCH});
             break;
 
           case ForkName.deneb:
