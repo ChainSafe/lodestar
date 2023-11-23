@@ -18,19 +18,15 @@ describe("updateUnfinalizedPubkeys perf tests", function () {
   const numCheckpointStateCache = 8;
   const numStateCache = 3 * 32;
 
-  let baseState: CachedBeaconStateAllForks;
   let checkpointStateCache: CheckpointStateCache;
   let stateCache: StateContextCache;
-  let unfinalizedPubkey2Index: PubkeyIndexMap;
 
+  const unfinalizedPubkey2Index = generatePubkey2Index(0, Math.max.apply(null, numPubkeysToBeFinalizedCases));
+  const baseState = generateCached6110State();
 
   for (const numPubkeysToBeFinalized of numPubkeysToBeFinalizedCases) {
     itBench({
       id: `updateUnfinalizedPubkeys - updating ${numPubkeysToBeFinalized} pubkeys`,
-      before: async() => {
-        unfinalizedPubkey2Index = generatePubkey2Index(0, Math.max.apply(null, numPubkeysToBeFinalizedCases));
-        baseState = generateCached6110State();
-      },
       beforeEach: async() => {
         baseState.epochCtx.unfinalizedPubkey2index = Map(unfinalizedPubkey2Index.map);
         baseState.epochCtx.pubkey2index = new PubkeyIndexMap();
