@@ -53,8 +53,8 @@ describe("updateUnfinalizedPubkeys perf tests", function () {
       },
       fn: async() => {
         const newFinalizedValidators = baseState.epochCtx.unfinalizedPubkey2index.filter((index, _pubkey) => index < numPubkeysToBeFinalized);
-        checkpointStateCache.updateUnfinalizedPubkeys(newFinalizedValidators);
         stateCache.updateUnfinalizedPubkeys(newFinalizedValidators);
+        stateCache.updateUnfinalizedPubkeys.bind(checkpointStateCache)(newFinalizedValidators);
       }});
   }
 

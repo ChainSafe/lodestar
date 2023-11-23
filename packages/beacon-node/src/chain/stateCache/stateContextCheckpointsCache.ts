@@ -90,33 +90,6 @@ export class CheckpointStateCache {
     return previousHits;
   }
 
-  updateUnfinalizedPubkeys(validators: UnfinalizedPubkeyIndexMap): void {
-    let totalNumStatesUpdated = 0;
-
-    const addTimer = this.metrics?.addPubkeyTime.startTimer();
-    try {
-      if (this.cache.size > 0) {
-        const st = this.cache.values().next().value as CachedBeaconStateAllForks;
-        // Only need to insert once since finalized cache is shared across all states globally
-        st.epochCtx.addFinalizedPubkeys(validators);
-      }
-    } finally {
-      addTimer?.();
-    }
-
-    const deleteTimer = this.metrics?.deletePubkeyTime.startTimer();
-    try {
-      for (const cachedState of this.cache.values()) {
-        cachedState.epochCtx.deleteUnfinalizedPubkeys(validators.keys());
-        totalNumStatesUpdated++;
-      }
-    } finally {
-      deleteTimer?.();
-    }
-
-    this.metrics?.numStatesUpdated.observe(totalNumStatesUpdated);
-  }
-
   pruneFinalized(finalizedEpoch: Epoch): void {
     for (const epoch of this.epochIndex.keys()) {
       if (epoch < finalizedEpoch) {
