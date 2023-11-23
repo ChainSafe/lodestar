@@ -76,7 +76,7 @@ describe("fromHex", () => {
   ];
 
   for (const {input, output} of testCases) {
-    it(`should convert  hex string ${input} to Uint8Array`, () => {
+    it(`should convert hex string ${input} to Uint8Array`, () => {
       expect(fromHex(input)).to.deep.equal(output);
     });
   }
@@ -89,11 +89,11 @@ describe("toHexString", () => {
     {input: new Uint8Array([]), output: "0x"},
     {input: new Uint8Array([0, 0, 0, 0]), output: "0x00000000"},
     {input: new Uint8Array([15, 255, 16, 0, 127]), output: "0x0fff10007f"},
-    {input: new Uint8Array(1000).fill(255), output: "0x" + "ff".repeat(1000)},
+    {input: new Uint8Array(5).fill(255), output: "0x" + "ff".repeat(5)},
   ];
 
   for (const {input, output} of testCases) {
-    it(`should convert Uint8Array to hex string ${output.length}`, () => {
+    it(`should convert Uint8Array to hex string ${output}`, () => {
       expect(toHexString(input)).to.be.equal(output);
     });
   }
