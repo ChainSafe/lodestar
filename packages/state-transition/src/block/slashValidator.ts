@@ -27,7 +27,7 @@ export function slashValidator(
   whistleblowerIndex?: ValidatorIndex
 ): void {
   const {epochCtx} = state;
-  const epoch = epochCtx.epoch;
+  const {epoch, effectiveBalanceIncrements} = epochCtx;
   const validator = state.validators.get(slashedIndex);
 
   // TODO: Bellatrix initiateValidatorExit validators.update() with the one below
@@ -40,6 +40,7 @@ export function slashValidator(
   // TODO: could state.slashings be number?
   const slashingIndex = epoch % EPOCHS_PER_SLASHINGS_VECTOR;
   state.slashings.set(slashingIndex, state.slashings.get(slashingIndex) + BigInt(effectiveBalance));
+  epochCtx.totalSlashingsByIncrement += effectiveBalanceIncrements[slashedIndex];
 
   const minSlashingPenaltyQuotient =
     fork === ForkSeq.phase0
