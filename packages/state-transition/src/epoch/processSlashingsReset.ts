@@ -11,8 +11,8 @@ export function processSlashingsReset(state: CachedBeaconStateAllForks, cache: E
 
   // reset slashings
   const slashIndex = nextEpoch % EPOCHS_PER_SLASHINGS_VECTOR;
-  const oldSlashingValueByIncrement = Math.floor(Number(state.slashings.get(slashIndex)) / EFFECTIVE_BALANCE_INCREMENT);
-  state.slashings.set(slashIndex, BigInt(0));
+  const oldSlashingValueByIncrement = Math.floor(state.slashings.get(slashIndex) / EFFECTIVE_BALANCE_INCREMENT);
+  state.slashings.set(slashIndex, 0);
   state.epochCtx.totalSlashingsByIncrement = Math.max(
     0,
     state.epochCtx.totalSlashingsByIncrement - oldSlashingValueByIncrement

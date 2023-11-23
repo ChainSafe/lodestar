@@ -84,7 +84,7 @@ export function getTotalSlashingsByIncrement(state: BeaconStateAllForks): number
   let totalSlashingsByIncrement = 0;
   const slashings = state.slashings.getAll();
   for (let i = 0; i < slashings.length; i++) {
-    totalSlashingsByIncrement += Math.floor(Number(slashings[i]) / EFFECTIVE_BALANCE_INCREMENT);
+    totalSlashingsByIncrement += Math.floor(slashings[i] / EFFECTIVE_BALANCE_INCREMENT);
   }
   return totalSlashingsByIncrement;
 }

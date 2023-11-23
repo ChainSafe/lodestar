@@ -39,7 +39,6 @@ const {
   EpochInf,
   CommitteeIndex,
   ValidatorIndex,
-  Gwei,
   Root,
   Version,
   ForkDigest,
@@ -248,7 +247,7 @@ export const Validator = ValidatorNodeStruct;
 export const Validators = new ListCompositeType(ValidatorNodeStruct, VALIDATOR_REGISTRY_LIMIT);
 export const Balances = new ListBasicType(UintNum64, VALIDATOR_REGISTRY_LIMIT);
 export const RandaoMixes = new VectorCompositeType(Bytes32, EPOCHS_PER_HISTORICAL_VECTOR);
-export const Slashings = new VectorBasicType(Gwei, EPOCHS_PER_SLASHINGS_VECTOR);
+export const Slashings = new VectorBasicType(primitiveSsz.Slashing, EPOCHS_PER_SLASHINGS_VECTOR);
 export const JustificationBits = new BitVectorType(JUSTIFICATION_BITS_LENGTH);
 
 // Misc dependants
