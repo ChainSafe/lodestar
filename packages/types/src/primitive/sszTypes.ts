@@ -49,13 +49,6 @@ export const SubcommitteeIndex = UintNum64;
  */
 export const ValidatorIndex = UintNum64;
 export const WithdrawalIndex = UintNum64;
-/**
- * Originally this is Gwei but now we switch to a number because:
- *   - it's reset per epoch in processSlashingsReset()
- *   - for each epoch, there are 8704 max validators to slash so it's safe to use Number
- *   - also we don't need to compute the total slashings from `state.slashings`, it's handled by totalSlashingsByIncrement in EpochCache
- */
-export const Slashing = UintNum64;
 export const Gwei = UintBn64;
 export const Wei = UintBn256;
 export const Root = new ByteVectorType(32);

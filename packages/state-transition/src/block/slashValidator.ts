@@ -41,7 +41,7 @@ export function slashValidator(
   // for each epoch, there are 8704 max validators to slash so it's safe to use Number
   // also we don't need to compute the total slashings from state.slashings, it's handled by totalSlashingsByIncrement in EpochCache
   const slashingIndex = epoch % EPOCHS_PER_SLASHINGS_VECTOR;
-  state.slashings.set(slashingIndex, state.slashings.get(slashingIndex) + effectiveBalance);
+  state.slashings.set(slashingIndex, (state.slashings.get(slashingIndex) ?? 0) + effectiveBalance);
   epochCtx.totalSlashingsByIncrement += effectiveBalanceIncrements[slashedIndex];
 
   const minSlashingPenaltyQuotient =

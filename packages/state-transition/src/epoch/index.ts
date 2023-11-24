@@ -47,7 +47,7 @@ export function processEpoch(fork: ForkSeq, state: CachedBeaconStateAllForks, ca
   if (fork >= ForkSeq.altair) {
     processInactivityUpdates(state as CachedBeaconStateAltair, cache);
   }
-  // processRewardsAndPenalties() is 2nd step on the specs, we optimize to do it
+  // processRewardsAndPenalties() is 2nd step in the specs, we optimize to do it
   // after processSlashings() to update balances only once
   // processRewardsAndPenalties(state, cache);
   processRegistryUpdates(state, cache);
