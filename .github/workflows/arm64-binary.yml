@@ -1,0 +1,31 @@
+name: Build arm64 binary
+
+on: push
+
+jobs:
+  binary:
+    name: Build Lodestar arm64 binary
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+      - name: Set QEMU library path
+        run: echo "QEMU_LD_PREFIX=/usr/aarch64-linux-gnu" >> $GITHUB_ENV
+      - name: Install ARM64 libraries
+        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu libc6-arm64-cross libc6-dev-arm64-cross
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 20
+          architecture: "arm64"
+          check-latest: true
+      - run: |
+          yarn global add caxa
+          yarn install --frozen-lockfile --force && yarn build
+          npx caxa --input . --output "lodestar" -- "{{caxa}}/node_modules/.bin/node" "{{caxa}}/node_modules/.bin/lodestar"
+      - uses: actions/upload-artifact@v3
+        with:
+          name: lodestar-next-linux-arm64
+          path: lodestar
