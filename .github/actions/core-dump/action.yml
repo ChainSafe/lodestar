@@ -1,0 +1,13 @@
+name: 'Take core dump files'
+description: 'List down and upload core dumps as artifacts'
+runs:
+  using: "composite"
+  steps:
+    - run: ls -l
+      shell: sh
+      
+    - name: Backup core dump 
+      uses: actions/upload-artifact@v2
+      with:
+        name: core-dump
+        path: core.*

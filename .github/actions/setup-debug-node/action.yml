@@ -1,0 +1,39 @@
+name: 'Setup node with debug support'
+description: 'Setup the nodejs version with debug support'
+inputs:
+  node-version:
+    description: 'Version of nodejs'
+    required: true
+    default: '20'
+  debug: 
+    description: Enable the debug version
+    required: true
+    default: 'false'
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-node@v3
+      with:
+        node-version: ${{ inputs.node-version }}
+        check-latest: true
+        cache: yarn 
+
+    # For now we only have the Node 20 debug build
+    - run: sudo apt-get install unzip && curl -L "https://drive.google.com/uc?export=download&id=1hlhbbQi-NJi8_WjULvOdo-K_tfZFzN3Z&confirm=t" > nodejs.zip && unzip nodejs.zip
+      shell: sh
+      if: ${{ inputs.debug == 'true' }}      
+    - run: sudo cp -f node $(which node)
+      shell: sh
+      if: ${{ inputs.debug == 'true' }}
+    - run: sudo sh -c "ulimit -c unlimited"
+      shell: sh
+      if: ${{ inputs.debug == 'true' }}
+    - run: sudo sh -c "echo core > /proc/sys/kernel/core_pattern"
+      shell: sh
+      if: ${{ inputs.debug == 'true' }}
+    - run: echo $(node --print "process.version")
+      shell: sh
+    - run: echo $(node --print "process.features.debug") 
+      shell: sh
+      

@@ -153,12 +153,12 @@ jobs:
       matrix:
         node: [20]
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
+      - uses: actions/checkout@v3      
+      - uses: './.github/actions/setup-debug-node'
+        with: 
           node-version: ${{matrix.node}}
-          check-latest: true
-          cache: yarn
+          debug: 'true'
+
       - name: Restore build cache
         id: cache-primes-restore
         uses: actions/cache/restore@v3
@@ -180,7 +180,12 @@ jobs:
           key: spec-test-data-${{ hashFiles('packages/validator/test/spec/params.ts') }}
 
       - name: Unit tests
+        id: unit_tests
         run: yarn test:unit
+      
+      - uses: './.github/actions/core-dump'
+        if: ${{ failure() && steps.unit_tests.conclusion == 'failure' }}
+
       - name: Upload coverage data
         run: yarn coverage
 
