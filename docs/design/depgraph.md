@@ -99,7 +99,7 @@ Let's talk about how each package fits together in finer detail, from top to bot
 ## `@lodestar/fork-choice`
 
 [@lodestar/fork-choice](https://github.com/ChainSafe/lodestar/tree/unstable/packages/fork-choice) holds the methods for reading/writing the fork choice DAG. The `@lodestar/beacon-node` package is the sole consumer of this package because the beacon node itself is what controls when the fork choice DAG is updated.
-For a good explanation on how the fork choice itself works, see the [annotated fork choice spec](https://github.com/ethereum/annotated-spec/blob/v1.1.10/phase0/fork-choice.md). This is an annotated version of the [Ethereum Consensus fork choice spec](https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md) which `lodestar-fork-choice` is based on.
+For a good explanation on how the fork choice itself works, see the [annotated fork choice spec](https://github.com/ethereum/annotated-spec/blob/master/phase0/fork-choice.md). This is an annotated version of the [Ethereum Consensus fork choice spec](https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md) which `lodestar-fork-choice` is based on.
 
 ## `@lodestar/validator`
 
