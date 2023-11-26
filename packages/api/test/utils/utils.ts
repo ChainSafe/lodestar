@@ -10,7 +10,16 @@ export function getTestServer(): {baseUrl: string; server: FastifyInstance} {
 
   const server = fastify({
     ajv: {customOptions: {coerceTypes: "array"}},
-    querystringParser: (str) => qs.parse(str, {comma: true, parseArrays: false}),
+    querystringParser: (str) =>
+      qs.parse(str, {
+        decoder: (str, defaultDecoder, charset, type) => {
+          if (type === "key") {
+            return defaultDecoder(str, defaultDecoder, charset);
+          } else if (type === "value") {
+            return decodeURIComponent(str).split(",");
+          } else throw new Error(`Unexpected type: ${type}`);
+        },
+      }),
   });
 
   server.addHook("onError", (request, reply, error, done) => {

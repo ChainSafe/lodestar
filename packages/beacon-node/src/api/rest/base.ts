@@ -51,11 +51,13 @@ export class RestApiServer {
       querystringParser: (str) =>
         qs.parse(str, {
           // Array as comma-separated values must be supported to be OpenAPI spec compliant
-          comma: true,
-          // Drop support for array query strings like `id[0]=1&id[1]=2&id[2]=3` as those are not required to
-          // be OpenAPI spec compliant and results are inconsistent, see https://github.com/ljharb/qs/issues/331.
-          // The schema validation will catch this and throw an error as parsed query string results in an object.
-          parseArrays: false,
+          decoder: (str, defaultDecoder, charset, type) => {
+            if (type === "key") {
+              return defaultDecoder(str, defaultDecoder, charset);
+            } else if (type === "value") {
+              return decodeURIComponent(str).split(",");
+            } else throw new Error(`Unexpected type: ${type}`);
+          },
         }),
       bodyLimit: opts.bodyLimit,
       http: {maxHeaderSize: opts.headerLimit},

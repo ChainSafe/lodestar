@@ -18,7 +18,17 @@ export async function startServer(
   const server = fastify({
     logger: false,
     ajv: {customOptions: {coerceTypes: "array"}},
-    querystringParser: (str) => qs.parse(str, {comma: true, parseArrays: false}),
+    querystringParser: (str) =>
+      qs.parse(str, {
+        // Array as comma-separated values must be supported to be OpenAPI spec compliant
+        decoder: (str, defaultDecoder, charset, type) => {
+          if (type === "key") {
+            return defaultDecoder(str, defaultDecoder, charset);
+          } else if (type === "value") {
+            return decodeURIComponent(str).split(",");
+          } else throw new Error(`Unexpected type: ${type}`);
+        },
+      }),
   });
 
   registerRoutes(server, config, api, ["lightclient", "proof", "events"]);
