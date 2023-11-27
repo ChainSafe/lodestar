@@ -297,7 +297,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
 
   "externalSigner.fetch": {
     conflicts: ["externalSigner.pubkeys"],
-    description: "Fetch then list of public keys to validate from an external signer",
+    description: "Fetch the list of public keys to validate from an external signer",
     type: "boolean",
     group: "externalSignerUrl",
   },

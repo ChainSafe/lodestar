@@ -28,6 +28,9 @@ type VoluntaryExitArgs = {
   exitEpoch?: number;
   pubkeys?: string[];
   yes?: boolean;
+  "externalSigner.url"?: string;
+  "externalSigner.pubkeys"?: string[];
+  "externalSigner.fetch"?: boolean;
 };
 
 export const voluntaryExit: CliCommand<VoluntaryExitArgs, IValidatorCliArgs & GlobalArgs> = {
@@ -35,12 +38,19 @@ export const voluntaryExit: CliCommand<VoluntaryExitArgs, IValidatorCliArgs & Gl
 
   describe:
     "Performs a voluntary exit for a given set of validators as identified via `pubkeys`. \
-If no `pubkeys` are provided, it will exit all validators that have been imported.",
+If no `pubkeys` are provided, it will exit all validators that have been imported. \
+Exiting validators on remote signers is also supported.",
 
   examples: [
     {
       command: "validator voluntary-exit --network goerli --pubkeys 0xF00",
       description: "Perform a voluntary exit for the validator who has a public key 0xF00",
+    },
+    {
+      command:
+        "validator voluntary-exit --network goerli --externalSigner.url=http://signer:9000 --externalSigner.pubkeys 0xF00",
+      description:
+        "Perform a voluntary exit for the validator who has a public key 0xF00 and its secret key is on a remote signer",
     },
   ],
 
@@ -66,6 +76,35 @@ If no `pubkeys` are provided, it will exit all validators that have been importe
     yes: {
       description: "Skip confirmation prompt",
       type: "boolean",
+    },
+
+    // Remote signer
+
+    "externalSigner.url": {
+      description: "URL to connect to an external signing server",
+      type: "string",
+      group: "externalSignerUrl",
+    },
+
+    "externalSigner.pubkeys": {
+      description:
+        "List of validator public keys used by an external signer. May also provide a single string a comma separated public keys",
+      type: "array",
+      string: true, // Ensures the pubkey string is not automatically converted to numbers
+      coerce: (pubkeys: string[]): string[] =>
+        // Parse ["0x11,0x22"] to ["0x11", "0x22"]
+        pubkeys
+          .map((item) => item.split(","))
+          .flat(1)
+          .map(ensure0xPrefix),
+      group: "externalSignerUrl",
+    },
+
+    "externalSigner.fetch": {
+      conflicts: ["externalSigner.pubkeys"],
+      description: "Fetch the list of public keys to validate from an external signer",
+      type: "boolean",
+      group: "externalSignerUrl",
     },
   },
 
