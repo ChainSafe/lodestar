@@ -24,7 +24,7 @@
     "build": "tsc -p tsconfig.build.json && yarn write-git-data",
     "build:release": "yarn clean && yarn run build",
     "build:watch": "tsc -p tsconfig.build.json --watch",
-    "build:refdocs": "node --loader ts-node/esm ./docsgen/index.ts docs/cli.md",
+    "build:docs": "node --loader ts-node/esm ./docsgen/index.ts",
     "write-git-data": "node lib/util/gitData/writeGitData.js",
     "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\" lodestar --help",
     "check-types": "tsc",
