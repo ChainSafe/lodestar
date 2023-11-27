@@ -511,13 +511,12 @@ export class BeaconChain implements IBeaconChain {
         : this.config.getBlindedForkTypes(slot).BeaconBlock.hashTreeRoot(block as allForks.BlindedBeaconBlock);
     const blockRootHex = toHex(blockRoot);
 
+    // track the produced block for consensus broadcast validations
     if (blockType === BlockType.Full) {
-      // track the produced block for consensus broadcast validations
       this.logger.debug("Setting executionPayload cache for produced block", {blockRootHex, slot, blockType});
       this.producedBlockRoot.set(blockRootHex, (block as bellatrix.BeaconBlock).body.executionPayload ?? null);
       this.metrics?.blockProductionCaches.producedBlockRoot.set(this.producedBlockRoot.size);
     } else {
-      // track the produced block for consensus broadcast validations
       this.logger.debug("Tracking the produced blinded block", {blockRootHex, slot, blockType});
       this.producedBlindedBlockRoot.add(blockRootHex);
       this.metrics?.blockProductionCaches.producedBlindedBlockRoot.set(this.producedBlindedBlockRoot.size);
