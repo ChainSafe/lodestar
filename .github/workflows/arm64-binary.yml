@@ -24,7 +24,7 @@ jobs:
       - run: |
           yarn global add caxa
           yarn install --frozen-lockfile --force && yarn build
-          npx caxa --input . --output "lodestar" -- "{{caxa}}/node_modules/.bin/node" "{{caxa}}/node_modules/.bin/lodestar"
+          npx caxa --input . --output "lodestar" -- "{{caxa}}/node_modules/.bin/node" "--max-old-space-size=4096" "{{caxa}}/node_modules/.bin/lodestar"
       - uses: actions/upload-artifact@v3
         with:
           name: lodestar-next-linux-arm64
