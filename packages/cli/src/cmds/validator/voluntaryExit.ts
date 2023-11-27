@@ -13,8 +13,6 @@ import {
   externalSignerPostSignature,
   SignableMessageType,
   Signer,
-  SignerLocal,
-  SignerRemote,
   SignerType,
 } from "@lodestar/validator";
 import {Api, ApiError, getClient} from "@lodestar/api";
@@ -146,7 +144,7 @@ ${validatorsToExit.map((v) => `${v.pubkey} ${v.index} ${v.status}`).join("\n")}`
   },
 };
 
-type SignerPubkey = {signer: SignerLocal | SignerRemote; pubkey: string};
+type SignerPubkey = {signer: Signer; pubkey: string};
 
 function selectSignersToExit(args: VoluntaryExitArgs, signers: Signer[]): SignerPubkey[] {
   const signersWithPubkey = signers.map((signer) => ({
