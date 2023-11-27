@@ -30,3 +30,20 @@ export async function profileNodeJS(durationMs: number): Promise<string> {
     });
   });
 }
+
+/**
+ * Write heap snapshot of the current thread to the specified file.
+ */
+export async function writeHeapSnapshot(filepath: string): Promise<void> {
+  // Lazily import NodeJS only modules
+  const fs = await import("node:fs");
+  const v8 = await import("v8");
+  const snapshotStream = v8.getHeapSnapshot();
+  const fileStream = fs.createWriteStream(filepath);
+  await new Promise<void>((resolve) => {
+    snapshotStream.pipe(fileStream);
+    snapshotStream.on("end", () => {
+      resolve();
+    });
+  });
+}

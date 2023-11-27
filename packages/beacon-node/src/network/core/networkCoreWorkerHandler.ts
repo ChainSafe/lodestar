@@ -249,6 +249,12 @@ export class WorkerNetworkCore implements INetworkCore {
   writeDiscv5Profile(durationMs: number, dirpath: string): Promise<string> {
     return this.getApi().writeDiscv5Profile(durationMs, dirpath);
   }
+  writeNetworkHeapSnapshot(dirpath: string): Promise<string> {
+    return this.getApi().writeHeapSnapshot(dirpath);
+  }
+  writeDiscv5HeapSnapshot(dirpath: string): Promise<string> {
+    return this.getApi().writeDiscv5HeapSnapshot(dirpath);
+  }
 
   private getApi(): ModuleThread<NetworkWorkerApi> {
     return this.modules.networkThreadApi;

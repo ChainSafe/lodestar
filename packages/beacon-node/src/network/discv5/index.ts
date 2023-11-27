@@ -107,6 +107,10 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
     return this.workerApi.writeProfile(durationMs, dirpath);
   }
 
+  async writeHeapSnapshot(dirpath: string): Promise<string> {
+    return this.workerApi.writeHeapSnapshot(dirpath);
+  }
+
   private decodeEnrs(objs: ENRData[]): ENR[] {
     const enrs: ENR[] = [];
     for (const obj of objs) {
