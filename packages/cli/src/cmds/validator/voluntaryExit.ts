@@ -127,9 +127,12 @@ Exiting validators on remote signers is also supported.",
     // Select signers to exit
     const signers = await getSignersFromArgs(args, network, {logger: console, signal: new AbortController().signal});
     if (signers.length === 0) {
-      throw new YargsError(`No local keystores found with current args.
+      throw new YargsError(`No validators to exit found with current args.
    Ensure --dataDir and --network match values used when importing keys via validator import
-   or alternatively, import keys by providing --importKeystores arg to voluntary-exit command.`);
+   or alternatively, import keys by providing --importKeystores arg to voluntary-exit command.
+   If attempting to exit validators on a remote signer, make sure values are provided for
+   the necessary --externalSigner options.
+    `);
     }
     const signersToExit = selectSignersToExit(args, signers);
     const validatorsToExit = await resolveValidatorIndexes(client, signersToExit);
