@@ -30,8 +30,7 @@ export const voluntaryExit: CliCommand<VoluntaryExitArgs, IValidatorCliArgs & Gl
 
   describe:
     "Performs a voluntary exit for a given set of validators as identified via `pubkeys`. \
-If no `pubkeys` are provided, it will exit all validators that have been imported. \
-Exiting validators on remote signers is also supported.",
+If no `pubkeys` are provided, it will exit all validators that have been imported.",
 
   examples: [
     {
