@@ -5,10 +5,11 @@ import tmp from "tmp";
 import {retry} from "@lodestar/utils";
 import {ApiError, getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
-import {interopSecretKey} from "@lodestar/state-transition";
+import {interopSecretKey, interopSecretKeys} from "@lodestar/state-transition";
 import {spawnCliCommand, execCliCommand} from "@lodestar/test-utils";
 import {getMochaContext} from "@lodestar/test-utils/mocha";
 import {testFilesDir} from "../utils.js";
+import {getKeystoresStr} from "../utils/keystores.js";
 
 let web3signerUrl: string;
 // using the latest image to be alerted in case there is a breaking change
@@ -42,7 +43,11 @@ describe("voluntaryExit using remote signer", function () {
     const passwordFilename = "password.txt";
     const password = "password";
 
-    const keystoreStrings = getKeystoresToExit();
+    const keystoreStrings = await getKeystoresStr(
+      password,
+      interopSecretKeys(2).map((key) => key.toHex())
+    );
+
     for (const [idx, keystoreString] of keystoreStrings.entries()) {
       fs.writeFileSync(path.join(configDirPathHost, `keystore-${idx}.json`), keystoreString);
     }
@@ -160,12 +165,3 @@ describe("voluntaryExit using remote signer", function () {
     httpClientController.abort();
   });
 });
-
-function getKeystoresToExit(): string[] {
-  return [
-    // eslint-disable-next-line quotes
-    `{"crypto": {"kdf": {"function": "scrypt", "params": {"dklen": 32, "n": 262144, "r": 8, "p": 1, "salt": "f75a7a266418913f3094dc6f1286b1cbacd9f1ff7d05413d5f9b289f79b8b53c"}, "message": ""}, "checksum": {"function": "sha256", "params": {}, "message": "5783b95fa51507968d6093a5ededa85e6c9837f85f4a8529f89f6aaeb107b9b8"}, "cipher": {"function": "aes-128-ctr", "params": {"iv": "74d0c19c6e325410cddba27241378ffc"}, "message": "0308b6e1b8b633539c905e739c605e4faa536481f405f8e65647433ae5cffd19"}}, "description": "", "pubkey": "a99a76ed7796f7be22d5b7e85deeb7c5677e88e511e0b337618f8c4eb61349b4bf2d153f649f7b53359fe8b94a38e44c", "path": "m/12381/3600/0/0/0", "uuid": "7903eb75-80a8-461a-87ab-19e0ca3dfeb0", "version": 4}`,
-    // eslint-disable-next-line quotes
-    `{"crypto": {"kdf": {"function": "scrypt", "params": {"dklen": 32, "n": 262144, "r": 8, "p": 1, "salt": "463e4375b2f09982ad19b53ae83b837d069f85f1c486a4c23b4b604cf4419c54"}, "message": ""}, "checksum": {"function": "sha256", "params": {}, "message": "024caab63a417aa7d8b5863dc5170e73a2a8df77cf9c16ec8b1557f366232617"}, "cipher": {"function": "aes-128-ctr", "params": {"iv": "528e9b03cbec63e8adb238209bef7bcf"}, "message": "fd5f912a4241a02e613e730e527a03840f106c5a37ac994233c5485c61b7cdf4"}}, "description": "", "pubkey": "b89bebc699769726a318c8e9971bd3171297c61aea4a6578a7a4f94b547dcba5bac16a89108b6b6a1fe3695d1a874a0b", "path": "m/12381/3600/0/0/0", "uuid": "f7ce9bcc-aaa1-4023-aec6-1bc03c8af20c", "version": 4}`,
-  ];
-}
