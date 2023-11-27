@@ -17,7 +17,7 @@ import {Interchange, ISlashingProtection, Signer, SignerType, ValidatorStore} fr
 import {IndicesService} from "../../src/services/indices.js";
 import {testLogger} from "../utils/logger.js";
 
-const web3signerVersion = "22.8.1";
+const web3signerVersion = "23.11.0";
 /** Till what version is the image updated for signature verification */
 const validTillSignatureForkSeq = ForkSeq.bellatrix;
 

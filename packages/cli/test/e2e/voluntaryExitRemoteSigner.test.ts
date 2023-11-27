@@ -12,7 +12,7 @@ import {testFilesDir} from "../utils.js";
 
 let web3signerUrl: string;
 // using the latest image to be alerted in case there is a breaking change
-const web3signerVersion = "latest";
+const web3signerVersion = "23.11.0";
 
 describe("voluntaryExit using remote signer", function () {
   const testContext = getMochaContext(this);
