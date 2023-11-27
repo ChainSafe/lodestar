@@ -9,12 +9,7 @@ import {
 import {createBeaconConfig} from "@lodestar/config";
 import {phase0, ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
-import {
-  externalSignerPostSignature,
-  SignableMessageType,
-  Signer,
-  SignerType,
-} from "@lodestar/validator";
+import {externalSignerPostSignature, SignableMessageType, Signer, SignerType} from "@lodestar/validator";
 import {Api, ApiError, getClient} from "@lodestar/api";
 import {CliCommand, ensure0xPrefix, YargsError} from "../../util/index.js";
 import {GlobalArgs} from "../../options/index.js";
@@ -28,9 +23,6 @@ type VoluntaryExitArgs = {
   exitEpoch?: number;
   pubkeys?: string[];
   yes?: boolean;
-  "externalSigner.url"?: string;
-  "externalSigner.pubkeys"?: string[];
-  "externalSigner.fetch"?: boolean;
 };
 
 export const voluntaryExit: CliCommand<VoluntaryExitArgs, IValidatorCliArgs & GlobalArgs> = {
@@ -76,35 +68,6 @@ Exiting validators on remote signers is also supported.",
     yes: {
       description: "Skip confirmation prompt",
       type: "boolean",
-    },
-
-    // Remote signer
-
-    "externalSigner.url": {
-      description: "URL to connect to an external signing server",
-      type: "string",
-      group: "externalSignerUrl",
-    },
-
-    "externalSigner.pubkeys": {
-      description:
-        "List of validator public keys used by an external signer. May also provide a single string a comma separated public keys",
-      type: "array",
-      string: true, // Ensures the pubkey string is not automatically converted to numbers
-      coerce: (pubkeys: string[]): string[] =>
-        // Parse ["0x11,0x22"] to ["0x11", "0x22"]
-        pubkeys
-          .map((item) => item.split(","))
-          .flat(1)
-          .map(ensure0xPrefix),
-      group: "externalSignerUrl",
-    },
-
-    "externalSigner.fetch": {
-      conflicts: ["externalSigner.pubkeys"],
-      description: "Fetch the list of public keys to validate from an external signer",
-      type: "boolean",
-      group: "externalSignerUrl",
     },
   },
 
