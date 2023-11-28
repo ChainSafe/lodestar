@@ -13,7 +13,7 @@ describe("voluntaryExit using remote signer", function () {
 
   let externalSigner: ExternalSignerTests;
 
-  before("set up validator stores", async () => {
+  before("start external signer container", async () => {
     const password = "password";
     externalSigner = await startExternalSigner({
       keystoreStrings: await getKeystoresStr(
