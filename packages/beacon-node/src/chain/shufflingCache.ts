@@ -49,7 +49,7 @@ export type ShufflingCacheOpts = {
  * - skip computing shuffling when loading state bytes from disk
  */
 export class ShufflingCache {
-  /** LRU cache implemented as an array, pruned every time we add an item */
+  /** LRU cache implemented as a map, pruned every time we add an item */
   private readonly itemsByDecisionRootByEpoch: MapDef<Epoch, Map<RootHex, CacheItem>> = new MapDef(
     () => new Map<RootHex, CacheItem>()
   );
@@ -124,8 +124,7 @@ export class ShufflingCache {
    */
   insertPromise(shufflingEpoch: Epoch, decisionRootHex: RootHex): void {
     const promiseCount = Array.from(this.itemsByDecisionRootByEpoch.values())
-      .map((innerMap) => Array.from(innerMap.values()))
-      .flat()
+      .flatMap((innerMap) => Array.from(innerMap.values()))
       .filter((item) => isPromiseCacheItem(item)).length;
     if (promiseCount >= MAX_PROMISES) {
       throw new Error(
