@@ -4,7 +4,7 @@ function splitString(str: string): string[] {
     // sanitize characters that cannot be included
     .replace(/[!@#$%^&*]/g, "-")
     // normalize separators to '-'
-    .replace(/[._/\s\\]/, "-")
+    .replace(/[._/\s\\]/g, "-")
     .split("-");
   return normalized.map((seg) => seg.match(wordPattern) || []).flat();
 }

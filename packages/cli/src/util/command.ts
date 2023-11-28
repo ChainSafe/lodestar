@@ -52,7 +52,7 @@ export function registerCommandToYargs(yargs: Argv, cliCommand: CliCommand<any, 
       }
       if (cliCommand.examples) {
         for (const example of cliCommand.examples) {
-          yargsBuilder.example(`$0 ${example.command}`, example.description);
+          yargsBuilder.example(`$0 ${example.command}`, example.description ?? "");
         }
       }
       return yargs;
