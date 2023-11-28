@@ -14,7 +14,7 @@ import {QueuedStateRegenerator, RegenRequest} from "../../../chain/regen/index.j
 import {GossipType} from "../../../network/index.js";
 import {IBeaconDb} from "../../../db/interface.js";
 import {ApiModules} from "../types.js";
-import {profileNodeJS} from "../../../util/profile.js";
+import {profileNodeJS, writeHeapSnapshot} from "../../../util/profile.js";
 
 export function getLodestarApi({
   chain,
@@ -28,26 +28,26 @@ export function getLodestarApi({
   const defaultProfileMs = SLOTS_PER_EPOCH * config.SECONDS_PER_SLOT * 1000;
 
   return {
-    async writeHeapdump(dirpath = ".") {
+    async writeHeapdump(thread = "main", dirpath = ".") {
       if (writingHeapdump) {
         throw Error("Already writing heapdump");
       }
-      // Lazily import NodeJS only modules
-      const fs = await import("node:fs");
-      const v8 = await import("v8");
-      const snapshotStream = v8.getHeapSnapshot();
-      // It's important that the filename end with `.heapsnapshot`,
-      // otherwise Chrome DevTools won't open it.
-      const filepath = `${dirpath}/${new Date().toISOString()}.heapsnapshot`;
-      const fileStream = fs.createWriteStream(filepath);
+
       try {
         writingHeapdump = true;
-        await new Promise<void>((resolve) => {
-          snapshotStream.pipe(fileStream);
-          snapshotStream.on("end", () => {
-            resolve();
-          });
-        });
+        let filepath: string;
+        switch (thread) {
+          case "network":
+            filepath = await network.writeNetworkHeapSnapshot("network_thread", dirpath);
+            break;
+          case "discv5":
+            filepath = await network.writeDiscv5HeapSnapshot("discv5_thread", dirpath);
+            break;
+          default:
+            // main thread
+            filepath = await writeHeapSnapshot("main_thread", dirpath);
+            break;
+        }
         return {data: {filepath}};
       } finally {
         writingHeapdump = false;

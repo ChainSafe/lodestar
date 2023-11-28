@@ -429,6 +429,14 @@ export class NetworkCore implements INetworkCore {
     return this.peerManager["discovery"]?.discv5.writeProfile(durationMs, dirpath) ?? "no discv5";
   }
 
+  writeNetworkHeapSnapshot(): Promise<string> {
+    throw new Error("Method not implemented, please configure network thread");
+  }
+
+  writeDiscv5HeapSnapshot(prefix: string, dirpath: string): Promise<string> {
+    return this.peerManager["discovery"]?.discv5.writeHeapSnapshot(prefix, dirpath) ?? Promise.resolve("no discv5");
+  }
+
   /**
    * Handle subscriptions through fork transitions, @see FORK_EPOCH_LOOKAHEAD
    */

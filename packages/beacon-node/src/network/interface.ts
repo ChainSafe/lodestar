@@ -60,6 +60,8 @@ export interface INetwork extends INetworkCorePublic {
   dumpGossipQueue(gossipType: GossipType): Promise<PendingGossipsubMessage[]>;
   writeNetworkThreadProfile(durationMs: number, dirpath: string): Promise<string>;
   writeDiscv5Profile(durationMs: number, dirpath: string): Promise<string>;
+  writeNetworkHeapSnapshot(prefix: string, dirpath: string): Promise<string>;
+  writeDiscv5HeapSnapshot(prefix: string, dirpath: string): Promise<string>;
 }
 
 export type LodestarComponents = Pick<
