@@ -51,7 +51,7 @@ markdown_extensions:
           class: mermaid
           format: !!python/name:mermaid2.fence_mermaid
   - pymdownx.emoji:
-      emoji_index: !!python/name:material.extensions.emoji.twemoji 
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
 
 extra_css:
@@ -74,72 +74,78 @@ nav:
   - Home: index.md
   - Introduction: introduction.md
   - Getting Started:
-    - Quick Start: getting-started/quick-start.md
-    - Installation: getting-started/installation.md
-    # - Creating a JWT: getting-started/creating-a-jwt.md
-    - Starting a Node: getting-started/starting-a-node.md
+      - Quick Start: getting-started/quick-start.md
+      - Installation: getting-started/installation.md
+      # - Creating a JWT: getting-started/creating-a-jwt.md
+      - Starting a Node: getting-started/starting-a-node.md
   - Beacon Node:
-    - Configuration: beacon-management/configuration.md
-    - Networking: beacon-management/networking.md
-    - MEV and Builder Integration: beacon-management/mev-and-builder-integration.md
-    - Database: beacon-management/database.md
-    - Syncing: beacon-management/syncing.md
+      - Configuration: beacon-management/beacon-cli.md
+      - Networking: beacon-management/networking.md
+      - MEV and Builder Integration: beacon-management/mev-and-builder-integration.md
+      - Database: beacon-management/database.md
+      - Syncing: beacon-management/syncing.md
   - Validator:
-    - Configuration: validator-management/configuration.md
-    - Key Management: validator-management/key-management.md
-    - Withdrawals: validator-management/withdrawals.md
-    - Multiple and Fall-Back Validation: validator-management/multiple-and-fallback-validation.md
-  - Light Client: light-client.md
-  - Prover: prover.md
+      - Configuration: validator-management/validator-cli.md
+      - Key Management: validator-management/key-management.md
+      - Withdrawals: validator-management/withdrawals.md
+      - Multiple and Fall-Back Validation: validator-management/multiple-and-fallback-validation.md
+  - Bootnode:
+      - Configuration: bootnode/bootnode-cli.md
+  - Light Client and Prover:
+      - Light Client: lightclient-prover/light-client.md
+      - Light Client Configuration: lightclient-prover/lightclient-cli.md
+      - Prover: lightclient-prover/prover.md
+      # - Prover Configuration: lightclient-prover/prover-cli.md
   - Logging and Metrics:
-    - Log Management: logging-and-metrics/log-management.md
-    - Metrics Management: logging-and-metrics/metrics-management.md
-    - Dashboards: logging-and-metrics/dashboards.md
+      - Prometheus and Grafana: logging-and-metrics/prometheus-grafana.md
+      - Client Monitoring: logging-and-metrics/client-monitoring.md
+      - Log Management: logging-and-metrics/log-management.md
+      - Metrics Management: logging-and-metrics/metrics-management.md
+      - Dashboards: logging-and-metrics/dashboards.md
   - Api:
-    - Using the API: api/using-the-api.md
-    - API Reference: api/api-reference.md
+      - Using the API: api/using-the-api.md
+      # - API Reference: api/api-reference.md // Auto-generate from API endpoint
   - Troubleshooting: trouble-shooting.md
     # - Installation Issues: troubleshooting/installation-issues.md
     # - Syncing Issues: troubleshooting/syncing-issues.md
     # - Validation Issues: troubleshooting/validation-issues.md
     # - Execution Layer Issues: troubleshooting/execution-layer-issues.md
   - Supporting Libraries:
-    - libp2p: supporting-libraries/libp2p.md
-    - "@chainsafe/ssz": supporting-libraries/ssz.md
-    - "@chainsafe/blst": supporting-libraries/blst.md
-    - "@chainsafe/libp2p-gossipsub": supporting-libraries/gossipsub.md
+      - libp2p: supporting-libraries/libp2p.md
+      - "@chainsafe/ssz": supporting-libraries/ssz.md
+      - "@chainsafe/blst": supporting-libraries/blst.md
+      - "@chainsafe/libp2p-gossipsub": supporting-libraries/gossipsub.md
   - Contributing:
-    - Getting Started: contribution/getting-started.md
-    - Bug Reports: contribution/bug-reports.md
-    - Repo: contribution/repo.md
-    - Testing:
-      - Overview: contribution/testing/overview.md
-      - Unit Tests: contribution/testing/unit-tests.md
-      - Spec Tests: contribution/testing/spec-tests.md
-      - Performance Tests: contribution/testing/performance-tests.md
-      - E2E Tests: contribution/testing/e2e-tests.md
-      - Simulation Tests: contribution/testing/simulation-tests.md
-    - PR Submission: contribution/pr-submission.md
+      - Getting Started: contribution/getting-started.md
+      - Bug Reports: contribution/bug-reports.md
+      - Repo: contribution/repo.md
+      - Testing:
+          - Overview: contribution/testing/index.md
+          - Unit Tests: contribution/testing/unit-tests.md
+          - Spec Tests: contribution/testing/spec-tests.md
+          - Performance Tests: contribution/testing/performance-tests.md
+          - E2E Tests: contribution/testing/e2e-tests.md
+          - Simulation Tests: contribution/testing/simulation-tests.md
+      - PR Submission: contribution/pr-submission.md
   - Tools:
-    - Debugging: tools/debugging.md
-    - perf: tools/perf.md
-    - Flame Graphs: tools/flame-graphs.md
-    - Core Dumps: tools/core-dumps.md
+      - Debugging: tools/debugging.md
+      - perf: tools/perf.md
+      - Flame Graphs: tools/flamegraphs.md
+      - Core Dumps: tools/core-dumps.md
   - Advanced Topics:
-    - Migrating from Other Clients: advanced-topics/migrating-from-other-clients.md
-    - Block Exploration: getting-started/block-exploration.md
-    - Slashing Protection: advanced-topics/slashing-protection.md
-    - Setting Up a Testnet: advanced-topics/setting-up-a-testnet.md
-    - Doppelganger Detection: advanced-topics/doppelganger-detection.md
-    - Weak Subjectivity: advanced-topics/weak-subjectivity.md
-
+      - Migrating from Other Clients: advanced-topics/migrating-from-other-clients.md
+      - Block Exploration: advanced-topics/block-exploration.md
+      - Slashing Protection: advanced-topics/slashing-protection.md
+      - Setting Up a Testnet: advanced-topics/setting-up-a-testnet.md
+      - Doppelganger Detection: advanced-topics/doppelganger-detection.md
+      - Weak Subjectivity: advanced-topics/weak-subjectivity.md
 
   # - Using Lodestar:
   #     - Beacon management: usage/beacon-management.md
   #     - Local testnet: usage/local.md
   #     - Validator management: usage/validator-management.md
   #     - Prometheus & Grafana Setup: usage/prometheus-grafana.md
-  #     - MEV Builder Integration: usage/mev-integration.md 
+  #     - MEV Builder Integration: usage/mev-integration.md
   #     - Client monitoring: usage/client-monitoring.md
   # - Reference:
   #     - Command line: reference/cli.md
