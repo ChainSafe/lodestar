@@ -1,99 +1,192 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {ssz, allForks, bellatrix, Slot, Root, BLSPubkey} from "@lodestar/types";
-import {ForkName, isForkExecution, isForkBlobs} from "@lodestar/params";
+import {ForkName, isForkExecution, isForkBlobs, ForkSeq} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
 
+import {AnyGetEndpoint, AnyPostEndpoint, Endpoint, ResponseCodec, RouteDefinitions, Schema} from "../utils/index.js";
 import {
-  ReturnTypes,
-  RoutesData,
-  Schema,
-  ReqSerializers,
-  reqOnlyBody,
-  reqEmpty,
-  ReqEmpty,
   ArrayOf,
+  EmptyArgs,
+  EmptyGetRequestCodec,
+  EmptyMeta,
+  EmptyRequest,
+  EmptyResponseCodec,
+  EmptyResponseData,
+  VersionCodec,
+  VersionMeta,
   WithVersion,
-} from "../utils/index.js";
-// See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
-import {getReqSerializers as getBeaconReqSerializers} from "../beacon/routes/beacon/block.js";
-import {HttpStatusCode} from "../utils/client/httpStatusCode.js";
-import {ApiClientResponse} from "../interfaces.js";
+} from "../utils/codecs.js";
+import {WireFormat} from "../utils/headers.js";
+import {
+  PreBlobSignedBlindedBeaconBlock,
+  SignedBlindedBlockContents,
+  SignedBlindedBlockContentsType,
+} from "../beacon/routes/beacon/block.js";
 
-export type Api = {
-  status(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.SERVICE_UNAVAILABLE>>;
-  registerValidator(
-    registrations: bellatrix.SignedValidatorRegistrationV1[]
-  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.BAD_REQUEST>>;
-  getHeader(
-    slot: Slot,
-    parentHash: Root,
-    proposerPubKey: BLSPubkey
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: allForks.SignedBuilderBid; version: ForkName}},
-      HttpStatusCode.NOT_FOUND | HttpStatusCode.BAD_REQUEST
-    >
+// See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
+
+const RegistrationsType = ArrayOf(ssz.bellatrix.SignedValidatorRegistrationV1);
+
+export type Endpoints = {
+  status: Endpoint<
+    //
+    "GET",
+    EmptyArgs,
+    EmptyRequest,
+    EmptyResponseData,
+    EmptyMeta
   >;
-  submitBlindedBlock(signedBlock: allForks.SignedBlindedBeaconBlockOrContents): Promise<
-    ApiClientResponse<
-      {
-        [HttpStatusCode.OK]: {
-          data: allForks.ExecutionPayload | allForks.ExecutionPayloadAndBlobsBundle;
-          version: ForkName;
-        };
-      },
-      HttpStatusCode.SERVICE_UNAVAILABLE
-    >
+
+  registerValidator: Endpoint<
+    "POST",
+    {registrations: bellatrix.SignedValidatorRegistrationV1[]},
+    {body: unknown},
+    EmptyResponseData,
+    EmptyMeta
+  >;
+
+  getHeader: Endpoint<
+    "GET",
+    {
+      slot: Slot;
+      parentHash: Root;
+      proposerPubkey: BLSPubkey;
+    },
+    {params: {slot: Slot; parent_hash: string; pubkey: string}},
+    allForks.SignedBuilderBid,
+    VersionMeta
+  >;
+
+  submitBlindedBlock: Endpoint<
+    "POST",
+    {signedBlindedBlock: PreBlobSignedBlindedBeaconBlock} | SignedBlindedBlockContents,
+    {body: unknown; headers: {"Eth-Consensus-Version": ForkName}},
+    allForks.ExecutionPayload | allForks.ExecutionPayloadAndBlobsBundle,
+    VersionMeta
   >;
 };
 
 /**
  * Define javascript values for each route
  */
-export const routesData: RoutesData<Api> = {
-  status: {url: "/eth/v1/builder/status", method: "GET"},
-  registerValidator: {url: "/eth/v1/builder/validators", method: "POST"},
-  getHeader: {url: "/eth/v1/builder/header/{slot}/{parent_hash}/{pubkey}", method: "GET"},
-  submitBlindedBlock: {url: "/eth/v1/builder/blinded_blocks", method: "POST"},
-};
-
-/* eslint-disable @typescript-eslint/naming-convention */
-export type ReqTypes = {
-  status: ReqEmpty;
-  registerValidator: {body: unknown};
-  getHeader: {params: {slot: Slot; parent_hash: string; pubkey: string}};
-  submitBlindedBlock: {body: unknown};
-};
-
-export function getReqSerializers(config: ChainForkConfig): ReqSerializers<Api, ReqTypes> {
+export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoints> {
   return {
-    status: reqEmpty,
-    registerValidator: reqOnlyBody(ArrayOf(ssz.bellatrix.SignedValidatorRegistrationV1), Schema.ObjectArray),
+    status: {
+      url: "/eth/v1/builder/status",
+      method: "GET",
+      req: EmptyGetRequestCodec,
+      resp: EmptyResponseCodec as ResponseCodec<AnyGetEndpoint>,
+    },
+    registerValidator: {
+      url: "/eth/v1/builder/validators",
+      method: "POST",
+      req: {
+        writeReqJson: ({registrations}) => ({body: RegistrationsType.toJson(registrations)}),
+        parseReqJson: ({body}) => ({registrations: RegistrationsType.fromJson(body)}),
+        writeReqSsz: () => {
+          throw new Error("Not implemented");
+        },
+        parseReqSsz: () => {
+          throw new Error("Not implemented");
+        },
+        schema: {body: Schema.ObjectArray},
+        onlySupport: WireFormat.json,
+      },
+      resp: EmptyResponseCodec as ResponseCodec<AnyPostEndpoint>,
+    },
     getHeader: {
-      writeReq: (slot, parentHash, proposerPubKey) => ({
-        params: {slot, parent_hash: toHexString(parentHash), pubkey: toHexString(proposerPubKey)},
-      }),
-      parseReq: ({params}) => [params.slot, fromHexString(params.parent_hash), fromHexString(params.pubkey)],
-      schema: {
-        params: {slot: Schema.UintRequired, parent_hash: Schema.StringRequired, pubkey: Schema.StringRequired},
+      url: "/eth/v1/builder/header/{slot}/{parent_hash}/{pubkey}",
+      method: "GET",
+      req: {
+        writeReq: ({slot, parentHash, proposerPubkey: proposerPubKey}) => ({
+          params: {slot, parent_hash: toHexString(parentHash), pubkey: toHexString(proposerPubKey)},
+        }),
+        parseReq: ({params}) => ({
+          slot: params.slot,
+          parentHash: fromHexString(params.parent_hash),
+          proposerPubkey: fromHexString(params.pubkey),
+        }),
+        schema: {
+          params: {slot: Schema.UintRequired, parent_hash: Schema.StringRequired, pubkey: Schema.StringRequired},
+        },
+      },
+      resp: {
+        data: WithVersion((fork: ForkName) =>
+          isForkExecution(fork) ? ssz.allForksExecution[fork].SignedBuilderBid : ssz.bellatrix.SignedBuilderBid
+        ),
+        meta: VersionCodec,
       },
     },
-    submitBlindedBlock: getBeaconReqSerializers(config)["publishBlindedBlock"],
-  };
-}
-
-export function getReturnTypes(): ReturnTypes<Api> {
-  return {
-    getHeader: WithVersion((fork: ForkName) =>
-      isForkExecution(fork) ? ssz.allForksExecution[fork].SignedBuilderBid : ssz.bellatrix.SignedBuilderBid
-    ),
-    submitBlindedBlock: WithVersion<allForks.ExecutionPayload | allForks.ExecutionPayloadAndBlobsBundle>(
-      (fork: ForkName) =>
-        isForkBlobs(fork)
-          ? ssz.allForksBlobs[fork].ExecutionPayloadAndBlobsBundle
-          : isForkExecution(fork)
-          ? ssz.allForksExecution[fork].ExecutionPayload
-          : ssz.bellatrix.ExecutionPayload
-    ),
+    submitBlindedBlock: {
+      url: "/eth/v1/builder/blinded_blocks",
+      method: "POST",
+      req: {
+        writeReqJson: (args) => {
+          const slot = args.signedBlindedBlock.message.slot;
+          return {
+            body:
+              config.getForkSeq(slot) < ForkSeq.deneb
+                ? config.getBlindedForkTypes(slot).SignedBeaconBlock.toJson(args.signedBlindedBlock)
+                : SignedBlindedBlockContentsType.toJson({
+                    signedBlindedBlock: args.signedBlindedBlock,
+                    signedBlindedBlobSidecars: (args as SignedBlindedBlockContents).signedBlindedBlobSidecars,
+                  }),
+            headers: {
+              "Eth-Consensus-Version": config.getForkName(slot),
+            },
+          };
+        },
+        parseReqJson: ({body, headers}) => {
+          const forkName = headers["Eth-Consensus-Version"]; // TODO validation
+          const forkSeq = config.forks[forkName].seq;
+          if (forkSeq < ForkSeq.capella) throw new Error("TODO"); // TODO
+          return forkSeq < ForkSeq.deneb
+            ? {
+                signedBlindedBlock: ssz[forkName as "capella"].SignedBlindedBeaconBlock.fromJson(body),
+              }
+            : SignedBlindedBlockContentsType.fromJson(body);
+        },
+        writeReqSsz: (args) => {
+          const slot = args.signedBlindedBlock.message.slot;
+          return {
+            body:
+              config.getForkSeq(slot) < ForkSeq.deneb
+                ? config.getBlindedForkTypes(slot).SignedBeaconBlock.serialize(args.signedBlindedBlock)
+                : SignedBlindedBlockContentsType.serialize({
+                    signedBlindedBlock: args.signedBlindedBlock,
+                    signedBlindedBlobSidecars: (args as SignedBlindedBlockContents).signedBlindedBlobSidecars,
+                  }),
+            headers: {
+              "Eth-Consensus-Version": config.getForkName(slot),
+            },
+          };
+        },
+        parseReqSsz: ({body, headers}) => {
+          const forkName = headers["Eth-Consensus-Version"]; // TODO validation
+          const forkSeq = config.forks[forkName].seq;
+          if (forkSeq < ForkSeq.capella) throw new Error("TODO"); // TODO
+          return forkSeq < ForkSeq.deneb
+            ? {
+                signedBlindedBlock: ssz[forkName as "capella"].SignedBlindedBeaconBlock.deserialize(body),
+              }
+            : SignedBlindedBlockContentsType.deserialize(body);
+        },
+        schema: {
+          body: Schema.Object,
+        },
+      },
+      resp: {
+        data: WithVersion<allForks.ExecutionPayload | allForks.ExecutionPayloadAndBlobsBundle, {version: ForkName}>(
+          (fork: ForkName) =>
+            isForkBlobs(fork)
+              ? ssz.allForksBlobs[fork].ExecutionPayloadAndBlobsBundle
+              : isForkExecution(fork)
+              ? ssz.allForksExecution[fork].ExecutionPayload
+              : ssz.bellatrix.ExecutionPayload
+        ),
+        meta: VersionCodec,
+      },
+    },
   };
 }

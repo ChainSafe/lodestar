@@ -86,6 +86,8 @@ export type PostRequestCodec<E extends Endpoint> = {
   writeReqSsz: (p: E["args"]) => SszPostRequestData<E["request"]>;
   parseReqSsz: (r: SszPostRequestData<E["request"]>) => E["args"];
   schema: SchemaDefinition<E["request"]>;
+  /** Support ssz-only or json-only requests */
+  onlySupport?: WireFormat;
 };
 
 /**
