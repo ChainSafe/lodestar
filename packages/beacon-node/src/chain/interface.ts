@@ -1,5 +1,17 @@
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
-import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex, deneb, Wei} from "@lodestar/types";
+import {
+  allForks,
+  UintNum64,
+  Root,
+  phase0,
+  Slot,
+  RootHex,
+  Epoch,
+  ValidatorIndex,
+  deneb,
+  Wei,
+  Gwei,
+} from "@lodestar/types";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
@@ -174,6 +186,8 @@ export interface IBeaconChain {
 
   regenCanAcceptWork(): boolean;
   blsThreadPoolCanAcceptWork(): boolean;
+
+  getBlockRewards(blockRef: RootHex | Slot | allForks.FullOrBlindedBeaconBlock): Promise<Gwei>;
 }
 
 export type SSZObjectType =

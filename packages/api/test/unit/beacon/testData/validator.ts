@@ -54,6 +54,7 @@ export const testData: GenericServerTestCases<Api> = {
       data: ssz.altair.BeaconBlock.defaultValue(),
       version: ForkName.altair,
       executionPayloadValue: ssz.Wei.defaultValue(),
+      consensusBlockValue: ssz.Gwei.defaultValue(),
     },
   },
   produceBlockV3: {
@@ -68,6 +69,7 @@ export const testData: GenericServerTestCases<Api> = {
       data: ssz.altair.BeaconBlock.defaultValue(),
       version: ForkName.altair,
       executionPayloadValue: ssz.Wei.defaultValue(),
+      consensusBlockValue: ssz.Gwei.defaultValue(),
       executionPayloadBlinded: false,
     },
   },
@@ -77,6 +79,7 @@ export const testData: GenericServerTestCases<Api> = {
       data: ssz.bellatrix.BlindedBeaconBlock.defaultValue(),
       version: ForkName.bellatrix,
       executionPayloadValue: ssz.Wei.defaultValue(),
+      consensusBlockValue: ssz.Gwei.defaultValue(),
     },
   },
   produceAttestationData: {

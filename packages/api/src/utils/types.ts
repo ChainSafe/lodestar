@@ -197,6 +197,25 @@ export function WithExecutionPayloadValue<T extends {data: unknown}>(
   };
 }
 
+/**
+ * SSZ factory helper to wrap an existing type with `{consensusBlockValue: Wei}`
+ */
+export function WithConsensusBlockValue<T extends {data: unknown}>(
+  type: TypeJson<T>
+): TypeJson<T & {consensusBlockValue: bigint}> {
+  return {
+    toJson: ({consensusBlockValue, ...data}) => ({
+      ...(type.toJson(data as unknown as T) as Record<string, unknown>),
+      consensus_block_value: consensusBlockValue.toString(),
+    }),
+    fromJson: ({consensus_block_value, ...data}: T & {consensus_block_value: string}) => ({
+      ...type.fromJson(data),
+      // For cross client usage where beacon or validator are of separate clients, executionPayloadValue could be missing
+      consensusBlockValue: BigInt(consensus_block_value ?? "0"),
+    }),
+  };
+}
+
 type JsonCase = "snake" | "constant" | "camel" | "param" | "header" | "pascal" | "dot" | "notransform";
 
 /** Helper to only translate casing */

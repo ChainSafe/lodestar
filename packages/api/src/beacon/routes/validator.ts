@@ -18,6 +18,7 @@ import {
   StringType,
   SubcommitteeIndex,
   Wei,
+  Gwei,
 } from "@lodestar/types";
 import {ApiClientResponse} from "../../interfaces.js";
 import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
@@ -34,6 +35,7 @@ import {
   ContainerDataExecutionOptimistic,
   ContainerData,
   TypeJson,
+  WithConsensusBlockValue,
 } from "../../utils/index.js";
 import {fromU64Str, fromGraffitiHex, toU64Str, U64Str, toGraffitiHex} from "../../utils/serdes.js";
 import {allForksBlockContentsResSerializer, allForksBlindedBlockContentsResSerializer} from "../../utils/routes.js";
@@ -54,11 +56,11 @@ export type ExtraProduceBlockOps = {
   strictFeeRecipientCheck?: boolean;
 };
 
-export type ProduceBlockOrContentsRes = {executionPayloadValue: Wei} & (
+export type ProduceBlockOrContentsRes = {executionPayloadValue: Wei; consensusBlockValue: Gwei} & (
   | {data: allForks.BeaconBlock; version: ForkPreBlobs}
   | {data: allForks.BlockContents; version: ForkBlobs}
 );
-export type ProduceBlindedBlockOrContentsRes = {executionPayloadValue: Wei} & (
+export type ProduceBlindedBlockOrContentsRes = {executionPayloadValue: Wei; consensusBlockValue: Gwei} & (
   | {data: allForks.BlindedBeaconBlock; version: ForkPreBlobs}
   | {data: allForks.BlindedBlockContents; version: ForkBlobs}
 );
@@ -715,16 +717,20 @@ export function getReturnTypes(): ReturnTypes<Api> {
     {jsonCase: "eth2"}
   );
 
-  const produceBlockOrContents = WithExecutionPayloadValue(
-    WithVersion<allForks.BeaconBlockOrContents>((fork: ForkName) =>
-      isForkBlobs(fork) ? allForksBlockContentsResSerializer(fork) : ssz[fork].BeaconBlock
+  const produceBlockOrContents = WithConsensusBlockValue(
+    WithExecutionPayloadValue(
+      WithVersion<allForks.BeaconBlockOrContents>((fork: ForkName) =>
+        isForkBlobs(fork) ? allForksBlockContentsResSerializer(fork) : ssz[fork].BeaconBlock
+      )
     )
   ) as TypeJson<ProduceBlockOrContentsRes>;
-  const produceBlindedBlockOrContents = WithExecutionPayloadValue(
-    WithVersion<allForks.BlindedBeaconBlockOrContents>((fork: ForkName) =>
-      isForkBlobs(fork)
-        ? allForksBlindedBlockContentsResSerializer(fork)
-        : ssz.allForksBlinded[isForkExecution(fork) ? fork : ForkName.bellatrix].BeaconBlock
+  const produceBlindedBlockOrContents = WithConsensusBlockValue(
+    WithExecutionPayloadValue(
+      WithVersion<allForks.BlindedBeaconBlockOrContents>((fork: ForkName) =>
+        isForkBlobs(fork)
+          ? allForksBlindedBlockContentsResSerializer(fork)
+          : ssz.allForksBlinded[isForkExecution(fork) ? fork : ForkName.bellatrix].BeaconBlock
+      )
     )
   ) as TypeJson<ProduceBlindedBlockOrContentsRes>;
 
