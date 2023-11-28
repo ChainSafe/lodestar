@@ -1,4 +1,3 @@
-import type {cmds} from "../src/cmds/index.js";
 import {CliOptionDefinition, CliCommand, CliExample, CliCommandOptions} from "../src/util/index.js";
 import {toKebab} from "./changeCase.js";
 
@@ -59,7 +58,7 @@ function renderCommandExample(example: CliExample, lodestarCommand?: string): st
  * ```
  * -------------------
  */
-function renderExamples(examples: CliExample[], sectionTitle?: string, lodestarCommand?: string): string {
+function renderExamplesSection(examples: CliExample[], sectionTitle?: string, lodestarCommand?: string): string {
   const exampleSection = [sectionTitle];
   for (const example of examples) {
     exampleSection.push(renderCommandExample(example, lodestarCommand));
@@ -95,9 +94,9 @@ function renderOption(optionName: string, option: CliOptionDefinition): string |
   }
 
   if (option.type === "array") {
-    commandOption.push("type: string[]");
+    commandOption.push("type: `string[]`");
   } else if (option.type) {
-    commandOption.push(`type: ${option.type}`);
+    commandOption.push(`type: \`${option.type}\``);
   }
 
   if (option.choices) {
@@ -109,7 +108,14 @@ function renderOption(optionName: string, option: CliOptionDefinition): string |
     if (option.type === "string" || option.string) {
       defaultValue = `"${defaultValue}"`;
     }
-    commandOption.push(`default: ${defaultValue}`);
+    if (option.type === "array") {
+      // eslint-disable-next-line quotes
+      if (!defaultValue.includes(`"`)) {
+        defaultValue = `"${defaultValue}"`;
+      }
+      defaultValue = `[ ${defaultValue} ]`;
+    }
+    commandOption.push(`default: \`${defaultValue}\``);
   }
 
   if (option.example) {
@@ -131,17 +137,14 @@ function renderOptions(options: CliCommandOptions<Record<never, never>>, title: 
   return optionsSection.filter(Boolean).join(DEFAULT_SEPARATOR);
 }
 
-function getSubCommands(cmd: (typeof cmds)[number]): CliCommand<unknown, unknown, unknown>[] {
-  const subCommands = [];
-  if (cmd.subcommands) {
-    for (const sub of cmd.subcommands) {
-      subCommands.push(sub, ...getSubCommands(sub));
-    }
-  }
-  return subCommands;
+interface SubCommandDefinition {
+  command: string;
+  description?: string;
+  options?: CliCommandOptions<Record<never, never>>;
+  examples?: CliExample[];
 }
 
-function renderSubCommandsList(command: string, subCommands: CliCommand<unknown, unknown, unknown>[]): string {
+function renderSubCommandsList(command: string, subCommands: SubCommandDefinition[]): string {
   const list = [
     `## Available Sub-Commands
 
@@ -152,7 +155,7 @@ The following sub-commands are available with the \`${command}\` command:`,
     list.push(`- [${sub.command}](#${toKebab(sub.command)})`);
   }
 
-  return list.join("\n");
+  return list.join(DEFAULT_SEPARATOR);
 }
 
 /**
@@ -177,28 +180,22 @@ The following sub-commands are available with the \`${command}\` command:`,
  * ./lodestar validator slashing-protection import --network goerli --file interchange.json
  * ```
  */
-function renderSingleSubCommand(
-  command: string,
-  description?: string,
-  options?: CliCommandOptions<Record<never, never>>,
-  examples?: CliExample[],
-  lodestarCommand?: string
-): string {
-  const subCommand = [`## \`${command}\``];
+function renderSubCommand(sub: SubCommandDefinition, lodestarCommand?: string): string {
+  const subCommand = [`## \`${sub.command}\``];
 
-  if (description) {
-    subCommand.push(description);
+  if (sub.description) {
+    subCommand.push(sub.description);
   }
 
-  if (examples) {
-    subCommand.push(renderExamples(examples, `### \`${command}\` Examples`, lodestarCommand));
+  if (sub.examples) {
+    subCommand.push(renderExamplesSection(sub.examples, `### \`${sub.command}\` Examples`, lodestarCommand));
   }
 
-  if (options) {
+  if (sub.options) {
     subCommand.push(
       renderOptions(
-        options,
-        `### \`${command}\` Options`,
+        sub.options,
+        `### \`${sub.command}\` Options`,
         "_Supports all parent command options plus the following:_\n\n<br>"
       )
     );
@@ -207,19 +204,15 @@ function renderSingleSubCommand(
   return subCommand.join(DEFAULT_SEPARATOR);
 }
 
-function renderSubCommand(
-  rootCommand: string,
-  sub: CliCommand<unknown, unknown, unknown>,
-  lodestarCommand?: string
-): string {
-  const subCommand = [];
+function getSubCommands(rootCommand: string, sub: CliCommand<unknown, unknown, unknown>): SubCommandDefinition[] {
+  const subCommands = [] as SubCommandDefinition[];
 
   if (sub.command.includes("<command>")) {
     // If subcommand is a nested subcommand recursively render each of its subcommands by
     // merging its props with its nested children but do not render the subcommand itself
     for (const subSub of sub.subcommands ?? []) {
-      subCommand.push(
-        renderSubCommand(rootCommand, {
+      subCommands.push(
+        ...getSubCommands(rootCommand, {
           ...subSub,
           command: sub.command.replace("<command>", subSub.command),
           options: {
@@ -232,35 +225,38 @@ function renderSubCommand(
     }
   } else {
     // If subcommand is not nested build actual markdown
-    subCommand.push(
-      renderSingleSubCommand(`${rootCommand} ${sub.command}`, sub.describe, sub.options, sub.examples, lodestarCommand)
-    );
+    subCommands.push({
+      command: `${rootCommand} ${sub.command}`,
+      description: sub.describe,
+      options: sub.options,
+      examples: sub.examples,
+    });
 
     // render any sub-subcommands
     if (sub.subcommands) {
       for (const subSub of sub.subcommands) {
-        subCommand.push(renderSubCommand(`${rootCommand} ${sub.command}`, subSub));
+        subCommands.push(...getSubCommands(`${rootCommand} ${sub.command}`, subSub));
       }
     }
   }
 
-  return subCommand.join(DEFAULT_SEPARATOR);
+  return subCommands;
 }
 
 export function renderCommandPage(
-  cmd: (typeof cmds)[number],
+  cmd: CliCommand<unknown, unknown, unknown>,
   globalOptions: CliCommandOptions<Record<never, never>>,
   lodestarCommand?: string
 ): string {
   const page = [`# \`${cmd.command}\` CLI Command`, cmd.describe];
 
-  const subCommands = getSubCommands(cmd);
+  const subCommands = (cmd.subcommands ?? []).map((sub) => getSubCommands(cmd.command, sub)).flat();
   if (subCommands.length > 0) {
     page.push(renderSubCommandsList(cmd.command, subCommands));
   }
 
   if (cmd.examples) {
-    page.push(renderExamples(cmd.examples, "## Examples", lodestarCommand));
+    page.push(renderExamplesSection(cmd.examples, "## Examples", lodestarCommand));
   }
 
   if (cmd.options) {
@@ -269,27 +265,9 @@ export function renderCommandPage(
 
   if (subCommands.length > 0) {
     for (const sub of subCommands) {
-      page.push(renderSubCommand(cmd.command, sub, lodestarCommand));
+      page.push(renderSubCommand(sub, lodestarCommand));
     }
   }
 
   return page.join(LINE_BREAK.concat(DEFAULT_SEPARATOR));
 }
-
-// /**
-//  * Render an array of objects as a markdown table
-//  */
-// export function toMarkdownTable<T extends {[key: string]: string}>(rows: T[], headers: (keyof T)[]): string {
-//   return [
-//     toMarkdownTableRow(headers as string[]),
-//     toMarkdownTableRow(headers.map(() => "---")),
-//     ...rows.map((row) => toMarkdownTableRow(headers.map((key) => row[key]))),
-//   ].join("\n");
-// }
-
-// /**
-//  * Render an array of items as a markdown table row
-//  */
-// export function toMarkdownTableRow(row: string[]): string {
-//   return `| ${row.join(" | ")} |`;
-// }
