@@ -107,10 +107,8 @@ const module: Discv5WorkerApi = {
     fs.writeFileSync(filePath, profile);
     return filePath;
   },
-  writeHeapSnapshot: async (dirpath: string) => {
-    const filePath = path.join(dirpath, `discv5_thread_${new Date().toISOString()}.heapsnapshot`);
-    await writeHeapSnapshot(filePath);
-    return filePath;
+  writeHeapSnapshot: async (prefix: string, dirpath: string) => {
+    return writeHeapSnapshot(prefix, dirpath);
   },
   async close() {
     closeMetrics?.();

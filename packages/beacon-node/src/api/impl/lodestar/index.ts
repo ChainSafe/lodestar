@@ -38,15 +38,14 @@ export function getLodestarApi({
         let filepath: string;
         switch (thread) {
           case "network":
-            filepath = await network.writeNetworkHeapSnapshot(dirpath);
+            filepath = await network.writeNetworkHeapSnapshot("network_thread", dirpath);
             break;
           case "discv5":
-            filepath = await network.writeDiscv5HeapSnapshot(dirpath);
+            filepath = await network.writeDiscv5HeapSnapshot("discv5_thread", dirpath);
             break;
           default:
             // main thread
-            filepath = `${dirpath}/main_thread_${new Date().toISOString()}.heapsnapshot`;
-            await writeHeapSnapshot(filepath);
+            filepath = await writeHeapSnapshot("main_thread", dirpath);
             break;
         }
         return {data: {filepath}};

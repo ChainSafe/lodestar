@@ -162,13 +162,11 @@ const libp2pWorkerApi: NetworkWorkerApi = {
   writeDiscv5Profile: async (durationMs: number, dirpath: string) => {
     return core.writeDiscv5Profile(durationMs, dirpath);
   },
-  writeHeapSnapshot: async (dirpath: string) => {
-    const filePath = `${dirpath}/network_thread_${new Date().toISOString()}.heapsnapshot`;
-    await writeHeapSnapshot(filePath);
-    return filePath;
+  writeHeapSnapshot: async (prefix: string, dirpath: string) => {
+    return writeHeapSnapshot(prefix, dirpath);
   },
-  writeDiscv5HeapSnapshot: async (dirpath: string) => {
-    return core.writeDiscv5HeapSnapshot(dirpath);
+  writeDiscv5HeapSnapshot: async (prefix: string, dirpath: string) => {
+    return core.writeDiscv5HeapSnapshot(prefix, dirpath);
   },
 };
 
