@@ -22,6 +22,7 @@
     "check-build": "lerna run check-build",
     "check-readme": "lerna run check-readme",
     "check-types": "lerna run check-types",
+    "check-spelling": "pyspelling -c .pyspelling.yml -v",
     "coverage": "lerna run coverage",
     "test": "lerna run test --concurrency 1",
     "test:unit": "lerna run test:unit --concurrency 1",
