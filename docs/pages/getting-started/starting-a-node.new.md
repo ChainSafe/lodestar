@@ -18,4 +18,4 @@
 
 ### Ingress/Egress
 
-### Failover
+### Fail-Over

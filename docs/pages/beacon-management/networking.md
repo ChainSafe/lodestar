@@ -28,7 +28,7 @@ Some of the important Lodestar flags related to networking are:
 
 ## Peer Discovery (Discv5)
 
-In Ethereum, discv5 plays a pivotal role in the peer discovery process, facilitating nodes to find and locate each other in order to form the peer-to-peer network​. The process begins with an interaction between new nodes and bootnodes at start-up. Bootnodes are nodes with hardcoded addresses, or are provided via the cli flag `--bootnodes`, to bootstrap the discovery process​. Through a method called PING-PONG, a new node establishes a bond with each bootnode, and it returns a list of peers for the new node to connect to. Following this trail, the new node engages through PING-PONG with the provided peers to further establish a web of connections​.
+In Ethereum, discv5 plays a pivotal role in the peer discovery process, facilitating nodes to find and locate each other in order to form the peer-to-peer network​. The process begins with an interaction between new nodes and bootnodes at start-up. Bootnodes are nodes with hard-coded addresses, or are provided via the cli flag `--bootnodes`, to bootstrap the discovery process​. Through a method called PING-PONG, a new node establishes a bond with each bootnode, and it returns a list of peers for the new node to connect to. Following this trail, the new node engages through PING-PONG with the provided peers to further establish a web of connections​.
 
 Discv5 operates as an advertisement medium in this network, where nodes can act as both providers and consumers of data. Every participating node in the Discv5 protocol can accept topic ads from other nodes and later relay them, making the discovery process dynamic and efficient​.
 
@@ -40,7 +40,7 @@ Ethereum Node Records (ENRs) are a standardized format utilized for network addr
 
 The primary objective behind ENRs is to aid nodes in discovering each other through the node discovery. This protocol relays vital identity information, including public keys (on the secp256k1 curve), IP addresses, and two port numbers for establishing connections and interactions between nodes on the network. Note that bootnodes are announced via ENR.
 
-## Peer Communication (gossibsub and ReqResp)
+## Peer Communication (gossipsub and ReqResp)
 
 Gossipsub and ReqResp are sort of two sides of the same coin. Gossipsub is used to propagate messages throughout the network and ReqResp is used by peers on the network to directly communicate the specific of that information as it crisscrosses the web of connections.
 
@@ -54,7 +54,7 @@ Messages are propagated through a blend of eager-push and lazy-pull models. Spec
 
 ### ReqResp
 
-ReqResp is a protocol that speak specifically to the messages that are gossipped between peers. It is a domain that entails a collection of method protocols that enable nodes to engage in bilateral communications. This domain operates over a single libp2p Protocol ID, with each specific method having its own versioning. The methods within this domain are invoked with a request message and the peer on the other end of the wire responds with an appropriately formed response message.
+ReqResp is a protocol that speak specifically to the messages that are gossiped between peers. It is a domain that entails a collection of method protocols that enable nodes to engage in bilateral communications. This domain operates over a single libp2p Protocol ID, with each specific method having its own versioning. The methods within this domain are invoked with a request message and the peer on the other end of the wire responds with an appropriately formed response message.
 
 Within the ReqResp domain, every method defines a specific request and response message type, alongside a protocol ID. The protocol IDs are crucial as they enable nodes to decode and encode messages appropriately. More importantly, ReqResp's design facilitates robust error handling, ensuring that the network remains resilient and effectively propagating essential information among beacon nodes.
 
