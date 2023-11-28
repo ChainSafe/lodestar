@@ -24,7 +24,7 @@ Some of the important Lodestar flags related to networking are:
 - [`--enr.tcp6`](./configuration.md#--enr.tcp6)
 - [`--enr.udp6`](./configuration.md#--enr.udp6)
 - [`--nat`](./configuration.md#--nat)
-- [``--private``](./configuration.md#`--private`)
+- [`--private`](./configuration.md#`--private`)
 
 ## Peer Discovery (Discv5)
 
@@ -81,13 +81,12 @@ Ports that should be fully (inbound/outbound) protected:
 - 9596/TCP - Lodestar Beacon-Node JSON RPC api calls
 - 5062/TCP - Lodestar validator key manager api calls
 - 18550/TCP - Lodestar MEV Boost/Builder port
-- ****** - Metrics
-- ****** - Metrics
-- ****** - Metrics
+- **\*\*** - Metrics
+- **\*\*** - Metrics
+- **\*\*** - Metrics
 - 8545/TCP - Execution client JSON RPC port for api calls
 - 8551/TCP - Execution engine port for Lodestar to communicate with the execution client
 
 ## NAT Traversal
 
 Lodestar does not support UPnP. If you are behind a NAT you will need to manually forward the ports listed above.
-

@@ -2,7 +2,7 @@
 
 Syncing an Ethereum node involves obtaining a copy of the blockchain data from other peers in the network to reach a consistent state. This process is crucial for new nodes or nodes that have been offline and need to catch up with the network's current state. Syncing can be performed for both the execution layer and the beacon chain, although the focus here will be primarily on the beacon chain.
 
-Lodestar allows for several methods of syncing however the recommended method is `checkpoint sync` as it is the fastest and least resource intensive. It is generally a good idea to sync via a [`--checkpointSyncUrl`](./configuration.md#--checkpointSyncUrl).  If starting at a specific point is necessary specify the [`--checkpointState`](./configuration.md#--checkpointState) that should be where the sync begins.
+Lodestar allows for several methods of syncing however the recommended method is `checkpoint sync` as it is the fastest and least resource intensive. It is generally a good idea to sync via a [`--checkpointSyncUrl`](./configuration.md#--checkpointSyncUrl). If starting at a specific point is necessary specify the [`--checkpointState`](./configuration.md#--checkpointState) that should be where the sync begins.
 
 ## Weak Subjectivity
 
@@ -30,7 +30,7 @@ Snapshot sync is a method where nodes download a compressed snapshot of the curr
 
 ## Syncing Lodestar
 
-The implementation of the different syncing styles in Lodestar are actually one of two types under the hood, range sync and unknown sync.  Range sync is used when the start point of syncing is known.  In the case of historical and checkpoint sync the starting points are well defined, genesis and the last finalized epoch boundary.  Snapshot sync is not supported by Lodestar. If the starting point for sync is not known Lodestar must first determine where the starting point is.  While the discussion about how that happens is out of scope for this document, the gist is that the beacon node will listen to gossipsub for blocks being broadcast on the network.  It will also request [`MetaData`](https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/p2p-interface.md#getmetadata) from its peers and use that to start requesting the correct blocks from the network.
+The implementation of the different syncing styles in Lodestar are actually one of two types under the hood, range sync and unknown sync. Range sync is used when the start point of syncing is known. In the case of historical and checkpoint sync the starting points are well defined, genesis and the last finalized epoch boundary. Snapshot sync is not supported by Lodestar. If the starting point for sync is not known Lodestar must first determine where the starting point is. While the discussion about how that happens is out of scope for this document, the gist is that the beacon node will listen to gossipsub for blocks being broadcast on the network. It will also request [`MetaData`](https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/p2p-interface.md#getmetadata) from its peers and use that to start requesting the correct blocks from the network.
 
 There are several flags that can be used to configure the sync process.
 

@@ -1,6 +1,6 @@
 # Testing
 
-Testing is critical to the Lodestar project and there are many types of tests that are run to build a product that is both effective AND efficient.  This page will help to break down the different types of tests you will find in the Lodestar repo.
+Testing is critical to the Lodestar project and there are many types of tests that are run to build a product that is both effective AND efficient. This page will help to break down the different types of tests you will find in the Lodestar repo.
 
 ### Unit Tests
 
@@ -16,7 +16,7 @@ Node.js is an unforgiving virtual machine when it comes to high performance, mul
 
 ### End-To-End Tests
 
-E2E test are where Lodestar is run in its full form, often from the CLI as a user would to check that the system as a whole works as expected.  These tests are meant to exercise the entire system in isolation and there is no network interaction, nor interaction with any other code outside of Lodestar.  See the [End-To-End Testing](./end-to-end-tests.md) page for more information.
+E2E test are where Lodestar is run in its full form, often from the CLI as a user would to check that the system as a whole works as expected. These tests are meant to exercise the entire system in isolation and there is no network interaction, nor interaction with any other code outside of Lodestar. See the [End-To-End Testing](./end-to-end-tests.md) page for more information.
 
 ### Integration Tests
 
@@ -24,4 +24,4 @@ Integration tests are meant to test how Lodestar interacts with other clients, b
 
 ### Simulation Tests
 
-These are the most comprehensive types of tests. They aim to test Lodestar in a fully functioning testnet environment.  See the [Simulation Testing](./simulation-tests.md) page for more information.
+These are the most comprehensive types of tests. They aim to test Lodestar in a fully functioning testnet environment. See the [Simulation Testing](./simulation-tests.md) page for more information.
