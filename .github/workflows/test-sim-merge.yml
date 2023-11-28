@@ -77,18 +77,21 @@ jobs:
           ENGINE_PORT: 8551
           ETH_PORT: 8545
 
-      - name: Pull mergemock
-        run: docker pull $MERGEMOCK_IMAGE
+      # This container is pre-shanghai and does not support enginer_getPayloadBodyV2
+      # for blinding/unblinding. Re-enable when we have a newer build.
+      # 
+      # - name: Pull mergemock
+      #   run: docker pull $MERGEMOCK_IMAGE
 
-      - name: Test Lodestar <> mergemock relay
-        run: yarn test:sim:mergemock
-        working-directory: packages/beacon-node
-        env:
-          EL_BINARY_DIR: ${{ env.MERGEMOCK_IMAGE }}
-          EL_SCRIPT_DIR: mergemock
-          LODESTAR_PRESET: mainnet
-          ENGINE_PORT: 8551
-          ETH_PORT: 8661
+      # - name: Test Lodestar <> mergemock relay
+      #   run: yarn test:sim:mergemock
+      #   working-directory: packages/beacon-node
+      #   env:
+      #     EL_BINARY_DIR: ${{ env.MERGEMOCK_IMAGE }}
+      #     EL_SCRIPT_DIR: mergemock
+      #     LODESTAR_PRESET: mainnet
+      #     ENGINE_PORT: 8551
+      #     ETH_PORT: 8661
 
       - name: Upload debug log test files
         if: ${{ always() }}

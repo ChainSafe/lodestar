@@ -11,8 +11,10 @@ import {getEstimatedTimeInSecForRun, getEstimatedTTD, logFilesDir} from "../util
 import {connectAllNodes, connectNewNode, waitForNodeSync, waitForSlot} from "../utils/simulation/utils/network.js";
 
 const genesisDelaySeconds = 20 * SIM_TESTS_SECONDS_PER_SLOT;
-const altairForkEpoch = 2;
-const bellatrixForkEpoch = 4;
+const altairForkEpoch = 1;
+const bellatrixForkEpoch = 2;
+const capellaForkEpoch = 3;
+const denebForkEpoch = 4;
 // Make sure bellatrix started before TTD reach
 const additionalSlotsForTTD = activePreset.SLOTS_PER_EPOCH - 2;
 const runTillEpoch = 6;
@@ -37,11 +39,13 @@ const ttd = getEstimatedTTD({
 
 const env = await SimulationEnvironment.initWithDefaults(
   {
-    id: "multi-fork",
-    logsDir: path.join(logFilesDir, "multi-fork"),
+    id: "deneb",
+    logsDir: path.join(logFilesDir, "deneb"),
     chainConfig: {
       ALTAIR_FORK_EPOCH: altairForkEpoch,
       BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
+      CAPELLA_FORK_EPOCH: capellaForkEpoch,
+      DENEB_FORK_EPOCH: denebForkEpoch,
       GENESIS_DELAY: genesisDelaySeconds,
       TERMINAL_TOTAL_DIFFICULTY: ttd,
     },

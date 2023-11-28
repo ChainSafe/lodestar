@@ -24,7 +24,7 @@ export async function* onBeaconBlocksByRange(
     // Chain of blobs won't change
     for await (const {key, value} of finalized.binaryEntriesStream({gte: startSlot, lt: endSlot})) {
       yield {
-        data: value,
+        data: await chain.blindedOrFullBlockToFullBytes(value),
         fork: chain.config.getForkName(finalized.decodeKey(key)),
       };
     }
@@ -55,7 +55,7 @@ export async function* onBeaconBlocksByRange(
         }
 
         yield {
-          data: blockBytes,
+          data: await chain.blindedOrFullBlockToFullBytes(blockBytes),
           fork: chain.config.getForkName(block.slot),
         };
       }

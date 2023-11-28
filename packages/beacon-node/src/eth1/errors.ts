@@ -23,6 +23,8 @@ export enum Eth1ErrorCode {
   NON_CONSECUTIVE_LOGS = "ETH1_ERROR_NON_CONSECUTIVE_LOGS",
   /** Expected a deposit log in the db for the index, missing log implies a corrupted db */
   MISSING_DEPOSIT_LOG = "ETH1_ERROR_MISSING_DEPOSIT_LOG",
+  /** Expected transactions or withdrawals for un-blinding block from db before serving */
+  INVALID_PAYLOAD_BODY = "ETH1_ERROR_INVALID_PAYLOAD_BODY",
 }
 
 export type Eth1ErrorType =
@@ -35,6 +37,7 @@ export type Eth1ErrorType =
   | {code: Eth1ErrorCode.NOT_ENOUGH_DEPOSIT_ROOTS; index: number; treeLength: number}
   | {code: Eth1ErrorCode.DUPLICATE_DISTINCT_LOG; newIndex: number; lastLogIndex: number}
   | {code: Eth1ErrorCode.NON_CONSECUTIVE_LOGS; newIndex: number; lastLogIndex: number}
-  | {code: Eth1ErrorCode.MISSING_DEPOSIT_LOG; newIndex: number; lastLogIndex: number};
+  | {code: Eth1ErrorCode.MISSING_DEPOSIT_LOG; newIndex: number; lastLogIndex: number}
+  | {code: Eth1ErrorCode.INVALID_PAYLOAD_BODY; blockHash: string};
 
 export class Eth1Error extends LodestarError<Eth1ErrorType> {}

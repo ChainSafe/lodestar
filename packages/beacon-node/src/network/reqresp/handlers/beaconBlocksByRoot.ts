@@ -39,7 +39,7 @@ export async function* onBeaconBlocksByRoot(
       }
 
       yield {
-        data: blockBytes,
+        data: await chain.blindedOrFullBlockToFullBytes(blockBytes),
         fork: chain.config.getForkName(slot),
       };
     }

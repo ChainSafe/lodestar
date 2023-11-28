@@ -29,8 +29,9 @@ import {
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {Logger, isErrorAborted, pruneSetToMax, sleep, toHex} from "@lodestar/utils";
-import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkSeq, SLOTS_PER_EPOCH, GENESIS_SLOT} from "@lodestar/params";
 
+import {toHexString} from "@lodestar/utils";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {Metrics} from "../metrics/index.js";
@@ -39,6 +40,13 @@ import {IExecutionEngine, IExecutionBuilder} from "../execution/index.js";
 import {Clock, ClockEvent, IClock} from "../util/clock.js";
 import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
+import {
+  blindedOrFullBlockToFull,
+  deserializeFullOrBlindedSignedBeaconBlock,
+  serializeFullOrBlindedSignedBeaconBlock,
+} from "../util/fullOrBlindedBlock.js";
+import {ExecutionPayloadBody} from "../execution/engine/types.js";
+import {Eth1Error, Eth1ErrorCode} from "../eth1/errors.js";
 import {CheckpointStateCache, StateContextCache} from "./stateCache/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {ChainEventEmitter, ChainEvent} from "./emitter.js";
@@ -431,7 +439,7 @@ export class BeaconChain implements IBeaconChain {
       if (block) {
         const data = await this.db.block.get(fromHexString(block.blockRoot));
         if (data) {
-          return {block: data, executionOptimistic: isOptimisticBlock(block)};
+          return {block: await this.blindedOrFullBlockToFull(data), executionOptimistic: isOptimisticBlock(block)};
         }
       }
       // A non-finalized slot expected to be found in the hot db, could be archived during
@@ -440,7 +448,7 @@ export class BeaconChain implements IBeaconChain {
     }
 
     const data = await this.db.blockArchive.get(slot);
-    return data && {block: data, executionOptimistic: false};
+    return data && {block: await this.blindedOrFullBlockToFull(data), executionOptimistic: false};
   }
 
   async getBlockByRoot(
@@ -450,7 +458,7 @@ export class BeaconChain implements IBeaconChain {
     if (block) {
       const data = await this.db.block.get(fromHexString(root));
       if (data) {
-        return {block: data, executionOptimistic: isOptimisticBlock(block)};
+        return {block: await this.blindedOrFullBlockToFull(data), executionOptimistic: isOptimisticBlock(block)};
       }
       // If block is not found in hot db, try cold db since there could be an archive cycle happening
       // TODO: Add a lock to the archiver to have determinstic behaviour on where are blocks
@@ -458,6 +466,24 @@ export class BeaconChain implements IBeaconChain {
 
     const data = await this.db.blockArchive.getByRoot(fromHexString(root));
     return data && {block: data, executionOptimistic: false};
+  }
+
+  async blindedOrFullBlockToFull(block: allForks.FullOrBlindedSignedBeaconBlock): Promise<allForks.SignedBeaconBlock> {
+    if (block.message.slot === GENESIS_SLOT) return block;
+    const info = this.config.getForkInfo(block.message.slot);
+    return blindedOrFullBlockToFull(
+      this.config,
+      info.seq,
+      block,
+      await this.getTransactionsAndWithdrawals(info.seq, toHexString(block.message.body.eth1Data.blockHash))
+    );
+  }
+
+  async blindedOrFullBlockToFullBytes(block: Uint8Array): Promise<Uint8Array> {
+    return serializeFullOrBlindedSignedBeaconBlock(
+      this.config,
+      await this.blindedOrFullBlockToFull(deserializeFullOrBlindedSignedBeaconBlock(this.config, block))
+    );
   }
 
   produceBlock(blockAttributes: BlockAttributes): Promise<{block: allForks.BeaconBlock; executionPayloadValue: Wei}> {
@@ -638,6 +664,23 @@ export class BeaconChain implements IBeaconChain {
     if (this.opts.persistInvalidSszObjects) {
       void this.persistInvalidSszObject(view.type.typeName, view.serialize(), view.hashTreeRoot(), suffix);
     }
+  }
+
+  private async getTransactionsAndWithdrawals(
+    forkSeq: ForkSeq,
+    blockHash: string
+  ): Promise<Partial<ExecutionPayloadBody>> {
+    if (forkSeq < ForkSeq.bellatrix) {
+      return {};
+    }
+    const [payload] = await this.executionEngine.getPayloadBodiesByHash([blockHash]);
+    if (!payload) {
+      throw new Eth1Error(
+        {code: Eth1ErrorCode.INVALID_PAYLOAD_BODY, blockHash},
+        "payload body not found by eth1 engine"
+      );
+    }
+    return payload;
   }
 
   /**

@@ -1,7 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {allForks} from "@lodestar/types";
 import {bytesToInt} from "@lodestar/utils";
-import {getSlotFromSignedBeaconBlockSerialized} from "./sszBytes.js";
 
 /**
  * Slot	uint64
@@ -19,18 +18,6 @@ const SLOT_BYTE_COUNT = 8;
  * ```
  */
 const SLOT_BYTES_POSITION_IN_STATE = 40;
-
-export function getSignedBlockTypeFromBytes(
-  config: ChainForkConfig,
-  bytes: Buffer | Uint8Array
-): allForks.AllForksSSZTypes["SignedBeaconBlock"] {
-  const slot = getSlotFromSignedBeaconBlockSerialized(bytes);
-  if (slot === null) {
-    throw Error("getSignedBlockTypeFromBytes: invalid bytes");
-  }
-
-  return config.getForkTypes(slot).SignedBeaconBlock;
-}
 
 export function getStateTypeFromBytes(
   config: ChainForkConfig,

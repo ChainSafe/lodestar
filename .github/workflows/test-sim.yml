@@ -61,9 +61,11 @@ jobs:
         run: yarn test:sim:endpoints
         working-directory: packages/cli
 
-      - name: Sim tests deneb
-        run: yarn test:sim:deneb
-        working-directory: packages/cli
+
+      # This test is not working correctly and does not ever reach Deneb
+      # - name: Sim tests deneb
+      #   run: yarn test:sim:deneb
+      #   working-directory: packages/cli
 
       - name: Sim tests backup eth provider
         run: yarn test:sim:backup_eth_provider
