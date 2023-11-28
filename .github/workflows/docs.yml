@@ -45,15 +45,17 @@ jobs:
         uses: actions/setup-python@v1
         
       - name: Install dependencies
+        working-directory: docs
         run: |
           python -m pip install --upgrade pip
-          pip install -r docs/requirements.txt
+          pip install -r requirements.txt
 
       - name: Build docs
-        run: mkdocs build --site-dir site -v --clean
+        working-directory: docs
+        run: mkdocs build --verbose --clean --site-dir site
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./site
+          publish_dir: ./docs/site

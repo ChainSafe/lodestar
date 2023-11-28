@@ -11,7 +11,7 @@
     "clean": "rm -rf ./packages/*/lib ./packages/*/*.tsbuildinfo",
     "clean:nm": "rm -rf ./packages/*/node_modules ./node_modules",
     "build": "lerna run build",
-    "build:docs": "lerna run build:refdocs && ./scripts/prepare-docs.sh",
+    "build:docs": "lerna run build:docs && ./scripts/prepare-docs.sh",
     "build:watch": "lerna exec --parallel -- 'yarn run build:watch'",
     "build:ifchanged": "lerna exec -- ../../scripts/build_if_changed.sh",
     "lint": "eslint --color --ext .ts packages/*/src packages/*/test",
