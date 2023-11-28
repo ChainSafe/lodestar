@@ -42,6 +42,8 @@ packages/**/docs
 packages/**/typedocs
 docs/pages/**/*-cli.md
 docs/pages/assets
+docs/pages/lightclient-prover/lightclient.md
+docs/pages/lightclient-prover/prover.md
 docs/pages/api/api-reference.md
 docs/pages/contribution/getting-started.md
 docs/site
