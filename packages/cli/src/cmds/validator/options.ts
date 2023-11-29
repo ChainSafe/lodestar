@@ -271,8 +271,6 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     type: "boolean",
   },
 
-  // HIDDEN INTEROP OPTIONS
-
   // Remote signer
 
   "externalSigner.url": {
@@ -283,7 +281,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
 
   "externalSigner.pubkeys": {
     description:
-      "List of validator public keys used by an external signer. May also provide a single string a comma separated public keys",
+      "List of validator public keys used by an external signer. May also provide a single string of comma-separated public keys",
     type: "array",
     string: true, // Ensures the pubkey string is not automatically converted to numbers
     coerce: (pubkeys: string[]): string[] =>
@@ -297,7 +295,8 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
 
   "externalSigner.fetch": {
     conflicts: ["externalSigner.pubkeys"],
-    description: "Fetch then list of public keys to validate from an external signer",
+    description:
+      "Fetch the list of public keys to validate from an external signer. Cannot be used in combination with `--externalSigner.pubkeys`",
     type: "boolean",
     group: "externalSignerUrl",
   },
