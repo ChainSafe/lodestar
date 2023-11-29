@@ -1,5 +1,20 @@
 import {Libp2p as ILibp2p} from "libp2p";
-import {Components} from "libp2p/components";
+import {
+  Libp2pEvents,
+  ComponentLogger,
+  NodeInfo,
+  ConnectionProtector,
+  ConnectionGater,
+  ContentRouting,
+  TypedEventTarget,
+  Metrics,
+  PeerId,
+  PeerRouting,
+  PeerStore,
+  Upgrader,
+} from "@libp2p/interface";
+import type {AddressManager, ConnectionManager, Registrar, TransportManager} from "@libp2p/interface-internal";
+import type {Datastore} from "interface-datastore";
 import {Slot, SlotRootHex, allForks, altair, capella, deneb, phase0} from "@lodestar/types";
 import {PeerIdStr} from "../util/peerId.js";
 import {INetworkEventBus} from "./events.js";
@@ -64,21 +79,23 @@ export interface INetwork extends INetworkCorePublic {
   writeDiscv5HeapSnapshot(prefix: string, dirpath: string): Promise<string>;
 }
 
-export type LodestarComponents = Pick<
-  Components,
-  | "peerId"
-  | "events"
-  | "addressManager"
-  | "peerStore"
-  | "upgrader"
-  | "registrar"
-  | "connectionManager"
-  | "transportManager"
-  | "connectionGater"
-  | "contentRouting"
-  | "peerRouting"
-  | "datastore"
-  | "connectionProtector"
-  | "metrics"
->;
+export type LodestarComponents = {
+  peerId: PeerId;
+  nodeInfo: NodeInfo;
+  logger: ComponentLogger;
+  events: TypedEventTarget<Libp2pEvents>;
+  addressManager: AddressManager;
+  peerStore: PeerStore;
+  upgrader: Upgrader;
+  registrar: Registrar;
+  connectionManager: ConnectionManager;
+  transportManager: TransportManager;
+  connectionGater: ConnectionGater;
+  contentRouting: ContentRouting;
+  peerRouting: PeerRouting;
+  datastore: Datastore;
+  connectionProtector?: ConnectionProtector;
+  metrics?: Metrics;
+};
+
 export type Libp2p = ILibp2p<{components: LodestarComponents}>;

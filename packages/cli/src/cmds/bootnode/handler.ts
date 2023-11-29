@@ -1,6 +1,7 @@
 import path from "node:path";
 import {Multiaddr, multiaddr} from "@multiformats/multiaddr";
-import {Discv5, ENR} from "@chainsafe/discv5";
+import {Discv5} from "@chainsafe/discv5";
+import {ENR} from "@chainsafe/enr";
 import {ErrorAborted} from "@lodestar/utils";
 import {HttpMetricsServer, RegistryMetricCreator, getHttpMetricsServer} from "@lodestar/beacon-node";
 
