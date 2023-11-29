@@ -1,8 +1,13 @@
+import SegfaultHandler from "segfault-handler";
 import {describe, it, expect} from "vitest";
 import {isValidAddress} from "../../../src/util/address.js";
 
+SegfaultHandler.registerHandler();
+
 describe("Eth address helper", () => {
   it("should be valid address", () => {
+    SegfaultHandler.causeSegfault();
+
     expect(isValidAddress("0x0000000000000000000000000000000000000000")).toBe(true);
     expect(isValidAddress("0x1C2D4a6b0e85e802952968d2DFBA985f2F5f339d")).toBe(true);
   });
