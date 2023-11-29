@@ -12,6 +12,7 @@ import {
   MAX_VOLUNTARY_EXITS,
   MAX_BLS_TO_EXECUTION_CHANGES,
   BLS_WITHDRAWAL_PREFIX,
+  MAX_ATTESTER_SLASHINGS,
 } from "@lodestar/params";
 import {Epoch, phase0, capella, ssz, ValidatorIndex} from "@lodestar/types";
 import {IBeaconDb} from "../../db/index.js";
@@ -204,6 +205,9 @@ export class OpPool {
         }
         if (isSlashableAtEpoch(validator, stateEpoch)) {
           slashableIndices.add(index);
+        }
+        if (attesterSlashings.length >= MAX_ATTESTER_SLASHINGS) {
+          break attesterSlashing;
         }
       }
 
