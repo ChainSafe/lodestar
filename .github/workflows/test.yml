@@ -146,7 +146,7 @@ jobs:
 
   unit-tests:
     name: Unit Tests
-    needs: type-checks
+    needs: build
     runs-on: buildjet-4vcpu-ubuntu-2204
     strategy:
       fail-fast: false
@@ -154,10 +154,13 @@ jobs:
         node: [20]
     steps:
       - uses: actions/checkout@v3      
+      - uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node }}
+          check-latest: true
+          cache: yarn 
+
       - uses: './.github/actions/setup-debug-node'
-        with: 
-          node-version: ${{matrix.node}}
-          debug: 'true'
 
       - name: Restore build cache
         id: cache-primes-restore
@@ -181,7 +184,7 @@ jobs:
 
       - name: Unit tests
         id: unit_tests
-        run: yarn test:unit
+        run: sudo sh -c "ulimit -c unlimited && /usr/bin/node-with-debug $(which yarn) test:unit"
       
       - uses: './.github/actions/core-dump'
         if: ${{ failure() && steps.unit_tests.conclusion == 'failure' }}
