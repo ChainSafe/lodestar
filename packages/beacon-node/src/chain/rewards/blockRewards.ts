@@ -54,14 +54,14 @@ export async function computeBlockRewards(
 }
 
 /**
- * Calculate rewards received by block proposer for incuding attestations.
+ * TODO: Calculate rewards received by block proposer for incuding attestations.
  */
 function computeBlockAttestationRewardPhase0(block: phase0.BeaconBlock, state: CachedBeaconStatePhase0): Gwei {
-  return 0n; // TODO
+  throw new Error("Unsupported fork! Block attestation reward calculation is not yet available in phase0");
 }
 
 /**
- * Calculate rewards received by block proposer for incuding attestations. Mimics `processAttestationsAltair()`
+ * Calculate rewards received by block proposer for incuding attestations since Altair. Mimics `processAttestationsAltair()`
  */
 function computeBlockAttestationRewardAltair(block: altair.BeaconBlock, state: CachedBeaconStateAltair): Gwei {
   const {epochCtx} = state;
