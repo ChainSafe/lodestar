@@ -541,7 +541,7 @@ export function getValidatorApi({
 
     const builderPayloadValue = blindedBlock?.executionPayloadValue ?? BigInt(0);
     const enginePayloadValue = fullBlock?.executionPayloadValue ?? BigInt(0);
-    const consensusBlockValue = blindedBlock?.consensusBlockValue || fullBlock?.consensusBlockValue || BigInt(0);
+    const consensusBlockValue = blindedBlock?.consensusBlockValue ?? fullBlock?.consensusBlockValue ?? BigInt(0);
 
     let selectedSource: ProducedBlockSource | null = null;
 

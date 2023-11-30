@@ -1,6 +1,11 @@
-import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStatePhase0, getAttesterSlashableIndices} from "@lodestar/state-transition";
-import {getAttestationParticipationStatus} from "@lodestar/state-transition/src/block/processAttestationsAltair";
-import {RootCache} from "@lodestar/state-transition/src/util/rootCache";
+import {
+  CachedBeaconStateAllForks,
+  CachedBeaconStateAltair,
+  CachedBeaconStatePhase0,
+  RootCache,
+  getAttesterSlashableIndices,
+} from "@lodestar/state-transition";
+import {getAttestationParticipationStatus} from "@lodestar/state-transition";
 import {Gwei, allForks, altair, phase0} from "@lodestar/types";
 import {
   PROPOSER_WEIGHT,
@@ -56,7 +61,7 @@ export async function computeBlockRewards(
 /**
  * TODO: Calculate rewards received by block proposer for incuding attestations.
  */
-function computeBlockAttestationRewardPhase0(block: phase0.BeaconBlock, state: CachedBeaconStatePhase0): Gwei {
+function computeBlockAttestationRewardPhase0(_block: phase0.BeaconBlock, _state: CachedBeaconStatePhase0): Gwei {
   throw new Error("Unsupported fork! Block attestation reward calculation is not yet available in phase0");
 }
 
@@ -130,7 +135,7 @@ function computeSyncAggregateReward(block: altair.BeaconBlock, state: CachedBeac
 }
 /**
  * Calculate rewards received by block proposer for include proposer slashings.
- * All proposer slashing rewards go to block proposer and none to whistleblower as of Deneb 
+ * All proposer slashing rewards go to block proposer and none to whistleblower as of Deneb
  */
 function computeBlockProposerSlashingReward(block: allForks.BeaconBlock, state: CachedBeaconStateAllForks): Gwei {
   let proposerSlashingReward = 0n;
@@ -139,7 +144,8 @@ function computeBlockProposerSlashingReward(block: allForks.BeaconBlock, state: 
     const offendingProposerIndex = proposerSlashing.signedHeader1.message.proposerIndex;
     const offendingProposerBalance = state.validators.get(offendingProposerIndex).effectiveBalance;
 
-    proposerSlashingReward = proposerSlashingReward + BigInt(Math.floor(offendingProposerBalance / WHISTLEBLOWER_REWARD_QUOTIENT ));
+    proposerSlashingReward =
+      proposerSlashingReward + BigInt(Math.floor(offendingProposerBalance / WHISTLEBLOWER_REWARD_QUOTIENT));
   }
 
   return proposerSlashingReward;
@@ -147,7 +153,7 @@ function computeBlockProposerSlashingReward(block: allForks.BeaconBlock, state: 
 
 /**
  * Calculate rewards received by block proposer for include attester slashings.
- * All attester slashing rewards go to block proposer and none to whistleblower as of Deneb 
+ * All attester slashing rewards go to block proposer and none to whistleblower as of Deneb
  */
 function computeBlockAttesterSlashingReward(block: allForks.BeaconBlock, state: CachedBeaconStateAllForks): Gwei {
   let attesterSlashingReward = 0n;
@@ -155,7 +161,8 @@ function computeBlockAttesterSlashingReward(block: allForks.BeaconBlock, state: 
   for (const attesterSlashing of block.body.attesterSlashings) {
     for (const offendingAttesterIndex of getAttesterSlashableIndices(attesterSlashing)) {
       const offendingAttesterBalance = state.validators.get(offendingAttesterIndex).effectiveBalance;
-      attesterSlashingReward = attesterSlashingReward + BigInt(Math.floor(offendingAttesterBalance / WHISTLEBLOWER_REWARD_QUOTIENT ));
+      attesterSlashingReward =
+        attesterSlashingReward + BigInt(Math.floor(offendingAttesterBalance / WHISTLEBLOWER_REWARD_QUOTIENT));
     }
   }
 

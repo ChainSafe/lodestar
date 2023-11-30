@@ -81,6 +81,7 @@ vi.mock("../../src/chain/index.js", async (requireActual) => {
       shufflingCache: new ShufflingCache(),
       produceBlock: vi.fn(),
       produceBlindedBlock: vi.fn(),
+      getBlockRewards: vi.fn(),
       getCanonicalBlockAtSlot: vi.fn(),
       recomputeForkChoiceHead: vi.fn(),
       getHeadStateAtCurrentEpoch: vi.fn(),
