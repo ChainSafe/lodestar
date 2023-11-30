@@ -800,7 +800,6 @@ export class BeaconChain implements IBeaconChain {
     this.seenAttestationDatas.onSlot(slot);
     this.reprocessController.onSlot(slot);
 
-    this.logger.debug("Pruning produced block caches for slot", {slot});
     // Prune old cached block production artifacts, those are only useful on their slot
     pruneSetToMax(this.producedBlockRoot, this.opts.maxCachedProducedRoots ?? DEFAULT_MAX_CACHED_PRODUCED_ROOTS);
     this.metrics?.blockProductionCaches.producedBlockRoot.set(this.producedBlockRoot.size);
