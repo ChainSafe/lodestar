@@ -197,12 +197,12 @@ export class OpPool {
       const slashableIndices = new Set<ValidatorIndex>();
       for (let i = 0; i < attesterSlashing.intersectingIndices.length; i++) {
         const index = attesterSlashing.intersectingIndices[i];
-        const validator = state.validators.getReadonly(index);
-
         // If we already have a slashing for this index, we can continue on to the next slashing
         if (toBeSlashedIndices.has(index)) {
           continue attesterSlashing;
         }
+
+        const validator = state.validators.getReadonly(index);
         if (isSlashableAtEpoch(validator, stateEpoch)) {
           slashableIndices.add(index);
         }
