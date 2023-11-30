@@ -3,9 +3,14 @@ import {retry} from "@lodestar/utils";
 import {ApiError, getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {interopSecretKey, interopSecretKeys} from "@lodestar/state-transition";
-import {spawnCliCommand, execCliCommand, startExternalSigner, ExternalSignerTests} from "@lodestar/test-utils";
+import {
+  spawnCliCommand,
+  execCliCommand,
+  startExternalSigner,
+  ExternalSignerTests,
+  getKeystoresStr,
+} from "@lodestar/test-utils";
 import {getMochaContext} from "@lodestar/test-utils/mocha";
-import {getKeystoresStr} from "@lodestar/test-utils";
 import {testFilesDir} from "../utils.js";
 
 describe("voluntaryExit using remote signer", function () {
@@ -58,9 +63,7 @@ describe("voluntaryExit using remote signer", function () {
     });
 
     const baseUrl = `http://127.0.0.1:${restPort}`;
-    // To cleanup the event stream connection
-    const httpClientController = new AbortController();
-    const client = getClient({baseUrl, getAbortSignal: () => httpClientController.signal}, {config});
+    const client = getClient({baseUrl}, {config});
 
     // Wait for beacon node API to be available + genesis
     await retry(
@@ -105,8 +108,5 @@ describe("voluntaryExit using remote signer", function () {
         {retryDelay: 1000, retries: 20}
       );
     }
-
-    // Disconnect the event stream for the client
-    httpClientController.abort();
   });
 });
