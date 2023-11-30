@@ -39,7 +39,7 @@ If no `pubkeys` are provided, it will exit all validators that have been importe
     },
     {
       command:
-        "validator voluntary-exit --network goerli --externalSigner.url=http://signer:9000 --externalSigner.pubkeys 0xF00",
+        "validator voluntary-exit --network goerli --externalSigner.url http://signer:9000 --externalSigner.fetch --pubkeys 0xF00",
       description:
         "Perform a voluntary exit for the validator who has a public key 0xF00 and its secret key is on a remote signer",
     },
