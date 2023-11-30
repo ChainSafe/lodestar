@@ -24,6 +24,7 @@ export type ChainArgs = {
   emitPayloadAttributes?: boolean;
   broadcastValidationStrictness?: string;
   "chain.minSameMessageSignatureSetsToBatch"?: number;
+  "chain.maxShufflingCacheEpochs"?: number;
 };
 
 export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
@@ -49,6 +50,7 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     broadcastValidationStrictness: args["broadcastValidationStrictness"],
     minSameMessageSignatureSetsToBatch:
       args["chain.minSameMessageSignatureSetsToBatch"] ?? defaultOptions.chain.minSameMessageSignatureSetsToBatch,
+    maxShufflingCacheEpochs: args["chain.maxShufflingCacheEpochs"] ?? defaultOptions.chain.maxShufflingCacheEpochs,
   };
 }
 
@@ -191,6 +193,14 @@ Will double processing times. Use only for debugging purposes.",
     description: "Minimum number of same message signature sets to batch",
     type: "number",
     default: defaultOptions.chain.minSameMessageSignatureSetsToBatch,
+    group: "chain",
+  },
+
+  "chain.maxShufflingCacheEpochs": {
+    hidden: true,
+    description: "Maximum ShufflingCache epochs to keep in memory",
+    type: "number",
+    default: defaultOptions.chain.maxShufflingCacheEpochs,
     group: "chain",
   },
 };

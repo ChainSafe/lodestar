@@ -13,6 +13,7 @@ import {BeaconProposerCache} from "../../src/chain/beaconProposerCache.js";
 import {QueuedStateRegenerator} from "../../src/chain/regen/index.js";
 import {LightClientServer} from "../../src/chain/lightClient/index.js";
 import {Clock} from "../../src/util/clock.js";
+import {ShufflingCache} from "../../src/chain/shufflingCache.js";
 import {getMockedLogger} from "./loggerMock.js";
 
 export type MockedBeaconChain = MockedObject<BeaconChain> & {
@@ -24,6 +25,7 @@ export type MockedBeaconChain = MockedObject<BeaconChain> & {
   opPool: MockedObject<OpPool>;
   aggregatedAttestationPool: MockedObject<AggregatedAttestationPool>;
   beaconProposerCache: MockedObject<BeaconProposerCache>;
+  shufflingCache: MockedObject<ShufflingCache>;
   regen: MockedObject<QueuedStateRegenerator>;
   bls: {
     verifySignatureSets: Mock<[boolean]>;
@@ -40,6 +42,7 @@ vi.mock("../../src/eth1/index.js");
 vi.mock("../../src/chain/opPools/opPool.js");
 vi.mock("../../src/chain/opPools/aggregatedAttestationPool.js");
 vi.mock("../../src/chain/beaconProposerCache.js");
+vi.mock("../../src/chain/shufflingCache.js");
 vi.mock("../../src/chain/regen/index.js");
 vi.mock("../../src/chain/lightClient/index.js");
 vi.mock("../../src/chain/index.js", async (requireActual) => {
@@ -75,6 +78,7 @@ vi.mock("../../src/chain/index.js", async (requireActual) => {
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-expect-error
       beaconProposerCache: new BeaconProposerCache(),
+      shufflingCache: new ShufflingCache(),
       produceBlock: vi.fn(),
       produceBlindedBlock: vi.fn(),
       getCanonicalBlockAtSlot: vi.fn(),
@@ -83,6 +87,7 @@ vi.mock("../../src/chain/index.js", async (requireActual) => {
       getHeadState: vi.fn(),
       updateBuilderStatus: vi.fn(),
       processBlock: vi.fn(),
+      regenStateForAttestationVerification: vi.fn(),
       close: vi.fn(),
       logger: getMockedLogger(),
       regen: new QueuedStateRegenerator({} as any),
