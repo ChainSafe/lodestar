@@ -146,7 +146,7 @@ jobs:
 
   unit-tests:
     name: Unit Tests
-    needs: build
+    needs: type-checks
     runs-on: buildjet-4vcpu-ubuntu-2204
     strategy:
       fail-fast: false
