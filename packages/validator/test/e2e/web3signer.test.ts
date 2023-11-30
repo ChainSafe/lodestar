@@ -4,18 +4,18 @@ import {config} from "@lodestar/config/default";
 import {computeStartSlotAtEpoch, interopSecretKey, interopSecretKeys} from "@lodestar/state-transition";
 import {createBeaconConfig} from "@lodestar/config";
 import {genesisData} from "@lodestar/config/networks";
-import {getClient} from "@lodestar/api";
+import {getClient, routes} from "@lodestar/api";
 import {ssz} from "@lodestar/types";
 import {ForkSeq} from "@lodestar/params";
-import {ExternalSignerTests, getKeystoresStr, startExternalSigner} from "@lodestar/test-utils";
+import {
+  ExternalSignerTests,
+  getKeystoresStr,
+  startExternalSigner,
+  externalSignerSupportedForkSeq,
+} from "@lodestar/test-utils";
 import {Interchange, ISlashingProtection, Signer, SignerType, ValidatorStore} from "../../src/index.js";
 import {IndicesService} from "../../src/services/indices.js";
 import {testLogger} from "../utils/logger.js";
-
-/** Till what version is the image updated for signature verification */
-const validTillSignatureForkSeq = ForkSeq.capella;
-
-/* eslint-disable no-console */
 
 describe("web3signer signature test", function () {
   this.timeout("60s");
@@ -34,7 +34,7 @@ describe("web3signer signature test", function () {
 
   let externalSigner: ExternalSignerTests;
 
-  const duty = {
+  const duty: routes.validator.AttesterDuty = {
     slot: altairSlot,
     committeeIndex: 0,
     committeeLength: 120,
@@ -69,7 +69,7 @@ describe("web3signer signature test", function () {
   for (const fork of config.forksAscendingEpochOrder) {
     it(`signBlock ${fork.name}`, async function () {
       // Only test till the fork the signer version supports
-      if (ForkSeq[fork.name] > validTillSignatureForkSeq) {
+      if (ForkSeq[fork.name] > externalSignerSupportedForkSeq) {
         this.skip();
       }
 

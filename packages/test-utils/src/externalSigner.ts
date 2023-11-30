@@ -2,8 +2,12 @@ import fs from "node:fs";
 import path from "node:path";
 import tmp from "tmp";
 import {GenericContainer, Wait, StartedTestContainer} from "testcontainers";
+import {ForkSeq} from "@lodestar/params";
 
 const web3signerVersion = "23.11.0";
+
+/** Till what version is the web3signer image updated for signature verification */
+export const externalSignerSupportedForkSeq = ForkSeq.capella;
 
 export type ExternalSignerTests = {
   container: StartedTestContainer;
