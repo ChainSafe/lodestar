@@ -28,7 +28,7 @@ const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;
 const TIMELY_HEAD = 1 << TIMELY_HEAD_FLAG_INDEX;
 
 /**
- * Calculate total proposer block rewards given block and state
+ * Calculate total proposer block rewards given block and the beacon state of the same slot before the block is applied
  * Standard (Non MEV) rewards for proposing a block consists of:
  *  1) Including attestations from (beacon) committee
  *  2) Including attestations from sync committee

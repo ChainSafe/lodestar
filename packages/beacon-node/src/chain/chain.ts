@@ -988,11 +988,12 @@ export class BeaconChain implements IBeaconChain {
       block = blockRef;
     }
 
-    if (block) {
+    if (block !== undefined) {
       const preState = await this.regen.getPreState(block, {dontTransferCache: true}, RegenCaller.restApi);
       return computeBlockRewards(block, preState);
     } else {
-      this.logger.warn(`Attempt to get rewards for a block that is not found: ${blockRef}`);
+      // Only RootHex | Slot can reach this code segment
+      this.logger.warn(`Attempt to get rewards for a block that is not found: ${blockRef as RootHex | Slot}`);
       return 0n;
     }
   }
