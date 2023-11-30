@@ -1,4 +1,4 @@
-import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStatePhase0} from "@lodestar/state-transition";
+import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStatePhase0, getAttesterSlashableIndices} from "@lodestar/state-transition";
 import {getAttestationParticipationStatus} from "@lodestar/state-transition/src/block/processAttestationsAltair";
 import {RootCache} from "@lodestar/state-transition/src/util/rootCache";
 import {Gwei, allForks, altair, phase0} from "@lodestar/types";
@@ -12,6 +12,7 @@ import {
   TIMELY_TARGET_WEIGHT,
   WEIGHT_DENOMINATOR,
   ForkName,
+  WHISTLEBLOWER_REWARD_QUOTIENT,
 } from "@lodestar/params";
 
 const PROPOSER_REWARD_DOMINATOR = ((WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIGHT_DENOMINATOR) / PROPOSER_WEIGHT;
@@ -42,9 +43,9 @@ export async function computeBlockRewards(
     fork === ForkName.phase0
       ? computeBlockAttestationRewardPhase0(block as phase0.BeaconBlock, state as CachedBeaconStatePhase0)
       : computeBlockAttestationRewardAltair(block as altair.BeaconBlock, state as CachedBeaconStateAltair);
-  const syncAggregateReward = computeSyncAggregateReward();
-  const blockProposerSlashingReward = computeBlockProposerSlashingReward();
-  const blockAttesterSlashingReward = computeBlockAttesterSlashingReward();
+  const syncAggregateReward = computeSyncAggregateReward(block as altair.BeaconBlock, state as CachedBeaconStateAltair);
+  const blockProposerSlashingReward = computeBlockProposerSlashingReward(block, state);
+  const blockAttesterSlashingReward = computeBlockAttesterSlashingReward(block, state);
 
   const total =
     blockAttestationReward + syncAggregateReward + blockProposerSlashingReward + blockAttesterSlashingReward;
@@ -117,14 +118,46 @@ function computeBlockAttestationRewardAltair(block: altair.BeaconBlock, state: C
   return blockAttestationReward;
 }
 
-function computeSyncAggregateReward(): Gwei {
-  return 0n; //TODO
+function computeSyncAggregateReward(block: altair.BeaconBlock, state: CachedBeaconStateAltair): Gwei {
+  if (block.body.syncAggregate !== undefined) {
+    const {syncCommitteeBits} = block.body.syncAggregate;
+    const {syncProposerReward} = state.epochCtx;
+
+    return BigInt(syncCommitteeBits.getTrueBitIndexes().length * syncProposerReward);
+  } else {
+    return 0n; // phase0 block does not have syncAggregate
+  }
+}
+/**
+ * Calculate rewards received by block proposer for include proposer slashings.
+ * All proposer slashing rewards go to block proposer and none to whistleblower as of Deneb 
+ */
+function computeBlockProposerSlashingReward(block: allForks.BeaconBlock, state: CachedBeaconStateAllForks): Gwei {
+  let proposerSlashingReward = 0n;
+
+  for (const proposerSlashing of block.body.proposerSlashings) {
+    const offendingProposerIndex = proposerSlashing.signedHeader1.message.proposerIndex;
+    const offendingProposerBalance = state.validators.get(offendingProposerIndex).effectiveBalance;
+
+    proposerSlashingReward = proposerSlashingReward + BigInt(Math.floor(offendingProposerBalance / WHISTLEBLOWER_REWARD_QUOTIENT ));
+  }
+
+  return proposerSlashingReward;
 }
 
-function computeBlockProposerSlashingReward(): Gwei {
-  return 0n; //TODO
-}
+/**
+ * Calculate rewards received by block proposer for include attester slashings.
+ * All attester slashing rewards go to block proposer and none to whistleblower as of Deneb 
+ */
+function computeBlockAttesterSlashingReward(block: allForks.BeaconBlock, state: CachedBeaconStateAllForks): Gwei {
+  let attesterSlashingReward = 0n;
 
-function computeBlockAttesterSlashingReward(): Gwei {
-  return 0n; //TODO
+  for (const attesterSlashing of block.body.attesterSlashings) {
+    for (const offendingAttesterIndex of getAttesterSlashableIndices(attesterSlashing)) {
+      const offendingAttesterBalance = state.validators.get(offendingAttesterIndex).effectiveBalance;
+      attesterSlashingReward = attesterSlashingReward + BigInt(Math.floor(offendingAttesterBalance / WHISTLEBLOWER_REWARD_QUOTIENT ));
+    }
+  }
+
+  return attesterSlashingReward;
 }
