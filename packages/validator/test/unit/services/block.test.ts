@@ -52,6 +52,7 @@ describe("BlockDutiesService", function () {
     // use produceBlockV3
     const blockService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, null, {
       useProduceBlockV3: true,
+      broadcastValidation: "consensus",
     });
 
     const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
