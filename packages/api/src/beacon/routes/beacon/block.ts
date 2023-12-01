@@ -52,7 +52,6 @@ export type BlockHeaderResponse = {
 };
 
 export enum BroadcastValidation {
-  none = "none",
   gossip = "gossip",
   consensus = "consensus",
   consensusAndEquivocation = "consensus_and_equivocation",

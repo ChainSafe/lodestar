@@ -19,7 +19,7 @@ import {
 } from "@lodestar/fork-choice";
 import {ChainForkConfig} from "@lodestar/config";
 import {ErrorAborted, Logger} from "@lodestar/utils";
-import {ForkSeq} from "@lodestar/params";
+import {ForkSeq, SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@lodestar/params";
 
 import {IExecutionEngine} from "../../execution/engine/interface.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
@@ -143,9 +143,10 @@ export async function verifyBlocksExecutionPayload(
   const lastBlock = blocks[blocks.length - 1];
 
   const currentSlot = chain.clock.currentSlot;
+  const safeSlotsToImportOptimistically = opts.safeSlotsToImportOptimistically ?? SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY;
   let isOptimisticallySafe =
     parentBlock.executionStatus !== ExecutionStatus.PreMerge ||
-    lastBlock.message.slot + opts.safeSlotsToImportOptimistically < currentSlot;
+    lastBlock.message.slot + safeSlotsToImportOptimistically < currentSlot;
 
   for (let blockIndex = 0; blockIndex < blocks.length; blockIndex++) {
     const block = blocks[blockIndex];
@@ -331,7 +332,9 @@ export async function verifyBlockExecutionPayload(
       // Check if the entire segment was deemed safe or, this block specifically itself if not in
       // the safeSlotsToImportOptimistically window of current slot, then we can import else
       // we need to throw and not import his block
-      if (!isOptimisticallySafe && block.message.slot + opts.safeSlotsToImportOptimistically >= currentSlot) {
+      const safeSlotsToImportOptimistically =
+        opts.safeSlotsToImportOptimistically ?? SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY;
+      if (!isOptimisticallySafe && block.message.slot + safeSlotsToImportOptimistically >= currentSlot) {
         const execError = new BlockError(block, {
           code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
           execStatus: ExecutionPayloadStatus.UNSAFE_OPTIMISTIC_STATUS,
