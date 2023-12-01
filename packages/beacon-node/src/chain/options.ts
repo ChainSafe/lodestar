@@ -55,6 +55,8 @@ export type BlockProcessOpts = {
    */
   disableImportExecutionFcU?: boolean;
   emitPayloadAttributes?: boolean;
+
+  // Flags to use for broadcastValidation while publishing block
   verifyOnly?: boolean;
   skipVerifyExecutionPayload?: boolean;
   skipVerifyBlockSignatures?: boolean;
