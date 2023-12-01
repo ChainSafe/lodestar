@@ -68,7 +68,7 @@ export function getBeaconBlockApi({
 
     // check what validations have been requested before broadcasting and publishing the block
     // TODO: add validation time to metrics
-    const broadcastValidation = opts.broadcastValidation ?? routes.beacon.BroadcastValidation.consensus;
+    const broadcastValidation = opts.broadcastValidation ?? routes.beacon.BroadcastValidation.gossip;
     // if block is locally produced, full or blinded, it already is 'consensus' validated as it went through
     // state transition to produce the stateRoot
     const slot = signedBlock.message.slot;
