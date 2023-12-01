@@ -41,6 +41,7 @@ import {PubkeyHex} from "../types.js";
 import {externalSignerPostSignature, SignableMessageType, SignableMessage} from "../util/externalSignerClient.js";
 import {Metrics} from "../metrics.js";
 import {isValidatePubkeyHex} from "../util/format.js";
+import {LoggerVc} from "../util/logger.js";
 import {IndicesService} from "./indices.js";
 import {DoppelgangerService} from "./doppelgangerService.js";
 
@@ -351,7 +352,8 @@ export class ValidatorStore {
   async signBlock(
     pubkey: BLSPubkey,
     blindedOrFull: allForks.FullOrBlindedBeaconBlock,
-    currentSlot: Slot
+    currentSlot: Slot,
+    logger?: LoggerVc
   ): Promise<allForks.FullOrBlindedSignedBeaconBlock> {
     // Make sure the block slot is not higher than the current slot to avoid potential attacks.
     if (blindedOrFull.slot > currentSlot) {
@@ -366,6 +368,12 @@ export class ValidatorStore {
     const blockRoot = blindedOrFullBlockHashTreeRoot(this.config, blindedOrFull);
     // Don't use `computeSigningRoot()` here to compute the objectRoot in typesafe function blindedOrFullBlockHashTreeRoot()
     const signingRoot = ssz.phase0.SigningData.hashTreeRoot({objectRoot: blockRoot, domain});
+
+    logger?.debug("Signing the block proposal", {
+      slot: signingSlot,
+      blockRoot: toHexString(blockRoot),
+      signingRoot: toHexString(signingRoot),
+    });
 
     try {
       await this.slashingProtection.checkAndInsertBlockProposal(pubkey, {slot: blindedOrFull.slot, signingRoot});
