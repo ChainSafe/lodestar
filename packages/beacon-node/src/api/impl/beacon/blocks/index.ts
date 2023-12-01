@@ -79,20 +79,19 @@ export function getBeaconBlockApi({
     const valLogMeta = {broadcastValidation, blockRoot, blockLocallyProduced, slot};
 
     switch (broadcastValidation) {
-      case routes.beacon.BroadcastValidation.gossip:
-        {
-          if (!blockLocallyProduced) {
-            try {
-              await validateGossipBlock(config, chain, signedBlock, fork);
-            } catch (error) {
-              chain.logger.error("Gossip validations failed while publishing the block", valLogMeta, error as Error);
-              throw error;
-            }
+      case routes.beacon.BroadcastValidation.gossip: {
+        if (!blockLocallyProduced) {
+          try {
+            await validateGossipBlock(config, chain, signedBlock, fork);
+          } catch (error) {
+            chain.logger.error("Gossip validations failed while publishing the block", valLogMeta, error as Error);
+            throw error;
           }
         }
         chain.logger.debug("Gossip checks validated while publishing the block", valLogMeta);
         // TODO: figure out if consensus validation is required for gossip or not
         break;
+      }
 
       case routes.beacon.BroadcastValidation.consensusAndEquivocation:
       case routes.beacon.BroadcastValidation.consensus: {
