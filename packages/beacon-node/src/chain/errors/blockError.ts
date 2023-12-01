@@ -138,10 +138,13 @@ export function renderBlockErrorType(type: BlockErrorType): Record<string, strin
       };
 
     case BlockErrorCode.INVALID_SIGNATURE:
-      return {};
+      return {
+        slot: type.state.slot,
+      };
 
     case BlockErrorCode.INVALID_STATE_ROOT:
       return {
+        slot: type.postState.slot,
         root: toHexString(type.root),
         expectedRoot: toHexString(type.expectedRoot),
       };
