@@ -376,7 +376,7 @@ export class ValidatorStore {
     });
 
     try {
-      await this.slashingProtection.checkAndInsertBlockProposal(pubkey, {slot: blindedOrFull.slot, signingRoot});
+      await this.slashingProtection.checkAndInsertBlockProposal(pubkey, {slot: signingSlot, signingRoot});
     } catch (e) {
       this.metrics?.slashingProtectionBlockError.inc();
       throw e;
