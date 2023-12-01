@@ -144,7 +144,7 @@ export class BlockProposingService {
       this.logger.debug("Produced block", {...debugLogCtx, ...blockContents.debugLogCtx});
       this.metrics?.blocksProduced.inc();
 
-      const signedBlockPromise = this.validatorStore.signBlock(pubkey, blockContents.block, slot);
+      const signedBlockPromise = this.validatorStore.signBlock(pubkey, blockContents.block, slot, this.logger);
       const signedBlobPromises =
         blockContents.blobs !== null
           ? blockContents.blobs.map((blob) => this.validatorStore.signBlob(pubkey, blob, slot))
