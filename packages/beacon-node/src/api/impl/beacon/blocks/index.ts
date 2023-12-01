@@ -4,11 +4,11 @@ import {
   computeTimeAtSlot,
   parseSignedBlindedBlockOrContents,
   reconstructFullBlockOrContents,
+  DataAvailableStatus,
 } from "@lodestar/state-transition";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {sleep, toHex} from "@lodestar/utils";
 import {allForks, deneb, isSignedBlockContents, ProducedBlockSource} from "@lodestar/types";
-import {DataAvailableStatus} from "@lodestar/state-transition/src/index.js";
 import {BlockSource, getBlockInput, ImportBlockOpts, BlockInput} from "../../../../chain/blocks/types.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
