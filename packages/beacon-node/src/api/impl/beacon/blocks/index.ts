@@ -8,6 +8,7 @@ import {
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {sleep, toHex} from "@lodestar/utils";
 import {allForks, deneb, isSignedBlockContents, ProducedBlockSource} from "@lodestar/types";
+import {DataAvailableStatus} from "@lodestar/state-transition/src/index.js";
 import {BlockSource, getBlockInput, ImportBlockOpts, BlockInput} from "../../../../chain/blocks/types.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
@@ -15,6 +16,9 @@ import {BlockError, BlockErrorCode} from "../../../../chain/errors/index.js";
 import {OpSource} from "../../../../metrics/validatorMonitor.js";
 import {NetworkEvent} from "../../../../network/index.js";
 import {ApiModules} from "../../types.js";
+import {validateGossipBlock} from "../../../../chain/validation/block.js";
+import {verifyBlocksInEpoch} from "../../../../chain/blocks/verifyBlock.js";
+import {BeaconChain} from "../../../../chain/chain.js";
 import {resolveBlockId, toBeaconHeaderResponse} from "./utils.js";
 
 type PublishBlockOpts = ImportBlockOpts & {broadcastValidation?: routes.beacon.BroadcastValidation};
@@ -64,33 +68,67 @@ export function getBeaconBlockApi({
 
     // check what validations have been requested before broadcasting and publishing the block
     // TODO: add validation time to metrics
-    const broadcastValidation = opts.broadcastValidation ?? routes.beacon.BroadcastValidation.none;
+    const broadcastValidation = opts.broadcastValidation ?? routes.beacon.BroadcastValidation.consensus;
     // if block is locally produced, full or blinded, it already is 'consensus' validated as it went through
     // state transition to produce the stateRoot
     const slot = signedBlock.message.slot;
+    const fork = config.getForkName(slot);
     const blockRoot = toHex(chain.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
     const blockLocallyProduced =
       chain.producedBlockRoot.has(blockRoot) || chain.producedBlindedBlockRoot.has(blockRoot);
     const valLogMeta = {broadcastValidation, blockRoot, blockLocallyProduced, slot};
 
     switch (broadcastValidation) {
-      case routes.beacon.BroadcastValidation.none: {
-        if (blockLocallyProduced) {
-          chain.logger.debug("No broadcast validation requested for the block", valLogMeta);
-        } else {
-          chain.logger.warn("No broadcast validation requested for the block", valLogMeta);
+      case routes.beacon.BroadcastValidation.gossip:
+        {
+          if (!blockLocallyProduced) {
+            try {
+              await validateGossipBlock(config, chain, signedBlock, fork);
+            } catch (error) {
+              chain.logger.error("Gossip validations failed while publishing the block", valLogMeta, error as Error);
+            }
+          }
         }
+        chain.logger.debug("Gossip checks validated while publishing the block", valLogMeta);
+        // TODO: figure out if consensus validation is required for gossip or not
         break;
-      }
+
+      case routes.beacon.BroadcastValidation.consensusAndEquivocation:
       case routes.beacon.BroadcastValidation.consensus: {
         // check if this beacon node produced the block else run validations
         if (!blockLocallyProduced) {
-          // error or log warning that we support consensus val on blocks produced via this beacon node
-          const message = "Consensus validation not implemented yet for block not produced by this beacon node";
+          const parentBlock = chain.forkChoice.getBlock(signedBlock.message.parentRoot);
+          if (parentBlock === null) {
+            throw Error("parentRoot not found in forkChoice");
+          }
+
+          try {
+            await verifyBlocksInEpoch.call(
+              chain as BeaconChain,
+              parentBlock,
+              [blockForImport],
+              [DataAvailableStatus.available],
+              {
+                ...opts,
+                verifyOnly: true,
+                skipVerifyBlockSignatures: true,
+                skipVerifyExecutionPayload: true,
+              }
+            );
+          } catch (error) {
+            chain.logger.error("Consensus checks failed while publishing the block", valLogMeta, error as Error);
+            throw error;
+          }
+        }
+
+        chain.logger.debug("Consensus validated while publishing block", valLogMeta);
+
+        if (broadcastValidation === routes.beacon.BroadcastValidation.consensusAndEquivocation) {
+          const message = `Equivocation checks not yet implemented for broadcastValidation=${broadcastValidation}`;
           if (chain.opts.broadcastValidationStrictness === "error") {
             throw Error(message);
           } else {
-            chain.logger.warn(message, valLogMeta);
+            chain.logger.warn(message);
           }
         }
         break;

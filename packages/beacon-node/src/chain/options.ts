@@ -40,7 +40,7 @@ export type BlockProcessOpts = {
   /**
    * Override SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY
    */
-  safeSlotsToImportOptimistically: number;
+  safeSlotsToImportOptimistically?: number;
   /**
    * Assert progressive balances the same to EpochTransitionCache
    */
@@ -55,6 +55,9 @@ export type BlockProcessOpts = {
    */
   disableImportExecutionFcU?: boolean;
   emitPayloadAttributes?: boolean;
+  verifyOnly?: boolean;
+  skipVerifyExecutionPayload?: boolean;
+  skipVerifyBlockSignatures?: boolean;
 };
 
 export type PoolOpts = {
