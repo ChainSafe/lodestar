@@ -134,16 +134,19 @@ export function renderBlockErrorType(type: BlockErrorType): Record<string, strin
     case BlockErrorCode.PER_BLOCK_PROCESSING_ERROR:
     case BlockErrorCode.BEACON_CHAIN_ERROR:
       return {
+        code: type.code,
         error: type.error.message,
       };
 
     case BlockErrorCode.INVALID_SIGNATURE:
       return {
+        code: type.code,
         slot: type.state.slot,
       };
 
     case BlockErrorCode.INVALID_STATE_ROOT:
       return {
+        code: type.code,
         slot: type.postState.slot,
         root: toHexString(type.root),
         expectedRoot: toHexString(type.expectedRoot),
