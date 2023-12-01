@@ -59,6 +59,15 @@ export function ArrayOf<T>(elementType: Type<T>, limit = Infinity): ArrayType<Ty
   }
 }
 
+export function WithMeta<T, M extends {version: ForkName}>(getType: (m: M) => Type<T>): ResponseDataCodec<T, M> {
+  return {
+    toJson: (data, meta: M) => getType(meta).toJson(data),
+    fromJson: (data, meta: M) => getType(meta).fromJson(data),
+    serialize: (data, meta: M) => getType(meta).serialize(data),
+    deserialize: (data, meta: M) => getType(meta).deserialize(data),
+  };
+}
+
 export function WithVersion<T, M extends {version: ForkName}>(
   getType: (v: ForkName) => Type<T>
 ): ResponseDataCodec<T, M> {

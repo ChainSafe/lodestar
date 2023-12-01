@@ -2,7 +2,7 @@ import {WireFormat} from "./headers.js";
 import {SchemaDefinition} from "./schema.js";
 
 export type PathParams = Record<string, string | number>;
-export type QueryParams = Record<string, string | number | (string | number)[]>;
+export type QueryParams = Record<string, string | number | boolean | (string | number)[]>;
 export type HeaderParams = Record<string, string>;
 
 export type GetRequestData<
