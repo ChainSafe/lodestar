@@ -89,7 +89,6 @@ export function getBeaconBlockApi({
           }
         }
         chain.logger.debug("Gossip checks validated while publishing the block", valLogMeta);
-        // TODO: figure out if consensus validation is required for gossip or not
         break;
       }
 
