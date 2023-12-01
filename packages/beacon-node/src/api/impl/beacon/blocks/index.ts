@@ -86,6 +86,7 @@ export function getBeaconBlockApi({
               await validateGossipBlock(config, chain, signedBlock, fork);
             } catch (error) {
               chain.logger.error("Gossip validations failed while publishing the block", valLogMeta, error as Error);
+              throw error;
             }
           }
         }
