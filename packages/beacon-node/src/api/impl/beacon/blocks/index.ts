@@ -136,7 +136,7 @@ export function getBeaconBlockApi({
           if (chain.opts.broadcastValidationStrictness === "error") {
             throw Error(message);
           } else {
-            chain.logger.warn(message);
+            chain.logger.warn(message, valLogMeta);
           }
         }
         break;
@@ -148,7 +148,7 @@ export function getBeaconBlockApi({
         if (chain.opts.broadcastValidationStrictness === "error") {
           throw Error(message);
         } else {
-          chain.logger.warn(message);
+          chain.logger.warn(message, valLogMeta);
         }
       }
     }
