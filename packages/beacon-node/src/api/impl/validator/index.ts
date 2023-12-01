@@ -536,6 +536,7 @@ export function getValidatorApi({
         // winston logger doesn't like bigint
         enginePayloadValue: `${enginePayloadValue}`,
         builderPayloadValue: `${builderPayloadValue}`,
+        slot,
       });
     } else if (fullBlock && !blindedBlock) {
       selectedSource = ProducedBlockSource.engine;
