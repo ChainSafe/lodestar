@@ -1,5 +1,5 @@
 import bls from "@chainsafe/bls";
-import {CoordType} from "@chainsafe/blst";
+import {CoordType} from "@chainsafe/bls/types";
 import {BeaconConfig} from "@lodestar/config";
 import {loadState} from "../util/loadState/loadState.js";
 import {EpochCache, EpochCacheImmutableData, EpochCacheOpts} from "./epochCache.js";
