@@ -210,7 +210,7 @@ export function WithConsensusBlockValue<T extends {data: unknown}>(
     }),
     fromJson: ({consensus_block_value, ...data}: T & {consensus_block_value: string}) => ({
       ...type.fromJson(data),
-      // For cross client usage where beacon or validator are of separate clients, executionPayloadValue could be missing
+      // For cross client usage where beacon or validator are of separate clients, consensusBlockValue could be missing
       consensusBlockValue: BigInt(consensus_block_value ?? "0"),
     }),
   };

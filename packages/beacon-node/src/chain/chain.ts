@@ -989,8 +989,10 @@ export class BeaconChain implements IBeaconChain {
     }
 
     if (block !== undefined) {
-      const preState = await this.regen.getBlockSlotState(toHexString(block.parentRoot), block.slot, {dontTransferCache: true}, RegenCaller.restApi);
-      return computeBlockRewards(block, preState);
+      const preState = (await this.regen.getPreState(block, {dontTransferCache: false}, RegenCaller.restApi)).clone();
+      preState.slot = block.slot; // regen.getPreState guarantees pre_state of the same epoch but not the same slot
+      const result = computeBlockRewards(block, preState);
+      return result;
     } else {
       // Only RootHex | Slot can reach this code segment
       this.logger.warn(`Attempt to get rewards for a block that is not found: ${blockRef as RootHex | Slot}`);
