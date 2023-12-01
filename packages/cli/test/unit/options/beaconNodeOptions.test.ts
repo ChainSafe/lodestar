@@ -34,6 +34,7 @@ describe("options / beaconNodeOptions", () => {
       "chain.archiveStateEpochFrequency": 1024,
       "chain.trustedSetup": "",
       "chain.minSameMessageSignatureSetsToBatch": 32,
+      "chain.maxShufflingCacheEpochs": 100,
       emitPayloadAttributes: false,
 
       eth1: true,
@@ -135,6 +136,7 @@ describe("options / beaconNodeOptions", () => {
         emitPayloadAttributes: false,
         trustedSetup: "",
         minSameMessageSignatureSetsToBatch: 32,
+        maxShufflingCacheEpochs: 100,
       },
       eth1: {
         enabled: true,

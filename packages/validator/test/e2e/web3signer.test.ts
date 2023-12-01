@@ -7,12 +7,7 @@ import {genesisData} from "@lodestar/config/networks";
 import {getClient, routes} from "@lodestar/api";
 import {ssz} from "@lodestar/types";
 import {ForkSeq} from "@lodestar/params";
-import {
-  ExternalSignerTests,
-  getKeystoresStr,
-  startExternalSigner,
-  externalSignerSupportedForkSeq,
-} from "@lodestar/test-utils";
+import {getKeystoresStr, StartedExternalSigner, startExternalSigner} from "@lodestar/test-utils";
 import {Interchange, ISlashingProtection, Signer, SignerType, ValidatorStore} from "../../src/index.js";
 import {IndicesService} from "../../src/services/indices.js";
 import {testLogger} from "../utils/logger.js";
@@ -32,7 +27,7 @@ describe("web3signer signature test", function () {
   let validatorStoreRemote: ValidatorStore;
   let validatorStoreLocal: ValidatorStore;
 
-  let externalSigner: ExternalSignerTests;
+  let externalSigner: StartedExternalSigner;
 
   const duty: routes.validator.AttesterDuty = {
     slot: altairSlot,
@@ -69,7 +64,7 @@ describe("web3signer signature test", function () {
   for (const fork of config.forksAscendingEpochOrder) {
     it(`signBlock ${fork.name}`, async function () {
       // Only test till the fork the signer version supports
-      if (ForkSeq[fork.name] > externalSignerSupportedForkSeq) {
+      if (ForkSeq[fork.name] > externalSigner.supportedForkSeq) {
         this.skip();
       }
 

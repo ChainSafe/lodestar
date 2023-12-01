@@ -11,7 +11,7 @@ import {config} from "@lodestar/config/default";
 
 import {createBeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {ZERO_HASH} from "../../src/constants/index.js";
-import {newZeroedBigIntArray} from "../../src/util/index.js";
+import {newZeroedArray} from "../../src/util/index.js";
 
 import {
   BeaconStatePhase0,
@@ -64,7 +64,7 @@ export function generateState(opts?: TestBeaconState): BeaconStatePhase0 {
     validators: [],
     balances: [],
     randaoMixes: Array.from({length: EPOCHS_PER_HISTORICAL_VECTOR}, () => ZERO_HASH),
-    slashings: newZeroedBigIntArray(EPOCHS_PER_SLASHINGS_VECTOR),
+    slashings: newZeroedArray(EPOCHS_PER_SLASHINGS_VECTOR),
     previousEpochAttestations: [],
     currentEpochAttestations: [],
     justificationBits: ssz.phase0.JustificationBits.defaultValue(),

@@ -11,7 +11,7 @@ import {createBeaconConfig} from "@lodestar/config";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {collectNodeJSMetrics} from "../../metrics/nodeJsMetrics.js";
-import {profileNodeJS} from "../../util/profile.js";
+import {profileNodeJS, writeHeapSnapshot} from "../../util/profile.js";
 import {Discv5WorkerApi, Discv5WorkerData} from "./types.js";
 import {enrRelevance, ENRRelevance} from "./utils.js";
 
@@ -106,6 +106,9 @@ const module: Discv5WorkerApi = {
     const filePath = path.join(dirpath, `discv5_thread_${new Date().toISOString()}.cpuprofile`);
     fs.writeFileSync(filePath, profile);
     return filePath;
+  },
+  writeHeapSnapshot: async (prefix: string, dirpath: string) => {
+    return writeHeapSnapshot(prefix, dirpath);
   },
   async close() {
     closeMetrics?.();

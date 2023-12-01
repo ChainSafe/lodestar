@@ -590,6 +590,26 @@ export function createLodestarMetrics(
         labelNames: ["caller"],
         buckets: [0, 1, 2, 4, 8, 16, 32, 64],
       }),
+      shufflingCacheHit: register.gauge<"caller">({
+        name: "lodestar_gossip_attestation_shuffling_cache_hit_count",
+        help: "Count of gossip attestation verification shuffling cache hit",
+        labelNames: ["caller"],
+      }),
+      shufflingCacheMiss: register.gauge<"caller">({
+        name: "lodestar_gossip_attestation_shuffling_cache_miss_count",
+        help: "Count of gossip attestation verification shuffling cache miss",
+        labelNames: ["caller"],
+      }),
+      shufflingCacheRegenHit: register.gauge<"caller">({
+        name: "lodestar_gossip_attestation_shuffling_cache_regen_hit_count",
+        help: "Count of gossip attestation verification shuffling cache regen hit",
+        labelNames: ["caller"],
+      }),
+      shufflingCacheRegenMiss: register.gauge<"caller">({
+        name: "lodestar_gossip_attestation_shuffling_cache_regen_miss_count",
+        help: "Count of gossip attestation verification shuffling cache regen miss",
+        labelNames: ["caller"],
+      }),
       attestationSlotToClockSlot: register.histogram<"caller">({
         name: "lodestar_gossip_attestation_attestation_slot_to_clock_slot",
         help: "Slot distance between clock slot and attestation slot",
@@ -1069,6 +1089,29 @@ export function createLodestarMetrics(
         name: "lodestar_balances_cache_closest_state_result_total",
         help: "Total number of stateIds returned as closest justified balances state by id",
         labelNames: ["stateId"],
+      }),
+    },
+
+    shufflingCache: {
+      size: register.gauge({
+        name: "lodestar_shuffling_cache_size",
+        help: "Shuffling cache size",
+      }),
+      processStateInsertNew: register.gauge({
+        name: "lodestar_shuffling_cache_process_state_insert_new_total",
+        help: "Total number of times processState is called resulting a new shuffling",
+      }),
+      processStateUpdatePromise: register.gauge({
+        name: "lodestar_shuffling_cache_process_state_update_promise_total",
+        help: "Total number of times processState is called resulting a promise being updated with shuffling",
+      }),
+      processStateNoOp: register.gauge({
+        name: "lodestar_shuffling_cache_process_state_no_op_total",
+        help: "Total number of times processState is called resulting no changes",
+      }),
+      insertPromiseCount: register.gauge({
+        name: "lodestar_shuffling_cache_insert_promise_count",
+        help: "Total number of times insertPromise is called",
       }),
     },
 

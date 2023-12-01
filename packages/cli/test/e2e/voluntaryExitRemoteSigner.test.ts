@@ -7,7 +7,7 @@ import {
   spawnCliCommand,
   execCliCommand,
   startExternalSigner,
-  ExternalSignerTests,
+  StartedExternalSigner,
   getKeystoresStr,
 } from "@lodestar/test-utils";
 import {getMochaContext} from "@lodestar/test-utils/mocha";
@@ -16,7 +16,7 @@ import {testFilesDir} from "../utils.js";
 describe("voluntaryExit using remote signer", function () {
   this.timeout("30s");
 
-  let externalSigner: ExternalSignerTests;
+  let externalSigner: StartedExternalSigner;
 
   before("start external signer container", async () => {
     const password = "password";

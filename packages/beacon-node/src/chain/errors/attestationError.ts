@@ -1,5 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
-import {CommitteeIndex, Epoch, Slot, ValidatorIndex, RootHex} from "@lodestar/types";
+import {Epoch, Slot, ValidatorIndex, RootHex} from "@lodestar/types";
 import {GossipActionError} from "./gossipValidation.js";
 
 export enum AttestationErrorCode {
@@ -65,11 +65,6 @@ export enum AttestationErrorCode {
    * A signature on the attestation is invalid.
    */
   INVALID_SIGNATURE = "ATTESTATION_ERROR_INVALID_SIGNATURE",
-  /**
-   * There is no committee for the slot and committee index of this attestation
-   * and the attestation should not have been produced.
-   */
-  NO_COMMITTEE_FOR_SLOT_AND_INDEX = "ATTESTATION_ERROR_NO_COMMITTEE_FOR_SLOT_AND_INDEX",
   /**
    * The unaggregated attestation doesn't have only one aggregation bit set.
    */
@@ -150,7 +145,6 @@ export type AttestationErrorType =
   | {code: AttestationErrorCode.HEAD_NOT_TARGET_DESCENDANT}
   | {code: AttestationErrorCode.UNKNOWN_TARGET_ROOT; root: Uint8Array}
   | {code: AttestationErrorCode.INVALID_SIGNATURE}
-  | {code: AttestationErrorCode.NO_COMMITTEE_FOR_SLOT_AND_INDEX; slot: Slot; index: CommitteeIndex}
   | {code: AttestationErrorCode.NOT_EXACTLY_ONE_AGGREGATION_BIT_SET}
   | {code: AttestationErrorCode.PRIOR_ATTESTATION_KNOWN; validatorIndex: ValidatorIndex; epoch: Epoch}
   | {code: AttestationErrorCode.FUTURE_EPOCH; attestationEpoch: Epoch; currentEpoch: Epoch}

@@ -77,9 +77,12 @@ export type LodestarNodePeer = NodePeer & {
 export type LodestarThreadType = "main" | "network" | "discv5";
 
 export type Api = {
-  /** Trigger to write a heapdump to disk at `dirpath`. May take > 1min */
-  writeHeapdump(dirpath?: string): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: {filepath: string}}}>>;
-  /** Trigger to write 10m network thread profile to disk */
+  /** Trigger to write a heapdump of either main/network/discv5 thread to disk at `dirpath`. May take > 1min */
+  writeHeapdump(
+    thread?: LodestarThreadType,
+    dirpath?: string
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: {filepath: string}}}>>;
+  /** Trigger to write profile of either main/network/discv5 thread to disk */
   writeProfile(
     thread?: LodestarThreadType,
     duration?: number,
@@ -153,7 +156,7 @@ export const routesData: RoutesData<Api> = {
 };
 
 export type ReqTypes = {
-  writeHeapdump: {query: {dirpath?: string}};
+  writeHeapdump: {query: {thread?: LodestarThreadType; dirpath?: string}};
   writeProfile: {query: {thread?: LodestarThreadType; duration?: number; dirpath?: string}};
   getLatestWeakSubjectivityCheckpointEpoch: ReqEmpty;
   getSyncChainsDebugState: ReqEmpty;
@@ -176,8 +179,8 @@ export type ReqTypes = {
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
   return {
     writeHeapdump: {
-      writeReq: (dirpath) => ({query: {dirpath}}),
-      parseReq: ({query}) => [query.dirpath],
+      writeReq: (thread, dirpath) => ({query: {thread, dirpath}}),
+      parseReq: ({query}) => [query.thread, query.dirpath],
       schema: {query: {dirpath: Schema.String}},
     },
     writeProfile: {

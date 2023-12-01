@@ -154,10 +154,14 @@ jobs:
         node: [20]
     steps:
       - uses: actions/checkout@v3      
+      - uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node }}
+          check-latest: true
+          cache: yarn 
+
+      # Remove when finished debugging core dumps
       - uses: './.github/actions/setup-debug-node'
-        with: 
-          node-version: ${{matrix.node}}
-          debug: 'true'
 
       - name: Restore build cache
         id: cache-primes-restore
@@ -181,8 +185,10 @@ jobs:
 
       - name: Unit tests
         id: unit_tests
-        run: yarn test:unit
+        # Rever to "yarn test:unit" when finished debugging core dumps
+        run: sudo sh -c "ulimit -c unlimited && /usr/bin/node-with-debug $(which yarn) test:unit"
       
+      # Remove when finished debugging core dumps
       - uses: './.github/actions/core-dump'
         if: ${{ failure() && steps.unit_tests.conclusion == 'failure' }}
 

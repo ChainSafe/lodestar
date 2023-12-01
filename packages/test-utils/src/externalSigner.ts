@@ -7,11 +7,12 @@ import {ForkSeq} from "@lodestar/params";
 const web3signerVersion = "23.11.0";
 
 /** Till what version is the web3signer image updated for signature verification */
-export const externalSignerSupportedForkSeq = ForkSeq.capella;
+const supportedForkSeq = ForkSeq.capella;
 
-export type ExternalSignerTests = {
+export type StartedExternalSigner = {
   container: StartedTestContainer;
   url: string;
+  supportedForkSeq: ForkSeq;
 };
 
 export async function startExternalSigner({
@@ -20,7 +21,7 @@ export async function startExternalSigner({
 }: {
   keystoreStrings: string[];
   password: string;
-}): Promise<ExternalSignerTests> {
+}): Promise<StartedExternalSigner> {
   // path to store configuration
   const tmpDir = tmp.dirSync({
     unsafeCleanup: true,
@@ -74,5 +75,6 @@ export async function startExternalSigner({
   return {
     container: startedContainer,
     url: url,
+    supportedForkSeq,
   };
 }

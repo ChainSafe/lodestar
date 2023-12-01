@@ -163,6 +163,8 @@ export function getBeaconBlockApi({
       : undefined;
     const blobs = blobSidecars ? blobSidecars.map((blobSidecar) => blobSidecar.blob) : null;
 
+    chain.logger.debug("Assembling blinded block for publishing", {source, blockRoot, slot});
+
     const signedBlockOrContents =
       source === ProducedBlockSource.engine
         ? reconstructFullBlockOrContents({signedBlindedBlock, signedBlindedBlobSidecars}, {executionPayload, blobs})
