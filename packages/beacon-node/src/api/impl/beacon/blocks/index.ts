@@ -100,7 +100,14 @@ export function getBeaconBlockApi({
         if (!blockLocallyProduced) {
           const parentBlock = chain.forkChoice.getBlock(signedBlock.message.parentRoot);
           if (parentBlock === null) {
-            throw Error("parentRoot not found in forkChoice");
+            network.events.emit(NetworkEvent.unknownBlockParent, {
+              blockInput: blockForImport,
+              peer: IDENTITY_PEER_ID,
+            });
+            throw new BlockError(signedBlock, {
+              code: BlockErrorCode.PARENT_UNKNOWN,
+              parentRoot: toHexString(signedBlock.message.parentRoot),
+            });
           }
 
           try {
