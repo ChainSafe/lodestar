@@ -30,15 +30,19 @@ export async function runCliCommand<T>(
   return wrapTimeout(
     // eslint-disable-next-line no-async-promise-executor
     new Promise(async (resolve, reject) => {
-      await cli
-        .parseAsync(parseArgs(args), {}, (err, _argv, output) => {
-          if (err) return reject(err);
+      try {
+        await cli
+          .parseAsync(parseArgs(args), {}, (err, _argv, output) => {
+            if (err) return reject(err);
 
-          resolve(output);
-        })
-        .catch(() => {
-          // We are suppressing error here as we are throwing from inside the callback
-        });
+            resolve(output);
+          })
+          .catch(() => {
+            // We are suppressing error here as we are throwing from inside the callback
+          });
+      } catch (err) {
+        reject(err);
+      }
     }),
     opts.timeoutMs
   );

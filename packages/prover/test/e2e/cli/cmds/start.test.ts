@@ -50,7 +50,7 @@ describe("prover/start", () => {
     beforeAll(async function () {
       await waitForCapellaFork();
       await mkdir(path.dirname(paramsFilePath), {recursive: true});
-      await writeFile(paramsFilePath, JSON.stringify(chainConfigToJson(config as ChainConfig)));
+      await writeFile(paramsFilePath, JSON.stringify(chainConfigToJson(config)));
 
       proc = await spawnCliCommand(
         "packages/prover/bin/lodestar-prover.js",
