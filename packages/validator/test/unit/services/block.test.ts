@@ -6,7 +6,7 @@ import {createChainForkConfig} from "@lodestar/config";
 import {config as mainnetConfig} from "@lodestar/config/default";
 import {sleep} from "@lodestar/utils";
 import {ssz} from "@lodestar/types";
-import {HttpStatusCode} from "@lodestar/api";
+import {HttpStatusCode, routes} from "@lodestar/api";
 import {ForkName} from "@lodestar/params";
 import {BlockProposingService} from "../../../src/services/block.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
@@ -52,6 +52,7 @@ describe("BlockDutiesService", function () {
     // use produceBlockV3
     const blockService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, null, {
       useProduceBlockV3: true,
+      broadcastValidation: routes.beacon.BroadcastValidation.consensus,
     });
 
     const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
@@ -78,6 +79,9 @@ describe("BlockDutiesService", function () {
 
     // Must have submitted the block received on signBlock()
     expect(api.beacon.publishBlockV2.callCount).to.equal(1, "publishBlock() must be called once");
-    expect(api.beacon.publishBlockV2.getCall(0).args).to.deep.equal([signedBlock], "wrong publishBlock() args");
+    expect(api.beacon.publishBlockV2.getCall(0).args).to.deep.equal(
+      [signedBlock, {broadcastValidation: routes.beacon.BroadcastValidation.consensus}],
+      "wrong publishBlock() args"
+    );
   });
 });

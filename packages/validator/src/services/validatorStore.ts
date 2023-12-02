@@ -127,6 +127,8 @@ export const defaultOptions = {
   builderAliasSelection: routes.validator.BuilderSelection.MaxProfit,
   // turn it off by default, turn it back on once other clients support v3 api
   useProduceBlockV3: false,
+  // spec asks for gossip validation by default
+  broadcastValidation: routes.beacon.BroadcastValidation.gossip,
 };
 
 /**
