@@ -509,7 +509,7 @@ export class BeaconChain implements IBeaconChain {
       blockType === BlockType.Full
         ? this.config.getForkTypes(slot).BeaconBlockBody.hashTreeRoot(body)
         : this.config.getBlindedForkTypes(slot).BeaconBlockBody.hashTreeRoot(body as allForks.BlindedBeaconBlockBody);
-    this.logger.debug("Computing block post state from tje produced body", {
+    this.logger.debug("Computing block post state from the produced body", {
       slot,
       bodyRoot: toHexString(bodyRoot),
       blockType,
