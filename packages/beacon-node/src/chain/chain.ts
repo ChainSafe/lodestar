@@ -1,5 +1,5 @@
 import path from "node:path";
-import {CompositeTypeAny, fromHexString, TreeView, Type} from "@chainsafe/ssz";
+import {CompositeTypeAny, fromHexString, toHexString, TreeView, Type} from "@chainsafe/ssz";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
@@ -504,6 +504,17 @@ export class BeaconChain implements IBeaconChain {
       proposerPubKey,
     });
 
+    // The hashtree root computed here for debug log will get cached and hence won't introduce additional delays
+    const bodyRoot =
+      blockType === BlockType.Full
+        ? this.config.getForkTypes(slot).BeaconBlockBody.hashTreeRoot(body)
+        : this.config.getBlindedForkTypes(slot).BeaconBlockBody.hashTreeRoot(body as allForks.BlindedBeaconBlockBody);
+    this.logger.debug("Computing block post state from the produced body", {
+      slot,
+      bodyRoot: toHexString(bodyRoot),
+      blockType,
+    });
+
     const block = {
       slot,
       proposerIndex,
@@ -511,7 +522,6 @@ export class BeaconChain implements IBeaconChain {
       stateRoot: ZERO_HASH,
       body,
     } as AssembledBlockType<T>;
-
     block.stateRoot = computeNewStateRoot(this.metrics, state, block);
     const blockRoot =
       blockType === BlockType.Full
