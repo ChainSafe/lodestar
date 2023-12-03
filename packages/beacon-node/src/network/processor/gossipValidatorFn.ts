@@ -1,4 +1,4 @@
-import {TopicValidatorResult} from "@libp2p/interface/pubsub";
+import {TopicValidatorResult} from "@libp2p/interface";
 import {ChainForkConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
