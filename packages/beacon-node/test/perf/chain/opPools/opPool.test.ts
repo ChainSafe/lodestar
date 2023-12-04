@@ -16,6 +16,7 @@ import {
   generateSignedBeaconBlockHeader,
   generateVoluntaryExits,
 } from "../../../fixtures/phase0.js";
+import {BlockType} from "../../../../src/chain/interface.js";
 
 // Aug 11 2021
 // getAttestationsForBlock
@@ -41,7 +42,7 @@ describe("opPool", () => {
       return pool;
     },
     fn: (pool) => {
-      pool.getSlashingsAndExits(originalState);
+      pool.getSlashingsAndExits(originalState, BlockType.Full, null);
     },
   });
 
@@ -59,7 +60,7 @@ describe("opPool", () => {
       return pool;
     },
     fn: (pool) => {
-      pool.getSlashingsAndExits(originalState);
+      pool.getSlashingsAndExits(originalState, BlockType.Full, null);
     },
   });
 });
