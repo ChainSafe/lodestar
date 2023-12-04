@@ -223,7 +223,6 @@
             "mode": "palette-classic"
           },
           "mappings": [],
-          "thresholds": {},
           "unit": "s"
         },
         "overrides": []
@@ -272,19 +271,6 @@
             "mode": "palette-classic"
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "value": null,
-                "color": "green"
-              },
-              {
-                "value": 80,
-                "color": "red"
-              }
-            ]
-          },
           "unit": "s"
         },
         "overrides": []
