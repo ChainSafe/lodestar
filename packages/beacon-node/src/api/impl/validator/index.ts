@@ -296,9 +296,9 @@ export function getValidatorApi({
     if (!chain.executionBuilder) {
       throw Error("Execution builder not set");
     }
-    if (!chain.executionBuilder.status) {
-      throw Error("Execution builder disabled");
-    }
+    // if (!chain.executionBuilder.status) {
+    //   throw Error("Execution builder disabled");
+    // }
 
     if (skipHeadChecksAndUpdate !== true) {
       notWhileSyncing();

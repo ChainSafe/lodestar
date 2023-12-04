@@ -107,6 +107,7 @@ export class BlockProposingService {
       this.metrics?.blockProposingErrors.inc({error: "publish"});
       throw extendError(e, "Failed to publish block");
     });
+    this.logger.info("@@@ test: published block successfully slot", block.slot);
   };
 
   /**
