@@ -121,6 +121,32 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       buckets: [0.1, 1, 2, 4, 10],
       labelNames: ["source"],
     }),
+    blockProductionTimeSteps: register.histogram<"step" | "source">({
+      name: "beacon_block_production_steps_seconds",
+      help: "Detailed steps runtime of block production",
+      /**
+       * Engine steps:
+       *  - proposerSlashing
+       * - attesterSlashing
+       * - voluntaryExits
+       * - blsToExecutionChanges
+       * - attestations
+       * - eth1DataAndDeposits
+       * - syncAggregate
+       * - executionPayload
+       *
+       * Builder steps:
+       *  - proposerSlashing
+       * - attesterSlashing
+       * - voluntaryExits
+       * - blsToExecutionChanges
+       * - attestations
+       * - eth1DataAndDeposits
+       * - syncAggregate
+       * - executionPayload
+       */
+      labelNames: ["step", "source"] as const,
+    }),
     blockProductionRequests: register.gauge<"source">({
       name: "beacon_block_production_requests_total",
       help: "Count of all block production requests",
