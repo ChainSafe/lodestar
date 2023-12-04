@@ -309,7 +309,7 @@
           "expr": "rate(beacon_block_production_seconds_sum[$rate_interval])\n/\nrate(beacon_block_production_seconds_count[$rate_interval])",
           "format": "heatmap",
           "interval": "",
-          "legendFormat": "time",
+          "legendFormat": "{{instance}} - {{source}}",
           "refId": "A"
         }
       ],
