@@ -14,6 +14,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {ForkPreBlobs, ForkBlobs, ForkSeq} from "@lodestar/params";
 import {extendError, prettyBytes} from "@lodestar/utils";
 import {Api, ApiError, routes} from "@lodestar/api";
+import {interopSecretKey} from "@lodestar/state-transition";
 import {IClock, LoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
@@ -81,11 +82,26 @@ export class BlockProposingService {
       metrics,
       this.notifyBlockProductionFn
     );
+    clock.runEverySlot(this.runTest);
   }
 
   removeDutiesForKey(pubkey: PubkeyHex): void {
     this.dutiesService.removeDutiesForKey(pubkey);
   }
+
+  /**
+   * Test: produce and publish a block for the given slot, then compare at the beacon node side.
+   */
+  private runTest = async (slot: Slot): Promise<void> => {
+    const secretKey = interopSecretKey(0);
+    const pubkey = secretKey.toPublicKey().toBytes();
+    const pubkeyHex = toHexString(pubkey);
+    const randaoReveal = await this.validatorStore.signRandao(pubkey, slot);
+    const graffiti = this.validatorStore.getGraffiti(pubkeyHex);
+    const blockContents = await this.produceBlockWrapper(this.config, slot, randaoReveal, graffiti, {});
+    const block = blockContents.block;
+    this.logger.info("@@@ test: produced block successfully slot", block.slot);
+  };
 
   /**
    * `BlockDutiesService` must call this fn to trigger block creation
