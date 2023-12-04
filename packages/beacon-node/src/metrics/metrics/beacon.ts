@@ -126,8 +126,8 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       help: "Detailed steps runtime of block production",
       /**
        * Engine steps:
-       *  - proposerSlashing
-       * - attesterSlashing
+       * - proposerSlashing
+       * - attesterSlashings
        * - voluntaryExits
        * - blsToExecutionChanges
        * - attestations
@@ -136,8 +136,8 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
        * - executionPayload
        *
        * Builder steps:
-       *  - proposerSlashing
-       * - attesterSlashing
+       * - proposerSlashing
+       * - attesterSlashings
        * - voluntaryExits
        * - blsToExecutionChanges
        * - attestations
