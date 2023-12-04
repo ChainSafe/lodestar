@@ -41,6 +41,7 @@ import {PubkeyHex} from "../types.js";
 import {externalSignerPostSignature, SignableMessageType, SignableMessage} from "../util/externalSignerClient.js";
 import {Metrics} from "../metrics.js";
 import {isValidatePubkeyHex} from "../util/format.js";
+import {LoggerVc} from "../util/logger.js";
 import {IndicesService} from "./indices.js";
 import {DoppelgangerService} from "./doppelgangerService.js";
 
@@ -122,9 +123,12 @@ type ValidatorData = ProposerConfig & {
 export const defaultOptions = {
   suggestedFeeRecipient: "0x0000000000000000000000000000000000000000",
   defaultGasLimit: 30_000_000,
-  builderSelection: routes.validator.BuilderSelection.MaxProfit,
+  builderSelection: routes.validator.BuilderSelection.ExecutionOnly,
+  builderAliasSelection: routes.validator.BuilderSelection.MaxProfit,
   // turn it off by default, turn it back on once other clients support v3 api
   useProduceBlockV3: false,
+  // spec asks for gossip validation by default
+  broadcastValidation: routes.beacon.BroadcastValidation.gossip,
 };
 
 /**
@@ -232,6 +236,22 @@ export class ValidatorStore {
     return this.validators.get(pubkeyHex)?.graffiti ?? this.defaultProposerConfig.graffiti;
   }
 
+  setGraffiti(pubkeyHex: PubkeyHex, graffiti: string): void {
+    const validatorData = this.validators.get(pubkeyHex);
+    if (validatorData === undefined) {
+      throw Error(`Validator pubkey ${pubkeyHex} not known`);
+    }
+    validatorData.graffiti = graffiti;
+  }
+
+  deleteGraffiti(pubkeyHex: PubkeyHex): void {
+    const validatorData = this.validators.get(pubkeyHex);
+    if (validatorData === undefined) {
+      throw Error(`Validator pubkey ${pubkeyHex} not known`);
+    }
+    delete validatorData["graffiti"];
+  }
+
   getBuilderSelection(pubkeyHex: PubkeyHex): routes.validator.BuilderSelection {
     return (this.validators.get(pubkeyHex)?.builder || {}).selection ?? this.defaultProposerConfig.builder.selection;
   }
@@ -334,7 +354,8 @@ export class ValidatorStore {
   async signBlock(
     pubkey: BLSPubkey,
     blindedOrFull: allForks.FullOrBlindedBeaconBlock,
-    currentSlot: Slot
+    currentSlot: Slot,
+    logger?: LoggerVc
   ): Promise<allForks.FullOrBlindedSignedBeaconBlock> {
     // Make sure the block slot is not higher than the current slot to avoid potential attacks.
     if (blindedOrFull.slot > currentSlot) {
@@ -350,8 +371,14 @@ export class ValidatorStore {
     // Don't use `computeSigningRoot()` here to compute the objectRoot in typesafe function blindedOrFullBlockHashTreeRoot()
     const signingRoot = ssz.phase0.SigningData.hashTreeRoot({objectRoot: blockRoot, domain});
 
+    logger?.debug("Signing the block proposal", {
+      slot: signingSlot,
+      blockRoot: toHexString(blockRoot),
+      signingRoot: toHexString(signingRoot),
+    });
+
     try {
-      await this.slashingProtection.checkAndInsertBlockProposal(pubkey, {slot: blindedOrFull.slot, signingRoot});
+      await this.slashingProtection.checkAndInsertBlockProposal(pubkey, {slot: signingSlot, signingRoot});
     } catch (e) {
       this.metrics?.slashingProtectionBlockError.inc();
       throw e;

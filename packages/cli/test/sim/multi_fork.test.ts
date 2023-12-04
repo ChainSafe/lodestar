@@ -218,7 +218,7 @@ await connectNewNode(unknownBlockSync, env.nodes);
 await sleep(5000);
 
 try {
-  ApiError.assert(await unknownBlockSync.beacon.api.beacon.publishBlock(headForUnknownBlockSync.response.data));
+  ApiError.assert(await unknownBlockSync.beacon.api.beacon.publishBlockV2(headForUnknownBlockSync.response.data));
 
   env.tracker.record({
     message: "Publishing unknown block should fail",

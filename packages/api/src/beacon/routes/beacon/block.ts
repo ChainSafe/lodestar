@@ -52,7 +52,6 @@ export type BlockHeaderResponse = {
 };
 
 export enum BroadcastValidation {
-  none = "none",
   gossip = "gossip",
   consensus = "consensus",
   consensusAndEquivocation = "consensus_and_equivocation",
@@ -193,7 +192,7 @@ export type Api = {
 
   publishBlockV2(
     blockOrContents: allForks.SignedBeaconBlockOrContents,
-    opts: {broadcastValidation?: BroadcastValidation}
+    opts?: {broadcastValidation?: BroadcastValidation}
   ): Promise<
     ApiClientResponse<
       {
@@ -341,7 +340,7 @@ export function getReqSerializers(config: ChainForkConfig): ReqSerializers<Api, 
     getBlockRoot: blockIdOnlyReq,
     publishBlock: reqOnlyBody(AllForksSignedBlockOrContents, Schema.Object),
     publishBlockV2: {
-      writeReq: (item, {broadcastValidation}) => ({
+      writeReq: (item, {broadcastValidation} = {}) => ({
         body: AllForksSignedBlockOrContents.toJson(item),
         query: {broadcast_validation: broadcastValidation},
       }),

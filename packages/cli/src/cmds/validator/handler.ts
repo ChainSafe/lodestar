@@ -1,7 +1,13 @@
 import path from "node:path";
 import {setMaxListeners} from "node:events";
 import {LevelDbController} from "@lodestar/db";
-import {ProcessShutdownCallback, SlashingProtection, Validator, ValidatorProposerConfig} from "@lodestar/validator";
+import {
+  ProcessShutdownCallback,
+  SlashingProtection,
+  Validator,
+  ValidatorProposerConfig,
+  defaultOptions,
+} from "@lodestar/validator";
 import {routes} from "@lodestar/api";
 import {getMetrics, MetricsRegister} from "@lodestar/validator";
 import {
@@ -163,6 +169,7 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
       valProposerConfig,
       distributed: args.distributed,
       useProduceBlockV3: args.useProduceBlockV3,
+      broadcastValidation: parseBroadcastValidation(args.broadcastValidation),
     },
     metrics
   );
@@ -216,7 +223,9 @@ function getProposerConfigFromArgs(
     feeRecipient: args.suggestedFeeRecipient ? parseFeeRecipient(args.suggestedFeeRecipient) : undefined,
     builder: {
       gasLimit: args.defaultGasLimit,
-      selection: parseBuilderSelection(args["builder.selection"]),
+      selection: parseBuilderSelection(
+        args["builder.selection"] ?? (args["builder"] ? defaultOptions.builderAliasSelection : undefined)
+      ),
     },
   };
 
@@ -259,4 +268,19 @@ function parseBuilderSelection(builderSelection?: string): routes.validator.Buil
     }
   }
   return builderSelection as routes.validator.BuilderSelection;
+}
+
+function parseBroadcastValidation(broadcastValidation?: string): routes.beacon.BroadcastValidation | undefined {
+  if (broadcastValidation) {
+    switch (broadcastValidation) {
+      case "gossip":
+      case "consensus":
+      case "consensus_and_equivocation":
+        break;
+      default:
+        throw Error("Invalid input for broadcastValidation, check help");
+    }
+  }
+
+  return broadcastValidation as routes.beacon.BroadcastValidation;
 }

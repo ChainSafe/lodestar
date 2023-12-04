@@ -4,8 +4,6 @@ import {phase0, RootHex, ssz, ValidatorIndex} from "@lodestar/types";
 import {
   computeEpochAtSlot,
   isAggregatorFromCommitteeLength,
-  getIndexedAttestationSignatureSet,
-  ISignatureSet,
   createAggregateSignatureSetFromComponents,
 } from "@lodestar/state-transition";
 import {IBeaconChain} from "..";
@@ -14,8 +12,9 @@ import {RegenCaller} from "../regen/index.js";
 import {getAttDataBase64FromSignedAggregateAndProofSerialized} from "../../util/sszBytes.js";
 import {getSelectionProofSignatureSet, getAggregateAndProofSignatureSet} from "./signatureSets/index.js";
 import {
+  getAttestationDataSigningRoot,
   getCommitteeIndices,
-  getStateForAttestationVerification,
+  getShufflingForAttestationVerification,
   verifyHeadBlockAndTargetRoot,
   verifyPropagationSlotRange,
 } from "./attestation.js";
@@ -142,17 +141,16 @@ async function validateAggregateAndProof(
   // -- i.e. get_ancestor(store, aggregate.data.beacon_block_root, compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)) == store.finalized_checkpoint.root
   // > Altready check in `chain.forkChoice.hasBlock(attestation.data.beaconBlockRoot)`
 
-  const attHeadState = await getStateForAttestationVerification(
+  const shuffling = await getShufflingForAttestationVerification(
     chain,
-    attSlot,
     attEpoch,
     attHeadBlock,
-    RegenCaller.validateGossipAggregateAndProof
+    RegenCaller.validateGossipAttestation
   );
 
   const committeeIndices: number[] = cachedAttData
     ? cachedAttData.committeeIndices
-    : getCommitteeIndices(attHeadState, attSlot, attIndex);
+    : getCommitteeIndices(shuffling, attSlot, attIndex);
 
   const attestingIndices = aggregate.aggregationBits.intersectValues(committeeIndices);
   const indexedAttestation: phase0.IndexedAttestation = {
@@ -185,21 +183,16 @@ async function validateAggregateAndProof(
   // by the validator with index aggregate_and_proof.aggregator_index.
   // [REJECT] The aggregator signature, signed_aggregate_and_proof.signature, is valid.
   // [REJECT] The signature of aggregate is valid.
-  const aggregator = attHeadState.epochCtx.index2pubkey[aggregateAndProof.aggregatorIndex];
-  let indexedAttestationSignatureSet: ISignatureSet;
-  if (cachedAttData) {
-    const {signingRoot} = cachedAttData;
-    indexedAttestationSignatureSet = createAggregateSignatureSetFromComponents(
-      indexedAttestation.attestingIndices.map((i) => chain.index2pubkey[i]),
-      signingRoot,
-      indexedAttestation.signature
-    );
-  } else {
-    indexedAttestationSignatureSet = getIndexedAttestationSignatureSet(attHeadState, indexedAttestation);
-  }
+  const aggregator = chain.index2pubkey[aggregateAndProof.aggregatorIndex];
+  const signingRoot = cachedAttData ? cachedAttData.signingRoot : getAttestationDataSigningRoot(chain.config, attData);
+  const indexedAttestationSignatureSet = createAggregateSignatureSetFromComponents(
+    indexedAttestation.attestingIndices.map((i) => chain.index2pubkey[i]),
+    signingRoot,
+    indexedAttestation.signature
+  );
   const signatureSets = [
-    getSelectionProofSignatureSet(attHeadState, attSlot, aggregator, signedAggregateAndProof),
-    getAggregateAndProofSignatureSet(attHeadState, attEpoch, aggregator, signedAggregateAndProof),
+    getSelectionProofSignatureSet(chain.config, attSlot, aggregator, signedAggregateAndProof),
+    getAggregateAndProofSignatureSet(chain.config, attEpoch, aggregator, signedAggregateAndProof),
     indexedAttestationSignatureSet,
   ];
   // no need to write to SeenAttestationDatas

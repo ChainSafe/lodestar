@@ -126,7 +126,9 @@ function benchmarkAltairEpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>
   itBench({
     id: `${stateId} - altair processSlashings`,
     beforeEach: () => stateOg.value.clone() as CachedBeaconStateAltair,
-    fn: (state) => processSlashings(state, cache.value),
+    fn: (state) => {
+      processSlashings(state, cache.value, false);
+    },
   });
 
   itBench({

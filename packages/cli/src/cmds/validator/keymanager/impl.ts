@@ -60,6 +60,28 @@ export class KeymanagerApi implements Api {
     );
   }
 
+  async listGraffiti(pubkeyHex: string): ReturnType<Api["listGraffiti"]> {
+    return {data: {pubkey: pubkeyHex, graffiti: this.validator.validatorStore.getGraffiti(pubkeyHex)}};
+  }
+
+  async setGraffiti(pubkeyHex: string, graffiti: string): Promise<void> {
+    this.checkIfProposerWriteEnabled();
+    this.validator.validatorStore.setGraffiti(pubkeyHex, graffiti);
+    this.persistedKeysBackend.writeProposerConfig(
+      pubkeyHex,
+      this.validator.validatorStore.getProposerConfig(pubkeyHex)
+    );
+  }
+
+  async deleteGraffiti(pubkeyHex: string): Promise<void> {
+    this.checkIfProposerWriteEnabled();
+    this.validator.validatorStore.deleteGraffiti(pubkeyHex);
+    this.persistedKeysBackend.writeProposerConfig(
+      pubkeyHex,
+      this.validator.validatorStore.getProposerConfig(pubkeyHex)
+    );
+  }
+
   async getGasLimit(pubkeyHex: string): ReturnType<Api["getGasLimit"]> {
     const gasLimit = this.validator.validatorStore.getGasLimit(pubkeyHex);
     return {data: {pubkey: pubkeyHex, gasLimit}};
@@ -218,11 +240,11 @@ export class KeymanagerApi implements Api {
 
         // Skip unknown keys or remote signers
         const signer = this.validator.validatorStore.getSigner(pubkeyHex);
-        if (signer && signer?.type === SignerType.Local) {
+        if (signer && signer.type === SignerType.Local) {
           // Remove key from live local signer
           deletedKey[i] = this.validator.validatorStore.removeSigner(pubkeyHex);
 
-          // Remove key from blockduties
+          // Remove key from block duties
           // Remove from attestation duties
           // Remove from Sync committee duties
           // Remove from indices
@@ -345,9 +367,12 @@ export class KeymanagerApi implements Api {
 
         // Remove key from live local signer
         const deletedFromMemory =
-          signer && signer?.type === SignerType.Remote ? this.validator.validatorStore.removeSigner(pubkeyHex) : false;
+          signer && signer.type === SignerType.Remote ? this.validator.validatorStore.removeSigner(pubkeyHex) : false;
 
-        // TODO: Remove duties
+        if (deletedFromMemory) {
+          // Remove duties if key was deleted from in-memory store
+          this.validator.removeDutiesForKey(pubkeyHex);
+        }
 
         const deletedFromDisk = this.persistedKeysBackend.deleteRemoteKey(pubkeyHex);
 

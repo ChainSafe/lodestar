@@ -29,6 +29,7 @@ import {
 import {computeEpochShuffling, EpochShuffling, getShufflingDecisionBlock} from "../util/epochShuffling.js";
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
 import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
+import {getTotalSlashingsByIncrement} from "../epoch/processSlashings.js";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements.js";
 import {
   Index2PubkeyCache,
@@ -147,6 +148,10 @@ export class EpochCache {
    * Effective balances, for altair processAttestations()
    */
   effectiveBalanceIncrements: EffectiveBalanceIncrements;
+  /**
+   * Total state.slashings by increment, for processSlashing()
+   */
+  totalSlashingsByIncrement: number;
   syncParticipantReward: number;
   syncProposerReward: number;
   /**
@@ -223,6 +228,7 @@ export class EpochCache {
     currentShuffling: EpochShuffling;
     nextShuffling: EpochShuffling;
     effectiveBalanceIncrements: EffectiveBalanceIncrements;
+    totalSlashingsByIncrement: number;
     syncParticipantReward: number;
     syncProposerReward: number;
     baseRewardPerIncrement: number;
@@ -249,6 +255,7 @@ export class EpochCache {
     this.currentShuffling = data.currentShuffling;
     this.nextShuffling = data.nextShuffling;
     this.effectiveBalanceIncrements = data.effectiveBalanceIncrements;
+    this.totalSlashingsByIncrement = data.totalSlashingsByIncrement;
     this.syncParticipantReward = data.syncParticipantReward;
     this.syncProposerReward = data.syncProposerReward;
     this.baseRewardPerIncrement = data.baseRewardPerIncrement;
@@ -295,6 +302,7 @@ export class EpochCache {
     const validatorCount = validators.length;
 
     const effectiveBalanceIncrements = getEffectiveBalanceIncrementsWithLen(validatorCount);
+    const totalSlashingsByIncrement = getTotalSlashingsByIncrement(state);
     const previousActiveIndices: ValidatorIndex[] = [];
     const currentActiveIndices: ValidatorIndex[] = [];
     const nextActiveIndices: ValidatorIndex[] = [];
@@ -445,6 +453,7 @@ export class EpochCache {
       currentShuffling,
       nextShuffling,
       effectiveBalanceIncrements,
+      totalSlashingsByIncrement,
       syncParticipantReward,
       syncProposerReward,
       baseRewardPerIncrement,
@@ -486,6 +495,7 @@ export class EpochCache {
       // Uint8Array, requires cloning, but it is cloned only when necessary before an epoch transition
       // See EpochCache.beforeEpochTransition()
       effectiveBalanceIncrements: this.effectiveBalanceIncrements,
+      totalSlashingsByIncrement: this.totalSlashingsByIncrement,
       // Basic types (numbers) cloned implicitly
       syncParticipantReward: this.syncParticipantReward,
       syncProposerReward: this.syncProposerReward,

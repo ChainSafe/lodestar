@@ -1,4 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
+import {Logger} from "@lodestar/logger";
 import {Metrics} from "../../metrics/metrics.js";
 import {IExecutionBuilder} from "./interface.js";
 
@@ -12,11 +13,12 @@ export const defaultExecutionBuilderOpts: ExecutionBuilderOpts = defaultExecutio
 export function initializeExecutionBuilder(
   opts: ExecutionBuilderOpts,
   config: ChainForkConfig,
-  metrics: Metrics | null = null
+  metrics: Metrics | null = null,
+  logger?: Logger
 ): IExecutionBuilder {
   switch (opts.mode) {
     case "http":
     default:
-      return new ExecutionBuilderHttp(opts, config, metrics);
+      return new ExecutionBuilderHttp(opts, config, metrics, logger);
   }
 }
