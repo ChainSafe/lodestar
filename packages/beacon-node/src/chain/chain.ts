@@ -866,7 +866,7 @@ export class BeaconChain implements IBeaconChain {
     this.metrics?.blockProductionCaches.producedBlockRoot.set(this.producedBlockRoot.size);
 
     pruneSetToMax(this.producedBlindedBlockRoot, this.opts.maxCachedProducedRoots ?? DEFAULT_MAX_CACHED_PRODUCED_ROOTS);
-    this.metrics?.blockProductionCaches.producedBlindedBlockRoot.set(this.producedBlockRoot.size);
+    this.metrics?.blockProductionCaches.producedBlindedBlockRoot.set(this.producedBlindedBlockRoot.size);
 
     if (this.config.getForkSeq(slot) >= ForkSeq.deneb) {
       pruneSetToMax(
