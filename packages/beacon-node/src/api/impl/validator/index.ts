@@ -314,12 +314,11 @@ export function getValidatorApi({
     let timer;
     try {
       timer = metrics?.blockProductionTime.startTimer();
-      const {block, executionPayloadValue} = await chain.produceBlindedBlock({
+      const {block, executionPayloadValue, consensusBlockValue} = await chain.produceBlindedBlock({
         slot,
         randaoReveal,
         graffiti: toGraffitiBuffer(graffiti || ""),
       });
-      const consensusBlockValue = await chain.getBlockRewards(block);
 
       metrics?.blockProductionSuccess.inc({source});
       metrics?.blockProductionNumAggregated.observe({source}, block.body.attestations.length);
@@ -381,14 +380,12 @@ export function getValidatorApi({
     let timer;
     try {
       timer = metrics?.blockProductionTime.startTimer();
-      const {block, executionPayloadValue} = await chain.produceBlock({
+      const {block, executionPayloadValue, consensusBlockValue} = await chain.produceBlock({
         slot,
         randaoReveal,
         graffiti: toGraffitiBuffer(graffiti || ""),
         feeRecipient,
       });
-      const consensusBlockValue = await chain.getBlockRewards(block);
-
       const version = config.getForkName(block.slot);
       if (strictFeeRecipientCheck && feeRecipient && isForkExecution(version)) {
         const blockFeeRecipient = toHexString((block as bellatrix.BeaconBlock).body.executionPayload.feeRecipient);

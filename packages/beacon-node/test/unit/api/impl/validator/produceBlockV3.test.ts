@@ -88,6 +88,7 @@ describe("api/validator - produceBlockV3", function () {
           chainStub.produceBlock.mockResolvedValue({
             block: fullBlock,
             executionPayloadValue: BigInt(enginePayloadValue),
+            consensusBlockValue: BigInt(consensusBlockValue),
           });
         } else {
           chainStub.produceBlock.mockRejectedValue(Error("not produced"));
@@ -97,12 +98,11 @@ describe("api/validator - produceBlockV3", function () {
           chainStub.produceBlindedBlock.mockResolvedValue({
             block: blindedBlock,
             executionPayloadValue: BigInt(builderPayloadValue),
+            consensusBlockValue: BigInt(consensusBlockValue),
           });
         } else {
           chainStub.produceBlindedBlock.mockRejectedValue(Error("not produced"));
         }
-        chainStub.getBlockRewards.mockResolvedValue(BigInt(consensusBlockValue));
-
         const _skipRandaoVerification = false;
         const produceBlockOpts = {
           strictFeeRecipientCheck: false,
@@ -121,14 +121,12 @@ describe("api/validator - produceBlockV3", function () {
         // check call counts
         if (builderSelection === routes.validator.BuilderSelection.ExecutionOnly) {
           expect(chainStub.produceBlindedBlock).toBeCalledTimes(0);
-          expect(chainStub.getBlockRewards).toBeCalledTimes(1);
         } else {
           expect(chainStub.produceBlindedBlock).toBeCalledTimes(1);
         }
 
         if (builderSelection === routes.validator.BuilderSelection.BuilderOnly) {
           expect(chainStub.produceBlock).toBeCalledTimes(0);
-          expect(chainStub.getBlockRewards).toBeCalledTimes(1);
         } else {
           expect(chainStub.produceBlock).toBeCalledTimes(1);
         }
