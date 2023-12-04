@@ -97,6 +97,7 @@ export interface IBeaconChain {
   readonly checkpointBalancesCache: CheckpointBalancesCache;
   readonly producedBlobSidecarsCache: Map<BlockHash, deneb.BlobSidecars>;
   readonly producedBlockRoot: Map<RootHex, allForks.ExecutionPayload | null>;
+  producedLocalBlockCurrentSlot: allForks.BeaconBlock | null;
   readonly producedBlindedBlobSidecarsCache: Map<BlockHash, deneb.BlindedBlobSidecars>;
   readonly shufflingCache: ShufflingCache;
   readonly producedBlindedBlockRoot: Set<RootHex>;

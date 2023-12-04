@@ -141,6 +141,7 @@ export class BeaconChain implements IBeaconChain {
   // send and get signed/published blinded versions which beacon can assemble into full before
   // actual publish
   readonly producedBlockRoot = new Map<RootHex, allForks.ExecutionPayload | null>();
+  producedLocalBlockCurrentSlot: allForks.BeaconBlock | null = null;
   readonly producedBlindedBlockRoot = new Set<RootHex>();
 
   readonly opts: IChainOptions;
@@ -533,6 +534,7 @@ export class BeaconChain implements IBeaconChain {
     if (blockType === BlockType.Full) {
       this.logger.debug("Setting executionPayload cache for produced block", {blockRootHex, slot, blockType});
       this.producedBlockRoot.set(blockRootHex, (block as bellatrix.BeaconBlock).body.executionPayload ?? null);
+      this.producedLocalBlockCurrentSlot = block;
       this.metrics?.blockProductionCaches.producedBlockRoot.set(this.producedBlockRoot.size);
     } else {
       this.logger.debug("Tracking the produced blinded block", {blockRootHex, slot, blockType});
@@ -845,6 +847,7 @@ export class BeaconChain implements IBeaconChain {
 
   private onClockSlot(slot: Slot): void {
     this.logger.verbose("Clock slot", {slot});
+    this.producedLocalBlockCurrentSlot = null;
 
     // CRITICAL UPDATE
     if (this.forkChoice.irrecoverableError) {

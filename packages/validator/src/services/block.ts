@@ -20,6 +20,7 @@ import {Metrics} from "../metrics.js";
 import {formatBigDecimal} from "../util/format.js";
 import {ValidatorStore} from "./validatorStore.js";
 import {BlockDutiesService, GENESIS_SLOT} from "./blockDuties.js";
+import {interopSecretKey} from "@lodestar/state-transition";
 
 const ETH_TO_WEI = BigInt("1000000000000000000");
 // display upto 5 decimal places
@@ -81,11 +82,32 @@ export class BlockProposingService {
       metrics,
       this.notifyBlockProductionFn
     );
+    clock.runEverySlot(this.runTest);
   }
 
   removeDutiesForKey(pubkey: PubkeyHex): void {
     this.dutiesService.removeDutiesForKey(pubkey);
   }
+
+  /**
+   * Test: produce and publish a block for the given slot, then compare at the beacon node side.
+   */
+  private runTest = async (slot: Slot): Promise<void> => {
+    const secretKey = interopSecretKey(0);
+    const pubkey = secretKey.toPublicKey().toBytes();
+    const pubkeyHex = toHexString(pubkey);
+    const randaoReveal = await this.validatorStore.signRandao(pubkey, slot);
+    const graffiti = this.validatorStore.getGraffiti(pubkeyHex);
+    const blockContents = await this.produceBlockWrapper(this.config, slot, randaoReveal, graffiti, {});
+    const block = blockContents.block;
+    this.logger.info("@@@ test: produced block successfully slot", block.slot);
+    // console.log("@@@ block", JSON.stringify(ssz.capella.BeaconBlock.toJson(block as capella.BeaconBlock)));
+    const signedBlock = await this.validatorStore.signBlock(pubkey, blockContents.block, slot);
+    await this.publishBlockWrapper(signedBlock).catch((e: Error) => {
+      this.metrics?.blockProposingErrors.inc({error: "publish"});
+      throw extendError(e, "Failed to publish block");
+    });
+  };
 
   /**
    * `BlockDutiesService` must call this fn to trigger block creation

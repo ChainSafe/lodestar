@@ -74,6 +74,22 @@ export function getBeaconBlockApi({
     const slot = signedBlock.message.slot;
     const fork = config.getForkName(slot);
     const blockRoot = toHex(chain.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
+    if (!chain.producedLocalBlockCurrentSlot) {
+      throw Error("producedLocalBlockCurrentSlot is null for slot=" + slot);
+    }
+    const cachedBlockRoot = toHex(
+      chain.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(chain.producedLocalBlockCurrentSlot)
+    );
+    if (blockRoot !== cachedBlockRoot) {
+      chain.logger.error("!!! Block root mismatch", {slot, blockRoot, cachedBlockRoot});
+      const blockType = chain.config.getForkTypes(slot).BeaconBlock;
+      chain.persistInvalidSszValue(blockType, chain.producedLocalBlockCurrentSlot, "produced");
+      chain.persistInvalidSszValue(blockType, signedBlock.message, "published");
+    }
+    // this is for test only so don't want other steps
+    if (slot > 0) {
+      return;
+    }
     const blockLocallyProduced =
       chain.producedBlockRoot.has(blockRoot) || chain.producedBlindedBlockRoot.has(blockRoot);
     const valLogMeta = {broadcastValidation, blockRoot, blockLocallyProduced, slot};
