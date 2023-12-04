@@ -145,6 +145,7 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
        * - syncAggregate
        * - executionPayload
        */
+      buckets: [0.1, 1, 2, 4, 10],
       labelNames: ["step", "source"] as const,
     }),
     blockProductionRequests: register.gauge<"source">({
