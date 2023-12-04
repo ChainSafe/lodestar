@@ -57,6 +57,7 @@ export type ValidatorOptions = {
   valProposerConfig?: ValidatorProposerConfig;
   distributed?: boolean;
   useProduceBlockV3?: boolean;
+  broadcastValidation?: routes.beacon.BroadcastValidation;
 };
 
 // TODO: Extend the timeout, and let it be customizable
@@ -208,6 +209,7 @@ export class Validator {
 
     const blockProposingService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, metrics, {
       useProduceBlockV3: opts.useProduceBlockV3 ?? defaultOptions.useProduceBlockV3,
+      broadcastValidation: opts.broadcastValidation ?? defaultOptions.broadcastValidation,
     });
 
     const attestationService = new AttestationService(
@@ -266,6 +268,7 @@ export class Validator {
     let api: Api;
     if (typeof opts.api === "string" || Array.isArray(opts.api)) {
       const urls = typeof opts.api === "string" ? [opts.api] : opts.api;
+      logger.info("Beacon node", {urls: urls.toString()});
       // This new api instance can make do with default timeout as a faster timeout is
       // not necessary since this instance won't be used for validator duties
       api = getClient({urls, getAbortSignal: () => opts.abortController.signal}, {config, logger});
@@ -284,13 +287,19 @@ export class Validator {
     await assertEqualGenesis(opts, genesis);
     logger.info("Verified connected beacon node and validator have the same genesisValidatorRoot");
 
-    const {useProduceBlockV3, valProposerConfig} = opts;
+    const {
+      useProduceBlockV3 = defaultOptions.useProduceBlockV3,
+      broadcastValidation = defaultOptions.broadcastValidation,
+      valProposerConfig,
+    } = opts;
     const defaultBuilderSelection =
       valProposerConfig?.defaultConfig.builder?.selection ?? defaultOptions.builderSelection;
     const strictFeeRecipientCheck = valProposerConfig?.defaultConfig.strictFeeRecipientCheck ?? false;
     const suggestedFeeRecipient = valProposerConfig?.defaultConfig.feeRecipient ?? defaultOptions.suggestedFeeRecipient;
+
     logger.info("Initializing validator", {
       useProduceBlockV3,
+      broadcastValidation,
       defaultBuilderSelection,
       suggestedFeeRecipient,
       strictFeeRecipientCheck,

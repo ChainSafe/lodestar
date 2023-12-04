@@ -63,6 +63,8 @@ export interface INetworkCore extends INetworkCorePublic {
   scrapeMetrics(): Promise<string>;
   writeNetworkThreadProfile(durationMs: number, dirpath: string): Promise<string>;
   writeDiscv5Profile(durationMs: number, dirpath: string): Promise<string>;
+  writeNetworkHeapSnapshot(prefix: string, dirpath: string): Promise<string>;
+  writeDiscv5HeapSnapshot(prefix: string, dirpath: string): Promise<string>;
 }
 
 /**

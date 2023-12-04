@@ -1,42 +1,33 @@
-import fs from "node:fs";
-import path from "node:path";
-import tmp from "tmp";
 import {expect} from "chai";
-import {GenericContainer, Wait, StartedTestContainer} from "testcontainers";
-import {Keystore} from "@chainsafe/bls-keystore";
-import bls from "@chainsafe/bls";
 import {fromHex, toHex} from "@lodestar/utils";
 import {config} from "@lodestar/config/default";
-import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {computeStartSlotAtEpoch, interopSecretKey, interopSecretKeys} from "@lodestar/state-transition";
 import {createBeaconConfig} from "@lodestar/config";
 import {genesisData} from "@lodestar/config/networks";
 import {getClient, routes} from "@lodestar/api";
 import {ssz} from "@lodestar/types";
 import {ForkSeq} from "@lodestar/params";
+import {getKeystoresStr, StartedExternalSigner, startExternalSigner} from "@lodestar/test-utils";
 import {Interchange, ISlashingProtection, Signer, SignerType, ValidatorStore} from "../../src/index.js";
 import {IndicesService} from "../../src/services/indices.js";
 import {testLogger} from "../utils/logger.js";
 
-const web3signerVersion = "22.8.1";
-/** Till what version is the image updated for signature verification */
-const validTillSignatureForkSeq = ForkSeq.bellatrix;
-
-/* eslint-disable no-console */
-
 describe("web3signer signature test", function () {
   this.timeout("60s");
 
-  let validatorStoreRemote: ValidatorStore;
-  let validatorStoreLocal: ValidatorStore;
-  let startedContainer: StartedTestContainer;
-
-  const pubkey = "0x8837af2a7452aff5a8b6906c3e5adefce5690e1bba6d73d870b9e679fece096b97a255bae0978e3a344aa832f68c6b47";
-  const pubkeyBytes = fromHex(pubkey);
   const altairSlot = 2375711;
   const epoch = 0;
   // Sample validator
   const validatorIndex = 4;
   const subcommitteeIndex = 0;
+
+  const secretKey = interopSecretKey(0);
+  const pubkeyBytes = secretKey.toPublicKey().toBytes();
+
+  let validatorStoreRemote: ValidatorStore;
+  let validatorStoreLocal: ValidatorStore;
+
+  let externalSigner: StartedExternalSigner;
 
   const duty: routes.validator.AttesterDuty = {
     slot: altairSlot,
@@ -48,77 +39,32 @@ describe("web3signer signature test", function () {
     pubkey: pubkeyBytes,
   };
 
-  after("stop container", async function () {
-    await startedContainer.stop();
+  before("set up validator stores", async () => {
+    validatorStoreLocal = await getValidatorStore({type: SignerType.Local, secretKey: secretKey});
+
+    const password = "password";
+    externalSigner = await startExternalSigner({
+      keystoreStrings: await getKeystoresStr(
+        password,
+        interopSecretKeys(2).map((k) => k.toHex())
+      ),
+      password: password,
+    });
+    validatorStoreRemote = await getValidatorStore({
+      type: SignerType.Remote,
+      url: externalSigner.url,
+      pubkey: secretKey.toPublicKey().toHex(),
+    });
   });
 
-  before("start container", async function () {
-    this.timeout("300s");
-    // path to store configuration
-    const tmpDir = tmp.dirSync({
-      unsafeCleanup: true,
-      // In Github runner NodeJS process probably runs as root, so web3signer doesn't have permissions to read config dir
-      mode: 755,
-    });
-    // Apply permissions again to hopefully make Github runner happy >.<
-    fs.chmodSync(tmpDir.name, 0o755);
-
-    const configDirPathHost = tmpDir.name;
-    const configDirPathContainer = "/var/web3signer/config";
-
-    // keystore content and file paths
-    // const keystoreStr = getKeystore();
-    // const password = "password";
-    const passwordFilename = "password.txt";
-
-    const keystoreStr = getKeystore();
-    const password = "password";
-
-    fs.writeFileSync(path.join(configDirPathHost, "keystore.json"), keystoreStr);
-    fs.writeFileSync(path.join(configDirPathHost, passwordFilename), password);
-
-    const secretKey = bls.SecretKey.fromBytes(await Keystore.parse(keystoreStr).decrypt(password));
-
-    const port = 9000;
-
-    // using the latest image to be alerted in case there is a breaking change
-    startedContainer = await new GenericContainer(`consensys/web3signer:${web3signerVersion}`)
-      .withHealthCheck({
-        test: ["CMD-SHELL", `curl -f http://localhost:${port}/healthcheck || exit 1`],
-        interval: 1000,
-        timeout: 3000,
-        retries: 5,
-        startPeriod: 1000,
-      })
-      .withWaitStrategy(Wait.forHealthCheck())
-      .withExposedPorts(port)
-      .withBindMounts([{source: configDirPathHost, target: configDirPathContainer, mode: "ro"}])
-      .withCommand([
-        "eth2",
-        `--keystores-path=${configDirPathContainer}`,
-        // Don't use path.join here, the container is running on unix filesystem
-        `--keystores-password-file=${configDirPathContainer}/${passwordFilename}`,
-        "--slashing-protection-enabled=false",
-      ])
-      .start();
-
-    const web3signerUrl = `http://localhost:${startedContainer.getMappedPort(port)}`;
-
-    // http://localhost:9000/api/v1/eth2/sign/0x8837af2a7452aff5a8b6906c3e5adefce5690e1bba6d73d870b9e679fece096b97a255bae0978e3a344aa832f68c6b47
-    validatorStoreRemote = await getValidatorStore({type: SignerType.Remote, url: web3signerUrl, pubkey});
-    validatorStoreLocal = await getValidatorStore({type: SignerType.Local, secretKey});
-
-    const stream = await startedContainer.logs();
-    stream
-      .on("data", (line) => process.stdout.write(line))
-      .on("err", (line) => process.stderr.write(line))
-      .on("end", () => console.log("Stream closed"));
+  after("stop external signer container", async () => {
+    await externalSigner.container.stop();
   });
 
   for (const fork of config.forksAscendingEpochOrder) {
     it(`signBlock ${fork.name}`, async function () {
       // Only test till the fork the signer version supports
-      if (ForkSeq[fork.name] > validTillSignatureForkSeq) {
+      if (ForkSeq[fork.name] > externalSigner.supportedForkSeq) {
         this.skip();
       }
 
@@ -260,37 +206,4 @@ class SlashingProtectionDisabled implements ISlashingProtection {
   exportInterchange(): Promise<Interchange> {
     throw Error("not implemented");
   }
-}
-
-function getKeystore(): string {
-  return `{
-    "version": 4,
-    "uuid": "f31f3377-694d-4943-8686-5b20356b2597",
-    "path": "m/12381/3600/0/0/0",
-    "pubkey": "8837af2a7452aff5a8b6906c3e5adefce5690e1bba6d73d870b9e679fece096b97a255bae0978e3a344aa832f68c6b47",
-    "crypto": {
-      "kdf": {
-        "function": "pbkdf2",
-        "params": {
-          "dklen": 32,
-          "c": 262144,
-          "prf": "hmac-sha256",
-          "salt": "ab2c11fe1a288a8344972e5e03a746f42867f5a9e749bf286f8e26cf16702c93"
-        },
-        "message": ""
-      },
-      "checksum": {
-        "function": "sha256",
-        "params": {},
-        "message": "1f0eda362360b51b85591e99fee6c5d030cc48f36af28eb055b19a2bf55b38a6"
-      },
-      "cipher": {
-        "function": "aes-128-ctr",
-        "params": {
-          "iv": "acf3173c5d0b074e1646bb6058dc0f2a"
-        },
-        "message": "402d1cecaa378e4f079c96437bd1d4771e09a85df2073d014b43980b623b9978"
-      }
-    }
-  }`;
 }

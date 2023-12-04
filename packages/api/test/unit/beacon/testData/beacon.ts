@@ -59,7 +59,7 @@ export const testData: GenericServerTestCases<Api> = {
     res: undefined,
   },
   publishBlockV2: {
-    args: [ssz.phase0.SignedBeaconBlock.defaultValue(), {broadcastValidation: BroadcastValidation.none}],
+    args: [ssz.phase0.SignedBeaconBlock.defaultValue(), {broadcastValidation: BroadcastValidation.consensus}],
     res: undefined,
   },
   publishBlindedBlock: {
@@ -67,7 +67,7 @@ export const testData: GenericServerTestCases<Api> = {
     res: undefined,
   },
   publishBlindedBlockV2: {
-    args: [getDefaultBlindedBlock(64), {broadcastValidation: BroadcastValidation.none}],
+    args: [getDefaultBlindedBlock(64), {broadcastValidation: BroadcastValidation.consensus}],
     res: undefined,
   },
   getBlobSidecars: {

@@ -108,7 +108,9 @@ function benchmarkPhase0EpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>
   itBench({
     id: `${stateId} - phase0 processSlashings`,
     beforeEach: () => stateOg.value.clone() as CachedBeaconStatePhase0,
-    fn: (state) => processSlashings(state, cache.value),
+    fn: (state) => {
+      processSlashings(state, cache.value, false);
+    },
   });
 
   itBench({

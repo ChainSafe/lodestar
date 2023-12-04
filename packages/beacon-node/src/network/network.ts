@@ -557,6 +557,14 @@ export class Network implements INetwork {
     return this.core.writeDiscv5Profile(durationMs, dirpath);
   }
 
+  async writeNetworkHeapSnapshot(prefix: string, dirpath: string): Promise<string> {
+    return this.core.writeNetworkHeapSnapshot(prefix, dirpath);
+  }
+
+  async writeDiscv5HeapSnapshot(prefix: string, dirpath: string): Promise<string> {
+    return this.core.writeDiscv5HeapSnapshot(prefix, dirpath);
+  }
+
   private onLightClientFinalityUpdate = async (finalityUpdate: allForks.LightClientFinalityUpdate): Promise<void> => {
     // TODO: Review is OK to remove if (this.hasAttachedSyncCommitteeMember())
 

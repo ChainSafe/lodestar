@@ -4,10 +4,10 @@ import {rimraf} from "rimraf";
 import {expect} from "chai";
 import {getMochaContext} from "@lodestar/test-utils/mocha";
 import {execCliCommand} from "@lodestar/test-utils";
+import {getKeystoresStr} from "@lodestar/test-utils";
 import {testFilesDir} from "../utils.js";
 import {cachedPubkeysHex, cachedSeckeysHex} from "../utils/cachedKeys.js";
 import {expectKeys, startValidatorWithKeyManager} from "../utils/validator.js";
-import {getKeystoresStr} from "../utils/keystores.js";
 
 describe("import from fs then validate", function () {
   const testContext = getMochaContext(this);

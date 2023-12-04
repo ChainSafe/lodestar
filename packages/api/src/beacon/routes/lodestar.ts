@@ -80,8 +80,8 @@ export type Endpoints = {
   writeHeapdump: Endpoint<
     //
     "POST",
-    {dirpath?: string},
-    {query: {dirpath?: string}},
+    {thread?: LodestarThreadType; dirpath?: string},
+    {query: {thread?: LodestarThreadType; dirpath?: string}},
     {filepath: string},
     EmptyMeta
   >;
@@ -258,10 +258,10 @@ export const definitions: RouteDefinitions<Endpoints> = {
     url: "/eth/v1/lodestar/write_heapdump",
     method: "POST",
     req: {
-      writeReqJson: ({dirpath}) => ({query: {dirpath}}),
-      parseReqJson: ({query}) => ({dirpath: query.dirpath}),
-      writeReqSsz: ({dirpath}) => ({query: {dirpath}, body: new Uint8Array()}),
-      parseReqSsz: ({query}) => ({dirpath: query.dirpath}),
+      writeReqJson: ({thread, dirpath}) => ({query: {thread, dirpath}}),
+      parseReqJson: ({query}) => ({thread: query.thread, dirpath: query.dirpath}),
+      writeReqSsz: ({thread, dirpath}) => ({query: {thread, dirpath}, body: new Uint8Array()}),
+      parseReqSsz: ({query}) => ({thread: query.thread, dirpath: query.dirpath}),
       schema: {query: {dirpath: Schema.String}},
     },
     resp: JsonOnlyResponseCodec as ResponseCodec<AnyPostEndpoint>,

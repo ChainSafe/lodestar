@@ -1,4 +1,5 @@
 import {itBench} from "@dapplion/benchmark";
+import {MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
 import {
   beforeProcessEpoch,
   CachedBeaconStatePhase0,
@@ -34,7 +35,9 @@ describe("phase0 processSlashings", () => {
       minRuns: 5, // Worst case is very slow
       before: () => getProcessSlashingsTestData(indicesToSlashLen),
       beforeEach: ({state, cache}) => ({state: state.clone(), cache}),
-      fn: ({state, cache}) => processSlashings(state as CachedBeaconStatePhase0, cache),
+      fn: ({state, cache}) => {
+        processSlashings(state as CachedBeaconStatePhase0, cache, false);
+      },
     });
   }
 });
@@ -48,6 +51,11 @@ function getProcessSlashingsTestData(indicesToSlashLen: number): {
 } {
   const state = generatePerfTestCachedStatePhase0({goBackOneSlot: true});
   const cache = beforeProcessEpoch(state);
+  state.slashings.set(0, indicesToSlashLen * MAX_EFFECTIVE_BALANCE);
+  for (let i = 1; i < state.slashings.length; i++) {
+    state.slashings.set(i, MAX_EFFECTIVE_BALANCE);
+  }
+  state.commit();
 
   cache.indicesToSlash = linspace(indicesToSlashLen);
 
