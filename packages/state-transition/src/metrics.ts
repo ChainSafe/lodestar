@@ -5,6 +5,8 @@ import {AttesterStatus} from "./util/attesterStatus.js";
 export type BeaconStateTransitionMetrics = {
   epochTransitionTime: Histogram;
   epochTransitionCommitTime: Histogram;
+  epochTransitionBeforeProcessEpochTime: Histogram;
+  epochTransitionAfterProcessEpochTime: Histogram;
   epochTransitionJustificationAndFinalizationTime: Histogram;
   epochTransitionInactivityUpdatesTime: Histogram;
   epochTransitionRewardsAndPenaltiesTime: Histogram;

@@ -286,6 +286,16 @@ export function createLodestarMetrics(
       help: "Time to call commit after process a single epoch transition in seconds",
       buckets: [0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1],
     }),
+    epochTransitionBeforeProcessEpochTime: register.histogram({
+      name: "lodestar_stfn_epoch_transition_before_process_epoch_seconds",
+      help: "Time to call beforeProcessEpoch before process a single epoch transition in seconds",
+      buckets: [0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1],
+    }),
+    epochTransitionAfterProcessEpochTime: register.histogram({
+      name: "lodestar_stfn_epoch_transition_after_process_epoch_seconds",
+      help: "Time to call afterProcessEpoch after process a single epoch transition in seconds",
+      buckets: [0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1],
+    }),
     epochTransitionJustificationAndFinalizationTime: register.histogram({
       name: "lodestar_stfn_epoch_transition_justification_and_finalization_seconds",
       help: "Time to process justification and finalization in seconds",
