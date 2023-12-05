@@ -203,8 +203,11 @@ export const LivenessResponseDataListType = ArrayOf(LivenessResponseDataType);
 export const SignedValidatorRegistrationV1ListType = ArrayOf(ssz.bellatrix.SignedValidatorRegistrationV1);
 
 export type ValidatorIndices = ValueOf<typeof ValidatorIndicesType>;
+export type AttesterDuty = ValueOf<typeof AttesterDutyType>;
 export type AttesterDutyList = ValueOf<typeof AttesterDutyListType>;
+export type ProposerDuty = ValueOf<typeof ProposerDutyType>;
 export type ProposerDutyList = ValueOf<typeof ProposerDutyListType>;
+export type SyncDuty = ValueOf<typeof SyncDutyType>;
 export type SyncDutyList = ValueOf<typeof SyncDutyListType>;
 export type SignedAggregateAndProofList = ValueOf<typeof SignedAggregateAndProofListType>;
 export type SignedContributionAndProofList = ValueOf<typeof SignedContributionAndProofListType>;

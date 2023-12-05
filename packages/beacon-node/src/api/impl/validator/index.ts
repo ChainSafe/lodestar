@@ -1,5 +1,5 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {routes, ServerApi} from "@lodestar/api";
+import {ApplicationMethods, routes} from "@lodestar/api";
 import {
   CachedBeaconStateAllForks,
   computeStartSlotAtEpoch,
@@ -91,7 +91,7 @@ export function getValidatorApi({
   metrics,
   network,
   sync,
-}: ApiModules): ServerApi<routes.validator.Api> {
+}: ApiModules): ApplicationMethods<routes.validator.Endpoints> {
   let genesisBlockRoot: Root | null = null;
 
   /**
@@ -702,7 +702,7 @@ export function getValidatorApi({
      * @param subcommitteeIndex The subcommittee index for which to produce the contribution.
      * @param beaconBlockRoot The block root for which to produce the contribution.
      */
-    async produceSyncCommitteeContribution(slot, subcommitteeIndex, beaconBlockRoot) {
+    async produceSyncCommitteeContribution({slot, subcommitteeIndex, beaconBlockRoot}) {
       // when a validator is configured with multiple beacon node urls, this beaconBlockRoot may come from another beacon node
       // and it hasn't been in our forkchoice since we haven't seen / processing that block
       // see https://github.com/ChainSafe/lodestar/issues/5063
@@ -726,7 +726,7 @@ export function getValidatorApi({
       return {data: contribution};
     },
 
-    async getProposerDuties(epoch) {
+    async getProposerDuties({epoch}) {
       notWhileSyncing();
 
       // Early check that epoch is within [current_epoch, current_epoch + 1], or allow for pre-genesis
@@ -790,15 +790,17 @@ export function getValidatorApi({
 
       return {
         data: duties,
-        dependentRoot: toHex(dependentRoot),
-        executionOptimistic: isOptimisticBlock(head),
+        meta: {
+          dependentRoot,
+          executionOptimistic: isOptimisticBlock(head),
+        },
       };
     },
 
-    async getAttesterDuties(epoch, validatorIndices) {
+    async getAttesterDuties({epoch, indices}) {
       notWhileSyncing();
 
-      if (validatorIndices.length === 0) {
+      if (indices.length === 0) {
         throw new ApiError(400, "No validator to get attester duties");
       }
 
@@ -822,11 +824,11 @@ export function getValidatorApi({
       // will equal `currentEpoch + 1`
 
       // Check that all validatorIndex belong to the state before calling getCommitteeAssignments()
-      const pubkeys = getPubkeysForIndices(state.validators, validatorIndices);
-      const committeeAssignments = state.epochCtx.getCommitteeAssignments(epoch, validatorIndices);
+      const pubkeys = getPubkeysForIndices(state.validators, indices);
+      const committeeAssignments = state.epochCtx.getCommitteeAssignments(epoch, indices);
       const duties: routes.validator.AttesterDuty[] = [];
-      for (let i = 0, len = validatorIndices.length; i < len; i++) {
-        const validatorIndex = validatorIndices[i];
+      for (let i = 0, len = indices.length; i < len; i++) {
+        const validatorIndex = indices[i];
         const duty = committeeAssignments.get(validatorIndex) as routes.validator.AttesterDuty | undefined;
         if (duty) {
           // Mutate existing object instead of re-creating another new object with spread operator
@@ -840,8 +842,10 @@ export function getValidatorApi({
 
       return {
         data: duties,
-        dependentRoot: toHex(dependentRoot),
-        executionOptimistic: isOptimisticBlock(head),
+        meta: {
+          dependentRoot,
+          executionOptimistic: isOptimisticBlock(head),
+        },
       };
     },
 
@@ -858,10 +862,10 @@ export function getValidatorApi({
      *
      * @param validatorIndices an array of the validator indices for which to obtain the duties.
      */
-    async getSyncCommitteeDuties(epoch, validatorIndices) {
+    async getSyncCommitteeDuties({epoch, indices}) {
       notWhileSyncing();
 
-      if (validatorIndices.length === 0) {
+      if (indices.length === 0) {
         throw new ApiError(400, "No validator to get attester duties");
       }
 
@@ -875,14 +879,14 @@ export function getValidatorApi({
       const state = chain.getHeadState();
 
       // Check that all validatorIndex belong to the state before calling getCommitteeAssignments()
-      const pubkeys = getPubkeysForIndices(state.validators, validatorIndices);
+      const pubkeys = getPubkeysForIndices(state.validators, indices);
       // Ensures `epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD <= current_epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1`
       const syncCommitteeCache = state.epochCtx.getIndexedSyncCommitteeAtEpoch(epoch);
       const syncCommitteeValidatorIndexMap = syncCommitteeCache.validatorIndexMap;
 
       const duties: routes.validator.SyncDuty[] = [];
-      for (let i = 0, len = validatorIndices.length; i < len; i++) {
-        const validatorIndex = validatorIndices[i];
+      for (let i = 0, len = indices.length; i < len; i++) {
+        const validatorIndex = indices[i];
         const validatorSyncCommitteeIndices = syncCommitteeValidatorIndexMap.get(validatorIndex);
         if (validatorSyncCommitteeIndices) {
           duties.push({
@@ -895,11 +899,11 @@ export function getValidatorApi({
 
       return {
         data: duties,
-        executionOptimistic: isOptimisticBlock(head),
+        meta: {executionOptimistic: isOptimisticBlock(head)},
       };
     },
 
-    async getAggregatedAttestation(attestationDataRoot, slot) {
+    async getAggregatedAttestation({attestationDataRoot, slot}) {
       notWhileSyncing();
 
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
@@ -912,7 +916,7 @@ export function getValidatorApi({
       };
     },
 
-    async publishAggregateAndProofs(signedAggregateAndProofs) {
+    async publishAggregateAndProofs({signedAggregateAndProofs}) {
       notWhileSyncing();
 
       const seenTimestampSec = Date.now() / 1000;
@@ -981,7 +985,7 @@ export function getValidatorApi({
      *
      * https://github.com/ethereum/beacon-APIs/pull/137
      */
-    async publishContributionAndProofs(contributionAndProofs) {
+    async publishContributionAndProofs({contributionAndProofs}) {
       notWhileSyncing();
 
       const errors: Error[] = [];
@@ -1024,7 +1028,7 @@ export function getValidatorApi({
       }
     },
 
-    async prepareBeaconCommitteeSubnet(subscriptions) {
+    async prepareBeaconCommitteeSubnet({subscriptions}) {
       notWhileSyncing();
 
       await network.prepareBeaconCommitteeSubnets(
@@ -1057,7 +1061,7 @@ export function getValidatorApi({
      *
      * https://github.com/ethereum/beacon-APIs/pull/136
      */
-    async prepareSyncCommitteeSubnets(subscriptions) {
+    async prepareSyncCommitteeSubnets({subscriptions}) {
       notWhileSyncing();
 
       // A `validatorIndex` can be in multiple subnets, so compute the CommitteeSubscription with double for loop
@@ -1084,7 +1088,7 @@ export function getValidatorApi({
       }
     },
 
-    async prepareBeaconProposer(proposers) {
+    async prepareBeaconProposer({proposers}) {
       await chain.updateBeaconProposerData(chain.clock.currentEpoch, proposers);
     },
 
@@ -1096,8 +1100,8 @@ export function getValidatorApi({
       throw new OnlySupportedByDVT();
     },
 
-    async getLiveness(epoch, validatorIndices) {
-      if (validatorIndices.length === 0) {
+    async getLiveness({epoch, indices}) {
+      if (indices.length === 0) {
         return {
           data: [],
         };
@@ -1111,14 +1115,14 @@ export function getValidatorApi({
       }
 
       return {
-        data: validatorIndices.map((index) => ({
+        data: indices.map((index) => ({
           index,
           isLive: chain.validatorSeenAtEpoch(index, epoch),
         })),
       };
     },
 
-    async registerValidator(registrations) {
+    async registerValidator({registrations}) {
       if (!chain.executionBuilder) {
         throw Error("Execution builder not enabled");
       }
