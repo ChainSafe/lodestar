@@ -128,19 +128,17 @@ export async function produceBlockBody<T extends BlockType>(
 
   const endAttestations = this.metrics?.blockProductionTimeSteps.startTimer();
   const attestations = this.aggregatedAttestationPool.getAttestationsForBlock(this.forkChoice, currentState);
-  endAttestations &&
-    endAttestations({
-      step: "attestations",
-      source: blockType,
-    });
+  endAttestations?.({
+    step: "attestations",
+    source: blockType,
+  });
 
   const endEth1DataAndDeposits = this.metrics?.blockProductionTimeSteps.startTimer();
   const {eth1Data, deposits} = await this.eth1.getEth1DataAndDeposits(currentState);
-  endEth1DataAndDeposits &&
-    endEth1DataAndDeposits({
-      step: "eth1DataAndDeposits",
-      source: blockType,
-    });
+  endEth1DataAndDeposits?.({
+    step: "eth1DataAndDeposits",
+    source: blockType,
+  });
 
   const blockBody: phase0.BeaconBlockBody = {
     randaoReveal,
@@ -163,11 +161,10 @@ export async function produceBlockBody<T extends BlockType>(
     );
     (blockBody as altair.BeaconBlockBody).syncAggregate = syncAggregate;
   }
-  endSyncAggregate &&
-    endSyncAggregate({
-      step: "syncAggregate",
-      source: blockType,
-    });
+  endSyncAggregate?.({
+    step: "syncAggregate",
+    source: blockType,
+  });
 
   Object.assign(logMeta, {
     attestations: attestations.length,
@@ -380,11 +377,10 @@ export async function produceBlockBody<T extends BlockType>(
     blobsResult = {type: BlobsResultType.preDeneb};
     executionPayloadValue = BigInt(0);
   }
-  endExecutionPayload &&
-    endExecutionPayload({
-      step: "executionPayload",
-      source: blockType,
-    });
+  endExecutionPayload?.({
+    step: "executionPayload",
+    source: blockType,
+  });
 
   if (ForkSeq[fork] >= ForkSeq.capella) {
     // TODO: blsToExecutionChanges should be passed in the produceBlock call

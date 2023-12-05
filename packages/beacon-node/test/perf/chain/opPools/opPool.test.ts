@@ -18,9 +18,6 @@ import {
 } from "../../../fixtures/phase0.js";
 import {BlockType} from "../../../../src/chain/interface.js";
 
-// Aug 11 2021
-// getAttestationsForBlock
-//     ✓ getAttestationsForBlock                                             4.410948 ops/s    226.7086 ms/op        -         64 runs   51.8 s
 describe("opPool", () => {
   let originalState: CachedBeaconStateAltair;
 

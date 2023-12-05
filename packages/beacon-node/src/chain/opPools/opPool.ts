@@ -195,11 +195,10 @@ export class OpPool {
         }
       }
     }
-    endProposerSlashing &&
-      endProposerSlashing({
-        step: "proposerSlashing",
-        source: blockType,
-      });
+    endProposerSlashing?.({
+      step: "proposerSlashing",
+      source: blockType,
+    });
 
     const endAttesterSlashings = metrics?.blockProductionTimeSteps.startTimer();
     const attesterSlashings: phase0.AttesterSlashing[] = [];
@@ -231,11 +230,10 @@ export class OpPool {
         }
       }
     }
-    endAttesterSlashings &&
-      endAttesterSlashings({
-        step: "attesterSlashings",
-        source: blockType,
-      });
+    endAttesterSlashings?.({
+      step: "attesterSlashings",
+      source: blockType,
+    });
 
     const endVoluntaryExits = metrics?.blockProductionTimeSteps.startTimer();
     const voluntaryExits: phase0.SignedVoluntaryExit[] = [];
@@ -254,11 +252,10 @@ export class OpPool {
         }
       }
     }
-    endVoluntaryExits &&
-      endVoluntaryExits({
-        step: "voluntaryExits",
-        source: blockType,
-      });
+    endVoluntaryExits?.({
+      step: "voluntaryExits",
+      source: blockType,
+    });
 
     const endBlsToExecutionChanges = metrics?.blockProductionTimeSteps.startTimer();
     const blsToExecutionChanges: capella.SignedBLSToExecutionChange[] = [];
@@ -270,11 +267,10 @@ export class OpPool {
         }
       }
     }
-    endBlsToExecutionChanges &&
-      endBlsToExecutionChanges({
-        step: "blsToExecutionChanges",
-        source: blockType,
-      });
+    endBlsToExecutionChanges?.({
+      step: "blsToExecutionChanges",
+      source: blockType,
+    });
 
     return [attesterSlashings, proposerSlashings, voluntaryExits, blsToExecutionChanges];
   }
