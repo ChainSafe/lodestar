@@ -1,7 +1,7 @@
 import {IncomingMessage} from "node:http";
 import {expect} from "chai";
 import fastify, {RouteOptions} from "fastify";
-import {ErrorAborted, TimeoutError} from "@lodestar/utils";
+import {ErrorAborted, TimeoutError, toBase64} from "@lodestar/utils";
 import {HttpClient, HttpError} from "../../../src/utils/client/index.js";
 import {HttpStatusCode} from "../../../src/utils/client/httpStatusCode.js";
 
@@ -147,6 +147,29 @@ describe("httpClient json client", () => {
     url.username = "user";
     url.password = "password";
     const httpClient = new HttpClient({baseUrl: url.toString()});
+
+    await httpClient.json(testRoute);
+  });
+
+  it("should not URI-encode user credentials in Authorization header", async () => {
+    // Semi exhaustive set of characters that RFC-3986 allows in the userinfo portion of a URI
+    // Notably absent is `%`. See comment on isValidHttpUrl().
+    const username = "A1-._~!$'&\"()*+,;=";
+    const password = "b2-._~!$'&\"()*+,;=";
+    let {baseUrl} = await getServer({
+      ...testRoute,
+      handler: async (req) => {
+        expect(req.headers.authorization).to.equal(`Basic ${toBase64(`${username}:${password}`)}`);
+        return {};
+      },
+    });
+    // Since `new URL()` is what URI-encodes, we have to do string manipulation to set the username/password
+    // First validate the assumption that the URL starts with http://
+    expect(baseUrl.indexOf("http://")).to.equal(0);
+    // We avoid using baseUrl.replace() because it treats $ as a special character
+    baseUrl = `http://${username}:${password}@${baseUrl.substring("http://".length)}`;
+
+    const httpClient = new HttpClient({baseUrl: baseUrl});
 
     await httpClient.json(testRoute);
   });

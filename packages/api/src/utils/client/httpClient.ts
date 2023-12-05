@@ -292,7 +292,7 @@ export class HttpClient implements IHttpClient {
       }
       if (url.username || url.password) {
         if (headers["Authorization"] === undefined) {
-          headers["Authorization"] = `Basic ${toBase64(`${url.username}:${url.password}`)}`;
+          headers["Authorization"] = `Basic ${toBase64(decodeURIComponent(`${url.username}:${url.password}`))}`;
         }
         // Remove the username and password from the URL
         url.username = "";
