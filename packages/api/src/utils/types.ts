@@ -53,7 +53,7 @@ export type HttpMethod = "GET" | "POST" | "DELETE";
 export type Endpoint<
   Method extends HttpMethod = HttpMethod,
   ArgsType = unknown,
-  RequestType extends Method extends "GET" ? GetRequestData : JsonPostRequestData = GetRequestData,
+  RequestType extends Method extends "GET" ? GetRequestData : JsonPostRequestData = JsonPostRequestData,
   ReturnType = unknown,
   Meta = unknown,
 > = {

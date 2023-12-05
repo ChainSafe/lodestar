@@ -29,12 +29,7 @@ export function createApiRequest<E extends Endpoint>(
 ): Request {
   const headers = new Headers(init.headers);
 
-  let req: {
-    params?: E["request"]["params"];
-    query?: E["request"]["query"];
-    headers?: E["request"]["headers"];
-    body?: string | Uint8Array;
-  };
+  let req: E["request"];
 
   if (definition.method === "GET") {
     req = (definition.req as GetRequestCodec<E>).writeReq(args);
@@ -69,6 +64,6 @@ export function createApiRequest<E extends Endpoint>(
     ...init,
     method: definition.method,
     headers: mergeHeaders(headers, req.headers),
-    body: req.body,
+    body: req.body as BodyInit,
   });
 }
