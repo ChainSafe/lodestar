@@ -31,7 +31,12 @@ export type ApplicationResponse<E extends Endpoint> = HasOnlyOptionalProps<Appli
 
 export type ApplicationError = ApiError | Error;
 
-export type ApplicationMethod<E extends Endpoint> = (args: E["args"]) => Promise<ApplicationResponse<E>>;
+type GenericOptions = Record<string, unknown>;
+
+export type ApplicationMethod<E extends Endpoint> = (
+  args: E["args"],
+  opts?: GenericOptions
+) => Promise<ApplicationResponse<E>>;
 export type ApplicationMethods<Es extends Record<string, Endpoint>> = {[K in keyof Es]: ApplicationMethod<Es[K]>};
 
 export type FastifyHandler<E extends Endpoint> = fastify.RouteHandlerMethod<
