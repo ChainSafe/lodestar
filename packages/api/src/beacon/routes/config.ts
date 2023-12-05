@@ -95,6 +95,14 @@ export const definitions: RouteDefinitions<Endpoints> = {
     resp: {
       data: StringRecordType,
       meta: EmptyMetaCodec,
+      transform: {
+        toResponse: (data) => {
+          return data.reduce((json, {key, value}) => ((json[key] = value), json), {} as Record<string, string>);
+        },
+        fromResponse: (resp) => {
+          return {data: Object.entries(resp as Record<string, string>).map(([key, value]) => ({key, value}))};
+        },
+      },
     },
   },
 };
