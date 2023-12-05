@@ -1,3 +1,4 @@
+import {EmptyMeta} from "./codecs.js";
 import {WireFormat} from "./headers.js";
 import {SchemaDefinition} from "./schema.js";
 
@@ -125,13 +126,12 @@ export type ResponseMetadataCodec<T> = {
 export type ResponseCodec<E extends Endpoint> = {
   data: ResponseDataCodec<E["return"], E["meta"]>;
   meta: ResponseMetadataCodec<E["meta"]>;
-  /** Occasionally, json responses require an extra transormation to separate the data from metadata */
+  /** Occasionally, json responses require an extra transformation to separate the data from metadata */
   transform?: {
-    toResponse: (data: unknown, meta: unknown) => unknown;
+    toResponse: (data: E["return"], meta: E["meta"]) => unknown;
     fromResponse: (resp: unknown) => {
-      data: unknown;
-      meta: unknown;
-    };
+      data: E["return"];
+    } & (E["meta"] extends EmptyMeta ? {meta?: never} : {meta: E["meta"]});
   };
   /** Support ssz-only or json-only responses */
   onlySupport?: WireFormat;
