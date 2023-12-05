@@ -3,7 +3,7 @@ export class ApiError extends Error {
   operationId?: string;
 
   constructor(message: string, status: number, operationId: string) {
-    super(`${message} status=${status}, operationId=${operationId}`);
+    super(`Request ${operationId} failed with status ${status}: ${message}`);
     this.operationId = operationId;
     this.status = status;
   }

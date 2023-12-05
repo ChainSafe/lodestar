@@ -244,9 +244,9 @@ export class HttpClient implements IHttpClient {
 
       if (isAbortedError(e)) {
         if (signalGlobal?.aborted || signalLocal?.aborted) {
-          throw new ErrorAborted(`request operationId=${definition.operationId}`);
+          throw new ErrorAborted(`${definition.operationId} request`);
         } else if (controller.signal.aborted) {
-          throw new TimeoutError(`request operationId=${definition.operationId}`);
+          throw new TimeoutError(`${definition.operationId} request`);
         } else {
           throw Error("Unknown aborted error");
         }
