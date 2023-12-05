@@ -124,6 +124,7 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
     executionBlockProductionTimeSteps: register.histogram<"step">({
       name: "beacon_block_production_execution_steps_seconds",
       help: "Detailed steps runtime of execution block production",
+      buckets: [0.01, 0.1, 0.2, 0.5, 1],
       /**
        * - proposerSlashing
        * - attesterSlashings
@@ -139,6 +140,7 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
     builderBlockProductionTimeSteps: register.histogram<"step">({
       name: "beacon_block_production_builder_steps_seconds",
       help: "Detailed steps runtime of builder block production",
+      buckets: [0.01, 0.1, 0.2, 0.5, 1],
       /**
        * - proposerSlashing
        * - attesterSlashings
