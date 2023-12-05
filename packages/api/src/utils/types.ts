@@ -1,6 +1,12 @@
 import {WireFormat} from "./headers.js";
 import {SchemaDefinition} from "./schema.js";
 
+export type HasOnlyOptionalProps<T> = {
+  [K in keyof T]-?: object extends Pick<T, K> ? never : K;
+} extends {[_ in keyof T]: never}
+  ? true
+  : false;
+
 export type PathParams = Record<string, string | number>;
 export type QueryParams = Record<string, string | number | boolean | (string | number)[]>;
 export type HeaderParams = Record<string, string>;

@@ -6,6 +6,7 @@ import {
   Endpoint,
   GetRequestCodec,
   GetRequestData,
+  HasOnlyOptionalProps,
   JsonPostRequestData,
   PostRequestCodec,
   RouteDefinition,
@@ -15,12 +16,18 @@ import {
 import {MediaType, WireFormat, getWireFormat, parseAcceptHeader, parseContentTypeHeader} from "./headers.js";
 import {toColonNotationPath} from "./urlFormat.js";
 import {getFastifySchema} from "./schema.js";
+import {EmptyMeta, EmptyResponseData} from "./codecs.js";
 
-export type ApplicationResponse<E extends Endpoint> = {
-  data: E["return"] | (E["return"] extends undefined ? undefined : Uint8Array);
-  meta: E["meta"];
-  statusCode?: number;
-};
+type ApplicationResponseObject<E extends Endpoint> = {
+  status?: number;
+} & (E["return"] extends EmptyResponseData
+  ? {data?: never}
+  : {data: E["return"] | (E["return"] extends undefined ? undefined : Uint8Array)}) &
+  (E["meta"] extends EmptyMeta ? {meta?: never} : {meta: E["meta"]});
+
+export type ApplicationResponse<E extends Endpoint> = HasOnlyOptionalProps<ApplicationResponseObject<E>> extends true
+  ? ApplicationResponseObject<E> | void
+  : ApplicationResponseObject<E>;
 
 export type ApplicationError = ApiError | Error;
 
@@ -99,10 +106,10 @@ export function createFastifyHandler<E extends Endpoint>(
       case WireFormat.json: {
         await resp.header("content-type", "application/json");
         const data =
-          response.data instanceof Uint8Array
+          response?.data instanceof Uint8Array
             ? definition.resp.data.toJson(definition.resp.data.deserialize(response.data, response.meta), response.meta)
-            : definition.resp.data.toJson(response.data, response.meta);
-        const meta = definition.resp.meta.toJson(response.meta);
+            : definition.resp.data.toJson(response?.data, response?.meta);
+        const meta = definition.resp.meta.toJson(response?.meta);
         if (definition.resp.transform) {
           return definition.resp.transform.toResponse(data, meta);
         }
@@ -113,18 +120,18 @@ export function createFastifyHandler<E extends Endpoint>(
         break;
       }
       case WireFormat.ssz: {
-        const meta = definition.resp.meta.toHeadersObject(response.meta);
+        const meta = definition.resp.meta.toHeadersObject(response?.meta);
         meta["content-type"] = "application/octet-stream";
         await resp.headers(meta);
         const data =
-          response.data instanceof Uint8Array
+          response?.data instanceof Uint8Array
             ? response.data
-            : definition.resp.data.serialize(response.data, response.meta);
+            : definition.resp.data.serialize(response?.data, response?.meta);
         wireResponse = Buffer.from(data);
       }
     }
-    if (response.statusCode !== undefined || definition.statusOk !== undefined) {
-      resp.statusCode = response.statusCode ?? (definition.statusOk as number);
+    if (response?.status !== undefined || definition.statusOk !== undefined) {
+      resp.statusCode = response?.status ?? (definition.statusOk as number);
     }
     return wireResponse;
   };

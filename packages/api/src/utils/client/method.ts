@@ -1,15 +1,9 @@
 import {mapValues} from "@lodestar/utils";
-import {Endpoint, RouteDefinition, RouteDefinitions} from "../types.js";
+import {Endpoint, HasOnlyOptionalProps, RouteDefinition, RouteDefinitions} from "../types.js";
 import {compileRouteUrlFormater} from "../urlFormat.js";
 import {IHttpClient} from "./httpClient.js";
 import {ApiRequestInit} from "./request.js";
 import {ApiResponse} from "./response.js";
-
-type HasOnlyOptionalProps<T> = {
-  [K in keyof T]-?: object extends Pick<T, K> ? never : K;
-} extends {[_ in keyof T]: never}
-  ? true
-  : false;
 
 export type ApiClientMethod<E extends Endpoint> = E["args"] extends void
   ? (init?: ApiRequestInit) => Promise<ApiResponse<E>>
