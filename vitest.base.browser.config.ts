@@ -8,7 +8,7 @@ export default defineConfig({
   plugins: [
     topLevelAwait(),
     nodePolyfills({
-      include: ["buffer", "process", "util", "string_decoder", "url", "querystring"],
+      include: ["buffer", "process", "util", "string_decoder", "url", "querystring", "events"],
       globals: {Buffer: true, process: true},
       protocolImports: true,
     }),
@@ -44,7 +44,6 @@ export default defineConfig({
   resolve: {
     alias: {
       "node:perf_hooks": path.join(__dirname, "scripts/vitest/polyfills/perf_hooks.js"),
-      events: "eventemitter3",
     },
   },
 });
