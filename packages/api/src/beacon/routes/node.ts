@@ -59,10 +59,11 @@ export type PeerDirection = "inbound" | "outbound";
 
 export type NodePeer = {
   peerId: string;
-  enr?: string;
+  enr: string;
   lastSeenP2pAddress: string;
   state: PeerState;
-  direction: PeerDirection;
+  // the spec does not specify direction for a disconnected peer, lodestar uses null in that case
+  direction: PeerDirection | null;
 };
 
 export type PeerCount = {
