@@ -44,7 +44,6 @@ export type BlockRewards = {
  *  1) Including attestations from (beacon) committee
  *  2) Including attestations from sync committee
  *  3) Reporting slashable behaviours from proposer and attester
- * TODO: Return the breakdown of the rewards and other metadata to comply with the beacon rewards endpoint
  */
 export async function computeBlockRewards(
   block: allForks.BeaconBlock,
