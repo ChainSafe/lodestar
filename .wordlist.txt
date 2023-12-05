@@ -8,7 +8,6 @@ CLI
 CTRL
 Chai
 ChainSafe
-coreutils
 Customizations
 Discv
 DockerHub
@@ -78,6 +77,7 @@ config
 configs
 const
 constantish
+coreutils
 cors
 cryptographic
 dApp
@@ -107,7 +107,6 @@ namespace
 namespaced
 namespaces
 nodemodule
-OSX
 overriden
 params
 plaintext
