@@ -116,11 +116,11 @@ export function getBeaconPoolApi({
       await network.publishVoluntaryExit(exit);
     },
 
-    async submitPoolBlsToExecutionChange({blsToExecutionChanges}) {
+    async submitPoolBlsToExecutionChange({changes}) {
       const errors: Error[] = [];
 
       await Promise.all(
-        blsToExecutionChanges.map(async (blsToExecutionChange, i) => {
+        changes.map(async (blsToExecutionChange, i) => {
           try {
             // Ignore even if the change exists and reprocess
             await validateApiBlsToExecutionChange(chain, blsToExecutionChange);
