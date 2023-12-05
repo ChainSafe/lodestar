@@ -144,7 +144,7 @@ describe("LevelDB controller", () => {
           return "gdu";
         }
       } catch {
-        console.error('Cannot find correct gdu command');
+        console.error("Cannot find correct gdu command");
       }
     }
     return "du";
