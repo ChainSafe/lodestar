@@ -38,11 +38,13 @@ Github
 Gossipsub
 Grafana
 HackMD
+Homebrew
 IPFS
 IPv
 Infura
 JSON
 JWT
+KDE
 LGPL
 LGPLv
 LMD
@@ -115,6 +117,8 @@ flamegraph
 flamegraphs
 gnosis
 goerli
+heapdump
+heaptrack
 holesky
 interop
 js
@@ -126,6 +130,7 @@ lightclient
 linter
 lockfile
 mainnet
+malloc
 mdns
 merkle
 merkleization
@@ -137,6 +142,7 @@ namespaced
 namespaces
 nodemodule
 orchestrator
+osx
 overriden
 params
 plaintext
@@ -146,6 +152,7 @@ produceBlockV
 protolambda
 prover
 repo
+repos
 req
 reqresp
 ropsten
