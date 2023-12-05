@@ -127,6 +127,12 @@ export type EventData = {
 
 export type BeaconEvent = {[K in EventType]: {type: K; message: EventData[K]}}[EventType];
 
+type EventstreamArgs = {
+  topics: EventType[];
+  signal: AbortSignal;
+  onEvent: (event: BeaconEvent) => void;
+};
+
 export type Endpoints = {
   /**
    * Subscribe to beacon node events
@@ -138,11 +144,9 @@ export type Endpoints = {
    * returns Opened SSE stream.
    */
   eventstream: Endpoint<
+    //
     "GET",
-    {
-      topics: EventType[];
-      onEvent: (event: BeaconEvent) => void;
-    },
+    EventstreamArgs,
     {query: {topics: EventType[]}},
     EmptyResponseData,
     EmptyMeta
@@ -155,7 +159,7 @@ export const routesData: RouteDefinitions<Endpoints> = {
     method: "GET",
     req: {
       writeReq: ({topics}) => ({query: {topics}}),
-      parseReq: ({query}) => ({topics: query.topics, onEvent: () => {}}),
+      parseReq: ({query}) => ({topics: query.topics}) as EventstreamArgs,
       schema: {
         query: {topics: Schema.StringArray},
       },
