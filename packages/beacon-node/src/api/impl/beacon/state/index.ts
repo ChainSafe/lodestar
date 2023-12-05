@@ -103,7 +103,7 @@ export function getBeaconStateApi({
           data: validatorResponses,
           meta: {executionOptimistic},
         };
-      } else if (filters?.status) {
+      } else if (filters.status) {
         const validatorsByStatus = filterStateValidatorsByStatus(filters.status, state, pubkey2index, currentEpoch);
         return {
           data: validatorsByStatus,
@@ -191,17 +191,17 @@ export function getBeaconStateApi({
         throw new ApiError(400, `No cached state available for stateId: ${stateId}`);
       }
 
-      const epoch = filters?.epoch ?? computeEpochAtSlot(state.slot);
+      const epoch = filters.epoch ?? computeEpochAtSlot(state.slot);
       const startSlot = computeStartSlotAtEpoch(epoch);
       const shuffling = stateCached.epochCtx.getShufflingAtEpoch(epoch);
       const committees = shuffling.committees;
       const committeesFlat = committees.flatMap((slotCommittees, slotInEpoch) => {
         const slot = startSlot + slotInEpoch;
-        if (filters?.slot !== undefined && filters.slot !== slot) {
+        if (filters.slot !== undefined && filters.slot !== slot) {
           return [];
         }
         return slotCommittees.flatMap((committee, committeeIndex) => {
-          if (filters?.index !== undefined && filters.index !== committeeIndex) {
+          if (filters.index !== undefined && filters.index !== committeeIndex) {
             return [];
           }
           return [
