@@ -123,21 +123,24 @@ export async function produceBlockBody<T extends BlockType>(
   //   }
   // }
 
+  const stepsMetrics =
+    blockType === BlockType.Full
+      ? this.metrics?.executionBlockProductionTimeSteps
+      : this.metrics?.builderBlockProductionTimeSteps;
+
   const [attesterSlashings, proposerSlashings, voluntaryExits, blsToExecutionChanges] =
     this.opPool.getSlashingsAndExits(currentState, blockType, this.metrics);
 
-  const endAttestations = this.metrics?.blockProductionTimeSteps.startTimer();
+  const endAttestations = stepsMetrics?.startTimer();
   const attestations = this.aggregatedAttestationPool.getAttestationsForBlock(this.forkChoice, currentState);
   endAttestations?.({
     step: "attestations",
-    source: blockType,
   });
 
-  const endEth1DataAndDeposits = this.metrics?.blockProductionTimeSteps.startTimer();
+  const endEth1DataAndDeposits = stepsMetrics?.startTimer();
   const {eth1Data, deposits} = await this.eth1.getEth1DataAndDeposits(currentState);
   endEth1DataAndDeposits?.({
     step: "eth1DataAndDeposits",
-    source: blockType,
   });
 
   const blockBody: phase0.BeaconBlockBody = {
@@ -153,7 +156,7 @@ export async function produceBlockBody<T extends BlockType>(
 
   const blockEpoch = computeEpochAtSlot(blockSlot);
 
-  const endSyncAggregate = this.metrics?.blockProductionTimeSteps.startTimer();
+  const endSyncAggregate = stepsMetrics?.startTimer();
   if (blockEpoch >= this.config.ALTAIR_FORK_EPOCH) {
     const syncAggregate = this.syncContributionAndProofPool.getAggregate(parentSlot, parentBlockRoot);
     this.metrics?.production.producedSyncAggregateParticipants.observe(
@@ -163,7 +166,6 @@ export async function produceBlockBody<T extends BlockType>(
   }
   endSyncAggregate?.({
     step: "syncAggregate",
-    source: blockType,
   });
 
   Object.assign(logMeta, {
@@ -174,7 +176,7 @@ export async function produceBlockBody<T extends BlockType>(
     proposerSlashings: proposerSlashings.length,
   });
 
-  const endExecutionPayload = this.metrics?.blockProductionTimeSteps.startTimer();
+  const endExecutionPayload = stepsMetrics?.startTimer();
   if (isForkExecution(fork)) {
     const safeBlockHash = this.forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
@@ -379,7 +381,6 @@ export async function produceBlockBody<T extends BlockType>(
   }
   endExecutionPayload?.({
     step: "executionPayload",
-    source: blockType,
   });
 
   if (ForkSeq[fork] >= ForkSeq.capella) {

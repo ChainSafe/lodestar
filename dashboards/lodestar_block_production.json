@@ -74,7 +74,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "refId": "proposerSlashing",
-          "expr": "rate(beacon_block_production_steps_seconds_sum{source=\"Full\", step=\"proposerSlashing\"}[$rate_interval])\n/\nrate(beacon_block_production_steps_seconds_count{source=\"Full\", step=\"proposerSlashing\"}[$rate_interval])",
+          "expr": "rate(beacon_block_production_execution_steps_seconds{step=\"proposerSlashing\"}[$rate_interval])\n/\nrate(beacon_block_production_execution_steps_seconds{step=\"proposerSlashing\"}[$rate_interval])",
           "range": true,
           "instant": false,
           "hide": false,
@@ -84,7 +84,7 @@
         },
         {
           "refId": "attesterSlashings",
-          "expr": "rate(beacon_block_production_steps_seconds_sum{source=\"Full\", step=\"attesterSlashings\"}[$rate_interval])\n/\nrate(beacon_block_production_steps_seconds_count{source=\"Full\", step=\"attesterSlashings\"}[$rate_interval])",
+          "expr": "rate(beacon_block_production_execution_steps_seconds{step=\"attesterSlashings\"}[$rate_interval])\n/\nrate(beacon_block_production_execution_steps_seconds{step=\"attesterSlashings\"}[$rate_interval])",
           "range": true,
           "instant": false,
           "datasource": {
@@ -97,7 +97,7 @@
         },
         {
           "refId": "voluntaryExits",
-          "expr": "rate(beacon_block_production_steps_seconds_sum{source=\"Full\", step=\"voluntaryExits\"}[$rate_interval])\n/\nrate(beacon_block_production_steps_seconds_count{source=\"Full\", step=\"voluntaryExits\"}[$rate_interval])",
+          "expr": "rate(beacon_block_production_execution_steps_seconds{step=\"voluntaryExits\"}[$rate_interval])\n/\nrate(beacon_block_production_execution_steps_seconds{step=\"voluntaryExits\"}[$rate_interval])",
           "range": true,
           "instant": false,
           "datasource": {
@@ -110,7 +110,7 @@
         },
         {
           "refId": "blsToExecutionChanges",
-          "expr": "rate(beacon_block_production_steps_seconds_sum{source=\"Full\", step=\"blsToExecutionChanges\"}[$rate_interval])\n/\nrate(beacon_block_production_steps_seconds_count{source=\"Full\", step=\"blsToExecutionChanges\"}[$rate_interval])",
+          "expr": "rate(beacon_block_production_execution_steps_seconds{step=\"blsToExecutionChanges\"}[$rate_interval])\n/\nrate(beacon_block_production_execution_steps_seconds{step=\"blsToExecutionChanges\"}[$rate_interval])",
           "range": true,
           "instant": false,
           "datasource": {
@@ -123,7 +123,7 @@
         },
         {
           "refId": "attestations",
-          "expr": "rate(beacon_block_production_steps_seconds_sum{source=\"Full\", step=\"attestations\"}[$rate_interval])\n/\nrate(beacon_block_production_steps_seconds_count{source=\"Full\", step=\"attestations\"}[$rate_interval])",
+          "expr": "rate(beacon_block_production_execution_steps_seconds{step=\"attestations\"}[$rate_interval])\n/\nrate(beacon_block_production_execution_steps_seconds{step=\"attestations\"}[$rate_interval])",
           "range": true,
           "instant": false,
           "datasource": {
@@ -136,7 +136,7 @@
         },
         {
           "refId": "eth1DataAndDeposits",
-          "expr": "rate(beacon_block_production_steps_seconds_sum{source=\"Full\", step=\"eth1DataAndDeposits\"}[$rate_interval])\n/\nrate(beacon_block_production_steps_seconds_count{source=\"Full\", step=\"eth1DataAndDeposits\"}[$rate_interval])",
+          "expr": "rate(beacon_block_production_execution_steps_seconds{step=\"eth1DataAndDeposits\"}[$rate_interval])\n/\nrate(beacon_block_production_execution_steps_seconds{step=\"eth1DataAndDeposits\"}[$rate_interval])",
           "range": true,
           "instant": false,
           "datasource": {
@@ -149,7 +149,7 @@
         },
         {
           "refId": "syncAggregate",
-          "expr": "rate(beacon_block_production_steps_seconds_sum{source=\"Full\", step=\"syncAggregate\"}[$rate_interval])\n/\nrate(beacon_block_production_steps_seconds_count{source=\"Full\", step=\"syncAggregate\"}[$rate_interval])",
+          "expr": "rate(beacon_block_production_execution_steps_seconds{step=\"syncAggregate\"}[$rate_interval])\n/\nrate(beacon_block_production_execution_steps_seconds{step=\"syncAggregate\"}[$rate_interval])",
           "range": true,
           "instant": false,
           "datasource": {
@@ -162,7 +162,7 @@
         },
         {
           "refId": "executionPayload",
-          "expr": "rate(beacon_block_production_steps_seconds_sum{source=\"Full\", step=\"executionPayload\"}[$rate_interval])\n/\nrate(beacon_block_production_steps_seconds_count{source=\"Full\", step=\"executionPayload\"}[$rate_interval])",
+          "expr": "rate(beacon_block_production_execution_steps_seconds{step=\"executionPayload\"}[$rate_interval])\n/\nrate(beacon_block_production_execution_steps_seconds{step=\"executionPayload\"}[$rate_interval])",
           "range": true,
           "instant": false,
           "datasource": {
@@ -301,7 +301,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "refId": "proposerSlashing",
-          "expr": "rate(beacon_block_production_steps_seconds_sum{source=\"Blinded\", step=\"proposerSlashing\"}[$rate_interval])\n/\nrate(beacon_block_production_steps_seconds_count{source=\"Blinded\", step=\"proposerSlashing\"}[$rate_interval])",
+          "expr": "rate(beacon_block_production_builder_steps_seconds{step=\"proposerSlashing\"}[$rate_interval])\n/\nrate(beacon_block_production_builder_steps_seconds{step=\"proposerSlashing\"}[$rate_interval])",
           "range": true,
           "instant": false,
           "hide": false,
@@ -311,7 +311,7 @@
         },
         {
           "refId": "attesterSlashings",
-          "expr": "rate(beacon_block_production_steps_seconds_sum{source=\"Blinded\", step=\"attesterSlashings\"}[$rate_interval])\n/\nrate(beacon_block_production_steps_seconds_count{source=\"Blinded\", step=\"attesterSlashings\"}[$rate_interval])",
+          "expr": "rate(beacon_block_production_builder_steps_seconds{step=\"attesterSlashings\"}[$rate_interval])\n/\nrate(beacon_block_production_builder_steps_seconds{step=\"attesterSlashings\"}[$rate_interval])",
           "range": true,
           "instant": false,
           "datasource": {
@@ -324,7 +324,7 @@
         },
         {
           "refId": "voluntaryExits",
-          "expr": "rate(beacon_block_production_steps_seconds_sum{source=\"Blinded\", step=\"voluntaryExits\"}[$rate_interval])\n/\nrate(beacon_block_production_steps_seconds_count{source=\"Blinded\", step=\"voluntaryExits\"}[$rate_interval])",
+          "expr": "rate(beacon_block_production_builder_steps_seconds{step=\"voluntaryExits\"}[$rate_interval])\n/\nrate(beacon_block_production_builder_steps_seconds{step=\"voluntaryExits\"}[$rate_interval])",
           "range": true,
           "instant": false,
           "datasource": {
@@ -337,7 +337,7 @@
         },
         {
           "refId": "blsToExecutionChanges",
-          "expr": "rate(beacon_block_production_steps_seconds_sum{source=\"Blinded\", step=\"blsToExecutionChanges\"}[$rate_interval])\n/\nrate(beacon_block_production_steps_seconds_count{source=\"Blinded\", step=\"blsToExecutionChanges\"}[$rate_interval])",
+          "expr": "rate(beacon_block_production_builder_steps_seconds{step=\"blsToExecutionChanges\"}[$rate_interval])\n/\nrate(beacon_block_production_builder_steps_seconds{step=\"blsToExecutionChanges\"}[$rate_interval])",
           "range": true,
           "instant": false,
           "datasource": {
@@ -350,7 +350,7 @@
         },
         {
           "refId": "attestations",
-          "expr": "rate(beacon_block_production_steps_seconds_sum{source=\"Blinded\", step=\"attestations\"}[$rate_interval])\n/\nrate(beacon_block_production_steps_seconds_count{source=\"Blinded\", step=\"attestations\"}[$rate_interval])",
+          "expr": "rate(beacon_block_production_builder_steps_seconds{step=\"attestations\"}[$rate_interval])\n/\nrate(beacon_block_production_builder_steps_seconds{step=\"attestations\"}[$rate_interval])",
           "range": true,
           "instant": false,
           "datasource": {
@@ -363,7 +363,7 @@
         },
         {
           "refId": "eth1DataAndDeposits",
-          "expr": "rate(beacon_block_production_steps_seconds_sum{source=\"Blinded\", step=\"eth1DataAndDeposits\"}[$rate_interval])\n/\nrate(beacon_block_production_steps_seconds_count{source=\"Blinded\", step=\"eth1DataAndDeposits\"}[$rate_interval])",
+          "expr": "rate(beacon_block_production_builder_steps_seconds{step=\"eth1DataAndDeposits\"}[$rate_interval])\n/\nrate(beacon_block_production_builder_steps_seconds{step=\"eth1DataAndDeposits\"}[$rate_interval])",
           "range": true,
           "instant": false,
           "datasource": {
@@ -376,7 +376,7 @@
         },
         {
           "refId": "syncAggregate",
-          "expr": "rate(beacon_block_production_steps_seconds_sum{source=\"Blinded\", step=\"syncAggregate\"}[$rate_interval])\n/\nrate(beacon_block_production_steps_seconds_count{source=\"Blinded\", step=\"syncAggregate\"}[$rate_interval])",
+          "expr": "rate(beacon_block_production_builder_steps_seconds{step=\"syncAggregate\"}[$rate_interval])\n/\nrate(beacon_block_production_builder_steps_seconds{step=\"syncAggregate\"}[$rate_interval])",
           "range": true,
           "instant": false,
           "datasource": {
@@ -389,7 +389,7 @@
         },
         {
           "refId": "executionPayload",
-          "expr": "rate(beacon_block_production_steps_seconds_sum{source=\"Blinded\", step=\"executionPayload\"}[$rate_interval])\n/\nrate(beacon_block_production_steps_seconds_count{source=\"Blinded\", step=\"executionPayload\"}[$rate_interval])",
+          "expr": "rate(beacon_block_production_builder_steps_seconds{step=\"executionPayload\"}[$rate_interval])\n/\nrate(beacon_block_production_builder_steps_seconds{step=\"executionPayload\"}[$rate_interval])",
           "range": true,
           "instant": false,
           "datasource": {

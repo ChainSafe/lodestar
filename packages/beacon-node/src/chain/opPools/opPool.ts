@@ -182,7 +182,12 @@ export class OpPool {
     const toBeSlashedIndices = new Set<ValidatorIndex>();
     const proposerSlashings: phase0.ProposerSlashing[] = [];
 
-    const endProposerSlashing = metrics?.blockProductionTimeSteps.startTimer();
+    const stepsMetrics =
+      blockType === BlockType.Full
+        ? metrics?.executionBlockProductionTimeSteps
+        : metrics?.builderBlockProductionTimeSteps;
+
+    const endProposerSlashing = stepsMetrics?.startTimer();
     for (const proposerSlashing of this.proposerSlashings.values()) {
       const index = proposerSlashing.signedHeader1.message.proposerIndex;
       const validator = state.validators.getReadonly(index);
@@ -197,10 +202,9 @@ export class OpPool {
     }
     endProposerSlashing?.({
       step: "proposerSlashing",
-      source: blockType,
     });
 
-    const endAttesterSlashings = metrics?.blockProductionTimeSteps.startTimer();
+    const endAttesterSlashings = stepsMetrics?.startTimer();
     const attesterSlashings: phase0.AttesterSlashing[] = [];
     attesterSlashing: for (const attesterSlashing of this.attesterSlashings.values()) {
       /** Indices slashable in this attester slashing */
@@ -232,10 +236,9 @@ export class OpPool {
     }
     endAttesterSlashings?.({
       step: "attesterSlashings",
-      source: blockType,
     });
 
-    const endVoluntaryExits = metrics?.blockProductionTimeSteps.startTimer();
+    const endVoluntaryExits = stepsMetrics?.startTimer();
     const voluntaryExits: phase0.SignedVoluntaryExit[] = [];
     for (const voluntaryExit of this.voluntaryExits.values()) {
       if (
@@ -254,10 +257,9 @@ export class OpPool {
     }
     endVoluntaryExits?.({
       step: "voluntaryExits",
-      source: blockType,
     });
 
-    const endBlsToExecutionChanges = metrics?.blockProductionTimeSteps.startTimer();
+    const endBlsToExecutionChanges = stepsMetrics?.startTimer();
     const blsToExecutionChanges: capella.SignedBLSToExecutionChange[] = [];
     for (const blsToExecutionChange of this.blsToExecutionChanges.values()) {
       if (isValidBlsToExecutionChangeForBlockInclusion(state, blsToExecutionChange.data)) {
@@ -269,7 +271,6 @@ export class OpPool {
     }
     endBlsToExecutionChanges?.({
       step: "blsToExecutionChanges",
-      source: blockType,
     });
 
     return [attesterSlashings, proposerSlashings, voluntaryExits, blsToExecutionChanges];
