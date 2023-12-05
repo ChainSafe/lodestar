@@ -1,9 +1,13 @@
-import {routes, ServerApi, ResponseFormat} from "@lodestar/api";
+import {ApplicationMethods, routes} from "@lodestar/api";
+import {phase0} from "@lodestar/types";
 import {resolveStateId} from "../beacon/state/utils.js";
 import {ApiModules} from "../types.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
 
-export function getDebugApi({chain, config}: Pick<ApiModules, "chain" | "config">): ServerApi<routes.debug.Api> {
+export function getDebugApi({
+  chain,
+  config,
+}: Pick<ApiModules, "chain" | "config">): ApplicationMethods<routes.debug.Endpoints> {
   return {
     async getDebugChainHeads() {
       const heads = chain.forkChoice.getHeads();
@@ -36,26 +40,23 @@ export function getDebugApi({chain, config}: Pick<ApiModules, "chain" | "config"
       return {data: nodes};
     },
 
-    async getState(stateId: string | number, format?: ResponseFormat) {
-      const {state} = await resolveStateId(chain, stateId, {allowRegen: true});
-      if (format === "ssz") {
-        // Casting to any otherwise Typescript doesn't like the multi-type return
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
-        return state.serialize() as any;
-      } else {
-        return {data: state.toValue()};
-      }
+    async getState({stateId}) {
+      const {state, executionOptimistic} = await resolveStateId(chain, stateId, {allowRegen: true});
+      return {
+        data: state.toValue() as phase0.BeaconState,
+        meta: {executionOptimistic},
+      };
     },
 
-    async getStateV2(stateId: string | number, format?: ResponseFormat) {
-      const {state} = await resolveStateId(chain, stateId, {allowRegen: true});
-      if (format === "ssz") {
-        // Casting to any otherwise Typescript doesn't like the multi-type return
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
-        return state.serialize() as any;
-      } else {
-        return {data: state.toValue(), version: config.getForkName(state.slot)};
-      }
+    async getStateV2({stateId}) {
+      const {state, executionOptimistic} = await resolveStateId(chain, stateId, {allowRegen: true});
+      return {
+        data: state.toValue(),
+        meta: {
+          version: config.getForkName(state.slot),
+          executionOptimistic,
+        },
+      };
     },
   };
 }
