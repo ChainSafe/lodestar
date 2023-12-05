@@ -210,7 +210,7 @@ export type Endpoints = {
   getPeers: Endpoint<
     //
     "GET",
-    {filters?: FilterGetPeers},
+    FilterGetPeers,
     {query: {state?: PeerState[]; direction?: PeerDirection[]}},
     LodestarNodePeer[],
     {count: number}
@@ -370,8 +370,8 @@ export const definitions: RouteDefinitions<Endpoints> = {
     url: "/eth/v1/lodestar/peers",
     method: "GET",
     req: {
-      writeReq: ({filters}) => ({query: filters ?? {}}),
-      parseReq: ({query}) => ({filters: query}),
+      writeReq: ({state, direction}) => ({query: {state, direction}}),
+      parseReq: ({query}) => ({state: query.state, direction: query.direction}),
       schema: {query: {state: Schema.StringArray, direction: Schema.StringArray}},
     },
     resp: JsonOnlyResponseCodec as ResponseCodec<AnyGetEndpoint>,
