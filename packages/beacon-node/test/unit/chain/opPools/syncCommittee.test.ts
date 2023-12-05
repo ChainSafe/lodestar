@@ -5,7 +5,16 @@ import {altair} from "@lodestar/types";
 import {SyncCommitteeMessagePool} from "../../../../src/chain/opPools/index.js";
 import {Clock} from "../../../../src/util/clock.js";
 
-vi.mock("../../../../src/util/clock.js");
+vi.mock("../../../../src/util/clock.js", () => {
+  return {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    Clock: vi.fn().mockImplementation(() => {
+      return {
+        secFromSlot: vi.fn(),
+      };
+    }),
+  };
+});
 
 describe("chain / opPools / SyncCommitteeMessagePool", function () {
   let cache: SyncCommitteeMessagePool;
@@ -38,7 +47,7 @@ describe("chain / opPools / SyncCommitteeMessagePool", function () {
     vi.clearAllMocks();
   });
 
-  it("should preaggregate SyncCommitteeContribution", () => {
+  it("should propagate SyncCommitteeContribution", () => {
     clockStub.secFromSlot.mockReturnValue(0);
     let contribution = cache.getContribution(subcommitteeIndex, syncCommittee.slot, syncCommittee.beaconBlockRoot);
     expect(contribution).not.toBeNull();

@@ -1,4 +1,4 @@
-import {describe, it, expect, beforeEach, beforeAll, afterAll, vi, afterEach, SpyInstance} from "vitest";
+import {describe, it, expect, beforeEach, beforeAll, afterAll, vi, afterEach, MockInstance} from "vitest";
 import {ErrorAborted, TimeoutError} from "@lodestar/utils";
 import {RegistryMetricCreator} from "../../../src/index.js";
 import {HistogramExtra} from "../../../src/metrics/utils/histogram.js";
@@ -115,7 +115,7 @@ describe("monitoring / service", () => {
   });
 
   describe("MonitoringService - close", () => {
-    let clearTimeout: SpyInstance;
+    let clearTimeout: MockInstance;
 
     beforeAll(() => {
       clearTimeout = vi.spyOn(global, "clearTimeout");

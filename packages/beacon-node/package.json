@@ -80,7 +80,7 @@
     "test:unit:minimal": "vitest --run --segfaultRetry 3 --dir test/unit/ --coverage",
     "test:unit:mainnet": "LODESTAR_PRESET=mainnet nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit-mainnet/**/*.test.ts'",
     "test:unit": "yarn test:unit:minimal && yarn test:unit:mainnet",
-    "test:e2e": "LODESTAR_PRESET=minimal vitest --run --segfaultRetry 3 --poolOptions.threads.singleThread --dir test/e2e",
+    "test:e2e": "LODESTAR_PRESET=minimal vitest --run --segfaultRetry 3 --poolOptions.forks.singleFork --dir test/e2e",
     "test:sim": "mocha 'test/sim/**/*.test.ts'",
     "test:sim:merge-interop": "mocha 'test/sim/merge-interop.test.ts'",
     "test:sim:mergemock": "mocha 'test/sim/mergemock.test.ts'",

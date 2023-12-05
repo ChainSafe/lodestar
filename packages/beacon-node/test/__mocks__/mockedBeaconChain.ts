@@ -39,7 +39,24 @@ vi.mock("@lodestar/fork-choice");
 vi.mock("../../src/execution/engine/http.js");
 vi.mock("../../src/execution/builder/http.js");
 vi.mock("../../src/eth1/index.js");
-vi.mock("../../src/chain/opPools/opPool.js");
+vi.mock("../../src/chain/opPools/opPool.js", () => {
+  // TODO: Investigate why `vitest > 1.0.0` does not work with getters
+  const OpPool = vi.fn().mockImplementation(() => {
+    return {
+      getSlashingsAndExits: vi.fn(),
+      hasSeenVoluntaryExit: vi.fn(),
+      hasSeenProposerSlashing: vi.fn(),
+      hasSeenBlsToExecutionChange: vi.fn(),
+      hasSeenAttesterSlashing: vi.fn(),
+      attesterSlashingsSize: vi.fn(),
+      proposerSlashingsSize: vi.fn(),
+      voluntaryExitsSize: vi.fn(),
+      blsToExecutionChangeSize: vi.fn(),
+    };
+  });
+
+  return {OpPool};
+});
 vi.mock("../../src/chain/opPools/aggregatedAttestationPool.js");
 vi.mock("../../src/chain/beaconProposerCache.js");
 vi.mock("../../src/chain/shufflingCache.js");

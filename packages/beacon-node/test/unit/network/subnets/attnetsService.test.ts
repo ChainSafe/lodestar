@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 import {describe, it, expect, beforeEach, afterEach, vi, MockedObject} from "vitest";
 import {
   ATTESTATION_SUBNET_COUNT,
@@ -16,7 +17,34 @@ import {ZERO_HASH} from "../../../../src/constants/index.js";
 import {IClock} from "../../../../src/util/clock.js";
 import {Clock} from "../../../../src/util/clock.js";
 
-vi.mock("../../../../src/network/gossip/index.js");
+vi.mock("../../../../src/network/gossip/index.js", async () => {
+  const actual = await vi.importActual("../../../../src/network/gossip/index.js");
+
+  const Eth2Gossipsub = vi.fn().mockImplementation(() => {
+    return {
+      subscribeTopic: vi.fn(),
+      unsubscribeTopic: vi.fn(),
+      close: vi.fn(),
+    };
+  });
+
+  const AttnetsService = vi.fn().mockImplementation(() => {
+    return {
+      addCommitteeSubscriptions: vi.fn(),
+      subscribeSubnetsToNextFork: vi.fn(),
+      unsubscribeSubnetsFromPrevFork: vi.fn(),
+      shouldProcess: vi.fn(),
+      getActiveSubnets: vi.fn(),
+      close: vi.fn(),
+    };
+  });
+
+  return {
+    ...actual,
+    Eth2Gossipsub,
+    AttnetsService,
+  };
+});
 
 describe("AttnetsService", function () {
   const COMMITTEE_SUBNET_SUBSCRIPTION = 10;
