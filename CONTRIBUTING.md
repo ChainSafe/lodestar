@@ -7,6 +7,13 @@ Thanks for your interest in contributing to Lodestar. It's people like you that 
 - :gear: [NodeJS](https://nodejs.org/) (LTS)
 - :toolbox: [Yarn](https://yarnpkg.com/)
 
+### OSX Specifics
+
+When using OSX a couple extra prerequisistes are required.
+
+* python
+* coreutils (e.g. via `brew install coreutils`)
+
 ## Getting Started
 
 - :gear: Run `yarn` to install dependencies.

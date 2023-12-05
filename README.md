@@ -28,8 +28,7 @@
 
 ## Prerequisites
 
-- :gear: [NodeJS](https://nodejs.org/) (LTS)
-- :toolbox: [Yarn](https://yarnpkg.com/)
+First follow the prerequisites list [here](./CONTRIBUTING.md#prerequisites)
 
 ###### Developer Quickstart:
 
