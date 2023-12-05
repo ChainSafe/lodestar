@@ -321,39 +321,9 @@ export function createLodestarMetrics(
       help: "Time to process slashings in seconds",
       buckets: [0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1],
     }),
-    epochTransitionEth1DataResetTime: register.histogram({
-      name: "lodestar_stfn_epoch_transition_eth1_data_reset_seconds",
-      help: "Time to process eth1 data reset in seconds",
-      buckets: [0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1],
-    }),
     epochTransitionEffectiveBalanceUpdatesTime: register.histogram({
       name: "lodestar_stfn_epoch_transition_effective_balance_updates_seconds",
       help: "Time to process effective balance updates in seconds",
-      buckets: [0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1],
-    }),
-    epochTransitionSlashingsResetTime: register.histogram({
-      name: "lodestar_stfn_epoch_transition_slashings_reset_seconds",
-      help: "Time to process slashings reset in seconds",
-      buckets: [0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1],
-    }),
-    epochTransitionRandaoMixesResetTime: register.histogram({
-      name: "lodestar_stfn_epoch_transition_randao_mixes_reset_seconds",
-      help: "Time to process randao mixes reset in seconds",
-      buckets: [0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1],
-    }),
-    epochTransitionHistoricalSummariesUpdateTime: register.histogram({
-      name: "lodestar_stfn_epoch_transition_historical_summaries_update_seconds",
-      help: "Time to process historical summaries update in seconds",
-      buckets: [0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1],
-    }),
-    epochTransitionHistoricalRootsUpdateTime: register.histogram({
-      name: "lodestar_stfn_epoch_transition_historical_roots_update_seconds",
-      help: "Time to process historical roots update in seconds",
-      buckets: [0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1],
-    }),
-    epochTransitionParticipationRecordUpdatesTime: register.histogram({
-      name: "lodestar_stfn_epoch_transition_participation_record_updates_seconds",
-      help: "Time to process participation record updates in seconds",
       buckets: [0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1],
     }),
     epochTransitionParticipationFlagUpdatesTime: register.histogram({

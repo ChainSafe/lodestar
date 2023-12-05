@@ -66,7 +66,6 @@ export function processEpoch(
   }
 
   let timer = metrics?.epochTransitionJustificationAndFinalizationTime.startTimer();
-
   processJustificationAndFinalization(state, cache);
   timer?.();
   if (fork >= ForkSeq.altair) {
@@ -88,31 +87,20 @@ export function processEpoch(
   processRewardsAndPenalties(state, cache, slashingPenalties);
   timer?.();
   processEth1DataReset(state, cache);
-  timer?.();
   timer = metrics?.epochTransitionEffectiveBalanceUpdatesTime.startTimer();
   processEffectiveBalanceUpdates(state, cache);
   timer?.();
-  timer = metrics?.epochTransitionSlashingsResetTime.startTimer();
   processSlashingsReset(state, cache);
-  timer?.();
-  timer = metrics?.epochTransitionRandaoMixesResetTime.startTimer();
   processRandaoMixesReset(state, cache);
-  timer?.();
 
   if (fork >= ForkSeq.capella) {
-    timer = metrics?.epochTransitionHistoricalSummariesUpdateTime.startTimer();
     processHistoricalSummariesUpdate(state as CachedBeaconStateCapella, cache);
-    timer?.();
   } else {
-    timer = metrics?.epochTransitionHistoricalRootsUpdateTime.startTimer();
     processHistoricalRootsUpdate(state, cache);
-    timer?.();
   }
 
   if (fork === ForkSeq.phase0) {
-    timer = metrics?.epochTransitionParticipationRecordUpdatesTime.startTimer();
     processParticipationRecordUpdates(state as CachedBeaconStatePhase0);
-    timer?.();
   } else {
     timer = metrics?.epochTransitionParticipationFlagUpdatesTime.startTimer();
     processParticipationFlagUpdates(state as CachedBeaconStateAltair);

@@ -12,13 +12,7 @@ export type BeaconStateTransitionMetrics = {
   epochTransitionRewardsAndPenaltiesTime: Histogram;
   epochTransitionRegistryUpdatesTime: Histogram;
   epochTransitionSlashingsTime: Histogram;
-  epochTransitionEth1DataResetTime: Histogram;
   epochTransitionEffectiveBalanceUpdatesTime: Histogram;
-  epochTransitionSlashingsResetTime: Histogram;
-  epochTransitionRandaoMixesResetTime: Histogram;
-  epochTransitionHistoricalSummariesUpdateTime: Histogram;
-  epochTransitionHistoricalRootsUpdateTime: Histogram;
-  epochTransitionParticipationRecordUpdatesTime: Histogram;
   epochTransitionParticipationFlagUpdatesTime: Histogram;
   epochTransitionSyncCommitteeUpdatesTime: Histogram;
   processBlockTime: Histogram;
