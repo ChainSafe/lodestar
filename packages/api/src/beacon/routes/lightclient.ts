@@ -194,9 +194,9 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
             return r;
           },
           fromResponse: (resp) => {
-            const d: unknown[] = [];
-            const meta: {version: unknown[]} = {version: []};
-            for (const {data, version} of resp as {data: unknown; version: unknown}[]) {
+            const d: allForks.LightClientUpdate[] = [];
+            const meta: {version: ForkName[]} = {version: []};
+            for (const {data, version} of resp as {data: allForks.LightClientUpdate; version: ForkName}[]) {
               d.push(data);
               meta.version.push(version);
             }
