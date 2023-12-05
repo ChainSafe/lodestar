@@ -1,5 +1,5 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {routes, ServerApi, ResponseFormat} from "@lodestar/api";
+import {ApplicationMethods, routes} from "@lodestar/api";
 import {
   computeTimeAtSlot,
   parseSignedBlindedBlockOrContents,
@@ -21,7 +21,7 @@ import {verifyBlocksInEpoch} from "../../../../chain/blocks/verifyBlock.js";
 import {BeaconChain} from "../../../../chain/chain.js";
 import {resolveBlockId, toBeaconHeaderResponse} from "./utils.js";
 
-type PublishBlockOpts = ImportBlockOpts & {broadcastValidation?: routes.beacon.BroadcastValidation};
+type PublishBlockOpts = ImportBlockOpts;
 
 /**
  * Validator clock may be advanced from beacon's clock. If the validator requests a resource in a
@@ -40,9 +40,12 @@ export function getBeaconBlockApi({
   metrics,
   network,
   db,
-}: Pick<ApiModules, "chain" | "config" | "metrics" | "network" | "db">): ServerApi<routes.beacon.block.Api> {
-  const publishBlock: ServerApi<routes.beacon.block.Api>["publishBlock"] = async (
-    signedBlockOrContents,
+}: Pick<
+  ApiModules,
+  "chain" | "config" | "metrics" | "network" | "db"
+>): ApplicationMethods<routes.beacon.block.Endpoints> {
+  const publishBlock: ApplicationMethods<routes.beacon.block.Endpoints>["publishBlockV2"] = async (
+    {signedBlockOrContents, broadcastValidation},
     opts: PublishBlockOpts = {}
   ) => {
     const seenTimestampSec = Date.now() / 1000;
@@ -68,7 +71,7 @@ export function getBeaconBlockApi({
 
     // check what validations have been requested before broadcasting and publishing the block
     // TODO: add validation time to metrics
-    const broadcastValidation = opts.broadcastValidation ?? routes.beacon.BroadcastValidation.gossip;
+    broadcastValidation = broadcastValidation ?? routes.beacon.BroadcastValidation.gossip;
     // if block is locally produced, full or blinded, it already is 'consensus' validated as it went through
     // state transition to produce the stateRoot
     const slot = signedBlock.message.slot;
@@ -182,8 +185,8 @@ export function getBeaconBlockApi({
     await promiseAllMaybeAsync(publishPromises);
   };
 
-  const publishBlindedBlock: ServerApi<routes.beacon.block.Api>["publishBlindedBlock"] = async (
-    signedBlindedBlockOrContents,
+  const publishBlindedBlock: ApplicationMethods<routes.beacon.block.Endpoints>["publishBlindedBlock"] = async (
+    {signedBlindedBlockOrContents},
     opts: PublishBlockOpts = {}
   ) => {
     const {signedBlindedBlock, signedBlindedBlobSidecars} =
@@ -219,19 +222,19 @@ export function getBeaconBlockApi({
     //
     // see: https://github.com/ChainSafe/lodestar/issues/5404
     chain.logger.info("Publishing assembled block", {blockRoot, slot, source});
-    return publishBlock(signedBlockOrContents, {...opts, ignoreIfKnown: true});
+    // TODO: opts are not type safe, add ServerOpts in Endpoint type definition?
+    return publishBlock({signedBlockOrContents}, {...opts, ignoreIfKnown: true});
   };
 
   return {
-    async getBlockHeaders(filters) {
+    async getBlockHeaders({slot, parentRoot}) {
       // TODO - SLOW CODE: This code seems like it could be improved
 
       // If one block in the response contains an optimistic block, mark the entire response as optimistic
       let executionOptimistic = false;
 
       const result: routes.beacon.BlockHeaderResponse[] = [];
-      if (filters.parentRoot) {
-        const parentRoot = filters.parentRoot;
+      if (parentRoot) {
         const finalizedBlock = await db.blockArchive.getByParentRoot(fromHexString(parentRoot));
         if (finalizedBlock) {
           result.push(toBeaconHeaderResponse(config, finalizedBlock, true));
@@ -252,30 +255,30 @@ export function getBeaconBlockApi({
           })
         );
         return {
-          executionOptimistic,
           data: result.filter(
             (item) =>
               // skip if no slot filter
-              !(filters.slot !== undefined && filters.slot !== 0) || item.header.message.slot === filters.slot
+              !(slot !== undefined && slot !== 0) || item.header.message.slot === slot
           ),
+          meta: {executionOptimistic},
         };
       }
 
       const headSlot = chain.forkChoice.getHead().slot;
-      if (!filters.parentRoot && filters.slot === undefined) {
-        filters.slot = headSlot;
+      if (!parentRoot && slot === undefined) {
+        slot = headSlot;
       }
 
-      if (filters.slot !== undefined) {
+      if (slot !== undefined) {
         // future slot
-        if (filters.slot > headSlot) {
-          return {executionOptimistic: false, data: []};
+        if (slot > headSlot) {
+          return {data: [], meta: {executionOptimistic: false}};
         }
 
-        const canonicalBlock = await chain.getCanonicalBlockAtSlot(filters.slot);
+        const canonicalBlock = await chain.getCanonicalBlockAtSlot(slot);
         // skip slot
         if (!canonicalBlock) {
-          return {executionOptimistic: false, data: []};
+          return {data: [], meta: {executionOptimistic: false}};
         }
         const canonicalRoot = config
           .getForkTypes(canonicalBlock.block.message.slot)
@@ -285,7 +288,7 @@ export function getBeaconBlockApi({
         // fork blocks
         // TODO: What is this logic?
         await Promise.all(
-          chain.forkChoice.getBlockSummariesAtSlot(filters.slot).map(async (summary) => {
+          chain.forkChoice.getBlockSummariesAtSlot(slot).map(async (summary) => {
             if (isOptimisticBlock(summary)) {
               executionOptimistic = true;
             }
@@ -301,50 +304,41 @@ export function getBeaconBlockApi({
       }
 
       return {
-        executionOptimistic,
         data: result,
+        meta: {executionOptimistic},
       };
     },
 
-    async getBlockHeader(blockId) {
+    async getBlockHeader({blockId}) {
       const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
       return {
-        executionOptimistic,
         data: toBeaconHeaderResponse(config, block, true),
+        meta: {executionOptimistic},
       };
     },
 
-    async getBlock(blockId, format?: ResponseFormat) {
+    async getBlock({blockId}) {
       const {block} = await resolveBlockId(chain, blockId);
-      if (format === "ssz") {
-        return config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block);
-      }
+      return {data: block};
+    },
+
+    async getBlockV2({blockId}) {
+      const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
       return {
         data: block,
+        meta: {executionOptimistic, version: config.getForkName(block.message.slot)},
       };
     },
 
-    async getBlockV2(blockId, format?: ResponseFormat) {
-      const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
-      if (format === "ssz") {
-        return config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block);
-      }
-      return {
-        executionOptimistic,
-        data: block,
-        version: config.getForkName(block.message.slot),
-      };
-    },
-
-    async getBlockAttestations(blockId) {
+    async getBlockAttestations({blockId}) {
       const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
       return {
-        executionOptimistic,
         data: Array.from(block.message.body.attestations),
+        meta: {executionOptimistic},
       };
     },
 
-    async getBlockRoot(blockId) {
+    async getBlockRoot({blockId}) {
       // Fast path: From head state already available in memory get historical blockRoot
       const slot = typeof blockId === "string" ? parseInt(blockId) : blockId;
       if (!Number.isNaN(slot)) {
@@ -352,31 +346,31 @@ export function getBeaconBlockApi({
 
         if (slot === head.slot) {
           return {
-            executionOptimistic: isOptimisticBlock(head),
             data: {root: fromHexString(head.blockRoot)},
+            meta: {executionOptimistic: isOptimisticBlock(head)},
           };
         }
 
         if (slot < head.slot && head.slot <= slot + SLOTS_PER_HISTORICAL_ROOT) {
           const state = chain.getHeadState();
           return {
-            executionOptimistic: isOptimisticBlock(head),
             data: {root: state.blockRoots.get(slot % SLOTS_PER_HISTORICAL_ROOT)},
+            meta: {executionOptimistic: isOptimisticBlock(head)},
           };
         }
       } else if (blockId === "head") {
         const head = chain.forkChoice.getHead();
         return {
-          executionOptimistic: isOptimisticBlock(head),
           data: {root: fromHexString(head.blockRoot)},
+          meta: {executionOptimistic: isOptimisticBlock(head)},
         };
       }
 
       // Slow path
       const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
       return {
-        executionOptimistic,
         data: {root: config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)},
+        meta: {executionOptimistic},
       };
     },
 
@@ -391,7 +385,7 @@ export function getBeaconBlockApi({
       await publishBlock(signedBlockOrContents, opts);
     },
 
-    async getBlobSidecars(blockId) {
+    async getBlobSidecars({blockId}) {
       const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
       const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
 
@@ -404,8 +398,8 @@ export function getBeaconBlockApi({
         throw Error(`blobSidecars not found in db for slot=${block.message.slot} root=${toHexString(blockRoot)}`);
       }
       return {
-        executionOptimistic,
         data: blobSidecars,
+        meta: {executionOptimistic},
       };
     },
   };
@@ -417,7 +411,7 @@ async function reconstructBuilderBlockOrContents(
 ): Promise<allForks.SignedBeaconBlockOrContents> {
   const executionBuilder = chain.executionBuilder;
   if (!executionBuilder) {
-    throw Error("exeutionBuilder required to publish SignedBlindedBeaconBlock");
+    throw Error("executionBuilder required to publish SignedBlindedBeaconBlock");
   }
 
   const signedBlockOrContents = await executionBuilder.submitBlindedBlock(signedBlindedBlockOrContents);
