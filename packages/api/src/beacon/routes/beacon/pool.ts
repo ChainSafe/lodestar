@@ -147,12 +147,12 @@ export type Endpoints = {
   >;
 
   /**
-   * Submit SignedBLSToExecutionChange object to node's pool
-   * Submits SignedBLSToExecutionChange object to node's pool and if passes validation node MUST broadcast it to network.
+   * Submit SignedBLSToExecutionChange objects to node's pool
+   * Submits SignedBLSToExecutionChange objects to node's pool and if passes validation node MUST broadcast it to network.
    */
   submitPoolBlsToExecutionChange: Endpoint<
     "POST",
-    {blsToExecutionChange: capella.SignedBLSToExecutionChange},
+    {blsToExecutionChanges: capella.SignedBLSToExecutionChange[]},
     {body: unknown},
     EmptyResponseData,
     EmptyMeta
@@ -293,14 +293,14 @@ export const definitions: RouteDefinitions<Endpoints> = {
     url: "/eth/v1/beacon/pool/bls_to_execution_changes",
     method: "POST",
     req: {
-      writeReqJson: ({blsToExecutionChange}) => ({
-        body: ssz.capella.SignedBLSToExecutionChange.toJson(blsToExecutionChange),
+      writeReqJson: ({blsToExecutionChanges}) => ({
+        body: SignedBLSToExecutionChangeListType.toJson(blsToExecutionChanges),
       }),
-      parseReqJson: ({body}) => ({blsToExecutionChange: ssz.capella.SignedBLSToExecutionChange.fromJson(body)}),
-      writeReqSsz: ({blsToExecutionChange}) => ({
-        body: ssz.capella.SignedBLSToExecutionChange.serialize(blsToExecutionChange),
+      parseReqJson: ({body}) => ({blsToExecutionChanges: SignedBLSToExecutionChangeListType.fromJson(body)}),
+      writeReqSsz: ({blsToExecutionChanges}) => ({
+        body: SignedBLSToExecutionChangeListType.serialize(blsToExecutionChanges),
       }),
-      parseReqSsz: ({body}) => ({blsToExecutionChange: ssz.capella.SignedBLSToExecutionChange.deserialize(body)}),
+      parseReqSsz: ({body}) => ({blsToExecutionChanges: SignedBLSToExecutionChangeListType.deserialize(body)}),
       schema: {
         body: Schema.Object,
       },

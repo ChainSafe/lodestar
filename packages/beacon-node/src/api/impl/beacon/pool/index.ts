@@ -1,4 +1,4 @@
-import {routes, ServerApi} from "@lodestar/api";
+import {ApplicationMethods, routes} from "@lodestar/api";
 import {Epoch, ssz} from "@lodestar/types";
 import {SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {validateApiAttestation} from "../../../../chain/validation/index.js";
@@ -16,14 +16,14 @@ export function getBeaconPoolApi({
   logger,
   metrics,
   network,
-}: Pick<ApiModules, "chain" | "logger" | "metrics" | "network">): ServerApi<routes.beacon.pool.Api> {
+}: Pick<ApiModules, "chain" | "logger" | "metrics" | "network">): ApplicationMethods<routes.beacon.pool.Endpoints> {
   return {
-    async getPoolAttestations(filters) {
+    async getPoolAttestations({slot, committeeIndex}) {
       // Already filtered by slot
-      let attestations = chain.aggregatedAttestationPool.getAll(filters?.slot);
+      let attestations = chain.aggregatedAttestationPool.getAll(slot);
 
-      if (filters?.committeeIndex !== undefined) {
-        attestations = attestations.filter((attestation) => filters.committeeIndex === attestation.data.index);
+      if (committeeIndex !== undefined) {
+        attestations = attestations.filter((attestation) => committeeIndex === attestation.data.index);
       }
 
       return {data: attestations};
@@ -45,7 +45,7 @@ export function getBeaconPoolApi({
       return {data: chain.opPool.getAllBlsToExecutionChanges().map(({data}) => data)};
     },
 
-    async submitPoolAttestations(attestations) {
+    async submitPoolAttestations({attestations}) {
       const seenTimestampSec = Date.now() / 1000;
       const errors: Error[] = [];
 
@@ -97,26 +97,26 @@ export function getBeaconPoolApi({
       }
     },
 
-    async submitPoolAttesterSlashings(attesterSlashing) {
-      await validateApiAttesterSlashing(chain, attesterSlashing);
-      chain.opPool.insertAttesterSlashing(attesterSlashing);
-      await network.publishAttesterSlashing(attesterSlashing);
+    async submitPoolAttesterSlashings({slashing}) {
+      await validateApiAttesterSlashing(chain, slashing);
+      chain.opPool.insertAttesterSlashing(slashing);
+      await network.publishAttesterSlashing(slashing);
     },
 
-    async submitPoolProposerSlashings(proposerSlashing) {
-      await validateApiProposerSlashing(chain, proposerSlashing);
-      chain.opPool.insertProposerSlashing(proposerSlashing);
-      await network.publishProposerSlashing(proposerSlashing);
+    async submitPoolProposerSlashings({slashing}) {
+      await validateApiProposerSlashing(chain, slashing);
+      chain.opPool.insertProposerSlashing(slashing);
+      await network.publishProposerSlashing(slashing);
     },
 
-    async submitPoolVoluntaryExit(voluntaryExit) {
-      await validateApiVoluntaryExit(chain, voluntaryExit);
-      chain.opPool.insertVoluntaryExit(voluntaryExit);
-      chain.emitter.emit(routes.events.EventType.voluntaryExit, voluntaryExit);
-      await network.publishVoluntaryExit(voluntaryExit);
+    async submitPoolVoluntaryExit({exit}) {
+      await validateApiVoluntaryExit(chain, exit);
+      chain.opPool.insertVoluntaryExit(exit);
+      chain.emitter.emit(routes.events.EventType.voluntaryExit, exit);
+      await network.publishVoluntaryExit(exit);
     },
 
-    async submitPoolBlsToExecutionChange(blsToExecutionChanges) {
+    async submitPoolBlsToExecutionChange({blsToExecutionChanges}) {
       const errors: Error[] = [];
 
       await Promise.all(
@@ -160,7 +160,7 @@ export function getBeaconPoolApi({
      *
      * https://github.com/ethereum/beacon-APIs/pull/135
      */
-    async submitPoolSyncCommitteeSignatures(signatures) {
+    async submitPoolSyncCommitteeSignatures({signatures}) {
       // Fetch states for all slots of the `signatures`
       const slots = new Set<Epoch>();
       for (const signature of signatures) {
