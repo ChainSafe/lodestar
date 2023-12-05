@@ -6,6 +6,7 @@ import {RoutesData, ReturnTypes, reqEmpty, ContainerData} from "../../../utils/i
 import * as block from "./block.js";
 import * as pool from "./pool.js";
 import * as state from "./state.js";
+import * as rewards from "./rewards.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -15,9 +16,11 @@ import * as state from "./state.js";
 export * as block from "./block.js";
 export * as pool from "./pool.js";
 export * as state from "./state.js";
+export * as rewards from "./rewards.js";
 export {BroadcastValidation} from "./block.js";
 export type {BlockId, BlockHeaderResponse} from "./block.js";
 export type {AttestationFilters} from "./pool.js";
+export type {ProposerRewardsResponse as ProposerRewards} from "./rewards.js";
 // TODO: Review if re-exporting all these types is necessary
 export type {
   StateId,
@@ -34,7 +37,8 @@ export type {
 
 export type Api = block.Api &
   pool.Api &
-  state.Api & {
+  state.Api &
+  rewards.Api & {
     getGenesis(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: phase0.Genesis}}>>;
   };
 
@@ -43,6 +47,7 @@ export const routesData: RoutesData<Api> = {
   ...block.routesData,
   ...pool.routesData,
   ...state.routesData,
+  ...rewards.routesData,
 };
 
 export type ReqTypes = {
@@ -56,6 +61,7 @@ export function getReqSerializers(config: ChainForkConfig) {
     ...block.getReqSerializers(config),
     ...pool.getReqSerializers(),
     ...state.getReqSerializers(),
+    ...rewards.getReqSerializers(),
   };
 }
 
@@ -65,5 +71,6 @@ export function getReturnTypes(): ReturnTypes<Api> {
     ...block.getReturnTypes(),
     ...pool.getReturnTypes(),
     ...state.getReturnTypes(),
+    ...rewards.getReturnTypes(),
   };
 }
