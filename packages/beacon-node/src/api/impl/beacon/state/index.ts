@@ -1,4 +1,4 @@
-import {routes, ServerApi} from "@lodestar/api";
+import {ApplicationMethods, routes} from "@lodestar/api";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAltair,
@@ -21,7 +21,7 @@ import {
 export function getBeaconStateApi({
   chain,
   config,
-}: Pick<ApiModules, "chain" | "config">): ServerApi<routes.beacon.state.Api> {
+}: Pick<ApiModules, "chain" | "config">): ApplicationMethods<routes.beacon.state.Endpoints> {
   async function getState(
     stateId: routes.beacon.StateId
   ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean}> {
@@ -29,23 +29,23 @@ export function getBeaconStateApi({
   }
 
   return {
-    async getStateRoot(stateId) {
+    async getStateRoot({stateId}) {
       const {state, executionOptimistic} = await getState(stateId);
       return {
-        executionOptimistic,
         data: {root: state.hashTreeRoot()},
+        meta: {executionOptimistic},
       };
     },
 
-    async getStateFork(stateId) {
+    async getStateFork({stateId}) {
       const {state, executionOptimistic} = await getState(stateId);
       return {
-        executionOptimistic,
         data: state.fork,
+        meta: {executionOptimistic},
       };
     },
 
-    async getStateRandao(stateId, epoch) {
+    async getStateRandao({stateId, epoch}) {
       const {state, executionOptimistic} = await getState(stateId);
       const stateEpoch = computeEpochAtSlot(state.slot);
       const usedEpoch = epoch ?? stateEpoch;
@@ -57,33 +57,31 @@ export function getBeaconStateApi({
       const randao = getRandaoMix(state, usedEpoch);
 
       return {
-        executionOptimistic,
-        data: {
-          randao,
-        },
+        data: {randao},
+        meta: {executionOptimistic},
       };
     },
 
-    async getStateFinalityCheckpoints(stateId) {
+    async getStateFinalityCheckpoints({stateId}) {
       const {state, executionOptimistic} = await getState(stateId);
       return {
-        executionOptimistic,
         data: {
           currentJustified: state.currentJustifiedCheckpoint,
           previousJustified: state.previousJustifiedCheckpoint,
           finalized: state.finalizedCheckpoint,
         },
+        meta: {executionOptimistic},
       };
     },
 
-    async getStateValidators(stateId, filters) {
+    async getStateValidators({stateId, ...filters}) {
       const {state, executionOptimistic} = await resolveStateId(chain, stateId);
       const currentEpoch = getCurrentEpoch(state);
       const {validators, balances} = state; // Get the validators sub tree once for all the loop
       const {pubkey2index} = chain.getHeadState().epochCtx;
 
       const validatorResponses: routes.beacon.ValidatorResponse[] = [];
-      if (filters?.id) {
+      if (filters.id) {
         for (const id of filters.id) {
           const resp = getStateValidatorIndex(id, state, pubkey2index);
           if (resp.valid) {
@@ -102,14 +100,14 @@ export function getBeaconStateApi({
           }
         }
         return {
-          executionOptimistic,
           data: validatorResponses,
+          meta: {executionOptimistic},
         };
       } else if (filters?.status) {
         const validatorsByStatus = filterStateValidatorsByStatus(filters.status, state, pubkey2index, currentEpoch);
         return {
-          executionOptimistic,
           data: validatorsByStatus,
+          meta: {executionOptimistic},
         };
       }
 
@@ -122,12 +120,12 @@ export function getBeaconStateApi({
       }
 
       return {
-        executionOptimistic,
         data: resp,
+        meta: {executionOptimistic},
       };
     },
 
-    async getStateValidator(stateId, validatorId) {
+    async getStateValidator({stateId, validatorId}) {
       const {state, executionOptimistic} = await resolveStateId(chain, stateId);
       const {pubkey2index} = chain.getHeadState().epochCtx;
 
@@ -138,17 +136,17 @@ export function getBeaconStateApi({
 
       const validatorIndex = resp.validatorIndex;
       return {
-        executionOptimistic,
         data: toValidatorResponse(
           validatorIndex,
           state.validators.getReadonly(validatorIndex),
           state.balances.get(validatorIndex),
           getCurrentEpoch(state)
         ),
+        meta: {executionOptimistic},
       };
     },
 
-    async getStateValidatorBalances(stateId, indices) {
+    async getStateValidatorBalances({stateId, indices}) {
       const {state, executionOptimistic} = await resolveStateId(chain, stateId);
 
       if (indices) {
@@ -168,8 +166,8 @@ export function getBeaconStateApi({
           }
         }
         return {
-          executionOptimistic,
           data: balances,
+          meta: {executionOptimistic},
         };
       }
 
@@ -180,12 +178,12 @@ export function getBeaconStateApi({
         resp.push({index: i, balance: balancesArr[i]});
       }
       return {
-        executionOptimistic,
         data: resp,
+        meta: {executionOptimistic},
       };
     },
 
-    async getEpochCommittees(stateId, filters) {
+    async getEpochCommittees({stateId, ...filters}) {
       const {state, executionOptimistic} = await resolveStateId(chain, stateId);
 
       const stateCached = state as CachedBeaconStateAltair;
@@ -217,8 +215,8 @@ export function getBeaconStateApi({
       });
 
       return {
-        executionOptimistic,
         data: committeesFlat,
+        meta: {executionOptimistic},
       };
     },
 
@@ -226,7 +224,7 @@ export function getBeaconStateApi({
      * Retrieves the sync committees for the given state.
      * @param epoch Fetch sync committees for the given epoch. If not present then the sync committees for the epoch of the state will be obtained.
      */
-    async getEpochSyncCommittees(stateId, epoch) {
+    async getEpochSyncCommittees({stateId, epoch}) {
       // TODO: Should pick a state with the provided epoch too
       const {state, executionOptimistic} = await resolveStateId(chain, stateId);
 
@@ -245,12 +243,12 @@ export function getBeaconStateApi({
       const syncCommitteeCache = stateCached.epochCtx.getIndexedSyncCommitteeAtEpoch(epoch ?? stateEpoch);
 
       return {
-        executionOptimistic,
         data: {
           validators: syncCommitteeCache.validatorIndices,
           // TODO: This is not used by the validator and will be deprecated soon
           validatorAggregates: [],
         },
+        meta: {executionOptimistic},
       };
     },
   };
