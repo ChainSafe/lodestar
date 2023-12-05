@@ -75,6 +75,7 @@ import {BlockAttributes, produceBlockBody} from "./produceBlock/produceBlockBody
 import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
 import {BlockInput} from "./blocks/types.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
+import {BlockRewards, computeBlockRewards} from "./rewards/blockRewards.js";
 import {ShufflingCache} from "./shufflingCache.js";
 import {StateContextCache} from "./stateCache/stateContextCache.js";
 import {CheckpointStateCache} from "./stateCache/stateContextCheckpointsCache.js";
@@ -966,5 +967,12 @@ export class BeaconChain implements IBeaconChain {
         this.logger.verbose("Execution builder status", builderLog);
       }
     }
+  }
+
+  async getBlockRewards(block: allForks.FullOrBlindedBeaconBlock): Promise<BlockRewards> {
+    const preState = (await this.regen.getPreState(block, {dontTransferCache: false}, RegenCaller.restApi)).clone();
+    preState.slot = block.slot; // regen.getPreState guarantees pre_state of the same epoch but not the same slot
+    const result = computeBlockRewards(block, preState);
+    return result;
   }
 }

@@ -38,6 +38,7 @@ import {IChainOptions} from "./options.js";
 import {AssembledBlockType, BlockAttributes, BlockType} from "./produceBlock/produceBlockBody.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {ShufflingCache} from "./shufflingCache.js";
+import { BlockRewards } from "./rewards/blockRewards.js";
 
 export {BlockType, type AssembledBlockType};
 export {type ProposerPreparationData};
@@ -173,6 +174,8 @@ export interface IBeaconChain {
 
   regenCanAcceptWork(): boolean;
   blsThreadPoolCanAcceptWork(): boolean;
+
+  getBlockRewards(blockRef: allForks.FullOrBlindedBeaconBlock): Promise<BlockRewards>;
 }
 
 export type SSZObjectType =
