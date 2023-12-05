@@ -11,8 +11,8 @@ Thanks for your interest in contributing to Lodestar. It's people like you that 
 
 When using OSX a couple extra prerequisites are required.
 
-* python
-* coreutils (e.g. via `brew install coreutils`)
+- python
+- coreutils (e.g. via `brew install coreutils`)
 
 ## Getting Started
 
