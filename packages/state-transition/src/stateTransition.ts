@@ -167,7 +167,7 @@ function processSlotsWithTransientCache(
       const beforeProcessEpochTimer = metrics?.epochTransitionStepTime.startTimer({step: "beforeProcessEpoch"});
       const epochTransitionCache = beforeProcessEpoch(postState, epochTransitionCacheOpts);
       beforeProcessEpochTimer?.({step: "beforeProcessEpoch"});
-      processEpoch(fork, postState, epochTransitionCache);
+      processEpoch(fork, postState, epochTransitionCache, metrics);
       const {currentEpoch, statuses, balances} = epochTransitionCache;
       metrics?.registerValidatorStatuses(currentEpoch, statuses, balances);
 
