@@ -2,6 +2,7 @@
 import path from "node:path";
 import {sleep, toHex, toHexString} from "@lodestar/utils";
 import {ApiError} from "@lodestar/api";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {CLIQUE_SEALING_PERIOD, SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/constants.js";
 import {AssertionMatch, BeaconClient, ExecutionClient, ValidatorClient} from "../utils/simulation/interfaces.js";
 import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
@@ -203,7 +204,16 @@ const unknownBlockSync = await env.createNodePair({
   id: "unknown-block-sync-node",
   beacon: {
     type: BeaconClient.Lodestar,
-    options: {clientOptions: {"network.allowPublishToZeroPeers": true, "sync.disableRangeSync": true}},
+    options: {
+      clientOptions: {
+        "network.allowPublishToZeroPeers": true,
+        "sync.disableRangeSync": true,
+        // Range sync node start when other nodes are multiple epoch behind and
+        // range sync triggers only if the gap is maximum `slotImportTolerance * 2`
+        // so a lot of times sim tests timeout unknownBlockSync node does not sync up
+        "sync.slotImportTolerance": SLOTS_PER_EPOCH * 2,
+      },
+    },
   },
   execution: ExecutionClient.Geth,
   keysCount: 0,

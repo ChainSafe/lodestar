@@ -28,15 +28,6 @@ export class BeaconSync implements IBeaconSync {
 
   /** For metrics only */
   private readonly peerSyncType = new Map<string, PeerSyncType>();
-
-  /**
-   * The number of slots ahead of us that is allowed before starting a RangeSync
-   * If a peer is within this tolerance (forwards or backwards), it is treated as a fully sync'd peer.
-   *
-   * This means that we consider ourselves synced (and hence subscribe to all subnets and block
-   * gossip if no peers are further than this range ahead of us that we have not already downloaded
-   * blocks for.
-   */
   private readonly slotImportTolerance: Slot;
 
   constructor(opts: SyncOptions, modules: SyncModules) {
@@ -48,7 +39,7 @@ export class BeaconSync implements IBeaconSync {
     this.logger = logger;
     this.rangeSync = new RangeSync(modules, opts);
     this.unknownBlockSync = new UnknownBlockSync(config, network, chain, logger, metrics, opts);
-    this.slotImportTolerance = SLOTS_PER_EPOCH;
+    this.slotImportTolerance = opts.slotImportTolerance ?? SLOTS_PER_EPOCH;
 
     // Subscribe to RangeSync completing a SyncChain and recompute sync state
     if (!opts.disableRangeSync) {
