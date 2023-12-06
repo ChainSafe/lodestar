@@ -5,16 +5,7 @@ import {AttesterStatus} from "./util/attesterStatus.js";
 export type BeaconStateTransitionMetrics = {
   epochTransitionTime: Histogram;
   epochTransitionCommitTime: Histogram;
-  epochTransitionBeforeProcessEpochTime: Histogram;
-  epochTransitionAfterProcessEpochTime: Histogram;
-  epochTransitionJustificationAndFinalizationTime: Histogram;
-  epochTransitionInactivityUpdatesTime: Histogram;
-  epochTransitionRewardsAndPenaltiesTime: Histogram;
-  epochTransitionRegistryUpdatesTime: Histogram;
-  epochTransitionSlashingsTime: Histogram;
-  epochTransitionEffectiveBalanceUpdatesTime: Histogram;
-  epochTransitionParticipationFlagUpdatesTime: Histogram;
-  epochTransitionSyncCommitteeUpdatesTime: Histogram;
+  epochTransitionStepTime: Histogram<"step">;
   processBlockTime: Histogram;
   processBlockCommitTime: Histogram;
   stateHashTreeRootTime: Histogram;
@@ -33,7 +24,7 @@ export type BeaconStateTransitionMetrics = {
 type LabelValues<T extends string> = Partial<Record<T, string | number>>;
 
 interface Histogram<T extends string = string> {
-  startTimer(): () => void;
+  startTimer(labels?: LabelValues<T>): (labels?: LabelValues<T>) => number;
 
   observe(value: number): void;
   observe(labels: LabelValues<T>, values: number): void;

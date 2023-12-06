@@ -164,17 +164,17 @@ function processSlotsWithTransientCache(
       const fork = postState.config.getForkSeq(postState.slot);
 
       const epochTransitionTimer = metrics?.epochTransitionTime.startTimer();
-      const beforeProcessEpochTimer = metrics?.epochTransitionBeforeProcessEpochTime.startTimer();
+      const beforeProcessEpochTimer = metrics?.epochTransitionStepTime.startTimer({step: "beforeProcessEpoch"});
       const epochTransitionCache = beforeProcessEpoch(postState, epochTransitionCacheOpts);
-      beforeProcessEpochTimer?.();
+      beforeProcessEpochTimer?.({step: "beforeProcessEpoch"});
       processEpoch(fork, postState, epochTransitionCache);
       const {currentEpoch, statuses, balances} = epochTransitionCache;
       metrics?.registerValidatorStatuses(currentEpoch, statuses, balances);
 
       postState.slot++;
-      const afterProcessEpochTimer = metrics?.epochTransitionAfterProcessEpochTime.startTimer();
+      const afterProcessEpochTimer = metrics?.epochTransitionStepTime.startTimer({step: "afterProcessEpoch"});
       postState.epochCtx.afterProcessEpoch(postState, epochTransitionCache);
-      afterProcessEpochTimer?.();
+      afterProcessEpochTimer?.({step: "afterProcessEpoch"});
 
       // Running commit here is not strictly necessary. The cost of running commit twice (here + after process block)
       // Should be negligible but gives better metrics to differentiate the cost of it for block and epoch proc.

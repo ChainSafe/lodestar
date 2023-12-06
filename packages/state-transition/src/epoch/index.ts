@@ -65,31 +65,31 @@ export function processEpoch(
     throw new Error("Lodestar does not support this network, parameters don't fit number value inside state.slashings");
   }
 
-  let timer = metrics?.epochTransitionJustificationAndFinalizationTime.startTimer();
+  let timer = metrics?.epochTransitionStepTime.startTimer({step: "processJustificationAndFinalization"});
   processJustificationAndFinalization(state, cache);
-  timer?.();
+  timer?.({step: "processJustificationAndFinalization"});
   if (fork >= ForkSeq.altair) {
-    timer = metrics?.epochTransitionInactivityUpdatesTime.startTimer();
+    timer = metrics?.epochTransitionStepTime.startTimer({step: "processInactivityUpdates"});
     processInactivityUpdates(state as CachedBeaconStateAltair, cache);
-    timer?.();
+    timer?.({step: "processInactivityUpdates"});
   }
   // processRewardsAndPenalties() is 2nd step in the specs, we optimize to do it
   // after processSlashings() to update balances only once
   // processRewardsAndPenalties(state, cache);
-  timer = metrics?.epochTransitionRegistryUpdatesTime.startTimer();
+  timer = metrics?.epochTransitionStepTime.startTimer({step: "processRegistryUpdates"});
   processRegistryUpdates(state, cache);
-  timer?.();
+  timer?.({step: "processRegistryUpdates"});
   // accumulate slashing penalties and only update balances once in processRewardsAndPenalties()
-  timer = metrics?.epochTransitionSlashingsTime.startTimer();
+  timer = metrics?.epochTransitionStepTime.startTimer({step: "processSlashings"});
   const slashingPenalties = processSlashings(state, cache, false);
-  timer?.();
-  timer = metrics?.epochTransitionRewardsAndPenaltiesTime.startTimer();
+  timer?.({step: "processSlashings"});
+  timer = metrics?.epochTransitionStepTime.startTimer({step: "processRewardsAndPenalties"});
   processRewardsAndPenalties(state, cache, slashingPenalties);
-  timer?.();
+  timer?.({step: "processRewardsAndPenalties"});
   processEth1DataReset(state, cache);
-  timer = metrics?.epochTransitionEffectiveBalanceUpdatesTime.startTimer();
+  timer = metrics?.epochTransitionStepTime.startTimer({step: "processEffectiveBalanceUpdates"});
   processEffectiveBalanceUpdates(state, cache);
-  timer?.();
+  timer?.({step: "processEffectiveBalanceUpdates"});
   processSlashingsReset(state, cache);
   processRandaoMixesReset(state, cache);
 
@@ -102,11 +102,11 @@ export function processEpoch(
   if (fork === ForkSeq.phase0) {
     processParticipationRecordUpdates(state as CachedBeaconStatePhase0);
   } else {
-    timer = metrics?.epochTransitionParticipationFlagUpdatesTime.startTimer();
+    timer = metrics?.epochTransitionStepTime.startTimer({step: "processParticipationFlagUpdates"});
     processParticipationFlagUpdates(state as CachedBeaconStateAltair);
-    timer?.();
-    timer = metrics?.epochTransitionSyncCommitteeUpdatesTime.startTimer();
+    timer?.({step: "processParticipationFlagUpdates"});
+    timer = metrics?.epochTransitionStepTime.startTimer({step: "processSyncCommitteeUpdates"});
     processSyncCommitteeUpdates(state as CachedBeaconStateAltair);
-    timer?.();
+    timer?.({step: "processSyncCommitteeUpdates"});
   }
 }
