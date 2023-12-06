@@ -28,14 +28,13 @@ import {
   ArrayOf,
   Schema,
   WithVersion,
-  WithExecutionPayloadValue,
+  WithBlockValues,
   reqOnlyBody,
   ReqSerializers,
   jsonType,
   ContainerDataExecutionOptimistic,
   ContainerData,
   TypeJson,
-  WithConsensusBlockValue,
 } from "../../utils/index.js";
 import {fromU64Str, fromGraffitiHex, toU64Str, U64Str, toGraffitiHex} from "../../utils/serdes.js";
 import {allForksBlockContentsResSerializer, allForksBlindedBlockContentsResSerializer} from "../../utils/routes.js";
@@ -717,20 +716,16 @@ export function getReturnTypes(): ReturnTypes<Api> {
     {jsonCase: "eth2"}
   );
 
-  const produceBlockOrContents = WithConsensusBlockValue(
-    WithExecutionPayloadValue(
-      WithVersion<allForks.BeaconBlockOrContents>((fork: ForkName) =>
-        isForkBlobs(fork) ? allForksBlockContentsResSerializer(fork) : ssz[fork].BeaconBlock
-      )
+  const produceBlockOrContents = WithBlockValues(
+    WithVersion<allForks.BeaconBlockOrContents>((fork: ForkName) =>
+      isForkBlobs(fork) ? allForksBlockContentsResSerializer(fork) : ssz[fork].BeaconBlock
     )
   ) as TypeJson<ProduceBlockOrContentsRes>;
-  const produceBlindedBlockOrContents = WithConsensusBlockValue(
-    WithExecutionPayloadValue(
-      WithVersion<allForks.BlindedBeaconBlockOrContents>((fork: ForkName) =>
-        isForkBlobs(fork)
-          ? allForksBlindedBlockContentsResSerializer(fork)
-          : ssz.allForksBlinded[isForkExecution(fork) ? fork : ForkName.bellatrix].BeaconBlock
-      )
+  const produceBlindedBlockOrContents = WithBlockValues(
+    WithVersion<allForks.BlindedBeaconBlockOrContents>((fork: ForkName) =>
+      isForkBlobs(fork)
+        ? allForksBlindedBlockContentsResSerializer(fork)
+        : ssz.allForksBlinded[isForkExecution(fork) ? fork : ForkName.bellatrix].BeaconBlock
     )
   ) as TypeJson<ProduceBlindedBlockOrContentsRes>;
 

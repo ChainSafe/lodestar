@@ -179,38 +179,25 @@ export function WithExecutionOptimistic<T extends {data: unknown}>(
 }
 
 /**
- * SSZ factory helper to wrap an existing type with `{executionPayloadValue: Wei}`
+ * SSZ factory helper to wrap an existing type with `{executionPayloadValue: Wei, consensusBlockValue: GWei}`
  */
-export function WithExecutionPayloadValue<T extends {data: unknown}>(
+export function WithBlockValues<T extends {data: unknown}>(
   type: TypeJson<T>
-): TypeJson<T & {executionPayloadValue: bigint}> {
+): TypeJson<T & {executionPayloadValue: bigint; consensusBlockValue: bigint}> {
   return {
-    toJson: ({executionPayloadValue, ...data}) => ({
+    toJson: ({executionPayloadValue, consensusBlockValue, ...data}) => ({
       ...(type.toJson(data as unknown as T) as Record<string, unknown>),
       execution_payload_value: executionPayloadValue.toString(),
+      consensus_block_value: consensusBlockValue.toString(),
     }),
-    fromJson: ({execution_payload_value, ...data}: T & {execution_payload_value: string}) => ({
+    fromJson: ({
+      execution_payload_value,
+      consensus_block_value,
+      ...data
+    }: T & {execution_payload_value: string; consensus_block_value: string}) => ({
       ...type.fromJson(data),
       // For cross client usage where beacon or validator are of separate clients, executionPayloadValue could be missing
       executionPayloadValue: BigInt(execution_payload_value ?? "0"),
-    }),
-  };
-}
-
-/**
- * SSZ factory helper to wrap an existing type with `{consensusBlockValue: Wei}`
- */
-export function WithConsensusBlockValue<T extends {data: unknown}>(
-  type: TypeJson<T>
-): TypeJson<T & {consensusBlockValue: bigint}> {
-  return {
-    toJson: ({consensusBlockValue, ...data}) => ({
-      ...(type.toJson(data as unknown as T) as Record<string, unknown>),
-      consensus_block_value: consensusBlockValue.toString(),
-    }),
-    fromJson: ({consensus_block_value, ...data}: T & {consensus_block_value: string}) => ({
-      ...type.fromJson(data),
-      // For cross client usage where beacon or validator are of separate clients, consensusBlockValue could be missing
       consensusBlockValue: BigInt(consensus_block_value ?? "0"),
     }),
   };
