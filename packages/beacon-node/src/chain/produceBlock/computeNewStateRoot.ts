@@ -20,7 +20,6 @@ export function computeNewStateRoot(
 ): {newStateRoot: Root; proposerReward: Gwei} {
   // Set signature to zero to re-use stateTransition() function which requires the SignedBeaconBlock type
   const blockEmptySig = {message: block, signature: ZERO_HASH} as allForks.FullOrBlindedSignedBeaconBlock;
-  const proposerBalanceBefore = state.balances.get(block.proposerIndex);
 
   const postState = stateTransition(
     state,
@@ -42,7 +41,8 @@ export function computeNewStateRoot(
     metrics
   );
 
-  const proposerBalanceAfter = postState.balances.get(block.proposerIndex);
+  const {attestations, syncAggregate, slashing} = postState.rewards;
+  const proposerReward = BigInt(attestations + syncAggregate + slashing);
 
-  return {newStateRoot: postState.hashTreeRoot(), proposerReward: BigInt(proposerBalanceAfter - proposerBalanceBefore)};
+  return {newStateRoot: postState.hashTreeRoot(), proposerReward};
 }

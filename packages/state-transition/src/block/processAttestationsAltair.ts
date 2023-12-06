@@ -123,6 +123,7 @@ export function processAttestationsAltair(
   }
 
   increaseBalance(state, epochCtx.getBeaconProposer(state.slot), proposerReward);
+  state.rewards.attestations = proposerReward;
 }
 
 /**

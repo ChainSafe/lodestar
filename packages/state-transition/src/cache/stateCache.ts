@@ -12,6 +12,7 @@ import {
   BeaconStateCapella,
   BeaconStateDeneb,
 } from "./types.js";
+import {RewardCache, createRewardCache as createEmptyRewardCache} from "./rewardCache.js";
 
 export type BeaconStateCache = {
   config: BeaconConfig;
@@ -20,6 +21,7 @@ export type BeaconStateCache = {
   readonly clonedCount: number;
   readonly clonedCountWithTransferCache: number;
   readonly createdWithTransferCache: boolean;
+  rewards: RewardCache;
 };
 
 type Mutable<T> = {
@@ -147,6 +149,7 @@ export function createCachedBeaconState<T extends BeaconStateAllForks>(
     clonedCount: 0,
     clonedCountWithTransferCache: 0,
     createdWithTransferCache: false,
+    rewards: createEmptyRewardCache(),
   });
 
   return cachedState;
@@ -219,6 +222,7 @@ export function getCachedBeaconState<T extends BeaconStateAllForks>(
       clonedCount: 0,
       clonedCountWithTransferCache: 0,
       createdWithTransferCache: !dontTransferCache,
+      rewards: createEmptyRewardCache(),
     }) as T & BeaconStateCache;
   }
 

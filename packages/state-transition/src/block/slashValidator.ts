@@ -66,9 +66,11 @@ export function slashValidator(
   if (whistleblowerIndex === undefined || !Number.isSafeInteger(whistleblowerIndex)) {
     // Call increaseBalance() once with `(whistleblowerReward - proposerReward) + proposerReward`
     increaseBalance(state, proposerIndex, whistleblowerReward);
+    state.rewards.slashing += whistleblowerReward;
   } else {
     increaseBalance(state, proposerIndex, proposerReward);
     increaseBalance(state, whistleblowerIndex, whistleblowerReward - proposerReward);
+    state.rewards.slashing += proposerReward;
   }
 
   // TODO: describe issue. Compute progressive target balances
