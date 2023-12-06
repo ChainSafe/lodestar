@@ -174,6 +174,16 @@ describe("httpClient json client", () => {
     await httpClient.json(testRoute);
   });
 
+  it("should not leak user credentials in baseUrl getter", () => {
+    const url = new URL("http://localhost");
+    url.username = "user";
+    url.password = "password";
+    const httpClient = new HttpClient({baseUrl: url.toString()});
+
+    expect(httpClient.baseUrl.includes(url.username)).to.be.false;
+    expect(httpClient.baseUrl.includes(url.password)).to.be.false;
+  });
+
   it("should handle aborting request with timeout", async () => {
     const {baseUrl} = await getServer({
       ...testRoute,

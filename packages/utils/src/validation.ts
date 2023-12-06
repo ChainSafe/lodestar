@@ -9,7 +9,7 @@ export function isValidHttpUrl(urlStr: string): boolean {
     //
     // Make sure that we can successfully decode the username and password here.
     //
-    // Unfortunately this menas we don't accept every character supported by RFC-3986.
+    // Unfortunately this means we don't accept every character supported by RFC-3986.
     decodeURIComponent(url.username);
     decodeURIComponent(url.password);
   } catch (_) {
