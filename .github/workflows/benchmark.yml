@@ -17,6 +17,7 @@ on:
     branches:
       - stable
       - unstable
+  workflow_dispatch:
 
 jobs:
   run:

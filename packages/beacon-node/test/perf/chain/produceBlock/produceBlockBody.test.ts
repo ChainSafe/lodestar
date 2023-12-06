@@ -15,10 +15,9 @@ import {BeaconDb} from "../../../../src/index.js";
 import {testLogger} from "../../../utils/logger.js";
 
 const logger = testLogger();
-const numberOfValidators = 1024;
 
 describe("produceBlockBody", () => {
-  const stateOg = generatePerfTestCachedStateAltair({goBackOneSlot: false, vc: numberOfValidators});
+  const stateOg = generatePerfTestCachedStateAltair({goBackOneSlot: false});
 
   let db: BeaconDb;
   let chain: BeaconChain;
