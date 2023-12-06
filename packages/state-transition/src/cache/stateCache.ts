@@ -201,6 +201,7 @@ export function getCachedBeaconState<T extends BeaconStateAllForks>(
   (cachedState as BeaconStateCacheMutable).clonedCount = cache.clonedCount;
   (cachedState as BeaconStateCacheMutable).clonedCountWithTransferCache = cache.clonedCountWithTransferCache;
   (cachedState as BeaconStateCacheMutable).createdWithTransferCache = cache.createdWithTransferCache;
+  cachedState.rewards = cache.rewards;
 
   // Overwrite .clone function to preserve cache
   // TreeViewDU.clone() creates a new object that does not have the attached cache
