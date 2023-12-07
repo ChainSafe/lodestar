@@ -2,6 +2,7 @@
 import path from "node:path";
 import {sleep, toHex, toHexString} from "@lodestar/utils";
 import {ApiError} from "@lodestar/api";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {CLIQUE_SEALING_PERIOD, SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/constants.js";
 import {AssertionMatch, BeaconClient, ExecutionClient, ValidatorClient} from "../utils/simulation/interfaces.js";
 import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
@@ -213,7 +214,8 @@ const unknownBlockSync = await env.createNodePair({
         // unknown block sync can work only if the gap is maximum `slotImportTolerance * 2`
         // default value for slotImportTolerance is one epoch, so if gap is more than 2 epoch
         // unknown block sync will not work. So why we have to increase it for tests.
-        "sync.slotImportTolerance": headForUnknownBlockSync.response.data.message.slot / 2 + 2,
+        // Adding SLOTS_PER_EPOCH will cover the case if the node starts on the last slot of epoch
+        "sync.slotImportTolerance": headForUnknownBlockSync.response.data.message.slot / 2 + SLOTS_PER_EPOCH,
       },
     },
   },
