@@ -1,6 +1,7 @@
 #!/bin/bash
 
 DOCS_DIR=docs
+ASSETS_DIR=assets
 
 # exit when any command fails
 set -e
@@ -13,5 +14,6 @@ cp -r packages/light-client/README.md $DOCS_DIR/pages/lightclient-prover/lightcl
 cp -r packages/prover/README.md $DOCS_DIR/pages/lightclient-prover/prover.md
 
 # Copy visual assets
-rm -rf $DOCS_DIR/pages/assets
-cp -r $DOCS_DIR/assets $DOCS_DIR/pages/assets
+rm -rf $DOCS_DIR/pages/assets $DOCS_DIR/pages/images
+cp -r $ASSETS_DIR $DOCS_DIR/pages/assets
+cp -r $DOCS_DIR/images $DOCS_DIR/pages/images
