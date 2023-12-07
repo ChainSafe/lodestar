@@ -4,7 +4,7 @@ const __dirname = new URL(".", import.meta.url).pathname;
 
 export default defineConfig({
   test: {
-    pool: "forks",
+    pool: "threads",
     include: ["**/*.test.ts"],
     exclude: [
       "**/*.browser.test.ts",

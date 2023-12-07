@@ -5,16 +5,7 @@ import {altair} from "@lodestar/types";
 import {SyncCommitteeMessagePool} from "../../../../src/chain/opPools/index.js";
 import {Clock} from "../../../../src/util/clock.js";
 
-vi.mock("../../../../src/util/clock.js", () => {
-  return {
-    // eslint-disable-next-line @typescript-eslint/naming-convention
-    Clock: vi.fn().mockImplementation(() => {
-      return {
-        secFromSlot: vi.fn(),
-      };
-    }),
-  };
-});
+vi.mock("../../../../src/util/clock.js");
 
 describe("chain / opPools / SyncCommitteeMessagePool", function () {
   let cache: SyncCommitteeMessagePool;

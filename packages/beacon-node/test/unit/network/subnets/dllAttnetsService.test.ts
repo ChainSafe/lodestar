@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import {describe, it, expect, beforeEach, vi, MockedObject, afterEach} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {ZERO_HASH} from "@lodestar/state-transition";
@@ -18,17 +17,7 @@ import {testLogger} from "../../../utils/logger.js";
 import {DLLAttnetsService} from "../../../../src/network/subnets/dllAttnetsService.js";
 import {CommitteeSubscription} from "../../../../src/network/subnets/interface.js";
 
-vi.mock("../../../../src/network/gossip/gossipsub.js", () => {
-  const Eth2Gossipsub = vi.fn().mockImplementation(() => {
-    return {
-      subscribeTopic: vi.fn(),
-      unsubscribeTopic: vi.fn(),
-      close: vi.fn(),
-    };
-  });
-
-  return {Eth2Gossipsub};
-});
+vi.mock("../../../../src/network/gossip/gossipsub.js");
 
 describe("DLLAttnetsService", () => {
   const nodeId = bigIntToBytes(
