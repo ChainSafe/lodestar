@@ -106,7 +106,6 @@
   },
   "resolutions": {
     "dns-over-http-resolver": "^2.1.1",
-    "chai": "^4.3.10",
-    "loupe": "^2.3.6"
+    "chai": "^4.3.10"
   }
 }
