@@ -538,16 +538,18 @@ export function getValidatorApi({
 
     const builderPayloadValue = blindedBlock?.executionPayloadValue ?? BigInt(0);
     const enginePayloadValue = fullBlock?.executionPayloadValue ?? BigInt(0);
-    const consensusBlockValue = blindedBlock?.consensusBlockValue ?? fullBlock?.consensusBlockValue ?? BigInt(0);
+    const consensusBlockValueBuilder = blindedBlock?.consensusBlockValue ?? BigInt(0);
+    const consensusBlockValueEngine = fullBlock?.consensusBlockValue ?? BigInt(0);
+
+    const blockValueBuilder = builderPayloadValue + consensusBlockValueBuilder;
+    const blockValueEngine = enginePayloadValue + consensusBlockValueEngine;
 
     let selectedSource: ProducedBlockSource | null = null;
 
     if (fullBlock && blindedBlock) {
       switch (builderSelection) {
         case routes.validator.BuilderSelection.MaxProfit: {
-          // If executionPayloadValues are zero, than choose builder as most likely beacon didn't provide executionPayloadValue
-          // and builder blocks are most likely thresholded by a min bid
-          if (enginePayloadValue >= builderPayloadValue && enginePayloadValue !== BigInt(0)) {
+          if (blockValueEngine > blockValueBuilder) {
             selectedSource = ProducedBlockSource.engine;
           } else {
             selectedSource = ProducedBlockSource.builder;
@@ -570,7 +572,8 @@ export function getValidatorApi({
         // winston logger doesn't like bigint
         enginePayloadValue: `${enginePayloadValue}`,
         builderPayloadValue: `${builderPayloadValue}`,
-        consensusBlockValue: `${consensusBlockValue}`,
+        consensusBlockValueEngine: `${consensusBlockValueEngine}`,
+        consensusBlockValueBuilder: `${consensusBlockValueBuilder}`,
         slot,
       });
     } else if (fullBlock && !blindedBlock) {
@@ -578,7 +581,7 @@ export function getValidatorApi({
       logger.verbose("Selected engine block: no builder block produced", {
         // winston logger doesn't like bigint
         enginePayloadValue: `${enginePayloadValue}`,
-        consensusBlockValue: `${consensusBlockValue}`,
+        consensusBlockValue: `${consensusBlockValueEngine}`,
         slot,
       });
     } else if (blindedBlock && !fullBlock) {
@@ -586,7 +589,7 @@ export function getValidatorApi({
       logger.verbose("Selected builder block: no engine block produced", {
         // winston logger doesn't like bigint
         builderPayloadValue: `${builderPayloadValue}`,
-        consensusBlockValue: `${consensusBlockValue}`,
+        consensusBlockValue: `${consensusBlockValueBuilder}`,
         slot,
       });
     }
