@@ -41,7 +41,7 @@ export function computeNewStateRoot(
     metrics
   );
 
-  const {attestations, syncAggregate, slashing} = postState.rewards;
+  const {attestations, syncAggregate, slashing} = postState.proposerRewards;
   const proposerReward = BigInt(attestations + syncAggregate + slashing);
 
   return {newStateRoot: postState.hashTreeRoot(), proposerReward};

@@ -41,7 +41,7 @@ export function processSyncAggregate(
       }
       // Proposer reward
       proposerBalance += syncProposerReward;
-      state.rewards.syncAggregate += syncProposerReward;
+      state.proposerRewards.syncAggregate += syncProposerReward;
     } else {
       // Negative rewards for non participants
       if (index === proposerIndex) {

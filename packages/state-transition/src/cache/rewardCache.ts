@@ -9,7 +9,7 @@ export type RewardCache = {
   slashing: number; // Sum of attester and proposer slashing reward
 };
 
-export function createRewardCache(): RewardCache {
+export function createEmptyRewardCache(): RewardCache {
   return {
     attestations: 0,
     syncAggregate: 0,
