@@ -213,7 +213,7 @@ const unknownBlockSync = await env.createNodePair({
         // unknown block sync can work only if the gap is maximum `slotImportTolerance * 2`
         // default value for slotImportTolerance is one epoch, so if gap is more than 2 epoch
         // unknown block sync will not work. So why we have to increase it for tests.
-        "sync.slotImportTolerance": headForUnknownBlockSync.response.data.message.slot / 2,
+        "sync.slotImportTolerance": headForUnknownBlockSync.response.data.message.slot / 2 + 2,
       },
     },
   },
