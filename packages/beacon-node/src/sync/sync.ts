@@ -237,7 +237,7 @@ export class BeaconSync implements IBeaconSync {
       const syncDiff = this.chain.clock.currentSlot - this.chain.forkChoice.getHead().slot;
       if (syncDiff > this.slotImportTolerance * 2) {
         if (this.network.isSubscribedToGossipCoreTopics()) {
-          this.logger.warn(`Node sync has fallen behind by ${syncDiff} slots.`);
+          this.logger.warn(`Node sync has fallen behind by ${syncDiff} slots`);
           this.network
             .unsubscribeGossipCoreTopics()
             .then(() => {
