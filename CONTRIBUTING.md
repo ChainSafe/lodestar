@@ -9,7 +9,7 @@ Thanks for your interest in contributing to Lodestar. It's people like you that 
 
 ### MacOS Specifics
 
-When using MacOS a couple extra prerequisites are required.
+When using MacOS, there are a couple of extra prerequisites that are required.
 
 - python
 - coreutils (e.g. via `brew install coreutils`)
