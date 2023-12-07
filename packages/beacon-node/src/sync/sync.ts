@@ -251,9 +251,6 @@ export class BeaconSync implements IBeaconSync {
 
         // also stop searching for unknown blocks
         if (this.unknownBlockSync.isSubscribedToNetwork()) {
-          this.logger.warn(
-            `Node sync has fallen behind by ${syncDiff} slots and will stop searching for unknown blocks.`
-          );
           this.unknownBlockSync.unsubscribeFromNetwork();
           this.metrics?.syncUnknownBlock.switchNetworkSubscriptions.inc({action: "unsubscribed"});
         }
