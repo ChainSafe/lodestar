@@ -90,7 +90,7 @@ export function setAuthorizationHeader(url: URL, headers: Headers, {bearerToken}
   }
   if (url.username || url.password) {
     if (!headers.has("Authorization")) {
-      headers.set("Authorization", `Basic ${toBase64(`${url.username}:${url.password}`)}`);
+      headers.set("Authorization", `Basic ${toBase64(decodeURIComponent(`${url.username}:${url.password}`))}`);
     }
     // Remove the username and password from the URL
     url.username = "";

@@ -123,10 +123,25 @@ export async function produceBlockBody<T extends BlockType>(
   //   }
   // }
 
+  const stepsMetrics =
+    blockType === BlockType.Full
+      ? this.metrics?.executionBlockProductionTimeSteps
+      : this.metrics?.builderBlockProductionTimeSteps;
+
   const [attesterSlashings, proposerSlashings, voluntaryExits, blsToExecutionChanges] =
-    this.opPool.getSlashingsAndExits(currentState);
+    this.opPool.getSlashingsAndExits(currentState, blockType, this.metrics);
+
+  const endAttestations = stepsMetrics?.startTimer();
   const attestations = this.aggregatedAttestationPool.getAttestationsForBlock(this.forkChoice, currentState);
+  endAttestations?.({
+    step: "attestations",
+  });
+
+  const endEth1DataAndDeposits = stepsMetrics?.startTimer();
   const {eth1Data, deposits} = await this.eth1.getEth1DataAndDeposits(currentState);
+  endEth1DataAndDeposits?.({
+    step: "eth1DataAndDeposits",
+  });
 
   const blockBody: phase0.BeaconBlockBody = {
     randaoReveal,
@@ -141,6 +156,7 @@ export async function produceBlockBody<T extends BlockType>(
 
   const blockEpoch = computeEpochAtSlot(blockSlot);
 
+  const endSyncAggregate = stepsMetrics?.startTimer();
   if (blockEpoch >= this.config.ALTAIR_FORK_EPOCH) {
     const syncAggregate = this.syncContributionAndProofPool.getAggregate(parentSlot, parentBlockRoot);
     this.metrics?.production.producedSyncAggregateParticipants.observe(
@@ -148,6 +164,9 @@ export async function produceBlockBody<T extends BlockType>(
     );
     (blockBody as altair.BeaconBlockBody).syncAggregate = syncAggregate;
   }
+  endSyncAggregate?.({
+    step: "syncAggregate",
+  });
 
   Object.assign(logMeta, {
     attestations: attestations.length,
@@ -157,6 +176,7 @@ export async function produceBlockBody<T extends BlockType>(
     proposerSlashings: proposerSlashings.length,
   });
 
+  const endExecutionPayload = stepsMetrics?.startTimer();
   if (isForkExecution(fork)) {
     const safeBlockHash = this.forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
@@ -359,6 +379,9 @@ export async function produceBlockBody<T extends BlockType>(
     blobsResult = {type: BlobsResultType.preDeneb};
     executionPayloadValue = BigInt(0);
   }
+  endExecutionPayload?.({
+    step: "executionPayload",
+  });
 
   if (ForkSeq[fork] >= ForkSeq.capella) {
     // TODO: blsToExecutionChanges should be passed in the produceBlock call

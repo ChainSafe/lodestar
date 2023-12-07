@@ -211,6 +211,10 @@ export function cachedStateAltairPopulateCaches(state: CachedBeaconStateAltair):
   state.inactivityScores.getAll();
 }
 
+/**
+ * Warning: This function has side effects on the cached state
+ * The order in which the caches are populated is important and can cause stable tests to fail.
+ */
 export function generatePerfTestCachedStateAltair(opts?: {
   goBackOneSlot: boolean;
   vc?: number;
