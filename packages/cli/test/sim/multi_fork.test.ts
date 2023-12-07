@@ -209,9 +209,10 @@ const unknownBlockSync = await env.createNodePair({
       clientOptions: {
         "network.allowPublishToZeroPeers": true,
         "sync.disableRangeSync": true,
-        // Range sync node start when other nodes are multiple epoch behind and
-        // range sync triggers only if the gap is maximum `slotImportTolerance * 2`
-        // so a lot of times sim tests timeout unknownBlockSync node does not sync up
+        // unknownBlockSync node start when other nodes are multiple epoch ahead and
+        // unknown block sync can work only if the gap is maximum `slotImportTolerance * 2`
+        // default value for slotImportTolerance is one epoch, so if gap is more than 2 epoch
+        // unknown block sync will not work. So why we have to increase it for tests.
         "sync.slotImportTolerance": headForUnknownBlockSync.response.data.message.slot / 2,
       },
     },
