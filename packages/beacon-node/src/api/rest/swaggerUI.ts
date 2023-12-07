@@ -43,7 +43,7 @@ async function getAsset(name: string): Promise<Buffer | undefined> {
     const url = await import("node:url");
     // eslint-disable-next-line @typescript-eslint/naming-convention
     const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
-    return await fs.readFile(path.join(__dirname, "../../../../../docs/assets/", name));
+    return await fs.readFile(path.join(__dirname, "../../../../../assets/", name));
   } catch (e) {
     return undefined;
   }
