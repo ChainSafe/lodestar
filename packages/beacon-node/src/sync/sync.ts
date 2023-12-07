@@ -232,7 +232,7 @@ export class BeaconSync implements IBeaconSync {
       }
     }
 
-    // If we stopped being synced and falled significantly behind, stop gossip
+    // If we stopped being synced and fallen significantly behind, stop gossip
     else if (state !== SyncState.Synced) {
       const syncDiff = this.chain.clock.currentSlot - this.chain.forkChoice.getHead().slot;
       if (syncDiff > this.slotImportTolerance * 2) {

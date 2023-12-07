@@ -41,7 +41,7 @@ Use only for local networks with a single node, can be dangerous in regular netw
   "sync.slotImportTolerance": {
     hidden: true,
     type: "number",
-    description: "Number of slot tolerance to trigger range sync or measure if node is synced.",
+    description: "Number of slot tolerance to trigger range sync and to measure if node is synced.",
     defaultDescription: String(defaultOptions.sync.slotImportTolerance),
     group: "sync",
   },
