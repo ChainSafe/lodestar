@@ -236,9 +236,8 @@ export class BeaconSync implements IBeaconSync {
     else if (state !== SyncState.Synced) {
       const syncDiff = this.chain.clock.currentSlot - this.chain.forkChoice.getHead().slot;
       if (syncDiff > this.slotImportTolerance * 2) {
-        this.logger.warn(`Node sync has fallen behind by ${syncDiff} slots.`);
-
         if (this.network.isSubscribedToGossipCoreTopics()) {
+          this.logger.warn(`Node sync has fallen behind by ${syncDiff} slots.`);
           this.network
             .unsubscribeGossipCoreTopics()
             .then(() => {
@@ -252,6 +251,9 @@ export class BeaconSync implements IBeaconSync {
 
         // also stop searching for unknown blocks
         if (this.unknownBlockSync.isSubscribedToNetwork()) {
+          this.logger.warn(
+            `Node sync has fallen behind by ${syncDiff} slots and will stop searching for unknown blocks.`
+          );
           this.unknownBlockSync.unsubscribeFromNetwork();
           this.metrics?.syncUnknownBlock.switchNetworkSubscriptions.inc({action: "unsubscribed"});
         }
