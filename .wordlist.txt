@@ -43,6 +43,7 @@ IPFS
 IPv
 Infura
 JSON
+JSObjects
 JWT
 KDE
 LGPL
@@ -93,6 +94,7 @@ chainsafe
 chiado
 cli
 cmd
+codebase
 config
 configs
 const
@@ -108,6 +110,7 @@ deserialization
 dev
 devnet
 devnets
+devtools
 enodes
 enum
 env
@@ -128,6 +131,8 @@ keystores
 libp
 lightclient
 linter
+lldb
+llnode
 lockfile
 mainnet
 malloc
@@ -145,6 +150,7 @@ orchestrator
 osx
 overriden
 params
+pid
 plaintext
 pre
 premined
@@ -176,4 +182,5 @@ utils
 validator
 validators
 wip
+xcode
 yaml
