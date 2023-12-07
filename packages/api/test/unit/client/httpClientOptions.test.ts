@@ -83,4 +83,8 @@ describe("HTTPClient options", () => {
   it("Throw if invalid value in urls option", () => {
     expect(() => new HttpClient({urls: ["invalid"]})).to.throw(Error);
   });
+
+  it("Throw if invalid username/password", () => {
+    expect(() => new HttpClient({baseUrl: "http://hasa%:%can'tbedecoded@localhost"})).to.throw(Error);
+  });
 });
