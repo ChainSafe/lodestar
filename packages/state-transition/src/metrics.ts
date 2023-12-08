@@ -20,6 +20,10 @@ export type BeaconStateTransitionMetrics = {
   registerValidatorStatuses: (currentEpoch: Epoch, statuses: AttesterStatus[], balances?: number[]) => void;
 };
 
+export type EpochCacheMetrics = {
+  finalizedPubkeyDuplicateInsert: Gauge;
+}
+
 type LabelValues<T extends string> = Partial<Record<T, string | number>>;
 
 interface Histogram<T extends string = string> {

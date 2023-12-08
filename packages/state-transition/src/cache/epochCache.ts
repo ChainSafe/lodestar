@@ -47,6 +47,7 @@ import {
   SyncCommitteeCache,
   SyncCommitteeCacheEmpty,
 } from "./syncCommitteeCache.js";
+import { EpochCacheMetrics } from "../metrics.js";
 
 /** `= PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT)` */
 export const PROPOSER_WEIGHT_FACTOR = PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT);
@@ -813,7 +814,7 @@ export class EpochCache {
     }
   }
 
-  addFinalizedPubkeys(pubkeyMap: UnfinalizedPubkeyIndexMap): void {
+  addFinalizedPubkeys(pubkeyMap: UnfinalizedPubkeyIndexMap, metrics?: EpochCacheMetrics): void {
     pubkeyMap.forEach((index, pubkey) => this.addFinalizedPubkey(index, pubkey));
   }
 
@@ -821,7 +822,7 @@ export class EpochCache {
    * Add finalized validator index and pubkey into finalized cache.
    * Since addFinalizedPubkey() primarily takes pubkeys from unfinalized cache, it can take pubkey hex string directly
    */
-  addFinalizedPubkey(index: ValidatorIndex, pubkey: PubkeyHex): void {
+  addFinalizedPubkey(index: ValidatorIndex, pubkey: PubkeyHex, metrics?: EpochCacheMetrics): void {
     if (!this.isAfterEIP6110()) {
       throw new Error("addFInalizedPubkey is not available pre EIP-6110");
     }
@@ -831,7 +832,7 @@ export class EpochCache {
     if (existingIndex != undefined) {
       if (existingIndex === index) {
         // Repeated insert.
-        // TODO: Add metric
+        metrics?.finalizedPubkeyDuplicateInsert.inc();
         return;
       } else {
         // attempt to insert the same pubkey with different index, should never happen.

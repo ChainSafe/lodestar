@@ -2,7 +2,7 @@ import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {Map} from "immutable";
 import {PubkeyIndexMap} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {interopPubkeysCached} from "../../../../../state-transition/test/utils/interop.js";
+import {interopPubkeysCached} from "@lodestar/state-transition/test/utils/interop.js";
 import {generateCached6110State} from "../../../utils/state.js";
 import {CheckpointStateCache, StateContextCache} from "../../../../src/chain/stateCache/index.js";
 
