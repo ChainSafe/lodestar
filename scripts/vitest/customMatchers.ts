@@ -52,4 +52,17 @@ expect.extend({
       message: () => message,
     };
   },
+  toSatisfy: (received: unknown, func: (received: unknown) => boolean) => {
+    if (func(received)) {
+      return {
+        message: () => "Expected value satisfied the condition",
+        pass: true,
+      };
+    }
+
+    return {
+      pass: false,
+      message: () => "Expected value did not satisfy the condition",
+    };
+  },
 });
