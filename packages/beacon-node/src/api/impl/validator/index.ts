@@ -549,7 +549,7 @@ export function getValidatorApi({
     if (fullBlock && blindedBlock) {
       switch (builderSelection) {
         case routes.validator.BuilderSelection.MaxProfit: {
-          if (blockValueEngine > blockValueBuilder) {
+          if (blockValueEngine >= blockValueBuilder) {
             selectedSource = ProducedBlockSource.engine;
           } else {
             selectedSource = ProducedBlockSource.builder;
