@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {sleep} from "@lodestar/utils";
 import {config} from "@lodestar/config/default";
 import {Api, routesData, EventType, BeaconEvent} from "../../../../src/beacon/routes/events.js";
@@ -38,9 +38,9 @@ describe("beacon / events", () => {
     const eventsReceived: BeaconEvent[] = [];
 
     await new Promise<void>((resolve, reject) => {
-      mockApi.eventstream.callsFake(async (topics, signal, onEvent) => {
+      mockApi.eventstream.mockImplementation(async (topics, signal, onEvent) => {
         try {
-          expect(topics).to.deep.equal(topicsToRequest, "Wrong received topics");
+          expect(topics).toEqual(topicsToRequest);
           for (const event of eventsToSend) {
             onEvent(event);
             await sleep(5);
@@ -58,6 +58,6 @@ describe("beacon / events", () => {
       });
     });
 
-    expect(eventsReceived).to.deep.equal(eventsToSend, "Wrong received events");
+    expect(eventsReceived).toEqual(eventsToSend);
   });
 });
