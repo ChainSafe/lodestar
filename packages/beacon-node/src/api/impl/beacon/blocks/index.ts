@@ -85,6 +85,11 @@ export function getBeaconBlockApi({
             await validateGossipBlock(config, chain, signedBlock, fork);
           } catch (error) {
             chain.logger.error("Gossip validations failed while publishing the block", valLogMeta, error as Error);
+            chain.persistInvalidSszValue(
+              chain.config.getForkTypes(slot).SignedBeaconBlock,
+              signedBlock,
+              "api_reject_gossip_failure"
+            );
             throw error;
           }
         }
@@ -102,6 +107,11 @@ export function getBeaconBlockApi({
               blockInput: blockForImport,
               peer: IDENTITY_PEER_ID,
             });
+            chain.persistInvalidSszValue(
+              chain.config.getForkTypes(slot).SignedBeaconBlock,
+              signedBlock,
+              "api_reject_parent_unknown"
+            );
             throw new BlockError(signedBlock, {
               code: BlockErrorCode.PARENT_UNKNOWN,
               parentRoot: toHexString(signedBlock.message.parentRoot),
@@ -123,6 +133,11 @@ export function getBeaconBlockApi({
             );
           } catch (error) {
             chain.logger.error("Consensus checks failed while publishing the block", valLogMeta, error as Error);
+            chain.persistInvalidSszValue(
+              chain.config.getForkTypes(slot).SignedBeaconBlock,
+              signedBlock,
+              "api_reject_consensus_failure"
+            );
             throw error;
           }
         }
