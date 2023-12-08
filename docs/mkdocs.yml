@@ -110,11 +110,11 @@ nav:
     # - Syncing Issues: troubleshooting/syncing-issues.md
     # - Validation Issues: troubleshooting/validation-issues.md
     # - Execution Layer Issues: troubleshooting/execution-layer-issues.md
-  - Supporting Libraries:
-      - libp2p: supporting-libraries/libp2p.md
-      - "@chainsafe/ssz": supporting-libraries/ssz.md
-      - "@chainsafe/blst": supporting-libraries/blst.md
-      - "@chainsafe/libp2p-gossipsub": supporting-libraries/gossipsub.md
+  - Supporting Libraries: supporting-libraries/index.md
+      # - libp2p: supporting-libraries/libp2p.md
+      # - "@chainsafe/ssz": supporting-libraries/ssz.md
+      # - "@chainsafe/blst": supporting-libraries/blst.md
+      # - "@chainsafe/libp2p-gossipsub": supporting-libraries/gossipsub.md
   - Contributing:
       - Getting Started: contribution/getting-started.md
       - Bug Reports: contribution/bug-reports.md
