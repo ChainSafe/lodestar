@@ -574,6 +574,8 @@ export function getValidatorApi({
         builderPayloadValue: `${builderPayloadValue}`,
         consensusBlockValueEngine: `${consensusBlockValueEngine}`,
         consensusBlockValueBuilder: `${consensusBlockValueBuilder}`,
+        blockValueEngine: `${blockValueEngine}`,
+        blockValueBuilder: `${blockValueBuilder}`,
         slot,
       });
     } else if (fullBlock && !blindedBlock) {
@@ -581,7 +583,8 @@ export function getValidatorApi({
       logger.verbose("Selected engine block: no builder block produced", {
         // winston logger doesn't like bigint
         enginePayloadValue: `${enginePayloadValue}`,
-        consensusBlockValue: `${consensusBlockValueEngine}`,
+        consensusBlockValueEngine: `${consensusBlockValueEngine}`,
+        blockValueEngine: `${blockValueEngine}`,
         slot,
       });
     } else if (blindedBlock && !fullBlock) {
@@ -589,7 +592,8 @@ export function getValidatorApi({
       logger.verbose("Selected builder block: no engine block produced", {
         // winston logger doesn't like bigint
         builderPayloadValue: `${builderPayloadValue}`,
-        consensusBlockValue: `${consensusBlockValueBuilder}`,
+        consensusBlockValueBuilder: `${consensusBlockValueBuilder}`,
+        blockValueBuilder: `${blockValueBuilder}`,
         slot,
       });
     }
