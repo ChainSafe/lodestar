@@ -93,7 +93,7 @@ export const testData: GenericServerTestCases<Api> = {
     args: [],
     res: {data: [ssz.phase0.SignedVoluntaryExit.defaultValue()]},
   },
-  getPoolBlsToExecutionChanges: {
+  getPoolBLSToExecutionChanges: {
     args: [],
     res: {data: [ssz.capella.SignedBLSToExecutionChange.defaultValue()]},
   },
@@ -113,7 +113,7 @@ export const testData: GenericServerTestCases<Api> = {
     args: [ssz.phase0.SignedVoluntaryExit.defaultValue()],
     res: undefined,
   },
-  submitPoolBlsToExecutionChange: {
+  submitPoolBLSToExecutionChange: {
     args: [[ssz.capella.SignedBLSToExecutionChange.defaultValue()]],
     res: undefined,
   },

@@ -323,7 +323,7 @@ export class Network implements INetwork {
     });
   }
 
-  async publishBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange): Promise<number> {
+  async publishBLSToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange): Promise<number> {
     const publishChanges = [];
     for (const fork of getActiveForks(this.config, this.clock.currentEpoch)) {
       if (ForkSeq[fork] >= ForkSeq.capella) {

@@ -2,17 +2,17 @@ import {toHexString, byteArrayEquals} from "@chainsafe/ssz";
 import {digest} from "@chainsafe/as-sha256";
 import {capella} from "@lodestar/types";
 import {BLS_WITHDRAWAL_PREFIX, ETH1_ADDRESS_WITHDRAWAL_PREFIX} from "@lodestar/params";
-import {verifyBlsToExecutionChangeSignature} from "../signatureSets/index.js";
+import {verifyBLSToExecutionChangeSignature} from "../signatureSets/index.js";
 
 import {CachedBeaconStateCapella} from "../types.js";
 
-export function processBlsToExecutionChange(
+export function processBLSToExecutionChange(
   state: CachedBeaconStateCapella,
-  signedBlsToExecutionChange: capella.SignedBLSToExecutionChange
+  signedBLSToExecutionChange: capella.SignedBLSToExecutionChange
 ): void {
-  const addressChange = signedBlsToExecutionChange.message;
+  const addressChange = signedBLSToExecutionChange.message;
 
-  const validation = isValidBlsToExecutionChange(state, signedBlsToExecutionChange, true);
+  const validation = isValidBLSToExecutionChange(state, signedBLSToExecutionChange, true);
   if (!validation.valid) {
     throw validation.error;
   }
@@ -26,7 +26,7 @@ export function processBlsToExecutionChange(
   validator.withdrawalCredentials = newWithdrawalCredentials;
 }
 
-export function isValidBlsToExecutionChange(
+export function isValidBLSToExecutionChange(
   state: CachedBeaconStateCapella,
   signedBLSToExecutionChange: capella.SignedBLSToExecutionChange,
   verifySignature = true
@@ -67,7 +67,7 @@ export function isValidBlsToExecutionChange(
     };
   }
 
-  if (verifySignature && !verifyBlsToExecutionChangeSignature(state, signedBLSToExecutionChange)) {
+  if (verifySignature && !verifyBLSToExecutionChangeSignature(state, signedBLSToExecutionChange)) {
     return {
       valid: false,
       error: Error(

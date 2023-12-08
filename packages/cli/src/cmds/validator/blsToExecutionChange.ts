@@ -14,13 +14,13 @@ import {IValidatorCliArgs} from "./options.js";
 
 /* eslint-disable no-console */
 
-type BlsToExecutionChangeArgs = {
+type BLSToExecutionChangeArgs = {
   publicKey?: string;
   fromBlsPrivkey?: string;
   toExecutionAddress?: string;
 };
 
-export const blsToExecutionChange: CliCommand<BlsToExecutionChangeArgs, IValidatorCliArgs & GlobalArgs> = {
+export const blsToExecutionChange: CliCommand<BLSToExecutionChangeArgs, IValidatorCliArgs & GlobalArgs> = {
   command: "bls-to-execution-change",
 
   describe:
@@ -94,7 +94,7 @@ like to choose for BLS To Execution Change.",
     };
 
     ApiError.assert(
-      await client.beacon.submitPoolBlsToExecutionChange([signedBLSToExecutionChange]),
+      await client.beacon.submitPoolBLSToExecutionChange([signedBLSToExecutionChange]),
       "Can not submit bls to execution change"
     );
     console.log(`Submitted bls to execution change for ${publicKey}`);

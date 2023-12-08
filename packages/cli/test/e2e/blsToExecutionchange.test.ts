@@ -72,7 +72,7 @@ describe("bLSToExecutionChange cmd", function () {
       "--toExecutionAddress 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     ]);
 
-    const pooledBlsChanges = await client.beacon.getPoolBlsToExecutionChanges();
+    const pooledBlsChanges = await client.beacon.getPoolBLSToExecutionChanges();
     ApiError.assert(pooledBlsChanges);
     const message = pooledBlsChanges.response.data[0].message;
     const {validatorIndex, toExecutionAddress, fromBlsPubkey} = message;

@@ -33,7 +33,7 @@ import {
   validateGossipSyncCommittee,
   validateSyncCommitteeGossipContributionAndProof,
   validateGossipVoluntaryExit,
-  validateGossipBlsToExecutionChange,
+  validateGossipBLSToExecutionChange,
   AggregateAndProofValidationResult,
   validateGossipAttestationsSameAttData,
   validateGossipAttestation,
@@ -548,11 +548,11 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
     }: GossipHandlerParamGeneric<GossipType.bls_to_execution_change>) => {
       const {serializedData} = gossipData;
       const blsToExecutionChange = sszDeserialize(topic, serializedData);
-      await validateGossipBlsToExecutionChange(chain, blsToExecutionChange);
+      await validateGossipBLSToExecutionChange(chain, blsToExecutionChange);
 
       // Handler
       try {
-        chain.opPool.insertBlsToExecutionChange(blsToExecutionChange);
+        chain.opPool.insertBLSToExecutionChange(blsToExecutionChange);
       } catch (e) {
         logger.error("Error adding blsToExecutionChange to pool", {}, e as Error);
       }
