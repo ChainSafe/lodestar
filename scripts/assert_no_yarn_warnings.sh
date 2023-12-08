@@ -19,7 +19,7 @@ for e in "${EXCLUDE[@]}"; do EXCLUDE_ARGS+=(-e "'$e'"); done
 echo "Running 'grep -qi ${MATCH_ARGS[@]} | grep -qi -v ${EXCLUDE_ARGS[@]}'"
 
 # grep the output for 'warning'
-if echo "$OUTPUT" | "grep -qi ${MATCH_ARGS[@]}" | "grep -qi -v ${EXCLUDE_ARGS[@]}"; then
+if echo "$OUTPUT" | grep -qi "${MATCH_ARGS[@]}" | grep -qi -v "${EXCLUDE_ARGS[@]}"; then
   echo "There were warnings in yarn install --check-files"
   exit 1
 else
