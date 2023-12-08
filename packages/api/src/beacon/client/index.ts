@@ -1,16 +1,25 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {Api} from "../routes/index.js";
-import {IHttpClient, HttpClient, HttpClientOptions, HttpClientModules} from "../../utils/client/index.js";
+import {
+  IHttpClient,
+  HttpClient,
+  HttpClientOptions,
+  HttpClientModules,
+  createApiClientMethods,
+  ApiClientMethods,
+} from "../../utils/client/index.js";
 
-import * as beacon from "./beacon.js";
-import * as configApi from "./config.js";
-import * as debug from "./debug.js";
+import {
+  Endpoints,
+  beacon,
+  config as configApi,
+  debug,
+  lightclient,
+  lodestar,
+  node,
+  proof,
+  validator,
+} from "../routes/index.js";
 import * as events from "./events.js";
-import * as lightclient from "./lightclient.js";
-import * as lodestar from "./lodestar.js";
-import * as node from "./node.js";
-import * as proof from "./proof.js";
-import * as validator from "./validator.js";
 
 type ClientModules = HttpClientModules & {
   config: ChainForkConfig;
@@ -20,19 +29,22 @@ type ClientModules = HttpClientModules & {
 /**
  * REST HTTP client for all routes
  */
-export function getClient(opts: HttpClientOptions, modules: ClientModules): Api {
+export function getClient(
+  opts: HttpClientOptions,
+  modules: ClientModules
+): {[K in keyof Endpoints]: ApiClientMethods<Endpoints[K]>} {
   const {config} = modules;
   const httpClient = modules.httpClient ?? new HttpClient(opts, modules);
 
   return {
-    beacon: beacon.getClient(config, httpClient),
-    config: configApi.getClient(config, httpClient),
-    debug: debug.getClient(config, httpClient),
-    events: events.getClient(config, httpClient.baseUrl),
-    lightclient: lightclient.getClient(config, httpClient),
-    lodestar: lodestar.getClient(config, httpClient),
-    node: node.getClient(config, httpClient),
-    proof: proof.getClient(config, httpClient),
-    validator: validator.getClient(config, httpClient),
+    beacon: createApiClientMethods(beacon.getDefinitions(config), httpClient),
+    config: createApiClientMethods(configApi.definitions, httpClient),
+    debug: createApiClientMethods(debug.definitions, httpClient),
+    events: events.getClient(config, httpClient),
+    lightclient: createApiClientMethods(lightclient.getDefinitions(config), httpClient),
+    lodestar: createApiClientMethods(lodestar.definitions, httpClient),
+    node: createApiClientMethods(node.definitions, httpClient),
+    proof: createApiClientMethods(proof.definitions, httpClient),
+    validator: createApiClientMethods(validator.definitions, httpClient),
   };
 }

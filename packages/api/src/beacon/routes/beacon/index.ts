@@ -46,7 +46,7 @@ export function getDefinitions(config: ChainForkConfig) {
   return {
     getGenesis: {
       url: "/eth/v1/beacon/genesis",
-      method: "GET",
+      method: "GET" as const,
       req: EmptyGetRequestCodec,
       resp: {
         data: ssz.phase0.Genesis,

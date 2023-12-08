@@ -549,7 +549,7 @@ export type Endpoints = {
 /**
  * Define javascript values for each route
  */
-export const routesData: RouteDefinitions<Endpoints> = {
+export const definitions: RouteDefinitions<Endpoints> = {
   getAttesterDuties: {
     url: "/eth/v1/validator/duties/attester/{epoch}",
     method: "POST",

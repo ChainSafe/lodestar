@@ -127,10 +127,15 @@ export type EventData = {
 
 export type BeaconEvent = {[K in EventType]: {type: K; message: EventData[K]}}[EventType];
 
+// https://github.com/EventSource/eventsource/blob/82e034389bd2c08d532c63172b8e858c5b185338/lib/eventsource.js#L143
+type EventSourceError = {status: number; message: string};
+
 type EventstreamArgs = {
   topics: EventType[];
   signal: AbortSignal;
   onEvent: (event: BeaconEvent) => void;
+  onError?: (err: EventSourceError) => void;
+  onClose?: () => void;
 };
 
 export type Endpoints = {
@@ -153,7 +158,7 @@ export type Endpoints = {
   >;
 };
 
-export const routesData: RouteDefinitions<Endpoints> = {
+export const definitions: RouteDefinitions<Endpoints> = {
   eventstream: {
     url: "/eth/v1/events",
     method: "GET",

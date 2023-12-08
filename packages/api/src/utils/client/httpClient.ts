@@ -18,13 +18,16 @@ const URL_SCORE_DELTA_ERROR = 2 * URL_SCORE_DELTA_SUCCESS;
 const URL_SCORE_MAX = 10 * URL_SCORE_DELTA_SUCCESS;
 const URL_SCORE_MIN = 0;
 
+type FetchType = typeof fetch;
 export interface IHttpClient {
   readonly baseUrl: string;
 
   request<E extends Endpoint>(
     definition: RouteDefinitionExtra<E>,
     args: E["args"],
-    localInit: ApiRequestInit
+    localInit: ApiRequestInit,
+    // patch for event source
+    fetch?: FetchType
   ): Promise<ApiResponse<E>>;
 }
 
@@ -113,11 +116,12 @@ export class HttpClient implements IHttpClient {
   async request<E extends Endpoint>(
     definition: RouteDefinitionExtra<E>,
     args: E["args"],
-    localInit: ApiRequestInit
+    localInit: ApiRequestInit,
+    fetch = this.fetch
   ): Promise<ApiResponse<E>> {
     // Early return when no fallback URLs are setup
     if (this.urlsInits.length === 1) {
-      return this._request(definition, args, localInit, 0);
+      return this._request(definition, args, localInit, 0, fetch);
     }
 
     let i = 0;
@@ -150,7 +154,7 @@ export class HttpClient implements IHttpClient {
             // eslint-disable-next-line @typescript-eslint/naming-convention
             const i_ = i; // Keep local copy of i variable to index urlScore after requestWithBody() resolves
 
-            this._request(definition, args, localInit, i).then(
+            this._request(definition, args, localInit, i, fetch).then(
               (res) => {
                 this.urlsScore[i_] = Math.min(URL_SCORE_MAX, this.urlsScore[i_] + URL_SCORE_DELTA_SUCCESS);
                 // Resolve immediately on success
@@ -193,7 +197,8 @@ export class HttpClient implements IHttpClient {
     definition: RouteDefinitionExtra<E>,
     args: E["args"],
     localInit: ApiRequestInit,
-    urlIndex = 0
+    urlIndex = 0,
+    fetch = this.fetch
   ): Promise<ApiResponse<E>> {
     const globalInit = this.urlsInits[urlIndex];
     if (globalInit === undefined) {
@@ -223,7 +228,7 @@ export class HttpClient implements IHttpClient {
     try {
       this.logger?.debug("API request begin", {routeId});
       const request = createApiRequest(definition, args, init);
-      const response = await this.fetch(request.url, request);
+      const response = await fetch(request.url, request);
       const apiResponse = new ApiResponse(definition, response.body, response);
 
       if (!apiResponse.ok) {
