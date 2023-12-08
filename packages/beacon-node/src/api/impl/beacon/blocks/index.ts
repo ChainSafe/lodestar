@@ -74,9 +74,11 @@ export function getBeaconBlockApi({
     const slot = signedBlock.message.slot;
     const fork = config.getForkName(slot);
     const blockRoot = toHex(chain.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
+    // bodyRoot should be the same to produced block
+    const bodyRoot = toHex(chain.config.getForkTypes(slot).BeaconBlockBody.hashTreeRoot(signedBlock.message.body));
     const blockLocallyProduced =
       chain.producedBlockRoot.has(blockRoot) || chain.producedBlindedBlockRoot.has(blockRoot);
-    const valLogMeta = {broadcastValidation, blockRoot, blockLocallyProduced, slot};
+    const valLogMeta = {broadcastValidation, blockRoot, bodyRoot, blockLocallyProduced, slot};
 
     switch (broadcastValidation) {
       case routes.beacon.BroadcastValidation.gossip: {
