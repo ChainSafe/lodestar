@@ -148,7 +148,7 @@ const ignoredTopics = [
    #6167
    eventTestData[bls_to_execution_change] does not match spec's example
    */
-  //"bls_to_execution_change",
+  "bls_to_execution_change",
   /*
    #6170
    Error: Invalid slot=0 fork=phase0 for lightclient fork types
