@@ -23,7 +23,7 @@ import {testData as validatorTestData} from "./testData/validator.js";
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const version = "v2.3.0";
+const version = "v2.4.0";
 const openApiFile: OpenApiFile = {
   url: `https://github.com/ethereum/beacon-APIs/releases/download/${version}/beacon-node-oapi.json`,
   filepath: path.join(__dirname, "../../../oapi-schemas/beacon-node-oapi.json"),
@@ -84,11 +84,73 @@ const testDatas = {
   ...validatorTestData,
 };
 
+const ignoredOperationsIds = [
+  /*
+   #5693
+   missing finalized
+   */
+  "getStateRoot",
+  "getStateFork",
+  "getStateFinalityCheckpoints",
+  "getStateValidators",
+  "getStateValidator",
+  "getStateValidatorBalances",
+  "getEpochCommittees",
+  "getEpochSyncCommittees",
+  "getStateRandao",
+  "getBlockHeaders",
+  "getBlockHeader",
+  "getBlockV2",
+  "getBlockRoot",
+  "getBlockAttestations",
+  "getStateV2",
+
+  /* missing route */
+  /* #5694 */
+  "getSyncCommitteeRewards",
+  "getBlockRewards",
+  "getAttestationsRewards",
+  "getDepositSnapshot", // Won't fix for now, see https://github.com/ChainSafe/lodestar/issues/5697
+  "getBlindedBlock", // #5699
+  "getNextWithdrawals", // #5696
+  "getDebugForkChoice", // #5700
+
+  /* 
+   #6168
+   /query/syncing_status - must be integer
+   */
+  "getHealth",
+
+  /* 
+   #4638 
+   /query - must have required property 'skip_randao_verification'
+   */
+  "produceBlockV2",
+  "produceBlindedBlock"];
+
 const openApiJson = await fetchOpenApiSpec(openApiFile);
 runTestCheckAgainstSpec(openApiJson, routesData, reqSerializers, returnTypes, testDatas, {
   // TODO: Investigate why schema validation fails otherwise
   routesDropOneOf: ["produceBlockV2", "produceBlindedBlock", "publishBlindedBlock"],
-});
+}, ignoredOperationsIds);
+
+const ignoredTopics = [
+  /*
+   #6167
+   eventTestData[bls_to_execution_change] does not match spec's example
+   */
+  "bls_to_execution_change",
+  /*
+   #6170
+   Error: Invalid slot=0 fork=phase0 for lightclient fork types
+  */
+  "light_client_finality_update",
+  "light_client_optimistic_update",
+  /*
+   https://github.com/ethereum/beacon-APIs/pull/379
+   SyntaxError: Unexpected non-whitespace character after JSON at position 629 (line 1 column 630)
+  */
+  "payload_attributes"];
 
 // eventstream types are defined as comments in the description of "examples".
 // The function runTestCheckAgainstSpec() can't handle those, so the custom code before:
@@ -113,7 +175,7 @@ describe("eventstream event data", () => {
   const eventSerdes = routes.events.getEventSerdes(config);
   const knownTopics = new Set<string>(Object.values(routes.events.eventTypes));
 
-  for (const [topic, {value}] of Object.entries(eventstreamExamples ?? {})) {
+  for (const [topic, {value}] of Object.entries(eventstreamExamples ?? {}).filter(([topic]) => !ignoredTopics.includes(topic))) {
     it(topic, () => {
       if (!knownTopics.has(topic)) {
         throw Error(`topic ${topic} not implemented`);

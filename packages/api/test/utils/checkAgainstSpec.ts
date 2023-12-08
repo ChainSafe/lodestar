@@ -25,11 +25,12 @@ export function runTestCheckAgainstSpec(
   reqSerializers: Record<string, ReqSerializer<any, any>>,
   returnTypes: Record<string, ReturnTypes<any>[string]>,
   testDatas: Record<string, GenericServerTestCases<any>[string]>,
-  opts?: ParseOpenApiSpecOpts
+  opts?: ParseOpenApiSpecOpts,
+  filteredOperationsIds: string[] = []
 ): void {
   const openApiSpec = parseOpenApiSpec(openApiJson, opts);
 
-  for (const [operationId, routeSpec] of openApiSpec.entries()) {
+  for (const [operationId, routeSpec] of [...openApiSpec.entries()].filter(([operationId]) => !filteredOperationsIds.includes(operationId))) {
     describe(operationId, () => {
       const {requestSchema, responseOkSchema} = routeSpec;
       const routeId = operationId;
