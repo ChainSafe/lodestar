@@ -10,16 +10,16 @@ MATCH=("warning")
 # There are few yarn warnings we can't find a fix for. Excluding those. 
 # TODO: Keep checking occasionally if the warnings are fixed upstream.
 EXCLUDE=("Pattern \[\".*\"\] is trying to unpack in the same destination")
-ARGS=()
 
-for m in "${MATCH[@]}"; do ARGS+=(-e "$m"); done
-for e in "${EXCLUDE[@]}"; do ARGS+=(--exclude "$e"); done
-COMMAND="grep -qi ${ARGS[@]}"
+MATCH_ARGS=()
+EXCLUDE_ARGS=()
+for m in "${MATCH[@]}"; do MATCH_ARGS+=(-e "'$m'"); done
+for e in "${EXCLUDE[@]}"; do EXCLUDE_ARGS+=(-e "'$e'"); done
 
-echo "Running $COMMAND"
+echo "Running 'grep -qi ${MATCH_ARGS[@]} | grep -qi -v ${EXCLUDE_ARGS[@]}'"
 
 # grep the output for 'warning'
-if echo "$OUTPUT" | ${COMMAND}; then
+if echo "$OUTPUT" | "grep -qi ${MATCH_ARGS[@]}" | "grep -qi -v ${EXCLUDE_ARGS[@]}"; then
   echo "There were warnings in yarn install --check-files"
   exit 1
 else
