@@ -314,7 +314,7 @@ export function getValidatorApi({
     let timer;
     try {
       timer = metrics?.blockProductionTime.startTimer();
-      const {block, executionPayloadValue} = await chain.produceBlindedBlock({
+      const {block, executionPayloadValue, consensusBlockValue} = await chain.produceBlindedBlock({
         slot,
         randaoReveal,
         graffiti: toGraffitiBuffer(graffiti || ""),
@@ -325,6 +325,7 @@ export function getValidatorApi({
       logger.verbose("Produced blinded block", {
         slot,
         executionPayloadValue,
+        consensusBlockValue,
         root: toHexString(config.getBlindedForkTypes(slot).BeaconBlock.hashTreeRoot(block)),
       });
 
@@ -342,9 +343,10 @@ export function getValidatorApi({
           data: {blindedBlock: block, blindedBlobSidecars} as allForks.BlindedBlockContents,
           version,
           executionPayloadValue,
+          consensusBlockValue,
         };
       } else {
-        return {data: block, version, executionPayloadValue};
+        return {data: block, version, executionPayloadValue, consensusBlockValue};
       }
     } finally {
       if (timer) timer({source});
@@ -378,13 +380,12 @@ export function getValidatorApi({
     let timer;
     try {
       timer = metrics?.blockProductionTime.startTimer();
-      const {block, executionPayloadValue} = await chain.produceBlock({
+      const {block, executionPayloadValue, consensusBlockValue} = await chain.produceBlock({
         slot,
         randaoReveal,
         graffiti: toGraffitiBuffer(graffiti || ""),
         feeRecipient,
       });
-
       const version = config.getForkName(block.slot);
       if (strictFeeRecipientCheck && feeRecipient && isForkExecution(version)) {
         const blockFeeRecipient = toHexString((block as bellatrix.BeaconBlock).body.executionPayload.feeRecipient);
@@ -398,6 +399,7 @@ export function getValidatorApi({
       logger.verbose("Produced execution block", {
         slot,
         executionPayloadValue,
+        consensusBlockValue,
         root: toHexString(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block)),
       });
       if (chain.opts.persistProducedBlocks) {
@@ -409,9 +411,14 @@ export function getValidatorApi({
         if (blobSidecars === undefined) {
           throw Error("blobSidecars missing in cache");
         }
-        return {data: {block, blobSidecars} as allForks.BlockContents, version, executionPayloadValue};
+        return {
+          data: {block, blobSidecars} as allForks.BlockContents,
+          version,
+          executionPayloadValue,
+          consensusBlockValue,
+        };
       } else {
-        return {data: block, version, executionPayloadValue};
+        return {data: block, version, executionPayloadValue, consensusBlockValue};
       }
     } finally {
       if (timer) timer({source});
@@ -531,15 +538,18 @@ export function getValidatorApi({
 
     const builderPayloadValue = blindedBlock?.executionPayloadValue ?? BigInt(0);
     const enginePayloadValue = fullBlock?.executionPayloadValue ?? BigInt(0);
+    const consensusBlockValueBuilder = blindedBlock?.consensusBlockValue ?? BigInt(0);
+    const consensusBlockValueEngine = fullBlock?.consensusBlockValue ?? BigInt(0);
+
+    const blockValueBuilder = builderPayloadValue + consensusBlockValueBuilder;
+    const blockValueEngine = enginePayloadValue + consensusBlockValueEngine;
 
     let selectedSource: ProducedBlockSource | null = null;
 
     if (fullBlock && blindedBlock) {
       switch (builderSelection) {
         case routes.validator.BuilderSelection.MaxProfit: {
-          // If executionPayloadValues are zero, than choose builder as most likely beacon didn't provide executionPayloadValue
-          // and builder blocks are most likely thresholded by a min bid
-          if (enginePayloadValue >= builderPayloadValue && enginePayloadValue !== BigInt(0)) {
+          if (blockValueEngine >= blockValueBuilder) {
             selectedSource = ProducedBlockSource.engine;
           } else {
             selectedSource = ProducedBlockSource.builder;
@@ -562,6 +572,10 @@ export function getValidatorApi({
         // winston logger doesn't like bigint
         enginePayloadValue: `${enginePayloadValue}`,
         builderPayloadValue: `${builderPayloadValue}`,
+        consensusBlockValueEngine: `${consensusBlockValueEngine}`,
+        consensusBlockValueBuilder: `${consensusBlockValueBuilder}`,
+        blockValueEngine: `${blockValueEngine}`,
+        blockValueBuilder: `${blockValueBuilder}`,
         slot,
       });
     } else if (fullBlock && !blindedBlock) {
@@ -569,6 +583,8 @@ export function getValidatorApi({
       logger.verbose("Selected engine block: no builder block produced", {
         // winston logger doesn't like bigint
         enginePayloadValue: `${enginePayloadValue}`,
+        consensusBlockValueEngine: `${consensusBlockValueEngine}`,
+        blockValueEngine: `${blockValueEngine}`,
         slot,
       });
     } else if (blindedBlock && !fullBlock) {
@@ -576,6 +592,8 @@ export function getValidatorApi({
       logger.verbose("Selected builder block: no engine block produced", {
         // winston logger doesn't like bigint
         builderPayloadValue: `${builderPayloadValue}`,
+        consensusBlockValueBuilder: `${consensusBlockValueBuilder}`,
+        blockValueBuilder: `${blockValueBuilder}`,
         slot,
       });
     }

@@ -1,5 +1,17 @@
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
-import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex, deneb, Wei} from "@lodestar/types";
+import {
+  allForks,
+  UintNum64,
+  Root,
+  phase0,
+  Slot,
+  RootHex,
+  Epoch,
+  ValidatorIndex,
+  deneb,
+  Wei,
+  Gwei,
+} from "@lodestar/types";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
@@ -141,10 +153,12 @@ export interface IBeaconChain {
 
   getBlobSidecars(beaconBlock: deneb.BeaconBlock): deneb.BlobSidecars;
 
-  produceBlock(blockAttributes: BlockAttributes): Promise<{block: allForks.BeaconBlock; executionPayloadValue: Wei}>;
+  produceBlock(
+    blockAttributes: BlockAttributes
+  ): Promise<{block: allForks.BeaconBlock; executionPayloadValue: Wei; consensusBlockValue: Gwei}>;
   produceBlindedBlock(
     blockAttributes: BlockAttributes
-  ): Promise<{block: allForks.BlindedBeaconBlock; executionPayloadValue: Wei}>;
+  ): Promise<{block: allForks.BlindedBeaconBlock; executionPayloadValue: Wei; consensusBlockValue: Gwei}>;
 
   /** Process a block until complete */
   processBlock(block: BlockInput, opts?: ImportBlockOpts): Promise<void>;
