@@ -74,9 +74,11 @@ export function getBeaconBlockApi({
     const slot = signedBlock.message.slot;
     const fork = config.getForkName(slot);
     const blockRoot = toHex(chain.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
+    // bodyRoot should be the same to produced block
+    const bodyRoot = toHex(chain.config.getForkTypes(slot).BeaconBlockBody.hashTreeRoot(signedBlock.message.body));
     const blockLocallyProduced =
       chain.producedBlockRoot.has(blockRoot) || chain.producedBlindedBlockRoot.has(blockRoot);
-    const valLogMeta = {broadcastValidation, blockRoot, blockLocallyProduced, slot};
+    const valLogMeta = {broadcastValidation, blockRoot, bodyRoot, blockLocallyProduced, slot};
 
     switch (broadcastValidation) {
       case routes.beacon.BroadcastValidation.gossip: {
@@ -85,6 +87,11 @@ export function getBeaconBlockApi({
             await validateGossipBlock(config, chain, signedBlock, fork);
           } catch (error) {
             chain.logger.error("Gossip validations failed while publishing the block", valLogMeta, error as Error);
+            chain.persistInvalidSszValue(
+              chain.config.getForkTypes(slot).SignedBeaconBlock,
+              signedBlock,
+              "api_reject_gossip_failure"
+            );
             throw error;
           }
         }
@@ -102,6 +109,11 @@ export function getBeaconBlockApi({
               blockInput: blockForImport,
               peer: IDENTITY_PEER_ID,
             });
+            chain.persistInvalidSszValue(
+              chain.config.getForkTypes(slot).SignedBeaconBlock,
+              signedBlock,
+              "api_reject_parent_unknown"
+            );
             throw new BlockError(signedBlock, {
               code: BlockErrorCode.PARENT_UNKNOWN,
               parentRoot: toHexString(signedBlock.message.parentRoot),
@@ -123,6 +135,11 @@ export function getBeaconBlockApi({
             );
           } catch (error) {
             chain.logger.error("Consensus checks failed while publishing the block", valLogMeta, error as Error);
+            chain.persistInvalidSszValue(
+              chain.config.getForkTypes(slot).SignedBeaconBlock,
+              signedBlock,
+              "api_reject_consensus_failure"
+            );
             throw error;
           }
         }

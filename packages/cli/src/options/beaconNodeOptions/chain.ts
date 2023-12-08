@@ -7,6 +7,7 @@ export type ChainArgs = {
   "chain.blsVerifyAllMultiThread"?: boolean;
   "chain.blsVerifyAllMainThread"?: boolean;
   "chain.disableBlsBatchVerify"?: boolean;
+  "chain.persistProducedBlocks"?: boolean;
   "chain.persistInvalidSszObjects"?: boolean;
   // No need to define chain.persistInvalidSszObjects as part of ChainArgs
   // as this is defined as part of BeaconPaths
@@ -33,6 +34,7 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     blsVerifyAllMultiThread: args["chain.blsVerifyAllMultiThread"],
     blsVerifyAllMainThread: args["chain.blsVerifyAllMainThread"],
     disableBlsBatchVerify: args["chain.disableBlsBatchVerify"],
+    persistProducedBlocks: args["chain.persistProducedBlocks"],
     persistInvalidSszObjects: args["chain.persistInvalidSszObjects"],
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
     persistInvalidSszObjectsDir: undefined as any,
@@ -93,6 +95,13 @@ export const options: CliCommandOptions<ChainArgs> = {
       "Do not use BLS batch verify to validate all block signatures at once. \
 Will double processing times. Use only for debugging purposes.",
     defaultDescription: String(defaultOptions.chain.blsVerifyAllMultiThread),
+    group: "chain",
+  },
+
+  "chain.persistProducedBlocks": {
+    hidden: true,
+    type: "boolean",
+    description: "Persist produced blocks or not for debugging purpose",
     group: "chain",
   },
 

@@ -72,7 +72,7 @@ const SYNC_TOLERANCE_EPOCHS = 1;
  * Cutoff time to wait for execution and builder block production apis to resolve
  * Post this time, race execution and builder to pick whatever resolves first
  *
- * Emprically the builder block resolves in ~1.5+ seconds, and executon should resolve <1 sec.
+ * Empirically the builder block resolves in ~1.5+ seconds, and execution should resolve <1 sec.
  * So lowering the cutoff to 2 sec from 3 seconds to publish faster for successful proposal
  * as proposals post 4 seconds into the slot seems to be not being included
  */
@@ -329,6 +329,9 @@ export function getValidatorApi({
       });
 
       const version = config.getForkName(block.slot);
+      if (chain.opts.persistProducedBlocks) {
+        void chain.persistBlock(block, "produced_builder_block");
+      }
       if (isForkBlobs(version)) {
         const blockHash = toHex((block as bellatrix.BlindedBeaconBlock).body.executionPayloadHeader.blockHash);
         const blindedBlobSidecars = chain.producedBlindedBlobSidecarsCache.get(blockHash);
@@ -397,6 +400,9 @@ export function getValidatorApi({
         executionPayloadValue,
         root: toHexString(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block)),
       });
+      if (chain.opts.persistProducedBlocks) {
+        void chain.persistBlock(block, "produced_engine_block");
+      }
       if (isForkBlobs(version)) {
         const blockHash = toHex((block as bellatrix.BeaconBlock).body.executionPayload.blockHash);
         const blobSidecars = chain.producedBlobSidecarsCache.get(blockHash);
@@ -437,7 +443,7 @@ export function getValidatorApi({
       chain.executionBuilder !== undefined &&
       builderSelection !== routes.validator.BuilderSelection.ExecutionOnly;
 
-    logger.verbose("produceBlockV3 assembling block", {
+    logger.verbose("Assembling block with produceBlockV3 ", {
       fork,
       builderSelection,
       slot,

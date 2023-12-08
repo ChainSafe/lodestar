@@ -199,19 +199,29 @@ await checkpointSync.execution.job.stop();
 
 // Unknown block sync
 // ========================================================
+const headForUnknownBlockSync = await env.nodes[0].beacon.api.beacon.getBlockV2("head");
+ApiError.assert(headForUnknownBlockSync);
 const unknownBlockSync = await env.createNodePair({
   id: "unknown-block-sync-node",
   beacon: {
     type: BeaconClient.Lodestar,
-    options: {clientOptions: {"network.allowPublishToZeroPeers": true, "sync.disableRangeSync": true}},
+    options: {
+      clientOptions: {
+        "network.allowPublishToZeroPeers": true,
+        "sync.disableRangeSync": true,
+        // unknownBlockSync node start when other nodes are multiple epoch ahead and
+        // unknown block sync can work only if the gap is maximum `slotImportTolerance * 2`
+        // default value for slotImportTolerance is one epoch, so if gap is more than 2 epoch
+        // unknown block sync will not work. So why we have to increase it for tests.
+        "sync.slotImportTolerance": headForUnknownBlockSync.response.data.message.slot / 2 + 2,
+      },
+    },
   },
   execution: ExecutionClient.Geth,
   keysCount: 0,
 });
 await unknownBlockSync.execution.job.start();
 await unknownBlockSync.beacon.job.start();
-const headForUnknownBlockSync = await env.nodes[0].beacon.api.beacon.getBlockV2("head");
-ApiError.assert(headForUnknownBlockSync);
 await connectNewNode(unknownBlockSync, env.nodes);
 
 // Wait for EL node to start and sync

@@ -21,6 +21,7 @@ describe("options / beaconNodeOptions", () => {
       "chain.blsVerifyAllMultiThread": true,
       "chain.blsVerifyAllMainThread": true,
       "chain.disableBlsBatchVerify": true,
+      "chain.persistProducedBlocks": true,
       "chain.persistInvalidSszObjects": true,
       "chain.proposerBoostEnabled": false,
       "chain.disableImportExecutionFcU": false,
@@ -122,6 +123,7 @@ describe("options / beaconNodeOptions", () => {
         blsVerifyAllMultiThread: true,
         blsVerifyAllMainThread: true,
         disableBlsBatchVerify: true,
+        persistProducedBlocks: true,
         persistInvalidSszObjects: true,
         proposerBoostEnabled: false,
         disableImportExecutionFcU: false,
@@ -206,6 +208,7 @@ describe("options / beaconNodeOptions", () => {
       },
       sync: {
         isSingleNode: true,
+        slotImportTolerance: 32,
         disableProcessAsChainSegment: true,
         backfillBatchSize: 64,
         disableRangeSync: false,

@@ -109,7 +109,8 @@ export class HttpClient implements IHttpClient {
   private readonly urlsScore: number[];
 
   get baseUrl(): string {
-    return this.urlsOpts[0].baseUrl;
+    // Don't leak username/password to caller
+    return new URL(this.urlsOpts[0].baseUrl).origin;
   }
 
   /**
@@ -292,7 +293,7 @@ export class HttpClient implements IHttpClient {
       }
       if (url.username || url.password) {
         if (headers["Authorization"] === undefined) {
-          headers["Authorization"] = `Basic ${toBase64(`${url.username}:${url.password}`)}`;
+          headers["Authorization"] = `Basic ${toBase64(decodeURIComponent(`${url.username}:${url.password}`))}`;
         }
         // Remove the username and password from the URL
         url.username = "";
