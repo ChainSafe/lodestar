@@ -126,20 +126,29 @@ const ignoredOperationsIds = [
    /query - must have required property 'skip_randao_verification'
    */
   "produceBlockV2",
-  "produceBlindedBlock"];
+  "produceBlindedBlock",
+];
 
 const openApiJson = await fetchOpenApiSpec(openApiFile);
-runTestCheckAgainstSpec(openApiJson, routesData, reqSerializers, returnTypes, testDatas, {
-  // TODO: Investigate why schema validation fails otherwise
-  routesDropOneOf: ["produceBlockV2", "produceBlindedBlock", "publishBlindedBlock"],
-}, ignoredOperationsIds);
+runTestCheckAgainstSpec(
+  openApiJson,
+  routesData,
+  reqSerializers,
+  returnTypes,
+  testDatas,
+  {
+    // TODO: Investigate why schema validation fails otherwise
+    routesDropOneOf: ["produceBlockV2", "produceBlindedBlock", "publishBlindedBlock"],
+  },
+  ignoredOperationsIds
+);
 
 const ignoredTopics = [
   /*
    #6167
    eventTestData[bls_to_execution_change] does not match spec's example
    */
-  "bls_to_execution_change",
+  //"bls_to_execution_change",
   /*
    #6170
    Error: Invalid slot=0 fork=phase0 for lightclient fork types
@@ -150,7 +159,8 @@ const ignoredTopics = [
    https://github.com/ethereum/beacon-APIs/pull/379
    SyntaxError: Unexpected non-whitespace character after JSON at position 629 (line 1 column 630)
   */
-  "payload_attributes"];
+  "payload_attributes",
+];
 
 // eventstream types are defined as comments in the description of "examples".
 // The function runTestCheckAgainstSpec() can't handle those, so the custom code before:
@@ -175,7 +185,9 @@ describe("eventstream event data", () => {
   const eventSerdes = routes.events.getEventSerdes(config);
   const knownTopics = new Set<string>(Object.values(routes.events.eventTypes));
 
-  for (const [topic, {value}] of Object.entries(eventstreamExamples ?? {}).filter(([topic]) => !ignoredTopics.includes(topic))) {
+  for (const [topic, {value}] of Object.entries(eventstreamExamples ?? {}).filter(
+    ([topic]) => !ignoredTopics.includes(topic)
+  )) {
     it(topic, () => {
       if (!knownTopics.has(topic)) {
         throw Error(`topic ${topic} not implemented`);

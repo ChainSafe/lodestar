@@ -30,7 +30,9 @@ export function runTestCheckAgainstSpec(
 ): void {
   const openApiSpec = parseOpenApiSpec(openApiJson, opts);
 
-  for (const [operationId, routeSpec] of [...openApiSpec.entries()].filter(([operationId]) => !filteredOperationsIds.includes(operationId))) {
+  for (const [operationId, routeSpec] of [...openApiSpec.entries()].filter(
+    ([operationId]) => !filteredOperationsIds.includes(operationId)
+  )) {
     describe(operationId, () => {
       const {requestSchema, responseOkSchema} = routeSpec;
       const routeId = operationId;
