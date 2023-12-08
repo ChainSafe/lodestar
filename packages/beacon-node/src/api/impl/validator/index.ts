@@ -329,6 +329,9 @@ export function getValidatorApi({
       });
 
       const version = config.getForkName(block.slot);
+      if (chain.opts.persistProducedBlocks) {
+        void chain.persistBlock(block, "produced_builder_block");
+      }
       if (isForkBlobs(version)) {
         const blockHash = toHex((block as bellatrix.BlindedBeaconBlock).body.executionPayloadHeader.blockHash);
         const blindedBlobSidecars = chain.producedBlindedBlobSidecarsCache.get(blockHash);
@@ -397,6 +400,9 @@ export function getValidatorApi({
         executionPayloadValue,
         root: toHexString(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block)),
       });
+      if (chain.opts.persistProducedBlocks) {
+        void chain.persistBlock(block, "produced_engine_block");
+      }
       if (isForkBlobs(version)) {
         const blockHash = toHex((block as bellatrix.BeaconBlock).body.executionPayload.blockHash);
         const blobSidecars = chain.producedBlobSidecarsCache.get(blockHash);
