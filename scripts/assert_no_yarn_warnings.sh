@@ -7,7 +7,7 @@ echo $OUTPUT
 
 MATCH=("warning")
 
-# There are few yarn warnings we can't find a fix for. Excluding those. 
+# There are few yarn warnings we can't find a fix for. Excluding those.
 # TODO: Keep checking occasionally if the warnings are fixed upstream.
 EXCLUDE=("Pattern \[\".*\"\] is trying to unpack in the same destination")
 
