@@ -44,7 +44,7 @@ Note that bootnodes are announced via ENR.
 
 ## Peer Communication (gossipsub and ReqResp)
 
-Gossipsub and ReqResp are sort of two sides of the same coin. Gossipsub is used to propagate messages throughout the network and ReqResp is used by peers on the network to directly communicate the specific of that information as it crisscrosses the web of connections.
+Gossipsub and ReqResp are the two mechanisms that beacon nodes use to exchange chain data. Gossipsub is used disseminate the most recent relevant data proactively throughout the network. ReqResp is used to directly ask specific peers for specific information (eg: during syncing).
 
 ### Gossipsub
 
