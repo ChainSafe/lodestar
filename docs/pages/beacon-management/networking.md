@@ -56,9 +56,7 @@ Messages are propagated through a blend of eager-push and lazy-pull models. Spec
 
 ### ReqResp
 
-ReqResp is a protocol that speak specifically to the messages that are gossiped between peers. It is a domain that entails a collection of method protocols that enable nodes to engage in bilateral communications. This domain operates over a single libp2p Protocol ID, with each specific method having its own versioning. The methods within this domain are invoked with a request message and the peer on the other end of the wire responds with an appropriately formed response message.
-
-Within the ReqResp domain, every method defines a specific request and response message type, alongside a protocol ID. The protocol IDs are crucial as they enable nodes to decode and encode messages appropriately. More importantly, ReqResp's design facilitates robust error handling, ensuring that the network remains resilient and effectively propagating essential information among beacon nodes.
+ReqResp is the domain of protocols that establish a flexible, on-demand mechanism to retrieve historical data and data missed by gossip. This family of methods, implemented as separate libp2p protocols, operate between a single requester and responder. A method is initiated via a libp2p protocol ID, with the initiator sending a request message and the responder sending a response message. Every method defines a specific request and response message type, and a specific protocol ID. This framework also facilitates streaming responses and robust error handling.
 
 ## Data Transport (libp2p)
 
