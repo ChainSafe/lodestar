@@ -1,5 +1,5 @@
 import path from "node:path";
-import {CompositeTypeAny, fromHexString, TreeView, Type} from "@chainsafe/ssz";
+import {CompositeTypeAny, fromHexString, TreeView, Type, toHexString} from "@chainsafe/ssz";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
@@ -80,7 +80,6 @@ import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {ShufflingCache} from "./shufflingCache.js";
 import {StateContextCache} from "./stateCache/stateContextCache.js";
 import {CheckpointStateCache} from "./stateCache/stateContextCheckpointsCache.js";
-import {computeBlockRewards} from "./rewards/blockRewards.js";
 
 /**
  * Arbitrary constants, blobs and payloads should be consumed immediately in the same slot
