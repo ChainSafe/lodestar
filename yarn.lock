@@ -565,13 +565,13 @@
   resolved "https://registry.yarnpkg.com/@chainsafe/is-ip/-/is-ip-2.0.2.tgz#7311e7403f11d8c5cfa48111f56fcecaac37c9f6"
   integrity sha512-ndGqEMG1W5WkGagaqOZHpPU172AGdxr+LD15sv3WIUvT5oCFUrG1Y0CW/v2Egwj4JXEvSibaIIIqImsm98y1nA==
 
-"@chainsafe/libp2p-gossipsub@^10.1.0":
-  version "10.1.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-gossipsub/-/libp2p-gossipsub-10.1.0.tgz#29c2e3da2bbf1dc68ae171c5ac777bce9ca88c2c"
-  integrity sha512-mOVYJAvxYRkh2HeggNFW/7ukEccQDVEI9LPhvlnJk7gnJhyJJ6mhZxUAaytfp3v3qTkmeBRnEL0eJOQBm+MoOA==
+"@chainsafe/libp2p-gossipsub@^10.1.1":
+  version "10.1.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-gossipsub/-/libp2p-gossipsub-10.1.1.tgz#906aa2a67efb5fea0bacc6721ef4e7ee4e353d7e"
+  integrity sha512-nou65zlGaUIPwlUq7ceEVpszJX4tBWRRanppYaKsJk7rbDeIKRJQla2duATGOI3fwj1+pGSlDQuF2zG7P0VJQw==
   dependencies:
     "@libp2p/crypto" "^2.0.0"
-    "@libp2p/interface" "^0.1.0"
+    "@libp2p/interface" "^0.1.4"
     "@libp2p/interface-internal" "^0.1.0"
     "@libp2p/logger" "^3.0.0"
     "@libp2p/peer-id" "^3.0.0"
@@ -1684,6 +1684,20 @@
     it-stream-types "^2.0.1"
     multiformats "^12.0.1"
     p-defer "^4.0.0"
+    uint8arraylist "^2.4.3"
+
+"@libp2p/interface@^0.1.4":
+  version "0.1.6"
+  resolved "https://registry.yarnpkg.com/@libp2p/interface/-/interface-0.1.6.tgz#1328cf6086f02c499183489ccb143fe9c159e871"
+  integrity sha512-Lzc5cS/hXuoXhuAbVIxJIHLCYmfPcbU0vVgrpMoiP1Qb2Q3ETU4A46GB8s8mWXgSU6tr9RcqerUqzFYD6+OAag==
+  dependencies:
+    "@multiformats/multiaddr" "^12.1.5"
+    abortable-iterator "^5.0.1"
+    it-pushable "^3.2.0"
+    it-stream-types "^2.0.1"
+    multiformats "^12.0.1"
+    p-defer "^4.0.0"
+    race-signal "^1.0.0"
     uint8arraylist "^2.4.3"
 
 "@libp2p/keychain@^3.0.4":
@@ -11703,6 +11717,11 @@ quick-lru@^5.1.1:
   version "5.1.1"
   resolved "https://registry.npmjs.org/quick-lru/-/quick-lru-5.1.1.tgz"
   integrity sha512-WuyALRjWPDGtt/wzJiadO5AXY+8hZ80hVpe6MyivgraREW751X3SbhRvG3eLKOYN+8VEvqLcf3wdnt44Z4S4SA==
+
+race-signal@^1.0.0:
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/race-signal/-/race-signal-1.0.2.tgz#e42379fba0cec4ee8dab7c9bbbd4aa6e0d14c25f"
+  integrity sha512-o3xNv0iTcIDQCXFlF6fPAMEBRjFxssgGoRqLbg06m+AdzEXXLUmoNOoUHTVz2NoBI8hHwKFKoC6IqyNtWr2bww==
 
 rambda@^7.4.0:
   version "7.5.0"
