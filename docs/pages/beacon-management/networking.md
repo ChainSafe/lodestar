@@ -28,7 +28,7 @@ Some of the important Lodestar flags related to networking are:
 
 ## Peer Discovery (Discv5)
 
-In Ethereum, discv5 plays a pivotal role in the peer discovery process, facilitating nodes to find and locate each other in order to form the peer-to-peer network​. The process begins with an interaction between new nodes and bootnodes at start-up. Bootnodes are nodes with hard-coded addresses, or are provided via the cli flag `--bootnodes`, to bootstrap the discovery process​. Through a method called PING-PONG, a new node establishes a bond with each bootnode, and it returns a list of peers for the new node to connect to. Following this trail, the new node engages through PING-PONG with the provided peers to further establish a web of connections​.
+In Ethereum, discv5 plays a pivotal role in the peer discovery process, facilitating nodes to find and locate each other in order to form the peer-to-peer network​. The process begins with an interaction between new nodes and bootnodes at start-up. Bootnodes are nodes with hard-coded addresses, or can be overrided via the cli flag `--bootnodes`, to bootstrap the discovery process​. Through a method called FINDNODE-NODES, a new node establishes a bond with each bootnode, and it returns a list of peers for the new node to connect to. Following this trail, the new node engages through FINDNODE-NODES with the provided peers to further establish a web of connections​.
 
 Discv5 operates as an advertisement medium in this network, where nodes can act as both providers and consumers of data. Every participating node in the Discv5 protocol can accept topic ads from other nodes and later relay them, making the discovery process dynamic and efficient​.
 
