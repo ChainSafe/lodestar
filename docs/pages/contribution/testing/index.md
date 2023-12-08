@@ -24,4 +24,4 @@ Integration tests are meant to test how Lodestar interacts with other clients, b
 
 ### Simulation Tests
 
-These are the most comprehensive types of tests. They aim to test Lodestar in a fully functioning testnet environment. See the [Simulation Testing](./simulation-tests.md) page for more information.
+These are the most comprehensive types of tests. They aim to test Lodestar in a fully functioning ephemeral devnet environment. See the [Simulation Testing](./simulation-tests.md) page for more information.
