@@ -48,7 +48,7 @@ Gossipsub and ReqResp are the two mechanisms that beacon nodes use to exchange c
 
 ### Gossipsub
 
-GossipSub is a foundational protocol in peer-to-peer (P2P) communication, particularly decentralized networks like Ethereum and IPFS. At its core, GossipSub organizes a collection of P2P overlays, each associated with a distinct topic. These overlays represent the network topology formed by interconnected nodes on the network, allowing for efficient dissemination based on topics of interest​.
+GossipSub is a foundational protocol in peer-to-peer (P2P) communication, particularly decentralized networks like Ethereum and IPFS. At its core, GossipSub efficiently propagates data, filtered by topic, through a P2P network. It organizes peers into a collection of overlay networks, each associated with a distinct topic. By routing data through relevant overlay networks based on topics of interest, large amounts of data can be efficiently disseminated without excessive bandwidth, latency, etc.
 
 In GossipSub, nodes can subscribe to topics, effectively joining the corresponding overlay to receive messages published to a specific topic. This topic-based structure enables nodes to congregate around shared interests, ensuring that relevant messages are delivered to all interested parties. Each message published to a topic gets disseminated and relayed to all subscribed peers, similar to a chat room.
 
