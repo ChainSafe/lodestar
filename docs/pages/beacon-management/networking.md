@@ -36,9 +36,11 @@ Discv5 is designed to be a standalone protocol running via UDP on a dedicated po
 
 ## ENR
 
-Ethereum Node Records (ENRs) are a standardized format utilized for network addressing and they replace the older formats of multiaddr and enodes. It facilitates a more comprehensive informational exchange between nodes compared to its predecessors. Each ENR contains a signature, a sequence number, and fields that detail the identity scheme used to generate and validate signatures. This identity scheme is pivotal for ensuring the authenticity and integrity of the information being exchanged between nodes.
+Ethereum Node Records (ENRs) are a standardized format utilized for peer discovery - see [EIP-778](https://eips.ethereum.org/EIPS/eip-778) for the specification. An ENR consists of a set of key-value pairs. These pairs include crucial information such as the node's ID, IP address, the port on which it's listening, and the protocols it supports. This information helps other nodes in the network locate and connect to the node.
 
-The primary objective behind ENRs is to aid nodes in discovering each other through the node discovery. This protocol relays vital identity information, including public keys (on the secp256k1 curve), IP addresses, and two port numbers for establishing connections and interactions between nodes on the network. Note that bootnodes are announced via ENR.
+The primary purpose of ENRs is to facilitate node discovery and connectivity in the Ethereum network. Nodes use ENRs to announce their presence and capabilities to other nodes, making it easier to establish and maintain a robust, interconnected network.
+
+Note that bootnodes are announced via ENR.
 
 ## Peer Communication (gossipsub and ReqResp)
 
