@@ -12,7 +12,7 @@ The Ethereum Consensus Specifications are what ensure that the various clients a
 
 ### Performance Tests
 
-Node.js is an unforgiving virtual machine when it comes to high performance, multi-threaded applications. In order to ensure that Lodestar can not only keep up with the chain, but to push the boundary of what is possible, there are lots of performance tests that optimize programming paradigms and prevent regression. See the [Performance Testing](./performance-tests.md) page for more information.
+Node.js is an unforgiving virtual machine when it comes to high performance, multi-threaded applications. In order to ensure that Lodestar can not only keep up with the chain, but to push the boundary of what is possible, there are lots of performance tests that benchmark programming paradigms and prevent regression. See the [Performance Testing](./performance-tests.md) page for more information.
 
 ### End-To-End Tests
 
