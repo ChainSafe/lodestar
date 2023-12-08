@@ -24,7 +24,7 @@ export type Api = {
    * - Has most bits
    * - Oldest update
    */
-  getUpdates(
+  getLightClientUpdatesByRange(
     startPeriod: SyncPeriod,
     count: number
   ): Promise<
@@ -39,7 +39,7 @@ export type Api = {
    * Returns the latest optimistic head update available. Clients should use the SSE type `light_client_optimistic_update`
    * unless to get the very first head update after syncing, or if SSE are not supported by the server.
    */
-  getOptimisticUpdate(): Promise<
+  getLightClientOptimisticUpdate(): Promise<
     ApiClientResponse<{
       [HttpStatusCode.OK]: {
         version: ForkName;
@@ -47,7 +47,7 @@ export type Api = {
       };
     }>
   >;
-  getFinalityUpdate(): Promise<
+  getLightClientFinalityUpdate(): Promise<
     ApiClientResponse<{
       [HttpStatusCode.OK]: {
         version: ForkName;
@@ -60,7 +60,7 @@ export type Api = {
    * The trusted block root should be fetched with similar means to a weak subjectivity checkpoint.
    * Only block roots for checkpoints are guaranteed to be available.
    */
-  getBootstrap(blockRoot: string): Promise<
+  getLightClientBootstrap(blockRoot: string): Promise<
     ApiClientResponse<{
       [HttpStatusCode.OK]: {
         version: ForkName;
@@ -71,7 +71,7 @@ export type Api = {
   /**
    * Returns an array of sync committee hashes based on the provided period and count
    */
-  getCommitteeRoot(
+  getLightClientCommitteeRoot(
     startPeriod: SyncPeriod,
     count: number
   ): Promise<
@@ -87,39 +87,39 @@ export type Api = {
  * Define javascript values for each route
  */
 export const routesData: RoutesData<Api> = {
-  getUpdates: {url: "/eth/v1/beacon/light_client/updates", method: "GET"},
-  getOptimisticUpdate: {url: "/eth/v1/beacon/light_client/optimistic_update", method: "GET"},
-  getFinalityUpdate: {url: "/eth/v1/beacon/light_client/finality_update", method: "GET"},
-  getBootstrap: {url: "/eth/v1/beacon/light_client/bootstrap/{block_root}", method: "GET"},
-  getCommitteeRoot: {url: "/eth/v0/beacon/light_client/committee_root", method: "GET"},
+  getLightClientUpdatesByRange: {url: "/eth/v1/beacon/light_client/updates", method: "GET"},
+  getLightClientOptimisticUpdate: {url: "/eth/v1/beacon/light_client/optimistic_update", method: "GET"},
+  getLightClientFinalityUpdate: {url: "/eth/v1/beacon/light_client/finality_update", method: "GET"},
+  getLightClientBootstrap: {url: "/eth/v1/beacon/light_client/bootstrap/{block_root}", method: "GET"},
+  getLightClientCommitteeRoot: {url: "/eth/v0/beacon/light_client/committee_root", method: "GET"},
 };
 
 /* eslint-disable @typescript-eslint/naming-convention */
 export type ReqTypes = {
-  getUpdates: {query: {start_period: number; count: number}};
-  getOptimisticUpdate: ReqEmpty;
-  getFinalityUpdate: ReqEmpty;
-  getBootstrap: {params: {block_root: string}};
-  getCommitteeRoot: {query: {start_period: number; count: number}};
+  getLightClientUpdatesByRange: {query: {start_period: number; count: number}};
+  getLightClientOptimisticUpdate: ReqEmpty;
+  getLightClientFinalityUpdate: ReqEmpty;
+  getLightClientBootstrap: {params: {block_root: string}};
+  getLightClientCommitteeRoot: {query: {start_period: number; count: number}};
 };
 
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
   return {
-    getUpdates: {
+    getLightClientUpdatesByRange: {
       writeReq: (start_period, count) => ({query: {start_period, count}}),
       parseReq: ({query}) => [query.start_period, query.count],
       schema: {query: {start_period: Schema.UintRequired, count: Schema.UintRequired}},
     },
 
-    getOptimisticUpdate: reqEmpty,
-    getFinalityUpdate: reqEmpty,
+    getLightClientOptimisticUpdate: reqEmpty,
+    getLightClientFinalityUpdate: reqEmpty,
 
-    getBootstrap: {
+    getLightClientBootstrap: {
       writeReq: (block_root) => ({params: {block_root}}),
       parseReq: ({params}) => [params.block_root],
       schema: {params: {block_root: Schema.StringRequired}},
     },
-    getCommitteeRoot: {
+    getLightClientCommitteeRoot: {
       writeReq: (start_period, count) => ({query: {start_period, count}}),
       parseReq: ({query}) => [query.start_period, query.count],
       schema: {query: {start_period: Schema.UintRequired, count: Schema.UintRequired}},
@@ -132,27 +132,27 @@ export function getReturnTypes(): ReturnTypes<Api> {
   const VersionedUpdate = WithVersion((fork: ForkName) =>
     isForkLightClient(fork) ? ssz.allForksLightClient[fork].LightClientUpdate : ssz.altair.LightClientUpdate
   );
-  const getUpdates = {
+  const getLightClientUpdatesByRange = {
     toJson: (updates: {version: ForkName; data: allForks.LightClientUpdate}[]) =>
       updates.map((data) => VersionedUpdate.toJson(data)),
     fromJson: (updates: unknown[]) => updates.map((data) => VersionedUpdate.fromJson(data)),
   };
 
   return {
-    getUpdates,
-    getOptimisticUpdate: WithVersion((fork: ForkName) =>
+    getLightClientUpdatesByRange,
+    getLightClientOptimisticUpdate: WithVersion((fork: ForkName) =>
       isForkLightClient(fork)
         ? ssz.allForksLightClient[fork].LightClientOptimisticUpdate
         : ssz.altair.LightClientOptimisticUpdate
     ),
-    getFinalityUpdate: WithVersion((fork: ForkName) =>
+    getLightClientFinalityUpdate: WithVersion((fork: ForkName) =>
       isForkLightClient(fork)
         ? ssz.allForksLightClient[fork].LightClientFinalityUpdate
         : ssz.altair.LightClientFinalityUpdate
     ),
-    getBootstrap: WithVersion((fork: ForkName) =>
+    getLightClientBootstrap: WithVersion((fork: ForkName) =>
       isForkLightClient(fork) ? ssz.allForksLightClient[fork].LightClientBootstrap : ssz.altair.LightClientBootstrap
     ),
-    getCommitteeRoot: ContainerData(ArrayOf(ssz.Root)),
+    getLightClientCommitteeRoot: ContainerData(ArrayOf(ssz.Root)),
   };
 }

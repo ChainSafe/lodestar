@@ -21,7 +21,7 @@ export class LightClientRestTransport extends (EventEmitter as {new (): RestEven
     super();
   }
 
-  async getUpdates(
+  async getLightClientUpdatesByRange(
     startPeriod: SyncPeriod,
     count: number
   ): Promise<
@@ -30,25 +30,25 @@ export class LightClientRestTransport extends (EventEmitter as {new (): RestEven
       data: allForks.LightClientUpdate;
     }[]
   > {
-    const res = await this.api.lightclient.getUpdates(startPeriod, count);
+    const res = await this.api.lightclient.getLightClientUpdatesByRange(startPeriod, count);
     ApiError.assert(res);
     return res.response;
   }
 
-  async getOptimisticUpdate(): Promise<{version: ForkName; data: allForks.LightClientOptimisticUpdate}> {
-    const res = await this.api.lightclient.getOptimisticUpdate();
+  async getLightClientOptimisticUpdate(): Promise<{version: ForkName; data: allForks.LightClientOptimisticUpdate}> {
+    const res = await this.api.lightclient.getLightClientOptimisticUpdate();
     ApiError.assert(res);
     return res.response;
   }
 
-  async getFinalityUpdate(): Promise<{version: ForkName; data: allForks.LightClientFinalityUpdate}> {
-    const res = await this.api.lightclient.getFinalityUpdate();
+  async getLightClientFinalityUpdate(): Promise<{version: ForkName; data: allForks.LightClientFinalityUpdate}> {
+    const res = await this.api.lightclient.getLightClientFinalityUpdate();
     ApiError.assert(res);
     return res.response;
   }
 
-  async getBootstrap(blockRoot: string): Promise<{version: ForkName; data: allForks.LightClientBootstrap}> {
-    const res = await this.api.lightclient.getBootstrap(blockRoot);
+  async getLightClientBootstrap(blockRoot: string): Promise<{version: ForkName; data: allForks.LightClientBootstrap}> {
+    const res = await this.api.lightclient.getLightClientBootstrap(blockRoot);
     ApiError.assert(res);
     return res.response;
   }
