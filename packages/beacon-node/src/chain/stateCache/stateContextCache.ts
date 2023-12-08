@@ -88,25 +88,21 @@ export class StateContextCache {
     let totalNumStatesUpdated = 0;
 
     const addTimer = this.metrics?.addPubkeyTime.startTimer();
-    try {
-      if (this.cache.size > 0) {
-        const st = this.cache.values().next().value as CachedBeaconStateAllForks;
-        // Only need to insert once since finalized cache is shared across all states globally
-        st.epochCtx.addFinalizedPubkeys(validators);
-      }
-    } finally {
-      addTimer?.();
+    // Don't use a try/catch, only count run without exceptions
+    if (this.cache.size > 0) {
+      const st = this.cache.values().next().value as CachedBeaconStateAllForks;
+      // Only need to insert once since finalized cache is shared across all states globally
+      st.epochCtx.addFinalizedPubkeys(validators);
     }
+    addTimer?.();
 
     const deleteTimer = this.metrics?.deletePubkeyTime.startTimer();
-    try {
-      for (const cachedState of this.cache.values()) {
-        cachedState.epochCtx.deleteUnfinalizedPubkeys(validators.keys());
-        totalNumStatesUpdated++;
-      }
-    } finally {
-      deleteTimer?.();
+    // Don't use a try/catch, only count run without exceptions
+    for (const cachedState of this.cache.values()) {
+      cachedState.epochCtx.deleteUnfinalizedPubkeys(validators.keys());
+      totalNumStatesUpdated++;
     }
+    deleteTimer?.();
 
     this.metrics?.numStatesUpdated.observe(totalNumStatesUpdated);
   }
