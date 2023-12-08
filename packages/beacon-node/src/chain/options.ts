@@ -12,6 +12,7 @@ export type IChainOptions = BlockProcessOpts &
   LightClientServerOpts & {
     blsVerifyAllMainThread?: boolean;
     blsVerifyAllMultiThread?: boolean;
+    persistProducedBlocks?: boolean;
     persistInvalidSszObjects?: boolean;
     persistInvalidSszObjectsDir?: string;
     skipCreateStateCacheIfAvailable?: boolean;

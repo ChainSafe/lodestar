@@ -25,6 +25,7 @@ import {
   deneb,
   Wei,
   bellatrix,
+  isBlindedBeaconBlock,
 } from "@lodestar/types";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
@@ -637,21 +638,32 @@ export class BeaconChain implements IBeaconChain {
     return this.reprocessController.waitForBlockOfAttestation(slot, root);
   }
 
+  persistBlock(data: allForks.BeaconBlock | allForks.BlindedBeaconBlock, suffix?: string): void {
+    const slot = data.slot;
+    if (isBlindedBeaconBlock(data)) {
+      const sszType = this.config.getBlindedForkTypes(slot).BeaconBlock;
+      void this.persistSszObject("BlindedBeaconBlock", sszType.serialize(data), sszType.hashTreeRoot(data), suffix);
+    } else {
+      const sszType = this.config.getForkTypes(slot).BeaconBlock;
+      void this.persistSszObject("BeaconBlock", sszType.serialize(data), sszType.hashTreeRoot(data), suffix);
+    }
+  }
+
   persistInvalidSszValue<T>(type: Type<T>, sszObject: T, suffix?: string): void {
     if (this.opts.persistInvalidSszObjects) {
-      void this.persistInvalidSszObject(type.typeName, type.serialize(sszObject), type.hashTreeRoot(sszObject), suffix);
+      void this.persistSszObject(type.typeName, type.serialize(sszObject), type.hashTreeRoot(sszObject), suffix);
     }
   }
 
   persistInvalidSszBytes(typeName: string, sszBytes: Uint8Array, suffix?: string): void {
     if (this.opts.persistInvalidSszObjects) {
-      void this.persistInvalidSszObject(typeName, sszBytes, sszBytes, suffix);
+      void this.persistSszObject(typeName, sszBytes, sszBytes, suffix);
     }
   }
 
   persistInvalidSszView(view: TreeView<CompositeTypeAny>, suffix?: string): void {
     if (this.opts.persistInvalidSszObjects) {
-      void this.persistInvalidSszObject(view.type.typeName, view.serialize(), view.hashTreeRoot(), suffix);
+      void this.persistSszObject(view.type.typeName, view.serialize(), view.hashTreeRoot(), suffix);
     }
   }
 
@@ -744,16 +756,12 @@ export class BeaconChain implements IBeaconChain {
     return {state: blockState, stateId: "block_state_any_epoch", shouldWarn: true};
   }
 
-  private async persistInvalidSszObject(
+  private async persistSszObject(
     typeName: string,
     bytes: Uint8Array,
     root: Uint8Array,
     suffix?: string
   ): Promise<void> {
-    if (!this.opts.persistInvalidSszObjects) {
-      return;
-    }
-
     const now = new Date();
     // yyyy-MM-dd
     const dateStr = now.toISOString().split("T")[0];
