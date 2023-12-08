@@ -8,7 +8,7 @@ This is the most fundamental type of test in most code bases. In all instances m
 
 ### Spec Tests
 
-The Ethereum Consensus Specifications are what ensure that the various clients are built toward the same end goal and will work harmoniously on the network. See the [Spec Tests](./spec-tests.md) page for more information.
+The Ethereum Consensus Specifications are what ensure that the various consensus clients do not diverge on critical computations and will work harmoniously on the network. See the [Spec Tests](./spec-tests.md) page for more information.
 
 ### Performance Tests
 
