@@ -32,7 +32,7 @@ In Ethereum, discv5 plays a pivotal role in the peer discovery process, facilita
 
 Discv5 operates as an advertisement medium in this network, where nodes can act as both providers and consumers of data. Every participating node in the Discv5 protocol can accept topic ads from other nodes and later relay them, making the discovery process dynamic and efficient​.
 
-Discv5 is designed to be a standalone protocol running via UDP on a dedicated port solely for peer discovery. It supports self-certified, flexible peer records (ENRs) and topic-based advertisement. These key features cater to the Ethereum network​ and being a good peer often means running a discv5 worker​. Lodestar offers simple configuration to setup and run a bootnode alongside the beacon node. See [bootnode](./bootnode.md) for more information and configuration options.
+Discv5 is designed to be a standalone protocol running via UDP on a dedicated port solely for peer discovery. Peer data is exchanged via self-certified, flexible peer records (ENRs). These key features cater to the Ethereum network​ and being a good peer often means running a discv5 worker​. Lodestar offers simple configuration to setup and run a bootnode independently of a beacon node. See [bootnode](./bootnode.md) for more information and configuration options.
 
 ## ENR
 
