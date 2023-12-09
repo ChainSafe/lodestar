@@ -166,10 +166,16 @@ export class AggregatedAttestationPool {
       }
     }
 
-    return attestationsByScore
-      .sort((a, b) => b.score - a.score)
-      .slice(0, MAX_ATTESTATIONS)
-      .map((attestation) => attestation.attestation);
+    const sortedAttestationsByScore = attestationsByScore.sort((a, b) => b.score - a.score);
+    const attestationsForBlock: phase0.Attestation[] = [];
+    for (const [i, attestationWithScore] of sortedAttestationsByScore.entries()) {
+      if (i >= MAX_ATTESTATIONS) {
+        break;
+      }
+      // attestations could be modified in this op pool, so we need to clone for block
+      attestationsForBlock.push(ssz.phase0.Attestation.clone(attestationWithScore.attestation));
+    }
+    return attestationsForBlock;
   }
 
   /**
