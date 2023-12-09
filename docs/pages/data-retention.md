@@ -8,18 +8,24 @@ There are several processes that need to store data for Lodestar. These data set
 $dataDir
 ├── $executionDir
 │   └── execution-db
-└── $beaconDir
-    ├── beacon.config.json
-    ├── peer-id.json
-    ├── enr
-    ├── beacon.log # there can be many of these
-    ├── $dbDir
-    │   ├── chain-db
-    │   └── peerstore
-    └── $validatorDir
-        ├── validator-db
-        ├── keystores
-        └── keystore cache
+├── $beaconDir
+│   ├── .log_rotate_audit.json
+│   ├── beacon.log # there can be many of these
+│   ├── enr
+│   ├── lodestar.sh # default locations are based off the cwd of
+│   │               # the entrance script if that is how lodestar
+│   │               # is started
+│   ├── peer-id.json
+│   ├── peerstore/
+│   └── $dbDir
+│       ├── chain-db/ 
+│       └── peerstore/ 
+└── $validatorDir
+    ├── .log_rotate_audit.json
+    ├── validator.log # there can be many of these
+    ├── validator-db/
+    ├── keystores/
+    └── keystore cache/
 ```
 
 ## Data Management
@@ -28,7 +34,7 @@ Configuring your node to store and prune data is key to success. On average you 
 
 - `execution-db` grows at 1GB per month
 - `chain-db` grows at 1GB per month
-- `validator-db` grows at 1GB per month
+- `validator-db` grows at less than 2MB per year, per key (2000 keys = 4GB per year)
 
 `keystores`, `keystore-cache` and `peerstore` are not usually very large and are not expected to grow much during normal operation.
 

@@ -30,6 +30,7 @@ EthStaker
 EtherScan
 Ethereum
 EthereumJS
+FINDNODE
 FX
 Flamegraph
 Flamegraphs
@@ -85,6 +86,7 @@ Vitalik
 Wagyu
 api
 async
+backfill
 beaconcha
 blockchain
 bootnode
@@ -111,6 +113,7 @@ dev
 devnet
 devnets
 devtools
+eg
 enodes
 enum
 env
@@ -161,6 +164,7 @@ repo
 repos
 req
 reqresp
+responder
 ropsten
 runtime
 scalability
@@ -184,3 +188,4 @@ validators
 wip
 xcode
 yaml
+yamux

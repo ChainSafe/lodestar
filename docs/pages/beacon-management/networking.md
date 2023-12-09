@@ -28,7 +28,7 @@ Some of the important Lodestar flags related to networking are:
 
 ## Peer Discovery (Discv5)
 
-In Ethereum, discv5 plays a pivotal role in the peer discovery process, facilitating nodes to find and locate each other in order to form the peer-to-peer network​. The process begins with an interaction between new nodes and bootnodes at start-up. Bootnodes are nodes with hard-coded addresses, or can be overrided via the cli flag `--bootnodes`, to bootstrap the discovery process​. Through a method called FINDNODE-NODES, a new node establishes a bond with each bootnode, and it returns a list of peers for the new node to connect to. Following this trail, the new node engages through FINDNODE-NODES with the provided peers to further establish a web of connections​.
+In Ethereum, discv5 plays a pivotal role in the peer discovery process, facilitating nodes to find and locate each other in order to form the peer-to-peer network​. The process begins with an interaction between new nodes and bootnodes at start-up. Bootnodes are nodes with hard-coded addresses, or can be overridden via the cli flag `--bootnodes`, to bootstrap the discovery process​. Through a method called FINDNODE-NODES, a new node establishes a bond with each bootnode, and it returns a list of peers for the new node to connect to. Following this trail, the new node engages through FINDNODE-NODES with the provided peers to further establish a web of connections​.
 
 Discv5 operates as a peer advertisement medium in this network, where nodes can act as both providers and consumers of data. Every participating node in the Discv5 protocol discovers peer data from other nodes and later relays it, making the discovery process dynamic and efficient​.
 
@@ -76,15 +76,14 @@ Ports that should be opened:
 - 13000/TCP - Prysm P2P communication port
 - 12000/UDP - Prysm P2P communication port
 
-Ports that should be fully (inbound/outbound) protected:
+Ports that should be inbound protected:
 
-- 8008/TCP - Lodestar Beacon-Node JSON RPC api calls
-- 5064/TCP - Lodestar validator key manager api calls
+- 9596/TCP - Lodestar Beacon-Node JSON RPC api calls
+- 5062/TCP - Lodestar validator key manager api calls
 - 18550/TCP - Lodestar MEV Boost/Builder port
-- **\*\*** - Metrics
-- **\*\*** - Metrics
-- **\*\*** - Metrics
-- 8545/TCP - Execution client JSON RPC port for api calls
+- 8008/TCP - Lodestar Metrics
+- 5064/TCP - Validator Metrics
+- 8545/TCP - Execution client JSON RPC port api calls
 - 8551/TCP - Execution engine port for Lodestar to communicate with the execution client
 
 ## NAT Traversal

@@ -6,15 +6,17 @@ Lodestar allows for several methods of syncing however the recommended method is
 
 ## Weak Subjectivity
 
-Weak subjectivity is a concept aimed at ascertaining the active chain amidst potential conflicting versions. It is realized through "weak subjectivity checkpoints", which are specific state roots acknowledged by all network nodes as belonging to the canonical chain. They serve as the "universal truth" from a node's perspective, and will remain unaltered despite any new information from peers.
+Weak subjectivity is a concept specific to Proof of Stake (PoS) systems, addressing how new nodes can safely join the network and synchronize with the correct blockchain history. Unlike in Proof of Work (PoW) systems, where a node can trust the longest chain due to the significant computational effort required to forge it, PoS systems present different challenges. In PoS, the cost of creating or altering blockchain history is lower, as it is not based on computational work but on the stake held by validators. This difference raises the possibility that an attacker, if possessing sufficient stake, could feasibly create a misleading version of the blockchain history.
 
-The concept of weak subjectivity emerges predominantly in two scenarios: when new nodes join the network and when existing nodes resume online activity after a significant offline duration. During these instances, the weak subjectivity period defines the time frame within which a client, upon rejoining, can reliably process blocks to reach the consensus chain head. Essentially, weak subjectivity mitigates the risks associated with long-range attacks, which might occur if nodes solely trusted the longest chain without any initial trust in a specific network state.
+The concept of weak subjectivity becomes particularly crucial in two scenarios: when new nodes join the network and when existing nodes reconnect after a significant period of being offline. During these times, the 'weak subjectivity period' defines a time frame within which a client, upon rejoining, can reliably process blocks to reach the consensus chain head. This approach is essential for mitigating the risks associated with long-range attacks, which could occur if nodes relied solely on the longest chain principle without any initial trust in a specific network state.
+
+To counter these risks, weak subjectivity requires new nodes to obtain a recent, trusted state of the blockchain from a reliable source upon joining the network. This state includes vital information about the current set of validators and their stakes. Starting from this trusted state helps new nodes avoid being misled by false histories, as any attempt to rewrite history beyond this point would require an unrealistically large portion of the total stake.
 
 ## Syncing Methods
 
 ### Checkpoint Sync
 
-Checkpoint sync, also known as state sync, allows a node to sync to a specific state checkpoint without having to process all historical data leading up to that point. In the context of a beacon node, this involves syncing to a recent finalized checkpoint, allowing the node to quickly join the network and participate in consensus activities. This is especially beneficial for new nodes or nodes that have been offline for a considerable duration. In the execution layer, checkpoint sync enables nodes to sync to a particular state, minimizing the time and resources required to become operational.
+Checkpoint sync, also known as state sync, allows a node to sync to a specific state checkpoint without having to process all historical data leading up to that point. In the context of a beacon node, this involves syncing to a recent finalized checkpoint, allowing the node to quickly join the network and participate in consensus activities. This is especially beneficial for new nodes or nodes that have been offline for a considerable duration.
 
 ### Historical Sync
 
@@ -24,9 +26,9 @@ Historical sync involves processing all blocks from the genesis block or from a 
 
 Range sync involves syncing blocks within a specified range, beneficial when a node is only temporarily offline and needs to catch up over a short range. In the beacon node context, this entails requesting and processing blocks within a defined range, ensuring the node quickly gets updated to the current network state.
 
-### Snapshot Sync
+### Backfill Sync
 
-Snapshot sync is a method where nodes download a compressed snapshot of the current state and the blocks leading up to it. This method provides a balance between speed and historical data preservation, allowing nodes to quickly sync while still obtaining a relatively comprehensive view of the blockchain history.
+This is another version of checkpoint sync that allows a node that has not been historically synchronized to verify data prior to the checkpoint. It is done via downloading a checkpoint and then fetch blocks backwards from that point until the desired data can be verified. It is a relatively inexpensive sync from a cpu perspective because it only checks the block hashes and verifies the proposer signatures along the way.
 
 ## Syncing Lodestar
 

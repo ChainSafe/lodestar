@@ -6,7 +6,7 @@ Unlike full nodes, light clients do not download and store the entire blockchain
 
 The evolution of light clients is emblematic of the broader trajectory of Ethereum towards becoming more accessible and resource-efficient, making blockchain technology more inclusive and adaptable to a wide array of use cases and environments. The Altair hard fork introduced sync committees to allow light-clients to synchronize to the network.
 
-## Pre-Requisites
+## Prerequisites
 
 [![Discord](https://img.shields.io/discord/593655374469660673.svg?label=Discord&logo=discord)](https://discord.gg/aMxzVcr)
 [![Eth Consensus Spec v1.1.10](https://img.shields.io/badge/ETH%20consensus--spec-1.1.10-blue)](https://github.com/ethereum/consensus-specs/releases/tag/v1.1.10)
