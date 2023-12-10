@@ -5,27 +5,42 @@ There are two components for an ethereum node database, the execution client and
 There are several processes that need to store data for Lodestar. These data sets can grow quite large over time so it is important to understand how to manage them so the host machine can support operations effectively.
 
 ```bash
-$dataDir
-├── $executionDir
-│   └── execution-db
-├── $beaconDir
-│   ├── .log_rotate_audit.json
-│   ├── beacon.log # there can be many of these
-│   ├── enr
-│   ├── lodestar.sh # default locations are based off the cwd of
-│   │               # the entrance script if that is how lodestar
-│   │               # is started
-│   ├── peer-id.json
-│   ├── peerstore/
-│   └── $dbDir
-│       ├── chain-db/ 
-│       └── peerstore/ 
-└── $validatorDir
-    ├── .log_rotate_audit.json
-    ├── validator.log # there can be many of these
-    ├── validator-db/
-    ├── keystores/
-    └── keystore cache/
+$executionDir # this changes depending on the execution client
+    └── execution-db 
+
+$dataDir # specified by --dataDir on the beacon command
+├── .log_rotate_audit.json
+├── beacon.log # there can be many of these
+├── enr
+├── peer-id.json
+├── chain-db # default if --dbDir not specified
+│   └── (db files)
+└── peerstore # default if --peerStoreDir not specified
+    └── (peerstore files)
+
+$dataDir # specified by --dataDir on the validator command
+├── .log_rotate_audit.json
+├── validator.log # there can be many of these
+├── validator-db # default if --validatorsDbDir not specified
+│   └── (db files)
+├── proposerConfigs # default if --proposerDir not specified
+│   └── (config files)
+├── cache # default if --cacheDir not specified
+│   └── (cache files)
+├── secrets # default if --secretsDir not specified
+│   ├── 0x8e41b969493454318c27ec6fac90645769331c07ebc8db5037...
+│   └── 0xa329f988c16993768299643d918a2694892c012765d896a16f...
+├── keystores # default if --keystoresDir not specified
+│   ├── 0x8e41b969493454318c27ec6fac90645769331c07ebc8db5037...
+│   │   ├── eth1-deposit-data.rlp
+│   │   ├── eth1-deposit-gwei.txt
+│   │   └── voting-keystore.json
+│   └── 0xa329f988c16993768299643d918a2694892c012765d896a16f...
+│       ├── eth1-deposit-data.rlp
+│       ├── eth1-deposit-gwei.txt
+│       └── voting-keystore.json
+└── remoteKeys # default if --remoteKeysDir not specified
+    └── 0xa329f988c16993768299643d918a2694892c012765d896a16f.json
 ```
 
 ## Data Management
