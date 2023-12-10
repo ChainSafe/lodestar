@@ -30,15 +30,15 @@ curl -X POST http://localhost:9596/eth/v1/lodestar/write_heapdump?dirpath=/some/
 
 It is best to analyze on a local development machine so if Lodestar is running on a cloud instance download the dump to the local environment. Open Chrome, or any Chromium based browser (the example photos were taken using Brave). In the url bar type `chrome:://inspect` to bring up the DevTools menu (in brave the url will be rewritten to `brave://inspect`).
 
-![DevTools](./images/heap-dumps/devtools.png)
+![DevTools](../images/heap-dumps/devtools.png)
 
 Click on the `Open dedicated DevTools for Node` link to open the node specific window and click on the `Memory` tab as shown below.
 
-![Memory Tab](./images/heap-dumps/memory-tab.png)
+![Memory Tab](../images/heap-dumps/memory-tab.png)
 
 Load the profile by either right clicking on the left pane or by clicking the `Load` button at the bottom.
 
-![Load Profile](./images/heap-dumps/load-profile.png)
+![Load Profile](../images/heap-dumps/load-profile.png)
 
 ### Analyzing a `V8` heap dump
 
@@ -46,7 +46,8 @@ Analysis is as much an art as it is a science and the best way to learn is to do
 
 To spot sources of leaks, focus on objects that have large quantities or very large `retained size`. Retained size is the amount of memory that would be freed if the object was garbage collected. As an example if there is an object that has lots and lots of instances, like 100,000, and they are all pushed into an array then the array will have a very large retained size. This is because the array is holding references to all of the objects that it contains.
 
-![Retained Size](./images/heap-dumps/retained-size.png)
+<!-- TODO: (matthewkeil) add this image -->
+<!-- ![Retained Size](./images/heap-dumps/retained-size.png) -->
 
 If it is not immediately apparent what objects are being leaked then another tool in your arsenal will be to take a second snapshot and compare it to the first. This will show what objects have been created/changed since the first snapshot.
 
@@ -54,7 +55,8 @@ If there is an object that has a large retained size but is roughly the same, bu
 
 Try to focus on objects that are growing in size or in number over time. Growing in size means the object is holding references to other objects and growing in number means a function closure somewhere is retaining the small instances.
 
-![Comparison](./images/heap-dumps/comparison.png)
+<!-- TODO: (matthewkeil) add this image -->
+<!-- ![Comparison](./images/heap-dumps/comparison.png) -->
 
 That is the science part, but these clues are just breadcrumbs to follow. In order to actually resolve the leak, one needs to go into the code to figure out where those objects are being created, or more often, why the references to them are being retained. This is where the art comes in.
 

@@ -26,7 +26,7 @@ $ which llvm-config
 /opt/homebrew/opt/llvm/bin/llvm-config # if this is not what comes up restart the shell
 $ npm install -g llnode
 $ llnode
-(lldb) plugin load '/Users/matthewkeil/.nvm/versions/node/v20.5.1/lib/node_modules/llnode/llnode.dylib'
+(lldb) plugin load '/Users/ninja_user/.nvm/versions/node/v20.5.1/lib/node_modules/llnode/llnode.dylib'
 (lldb) settings set prompt '(llnode) '
 (llnode)
 ```
@@ -59,12 +59,8 @@ Core file '/Users/ninja_user/coredumps/node.coredump' (x86_64) was loaded.
 (llnode)
 ```
 
-Once the dump is loaded the first few steps will be to figure out what types of objects were in memory and what was the processor working on when the crash occurred. Lets start with the stack trace. There are two distinct commands for pulling the stack because node is both a native runtime and a virtual machine. The `bt`, back trace, command will pull the native stack frames and the `v8 bt` command will use the `llnode` plugin to pull the JavaScript stack frames.
+Once the dump is loaded the first few steps will be to figure out what types of objects were in memory and what was the processor working on when the crash occurred. Lets start with the stack trace.
 
-```sh
-(llnode) bt
+There are two distinct commands for pulling the stack because node is both a native runtime and a virtual machine. The `bt`, back trace, command will pull the native stack frames and the `v8 bt` command will use the `llnode` plugin to pull the JavaScript stack frames. Newer versions of `llnode` will automatically pull the JavaScript stack frames when the `bt` command is run but it is still good to know the difference. It is also possible to add the `all` verb to the `bt` command and it will pull the back trace for all threads.
 
-
-(llnode) v8 bt
-
-```
+To start looking through memory there are two commands that are helpful. The `v8 findjsobjects` command will list all of the JavaScript objects in memory. The `v8 findjsinstances` command will list all of the instances of a particular JavaScript object.
