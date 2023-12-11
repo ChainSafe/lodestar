@@ -50,7 +50,6 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
   ) {
     const baseUrl = opts.urls[0];
     if (!baseUrl) throw Error("No Url provided for executionBuilder");
-    logger?.info("External builder", {url: toSafePrintableUrl(baseUrl)});
     this.api = getClient(
       {
         baseUrl,
@@ -59,6 +58,7 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
       },
       {config, metrics: metrics?.builderHttpClient}
     );
+    logger?.info("External builder", {url: toSafePrintableUrl(baseUrl)});
     this.config = config;
     this.issueLocalFcUWithFeeRecipient = opts.issueLocalFcUWithFeeRecipient;
 

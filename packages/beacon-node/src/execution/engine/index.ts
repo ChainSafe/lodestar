@@ -31,7 +31,6 @@ export function getExecutionEngineHttp(
   opts: ExecutionEngineHttpOpts,
   modules: ExecutionEngineModules
 ): IExecutionEngine {
-  modules.logger.info("Execution client", {urls: opts.urls.map(toSafePrintableUrl).toString()});
   const rpc = new JsonRpcHttpClient(opts.urls, {
     ...opts,
     signal: modules.signal,
@@ -40,6 +39,7 @@ export function getExecutionEngineHttp(
     jwtId: opts.jwtId,
     jwtVersion: opts.jwtVersion,
   });
+  modules.logger.info("Execution client", {urls: opts.urls.map(toSafePrintableUrl).toString()});
   return new ExecutionEngineHttp(rpc, modules);
 }
 

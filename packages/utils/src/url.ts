@@ -21,12 +21,9 @@ export function isValidHttpUrl(urlStr: string): boolean {
 
 /**
  * Sanitize URL to prevent leaking user credentials in logs
+ *
+ * Note: `urlStr` must be a valid URL
  */
 export function toSafePrintableUrl(urlStr: string): string {
-  try {
-    return new URL(urlStr).origin;
-  } catch (_) {
-    // Best effort to sanitize value if an invalid URL is provided
-    return urlStr.replace(/(.*?:\/\/|.*?:\/)?(.*?:.*?@)/, "$1");
-  }
+  return new URL(urlStr).origin;
 }

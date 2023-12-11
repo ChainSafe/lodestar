@@ -75,7 +75,6 @@ export class Eth1Provider implements IEth1Provider {
     this.depositContractAddress = toHexString(config.DEPOSIT_CONTRACT_ADDRESS);
 
     const providerUrls = opts.providerUrls ?? DEFAULT_PROVIDER_URLS;
-    this.logger?.info("Eth1 provider", {urls: providerUrls.map(toSafePrintableUrl).toString()});
     this.rpc = new JsonRpcHttpClient(providerUrls, {
       signal,
       // Don't fallback with is truncated error. Throw early and let the retry on this class handle it
@@ -85,6 +84,7 @@ export class Eth1Provider implements IEth1Provider {
       jwtVersion: opts.jwtVersion,
       metrics: metrics,
     });
+    this.logger?.info("Eth1 provider", {urls: providerUrls.map(toSafePrintableUrl).toString()});
 
     this.rpc.emitter.on(JsonRpcHttpClientEvent.RESPONSE, () => {
       const oldState = this.state;
