@@ -114,6 +114,13 @@ const ignoredOperationsIds = [
   "getBlindedBlock", // #5699
   "getNextWithdrawals", // #5696
   "getDebugForkChoice", // #5700
+  /* #6080 */
+  "getLightClientBootstrap",
+  "getLightClientUpdatesByRange",
+  "getLightClientFinalityUpdate",
+  "getLightClientOptimisticUpdate",
+  "getPoolBLSToExecutionChanges",
+  "submitPoolBLSToExecutionChange",
 
   /* 
    #6168
@@ -204,7 +211,7 @@ describe("eventstream event data", () => {
       if (testEvent == null) {
         throw Error(`No eventTestData for ${topic}`);
       }
-
+console.log(eventTestData)
       const testEventJson = eventSerdes.toJson({
         type: topic as routes.events.EventType,
         message: testEvent,
