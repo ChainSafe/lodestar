@@ -32,7 +32,7 @@ export class LightclientServerApiMock implements ServerApi<routes.lightclient.Ap
   latestHeadUpdate: altair.LightClientOptimisticUpdate | null = null;
   finalized: altair.LightClientFinalityUpdate | null = null;
 
-  async getLightClientUpdatesByRange(from: SyncPeriod, to: SyncPeriod): Promise<VersionedLightClientUpdate[]> {
+  async getUpdates(from: SyncPeriod, to: SyncPeriod): Promise<VersionedLightClientUpdate[]> {
     const updates: VersionedLightClientUpdate[] = [];
     for (let period = parseInt(String(from)); period <= parseInt(String(to)); period++) {
       const update = this.updates.get(period);
@@ -46,23 +46,23 @@ export class LightclientServerApiMock implements ServerApi<routes.lightclient.Ap
     return updates;
   }
 
-  async getLightClientOptimisticUpdate(): Promise<{version: ForkName; data: altair.LightClientOptimisticUpdate}> {
+  async getOptimisticUpdate(): Promise<{version: ForkName; data: altair.LightClientOptimisticUpdate}> {
     if (!this.latestHeadUpdate) throw Error("No latest head update");
     return {version: ForkName.bellatrix, data: this.latestHeadUpdate};
   }
 
-  async getLightClientFinalityUpdate(): Promise<{version: ForkName; data: altair.LightClientFinalityUpdate}> {
+  async getFinalityUpdate(): Promise<{version: ForkName; data: altair.LightClientFinalityUpdate}> {
     if (!this.finalized) throw Error("No finalized head update");
     return {version: ForkName.bellatrix, data: this.finalized};
   }
 
-  async getLightClientBootstrap(blockRoot: string): Promise<{version: ForkName; data: altair.LightClientBootstrap}> {
+  async getBootstrap(blockRoot: string): Promise<{version: ForkName; data: altair.LightClientBootstrap}> {
     const snapshot = this.snapshots.get(blockRoot);
     if (!snapshot) throw Error(`snapshot for blockRoot ${blockRoot} not available`);
     return {version: ForkName.bellatrix, data: snapshot};
   }
 
-  async getLightClientCommitteeRoot(startPeriod: SyncPeriod, count: number): Promise<{data: Uint8Array[]}> {
+  async getCommitteeRoot(startPeriod: SyncPeriod, count: number): Promise<{data: Uint8Array[]}> {
     const periods = Array.from({length: count}, (_ignored, i) => i + startPeriod);
     const committeeHashes = periods
       .map((period) => this.updates.get(period)?.nextSyncCommittee.pubkeys)

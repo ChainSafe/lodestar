@@ -160,7 +160,7 @@ export class Lightclient {
     await initBls(isNode ? "blst-native" : "herumi");
 
     // Fetch bootstrap state with proof at the trusted block root
-    const {data: bootstrap} = await transport.getLightClientBootstrap(toHexString(checkpointRoot));
+    const {data: bootstrap} = await transport.getBootstrap(toHexString(checkpointRoot));
 
     validateLightClientBootstrap(args.config, checkpointRoot, bootstrap);
 
@@ -199,7 +199,7 @@ export class Lightclient {
 
     for (const [fromPeriodRng, toPeriodRng] of periodRanges) {
       const count = toPeriodRng + 1 - fromPeriodRng;
-      const updates = await this.transport.getLightClientUpdatesByRange(fromPeriodRng, count);
+      const updates = await this.transport.getUpdates(fromPeriodRng, count);
       for (const update of updates) {
         this.processSyncCommitteeUpdate(update.data);
         this.logger.debug("processed sync update", {slot: update.data.attestedHeader.beacon.slot});
@@ -253,7 +253,7 @@ export class Lightclient {
         // Fetch latest optimistic head to prevent a potential 12 seconds lag between syncing and getting the first head,
         // Don't retry, this is a non-critical UX improvement
         try {
-          const update = await this.transport.getLightClientOptimisticUpdate();
+          const update = await this.transport.getOptimisticUpdate();
           this.processOptimisticUpdate(update.data);
         } catch (e) {
           this.logger.error("Error fetching getLatestHeadUpdate", {currentPeriod}, e as Error);
