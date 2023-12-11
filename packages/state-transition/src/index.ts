@@ -61,4 +61,4 @@ export {becomesNewEth1Data} from "./block/processEth1Data.js";
 // Withdrawals for new blocks
 export {getExpectedWithdrawals} from "./block/processWithdrawals.js";
 
-export {getAttestationParticipationStatus} from "./block/processAttestationsAltair.js"
+export {getAttestationParticipationStatus} from "./block/processAttestationsAltair.js";
