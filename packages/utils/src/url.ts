@@ -26,7 +26,7 @@ export function toSafePrintableUrl(urlStr: string): string {
   try {
     return new URL(urlStr).origin;
   } catch (_) {
-    // Best effort to sanitize if an invalid URL is provided
+    // Best effort to sanitize value if an invalid URL is provided
     return urlStr.replace(/(.*?:\/\/|.*?:\/)?(.*?:.*?@)/, "$1");
   }
 }

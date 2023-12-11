@@ -50,7 +50,7 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
   ) {
     const baseUrl = opts.urls[0];
     if (!baseUrl) throw Error("No Url provided for executionBuilder");
-    logger?.info("External builder", {urls: opts.urls.map(toSafePrintableUrl).toString()});
+    logger?.info("External builder", {url: toSafePrintableUrl(baseUrl)});
     this.api = getClient(
       {
         baseUrl,
