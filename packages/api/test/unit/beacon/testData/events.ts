@@ -4,7 +4,7 @@ import {Api, EventData, EventType, blobSidecarSSE} from "../../../../src/beacon/
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 
 const abortController = new AbortController();
-const root = Buffer.alloc(32, 0);
+const root = new Uint8Array(32);
 
 /* eslint-disable @typescript-eslint/no-empty-function, @typescript-eslint/naming-convention */
 

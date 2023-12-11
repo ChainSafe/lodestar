@@ -1,6 +1,6 @@
 import path from "node:path";
 import {fileURLToPath} from "node:url";
-import {expect} from "chai";
+import {describe, it, beforeAll, expect} from "vitest";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {OpenApiFile} from "../../utils/parseOpenApiSpec.js";
 import {routes} from "../../../src/beacon/index.js";
@@ -104,7 +104,7 @@ describe("eventstream event data", () => {
   const eventstreamExamples =
     openApiJson.paths["/eth/v1/events"]["get"].responses["200"].content?.["text/event-stream"].examples;
 
-  before("Check eventstreamExamples exists", () => {
+  beforeAll(() => {
     if (!eventstreamExamples) {
       throw Error(`eventstreamExamples not defined: ${eventstreamExamples}`);
     }
@@ -136,7 +136,7 @@ describe("eventstream event data", () => {
         message: testEvent,
       } as routes.events.BeaconEvent);
 
-      expect(testEventJson).deep.equals(exampleDataJson, `eventTestData[${topic}] does not match spec's example`);
+      expect(testEventJson).toEqual(exampleDataJson);
     });
   }
 });
