@@ -170,7 +170,9 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
         seedSlot: closestState.slot,
       });
       // only remove persisted state once we reload successfully
-      void this.persistentApis.remove(persistentKey);
+      this.persistentApis
+        .remove(persistentKey)
+        .catch((e) => this.logger.debug("Error removing persisted state", logMeta, e));
       this.cache.set(cpKey, newCachedState);
       // don't prune from memory here, call it at the last 1/3 of slot 0 of an epoch
       return newCachedState;
@@ -240,7 +242,15 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       if (isPersistentKey(stateOrPersistentKey)) {
         // was persisted to disk, set back to memory
         this.cache.set(key, state);
-        void this.persistentApis.remove(stateOrPersistentKey);
+        this.persistentApis
+          .remove(stateOrPersistentKey)
+          .catch((e) =>
+            this.logger.debug(
+              "Error removing persisted state",
+              {key, stateOrPersistentKey: toHexString(stateOrPersistentKey)},
+              e
+            )
+          );
         this.metrics?.stateRemoveCount.inc({reason: RemovePersistedStateReason.stateUpdate});
       }
       return;
