@@ -5,7 +5,7 @@ import {config as defaultConfig} from "@lodestar/config/default";
 import {createBeaconConfig} from "@lodestar/config";
 import {createCachedBeaconStateTest} from "../utils/state.js";
 import {PubkeyIndexMap} from "../../src/cache/pubkeyCache.js";
-import {createCachedBeaconState, loadUnfinalizedCachedBeaconState} from "../../src/cache/stateCache.js";
+import {createCachedBeaconState, loadCachedBeaconState} from "../../src/cache/stateCache.js";
 import {interopPubkeysCached} from "../utils/interop.js";
 import {modifyStateSameValidator, newStateWithValidators} from "../utils/capella.js";
 import {EpochShuffling, getShufflingDecisionBlock} from "../../src/util/epochShuffling.js";
@@ -129,7 +129,7 @@ describe("CachedBeaconState", () => {
 
         // confirm loadState() result
         const stateBytes = state.serialize();
-        const newCachedState = loadUnfinalizedCachedBeaconState(seedState, stateBytes, {skipSyncCommitteeCache: true});
+        const newCachedState = loadCachedBeaconState(seedState, stateBytes, {skipSyncCommitteeCache: true});
         const newStateBytes = newCachedState.serialize();
         expect(newStateBytes).toEqual(stateBytes);
         expect(newCachedState.hashTreeRoot()).toEqual(state.hashTreeRoot());
@@ -171,7 +171,7 @@ describe("CachedBeaconState", () => {
           expect(newCachedState.epochCtx).toEqual(cachedState.epochCtx);
         }
 
-        // confirm loadUnfinalizedCachedBeaconState() result
+        // confirm loadCachedBeaconState() result
         for (let i = 0; i < newCachedState.validators.length; i++) {
           expect(newCachedState.epochCtx.pubkey2index.get(newCachedState.validators.get(i).pubkey)).toBe(i);
           expect(newCachedState.epochCtx.index2pubkey[i].toBytes()).toEqual(pubkeys[i]);
