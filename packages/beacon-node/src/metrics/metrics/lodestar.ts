@@ -1119,6 +1119,40 @@ export function createLodestarMetrics(
         help: "Histogram of cloned count per state every time state.clone() is called",
         buckets: [1, 2, 5, 10, 50, 250],
       }),
+      statePersistDuration: register.histogram({
+        name: "lodestar_cp_state_cache_state_persist_seconds",
+        help: "Histogram of time to persist state to memory",
+        buckets: [0.5, 1, 2, 4],
+      }),
+      statePruneFromMemoryCount: register.gauge({
+        name: "lodestar_cp_state_cache_state_prune_from_memory_count",
+        help: "Total number of states pruned from memory",
+      }),
+      statePersistSecFromSlot: register.histogram({
+        name: "lodestar_cp_state_cache_state_persist_seconds_from_slot",
+        help: "Histogram of time to persist state to memory from slot",
+        buckets: [0, 4, 8, 12],
+      }),
+      stateReloadDuration: register.histogram({
+        name: "lodestar_cp_state_cache_state_reload_seconds",
+        help: "Histogram of time to load state from disk",
+        buckets: [2, 4, 6, 8],
+      }),
+      stateReloadEpochDiff: register.histogram({
+        name: "lodestar_cp_state_cache_state_reload_epoch_diff",
+        help: "Histogram of epoch difference between seed state epoch and loaded state epoch",
+        buckets: [0, 1, 2, 4, 8, 16, 32],
+      }),
+      stateReloadSecFromSlot: register.histogram({
+        name: "lodestar_cp_state_cache_state_reload_seconds_from_slot",
+        help: "Histogram of time to load state from disk from slot",
+        buckets: [0, 4, 8, 12],
+      }),
+      stateRemoveCount: register.gauge<"reason">({
+        name: "lodestar_cp_state_cache_state_remove_count",
+        help: "Total number of persisted states removed",
+        labelNames: ["reason"],
+      }),
     },
 
     balancesCache: {

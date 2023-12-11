@@ -50,8 +50,7 @@ export interface CheckpointStateCache {
   updatePreComputedCheckpoint(rootHex: RootHex, epoch: Epoch): number | null;
   prune(finalizedEpoch: Epoch, justifiedEpoch: Epoch): void;
   pruneFinalized(finalizedEpoch: Epoch): void;
-  delete(cp: phase0.Checkpoint): void;
-  pruneFromMemory(): Promise<number>;
+  processState(blockRootHex: RootHex, state: CachedBeaconStateAllForks): Promise<number>;
   clear(): void;
   dumpSummary(): routes.lodestar.StateCacheItem[];
 }
