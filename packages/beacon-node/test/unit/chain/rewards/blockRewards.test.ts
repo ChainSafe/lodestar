@@ -1,11 +1,20 @@
 import {describe, it, expect} from "vitest";
 import {SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {CachedBeaconStateAllForks, DataAvailableStatus, ExecutionPayloadStatus, stateTransition} from "../../../../../state-transition";
-import { generatePerfTestCachedStateAltair, cachedStateAltairPopulateCaches } from "../../../../../state-transition/test/perf/util.js";
+import {
+  CachedBeaconStateAllForks,
+  DataAvailableStatus,
+  ExecutionPayloadStatus,
+  stateTransition,
+} from "@lodestar/state-transition";
+import {
+  generatePerfTestCachedStateAltair,
+  cachedStateAltairPopulateCaches,
+  // eslint-disable-next-line import/no-relative-packages
+} from "../../../../../state-transition/test/perf/util.js";
 // eslint-disable-next-line import/no-relative-packages
 import {BlockAltairOpts, getBlockAltair} from "../../../../../state-transition/test/perf/block/util.js";
-import { computeBlockRewards } from "../../../../src/chain/rewards/blockRewards.js";
+import {computeBlockRewards} from "../../../../src/chain/rewards/blockRewards.js";
 
 describe("chain / rewards / blockRewards", () => {
   const testCases: {id: string; opts: BlockAltairOpts}[] = [
@@ -68,7 +77,7 @@ describe("chain / rewards / blockRewards", () => {
         bitsLen: 90,
         syncCommitteeBitsLen: 0,
       },
-    }
+    },
   ];
 
   for (const {id, opts} of testCases) {
@@ -81,7 +90,8 @@ describe("chain / rewards / blockRewards", () => {
       state.hashTreeRoot();
       cachedStateAltairPopulateCaches(state);
       const calculatedBlockReward = await computeBlockRewards(block.message, state as CachedBeaconStateAllForks);
-      const {proposerIndex, total, attestations, syncAggregate, proposerSlashings, attesterSlashings} = calculatedBlockReward;
+      const {proposerIndex, total, attestations, syncAggregate, proposerSlashings, attesterSlashings} =
+        calculatedBlockReward;
 
       // Sanity check
       expect(proposerIndex).toBe(block.message.proposerIndex);
@@ -113,8 +123,6 @@ describe("chain / rewards / blockRewards", () => {
       expect(attestations).toBe(rewardCache.attestations);
       expect(syncAggregate).toBe(rewardCache.syncAggregate);
       expect(proposerSlashings + attesterSlashings).toBe(rewardCache.slashing);
-
     });
   }
-
 });

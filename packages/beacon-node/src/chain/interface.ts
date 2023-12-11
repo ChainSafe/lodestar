@@ -52,7 +52,7 @@ import {AssembledBlockType, BlockAttributes, BlockType} from "./produceBlock/pro
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {SeenGossipBlockInput} from "./seenCache/index.js";
 import {ShufflingCache} from "./shufflingCache.js";
-import { BlockRewards } from "./rewards/blockRewards.js";
+import {BlockRewards} from "./rewards/blockRewards.js";
 
 export {BlockType, type AssembledBlockType};
 export {type ProposerPreparationData};

@@ -6,7 +6,7 @@ import {
   getAttesterSlashableIndices,
 } from "@lodestar/state-transition";
 import {getAttestationParticipationStatus} from "@lodestar/state-transition";
-import {Gwei, UintNum64, ValidatorIndex, allForks, altair, phase0} from "@lodestar/types";
+import {ValidatorIndex, allForks, altair, phase0} from "@lodestar/types";
 import {
   PROPOSER_WEIGHT,
   TIMELY_HEAD_FLAG_INDEX,
@@ -49,7 +49,6 @@ export async function computeBlockRewards(
   block: allForks.BeaconBlock,
   state: CachedBeaconStateAllForks
 ): Promise<BlockRewards> {
-
   const fork = state.config.getForkName(block.slot);
   const blockAttestationReward =
     fork === ForkName.phase0
@@ -62,20 +61,33 @@ export async function computeBlockRewards(
   const total =
     blockAttestationReward + syncAggregateReward + blockProposerSlashingReward + blockAttesterSlashingReward;
 
-  return {proposerIndex: block.proposerIndex, total, attestations: blockAttestationReward, syncAggregate: syncAggregateReward, proposerSlashings: blockProposerSlashingReward, attesterSlashings: blockAttesterSlashingReward};
+  return {
+    proposerIndex: block.proposerIndex,
+    total,
+    attestations: blockAttestationReward,
+    syncAggregate: syncAggregateReward,
+    proposerSlashings: blockProposerSlashingReward,
+    attesterSlashings: blockAttesterSlashingReward,
+  };
 }
 
 /**
  * TODO: Calculate rewards received by block proposer for incuding attestations.
  */
-function computeBlockAttestationRewardPhase0(_block: phase0.BeaconBlock, _state: CachedBeaconStatePhase0): SubRewardValue {
+function computeBlockAttestationRewardPhase0(
+  _block: phase0.BeaconBlock,
+  _state: CachedBeaconStatePhase0
+): SubRewardValue {
   throw new Error("Unsupported fork! Block attestation reward calculation is not yet available in phase0");
 }
 
 /**
  * Calculate rewards received by block proposer for incuding attestations since Altair. Mimics `processAttestationsAltair()`
  */
-function computeBlockAttestationRewardAltair(block: altair.BeaconBlock, state: CachedBeaconStateAltair): SubRewardValue {
+function computeBlockAttestationRewardAltair(
+  block: altair.BeaconBlock,
+  state: CachedBeaconStateAltair
+): SubRewardValue {
   const {epochCtx} = state;
   const {effectiveBalanceIncrements} = epochCtx;
   const stateSlot = state.slot;
@@ -143,7 +155,10 @@ function computeSyncAggregateReward(block: altair.BeaconBlock, state: CachedBeac
  * Calculate rewards received by block proposer for include proposer slashings.
  * All proposer slashing rewards go to block proposer and none to whistleblower as of Deneb
  */
-function computeBlockProposerSlashingReward(block: allForks.BeaconBlock, state: CachedBeaconStateAllForks): SubRewardValue {
+function computeBlockProposerSlashingReward(
+  block: allForks.BeaconBlock,
+  state: CachedBeaconStateAllForks
+): SubRewardValue {
   let proposerSlashingReward = 0;
 
   for (const proposerSlashing of block.body.proposerSlashings) {
@@ -160,7 +175,10 @@ function computeBlockProposerSlashingReward(block: allForks.BeaconBlock, state: 
  * Calculate rewards received by block proposer for include attester slashings.
  * All attester slashing rewards go to block proposer and none to whistleblower as of Deneb
  */
-function computeBlockAttesterSlashingReward(block: allForks.BeaconBlock, state: CachedBeaconStateAllForks): SubRewardValue {
+function computeBlockAttesterSlashingReward(
+  block: allForks.BeaconBlock,
+  state: CachedBeaconStateAllForks
+): SubRewardValue {
   let attesterSlashingReward = 0;
 
   for (const attesterSlashing of block.body.attesterSlashings) {

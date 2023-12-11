@@ -172,7 +172,17 @@ export const testData: GenericServerTestCases<Api> = {
 
   getProposerRewards: {
     args: ["head"],
-    res: {executionOptimistic: true, data: {proposerIndex: 0, total: 15, attestations: 8, syncAggregate: 4, proposerSlashings: 2, attesterSlashings: 1}}
+    res: {
+      executionOptimistic: true,
+      data: {
+        proposerIndex: 0,
+        total: 15,
+        attestations: 8,
+        syncAggregate: 4,
+        proposerSlashings: 2,
+        attesterSlashings: 1,
+      },
+    },
   },
 
   // -

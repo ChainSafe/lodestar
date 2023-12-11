@@ -31,9 +31,8 @@ export type ProposerRewardsResponse = {
 
 export type Api = {
   /**
-   * Get block
-   * Returns the complete `SignedBeaconBlock` for a given block ID.
-   * Depending on the `Accept` header it can be returned either as JSON or SSZ-serialized bytes.
+   * Get block rewards
+   * Returns the info of rewards received by the block proposer
    *
    * @param blockId Block identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
@@ -56,6 +55,7 @@ export const routesData: RoutesData<Api> = {
 };
 
 export type ReqTypes = {
+  /* eslint-disable @typescript-eslint/naming-convention */
   getProposerRewards: {params: {block_id: string}};
 };
 

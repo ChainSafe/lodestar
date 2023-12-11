@@ -3,7 +3,7 @@ import {ApiModules} from "../types.js";
 import {getBeaconBlockApi} from "./blocks/index.js";
 import {getBeaconPoolApi} from "./pool/index.js";
 import {getBeaconStateApi} from "./state/index.js";
-import { getBeaconRewardsApi } from "./rewards/index.js";
+import {getBeaconRewardsApi} from "./rewards/index.js";
 
 export function getBeaconApi(
   modules: Pick<ApiModules, "chain" | "config" | "logger" | "metrics" | "network" | "db">
