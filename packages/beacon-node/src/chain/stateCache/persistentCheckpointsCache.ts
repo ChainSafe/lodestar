@@ -151,7 +151,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     this.logger.verbose("Reload: read state successfully", logMeta);
     this.metrics?.stateRemoveCount.inc({reason: RemovePersistedStateReason.reload});
     this.metrics?.stateReloadSecFromSlot.observe(this.clock?.secFromSlot(this.clock?.currentSlot ?? 0) ?? 0);
-    const closestState = findClosestCheckpointState(cp, this.cache) ?? this.getHeadState?.();
+    const closestState = this.findSeedStateToReload(cp) ?? this.getHeadState?.();
     if (closestState == null) {
       throw new Error("No closest state found for cp " + toCheckpointKey(cp));
     }
@@ -430,6 +430,60 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     return persistCount;
   }
 
+  /**
+   * Find a seed state to reload the state of provided checkpoint. Based on the design of n-historical state:
+   *
+   * ╔════════════════════════════════════╗═══════════════╗
+   * ║      persisted to db or fs         ║   in memory   ║
+   * ║        reload if needed            ║               ║
+   * ║ -----------------------------------║---------------║
+   * ║        epoch:       (n-2)   (n-1)  ║  n     (n+1)  ║
+   * ║               |-------|-------|----║--|-------|----║
+   * ║                      ^        ^    ║ ^       ^     ║
+   * ║                                    ║  ^       ^    ║
+   * ╚════════════════════════════════════╝═══════════════╝
+   *
+   * we always reload an epoch in the past. We'll start with epoch n then (n+1) prioritizing ones with the same view of `reloadedCp`.
+   *
+   * This could return null and we should get head state in that case.
+   */
+  findSeedStateToReload(reloadedCp: CheckpointHex): CachedBeaconStateAllForks | null {
+    const maxEpoch = Math.max(...Array.from(this.epochIndex.keys()));
+    const reloadedCpSlot = computeStartSlotAtEpoch(reloadedCp.epoch);
+    let firstState: CachedBeaconStateAllForks | null = null;
+    // no need to check epochs before `maxEpoch - this.maxEpochsInMemory + 1` before they are all persisted
+    for (let epoch = maxEpoch - this.maxEpochsInMemory + 1; epoch <= maxEpoch; epoch++) {
+      // if there's at least 1 state in memory in an epoch, just return the 1st one
+      if (firstState !== null) {
+        return firstState;
+      }
+
+      for (const rootHex of this.epochIndex.get(epoch) || []) {
+        const cpKey = toCheckpointKey({rootHex, epoch});
+        const stateOrPersistentKey = this.cache.get(cpKey);
+        if (stateOrPersistentKey === undefined) {
+          // should not happen
+          continue;
+        }
+        if (!isPersistentKey(stateOrPersistentKey)) {
+          if (firstState === null) {
+            firstState = stateOrPersistentKey;
+          }
+
+          // amongst states of the same epoch, choose the one with the same view of reloadedCp
+          if (
+            reloadedCpSlot < stateOrPersistentKey.slot &&
+            toHexString(getBlockRootAtSlot(stateOrPersistentKey, reloadedCpSlot)) === reloadedCp.rootHex
+          ) {
+            return stateOrPersistentKey;
+          }
+        }
+      }
+    }
+
+    return firstState;
+  }
+
   clear(): void {
     this.cache.clear();
     this.epochIndex.clear();
@@ -474,31 +528,6 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     }
     this.epochIndex.delete(epoch);
   }
-}
-
-/**
- * Find closest state from cache to provided checkpoint.
- * Note that in 0-historical state configuration, this could return null and we should get head state in that case.
- */
-export function findClosestCheckpointState(
-  cp: CheckpointHex,
-  cache: Map<string, CachedBeaconStateAllForks | PersistentKey>
-): CachedBeaconStateAllForks | null {
-  let smallestEpochDiff = Infinity;
-  let closestState: CachedBeaconStateAllForks | null = null;
-  for (const [key, value] of cache.entries()) {
-    // ignore entries with PersistentKey
-    if (isPersistentKey(value)) {
-      continue;
-    }
-    const epochDiff = Math.abs(cp.epoch - fromCheckpointKey(key).epoch);
-    if (epochDiff < smallestEpochDiff) {
-      smallestEpochDiff = epochDiff;
-      closestState = value;
-    }
-  }
-
-  return closestState;
 }
 
 export function toCheckpointHex(checkpoint: phase0.Checkpoint): CheckpointHex {

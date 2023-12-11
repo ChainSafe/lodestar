@@ -1,18 +1,15 @@
 import {describe, it, expect, beforeEach} from "vitest";
 import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
-import {CachedBeaconStateAllForks, computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {Epoch, phase0} from "@lodestar/types";
+import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {phase0} from "@lodestar/types";
 import {mapValues, toHexString} from "@lodestar/utils";
 import {
   PersistentCheckpointStateCache,
-  findClosestCheckpointState,
   toCheckpointHex,
-  toCheckpointKey,
 } from "../../../../src/chain/stateCache/persistentCheckpointsCache.js";
 import {generateCachedState} from "../../../utils/state.js";
 import {ShufflingCache} from "../../../../src/chain/shufflingCache.js";
 import {testLogger} from "../../../utils/logger.js";
-import {PersistentKey} from "../../../../src/chain/stateCache/persistent/types.js";
 import {checkpointToPersistentKey, getTestPersistentApi} from "../../../utils/chain/stateCache/persistent.js";
 
 const root0a = Buffer.alloc(32);
@@ -34,7 +31,6 @@ const cp0b = {epoch: 20, root: root0b};
 const cp1 = {epoch: 21, root: root1};
 const cp2 = {epoch: 22, root: root2};
 const [cp0aHex, cp0bHex, cp1Hex, cp2Hex] = [cp0a, cp0b, cp1, cp2].map((cp) => toCheckpointHex(cp));
-const [cp0aKey, cp1Key, cp2Key] = [cp0aHex, cp1Hex, cp2Hex].map((cp) => toCheckpointKey(cp));
 const persistent0bKey = toHexString(checkpointToPersistentKey(cp0b));
 const startSlotEpoch20 = computeStartSlotAtEpoch(20);
 const startSlotEpoch21 = computeStartSlotAtEpoch(21);
@@ -144,6 +140,78 @@ describe("PersistentCheckpointStateCache", function () {
     expect(cache.get(cp1Hex)).to.be.null;
     expect(cache.get(cp2Hex)).to.be.not.null;
     expect(await cache.getStateOrBytes(cp0bHex)).to.be.null;
+  });
+
+  describe("findSeedStateToReload", () => {
+    beforeEach(() => {
+      fileApisBuffer = new Map();
+      const persistentApis = getTestPersistentApi(fileApisBuffer);
+      cache = new PersistentCheckpointStateCache(
+        {persistentApis, logger: testLogger(), shufflingCache: new ShufflingCache()},
+        {maxEpochsInMemory: 2}
+      );
+      cache.add(cp0a, states["cp0a"]);
+      cache.add(cp0b, states["cp0b"]);
+      cache.add(cp1, states["cp1"]);
+    });
+
+    //     epoch: 19         20           21         22          23
+    //            |-----------|-----------|-----------|-----------|
+    //                       ^^           ^           ^
+    //                       ||           |           |
+    //                       |0b--------root1--------root2
+    //                       |
+    //                       0a
+    it("single state at lowest memory epoch", async function () {
+      cache.add(cp2, states["cp2"]);
+      expect(await cache.processState(toHexString(cp2.root), states["cp2"])).toEqual(1);
+      expect(cache.findSeedStateToReload(cp0aHex)?.hashTreeRoot()).toEqual(states["cp1"].hashTreeRoot());
+      expect(cache.findSeedStateToReload(cp0bHex)?.hashTreeRoot()).toEqual(states["cp1"].hashTreeRoot());
+    });
+
+    //     epoch: 19         20           21         22          23
+    //            |-----------|-----------|-----------|-----------|
+    //                       ^^           ^           ^        ^
+    //                       ||           |           |        |
+    //                       |0b--------root1--------root2     |
+    //                       |                                 |
+    //                       0a------------------------------root3
+    //                                    ^           ^
+    //                           cp1a={0a, 21}       {0a, 22}=cp2a
+    it("multiple states at lowest memory epoch", async function () {
+      cache.add(cp2, states["cp2"]);
+      expect(await cache.processState(toHexString(cp2.root), states["cp2"])).toEqual(1);
+
+      const cp1a = {epoch: 21, root: root0a};
+      const cp1aState = states["cp0a"].clone();
+      cp1aState.slot = 21 * SLOTS_PER_EPOCH;
+      cp1aState.blockRoots.set(startSlotEpoch21 % SLOTS_PER_HISTORICAL_ROOT, root0a);
+      cp1aState.commit();
+      cache.add(cp1a, cp1aState);
+
+      const cp2a = {epoch: 22, root: root0a};
+      const cp2aState = cp1aState.clone();
+      cp2aState.slot = 22 * SLOTS_PER_EPOCH;
+      cp2aState.blockRoots.set(startSlotEpoch22 % SLOTS_PER_HISTORICAL_ROOT, root0a);
+      cp2aState.commit();
+      cache.add(cp2a, cp2aState);
+
+      const root3 = Buffer.alloc(32, 100);
+      const state3 = cp2aState.clone();
+      state3.slot = 22 * SLOTS_PER_EPOCH + 3;
+      state3.commit();
+      await cache.processState(toHexString(root3), state3);
+
+      // state of {0a, 21} is choosen because it was built from cp0a
+      expect(cache.findSeedStateToReload(cp0aHex)?.hashTreeRoot()).toEqual(cp1aState.hashTreeRoot());
+      // cp1 is choosen for 0b because it was built from cp0b
+      expect(cache.findSeedStateToReload(cp0bHex)?.hashTreeRoot()).toEqual(states["cp1"].hashTreeRoot());
+      const randomRoot = Buffer.alloc(32, 101);
+      // for other random root it'll pick the first state of epoch 21 which is states["cp1"]
+      expect(cache.findSeedStateToReload({epoch: 20, rootHex: toHexString(randomRoot)})?.hashTreeRoot()).toEqual(
+        states["cp1"].hashTreeRoot()
+      );
+    });
   });
 
   describe("processState, maxEpochsInMemory = 2", () => {
@@ -777,47 +845,5 @@ describe("PersistentCheckpointStateCache", function () {
       // simple get() does not reload from disk
       expect(cache.get(cpHex)).to.be.null;
     }
-  }
-});
-
-describe("findClosestCheckpointState", function () {
-  const cacheMap = new Map<string, CachedBeaconStateAllForks | PersistentKey>();
-  cacheMap.set(cp0aKey, states["cp0a"]);
-  cacheMap.set(cp1Key, states["cp1"]);
-  cacheMap.set(cp2Key, states["cp2"]);
-  const testCases: {name: string; epoch: Epoch; expectedState: CachedBeaconStateAllForks}[] = [
-    {
-      name: "should return cp0 for epoch less than cp0",
-      epoch: 19,
-      expectedState: states["cp0a"],
-    },
-    {
-      name: "should return cp0 for epoch same to cp0",
-      epoch: 20,
-      expectedState: states["cp0a"],
-    },
-    {
-      name: "should return cp1 for epoch same to cp1",
-      epoch: 21,
-      expectedState: states["cp1"],
-    },
-    {
-      name: "should return cp2 for epoch same to cp2",
-      epoch: 22,
-      expectedState: states["cp2"],
-    },
-    {
-      name: "should return cp2 for epoch greater than cp2",
-      epoch: 23,
-      expectedState: states["cp2"],
-    },
-  ];
-
-  for (const {name, epoch, expectedState} of testCases) {
-    it(name, function () {
-      const cpHex = toCheckpointHex({epoch, root: Buffer.alloc(32)});
-      const state = findClosestCheckpointState(cpHex, cacheMap);
-      expect(state?.hashTreeRoot()).toEqual(expectedState.hashTreeRoot());
-    });
   }
 });
