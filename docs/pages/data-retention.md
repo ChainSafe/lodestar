@@ -32,12 +32,8 @@ $dataDir # specified by --dataDir on the validator command
 │   └── 0xa329f988c16993768299643d918a2694892c012765d896a16f...
 ├── keystores # default if --keystoresDir not specified
 │   ├── 0x8e41b969493454318c27ec6fac90645769331c07ebc8db5037...
-│   │   ├── eth1-deposit-data.rlp
-│   │   ├── eth1-deposit-gwei.txt
 │   │   └── voting-keystore.json
 │   └── 0xa329f988c16993768299643d918a2694892c012765d896a16f...
-│       ├── eth1-deposit-data.rlp
-│       ├── eth1-deposit-gwei.txt
 │       └── voting-keystore.json
 └── remoteKeys # default if --remoteKeysDir not specified
     └── 0xa329f988c16993768299643d918a2694892c012765d896a16f.json
@@ -47,7 +43,7 @@ $dataDir # specified by --dataDir on the validator command
 
 Configuring your node to store and prune data is key to success. On average you can expect for the database to grow by the follow amounts:
 
-- `execution-db` grows at 1GB per month
+- `execution-db` grows at 2-30GB per week
 - `chain-db` grows at 1GB per month
 - `validator-db` grows at less than 2MB per year, per key (2000 keys = 4GB per year)
 
