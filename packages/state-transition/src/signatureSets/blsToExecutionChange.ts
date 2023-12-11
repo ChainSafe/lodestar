@@ -7,17 +7,17 @@ import {BeaconConfig} from "@lodestar/config";
 import {computeSigningRoot, ISignatureSet, SignatureSetType, verifySignatureSet} from "../util/index.js";
 import {CachedBeaconStateAllForks} from "../types.js";
 
-export function verifyBLSToExecutionChangeSignature(
+export function verifyBlsToExecutionChangeSignature(
   state: CachedBeaconStateAllForks,
   signedBLSToExecutionChange: capella.SignedBLSToExecutionChange
 ): boolean {
-  return verifySignatureSet(getBLSToExecutionChangeSignatureSet(state.config, signedBLSToExecutionChange));
+  return verifySignatureSet(getBlsToExecutionChangeSignatureSet(state.config, signedBLSToExecutionChange));
 }
 
 /**
  * Extract signatures to allow validating all block signatures at once
  */
-export function getBLSToExecutionChangeSignatureSet(
+export function getBlsToExecutionChangeSignatureSet(
   config: BeaconConfig,
   signedBLSToExecutionChange: capella.SignedBLSToExecutionChange
 ): ISignatureSet {
@@ -35,11 +35,11 @@ export function getBLSToExecutionChangeSignatureSet(
   };
 }
 
-export function getBLSToExecutionChangeSignatureSets(
+export function getBlsToExecutionChangeSignatureSets(
   config: BeaconConfig,
   signedBlock: capella.SignedBeaconBlock
 ): ISignatureSet[] {
   return signedBlock.message.body.blsToExecutionChanges.map((blsToExecutionChange) =>
-    getBLSToExecutionChangeSignatureSet(config, blsToExecutionChange)
+    getBlsToExecutionChangeSignatureSet(config, blsToExecutionChange)
   );
 }

@@ -78,7 +78,7 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
   },
 
   bls_to_execution_change: (state, testCase: {address_change: capella.SignedBLSToExecutionChange}) => {
-    blockFns.processBLSToExecutionChange(state as CachedBeaconStateCapella, testCase.address_change);
+    blockFns.processBlsToExecutionChange(state as CachedBeaconStateCapella, testCase.address_change);
   },
 
   withdrawals: (state, testCase: {execution_payload: capella.ExecutionPayload}) => {

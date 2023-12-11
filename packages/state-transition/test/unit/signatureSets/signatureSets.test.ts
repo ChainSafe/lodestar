@@ -45,7 +45,7 @@ describe("signatureSets", () => {
         attestations: [getMockAttestations(1)],
         deposits: [] as phase0.Deposit[],
         voluntaryExits: [getMockSignedVoluntaryExit({validatorIndex: 0, signature: EMPTY_SIGNATURE})],
-        blsToExecutionChanges: [getMockSignedBLSToExecutionChange({validatorIndex: 0, signature: EMPTY_SIGNATURE})],
+        blsToExecutionChanges: [getMockSignedBlsToExecutionChange({validatorIndex: 0, signature: EMPTY_SIGNATURE})],
       },
     };
 
@@ -177,7 +177,7 @@ type SignedBLStoExecutionChange = {
   validatorIndex: ValidatorIndex;
 };
 
-function getMockSignedBLSToExecutionChange(data: SignedBLStoExecutionChange): capella.SignedBLSToExecutionChange {
+function getMockSignedBlsToExecutionChange(data: SignedBLStoExecutionChange): capella.SignedBLSToExecutionChange {
   return {
     message: {
       validatorIndex: data.validatorIndex,

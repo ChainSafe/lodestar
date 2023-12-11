@@ -9,7 +9,7 @@ import {getAttestationsSignatureSets} from "./indexedAttestation.js";
 import {getBlockProposerSignatureSet} from "./proposer.js";
 import {getRandaoRevealSignatureSet} from "./randao.js";
 import {getVoluntaryExitsSignatureSets} from "./voluntaryExits.js";
-import {getBLSToExecutionChangeSignatureSets} from "./blsToExecutionChange.js";
+import {getBlsToExecutionChangeSignatureSets} from "./blsToExecutionChange.js";
 
 export * from "./attesterSlashings.js";
 export * from "./indexedAttestation.js";
@@ -60,7 +60,7 @@ export function getBlockSignatureSets(
 
   // only after capella fork
   if (fork >= ForkSeq.capella) {
-    const blsToExecutionChangeSignatureSets = getBLSToExecutionChangeSignatureSets(
+    const blsToExecutionChangeSignatureSets = getBlsToExecutionChangeSignatureSets(
       state.config,
       signedBlock as capella.SignedBeaconBlock
     );

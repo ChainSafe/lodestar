@@ -19,7 +19,7 @@ import {IBeaconDb} from "../../db/index.js";
 import {SignedBLSToExecutionChangeVersioned} from "../../util/types.js";
 import {BlockType} from "../interface.js";
 import {Metrics} from "../../metrics/metrics.js";
-import {isValidBLSToExecutionChangeForBlockInclusion} from "./utils.js";
+import {isValidBlsToExecutionChangeForBlockInclusion} from "./utils.js";
 
 type HexRoot = string;
 type AttesterSlashingCached = {
@@ -72,7 +72,7 @@ export class OpPool {
       this.insertVoluntaryExit(voluntaryExit);
     }
     for (const item of blsToExecutionChanges) {
-      this.insertBLSToExecutionChange(item.data, item.preCapella);
+      this.insertBlsToExecutionChange(item.data, item.preCapella);
     }
   }
 
@@ -120,7 +120,7 @@ export class OpPool {
     return this.voluntaryExits.has(validatorIndex);
   }
 
-  hasSeenBLSToExecutionChange(validatorIndex: ValidatorIndex): boolean {
+  hasSeenBlsToExecutionChange(validatorIndex: ValidatorIndex): boolean {
     return this.blsToExecutionChanges.has(validatorIndex);
   }
 
@@ -153,7 +153,7 @@ export class OpPool {
   }
 
   /** Must be validated beforehand */
-  insertBLSToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange, preCapella = false): void {
+  insertBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange, preCapella = false): void {
     this.blsToExecutionChanges.set(blsToExecutionChange.message.validatorIndex, {
       data: blsToExecutionChange,
       preCapella,
@@ -262,7 +262,7 @@ export class OpPool {
     const endBlsToExecutionChanges = stepsMetrics?.startTimer();
     const blsToExecutionChanges: capella.SignedBLSToExecutionChange[] = [];
     for (const blsToExecutionChange of this.blsToExecutionChanges.values()) {
-      if (isValidBLSToExecutionChangeForBlockInclusion(state, blsToExecutionChange.data)) {
+      if (isValidBlsToExecutionChangeForBlockInclusion(state, blsToExecutionChange.data)) {
         blsToExecutionChanges.push(blsToExecutionChange.data);
         if (blsToExecutionChanges.length >= MAX_BLS_TO_EXECUTION_CHANGES) {
           break;
@@ -292,7 +292,7 @@ export class OpPool {
   }
 
   /** For beacon pool API */
-  getAllBLSToExecutionChanges(): SignedBLSToExecutionChangeVersioned[] {
+  getAllBlsToExecutionChanges(): SignedBLSToExecutionChangeVersioned[] {
     return Array.from(this.blsToExecutionChanges.values());
   }
 
@@ -303,7 +303,7 @@ export class OpPool {
     this.pruneAttesterSlashings(headState);
     this.pruneProposerSlashings(headState);
     this.pruneVoluntaryExits(headState);
-    this.pruneBLSToExecutionChanges(headState, finalizedState);
+    this.pruneBlsToExecutionChanges(headState, finalizedState);
   }
 
   /**
@@ -372,12 +372,12 @@ export class OpPool {
    * Prune blsToExecutionChanges for validators which have been set with withdrawal
    * credentials
    */
-  private pruneBLSToExecutionChanges(
+  private pruneBlsToExecutionChanges(
     headState: CachedBeaconStateAllForks,
     finalizedState: CachedBeaconStateAllForks | null
   ): void {
     for (const [key, blsToExecutionChange] of this.blsToExecutionChanges.entries()) {
-      // TODO CAPELLA: We need the finalizedState to safely prune BLSToExecutionChanges. Finalized state may not be
+      // TODO CAPELLA: We need the finalizedState to safely prune BlsToExecutionChanges. Finalized state may not be
       // available in the cache, so it can be null. Once there's a head only prunning strategy, change
       if (finalizedState !== null) {
         const validator = finalizedState.validators.getReadonly(blsToExecutionChange.data.message.validatorIndex);

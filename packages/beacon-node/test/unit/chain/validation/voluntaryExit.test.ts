@@ -65,7 +65,7 @@ describe("validate voluntary exit", () => {
     chainStub = getMockedBeaconChain();
     opPool = chainStub.opPool;
     vi.spyOn(chainStub, "getHeadStateAtCurrentEpoch").mockResolvedValue(state);
-    vi.spyOn(opPool, "hasSeenBLSToExecutionChange");
+    vi.spyOn(opPool, "hasSeenBlsToExecutionChange");
     vi.spyOn(opPool, "hasSeenVoluntaryExit");
   });
 

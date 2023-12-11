@@ -16,8 +16,8 @@ import {
 import {createBeaconConfig} from "@lodestar/config";
 
 import {generateState} from "../../../utils/state.js";
-import {validateGossipBLSToExecutionChange} from "../../../../src/chain/validation/blsToExecutionChange.js";
-import {BLSToExecutionChangeErrorCode} from "../../../../src/chain/errors/blsToExecutionChangeError.js";
+import {validateGossipBlsToExecutionChange} from "../../../../src/chain/validation/blsToExecutionChange.js";
+import {BlsToExecutionChangeErrorCode} from "../../../../src/chain/errors/blsToExecutionChangeError.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../../__mocks__/mockedBeaconChain.js";
@@ -89,7 +89,7 @@ describe("validate bls to execution change", () => {
     opPool = chainStub.opPool;
     vi.spyOn(chainStub, "getHeadState").mockReturnValue(state);
     vi.spyOn(chainStub, "getHeadStateAtCurrentEpoch");
-    vi.spyOn(opPool, "hasSeenBLSToExecutionChange");
+    vi.spyOn(opPool, "hasSeenBlsToExecutionChange");
   });
 
   afterEach(() => {
@@ -102,17 +102,17 @@ describe("validate bls to execution change", () => {
       signature: Buffer.alloc(96, 0),
     };
 
-    // Return BLSToExecutionChange known
-    opPool.hasSeenBLSToExecutionChange.mockReturnValue(true);
+    // Return BlsToExecutionChange known
+    opPool.hasSeenBlsToExecutionChange.mockReturnValue(true);
 
     await expectRejectedWithLodestarError(
-      validateGossipBLSToExecutionChange(chainStub, signedBlsToExecChangeInvalid),
-      BLSToExecutionChangeErrorCode.ALREADY_EXISTS
+      validateGossipBlsToExecutionChange(chainStub, signedBlsToExecChangeInvalid),
+      BlsToExecutionChangeErrorCode.ALREADY_EXISTS
     );
   });
 
   it("should return valid blsToExecutionChange ", async () => {
-    await validateGossipBLSToExecutionChange(chainStub, signedBlsToExecChange);
+    await validateGossipBlsToExecutionChange(chainStub, signedBlsToExecChange);
   });
 
   it("should return invalid bls to execution Change - invalid validatorIndex", async () => {
@@ -126,8 +126,8 @@ describe("validate bls to execution change", () => {
     };
 
     await expectRejectedWithLodestarError(
-      validateGossipBLSToExecutionChange(chainStub, signedBlsToExecChangeInvalid),
-      BLSToExecutionChangeErrorCode.INVALID
+      validateGossipBlsToExecutionChange(chainStub, signedBlsToExecChangeInvalid),
+      BlsToExecutionChangeErrorCode.INVALID
     );
   });
 
@@ -141,8 +141,8 @@ describe("validate bls to execution change", () => {
     };
 
     await expectRejectedWithLodestarError(
-      validateGossipBLSToExecutionChange(chainStub, signedBlsToExecChangeInvalid),
-      BLSToExecutionChangeErrorCode.INVALID
+      validateGossipBlsToExecutionChange(chainStub, signedBlsToExecChangeInvalid),
+      BlsToExecutionChangeErrorCode.INVALID
     );
   });
 
@@ -157,8 +157,8 @@ describe("validate bls to execution change", () => {
     };
 
     await expectRejectedWithLodestarError(
-      validateGossipBLSToExecutionChange(chainStub, signedBlsToExecChangeInvalid),
-      BLSToExecutionChangeErrorCode.INVALID
+      validateGossipBlsToExecutionChange(chainStub, signedBlsToExecChangeInvalid),
+      BlsToExecutionChangeErrorCode.INVALID
     );
   });
 
@@ -173,8 +173,8 @@ describe("validate bls to execution change", () => {
     };
 
     await expectRejectedWithLodestarError(
-      validateGossipBLSToExecutionChange(chainStub, signedBlsToExecChangeInvalid),
-      BLSToExecutionChangeErrorCode.INVALID
+      validateGossipBlsToExecutionChange(chainStub, signedBlsToExecChangeInvalid),
+      BlsToExecutionChangeErrorCode.INVALID
     );
   });
 });

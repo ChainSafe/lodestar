@@ -99,14 +99,14 @@ function runTests({useWorker}: {useWorker: boolean}): void {
   });
 
   it("Publish and receive a blsToExecutionChange", async function () {
-    let onBLSToExecutionChange: (blsToExec: Uint8Array) => void;
-    const onBLSToExecutionChangePromise = new Promise<Uint8Array>((resolve) => (onBLSToExecutionChange = resolve));
+    let onBlsToExecutionChange: (blsToExec: Uint8Array) => void;
+    const onBlsToExecutionChangePromise = new Promise<Uint8Array>((resolve) => (onBlsToExecutionChange = resolve));
 
     const {netA, netB} = await mockModules({
       [GossipType.bls_to_execution_change]: async ({
         gossipData,
       }: GossipHandlerParamGeneric<GossipType.bls_to_execution_change>) => {
-        onBLSToExecutionChange(gossipData.serializedData);
+        onBlsToExecutionChange(gossipData.serializedData);
       },
     });
 
@@ -126,9 +126,9 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     }
 
     const blsToExec = ssz.capella.SignedBLSToExecutionChange.defaultValue();
-    await netA.publishBLSToExecutionChange(blsToExec);
+    await netA.publishBlsToExecutionChange(blsToExec);
 
-    const receivedblsToExec = await onBLSToExecutionChangePromise;
+    const receivedblsToExec = await onBlsToExecutionChangePromise;
     expect(Buffer.from(receivedblsToExec)).toEqual(
       Buffer.from(ssz.capella.SignedBLSToExecutionChange.serialize(blsToExec))
     );
