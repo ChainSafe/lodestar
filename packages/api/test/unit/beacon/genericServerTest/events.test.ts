@@ -1,4 +1,4 @@
-import {describe, it, expect} from "vitest";
+import {describe, it, expect, beforeEach, afterEach} from "vitest";
 import {sleep} from "@lodestar/utils";
 import {config} from "@lodestar/config/default";
 import {Api, routesData, EventType, BeaconEvent} from "../../../../src/beacon/routes/events.js";
@@ -16,7 +16,9 @@ describe("beacon / events", () => {
   }
 
   let controller: AbortController;
-  beforeEach(() => (controller = new AbortController()));
+  beforeEach(() => {
+    controller = new AbortController();
+  });
   afterEach(() => controller.abort());
 
   it("Receive events", async () => {
