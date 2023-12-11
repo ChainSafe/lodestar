@@ -51,7 +51,7 @@ export const testData: GenericServerTestCases<Api> = {
       graffiti,
       undefined,
       {feeRecipient: undefined, builderSelection: undefined, strictFeeRecipientCheck: undefined},
-    ],
+    ] as unknown as GenericServerTestCases<Api>["produceBlock"]["args"],
     res: {data: ssz.phase0.BeaconBlock.defaultValue()},
   },
   produceBlockV2: {
@@ -61,7 +61,7 @@ export const testData: GenericServerTestCases<Api> = {
       graffiti,
       undefined,
       {feeRecipient: undefined, builderSelection: undefined, strictFeeRecipientCheck: undefined},
-    ],
+    ] as unknown as GenericServerTestCases<Api>["produceBlockV2"]["args"],
     res: {
       data: ssz.altair.BeaconBlock.defaultValue(),
       version: ForkName.altair,
@@ -92,7 +92,7 @@ export const testData: GenericServerTestCases<Api> = {
       graffiti,
       undefined,
       {feeRecipient: undefined, builderSelection: undefined, strictFeeRecipientCheck: undefined},
-    ],
+    ] as unknown as GenericServerTestCases<Api>["produceBlindedBlock"]["args"],
     res: {
       data: ssz.bellatrix.BlindedBeaconBlock.defaultValue(),
       version: ForkName.bellatrix,

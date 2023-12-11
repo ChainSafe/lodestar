@@ -61,7 +61,7 @@ describe("utils / urlFormat", () => {
 
       const utlFormater = compileRouteUrlFormater(urlTemplate);
 
-      for (const [i, {args, url}] of cases.entries()) {
+      for (const [_, {args, url}] of cases.entries()) {
         expect(utlFormater(args)).toBe(url);
       }
     });
