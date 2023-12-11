@@ -1,18 +1,16 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import {expect} from "chai";
+import {describe, it, expect, beforeAll} from "vitest";
 import Web3 from "web3";
 import {LCTransport} from "../../src/interfaces.js";
 import {createVerifiedExecutionProvider} from "../../src/web3_provider.js";
 import {rpcUrl, beaconUrl, config} from "../utils/e2e_env.js";
 import {getVerificationFailedMessage} from "../../src/utils/json_rpc.js";
 
+/* prettier-ignore */
 describe("web3_batch_requests", function () {
-  // Give some margin to sync light client
-  this.timeout("10s");
-
   let web3: Web3;
 
-  before(() => {
+  beforeAll(() => {
     const {provider} = createVerifiedExecutionProvider(new Web3.providers.HttpProvider(rpcUrl), {
       transport: LCTransport.Rest,
       urls: [beaconUrl],
@@ -45,8 +43,8 @@ describe("web3_batch_requests", function () {
 
       await batch.execute();
 
-      expect(results.length).to.be.gt(1);
-      await expect(Promise.all(results)).to.be.fulfilled;
+      expect(results.length).toBeGreaterThan(1);
+      await expect(Promise.all(results)).resolves.toBeDefined();
     });
 
     it("should be able to process batch request containing error", async () => {
@@ -66,8 +64,8 @@ describe("web3_batch_requests", function () {
 
       await batch.execute();
 
-      await expect(successRequest).to.be.fulfilled;
-      await expect(errorRequest).to.be.rejectedWith(getVerificationFailedMessage("eth_getBlockByHash"));
+      await expect(successRequest).resolves.toBeDefined();
+      await expect(errorRequest).rejects.toThrow(getVerificationFailedMessage("eth_getBlockByHash"));
     });
   });
-});
+}, {timeout: 10_000});

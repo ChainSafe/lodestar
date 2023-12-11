@@ -1,4 +1,4 @@
-import {describe, it, expect, beforeEach, afterEach, vi, SpyInstance} from "vitest";
+import {describe, it, expect, beforeEach, afterEach, vi, MockInstance} from "vitest";
 import {config} from "@lodestar/config/default";
 import {TimeoutError} from "@lodestar/utils";
 import {Eth1DepositDataTracker} from "../../../src/eth1/eth1DepositDataTracker.js";
@@ -17,8 +17,8 @@ describe("Eth1DepositDataTracker", function () {
   const eth1Provider = new Eth1Provider(config, opts, signal, null);
   let db: BeaconDb;
   let eth1DepositDataTracker: Eth1DepositDataTracker;
-  let getBlocksByNumberStub: SpyInstance;
-  let getDepositEventsStub: SpyInstance;
+  let getBlocksByNumberStub: MockInstance;
+  let getDepositEventsStub: MockInstance;
 
   beforeEach(() => {
     db = getMockedBeaconDb();

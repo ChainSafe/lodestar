@@ -63,6 +63,7 @@ describe("BlockDutiesService", function () {
         data: signedBlock.message,
         version: ForkName.bellatrix,
         executionPayloadValue: BigInt(1),
+        consensusBlockValue: BigInt(1),
         executionPayloadBlinded: false,
       },
       ok: true,
