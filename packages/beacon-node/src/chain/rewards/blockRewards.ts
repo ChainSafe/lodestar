@@ -49,9 +49,6 @@ export async function computeBlockRewards(
   block: allForks.BeaconBlock,
   state: CachedBeaconStateAllForks
 ): Promise<BlockRewards> {
-  if (block.slot !== state.slot) {
-    throw Error(`Block slot and state slot mismatch. Block slot: ${block.slot}, state slot: ${state.slot}`);
-  }
 
   const fork = state.config.getForkName(block.slot);
   const blockAttestationReward =
@@ -65,7 +62,7 @@ export async function computeBlockRewards(
   const total =
     blockAttestationReward + syncAggregateReward + blockProposerSlashingReward + blockAttesterSlashingReward;
 
-  return {proposerIndex: block.proposerIndex, total, attestations: blockAttestationReward, syncAggregate: syncAggregateReward, proposerSlashings: blockProposerSlashingReward, attesterSlashings: blockAttestationReward};
+  return {proposerIndex: block.proposerIndex, total, attestations: blockAttestationReward, syncAggregate: syncAggregateReward, proposerSlashings: blockProposerSlashingReward, attesterSlashings: blockAttesterSlashingReward};
 }
 
 /**
