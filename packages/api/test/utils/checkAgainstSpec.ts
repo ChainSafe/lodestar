@@ -19,6 +19,22 @@ ajv.addKeyword({
 
 ajv.addFormat("hex", /^0x[a-fA-F0-9]+$/);
 
+export type Operation = {
+  id: string;
+  required?: string[];
+};
+
+/**
+ * Run all tests defined as part of the OpenAPI spec provided as `openApiJson`.
+ * 
+ * @param openApiJson 
+ * @param routesData 
+ * @param reqSerializers 
+ * @param returnTypes 
+ * @param testDatas 
+ * @param opts 
+ * @param filteredOperations an array of Operation that will be ignored during tests. When `required` properties are specified, associated operation is tested but required properties are omitted.
+ */
 export function runTestCheckAgainstSpec(
   openApiJson: OpenApiJson,
   routesData: Record<string, RouteDef>,
@@ -26,13 +42,17 @@ export function runTestCheckAgainstSpec(
   returnTypes: Record<string, ReturnTypes<any>[string]>,
   testDatas: Record<string, GenericServerTestCases<any>[string]>,
   opts?: ParseOpenApiSpecOpts,
-  filteredOperationsIds: string[] = []
+  filteredOperations: Operation[] = []
 ): void {
   const openApiSpec = parseOpenApiSpec(openApiJson, opts);
 
-  for (const [operationId, routeSpec] of [...openApiSpec.entries()].filter(
-    ([operationId]) => !filteredOperationsIds.includes(operationId)
-  )) {
+  for (const [operationId, routeSpec] of openApiSpec.entries()) {
+    const ignoredFields = filteredOperations.find(e => e.id === operationId)?.required;
+    if (!ignoredFields) {
+      // Operation is part of `filteredOperations` but no `required` properties are specified, skipping operation validation
+      continue;
+    }
+
     describe(operationId, () => {
       const {requestSchema, responseOkSchema} = routeSpec;
       const routeId = operationId;
@@ -71,7 +91,7 @@ export function runTestCheckAgainstSpec(
           stringifyProperties((reqJson as ReqGeneric).params ?? {});
           stringifyProperties((reqJson as ReqGeneric).query ?? {});
 
-          // Validate response
+          // Validate request
           validateSchema(routeSpec.requestSchema, reqJson, "request");
         });
       }
@@ -90,6 +110,10 @@ export function runTestCheckAgainstSpec(
             }
           }
 
+          if (ignoredFields) {
+            // Remove specified fields from schema validation
+            responseOkSchema.required = responseOkSchema.required?.filter(e => !ignoredFields.includes(e));
+          }
           // Validate response
           validateSchema(responseOkSchema, resJson, "response");
         });

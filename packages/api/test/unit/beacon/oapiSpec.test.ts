@@ -84,56 +84,56 @@ const testDatas = {
   ...validatorTestData,
 };
 
-const ignoredOperationsIds = [
+const ignoredOperations = [
   /*
    #5693
    missing finalized
    */
-  "getStateRoot",
-  "getStateFork",
-  "getStateFinalityCheckpoints",
-  "getStateValidators",
-  "getStateValidator",
-  "getStateValidatorBalances",
-  "getEpochCommittees",
-  "getEpochSyncCommittees",
-  "getStateRandao",
-  "getBlockHeaders",
-  "getBlockHeader",
-  "getBlockV2",
-  "getBlockRoot",
-  "getBlockAttestations",
-  "getStateV2",
+  {id: "getStateRoot", required: ["finalized"]},
+  {id: "getStateFork", required: ["finalized"]},
+  {id: "getStateFinalityCheckpoints", required: ["finalized"]},
+  {id: "getStateValidators", required: ["finalized"]},
+  {id: "getStateValidator", required: ["finalized"]},
+  {id: "getStateValidatorBalances", required: ["finalized"]},
+  {id: "getEpochCommittees", required: ["finalized"]},
+  {id: "getEpochSyncCommittees", required: ["finalized"]},
+  {id: "getStateRandao", required: ["finalized"]},
+  {id: "getBlockHeaders", required: ["finalized"]},
+  {id: "getBlockHeader", required: ["finalized"]},
+  {id: "getBlockV2", required: ["finalized"]},
+  {id: "getBlockRoot", required: ["finalized"]},
+  {id: "getBlockAttestations", required: ["finalized"]},
+  {id: "getStateV2", required: ["finalized"]},
 
   /* missing route */
   /* #5694 */
-  "getSyncCommitteeRewards",
-  "getBlockRewards",
-  "getAttestationsRewards",
-  "getDepositSnapshot", // Won't fix for now, see https://github.com/ChainSafe/lodestar/issues/5697
-  "getBlindedBlock", // #5699
-  "getNextWithdrawals", // #5696
-  "getDebugForkChoice", // #5700
+  {id: "getSyncCommitteeRewards"},
+  {id: "getBlockRewards"},
+  {id: "getAttestationsRewards"},
+  {id: "getDepositSnapshot"}, // Won't fix for now, see https://github.com/ChainSafe/lodestar/issues/5697
+  {id: "getBlindedBlock"}, // #5699
+  {id: "getNextWithdrawals"}, // #5696
+  {id: "getDebugForkChoice"}, // #5700
   /* #6080 */
-  "getLightClientBootstrap",
-  "getLightClientUpdatesByRange",
-  "getLightClientFinalityUpdate",
-  "getLightClientOptimisticUpdate",
-  "getPoolBLSToExecutionChanges",
-  "submitPoolBLSToExecutionChange",
+  {id: "getLightClientBootstrap"},
+  {id: "getLightClientUpdatesByRange"},
+  {id: "getLightClientFinalityUpdate"},
+  {id: "getLightClientOptimisticUpdate"},
+  {id: "getPoolBLSToExecutionChanges"},
+  {id: "submitPoolBLSToExecutionChange"},
 
   /* 
    #6168
    /query/syncing_status - must be integer
    */
-  "getHealth",
+  {id: "getHealth"},
 
   /* 
    #4638 
    /query - must have required property 'skip_randao_verification'
    */
-  "produceBlockV2",
-  "produceBlindedBlock",
+  {id: "produceBlockV2"},
+  {id: "produceBlindedBlock"},
 ];
 
 const openApiJson = await fetchOpenApiSpec(openApiFile);
@@ -147,7 +147,7 @@ runTestCheckAgainstSpec(
     // TODO: Investigate why schema validation fails otherwise
     routesDropOneOf: ["produceBlockV2", "produceBlindedBlock", "publishBlindedBlock"],
   },
-  ignoredOperationsIds
+  ignoredOperations
 );
 
 const ignoredTopics = [
