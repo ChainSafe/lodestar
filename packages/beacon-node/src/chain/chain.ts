@@ -1,5 +1,5 @@
 import path from "node:path";
-import {CompositeTypeAny, fromHexString, TreeView, Type} from "@chainsafe/ssz";
+import {CompositeTypeAny, fromHexString, toHexString, TreeView, Type} from "@chainsafe/ssz";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
@@ -25,6 +25,7 @@ import {
   deneb,
   Wei,
   bellatrix,
+  isBlindedBeaconBlock,
 } from "@lodestar/types";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
@@ -496,6 +497,17 @@ export class BeaconChain implements IBeaconChain {
       proposerPubKey,
     });
 
+    // The hashtree root computed here for debug log will get cached and hence won't introduce additional delays
+    const bodyRoot =
+      blockType === BlockType.Full
+        ? this.config.getForkTypes(slot).BeaconBlockBody.hashTreeRoot(body)
+        : this.config.getBlindedForkTypes(slot).BeaconBlockBody.hashTreeRoot(body as allForks.BlindedBeaconBlockBody);
+    this.logger.debug("Computing block post state from the produced body", {
+      slot,
+      bodyRoot: toHexString(bodyRoot),
+      blockType,
+    });
+
     const block = {
       slot,
       proposerIndex,
@@ -503,16 +515,20 @@ export class BeaconChain implements IBeaconChain {
       stateRoot: ZERO_HASH,
       body,
     } as AssembledBlockType<T>;
-
     block.stateRoot = computeNewStateRoot(this.metrics, state, block);
+    const blockRoot =
+      blockType === BlockType.Full
+        ? this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block)
+        : this.config.getBlindedForkTypes(slot).BeaconBlock.hashTreeRoot(block as allForks.BlindedBeaconBlock);
+    const blockRootHex = toHex(blockRoot);
 
     // track the produced block for consensus broadcast validations
-    const blockRoot = this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block);
-    const blockRootHex = toHex(blockRoot);
     if (blockType === BlockType.Full) {
+      this.logger.debug("Setting executionPayload cache for produced block", {blockRootHex, slot, blockType});
       this.producedBlockRoot.set(blockRootHex, (block as bellatrix.BeaconBlock).body.executionPayload ?? null);
       this.metrics?.blockProductionCaches.producedBlockRoot.set(this.producedBlockRoot.size);
     } else {
+      this.logger.debug("Tracking the produced blinded block", {blockRootHex, slot, blockType});
       this.producedBlindedBlockRoot.add(blockRootHex);
       this.metrics?.blockProductionCaches.producedBlindedBlockRoot.set(this.producedBlindedBlockRoot.size);
     }
@@ -622,21 +638,32 @@ export class BeaconChain implements IBeaconChain {
     return this.reprocessController.waitForBlockOfAttestation(slot, root);
   }
 
+  persistBlock(data: allForks.BeaconBlock | allForks.BlindedBeaconBlock, suffix?: string): void {
+    const slot = data.slot;
+    if (isBlindedBeaconBlock(data)) {
+      const sszType = this.config.getBlindedForkTypes(slot).BeaconBlock;
+      void this.persistSszObject("BlindedBeaconBlock", sszType.serialize(data), sszType.hashTreeRoot(data), suffix);
+    } else {
+      const sszType = this.config.getForkTypes(slot).BeaconBlock;
+      void this.persistSszObject("BeaconBlock", sszType.serialize(data), sszType.hashTreeRoot(data), suffix);
+    }
+  }
+
   persistInvalidSszValue<T>(type: Type<T>, sszObject: T, suffix?: string): void {
     if (this.opts.persistInvalidSszObjects) {
-      void this.persistInvalidSszObject(type.typeName, type.serialize(sszObject), type.hashTreeRoot(sszObject), suffix);
+      void this.persistSszObject(type.typeName, type.serialize(sszObject), type.hashTreeRoot(sszObject), suffix);
     }
   }
 
   persistInvalidSszBytes(typeName: string, sszBytes: Uint8Array, suffix?: string): void {
     if (this.opts.persistInvalidSszObjects) {
-      void this.persistInvalidSszObject(typeName, sszBytes, sszBytes, suffix);
+      void this.persistSszObject(typeName, sszBytes, sszBytes, suffix);
     }
   }
 
   persistInvalidSszView(view: TreeView<CompositeTypeAny>, suffix?: string): void {
     if (this.opts.persistInvalidSszObjects) {
-      void this.persistInvalidSszObject(view.type.typeName, view.serialize(), view.hashTreeRoot(), suffix);
+      void this.persistSszObject(view.type.typeName, view.serialize(), view.hashTreeRoot(), suffix);
     }
   }
 
@@ -729,16 +756,12 @@ export class BeaconChain implements IBeaconChain {
     return {state: blockState, stateId: "block_state_any_epoch", shouldWarn: true};
   }
 
-  private async persistInvalidSszObject(
+  private async persistSszObject(
     typeName: string,
     bytes: Uint8Array,
     root: Uint8Array,
     suffix?: string
   ): Promise<void> {
-    if (!this.opts.persistInvalidSszObjects) {
-      return;
-    }
-
     const now = new Date();
     // yyyy-MM-dd
     const dateStr = now.toISOString().split("T")[0];

@@ -169,6 +169,7 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
       valProposerConfig,
       distributed: args.distributed,
       useProduceBlockV3: args.useProduceBlockV3,
+      broadcastValidation: parseBroadcastValidation(args.broadcastValidation),
     },
     metrics
   );
@@ -267,4 +268,19 @@ function parseBuilderSelection(builderSelection?: string): routes.validator.Buil
     }
   }
   return builderSelection as routes.validator.BuilderSelection;
+}
+
+function parseBroadcastValidation(broadcastValidation?: string): routes.beacon.BroadcastValidation | undefined {
+  if (broadcastValidation) {
+    switch (broadcastValidation) {
+      case "gossip":
+      case "consensus":
+      case "consensus_and_equivocation":
+        break;
+      default:
+        throw Error("Invalid input for broadcastValidation, check help");
+    }
+  }
+
+  return broadcastValidation as routes.beacon.BroadcastValidation;
 }

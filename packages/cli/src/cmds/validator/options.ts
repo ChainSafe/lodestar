@@ -47,6 +47,7 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     "builder.selection"?: string;
 
     useProduceBlockV3?: boolean;
+    broadcastValidation?: string;
 
     importKeystores?: string[];
     importKeystoresPassword?: string;
@@ -248,6 +249,12 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     type: "boolean",
     description: "Enable/disable usage of produceBlockV3 that might not be supported by all beacon clients yet",
     defaultDescription: `${defaultOptions.useProduceBlockV3}`,
+  },
+
+  broadcastValidation: {
+    type: "string",
+    description: "Validations to be run by beacon node for the signed block prior to publishing",
+    defaultDescription: `${defaultOptions.broadcastValidation}`,
   },
 
   importKeystores: {

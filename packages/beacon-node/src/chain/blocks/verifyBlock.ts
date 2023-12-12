@@ -7,7 +7,7 @@ import {
 } from "@lodestar/state-transition";
 import {bellatrix} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
-import {ProtoBlock} from "@lodestar/fork-choice";
+import {ProtoBlock, ExecutionStatus} from "@lodestar/fork-choice";
 import {ChainForkConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
@@ -89,7 +89,14 @@ export async function verifyBlocksInEpoch(
     // batch all I/O operations to reduce overhead
     const [segmentExecStatus, {postStates, proposerBalanceDeltas}] = await Promise.all([
       // Execution payloads
-      verifyBlocksExecutionPayload(this, parentBlock, blocks, preState0, abortController.signal, opts),
+      opts.skipVerifyExecutionPayload !== true
+        ? verifyBlocksExecutionPayload(this, parentBlock, blocks, preState0, abortController.signal, opts)
+        : Promise.resolve({
+            execAborted: null,
+            executionStatuses: blocks.map((_blk) => ExecutionStatus.Syncing),
+            mergeBlockFound: null,
+          } as SegmentExecStatus),
+
       // Run state transition only
       // TODO: Ensure it yields to allow flushing to workers and engine API
       verifyBlocksStateTransitionOnly(
@@ -103,37 +110,43 @@ export async function verifyBlocksInEpoch(
       ),
 
       // All signatures at once
-      verifyBlocksSignatures(this.bls, this.logger, this.metrics, preState0, blocks, opts),
+      opts.skipVerifyBlockSignatures !== true
+        ? verifyBlocksSignatures(this.bls, this.logger, this.metrics, preState0, blocks, opts)
+        : Promise.resolve(),
 
       // ideally we want to only persist blocks after verifying them however the reality is there are
       // rarely invalid blocks we'll batch all I/O operation here to reduce the overhead if there's
       // an error, we'll remove blocks not in forkchoice
-      opts.eagerPersistBlock ? writeBlockInputToDb.call(this, blocksInput) : Promise.resolve(),
+      opts.verifyOnly !== true && opts.eagerPersistBlock
+        ? writeBlockInputToDb.call(this, blocksInput)
+        : Promise.resolve(),
     ]);
 
-    if (segmentExecStatus.execAborted === null && segmentExecStatus.mergeBlockFound !== null) {
-      // merge block found and is fully valid = state transition + signatures + execution payload.
-      // TODO: Will this banner be logged during syncing?
-      logOnPowBlock(this.logger, this.config, segmentExecStatus.mergeBlockFound);
-    }
+    if (opts.verifyOnly !== true) {
+      if (segmentExecStatus.execAborted === null && segmentExecStatus.mergeBlockFound !== null) {
+        // merge block found and is fully valid = state transition + signatures + execution payload.
+        // TODO: Will this banner be logged during syncing?
+        logOnPowBlock(this.logger, this.config, segmentExecStatus.mergeBlockFound);
+      }
 
-    const fromFork = this.config.getForkName(parentBlock.slot);
-    const toFork = this.config.getForkName(blocks[blocks.length - 1].message.slot);
+      const fromFork = this.config.getForkName(parentBlock.slot);
+      const toFork = this.config.getForkName(blocks[blocks.length - 1].message.slot);
 
-    // If transition through toFork, note won't happen if ${toFork}_EPOCH = 0, will log double on re-org
-    if (toFork !== fromFork) {
-      switch (toFork) {
-        case ForkName.capella:
-          this.logger.info(CAPELLA_OWL_BANNER);
-          this.logger.info("Activating withdrawals", {epoch: this.config.CAPELLA_FORK_EPOCH});
-          break;
+      // If transition through toFork, note won't happen if ${toFork}_EPOCH = 0, will log double on re-org
+      if (toFork !== fromFork) {
+        switch (toFork) {
+          case ForkName.capella:
+            this.logger.info(CAPELLA_OWL_BANNER);
+            this.logger.info("Activating withdrawals", {epoch: this.config.CAPELLA_FORK_EPOCH});
+            break;
 
-        case ForkName.deneb:
-          this.logger.info(DENEB_BLOWFISH_BANNER);
-          this.logger.info("Activating blobs", {epoch: this.config.DENEB_FORK_EPOCH});
-          break;
+          case ForkName.deneb:
+            this.logger.info(DENEB_BLOWFISH_BANNER);
+            this.logger.info("Activating blobs", {epoch: this.config.DENEB_FORK_EPOCH});
+            break;
 
-        default:
+          default:
+        }
       }
     }
 

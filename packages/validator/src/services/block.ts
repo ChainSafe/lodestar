@@ -70,7 +70,7 @@ export class BlockProposingService {
     private readonly clock: IClock,
     private readonly validatorStore: ValidatorStore,
     private readonly metrics: Metrics | null,
-    private readonly opts: {useProduceBlockV3: boolean}
+    private readonly opts: {useProduceBlockV3: boolean; broadcastValidation: routes.beacon.BroadcastValidation}
   ) {
     this.dutiesService = new BlockDutiesService(
       config,
@@ -144,7 +144,7 @@ export class BlockProposingService {
       this.logger.debug("Produced block", {...debugLogCtx, ...blockContents.debugLogCtx});
       this.metrics?.blocksProduced.inc();
 
-      const signedBlockPromise = this.validatorStore.signBlock(pubkey, blockContents.block, slot);
+      const signedBlockPromise = this.validatorStore.signBlock(pubkey, blockContents.block, slot, this.logger);
       const signedBlobPromises =
         blockContents.blobs !== null
           ? blockContents.blobs.map((blob) => this.validatorStore.signBlob(pubkey, blob, slot))
@@ -158,7 +158,9 @@ export class BlockProposingService {
         signedBlobs = undefined;
       }
 
-      await this.publishBlockWrapper(signedBlock, signedBlobs).catch((e: Error) => {
+      await this.publishBlockWrapper(signedBlock, signedBlobs, {
+        broadcastValidation: this.opts.broadcastValidation,
+      }).catch((e: Error) => {
         this.metrics?.blockProposingErrors.inc({error: "publish"});
         throw extendError(e, "Failed to publish block");
       });
@@ -172,22 +174,29 @@ export class BlockProposingService {
 
   private publishBlockWrapper = async (
     signedBlock: allForks.FullOrBlindedSignedBeaconBlock,
-    signedBlobSidecars?: allForks.FullOrBlindedSignedBlobSidecar[]
+    signedBlobSidecars?: allForks.FullOrBlindedSignedBlobSidecar[],
+    opts: {broadcastValidation?: routes.beacon.BroadcastValidation} = {}
   ): Promise<void> => {
     if (signedBlobSidecars === undefined) {
       ApiError.assert(
         isBlindedBeaconBlock(signedBlock.message)
-          ? await this.api.beacon.publishBlindedBlock(signedBlock as allForks.SignedBlindedBeaconBlock)
-          : await this.api.beacon.publishBlockV2(signedBlock as allForks.SignedBeaconBlock)
+          ? await this.api.beacon.publishBlindedBlockV2(signedBlock as allForks.SignedBlindedBeaconBlock, opts)
+          : await this.api.beacon.publishBlockV2(signedBlock as allForks.SignedBeaconBlock, opts)
       );
     } else {
       ApiError.assert(
         isBlindedBeaconBlock(signedBlock.message)
-          ? await this.api.beacon.publishBlindedBlock({
-              signedBlindedBlock: signedBlock,
-              signedBlindedBlobSidecars: signedBlobSidecars,
-            } as allForks.SignedBlindedBlockContents)
-          : await this.api.beacon.publishBlockV2({signedBlock, signedBlobSidecars} as allForks.SignedBlockContents)
+          ? await this.api.beacon.publishBlindedBlockV2(
+              {
+                signedBlindedBlock: signedBlock,
+                signedBlindedBlobSidecars: signedBlobSidecars,
+              } as allForks.SignedBlindedBlockContents,
+              opts
+            )
+          : await this.api.beacon.publishBlockV2(
+              {signedBlock, signedBlobSidecars} as allForks.SignedBlockContents,
+              opts
+            )
       );
     }
   };
