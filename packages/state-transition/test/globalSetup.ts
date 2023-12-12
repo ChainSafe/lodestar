@@ -17,13 +17,4 @@ export async function setup(): Promise<void> {
 }
 
 export async function teardown(): Promise<void> {
-  // if (teardownHappened) throw new Error("teardown called twice");
-  // teardownHappened = true;
-  // tear it down here
-  // await server.close()
-  // await sleep(25);
-  // const duration = Date.now() - start
-  // console.log(`globalTeardown named-exports.js, took ${(duration)}ms`)
-  // if (duration > 4000)
-  //  throw new Error('error from teardown in globalSetup named-exports.js')
 }
