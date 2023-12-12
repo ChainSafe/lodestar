@@ -1,6 +1,5 @@
-import {Options} from "yargs";
 import {LogArgs, logOptions} from "../../options/logOptions.js";
-import {CliCommandOptions} from "../../util/index.js";
+import {CliOptionDefinition, CliCommandOptions} from "../../util/index.js";
 import {MetricsArgs, options as metricsOptions} from "../../options/beaconNodeOptions/metrics.js";
 import {defaultListenAddress, defaultP2pPort, defaultP2pPort6} from "../../options/beaconNodeOptions/network.js";
 
@@ -102,7 +101,7 @@ export const bootnodeExtraOptions: CliCommandOptions<BootnodeExtraArgs> = {
 
 export type BootnodeArgs = BootnodeExtraArgs & LogArgs & MetricsArgs;
 
-export const bootnodeOptions: {[k: string]: Options} = {
+export const bootnodeOptions: {[k: string]: CliOptionDefinition} = {
   ...bootnodeExtraOptions,
   ...logOptions,
   ...metricsOptions,

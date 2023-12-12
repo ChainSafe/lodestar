@@ -12,9 +12,11 @@ import {validatorHandler} from "./handler.js";
 export const validator: CliCommand<IValidatorCliArgs, GlobalArgs> = {
   command: "validator",
   describe: "Run one or multiple validator clients",
+  docsFolder: "validator-management",
   examples: [
     {
       command: "validator --network goerli",
+      title: "Base `validator` command",
       description:
         "Run one validator client with all the keystores available in the directory" +
         ` ${getAccountPaths({dataDir: ".goerli"}, "goerli").keystoresDir}`,

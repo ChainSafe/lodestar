@@ -1,4 +1,4 @@
-# Local testnet
+# Setting-Up a Testnet
 
 To quickly test and run Lodestar we recommend starting a local testnet. We recommend a simple configuration of two beacon nodes with multiple validators
 
