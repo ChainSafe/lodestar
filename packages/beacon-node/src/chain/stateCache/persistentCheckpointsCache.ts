@@ -156,13 +156,13 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     const logMeta = {persistedKey: toHexString(persistedKey)};
 
     // reload from disk or db based on closest checkpoint
-    this.logger.verbose("Reload: read state", logMeta);
+    this.logger.debug("Reload: read state", logMeta);
     const newStateBytes = await this.persistentApis.read(persistedKey);
     if (newStateBytes === null) {
-      this.logger.verbose("Reload: read state failed", logMeta);
+      this.logger.warn("Reload: read state failed", logMeta);
       return null;
     }
-    this.logger.verbose("Reload: read state successfully", logMeta);
+    this.logger.debug("Reload: read state successfully", logMeta);
     this.metrics?.stateRemoveCount.inc({reason: RemovePersistedStateReason.reload});
     this.metrics?.stateReloadSecFromSlot.observe(this.clock?.secFromSlot(this.clock?.currentSlot ?? 0) ?? 0);
     const closestState = this.findSeedStateToReload(cp) ?? this.getHeadState?.();
@@ -170,7 +170,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       throw new Error("No closest state found for cp " + toCheckpointKey(cp));
     }
     this.metrics?.stateReloadEpochDiff.observe(Math.abs(closestState.epochCtx.epoch - cp.epoch));
-    this.logger.verbose("Reload: found closest state", {...logMeta, seedSlot: closestState.slot});
+    this.logger.debug("Reload: found closest state", {...logMeta, seedSlot: closestState.slot});
     const timer = this.metrics?.stateReloadDuration.startTimer();
 
     try {
@@ -178,7 +178,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
         shufflingGetter: this.shufflingCache.getSync.bind(this.shufflingCache),
       });
       timer?.();
-      this.logger.verbose("Reload state successfully", {
+      this.logger.debug("Reload state successfully", {
         ...logMeta,
         stateSlot: newCachedState.slot,
         seedSlot: closestState.slot,
@@ -411,24 +411,27 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     let persistCount = 0;
     // it's important to sort the epochs in ascending order, in case of big reorg we always want to keep the most recent checkpoint states
     const sortedEpochs = Array.from(this.epochIndex.keys()).sort((a, b) => a - b);
-    while (sortedEpochs.length > this.maxEpochsInMemory) {
-      const lowestEpoch = sortedEpochs.shift();
-      if (lowestEpoch === undefined) {
-        // should not happen
-        throw new Error("No epoch in memory");
-      }
+    if (sortedEpochs.length <= this.maxEpochsInMemory) {
+      return 0;
+    }
+
+    for (const lowestEpoch of sortedEpochs.slice(0, sortedEpochs.length - this.maxEpochsInMemory)) {
       const epochBoundarySlot = computeStartSlotAtEpoch(lowestEpoch);
       const epochBoundaryRoot =
         epochBoundarySlot === state.slot ? fromHexString(blockRootHex) : getBlockRootAtSlot(state, epochBoundarySlot);
-      const rootHexPersist = toHexString(epochBoundaryRoot);
+      const epochBoundaryHex = toHexString(epochBoundaryRoot);
+
       // for each epoch, usually there are 2 rootHex respective to the 2 checkpoint states: Previous Root Checkpoint State and Current Root Checkpoint State
       for (const rootHex of this.epochIndex.get(lowestEpoch) ?? []) {
         const cpKey = toCheckpointKey({epoch: lowestEpoch, rootHex});
         const cacheItem = this.cache.get(cpKey);
+
         if (cacheItem !== undefined && isInMemoryCacheItem(cacheItem)) {
-          const state = cacheItem.value;
           // this is state in memory, we don't care if the checkpoint state is already persisted
-          if (rootHex === rootHexPersist) {
+          const state = cacheItem.value;
+          const logMeta = {stateSlot: state.slot, rootHex, epochBoundaryHex};
+
+          if (rootHex === epochBoundaryHex) {
             // persist
             // do not update epochIndex
             this.metrics?.statePersistSecFromSlot.observe(this.clock?.secFromSlot(this.clock?.currentSlot ?? 0) ?? 0);
@@ -441,15 +444,14 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
             persistCount++;
             this.logger.verbose("Prune checkpoint state from memory and persist to disk", {
               persistedKey: toHexString(persistedKey),
-              stateSlot: state.slot,
-              rootHex,
+              ...logMeta,
             });
           } else {
             // delete the state from memory
             this.epochIndex.get(lowestEpoch)?.delete(rootHex);
             this.cache.delete(cpKey);
             this.metrics?.statePruneFromMemoryCount.inc();
-            this.logger.verbose("Prune checkpoint state from memory", {stateSlot: state.slot, rootHex});
+            this.logger.verbose("Prune checkpoint state from memory", logMeta);
           }
         }
       }
