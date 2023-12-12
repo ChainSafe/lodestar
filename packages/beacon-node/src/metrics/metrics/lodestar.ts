@@ -286,6 +286,12 @@ export function createLodestarMetrics(
       help: "Time to call commit after process a single epoch transition in seconds",
       buckets: [0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1],
     }),
+    epochTransitionStepTime: register.histogram<"step">({
+      name: "lodestar_stfn_epoch_transition_step_seconds",
+      help: "Time to call each step of epoch transition in seconds",
+      labelNames: ["step"],
+      buckets: [0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1],
+    }),
     processBlockTime: register.histogram({
       name: "lodestar_stfn_process_block_seconds",
       help: "Time to process a single block in seconds",
