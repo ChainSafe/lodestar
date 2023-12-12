@@ -26,13 +26,13 @@ export type Operation = {
 
 /**
  * Run all tests defined as part of the OpenAPI spec provided as `openApiJson`.
- * 
- * @param openApiJson 
- * @param routesData 
- * @param reqSerializers 
- * @param returnTypes 
- * @param testDatas 
- * @param opts 
+ *
+ * @param openApiJson
+ * @param routesData
+ * @param reqSerializers
+ * @param returnTypes
+ * @param testDatas
+ * @param opts
  * @param filteredOperations an array of Operation that will be ignored during tests. When `required` properties are specified, associated operation is tested but required properties are omitted.
  */
 export function runTestCheckAgainstSpec(
@@ -47,7 +47,7 @@ export function runTestCheckAgainstSpec(
   const openApiSpec = parseOpenApiSpec(openApiJson, opts);
 
   for (const [operationId, routeSpec] of openApiSpec.entries()) {
-    const filteredOperation = filteredOperations.find(e => e.id === operationId);
+    const filteredOperation = filteredOperations.find((e) => e.id === operationId);
     if (filteredOperation && !filteredOperation.required) {
       // Operation is part of `filteredOperations` but no `required` properties are specified, skipping operation validation
       continue;
@@ -113,7 +113,7 @@ export function runTestCheckAgainstSpec(
           const ignoredProperties = filteredOperation?.required;
           if (ignoredProperties) {
             // Remove specified fields from schema validation
-            responseOkSchema.required = responseOkSchema.required?.filter(e => !ignoredProperties.includes(e));
+            responseOkSchema.required = responseOkSchema.required?.filter((e) => !ignoredProperties.includes(e));
           }
           // Validate response
           validateSchema(responseOkSchema, resJson, "response");

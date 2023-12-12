@@ -211,7 +211,6 @@ describe("eventstream event data", () => {
       if (testEvent == null) {
         throw Error(`No eventTestData for ${topic}`);
       }
-console.log(eventTestData)
       const testEventJson = eventSerdes.toJson({
         type: topic as routes.events.EventType,
         message: testEvent,
