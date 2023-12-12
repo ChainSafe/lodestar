@@ -65,41 +65,52 @@ export function processEpoch(
     throw new Error("Lodestar does not support this network, parameters don't fit number value inside state.slashings");
   }
 
-  const justificationAndFinalizationTimer = metrics?.epochTransitionStepTime.startTimer({
-    step: "processJustificationAndFinalization",
-  });
-  processJustificationAndFinalization(state, cache);
-  justificationAndFinalizationTimer?.();
+  {
+    const timer = metrics?.epochTransitionStepTime.startTimer({
+      step: "processJustificationAndFinalization",
+    });
+    processJustificationAndFinalization(state, cache);
+    timer?.();
+  }
 
   if (fork >= ForkSeq.altair) {
-    const inactivityUpdatesTimer = metrics?.epochTransitionStepTime.startTimer({step: "processInactivityUpdates"});
+    const timer = metrics?.epochTransitionStepTime.startTimer({step: "processInactivityUpdates"});
     processInactivityUpdates(state as CachedBeaconStateAltair, cache);
-    inactivityUpdatesTimer?.();
+    timer?.();
   }
 
   // processRewardsAndPenalties() is 2nd step in the specs, we optimize to do it
   // after processSlashings() to update balances only once
   // processRewardsAndPenalties(state, cache);
-  const registryUpdatesTimer = metrics?.epochTransitionStepTime.startTimer({step: "processRegistryUpdates"});
-  processRegistryUpdates(state, cache);
-  registryUpdatesTimer?.();
+  {
+    const timer = metrics?.epochTransitionStepTime.startTimer({step: "processRegistryUpdates"});
+    processRegistryUpdates(state, cache);
+    timer?.();
+  }
 
   // accumulate slashing penalties and only update balances once in processRewardsAndPenalties()
-  const slashingsTimer = metrics?.epochTransitionStepTime.startTimer({step: "processSlashings"});
-  const slashingPenalties = processSlashings(state, cache, false);
-  slashingsTimer?.();
+  let slashingPenalties: number[];
+  {
+    const timer = metrics?.epochTransitionStepTime.startTimer({step: "processSlashings"});
+    slashingPenalties = processSlashings(state, cache, false);
+    timer?.();
+  }
 
-  const rewardsAndPenaltiesTimer = metrics?.epochTransitionStepTime.startTimer({step: "processRewardsAndPenalties"});
-  processRewardsAndPenalties(state, cache, slashingPenalties);
-  rewardsAndPenaltiesTimer?.();
+  {
+    const timer = metrics?.epochTransitionStepTime.startTimer({step: "processRewardsAndPenalties"});
+    processRewardsAndPenalties(state, cache, slashingPenalties);
+    timer?.();
+  }
 
   processEth1DataReset(state, cache);
 
-  const effectiveBalanceUpdatesTimer = metrics?.epochTransitionStepTime.startTimer({
-    step: "processEffectiveBalanceUpdates",
-  });
-  processEffectiveBalanceUpdates(state, cache);
-  effectiveBalanceUpdatesTimer?.();
+  {
+    const timer = metrics?.epochTransitionStepTime.startTimer({
+      step: "processEffectiveBalanceUpdates",
+    });
+    processEffectiveBalanceUpdates(state, cache);
+    timer?.();
+  }
 
   processSlashingsReset(state, cache);
   processRandaoMixesReset(state, cache);
@@ -113,16 +124,20 @@ export function processEpoch(
   if (fork === ForkSeq.phase0) {
     processParticipationRecordUpdates(state as CachedBeaconStatePhase0);
   } else {
-    const participationFlagUpdatesTimer = metrics?.epochTransitionStepTime.startTimer({
-      step: "processParticipationFlagUpdates",
-    });
-    processParticipationFlagUpdates(state as CachedBeaconStateAltair);
-    participationFlagUpdatesTimer?.();
+    {
+      const timer = metrics?.epochTransitionStepTime.startTimer({
+        step: "processParticipationFlagUpdates",
+      });
+      processParticipationFlagUpdates(state as CachedBeaconStateAltair);
+      timer?.();
+    }
 
-    const syncCommitteeUpdatesTimer = metrics?.epochTransitionStepTime.startTimer({
-      step: "processSyncCommitteeUpdates",
-    });
-    processSyncCommitteeUpdates(state as CachedBeaconStateAltair);
-    syncCommitteeUpdatesTimer?.();
+    {
+      const timer = metrics?.epochTransitionStepTime.startTimer({
+        step: "processSyncCommitteeUpdates",
+      });
+      processSyncCommitteeUpdates(state as CachedBeaconStateAltair);
+      timer?.();
+    }
   }
 }
