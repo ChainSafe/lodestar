@@ -2,30 +2,11 @@ import {
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
   CachedBeaconStatePhase0,
-  RootCache,
   getAttesterSlashableIndices,
+  processAttestationsAltair,
 } from "@lodestar/state-transition";
-import {getAttestationParticipationStatus} from "@lodestar/state-transition";
 import {ValidatorIndex, allForks, altair, phase0} from "@lodestar/types";
-import {
-  PROPOSER_WEIGHT,
-  TIMELY_HEAD_FLAG_INDEX,
-  TIMELY_HEAD_WEIGHT,
-  TIMELY_SOURCE_FLAG_INDEX,
-  TIMELY_SOURCE_WEIGHT,
-  TIMELY_TARGET_FLAG_INDEX,
-  TIMELY_TARGET_WEIGHT,
-  WEIGHT_DENOMINATOR,
-  ForkName,
-  WHISTLEBLOWER_REWARD_QUOTIENT,
-} from "@lodestar/params";
-
-const PROPOSER_REWARD_DOMINATOR = ((WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIGHT_DENOMINATOR) / PROPOSER_WEIGHT;
-
-/** Same to https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/beacon-chain.md#has_flag */
-const TIMELY_SOURCE = 1 << TIMELY_SOURCE_FLAG_INDEX;
-const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;
-const TIMELY_HEAD = 1 << TIMELY_HEAD_FLAG_INDEX;
+import {ForkName, WHISTLEBLOWER_REWARD_QUOTIENT} from "@lodestar/params";
 
 type SubRewardValue = number; // All reward values should be integer
 
@@ -82,63 +63,19 @@ function computeBlockAttestationRewardPhase0(
 }
 
 /**
- * Calculate rewards received by block proposer for incuding attestations since Altair. Mimics `processAttestationsAltair()`
+ * Calculate rewards received by block proposer for incuding attestations since Altair.
+ * Reuses `processAttestationsAltair()`. Has dependency on RewardCache
  */
 function computeBlockAttestationRewardAltair(
   block: altair.BeaconBlock,
   state: CachedBeaconStateAltair
 ): SubRewardValue {
-  const {epochCtx} = state;
-  const {effectiveBalanceIncrements} = epochCtx;
-  const stateSlot = state.slot;
-  const rootCache = new RootCache(state);
-  const currentEpoch = epochCtx.epoch;
   const fork = state.config.getForkSeq(block.slot);
+  const {attestations} = block.body;
 
-  let blockAttestationReward = 0;
+  processAttestationsAltair(fork, state, attestations, false);
 
-  for (const attestation of block.body.attestations) {
-    const data = attestation.data;
-
-    const committeeIndices = epochCtx.getBeaconCommittee(data.slot, data.index);
-    const attestingIndices = attestation.aggregationBits.intersectValues(committeeIndices);
-
-    const inCurrentEpoch = data.target.epoch === currentEpoch;
-    const epochParticipation = inCurrentEpoch ? state.currentEpochParticipation : state.previousEpochParticipation;
-
-    const flagsAttestation = getAttestationParticipationStatus(
-      fork,
-      data,
-      stateSlot - data.slot,
-      epochCtx.epoch,
-      rootCache
-    );
-
-    let totalBalanceIncrementsWithWeight = 0;
-    for (const index of attestingIndices) {
-      const flags = epochParticipation.get(index);
-      epochParticipation.set(index, flagsAttestation);
-      const flagsNewSet = ~flags & flagsAttestation;
-
-      // Spec:
-      // baseReward = state.validators[index].effectiveBalance / EFFECTIVE_BALANCE_INCREMENT * baseRewardPerIncrement;
-      // proposerRewardNumerator += baseReward * totalWeight
-      let totalWeight = 0;
-      if ((flagsNewSet & TIMELY_SOURCE) === TIMELY_SOURCE) totalWeight += TIMELY_SOURCE_WEIGHT;
-      if ((flagsNewSet & TIMELY_TARGET) === TIMELY_TARGET) totalWeight += TIMELY_TARGET_WEIGHT;
-      if ((flagsNewSet & TIMELY_HEAD) === TIMELY_HEAD) totalWeight += TIMELY_HEAD_WEIGHT;
-
-      if (totalWeight > 0) {
-        totalBalanceIncrementsWithWeight += effectiveBalanceIncrements[index] * totalWeight;
-      }
-    }
-
-    const totalIncrements = totalBalanceIncrementsWithWeight;
-    const proposerRewardNumerator = totalIncrements * state.epochCtx.baseRewardPerIncrement;
-    blockAttestationReward += Math.floor(proposerRewardNumerator / PROPOSER_REWARD_DOMINATOR);
-  }
-
-  return blockAttestationReward;
+  return state.proposerRewards.attestations;
 }
 
 function computeSyncAggregateReward(block: altair.BeaconBlock, state: CachedBeaconStateAltair): SubRewardValue {
