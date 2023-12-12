@@ -7,7 +7,7 @@ import {processProposerSlashing} from "./processProposerSlashing.js";
 import {processAttesterSlashing} from "./processAttesterSlashing.js";
 import {processDeposit} from "./processDeposit.js";
 import {processVoluntaryExit} from "./processVoluntaryExit.js";
-import {processBlsToExecutionChange} from "./processBLSToExecutionChange.js";
+import {processBlsToExecutionChange} from "./processBlsToExecutionChange.js";
 import {ProcessBlockOpts} from "./types.js";
 
 export {

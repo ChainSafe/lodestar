@@ -100,7 +100,7 @@ function fillVoluntaryExits(pool: OpPool, state: CachedBeaconStateAltair, count:
 // So it will be in the pool but not returned from `getSlashingsAndExits`
 function fillBlsToExecutionChanges(pool: OpPool, state: CachedBeaconStateAltair, count: number): OpPool {
   for (const blsToExecution of generateBlsToExecutionChanges(state, count)) {
-    pool.insertBLSToExecutionChange(blsToExecution);
+    pool.insertBlsToExecutionChange(blsToExecution);
   }
 
   return pool;
