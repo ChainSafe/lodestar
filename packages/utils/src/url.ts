@@ -18,3 +18,12 @@ export function isValidHttpUrl(urlStr: string): boolean {
 
   return url.protocol === "http:" || url.protocol === "https:";
 }
+
+/**
+ * Sanitize URL to prevent leaking user credentials in logs
+ *
+ * Note: `urlStr` must be a valid URL
+ */
+export function toSafePrintableUrl(urlStr: string): string {
+  return new URL(urlStr).origin;
+}
