@@ -47,8 +47,8 @@ export function runTestCheckAgainstSpec(
   const openApiSpec = parseOpenApiSpec(openApiJson, opts);
 
   for (const [operationId, routeSpec] of openApiSpec.entries()) {
-    const ignoredFields = filteredOperations.find(e => e.id === operationId)?.required;
-    if (!ignoredFields) {
+    const filteredOperation = filteredOperations.find(e => e.id === operationId);
+    if (filteredOperation && !filteredOperation.required) {
       // Operation is part of `filteredOperations` but no `required` properties are specified, skipping operation validation
       continue;
     }
@@ -110,9 +110,10 @@ export function runTestCheckAgainstSpec(
             }
           }
 
-          if (ignoredFields) {
+          const ignoredProperties = filteredOperation?.required;
+          if (ignoredProperties) {
             // Remove specified fields from schema validation
-            responseOkSchema.required = responseOkSchema.required?.filter(e => !ignoredFields.includes(e));
+            responseOkSchema.required = responseOkSchema.required?.filter(e => !ignoredProperties.includes(e));
           }
           // Validate response
           validateSchema(responseOkSchema, resJson, "response");
