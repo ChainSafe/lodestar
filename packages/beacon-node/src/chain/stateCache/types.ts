@@ -64,13 +64,6 @@ export enum CacheType {
   inMemory = "in-memory",
 }
 
-// Reason to remove a checkpoint state from file/db
-export enum RemovePersistedStateReason {
-  pruneFinalized = "prune_finalized",
-  reload = "reload",
-  stateUpdate = "state_update",
-}
-
 export type GetHeadStateFn = () => CachedBeaconStateAllForks;
 
 export type PersistentCheckpointStateCacheOpts = {

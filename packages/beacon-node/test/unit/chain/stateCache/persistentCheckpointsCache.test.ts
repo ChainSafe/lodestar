@@ -419,7 +419,7 @@ describe("PersistentCheckpointStateCache", function () {
     //                                    ^           ^
     //                                    |           |
     //                            cp1a={0a, 21}     {0a, 22}=cp2a
-    it("reorg 3 epochs", async function () {
+    it("reorg 3 epochs, persist cp 0a", async function () {
       // process root2 state
       cache.add(cp2, states["cp2"]);
       expect(await cache.processState(toHexString(cp2.root), states["cp2"])).toEqual(1);
@@ -453,13 +453,69 @@ describe("PersistentCheckpointStateCache", function () {
 
       const root3 = Buffer.alloc(32, 100);
       // process state of root3
-      await cache.processState(toHexString(root3), blockStateRoot3);
+      expect(await cache.processState(toHexString(root3), blockStateRoot3)).toEqual(1);
       await assertPersistedCheckpointState([cp0b, cp0a], [stateBytes["cp0b"], stateBytes["cp0a"]]);
       // epoch 21 and 22 have 2 checkpoint states
       expect(cache.get(cp1Hex)).to.be.not.null;
       expect(cache.get(toCheckpointHex(cp1a))).to.be.not.null;
       expect(cache.get(cp2Hex)).to.be.not.null;
       expect(cache.get(toCheckpointHex(cp2a))).to.be.not.null;
+      // epoch 20 has 0 checkpoint state
+      expect(cache.get(cp0aHex)).to.be.null;
+      expect(cache.get(cp0bHex)).to.be.null;
+    });
+
+    //     epoch: 19         20           21         22          23
+    //            |-----------|-----------|-----------|-----------|
+    //                       ^^           ^           ^     ^
+    //                       ||           |           |     |
+    //                       |0b--------root1--------root2  |
+    //                       ||                             |
+    //                       ||---------------------------root3
+    //                      0a            ^           ^
+    //                                    |           |
+    //                            cp1b={0b, 21}     {0b, 22}=cp2b
+    it("reorg 3 epochs, prune but no persist", async function () {
+      // process root2 state
+      cache.add(cp2, states["cp2"]);
+      expect(await cache.processState(toHexString(cp2.root), states["cp2"])).toEqual(1);
+      await assertPersistedCheckpointState([cp0b], [stateBytes["cp0b"]]);
+      // cp0a was pruned from memory and not in disc
+      expect(await cache.getStateOrBytes(cp0aHex)).to.be.null;
+
+      // regen needs to reload cp0b
+      cache.add(cp0b, states["cp0b"]);
+      expect(await cache.getStateOrBytes(cp0bHex)).toEqual(states["cp0b"]);
+
+      // regen generates cp1b
+      const cp1b = {epoch: 21, root: root0b};
+      const cp1bState = states["cp0b"].clone();
+      cp1bState.slot = 21 * SLOTS_PER_EPOCH;
+      cp1bState.blockRoots.set(startSlotEpoch21 % SLOTS_PER_HISTORICAL_ROOT, root0b);
+      cache.add(cp1b, cp1bState);
+
+      // regen generates cp2b
+      const cp2b = {epoch: 22, root: root0b};
+      const cp2bState = cp1bState.clone();
+      cp2bState.slot = 22 * SLOTS_PER_EPOCH;
+      cp2bState.blockRoots.set(startSlotEpoch22 % SLOTS_PER_HISTORICAL_ROOT, root0b);
+      cache.add(cp2b, cp2bState);
+
+      // block state of root3 in epoch 22 is built on cp2a
+      const blockStateRoot3 = cp2bState.clone();
+      blockStateRoot3.slot = 22 * SLOTS_PER_EPOCH + 3;
+      const root3 = Buffer.alloc(32, 100);
+      // process state of root3, nothing is persisted
+      expect(await cache.processState(toHexString(root3), blockStateRoot3)).toEqual(0);
+      // but state of cp0b is pruned from memory
+      expect(await cache.getStateOrBytes(cp0bHex)).toEqual(stateBytes["cp0b"]);
+      await assertPersistedCheckpointState([cp0b], [stateBytes["cp0b"]]);
+
+      // epoch 21 and 22 have 2 checkpoint states
+      expect(cache.get(cp1Hex)).to.be.not.null;
+      expect(cache.get(toCheckpointHex(cp1b))).to.be.not.null;
+      expect(cache.get(cp2Hex)).to.be.not.null;
+      expect(cache.get(toCheckpointHex(cp2b))).to.be.not.null;
       // epoch 20 has 0 checkpoint state
       expect(cache.get(cp0aHex)).to.be.null;
       expect(cache.get(cp0bHex)).to.be.null;
@@ -560,7 +616,7 @@ describe("PersistentCheckpointStateCache", function () {
     //                       |       |----|-------root2
     //                       0a           |
     //                               cp1a={1a, 21}
-    it("reorg 1 epoch, no persist", async () => {
+    it("reorg 1 epoch, no persist 1a", async () => {
       // root 1a
       expect(fileApisBuffer.size).toEqual(0);
       const root1a = Buffer.alloc(32, 100);
@@ -593,6 +649,44 @@ describe("PersistentCheckpointStateCache", function () {
       expect(cache.get(cp1Hex)?.hashTreeRoot()).toEqual(states["cp1"].hashTreeRoot());
       // keep these 2 cp states at epoch 21
       expect(cache.get(toCheckpointHex(cp1a))).to.be.not.null;
+      expect(cache.get(toCheckpointHex(cp1))).to.be.not.null;
+    });
+
+    //     epoch: 19         20           21         22          23
+    //            |-----------|-----------|-----------|-----------|
+    //                       ^^           ^        ^
+    //                       ||           |        |
+    //                       |0b--------root1      |
+    //                       ||-----------|-------root2
+    //                       0a        {21, 1b}=cp1b
+    it("reorg 1 epoch, no persist 0b", async () => {
+      expect(fileApisBuffer.size).toEqual(0);
+      // cp1
+      cache.add(cp1, states["cp1"]);
+      expect(await cache.processState(toHexString(cp1.root), states["cp1"])).toEqual(1);
+      expect(cache.get(cp1Hex)?.hashTreeRoot()).toEqual(states["cp1"].hashTreeRoot());
+      expect(fileApisBuffer.size).toEqual(1);
+      await assertPersistedCheckpointState([cp0b], [stateBytes["cp0b"]]);
+      expect(cache.get(cp1Hex)?.hashTreeRoot()).toEqual(states["cp1"].hashTreeRoot());
+
+      // simulate regen
+      cache.add(cp0b, states["cp0b"]);
+      expect(await cache.getStateOrBytes(cp0bHex)).toEqual(states["cp0b"]);
+      // root2, regen cp0b
+      const cp1bState = states["cp0b"].clone();
+      cp1bState.slot = 21 * SLOTS_PER_EPOCH;
+      const cp1b = {epoch: 21, root: root0b};
+      cache.add(cp1b, cp1bState);
+      const blockStateRoot2 = cp1bState.clone();
+      blockStateRoot2.slot = 21 * SLOTS_PER_EPOCH + 3;
+      const root2 = Buffer.alloc(32, 100);
+      // process state of root2, nothing is persisted
+      expect(await cache.processState(toHexString(root2), blockStateRoot2)).toEqual(0);
+
+      // but cp0b in-memory state is pruned
+      expect(await cache.getStateOrBytes(cp0bHex)).toEqual(stateBytes["cp0b"]);
+      // keep these 2 cp states at epoch 21
+      expect(cache.get(toCheckpointHex(cp1b))).to.be.not.null;
       expect(cache.get(toCheckpointHex(cp1))).to.be.not.null;
     });
 
@@ -752,15 +846,18 @@ describe("PersistentCheckpointStateCache", function () {
         expect(await cache.getStateOrBytes(cp0aHex)).to.be.null;
         expect(await cache.getStateOrBytes(cp0bHex)).toEqual(stateBytes["cp0b"]);
 
+        // simulate reload cp1b
+        cache.add(cp0b, states["cp0b"]);
+        expect(await cache.getStateOrBytes(cp0bHex)).toEqual(states["cp0b"]);
         const root1b = Buffer.alloc(32, 101);
         const state1b = states["cp0b"].clone();
         state1b.slot = state1a.slot + 1;
         state1b.blockRoots.set(state1b.slot % SLOTS_PER_HISTORICAL_ROOT, root1b);
+        // but no need to persist cp1b
         expect(await cache.processState(toHexString(root1b), state1b)).toEqual(0);
-
-        // nothing change
-        expect(await cache.getStateOrBytes(cp0aHex)).to.be.null;
+        // although states["cp0b"] is pruned
         expect(await cache.getStateOrBytes(cp0bHex)).toEqual(stateBytes["cp0b"]);
+        expect(await cache.getStateOrBytes(cp0aHex)).to.be.null;
       });
 
       //     epoch: 19         20           21         22          23

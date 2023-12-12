@@ -1148,10 +1148,9 @@ export function createLodestarMetrics(
         help: "Histogram of time to load state from db since the clock slot",
         buckets: [0, 2, 4, 6, 8, 10, 12],
       }),
-      stateRemoveCount: register.gauge<"reason">({
-        name: "lodestar_cp_state_cache_state_remove_count",
+      persistedStateRemoveCount: register.gauge({
+        name: "lodestar_cp_state_cache_persisted_state_remove_count",
         help: "Total number of persisted states removed",
-        labelNames: ["reason"],
       }),
     },
 
