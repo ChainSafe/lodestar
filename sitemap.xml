@@ -2,82 +2,82 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://chainsafe.github.io/lodestar/</loc>
-         <lastmod>2023-11-09</lastmod>
+         <lastmod>2023-12-12</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/contributing/</loc>
-         <lastmod>2023-11-09</lastmod>
+         <lastmod>2023-12-12</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/quickstart/</loc>
-         <lastmod>2023-11-09</lastmod>
+         <lastmod>2023-12-12</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/design/depgraph/</loc>
-         <lastmod>2023-11-09</lastmod>
+         <lastmod>2023-12-12</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/install/docker/</loc>
-         <lastmod>2023-11-09</lastmod>
+         <lastmod>2023-12-12</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/install/npm/</loc>
-         <lastmod>2023-11-09</lastmod>
+         <lastmod>2023-12-12</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/install/source/</loc>
-         <lastmod>2023-11-09</lastmod>
+         <lastmod>2023-12-12</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/libraries/</loc>
-         <lastmod>2023-11-09</lastmod>
+         <lastmod>2023-12-12</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/reference/cli/</loc>
-         <lastmod>2023-11-09</lastmod>
+         <lastmod>2023-12-12</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/tools/flamegraphs/</loc>
-         <lastmod>2023-11-09</lastmod>
+         <lastmod>2023-12-12</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/usage/beacon-management/</loc>
-         <lastmod>2023-11-09</lastmod>
+         <lastmod>2023-12-12</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/usage/client-monitoring/</loc>
-         <lastmod>2023-11-09</lastmod>
+         <lastmod>2023-12-12</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/usage/local/</loc>
-         <lastmod>2023-11-09</lastmod>
+         <lastmod>2023-12-12</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/usage/mev-integration/</loc>
-         <lastmod>2023-11-09</lastmod>
+         <lastmod>2023-12-12</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/usage/prometheus-grafana/</loc>
-         <lastmod>2023-11-09</lastmod>
+         <lastmod>2023-12-12</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/usage/validator-management/</loc>
-         <lastmod>2023-11-09</lastmod>
+         <lastmod>2023-12-12</lastmod>
          <changefreq>daily</changefreq>
     </url>
 </urlset>
