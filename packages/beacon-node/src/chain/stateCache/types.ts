@@ -60,8 +60,8 @@ export const CHECKPOINT_STATES_FOLDER = "./unfinalized_checkpoint_states";
 export type CheckpointKey = string;
 
 export enum CacheType {
-  state = "state",
-  persistence = "persistence",
+  persisted = "persisted",
+  inMemory = "in-memory",
 }
 
 // Reason to remove a checkpoint state from file/db

@@ -1121,8 +1121,8 @@ export function createLodestarMetrics(
       }),
       statePersistDuration: register.histogram({
         name: "lodestar_cp_state_cache_state_persist_seconds",
-        help: "Histogram of time to persist state to memory",
-        buckets: [0.5, 1, 2, 4],
+        help: "Histogram of time to persist state to db",
+        buckets: [0.1, 0.5, 1, 2, 3, 4],
       }),
       statePruneFromMemoryCount: register.gauge({
         name: "lodestar_cp_state_cache_state_prune_from_memory_count",
@@ -1130,13 +1130,13 @@ export function createLodestarMetrics(
       }),
       statePersistSecFromSlot: register.histogram({
         name: "lodestar_cp_state_cache_state_persist_seconds_from_slot",
-        help: "Histogram of time to persist state to memory from slot",
-        buckets: [0, 4, 8, 12],
+        help: "Histogram of time to persist state to db since the clock slot",
+        buckets: [0, 2, 4, 6, 8, 10, 12],
       }),
       stateReloadDuration: register.histogram({
         name: "lodestar_cp_state_cache_state_reload_seconds",
-        help: "Histogram of time to load state from disk",
-        buckets: [2, 4, 6, 8],
+        help: "Histogram of time to load state from db",
+        buckets: [0, 2, 4, 6, 8, 10, 12],
       }),
       stateReloadEpochDiff: register.histogram({
         name: "lodestar_cp_state_cache_state_reload_epoch_diff",
@@ -1145,8 +1145,8 @@ export function createLodestarMetrics(
       }),
       stateReloadSecFromSlot: register.histogram({
         name: "lodestar_cp_state_cache_state_reload_seconds_from_slot",
-        help: "Histogram of time to load state from disk from slot",
-        buckets: [0, 4, 8, 12],
+        help: "Histogram of time to load state from db since the clock slot",
+        buckets: [0, 2, 4, 6, 8, 10, 12],
       }),
       stateRemoveCount: register.gauge<"reason">({
         name: "lodestar_cp_state_cache_state_remove_count",

@@ -38,7 +38,9 @@ export class LRUBlockStateCache implements BlockStateCache {
   readonly maxStates: number;
 
   private readonly cache: MapTracker<string, CachedBeaconStateAllForks>;
-  // key order to implement LRU like cache
+  /**
+   * Key order to implement LRU like cache
+   */
   private readonly keyOrder: LinkedList<string>;
   private readonly metrics: Metrics["stateCache"] | null | undefined;
 
@@ -61,6 +63,9 @@ export class LRUBlockStateCache implements BlockStateCache {
     }
   }
 
+  /**
+   * Get a state from this cache given a state root hex.
+   */
   get(rootHex: RootHex): CachedBeaconStateAllForks | null {
     this.metrics?.lookups.inc();
     const item = this.cache.get(rootHex);
@@ -112,17 +117,14 @@ export class LRUBlockStateCache implements BlockStateCache {
     this.prune();
   }
 
-  clear(): void {
-    this.cache.clear();
-  }
-
   get size(): number {
     return this.cache.size;
   }
 
   /**
-   * If a recent state is not available, regen from the checkpoint state.
-   * Given state 0 => 1 => ... => n, if regen adds back state 0 we should not remove it right away.
+   * Prune the cache from tail to keep the most recent n states consistently.
+   * The tail of the list is the oldest state, in case regen adds back the same state,
+   * it should stay next to head so that it won't be pruned right away.
    * The LRU-like cache helps with this.
    */
   prune(): void {
@@ -144,6 +146,13 @@ export class LRUBlockStateCache implements BlockStateCache {
    * This is only to conform to the old api
    */
   deleteAllBeforeEpoch(): void {}
+
+  /**
+   * ONLY FOR DEBUGGING PURPOSES. For lodestar debug API.
+   */
+  clear(): void {
+    this.cache.clear();
+  }
 
   /** ONLY FOR DEBUGGING PURPOSES. For lodestar debug API */
   dumpSummary(): routes.lodestar.StateCacheItem[] {
