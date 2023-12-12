@@ -948,14 +948,16 @@ export class BeaconChain implements IBeaconChain {
       this.opPool.pruneAll(headState, finalizedState);
     }
 
-    // TODO: finalizedState may not be available after https://github.com/ChainSafe/lodestar/issues/5968.
-    // In that case implement getCheckpointStateValidatorCount() in regen and use headState instead
-    if (finalizedState === null) {
-      this.logger.verbose("Finalized state is null");
-    } else if (finalizedState.epochCtx.isAfterEIP6110()) {
-      const pivotValidatorIndex = finalizedState.validators.length;
+    const cpEpoch = cp.epoch;
+
+    if (headState === null) {
+      this.logger.verbose("Head state is null");
+    } else if (cpEpoch >= (headState.config.EIP6110_FORK_EPOCH ?? Infinity)) {
+      const headEpoch = headState.epochCtx.epoch;
+      const pivotValidatorIndex = headState.epochCtx.historialValidatorLengths.get((headEpoch - cpEpoch) * -1) ?? 0; 
+
       // Note EIP-6914 will break this logic
-      const newFinalizedValidators = finalizedState.epochCtx.unfinalizedPubkey2index.filter(
+      const newFinalizedValidators = headState.epochCtx.unfinalizedPubkey2index.filter(
         (index, _pubkey) => index < pivotValidatorIndex
       );
 
@@ -964,6 +966,10 @@ export class BeaconChain implements IBeaconChain {
         this.regen.updateUnfinalizedPubkeys(newFinalizedValidators);
       }
 
+    }
+
+    if (finalizedState && finalizedState.epochCtx.isAfterEIP6110()) {
+      // finalizedState can be safely casted to 6110 state since cp is already post-6110
       if (finalizedState.eth1DepositIndex >= (finalizedState as CachedBeaconStateEIP6110).depositReceiptsStartIndex) {
         // Signal eth1 to stop polling eth1Data
         this.eth1.stopPollingEth1Data();

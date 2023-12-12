@@ -48,6 +48,7 @@ import {
   SyncCommitteeCacheEmpty,
 } from "./syncCommitteeCache.js";
 import { EpochCacheMetrics } from "../metrics.js";
+import * as immutable from "immutable";
 
 /** `= PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT)` */
 export const PROPOSER_WEIGHT_FACTOR = PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT);
@@ -216,6 +217,12 @@ export class EpochCache {
   // TODO: Helper stats
   epoch: Epoch;
   syncPeriod: SyncPeriod;
+  /**
+   * state.validators.length of every state at epoch boundary
+   * They are saved in an increasing order of epoch. 
+   * The last validator length in the list corresponds to the latest checkpoint state.
+   */
+  historialValidatorLengths: immutable.List<number>;
 
   constructor(data: {
     config: BeaconConfig;
@@ -244,6 +251,7 @@ export class EpochCache {
     nextSyncCommitteeIndexed: SyncCommitteeCache;
     epoch: Epoch;
     syncPeriod: SyncPeriod;
+    historialValidatorLengths: immutable.List<number>;
   }) {
     this.config = data.config;
     this.pubkey2index = data.pubkey2index;
@@ -271,6 +279,7 @@ export class EpochCache {
     this.nextSyncCommitteeIndexed = data.nextSyncCommitteeIndexed;
     this.epoch = data.epoch;
     this.syncPeriod = data.syncPeriod;
+    this.historialValidatorLengths = data.historialValidatorLengths;
   }
 
   /**
@@ -469,6 +478,7 @@ export class EpochCache {
       nextSyncCommitteeIndexed,
       epoch: currentEpoch,
       syncPeriod: computeSyncPeriodAtEpoch(currentEpoch),
+      historialValidatorLengths: immutable.List(),
     });
   }
 
@@ -512,6 +522,7 @@ export class EpochCache {
       nextSyncCommitteeIndexed: this.nextSyncCommitteeIndexed,
       epoch: this.epoch,
       syncPeriod: this.syncPeriod,
+      historialValidatorLengths: this.historialValidatorLengths,
     });
   }
 
@@ -595,6 +606,9 @@ export class EpochCache {
     // ```
     this.epoch = computeEpochAtSlot(state.slot);
     this.syncPeriod = computeSyncPeriodAtEpoch(this.epoch);
+    // Add current cpState.validators.length
+    // Only keep validatorLength for epochs after finalized cpState.epoch
+    this.historialValidatorLengths = this.historialValidatorLengths.push(state.validators.length).slice((this.epoch - state.finalizedCheckpoint.epoch) * -1);
   }
 
   beforeEpochTransition(): void {
