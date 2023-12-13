@@ -16,7 +16,7 @@ import {IExecutionBuilder} from "./interface.js";
 
 export type ExecutionBuilderHttpOpts = {
   enabled: boolean;
-  urls: string[];
+  url: string;
   timeout?: number;
   faultInspectionWindow?: number;
   allowedFaults?: number;
@@ -29,7 +29,7 @@ export type ExecutionBuilderHttpOpts = {
 
 export const defaultExecutionBuilderHttpOpts: ExecutionBuilderHttpOpts = {
   enabled: false,
-  urls: ["http://localhost:8661"],
+  url: "http://localhost:8661",
   timeout: 12000,
 };
 
@@ -48,7 +48,7 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
     metrics: Metrics | null = null,
     logger?: Logger
   ) {
-    const baseUrl = opts.urls[0];
+    const baseUrl = opts.url;
     if (!baseUrl) throw Error("No Url provided for executionBuilder");
     this.api = getClient(
       {
