@@ -107,7 +107,7 @@ export function getValidatorApi({
   const MAX_API_CLOCK_DISPARITY_MS = MAX_API_CLOCK_DISPARITY_SEC * 1000;
 
   async function waitForSlotWithDisparity(slot: number): Promise<void> {
-    if (chain.clock.isCurrentSlotGivenDisparity(slot, 0, MAX_API_CLOCK_DISPARITY_MS)) {
+    if (chain.clock.isCurrentSlotGivenTolerance(slot, 0, MAX_API_CLOCK_DISPARITY_MS)) {
       return chain.clock.waitForSlot(slot);
     }
 

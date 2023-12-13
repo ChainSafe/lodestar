@@ -477,7 +477,7 @@ async function validateGossipAttestationNoSignatureCheck(
  */
 export function verifyPropagationSlotRange(fork: ForkName, chain: IBeaconChain, attestationSlot: Slot): void {
   // slot with future tolerance of MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC
-  const latestPermissibleSlot = chain.clock.slotWithFutureTolerance(MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC);
+  const latestPermissibleSlot = chain.clock.slotWithFutureTolerance(MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC * 1000);
   if (attestationSlot > latestPermissibleSlot) {
     throw new AttestationError(GossipAction.IGNORE, {
       code: AttestationErrorCode.FUTURE_SLOT,
@@ -489,7 +489,7 @@ export function verifyPropagationSlotRange(fork: ForkName, chain: IBeaconChain, 
   const earliestPermissibleSlot = Math.max(
     // slot with past tolerance of MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC
     // ATTESTATION_PROPAGATION_SLOT_RANGE = SLOTS_PER_EPOCH
-    chain.clock.slotWithPastTolerance(MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC) - SLOTS_PER_EPOCH,
+    chain.clock.slotWithPastTolerance(MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC * 1000) - SLOTS_PER_EPOCH,
     0
   );
 

@@ -87,7 +87,7 @@ export function currentEpochWithDisparity({
   clock: IClock;
   maxClockDisparityMs: number;
 }): Epoch {
-  if (clock.isCurrentSlotGivenDisparity(computeStartSlotAtEpoch(clock.currentEpoch + 1), maxClockDisparityMs, 0)) {
+  if (clock.isCurrentSlotGivenTolerance(computeStartSlotAtEpoch(clock.currentEpoch + 1), maxClockDisparityMs, 0)) {
     return clock.currentEpoch + 1;
   } else {
     return clock.currentEpoch;

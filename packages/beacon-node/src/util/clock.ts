@@ -40,9 +40,9 @@ export type IClock = StrictEventEmitter<EventEmitter, ClockEvents> & {
    */
   readonly currentSlotWithGossipDisparity: Slot;
   readonly currentEpoch: Epoch;
-  /** Returns the slot if the internal clock were advanced by `toleranceSec`. */
-  slotWithFutureTolerance(toleranceSec: number): Slot;
-  /** Returns the slot if the internal clock were reversed by `toleranceSec`. */
+  /** Returns the slot if the internal clock were advanced by `toleranceMs`. */
+  slotWithFutureTolerance(toleranceMs: number): Slot;
+  /** Returns the slot if the internal clock were reversed by `toleranceMs`. */
   slotWithPastTolerance(toleranceSec: number): Slot;
   /**
    * Check if a slot is current slot given MAXIMUM_GOSSIP_CLOCK_DISPARITY.
@@ -52,10 +52,10 @@ export type IClock = StrictEventEmitter<EventEmitter, ClockEvents> & {
    * Check if current slot is same as given slot considering futureDisparityMs.
    * -----------------------------------------------------------------------------------
    * |                                 |    (current)    |                            |
-   *              |<-pastDisparityMs->|                 |<-futureDisparityMs->|
+   *              |<-pastToleranceMs->|                 |<-futureToleranceMs->|
    */
-  isCurrentSlotGivenDisparity(slot: Slot, pastDisparityMs: number, futureDisparityMs: number): boolean;
-  isCurrentSlotGivenDisparity(slot: Slot, pastAndFutureDisparity: number): boolean;
+  isCurrentSlotGivenTolerance(slot: Slot, pastToleranceMs: number, futureToleranceMs: number): boolean;
+  isCurrentSlotGivenTolerance(slot: Slot, pastAndFutureToleranceMs: number): boolean;
   /**
    * Returns a promise that waits until at least `slot` is reached
    * Resolves when the current slot >= `slot`
@@ -112,37 +112,36 @@ export class Clock extends EventEmitter implements IClock {
     return computeEpochAtSlot(this.currentSlot);
   }
 
-  /** Returns the slot if the internal clock were advanced by `toleranceSec`. */
-  slotWithFutureTolerance(toleranceSec: number): Slot {
-    // this is the same to getting slot at now + toleranceSec
-    return getCurrentSlot(this.config, this.genesisTime - toleranceSec);
+  /** Returns the slot if the internal clock were advanced by `toleranceMs`. */
+  slotWithFutureTolerance(toleranceMs: number): Slot {
+    const currentSlot = this.currentSlot;
+    const currentSlotStartTime = computeTimeAtSlot(this.config, currentSlot, this.genesisTime) * 1000;
+    const now = Date.now();
+    return toleranceMs > 0 && now > currentSlotStartTime && now - currentSlotStartTime <= toleranceMs
+      ? this.currentSlot - 1
+      : this.currentSlot;
   }
 
-  /** Returns the slot if the internal clock were reversed by `toleranceSec`. */
-  slotWithPastTolerance(toleranceSec: number): Slot {
-    // this is the same to getting slot at now - toleranceSec
-    return getCurrentSlot(this.config, this.genesisTime + toleranceSec);
+  /** Returns the slot if the internal clock were reversed by `toleranceMs`. */
+  slotWithPastTolerance(toleranceMs: number): Slot {
+    const currentSlot = this.currentSlot;
+    const currentSlotEndTime = computeTimeAtSlot(this.config, currentSlot + 1, this.genesisTime) * 1000 - 1;
+    const now = Date.now();
+    return toleranceMs > 0 && now < currentSlotEndTime && currentSlotEndTime - now < toleranceMs
+      ? currentSlot + 1
+      : currentSlot;
   }
 
-  isCurrentSlotGivenDisparity(slot: Slot, pastDisparityMs: number, futureDisparityMs?: number): boolean {
+  isCurrentSlotGivenTolerance(slot: Slot, pastToleranceMs: number, futureToleranceMs?: number): boolean {
     const currentSlot = this.currentSlot;
     if (currentSlot === slot) {
       return true;
     }
+    pastToleranceMs = pastToleranceMs ?? 0;
+    futureToleranceMs = futureToleranceMs ?? pastToleranceMs ?? 0;
 
-    const past = pastDisparityMs ?? 0;
-    const future = futureDisparityMs ?? pastDisparityMs ?? 0;
-
-    const nextSlotTime = computeTimeAtSlot(this.config, currentSlot + 1, this.genesisTime) * 1000;
-    if (nextSlotTime - Date.now() < past) {
-      return slot === currentSlot + 1;
-    }
-
-    const currentSlotTime = computeTimeAtSlot(this.config, currentSlot, this.genesisTime) * 1000;
-    // we've just passed the current slot, accept previous slot
-    if (Date.now() - currentSlotTime < future) {
-      return slot === currentSlot - 1;
-    }
+    if (pastToleranceMs > 0 && this.slotWithPastTolerance(pastToleranceMs) === slot) return true;
+    if (futureToleranceMs > 0 && this.slotWithFutureTolerance(futureToleranceMs) === slot) return true;
 
     return false;
   }
@@ -151,7 +150,7 @@ export class Clock extends EventEmitter implements IClock {
    * Check if a slot is current slot given MAXIMUM_GOSSIP_CLOCK_DISPARITY.
    */
   isCurrentSlotGivenGossipDisparity(slot: Slot): boolean {
-    return this.isCurrentSlotGivenDisparity(slot, MAXIMUM_GOSSIP_CLOCK_DISPARITY, MAXIMUM_GOSSIP_CLOCK_DISPARITY);
+    return this.isCurrentSlotGivenTolerance(slot, MAXIMUM_GOSSIP_CLOCK_DISPARITY, MAXIMUM_GOSSIP_CLOCK_DISPARITY);
   }
 
   async waitForSlot(slot: Slot): Promise<void> {
