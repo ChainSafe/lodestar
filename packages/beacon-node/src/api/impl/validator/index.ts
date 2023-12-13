@@ -7,7 +7,6 @@ import {
   attesterShufflingDecisionRoot,
   getBlockRootAtSlot,
   computeEpochAtSlot,
-  getCurrentSlot,
   beaconBlockToBlinded,
   blobSidecarsToBlinded,
 } from "@lodestar/state-transition";
@@ -25,24 +24,20 @@ import {
   Slot,
   ValidatorIndex,
   ssz,
-  Epoch,
   ProducedBlockSource,
   bellatrix,
   allForks,
   BLSSignature,
   isBlindedBeaconBlock,
   isBlindedBlockContents,
-  phase0,
 } from "@lodestar/types";
-import {ExecutionStatus} from "@lodestar/fork-choice";
 import {toHex, racePromisesWithCutoff, RaceEvent} from "@lodestar/utils";
 import {AttestationError, AttestationErrorCode, GossipAction, SyncCommitteeError} from "../../../chain/errors/index.js";
 import {validateApiAggregateAndProof} from "../../../chain/validation/index.js";
 import {ZERO_HASH} from "../../../constants/index.js";
-import {SyncState} from "../../../sync/index.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
 import {toGraffitiBuffer} from "../../../util/graffiti.js";
-import {ApiError, NodeIsSyncing, OnlySupportedByDVT} from "../errors.js";
+import {ApiError, OnlySupportedByDVT} from "../errors.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof.js";
 import {CommitteeSubscription} from "../../../network/subnets/index.js";
 import {ApiModules} from "../types.js";
@@ -50,8 +45,16 @@ import {RegenCaller} from "../../../chain/regen/index.js";
 import {getValidatorStatus} from "../beacon/state/utils.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossipHandlers.js";
 import {SCHEDULER_LOOKAHEAD_FACTOR} from "../../../chain/prepareNextSlot.js";
-import {ChainEvent, CheckpointHex} from "../../../chain/index.js";
-import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices} from "./utils.js";
+import {
+  computeSubnetForCommitteesAtSlot,
+  currentEpochWithDisparity,
+  getPubkeysForIndices,
+  isNodeSynced,
+  isValidBeaconBlockRoot,
+  msToNextEpoch,
+  waitForCheckpointState,
+  waitForNextClosestEpoch,
+} from "./utils.js";
 
 /**
  * If the node is within this many epochs from the head, we declare it to be synced regardless of
@@ -103,7 +106,31 @@ export function getValidatorApi({
   const MAX_API_CLOCK_DISPARITY_SEC = Math.min(0.5, config.SECONDS_PER_SLOT / 2);
   const MAX_API_CLOCK_DISPARITY_MS = MAX_API_CLOCK_DISPARITY_SEC * 1000;
 
-  /** Compute and cache the genesis block root */
+  async function waitForSlotWithDisparity(slot: number): Promise<void> {
+    if (chain.clock.isCurrentSlotGivenDisparity(slot, 0, MAX_API_CLOCK_DISPARITY_MS)) {
+      return chain.clock.waitForSlot(slot);
+    }
+
+    throw Error(`Requested slot ${slot} is in the future`);
+  }
+
+  function notWhileSyncing(): void {
+    isNodeSynced({
+      headSlot: chain.forkChoice.getHead().slot,
+      currentSlot: chain.clock.currentSlot,
+      syncState: sync.state,
+      syncToleranceEpochs: SYNC_TOLERANCE_EPOCHS,
+      raiseErrors: false,
+    });
+  }
+
+  function notOnOptimisticBlockRoot(root: Root): void {
+    isValidBeaconBlockRoot({forkChoice: chain.forkChoice, beaconBlockRoot: root});
+  }
+
+  /**
+   * Compute and cache the genesis block root
+   */
   async function getGenesisBlockRoot(state: CachedBeaconStateAllForks): Promise<Root> {
     if (!genesisBlockRoot) {
       // Close to genesis the genesis block may not be available in the DB
@@ -124,163 +151,7 @@ export function getValidatorApi({
     return genesisBlockRoot || ZERO_HASH;
   }
 
-  /**
-   * If advancing the local clock `MAX_API_CLOCK_DISPARITY_MS` ticks to the requested slot, wait for its start
-   * Prevents the validator from getting errors from the API if the clock is a bit advanced
-   */
-  async function waitForSlot(slot: Slot): Promise<void> {
-    if (slot <= 0) {
-      return;
-    }
-
-    const slotStartSec = chain.genesisTime + slot * config.SECONDS_PER_SLOT;
-    const msToSlot = slotStartSec * 1000 - Date.now();
-
-    if (msToSlot > MAX_API_CLOCK_DISPARITY_MS) {
-      throw Error(`Requested slot ${slot} is in the future`);
-    } else if (msToSlot > 0) {
-      await chain.clock.waitForSlot(slot);
-    }
-
-    // else, clock already in slot or slot is in the past
-  }
-
-  /**
-   * If advancing the local clock `MAX_API_CLOCK_DISPARITY_MS` ticks to the next epoch, wait for slot 0 of the next epoch.
-   * Prevents a validator from not being able to get the attestater duties correctly if the beacon and validator clocks are off
-   */
-  async function waitForNextClosestEpoch(): Promise<void> {
-    const toNextEpochMs = msToNextEpoch();
-    if (toNextEpochMs > 0 && toNextEpochMs < MAX_API_CLOCK_DISPARITY_MS) {
-      const nextEpoch = chain.clock.currentEpoch + 1;
-      await chain.clock.waitForSlot(computeStartSlotAtEpoch(nextEpoch));
-    }
-  }
-
-  /**
-   * Compute ms to the next epoch.
-   */
-  function msToNextEpoch(): number {
-    const nextEpoch = chain.clock.currentEpoch + 1;
-    const secPerEpoch = SLOTS_PER_EPOCH * config.SECONDS_PER_SLOT;
-    const nextEpochStartSec = chain.genesisTime + nextEpoch * secPerEpoch;
-    return nextEpochStartSec * 1000 - Date.now();
-  }
-
-  function currentEpochWithDisparity(): Epoch {
-    return computeEpochAtSlot(getCurrentSlot(config, chain.genesisTime - MAX_API_CLOCK_DISPARITY_SEC));
-  }
-
-  /**
-   * This function is called 1s before next epoch, usually at that time PrepareNextSlotScheduler finishes
-   * so we should have checkpoint state, otherwise wait for up to the slot 1 of epoch.
-   *      slot epoch        0            1
-   *           |------------|------------|
-   *                    ^  ^
-   *                    |  |
-   *                    |  |
-   *                    | waitForCheckpointState (1s before slot 0 of epoch, wait until slot 1 of epoch)
-   *                    |
-   *              prepareNextSlot (4s before next slot)
-   */
-  async function waitForCheckpointState(cpHex: CheckpointHex): Promise<CachedBeaconStateAllForks | null> {
-    const cpState = chain.regen.getCheckpointStateSync(cpHex);
-    if (cpState) {
-      return cpState;
-    }
-    const cp = {
-      epoch: cpHex.epoch,
-      root: fromHexString(cpHex.rootHex),
-    };
-    const slot0 = computeStartSlotAtEpoch(cp.epoch);
-    // if not, wait for ChainEvent.checkpoint event until slot 1 of epoch
-    let listener: ((eventCp: phase0.Checkpoint) => void) | null = null;
-    const foundCPState = await Promise.race([
-      new Promise((resolve) => {
-        listener = (eventCp) => {
-          resolve(ssz.phase0.Checkpoint.equals(eventCp, cp));
-        };
-        chain.emitter.once(ChainEvent.checkpoint, listener);
-      }),
-      // in rare case, checkpoint state cache may happen up to 6s of slot 0 of epoch
-      // so we wait for it until the slot 1 of epoch
-      chain.clock.waitForSlot(slot0 + 1),
-    ]);
-
-    if (listener != null) {
-      chain.emitter.off(ChainEvent.checkpoint, listener);
-    }
-
-    if (foundCPState === true) {
-      return chain.regen.getCheckpointStateSync(cpHex);
-    }
-
-    return null;
-  }
-
-  /**
-   * Reject any request while the node is syncing
-   */
-  function notWhileSyncing(): void {
-    // Consider node synced before or close to genesis
-    if (chain.clock.currentSlot < SLOTS_PER_EPOCH) {
-      return;
-    }
-
-    const syncState = sync.state;
-    switch (syncState) {
-      case SyncState.SyncingFinalized:
-      case SyncState.SyncingHead: {
-        const currentSlot = chain.clock.currentSlot;
-        const headSlot = chain.forkChoice.getHead().slot;
-        if (currentSlot - headSlot > SYNC_TOLERANCE_EPOCHS * SLOTS_PER_EPOCH) {
-          throw new NodeIsSyncing(`headSlot ${headSlot} currentSlot ${currentSlot}`);
-        } else {
-          return;
-        }
-      }
-
-      case SyncState.Synced:
-        return;
-
-      case SyncState.Stalled:
-        throw new NodeIsSyncing("waiting for peers");
-    }
-  }
-
-  /**
-   * Post merge, the CL and EL could be out of step in the sync, and could result in
-   * Syncing status of the chain head. To be precise:
-   * 1. CL could be ahead of the EL, with the validity of head payload not yet verified
-   * 2. CL could be on an invalid chain of execution blocks with a non-existent
-   *    or non-available parent that never syncs up
-   *
-   * Both the above scenarios could be problematic and hence validator shouldn't participate
-   * or weigh its vote on a head till it resolves to a Valid execution status.
-   * Following activities should be skipped on an Optimistic head (with Syncing status):
-   * 1. Attestation if targetRoot is optimistic
-   * 2. SyncCommitteeContribution if if the root for which to produce contribution is Optimistic.
-   * 3. ProduceBlock if the parentRoot (chain's current head is optimistic). However this doesn't
-   *    need to be checked/aborted here as assembleBody would call EL's api for the latest
-   *    executionStatus of the parentRoot. If still not validated, produceBlock will throw error.
-   *
-   * TODO/PENDING: SyncCommitteeSignatures should also be aborted, the best way to address this
-   *   is still in flux and will be updated as and when other CL's figure this out.
-   */
-
-  function notOnOptimisticBlockRoot(beaconBlockRoot: Root): void {
-    const protoBeaconBlock = chain.forkChoice.getBlock(beaconBlockRoot);
-    if (!protoBeaconBlock) {
-      throw new ApiError(400, "Block not in forkChoice");
-    }
-
-    if (protoBeaconBlock.executionStatus === ExecutionStatus.Syncing)
-      throw new NodeIsSyncing(
-        `Block's execution payload not yet validated, executionPayloadBlockHash=${protoBeaconBlock.executionPayloadBlockHash} number=${protoBeaconBlock.executionPayloadNumber}`
-      );
-  }
-
-  const produceBlindedBlockOrContents = async function produceBlindedBlockOrContents(
+  async function produceBlindedBlockOrContents(
     slot: Slot,
     randaoReveal: BLSSignature,
     graffiti: string,
@@ -302,7 +173,7 @@ export function getValidatorApi({
 
     if (skipHeadChecksAndUpdate !== true) {
       notWhileSyncing();
-      await waitForSlot(slot); // Must never request for a future slot > currentSlot
+      await waitForSlotWithDisparity(slot); // Must never request for a future slot > currentSlot
 
       // Process the queued attestations in the forkchoice for correct head estimation
       // forkChoice.updateTime() might have already been called by the onSlot clock
@@ -351,9 +222,24 @@ export function getValidatorApi({
     } finally {
       if (timer) timer({source});
     }
+  }
+
+  const produceBlock: ServerApi<routes.validator.Api>["produceBlock"] = async function produceBlock(
+    slot,
+    randaoReveal,
+    graffiti
+  ) {
+    const producedData = await produceBlockV2(slot, randaoReveal, graffiti);
+    if (isForkBlobs(producedData.version)) {
+      throw Error(`Invalid call to produceBlock for deneb+ fork=${producedData.version}`);
+    } else {
+      // TODO: need to figure out why typescript requires typecasting here
+      // by typing of produceFullBlockOrContents respose it should have figured this out itself
+      return producedData as {data: allForks.BeaconBlock};
+    }
   };
 
-  const produceFullBlockOrContents = async function produceFullBlockOrContents(
+  const produceBlockV2: ServerApi<routes.validator.Api>["produceBlockV2"] = async function produceBlockV2(
     slot: Slot,
     randaoReveal: BLSSignature,
     graffiti: string,
@@ -368,7 +254,7 @@ export function getValidatorApi({
 
     if (skipHeadChecksAndUpdate !== true) {
       notWhileSyncing();
-      await waitForSlot(slot); // Must never request for a future slot > currentSlot
+      await waitForSlotWithDisparity(slot); // Must never request for a future slot > currentSlot
 
       // Process the queued attestations in the forkchoice for correct head estimation
       // forkChoice.updateTime() might have already been called by the onSlot clock
@@ -434,7 +320,7 @@ export function getValidatorApi({
     {feeRecipient, builderSelection, strictFeeRecipientCheck}: routes.validator.ExtraProduceBlockOps = {}
   ) {
     notWhileSyncing();
-    await waitForSlot(slot); // Must never request for a future slot > currentSlot
+    await waitForSlotWithDisparity(slot); // Must never request for a future slot > currentSlot
 
     // Process the queued attestations in the forkchoice for correct head estimation
     // forkChoice.updateTime() might have already been called by the onSlot clock
@@ -481,7 +367,7 @@ export function getValidatorApi({
       !isBuilderEnabled || builderSelection !== routes.validator.BuilderSelection.BuilderOnly
         ? // TODO deneb: builderSelection needs to be figured out if to be done beacon side
           // || builderSelection !== BuilderSelection.BuilderOnly
-          produceFullBlockOrContents(slot, randaoReveal, graffiti, {
+          produceBlockV2(slot, randaoReveal, graffiti, {
             feeRecipient,
             strictFeeRecipientCheck,
             // skip checking and recomputing head in these individual produce calls
@@ -613,21 +499,6 @@ export function getValidatorApi({
     }
   };
 
-  const produceBlock: ServerApi<routes.validator.Api>["produceBlock"] = async function produceBlock(
-    slot,
-    randaoReveal,
-    graffiti
-  ) {
-    const producedData = await produceFullBlockOrContents(slot, randaoReveal, graffiti);
-    if (isForkBlobs(producedData.version)) {
-      throw Error(`Invalid call to produceBlock for deneb+ fork=${producedData.version}`);
-    } else {
-      // TODO: need to figure out why typescript requires typecasting here
-      // by typing of produceFullBlockOrContents respose it should have figured this out itself
-      return producedData as {data: allForks.BeaconBlock};
-    }
-  };
-
   const produceBlindedBlock: ServerApi<routes.validator.Api>["produceBlindedBlock"] =
     async function produceBlindedBlock(slot, randaoReveal, graffiti) {
       const producedData = await produceBlockV3(slot, randaoReveal, graffiti);
@@ -664,14 +535,14 @@ export function getValidatorApi({
 
   return {
     produceBlock,
-    produceBlockV2: produceFullBlockOrContents,
+    produceBlockV2,
     produceBlockV3,
     produceBlindedBlock,
 
     async produceAttestationData(committeeIndex, slot) {
       notWhileSyncing();
 
-      await waitForSlot(slot); // Must never request for a future slot > currentSlot
+      await waitForSlotWithDisparity(slot); // Must never request for a future slot > currentSlot
 
       // This needs a state in the same epoch as `slot` such that state.currentJustifiedCheckpoint is correct.
       // Note: This may trigger an epoch transition if there skipped slots at the beginning of the epoch.
@@ -754,7 +625,10 @@ export function getValidatorApi({
       notWhileSyncing();
 
       // Early check that epoch is within [current_epoch, current_epoch + 1], or allow for pre-genesis
-      const currentEpoch = currentEpochWithDisparity();
+      const currentEpoch = currentEpochWithDisparity({
+        clock: chain.clock,
+        maxClockDisparityMs: MAX_API_CLOCK_DISPARITY_MS,
+      });
       const nextEpoch = currentEpoch + 1;
       if (currentEpoch >= 0 && epoch !== currentEpoch && epoch !== nextEpoch) {
         throw Error(`Requested epoch ${epoch} must equal current ${currentEpoch} or next epoch ${nextEpoch}`);
@@ -764,12 +638,12 @@ export function getValidatorApi({
       let state: CachedBeaconStateAllForks | undefined = undefined;
       const slotMs = config.SECONDS_PER_SLOT * 1000;
       const prepareNextSlotLookAheadMs = slotMs / SCHEDULER_LOOKAHEAD_FACTOR;
-      const toNextEpochMs = msToNextEpoch();
+      const toNextEpochMs = msToNextEpoch(chain.clock);
       // validators may request next epoch's duties when it's close to next epoch
       // this is to avoid missed block proposal due to 0 epoch look ahead
       if (epoch === nextEpoch && toNextEpochMs < prepareNextSlotLookAheadMs) {
         // wait for maximum 1 slot for cp state which is the timeout of validator api
-        const cpState = await waitForCheckpointState({rootHex: head.blockRoot, epoch});
+        const cpState = await waitForCheckpointState({chain, cpHex: {rootHex: head.blockRoot, epoch}});
         if (cpState) {
           state = cpState;
           metrics?.duties.requestNextEpochProposalDutiesHit.inc();
@@ -827,7 +701,7 @@ export function getValidatorApi({
       }
 
       // May request for an epoch that's in the future
-      await waitForNextClosestEpoch();
+      await waitForNextClosestEpoch({clock: chain.clock, maxClockDisparityMs: MAX_API_CLOCK_DISPARITY_MS});
 
       // should not compare to headEpoch in order to handle skipped slots
       // Check if the epoch is in the future after waiting for requested slot
@@ -890,7 +764,7 @@ export function getValidatorApi({
       }
 
       // May request for an epoch that's in the future
-      await waitForNextClosestEpoch();
+      await waitForNextClosestEpoch({clock: chain.clock, maxClockDisparityMs: MAX_API_CLOCK_DISPARITY_MS});
 
       // sync committee duties have a lookahead of 1 day. Assuming the validator only requests duties for upcoming
       // epochs, the head state will very likely have the duties available for the requested epoch.
@@ -926,7 +800,7 @@ export function getValidatorApi({
     async getAggregatedAttestation(attestationDataRoot, slot) {
       notWhileSyncing();
 
-      await waitForSlot(slot); // Must never request for a future slot > currentSlot
+      await waitForSlotWithDisparity(slot); // Must never request for a future slot > currentSlot
 
       const aggregate = chain.attestationPool.getAggregate(slot, attestationDataRoot);
       metrics?.production.producedAggregateParticipants.observe(aggregate.aggregationBits.getTrueBitIndexes().length);

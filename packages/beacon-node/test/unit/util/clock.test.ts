@@ -4,42 +4,126 @@ import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Clock, ClockEvent} from "../../../src/util/clock.js";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../../src/constants/index.js";
 
-describe("Clock", function () {
+function slotTimeMs(slot: number): number {
+  return slot * config.SECONDS_PER_SLOT * 1000;
+}
+
+describe("Clock", () => {
   let abortController: AbortController;
   let clock: Clock;
 
   beforeEach(() => {
-    const now = Date.now();
-    vi.useFakeTimers({now: 0});
+    const now = 0;
+    vi.useFakeTimers({now});
     abortController = new AbortController();
     clock = new Clock({
       config,
-      genesisTime: Math.round(now / 1000),
+      genesisTime: Math.floor(now / 1000),
       signal: abortController.signal,
     });
   });
 
   afterEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
     vi.clearAllTimers();
+    vi.useRealTimers();
     abortController.abort();
   });
 
-  // TODO: Debug why this test is fragile after migrating to vitest
-  it.skip("Should notify on new slot", function () {
-    const spy = vi.fn();
-    clock.on(ClockEvent.slot, spy);
-    vi.advanceTimersByTime(config.SECONDS_PER_SLOT * 1000);
-    expect(spy).toHaveBeenCalledTimes(1);
-    expect(spy).toBeCalledWith(clock.currentSlot);
+  describe("isCurrentSlotGivenDisparity", () => {
+    it("should return true if disparity set to zero for current slot", () => {
+      vi.advanceTimersByTime(slotTimeMs(10.5));
+
+      expect(clock.isCurrentSlotGivenDisparity(10, 0, 0)).toBe(true);
+    });
+
+    it("should return true for if slot in the middle of slot time and not in disparity range", () => {
+      vi.advanceTimersByTime(slotTimeMs(10.5));
+
+      expect(clock.isCurrentSlotGivenDisparity(10, 500, 500)).toBe(true);
+    });
+
+    it("should return true if slot within in the future disparity range", () => {
+      vi.advanceTimersByTime(slotTimeMs(11) + 499);
+
+      expect(clock.isCurrentSlotGivenDisparity(10, 0, 500)).toBe(true);
+    });
+
+    it("should return false if slot not in the future disparity range", () => {
+      vi.advanceTimersByTime(slotTimeMs(11) + 500);
+
+      expect(clock.isCurrentSlotGivenDisparity(10, 0, 500)).toBe(false);
+    });
+
+    it("should return true if slot within the past disparity range", () => {
+      vi.advanceTimersByTime(slotTimeMs(10) - 499);
+
+      expect(clock.isCurrentSlotGivenDisparity(10, 500, 0)).toBe(true);
+    });
+
+    it("should return false if slot not in the past disparity range", () => {
+      vi.advanceTimersByTime(slotTimeMs(10) - 500);
+
+      expect(clock.isCurrentSlotGivenDisparity(10, 500, 0)).toBe(false);
+    });
+
+    it("should return true if slot within in the future disparity range with single parameter", () => {
+      vi.advanceTimersByTime(slotTimeMs(11) + 499);
+
+      expect(clock.isCurrentSlotGivenDisparity(10, 500)).toBe(true);
+    });
   });
 
-  it("Should notify on new epoch", function () {
-    const spy = vi.fn();
-    clock.on(ClockEvent.epoch, spy);
-    vi.advanceTimersByTime(SLOTS_PER_EPOCH * config.SECONDS_PER_SLOT * 1000);
-    expect(spy).toHaveBeenCalledTimes(1);
-    expect(spy).toBeCalledWith(clock.currentEpoch);
+  describe("waitForSlot", () => {
+    it("should resolve if slot is current", async () => {
+      const slot = clock.currentSlot;
+      await expect(clock.waitForSlot(slot)).resolves.toBeUndefined();
+    });
+
+    it("should resolve if slot is in the past", async () => {
+      const slot = clock.currentSlot - 1;
+      await expect(clock.waitForSlot(slot)).resolves.toBeUndefined();
+    });
+
+    it("should wait if the slot is in the future", async () => {
+      const slot = clock.currentSlot + 1;
+      const promise = clock.waitForSlot(slot);
+
+      vi.advanceTimersByTime(config.SECONDS_PER_SLOT * 1000);
+      await expect(promise).resolves.toBeUndefined();
+    });
+  });
+
+  describe("currentSlot", () => {
+    it("should return zero on genesis time", () => {
+      expect(clock.currentSlot).toBe(0);
+    });
+
+    it("should return 1 after after one slot tick", () => {
+      vi.advanceTimersByTime(config.SECONDS_PER_SLOT * 1000);
+      expect(clock.currentSlot).toBe(1);
+    });
+  });
+
+  describe("events", () => {
+    it("Should notify on new slot", () => {
+      const spy = vi.fn();
+      const currentSlot = clock.currentSlot;
+      clock.on(ClockEvent.slot, spy);
+
+      vi.advanceTimersByTime(config.SECONDS_PER_SLOT * 1000);
+
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toBeCalledWith(currentSlot + 1);
+    });
+
+    it("Should notify on new epoch", () => {
+      const spy = vi.fn();
+      clock.on(ClockEvent.epoch, spy);
+      vi.advanceTimersByTime(SLOTS_PER_EPOCH * config.SECONDS_PER_SLOT * 1000);
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toBeCalledWith(clock.currentEpoch);
+    });
   });
 
   describe("currentSlotWithGossipDisparity", () => {

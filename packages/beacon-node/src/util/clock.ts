@@ -49,6 +49,14 @@ export type IClock = StrictEventEmitter<EventEmitter, ClockEvents> & {
    */
   isCurrentSlotGivenGossipDisparity(slot: Slot): boolean;
   /**
+   * Check if current slot is same as given slot considering futureDisparityMs.
+   * -----------------------------------------------------------------------------------
+   * |                                 |    (current)    |                            |
+   *              |<-pastDisparityMs->|                 |<-futureDisparityMs->|
+   */
+  isCurrentSlotGivenDisparity(slot: Slot, pastDisparityMs: number, futureDisparityMs: number): boolean;
+  isCurrentSlotGivenDisparity(slot: Slot, pastAndFutureDisparity: number): boolean;
+  /**
    * Returns a promise that waits until at least `slot` is reached
    * Resolves when the current slot >= `slot`
    * Rejects if the clock is aborted
@@ -116,30 +124,43 @@ export class Clock extends EventEmitter implements IClock {
     return getCurrentSlot(this.config, this.genesisTime + toleranceSec);
   }
 
-  /**
-   * Check if a slot is current slot given MAXIMUM_GOSSIP_CLOCK_DISPARITY.
-   */
-  isCurrentSlotGivenGossipDisparity(slot: Slot): boolean {
+  isCurrentSlotGivenDisparity(slot: Slot, pastDisparityMs: number, futureDisparityMs?: number): boolean {
     const currentSlot = this.currentSlot;
     if (currentSlot === slot) {
       return true;
     }
+
+    const past = pastDisparityMs ?? 0;
+    const future = futureDisparityMs ?? pastDisparityMs ?? 0;
+
     const nextSlotTime = computeTimeAtSlot(this.config, currentSlot + 1, this.genesisTime) * 1000;
-    // we're too close to next slot, accept next slot
-    if (nextSlotTime - Date.now() < MAXIMUM_GOSSIP_CLOCK_DISPARITY) {
+    if (nextSlotTime - Date.now() < past) {
       return slot === currentSlot + 1;
     }
+
     const currentSlotTime = computeTimeAtSlot(this.config, currentSlot, this.genesisTime) * 1000;
     // we've just passed the current slot, accept previous slot
-    if (Date.now() - currentSlotTime < MAXIMUM_GOSSIP_CLOCK_DISPARITY) {
+    if (Date.now() - currentSlotTime < future) {
       return slot === currentSlot - 1;
     }
+
     return false;
+  }
+
+  /**
+   * Check if a slot is current slot given MAXIMUM_GOSSIP_CLOCK_DISPARITY.
+   */
+  isCurrentSlotGivenGossipDisparity(slot: Slot): boolean {
+    return this.isCurrentSlotGivenDisparity(slot, MAXIMUM_GOSSIP_CLOCK_DISPARITY, MAXIMUM_GOSSIP_CLOCK_DISPARITY);
   }
 
   async waitForSlot(slot: Slot): Promise<void> {
     if (this.signal.aborted) {
       throw new ErrorAborted();
+    }
+
+    if (slot <= 0) {
+      return;
     }
 
     if (this.currentSlot >= slot) {
