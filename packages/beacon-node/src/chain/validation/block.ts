@@ -11,7 +11,7 @@ import {
 } from "@lodestar/state-transition";
 import {sleep} from "@lodestar/utils";
 import {ForkName} from "@lodestar/params";
-import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants/index.js";
+import {MAXIMUM_GOSSIP_CLOCK_DISPARITY_MS} from "../../constants/index.js";
 import {IBeaconChain} from "../interface.js";
 import {BlockGossipError, BlockErrorCode, GossipAction} from "../errors/index.js";
 import {RegenCaller} from "../regen/index.js";
@@ -166,7 +166,7 @@ export async function validateGossipBlock(
   // gossip validation promise without any extra infrastructure.
   // Do the sleep at the end, since regen and signature validation can already take longer than `msToBlockSlot`.
   const msToBlockSlot = computeTimeAtSlot(config, blockSlot, chain.genesisTime) * 1000 - Date.now();
-  if (msToBlockSlot <= MAXIMUM_GOSSIP_CLOCK_DISPARITY && msToBlockSlot > 0) {
+  if (msToBlockSlot <= MAXIMUM_GOSSIP_CLOCK_DISPARITY_MS && msToBlockSlot > 0) {
     // If block is between 0 and 500 ms early, hold it in a promise. Equivalent to a pending queue.
     await sleep(msToBlockSlot);
   }

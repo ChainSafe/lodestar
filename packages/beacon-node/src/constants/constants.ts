@@ -11,5 +11,4 @@ export const GRAFFITI_SIZE = 32;
 /**
  * The maximum milliseconds of clock disparity assumed between honest nodes.
  */
-export const MAXIMUM_GOSSIP_CLOCK_DISPARITY = 500;
-export const MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC = MAXIMUM_GOSSIP_CLOCK_DISPARITY / 1000;
+export const MAXIMUM_GOSSIP_CLOCK_DISPARITY_MS = 500;

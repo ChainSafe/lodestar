@@ -4,7 +4,7 @@ import type {Epoch, Slot} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {ErrorAborted} from "@lodestar/utils";
 import {computeEpochAtSlot, computeTimeAtSlot, getCurrentSlot} from "@lodestar/state-transition";
-import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../constants/constants.js";
+import {MAXIMUM_GOSSIP_CLOCK_DISPARITY_MS} from "../constants/constants.js";
 
 export enum ClockEvent {
   /**
@@ -105,7 +105,7 @@ export class Clock extends EventEmitter implements IClock {
   get currentSlotWithGossipDisparity(): Slot {
     const currentSlot = this.currentSlot;
     const nextSlotTime = computeTimeAtSlot(this.config, currentSlot + 1, this.genesisTime) * 1000;
-    return nextSlotTime - Date.now() < MAXIMUM_GOSSIP_CLOCK_DISPARITY ? currentSlot + 1 : currentSlot;
+    return nextSlotTime - Date.now() < MAXIMUM_GOSSIP_CLOCK_DISPARITY_MS ? currentSlot + 1 : currentSlot;
   }
 
   get currentEpoch(): Epoch {
@@ -150,7 +150,7 @@ export class Clock extends EventEmitter implements IClock {
    * Check if a slot is current slot given MAXIMUM_GOSSIP_CLOCK_DISPARITY.
    */
   isCurrentSlotGivenGossipDisparity(slot: Slot): boolean {
-    return this.isCurrentSlotGivenTolerance(slot, MAXIMUM_GOSSIP_CLOCK_DISPARITY, MAXIMUM_GOSSIP_CLOCK_DISPARITY);
+    return this.isCurrentSlotGivenTolerance(slot, MAXIMUM_GOSSIP_CLOCK_DISPARITY_MS, MAXIMUM_GOSSIP_CLOCK_DISPARITY_MS);
   }
 
   async waitForSlot(slot: Slot): Promise<void> {

@@ -14,7 +14,7 @@ import {
 } from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
-import {MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC} from "../../constants/index.js";
+import {MAXIMUM_GOSSIP_CLOCK_DISPARITY_MS} from "../../constants/index.js";
 import {RegenCaller} from "../regen/index.js";
 import {
   AttDataBase64,
@@ -476,8 +476,7 @@ async function validateGossipAttestationNoSignatureCheck(
  * Note: We do not queue future attestations for later processing
  */
 export function verifyPropagationSlotRange(fork: ForkName, chain: IBeaconChain, attestationSlot: Slot): void {
-  // slot with future tolerance of MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC
-  const latestPermissibleSlot = chain.clock.slotWithFutureTolerance(MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC * 1000);
+  const latestPermissibleSlot = chain.clock.slotWithPastTolerance(MAXIMUM_GOSSIP_CLOCK_DISPARITY_MS);
   if (attestationSlot > latestPermissibleSlot) {
     throw new AttestationError(GossipAction.IGNORE, {
       code: AttestationErrorCode.FUTURE_SLOT,
@@ -489,7 +488,7 @@ export function verifyPropagationSlotRange(fork: ForkName, chain: IBeaconChain, 
   const earliestPermissibleSlot = Math.max(
     // slot with past tolerance of MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC
     // ATTESTATION_PROPAGATION_SLOT_RANGE = SLOTS_PER_EPOCH
-    chain.clock.slotWithPastTolerance(MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC * 1000) - SLOTS_PER_EPOCH,
+    chain.clock.slotWithFutureTolerance(MAXIMUM_GOSSIP_CLOCK_DISPARITY_MS) - SLOTS_PER_EPOCH,
     0
   );
 

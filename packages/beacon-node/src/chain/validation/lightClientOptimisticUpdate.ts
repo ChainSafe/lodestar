@@ -4,7 +4,7 @@ import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {IBeaconChain} from "../interface.js";
 import {LightClientError, LightClientErrorCode} from "../errors/lightClientError.js";
 import {GossipAction} from "../errors/index.js";
-import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants/index.js";
+import {MAXIMUM_GOSSIP_CLOCK_DISPARITY_MS} from "../../constants/index.js";
 
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#light_client_optimistic_update
 export function validateLightClientOptimisticUpdate(
@@ -59,6 +59,6 @@ export function updateReceivedTooEarly(
   update: Pick<allForks.LightClientOptimisticUpdate, "signatureSlot">
 ): boolean {
   const signatureSlot13TimestampMs = computeTimeAtSlot(config, update.signatureSlot + 1 / 3, genesisTime) * 1000;
-  const earliestAllowedTimestampMs = signatureSlot13TimestampMs - MAXIMUM_GOSSIP_CLOCK_DISPARITY;
+  const earliestAllowedTimestampMs = signatureSlot13TimestampMs - MAXIMUM_GOSSIP_CLOCK_DISPARITY_MS;
   return Date.now() < earliestAllowedTimestampMs;
 }
