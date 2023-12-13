@@ -13,6 +13,8 @@ const ajv = new Ajv({
 // Ensure embedded schema 'example' do not fail validation
 ajv.addKeyword({
   keyword: "example",
+  validate: () => true,
+  errors: false,
 });
 
 ajv.addFormat("hex", /^0x[a-fA-F0-9]+$/);
