@@ -20,37 +20,13 @@ ajv.addKeyword({
 ajv.addFormat("hex", /^0x[a-fA-F0-9]+$/);
 
 /**
- * An operation that will be filtered during tests execution.
+ * A property that will be filtered during tests execution.
  */
-export type FilteredOperation = {
-  id: string;
-  /**
-   * When specified, associated operation is tested but `required` properties are ignored from request.
-   */
-  requiredRequestProperties?: string[];
-  /**
-   * When specified, associated operation is tested but `required` query properties are ignored from request.
-   */
-  requiredRequestQueryProperties?: string[];
-  /**
-   * When specified, associated operation is tested but `required` properties are ignored from response.
-   */
-  requiredResponseProperties?: string[];
+export type FilteredProperty = {
+  requestProperties?: string[];
+  requestQueryProperties?: string[];
+  responseProperties?: string[];
 };
-
-/**
- * @returns `true` if the `filteredOperation` is defined and no required property is specified.
- */
-function isOperationIgnored(filteredOperation: FilteredOperation | undefined): boolean {
-  if (filteredOperation) {
-    return (
-      filteredOperation.requiredResponseProperties === undefined &&
-      filteredOperation.requiredRequestProperties === undefined &&
-      filteredOperation.requiredRequestQueryProperties === undefined
-    );
-  }
-  return false;
-}
 
 export function runTestCheckAgainstSpec(
   openApiJson: OpenApiJson,
@@ -59,15 +35,18 @@ export function runTestCheckAgainstSpec(
   returnTypes: Record<string, ReturnTypes<any>[string]>,
   testDatas: Record<string, GenericServerTestCases<any>[string]>,
   opts?: ParseOpenApiSpecOpts,
-  filteredOperations: FilteredOperation[] = []
+  filteredOperations: string[] = [],
+  filteredProperties: Record<string, FilteredProperty> = {}
 ): void {
   const openApiSpec = parseOpenApiSpec(openApiJson, opts);
 
   for (const [operationId, routeSpec] of openApiSpec.entries()) {
-    const filteredOperation = filteredOperations.find((e) => e.id === operationId);
-    if (isOperationIgnored(filteredOperation)) {
+    const isFiltered = filteredOperations.some((id) => id === operationId);
+    if (isFiltered) {
       continue;
     }
+
+    const filteredProperty = filteredProperties[operationId];
 
     describe(operationId, () => {
       const {requestSchema, responseOkSchema} = routeSpec;
@@ -107,7 +86,7 @@ export function runTestCheckAgainstSpec(
           stringifyProperties((reqJson as ReqGeneric).params ?? {});
           stringifyProperties((reqJson as ReqGeneric).query ?? {});
 
-          const ignoredProperties = filteredOperation?.requiredRequestProperties;
+          const ignoredProperties = filteredProperty?.requestProperties;
           if (ignoredProperties && routeSpec.requestSchema.properties) {
             // Remove ignored properties from schema validation
             routeSpec.requestSchema.required = routeSpec.requestSchema.required?.filter(
@@ -115,7 +94,7 @@ export function runTestCheckAgainstSpec(
             );
           }
 
-          const ignoredQueryProperties = filteredOperation?.requiredRequestQueryProperties;
+          const ignoredQueryProperties = filteredProperty?.requestQueryProperties;
           if (ignoredQueryProperties && routeSpec.requestSchema.properties) {
             // Remove ignored query properties from schema validation
             routeSpec.requestSchema.properties.query.required =
@@ -141,7 +120,7 @@ export function runTestCheckAgainstSpec(
             }
           }
 
-          const ignoredProperties = filteredOperation?.requiredResponseProperties;
+          const ignoredProperties = filteredProperty?.responseProperties;
           if (ignoredProperties) {
             // Remove ignored properties from schema validation
             responseOkSchema.required = responseOkSchema.required?.filter((e) => !ignoredProperties.includes(e));

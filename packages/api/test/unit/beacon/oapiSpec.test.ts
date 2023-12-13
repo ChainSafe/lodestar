@@ -6,7 +6,7 @@ import {OpenApiFile} from "../../utils/parseOpenApiSpec.js";
 import {routes} from "../../../src/beacon/index.js";
 import {ReqSerializers} from "../../../src/utils/types.js";
 import {Schema} from "../../../src/utils/schema.js";
-import {FilteredOperation, runTestCheckAgainstSpec} from "../../utils/checkAgainstSpec.js";
+import {FilteredProperty, runTestCheckAgainstSpec} from "../../utils/checkAgainstSpec.js";
 import {fetchOpenApiSpec} from "../../utils/fetchOpenApiSpec.js";
 // Import all testData and merge below
 import {testData as beaconTestData} from "./testData/beacon.js";
@@ -84,63 +84,65 @@ const testDatas = {
   ...validatorTestData,
 };
 
-const filteredOperations: FilteredOperation[] = [
-  /*
-   #5693
-   missing finalized
-   */
-  {id: "getStateRoot", requiredResponseProperties: ["finalized"]},
-  {id: "getStateFork", requiredResponseProperties: ["finalized"]},
-  {id: "getStateFinalityCheckpoints", requiredResponseProperties: ["finalized"]},
-  {id: "getStateValidators", requiredResponseProperties: ["finalized"]},
-  {id: "getStateValidator", requiredResponseProperties: ["finalized"]},
-  {id: "getStateValidatorBalances", requiredResponseProperties: ["finalized"]},
-  {id: "getEpochCommittees", requiredResponseProperties: ["finalized"]},
-  {id: "getEpochSyncCommittees", requiredResponseProperties: ["finalized"]},
-  {id: "getStateRandao", requiredResponseProperties: ["finalized"]},
-  {id: "getBlockHeaders", requiredResponseProperties: ["finalized"]},
-  {id: "getBlockHeader", requiredResponseProperties: ["finalized"]},
-  {id: "getBlockV2", requiredResponseProperties: ["finalized"]},
-  {id: "getBlockRoot", requiredResponseProperties: ["finalized"]},
-  {id: "getBlockAttestations", requiredResponseProperties: ["finalized"]},
-  {id: "getStateV2", requiredResponseProperties: ["finalized"]},
-
-  /**
-   * #6185
-   *  - must have required property 'query'
-   */
-  {id: "getBlobSidecars", requiredRequestProperties: ["query"]},
-
+const filteredOperations = [
   /* missing route */
   /* #5694 */
-  {id: "getSyncCommitteeRewards"},
-  {id: "getBlockRewards"},
-  {id: "getAttestationsRewards"},
-  {id: "getDepositSnapshot"}, // Won't fix for now, see https://github.com/ChainSafe/lodestar/issues/5697
-  {id: "getBlindedBlock"}, // #5699
-  {id: "getNextWithdrawals"}, // #5696
-  {id: "getDebugForkChoice"}, // #5700
+  "getSyncCommitteeRewards",
+  "getBlockRewards",
+  "getAttestationsRewards",
+  "getDepositSnapshot", // Won't fix for now, see https://github.com/ChainSafe/lodestar/issues/5697
+  "getBlindedBlock", // #5699
+  "getNextWithdrawals", // #5696
+  "getDebugForkChoice", // #5700
   /* #6080 */
-  {id: "getLightClientBootstrap"},
-  {id: "getLightClientUpdatesByRange"},
-  {id: "getLightClientFinalityUpdate"},
-  {id: "getLightClientOptimisticUpdate"},
-  {id: "getPoolBLSToExecutionChanges"},
-  {id: "submitPoolBLSToExecutionChange"},
+  "getLightClientBootstrap",
+  "getLightClientUpdatesByRange",
+  "getLightClientFinalityUpdate",
+  "getLightClientOptimisticUpdate",
+  "getPoolBLSToExecutionChanges",
+  "submitPoolBLSToExecutionChange",
 
   /* 
    #6168
    /query/syncing_status - must be integer
    */
-  {id: "getHealth"},
+  "getHealth",
+];
+
+const filteredProperties: Record<string, FilteredProperty> = {
+  /*
+   #5693
+   missing finalized
+   */
+  "getStateRoot": {responseProperties: ["finalized"]},
+  "getStateFork": {responseProperties: ["finalized"]},
+  "getStateFinalityCheckpoints": {responseProperties: ["finalized"]},
+  "getStateValidators": {responseProperties: ["finalized"]},
+  "getStateValidator": {responseProperties: ["finalized"]},
+  "getStateValidatorBalances": {responseProperties: ["finalized"]},
+  "getEpochCommittees": {responseProperties: ["finalized"]},
+  "getEpochSyncCommittees": {responseProperties: ["finalized"]},
+  "getStateRandao": {responseProperties: ["finalized"]},
+  "getBlockHeaders": {responseProperties: ["finalized"]},
+  "getBlockHeader": {responseProperties: ["finalized"]},
+  "getBlockV2": {responseProperties: ["finalized"]},
+  "getBlockRoot": {responseProperties: ["finalized"]},
+  "getBlockAttestations": {responseProperties: ["finalized"]},
+  "getStateV2": {responseProperties: ["finalized"]},
+
+  /**
+   * #6185
+   *  - must have required property 'query'
+   */
+  "getBlobSidecars": {requestProperties: ["query"]},
 
   /* 
    #4638 
    /query - must have required property 'skip_randao_verification'
    */
-  {id: "produceBlockV2", requiredRequestQueryProperties: ["skip_randao_verification"]},
-  {id: "produceBlindedBlock", requiredRequestQueryProperties: ["skip_randao_verification"]},
-];
+  "produceBlockV2": {requestQueryProperties: ["skip_randao_verification"]},
+  "produceBlindedBlock": {requestQueryProperties: ["skip_randao_verification"]},
+  };
 
 const openApiJson = await fetchOpenApiSpec(openApiFile);
 runTestCheckAgainstSpec(
@@ -159,7 +161,8 @@ runTestCheckAgainstSpec(
       "publishBlindedBlockV2",
     ],
   },
-  filteredOperations
+  filteredOperations,
+  filteredProperties
 );
 
 const ignoredTopics = [
