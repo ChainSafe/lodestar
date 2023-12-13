@@ -6,7 +6,7 @@ import {OpenApiFile} from "../../utils/parseOpenApiSpec.js";
 import {routes} from "../../../src/beacon/index.js";
 import {ReqSerializers} from "../../../src/utils/types.js";
 import {Schema} from "../../../src/utils/schema.js";
-import {runTestCheckAgainstSpec} from "../../utils/checkAgainstSpec.js";
+import {FilteredOperation, runTestCheckAgainstSpec} from "../../utils/checkAgainstSpec.js";
 import {fetchOpenApiSpec} from "../../utils/fetchOpenApiSpec.js";
 // Import all testData and merge below
 import {testData as beaconTestData} from "./testData/beacon.js";
@@ -23,7 +23,7 @@ import {testData as validatorTestData} from "./testData/validator.js";
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const version = "v2.4.0";
+const version = "v2.4.2";
 const openApiFile: OpenApiFile = {
   url: `https://github.com/ethereum/beacon-APIs/releases/download/${version}/beacon-node-oapi.json`,
   filepath: path.join(__dirname, "../../../oapi-schemas/beacon-node-oapi.json"),
@@ -84,26 +84,32 @@ const testDatas = {
   ...validatorTestData,
 };
 
-const ignoredOperations = [
+const filteredOperations: FilteredOperation[] = [
   /*
    #5693
    missing finalized
    */
-  {id: "getStateRoot", required: ["finalized"]},
-  {id: "getStateFork", required: ["finalized"]},
-  {id: "getStateFinalityCheckpoints", required: ["finalized"]},
-  {id: "getStateValidators", required: ["finalized"]},
-  {id: "getStateValidator", required: ["finalized"]},
-  {id: "getStateValidatorBalances", required: ["finalized"]},
-  {id: "getEpochCommittees", required: ["finalized"]},
-  {id: "getEpochSyncCommittees", required: ["finalized"]},
-  {id: "getStateRandao", required: ["finalized"]},
-  {id: "getBlockHeaders", required: ["finalized"]},
-  {id: "getBlockHeader", required: ["finalized"]},
-  {id: "getBlockV2", required: ["finalized"]},
-  {id: "getBlockRoot", required: ["finalized"]},
-  {id: "getBlockAttestations", required: ["finalized"]},
-  {id: "getStateV2", required: ["finalized"]},
+  {id: "getStateRoot", requiredResponseProperties: ["finalized"]},
+  {id: "getStateFork", requiredResponseProperties: ["finalized"]},
+  {id: "getStateFinalityCheckpoints", requiredResponseProperties: ["finalized"]},
+  {id: "getStateValidators", requiredResponseProperties: ["finalized"]},
+  {id: "getStateValidator", requiredResponseProperties: ["finalized"]},
+  {id: "getStateValidatorBalances", requiredResponseProperties: ["finalized"]},
+  {id: "getEpochCommittees", requiredResponseProperties: ["finalized"]},
+  {id: "getEpochSyncCommittees", requiredResponseProperties: ["finalized"]},
+  {id: "getStateRandao", requiredResponseProperties: ["finalized"]},
+  {id: "getBlockHeaders", requiredResponseProperties: ["finalized"]},
+  {id: "getBlockHeader", requiredResponseProperties: ["finalized"]},
+  {id: "getBlockV2", requiredResponseProperties: ["finalized"]},
+  {id: "getBlockRoot", requiredResponseProperties: ["finalized"]},
+  {id: "getBlockAttestations", requiredResponseProperties: ["finalized"]},
+  {id: "getStateV2", requiredResponseProperties: ["finalized"]},
+
+  /**
+   * #6185
+   *  - must have required property 'query'
+   */
+  {id: "getBlobSidecars", requiredRequestProperties: ["query"]},
 
   /* missing route */
   /* #5694 */
@@ -132,8 +138,8 @@ const ignoredOperations = [
    #4638 
    /query - must have required property 'skip_randao_verification'
    */
-  {id: "produceBlockV2"},
-  {id: "produceBlindedBlock"},
+  {id: "produceBlockV2", requiredRequestQueryProperties: ["skip_randao_verification"]},
+  {id: "produceBlindedBlock", requiredRequestQueryProperties: ["skip_randao_verification"]},
 ];
 
 const openApiJson = await fetchOpenApiSpec(openApiFile);
@@ -145,9 +151,15 @@ runTestCheckAgainstSpec(
   testDatas,
   {
     // TODO: Investigate why schema validation fails otherwise
-    routesDropOneOf: ["produceBlockV2", "produceBlindedBlock", "publishBlindedBlock"],
+    routesDropOneOf: [
+      "produceBlockV2",
+      "produceBlockV3",
+      "produceBlindedBlock",
+      "publishBlindedBlock",
+      "publishBlindedBlockV2",
+    ],
   },
-  ignoredOperations
+  filteredOperations
 );
 
 const ignoredTopics = [

@@ -5,36 +5,49 @@ import {applyRecursively, OpenApiJson, parseOpenApiSpec, ParseOpenApiSpecOpts} f
 import {GenericServerTestCases} from "./genericServerTest.js";
 
 const ajv = new Ajv({
-  // strict: true,
-  // strictSchema: true,
   allErrors: true,
 });
 
-// TODO: Still necessary?
+// Ensure embedded schema 'example' do not fail validation
 ajv.addKeyword({
   keyword: "example",
-  validate: () => true,
-  errors: false,
 });
 
 ajv.addFormat("hex", /^0x[a-fA-F0-9]+$/);
 
-export type Operation = {
+/**
+ * An operation that will be filtered during tests execution.
+ */
+export type FilteredOperation = {
   id: string;
-  required?: string[];
+  /**
+   * When specified, associated operation is tested but `required` properties are ignored from request.
+   */
+  requiredRequestProperties?: string[];
+  /**
+   * When specified, associated operation is tested but `required` query properties are ignored from request.
+   */
+  requiredRequestQueryProperties?: string[];
+  /**
+   * When specified, associated operation is tested but `required` properties are ignored from response.
+   */
+  requiredResponseProperties?: string[];
 };
 
 /**
- * Run all tests defined as part of the OpenAPI spec provided as `openApiJson`.
- *
- * @param openApiJson
- * @param routesData
- * @param reqSerializers
- * @param returnTypes
- * @param testDatas
- * @param opts
- * @param filteredOperations an array of Operation that will be ignored during tests. When `required` properties are specified, associated operation is tested but required properties are omitted.
+ * @returns `true` if the `filteredOperation` is defined and no required property is specified.
  */
+function isOperationIgnored(filteredOperation: FilteredOperation | undefined): boolean {
+  if (filteredOperation) {
+    return (
+      filteredOperation.requiredResponseProperties === undefined &&
+      filteredOperation.requiredRequestProperties === undefined &&
+      filteredOperation.requiredRequestQueryProperties === undefined
+    );
+  }
+  return false;
+}
+
 export function runTestCheckAgainstSpec(
   openApiJson: OpenApiJson,
   routesData: Record<string, RouteDef>,
@@ -42,14 +55,13 @@ export function runTestCheckAgainstSpec(
   returnTypes: Record<string, ReturnTypes<any>[string]>,
   testDatas: Record<string, GenericServerTestCases<any>[string]>,
   opts?: ParseOpenApiSpecOpts,
-  filteredOperations: Operation[] = []
+  filteredOperations: FilteredOperation[] = []
 ): void {
   const openApiSpec = parseOpenApiSpec(openApiJson, opts);
 
   for (const [operationId, routeSpec] of openApiSpec.entries()) {
     const filteredOperation = filteredOperations.find((e) => e.id === operationId);
-    if (filteredOperation && !filteredOperation.required) {
-      // Operation is part of `filteredOperations` but no `required` properties are specified, skipping operation validation
+    if (isOperationIgnored(filteredOperation)) {
       continue;
     }
 
@@ -91,6 +103,19 @@ export function runTestCheckAgainstSpec(
           stringifyProperties((reqJson as ReqGeneric).params ?? {});
           stringifyProperties((reqJson as ReqGeneric).query ?? {});
 
+          const ignoredProperties = filteredOperation?.requiredRequestProperties;
+          if (ignoredProperties && routeSpec.requestSchema.properties) {
+            // Remove ignored properties from schema validation
+              routeSpec.requestSchema.required = routeSpec.requestSchema.required?.filter((e) => !ignoredProperties.includes(e));
+          }
+
+          const ignoredQueryProperties = filteredOperation?.requiredRequestQueryProperties;
+          if (ignoredQueryProperties && routeSpec.requestSchema.properties) {
+            // Remove ignored query properties from schema validation
+            routeSpec.requestSchema.properties.query.required =
+              routeSpec.requestSchema.properties.query.required?.filter((e) => !ignoredQueryProperties.includes(e));
+          }
+
           // Validate request
           validateSchema(routeSpec.requestSchema, reqJson, "request");
         });
@@ -110,9 +135,9 @@ export function runTestCheckAgainstSpec(
             }
           }
 
-          const ignoredProperties = filteredOperation?.required;
+          const ignoredProperties = filteredOperation?.requiredResponseProperties;
           if (ignoredProperties) {
-            // Remove specified fields from schema validation
+            // Remove ignored properties from schema validation
             responseOkSchema.required = responseOkSchema.required?.filter((e) => !ignoredProperties.includes(e));
           }
           // Validate response
