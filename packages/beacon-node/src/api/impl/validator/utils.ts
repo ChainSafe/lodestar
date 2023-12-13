@@ -2,14 +2,11 @@ import {fromHexString} from "@chainsafe/ssz";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
-  computeEpochAtSlot,
   computeSlotsSinceEpochStart,
   computeStartSlotAtEpoch,
-  getCurrentSlot,
 } from "@lodestar/state-transition";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BLSPubkey, CommitteeIndex, Epoch, Root, Slot, ValidatorIndex, phase0, ssz} from "@lodestar/types";
-import {ChainForkConfig} from "@lodestar/config";
 import {ExecutionStatus, IForkChoice} from "@lodestar/fork-choice";
 import {IBeaconChain, ChainEvent, CheckpointHex} from "../../../chain/index.js";
 import {SyncState} from "../../../sync/interface.js";

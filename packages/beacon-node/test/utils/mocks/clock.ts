@@ -40,6 +40,10 @@ export class ClockStopped extends EventEmitter implements IClock {
     return slot === this.slot;
   }
 
+  isCurrentSlotGivenTolerance(slot: Slot, _pastToleranceMs: number, _futureToleranceMs?: number): boolean {
+    return slot === this.slot;
+  }
+
   /**
    * Returns a promise that waits until at least `slot` is reached
    * Resolves when the current slot >= `slot`

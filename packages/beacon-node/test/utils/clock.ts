@@ -31,6 +31,10 @@ export class ClockStatic extends EventEmitter implements IClock {
     return this.currentSlot === slot;
   }
 
+  isCurrentSlotGivenTolerance(slot: unknown, _pastToleranceMs: unknown, _futureToleranceMs?: unknown): boolean {
+    return this.currentSlot === slot;
+  }
+
   async waitForSlot(): Promise<void> {
     //
   }
