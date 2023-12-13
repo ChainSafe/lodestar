@@ -106,7 +106,9 @@ export function runTestCheckAgainstSpec(
           const ignoredProperties = filteredOperation?.requiredRequestProperties;
           if (ignoredProperties && routeSpec.requestSchema.properties) {
             // Remove ignored properties from schema validation
-              routeSpec.requestSchema.required = routeSpec.requestSchema.required?.filter((e) => !ignoredProperties.includes(e));
+            routeSpec.requestSchema.required = routeSpec.requestSchema.required?.filter(
+              (e) => !ignoredProperties.includes(e)
+            );
           }
 
           const ignoredQueryProperties = filteredOperation?.requiredRequestQueryProperties;
