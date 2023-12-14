@@ -6,7 +6,7 @@ import {OpenApiFile} from "../../utils/parseOpenApiSpec.js";
 import {routes} from "../../../src/beacon/index.js";
 import {ReqSerializers} from "../../../src/utils/types.js";
 import {Schema} from "../../../src/utils/schema.js";
-import {FilteredProperty, runTestCheckAgainstSpec} from "../../utils/checkAgainstSpec.js";
+import {IgnoredProperty, runTestCheckAgainstSpec} from "../../utils/checkAgainstSpec.js";
 import {fetchOpenApiSpec} from "../../utils/fetchOpenApiSpec.js";
 // Import all testData and merge below
 import {testData as beaconTestData} from "./testData/beacon.js";
@@ -84,7 +84,7 @@ const testDatas = {
   ...validatorTestData,
 };
 
-const filteredOperations = [
+const ignoredOperations = [
   /* missing route */
   /* #5694 */
   "getSyncCommitteeRewards",
@@ -101,48 +101,48 @@ const filteredOperations = [
   "getLightClientOptimisticUpdate",
   "getPoolBLSToExecutionChanges",
   "submitPoolBLSToExecutionChange",
+];
+
+const ignoredProperties: Record<string, IgnoredProperty> = {
+  /*
+   #5693
+   missing finalized
+   */
+  getStateRoot: {responseProperties: ["finalized"]},
+  getStateFork: {responseProperties: ["finalized"]},
+  getStateFinalityCheckpoints: {responseProperties: ["finalized"]},
+  getStateValidators: {responseProperties: ["finalized"]},
+  getStateValidator: {responseProperties: ["finalized"]},
+  getStateValidatorBalances: {responseProperties: ["finalized"]},
+  getEpochCommittees: {responseProperties: ["finalized"]},
+  getEpochSyncCommittees: {responseProperties: ["finalized"]},
+  getStateRandao: {responseProperties: ["finalized"]},
+  getBlockHeaders: {responseProperties: ["finalized"]},
+  getBlockHeader: {responseProperties: ["finalized"]},
+  getBlockV2: {responseProperties: ["finalized"]},
+  getBlockRoot: {responseProperties: ["finalized"]},
+  getBlockAttestations: {responseProperties: ["finalized"]},
+  getStateV2: {responseProperties: ["finalized"]},
 
   /* 
    #6168
    /query/syncing_status - must be integer
    */
-  "getHealth",
-];
-
-const filteredProperties: Record<string, FilteredProperty> = {
-  /*
-   #5693
-   missing finalized
-   */
-  "getStateRoot": {responseProperties: ["finalized"]},
-  "getStateFork": {responseProperties: ["finalized"]},
-  "getStateFinalityCheckpoints": {responseProperties: ["finalized"]},
-  "getStateValidators": {responseProperties: ["finalized"]},
-  "getStateValidator": {responseProperties: ["finalized"]},
-  "getStateValidatorBalances": {responseProperties: ["finalized"]},
-  "getEpochCommittees": {responseProperties: ["finalized"]},
-  "getEpochSyncCommittees": {responseProperties: ["finalized"]},
-  "getStateRandao": {responseProperties: ["finalized"]},
-  "getBlockHeaders": {responseProperties: ["finalized"]},
-  "getBlockHeader": {responseProperties: ["finalized"]},
-  "getBlockV2": {responseProperties: ["finalized"]},
-  "getBlockRoot": {responseProperties: ["finalized"]},
-  "getBlockAttestations": {responseProperties: ["finalized"]},
-  "getStateV2": {responseProperties: ["finalized"]},
+  getHealth: {requestProperties: ["query.syncing_status"]},
 
   /**
    * #6185
    *  - must have required property 'query'
    */
-  "getBlobSidecars": {requestProperties: ["query"]},
+  getBlobSidecars: {requestProperties: ["query"]},
 
   /* 
    #4638 
    /query - must have required property 'skip_randao_verification'
    */
-  "produceBlockV2": {requestQueryProperties: ["skip_randao_verification"]},
-  "produceBlindedBlock": {requestQueryProperties: ["skip_randao_verification"]},
-  };
+  produceBlockV2: {requestProperties: ["query.skip_randao_verification"]},
+  produceBlindedBlock: {requestProperties: ["query.skip_randao_verification"]},
+};
 
 const openApiJson = await fetchOpenApiSpec(openApiFile);
 runTestCheckAgainstSpec(
@@ -161,8 +161,8 @@ runTestCheckAgainstSpec(
       "publishBlindedBlockV2",
     ],
   },
-  filteredOperations,
-  filteredProperties
+  ignoredOperations,
+  ignoredProperties
 );
 
 const ignoredTopics = [

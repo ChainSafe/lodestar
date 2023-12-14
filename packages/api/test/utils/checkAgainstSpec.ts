@@ -1,7 +1,7 @@
 import Ajv, {ErrorObject} from "ajv";
 import {expect} from "chai";
 import {ReqGeneric, ReqSerializer, ReturnTypes, RouteDef} from "../../src/utils/types.js";
-import {applyRecursively, OpenApiJson, parseOpenApiSpec, ParseOpenApiSpecOpts} from "./parseOpenApiSpec.js";
+import {applyRecursively, JsonSchema, OpenApiJson, parseOpenApiSpec, ParseOpenApiSpecOpts} from "./parseOpenApiSpec.js";
 import {GenericServerTestCases} from "./genericServerTest.js";
 
 const ajv = new Ajv({
@@ -20,13 +20,47 @@ ajv.addKeyword({
 ajv.addFormat("hex", /^0x[a-fA-F0-9]+$/);
 
 /**
- * A property that will be filtered during tests execution.
+ * A set of properties that will be ignored during tests execution.
+ * This allows for a black-list mechanism to have a test pass while some part of the spec is not yet implemented.
+ *
+ * Properties can be nested using dot notation, follwong JSONPath semantic.
+ *
+ * Example:
+ * - query
+ * - query.skip_randao_verification
  */
-export type FilteredProperty = {
+export type IgnoredProperty = {
+  /**
+   * Properties to ignore in the request schema
+   */
   requestProperties?: string[];
-  requestQueryProperties?: string[];
+  /**
+   * Properties to ignore in the response schema
+   */
   responseProperties?: string[];
 };
+
+/**
+ * Recursively remove a property from a schema
+ *
+ * @param schema a schema to remove a property from
+ * @param property a JSONPath like property to remove from the schema
+ */
+function deleteNested(schema: JsonSchema | undefined, property: string): void {
+  const properties = schema?.properties;
+  if (property.includes(".")) {
+    // Extract first segment, keep the rest as dotted
+    const [key, rest] = property.split(".", 2);
+    deleteNested(properties?.[key], rest);
+  } else {
+    // Remove property from 'required'
+    if (schema?.required) {
+      schema.required = schema.required?.filter((e) => property !== e);
+    }
+    // Remove property from 'properties'
+    delete properties?.[property];
+  }
+}
 
 export function runTestCheckAgainstSpec(
   openApiJson: OpenApiJson,
@@ -35,18 +69,18 @@ export function runTestCheckAgainstSpec(
   returnTypes: Record<string, ReturnTypes<any>[string]>,
   testDatas: Record<string, GenericServerTestCases<any>[string]>,
   opts?: ParseOpenApiSpecOpts,
-  filteredOperations: string[] = [],
-  filteredProperties: Record<string, FilteredProperty> = {}
+  ignoredOperations: string[] = [],
+  ignoredProperties: Record<string, IgnoredProperty> = {}
 ): void {
   const openApiSpec = parseOpenApiSpec(openApiJson, opts);
 
   for (const [operationId, routeSpec] of openApiSpec.entries()) {
-    const isFiltered = filteredOperations.some((id) => id === operationId);
-    if (isFiltered) {
+    const isIgnored = ignoredOperations.some((id) => id === operationId);
+    if (isIgnored) {
       continue;
     }
 
-    const filteredProperty = filteredProperties[operationId];
+    const ignoredProperty = ignoredProperties[operationId];
 
     describe(operationId, () => {
       const {requestSchema, responseOkSchema} = routeSpec;
@@ -86,19 +120,10 @@ export function runTestCheckAgainstSpec(
           stringifyProperties((reqJson as ReqGeneric).params ?? {});
           stringifyProperties((reqJson as ReqGeneric).query ?? {});
 
-          const ignoredProperties = filteredProperty?.requestProperties;
-          if (ignoredProperties && routeSpec.requestSchema.properties) {
+          const ignoredProperties = ignoredProperty?.requestProperties;
+          if (ignoredProperties) {
             // Remove ignored properties from schema validation
-            routeSpec.requestSchema.required = routeSpec.requestSchema.required?.filter(
-              (e) => !ignoredProperties.includes(e)
-            );
-          }
-
-          const ignoredQueryProperties = filteredProperty?.requestQueryProperties;
-          if (ignoredQueryProperties && routeSpec.requestSchema.properties) {
-            // Remove ignored query properties from schema validation
-            routeSpec.requestSchema.properties.query.required =
-              routeSpec.requestSchema.properties.query.required?.filter((e) => !ignoredQueryProperties.includes(e));
+            ignoredProperties.forEach((property) => deleteNested(routeSpec.requestSchema, property));
           }
 
           // Validate request
@@ -120,10 +145,10 @@ export function runTestCheckAgainstSpec(
             }
           }
 
-          const ignoredProperties = filteredProperty?.responseProperties;
+          const ignoredProperties = ignoredProperty?.responseProperties;
           if (ignoredProperties) {
             // Remove ignored properties from schema validation
-            responseOkSchema.required = responseOkSchema.required?.filter((e) => !ignoredProperties.includes(e));
+            ignoredProperties.forEach((property) => deleteNested(routeSpec.responseOkSchema, property));
           }
           // Validate response
           validateSchema(responseOkSchema, resJson, "response");
