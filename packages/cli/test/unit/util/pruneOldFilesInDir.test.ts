@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
+import {describe, it, expect, beforeEach, afterEach} from "vitest";
 import {rimraf} from "rimraf";
-import {expect} from "chai";
 import {pruneOldFilesInDir} from "../../../src/util/index.js";
 import {testFilesDir} from "../../utils.js";
 
@@ -25,14 +25,14 @@ describe("pruneOldFilesInDir", () => {
     pruneOldFilesInDir(dataDir, DAYS_TO_MS);
 
     const files = fs.readdirSync(dataDir);
-    expect(files).to.not.include(oldFile);
+    expect(files).toEqual(expect.not.arrayContaining([oldFile]));
   });
 
   it("should not delete new files", () => {
     pruneOldFilesInDir(dataDir, DAYS_TO_MS);
 
     const files = fs.readdirSync(dataDir);
-    expect(files).to.include(newFile);
+    expect(files).toEqual(expect.arrayContaining([newFile]));
   });
 
   it("should delete old files in nested directories", () => {
@@ -43,7 +43,7 @@ describe("pruneOldFilesInDir", () => {
 
     pruneOldFilesInDir(dataDir, DAYS_TO_MS);
 
-    expect(fs.readdirSync(nestedDir)).to.be.empty;
+    expect(fs.readdirSync(nestedDir)).toHaveLength(0);
   });
 
   it("should handle empty directories", () => {
@@ -52,7 +52,7 @@ describe("pruneOldFilesInDir", () => {
 
     pruneOldFilesInDir(emptyDir, DAYS_TO_MS);
 
-    expect(fs.readdirSync(emptyDir)).to.be.empty;
+    expect(fs.readdirSync(emptyDir)).toHaveLength(0);
   });
 
   function createFileWithAge(path: string, ageInDays: number): void {

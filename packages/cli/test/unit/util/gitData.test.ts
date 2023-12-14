@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {findUpSync} from "find-up";
 import {gitDataPath, readGitDataFile} from "../../../src/util/gitData/gitDataPath.js";
 import {getGitData} from "../../../src/util/index.js";
@@ -20,7 +20,7 @@ describe("util / gitData", function () {
   it("gitData file must exist", () => {
     const gitData = readGitDataFile();
 
-    expect(gitData).to.deep.equal(getGitData(), "Wrong git-data.json contents");
+    expect(gitData).toEqual(getGitData());
   });
 
   it("gitData path must be included in the package.json", () => {
@@ -32,6 +32,8 @@ describe("util / gitData", function () {
     const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, "utf8")) as {files: string[]};
     const gitDataPathFromPkgJson = path.relative(path.dirname(pkgJsonPath), gitDataPath);
 
-    expect(pkgJson.files).to.include(gitDataPathFromPkgJson, "package.json .files does not include gitData path");
+    expect(pkgJson.files).toEqual(
+      expect.arrayContaining([gitDataPathFromPkgJson, "package.json .files does not include gitData path"])
+    );
   });
 });
