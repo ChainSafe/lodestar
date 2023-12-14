@@ -108,40 +108,40 @@ const ignoredProperties: Record<string, IgnoredProperty> = {
    #5693
    missing finalized
    */
-  getStateRoot: {responseProperties: ["finalized"]},
-  getStateFork: {responseProperties: ["finalized"]},
-  getStateFinalityCheckpoints: {responseProperties: ["finalized"]},
-  getStateValidators: {responseProperties: ["finalized"]},
-  getStateValidator: {responseProperties: ["finalized"]},
-  getStateValidatorBalances: {responseProperties: ["finalized"]},
-  getEpochCommittees: {responseProperties: ["finalized"]},
-  getEpochSyncCommittees: {responseProperties: ["finalized"]},
-  getStateRandao: {responseProperties: ["finalized"]},
-  getBlockHeaders: {responseProperties: ["finalized"]},
-  getBlockHeader: {responseProperties: ["finalized"]},
-  getBlockV2: {responseProperties: ["finalized"]},
-  getBlockRoot: {responseProperties: ["finalized"]},
-  getBlockAttestations: {responseProperties: ["finalized"]},
-  getStateV2: {responseProperties: ["finalized"]},
+  getStateRoot: {response: ["finalized"]},
+  getStateFork: {response: ["finalized"]},
+  getStateFinalityCheckpoints: {response: ["finalized"]},
+  getStateValidators: {response: ["finalized"]},
+  getStateValidator: {response: ["finalized"]},
+  getStateValidatorBalances: {response: ["finalized"]},
+  getEpochCommittees: {response: ["finalized"]},
+  getEpochSyncCommittees: {response: ["finalized"]},
+  getStateRandao: {response: ["finalized"]},
+  getBlockHeaders: {response: ["finalized"]},
+  getBlockHeader: {response: ["finalized"]},
+  getBlockV2: {response: ["finalized"]},
+  getBlockRoot: {response: ["finalized"]},
+  getBlockAttestations: {response: ["finalized"]},
+  getStateV2: {response: ["finalized"]},
 
   /* 
    #6168
    /query/syncing_status - must be integer
    */
-  getHealth: {requestProperties: ["query.syncing_status"]},
+  getHealth: {request: ["query.syncing_status"]},
 
   /**
    * #6185
    *  - must have required property 'query'
    */
-  getBlobSidecars: {requestProperties: ["query"]},
+  getBlobSidecars: {request: ["query"]},
 
   /* 
    #4638 
    /query - must have required property 'skip_randao_verification'
    */
-  produceBlockV2: {requestProperties: ["query.skip_randao_verification"]},
-  produceBlindedBlock: {requestProperties: ["query.skip_randao_verification"]},
+  produceBlockV2: {request: ["query.skip_randao_verification"]},
+  produceBlindedBlock: {request: ["query.skip_randao_verification"]},
 };
 
 const openApiJson = await fetchOpenApiSpec(openApiFile);

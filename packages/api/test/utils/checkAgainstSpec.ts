@@ -33,11 +33,11 @@ export type IgnoredProperty = {
   /**
    * Properties to ignore in the request schema
    */
-  requestProperties?: string[];
+  request?: string[];
   /**
    * Properties to ignore in the response schema
    */
-  responseProperties?: string[];
+  response?: string[];
 };
 
 /**
@@ -120,7 +120,7 @@ export function runTestCheckAgainstSpec(
           stringifyProperties((reqJson as ReqGeneric).params ?? {});
           stringifyProperties((reqJson as ReqGeneric).query ?? {});
 
-          const ignoredProperties = ignoredProperty?.requestProperties;
+          const ignoredProperties = ignoredProperty?.request;
           if (ignoredProperties) {
             // Remove ignored properties from schema validation
             ignoredProperties.forEach((property) => deleteNested(routeSpec.requestSchema, property));
@@ -145,7 +145,7 @@ export function runTestCheckAgainstSpec(
             }
           }
 
-          const ignoredProperties = ignoredProperty?.responseProperties;
+          const ignoredProperties = ignoredProperty?.response;
           if (ignoredProperties) {
             // Remove ignored properties from schema validation
             ignoredProperties.forEach((property) => deleteNested(routeSpec.responseOkSchema, property));
