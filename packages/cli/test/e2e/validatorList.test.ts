@@ -1,8 +1,8 @@
 /* eslint-disable no-console */
 import fs from "node:fs";
 import path from "node:path";
+import {describe, it, beforeAll, vi, expect, afterEach, beforeEach} from "vitest";
 import {rimraf} from "rimraf";
-import {expect} from "chai";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {fromHex} from "@lodestar/utils";
 import {runCliCommand} from "@lodestar/test-utils";
@@ -11,12 +11,13 @@ import {testFilesDir} from "../utils.js";
 import {getLodestarCli} from "../../src/cli.js";
 
 describe("cmds / validator", function () {
-  this.timeout("30s");
-  stubLogger(this, console);
+  vi.setConfig({testTimeout: 30_000});
+
+  stubLogger({beforeEach, afterEach}, console);
   const lodestar = getLodestarCli();
   const dataDir = testFilesDir;
 
-  before("Clean dataDir", () => {
+  beforeAll(() => {
     rimraf.sync(dataDir);
   });
 
@@ -41,7 +42,7 @@ describe("cmds / validator", function () {
       `--passphraseFile ${passphraseFilepath}`,
     ]);
 
-    expect(console.log).be.calledWith(`Imported keystore ${pkHex} ${keystoreFilepath}`);
+    expect(console.log).toHaveBeenCalledWith(`Imported keystore ${pkHex} ${keystoreFilepath}`);
   });
 
   it("should list validators", async function () {
@@ -50,7 +51,7 @@ describe("cmds / validator", function () {
 
     await runCliCommand(lodestar, ["validator list", `--dataDir ${dataDir}`], {timeoutMs: 5000});
 
-    expect(console.info).calledWith("1 local keystores");
-    expect(console.info).calledWith(pkHex);
+    expect(console.info).toHaveBeenCalledWith("1 local keystores");
+    expect(console.info).toHaveBeenCalledWith(pkHex);
   });
 });

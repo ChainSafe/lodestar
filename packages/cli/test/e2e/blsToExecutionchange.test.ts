@@ -1,4 +1,5 @@
 import path from "node:path";
+import {describe, it, vi} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {sleep, retry} from "@lodestar/utils";
 import {ApiError, getClient} from "@lodestar/api";
@@ -8,7 +9,7 @@ import {execCliCommand, spawnCliCommand, stopChildProcess} from "@lodestar/test-
 import {testFilesDir} from "../utils.js";
 
 describe("bLSToExecutionChange cmd", function () {
-  this.timeout("60s");
+  vi.setConfig({testTimeout: 60_000});
 
   it("Perform bLSToExecutionChange", async () => {
     const restPort = 9596;

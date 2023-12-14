@@ -16,9 +16,6 @@
     },
     "./sinon": {
       "import": "./lib/sinon.js"
-    },
-    "./mocha": {
-      "import": "./lib/mocha.js"
     }
   },
   "typesVersions": {
