@@ -40,9 +40,19 @@ export type IClock = StrictEventEmitter<EventEmitter, ClockEvents> & {
    */
   readonly currentSlotWithGossipDisparity: Slot;
   readonly currentEpoch: Epoch;
-  /** Returns the slot if the internal clock were advanced by `toleranceMs`. */
+  /**
+   * Return the current slot with future tolerance e.g. currentSlot or currentSlot + 1
+   * -----------------------------------------------------------------------------------
+   * |             |    (current)    |                            |
+   *              |                  |<-futureToleranceMs->|
+   */
   slotWithFutureTolerance(toleranceMs: number): Slot;
-  /** Returns the slot if the internal clock were reversed by `toleranceMs`. */
+  /**
+   * Return the current slot with past tolerance. e.g. currentSlot or currentSlot - 1
+   * -----------------------------------------------------------------------------------
+   * |                                 |    (current)    |                            |
+   *              |<-pastToleranceMs->|                 |
+   */
   slotWithPastTolerance(toleranceSec: number): Slot;
   /**
    * Check if a slot is current slot given MAXIMUM_GOSSIP_CLOCK_DISPARITY.

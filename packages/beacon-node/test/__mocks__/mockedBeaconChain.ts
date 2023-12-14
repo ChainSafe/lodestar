@@ -55,11 +55,13 @@ vi.mock("../../src/chain/index.js", async (requireActual) => {
       genesisTime,
       clock:
         clock === "real"
-          ? new Clock({config, genesisTime: 0, signal: new AbortController().signal})
+          ? new Clock({config, genesisTime: genesisTime, signal: new AbortController().signal})
           : {
               currentSlot: undefined,
               currentSlotWithGossipDisparity: undefined,
               isCurrentSlotGivenGossipDisparity: vi.fn(),
+              isCurrentSlotGivenTolerance: vi.fn().mockResolvedValue(true),
+              waitForSlot: vi.fn().mockResolvedValue(undefined),
             },
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-expect-error

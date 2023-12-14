@@ -3,6 +3,7 @@ import {ssz} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {ProtoBlock} from "@lodestar/fork-choice";
 import {SyncState} from "../../../../../src/sync/interface.js";
 import {ApiModules} from "../../../../../src/api/impl/types.js";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
@@ -81,6 +82,9 @@ describe("api/validator - produceBlockV3", function () {
 
         vi.spyOn(server.chainStub.clock, "currentSlot", "get").mockReturnValue(currentSlot);
         vi.spyOn(syncStub, "state", "get").mockReturnValue(SyncState.Synced);
+        vi.spyOn(server.forkChoiceStub, "getHead").mockReturnValue({
+          slot: currentSlot,
+        } as ProtoBlock);
 
         const api = getValidatorApi(modules);
 

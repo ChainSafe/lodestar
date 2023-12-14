@@ -23,7 +23,7 @@ import {AggregatedAttestationPool} from "../../../../../src/chain/opPools/index.
 import {Eth1ForBlockProduction} from "../../../../../src/eth1/index.js";
 import {BeaconProposerCache} from "../../../../../src/chain/beaconProposerCache.js";
 
-describe("api/validator - produceBlockV2", function () {
+describe.only("api/validator - produceBlockV2", function () {
   const logger = testLogger();
 
   let modules: ApiModules;
@@ -76,6 +76,9 @@ describe("api/validator - produceBlockV2", function () {
 
     const currentSlot = 100000;
     vi.spyOn(server.chainStub.clock, "currentSlot", "get").mockReturnValue(currentSlot);
+    vi.spyOn(server.forkChoiceStub, "getHead").mockReturnValue({
+      slot: currentSlot,
+    } as ProtoBlock);
     vi.spyOn(syncStub, "state", "get").mockReturnValue(SyncState.Synced);
 
     // Set the node's state to way back from current slot

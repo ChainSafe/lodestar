@@ -44,6 +44,7 @@ describe("api - validator - produceAttestationData", function () {
     const currentSlot = 100000;
     vi.spyOn(server.chainStub.clock, "currentSlot", "get").mockReturnValue(currentSlot);
     vi.spyOn(syncStub, "state", "get").mockReturnValue(SyncState.Stalled);
+    server.chainStub.forkChoice.getHead.mockReturnValue({slot: currentSlot} as ProtoBlock);
 
     // Should not allow any call to validator API
     const api = getValidatorApi(modules);

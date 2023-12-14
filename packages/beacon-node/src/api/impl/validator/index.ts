@@ -120,7 +120,7 @@ export function getValidatorApi({
       currentSlot: chain.clock.currentSlot,
       syncState: sync.state,
       syncToleranceEpochs: SYNC_TOLERANCE_EPOCHS,
-      raiseErrors: false,
+      raiseErrors: true,
     });
   }
 
