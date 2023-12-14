@@ -1,5 +1,5 @@
 import {defaultExecutionBuilderHttpOpts, IBeaconNodeOptions} from "@lodestar/beacon-node";
-import {CliCommandOptions} from "../../util/index.js";
+import {CliCommandOptions, YargsError} from "../../util/index.js";
 
 export type ExecutionBuilderArgs = {
   builder: boolean;
@@ -10,6 +10,12 @@ export type ExecutionBuilderArgs = {
 };
 
 export function parseArgs(args: ExecutionBuilderArgs): IBeaconNodeOptions["executionBuilder"] {
+  if (Array.isArray(args["builder.url"]) || args["builder.url"]?.includes(",http")) {
+    throw new YargsError(
+      "Lodestar only supports a single builder URL. External tooling like mev-boost can be used to connect to multiple builder/relays"
+    );
+  }
+
   return {
     enabled: args["builder"],
     url: args["builder.url"] ?? defaultExecutionBuilderHttpOpts.url,
