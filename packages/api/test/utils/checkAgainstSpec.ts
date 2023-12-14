@@ -23,7 +23,7 @@ ajv.addFormat("hex", /^0x[a-fA-F0-9]+$/);
  * A set of properties that will be ignored during tests execution.
  * This allows for a black-list mechanism to have a test pass while some part of the spec is not yet implemented.
  *
- * Properties can be nested using dot notation, follwong JSONPath semantic.
+ * Properties can be nested using dot notation, following JSONPath semantic.
  *
  * Example:
  * - query
