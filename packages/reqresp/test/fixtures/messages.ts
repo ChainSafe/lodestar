@@ -10,7 +10,7 @@ type MessageFixture = {
   type: TypeSizes;
   binaryPayload: ResponseIncoming;
   chunks: Uint8Array[];
-  asyncChunks: Buffer[];
+  asyncChunks: Uint8Array[];
 };
 
 const phase0Metadata = ssz.phase0.Metadata.fromJson({
@@ -26,14 +26,14 @@ export const sszSnappyPhase0Metadata: MessageFixture = {
     fork: ForkName.phase0,
     protocolVersion: 1,
   },
-  chunks: ["0x10", "0xff060000734e61507059011400000b5ee91209000000000000000000000000000000"].map(
-    (s) => new Uint8Array(fromHexString(s))
+  chunks: ["0x10", "0xff060000734e61507059011400000b5ee91209000000000000000000000000000000"].map((s) =>
+    fromHexString(s)
   ),
   asyncChunks: [
     "0x10", // length prefix
     "0xff060000734e61507059", // snappy frames header
     "0x011400000b5ee91209000000000000000000000000000000", // snappy frames content
-  ].map((d) => Buffer.from(fromHexString(d))),
+  ].map((d) => fromHexString(d)),
 };
 
 const altairMetadata = ssz.altair.Metadata.fromJson({
@@ -68,14 +68,12 @@ export const sszSnappyPing: MessageFixture = {
     fork: ForkName.phase0,
     protocolVersion: 1,
   },
-  chunks: ["0x08", "0xff060000734e61507059010c00000175de410100000000000000"].map(
-    (s) => new Uint8Array(fromHexString(s))
-  ),
+  chunks: ["0x08", "0xff060000734e61507059010c00000175de410100000000000000"].map((s) => fromHexString(s)),
   asyncChunks: [
     "0x08", // length prefix
     "0xff060000734e61507059", // snappy frames header
     "0x010c00000175de410100000000000000", // snappy frames content
-  ].map((d) => Buffer.from(fromHexString(d))),
+  ].map((d) => fromHexString(d)),
 };
 
 const statusData = {
@@ -96,9 +94,9 @@ export const sszSnappyStatus: MessageFixture = {
     "0x54", // length prefix
     "0xff060000734e61507059", // snappy frames header
     "0x001b0000097802c15400da8a010004090009017e2b001c0900000000000000",
-  ].map((d) => Buffer.from(fromHexString(d))),
-  chunks: ["0x54", "0xff060000734e61507059001b0000097802c15400da8a010004090009017e2b001c0900000000000000"].map(
-    (s) => new Uint8Array(fromHexString(s))
+  ].map((d) => fromHexString(d)),
+  chunks: ["0x54", "0xff060000734e61507059001b0000097802c15400da8a010004090009017e2b001c0900000000000000"].map((s) =>
+    fromHexString(s)
   ),
 };
 
@@ -137,11 +135,11 @@ export const sszSnappySignedBeaconBlockPhase0: MessageFixture = {
     "0x9403",
     "0xff060000734e61507059",
     "0x00340000fff3b3f594031064000000dafe01007a010004090009011108fe6f000054feb4008ab4007e0100fecc0011cc0cdc0000003e0400",
-  ].map((d) => Buffer.from(fromHexString(d))),
+  ].map((d) => fromHexString(d)),
   chunks: [
     "0x9403",
     "0xff060000734e6150705900340000fff3b3f594031064000000dafe01007a010004090009011108fe6f000054feb4008ab4007e0100fecc0011cc0cdc0000003e0400",
-  ].map((s) => new Uint8Array(fromHexString(s))),
+  ].map((s) => fromHexString(s)),
 };
 
 const signedBeaconBlockAltairData = {
@@ -166,11 +164,11 @@ export const sszSnappySignedBeaconBlockAltair: MessageFixture = {
     "0xf803", // length prefix
     "0xff060000734e61507059", // snappy frames header
     "0x003f0000ee14ab0df8031064000000dafe01007a01000c995f0100010100090105ee70000d700054ee44000d44fe0100fecc0011cc0c400100003e0400fe01008e0100",
-  ].map((d) => Buffer.from(fromHexString(d))),
+  ].map((d) => fromHexString(d)),
   chunks: [
     "0xb404",
     "0xff060000734e6150705900420000bab7f8feb4041064000000dafe01007a01000c995f0100010100090105ee70000d700054ee44000d44fe0100fecc0011cc0c7c0100003e0400fe0100fe01007e0100",
-  ].map((s) => new Uint8Array(fromHexString(s))),
+  ].map((s) => fromHexString(s)),
 };
 
 // Set the altair fork to happen between the two precomputed SSZ snappy blocks

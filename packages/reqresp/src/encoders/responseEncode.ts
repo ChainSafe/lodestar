@@ -28,12 +28,10 @@ export function responseEncodeSuccess(
 
       // <context-bytes> - from altair
       const contextBytes = getContextBytes(protocol.contextBytes, chunk);
-      if (contextBytes) {
-        yield contextBytes as Buffer;
-      }
+      if (contextBytes) yield Buffer.from(contextBytes);
 
       // <encoding-dependent-header> | <encoded-payload>
-      yield* writeEncodedPayload(chunk.data, protocol.encoding);
+      yield* writeEncodedPayload(Buffer.from(chunk.data), protocol.encoding);
     }
   };
 }
