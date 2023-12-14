@@ -152,7 +152,7 @@ runTestCheckAgainstSpec(
   returnTypes,
   testDatas,
   {
-    // TODO: Investigate why schema validation fails otherwise
+    // TODO: Investigate why schema validation fails otherwise (see #6187)
     routesDropOneOf: [
       "produceBlockV2",
       "produceBlockV3",
