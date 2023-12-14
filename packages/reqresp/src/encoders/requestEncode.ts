@@ -13,6 +13,6 @@ export async function* requestEncode(protocol: MixedProtocol, requestBody: Uint8
   const type = protocol.requestSizes;
 
   if (type && requestBody !== null) {
-    yield* writeEncodedPayload(requestBody, protocol.encoding);
+    yield* writeEncodedPayload(Buffer.from(requestBody), protocol.encoding);
   }
 }
