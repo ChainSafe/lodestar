@@ -1,6 +1,11 @@
+import path from "node:path";
 import {spawn, Pool, Worker, ModuleThread, QueuedTask} from "@chainsafe/threads";
 import {DecryptKeystoreArgs, DecryptKeystoreWorkerAPI} from "./types.js";
 import {maxPoolSize} from "./poolSize.js";
+
+// Worker constructor consider the path relative to the current working directory
+const workerDir =
+  process.env.NODE_ENV === "test" ? "../../../../../lib/cmds/validator/keymanager/decryptKeystores" : "./";
 
 /**
  * Thread pool to decrypt keystores
@@ -16,7 +21,7 @@ export class DecryptKeystoresThreadPool {
   ) {
     this.pool = Pool(
       () =>
-        spawn<DecryptKeystoreWorkerAPI>(new Worker("./worker.js"), {
+        spawn<DecryptKeystoreWorkerAPI>(new Worker(path.join(workerDir, "worker.js")), {
           // The number below is big enough to almost disable the timeout
           // which helps during tests run on unpredictably slow hosts
           timeout: 5 * 60 * 1000,

@@ -32,8 +32,6 @@ describe("util / gitData", function () {
     const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, "utf8")) as {files: string[]};
     const gitDataPathFromPkgJson = path.relative(path.dirname(pkgJsonPath), gitDataPath);
 
-    expect(pkgJson.files).toEqual(
-      expect.arrayContaining([gitDataPathFromPkgJson, "package.json .files does not include gitData path"])
-    );
+    expect(pkgJson.files).toContain(gitDataPathFromPkgJson);
   });
 });
