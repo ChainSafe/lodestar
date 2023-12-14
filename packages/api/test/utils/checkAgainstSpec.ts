@@ -43,8 +43,8 @@ export type IgnoredProperty = {
 /**
  * Recursively remove a property from a schema
  *
- * @param schema a schema to remove a property from
- * @param property a JSONPath like property to remove from the schema
+ * @param schema Schema to remove a property from
+ * @param property JSONPath like property to remove from the schema
  */
 function deleteNested(schema: JsonSchema | undefined, property: string): void {
   const properties = schema?.properties;
