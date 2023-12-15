@@ -307,7 +307,7 @@ export function createLodestarMetrics(
     stateHashTreeRootTime: register.histogram<"source">({
       name: "lodestar_stfn_hash_tree_root_seconds",
       help: "Time to compute the hash tree root of a post state in seconds",
-      buckets: [0.005, 0.01, 0.02, 0.05, 0.1, 1],
+      buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5],
       labelNames: ["source"],
     }),
     preStateBalancesNodesPopulatedMiss: register.gauge<"source">({
