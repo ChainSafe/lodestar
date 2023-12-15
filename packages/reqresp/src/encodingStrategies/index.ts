@@ -34,7 +34,7 @@ export async function readEncodedPayload(
  * <encoding-dependent-header> | <encoded-payload>
  * ```
  */
-export async function* writeEncodedPayload(chunkData: Buffer, encoding: Encoding): AsyncGenerator<Buffer> {
+export async function* writeEncodedPayload(chunkData: Uint8Array, encoding: Encoding): AsyncGenerator<Buffer> {
   switch (encoding) {
     case Encoding.SSZ_SNAPPY:
       yield* writeSszSnappyPayload(chunkData);

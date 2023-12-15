@@ -8,7 +8,7 @@ import {encodeSnappy} from "./snappyFrames/compress.js";
  * <encoding-dependent-header> | <encoded-payload>
  * ```
  */
-export const writeSszSnappyPayload = encodeSszSnappy;
+export const writeSszSnappyPayload = encodeSszSnappy as (bytes: Uint8Array) => AsyncGenerator<Buffer>;
 
 /**
  * Buffered Snappy writer
