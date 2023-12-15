@@ -70,6 +70,9 @@ export const chainConfig: ChainConfig = {
   // [customized] scale queue churn at much lower validator counts for testing
   CHURN_LIMIT_QUOTIENT: 32,
   PROPOSER_SCORE_BOOST: 40,
+  REORG_HEAD_WEIGHT_THRESHOLD: 20,
+  REORG_PARENT_WEIGHT_THRESHOLD: 160,
+  REORG_MAX_EPOCHS_SINCE_FINALIZATION: 2,
 
   // Deposit contract
   // ---------------------------------------------------------------

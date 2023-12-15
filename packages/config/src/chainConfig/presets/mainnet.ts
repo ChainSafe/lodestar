@@ -72,6 +72,9 @@ export const chainConfig: ChainConfig = {
   // 2**16 (= 65,536)
   CHURN_LIMIT_QUOTIENT: 65536,
   PROPOSER_SCORE_BOOST: 40,
+  REORG_HEAD_WEIGHT_THRESHOLD: 20,
+  REORG_PARENT_WEIGHT_THRESHOLD: 160,
+  REORG_MAX_EPOCHS_SINCE_FINALIZATION: 2,
 
   // Deposit contract
   // ---------------------------------------------------------------
