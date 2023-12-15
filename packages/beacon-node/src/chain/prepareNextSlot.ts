@@ -104,6 +104,10 @@ export class PrepareNextSlotScheduler {
         RegenCaller.precomputeEpoch
       );
 
+      const hashTreeRootTimer = this.metrics?.stateHashTreeRootTime.startTimer({source: "prepare_next_slot"});
+      prepareState.hashTreeRoot();
+      hashTreeRootTimer?.();
+
       // assuming there is no reorg, it caches the checkpoint state & helps avoid doing a full state transition in the next slot
       //  + when gossip block comes, we need to validate and run state transition
       //  + if next slot is a skipped slot, it'd help getting target checkpoint state faster to validate attestations
