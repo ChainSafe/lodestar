@@ -1,0 +1,15 @@
+dataDir: "/${home}/validator"
+logFile: "/${home}/validator/validator.log"
+network: "mainnet"
+beaconNodes: "http://127.0.0.1:9596"
+interopIndexes: 0..0
+logLevel: debug
+logFileLevel: debug
+logFileDailyRotate: 5
+metrics: true
+metrics.port: "5064"
+metrics.address: 127.0.0.1
+suggestedFeeRecipient: "0x95222290DD7278Aa3Ddd389Cc1E1d165CC4BAfe5"
+builder.selection: maxprofit
+useProduceBlockV3: true
+builder: true
