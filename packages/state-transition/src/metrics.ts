@@ -22,7 +22,7 @@ export type BeaconStateTransitionMetrics = {
 
 export type EpochCacheMetrics = {
   finalizedPubkeyDuplicateInsert: Gauge;
-}
+};
 
 type LabelValues<T extends string> = Partial<Record<T, string | number>>;
 

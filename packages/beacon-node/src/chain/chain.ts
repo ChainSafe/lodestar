@@ -949,12 +949,16 @@ export class BeaconChain implements IBeaconChain {
     }
 
     const cpEpoch = cp.epoch;
+    const eip6110Epoch = headState?.config.EIP6110_FORK_EPOCH ?? Infinity;
 
     if (headState === null) {
       this.logger.verbose("Head state is null");
-    } else if (cpEpoch >= (headState.config.EIP6110_FORK_EPOCH ?? Infinity)) {
+    } else if (cpEpoch >= eip6110Epoch) {
       const headEpoch = headState.epochCtx.epoch;
-      const pivotValidatorIndex = headState.epochCtx.historialValidatorLengths.get((headEpoch - cpEpoch) * -1) ?? 0; 
+
+      // Set pivotValidatorIndex to 0 if `historicalValidatorLengths` does not
+      // contain validator length for cpEpoch to ensure `newFinalizedValidators` to be empty
+      const pivotValidatorIndex = headState.epochCtx.historicalValidatorLengths.get((headEpoch - cpEpoch) * -1) ?? 0;
 
       // Note EIP-6914 will break this logic
       const newFinalizedValidators = headState.epochCtx.unfinalizedPubkey2index.filter(
@@ -965,7 +969,6 @@ export class BeaconChain implements IBeaconChain {
       if (!newFinalizedValidators.isEmpty()) {
         this.regen.updateUnfinalizedPubkeys(newFinalizedValidators);
       }
-
     }
 
     if (finalizedState && finalizedState.epochCtx.isAfterEIP6110()) {

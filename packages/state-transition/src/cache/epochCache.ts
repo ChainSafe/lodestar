@@ -1,5 +1,6 @@
 import {CoordType, PublicKey} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
+import * as immutable from "immutable";
 import {BLSSignature, CommitteeIndex, Epoch, Slot, ValidatorIndex, phase0, SyncPeriod} from "@lodestar/types";
 import {createBeaconConfig, BeaconConfig, ChainConfig} from "@lodestar/config";
 import {
@@ -30,6 +31,7 @@ import {computeEpochShuffling, EpochShuffling, getShufflingDecisionBlock} from "
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
 import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
 import {getTotalSlashingsByIncrement} from "../epoch/processSlashings.js";
+import {EpochCacheMetrics} from "../metrics.js";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements.js";
 import {
   Index2PubkeyCache,
@@ -47,8 +49,6 @@ import {
   SyncCommitteeCache,
   SyncCommitteeCacheEmpty,
 } from "./syncCommitteeCache.js";
-import { EpochCacheMetrics } from "../metrics.js";
-import * as immutable from "immutable";
 
 /** `= PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT)` */
 export const PROPOSER_WEIGHT_FACTOR = PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT);
@@ -219,10 +219,10 @@ export class EpochCache {
   syncPeriod: SyncPeriod;
   /**
    * state.validators.length of every state at epoch boundary
-   * They are saved in an increasing order of epoch. 
+   * They are saved in increasing order of epoch.
    * The last validator length in the list corresponds to the latest checkpoint state.
    */
-  historialValidatorLengths: immutable.List<number>;
+  historicalValidatorLengths: immutable.List<number>;
 
   constructor(data: {
     config: BeaconConfig;
@@ -279,7 +279,7 @@ export class EpochCache {
     this.nextSyncCommitteeIndexed = data.nextSyncCommitteeIndexed;
     this.epoch = data.epoch;
     this.syncPeriod = data.syncPeriod;
-    this.historialValidatorLengths = data.historialValidatorLengths;
+    this.historicalValidatorLengths = data.historialValidatorLengths;
   }
 
   /**
@@ -522,7 +522,7 @@ export class EpochCache {
       nextSyncCommitteeIndexed: this.nextSyncCommitteeIndexed,
       epoch: this.epoch,
       syncPeriod: this.syncPeriod,
-      historialValidatorLengths: this.historialValidatorLengths,
+      historialValidatorLengths: this.historicalValidatorLengths,
     });
   }
 
@@ -608,7 +608,9 @@ export class EpochCache {
     this.syncPeriod = computeSyncPeriodAtEpoch(this.epoch);
     // Add current cpState.validators.length
     // Only keep validatorLength for epochs after finalized cpState.epoch
-    this.historialValidatorLengths = this.historialValidatorLengths.push(state.validators.length).slice((this.epoch - state.finalizedCheckpoint.epoch) * -1);
+    this.historicalValidatorLengths = this.historicalValidatorLengths
+      .push(state.validators.length)
+      .slice((this.epoch - state.finalizedCheckpoint.epoch) * -1);
   }
 
   beforeEpochTransition(): void {
@@ -829,7 +831,7 @@ export class EpochCache {
   }
 
   addFinalizedPubkeys(pubkeyMap: UnfinalizedPubkeyIndexMap, metrics?: EpochCacheMetrics): void {
-    pubkeyMap.forEach((index, pubkey) => this.addFinalizedPubkey(index, pubkey));
+    pubkeyMap.forEach((index, pubkey) => this.addFinalizedPubkey(index, pubkey, metrics));
   }
 
   /**
