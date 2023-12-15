@@ -14,6 +14,8 @@ eth-consensus api compatible beacon nodes/databases/loggers.
 
 - Follow the [installation guide](https://chainsafe.github.io/lodestar/) to install Lodestar.
 - Quickly try out the whole stack by [starting a local testnet](https://chainsafe.github.io/lodestar/usage/local).
+- Set up: past `test/interop/rcconfig.yml` to `${home}/validator` folder, create if needed
+- To run `node lib/index.js validator --rcConfig /${home}/validator/rcconfig.yml`
 
 ## License
 
