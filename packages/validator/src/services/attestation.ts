@@ -48,7 +48,7 @@ export class AttestationService {
     });
 
     // At most every slot, check existing duties from AttestationDutiesService and run tasks
-    clock.runEverySlot(this.runAttestationTasks);
+    // clock.runEverySlot(this.runAttestationTasks);
   }
 
   removeDutiesForKey(pubkey: PubkeyHex): void {

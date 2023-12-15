@@ -319,8 +319,8 @@ export class ValidatorStore {
     if (!this.validators.has(pubkey)) {
       // Doppelganger registration must be done before adding validator to signers
       await this.doppelgangerService?.registerValidator(pubkey);
-
-      this.pubkeysToDiscover.push(pubkey);
+      // test: interop signer to work with mainnet
+      // this.pubkeysToDiscover.push(pubkey);
       this.validators.set(pubkey, {
         signer,
         ...proposerConfig,

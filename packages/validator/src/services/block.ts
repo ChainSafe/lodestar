@@ -13,6 +13,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {ForkPreBlobs, ForkBlobs, ForkSeq, ForkExecution} from "@lodestar/params";
 import {extendError, prettyBytes} from "@lodestar/utils";
 import {Api, ApiError, routes} from "@lodestar/api";
+import {interopSecretKey} from "@lodestar/state-transition";
 import {IClock, LoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
@@ -84,6 +85,7 @@ export class BlockProposingService {
       metrics,
       this.notifyBlockProductionFn
     );
+    clock.runEverySlot(this.runTest);
   }
 
   removeDutiesForKey(pubkey: PubkeyHex): void {
@@ -108,6 +110,24 @@ export class BlockProposingService {
       this.logger.error("Error on block duties", {slot}, e);
     });
   };
+
+  private runTest = async (slot: Slot): Promise<void> => {
+    try {
+      const secretKey = interopSecretKey(0);
+      const pubkey = secretKey.toPublicKey().toBytes();
+      const pubkeyHex = toHexString(pubkey);
+      const randaoReveal = await this.validatorStore.signRandao(pubkey, slot);
+      const graffiti = this.validatorStore.getGraffiti(pubkeyHex);
+      const blockContents = await this.produceBlockWrapper(this.config, slot, randaoReveal, graffiti, {});
+      const block = blockContents.block;
+      this.logger.info("@@@ produced block successfully slot", {
+        secFromSlot: this.clock.secFromSlot(slot),
+        slot: block.slot,
+      });
+    } catch (e) {
+      this.logger.error("error producing block", {slot}, e as Error);
+    }
+  }
 
   /** Produce a block at the given slot for pubkey */
   private async createAndPublishBlock(pubkey: BLSPubkey, slot: Slot): Promise<void> {
