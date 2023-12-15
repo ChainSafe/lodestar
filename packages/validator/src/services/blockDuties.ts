@@ -44,7 +44,8 @@ export class BlockDutiesService {
     // TODO: Instead of polling every CLOCK_SLOT, poll every CLOCK_EPOCH and track re-org events
     //       only then re-fetch the block duties. Make sure most clients (including Lodestar)
     //       properly emit the re-org event
-    clock.runEverySlot(this.runBlockDutiesTask);
+    // test: no need this
+    // clock.runEverySlot(this.runBlockDutiesTask);
 
     if (metrics) {
       metrics.proposerDutiesEpochCount.addCollect(() => {

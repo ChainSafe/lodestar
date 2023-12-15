@@ -39,7 +39,7 @@ export class SyncCommitteeService {
     });
 
     // At most every slot, check existing duties from SyncCommitteeDutiesService and run tasks
-    clock.runEverySlot(this.runSyncCommitteeTasks);
+    // clock.runEverySlot(this.runSyncCommitteeTasks);
   }
 
   removeDutiesForKey(pubkey: PubkeyHex): void {
