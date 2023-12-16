@@ -11,13 +11,21 @@ import {MapTracker} from "./mapMetrics.js";
 import {
   CacheType,
   CheckpointHex,
-  PersistentCheckpointStateCacheModules,
   PersistentCheckpointStateCacheOpts,
   GetHeadStateFn,
   CheckpointStateCache,
   CheckpointKey,
 } from "./types.js";
 import {CPStatePersistentApis, PersistedKey} from "./persistent/types.js";
+
+type PersistentCheckpointStateCacheModules = {
+  metrics?: Metrics | null;
+  logger: Logger;
+  clock?: IClock | null;
+  shufflingCache: ShufflingCache;
+  persistentApis: CPStatePersistentApis;
+  getHeadState?: GetHeadStateFn;
+};
 
 type InMemoryCacheItem = {
   type: CacheType.inMemory;
@@ -33,6 +41,8 @@ type PersistedCacheItem = {
 };
 
 type CacheItem = InMemoryCacheItem | PersistedCacheItem;
+
+type LoadedStateBytesData = {persistedKey: PersistedKey; stateBytes: Uint8Array};
 
 /**
  * An implementation of CheckpointStateCache that keep up to n epoch checkpoint states in memory and persist the rest to disk
@@ -137,66 +147,59 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
    * - Regen head state
    */
   async getOrReload(cp: CheckpointHex): Promise<CachedBeaconStateAllForks | null> {
-    const cpKey = toCheckpointKey(cp);
-    const inMemoryState = this.get(cpKey);
-    if (inMemoryState) {
-      return inMemoryState;
+    const stateOrStateBytesData = await this.getStateOrLoadDb(cp);
+    if (stateOrStateBytesData === null || isCachedBeaconState(stateOrStateBytesData)) {
+      return stateOrStateBytesData;
     }
-
-    const cacheItem = this.cache.get(cpKey);
-    if (cacheItem === undefined) {
-      return null;
-    }
-
-    if (isInMemoryCacheItem(cacheItem)) {
-      // should not happen, in-memory state is handled above
-      throw new Error("Expected persisted key");
-    }
-
-    const persistedKey = cacheItem.value;
+    const {persistedKey, stateBytes} = stateOrStateBytesData;
     const logMeta = {persistedKey: toHexString(persistedKey)};
-
-    // reload from disk or db based on closest checkpoint
-    this.logger.debug("Reload: read state", logMeta);
-    const newStateBytes = await this.persistentApis.read(persistedKey);
-    if (newStateBytes === null) {
-      this.logger.warn("Reload: read state failed", logMeta);
-      return null;
-    }
-    this.logger.debug("Reload: read state successfully", logMeta);
+    this.logger.debug("Reload: read state successful", logMeta);
     this.metrics?.stateReloadSecFromSlot.observe(this.clock?.secFromSlot(this.clock?.currentSlot ?? 0) ?? 0);
-    const closestState = this.findSeedStateToReload(cp) ?? this.getHeadState?.();
-    if (closestState == null) {
-      throw new Error("No closest state found for cp " + toCheckpointKey(cp));
+    const seedState = this.findSeedStateToReload(cp) ?? this.getHeadState?.();
+    if (seedState == null) {
+      throw new Error("No seed state found for cp " + toCheckpointKey(cp));
     }
-    this.metrics?.stateReloadEpochDiff.observe(Math.abs(closestState.epochCtx.epoch - cp.epoch));
-    this.logger.debug("Reload: found closest state", {...logMeta, seedSlot: closestState.slot});
-    const timer = this.metrics?.stateReloadDuration.startTimer();
+    this.metrics?.stateReloadEpochDiff.observe(Math.abs(seedState.epochCtx.epoch - cp.epoch));
+    this.logger.debug("Reload: found seed state", {...logMeta, seedSlot: seedState.slot});
 
     try {
-      const newCachedState = loadCachedBeaconState(closestState, newStateBytes, {
+      const timer = this.metrics?.stateReloadDuration.startTimer();
+      const newCachedState = loadCachedBeaconState(seedState, stateBytes, {
         shufflingGetter: this.shufflingCache.getSync.bind(this.shufflingCache),
       });
       timer?.();
-      this.logger.debug("Reload state successfully", {
+      this.logger.debug("Reload: cached state load successful", {
         ...logMeta,
         stateSlot: newCachedState.slot,
-        seedSlot: closestState.slot,
+        seedSlot: seedState.slot,
       });
+
       // only remove persisted state once we reload successfully
+      const cpKey = toCheckpointKey(cp);
       this.cache.set(cpKey, {type: CacheType.inMemory, state: newCachedState, persistedKey});
       // don't prune from memory here, call it at the last 1/3 of slot 0 of an epoch
       return newCachedState;
     } catch (e) {
-      this.logger.debug("Error reloading state from disk", logMeta, e as Error);
+      this.logger.debug("Reload: error loading cached state", logMeta, e as Error);
       return null;
     }
   }
 
   /**
-   * Return either state or state bytes without reloading from disk.
+   * Return either state or state bytes loaded from db.
    */
   async getStateOrBytes(cp: CheckpointHex): Promise<CachedBeaconStateAllForks | Uint8Array | null> {
+    const stateOrLoadedState = await this.getStateOrLoadDb(cp);
+    if (stateOrLoadedState === null || isCachedBeaconState(stateOrLoadedState)) {
+      return stateOrLoadedState;
+    }
+    return stateOrLoadedState.stateBytes;
+  }
+
+  /**
+   * Return either state or state bytes with persisted key loaded from db.
+   */
+  async getStateOrLoadDb(cp: CheckpointHex): Promise<CachedBeaconStateAllForks | LoadedStateBytesData | null> {
     const cpKey = toCheckpointKey(cp);
     const inMemoryState = this.get(cpKey);
     if (inMemoryState) {
@@ -214,7 +217,14 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     }
 
     const persistedKey = cacheItem.value;
-    return this.persistentApis.read(persistedKey);
+    const dbReadTimer = this.metrics?.stateReloadDbReadTime.startTimer();
+    const stateBytes = await this.persistentApis.read(persistedKey);
+    dbReadTimer?.();
+
+    if (stateBytes === null) {
+      return null;
+    }
+    return {persistedKey, stateBytes};
   }
 
   /**
@@ -592,6 +602,12 @@ export function fromCheckpointKey(key: CheckpointKey): CheckpointHex {
     rootHex,
     epoch: Number(epoch),
   };
+}
+
+function isCachedBeaconState(
+  stateOrBytes: CachedBeaconStateAllForks | LoadedStateBytesData
+): stateOrBytes is CachedBeaconStateAllForks {
+  return (stateOrBytes as CachedBeaconStateAllForks).slot !== undefined;
 }
 
 function isInMemoryCacheItem(cacheItem: CacheItem): cacheItem is InMemoryCacheItem {

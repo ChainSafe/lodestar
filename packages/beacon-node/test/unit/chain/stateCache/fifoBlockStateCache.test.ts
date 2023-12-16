@@ -3,11 +3,11 @@ import {toHexString} from "@chainsafe/ssz";
 import {EpochShuffling} from "@lodestar/state-transition";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition/src/types.js";
-import {LRUBlockStateCache} from "../../../../src/chain/stateCache/index.js";
+import {FIFOBlockStateCache} from "../../../../src/chain/stateCache/index.js";
 import {generateCachedState} from "../../../utils/state.js";
 
-describe("LRUBlockStateCache", function () {
-  let cache: LRUBlockStateCache;
+describe("FIFOBlockStateCache", function () {
+  let cache: FIFOBlockStateCache;
   const shuffling: EpochShuffling = {
     epoch: 0,
     activeIndices: [],
@@ -30,7 +30,7 @@ describe("LRUBlockStateCache", function () {
 
   beforeEach(function () {
     // max 2 items
-    cache = new LRUBlockStateCache({maxStates: 2}, {});
+    cache = new FIFOBlockStateCache({maxStates: 2}, {});
     cache.add(state1);
     cache.add(state2);
   });

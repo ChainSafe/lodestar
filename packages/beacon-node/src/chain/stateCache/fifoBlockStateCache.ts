@@ -7,7 +7,7 @@ import {LinkedList} from "../../util/array.js";
 import {MapTracker} from "./mapMetrics.js";
 import {BlockStateCache} from "./types.js";
 
-export type LRUBlockStateCacheOpts = {
+export type FIFOBlockStateCacheOpts = {
   maxStates: number;
 };
 
@@ -15,7 +15,7 @@ export type LRUBlockStateCacheOpts = {
  * New implementation of BlockStateCache that keeps the most recent n states consistently
  *  - Maintain a linked list where the head state is always the first item in the list
  *  - Prune per add() instead of per checkpoint so it only keeps n historical states consistently, prune from tail
- *  - This is LRU like cache except that we only track the last added time, not the last used time
+ *  - This is FIFO cache except that we only track the last added time, not the last used time
  * because state could be fetched from multiple places, but we only care about the last added time.
  *  - No need to prune per finalized checkpoint
  *
@@ -31,7 +31,7 @@ export type LRUBlockStateCacheOpts = {
  *
  * The maintained key order would be: 11 -> 13 -> 12 -> 10, and state 10 will be pruned first.
  */
-export class LRUBlockStateCache implements BlockStateCache {
+export class FIFOBlockStateCache implements BlockStateCache {
   /**
    * Max number of states allowed in the cache
    */
@@ -39,12 +39,12 @@ export class LRUBlockStateCache implements BlockStateCache {
 
   private readonly cache: MapTracker<string, CachedBeaconStateAllForks>;
   /**
-   * Key order to implement LRU like cache
+   * Key order to implement FIFO cache
    */
   private readonly keyOrder: LinkedList<string>;
   private readonly metrics: Metrics["stateCache"] | null | undefined;
 
-  constructor(opts: LRUBlockStateCacheOpts, {metrics}: {maxStates?: number; metrics?: Metrics | null}) {
+  constructor(opts: FIFOBlockStateCacheOpts, {metrics}: {maxStates?: number; metrics?: Metrics | null}) {
     this.maxStates = opts.maxStates;
     this.cache = new MapTracker(metrics?.stateCache);
     if (metrics) {
@@ -125,7 +125,7 @@ export class LRUBlockStateCache implements BlockStateCache {
    * Prune the cache from tail to keep the most recent n states consistently.
    * The tail of the list is the oldest state, in case regen adds back the same state,
    * it should stay next to head so that it won't be pruned right away.
-   * The LRU-like cache helps with this.
+   * The FIFO cache helps with this.
    */
   prune(): void {
     while (this.keyOrder.length > this.maxStates) {

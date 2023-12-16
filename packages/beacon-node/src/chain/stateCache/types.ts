@@ -1,11 +1,6 @@
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {Epoch, RootHex, phase0} from "@lodestar/types";
-import {Logger} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
-import {Metrics} from "../../metrics/index.js";
-import {IClock} from "../../util/clock.js";
-import {ShufflingCache} from "../shufflingCache.js";
-import {CPStatePersistentApis} from "./persistent/types.js";
 
 export type CheckpointHex = {epoch: Epoch; rootHex: RootHex};
 
@@ -69,13 +64,4 @@ export type GetHeadStateFn = () => CachedBeaconStateAllForks;
 export type PersistentCheckpointStateCacheOpts = {
   // Keep max n states in memory, persist the rest to disk
   maxEpochsInMemory: number;
-};
-
-export type PersistentCheckpointStateCacheModules = {
-  metrics?: Metrics | null;
-  logger: Logger;
-  clock?: IClock | null;
-  shufflingCache: ShufflingCache;
-  persistentApis: CPStatePersistentApis;
-  getHeadState?: GetHeadStateFn;
 };

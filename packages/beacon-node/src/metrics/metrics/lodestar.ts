@@ -1148,6 +1148,11 @@ export function createLodestarMetrics(
         help: "Histogram of time to load state from db since the clock slot",
         buckets: [0, 2, 4, 6, 8, 10, 12],
       }),
+      stateReloadDbReadTime: register.histogram({
+        name: "lodestar_cp_state_cache_state_reload_db_read_seconds",
+        help: "Histogram of time to load state bytes from db",
+        buckets: [0.01, 0.05, 0.1, 0.2, 0.5],
+      }),
       persistedStateRemoveCount: register.gauge({
         name: "lodestar_cp_state_cache_persisted_state_remove_count",
         help: "Total number of persisted states removed",
