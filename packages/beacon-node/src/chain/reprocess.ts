@@ -11,7 +11,7 @@ export const REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC = 2;
 /**
  * Reprocess status for metrics
  */
-enum ReprocessStatus {
+export enum ReprocessStatus {
   /**
    * There are too many attestations that have unknown block root.
    */
@@ -140,7 +140,10 @@ export class ReprocessController {
         for (const awaitingPromise of awaitingPromisesByRoot.values()) {
           const {resolve, addedTimeMs} = awaitingPromise;
           resolve(false);
-          this.metrics?.reprocessApiAttestations.waitSecBeforeReject.set((now - addedTimeMs) / 1000);
+          this.metrics?.reprocessApiAttestations.waitSecBeforeReject.set(
+            {reason: ReprocessStatus.expired},
+            (now - addedTimeMs) / 1000
+          );
           this.metrics?.reprocessApiAttestations.reject.inc({reason: ReprocessStatus.expired});
         }
 

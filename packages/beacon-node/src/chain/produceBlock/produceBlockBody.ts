@@ -42,10 +42,26 @@ import {
 
 // Time to provide the EL to generate a payload from new payload id
 const PAYLOAD_GENERATION_TIME_MS = 500;
-enum PayloadPreparationType {
+
+export enum PayloadPreparationType {
   Fresh = "Fresh",
   Cached = "Cached",
   Reorged = "Reorged",
+  Blinded = "Blinded",
+}
+
+/**
+ * Block production steps tracked in metrics
+ */
+export enum BlockProductionStep {
+  proposerSlashing = "proposerSlashing",
+  attesterSlashings = "attesterSlashings",
+  voluntaryExits = "voluntaryExits",
+  blsToExecutionChanges = "blsToExecutionChanges",
+  attestations = "attestations",
+  eth1DataAndDeposits = "eth1DataAndDeposits",
+  syncAggregate = "syncAggregate",
+  executionPayload = "executionPayload",
 }
 
 export type BlockAttributes = {
@@ -134,13 +150,13 @@ export async function produceBlockBody<T extends BlockType>(
   const endAttestations = stepsMetrics?.startTimer();
   const attestations = this.aggregatedAttestationPool.getAttestationsForBlock(this.forkChoice, currentState);
   endAttestations?.({
-    step: "attestations",
+    step: BlockProductionStep.attestations,
   });
 
   const endEth1DataAndDeposits = stepsMetrics?.startTimer();
   const {eth1Data, deposits} = await this.eth1.getEth1DataAndDeposits(currentState);
   endEth1DataAndDeposits?.({
-    step: "eth1DataAndDeposits",
+    step: BlockProductionStep.eth1DataAndDeposits,
   });
 
   const blockBody: phase0.BeaconBlockBody = {
@@ -165,7 +181,7 @@ export async function produceBlockBody<T extends BlockType>(
     (blockBody as altair.BeaconBlockBody).syncAggregate = syncAggregate;
   }
   endSyncAggregate?.({
-    step: "syncAggregate",
+    step: BlockProductionStep.syncAggregate,
   });
 
   Object.assign(logMeta, {
@@ -221,7 +237,7 @@ export async function produceBlockBody<T extends BlockType>(
       executionPayloadValue = builderRes.executionPayloadValue;
 
       const fetchedTime = Date.now() / 1000 - computeTimeAtSlot(this.config, blockSlot, this.genesisTime);
-      const prepType = "blinded";
+      const prepType = PayloadPreparationType.Blinded;
       this.metrics?.blockPayload.payloadFetchedTime.observe({prepType}, fetchedTime);
       this.logger.verbose("Fetched execution payload header from builder", {
         slot: blockSlot,
@@ -380,7 +396,7 @@ export async function produceBlockBody<T extends BlockType>(
     executionPayloadValue = BigInt(0);
   }
   endExecutionPayload?.({
-    step: "executionPayload",
+    step: BlockProductionStep.executionPayload,
   });
 
   if (ForkSeq[fork] >= ForkSeq.capella) {

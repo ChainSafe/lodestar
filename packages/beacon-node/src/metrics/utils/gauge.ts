@@ -1,27 +1,14 @@
-import {Gauge, GaugeConfiguration} from "prom-client";
-import {IGauge} from "../interface.js";
-
-type CollectFn<T extends string> = (metric: IGauge<T>) => void;
-type Labels<T extends string> = Partial<Record<T, string | number>>;
+import {Gauge} from "prom-client";
+import {CollectFn, Gauge as IGauge, LabelKeys, LabelsGeneric} from "@lodestar/utils";
 
 /**
- * Extends the prom-client Gauge with extra features:
- * - Add multiple collect functions after instantiation
- * - Create child gauges with fixed labels
+ * Extends the prom-client Gauge to be able to add multiple collect functions after instantiation
  */
-export class GaugeExtra<T extends string> extends Gauge<T> implements IGauge {
-  private collectFns: CollectFn<T>[] = [];
+export class GaugeExtra<Labels extends LabelsGeneric> extends Gauge<LabelKeys<Labels>> implements IGauge<Labels> {
+  private collectFns: CollectFn<Labels>[] = [];
 
-  constructor(configuration: GaugeConfiguration<T>) {
-    super(configuration);
-  }
-
-  addCollect(collectFn: CollectFn<T>): void {
+  addCollect(collectFn: CollectFn<Labels>): void {
     this.collectFns.push(collectFn);
-  }
-
-  child(labels: Labels<T>): GaugeChild<T> {
-    return new GaugeChild(labels, this);
   }
 
   /**
@@ -31,50 +18,5 @@ export class GaugeExtra<T extends string> extends Gauge<T> implements IGauge {
     for (const collectFn of this.collectFns) {
       collectFn(this);
     }
-  }
-}
-
-export class GaugeChild<T extends string> implements IGauge {
-  gauge: GaugeExtra<T>;
-  labelsParent: Labels<T>;
-  constructor(labelsParent: Labels<T>, gauge: GaugeExtra<T>) {
-    this.gauge = gauge;
-    this.labelsParent = labelsParent;
-  }
-
-  // Sorry for this mess, `prom-client` API choices are not great
-  // If the function signature was `inc(value: number, labels?: Labels)`, this would be simpler
-  inc(value?: number): void;
-  inc(labels: Labels<T>, value?: number): void;
-  inc(arg1?: Labels<T> | number, arg2?: number): void {
-    if (typeof arg1 === "object") {
-      this.gauge.inc({...this.labelsParent, ...arg1}, arg2 ?? 1);
-    } else {
-      this.gauge.inc(this.labelsParent, arg1 ?? 1);
-    }
-  }
-
-  dec(value?: number): void;
-  dec(labels: Labels<T>, value?: number): void;
-  dec(arg1?: Labels<T> | number, arg2?: number): void {
-    if (typeof arg1 === "object") {
-      this.gauge.dec({...this.labelsParent, ...arg1}, arg2 ?? 1);
-    } else {
-      this.gauge.dec(this.labelsParent, arg1 ?? 1);
-    }
-  }
-
-  set(value: number): void;
-  set(labels: Labels<T>, value: number): void;
-  set(arg1?: Labels<T> | number, arg2?: number): void {
-    if (typeof arg1 === "object") {
-      this.gauge.set({...this.labelsParent, ...arg1}, arg2 ?? 0);
-    } else {
-      this.gauge.set(this.labelsParent, arg1 ?? 0);
-    }
-  }
-
-  addCollect(collectFn: CollectFn<T>): void {
-    this.gauge.addCollect(() => collectFn(this));
   }
 }

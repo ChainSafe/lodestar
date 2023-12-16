@@ -1,4 +1,9 @@
-import {computeEpochAtSlot, isExecutionStateType, computeTimeAtSlot} from "@lodestar/state-transition";
+import {
+  computeEpochAtSlot,
+  isExecutionStateType,
+  computeTimeAtSlot,
+  StateHashTreeRootSource,
+} from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkSeq, SLOTS_PER_EPOCH, ForkExecution} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
@@ -106,7 +111,9 @@ export class PrepareNextSlotScheduler {
 
       // cache HashObjects for faster hashTreeRoot() later, especially for computeNewStateRoot() if we need to produce a block at slot 0 of epoch
       // see https://github.com/ChainSafe/lodestar/issues/6194
-      const hashTreeRootTimer = this.metrics?.stateHashTreeRootTime.startTimer({source: "prepare_next_slot"});
+      const hashTreeRootTimer = this.metrics?.stateHashTreeRootTime.startTimer({
+        source: StateHashTreeRootSource.prepareNextSlot,
+      });
       prepareState.hashTreeRoot();
       hashTreeRootTimer?.();
 

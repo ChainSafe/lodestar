@@ -3,12 +3,20 @@ import path from "node:path";
 import fs from "node:fs";
 import {createFromProtobuf} from "@libp2p/peer-id-factory";
 import {Multiaddr, multiaddr} from "@multiformats/multiaddr";
-import {Gauge} from "prom-client";
 import {expose} from "@chainsafe/threads/worker";
 import {Observable, Subject} from "@chainsafe/threads/observable";
-import {createKeypairFromPeerId, Discv5, ENR, ENRData, SignableENR, SignableENRData} from "@chainsafe/discv5";
+import {
+  createKeypairFromPeerId,
+  Discv5,
+  ENR,
+  ENRData,
+  IDiscv5CreateOptions,
+  SignableENR,
+  SignableENRData,
+} from "@chainsafe/discv5";
 import {createBeaconConfig} from "@lodestar/config";
 import {getNodeLogger} from "@lodestar/logger/node";
+import {Gauge} from "@lodestar/utils";
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {collectNodeJSMetrics} from "../../metrics/nodeJsMetrics.js";
 import {profileNodeJS, writeHeapSnapshot} from "../../util/profile.js";
@@ -28,14 +36,14 @@ const logger = getNodeLogger(workerData.loggerOpts);
 
 // Set up metrics, nodejs and discv5-specific
 let metricsRegistry: RegistryMetricCreator | undefined;
-let enrRelevanceMetric: Gauge<"status"> | undefined;
+let enrRelevanceMetric: Gauge<{status: string}> | undefined;
 let closeMetrics: () => void | undefined;
 if (workerData.metrics) {
   metricsRegistry = new RegistryMetricCreator();
   closeMetrics = collectNodeJSMetrics(metricsRegistry, "discv5_worker_");
 
   // add enr relevance metric
-  enrRelevanceMetric = metricsRegistry.gauge<"status">({
+  enrRelevanceMetric = metricsRegistry.gauge<{status: string}>({
     name: "lodestar_discv5_discovered_status_total_count",
     help: "Total count of status results of enrRelevance() function",
     labelNames: ["status"],
@@ -56,7 +64,7 @@ const discv5 = Discv5.create({
     ip6: workerData.bindAddrs.ip6 ? multiaddr(workerData.bindAddrs.ip6) : undefined,
   },
   config: workerData.config,
-  metricsRegistry,
+  metricsRegistry: metricsRegistry as IDiscv5CreateOptions["metricsRegistry"],
 });
 
 // Load boot enrs
