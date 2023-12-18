@@ -6,19 +6,28 @@ import {rimraf} from "rimraf";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {fromHex} from "@lodestar/utils";
 import {runCliCommand} from "@lodestar/test-utils";
-import {stubLogger} from "@lodestar/test-utils/sinon";
 import {testFilesDir} from "../utils.js";
 import {getLodestarCli} from "../../src/cli.js";
 
 describe("cmds / validator", function () {
   vi.setConfig({testTimeout: 30_000});
 
-  stubLogger({beforeEach, afterEach}, console);
   const lodestar = getLodestarCli();
   const dataDir = testFilesDir;
 
   beforeAll(() => {
     rimraf.sync(dataDir);
+  });
+
+  beforeEach(() => {
+    vi.spyOn(console, "log");
+    vi.spyOn(console, "info");
+    vi.spyOn(console, "error");
+    vi.spyOn(console, "debug");
+  });
+
+  afterEach(() => {
+    vi.resetAllMocks();
   });
 
   /** Generated from  const sk = bls.SecretKey.fromKeygen(Buffer.alloc(32, 0xaa)); */

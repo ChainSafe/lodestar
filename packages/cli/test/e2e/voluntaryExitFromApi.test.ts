@@ -1,5 +1,5 @@
 import path from "node:path";
-import {describe, it, vi, expect} from "vitest";
+import {describe, it, vi, expect, afterAll, beforeEach, afterEach} from "vitest";
 import {ApiError, getClient} from "@lodestar/api";
 import {getClient as getKeymanagerClient} from "@lodestar/api/keymanager";
 import {config} from "@lodestar/config/default";
@@ -37,7 +37,7 @@ describe("voluntary exit from api", function () {
         // Disable bearer token auth to simplify testing
         "--keymanager.authEnabled=false",
       ],
-      {pipeStdioToParent: false, logPrefix: "dev"}
+      {pipeStdioToParent: false, logPrefix: "dev", testContext: {beforeEach, afterEach, afterAll}}
     );
 
     // Exit early if process exits

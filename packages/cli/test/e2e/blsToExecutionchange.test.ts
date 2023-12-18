@@ -1,5 +1,5 @@
 import path from "node:path";
-import {describe, it, vi} from "vitest";
+import {afterAll, describe, it, vi, beforeEach, afterEach} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {sleep, retry} from "@lodestar/utils";
 import {ApiError, getClient} from "@lodestar/api";
@@ -26,7 +26,7 @@ describe("bLSToExecutionChange cmd", function () {
         // Speed up test to make genesis happen faster
         "--params.SECONDS_PER_SLOT=2",
       ],
-      {pipeStdioToParent: false, logPrefix: "dev"}
+      {pipeStdioToParent: false, logPrefix: "dev", testContext: {beforeEach, afterEach, afterAll}}
     );
 
     // Exit early if process exits

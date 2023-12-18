@@ -1,4 +1,4 @@
-import {describe, it, vi} from "vitest";
+import {describe, it, vi, beforeEach, afterEach, afterAll} from "vitest";
 import {ApiError, getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {retry} from "@lodestar/utils";
@@ -13,7 +13,7 @@ describe("Run dev command", function () {
     const devProc = await spawnCliCommand(
       "packages/cli/bin/lodestar.js",
       ["dev", "--reset", "--startValidators=0..7", `--rest.port=${beaconPort}`],
-      {pipeStdioToParent: true, logPrefix: "dev"}
+      {pipeStdioToParent: true, logPrefix: "dev", testContext: {beforeEach, afterEach, afterAll}}
     );
 
     // Exit early if process exits

@@ -1,5 +1,5 @@
 import path from "node:path";
-import {describe, it, beforeAll, afterAll, vi} from "vitest";
+import {describe, it, beforeAll, afterAll, beforeEach, afterEach, vi} from "vitest";
 import {retry} from "@lodestar/utils";
 import {ApiError, getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
@@ -50,7 +50,7 @@ describe("voluntaryExit using remote signer", function () {
         // Allow voluntary exists to be valid immediately
         "--params.SHARD_COMMITTEE_PERIOD=0",
       ],
-      {pipeStdioToParent: false, logPrefix: "dev"}
+      {pipeStdioToParent: false, logPrefix: "dev", testContext: {beforeEach, afterEach, afterAll}}
     );
 
     // Exit early if process exits
