@@ -131,6 +131,7 @@ export function getBeaconBlockApi({
                 verifyOnly: true,
                 skipVerifyBlockSignatures: true,
                 skipVerifyExecutionPayload: true,
+                seenTimestampSec,
               }
             );
           } catch (error) {
