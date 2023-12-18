@@ -1,5 +1,5 @@
 import bls from "@chainsafe/bls";
-import {CoordType} from "@chainsafe/blst";
+import {CoordType} from "@chainsafe/bls/types";
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {loadState} from "../../../../src/util/loadState/loadState.js";
 import {createCachedBeaconState} from "../../../../src/cache/stateCache.js";

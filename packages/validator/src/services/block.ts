@@ -220,6 +220,12 @@ export class BlockProposingService {
       source: response.executionPayloadBlinded ? ProducedBlockSource.builder : ProducedBlockSource.engine,
       // winston logger doesn't like bigint
       executionPayloadValue: `${formatBigDecimal(response.executionPayloadValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)} ETH`,
+      consensusBlockValue: `${formatBigDecimal(response.consensusBlockValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)} ETH`,
+      totalBlockValue: `${formatBigDecimal(
+        response.executionPayloadValue + response.consensusBlockValue,
+        ETH_TO_WEI,
+        MAX_DECIMAL_FACTOR
+      )} ETH`,
       // TODO PR: should be used in api call instead of adding in log
       strictFeeRecipientCheck,
       builderSelection,

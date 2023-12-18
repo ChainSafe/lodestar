@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import bls from "@chainsafe/bls";
 import {BitArray} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
@@ -67,7 +67,7 @@ describe("signatureSets", () => {
     const state = generateCachedState(config, {validators});
 
     const signatureSets = getBlockSignatureSets(state, signedBlock);
-    expect(signatureSets.length).to.equal(
+    expect(signatureSets.length).toBe(
       // block signature
       1 +
         // randao reveal

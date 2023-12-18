@@ -2,7 +2,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {allForks, Slot, ssz} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateTransitionMetrics, onPostStateMetrics, onStateCloneMetrics} from "./metrics.js";
-import {beforeProcessEpoch, EpochTransitionCacheOpts} from "./cache/epochTransitionCache.js";
+import {beforeProcessEpoch, EpochTransitionCache, EpochTransitionCacheOpts} from "./cache/epochTransitionCache.js";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStatePhase0,
@@ -167,19 +167,33 @@ function processSlotsWithTransientCache(
 
       const epochTransitionTimer = metrics?.epochTransitionTime.startTimer();
 
-      const epochTransitionCache = beforeProcessEpoch(postState, epochTransitionCacheOpts);
-      processEpoch(fork, postState, epochTransitionCache);
+      let epochTransitionCache: EpochTransitionCache;
+      {
+        const timer = metrics?.epochTransitionStepTime.startTimer({step: "beforeProcessEpoch"});
+        epochTransitionCache = beforeProcessEpoch(postState, epochTransitionCacheOpts);
+        timer?.();
+      }
+
+      processEpoch(fork, postState, epochTransitionCache, metrics);
+
       const {currentEpoch, statuses, balances} = epochTransitionCache;
       metrics?.registerValidatorStatuses(currentEpoch, statuses, balances);
 
       postState.slot++;
-      postState.epochCtx.afterProcessEpoch(postState, epochTransitionCache);
+
+      {
+        const timer = metrics?.epochTransitionStepTime.startTimer({step: "afterProcessEpoch"});
+        postState.epochCtx.afterProcessEpoch(postState, epochTransitionCache);
+        timer?.();
+      }
 
       // Running commit here is not strictly necessary. The cost of running commit twice (here + after process block)
       // Should be negligible but gives better metrics to differentiate the cost of it for block and epoch proc.
-      const epochTransitionCommitTimer = metrics?.epochTransitionCommitTime.startTimer();
-      postState.commit();
-      epochTransitionCommitTimer?.();
+      {
+        const timer = metrics?.epochTransitionCommitTime.startTimer();
+        postState.commit();
+        timer?.();
+      }
 
       // Note: time only on success. Include beforeProcessEpoch, processEpoch, afterProcessEpoch, commit
       epochTransitionTimer?.();

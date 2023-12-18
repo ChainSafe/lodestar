@@ -1,4 +1,4 @@
-import {describe, it, expect, beforeEach, afterEach, vi, SpyInstance, Mock} from "vitest";
+import {describe, it, expect, beforeEach, afterEach, vi, Mock, MockInstance} from "vitest";
 import {config} from "@lodestar/config/default";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {routes} from "@lodestar/api";
@@ -20,7 +20,7 @@ describe("PrepareNextSlot scheduler", () => {
   let regenStub: MockedBeaconChain["regen"];
   let loggerStub: MockedLogger;
   let beaconProposerCacheStub: MockedBeaconChain["beaconProposerCache"];
-  let getForkStub: SpyInstance<[number], ForkName>;
+  let getForkStub: MockInstance<[number], ForkName>;
   let updateBuilderStatus: MockedBeaconChain["updateBuilderStatus"];
   let executionEngineStub: MockedBeaconChain["executionEngine"];
   const emitPayloadAttributes = true;

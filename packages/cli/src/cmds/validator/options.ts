@@ -241,7 +241,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
   "builder.selection": {
     type: "string",
     description: "Builder block selection strategy `maxprofit`, `builderalways`, `builderonly` or `executiononly`",
-    defaultDescription: `\`${defaultOptions.builderSelection}\``,
+    defaultDescription: `${defaultOptions.builderSelection}`,
     group: "builder",
   },
 
@@ -267,7 +267,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
   importKeystoresPassword: {
     alias: ["passphraseFile"], // Backwards compatibility with old `validator import` cmd
     description: "Path to a file with password to decrypt all keystores from `importKeystores` option",
-    defaultDescription: "`./password.txt`",
+    defaultDescription: "./password.txt",
     type: "string",
   },
 

@@ -1,5 +1,5 @@
 import Ajv, {ErrorObject} from "ajv";
-import {expect} from "chai";
+import {expect, describe, beforeAll, it} from "vitest";
 import {ReqGeneric, ReqSerializer, ReturnTypes, RouteDef} from "../../src/utils/types.js";
 import {applyRecursively, OpenApiJson, parseOpenApiSpec, ParseOpenApiSpecOpts} from "./parseOpenApiSpec.js";
 import {GenericServerTestCases} from "./genericServerTest.js";
@@ -36,7 +36,7 @@ export function runTestCheckAgainstSpec(
       const testData = testDatas[routeId];
       const routeData = routesData[routeId];
 
-      before("route is defined", () => {
+      beforeAll(() => {
         if (routeData == null) {
           throw Error(`No routeData for ${routeId}`);
         }

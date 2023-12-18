@@ -1,4 +1,5 @@
-import sinon from "sinon";
+import {vi, expect} from "vitest";
+import {when} from "vitest-when";
 import deepmerge from "deepmerge";
 import {NetworkName} from "@lodestar/config/networks";
 import {ForkConfig} from "@lodestar/config";
@@ -51,28 +52,29 @@ export interface TestFixture<R = unknown, P = unknown[]> {
   dependentRequests: {payload: JsonRpcRequestOrBatch; response: Writeable<JsonRpcResponseOrBatch>}[];
 }
 
-function matchTransaction(value: ELTransaction, expected: ELTransaction): boolean {
-  if (
-    value.to?.toLowerCase() !== expected.to?.toLowerCase() ||
-    value.from.toLocaleLowerCase() !== expected.from.toLowerCase()
-  ) {
+function matchTransaction(received: ELTransaction, expected: ELTransaction): boolean {
+  if (received.to?.toLowerCase() !== expected.to?.toLowerCase()) {
     return false;
   }
 
-  if ("value" in value && value.value.toLowerCase() !== expected.value.toLowerCase()) {
+  if ("from" in expected && "from" in received && received.from.toLowerCase() !== expected.from.toLowerCase()) {
     return false;
   }
 
-  if ("data" in value && value.data?.toLowerCase() !== expected.data?.toLowerCase()) {
+  if ("value" in received && received.value.toLowerCase() !== expected.value.toLowerCase()) {
+    return false;
+  }
+
+  if ("data" in received && received.data?.toLowerCase() !== expected.data?.toLowerCase()) {
     return false;
   }
 
   return true;
 }
 
-function matchParams(params: unknown[], expected: unknown[]): boolean {
-  for (let i = 0; i < params.length; i++) {
-    const item = params[i];
+function matchParams(received: unknown[], expected: unknown[]): boolean {
+  for (let i = 0; i < received.length; i++) {
+    const item = received[i];
     const expectedItem = expected[i];
 
     if (typeof item === "string" && typeof expectedItem === "string") {
@@ -92,20 +94,12 @@ function matchParams(params: unknown[], expected: unknown[]): boolean {
   return true;
 }
 
-function getPayloadParamsMatcher(expected: unknown[]): sinon.SinonMatcher {
-  return sinon.match(function (params: unknown[]): boolean {
-    return matchParams(params, expected);
-  }, "payload match params");
-}
-
-function getBatchPayloadMatcher(expected: JsonRpcBatchRequest): sinon.SinonMatcher {
-  return sinon.match(function (value: JsonRpcBatchRequest): boolean {
-    for (const [index, item] of value.entries()) {
-      if (item.method !== expected[index].method) return false;
-      if (!matchParams(item.params, expected[index].params)) return false;
-    }
-    return true;
-  }, "batch payload match");
+function matchBatchPayload(received: JsonRpcBatchRequest, expected: JsonRpcBatchRequest): boolean {
+  for (const [index, item] of received.entries()) {
+    if (item.method !== expected[index].method) return false;
+    if (!matchParams(item.params, expected[index].params)) return false;
+  }
+  return true;
 }
 
 export function generateReqHandlerOptionsMock(
@@ -119,7 +113,7 @@ export function generateReqHandlerOptionsMock(
   const options = {
     logger: getEmptyLogger(),
     proofProvider: {
-      getExecutionPayload: sinon.stub().resolves(executionPayload),
+      getExecutionPayload: vi.fn().mockResolvedValue(executionPayload),
       config: {
         ...config,
         // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -129,35 +123,46 @@ export function generateReqHandlerOptionsMock(
     } as unknown as ProofProvider,
     network: data.network as NetworkName,
     rpc: {
-      request: sinon.stub(),
-      batchRequest: sinon.stub(),
+      request: vi.fn(),
+      batchRequest: vi.fn(),
       getRequestId: () => (Math.random() * 10000).toFixed(0),
     },
   };
 
-  options.rpc.request
-    .withArgs(data.request.method, getPayloadParamsMatcher(data.request.params), sinon.match.any)
-    .resolves(data.response);
+  when(options.rpc.request)
+    .calledWith(
+      data.request.method,
+      expect.toSatisfy((received) => matchParams(received as unknown[], data.request.params)),
+      expect.anything()
+    )
+    .thenResolve(data.response);
 
   for (const {payload, response} of data.dependentRequests) {
     if (isBatchRequest(payload)) {
-      options.rpc.batchRequest
-        .withArgs(getBatchPayloadMatcher(payload), sinon.match.any)
-        .resolves(mergeBatchReqResp(payload, response as JsonRpcBatchResponse));
+      when(options.rpc.batchRequest)
+        .calledWith(
+          expect.toSatisfy((received) => matchBatchPayload(received as JsonRpcBatchRequest, payload)),
+          expect.anything()
+        )
+        .thenResolve(mergeBatchReqResp(payload, response as JsonRpcBatchResponse));
     } else {
-      options.rpc.request
-        .withArgs(payload.method, getPayloadParamsMatcher(payload.params), sinon.match.any)
-        .resolves(response);
+      when(options.rpc.request)
+        .calledWith(
+          payload.method,
+          expect.toSatisfy((received) => matchParams(received as unknown[], data.request.params)),
+          expect.anything()
+        )
+        .thenResolve(response);
     }
   }
 
-  options.rpc.request
-    .withArgs("eth_getBlockByNumber", [data.execution.block.number, true], sinon.match.any)
-    .resolves({id: 1233, jsonrpc: "2.0", result: data.execution.block});
+  when(options.rpc.request)
+    .calledWith("eth_getBlockByNumber", [data.execution.block.number, true], expect.anything())
+    .thenResolve({id: 1233, jsonrpc: "2.0", result: data.execution.block});
 
-  options.rpc.request
-    .withArgs("eth_getBlockByHash", [data.execution.block.hash, true], sinon.match.any)
-    .resolves({id: 1233, jsonrpc: "2.0", result: data.execution.block});
+  when(options.rpc.request)
+    .calledWith("eth_getBlockByHash", [data.execution.block.hash, true], expect.anything())
+    .thenResolve({id: 1233, jsonrpc: "2.0", result: data.execution.block});
 
   return options as unknown as Omit<ELVerifiedRequestHandlerOpts<any>, "payload">;
 }

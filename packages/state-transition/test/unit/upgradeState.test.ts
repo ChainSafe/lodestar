@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {expect, describe, it} from "vitest";
 import {ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 import {createBeaconConfig, ChainForkConfig, createChainForkConfig} from "@lodestar/config";
@@ -23,7 +23,7 @@ describe("upgradeState", () => {
       {skipSyncCommitteeCache: true}
     );
     const newState = upgradeStateToDeneb(stateView);
-    expect(() => newState.toValue()).to.not.throw();
+    expect(() => newState.toValue()).not.toThrow();
   });
   it("upgradeStateToEIP6110", () => {
     const denebState = ssz.deneb.BeaconState.defaultViewDU();

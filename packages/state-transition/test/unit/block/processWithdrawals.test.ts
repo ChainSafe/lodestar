@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {getExpectedWithdrawals} from "../../../src/block/processWithdrawals.js";
 import {numValidators} from "../../perf/util.js";
 import {getExpectedWithdrawalsTestData, WithdrawalOpts} from "../../utils/capella.js";
@@ -38,8 +38,8 @@ describe("getExpectedWithdrawals", () => {
 
     it(`getExpectedWithdrawals ${vc} ${caseID}`, () => {
       const {sampledValidators, withdrawals} = getExpectedWithdrawals(state.value);
-      expect(sampledValidators).equals(opts.sampled, "Wrong sampledValidators");
-      expect(withdrawals.length).equals(opts.withdrawals, "Wrong withdrawals");
+      expect(sampledValidators).toBe(opts.sampled);
+      expect(withdrawals.length).toBe(opts.withdrawals);
     });
   }
 });

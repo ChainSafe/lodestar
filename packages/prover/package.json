@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.12.0",
+  "version": "1.12.1",
   "type": "module",
   "exports": {
     ".": {
@@ -53,9 +53,12 @@
     "lint:fix": "yarn run lint --fix",
     "pretest": "yarn run check-types",
     "test": "yarn test:unit && yarn test:e2e",
-    "test:unit": "nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'",
-    "test:browsers": "yarn karma start karma.config.cjs",
-    "test:e2e": "LODESTAR_PRESET=minimal mocha 'test/e2e/**/*.test.ts'",
+    "test:unit": "vitest --run --dir test/unit/ --coverage",
+    "test:browsers": "yarn test:browsers:chrome && yarn test:browsers:firefox && yarn test:browsers:electron",
+    "test:browsers:chrome": "vitest --run --browser chrome --config ./vitest.browser.config.ts --dir test/unit",
+    "test:browsers:firefox": "vitest --run --browser firefox --config ./vitest.browser.config.ts --dir test/unit",
+    "test:browsers:electron": "echo 'Electron tests will be introduced back in the future as soon vitest supports electron.'",
+    "test:e2e": "LODESTAR_PRESET=minimal vitest --run --poolOptions.threads.singleThread --dir test/e2e",
     "check-readme": "typescript-docs-verifier",
     "generate-fixtures": "node --loader ts-node/esm scripts/generate_fixtures.ts"
   },
@@ -69,13 +72,13 @@
     "@ethereumjs/tx": "^4.1.2",
     "@ethereumjs/util": "^8.0.6",
     "@ethereumjs/vm": "^6.4.2",
-    "@lodestar/api": "^1.12.0",
-    "@lodestar/config": "^1.12.0",
-    "@lodestar/light-client": "^1.12.0",
-    "@lodestar/logger": "^1.12.0",
-    "@lodestar/params": "^1.12.0",
-    "@lodestar/types": "^1.12.0",
-    "@lodestar/utils": "^1.12.0",
+    "@lodestar/api": "^1.12.1",
+    "@lodestar/config": "^1.12.1",
+    "@lodestar/light-client": "^1.12.1",
+    "@lodestar/logger": "^1.12.1",
+    "@lodestar/params": "^1.12.1",
+    "@lodestar/types": "^1.12.1",
+    "@lodestar/utils": "^1.12.1",
     "ethereum-cryptography": "^1.2.0",
     "find-up": "^6.3.0",
     "http-proxy": "^1.18.1",
@@ -84,7 +87,7 @@
     "yargs": "^17.7.1"
   },
   "devDependencies": {
-    "@lodestar/test-utils": "^1.12.0",
+    "@lodestar/test-utils": "^1.12.1",
     "@types/http-proxy": "^1.17.10",
     "@types/yargs": "^17.0.24",
     "axios": "^1.3.4",

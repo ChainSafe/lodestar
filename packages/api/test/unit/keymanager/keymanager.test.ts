@@ -1,3 +1,4 @@
+import {describe} from "vitest";
 import {config} from "@lodestar/config/default";
 import {Api, ReqTypes} from "../../../src/keymanager/routes.js";
 import {getClient} from "../../../src/keymanager/client.js";

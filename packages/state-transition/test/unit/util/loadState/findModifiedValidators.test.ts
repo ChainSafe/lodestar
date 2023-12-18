@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
 import {findModifiedValidators} from "../../../../src/util/loadState/findModifiedValidators.js";
 import {generateState} from "../../../utils/state.js";
@@ -35,7 +35,7 @@ describe("findModifiedValidators", () => {
       const validatorsBytes2 = clonedState.validators.serialize();
       const modifiedValidators: number[] = [];
       findModifiedValidators(validatorsBytes, validatorsBytes2, modifiedValidators);
-      expect(modifiedValidators.sort((a, b) => a - b)).to.be.deep.equal(expectedModifiedValidators);
+      expect(modifiedValidators.sort((a, b) => a - b)).toEqual(expectedModifiedValidators);
     });
   }
 });

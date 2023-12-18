@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import http from "node:http";
-import {expect} from "chai";
+import {describe, it, expect, afterEach} from "vitest";
 import {FetchError, FetchErrorType, fetch} from "../../../src/utils/client/fetch.js";
 
 describe("FetchError", function () {
@@ -116,12 +116,16 @@ describe("FetchError", function () {
         );
       }
 
-      await expect(fetch(url, {signal: signalHandler?.()})).to.be.rejected.then((error: FetchError) => {
-        expect(error.type).to.be.equal(testCase.errorType);
-        expect(error.code).to.be.equal(testCase.errorCode);
+      await expect(fetch(url, {signal: signalHandler?.()})).rejects.toSatisfy((err) => {
+        expect(err).toBeInstanceOf(FetchError);
+        expect((err as FetchError).code).toBe(testCase.errorCode);
+        expect((err as FetchError).type).toBe(testCase.errorType);
+
         if (testCase.expectCause) {
-          expect(error.cause).to.be.instanceof(Error);
+          expect((err as FetchError).cause).toBeInstanceOf(Error);
         }
+
+        return true;
       });
     });
   }

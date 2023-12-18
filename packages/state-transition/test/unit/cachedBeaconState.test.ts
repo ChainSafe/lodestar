@@ -1,5 +1,5 @@
-import {expect} from "chai";
 import {fromHexString} from "@chainsafe/ssz";
+import {describe, it, expect} from "vitest";
 import {ssz} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
 import {config} from "@lodestar/config/default";
@@ -17,18 +17,15 @@ describe("CachedBeaconState", () => {
     const state2 = state1.clone();
 
     state1.slot = 1;
-    expect(state2.slot).to.equal(0, "state2.slot was mutated");
+    expect(state2.slot).toBe(0);
 
     const prevRoot = state2.currentJustifiedCheckpoint.root;
     const newRoot = Buffer.alloc(32, 1);
     state1.currentJustifiedCheckpoint.root = newRoot;
-    expect(toHexString(state2.currentJustifiedCheckpoint.root)).to.equal(
-      toHexString(prevRoot),
-      "state2.currentJustifiedCheckpoint.root was mutated"
-    );
+    expect(toHexString(state2.currentJustifiedCheckpoint.root)).toBe(toHexString(prevRoot));
 
     state1.epochCtx.epoch = 1;
-    expect(state2.epochCtx.epoch).to.equal(0, "state2.epochCtx.epoch was mutated");
+    expect(state2.epochCtx.epoch).toBe(0);
   });
 
   it("Clone and mutate cache pre-6110", () => {
@@ -124,10 +121,7 @@ describe("CachedBeaconState", () => {
 
     // Only commit state1 beforehand
     cp1.commit();
-    expect(toHexString(cp1.hashTreeRoot())).to.equal(
-      toHexString(cp2.hashTreeRoot()),
-      ".hashTreeRoot() does not automatically commit"
-    );
+    expect(toHexString(cp1.hashTreeRoot())).toBe(toHexString(cp2.hashTreeRoot()));
   });
 
   it("Auto-commit on serialize", () => {
@@ -139,10 +133,7 @@ describe("CachedBeaconState", () => {
 
     // Only commit state1 beforehand
     cp1.commit();
-    expect(toHexString(cp1.serialize())).to.equal(
-      toHexString(cp2.serialize()),
-      ".serialize() does not automatically commit"
-    );
+    expect(toHexString(cp1.serialize())).toBe(toHexString(cp2.serialize()));
   });
 
   describe("loadCachedBeaconState", () => {
@@ -222,16 +213,13 @@ describe("CachedBeaconState", () => {
         const stateBytes = state.serialize();
         const newCachedState = loadUnfinalizedCachedBeaconState(seedState, stateBytes, {skipSyncCommitteeCache: true});
         const newStateBytes = newCachedState.serialize();
-        expect(newStateBytes).to.be.deep.equal(stateBytes, "loadState: state bytes are not equal");
-        expect(newCachedState.hashTreeRoot()).to.be.deep.equal(
-          state.hashTreeRoot(),
-          "loadState: state root is not equal"
-        );
+        expect(newStateBytes).toEqual(stateBytes);
+        expect(newCachedState.hashTreeRoot()).toEqual(state.hashTreeRoot());
 
         // confirm loadUnfinalizedCachedBeaconState() result
         for (let i = 0; i < newCachedState.validators.length; i++) {
-          expect(newCachedState.epochCtx.pubkey2index.get(newCachedState.validators.get(i).pubkey)).to.be.equal(i);
-          expect(newCachedState.epochCtx.index2pubkey[i].toBytes()).to.be.deep.equal(pubkeys[i]);
+          expect(newCachedState.epochCtx.pubkey2index.get(newCachedState.validators.get(i).pubkey)).toBe(i);
+          expect(newCachedState.epochCtx.index2pubkey[i].toBytes()).toEqual(pubkeys[i]);
         }
       });
     }

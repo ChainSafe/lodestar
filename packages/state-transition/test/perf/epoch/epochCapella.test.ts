@@ -7,7 +7,8 @@ import {
   CachedBeaconStateAltair,
   beforeProcessEpoch,
 } from "../../../src/index.js";
-import {getNetworkCachedState, beforeValue, LazyValue} from "../../utils/index.js";
+import {beforeValue, LazyValue} from "../../utils/beforeValueMocha.js";
+import {getNetworkCachedState} from "../../utils/testFileCache.js";
 import {StateEpoch} from "../types.js";
 import {capellaState} from "../params.js";
 import {processJustificationAndFinalization} from "../../../src/epoch/processJustificationAndFinalization.js";

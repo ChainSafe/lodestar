@@ -9,7 +9,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/logger";
 import {getClient, Api as BuilderApi} from "@lodestar/api/builder";
 import {SLOTS_PER_EPOCH, ForkExecution} from "@lodestar/params";
-
+import {toSafePrintableUrl} from "@lodestar/utils";
 import {ApiError} from "@lodestar/api";
 import {Metrics} from "../../metrics/metrics.js";
 import {IExecutionBuilder} from "./interface.js";
@@ -50,7 +50,6 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
   ) {
     const baseUrl = opts.urls[0];
     if (!baseUrl) throw Error("No Url provided for executionBuilder");
-    logger?.info("External builder", {urls: opts.urls.toString()});
     this.api = getClient(
       {
         baseUrl,
@@ -59,6 +58,7 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
       },
       {config, metrics: metrics?.builderHttpClient}
     );
+    logger?.info("External builder", {url: toSafePrintableUrl(baseUrl)});
     this.config = config;
     this.issueLocalFcUWithFeeRecipient = opts.issueLocalFcUWithFeeRecipient;
 

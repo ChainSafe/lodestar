@@ -1,5 +1,5 @@
 import path from "node:path";
-import {CompositeTypeAny, fromHexString, toHexString, TreeView, Type} from "@chainsafe/ssz";
+import {CompositeTypeAny, fromHexString, TreeView, Type, toHexString} from "@chainsafe/ssz";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
@@ -28,6 +28,7 @@ import {
   Wei,
   bellatrix,
   isBlindedBeaconBlock,
+  Gwei,
 } from "@lodestar/types";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
@@ -470,20 +471,22 @@ export class BeaconChain implements IBeaconChain {
     return data && {block: data, executionOptimistic: false};
   }
 
-  produceBlock(blockAttributes: BlockAttributes): Promise<{block: allForks.BeaconBlock; executionPayloadValue: Wei}> {
+  produceBlock(
+    blockAttributes: BlockAttributes
+  ): Promise<{block: allForks.BeaconBlock; executionPayloadValue: Wei; consensusBlockValue: Gwei}> {
     return this.produceBlockWrapper<BlockType.Full>(BlockType.Full, blockAttributes);
   }
 
   produceBlindedBlock(
     blockAttributes: BlockAttributes
-  ): Promise<{block: allForks.BlindedBeaconBlock; executionPayloadValue: Wei}> {
+  ): Promise<{block: allForks.BlindedBeaconBlock; executionPayloadValue: Wei; consensusBlockValue: Gwei}> {
     return this.produceBlockWrapper<BlockType.Blinded>(BlockType.Blinded, blockAttributes);
   }
 
   async produceBlockWrapper<T extends BlockType>(
     blockType: T,
     {randaoReveal, graffiti, slot, feeRecipient}: BlockAttributes
-  ): Promise<{block: AssembledBlockType<T>; executionPayloadValue: Wei}> {
+  ): Promise<{block: AssembledBlockType<T>; executionPayloadValue: Wei; consensusBlockValue: Gwei}> {
     const head = this.forkChoice.getHead();
     const state = await this.regen.getBlockSlotState(
       head.blockRoot,
@@ -524,7 +527,9 @@ export class BeaconChain implements IBeaconChain {
       stateRoot: ZERO_HASH,
       body,
     } as AssembledBlockType<T>;
-    block.stateRoot = computeNewStateRoot(this.metrics, state, block);
+
+    const {newStateRoot, proposerReward} = computeNewStateRoot(this.metrics, state, block);
+    block.stateRoot = newStateRoot;
     const blockRoot =
       blockType === BlockType.Full
         ? this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block)
@@ -576,7 +581,7 @@ export class BeaconChain implements IBeaconChain {
       );
     }
 
-    return {block, executionPayloadValue};
+    return {block, executionPayloadValue, consensusBlockValue: proposerReward};
   }
 
   /**

@@ -57,7 +57,7 @@ export async function verifyBlocksStateTransitionOnly(
       metrics
     );
 
-    const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer();
+    const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({source: "block_transition"});
     const stateRoot = postState.hashTreeRoot();
     hashTreeRootTimer?.();
 

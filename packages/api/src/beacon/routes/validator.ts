@@ -18,6 +18,7 @@ import {
   StringType,
   SubcommitteeIndex,
   Wei,
+  Gwei,
 } from "@lodestar/types";
 import {ApiClientResponse} from "../../interfaces.js";
 import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
@@ -27,7 +28,7 @@ import {
   ArrayOf,
   Schema,
   WithVersion,
-  WithExecutionPayloadValue,
+  WithBlockValues,
   reqOnlyBody,
   ReqSerializers,
   jsonType,
@@ -54,11 +55,11 @@ export type ExtraProduceBlockOps = {
   strictFeeRecipientCheck?: boolean;
 };
 
-export type ProduceBlockOrContentsRes = {executionPayloadValue: Wei} & (
+export type ProduceBlockOrContentsRes = {executionPayloadValue: Wei; consensusBlockValue: Gwei} & (
   | {data: allForks.BeaconBlock; version: ForkPreBlobs}
   | {data: allForks.BlockContents; version: ForkBlobs}
 );
-export type ProduceBlindedBlockOrContentsRes = {executionPayloadValue: Wei} & (
+export type ProduceBlindedBlockOrContentsRes = {executionPayloadValue: Wei; consensusBlockValue: Gwei} & (
   | {data: allForks.BlindedBeaconBlock; version: ForkPreBlobs}
   | {data: allForks.BlindedBlockContents; version: ForkBlobs}
 );
@@ -715,12 +716,12 @@ export function getReturnTypes(): ReturnTypes<Api> {
     {jsonCase: "eth2"}
   );
 
-  const produceBlockOrContents = WithExecutionPayloadValue(
+  const produceBlockOrContents = WithBlockValues(
     WithVersion<allForks.BeaconBlockOrContents>((fork: ForkName) =>
       isForkBlobs(fork) ? allForksBlockContentsResSerializer(fork) : ssz[fork].BeaconBlock
     )
   ) as TypeJson<ProduceBlockOrContentsRes>;
-  const produceBlindedBlockOrContents = WithExecutionPayloadValue(
+  const produceBlindedBlockOrContents = WithBlockValues(
     WithVersion<allForks.BlindedBeaconBlockOrContents>((fork: ForkName) =>
       isForkBlobs(fork)
         ? allForksBlindedBlockContentsResSerializer(fork)
