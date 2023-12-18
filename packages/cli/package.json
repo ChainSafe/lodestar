@@ -32,7 +32,7 @@
     "lint:fix": "yarn run lint --fix",
     "pretest": "yarn run check-types",
     "test:unit": "vitest --run --dir test/unit/ --coverage",
-    "test:e2e": "vitest --run --poolOptions.threads.singleThread --dir test/e2e/",
+    "test:e2e": "vitest --run --poolOptions.threads.singleThread true --dir test/e2e/",
     "test:sim:multifork": "LODESTAR_PRESET=minimal node --loader ts-node/esm test/sim/multi_fork.test.ts",
     "test:sim:mixedclient": "LODESTAR_PRESET=minimal node --loader ts-node/esm test/sim/mixed_client.test.ts",
     "test:sim:endpoints": "LODESTAR_PRESET=minimal node --loader ts-node/esm test/sim/endpoints.test.ts",
