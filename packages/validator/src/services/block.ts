@@ -116,15 +116,25 @@ export class BlockProposingService {
       const randaoReveal = await this.validatorStore.signRandao(pubkey, slot);
       const graffiti = this.validatorStore.getGraffiti(pubkeyHex);
       const blockContents = await this.produceBlockWrapper(this.config, slot, randaoReveal, graffiti, {});
-      const block = blockContents.block;
-      this.logger.info("@@@ produced block successfully slot", {
-        secFromSlot: this.clock.secFromSlot(slot),
-        slot: block.slot,
+      const produceTime = this.clock.secFromSlot(slot);
+      const signedBlock = await this.validatorStore.signBlock(pubkey, blockContents.block, slot, this.logger);
+      await this.publishBlockWrapper(signedBlock, undefined, {
+        broadcastValidation: this.opts.broadcastValidation,
+      }).catch((e: Error) => {
+        this.metrics?.blockProposingErrors.inc({error: "publish"});
+        throw extendError(e, "Failed to publish block");
+      });
+      const publishTime = this.clock.secFromSlot(slot);
+      this.logger.info("@@@ Test block produce and publish", {
+        slot,
+        produceTime,
+        publishTime,
+        totalTimeSec: publishTime - produceTime,
       });
     } catch (e) {
       this.logger.error("error producing block", {slot}, e as Error);
     }
-  }
+  };
 
   /** Produce a block at the given slot for pubkey */
   private async createAndPublishBlock(pubkey: BLSPubkey, slot: Slot): Promise<void> {

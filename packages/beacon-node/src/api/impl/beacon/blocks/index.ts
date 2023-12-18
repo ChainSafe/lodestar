@@ -173,24 +173,25 @@ export function getBeaconBlockApi({
 
     // TODO: Validate block
     metrics?.registerBeaconBlock(OpSource.api, seenTimestampSec, blockForImport.block.message);
-    const publishPromises = [
-      // Send the block, regardless of whether or not it is valid. The API
-      // specification is very clear that this is the desired behaviour.
-      () => network.publishBeaconBlock(signedBlock) as Promise<unknown>,
-      () =>
-        // there is no rush to persist block since we published it to gossip anyway
-        chain.processBlock(blockForImport, {...opts, eagerPersistBlock: false}).catch((e) => {
-          if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
-            network.events.emit(NetworkEvent.unknownBlockParent, {
-              blockInput: blockForImport,
-              peer: IDENTITY_PEER_ID,
-            });
-          }
-          throw e;
-        }),
-      ...signedBlobs.map((signedBlob) => () => network.publishBlobSidecar(signedBlob)),
-    ];
-    await promiseAllMaybeAsync(publishPromises);
+    // Do not spread as this is test block
+    // const publishPromises = [
+    //   // Send the block, regardless of whether or not it is valid. The API
+    //   // specification is very clear that this is the desired behaviour.
+    //   () => network.publishBeaconBlock(signedBlock) as Promise<unknown>,
+    //   () =>
+    //     // there is no rush to persist block since we published it to gossip anyway
+    //     chain.processBlock(blockForImport, {...opts, eagerPersistBlock: false}).catch((e) => {
+    //       if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
+    //         network.events.emit(NetworkEvent.unknownBlockParent, {
+    //           blockInput: blockForImport,
+    //           peer: IDENTITY_PEER_ID,
+    //         });
+    //       }
+    //       throw e;
+    //     }),
+    //   ...signedBlobs.map((signedBlob) => () => network.publishBlobSidecar(signedBlob)),
+    // ];
+    // await promiseAllMaybeAsync(publishPromises);
   };
 
   const publishBlindedBlock: ServerApi<routes.beacon.block.Api>["publishBlindedBlock"] = async (
