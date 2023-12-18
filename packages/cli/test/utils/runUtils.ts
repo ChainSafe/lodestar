@@ -29,7 +29,7 @@ export function expectDeepEquals<T>(a: T, b: T, message: string): void {
  */
 export function expectDeepEqualsUnordered<T>(a: T[], b: T[], message: string): void {
   try {
-    expect(a).toEqual(b);
+    expect(a.sort()).toEqual(b.sort());
   } catch (e) {
     expect.fail(message);
   }

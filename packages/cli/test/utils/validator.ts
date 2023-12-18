@@ -1,5 +1,5 @@
 import childProcess from "node:child_process";
-import {afterAll, beforeEach, afterEach} from "vitest";
+import {afterEach} from "vitest";
 import {retry} from "@lodestar/utils";
 import {Api, getClient} from "@lodestar/api/keymanager";
 import {config} from "@lodestar/config/default";
@@ -41,7 +41,7 @@ export async function startValidatorWithKeyManager(
       `--server=${beaconUrl}`,
       ...(args ?? []),
     ],
-    {pipeStdioToParent: true, logPrefix: logPrefix ?? "vc", testContext: {beforeEach, afterEach, afterAll}}
+    {pipeStdioToParent: true, logPrefix: logPrefix ?? "vc"}
   );
 
   // Exit early if process exits
