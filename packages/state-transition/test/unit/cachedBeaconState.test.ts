@@ -46,22 +46,10 @@ describe("CachedBeaconState", () => {
     const state2 = state1.clone();
     state2.epochCtx.addPubkey(index2, pubkey2);
 
-    expect(state1.epochCtx.getValidatorIndex(pubkey1)).to.equal(
-      index1,
-      "addPubkey() is not reflected in getValidatorIndex()"
-    );
-    expect(state2.epochCtx.getValidatorIndex(pubkey1)).to.equal(
-      index1,
-      "cloned state does not maintain cache from original state"
-    );
-    expect(state1.epochCtx.getValidatorIndex(pubkey2)).to.equal(
-      index2,
-      "original state cache was not updated when inserting pubkeys into cloned state cache"
-    );
-    expect(state2.epochCtx.getValidatorIndex(pubkey2)).to.equal(
-      index2,
-      "addPubkey() is not reflected in getValidatorIndex()"
-    );
+    expect(state1.epochCtx.getValidatorIndex(pubkey1)).toBe(index1);
+    expect(state2.epochCtx.getValidatorIndex(pubkey1)).toBe(index1);
+    expect(state1.epochCtx.getValidatorIndex(pubkey2)).toBe(index2);
+    expect(state2.epochCtx.getValidatorIndex(pubkey2)).toBe(index2);
   });
 
   /* eslint-disable @typescript-eslint/naming-convention */
@@ -93,22 +81,10 @@ describe("CachedBeaconState", () => {
     const state2 = state1.clone();
     state2.epochCtx.addPubkey(index2, pubkey2);
 
-    expect(state1.epochCtx.getValidatorIndex(pubkey1)).to.equal(
-      index1,
-      "addPubkey() is not reflected in getValidatorIndex()"
-    );
-    expect(state2.epochCtx.getValidatorIndex(pubkey1)).to.equal(
-      index1,
-      "cloned state does not maintain cache from original state"
-    );
-    expect(state1.epochCtx.getValidatorIndex(pubkey2)).to.equal(
-      undefined,
-      "original state cache was updated when inserting pubkeys into cloned state cache"
-    );
-    expect(state2.epochCtx.getValidatorIndex(pubkey2)).to.equal(
-      index2,
-      "addPubkey() is not reflected in getValidatorIndex()"
-    );
+    expect(state1.epochCtx.getValidatorIndex(pubkey1)).toBe(index1);
+    expect(state2.epochCtx.getValidatorIndex(pubkey1)).toBe(index1);
+    expect(state1.epochCtx.getValidatorIndex(pubkey2)).toBe(undefined);
+    expect(state2.epochCtx.getValidatorIndex(pubkey2)).toBe(index2);
   });
 
   it("Auto-commit on hashTreeRoot", () => {

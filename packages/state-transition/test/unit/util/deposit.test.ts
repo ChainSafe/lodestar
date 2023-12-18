@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {ssz} from "@lodestar/types";
 import {createChainForkConfig} from "@lodestar/config";
 import {MAX_DEPOSITS} from "@lodestar/params";
@@ -18,11 +18,11 @@ describe("getEth1DepositCount", () => {
 
     // 1. Should get less than MAX_DEPOSIT
     pre6110State.eth1DepositIndex = 120;
-    expect(getEth1DepositCount(pre6110State)).to.equal(3);
+    expect(getEth1DepositCount(pre6110State)).toBe(3);
 
     // 2. Should get MAX_DEPOSIT
     pre6110State.eth1DepositIndex = 100;
-    expect(getEth1DepositCount(pre6110State)).to.equal(MAX_DEPOSITS);
+    expect(getEth1DepositCount(pre6110State)).toBe(MAX_DEPOSITS);
   });
   it("Post 6110 with eth1 deposit", () => {
     const stateView = ssz.eip6110.BeaconState.defaultViewDU();
@@ -48,15 +48,15 @@ describe("getEth1DepositCount", () => {
 
     // 1. Should get less than MAX_DEPOSIT
     post6110State.eth1DepositIndex = 990;
-    expect(getEth1DepositCount(post6110State)).to.equal(5);
+    expect(getEth1DepositCount(post6110State)).toBe(5);
 
     // 2. Should get MAX_DEPOSIT
     post6110State.eth1DepositIndex = 100;
-    expect(getEth1DepositCount(post6110State)).to.equal(MAX_DEPOSITS);
+    expect(getEth1DepositCount(post6110State)).toBe(MAX_DEPOSITS);
 
     // 3. Should be 0
     post6110State.eth1DepositIndex = 1000;
-    expect(getEth1DepositCount(post6110State)).to.equal(0);
+    expect(getEth1DepositCount(post6110State)).toBe(0);
   });
   it("Post 6110 without eth1 deposit", () => {
     const stateView = ssz.eip6110.BeaconState.defaultViewDU();
@@ -83,17 +83,17 @@ describe("getEth1DepositCount", () => {
     // Before eth1DepositIndex reaching the start index
     // 1. Should get less than MAX_DEPOSIT
     post6110State.eth1DepositIndex = 990;
-    expect(getEth1DepositCount(post6110State)).to.equal(10);
+    expect(getEth1DepositCount(post6110State)).toBe(10);
 
     // 2. Should get MAX_DEPOSIT
     post6110State.eth1DepositIndex = 983;
-    expect(getEth1DepositCount(post6110State)).to.equal(MAX_DEPOSITS);
+    expect(getEth1DepositCount(post6110State)).toBe(MAX_DEPOSITS);
 
     // After eth1DepositIndex reaching the start index
     // 1. Should be 0
     post6110State.eth1DepositIndex = 1000;
-    expect(getEth1DepositCount(post6110State)).to.equal(0);
+    expect(getEth1DepositCount(post6110State)).toBe(0);
     post6110State.eth1DepositIndex = 1003;
-    expect(getEth1DepositCount(post6110State)).to.equal(0);
+    expect(getEth1DepositCount(post6110State)).toBe(0);
   });
 });
