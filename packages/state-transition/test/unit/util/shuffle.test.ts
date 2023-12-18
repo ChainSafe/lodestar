@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {expect, describe, it} from "vitest";
 import {unshuffleList} from "../../../src/index.js";
 
 describe("util / shuffle", () => {
@@ -22,10 +22,8 @@ describe("util / shuffle", () => {
 
   const seed = new Uint8Array([42, 32]);
 
-  for (const {id, input, res} of testCases) {
-    it(id, () => {
-      unshuffleList(input, seed);
-      expect(input).to.deep.equal(res);
-    });
-  }
+  it.each(testCases)("$id", ({input, res}) => {
+    unshuffleList(input, seed);
+    expect(input).toEqual(res);
+  });
 });

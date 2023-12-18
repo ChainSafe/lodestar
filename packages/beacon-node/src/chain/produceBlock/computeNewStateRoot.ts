@@ -44,5 +44,9 @@ export function computeNewStateRoot(
   const {attestations, syncAggregate, slashing} = postState.proposerRewards;
   const proposerReward = BigInt(attestations + syncAggregate + slashing);
 
-  return {newStateRoot: postState.hashTreeRoot(), proposerReward};
+  const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({source: "compute_new_state_root"});
+  const newStateRoot = postState.hashTreeRoot();
+  hashTreeRootTimer?.();
+
+  return {newStateRoot, proposerReward};
 }

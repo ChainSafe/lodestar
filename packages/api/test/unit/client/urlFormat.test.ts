@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {
   compileRouteUrlFormater,
   toColonNotationPath,
@@ -55,14 +55,14 @@ describe("utils / urlFormat", () => {
 
   for (const {urlTemplate, colonNotation, tokens, cases} of testCases) {
     it(urlTemplate, () => {
-      expect(urlToTokens(urlTemplate)).deep.equal(tokens, "Wrong tokens");
+      expect(urlToTokens(urlTemplate)).toEqual(tokens);
 
-      expect(toColonNotationPath(urlTemplate)).equal(colonNotation, "Wrong colonNotation");
+      expect(toColonNotationPath(urlTemplate)).toBe(colonNotation);
 
       const utlFormater = compileRouteUrlFormater(urlTemplate);
 
-      for (const [i, {args, url}] of cases.entries()) {
-        expect(utlFormater(args)).to.equal(url, `wrong case ${i}`);
+      for (const [_, {args, url}] of cases.entries()) {
+        expect(utlFormater(args)).toBe(url);
       }
     });
   }

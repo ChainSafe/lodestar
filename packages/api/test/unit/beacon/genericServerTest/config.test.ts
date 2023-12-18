@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {config} from "@lodestar/config/default";
 import {Api, ReqTypes, getReturnTypes} from "../../../../src/beacon/routes/config.js";
 import {getClient} from "../../../../src/beacon/client/config.js";
@@ -27,6 +27,6 @@ describe("beacon / config", () => {
     const jsonRes = returnTypes.getSpec.toJson({data: partialJsonSpec});
     const specRes = returnTypes.getSpec.fromJson(jsonRes);
 
-    expect(specRes).to.deep.equal({data: partialJsonSpec}, "Wrong toJson -> fromJson");
+    expect(specRes).toEqual({data: partialJsonSpec});
   });
 });

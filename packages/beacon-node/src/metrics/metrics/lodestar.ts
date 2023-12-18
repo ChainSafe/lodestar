@@ -286,6 +286,12 @@ export function createLodestarMetrics(
       help: "Time to call commit after process a single epoch transition in seconds",
       buckets: [0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1],
     }),
+    epochTransitionStepTime: register.histogram<"step">({
+      name: "lodestar_stfn_epoch_transition_step_seconds",
+      help: "Time to call each step of epoch transition in seconds",
+      labelNames: ["step"],
+      buckets: [0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1],
+    }),
     processBlockTime: register.histogram({
       name: "lodestar_stfn_process_block_seconds",
       help: "Time to process a single block in seconds",
@@ -298,10 +304,11 @@ export function createLodestarMetrics(
       help: "Time to call commit after process a single block in seconds",
       buckets: [0.005, 0.01, 0.02, 0.05, 0.1, 1],
     }),
-    stateHashTreeRootTime: register.histogram({
+    stateHashTreeRootTime: register.histogram<"source">({
       name: "lodestar_stfn_hash_tree_root_seconds",
       help: "Time to compute the hash tree root of a post state in seconds",
-      buckets: [0.005, 0.01, 0.02, 0.05, 0.1, 1],
+      buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5],
+      labelNames: ["source"],
     }),
     preStateBalancesNodesPopulatedMiss: register.gauge<"source">({
       name: "lodestar_stfn_balances_nodes_populated_miss_total",

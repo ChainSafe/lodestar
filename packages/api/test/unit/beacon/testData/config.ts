@@ -15,7 +15,7 @@ export const testData: GenericServerTestCases<Api> = {
     res: {
       data: {
         chainId: 1,
-        address: Buffer.alloc(20, 1),
+        address: new Uint8Array(20).fill(1),
       },
     },
   },
