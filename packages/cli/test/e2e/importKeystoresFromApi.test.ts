@@ -1,5 +1,5 @@
 import path from "node:path";
-import {describe, it, expect, beforeAll, vi} from "vitest";
+import {describe, it, expect, beforeAll, vi, afterAll, beforeEach, afterEach} from "vitest";
 import {rimraf} from "rimraf";
 import {DeletionStatus, getClient, ImportStatus} from "@lodestar/api/keymanager";
 import {config} from "@lodestar/config/default";
@@ -86,6 +86,7 @@ describe("import keystores from api", function () {
     // Attempt to run a second process and expect the keystore lock to throw
     const validator = await spawnCliCommand("packages/cli/bin/lodestar.js", ["validator", "--dataDir", dataDir], {
       logPrefix: "vc-2",
+      testContext: {beforeEach, afterEach, afterAll},
     });
 
     await new Promise<void>((resolve, reject) => {

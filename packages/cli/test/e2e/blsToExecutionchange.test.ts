@@ -26,7 +26,7 @@ describe("bLSToExecutionChange cmd", function () {
         // Speed up test to make genesis happen faster
         "--params.SECONDS_PER_SLOT=2",
       ],
-      {pipeStdioToParent: false, logPrefix: "dev", testContext: {beforeEach, afterEach, afterAll}}
+      {pipeStdioToParent: true, logPrefix: "dev", testContext: {beforeEach, afterEach, afterAll}}
     );
 
     // Exit early if process exits
