@@ -29,7 +29,7 @@ export function responseEncodeSuccess(
       // <context-bytes> - from altair
       const contextBytes = getContextBytes(protocol.contextBytes, chunk);
       if (contextBytes) {
-        yield Buffer.from(contextBytes);
+        yield contextBytes as Buffer;
       }
 
       // <encoding-dependent-header> | <encoded-payload>
