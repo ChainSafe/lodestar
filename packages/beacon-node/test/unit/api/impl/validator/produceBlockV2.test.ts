@@ -23,7 +23,7 @@ import {AggregatedAttestationPool} from "../../../../../src/chain/opPools/index.
 import {Eth1ForBlockProduction} from "../../../../../src/eth1/index.js";
 import {BeaconProposerCache} from "../../../../../src/chain/beaconProposerCache.js";
 
-describe.only("api/validator - produceBlockV2", function () {
+describe("api/validator - produceBlockV2", function () {
   const logger = testLogger();
 
   let modules: ApiModules;
