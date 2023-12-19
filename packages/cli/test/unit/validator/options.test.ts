@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {parseFeeRecipient} from "../../../src/util/index.js";
 
 const feeRecipient = Buffer.from(Array.from({length: 20}, () => Math.round(Math.random() * 255)));
@@ -8,7 +8,7 @@ describe("validator / parseFeeRecipient", () => {
   const testCases: string[] = [`0x${feeRecipientString}`, `0X${feeRecipientString}`];
   for (const testCase of testCases) {
     it(`parse ${testCase}`, () => {
-      expect(`0x${feeRecipientString}`).to.be.deep.equal(parseFeeRecipient(testCase));
+      expect(`0x${feeRecipientString}`).toEqual(parseFeeRecipient(testCase));
     });
   }
 });
@@ -22,7 +22,7 @@ describe("validator / invalid feeRecipient", () => {
   ];
   for (const testCase of testCases) {
     it(`should error on ${testCase}`, () => {
-      expect(() => parseFeeRecipient(testCase)).to.throw();
+      expect(() => parseFeeRecipient(testCase)).toThrow();
     });
   }
 });

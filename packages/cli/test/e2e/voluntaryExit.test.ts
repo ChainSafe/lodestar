@@ -1,15 +1,14 @@
 import path from "node:path";
+import {afterAll, describe, it, vi, beforeEach, afterEach} from "vitest";
 import {retry} from "@lodestar/utils";
 import {ApiError, getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {interopSecretKey} from "@lodestar/state-transition";
 import {spawnCliCommand, execCliCommand} from "@lodestar/test-utils";
-import {getMochaContext} from "@lodestar/test-utils/mocha";
 import {testFilesDir} from "../utils.js";
 
 describe("voluntaryExit cmd", function () {
-  const testContext = getMochaContext(this);
-  this.timeout("60s");
+  vi.setConfig({testTimeout: 60_000});
 
   it("Perform a voluntary exit", async () => {
     const restPort = 9596;
@@ -29,7 +28,7 @@ describe("voluntaryExit cmd", function () {
         // Allow voluntary exists to be valid immediately
         "--params.SHARD_COMMITTEE_PERIOD=0",
       ],
-      {pipeStdioToParent: false, logPrefix: "dev", testContext}
+      {pipeStdioToParent: true, logPrefix: "dev", testContext: {beforeEach, afterEach, afterAll}}
     );
 
     // Exit early if process exits

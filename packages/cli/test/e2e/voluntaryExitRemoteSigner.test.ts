@@ -1,4 +1,5 @@
 import path from "node:path";
+import {describe, it, beforeAll, afterAll, beforeEach, afterEach, vi} from "vitest";
 import {retry} from "@lodestar/utils";
 import {ApiError, getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
@@ -10,15 +11,14 @@ import {
   StartedExternalSigner,
   getKeystoresStr,
 } from "@lodestar/test-utils";
-import {getMochaContext} from "@lodestar/test-utils/mocha";
 import {testFilesDir} from "../utils.js";
 
 describe("voluntaryExit using remote signer", function () {
-  this.timeout("30s");
+  vi.setConfig({testTimeout: 30_000});
 
   let externalSigner: StartedExternalSigner;
 
-  before("start external signer container", async () => {
+  beforeAll(async () => {
     const password = "password";
     externalSigner = await startExternalSigner({
       keystoreStrings: await getKeystoresStr(
@@ -29,13 +29,11 @@ describe("voluntaryExit using remote signer", function () {
     });
   });
 
-  after("stop external signer container", async () => {
+  afterAll(async () => {
     await externalSigner.container.stop();
   });
 
   it("Perform a voluntary exit", async () => {
-    const testContext = getMochaContext(this);
-
     const restPort = 9596;
     const devBnProc = await spawnCliCommand(
       "packages/cli/bin/lodestar.js",
@@ -52,7 +50,7 @@ describe("voluntaryExit using remote signer", function () {
         // Allow voluntary exists to be valid immediately
         "--params.SHARD_COMMITTEE_PERIOD=0",
       ],
-      {pipeStdioToParent: false, logPrefix: "dev", testContext}
+      {pipeStdioToParent: false, logPrefix: "dev", testContext: {beforeEach, afterEach, afterAll}}
     );
 
     // Exit early if process exits

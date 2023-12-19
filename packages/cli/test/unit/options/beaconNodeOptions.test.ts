@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {RecursivePartial} from "@lodestar/utils";
 import {parseBeaconNodeArgs, BeaconNodeArgs} from "../../../src/options/beaconNodeOptions/index.js";
@@ -216,7 +216,7 @@ describe("options / beaconNodeOptions", () => {
     };
 
     const options = parseBeaconNodeArgs(beaconNodeArgsPartial);
-    expect(options).to.deep.equal(expectedOptions);
+    expect(options).toEqual(expectedOptions);
   });
 
   it("Should use execution endpoint & jwt for eth1", () => {
@@ -240,6 +240,6 @@ describe("options / beaconNodeOptions", () => {
     };
 
     const options = parseBeaconNodeArgs(beaconNodeArgsPartial);
-    expect(options.eth1).to.deep.equal(expectedOptions.eth1);
+    expect(options.eth1).toEqual(expectedOptions.eth1);
   });
 });

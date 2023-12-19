@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {parseBeaconParamsArgs} from "../../../src/options/paramsOptions.js";
 import {IBeaconParamsUnparsed} from "../../../src/config/types.js";
 
@@ -18,6 +18,6 @@ describe("options / paramsOptions", () => {
     };
 
     const beaconParams = parseBeaconParamsArgs(beaconParamsArgs);
-    expect(beaconParams).to.deep.equal(expectedBeaconParams);
+    expect(beaconParams).toEqual(expectedBeaconParams);
   });
 });
