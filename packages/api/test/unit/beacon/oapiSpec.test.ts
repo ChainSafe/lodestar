@@ -86,15 +86,15 @@ const testDatas = {
 
 const ignoredOperations = [
   /* missing route */
-  /* #5694 */
+  /* https://github.com/ChainSafe/lodestar/issues/5694 */
   "getSyncCommitteeRewards",
   "getBlockRewards",
   "getAttestationsRewards",
   "getDepositSnapshot", // Won't fix for now, see https://github.com/ChainSafe/lodestar/issues/5697
-  "getBlindedBlock", // #5699
-  "getNextWithdrawals", // #5696
-  "getDebugForkChoice", // #5700
-  /* #6080 */
+  "getBlindedBlock", // https://github.com/ChainSafe/lodestar/issues/5699
+  "getNextWithdrawals", // https://github.com/ChainSafe/lodestar/issues/5696
+  "getDebugForkChoice", // https://github.com/ChainSafe/lodestar/issues/5700
+  /* https://github.com/ChainSafe/lodestar/issues/6080 */
   "getLightClientBootstrap",
   "getLightClientUpdatesByRange",
   "getLightClientFinalityUpdate",
@@ -105,7 +105,7 @@ const ignoredOperations = [
 
 const ignoredProperties: Record<string, IgnoredProperty> = {
   /*
-   #5693
+   https://github.com/ChainSafe/lodestar/issues/5693
    missing finalized
    */
   getStateRoot: {response: ["finalized"]},
@@ -125,19 +125,19 @@ const ignoredProperties: Record<string, IgnoredProperty> = {
   getStateV2: {response: ["finalized"]},
 
   /* 
-   #6168
+   https://github.com/ChainSafe/lodestar/issues/6168
    /query/syncing_status - must be integer
    */
   getHealth: {request: ["query.syncing_status"]},
 
   /**
-   * #6185
+   * https://github.com/ChainSafe/lodestar/issues/6185
    *  - must have required property 'query'
    */
   getBlobSidecars: {request: ["query"]},
 
   /* 
-   #4638 
+   https://github.com/ChainSafe/lodestar/issues/4638 
    /query - must have required property 'skip_randao_verification'
    */
   produceBlockV2: {request: ["query.skip_randao_verification"]},
@@ -152,7 +152,7 @@ runTestCheckAgainstSpec(
   returnTypes,
   testDatas,
   {
-    // TODO: Investigate why schema validation fails otherwise (see #6187)
+    // TODO: Investigate why schema validation fails otherwise (see https://github.com/ChainSafe/lodestar/issues/6187)
     routesDropOneOf: [
       "produceBlockV2",
       "produceBlockV3",
@@ -167,12 +167,12 @@ runTestCheckAgainstSpec(
 
 const ignoredTopics = [
   /*
-   #6167
+   https://github.com/ChainSafe/lodestar/issues/6167
    eventTestData[bls_to_execution_change] does not match spec's example
    */
   "bls_to_execution_change",
   /*
-   #6170
+   https://github.com/ChainSafe/lodestar/issues/6170
    Error: Invalid slot=0 fork=phase0 for lightclient fork types
   */
   "light_client_finality_update",

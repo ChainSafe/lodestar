@@ -6,7 +6,7 @@ import {GenericServerTestCases} from "./genericServerTest.js";
 
 const ajv = new Ajv({
   strict: true,
-  strictTypes: false, // TODO Enable once https://github.com/ethereum/beacon-APIs/pull/391 is released
+  strictTypes: false, // TODO Enable once beacon-APIs is fixed. See https://github.com/ChainSafe/lodestar/issues/6206
   allErrors: true,
 });
 
