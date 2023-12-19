@@ -19,11 +19,9 @@ describe("decryptKeystoreDefinitions", () => {
   const keyCount = 2;
   const secretKeys = cachedSeckeysHex.slice(0, keyCount);
 
-  // Produce and encrypt keystores
   let definitions: LocalKeystoreDefinition[] = [];
 
   beforeEach(async () => {
-    // wipe out data dir and existing keystores
     rimraf.sync(dataDir);
     rimraf.sync(importFromDir);
 
@@ -31,7 +29,7 @@ describe("decryptKeystoreDefinitions", () => {
 
     const keystoresStr = await getKeystoresStr(password, secretKeys);
     definitions = [];
-    // write keystores to disk
+
     for (let i = 0; i < keyCount; i++) {
       const keystorePath = path.join(importFromDir, `keystore_${i}.json`);
       fs.writeFileSync(keystorePath, keystoresStr[i]);
@@ -64,7 +62,7 @@ describe("decryptKeystoreDefinitions", () => {
       expect(signers.length).toBe(secretKeys.length);
       for (const signer of signers) {
         const hexSecret = signer.secretKey.toHex();
-        // secretKeys doesn't include ${hexSecret}
+
         expect(secretKeys.includes(hexSecret)).toBe(true);
       }
     });
@@ -77,15 +75,14 @@ describe("decryptKeystoreDefinitions", () => {
         await decryptKeystoreDefinitions(definitions, {logger: console, signal, cacheFilePath});
         expect.fail("Second decrypt should fail due to failure to get lockfile");
       } catch (e) {
-        // "Wrong error is thrown"
         expect((e as Error).message.startsWith("EEXIST: file already exists")).toBe(true);
       }
     });
 
     it("decrypt keystores if lockfiles already exist if ignoreLockFile=true", async () => {
       await decryptKeystoreDefinitions(definitions, {logger: console, signal, cacheFilePath});
-      // lockfiles should exist after the first run
 
+      // lockfiles should exist after the first run
       await decryptKeystoreDefinitions(definitions, {logger: console, signal, cacheFilePath, ignoreLockFile: true});
     });
   }
