@@ -35,7 +35,7 @@ import {
   phase0,
 } from "@lodestar/types";
 import {ExecutionStatus} from "@lodestar/fork-choice";
-import {toHex, racePromisesWithCutoff, RaceEvent} from "@lodestar/utils";
+import {toHex, racePromisesWithCutoff, RaceEvent, gweiToWei} from "@lodestar/utils";
 import {AttestationError, AttestationErrorCode, GossipAction, SyncCommitteeError} from "../../../chain/errors/index.js";
 import {validateApiAggregateAndProof} from "../../../chain/validation/index.js";
 import {ZERO_HASH} from "../../../constants/index.js";
@@ -541,8 +541,8 @@ export function getValidatorApi({
     const consensusBlockValueBuilder = blindedBlock?.consensusBlockValue ?? BigInt(0);
     const consensusBlockValueEngine = fullBlock?.consensusBlockValue ?? BigInt(0);
 
-    const blockValueBuilder = builderPayloadValue + consensusBlockValueBuilder;
-    const blockValueEngine = enginePayloadValue + consensusBlockValueEngine;
+    const blockValueBuilder = builderPayloadValue + gweiToWei(consensusBlockValueBuilder); // Total block value is in wei
+    const blockValueEngine = enginePayloadValue + gweiToWei(consensusBlockValueEngine); // Total block value is in wei
 
     let selectedSource: ProducedBlockSource | null = null;
 

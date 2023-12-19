@@ -12,7 +12,7 @@ import {
 } from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPreBlobs, ForkBlobs, ForkSeq} from "@lodestar/params";
-import {extendError, prettyBytes} from "@lodestar/utils";
+import {ETH_TO_GWEI, ETH_TO_WEI, extendError, gweiToWei, prettyBytes} from "@lodestar/utils";
 import {Api, ApiError, routes} from "@lodestar/api";
 import {IClock, LoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
@@ -21,7 +21,6 @@ import {formatBigDecimal} from "../util/format.js";
 import {ValidatorStore} from "./validatorStore.js";
 import {BlockDutiesService, GENESIS_SLOT} from "./blockDuties.js";
 
-const ETH_TO_WEI = BigInt("1000000000000000000");
 // display upto 5 decimal places
 const MAX_DECIMAL_FACTOR = BigInt("100000");
 
@@ -220,9 +219,9 @@ export class BlockProposingService {
       source: response.executionPayloadBlinded ? ProducedBlockSource.builder : ProducedBlockSource.engine,
       // winston logger doesn't like bigint
       executionPayloadValue: `${formatBigDecimal(response.executionPayloadValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)} ETH`,
-      consensusBlockValue: `${formatBigDecimal(response.consensusBlockValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)} ETH`,
+      consensusBlockValue: `${formatBigDecimal(response.consensusBlockValue, ETH_TO_GWEI, MAX_DECIMAL_FACTOR)} ETH`,
       totalBlockValue: `${formatBigDecimal(
-        response.executionPayloadValue + response.consensusBlockValue,
+        response.executionPayloadValue + gweiToWei(response.consensusBlockValue),
         ETH_TO_WEI,
         MAX_DECIMAL_FACTOR
       )} ETH`,
