@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {Encoding, ProtocolAttributes} from "../../../src/index.js";
 import {formatProtocolID, parseProtocolID as reqrespParseProtocolID} from "../../../src/utils/index.js";
 
@@ -36,11 +36,11 @@ describe("ReqResp protocolID parse / render", () => {
 
   for (const {method, encoding, version, protocolId} of testCases) {
     it(`Should render ${protocolId}`, () => {
-      expect(formatProtocolID(protocolPrefix, method, version, encoding)).to.equal(protocolId);
+      expect(formatProtocolID(protocolPrefix, method, version, encoding)).toBe(protocolId);
     });
 
     it(`Should parse ${protocolId}`, () => {
-      expect(parseProtocolId(protocolId)).to.deep.equal({protocolPrefix, method, version, encoding});
+      expect(parseProtocolId(protocolId)).toEqual({protocolPrefix, method, version, encoding});
     });
   }
 });

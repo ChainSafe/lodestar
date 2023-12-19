@@ -28,7 +28,7 @@ export async function verifyBlocksStateTransitionOnly(
   metrics: Metrics | null,
   signal: AbortSignal,
   opts: BlockProcessOpts & ImportBlockOpts
-): Promise<{postStates: CachedBeaconStateAllForks[]; proposerBalanceDeltas: number[]}> {
+): Promise<{postStates: CachedBeaconStateAllForks[]; proposerBalanceDeltas: number[]; verifyStateTime: number}> {
   const postStates: CachedBeaconStateAllForks[] = [];
   const proposerBalanceDeltas: number[] = [];
 
@@ -93,12 +93,13 @@ export async function verifyBlocksStateTransitionOnly(
     }
   }
 
+  const verifyStateTime = Date.now();
   if (blocks.length === 1 && opts.seenTimestampSec !== undefined) {
     const slot = blocks[0].block.message.slot;
-    const recvToTransition = Date.now() / 1000 - opts.seenTimestampSec;
+    const recvToTransition = verifyStateTime / 1000 - opts.seenTimestampSec;
     metrics?.gossipBlock.receivedToStateTransition.observe(recvToTransition);
-    logger.verbose("Transitioned gossip block", {slot, recvToTransition});
+    logger.verbose("Verified block state transition", {slot, recvToTransition});
   }
 
-  return {postStates, proposerBalanceDeltas};
+  return {postStates, proposerBalanceDeltas, verifyStateTime};
 }

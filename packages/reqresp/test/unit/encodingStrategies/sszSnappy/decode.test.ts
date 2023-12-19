@@ -1,5 +1,4 @@
-import chai, {expect} from "chai";
-import chaiAsPromised from "chai-as-promised";
+import {describe, it, expect} from "vitest";
 import {Uint8ArrayList} from "uint8arraylist";
 import {encode as varintEncode} from "uint8-varint";
 import {readSszSnappyPayload} from "../../../../src/encodingStrategies/sszSnappy/index.js";
@@ -11,16 +10,12 @@ import {
 } from "../../../fixtures/index.js";
 import {arrToSource} from "../../../utils/index.js";
 
-chai.use(chaiAsPromised);
-
 describe("encodingStrategies / sszSnappy / decode", () => {
-  for (const {id, type, binaryPayload, chunks} of encodingStrategiesTestCases) {
-    it(id, async () => {
-      const bufferedSource = new BufferedSource(arrToSource(chunks));
-      const bodyResult = await readSszSnappyPayload(bufferedSource, type);
-      expect(bodyResult).to.deep.equal(binaryPayload.data, "Wrong decoded body");
-    });
-  }
+  it.each(encodingStrategiesTestCases)("$id", async ({type, binaryPayload, chunks}) => {
+    const bufferedSource = new BufferedSource(arrToSource(chunks));
+    const bodyResult = await readSszSnappyPayload(bufferedSource, type);
+    expect(bodyResult).toEqual(binaryPayload.data);
+  });
 
   describe("mainnet cases", () => {
     for (const {id, payload, type: serializer, streamedBody} of encodingStrategiesMainnetTestCases) {
@@ -31,7 +26,7 @@ describe("encodingStrategies / sszSnappy / decode", () => {
         const bufferedSource = new BufferedSource(arrToSource([streamedBytes]));
         const bodyResult = await readSszSnappyPayload(bufferedSource, serializer);
 
-        expect(bodyResult).to.deep.equal(payload.data, "Wrong decoded body");
+        expect(bodyResult).toEqual(new Uint8Array(payload.data));
       });
     }
   });
@@ -40,7 +35,7 @@ describe("encodingStrategies / sszSnappy / decode", () => {
     for (const {id, type, error, chunks} of encodingStrategiesDecodingErrorCases) {
       it(id, async () => {
         const bufferedSource = new BufferedSource(arrToSource([new Uint8ArrayList(...chunks)]));
-        await expect(readSszSnappyPayload(bufferedSource, type)).to.be.rejectedWith(error);
+        await expect(readSszSnappyPayload(bufferedSource, type)).rejects.toThrow(error);
       });
     }
   });
