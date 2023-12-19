@@ -1,8 +1,7 @@
+export type NoLabels = Record<string, never>;
 export type LabelsGeneric = Record<string, string | number>;
 export type LabelKeys<Labels extends LabelsGeneric> = Extract<keyof Labels, string>;
 export type CollectFn<Labels extends LabelsGeneric> = (metric: Gauge<Labels>) => void;
-
-export type NoLabels = Record<string, never>;
 
 export interface Gauge<Labels extends LabelsGeneric = NoLabels> {
   inc: NoLabels extends Labels ? (value?: number) => void : (labels: Labels, value?: number) => void;
