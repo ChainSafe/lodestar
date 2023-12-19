@@ -4,7 +4,6 @@ import {
   computeTimeAtSlot,
   parseSignedBlindedBlockOrContents,
   reconstructFullBlockOrContents,
-  DataAvailableStatus,
 } from "@lodestar/state-transition";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {sleep, toHex} from "@lodestar/utils";
@@ -121,19 +120,13 @@ export function getBeaconBlockApi({
           }
 
           try {
-            await verifyBlocksInEpoch.call(
-              chain as BeaconChain,
-              parentBlock,
-              [blockForImport],
-              [DataAvailableStatus.available],
-              {
-                ...opts,
-                verifyOnly: true,
-                skipVerifyBlockSignatures: true,
-                skipVerifyExecutionPayload: true,
-                seenTimestampSec,
-              }
-            );
+            await verifyBlocksInEpoch.call(chain as BeaconChain, parentBlock, [blockForImport], {
+              ...opts,
+              verifyOnly: true,
+              skipVerifyBlockSignatures: true,
+              skipVerifyExecutionPayload: true,
+              seenTimestampSec,
+            });
           } catch (error) {
             chain.logger.error("Consensus checks failed while publishing the block", valLogMeta, error as Error);
             chain.persistInvalidSszValue(

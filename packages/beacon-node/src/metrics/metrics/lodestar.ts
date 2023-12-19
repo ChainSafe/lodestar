@@ -649,27 +649,44 @@ export function createLodestarMetrics(
       receivedToGossipValidate: register.histogram({
         name: "lodestar_gossip_block_received_to_gossip_validate",
         help: "Time elapsed between block received and block validated",
-        buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
+        buckets: [0.05, 0.1, 0.3, 0.5, 0.7, 1, 1.3, 1.6, 2, 2.5, 3, 3.5, 4],
       }),
       receivedToStateTransition: register.histogram({
         name: "lodestar_gossip_block_received_to_state_transition",
         help: "Time elapsed between block received and block state transition",
-        buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
+        buckets: [0.05, 0.1, 0.3, 0.5, 0.7, 1, 1.3, 1.6, 2, 2.5, 3, 3.5, 4],
       }),
       receivedToSignaturesVerification: register.histogram({
         name: "lodestar_gossip_block_received_to_signatures_verification",
         help: "Time elapsed between block received and block signatures verification",
-        buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
+        buckets: [0.05, 0.1, 0.3, 0.5, 0.7, 1, 1.3, 1.6, 2, 2.5, 3, 3.5, 4],
       }),
       receivedToExecutionPayloadVerification: register.histogram({
         name: "lodestar_gossip_block_received_to_execution_payload_verification",
         help: "Time elapsed between block received and execution payload verification",
-        buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
+        buckets: [0.05, 0.1, 0.3, 0.5, 0.7, 1, 1.3, 1.6, 2, 2.5, 3, 3.5, 4],
+      }),
+      receivedToBlobsAvailabilityTime: register.histogram<"numBlobs">({
+        name: "lodestar_gossip_block_received_to_blobs_availability_time",
+        help: "Time elapsed between block received and blobs became available",
+        buckets: [0.05, 0.1, 0.3, 0.5, 0.7, 1, 1.3, 1.6, 2, 2.5, 3, 3.5, 4],
+        labelNames: ["numBlobs"],
+      }),
+      receivedToFullyVerifiedTime: register.histogram({
+        name: "lodestar_gossip_block_received_to_fully_verified_time",
+        help: "Time elapsed between block received and fully verified state, signatures and payload",
+        buckets: [0.05, 0.1, 0.3, 0.5, 0.7, 1, 1.3, 1.6, 2, 2.5, 3, 3.5, 4],
+      }),
+      verifiedToBlobsAvailabiltyTime: register.histogram<"numBlobs">({
+        name: "lodestar_gossip_block_verified_to_blobs_availability_time",
+        help: "Time elapsed between block verified and blobs became available",
+        buckets: [0.05, 0.1, 0.3, 0.5, 0.7, 1, 1.3, 1.6, 2, 2.5, 3, 3.5, 4],
+        labelNames: ["numBlobs"],
       }),
       receivedToBlockImport: register.histogram({
         name: "lodestar_gossip_block_received_to_block_import",
         help: "Time elapsed between block received and block import",
-        buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
+        buckets: [0.05, 0.1, 0.3, 0.5, 0.7, 1, 1.3, 1.6, 2, 2.5, 3, 3.5, 4],
       }),
       processBlockErrors: register.gauge<"error">({
         name: "lodestar_gossip_block_process_block_errors",
