@@ -687,7 +687,7 @@ export function createLodestarMetrics(
         help: "Time elapsed between block received and execution payload verification",
         buckets: [0.05, 0.1, 0.3, 0.5, 0.7, 1, 1.3, 1.6, 2, 2.5, 3, 3.5, 4],
       }),
-      receivedToBlobsAvailabilityTime: register.histogram<"numBlobs">({
+      receivedToBlobsAvailabilityTime: register.histogram<{numBlobs: number}>({
         name: "lodestar_gossip_block_received_to_blobs_availability_time",
         help: "Time elapsed between block received and blobs became available",
         buckets: [0.05, 0.1, 0.3, 0.5, 0.7, 1, 1.3, 1.6, 2, 2.5, 3, 3.5, 4],
@@ -698,7 +698,7 @@ export function createLodestarMetrics(
         help: "Time elapsed between block received and fully verified state, signatures and payload",
         buckets: [0.05, 0.1, 0.3, 0.5, 0.7, 1, 1.3, 1.6, 2, 2.5, 3, 3.5, 4],
       }),
-      verifiedToBlobsAvailabiltyTime: register.histogram<"numBlobs">({
+      verifiedToBlobsAvailabiltyTime: register.histogram<{numBlobs: number}>({
         name: "lodestar_gossip_block_verified_to_blobs_availability_time",
         help: "Time elapsed between block verified and blobs became available",
         buckets: [0.05, 0.1, 0.3, 0.5, 0.7, 1, 1.3, 1.6, 2, 2.5, 3, 3.5, 4],
