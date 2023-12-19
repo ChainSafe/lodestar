@@ -17,13 +17,8 @@ export interface Gauge<Labels extends LabelsGeneric = NoLabels> {
   collect?(): void;
 }
 
-export interface GaugeExtra<Labels extends LabelsGeneric = NoLabels> extends Gauge<Labels> {
+export interface GaugeExtra<Labels extends LabelsGeneric = NoLabels> extends Omit<Gauge<Labels>, "collect"> {
   addCollect(collectFn: CollectFn<Labels>): void;
-
-  /**
-   * @deprecated Use `addCollect` instead
-   */
-  collect(): void;
 }
 
 export interface Histogram<Labels extends LabelsGeneric = NoLabels> {
