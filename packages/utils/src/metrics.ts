@@ -2,9 +2,7 @@ export type LabelsGeneric = Record<string, string | number>;
 export type LabelKeys<Labels extends LabelsGeneric> = Extract<keyof Labels, string>;
 export type CollectFn<Labels extends LabelsGeneric> = (metric: Gauge<Labels>) => void;
 
-// Type `{}` is required here as alternative types do not work
-// eslint-disable-next-line @typescript-eslint/ban-types
-export type NoLabels = {};
+export type NoLabels = Record<string, never>;
 
 export interface Gauge<Labels extends LabelsGeneric = NoLabels> {
   inc: NoLabels extends Labels ? (value?: number) => void : (labels: Labels, value?: number) => void;
@@ -57,16 +55,16 @@ export type StaticConfig<Labels extends LabelsGeneric> = {
 };
 
 export interface MetricsRegister {
-  gauge<Labels extends LabelsGeneric>(config: GaugeConfig<Labels>): Gauge<Labels>;
-  histogram<Labels extends LabelsGeneric>(config: HistogramConfig<Labels>): Histogram<Labels>;
-  counter<Labels extends LabelsGeneric>(config: CounterConfig<Labels>): Counter<Labels>;
+  gauge<Labels extends LabelsGeneric = NoLabels>(config: GaugeConfig<Labels>): Gauge<Labels>;
+  histogram<Labels extends LabelsGeneric = NoLabels>(config: HistogramConfig<Labels>): Histogram<Labels>;
+  counter<Labels extends LabelsGeneric = NoLabels>(config: CounterConfig<Labels>): Counter<Labels>;
 }
 
 export interface MetricsRegisterExtra extends MetricsRegister {
-  gauge<Labels extends LabelsGeneric>(config: GaugeConfig<Labels>): GaugeExtra<Labels>;
+  gauge<Labels extends LabelsGeneric = NoLabels>(config: GaugeConfig<Labels>): GaugeExtra<Labels>;
 }
 
 export interface MetricsRegisterCustom extends MetricsRegisterExtra {
-  avgMinMax<Labels extends LabelsGeneric>(config: AvgMinMaxConfig<Labels>): AvgMinMax<Labels>;
-  static<Labels extends LabelsGeneric>(config: StaticConfig<Labels>): void;
+  avgMinMax<Labels extends LabelsGeneric = NoLabels>(config: AvgMinMaxConfig<Labels>): AvgMinMax<Labels>;
+  static<Labels extends LabelsGeneric = NoLabels>(config: StaticConfig<Labels>): void;
 }
