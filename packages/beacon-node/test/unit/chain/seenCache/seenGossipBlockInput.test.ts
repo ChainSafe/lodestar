@@ -108,7 +108,7 @@ describe("SeenGossipBlockInput", () => {
             if (expectedResponseType instanceof Error) {
               expect.fail(`expected to fail with error: ${expectedResponseType.message}`);
             } else if (expectedResponseType === null) {
-              expect(blockInputRes).equal.toBeNull;
+              expect(blockInputRes).toBeNull;
             } else {
               expect(blockInputRes.blockInput?.type).to.be.equal(expectedResponseType);
             }
@@ -144,7 +144,7 @@ describe("SeenGossipBlockInput", () => {
   }
 });
 
-function parseResponseType(expectedRes: string | Error | null): BlockInputType | null | Error {
+function parseResponseType(expectedRes: string | null): BlockInputType | null | Error {
   switch (expectedRes) {
     case null:
       return null;
