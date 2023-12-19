@@ -50,8 +50,8 @@ function deleteNested(schema: JsonSchema | undefined, property: string): void {
   const properties = schema?.properties;
   if (property.includes(".")) {
     // Extract first segment, keep the rest as dotted
-    const [key, rest] = property.split(".", 2);
-    deleteNested(properties?.[key], rest);
+    const [key, ...rest] = property.split(".");
+    deleteNested(properties?.[key], rest.join("."));
   } else {
     // Remove property from 'required'
     if (schema?.required) {
@@ -123,7 +123,9 @@ export function runTestCheckAgainstSpec(
           const ignoredProperties = ignoredProperty?.request;
           if (ignoredProperties) {
             // Remove ignored properties from schema validation
-            ignoredProperties.forEach((property) => deleteNested(routeSpec.requestSchema, property));
+            for (const property of ignoredProperties) {
+              deleteNested(routeSpec.requestSchema, property);
+            }
           }
 
           // Validate request
@@ -148,7 +150,9 @@ export function runTestCheckAgainstSpec(
           const ignoredProperties = ignoredProperty?.response;
           if (ignoredProperties) {
             // Remove ignored properties from schema validation
-            ignoredProperties.forEach((property) => deleteNested(routeSpec.responseOkSchema, property));
+            for (const property of ignoredProperties) {
+              deleteNested(routeSpec.responseOkSchema, property);
+            }
           }
           // Validate response
           validateSchema(responseOkSchema, resJson, "response");
