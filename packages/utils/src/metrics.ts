@@ -17,8 +17,15 @@ export interface GaugeExtra<Labels extends LabelsGeneric = NoLabels> extends Omi
 }
 
 export interface Histogram<Labels extends LabelsGeneric = NoLabels> {
-  startTimer(): NoLabels extends Labels ? () => number : (labels: Labels) => number;
-  startTimer(labels: NoLabels extends Labels ? undefined : Labels): (labels?: Labels) => number;
+  startTimer: NoLabels extends Labels
+    ? () => () => number
+    : <L extends Partial<Labels> | undefined>(
+        labels?: L
+      ) => L extends undefined
+        ? (labels: Labels) => number
+        : keyof Omit<Labels, keyof L> extends never
+        ? () => number
+        : (labels: Omit<Labels, keyof L>) => number;
 
   observe: NoLabels extends Labels ? (value: number) => void : (labels: Labels, value: number) => void;
 
