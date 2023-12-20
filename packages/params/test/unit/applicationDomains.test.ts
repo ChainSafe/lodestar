@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {DOMAIN_APPLICATION_MASK, DOMAIN_APPLICATION_BUILDER} from "../../src/index.js";
 
 describe("validate application domains", () => {
@@ -8,7 +8,7 @@ describe("validate application domains", () => {
       for (let i = 0; i < DOMAIN_APPLICATION_MASK.length; i++) {
         r += DOMAIN_APPLICATION_MASK[i] & domain[i];
       }
-      expect(r).to.be.above(0, `${name} mask application should be valid`);
+      expect(r).toBeGreaterThan(0);
     });
   });
 });
