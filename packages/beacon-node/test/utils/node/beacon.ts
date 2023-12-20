@@ -58,6 +58,7 @@ export async function getDevBeaconNode(
           localMultiaddrs: options.network?.localMultiaddrs || ["/ip4/127.0.0.1/tcp/0"],
           targetPeers: defaultNetworkOptions.targetPeers,
           maxPeers: defaultNetworkOptions.maxPeers,
+          useWorker: options.network?.useWorker ?? defaultNetworkOptions.useWorker,
         },
       } as Partial<IBeaconNodeOptions>,
       options

@@ -24,7 +24,7 @@ import {logFilesDir} from "./params.js";
 import {shell} from "./shell.js";
 
 // NOTE: How to run
-// DEV_RUN=true EL_BINARY_DIR=g11tech/ethereumjs:devnet6-32aaac EL_SCRIPT_DIR=ethereumjsdocker yarn mocha test/sim/4844-interop.test.ts
+// DEV_RUN=true EL_BINARY_DIR=ethpandaops/ethereumjs:master-7b4c229 EL_SCRIPT_DIR=ethereumjsdocker yarn mocha test/sim/4844-interop.test.ts
 // ```
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention */
@@ -102,7 +102,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     // delay a bit so that test is over the startup cpu surge that can cause timeouts
     // somehow this seems to be dependent on the number of the bns we start which calls
     // for some debugging
-    const genesisSlotsDelay = 30;
+    const genesisSlotsDelay = 5;
 
     // On the emprical runs 11 blobs are processed, leaving 3 blobs marging
     const expectedBlobs = 8;
@@ -144,7 +144,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       options: {
         api: {rest: {enabled: true} as BeaconRestApiServerOpts},
         sync: {isSingleNode: true},
-        network: {allowPublishToZeroPeers: true, rateLimitMultiplier: 0},
+        network: {allowPublishToZeroPeers: true, rateLimitMultiplier: 0, useWorker: false},
         // Now eth deposit/merge tracker methods directly available on engine endpoints
         eth1: {enabled: false, providerUrls: [engineRpcUrl], jwtSecretHex},
         executionEngine: {urls: [engineRpcUrl], jwtSecretHex},
@@ -203,7 +203,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       },
       options: {
         api: {rest: {enabled: false} as BeaconRestApiServerOpts},
-        network: {allowPublishToZeroPeers: true, discv5: null},
+        network: {allowPublishToZeroPeers: true, discv5: null, useWorker: false},
         // Now eth deposit/merge tracker methods directly available on engine endpoints
         eth1: {enabled: false, providerUrls: [engineRpcUrl], jwtSecretHex},
         executionEngine: {urls: [engineRpcUrl], jwtSecretHex},
@@ -237,7 +237,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       },
       options: {
         api: {rest: {enabled: false} as BeaconRestApiServerOpts},
-        network: {allowPublishToZeroPeers: true, discv5: null},
+        network: {allowPublishToZeroPeers: true, discv5: null, useWorker: false},
         // Now eth deposit/merge tracker methods directly available on engine endpoints
         eth1: {enabled: false, providerUrls: [engineRpcUrl], jwtSecretHex},
         executionEngine: {urls: [engineRpcUrl], jwtSecretHex},
