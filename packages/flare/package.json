@@ -44,7 +44,7 @@
     "lint": "eslint --color --ext .ts src/",
     "lint:fix": "yarn run lint --fix",
     "pretest": "yarn run check-types",
-    "test:unit": "nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'",
+    "test:unit": "vitest --run --dir test/unit/ --coverage",
     "check-readme": "typescript-docs-verifier"
   },
   "repository": {
