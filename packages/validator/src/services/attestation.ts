@@ -49,7 +49,17 @@ export class AttestationService {
 
     // At most every slot, check existing duties from AttestationDutiesService and run tasks
     // clock.runEverySlot(this.runAttestationTasks);
+    clock.runEverySlot(this.runTest);
   }
+
+  private runTest = async (slot: Slot): Promise<void> => {
+    // keep querying attestation data to make the server a little bit busy
+    // this interleaves with the block service, want to make server more busy
+    for (let i = 0; i < 6; i++) {
+      await this.api.validator.produceAttestationData(0, slot);
+      await sleep(1000);
+    }
+  };
 
   removeDutiesForKey(pubkey: PubkeyHex): void {
     this.dutiesService.removeDutiesForKey(pubkey);
