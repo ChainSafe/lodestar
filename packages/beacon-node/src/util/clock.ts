@@ -144,7 +144,6 @@ export class Clock extends EventEmitter implements IClock {
     if (currentSlot === slot) {
       return true;
     }
-    futureToleranceMs ??= pastToleranceMs;
 
     if (pastToleranceMs > 0 && this.slotWithPastTolerance(pastToleranceMs) === slot) return true;
     if (futureToleranceMs > 0 && this.slotWithFutureTolerance(futureToleranceMs) === slot) return true;
