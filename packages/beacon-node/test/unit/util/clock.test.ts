@@ -31,47 +31,32 @@ describe("Clock", () => {
   });
 
   describe("isCurrentSlotGivenDisparity", () => {
-    it("should return true if disparity set to zero for current slot", () => {
-      vi.advanceTimersByTime(slotTimeMs(10.5));
+    const testCases: {
+      past: number;
+      future: number;
+      clockTime: number;
+      slot: number;
+      expected: boolean;
+    }[] = [
+      {past: 0, future: 0, clockTime: slotTimeMs(10.5), slot: 10, expected: true},
+      {past: 500, future: 500, clockTime: slotTimeMs(10.5), slot: 10, expected: true},
+      {past: 0, future: 500, clockTime: slotTimeMs(11) + 500, slot: 10, expected: false},
+      {past: 0, future: 500, clockTime: slotTimeMs(11) + 499, slot: 10, expected: true},
+      {past: 0, future: 500, clockTime: slotTimeMs(11) + 500, slot: 10, expected: false},
+      {past: 500, future: 0, clockTime: slotTimeMs(10) - 500, slot: 10, expected: true},
+      {past: 500, future: 0, clockTime: slotTimeMs(10) - 501, slot: 10, expected: false},
+      {past: 500, future: 0, clockTime: slotTimeMs(10) - 501, slot: 10, expected: false},
+    ];
 
-      expect(clock.isCurrentSlotGivenTolerance(10, 0, 0)).toBe(true);
-    });
+    for (const {past, future, clockTime, slot, expected} of testCases) {
+      it(`should return ${expected} at clockTime=${clockTime} for slot=${slot} with given \t <- ${past}\t| ${slot}(${
+        slot * config.SECONDS_PER_SLOT * 1000
+      }-${(slot + 1) * config.SECONDS_PER_SLOT * 1000 - 1}) |\t${future} ->`, () => {
+        vi.advanceTimersByTime(clockTime);
 
-    it("should return true for if slot in the middle of slot time and not in disparity range", () => {
-      vi.advanceTimersByTime(slotTimeMs(10.5));
-
-      expect(clock.isCurrentSlotGivenTolerance(10, 500, 500)).toBe(true);
-    });
-
-    it("should return true if slot within in the future disparity range", () => {
-      vi.advanceTimersByTime(slotTimeMs(11) + 500);
-
-      expect(clock.isCurrentSlotGivenTolerance(10, 0, 500)).toBe(true);
-    });
-
-    it("should return false if slot not in the future disparity range", () => {
-      vi.advanceTimersByTime(slotTimeMs(11) + 501);
-
-      expect(clock.isCurrentSlotGivenTolerance(10, 0, 500)).toBe(false);
-    });
-
-    it("should return true if slot within the past disparity range", () => {
-      vi.advanceTimersByTime(slotTimeMs(10) - 500);
-
-      expect(clock.isCurrentSlotGivenTolerance(10, 500, 0)).toBe(true);
-    });
-
-    it("should return false if slot not in the past disparity range", () => {
-      vi.advanceTimersByTime(slotTimeMs(10) - 501);
-
-      expect(clock.isCurrentSlotGivenTolerance(10, 500, 0)).toBe(false);
-    });
-
-    it("should return true if slot within in the future disparity range with single parameter", () => {
-      vi.advanceTimersByTime(slotTimeMs(11) + 500);
-
-      expect(clock.isCurrentSlotGivenTolerance(10, 500)).toBe(true);
-    });
+        expect(clock.isCurrentSlotGivenTolerance(slot, past, future)).toBe(expected);
+      });
+    }
   });
 
   describe("waitForSlot", () => {

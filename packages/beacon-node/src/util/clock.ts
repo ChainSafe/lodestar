@@ -65,7 +65,6 @@ export type IClock = StrictEventEmitter<EventEmitter, ClockEvents> & {
    *              |<-pastToleranceMs->|                 |<-futureToleranceMs->|
    */
   isCurrentSlotGivenTolerance(slot: Slot, pastToleranceMs: number, futureToleranceMs: number): boolean;
-  isCurrentSlotGivenTolerance(slot: Slot, pastAndFutureToleranceMs: number): boolean;
   /**
    * Returns a promise that waits until at least `slot` is reached
    * Resolves when the current slot >= `slot`
@@ -78,6 +77,10 @@ export type IClock = StrictEventEmitter<EventEmitter, ClockEvents> & {
   secFromSlot(slot: Slot, toSec?: number): number;
 };
 
+function getSlotAtTime(timeInMs: number, genesisTimeInMs: number, msPerSlot: number): Slot {
+  return Math.floor((timeInMs - genesisTimeInMs) / msPerSlot);
+}
+
 /**
  * A local clock, the clock time is assumed to be trusted
  */
@@ -87,6 +90,8 @@ export class Clock extends EventEmitter implements IClock {
   private timeoutId: number | NodeJS.Timeout;
   private readonly signal: AbortSignal;
   private _currentSlot: number;
+  private _genesisTimeMs: number;
+  private _msPerSlot: number;
 
   constructor({config, genesisTime, signal}: {config: ChainForkConfig; genesisTime: number; signal: AbortSignal}) {
     super();
@@ -96,6 +101,8 @@ export class Clock extends EventEmitter implements IClock {
     this.timeoutId = setTimeout(this.onNextSlot, this.msUntilNextSlot());
     this.signal = signal;
     this._currentSlot = getCurrentSlot(this.config, this.genesisTime);
+    this._genesisTimeMs = this.genesisTime * 1000;
+    this._msPerSlot = this.config.SECONDS_PER_SLOT * 1000;
     this.signal.addEventListener("abort", () => clearTimeout(this.timeoutId), {once: true});
   }
 
@@ -124,25 +131,15 @@ export class Clock extends EventEmitter implements IClock {
 
   /** Returns the slot if the internal clock were advanced by `toleranceMs`. */
   slotWithFutureTolerance(toleranceMs: number): Slot {
-    const currentSlot = this.currentSlot;
-    const currentSlotStartTime = computeTimeAtSlot(this.config, currentSlot, this.genesisTime) * 1000;
-    const now = Date.now();
-    return toleranceMs > 0 && now > currentSlotStartTime && now - currentSlotStartTime <= toleranceMs
-      ? this.currentSlot - 1
-      : this.currentSlot;
+    return getSlotAtTime(Date.now(), this._genesisTimeMs + toleranceMs, this._msPerSlot);
   }
 
   /** Returns the slot if the internal clock were reversed by `toleranceMs`. */
   slotWithPastTolerance(toleranceMs: number): Slot {
-    const currentSlot = this.currentSlot;
-    const currentSlotEndTime = computeTimeAtSlot(this.config, currentSlot + 1, this.genesisTime) * 1000 - 1;
-    const now = Date.now();
-    return toleranceMs > 0 && now < currentSlotEndTime && currentSlotEndTime - now < toleranceMs
-      ? currentSlot + 1
-      : currentSlot;
+    return getSlotAtTime(Date.now(), this._genesisTimeMs - toleranceMs, this._msPerSlot);
   }
 
-  isCurrentSlotGivenTolerance(slot: Slot, pastToleranceMs: number, futureToleranceMs?: number): boolean {
+  isCurrentSlotGivenTolerance(slot: Slot, pastToleranceMs: number, futureToleranceMs: number): boolean {
     const currentSlot = this.currentSlot;
     if (currentSlot === slot) {
       return true;
