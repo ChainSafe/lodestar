@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {ProtoArray, ExecutionStatus} from "../../../src/index.js";
 
 describe("getCommonAncestor", () => {
@@ -73,7 +73,7 @@ describe("getCommonAncestor", () => {
     it(`${nodeA} & ${nodeB} -> ${ancestor}`, () => {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const ancestorNode = fc.getCommonAncestor(fc.getNode(nodeA)!, fc.getNode(nodeB)!);
-      expect(ancestorNode && ancestorNode.blockRoot).to.equal(ancestor);
+      expect(ancestorNode && ancestorNode.blockRoot).toBe(ancestor);
     });
   }
 
@@ -104,5 +104,5 @@ describe("getCommonAncestor", () => {
 
   // multiple calls to applyScoreChanges don't keep on adding boosts to weight over
   // and over again, and applyScoreChanges can be safely called after onAttestations
-  expect(weightsAfterCall1).to.deep.equal(weightsAfterCall2);
+  expect(weightsAfterCall1).toEqual(weightsAfterCall2);
 });

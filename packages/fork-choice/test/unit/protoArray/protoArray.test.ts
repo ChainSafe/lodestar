@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {RootHex} from "@lodestar/types";
 
 import {ProtoArray, ExecutionStatus} from "../../../src/index.js";
@@ -107,10 +107,7 @@ describe("ProtoArray", () => {
     ];
 
     for (const [ancestorRoot, descendantRoot, isDescendant] of assertions) {
-      expect(fc.isDescendant(ancestorRoot, descendantRoot)).to.equal(
-        isDescendant,
-        `${descendantRoot} must be ${isDescendant ? "descendant" : "not descendant"} of ${ancestorRoot}`
-      );
+      expect(fc.isDescendant(ancestorRoot, descendantRoot)).toBe(isDescendant);
     }
   });
 });
