@@ -35,14 +35,20 @@ for (const fnName of readdirSyncSpec(blsSpecTests.outputDir)) {
 
     const fnTestDirpath = path.join(blsSpecTests.outputDir, fnName);
     for (const testName of readdirSyncSpec(fnTestDirpath)) {
+      // TODO: Will be removed when we remove chai/mocha eslint rules
+      // eslint-disable-next-line mocha/handle-done-callback
       it(`${fnName}/${testName}`, function (context) {
         if (fn === "skip") {
+          // TODO: Will be removed when we remove chai/mocha eslint rules
+          // eslint-disable-next-line mocha/no-nested-tests
           context.skip();
           return;
         }
 
         // Do not manually skip tests here, do it in the top of the file
         if (skippedTestNames.includes(testName)) {
+          // TODO: Will be removed when we remove chai/mocha eslint rules
+          // eslint-disable-next-line mocha/no-nested-tests
           context.skip();
           return;
         }
