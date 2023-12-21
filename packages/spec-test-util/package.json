@@ -13,11 +13,20 @@
     ".": {
       "import": "./lib/index.js"
     },
-    "./download": {
+    "./downloadTests": {
       "import": "./lib/downloadTests.js"
     }
   },
   "types": "lib/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "*": [
+        "*",
+        "lib/*",
+        "lib/*/index"
+      ]
+    }
+  },
   "files": [
     "lib/**/*.js",
     "lib/**/*.js.map",
