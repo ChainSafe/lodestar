@@ -87,10 +87,11 @@
     "test:sim:withdrawals": "mocha 'test/sim/withdrawal-interop.test.ts'",
     "test:sim:blobs": "mocha 'test/sim/4844-interop.test.ts'",
     "download-spec-tests": "node --loader=ts-node/esm test/spec/downloadTests.ts",
-    "test:spec-bls-general": "vitest --run --config vitest.config.spec.ts --dir test/spec/bls/ --dir  test/spec/general/",
-    "test:spec-minimal": "LODESTAR_PRESET=minimal vitest --run --config vitest.config.spec.ts --dir test/spec/presets/",
-    "test:spec-mainnet": "LODESTAR_PRESET=mainnet vitest --run --config vitest.config.spec.ts --dir test/spec/presets/",
-    "test:spec": "yarn test:spec-bls-general && yarn test:spec-minimal && yarn test:spec-mainnet",
+    "test:spec:bls": "vitest --run --config vitest.config.spec.ts --dir test/spec/bls/",
+    "test:spec:general": "vitest --run --config vitest.config.spec.ts --dir test/spec/general/",
+    "test:spec:minimal": "LODESTAR_PRESET=minimal vitest --run --config vitest.config.spec.ts --dir test/spec/presets/",
+    "test:spec:mainnet": "LODESTAR_PRESET=mainnet vitest --run --config vitest.config.spec.ts --dir test/spec/presets/",
+    "test:spec": "yarn test:spec:bls && yarn test:spec:general && yarn test:spec:minimal && yarn test:spec:mainnet",
     "check-readme": "typescript-docs-verifier"
   },
   "dependencies": {
