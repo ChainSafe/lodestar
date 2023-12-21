@@ -10,26 +10,26 @@
       
       
       
-        <link rel="canonical" href="https://chainsafe.github.io/lodestar/">
+        <link rel="canonical" href="https://chainsafe.github.io/lodestar/advanced-topics/setting-up-a-testnet/">
+      
+      
+        <link rel="prev" href="../../tools/core-dumps/">
       
       
       
-        <link rel="next" href="introduction/">
-      
-      
-      <link rel="icon" href="assets/round-icon.ico">
+      <link rel="icon" href="../../assets/round-icon.ico">
       <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.2">
     
     
       
-        <title>Lodestar Documentation</title>
+        <title>Setting Up a Testnet - Lodestar Documentation</title>
       
     
     
-      <link rel="stylesheet" href="assets/stylesheets/main.50c56a3b.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.50c56a3b.min.css">
       
         
-        <link rel="stylesheet" href="assets/stylesheets/palette.06af60db.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
       
       
 
@@ -48,9 +48,9 @@
       
     
     
-      <link rel="stylesheet" href="stylesheets/extras.css">
+      <link rel="stylesheet" href="../../stylesheets/extras.css">
     
-    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -76,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#welcome-to-the-lodestar-documentation" class="md-skip">
+        <a href="#setting-up-a-testnet" class="md-skip">
           Skip to content
         </a>
       
@@ -92,9 +92,9 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="." title="Lodestar Documentation" class="md-header__button md-logo" aria-label="Lodestar Documentation" data-md-component="logo">
+    <a href="../.." title="Lodestar Documentation" class="md-header__button md-logo" aria-label="Lodestar Documentation" data-md-component="logo">
       
-  <img src="assets/lodestar_icon_300.png" alt="logo">
+  <img src="../../assets/lodestar_icon_300.png" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -111,7 +111,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Home
+              Setting Up a Testnet
             
           </span>
         </div>
@@ -224,9 +224,9 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="." title="Lodestar Documentation" class="md-nav__button md-logo" aria-label="Lodestar Documentation" data-md-component="logo">
+    <a href="../.." title="Lodestar Documentation" class="md-nav__button md-logo" aria-label="Lodestar Documentation" data-md-component="logo">
       
-  <img src="assets/lodestar_icon_300.png" alt="logo">
+  <img src="../../assets/lodestar_icon_300.png" alt="logo">
 
     </a>
     Lodestar Documentation
@@ -250,28 +250,10 @@
       
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  <span class="md-ellipsis">
-    Home
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="." class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -280,75 +262,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#welcome-to-the-lodestar-documentation" class="md-nav__link">
-    <span class="md-ellipsis">
-      Welcome to the Lodestar documentation!
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Welcome to the Lodestar documentation!">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#getting-started" class="md-nav__link">
-    <span class="md-ellipsis">
-      Getting started
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#specifications" class="md-nav__link">
-    <span class="md-ellipsis">
-      Specifications
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#about-these-docs" class="md-nav__link">
-    <span class="md-ellipsis">
-      About these docs
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#need-assistance" class="md-nav__link">
-    <span class="md-ellipsis">
-      Need assistance?
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -360,7 +273,7 @@
   
   
     <li class="md-nav__item">
-      <a href="introduction/" class="md-nav__link">
+      <a href="../../introduction/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -417,7 +330,7 @@
   
   
     <li class="md-nav__item">
-      <a href="getting-started/quick-start/" class="md-nav__link">
+      <a href="../../getting-started/quick-start/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -438,7 +351,7 @@
   
   
     <li class="md-nav__item">
-      <a href="getting-started/installation/" class="md-nav__link">
+      <a href="../../getting-started/installation/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -459,7 +372,7 @@
   
   
     <li class="md-nav__item">
-      <a href="getting-started/starting-a-node/" class="md-nav__link">
+      <a href="../../getting-started/starting-a-node/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -487,7 +400,7 @@
   
   
     <li class="md-nav__item">
-      <a href="data-retention/" class="md-nav__link">
+      <a href="../../data-retention/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -544,7 +457,7 @@
   
   
     <li class="md-nav__item">
-      <a href="beacon-management/beacon-cli/" class="md-nav__link">
+      <a href="../../beacon-management/beacon-cli/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -565,7 +478,7 @@
   
   
     <li class="md-nav__item">
-      <a href="beacon-management/networking/" class="md-nav__link">
+      <a href="../../beacon-management/networking/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -586,7 +499,7 @@
   
   
     <li class="md-nav__item">
-      <a href="beacon-management/mev-and-builder-integration/" class="md-nav__link">
+      <a href="../../beacon-management/mev-and-builder-integration/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -607,7 +520,7 @@
   
   
     <li class="md-nav__item">
-      <a href="beacon-management/syncing/" class="md-nav__link">
+      <a href="../../beacon-management/syncing/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -672,7 +585,7 @@
   
   
     <li class="md-nav__item">
-      <a href="validator-management/validator-cli/" class="md-nav__link">
+      <a href="../../validator-management/validator-cli/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -737,7 +650,7 @@
   
   
     <li class="md-nav__item">
-      <a href="bootnode/bootnode-cli/" class="md-nav__link">
+      <a href="../../bootnode/bootnode-cli/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -802,7 +715,7 @@
   
   
     <li class="md-nav__item">
-      <a href="lightclient-prover/lightclient/" class="md-nav__link">
+      <a href="../../lightclient-prover/lightclient/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -823,7 +736,7 @@
   
   
     <li class="md-nav__item">
-      <a href="lightclient-prover/lightclient-cli/" class="md-nav__link">
+      <a href="../../lightclient-prover/lightclient-cli/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -844,7 +757,7 @@
   
   
     <li class="md-nav__item">
-      <a href="lightclient-prover/prover/" class="md-nav__link">
+      <a href="../../lightclient-prover/prover/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -909,7 +822,7 @@
   
   
     <li class="md-nav__item">
-      <a href="logging-and-metrics/prometheus-grafana/" class="md-nav__link">
+      <a href="../../logging-and-metrics/prometheus-grafana/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -930,7 +843,7 @@
   
   
     <li class="md-nav__item">
-      <a href="logging-and-metrics/client-monitoring/" class="md-nav__link">
+      <a href="../../logging-and-metrics/client-monitoring/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -958,7 +871,7 @@
   
   
     <li class="md-nav__item">
-      <a href="supporting-libraries/" class="md-nav__link">
+      <a href="../../supporting-libraries/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1015,7 +928,7 @@
   
   
     <li class="md-nav__item">
-      <a href="contribution/getting-started/" class="md-nav__link">
+      <a href="../../contribution/getting-started/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1036,7 +949,7 @@
   
   
     <li class="md-nav__item">
-      <a href="contribution/depgraph/" class="md-nav__link">
+      <a href="../../contribution/depgraph/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1094,7 +1007,7 @@
   
   
     <li class="md-nav__item">
-      <a href="contribution/testing/overview.md" class="md-nav__link">
+      <a href="../../contribution/testing/overview.md" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1115,7 +1028,7 @@
   
   
     <li class="md-nav__item">
-      <a href="contribution/testing/simulation-tests/" class="md-nav__link">
+      <a href="../../contribution/testing/simulation-tests/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1188,7 +1101,7 @@
   
   
     <li class="md-nav__item">
-      <a href="tools/flamegraphs/" class="md-nav__link">
+      <a href="../../tools/flamegraphs/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1209,7 +1122,7 @@
   
   
     <li class="md-nav__item">
-      <a href="tools/heap-dumps/" class="md-nav__link">
+      <a href="../../tools/heap-dumps/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1230,7 +1143,7 @@
   
   
     <li class="md-nav__item">
-      <a href="tools/core-dumps/" class="md-nav__link">
+      <a href="../../tools/core-dumps/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1255,19 +1168,21 @@
       
   
   
+    
   
   
+  
     
     
     
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_13" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_13" checked>
         
           
           <label class="md-nav__link" for="__nav_13" id="__nav_13_label" tabindex="0">
@@ -1281,7 +1196,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_13_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_13_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_13">
             <span class="md-nav__icon md-icon"></span>
             Advanced Topics
@@ -1292,10 +1207,30 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="advanced-topics/setting-up-a-testnet/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Setting Up a Testnet
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   <span class="md-ellipsis">
@@ -1304,6 +1239,35 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#post-merge-local-testnet" class="md-nav__link">
+    <span class="md-ellipsis">
+      Post-Merge local testnet
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1333,6 +1297,8 @@
   
   
   
+    
+  
   
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
@@ -1341,51 +1307,9 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#welcome-to-the-lodestar-documentation" class="md-nav__link">
+  <a href="#post-merge-local-testnet" class="md-nav__link">
     <span class="md-ellipsis">
-      Welcome to the Lodestar documentation!
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Welcome to the Lodestar documentation!">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#getting-started" class="md-nav__link">
-    <span class="md-ellipsis">
-      Getting started
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#specifications" class="md-nav__link">
-    <span class="md-ellipsis">
-      Specifications
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#about-these-docs" class="md-nav__link">
-    <span class="md-ellipsis">
-      About these docs
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#need-assistance" class="md-nav__link">
-    <span class="md-ellipsis">
-      Need assistance?
+      Post-Merge local testnet
     </span>
   </a>
   
@@ -1409,62 +1333,77 @@
   
 
 
-  <h1>Home</h1>
-
-<p><img alt="lodestar logo" src="assets/lodestar_icon_text_black_stroke.png" /></p>
-<h2 id="welcome-to-the-lodestar-documentation">Welcome to the Lodestar documentation!<a class="headerlink" href="#welcome-to-the-lodestar-documentation" title="Permanent link">&para;</a></h2>
+<h1 id="setting-up-a-testnet">Setting-Up a Testnet<a class="headerlink" href="#setting-up-a-testnet" title="Permanent link">&para;</a></h1>
+<p>To quickly test and run Lodestar we recommend starting a local testnet. We recommend a simple configuration of two beacon nodes with multiple validators</p>
+<p><strong>Terminal 1</strong></p>
+<p>Run a beacon node as a <strong>bootnode</strong>, with 8 validators with the following command.</p>
+<div class="highlight"><pre><span></span><code>./lodestar<span class="w"> </span>dev<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--genesisValidators<span class="w"> </span><span class="m">8</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--genesisTime<span class="w"> </span><span class="m">1669713528</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--startValidators<span class="w"> </span><span class="m">0</span>..7<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--enr.ip<span class="w"> </span><span class="m">127</span>.0.0.1<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--enr.udp<span class="w"> </span><span class="m">9000</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--dataDir<span class="w"> </span>&lt;/path/to/node1&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--reset
+</code></pre></div>
+<p><code>--genesisValidators</code> and <code>--genesisTime</code> define the genesis state of the beacon chain. <code>--dataDir</code> defines a path where
+lodestar should store the beacon state.
+<code>--enr.ip</code> sets the ENR IP entry for the node (essential for second node to connect via <code>enr</code>) and <code>--enr.udp</code> exposes the <code>discv5</code> discovery service (if you want to connect more than 1 node and enable discovery amongst them via <em>bootnode</em>).
+Lastly the <code>--reset</code> flag ensures the state is cleared on each restart - which is useful when testing locally.</p>
+<p>Once the node has started, make a request to <code>curl http://localhost:9596/eth/v1/node/identity</code> and copy the <code>enr</code> value.</p>
+<p>This would be used to connect from the second node.</p>
 <blockquote>
-<p><strong>Lodestar is an open-source Ethereum Consensus client and Typescript ecosystem, maintained by ChainSafe Systems</strong></p>
+<p>ENR stands for Ethereum node records, which is a format for conveying p2p connectivity information for Ethereum nodes.
+For more info see <a href="https://eips.ethereum.org/EIPS/eip-778">EIP-778</a>.</p>
 </blockquote>
-<h3 id="getting-started">Getting started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h3>
+<p><strong>Terminal 2</strong></p>
+<p>Start the second node without starting any validators and connect to the first node by supplying the copied <code>enr</code> value:</p>
+<div class="highlight"><pre><span></span><code>./lodestar<span class="w"> </span>dev<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--genesisValidators<span class="w"> </span><span class="m">8</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--genesisTime<span class="w"> </span><span class="m">1669713528</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--dataDir<span class="w"> </span>&lt;/path/to/node2&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--port<span class="w"> </span><span class="m">9001</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--rest.port<span class="w"> </span><span class="m">9597</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--network.connectToDiscv5Bootnodes<span class="w"> </span><span class="nb">true</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--bootnodes<span class="w"> </span>&lt;enr<span class="w"> </span>value&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--reset
+</code></pre></div>
+<p>By default, lodestar starts as many validators as the number supplied by <code>--genesisValidators</code>. In order to not start any validator, this is overridden by
+the <code>--startValidators</code> option. Passing a value of <code>0..0</code> means no validators should be started.</p>
+<p>Also, take note that the values of <code>--genesisValidators</code> and <code>--genesisTime</code> must be the same as the ones passed to the first node in order for the two nodes
+to have the same beacon chain.</p>
+<p>Also <code>--port</code> and <code>--rest.port</code> are supplied since the default values will already be in use by the first node.</p>
+<p>The <code>--network.connectToDiscv5Bootnodes</code> flags needs to be set to true as this is needed to allow connection to boot ENRs on local devnet.
+The exact ENR of node to connect to is then supplied via the <code>--bootnodes</code> flag.</p>
+<p>Once the second node starts, you should see an output similar to the following in either of the terminals:</p>
+<div class="highlight"><pre><span></span><code>Eph 167991/6 6.007 []  info: Searching peers - peers: 1 - slot: 5375718 (skipped 5375718) - head: 0 0xcc67…3345 - finalized: 0x0000…0000:0
+</code></pre></div>
+<p>For further confirmation that both nodes are connected as peers, make a request to the <code>/eth/v1/node/peers</code> endpoint.</p>
+<p>For example, making the request on the first node via the following command:</p>
+<p><code>curl http://localhost:9596/eth/v1/node/peers | jq</code></p>
+<p>will give a result similar to the following:</p>
+<div class="highlight"><pre><span></span><code>{
+  &quot;data&quot;: [
+    {
+      &quot;peer_id&quot;: &quot;...&quot;,
+      &quot;enr&quot;: &quot;&quot;,
+      &quot;last_seen_p2p_address&quot;: &quot;....&quot;,
+      &quot;direction&quot;: &quot;inbound&quot;,
+      &quot;state&quot;: &quot;connected&quot;
+    }
+  ],
+  &quot;meta&quot;: {
+    &quot;count&quot;: 1
+  }
+}
+</code></pre></div>
+<h2 id="post-merge-local-testnet">Post-Merge local testnet<a class="headerlink" href="#post-merge-local-testnet" title="Permanent link">&para;</a></h2>
+<p>To set up a local testnet with a Post-Merge configuration, you may need to add the following parameters (in addition to the parameters described above) to your <code>lodestar dev</code> command:</p>
 <ul>
-<li>Follow the installation method for <a href="install/source.md">source install</a>, <a href="install/npm.md">NPM install</a>, or <a href="install/docker.md">Docker install</a> to install Lodestar. Or use our <a href="https://github.com/ChainSafe/lodestar-quickstart">Lodestar Quickstart scripts</a>.</li>
-<li>Use <a href="libraries">Lodestar libraries</a> in your next Ethereum Typescript project.</li>
-<li>Run a beacon node on <a href="usage/beacon-management.md">mainnet or a public testnet</a>.</li>
-<li>Utilize the whole stack by <a href="usage/local">starting a local testnet</a>.</li>
-<li>View the Lodestar <a href="https://chainsafe.github.io/lodestar/reference/cli/">CLI commands and options</a></li>
-<li>Prospective contributors can read the <a href="https://chainsafe.github.io/lodestar/contributing/">contributing section</a> to understand how we develop and test on Lodestar.</li>
-<li>If you have questions <a href="https://github.com/ChainSafe/lodestar/issues/new">submit an issue</a> or join us on <a href="https://discord.gg/yjyvFRP">Discord</a>!</li>
-<li>Please note our <a href="https://github.com/ChainSafe/lodestar/blob/unstable/SECURITY.md">security policy</a>.</li>
-<li>Sign up to our <a href="https://chainsafe.typeform.com/lodestar">mailing list</a> for announcements and any critical information about Lodestar.</li>
+<li><code>--params.ALTAIR_FORK_EPOCH 0</code></li>
+<li><code>--params.BELLATRIX_FORK_EPOCH 0</code></li>
+<li><code>--terminal-total-difficulty-override 0</code></li>
 </ul>
-<h2 id="specifications">Specifications<a class="headerlink" href="#specifications" title="Permanent link">&para;</a></h2>
-<p>Hardware specifications minimum / recommended, to run the Lodestar client.</p>
-<table>
-<thead>
-<tr>
-<th></th>
-<th>Minimum</th>
-<th>Recommended</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Processor</td>
-<td>Intel Core i5–760 or AMD FX-8100</td>
-<td>Intel Core i7–4770 or AMD FX-8310</td>
-</tr>
-<tr>
-<td>Memory</td>
-<td>4GB RAM</td>
-<td>8GB RAM</td>
-</tr>
-<tr>
-<td>Storage</td>
-<td>20GB available space SSD</td>
-<td>100GB available space SSD</td>
-</tr>
-<tr>
-<td>Internet</td>
-<td>Broadband connection</td>
-<td>Broadband connection</td>
-</tr>
-</tbody>
-</table>
-<h2 id="about-these-docs">About these docs<a class="headerlink" href="#about-these-docs" title="Permanent link">&para;</a></h2>
-<p>This documentation is open source, contribute at <a href="https://github.com/ChainSafe/lodestar/tree/unstable/docs">Github Lodestar repository /docs</a>.</p>
-<h2 id="need-assistance">Need assistance?<a class="headerlink" href="#need-assistance" title="Permanent link">&para;</a></h2>
-<p>If you have questions about this documentation, feel free to talk to us on our <a href="https://discord.gg/yjyvFRP">ChainSafe Discord</a> or <a href="https://github.com/ChainSafe/lodestar/issues/new/choose">open an issue</a> and a member of the team or our community will be happy to assist you.</p>
 
 
 
@@ -1559,10 +1498,10 @@
     </div>
     
     
-    <script id="__config" type="application/json">{"base": ".", "features": [], "search": "assets/javascripts/workers/search.f886a092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.f886a092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="assets/javascripts/bundle.d7c377c4.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7c377c4.min.js"></script>
       
     
   </body>

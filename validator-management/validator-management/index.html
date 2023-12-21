@@ -10,26 +10,24 @@
       
       
       
-        <link rel="canonical" href="https://chainsafe.github.io/lodestar/">
+        <link rel="canonical" href="https://chainsafe.github.io/lodestar/validator-management/validator-management/">
       
       
       
-        <link rel="next" href="introduction/">
       
-      
-      <link rel="icon" href="assets/round-icon.ico">
+      <link rel="icon" href="../../assets/round-icon.ico">
       <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.2">
     
     
       
-        <title>Lodestar Documentation</title>
+        <title>Validator management - Lodestar Documentation</title>
       
     
     
-      <link rel="stylesheet" href="assets/stylesheets/main.50c56a3b.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.50c56a3b.min.css">
       
         
-        <link rel="stylesheet" href="assets/stylesheets/palette.06af60db.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
       
       
 
@@ -48,9 +46,9 @@
       
     
     
-      <link rel="stylesheet" href="stylesheets/extras.css">
+      <link rel="stylesheet" href="../../stylesheets/extras.css">
     
-    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -76,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#welcome-to-the-lodestar-documentation" class="md-skip">
+        <a href="#validator-management" class="md-skip">
           Skip to content
         </a>
       
@@ -92,9 +90,9 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="." title="Lodestar Documentation" class="md-header__button md-logo" aria-label="Lodestar Documentation" data-md-component="logo">
+    <a href="../.." title="Lodestar Documentation" class="md-header__button md-logo" aria-label="Lodestar Documentation" data-md-component="logo">
       
-  <img src="assets/lodestar_icon_300.png" alt="logo">
+  <img src="../../assets/lodestar_icon_300.png" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -111,7 +109,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Home
+              Validator management
             
           </span>
         </div>
@@ -224,9 +222,9 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="." title="Lodestar Documentation" class="md-nav__button md-logo" aria-label="Lodestar Documentation" data-md-component="logo">
+    <a href="../.." title="Lodestar Documentation" class="md-nav__button md-logo" aria-label="Lodestar Documentation" data-md-component="logo">
       
-  <img src="assets/lodestar_icon_300.png" alt="logo">
+  <img src="../../assets/lodestar_icon_300.png" alt="logo">
 
     </a>
     Lodestar Documentation
@@ -250,28 +248,10 @@
       
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  <span class="md-ellipsis">
-    Home
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="." class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -280,75 +260,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#welcome-to-the-lodestar-documentation" class="md-nav__link">
-    <span class="md-ellipsis">
-      Welcome to the Lodestar documentation!
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Welcome to the Lodestar documentation!">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#getting-started" class="md-nav__link">
-    <span class="md-ellipsis">
-      Getting started
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#specifications" class="md-nav__link">
-    <span class="md-ellipsis">
-      Specifications
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#about-these-docs" class="md-nav__link">
-    <span class="md-ellipsis">
-      About these docs
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#need-assistance" class="md-nav__link">
-    <span class="md-ellipsis">
-      Need assistance?
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -360,7 +271,7 @@
   
   
     <li class="md-nav__item">
-      <a href="introduction/" class="md-nav__link">
+      <a href="../../introduction/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -417,7 +328,7 @@
   
   
     <li class="md-nav__item">
-      <a href="getting-started/quick-start/" class="md-nav__link">
+      <a href="../../getting-started/quick-start/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -438,7 +349,7 @@
   
   
     <li class="md-nav__item">
-      <a href="getting-started/installation/" class="md-nav__link">
+      <a href="../../getting-started/installation/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -459,7 +370,7 @@
   
   
     <li class="md-nav__item">
-      <a href="getting-started/starting-a-node/" class="md-nav__link">
+      <a href="../../getting-started/starting-a-node/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -487,7 +398,7 @@
   
   
     <li class="md-nav__item">
-      <a href="data-retention/" class="md-nav__link">
+      <a href="../../data-retention/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -544,7 +455,7 @@
   
   
     <li class="md-nav__item">
-      <a href="beacon-management/beacon-cli/" class="md-nav__link">
+      <a href="../../beacon-management/beacon-cli/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -565,7 +476,7 @@
   
   
     <li class="md-nav__item">
-      <a href="beacon-management/networking/" class="md-nav__link">
+      <a href="../../beacon-management/networking/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -586,7 +497,7 @@
   
   
     <li class="md-nav__item">
-      <a href="beacon-management/mev-and-builder-integration/" class="md-nav__link">
+      <a href="../../beacon-management/mev-and-builder-integration/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -607,7 +518,7 @@
   
   
     <li class="md-nav__item">
-      <a href="beacon-management/syncing/" class="md-nav__link">
+      <a href="../../beacon-management/syncing/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -672,7 +583,7 @@
   
   
     <li class="md-nav__item">
-      <a href="validator-management/validator-cli/" class="md-nav__link">
+      <a href="../validator-cli/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -737,7 +648,7 @@
   
   
     <li class="md-nav__item">
-      <a href="bootnode/bootnode-cli/" class="md-nav__link">
+      <a href="../../bootnode/bootnode-cli/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -802,7 +713,7 @@
   
   
     <li class="md-nav__item">
-      <a href="lightclient-prover/lightclient/" class="md-nav__link">
+      <a href="../../lightclient-prover/lightclient/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -823,7 +734,7 @@
   
   
     <li class="md-nav__item">
-      <a href="lightclient-prover/lightclient-cli/" class="md-nav__link">
+      <a href="../../lightclient-prover/lightclient-cli/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -844,7 +755,7 @@
   
   
     <li class="md-nav__item">
-      <a href="lightclient-prover/prover/" class="md-nav__link">
+      <a href="../../lightclient-prover/prover/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -909,7 +820,7 @@
   
   
     <li class="md-nav__item">
-      <a href="logging-and-metrics/prometheus-grafana/" class="md-nav__link">
+      <a href="../../logging-and-metrics/prometheus-grafana/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -930,7 +841,7 @@
   
   
     <li class="md-nav__item">
-      <a href="logging-and-metrics/client-monitoring/" class="md-nav__link">
+      <a href="../../logging-and-metrics/client-monitoring/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -958,7 +869,7 @@
   
   
     <li class="md-nav__item">
-      <a href="supporting-libraries/" class="md-nav__link">
+      <a href="../../supporting-libraries/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1015,7 +926,7 @@
   
   
     <li class="md-nav__item">
-      <a href="contribution/getting-started/" class="md-nav__link">
+      <a href="../../contribution/getting-started/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1036,7 +947,7 @@
   
   
     <li class="md-nav__item">
-      <a href="contribution/depgraph/" class="md-nav__link">
+      <a href="../../contribution/depgraph/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1094,7 +1005,7 @@
   
   
     <li class="md-nav__item">
-      <a href="contribution/testing/overview.md" class="md-nav__link">
+      <a href="../../contribution/testing/overview.md" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1115,7 +1026,7 @@
   
   
     <li class="md-nav__item">
-      <a href="contribution/testing/simulation-tests/" class="md-nav__link">
+      <a href="../../contribution/testing/simulation-tests/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1188,7 +1099,7 @@
   
   
     <li class="md-nav__item">
-      <a href="tools/flamegraphs/" class="md-nav__link">
+      <a href="../../tools/flamegraphs/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1209,7 +1120,7 @@
   
   
     <li class="md-nav__item">
-      <a href="tools/heap-dumps/" class="md-nav__link">
+      <a href="../../tools/heap-dumps/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1230,7 +1141,7 @@
   
   
     <li class="md-nav__item">
-      <a href="tools/core-dumps/" class="md-nav__link">
+      <a href="../../tools/core-dumps/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1295,7 +1206,7 @@
   
   
     <li class="md-nav__item">
-      <a href="advanced-topics/setting-up-a-testnet/" class="md-nav__link">
+      <a href="../../advanced-topics/setting-up-a-testnet/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1333,6 +1244,8 @@
   
   
   
+    
+  
   
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
@@ -1341,19 +1254,19 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#welcome-to-the-lodestar-documentation" class="md-nav__link">
+  <a href="#wallet-configuration" class="md-nav__link">
     <span class="md-ellipsis">
-      Welcome to the Lodestar documentation!
+      Wallet configuration
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Welcome to the Lodestar documentation!">
+    <nav class="md-nav" aria-label="Wallet configuration">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#getting-started" class="md-nav__link">
+  <a href="#create-a-wallet" class="md-nav__link">
     <span class="md-ellipsis">
-      Getting started
+      Create a wallet
     </span>
   </a>
   
@@ -1365,27 +1278,75 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#specifications" class="md-nav__link">
+  <a href="#setup-your-validator" class="md-nav__link">
     <span class="md-ellipsis">
-      Specifications
+      Setup your validator
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Setup your validator">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#import-a-validator-keystore-from-your-wallet-to-lodestar" class="md-nav__link">
+    <span class="md-ellipsis">
+      Import a validator keystore from your wallet to Lodestar
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Import a validator keystore from your wallet to Lodestar">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#option-1-import-keys-to-lodestars-keystores-folder" class="md-nav__link">
+    <span class="md-ellipsis">
+      Option 1: Import Keys To Lodestar's Keystores Folder
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#about-these-docs" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#option-2-import-keys-when-starting-the-validator" class="md-nav__link">
     <span class="md-ellipsis">
-      About these docs
+      Option 2: Import Keys When Starting the Validator
     </span>
   </a>
   
 </li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configuring-the-fee-recipient-address" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuring the fee recipient address
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#submit-a-validator-deposit" class="md-nav__link">
+    <span class="md-ellipsis">
+      Submit a validator deposit
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
       
         <li class="md-nav__item">
-  <a href="#need-assistance" class="md-nav__link">
+  <a href="#run-the-validator" class="md-nav__link">
     <span class="md-ellipsis">
-      Need assistance?
+      Run the validator
     </span>
   </a>
   
@@ -1409,62 +1370,117 @@
   
 
 
-  <h1>Home</h1>
-
-<p><img alt="lodestar logo" src="assets/lodestar_icon_text_black_stroke.png" /></p>
-<h2 id="welcome-to-the-lodestar-documentation">Welcome to the Lodestar documentation!<a class="headerlink" href="#welcome-to-the-lodestar-documentation" title="Permanent link">&para;</a></h2>
-<blockquote>
-<p><strong>Lodestar is an open-source Ethereum Consensus client and Typescript ecosystem, maintained by ChainSafe Systems</strong></p>
-</blockquote>
-<h3 id="getting-started">Getting started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h3>
+<h1 id="validator-management">Validator management<a class="headerlink" href="#validator-management" title="Permanent link">&para;</a></h1>
+<p>The following instructions are required for stakers utilizing Lodestar.</p>
+<div class="toc">
 <ul>
-<li>Follow the installation method for <a href="install/source.md">source install</a>, <a href="install/npm.md">NPM install</a>, or <a href="install/docker.md">Docker install</a> to install Lodestar. Or use our <a href="https://github.com/ChainSafe/lodestar-quickstart">Lodestar Quickstart scripts</a>.</li>
-<li>Use <a href="libraries">Lodestar libraries</a> in your next Ethereum Typescript project.</li>
-<li>Run a beacon node on <a href="usage/beacon-management.md">mainnet or a public testnet</a>.</li>
-<li>Utilize the whole stack by <a href="usage/local">starting a local testnet</a>.</li>
-<li>View the Lodestar <a href="https://chainsafe.github.io/lodestar/reference/cli/">CLI commands and options</a></li>
-<li>Prospective contributors can read the <a href="https://chainsafe.github.io/lodestar/contributing/">contributing section</a> to understand how we develop and test on Lodestar.</li>
-<li>If you have questions <a href="https://github.com/ChainSafe/lodestar/issues/new">submit an issue</a> or join us on <a href="https://discord.gg/yjyvFRP">Discord</a>!</li>
-<li>Please note our <a href="https://github.com/ChainSafe/lodestar/blob/unstable/SECURITY.md">security policy</a>.</li>
-<li>Sign up to our <a href="https://chainsafe.typeform.com/lodestar">mailing list</a> for announcements and any critical information about Lodestar.</li>
+<li><a href="#validator-management">Validator management</a><ul>
+<li><a href="#wallet-configuration">Wallet configuration</a><ul>
+<li><a href="#create-a-wallet">Create a wallet</a></li>
 </ul>
-<h2 id="specifications">Specifications<a class="headerlink" href="#specifications" title="Permanent link">&para;</a></h2>
-<p>Hardware specifications minimum / recommended, to run the Lodestar client.</p>
-<table>
-<thead>
-<tr>
-<th></th>
-<th>Minimum</th>
-<th>Recommended</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Processor</td>
-<td>Intel Core i5–760 or AMD FX-8100</td>
-<td>Intel Core i7–4770 or AMD FX-8310</td>
-</tr>
-<tr>
-<td>Memory</td>
-<td>4GB RAM</td>
-<td>8GB RAM</td>
-</tr>
-<tr>
-<td>Storage</td>
-<td>20GB available space SSD</td>
-<td>100GB available space SSD</td>
-</tr>
-<tr>
-<td>Internet</td>
-<td>Broadband connection</td>
-<td>Broadband connection</td>
-</tr>
-</tbody>
-</table>
-<h2 id="about-these-docs">About these docs<a class="headerlink" href="#about-these-docs" title="Permanent link">&para;</a></h2>
-<p>This documentation is open source, contribute at <a href="https://github.com/ChainSafe/lodestar/tree/unstable/docs">Github Lodestar repository /docs</a>.</p>
-<h2 id="need-assistance">Need assistance?<a class="headerlink" href="#need-assistance" title="Permanent link">&para;</a></h2>
-<p>If you have questions about this documentation, feel free to talk to us on our <a href="https://discord.gg/yjyvFRP">ChainSafe Discord</a> or <a href="https://github.com/ChainSafe/lodestar/issues/new/choose">open an issue</a> and a member of the team or our community will be happy to assist you.</p>
+</li>
+<li><a href="#setup-your-validator">Setup your validator</a><ul>
+<li><a href="#import-a-validator-keystore-from-your-wallet-to-lodestar">Import a validator keystore from your wallet to Lodestar</a><ul>
+<li><a href="#option-1-import-keys-to-lodestars-keystores-folder">Option 1: Import Keys To Lodestar's Keystores Folder</a></li>
+<li><a href="#option-2-import-keys-when-starting-the-validator">Option 2: Import Keys When Starting the Validator</a></li>
+</ul>
+</li>
+<li><a href="#configuring-the-fee-recipient-address">Configuring the fee recipient address</a></li>
+<li><a href="#submit-a-validator-deposit">Submit a validator deposit</a></li>
+</ul>
+</li>
+<li><a href="#run-the-validator">Run the validator</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<h2 id="wallet-configuration">Wallet configuration<a class="headerlink" href="#wallet-configuration" title="Permanent link">&para;</a></h2>
+<p>A wallet helps to manage many validators from a group of 12/24 words (also known as a "mnemonic" or "recovery phrase"). All validators and withdrawal keys can be re-generated from a backed-up mnemonic.</p>
+<p>The mnemonic is randomly generated during wallet creation and printed out to the terminal. It's important to make one or more backups of the mnemonic to ensure your ETH wallets are not lost in the case of data loss.</p>
+<!-- prettier-ignore-start -->
+<div class="admonition danger">
+<p class="admonition-title">Danger</p>
+<p>It is very important to keep your mnemonic private as it represents the ultimate control of your ETH wallets.</p>
+</div>
+<!-- prettier-ignore-end -->
+
+<h3 id="create-a-wallet">Create a wallet<a class="headerlink" href="#create-a-wallet" title="Permanent link">&para;</a></h3>
+<p>Lodestar is deprecating its functionality to create wallets.</p>
+<p>To create a wallet, we recommend using the official <a href="https://github.com/ethereum/staking-deposit-cli/releases"><code>staking-deposit-cli</code></a> from the Ethereum Foundation for users comfortable with command line interfaces.</p>
+<p>Alternatively, for a graphical user interface, you can use the <a href="https://wagyu.gg/">Stakehouse Wagyu Key Generator</a> developed by members of the EthStaker community.</p>
+<!-- prettier-ignore-start -->
+<div class="admonition info">
+<p class="admonition-title">Info</p>
+<p>These tools will generate files for staking validators as well as the important mnemonic. This mnemonic must be handled and stored securely.</p>
+</div>
+<!-- prettier-ignore-end -->
+
+<h2 id="setup-your-validator">Setup your validator<a class="headerlink" href="#setup-your-validator" title="Permanent link">&para;</a></h2>
+<p>Validators are represented by a BLS keypair. Use your generated mnemonic from one of the tools above to generate the keystore files required for validator duties on Lodestar.</p>
+<h3 id="import-a-validator-keystore-from-your-wallet-to-lodestar">Import a validator keystore from your wallet to Lodestar<a class="headerlink" href="#import-a-validator-keystore-from-your-wallet-to-lodestar" title="Permanent link">&para;</a></h3>
+<p>To import a validator keystore that was created via one of the methods described above, you must locate the validator JSON keystores exported by those tools (ex. <code>keystore-m_12381_3600_0_0_0-1654128694.json</code>).</p>
+<p>Inside the keystore JSON file, you should have an <a href="https://github.com/ethereum/EIPs/blob/master/EIPS/eip-2335.md#json-schema">EIP-2335 keystore file</a>.</p>
+<p>You will also need the passphrase used the encrypt the keystore. This can be specified interactively, or provided in a plaintext file.</p>
+<h4 id="option-1-import-keys-to-lodestars-keystores-folder">Option 1: Import Keys To Lodestar's Keystores Folder<a class="headerlink" href="#option-1-import-keys-to-lodestars-keystores-folder" title="Permanent link">&para;</a></h4>
+<p>You can load the keys into the keystore folder using the <code>validator import</code> command. There are two methods for importing keystores:</p>
+<p><em>Interactive passphrase import</em></p>
+<div class="highlight"><pre><span></span><code>./lodestar<span class="w"> </span>validator<span class="w"> </span>import<span class="w"> </span>--importKeystores<span class="w"> </span>./validator_keys
+</code></pre></div>
+<p><em>Plaintext passphrase file import</em></p>
+<div class="highlight"><pre><span></span><code>./lodestar<span class="w"> </span>validator<span class="w"> </span>import<span class="w"> </span>--importKeystores<span class="w"> </span>./validator_keys<span class="w"> </span>--importKeystoresPassword<span class="w"> </span>./password.txt
+</code></pre></div>
+<!-- prettier-ignore-start -->
+<div class="admonition info">
+<p class="admonition-title">Info</p>
+<p>The interactive passphrase import method will prompt every keystore in the <code>validator_keys</code> folder for import and will ask for the individual password for each keystore. <strong>This method will allow you to import multiple keystores with different passwords.</strong></p>
+<p>The plaintext passphrase file import method will allow  to import all keystores in the <code>validator_keys</code> folder with the same password contained in <code>password.txt</code> for efficiency. </p>
+</div>
+<!-- prettier-ignore-end -->
+
+<p>Once imported with either method, these keystores will be automatically loaded when you start the validator. To list the imported keystores, use the <code>validator list</code> command.</p>
+<hr />
+<h4 id="option-2-import-keys-when-starting-the-validator">Option 2: Import Keys When Starting the Validator<a class="headerlink" href="#option-2-import-keys-when-starting-the-validator" title="Permanent link">&para;</a></h4>
+<p>To import keys when you start the validator specify the <code>--importKeystores</code> and <code>--importKeystoresPassword</code> flags with the <code>validator</code> command:</p>
+<div class="highlight"><pre><span></span><code>./lodestar<span class="w"> </span>validator<span class="w"> </span>--importKeystores<span class="w"> </span>./validator_keys<span class="w"> </span>--importKeystoresPassword<span class="w"> </span>./password.txt
+</code></pre></div>
+<!-- prettier-ignore-start -->
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>If you import keys using <code>--importKeystores</code> at runtime (Option 2) any keys loaded to the keystores folder from Option 1 will be ignored.</p>
+</div>
+<!-- prettier-ignore-end -->
+
+<h3 id="configuring-the-fee-recipient-address">Configuring the fee recipient address<a class="headerlink" href="#configuring-the-fee-recipient-address" title="Permanent link">&para;</a></h3>
+<p>Post-Merge Ethereum requires validators to set a <strong>Fee Recipient</strong> which allows you to receive priority fees when proposing blocks. If you do not set this address, your priority fees will be sent to the <a href="https://etherscan.io/address/0x0000000000000000000000000000000000000000">burn address</a>.</p>
+<p>Configure your validator client's fee recipient address by using the <code>--suggestedFeeRecipient</code> flag. Ensure you specify an Ethereum address you control. An example of a fee recipient set with the address <code>0xB7576e9d314Df41EC5506494293Afb1bd5D3f65d</code> would add the following flag to their configuration: <code>--suggestedFeeRecipient 0xB7576e9d314Df41EC5506494293Afb1bd5D3f65d</code>.</p>
+<p>You may choose to use the <code>--strictFeeRecipientCheck</code> flag to enable a strict check of the fee recipient address with the one returned by the beacon node for added reassurance.</p>
+<h3 id="submit-a-validator-deposit">Submit a validator deposit<a class="headerlink" href="#submit-a-validator-deposit" title="Permanent link">&para;</a></h3>
+<p>Please use the official tools to perform your deposits</p>
+<ul>
+<li><code>staking-deposit-cli</code>: <a href="https://github.com/ethereum/staking-deposit-cli">https://github.com/ethereum/staking-deposit-cli</a></li>
+<li>Ethereum Foundation launchpad: <a href="https://launchpad.ethereum.org">https://launchpad.ethereum.org</a></li>
+</ul>
+<h2 id="run-the-validator">Run the validator<a class="headerlink" href="#run-the-validator" title="Permanent link">&para;</a></h2>
+<p>To start a Lodestar validator run the command:</p>
+<div class="highlight"><pre><span></span><code>./lodestar<span class="w"> </span>validator<span class="w"> </span>--network<span class="w"> </span><span class="nv">$NETWORK_NAME</span>
+</code></pre></div>
+<p>You should see confirmation that modules have started.</p>
+<div class="highlight"><pre><span></span><code>Nov-29<span class="w"> </span><span class="m">10</span>:47:13.647<span class="o">[]</span><span class="w">                 </span>info:<span class="w"> </span>Lodestar<span class="w"> </span><span class="nv">network</span><span class="o">=</span>sepolia,<span class="w"> </span><span class="nv">version</span><span class="o">=</span>v1.2.2/f093b46,<span class="w"> </span><span class="nv">commit</span><span class="o">=</span>f093b468ec3ab0dbbe8e2d2c8175f52ad88aa35f
+Nov-29<span class="w"> </span><span class="m">10</span>:47:13.649<span class="o">[]</span><span class="w">                 </span>info:<span class="w"> </span>Connecting<span class="w"> </span>to<span class="w"> </span>LevelDB<span class="w"> </span>database<span class="w"> </span><span class="nv">path</span><span class="o">=</span>/home/user/.local/share/lodestar/sepolia/validator-db
+Nov-29<span class="w"> </span><span class="m">10</span>:47:51.732<span class="o">[]</span><span class="w">                 </span>info:<span class="w"> </span><span class="m">3</span><span class="w"> </span><span class="nb">local</span><span class="w"> </span>keystores
+Nov-29<span class="w"> </span><span class="m">10</span>:47:51.735<span class="o">[]</span><span class="w">                 </span>info:<span class="w"> </span>0x800f6be579b31ea950a50be65f7de8f678b23b7466579c01ac26ebf9c19599fb2b446da40ad4fc92c6109fcd6793303f
+Nov-29<span class="w"> </span><span class="m">10</span>:47:51.735<span class="o">[]</span><span class="w">                 </span>info:<span class="w"> </span>0x81337ebe90d6942d8b61922ea880c4d28ebc745ddc10a1acc85b745a15c6c8754af1a73b1b3483b6a5024b783510b35c
+Nov-29<span class="w"> </span><span class="m">10</span>:47:51.757<span class="o">[]</span><span class="w">                 </span>info:<span class="w"> </span>0xb95fc0ec39596deee2c4363f57bb4786f5bb8dfb345c1e5b14e2927be482615971d0d81f9a88b3389fac7079b3cb2f46
+Nov-29<span class="w"> </span><span class="m">10</span>:47:51.776<span class="o">[]</span><span class="w">                 </span>info:<span class="w"> </span>Genesis<span class="w"> </span>fetched<span class="w"> </span>from<span class="w"> </span>the<span class="w"> </span>beacon<span class="w"> </span>node
+Nov-29<span class="w"> </span><span class="m">10</span>:47:51.781<span class="o">[]</span><span class="w">                 </span>info:<span class="w"> </span>Verified<span class="w"> </span>connected<span class="w"> </span>beacon<span class="w"> </span>node<span class="w"> </span>and<span class="w"> </span>validator<span class="w"> </span>have<span class="w"> </span>same<span class="w"> </span>the<span class="w"> </span>config
+Nov-29<span class="w"> </span><span class="m">10</span>:47:51.837<span class="o">[]</span><span class="w">                 </span>info:<span class="w"> </span>Verified<span class="w"> </span>connected<span class="w"> </span>beacon<span class="w"> </span>node<span class="w"> </span>and<span class="w"> </span>validator<span class="w"> </span>have<span class="w"> </span>the<span class="w"> </span>same<span class="w"> </span>genesisValidatorRoot
+Nov-29<span class="w"> </span><span class="m">10</span>:47:51.914<span class="o">[]</span><span class="w">                 </span>info:<span class="w"> </span>Discovered<span class="w"> </span>new<span class="w"> </span>validators<span class="w"> </span><span class="nv">count</span><span class="o">=</span><span class="m">100</span>
+Nov-29<span class="w"> </span><span class="m">10</span>:48:00.197<span class="o">[]</span><span class="w">                 </span>info:<span class="w"> </span>Published<span class="w"> </span>SyncCommitteeMessage<span class="w"> </span><span class="nv">slot</span><span class="o">=</span><span class="m">1165140</span>,<span class="w"> </span><span class="nv">count</span><span class="o">=</span><span class="m">27</span>
+Nov-29<span class="w"> </span><span class="m">10</span>:48:02.296<span class="o">[]</span><span class="w">                 </span>info:<span class="w"> </span>Published<span class="w"> </span>attestations<span class="w"> </span><span class="nv">slot</span><span class="o">=</span><span class="m">1165140</span>,<span class="w"> </span><span class="nv">count</span><span class="o">=</span><span class="m">6</span>
+Nov-29<span class="w"> </span><span class="m">10</span>:48:08.122<span class="o">[]</span><span class="w">                 </span>info:<span class="w"> </span>Published<span class="w"> </span>aggregateAndProofs<span class="w"> </span><span class="nv">slot</span><span class="o">=</span><span class="m">1165140</span>,<span class="w"> </span><span class="nv">index</span><span class="o">=</span><span class="m">0</span>,<span class="w"> </span><span class="nv">count</span><span class="o">=</span><span class="m">2</span>
+Nov-29<span class="w"> </span><span class="m">10</span>:48:12.102<span class="o">[]</span><span class="w">                 </span>info:<span class="w"> </span>Published<span class="w"> </span>SyncCommitteeMessage<span class="w"> </span><span class="nv">slot</span><span class="o">=</span><span class="m">1165141</span>,<span class="w"> </span><span class="nv">count</span><span class="o">=</span><span class="m">27</span>
+Nov-29<span class="w"> </span><span class="m">10</span>:48:14.236<span class="o">[]</span><span class="w">                 </span>info:<span class="w"> </span>Published<span class="w"> </span>attestations<span class="w"> </span><span class="nv">slot</span><span class="o">=</span><span class="m">1165141</span>,<span class="w"> </span><span class="nv">count</span><span class="o">=</span><span class="m">4</span>
+</code></pre></div>
 
 
 
@@ -1559,10 +1575,10 @@
     </div>
     
     
-    <script id="__config" type="application/json">{"base": ".", "features": [], "search": "assets/javascripts/workers/search.f886a092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.f886a092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="assets/javascripts/bundle.d7c377c4.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7c377c4.min.js"></script>
       
     
   </body>

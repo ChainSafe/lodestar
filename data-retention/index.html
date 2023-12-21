@@ -10,26 +10,28 @@
       
       
       
-        <link rel="canonical" href="https://chainsafe.github.io/lodestar/">
+        <link rel="canonical" href="https://chainsafe.github.io/lodestar/data-retention/">
       
       
+        <link rel="prev" href="../getting-started/starting-a-node/">
       
-        <link rel="next" href="introduction/">
+      
+        <link rel="next" href="../beacon-management/beacon-cli/">
       
       
-      <link rel="icon" href="assets/round-icon.ico">
+      <link rel="icon" href="../assets/round-icon.ico">
       <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.2">
     
     
       
-        <title>Lodestar Documentation</title>
+        <title>Data Retention - Lodestar Documentation</title>
       
     
     
-      <link rel="stylesheet" href="assets/stylesheets/main.50c56a3b.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.50c56a3b.min.css">
       
         
-        <link rel="stylesheet" href="assets/stylesheets/palette.06af60db.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
       
       
 
@@ -48,9 +50,9 @@
       
     
     
-      <link rel="stylesheet" href="stylesheets/extras.css">
+      <link rel="stylesheet" href="../stylesheets/extras.css">
     
-    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -76,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#welcome-to-the-lodestar-documentation" class="md-skip">
+        <a href="#data-retention" class="md-skip">
           Skip to content
         </a>
       
@@ -92,9 +94,9 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="." title="Lodestar Documentation" class="md-header__button md-logo" aria-label="Lodestar Documentation" data-md-component="logo">
+    <a href=".." title="Lodestar Documentation" class="md-header__button md-logo" aria-label="Lodestar Documentation" data-md-component="logo">
       
-  <img src="assets/lodestar_icon_300.png" alt="logo">
+  <img src="../assets/lodestar_icon_300.png" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -111,7 +113,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Home
+              Data Retention
             
           </span>
         </div>
@@ -224,9 +226,9 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="." title="Lodestar Documentation" class="md-nav__button md-logo" aria-label="Lodestar Documentation" data-md-component="logo">
+    <a href=".." title="Lodestar Documentation" class="md-nav__button md-logo" aria-label="Lodestar Documentation" data-md-component="logo">
       
-  <img src="assets/lodestar_icon_300.png" alt="logo">
+  <img src="../assets/lodestar_icon_300.png" alt="logo">
 
     </a>
     Lodestar Documentation
@@ -250,28 +252,10 @@
       
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  <span class="md-ellipsis">
-    Home
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="." class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -280,75 +264,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#welcome-to-the-lodestar-documentation" class="md-nav__link">
-    <span class="md-ellipsis">
-      Welcome to the Lodestar documentation!
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Welcome to the Lodestar documentation!">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#getting-started" class="md-nav__link">
-    <span class="md-ellipsis">
-      Getting started
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#specifications" class="md-nav__link">
-    <span class="md-ellipsis">
-      Specifications
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#about-these-docs" class="md-nav__link">
-    <span class="md-ellipsis">
-      About these docs
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#need-assistance" class="md-nav__link">
-    <span class="md-ellipsis">
-      Need assistance?
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -360,7 +275,7 @@
   
   
     <li class="md-nav__item">
-      <a href="introduction/" class="md-nav__link">
+      <a href="../introduction/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -417,7 +332,7 @@
   
   
     <li class="md-nav__item">
-      <a href="getting-started/quick-start/" class="md-nav__link">
+      <a href="../getting-started/quick-start/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -438,7 +353,7 @@
   
   
     <li class="md-nav__item">
-      <a href="getting-started/installation/" class="md-nav__link">
+      <a href="../getting-started/installation/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -459,7 +374,7 @@
   
   
     <li class="md-nav__item">
-      <a href="getting-started/starting-a-node/" class="md-nav__link">
+      <a href="../getting-started/starting-a-node/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -484,10 +399,30 @@
       
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="data-retention/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Data Retention
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   <span class="md-ellipsis">
@@ -496,6 +431,35 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#data-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      Data Management
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -544,7 +508,7 @@
   
   
     <li class="md-nav__item">
-      <a href="beacon-management/beacon-cli/" class="md-nav__link">
+      <a href="../beacon-management/beacon-cli/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -565,7 +529,7 @@
   
   
     <li class="md-nav__item">
-      <a href="beacon-management/networking/" class="md-nav__link">
+      <a href="../beacon-management/networking/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -586,7 +550,7 @@
   
   
     <li class="md-nav__item">
-      <a href="beacon-management/mev-and-builder-integration/" class="md-nav__link">
+      <a href="../beacon-management/mev-and-builder-integration/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -607,7 +571,7 @@
   
   
     <li class="md-nav__item">
-      <a href="beacon-management/syncing/" class="md-nav__link">
+      <a href="../beacon-management/syncing/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -672,7 +636,7 @@
   
   
     <li class="md-nav__item">
-      <a href="validator-management/validator-cli/" class="md-nav__link">
+      <a href="../validator-management/validator-cli/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -737,7 +701,7 @@
   
   
     <li class="md-nav__item">
-      <a href="bootnode/bootnode-cli/" class="md-nav__link">
+      <a href="../bootnode/bootnode-cli/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -802,7 +766,7 @@
   
   
     <li class="md-nav__item">
-      <a href="lightclient-prover/lightclient/" class="md-nav__link">
+      <a href="../lightclient-prover/lightclient/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -823,7 +787,7 @@
   
   
     <li class="md-nav__item">
-      <a href="lightclient-prover/lightclient-cli/" class="md-nav__link">
+      <a href="../lightclient-prover/lightclient-cli/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -844,7 +808,7 @@
   
   
     <li class="md-nav__item">
-      <a href="lightclient-prover/prover/" class="md-nav__link">
+      <a href="../lightclient-prover/prover/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -909,7 +873,7 @@
   
   
     <li class="md-nav__item">
-      <a href="logging-and-metrics/prometheus-grafana/" class="md-nav__link">
+      <a href="../logging-and-metrics/prometheus-grafana/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -930,7 +894,7 @@
   
   
     <li class="md-nav__item">
-      <a href="logging-and-metrics/client-monitoring/" class="md-nav__link">
+      <a href="../logging-and-metrics/client-monitoring/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -958,7 +922,7 @@
   
   
     <li class="md-nav__item">
-      <a href="supporting-libraries/" class="md-nav__link">
+      <a href="../supporting-libraries/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1015,7 +979,7 @@
   
   
     <li class="md-nav__item">
-      <a href="contribution/getting-started/" class="md-nav__link">
+      <a href="../contribution/getting-started/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1036,7 +1000,7 @@
   
   
     <li class="md-nav__item">
-      <a href="contribution/depgraph/" class="md-nav__link">
+      <a href="../contribution/depgraph/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1094,7 +1058,7 @@
   
   
     <li class="md-nav__item">
-      <a href="contribution/testing/overview.md" class="md-nav__link">
+      <a href="../contribution/testing/overview.md" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1115,7 +1079,7 @@
   
   
     <li class="md-nav__item">
-      <a href="contribution/testing/simulation-tests/" class="md-nav__link">
+      <a href="../contribution/testing/simulation-tests/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1188,7 +1152,7 @@
   
   
     <li class="md-nav__item">
-      <a href="tools/flamegraphs/" class="md-nav__link">
+      <a href="../tools/flamegraphs/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1209,7 +1173,7 @@
   
   
     <li class="md-nav__item">
-      <a href="tools/heap-dumps/" class="md-nav__link">
+      <a href="../tools/heap-dumps/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1230,7 +1194,7 @@
   
   
     <li class="md-nav__item">
-      <a href="tools/core-dumps/" class="md-nav__link">
+      <a href="../tools/core-dumps/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1295,7 +1259,7 @@
   
   
     <li class="md-nav__item">
-      <a href="advanced-topics/setting-up-a-testnet/" class="md-nav__link">
+      <a href="../advanced-topics/setting-up-a-testnet/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1333,6 +1297,8 @@
   
   
   
+    
+  
   
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
@@ -1341,51 +1307,9 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#welcome-to-the-lodestar-documentation" class="md-nav__link">
+  <a href="#data-management" class="md-nav__link">
     <span class="md-ellipsis">
-      Welcome to the Lodestar documentation!
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Welcome to the Lodestar documentation!">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#getting-started" class="md-nav__link">
-    <span class="md-ellipsis">
-      Getting started
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#specifications" class="md-nav__link">
-    <span class="md-ellipsis">
-      Specifications
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#about-these-docs" class="md-nav__link">
-    <span class="md-ellipsis">
-      About these docs
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#need-assistance" class="md-nav__link">
-    <span class="md-ellipsis">
-      Need assistance?
+      Data Management
     </span>
   </a>
   
@@ -1409,62 +1333,52 @@
   
 
 
-  <h1>Home</h1>
+<h1 id="data-retention">Data Retention<a class="headerlink" href="#data-retention" title="Permanent link">&para;</a></h1>
+<p>There are two components for an ethereum node database, the execution client and the beacon node. Both need to hold data for a full node to work correctly. In particular the execution node holds state such as wallet information and smart contract code. It also holds the execution blocks with the transaction record. The beacon node is responsible for holding beacon node blocks and state. The beacon state is responsible primarily for the validator information.</p>
+<p>There are several processes that need to store data for Lodestar. These data sets can grow quite large over time so it is important to understand how to manage them so the host machine can support operations effectively.</p>
+<div class="highlight"><pre><span></span><code><span class="nv">$executionDir</span><span class="w"> </span><span class="c1"># this changes depending on the execution client</span>
+<span class="w">    </span>└──<span class="w"> </span>execution-db
 
-<p><img alt="lodestar logo" src="assets/lodestar_icon_text_black_stroke.png" /></p>
-<h2 id="welcome-to-the-lodestar-documentation">Welcome to the Lodestar documentation!<a class="headerlink" href="#welcome-to-the-lodestar-documentation" title="Permanent link">&para;</a></h2>
-<blockquote>
-<p><strong>Lodestar is an open-source Ethereum Consensus client and Typescript ecosystem, maintained by ChainSafe Systems</strong></p>
-</blockquote>
-<h3 id="getting-started">Getting started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h3>
+<span class="nv">$dataDir</span><span class="w"> </span><span class="c1"># specified by --dataDir on the beacon command</span>
+├──<span class="w"> </span>.log_rotate_audit.json
+├──<span class="w"> </span>beacon.log<span class="w"> </span><span class="c1"># there can be many of these</span>
+├──<span class="w"> </span>enr
+├──<span class="w"> </span>peer-id.json
+├──<span class="w"> </span>chain-db<span class="w"> </span><span class="c1"># default if --dbDir not specified</span>
+│<span class="w">   </span>└──<span class="w"> </span><span class="o">(</span>db<span class="w"> </span>files<span class="o">)</span>
+└──<span class="w"> </span>peerstore<span class="w"> </span><span class="c1"># default if --peerStoreDir not specified</span>
+<span class="w">    </span>└──<span class="w"> </span><span class="o">(</span>peerstore<span class="w"> </span>files<span class="o">)</span>
+
+<span class="nv">$dataDir</span><span class="w"> </span><span class="c1"># specified by --dataDir on the validator command</span>
+├──<span class="w"> </span>.log_rotate_audit.json
+├──<span class="w"> </span>validator.log<span class="w"> </span><span class="c1"># there can be many of these</span>
+├──<span class="w"> </span>validator-db<span class="w"> </span><span class="c1"># default if --validatorsDbDir not specified</span>
+│<span class="w">   </span>└──<span class="w"> </span><span class="o">(</span>db<span class="w"> </span>files<span class="o">)</span>
+├──<span class="w"> </span>proposerConfigs<span class="w"> </span><span class="c1"># default if --proposerDir not specified</span>
+│<span class="w">   </span>└──<span class="w"> </span><span class="o">(</span>config<span class="w"> </span>files<span class="o">)</span>
+├──<span class="w"> </span>cache<span class="w"> </span><span class="c1"># default if --cacheDir not specified</span>
+│<span class="w">   </span>└──<span class="w"> </span><span class="o">(</span>cache<span class="w"> </span>files<span class="o">)</span>
+├──<span class="w"> </span>secrets<span class="w"> </span><span class="c1"># default if --secretsDir not specified</span>
+│<span class="w">   </span>├──<span class="w"> </span>0x8e41b969493454318c27ec6fac90645769331c07ebc8db5037...
+│<span class="w">   </span>└──<span class="w"> </span>0xa329f988c16993768299643d918a2694892c012765d896a16f...
+├──<span class="w"> </span>keystores<span class="w"> </span><span class="c1"># default if --keystoresDir not specified</span>
+│<span class="w">   </span>├──<span class="w"> </span>0x8e41b969493454318c27ec6fac90645769331c07ebc8db5037...
+│<span class="w">   </span>│<span class="w">   </span>└──<span class="w"> </span>voting-keystore.json
+│<span class="w">   </span>└──<span class="w"> </span>0xa329f988c16993768299643d918a2694892c012765d896a16f...
+│<span class="w">       </span>└──<span class="w"> </span>voting-keystore.json
+└──<span class="w"> </span>remoteKeys<span class="w"> </span><span class="c1"># default if --remoteKeysDir not specified</span>
+<span class="w">    </span>└──<span class="w"> </span>0xa329f988c16993768299643d918a2694892c012765d896a16f.json
+</code></pre></div>
+<h2 id="data-management">Data Management<a class="headerlink" href="#data-management" title="Permanent link">&para;</a></h2>
+<p>Configuring your node to store and prune data is key to success. On average you can expect for the database to grow by the follow amounts:</p>
 <ul>
-<li>Follow the installation method for <a href="install/source.md">source install</a>, <a href="install/npm.md">NPM install</a>, or <a href="install/docker.md">Docker install</a> to install Lodestar. Or use our <a href="https://github.com/ChainSafe/lodestar-quickstart">Lodestar Quickstart scripts</a>.</li>
-<li>Use <a href="libraries">Lodestar libraries</a> in your next Ethereum Typescript project.</li>
-<li>Run a beacon node on <a href="usage/beacon-management.md">mainnet or a public testnet</a>.</li>
-<li>Utilize the whole stack by <a href="usage/local">starting a local testnet</a>.</li>
-<li>View the Lodestar <a href="https://chainsafe.github.io/lodestar/reference/cli/">CLI commands and options</a></li>
-<li>Prospective contributors can read the <a href="https://chainsafe.github.io/lodestar/contributing/">contributing section</a> to understand how we develop and test on Lodestar.</li>
-<li>If you have questions <a href="https://github.com/ChainSafe/lodestar/issues/new">submit an issue</a> or join us on <a href="https://discord.gg/yjyvFRP">Discord</a>!</li>
-<li>Please note our <a href="https://github.com/ChainSafe/lodestar/blob/unstable/SECURITY.md">security policy</a>.</li>
-<li>Sign up to our <a href="https://chainsafe.typeform.com/lodestar">mailing list</a> for announcements and any critical information about Lodestar.</li>
+<li><code>execution-db</code> grows at 2-30GB per week</li>
+<li><code>chain-db</code> grows at 1GB per month</li>
+<li><code>validator-db</code> grows at less than 2MB per year, per key (2000 keys = 4GB per year)</li>
 </ul>
-<h2 id="specifications">Specifications<a class="headerlink" href="#specifications" title="Permanent link">&para;</a></h2>
-<p>Hardware specifications minimum / recommended, to run the Lodestar client.</p>
-<table>
-<thead>
-<tr>
-<th></th>
-<th>Minimum</th>
-<th>Recommended</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Processor</td>
-<td>Intel Core i5–760 or AMD FX-8100</td>
-<td>Intel Core i7–4770 or AMD FX-8310</td>
-</tr>
-<tr>
-<td>Memory</td>
-<td>4GB RAM</td>
-<td>8GB RAM</td>
-</tr>
-<tr>
-<td>Storage</td>
-<td>20GB available space SSD</td>
-<td>100GB available space SSD</td>
-</tr>
-<tr>
-<td>Internet</td>
-<td>Broadband connection</td>
-<td>Broadband connection</td>
-</tr>
-</tbody>
-</table>
-<h2 id="about-these-docs">About these docs<a class="headerlink" href="#about-these-docs" title="Permanent link">&para;</a></h2>
-<p>This documentation is open source, contribute at <a href="https://github.com/ChainSafe/lodestar/tree/unstable/docs">Github Lodestar repository /docs</a>.</p>
-<h2 id="need-assistance">Need assistance?<a class="headerlink" href="#need-assistance" title="Permanent link">&para;</a></h2>
-<p>If you have questions about this documentation, feel free to talk to us on our <a href="https://discord.gg/yjyvFRP">ChainSafe Discord</a> or <a href="https://github.com/ChainSafe/lodestar/issues/new/choose">open an issue</a> and a member of the team or our community will be happy to assist you.</p>
+<p><code>keystores</code>, <code>keystore-cache</code> and <code>peerstore</code> are not usually very large and are not expected to grow much during normal operation.</p>
+<p>Logs can also become quite large so please check out the section on <a href="../logging-and-metrics/log-management.md">log management</a> for more information.</p>
+<p>There is really only one flag that is needed to manage the data for Lodestar, <a href="./configuration.md#--dataDir"><code>--dataDir</code></a>. Other than that handling log management is really the heart of the data management story. Beacon node data is what it is. Depending on the execution client that is chosen, there may be flags to help with data storage growth but that is outside the scope of this document.</p>
 
 
 
@@ -1559,10 +1473,10 @@
     </div>
     
     
-    <script id="__config" type="application/json">{"base": ".", "features": [], "search": "assets/javascripts/workers/search.f886a092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "..", "features": [], "search": "../assets/javascripts/workers/search.f886a092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="assets/javascripts/bundle.d7c377c4.min.js"></script>
+      <script src="../assets/javascripts/bundle.d7c377c4.min.js"></script>
       
     
   </body>

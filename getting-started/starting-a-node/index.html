@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://chainsafe.github.io/lodestar/tools/flamegraphs/">
+        <link rel="canonical" href="https://chainsafe.github.io/lodestar/getting-started/starting-a-node/">
       
       
-        <link rel="prev" href="../../contribution/testing/simulation-tests/">
+        <link rel="prev" href="../installation/">
       
       
-        <link rel="next" href="../heap-dumps/">
+        <link rel="next" href="../../data-retention/">
       
       
       <link rel="icon" href="../../assets/round-icon.ico">
@@ -24,7 +24,7 @@
     
     
       
-        <title>Flame Graphs - Lodestar Documentation</title>
+        <title>Starting a Node - Lodestar Documentation</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#generating-flamegraphs-for-a-running-node-service-on-linux" class="md-skip">
+        <a href="#beacon-management" class="md-skip">
           Skip to content
         </a>
       
@@ -113,7 +113,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Flame Graphs
+              Starting a Node
             
           </span>
         </div>
@@ -292,19 +292,21 @@
       
   
   
+    
   
   
+  
     
     
     
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
           <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
@@ -318,7 +320,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             Getting Started
@@ -332,7 +334,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../getting-started/quick-start/" class="md-nav__link">
+      <a href="../quick-start/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -353,7 +355,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../getting-started/installation/" class="md-nav__link">
+      <a href="../installation/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -371,10 +373,30 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../getting-started/starting-a-node/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Starting a Node
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   <span class="md-ellipsis">
@@ -383,6 +405,110 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#connect-to-mainnet-or-a-public-testnet" class="md-nav__link">
+    <span class="md-ellipsis">
+      Connect to mainnet or a public testnet
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configure-the-lodestar-jwt-authentication-token" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configure the Lodestar JWT authentication token
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configure the Lodestar JWT authentication token">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#generate-a-secret-key" class="md-nav__link">
+    <span class="md-ellipsis">
+      Generate a secret key
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configure-lodestar-to-locate-the-jwt-secret" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configure Lodestar to locate the JWT secret
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ensure-jwt-is-configured-with-your-execution-node" class="md-nav__link">
+    <span class="md-ellipsis">
+      Ensure JWT is configured with your execution node
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#run-a-beacon-node" class="md-nav__link">
+    <span class="md-ellipsis">
+      Run a beacon node
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Run a beacon node">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#checkpoint-sync" class="md-nav__link">
+    <span class="md-ellipsis">
+      Checkpoint Sync
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#guide-to-the-sync-logs" class="md-nav__link">
+    <span class="md-ellipsis">
+      Guide to the sync logs
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1063,21 +1189,19 @@
       
   
   
-    
   
   
-  
     
     
     
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12" >
         
           
           <label class="md-nav__link" for="__nav_12" id="__nav_12_label" tabindex="0">
@@ -1091,7 +1215,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_12_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_12_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_12">
             <span class="md-nav__icon md-icon"></span>
             Tools
@@ -1102,30 +1226,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  <span class="md-ellipsis">
-    Flame Graphs
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../tools/flamegraphs/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1134,170 +1238,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#modifying-linux-and-lodestar" class="md-nav__link">
-    <span class="md-ellipsis">
-      Modifying Linux and Lodestar
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Modifying Linux and Lodestar">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#example-start_lodestarsh" class="md-nav__link">
-    <span class="md-ellipsis">
-      Example start_lodestar.sh
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#capturing-stack-traces" class="md-nav__link">
-    <span class="md-ellipsis">
-      Capturing Stack Traces
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#rendering-a-flamegraph" class="md-nav__link">
-    <span class="md-ellipsis">
-      Rendering a Flamegraph
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#installation" class="md-nav__link">
-    <span class="md-ellipsis">
-      Installation
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#filtering-results" class="md-nav__link">
-    <span class="md-ellipsis">
-      Filtering Results
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Filtering Results">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#unfiltered" class="md-nav__link">
-    <span class="md-ellipsis">
-      Unfiltered
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#filtered" class="md-nav__link">
-    <span class="md-ellipsis">
-      Filtered
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#references" class="md-nav__link">
-    <span class="md-ellipsis">
-      References
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="References">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#list-of-web-references" class="md-nav__link">
-    <span class="md-ellipsis">
-      List of Web References
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#visualization-tools" class="md-nav__link">
-    <span class="md-ellipsis">
-      Visualization Tools
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#collecting-on-linux" class="md-nav__link">
-    <span class="md-ellipsis">
-      Collecting on Linux
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#collecting-on-macos" class="md-nav__link">
-    <span class="md-ellipsis">
-      Collecting on MacOS
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1310,7 +1250,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../heap-dumps/" class="md-nav__link">
+      <a href="../../tools/heap-dumps/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1331,7 +1271,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../core-dumps/" class="md-nav__link">
+      <a href="../../tools/core-dumps/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1444,28 +1384,46 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#modifying-linux-and-lodestar" class="md-nav__link">
+  <a href="#connect-to-mainnet-or-a-public-testnet" class="md-nav__link">
     <span class="md-ellipsis">
-      Modifying Linux and Lodestar
+      Connect to mainnet or a public testnet
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Modifying Linux and Lodestar">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configure-the-lodestar-jwt-authentication-token" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configure the Lodestar JWT authentication token
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configure the Lodestar JWT authentication token">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#example-start_lodestarsh" class="md-nav__link">
+  <a href="#generate-a-secret-key" class="md-nav__link">
     <span class="md-ellipsis">
-      Example start_lodestar.sh
+      Generate a secret key
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#capturing-stack-traces" class="md-nav__link">
+  <a href="#configure-lodestar-to-locate-the-jwt-secret" class="md-nav__link">
     <span class="md-ellipsis">
-      Capturing Stack Traces
+      Configure Lodestar to locate the JWT secret
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ensure-jwt-is-configured-with-your-execution-node" class="md-nav__link">
+    <span class="md-ellipsis">
+      Ensure JWT is configured with your execution node
     </span>
   </a>
   
@@ -1477,106 +1435,28 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#rendering-a-flamegraph" class="md-nav__link">
+  <a href="#run-a-beacon-node" class="md-nav__link">
     <span class="md-ellipsis">
-      Rendering a Flamegraph
+      Run a beacon node
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#installation" class="md-nav__link">
-    <span class="md-ellipsis">
-      Installation
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#filtering-results" class="md-nav__link">
-    <span class="md-ellipsis">
-      Filtering Results
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Filtering Results">
+    <nav class="md-nav" aria-label="Run a beacon node">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#unfiltered" class="md-nav__link">
+  <a href="#checkpoint-sync" class="md-nav__link">
     <span class="md-ellipsis">
-      Unfiltered
+      Checkpoint Sync
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#filtered" class="md-nav__link">
+  <a href="#guide-to-the-sync-logs" class="md-nav__link">
     <span class="md-ellipsis">
-      Filtered
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#references" class="md-nav__link">
-    <span class="md-ellipsis">
-      References
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="References">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#list-of-web-references" class="md-nav__link">
-    <span class="md-ellipsis">
-      List of Web References
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#visualization-tools" class="md-nav__link">
-    <span class="md-ellipsis">
-      Visualization Tools
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#collecting-on-linux" class="md-nav__link">
-    <span class="md-ellipsis">
-      Collecting on Linux
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#collecting-on-macos" class="md-nav__link">
-    <span class="md-ellipsis">
-      Collecting on MacOS
+      Guide to the sync logs
     </span>
   </a>
   
@@ -1605,113 +1485,164 @@
   
 
 
-<h1 id="generating-flamegraphs-for-a-running-node-service-on-linux">Generating Flamegraphs for a Running Node Service on Linux<a class="headerlink" href="#generating-flamegraphs-for-a-running-node-service-on-linux" title="Permanent link">&para;</a></h1>
-<p>This guide assumes a running instance of Lodestar and will walk through how to generate a flamegraph for the process while running on Linux. While it is possible to run Lodestar in a number of ways, for performance profiling it is recommended to not use Dockerized implementations. It is best to run Lodestar as a service on a Linux machine. Follow the Lodestar docs to get the service installed and running. Then come back here when you are ready to generate the flamegraph.</p>
-<h2 id="modifying-linux-and-lodestar">Modifying Linux and Lodestar<a class="headerlink" href="#modifying-linux-and-lodestar" title="Permanent link">&para;</a></h2>
-<p>Use the following two commands to install <code>perf</code> for generating the stack traces. You may get a warning about needing to restart the VM due to kernel updates. This is nothing to be concerned with and if so, cancel out of the restart dialog.</p>
-<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>linux-tools-common<span class="w"> </span>linux-tools-generic
-sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>linux-tools-<span class="sb">`</span>uname<span class="w"> </span>-r<span class="sb">`</span><span class="w">  </span><span class="c1"># empirically this throws if run on the same line above</span>
-</code></pre></div>
-<p>Next we need to update the Lodestar service by modifying the start script. We need to add a necessary flag <code>--perf-basic-prof</code> to allow the stack traces to be useful. Node is a virtual machine and <code>perf</code> is designed to capture host stack traces. In order to allow the JavaScript functions to be captured meaningfully, <code>v8</code> can provide some help. Generally Lodestar is started with a script like the following:</p>
-<h3 id="example-start_lodestarsh">Example start_lodestar.sh<a class="headerlink" href="#example-start_lodestarsh" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code>node<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--perf-basic-prof<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--max-old-space-size<span class="o">=</span><span class="m">4096</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>/usr/src/lodestar/packages/cli/bin/lodestar<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>beacon<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--rcConfig<span class="w"> </span>/home/devops/beacon/rcconfig.yml
-</code></pre></div>
-<p>After updating the start script, restart the node process running the beacon service. Note in the command below, that the <code>beacon</code> service may have a different name or restart command, depending on your setup.</p>
-<div class="highlight"><pre><span></span><code>admin@12.34.56.78:<span class="w"> </span>sudo<span class="w"> </span>systemctl<span class="w"> </span>restart<span class="w"> </span>beacon
-</code></pre></div>
-<p>The flag that was added notifies <code>V8</code> to output a map of functions and their addresses. This is necessary for <code>perf</code> to generate the stack traces for the virtual machine in addition to the traditional host stack traces. There is a very small, performance overhead to output the maps. After a short while, once the process runs for a bit the functions will no longer be moving in memory and the overhead will be significantly reduced. The VM will still be moving objects around but this flag is generally safe to run in production. After a few minutes of running, listing the directory with the start script (<code>process.cwd()</code>) will look similar:</p>
-<div class="highlight"><pre><span></span><code>-rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">   </span><span class="m">9701529</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>beacon-2023-05-22.log
--rwxrwxr-x<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>root<span class="w">        </span><span class="m">421</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:31<span class="w"> </span>beacon_run.sh
-drwxr-xr-x<span class="w">  </span><span class="m">2</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">    </span><span class="m">917504</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:35<span class="w"> </span>chain-db
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">   </span><span class="m">2861242</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>isolate-0x6761520-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">    </span><span class="m">203172</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>isolate-0x7fa2f0001060-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">     </span><span class="m">68044</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>isolate-0x7fcd80001060-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">    </span><span class="m">420809</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>isolate-0x7fcd84001060-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">    </span><span class="m">123919</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>isolate-0x7fcd88001060-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">     </span><span class="m">94391</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:35<span class="w"> </span>isolate-0x7fcd8c001060-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">    </span><span class="m">183831</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>isolate-0x7fcd90000e60-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">    </span><span class="m">152786</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>isolate-0x7fcd94000e60-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">    </span><span class="m">262333</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>isolate-0x7fcd98000e60-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">    </span><span class="m">218473</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>isolate-0x7fcd9c000e60-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">    </span><span class="m">366788</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>isolate-0x7fcda0000e60-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">    </span><span class="m">304917</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>isolate-0x7fcda4000e60-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">    </span><span class="m">586238</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>isolate-0x7fcda8000e60-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">    </span><span class="m">450675</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>isolate-0x7fcdac000e60-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">    </span><span class="m">768470</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>isolate-0x7fcdb8000d60-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>root<span class="w">        </span><span class="m">559</span><span class="w"> </span>May<span class="w"> </span><span class="m">21</span><span class="w"> </span><span class="m">14</span>:17<span class="w"> </span>rcconfig.yml
-</code></pre></div>
-<p>The <code>isolate-*-v8.log</code> files are the maps that <code>v8</code> outputs for the <code>perf</code> command to reference. You are now ready to collect the stack traces.</p>
-<h3 id="capturing-stack-traces">Capturing Stack Traces<a class="headerlink" href="#capturing-stack-traces" title="Permanent link">&para;</a></h3>
-<p>The first command below will run <code>perf</code> for 60 seconds, and then save the output to a file named <code>perf.out</code>. The second one will merge the exported, unknown, tokens with the isolate maps and output full stack traces for the render. Running both <code>perf</code> commands in the folder with the <code>isolate</code> maps will allow the data to be seamlessly spliced. Once the output is saved, update the permissions so the file can be copied to your local machine via <code>scp</code>.</p>
-<p>You can modify the frequency of capture by changing <code>-F 99</code> to a different number. Try to stay away from whole numbers as they are more likely to cause interference with periodically scheduled tasks. As an example use <code>99Hz</code> or <code>997Hz</code> instead of <code>100Hz</code> or <code>1000Hz</code>. In testing neither seemed to have an appreciable affect on CPU usage when run for a short period of time.</p>
-<p>To change the period of capture adjust the sleep duration (which is in seconds).</p>
-<p>The <code>pgrep</code> command is used to find the process id to capture against. Feel free to pass a number to the <code>-p</code> flag if you know the process id, or adjust the file path if the executable is in a different location.</p>
-<div class="highlight"><pre><span></span><code>admin@12.34.56.78:<span class="w"> </span>sudo<span class="w"> </span>perf<span class="w"> </span>record<span class="w"> </span>-F<span class="w"> </span><span class="m">99</span><span class="w"> </span>-p<span class="w"> </span><span class="k">$(</span>pgrep<span class="w"> </span>-f<span class="w"> </span><span class="s1">&#39;/usr/src/lodestar/packages/cli/bin/lodestar beacon&#39;</span><span class="k">)</span><span class="w"> </span>-g<span class="w"> </span>--<span class="w"> </span>sleep<span class="w"> </span><span class="m">60</span>
-admin@12.34.56.78:<span class="w"> </span>sudo<span class="w"> </span>perf<span class="w"> </span>script<span class="w"> </span>-f<span class="w"> </span>&gt;<span class="w"> </span>perf.out
-admin@12.34.56.78:<span class="w"> </span>sudo<span class="w"> </span>chmod<span class="w"> </span><span class="m">777</span><span class="w"> </span>~/beacon/perf.out
-</code></pre></div>
-<p>And then copy the <code>perf.out</code> file to your local machine to render the flamegraph. Running at <code>99Hz</code> for 180 seconds results in a file size of about 3.5MB and <code>997Hz</code> for 60 seconds is roughly 4.4MB.</p>
-<div class="highlight"><pre><span></span><code>scp<span class="w"> </span>admin@12.34.56.78:/home/devops/beacon/out.perf<span class="w"> </span>/some_temp_dir/perf.out
-</code></pre></div>
-<h2 id="rendering-a-flamegraph">Rendering a Flamegraph<a class="headerlink" href="#rendering-a-flamegraph" title="Permanent link">&para;</a></h2>
-<p>By far the best tool to render flamegraphs is <a href="https://github.com/Netflix/flamescope"><code>flamescope</code></a> from Netflix. It allows for easy analysis and zooming into specific time periods. It also give a holistic view of how the process is performing over time.</p>
-<h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
-<p>Python3 is required. Clone the repository and install the dependencies:</p>
-<p><em>The original is no longer maintained and had a configuration bug. This is a fork that fixes the issue.</em></p>
-<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/matthewkeil/flamescope
-<span class="nb">cd</span><span class="w"> </span>flamescope
-pip3<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
-yarn
-</code></pre></div>
-<h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>mv<span class="w"> </span>/some_temp_dir/perf.out<span class="w"> </span>/path/to/flamescope/examples
-yarn<span class="w"> </span>dev
-</code></pre></div>
-<p>Then navigate in a browser to <code>http://localhost:8080</code> and begin analyzing the data.</p>
-<p><img src="../images/flamescope/home-screen.png" alt="flamescope home screen" width="1024"/>
-<img src="../images/flamescope/time-series-view.png" alt="flamescope home screen" width="1024"/>
-<img src="../images/flamescope/selecting-series.png" alt="flamescope home screen" width="1024"/>
-<img src="../images/flamescope/unfiltered-flamegraph.png" alt="flamescope home screen" width="1024"/>
-<img src="../images/flamescope/zoom-in.png" alt="flamescope home screen" width="1024"/></p>
-<h2 id="filtering-results">Filtering Results<a class="headerlink" href="#filtering-results" title="Permanent link">&para;</a></h2>
-<p>There can be a lot of "noise" in the stack traces with <code>libc</code>, <code>v8</code> and <code>libuv</code> calls. It is possible to filter the results to make it more useful, but note this will skew the results. Looking at the graph both filtered and unfiltered can be beneficial. The following <code>sed</code> command will remove the noise from the stack traces.</p>
-<div class="highlight"><pre><span></span><code>sed<span class="w"> </span>-r<span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;/( __libc_start| uv_| LazyCompile | v8::internal::| node::| Builtins_| Builtin:| Stub:| LoadIC:| \\[unknown\\]| LoadPolymorphicIC:)/d&quot;</span><span class="w"> </span>-e<span class="w"> </span><span class="s1">&#39;s/ LazyCompile:[*~]?/ /&#39;</span>
-</code></pre></div>
-<h3 id="unfiltered">Unfiltered<a class="headerlink" href="#unfiltered" title="Permanent link">&para;</a></h3>
-<p><img src="../images/flamescope/unfiltered-flamegraph.png" alt="flamescope home screen" width="1024"/></p>
-<h3 id="filtered">Filtered<a class="headerlink" href="#filtered" title="Permanent link">&para;</a></h3>
-<p><img src="../images/flamescope/filtered-flamegraph.png" alt="flamescope home screen" width="1024"/></p>
-<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
-<h3 id="list-of-web-references">List of Web References<a class="headerlink" href="#list-of-web-references" title="Permanent link">&para;</a></h3>
+<h1 id="beacon-management">Beacon management<a class="headerlink" href="#beacon-management" title="Permanent link">&para;</a></h1>
+<p>The following instructions are required to setup and run a Lodestar beacon node.</p>
+<div class="toc">
 <ul>
-<li><a href="https://www.brendangregg.com/flamegraphs.html">https://www.brendangregg.com/flamegraphs.html</a></li>
-<li><a href="https://nodejs.org/en/docs/guides/diagnostics-flamegraph">https://nodejs.org/en/docs/guides/diagnostics-flamegraph</a></li>
-<li><a href="https://netflixtechblog.com/netflix-flamescope-a57ca19d47bb">https://netflixtechblog.com/netflix-flamescope-a57ca19d47bb</a></li>
-<li><a href="https://jaanhio.me/blog/nodejs-flamegraph-analysis/">https://jaanhio.me/blog/nodejs-flamegraph-analysis/</a> (this was a great one about filtering methodology)</li>
-<li><a href="https://medium.com/voodoo-engineering/node-js-and-cpu-profiling-on-production-in-real-time-without-downtime-d6e62af173e2">https://medium.com/voodoo-engineering/node-js-and-cpu-profiling-on-production-in-real-time-without-downtime-d6e62af173e2</a></li>
+<li><a href="#beacon-management">Beacon management</a><ul>
+<li><a href="#connect-to-mainnet-or-a-public-testnet">Connect to mainnet or a public testnet</a></li>
+<li><a href="#configure-the-lodestar-jwt-authentication-token">Configure the Lodestar JWT authentication token</a><ul>
+<li><a href="#generate-a-secret-key">Generate a secret key</a></li>
+<li><a href="#configure-lodestar-to-locate-the-jwt-secret">Configure Lodestar to locate the JWT secret</a></li>
+<li><a href="#ensure-jwt-is-configured-with-your-execution-node">Ensure JWT is configured with your execution node</a></li>
 </ul>
-<h3 id="visualization-tools">Visualization Tools<a class="headerlink" href="#visualization-tools" title="Permanent link">&para;</a></h3>
-<ul>
-<li><a href="https://github.com/Netflix/flamescope"><code>flamescope</code></a></li>
+</li>
+<li><a href="#run-a-beacon-node">Run a beacon node</a><ul>
+<li><a href="#checkpoint-sync">Checkpoint Sync</a></li>
+<li><a href="#guide-to-the-sync-logs">Guide to the sync logs</a></li>
 </ul>
-<h3 id="collecting-on-linux">Collecting on Linux<a class="headerlink" href="#collecting-on-linux" title="Permanent link">&para;</a></h3>
-<ul>
-<li><a href="https://www.brendangregg.com/perf.html">https://www.brendangregg.com/perf.html</a></li>
-<li><a href="https://www.brendangregg.com/linuxperf.html">https://www.brendangregg.com/linuxperf.html</a></li>
-<li><a href="https://www.brendangregg.com/blog/2014-09-17/node-flame-graphs-on-linux.html">https://www.brendangregg.com/blog/2014-09-17/node-flame-graphs-on-linux.html</a></li>
-<li><a href="https://perf.wiki.kernel.org/index.php/Main_Page">https://perf.wiki.kernel.org/index.php/Main_Page</a></li>
+</li>
 </ul>
-<h3 id="collecting-on-macos">Collecting on MacOS<a class="headerlink" href="#collecting-on-macos" title="Permanent link">&para;</a></h3>
-<ul>
-<li><a href="https://gist.github.com/zeusdeux/aac6f8500917319213c5">https://gist.github.com/zeusdeux/aac6f8500917319213c5</a></li>
-<li><a href="https://gist.github.com/loderunner/36724cc9ee8db66db305">https://gist.github.com/loderunner/36724cc9ee8db66db305</a></li>
-<li><a href="https://keith.github.io/xcode-man-pages/xctrace.1.html">https://keith.github.io/xcode-man-pages/xctrace.1.html</a></li>
+</li>
 </ul>
+</div>
+<h2 id="connect-to-mainnet-or-a-public-testnet">Connect to mainnet or a public testnet<a class="headerlink" href="#connect-to-mainnet-or-a-public-testnet" title="Permanent link">&para;</a></h2>
+<p>Running a Lodestar node on mainnet or a testnet only requires basic familiarity with the terminal.</p>
+<p>Make sure Lodestar is installed in your local environment, following the chosen install method. The following command should return a non error message.</p>
+<div class="highlight"><pre><span></span><code>./lodestar<span class="w"> </span>--help
+</code></pre></div>
+<p>For a complete list of beacon node CLI commands and options, see the <a href="../../reference/cli/">Command Line Reference</a></p>
+<p>To select a known testnet or mainnet, use the <code>--network</code> flag. <code>mainnet</code> is selected by default, and a list of available networks is listed with the <code>--help</code> flag. Setting the <code>--network</code> flag will conveniently configure the beacon node or validator client for the selected network. For power users, any configuration option should be able to be overridden.</p>
+<h2 id="configure-the-lodestar-jwt-authentication-token">Configure the Lodestar JWT authentication token<a class="headerlink" href="#configure-the-lodestar-jwt-authentication-token" title="Permanent link">&para;</a></h2>
+<p>Post-Merge Ethereum will require <a href="https://github.com/ethereum/execution-apis/blob/main/src/engine/authentication.md">secure authentication with the Engine API</a> connection on your chosen Execution node.</p>
+<!-- prettier-ignore-start -->
+<div class="admonition info">
+<p class="admonition-title">Info</p>
+<p>Post-Merge Ethereum <strong>requires</strong> a secure, authenticated connection to the Execution client on port 8551. We recommend setting this up now to ensure a proper configuration before the Merge.</p>
+</div>
+<!-- prettier-ignore-end -->
+
+<h3 id="generate-a-secret-key">Generate a secret key<a class="headerlink" href="#generate-a-secret-key" title="Permanent link">&para;</a></h3>
+<p>You must generate a secret 32-byte (64 characters) hexadecimal string that will be used to authenticate with an execution node. You can use the following command in most terminals to generate a random secret: <code>openssl rand -hex 32</code>. Or you can use an <a href="https://codebeautify.org/generate-random-hexadecimal-numbers">online generator</a>. Save this secret key into a text file and note where you store this file.</p>
+<h3 id="configure-lodestar-to-locate-the-jwt-secret">Configure Lodestar to locate the JWT secret<a class="headerlink" href="#configure-lodestar-to-locate-the-jwt-secret" title="Permanent link">&para;</a></h3>
+<p>When starting up a Lodestar beacon node in any configuration, ensure you add the <code>--jwtSecret $JWT_SECRET_PATH</code> flag to point to the saved secret key file.</p>
+<h3 id="ensure-jwt-is-configured-with-your-execution-node">Ensure JWT is configured with your execution node<a class="headerlink" href="#ensure-jwt-is-configured-with-your-execution-node" title="Permanent link">&para;</a></h3>
+<p><strong>For Go Ethereum:</strong>
+Use the <code>--authrpc.jwtsecret /data/jwtsecret</code> flag to configure the secret. Use their documentation <a href="https://geth.ethereum.org/docs/interface/merge">here</a>.</p>
+<p><strong>For Nethermind:</strong>
+Use the <code>--JsonRpc.JwtSecretFile /data/jwtsecret</code> flag to configure the secret. Use their documentation <a href="https://docs.nethermind.io/nethermind/first-steps-with-nethermind/running-nethermind-post-merge#jwtsecretfile">here</a>.</p>
+<p><strong>For Besu:</strong>
+Use the <code>--engine-jwt-secret=&lt;FILE&gt;</code> flag to configure the secret. Use their documentation <a href="https://besu.hyperledger.org/en/stable/Reference/CLI/CLI-Syntax/#engine-jwt-secret">here</a>.</p>
+<p><strong>For Erigon:</strong>
+Use the <code>--authrpc.jwtsecret</code> flag to configure the secret. Use their documentation <a href="https://github.com/ledgerwatch/erigon#authentication-api">here</a>.</p>
+<h2 id="run-a-beacon-node">Run a beacon node<a class="headerlink" href="#run-a-beacon-node" title="Permanent link">&para;</a></h2>
+<p>To start a Lodestar beacon run the command:</p>
+<div class="highlight"><pre><span></span><code>./lodestar<span class="w"> </span>beacon<span class="w"> </span>--network<span class="w"> </span><span class="nv">$NETWORK_NAME</span><span class="w"> </span>--jwtSecret<span class="w"> </span><span class="nv">$JWT_SECRET_PATH</span>
+</code></pre></div>
+<p>This will assume an execution-layer client is available at the default
+location of <code>https://localhost:8545</code>.</p>
+<p>In case execution-layer clients are available at different locations, use <code>--execution.urls</code> to specify these locations in the command:</p>
+<div class="highlight"><pre><span></span><code>./lodestar<span class="w"> </span>beacon<span class="w"> </span>--network<span class="w"> </span><span class="nv">$NETWORK_NAME</span><span class="w"> </span>--jwtSecret<span class="w"> </span><span class="nv">$JWT_SECRET_PATH</span><span class="w"> </span>--execution.urls<span class="w"> </span><span class="nv">$EL_URL1</span><span class="w"> </span><span class="nv">$EL_URL2</span>
+</code></pre></div>
+<p>Immediately you should see confirmation that the node has started</p>
+<div class="highlight"><pre><span></span><code>pr-20<span class="w"> </span><span class="m">15</span>:12:45.274<span class="o">[]</span><span class="w">                 </span>info:<span class="w"> </span>Lodestar<span class="w"> </span><span class="nv">network</span><span class="o">=</span>mainnet,<span class="w"> </span><span class="nv">version</span><span class="o">=</span>v1.7.2,<span class="w"> </span><span class="nv">commit</span><span class="o">=</span>
+Apr-20<span class="w"> </span><span class="m">15</span>:12:45.327<span class="o">[]</span><span class="w">                 </span>info:<span class="w"> </span>Connected<span class="w"> </span>to<span class="w"> </span>LevelDB<span class="w"> </span>database<span class="w"> </span><span class="nv">path</span><span class="o">=</span>/data/mt1/chain-db
+Apr-20<span class="w"> </span><span class="m">15</span>:12:57.747<span class="o">[]</span><span class="w">                 </span>info:<span class="w"> </span>Initializing<span class="w"> </span>beacon<span class="w"> </span>from<span class="w"> </span>a<span class="w"> </span>valid<span class="w"> </span>db<span class="w"> </span>state<span class="w"> </span><span class="nv">slot</span><span class="o">=</span><span class="m">6264480</span>,<span class="w"> </span><span class="nv">epoch</span><span class="o">=</span><span class="m">195765</span>,<span class="w"> </span><span class="nv">stateRoot</span><span class="o">=</span>0x8133cd4d0be59c3e94405f902fe0ad68ffaa5013b525dddb6285b91ad79716f6,<span class="w"> </span><span class="nv">isWithinWeakSubjectivityPeriod</span><span class="o">=</span><span class="nb">true</span>
+Apr-20<span class="w"> </span><span class="m">15</span>:13:18.077<span class="o">[</span>network<span class="o">]</span><span class="w">          </span>info:<span class="w"> </span>PeerId<span class="w"> </span>16Uiu2HAmDsGet67va6VCnaW2Tu1Ae2yujiDMnmURMMWNvssER7ZQ,<span class="w"> </span>Multiaddrs<span class="w"> </span>/ip4/127.0.0.1/tcp/9000/p2p/16Uiu2HAmDsGet67va6VCnaW2Tu1Ae2yujiDMnmURMMWNvssER7ZQ,/ip4/10.244.0.199/tcp/9000/p2p/16Uiu2HAmDsGet67va6VCnaW2Tu1Ae2yujiDMnmURMMWNvssER7ZQ
+Apr-20<span class="w"> </span><span class="m">15</span>:13:18.270<span class="o">[</span>rest<span class="o">]</span><span class="w">             </span>info:<span class="w"> </span>Started<span class="w"> </span>REST<span class="w"> </span>API<span class="w"> </span>server<span class="w"> </span><span class="nv">address</span><span class="o">=</span>http://127.0.0.1:9596
+Apr-20<span class="w"> </span><span class="m">15</span>:13:18.271<span class="o">[]</span><span class="w">                 </span>warn:<span class="w"> </span>Low<span class="w"> </span>peer<span class="w"> </span>count<span class="w"> </span><span class="nv">peers</span><span class="o">=</span><span class="m">0</span>
+Apr-20<span class="w"> </span><span class="m">15</span>:13:18.280<span class="o">[]</span><span class="w">                 </span>info:<span class="w"> </span>Searching<span class="w"> </span>peers<span class="w"> </span>-<span class="w"> </span>peers:<span class="w"> </span><span class="m">0</span><span class="w"> </span>-<span class="w"> </span>slot:<span class="w"> </span><span class="m">6264964</span><span class="w"> </span>-<span class="w"> </span>head:<span class="w"> </span><span class="o">(</span>slot<span class="w"> </span>-<span class="w"> </span><span class="m">484</span><span class="o">)</span><span class="w"> </span>0x7ee6…2a15<span class="w"> </span>-<span class="w"> </span>exec-block:<span class="w"> </span>syncing<span class="o">(</span><span class="m">17088043</span><span class="w"> </span>0x9442…<span class="o">)</span><span class="w"> </span>-<span class="w"> </span>finalized:<span class="w"> </span>0xe359…4d7e:195763
+Apr-20<span class="w"> </span><span class="m">15</span>:13:23.009<span class="o">[</span>chain<span class="o">]</span><span class="w">            </span>info:<span class="w"> </span>Validated<span class="w"> </span>transition<span class="w"> </span>configuration<span class="w"> </span>with<span class="w"> </span>execution<span class="w"> </span>client<span class="w"> </span><span class="nv">terminalTotalDifficulty</span><span class="o">=</span>0xc70d808a128d7380000,<span class="w"> </span><span class="nv">terminalBlockHash</span><span class="o">=</span>0x0000000000000000000000000000000000000000000000000000000000000000,<span class="w"> </span><span class="nv">terminalBlockNumber</span><span class="o">=</span>0x0
+Apr-20<span class="w"> </span><span class="m">15</span>:13:29.287<span class="o">[]</span><span class="w">                 </span>info:<span class="w"> </span>Syncing<span class="w"> </span>-<span class="w"> </span>?<span class="w"> </span>left<span class="w"> </span>-<span class="w"> </span><span class="m">0</span>.00<span class="w"> </span>slots/s<span class="w"> </span>-<span class="w"> </span>slot:<span class="w"> </span><span class="m">6264965</span><span class="w"> </span>-<span class="w"> </span>head:<span class="w"> </span><span class="o">(</span>slot<span class="w"> </span>-<span class="w"> </span><span class="m">485</span><span class="o">)</span><span class="w"> </span>0x7ee6…2a15<span class="w"> </span>-<span class="w"> </span>exec-block:<span class="w"> </span>syncing<span class="o">(</span><span class="m">17088043</span><span class="w"> </span>0x9442…<span class="o">)</span><span class="w"> </span>-<span class="w"> </span>finalized:<span class="w"> </span>0xe359…4d7e:195763<span class="w"> </span>-<span class="w"> </span>peers:<span class="w"> </span><span class="m">1</span>
+Apr-20<span class="w"> </span><span class="m">15</span>:14:41.003<span class="o">[]</span><span class="w">                 </span>info:<span class="w"> </span>Syncing<span class="w"> </span>-<span class="w"> </span><span class="m">22</span><span class="w"> </span>seconds<span class="w"> </span>left<span class="w"> </span>-<span class="w"> </span><span class="m">4</span>.92<span class="w"> </span>slots/s<span class="w"> </span>-<span class="w"> </span>slot:<span class="w"> </span><span class="m">6264971</span><span class="w"> </span>-<span class="w"> </span>head:<span class="w"> </span><span class="o">(</span>slot<span class="w"> </span>-<span class="w"> </span><span class="m">108</span><span class="o">)</span><span class="w"> </span>0xd15f…b605<span class="w"> </span>-<span class="w"> </span>exec-block:<span class="w"> </span>valid<span class="o">(</span><span class="m">17088414</span><span class="w"> </span>0x3dba…<span class="o">)</span><span class="w"> </span>-<span class="w"> </span>finalized:<span class="w"> </span>0x70fd…5157:195775<span class="w"> </span>-<span class="w"> </span>peers:<span class="w"> </span><span class="m">4</span>
+Apr-20<span class="w"> </span><span class="m">15</span>:14:53.001<span class="o">[]</span><span class="w">                 </span>info:<span class="w"> </span>Syncing<span class="w"> </span>-<span class="w"> </span><span class="m">9</span><span class="w"> </span>seconds<span class="w"> </span>left<span class="w"> </span>-<span class="w"> </span><span class="m">5</span>.00<span class="w"> </span>slots/s<span class="w"> </span>-<span class="w"> </span>slot:<span class="w"> </span><span class="m">6264972</span><span class="w"> </span>-<span class="w"> </span>head:<span class="w"> </span><span class="o">(</span>slot<span class="w"> </span>-<span class="w"> </span><span class="m">45</span><span class="o">)</span><span class="w"> </span>0x44e4…20a4<span class="w"> </span>-<span class="w"> </span>exec-block:<span class="w"> </span>valid<span class="o">(</span><span class="m">17088475</span><span class="w"> </span>0xca61…<span class="o">)</span><span class="w"> </span>-<span class="w"> </span>finalized:<span class="w"> </span>0x9cbd…ba83:195776<span class="w"> </span>-<span class="w"> </span>peers:<span class="w"> </span><span class="m">8</span>
+Apr-20<span class="w"> </span><span class="m">15</span>:15:01.443<span class="o">[</span>network<span class="o">]</span><span class="w">          </span>info:<span class="w"> </span>Subscribed<span class="w"> </span>gossip<span class="w"> </span>core<span class="w"> </span>topics
+Apr-20<span class="w"> </span><span class="m">15</span>:15:01.446<span class="o">[</span>sync<span class="o">]</span><span class="w">             </span>info:<span class="w"> </span>Subscribed<span class="w"> </span>gossip<span class="w"> </span>core<span class="w"> </span>topics
+Apr-20<span class="w"> </span><span class="m">15</span>:15:05.000<span class="o">[]</span><span class="w">                 </span>info:<span class="w"> </span>Synced<span class="w"> </span>-<span class="w"> </span>slot:<span class="w"> </span><span class="m">6264973</span><span class="w"> </span>-<span class="w"> </span>head:<span class="w"> </span>0x90ea…c655<span class="w"> </span>-<span class="w"> </span>exec-block:<span class="w"> </span>valid<span class="o">(</span><span class="m">17088521</span><span class="w"> </span>0xca9b…<span class="o">)</span><span class="w"> </span>-<span class="w"> </span>finalized:<span class="w"> </span>0x6981…682f:195778<span class="w"> </span>-<span class="w"> </span>peers:<span class="w"> </span><span class="m">6</span>
+</code></pre></div>
+<!-- prettier-ignore-start -->
+<div class="admonition info">
+<p class="admonition-title">Info</p>
+<p>If your node is stuck with <code>Searching for peers</code> review your network configuration to make sure your ports are open.</p>
+</div>
+<!-- prettier-ignore-end -->
+
+<p>By default, Lodestar stores all configuration and chain data at the path <code>$XDG_DATA_HOME/lodestar/$NETWORK_NAME</code>.</p>
+<p>A young testnet should take a few hours to sync. If you see multiple or consistent errors in the logs, please open a <a href="https://github.com/ChainSafe/lodestar/issues/new">Github issue</a> or reach out to us in <a href="https://discord.gg/yjyvFRP">Discord</a>. Just by reporting anomalies you are helping accelerate the progress of Ethereum Consensus, thanks for contributing!</p>
+<!-- prettier-ignore-start -->
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>It is dangerous to expose your Beacon APIs publicly as there is no default authentication mechanism provided. Ensure your beacon node host is not exposing ports 8545 or 9596 outside of your internal network.</p>
+</div>
+<!-- prettier-ignore-end -->
+
+<h3 id="checkpoint-sync">Checkpoint Sync<a class="headerlink" href="#checkpoint-sync" title="Permanent link">&para;</a></h3>
+<p>If you are starting your node from a blank db, like starting from genesis, or from the last saved state in db and the network is now far ahead, your node will be susceptible to "long range attacks." Ethereum's solution to this is via something called weak subjectivity. <a href="https://blog.ethereum.org/2014/11/25/proof-stake-learned-love-weak-subjectivity/">Read Vitalik's illuminating post explaining weak subjectivity.</a>.</p>
+<p>If you have a synced beacon node available (e.g., your friend's node or an infrastructure provider) and a trusted checkpoint you can rely on, you can start off your beacon node in under a minute! And at the same time kicking the "long range attack" in its butt!</p>
+<p>Just supply these <strong>extra arguments</strong> to your beacon node command:</p>
+<div class="highlight"><pre><span></span><code>--checkpointSyncUrl<span class="w"> </span>&lt;synced<span class="w"> </span>node<span class="w"> </span>url&gt;<span class="w"> </span><span class="o">[</span>--wssCheckpoint<span class="w"> </span>&lt;trusted<span class="w"> </span>checkpoint<span class="w"> </span><span class="k">in</span><span class="w"> </span>root:epoch<span class="w"> </span>format&gt;<span class="o">]</span>
+</code></pre></div>
+<p>In case you really trust <code>checkpointSyncUrl</code> then you may skip providing <code>wssCheckpoint</code>, which will then result into your beacon node syncing and starting off the recently finalized state from the trusted URL.</p>
+<!-- prettier-ignore-start -->
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Please use this option very carefully (and at your own risk), a malicious server URL can put you on the wrong chain with a danger of you losing your funds by social engineering.</p>
+</div>
+<p>If possible, validate your <code>wssCheckpoint</code> from multiple places (e.g. different client distributions) or from other trusted sources. This will highly reduce the risk of starting off on a malicious chain.</p>
+<!-- prettier-ignore-end -->
+
+<p><strong>Taking too long to sync?</strong></p>
+<p>After your node has been offline for a while, it might be the case that it takes a long time to sync even though a <code>checkpointSyncUrl</code> is specified.
+This is due to the fact that the last db state is still within the weak subjectivity period (~15 days on mainnet) which causes the node
+to sync from the db state instead of the checkpoint state.</p>
+<p>It is possible to force syncing from checkpoint state by supplying the <code>--forceCheckpointSync</code> flag. This option is only recommended if it is absolutely
+necessary for the node to be synced right away to fulfill its duties as there is an inherent risk each time the state is obtained from an external source.</p>
+<h3 id="guide-to-the-sync-logs">Guide to the sync logs<a class="headerlink" href="#guide-to-the-sync-logs" title="Permanent link">&para;</a></h3>
+<p>Lodestar beacon sync log aims to provide information of utmost importance about your node and yet be succinct at the same time. You may see the sync logs in the following format:</p>
+<p><code>[Sync status] - [ Slot info ] - [Head info] - [Exec block info] - [Finalized info] - [Peers info]</code></p>
+<p>See the following example of different kinds of sync log:</p>
+<div class="highlight"><pre><span></span><code>Apr-20 15:24:08.034[]                 info: Searching peers - peers: 0 - slot: 6265018 - head: 6264018 0xed93…7b0a - exec-block: syncing(17088476 0x9649…) - finalized: 0xbf30…7e7c:195777
+Apr-20 15:24:17.000[]                 info: Searching peers - peers: 0 - slot: 6265019 - head: 6264018 0xed93…7b0a - exec-block: syncing(17088476 0x9649…) - finalized: 0xbf30…7e7c:195777
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>Apr-20 15:13:41.298[]                 info: Syncing - 2.5 minutes left - 2.78 slots/s - slot: 6264966 - head: 6262966 0x5cec…f5b8 - exec-block: valid(17088105 0x6f74…) - finalized: 0x5cc0…3874:195764 - peers: 1
+Apr-20 15:13:41.298[]                 info: Syncing - 2 minutes left - 2.78 slots/s - slot: 6264967 - head: 6263965 0x5cec…f5b8 - exec-block: valid(17088105 0x6f74…) - finalized: 0x5cc0…3874:195764 - peers: 1
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>Apr-20 15:13:53.151[]                 info: Syncing - 1.6 minutes left - 3.82 slots/s - slot: 6264967 - head: (slot -360) 0xe0cf…9f3c - exec-block: valid(17088167 0x2d6a…) - finalized: 0x8f3f…2f81:195766 - peers: 5
+Apr-20 15:14:05.425[]                 info: Syncing - 1.1 minutes left - 4.33 slots/s - slot: 6264968 - head: (slot -297) 0x3655…1658 - exec-block: valid(17088231 0xdafd…) - finalized: 0x9475…425a:195769 - peers: 2
+Apr-20 15:14:53.001[]                 info: Syncing - 9 seconds left - 5.00 slots/s - slot: 6264972 - head: (slot -45) 0x44e4…20a4 - exec-block: valid(17088475 0xca61…) - finalized: 0x9cbd…ba83:195776 - peers: 8
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>Apr-20 15:15:01.443[network]          info: Subscribed gossip core topics
+Apr-20 15:15:01.446[sync]             info: Subscribed gossip core topics
+Apr-20 15:15:05.000[]                 info: Synced - slot: 6264973 - head: 0x90ea…c655 - exec-block: valid(17088521 0xca9b…) - finalized: 0x6981…682f:195778 - peers: 6
+Apr-20 15:15:17.003[]                 info: Synced - slot: 6264974 - head: 0x4f7e…0e3a - exec-block: valid(17088522 0x08b1…) - finalized: 0x6981…682f:195778 - peers: 6
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>Apr-20 15:15:41.001[]                 info: Synced - slot: 6264976 - head: (slot -1) 0x17c6…71a7 - exec-block: valid(17088524 0x5bc1…) - finalized: 0x6981…682f:195778 - peers: 8
+Apr-20 15:15:53.001[]                 info: Synced - slot: 6264977 - head: (slot -2) 0x17c6…71a7 - exec-block: valid(17088524 0x5bc1…) - finalized: 0x6981…682f:195778 - peers: 8
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>Apr-20 15:16:05.000[]                 info: Synced - slot: 6264978 - head: 0xc9fd…28c5 - exec-block: valid(17088526 0xb5bf…) - finalized: 0x6981…682f:195778 - peers: 8
+Apr-20 15:16:17.017[]                 info: Synced - slot: 6264979 - head: 0xde91…d4cb - exec-block: valid(17088527 0xa488…) - finalized: 0x6981…682f:195778 - peers: 7
+</code></pre></div>
+<ol>
+<li>
+<p>Sync status: Takes three values : <code>Synced</code> or <code>Syncing</code> (along with sync speed info) or <code>Searching</code> if node is is still looking for viable peers from where it can download blocks.</p>
+</li>
+<li>
+<p>Slot (clock) info: What is the current ongoing slot as per the chain genesis</p>
+</li>
+<li>
+<p>Head info: It specifies where the local chain head hash is. In case its far behind the Slot (clock) then it independently shows the head slot else it show how far behind from the Slot it is if difference &lt; 1000.</p>
+</li>
+<li>
+<p>Execution block info: It provides the execution information about the head whether its confirmed <code>valid</code> or execution layer is still <code>syncing</code> to it, as well as its number and a short hash to easy identification.</p>
+</li>
+<li>
+<p>Finalized info: What is the current local <code>finalized</code> checkpoint in the format of <code>[checkpoint root]:[checkpoint epoch]</code>, for e.g.: <code>0xd7ba…8386:189636</code></p>
+</li>
+<li>
+<p>Peer info: Current total number of outbound or inbound peers, for e.g.: <code>peers: 27</code></p>
+</li>
+</ol>
+<p>For more insight into how a Lodestar beacon node is functioning, you may setup lodestar metrics and use the prepared Grafana dashboards that are found in the repository. Check out our section on <a href="./prometheus-grafana.md">Prometheus and Grafana</a> for more details.</p>
 
 
 

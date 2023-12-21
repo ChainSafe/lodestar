@@ -10,28 +10,28 @@
       
       
       
-        <link rel="canonical" href="https://chainsafe.github.io/lodestar/tools/flamegraphs/">
+        <link rel="canonical" href="https://chainsafe.github.io/lodestar/contribution/testing/simulation-tests/">
       
       
-        <link rel="prev" href="../../contribution/testing/simulation-tests/">
+        <link rel="prev" href="../../depgraph/">
       
       
-        <link rel="next" href="../heap-dumps/">
+        <link rel="next" href="../../../tools/flamegraphs/">
       
       
-      <link rel="icon" href="../../assets/round-icon.ico">
+      <link rel="icon" href="../../../assets/round-icon.ico">
       <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.2">
     
     
       
-        <title>Flame Graphs - Lodestar Documentation</title>
+        <title>Simulation Tests - Lodestar Documentation</title>
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.50c56a3b.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.50c56a3b.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.06af60db.min.css">
       
       
 
@@ -50,9 +50,9 @@
       
     
     
-      <link rel="stylesheet" href="../../stylesheets/extras.css">
+      <link rel="stylesheet" href="../../../stylesheets/extras.css">
     
-    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#generating-flamegraphs-for-a-running-node-service-on-linux" class="md-skip">
+        <a href="#simulation-testing" class="md-skip">
           Skip to content
         </a>
       
@@ -94,9 +94,9 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../.." title="Lodestar Documentation" class="md-header__button md-logo" aria-label="Lodestar Documentation" data-md-component="logo">
+    <a href="../../.." title="Lodestar Documentation" class="md-header__button md-logo" aria-label="Lodestar Documentation" data-md-component="logo">
       
-  <img src="../../assets/lodestar_icon_300.png" alt="logo">
+  <img src="../../../assets/lodestar_icon_300.png" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -113,7 +113,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Flame Graphs
+              Simulation Tests
             
           </span>
         </div>
@@ -226,9 +226,9 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="Lodestar Documentation" class="md-nav__button md-logo" aria-label="Lodestar Documentation" data-md-component="logo">
+    <a href="../../.." title="Lodestar Documentation" class="md-nav__button md-logo" aria-label="Lodestar Documentation" data-md-component="logo">
       
-  <img src="../../assets/lodestar_icon_300.png" alt="logo">
+  <img src="../../../assets/lodestar_icon_300.png" alt="logo">
 
     </a>
     Lodestar Documentation
@@ -255,7 +255,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../.." class="md-nav__link">
+      <a href="../../.." class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -275,7 +275,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../introduction/" class="md-nav__link">
+      <a href="../../../introduction/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -332,7 +332,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../getting-started/quick-start/" class="md-nav__link">
+      <a href="../../../getting-started/quick-start/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -353,7 +353,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../getting-started/installation/" class="md-nav__link">
+      <a href="../../../getting-started/installation/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -374,7 +374,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../getting-started/starting-a-node/" class="md-nav__link">
+      <a href="../../../getting-started/starting-a-node/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -402,7 +402,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../data-retention/" class="md-nav__link">
+      <a href="../../../data-retention/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -459,7 +459,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../beacon-management/beacon-cli/" class="md-nav__link">
+      <a href="../../../beacon-management/beacon-cli/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -480,7 +480,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../beacon-management/networking/" class="md-nav__link">
+      <a href="../../../beacon-management/networking/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -501,7 +501,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../beacon-management/mev-and-builder-integration/" class="md-nav__link">
+      <a href="../../../beacon-management/mev-and-builder-integration/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -522,7 +522,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../beacon-management/syncing/" class="md-nav__link">
+      <a href="../../../beacon-management/syncing/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -587,7 +587,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../validator-management/validator-cli/" class="md-nav__link">
+      <a href="../../../validator-management/validator-cli/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -652,7 +652,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../bootnode/bootnode-cli/" class="md-nav__link">
+      <a href="../../../bootnode/bootnode-cli/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -717,7 +717,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../lightclient-prover/lightclient/" class="md-nav__link">
+      <a href="../../../lightclient-prover/lightclient/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -738,7 +738,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../lightclient-prover/lightclient-cli/" class="md-nav__link">
+      <a href="../../../lightclient-prover/lightclient-cli/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -759,7 +759,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../lightclient-prover/prover/" class="md-nav__link">
+      <a href="../../../lightclient-prover/prover/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -824,7 +824,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../logging-and-metrics/prometheus-grafana/" class="md-nav__link">
+      <a href="../../../logging-and-metrics/prometheus-grafana/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -845,7 +845,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../logging-and-metrics/client-monitoring/" class="md-nav__link">
+      <a href="../../../logging-and-metrics/client-monitoring/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -873,7 +873,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../supporting-libraries/" class="md-nav__link">
+      <a href="../../../supporting-libraries/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -882,179 +882,6 @@
   
 
       </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-    
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_11" >
-        
-          
-          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="0">
-            
-  
-  <span class="md-ellipsis">
-    Contributing
-  </span>
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_11">
-            <span class="md-nav__icon md-icon"></span>
-            Contributing
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../contribution/getting-started/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Getting Started
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../contribution/depgraph/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Dependency Graph
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-    
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_11_3" >
-        
-          
-          <label class="md-nav__link" for="__nav_11_3" id="__nav_11_3_label" tabindex="0">
-            
-  
-  <span class="md-ellipsis">
-    Testing
-  </span>
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_11_3_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_11_3">
-            <span class="md-nav__icon md-icon"></span>
-            Testing
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../contribution/testing/overview.md" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Overview
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../contribution/testing/simulation-tests/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Simulation Tests
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
     </li>
   
 
@@ -1077,26 +904,128 @@
         
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_11" checked>
         
           
-          <label class="md-nav__link" for="__nav_12" id="__nav_12_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="0">
             
   
   <span class="md-ellipsis">
-    Tools
+    Contributing
   </span>
   
 
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_12_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_12">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_11">
             <span class="md-nav__icon md-icon"></span>
-            Tools
+            Contributing
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Getting Started
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../depgraph/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Dependency Graph
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_11_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_11_3" id="__nav_11_3_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Testing
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_11_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_11_3">
+            <span class="md-nav__icon md-icon"></span>
+            Testing
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../overview.md" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -1118,7 +1047,7 @@
           
   
   <span class="md-ellipsis">
-    Flame Graphs
+    Simulation Tests
   </span>
   
 
@@ -1129,7 +1058,7 @@
         
   
   <span class="md-ellipsis">
-    Flame Graphs
+    Simulation Tests
   </span>
   
 
@@ -1151,28 +1080,55 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#modifying-linux-and-lodestar" class="md-nav__link">
+  <a href="#running-sim-tests" class="md-nav__link">
     <span class="md-ellipsis">
-      Modifying Linux and Lodestar
+      Running Sim Tests
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Modifying Linux and Lodestar">
+    <nav class="md-nav" aria-label="Running Sim Tests">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#example-start_lodestarsh" class="md-nav__link">
+  <a href="#environment-variables" class="md-nav__link">
     <span class="md-ellipsis">
-      Example start_lodestar.sh
+      Environment Variables
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#capturing-stack-traces" class="md-nav__link">
+  <a href="#testsimmultifork" class="md-nav__link">
     <span class="md-ellipsis">
-      Capturing Stack Traces
+      test:sim:multifork
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#testsimendpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      test:sim:endpoints
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#testsimdeneb" class="md-nav__link">
+    <span class="md-ellipsis">
+      test:sim:deneb
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#testsimmixedcleint" class="md-nav__link">
+    <span class="md-ellipsis">
+      test:sim:mixedcleint
     </span>
   </a>
   
@@ -1184,55 +1140,65 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#rendering-a-flamegraph" class="md-nav__link">
+  <a href="#sim-test-infrastructure" class="md-nav__link">
     <span class="md-ellipsis">
-      Rendering a Flamegraph
+      Sim Test Infrastructure
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#installation" class="md-nav__link">
-    <span class="md-ellipsis">
-      Installation
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#filtering-results" class="md-nav__link">
-    <span class="md-ellipsis">
-      Filtering Results
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Filtering Results">
+    <nav class="md-nav" aria-label="Sim Test Infrastructure">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#unfiltered" class="md-nav__link">
+  <a href="#simulation-environment" class="md-nav__link">
     <span class="md-ellipsis">
-      Unfiltered
+      Simulation Environment
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#filtered" class="md-nav__link">
+  <a href="#simulation-assertions" class="md-nav__link">
     <span class="md-ellipsis">
-      Filtered
+      Simulation Assertions
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#custom-assertions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Custom Assertions
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#simulation-reports" class="md-nav__link">
+    <span class="md-ellipsis">
+      Simulation Reports
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Simulation Reports">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#slot-information" class="md-nav__link">
+    <span class="md-ellipsis">
+      Slot Information
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#epoch-information" class="md-nav__link">
+    <span class="md-ellipsis">
+      Epoch Information
     </span>
   </a>
   
@@ -1242,48 +1208,11 @@
     </nav>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#references" class="md-nav__link">
-    <span class="md-ellipsis">
-      References
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="References">
-      <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#list-of-web-references" class="md-nav__link">
+  <a href="#simulation-logging" class="md-nav__link">
     <span class="md-ellipsis">
-      List of Web References
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#visualization-tools" class="md-nav__link">
-    <span class="md-ellipsis">
-      Visualization Tools
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#collecting-on-linux" class="md-nav__link">
-    <span class="md-ellipsis">
-      Collecting on Linux
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#collecting-on-macos" class="md-nav__link">
-    <span class="md-ellipsis">
-      Collecting on MacOS
+      Simulation Logging
     </span>
   </a>
   
@@ -1303,6 +1232,58 @@
 
               
             
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12" >
+        
+          
+          <label class="md-nav__link" for="__nav_12" id="__nav_12_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Tools
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_12">
+            <span class="md-nav__icon md-icon"></span>
+            Tools
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
               
                 
   
@@ -1310,7 +1291,28 @@
   
   
     <li class="md-nav__item">
-      <a href="../heap-dumps/" class="md-nav__link">
+      <a href="../../../tools/flamegraphs/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Flame Graphs
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../tools/heap-dumps/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1331,7 +1333,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../core-dumps/" class="md-nav__link">
+      <a href="../../../tools/core-dumps/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1396,7 +1398,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../advanced-topics/setting-up-a-testnet/" class="md-nav__link">
+      <a href="../../../advanced-topics/setting-up-a-testnet/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1444,28 +1446,55 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#modifying-linux-and-lodestar" class="md-nav__link">
+  <a href="#running-sim-tests" class="md-nav__link">
     <span class="md-ellipsis">
-      Modifying Linux and Lodestar
+      Running Sim Tests
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Modifying Linux and Lodestar">
+    <nav class="md-nav" aria-label="Running Sim Tests">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#example-start_lodestarsh" class="md-nav__link">
+  <a href="#environment-variables" class="md-nav__link">
     <span class="md-ellipsis">
-      Example start_lodestar.sh
+      Environment Variables
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#capturing-stack-traces" class="md-nav__link">
+  <a href="#testsimmultifork" class="md-nav__link">
     <span class="md-ellipsis">
-      Capturing Stack Traces
+      test:sim:multifork
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#testsimendpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      test:sim:endpoints
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#testsimdeneb" class="md-nav__link">
+    <span class="md-ellipsis">
+      test:sim:deneb
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#testsimmixedcleint" class="md-nav__link">
+    <span class="md-ellipsis">
+      test:sim:mixedcleint
     </span>
   </a>
   
@@ -1477,55 +1506,65 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#rendering-a-flamegraph" class="md-nav__link">
+  <a href="#sim-test-infrastructure" class="md-nav__link">
     <span class="md-ellipsis">
-      Rendering a Flamegraph
+      Sim Test Infrastructure
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#installation" class="md-nav__link">
-    <span class="md-ellipsis">
-      Installation
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#filtering-results" class="md-nav__link">
-    <span class="md-ellipsis">
-      Filtering Results
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Filtering Results">
+    <nav class="md-nav" aria-label="Sim Test Infrastructure">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#unfiltered" class="md-nav__link">
+  <a href="#simulation-environment" class="md-nav__link">
     <span class="md-ellipsis">
-      Unfiltered
+      Simulation Environment
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#filtered" class="md-nav__link">
+  <a href="#simulation-assertions" class="md-nav__link">
     <span class="md-ellipsis">
-      Filtered
+      Simulation Assertions
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#custom-assertions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Custom Assertions
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#simulation-reports" class="md-nav__link">
+    <span class="md-ellipsis">
+      Simulation Reports
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Simulation Reports">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#slot-information" class="md-nav__link">
+    <span class="md-ellipsis">
+      Slot Information
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#epoch-information" class="md-nav__link">
+    <span class="md-ellipsis">
+      Epoch Information
     </span>
   </a>
   
@@ -1535,48 +1574,11 @@
     </nav>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#references" class="md-nav__link">
-    <span class="md-ellipsis">
-      References
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="References">
-      <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#list-of-web-references" class="md-nav__link">
+  <a href="#simulation-logging" class="md-nav__link">
     <span class="md-ellipsis">
-      List of Web References
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#visualization-tools" class="md-nav__link">
-    <span class="md-ellipsis">
-      Visualization Tools
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#collecting-on-linux" class="md-nav__link">
-    <span class="md-ellipsis">
-      Collecting on Linux
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#collecting-on-macos" class="md-nav__link">
-    <span class="md-ellipsis">
-      Collecting on MacOS
+      Simulation Logging
     </span>
   </a>
   
@@ -1605,112 +1607,106 @@
   
 
 
-<h1 id="generating-flamegraphs-for-a-running-node-service-on-linux">Generating Flamegraphs for a Running Node Service on Linux<a class="headerlink" href="#generating-flamegraphs-for-a-running-node-service-on-linux" title="Permanent link">&para;</a></h1>
-<p>This guide assumes a running instance of Lodestar and will walk through how to generate a flamegraph for the process while running on Linux. While it is possible to run Lodestar in a number of ways, for performance profiling it is recommended to not use Dockerized implementations. It is best to run Lodestar as a service on a Linux machine. Follow the Lodestar docs to get the service installed and running. Then come back here when you are ready to generate the flamegraph.</p>
-<h2 id="modifying-linux-and-lodestar">Modifying Linux and Lodestar<a class="headerlink" href="#modifying-linux-and-lodestar" title="Permanent link">&para;</a></h2>
-<p>Use the following two commands to install <code>perf</code> for generating the stack traces. You may get a warning about needing to restart the VM due to kernel updates. This is nothing to be concerned with and if so, cancel out of the restart dialog.</p>
-<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>linux-tools-common<span class="w"> </span>linux-tools-generic
-sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>linux-tools-<span class="sb">`</span>uname<span class="w"> </span>-r<span class="sb">`</span><span class="w">  </span><span class="c1"># empirically this throws if run on the same line above</span>
-</code></pre></div>
-<p>Next we need to update the Lodestar service by modifying the start script. We need to add a necessary flag <code>--perf-basic-prof</code> to allow the stack traces to be useful. Node is a virtual machine and <code>perf</code> is designed to capture host stack traces. In order to allow the JavaScript functions to be captured meaningfully, <code>v8</code> can provide some help. Generally Lodestar is started with a script like the following:</p>
-<h3 id="example-start_lodestarsh">Example start_lodestar.sh<a class="headerlink" href="#example-start_lodestarsh" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code>node<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--perf-basic-prof<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--max-old-space-size<span class="o">=</span><span class="m">4096</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>/usr/src/lodestar/packages/cli/bin/lodestar<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>beacon<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--rcConfig<span class="w"> </span>/home/devops/beacon/rcconfig.yml
-</code></pre></div>
-<p>After updating the start script, restart the node process running the beacon service. Note in the command below, that the <code>beacon</code> service may have a different name or restart command, depending on your setup.</p>
-<div class="highlight"><pre><span></span><code>admin@12.34.56.78:<span class="w"> </span>sudo<span class="w"> </span>systemctl<span class="w"> </span>restart<span class="w"> </span>beacon
-</code></pre></div>
-<p>The flag that was added notifies <code>V8</code> to output a map of functions and their addresses. This is necessary for <code>perf</code> to generate the stack traces for the virtual machine in addition to the traditional host stack traces. There is a very small, performance overhead to output the maps. After a short while, once the process runs for a bit the functions will no longer be moving in memory and the overhead will be significantly reduced. The VM will still be moving objects around but this flag is generally safe to run in production. After a few minutes of running, listing the directory with the start script (<code>process.cwd()</code>) will look similar:</p>
-<div class="highlight"><pre><span></span><code>-rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">   </span><span class="m">9701529</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>beacon-2023-05-22.log
--rwxrwxr-x<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>root<span class="w">        </span><span class="m">421</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:31<span class="w"> </span>beacon_run.sh
-drwxr-xr-x<span class="w">  </span><span class="m">2</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">    </span><span class="m">917504</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:35<span class="w"> </span>chain-db
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">   </span><span class="m">2861242</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>isolate-0x6761520-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">    </span><span class="m">203172</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>isolate-0x7fa2f0001060-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">     </span><span class="m">68044</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>isolate-0x7fcd80001060-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">    </span><span class="m">420809</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>isolate-0x7fcd84001060-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">    </span><span class="m">123919</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>isolate-0x7fcd88001060-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">     </span><span class="m">94391</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:35<span class="w"> </span>isolate-0x7fcd8c001060-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">    </span><span class="m">183831</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>isolate-0x7fcd90000e60-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">    </span><span class="m">152786</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>isolate-0x7fcd94000e60-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">    </span><span class="m">262333</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>isolate-0x7fcd98000e60-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">    </span><span class="m">218473</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>isolate-0x7fcd9c000e60-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">    </span><span class="m">366788</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>isolate-0x7fcda0000e60-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">    </span><span class="m">304917</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>isolate-0x7fcda4000e60-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">    </span><span class="m">586238</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>isolate-0x7fcda8000e60-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">    </span><span class="m">450675</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>isolate-0x7fcdac000e60-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">    </span><span class="m">768470</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>isolate-0x7fcdb8000d60-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>root<span class="w">        </span><span class="m">559</span><span class="w"> </span>May<span class="w"> </span><span class="m">21</span><span class="w"> </span><span class="m">14</span>:17<span class="w"> </span>rcconfig.yml
-</code></pre></div>
-<p>The <code>isolate-*-v8.log</code> files are the maps that <code>v8</code> outputs for the <code>perf</code> command to reference. You are now ready to collect the stack traces.</p>
-<h3 id="capturing-stack-traces">Capturing Stack Traces<a class="headerlink" href="#capturing-stack-traces" title="Permanent link">&para;</a></h3>
-<p>The first command below will run <code>perf</code> for 60 seconds, and then save the output to a file named <code>perf.out</code>. The second one will merge the exported, unknown, tokens with the isolate maps and output full stack traces for the render. Running both <code>perf</code> commands in the folder with the <code>isolate</code> maps will allow the data to be seamlessly spliced. Once the output is saved, update the permissions so the file can be copied to your local machine via <code>scp</code>.</p>
-<p>You can modify the frequency of capture by changing <code>-F 99</code> to a different number. Try to stay away from whole numbers as they are more likely to cause interference with periodically scheduled tasks. As an example use <code>99Hz</code> or <code>997Hz</code> instead of <code>100Hz</code> or <code>1000Hz</code>. In testing neither seemed to have an appreciable affect on CPU usage when run for a short period of time.</p>
-<p>To change the period of capture adjust the sleep duration (which is in seconds).</p>
-<p>The <code>pgrep</code> command is used to find the process id to capture against. Feel free to pass a number to the <code>-p</code> flag if you know the process id, or adjust the file path if the executable is in a different location.</p>
-<div class="highlight"><pre><span></span><code>admin@12.34.56.78:<span class="w"> </span>sudo<span class="w"> </span>perf<span class="w"> </span>record<span class="w"> </span>-F<span class="w"> </span><span class="m">99</span><span class="w"> </span>-p<span class="w"> </span><span class="k">$(</span>pgrep<span class="w"> </span>-f<span class="w"> </span><span class="s1">&#39;/usr/src/lodestar/packages/cli/bin/lodestar beacon&#39;</span><span class="k">)</span><span class="w"> </span>-g<span class="w"> </span>--<span class="w"> </span>sleep<span class="w"> </span><span class="m">60</span>
-admin@12.34.56.78:<span class="w"> </span>sudo<span class="w"> </span>perf<span class="w"> </span>script<span class="w"> </span>-f<span class="w"> </span>&gt;<span class="w"> </span>perf.out
-admin@12.34.56.78:<span class="w"> </span>sudo<span class="w"> </span>chmod<span class="w"> </span><span class="m">777</span><span class="w"> </span>~/beacon/perf.out
-</code></pre></div>
-<p>And then copy the <code>perf.out</code> file to your local machine to render the flamegraph. Running at <code>99Hz</code> for 180 seconds results in a file size of about 3.5MB and <code>997Hz</code> for 60 seconds is roughly 4.4MB.</p>
-<div class="highlight"><pre><span></span><code>scp<span class="w"> </span>admin@12.34.56.78:/home/devops/beacon/out.perf<span class="w"> </span>/some_temp_dir/perf.out
-</code></pre></div>
-<h2 id="rendering-a-flamegraph">Rendering a Flamegraph<a class="headerlink" href="#rendering-a-flamegraph" title="Permanent link">&para;</a></h2>
-<p>By far the best tool to render flamegraphs is <a href="https://github.com/Netflix/flamescope"><code>flamescope</code></a> from Netflix. It allows for easy analysis and zooming into specific time periods. It also give a holistic view of how the process is performing over time.</p>
-<h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
-<p>Python3 is required. Clone the repository and install the dependencies:</p>
-<p><em>The original is no longer maintained and had a configuration bug. This is a fork that fixes the issue.</em></p>
-<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/matthewkeil/flamescope
-<span class="nb">cd</span><span class="w"> </span>flamescope
-pip3<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
-yarn
-</code></pre></div>
-<h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>mv<span class="w"> </span>/some_temp_dir/perf.out<span class="w"> </span>/path/to/flamescope/examples
-yarn<span class="w"> </span>dev
-</code></pre></div>
-<p>Then navigate in a browser to <code>http://localhost:8080</code> and begin analyzing the data.</p>
-<p><img src="../images/flamescope/home-screen.png" alt="flamescope home screen" width="1024"/>
-<img src="../images/flamescope/time-series-view.png" alt="flamescope home screen" width="1024"/>
-<img src="../images/flamescope/selecting-series.png" alt="flamescope home screen" width="1024"/>
-<img src="../images/flamescope/unfiltered-flamegraph.png" alt="flamescope home screen" width="1024"/>
-<img src="../images/flamescope/zoom-in.png" alt="flamescope home screen" width="1024"/></p>
-<h2 id="filtering-results">Filtering Results<a class="headerlink" href="#filtering-results" title="Permanent link">&para;</a></h2>
-<p>There can be a lot of "noise" in the stack traces with <code>libc</code>, <code>v8</code> and <code>libuv</code> calls. It is possible to filter the results to make it more useful, but note this will skew the results. Looking at the graph both filtered and unfiltered can be beneficial. The following <code>sed</code> command will remove the noise from the stack traces.</p>
-<div class="highlight"><pre><span></span><code>sed<span class="w"> </span>-r<span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;/( __libc_start| uv_| LazyCompile | v8::internal::| node::| Builtins_| Builtin:| Stub:| LoadIC:| \\[unknown\\]| LoadPolymorphicIC:)/d&quot;</span><span class="w"> </span>-e<span class="w"> </span><span class="s1">&#39;s/ LazyCompile:[*~]?/ /&#39;</span>
-</code></pre></div>
-<h3 id="unfiltered">Unfiltered<a class="headerlink" href="#unfiltered" title="Permanent link">&para;</a></h3>
-<p><img src="../images/flamescope/unfiltered-flamegraph.png" alt="flamescope home screen" width="1024"/></p>
-<h3 id="filtered">Filtered<a class="headerlink" href="#filtered" title="Permanent link">&para;</a></h3>
-<p><img src="../images/flamescope/filtered-flamegraph.png" alt="flamescope home screen" width="1024"/></p>
-<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
-<h3 id="list-of-web-references">List of Web References<a class="headerlink" href="#list-of-web-references" title="Permanent link">&para;</a></h3>
+<h1 id="simulation-testing">Simulation Testing<a class="headerlink" href="#simulation-testing" title="Permanent link">&para;</a></h1>
+<p>"Sim" testing for Lodestar is the most comprehensive, and complex, testing that is run. The goal is to fully simulate a testnet and to actuate the code in a way that closely mimics what will happen when turning on Lodestar in the wild. This is a very complex task and requires a lot of moving parts to work together. The following sections will describe the various components and how they work together.</p>
+<p>At a very high level, simulation testing will setup a testnet from genesis and let proceed through "normal" execution exactly as the nodes would under production circumstances. To get feedback there are regular checks along the way to asses how the testnet nodes are working. These "assertions" can be added and removed at will to allow developers to check for specific conditions in a tightly controlled, reproducible, environment to get high quality and actionable feedback on how Lodestar performs. The end goal of these tests is to to run a full Lodestar client in an environment that is as close to what an end user would experience.</p>
+<p>These tests usually setup full testnets with multiple consensus clients and their paired execution node. In many instance we are looking to just exercise the Lodestar code but there are some places where there is also testing to see how Lodestar works in relation to the other consensus clients, like Lighthouse. As you can imagine, there is quite a bit of machinery that is responsible for setting up and managing the simulations and assertions. This section will help to go over those bits and pieces. Many, but not all, of these classes can be found in <code>packages/cli/test/utils/simulation</code>.</p>
+<h2 id="running-sim-tests">Running Sim Tests<a class="headerlink" href="#running-sim-tests" title="Permanent link">&para;</a></h2>
+<p>There are a number of sim tests that are available and each has a slightly different purpose. All are run by CI and must pass for a PR to be valid for merging. Most tests require a couple of environment variables to be set.</p>
+<h3 id="environment-variables">Environment Variables<a class="headerlink" href="#environment-variables" title="Permanent link">&para;</a></h3>
+<p>To see what typical values for these are check out the <code>test-sim.yaml</code> workflow file in the <code>.github/workflows</code> directory.</p>
 <ul>
-<li><a href="https://www.brendangregg.com/flamegraphs.html">https://www.brendangregg.com/flamegraphs.html</a></li>
-<li><a href="https://nodejs.org/en/docs/guides/diagnostics-flamegraph">https://nodejs.org/en/docs/guides/diagnostics-flamegraph</a></li>
-<li><a href="https://netflixtechblog.com/netflix-flamescope-a57ca19d47bb">https://netflixtechblog.com/netflix-flamescope-a57ca19d47bb</a></li>
-<li><a href="https://jaanhio.me/blog/nodejs-flamegraph-analysis/">https://jaanhio.me/blog/nodejs-flamegraph-analysis/</a> (this was a great one about filtering methodology)</li>
-<li><a href="https://medium.com/voodoo-engineering/node-js-and-cpu-profiling-on-production-in-real-time-without-downtime-d6e62af173e2">https://medium.com/voodoo-engineering/node-js-and-cpu-profiling-on-production-in-real-time-without-downtime-d6e62af173e2</a></li>
+<li><code>GETH_DOCKER_IMAGE</code>: The geth docker image that will be used</li>
+<li><code>NETHERMIND_IMAGE</code>: The nethermind docker image that will be used</li>
+<li><code>LIGHTHOUSE_IMAGE</code>: The lighthouse docker image that will be used</li>
 </ul>
-<h3 id="visualization-tools">Visualization Tools<a class="headerlink" href="#visualization-tools" title="Permanent link">&para;</a></h3>
+<h3 id="testsimmultifork"><code>test:sim:multifork</code><a class="headerlink" href="#testsimmultifork" title="Permanent link">&para;</a></h3>
+<p>The multi-fork sim test checks most of the functionality Lodestar provides. Is verifies that Lodestar is capable of peering, moving through all of the forks and using various sync methods in a testnet environment. Lodestar is tested with both Geth and Nethermind as the execution client. It also checks a Lighthouse/Geth node for cross client compatibility.</p>
+<div class="highlight"><pre><span></span><code><span class="nv">GETH_DOCKER_IMAGE</span><span class="o">=</span>ethereum/client-go:v1.11.6<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="nv">LIGHTHOUSE_DOCKER_IMAGE</span><span class="o">=</span>sigp/lighthouse:latest-amd64-modern-dev<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="nv">NETHERMIND_DOCKER_IMAGE</span><span class="o">=</span>nethermind/nethermind:1.18.0<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>yarn<span class="w"> </span>workspace<span class="w"> </span>@chainsafe/lodestar<span class="w"> </span>test:sim:multifork
+</code></pre></div>
+<h3 id="testsimendpoints"><code>test:sim:endpoints</code><a class="headerlink" href="#testsimendpoints" title="Permanent link">&para;</a></h3>
+<p>This tests that various endpoints of the beacon node and validator client are working as expected.</p>
+<div class="highlight"><pre><span></span><code><span class="nv">GETH_DOCKER_IMAGE</span><span class="o">=</span>ethereum/client-go:v1.11.6<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>yarn<span class="w"> </span>workspace<span class="w"> </span>@chainsafe/lodestar<span class="w"> </span>test:sim:endpoints
+</code></pre></div>
+<h3 id="testsimdeneb"><code>test:sim:deneb</code><a class="headerlink" href="#testsimdeneb" title="Permanent link">&para;</a></h3>
+<p>This test is still included in our CI but is no longer as important as it once was. Lodestar is often the first client to implement new features and this test was created before geth was upgraded with the features required to support the Deneb fork. To test that Lodestar was ready this test uses mocked geth instances. It is left as a placeholder for when the next fork comes along that requires a similar approach.</p>
+<h3 id="testsimmixedcleint"><code>test:sim:mixedcleint</code><a class="headerlink" href="#testsimmixedcleint" title="Permanent link">&para;</a></h3>
+<p>Checks that Lodestar is compatible with other consensus validators and vice-versa. All tests use Geth as the EL.</p>
+<div class="highlight"><pre><span></span><code><span class="nv">GETH_DOCKER_IMAGE</span><span class="o">=</span>ethereum/client-go:v1.11.6<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="nv">LIGHTHOUSE_DOCKER_IMAGE</span><span class="o">=</span>sigp/lighthouse:latest-amd64-modern-dev<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>yarn<span class="w"> </span>workspace<span class="w"> </span>@chainsafe/lodestar<span class="w"> </span>test:sim:mixedclient
+</code></pre></div>
+<h2 id="sim-test-infrastructure">Sim Test Infrastructure<a class="headerlink" href="#sim-test-infrastructure" title="Permanent link">&para;</a></h2>
+<p>When setting up and running the simulations, interactions with the nodes is through the published node API's. All functionality is actuated via http request and by "plugging in" this way it is possible to run the nodes in a stand-alone fashion, as they would be run in production, but to still achieve a tightly monitored and controlled environment. If code needs to be executed on a "class by class" basis or with mocking involved then the test is not a simulation test and would fall into one of the other testing categories. See the <a href="../testing.md">Testing</a> page for more information on the other types of tests available for Lodestar.</p>
+<h3 id="simulation-environment">Simulation Environment<a class="headerlink" href="#simulation-environment" title="Permanent link">&para;</a></h3>
+<p>The simulation environment has many pieces and those are orchestrated by the <code>SimulationEnvironment</code> class. The testnet nodes will be run as a mixture of Docker containers and bare metal code execution via Node.js. In order to monitor the various clients there is a <code>SimulationTracker</code> that's primary function is to <code>register</code> assertions that will track and gauge how the nodes are doing during the simulation. See the section on <a href="#simulation-assertions">Simulation Assertions</a> below for more information on them. There is an <code>EpochClock</code> that has helper functions related to timing of slots and epochs and there is also a <code>Runner</code> that will help to start/stop the various Docker container and spawn the Node.js child processes as necessary.</p>
+<p>The <code>SimulationEnvironment</code> is the orchestrator for all the various functions to great the test net and start it from genesis. It is also how the various forks are configured to exercise code through various fork transitions.</p>
+<h3 id="simulation-assertions">Simulation Assertions<a class="headerlink" href="#simulation-assertions" title="Permanent link">&para;</a></h3>
+<p>These are the secret sauce for making the simulation tests meaningful. There are several predefined assertions that can be added to a simulation tracker and one can also create custom assertions and add them to the environment. Assertions can be added per slot, per epoch, per fork or per node. They can even be added to check conditions across nodes.</p>
+<p>Assertions are added to the <code>SimulationTracker</code> with the <code>register</code> method and the tracker follows the environment to make sure that assertions are run at the appropriate times, and on the correct targets.</p>
+<p>Assertions are implemented via API calls to the various targets and meta from the API calls is stored and used to assert that the desired conditions were met. Any information that can be retrieved via API call can be added to the assertion <code>stores</code> for validation, and validations can be asserted at a specific time or on an interval.</p>
+<p>There are a number of assertions that are added to simulations by default. They are:</p>
 <ul>
-<li><a href="https://github.com/Netflix/flamescope"><code>flamescope</code></a></li>
+<li><code>inclusionDelayAssertion</code></li>
+<li><code>attestationsCountAssertion</code></li>
+<li><code>attestationParticipationAssertion</code></li>
+<li><code>connectedPeerCountAssertion</code></li>
+<li><code>finalizedAssertion</code></li>
+<li><code>headAssertion</code></li>
+<li><code>missedBlocksAssertion</code></li>
+<li><code>syncCommitteeParticipationAssertion</code></li>
 </ul>
-<h3 id="collecting-on-linux">Collecting on Linux<a class="headerlink" href="#collecting-on-linux" title="Permanent link">&para;</a></h3>
+<p>Because of the flexibility, and complexity, there is a section specifically for how to create custom assertions below. See <a href="#custom-assertions">custom assertions</a> for more info.</p>
+<h3 id="custom-assertions">Custom Assertions<a class="headerlink" href="#custom-assertions" title="Permanent link">&para;</a></h3>
+<p>Check back soon for more information on how to create custom assertions.</p>
+<h3 id="simulation-reports">Simulation Reports<a class="headerlink" href="#simulation-reports" title="Permanent link">&para;</a></h3>
+<p>Sim tests that are run using the simulation framework output a table of information to the console. The table summarizes the state of all of the nodes and the network at each slot.</p>
+<p>Here is an example of the table and how to interpret it:</p>
+<div class="highlight"><pre><span></span><code>┼─────────────────────────────────────────────────────────────────────────────────────────────────┼
+│<span class="w"> </span>fork<span class="w">       </span>│<span class="w"> </span>eph<span class="w">   </span>│<span class="w"> </span>slot<span class="w"> </span>│<span class="w"> </span>head<span class="w">       </span>│<span class="w"> </span>finzed<span class="w">   </span>│<span class="w"> </span>peers<span class="w">    </span>│<span class="w"> </span>attCount<span class="w"> </span>│<span class="w"> </span>incDelay<span class="w"> </span>│<span class="w"> </span>errors<span class="w">     </span>│
+┼─────────────────────────────────────────────────────────────────────────────────────────────────┼
+│<span class="w"> </span>capella<span class="w">    </span>│<span class="w"> </span><span class="m">9</span>/0<span class="w">   </span>│<span class="w"> </span><span class="m">72</span><span class="w">   </span>│<span class="w"> </span>0x95c4..<span class="w">   </span>│<span class="w"> </span><span class="m">56</span><span class="w">       </span>│<span class="w"> </span><span class="m">3</span><span class="w">        </span>│<span class="w"> </span><span class="m">16</span><span class="w">       </span>│<span class="w"> </span><span class="m">1</span>.00<span class="w">     </span>│<span class="w"> </span><span class="m">0</span><span class="w">          </span>│
+│<span class="w"> </span>capella<span class="w">    </span>│<span class="w"> </span><span class="m">9</span>/1<span class="w">   </span>│<span class="w"> </span><span class="m">73</span><span class="w">   </span>│<span class="w"> </span>0x9dfc..<span class="w">   </span>│<span class="w"> </span><span class="m">56</span><span class="w">       </span>│<span class="w"> </span><span class="m">3</span><span class="w">        </span>│<span class="w"> </span><span class="m">16</span><span class="w">       </span>│<span class="w"> </span><span class="m">1</span>.00<span class="w">     </span>│<span class="w"> </span><span class="m">0</span><span class="w">          </span>│
+│<span class="w"> </span>capella<span class="w">    </span>│<span class="w"> </span><span class="m">9</span>/2<span class="w">   </span>│<span class="w"> </span><span class="m">74</span><span class="w">   </span>│<span class="w"> </span>0xdf3f..<span class="w">   </span>│<span class="w"> </span><span class="m">56</span><span class="w">       </span>│<span class="w"> </span><span class="m">3</span><span class="w">        </span>│<span class="w"> </span><span class="m">16</span><span class="w">       </span>│<span class="w"> </span><span class="m">1</span>.00<span class="w">     </span>│<span class="w"> </span><span class="m">0</span><span class="w">          </span>│
+│<span class="w"> </span>capella<span class="w">    </span>│<span class="w"> </span><span class="m">9</span>/3<span class="w">   </span>│<span class="w"> </span><span class="m">75</span><span class="w">   </span>│<span class="w"> </span>0xbeae..<span class="w">   </span>│<span class="w"> </span><span class="m">56</span><span class="w">       </span>│<span class="w"> </span><span class="m">3</span><span class="w">        </span>│<span class="w"> </span><span class="m">16</span><span class="w">       </span>│<span class="w"> </span><span class="m">1</span>.00<span class="w">     </span>│<span class="w"> </span><span class="m">0</span><span class="w">          </span>│
+│<span class="w"> </span>capella<span class="w">    </span>│<span class="w"> </span><span class="m">9</span>/4<span class="w">   </span>│<span class="w"> </span><span class="m">76</span><span class="w">   </span>│<span class="w"> </span>0x15fa..<span class="w">   </span>│<span class="w"> </span><span class="m">56</span><span class="w">       </span>│<span class="w"> </span><span class="m">3</span><span class="w">        </span>│<span class="w"> </span><span class="m">16</span><span class="w">       </span>│<span class="w"> </span><span class="m">1</span>.00<span class="w">     </span>│<span class="w"> </span><span class="m">0</span><span class="w">          </span>│
+│<span class="w"> </span>capella<span class="w">    </span>│<span class="w"> </span><span class="m">9</span>/5<span class="w">   </span>│<span class="w"> </span><span class="m">77</span><span class="w">   </span>│<span class="w"> </span>0xf8ff..<span class="w">   </span>│<span class="w"> </span><span class="m">56</span><span class="w">       </span>│<span class="w"> </span><span class="m">2</span>,3,3,2<span class="w">  </span>│<span class="w"> </span><span class="m">16</span><span class="w">       </span>│<span class="w"> </span><span class="m">1</span>.00<span class="w">     </span>│<span class="w"> </span><span class="m">0</span><span class="w">          </span>│
+│<span class="w"> </span>capella<span class="w">    </span>│<span class="w"> </span><span class="m">9</span>/6<span class="w">   </span>│<span class="w"> </span><span class="m">78</span><span class="w">   </span>│<span class="w"> </span>0x8199..<span class="w">   </span>│<span class="w"> </span><span class="m">56</span><span class="w">       </span>│<span class="w"> </span><span class="m">2</span>,3,3,2<span class="w">  </span>│<span class="w"> </span><span class="m">16</span><span class="w">       </span>│<span class="w"> </span><span class="m">1</span>.20<span class="w">     </span>│<span class="w"> </span><span class="m">0</span><span class="w">          </span>│
+│<span class="w"> </span>capella<span class="w">    </span>│<span class="w"> </span><span class="m">9</span>/7<span class="w">   </span>│<span class="w"> </span><span class="m">79</span><span class="w">   </span>│<span class="w"> </span>different<span class="w">  </span>│<span class="w"> </span><span class="m">56</span><span class="w">       </span>│<span class="w"> </span><span class="m">2</span>,3,3,2<span class="w">  </span>│<span class="w"> </span><span class="m">16</span><span class="w">       </span>│<span class="w"> </span><span class="m">1</span>.50<span class="w">     </span>│<span class="w"> </span><span class="m">2</span><span class="w">          </span>│
+┼─────────────────────────────────────────────────────────────────────────────────────────────────┼
+│<span class="w"> </span>Att<span class="w"> </span>Participation:<span class="w"> </span>H:<span class="w"> </span><span class="m">0</span>.75,<span class="w"> </span>S:<span class="w"> </span><span class="m">1</span>.00,<span class="w"> </span>T:<span class="w"> </span><span class="m">0</span>.75<span class="w"> </span>-<span class="w"> </span>SC<span class="w"> </span>Participation:<span class="w"> </span><span class="m">1</span>.00<span class="w">                           </span>│
+┼─────────────────────────────────────────────────────────────────────────────────────────────────┼
+</code></pre></div>
+<h4 id="slot-information">Slot Information<a class="headerlink" href="#slot-information" title="Permanent link">&para;</a></h4>
 <ul>
-<li><a href="https://www.brendangregg.com/perf.html">https://www.brendangregg.com/perf.html</a></li>
-<li><a href="https://www.brendangregg.com/linuxperf.html">https://www.brendangregg.com/linuxperf.html</a></li>
-<li><a href="https://www.brendangregg.com/blog/2014-09-17/node-flame-graphs-on-linux.html">https://www.brendangregg.com/blog/2014-09-17/node-flame-graphs-on-linux.html</a></li>
-<li><a href="https://perf.wiki.kernel.org/index.php/Main_Page">https://perf.wiki.kernel.org/index.php/Main_Page</a></li>
+<li><code>fork</code>: shows what fork is currently being tested</li>
+<li><code>eph</code>: During simulation tests the Lodestar repo is setup to use 8 slot per epoch so what is shown is the epoch number and the slot number within that epoch as <code>epoch/slot</code></li>
+<li><code>slot</code>: The slot number that is currently being processed</li>
+<li><code>head</code>: If all clients have the the same head the first couple of bytes of the hash are shown. If all clients do not have the same head <code>different</code> is reported.</li>
+<li><code>finzed</code>: Shows the number of the last finalized slot</li>
+<li><code>peers</code>: The number of peers that each node is connected to. If all have the same number then only a single value is shown. If they do not have the same number of peers count for each node is reported in a comma-separated list</li>
+<li><code>attCount</code>: The number of attestations that the node has seen.</li>
+<li><code>incDelay</code>: The average number of slots inclusion delay was experienced for the attestations. Often attestations for the current head arrive more than one slot behind and this value tracks that</li>
+<li><code>errors</code>: The number of errors that were encountered during the slot</li>
 </ul>
-<h3 id="collecting-on-macos">Collecting on MacOS<a class="headerlink" href="#collecting-on-macos" title="Permanent link">&para;</a></h3>
+<h4 id="epoch-information">Epoch Information<a class="headerlink" href="#epoch-information" title="Permanent link">&para;</a></h4>
 <ul>
-<li><a href="https://gist.github.com/zeusdeux/aac6f8500917319213c5">https://gist.github.com/zeusdeux/aac6f8500917319213c5</a></li>
-<li><a href="https://gist.github.com/loderunner/36724cc9ee8db66db305">https://gist.github.com/loderunner/36724cc9ee8db66db305</a></li>
-<li><a href="https://keith.github.io/xcode-man-pages/xctrace.1.html">https://keith.github.io/xcode-man-pages/xctrace.1.html</a></li>
+<li><code>H</code>: The percentage of nodes, at epoch transition, that voted for the head block</li>
+<li><code>S</code>: The percentage of nodes, at epoch transition, that voted for the source block</li>
+<li><code>T</code>: The percentage of nodes, at epoch transition, that voted for the target block</li>
+<li><code>SC Participation</code>: The sync committee participation rate</li>
+</ul>
+<h3 id="simulation-logging">Simulation Logging<a class="headerlink" href="#simulation-logging" title="Permanent link">&para;</a></h3>
+<p>The simulation environment will capture all of the logs from all nodes that are running. The logs can be found in the <code>packages/cli/test-logs</code> directory. The logs are named with the following convention:</p>
+<p><code>&lt;PURPOSE&gt;-&lt;TYPE&gt;_&lt;CLIENT&gt;.log</code></p>
+<p>Some examples are:</p>
+<ul>
+<li><code>node-1-beacon_lodestar.log</code>: The is the first node in the simulation. It is the consensus layer. It is running the lodestar validator client.</li>
+<li><code>range-sync-execution_geth.log</code>: This is the node that was added to test pulling history in range sync mode. It was the execution layer and was running the geth execution client.</li>
 </ul>
 
 
@@ -1806,10 +1802,10 @@ yarn<span class="w"> </span>dev
     </div>
     
     
-    <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.f886a092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../../..", "features": [], "search": "../../../assets/javascripts/workers/search.f886a092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.d7c377c4.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.d7c377c4.min.js"></script>
       
     
   </body>

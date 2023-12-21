@@ -10,26 +10,28 @@
       
       
       
-        <link rel="canonical" href="https://chainsafe.github.io/lodestar/">
+        <link rel="canonical" href="https://chainsafe.github.io/lodestar/beacon-management/syncing/">
       
       
+        <link rel="prev" href="../mev-and-builder-integration/">
       
-        <link rel="next" href="introduction/">
+      
+        <link rel="next" href="../../validator-management/validator-cli/">
       
       
-      <link rel="icon" href="assets/round-icon.ico">
+      <link rel="icon" href="../../assets/round-icon.ico">
       <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.2">
     
     
       
-        <title>Lodestar Documentation</title>
+        <title>Syncing - Lodestar Documentation</title>
       
     
     
-      <link rel="stylesheet" href="assets/stylesheets/main.50c56a3b.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.50c56a3b.min.css">
       
         
-        <link rel="stylesheet" href="assets/stylesheets/palette.06af60db.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
       
       
 
@@ -48,9 +50,9 @@
       
     
     
-      <link rel="stylesheet" href="stylesheets/extras.css">
+      <link rel="stylesheet" href="../../stylesheets/extras.css">
     
-    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -76,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#welcome-to-the-lodestar-documentation" class="md-skip">
+        <a href="#syncing" class="md-skip">
           Skip to content
         </a>
       
@@ -92,9 +94,9 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="." title="Lodestar Documentation" class="md-header__button md-logo" aria-label="Lodestar Documentation" data-md-component="logo">
+    <a href="../.." title="Lodestar Documentation" class="md-header__button md-logo" aria-label="Lodestar Documentation" data-md-component="logo">
       
-  <img src="assets/lodestar_icon_300.png" alt="logo">
+  <img src="../../assets/lodestar_icon_300.png" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -111,7 +113,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Home
+              Syncing
             
           </span>
         </div>
@@ -224,9 +226,9 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="." title="Lodestar Documentation" class="md-nav__button md-logo" aria-label="Lodestar Documentation" data-md-component="logo">
+    <a href="../.." title="Lodestar Documentation" class="md-nav__button md-logo" aria-label="Lodestar Documentation" data-md-component="logo">
       
-  <img src="assets/lodestar_icon_300.png" alt="logo">
+  <img src="../../assets/lodestar_icon_300.png" alt="logo">
 
     </a>
     Lodestar Documentation
@@ -250,28 +252,10 @@
       
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  <span class="md-ellipsis">
-    Home
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="." class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -280,75 +264,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#welcome-to-the-lodestar-documentation" class="md-nav__link">
-    <span class="md-ellipsis">
-      Welcome to the Lodestar documentation!
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Welcome to the Lodestar documentation!">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#getting-started" class="md-nav__link">
-    <span class="md-ellipsis">
-      Getting started
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#specifications" class="md-nav__link">
-    <span class="md-ellipsis">
-      Specifications
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#about-these-docs" class="md-nav__link">
-    <span class="md-ellipsis">
-      About these docs
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#need-assistance" class="md-nav__link">
-    <span class="md-ellipsis">
-      Need assistance?
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -360,7 +275,7 @@
   
   
     <li class="md-nav__item">
-      <a href="introduction/" class="md-nav__link">
+      <a href="../../introduction/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -417,7 +332,7 @@
   
   
     <li class="md-nav__item">
-      <a href="getting-started/quick-start/" class="md-nav__link">
+      <a href="../../getting-started/quick-start/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -438,7 +353,7 @@
   
   
     <li class="md-nav__item">
-      <a href="getting-started/installation/" class="md-nav__link">
+      <a href="../../getting-started/installation/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -459,7 +374,7 @@
   
   
     <li class="md-nav__item">
-      <a href="getting-started/starting-a-node/" class="md-nav__link">
+      <a href="../../getting-started/starting-a-node/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -487,7 +402,7 @@
   
   
     <li class="md-nav__item">
-      <a href="data-retention/" class="md-nav__link">
+      <a href="../../data-retention/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -504,19 +419,21 @@
       
   
   
+    
   
   
+  
     
     
     
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
         
           
           <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
@@ -530,7 +447,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             Beacon Node
@@ -544,7 +461,7 @@
   
   
     <li class="md-nav__item">
-      <a href="beacon-management/beacon-cli/" class="md-nav__link">
+      <a href="../beacon-cli/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -565,7 +482,7 @@
   
   
     <li class="md-nav__item">
-      <a href="beacon-management/networking/" class="md-nav__link">
+      <a href="../networking/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -586,7 +503,7 @@
   
   
     <li class="md-nav__item">
-      <a href="beacon-management/mev-and-builder-integration/" class="md-nav__link">
+      <a href="../mev-and-builder-integration/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -604,10 +521,30 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="beacon-management/syncing/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Syncing
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   <span class="md-ellipsis">
@@ -616,6 +553,95 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#weak-subjectivity" class="md-nav__link">
+    <span class="md-ellipsis">
+      Weak Subjectivity
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#syncing-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      Syncing Methods
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Syncing Methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#checkpoint-sync" class="md-nav__link">
+    <span class="md-ellipsis">
+      Checkpoint Sync
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#historical-sync" class="md-nav__link">
+    <span class="md-ellipsis">
+      Historical Sync
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#range-sync" class="md-nav__link">
+    <span class="md-ellipsis">
+      Range Sync
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#backfill-sync" class="md-nav__link">
+    <span class="md-ellipsis">
+      Backfill Sync
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#syncing-lodestar" class="md-nav__link">
+    <span class="md-ellipsis">
+      Syncing Lodestar
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -672,7 +698,7 @@
   
   
     <li class="md-nav__item">
-      <a href="validator-management/validator-cli/" class="md-nav__link">
+      <a href="../../validator-management/validator-cli/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -737,7 +763,7 @@
   
   
     <li class="md-nav__item">
-      <a href="bootnode/bootnode-cli/" class="md-nav__link">
+      <a href="../../bootnode/bootnode-cli/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -802,7 +828,7 @@
   
   
     <li class="md-nav__item">
-      <a href="lightclient-prover/lightclient/" class="md-nav__link">
+      <a href="../../lightclient-prover/lightclient/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -823,7 +849,7 @@
   
   
     <li class="md-nav__item">
-      <a href="lightclient-prover/lightclient-cli/" class="md-nav__link">
+      <a href="../../lightclient-prover/lightclient-cli/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -844,7 +870,7 @@
   
   
     <li class="md-nav__item">
-      <a href="lightclient-prover/prover/" class="md-nav__link">
+      <a href="../../lightclient-prover/prover/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -909,7 +935,7 @@
   
   
     <li class="md-nav__item">
-      <a href="logging-and-metrics/prometheus-grafana/" class="md-nav__link">
+      <a href="../../logging-and-metrics/prometheus-grafana/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -930,7 +956,7 @@
   
   
     <li class="md-nav__item">
-      <a href="logging-and-metrics/client-monitoring/" class="md-nav__link">
+      <a href="../../logging-and-metrics/client-monitoring/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -958,7 +984,7 @@
   
   
     <li class="md-nav__item">
-      <a href="supporting-libraries/" class="md-nav__link">
+      <a href="../../supporting-libraries/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1015,7 +1041,7 @@
   
   
     <li class="md-nav__item">
-      <a href="contribution/getting-started/" class="md-nav__link">
+      <a href="../../contribution/getting-started/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1036,7 +1062,7 @@
   
   
     <li class="md-nav__item">
-      <a href="contribution/depgraph/" class="md-nav__link">
+      <a href="../../contribution/depgraph/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1094,7 +1120,7 @@
   
   
     <li class="md-nav__item">
-      <a href="contribution/testing/overview.md" class="md-nav__link">
+      <a href="../../contribution/testing/overview.md" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1115,7 +1141,7 @@
   
   
     <li class="md-nav__item">
-      <a href="contribution/testing/simulation-tests/" class="md-nav__link">
+      <a href="../../contribution/testing/simulation-tests/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1188,7 +1214,7 @@
   
   
     <li class="md-nav__item">
-      <a href="tools/flamegraphs/" class="md-nav__link">
+      <a href="../../tools/flamegraphs/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1209,7 +1235,7 @@
   
   
     <li class="md-nav__item">
-      <a href="tools/heap-dumps/" class="md-nav__link">
+      <a href="../../tools/heap-dumps/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1230,7 +1256,7 @@
   
   
     <li class="md-nav__item">
-      <a href="tools/core-dumps/" class="md-nav__link">
+      <a href="../../tools/core-dumps/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1295,7 +1321,7 @@
   
   
     <li class="md-nav__item">
-      <a href="advanced-topics/setting-up-a-testnet/" class="md-nav__link">
+      <a href="../../advanced-topics/setting-up-a-testnet/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1333,6 +1359,8 @@
   
   
   
+    
+  
   
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
@@ -1341,19 +1369,55 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#welcome-to-the-lodestar-documentation" class="md-nav__link">
+  <a href="#weak-subjectivity" class="md-nav__link">
     <span class="md-ellipsis">
-      Welcome to the Lodestar documentation!
+      Weak Subjectivity
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Welcome to the Lodestar documentation!">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#syncing-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      Syncing Methods
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Syncing Methods">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#getting-started" class="md-nav__link">
+  <a href="#checkpoint-sync" class="md-nav__link">
     <span class="md-ellipsis">
-      Getting started
+      Checkpoint Sync
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#historical-sync" class="md-nav__link">
+    <span class="md-ellipsis">
+      Historical Sync
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#range-sync" class="md-nav__link">
+    <span class="md-ellipsis">
+      Range Sync
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#backfill-sync" class="md-nav__link">
+    <span class="md-ellipsis">
+      Backfill Sync
     </span>
   </a>
   
@@ -1365,27 +1429,9 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#specifications" class="md-nav__link">
+  <a href="#syncing-lodestar" class="md-nav__link">
     <span class="md-ellipsis">
-      Specifications
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#about-these-docs" class="md-nav__link">
-    <span class="md-ellipsis">
-      About these docs
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#need-assistance" class="md-nav__link">
-    <span class="md-ellipsis">
-      Need assistance?
+      Syncing Lodestar
     </span>
   </a>
   
@@ -1409,62 +1455,31 @@
   
 
 
-  <h1>Home</h1>
-
-<p><img alt="lodestar logo" src="assets/lodestar_icon_text_black_stroke.png" /></p>
-<h2 id="welcome-to-the-lodestar-documentation">Welcome to the Lodestar documentation!<a class="headerlink" href="#welcome-to-the-lodestar-documentation" title="Permanent link">&para;</a></h2>
-<blockquote>
-<p><strong>Lodestar is an open-source Ethereum Consensus client and Typescript ecosystem, maintained by ChainSafe Systems</strong></p>
-</blockquote>
-<h3 id="getting-started">Getting started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h3>
+<h1 id="syncing">Syncing<a class="headerlink" href="#syncing" title="Permanent link">&para;</a></h1>
+<p>Syncing an Ethereum node involves obtaining a copy of the blockchain data from other peers in the network to reach a consistent state. This process is crucial for new nodes or nodes that have been offline and need to catch up with the network's current state. Syncing can be performed for both the execution layer and the beacon chain, although the focus here will be primarily on the beacon chain.</p>
+<p>Lodestar allows for several methods of syncing however the recommended method is <code>checkpoint sync</code> as it is the fastest and least resource intensive. It is generally a good idea to sync via a <a href="./configuration.md#--checkpointSyncUrl"><code>--checkpointSyncUrl</code></a>. If starting at a specific point is necessary specify the <a href="./configuration.md#--checkpointState"><code>--checkpointState</code></a> that should be where the sync begins.</p>
+<h2 id="weak-subjectivity">Weak Subjectivity<a class="headerlink" href="#weak-subjectivity" title="Permanent link">&para;</a></h2>
+<p>Weak subjectivity is a concept specific to Proof of Stake (PoS) systems, addressing how new nodes can safely join the network and synchronize with the correct blockchain history. Unlike in Proof of Work (PoW) systems, where a node can trust the longest chain due to the significant computational effort required to forge it, PoS systems present different challenges. In PoS, the cost of creating or altering blockchain history is lower, as it is not based on computational work but on the stake held by validators. This difference raises the possibility that an attacker, if possessing sufficient stake, could feasibly create a misleading version of the blockchain history.</p>
+<p>The concept of weak subjectivity becomes particularly crucial in two scenarios: when new nodes join the network and when existing nodes reconnect after a significant period of being offline. During these times, the 'weak subjectivity period' defines a time frame within which a client, upon rejoining, can reliably process blocks to reach the consensus chain head. This approach is essential for mitigating the risks associated with long-range attacks, which could occur if nodes relied solely on the longest chain principle without any initial trust in a specific network state.</p>
+<p>To counter these risks, weak subjectivity requires new nodes to obtain a recent, trusted state of the blockchain from a reliable source upon joining the network. This state includes vital information about the current set of validators and their stakes. Starting from this trusted state helps new nodes avoid being misled by false histories, as any attempt to rewrite history beyond this point would require an unrealistically large portion of the total stake.</p>
+<h2 id="syncing-methods">Syncing Methods<a class="headerlink" href="#syncing-methods" title="Permanent link">&para;</a></h2>
+<h3 id="checkpoint-sync">Checkpoint Sync<a class="headerlink" href="#checkpoint-sync" title="Permanent link">&para;</a></h3>
+<p>Checkpoint sync, also known as state sync, allows a node to sync to a specific state checkpoint without having to process all historical data leading up to that point. In the context of a beacon node, this involves syncing to a recent finalized checkpoint, allowing the node to quickly join the network and participate in consensus activities. This is especially beneficial for new nodes or nodes that have been offline for a considerable duration.</p>
+<h3 id="historical-sync">Historical Sync<a class="headerlink" href="#historical-sync" title="Permanent link">&para;</a></h3>
+<p>Historical sync involves processing all blocks from the genesis block or from a specified starting point to the current block. This is the most comprehensive sync method but also the most resource and time-intensive. For beacon nodes, historical sync is crucial for nodes that aim to maintain a complete history of the beacon chain, facilitating a deeper understanding and analysis of the network's history. In the execution layer, it ensures a complete historical record of the execution layer data.</p>
+<h3 id="range-sync">Range Sync<a class="headerlink" href="#range-sync" title="Permanent link">&para;</a></h3>
+<p>Range sync involves syncing blocks within a specified range, beneficial when a node is only temporarily offline and needs to catch up over a short range. In the beacon node context, this entails requesting and processing blocks within a defined range, ensuring the node quickly gets updated to the current network state.</p>
+<h3 id="backfill-sync">Backfill Sync<a class="headerlink" href="#backfill-sync" title="Permanent link">&para;</a></h3>
+<p>This is another version of checkpoint sync that allows a node that has not been historically synchronized to verify data prior to the checkpoint. It is done via downloading a checkpoint and then fetch blocks backwards from that point until the desired data can be verified. It is a relatively inexpensive sync from a cpu perspective because it only checks the block hashes and verifies the proposer signatures along the way.</p>
+<h2 id="syncing-lodestar">Syncing Lodestar<a class="headerlink" href="#syncing-lodestar" title="Permanent link">&para;</a></h2>
+<p>The implementation of the different syncing styles in Lodestar are actually one of two types under the hood, range sync and unknown-parent sync. Range sync is used when the start point of syncing is known. In the case of historical and checkpoint sync the starting points are well defined, genesis and the last finalized epoch boundary. Snapshot sync is not supported by Lodestar. If the starting point for sync is not known Lodestar must first determine where the starting point is. While the discussion about how that happens is out of scope for this document, the gist is that the beacon node will listen to gossipsub for blocks being broadcast on the network. It will also request <a href="https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/p2p-interface.md#getmetadata"><code>MetaData</code></a> from its peers and use that to start requesting the correct blocks from the network.</p>
+<p>There are several flags that can be used to configure the sync process.</p>
 <ul>
-<li>Follow the installation method for <a href="install/source.md">source install</a>, <a href="install/npm.md">NPM install</a>, or <a href="install/docker.md">Docker install</a> to install Lodestar. Or use our <a href="https://github.com/ChainSafe/lodestar-quickstart">Lodestar Quickstart scripts</a>.</li>
-<li>Use <a href="libraries">Lodestar libraries</a> in your next Ethereum Typescript project.</li>
-<li>Run a beacon node on <a href="usage/beacon-management.md">mainnet or a public testnet</a>.</li>
-<li>Utilize the whole stack by <a href="usage/local">starting a local testnet</a>.</li>
-<li>View the Lodestar <a href="https://chainsafe.github.io/lodestar/reference/cli/">CLI commands and options</a></li>
-<li>Prospective contributors can read the <a href="https://chainsafe.github.io/lodestar/contributing/">contributing section</a> to understand how we develop and test on Lodestar.</li>
-<li>If you have questions <a href="https://github.com/ChainSafe/lodestar/issues/new">submit an issue</a> or join us on <a href="https://discord.gg/yjyvFRP">Discord</a>!</li>
-<li>Please note our <a href="https://github.com/ChainSafe/lodestar/blob/unstable/SECURITY.md">security policy</a>.</li>
-<li>Sign up to our <a href="https://chainsafe.typeform.com/lodestar">mailing list</a> for announcements and any critical information about Lodestar.</li>
+<li><a href="./configuration.md#--checkpointSyncUrl"><code>--checkpointSyncUrl</code></a></li>
+<li><a href="./configuration.md#--checkpointState"><code>--checkpointState</code></a></li>
+<li><a href="./configuration.md#--wssCheckpoint"><code>--wssCheckpoint</code></a></li>
+<li><a href="./configuration.md#--forceCheckpointSync"><code>--forceCheckpointSync</code></a></li>
 </ul>
-<h2 id="specifications">Specifications<a class="headerlink" href="#specifications" title="Permanent link">&para;</a></h2>
-<p>Hardware specifications minimum / recommended, to run the Lodestar client.</p>
-<table>
-<thead>
-<tr>
-<th></th>
-<th>Minimum</th>
-<th>Recommended</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Processor</td>
-<td>Intel Core i5–760 or AMD FX-8100</td>
-<td>Intel Core i7–4770 or AMD FX-8310</td>
-</tr>
-<tr>
-<td>Memory</td>
-<td>4GB RAM</td>
-<td>8GB RAM</td>
-</tr>
-<tr>
-<td>Storage</td>
-<td>20GB available space SSD</td>
-<td>100GB available space SSD</td>
-</tr>
-<tr>
-<td>Internet</td>
-<td>Broadband connection</td>
-<td>Broadband connection</td>
-</tr>
-</tbody>
-</table>
-<h2 id="about-these-docs">About these docs<a class="headerlink" href="#about-these-docs" title="Permanent link">&para;</a></h2>
-<p>This documentation is open source, contribute at <a href="https://github.com/ChainSafe/lodestar/tree/unstable/docs">Github Lodestar repository /docs</a>.</p>
-<h2 id="need-assistance">Need assistance?<a class="headerlink" href="#need-assistance" title="Permanent link">&para;</a></h2>
-<p>If you have questions about this documentation, feel free to talk to us on our <a href="https://discord.gg/yjyvFRP">ChainSafe Discord</a> or <a href="https://github.com/ChainSafe/lodestar/issues/new/choose">open an issue</a> and a member of the team or our community will be happy to assist you.</p>
 
 
 
@@ -1559,10 +1574,10 @@
     </div>
     
     
-    <script id="__config" type="application/json">{"base": ".", "features": [], "search": "assets/javascripts/workers/search.f886a092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.f886a092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="assets/javascripts/bundle.d7c377c4.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7c377c4.min.js"></script>
       
     
   </body>

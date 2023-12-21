@@ -10,26 +10,28 @@
       
       
       
-        <link rel="canonical" href="https://chainsafe.github.io/lodestar/">
+        <link rel="canonical" href="https://chainsafe.github.io/lodestar/beacon-management/networking/">
       
       
+        <link rel="prev" href="../beacon-cli/">
       
-        <link rel="next" href="introduction/">
+      
+        <link rel="next" href="../mev-and-builder-integration/">
       
       
-      <link rel="icon" href="assets/round-icon.ico">
+      <link rel="icon" href="../../assets/round-icon.ico">
       <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.2">
     
     
       
-        <title>Lodestar Documentation</title>
+        <title>Networking - Lodestar Documentation</title>
       
     
     
-      <link rel="stylesheet" href="assets/stylesheets/main.50c56a3b.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.50c56a3b.min.css">
       
         
-        <link rel="stylesheet" href="assets/stylesheets/palette.06af60db.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
       
       
 
@@ -48,9 +50,9 @@
       
     
     
-      <link rel="stylesheet" href="stylesheets/extras.css">
+      <link rel="stylesheet" href="../../stylesheets/extras.css">
     
-    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -76,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#welcome-to-the-lodestar-documentation" class="md-skip">
+        <a href="#networking" class="md-skip">
           Skip to content
         </a>
       
@@ -92,9 +94,9 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="." title="Lodestar Documentation" class="md-header__button md-logo" aria-label="Lodestar Documentation" data-md-component="logo">
+    <a href="../.." title="Lodestar Documentation" class="md-header__button md-logo" aria-label="Lodestar Documentation" data-md-component="logo">
       
-  <img src="assets/lodestar_icon_300.png" alt="logo">
+  <img src="../../assets/lodestar_icon_300.png" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -111,7 +113,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Home
+              Networking
             
           </span>
         </div>
@@ -224,9 +226,9 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="." title="Lodestar Documentation" class="md-nav__button md-logo" aria-label="Lodestar Documentation" data-md-component="logo">
+    <a href="../.." title="Lodestar Documentation" class="md-nav__button md-logo" aria-label="Lodestar Documentation" data-md-component="logo">
       
-  <img src="assets/lodestar_icon_300.png" alt="logo">
+  <img src="../../assets/lodestar_icon_300.png" alt="logo">
 
     </a>
     Lodestar Documentation
@@ -250,28 +252,10 @@
       
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  <span class="md-ellipsis">
-    Home
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="." class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -280,75 +264,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#welcome-to-the-lodestar-documentation" class="md-nav__link">
-    <span class="md-ellipsis">
-      Welcome to the Lodestar documentation!
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Welcome to the Lodestar documentation!">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#getting-started" class="md-nav__link">
-    <span class="md-ellipsis">
-      Getting started
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#specifications" class="md-nav__link">
-    <span class="md-ellipsis">
-      Specifications
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#about-these-docs" class="md-nav__link">
-    <span class="md-ellipsis">
-      About these docs
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#need-assistance" class="md-nav__link">
-    <span class="md-ellipsis">
-      Need assistance?
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -360,7 +275,7 @@
   
   
     <li class="md-nav__item">
-      <a href="introduction/" class="md-nav__link">
+      <a href="../../introduction/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -417,7 +332,7 @@
   
   
     <li class="md-nav__item">
-      <a href="getting-started/quick-start/" class="md-nav__link">
+      <a href="../../getting-started/quick-start/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -438,7 +353,7 @@
   
   
     <li class="md-nav__item">
-      <a href="getting-started/installation/" class="md-nav__link">
+      <a href="../../getting-started/installation/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -459,7 +374,7 @@
   
   
     <li class="md-nav__item">
-      <a href="getting-started/starting-a-node/" class="md-nav__link">
+      <a href="../../getting-started/starting-a-node/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -487,7 +402,7 @@
   
   
     <li class="md-nav__item">
-      <a href="data-retention/" class="md-nav__link">
+      <a href="../../data-retention/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -504,19 +419,21 @@
       
   
   
+    
   
   
+  
     
     
     
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
         
           
           <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
@@ -530,7 +447,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             Beacon Node
@@ -544,7 +461,7 @@
   
   
     <li class="md-nav__item">
-      <a href="beacon-management/beacon-cli/" class="md-nav__link">
+      <a href="../beacon-cli/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -562,10 +479,30 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="beacon-management/networking/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Networking
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   <span class="md-ellipsis">
@@ -574,6 +511,113 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#networking-flags" class="md-nav__link">
+    <span class="md-ellipsis">
+      Networking Flags
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#peer-discovery-discv5" class="md-nav__link">
+    <span class="md-ellipsis">
+      Peer Discovery (Discv5)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#enr" class="md-nav__link">
+    <span class="md-ellipsis">
+      ENR
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#peer-communication-gossipsub-and-reqresp" class="md-nav__link">
+    <span class="md-ellipsis">
+      Peer Communication (gossipsub and ReqResp)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Peer Communication (gossipsub and ReqResp)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#gossipsub" class="md-nav__link">
+    <span class="md-ellipsis">
+      Gossipsub
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reqresp" class="md-nav__link">
+    <span class="md-ellipsis">
+      ReqResp
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-transport-libp2p" class="md-nav__link">
+    <span class="md-ellipsis">
+      Data Transport (libp2p)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#firewall-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      Firewall Management
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#nat-traversal" class="md-nav__link">
+    <span class="md-ellipsis">
+      NAT Traversal
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -586,7 +630,7 @@
   
   
     <li class="md-nav__item">
-      <a href="beacon-management/mev-and-builder-integration/" class="md-nav__link">
+      <a href="../mev-and-builder-integration/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -607,7 +651,7 @@
   
   
     <li class="md-nav__item">
-      <a href="beacon-management/syncing/" class="md-nav__link">
+      <a href="../syncing/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -672,7 +716,7 @@
   
   
     <li class="md-nav__item">
-      <a href="validator-management/validator-cli/" class="md-nav__link">
+      <a href="../../validator-management/validator-cli/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -737,7 +781,7 @@
   
   
     <li class="md-nav__item">
-      <a href="bootnode/bootnode-cli/" class="md-nav__link">
+      <a href="../../bootnode/bootnode-cli/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -802,7 +846,7 @@
   
   
     <li class="md-nav__item">
-      <a href="lightclient-prover/lightclient/" class="md-nav__link">
+      <a href="../../lightclient-prover/lightclient/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -823,7 +867,7 @@
   
   
     <li class="md-nav__item">
-      <a href="lightclient-prover/lightclient-cli/" class="md-nav__link">
+      <a href="../../lightclient-prover/lightclient-cli/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -844,7 +888,7 @@
   
   
     <li class="md-nav__item">
-      <a href="lightclient-prover/prover/" class="md-nav__link">
+      <a href="../../lightclient-prover/prover/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -909,7 +953,7 @@
   
   
     <li class="md-nav__item">
-      <a href="logging-and-metrics/prometheus-grafana/" class="md-nav__link">
+      <a href="../../logging-and-metrics/prometheus-grafana/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -930,7 +974,7 @@
   
   
     <li class="md-nav__item">
-      <a href="logging-and-metrics/client-monitoring/" class="md-nav__link">
+      <a href="../../logging-and-metrics/client-monitoring/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -958,7 +1002,7 @@
   
   
     <li class="md-nav__item">
-      <a href="supporting-libraries/" class="md-nav__link">
+      <a href="../../supporting-libraries/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1015,7 +1059,7 @@
   
   
     <li class="md-nav__item">
-      <a href="contribution/getting-started/" class="md-nav__link">
+      <a href="../../contribution/getting-started/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1036,7 +1080,7 @@
   
   
     <li class="md-nav__item">
-      <a href="contribution/depgraph/" class="md-nav__link">
+      <a href="../../contribution/depgraph/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1094,7 +1138,7 @@
   
   
     <li class="md-nav__item">
-      <a href="contribution/testing/overview.md" class="md-nav__link">
+      <a href="../../contribution/testing/overview.md" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1115,7 +1159,7 @@
   
   
     <li class="md-nav__item">
-      <a href="contribution/testing/simulation-tests/" class="md-nav__link">
+      <a href="../../contribution/testing/simulation-tests/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1188,7 +1232,7 @@
   
   
     <li class="md-nav__item">
-      <a href="tools/flamegraphs/" class="md-nav__link">
+      <a href="../../tools/flamegraphs/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1209,7 +1253,7 @@
   
   
     <li class="md-nav__item">
-      <a href="tools/heap-dumps/" class="md-nav__link">
+      <a href="../../tools/heap-dumps/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1230,7 +1274,7 @@
   
   
     <li class="md-nav__item">
-      <a href="tools/core-dumps/" class="md-nav__link">
+      <a href="../../tools/core-dumps/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1295,7 +1339,7 @@
   
   
     <li class="md-nav__item">
-      <a href="advanced-topics/setting-up-a-testnet/" class="md-nav__link">
+      <a href="../../advanced-topics/setting-up-a-testnet/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1333,6 +1377,8 @@
   
   
   
+    
+  
   
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
@@ -1341,19 +1387,55 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#welcome-to-the-lodestar-documentation" class="md-nav__link">
+  <a href="#networking-flags" class="md-nav__link">
     <span class="md-ellipsis">
-      Welcome to the Lodestar documentation!
+      Networking Flags
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Welcome to the Lodestar documentation!">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#peer-discovery-discv5" class="md-nav__link">
+    <span class="md-ellipsis">
+      Peer Discovery (Discv5)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#enr" class="md-nav__link">
+    <span class="md-ellipsis">
+      ENR
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#peer-communication-gossipsub-and-reqresp" class="md-nav__link">
+    <span class="md-ellipsis">
+      Peer Communication (gossipsub and ReqResp)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Peer Communication (gossipsub and ReqResp)">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#getting-started" class="md-nav__link">
+  <a href="#gossipsub" class="md-nav__link">
     <span class="md-ellipsis">
-      Getting started
+      Gossipsub
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reqresp" class="md-nav__link">
+    <span class="md-ellipsis">
+      ReqResp
     </span>
   </a>
   
@@ -1365,27 +1447,27 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#specifications" class="md-nav__link">
+  <a href="#data-transport-libp2p" class="md-nav__link">
     <span class="md-ellipsis">
-      Specifications
+      Data Transport (libp2p)
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#about-these-docs" class="md-nav__link">
+  <a href="#firewall-management" class="md-nav__link">
     <span class="md-ellipsis">
-      About these docs
+      Firewall Management
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#need-assistance" class="md-nav__link">
+  <a href="#nat-traversal" class="md-nav__link">
     <span class="md-ellipsis">
-      Need assistance?
+      NAT Traversal
     </span>
   </a>
   
@@ -1409,62 +1491,72 @@
   
 
 
-  <h1>Home</h1>
-
-<p><img alt="lodestar logo" src="assets/lodestar_icon_text_black_stroke.png" /></p>
-<h2 id="welcome-to-the-lodestar-documentation">Welcome to the Lodestar documentation!<a class="headerlink" href="#welcome-to-the-lodestar-documentation" title="Permanent link">&para;</a></h2>
-<blockquote>
-<p><strong>Lodestar is an open-source Ethereum Consensus client and Typescript ecosystem, maintained by ChainSafe Systems</strong></p>
-</blockquote>
-<h3 id="getting-started">Getting started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h3>
+<h1 id="networking">Networking<a class="headerlink" href="#networking" title="Permanent link">&para;</a></h1>
+<p>Starting up Lodestar will automatically connect it to peers on the network. Peers are found through the discv5 protocol and one peers are established communications happen via gossipsub over libp2p. While not necessary, having a basic understanding of how the various protocols and transport work will help with debugging and troubleshooting as some of the more common challenges come up with <a href="#firewall-management">firewalls</a> and <a href="#nat-traversal">NAT traversal</a>.</p>
+<h2 id="networking-flags">Networking Flags<a class="headerlink" href="#networking-flags" title="Permanent link">&para;</a></h2>
+<p>Some of the important Lodestar flags related to networking are:</p>
 <ul>
-<li>Follow the installation method for <a href="install/source.md">source install</a>, <a href="install/npm.md">NPM install</a>, or <a href="install/docker.md">Docker install</a> to install Lodestar. Or use our <a href="https://github.com/ChainSafe/lodestar-quickstart">Lodestar Quickstart scripts</a>.</li>
-<li>Use <a href="libraries">Lodestar libraries</a> in your next Ethereum Typescript project.</li>
-<li>Run a beacon node on <a href="usage/beacon-management.md">mainnet or a public testnet</a>.</li>
-<li>Utilize the whole stack by <a href="usage/local">starting a local testnet</a>.</li>
-<li>View the Lodestar <a href="https://chainsafe.github.io/lodestar/reference/cli/">CLI commands and options</a></li>
-<li>Prospective contributors can read the <a href="https://chainsafe.github.io/lodestar/contributing/">contributing section</a> to understand how we develop and test on Lodestar.</li>
-<li>If you have questions <a href="https://github.com/ChainSafe/lodestar/issues/new">submit an issue</a> or join us on <a href="https://discord.gg/yjyvFRP">Discord</a>!</li>
-<li>Please note our <a href="https://github.com/ChainSafe/lodestar/blob/unstable/SECURITY.md">security policy</a>.</li>
-<li>Sign up to our <a href="https://chainsafe.typeform.com/lodestar">mailing list</a> for announcements and any critical information about Lodestar.</li>
+<li><a href="./configuration.md#--discv5"><code>--discv5</code></a></li>
+<li><a href="./configuration.md#--listenAddress"><code>--listenAddress</code></a></li>
+<li><a href="./configuration.md#--port"><code>--port</code></a></li>
+<li><a href="./configuration.md#--discoveryPort"><code>--discoveryPort</code></a></li>
+<li><a href="./configuration.md#--listenAddress6"><code>--listenAddress6</code></a></li>
+<li><a href="./configuration.md#--port6"><code>--port6</code></a></li>
+<li><a href="./configuration.md#--discoveryPort6"><code>--discoveryPort6</code></a></li>
+<li><a href="./configuration.md#--bootnodes"><code>--bootnodes</code></a></li>
+<li><a href="./configuration.md#--deterministicLongLivedAttnets"><code>--deterministicLongLivedAttnets</code></a></li>
+<li><a href="./configuration.md#--subscribeAllSubnets"><code>--subscribeAllSubnets</code></a></li>
+<li><a href="./configuration.md#--disablePeerScoring"><code>--disablePeerScoring</code></a></li>
+<li><a href="./configuration.md#--enr.ip"><code>--enr.ip</code></a></li>
+<li><a href="./configuration.md#--enr.tcp"><code>--enr.tcp</code></a></li>
+<li><a href="./configuration.md#--enr.udp"><code>--enr.udp</code></a></li>
+<li><a href="./configuration.md#--enr.ip6"><code>--enr.ip6</code></a></li>
+<li><a href="./configuration.md#--enr.tcp6"><code>--enr.tcp6</code></a></li>
+<li><a href="./configuration.md#--enr.udp6"><code>--enr.udp6</code></a></li>
+<li><a href="./configuration.md#--nat"><code>--nat</code></a></li>
+<li><a href="./configuration.md#--private"><code>--private</code></a></li>
 </ul>
-<h2 id="specifications">Specifications<a class="headerlink" href="#specifications" title="Permanent link">&para;</a></h2>
-<p>Hardware specifications minimum / recommended, to run the Lodestar client.</p>
-<table>
-<thead>
-<tr>
-<th></th>
-<th>Minimum</th>
-<th>Recommended</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Processor</td>
-<td>Intel Core i5–760 or AMD FX-8100</td>
-<td>Intel Core i7–4770 or AMD FX-8310</td>
-</tr>
-<tr>
-<td>Memory</td>
-<td>4GB RAM</td>
-<td>8GB RAM</td>
-</tr>
-<tr>
-<td>Storage</td>
-<td>20GB available space SSD</td>
-<td>100GB available space SSD</td>
-</tr>
-<tr>
-<td>Internet</td>
-<td>Broadband connection</td>
-<td>Broadband connection</td>
-</tr>
-</tbody>
-</table>
-<h2 id="about-these-docs">About these docs<a class="headerlink" href="#about-these-docs" title="Permanent link">&para;</a></h2>
-<p>This documentation is open source, contribute at <a href="https://github.com/ChainSafe/lodestar/tree/unstable/docs">Github Lodestar repository /docs</a>.</p>
-<h2 id="need-assistance">Need assistance?<a class="headerlink" href="#need-assistance" title="Permanent link">&para;</a></h2>
-<p>If you have questions about this documentation, feel free to talk to us on our <a href="https://discord.gg/yjyvFRP">ChainSafe Discord</a> or <a href="https://github.com/ChainSafe/lodestar/issues/new/choose">open an issue</a> and a member of the team or our community will be happy to assist you.</p>
+<h2 id="peer-discovery-discv5">Peer Discovery (Discv5)<a class="headerlink" href="#peer-discovery-discv5" title="Permanent link">&para;</a></h2>
+<p>In Ethereum, discv5 plays a pivotal role in the peer discovery process, facilitating nodes to find and locate each other in order to form the peer-to-peer network​. The process begins with an interaction between new nodes and bootnodes at start-up. Bootnodes are nodes with hard-coded addresses, or can be overridden via the cli flag <code>--bootnodes</code>, to bootstrap the discovery process​. Through a method called FINDNODE-NODES, a new node establishes a bond with each bootnode, and it returns a list of peers for the new node to connect to. Following this trail, the new node engages through FINDNODE-NODES with the provided peers to further establish a web of connections​.</p>
+<p>Discv5 operates as a peer advertisement medium in this network, where nodes can act as both providers and consumers of data. Every participating node in the Discv5 protocol discovers peer data from other nodes and later relays it, making the discovery process dynamic and efficient​.</p>
+<p>Discv5 is designed to be a standalone protocol running via UDP on a dedicated port solely for peer discovery. Peer data is exchanged via self-certified, flexible peer records (ENRs). These key features cater to the Ethereum network​ and being a good peer often means running a discv5 worker​. Lodestar offers simple configuration to setup and run a bootnode independently of a beacon node. See <a href="./bootnode.md">bootnode</a> for more information and configuration options.</p>
+<h2 id="enr">ENR<a class="headerlink" href="#enr" title="Permanent link">&para;</a></h2>
+<p>Ethereum Node Records (ENRs) are a standardized format utilized for peer discovery - see <a href="https://eips.ethereum.org/EIPS/eip-778">EIP-778</a> for the specification. An ENR consists of a set of key-value pairs. These pairs include crucial information such as the node's ID, IP address, the port on which it's listening, and the protocols it supports. This information helps other nodes in the network locate and connect to the node.</p>
+<p>The primary purpose of ENRs is to facilitate node discovery and connectivity in the Ethereum network. Nodes use ENRs to announce their presence and capabilities to other nodes, making it easier to establish and maintain a robust, interconnected network.</p>
+<p>Note that bootnodes are announced via ENR.</p>
+<h2 id="peer-communication-gossipsub-and-reqresp">Peer Communication (gossipsub and ReqResp)<a class="headerlink" href="#peer-communication-gossipsub-and-reqresp" title="Permanent link">&para;</a></h2>
+<p>Gossipsub and ReqResp are the two mechanisms that beacon nodes use to exchange chain data. Gossipsub is used disseminate the most recent relevant data proactively throughout the network. ReqResp is used to directly ask specific peers for specific information (eg: during syncing).</p>
+<h3 id="gossipsub">Gossipsub<a class="headerlink" href="#gossipsub" title="Permanent link">&para;</a></h3>
+<p>GossipSub is a foundational protocol in peer-to-peer (P2P) communication, particularly decentralized networks like Ethereum and IPFS. At its core, GossipSub efficiently propagates data, filtered by topic, through a P2P network. It organizes peers into a collection of overlay networks, each associated with a distinct topic. By routing data through relevant overlay networks based on topics of interest, large amounts of data can be efficiently disseminated without excessive bandwidth, latency, etc.</p>
+<p>In GossipSub, nodes can subscribe to topics, effectively joining the corresponding overlay to receive messages published to a specific topic. This topic-based structure enables nodes to congregate around shared interests, ensuring that relevant messages are delivered to all interested parties. Each message published to a topic gets disseminated and relayed to all subscribed peers, similar to a chat room.</p>
+<p>Messages are propagated through a blend of eager-push and lazy-pull models. Specifically, the protocol employs "mesh links" to carry full messages actively and "gossip links" to carry only message identifiers (lazy-pull propagation model). This hybrid approach allows for both active message propagation and reactive message retrieval​ which is an extension of the traditional hub-and-spoke pub/sub model.</p>
+<h3 id="reqresp">ReqResp<a class="headerlink" href="#reqresp" title="Permanent link">&para;</a></h3>
+<p>ReqResp is the domain of protocols that establish a flexible, on-demand mechanism to retrieve historical data and data missed by gossip. This family of methods, implemented as separate libp2p protocols, operate between a single requester and responder. A method is initiated via a libp2p protocol ID, with the initiator sending a request message and the responder sending a response message. Every method defines a specific request and response message type, and a specific protocol ID. This framework also facilitates streaming responses and robust error handling.</p>
+<h2 id="data-transport-libp2p">Data Transport (libp2p)<a class="headerlink" href="#data-transport-libp2p" title="Permanent link">&para;</a></h2>
+<p>Libp2p is a modular and extensible network stack that serves as the data transport layer below both gossipsub and ReqResp and facilitates the lower-level peer-to-peer communications. It provides a suite of protocols for various networking functionalities including network transports, connection encryption and protocol multiplexing. Its modular design allows for the easy addition, replacement, or upgrading of protocols, ensuring an adaptable and evolving networking stack.</p>
+<p>Libp2p operates at the lower levels of the OSI model, particularly at the Transport and Network layers. Libp2p supports both TCP and UDP protocols for establishing connections and data transmission. Combined with libp2p's modular design it can integrate with various networking technologies to facilitating both routing and addressing.</p>
+<h2 id="firewall-management">Firewall Management<a class="headerlink" href="#firewall-management" title="Permanent link">&para;</a></h2>
+<p>If your setup is behind a firewall there are a few ports that will need to be opened to allow for P2P discovery and communication. There are also some ports that need to be protected to prevent unwanted access or DDOS attacks on your node.</p>
+<p>Ports that should be opened:</p>
+<ul>
+<li>30303/TCP+UDP - Execution layer p2p communication port</li>
+<li>9000/TCP+UDP - Beacon Node P2P communication port</li>
+<li>9090/TCP - Lodestar IPv6 P2P communication port</li>
+<li>13000/TCP - Prysm P2P communication port</li>
+<li>12000/UDP - Prysm P2P communication port</li>
+</ul>
+<p>Ports that should be inbound protected:</p>
+<ul>
+<li>9596/TCP - Lodestar Beacon-Node JSON RPC api calls</li>
+<li>5062/TCP - Lodestar validator key manager api calls</li>
+<li>18550/TCP - Lodestar MEV Boost/Builder port</li>
+<li>8008/TCP - Lodestar Metrics</li>
+<li>5064/TCP - Validator Metrics</li>
+<li>8545/TCP - Execution client JSON RPC port api calls</li>
+<li>8551/TCP - Execution engine port for Lodestar to communicate with the execution client</li>
+</ul>
+<h2 id="nat-traversal">NAT Traversal<a class="headerlink" href="#nat-traversal" title="Permanent link">&para;</a></h2>
+<p>Lodestar does not support UPnP. If you are behind a NAT you will need to manually forward the ports listed above.</p>
 
 
 
@@ -1559,10 +1651,10 @@
     </div>
     
     
-    <script id="__config" type="application/json">{"base": ".", "features": [], "search": "assets/javascripts/workers/search.f886a092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.f886a092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="assets/javascripts/bundle.d7c377c4.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7c377c4.min.js"></script>
       
     
   </body>

@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://chainsafe.github.io/lodestar/tools/flamegraphs/">
+        <link rel="canonical" href="https://chainsafe.github.io/lodestar/tools/heap-dumps/">
       
       
-        <link rel="prev" href="../../contribution/testing/simulation-tests/">
+        <link rel="prev" href="../flamegraphs/">
       
       
-        <link rel="next" href="../heap-dumps/">
+        <link rel="next" href="../core-dumps/">
       
       
       <link rel="icon" href="../../assets/round-icon.ico">
@@ -24,7 +24,7 @@
     
     
       
-        <title>Flame Graphs - Lodestar Documentation</title>
+        <title>Heap Dumps - Lodestar Documentation</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#generating-flamegraphs-for-a-running-node-service-on-linux" class="md-skip">
+        <a href="#heap-dump-analysis" class="md-skip">
           Skip to content
         </a>
       
@@ -113,7 +113,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Flame Graphs
+              Heap Dumps
             
           </span>
         </div>
@@ -1102,6 +1102,27 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../flamegraphs/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Flame Graphs
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
     
   
   
@@ -1118,7 +1139,7 @@
           
   
   <span class="md-ellipsis">
-    Flame Graphs
+    Heap Dumps
   </span>
   
 
@@ -1129,7 +1150,7 @@
         
   
   <span class="md-ellipsis">
-    Flame Graphs
+    Heap Dumps
   </span>
   
 
@@ -1151,28 +1172,37 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#modifying-linux-and-lodestar" class="md-nav__link">
+  <a href="#javascript-heap-dump" class="md-nav__link">
     <span class="md-ellipsis">
-      Modifying Linux and Lodestar
+      JavaScript Heap Dump
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Modifying Linux and Lodestar">
+    <nav class="md-nav" aria-label="JavaScript Heap Dump">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#example-start_lodestarsh" class="md-nav__link">
+  <a href="#creating-a-v8-heap-dump" class="md-nav__link">
     <span class="md-ellipsis">
-      Example start_lodestar.sh
+      Creating a V8 heap dump
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#capturing-stack-traces" class="md-nav__link">
+  <a href="#viewing-a-v8-heap-dump" class="md-nav__link">
     <span class="md-ellipsis">
-      Capturing Stack Traces
+      Viewing a V8 heap dump
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#analyzing-a-v8-heap-dump" class="md-nav__link">
+    <span class="md-ellipsis">
+      Analyzing a V8 heap dump
     </span>
   </a>
   
@@ -1184,106 +1214,55 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#rendering-a-flamegraph" class="md-nav__link">
+  <a href="#native-heap-dump" class="md-nav__link">
     <span class="md-ellipsis">
-      Rendering a Flamegraph
+      Native Heap Dump
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#installation" class="md-nav__link">
-    <span class="md-ellipsis">
-      Installation
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#filtering-results" class="md-nav__link">
-    <span class="md-ellipsis">
-      Filtering Results
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Filtering Results">
+    <nav class="md-nav" aria-label="Native Heap Dump">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#unfiltered" class="md-nav__link">
+  <a href="#build-collection-tools" class="md-nav__link">
     <span class="md-ellipsis">
-      Unfiltered
+      Build collection tools
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#filtered" class="md-nav__link">
+  <a href="#collect-a-heap-dump" class="md-nav__link">
     <span class="md-ellipsis">
-      Filtered
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#references" class="md-nav__link">
-    <span class="md-ellipsis">
-      References
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="References">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#list-of-web-references" class="md-nav__link">
-    <span class="md-ellipsis">
-      List of Web References
+      Collect a heap dump
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#visualization-tools" class="md-nav__link">
+  <a href="#collecting-a-heap-dump-on-a-running-process" class="md-nav__link">
     <span class="md-ellipsis">
-      Visualization Tools
+      Collecting a heap dump on a running process
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#collecting-on-linux" class="md-nav__link">
+  <a href="#installing-heaptrack-gui-on-linux" class="md-nav__link">
     <span class="md-ellipsis">
-      Collecting on Linux
+      Installing heaptrack-gui on Linux
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#collecting-on-macos" class="md-nav__link">
+  <a href="#installing-heaptrack-gui-on-osx" class="md-nav__link">
     <span class="md-ellipsis">
-      Collecting on MacOS
+      Installing heaptrack-gui on OSX
     </span>
   </a>
   
@@ -1298,27 +1277,6 @@
   
 </nav>
       
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../heap-dumps/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Heap Dumps
-  </span>
-  
-
-      </a>
     </li>
   
 
@@ -1444,28 +1402,37 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#modifying-linux-and-lodestar" class="md-nav__link">
+  <a href="#javascript-heap-dump" class="md-nav__link">
     <span class="md-ellipsis">
-      Modifying Linux and Lodestar
+      JavaScript Heap Dump
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Modifying Linux and Lodestar">
+    <nav class="md-nav" aria-label="JavaScript Heap Dump">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#example-start_lodestarsh" class="md-nav__link">
+  <a href="#creating-a-v8-heap-dump" class="md-nav__link">
     <span class="md-ellipsis">
-      Example start_lodestar.sh
+      Creating a V8 heap dump
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#capturing-stack-traces" class="md-nav__link">
+  <a href="#viewing-a-v8-heap-dump" class="md-nav__link">
     <span class="md-ellipsis">
-      Capturing Stack Traces
+      Viewing a V8 heap dump
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#analyzing-a-v8-heap-dump" class="md-nav__link">
+    <span class="md-ellipsis">
+      Analyzing a V8 heap dump
     </span>
   </a>
   
@@ -1477,106 +1444,55 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#rendering-a-flamegraph" class="md-nav__link">
+  <a href="#native-heap-dump" class="md-nav__link">
     <span class="md-ellipsis">
-      Rendering a Flamegraph
+      Native Heap Dump
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#installation" class="md-nav__link">
-    <span class="md-ellipsis">
-      Installation
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#filtering-results" class="md-nav__link">
-    <span class="md-ellipsis">
-      Filtering Results
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Filtering Results">
+    <nav class="md-nav" aria-label="Native Heap Dump">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#unfiltered" class="md-nav__link">
+  <a href="#build-collection-tools" class="md-nav__link">
     <span class="md-ellipsis">
-      Unfiltered
+      Build collection tools
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#filtered" class="md-nav__link">
+  <a href="#collect-a-heap-dump" class="md-nav__link">
     <span class="md-ellipsis">
-      Filtered
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#references" class="md-nav__link">
-    <span class="md-ellipsis">
-      References
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="References">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#list-of-web-references" class="md-nav__link">
-    <span class="md-ellipsis">
-      List of Web References
+      Collect a heap dump
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#visualization-tools" class="md-nav__link">
+  <a href="#collecting-a-heap-dump-on-a-running-process" class="md-nav__link">
     <span class="md-ellipsis">
-      Visualization Tools
+      Collecting a heap dump on a running process
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#collecting-on-linux" class="md-nav__link">
+  <a href="#installing-heaptrack-gui-on-linux" class="md-nav__link">
     <span class="md-ellipsis">
-      Collecting on Linux
+      Installing heaptrack-gui on Linux
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#collecting-on-macos" class="md-nav__link">
+  <a href="#installing-heaptrack-gui-on-osx" class="md-nav__link">
     <span class="md-ellipsis">
-      Collecting on MacOS
+      Installing heaptrack-gui on OSX
     </span>
   </a>
   
@@ -1605,113 +1521,223 @@
   
 
 
-<h1 id="generating-flamegraphs-for-a-running-node-service-on-linux">Generating Flamegraphs for a Running Node Service on Linux<a class="headerlink" href="#generating-flamegraphs-for-a-running-node-service-on-linux" title="Permanent link">&para;</a></h1>
-<p>This guide assumes a running instance of Lodestar and will walk through how to generate a flamegraph for the process while running on Linux. While it is possible to run Lodestar in a number of ways, for performance profiling it is recommended to not use Dockerized implementations. It is best to run Lodestar as a service on a Linux machine. Follow the Lodestar docs to get the service installed and running. Then come back here when you are ready to generate the flamegraph.</p>
-<h2 id="modifying-linux-and-lodestar">Modifying Linux and Lodestar<a class="headerlink" href="#modifying-linux-and-lodestar" title="Permanent link">&para;</a></h2>
-<p>Use the following two commands to install <code>perf</code> for generating the stack traces. You may get a warning about needing to restart the VM due to kernel updates. This is nothing to be concerned with and if so, cancel out of the restart dialog.</p>
-<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>linux-tools-common<span class="w"> </span>linux-tools-generic
-sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>linux-tools-<span class="sb">`</span>uname<span class="w"> </span>-r<span class="sb">`</span><span class="w">  </span><span class="c1"># empirically this throws if run on the same line above</span>
+<h1 id="heap-dump-analysis">Heap Dump Analysis<a class="headerlink" href="#heap-dump-analysis" title="Permanent link">&para;</a></h1>
+<p>There are a number of reason why one would want to do a heap dump but in particular, they are helpful for find memory intensive operations and leaks. There are two major types of heap dumps that are available to node developers. The first is a JavaScript heap dump, and the second is a native heap dump. The JS heap dump is much more common and is the default heap dump that is generated by <code>node</code>. It is useful when analyzing JS generated objects that are managed by the runtime. However there is one major limitation to the JS heap dump, and that is that it does not include native objects. This is where the native heap dump comes in handy. The native heap dump is a snapshot of the entire process memory, and includes objects that are allocated by <code>C/C++</code> code, including native modules in use by the application. The limitation to the native heap dump is that it will not include any JS objects that are allocated by the <code>V8</code> runtime. Those are generally created within <code>mmap</code>'ed pages and the native heap dump tools are specific to <code>C</code> objects that are created with <code>malloc</code> and destroyed via <code>free</code>. <code>C++</code> is also covered as <code>new</code> and <code>delete</code> are wrappers around <code>malloc</code> and <code>free</code>. This is why it is important to understand how to analyze both types of memory usage.</p>
+<h2 id="javascript-heap-dump">JavaScript Heap Dump<a class="headerlink" href="#javascript-heap-dump" title="Permanent link">&para;</a></h2>
+<p>Node has built in <code>V8</code> heap dump access and its a very powerful tool for analyzing memory usage. Understanding how the dump is created will both help to understand how it is displayed and how to use the analysis more effectively.</p>
+<p>The <code>V8</code> heap dump is a stop the world process because walking the entire heap graph is necessary to create one. This is similar to a full, major garbage collection event. The VM starts at the heap entrance node and walks the entire graph and makes note of every edge that connects each node along the way. Nodes are JSObjects and edges are references between those objects.</p>
+<p>By time the whole heap is walked the full size and values of all nodes are known and all of the connections between those nodes is well understood. The object that is returned is a set of three arrays, the nodes, the edges and the string values that are encountered (because strings are themselves arrays of characters in <code>C</code> so they are treated a bit differently by <code>V8</code>).</p>
+<h3 id="creating-a-v8-heap-dump">Creating a <code>V8</code> heap dump<a class="headerlink" href="#creating-a-v8-heap-dump" title="Permanent link">&para;</a></h3>
+<p>There are two functions for creating a heap dump but both call the same functionality under the hood. One streams the result, <code>require("v8").getHeapSnapshot([options])</code>, and is primarily intended for use by the Chrome devtools button to "take a snapshot". The second writes the heap dump to a file, <code>require("v8").writeHeapSnapshot(filename[,options])</code>.</p>
+<p>The optional <code>options</code> argument, in both cases, is the same and contains two props.<code>exposeInternals</code> and <code>exposeNumericValues</code> to enrich the dump. In many cases its the application layer that one wants to debug so <code>exposeInternals</code> is not usually necessary. In <code>V8</code> numbers are stored as 32bit integers and the size of pointers is also 32bits. So as an optimization, the pointer to the numeric value can be eliminated and the value itself can be stored in the <code>Address</code> of the <code>Value</code> instead. <code>exposeNumericValues</code> transcribes those "pointers" to the actual numeric value and appends them to the dump.</p>
+<p>Because heap analysis happens frequently during Lodestar development there is a helper api endpoint to capture a heap dump. <strong>It is IMPORTANT</strong> that this endpoint is not public facing as it will open the threat of DDOS attack.</p>
+<p>The endpoint accepts a <code>POST</code> request and you may include an optional <code>dirpath</code> query parameter to specify the directory where the heap dump will be written. If the <code>dirpath</code> is not specified then the heap dump will be written to the current working directory.</p>
+<p>To create a Lodestar heap dump you can use the following command:</p>
+<div class="highlight"><pre><span></span><code>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:9596/eth/v1/lodestar/write_heapdump?dirpath<span class="o">=</span>/some/directory/path
 </code></pre></div>
-<p>Next we need to update the Lodestar service by modifying the start script. We need to add a necessary flag <code>--perf-basic-prof</code> to allow the stack traces to be useful. Node is a virtual machine and <code>perf</code> is designed to capture host stack traces. In order to allow the JavaScript functions to be captured meaningfully, <code>v8</code> can provide some help. Generally Lodestar is started with a script like the following:</p>
-<h3 id="example-start_lodestarsh">Example start_lodestar.sh<a class="headerlink" href="#example-start_lodestarsh" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code>node<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--perf-basic-prof<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--max-old-space-size<span class="o">=</span><span class="m">4096</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>/usr/src/lodestar/packages/cli/bin/lodestar<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>beacon<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--rcConfig<span class="w"> </span>/home/devops/beacon/rcconfig.yml
+<h3 id="viewing-a-v8-heap-dump">Viewing a <code>V8</code> heap dump<a class="headerlink" href="#viewing-a-v8-heap-dump" title="Permanent link">&para;</a></h3>
+<p>It is best to analyze on a local development machine so if Lodestar is running on a cloud instance download the dump to the local environment. Open Chrome, or any Chromium based browser (the example photos were taken using Brave). In the url bar type <code>chrome:://inspect</code> to bring up the DevTools menu (in brave the url will be rewritten to <code>brave://inspect</code>).</p>
+<p><img alt="DevTools" src="../../images/heap-dumps/devtools.png" /></p>
+<p>Click on the <code>Open dedicated DevTools for Node</code> link to open the node specific window and click on the <code>Memory</code> tab as shown below.</p>
+<p><img alt="Memory Tab" src="../../images/heap-dumps/memory-tab.png" /></p>
+<p>Load the profile by either right clicking on the left pane or by clicking the <code>Load</code> button at the bottom.</p>
+<p><img alt="Load Profile" src="../../images/heap-dumps/load-profile.png" /></p>
+<h3 id="analyzing-a-v8-heap-dump">Analyzing a <code>V8</code> heap dump<a class="headerlink" href="#analyzing-a-v8-heap-dump" title="Permanent link">&para;</a></h3>
+<p>Analysis is as much an art as it is a science and the best way to learn is to do it a few times. Generally the goal is looking for memory leaks but reducing memory overhead is also something that happens. This guide will focus on leaks. With memory leaks one is looking for why objects have references that prevent them from being garbage collected.</p>
+<p>To spot sources of leaks, focus on objects that have large quantities or very large <code>retained size</code>. Retained size is the amount of memory that would be freed if the object was garbage collected. As an example if there is an object that has lots and lots of instances, like 100,000, and they are all pushed into an array then the array will have a very large retained size. This is because the array is holding references to all of the objects that it contains.</p>
+<!-- TODO: (matthewkeil) add this image -->
+<!-- ![Retained Size](./images/heap-dumps/retained-size.png) -->
+
+<p>If it is not immediately apparent what objects are being leaked then another tool in your arsenal will be to take a second snapshot and compare it to the first. This will show what objects have been created/changed since the first snapshot.</p>
+<p>If there is an object that has a large retained size but is roughly the same, but not exactly the same, changes are that is NOT the leak. Some objects can get quite large during runtime but if its roughly the same size over time, but not exactly the same, it means that the application is modifying the object (why its not exactly identical in size) but if it hasn't grown significantly over time it can be assumed it is probably the working size of the instances.</p>
+<p>Try to focus on objects that are growing in size or in number over time. Growing in size means the object is holding references to other objects and growing in number means a function closure somewhere is retaining the small instances.</p>
+<!-- TODO: (matthewkeil) add this image -->
+<!-- ![Comparison](./images/heap-dumps/comparison.png) -->
+
+<p>That is the science part, but these clues are just breadcrumbs to follow. In order to actually resolve the leak, one needs to go into the code to figure out where those objects are being created, or more often, why the references to them are being retained. This is where the art comes in.</p>
+<p>Having a good understanding of the codebase will help to narrow down where to look. It is also common that the leak is not coming directly from Lodestar code, but rather one of the dependencies so be careful not to rule those out.</p>
+<h2 id="native-heap-dump">Native Heap Dump<a class="headerlink" href="#native-heap-dump" title="Permanent link">&para;</a></h2>
+<p><em><strong>note: collecting a native heap dump is only supported on linux, analysis can be done from linux or Mac</strong></em></p>
+<p>There are several tools that can be used to do native heap dump analysis. The most common are <a href="https://valgrind.org/docs/manual/ms-manual.html"><code>massif</code></a> from the <a href="https://valgrind.org/"><code>Valgrind</code></a> suite, google's <a href="https://github.com/gperftools/gperftools"><code>gperftools</code></a> and <code>heaptrack</code> from <a href="https://community.kde.org/Main_Page">KDE</a>. Of the three, <code>heaptrack</code> is the most user friendly tool, and it is specifically designed for the task. It is much faster than <code>Valgrind</code>, easier to integrate than <code>gperftools</code> and also includes a gui for result analysis. Often times there are also memory allocations that are not related to memory leaks, and tools like <code>Valgrind</code> and <code>gperftools</code> become less useful. This is why <code>heaptrack</code> is the recommended tool for heap dump analysis on Lodestar.</p>
+<p>There are a few things that will make the results with <code>heaptrack</code> far better. The most important is using debug builds of all libraries included in a binary, including the application itself. This will make the results usable. Not to say that they will be useless without debug symbols but it will be kinda tough to optimize functions without knowing the function names nor the file and line numbers.</p>
+<p>This is the heart of what <code>heaptrack</code> will do for us. It hooks into the memory allocation and adds in stack traces for each <code>malloc</code> call site. That way every time memory is reserved there is a way to track back where it happened in the code. <code>heaptrack</code> also hooks into the <code>free</code> function and checks that versus the allocations to check for memory leaks and for temporary variables that can be optimized. This also allows for optimization of how many of each object is created by identifying high frequency allocations.</p>
+<p>Generally the .heapdump file will be created on a cloud server and then copied to a local machine for analysis, mostly because the gui is not available through ssh. The gui is not required for analysis but it is much easier to use than the command line tools. The first step will be to install <code>heaptrack</code> on the target server and to capture a profile.</p>
+<h3 id="build-collection-tools">Build collection tools<a class="headerlink" href="#build-collection-tools" title="Permanent link">&para;</a></h3>
+<p>Assume the following directory structure:</p>
+<div class="highlight"><pre><span></span><code>├──<span class="w"> </span>beacon-node
+│<span class="w">   </span>├──<span class="w"> </span>db
+│<span class="w">   </span>├──<span class="w"> </span>logs
+│<span class="w">   </span>├──<span class="w"> </span>start-lodestar.sh
+│<span class="w">   </span>└──<span class="w"> </span>rc-config.yml
+├──<span class="w"> </span>lodestar
+└──<span class="w"> </span>node<span class="w"> </span><span class="c1"># step below will clone this repo</span>
 </code></pre></div>
-<p>After updating the start script, restart the node process running the beacon service. Note in the command below, that the <code>beacon</code> service may have a different name or restart command, depending on your setup.</p>
-<div class="highlight"><pre><span></span><code>admin@12.34.56.78:<span class="w"> </span>sudo<span class="w"> </span>systemctl<span class="w"> </span>restart<span class="w"> </span>beacon
+<p>We will start from the directory that contains <code>lodestar</code> and the <code>beacon-node</code> files.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Install heaptrack</span>
+$<span class="w"> </span>sudo<span class="w"> </span>apt-get<span class="w"> </span>update
+$<span class="w"> </span>sudo<span class="w"> </span>apt-get<span class="w"> </span>-y<span class="w"> </span>install<span class="w"> </span>heaptrack
+
+<span class="c1"># Using a debug build of node is recommended and it can be build</span>
+<span class="c1"># from source. Clone the node repo to get started.</span>
+$<span class="w"> </span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/nodejs/node.git
+$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>node
+
+<span class="c1"># Use whichever version of node you prefer</span>
+$<span class="w"> </span>git<span class="w"> </span>checkout<span class="w"> </span>v20.10.0
+$<span class="w"> </span>./configure<span class="w"> </span>--debug
+
+<span class="c1"># This command only builds the debug version of node and assumes</span>
+<span class="c1"># that a release version of node is already installed on the system</span>
+$<span class="w"> </span>make<span class="w"> </span>-C<span class="w"> </span>out<span class="w"> </span><span class="nv">BUILDTYPE</span><span class="o">=</span>Debug<span class="w"> </span>-j<span class="k">$(</span>nproc<span class="w"> </span>--all<span class="k">)</span>
+
+<span class="c1"># Move the debug version of node the the same folder that the release</span>
+<span class="c1"># version is installed in and name it `node_debug`.  This will put the</span>
+<span class="c1"># debug binary on the path and allow you to run it with the</span>
+<span class="c1"># `node_debug` command</span>
+$<span class="w"> </span>cp<span class="w"> </span>out/Debug/node<span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>which<span class="w"> </span>node<span class="k">)</span><span class="s2">_debug&quot;</span>
+$<span class="w"> </span>which<span class="w"> </span>node_debug
+/your/home/directory/.nvm/versions/node/v20.10.0/bin/node_debug
+
+<span class="c1"># Return to the lodestar repo</span>
+$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>../lodestar
+
+<span class="c1"># Clean the build artifacts and node_modules</span>
+$<span class="w"> </span>yarn<span class="w"> </span>clean<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>yarn<span class="w"> </span>clean:nm
+
+<span class="c1"># Install the dependencies</span>
+$<span class="w"> </span>yarn<span class="w"> </span>install
+
+<span class="c1"># Ensure that all native modules are rebuilt with debug symbols. Some</span>
+<span class="c1"># modules are prebuilt, like classic-level, and the debug symbols may</span>
+<span class="c1"># not be included. If the the debugging exercise is focussed around</span>
+<span class="c1"># one of these dependencies, then you will need to manually clone those</span>
+<span class="c1"># repos and manually build them with debug symbols.</span>
+$<span class="w"> </span>npm<span class="w"> </span>rebuild<span class="w"> </span>--debug
 </code></pre></div>
-<p>The flag that was added notifies <code>V8</code> to output a map of functions and their addresses. This is necessary for <code>perf</code> to generate the stack traces for the virtual machine in addition to the traditional host stack traces. There is a very small, performance overhead to output the maps. After a short while, once the process runs for a bit the functions will no longer be moving in memory and the overhead will be significantly reduced. The VM will still be moving objects around but this flag is generally safe to run in production. After a few minutes of running, listing the directory with the start script (<code>process.cwd()</code>) will look similar:</p>
-<div class="highlight"><pre><span></span><code>-rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">   </span><span class="m">9701529</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>beacon-2023-05-22.log
--rwxrwxr-x<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>root<span class="w">        </span><span class="m">421</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:31<span class="w"> </span>beacon_run.sh
-drwxr-xr-x<span class="w">  </span><span class="m">2</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">    </span><span class="m">917504</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:35<span class="w"> </span>chain-db
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">   </span><span class="m">2861242</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>isolate-0x6761520-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">    </span><span class="m">203172</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>isolate-0x7fa2f0001060-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">     </span><span class="m">68044</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>isolate-0x7fcd80001060-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">    </span><span class="m">420809</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>isolate-0x7fcd84001060-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">    </span><span class="m">123919</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>isolate-0x7fcd88001060-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">     </span><span class="m">94391</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:35<span class="w"> </span>isolate-0x7fcd8c001060-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">    </span><span class="m">183831</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>isolate-0x7fcd90000e60-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">    </span><span class="m">152786</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>isolate-0x7fcd94000e60-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">    </span><span class="m">262333</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>isolate-0x7fcd98000e60-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">    </span><span class="m">218473</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>isolate-0x7fcd9c000e60-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">    </span><span class="m">366788</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>isolate-0x7fcda0000e60-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">    </span><span class="m">304917</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>isolate-0x7fcda4000e60-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">    </span><span class="m">586238</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>isolate-0x7fcda8000e60-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">    </span><span class="m">450675</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>isolate-0x7fcdac000e60-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w">    </span><span class="m">768470</span><span class="w"> </span>May<span class="w"> </span><span class="m">22</span><span class="w"> </span><span class="m">00</span>:36<span class="w"> </span>isolate-0x7fcdb8000d60-2085004-v8.log
--rw-r--r--<span class="w">  </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>root<span class="w">        </span><span class="m">559</span><span class="w"> </span>May<span class="w"> </span><span class="m">21</span><span class="w"> </span><span class="m">14</span>:17<span class="w"> </span>rcconfig.yml
+<h3 id="collect-a-heap-dump">Collect a heap dump<a class="headerlink" href="#collect-a-heap-dump" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Move to th `beacon-node` directory</span>
+$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>../beacon-node
+
+<span class="c1"># Start lodestar with profiling enabled</span>
+$<span class="w"> </span>heaptrack<span class="w"> </span><span class="se">\</span>
+$<span class="w">   </span>--output<span class="w"> </span>./lodestar.heapdump<span class="w"> </span><span class="se">\</span>
+$<span class="w">   </span>node_debug<span class="w"> </span><span class="se">\</span>
+$<span class="w">   </span>--max-old-space-size<span class="o">=</span><span class="m">8192</span><span class="w"> </span><span class="se">\</span>
+$<span class="w">   </span>../lodestar/packages/cli/bin/lodestar.js<span class="w"> </span><span class="se">\</span>
+$<span class="w">   </span>beacon<span class="w"> </span><span class="se">\</span>
+$<span class="w">   </span>--rcConfig<span class="w"> </span>./rc-config.yml<span class="w"> </span><span class="se">\</span>
+$<span class="w">   </span>&gt;<span class="w"> </span>/dev/null<span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span><span class="w"> </span><span class="p">&amp;</span>
+<span class="c1"># Wait some period of time for the heap dump data to be collected</span>
+
+<span class="c1"># The data will not be persisted until the process is stopped. You can gracefully</span>
+<span class="c1"># stop the process with the following command and if you want to hard kill it</span>
+<span class="c1"># add `-9` to the end of the `kill` command although that should not be necessary</span>
+$<span class="w"> </span>ps<span class="w"> </span>aux<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>lodestar<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-v<span class="w"> </span>grep<span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;{print $2}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-n<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>xargs<span class="w"> </span><span class="nb">kill</span>
 </code></pre></div>
-<p>The <code>isolate-*-v8.log</code> files are the maps that <code>v8</code> outputs for the <code>perf</code> command to reference. You are now ready to collect the stack traces.</p>
-<h3 id="capturing-stack-traces">Capturing Stack Traces<a class="headerlink" href="#capturing-stack-traces" title="Permanent link">&para;</a></h3>
-<p>The first command below will run <code>perf</code> for 60 seconds, and then save the output to a file named <code>perf.out</code>. The second one will merge the exported, unknown, tokens with the isolate maps and output full stack traces for the render. Running both <code>perf</code> commands in the folder with the <code>isolate</code> maps will allow the data to be seamlessly spliced. Once the output is saved, update the permissions so the file can be copied to your local machine via <code>scp</code>.</p>
-<p>You can modify the frequency of capture by changing <code>-F 99</code> to a different number. Try to stay away from whole numbers as they are more likely to cause interference with periodically scheduled tasks. As an example use <code>99Hz</code> or <code>997Hz</code> instead of <code>100Hz</code> or <code>1000Hz</code>. In testing neither seemed to have an appreciable affect on CPU usage when run for a short period of time.</p>
-<p>To change the period of capture adjust the sleep duration (which is in seconds).</p>
-<p>The <code>pgrep</code> command is used to find the process id to capture against. Feel free to pass a number to the <code>-p</code> flag if you know the process id, or adjust the file path if the executable is in a different location.</p>
-<div class="highlight"><pre><span></span><code>admin@12.34.56.78:<span class="w"> </span>sudo<span class="w"> </span>perf<span class="w"> </span>record<span class="w"> </span>-F<span class="w"> </span><span class="m">99</span><span class="w"> </span>-p<span class="w"> </span><span class="k">$(</span>pgrep<span class="w"> </span>-f<span class="w"> </span><span class="s1">&#39;/usr/src/lodestar/packages/cli/bin/lodestar beacon&#39;</span><span class="k">)</span><span class="w"> </span>-g<span class="w"> </span>--<span class="w"> </span>sleep<span class="w"> </span><span class="m">60</span>
-admin@12.34.56.78:<span class="w"> </span>sudo<span class="w"> </span>perf<span class="w"> </span>script<span class="w"> </span>-f<span class="w"> </span>&gt;<span class="w"> </span>perf.out
-admin@12.34.56.78:<span class="w"> </span>sudo<span class="w"> </span>chmod<span class="w"> </span><span class="m">777</span><span class="w"> </span>~/beacon/perf.out
+<h3 id="collecting-a-heap-dump-on-a-running-process">Collecting a heap dump on a running process<a class="headerlink" href="#collecting-a-heap-dump-on-a-running-process" title="Permanent link">&para;</a></h3>
+<p>Collecting a heap dump can also be done on a running process. There are both advantages and disadvantages to this approach. The main advantage is that you can collect a heap dump without having to restart. The down side is that the dump will only include allocations/de-allocations while the tracker is running. This means that all the non-paired calls to malloc/free will register as leaks. It will also not give a true representation of how the heap is being used. On the upside, however the dump will be much smaller in size.</p>
+<p>It is important to note a warning that is in the <code>heaptrack</code> source code:</p>
+<p><em>WARNING: Runtime-attaching heaptrack is UNSTABLE and can lead to CRASHES in your application, especially after you detach heaptrack again. You are hereby warned, use it at your own risk!</em></p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Move to th `beacon-node` directory</span>
+$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>../beacon-node
+
+<span class="c1"># Start lodestar</span>
+$<span class="w"> </span>node_debug<span class="w"> </span><span class="se">\</span>
+$<span class="w">   </span>--max-old-space-size<span class="o">=</span><span class="m">8192</span><span class="w"> </span><span class="se">\</span>
+$<span class="w">   </span>../lodestar/packages/cli/bin/lodestar.js<span class="w"> </span><span class="se">\</span>
+$<span class="w">   </span>beacon<span class="w"> </span><span class="se">\</span>
+$<span class="w">   </span>--rcConfig<span class="w"> </span>./rc-config.yml<span class="w"> </span><span class="se">\</span>
+$<span class="w">   </span>&gt;<span class="w"> </span>/dev/null<span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span><span class="w"> </span><span class="p">&amp;</span>
+<span class="c1"># Wait some period of time to start collecting the dump</span>
+
+<span class="c1"># GDB is required to inject heaptrack into a running process</span>
+<span class="c1"># so you may need to install it</span>
+$<span class="w"> </span>sudo<span class="w"> </span>apt-get<span class="w"> </span>update
+$<span class="w"> </span>sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>gdb
+
+<span class="c1"># Elevated `perf` permissions are also required depending on your</span>
+<span class="c1"># system configuration. Change until the next reboot</span>
+$<span class="w"> </span><span class="nb">echo</span><span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>tee<span class="w"> </span>/proc/sys/kernel/yama/ptrace_scope
+
+<span class="c1"># Get the pid of the lodestar process</span>
+$<span class="w"> </span><span class="nb">export</span><span class="w"> </span><span class="nv">LODESTAR_PID</span><span class="o">=</span><span class="k">$(</span>ps<span class="w"> </span>aux<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>lodestar<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-v<span class="w"> </span>grep<span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;{print $2}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-n<span class="w"> </span><span class="m">1</span><span class="k">)</span>
+
+<span class="c1"># Inject heaptrack into the running process</span>
+$<span class="w"> </span>heaptrack<span class="w"> </span>--pid<span class="w"> </span><span class="nv">$LODESTAR_PID</span>
+
+heaptrack<span class="w"> </span>output<span class="w"> </span>will<span class="w"> </span>be<span class="w"> </span>written<span class="w"> </span>to<span class="w"> </span><span class="s2">&quot;/home/user/beacon-node/heaptrack.node_debug.111868.zst&quot;</span>
+/usr/lib/heaptrack/libheaptrack_preload.so
+injecting<span class="w"> </span>heaptrack<span class="w"> </span>into<span class="w"> </span>application<span class="w"> </span>via<span class="w"> </span>GDB,<span class="w"> </span>this<span class="w"> </span>might<span class="w"> </span>take<span class="w"> </span>some<span class="w"> </span>time...
+injection<span class="w"> </span>finished
+<span class="c1"># Wait some period of time to collect the heap dump. See below</span>
+<span class="c1"># for the termination command that can be run from a separate</span>
+<span class="c1"># terminal when ready to stop collecting data</span>
+Terminated
+removing<span class="w"> </span>heaptrack<span class="w"> </span>injection<span class="w"> </span>via<span class="w"> </span>GDB,<span class="w"> </span>this<span class="w"> </span>might<span class="w"> </span>take<span class="w"> </span>some<span class="w"> </span>time...
+Heaptrack<span class="w"> </span>finished!<span class="w"> </span>Now<span class="w"> </span>run<span class="w"> </span>the<span class="w"> </span>following<span class="w"> </span>to<span class="w"> </span>investigate<span class="w"> </span>the<span class="w"> </span>data:
+
+<span class="w">  </span>heaptrack<span class="w"> </span>--analyze<span class="w"> </span><span class="s2">&quot;/home/user/beacon-node/heaptrack.node_debug.111868.zst&quot;</span>
 </code></pre></div>
-<p>And then copy the <code>perf.out</code> file to your local machine to render the flamegraph. Running at <code>99Hz</code> for 180 seconds results in a file size of about 3.5MB and <code>997Hz</code> for 60 seconds is roughly 4.4MB.</p>
-<div class="highlight"><pre><span></span><code>scp<span class="w"> </span>admin@12.34.56.78:/home/devops/beacon/out.perf<span class="w"> </span>/some_temp_dir/perf.out
+<p>There is a trap in <code>heaptrack</code> but the process uses a nested shell to do the actual injection so it is not possible to just Ctrl+C out of the injected process without corrupting the output file. To properly kill the collection one needs to target the nested shell pid. Here is a helper command to target that process:</p>
+<div class="highlight"><pre><span></span><code>ps<span class="w"> </span>-ef<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="s1">&#39;[h]eaptrack --pid&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;$3 == &#39;</span><span class="k">$(</span>ps<span class="w"> </span>-ef<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="s1">&#39;[h]eaptrack --pid&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;$3 != 1 {print $2}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-n<span class="w"> </span><span class="m">1</span><span class="k">)</span><span class="s1">&#39; {print $2}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>xargs<span class="w"> </span>-r<span class="w"> </span><span class="nb">kill</span>
 </code></pre></div>
-<h2 id="rendering-a-flamegraph">Rendering a Flamegraph<a class="headerlink" href="#rendering-a-flamegraph" title="Permanent link">&para;</a></h2>
-<p>By far the best tool to render flamegraphs is <a href="https://github.com/Netflix/flamescope"><code>flamescope</code></a> from Netflix. It allows for easy analysis and zooming into specific time periods. It also give a holistic view of how the process is performing over time.</p>
-<h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
-<p>Python3 is required. Clone the repository and install the dependencies:</p>
-<p><em>The original is no longer maintained and had a configuration bug. This is a fork that fixes the issue.</em></p>
-<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/matthewkeil/flamescope
-<span class="nb">cd</span><span class="w"> </span>flamescope
-pip3<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
-yarn
+<p>After working with the injected process for a while, I cannot honestly recommend it. It can work in a pinch, and is best suited for when the profiled process can be exited gracefully without repercussions (not on mainnet for instance). The benefit, though, is that the heapdump will be much smaller and targeted to runtime (will not have the transient, startup allocations) which can make it easier to see what is happening.</p>
+<h3 id="installing-heaptrack-gui-on-linux">Installing <code>heaptrack-gui</code> on Linux<a class="headerlink" href="#installing-heaptrack-gui-on-linux" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># You can you apt, apt-get or aptitude to install the gui</span>
+$<span class="w"> </span>sudo<span class="w"> </span>apt-get<span class="w"> </span>update
+$<span class="w"> </span>sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>heaptrack-gui
 </code></pre></div>
-<h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>mv<span class="w"> </span>/some_temp_dir/perf.out<span class="w"> </span>/path/to/flamescope/examples
-yarn<span class="w"> </span>dev
+<h3 id="installing-heaptrack-gui-on-osx">Installing <code>heaptrack-gui</code> on OSX<a class="headerlink" href="#installing-heaptrack-gui-on-osx" title="Permanent link">&para;</a></h3>
+<p>At the time of writing this there is no official pre-built binary for OSX. This was a bit of a challenge but it was WELL worth the effort as the tool works very well. There were a number of bugs along the way while "using the docs" so your mileage may vary, but this is what worked for me.</p>
+<p>Most of the dependencies can be installed via Homebrew and the tool itself needs to be built from source. There was one dependency that needed to be built from source. This process assumes a working folder that the repos can be cloned into.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Start in the root folder where the repos will be cloned</span>
+$<span class="w"> </span>brew<span class="w"> </span>install<span class="w"> </span>qt@5
+
+<span class="c1"># prepare tap of kde-mac/kde</span>
+$<span class="w"> </span>brew<span class="w"> </span>tap<span class="w"> </span>kde-mac/kde<span class="w"> </span>https://invent.kde.org/packaging/homebrew-kde.git
+$<span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>brew<span class="w"> </span>--repo<span class="w"> </span>kde-mac/kde<span class="k">)</span><span class="s2">/tools/do-caveats.sh&quot;</span>
+
+<span class="c1"># install the kde-mac and other required dependencies</span>
+$<span class="w"> </span>brew<span class="w"> </span>install<span class="w"> </span>kde-mac/kde/kf5-kcoreaddons<span class="w"> </span><span class="se">\</span>
+$<span class="w">     </span>kde-mac/kde/kf5-kitemmodels<span class="w"> </span><span class="se">\</span>
+$<span class="w">     </span>kde-mac/kde/kf5-kconfigwidgets<span class="w"> </span><span class="se">\</span>
+$<span class="w">     </span>kde-mac/kde/kdiagram<span class="w"> </span><span class="se">\</span>
+$<span class="w">     </span>extra-cmake-modules<span class="w"> </span><span class="se">\</span>
+$<span class="w">     </span>ki18n<span class="w"> </span><span class="se">\</span>
+$<span class="w">     </span>threadweaver<span class="w"> </span><span class="se">\</span>
+$<span class="w">     </span>boost<span class="w"> </span><span class="se">\</span>
+$<span class="w">     </span>zstd<span class="w"> </span><span class="se">\</span>
+$<span class="w">     </span>gettext
+
+<span class="c1"># There is a bug in the current version of kde-mac/kde and one dependency needs</span>
+<span class="c1"># to be built manually. This is the workaround to get it built.</span>
+$<span class="w"> </span>git<span class="w"> </span>clone<span class="w"> </span>https://invent.kde.org/frameworks/kio.git
+$<span class="w"> </span>mkdir<span class="w"> </span>kio/build
+$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>kio/build
+$<span class="w"> </span><span class="nb">export</span><span class="w"> </span><span class="nv">CMAKE_PREFIX_PATH</span><span class="o">=</span><span class="k">$(</span>brew<span class="w"> </span>--prefix<span class="w"> </span>qt@5<span class="k">)</span>
+$<span class="w"> </span>cmake<span class="w"> </span>-G<span class="w"> </span>Ninja<span class="w"> </span>-DCMAKE_BUILD_TYPE<span class="o">=</span>Release<span class="w"> </span>..
+$<span class="w"> </span>ninja
+$<span class="w"> </span>sudo<span class="w"> </span>ninja<span class="w"> </span>install
+$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>../..
+
+<span class="c1"># Now make sure that the dependencies are available to the system during runtime</span>
+$<span class="w"> </span>ln<span class="w"> </span>-sfv<span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>brew<span class="w"> </span>--prefix<span class="k">)</span><span class="s2">/share/kf5&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$HOME</span><span class="s2">/Library/Application Support&quot;</span>
+$<span class="w"> </span>ln<span class="w"> </span>-sfv<span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>brew<span class="w"> </span>--prefix<span class="k">)</span><span class="s2">/share/knotifications5&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$HOME</span><span class="s2">/Library/Application Support&quot;</span>
+$<span class="w"> </span>ln<span class="w"> </span>-sfv<span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>brew<span class="w"> </span>--prefix<span class="k">)</span><span class="s2">/share/kservices5&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$HOME</span><span class="s2">/Library/Application Support&quot;</span>
+$<span class="w"> </span>ln<span class="w"> </span>-sfv<span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>brew<span class="w"> </span>--prefix<span class="k">)</span><span class="s2">/share/kservicetypes5&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$HOME</span><span class="s2">/Library/Application Support&quot;</span>
+
+<span class="c1"># We are now ready to build the heaptrack_gui binaries for analysis on OSX</span>
+$<span class="w"> </span>git<span class="w"> </span>clone<span class="w"> </span>https://invent.kde.org/sdk/heaptrack.git
+$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>heaptrack
+$<span class="w"> </span>mkdir<span class="w"> </span>build
+$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>build
+$<span class="w"> </span><span class="nv">CMAKE_PREFIX_PATH</span><span class="o">=</span><span class="k">$(</span>brew<span class="w"> </span>--prefix<span class="w"> </span>qt@5<span class="k">)</span><span class="w"> </span><span class="nv">PATH</span><span class="o">=</span><span class="nv">$PATH</span>:/opt/homebrew/opt/gettext/bin<span class="w"> </span>cmake<span class="w"> </span>..
+$<span class="w"> </span>cmake<span class="w"> </span>-DCMAKE_BUILD_TYPE<span class="o">=</span>Release<span class="w"> </span>..
+$<span class="w"> </span>make<span class="w"> </span>heaptrack_gui
+$<span class="w"> </span>sudo<span class="w"> </span>make<span class="w"> </span>install
+<span class="c1"># You can now find heaptrack_gui with your gui Applications. It is default</span>
+<span class="c1"># placed as /Applications/KDE/heaptrack_gui.app</span>
 </code></pre></div>
-<p>Then navigate in a browser to <code>http://localhost:8080</code> and begin analyzing the data.</p>
-<p><img src="../images/flamescope/home-screen.png" alt="flamescope home screen" width="1024"/>
-<img src="../images/flamescope/time-series-view.png" alt="flamescope home screen" width="1024"/>
-<img src="../images/flamescope/selecting-series.png" alt="flamescope home screen" width="1024"/>
-<img src="../images/flamescope/unfiltered-flamegraph.png" alt="flamescope home screen" width="1024"/>
-<img src="../images/flamescope/zoom-in.png" alt="flamescope home screen" width="1024"/></p>
-<h2 id="filtering-results">Filtering Results<a class="headerlink" href="#filtering-results" title="Permanent link">&para;</a></h2>
-<p>There can be a lot of "noise" in the stack traces with <code>libc</code>, <code>v8</code> and <code>libuv</code> calls. It is possible to filter the results to make it more useful, but note this will skew the results. Looking at the graph both filtered and unfiltered can be beneficial. The following <code>sed</code> command will remove the noise from the stack traces.</p>
-<div class="highlight"><pre><span></span><code>sed<span class="w"> </span>-r<span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;/( __libc_start| uv_| LazyCompile | v8::internal::| node::| Builtins_| Builtin:| Stub:| LoadIC:| \\[unknown\\]| LoadPolymorphicIC:)/d&quot;</span><span class="w"> </span>-e<span class="w"> </span><span class="s1">&#39;s/ LazyCompile:[*~]?/ /&#39;</span>
-</code></pre></div>
-<h3 id="unfiltered">Unfiltered<a class="headerlink" href="#unfiltered" title="Permanent link">&para;</a></h3>
-<p><img src="../images/flamescope/unfiltered-flamegraph.png" alt="flamescope home screen" width="1024"/></p>
-<h3 id="filtered">Filtered<a class="headerlink" href="#filtered" title="Permanent link">&para;</a></h3>
-<p><img src="../images/flamescope/filtered-flamegraph.png" alt="flamescope home screen" width="1024"/></p>
-<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
-<h3 id="list-of-web-references">List of Web References<a class="headerlink" href="#list-of-web-references" title="Permanent link">&para;</a></h3>
-<ul>
-<li><a href="https://www.brendangregg.com/flamegraphs.html">https://www.brendangregg.com/flamegraphs.html</a></li>
-<li><a href="https://nodejs.org/en/docs/guides/diagnostics-flamegraph">https://nodejs.org/en/docs/guides/diagnostics-flamegraph</a></li>
-<li><a href="https://netflixtechblog.com/netflix-flamescope-a57ca19d47bb">https://netflixtechblog.com/netflix-flamescope-a57ca19d47bb</a></li>
-<li><a href="https://jaanhio.me/blog/nodejs-flamegraph-analysis/">https://jaanhio.me/blog/nodejs-flamegraph-analysis/</a> (this was a great one about filtering methodology)</li>
-<li><a href="https://medium.com/voodoo-engineering/node-js-and-cpu-profiling-on-production-in-real-time-without-downtime-d6e62af173e2">https://medium.com/voodoo-engineering/node-js-and-cpu-profiling-on-production-in-real-time-without-downtime-d6e62af173e2</a></li>
-</ul>
-<h3 id="visualization-tools">Visualization Tools<a class="headerlink" href="#visualization-tools" title="Permanent link">&para;</a></h3>
-<ul>
-<li><a href="https://github.com/Netflix/flamescope"><code>flamescope</code></a></li>
-</ul>
-<h3 id="collecting-on-linux">Collecting on Linux<a class="headerlink" href="#collecting-on-linux" title="Permanent link">&para;</a></h3>
-<ul>
-<li><a href="https://www.brendangregg.com/perf.html">https://www.brendangregg.com/perf.html</a></li>
-<li><a href="https://www.brendangregg.com/linuxperf.html">https://www.brendangregg.com/linuxperf.html</a></li>
-<li><a href="https://www.brendangregg.com/blog/2014-09-17/node-flame-graphs-on-linux.html">https://www.brendangregg.com/blog/2014-09-17/node-flame-graphs-on-linux.html</a></li>
-<li><a href="https://perf.wiki.kernel.org/index.php/Main_Page">https://perf.wiki.kernel.org/index.php/Main_Page</a></li>
-</ul>
-<h3 id="collecting-on-macos">Collecting on MacOS<a class="headerlink" href="#collecting-on-macos" title="Permanent link">&para;</a></h3>
-<ul>
-<li><a href="https://gist.github.com/zeusdeux/aac6f8500917319213c5">https://gist.github.com/zeusdeux/aac6f8500917319213c5</a></li>
-<li><a href="https://gist.github.com/loderunner/36724cc9ee8db66db305">https://gist.github.com/loderunner/36724cc9ee8db66db305</a></li>
-<li><a href="https://keith.github.io/xcode-man-pages/xctrace.1.html">https://keith.github.io/xcode-man-pages/xctrace.1.html</a></li>
-</ul>
 
 
 
