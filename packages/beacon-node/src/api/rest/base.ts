@@ -90,6 +90,16 @@ export class RestApiServer {
       metrics?.requests.inc({operationId});
     });
 
+    server.addHook("preParsing", async (req, _res) => {
+      const {operationId} = req.routeConfig as RouteConfig;
+      this.logger.debug(`preParsing ${req.id as string} ${req.ip} ${operationId}`);
+    });
+
+    server.addHook("preValidation", async (req, _res) => {
+      const {operationId} = req.routeConfig as RouteConfig;
+      this.logger.debug(`preValidation ${req.id as string} ${req.ip} ${operationId}`);
+    });
+
     server.addHook("preHandler", async (req, _res) => {
       const {operationId} = req.routeConfig as RouteConfig;
       this.logger.debug(`Exec ${req.id as string} ${req.ip} ${operationId}`);
