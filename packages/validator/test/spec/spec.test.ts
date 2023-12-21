@@ -1,5 +1,5 @@
 import path from "node:path";
-import {expect} from "chai";
+import {expect} from "vitest";
 import {rimraf} from "rimraf";
 import {fromHexString} from "@chainsafe/ssz";
 import {LevelDbController} from "@lodestar/db";

@@ -9,7 +9,14 @@
   },
   "homepage": "https://github.com/ChainSafe/lodestar#readme",
   "type": "module",
-  "exports": "./lib/index.js",
+  "exports": {
+    ".": {
+      "import": "./lib/index.js"
+    },
+    "./download": {
+      "import": "./lib/downloadTests.js"
+    }
+  },
   "types": "lib/index.d.ts",
   "files": [
     "lib/**/*.js",
@@ -31,7 +38,8 @@
     "lint": "eslint --color --ext .ts src/ test/",
     "lint:fix": "yarn run lint --fix",
     "pretest": "yarn run check-types",
-    "test:e2e": "mocha 'test/e2e/**/*.test.ts'",
+    "test:unit": "vitest --run --passWithNoTests --dir test/unit/ --coverage",
+    "test:e2e": "vitest --run --dir test/e2e/",
     "check-readme": "typescript-docs-verifier"
   },
   "repository": {
@@ -48,8 +56,7 @@
     "@lodestar/utils": "^1.13.0",
     "async-retry": "^1.3.3",
     "axios": "^1.3.4",
-    "chai": "^4.3.7",
-    "mocha": "^10.2.0",
+    "vitest": "^1.0.2",
     "rimraf": "^4.4.1",
     "snappyjs": "^0.7.0",
     "tar": "^6.1.13"
@@ -59,7 +66,6 @@
     "@types/tar": "^6.1.4"
   },
   "peerDependencies": {
-    "chai": "^4.3.7",
-    "mocha": "^10.2.0"
+    "vitest": "^1.0.2"
   }
 }

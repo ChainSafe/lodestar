@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import {expect} from "chai";
+import {describe, it, vi, expect} from "vitest";
 import {uncompress} from "snappyjs";
 import {loadYaml} from "@lodestar/utils";
 
@@ -103,7 +103,7 @@ export function describeDirectorySpecTest<TestCase extends {meta?: any}, Result>
 
   describe(name, function () {
     if (options.timeout !== undefined) {
-      this.timeout(options.timeout || "10 min");
+      vi.setConfig({testTimeout: options.timeout ?? 10 * 60 * 1000});
     }
 
     for (const testSubDirname of fs.readdirSync(testCaseDirectoryPath)) {
@@ -112,9 +112,9 @@ export function describeDirectorySpecTest<TestCase extends {meta?: any}, Result>
         continue;
       }
 
-      // Use full path here, not just `testSubDirname` to allow usage of `mocha --grep`
+      // Use full path here, not just `testSubDirname` to allow usage of `vitest --grep`
       const testName = `${name}/${testSubDirname}`;
-      it(testName, async function () {
+      it(testName, async function (context) {
         // some tests require to load meta.yaml first in order to know respective ssz types.
         const metaFilePath = path.join(testSubDirPath, "meta.yaml");
         const meta: TestCase["meta"] = fs.existsSync(metaFilePath)
@@ -124,7 +124,7 @@ export function describeDirectorySpecTest<TestCase extends {meta?: any}, Result>
         let testCase = loadInputFiles(testSubDirPath, options, meta);
         if (options.mapToTestCase) testCase = options.mapToTestCase(testCase);
         if (options.shouldSkip && options.shouldSkip(testCase, testName, 0)) {
-          this.skip();
+          context.skip();
           return;
         }
 

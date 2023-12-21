@@ -1,4 +1,4 @@
-import {downloadGenericSpecTests} from "@lodestar/spec-test-util";
+import {downloadGenericSpecTests} from "@lodestar/spec-test-util/download";
 import {SPEC_TEST_LOCATION, SPEC_TEST_VERSION, SPEC_TEST_REPO_URL, TESTS_TO_DOWNLOAD} from "./params.js";
 
 /* eslint-disable no-console */

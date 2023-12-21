@@ -1,6 +1,6 @@
 import path from "node:path";
 import {fileURLToPath} from "node:url";
-import {DownloadTestsOptions} from "@lodestar/spec-test-util";
+import {DownloadTestsOptions} from "@lodestar/spec-test-util/download";
 
 // WARNING! Don't move or rename this file !!!
 //

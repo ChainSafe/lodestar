@@ -1,4 +1,4 @@
-import {downloadTests} from "@lodestar/spec-test-util";
+import {downloadTests} from "@lodestar/spec-test-util/download";
 import {ethereumConsensusSpecsTests, blsSpecTests} from "./specTestVersioning.js";
 
 /* eslint-disable no-console */

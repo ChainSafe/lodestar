@@ -1,5 +1,5 @@
 import path from "node:path";
-import {expect} from "chai";
+import {expect} from "vitest";
 import {phase0, Root, ssz, TimeSeconds, allForks, deneb} from "@lodestar/types";
 import {InputType} from "@lodestar/spec-test-util";
 import {

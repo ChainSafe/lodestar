@@ -1,5 +1,5 @@
 import path from "node:path";
-import {expect} from "chai";
+import {expect} from "vitest";
 import {
   CachedBeaconStateAllForks,
   EpochTransitionCache,

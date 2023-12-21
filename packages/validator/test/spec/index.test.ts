@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {expect} from "vitest";
 import {rimraf} from "rimraf";
 import {LevelDbController} from "@lodestar/db";
 import {
