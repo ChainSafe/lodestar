@@ -26,6 +26,12 @@ interface CustomMatchers<R = unknown> {
    * ```
    * */
   toBeWithMessage(expected: unknown, message: string): R;
+  /**
+   * @deprecated
+   * We highly recommend to not use this matcher instead use detail test case with .toEqual
+   * where you don't need message to explain assertion
+   * */
+  toEqualWithMessage(expected: unknown, message: string): R;
 }
 
 interface CustomAsymmetricMatchers<R = unknown> extends CustomMatchers<R> {
