@@ -1,5 +1,5 @@
 import path from "node:path";
-import {expect} from "vitest";
+import {describe, it, beforeAll, afterAll, expect} from "vitest";
 import {rimraf} from "rimraf";
 import {fromHexString} from "@chainsafe/ssz";
 import {LevelDbController} from "@lodestar/db";
@@ -22,12 +22,12 @@ describe("slashing-protection-interchange-tests", () => {
   let db: LevelDbController;
   let slashingProtection: SlashingProtection;
 
-  before(async () => {
+  beforeAll(async () => {
     db = await LevelDbController.create({name: dbLocation}, {logger: testLogger()});
     slashingProtection = new SlashingProtection(db);
   });
 
-  after(async () => {
+  afterAll(async () => {
     await db.close();
     rimraf.sync(dbLocation);
   });

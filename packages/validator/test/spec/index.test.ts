@@ -1,4 +1,4 @@
-import {expect} from "vitest";
+import {expect,  describe, it, beforeAll, afterAll} from "vitest";
 import {rimraf} from "rimraf";
 import {LevelDbController} from "@lodestar/db";
 import {
@@ -15,11 +15,11 @@ describe("slashing-protection custom tests", () => {
   const pubkey = Buffer.alloc(96, 1);
   let db: LevelDbController;
 
-  before(async () => {
+  beforeAll(async () => {
     db = await LevelDbController.create({name: dbLocation}, {logger: testLogger()});
   });
 
-  after(async () => {
+  afterAll(async () => {
     await db.clear();
     await db.close();
     rimraf.sync(dbLocation);
