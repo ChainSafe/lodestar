@@ -48,6 +48,7 @@ export type IValidatorCliArgs = AccountValidatorArgs &
 
     useProduceBlockV3?: boolean;
     broadcastValidation?: string;
+    blindedLocal?: boolean;
 
     importKeystores?: string[];
     importKeystoresPassword?: string;
@@ -255,6 +256,12 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     type: "string",
     description: "Validations to be run by beacon node for the signed block prior to publishing",
     defaultDescription: `${defaultOptions.broadcastValidation}`,
+  },
+
+  blindedLocal: {
+    type: "string",
+    description: "Request fetching local block in blinded format for produceBlockV3",
+    defaultDescription: `${defaultOptions.blindedLocal}`,
   },
 
   importKeystores: {
