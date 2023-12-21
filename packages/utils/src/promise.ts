@@ -1,5 +1,6 @@
 import {TimeoutError} from "./errors.js";
 import {sleep} from "./sleep.js";
+import {ArrayToTuple, NonEmptyArray} from "./types.js";
 
 /**
  * While promise t is not finished, call function `fn` per `interval`
@@ -99,9 +100,8 @@ export class PromiseWithStatus<T> implements Promise<T> {
   }
 }
 
-type NonEmptyArray<T> = [T, ...T[]];
 type ReturnPromiseWithTuple<Tuple extends NonEmptyArray<unknown>> = {
-  [Index in keyof Tuple]: PromiseWithStatus<Awaited<Tuple[Index]>>;
+  [Index in keyof ArrayToTuple<Tuple>]: PromiseWithStatus<Awaited<Tuple[Index]>>;
 };
 
 /**

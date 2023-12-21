@@ -1,5 +1,6 @@
 import {expect, describe, it} from "vitest";
 import {resolveOrRacePromises} from "../../src/promise.js";
+import {NonEmptyArray} from "../../src/types.js";
 
 describe("resolveOrRacePromises", () => {
   const cutoffMs = 1000;
@@ -51,16 +52,16 @@ describe("resolveOrRacePromises", () => {
     ["none resolve/reject pre timeout", [1600, -1700], ["pending", "pending"]],
   ];
 
-  for (const [name, promises, results] of testCases) {
+  for (const [name, timeouts, results] of testCases) {
     it(name, async () => {
-      const testPromises = promises.map((timeMs) => {
+      const testPromises = timeouts.map((timeMs) => {
         if (timeMs > 0) {
           return resolveAfter(`${timeMs}`, timeMs);
         } else {
           return rejectAfter(`${timeMs}`, -timeMs);
         }
       });
-      const testResults = await resolveOrRacePromises(testPromises, {
+      const testResults = await resolveOrRacePromises(testPromises as NonEmptyArray<Promise<unknown>>, {
         resolveTimeoutMs: cutoffMs,
         raceTimeoutMs: timeoutMs,
       });
