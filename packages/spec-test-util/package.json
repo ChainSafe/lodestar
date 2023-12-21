@@ -33,7 +33,7 @@
     "build": "tsc -p tsconfig.build.json",
     "build:release": "yarn clean && yarn build",
     "build:watch": "yarn run build --watch",
-    "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\"",
+    "check-build": "node -e \"(async function() { await import('./lib/downloadTests.js') })()\"",
     "check-types": "tsc",
     "lint": "eslint --color --ext .ts src/ test/",
     "lint:fix": "yarn run lint --fix",
