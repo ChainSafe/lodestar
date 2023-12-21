@@ -90,6 +90,11 @@ export class RestApiServer {
       metrics?.requests.inc({operationId});
     });
 
+    server.addHook("preHandler", async (req, _res) => {
+      const {operationId} = req.routeConfig as RouteConfig;
+      this.logger.debug(`Exec ${req.id as string} ${req.ip} ${operationId}`);
+    });
+
     // Log after response
     server.addHook("onResponse", async (req, res) => {
       const {operationId} = req.routeConfig as RouteConfig;
