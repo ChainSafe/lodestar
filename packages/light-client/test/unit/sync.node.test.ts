@@ -1,4 +1,4 @@
-import {describe, it, expect, afterEach, vi} from 'vitest';
+import {describe, it, expect, afterEach, vi} from "vitest";
 import {JsonPath, toHexString} from "@chainsafe/ssz";
 import {computeDescriptor, TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -26,7 +26,7 @@ import {LightClientRestTransport} from "../../src/transport/rest.js";
 const SOME_HASH = Buffer.alloc(32, 0xff);
 
 describe("sync", () => {
-  vi.setConfig({testTimeout: 15000});
+  vi.setConfig({testTimeout: 30_000});
   const afterEachCbs: (() => Promise<unknown> | unknown)[] = [];
 
   afterEach(async () => {

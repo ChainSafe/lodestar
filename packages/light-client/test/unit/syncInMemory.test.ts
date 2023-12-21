@@ -9,7 +9,6 @@ import {BeaconChainLcMock} from "../mocks/BeaconChainLcMock.js";
 import {processLightClientUpdate} from "../utils/naive/update.js";
 import {IBeaconChainLc, prepareUpdateNaive} from "../utils/prepareUpdateNaive.js";
 import {getInteropSyncCommittee, getSyncAggregateSigningRoot, SyncCommitteeKeys} from "../utils/utils.js";
-import {isNode} from "../../src/utils/utils.js";
 
 function getSyncCommittee(
   syncCommitteesKeys: Map<SyncPeriod, SyncCommitteeKeys>,

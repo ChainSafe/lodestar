@@ -1,4 +1,4 @@
-import {describe, it, expect, beforeAll, vi} from 'vitest';
+import {describe, it, expect, beforeAll, vi} from "vitest";
 import bls from "@chainsafe/bls";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {altair, ssz} from "@lodestar/types";
@@ -14,7 +14,6 @@ import {
 import {assertValidLightClientUpdate} from "../../src/validation.js";
 import {LightClientSnapshotFast, SyncCommitteeFast} from "../../src/types.js";
 import {defaultBeaconBlockHeader, getSyncAggregateSigningRoot, signAndAggregate} from "../utils/utils.js";
-import {isNode} from "../../src/utils/utils.js";
 
 describe("validation", function () {
   // In browser test this process is taking more time than default 2000ms
