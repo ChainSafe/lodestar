@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from 'vitest';
 import {chunkifyInclusiveRange} from "../../../src/utils/chunkify.js";
 
 describe("utils / chunkifyInclusiveRange", () => {
@@ -20,7 +20,7 @@ describe("utils / chunkifyInclusiveRange", () => {
 
   for (const {id, from, to, max, result} of testCases) {
     it(id, () => {
-      expect(chunkifyInclusiveRange(from, to, max)).to.deep.equal(result);
+      expect(chunkifyInclusiveRange(from, to, max)).toEqual(result);
     });
   }
 });

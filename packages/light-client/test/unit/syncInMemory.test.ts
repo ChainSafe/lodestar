@@ -1,5 +1,5 @@
-import {expect} from "chai";
-import bls, {init} from "@chainsafe/bls/switchable";
+import {describe, it, expect, beforeAll, vi} from "vitest";
+import bls from "@chainsafe/bls";
 import {createBeaconConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -25,7 +25,7 @@ function getSyncCommittee(
 
 describe("syncInMemory", function () {
   // In browser test this process is taking more time than default 2000ms
-  this.timeout(10000);
+  vi.setConfig({testTimeout: 10000});
 
   // Fixed params
   const genValiRoot = Buffer.alloc(32, 9);
@@ -35,20 +35,14 @@ describe("syncInMemory", function () {
   let updateData: {chain: IBeaconChainLc; blockWithSyncAggregate: altair.BeaconBlock};
   let update: altair.LightClientUpdate;
 
-  before("init bls", async () => {
-    // This process has to be done manually because of an issue in Karma runner
-    // https://github.com/karma-runner/karma/issues/3804
-    await init(isNode ? "blst-native" : "herumi");
-  });
-
-  before("BLS sanity check", () => {
+  beforeAll(() => {
     const sk = bls.SecretKey.fromBytes(Buffer.alloc(32, 1));
-    expect(sk.toPublicKey().toHex()).to.equal(
+    expect(sk.toPublicKey().toHex()).toBe(
       "0xaa1a1c26055a329817a5759d877a2795f9499b97d6056edde0eea39512f24e8bc874b4471f0501127abb1ea0d9f68ac1"
     );
   });
 
-  before("Generate data for prepareUpdate", () => {
+  beforeAll(() => {
     // Create a state that has as nextSyncCommittee the committee 2
     const finalizedBlockSlot = SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1;
     const headerBlockSlot = finalizedBlockSlot + 1;
@@ -107,6 +101,6 @@ describe("syncInMemory", function () {
       },
     };
 
-    expect(() => processLightClientUpdate(config, store, update, currentSlot)).to.not.throw();
+    expect(() => processLightClientUpdate(config, store, update, currentSlot)).not.toThrow();
   });
 });

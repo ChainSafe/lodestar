@@ -1,4 +1,4 @@
-import bls from "@chainsafe/bls/switchable";
+import bls from "@chainsafe/bls";
 import type {PublicKey, Signature} from "@chainsafe/bls/types";
 import {altair, Root, Slot, ssz, allForks} from "@lodestar/types";
 import {
