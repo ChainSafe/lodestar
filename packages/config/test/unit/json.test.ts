@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {chainConfigFromJson, chainConfigToJson} from "../../src/index.js";
 import {chainConfig} from "../../src/default.js";
 
@@ -7,6 +7,6 @@ describe("chainConfig JSON", () => {
     const json = chainConfigToJson(chainConfig);
     const chainConfigRes = chainConfigFromJson(json);
 
-    expect(chainConfigRes).to.deep.equal(chainConfig);
+    expect(chainConfigRes).toEqual(chainConfig);
   });
 });
