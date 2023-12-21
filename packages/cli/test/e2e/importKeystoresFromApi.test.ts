@@ -7,11 +7,11 @@ import {Interchange} from "@lodestar/validator";
 import {ApiError, HttpStatusCode} from "@lodestar/api";
 import {bufferStderr, spawnCliCommand} from "@lodestar/test-utils";
 import {getMochaContext} from "@lodestar/test-utils/mocha";
+import {getKeystoresStr} from "@lodestar/test-utils";
 import {testFilesDir} from "../utils.js";
 import {cachedPubkeysHex, cachedSeckeysHex} from "../utils/cachedKeys.js";
 import {expectDeepEquals} from "../utils/runUtils.js";
 import {expectKeys, startValidatorWithKeyManager} from "../utils/validator.js";
-import {getKeystoresStr} from "../utils/keystores.js";
 
 describe("import keystores from api", function () {
   const testContext = getMochaContext(this);

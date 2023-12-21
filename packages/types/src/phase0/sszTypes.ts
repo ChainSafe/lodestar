@@ -39,7 +39,6 @@ const {
   EpochInf,
   CommitteeIndex,
   ValidatorIndex,
-  Gwei,
   Root,
   Version,
   ForkDigest,
@@ -248,7 +247,14 @@ export const Validator = ValidatorNodeStruct;
 export const Validators = new ListCompositeType(ValidatorNodeStruct, VALIDATOR_REGISTRY_LIMIT);
 export const Balances = new ListBasicType(UintNum64, VALIDATOR_REGISTRY_LIMIT);
 export const RandaoMixes = new VectorCompositeType(Bytes32, EPOCHS_PER_HISTORICAL_VECTOR);
-export const Slashings = new VectorBasicType(Gwei, EPOCHS_PER_SLASHINGS_VECTOR);
+/**
+ * This is initially a Gwei (BigInt) vector, however since Nov 2023 it's converted to UintNum64 (number) vector in the state transition because:
+ * - state.slashings[nextEpoch % EPOCHS_PER_SLASHINGS_VECTOR] is reset per epoch in processSlashingsReset()
+ * - max slashed validators per epoch is SLOTS_PER_EPOCH * MAX_ATTESTER_SLASHINGS * MAX_VALIDATORS_PER_COMMITTEE which is 32 * 2 * 2048 = 131072 on mainnet
+ * - with that and 32_000_000_000 MAX_EFFECTIVE_BALANCE, it still fits in a number given that Math.floor(Number.MAX_SAFE_INTEGER / 32_000_000_000) = 281474
+ * - we don't need to compute the total slashings from state.slashings, it's handled by totalSlashingsByIncrement in EpochCache
+ */
+export const Slashings = new VectorBasicType(UintNum64, EPOCHS_PER_SLASHINGS_VECTOR);
 export const JustificationBits = new BitVectorType(JUSTIFICATION_BITS_LENGTH);
 
 // Misc dependants

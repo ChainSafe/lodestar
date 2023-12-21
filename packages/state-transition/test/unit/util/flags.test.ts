@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 
 describe("Altair status flags", () => {
   for (let prev = 0b000; prev <= 0b111; prev++) {
@@ -7,7 +7,7 @@ describe("Altair status flags", () => {
         expect(
           // Actual function
           toStr(getResFlags(prev, att))
-        ).to.equal(
+        ).toBe(
           // Naive but correct implementation
           toStr(getResFlagsNaive(prev, att))
         );

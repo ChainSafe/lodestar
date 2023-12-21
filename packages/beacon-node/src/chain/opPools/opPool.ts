@@ -12,10 +12,13 @@ import {
   MAX_VOLUNTARY_EXITS,
   MAX_BLS_TO_EXECUTION_CHANGES,
   BLS_WITHDRAWAL_PREFIX,
+  MAX_ATTESTER_SLASHINGS,
 } from "@lodestar/params";
 import {Epoch, phase0, capella, ssz, ValidatorIndex} from "@lodestar/types";
 import {IBeaconDb} from "../../db/index.js";
 import {SignedBLSToExecutionChangeVersioned} from "../../util/types.js";
+import {BlockType} from "../interface.js";
+import {Metrics} from "../../metrics/metrics.js";
 import {isValidBlsToExecutionChangeForBlockInclusion} from "./utils.js";
 
 type HexRoot = string;
@@ -164,7 +167,9 @@ export class OpPool {
    * slashings included earlier in the block.
    */
   getSlashingsAndExits(
-    state: CachedBeaconStateAllForks
+    state: CachedBeaconStateAllForks,
+    blockType: BlockType,
+    metrics: Metrics | null
   ): [
     phase0.AttesterSlashing[],
     phase0.ProposerSlashing[],
@@ -177,6 +182,12 @@ export class OpPool {
     const toBeSlashedIndices = new Set<ValidatorIndex>();
     const proposerSlashings: phase0.ProposerSlashing[] = [];
 
+    const stepsMetrics =
+      blockType === BlockType.Full
+        ? metrics?.executionBlockProductionTimeSteps
+        : metrics?.builderBlockProductionTimeSteps;
+
+    const endProposerSlashing = stepsMetrics?.startTimer();
     for (const proposerSlashing of this.proposerSlashings.values()) {
       const index = proposerSlashing.signedHeader1.message.proposerIndex;
       const validator = state.validators.getReadonly(index);
@@ -189,21 +200,28 @@ export class OpPool {
         }
       }
     }
+    endProposerSlashing?.({
+      step: "proposerSlashing",
+    });
 
+    const endAttesterSlashings = stepsMetrics?.startTimer();
     const attesterSlashings: phase0.AttesterSlashing[] = [];
     attesterSlashing: for (const attesterSlashing of this.attesterSlashings.values()) {
       /** Indices slashable in this attester slashing */
       const slashableIndices = new Set<ValidatorIndex>();
       for (let i = 0; i < attesterSlashing.intersectingIndices.length; i++) {
         const index = attesterSlashing.intersectingIndices[i];
-        const validator = state.validators.getReadonly(index);
-
         // If we already have a slashing for this index, we can continue on to the next slashing
         if (toBeSlashedIndices.has(index)) {
           continue attesterSlashing;
         }
+
+        const validator = state.validators.getReadonly(index);
         if (isSlashableAtEpoch(validator, stateEpoch)) {
           slashableIndices.add(index);
+        }
+        if (attesterSlashings.length >= MAX_ATTESTER_SLASHINGS) {
+          break attesterSlashing;
         }
       }
 
@@ -216,7 +234,11 @@ export class OpPool {
         }
       }
     }
+    endAttesterSlashings?.({
+      step: "attesterSlashings",
+    });
 
+    const endVoluntaryExits = stepsMetrics?.startTimer();
     const voluntaryExits: phase0.SignedVoluntaryExit[] = [];
     for (const voluntaryExit of this.voluntaryExits.values()) {
       if (
@@ -233,7 +255,11 @@ export class OpPool {
         }
       }
     }
+    endVoluntaryExits?.({
+      step: "voluntaryExits",
+    });
 
+    const endBlsToExecutionChanges = stepsMetrics?.startTimer();
     const blsToExecutionChanges: capella.SignedBLSToExecutionChange[] = [];
     for (const blsToExecutionChange of this.blsToExecutionChanges.values()) {
       if (isValidBlsToExecutionChangeForBlockInclusion(state, blsToExecutionChange.data)) {
@@ -243,6 +269,9 @@ export class OpPool {
         }
       }
     }
+    endBlsToExecutionChanges?.({
+      step: "blsToExecutionChanges",
+    });
 
     return [attesterSlashings, proposerSlashings, voluntaryExits, blsToExecutionChanges];
   }

@@ -6,16 +6,17 @@ import {
   reconstructFullBlockOrContents,
 } from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
+import {Logger} from "@lodestar/logger";
 import {getClient, Api as BuilderApi} from "@lodestar/api/builder";
 import {SLOTS_PER_EPOCH, ForkExecution} from "@lodestar/params";
-
+import {toSafePrintableUrl} from "@lodestar/utils";
 import {ApiError} from "@lodestar/api";
 import {Metrics} from "../../metrics/metrics.js";
 import {IExecutionBuilder} from "./interface.js";
 
 export type ExecutionBuilderHttpOpts = {
   enabled: boolean;
-  urls: string[];
+  url: string;
   timeout?: number;
   faultInspectionWindow?: number;
   allowedFaults?: number;
@@ -28,7 +29,7 @@ export type ExecutionBuilderHttpOpts = {
 
 export const defaultExecutionBuilderHttpOpts: ExecutionBuilderHttpOpts = {
   enabled: false,
-  urls: ["http://localhost:8661"],
+  url: "http://localhost:8661",
   timeout: 12000,
 };
 
@@ -41,8 +42,13 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
   faultInspectionWindow: number;
   allowedFaults: number;
 
-  constructor(opts: ExecutionBuilderHttpOpts, config: ChainForkConfig, metrics: Metrics | null = null) {
-    const baseUrl = opts.urls[0];
+  constructor(
+    opts: ExecutionBuilderHttpOpts,
+    config: ChainForkConfig,
+    metrics: Metrics | null = null,
+    logger?: Logger
+  ) {
+    const baseUrl = opts.url;
     if (!baseUrl) throw Error("No Url provided for executionBuilder");
     this.api = getClient(
       {
@@ -52,6 +58,7 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
       },
       {config, metrics: metrics?.builderHttpClient}
     );
+    logger?.info("External builder", {url: toSafePrintableUrl(baseUrl)});
     this.config = config;
     this.issueLocalFcUWithFeeRecipient = opts.issueLocalFcUWithFeeRecipient;
 

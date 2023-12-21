@@ -21,8 +21,8 @@ const KEYSTORE_IMPORT_PROGRESS_MS = 10000;
  * --interopIndexes
  * --fromMnemonic, then requires --mnemonicIndexes
  * --importKeystores, then requires --importKeystoresPassword
- * --externalSignerFetchPubkeys, then requires --externalSignerUrl
- * --externalSignerPublicKeys, then requires --externalSignerUrl
+ * --externalSigner.fetch, then requires --externalSigner.url
+ * --externalSigner.pubkeys, then requires --externalSigner.url
  * else load from persisted
  * - both remote keys and local keystores
  *
@@ -104,7 +104,7 @@ export async function getSignersFromArgs(
     });
   }
 
-  // Remote keys declared manually with --externalSignerPublicKeys
+  // Remote keys are declared manually or will be fetched from external signer
   else if (args["externalSigner.pubkeys"] || args["externalSigner.fetch"]) {
     return getRemoteSigners(args);
   }
@@ -158,13 +158,17 @@ export function getSignerPubkeyHex(signer: Signer): string {
 async function getRemoteSigners(args: IValidatorCliArgs & GlobalArgs): Promise<Signer[]> {
   const externalSignerUrl = args["externalSigner.url"];
   if (!externalSignerUrl) {
-    throw new YargsError("Must set externalSignerUrl with externalSignerPublicKeys");
+    throw new YargsError(
+      `Must set externalSigner.url with ${
+        args["externalSigner.pubkeys"] ? "externalSigner.pubkeys" : "externalSigner.fetch"
+      }`
+    );
   }
   if (!isValidHttpUrl(externalSignerUrl)) {
-    throw new YargsError(`Invalid external signer URL ${externalSignerUrl}`);
+    throw new YargsError(`Invalid external signer URL: ${externalSignerUrl}`);
   }
   if (args["externalSigner.pubkeys"] && args["externalSigner.pubkeys"].length === 0) {
-    throw new YargsError("externalSignerPublicKeys is set to an empty list");
+    throw new YargsError("externalSigner.pubkeys is set to an empty list");
   }
 
   const pubkeys = args["externalSigner.pubkeys"] ?? (await externalSignerGetKeys(externalSignerUrl));

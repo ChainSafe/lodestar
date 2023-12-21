@@ -1,5 +1,4 @@
-import Sinon from "sinon";
-import {expect} from "chai";
+import {describe, it, beforeEach, afterEach, expect, vi} from "vitest";
 import {HttpClient} from "../../../src/utils/client/index.js";
 
 describe("httpClient fallback", () => {
@@ -8,7 +7,7 @@ describe("httpClient fallback", () => {
 
   // Using fetchSub instead of actually setting up servers because there are some strange
   // race conditions, where the server stub doesn't count the call in time before the test is over.
-  const fetchStub = Sinon.stub<[URL], ReturnType<typeof fetch>>();
+  const fetchStub = vi.fn();
 
   let httpClient: HttpClient;
 
@@ -37,7 +36,7 @@ describe("httpClient fallback", () => {
       fetch: fetchStub as typeof fetch,
     });
 
-    fetchStub.callsFake(async (url) => {
+    fetchStub.mockImplementation(async (url) => {
       // Simulate network delay
       await new Promise((r) => setTimeout(r, 10));
       const i = getServerIndex(url);
@@ -50,7 +49,6 @@ describe("httpClient fallback", () => {
   });
 
   afterEach(() => {
-    fetchStub.reset();
     serverErrors.clear();
   });
 
@@ -58,13 +56,13 @@ describe("httpClient fallback", () => {
   function assertServerCallCount(step: number, expectedCallCounts: number[]): void {
     const callCounts: number[] = [];
     for (let i = 0; i < serverCount; i++) callCounts[i] = 0;
-    for (const call of fetchStub.getCalls()) {
-      callCounts[getServerIndex(call.args[0])]++;
+    for (const call of fetchStub.mock.calls) {
+      callCounts[getServerIndex(call)]++;
     }
 
-    expect(callCounts.join(",")).equals(expectedCallCounts.join(","), `step ${step} - callCounts`);
+    expect(callCounts.join(",")).toBe(expectedCallCounts.join(","));
 
-    fetchStub.resetHistory();
+    fetchStub.mockClear();
 
     // eslint-disable-next-line no-console
     if (DEBUG_LOGS) console.log("completed assertions step", step);
@@ -114,7 +112,7 @@ describe("httpClient fallback", () => {
     serverErrors.set(0, true);
     serverErrors.set(1, true);
     serverErrors.set(2, true);
-    await expect(requestTestRoute()).rejectedWith("test_error_server_2");
+    await expect(requestTestRoute()).rejects.toThrow("test_error_server_2");
     assertServerCallCount(0, [1, 1, 1]);
   });
 });

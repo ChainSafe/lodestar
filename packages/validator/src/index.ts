@@ -15,6 +15,7 @@ export {
   externalSignerGetKeys,
   externalSignerPostSignature,
   externalSignerUpCheck,
+  SignableMessageType,
 } from "./util/externalSignerClient.js";
 
 // Types

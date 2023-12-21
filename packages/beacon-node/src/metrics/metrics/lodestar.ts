@@ -286,6 +286,12 @@ export function createLodestarMetrics(
       help: "Time to call commit after process a single epoch transition in seconds",
       buckets: [0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1],
     }),
+    epochTransitionStepTime: register.histogram<"step">({
+      name: "lodestar_stfn_epoch_transition_step_seconds",
+      help: "Time to call each step of epoch transition in seconds",
+      labelNames: ["step"],
+      buckets: [0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1],
+    }),
     processBlockTime: register.histogram({
       name: "lodestar_stfn_process_block_seconds",
       help: "Time to process a single block in seconds",
@@ -298,10 +304,11 @@ export function createLodestarMetrics(
       help: "Time to call commit after process a single block in seconds",
       buckets: [0.005, 0.01, 0.02, 0.05, 0.1, 1],
     }),
-    stateHashTreeRootTime: register.histogram({
+    stateHashTreeRootTime: register.histogram<"source">({
       name: "lodestar_stfn_hash_tree_root_seconds",
       help: "Time to compute the hash tree root of a post state in seconds",
-      buckets: [0.005, 0.01, 0.02, 0.05, 0.1, 1],
+      buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5],
+      labelNames: ["source"],
     }),
     preStateBalancesNodesPopulatedMiss: register.gauge<"source">({
       name: "lodestar_stfn_balances_nodes_populated_miss_total",
@@ -589,6 +596,26 @@ export function createLodestarMetrics(
         help: "Slot distance between attestation slot and head slot",
         labelNames: ["caller"],
         buckets: [0, 1, 2, 4, 8, 16, 32, 64],
+      }),
+      shufflingCacheHit: register.gauge<"caller">({
+        name: "lodestar_gossip_attestation_shuffling_cache_hit_count",
+        help: "Count of gossip attestation verification shuffling cache hit",
+        labelNames: ["caller"],
+      }),
+      shufflingCacheMiss: register.gauge<"caller">({
+        name: "lodestar_gossip_attestation_shuffling_cache_miss_count",
+        help: "Count of gossip attestation verification shuffling cache miss",
+        labelNames: ["caller"],
+      }),
+      shufflingCacheRegenHit: register.gauge<"caller">({
+        name: "lodestar_gossip_attestation_shuffling_cache_regen_hit_count",
+        help: "Count of gossip attestation verification shuffling cache regen hit",
+        labelNames: ["caller"],
+      }),
+      shufflingCacheRegenMiss: register.gauge<"caller">({
+        name: "lodestar_gossip_attestation_shuffling_cache_regen_miss_count",
+        help: "Count of gossip attestation verification shuffling cache regen miss",
+        labelNames: ["caller"],
       }),
       attestationSlotToClockSlot: register.histogram<"caller">({
         name: "lodestar_gossip_attestation_attestation_slot_to_clock_slot",
@@ -1069,6 +1096,29 @@ export function createLodestarMetrics(
         name: "lodestar_balances_cache_closest_state_result_total",
         help: "Total number of stateIds returned as closest justified balances state by id",
         labelNames: ["stateId"],
+      }),
+    },
+
+    shufflingCache: {
+      size: register.gauge({
+        name: "lodestar_shuffling_cache_size",
+        help: "Shuffling cache size",
+      }),
+      processStateInsertNew: register.gauge({
+        name: "lodestar_shuffling_cache_process_state_insert_new_total",
+        help: "Total number of times processState is called resulting a new shuffling",
+      }),
+      processStateUpdatePromise: register.gauge({
+        name: "lodestar_shuffling_cache_process_state_update_promise_total",
+        help: "Total number of times processState is called resulting a promise being updated with shuffling",
+      }),
+      processStateNoOp: register.gauge({
+        name: "lodestar_shuffling_cache_process_state_no_op_total",
+        help: "Total number of times processState is called resulting no changes",
+      }),
+      insertPromiseCount: register.gauge({
+        name: "lodestar_shuffling_cache_insert_promise_count",
+        help: "Total number of times insertPromise is called",
       }),
     },
 

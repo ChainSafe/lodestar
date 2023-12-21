@@ -1,16 +1,13 @@
-import {expect} from "chai";
-import chai from "chai";
-import sinon from "sinon";
-import sinonChai from "sinon-chai";
-import {Api} from "@lodestar/api";
+import {describe, it, expect, beforeEach, vi, MockedObject} from "vitest";
+import {when} from "vitest-when";
+import {Api, HttpStatusCode, routes} from "@lodestar/api";
 import {hash} from "@lodestar/utils";
 import {Logger} from "@lodestar/logger";
 import {allForks, capella} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
+import {ForkName} from "@lodestar/params";
 import {PayloadStore} from "../../../src/proof_provider/payload_store.js";
 import {MAX_PAYLOAD_HISTORY} from "../../../src/constants.js";
-
-chai.use(sinonChai);
 
 const createHash = (input: string): Uint8Array => hash(Buffer.from(input, "utf8"));
 
@@ -47,22 +44,23 @@ const buildBlockResponse = ({
 }: {
   slot: number;
   blockNumber: number;
-}): {ok: boolean; response: {version: number; executionOptimistic: boolean; data: allForks.SignedBeaconBlock}} => ({
+}): routes.beacon.block.BlockV2Response<"json"> => ({
   ok: true,
+  status: HttpStatusCode.OK,
   response: {
-    version: 12,
+    version: ForkName.altair,
     executionOptimistic: true,
     data: buildBlock({slot, blockNumber}),
   },
 });
 
 describe("proof_provider/payload_store", function () {
-  let api: Api;
+  let api: Api & {beacon: MockedObject<Api["beacon"]>};
   let logger: Logger;
   let store: PayloadStore;
 
   beforeEach(() => {
-    api = {beacon: {getBlockV2: sinon.stub()}} as unknown as Api;
+    api = {beacon: {getBlockV2: vi.fn()}} as unknown as Api & {beacon: MockedObject<Api["beacon"]>};
     logger = console as unknown as Logger;
     store = new PayloadStore({api, logger});
   });
@@ -82,7 +80,7 @@ describe("proof_provider/payload_store", function () {
       const payload = buildPayload({blockNumber: 10});
       store.set(payload, true);
 
-      expect(store.finalized).to.eql(payload);
+      expect(store.finalized).toEqual(payload);
     });
 
     it("should return highest finalized payload", () => {
@@ -91,7 +89,7 @@ describe("proof_provider/payload_store", function () {
       store.set(payload1, true);
       store.set(payload2, true);
 
-      expect(store.finalized).to.eql(payload2);
+      expect(store.finalized).toEqual(payload2);
     });
   });
 
@@ -106,7 +104,7 @@ describe("proof_provider/payload_store", function () {
       store.set(payload1, true);
       store.set(payload2, true);
 
-      expect(store.latest).to.eql(payload2);
+      expect(store.latest).toEqual(payload2);
     });
 
     it("should return latest payload if not finalized", () => {
@@ -115,20 +113,20 @@ describe("proof_provider/payload_store", function () {
       store.set(payload1, false);
       store.set(payload2, false);
 
-      expect(store.latest).to.eql(payload2);
+      expect(store.latest).toEqual(payload2);
     });
   });
 
   describe("get", () => {
     it("should return undefined for an empty store", async () => {
-      await expect(store.get(10)).to.eventually.undefined;
+      await expect(store.get(10)).resolves.toBeUndefined();
     });
 
     it("should return undefined for non existing block id", async () => {
       const payload1 = buildPayload({blockNumber: 10});
       store.set(payload1, false);
 
-      await expect(store.get(11)).to.eventually.undefined;
+      await expect(store.get(11)).resolves.toBeUndefined();
     });
 
     it("should return undefined for non existing block hash", async () => {
@@ -136,7 +134,7 @@ describe("proof_provider/payload_store", function () {
       store.set(payload1, false);
       const nonExistingBlockHash = createHash("non-existing-block-hash");
 
-      await expect(store.get(toHexString(nonExistingBlockHash))).to.eventually.undefined;
+      await expect(store.get(toHexString(nonExistingBlockHash))).resolves.toBeUndefined();
     });
 
     describe("block hash as blockId", () => {
@@ -144,7 +142,7 @@ describe("proof_provider/payload_store", function () {
         const payload1 = buildPayload({blockNumber: 10});
         store.set(payload1, false);
 
-        await expect(store.get(toHexString(payload1.blockHash))).to.eventually.eql(payload1);
+        await expect(store.get(toHexString(payload1.blockHash))).resolves.toEqual(payload1);
       });
     });
 
@@ -153,7 +151,7 @@ describe("proof_provider/payload_store", function () {
         const finalizedPayload = buildPayload({blockNumber: 10});
         store.set(finalizedPayload, true);
 
-        await expect(store.get(11)).to.rejectedWith(
+        await expect(store.get(11)).rejects.toThrow(
           "Block number 11 is higher than the latest finalized block number. We recommend to use block hash for unfinalized blocks."
         );
       });
@@ -162,28 +160,28 @@ describe("proof_provider/payload_store", function () {
         const payload1 = buildPayload({blockNumber: 10});
         store.set(payload1, false);
 
-        await expect(store.get(10)).to.eventually.undefined;
+        await expect(store.get(10)).resolves.toBeUndefined();
       });
 
       it("should return payload for a block number in hex", async () => {
         const payload1 = buildPayload({blockNumber: 10});
         store.set(payload1, true);
 
-        await expect(store.get(`0x${payload1.blockNumber.toString(16)}`)).to.eventually.eql(payload1);
+        await expect(store.get(`0x${payload1.blockNumber.toString(16)}`)).resolves.toEqual(payload1);
       });
 
       it("should return payload for a block number as string", async () => {
         const payload1 = buildPayload({blockNumber: 10});
         store.set(payload1, true);
 
-        await expect(store.get(payload1.blockNumber.toString())).to.eventually.eql(payload1);
+        await expect(store.get(payload1.blockNumber.toString())).resolves.toEqual(payload1);
       });
 
       it("should return payload for a block number as integer", async () => {
         const payload1 = buildPayload({blockNumber: 10});
         store.set(payload1, true);
 
-        await expect(store.get(10)).to.eventually.eql(payload1);
+        await expect(store.get(10)).resolves.toEqual(payload1);
       });
 
       it("should fetch the finalized payload from API if payload root not exists", async () => {
@@ -193,22 +191,22 @@ describe("proof_provider/payload_store", function () {
         const availablePayload = buildPayload({blockNumber});
         const unavailablePayload = buildPayload({blockNumber: unavailableBlockNumber});
 
-        (api.beacon.getBlockV2 as sinon.SinonStub)
-          .withArgs(blockNumber)
-          .resolves(buildBlockResponse({blockNumber, slot: blockNumber}));
+        when(api.beacon.getBlockV2)
+          .calledWith(blockNumber)
+          .thenResolve(buildBlockResponse({blockNumber, slot: blockNumber}));
 
-        (api.beacon.getBlockV2 as sinon.SinonStub)
-          .withArgs(unavailableBlockNumber)
-          .resolves(buildBlockResponse({blockNumber: unavailableBlockNumber, slot: unavailableBlockNumber}));
+        when(api.beacon.getBlockV2)
+          .calledWith(unavailableBlockNumber)
+          .thenResolve(buildBlockResponse({blockNumber: unavailableBlockNumber, slot: unavailableBlockNumber}));
 
         store.set(availablePayload, true);
 
         const result = await store.get(unavailablePayload.blockNumber);
 
-        expect(api.beacon.getBlockV2 as sinon.SinonStub).calledTwice;
-        expect(api.beacon.getBlockV2 as sinon.SinonStub).calledWith(blockNumber);
-        expect(api.beacon.getBlockV2 as sinon.SinonStub).calledWith(unavailableBlockNumber);
-        expect(result).to.eql(unavailablePayload);
+        expect(api.beacon.getBlockV2).toHaveBeenCalledTimes(2);
+        expect(api.beacon.getBlockV2).toHaveBeenCalledWith(blockNumber);
+        expect(api.beacon.getBlockV2).toHaveBeenCalledWith(unavailableBlockNumber);
+        expect(result).toEqual(unavailablePayload);
       });
     });
   });
@@ -219,16 +217,16 @@ describe("proof_provider/payload_store", function () {
       store.set(payload1, false);
 
       // Unfinalized blocks are not indexed by block hash
-      await expect(store.get(toHexString(payload1.blockHash))).to.eventually.eql(payload1);
-      expect(store.finalized).to.eql(undefined);
+      await expect(store.get(toHexString(payload1.blockHash))).resolves.toEqual(payload1);
+      expect(store.finalized).toEqual(undefined);
     });
 
     it("should set the payload for finalized blocks", async () => {
       const payload1 = buildPayload({blockNumber: 10});
       store.set(payload1, true);
 
-      await expect(store.get(payload1.blockNumber.toString())).to.eventually.eql(payload1);
-      expect(store.finalized).to.eql(payload1);
+      await expect(store.get(payload1.blockNumber.toString())).resolves.toEqual(payload1);
+      expect(store.finalized).toEqual(payload1);
     });
   });
 
@@ -243,15 +241,15 @@ describe("proof_provider/payload_store", function () {
         const slot = 20;
         const header = buildLCHeader({slot, blockNumber});
         const blockResponse = buildBlockResponse({blockNumber, slot});
-        const executionPayload = (blockResponse.response.data as capella.SignedBeaconBlock).message.body
+        const executionPayload = (blockResponse.response?.data as capella.SignedBeaconBlock).message.body
           .executionPayload;
-        (api.beacon.getBlockV2 as sinon.SinonStub).resolves(blockResponse);
+        api.beacon.getBlockV2.mockResolvedValue(blockResponse);
 
         await store.processLCHeader(header, true);
 
-        expect(api.beacon.getBlockV2).calledOnce;
-        expect(api.beacon.getBlockV2).calledWith(20);
-        expect(store.finalized).to.eql(executionPayload);
+        expect(api.beacon.getBlockV2).toHaveBeenCalledOnce();
+        expect(api.beacon.getBlockV2).toHaveBeenCalledWith(20);
+        expect(store.finalized).toEqual(executionPayload);
       });
 
       it("should process lightclient header for finalized block which exists as un-finalized in store", async () => {
@@ -259,9 +257,9 @@ describe("proof_provider/payload_store", function () {
         const slot = 20;
         const header = buildLCHeader({slot, blockNumber});
         const blockResponse = buildBlockResponse({blockNumber, slot});
-        const executionPayload = (blockResponse.response.data as capella.SignedBeaconBlock).message.body
+        const executionPayload = (blockResponse.response?.data as capella.SignedBeaconBlock).message.body
           .executionPayload;
-        (api.beacon.getBlockV2 as sinon.SinonStub).resolves(blockResponse);
+        api.beacon.getBlockV2.mockResolvedValue(blockResponse);
 
         expect(store.finalized).to.undefined;
         // First process as unfinalized
@@ -271,8 +269,8 @@ describe("proof_provider/payload_store", function () {
         await store.processLCHeader(header, true);
 
         // Called only once when we process unfinalized
-        expect(api.beacon.getBlockV2).to.be.calledOnce;
-        expect(store.finalized).to.eql(executionPayload);
+        expect(api.beacon.getBlockV2).to.be.toHaveBeenCalledOnce();
+        expect(store.finalized).toEqual(executionPayload);
       });
     });
 
@@ -280,19 +278,19 @@ describe("proof_provider/payload_store", function () {
       const blockNumber = 10;
       const slot = 20;
       const header = buildLCHeader({slot, blockNumber});
-      (api.beacon.getBlockV2 as sinon.SinonStub).resolves(buildBlockResponse({blockNumber, slot}));
+      api.beacon.getBlockV2.mockResolvedValue(buildBlockResponse({blockNumber, slot}));
 
       await store.processLCHeader(header);
 
-      expect(api.beacon.getBlockV2).calledOnce;
-      expect(api.beacon.getBlockV2).calledWith(20);
+      expect(api.beacon.getBlockV2).toHaveBeenCalledOnce();
+      expect(api.beacon.getBlockV2).toHaveBeenCalledWith(20);
     });
 
     it("should not fetch existing payload for lightclient header", async () => {
       const blockNumber = 10;
       const slot = 20;
       const header = buildLCHeader({slot, blockNumber});
-      (api.beacon.getBlockV2 as sinon.SinonStub).resolves(buildBlockResponse({blockNumber, slot}));
+      api.beacon.getBlockV2.mockResolvedValue(buildBlockResponse({blockNumber, slot}));
 
       await store.processLCHeader(header);
 
@@ -300,21 +298,21 @@ describe("proof_provider/payload_store", function () {
       await store.processLCHeader(header);
 
       // The network fetch should be done once
-      expect(api.beacon.getBlockV2).calledOnce;
-      expect(api.beacon.getBlockV2).calledWith(20);
+      expect(api.beacon.getBlockV2).toHaveBeenCalledOnce();
+      expect(api.beacon.getBlockV2).toHaveBeenCalledWith(20);
     });
 
     it("should prune the existing payloads", async () => {
       const blockNumber = 10;
       const slot = 20;
       const header = buildLCHeader({slot, blockNumber});
-      (api.beacon.getBlockV2 as sinon.SinonStub).resolves(buildBlockResponse({blockNumber, slot}));
+      api.beacon.getBlockV2.mockResolvedValue(buildBlockResponse({blockNumber, slot}));
 
-      sinon.spy(store, "prune");
+      vi.spyOn(store, "prune");
 
       await store.processLCHeader(header);
 
-      expect(store.prune).to.be.calledOnce;
+      expect(store.prune).toHaveBeenCalledOnce();
     });
   });
 
@@ -330,11 +328,11 @@ describe("proof_provider/payload_store", function () {
         store.set(buildPayload({blockNumber: i}), true);
       }
 
-      expect(store["payloads"].size).to.equal(numberOfPayloads);
+      expect(store["payloads"].size).toEqual(numberOfPayloads);
 
       store.prune();
 
-      expect(store["payloads"].size).to.equal(MAX_PAYLOAD_HISTORY);
+      expect(store["payloads"].size).toEqual(MAX_PAYLOAD_HISTORY);
     });
 
     it("should not prune the existing payloads if equal to MAX_PAYLOAD_HISTORY", () => {
@@ -344,11 +342,11 @@ describe("proof_provider/payload_store", function () {
         store.set(buildPayload({blockNumber: i}), true);
       }
 
-      expect(store["payloads"].size).to.equal(MAX_PAYLOAD_HISTORY);
+      expect(store["payloads"].size).toEqual(MAX_PAYLOAD_HISTORY);
 
       store.prune();
 
-      expect(store["payloads"].size).to.equal(MAX_PAYLOAD_HISTORY);
+      expect(store["payloads"].size).toEqual(MAX_PAYLOAD_HISTORY);
     });
 
     it("should not prune the existing payloads if less than MAX_PAYLOAD_HISTORY", () => {
@@ -358,11 +356,11 @@ describe("proof_provider/payload_store", function () {
         store.set(buildPayload({blockNumber: i}), true);
       }
 
-      expect(store["payloads"].size).to.equal(numberOfPayloads);
+      expect(store["payloads"].size).toEqual(numberOfPayloads);
 
       store.prune();
 
-      expect(store["payloads"].size).to.equal(numberOfPayloads);
+      expect(store["payloads"].size).toEqual(numberOfPayloads);
     });
 
     it("should prune finalized roots", () => {
@@ -372,33 +370,33 @@ describe("proof_provider/payload_store", function () {
         store.set(buildPayload({blockNumber: i}), true);
       }
 
-      expect(store["finalizedRoots"].size).to.equal(numberOfPayloads);
+      expect(store["finalizedRoots"].size).toEqual(numberOfPayloads);
 
       store.prune();
 
-      expect(store["finalizedRoots"].size).to.equal(MAX_PAYLOAD_HISTORY);
+      expect(store["finalizedRoots"].size).toEqual(MAX_PAYLOAD_HISTORY);
     });
 
     it("should prune unfinalized roots", async () => {
       const numberOfPayloads = MAX_PAYLOAD_HISTORY + 2;
 
       for (let i = 1; i <= numberOfPayloads; i++) {
-        (api.beacon.getBlockV2 as sinon.SinonStub)
-          .withArgs(i)
-          .resolves(buildBlockResponse({blockNumber: 500 + i, slot: i}));
+        when(api.beacon.getBlockV2)
+          .calledWith(i)
+          .thenResolve(buildBlockResponse({blockNumber: 500 + i, slot: i}));
 
         await store.processLCHeader(buildLCHeader({blockNumber: 500 + i, slot: i}), false);
       }
 
       // Because all payloads are unfinalized, they are not pruned
-      expect(store["unfinalizedRoots"].size).to.equal(numberOfPayloads);
+      expect(store["unfinalizedRoots"].size).toEqual(numberOfPayloads);
 
       // Let make some payloads finalized
       await store.processLCHeader(buildLCHeader({blockNumber: 500 + 1, slot: 1}), true);
       await store.processLCHeader(buildLCHeader({blockNumber: 500 + 2, slot: 2}), true);
 
       // store.processLCHeader will call the prune method internally and clean the unfinalized roots
-      expect(store["unfinalizedRoots"].size).to.equal(numberOfPayloads - 2);
+      expect(store["unfinalizedRoots"].size).toEqual(numberOfPayloads - 2);
     });
   });
 });

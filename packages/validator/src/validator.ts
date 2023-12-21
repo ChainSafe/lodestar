@@ -2,7 +2,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {BLSPubkey, phase0, ssz} from "@lodestar/types";
 import {createBeaconConfig, BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {Genesis} from "@lodestar/types/phase0";
-import {Logger} from "@lodestar/utils";
+import {Logger, toSafePrintableUrl} from "@lodestar/utils";
 import {getClient, Api, routes, ApiError} from "@lodestar/api";
 import {computeEpochAtSlot, getCurrentSlot} from "@lodestar/state-transition";
 import {Clock, IClock} from "./util/clock.js";
@@ -271,6 +271,7 @@ export class Validator {
       // This new api instance can make do with default timeout as a faster timeout is
       // not necessary since this instance won't be used for validator duties
       api = getClient({urls, getAbortSignal: () => opts.abortController.signal}, {config, logger});
+      logger.info("Beacon node", {urls: urls.map(toSafePrintableUrl).toString()});
     } else {
       api = opts.api;
     }

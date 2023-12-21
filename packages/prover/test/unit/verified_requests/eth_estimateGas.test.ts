@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {createForkConfig} from "@lodestar/config";
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
 import {ELTransaction} from "../../../lib/types.js";
@@ -29,7 +29,7 @@ describe("verified_requests / eth_estimateGas", () => {
           },
         });
 
-        expect(response).to.eql(testCase.response);
+        expect(response).toEqual(testCase.response);
       });
 
       it("should return the json-rpc response with error for an invalid call", async () => {
@@ -59,7 +59,7 @@ describe("verified_requests / eth_estimateGas", () => {
           },
         });
 
-        expect(response).to.eql({
+        expect(response).toEqual({
           jsonrpc: "2.0",
           id: testCase.request.id,
           error: {code: VERIFICATION_FAILED_RESPONSE_CODE, message: getVerificationFailedMessage("eth_estimateGas")},

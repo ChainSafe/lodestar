@@ -35,6 +35,7 @@ describe("options / beaconNodeOptions", () => {
       "chain.archiveStateEpochFrequency": 1024,
       "chain.trustedSetup": "",
       "chain.minSameMessageSignatureSetsToBatch": 32,
+      "chain.maxShufflingCacheEpochs": 100,
       emitPayloadAttributes: false,
 
       eth1: true,
@@ -52,7 +53,7 @@ describe("options / beaconNodeOptions", () => {
       "execution.retryAttempts": 1,
 
       builder: false,
-      "builder.urls": ["http://localhost:8661"],
+      "builder.url": "http://localhost:8661",
       "builder.timeout": 12000,
       "builder.faultInspectionWindow": 32,
       "builder.allowedFaults": 16,
@@ -137,6 +138,7 @@ describe("options / beaconNodeOptions", () => {
         emitPayloadAttributes: false,
         trustedSetup: "",
         minSameMessageSignatureSetsToBatch: 32,
+        maxShufflingCacheEpochs: 100,
       },
       eth1: {
         enabled: true,
@@ -155,7 +157,7 @@ describe("options / beaconNodeOptions", () => {
       },
       executionBuilder: {
         enabled: false,
-        urls: ["http://localhost:8661"],
+        url: "http://localhost:8661",
         timeout: 12000,
         faultInspectionWindow: 32,
         allowedFaults: 16,
@@ -206,6 +208,7 @@ describe("options / beaconNodeOptions", () => {
       },
       sync: {
         isSingleNode: true,
+        slotImportTolerance: 32,
         disableProcessAsChainSegment: true,
         backfillBatchSize: 64,
         disableRangeSync: false,

@@ -98,9 +98,17 @@ export class PrepareNextSlotScheduler {
       const prepareState = await this.chain.regen.getBlockSlotState(
         headRoot,
         prepareSlot,
-        {dontTransferCache: true},
+        // the slot 0 of next epoch will likely use this Previous Root Checkpoint state for state transition so we transfer cache here
+        // for other slots dontTransferCached=true because we don't run state transition on this state
+        {dontTransferCache: !isEpochTransition},
         RegenCaller.precomputeEpoch
       );
+
+      // cache HashObjects for faster hashTreeRoot() later, especially for computeNewStateRoot() if we need to produce a block at slot 0 of epoch
+      // see https://github.com/ChainSafe/lodestar/issues/6194
+      const hashTreeRootTimer = this.metrics?.stateHashTreeRootTime.startTimer({source: "prepare_next_slot"});
+      prepareState.hashTreeRoot();
+      hashTreeRootTimer?.();
 
       // assuming there is no reorg, it caches the checkpoint state & helps avoid doing a full state transition in the next slot
       //  + when gossip block comes, we need to validate and run state transition
@@ -116,6 +124,7 @@ export class PrepareNextSlotScheduler {
           nextEpoch,
           headSlot,
           prepareSlot,
+          previousHits,
         });
       }
 

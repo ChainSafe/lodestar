@@ -6,7 +6,8 @@ import {
   CachedBeaconStatePhase0,
   beforeProcessEpoch,
 } from "../../../src/index.js";
-import {getNetworkCachedState, beforeValue, LazyValue} from "../../utils/index.js";
+import {beforeValue, LazyValue} from "../../utils/beforeValueMocha.js";
+import {getNetworkCachedState} from "../../utils/testFileCache.js";
 import {StateEpoch} from "../types.js";
 import {phase0State} from "../params.js";
 import {processEpoch} from "../../../src/epoch/index.js";
@@ -108,7 +109,9 @@ function benchmarkPhase0EpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>
   itBench({
     id: `${stateId} - phase0 processSlashings`,
     beforeEach: () => stateOg.value.clone() as CachedBeaconStatePhase0,
-    fn: (state) => processSlashings(state, cache.value),
+    fn: (state) => {
+      processSlashings(state, cache.value, false);
+    },
   });
 
   itBench({

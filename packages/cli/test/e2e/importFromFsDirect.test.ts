@@ -2,10 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 import {rimraf} from "rimraf";
 import {getMochaContext} from "@lodestar/test-utils/mocha";
+import {getKeystoresStr} from "@lodestar/test-utils";
 import {testFilesDir} from "../utils.js";
 import {cachedPubkeysHex, cachedSeckeysHex} from "../utils/cachedKeys.js";
 import {expectKeys, startValidatorWithKeyManager} from "../utils/validator.js";
-import {getKeystoresStr} from "../utils/keystores.js";
 
 describe("import from fs same cmd as validate", function () {
   const testContext = getMochaContext(this);

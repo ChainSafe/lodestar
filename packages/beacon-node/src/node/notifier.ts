@@ -33,7 +33,7 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
   const tdTimeSeries = new TimeSeries({maxPoints: 50});
 
   const SLOTS_PER_SYNC_COMMITTEE_PERIOD = SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
-  let hasLowPeerCount = false; // Only log once
+  let hasLowPeerCount = false;
   let isFirstTime = true;
 
   try {
@@ -41,7 +41,8 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
       const connectedPeerCount = network.getConnectedPeerCount();
 
       if (connectedPeerCount <= WARN_PEER_COUNT) {
-        if (!hasLowPeerCount) {
+        // Only log once and prevent peer count warning on startup
+        if (!hasLowPeerCount && !isFirstTime) {
           logger.warn("Low peer count", {peers: connectedPeerCount});
           hasLowPeerCount = true;
         }

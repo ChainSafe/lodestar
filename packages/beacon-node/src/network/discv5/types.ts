@@ -65,6 +65,8 @@ export type Discv5WorkerApi = {
 
   /** write profile to disc */
   writeProfile(durationMs: number, dirpath: string): Promise<string>;
+  /** write heap snapshot to disc */
+  writeHeapSnapshot(prefix: string, dirpath: string): Promise<string>;
   /** tear down discv5 resources */
   close(): Promise<void>;
 };

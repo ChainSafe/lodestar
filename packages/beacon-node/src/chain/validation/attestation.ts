@@ -1,16 +1,18 @@
 import {toHexString} from "@chainsafe/ssz";
 import {phase0, Epoch, Root, Slot, RootHex, ssz} from "@lodestar/types";
 import {ProtoBlock} from "@lodestar/fork-choice";
-import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, ForkName, ForkSeq} from "@lodestar/params";
+import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, ForkName, ForkSeq, DOMAIN_BEACON_ATTESTER} from "@lodestar/params";
 import {
   computeEpochAtSlot,
-  CachedBeaconStateAllForks,
-  getAttestationDataSigningRoot,
   createSingleSignatureSetFromComponents,
   SingleSignatureSet,
   EpochCacheError,
   EpochCacheErrorCode,
+  EpochShuffling,
+  computeStartSlotAtEpoch,
+  computeSigningRoot,
 } from "@lodestar/state-transition";
+import {BeaconConfig} from "@lodestar/config";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC} from "../../constants/index.js";
 import {RegenCaller} from "../regen/index.js";
@@ -24,6 +26,7 @@ import {AttestationDataCacheEntry} from "../seenCache/seenAttestationData.js";
 import {sszDeserializeAttestation} from "../../network/gossip/topic.js";
 import {Result, wrapError} from "../../util/wrapError.js";
 import {IBeaconChain} from "../interface.js";
+import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 
 export type BatchResult = {
   results: Result<AttestationValidationResult>[];
@@ -55,12 +58,6 @@ export type Step0Result = AttestationValidationResult & {
   signatureSet: SingleSignatureSet;
   validatorIndex: number;
 };
-
-/**
- * The beacon chain shufflings are designed to provide 1 epoch lookahead
- * At each state, we have previous shuffling, current shuffling and next shuffling
- */
-const SHUFFLING_LOOK_AHEAD_EPOCHS = 1;
 
 /**
  * Validate a single gossip attestation, do not prioritize bls signature set
@@ -359,9 +356,8 @@ async function validateGossipAttestationNoSignatureCheck(
     //  --i.e. get_ancestor(store, attestation.data.beacon_block_root, compute_start_slot_at_epoch(attestation.data.target.epoch)) == attestation.data.target.root
     // > Altready check in `verifyHeadBlockAndTargetRoot()`
 
-    const attHeadState = await getStateForAttestationVerification(
+    const shuffling = await getShufflingForAttestationVerification(
       chain,
-      attSlot,
       attEpoch,
       attHeadBlock,
       RegenCaller.validateGossipAttestation
@@ -369,9 +365,9 @@ async function validateGossipAttestationNoSignatureCheck(
 
     // [REJECT] The committee index is within the expected range
     // -- i.e. data.index < get_committee_count_per_slot(state, data.target.epoch)
-    committeeIndices = getCommitteeIndices(attHeadState, attSlot, attIndex);
-    getSigningRoot = () => getAttestationDataSigningRoot(attHeadState, attData);
-    expectedSubnet = attHeadState.epochCtx.computeSubnetForSlot(attSlot, attIndex);
+    committeeIndices = getCommitteeIndices(shuffling, attSlot, attIndex);
+    getSigningRoot = () => getAttestationDataSigningRoot(chain.config, attData);
+    expectedSubnet = computeSubnetForSlot(shuffling, attSlot, attIndex);
   }
 
   const validatorIndex = committeeIndices[bitIndex];
@@ -568,41 +564,64 @@ export function verifyHeadBlockAndTargetRoot(
 }
 
 /**
- * Get a state for attestation verification.
- * Use head state if:
- *   - attestation slot is in the same fork as head block
- *   - head state includes committees of target epoch
+ * Get a shuffling for attestation verification from the ShufflingCache.
+ * - if blockEpoch is attEpoch, use current shuffling of head state
+ * - if blockEpoch is attEpoch - 1, use next shuffling of head state
+ * - if blockEpoch is less than attEpoch - 1, dial head state to attEpoch - 1, and add to ShufflingCache
  *
- * Otherwise, regenerate state from head state dialing to target epoch
+ * This implementation does not require to dial head state to attSlot at fork boundary because we always get domain of attSlot
+ * in consumer context.
+ *
+ * This is similar to the old getStateForAttestationVerification
+ * see https://github.com/ChainSafe/lodestar/blob/v1.11.3/packages/beacon-node/src/chain/validation/attestation.ts#L566
  */
-export async function getStateForAttestationVerification(
+export async function getShufflingForAttestationVerification(
   chain: IBeaconChain,
-  attSlot: Slot,
   attEpoch: Epoch,
   attHeadBlock: ProtoBlock,
   regenCaller: RegenCaller
-): Promise<CachedBeaconStateAllForks> {
-  const isSameFork = chain.config.getForkSeq(attSlot) === chain.config.getForkSeq(attHeadBlock.slot);
-  // thanks for 1 epoch look ahead of shuffling, a state at epoch n can get committee for epoch n+1
-  const headStateHasTargetEpochCommmittee =
-    attEpoch - computeEpochAtSlot(attHeadBlock.slot) <= SHUFFLING_LOOK_AHEAD_EPOCHS;
-  try {
-    if (isSameFork && headStateHasTargetEpochCommmittee) {
-      // most of the time it should just use head state
-      chain.metrics?.gossipAttestation.useHeadBlockState.inc({caller: regenCaller});
-      return await chain.regen.getState(attHeadBlock.stateRoot, regenCaller);
-    }
+): Promise<EpochShuffling> {
+  const blockEpoch = computeEpochAtSlot(attHeadBlock.slot);
+  const shufflingDependentRoot = getShufflingDependentRoot(chain.forkChoice, attEpoch, blockEpoch, attHeadBlock);
 
-    // at fork boundary we should dial head state to target epoch
-    // see https://github.com/ChainSafe/lodestar/pull/4849
-    chain.metrics?.gossipAttestation.useHeadBlockStateDialedToTargetEpoch.inc({caller: regenCaller});
-    return await chain.regen.getBlockSlotState(attHeadBlock.blockRoot, attSlot, {dontTransferCache: true}, regenCaller);
+  const shuffling = await chain.shufflingCache.get(attEpoch, shufflingDependentRoot);
+  if (shuffling) {
+    // most of the time, we should get the shuffling from cache
+    chain.metrics?.gossipAttestation.shufflingCacheHit.inc({caller: regenCaller});
+    return shuffling;
+  }
+
+  chain.metrics?.gossipAttestation.shufflingCacheMiss.inc({caller: regenCaller});
+  try {
+    // for the 1st time of the same epoch and dependent root, it awaits for the regen state
+    // from the 2nd time, it should use the same cached promise and it should reach the above code
+    chain.metrics?.gossipAttestation.shufflingCacheRegenHit.inc({caller: regenCaller});
+    return await chain.regenStateForAttestationVerification(
+      attEpoch,
+      shufflingDependentRoot,
+      attHeadBlock,
+      regenCaller
+    );
   } catch (e) {
+    chain.metrics?.gossipAttestation.shufflingCacheRegenMiss.inc({caller: regenCaller});
     throw new AttestationError(GossipAction.IGNORE, {
       code: AttestationErrorCode.MISSING_STATE_TO_VERIFY_ATTESTATION,
       error: e as Error,
     });
   }
+}
+
+/**
+ * Different version of getAttestationDataSigningRoot in state-transition which doesn't require a state.
+ */
+export function getAttestationDataSigningRoot(config: BeaconConfig, data: phase0.AttestationData): Uint8Array {
+  const slot = computeStartSlotAtEpoch(data.target.epoch);
+  // previously, we call `domain = config.getDomain(state.slot, DOMAIN_BEACON_ATTESTER, slot)`
+  // at fork boundary, it's required to dial to target epoch https://github.com/ChainSafe/lodestar/blob/v1.11.3/packages/beacon-node/src/chain/validation/attestation.ts#L573
+  // instead of that, just use the fork at slot in the attestation data
+  const fork = config.getForkName(slot);
+  const domain = config.getDomainAtFork(fork, DOMAIN_BEACON_ATTESTER);
+  return computeSigningRoot(ssz.phase0.AttestationData, data, domain);
 }
 
 /**
@@ -680,21 +699,10 @@ function verifyAttestationTargetRoot(headBlock: ProtoBlock, targetRoot: Root, at
 }
 
 export function getCommitteeIndices(
-  attestationTargetState: CachedBeaconStateAllForks,
+  shuffling: EpochShuffling,
   attestationSlot: Slot,
   attestationIndex: number
 ): number[] {
-  const shuffling = attestationTargetState.epochCtx.getShufflingAtSlotOrNull(attestationSlot);
-  if (shuffling === null) {
-    // this may come from an out-of-synced node, the spec did not define it so should not REJECT
-    // see https://github.com/ChainSafe/lodestar/issues/4396
-    throw new AttestationError(GossipAction.IGNORE, {
-      code: AttestationErrorCode.NO_COMMITTEE_FOR_SLOT_AND_INDEX,
-      index: attestationIndex,
-      slot: attestationSlot,
-    });
-  }
-
   const {committees} = shuffling;
   const slotCommittees = committees[attestationSlot % SLOTS_PER_EPOCH];
 
@@ -710,9 +718,8 @@ export function getCommitteeIndices(
 /**
  * Compute the correct subnet for a slot/committee index
  */
-export function computeSubnetForSlot(state: CachedBeaconStateAllForks, slot: number, committeeIndex: number): number {
+export function computeSubnetForSlot(shuffling: EpochShuffling, slot: number, committeeIndex: number): number {
   const slotsSinceEpochStart = slot % SLOTS_PER_EPOCH;
-  const committeesPerSlot = state.epochCtx.getCommitteeCountPerSlot(computeEpochAtSlot(slot));
-  const committeesSinceEpochStart = committeesPerSlot * slotsSinceEpochStart;
+  const committeesSinceEpochStart = shuffling.committeesPerSlot * slotsSinceEpochStart;
   return (committeesSinceEpochStart + committeeIndex) % ATTESTATION_SUBNET_COUNT;
 }

@@ -71,6 +71,7 @@ export async function verifyBlocksInEpoch(
 
   if (!isStateValidatorsNodesPopulated(preState0)) {
     this.logger.verbose("verifyBlocksInEpoch preState0 SSZ cache stats", {
+      slot: preState0.slot,
       cache: isStateValidatorsNodesPopulated(preState0),
       clonedCount: preState0.clonedCount,
       clonedCountWithTransferCache: preState0.clonedCountWithTransferCache,

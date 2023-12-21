@@ -1,5 +1,4 @@
-import {Options} from "yargs";
-import {CliCommandOptions} from "../../util/index.js";
+import {CliCommandOptions, CliOptionDefinition} from "../../util/index.js";
 import {beaconOptions, BeaconArgs} from "../beacon/options.js";
 import {NetworkName} from "../../networks/index.js";
 import {beaconNodeOptions, globalOptions} from "../../options/index.js";
@@ -63,7 +62,7 @@ const devOwnOptions: CliCommandOptions<IDevOwnArgs> = {
  * - and have api enabled by default (as it's used by validator)
  * Note: use beaconNodeOptions and globalOptions to make sure option key is correct
  */
-const externalOptionsOverrides: Partial<Record<"network" | keyof typeof beaconNodeOptions, Options>> = {
+const externalOptionsOverrides: Partial<Record<"network" | keyof typeof beaconNodeOptions, CliOptionDefinition>> = {
   // Custom paths different than regular beacon, validator paths
   // network="dev" will store all data in separate dir than other networks
   network: {

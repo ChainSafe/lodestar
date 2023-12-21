@@ -38,7 +38,7 @@ describe("chain / opPools / SyncCommitteeMessagePool", function () {
     vi.clearAllMocks();
   });
 
-  it("should preaggregate SyncCommitteeContribution", () => {
+  it("should propagate SyncCommitteeContribution", () => {
     clockStub.secFromSlot.mockReturnValue(0);
     let contribution = cache.getContribution(subcommitteeIndex, syncCommittee.slot, syncCommittee.beaconBlockRoot);
     expect(contribution).not.toBeNull();

@@ -102,7 +102,7 @@ export function modifyStateSameValidator(seedState: BeaconStateCapella): BeaconS
   state.eth1DepositIndex = 1000;
   state.balances.set(0, 30);
   state.randaoMixes.set(0, crypto.randomBytes(32));
-  state.slashings.set(0, 1n);
+  state.slashings.set(0, 1);
   state.previousEpochParticipation.set(0, 0b11111110);
   state.currentEpochParticipation.set(0, 0b11111110);
   state.justificationBits.set(0, true);

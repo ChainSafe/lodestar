@@ -1,8 +1,21 @@
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
-import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex, deneb, Wei} from "@lodestar/types";
+import {
+  allForks,
+  UintNum64,
+  Root,
+  phase0,
+  Slot,
+  RootHex,
+  Epoch,
+  ValidatorIndex,
+  deneb,
+  Wei,
+  Gwei,
+} from "@lodestar/types";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
+  EpochShuffling,
   Index2PubkeyCache,
   PubkeyIndexMap,
 } from "@lodestar/state-transition";
@@ -36,6 +49,7 @@ import {CheckpointBalancesCache} from "./balancesCache.js";
 import {IChainOptions} from "./options.js";
 import {AssembledBlockType, BlockAttributes, BlockType} from "./produceBlock/produceBlockBody.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
+import {ShufflingCache} from "./shufflingCache.js";
 
 export {BlockType, type AssembledBlockType};
 export {type ProposerPreparationData};
@@ -96,6 +110,7 @@ export interface IBeaconChain {
   readonly producedBlobSidecarsCache: Map<BlockHash, deneb.BlobSidecars>;
   readonly producedBlockRoot: Map<RootHex, allForks.ExecutionPayload | null>;
   readonly producedBlindedBlobSidecarsCache: Map<BlockHash, deneb.BlindedBlobSidecars>;
+  readonly shufflingCache: ShufflingCache;
   readonly producedBlindedBlockRoot: Set<RootHex>;
   readonly opts: IChainOptions;
 
@@ -138,10 +153,12 @@ export interface IBeaconChain {
 
   getBlobSidecars(beaconBlock: deneb.BeaconBlock): deneb.BlobSidecars;
 
-  produceBlock(blockAttributes: BlockAttributes): Promise<{block: allForks.BeaconBlock; executionPayloadValue: Wei}>;
+  produceBlock(
+    blockAttributes: BlockAttributes
+  ): Promise<{block: allForks.BeaconBlock; executionPayloadValue: Wei; consensusBlockValue: Gwei}>;
   produceBlindedBlock(
     blockAttributes: BlockAttributes
-  ): Promise<{block: allForks.BlindedBeaconBlock; executionPayloadValue: Wei}>;
+  ): Promise<{block: allForks.BlindedBeaconBlock; executionPayloadValue: Wei; consensusBlockValue: Gwei}>;
 
   /** Process a block until complete */
   processBlock(block: BlockInput, opts?: ImportBlockOpts): Promise<void>;
@@ -161,6 +178,12 @@ export interface IBeaconChain {
   persistInvalidSszBytes(type: string, sszBytes: Uint8Array, suffix?: string): void;
   /** Persist bad items to persistInvalidSszObjectsDir dir, for example invalid state, attestations etc. */
   persistInvalidSszView(view: TreeView<CompositeTypeAny>, suffix?: string): void;
+  regenStateForAttestationVerification(
+    attEpoch: Epoch,
+    shufflingDependentRoot: RootHex,
+    attHeadBlock: ProtoBlock,
+    regenCaller: RegenCaller
+  ): Promise<EpochShuffling>;
   updateBuilderStatus(clockSlot: Slot): void;
 
   regenCanAcceptWork(): boolean;

@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.12.1",
+  "version": "1.13.0",
   "type": "module",
   "exports": {
     ".": {
@@ -65,16 +65,16 @@
     "lint:fix": "yarn run lint --fix",
     "pretest": "yarn run check-types",
     "test": "yarn test:unit && yarn test:e2e",
-    "test:unit": "nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'",
+    "test:unit": "vitest --run --dir test/unit/ --coverage",
     "check-readme": "typescript-docs-verifier"
   },
   "dependencies": {
     "@chainsafe/persistent-merkle-tree": "^0.6.1",
     "@chainsafe/ssz": "^0.14.0",
-    "@lodestar/config": "^1.12.1",
-    "@lodestar/params": "^1.12.1",
-    "@lodestar/types": "^1.12.1",
-    "@lodestar/utils": "^1.12.1",
+    "@lodestar/config": "^1.13.0",
+    "@lodestar/params": "^1.13.0",
+    "@lodestar/types": "^1.13.0",
+    "@lodestar/utils": "^1.13.0",
     "eventsource": "^2.0.2",
     "qs": "^6.11.1"
   },

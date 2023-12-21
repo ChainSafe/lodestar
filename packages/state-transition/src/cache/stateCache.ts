@@ -1,5 +1,5 @@
 import bls from "@chainsafe/bls";
-import {CoordType} from "@chainsafe/blst";
+import {CoordType} from "@chainsafe/bls/types";
 import {BeaconConfig} from "@lodestar/config";
 import {loadState} from "../util/loadState/loadState.js";
 import {EpochCache, EpochCacheImmutableData, EpochCacheOpts} from "./epochCache.js";
@@ -12,6 +12,7 @@ import {
   BeaconStateCapella,
   BeaconStateDeneb,
 } from "./types.js";
+import {RewardCache, createEmptyRewardCache} from "./rewardCache.js";
 
 export type BeaconStateCache = {
   config: BeaconConfig;
@@ -20,6 +21,7 @@ export type BeaconStateCache = {
   readonly clonedCount: number;
   readonly clonedCountWithTransferCache: number;
   readonly createdWithTransferCache: boolean;
+  proposerRewards: RewardCache;
 };
 
 type Mutable<T> = {
@@ -147,6 +149,7 @@ export function createCachedBeaconState<T extends BeaconStateAllForks>(
     clonedCount: 0,
     clonedCountWithTransferCache: 0,
     createdWithTransferCache: false,
+    proposerRewards: createEmptyRewardCache(),
   });
 
   return cachedState;
@@ -198,6 +201,7 @@ export function getCachedBeaconState<T extends BeaconStateAllForks>(
   (cachedState as BeaconStateCacheMutable).clonedCount = cache.clonedCount;
   (cachedState as BeaconStateCacheMutable).clonedCountWithTransferCache = cache.clonedCountWithTransferCache;
   (cachedState as BeaconStateCacheMutable).createdWithTransferCache = cache.createdWithTransferCache;
+  cachedState.proposerRewards = cache.proposerRewards;
 
   // Overwrite .clone function to preserve cache
   // TreeViewDU.clone() creates a new object that does not have the attached cache
@@ -219,6 +223,7 @@ export function getCachedBeaconState<T extends BeaconStateAllForks>(
       clonedCount: 0,
       clonedCountWithTransferCache: 0,
       createdWithTransferCache: !dontTransferCache,
+      proposerRewards: createEmptyRewardCache(), // this sets the rewards to 0 while cloning new state
     }) as T & BeaconStateCache;
   }
 

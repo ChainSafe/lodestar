@@ -1,18 +1,24 @@
 import {defaultExecutionBuilderHttpOpts, IBeaconNodeOptions} from "@lodestar/beacon-node";
-import {CliCommandOptions} from "../../util/index.js";
+import {CliCommandOptions, YargsError} from "../../util/index.js";
 
 export type ExecutionBuilderArgs = {
   builder: boolean;
-  "builder.urls"?: string[];
+  "builder.url"?: string;
   "builder.timeout"?: number;
   "builder.faultInspectionWindow"?: number;
   "builder.allowedFaults"?: number;
 };
 
 export function parseArgs(args: ExecutionBuilderArgs): IBeaconNodeOptions["executionBuilder"] {
+  if (Array.isArray(args["builder.url"]) || args["builder.url"]?.includes(",http")) {
+    throw new YargsError(
+      "Lodestar only supports a single builder URL. External tooling like mev-boost can be used to connect to multiple builder/relays"
+    );
+  }
+
   return {
     enabled: args["builder"],
-    urls: args["builder.urls"] ?? defaultExecutionBuilderHttpOpts.urls,
+    url: args["builder.url"] ?? defaultExecutionBuilderHttpOpts.url,
     timeout: args["builder.timeout"],
     faultInspectionWindow: args["builder.faultInspectionWindow"],
     allowedFaults: args["builder.allowedFaults"],
@@ -27,14 +33,11 @@ export const options: CliCommandOptions<ExecutionBuilderArgs> = {
     group: "builder",
   },
 
-  "builder.urls": {
-    description: "Urls hosting the builder API",
-    defaultDescription: defaultExecutionBuilderHttpOpts.urls.join(","),
-    type: "array",
-    string: true,
-    coerce: (urls: string[]): string[] =>
-      // Parse ["url1,url2"] to ["url1", "url2"]
-      urls.map((item) => item.split(",")).flat(1),
+  "builder.url": {
+    alias: ["builder.urls"],
+    description: "Url hosting the builder API",
+    defaultDescription: defaultExecutionBuilderHttpOpts.url,
+    type: "string",
     group: "builder",
   },
 

@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {HttpClient} from "../../../src/index.js";
 
 describe("HTTPClient options", () => {
@@ -10,7 +10,7 @@ describe("HTTPClient options", () => {
   it("Single root baseUrl option", () => {
     const httpClient = new HttpClient({baseUrl: baseUrl1, bearerToken: bearerToken1});
 
-    expect(httpClient["urlsOpts"]).deep.equals([{baseUrl: baseUrl1, bearerToken: bearerToken1}]);
+    expect(httpClient["urlsOpts"]).toEqual([{baseUrl: baseUrl1, bearerToken: bearerToken1}]);
   });
 
   it("Multiple urls option with common bearerToken", () => {
@@ -19,7 +19,7 @@ describe("HTTPClient options", () => {
       bearerToken: bearerToken1,
     });
 
-    expect(httpClient["urlsOpts"]).deep.equals([
+    expect(httpClient["urlsOpts"]).toEqual([
       {baseUrl: baseUrl1, bearerToken: bearerToken1},
       {baseUrl: baseUrl2, bearerToken: bearerToken1},
     ]);
@@ -33,7 +33,7 @@ describe("HTTPClient options", () => {
       ],
     });
 
-    expect(httpClient["urlsOpts"]).deep.equals([
+    expect(httpClient["urlsOpts"]).toEqual([
       {baseUrl: baseUrl1, bearerToken: bearerToken1},
       {baseUrl: baseUrl2, bearerToken: bearerToken2},
     ]);
@@ -46,7 +46,7 @@ describe("HTTPClient options", () => {
       urls: [{baseUrl: baseUrl2, bearerToken: bearerToken2}],
     });
 
-    expect(httpClient["urlsOpts"]).deep.equals([
+    expect(httpClient["urlsOpts"]).toEqual([
       {baseUrl: baseUrl1, bearerToken: bearerToken1},
       {baseUrl: baseUrl2, bearerToken: bearerToken2},
     ]);
@@ -62,25 +62,29 @@ describe("HTTPClient options", () => {
         {baseUrl: baseUrl2, bearerToken: bearerToken2},
       ],
     });
-    expect(httpClient["urlsOpts"]).deep.equals([
+    expect(httpClient["urlsOpts"]).toEqual([
       {baseUrl: baseUrl1, bearerToken: bearerToken1},
       {baseUrl: baseUrl2, bearerToken: bearerToken2},
     ]);
   });
 
   it("Throw if empty baseUrl", () => {
-    expect(() => new HttpClient({baseUrl: ""})).to.throw(Error);
+    expect(() => new HttpClient({baseUrl: ""})).toThrow(Error);
   });
 
   it("Throw if invalid baseUrl", () => {
-    expect(() => new HttpClient({baseUrl: "invalid"})).to.throw(Error);
+    expect(() => new HttpClient({baseUrl: "invalid"})).toThrow(Error);
   });
 
   it("Throw if empty value in urls option", () => {
-    expect(() => new HttpClient({urls: [""]})).to.throw(Error);
+    expect(() => new HttpClient({urls: [""]})).toThrow(Error);
   });
 
   it("Throw if invalid value in urls option", () => {
-    expect(() => new HttpClient({urls: ["invalid"]})).to.throw(Error);
+    expect(() => new HttpClient({urls: ["invalid"]})).toThrow(Error);
+  });
+
+  it("Throw if invalid username/password", () => {
+    expect(() => new HttpClient({baseUrl: "http://hasa%:%can'tbedecoded@localhost"})).toThrow(Error);
   });
 });

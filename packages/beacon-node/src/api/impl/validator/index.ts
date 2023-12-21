@@ -32,6 +32,7 @@ import {
   BLSSignature,
   isBlindedBeaconBlock,
   isBlindedBlockContents,
+  phase0,
 } from "@lodestar/types";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {toHex, racePromisesWithCutoff, RaceEvent} from "@lodestar/utils";
@@ -71,7 +72,7 @@ const SYNC_TOLERANCE_EPOCHS = 1;
  * Cutoff time to wait for execution and builder block production apis to resolve
  * Post this time, race execution and builder to pick whatever resolves first
  *
- * Emprically the builder block resolves in ~1.5+ seconds, and executon should resolve <1 sec.
+ * Empirically the builder block resolves in ~1.5+ seconds, and execution should resolve <1 sec.
  * So lowering the cutoff to 2 sec from 3 seconds to publish faster for successful proposal
  * as proposals post 4 seconds into the slot seems to be not being included
  */
@@ -172,12 +173,17 @@ export function getValidatorApi({
 
   /**
    * This function is called 1s before next epoch, usually at that time PrepareNextSlotScheduler finishes
-   * so we should have checkpoint state, otherwise wait for up to `timeoutMs`.
+   * so we should have checkpoint state, otherwise wait for up to the slot 1 of epoch.
+   *      slot epoch        0            1
+   *           |------------|------------|
+   *                    ^  ^
+   *                    |  |
+   *                    |  |
+   *                    | waitForCheckpointState (1s before slot 0 of epoch, wait until slot 1 of epoch)
+   *                    |
+   *              prepareNextSlot (4s before next slot)
    */
-  async function waitForCheckpointState(
-    cpHex: CheckpointHex,
-    timeoutMs: number
-  ): Promise<CachedBeaconStateAllForks | null> {
+  async function waitForCheckpointState(cpHex: CheckpointHex): Promise<CachedBeaconStateAllForks | null> {
     const cpState = chain.regen.getCheckpointStateSync(cpHex);
     if (cpState) {
       return cpState;
@@ -186,16 +192,30 @@ export function getValidatorApi({
       epoch: cpHex.epoch,
       root: fromHexString(cpHex.rootHex),
     };
-    // if not, wait for ChainEvent.checkpoint event until timeoutMs
-    return new Promise<CachedBeaconStateAllForks | null>((resolve) => {
-      const timer = setTimeout(() => resolve(null), timeoutMs);
-      chain.emitter.on(ChainEvent.checkpoint, (eventCp, cpState) => {
-        if (ssz.phase0.Checkpoint.equals(eventCp, cp)) {
-          clearTimeout(timer);
-          resolve(cpState);
-        }
-      });
-    });
+    const slot0 = computeStartSlotAtEpoch(cp.epoch);
+    // if not, wait for ChainEvent.checkpoint event until slot 1 of epoch
+    let listener: ((eventCp: phase0.Checkpoint) => void) | null = null;
+    const foundCPState = await Promise.race([
+      new Promise((resolve) => {
+        listener = (eventCp) => {
+          resolve(ssz.phase0.Checkpoint.equals(eventCp, cp));
+        };
+        chain.emitter.once(ChainEvent.checkpoint, listener);
+      }),
+      // in rare case, checkpoint state cache may happen up to 6s of slot 0 of epoch
+      // so we wait for it until the slot 1 of epoch
+      chain.clock.waitForSlot(slot0 + 1),
+    ]);
+
+    if (listener != null) {
+      chain.emitter.off(ChainEvent.checkpoint, listener);
+    }
+
+    if (foundCPState === true) {
+      return chain.regen.getCheckpointStateSync(cpHex);
+    }
+
+    return null;
   }
 
   /**
@@ -294,7 +314,7 @@ export function getValidatorApi({
     let timer;
     try {
       timer = metrics?.blockProductionTime.startTimer();
-      const {block, executionPayloadValue} = await chain.produceBlindedBlock({
+      const {block, executionPayloadValue, consensusBlockValue} = await chain.produceBlindedBlock({
         slot,
         randaoReveal,
         graffiti: toGraffitiBuffer(graffiti || ""),
@@ -305,6 +325,7 @@ export function getValidatorApi({
       logger.verbose("Produced blinded block", {
         slot,
         executionPayloadValue,
+        consensusBlockValue,
         root: toHexString(config.getBlindedForkTypes(slot).BeaconBlock.hashTreeRoot(block)),
       });
 
@@ -322,9 +343,10 @@ export function getValidatorApi({
           data: {blindedBlock: block, blindedBlobSidecars} as allForks.BlindedBlockContents,
           version,
           executionPayloadValue,
+          consensusBlockValue,
         };
       } else {
-        return {data: block, version, executionPayloadValue};
+        return {data: block, version, executionPayloadValue, consensusBlockValue};
       }
     } finally {
       if (timer) timer({source});
@@ -358,13 +380,12 @@ export function getValidatorApi({
     let timer;
     try {
       timer = metrics?.blockProductionTime.startTimer();
-      const {block, executionPayloadValue} = await chain.produceBlock({
+      const {block, executionPayloadValue, consensusBlockValue} = await chain.produceBlock({
         slot,
         randaoReveal,
         graffiti: toGraffitiBuffer(graffiti || ""),
         feeRecipient,
       });
-
       const version = config.getForkName(block.slot);
       if (strictFeeRecipientCheck && feeRecipient && isForkExecution(version)) {
         const blockFeeRecipient = toHexString((block as bellatrix.BeaconBlock).body.executionPayload.feeRecipient);
@@ -378,6 +399,7 @@ export function getValidatorApi({
       logger.verbose("Produced execution block", {
         slot,
         executionPayloadValue,
+        consensusBlockValue,
         root: toHexString(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block)),
       });
       if (chain.opts.persistProducedBlocks) {
@@ -389,9 +411,14 @@ export function getValidatorApi({
         if (blobSidecars === undefined) {
           throw Error("blobSidecars missing in cache");
         }
-        return {data: {block, blobSidecars} as allForks.BlockContents, version, executionPayloadValue};
+        return {
+          data: {block, blobSidecars} as allForks.BlockContents,
+          version,
+          executionPayloadValue,
+          consensusBlockValue,
+        };
       } else {
-        return {data: block, version, executionPayloadValue};
+        return {data: block, version, executionPayloadValue, consensusBlockValue};
       }
     } finally {
       if (timer) timer({source});
@@ -423,7 +450,7 @@ export function getValidatorApi({
       chain.executionBuilder !== undefined &&
       builderSelection !== routes.validator.BuilderSelection.ExecutionOnly;
 
-    logger.verbose("produceBlockV3 assembling block", {
+    logger.verbose("Assembling block with produceBlockV3 ", {
       fork,
       builderSelection,
       slot,
@@ -511,15 +538,18 @@ export function getValidatorApi({
 
     const builderPayloadValue = blindedBlock?.executionPayloadValue ?? BigInt(0);
     const enginePayloadValue = fullBlock?.executionPayloadValue ?? BigInt(0);
+    const consensusBlockValueBuilder = blindedBlock?.consensusBlockValue ?? BigInt(0);
+    const consensusBlockValueEngine = fullBlock?.consensusBlockValue ?? BigInt(0);
+
+    const blockValueBuilder = builderPayloadValue + consensusBlockValueBuilder;
+    const blockValueEngine = enginePayloadValue + consensusBlockValueEngine;
 
     let selectedSource: ProducedBlockSource | null = null;
 
     if (fullBlock && blindedBlock) {
       switch (builderSelection) {
         case routes.validator.BuilderSelection.MaxProfit: {
-          // If executionPayloadValues are zero, than choose builder as most likely beacon didn't provide executionPayloadValue
-          // and builder blocks are most likely thresholded by a min bid
-          if (enginePayloadValue >= builderPayloadValue && enginePayloadValue !== BigInt(0)) {
+          if (blockValueEngine >= blockValueBuilder) {
             selectedSource = ProducedBlockSource.engine;
           } else {
             selectedSource = ProducedBlockSource.builder;
@@ -542,6 +572,10 @@ export function getValidatorApi({
         // winston logger doesn't like bigint
         enginePayloadValue: `${enginePayloadValue}`,
         builderPayloadValue: `${builderPayloadValue}`,
+        consensusBlockValueEngine: `${consensusBlockValueEngine}`,
+        consensusBlockValueBuilder: `${consensusBlockValueBuilder}`,
+        blockValueEngine: `${blockValueEngine}`,
+        blockValueBuilder: `${blockValueBuilder}`,
         slot,
       });
     } else if (fullBlock && !blindedBlock) {
@@ -549,6 +583,8 @@ export function getValidatorApi({
       logger.verbose("Selected engine block: no builder block produced", {
         // winston logger doesn't like bigint
         enginePayloadValue: `${enginePayloadValue}`,
+        consensusBlockValueEngine: `${consensusBlockValueEngine}`,
+        blockValueEngine: `${blockValueEngine}`,
         slot,
       });
     } else if (blindedBlock && !fullBlock) {
@@ -556,6 +592,8 @@ export function getValidatorApi({
       logger.verbose("Selected builder block: no engine block produced", {
         // winston logger doesn't like bigint
         builderPayloadValue: `${builderPayloadValue}`,
+        consensusBlockValueBuilder: `${consensusBlockValueBuilder}`,
+        blockValueBuilder: `${blockValueBuilder}`,
         slot,
       });
     }
@@ -731,7 +769,7 @@ export function getValidatorApi({
       // this is to avoid missed block proposal due to 0 epoch look ahead
       if (epoch === nextEpoch && toNextEpochMs < prepareNextSlotLookAheadMs) {
         // wait for maximum 1 slot for cp state which is the timeout of validator api
-        const cpState = await waitForCheckpointState({rootHex: head.blockRoot, epoch}, slotMs);
+        const cpState = await waitForCheckpointState({rootHex: head.blockRoot, epoch});
         if (cpState) {
           state = cpState;
           metrics?.duties.requestNextEpochProposalDutiesHit.inc();
