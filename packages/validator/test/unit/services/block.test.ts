@@ -5,7 +5,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as mainnetConfig} from "@lodestar/config/default";
 import {sleep} from "@lodestar/utils";
-import {ssz} from "@lodestar/types";
+import {ssz, ProducedBlockSource} from "@lodestar/types";
 import {HttpStatusCode, routes} from "@lodestar/api";
 import {ForkName} from "@lodestar/params";
 import {BlockProposingService} from "../../../src/services/block.js";
@@ -53,6 +53,7 @@ describe("BlockDutiesService", function () {
     const blockService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, null, {
       useProduceBlockV3: true,
       broadcastValidation: routes.beacon.BroadcastValidation.consensus,
+      blindedLocal: false,
     });
 
     const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
@@ -65,6 +66,7 @@ describe("BlockDutiesService", function () {
         executionPayloadValue: BigInt(1),
         consensusBlockValue: BigInt(1),
         executionPayloadBlinded: false,
+        executionPayloadSource: ProducedBlockSource.engine,
       },
       ok: true,
       status: HttpStatusCode.OK,
@@ -81,6 +83,59 @@ describe("BlockDutiesService", function () {
     // Must have submitted the block received on signBlock()
     expect(api.beacon.publishBlockV2.callCount).to.equal(1, "publishBlock() must be called once");
     expect(api.beacon.publishBlockV2.getCall(0).args).to.deep.equal(
+      [signedBlock, {broadcastValidation: routes.beacon.BroadcastValidation.consensus}],
+      "wrong publishBlock() args"
+    );
+  });
+
+  it("Should produce, sign, and publish a blinded block", async function () {
+    // Reply with some duties
+    const slot = 0; // genesisTime is right now, so test with slot = currentSlot
+    api.validator.getProposerDuties.resolves({
+      response: {
+        dependentRoot: ZERO_HASH_HEX,
+        executionOptimistic: false,
+        data: [{slot: slot, validatorIndex: 0, pubkey: pubkeys[0]}],
+      },
+      ok: true,
+      status: HttpStatusCode.OK,
+    });
+
+    const clock = new ClockMock();
+    // use produceBlockV3
+    const blockService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, null, {
+      useProduceBlockV3: true,
+      broadcastValidation: routes.beacon.BroadcastValidation.consensus,
+      blindedLocal: true,
+    });
+
+    const signedBlock = ssz.bellatrix.SignedBlindedBeaconBlock.defaultValue();
+    validatorStore.signRandao.resolves(signedBlock.message.body.randaoReveal);
+    validatorStore.signBlock.callsFake(async (_, block) => ({message: block, signature: signedBlock.signature}));
+    api.validator.produceBlockV3.resolves({
+      response: {
+        data: signedBlock.message,
+        version: ForkName.bellatrix,
+        executionPayloadValue: BigInt(1),
+        consensusBlockValue: BigInt(1),
+        executionPayloadBlinded: true,
+        executionPayloadSource: ProducedBlockSource.engine,
+      },
+      ok: true,
+      status: HttpStatusCode.OK,
+    });
+    api.beacon.publishBlindedBlockV2.resolves();
+
+    // Trigger block production for slot 1
+    const notifyBlockProductionFn = blockService["dutiesService"]["notifyBlockProductionFn"];
+    notifyBlockProductionFn(1, [pubkeys[0]]);
+
+    // Resolve all promises
+    await sleep(20, controller.signal);
+
+    // Must have submitted the block received on signBlock()
+    expect(api.beacon.publishBlindedBlockV2.callCount).to.equal(1, "publishBlindedBlockV2() must be called once");
+    expect(api.beacon.publishBlindedBlockV2.getCall(0).args).to.deep.equal(
       [signedBlock, {broadcastValidation: routes.beacon.BroadcastValidation.consensus}],
       "wrong publishBlock() args"
     );

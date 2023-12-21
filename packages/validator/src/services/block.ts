@@ -33,6 +33,7 @@ type FullOrBlindedBlockWithContents =
       block: allForks.BeaconBlock;
       contents: null;
       executionPayloadBlinded: false;
+      executionPayloadSource: ProducedBlockSource.engine;
     }
   | {
       version: ForkBlobs;
@@ -42,15 +43,22 @@ type FullOrBlindedBlockWithContents =
         blobs: deneb.Blobs;
       };
       executionPayloadBlinded: false;
+      executionPayloadSource: ProducedBlockSource.engine;
     }
   | {
       version: ForkExecution;
       block: allForks.BlindedBeaconBlock;
       contents: null;
       executionPayloadBlinded: true;
+      executionPayloadSource: ProducedBlockSource;
     };
 
 type DebugLogCtx = {debugLogCtx: Record<string, string | boolean | undefined>};
+type BlockProposalOpts = {
+  useProduceBlockV3: boolean;
+  broadcastValidation: routes.beacon.BroadcastValidation;
+  blindedLocal: boolean;
+};
 /**
  * Service that sets up and handles validator block proposal duties.
  */
@@ -64,7 +72,7 @@ export class BlockProposingService {
     private readonly clock: IClock,
     private readonly validatorStore: ValidatorStore,
     private readonly metrics: Metrics | null,
-    private readonly opts: {useProduceBlockV3: boolean; broadcastValidation: routes.beacon.BroadcastValidation}
+    private readonly opts: BlockProposalOpts
   ) {
     this.dutiesService = new BlockDutiesService(
       config,
@@ -115,6 +123,7 @@ export class BlockProposingService {
       const strictFeeRecipientCheck = this.validatorStore.strictFeeRecipientCheck(pubkeyHex);
       const builderSelection = this.validatorStore.getBuilderSelection(pubkeyHex);
       const feeRecipient = this.validatorStore.getFeeRecipient(pubkeyHex);
+      const blindedLocal = this.opts.blindedLocal;
 
       this.logger.debug("Producing block", {
         ...debugLogCtx,
@@ -122,6 +131,7 @@ export class BlockProposingService {
         feeRecipient,
         strictFeeRecipientCheck,
         useProduceBlockV3: this.opts.useProduceBlockV3,
+        blindedLocal,
       });
       this.metrics?.proposerStepCallProduceBlock.observe(this.clock.secFromSlot(slot));
 
@@ -130,6 +140,7 @@ export class BlockProposingService {
         feeRecipient,
         strictFeeRecipientCheck,
         builderSelection,
+        blindedLocal,
       };
       const blockContents = await produceBlockFn(this.config, slot, randaoReveal, graffiti, produceOpts).catch(
         (e: Error) => {
@@ -231,14 +242,23 @@ export class BlockProposingService {
       const res = await this.api.validator.produceBlockV2(slot, randaoReveal, graffiti);
       ApiError.assert(res, "Failed to produce block: validator.produceBlockV2");
       const {response} = res;
-      return parseProduceBlockResponse({executionPayloadBlinded: false, ...response}, debugLogCtx);
+      const executionPayloadSource = ProducedBlockSource.engine;
+
+      return parseProduceBlockResponse(
+        {executionPayloadBlinded: false, executionPayloadSource, ...response},
+        debugLogCtx
+      );
     } else {
       Object.assign(debugLogCtx, {api: "produceBlindedBlock"});
       const res = await this.api.validator.produceBlindedBlock(slot, randaoReveal, graffiti);
       ApiError.assert(res, "Failed to produce block: validator.produceBlockV2");
       const {response} = res;
+      const executionPayloadSource = ProducedBlockSource.builder;
 
-      return parseProduceBlockResponse({executionPayloadBlinded: true, ...response}, debugLogCtx);
+      return parseProduceBlockResponse(
+        {executionPayloadBlinded: true, executionPayloadSource, ...response},
+        debugLogCtx
+      );
     }
   };
 }
@@ -253,6 +273,7 @@ function parseProduceBlockResponse(
       contents: null,
       version: response.version,
       executionPayloadBlinded: true,
+      executionPayloadSource: response.executionPayloadSource,
       debugLogCtx,
     } as FullOrBlindedBlockWithContents & DebugLogCtx;
   } else {
@@ -262,6 +283,7 @@ function parseProduceBlockResponse(
         contents: {blobs: response.data.blobs, kzgProofs: response.data.kzgProofs},
         version: response.version,
         executionPayloadBlinded: false,
+        executionPayloadSource: response.executionPayloadSource,
         debugLogCtx,
       } as FullOrBlindedBlockWithContents & DebugLogCtx;
     } else {
@@ -270,6 +292,7 @@ function parseProduceBlockResponse(
         contents: null,
         version: response.version,
         executionPayloadBlinded: false,
+        executionPayloadSource: response.executionPayloadSource,
         debugLogCtx,
       } as FullOrBlindedBlockWithContents & DebugLogCtx;
     }

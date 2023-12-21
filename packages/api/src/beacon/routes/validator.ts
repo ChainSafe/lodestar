@@ -19,6 +19,7 @@ import {
   SubcommitteeIndex,
   Wei,
   Gwei,
+  ProducedBlockSource,
 } from "@lodestar/types";
 import {ApiClientResponse} from "../../interfaces.js";
 import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
@@ -53,6 +54,7 @@ export type ExtraProduceBlockOps = {
   feeRecipient?: string;
   builderSelection?: BuilderSelection;
   strictFeeRecipientCheck?: boolean;
+  blindedLocal?: boolean;
 };
 
 export type ProduceBlockOrContentsRes = {executionPayloadValue: Wei; consensusBlockValue: Gwei} & (
@@ -64,9 +66,10 @@ export type ProduceBlindedBlockRes = {executionPayloadValue: Wei; consensusBlock
   version: ForkExecution;
 };
 
-export type ProduceFullOrBlindedBlockOrContentsRes =
+export type ProduceFullOrBlindedBlockOrContentsRes = {executionPayloadSource: ProducedBlockSource} & (
   | (ProduceBlockOrContentsRes & {executionPayloadBlinded: false})
-  | (ProduceBlindedBlockRes & {executionPayloadBlinded: true});
+  | (ProduceBlindedBlockRes & {executionPayloadBlinded: true})
+);
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -485,6 +488,7 @@ export type ReqTypes = {
       fee_recipient?: string;
       builder_selection?: string;
       strict_fee_recipient_check?: boolean;
+      blinded_local?: boolean;
     };
   };
   produceBlindedBlock: {params: {slot: number}; query: {randao_reveal: string; graffiti: string}};
@@ -552,6 +556,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
         skip_randao_verification: skipRandaoVerification,
         builder_selection: opts?.builderSelection,
         strict_fee_recipient_check: opts?.strictFeeRecipientCheck,
+        blinded_local: opts?.blindedLocal,
       },
     }),
     parseReq: ({params, query}) => [
@@ -563,6 +568,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
         feeRecipient: query.fee_recipient,
         builderSelection: query.builder_selection as BuilderSelection,
         strictFeeRecipientCheck: query.strict_fee_recipient_check,
+        blindedLocal: query.blinded_local,
       },
     ],
     schema: {
@@ -574,6 +580,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
         skip_randao_verification: Schema.Boolean,
         builder_selection: Schema.String,
         strict_fee_recipient_check: Schema.Boolean,
+        blinded_local: Schema.Boolean,
       },
     },
   };
@@ -739,20 +746,32 @@ export function getReturnTypes(): ReturnTypes<Api> {
         if (data.executionPayloadBlinded) {
           return {
             execution_payload_blinded: true,
+            executionPayloadSource: data.executionPayloadSource,
             ...(produceBlindedBlock.toJson(data) as Record<string, unknown>),
           };
         } else {
           return {
             execution_payload_blinded: false,
+            executionPayloadSource: data.executionPayloadSource,
             ...(produceBlockOrContents.toJson(data) as Record<string, unknown>),
           };
         }
       },
       fromJson: (data) => {
-        if ((data as {execution_payload_blinded: true}).execution_payload_blinded) {
-          return {executionPayloadBlinded: true, ...produceBlindedBlock.fromJson(data)};
+        const executionPayloadBlinded = (data as {execution_payload_blinded: boolean}).execution_payload_blinded;
+        if (executionPayloadBlinded === undefined) {
+          throw Error(`Invalid executionPayloadBlinded=${executionPayloadBlinded} for fromJson deserialization`);
+        }
+
+        // extract source from the data and assign defaults in the spec complaint manner if not present in response
+        const executionPayloadSource =
+          (data as {execution_payload_source: ProducedBlockSource}).execution_payload_source ??
+          (executionPayloadBlinded ? ProducedBlockSource.builder : ProducedBlockSource.engine);
+
+        if (executionPayloadBlinded) {
+          return {executionPayloadBlinded, executionPayloadSource, ...produceBlindedBlock.fromJson(data)};
         } else {
-          return {executionPayloadBlinded: false, ...produceBlockOrContents.fromJson(data)};
+          return {executionPayloadBlinded, executionPayloadSource, ...produceBlockOrContents.fromJson(data)};
         }
       },
     },
