@@ -303,9 +303,12 @@ describe("computeDeltas", () => {
     // 1st validator is part of an attester slashing
     const equivocatingIndices = new Set([0]);
     let deltas = computeDeltas(indices.size, votes, balances, balances, equivocatingIndices);
-    expect(deltas[0]).toBe(-1 * (firstBalance + secondBalance));
-    expect(deltas[1]).toBe(secondBalance);
+    expect(deltas[0]).toBeWithMessage(
+      -1 * (firstBalance + secondBalance),
+      "should move 2nd balance from 1st root to 2nd root"
+    );
+    expect(deltas[1]).toBeWithMessage(secondBalance, "should move 2nd balance from 1st root to 2nd root");
     deltas = computeDeltas(indices.size, votes, balances, balances, equivocatingIndices);
-    expect(deltas).toEqual([0, 0]);
+    expect(deltas).toEqualWithMessage([0, 0], "calling computeDeltas again should not have any affect on the weight");
   });
 });
