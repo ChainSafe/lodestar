@@ -107,7 +107,10 @@ describe("ProtoArray", () => {
     ];
 
     for (const [ancestorRoot, descendantRoot, isDescendant] of assertions) {
-      expect(fc.isDescendant(ancestorRoot, descendantRoot)).toBe(isDescendant);
+      expect(fc.isDescendant(ancestorRoot, descendantRoot)).toBeWithMessage(
+        isDescendant,
+        `${descendantRoot} must be ${isDescendant ? "descendant" : "not descendant"} of ${ancestorRoot}`
+      );
     }
   });
 });
