@@ -305,7 +305,7 @@ describe("computeDeltas", () => {
     let deltas = computeDeltas(indices.size, votes, balances, balances, equivocatingIndices);
     expect(deltas[0]).toBeWithMessage(
       -1 * (firstBalance + secondBalance),
-      "should move 2nd balance from 1st root to 2nd root"
+      "should disregard the 1st validator due to attester slashing"
     );
     expect(deltas[1]).toBeWithMessage(secondBalance, "should move 2nd balance from 1st root to 2nd root");
     deltas = computeDeltas(indices.size, votes, balances, balances, equivocatingIndices);
