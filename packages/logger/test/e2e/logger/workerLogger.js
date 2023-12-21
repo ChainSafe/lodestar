@@ -1,9 +1,10 @@
 import fs from "node:fs";
 import worker from "node:worker_threads";
+// eslint-disable-next-line import/no-extraneous-dependencies
 import {expose} from "@chainsafe/threads/worker";
 
 const parentPort = worker.parentPort;
-const workerData = worker.workerData as {logFilepath: string};
+const workerData = worker.workerData;
 if (!parentPort) throw Error("parentPort must be defined");
 
 const file = fs.createWriteStream(workerData.logFilepath, {flags: "a"});
