@@ -26,4 +26,5 @@ export function expectDeepEquals<T>(a: T, b: T, message: string): void {
 export function expectDeepEqualsUnordered<T>(a: T[], b: T[], message: string): void {
   expect(a).toEqualWithMessage(expect.arrayContaining(b), message);
   expect(b).toEqualWithMessage(expect.arrayContaining(a), message);
+  expect(a).toHaveLength(b.length);
 }
