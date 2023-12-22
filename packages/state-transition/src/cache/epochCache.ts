@@ -606,11 +606,15 @@ export class EpochCache {
     // ```
     this.epoch = computeEpochAtSlot(state.slot);
     this.syncPeriod = computeSyncPeriodAtEpoch(this.epoch);
-    // Add current cpState.validators.length
+    // 6110 Only: Add current cpState.validators.length
     // Only keep validatorLength for epochs after finalized cpState.epoch
-    this.historicalValidatorLengths = this.historicalValidatorLengths
-      .push(state.validators.length)
-      .slice((this.epoch - state.finalizedCheckpoint.epoch) * -1);
+    // eg. [100(epoch 1), 102(epoch 2)].push(104(epoch 3)), this.epoch = 3, finalized cp epoch = 1
+    // We keep the last (3 - 1) items = [102, 104]
+    if (currEpoch >= this.config.EIP6110_FORK_EPOCH) {
+      this.historicalValidatorLengths = this.historicalValidatorLengths
+        .push(state.validators.length)
+        .slice((this.epoch - state.finalizedCheckpoint.epoch) * -1);
+    }
   }
 
   beforeEpochTransition(): void {
