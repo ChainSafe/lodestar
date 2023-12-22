@@ -1,14 +1,11 @@
-import "../setup.js";
-import {expect} from "chai";
+import {describe, it, expect, afterEach} from "vitest";
 import {withTimeout} from "../../src/timeout.js";
 import {ErrorAborted, TimeoutError} from "../../src/errors.js";
 
 describe("withTimeout", function () {
   const data = "DATA";
   const shortTimeoutMs = 10;
-  // Sleep for longer than the current test timeout.
-  // If the abort signal doesn't work mocha will throw a timeout error
-  const longTimeoutMs = 2 * this.timeout();
+  const longTimeoutMs = 5000;
 
   const pendingTimeouts: NodeJS.Timeout[] = [];
 
@@ -32,33 +29,33 @@ describe("withTimeout", function () {
 
   it("Should resolve timeout", async function () {
     const res = await withTimeout(() => pause(shortTimeoutMs, data), longTimeoutMs);
-    expect(res).to.equal(data);
+    expect(res).toBe(data);
   });
 
   it("Should resolve timeout with not triggered signal", async function () {
     const controller = new AbortController();
 
     const res = await withTimeout(() => pause(shortTimeoutMs, data), longTimeoutMs, controller.signal);
-    expect(res).to.equal(data);
+    expect(res).toBe(data);
   });
 
   it("Should abort timeout with triggered signal", async function () {
     const controller = new AbortController();
     setTimeout(() => controller.abort(), shortTimeoutMs);
 
-    await expect(withTimeout(() => pause(longTimeoutMs, data), longTimeoutMs, controller.signal)).to.rejectedWith(
+    await expect(withTimeout(() => pause(longTimeoutMs, data), longTimeoutMs, controller.signal)).rejects.toThrow(
       ErrorAborted
     );
   });
 
   it("Should timeout with no signal", async function () {
-    await expect(withTimeout(() => pause(longTimeoutMs, data), shortTimeoutMs)).to.rejectedWith(TimeoutError);
+    await expect(withTimeout(() => pause(longTimeoutMs, data), shortTimeoutMs)).rejects.toThrow(TimeoutError);
   });
 
   it("Should timeout with not triggered signal", async function () {
     const controller = new AbortController();
 
-    await expect(withTimeout(() => pause(longTimeoutMs, data), shortTimeoutMs, controller.signal)).to.rejectedWith(
+    await expect(withTimeout(() => pause(longTimeoutMs, data), shortTimeoutMs, controller.signal)).rejects.toThrow(
       TimeoutError
     );
   });
@@ -67,9 +64,10 @@ describe("withTimeout", function () {
     const controller = new AbortController();
 
     controller.abort();
-    expect(controller.signal.aborted, "Signal should already be aborted").to.equal(true);
+    // "Signal should already be aborted"
+    expect(controller.signal.aborted).toBe(true);
 
-    await expect(withTimeout(() => pause(shortTimeoutMs, data), shortTimeoutMs, controller.signal)).to.rejectedWith(
+    await expect(withTimeout(() => pause(shortTimeoutMs, data), shortTimeoutMs, controller.signal)).rejects.toThrow(
       ErrorAborted
     );
   });

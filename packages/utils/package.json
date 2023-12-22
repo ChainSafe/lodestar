@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.12.1",
+  "version": "1.13.0",
   "type": "module",
   "exports": "./lib/index.js",
   "files": [
@@ -31,8 +31,11 @@
     "lint": "eslint --color --ext .ts src/ test/",
     "lint:fix": "yarn run lint --fix",
     "pretest": "yarn run check-types",
-    "test:unit": "mocha 'test/**/*.test.ts'",
-    "test:browsers": "yarn karma start karma.config.cjs",
+    "test:unit": "vitest --run --dir test/unit/ --coverage",
+    "test:browsers": "yarn test:browsers:chrome && yarn test:browsers:firefox && yarn test:browsers:electron",
+    "test:browsers:chrome": "vitest --run --browser chrome --config ./vitest.browser.config.ts --dir test/unit",
+    "test:browsers:firefox": "vitest --run --browser firefox --config ./vitest.browser.config.ts --dir test/unit",
+    "test:browsers:electron": "echo 'Electron tests will be introduced back in the future as soon vitest supports electron.'",
     "check-readme": "typescript-docs-verifier"
   },
   "types": "lib/index.d.ts",

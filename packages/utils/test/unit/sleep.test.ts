@@ -1,5 +1,4 @@
-import "../setup.js";
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {sleep} from "../../src/sleep.js";
 import {ErrorAborted} from "../../src/errors.js";
 
@@ -13,20 +12,19 @@ describe("sleep", function () {
     const controller = new AbortController();
     setTimeout(() => controller.abort(), 10);
 
-    // Sleep for longer than the current test timeout.
-    // If the abort signal doesn't work mocha will throw a timeout error
-    const sleepTime = 2 * this.timeout();
+    const sleepTime = 5000;
 
-    await expect(sleep(sleepTime, controller.signal)).to.rejectedWith(ErrorAborted);
+    await expect(sleep(sleepTime, controller.signal)).rejects.toThrow(ErrorAborted);
   });
 
   it("Should abort timeout with already aborted signal", async function () {
     const controller = new AbortController();
 
     controller.abort();
-    expect(controller.signal.aborted, "Signal should already be aborted").to.equal(true);
+    // "Signal should already be aborted"
+    expect(controller.signal.aborted).toBe(true);
 
-    await expect(sleep(0, controller.signal)).to.rejectedWith(ErrorAborted);
+    await expect(sleep(0, controller.signal)).rejects.toThrow(ErrorAborted);
   });
 
   it("sleep 0 must tick the event loop", async () => {
@@ -51,16 +49,13 @@ describe("sleep", function () {
       await new Promise((r) => setTimeout(r, 0));
     }
 
-    expect(steps).to.deep.equal(
-      [
-        // Sync execution
-        Step.beforeSleep,
-        // Next tick, first registered callback
-        Step.setTimeout0,
-        // Next tick, second registered callback
-        Step.afterSleep,
-      ],
-      "Wrong steps"
-    );
+    expect(steps).toEqual([
+      // Sync execution
+      Step.beforeSleep,
+      // Next tick, first registered callback
+      Step.setTimeout0,
+      // Next tick, second registered callback
+      Step.afterSleep,
+    ]);
   });
 });

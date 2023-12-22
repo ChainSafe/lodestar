@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {DOMAIN_APPLICATION_MASK, DOMAIN_APPLICATION_BUILDER} from "../../src/index.js";
 
 describe("validate application domains", () => {
@@ -8,7 +8,8 @@ describe("validate application domains", () => {
       for (let i = 0; i < DOMAIN_APPLICATION_MASK.length; i++) {
         r += DOMAIN_APPLICATION_MASK[i] & domain[i];
       }
-      expect(r).to.be.above(0, `${name} mask application should be valid`);
+      // eslint-disable-next-line chai-expect/no-inner-compare
+      expect(r > 0).toBeWithMessage(true, `${name} mask application should be valid`);
     });
   });
 });
