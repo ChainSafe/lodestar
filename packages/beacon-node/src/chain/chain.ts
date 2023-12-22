@@ -963,7 +963,7 @@ export class BeaconChain implements IBeaconChain {
 
       // Set pivotValidatorIndex to 0 if `historicalValidatorLengths` does not
       // contain validator length for cpEpoch to ensure `newFinalizedValidators` to be empty
-      const pivotValidatorIndex = headState.epochCtx.historicalValidatorLengths.get((headEpoch - cpEpoch) * -1) ?? 0;
+      const pivotValidatorIndex = headState.epochCtx.historicalValidatorLengths.get((headEpoch - cpEpoch + 1) * -1) ?? 0;
 
       // Note EIP-6914 will break this logic
       const newFinalizedValidators = headState.epochCtx.unfinalizedPubkey2index.filter(
