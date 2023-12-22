@@ -21,7 +21,7 @@ export function getRoutes(config: ChainForkConfig, api: ServerApi<Api>): ServerR
         const response = await api.produceBlockV3(...reqSerializers.produceBlockV3.parseReq(req));
         res.header("Eth-Consensus-Version", response.version);
         return returnTypes.produceBlockV3.toJson(response);
-      }
+      },
     },
   };
 }
