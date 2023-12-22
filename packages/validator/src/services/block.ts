@@ -118,10 +118,11 @@ export class BlockProposingService {
       const pubkeyHex = toHexString(pubkey);
       const randaoReveal = await this.validatorStore.signRandao(pubkey, slot);
       const graffiti = this.validatorStore.getGraffiti(pubkeyHex);
-      const blockContents = await this.produceBlockWrapper(this.config, slot, randaoReveal, graffiti, {});
+      const blindedLocal = true;
+      const blockContents = await this.produceBlockWrapper(this.config, slot, randaoReveal, graffiti, {blindedLocal});
       const produceTime = this.clock.secFromSlot(slot);
       const signedBlock = await this.validatorStore.signBlock(pubkey, blockContents.block, slot, this.logger);
-      await this.publishBlockWrapper(signedBlock, undefined, {
+      await this.publishBlockWrapper(signedBlock, null, {
         broadcastValidation: this.opts.broadcastValidation,
       }).catch((e: Error) => {
         this.metrics?.blockProposingErrors.inc({error: "publish"});
@@ -219,12 +220,13 @@ export class BlockProposingService {
     slot: Slot,
     randaoReveal: BLSSignature,
     graffiti: string,
-    {feeRecipient, strictFeeRecipientCheck, builderSelection}: routes.validator.ExtraProduceBlockOps
+    {feeRecipient, strictFeeRecipientCheck, builderSelection, blindedLocal}: routes.validator.ExtraProduceBlockOps
   ): Promise<FullOrBlindedBlockWithContents & DebugLogCtx> => {
     const res = await this.api.validator.produceBlockV3(slot, randaoReveal, graffiti, false, {
       feeRecipient,
       builderSelection,
       strictFeeRecipientCheck,
+      blindedLocal
     });
     ApiError.assert(res, "Failed to produce block: validator.produceBlockV2");
     const {response} = res;
@@ -241,6 +243,7 @@ export class BlockProposingService {
       )} ETH`,
       // TODO PR: should be used in api call instead of adding in log
       strictFeeRecipientCheck,
+      blindedLocal,
       builderSelection,
       api: "produceBlockV3",
     };
