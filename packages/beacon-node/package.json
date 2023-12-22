@@ -145,7 +145,7 @@
     "jwt-simple": "0.5.6",
     "libp2p": "0.46.12",
     "multiformats": "^11.0.1",
-    "prom-client": "^14.2.0",
+    "prom-client": "^15.1.0",
     "qs": "^6.11.1",
     "snappyjs": "^0.7.0",
     "strict-event-emitter-types": "^2.0.0",
