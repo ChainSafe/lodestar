@@ -415,7 +415,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     // Its historicalValidatorLengths should store lengths for epoch 3 and 4 hence size should be 2
     console.log(`haha ${epochCtx.historicalValidatorLengths.size}`);
     if (epochCtx.historicalValidatorLengths.size !== 2) {
-      throw Error("Historical validator lengths is not updated correctly")
+      throw Error("Historical validator lengths is not updated correctly");
     }
 
     if (headState.depositReceiptsStartIndex === UNSET_DEPOSIT_RECEIPTS_START_INDEX) {
