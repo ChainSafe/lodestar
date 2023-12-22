@@ -20,6 +20,10 @@ export function getRoutes(config: ChainForkConfig, api: ServerApi<Api>): ServerR
       handler: async (req, res) => {
         const response = await api.produceBlockV3(...reqSerializers.produceBlockV3.parseReq(req));
         void res.header("Eth-Consensus-Version", response.version);
+        void res.header("Eth-Execution-Payload-Blinded", response.executionPayloadBlinded);
+        void res.header("Eth-Execution-Payload-Value", response.executionPayloadValue);
+        void res.header("Eth-Consensus-Block-Value", response.consensusBlockValue);
+
         return returnTypes.produceBlockV3.toJson(response);
       },
     },
