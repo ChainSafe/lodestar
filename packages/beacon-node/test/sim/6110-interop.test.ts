@@ -377,6 +377,10 @@ describe("executionEngine / ExecutionEngineHttp", function () {
         `Unfinalized cache is missing the expected validator. Size: ${epochCtx.unfinalizedPubkey2index.size}`
       );
     }
+    // epochCtx.historicalValidatorsLength should be empty since no epoch transition has happened.
+    if (!epochCtx.historicalValidatorLengths.isEmpty()) {
+      throw Error("Historical validator lengths is modified");
+    }
 
     await new Promise<void>((resolve, _reject) => {
       bn.chain.clock.on(ClockEvent.epoch, (epoch) => {
@@ -406,6 +410,12 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     }
     if (!epochCtx.unfinalizedPubkey2index.isEmpty()) {
       throw Error("Unfinalized cache still contains new validator");
+    }
+    // After 4 epochs, headState's finalized cp epoch should be 2
+    // Its historicalValidatorLengths should store lengths for epoch 3 and 4 hence size should be 2
+    console.log(`haha ${epochCtx.historicalValidatorLengths.size}`);
+    if (epochCtx.historicalValidatorLengths.size !== 2) {
+      throw Error("Historical validator lengths is not updated correctly")
     }
 
     if (headState.depositReceiptsStartIndex === UNSET_DEPOSIT_RECEIPTS_START_INDEX) {
