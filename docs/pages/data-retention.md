@@ -6,7 +6,7 @@ There are several processes that need to store data for Lodestar. These data set
 
 ```bash
 $executionDir # this changes depending on the execution client
-    └── execution-db 
+    └── execution-db
 
 $dataDir # specified by --dataDir on the beacon command
 ├── .log_rotate_audit.json
