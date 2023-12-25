@@ -271,9 +271,11 @@ jobs:
           key: ${{ runner.os }}-node-${{ matrix.node }}-${{ github.sha }}
           fail-on-cache-miss: true
       - name: Install Chrome browser
-        run: npx @puppeteer/browsers install chrome
+        run: |
+          npx @puppeteer/browsers install chrome@stable
+          npx @puppeteer/browsers install chromedriver@stable
       - name: Install Firefox browser
-        run: npx @puppeteer/browsers install firefox
+        run: npx @puppeteer/browsers install firefox@latest
       - name: Browser tests
         run: |
           export DISPLAY=':99.0'
