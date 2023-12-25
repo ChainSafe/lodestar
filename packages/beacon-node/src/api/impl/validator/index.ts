@@ -9,7 +9,6 @@ import {
   computeEpochAtSlot,
   getCurrentSlot,
   beaconBlockToBlinded,
-  blobSidecarsToBlinded,
 } from "@lodestar/state-transition";
 import {
   GENESIS_SLOT,
@@ -31,11 +30,11 @@ import {
   allForks,
   BLSSignature,
   isBlindedBeaconBlock,
-  isBlindedBlockContents,
+  isBlockContents,
   phase0,
 } from "@lodestar/types";
 import {ExecutionStatus} from "@lodestar/fork-choice";
-import {toHex, racePromisesWithCutoff, RaceEvent} from "@lodestar/utils";
+import {toHex, racePromisesWithCutoff, RaceEvent, gweiToWei} from "@lodestar/utils";
 import {AttestationError, AttestationErrorCode, GossipAction, SyncCommitteeError} from "../../../chain/errors/index.js";
 import {validateApiAggregateAndProof} from "../../../chain/validation/index.js";
 import {ZERO_HASH} from "../../../constants/index.js";
@@ -280,7 +279,7 @@ export function getValidatorApi({
       );
   }
 
-  const produceBlindedBlockOrContents = async function produceBlindedBlockOrContents(
+  const produceBuilderBlindedBlock = async function produceBuilderBlindedBlock(
     slot: Slot,
     randaoReveal: BLSSignature,
     graffiti: string,
@@ -288,7 +287,12 @@ export function getValidatorApi({
     {
       skipHeadChecksAndUpdate,
     }: Omit<routes.validator.ExtraProduceBlockOps, "builderSelection"> & {skipHeadChecksAndUpdate?: boolean} = {}
-  ): Promise<routes.validator.ProduceBlindedBlockOrContentsRes> {
+  ): Promise<routes.validator.ProduceBlindedBlockRes> {
+    const version = config.getForkName(slot);
+    if (!isForkExecution(version)) {
+      throw Error(`Invalid fork=${version} for produceBuilderBlindedBlock`);
+    }
+
     const source = ProducedBlockSource.builder;
     metrics?.blockProductionRequests.inc({source});
 
@@ -329,31 +333,17 @@ export function getValidatorApi({
         root: toHexString(config.getBlindedForkTypes(slot).BeaconBlock.hashTreeRoot(block)),
       });
 
-      const version = config.getForkName(block.slot);
       if (chain.opts.persistProducedBlocks) {
         void chain.persistBlock(block, "produced_builder_block");
       }
-      if (isForkBlobs(version)) {
-        const blockHash = toHex((block as bellatrix.BlindedBeaconBlock).body.executionPayloadHeader.blockHash);
-        const blindedBlobSidecars = chain.producedBlindedBlobSidecarsCache.get(blockHash);
-        if (blindedBlobSidecars === undefined) {
-          throw Error("blobSidecars missing in cache");
-        }
-        return {
-          data: {blindedBlock: block, blindedBlobSidecars} as allForks.BlindedBlockContents,
-          version,
-          executionPayloadValue,
-          consensusBlockValue,
-        };
-      } else {
-        return {data: block, version, executionPayloadValue, consensusBlockValue};
-      }
+
+      return {data: block, version, executionPayloadValue, consensusBlockValue};
     } finally {
       if (timer) timer({source});
     }
   };
 
-  const produceFullBlockOrContents = async function produceFullBlockOrContents(
+  const produceEngineFullBlockOrContents = async function produceEngineFullBlockOrContents(
     slot: Slot,
     randaoReveal: BLSSignature,
     graffiti: string,
@@ -407,12 +397,13 @@ export function getValidatorApi({
       }
       if (isForkBlobs(version)) {
         const blockHash = toHex((block as bellatrix.BeaconBlock).body.executionPayload.blockHash);
-        const blobSidecars = chain.producedBlobSidecarsCache.get(blockHash);
-        if (blobSidecars === undefined) {
-          throw Error("blobSidecars missing in cache");
+        const contents = chain.producedContentsCache.get(blockHash);
+        if (contents === undefined) {
+          throw Error("contents missing in cache");
         }
+
         return {
-          data: {block, blobSidecars} as allForks.BlockContents,
+          data: {block, ...contents} as allForks.BlockContents,
           version,
           executionPayloadValue,
           consensusBlockValue,
@@ -460,12 +451,12 @@ export function getValidatorApi({
     // Start calls for building execution and builder blocks
     const blindedBlockPromise = isBuilderEnabled
       ? // can't do fee recipient checks as builder bid doesn't return feeRecipient as of now
-        produceBlindedBlockOrContents(slot, randaoReveal, graffiti, {
+        produceBuilderBlindedBlock(slot, randaoReveal, graffiti, {
           feeRecipient,
           // skip checking and recomputing head in these individual produce calls
           skipHeadChecksAndUpdate: true,
         }).catch((e) => {
-          logger.error("produceBlindedBlockOrContents failed to produce block", {slot}, e);
+          logger.error("produceBuilderBlindedBlock failed to produce block", {slot}, e);
           return null;
         })
       : null;
@@ -481,13 +472,13 @@ export function getValidatorApi({
       !isBuilderEnabled || builderSelection !== routes.validator.BuilderSelection.BuilderOnly
         ? // TODO deneb: builderSelection needs to be figured out if to be done beacon side
           // || builderSelection !== BuilderSelection.BuilderOnly
-          produceFullBlockOrContents(slot, randaoReveal, graffiti, {
+          produceEngineFullBlockOrContents(slot, randaoReveal, graffiti, {
             feeRecipient,
             strictFeeRecipientCheck,
             // skip checking and recomputing head in these individual produce calls
             skipHeadChecksAndUpdate: true,
           }).catch((e) => {
-            logger.error("produceFullBlockOrContents failed to produce block", {slot}, e);
+            logger.error("produceEngineFullBlockOrContents failed to produce block", {slot}, e);
             return null;
           })
         : null;
@@ -497,7 +488,7 @@ export function getValidatorApi({
       // reference index of promises in the race
       const promisesOrder = [ProducedBlockSource.builder, ProducedBlockSource.engine];
       [blindedBlock, fullBlock] = await racePromisesWithCutoff<
-        routes.validator.ProduceBlockOrContentsRes | routes.validator.ProduceBlindedBlockOrContentsRes | null
+        routes.validator.ProduceBlockOrContentsRes | routes.validator.ProduceBlindedBlockRes | null
       >(
         [blindedBlockPromise, fullBlockPromise],
         BLOCK_PRODUCTION_RACE_CUTOFF_MS,
@@ -541,8 +532,8 @@ export function getValidatorApi({
     const consensusBlockValueBuilder = blindedBlock?.consensusBlockValue ?? BigInt(0);
     const consensusBlockValueEngine = fullBlock?.consensusBlockValue ?? BigInt(0);
 
-    const blockValueBuilder = builderPayloadValue + consensusBlockValueBuilder;
-    const blockValueEngine = enginePayloadValue + consensusBlockValueEngine;
+    const blockValueBuilder = builderPayloadValue + gweiToWei(consensusBlockValueBuilder); // Total block value is in wei
+    const blockValueEngine = enginePayloadValue + gweiToWei(consensusBlockValueEngine); // Total block value is in wei
 
     let selectedSource: ProducedBlockSource | null = null;
 
@@ -607,7 +598,7 @@ export function getValidatorApi({
         executionPayloadBlinded: false;
       };
     } else {
-      return {...blindedBlock, executionPayloadBlinded: true} as routes.validator.ProduceBlindedBlockOrContentsRes & {
+      return {...blindedBlock, executionPayloadBlinded: true} as routes.validator.ProduceBlindedBlockRes & {
         executionPayloadBlinded: true;
       };
     }
@@ -618,7 +609,7 @@ export function getValidatorApi({
     randaoReveal,
     graffiti
   ) {
-    const producedData = await produceFullBlockOrContents(slot, randaoReveal, graffiti);
+    const producedData = await produceEngineFullBlockOrContents(slot, randaoReveal, graffiti);
     if (isForkBlobs(producedData.version)) {
       throw Error(`Invalid call to produceBlock for deneb+ fork=${producedData.version}`);
     } else {
@@ -628,45 +619,35 @@ export function getValidatorApi({
     }
   };
 
-  const produceBlindedBlock: ServerApi<routes.validator.Api>["produceBlindedBlock"] =
-    async function produceBlindedBlock(slot, randaoReveal, graffiti) {
-      const producedData = await produceBlockV3(slot, randaoReveal, graffiti);
-      let blindedProducedData: routes.validator.ProduceBlindedBlockOrContentsRes;
-
-      if (isForkBlobs(producedData.version)) {
-        if (isBlindedBlockContents(producedData.data as allForks.FullOrBlindedBlockContents)) {
-          blindedProducedData = producedData as routes.validator.ProduceBlindedBlockOrContentsRes;
-        } else {
-          //
-          const {block, blobSidecars} = producedData.data as allForks.BlockContents;
-          const blindedBlock = beaconBlockToBlinded(config, block as allForks.AllForksExecution["BeaconBlock"]);
-          const blindedBlobSidecars = blobSidecarsToBlinded(blobSidecars);
-
-          blindedProducedData = {
-            ...producedData,
-            data: {blindedBlock, blindedBlobSidecars},
-          } as routes.validator.ProduceBlindedBlockOrContentsRes;
-        }
-      } else {
-        if (isBlindedBeaconBlock(producedData.data)) {
-          blindedProducedData = producedData as routes.validator.ProduceBlindedBlockOrContentsRes;
-        } else {
-          const block = producedData.data;
-          const blindedBlock = beaconBlockToBlinded(config, block as allForks.AllForksExecution["BeaconBlock"]);
-          blindedProducedData = {
-            ...producedData,
-            data: blindedBlock,
-          } as routes.validator.ProduceBlindedBlockOrContentsRes;
-        }
+  const produceEngineOrBuilderBlindedBlock: ServerApi<routes.validator.Api>["produceBlindedBlock"] =
+    async function produceEngineOrBuilderBlindedBlock(slot, randaoReveal, graffiti) {
+      const {data, executionPayloadValue, consensusBlockValue, version} = await produceBlockV3(
+        slot,
+        randaoReveal,
+        graffiti
+      );
+      if (!isForkExecution(version)) {
+        throw Error(`Invalid fork=${version} for produceEngineOrBuilderBlindedBlock`);
       }
-      return blindedProducedData;
+      const executionPayloadBlinded = true;
+
+      if (isBlockContents(data)) {
+        const {block} = data;
+        const blindedBlock = beaconBlockToBlinded(config, block as allForks.AllForksExecution["BeaconBlock"]);
+        return {executionPayloadValue, consensusBlockValue, data: blindedBlock, executionPayloadBlinded, version};
+      } else if (isBlindedBeaconBlock(data)) {
+        return {executionPayloadValue, consensusBlockValue, data, executionPayloadBlinded, version};
+      } else {
+        const blindedBlock = beaconBlockToBlinded(config, data as allForks.AllForksExecution["BeaconBlock"]);
+        return {executionPayloadValue, consensusBlockValue, data: blindedBlock, executionPayloadBlinded, version};
+      }
     };
 
   return {
     produceBlock,
-    produceBlockV2: produceFullBlockOrContents,
+    produceBlockV2: produceEngineFullBlockOrContents,
     produceBlockV3,
-    produceBlindedBlock,
+    produceBlindedBlock: produceEngineOrBuilderBlindedBlock,
 
     async produceAttestationData(committeeIndex, slot) {
       notWhileSyncing();

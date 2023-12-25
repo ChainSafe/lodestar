@@ -288,14 +288,14 @@ export class Network implements INetwork {
     });
   }
 
-  async publishBlobSidecar(signedBlobSidecar: deneb.SignedBlobSidecar): Promise<number> {
-    const fork = this.config.getForkName(signedBlobSidecar.message.slot);
-    const index = signedBlobSidecar.message.index;
-    return this.publishGossip<GossipType.blob_sidecar>(
-      {type: GossipType.blob_sidecar, fork, index},
-      signedBlobSidecar,
-      {ignoreDuplicatePublishError: true}
-    );
+  async publishBlobSidecar(blobSidecar: deneb.BlobSidecar): Promise<number> {
+    const slot = blobSidecar.signedBlockHeader.message.slot;
+    const fork = this.config.getForkName(slot);
+    const index = blobSidecar.index;
+
+    return this.publishGossip<GossipType.blob_sidecar>({type: GossipType.blob_sidecar, fork, index}, blobSidecar, {
+      ignoreDuplicatePublishError: true,
+    });
   }
 
   async publishBeaconAggregateAndProof(aggregateAndProof: phase0.SignedAggregateAndProof): Promise<number> {

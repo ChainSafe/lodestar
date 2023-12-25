@@ -17,20 +17,14 @@ export function findApiToken(dirpath: string): string {
 }
 
 export function expectDeepEquals<T>(a: T, b: T, message: string): void {
-  try {
-    expect(a).toEqual(b);
-  } catch (e) {
-    expect.fail(message);
-  }
+  expect(a).toEqualWithMessage(b, message);
 }
 
 /**
  * Similar to `expectDeepEquals` but only checks presence of all elements in array, irrespective of their order.
  */
 export function expectDeepEqualsUnordered<T>(a: T[], b: T[], message: string): void {
-  try {
-    expect(a.sort()).toEqual(b.sort());
-  } catch (e) {
-    expect.fail(message);
-  }
+  expect(a).toEqualWithMessage(expect.arrayContaining(b), message);
+  expect(b).toEqualWithMessage(expect.arrayContaining(a), message);
+  expect(a).toHaveLength(b.length);
 }

@@ -42,7 +42,7 @@ expect.extend({
   toBeWithMessage(received: unknown, expected: unknown, message: string) {
     if (Object.is(received, expected)) {
       return {
-        message: () => "Expected value is truthy",
+        message: () => "Received value is the same as expected value",
         pass: true,
       };
     }
@@ -50,25 +50,27 @@ expect.extend({
     return {
       pass: false,
       message: () => message,
+      actual: received,
+      expected,
     };
   },
   toSatisfy(received: unknown, func: (received: unknown) => boolean) {
     if (func(received)) {
       return {
-        message: () => "Expected value satisfied the condition",
+        message: () => "Received value satisfied the condition",
         pass: true,
       };
     }
 
     return {
       pass: false,
-      message: () => "Expected value did not satisfy the condition",
+      message: () => "Received value did not satisfy the condition",
     };
   },
   toEqualWithMessage(received: unknown, expected: unknown, message: string) {
     if (this.equals(received, expected)) {
       return {
-        message: () => "Expected value is truthy",
+        message: () => "Received value equals expected value",
         pass: true,
       };
     }
@@ -76,6 +78,8 @@ expect.extend({
     return {
       pass: false,
       message: () => message,
+      actual: received,
+      expected,
     };
   },
 });
