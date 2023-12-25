@@ -7,7 +7,6 @@ import {
   computeDomain,
   ZERO_HASH,
   blindedOrFullBlockHashTreeRoot,
-  blindedOrFullBlobSidecarHashTreeRoot,
 } from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
 import {
@@ -20,7 +19,6 @@ import {
   DOMAIN_SYNC_COMMITTEE,
   DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF,
   DOMAIN_APPLICATION_BUILDER,
-  DOMAIN_BLOB_SIDECAR,
 } from "@lodestar/params";
 import {
   allForks,
@@ -393,37 +391,6 @@ export class ValidatorStore {
       message: blindedOrFull,
       signature: await this.getSignature(pubkey, signingRoot, signingSlot, signableMessage),
     } as allForks.FullOrBlindedSignedBeaconBlock;
-  }
-
-  async signBlob(
-    pubkey: BLSPubkey,
-    blindedOrFull: allForks.FullOrBlindedBlobSidecar,
-    currentSlot: Slot
-  ): Promise<allForks.FullOrBlindedSignedBlobSidecar> {
-    // Make sure the block slot is not higher than the current slot to avoid potential attacks.
-    if (blindedOrFull.slot > currentSlot) {
-      throw Error(`Not signing block with slot ${blindedOrFull.slot} greater than current slot ${currentSlot}`);
-    }
-
-    // Duties are filtered before-hard by doppelganger-safe, this assert should never throw
-    this.assertDoppelgangerSafe(pubkey);
-
-    const signingSlot = blindedOrFull.slot;
-    const domain = this.config.getDomain(signingSlot, DOMAIN_BLOB_SIDECAR);
-    const blobRoot = blindedOrFullBlobSidecarHashTreeRoot(this.config, blindedOrFull);
-    // Don't use `computeSigningRoot()` here to compute the objectRoot in typesafe function blindedOrFullBlockHashTreeRoot()
-    const signingRoot = ssz.phase0.SigningData.hashTreeRoot({objectRoot: blobRoot, domain});
-
-    // Slashing protection is not required as blobs are binded to blocks which are already protected
-    const signableMessage: SignableMessage = {
-      type: SignableMessageType.BLOB,
-      data: blindedOrFull,
-    };
-
-    return {
-      message: blindedOrFull,
-      signature: await this.getSignature(pubkey, signingRoot, signingSlot, signableMessage),
-    } as allForks.FullOrBlindedSignedBlobSidecar;
   }
 
   async signRandao(pubkey: BLSPubkey, slot: Slot): Promise<BLSSignature> {

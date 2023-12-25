@@ -7,7 +7,6 @@ import {
   computeStartSlotAtEpoch,
   isStateValidatorsNodesPopulated,
   RootCache,
-  kzgCommitmentToVersionedHash,
 } from "@lodestar/state-transition";
 import {routes} from "@lodestar/api";
 import {ForkChoiceError, ForkChoiceErrorCode, EpochDifference, AncestorStatus} from "@lodestar/fork-choice";
@@ -16,6 +15,7 @@ import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {toCheckpointHex} from "../stateCache/index.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
+import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {ChainEvent, ReorgEventData} from "../emitter.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
 import type {BeaconChain} from "../chain.js";

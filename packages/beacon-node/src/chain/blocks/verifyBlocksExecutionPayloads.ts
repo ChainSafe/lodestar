@@ -5,7 +5,6 @@ import {
   isExecutionBlockBodyType,
   isMergeTransitionBlock as isMergeTransitionBlockFn,
   isExecutionEnabled,
-  kzgCommitmentToVersionedHash,
 } from "@lodestar/state-transition";
 import {bellatrix, allForks, Slot, deneb} from "@lodestar/types";
 import {
@@ -24,6 +23,7 @@ import {ForkSeq, SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@lodestar/params";
 import {IExecutionEngine} from "../../execution/engine/interface.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {IClock} from "../../util/clock.js";
+import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {BlockProcessOpts} from "../options.js";
 import {ExecutionPayloadStatus} from "../../execution/engine/interface.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";

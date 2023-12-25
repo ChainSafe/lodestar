@@ -6,7 +6,7 @@ import {ssz} from "../../src/index.js";
 // Since lodestar-params and lodestar-types are in the same mono-repo, running this test here is enough
 // guarantee that these constants are correct.
 
-describe("Lightclient pre-computed constants", () => {
+describe(`${constants.ACTIVE_PRESET}/ Lightclient pre-computed constants`, () => {
   const FINALIZED_ROOT_GINDEX = bnToNum(ssz.altair.BeaconState.getPathInfo(["finalizedCheckpoint", "root"]).gindex);
   const FINALIZED_ROOT_DEPTH = floorlog2(FINALIZED_ROOT_GINDEX);
   const FINALIZED_ROOT_INDEX = FINALIZED_ROOT_GINDEX % 2 ** FINALIZED_ROOT_DEPTH;
