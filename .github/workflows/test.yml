@@ -272,10 +272,10 @@ jobs:
           fail-on-cache-miss: true
       - name: Install Chrome browser
         run: |
-          npx @puppeteer/browsers install chrome@stable
-          npx @puppeteer/browsers install chromedriver@stable
+          npx @puppeteer/browsers install chrome@stable --path /tmp
+          npx @puppeteer/browsers install chromedriver@stable --path /tmp
       - name: Install Firefox browser
-        run: npx @puppeteer/browsers install firefox@latest
+        run: npx @puppeteer/browsers install firefox@latest --path /tmp
       - name: Browser tests
         run: |
           export DISPLAY=':99.0'
