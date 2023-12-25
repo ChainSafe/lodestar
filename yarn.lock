@@ -4943,15 +4943,6 @@ buffer-indexof-polyfill@~1.0.0:
   resolved "https://registry.yarnpkg.com/buffer-indexof-polyfill/-/buffer-indexof-polyfill-1.0.2.tgz#d2732135c5999c64b277fcf9b1abe3498254729c"
   integrity sha512-I7wzHwA3t1/lwXQh+A5PbNvJxgfo5r3xulgpYDB5zckTu/Z9oUK9biouBKQUjEqzaz3HnAT6TYoovmE+GqSf7A==
 
-"buffer-polyfill@npm:buffer@^6.0.3", buffer@^6.0.3:
-  name buffer-polyfill
-  version "6.0.3"
-  resolved "https://registry.yarnpkg.com/buffer/-/buffer-6.0.3.tgz#2ace578459cc8fbe2a70aaa8f52ee63b6a74c6c6"
-  integrity sha512-FTiCpNxtwiZZHEZbcbTIcZjERVICn9yq/pDFkTl95/AxzD1naBctN7YO68riM/gLSDY7sdrMby8hofADYuuqOA==
-  dependencies:
-    base64-js "^1.3.1"
-    ieee754 "^1.2.1"
-
 buffer-xor@^1.0.3:
   version "1.0.3"
   resolved "https://registry.npmjs.org/buffer-xor/-/buffer-xor-1.0.3.tgz"
@@ -4980,6 +4971,15 @@ buffer@^5.2.1, buffer@^5.4.3, buffer@^5.5.0, buffer@^5.7.1:
   dependencies:
     base64-js "^1.3.1"
     ieee754 "^1.1.13"
+
+buffer@^6.0.3:
+  name buffer-polyfill
+  version "6.0.3"
+  resolved "https://registry.yarnpkg.com/buffer/-/buffer-6.0.3.tgz#2ace578459cc8fbe2a70aaa8f52ee63b6a74c6c6"
+  integrity sha512-FTiCpNxtwiZZHEZbcbTIcZjERVICn9yq/pDFkTl95/AxzD1naBctN7YO68riM/gLSDY7sdrMby8hofADYuuqOA==
+  dependencies:
+    base64-js "^1.3.1"
+    ieee754 "^1.2.1"
 
 buffers@~0.1.1:
   version "0.1.1"
@@ -15191,15 +15191,13 @@ vite-node@1.0.2:
     picocolors "^1.0.0"
     vite "^5.0.0"
 
-vite-plugin-node-polyfills@^0.17.0:
-  version "0.17.0"
-  resolved "https://registry.yarnpkg.com/vite-plugin-node-polyfills/-/vite-plugin-node-polyfills-0.17.0.tgz#1044a4955174ddaeedbc3679b179e1efac9da006"
-  integrity sha512-iPmPn7376e5u6QvoTSJa16hf5Q0DFwHFXJk2uYpsNlmI3JdPms7hWyh55o+OysJ5jo9J5XPhLC9sMOYifwFd1w==
+vite-plugin-node-polyfills@^0.18.0:
+  version "0.18.0"
+  resolved "https://registry.yarnpkg.com/vite-plugin-node-polyfills/-/vite-plugin-node-polyfills-0.18.0.tgz#2ad147960f7a35dbbb1c9f9c1ae928bd0f438c1e"
+  integrity sha512-zkdLD3gpOhLFyxYRMJ5apk0RcODhomuS3XQgExowiX8naoc251JfcP3toqnfDlMdF0xuPYahre/H38xAcq8ApA==
   dependencies:
     "@rollup/plugin-inject" "^5.0.5"
-    buffer-polyfill "npm:buffer@^6.0.3"
     node-stdlib-browser "^1.2.0"
-    process "^0.11.10"
 
 vite-plugin-top-level-await@^1.3.1:
   version "1.3.1"
