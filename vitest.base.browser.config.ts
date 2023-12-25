@@ -34,11 +34,6 @@ export default defineConfig({
       headless: true,
       provider: "webdriverio",
       slowHijackESM: false,
-      providerOptions: {
-        capabilities: {
-          browserVersion: "latest",
-        },
-      },
     },
   },
   resolve: {
