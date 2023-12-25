@@ -2,12 +2,30 @@ name: "Setup node with debug support"
 description: "Setup the nodejs version with debug support"
 runs:
   using: "composite"
-  steps:
+  steps:    
+    # Determine the path of the Node executable
+    - name: Get Node Path
+      id: nodepath
+      shell: sh
+      run: echo "NODE_PATH=$(which node)" >> $GITHUB_OUTPUT
+
+    - name: Check node version
+      shell: sh
+      run: |
+        NODE_VERSION=$(${{ steps.nodepath.outputs.NODE_PATH }} --print "process.version")
+        echo "Node version found: $NODE_VERSION"
+        if [[ "$NODE_VERSION" == v20* ]]; then
+          echo "Matching node version (v20) is installed."
+        else
+          echo "Only node 20 has a debug version available"
+          exit 1
+        fi
+
     # For now we only have the Node 20 debug build
     - run: |
         sudo apt-get install unzip && curl -L "https://drive.google.com/uc?export=download&id=1hlhbbQi-NJi8_WjULvOdo-K_tfZFzN3Z&confirm=t" > nodejs.zip && unzip nodejs.zip
-        sudo cp -f node /usr/bin/node-with-debug
-        sudo chmod +x /usr/bin/node-with-debug
+        sudo cp -f node ${{ steps.nodepath.outputs.NODE_PATH }}
+        sudo chmod +x ${{ steps.nodepath.outputs.NODE_PATH }}
       shell: sh
 
     # List of naming patterns
@@ -18,6 +36,6 @@ runs:
       shell: sh
 
     - run: |
-        echo $(/usr/bin/node-with-debug --print "process.version")
-        echo $(/usr/bin/node-with-debug --print "process.features.debug")
+        echo $(${{ steps.nodepath.outputs.NODE_PATH }} --print "process.version")
+        echo $(${{ steps.nodepath.outputs.NODE_PATH }} --print "process.features.debug")
       shell: sh
