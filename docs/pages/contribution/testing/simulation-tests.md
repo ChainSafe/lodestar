@@ -1,4 +1,4 @@
-# Simulation Testing
+# Simulation Tests
 
 "Sim" testing for Lodestar is the most comprehensive, and complex, testing that is run. The goal is to fully simulate a testnet and to actuate the code in a way that closely mimics what will happen when turning on Lodestar in the wild. This is a very complex task and requires a lot of moving parts to work together. The following sections will describe the various components and how they work together.
 
@@ -54,7 +54,7 @@ GETH_DOCKER_IMAGE=ethereum/client-go:v1.11.6 \
 
 ## Sim Test Infrastructure
 
-When setting up and running the simulations, interactions with the nodes is through the published node API's. All functionality is actuated via http request and by "plugging in" this way it is possible to run the nodes in a stand-alone fashion, as they would be run in production, but to still achieve a tightly monitored and controlled environment. If code needs to be executed on a "class by class" basis or with mocking involved then the test is not a simulation test and would fall into one of the other testing categories. See the [Testing](../testing.md) page for more information on the other types of tests available for Lodestar.
+When setting up and running the simulations, interactions with the nodes is through the published node API's. All functionality is actuated via http request and by "plugging in" this way it is possible to run the nodes in a stand-alone fashion, as they would be run in production, but to still achieve a tightly monitored and controlled environment. If code needs to be executed on a "class by class" basis or with mocking involved then the test is not a simulation test and would fall into one of the other testing categories. See the [Testing Overview](./index.md) page for more information on the other types of tests available for Lodestar.
 
 ### Simulation Environment
 
