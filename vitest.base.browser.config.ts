@@ -36,7 +36,7 @@ export default defineConfig({
       slowHijackESM: false,
       providerOptions: {
         capabilities: {
-          browserVersion: "stable",
+          browserVersion: "latest",
         },
       },
     },
