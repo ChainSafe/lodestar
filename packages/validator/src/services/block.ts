@@ -121,13 +121,15 @@ export class BlockProposingService {
       const debugLogCtx = {...logCtx, validator: pubkeyHex};
 
       const strictFeeRecipientCheck = this.validatorStore.strictFeeRecipientCheck(pubkeyHex);
-      const builderSelection = this.validatorStore.getBuilderSelection(pubkeyHex);
+      const {selection: builderSelection, boostFactor: builderBoostFactor} =
+        this.validatorStore.getBuilderSelectionParams(pubkeyHex);
       const feeRecipient = this.validatorStore.getFeeRecipient(pubkeyHex);
       const blindedLocal = this.opts.blindedLocal;
 
       this.logger.debug("Producing block", {
         ...debugLogCtx,
         builderSelection,
+        builderBoostFactor,
         feeRecipient,
         strictFeeRecipientCheck,
         useProduceBlockV3: this.opts.useProduceBlockV3,
@@ -139,15 +141,20 @@ export class BlockProposingService {
       const produceOpts = {
         feeRecipient,
         strictFeeRecipientCheck,
-        builderSelection,
+        builderBoostFactor,
         blindedLocal,
       };
-      const blockContents = await produceBlockFn(this.config, slot, randaoReveal, graffiti, produceOpts).catch(
-        (e: Error) => {
-          this.metrics?.blockProposingErrors.inc({error: "produce"});
-          throw extendError(e, "Failed to produce block");
-        }
-      );
+      const blockContents = await produceBlockFn(
+        this.config,
+        slot,
+        randaoReveal,
+        graffiti,
+        produceOpts,
+        builderSelection
+      ).catch((e: Error) => {
+        this.metrics?.blockProposingErrors.inc({error: "produce"});
+        throw extendError(e, "Failed to produce block");
+      });
 
       this.logger.debug("Produced block", {...debugLogCtx, ...blockContents.debugLogCtx});
       this.metrics?.blocksProduced.inc();
@@ -195,13 +202,15 @@ export class BlockProposingService {
     slot: Slot,
     randaoReveal: BLSSignature,
     graffiti: string,
-    {feeRecipient, strictFeeRecipientCheck, builderSelection, blindedLocal}: routes.validator.ExtraProduceBlockOps
+    {feeRecipient, strictFeeRecipientCheck, builderBoostFactor, blindedLocal}: routes.validator.ExtraProduceBlockOps,
+    builderSelection: routes.validator.BuilderSelection
   ): Promise<FullOrBlindedBlockWithContents & DebugLogCtx> => {
     const res = await this.api.validator.produceBlockV3(slot, randaoReveal, graffiti, false, {
       feeRecipient,
       builderSelection,
       strictFeeRecipientCheck,
       blindedLocal,
+      builderBoostFactor,
     });
     ApiError.assert(res, "Failed to produce block: validator.produceBlockV2");
     const {response} = res;
@@ -223,7 +232,7 @@ export class BlockProposingService {
       api: "produceBlockV3",
     };
 
-    return parseProduceBlockResponse(response, debugLogCtx);
+    return parseProduceBlockResponse(response, debugLogCtx, builderSelection);
   };
 
   /** a wrapper function used for backward compatibility with the clients who don't have v3 implemented yet */
@@ -232,7 +241,8 @@ export class BlockProposingService {
     slot: Slot,
     randaoReveal: BLSSignature,
     graffiti: string,
-    {builderSelection}: routes.validator.ExtraProduceBlockOps
+    _opts: routes.validator.ExtraProduceBlockOps,
+    builderSelection: routes.validator.BuilderSelection
   ): Promise<FullOrBlindedBlockWithContents & DebugLogCtx> => {
     // other clients have always implemented builder vs execution race in produce blinded block
     // so if builderSelection is executiononly then only we call produceBlockV2 else produceBlockV3 always
@@ -248,7 +258,8 @@ export class BlockProposingService {
 
       return parseProduceBlockResponse(
         {executionPayloadBlinded: false, executionPayloadSource, ...response},
-        debugLogCtx
+        debugLogCtx,
+        builderSelection
       );
     } else {
       Object.assign(debugLogCtx, {api: "produceBlindedBlock"});
@@ -259,7 +270,8 @@ export class BlockProposingService {
 
       return parseProduceBlockResponse(
         {executionPayloadBlinded: true, executionPayloadSource, ...response},
-        debugLogCtx
+        debugLogCtx,
+        builderSelection
       );
     }
   };
@@ -267,15 +279,29 @@ export class BlockProposingService {
 
 function parseProduceBlockResponse(
   response: routes.validator.ProduceFullOrBlindedBlockOrContentsRes,
-  debugLogCtx: Record<string, string | boolean | undefined>
+  debugLogCtx: Record<string, string | boolean | undefined>,
+  builderSelection: routes.validator.BuilderSelection
 ): FullOrBlindedBlockWithContents & DebugLogCtx {
+  const executionPayloadSource = response.executionPayloadSource;
+
+  if (
+    (builderSelection === routes.validator.BuilderSelection.BuilderOnly &&
+      executionPayloadSource === ProducedBlockSource.engine) ||
+    (builderSelection === routes.validator.BuilderSelection.ExecutionOnly &&
+      executionPayloadSource === ProducedBlockSource.builder)
+  ) {
+    throw Error(
+      `Block not produced as per desired builderSelection=${builderSelection} executionPayloadSource=${executionPayloadSource}`
+    );
+  }
+
   if (response.executionPayloadBlinded) {
     return {
       block: response.data,
       contents: null,
       version: response.version,
       executionPayloadBlinded: true,
-      executionPayloadSource: response.executionPayloadSource,
+      executionPayloadSource,
       debugLogCtx,
     } as FullOrBlindedBlockWithContents & DebugLogCtx;
   } else {
@@ -285,7 +311,7 @@ function parseProduceBlockResponse(
         contents: {blobs: response.data.blobs, kzgProofs: response.data.kzgProofs},
         version: response.version,
         executionPayloadBlinded: false,
-        executionPayloadSource: response.executionPayloadSource,
+        executionPayloadSource,
         debugLogCtx,
       } as FullOrBlindedBlockWithContents & DebugLogCtx;
     } else {
@@ -294,7 +320,7 @@ function parseProduceBlockResponse(
         contents: null,
         version: response.version,
         executionPayloadBlinded: false,
-        executionPayloadSource: response.executionPayloadSource,
+        executionPayloadSource,
         debugLogCtx,
       } as FullOrBlindedBlockWithContents & DebugLogCtx;
     }

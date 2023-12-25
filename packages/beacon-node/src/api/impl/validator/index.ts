@@ -423,7 +423,12 @@ export function getValidatorApi({
       graffiti,
       // TODO deneb: skip randao verification
       _skipRandaoVerification?: boolean,
-      {feeRecipient, builderSelection, strictFeeRecipientCheck}: routes.validator.ExtraProduceBlockOps = {}
+      {
+        feeRecipient,
+        builderSelection,
+        builderBoostFactor,
+        strictFeeRecipientCheck,
+      }: routes.validator.ExtraProduceBlockOps = {}
     ) {
       notWhileSyncing();
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
@@ -436,7 +441,10 @@ export function getValidatorApi({
 
       const fork = config.getForkName(slot);
       // set some sensible opts
+      // builderSelection will be deprecated and will run in mode MaxProfit if builder is enabled
+      // and the actual selection will be determined using builderBoostFactor passed by the validator
       builderSelection = builderSelection ?? routes.validator.BuilderSelection.MaxProfit;
+      builderBoostFactor = builderBoostFactor ?? 100;
       const isBuilderEnabled =
         ForkSeq[fork] >= ForkSeq.bellatrix &&
         chain.executionBuilder !== undefined &&
@@ -448,6 +456,7 @@ export function getValidatorApi({
         slot,
         isBuilderEnabled,
         strictFeeRecipientCheck,
+        builderBoostFactor,
       });
       // Start calls for building execution and builder blocks
       const blindedBlockPromise = isBuilderEnabled
@@ -541,7 +550,7 @@ export function getValidatorApi({
       if (fullBlock && blindedBlock) {
         switch (builderSelection) {
           case routes.validator.BuilderSelection.MaxProfit: {
-            if (blockValueEngine >= blockValueBuilder) {
+            if (blockValueEngine >= (blockValueBuilder * BigInt(builderBoostFactor)) / BigInt(100)) {
               executionPayloadSource = ProducedBlockSource.engine;
             } else {
               executionPayloadSource = ProducedBlockSource.builder;
@@ -561,6 +570,7 @@ export function getValidatorApi({
         }
         logger.verbose(`Selected executionPayloadSource=${executionPayloadSource} block`, {
           builderSelection,
+          builderBoostFactor,
           // winston logger doesn't like bigint
           enginePayloadValue: `${enginePayloadValue}`,
           builderPayloadValue: `${builderPayloadValue}`,

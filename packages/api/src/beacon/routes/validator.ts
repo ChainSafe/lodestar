@@ -53,6 +53,10 @@ export enum BuilderSelection {
 export type ExtraProduceBlockOps = {
   feeRecipient?: string;
   builderSelection?: BuilderSelection;
+  // precise value  isn't required because super high values will be treated as always builder prefered
+  // and hence UintNum64 is sufficient. If this param is present, builderSelection will be infered to
+  // be of maxprofit (unless explicity provided) with this %age boost factor applied to the builder values
+  builderBoostFactor?: UintNum64;
   strictFeeRecipientCheck?: boolean;
   blindedLocal?: boolean;
 };
@@ -487,6 +491,7 @@ export type ReqTypes = {
       skip_randao_verification?: boolean;
       fee_recipient?: string;
       builder_selection?: string;
+      builder_boost_factor?: UintNum64;
       strict_fee_recipient_check?: boolean;
       blinded_local?: boolean;
     };
@@ -555,6 +560,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
         fee_recipient: opts?.feeRecipient,
         skip_randao_verification: skipRandaoVerification,
         builder_selection: opts?.builderSelection,
+        builder_boost_factor: opts?.builderBoostFactor,
         strict_fee_recipient_check: opts?.strictFeeRecipientCheck,
         blinded_local: opts?.blindedLocal,
       },
@@ -567,6 +573,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       {
         feeRecipient: query.fee_recipient,
         builderSelection: query.builder_selection as BuilderSelection,
+        builderBoostFactor: query.builder_boost_factor,
         strictFeeRecipientCheck: query.strict_fee_recipient_check,
         blindedLocal: query.blinded_local,
       },
@@ -579,6 +586,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
         fee_recipient: Schema.String,
         skip_randao_verification: Schema.Boolean,
         builder_selection: Schema.String,
+        builder_boost_factor: Schema.Uint,
         strict_fee_recipient_check: Schema.Boolean,
         blinded_local: Schema.Boolean,
       },
