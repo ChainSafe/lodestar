@@ -195,18 +195,20 @@ export class BlockProposingService {
     slot: Slot,
     randaoReveal: BLSSignature,
     graffiti: string,
-    {feeRecipient, strictFeeRecipientCheck, builderSelection}: routes.validator.ExtraProduceBlockOps
+    {feeRecipient, strictFeeRecipientCheck, builderSelection, blindedLocal}: routes.validator.ExtraProduceBlockOps
   ): Promise<FullOrBlindedBlockWithContents & DebugLogCtx> => {
     const res = await this.api.validator.produceBlockV3(slot, randaoReveal, graffiti, false, {
       feeRecipient,
       builderSelection,
       strictFeeRecipientCheck,
+      blindedLocal,
     });
     ApiError.assert(res, "Failed to produce block: validator.produceBlockV2");
     const {response} = res;
 
     const debugLogCtx = {
-      source: response.executionPayloadBlinded ? ProducedBlockSource.builder : ProducedBlockSource.engine,
+      executionPayloadSource: response.executionPayloadSource,
+      executionPayloadBlinded: response.executionPayloadBlinded,
       // winston logger doesn't like bigint
       executionPayloadValue: `${formatBigDecimal(response.executionPayloadValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)} ETH`,
       consensusBlockValue: `${formatBigDecimal(response.consensusBlockValue, ETH_TO_GWEI, MAX_DECIMAL_FACTOR)} ETH`,

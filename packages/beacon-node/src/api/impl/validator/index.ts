@@ -668,7 +668,8 @@ export function getValidatorApi({
       skipRandaoVerification,
       opts
     );
-    if (opts.blindedLocal === true) {
+
+    if (opts.blindedLocal === true && ForkSeq[produceBlockEngineOrBuilderRes.version] >= ForkSeq.bellatrix) {
       if (produceBlockEngineOrBuilderRes.executionPayloadBlinded) {
         return produceBlockEngineOrBuilderRes;
       } else {

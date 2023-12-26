@@ -746,13 +746,13 @@ export function getReturnTypes(): ReturnTypes<Api> {
         if (data.executionPayloadBlinded) {
           return {
             execution_payload_blinded: true,
-            executionPayloadSource: data.executionPayloadSource,
+            execution_payload_source: data.executionPayloadSource,
             ...(produceBlindedBlock.toJson(data) as Record<string, unknown>),
           };
         } else {
           return {
             execution_payload_blinded: false,
-            executionPayloadSource: data.executionPayloadSource,
+            execution_payload_source: data.executionPayloadSource,
             ...(produceBlockOrContents.toJson(data) as Record<string, unknown>),
           };
         }
