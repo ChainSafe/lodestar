@@ -38,7 +38,7 @@ export type BlobSidecarErrorType =
   | {code: BlobSidecarErrorCode.PARENT_UNKNOWN; parentRoot: RootHex}
   | {code: BlobSidecarErrorCode.NOT_LATER_THAN_PARENT; parentSlot: Slot; slot: Slot}
   | {code: BlobSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID}
-  | {code: BlobSidecarErrorCode.INCLUSION_PROOF_INVALID}
+  | {code: BlobSidecarErrorCode.INCLUSION_PROOF_INVALID; slot: Slot; blobIdx: number}
   | {code: BlobSidecarErrorCode.INCORRECT_PROPOSER; proposerIndex: ValidatorIndex};
 
 export class BlobSidecarGossipError extends GossipActionError<BlobSidecarErrorType> {}

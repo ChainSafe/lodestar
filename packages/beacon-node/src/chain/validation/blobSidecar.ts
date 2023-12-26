@@ -1,4 +1,3 @@
-import {ChainForkConfig} from "@lodestar/config";
 import {deneb, Root, Slot, ssz} from "@lodestar/types";
 import {toHex, verifyMerkleBranch} from "@lodestar/utils";
 import {computeStartSlotAtEpoch, getBlockHeaderProposerSignatureSet} from "@lodestar/state-transition";
@@ -12,7 +11,6 @@ import {IBeaconChain} from "../interface.js";
 import {RegenCaller} from "../regen/index.js";
 
 export async function validateGossipBlobSidecar(
-  config: ChainForkConfig,
   chain: IBeaconChain,
   blobSidecar: deneb.BlobSidecar,
   gossipIndex: number
@@ -116,9 +114,11 @@ export async function validateGossipBlobSidecar(
   }
 
   // verify if the blob inclusion proof is correct
-  if (!validateInclusionProof(config, blobSidecar)) {
+  if (!validateInclusionProof(blobSidecar)) {
     throw new BlobSidecarGossipError(GossipAction.REJECT, {
       code: BlobSidecarErrorCode.INCLUSION_PROOF_INVALID,
+      slot: blobSidecar.signedBlockHeader.message.slot,
+      blobIdx: blobSidecar.index,
     });
   }
 
@@ -216,7 +216,7 @@ function validateBlobsAndProofs(
   }
 }
 
-function validateInclusionProof(config: ChainForkConfig, blobSidecar: deneb.BlobSidecar): boolean {
+function validateInclusionProof(blobSidecar: deneb.BlobSidecar): boolean {
   return verifyMerkleBranch(
     ssz.deneb.KZGCommitment.hashTreeRoot(blobSidecar.kzgCommitment),
     blobSidecar.kzgCommitmentInclusionProof,
