@@ -1,7 +1,7 @@
-import {expect} from "chai";
+import {expect, describe, it} from "vitest";
 import {resolveOrRacePromises} from "../../src/promise.js";
 
-describe("racePromisesWithCutoff", () => {
+describe("resolveOrRacePromises", () => {
   const cutoffMs = 1000;
   const timeoutMs = 1500;
 
