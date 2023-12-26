@@ -49,7 +49,6 @@ export class PromiseWithStatus<T> implements Promise<T> {
       (reason) => {
         this._status = "rejected";
         this._reason = reason;
-        throw reason;
       }
     );
   }
