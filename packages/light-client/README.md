@@ -12,7 +12,7 @@ The evolution of light clients is emblematic of the broader trajectory of Ethere
 [![Eth Consensus Spec v1.1.10](https://img.shields.io/badge/ETH%20consensus--spec-1.1.10-blue)](https://github.com/ethereum/consensus-specs/releases/tag/v1.1.10)
 ![ES Version](https://img.shields.io/badge/ES-2021-yellow)
 ![Node Version](https://img.shields.io/badge/node-16.x-green)
-[Yarn](https://yarnpkg.com/)
+![Yarn](https://img.shields.io/badge/yarn-%232C8EBB.svg?style=for-the-badge&logo=yarn&logoColor=white)
 
 > This package is part of [ChainSafe's Lodestar](https://lodestar.chainsafe.io) project
 
@@ -26,14 +26,14 @@ Access to an beacon node that supports the light client specification is necessa
 - `/eth/v1/beacon/light_client/bootstrap/{block_root}`
 - `/eth/v0/beacon/light_client/committee_root`
 
-System requirements are quite low so its possible to run a light client in the browser as part of a website. There are a few examples of this on github that you can use as reference, our [prover](https://chainsafe.github.io/lodestar/lightclient-prover/prover.md) being one of them.
+System requirements are quite low so its possible to run a light client in the browser as part of a website. There are a few examples of this on github that you can use as reference, our [prover](https://chainsafe.github.io/lodestar/lightclient-prover/prover) being one of them.
 
 You can find more information about the light-client protocol in the [specification](https://github.com/ethereum/consensus-specs).
 
 ## Getting started
 
-- Follow the [installation guide](https://chainsafe.github.io/lodestar/) to install Lodestar.
-- Quickly try out the whole stack by [starting a local testnet](https://chainsafe.github.io/lodestar/usage/local).
+- Follow the [installation guide](https://chainsafe.github.io/lodestar/getting-started/installation) or [Docker install](https://chainsafe.github.io/lodestar/getting-started/installation/#docker-installation) to install Lodestar.
+- Quickly try out the whole stack by [starting a local testnet](https://chainsafe.github.io/lodestar/advanced-topics/setting-up-a-testnet).
 
 ## Light-Client CLI Example
 
@@ -126,7 +126,7 @@ lightclient.emitter.on(LightclientEvent.lightClientOptimisticHeader, async (opti
 
 ## Contributors
 
-Read our [contributors document](/CONTRIBUTING.md), [submit an issue](https://github.com/ChainSafe/lodestar/issues/new/choose) or talk to us on our [discord](https://discord.gg/yjyvFRP)!
+Read our [contribution documentation](https://chainsafe.github.io/lodestar/contribution/getting-started), [submit an issue](https://github.com/ChainSafe/lodestar/issues/new/choose) or talk to us on our [discord](https://discord.gg/yjyvFRP)!
 
 ## License
 
