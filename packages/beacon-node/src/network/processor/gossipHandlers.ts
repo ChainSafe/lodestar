@@ -211,7 +211,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
     });
 
     try {
-      await validateGossipBlobSidecar(config, chain, blobSidecar, gossipIndex);
+      await validateGossipBlobSidecar(chain, blobSidecar, gossipIndex);
       return blockInput;
     } catch (e) {
       if (e instanceof BlobSidecarGossipError) {
