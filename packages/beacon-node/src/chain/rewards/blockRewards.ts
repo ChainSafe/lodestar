@@ -30,12 +30,23 @@ export async function computeBlockRewards(
   block: allForks.BeaconBlock,
   state: CachedBeaconStateAllForks
 ): Promise<BlockRewards> {
+
   const fork = state.config.getForkName(block.slot);
-  const blockAttestationReward =
-    fork === ForkName.phase0
-      ? computeBlockAttestationRewardPhase0(block as phase0.BeaconBlock, state as CachedBeaconStatePhase0)
-      : computeBlockAttestationRewardAltair(block as altair.BeaconBlock, state as CachedBeaconStateAltair);
-  const syncAggregateReward = computeSyncAggregateReward(block as altair.BeaconBlock, state as CachedBeaconStateAltair);
+  const {attestations: cachedAttestationsReward, syncAggregate: cachedSyncAggregateReward} = state.proposerRewards;
+  let blockAttestationReward = cachedAttestationsReward;
+  let syncAggregateReward = cachedSyncAggregateReward;
+
+  if (blockAttestationReward === 0) {
+    blockAttestationReward =
+      fork === ForkName.phase0
+        ? computeBlockAttestationRewardPhase0(block as phase0.BeaconBlock, state as CachedBeaconStatePhase0)
+        : computeBlockAttestationRewardAltair(block as altair.BeaconBlock, state as CachedBeaconStateAltair);
+  }
+
+  if (syncAggregateReward === 0) {
+    syncAggregateReward = computeSyncAggregateReward(block as altair.BeaconBlock, state as CachedBeaconStateAltair);
+  }
+
   const blockProposerSlashingReward = computeBlockProposerSlashingReward(block, state);
   const blockAttesterSlashingReward = computeBlockAttesterSlashingReward(block, state);
 
