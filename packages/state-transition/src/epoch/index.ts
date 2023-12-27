@@ -5,6 +5,7 @@ import {
   MAX_VALIDATORS_PER_COMMITTEE,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
+import {withTimer} from "@lodestar/utils";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStateCapella,
@@ -81,52 +82,37 @@ export function processEpoch(
     throw new Error("Lodestar does not support this network, parameters don't fit number value inside state.slashings");
   }
 
-  {
-    const timer = metrics?.epochTransitionStepTime.startTimer({
-      step: EpochTransitionStep.processJustificationAndFinalization,
-    });
-    processJustificationAndFinalization(state, cache);
-    timer?.();
-  }
+  withTimer(processJustificationAndFinalization, [state, cache], metrics?.epochTransitionStepTime, {
+    step: EpochTransitionStep.processJustificationAndFinalization,
+  });
 
   if (fork >= ForkSeq.altair) {
-    const timer = metrics?.epochTransitionStepTime.startTimer({step: EpochTransitionStep.processInactivityUpdates});
-    processInactivityUpdates(state as CachedBeaconStateAltair, cache);
-    timer?.();
+    withTimer(processInactivityUpdates, [state as CachedBeaconStateAltair, cache], metrics?.epochTransitionStepTime, {
+      step: EpochTransitionStep.processInactivityUpdates,
+    });
   }
 
   // processRewardsAndPenalties() is 2nd step in the specs, we optimize to do it
   // after processSlashings() to update balances only once
   // processRewardsAndPenalties(state, cache);
-  {
-    const timer = metrics?.epochTransitionStepTime.startTimer({step: EpochTransitionStep.processRegistryUpdates});
-    processRegistryUpdates(state, cache);
-    timer?.();
-  }
+  withTimer(processRegistryUpdates, [state, cache], metrics?.epochTransitionStepTime, {
+    step: EpochTransitionStep.processRegistryUpdates,
+  });
 
   // accumulate slashing penalties and only update balances once in processRewardsAndPenalties()
-  let slashingPenalties: number[];
-  {
-    const timer = metrics?.epochTransitionStepTime.startTimer({step: EpochTransitionStep.processSlashings});
-    slashingPenalties = processSlashings(state, cache, false);
-    timer?.();
-  }
+  const slashingPenalties = withTimer(processSlashings, [state, cache, false], metrics?.epochTransitionStepTime, {
+    step: EpochTransitionStep.processSlashings,
+  });
 
-  {
-    const timer = metrics?.epochTransitionStepTime.startTimer({step: EpochTransitionStep.processRewardsAndPenalties});
-    processRewardsAndPenalties(state, cache, slashingPenalties);
-    timer?.();
-  }
+  withTimer(processRewardsAndPenalties, [state, cache, slashingPenalties], metrics?.epochTransitionStepTime, {
+    step: EpochTransitionStep.processRewardsAndPenalties,
+  });
 
   processEth1DataReset(state, cache);
 
-  {
-    const timer = metrics?.epochTransitionStepTime.startTimer({
-      step: EpochTransitionStep.processEffectiveBalanceUpdates,
-    });
-    processEffectiveBalanceUpdates(state, cache);
-    timer?.();
-  }
+  withTimer(processEffectiveBalanceUpdates, [state, cache], metrics?.epochTransitionStepTime, {
+    step: EpochTransitionStep.processEffectiveBalanceUpdates,
+  });
 
   processSlashingsReset(state, cache);
   processRandaoMixesReset(state, cache);
@@ -140,20 +126,12 @@ export function processEpoch(
   if (fork === ForkSeq.phase0) {
     processParticipationRecordUpdates(state as CachedBeaconStatePhase0);
   } else {
-    {
-      const timer = metrics?.epochTransitionStepTime.startTimer({
-        step: EpochTransitionStep.processParticipationFlagUpdates,
-      });
-      processParticipationFlagUpdates(state as CachedBeaconStateAltair);
-      timer?.();
-    }
+    withTimer(processParticipationFlagUpdates, [state as CachedBeaconStateAltair], metrics?.epochTransitionStepTime, {
+      step: EpochTransitionStep.processParticipationFlagUpdates,
+    });
 
-    {
-      const timer = metrics?.epochTransitionStepTime.startTimer({
-        step: EpochTransitionStep.processSyncCommitteeUpdates,
-      });
-      processSyncCommitteeUpdates(state as CachedBeaconStateAltair);
-      timer?.();
-    }
+    withTimer(processSyncCommitteeUpdates, [state as CachedBeaconStateAltair], metrics?.epochTransitionStepTime, {
+      step: EpochTransitionStep.processSyncCommitteeUpdates,
+    });
   }
 }

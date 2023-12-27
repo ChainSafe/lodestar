@@ -1,5 +1,6 @@
 import type {PublicKey} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
+import {withTimer} from "@lodestar/utils";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {Metrics} from "../../metrics/metrics.js";
 
@@ -9,9 +10,11 @@ export function getAggregatedPubkey(signatureSet: ISignatureSet, metrics: Metric
       return signatureSet.pubkey;
 
     case SignatureSetType.aggregate: {
-      const timer = metrics?.blsThreadPool.pubkeysAggregationMainThreadDuration.startTimer();
-      const pubkeys = bls.PublicKey.aggregate(signatureSet.pubkeys);
-      timer?.();
+      const pubkeys = withTimer(
+        bls.PublicKey.aggregate,
+        [signatureSet.pubkeys],
+        metrics?.blsThreadPool.pubkeysAggregationMainThreadDuration
+      );
       return pubkeys;
     }
 

@@ -7,7 +7,7 @@ import {
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkSeq, SLOTS_PER_EPOCH, ForkExecution} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
-import {Logger, sleep, fromHex, isErrorAborted} from "@lodestar/utils";
+import {Logger, sleep, fromHex, isErrorAborted, withTimer} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
 import {GENESIS_SLOT, ZERO_HASH_HEX} from "../constants/constants.js";
 import {Metrics} from "../metrics/index.js";
@@ -111,11 +111,9 @@ export class PrepareNextSlotScheduler {
 
       // cache HashObjects for faster hashTreeRoot() later, especially for computeNewStateRoot() if we need to produce a block at slot 0 of epoch
       // see https://github.com/ChainSafe/lodestar/issues/6194
-      const hashTreeRootTimer = this.metrics?.stateHashTreeRootTime.startTimer({
+      withTimer(prepareState.hashTreeRoot, [], this.metrics?.stateHashTreeRootTime, {
         source: StateHashTreeRootSource.prepareNextSlot,
       });
-      prepareState.hashTreeRoot();
-      hashTreeRootTimer?.();
 
       // assuming there is no reorg, it caches the checkpoint state & helps avoid doing a full state transition in the next slot
       //  + when gossip block comes, we need to validate and run state transition

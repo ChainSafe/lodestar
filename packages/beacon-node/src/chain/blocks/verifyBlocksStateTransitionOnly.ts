@@ -5,7 +5,7 @@ import {
   DataAvailableStatus,
   StateHashTreeRootSource,
 } from "@lodestar/state-transition";
-import {ErrorAborted, Logger, sleep} from "@lodestar/utils";
+import {ErrorAborted, Logger, sleep, withTimer} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
@@ -58,11 +58,9 @@ export async function verifyBlocksStateTransitionOnly(
       metrics
     );
 
-    const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
+    const stateRoot = withTimer(postState.hashTreeRoot, [], metrics?.stateHashTreeRootTime, {
       source: StateHashTreeRootSource.blockTransition,
     });
-    const stateRoot = postState.hashTreeRoot();
-    hashTreeRootTimer?.();
 
     // Check state root matches
     if (!byteArrayEquals(block.message.stateRoot, stateRoot)) {

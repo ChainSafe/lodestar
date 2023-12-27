@@ -69,3 +69,15 @@ export interface MetricsRegisterCustom extends MetricsRegisterExtra {
   avgMinMax<Labels extends LabelsGeneric = NoLabels>(config: AvgMinMaxConfig<Labels>): AvgMinMax<Labels>;
   static<Labels extends LabelsGeneric = NoLabels>(config: StaticConfig<Labels>): void;
 }
+
+export function withTimer<T, A extends unknown[], L extends LabelsGeneric>(
+  fn: (...args: A) => T,
+  args: A,
+  histogram?: Histogram<L>,
+  labels?: NoLabels extends L ? never : L
+): T {
+  const timer = histogram?.startTimer(labels);
+  const result = fn(...args);
+  (timer as (() => number) | undefined)?.();
+  return result;
+}

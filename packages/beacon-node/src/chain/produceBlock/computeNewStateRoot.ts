@@ -6,6 +6,7 @@ import {
   stateTransition,
 } from "@lodestar/state-transition";
 import {allForks, Gwei, Root} from "@lodestar/types";
+import {withTimer} from "@lodestar/utils";
 import {ZERO_HASH} from "../../constants/index.js";
 import {Metrics} from "../../metrics/index.js";
 
@@ -45,11 +46,9 @@ export function computeNewStateRoot(
   const {attestations, syncAggregate, slashing} = postState.proposerRewards;
   const proposerReward = BigInt(attestations + syncAggregate + slashing);
 
-  const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
+  const newStateRoot = withTimer(postState.hashTreeRoot, [], metrics?.stateHashTreeRootTime, {
     source: StateHashTreeRootSource.computeNewStateRoot,
   });
-  const newStateRoot = postState.hashTreeRoot();
-  hashTreeRootTimer?.();
 
   return {newStateRoot, proposerReward};
 }
