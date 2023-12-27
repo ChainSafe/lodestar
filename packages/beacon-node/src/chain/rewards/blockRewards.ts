@@ -30,7 +30,6 @@ export async function computeBlockRewards(
   block: allForks.BeaconBlock,
   state: CachedBeaconStateAllForks
 ): Promise<BlockRewards> {
-
   const fork = state.config.getForkName(block.slot);
   const {attestations: cachedAttestationsReward, syncAggregate: cachedSyncAggregateReward} = state.proposerRewards;
   let blockAttestationReward = cachedAttestationsReward;
