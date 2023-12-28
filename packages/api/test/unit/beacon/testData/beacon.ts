@@ -12,6 +12,7 @@ import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 const root = new Uint8Array(32).fill(1);
 const randao = new Uint8Array(32).fill(1);
 const balance = 32e9;
+const reward = 32e9;
 const pubkeyHex = toHexString(Buffer.alloc(48, 1));
 
 const blockHeaderResponse: BlockHeaderResponse = {
@@ -183,6 +184,10 @@ export const testData: GenericServerTestCases<Api> = {
         attesterSlashings: 1,
       },
     },
+  },
+  getSyncCommitteeRewards: {
+    args: ["head", ["1300"]],
+    res: {executionOptimistic: true, data: [{validatorIndex: 1300, reward}]},
   },
 
   // -

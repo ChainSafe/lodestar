@@ -7,10 +7,12 @@ import {
   Schema,
   ReqSerializers,
   ContainerDataExecutionOptimistic,
+  ArrayOf,
 } from "../../../utils/index.js";
 import {HttpStatusCode} from "../../../utils/client/httpStatusCode.js";
 import {ApiClientResponse} from "../../../interfaces.js";
 import {BlockId} from "./block.js";
+import { ValidatorId } from "./state.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -29,6 +31,8 @@ export type ProposerRewardsResponse = {
   attesterSlashings: number;
 };
 
+export type SyncCommitteeRewardsResponse = {validatorIndex: ValidatorIndex, reward: number}[];
+
 export type Api = {
   /**
    * Get block rewards
@@ -45,6 +49,10 @@ export type Api = {
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
     >
   >;
+  getSyncCommitteeRewards(blockId: BlockId, filters?: ValidatorId[]): Promise<ApiClientResponse<
+      {[HttpStatusCode.OK]: {data: SyncCommitteeRewardsResponse; executionOptimistic: ExecutionOptimistic}},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
+  >>;
 };
 
 /**
@@ -52,11 +60,13 @@ export type Api = {
  */
 export const routesData: RoutesData<Api> = {
   getProposerRewards: {url: "/eth/v1/beacon/rewards/blocks/{block_id}", method: "GET"},
+  getSyncCommitteeRewards: {url: "/eth/v1/beacon/rewards/sync_committee/{block_id}", method: "POST"},
 };
 
 export type ReqTypes = {
   /* eslint-disable @typescript-eslint/naming-convention */
   getProposerRewards: {params: {block_id: string}};
+  getSyncCommitteeRewards: {params: {block_id: string}; body: ValidatorId[]};
 };
 
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
@@ -66,6 +76,14 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       parseReq: ({params}) => [params.block_id],
       schema: {params: {block_id: Schema.StringRequired}},
     },
+    getSyncCommitteeRewards: {
+      writeReq: (block_id, filters) => ({params: {block_id: String(block_id)}, body: filters || []}),
+      parseReq: ({params, body}) => [params.block_id, body],
+      schema: {
+        params: {block_id: Schema.StringRequired},
+        body: Schema.UintOrStringArray,
+      }
+    }
   };
 }
 
@@ -82,7 +100,16 @@ export function getReturnTypes(): ReturnTypes<Api> {
     {jsonCase: "eth2"}
   );
 
+  const SyncCommitteeRewards = new ContainerType(
+    {
+      validatorIndex: ssz.ValidatorIndex,
+      reward: ssz.UintNum64,
+    },
+    {jsonCase: "eth2"}
+  );
+
   return {
     getProposerRewards: ContainerDataExecutionOptimistic(ProposerRewardsResponse),
+    getSyncCommitteeRewards: ContainerDataExecutionOptimistic(ArrayOf(SyncCommitteeRewards)),
   };
 }
