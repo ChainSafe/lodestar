@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import * as constants from "@lodestar/params";
 import {ssz} from "../../src/index.js";
 

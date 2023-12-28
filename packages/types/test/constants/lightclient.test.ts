@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import * as constants from "@lodestar/params";
 import {ssz} from "../../src/index.js";
 
@@ -26,7 +26,7 @@ describe(`${constants.ACTIVE_PRESET}/ Lightclient pre-computed constants`, () =>
 
   for (const [key, expectedValue] of Object.entries(correctConstants)) {
     it(key, () => {
-      expect((constants as unknown as Record<string, number>)[key]).to.equal(expectedValue);
+      expect((constants as unknown as Record<string, number>)[key]).toBe(expectedValue);
     });
   }
 });
