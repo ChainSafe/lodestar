@@ -133,7 +133,7 @@ describe("CachedBeaconState", () => {
         const newStateBytes = newCachedState.serialize();
         expect(newStateBytes).toEqual(stateBytes);
         expect(newCachedState.hashTreeRoot()).toEqual(state.hashTreeRoot());
-        const shufflingGetter = (shufflingEpoch: Epoch, dependentRoot: RootHex) => {
+        const shufflingGetter = (shufflingEpoch: Epoch, dependentRoot: RootHex): EpochShuffling | null => {
           if (
             shufflingEpoch === seedState.epochCtx.epoch - 1 &&
             dependentRoot === getShufflingDecisionBlock(seedState, shufflingEpoch)
