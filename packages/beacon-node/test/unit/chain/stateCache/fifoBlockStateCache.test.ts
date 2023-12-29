@@ -30,7 +30,7 @@ describe("FIFOBlockStateCache", function () {
 
   beforeEach(function () {
     // max 2 items
-    cache = new FIFOBlockStateCache({maxStates: 2}, {});
+    cache = new FIFOBlockStateCache({maxBlockStates: 2}, {});
     cache.add(state1);
     cache.add(state2);
   });
@@ -103,4 +103,18 @@ describe("FIFOBlockStateCache", function () {
       }
     });
   }
+
+  it("Should not prune newly added state", () => {
+    cache = new FIFOBlockStateCache({maxBlockStates: 1}, {});
+    cache.setHeadState(state1);
+    // Size must be same as initial 1
+    expect(cache.size).toEqual(1);
+    cache.add(state2);
+    // Should not deleted newly added state
+    expect(cache.size).toEqual(2);
+    cache.add(state3);
+    // Should delete 1 state
+    expect(cache.size).toEqual(2);
+    expect(cache.dumpKeyOrder()).toEqual([key1, key3]);
+  });
 });

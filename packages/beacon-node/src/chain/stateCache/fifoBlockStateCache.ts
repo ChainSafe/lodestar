@@ -8,8 +8,13 @@ import {MapTracker} from "./mapMetrics.js";
 import {BlockStateCache} from "./types.js";
 
 export type FIFOBlockStateCacheOpts = {
-  maxStates: number;
+  maxBlockStates?: number;
 };
+
+/**
+ * Regen state if there's a reorg distance > 32 slots.
+ */
+export const DEFAULT_MAX_BLOCK_STATES = 32;
 
 /**
  * New implementation of BlockStateCache that keeps the most recent n states consistently
@@ -44,8 +49,8 @@ export class FIFOBlockStateCache implements BlockStateCache {
   private readonly keyOrder: LinkedList<string>;
   private readonly metrics: Metrics["stateCache"] | null | undefined;
 
-  constructor(opts: FIFOBlockStateCacheOpts, {metrics}: {maxStates?: number; metrics?: Metrics | null}) {
-    this.maxStates = opts.maxStates;
+  constructor(opts: FIFOBlockStateCacheOpts, {metrics}: {metrics?: Metrics | null}) {
+    this.maxStates = opts.maxBlockStates ?? DEFAULT_MAX_BLOCK_STATES;
     this.cache = new MapTracker(metrics?.stateCache);
     if (metrics) {
       this.metrics = metrics.stateCache;
@@ -114,7 +119,7 @@ export class FIFOBlockStateCache implements BlockStateCache {
         this.keyOrder.insertAfter(head, key);
       }
     }
-    this.prune();
+    this.prune(key);
   }
 
   get size(): number {
@@ -127,17 +132,20 @@ export class FIFOBlockStateCache implements BlockStateCache {
    * it should stay next to head so that it won't be pruned right away.
    * The FIFO cache helps with this.
    */
-  prune(): void {
+  prune(lastAddedKey: string): void {
     while (this.keyOrder.length > this.maxStates) {
-      const key = this.keyOrder.pop();
+      const key = this.keyOrder.last();
+      // it does not make sense to prune the last added state
+      // this only happens when max state is 1 in a short period of time
+      if (key === lastAddedKey) {
+        break;
+      }
       if (!key) {
         // should not happen
         throw new Error("No key");
       }
-      const item = this.cache.get(key);
-      if (item) {
-        this.cache.delete(key);
-      }
+      this.keyOrder.pop();
+      this.cache.delete(key);
     }
   }
 
