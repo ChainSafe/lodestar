@@ -309,8 +309,10 @@ export class EpochCache {
       if (cachedPreviousShuffling == null && isActiveValidator(validator, previousEpoch)) {
         previousActiveIndices.push(i);
       }
-      if (cachedCurrentShuffling == null && isActiveValidator(validator, currentEpoch)) {
-        currentActiveIndices.push(i);
+      if (isActiveValidator(validator, currentEpoch)) {
+        if (cachedCurrentShuffling == null) {
+          currentActiveIndices.push(i);
+        }
         // We track totalActiveBalanceIncrements as ETH to fit total network balance in a JS number (53 bits)
         totalActiveBalanceIncrements += effectiveBalanceIncrements[i];
       }
