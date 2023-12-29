@@ -63,5 +63,5 @@ export type GetHeadStateFn = () => CachedBeaconStateAllForks;
 
 export type PersistentCheckpointStateCacheOpts = {
   // Keep max n states in memory, persist the rest to disk
-  maxEpochsInMemory: number;
+  maxCPStateEpochsInMemory?: number;
 };

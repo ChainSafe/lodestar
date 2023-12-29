@@ -89,7 +89,7 @@ describe("PersistentCheckpointStateCache", function () {
     const persistentApis = getTestPersistentApi(fileApisBuffer);
     cache = new PersistentCheckpointStateCache(
       {persistentApis, logger: testLogger(), shufflingCache: new ShufflingCache()},
-      {maxEpochsInMemory: 2}
+      {maxCPStateEpochsInMemory: 2}
     );
     cache.add(cp0a, states["cp0a"]);
     cache.add(cp0b, states["cp0b"]);
@@ -157,7 +157,7 @@ describe("PersistentCheckpointStateCache", function () {
       const persistentApis = getTestPersistentApi(fileApisBuffer);
       cache = new PersistentCheckpointStateCache(
         {persistentApis, logger: testLogger(), shufflingCache: new ShufflingCache()},
-        {maxEpochsInMemory: 2}
+        {maxCPStateEpochsInMemory: 2}
       );
       cache.add(cp0a, states["cp0a"]);
       cache.add(cp0b, states["cp0b"]);
@@ -229,7 +229,7 @@ describe("PersistentCheckpointStateCache", function () {
       const persistentApis = getTestPersistentApi(fileApisBuffer);
       cache = new PersistentCheckpointStateCache(
         {persistentApis, logger: testLogger(), shufflingCache: new ShufflingCache()},
-        {maxEpochsInMemory: 2}
+        {maxCPStateEpochsInMemory: 2}
       );
       cache.add(cp0a, states["cp0a"]);
       cache.add(cp0b, states["cp0b"]);
@@ -528,7 +528,7 @@ describe("PersistentCheckpointStateCache", function () {
       const persistentApis = getTestPersistentApi(fileApisBuffer);
       cache = new PersistentCheckpointStateCache(
         {persistentApis, logger: testLogger(), shufflingCache: new ShufflingCache()},
-        {maxEpochsInMemory: 1}
+        {maxCPStateEpochsInMemory: 1}
       );
       cache.add(cp0a, states["cp0a"]);
       cache.add(cp0b, states["cp0b"]);
@@ -793,7 +793,7 @@ describe("PersistentCheckpointStateCache", function () {
         const persistentApis = getTestPersistentApi(fileApisBuffer);
         cache = new PersistentCheckpointStateCache(
           {persistentApis, logger: testLogger(), shufflingCache: new ShufflingCache()},
-          {maxEpochsInMemory: 0}
+          {maxCPStateEpochsInMemory: 0}
         );
         cache.add(cp0a, states["cp0a"]);
         cache.add(cp0b, states["cp0b"]);
