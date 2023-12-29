@@ -1,4 +1,6 @@
+import {TimeoutError} from "./errors.js";
 import {sleep} from "./sleep.js";
+import {ArrayToTuple, NonEmptyArray} from "./types.js";
 
 /**
  * While promise t is not finished, call function `fn` per `interval`
@@ -25,115 +27,136 @@ export async function callFnWhenAwait<T>(
   return t;
 }
 
-enum PromiseStatus {
-  resolved,
-  rejected,
-  pending,
-}
+export class PromiseWithStatus<T> implements Promise<T> {
+  private readonly _promise: Promise<T>;
+  private _status: "pending" | "fulfilled" | "rejected" = "pending";
+  private _value?: T;
+  private _reason: unknown;
 
-type PromiseState<T> =
-  | {status: PromiseStatus.resolved; value: T}
-  | {status: PromiseStatus.rejected; value: Error}
-  | {status: PromiseStatus.pending; value: null};
-
-function mapStatusesToResponses<T>(promisesStates: PromiseState<T>[]): (Error | T)[] {
-  return promisesStates.map((pmStatus) => {
-    switch (pmStatus.status) {
-      case PromiseStatus.resolved:
-        return pmStatus.value;
-      case PromiseStatus.rejected:
-        return pmStatus.value;
-      case PromiseStatus.pending:
-        return Error("pending");
+  constructor(...args: ConstructorParameters<typeof Promise<T>> | [Promise<T>]) {
+    if (args.length === 1 && args[0] instanceof Promise) {
+      this._promise = args[0];
+    } else {
+      this._promise = new Promise<T>(...(args as ConstructorParameters<typeof Promise<T>>));
     }
-  });
+
+    this._promise.then(
+      (value) => {
+        this._status = "fulfilled";
+        this._value = value;
+        return value;
+      },
+      (reason) => {
+        // We suppress error here to avoid unhandled promise rejection and handle the error with status
+        this._status = "rejected";
+        this._reason = reason;
+      }
+    );
+  }
+
+  [Symbol.toStringTag] = "Promise" as const;
+
+  get status(): "pending" | "fulfilled" | "rejected" {
+    return this._status;
+  }
+
+  get value(): T {
+    switch (this.status) {
+      case "fulfilled":
+        return this._value as T;
+      case "rejected":
+        throw this._reason;
+      case "pending":
+        throw new Error("Promise is still pending");
+    }
+  }
+
+  get reason(): unknown {
+    switch (this.status) {
+      case "fulfilled":
+        throw new Error("Promise is fulfilled");
+      case "rejected":
+        return this._reason;
+      case "pending":
+        throw new Error("Promise is still pending");
+    }
+  }
+
+  async then<TResult1 = T, TResult2 = never>(
+    onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined,
+    onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | undefined
+  ): Promise<TResult1 | TResult2> {
+    return this._promise.then(onfulfilled, onrejected);
+  }
+
+  async catch<TResult = never>(
+    onrejected?: ((reason: unknown) => TResult | PromiseLike<TResult>) | undefined
+  ): Promise<T | TResult> {
+    return this._promise.catch(onrejected);
+  }
+
+  async finally(onfinally?: (() => void) | undefined): Promise<T> {
+    return this._promise.finally(onfinally);
+  }
 }
 
-export enum RaceEvent {
-  /** all reject/resolve before cutoff */
-  precutoff = "precutoff-return",
-  /** cutoff reached as some were pending till cutoff **/
-  cutoff = "cutoff-reached",
-  /** atleast one resolved till cutoff so no race required */
-  resolvedatcutoff = "resolved-at-cutoff",
-  /** if none reject/resolve before cutoff but one resolves or all reject before timeout */
-  pretimeout = "pretimeout-return",
-  /** timeout reached as none resolved and some were pending till timeout*/
-  timeout = "timeout-reached",
-
-  // events for the promises for better tracking
-  /** promise resolved */
-  resolved = "resolved",
-  /** promise rejected */
-  rejected = "rejected",
-}
+type ReturnPromiseWithTuple<Tuple extends NonEmptyArray<unknown>> = {
+  [Index in keyof ArrayToTuple<Tuple>]: PromiseWithStatus<Awaited<Tuple[Index]>>;
+};
 
 /**
- * Wait for promises to resolve till cutoff and then race them beyond the cutoff with an overall timeout
- * @return resolved values or rejections or still pending errors corresponding to input promises
+ * Resolve all promises till `resolveTimeoutMs` if not then race them till `raceTimeoutMs`
  */
-export async function racePromisesWithCutoff<T>(
-  promises: Promise<T>[],
-  cutoffMs: number,
-  timeoutMs: number,
-  eventCb: (event: RaceEvent, delayMs: number, index?: number) => void
-): Promise<(Error | T)[]> {
-  // start the cutoff and timeout timers
-  let cutoffObserved = false;
-  const cutoffPromise = sleep(cutoffMs).then(() => {
-    cutoffObserved = true;
-  });
-  let timeoutObserved = false;
-  const timeoutPromise = sleep(timeoutMs).then(() => {
-    timeoutObserved = true;
-  });
-  const startTime = Date.now();
-
-  // Track promises status and resolved values/rejected errors
-  // Even if the promises reject with the following decoration promises will not throw
-  const promisesStates = [] as PromiseState<T>[];
-  promises.forEach((promise, index) => {
-    promisesStates[index] = {status: PromiseStatus.pending, value: null};
-    promise
-      .then((value) => {
-        eventCb(RaceEvent.resolved, Date.now() - startTime, index);
-        promisesStates[index] = {status: PromiseStatus.resolved, value};
-      })
-      .catch((e: Error) => {
-        eventCb(RaceEvent.rejected, Date.now() - startTime, index);
-        promisesStates[index] = {status: PromiseStatus.rejected, value: e};
-      });
-  });
-
-  // Wait till cutoff time unless all original promises resolve/reject early
-  await Promise.allSettled(promises.map((promise) => Promise.race([promise, cutoffPromise])));
-  if (cutoffObserved) {
-    // If any is resolved, then just simply return as we are post cutoff
-    const anyResolved = promisesStates.reduce(
-      (acc, pmState) => acc || pmState.status === PromiseStatus.resolved,
-      false
-    );
-    if (anyResolved) {
-      eventCb(RaceEvent.resolvedatcutoff, Date.now() - startTime);
-      return mapStatusesToResponses(promisesStates);
-    } else {
-      eventCb(RaceEvent.cutoff, Date.now() - startTime);
-    }
-  } else {
-    eventCb(RaceEvent.precutoff, Date.now() - startTime);
-    return mapStatusesToResponses(promisesStates);
+export async function resolveOrRacePromises<T extends NonEmptyArray<Promise<unknown> | PromiseWithStatus<unknown>>>(
+  promises: T,
+  {
+    resolveTimeoutMs,
+    raceTimeoutMs,
+    signal,
+  }: {
+    resolveTimeoutMs: number;
+    raceTimeoutMs: number;
+    signal?: AbortSignal;
+  }
+): Promise<ReturnPromiseWithTuple<T>> | never {
+  if (raceTimeoutMs <= resolveTimeoutMs) {
+    throw new Error("Race time mus tbe greater than resolve time");
   }
 
-  // Post deadline resolve with any of the promise or all rejected before timeout
-  await Promise.any(promises.map((promise) => Promise.race([promise, timeoutPromise]))).catch(
-    // just ignore if all reject as we will returned mapped rejections
-    // eslint-disable-next-line  @typescript-eslint/no-empty-function
-    (_e) => {}
+  const promisesWithStatuses = promises.map((p) => (p instanceof PromiseWithStatus ? p : new PromiseWithStatus(p)));
+  const resolveTimeoutError = new TimeoutError(
+    `Given promises can't be resolved within resolveTimeoutMs=${resolveTimeoutMs}`
   );
-  if (timeoutObserved) {
-    eventCb(RaceEvent.timeout, Date.now() - startTime);
-  } else {
-    eventCb(RaceEvent.pretimeout, Date.now() - startTime);
+  const raceTimeoutError = new TimeoutError(
+    `Not a any single promise be resolved in given raceTimeoutMs=${raceTimeoutMs}`
+  );
+
+  try {
+    await Promise.race([
+      Promise.allSettled(promisesWithStatuses),
+      sleep(resolveTimeoutMs, signal).then(() => {
+        throw resolveTimeoutError;
+      }),
+    ]);
+    return promisesWithStatuses as ReturnPromiseWithTuple<T>;
+  } catch (err) {
+    if (err !== resolveTimeoutError) {
+      throw err;
+    }
   }
-  return mapStatusesToResponses(promisesStates);
+
+  try {
+    await Promise.race([
+      Promise.any(promisesWithStatuses),
+      sleep(raceTimeoutMs - resolveTimeoutMs, signal).then(() => {
+        throw raceTimeoutError;
+      }),
+    ]);
+  } catch (err) {
+    if (err !== raceTimeoutError && !(err instanceof AggregateError)) {
+      throw err;
+    }
+  }
+
+  return promisesWithStatuses as ReturnPromiseWithTuple<T>;
 }
