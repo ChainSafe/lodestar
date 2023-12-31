@@ -1,6 +1,6 @@
 # Networking
 
-Starting up Lodestar will automatically connect it to peers on the network. Peers are found through the discv5 protocol and one peers are established communications happen via gossipsub over libp2p. While not necessary, having a basic understanding of how the various protocols and transport work will help with debugging and troubleshooting as some of the more common challenges come up with [firewalls](#firewall-management) and [NAT traversal](#nat-traversal).
+Starting up Lodestar will automatically connect it to peers on the network. Peers are found through the discv5 protocol and once peers are established communications happen via gossipsub over libp2p. While not necessary, having a basic understanding of how the various protocols and transport work will help with debugging and troubleshooting as some of the more common challenges come up with [firewalls](#firewall-management) and [NAT traversal](#nat-traversal).
 
 ## Networking Flags
 
