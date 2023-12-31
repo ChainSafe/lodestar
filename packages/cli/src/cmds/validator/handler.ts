@@ -170,6 +170,7 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
       distributed: args.distributed,
       useProduceBlockV3: args.useProduceBlockV3,
       broadcastValidation: parseBroadcastValidation(args.broadcastValidation),
+      blindedLocal: args.blindedLocal,
     },
     metrics
   );

@@ -58,6 +58,7 @@ export type ValidatorOptions = {
   distributed?: boolean;
   useProduceBlockV3?: boolean;
   broadcastValidation?: routes.beacon.BroadcastValidation;
+  blindedLocal?: boolean;
 };
 
 // TODO: Extend the timeout, and let it be customizable
@@ -210,6 +211,7 @@ export class Validator {
     const blockProposingService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, metrics, {
       useProduceBlockV3: opts.useProduceBlockV3 ?? defaultOptions.useProduceBlockV3,
       broadcastValidation: opts.broadcastValidation ?? defaultOptions.broadcastValidation,
+      blindedLocal: opts.blindedLocal ?? defaultOptions.blindedLocal,
     });
 
     const attestationService = new AttestationService(

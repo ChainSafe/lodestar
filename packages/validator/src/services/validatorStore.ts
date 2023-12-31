@@ -127,6 +127,8 @@ export const defaultOptions = {
   useProduceBlockV3: false,
   // spec asks for gossip validation by default
   broadcastValidation: routes.beacon.BroadcastValidation.gossip,
+  // should request fetching the locally produced block in blinded format
+  blindedLocal: false,
 };
 
 /**
