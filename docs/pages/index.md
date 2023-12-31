@@ -10,10 +10,9 @@
 - Use [Lodestar libraries](./supporting-libraries/index.md) in your next Ethereum Typescript project.
 - Run a beacon node on [mainnet or a public testnet](./getting-started/starting-a-node.md).
 - Utilize the whole stack by [starting a local testnet](./advanced-topics/setting-up-a-testnet.md).
-- View the Lodestar [CLI commands and options](./beacon-management/beacon-cli.md)
-- Prospective contributors can read the [contributing section](./contribution/getting-started.md) to understand how we develop and test on Lodestar.
+- Prospective contributors can read the [contributing section](../../CONTRIBUTING.md) to understand how we develop and test on Lodestar.
 - If you have questions [submit an issue](https://github.com/ChainSafe/lodestar/issues/new) or join us on [Discord](https://discord.gg/yjyvFRP)!
-- Please note our [security policy](./security.md).
+- Please note our [security policy](../../SECURITY.md).
 - Sign up to our [mailing list](https://chainsafe.typeform.com/lodestar) for announcements and any critical information about Lodestar.
 
 ## Specifications
