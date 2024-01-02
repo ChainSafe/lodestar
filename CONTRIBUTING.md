@@ -61,7 +61,7 @@ If you observe following error running any of the test files that means you are 
 
 - To fix errors always focus on passing all minimal tests first without running mainnet tests.
 - Spec tests often compare full expected vs actual states in JSON format.
-- A single logical error can cause many spec tests to fail. To focus on a single test at a time you can use vitest's option `--bail` to stop at the first failed test
+- A single logical error can cause many spec tests to fail. To focus on a single test at a time you can use vitest's option `--bail 1` to stop at the first failed test
 - To then run only that failed test you can run against a specific file as use vitest's filters to run only one case
 
 ```sh
