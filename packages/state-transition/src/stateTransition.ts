@@ -20,7 +20,7 @@ import {
   upgradeStateToDeneb,
 } from "./slot/index.js";
 import {processBlock} from "./block/index.js";
-import {processEpoch} from "./epoch/index.js";
+import {EpochTransitionStep, processEpoch} from "./epoch/index.js";
 import {BlockExternalData, DataAvailableStatus, ExecutionPayloadStatus} from "./block/externalData.js";
 import {ProcessBlockOpts} from "./block/types.js";
 
@@ -35,6 +35,24 @@ export type StateTransitionOpts = BlockExternalData &
     verifySignatures?: boolean;
     dontTransferCache?: boolean;
   };
+
+/**
+ * `state.clone()` invocation source tracked in metrics
+ */
+export enum StateCloneSource {
+  stateTransition = "stateTransition",
+  processSlots = "processSlots",
+}
+
+/**
+ * `state.hashTreeRoot()` invocation source tracked in metrics
+ */
+export enum StateHashTreeRootSource {
+  stateTransition = "state_transition",
+  blockTransition = "block_transition",
+  prepareNextSlot = "prepare_next_slot",
+  computeNewStateRoot = "compute_new_state_root",
+}
 
 /**
  * Implementation Note: follows the optimizations in protolambda's eth2fastspec (https://github.com/protolambda/eth2fastspec)
@@ -58,7 +76,7 @@ export function stateTransition(
   let postState = state.clone(options.dontTransferCache);
 
   if (metrics) {
-    onStateCloneMetrics(postState, metrics, "stateTransition");
+    onStateCloneMetrics(postState, metrics, StateCloneSource.stateTransition);
   }
 
   // State is already a ViewDU, which won't commit changes. Equivalent to .setStateCachesAsTransient()
@@ -96,7 +114,9 @@ export function stateTransition(
 
   // Verify state root
   if (verifyStateRoot) {
-    const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer();
+    const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
+      source: StateHashTreeRootSource.stateTransition,
+    });
     const stateRoot = postState.hashTreeRoot();
     hashTreeRootTimer?.();
 
@@ -127,7 +147,7 @@ export function processSlots(
   let postState = state.clone(epochTransitionCacheOpts?.dontTransferCache);
 
   if (metrics) {
-    onStateCloneMetrics(postState, metrics, "processSlots");
+    onStateCloneMetrics(postState, metrics, StateCloneSource.processSlots);
   }
 
   // State is already a ViewDU, which won't commit changes. Equivalent to .setStateCachesAsTransient()
@@ -167,7 +187,7 @@ function processSlotsWithTransientCache(
 
       let epochTransitionCache: EpochTransitionCache;
       {
-        const timer = metrics?.epochTransitionStepTime.startTimer({step: "beforeProcessEpoch"});
+        const timer = metrics?.epochTransitionStepTime.startTimer({step: EpochTransitionStep.beforeProcessEpoch});
         epochTransitionCache = beforeProcessEpoch(postState, epochTransitionCacheOpts);
         timer?.();
       }
@@ -180,7 +200,7 @@ function processSlotsWithTransientCache(
       postState.slot++;
 
       {
-        const timer = metrics?.epochTransitionStepTime.startTimer({step: "afterProcessEpoch"});
+        const timer = metrics?.epochTransitionStepTime.startTimer({step: EpochTransitionStep.afterProcessEpoch});
         postState.epochCtx.afterProcessEpoch(postState, epochTransitionCache);
         timer?.();
       }

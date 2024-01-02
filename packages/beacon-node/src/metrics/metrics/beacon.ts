@@ -1,4 +1,6 @@
+import {ProducedBlockSource} from "@lodestar/types";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
+import {BlockProductionStep, PayloadPreparationType} from "../../chain/produceBlock/index.js";
 
 export type BeaconMetrics = ReturnType<typeof createBeaconMetrics>;
 
@@ -46,7 +48,7 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
     // Additional Metrics
     // TODO: Implement
 
-    currentValidators: register.gauge<"status">({
+    currentValidators: register.gauge<{status: string}>({
       name: "beacon_current_validators",
       labelNames: ["status"],
       help: "number of validators in current epoch",
@@ -115,55 +117,35 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       buckets: [1, 2, 3, 5, 7, 10, 20, 30, 50, 100],
     }),
 
-    blockProductionTime: register.histogram<"source">({
+    blockProductionTime: register.histogram<{source: ProducedBlockSource}>({
       name: "beacon_block_production_seconds",
       help: "Full runtime of block production",
       buckets: [0.1, 1, 2, 4, 10],
       labelNames: ["source"],
     }),
-    executionBlockProductionTimeSteps: register.histogram<"step">({
+    executionBlockProductionTimeSteps: register.histogram<{step: BlockProductionStep}>({
       name: "beacon_block_production_execution_steps_seconds",
       help: "Detailed steps runtime of execution block production",
       buckets: [0.01, 0.1, 0.2, 0.5, 1],
-      /**
-       * - proposerSlashing
-       * - attesterSlashings
-       * - voluntaryExits
-       * - blsToExecutionChanges
-       * - attestations
-       * - eth1DataAndDeposits
-       * - syncAggregate
-       * - executionPayload
-       */
       labelNames: ["step"],
     }),
-    builderBlockProductionTimeSteps: register.histogram<"step">({
+    builderBlockProductionTimeSteps: register.histogram<{step: BlockProductionStep}>({
       name: "beacon_block_production_builder_steps_seconds",
       help: "Detailed steps runtime of builder block production",
       buckets: [0.01, 0.1, 0.2, 0.5, 1],
-      /**
-       * - proposerSlashing
-       * - attesterSlashings
-       * - voluntaryExits
-       * - blsToExecutionChanges
-       * - attestations
-       * - eth1DataAndDeposits
-       * - syncAggregate
-       * - executionPayload
-       */
       labelNames: ["step"],
     }),
-    blockProductionRequests: register.gauge<"source">({
+    blockProductionRequests: register.gauge<{source: ProducedBlockSource}>({
       name: "beacon_block_production_requests_total",
       help: "Count of all block production requests",
       labelNames: ["source"],
     }),
-    blockProductionSuccess: register.gauge<"source">({
+    blockProductionSuccess: register.gauge<{source: ProducedBlockSource}>({
       name: "beacon_block_production_successes_total",
       help: "Count of blocks successfully produced",
       labelNames: ["source"],
     }),
-    blockProductionNumAggregated: register.histogram<"source">({
+    blockProductionNumAggregated: register.histogram<{source: ProducedBlockSource}>({
       name: "beacon_block_production_num_aggregated_total",
       help: "Count of all aggregated attestations in our produced block",
       buckets: [32, 64, 96, 128],
@@ -173,11 +155,11 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
     blockProductionCaches: {
       producedBlockRoot: register.gauge({
         name: "beacon_blockroot_produced_cache_total",
-        help: "Count of cached produded block roots",
+        help: "Count of cached produced block roots",
       }),
       producedBlindedBlockRoot: register.gauge({
         name: "beacon_blinded_blockroot_produced_cache_total",
-        help: "Count of cached produded blinded block roots",
+        help: "Count of cached produced blinded block roots",
       }),
       producedContentsCache: register.gauge({
         name: "beacon_contents_produced_cache_total",
@@ -188,15 +170,15 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
     blockPayload: {
       payloadAdvancePrepTime: register.histogram({
         name: "beacon_block_payload_prepare_time",
-        help: "Time for perparing payload in advance",
+        help: "Time for preparing payload in advance",
         buckets: [0.1, 1, 3, 5, 10],
       }),
-      payloadFetchedTime: register.histogram<"prepType">({
+      payloadFetchedTime: register.histogram<{prepType: PayloadPreparationType}>({
         name: "beacon_block_payload_fetched_time",
         help: "Time to fetch the payload from EL",
         labelNames: ["prepType"],
       }),
-      emptyPayloads: register.gauge<"prepType">({
+      emptyPayloads: register.gauge<{prepType: PayloadPreparationType}>({
         name: "beacon_block_payload_empty_total",
         help: "Count of payload with empty transactions",
         labelNames: ["prepType"],

@@ -8,6 +8,7 @@ export * from "./format.js";
 export * from "./logger.js";
 export * from "./map.js";
 export * from "./math.js";
+export * from "./metrics.js";
 export * from "./objects.js";
 export {retry, type RetryOptions} from "./retry.js";
 export * from "./notNullish.js";

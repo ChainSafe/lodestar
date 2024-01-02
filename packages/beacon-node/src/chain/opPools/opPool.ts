@@ -19,6 +19,7 @@ import {IBeaconDb} from "../../db/index.js";
 import {SignedBLSToExecutionChangeVersioned} from "../../util/types.js";
 import {BlockType} from "../interface.js";
 import {Metrics} from "../../metrics/metrics.js";
+import {BlockProductionStep} from "../produceBlock/produceBlockBody.js";
 import {isValidBlsToExecutionChangeForBlockInclusion} from "./utils.js";
 
 type HexRoot = string;
@@ -201,7 +202,7 @@ export class OpPool {
       }
     }
     endProposerSlashing?.({
-      step: "proposerSlashing",
+      step: BlockProductionStep.proposerSlashing,
     });
 
     const endAttesterSlashings = stepsMetrics?.startTimer();
@@ -235,7 +236,7 @@ export class OpPool {
       }
     }
     endAttesterSlashings?.({
-      step: "attesterSlashings",
+      step: BlockProductionStep.attesterSlashings,
     });
 
     const endVoluntaryExits = stepsMetrics?.startTimer();
@@ -256,7 +257,7 @@ export class OpPool {
       }
     }
     endVoluntaryExits?.({
-      step: "voluntaryExits",
+      step: BlockProductionStep.voluntaryExits,
     });
 
     const endBlsToExecutionChanges = stepsMetrics?.startTimer();
@@ -270,7 +271,7 @@ export class OpPool {
       }
     }
     endBlsToExecutionChanges?.({
-      step: "blsToExecutionChanges",
+      step: BlockProductionStep.blsToExecutionChanges,
     });
 
     return [attesterSlashings, proposerSlashings, voluntaryExits, blsToExecutionChanges];

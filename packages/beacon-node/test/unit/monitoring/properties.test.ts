@@ -91,7 +91,11 @@ describe("monitoring / properties", () => {
       const labelValue = "test_label_value";
       const metricValue = 10;
 
-      const metric = metrics.register.gauge({name: metricName, help: "withLabel test", labelNames: [labelName]});
+      const metric = metrics.register.gauge<{[labelName]: string}>({
+        name: metricName,
+        help: "withLabel test",
+        labelNames: [labelName],
+      });
       metric.set({[labelName]: "different_value"}, metricValue + 1);
       metric.set({[labelName]: labelValue}, metricValue);
 

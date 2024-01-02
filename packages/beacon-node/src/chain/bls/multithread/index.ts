@@ -41,6 +41,8 @@ export type BlsMultiThreadWorkerPoolOptions = {
   blsVerifyAllMultiThread?: boolean;
 };
 
+export type {JobQueueItemType};
+
 // 1 worker for the main thread
 const blsPoolSize = Math.max(defaultPoolSize - 1, 1);
 

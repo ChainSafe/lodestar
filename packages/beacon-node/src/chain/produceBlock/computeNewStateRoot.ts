@@ -2,6 +2,7 @@ import {
   CachedBeaconStateAllForks,
   DataAvailableStatus,
   ExecutionPayloadStatus,
+  StateHashTreeRootSource,
   stateTransition,
 } from "@lodestar/state-transition";
 import {allForks, Gwei, Root} from "@lodestar/types";
@@ -44,7 +45,9 @@ export function computeNewStateRoot(
   const {attestations, syncAggregate, slashing} = postState.proposerRewards;
   const proposerReward = BigInt(attestations + syncAggregate + slashing);
 
-  const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({source: "compute_new_state_root"});
+  const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
+    source: StateHashTreeRootSource.computeNewStateRoot,
+  });
   const newStateRoot = postState.hashTreeRoot();
   hashTreeRootTimer?.();
 

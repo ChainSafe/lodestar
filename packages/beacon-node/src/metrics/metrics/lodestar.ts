@@ -1,6 +1,21 @@
+import {EpochTransitionStep, StateCloneSource, StateHashTreeRootSource} from "@lodestar/state-transition";
 import {allForks} from "@lodestar/types";
-import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
+import {BlockSource} from "../../chain/blocks/types.js";
+import {JobQueueItemType} from "../../chain/bls/index.js";
+import {BlockErrorCode} from "../../chain/errors/index.js";
+import {InsertOutcome} from "../../chain/opPools/types.js";
+import {RegenCaller, RegenFnName} from "../../chain/regen/interface.js";
+import {ReprocessStatus} from "../../chain/reprocess.js";
+import {RejectReason} from "../../chain/seenCache/seenAttestationData.js";
+import {ExecutionPayloadStatus} from "../../execution/index.js";
+import {GossipType} from "../../network/index.js";
+import {CannotAcceptWorkReason, ReprocessRejectReason} from "../../network/processor/index.js";
+import {BackfillSyncMethod} from "../../sync/backfill/backfill.js";
+import {PendingBlockType} from "../../sync/interface.js";
+import {PeerSyncType, RangeSyncType} from "../../sync/utils/remoteSyncType.js";
 import {LodestarMetadata} from "../options.js";
+import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
+import {OpSource} from "../validatorMonitor.js";
 
 export type LodestarMetrics = ReturnType<typeof createLodestarMetrics>;
 
@@ -14,7 +29,7 @@ export function createLodestarMetrics(
   anchorState?: Pick<allForks.BeaconState, "genesisTime">
 ) {
   if (metadata) {
-    register.static<keyof LodestarMetadata>({
+    register.static<LodestarMetadata>({
       name: "lodestar_version",
       help: "Lodestar version",
       value: metadata,
@@ -33,34 +48,34 @@ export function createLodestarMetrics(
 
   return {
     gossipValidationQueue: {
-      length: register.gauge<"topic">({
+      length: register.gauge<{topic: GossipType}>({
         name: "lodestar_gossip_validation_queue_length",
         help: "Count of total gossip validation queue length",
         labelNames: ["topic"],
       }),
-      keySize: register.gauge<"topic">({
+      keySize: register.gauge<{topic: GossipType}>({
         name: "lodestar_gossip_validation_queue_key_size",
         help: "Count of total gossip validation queue key size",
         labelNames: ["topic"],
       }),
-      droppedJobs: register.gauge<"topic">({
+      droppedJobs: register.gauge<{topic: GossipType}>({
         name: "lodestar_gossip_validation_queue_dropped_jobs_total",
         help: "Count of total gossip validation queue dropped jobs",
         labelNames: ["topic"],
       }),
-      jobTime: register.histogram<"topic">({
+      jobTime: register.histogram<{topic: GossipType}>({
         name: "lodestar_gossip_validation_queue_job_time_seconds",
         help: "Time to process gossip validation queue job in seconds",
         labelNames: ["topic"],
         buckets: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10],
       }),
-      jobWaitTime: register.histogram<"topic">({
+      jobWaitTime: register.histogram<{topic: GossipType}>({
         name: "lodestar_gossip_validation_queue_job_wait_time_seconds",
         help: "Time from job added to the queue to starting the job in seconds",
         labelNames: ["topic"],
         buckets: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10],
       }),
-      concurrency: register.gauge<"topic">({
+      concurrency: register.gauge<{topic: GossipType}>({
         name: "lodestar_gossip_validation_queue_concurrency",
         help: "Current count of jobs being run on network processor for topic",
         labelNames: ["topic"],
@@ -79,22 +94,22 @@ export function createLodestarMetrics(
     },
 
     networkProcessor: {
-      gossipValidationAccept: register.gauge<"topic">({
+      gossipValidationAccept: register.gauge<{topic: GossipType}>({
         name: "lodestar_gossip_validation_accept_total",
         help: "Count of total gossip validation accept",
         labelNames: ["topic"],
       }),
-      gossipValidationIgnore: register.gauge<"topic">({
+      gossipValidationIgnore: register.gauge<{topic: GossipType}>({
         name: "lodestar_gossip_validation_ignore_total",
         help: "Count of total gossip validation ignore",
         labelNames: ["topic"],
       }),
-      gossipValidationReject: register.gauge<"topic">({
+      gossipValidationReject: register.gauge<{topic: GossipType}>({
         name: "lodestar_gossip_validation_reject_total",
         help: "Count of total gossip validation reject",
         labelNames: ["topic"],
       }),
-      gossipValidationError: register.gauge<"topic" | "error">({
+      gossipValidationError: register.gauge<{topic: GossipType; error: string}>({
         name: "lodestar_gossip_validation_error_total",
         help: "Count of total gossip validation errors detailed",
         labelNames: ["topic", "error"],
@@ -108,7 +123,7 @@ export function createLodestarMetrics(
         help: "Total calls to network processor execute work fn",
         buckets: [0, 1, 5, 128],
       }),
-      canNotAcceptWork: register.gauge<"reason">({
+      canNotAcceptWork: register.gauge<{reason: CannotAcceptWorkReason}>({
         name: "lodestar_network_processor_can_not_accept_work_total",
         help: "Total times network processor can not accept work on executeWork",
         labelNames: ["reason"],
@@ -121,7 +136,7 @@ export function createLodestarMetrics(
         help: "Current count of pending items in reqRespBridgeReqCaller data structure",
       }),
     },
-    networkWorkerWireEventsOnMainThreadLatency: register.histogram<"eventName">({
+    networkWorkerWireEventsOnMainThreadLatency: register.histogram<{eventName: string}>({
       name: "lodestar_network_worker_wire_events_on_main_thread_latency_seconds",
       help: "Latency in seconds to transmit network events to main thread across worker port",
       labelNames: ["eventName"],
@@ -206,19 +221,19 @@ export function createLodestarMetrics(
     },
 
     apiRest: {
-      responseTime: register.histogram<"operationId">({
+      responseTime: register.histogram<{operationId: string}>({
         name: "lodestar_api_rest_response_time_seconds",
         help: "REST API time to fulfill a request by operationId",
         labelNames: ["operationId"],
         // Request times range between 1ms to 100ms in normal conditions. Can get to 1-5 seconds if overloaded
         buckets: [0.01, 0.1, 1],
       }),
-      requests: register.gauge<"operationId">({
+      requests: register.gauge<{operationId: string}>({
         name: "lodestar_api_rest_requests_total",
         help: "REST API total count requests by operationId",
         labelNames: ["operationId"],
       }),
-      errors: register.gauge<"operationId">({
+      errors: register.gauge<{operationId: string}>({
         name: "lodestar_api_rest_errors_total",
         help: "REST API total count of errors by operationId",
         labelNames: ["operationId"],
@@ -286,7 +301,7 @@ export function createLodestarMetrics(
       help: "Time to call commit after process a single epoch transition in seconds",
       buckets: [0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1],
     }),
-    epochTransitionStepTime: register.histogram<"step">({
+    epochTransitionStepTime: register.histogram<{step: EpochTransitionStep}>({
       name: "lodestar_stfn_epoch_transition_step_seconds",
       help: "Time to call each step of epoch transition in seconds",
       labelNames: ["step"],
@@ -304,28 +319,28 @@ export function createLodestarMetrics(
       help: "Time to call commit after process a single block in seconds",
       buckets: [0.005, 0.01, 0.02, 0.05, 0.1, 1],
     }),
-    stateHashTreeRootTime: register.histogram<"source">({
+    stateHashTreeRootTime: register.histogram<{source: StateHashTreeRootSource}>({
       name: "lodestar_stfn_hash_tree_root_seconds",
       help: "Time to compute the hash tree root of a post state in seconds",
       buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5],
       labelNames: ["source"],
     }),
-    preStateBalancesNodesPopulatedMiss: register.gauge<"source">({
+    preStateBalancesNodesPopulatedMiss: register.gauge<{source: StateCloneSource}>({
       name: "lodestar_stfn_balances_nodes_populated_miss_total",
       help: "Total count state.balances nodesPopulated is false on stfn",
       labelNames: ["source"],
     }),
-    preStateBalancesNodesPopulatedHit: register.gauge<"source">({
+    preStateBalancesNodesPopulatedHit: register.gauge<{source: StateCloneSource}>({
       name: "lodestar_stfn_balances_nodes_populated_hit_total",
       help: "Total count state.balances nodesPopulated is true on stfn",
       labelNames: ["source"],
     }),
-    preStateValidatorsNodesPopulatedMiss: register.gauge<"source">({
+    preStateValidatorsNodesPopulatedMiss: register.gauge<{source: StateCloneSource}>({
       name: "lodestar_stfn_validators_nodes_populated_miss_total",
       help: "Total count state.validators nodesPopulated is false on stfn",
       labelNames: ["source"],
     }),
-    preStateValidatorsNodesPopulatedHit: register.gauge<"source">({
+    preStateValidatorsNodesPopulatedHit: register.gauge<{source: StateCloneSource}>({
       name: "lodestar_stfn_validators_nodes_populated_hit_total",
       help: "Total count state.validators nodesPopulated is true on stfn",
       labelNames: ["source"],
@@ -362,7 +377,7 @@ export function createLodestarMetrics(
     },
 
     blsThreadPool: {
-      jobsWorkerTime: register.gauge<"workerId">({
+      jobsWorkerTime: register.gauge<{workerId: number}>({
         name: "lodestar_bls_thread_pool_time_seconds_sum",
         help: "Total time spent verifying signature sets measured on the worker",
         labelNames: ["workerId"],
@@ -371,7 +386,7 @@ export function createLodestarMetrics(
         name: "lodestar_bls_thread_pool_success_jobs_signature_sets_count",
         help: "Count of total verified signature sets",
       }),
-      errorAggregateSignatureSetsCount: register.gauge<"type">({
+      errorAggregateSignatureSetsCount: register.gauge<{type: JobQueueItemType}>({
         name: "lodestar_bls_thread_pool_error_aggregate_signature_sets_count",
         help: "Count of error when aggregating pubkeys or signatures",
         labelNames: ["type"],
@@ -397,12 +412,12 @@ export function createLodestarMetrics(
         name: "lodestar_bls_thread_pool_job_groups_started_total",
         help: "Count of total jobs groups started in bls thread pool, job groups include +1 jobs",
       }),
-      totalJobsStarted: register.gauge<"type">({
+      totalJobsStarted: register.gauge<{type: JobQueueItemType}>({
         name: "lodestar_bls_thread_pool_jobs_started_total",
         help: "Count of total jobs started in bls thread pool, jobs include +1 signature sets",
         labelNames: ["type"],
       }),
-      totalSigSetsStarted: register.gauge<"type">({
+      totalSigSetsStarted: register.gauge<{type: JobQueueItemType}>({
         name: "lodestar_bls_thread_pool_sig_sets_started_total",
         help: "Count of total signature sets started in bls thread pool, sig sets include 1 pk, msg, sig",
         labelNames: ["type"],
@@ -493,29 +508,29 @@ export function createLodestarMetrics(
       name: "lodestar_sync_status",
       help: "Range sync status: [Stalled, SyncingFinalized, SyncingHead, Synced]",
     }),
-    syncPeersBySyncType: register.gauge<"syncType">({
+    syncPeersBySyncType: register.gauge<{syncType: PeerSyncType}>({
       name: "lodestar_sync_range_sync_peers",
       help: "Count of peers by sync type [FullySynced, Advanced, Behind]",
       labelNames: ["syncType"],
     }),
-    syncSwitchGossipSubscriptions: register.gauge<"action">({
+    syncSwitchGossipSubscriptions: register.gauge<{action: string}>({
       name: "lodestar_sync_switch_gossip_subscriptions",
       help: "Sync switched gossip subscriptions on/off",
       labelNames: ["action"],
     }),
 
     syncRange: {
-      syncChainsEvents: register.gauge<"syncType" | "event">({
+      syncChainsEvents: register.gauge<{syncType: RangeSyncType; event: string}>({
         name: "lodestar_sync_chains_events_total",
         help: "Total number of sync chains events events, labeled by syncType",
         labelNames: ["syncType", "event"],
       }),
-      syncChains: register.gauge<"syncType">({
+      syncChains: register.gauge<{syncType: RangeSyncType}>({
         name: "lodestar_sync_chains_count",
         help: "Count of sync chains by syncType",
         labelNames: ["syncType"],
       }),
-      syncChainsPeers: register.histogram<"syncType">({
+      syncChainsPeers: register.histogram<{syncType: RangeSyncType}>({
         name: "lodestar_sync_chains_peer_count_by_type",
         help: "Count of sync chain peers by syncType",
         labelNames: ["syncType"],
@@ -528,12 +543,12 @@ export function createLodestarMetrics(
     },
 
     syncUnknownBlock: {
-      switchNetworkSubscriptions: register.gauge<"action">({
+      switchNetworkSubscriptions: register.gauge<{action: string}>({
         name: "lodestar_sync_unknown_block_network_subscriptions_count",
         help: "Switch network subscriptions on/off",
         labelNames: ["action"],
       }),
-      requests: register.gauge<"type">({
+      requests: register.gauge<{type: PendingBlockType}>({
         name: "lodestar_sync_unknown_block_requests_total",
         help: "Total number of unknown block events or requests",
         labelNames: ["type"],
@@ -587,43 +602,43 @@ export function createLodestarMetrics(
 
     // Gossip attestation
     gossipAttestation: {
-      useHeadBlockState: register.gauge<"caller">({
+      useHeadBlockState: register.gauge<{caller: RegenCaller}>({
         name: "lodestar_gossip_attestation_use_head_block_state_count",
         help: "Count of gossip attestation verification using head block state",
         labelNames: ["caller"],
       }),
-      useHeadBlockStateDialedToTargetEpoch: register.gauge<"caller">({
+      useHeadBlockStateDialedToTargetEpoch: register.gauge<{caller: RegenCaller}>({
         name: "lodestar_gossip_attestation_use_head_block_state_dialed_to_target_epoch_count",
         help: "Count of gossip attestation verification using head block state and dialed to target epoch",
         labelNames: ["caller"],
       }),
-      headSlotToAttestationSlot: register.histogram<"caller">({
+      headSlotToAttestationSlot: register.histogram<{caller: RegenCaller}>({
         name: "lodestar_gossip_attestation_head_slot_to_attestation_slot",
         help: "Slot distance between attestation slot and head slot",
         labelNames: ["caller"],
         buckets: [0, 1, 2, 4, 8, 16, 32, 64],
       }),
-      shufflingCacheHit: register.gauge<"caller">({
+      shufflingCacheHit: register.gauge<{caller: RegenCaller}>({
         name: "lodestar_gossip_attestation_shuffling_cache_hit_count",
         help: "Count of gossip attestation verification shuffling cache hit",
         labelNames: ["caller"],
       }),
-      shufflingCacheMiss: register.gauge<"caller">({
+      shufflingCacheMiss: register.gauge<{caller: RegenCaller}>({
         name: "lodestar_gossip_attestation_shuffling_cache_miss_count",
         help: "Count of gossip attestation verification shuffling cache miss",
         labelNames: ["caller"],
       }),
-      shufflingCacheRegenHit: register.gauge<"caller">({
+      shufflingCacheRegenHit: register.gauge<{caller: RegenCaller}>({
         name: "lodestar_gossip_attestation_shuffling_cache_regen_hit_count",
         help: "Count of gossip attestation verification shuffling cache regen hit",
         labelNames: ["caller"],
       }),
-      shufflingCacheRegenMiss: register.gauge<"caller">({
+      shufflingCacheRegenMiss: register.gauge<{caller: RegenCaller}>({
         name: "lodestar_gossip_attestation_shuffling_cache_regen_miss_count",
         help: "Count of gossip attestation verification shuffling cache regen miss",
         labelNames: ["caller"],
       }),
-      attestationSlotToClockSlot: register.histogram<"caller">({
+      attestationSlotToClockSlot: register.histogram<{caller: RegenCaller}>({
         name: "lodestar_gossip_attestation_attestation_slot_to_clock_slot",
         help: "Slot distance between clock slot and attestation slot",
         labelNames: ["caller"],
@@ -672,7 +687,7 @@ export function createLodestarMetrics(
         help: "Time elapsed between block received and execution payload verification",
         buckets: [0.05, 0.1, 0.3, 0.5, 0.7, 1, 1.3, 1.6, 2, 2.5, 3, 3.5, 4],
       }),
-      receivedToBlobsAvailabilityTime: register.histogram<"numBlobs">({
+      receivedToBlobsAvailabilityTime: register.histogram<{numBlobs: number}>({
         name: "lodestar_gossip_block_received_to_blobs_availability_time",
         help: "Time elapsed between block received and blobs became available",
         buckets: [0.05, 0.1, 0.3, 0.5, 0.7, 1, 1.3, 1.6, 2, 2.5, 3, 3.5, 4],
@@ -683,7 +698,7 @@ export function createLodestarMetrics(
         help: "Time elapsed between block received and fully verified state, signatures and payload",
         buckets: [0.05, 0.1, 0.3, 0.5, 0.7, 1, 1.3, 1.6, 2, 2.5, 3, 3.5, 4],
       }),
-      verifiedToBlobsAvailabiltyTime: register.histogram<"numBlobs">({
+      verifiedToBlobsAvailabiltyTime: register.histogram<{numBlobs: number}>({
         name: "lodestar_gossip_block_verified_to_blobs_availability_time",
         help: "Time elapsed between block verified and blobs became available",
         buckets: [0.05, 0.1, 0.3, 0.5, 0.7, 1, 1.3, 1.6, 2, 2.5, 3, 3.5, 4],
@@ -694,7 +709,7 @@ export function createLodestarMetrics(
         help: "Time elapsed between block received and block import",
         buckets: [0.05, 0.1, 0.3, 0.5, 0.7, 1, 1.3, 1.6, 2, 2.5, 3, 3.5, 4],
       }),
-      processBlockErrors: register.gauge<"error">({
+      processBlockErrors: register.gauge<{error: BlockErrorCode | "NOT_BLOCK_ERROR"}>({
         name: "lodestar_gossip_block_process_block_errors",
         help: "Count of errors, by error type, while processing blocks",
         labelNames: ["error"],
@@ -725,13 +740,13 @@ export function createLodestarMetrics(
         name: "lodestar_import_block_set_head_after_first_interval_total",
         help: "Total times an imported block is set as head after the first slot interval",
       }),
-      bySource: register.gauge<"source">({
+      bySource: register.gauge<{source: BlockSource}>({
         name: "lodestar_import_block_by_source_total",
         help: "Total number of imported blocks by source",
         labelNames: ["source"],
       }),
     },
-    engineNotifyNewPayloadResult: register.gauge<"result">({
+    engineNotifyNewPayloadResult: register.gauge<{result: ExecutionPayloadStatus}>({
       name: "lodestar_execution_engine_notify_new_payload_result_total",
       help: "The total result of calling notifyNewPayload execution engine api",
       labelNames: ["result"],
@@ -745,7 +760,7 @@ export function createLodestarMetrics(
         name: "lodestar_backfill_prev_fin_or_ws_slot",
         help: "Slot of previous finalized or wsCheckpoint block to be validated",
       }),
-      totalBlocks: register.gauge<"method">({
+      totalBlocks: register.gauge<{method: BackfillSyncMethod}>({
         name: "lodestar_backfill_sync_blocks_total",
         help: "Total amount of backfilled blocks",
         labelNames: ["method"],
@@ -776,7 +791,7 @@ export function createLodestarMetrics(
         name: "lodestar_oppool_attestation_pool_size",
         help: "Current size of the AttestationPool = total attestations unique by data and slot",
       }),
-      attestationPoolInsertOutcome: register.counter<"insertOutcome">({
+      attestationPoolInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
         name: "lodestar_attestation_pool_insert_outcome_total",
         help: "Total number of InsertOutcome as a result of adding an attestation in a pool",
         labelNames: ["insertOutcome"],
@@ -801,7 +816,7 @@ export function createLodestarMetrics(
         name: "lodestar_oppool_sync_committee_message_pool_size",
         help: "Current size of the SyncCommitteeMessagePool unique by slot subnet and block root",
       }),
-      syncCommitteeMessagePoolInsertOutcome: register.counter<"insertOutcome">({
+      syncCommitteeMessagePoolInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
         name: "lodestar_oppool_sync_committee_message_insert_outcome_total",
         help: "Total number of InsertOutcome as a result of adding a SyncCommitteeMessage to pool",
         labelNames: ["insertOutcome"],
@@ -827,7 +842,7 @@ export function createLodestarMetrics(
 
       // Validator Monitor Metrics (per-epoch summaries)
       // Only track prevEpochOnChainBalance per index
-      prevEpochOnChainBalance: register.gauge<"index">({
+      prevEpochOnChainBalance: register.gauge<{index: number}>({
         name: "validator_monitor_prev_epoch_on_chain_balance",
         help: "Balance of validator after an epoch",
         labelNames: ["index"],
@@ -936,12 +951,12 @@ export function createLodestarMetrics(
         help: "The count of times a sync signature was seen inside an aggregate",
         buckets: [0, 1, 2, 3, 5, 10],
       }),
-      prevEpochAttestationSummary: register.gauge<"summary">({
+      prevEpochAttestationSummary: register.gauge<{summary: string}>({
         name: "validator_monitor_prev_epoch_attestation_summary",
         help: "Best guess of the node of the result of previous epoch validators attestation actions and causality",
         labelNames: ["summary"],
       }),
-      prevEpochBlockProposalSummary: register.gauge<"summary">({
+      prevEpochBlockProposalSummary: register.gauge<{summary: string}>({
         name: "validator_monitor_prev_epoch_block_proposal_summary",
         help: "Best guess of the node of the result of previous epoch validators block proposal actions and causality",
         labelNames: ["summary"],
@@ -949,12 +964,12 @@ export function createLodestarMetrics(
 
       // Validator Monitor Metrics (real-time)
 
-      unaggregatedAttestationTotal: register.gauge<"src">({
+      unaggregatedAttestationTotal: register.gauge<{src: OpSource}>({
         name: "validator_monitor_unaggregated_attestation_total",
         help: "Number of unaggregated attestations seen",
         labelNames: ["src"],
       }),
-      unaggregatedAttestationDelaySeconds: register.histogram<"src">({
+      unaggregatedAttestationDelaySeconds: register.histogram<{src: OpSource}>({
         name: "validator_monitor_unaggregated_attestation_delay_seconds",
         help: "The delay between when the validator should send the attestation and when it was received",
         labelNames: ["src"],
@@ -968,23 +983,23 @@ export function createLodestarMetrics(
         // refine if we want more reasonable values
         buckets: [0, 10, 20, 30],
       }),
-      aggregatedAttestationTotal: register.gauge<"src">({
+      aggregatedAttestationTotal: register.gauge<{src: OpSource}>({
         name: "validator_monitor_aggregated_attestation_total",
         help: "Number of aggregated attestations seen",
         labelNames: ["src"],
       }),
-      aggregatedAttestationDelaySeconds: register.histogram<"src">({
+      aggregatedAttestationDelaySeconds: register.histogram<{src: OpSource}>({
         name: "validator_monitor_aggregated_attestation_delay_seconds",
         help: "The delay between then the validator should send the aggregate and when it was received",
         labelNames: ["src"],
         buckets: [0.1, 0.25, 0.5, 1, 2, 5, 10],
       }),
-      attestationInAggregateTotal: register.gauge<"src">({
+      attestationInAggregateTotal: register.gauge<{src: OpSource}>({
         name: "validator_monitor_attestation_in_aggregate_total",
         help: "Number of times an attestation has been seen in an aggregate",
         labelNames: ["src"],
       }),
-      attestationInAggregateDelaySeconds: register.histogram<"src">({
+      attestationInAggregateDelaySeconds: register.histogram<{src: OpSource}>({
         name: "validator_monitor_attestation_in_aggregate_delay_seconds",
         help: "The delay between when the validator should send the aggregate and when it was received",
         labelNames: ["src"],
@@ -1008,12 +1023,12 @@ export function createLodestarMetrics(
         name: "validator_monitor_sync_signature_in_aggregate_total",
         help: "Number of times a sync signature has been seen in an aggregate",
       }),
-      beaconBlockTotal: register.gauge<"src">({
+      beaconBlockTotal: register.gauge<{src: OpSource}>({
         name: "validator_monitor_beacon_block_total",
         help: "Total number of beacon blocks seen",
         labelNames: ["src"],
       }),
-      beaconBlockDelaySeconds: register.histogram<"src">({
+      beaconBlockDelaySeconds: register.histogram<{src: OpSource}>({
         name: "validator_monitor_beacon_block_delay_seconds",
         help: "The delay between when the validator should send the block and when it was received",
         labelNames: ["src"],
@@ -1115,7 +1130,7 @@ export function createLodestarMetrics(
         name: "lodestar_balances_cache_misses_total",
         help: "Total number of balances cache misses",
       }),
-      closestStateResult: register.counter<"stateId">({
+      closestStateResult: register.counter<{stateId: string}>({
         name: "lodestar_balances_cache_closest_state_result_total",
         help: "Total number of stateIds returned as closest justified balances state by id",
         labelNames: ["stateId"],
@@ -1193,7 +1208,7 @@ export function createLodestarMetrics(
           name: "lodestar_seen_cache_attestation_data_miss_total",
           help: "Total number of attestation data miss in SeenAttestationData",
         }),
-        reject: register.gauge<"reason">({
+        reject: register.gauge<{reason: RejectReason}>({
           name: "lodestar_seen_cache_attestation_data_reject_total",
           help: "Total number of attestation data rejected in SeenAttestationData",
           labelNames: ["reason"],
@@ -1201,23 +1216,23 @@ export function createLodestarMetrics(
       },
     },
 
-    regenFnCallTotal: register.gauge<"entrypoint" | "caller">({
+    regenFnCallTotal: register.gauge<{entrypoint: RegenFnName; caller: RegenCaller}>({
       name: "lodestar_regen_fn_call_total",
       help: "Total number of calls for regen functions",
       labelNames: ["entrypoint", "caller"],
     }),
-    regenFnQueuedTotal: register.gauge<"entrypoint" | "caller">({
+    regenFnQueuedTotal: register.gauge<{entrypoint: RegenFnName; caller: RegenCaller}>({
       name: "lodestar_regen_fn_queued_total",
       help: "Total number of calls queued for regen functions",
       labelNames: ["entrypoint", "caller"],
     }),
-    regenFnCallDuration: register.histogram<"entrypoint" | "caller">({
+    regenFnCallDuration: register.histogram<{entrypoint: RegenFnName; caller: RegenCaller}>({
       name: "lodestar_regen_fn_call_duration",
       help: "regen function duration",
       labelNames: ["entrypoint", "caller"],
       buckets: [0.1, 1, 10, 100],
     }),
-    regenFnTotalErrors: register.gauge<"entrypoint" | "caller">({
+    regenFnTotalErrors: register.gauge<{entrypoint: RegenFnName; caller: RegenCaller}>({
       name: "lodestar_regen_fn_errors_total",
       help: "regen function total errors",
       labelNames: ["entrypoint", "caller"],
@@ -1229,7 +1244,7 @@ export function createLodestarMetrics(
 
     // Precompute next epoch transition
     precomputeNextEpochTransition: {
-      count: register.counter<"result">({
+      count: register.counter<{result: string}>({
         name: "lodestar_precompute_next_epoch_transition_result_total",
         labelNames: ["result"],
         help: "Total number of precomputeNextEpochTransition runs by result",
@@ -1258,14 +1273,15 @@ export function createLodestarMetrics(
         name: "lodestar_reprocess_attestations_wait_time_resolve_seconds",
         help: "Time to wait for unknown block in seconds",
       }),
-      reject: register.gauge<"reason">({
+      reject: register.gauge<{reason: ReprocessStatus}>({
         name: "lodestar_reprocess_attestations_reject_total",
         help: "Total number of attestations are rejected to reprocess",
         labelNames: ["reason"],
       }),
-      waitSecBeforeReject: register.gauge<"reason">({
+      waitSecBeforeReject: register.gauge<{reason: ReprocessStatus}>({
         name: "lodestar_reprocess_attestations_wait_time_reject_seconds",
         help: "Time to wait for unknown block before being rejected",
+        labelNames: ["reason"],
       }),
     },
 
@@ -1287,24 +1303,25 @@ export function createLodestarMetrics(
         name: "lodestar_reprocess_gossip_attestations_wait_time_resolve_seconds",
         help: "Time to wait for unknown block in seconds",
       }),
-      reject: register.gauge<"reason">({
+      reject: register.gauge<{reason: ReprocessRejectReason}>({
         name: "lodestar_reprocess_gossip_attestations_reject_total",
         help: "Total number of attestations are rejected to reprocess",
         labelNames: ["reason"],
       }),
-      waitSecBeforeReject: register.gauge<"reason">({
+      waitSecBeforeReject: register.gauge<{reason: ReprocessRejectReason}>({
         name: "lodestar_reprocess_gossip_attestations_wait_time_reject_seconds",
         help: "Time to wait for unknown block before being rejected",
+        labelNames: ["reason"],
       }),
     },
 
     lightclientServer: {
-      onSyncAggregate: register.gauge<"event">({
+      onSyncAggregate: register.gauge<{event: string}>({
         name: "lodestar_lightclient_server_on_sync_aggregate_event_total",
         help: "Total number of relevant events onSyncAggregate fn",
         labelNames: ["event"],
       }),
-      highestSlot: register.gauge<"item">({
+      highestSlot: register.gauge<{item: string}>({
         name: "lodestar_lightclient_server_highest_slot",
         help: "Current highest slot of items stored by LightclientServer",
         labelNames: ["item"],
@@ -1415,7 +1432,11 @@ export function createLodestarMetrics(
       }),
 
       // Merge details
-      eth1MergeBlockDetails: register.gauge<"terminalBlockHash" | "terminalBlockNumber" | "terminalBlockTD">({
+      eth1MergeBlockDetails: register.gauge<{
+        terminalBlockHash: string;
+        terminalBlockNumber: string;
+        terminalBlockTD: string;
+      }>({
         name: "lodestar_eth1_merge_block_details",
         help: "If found then 1 with terminal block details",
         labelNames: ["terminalBlockHash", "terminalBlockNumber", "terminalBlockTD"],
@@ -1423,36 +1444,36 @@ export function createLodestarMetrics(
     },
 
     eth1HttpClient: {
-      requestTime: register.histogram<"routeId">({
+      requestTime: register.histogram<{routeId: string}>({
         name: "lodestar_eth1_http_client_request_time_seconds",
         help: "eth1 JsonHttpClient - histogram or roundtrip request times",
         labelNames: ["routeId"],
         // Provide max resolution on problematic values around 1 second
         buckets: [0.1, 0.5, 1, 2, 5, 15],
       }),
-      streamTime: register.histogram<"routeId">({
+      streamTime: register.histogram<{routeId: string}>({
         name: "lodestar_eth1_http_client_stream_time_seconds",
         help: "eth1 JsonHttpClient - streaming time by routeId",
         labelNames: ["routeId"],
         // Provide max resolution on problematic values around 1 second
         buckets: [0.1, 0.5, 1, 2, 5, 15],
       }),
-      requestErrors: register.gauge<"routeId">({
+      requestErrors: register.gauge<{routeId: string}>({
         name: "lodestar_eth1_http_client_request_errors_total",
         help: "eth1 JsonHttpClient - total count of request errors",
         labelNames: ["routeId"],
       }),
-      retryCount: register.gauge<"routeId">({
+      retryCount: register.gauge<{routeId: string}>({
         name: "lodestar_eth1_http_client_request_retries_total",
         help: "eth1 JsonHttpClient - total count of request retries",
         labelNames: ["routeId"],
       }),
-      requestUsedFallbackUrl: register.gauge({
+      requestUsedFallbackUrl: register.gauge<{routeId: string}>({
         name: "lodestar_eth1_http_client_request_used_fallback_url_total",
         help: "eth1 JsonHttpClient - total count of requests on fallback url(s)",
         labelNames: ["routeId"],
       }),
-      activeRequests: register.gauge({
+      activeRequests: register.gauge<{routeId: string}>({
         name: "lodestar_eth1_http_client_active_requests",
         help: "eth1 JsonHttpClient - current count of active requests",
         labelNames: ["routeId"],
@@ -1464,36 +1485,36 @@ export function createLodestarMetrics(
     },
 
     executionEnginerHttpClient: {
-      requestTime: register.histogram<"routeId">({
+      requestTime: register.histogram<{routeId: string}>({
         name: "lodestar_execution_engine_http_client_request_time_seconds",
         help: "ExecutionEngineHttp client - histogram or roundtrip request times",
         labelNames: ["routeId"],
         // Provide max resolution on problematic values around 1 second
         buckets: [0.1, 0.5, 1, 2, 5, 15],
       }),
-      streamTime: register.histogram<"routeId">({
+      streamTime: register.histogram<{routeId: string}>({
         name: "lodestar_execution_engine_http_client_stream_time_seconds",
         help: "ExecutionEngineHttp client - streaming time by routeId",
         labelNames: ["routeId"],
         // Provide max resolution on problematic values around 1 second
         buckets: [0.1, 0.5, 1, 2, 5, 15],
       }),
-      requestErrors: register.gauge<"routeId">({
+      requestErrors: register.gauge<{routeId: string}>({
         name: "lodestar_execution_engine_http_client_request_errors_total",
         help: "ExecutionEngineHttp client - total count of request errors",
         labelNames: ["routeId"],
       }),
-      retryCount: register.gauge<"routeId">({
+      retryCount: register.gauge<{routeId: string}>({
         name: "lodestar_execution_engine_http_client_request_retries_total",
         help: "ExecutionEngineHttp client - total count of request retries",
         labelNames: ["routeId"],
       }),
-      requestUsedFallbackUrl: register.gauge({
+      requestUsedFallbackUrl: register.gauge<{routeId: string}>({
         name: "lodestar_execution_engine_http_client_request_used_fallback_url_total",
         help: "ExecutionEngineHttp client - total count of requests on fallback url(s)",
         labelNames: ["routeId"],
       }),
-      activeRequests: register.gauge({
+      activeRequests: register.gauge<{routeId: string}>({
         name: "lodestar_execution_engine_http_client_active_requests",
         help: "ExecutionEngineHttp client - current count of active requests",
         labelNames: ["routeId"],
@@ -1505,32 +1526,32 @@ export function createLodestarMetrics(
     },
 
     builderHttpClient: {
-      requestTime: register.histogram<"routeId">({
+      requestTime: register.histogram<{routeId: string}>({
         name: "lodestar_builder_http_client_request_time_seconds",
         help: "Histogram of builder http client request time by routeId",
         labelNames: ["routeId"],
         // Expected times are ~ 50-500ms, but in an overload NodeJS they can be greater
         buckets: [0.01, 0.1, 1, 5],
       }),
-      streamTime: register.histogram<"routeId">({
+      streamTime: register.histogram<{routeId: string}>({
         name: "lodestar_builder_http_client_stream_time_seconds",
         help: "Builder api - streaming time by routeId",
         labelNames: ["routeId"],
         // Provide max resolution on problematic values around 1 second
         buckets: [0.1, 0.5, 1, 2, 5, 15],
       }),
-      requestErrors: register.gauge<"routeId">({
+      requestErrors: register.gauge<{routeId: string}>({
         name: "lodestar_builder_http_client_request_errors_total",
         help: "Total count of errors on builder http client requests by routeId",
         labelNames: ["routeId"],
       }),
-      requestToFallbacks: register.gauge<"routeId">({
+      requestToFallbacks: register.gauge<{routeId: string}>({
         name: "lodestar_builder_http_client_request_to_fallbacks_total",
         help: "Total count of requests to fallback URLs on builder http API by routeId",
         labelNames: ["routeId"],
       }),
 
-      urlsScore: register.gauge<"urlIndex">({
+      urlsScore: register.gauge<{urlIndex: number}>({
         name: "lodestar_builder_http_client_urls_score",
         help: "Current score of builder http URLs by url index",
         labelNames: ["urlIndex"],
@@ -1538,22 +1559,22 @@ export function createLodestarMetrics(
     },
 
     db: {
-      dbReadReq: register.gauge<"bucket">({
+      dbReadReq: register.gauge<{bucket: string}>({
         name: "lodestar_db_read_req_total",
         help: "Total count of db read requests, may read 0 or more items",
         labelNames: ["bucket"],
       }),
-      dbReadItems: register.gauge<"bucket">({
+      dbReadItems: register.gauge<{bucket: string}>({
         name: "lodestar_db_read_items_total",
         help: "Total count of db read items, item = key | value | entry",
         labelNames: ["bucket"],
       }),
-      dbWriteReq: register.gauge<"bucket">({
+      dbWriteReq: register.gauge<{bucket: string}>({
         name: "lodestar_db_write_req_total",
         help: "Total count of db write requests, may write 0 or more items",
         labelNames: ["bucket"],
       }),
-      dbWriteItems: register.gauge<"bucket">({
+      dbWriteItems: register.gauge<{bucket: string}>({
         name: "lodestar_db_write_items_total",
         help: "Total count of db write items",
         labelNames: ["bucket"],

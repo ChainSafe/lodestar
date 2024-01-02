@@ -3,6 +3,7 @@ import {
   stateTransition,
   ExecutionPayloadStatus,
   DataAvailableStatus,
+  StateHashTreeRootSource,
 } from "@lodestar/state-transition";
 import {ErrorAborted, Logger, sleep} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
@@ -57,7 +58,9 @@ export async function verifyBlocksStateTransitionOnly(
       metrics
     );
 
-    const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({source: "block_transition"});
+    const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
+      source: StateHashTreeRootSource.blockTransition,
+    });
     const stateRoot = postState.hashTreeRoot();
     hashTreeRootTimer?.();
 
