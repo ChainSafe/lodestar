@@ -18,17 +18,6 @@ jobs:
     env:
       DEPLOY_REF: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.ref || 'stable' }}
     steps:
-      # Validation step for workflow_dispatch ref input
-      - name: Validate Ref
-        if: github.event_name == 'workflow_dispatch'
-        run: |
-          if git rev-parse "${{ env.DEPLOY_REF }}" >/dev/null 2>&1; then
-            echo "Ref ${{ env.DEPLOY_REF }} is valid."
-          else
-            echo "Error: Ref ${{ env.DEPLOY_REF }} is not a valid branch, tag or commit." >&2
-            exit 1
-          fi
-
       # Log out the ref being deployed
       - name: Log Deployment Ref
         if: github.event_name == 'workflow_dispatch'
