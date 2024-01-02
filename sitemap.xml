@@ -2,257 +2,272 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://chainsafe.github.io/lodestar/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/data-retention/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/introduction/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://chainsafe.github.io/lodestar/security/</loc>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/trouble-shooting/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/advanced-topics/block-exploration/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/advanced-topics/doppelganger-detection/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/advanced-topics/migrating-from-other-clients/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/advanced-topics/setting-up-a-testnet/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/advanced-topics/slashing-protection/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/api/using-the-api/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/beacon-management/beacon-cli/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/beacon-management/mev-and-builder-integration/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/beacon-management/networking/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/beacon-management/syncing/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/bootnode/bootnode-cli/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/contribution/bug-reports/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/contribution/depgraph/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/contribution/dev-cli/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/contribution/getting-started/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/contribution/pr-submission/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/contribution/repo/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/contribution/testing/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://chainsafe.github.io/lodestar/contribution/testing/end-to-end-tests/</loc>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/contribution/testing/integration-tests/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/contribution/testing/performance-tests/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/contribution/testing/simulation-tests/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/contribution/testing/spec-tests/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/contribution/testing/unit-tests/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/getting-started/installation/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/getting-started/quick-start/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/getting-started/starting-a-node/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/getting-started/starting-a-node.new/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/lightclient-prover/lightclient-cli/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/lightclient-prover/lightclient/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/lightclient-prover/prover/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/logging-and-metrics/client-monitoring/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/logging-and-metrics/dashboards/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/logging-and-metrics/log-management/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/logging-and-metrics/metrics-management/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/logging-and-metrics/prometheus-grafana/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://chainsafe.github.io/lodestar/reference/cli/</loc>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/supporting-libraries/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/supporting-libraries/libraries/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/tools/core-dumps/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/tools/debugging/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/tools/flamegraphs/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/tools/heap-dumps/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/tools/perf/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/validator-management/key-management/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/validator-management/multiple-and-fallback-validation/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/validator-management/validator-cli/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/validator-management/validator-management/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/validator-management/withdrawals/</loc>
-         <lastmod>2023-12-21</lastmod>
+         <lastmod>2024-01-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
 </urlset>
