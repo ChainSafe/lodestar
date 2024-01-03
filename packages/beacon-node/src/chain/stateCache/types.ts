@@ -49,19 +49,3 @@ export interface CheckpointStateCache {
   clear(): void;
   dumpSummary(): routes.lodestar.StateCacheItem[];
 }
-
-export const CHECKPOINT_STATES_FOLDER = "./unfinalized_checkpoint_states";
-
-export type CheckpointKey = string;
-
-export enum CacheType {
-  persisted = "persisted",
-  inMemory = "in-memory",
-}
-
-export type GetHeadStateFn = () => CachedBeaconStateAllForks;
-
-export type PersistentCheckpointStateCacheOpts = {
-  // Keep max n states in memory, persist the rest to disk
-  maxCPStateEpochsInMemory?: number;
-};

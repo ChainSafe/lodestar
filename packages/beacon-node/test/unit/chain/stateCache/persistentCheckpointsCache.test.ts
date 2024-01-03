@@ -3,15 +3,13 @@ import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {CachedBeaconStateAllForks, computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex, phase0} from "@lodestar/types";
 import {mapValues, toHexString} from "@lodestar/utils";
-import {
-  PersistentCheckpointStateCache,
-  toCheckpointHex,
-} from "../../../../src/chain/stateCache/persistentCheckpointsCache.js";
+import {PersistentCheckpointStateCache} from "../../../../src/chain/stateCache/persistentCheckpointsCache.js";
 import {generateCachedState} from "../../../utils/state.js";
 import {ShufflingCache} from "../../../../src/chain/shufflingCache.js";
 import {testLogger} from "../../../utils/logger.js";
 import {checkpointToPersistentKey, getTestPersistentApi} from "../../../utils/chain/stateCache/persistent.js";
 import {CheckpointHex} from "../../../../src/chain/stateCache/types.js";
+import {toCheckpointHex} from "../../../../src/chain/index.js";
 
 describe("PersistentCheckpointStateCache", function () {
   let root0a: Buffer, root0b: Buffer, root1: Buffer, root2: Buffer;
