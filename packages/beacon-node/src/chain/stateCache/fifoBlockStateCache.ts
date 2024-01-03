@@ -18,14 +18,13 @@ export const DEFAULT_MAX_BLOCK_STATES = 32;
 
 /**
  * New implementation of BlockStateCache that keeps the most recent n states consistently
- *  - Maintain a linked list where the head state is always the first item in the list
+ *  - Maintain a linked list (FIFO) with special handling for head state, which is always the first item in the list
  *  - Prune per add() instead of per checkpoint so it only keeps n historical states consistently, prune from tail
- *  - This is FIFO cache except that we only track the last added time, not the last used time
- * because state could be fetched from multiple places, but we only care about the last added time.
  *  - No need to prune per finalized checkpoint
  *
  * Given this block tree with Block 11 as head:
- *       Block 10
+ * ```
+         Block 10
            |
      +-----+-----+
      |           |
@@ -33,7 +32,7 @@ export const DEFAULT_MAX_BLOCK_STATES = 32;
      ^           |
      |           |
     head       Block 13
- *
+ * ```
  * The maintained key order would be: 11 -> 13 -> 12 -> 10, and state 10 will be pruned first.
  */
 export class FIFOBlockStateCache implements BlockStateCache {
