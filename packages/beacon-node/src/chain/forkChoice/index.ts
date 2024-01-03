@@ -68,6 +68,7 @@ export function initializeForkChoice(
         parentRoot: toHexString(blockHeader.parentRoot),
         stateRoot: toHexString(blockHeader.stateRoot),
         blockRoot: toHexString(checkpoint.root),
+        timeliness: true, // Optimisitcally assume is timely
 
         justifiedEpoch: justifiedCheckpoint.epoch,
         justifiedRoot: toHexString(justifiedCheckpoint.root),

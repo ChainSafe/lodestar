@@ -352,12 +352,13 @@ export class ForkChoice implements IForkChoice {
     const blockRoot = this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block);
     const blockRootHex = toHexString(blockRoot);
 
-    // Add proposer score boost if the block is timely
+    // Assign proposer score boost if the block is timely
     // before attesting interval = before 1st interval
+    const isBeforeAttestingInterval = blockDelaySec < this.config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT;
+    const isTimely = this.fcStore.currentSlot === slot && isBeforeAttestingInterval;
     if (
       this.opts?.proposerBoostEnabled &&
-      this.fcStore.currentSlot === slot &&
-      blockDelaySec < this.config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT &&
+      isTimely &&
       // only boost the first block we see
       this.proposerBoostRoot === null
     ) {
@@ -451,6 +452,7 @@ export class ForkChoice implements IForkChoice {
       parentRoot: parentRootHex,
       targetRoot: toHexString(targetRoot),
       stateRoot: toHexString(block.stateRoot),
+      timeliness: isTimely, 
 
       justifiedEpoch: stateJustifiedEpoch,
       justifiedRoot: toHexString(state.currentJustifiedCheckpoint.root),
@@ -1270,7 +1272,7 @@ function computeProposerBoostScore(
   const avgBalanceByIncrement = Math.floor(justifiedTotalActiveBalanceByIncrement / justifiedActiveValidators);
   const committeeSize = Math.floor(justifiedActiveValidators / config.slotsPerEpoch);
   const committeeWeight = committeeSize * avgBalanceByIncrement;
-  const proposerScore = Math.floor((committeeWeight * config.proposerScoreBoost) / 100);
+  const proposerScore = Math.floor((committeeWeight * config.proposerScoreBoost) / 100); // TODO: calculate committee fraction
   return proposerScore;
 }
 
