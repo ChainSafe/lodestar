@@ -9,7 +9,7 @@ import {IClock} from "../../util/clock.js";
 import {ShufflingCache} from "../shufflingCache.js";
 import {MapTracker} from "./mapMetrics.js";
 import {CheckpointHex, CheckpointStateCache} from "./types.js";
-import {CPStatePersistentApis, PersistedKey} from "./persistent/types.js";
+import {CPStateDatastore, DatastoreKey, datastoreKeyToCheckpoint} from "./datastore/index.js";
 
 type GetHeadStateFn = () => CachedBeaconStateAllForks;
 
@@ -18,7 +18,7 @@ type PersistentCheckpointStateCacheModules = {
   logger: Logger;
   clock?: IClock | null;
   shufflingCache: ShufflingCache;
-  persistentApis: CPStatePersistentApis;
+  datastore: CPStateDatastore;
   getHeadState?: GetHeadStateFn;
 };
 
@@ -40,17 +40,17 @@ type InMemoryCacheItem = {
   state: CachedBeaconStateAllForks;
   // if a cp state is reloaded from disk, it'll keep track of persistedKey to allow us to remove it from disk later
   // it also helps not to persist it again
-  persistedKey?: PersistedKey;
+  persistedKey?: DatastoreKey;
 };
 
 type PersistedCacheItem = {
   type: CacheItemType.persisted;
-  value: PersistedKey;
+  value: DatastoreKey;
 };
 
 type CacheItem = InMemoryCacheItem | PersistedCacheItem;
 
-type LoadedStateBytesData = {persistedKey: PersistedKey; stateBytes: Uint8Array};
+type LoadedStateBytesData = {persistedKey: DatastoreKey; stateBytes: Uint8Array};
 
 /**
  * Before n-historical states, lodestar keeps mostly 3 states in memory with 1 finalized state
@@ -98,12 +98,12 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   private preComputedCheckpoint: string | null = null;
   private preComputedCheckpointHits: number | null = null;
   private readonly maxEpochsInMemory: number;
-  private readonly persistentApis: CPStatePersistentApis;
+  private readonly datastore: CPStateDatastore;
   private readonly shufflingCache: ShufflingCache;
   private readonly getHeadState?: GetHeadStateFn;
 
   constructor(
-    {metrics, logger, clock, shufflingCache, persistentApis, getHeadState}: PersistentCheckpointStateCacheModules,
+    {metrics, logger, clock, shufflingCache, datastore, getHeadState}: PersistentCheckpointStateCacheModules,
     opts: PersistentCheckpointStateCacheOpts
   ) {
     this.cache = new MapTracker(metrics?.cpStateCache);
@@ -136,8 +136,8 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       throw new Error("maxEpochsInMemory must be >= 0");
     }
     this.maxEpochsInMemory = opts.maxCPStateEpochsInMemory ?? DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY;
-    // Specify different persistentApis for testing
-    this.persistentApis = persistentApis;
+    // Specify different datastore for testing
+    this.datastore = datastore;
     this.shufflingCache = shufflingCache;
     this.getHeadState = getHeadState;
   }
@@ -146,9 +146,9 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
    * Reload checkpoint state keys from the last run.
    */
   async init(): Promise<void> {
-    const persistedKeys = await this.persistentApis.readKeys();
+    const persistedKeys = await this.datastore.readKeys();
     for (const persistedKey of persistedKeys) {
-      const cp = this.persistentApis.persistedKeyToCheckpoint(persistedKey);
+      const cp = datastoreKeyToCheckpoint(persistedKey);
       this.cache.set(toCacheKey(cp), {type: CacheItemType.persisted, value: persistedKey});
       this.epochIndex.getOrDefault(cp.epoch).add(toHexString(cp.root));
     }
@@ -241,7 +241,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
 
     const persistedKey = cacheItem.value;
     const dbReadTimer = this.metrics?.stateReloadDbReadTime.startTimer();
-    const stateBytes = await this.persistentApis.read(persistedKey);
+    const stateBytes = await this.datastore.read(persistedKey);
     dbReadTimer?.();
 
     if (stateBytes === null) {
@@ -469,7 +469,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
               this.metrics?.statePersistSecFromSlot.observe(this.clock?.secFromSlot(this.clock?.currentSlot ?? 0) ?? 0);
               const timer = this.metrics?.statePersistDuration.startTimer();
               const cpPersist = {epoch: lowestEpoch, root: epochBoundaryRoot};
-              persistedKey = await this.persistentApis.write(cpPersist, state);
+              persistedKey = await this.datastore.write(cpPersist, state);
               timer?.();
               persistCount++;
               this.logger.verbose("Pruned checkpoint state from memory and persisted to disk", {
@@ -593,7 +593,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       if (cacheItem) {
         const persistedKey = isPersistedCacheItem(cacheItem) ? cacheItem.value : cacheItem.persistedKey;
         if (persistedKey) {
-          await this.persistentApis.remove(persistedKey);
+          await this.datastore.remove(persistedKey);
           persistCount++;
           this.metrics?.persistedStateRemoveCount.inc();
         }

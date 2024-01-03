@@ -4,10 +4,11 @@ import {CachedBeaconStateAllForks, computeEpochAtSlot, computeStartSlotAtEpoch} 
 import {RootHex, phase0} from "@lodestar/types";
 import {mapValues, toHexString} from "@lodestar/utils";
 import {PersistentCheckpointStateCache} from "../../../../src/chain/stateCache/persistentCheckpointsCache.js";
+import {checkpointToDatastoreKey} from "../../../../src/chain/stateCache/datastore/index.js";
 import {generateCachedState} from "../../../utils/state.js";
 import {ShufflingCache} from "../../../../src/chain/shufflingCache.js";
 import {testLogger} from "../../../utils/logger.js";
-import {checkpointToPersistentKey, getTestPersistentApi} from "../../../utils/chain/stateCache/persistent.js";
+import {getTestDatastore} from "../../../utils/chain/stateCache/datastore.js";
 import {CheckpointHex} from "../../../../src/chain/stateCache/types.js";
 import {toCheckpointHex} from "../../../../src/chain/index.js";
 
@@ -44,7 +45,7 @@ describe("PersistentCheckpointStateCache", function () {
     cp1 = {epoch: 21, root: root1};
     cp2 = {epoch: 22, root: root2};
     [cp0aHex, cp0bHex, cp1Hex, cp2Hex] = [cp0a, cp0b, cp1, cp2].map((cp) => toCheckpointHex(cp));
-    persistent0bKey = toHexString(checkpointToPersistentKey(cp0b));
+    persistent0bKey = toHexString(checkpointToDatastoreKey(cp0b));
     const allStates = [cp0a, cp0b, cp1, cp2]
       .map((cp) => generateCachedState({slot: cp.epoch * SLOTS_PER_EPOCH}))
       .map((state, i) => {
@@ -84,9 +85,9 @@ describe("PersistentCheckpointStateCache", function () {
 
   beforeEach(() => {
     fileApisBuffer = new Map();
-    const persistentApis = getTestPersistentApi(fileApisBuffer);
+    const datastore = getTestDatastore(fileApisBuffer);
     cache = new PersistentCheckpointStateCache(
-      {persistentApis, logger: testLogger(), shufflingCache: new ShufflingCache()},
+      {datastore, logger: testLogger(), shufflingCache: new ShufflingCache()},
       {maxCPStateEpochsInMemory: 2}
     );
     cache.add(cp0a, states["cp0a"]);
@@ -152,9 +153,9 @@ describe("PersistentCheckpointStateCache", function () {
   describe("findSeedStateToReload", () => {
     beforeEach(() => {
       fileApisBuffer = new Map();
-      const persistentApis = getTestPersistentApi(fileApisBuffer);
+      const datastore = getTestDatastore(fileApisBuffer);
       cache = new PersistentCheckpointStateCache(
-        {persistentApis, logger: testLogger(), shufflingCache: new ShufflingCache()},
+        {datastore, logger: testLogger(), shufflingCache: new ShufflingCache()},
         {maxCPStateEpochsInMemory: 2}
       );
       cache.add(cp0a, states["cp0a"]);
@@ -224,9 +225,9 @@ describe("PersistentCheckpointStateCache", function () {
   describe("processState, maxEpochsInMemory = 2", () => {
     beforeEach(() => {
       fileApisBuffer = new Map();
-      const persistentApis = getTestPersistentApi(fileApisBuffer);
+      const datastore = getTestDatastore(fileApisBuffer);
       cache = new PersistentCheckpointStateCache(
-        {persistentApis, logger: testLogger(), shufflingCache: new ShufflingCache()},
+        {datastore, logger: testLogger(), shufflingCache: new ShufflingCache()},
         {maxCPStateEpochsInMemory: 2}
       );
       cache.add(cp0a, states["cp0a"]);
@@ -523,9 +524,9 @@ describe("PersistentCheckpointStateCache", function () {
   describe("processState, maxEpochsInMemory = 1", () => {
     beforeEach(() => {
       fileApisBuffer = new Map();
-      const persistentApis = getTestPersistentApi(fileApisBuffer);
+      const datastore = getTestDatastore(fileApisBuffer);
       cache = new PersistentCheckpointStateCache(
-        {persistentApis, logger: testLogger(), shufflingCache: new ShufflingCache()},
+        {datastore, logger: testLogger(), shufflingCache: new ShufflingCache()},
         {maxCPStateEpochsInMemory: 1}
       );
       cache.add(cp0a, states["cp0a"]);
@@ -788,9 +789,9 @@ describe("PersistentCheckpointStateCache", function () {
     describe("processState, maxEpochsInMemory = 0", () => {
       beforeEach(() => {
         fileApisBuffer = new Map();
-        const persistentApis = getTestPersistentApi(fileApisBuffer);
+        const datastore = getTestDatastore(fileApisBuffer);
         cache = new PersistentCheckpointStateCache(
-          {persistentApis, logger: testLogger(), shufflingCache: new ShufflingCache()},
+          {datastore, logger: testLogger(), shufflingCache: new ShufflingCache()},
           {maxCPStateEpochsInMemory: 0}
         );
         cache.add(cp0a, states["cp0a"]);
@@ -938,7 +939,7 @@ describe("PersistentCheckpointStateCache", function () {
   });
 
   async function assertPersistedCheckpointState(cps: phase0.Checkpoint[], stateBytesArr: Uint8Array[]): Promise<void> {
-    const persistedKeys = cps.map((cp) => toHexString(checkpointToPersistentKey(cp)));
+    const persistedKeys = cps.map((cp) => toHexString(checkpointToDatastoreKey(cp)));
     expect(Array.from(fileApisBuffer.keys())).toStrictEqual(persistedKeys);
     for (const [i, persistedKey] of persistedKeys.entries()) {
       expect(fileApisBuffer.get(persistedKey)).toStrictEqual(stateBytesArr[i]);

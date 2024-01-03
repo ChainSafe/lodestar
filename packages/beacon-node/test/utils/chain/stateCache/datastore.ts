@@ -1,11 +1,10 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {phase0, ssz} from "@lodestar/types";
-import {CPStatePersistentApis, PersistedKey} from "../../../../src/chain/stateCache/persistent/types.js";
+import {CPStateDatastore, checkpointToDatastoreKey} from "../../../../src/chain/stateCache/datastore/index.js";
 
-export function getTestPersistentApi(fileApisBuffer: Map<string, Uint8Array>): CPStatePersistentApis {
-  const persistentApis: CPStatePersistentApis = {
+export function getTestDatastore(fileApisBuffer: Map<string, Uint8Array>): CPStateDatastore {
+  const datastore: CPStateDatastore = {
     write: (cp, state) => {
-      const persistentKey = checkpointToPersistentKey(cp);
+      const persistentKey = checkpointToDatastoreKey(cp);
       const stringKey = toHexString(persistentKey);
       if (!fileApisBuffer.has(stringKey)) {
         fileApisBuffer.set(stringKey, state.serialize());
@@ -21,12 +20,7 @@ export function getTestPersistentApi(fileApisBuffer: Map<string, Uint8Array>): C
     },
     read: (persistentKey) => Promise.resolve(fileApisBuffer.get(toHexString(persistentKey)) ?? null),
     readKeys: () => Promise.resolve(Array.from(fileApisBuffer.keys()).map((key) => fromHexString(key))),
-    persistedKeyToCheckpoint: (persistentKey: PersistedKey) => ssz.phase0.Checkpoint.deserialize(persistentKey),
   };
 
-  return persistentApis;
-}
-
-export function checkpointToPersistentKey(cp: phase0.Checkpoint): PersistedKey {
-  return ssz.phase0.Checkpoint.serialize(cp);
+  return datastore;
 }
