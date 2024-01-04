@@ -59,6 +59,14 @@ describe("BlockDutiesService", function () {
     const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
     validatorStore.signRandao.resolves(signedBlock.message.body.randaoReveal);
     validatorStore.signBlock.callsFake(async (_, block) => ({message: block, signature: signedBlock.signature}));
+    validatorStore.getBuilderSelectionParams.returns({
+      selection: routes.validator.BuilderSelection.MaxProfit,
+      boostFactor: 100,
+    });
+    validatorStore.getGraffiti.returns("aaaa");
+    validatorStore.getFeeRecipient.returns("0x00");
+    validatorStore.strictFeeRecipientCheck.returns(false);
+
     api.validator.produceBlockV3.resolves({
       response: {
         data: signedBlock.message,
@@ -85,6 +93,24 @@ describe("BlockDutiesService", function () {
     expect(api.beacon.publishBlockV2.getCall(0).args).to.deep.equal(
       [signedBlock, {broadcastValidation: routes.beacon.BroadcastValidation.consensus}],
       "wrong publishBlock() args"
+    );
+
+    // ProduceBlockV3 is called with all correct arguments
+    expect(api.validator.produceBlockV3.getCall(0).args).to.deep.equal(
+      [
+        1,
+        signedBlock.message.body.randaoReveal,
+        "aaaa",
+        false,
+        {
+          feeRecipient: "0x00",
+          builderSelection: routes.validator.BuilderSelection.MaxProfit,
+          strictFeeRecipientCheck: false,
+          blindedLocal: false,
+          builderBoostFactor: 100,
+        },
+      ],
+      "wrong produceBlockV3() args"
     );
   });
 

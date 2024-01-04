@@ -247,6 +247,16 @@ export type Api = {
     >
   >;
 
+  updateBuilderBoostFactor(
+    pubkey: string,
+    builderBoostFactor: number
+  ): Promise<
+    ApiClientResponse<
+      {[HttpStatusCode.OK]: void; [HttpStatusCode.NO_CONTENT]: void},
+      HttpStatusCode.UNAUTHORIZED | HttpStatusCode.FORBIDDEN | HttpStatusCode.NOT_FOUND
+    >
+  >;
+
   /**
    * Create a signed voluntary exit message for an active validator, identified by a public key known to the validator
    * client. This endpoint returns a `SignedVoluntaryExit` object, which can be used to initiate voluntary exit via the
@@ -290,6 +300,8 @@ export const routesData: RoutesData<Api> = {
   setGasLimit: {url: "/eth/v1/validator/{pubkey}/gas_limit", method: "POST", statusOk: 202},
   deleteGasLimit: {url: "/eth/v1/validator/{pubkey}/gas_limit", method: "DELETE", statusOk: 204},
 
+  updateBuilderBoostFactor: {url: "/eth/v1/validator/{pubkey}/builder_boost_factor", method: "POST", statusOk: 202},
+
   signVoluntaryExit: {url: "/eth/v1/validator/{pubkey}/voluntary_exit", method: "POST"},
 };
 
@@ -325,6 +337,8 @@ export type ReqTypes = {
   getGasLimit: {params: {pubkey: string}};
   setGasLimit: {params: {pubkey: string}; body: {gas_limit: string}};
   deleteGasLimit: {params: {pubkey: string}};
+
+  updateBuilderBoostFactor: {params: {pubkey: string}; body: {builder_boost_factor: string}};
 
   signVoluntaryExit: {params: {pubkey: string}; query: {epoch?: number}};
 };
@@ -423,6 +437,17 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
         params: {pubkey: Schema.StringRequired},
       },
     },
+    updateBuilderBoostFactor: {
+      writeReq: (pubkey, builderBoostFactor) => ({
+        params: {pubkey},
+        body: {builder_boost_factor: builderBoostFactor.toString(10)},
+      }),
+      parseReq: ({params: {pubkey}, body: {builder_boost_factor}}) => [pubkey, parseBoostFactor(builder_boost_factor)],
+      schema: {
+        params: {pubkey: Schema.StringRequired},
+        body: Schema.Object,
+      },
+    },
     signVoluntaryExit: {
       writeReq: (pubkey, epoch) => ({params: {pubkey}, query: epoch !== undefined ? {epoch} : {}}),
       parseReq: ({params: {pubkey}, query: {epoch}}) => [pubkey, epoch],
@@ -468,4 +493,19 @@ function parseGasLimit(gasLimitInput: string | number): number {
     throw Error(`Gas Limit is not valid gasLimit=${gasLimit}`);
   }
   return gasLimit;
+}
+
+function parseBoostFactor(builderBoostFactorInput: string | number): number {
+  if (
+    (typeof builderBoostFactorInput !== "string" && typeof builderBoostFactorInput !== "number") ||
+    `${builderBoostFactorInput}`.trim() === ""
+  ) {
+    throw Error("Not valid Builder Boost Factor");
+  }
+
+  const builderBoostFactor = Number(builderBoostFactorInput);
+  if (Number.isNaN(builderBoostFactor)) {
+    throw Error(`Builder Boost Factor is not valid builderBoostFactor=${builderBoostFactor}`);
+  }
+  return builderBoostFactor;
 }

@@ -311,6 +311,14 @@ export class ValidatorStore {
     delete validatorData.builder?.gasLimit;
   }
 
+  updateBuilderBoostFactor(pubkeyHex: PubkeyHex, boostFactor: number): void {
+    const validatorData = this.validators.get(pubkeyHex);
+    if (validatorData === undefined) {
+      throw Error(`Validator pubkey ${pubkeyHex} not known`);
+    }
+    validatorData.builder = {...validatorData.builder, boostFactor};
+  }
+
   /** Return true if `index` is active part of this validator client */
   hasValidatorIndex(index: ValidatorIndex): boolean {
     return this.indicesService.index2pubkey.has(index);

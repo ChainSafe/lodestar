@@ -390,6 +390,15 @@ export class KeymanagerApi implements Api {
     };
   }
 
+  async updateBuilderBoostFactor(pubkeyHex: string, builderBoostFactor: number): Promise<void> {
+    this.checkIfProposerWriteEnabled();
+    this.validator.validatorStore.updateBuilderBoostFactor(pubkeyHex, builderBoostFactor);
+    this.persistedKeysBackend.writeProposerConfig(
+      pubkeyHex,
+      this.validator.validatorStore.getProposerConfig(pubkeyHex)
+    );
+  }
+
   /**
    * Create and sign a voluntary exit message for an active validator
    */
