@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {config} from "@lodestar/config/default";
 import {computeWeakSubjectivityPeriodFromConstituents} from "../../../src/util/weakSubjectivity.js";
 import {getChurnLimit} from "../../../src/util/validator.js";
@@ -23,16 +23,17 @@ describe("weak subjectivity tests", () => {
       {avgValBalance: balance32, valCount: 1048576, wsPeriod: 3532},
     ];
 
-    for (const {avgValBalance, valCount, wsPeriod} of testValues) {
-      it(`should have wsPeriod: ${wsPeriod} with avgValBalance: ${avgValBalance} and valCount: ${valCount}`, () => {
+    it.each(testValues)(
+      "should have wsPeriod: $wsPeriod with avgValBalance: $avgValBalance and valCount: $valCount",
+      ({valCount, avgValBalance}) => {
         const wsPeriod = computeWeakSubjectivityPeriodFromConstituents(
           valCount,
           avgValBalance * valCount,
           getChurnLimit(config, valCount),
           config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY
         );
-        expect(wsPeriod).to.equal(wsPeriod);
-      });
-    }
+        expect(wsPeriod).toBe(wsPeriod);
+      }
+    );
   });
 });

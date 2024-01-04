@@ -1,5 +1,5 @@
 import path from "node:path";
-import {CompositeTypeAny, fromHexString, toHexString, TreeView, Type} from "@chainsafe/ssz";
+import {CompositeTypeAny, fromHexString, TreeView, Type, toHexString} from "@chainsafe/ssz";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
@@ -26,6 +26,8 @@ import {
   deneb,
   Wei,
   bellatrix,
+  isBlindedBeaconBlock,
+  Gwei,
 } from "@lodestar/types";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
@@ -77,6 +79,7 @@ import {BlockInput} from "./blocks/types.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {ShufflingCache} from "./shufflingCache.js";
 import {StateContextCache} from "./stateCache/stateContextCache.js";
+import {SeenGossipBlockInput} from "./seenCache/index.js";
 import {CheckpointStateCache} from "./stateCache/stateContextCheckpointsCache.js";
 
 /**
@@ -85,7 +88,6 @@ import {CheckpointStateCache} from "./stateCache/stateContextCheckpointsCache.js
  * allow some margin if the node overloads.
  */
 const DEFAULT_MAX_CACHED_PRODUCED_ROOTS = 4;
-const DEFAULT_MAX_CACHED_BLOB_SIDECARS = 4;
 
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: UintNum64;
@@ -123,6 +125,7 @@ export class BeaconChain implements IBeaconChain {
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
   readonly seenContributionAndProof: SeenContributionAndProof;
   readonly seenAttestationDatas: SeenAttestationDatas;
+  readonly seenGossipBlockInput = new SeenGossipBlockInput();
   // Seen cache for liveness checks
   readonly seenBlockAttesters = new SeenBlockAttesters();
 
@@ -134,8 +137,7 @@ export class BeaconChain implements IBeaconChain {
   readonly checkpointBalancesCache: CheckpointBalancesCache;
   readonly shufflingCache: ShufflingCache;
   /** Map keyed by executionPayload.blockHash of the block for those blobs */
-  readonly producedBlobSidecarsCache = new Map<BlockHash, deneb.BlobSidecars>();
-  readonly producedBlindedBlobSidecarsCache = new Map<BlockHash, deneb.BlindedBlobSidecars>();
+  readonly producedContentsCache = new Map<BlockHash, deneb.Contents>();
 
   // Cache payload from the local execution so that produceBlindedBlock or produceBlockV3 and
   // send and get signed/published blinded versions which beacon can assemble into full before
@@ -468,20 +470,22 @@ export class BeaconChain implements IBeaconChain {
     return data && {block: data, executionOptimistic: false};
   }
 
-  produceBlock(blockAttributes: BlockAttributes): Promise<{block: allForks.BeaconBlock; executionPayloadValue: Wei}> {
+  produceBlock(
+    blockAttributes: BlockAttributes
+  ): Promise<{block: allForks.BeaconBlock; executionPayloadValue: Wei; consensusBlockValue: Gwei}> {
     return this.produceBlockWrapper<BlockType.Full>(BlockType.Full, blockAttributes);
   }
 
   produceBlindedBlock(
     blockAttributes: BlockAttributes
-  ): Promise<{block: allForks.BlindedBeaconBlock; executionPayloadValue: Wei}> {
+  ): Promise<{block: allForks.BlindedBeaconBlock; executionPayloadValue: Wei; consensusBlockValue: Gwei}> {
     return this.produceBlockWrapper<BlockType.Blinded>(BlockType.Blinded, blockAttributes);
   }
 
   async produceBlockWrapper<T extends BlockType>(
     blockType: T,
     {randaoReveal, graffiti, slot, feeRecipient}: BlockAttributes
-  ): Promise<{block: AssembledBlockType<T>; executionPayloadValue: Wei}> {
+  ): Promise<{block: AssembledBlockType<T>; executionPayloadValue: Wei; consensusBlockValue: Gwei}> {
     const head = this.forkChoice.getHead();
     const state = await this.regen.getBlockSlotState(
       head.blockRoot,
@@ -522,7 +526,9 @@ export class BeaconChain implements IBeaconChain {
       stateRoot: ZERO_HASH,
       body,
     } as AssembledBlockType<T>;
-    block.stateRoot = computeNewStateRoot(this.metrics, state, block);
+
+    const {newStateRoot, proposerReward} = computeNewStateRoot(this.metrics, state, block);
+    block.stateRoot = newStateRoot;
     const blockRoot =
       blockType === BlockType.Full
         ? this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block)
@@ -546,35 +552,12 @@ export class BeaconChain implements IBeaconChain {
     // publishing the blinded block's full version
     if (blobs.type === BlobsResultType.produced) {
       // body is of full type here
-      const blockHash = blobs.blockHash;
-      const blobSidecars = blobs.blobSidecars.map((blobSidecar) => ({
-        ...blobSidecar,
-        blockRoot,
-        slot,
-        blockParentRoot: parentBlockRoot,
-        proposerIndex,
-      }));
-
-      this.producedBlobSidecarsCache.set(blockHash, blobSidecars);
-      this.metrics?.blockProductionCaches.producedBlobSidecarsCache.set(this.producedBlobSidecarsCache.size);
-    } else if (blobs.type === BlobsResultType.blinded) {
-      // body is of blinded type here
-      const blockHash = blobs.blockHash;
-      const blindedBlobSidecars = blobs.blobSidecars.map((blindedBlobSidecar) => ({
-        ...blindedBlobSidecar,
-        blockRoot,
-        slot,
-        blockParentRoot: parentBlockRoot,
-        proposerIndex,
-      }));
-
-      this.producedBlindedBlobSidecarsCache.set(blockHash, blindedBlobSidecars);
-      this.metrics?.blockProductionCaches.producedBlindedBlobSidecarsCache.set(
-        this.producedBlindedBlobSidecarsCache.size
-      );
+      const {blockHash, contents} = blobs;
+      this.producedContentsCache.set(blockHash, contents);
+      this.metrics?.blockProductionCaches.producedContentsCache.set(this.producedContentsCache.size);
     }
 
-    return {block, executionPayloadValue};
+    return {block, executionPayloadValue, consensusBlockValue: proposerReward};
   }
 
   /**
@@ -587,14 +570,14 @@ export class BeaconChain implements IBeaconChain {
    *       kzg_aggregated_proof=compute_proof_from_blobs(blobs),
    *   )
    */
-  getBlobSidecars(beaconBlock: deneb.BeaconBlock): deneb.BlobSidecars {
+  getContents(beaconBlock: deneb.BeaconBlock): deneb.Contents {
     const blockHash = toHex(beaconBlock.body.executionPayload.blockHash);
-    const blobSidecars = this.producedBlobSidecarsCache.get(blockHash);
-    if (!blobSidecars) {
-      throw Error(`No blobSidecars for executionPayload.blockHash ${blockHash}`);
+    const contents = this.producedContentsCache.get(blockHash);
+    if (!contents) {
+      throw Error(`No contents for executionPayload.blockHash ${blockHash}`);
     }
 
-    return blobSidecars;
+    return contents;
   }
 
   async processBlock(block: BlockInput, opts?: ImportBlockOpts): Promise<void> {
@@ -645,21 +628,32 @@ export class BeaconChain implements IBeaconChain {
     return this.reprocessController.waitForBlockOfAttestation(slot, root);
   }
 
+  persistBlock(data: allForks.BeaconBlock | allForks.BlindedBeaconBlock, suffix?: string): void {
+    const slot = data.slot;
+    if (isBlindedBeaconBlock(data)) {
+      const sszType = this.config.getBlindedForkTypes(slot).BeaconBlock;
+      void this.persistSszObject("BlindedBeaconBlock", sszType.serialize(data), sszType.hashTreeRoot(data), suffix);
+    } else {
+      const sszType = this.config.getForkTypes(slot).BeaconBlock;
+      void this.persistSszObject("BeaconBlock", sszType.serialize(data), sszType.hashTreeRoot(data), suffix);
+    }
+  }
+
   persistInvalidSszValue<T>(type: Type<T>, sszObject: T, suffix?: string): void {
     if (this.opts.persistInvalidSszObjects) {
-      void this.persistInvalidSszObject(type.typeName, type.serialize(sszObject), type.hashTreeRoot(sszObject), suffix);
+      void this.persistSszObject(type.typeName, type.serialize(sszObject), type.hashTreeRoot(sszObject), suffix);
     }
   }
 
   persistInvalidSszBytes(typeName: string, sszBytes: Uint8Array, suffix?: string): void {
     if (this.opts.persistInvalidSszObjects) {
-      void this.persistInvalidSszObject(typeName, sszBytes, sszBytes, suffix);
+      void this.persistSszObject(typeName, sszBytes, sszBytes, suffix);
     }
   }
 
   persistInvalidSszView(view: TreeView<CompositeTypeAny>, suffix?: string): void {
     if (this.opts.persistInvalidSszObjects) {
-      void this.persistInvalidSszObject(view.type.typeName, view.serialize(), view.hashTreeRoot(), suffix);
+      void this.persistSszObject(view.type.typeName, view.serialize(), view.hashTreeRoot(), suffix);
     }
   }
 
@@ -795,16 +789,12 @@ export class BeaconChain implements IBeaconChain {
     return {state: blockState, stateId: "block_state_any_epoch", shouldWarn: true};
   }
 
-  private async persistInvalidSszObject(
+  private async persistSszObject(
     typeName: string,
     bytes: Uint8Array,
     root: Uint8Array,
     suffix?: string
   ): Promise<void> {
-    if (!this.opts.persistInvalidSszObjects) {
-      return;
-    }
-
     const now = new Date();
     // yyyy-MM-dd
     const dateStr = now.toISOString().split("T")[0];
@@ -869,19 +859,8 @@ export class BeaconChain implements IBeaconChain {
     this.metrics?.blockProductionCaches.producedBlindedBlockRoot.set(this.producedBlindedBlockRoot.size);
 
     if (this.config.getForkSeq(slot) >= ForkSeq.deneb) {
-      pruneSetToMax(
-        this.producedBlobSidecarsCache,
-        this.opts.maxCachedBlobSidecars ?? DEFAULT_MAX_CACHED_BLOB_SIDECARS
-      );
-      this.metrics?.blockProductionCaches.producedBlobSidecarsCache.set(this.producedBlobSidecarsCache.size);
-
-      pruneSetToMax(
-        this.producedBlindedBlobSidecarsCache,
-        this.opts.maxCachedBlobSidecars ?? DEFAULT_MAX_CACHED_BLOB_SIDECARS
-      );
-      this.metrics?.blockProductionCaches.producedBlindedBlobSidecarsCache.set(
-        this.producedBlindedBlobSidecarsCache.size
-      );
+      pruneSetToMax(this.producedContentsCache, this.opts.maxCachedProducedRoots ?? DEFAULT_MAX_CACHED_PRODUCED_ROOTS);
+      this.metrics?.blockProductionCaches.producedContentsCache.set(this.producedContentsCache.size);
     }
 
     const metrics = this.metrics;

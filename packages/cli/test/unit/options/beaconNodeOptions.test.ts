@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {RecursivePartial} from "@lodestar/utils";
 import {parseBeaconNodeArgs, BeaconNodeArgs} from "../../../src/options/beaconNodeOptions/index.js";
@@ -21,6 +21,7 @@ describe("options / beaconNodeOptions", () => {
       "chain.blsVerifyAllMultiThread": true,
       "chain.blsVerifyAllMainThread": true,
       "chain.disableBlsBatchVerify": true,
+      "chain.persistProducedBlocks": true,
       "chain.persistInvalidSszObjects": true,
       "chain.proposerBoostEnabled": false,
       "chain.disableImportExecutionFcU": false,
@@ -52,7 +53,7 @@ describe("options / beaconNodeOptions", () => {
       "execution.retryAttempts": 1,
 
       builder: false,
-      "builder.urls": ["http://localhost:8661"],
+      "builder.url": "http://localhost:8661",
       "builder.timeout": 12000,
       "builder.faultInspectionWindow": 32,
       "builder.allowedFaults": 16,
@@ -122,6 +123,7 @@ describe("options / beaconNodeOptions", () => {
         blsVerifyAllMultiThread: true,
         blsVerifyAllMainThread: true,
         disableBlsBatchVerify: true,
+        persistProducedBlocks: true,
         persistInvalidSszObjects: true,
         proposerBoostEnabled: false,
         disableImportExecutionFcU: false,
@@ -155,7 +157,7 @@ describe("options / beaconNodeOptions", () => {
       },
       executionBuilder: {
         enabled: false,
-        urls: ["http://localhost:8661"],
+        url: "http://localhost:8661",
         timeout: 12000,
         faultInspectionWindow: 32,
         allowedFaults: 16,
@@ -214,7 +216,7 @@ describe("options / beaconNodeOptions", () => {
     };
 
     const options = parseBeaconNodeArgs(beaconNodeArgsPartial);
-    expect(options).to.deep.equal(expectedOptions);
+    expect(options).toEqual(expectedOptions);
   });
 
   it("Should use execution endpoint & jwt for eth1", () => {
@@ -238,6 +240,6 @@ describe("options / beaconNodeOptions", () => {
     };
 
     const options = parseBeaconNodeArgs(beaconNodeArgsPartial);
-    expect(options.eth1).to.deep.equal(expectedOptions.eth1);
+    expect(options.eth1).toEqual(expectedOptions.eth1);
   });
 });

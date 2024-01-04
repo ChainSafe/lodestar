@@ -1,23 +1,22 @@
-import "../setup.js";
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {assert} from "../../src/index.js";
 
 describe("assert", () => {
   describe("true", () => {
     it("Should not throw with true", () => {
-      expect(() => assert.true(true)).to.not.throw();
+      expect(() => assert.true(true)).not.toThrow();
     });
     it("Should throw with false", () => {
-      expect(() => assert.true(false, "something must be valid")).to.throw("something must be valid");
+      expect(() => assert.true(false, "something must be valid")).toThrow("something must be valid");
     });
   });
 
   describe("equal with custom message", () => {
     it("Should not throw with equal values", () => {
-      expect(() => assert.equal(1, 1)).to.not.throw();
+      expect(() => assert.equal(1, 1)).not.toThrow();
     });
     it("Should throw with different values", () => {
-      expect(() => assert.equal(1, 2, "something must be equal")).to.throw("something must be equal: 1 === 2");
+      expect(() => assert.equal(1, 2, "something must be equal")).toThrow("something must be equal: 1 === 2");
     });
   });
 
@@ -51,9 +50,9 @@ describe("assert", () => {
     for (const {op, args, ok} of cases) {
       it(`assert ${args[0]} ${op} ${args[1]} = ${ok}`, () => {
         if (ok) {
-          expect(() => assert[op](...args)).to.not.throw();
+          expect(() => assert[op](...args)).not.toThrow();
         } else {
-          expect(() => assert[op](...args)).to.throw();
+          expect(() => assert[op](...args)).toThrow();
         }
       });
     }

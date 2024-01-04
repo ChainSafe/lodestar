@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {chunkIntoN} from "../../../src/utils/conversion.js";
 
 describe("utils/conversion", () => {
@@ -71,12 +71,12 @@ describe("utils/conversion", () => {
 
     for (const {title, input, output} of testCases) {
       it(`should chunkify data when ${title}`, async () => {
-        expect(chunkIntoN(input.data, input.n)).to.be.deep.eq(output);
+        expect(chunkIntoN(input.data, input.n)).toEqual(output);
       });
     }
 
     it("should not change the order of elements", () => {
-      expect(chunkIntoN([6, 5, 4, 3, 2, 1], 2)).to.be.deep.eq([
+      expect(chunkIntoN([6, 5, 4, 3, 2, 1], 2)).toEqual([
         [6, 5],
         [4, 3],
         [2, 1],

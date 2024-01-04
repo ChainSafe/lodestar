@@ -4,15 +4,16 @@ import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {routes} from "@lodestar/api";
 import {Metrics} from "../../metrics/index.js";
 import {MapTracker} from "./mapMetrics.js";
+import {BlockStateCache} from "./types.js";
 
 const MAX_STATES = 3 * 32;
 
 /**
- * In memory cache of CachedBeaconState
- *
- * Similar API to Repository
+ * Old implementation of StateCache
+ * - Prune per checkpoint so number of states ranges from 96 to 128
+ * - Keep a separate head state to make sure it is always available
  */
-export class StateContextCache {
+export class StateContextCache implements BlockStateCache {
   /**
    * Max number of states allowed in the cache
    */

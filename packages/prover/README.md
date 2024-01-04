@@ -123,12 +123,12 @@ You will need to go over the [specification](https://github.com/ethereum/beacon-
 
 ## Getting started
 
-- Follow the [installation guide](https://chainsafe.github.io/lodestar/) to install Lodestar.
-- Quickly try out the whole stack by [starting a local testnet](https://chainsafe.github.io/lodestar/usage/local).
+- Follow the [installation guide](https://chainsafe.github.io/lodestar/getting-started/installation) to install Lodestar.
+- Quickly try out the whole stack by [starting a local testnet](https://chainsafe.github.io/lodestar/advanced-topics/setting-up-a-testnet).
 
 ## Contributors
 
-Read our [contributors document](/CONTRIBUTING.md), [submit an issue](https://github.com/ChainSafe/lodestar/issues/new/choose) or talk to us on our [discord](https://discord.gg/yjyvFRP)!
+Read our [contributors document](https://chainsafe.github.io/lodestar/contribution/getting-started), [submit an issue](https://github.com/ChainSafe/lodestar/issues/new/choose) or talk to us on our [discord](https://discord.gg/yjyvFRP)!
 
 ## License
 

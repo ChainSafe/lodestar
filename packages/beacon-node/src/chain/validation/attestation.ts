@@ -541,7 +541,7 @@ export function verifyHeadBlockAndTargetRoot(
   targetRoot: Root,
   attestationSlot: Slot,
   attestationEpoch: Epoch,
-  caller: string,
+  caller: RegenCaller,
   maxSkipSlots?: number
 ): ProtoBlock {
   const headBlock = verifyHeadBlockIsKnown(chain, beaconBlockRoot);

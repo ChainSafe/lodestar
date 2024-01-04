@@ -1,8 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
+import {describe, it, expect, beforeAll, vi} from "vitest";
 import {rimraf} from "rimraf";
-import {expect} from "chai";
-import {getMochaContext} from "@lodestar/test-utils/mocha";
 import {execCliCommand} from "@lodestar/test-utils";
 import {getKeystoresStr} from "@lodestar/test-utils";
 import {testFilesDir} from "../utils.js";
@@ -10,14 +9,13 @@ import {cachedPubkeysHex, cachedSeckeysHex} from "../utils/cachedKeys.js";
 import {expectKeys, startValidatorWithKeyManager} from "../utils/validator.js";
 
 describe("import from fs then validate", function () {
-  const testContext = getMochaContext(this);
-  this.timeout("30s");
+  vi.setConfig({testTimeout: 30_000});
 
   const dataDir = path.join(testFilesDir, "import-then-validate-test");
   const importFromDir = path.join(dataDir, "eth2.0_deposit_out");
   const passphraseFilepath = path.join(importFromDir, "password.text");
 
-  before("Clean dataDir", () => {
+  beforeAll(() => {
     rimraf.sync(dataDir);
     rimraf.sync(importFromDir);
   });
@@ -45,7 +43,7 @@ describe("import from fs then validate", function () {
     ]);
 
     for (let i = 0; i < keyCount; i++) {
-      expect(stdout).includes(pubkeys[i], `stdout should include imported pubkey[${i}]`);
+      expect(stdout).toContain(pubkeys[i]);
     }
   });
 
@@ -56,12 +54,12 @@ describe("import from fs then validate", function () {
     const stdout = await execCliCommand("packages/cli/bin/lodestar.js", ["validator list", `--dataDir ${dataDir}`]);
 
     for (let i = 0; i < keyCount; i++) {
-      expect(stdout).includes(pubkeys[i], `stdout should include imported pubkey[${i}]`);
+      expect(stdout).toContain(pubkeys[i]);
     }
   });
 
   it("run 'validator' check keys are loaded", async function () {
-    const {keymanagerClient} = await startValidatorWithKeyManager([], {dataDir, testContext});
+    const {keymanagerClient} = await startValidatorWithKeyManager([], {dataDir});
 
     await expectKeys(keymanagerClient, pubkeys, "Wrong listKeys response data");
   });

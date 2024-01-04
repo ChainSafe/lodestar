@@ -1,22 +1,18 @@
 import {byteArrayEquals, toHexString} from "@chainsafe/ssz";
 import {allForks, bellatrix, Slot, Root, BLSPubkey, ssz, deneb, Wei} from "@lodestar/types";
-import {
-  parseSignedBlindedBlockOrContents,
-  parseExecutionPayloadAndBlobsBundle,
-  reconstructFullBlockOrContents,
-} from "@lodestar/state-transition";
+import {parseExecutionPayloadAndBlobsBundle, reconstructFullBlockOrContents} from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/logger";
 import {getClient, Api as BuilderApi} from "@lodestar/api/builder";
 import {SLOTS_PER_EPOCH, ForkExecution} from "@lodestar/params";
-
+import {toSafePrintableUrl} from "@lodestar/utils";
 import {ApiError} from "@lodestar/api";
 import {Metrics} from "../../metrics/metrics.js";
 import {IExecutionBuilder} from "./interface.js";
 
 export type ExecutionBuilderHttpOpts = {
   enabled: boolean;
-  urls: string[];
+  url: string;
   timeout?: number;
   faultInspectionWindow?: number;
   allowedFaults?: number;
@@ -29,7 +25,7 @@ export type ExecutionBuilderHttpOpts = {
 
 export const defaultExecutionBuilderHttpOpts: ExecutionBuilderHttpOpts = {
   enabled: false,
-  urls: ["http://localhost:8661"],
+  url: "http://localhost:8661",
   timeout: 12000,
 };
 
@@ -48,9 +44,8 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
     metrics: Metrics | null = null,
     logger?: Logger
   ) {
-    const baseUrl = opts.urls[0];
+    const baseUrl = opts.url;
     if (!baseUrl) throw Error("No Url provided for executionBuilder");
-    logger?.info("External builder", {urls: opts.urls.toString()});
     this.api = getClient(
       {
         baseUrl,
@@ -59,6 +54,7 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
       },
       {config, metrics: metrics?.builderHttpClient}
     );
+    logger?.info("External builder", {url: toSafePrintableUrl(baseUrl)});
     this.config = config;
     this.issueLocalFcUWithFeeRecipient = opts.issueLocalFcUWithFeeRecipient;
 
@@ -110,26 +106,23 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
   ): Promise<{
     header: allForks.ExecutionPayloadHeader;
     executionPayloadValue: Wei;
-    blindedBlobsBundle?: deneb.BlindedBlobsBundle;
+    blobKzgCommitments?: deneb.BlobKzgCommitments;
   }> {
     const res = await this.api.getHeader(slot, parentHash, proposerPubKey);
     ApiError.assert(res, "execution.builder.getheader");
     const {header, value: executionPayloadValue} = res.response.data.message;
-    const {blindedBlobsBundle} = res.response.data.message as deneb.BuilderBid;
-    return {header, executionPayloadValue, blindedBlobsBundle};
+    const {blobKzgCommitments} = res.response.data.message as deneb.BuilderBid;
+    return {header, executionPayloadValue, blobKzgCommitments};
   }
 
   async submitBlindedBlock(
-    signedBlindedBlockOrContents: allForks.SignedBlindedBeaconBlockOrContents
+    signedBlindedBlock: allForks.SignedBlindedBeaconBlock
   ): Promise<allForks.SignedBeaconBlockOrContents> {
-    const res = await this.api.submitBlindedBlock(signedBlindedBlockOrContents);
+    const res = await this.api.submitBlindedBlock(signedBlindedBlock);
     ApiError.assert(res, "execution.builder.submitBlindedBlock");
     const {data} = res.response;
 
     const {executionPayload, blobsBundle} = parseExecutionPayloadAndBlobsBundle(data);
-    const {signedBlindedBlock, signedBlindedBlobSidecars} =
-      parseSignedBlindedBlockOrContents(signedBlindedBlockOrContents);
-
     // some validations for execution payload
     const expectedTransactionsRoot = signedBlindedBlock.message.body.executionPayloadHeader.transactionsRoot;
     const actualTransactionsRoot = ssz.bellatrix.Transactions.hashTreeRoot(executionPayload.transactions);
@@ -141,7 +134,7 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
       );
     }
 
-    const blobs = blobsBundle ? blobsBundle.blobs : null;
-    return reconstructFullBlockOrContents({signedBlindedBlock, signedBlindedBlobSidecars}, {executionPayload, blobs});
+    const contents = blobsBundle ? {blobs: blobsBundle.blobs, kzgProofs: blobsBundle.proofs} : null;
+    return reconstructFullBlockOrContents(signedBlindedBlock, {executionPayload, contents});
   }
 }

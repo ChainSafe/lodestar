@@ -48,6 +48,7 @@ export type IValidatorCliArgs = AccountValidatorArgs &
 
     useProduceBlockV3?: boolean;
     broadcastValidation?: string;
+    blindedLocal?: boolean;
 
     importKeystores?: string[];
     importKeystoresPassword?: string;
@@ -241,7 +242,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
   "builder.selection": {
     type: "string",
     description: "Builder block selection strategy `maxprofit`, `builderalways`, `builderonly` or `executiononly`",
-    defaultDescription: `\`${defaultOptions.builderSelection}\``,
+    defaultDescription: `${defaultOptions.builderSelection}`,
     group: "builder",
   },
 
@@ -257,6 +258,12 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     defaultDescription: `${defaultOptions.broadcastValidation}`,
   },
 
+  blindedLocal: {
+    type: "string",
+    description: "Request fetching local block in blinded format for produceBlockV3",
+    defaultDescription: `${defaultOptions.blindedLocal}`,
+  },
+
   importKeystores: {
     alias: ["keystore"], // Backwards compatibility with old `validator import` cmdx
     description: "Path(s) to a directory or single file path to validator keystores, i.e. Launchpad validators",
@@ -267,7 +274,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
   importKeystoresPassword: {
     alias: ["passphraseFile"], // Backwards compatibility with old `validator import` cmd
     description: "Path to a file with password to decrypt all keystores from `importKeystores` option",
-    defaultDescription: "`./password.txt`",
+    defaultDescription: "./password.txt",
     type: "string",
   },
 

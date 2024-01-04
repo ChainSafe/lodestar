@@ -1,15 +1,15 @@
 import fs from "node:fs";
 import path from "node:path";
+import {describe, it, expect, beforeEach, vi} from "vitest";
 import {rimraf} from "rimraf";
-import {expect} from "chai";
 import {getKeystoresStr} from "@lodestar/test-utils";
 import {cachedSeckeysHex} from "../../utils/cachedKeys.js";
 import {testFilesDir} from "../../utils.js";
 import {decryptKeystoreDefinitions} from "../../../src/cmds/validator/keymanager/decryptKeystoreDefinitions.js";
 import {LocalKeystoreDefinition} from "../../../src/cmds/validator/keymanager/interface.js";
 
-describe("decryptKeystoreDefinitions", function () {
-  this.timeout(100_000);
+describe("decryptKeystoreDefinitions", () => {
+  vi.setConfig({testTimeout: 100_000});
 
   const signal = new AbortController().signal;
   const dataDir = path.join(testFilesDir, "decrypt-keystores-test");
@@ -19,11 +19,9 @@ describe("decryptKeystoreDefinitions", function () {
   const keyCount = 2;
   const secretKeys = cachedSeckeysHex.slice(0, keyCount);
 
-  // Produce and encrypt keystores
   let definitions: LocalKeystoreDefinition[] = [];
 
-  beforeEach("Prepare dataDir", async () => {
-    // wipe out data dir and existing keystores
+  beforeEach(async () => {
     rimraf.sync(dataDir);
     rimraf.sync(importFromDir);
 
@@ -31,7 +29,7 @@ describe("decryptKeystoreDefinitions", function () {
 
     const keystoresStr = await getKeystoresStr(password, secretKeys);
     definitions = [];
-    // write keystores to disk
+
     for (let i = 0; i < keyCount; i++) {
       const keystorePath = path.join(importFromDir, `keystore_${i}.json`);
       fs.writeFileSync(keystorePath, keystoresStr[i]);
@@ -39,13 +37,13 @@ describe("decryptKeystoreDefinitions", function () {
     }
   });
 
-  context("with keystore cache", () => {
+  describe("with keystore cache", () => {
     const cacheFilePath = path.join(dataDir, "cache", "keystores.cache");
 
     beforeEach(async () => {
       // create cache file to ensure keystores are loaded from cache during tests
       await decryptKeystoreDefinitions(definitions, {logger: console, cacheFilePath, signal});
-      expect(fs.existsSync(cacheFilePath)).to.be.true;
+      expect(fs.existsSync(cacheFilePath)).toBe(true);
 
       // remove lockfiles created during cache file preparation
       rimraf.sync(path.join(importFromDir, "*.lock"), {glob: true});
@@ -54,17 +52,18 @@ describe("decryptKeystoreDefinitions", function () {
     testDecryptKeystoreDefinitions(cacheFilePath);
   });
 
-  context("without keystore cache", () => {
+  describe("without keystore cache", () => {
     testDecryptKeystoreDefinitions();
   });
 
   function testDecryptKeystoreDefinitions(cacheFilePath?: string): void {
     it("decrypt keystores", async () => {
       const signers = await decryptKeystoreDefinitions(definitions, {logger: console, signal, cacheFilePath});
-      expect(signers.length).to.equal(secretKeys.length);
+      expect(signers.length).toBe(secretKeys.length);
       for (const signer of signers) {
         const hexSecret = signer.secretKey.toHex();
-        expect(secretKeys.includes(hexSecret), `secretKeys doesn't include ${hexSecret}`).to.be.true;
+
+        expect(secretKeys.includes(hexSecret)).toBe(true);
       }
     });
 
@@ -76,14 +75,14 @@ describe("decryptKeystoreDefinitions", function () {
         await decryptKeystoreDefinitions(definitions, {logger: console, signal, cacheFilePath});
         expect.fail("Second decrypt should fail due to failure to get lockfile");
       } catch (e) {
-        expect((e as Error).message.startsWith("EEXIST: file already exists"), "Wrong error is thrown").to.be.true;
+        expect((e as Error).message.startsWith("EEXIST: file already exists")).toBe(true);
       }
     });
 
     it("decrypt keystores if lockfiles already exist if ignoreLockFile=true", async () => {
       await decryptKeystoreDefinitions(definitions, {logger: console, signal, cacheFilePath});
-      // lockfiles should exist after the first run
 
+      // lockfiles should exist after the first run
       await decryptKeystoreDefinitions(definitions, {logger: console, signal, cacheFilePath, ignoreLockFile: true});
     });
   }

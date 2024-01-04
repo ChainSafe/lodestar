@@ -1,4 +1,4 @@
-import bls from "@chainsafe/bls/switchable";
+import bls from "@chainsafe/bls";
 import {PointFormat, PublicKey, SecretKey} from "@chainsafe/bls/types";
 import {hasher, Tree} from "@chainsafe/persistent-merkle-tree";
 import {BitArray, fromHexString} from "@chainsafe/ssz";

@@ -1,6 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
-import "../../setup.js";
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {LodestarError} from "@lodestar/utils";
 import {logCtxToJson, logCtxToString} from "../../../src/utils/json.js";
@@ -13,7 +11,7 @@ describe("Json helper", () => {
     type TestCase = {
       id: string;
       arg: unknown;
-      json: any;
+      json: unknown;
     };
     const testCases: (TestCase | (() => TestCase))[] = [
       // Basic types
@@ -27,13 +25,13 @@ describe("Json helper", () => {
 
       // Functions
       // eslint-disable-next-line @typescript-eslint/no-empty-function
-      {id: "function", arg: function () {}, json: "function () { }"},
+      {id: "function", arg: function () {}, json: "function() {\n      }"},
       // eslint-disable-next-line @typescript-eslint/no-empty-function
-      {id: "arrow function", arg: () => {}, json: "() => { }"},
+      {id: "arrow function", arg: () => {}, json: "() => {\n      }"},
       // eslint-disable-next-line @typescript-eslint/no-empty-function
-      {id: "async function", arg: async function () {}, json: "async function () { }"},
+      {id: "async function", arg: async function () {}, json: "async function() {\n      }"},
       // eslint-disable-next-line @typescript-eslint/no-empty-function
-      {id: "async arrow function", arg: async () => {}, json: "async () => { }"},
+      {id: "async arrow function", arg: async () => {}, json: "async () => {\n      }"},
 
       // Arrays
       {id: "array of basic types", arg: [1, 2, 3], json: [1, 2, 3]},
@@ -119,6 +117,7 @@ describe("Json helper", () => {
       // Circular references
       () => {
         const circularReference: any = {};
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
         circularReference.myself = circularReference;
         return {
           id: "circular reference",
@@ -131,7 +130,7 @@ describe("Json helper", () => {
     for (const testCase of testCases) {
       const {id, arg, json} = typeof testCase === "function" ? testCase() : testCase;
       it(id, () => {
-        expect(logCtxToJson(arg)).to.deep.equal(json);
+        expect(logCtxToJson(arg)).toEqual(json);
       });
     }
   });
@@ -180,6 +179,7 @@ describe("Json helper", () => {
       // Circular references
       () => {
         const circularReference: any = {};
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
         circularReference.myself = circularReference;
         return {
           id: "circular reference",
@@ -192,7 +192,7 @@ describe("Json helper", () => {
     for (const testCase of testCases) {
       const {id, json, output} = typeof testCase === "function" ? testCase() : testCase;
       it(id, () => {
-        expect(logCtxToString(json)).to.equal(output);
+        expect(logCtxToString(json)).toBe(output);
       });
     }
   });

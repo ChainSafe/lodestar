@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {parseAcceptHeader} from "../../../src/utils/acceptHeader.js";
 import {ResponseFormat} from "../../../src/interfaces.js";
 
@@ -30,10 +30,8 @@ describe("utils / acceptHeader", () => {
       {header: "application/json;q=1,application/octet-stream;q=1", expected: "ssz"},
     ];
 
-    for (const testCase of testCases) {
-      it(`should correctly parse the header ${testCase.header}`, () => {
-        expect(parseAcceptHeader(testCase.header)).to.equal(testCase.expected);
-      });
-    }
+    it.each(testCases)("should correctly parse the header $header", ({header, expected}) => {
+      expect(parseAcceptHeader(header)).toBe(expected);
+    });
   });
 });

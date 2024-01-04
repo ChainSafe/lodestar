@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {parseBootnodesFile} from "../../../src/util/index.js";
 
 describe("config / bootnodes / parsing", () => {
@@ -18,7 +18,7 @@ describe("config / bootnodes / parsing", () => {
 {
   "enrs":
     [
-      "enr:-cabfg",
+      "enr:-cabfg", 
       "enr:-deadbeef"
     ]
 }
@@ -124,9 +124,7 @@ enr:-LK4QKWrXTpV9T78hNG6s8AM6IO4XH9kFT91uZtFg1GcsJ6dKovDOr1jtAAFPnS2lvNltkOGA9k2
     },
   ];
 
-  for (const {name, input, expected} of testCases) {
-    it(name, () => {
-      expect(parseBootnodesFile(input)).to.be.deep.equal(expected);
-    });
-  }
+  it.each(testCases)("$name", ({input, expected}) => {
+    expect(parseBootnodesFile(input)).toEqual(expected);
+  });
 });

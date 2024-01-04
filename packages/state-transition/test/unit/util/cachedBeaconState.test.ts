@@ -1,3 +1,4 @@
+import {describe, it} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";

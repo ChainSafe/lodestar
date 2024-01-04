@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {ContainerType, fromHexString, toHexString, Type, ValueOf} from "@chainsafe/ssz";
-import {ForkName, isForkBlobs} from "@lodestar/params";
+import {ForkName, isForkBlobs, isForkExecution} from "@lodestar/params";
 import {
   allForks,
   altair,
@@ -13,6 +13,8 @@ import {
   ssz,
   ValidatorIndex,
   Wei,
+  Gwei,
+  ProducedBlockSource,
   stringType,
 } from "@lodestar/types";
 import {AnyPostEndpoint, Endpoint, ResponseCodec, RouteDefinitions, Schema} from "../../utils/index.js";
@@ -47,14 +49,17 @@ export type ExtraProduceBlockOps = {
   feeRecipient?: string;
   builderSelection?: BuilderSelection;
   strictFeeRecipientCheck?: boolean;
+  blindedLocal?: boolean;
 };
 
 export type ProduceBlockMeta = {
-  executionPayloadValue: Wei;
   version: ForkName;
 };
 export type ProduceBlockV3Meta = ProduceBlockMeta & {
+  executionPayloadSource: ProducedBlockSource;
   executionPayloadBlinded: boolean;
+  executionPayloadValue: Wei;
+  consensusBlockValue: Gwei;
 };
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
@@ -62,15 +67,8 @@ export type ProduceBlockV3Meta = ProduceBlockMeta & {
 export const BlockContentsType = new ContainerType(
   {
     block: ssz.deneb.BeaconBlock,
-    blobSidecars: ssz.deneb.BlobSidecars,
-  },
-  {jsonCase: "eth2"}
-);
-
-export const BlindedBlockContentsType = new ContainerType(
-  {
-    block: ssz.deneb.BlindedBeaconBlock,
-    blobSidecars: ssz.deneb.BlobSidecars,
+    kzgProofs: ssz.deneb.KZGProofs,
+    blobs: ssz.deneb.Blobs,
   },
   {jsonCase: "eth2"}
 );
@@ -344,6 +342,7 @@ export type Endpoints = {
         fee_recipient?: string;
         builder_selection?: string;
         strict_fee_recipient_check?: boolean;
+        blinded_local?: boolean;
       };
     },
     allForks.FullOrBlindedBeaconBlockOrContents,
@@ -358,7 +357,7 @@ export type Endpoints = {
       graffiti: string;
     },
     {params: {slot: number}; query: {randao_reveal: string; graffiti: string}},
-    allForks.BlindedBeaconBlockOrContents,
+    allForks.BlindedBeaconBlock,
     ProduceBlockMeta
   >;
 
@@ -681,11 +680,9 @@ export const definitions: RouteDefinitions<Endpoints> = {
         fromJson: (val) => val as ProduceBlockMeta,
         toHeadersObject: (meta) => ({
           "Eth-Consensus-Version": meta.version,
-          "Eth-Execution-Payload-Value": String(meta.executionPayloadValue),
         }),
         fromHeaders: (headers) => ({
           version: headers.get("Eth-Consensus-Version")! as ForkName,
-          executionPayloadValue: BigInt(headers.get("Eth-Execution-Payload-Value")!),
         }),
       },
     },
@@ -702,6 +699,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
         feeRecipient,
         builderSelection,
         strictFeeRecipientCheck,
+        blindedLocal,
       }) => ({
         params: {slot},
         query: {
@@ -711,6 +709,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
           fee_recipient: feeRecipient,
           builder_selection: builderSelection,
           strict_fee_recipient_check: strictFeeRecipientCheck,
+          blinded_local: blindedLocal,
         },
       }),
       parseReq: ({params, query}) => ({
@@ -721,6 +720,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
         feeRecipient: query.fee_recipient,
         builderSelection: query.builder_selection as BuilderSelection,
         strictFeeRecipientCheck: query.strict_fee_recipient_check,
+        blindedLocal: query.blinded_local,
       }),
       schema: {
         params: {slot: Schema.UintRequired},
@@ -731,6 +731,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
           fee_recipient: Schema.String,
           builder_selection: Schema.String,
           strict_fee_recipient_check: Schema.Boolean,
+          blinded_local: Schema.Boolean,
         },
       },
     },
@@ -738,9 +739,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
       data: WithMeta(
         ({version, executionPayloadBlinded}) =>
           (executionPayloadBlinded
-            ? isForkBlobs(version)
-              ? BlindedBlockContentsType
-              : ssz[version as ForkName.bellatrix].BlindedBeaconBlock
+            ? ssz.allForksBlinded[isForkExecution(version) ? version : ForkName.bellatrix].BeaconBlock
             : isForkBlobs(version)
             ? BlockContentsType
             : ssz[version].BeaconBlock) as Type<allForks.FullOrBlindedBeaconBlockOrContents>
@@ -750,13 +749,17 @@ export const definitions: RouteDefinitions<Endpoints> = {
         fromJson: (val) => val as ProduceBlockV3Meta,
         toHeadersObject: (meta) => ({
           "Eth-Consensus-Version": meta.version,
-          "Eth-Execution-Payload-Value": String(meta.executionPayloadValue),
+          "Eth-Execution-Payload-Source": String(meta.executionPayloadSource),
           "Eth-Execution-Payload-Blinded": String(meta.executionPayloadBlinded),
+          "Eth-Execution-Payload-Value": String(meta.executionPayloadValue),
+          "Eth-Consensus-Block-Value": String(meta.consensusBlockValue),
         }),
         fromHeaders: (headers) => ({
           version: headers.get("Eth-Consensus-Version")! as ForkName,
-          executionPayloadValue: BigInt(headers.get("Eth-Execution-Payload-Value")!),
+          executionPayloadSource: headers.get("Eth-Execution-Payload-Source")! as ProducedBlockSource,
           executionPayloadBlinded: Boolean(headers.get("Eth-Execution-Payload-Blinded")!),
+          executionPayloadValue: BigInt(headers.get("Eth-Execution-Payload-Value")!),
+          consensusBlockValue: BigInt(headers.get("Eth-Consensus-Block-Value")!),
         }),
       },
     },
@@ -783,23 +786,15 @@ export const definitions: RouteDefinitions<Endpoints> = {
       },
     },
     resp: {
-      data: WithVersion(
-        (fork) =>
-          // TODO fix the else branch
-          (isForkBlobs(fork)
-            ? BlindedBlockContentsType
-            : ssz[fork as ForkName.bellatrix].BlindedBeaconBlock) as Type<allForks.BlindedBeaconBlockOrContents>
-      ),
+      data: WithVersion((fork) => ssz.allForksBlinded[isForkExecution(fork) ? fork : ForkName.bellatrix].BeaconBlock),
       meta: {
         toJson: (meta) => meta,
         fromJson: (val) => val as ProduceBlockMeta,
         toHeadersObject: (meta) => ({
           "Eth-Consensus-Version": meta.version,
-          "Eth-Execution-Payload-Value": String(meta.executionPayloadValue),
         }),
         fromHeaders: (headers) => ({
           version: headers.get("Eth-Consensus-Version")! as ForkName,
-          executionPayloadValue: BigInt(headers.get("Eth-Execution-Payload-Value")!),
         }),
       },
     },

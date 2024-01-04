@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {isValidMerkleBranch} from "../../src/utils/verifyMerkleBranch.js";
 import {computeMerkleBranch} from "../utils/utils.js";
 
@@ -9,6 +9,6 @@ describe("utils", () => {
     const index = 22;
     const {root, proof} = computeMerkleBranch(leaf, depth, index);
 
-    expect(isValidMerkleBranch(leaf, proof, depth, index, root)).to.equal(true);
+    expect(isValidMerkleBranch(leaf, proof, depth, index, root)).toBe(true);
   });
 });

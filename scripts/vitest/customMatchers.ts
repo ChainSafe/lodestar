@@ -2,14 +2,14 @@
 import {expect} from "vitest";
 
 expect.extend({
-  toBeValidEpochCommittee: (
+  toBeValidEpochCommittee(
     committee: {index: number; slot: number; validators: unknown[]},
     {
       committeeCount,
       validatorsPerCommittee,
       slotsPerEpoch,
     }: {committeeCount: number; validatorsPerCommittee: number; slotsPerEpoch: number}
-  ) => {
+  ) {
     if (committee.index < 0 || committee.index > committeeCount - 1) {
       return {
         message: () =>
@@ -39,10 +39,10 @@ expect.extend({
       pass: true,
     };
   },
-  toBeWithMessage: (received: unknown, expected: unknown, message: string) => {
-    if (received === expected) {
+  toBeWithMessage(received: unknown, expected: unknown, message: string) {
+    if (Object.is(received, expected)) {
       return {
-        message: () => "Expected value is truthy",
+        message: () => "Received value is the same as expected value",
         pass: true,
       };
     }
@@ -50,6 +50,36 @@ expect.extend({
     return {
       pass: false,
       message: () => message,
+      actual: received,
+      expected,
+    };
+  },
+  toSatisfy(received: unknown, func: (received: unknown) => boolean) {
+    if (func(received)) {
+      return {
+        message: () => "Received value satisfied the condition",
+        pass: true,
+      };
+    }
+
+    return {
+      pass: false,
+      message: () => "Received value did not satisfy the condition",
+    };
+  },
+  toEqualWithMessage(received: unknown, expected: unknown, message: string) {
+    if (this.equals(received, expected)) {
+      return {
+        message: () => "Received value equals expected value",
+        pass: true,
+      };
+    }
+
+    return {
+      pass: false,
+      message: () => message,
+      actual: received,
+      expected,
     };
   },
 });

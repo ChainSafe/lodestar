@@ -52,8 +52,7 @@ export class HttpClient implements IHttpClient {
   private readonly urlsScore: number[];
 
   get baseUrl(): string {
-    // Don't leak username/password to caller
-    return new URL(this.urlsInits[0].baseUrl).origin;
+    return this.urlsInits[0].baseUrl;
   }
 
   constructor(opts: HttpClientOptions, {logger, metrics}: HttpClientModules = {}) {

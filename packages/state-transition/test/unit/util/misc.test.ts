@@ -1,4 +1,4 @@
-import {assert} from "chai";
+import {describe, it, expect} from "vitest";
 
 import {toBigIntLE} from "bigint-buffer";
 import {GENESIS_SLOT, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
@@ -13,14 +13,14 @@ describe("getBlockRoot", () => {
     });
     const res = Buffer.from(getBlockRoot(state, GENESIS_SLOT));
     const expectedRes = BigInt("0xab");
-    assert(toBigIntLE(res) === expectedRes, `got: ${toBigIntLE(res)}, expected: ${expectedRes.toString(16)}`);
+    expect(toBigIntLE(res)).toEqual(expectedRes);
   });
   it("should fail if slot is current slot", () => {
     const state = generateState({slot: GENESIS_SLOT});
-    assert.throws(() => getBlockRoot(state, GENESIS_SLOT), "");
+    expect(() => getBlockRoot(state, GENESIS_SLOT)).toThrow("");
   });
   it("should fail if slot is not within SLOTS_PER_HISTORICAL_ROOT of current slot", () => {
     const state = generateState({slot: GENESIS_SLOT + SLOTS_PER_HISTORICAL_ROOT + 1});
-    assert.throws(() => getBlockRoot(state, GENESIS_SLOT), "");
+    expect(() => getBlockRoot(state, GENESIS_SLOT)).toThrow("");
   });
 });

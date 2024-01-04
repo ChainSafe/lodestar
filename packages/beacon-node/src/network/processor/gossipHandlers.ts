@@ -116,7 +116,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
     fork: ForkName,
     peerIdStr: string,
     seenTimestampSec: number
-  ): Promise<BlockInput | null> {
+  ): Promise<BlockInput> {
     const slot = signedBlock.message.slot;
     const forkTypes = config.getForkTypes(slot);
     const blockHex = prettyBytes(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
@@ -126,13 +126,21 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
     let blockInput;
     let blockInputMeta;
     if (config.getForkSeq(signedBlock.message.slot) >= ForkSeq.deneb) {
-      const blockInputRes = getBlockInput.getGossipBlockInput(config, {
+      const blockInputRes = chain.seenGossipBlockInput.getGossipBlockInput(config, {
         type: GossipedInputType.block,
         signedBlock,
         blockBytes,
       });
+
       blockInput = blockInputRes.blockInput;
       blockInputMeta = blockInputRes.blockInputMeta;
+
+      // blockInput can't be returned null, improve by enforcing via return types
+      if (blockInput === null) {
+        throw Error(
+          `Invalid null blockInput returned by getGossipBlockInput for type=${GossipedInputType.block} blockHex=${blockHex} slot=${slot}`
+        );
+      }
     } else {
       blockInput = getBlockInput.preDeneb(config, signedBlock, BlockSource.gossip, blockBytes);
       blockInputMeta = {};
@@ -170,20 +178,23 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
   }
 
   async function validateBeaconBlob(
-    signedBlob: deneb.SignedBlobSidecar,
+    blobSidecar: deneb.BlobSidecar,
     blobBytes: Uint8Array,
     gossipIndex: number,
     peerIdStr: string,
     seenTimestampSec: number
   ): Promise<BlockInput | null> {
-    const slot = signedBlob.message.slot;
-    const blockHex = prettyBytes(signedBlob.message.blockRoot);
+    const blobBlockHeader = blobSidecar.signedBlockHeader.message;
+    const slot = blobBlockHeader.slot;
+    const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blobBlockHeader);
+    const blockHex = prettyBytes(blockRoot);
+
     const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
     const recvToVal = Date.now() / 1000 - seenTimestampSec;
 
-    const {blockInput, blockInputMeta} = getBlockInput.getGossipBlockInput(config, {
+    const {blockInput, blockInputMeta} = chain.seenGossipBlockInput.getGossipBlockInput(config, {
       type: GossipedInputType.blob,
-      signedBlob,
+      blobSidecar,
       blobBytes,
     });
 
@@ -200,7 +211,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
     });
 
     try {
-      await validateGossipBlobSidecar(config, chain, signedBlob, gossipIndex);
+      await validateGossipBlobSidecar(chain, blobSidecar, gossipIndex);
       return blockInput;
     } catch (e) {
       if (e instanceof BlobSidecarGossipError) {
@@ -211,7 +222,11 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
         }
 
         if (e.action === GossipAction.REJECT) {
-          chain.persistInvalidSszValue(ssz.deneb.SignedBlobSidecar, signedBlob, `gossip_reject_slot_${slot}`);
+          chain.persistInvalidSszValue(
+            ssz.deneb.BlobSidecar,
+            blobSidecar,
+            `gossip_reject_slot_${slot}_index_${blobSidecar.index}`
+          );
         }
       }
 
@@ -250,10 +265,20 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
         // Returns the delay between the start of `block.slot` and `current time`
         const delaySec = chain.clock.secFromSlot(signedBlock.message.slot);
         metrics?.gossipBlock.elapsedTimeTillProcessed.observe(delaySec);
+        chain.seenGossipBlockInput.prune();
       })
       .catch((e) => {
         if (e instanceof BlockError) {
           switch (e.type.code) {
+            case BlockErrorCode.DATA_UNAVAILABLE: {
+              // TODO: create a newevent unknownBlobs and only pull blobs
+              const slot = signedBlock.message.slot;
+              const forkTypes = config.getForkTypes(slot);
+              const rootHex = toHexString(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
+
+              events.emit(NetworkEvent.unknownBlock, {rootHex, peer: peerIdStr});
+              break;
+            }
             // ALREADY_KNOWN should not happen with ignoreIfKnown=true above
             // PARENT_UNKNOWN should not happen, we handled this in validateBeaconBlock() function above
             case BlockErrorCode.ALREADY_KNOWN:
@@ -268,6 +293,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
         }
         metrics?.gossipBlock.processBlockErrors.inc({error: e instanceof BlockError ? e.type.code : "NOT_BLOCK_ERROR"});
         logger.error("Error receiving block", {slot: signedBlock.message.slot, peer: peerIdStr}, e as Error);
+        chain.seenGossipBlockInput.prune();
       });
   }
 
@@ -288,15 +314,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
         peerIdStr,
         seenTimestampSec
       );
-      if (blockInput !== null) {
-        handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
-      } else {
-        // TODO DENEB:
-        //
-        // If block + blobs not fully received in the slot within some deadline, we should trigger block/blob
-        // pull using req/resp by root pre-emptively even though it will be trigged on seeing any block/blob
-        // gossip on next slot via missing parent checks
-      }
+      handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
     },
 
     [GossipType.blob_sidecar]: async ({
@@ -306,13 +324,25 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
       seenTimestampSec,
     }: GossipHandlerParamGeneric<GossipType.blob_sidecar>) => {
       const {serializedData} = gossipData;
-      const signedBlob = sszDeserialize(topic, serializedData);
-      if (config.getForkSeq(signedBlob.message.slot) < ForkSeq.deneb) {
+      const blobSidecar = sszDeserialize(topic, serializedData);
+      if (config.getForkSeq(blobSidecar.signedBlockHeader.message.slot) < ForkSeq.deneb) {
         throw new GossipActionError(GossipAction.REJECT, {code: "PRE_DENEB_BLOCK"});
       }
-      const blockInput = await validateBeaconBlob(signedBlob, serializedData, topic.index, peerIdStr, seenTimestampSec);
+      const blockInput = await validateBeaconBlob(
+        blobSidecar,
+        serializedData,
+        topic.index,
+        peerIdStr,
+        seenTimestampSec
+      );
       if (blockInput !== null) {
-        handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
+        // TODO DENEB:
+        //
+        // With blobsPromise the block import would have been attempted with the receipt of the block gossip
+        // and should have resolved the availability promise, however we could track if the block processing
+        // was halted and requeue it
+        //
+        // handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
       } else {
         // TODO DENEB:
         //

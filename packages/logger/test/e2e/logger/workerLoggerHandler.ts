@@ -9,7 +9,9 @@ export type LoggerWorker = {
 type WorkerData = {logFilepath: string};
 
 export async function getLoggerWorker(opts: WorkerData): Promise<LoggerWorker> {
-  const workerThreadjs = new Worker("./workerLogger.js", {workerData: opts});
+  const workerThreadjs = new Worker("./workerLogger.js", {
+    workerData: opts,
+  });
   const worker = workerThreadjs as unknown as worker_threads.Worker;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

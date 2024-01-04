@@ -9,8 +9,8 @@ import {
 } from "../../../../src/beacon/routes/beacon/index.js";
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 
-const root = Buffer.alloc(32, 1);
-const randao = Buffer.alloc(32, 1);
+const root = new Uint8Array(32).fill(1);
+const randao = new Uint8Array(32).fill(1);
 const balance = 32e9;
 const pubkeyHex = toHexString(Buffer.alloc(48, 1));
 
