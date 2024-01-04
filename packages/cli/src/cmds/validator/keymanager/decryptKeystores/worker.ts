@@ -1,8 +1,25 @@
 import fs from "node:fs";
+import worker from 'node:worker_threads';
 import {expose} from "@chainsafe/threads/worker";
 import {Transfer, TransferDescriptor} from "@chainsafe/threads";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {DecryptKeystoreArgs, DecryptKeystoreWorkerAPI, isLocalKeystoreDefinition} from "./types.js";
+
+/**
+ * @param buffer The ArrayBuffer to be returned as transferable 
+ * @returns a buffer that can be transferred. If the provided buffer is marked as untransferable, a copy is returned
+ */
+function transferableArrayBuffer(buffer: ArrayBuffer) {
+  const unknown_worker = worker as any;
+  const isMarkedAsUntransferable = unknown_worker["isMarkedAsUntransferable"];
+  // Can be updated to direct access once minimal version of node is 21
+  if (isMarkedAsUntransferable && isMarkedAsUntransferable(buffer)) {
+    // Return a copy of the buffer so that it can be transferred
+    return buffer.slice(0);
+  } else {
+    return buffer;
+  }
+}
 
 /**
  * Decrypt a single keystore, returning the secret key as a Uint8Array
@@ -18,7 +35,7 @@ export async function decryptKeystore(args: DecryptKeystoreArgs): Promise<Transf
   const secret = await keystore.decrypt(args.password);
   // Transfer the underlying ArrayBuffer back to the main thread: https://threads.js.org/usage-advanced#transferable-objects
   // This small performance gain may help in cases where this is run for many keystores
-  return Transfer(secret, [secret.buffer]);
+  return Transfer(secret, [transferableArrayBuffer(secret.buffer)]);
 }
 
 expose({decryptKeystore} as unknown as DecryptKeystoreWorkerAPI);
