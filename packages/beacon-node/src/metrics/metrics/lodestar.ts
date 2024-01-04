@@ -16,6 +16,7 @@ import {PeerSyncType, RangeSyncType} from "../../sync/utils/remoteSyncType.js";
 import {LodestarMetadata} from "../options.js";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
 import {OpSource} from "../validatorMonitor.js";
+import {CacheItemType} from "../../chain/stateCache/types.js";
 
 export type LodestarMetrics = ReturnType<typeof createLodestarMetrics>;
 
@@ -1098,13 +1099,15 @@ export function createLodestarMetrics(
         name: "lodestar_cp_state_cache_adds_total",
         help: "Total number of items added in checkpoint state cache",
       }),
-      size: register.gauge({
+      size: register.gauge<{type: CacheItemType}>({
         name: "lodestar_cp_state_cache_size",
         help: "Checkpoint state cache size",
+        labelNames: ["type"],
       }),
-      epochSize: register.gauge({
+      epochSize: register.gauge<{type: CacheItemType}>({
         name: "lodestar_cp_state_epoch_size",
         help: "Checkpoint state cache size",
+        labelNames: ["type"],
       }),
       reads: register.avgMinMax({
         name: "lodestar_cp_state_epoch_reads",
@@ -1118,6 +1121,44 @@ export function createLodestarMetrics(
         name: "lodestar_cp_state_cache_state_cloned_count",
         help: "Histogram of cloned count per state every time state.clone() is called",
         buckets: [1, 2, 5, 10, 50, 250],
+      }),
+      statePersistDuration: register.histogram({
+        name: "lodestar_cp_state_cache_state_persist_seconds",
+        help: "Histogram of time to persist state to db",
+        buckets: [0.1, 0.5, 1, 2, 3, 4],
+      }),
+      statePruneFromMemoryCount: register.gauge({
+        name: "lodestar_cp_state_cache_state_prune_from_memory_count",
+        help: "Total number of states pruned from memory",
+      }),
+      statePersistSecFromSlot: register.histogram({
+        name: "lodestar_cp_state_cache_state_persist_seconds_from_slot",
+        help: "Histogram of time to persist state to db since the clock slot",
+        buckets: [0, 2, 4, 6, 8, 10, 12],
+      }),
+      stateReloadDuration: register.histogram({
+        name: "lodestar_cp_state_cache_state_reload_seconds",
+        help: "Histogram of time to load state from db",
+        buckets: [0, 2, 4, 6, 8, 10, 12],
+      }),
+      stateReloadEpochDiff: register.histogram({
+        name: "lodestar_cp_state_cache_state_reload_epoch_diff",
+        help: "Histogram of epoch difference between seed state epoch and loaded state epoch",
+        buckets: [0, 1, 2, 4, 8, 16, 32],
+      }),
+      stateReloadSecFromSlot: register.histogram({
+        name: "lodestar_cp_state_cache_state_reload_seconds_from_slot",
+        help: "Histogram of time to load state from db since the clock slot",
+        buckets: [0, 2, 4, 6, 8, 10, 12],
+      }),
+      stateReloadDbReadTime: register.histogram({
+        name: "lodestar_cp_state_cache_state_reload_db_read_seconds",
+        help: "Histogram of time to load state bytes from db",
+        buckets: [0.01, 0.05, 0.1, 0.2, 0.5],
+      }),
+      persistedStateRemoveCount: register.gauge({
+        name: "lodestar_cp_state_cache_persisted_state_remove_count",
+        help: "Total number of persisted states removed",
       }),
     },
 

@@ -5,6 +5,7 @@ import {MapDef} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
 import {Metrics} from "../../metrics/index.js";
 import {MapTracker} from "./mapMetrics.js";
+import {CheckpointStateCache as CheckpointStateCacheInterface, CacheItemType} from "./types.js";
 
 export type CheckpointHex = {epoch: Epoch; rootHex: RootHex};
 const MAX_EPOCHS = 10;
@@ -14,8 +15,9 @@ const MAX_EPOCHS = 10;
  * belonging to checkpoint
  *
  * Similar API to Repository
+ * TODO: rename to MemoryCheckpointStateCache in the next PR of n-historical states
  */
-export class CheckpointStateCache {
+export class CheckpointStateCache implements CheckpointStateCacheInterface {
   private readonly cache: MapTracker<string, CachedBeaconStateAllForks>;
   /** Epoch -> Set<blockRoot> */
   private readonly epochIndex = new MapDef<Epoch, Set<string>>(() => new Set<string>());
@@ -27,9 +29,30 @@ export class CheckpointStateCache {
     this.cache = new MapTracker(metrics?.cpStateCache);
     if (metrics) {
       this.metrics = metrics.cpStateCache;
-      metrics.cpStateCache.size.addCollect(() => metrics.cpStateCache.size.set(this.cache.size));
-      metrics.cpStateCache.epochSize.addCollect(() => metrics.cpStateCache.epochSize.set(this.epochIndex.size));
+      metrics.cpStateCache.size.addCollect(() =>
+        metrics.cpStateCache.size.set({type: CacheItemType.inMemory}, this.cache.size)
+      );
+      metrics.cpStateCache.epochSize.addCollect(() =>
+        metrics.cpStateCache.epochSize.set({type: CacheItemType.inMemory}, this.epochIndex.size)
+      );
     }
+  }
+
+  async getOrReload(cp: CheckpointHex): Promise<CachedBeaconStateAllForks | null> {
+    return this.get(cp);
+  }
+
+  async getStateOrBytes(cp: CheckpointHex): Promise<Uint8Array | CachedBeaconStateAllForks | null> {
+    return this.get(cp);
+  }
+
+  async getOrReloadLatest(rootHex: string, maxEpoch: number): Promise<CachedBeaconStateAllForks | null> {
+    return this.getLatest(rootHex, maxEpoch);
+  }
+
+  async processState(): Promise<number> {
+    // do nothing, this class does not support prunning
+    return 0;
   }
 
   get(cp: CheckpointHex): CachedBeaconStateAllForks | null {
