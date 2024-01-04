@@ -161,6 +161,86 @@ export class ForkChoice implements IForkChoice {
     return this.proposerBoostRoot ?? HEX_ZERO_HASH;
   }
 
+  // https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#get_proposer_head
+  getProposerHead(headBlock: ProtoBlock, slot: Slot): ProtoBlock {
+    const parentBlock = this.protoArray.getBlock(headBlock.parentRoot);
+
+    // No reorg if parentBlock isn't available
+    if (parentBlock === undefined) {
+      return headBlock;
+    }
+
+    // No reorg if headBlock is on time
+    // https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_head_late
+    if (headBlock.timeliness) {
+      return headBlock;
+    }
+
+    // No reorg if we are at epoch boundary where proposer shuffling could change
+    // https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_shuffling_stable
+    if (slot % SLOTS_PER_EPOCH === 0) {
+      return headBlock;
+    }
+
+
+    // No reorg if headBlock and parentBlock are not ffg competitive
+    // https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_ffg_competitive
+    const {unrealizedJustifiedEpoch: headBlockCpEpoch, unrealizedFinalizedRoot: headBlockCpRoot} = headBlock;
+    const {unrealizedJustifiedEpoch: parentBlockCpEpoch, unrealizedFinalizedRoot: parentBlockCpRoot} = parentBlock;
+    if (headBlockCpEpoch !== parentBlockCpEpoch || headBlockCpRoot !== parentBlockCpRoot) {
+      return headBlock;
+    }
+
+
+    // No reorg if chain is not finalizing within REORG_MAX_EPOCHS_SINCE_FINALIZATION
+    // https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_finalization_ok
+    const epochsSinceFinalization = computeEpochAtSlot(slot) - this.getFinalizedCheckpoint().epoch;
+    if (epochsSinceFinalization > this.config.REORG_MAX_EPOCHS_SINCE_FINALIZATION) {
+      return headBlock;
+    }
+
+    // -No reorg if we are not proposing on time.- 
+    // Skipping this check as store.time is stored in slot and not unix time
+    // https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_proposing_on_time
+
+    // No reorg if attempted reorg is more than a single slot
+    if ((parentBlock.slot + 1 !== headBlock.slot) || (headBlock.slot + 1) !== slot) {
+      return headBlock;
+    }
+
+    // No reorg if headBlock has proposer boost
+    if (this.proposerBoostRoot === headBlock.blockRoot) {
+      return headBlock;
+    }
+
+    // No reorg if headBlock is "not weak" ie. headBlock's weight exceeds (REORG_HEAD_WEIGHT_THRESHOLD = 20)% of total attester weight 
+    // https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_head_weak
+    const reorgThreshold = computeCommitteeFractionFromBalances(this.fcStore.justified.balances, {
+      slotsPerEpoch: SLOTS_PER_EPOCH,
+      committeePercent: this.config.REORG_HEAD_WEIGHT_THRESHOLD,
+    });
+    const headNode = this.protoArray.getNode(headBlock.blockRoot);
+    // If headNode is unavailable, give up reorg
+    if (headNode === undefined || headNode.weight >= reorgThreshold) {
+      return headBlock;
+    }
+
+    // No reorg if parentBlock is "not strong" ie. parentBlock's weight is less than or equal to (REORG_PARENT_WEIGHT_THRESHOLD = 160)% of total attester weight
+    // https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/fork-choice.md#is_parent_strong 
+    const parentThreshold = computeCommitteeFractionFromBalances(this.fcStore.justified.balances, {
+      slotsPerEpoch: SLOTS_PER_EPOCH,
+      committeePercent: this.config.REORG_PARENT_WEIGHT_THRESHOLD,
+    });
+    const parentNode = this.protoArray.getNode(headBlock.blockRoot);
+    // If parentNode is unavailable, give up reorg
+    if (parentNode === undefined || parentNode.weight <= parentThreshold) {
+      return headBlock;
+    }
+
+    // Reorg if all above checks fail
+    return parentBlock;
+  }
+
   /**
    * Run the fork choice rule to determine the head.
    * Update the head cache.
