@@ -201,9 +201,9 @@ export class ForkChoice implements IForkChoice {
     if (this.opts?.proposerBoostEnabled && this.proposerBoostRoot) {
       const proposerBoostScore =
         this.justifiedProposerBoostScore ??
-        computeProposerBoostScoreFromBalances(this.fcStore.justified.balances, {
+        computeCommitteeFractionFromBalances(this.fcStore.justified.balances, {
           slotsPerEpoch: SLOTS_PER_EPOCH,
-          proposerScoreBoost: this.config.PROPOSER_SCORE_BOOST,
+          committeePercent: this.config.PROPOSER_SCORE_BOOST,
         });
       proposerBoost = {root: this.proposerBoostRoot, score: proposerBoostScore};
       this.justifiedProposerBoostScore = proposerBoostScore;
@@ -1262,23 +1262,25 @@ export function assertValidTerminalPowBlock(
   }
 }
 
-function computeProposerBoostScore(
+function computeCommitteeFraction(
   {
     justifiedTotalActiveBalanceByIncrement,
     justifiedActiveValidators,
   }: {justifiedTotalActiveBalanceByIncrement: number; justifiedActiveValidators: number},
-  config: {slotsPerEpoch: number; proposerScoreBoost: number}
+  config: {slotsPerEpoch: number; committeePercent: number}
 ): number {
   const avgBalanceByIncrement = Math.floor(justifiedTotalActiveBalanceByIncrement / justifiedActiveValidators);
   const committeeSize = Math.floor(justifiedActiveValidators / config.slotsPerEpoch);
   const committeeWeight = committeeSize * avgBalanceByIncrement;
-  const proposerScore = Math.floor((committeeWeight * config.proposerScoreBoost) / 100); // TODO: calculate committee fraction
+  const proposerScore = Math.floor((committeeWeight * config.committeePercent) / 100);
   return proposerScore;
 }
 
-export function computeProposerBoostScoreFromBalances(
+// Approximate https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/fork-choice.md#calculate_committee_fraction
+// Calculates proposer boost score when committeePercent = config.PROPOSER_SCORE_BOOST
+export function computeCommitteeFractionFromBalances(
   justifiedBalances: EffectiveBalanceIncrements,
-  config: {slotsPerEpoch: number; proposerScoreBoost: number}
+  config: {slotsPerEpoch: number; committeePercent: number}
 ): number {
   let justifiedTotalActiveBalanceByIncrement = 0,
     justifiedActiveValidators = 0;
@@ -1289,5 +1291,5 @@ export function computeProposerBoostScoreFromBalances(
       justifiedTotalActiveBalanceByIncrement += justifiedBalances[i];
     }
   }
-  return computeProposerBoostScore({justifiedTotalActiveBalanceByIncrement, justifiedActiveValidators}, config);
+  return computeCommitteeFraction({justifiedTotalActiveBalanceByIncrement, justifiedActiveValidators}, config);
 }
