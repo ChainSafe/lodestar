@@ -236,7 +236,7 @@ export class HttpClient implements IHttpClient {
         return apiResponse;
       }
 
-      const streamTimer = this.metrics?.streamTime.startTimer();
+      const streamTimer = this.metrics?.streamTime.startTimer({routeId});
       try {
         await apiResponse.rawBody();
         this.logger?.debug("API response success", {routeId});
