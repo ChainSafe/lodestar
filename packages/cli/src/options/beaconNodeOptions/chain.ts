@@ -13,6 +13,7 @@ export type ChainArgs = {
   // as this is defined as part of BeaconPaths
   // "chain.persistInvalidSszObjectsDir": string;
   "chain.proposerBoostEnabled"?: boolean;
+  "chain.proposerBoostReorgEnabled"?: boolean;
   "chain.disableImportExecutionFcU"?: boolean;
   "chain.preaggregateSlotDistance"?: number;
   "chain.attDataCacheSlotDistance"?: number;
@@ -39,6 +40,7 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
     persistInvalidSszObjectsDir: undefined as any,
     proposerBoostEnabled: args["chain.proposerBoostEnabled"],
+    proposerBoostReorgEnabled: args["chain.proposerBoostReorgEnabled"],
     disableImportExecutionFcU: args["chain.disableImportExecutionFcU"],
     preaggregateSlotDistance: args["chain.preaggregateSlotDistance"],
     attDataCacheSlotDistance: args["chain.attDataCacheSlotDistance"],
@@ -117,6 +119,14 @@ Will double processing times. Use only for debugging purposes.",
     type: "boolean",
     description: "Enable proposer boost to reward a timely block",
     defaultDescription: String(defaultOptions.chain.proposerBoostEnabled),
+    group: "chain",
+  },
+
+  "chain.proposerBoostReorgEnabled": {
+    hidden: true,
+    type: "boolean",
+    description: "Enable proposer boost reorg to reorg out a late block",
+    defaultDescription: String(defaultOptions.chain.proposerBoostReorgEnabled),
     group: "chain",
   },
 
