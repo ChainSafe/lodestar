@@ -25,6 +25,19 @@ const SLOT_BYTE_COUNT = 8;
  */
 export const VALIDATOR_BYTES_SIZE = 121;
 
+const BLS_PUBKEY_SIZE = 48;
+
+export function getWithdrawalCredentialFirstByteFromValidatorBytes(
+  validatorBytes: Uint8Array,
+  validatorIndex: number
+): number | null {
+  if (validatorBytes.length < VALIDATOR_BYTES_SIZE * (validatorIndex + 1)) {
+    return null;
+  }
+
+  return validatorBytes[VALIDATOR_BYTES_SIZE * validatorIndex + BLS_PUBKEY_SIZE];
+}
+
 /**
  * 8 + 32 = 40
  * ```

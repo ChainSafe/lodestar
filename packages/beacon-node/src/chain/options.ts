@@ -4,12 +4,17 @@ import {ArchiverOpts} from "./archiver/index.js";
 import {ForkChoiceOpts} from "./forkChoice/index.js";
 import {LightClientServerOpts} from "./lightClient/index.js";
 import {ShufflingCacheOpts} from "./shufflingCache.js";
+import {DEFAULT_MAX_BLOCK_STATES, FIFOBlockStateCacheOpts} from "./stateCache/fifoBlockStateCache.js";
+import {PersistentCheckpointStateCacheOpts} from "./stateCache/persistentCheckpointsCache.js";
+import {DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY} from "./stateCache/persistentCheckpointsCache.js";
 
 export type IChainOptions = BlockProcessOpts &
   PoolOpts &
   SeenCacheOpts &
   ForkChoiceOpts &
   ArchiverOpts &
+  FIFOBlockStateCacheOpts &
+  PersistentCheckpointStateCacheOpts &
   ShufflingCacheOpts &
   LightClientServerOpts & {
     blsVerifyAllMainThread?: boolean;
@@ -30,6 +35,7 @@ export type IChainOptions = BlockProcessOpts &
     trustedSetup?: string;
     broadcastValidationStrictness?: string;
     minSameMessageSignatureSetsToBatch: number;
+    nHistoricalStates?: boolean;
   };
 
 export type BlockProcessOpts = {
@@ -102,4 +108,7 @@ export const defaultChainOptions: IChainOptions = {
   // batching too much may block the I/O thread so if useWorker=false, suggest this value to be 32
   // since this batch attestation work is designed to work with useWorker=true, make this the lowest value
   minSameMessageSignatureSetsToBatch: 2,
+  nHistoricalStates: false,
+  maxBlockStates: DEFAULT_MAX_BLOCK_STATES,
+  maxCPStateEpochsInMemory: DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY,
 };

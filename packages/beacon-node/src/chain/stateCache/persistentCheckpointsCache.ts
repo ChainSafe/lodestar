@@ -7,9 +7,15 @@ import {loadCachedBeaconState} from "@lodestar/state-transition";
 import {Metrics} from "../../metrics/index.js";
 import {IClock} from "../../util/clock.js";
 import {ShufflingCache} from "../shufflingCache.js";
+import {BufferPool} from "../../util/bufferPool.js";
 import {MapTracker} from "./mapMetrics.js";
-import {CheckpointHex, CheckpointStateCache, CacheItemType} from "./types.js";
 import {CPStateDatastore, DatastoreKey, datastoreKeyToCheckpoint} from "./datastore/index.js";
+import {CheckpointHex, CacheItemType, CheckpointStateCache} from "./types.js";
+
+export type PersistentCheckpointStateCacheOpts = {
+  // Keep max n states in memory, persist the rest to disk
+  maxCPStateEpochsInMemory?: number;
+};
 
 type GetHeadStateFn = () => CachedBeaconStateAllForks;
 
@@ -20,11 +26,7 @@ type PersistentCheckpointStateCacheModules = {
   shufflingCache: ShufflingCache;
   datastore: CPStateDatastore;
   getHeadState?: GetHeadStateFn;
-};
-
-type PersistentCheckpointStateCacheOpts = {
-  // Keep max n states in memory, persist the rest to disk
-  maxCPStateEpochsInMemory?: number;
+  bufferPool?: BufferPool;
 };
 
 /** checkpoint serialized as a string */
@@ -96,9 +98,18 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   private readonly datastore: CPStateDatastore;
   private readonly shufflingCache: ShufflingCache;
   private readonly getHeadState?: GetHeadStateFn;
+  private readonly bufferPool?: BufferPool;
 
   constructor(
-    {metrics, logger, clock, shufflingCache, datastore, getHeadState}: PersistentCheckpointStateCacheModules,
+    {
+      metrics,
+      logger,
+      clock,
+      shufflingCache,
+      datastore,
+      getHeadState,
+      bufferPool,
+    }: PersistentCheckpointStateCacheModules,
     opts: PersistentCheckpointStateCacheOpts
   ) {
     this.cache = new MapTracker(metrics?.cpStateCache);
@@ -135,6 +146,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     this.datastore = datastore;
     this.shufflingCache = shufflingCache;
     this.getHeadState = getHeadState;
+    this.bufferPool = bufferPool;
   }
 
   /**
@@ -177,13 +189,28 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     this.logger.debug("Reload: found seed state", {...logMeta, seedSlot: seedState.slot});
 
     try {
-      const timer = this.metrics?.stateReloadDuration.startTimer();
-      const newCachedState = loadCachedBeaconState(seedState, stateBytes, {
-        shufflingGetter: this.shufflingCache.getSync.bind(this.shufflingCache),
-      });
+      const validatorsSszTimer = this.metrics?.stateReloadValidatorsSszDuration.startTimer();
+      // 80% of validators serialization time comes from memory allocation, this is to avoid it
+      const seedValidatorsBytes = this.serializeStateValidators(seedState);
+      validatorsSszTimer?.();
+      const reloadTimer = this.metrics?.stateReloadDuration.startTimer();
+      const newCachedState = loadCachedBeaconState(
+        seedState,
+        stateBytes,
+        {
+          shufflingGetter: (shufflingEpoch, decisionRootHex) => {
+            const shuffling = this.shufflingCache.getSync(shufflingEpoch, decisionRootHex);
+            if (shuffling == null) {
+              this.metrics?.stateReloadShufflingCacheMiss.inc();
+            }
+            return shuffling;
+          },
+        },
+        seedValidatorsBytes
+      );
       newCachedState.commit();
       const stateRoot = toHexString(newCachedState.hashTreeRoot());
-      timer?.();
+      reloadTimer?.();
       this.logger.debug("Reload: cached state load successful", {
         ...logMeta,
         stateSlot: newCachedState.slot,
@@ -602,9 +629,65 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       rootHexes: Array.from(rootHexes).join(","),
     });
   }
+
+  /*
+   * It's not sustainable to allocate ~240MB for each state every epoch, so we use buffer pool to reuse the memory.
+   * As monitored on holesky as of Jan 2024:
+   *   - This does not increase heap allocation while gc time is the same
+   *   - It helps stabilize persist time and save ~300ms in average (1.5s vs 1.2s)
+   *   - It also helps the state reload to save ~500ms in average (4.3s vs 3.8s)
+   *   - Also `serializeState.test.ts` perf test shows a lot of differences allocating ~240MB once vs per state serialization
+   */
+  private serializeState(state: CachedBeaconStateAllForks): Uint8Array {
+    const size = state.type.tree_serializedSize(state.node);
+    if (this.bufferPool) {
+      const bufferWithKey = this.bufferPool.alloc(size);
+      if (bufferWithKey) {
+        try {
+          const stateBytes = bufferWithKey.buffer;
+          const dataView = new DataView(stateBytes.buffer, stateBytes.byteOffset, stateBytes.byteLength);
+          state.type.tree_serializeToBytes({uint8Array: stateBytes, dataView}, 0, state.node);
+          return stateBytes;
+        } finally {
+          this.bufferPool.free(bufferWithKey.key);
+        }
+      }
+    }
+
+    this.metrics?.persistedStateAllocCount.inc();
+    return state.serialize();
+  }
+
+  /**
+   * Serialize validators to bytes leveraging the buffer pool to save memory allocation.
+   *   - As monitored on holesky as of Jan 2024, it helps save ~500ms state reload time (4.3s vs 3.8s)
+   *   - Also `serializeState.test.ts` perf test shows a lot of differences allocating validators bytes once vs every time,
+   * This is 2x - 3x faster than allocating memory every time.
+   * TODO: consider serializing validators manually like in `serializeState.test.ts` perf test, this could be 3x faster than this
+   */
+  private serializeStateValidators(state: CachedBeaconStateAllForks): Uint8Array {
+    const type = state.type.fields.validators;
+    const size = type.tree_serializedSize(state.validators.node);
+    if (this.bufferPool) {
+      const bufferWithKey = this.bufferPool.alloc(size);
+      if (bufferWithKey) {
+        try {
+          const validatorsBytes = bufferWithKey.buffer;
+          const dataView = new DataView(validatorsBytes.buffer, validatorsBytes.byteOffset, validatorsBytes.byteLength);
+          type.tree_serializeToBytes({uint8Array: validatorsBytes, dataView}, 0, state.validators.node);
+          return validatorsBytes;
+        } finally {
+          this.bufferPool.free(bufferWithKey.key);
+        }
+      }
+    }
+
+    this.metrics?.stateReloadValidatorsSszAllocCount.inc();
+    return state.validators.serialize();
+  }
 }
 
-function toCheckpointHex(checkpoint: phase0.Checkpoint): CheckpointHex {
+export function toCheckpointHex(checkpoint: phase0.Checkpoint): CheckpointHex {
   return {
     epoch: checkpoint.epoch,
     rootHex: toHexString(checkpoint.root),

@@ -20,7 +20,8 @@ type MigrateStateOutput = {state: BeaconStateAllForks; modifiedValidators: numbe
 export function loadState(
   config: ChainForkConfig,
   seedState: BeaconStateAllForks,
-  stateBytes: Uint8Array
+  stateBytes: Uint8Array,
+  seedValidatorsBytes?: Uint8Array
 ): MigrateStateOutput {
   // casting only to make typescript happy
   const stateType = getStateTypeFromBytes(config, stateBytes) as typeof ssz.capella.BeaconState;
@@ -42,7 +43,8 @@ export function loadState(
   const modifiedValidators = loadValidators(
     migratedState,
     seedState,
-    stateBytes.subarray(validatorsRange.start, validatorsRange.end)
+    stateBytes.subarray(validatorsRange.start, validatorsRange.end),
+    seedValidatorsBytes
   );
 
   // inactivityScores are rarely changed
@@ -128,7 +130,7 @@ function loadInactivityScores(
 }
 
 /**
- * As of Sep 2021, common validators of 2 mainnet states are rarely changed. However, the benchmark shows that
+ * As of Sep 2023, common validators of 2 mainnet states are rarely changed. However, the benchmark shows that
  * 10k modified validators is not an issue. (see packages/state-transition/test/perf/util/loadState/findModifiedValidators.test.ts)
  *
  * This method loads validators from bytes given a seed state so that they share the same base tree. This gives some benefits:
@@ -159,7 +161,8 @@ function loadInactivityScores(
 function loadValidators(
   migratedState: BeaconStateAllForks,
   seedState: BeaconStateAllForks,
-  newValidatorsBytes: Uint8Array
+  newValidatorsBytes: Uint8Array,
+  seedStateValidatorsBytes?: Uint8Array
 ): number[] {
   const seedValidatorCount = seedState.validators.length;
   const newValidatorCount = Math.floor(newValidatorsBytes.length / VALIDATOR_BYTES_SIZE);
@@ -167,7 +170,9 @@ function loadValidators(
   const minValidatorCount = Math.min(seedValidatorCount, newValidatorCount);
   // migrated state starts with the same validators to seed state
   migratedState.validators = seedState.validators.clone();
-  const seedValidatorsBytes = seedState.validators.serialize();
+  // 80% of validators serialization time comes from memory allocation
+  // seedStateValidatorsBytes is an optimization at beacon-node side to avoid memory allocation here
+  const seedValidatorsBytes = seedStateValidatorsBytes ?? seedState.validators.serialize();
   const modifiedValidators: number[] = [];
   findModifiedValidators(
     isMoreValidator ? seedValidatorsBytes : seedValidatorsBytes.subarray(0, minValidatorCount * VALIDATOR_BYTES_SIZE),
