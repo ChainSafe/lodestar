@@ -1098,13 +1098,15 @@ export function createLodestarMetrics(
         name: "lodestar_cp_state_cache_adds_total",
         help: "Total number of items added in checkpoint state cache",
       }),
-      size: register.gauge({
+      size: register.gauge<"type">({
         name: "lodestar_cp_state_cache_size",
         help: "Checkpoint state cache size",
+        labelNames: ["type"],
       }),
-      epochSize: register.gauge({
+      epochSize: register.gauge<"type">({
         name: "lodestar_cp_state_epoch_size",
         help: "Checkpoint state cache size",
+        labelNames: ["type"],
       }),
       reads: register.avgMinMax({
         name: "lodestar_cp_state_epoch_reads",
