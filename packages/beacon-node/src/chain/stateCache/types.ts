@@ -66,3 +66,8 @@ export interface CheckpointStateCache {
   clear(): void;
   dumpSummary(): routes.lodestar.StateCacheItem[];
 }
+
+export enum CacheItemType {
+  persisted = "persisted",
+  inMemory = "in-memory",
+}

@@ -5,7 +5,7 @@ import {MapDef} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
 import {Metrics} from "../../metrics/index.js";
 import {MapTracker} from "./mapMetrics.js";
-import {CheckpointStateCache as CheckpointStateCacheInterface} from "./types.js";
+import {CheckpointStateCache as CheckpointStateCacheInterface, CacheItemType} from "./types.js";
 
 export type CheckpointHex = {epoch: Epoch; rootHex: RootHex};
 const MAX_EPOCHS = 10;
@@ -29,8 +29,12 @@ export class CheckpointStateCache implements CheckpointStateCacheInterface {
     this.cache = new MapTracker(metrics?.cpStateCache);
     if (metrics) {
       this.metrics = metrics.cpStateCache;
-      metrics.cpStateCache.size.addCollect(() => metrics.cpStateCache.size.set(this.cache.size));
-      metrics.cpStateCache.epochSize.addCollect(() => metrics.cpStateCache.epochSize.set(this.epochIndex.size));
+      metrics.cpStateCache.size.addCollect(() =>
+        metrics.cpStateCache.size.set({type: CacheItemType.inMemory}, this.cache.size)
+      );
+      metrics.cpStateCache.epochSize.addCollect(() =>
+        metrics.cpStateCache.epochSize.set({type: CacheItemType.inMemory}, this.epochIndex.size)
+      );
     }
   }
 

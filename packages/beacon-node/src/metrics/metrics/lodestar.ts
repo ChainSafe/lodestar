@@ -16,6 +16,7 @@ import {PeerSyncType, RangeSyncType} from "../../sync/utils/remoteSyncType.js";
 import {LodestarMetadata} from "../options.js";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
 import {OpSource} from "../validatorMonitor.js";
+import {CacheItemType} from "../../chain/stateCache/types.js";
 
 export type LodestarMetrics = ReturnType<typeof createLodestarMetrics>;
 
@@ -1098,12 +1099,12 @@ export function createLodestarMetrics(
         name: "lodestar_cp_state_cache_adds_total",
         help: "Total number of items added in checkpoint state cache",
       }),
-      size: register.gauge<"type">({
+      size: register.gauge<{type: CacheItemType}>({
         name: "lodestar_cp_state_cache_size",
         help: "Checkpoint state cache size",
         labelNames: ["type"],
       }),
-      epochSize: register.gauge<"type">({
+      epochSize: register.gauge<{type: CacheItemType}>({
         name: "lodestar_cp_state_epoch_size",
         help: "Checkpoint state cache size",
         labelNames: ["type"],

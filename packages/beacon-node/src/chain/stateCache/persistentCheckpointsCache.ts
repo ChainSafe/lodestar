@@ -8,7 +8,7 @@ import {Metrics} from "../../metrics/index.js";
 import {IClock} from "../../util/clock.js";
 import {ShufflingCache} from "../shufflingCache.js";
 import {MapTracker} from "./mapMetrics.js";
-import {CheckpointHex, CheckpointStateCache} from "./types.js";
+import {CheckpointHex, CheckpointStateCache, CacheItemType} from "./types.js";
 import {CPStateDatastore, DatastoreKey, datastoreKeyToCheckpoint} from "./datastore/index.js";
 
 type GetHeadStateFn = () => CachedBeaconStateAllForks;
@@ -29,11 +29,6 @@ type PersistentCheckpointStateCacheOpts = {
 
 /** checkpoint serialized as a string */
 type CacheKey = string;
-
-enum CacheItemType {
-  persisted = "persisted",
-  inMemory = "in-memory",
-}
 
 type InMemoryCacheItem = {
   type: CacheItemType.inMemory;
