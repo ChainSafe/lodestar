@@ -132,7 +132,6 @@ export class BeaconChain implements IBeaconChain {
   readonly seenGossipBlockInput = new SeenGossipBlockInput();
   // Seen cache for liveness checks
   readonly seenBlockAttesters = new SeenBlockAttesters();
-  readonly bufferPool: BufferPool;
 
   // Global state caches
   readonly pubkey2index: PubkeyIndexMap;
@@ -197,7 +196,6 @@ export class BeaconChain implements IBeaconChain {
     this.eth1 = eth1;
     this.executionEngine = executionEngine;
     this.executionBuilder = executionBuilder;
-    this.bufferPool = new BufferPool(anchorState.type.tree_serializedSize(anchorState.node), metrics);
     const signal = this.abortController.signal;
     const emitter = new ChainEventEmitter();
     // by default, verify signatures on both main threads and worker threads
@@ -255,7 +253,7 @@ export class BeaconChain implements IBeaconChain {
             clock,
             shufflingCache: this.shufflingCache,
             getHeadState: this.getHeadState.bind(this),
-            bufferPool: this.bufferPool,
+            bufferPool: new BufferPool(anchorState.type.tree_serializedSize(anchorState.node), metrics),
             datastore: new DbCPStateDatastore(this.db),
           },
           this.opts
