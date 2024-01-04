@@ -1,18 +1,21 @@
 import fs from "node:fs";
-import worker from 'node:worker_threads';
+import worker from "node:worker_threads";
 import {expose} from "@chainsafe/threads/worker";
 import {Transfer, TransferDescriptor} from "@chainsafe/threads";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {DecryptKeystoreArgs, DecryptKeystoreWorkerAPI, isLocalKeystoreDefinition} from "./types.js";
 
 /**
- * @param buffer The ArrayBuffer to be returned as transferable 
+ * @param buffer The ArrayBuffer to be returned as transferable
  * @returns a buffer that can be transferred. If the provided buffer is marked as untransferable, a copy is returned
  */
-function transferableArrayBuffer(buffer: ArrayBuffer) {
-  const unknown_worker = worker as any;
-  const isMarkedAsUntransferable = unknown_worker["isMarkedAsUntransferable"];
+function transferableArrayBuffer(buffer: ArrayBuffer): ArrayBuffer {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
+  const unknownWorker = worker as any;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
+  const isMarkedAsUntransferable = unknownWorker["isMarkedAsUntransferable"];
   // Can be updated to direct access once minimal version of node is 21
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-call
   if (isMarkedAsUntransferable && isMarkedAsUntransferable(buffer)) {
     // Return a copy of the buffer so that it can be transferred
     return buffer.slice(0);
