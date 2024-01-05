@@ -81,10 +81,6 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     return this.checkpointStateCache.getStateOrBytes(cp);
   }
 
-  async onProcessState(blockRootHex: RootHex, state: CachedBeaconStateAllForks): Promise<number> {
-    return this.checkpointStateCache.processState(blockRootHex, state);
-  }
-
   getCheckpointStateSync(cp: CheckpointHex): CachedBeaconStateAllForks | null {
     return this.checkpointStateCache.get(cp);
   }
@@ -103,8 +99,11 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     this.stateCache.deleteAllBeforeEpoch(finalizedEpoch);
   }
 
-  addPostState(postState: CachedBeaconStateAllForks): void {
+  processState(blockRootHex: RootHex, postState: CachedBeaconStateAllForks): void {
     this.stateCache.add(postState);
+    this.checkpointStateCache.processState(blockRootHex, postState).catch((e) => {
+      this.logger.debug("Error processing block state", {blockRootHex, slot: postState.slot}, e);
+    });
   }
 
   addCheckpointState(cp: phase0.Checkpoint, item: CachedBeaconStateAllForks): void {

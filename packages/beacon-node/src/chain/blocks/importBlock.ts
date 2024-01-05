@@ -88,7 +88,7 @@ export async function importBlock(
 
   // This adds the state necessary to process the next block
   // Some block event handlers require state being in state cache so need to do this before emitting EventType.block
-  this.regen.addPostState(postState);
+  this.regen.processState(blockRootHex, postState);
 
   this.metrics?.importBlock.bySource.inc({source});
   this.logger.verbose("Added block to forkchoice and state cache", {slot: blockSlot, root: blockRootHex});
@@ -114,20 +114,6 @@ export async function importBlock(
       }
     }
   }, 0);
-
-  const secFromSlot = this.clock.secFromSlot(blockSlot);
-  // 2/3 of slot is the most free time of every slot, take that chance to persist checkpoint states
-  // normally it should only persist checkpoint states at 2/3 of slot 0 of epoch
-  const secToTwoThirdsSlot = (2 * this.config.SECONDS_PER_SLOT) / INTERVALS_PER_SLOT - secFromSlot;
-  setTimeout(
-    async () => {
-      const persistCount = await this.regen.onProcessState(blockRootHex, postState);
-      if (persistCount > 0) {
-        this.logger.verbose("Persisted checkpoint states", {slot: blockSlot, root: blockRootHex, persistCount});
-      }
-    },
-    Math.max(0, secToTwoThirdsSlot * 1000)
-  );
 
   // 3. Import attestations to fork choice
   //

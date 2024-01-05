@@ -35,7 +35,7 @@ export type RegenModules = {
  * Regenerates states that have already been processed by the fork choice
  * Since Jan 2024, we support reloading checkpoint state from disk via shouldReload flag. Due to its performance impact
  * this flag is only used in this case:
- *    - getPreState: this is for block processing, this is imporant for long unfinalized chain
+ *    - getPreState: this is for block processing, this is important for long unfinalized chain
  *    - updateHeadState: rarely happen, but it's important to make sure we always can regen head state
  */
 export class StateRegenerator implements IStateRegeneratorInternal {
@@ -45,7 +45,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
    * Get the state to run with `block`. May be:
    * - If parent is in same epoch -> Exact state at `block.parentRoot`
    * - If parent is in prev epoch -> State after `block.parentRoot` dialed forward through epoch transition
-   * - It's imporant to reload state if needed in this flow
+   * - It's important to reload state if needed in this flow
    * TODO: refactor to getStateForBlockProcessing, this getPreState() api is used to regen state for processed block only
    */
   async getPreState(

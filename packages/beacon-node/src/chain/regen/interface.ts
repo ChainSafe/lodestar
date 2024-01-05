@@ -40,7 +40,7 @@ export interface IStateRegenerator extends IStateRegeneratorInternal {
   getClosestHeadState(head: ProtoBlock): CachedBeaconStateAllForks | null;
   pruneOnCheckpoint(finalizedEpoch: Epoch, justifiedEpoch: Epoch, headStateRoot: RootHex): void;
   pruneOnFinalized(finalizedEpoch: Epoch): void;
-  addPostState(postState: CachedBeaconStateAllForks): void;
+  processState(blockRootHex: RootHex, postState: CachedBeaconStateAllForks): void;
   addCheckpointState(cp: phase0.Checkpoint, item: CachedBeaconStateAllForks): void;
   updateHeadState(newHeadStateRoot: RootHex, maybeHeadState: CachedBeaconStateAllForks): void;
   updatePreComputedCheckpoint(rootHex: RootHex, epoch: Epoch): number | null;
