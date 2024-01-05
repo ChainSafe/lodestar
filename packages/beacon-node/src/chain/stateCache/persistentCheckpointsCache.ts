@@ -614,7 +614,8 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
             this.metrics?.statePersistSecFromSlot.observe(this.clock?.secFromSlot(this.clock?.currentSlot ?? 0) ?? 0);
             const timer = this.metrics?.statePersistDuration.startTimer();
             const cpPersist = {epoch: epoch, root: epochBoundaryRoot};
-            persistedKey = await this.datastore.write(cpPersist, state);
+            const stateBytes = this.serializeState(state);
+            persistedKey = await this.datastore.write(cpPersist, stateBytes);
             timer?.();
             persistCount++;
             this.logger.verbose("Pruned checkpoint state from memory and persisted to disk", {
