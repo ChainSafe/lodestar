@@ -36,6 +36,7 @@ export type IChainOptions = BlockProcessOpts &
     broadcastValidationStrictness?: string;
     minSameMessageSignatureSetsToBatch: number;
     nHistoricalStates?: boolean;
+    nHistoricalStatesFileDataStore?: boolean;
   };
 
 export type BlockProcessOpts = {
@@ -109,6 +110,7 @@ export const defaultChainOptions: IChainOptions = {
   // since this batch attestation work is designed to work with useWorker=true, make this the lowest value
   minSameMessageSignatureSetsToBatch: 2,
   nHistoricalStates: false,
+  nHistoricalStatesFileDataStore: false,
   maxBlockStates: DEFAULT_MAX_BLOCK_STATES,
   maxCPStateEpochsInMemory: DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY,
 };

@@ -85,6 +85,7 @@ import {InMemoryCheckpointStateCache} from "./stateCache/stateContextCheckpoints
 import {FIFOBlockStateCache} from "./stateCache/fifoBlockStateCache.js";
 import {PersistentCheckpointStateCache} from "./stateCache/persistentCheckpointsCache.js";
 import {CHECKPOINT_STATES_FOLDER, FileCPStateDatastore} from "./stateCache/datastore/file.js";
+import {DbCPStateDatastore} from "./stateCache/datastore/db.js";
 
 /**
  * Arbitrary constants, blobs and payloads should be consumed immediately in the same slot
@@ -242,6 +243,7 @@ export class BeaconChain implements IBeaconChain {
     this.pubkey2index = cachedState.epochCtx.pubkey2index;
     this.index2pubkey = cachedState.epochCtx.index2pubkey;
 
+    const fileDataStore = opts.nHistoricalStatesFileDataStore ?? false;
     const stateCache = this.opts.nHistoricalStates
       ? new FIFOBlockStateCache(this.opts, {metrics})
       : new StateContextCache({metrics});
@@ -254,9 +256,9 @@ export class BeaconChain implements IBeaconChain {
             shufflingCache: this.shufflingCache,
             getHeadState: this.getHeadState.bind(this),
             bufferPool: new BufferPool(anchorState.type.tree_serializedSize(anchorState.node), metrics),
-            // datastore: new DbCPStateDatastore(this.db),
-            // TODO: add new flag
-            datastore: new FileCPStateDatastore(CHECKPOINT_STATES_FOLDER),
+            datastore: fileDataStore
+              ? new FileCPStateDatastore(CHECKPOINT_STATES_FOLDER)
+              : new DbCPStateDatastore(this.db),
           },
           this.opts
         )

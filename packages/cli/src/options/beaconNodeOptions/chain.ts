@@ -27,6 +27,7 @@ export type ChainArgs = {
   "chain.minSameMessageSignatureSetsToBatch"?: number;
   "chain.maxShufflingCacheEpochs"?: number;
   "chain.nHistoricalStates"?: boolean;
+  "chain.nHistoricalStatesFileDataStore"?: boolean;
   "chain.maxBlockStates"?: number;
   "chain.maxCPStateEpochsInMemory"?: number;
 };
@@ -57,6 +58,8 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
       args["chain.minSameMessageSignatureSetsToBatch"] ?? defaultOptions.chain.minSameMessageSignatureSetsToBatch,
     maxShufflingCacheEpochs: args["chain.maxShufflingCacheEpochs"] ?? defaultOptions.chain.maxShufflingCacheEpochs,
     nHistoricalStates: args["chain.nHistoricalStates"] ?? defaultOptions.chain.nHistoricalStates,
+    nHistoricalStatesFileDataStore:
+      args["chain.nHistoricalStatesFileDataStore"] ?? defaultOptions.chain.nHistoricalStatesFileDataStore,
     maxBlockStates: args["chain.maxBlockStates"] ?? defaultOptions.chain.maxBlockStates,
     maxCPStateEpochsInMemory: args["chain.maxCPStateEpochsInMemory"] ?? defaultOptions.chain.maxCPStateEpochsInMemory,
   };
@@ -225,6 +228,14 @@ Will double processing times. Use only for debugging purposes.",
       "Use the new FIFOBlockStateCache and PersistentCheckpointStateCache or not which make lodestar heap size bounded instead of unbounded as before",
     type: "boolean",
     default: defaultOptions.chain.nHistoricalStates,
+    group: "chain",
+  },
+
+  "chain.nHistoricalStatesFileDataStore": {
+    hidden: true,
+    description: "Use fs to store checkpoint state for PersistentCheckpointStateCache or not",
+    type: "boolean",
+    default: defaultOptions.chain.nHistoricalStatesFileDataStore,
     group: "chain",
   },
 
