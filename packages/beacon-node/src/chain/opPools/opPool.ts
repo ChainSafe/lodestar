@@ -5,7 +5,6 @@ import {
   computeStartSlotAtEpoch,
   getAttesterSlashableIndices,
   isValidVoluntaryExit,
-  getWithdrawalCredentialFirstByteFromValidatorBytes,
 } from "@lodestar/state-transition";
 import {Repository, Id} from "@lodestar/db";
 import {
@@ -22,7 +21,6 @@ import {SignedBLSToExecutionChangeVersioned} from "../../util/types.js";
 import {BlockType} from "../interface.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {BlockProductionStep} from "../produceBlock/produceBlockBody.js";
-import {getValidatorsBytesFromStateBytes} from "../../util/sszBytes.js";
 import {isValidBlsToExecutionChangeForBlockInclusion} from "./utils.js";
 
 type HexRoot = string;
@@ -397,16 +395,6 @@ export class OpPool {
         if (validator.withdrawalCredentials[0] !== BLS_WITHDRAWAL_PREFIX) {
           this.blsToExecutionChanges.delete(key);
         }
-        withdrawalCredentialFirstByte = getWithdrawalCredentialFirstByteFromValidatorBytes(
-          validatorBytes,
-          validatorIndex
-        );
-      } else {
-        const validator = finalizedStateOrBytes.validators.getReadonly(validatorIndex);
-        withdrawalCredentialFirstByte = validator.withdrawalCredentials[0];
-      }
-      if (withdrawalCredentialFirstByte !== BLS_WITHDRAWAL_PREFIX) {
-        this.blsToExecutionChanges.delete(key);
       }
     }
   }

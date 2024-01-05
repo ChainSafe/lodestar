@@ -256,7 +256,7 @@ export class BeaconChain implements IBeaconChain {
             bufferPool: new BufferPool(anchorState.type.tree_serializedSize(anchorState.node), metrics),
             // datastore: new DbCPStateDatastore(this.db),
             // TODO: add new flag
-            datastore: new FileCPStateDatastore(CHECKPOINT_STATES_FOLDER)
+            datastore: new FileCPStateDatastore(CHECKPOINT_STATES_FOLDER),
           },
           this.opts
         )
