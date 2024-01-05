@@ -158,6 +158,9 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
    * Reload checkpoint state keys from the last run.
    */
   async init(): Promise<void> {
+    if (this.datastore?.init) {
+      await this.datastore.init();
+    }
     const persistedKeys = await this.datastore.readKeys();
     for (const persistedKey of persistedKeys) {
       const cp = datastoreKeyToCheckpoint(persistedKey);

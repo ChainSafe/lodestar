@@ -9,4 +9,5 @@ export interface CPStateDatastore {
   remove: (key: DatastoreKey) => Promise<void>;
   read: (key: DatastoreKey) => Promise<Uint8Array | null>;
   readKeys: () => Promise<DatastoreKey[]>;
+  init?: () => Promise<void>;
 }
