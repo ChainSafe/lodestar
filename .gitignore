@@ -77,3 +77,5 @@ packages/cli/.git-data.json
 dictionary.dic
 
 temp/
+
+checkpoint_states/

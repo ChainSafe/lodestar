@@ -5,6 +5,7 @@ import {ensureDir, readFile, readFileNames, removeFile, writeIfNotExist} from ".
 import {CPStateDatastore, DatastoreKey} from "./types.js";
 
 export const CHECKPOINT_STATES_FOLDER = "./checkpoint_states";
+const CHECKPOINT_FILE_NAME_LENGTH = 82;
 
 /**
  * Implementation of CPStatePersistentApis using file system, this is beneficial for debugging.
@@ -39,7 +40,8 @@ export class FileCPStateDatastore implements CPStateDatastore {
 
   async readKeys(): Promise<DatastoreKey[]> {
     const fileNames = await readFileNames(this.folderPath);
-    // TODO: filter file names with fixed size
-    return fileNames.map((fileName) => fromHexString(fileName));
+    return fileNames
+      .filter((fileName) => fileName.startsWith("0x") && fileName.length === CHECKPOINT_FILE_NAME_LENGTH)
+      .map((fileName) => fromHexString(fileName));
   }
 }

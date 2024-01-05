@@ -1,4 +1,5 @@
-import {describe, it, afterEach, expect} from "vitest";
+import fs from "node:fs";
+import {describe, it, afterEach, beforeEach, expect} from "vitest";
 import {Gauge, Histogram} from "prom-client";
 import {ChainConfig} from "@lodestar/config";
 import {Slot, phase0} from "@lodestar/types";
@@ -13,6 +14,7 @@ import {ChainEvent, ReorgEventData} from "../../../../src/chain/emitter.js";
 import {ReorgedForkChoice} from "../../../utils/mocks/forkchoice.js";
 import {connect} from "../../../utils/network.js";
 import {CacheItemType} from "../../../../src/chain/stateCache/types.js";
+import {CHECKPOINT_STATES_FOLDER} from "../../../../src/chain/stateCache/datastore/file.js";
 
 /**
  * Test different reorg scenarios to make sure the StateCache implementations are correct.
@@ -25,6 +27,10 @@ describe(
       // eslint-disable-next-line @typescript-eslint/naming-convention
       SECONDS_PER_SLOT: 2,
     };
+
+    beforeEach(async () => {
+      await fs.promises.rm(CHECKPOINT_STATES_FOLDER, {recursive: true, force: true});
+    });
 
     const afterEachCallbacks: (() => Promise<unknown> | void)[] = [];
     afterEach(async () => {
