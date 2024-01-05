@@ -88,7 +88,7 @@ describe("PersistentCheckpointStateCache", function () {
     const datastore = getTestDatastore(fileApisBuffer);
     cache = new PersistentCheckpointStateCache(
       {datastore, logger: testLogger(), shufflingCache: new ShufflingCache()},
-      {maxCPStateEpochsInMemory: 2}
+      {maxCPStateEpochsInMemory: 2, processLateBlock: true}
     );
     cache.add(cp0a, states["cp0a"]);
     cache.add(cp0b, states["cp0b"]);
@@ -156,7 +156,7 @@ describe("PersistentCheckpointStateCache", function () {
       const datastore = getTestDatastore(fileApisBuffer);
       cache = new PersistentCheckpointStateCache(
         {datastore, logger: testLogger(), shufflingCache: new ShufflingCache()},
-        {maxCPStateEpochsInMemory: 2}
+        {maxCPStateEpochsInMemory: 2, processLateBlock: true}
       );
       cache.add(cp0a, states["cp0a"]);
       cache.add(cp0b, states["cp0b"]);
@@ -228,7 +228,7 @@ describe("PersistentCheckpointStateCache", function () {
       const datastore = getTestDatastore(fileApisBuffer);
       cache = new PersistentCheckpointStateCache(
         {datastore, logger: testLogger(), shufflingCache: new ShufflingCache()},
-        {maxCPStateEpochsInMemory: 2}
+        {maxCPStateEpochsInMemory: 2, processLateBlock: true}
       );
       cache.add(cp0a, states["cp0a"]);
       cache.add(cp0b, states["cp0b"]);
@@ -527,7 +527,7 @@ describe("PersistentCheckpointStateCache", function () {
       const datastore = getTestDatastore(fileApisBuffer);
       cache = new PersistentCheckpointStateCache(
         {datastore, logger: testLogger(), shufflingCache: new ShufflingCache()},
-        {maxCPStateEpochsInMemory: 1}
+        {maxCPStateEpochsInMemory: 1, processLateBlock: true}
       );
       cache.add(cp0a, states["cp0a"]);
       cache.add(cp0b, states["cp0b"]);
@@ -792,7 +792,7 @@ describe("PersistentCheckpointStateCache", function () {
         const datastore = getTestDatastore(fileApisBuffer);
         cache = new PersistentCheckpointStateCache(
           {datastore, logger: testLogger(), shufflingCache: new ShufflingCache()},
-          {maxCPStateEpochsInMemory: 0}
+          {maxCPStateEpochsInMemory: 0, processLateBlock: true}
         );
         cache.add(cp0a, states["cp0a"]);
         cache.add(cp0b, states["cp0b"]);

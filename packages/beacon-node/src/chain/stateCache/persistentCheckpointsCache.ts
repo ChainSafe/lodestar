@@ -16,6 +16,8 @@ import {CheckpointHex, CacheItemType, CheckpointStateCache} from "./types.js";
 export type PersistentCheckpointStateCacheOpts = {
   // Keep max n states in memory, persist the rest to disk
   maxCPStateEpochsInMemory?: number;
+  // for test only
+  processLateBlock?: boolean;
 };
 
 type GetHeadStateFn = () => CachedBeaconStateAllForks;
@@ -98,6 +100,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   private preComputedCheckpoint: string | null = null;
   private preComputedCheckpointHits: number | null = null;
   private readonly maxEpochsInMemory: number;
+  private readonly processLateBlock: boolean;
   private readonly datastore: CPStateDatastore;
   private readonly shufflingCache: ShufflingCache;
   private readonly getHeadState?: GetHeadStateFn;
@@ -147,6 +150,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       throw new Error("maxEpochsInMemory must be >= 0");
     }
     this.maxEpochsInMemory = opts.maxCPStateEpochsInMemory ?? DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY;
+    this.processLateBlock = opts.processLateBlock ?? false;
     // Specify different datastore for testing
     this.datastore = datastore;
     this.shufflingCache = shufflingCache;
@@ -477,7 +481,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       // 2/3 of slot is the most free time of every slot, take that chance to persist checkpoint states
       // normally it should only persist checkpoint states at 2/3 of slot 0 of epoch
       await sleep(secToTwoThirdsSlot * 1000, this.signal);
-    } else {
+    } else if (!this.processLateBlock) {
       // normally the block persist happens at 2/3 of slot 0 of epoch, if it's already late then just skip to allow other tasks to run
       // there are plenty of chances in the same epoch to persist checkpoint states, also if block is late it could be reorged
       this.logger.verbose("Skip persist checkpoint states", {blockSlot, root: blockRootHex});
