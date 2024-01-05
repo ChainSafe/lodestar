@@ -200,10 +200,12 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     this.metrics?.stateReloadEpochDiff.observe(Math.abs(seedState.epochCtx.epoch - cp.epoch));
     this.logger.debug("Reload: found seed state", {...logMeta, seedSlot: seedState.slot});
 
+    let bufferPoolKey: number | undefined = undefined;
     try {
       const validatorsSszTimer = this.metrics?.stateReloadValidatorsSszDuration.startTimer();
       // 80% of validators serialization time comes from memory allocation, this is to avoid it
-      const seedValidatorsBytes = this.serializeStateValidators(seedState);
+      const bytesWithKey = this.serializeStateValidators(seedState);
+      bufferPoolKey = bytesWithKey.key;
       validatorsSszTimer?.();
       const reloadTimer = this.metrics?.stateReloadDuration.startTimer();
       const newCachedState = loadCachedBeaconState(
@@ -218,7 +220,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
             return shuffling;
           },
         },
-        seedValidatorsBytes
+        bytesWithKey.data
       );
       newCachedState.commit();
       const stateRoot = toHexString(newCachedState.hashTreeRoot());
@@ -239,6 +241,10 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     } catch (e) {
       this.logger.debug("Reload: error loading cached state", logMeta, e as Error);
       return null;
+    } finally {
+      if (bufferPoolKey !== undefined) {
+        this.bufferPool?.free(bufferPoolKey);
+      }
     }
   }
 
@@ -619,11 +625,19 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
           } else {
             // persist and do not update epochIndex
             this.metrics?.statePersistSecFromSlot.observe(this.clock?.secFromSlot(this.clock?.currentSlot ?? 0) ?? 0);
-            const timer = this.metrics?.statePersistDuration.startTimer();
             const cpPersist = {epoch: epoch, root: epochBoundaryRoot};
-            const stateBytes = this.serializeState(state);
-            persistedKey = await this.datastore.write(cpPersist, stateBytes);
-            timer?.();
+            let bufferPoolKey: number | undefined = undefined;
+            try {
+              const timer = this.metrics?.statePersistDuration.startTimer();
+              const stateBytesWithKey = this.serializeState(state);
+              bufferPoolKey = stateBytesWithKey.key;
+              persistedKey = await this.datastore.write(cpPersist, stateBytesWithKey.data);
+              timer?.();
+            } finally {
+              if (bufferPoolKey !== undefined) {
+                this.bufferPool?.free(bufferPoolKey);
+              }
+            }
             persistCount++;
             this.logger.verbose("Pruned checkpoint state from memory and persisted to disk", {
               ...logMeta,
@@ -688,24 +702,20 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
    *   - It also helps the state reload to save ~500ms in average (4.3s vs 3.8s)
    *   - Also `serializeState.test.ts` perf test shows a lot of differences allocating ~240MB once vs per state serialization
    */
-  private serializeState(state: CachedBeaconStateAllForks): Uint8Array {
+  private serializeState(state: CachedBeaconStateAllForks): {data: Uint8Array; key?: number} {
     const size = state.type.tree_serializedSize(state.node);
     if (this.bufferPool) {
       const bufferWithKey = this.bufferPool.alloc(size);
       if (bufferWithKey) {
-        try {
-          const stateBytes = bufferWithKey.buffer;
-          const dataView = new DataView(stateBytes.buffer, stateBytes.byteOffset, stateBytes.byteLength);
-          state.type.tree_serializeToBytes({uint8Array: stateBytes, dataView}, 0, state.node);
-          return stateBytes;
-        } finally {
-          this.bufferPool.free(bufferWithKey.key);
-        }
+        const stateBytes = bufferWithKey.buffer;
+        const dataView = new DataView(stateBytes.buffer, stateBytes.byteOffset, stateBytes.byteLength);
+        state.type.tree_serializeToBytes({uint8Array: stateBytes, dataView}, 0, state.node);
+        return {data: stateBytes, key: bufferWithKey.key};
       }
     }
 
     this.metrics?.persistedStateAllocCount.inc();
-    return state.serialize();
+    return {data: state.serialize()};
   }
 
   /**
@@ -715,25 +725,21 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
    * This is 2x - 3x faster than allocating memory every time.
    * TODO: consider serializing validators manually like in `serializeState.test.ts` perf test, this could be 3x faster than this
    */
-  private serializeStateValidators(state: CachedBeaconStateAllForks): Uint8Array {
+  private serializeStateValidators(state: CachedBeaconStateAllForks): {data: Uint8Array; key?: number} {
     const type = state.type.fields.validators;
     const size = type.tree_serializedSize(state.validators.node);
     if (this.bufferPool) {
       const bufferWithKey = this.bufferPool.alloc(size);
       if (bufferWithKey) {
-        try {
-          const validatorsBytes = bufferWithKey.buffer;
-          const dataView = new DataView(validatorsBytes.buffer, validatorsBytes.byteOffset, validatorsBytes.byteLength);
-          type.tree_serializeToBytes({uint8Array: validatorsBytes, dataView}, 0, state.validators.node);
-          return validatorsBytes;
-        } finally {
-          this.bufferPool.free(bufferWithKey.key);
-        }
+        const validatorsBytes = bufferWithKey.buffer;
+        const dataView = new DataView(validatorsBytes.buffer, validatorsBytes.byteOffset, validatorsBytes.byteLength);
+        type.tree_serializeToBytes({uint8Array: validatorsBytes, dataView}, 0, state.validators.node);
+        return {data: validatorsBytes, key: bufferWithKey.key};
       }
     }
 
     this.metrics?.stateReloadValidatorsSszAllocCount.inc();
-    return state.validators.serialize();
+    return {data: state.validators.serialize()};
   }
 }
 
