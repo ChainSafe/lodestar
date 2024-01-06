@@ -384,10 +384,9 @@ export class OpPool {
         ? (headBlock as capella.SignedBeaconBlock).message.body.blsToExecutionChanges
         : [];
 
-    const recentBlsToExecutionChangeIndexes = new Set<ValidatorIndex>();
-    for (const blsToExecutionChange of recentBlsToExecutionChanges) {
-      recentBlsToExecutionChangeIndexes.add(blsToExecutionChange.message.validatorIndex);
-    }
+    const recentBlsToExecutionChangeIndexes = new Set(
+      recentBlsToExecutionChanges.map((blsToExecutionChange) => blsToExecutionChange.message.validatorIndex)
+    );
 
     for (const [key, blsToExecutionChange] of this.blsToExecutionChanges.entries()) {
       const {validatorIndex} = blsToExecutionChange.data.message;
