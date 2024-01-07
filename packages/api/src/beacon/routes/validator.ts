@@ -54,9 +54,6 @@ export enum BuilderSelection {
 export type ExtraProduceBlockOps = {
   feeRecipient?: string;
   builderSelection?: BuilderSelection;
-  // precise value  isn't required because super high values will be treated as always builder prefered
-  // and hence UintNum64 is sufficient. If this param is present, builderSelection will be infered to
-  // be of maxprofit (unless explicity provided) with this %age boost factor applied to the builder values
   builderBoostFactor?: UintBn64;
   strictFeeRecipientCheck?: boolean;
   blindedLocal?: boolean;
