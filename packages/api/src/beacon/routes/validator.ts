@@ -52,10 +52,8 @@ export type ExtraProduceBlockOps = {
   blindedLocal?: boolean;
 };
 
-export type ProduceBlockMeta = {
+export type ProduceBlockV3Meta = {
   version: ForkName;
-};
-export type ProduceBlockV3Meta = ProduceBlockMeta & {
   executionPayloadBlinded: boolean;
   executionPayloadSource: ProducedBlockSource;
   executionPayloadValue: Wei;
@@ -314,7 +312,7 @@ export type Endpoints = {
       };
     },
     allForks.BeaconBlockOrContents,
-    ProduceBlockMeta
+    VersionMeta
   >;
 
   /**
@@ -358,7 +356,7 @@ export type Endpoints = {
     },
     {params: {slot: number}; query: {randao_reveal: string; graffiti: string}},
     allForks.BlindedBeaconBlock,
-    ProduceBlockMeta
+    VersionMeta
   >;
 
   /**
@@ -675,16 +673,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
         (fork) =>
           (isForkBlobs(fork) ? BlockContentsType : ssz[fork].BeaconBlock) as Type<allForks.BeaconBlockOrContents>
       ),
-      meta: {
-        toJson: (meta) => meta,
-        fromJson: (val) => val as ProduceBlockMeta,
-        toHeadersObject: (meta) => ({
-          "Eth-Consensus-Version": meta.version,
-        }),
-        fromHeaders: (headers) => ({
-          version: headers.get("Eth-Consensus-Version")! as ForkName,
-        }),
-      },
+      meta: VersionCodec,
     },
   },
   produceBlockV3: {
@@ -819,16 +808,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
     },
     resp: {
       data: WithVersion((fork) => ssz.allForksBlinded[isForkExecution(fork) ? fork : ForkName.bellatrix].BeaconBlock),
-      meta: {
-        toJson: (meta) => meta,
-        fromJson: (val) => val as ProduceBlockMeta,
-        toHeadersObject: (meta) => ({
-          "Eth-Consensus-Version": meta.version,
-        }),
-        fromHeaders: (headers) => ({
-          version: headers.get("Eth-Consensus-Version")! as ForkName,
-        }),
-      },
+      meta: VersionCodec,
     },
   },
   produceAttestationData: {
