@@ -18,7 +18,7 @@ import {
   stringType,
 } from "@lodestar/types";
 import {AnyPostEndpoint, Endpoint, ResponseCodec, RouteDefinitions, Schema} from "../../utils/index.js";
-import {fromGraffitiHex, toGraffitiHex} from "../../utils/serdes.js";
+import {fromGraffitiHex, toForkName, toGraffitiHex} from "../../utils/serdes.js";
 import {
   ArrayOf,
   EmptyMeta,
@@ -56,8 +56,8 @@ export type ProduceBlockMeta = {
   version: ForkName;
 };
 export type ProduceBlockV3Meta = ProduceBlockMeta & {
-  executionPayloadSource: ProducedBlockSource;
   executionPayloadBlinded: boolean;
+  executionPayloadSource: ProducedBlockSource;
   executionPayloadValue: Wei;
   consensusBlockValue: Gwei;
 };
@@ -745,22 +745,54 @@ export const definitions: RouteDefinitions<Endpoints> = {
             : ssz[version].BeaconBlock) as Type<allForks.FullOrBlindedBeaconBlockOrContents>
       ),
       meta: {
-        toJson: (meta) => meta,
-        fromJson: (val) => val as ProduceBlockV3Meta,
+        toJson: (meta) => ({
+          version: meta.version,
+          execution_payload_blinded: meta.executionPayloadBlinded,
+          execution_payload_source: meta.executionPayloadSource,
+          execution_payload_value: meta.executionPayloadValue,
+          consensus_block_value: meta.consensusBlockValue,
+        }),
+        fromJson: (val) => {
+          const executionPayloadBlinded = (val as {execution_payload_blinded: boolean}).execution_payload_blinded;
+
+          // extract source from the data and assign defaults in the spec complaint manner if not present in response
+          const executionPayloadSource =
+            (val as {execution_payload_source: ProducedBlockSource}).execution_payload_source ??
+            (executionPayloadBlinded === true ? ProducedBlockSource.builder : ProducedBlockSource.engine);
+
+          return {
+            version: toForkName((val as {version: string}).version),
+            executionPayloadBlinded,
+            executionPayloadSource,
+            // For cross client usage where beacon or validator are of separate clients, executionPayloadValue could be missing
+            executionPayloadValue: BigInt((val as {execution_payload_value: string}).execution_payload_value ?? "0"),
+            consensusBlockValue: BigInt((val as {consensus_block_value: string}).consensus_block_value ?? "0"),
+          };
+        },
         toHeadersObject: (meta) => ({
           "Eth-Consensus-Version": meta.version,
-          "Eth-Execution-Payload-Source": String(meta.executionPayloadSource),
           "Eth-Execution-Payload-Blinded": String(meta.executionPayloadBlinded),
+          "Eth-Execution-Payload-Source": String(meta.executionPayloadSource),
           "Eth-Execution-Payload-Value": String(meta.executionPayloadValue),
           "Eth-Consensus-Block-Value": String(meta.consensusBlockValue),
         }),
-        fromHeaders: (headers) => ({
-          version: headers.get("Eth-Consensus-Version")! as ForkName,
-          executionPayloadSource: headers.get("Eth-Execution-Payload-Source")! as ProducedBlockSource,
-          executionPayloadBlinded: Boolean(headers.get("Eth-Execution-Payload-Blinded")!),
-          executionPayloadValue: BigInt(headers.get("Eth-Execution-Payload-Value")!),
-          consensusBlockValue: BigInt(headers.get("Eth-Consensus-Block-Value")!),
-        }),
+        fromHeaders: (headers) => {
+          const executionPayloadBlinded = Boolean(headers.get("Eth-Execution-Payload-Blinded")!);
+
+          // extract source from the data and assign defaults in a spec complaint manner if not present in response
+          const executionPayloadSource =
+            (headers.get("Eth-Execution-Payload-Source") as ProducedBlockSource) ??
+            (executionPayloadBlinded === true ? ProducedBlockSource.builder : ProducedBlockSource.engine);
+
+          return {
+            version: toForkName(headers.get("Eth-Consensus-Version")!),
+            executionPayloadBlinded,
+            executionPayloadSource,
+            // For cross client usage where beacon or validator are of separate clients, executionPayloadValue could be missing
+            executionPayloadValue: BigInt(headers.get("Eth-Execution-Payload-Value") ?? "0"),
+            consensusBlockValue: BigInt(headers.get("Eth-Consensus-Block-Value") ?? "0"),
+          };
+        },
       },
     },
   },
