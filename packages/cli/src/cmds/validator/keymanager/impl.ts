@@ -390,7 +390,7 @@ export class KeymanagerApi implements Api {
     };
   }
 
-  async updateBuilderBoostFactor(pubkeyHex: string, builderBoostFactor: number): Promise<void> {
+  async updateBuilderBoostFactor(pubkeyHex: string, builderBoostFactor: bigint): Promise<void> {
     this.checkIfProposerWriteEnabled();
     this.validator.validatorStore.updateBuilderBoostFactor(pubkeyHex, builderBoostFactor);
     this.persistedKeysBackend.writeProposerConfig(

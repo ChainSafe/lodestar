@@ -69,7 +69,7 @@ type DefaultProposerConfig = {
   builder: {
     gasLimit: number;
     selection: routes.validator.BuilderSelection;
-    boostFactor: number;
+    boostFactor: bigint;
   };
 };
 
@@ -80,7 +80,7 @@ export type ProposerConfig = {
   builder?: {
     gasLimit?: number;
     selection?: routes.validator.BuilderSelection;
-    boostFactor?: number;
+    boostFactor?: bigint;
   };
 };
 
@@ -125,7 +125,7 @@ export const defaultOptions = {
   defaultGasLimit: 30_000_000,
   builderSelection: routes.validator.BuilderSelection.ExecutionOnly,
   builderAliasSelection: routes.validator.BuilderSelection.MaxProfit,
-  builderBoostFactor: 100,
+  builderBoostFactor: BigInt(100),
   // turn it off by default, turn it back on once other clients support v3 api
   useProduceBlockV3: false,
   // spec asks for gossip validation by default
@@ -134,7 +134,7 @@ export const defaultOptions = {
   blindedLocal: false,
 };
 
-const MAX_BUILDER_BOOST_FACTOR = 2 ** 64 - 1;
+const MAX_BUILDER_BOOST_FACTOR = BigInt(2 ** 64 - 1);
 
 /**
  * Service that sets up and handles validator attester duties.
@@ -258,7 +258,7 @@ export class ValidatorStore {
     delete validatorData["graffiti"];
   }
 
-  getBuilderSelectionParams(pubkeyHex: PubkeyHex): {selection: routes.validator.BuilderSelection; boostFactor: number} {
+  getBuilderSelectionParams(pubkeyHex: PubkeyHex): {selection: routes.validator.BuilderSelection; boostFactor: bigint} {
     const selection =
       (this.validators.get(pubkeyHex)?.builder || {}).selection ?? this.defaultProposerConfig.builder.selection;
 
@@ -275,7 +275,7 @@ export class ValidatorStore {
         break;
 
       case routes.validator.BuilderSelection.ExecutionOnly:
-        boostFactor = 0;
+        boostFactor = BigInt(0);
     }
 
     return {selection, boostFactor};
@@ -311,7 +311,7 @@ export class ValidatorStore {
     delete validatorData.builder?.gasLimit;
   }
 
-  updateBuilderBoostFactor(pubkeyHex: PubkeyHex, boostFactor: number): void {
+  updateBuilderBoostFactor(pubkeyHex: PubkeyHex, boostFactor: bigint): void {
     const validatorData = this.validators.get(pubkeyHex);
     if (validatorData === undefined) {
       throw Error(`Validator pubkey ${pubkeyHex} not known`);

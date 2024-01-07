@@ -61,7 +61,7 @@ describe("BlockDutiesService", function () {
     validatorStore.signBlock.callsFake(async (_, block) => ({message: block, signature: signedBlock.signature}));
     validatorStore.getBuilderSelectionParams.returns({
       selection: routes.validator.BuilderSelection.MaxProfit,
-      boostFactor: 100,
+      boostFactor: BigInt(100),
     });
     validatorStore.getGraffiti.returns("aaaa");
     validatorStore.getFeeRecipient.returns("0x00");
@@ -107,7 +107,7 @@ describe("BlockDutiesService", function () {
           builderSelection: routes.validator.BuilderSelection.MaxProfit,
           strictFeeRecipientCheck: false,
           blindedLocal: false,
-          builderBoostFactor: 100,
+          builderBoostFactor: BigInt(100),
         },
       ],
       "wrong produceBlockV3() args"

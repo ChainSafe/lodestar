@@ -249,7 +249,7 @@ export type Api = {
 
   updateBuilderBoostFactor(
     pubkey: string,
-    builderBoostFactor: number
+    builderBoostFactor: bigint
   ): Promise<
     ApiClientResponse<
       {[HttpStatusCode.OK]: void; [HttpStatusCode.NO_CONTENT]: void},
@@ -442,7 +442,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
         params: {pubkey},
         body: {builder_boost_factor: builderBoostFactor.toString(10)},
       }),
-      parseReq: ({params: {pubkey}, body: {builder_boost_factor}}) => [pubkey, parseBoostFactor(builder_boost_factor)],
+      parseReq: ({params: {pubkey}, body: {builder_boost_factor}}) => [pubkey, BigInt(builder_boost_factor)],
       schema: {
         params: {pubkey: Schema.StringRequired},
         body: Schema.Object,
@@ -493,19 +493,4 @@ function parseGasLimit(gasLimitInput: string | number): number {
     throw Error(`Gas Limit is not valid gasLimit=${gasLimit}`);
   }
   return gasLimit;
-}
-
-function parseBoostFactor(builderBoostFactorInput: string | number): number {
-  if (
-    (typeof builderBoostFactorInput !== "string" && typeof builderBoostFactorInput !== "number") ||
-    `${builderBoostFactorInput}`.trim() === ""
-  ) {
-    throw Error("Not valid Builder Boost Factor");
-  }
-
-  const builderBoostFactor = Number(builderBoostFactorInput);
-  if (Number.isNaN(builderBoostFactor)) {
-    throw Error(`Builder Boost Factor is not valid builderBoostFactor=${builderBoostFactor}`);
-  }
-  return builderBoostFactor;
 }
