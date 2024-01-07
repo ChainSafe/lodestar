@@ -134,7 +134,7 @@ export const defaultOptions = {
   blindedLocal: false,
 };
 
-const MAX_BUILDER_BOOST_FACTOR = BigInt(2 ** 64 - 1);
+export const MAX_BUILDER_BOOST_FACTOR = BigInt(2 ** 64 - 1);
 
 /**
  * Service that sets up and handles validator attester duties.
@@ -160,6 +160,11 @@ export class ValidatorStore {
     this.metrics = metrics;
 
     const defaultConfig = valProposerConfig.defaultConfig;
+    const builderBoostFactor = defaultConfig.builder?.boostFactor ?? defaultOptions.builderBoostFactor;
+    if (builderBoostFactor > MAX_BUILDER_BOOST_FACTOR) {
+      throw Error(`Invalid builderBoostFactor=${builderBoostFactor} > MAX_BUILDER_BOOST_FACTOR for defaultConfigc`);
+    }
+
     this.defaultProposerConfig = {
       graffiti: defaultConfig.graffiti ?? "",
       strictFeeRecipientCheck: defaultConfig.strictFeeRecipientCheck ?? false,
@@ -167,7 +172,7 @@ export class ValidatorStore {
       builder: {
         gasLimit: defaultConfig.builder?.gasLimit ?? defaultOptions.defaultGasLimit,
         selection: defaultConfig.builder?.selection ?? defaultOptions.builderSelection,
-        boostFactor: defaultConfig.builder?.boostFactor ?? defaultOptions.builderBoostFactor,
+        boostFactor: builderBoostFactor,
       },
     };
 
@@ -312,6 +317,10 @@ export class ValidatorStore {
   }
 
   updateBuilderBoostFactor(pubkeyHex: PubkeyHex, boostFactor: bigint): void {
+    if (boostFactor > MAX_BUILDER_BOOST_FACTOR) {
+      throw Error(`Invalid builderBoostFactor=${boostFactor} > MAX_BUILDER_BOOST_FACTOR`);
+    }
+
     const validatorData = this.validators.get(pubkeyHex);
     if (validatorData === undefined) {
       throw Error(`Validator pubkey ${pubkeyHex} not known`);
@@ -348,6 +357,10 @@ export class ValidatorStore {
   async addSigner(signer: Signer, valProposerConfig?: ValidatorProposerConfig): Promise<void> {
     const pubkey = getSignerPubkeyHex(signer);
     const proposerConfig = (valProposerConfig?.proposerConfig ?? {})[pubkey];
+    const builderBoostFactor = proposerConfig.builder?.boostFactor;
+    if (builderBoostFactor !== undefined && builderBoostFactor > MAX_BUILDER_BOOST_FACTOR) {
+      throw Error(`Invalid builderBoostFactor=${builderBoostFactor} > MAX_BUILDER_BOOST_FACTOR for pubkey=${pubkey}`);
+    }
 
     if (!this.validators.has(pubkey)) {
       // Doppelganger registration must be done before adding validator to signers

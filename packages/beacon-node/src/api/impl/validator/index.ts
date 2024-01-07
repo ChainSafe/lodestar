@@ -19,6 +19,7 @@ import {
   isForkExecution,
   ForkSeq,
 } from "@lodestar/params";
+import {MAX_BUILDER_BOOST_FACTOR} from "@lodestar/validator";
 import {
   Root,
   Slot,
@@ -445,10 +446,15 @@ export function getValidatorApi({
       // and the actual selection will be determined using builderBoostFactor passed by the validator
       builderSelection = builderSelection ?? routes.validator.BuilderSelection.MaxProfit;
       builderBoostFactor = builderBoostFactor ?? BigInt(100);
+      if (builderBoostFactor > MAX_BUILDER_BOOST_FACTOR) {
+        throw Error(`Invalid builderBoostFactor=${builderBoostFactor} > MAX_BUILDER_BOOST_FACTOR`);
+      }
+
       const isBuilderEnabled =
         ForkSeq[fork] >= ForkSeq.bellatrix &&
         chain.executionBuilder !== undefined &&
-        builderSelection !== routes.validator.BuilderSelection.ExecutionOnly;
+        builderSelection !== routes.validator.BuilderSelection.ExecutionOnly &&
+        builderBoostFactor !== BigInt(0);
 
       logger.verbose("Assembling block with produceEngineOrBuilderBlock ", {
         fork,
@@ -551,7 +557,10 @@ export function getValidatorApi({
       if (fullBlock && blindedBlock) {
         switch (builderSelection) {
           case routes.validator.BuilderSelection.MaxProfit: {
-            if (blockValueEngine >= (blockValueBuilder * builderBoostFactor) / BigInt(100)) {
+            if (
+              builderBoostFactor === MAX_BUILDER_BOOST_FACTOR ||
+              blockValueEngine >= (blockValueBuilder * builderBoostFactor) / BigInt(100)
+            ) {
               executionPayloadSource = ProducedBlockSource.engine;
             } else {
               executionPayloadSource = ProducedBlockSource.builder;
