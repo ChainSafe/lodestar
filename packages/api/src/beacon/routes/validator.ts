@@ -12,8 +12,6 @@ import {
   Slot,
   ssz,
   ValidatorIndex,
-  Wei,
-  Gwei,
   ProducedBlockSource,
   stringType,
 } from "@lodestar/types";
@@ -21,6 +19,7 @@ import {AnyPostEndpoint, Endpoint, ResponseCodec, RouteDefinitions, Schema} from
 import {fromGraffitiHex, toForkName, toGraffitiHex} from "../../utils/serdes.js";
 import {
   ArrayOf,
+  BlockValuesMeta,
   EmptyMeta,
   EmptyMetaCodec,
   EmptyResponseCodec,
@@ -31,6 +30,7 @@ import {
   ExecutionOptimisticMeta,
   VersionCodec,
   VersionMeta,
+  WithBlockValues,
   WithMeta,
   WithVersion,
 } from "../../utils/codecs.js";
@@ -52,12 +52,10 @@ export type ExtraProduceBlockOps = {
   blindedLocal?: boolean;
 };
 
-export type ProduceBlockV3Meta = {
-  version: ForkName;
+export type ProduceBlockMeta = VersionMeta & BlockValuesMeta;
+export type ProduceBlockV3Meta = ProduceBlockMeta & {
   executionPayloadBlinded: boolean;
   executionPayloadSource: ProducedBlockSource;
-  executionPayloadValue: Wei;
-  consensusBlockValue: Gwei;
 };
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
@@ -312,7 +310,7 @@ export type Endpoints = {
       };
     },
     allForks.BeaconBlockOrContents,
-    VersionMeta
+    ProduceBlockMeta
   >;
 
   /**
@@ -356,7 +354,7 @@ export type Endpoints = {
     },
     {params: {slot: number}; query: {randao_reveal: string; graffiti: string}},
     allForks.BlindedBeaconBlock,
-    VersionMeta
+    ProduceBlockMeta
   >;
 
   /**
@@ -673,7 +671,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
         (fork) =>
           (isForkBlobs(fork) ? BlockContentsType : ssz[fork].BeaconBlock) as Type<allForks.BeaconBlockOrContents>
       ),
-      meta: VersionCodec,
+      meta: WithBlockValues(VersionCodec),
     },
   },
   produceBlockV3: {
@@ -733,13 +731,11 @@ export const definitions: RouteDefinitions<Endpoints> = {
             ? BlockContentsType
             : ssz[version].BeaconBlock) as Type<allForks.FullOrBlindedBeaconBlockOrContents>
       ),
-      meta: {
+      meta: WithBlockValues({
         toJson: (meta) => ({
           version: meta.version,
           execution_payload_blinded: meta.executionPayloadBlinded,
           execution_payload_source: meta.executionPayloadSource,
-          execution_payload_value: meta.executionPayloadValue,
-          consensus_block_value: meta.consensusBlockValue,
         }),
         fromJson: (val) => {
           const executionPayloadBlinded = (val as {execution_payload_blinded: boolean}).execution_payload_blinded;
@@ -753,17 +749,12 @@ export const definitions: RouteDefinitions<Endpoints> = {
             version: toForkName((val as {version: string}).version),
             executionPayloadBlinded,
             executionPayloadSource,
-            // For cross client usage where beacon or validator are of separate clients, executionPayloadValue could be missing
-            executionPayloadValue: BigInt((val as {execution_payload_value: string}).execution_payload_value ?? "0"),
-            consensusBlockValue: BigInt((val as {consensus_block_value: string}).consensus_block_value ?? "0"),
           };
         },
         toHeadersObject: (meta) => ({
           "Eth-Consensus-Version": meta.version,
           "Eth-Execution-Payload-Blinded": String(meta.executionPayloadBlinded),
           "Eth-Execution-Payload-Source": String(meta.executionPayloadSource),
-          "Eth-Execution-Payload-Value": String(meta.executionPayloadValue),
-          "Eth-Consensus-Block-Value": String(meta.consensusBlockValue),
         }),
         fromHeaders: (headers) => {
           const executionPayloadBlinded = Boolean(headers.get("Eth-Execution-Payload-Blinded")!);
@@ -777,12 +768,9 @@ export const definitions: RouteDefinitions<Endpoints> = {
             version: toForkName(headers.get("Eth-Consensus-Version")!),
             executionPayloadBlinded,
             executionPayloadSource,
-            // For cross client usage where beacon or validator are of separate clients, executionPayloadValue could be missing
-            executionPayloadValue: BigInt(headers.get("Eth-Execution-Payload-Value") ?? "0"),
-            consensusBlockValue: BigInt(headers.get("Eth-Consensus-Block-Value") ?? "0"),
           };
         },
-      },
+      }),
     },
   },
   produceBlindedBlock: {
@@ -808,7 +796,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
     },
     resp: {
       data: WithVersion((fork) => ssz.allForksBlinded[isForkExecution(fork) ? fork : ForkName.bellatrix].BeaconBlock),
-      meta: VersionCodec,
+      meta: WithBlockValues(VersionCodec),
     },
   },
   produceAttestationData: {

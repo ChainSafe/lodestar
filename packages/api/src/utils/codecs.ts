@@ -2,7 +2,7 @@
 
 import {ArrayType, ListBasicType, ListCompositeType, Type, isBasicType, isCompositeType} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
-import {Root} from "@lodestar/types";
+import {Gwei, Root, Wei} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
 import {ExecutionOptimistic} from "../beacon/routes/beacon/block.js";
 import {
@@ -29,6 +29,7 @@ export type ExecutionOptimisticMeta = {executionOptimistic: ExecutionOptimistic}
 export type VersionMeta = {version: ForkName};
 export type ExecutionOptimisticAndVersionMeta = ExecutionOptimisticMeta & VersionMeta;
 export type ExecutionOptimisticAndDependentRootMeta = {executionOptimistic: ExecutionOptimistic; dependentRoot: Root};
+export type BlockValuesMeta = {executionPayloadValue: Wei; consensusBlockValue: Gwei};
 
 /** Shortcut for routes that have no params, query */
 export const EmptyGetRequestCodec: GetRequestCodec<AnyGetEndpoint> = {
@@ -155,6 +156,35 @@ export const ExecutionOptimisticAndDependentRootCodec: ResponseMetadataCodec<Exe
       dependentRoot: fromHex(val.get("Eth-Consensus-Dependent-Root")!),
     }),
   };
+
+export function WithBlockValues<M extends Record<string, unknown>>(
+  meta: ResponseMetadataCodec<Omit<M, keyof BlockValuesMeta>>
+): ResponseMetadataCodec<M & BlockValuesMeta> {
+  return {
+    toJson: (val) => ({
+      ...(meta.toJson(val) as Record<string, unknown>),
+      execution_payload_value: val.executionPayloadValue.toString(),
+      consensus_block_value: val.consensusBlockValue.toString(),
+    }),
+    fromJson: (val) => ({
+      ...(meta.fromJson(val) as M),
+      // For cross client usage where beacon or validator are of separate clients, executionPayloadValue could be missing
+      executionPayloadValue: BigInt((val as {execution_payload_value: string}).execution_payload_value ?? "0"),
+      consensusBlockValue: BigInt((val as {consensus_block_value: string}).consensus_block_value ?? "0"),
+    }),
+    toHeadersObject: (val) => ({
+      ...meta.toHeadersObject(val),
+      "Eth-Execution-Payload-Value": val.executionPayloadValue.toString(),
+      "Eth-Consensus-Block-Value": val.consensusBlockValue.toString(),
+    }),
+    fromHeaders: (val) => ({
+      ...(meta.fromHeaders(val) as M),
+      // For cross client usage where beacon or validator are of separate clients, executionPayloadValue could be missing
+      executionPayloadValue: BigInt(val.get("Eth-Execution-Payload-Value") ?? "0"),
+      consensusBlockValue: BigInt(val.get("Eth-Consensus-Block-Value") ?? "0"),
+    }),
+  };
+}
 
 export const EmptyResponseCodec: ResponseCodec<AnyEndpoint> = {
   data: EmptyResponseDataCodec,
