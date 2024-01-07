@@ -5,8 +5,18 @@ import {ForkName} from "@lodestar/params";
 import {Root} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
 import {ExecutionOptimistic} from "../beacon/routes/beacon/block.js";
-import {AnyEndpoint, AnyGetEndpoint, AnyPostEndpoint, GetRequestCodec, PostRequestCodec, ResponseCodec, ResponseDataCodec, ResponseMetadataCodec} from "./types.js";
-import { WireFormat } from "./headers.js";
+import {
+  AnyEndpoint,
+  AnyGetEndpoint,
+  AnyPostEndpoint,
+  GetRequestCodec,
+  PostRequestCodec,
+  ResponseCodec,
+  ResponseDataCodec,
+  ResponseMetadataCodec,
+} from "./types.js";
+import {WireFormat} from "./headers.js";
+import {toForkName} from "./serdes.js";
 
 // Utility types / codecs
 
@@ -80,8 +90,12 @@ export function WithVersion<T, M extends {version: ForkName}>(
 }
 
 export const ExecutionOptimisticCodec: ResponseMetadataCodec<ExecutionOptimisticMeta> = {
-  toJson: (val) => val,
-  fromJson: (val) => val as ExecutionOptimisticAndVersionMeta,
+  toJson: ({executionOptimistic}) => ({
+    execution_optimistic: executionOptimistic,
+  }),
+  fromJson: (val) => ({
+    executionOptimistic: (val as {execution_optimistic: boolean}).execution_optimistic,
+  }),
   toHeadersObject: (val) => ({
     "Eth-Execution-Optimistic": String(val.executionOptimistic),
   }),
@@ -92,36 +106,46 @@ export const ExecutionOptimisticCodec: ResponseMetadataCodec<ExecutionOptimistic
 
 export const VersionCodec: ResponseMetadataCodec<VersionMeta> = {
   toJson: (val) => val,
-  fromJson: (val) => val as VersionMeta,
+  fromJson: (val) => ({
+    version: toForkName((val as {version: string}).version),
+  }),
   toHeadersObject: (val) => ({
     "Eth-Consensus-Version": val.version,
   }),
   fromHeaders: (val) => ({
-    version: val.get("Eth-Consensus-Version")!.toLowerCase() as ForkName,
+    version: toForkName(val.get("Eth-Consensus-Version")!),
   }),
 };
 
 export const ExecutionOptimisticAndVersionCodec: ResponseMetadataCodec<ExecutionOptimisticAndVersionMeta> = {
-  toJson: (val) => val,
-  fromJson: (val) => val as ExecutionOptimisticAndVersionMeta,
+  toJson: ({executionOptimistic, version}) => ({
+    execution_optimistic: executionOptimistic,
+    version,
+  }),
+  fromJson: (val) => ({
+    executionOptimistic: (val as {execution_optimistic: boolean}).execution_optimistic,
+    version: toForkName((val as {version: string}).version),
+  }),
   toHeadersObject: (val) => ({
     "Eth-Execution-Optimistic": String(val.executionOptimistic),
     "Eth-Consensus-Version": val.version,
   }),
   fromHeaders: (val) => ({
     executionOptimistic: Boolean(val.get("Eth-Execution-Optimistic")),
-    version: val.get("Eth-Consensus-Version")!.toLowerCase() as ForkName,
+    version: toForkName(val.get("Eth-Consensus-Version")!),
   }),
 };
 
 export const ExecutionOptimisticAndDependentRootCodec: ResponseMetadataCodec<ExecutionOptimisticAndDependentRootMeta> =
   {
-    toJson: ({executionOptimistic, dependentRoot}) => ({executionOptimistic, dependentRoot: toHex(dependentRoot)}),
-    fromJson: (val) =>
-      ({
-        executionOptimistic: (val as any).executionOptimistic as boolean,
-        dependentRoot: fromHex((val as any).dependentRoot),
-      }) as ExecutionOptimisticAndDependentRootMeta,
+    toJson: ({executionOptimistic, dependentRoot}) => ({
+      execution_optimistic: executionOptimistic,
+      dependent_root: toHex(dependentRoot),
+    }),
+    fromJson: (val) => ({
+      executionOptimistic: (val as {execution_optimistic: boolean}).execution_optimistic,
+      dependentRoot: fromHex((val as {dependent_root: string}).dependent_root),
+    }),
     toHeadersObject: (val) => ({
       "Eth-Execution-Optimistic": String(val.executionOptimistic),
       "Eth-Consensus-Dependent-Root": toHex(val.dependentRoot),
