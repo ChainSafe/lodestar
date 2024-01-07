@@ -357,7 +357,7 @@ export class ValidatorStore {
   async addSigner(signer: Signer, valProposerConfig?: ValidatorProposerConfig): Promise<void> {
     const pubkey = getSignerPubkeyHex(signer);
     const proposerConfig = (valProposerConfig?.proposerConfig ?? {})[pubkey];
-    const builderBoostFactor = proposerConfig.builder?.boostFactor;
+    const builderBoostFactor = proposerConfig?.builder?.boostFactor;
     if (builderBoostFactor !== undefined && builderBoostFactor > MAX_BUILDER_BOOST_FACTOR) {
       throw Error(`Invalid builderBoostFactor=${builderBoostFactor} > MAX_BUILDER_BOOST_FACTOR for pubkey=${pubkey}`);
     }
