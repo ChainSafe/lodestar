@@ -250,7 +250,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
   "builder.boostFactor": {
     type: "number",
     description:
-      "A factor in percentage requested to block producing beacon to boost (>100) or dampen(<100) builder block value for selection against engine, is overriden when `--builder.selection` set to anything other than `maxprofit`",
+      "Percentage multiplier the block producing beacon node must apply to boost (>100) or dampen (<100) builder block value for selection against execution block. The multiplier is ignored if `--builder.selection` is set to anything other than `maxprofit`",
     defaultDescription: `${defaultOptions.builderBoostFactor}`,
     group: "builder",
   },
