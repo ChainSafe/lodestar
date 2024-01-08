@@ -162,7 +162,7 @@ export class ValidatorStore {
     const defaultConfig = valProposerConfig.defaultConfig;
     const builderBoostFactor = defaultConfig.builder?.boostFactor ?? defaultOptions.builderBoostFactor;
     if (builderBoostFactor > MAX_BUILDER_BOOST_FACTOR) {
-      throw Error(`Invalid builderBoostFactor=${builderBoostFactor} > MAX_BUILDER_BOOST_FACTOR for defaultConfigc`);
+      throw Error(`Invalid builderBoostFactor=${builderBoostFactor} > MAX_BUILDER_BOOST_FACTOR for defaultConfig`);
     }
 
     this.defaultProposerConfig = {
