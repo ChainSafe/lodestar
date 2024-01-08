@@ -447,14 +447,13 @@ export function getValidatorApi({
       builderSelection = builderSelection ?? routes.validator.BuilderSelection.MaxProfit;
       builderBoostFactor = builderBoostFactor ?? BigInt(100);
       if (builderBoostFactor > MAX_BUILDER_BOOST_FACTOR) {
-        throw Error(`Invalid builderBoostFactor=${builderBoostFactor} > MAX_BUILDER_BOOST_FACTOR`);
+        throw new ApiError(400, `Invalid builderBoostFactor=${builderBoostFactor} > MAX_BUILDER_BOOST_FACTOR`);
       }
 
       const isBuilderEnabled =
         ForkSeq[fork] >= ForkSeq.bellatrix &&
         chain.executionBuilder !== undefined &&
-        builderSelection !== routes.validator.BuilderSelection.ExecutionOnly &&
-        builderBoostFactor !== BigInt(0);
+        builderSelection !== routes.validator.BuilderSelection.ExecutionOnly;
 
       logger.verbose("Assembling block with produceEngineOrBuilderBlock ", {
         fork,
