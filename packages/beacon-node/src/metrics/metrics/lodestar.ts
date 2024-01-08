@@ -1300,7 +1300,7 @@ export function createLodestarMetrics(
       }),
       duration: register.histogram({
         name: "lodestar_precompute_next_epoch_transition_duration_seconds",
-        help: "Duration of precomputeNextEpochTransition at lodestar side",
+        help: "Duration of precomputeNextEpochTransition, including epoch transition and hashTreeRoot",
         buckets: [1, 2, 3, 4, 8],
       }),
     },
