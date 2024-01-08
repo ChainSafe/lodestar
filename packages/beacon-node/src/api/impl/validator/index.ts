@@ -561,12 +561,6 @@ export function getValidatorApi({
 
       // handle the builder override case separately
       if (shouldOverrideBuilder === true) {
-        // this is just to make typescript happy as shouldOverrideBuilder can be true only will valid
-        // full block response
-        if (fullBlock === null) {
-          throw Error("Invalid null fullBlock with builder override");
-        }
-
         executionPayloadSource = ProducedBlockSource.engine;
         logger.verbose("Selected engine block as censorship suspected in builder blocks", {
           // winston logger doesn't like bigint
