@@ -557,7 +557,7 @@ export function getValidatorApi({
         switch (builderSelection) {
           case routes.validator.BuilderSelection.MaxProfit: {
             if (
-              // explicitly handle the two special values mentioned in spec for builder preferred/ engine preffered
+              // explicitly handle the two special values mentioned in spec for builder preferred / engine preferred
               builderBoostFactor !== MAX_BUILDER_BOOST_FACTOR &&
               (builderBoostFactor === BigInt(0) ||
                 blockValueEngine >= (blockValueBuilder * builderBoostFactor) / BigInt(100))
