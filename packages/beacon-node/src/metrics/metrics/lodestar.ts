@@ -1298,6 +1298,11 @@ export function createLodestarMetrics(
         name: "lodestar_precompute_next_epoch_transition_waste_total",
         help: "Total number of precomputing next epoch transition wasted",
       }),
+      duration: register.histogram({
+        name: "lodestar_precompute_next_epoch_transition_duration_seconds",
+        help: "Duration of precomputeNextEpochTransition, including epoch transition and hashTreeRoot",
+        buckets: [1, 2, 3, 4, 8],
+      }),
     },
 
     // reprocess attestations
