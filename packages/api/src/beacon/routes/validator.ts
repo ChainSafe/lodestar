@@ -13,6 +13,7 @@ import {
   Slot,
   ssz,
   UintNum64,
+  UintBn64,
   ValidatorIndex,
   RootHex,
   StringType,
@@ -53,6 +54,7 @@ export enum BuilderSelection {
 export type ExtraProduceBlockOps = {
   feeRecipient?: string;
   builderSelection?: BuilderSelection;
+  builderBoostFactor?: UintBn64;
   strictFeeRecipientCheck?: boolean;
   blindedLocal?: boolean;
 };
@@ -487,6 +489,7 @@ export type ReqTypes = {
       skip_randao_verification?: boolean;
       fee_recipient?: string;
       builder_selection?: string;
+      builder_boost_factor?: string;
       strict_fee_recipient_check?: boolean;
       blinded_local?: boolean;
     };
@@ -555,6 +558,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
         fee_recipient: opts?.feeRecipient,
         skip_randao_verification: skipRandaoVerification,
         builder_selection: opts?.builderSelection,
+        builder_boost_factor: opts?.builderBoostFactor?.toString(),
         strict_fee_recipient_check: opts?.strictFeeRecipientCheck,
         blinded_local: opts?.blindedLocal,
       },
@@ -567,6 +571,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       {
         feeRecipient: query.fee_recipient,
         builderSelection: query.builder_selection as BuilderSelection,
+        builderBoostFactor: parseBuilderBoostFactor(query.builder_boost_factor),
         strictFeeRecipientCheck: query.strict_fee_recipient_check,
         blindedLocal: query.blinded_local,
       },
@@ -579,6 +584,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
         fee_recipient: Schema.String,
         skip_randao_verification: Schema.Boolean,
         builder_selection: Schema.String,
+        builder_boost_factor: Schema.String,
         strict_fee_recipient_check: Schema.Boolean,
         blinded_local: Schema.Boolean,
       },
@@ -784,4 +790,8 @@ export function getReturnTypes(): ReturnTypes<Api> {
     submitSyncCommitteeSelections: ContainerData(ArrayOf(SyncCommitteeSelection)),
     getLiveness: jsonType("snake"),
   };
+}
+
+function parseBuilderBoostFactor(builderBoostFactorInput?: string | number | bigint): bigint | undefined {
+  return builderBoostFactorInput !== undefined ? BigInt(builderBoostFactorInput) : undefined;
 }

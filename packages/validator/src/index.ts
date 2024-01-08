@@ -1,5 +1,5 @@
 export {Validator, type ValidatorOptions} from "./validator.js";
-export {ValidatorStore, SignerType, defaultOptions} from "./services/validatorStore.js";
+export {ValidatorStore, SignerType, defaultOptions, MAX_BUILDER_BOOST_FACTOR} from "./services/validatorStore.js";
 export type {
   Signer,
   SignerLocal,

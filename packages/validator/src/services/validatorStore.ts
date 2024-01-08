@@ -69,6 +69,7 @@ type DefaultProposerConfig = {
   builder: {
     gasLimit: number;
     selection: routes.validator.BuilderSelection;
+    boostFactor: bigint;
   };
 };
 
@@ -79,6 +80,7 @@ export type ProposerConfig = {
   builder?: {
     gasLimit?: number;
     selection?: routes.validator.BuilderSelection;
+    boostFactor?: bigint;
   };
 };
 
@@ -123,6 +125,7 @@ export const defaultOptions = {
   defaultGasLimit: 30_000_000,
   builderSelection: routes.validator.BuilderSelection.ExecutionOnly,
   builderAliasSelection: routes.validator.BuilderSelection.MaxProfit,
+  builderBoostFactor: BigInt(100),
   // turn it off by default, turn it back on once other clients support v3 api
   useProduceBlockV3: false,
   // spec asks for gossip validation by default
@@ -130,6 +133,8 @@ export const defaultOptions = {
   // should request fetching the locally produced block in blinded format
   blindedLocal: false,
 };
+
+export const MAX_BUILDER_BOOST_FACTOR = BigInt(2 ** 64 - 1);
 
 /**
  * Service that sets up and handles validator attester duties.
@@ -155,6 +160,11 @@ export class ValidatorStore {
     this.metrics = metrics;
 
     const defaultConfig = valProposerConfig.defaultConfig;
+    const builderBoostFactor = defaultConfig.builder?.boostFactor ?? defaultOptions.builderBoostFactor;
+    if (builderBoostFactor > MAX_BUILDER_BOOST_FACTOR) {
+      throw Error(`Invalid builderBoostFactor=${builderBoostFactor} > MAX_BUILDER_BOOST_FACTOR for defaultConfig`);
+    }
+
     this.defaultProposerConfig = {
       graffiti: defaultConfig.graffiti ?? "",
       strictFeeRecipientCheck: defaultConfig.strictFeeRecipientCheck ?? false,
@@ -162,6 +172,7 @@ export class ValidatorStore {
       builder: {
         gasLimit: defaultConfig.builder?.gasLimit ?? defaultOptions.defaultGasLimit,
         selection: defaultConfig.builder?.selection ?? defaultOptions.builderSelection,
+        boostFactor: builderBoostFactor,
       },
     };
 
@@ -252,8 +263,27 @@ export class ValidatorStore {
     delete validatorData["graffiti"];
   }
 
-  getBuilderSelection(pubkeyHex: PubkeyHex): routes.validator.BuilderSelection {
-    return (this.validators.get(pubkeyHex)?.builder || {}).selection ?? this.defaultProposerConfig.builder.selection;
+  getBuilderSelectionParams(pubkeyHex: PubkeyHex): {selection: routes.validator.BuilderSelection; boostFactor: bigint} {
+    const selection =
+      (this.validators.get(pubkeyHex)?.builder || {}).selection ?? this.defaultProposerConfig.builder.selection;
+
+    let boostFactor;
+    switch (selection) {
+      case routes.validator.BuilderSelection.MaxProfit:
+        boostFactor =
+          (this.validators.get(pubkeyHex)?.builder || {}).boostFactor ?? this.defaultProposerConfig.builder.boostFactor;
+        break;
+
+      case routes.validator.BuilderSelection.BuilderAlways:
+      case routes.validator.BuilderSelection.BuilderOnly:
+        boostFactor = MAX_BUILDER_BOOST_FACTOR;
+        break;
+
+      case routes.validator.BuilderSelection.ExecutionOnly:
+        boostFactor = BigInt(0);
+    }
+
+    return {selection, boostFactor};
   }
 
   strictFeeRecipientCheck(pubkeyHex: PubkeyHex): boolean {
@@ -286,6 +316,34 @@ export class ValidatorStore {
     delete validatorData.builder?.gasLimit;
   }
 
+  getBuilderBoostFactor(pubkeyHex: PubkeyHex): bigint {
+    const validatorData = this.validators.get(pubkeyHex);
+    if (validatorData === undefined) {
+      throw Error(`Validator pubkey ${pubkeyHex} not known`);
+    }
+    return validatorData?.builder?.boostFactor ?? this.defaultProposerConfig.builder.boostFactor;
+  }
+
+  setBuilderBoostFactor(pubkeyHex: PubkeyHex, boostFactor: bigint): void {
+    if (boostFactor > MAX_BUILDER_BOOST_FACTOR) {
+      throw Error(`Invalid builderBoostFactor=${boostFactor} > MAX_BUILDER_BOOST_FACTOR`);
+    }
+
+    const validatorData = this.validators.get(pubkeyHex);
+    if (validatorData === undefined) {
+      throw Error(`Validator pubkey ${pubkeyHex} not known`);
+    }
+    validatorData.builder = {...validatorData.builder, boostFactor};
+  }
+
+  deleteBuilderBoostFactor(pubkeyHex: PubkeyHex): void {
+    const validatorData = this.validators.get(pubkeyHex);
+    if (validatorData === undefined) {
+      throw Error(`Validator pubkey ${pubkeyHex} not known`);
+    }
+    delete validatorData.builder?.boostFactor;
+  }
+
   /** Return true if `index` is active part of this validator client */
   hasValidatorIndex(index: ValidatorIndex): boolean {
     return this.indicesService.index2pubkey.has(index);
@@ -315,6 +373,10 @@ export class ValidatorStore {
   async addSigner(signer: Signer, valProposerConfig?: ValidatorProposerConfig): Promise<void> {
     const pubkey = getSignerPubkeyHex(signer);
     const proposerConfig = (valProposerConfig?.proposerConfig ?? {})[pubkey];
+    const builderBoostFactor = proposerConfig?.builder?.boostFactor;
+    if (builderBoostFactor !== undefined && builderBoostFactor > MAX_BUILDER_BOOST_FACTOR) {
+      throw Error(`Invalid builderBoostFactor=${builderBoostFactor} > MAX_BUILDER_BOOST_FACTOR for pubkey=${pubkey}`);
+    }
 
     if (!this.validators.has(pubkey)) {
       // Doppelganger registration must be done before adding validator to signers
