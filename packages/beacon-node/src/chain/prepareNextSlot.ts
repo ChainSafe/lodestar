@@ -97,6 +97,9 @@ export class PrepareNextSlotScheduler {
         headRoot,
         isEpochTransition,
       });
+      const lodestarPrecomputeEpochTransitionTimer = isEpochTransition
+        ? this.metrics?.precomputeNextEpochTransition.duration.startTimer()
+        : null;
       // No need to wait for this or the clock drift
       // Pre Bellatrix: we only do precompute state transition for the last slot of epoch
       // For Bellatrix, we always do the `processSlots()` to prepare payload for the next slot
@@ -133,6 +136,8 @@ export class PrepareNextSlotScheduler {
           prepareSlot,
           previousHits,
         });
+
+        lodestarPrecomputeEpochTransitionTimer?.();
       }
 
       if (isExecutionStateType(prepareState)) {
