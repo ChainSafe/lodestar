@@ -72,6 +72,10 @@ export type GasLimitData = {
   pubkey: string;
   gasLimit: number;
 };
+export type BuilderBoostFactorData = {
+  pubkey: string;
+  builderBoostFactor: bigint;
+};
 
 export type SignerDefinition = {
   pubkey: PubkeyHex;
@@ -247,9 +251,20 @@ export type Api = {
     >
   >;
 
-  updateBuilderBoostFactor(
+  getBuilderBoostFactor(
+    pubkey: string
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: BuilderBoostFactorData}}>>;
+  setBuilderBoostFactor(
     pubkey: string,
     builderBoostFactor: bigint
+  ): Promise<
+    ApiClientResponse<
+      {[HttpStatusCode.OK]: void; [HttpStatusCode.NO_CONTENT]: void},
+      HttpStatusCode.UNAUTHORIZED | HttpStatusCode.FORBIDDEN | HttpStatusCode.NOT_FOUND
+    >
+  >;
+  deleteBuilderBoostFactor(
+    pubkey: string
   ): Promise<
     ApiClientResponse<
       {[HttpStatusCode.OK]: void; [HttpStatusCode.NO_CONTENT]: void},
@@ -300,7 +315,9 @@ export const routesData: RoutesData<Api> = {
   setGasLimit: {url: "/eth/v1/validator/{pubkey}/gas_limit", method: "POST", statusOk: 202},
   deleteGasLimit: {url: "/eth/v1/validator/{pubkey}/gas_limit", method: "DELETE", statusOk: 204},
 
-  updateBuilderBoostFactor: {url: "/eth/v1/validator/{pubkey}/builder_boost_factor", method: "POST", statusOk: 202},
+  getBuilderBoostFactor: {url: "/eth/v1/validator/{pubkey}/builder_boost_factor", method: "GET"},
+  setBuilderBoostFactor: {url: "/eth/v1/validator/{pubkey}/builder_boost_factor", method: "POST", statusOk: 202},
+  deleteBuilderBoostFactor: {url: "/eth/v1/validator/{pubkey}/builder_boost_factor", method: "DELETE", statusOk: 204},
 
   signVoluntaryExit: {url: "/eth/v1/validator/{pubkey}/voluntary_exit", method: "POST"},
 };
@@ -338,7 +355,9 @@ export type ReqTypes = {
   setGasLimit: {params: {pubkey: string}; body: {gas_limit: string}};
   deleteGasLimit: {params: {pubkey: string}};
 
-  updateBuilderBoostFactor: {params: {pubkey: string}; body: {builder_boost_factor: string}};
+  getBuilderBoostFactor: {params: {pubkey: string}};
+  setBuilderBoostFactor: {params: {pubkey: string}; body: {builder_boost_factor: string}};
+  deleteBuilderBoostFactor: {params: {pubkey: string}};
 
   signVoluntaryExit: {params: {pubkey: string}; query: {epoch?: number}};
 };
@@ -437,7 +456,15 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
         params: {pubkey: Schema.StringRequired},
       },
     },
-    updateBuilderBoostFactor: {
+
+    getBuilderBoostFactor: {
+      writeReq: (pubkey) => ({params: {pubkey}}),
+      parseReq: ({params: {pubkey}}) => [pubkey],
+      schema: {
+        params: {pubkey: Schema.StringRequired},
+      },
+    },
+    setBuilderBoostFactor: {
       writeReq: (pubkey, builderBoostFactor) => ({
         params: {pubkey},
         body: {builder_boost_factor: builderBoostFactor.toString(10)},
@@ -448,6 +475,14 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
         body: Schema.Object,
       },
     },
+    deleteBuilderBoostFactor: {
+      writeReq: (pubkey) => ({params: {pubkey}}),
+      parseReq: ({params: {pubkey}}) => [pubkey],
+      schema: {
+        params: {pubkey: Schema.StringRequired},
+      },
+    },
+
     signVoluntaryExit: {
       writeReq: (pubkey, epoch) => ({params: {pubkey}, query: epoch !== undefined ? {epoch} : {}}),
       parseReq: ({params: {pubkey}, query: {epoch}}) => [pubkey, epoch],
@@ -476,6 +511,15 @@ export function getReturnTypes(): ReturnTypes<Api> {
         {
           pubkey: stringType,
           gasLimit: ssz.UintNum64,
+        },
+        {jsonCase: "eth2"}
+      )
+    ),
+    getBuilderBoostFactor: ContainerData(
+      new ContainerType(
+        {
+          pubkey: stringType,
+          builderBoostFactor: ssz.UintBn64,
         },
         {jsonCase: "eth2"}
       )

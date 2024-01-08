@@ -316,7 +316,15 @@ export class ValidatorStore {
     delete validatorData.builder?.gasLimit;
   }
 
-  updateBuilderBoostFactor(pubkeyHex: PubkeyHex, boostFactor: bigint): void {
+  getBuilderBoostFactor(pubkeyHex: PubkeyHex): bigint {
+    const validatorData = this.validators.get(pubkeyHex);
+    if (validatorData === undefined) {
+      throw Error(`Validator pubkey ${pubkeyHex} not known`);
+    }
+    return validatorData?.builder?.boostFactor ?? this.defaultProposerConfig.builder.boostFactor;
+  }
+
+  setBuilderBoostFactor(pubkeyHex: PubkeyHex, boostFactor: bigint): void {
     if (boostFactor > MAX_BUILDER_BOOST_FACTOR) {
       throw Error(`Invalid builderBoostFactor=${boostFactor} > MAX_BUILDER_BOOST_FACTOR`);
     }
@@ -326,6 +334,14 @@ export class ValidatorStore {
       throw Error(`Validator pubkey ${pubkeyHex} not known`);
     }
     validatorData.builder = {...validatorData.builder, boostFactor};
+  }
+
+  deleteBuilderBoostFactor(pubkeyHex: PubkeyHex): void {
+    const validatorData = this.validators.get(pubkeyHex);
+    if (validatorData === undefined) {
+      throw Error(`Validator pubkey ${pubkeyHex} not known`);
+    }
+    delete validatorData.builder?.boostFactor;
   }
 
   /** Return true if `index` is active part of this validator client */

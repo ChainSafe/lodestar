@@ -390,9 +390,23 @@ export class KeymanagerApi implements Api {
     };
   }
 
-  async updateBuilderBoostFactor(pubkeyHex: string, builderBoostFactor: bigint): Promise<void> {
+  async getBuilderBoostFactor(pubkeyHex: string): ReturnType<Api["getBuilderBoostFactor"]> {
+    const builderBoostFactor = this.validator.validatorStore.getBuilderBoostFactor(pubkeyHex);
+    return {data: {pubkey: pubkeyHex, builderBoostFactor}};
+  }
+
+  async setBuilderBoostFactor(pubkeyHex: string, builderBoostFactor: bigint): Promise<void> {
     this.checkIfProposerWriteEnabled();
-    this.validator.validatorStore.updateBuilderBoostFactor(pubkeyHex, builderBoostFactor);
+    this.validator.validatorStore.setBuilderBoostFactor(pubkeyHex, builderBoostFactor);
+    this.persistedKeysBackend.writeProposerConfig(
+      pubkeyHex,
+      this.validator.validatorStore.getProposerConfig(pubkeyHex)
+    );
+  }
+
+  async deleteBuilderBoostFactor(pubkeyHex: string): Promise<void> {
+    this.checkIfProposerWriteEnabled();
+    this.validator.validatorStore.deleteBuilderBoostFactor(pubkeyHex);
     this.persistedKeysBackend.writeProposerConfig(
       pubkeyHex,
       this.validator.validatorStore.getProposerConfig(pubkeyHex)
