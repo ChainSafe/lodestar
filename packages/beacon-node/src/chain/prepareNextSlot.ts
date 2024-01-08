@@ -97,7 +97,7 @@ export class PrepareNextSlotScheduler {
         headRoot,
         isEpochTransition,
       });
-      const lodestarPrecomputeEpochTransitionTimer = isEpochTransition
+      const precomputeEpochTransitionTimer = isEpochTransition
         ? this.metrics?.precomputeNextEpochTransition.duration.startTimer()
         : null;
       // No need to wait for this or the clock drift
@@ -137,7 +137,7 @@ export class PrepareNextSlotScheduler {
           previousHits,
         });
 
-        lodestarPrecomputeEpochTransitionTimer?.();
+        precomputeEpochTransitionTimer?.();
       }
 
       if (isExecutionStateType(prepareState)) {
