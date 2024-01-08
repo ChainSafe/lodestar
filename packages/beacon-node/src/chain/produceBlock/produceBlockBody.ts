@@ -109,12 +109,20 @@ export async function produceBlockBody<T extends BlockType>(
     proposerIndex: ValidatorIndex;
     proposerPubKey: BLSPubkey;
   }
-): Promise<{body: AssembledBodyType<T>; blobs: BlobsResult; executionPayloadValue: Wei}> {
+): Promise<{
+  body: AssembledBodyType<T>;
+  blobs: BlobsResult;
+  executionPayloadValue: Wei;
+  shouldOverrideBuilder: boolean;
+}> {
   // Type-safe for blobs variable. Translate 'null' value into 'preDeneb' enum
   // TODO: Not ideal, but better than just using null.
   // TODO: Does not guarantee that preDeneb enum goes with a preDeneb block
   let blobsResult: BlobsResult;
   let executionPayloadValue: Wei;
+  // even though shouldOverrideBuilder is relevant for the engine response, for simplicity of typing
+  // we can also return is just as false for builder which will anyway be ignored by the caller
+  let shouldOverrideBuilder: boolean;
   const fork = currentState.config.getForkName(blockSlot);
 
   const logMeta: Record<string, string | number | bigint> = {
@@ -204,6 +212,7 @@ export async function produceBlockBody<T extends BlockType>(
 
     if (blockType === BlockType.Blinded) {
       if (!this.executionBuilder) throw Error("Execution Builder not available");
+      shouldOverrideBuilder = false;
 
       // This path will not be used in the production, but is here just for merge mock
       // tests because merge-mock requires an fcU to be issued prior to fetch payload
@@ -280,6 +289,7 @@ export async function produceBlockBody<T extends BlockType>(
             ssz.allForksExecution[fork].ExecutionPayload.defaultValue();
           blobsResult = {type: BlobsResultType.preDeneb};
           executionPayloadValue = BigInt(0);
+          shouldOverrideBuilder = false;
         } else {
           const {prepType, payloadId} = prepareRes;
           Object.assign(logMeta, {executionPayloadPrepType: prepType});
@@ -295,9 +305,11 @@ export async function produceBlockBody<T extends BlockType>(
 
           const engineRes = await this.executionEngine.getPayload(fork, payloadId);
           const {executionPayload, blobsBundle} = engineRes;
+          shouldOverrideBuilder = engineRes.shouldOverrideBuilder;
+
           (blockBody as allForks.ExecutionBlockBody).executionPayload = executionPayload;
           executionPayloadValue = engineRes.executionPayloadValue;
-          Object.assign(logMeta, {transactions: executionPayload.transactions.length});
+          Object.assign(logMeta, {transactions: executionPayload.transactions.length, shouldOverrideBuilder});
 
           const fetchedTime = Date.now() / 1000 - computeTimeAtSlot(this.config, blockSlot, this.genesisTime);
           this.metrics?.blockPayload.payloadFetchedTime.observe({prepType}, fetchedTime);
@@ -347,6 +359,7 @@ export async function produceBlockBody<T extends BlockType>(
             ssz.allForksExecution[fork].ExecutionPayload.defaultValue();
           blobsResult = {type: BlobsResultType.preDeneb};
           executionPayloadValue = BigInt(0);
+          shouldOverrideBuilder = false;
         } else {
           // since merge transition is complete, we need a valid payload even if with an
           // empty (transactions) one. defaultValue isn't gonna cut it!
@@ -357,6 +370,7 @@ export async function produceBlockBody<T extends BlockType>(
   } else {
     blobsResult = {type: BlobsResultType.preDeneb};
     executionPayloadValue = BigInt(0);
+    shouldOverrideBuilder = false;
   }
   endExecutionPayload?.({
     step: BlockProductionStep.executionPayload,
@@ -380,7 +394,7 @@ export async function produceBlockBody<T extends BlockType>(
   Object.assign(logMeta, {executionPayloadValue});
   this.logger.verbose("Produced beacon block body", logMeta);
 
-  return {body: blockBody as AssembledBodyType<T>, blobs: blobsResult, executionPayloadValue};
+  return {body: blockBody as AssembledBodyType<T>, blobs: blobsResult, executionPayloadValue, shouldOverrideBuilder};
 }
 
 /**

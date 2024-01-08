@@ -288,7 +288,7 @@ export function getValidatorApi({
     {
       skipHeadChecksAndUpdate,
     }: Omit<routes.validator.ExtraProduceBlockOps, "builderSelection"> & {skipHeadChecksAndUpdate?: boolean} = {}
-  ): Promise<routes.validator.ProduceBlindedBlockRes> {
+  ): Promise<routes.validator.ProduceBlindedBlockRes & {shouldOverrideBuilder: boolean}> {
     const version = config.getForkName(slot);
     if (!isForkExecution(version)) {
       throw Error(`Invalid fork=${version} for produceBuilderBlindedBlock`);
@@ -319,11 +319,12 @@ export function getValidatorApi({
     let timer;
     try {
       timer = metrics?.blockProductionTime.startTimer();
-      const {block, executionPayloadValue, consensusBlockValue} = await chain.produceBlindedBlock({
-        slot,
-        randaoReveal,
-        graffiti: toGraffitiBuffer(graffiti || ""),
-      });
+      const {block, executionPayloadValue, consensusBlockValue, shouldOverrideBuilder} =
+        await chain.produceBlindedBlock({
+          slot,
+          randaoReveal,
+          graffiti: toGraffitiBuffer(graffiti || ""),
+        });
 
       metrics?.blockProductionSuccess.inc({source});
       metrics?.blockProductionNumAggregated.observe({source}, block.body.attestations.length);
@@ -338,7 +339,7 @@ export function getValidatorApi({
         void chain.persistBlock(block, "produced_builder_block");
       }
 
-      return {data: block, version, executionPayloadValue, consensusBlockValue};
+      return {data: block, version, executionPayloadValue, consensusBlockValue, shouldOverrideBuilder};
     } finally {
       if (timer) timer({source});
     }
@@ -353,7 +354,7 @@ export function getValidatorApi({
       strictFeeRecipientCheck,
       skipHeadChecksAndUpdate,
     }: Omit<routes.validator.ExtraProduceBlockOps, "builderSelection"> & {skipHeadChecksAndUpdate?: boolean} = {}
-  ): Promise<routes.validator.ProduceBlockOrContentsRes> {
+  ): Promise<routes.validator.ProduceBlockOrContentsRes & {shouldOverrideBuilder: boolean}> {
     const source = ProducedBlockSource.engine;
     metrics?.blockProductionRequests.inc({source});
 
@@ -371,7 +372,7 @@ export function getValidatorApi({
     let timer;
     try {
       timer = metrics?.blockProductionTime.startTimer();
-      const {block, executionPayloadValue, consensusBlockValue} = await chain.produceBlock({
+      const {block, executionPayloadValue, consensusBlockValue, shouldOverrideBuilder} = await chain.produceBlock({
         slot,
         randaoReveal,
         graffiti: toGraffitiBuffer(graffiti || ""),
@@ -408,9 +409,10 @@ export function getValidatorApi({
           version,
           executionPayloadValue,
           consensusBlockValue,
+          shouldOverrideBuilder,
         };
       } else {
-        return {data: block, version, executionPayloadValue, consensusBlockValue};
+        return {data: block, version, executionPayloadValue, consensusBlockValue, shouldOverrideBuilder};
       }
     } finally {
       if (timer) timer({source});
@@ -504,7 +506,10 @@ export function getValidatorApi({
         // reference index of promises in the race
         const promisesOrder = [ProducedBlockSource.builder, ProducedBlockSource.engine];
         [blindedBlock, fullBlock] = await racePromisesWithCutoff<
-          routes.validator.ProduceBlockOrContentsRes | routes.validator.ProduceBlindedBlockRes | null
+          | ((routes.validator.ProduceBlockOrContentsRes | routes.validator.ProduceBlindedBlockRes) & {
+              shouldOverrideBuilder: boolean;
+            })
+          | null
         >(
           [blindedBlockPromise, fullBlockPromise],
           BLOCK_PRODUCTION_RACE_CUTOFF_MS,
@@ -552,8 +557,26 @@ export function getValidatorApi({
       const blockValueEngine = enginePayloadValue + gweiToWei(consensusBlockValueEngine); // Total block value is in wei
 
       let executionPayloadSource: ProducedBlockSource | null = null;
+      const shouldOverrideBuilder = fullBlock?.shouldOverrideBuilder ?? false;
 
-      if (fullBlock && blindedBlock) {
+      // handle the builder override case separately
+      if (shouldOverrideBuilder === true) {
+        // this is just to make typescript happy as shouldOverrideBuilder can be true only will valid
+        // full block response
+        if (fullBlock === null) {
+          throw Error("Invalid null fullBlock with builder override");
+        }
+
+        executionPayloadSource = ProducedBlockSource.engine;
+        logger.verbose("Selected engine block as censorship suspected in builder blocks", {
+          // winston logger doesn't like bigint
+          enginePayloadValue: `${enginePayloadValue}`,
+          consensusBlockValueEngine: `${consensusBlockValueEngine}`,
+          blockValueEngine: `${blockValueEngine}`,
+          slot,
+          shouldOverrideBuilder,
+        });
+      } else if (fullBlock && blindedBlock) {
         switch (builderSelection) {
           case routes.validator.BuilderSelection.MaxProfit: {
             if (
@@ -590,6 +613,7 @@ export function getValidatorApi({
           blockValueEngine: `${blockValueEngine}`,
           blockValueBuilder: `${blockValueBuilder}`,
           slot,
+          shouldOverrideBuilder,
         });
       } else if (fullBlock && !blindedBlock) {
         executionPayloadSource = ProducedBlockSource.engine;
@@ -599,6 +623,7 @@ export function getValidatorApi({
           consensusBlockValueEngine: `${consensusBlockValueEngine}`,
           blockValueEngine: `${blockValueEngine}`,
           slot,
+          shouldOverrideBuilder,
         });
       } else if (blindedBlock && !fullBlock) {
         executionPayloadSource = ProducedBlockSource.builder;

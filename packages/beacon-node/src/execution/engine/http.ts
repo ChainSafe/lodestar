@@ -363,7 +363,12 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   async getPayload(
     fork: ForkName,
     payloadId: PayloadId
-  ): Promise<{executionPayload: allForks.ExecutionPayload; executionPayloadValue: Wei; blobsBundle?: BlobsBundle}> {
+  ): Promise<{
+    executionPayload: allForks.ExecutionPayload;
+    executionPayloadValue: Wei;
+    blobsBundle?: BlobsBundle;
+    shouldOverrideBuilder: boolean;
+  }> {
     const method =
       ForkSeq[fork] >= ForkSeq.deneb
         ? "engine_getPayloadV3"
