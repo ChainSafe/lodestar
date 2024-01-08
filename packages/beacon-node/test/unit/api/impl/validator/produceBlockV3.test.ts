@@ -89,6 +89,7 @@ describe("api/validator - produceBlockV3", function () {
             block: fullBlock,
             executionPayloadValue: BigInt(enginePayloadValue),
             consensusBlockValue: BigInt(consensusBlockValue),
+            shouldOverrideBuilder: false,
           });
         } else {
           chainStub.produceBlock.mockRejectedValue(Error("not produced"));
@@ -99,6 +100,7 @@ describe("api/validator - produceBlockV3", function () {
             block: blindedBlock,
             executionPayloadValue: BigInt(builderPayloadValue),
             consensusBlockValue: BigInt(consensusBlockValue),
+            shouldOverrideBuilder: false,
           });
         } else {
           chainStub.produceBlindedBlock.mockRejectedValue(Error("not produced"));

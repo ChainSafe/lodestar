@@ -85,7 +85,12 @@ describe("api/validator - produceBlockV2", function () {
     const feeRecipient = "0xcccccccccccccccccccccccccccccccccccccccc";
 
     const api = getValidatorApi(modules);
-    server.chainStub.produceBlock.mockResolvedValue({block: fullBlock, executionPayloadValue, consensusBlockValue});
+    server.chainStub.produceBlock.mockResolvedValue({
+      block: fullBlock,
+      executionPayloadValue,
+      consensusBlockValue,
+      shouldOverrideBuilder: false,
+    });
 
     // check if expectedFeeRecipient is passed to produceBlock
     await api.produceBlockV2(slot, randaoReveal, graffiti, {feeRecipient});
@@ -129,6 +134,7 @@ describe("api/validator - produceBlockV2", function () {
     executionEngineStub.getPayload.mockResolvedValue({
       executionPayload: ssz.bellatrix.ExecutionPayload.defaultValue(),
       executionPayloadValue,
+      shouldOverrideBuilder: false,
     });
 
     // use fee recipient passed in produceBlockBody call for payload gen in engine notifyForkchoiceUpdate
