@@ -558,8 +558,10 @@ export function getValidatorApi({
         switch (builderSelection) {
           case routes.validator.BuilderSelection.MaxProfit: {
             if (
-              builderBoostFactor === MAX_BUILDER_BOOST_FACTOR ||
-              blockValueEngine >= (blockValueBuilder * builderBoostFactor) / BigInt(100)
+              // explicitly handle the two special values mentioned in spec for builder preferred/ engine preffered
+              builderBoostFactor !== MAX_BUILDER_BOOST_FACTOR &&
+              (builderBoostFactor === BigInt(0) ||
+                blockValueEngine >= (blockValueBuilder * builderBoostFactor) / BigInt(100))
             ) {
               executionPayloadSource = ProducedBlockSource.engine;
             } else {
