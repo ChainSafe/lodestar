@@ -1,5 +1,5 @@
 import {ForkName} from "@lodestar/params";
-import {ssz} from "@lodestar/types";
+import {ssz, ProducedBlockSource} from "@lodestar/types";
 import {Api} from "../../../../src/beacon/routes/validator.js";
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 
@@ -83,6 +83,7 @@ export const testData: GenericServerTestCases<Api> = {
       executionPayloadValue: ssz.Wei.defaultValue(),
       consensusBlockValue: ssz.Gwei.defaultValue(),
       executionPayloadBlinded: false,
+      executionPayloadSource: ProducedBlockSource.engine,
     },
   },
   produceBlindedBlock: {

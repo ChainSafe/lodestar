@@ -1,16 +1,16 @@
 import Ajv, {ErrorObject} from "ajv";
 import {expect, describe, beforeAll, it} from "vitest";
 import {ReqGeneric, ReqSerializer, ReturnTypes, RouteDef} from "../../src/utils/types.js";
-import {applyRecursively, OpenApiJson, parseOpenApiSpec, ParseOpenApiSpecOpts} from "./parseOpenApiSpec.js";
+import {applyRecursively, JsonSchema, OpenApiJson, parseOpenApiSpec, ParseOpenApiSpecOpts} from "./parseOpenApiSpec.js";
 import {GenericServerTestCases} from "./genericServerTest.js";
 
 const ajv = new Ajv({
-  // strict: true,
-  // strictSchema: true,
+  strict: true,
+  strictTypes: false, // TODO Enable once beacon-APIs is fixed. See https://github.com/ChainSafe/lodestar/issues/6206
   allErrors: true,
 });
 
-// TODO: Still necessary?
+// Ensure embedded schema 'example' do not fail validation
 ajv.addKeyword({
   keyword: "example",
   validate: () => true,
@@ -19,17 +19,69 @@ ajv.addKeyword({
 
 ajv.addFormat("hex", /^0x[a-fA-F0-9]+$/);
 
+/**
+ * A set of properties that will be ignored during tests execution.
+ * This allows for a black-list mechanism to have a test pass while some part of the spec is not yet implemented.
+ *
+ * Properties can be nested using dot notation, following JSONPath semantic.
+ *
+ * Example:
+ * - query
+ * - query.skip_randao_verification
+ */
+export type IgnoredProperty = {
+  /**
+   * Properties to ignore in the request schema
+   */
+  request?: string[];
+  /**
+   * Properties to ignore in the response schema
+   */
+  response?: string[];
+};
+
+/**
+ * Recursively remove a property from a schema
+ *
+ * @param schema Schema to remove a property from
+ * @param property JSONPath like property to remove from the schema
+ */
+function deleteNested(schema: JsonSchema | undefined, property: string): void {
+  const properties = schema?.properties;
+  if (property.includes(".")) {
+    // Extract first segment, keep the rest as dotted
+    const [key, ...rest] = property.split(".");
+    deleteNested(properties?.[key], rest.join("."));
+  } else {
+    // Remove property from 'required'
+    if (schema?.required) {
+      schema.required = schema.required?.filter((e) => property !== e);
+    }
+    // Remove property from 'properties'
+    delete properties?.[property];
+  }
+}
+
 export function runTestCheckAgainstSpec(
   openApiJson: OpenApiJson,
   routesData: Record<string, RouteDef>,
   reqSerializers: Record<string, ReqSerializer<any, any>>,
   returnTypes: Record<string, ReturnTypes<any>[string]>,
   testDatas: Record<string, GenericServerTestCases<any>[string]>,
-  opts?: ParseOpenApiSpecOpts
+  opts?: ParseOpenApiSpecOpts,
+  ignoredOperations: string[] = [],
+  ignoredProperties: Record<string, IgnoredProperty> = {}
 ): void {
   const openApiSpec = parseOpenApiSpec(openApiJson, opts);
 
   for (const [operationId, routeSpec] of openApiSpec.entries()) {
+    const isIgnored = ignoredOperations.some((id) => id === operationId);
+    if (isIgnored) {
+      continue;
+    }
+
+    const ignoredProperty = ignoredProperties[operationId];
+
     describe(operationId, () => {
       const {requestSchema, responseOkSchema} = routeSpec;
       const routeId = operationId;
@@ -68,7 +120,15 @@ export function runTestCheckAgainstSpec(
           stringifyProperties((reqJson as ReqGeneric).params ?? {});
           stringifyProperties((reqJson as ReqGeneric).query ?? {});
 
-          // Validate response
+          const ignoredProperties = ignoredProperty?.request;
+          if (ignoredProperties) {
+            // Remove ignored properties from schema validation
+            for (const property of ignoredProperties) {
+              deleteNested(routeSpec.requestSchema, property);
+            }
+          }
+
+          // Validate request
           validateSchema(routeSpec.requestSchema, reqJson, "request");
         });
       }
@@ -87,6 +147,13 @@ export function runTestCheckAgainstSpec(
             }
           }
 
+          const ignoredProperties = ignoredProperty?.response;
+          if (ignoredProperties) {
+            // Remove ignored properties from schema validation
+            for (const property of ignoredProperties) {
+              deleteNested(routeSpec.responseOkSchema, property);
+            }
+          }
           // Validate response
           validateSchema(responseOkSchema, resJson, "response");
         });

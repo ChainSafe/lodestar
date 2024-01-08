@@ -5,7 +5,6 @@ import {
   isExecutionBlockBodyType,
   isMergeTransitionBlock as isMergeTransitionBlockFn,
   isExecutionEnabled,
-  kzgCommitmentToVersionedHash,
 } from "@lodestar/state-transition";
 import {bellatrix, allForks, Slot, deneb} from "@lodestar/types";
 import {
@@ -24,6 +23,7 @@ import {ForkSeq, SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@lodestar/params";
 import {IExecutionEngine} from "../../execution/engine/interface.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {IClock} from "../../util/clock.js";
+import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {BlockProcessOpts} from "../options.js";
 import {ExecutionPayloadStatus} from "../../execution/engine/interface.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
@@ -45,6 +45,7 @@ export type SegmentExecStatus =
   | {
       execAborted: null;
       executionStatuses: MaybeValidExecutionStatus[];
+      executionTime: number;
       mergeBlockFound: bellatrix.BeaconBlock | null;
     }
   | {execAborted: ExecAbortType; invalidSegmentLVH?: LVHInvalidResponse; mergeBlockFound: null};
@@ -243,8 +244,9 @@ export async function verifyBlocksExecutionPayload(
     }
   }
 
-  if (blocks.length === 1 && opts.seenTimestampSec !== undefined) {
-    const recvToVerifiedExecPayload = Date.now() / 1000 - opts.seenTimestampSec;
+  const executionTime = Date.now();
+  if (blocks.length === 1 && opts.seenTimestampSec !== undefined && executionStatuses[0] === ExecutionStatus.Valid) {
+    const recvToVerifiedExecPayload = executionTime / 1000 - opts.seenTimestampSec;
     chain.metrics?.gossipBlock.receivedToExecutionPayloadVerification.observe(recvToVerifiedExecPayload);
     chain.logger.verbose("Verified execution payload", {
       slot: blocks[0].message.slot,
@@ -255,6 +257,7 @@ export async function verifyBlocksExecutionPayload(
   return {
     execAborted: null,
     executionStatuses,
+    executionTime,
     mergeBlockFound,
   };
 }

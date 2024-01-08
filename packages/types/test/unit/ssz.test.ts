@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {ssz} from "../../src/index.js";
 
 describe("size", function () {
@@ -6,8 +6,8 @@ describe("size", function () {
     const minSize = ssz.phase0.BeaconState.minSize;
     const maxSize = ssz.phase0.BeaconState.maxSize;
     // https://gist.github.com/protolambda/db75c7faa1e94f2464787a480e5d613e
-    expect(minSize).to.be.equal(2687377);
-    expect(maxSize).to.be.equal(141837543039377);
+    expect(minSize).toBe(2687377);
+    expect(maxSize).toBe(141837543039377);
   });
 });
 
@@ -24,7 +24,7 @@ describe("container serialization/deserialization field casing(s)", function () 
 
     const result = ssz.phase0.AttesterSlashing.fromJson(json);
     const back = ssz.phase0.AttesterSlashing.toJson(result);
-    expect(back).to.be.deep.equal(json);
+    expect(back).toEqual(json);
   });
 
   it("ProposerSlashing", function () {
@@ -39,6 +39,6 @@ describe("container serialization/deserialization field casing(s)", function () 
 
     const result = ssz.phase0.ProposerSlashing.fromJson(json);
     const back = ssz.phase0.ProposerSlashing.toJson(result);
-    expect(back).to.be.deep.equal(json);
+    expect(back).toEqual(json);
   });
 });

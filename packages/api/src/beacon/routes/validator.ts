@@ -1,5 +1,5 @@
 import {ContainerType, fromHexString, toHexString, Type} from "@chainsafe/ssz";
-import {ForkName, ForkBlobs, isForkBlobs, isForkExecution, ForkPreBlobs} from "@lodestar/params";
+import {ForkName, ForkBlobs, isForkBlobs, isForkExecution, ForkPreBlobs, ForkExecution} from "@lodestar/params";
 import {
   allForks,
   altair,
@@ -19,6 +19,7 @@ import {
   SubcommitteeIndex,
   Wei,
   Gwei,
+  ProducedBlockSource,
 } from "@lodestar/types";
 import {ApiClientResponse} from "../../interfaces.js";
 import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
@@ -37,7 +38,7 @@ import {
   TypeJson,
 } from "../../utils/index.js";
 import {fromU64Str, fromGraffitiHex, toU64Str, U64Str, toGraffitiHex} from "../../utils/serdes.js";
-import {allForksBlockContentsResSerializer, allForksBlindedBlockContentsResSerializer} from "../../utils/routes.js";
+import {allForksBlockContentsResSerializer} from "../../utils/routes.js";
 import {ExecutionOptimistic} from "./beacon/block.js";
 
 export enum BuilderSelection {
@@ -53,20 +54,22 @@ export type ExtraProduceBlockOps = {
   feeRecipient?: string;
   builderSelection?: BuilderSelection;
   strictFeeRecipientCheck?: boolean;
+  blindedLocal?: boolean;
 };
 
 export type ProduceBlockOrContentsRes = {executionPayloadValue: Wei; consensusBlockValue: Gwei} & (
   | {data: allForks.BeaconBlock; version: ForkPreBlobs}
   | {data: allForks.BlockContents; version: ForkBlobs}
 );
-export type ProduceBlindedBlockOrContentsRes = {executionPayloadValue: Wei; consensusBlockValue: Gwei} & (
-  | {data: allForks.BlindedBeaconBlock; version: ForkPreBlobs}
-  | {data: allForks.BlindedBlockContents; version: ForkBlobs}
-);
+export type ProduceBlindedBlockRes = {executionPayloadValue: Wei; consensusBlockValue: Gwei} & {
+  data: allForks.BlindedBeaconBlock;
+  version: ForkExecution;
+};
 
-export type ProduceFullOrBlindedBlockOrContentsRes =
+export type ProduceFullOrBlindedBlockOrContentsRes = {executionPayloadSource: ProducedBlockSource} & (
   | (ProduceBlockOrContentsRes & {executionPayloadBlinded: false})
-  | (ProduceBlindedBlockOrContentsRes & {executionPayloadBlinded: true});
+  | (ProduceBlindedBlockRes & {executionPayloadBlinded: true})
+);
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -287,7 +290,7 @@ export type Api = {
   ): Promise<
     ApiClientResponse<
       {
-        [HttpStatusCode.OK]: ProduceBlindedBlockOrContentsRes;
+        [HttpStatusCode.OK]: ProduceBlindedBlockRes;
       },
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
     >
@@ -485,6 +488,7 @@ export type ReqTypes = {
       fee_recipient?: string;
       builder_selection?: string;
       strict_fee_recipient_check?: boolean;
+      blinded_local?: boolean;
     };
   };
   produceBlindedBlock: {params: {slot: number}; query: {randao_reveal: string; graffiti: string}};
@@ -552,6 +556,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
         skip_randao_verification: skipRandaoVerification,
         builder_selection: opts?.builderSelection,
         strict_fee_recipient_check: opts?.strictFeeRecipientCheck,
+        blinded_local: opts?.blindedLocal,
       },
     }),
     parseReq: ({params, query}) => [
@@ -563,6 +568,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
         feeRecipient: query.fee_recipient,
         builderSelection: query.builder_selection as BuilderSelection,
         strictFeeRecipientCheck: query.strict_fee_recipient_check,
+        blindedLocal: query.blinded_local,
       },
     ],
     schema: {
@@ -574,6 +580,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
         skip_randao_verification: Schema.Boolean,
         builder_selection: Schema.String,
         strict_fee_recipient_check: Schema.Boolean,
+        blinded_local: Schema.Boolean,
       },
     },
   };
@@ -721,13 +728,11 @@ export function getReturnTypes(): ReturnTypes<Api> {
       isForkBlobs(fork) ? allForksBlockContentsResSerializer(fork) : ssz[fork].BeaconBlock
     )
   ) as TypeJson<ProduceBlockOrContentsRes>;
-  const produceBlindedBlockOrContents = WithBlockValues(
-    WithVersion<allForks.BlindedBeaconBlockOrContents>((fork: ForkName) =>
-      isForkBlobs(fork)
-        ? allForksBlindedBlockContentsResSerializer(fork)
-        : ssz.allForksBlinded[isForkExecution(fork) ? fork : ForkName.bellatrix].BeaconBlock
+  const produceBlindedBlock = WithBlockValues(
+    WithVersion<allForks.BlindedBeaconBlock>(
+      (fork: ForkName) => ssz.allForksBlinded[isForkExecution(fork) ? fork : ForkName.bellatrix].BeaconBlock
     )
-  ) as TypeJson<ProduceBlindedBlockOrContentsRes>;
+  ) as TypeJson<ProduceBlindedBlockRes>;
 
   return {
     getAttesterDuties: WithDependentRootExecutionOptimistic(ArrayOf(AttesterDuty)),
@@ -741,24 +746,36 @@ export function getReturnTypes(): ReturnTypes<Api> {
         if (data.executionPayloadBlinded) {
           return {
             execution_payload_blinded: true,
-            ...(produceBlindedBlockOrContents.toJson(data) as Record<string, unknown>),
+            execution_payload_source: data.executionPayloadSource,
+            ...(produceBlindedBlock.toJson(data) as Record<string, unknown>),
           };
         } else {
           return {
             execution_payload_blinded: false,
+            execution_payload_source: data.executionPayloadSource,
             ...(produceBlockOrContents.toJson(data) as Record<string, unknown>),
           };
         }
       },
       fromJson: (data) => {
-        if ((data as {execution_payload_blinded: true}).execution_payload_blinded) {
-          return {executionPayloadBlinded: true, ...produceBlindedBlockOrContents.fromJson(data)};
+        const executionPayloadBlinded = (data as {execution_payload_blinded: boolean}).execution_payload_blinded;
+        if (executionPayloadBlinded === undefined) {
+          throw Error(`Invalid executionPayloadBlinded=${executionPayloadBlinded} for fromJson deserialization`);
+        }
+
+        // extract source from the data and assign defaults in the spec complaint manner if not present in response
+        const executionPayloadSource =
+          (data as {execution_payload_source: ProducedBlockSource}).execution_payload_source ??
+          (executionPayloadBlinded ? ProducedBlockSource.builder : ProducedBlockSource.engine);
+
+        if (executionPayloadBlinded) {
+          return {executionPayloadBlinded, executionPayloadSource, ...produceBlindedBlock.fromJson(data)};
         } else {
-          return {executionPayloadBlinded: false, ...produceBlockOrContents.fromJson(data)};
+          return {executionPayloadBlinded, executionPayloadSource, ...produceBlockOrContents.fromJson(data)};
         }
       },
     },
-    produceBlindedBlock: produceBlindedBlockOrContents,
+    produceBlindedBlock,
 
     produceAttestationData: ContainerData(ssz.phase0.AttestationData),
     produceSyncCommitteeContribution: ContainerData(ssz.altair.SyncCommitteeContribution),

@@ -1,5 +1,4 @@
-import "../setup.js";
-import {assert, expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {intToBytes, bytesToInt, toHex, fromHex, toHexString} from "../../src/index.js";
 
 describe("intToBytes", () => {
@@ -27,7 +26,7 @@ describe("intToBytes", () => {
     const type = typeof input;
     const length = input[1];
     it(`should correctly serialize ${type} to bytes length ${length}`, () => {
-      assert(intToBytes(input[0], input[1]).equals(output));
+      expect(intToBytes(input[0], input[1])).toEqual(output);
     });
   }
 });
@@ -43,7 +42,7 @@ describe("bytesToInt", () => {
   ];
   for (const {input, output} of testCases) {
     it(`should produce ${output}`, () => {
-      expect(bytesToInt(input)).to.be.equal(output);
+      expect(bytesToInt(input)).toBe(output);
     });
   }
 });
@@ -57,7 +56,7 @@ describe("toHex", () => {
   ];
   for (const {input, output} of testCases) {
     it(`should convert Uint8Array to hex string ${output}`, () => {
-      expect(toHex(input)).to.be.equal(output);
+      expect(toHex(input)).toBe(output);
     });
   }
 });
@@ -77,7 +76,7 @@ describe("fromHex", () => {
 
   for (const {input, output} of testCases) {
     it(`should convert hex string ${input} to Uint8Array`, () => {
-      expect(fromHex(input)).to.deep.equal(output);
+      expect(fromHex(input)).toEqual(output);
     });
   }
 });
@@ -94,7 +93,7 @@ describe("toHexString", () => {
 
   for (const {input, output} of testCases) {
     it(`should convert Uint8Array to hex string ${output}`, () => {
-      expect(toHexString(input)).to.be.equal(output);
+      expect(toHexString(input)).toBe(output);
     });
   }
 });

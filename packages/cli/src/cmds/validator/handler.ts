@@ -9,7 +9,7 @@ import {
   defaultOptions,
 } from "@lodestar/validator";
 import {routes} from "@lodestar/api";
-import {getMetrics, MetricsRegister} from "@lodestar/validator";
+import {getMetrics} from "@lodestar/validator";
 import {
   RegistryMetricCreator,
   collectNodeJSMetrics,
@@ -112,7 +112,7 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
   // Send version and network data for static registries
 
   const register = args["metrics"] || args["monitoring.endpoint"] ? new RegistryMetricCreator() : null;
-  const metrics = register && getMetrics(register as unknown as MetricsRegister, {version, commit, network});
+  const metrics = register && getMetrics(register, {version, commit, network});
 
   // Start metrics server if metrics are enabled.
   // Collect NodeJS metrics defined in the Lodestar repo
@@ -170,6 +170,7 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
       distributed: args.distributed,
       useProduceBlockV3: args.useProduceBlockV3,
       broadcastValidation: parseBroadcastValidation(args.broadcastValidation),
+      blindedLocal: args.blindedLocal,
     },
     metrics
   );

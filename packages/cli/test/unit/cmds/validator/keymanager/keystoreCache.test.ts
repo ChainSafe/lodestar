@@ -1,17 +1,13 @@
 import fs from "node:fs";
 import {randomBytes} from "node:crypto";
+import {describe, it, expect, beforeEach} from "vitest";
 import tmp from "tmp";
-import {expect} from "chai";
-import chainAsPromised from "chai-as-promised";
-import chai from "chai";
 import {Keystore} from "@chainsafe/bls-keystore";
 import bls from "@chainsafe/bls";
 import {interopSecretKey} from "@lodestar/state-transition";
 import {SignerLocal, SignerType} from "@lodestar/validator";
 import {loadKeystoreCache, writeKeystoreCache} from "../../../../../src/cmds/validator/keymanager/keystoreCache.js";
 import {LocalKeystoreDefinition} from "../../../../../src/cmds/validator/keymanager/interface.js";
-
-chai.use(chainAsPromised);
 
 const numberOfSigners = 10;
 
@@ -23,7 +19,6 @@ describe("keystoreCache", () => {
   let keystoreCacheFile: string;
 
   beforeEach(async function setup() {
-    this.timeout(50000);
     definitions = [];
     signers = [];
     secretKeys = [];
@@ -55,16 +50,16 @@ describe("keystoreCache", () => {
       passwords.push(password);
       secretKeys.push(secretKey.toBytes());
     }
-  });
+  }, 50000);
 
   describe("writeKeystoreCache", () => {
     it("should write a valid keystore cache file", async () => {
-      await expect(writeKeystoreCache(keystoreCacheFile, signers, passwords)).to.fulfilled;
-      expect(fs.existsSync(keystoreCacheFile)).to.be.true;
+      await expect(writeKeystoreCache(keystoreCacheFile, signers, passwords)).resolves.toBeUndefined();
+      expect(fs.existsSync(keystoreCacheFile)).toBe(true);
     });
 
     it("should throw error if password length are not same as signers", async () => {
-      await expect(writeKeystoreCache(keystoreCacheFile, signers, [passwords[0]])).to.rejectedWith(
+      await expect(writeKeystoreCache(keystoreCacheFile, signers, [passwords[0]])).rejects.toThrow(
         `Number of signers and passwords must be equal. signers=${numberOfSigners}, passwords=1`
       );
     });
@@ -75,14 +70,14 @@ describe("keystoreCache", () => {
       await writeKeystoreCache(keystoreCacheFile, signers, passwords);
       const result = await loadKeystoreCache(keystoreCacheFile, definitions);
 
-      expect(result.map((r) => r.secretKey.toBytes())).to.eql(secretKeys);
+      expect(result.map((r) => r.secretKey.toBytes())).toEqual(secretKeys);
     });
 
     it("should raise error for mismatch public key", async () => {
       await writeKeystoreCache(keystoreCacheFile, signers, passwords);
       definitions[0].keystorePath = definitions[1].keystorePath;
 
-      await expect(loadKeystoreCache(keystoreCacheFile, definitions)).to.rejected;
+      await expect(loadKeystoreCache(keystoreCacheFile, definitions)).rejects.toBeDefined();
     });
   });
 });

@@ -1,17 +1,15 @@
 import path from "node:path";
-import {expect} from "chai";
+import {describe, it, vi, expect, afterAll, beforeEach, afterEach} from "vitest";
 import {ApiError, getClient} from "@lodestar/api";
 import {getClient as getKeymanagerClient} from "@lodestar/api/keymanager";
 import {config} from "@lodestar/config/default";
 import {interopSecretKey} from "@lodestar/state-transition";
 import {spawnCliCommand} from "@lodestar/test-utils";
-import {getMochaContext} from "@lodestar/test-utils/mocha";
 import {retry} from "@lodestar/utils";
 import {testFilesDir} from "../utils.js";
 
 describe("voluntary exit from api", function () {
-  const testContext = getMochaContext(this);
-  this.timeout("60s");
+  vi.setConfig({testTimeout: 60_000});
 
   it("Perform a voluntary exit", async () => {
     // Start dev node with keymanager
@@ -39,7 +37,7 @@ describe("voluntary exit from api", function () {
         // Disable bearer token auth to simplify testing
         "--keymanager.authEnabled=false",
       ],
-      {pipeStdioToParent: false, logPrefix: "dev", testContext}
+      {pipeStdioToParent: false, logPrefix: "dev", testContext: {beforeEach, afterEach, afterAll}}
     );
 
     // Exit early if process exits
@@ -71,10 +69,10 @@ describe("voluntary exit from api", function () {
     ApiError.assert(res);
     const signedVoluntaryExit = res.response.data;
 
-    expect(signedVoluntaryExit.message.epoch).to.equal(exitEpoch);
-    expect(signedVoluntaryExit.message.validatorIndex).to.equal(indexToExit);
+    expect(signedVoluntaryExit.message.epoch).toBe(exitEpoch);
+    expect(signedVoluntaryExit.message.validatorIndex).toBe(indexToExit);
     // Signature will be verified when submitting to beacon node
-    expect(signedVoluntaryExit.signature).to.not.be.undefined;
+    expect(signedVoluntaryExit.signature).toBeDefined();
 
     // 2. submit signed voluntary exit message to beacon node
     ApiError.assert(await beaconClient.submitPoolVoluntaryExit(signedVoluntaryExit));

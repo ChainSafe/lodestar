@@ -1,18 +1,17 @@
-import {expect} from "chai";
-import sinon from "sinon";
+import {describe, it, expect, vi, beforeEach, afterEach} from "vitest";
 import {shouldDeleteLogFile} from "../../../src/util/logger.js";
 
 describe("shouldDeleteLogFile", function () {
   const prefix = "beacon";
   const extension = "log";
 
-  const sandbox = sinon.createSandbox();
   beforeEach(() => {
-    sandbox.useFakeTimers(new Date("2023-01-01"));
+    vi.useFakeTimers({now: new Date("2023-01-01")});
   });
 
   afterEach(() => {
-    sandbox.restore();
+    vi.useRealTimers();
+    vi.clearAllTimers();
   });
   const tcs: {logFile: string; maxFiles: number; now: number; result: boolean}[] = [
     // missing .log
@@ -55,7 +54,7 @@ describe("shouldDeleteLogFile", function () {
     it(`should ${
       result ? "" : "not"
     } delete ${logFile}, maxFiles ${maxFiles}, today ${new Date().toUTCString()}`, () => {
-      expect(shouldDeleteLogFile(prefix, extension, logFile, maxFiles)).to.be.equal(result);
+      expect(shouldDeleteLogFile(prefix, extension, logFile, maxFiles)).toBe(result);
     });
   }
 });

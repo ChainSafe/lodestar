@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {extractJwtHexSecret} from "../../../src/util/index.js";
 
 describe("parseJwtHexSecret", () => {
@@ -18,7 +18,7 @@ describe("parseJwtHexSecret", () => {
   ];
   for (const {raw, parsed} of testCases) {
     it(`parse ${raw}`, () => {
-      expect(parsed).to.be.equal(extractJwtHexSecret(raw));
+      expect(parsed).toBe(extractJwtHexSecret(raw));
     });
   }
 });
@@ -30,7 +30,7 @@ describe("invalid jwtHexSecret", () => {
   ];
   for (const {raw, error} of testCases) {
     it(`should error on ${error}:  ${raw}`, () => {
-      expect(() => extractJwtHexSecret(raw)).to.throw();
+      expect(() => extractJwtHexSecret(raw)).toThrow();
     });
   }
 });

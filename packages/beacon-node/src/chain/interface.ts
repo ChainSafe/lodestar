@@ -49,6 +49,7 @@ import {CheckpointBalancesCache} from "./balancesCache.js";
 import {IChainOptions} from "./options.js";
 import {AssembledBlockType, BlockAttributes, BlockType} from "./produceBlock/produceBlockBody.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
+import {SeenGossipBlockInput} from "./seenCache/index.js";
 import {ShufflingCache} from "./shufflingCache.js";
 import {BlockRewards} from "./rewards/blockRewards.js";
 import { SyncCommitteeRewards } from "./rewards/syncCommitteeRewards.js";
@@ -104,14 +105,14 @@ export interface IBeaconChain {
   readonly seenSyncCommitteeMessages: SeenSyncCommitteeMessages;
   readonly seenContributionAndProof: SeenContributionAndProof;
   readonly seenAttestationDatas: SeenAttestationDatas;
+  readonly seenGossipBlockInput: SeenGossipBlockInput;
   // Seen cache for liveness checks
   readonly seenBlockAttesters: SeenBlockAttesters;
 
   readonly beaconProposerCache: BeaconProposerCache;
   readonly checkpointBalancesCache: CheckpointBalancesCache;
-  readonly producedBlobSidecarsCache: Map<BlockHash, deneb.BlobSidecars>;
+  readonly producedContentsCache: Map<BlockHash, deneb.Contents>;
   readonly producedBlockRoot: Map<RootHex, allForks.ExecutionPayload | null>;
-  readonly producedBlindedBlobSidecarsCache: Map<BlockHash, deneb.BlindedBlobSidecars>;
   readonly shufflingCache: ShufflingCache;
   readonly producedBlindedBlockRoot: Set<RootHex>;
   readonly opts: IChainOptions;
@@ -153,7 +154,7 @@ export interface IBeaconChain {
    */
   getBlockByRoot(root: RootHex): Promise<{block: allForks.SignedBeaconBlock; executionOptimistic: boolean} | null>;
 
-  getBlobSidecars(beaconBlock: deneb.BeaconBlock): deneb.BlobSidecars;
+  getContents(beaconBlock: deneb.BeaconBlock): deneb.Contents;
 
   produceBlock(
     blockAttributes: BlockAttributes

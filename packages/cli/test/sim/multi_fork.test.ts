@@ -65,10 +65,11 @@ const env = await SimulationEnvironment.initWithDefaults(
       validator: {
         type: ValidatorClient.Lodestar,
         options: {
+          // this will cause race in beacon but since builder is not attached will
+          // return with engine full block and publish via publishBlockV2
           clientOptions: {
             useProduceBlockV3: true,
-            // default builder selection will cause a race try in beacon even if builder is not set
-            // but not to worry, execution block will be selected as fallback anyway
+            "builder.selection": "maxprofit",
           },
         },
       },
@@ -82,12 +83,12 @@ const env = await SimulationEnvironment.initWithDefaults(
       validator: {
         type: ValidatorClient.Lodestar,
         options: {
+          // this will make the beacon respond with blinded version of the local block as no
+          // builder is attached to beacon, and publish via publishBlindedBlockV2
           clientOptions: {
-            useProduceBlockV3: false,
-            // default builder selection of max profit will make it use produceBlindedBlock
-            // but not to worry, execution block will be selected as fallback anyway
-            // but returned in blinded format for validator to use publish blinded block
-            // which assembles block beacon side from local cache before publishing
+            useProduceBlockV3: true,
+            "builder.selection": "maxprofit",
+            blindedLocal: true,
           },
         },
       },
@@ -101,9 +102,9 @@ const env = await SimulationEnvironment.initWithDefaults(
       validator: {
         type: ValidatorClient.Lodestar,
         options: {
+          // this builder selection will make it use produceBlockV2 and respond with full block
           clientOptions: {
             useProduceBlockV3: false,
-            // this builder selection will make it use produceBlockV2
             "builder.selection": "executiononly",
           },
         },
@@ -111,7 +112,24 @@ const env = await SimulationEnvironment.initWithDefaults(
       execution: ExecutionClient.Nethermind,
       keysCount: 32,
     },
-    {id: "node-4", beacon: BeaconClient.Lighthouse, execution: ExecutionClient.Geth, keysCount: 32},
+    {
+      id: "node-4",
+      beacon: BeaconClient.Lodestar,
+      validator: {
+        type: ValidatorClient.Lodestar,
+        options: {
+          // this builder selection will make it use produceBlindedBlockV2 and respond with blinded version
+          // of local block and subsequent publishing via publishBlindedBlock
+          clientOptions: {
+            useProduceBlockV3: false,
+            "builder.selection": "maxprofit",
+          },
+        },
+      },
+      execution: ExecutionClient.Nethermind,
+      keysCount: 32,
+    },
+    {id: "node-5", beacon: BeaconClient.Lighthouse, execution: ExecutionClient.Geth, keysCount: 32},
   ]
 );
 

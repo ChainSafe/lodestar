@@ -1,23 +1,8 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkSeq} from "@lodestar/params";
-import {
-  allForks,
-  phase0,
-  Root,
-  deneb,
-  ssz,
-  isBlindedBeaconBlock,
-  isBlindedBlobSidecar,
-  isSignedBlindedBlockContents,
-  isExecutionPayloadAndBlobsBundle,
-} from "@lodestar/types";
+import {allForks, phase0, Root, deneb, isBlindedBeaconBlock, isExecutionPayloadAndBlobsBundle} from "@lodestar/types";
 
 import {executionPayloadToPayloadHeader} from "./execution.js";
-
-type ParsedSignedBlindedBlockOrContents = {
-  signedBlindedBlock: allForks.SignedBlindedBeaconBlock;
-  signedBlindedBlobSidecars: deneb.SignedBlindedBlobSidecars | null;
-};
 
 export function blindedOrFullBlockHashTreeRoot(
   config: ChainForkConfig,
@@ -28,17 +13,6 @@ export function blindedOrFullBlockHashTreeRoot(
       config.getBlindedForkTypes(blindedOrFull.slot).BeaconBlock.hashTreeRoot(blindedOrFull)
     : // Full
       config.getForkTypes(blindedOrFull.slot).BeaconBlock.hashTreeRoot(blindedOrFull);
-}
-
-export function blindedOrFullBlobSidecarHashTreeRoot(
-  config: ChainForkConfig,
-  blindedOrFull: allForks.FullOrBlindedBlobSidecar
-): Root {
-  return isBlindedBlobSidecar(blindedOrFull)
-    ? // Blinded
-      config.getBlobsForkTypes(blindedOrFull.slot).BlindedBlobSidecar.hashTreeRoot(blindedOrFull)
-    : // Full
-      config.getBlobsForkTypes(blindedOrFull.slot).BlobSidecar.hashTreeRoot(blindedOrFull);
 }
 
 export function blindedOrFullBlockToHeader(
@@ -70,13 +44,6 @@ export function beaconBlockToBlinded(
   return blindedBlock;
 }
 
-export function blobSidecarsToBlinded(blobSidecars: deneb.BlobSidecars): deneb.BlindedBlobSidecars {
-  return blobSidecars.map((blobSidecar) => {
-    const blobRoot = ssz.deneb.Blob.hashTreeRoot(blobSidecar.blob);
-    return {...blobSidecar, blobRoot} as deneb.BlindedBlobSidecar;
-  });
-}
-
 export function signedBlindedBlockToFull(
   signedBlindedBlock: allForks.SignedBlindedBeaconBlock,
   executionPayload: allForks.ExecutionPayload | null
@@ -100,33 +67,6 @@ export function signedBlindedBlockToFull(
   return signedBlock;
 }
 
-export function signedBlindedBlobSidecarsToFull(
-  signedBlindedBlobSidecars: deneb.SignedBlindedBlobSidecars,
-  blobs: deneb.Blobs
-): deneb.SignedBlobSidecars {
-  const signedBlobSidecars = signedBlindedBlobSidecars.map((signedBlindedBlobSidecar, index) => {
-    const signedBlobSidecar = {
-      ...signedBlindedBlobSidecar,
-      message: {...signedBlindedBlobSidecar.message, blob: blobs[index]},
-    };
-    delete (signedBlobSidecar.message as {blobRoot?: deneb.BlindedBlob}).blobRoot;
-    return signedBlobSidecar;
-  });
-  return signedBlobSidecars;
-}
-
-export function parseSignedBlindedBlockOrContents(
-  signedBlindedBlockOrContents: allForks.SignedBlindedBeaconBlockOrContents
-): ParsedSignedBlindedBlockOrContents {
-  if (isSignedBlindedBlockContents(signedBlindedBlockOrContents)) {
-    const signedBlindedBlock = signedBlindedBlockOrContents.signedBlindedBlock;
-    const signedBlindedBlobSidecars = signedBlindedBlockOrContents.signedBlindedBlobSidecars;
-    return {signedBlindedBlock, signedBlindedBlobSidecars};
-  } else {
-    return {signedBlindedBlock: signedBlindedBlockOrContents, signedBlindedBlobSidecars: null};
-  }
-}
-
 export function parseExecutionPayloadAndBlobsBundle(
   data: allForks.ExecutionPayload | allForks.ExecutionPayloadAndBlobsBundle
 ): {executionPayload: allForks.ExecutionPayload; blobsBundle: deneb.BlobsBundle | null} {
@@ -141,27 +81,23 @@ export function parseExecutionPayloadAndBlobsBundle(
 }
 
 export function reconstructFullBlockOrContents(
-  {signedBlindedBlock, signedBlindedBlobSidecars}: ParsedSignedBlindedBlockOrContents,
-  {executionPayload, blobs}: {executionPayload: allForks.ExecutionPayload | null; blobs: deneb.Blobs | null}
+  signedBlindedBlock: allForks.SignedBlindedBeaconBlock,
+  {
+    executionPayload,
+    contents,
+  }: {
+    executionPayload: allForks.ExecutionPayload | null;
+    contents: deneb.Contents | null;
+  }
 ): allForks.SignedBeaconBlockOrContents {
   const signedBlock = signedBlindedBlockToFull(signedBlindedBlock, executionPayload);
 
-  if (signedBlindedBlobSidecars !== null) {
+  if (contents !== null) {
     if (executionPayload === null) {
       throw Error("Missing locally produced executionPayload for deneb+ publishBlindedBlock");
     }
 
-    if (blobs === null) {
-      throw Error("Missing blobs from the local execution cache");
-    }
-    if (blobs.length !== signedBlindedBlobSidecars.length) {
-      throw Error(
-        `Length mismatch signedBlindedBlobSidecars=${signedBlindedBlobSidecars.length} blobs=${blobs.length}`
-      );
-    }
-    const signedBlobSidecars = signedBlindedBlobSidecarsToFull(signedBlindedBlobSidecars, blobs);
-
-    return {signedBlock, signedBlobSidecars} as allForks.SignedBeaconBlockOrContents;
+    return {signedBlock, ...contents} as allForks.SignedBeaconBlockOrContents;
   } else {
     return signedBlock as allForks.SignedBeaconBlockOrContents;
   }

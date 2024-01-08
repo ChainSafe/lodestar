@@ -1,21 +1,20 @@
 import fs from "node:fs";
 import path from "node:path";
+import {describe, it, beforeAll, vi} from "vitest";
 import {rimraf} from "rimraf";
-import {getMochaContext} from "@lodestar/test-utils/mocha";
 import {getKeystoresStr} from "@lodestar/test-utils";
 import {testFilesDir} from "../utils.js";
 import {cachedPubkeysHex, cachedSeckeysHex} from "../utils/cachedKeys.js";
 import {expectKeys, startValidatorWithKeyManager} from "../utils/validator.js";
 
 describe("import from fs same cmd as validate", function () {
-  const testContext = getMochaContext(this);
-  this.timeout("30s");
+  vi.setConfig({testTimeout: 30_000});
 
   const dataDir = path.join(testFilesDir, "import-and-validate-test");
   const importFromDir = path.join(dataDir, "eth2.0_deposit_out");
   const passphraseFilepath = path.join(importFromDir, "password.text");
 
-  before("Clean dataDir", () => {
+  beforeAll(() => {
     rimraf.sync(dataDir);
     rimraf.sync(importFromDir);
   });
@@ -25,7 +24,7 @@ describe("import from fs same cmd as validate", function () {
   const pubkeys = cachedPubkeysHex.slice(0, keyCount);
   const secretKeys = cachedSeckeysHex.slice(0, keyCount);
 
-  before("write keystores to disk", async () => {
+  beforeAll(async () => {
     // Produce and encrypt keystores
     const keystoresStr = await getKeystoresStr(passphrase, secretKeys);
 
@@ -41,7 +40,6 @@ describe("import from fs same cmd as validate", function () {
     const {keymanagerClient} = await startValidatorWithKeyManager([], {
       dataDir,
       logPrefix: "case-1",
-      testContext,
     });
 
     await expectKeys(keymanagerClient, [], "Wrong listKeys response data");
@@ -51,7 +49,7 @@ describe("import from fs same cmd as validate", function () {
   it("run 'validator' check keys are loaded", async () => {
     const {keymanagerClient} = await startValidatorWithKeyManager(
       [`--importKeystores=${importFromDir}`, `--importKeystoresPassword=${passphraseFilepath}`],
-      {dataDir, logPrefix: "case-2", testContext}
+      {dataDir, logPrefix: "case-2"}
     );
 
     await expectKeys(keymanagerClient, pubkeys, "Wrong listKeys response data");

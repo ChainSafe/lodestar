@@ -8,7 +8,7 @@ export type {
   ProposerConfig,
 } from "./services/validatorStore.js";
 export {waitForGenesis} from "./genesis.js";
-export {getMetrics, type Metrics, type MetricsRegister} from "./metrics.js";
+export {getMetrics, type Metrics} from "./metrics.js";
 
 // Remote signer client
 export {
