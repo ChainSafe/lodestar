@@ -125,6 +125,7 @@ export class BlockProposingService {
         this.validatorStore.getBuilderSelectionParams(pubkeyHex);
       const feeRecipient = this.validatorStore.getFeeRecipient(pubkeyHex);
       const blindedLocal = this.opts.blindedLocal;
+      const useProduceBlockV3 = this.config.getForkSeq(slot) >= ForkSeq.deneb || this.opts.useProduceBlockV3;
 
       this.logger.debug("Producing block", {
         ...debugLogCtx,
@@ -132,12 +133,12 @@ export class BlockProposingService {
         builderBoostFactor,
         feeRecipient,
         strictFeeRecipientCheck,
-        useProduceBlockV3: this.opts.useProduceBlockV3,
+        useProduceBlockV3,
         blindedLocal,
       });
       this.metrics?.proposerStepCallProduceBlock.observe(this.clock.secFromSlot(slot));
 
-      const produceBlockFn = this.opts.useProduceBlockV3 ? this.produceBlockWrapper : this.produceBlockV2Wrapper;
+      const produceBlockFn = useProduceBlockV3 ? this.produceBlockWrapper : this.produceBlockV2Wrapper;
       const produceOpts = {
         feeRecipient,
         strictFeeRecipientCheck,

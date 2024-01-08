@@ -257,7 +257,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
 
   useProduceBlockV3: {
     type: "boolean",
-    description: "Enable/disable usage of produceBlockV3 that might not be supported by all beacon clients yet",
+    description: "Enable/disable usage of produceBlockV3 pre deneb that might not be supported by all beacon clients yet",
     defaultDescription: `${defaultOptions.useProduceBlockV3}`,
   },
 
