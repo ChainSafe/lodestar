@@ -10,7 +10,12 @@ import {
   kzgCommitmentToVersionedHash,
 } from "@lodestar/state-transition";
 import {routes} from "@lodestar/api";
-import {ForkChoiceError, ForkChoiceErrorCode, EpochDifference, AncestorStatus, UpdateHeadOpt} from "@lodestar/fork-choice";
+import {
+  ForkChoiceError,
+  ForkChoiceErrorCode,
+  EpochDifference,
+  AncestorStatus,
+} from "@lodestar/fork-choice";
 import {isErrorAborted} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {toCheckpointHex} from "../stateCache/index.js";

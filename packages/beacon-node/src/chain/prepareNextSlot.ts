@@ -1,9 +1,15 @@
-import {computeEpochAtSlot, isExecutionStateType, computeTimeAtSlot, CachedBeaconStateExecutions} from "@lodestar/state-transition";
+import {
+  computeEpochAtSlot,
+  isExecutionStateType,
+  computeTimeAtSlot,
+  CachedBeaconStateExecutions,
+} from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkSeq, SLOTS_PER_EPOCH, ForkExecution} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
 import {Logger, sleep, fromHex, isErrorAborted} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
+import {UpdateHeadOpt} from "@lodestar/fork-choice";
 import {GENESIS_SLOT, ZERO_HASH_HEX} from "../constants/constants.js";
 import {Metrics} from "../metrics/index.js";
 import {ClockEvent} from "../util/clock.js";
@@ -11,7 +17,6 @@ import {isQueueErrorAborted} from "../util/queue/index.js";
 import {prepareExecutionPayload, getPayloadAttributesForSSE} from "./produceBlock/produceBlockBody.js";
 import {IBeaconChain} from "./interface.js";
 import {RegenCaller} from "./regen/index.js";
-import { UpdateHeadOpt } from "@lodestar/fork-choice";
 
 /* With 12s slot times, this scheduler will run 4s before the start of each slot (`12 / 3 = 4`). */
 export const SCHEDULER_LOOKAHEAD_FACTOR = 3;
@@ -130,17 +135,23 @@ export class PrepareNextSlotScheduler {
 
         if (feeRecipient) {
           // If we are proposing next slot, we need to predict if we can proposer-boost-reorg or not
-          const {slot: proposerHeadSlot, blockRoot: proposerHeadRoot} = this.chain.recomputeForkChoiceHead(UpdateHeadOpt.GetPredictedProposerHead, clockSlot); 
+          const {slot: proposerHeadSlot, blockRoot: proposerHeadRoot} = this.chain.recomputeForkChoiceHead(
+            UpdateHeadOpt.GetPredictedProposerHead,
+            clockSlot
+          );
 
           // If we predict we can reorg, update prepareState with proposer head block
           if (proposerHeadRoot !== headRoot || proposerHeadSlot !== headSlot) {
-            this.logger.verbose("Weak head detected. May build on this block instead:", {proposerHeadSlot, proposerHeadRoot});
-            updatedPrepareState = await this.chain.regen.getBlockSlotState(
+            this.logger.verbose("Weak head detected. May build on this block instead:", {
+              proposerHeadSlot,
+              proposerHeadRoot,
+            });
+            updatedPrepareState = (await this.chain.regen.getBlockSlotState(
               proposerHeadRoot,
               prepareSlot,
               {dontTransferCache: !isEpochTransition},
               RegenCaller.precomputeEpoch
-            ) as CachedBeaconStateExecutions;
+            )) as CachedBeaconStateExecutions;
           }
 
           // Update the builder status, if enabled shoot an api call to check status
