@@ -103,6 +103,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -220,7 +221,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "9.3.2",
+      "pluginVersion": "10.1.1",
       "targets": [
         {
           "datasource": {
@@ -289,7 +290,7 @@
         "text": {},
         "textMode": "value"
       },
-      "pluginVersion": "9.3.2",
+      "pluginVersion": "10.1.1",
       "targets": [
         {
           "datasource": {
@@ -341,7 +342,7 @@
         "text": {},
         "textMode": "name"
       },
-      "pluginVersion": "9.3.2",
+      "pluginVersion": "10.1.1",
       "targets": [
         {
           "datasource": {
@@ -396,7 +397,7 @@
         "text": {},
         "textMode": "name"
       },
-      "pluginVersion": "9.3.2",
+      "pluginVersion": "10.1.1",
       "targets": [
         {
           "datasource": {
@@ -451,7 +452,7 @@
         "text": {},
         "textMode": "name"
       },
-      "pluginVersion": "9.3.2",
+      "pluginVersion": "10.1.1",
       "targets": [
         {
           "datasource": {
@@ -493,6 +494,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -703,6 +705,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -786,6 +789,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -957,6 +961,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1037,6 +1042,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -8729,7 +8735,7 @@
     }
   ],
   "refresh": "10s",
-  "schemaVersion": 37,
+  "schemaVersion": 38,
   "style": "dark",
   "tags": [
     "lodestar",
