@@ -121,7 +121,7 @@ export async function produceBlockBody<T extends BlockType>(
   let blobsResult: BlobsResult;
   let executionPayloadValue: Wei;
   // even though shouldOverrideBuilder is relevant for the engine response, for simplicity of typing
-  // we just return it undefined for the builder which anyway doesn't gets consumed downstream
+  // we just return it undefined for the builder which anyway doesn't get consumed downstream
   let shouldOverrideBuilder: boolean | undefined;
   const fork = currentState.config.getForkName(blockSlot);
 
