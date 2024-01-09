@@ -566,8 +566,8 @@ export function getValidatorApi({
           enginePayloadValue: `${enginePayloadValue}`,
           consensusBlockValueEngine: `${consensusBlockValueEngine}`,
           blockValueEngine: `${blockValueEngine}`,
-          slot,
           shouldOverrideBuilder,
+          slot,
         });
       } else if (fullBlock && blindedBlock) {
         switch (builderSelection) {
@@ -605,8 +605,8 @@ export function getValidatorApi({
           consensusBlockValueBuilder: `${consensusBlockValueBuilder}`,
           blockValueEngine: `${blockValueEngine}`,
           blockValueBuilder: `${blockValueBuilder}`,
-          slot,
           shouldOverrideBuilder,
+          slot,
         });
       } else if (fullBlock && !blindedBlock) {
         executionPayloadSource = ProducedBlockSource.engine;
@@ -615,8 +615,8 @@ export function getValidatorApi({
           enginePayloadValue: `${enginePayloadValue}`,
           consensusBlockValueEngine: `${consensusBlockValueEngine}`,
           blockValueEngine: `${blockValueEngine}`,
-          slot,
           shouldOverrideBuilder,
+          slot,
         });
       } else if (blindedBlock && !fullBlock) {
         executionPayloadSource = ProducedBlockSource.builder;
@@ -625,6 +625,7 @@ export function getValidatorApi({
           builderPayloadValue: `${builderPayloadValue}`,
           consensusBlockValueBuilder: `${consensusBlockValueBuilder}`,
           blockValueBuilder: `${blockValueBuilder}`,
+          shouldOverrideBuilder,
           slot,
         });
       }
