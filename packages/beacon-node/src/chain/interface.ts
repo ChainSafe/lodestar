@@ -155,8 +155,8 @@ export interface IBeaconChain {
   getBlockByRoot(root: RootHex): Promise<{block: allForks.SignedBeaconBlock; executionOptimistic: boolean} | null>;
 
   getContents(beaconBlock: deneb.BeaconBlock): deneb.Contents;
-  
-  produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody>;  
+
+  produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody>;
   produceBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{
     block: allForks.BeaconBlock;
     executionPayloadValue: Wei;

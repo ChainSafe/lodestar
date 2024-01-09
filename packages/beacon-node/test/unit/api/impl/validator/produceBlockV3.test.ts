@@ -1,5 +1,5 @@
 import {describe, it, expect, beforeEach, afterEach, MockedObject, vi} from "vitest";
-import {phase0, ssz} from "@lodestar/types";
+import {ssz} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
