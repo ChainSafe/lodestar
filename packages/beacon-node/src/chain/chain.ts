@@ -904,15 +904,20 @@ export class BeaconChain implements IBeaconChain {
     this.logger.verbose("Fork choice justified", {epoch: cp.epoch, root: cp.rootHex});
   }
 
-  private onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWithHex): void {
+  private async onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWithHex): Promise<void> {
     this.logger.verbose("Fork choice finalized", {epoch: cp.epoch, root: cp.rootHex});
     this.seenBlockProposers.prune(computeStartSlotAtEpoch(cp.epoch));
 
     // TODO: Improve using regen here
-    const headState = this.regen.getStateSync(this.forkChoice.getHead().stateRoot);
-    const finalizedState = this.regen.getCheckpointStateSync(cp);
+    const {blockRoot, stateRoot, slot} = this.forkChoice.getHead();
+    const headState = this.regen.getStateSync(stateRoot);
+    const headBlock = await this.db.block.get(fromHexString(blockRoot));
+    if (headBlock == null) {
+      throw Error(`Head block ${slot} ${headBlock} is not available in database`);
+    }
+
     if (headState) {
-      this.opPool.pruneAll(headState, finalizedState);
+      this.opPool.pruneAll(headBlock, headState);
     }
   }
 
