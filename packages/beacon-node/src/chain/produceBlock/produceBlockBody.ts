@@ -94,22 +94,23 @@ export async function produceBlockBody<T extends BlockType>(
   this: BeaconChain,
   blockType: T,
   currentState: CachedBeaconStateAllForks,
-  {
-    randaoReveal,
-    graffiti,
+  blockAttr: BlockAttributes & {
+    parentSlot: Slot;
+    parentBlockRoot: Root;
+    proposerIndex: ValidatorIndex;
+    proposerPubKey: BLSPubkey;
+    phase0BlockBody?: phase0.BeaconBlockBody;
+  }
+): Promise<{body: AssembledBodyType<T>; blobs: BlobsResult; executionPayloadValue: Wei}> {
+  const {
     slot: blockSlot,
     feeRecipient: requestedFeeRecipient,
     parentSlot,
     parentBlockRoot,
     proposerIndex,
     proposerPubKey,
-  }: BlockAttributes & {
-    parentSlot: Slot;
-    parentBlockRoot: Root;
-    proposerIndex: ValidatorIndex;
-    proposerPubKey: BLSPubkey;
-  }
-): Promise<{body: AssembledBodyType<T>; blobs: BlobsResult; executionPayloadValue: Wei}> {
+    phase0BlockBody,
+  } = blockAttr;
   // Type-safe for blobs variable. Translate 'null' value into 'preDeneb' enum
   // TODO: Not ideal, but better than just using null.
   // TODO: Does not guarantee that preDeneb enum goes with a preDeneb block
@@ -123,6 +124,10 @@ export async function produceBlockBody<T extends BlockType>(
     slot: blockSlot,
   };
   this.logger.verbose("Producing beacon block body", logMeta);
+  const stepsMetrics =
+    blockType === BlockType.Full
+      ? this.metrics?.executionBlockProductionTimeSteps
+      : this.metrics?.builderBlockProductionTimeSteps;
 
   // TODO:
   // Iterate through the naive aggregation pool and ensure all the attestations from there
@@ -135,38 +140,9 @@ export async function produceBlockBody<T extends BlockType>(
   //     logger.error("Attestation did not transfer to op pool", {}, e);
   //   }
   // }
-
-  const stepsMetrics =
-    blockType === BlockType.Full
-      ? this.metrics?.executionBlockProductionTimeSteps
-      : this.metrics?.builderBlockProductionTimeSteps;
-
-  const [attesterSlashings, proposerSlashings, voluntaryExits, blsToExecutionChanges] =
-    this.opPool.getSlashingsAndExits(currentState, blockType, this.metrics);
-
-  const endAttestations = stepsMetrics?.startTimer();
-  const attestations = this.aggregatedAttestationPool.getAttestationsForBlock(this.forkChoice, currentState);
-  endAttestations?.({
-    step: BlockProductionStep.attestations,
-  });
-
-  const endEth1DataAndDeposits = stepsMetrics?.startTimer();
-  const {eth1Data, deposits} = await this.eth1.getEth1DataAndDeposits(currentState);
-  endEth1DataAndDeposits?.({
-    step: BlockProductionStep.eth1DataAndDeposits,
-  });
-
-  const blockBody: phase0.BeaconBlockBody = {
-    randaoReveal,
-    graffiti,
-    eth1Data,
-    proposerSlashings,
-    attesterSlashings,
-    attestations,
-    deposits,
-    voluntaryExits,
-  };
-
+  const blockBody = phase0BlockBody ?? (await produceBlockBodyPhase0.call(this, blockType, currentState, blockAttr));
+  const blsToExecutionChanges = this.opPool.getBlsToExecutionChanges(currentState, blockType, this.metrics);
+  const {attestations, deposits, voluntaryExits, attesterSlashings, proposerSlashings} = blockBody;
   const blockEpoch = computeEpochAtSlot(blockSlot);
 
   const endSyncAggregate = stepsMetrics?.startTimer();
@@ -607,3 +583,46 @@ function preparePayloadAttributes(
 }
 
 /** process_sync_committee_contributions is implemented in syncCommitteeContribution.getSyncAggregate */
+
+export async function produceBlockBodyPhase0<T extends BlockType>(
+  this: BeaconChain,
+  blockType: T,
+  currentState: CachedBeaconStateAllForks,
+  {randaoReveal, graffiti}: Pick<BlockAttributes, "randaoReveal" | "graffiti">
+): Promise<phase0.BeaconBlockBody> {
+  const stepsMetrics =
+    blockType === BlockType.Full
+      ? this.metrics?.executionBlockProductionTimeSteps
+      : this.metrics?.builderBlockProductionTimeSteps;
+
+  const [attesterSlashings, proposerSlashings, voluntaryExits] = this.opPool.getSlashingsAndExits(
+    currentState,
+    blockType,
+    this.metrics
+  );
+
+  const endAttestations = stepsMetrics?.startTimer();
+  const attestations = this.aggregatedAttestationPool.getAttestationsForBlock(this.forkChoice, currentState);
+  endAttestations?.({
+    step: BlockProductionStep.attestations,
+  });
+
+  const endEth1DataAndDeposits = stepsMetrics?.startTimer();
+  const {eth1Data, deposits} = await this.eth1.getEth1DataAndDeposits(currentState);
+  endEth1DataAndDeposits?.({
+    step: BlockProductionStep.eth1DataAndDeposits,
+  });
+
+  const blockBody: phase0.BeaconBlockBody = {
+    randaoReveal,
+    graffiti,
+    eth1Data,
+    proposerSlashings,
+    attesterSlashings,
+    attestations,
+    deposits,
+    voluntaryExits,
+  };
+
+  return blockBody;
+}

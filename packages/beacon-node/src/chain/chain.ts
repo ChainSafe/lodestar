@@ -73,7 +73,7 @@ import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {AssembledBlockType, BlobsResultType, BlockType} from "./produceBlock/index.js";
-import {BlockAttributes, produceBlockBody} from "./produceBlock/produceBlockBody.js";
+import {BlockAttributes, produceBlockBody, produceBlockBodyPhase0} from "./produceBlock/produceBlockBody.js";
 import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
 import {BlockInput} from "./blocks/types.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
@@ -463,28 +463,52 @@ export class BeaconChain implements IBeaconChain {
         return {block: data, executionOptimistic: isOptimisticBlock(block)};
       }
       // If block is not found in hot db, try cold db since there could be an archive cycle happening
-      // TODO: Add a lock to the archiver to have determinstic behaviour on where are blocks
+      // TODO: Add a lock to the archiver to have deterministic behavior on where are blocks
     }
 
     const data = await this.db.blockArchive.getByRoot(fromHexString(root));
     return data && {block: data, executionOptimistic: false};
   }
 
+  async produceBlockBodyPhase0(
+    blockAttributes: Pick<BlockAttributes, "slot" | "graffiti" | "randaoReveal">
+  ): Promise<phase0.BeaconBlockBody> {
+    const {slot} = blockAttributes;
+    const head = this.forkChoice.getHead();
+    const state = await this.regen.getBlockSlotState(
+      head.blockRoot,
+      slot,
+      {dontTransferCache: true},
+      RegenCaller.produceBlock
+    );
+
+    // TODO: To avoid breaking changes for metric define this attribute
+    const blockType = BlockType.Full;
+
+    return produceBlockBodyPhase0.call(this, blockType, state, blockAttributes);
+  }
+
   produceBlock(
-    blockAttributes: BlockAttributes
+    blockAttributes: BlockAttributes & {phase0BlockBody?: phase0.BeaconBlockBody}
   ): Promise<{block: allForks.BeaconBlock; executionPayloadValue: Wei; consensusBlockValue: Gwei}> {
     return this.produceBlockWrapper<BlockType.Full>(BlockType.Full, blockAttributes);
   }
 
   produceBlindedBlock(
-    blockAttributes: BlockAttributes
+    blockAttributes: BlockAttributes & {phase0BlockBody?: phase0.BeaconBlockBody}
   ): Promise<{block: allForks.BlindedBeaconBlock; executionPayloadValue: Wei; consensusBlockValue: Gwei}> {
     return this.produceBlockWrapper<BlockType.Blinded>(BlockType.Blinded, blockAttributes);
   }
 
   async produceBlockWrapper<T extends BlockType>(
     blockType: T,
-    {randaoReveal, graffiti, slot, feeRecipient}: BlockAttributes
+    {
+      randaoReveal,
+      graffiti,
+      slot,
+      feeRecipient,
+      phase0BlockBody,
+    }: BlockAttributes & {phase0BlockBody?: phase0.BeaconBlockBody}
   ): Promise<{block: AssembledBlockType<T>; executionPayloadValue: Wei; consensusBlockValue: Gwei}> {
     const head = this.forkChoice.getHead();
     const state = await this.regen.getBlockSlotState(
@@ -506,6 +530,7 @@ export class BeaconChain implements IBeaconChain {
       parentBlockRoot,
       proposerIndex,
       proposerPubKey,
+      phase0BlockBody,
     });
 
     // The hashtree root computed here for debug log will get cached and hence won't introduce additional delays

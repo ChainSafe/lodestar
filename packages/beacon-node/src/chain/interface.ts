@@ -154,11 +154,12 @@ export interface IBeaconChain {
 
   getContents(beaconBlock: deneb.BeaconBlock): deneb.Contents;
 
+  produceBlockBodyPhase0(blockAttributes: BlockAttributes): Promise<phase0.BeaconBlockBody>;
   produceBlock(
-    blockAttributes: BlockAttributes
+    blockAttributes: BlockAttributes & {phase0BlockBody?: phase0.BeaconBlockBody}
   ): Promise<{block: allForks.BeaconBlock; executionPayloadValue: Wei; consensusBlockValue: Gwei}>;
   produceBlindedBlock(
-    blockAttributes: BlockAttributes
+    blockAttributes: BlockAttributes & {phase0BlockBody?: phase0.BeaconBlockBody}
   ): Promise<{block: allForks.BlindedBeaconBlock; executionPayloadValue: Wei; consensusBlockValue: Gwei}>;
 
   /** Process a block until complete */

@@ -1,5 +1,5 @@
 import {describe, it, expect, beforeEach, afterEach, MockedObject, vi} from "vitest";
-import {ssz} from "@lodestar/types";
+import {phase0, ssz} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
@@ -85,6 +85,19 @@ describe("api/validator - produceBlockV3", function () {
         const api = getValidatorApi(modules);
 
         if (enginePayloadValue !== null) {
+          const phase0BlockBody: phase0.BeaconBlockBody = {
+            attestations: fullBlock.body.attestations,
+            attesterSlashings: fullBlock.body.attesterSlashings,
+            deposits: fullBlock.body.deposits,
+            proposerSlashings: fullBlock.body.proposerSlashings,
+            eth1Data: fullBlock.body.eth1Data,
+            graffiti: fullBlock.body.graffiti,
+            randaoReveal: fullBlock.body.randaoReveal,
+            voluntaryExits: fullBlock.body.voluntaryExits,
+          };
+
+          chainStub.produceBlockBodyPhase0.mockResolvedValue(phase0BlockBody);
+
           chainStub.produceBlock.mockResolvedValue({
             block: fullBlock,
             executionPayloadValue: BigInt(enginePayloadValue),

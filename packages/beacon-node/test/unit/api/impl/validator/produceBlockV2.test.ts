@@ -118,7 +118,7 @@ describe("api/validator - produceBlockV2", function () {
     const headSlot = 0;
     forkChoiceStub.getHead.mockReturnValue(generateProtoBlock({slot: headSlot}));
 
-    opPoolStub.getSlashingsAndExits.mockReturnValue([[], [], [], []]);
+    opPoolStub.getSlashingsAndExits.mockReturnValue([[], [], []]);
     aggregatedAttestationPoolStub.getAttestationsForBlock.mockReturnValue([]);
     eth1Stub.getEth1DataAndDeposits.mockResolvedValue({eth1Data: ssz.phase0.Eth1Data.defaultValue(), deposits: []});
     forkChoiceStub.getJustifiedBlock.mockReturnValue({} as ProtoBlock);
