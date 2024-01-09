@@ -134,7 +134,7 @@ export const defaultOptions = {
   blindedLocal: false,
 };
 
-export const MAX_BUILDER_BOOST_FACTOR = BigInt(2 ** 64 - 1);
+export const MAX_BUILDER_BOOST_FACTOR = 2n ** 64n - 1n;
 
 /**
  * Service that sets up and handles validator attester duties.
