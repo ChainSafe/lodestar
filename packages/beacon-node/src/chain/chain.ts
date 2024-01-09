@@ -483,7 +483,6 @@ export class BeaconChain implements IBeaconChain {
     block: allForks.BlindedBeaconBlock;
     executionPayloadValue: Wei;
     consensusBlockValue: Gwei;
-    shouldOverrideBuilder?: boolean;
   }> {
     return this.produceBlockWrapper<BlockType.Blinded>(BlockType.Blinded, blockAttributes);
   }

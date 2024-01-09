@@ -164,7 +164,6 @@ export interface IBeaconChain {
     block: allForks.BlindedBeaconBlock;
     executionPayloadValue: Wei;
     consensusBlockValue: Gwei;
-    shouldOverrideBuilder?: boolean;
   }>;
 
   /** Process a block until complete */
