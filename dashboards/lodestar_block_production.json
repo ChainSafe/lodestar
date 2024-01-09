@@ -54,358 +54,6 @@
   "liveNow": false,
   "panels": [
     {
-      "type": "timeseries",
-      "title": "Full block production avg time with steps",
-      "gridPos": {
-        "x": 0,
-        "y": 1,
-        "w": 12,
-        "h": 8
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "id": 546,
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "refId": "proposerSlashing",
-          "expr": "rate(beacon_block_production_execution_steps_seconds{step=\"proposerSlashing\"}[$rate_interval])\n/\nrate(beacon_block_production_execution_steps_seconds{step=\"proposerSlashing\"}[$rate_interval])",
-          "range": true,
-          "instant": false,
-          "hide": false,
-          "editorMode": "code",
-          "legendFormat": "{{step}}",
-          "exemplar": false
-        },
-        {
-          "refId": "attesterSlashings",
-          "expr": "rate(beacon_block_production_execution_steps_seconds{step=\"attesterSlashings\"}[$rate_interval])\n/\nrate(beacon_block_production_execution_steps_seconds{step=\"attesterSlashings\"}[$rate_interval])",
-          "range": true,
-          "instant": false,
-          "datasource": {
-            "uid": "${DS_PROMETHEUS}",
-            "type": "prometheus"
-          },
-          "hide": false,
-          "editorMode": "code",
-          "legendFormat": "{{step}}"
-        },
-        {
-          "refId": "voluntaryExits",
-          "expr": "rate(beacon_block_production_execution_steps_seconds{step=\"voluntaryExits\"}[$rate_interval])\n/\nrate(beacon_block_production_execution_steps_seconds{step=\"voluntaryExits\"}[$rate_interval])",
-          "range": true,
-          "instant": false,
-          "datasource": {
-            "uid": "${DS_PROMETHEUS}",
-            "type": "prometheus"
-          },
-          "hide": false,
-          "editorMode": "code",
-          "legendFormat": "{{step}}"
-        },
-        {
-          "refId": "blsToExecutionChanges",
-          "expr": "rate(beacon_block_production_execution_steps_seconds{step=\"blsToExecutionChanges\"}[$rate_interval])\n/\nrate(beacon_block_production_execution_steps_seconds{step=\"blsToExecutionChanges\"}[$rate_interval])",
-          "range": true,
-          "instant": false,
-          "datasource": {
-            "uid": "${DS_PROMETHEUS}",
-            "type": "prometheus"
-          },
-          "hide": false,
-          "editorMode": "code",
-          "legendFormat": "{{step}}"
-        },
-        {
-          "refId": "attestations",
-          "expr": "rate(beacon_block_production_execution_steps_seconds{step=\"attestations\"}[$rate_interval])\n/\nrate(beacon_block_production_execution_steps_seconds{step=\"attestations\"}[$rate_interval])",
-          "range": true,
-          "instant": false,
-          "datasource": {
-            "uid": "${DS_PROMETHEUS}",
-            "type": "prometheus"
-          },
-          "hide": false,
-          "editorMode": "code",
-          "legendFormat": "{{step}}"
-        },
-        {
-          "refId": "eth1DataAndDeposits",
-          "expr": "rate(beacon_block_production_execution_steps_seconds{step=\"eth1DataAndDeposits\"}[$rate_interval])\n/\nrate(beacon_block_production_execution_steps_seconds{step=\"eth1DataAndDeposits\"}[$rate_interval])",
-          "range": true,
-          "instant": false,
-          "datasource": {
-            "uid": "${DS_PROMETHEUS}",
-            "type": "prometheus"
-          },
-          "hide": false,
-          "editorMode": "code",
-          "legendFormat": "{{step}}"
-        },
-        {
-          "refId": "syncAggregate",
-          "expr": "rate(beacon_block_production_execution_steps_seconds{step=\"syncAggregate\"}[$rate_interval])\n/\nrate(beacon_block_production_execution_steps_seconds{step=\"syncAggregate\"}[$rate_interval])",
-          "range": true,
-          "instant": false,
-          "datasource": {
-            "uid": "${DS_PROMETHEUS}",
-            "type": "prometheus"
-          },
-          "hide": false,
-          "editorMode": "code",
-          "legendFormat": "{{step}}"
-        },
-        {
-          "refId": "executionPayload",
-          "expr": "rate(beacon_block_production_execution_steps_seconds{step=\"executionPayload\"}[$rate_interval])\n/\nrate(beacon_block_production_execution_steps_seconds{step=\"executionPayload\"}[$rate_interval])",
-          "range": true,
-          "instant": false,
-          "datasource": {
-            "uid": "${DS_PROMETHEUS}",
-            "type": "prometheus"
-          },
-          "hide": false,
-          "editorMode": "code",
-          "legendFormat": "{{step}}"
-        }
-      ],
-      "options": {
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        },
-        "legend": {
-          "showLegend": true,
-          "displayMode": "list",
-          "placement": "bottom",
-          "calcs": []
-        }
-      },
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "barAlignment": 0,
-            "lineWidth": 1,
-            "fillOpacity": 30,
-            "gradientMode": "opacity",
-            "spanNulls": false,
-            "insertNulls": false,
-            "showPoints": "auto",
-            "pointSize": 5,
-            "stacking": {
-              "mode": "normal",
-              "group": "A"
-            },
-            "axisPlacement": "auto",
-            "axisLabel": "",
-            "axisColorMode": "text",
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "axisCenteredZero": false,
-            "hideFrom": {
-              "tooltip": false,
-              "viz": false,
-              "legend": false
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "color": {
-            "mode": "palette-classic"
-          },
-          "mappings": [],
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "transformations": []
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "barAlignment": 0,
-            "lineWidth": 1,
-            "fillOpacity": 30,
-            "gradientMode": "opacity",
-            "spanNulls": false,
-            "insertNulls": false,
-            "showPoints": "auto",
-            "pointSize": 5,
-            "stacking": {
-              "mode": "normal",
-              "group": "A"
-            },
-            "axisPlacement": "auto",
-            "axisLabel": "",
-            "axisColorMode": "text",
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "axisCenteredZero": false,
-            "hideFrom": {
-              "tooltip": false,
-              "viz": false,
-              "legend": false
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "color": {
-            "mode": "palette-classic"
-          },
-          "mappings": [],
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "x": 12,
-        "y": 1,
-        "w": 12,
-        "h": 8
-      },
-      "id": 547,
-      "options": {
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        },
-        "legend": {
-          "showLegend": true,
-          "displayMode": "list",
-          "placement": "bottom",
-          "calcs": []
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "refId": "proposerSlashing",
-          "expr": "rate(beacon_block_production_builder_steps_seconds{step=\"proposerSlashing\"}[$rate_interval])\n/\nrate(beacon_block_production_builder_steps_seconds{step=\"proposerSlashing\"}[$rate_interval])",
-          "range": true,
-          "instant": false,
-          "hide": false,
-          "editorMode": "code",
-          "legendFormat": "{{step}}",
-          "exemplar": false
-        },
-        {
-          "refId": "attesterSlashings",
-          "expr": "rate(beacon_block_production_builder_steps_seconds{step=\"attesterSlashings\"}[$rate_interval])\n/\nrate(beacon_block_production_builder_steps_seconds{step=\"attesterSlashings\"}[$rate_interval])",
-          "range": true,
-          "instant": false,
-          "datasource": {
-            "uid": "${DS_PROMETHEUS}",
-            "type": "prometheus"
-          },
-          "hide": false,
-          "editorMode": "code",
-          "legendFormat": "{{step}}"
-        },
-        {
-          "refId": "voluntaryExits",
-          "expr": "rate(beacon_block_production_builder_steps_seconds{step=\"voluntaryExits\"}[$rate_interval])\n/\nrate(beacon_block_production_builder_steps_seconds{step=\"voluntaryExits\"}[$rate_interval])",
-          "range": true,
-          "instant": false,
-          "datasource": {
-            "uid": "${DS_PROMETHEUS}",
-            "type": "prometheus"
-          },
-          "hide": false,
-          "editorMode": "code",
-          "legendFormat": "{{step}}"
-        },
-        {
-          "refId": "blsToExecutionChanges",
-          "expr": "rate(beacon_block_production_builder_steps_seconds{step=\"blsToExecutionChanges\"}[$rate_interval])\n/\nrate(beacon_block_production_builder_steps_seconds{step=\"blsToExecutionChanges\"}[$rate_interval])",
-          "range": true,
-          "instant": false,
-          "datasource": {
-            "uid": "${DS_PROMETHEUS}",
-            "type": "prometheus"
-          },
-          "hide": false,
-          "editorMode": "code",
-          "legendFormat": "{{step}}"
-        },
-        {
-          "refId": "attestations",
-          "expr": "rate(beacon_block_production_builder_steps_seconds{step=\"attestations\"}[$rate_interval])\n/\nrate(beacon_block_production_builder_steps_seconds{step=\"attestations\"}[$rate_interval])",
-          "range": true,
-          "instant": false,
-          "datasource": {
-            "uid": "${DS_PROMETHEUS}",
-            "type": "prometheus"
-          },
-          "hide": false,
-          "editorMode": "code",
-          "legendFormat": "{{step}}"
-        },
-        {
-          "refId": "eth1DataAndDeposits",
-          "expr": "rate(beacon_block_production_builder_steps_seconds{step=\"eth1DataAndDeposits\"}[$rate_interval])\n/\nrate(beacon_block_production_builder_steps_seconds{step=\"eth1DataAndDeposits\"}[$rate_interval])",
-          "range": true,
-          "instant": false,
-          "datasource": {
-            "uid": "${DS_PROMETHEUS}",
-            "type": "prometheus"
-          },
-          "hide": false,
-          "editorMode": "code",
-          "legendFormat": "{{step}}"
-        },
-        {
-          "refId": "syncAggregate",
-          "expr": "rate(beacon_block_production_builder_steps_seconds{step=\"syncAggregate\"}[$rate_interval])\n/\nrate(beacon_block_production_builder_steps_seconds{step=\"syncAggregate\"}[$rate_interval])",
-          "range": true,
-          "instant": false,
-          "datasource": {
-            "uid": "${DS_PROMETHEUS}",
-            "type": "prometheus"
-          },
-          "hide": false,
-          "editorMode": "code",
-          "legendFormat": "{{step}}"
-        },
-        {
-          "refId": "executionPayload",
-          "expr": "rate(beacon_block_production_builder_steps_seconds{step=\"executionPayload\"}[$rate_interval])\n/\nrate(beacon_block_production_builder_steps_seconds{step=\"executionPayload\"}[$rate_interval])",
-          "range": true,
-          "instant": false,
-          "datasource": {
-            "uid": "${DS_PROMETHEUS}",
-            "type": "prometheus"
-          },
-          "hide": false,
-          "editorMode": "code",
-          "legendFormat": "{{step}}"
-        }
-      ],
-      "title": "Blinded block production avg time with steps",
-      "type": "timeseries",
-      "transformations": []
-    },
-    {
       "collapsed": false,
       "datasource": {
         "type": "prometheus",
@@ -448,6 +96,358 @@
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
+            "fillOpacity": 30,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 1
+      },
+      "id": 546,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "rate(beacon_block_production_execution_steps_seconds_sum{step=\"proposerSlashing\"}[$rate_interval])\n/\nrate(beacon_block_production_execution_steps_seconds_count{step=\"proposerSlashing\"}[$rate_interval])",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "{{step}}",
+          "range": true,
+          "refId": "proposerSlashing"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(beacon_block_production_execution_steps_seconds_sum{step=\"attesterSlashings\"}[$rate_interval])\n/\nrate(beacon_block_production_execution_steps_seconds_count{step=\"attesterSlashings\"}[$rate_interval])",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "{{step}}",
+          "range": true,
+          "refId": "attesterSlashings"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(beacon_block_production_execution_steps_seconds_sum{step=\"voluntaryExits\"}[$rate_interval])\n/\nrate(beacon_block_production_execution_steps_seconds_count{step=\"voluntaryExits\"}[$rate_interval])",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "{{step}}",
+          "range": true,
+          "refId": "voluntaryExits"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(beacon_block_production_execution_steps_seconds_sum{step=\"blsToExecutionChanges\"}[$rate_interval])\n/\nrate(beacon_block_production_execution_steps_seconds_count{step=\"blsToExecutionChanges\"}[$rate_interval])",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "{{step}}",
+          "range": true,
+          "refId": "blsToExecutionChanges"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(beacon_block_production_execution_steps_seconds_sum{step=\"attestations\"}[$rate_interval])\n/\nrate(beacon_block_production_execution_steps_seconds_count{step=\"attestations\"}[$rate_interval])",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "{{step}}",
+          "range": true,
+          "refId": "attestations"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(beacon_block_production_execution_steps_seconds_sum{step=\"eth1DataAndDeposits\"}[$rate_interval])\n/\nrate(beacon_block_production_execution_steps_seconds_count{step=\"eth1DataAndDeposits\"}[$rate_interval])",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "{{step}}",
+          "range": true,
+          "refId": "eth1DataAndDeposits"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(beacon_block_production_execution_steps_seconds_sum{step=\"syncAggregate\"}[$rate_interval])\n/\nrate(beacon_block_production_execution_steps_seconds_count{step=\"syncAggregate\"}[$rate_interval])",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "{{step}}",
+          "range": true,
+          "refId": "syncAggregate"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(beacon_block_production_execution_steps_seconds_sum{step=\"executionPayload\"}[$rate_interval])\n/\nrate(beacon_block_production_execution_steps_seconds_count{step=\"executionPayload\"}[$rate_interval])",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "{{step}}",
+          "range": true,
+          "refId": "executionPayload"
+        }
+      ],
+      "title": "Full block production avg time with steps",
+      "transformations": [],
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 30,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 1
+      },
+      "id": 547,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "rate(beacon_block_production_builder_steps_seconds_sum{step=\"proposerSlashing\"}[$rate_interval])\n/\nrate(beacon_block_production_builder_steps_seconds_count{step=\"proposerSlashing\"}[$rate_interval])",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "{{step}}",
+          "range": true,
+          "refId": "proposerSlashing"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(beacon_block_production_builder_steps_seconds_sum{step=\"attesterSlashings\"}[$rate_interval])\n/\nrate(beacon_block_production_builder_steps_seconds_count{step=\"attesterSlashings\"}[$rate_interval])",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "{{step}}",
+          "range": true,
+          "refId": "attesterSlashings"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(beacon_block_production_builder_steps_seconds_sum{step=\"voluntaryExits\"}[$rate_interval])\n/\nrate(beacon_block_production_builder_steps_seconds_count{step=\"voluntaryExits\"}[$rate_interval])",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "{{step}}",
+          "range": true,
+          "refId": "voluntaryExits"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(beacon_block_production_builder_steps_seconds_sum{step=\"blsToExecutionChanges\"}[$rate_interval])\n/\nrate(beacon_block_production_builder_steps_seconds_count{step=\"blsToExecutionChanges\"}[$rate_interval])",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "{{step}}",
+          "range": true,
+          "refId": "blsToExecutionChanges"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(beacon_block_production_builder_steps_seconds_sum{step=\"attestations\"}[$rate_interval])\n/\nrate(beacon_block_production_builder_steps_seconds_count{step=\"attestations\"}[$rate_interval])",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "{{step}}",
+          "range": true,
+          "refId": "attestations"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(beacon_block_production_builder_steps_seconds_sum{step=\"eth1DataAndDeposits\"}[$rate_interval])\n/\nrate(beacon_block_production_builder_steps_seconds_count{step=\"eth1DataAndDeposits\"}[$rate_interval])",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "{{step}}",
+          "range": true,
+          "refId": "eth1DataAndDeposits"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(beacon_block_production_builder_steps_seconds_sum{step=\"syncAggregate\"}[$rate_interval])\n/\nrate(beacon_block_production_builder_steps_seconds_count{step=\"syncAggregate\"}[$rate_interval])",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "{{step}}",
+          "range": true,
+          "refId": "syncAggregate"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(beacon_block_production_builder_steps_seconds_sum{step=\"executionPayload\"}[$rate_interval])\n/\nrate(beacon_block_production_builder_steps_seconds_count{step=\"executionPayload\"}[$rate_interval])",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "{{step}}",
+          "range": true,
+          "refId": "executionPayload"
+        }
+      ],
+      "title": "Blinded block production avg time with steps",
+      "transformations": [],
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
             "hideFrom": {
@@ -455,6 +455,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -540,7 +541,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 1
+        "y": 9
       },
       "id": 168,
       "options": {
@@ -611,6 +612,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -636,7 +638,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 1
+        "y": 9
       },
       "id": 170,
       "options": {
@@ -657,11 +659,13 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
           "exemplar": false,
           "expr": "rate(beacon_block_production_seconds_sum[$rate_interval])\n/\nrate(beacon_block_production_seconds_count[$rate_interval])",
           "format": "heatmap",
           "interval": "",
-          "legendFormat": "{{instance}} - {{source}}",
+          "legendFormat": "{{source}}",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -692,6 +696,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -716,7 +721,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 9
+        "y": 17
       },
       "id": 528,
       "options": {
@@ -780,7 +785,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 9
+        "y": 17
       },
       "heatmap": {},
       "hideZeroBuckets": false,
@@ -826,7 +831,7 @@
           "unit": "s"
         }
       },
-      "pluginVersion": "9.3.2",
+      "pluginVersion": "10.1.1",
       "reverseYBuckets": false,
       "targets": [
         {
@@ -882,6 +887,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -906,7 +912,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 17
+        "y": 25
       },
       "id": 511,
       "options": {
@@ -1036,7 +1042,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 17
+        "y": 25
       },
       "hiddenSeries": false,
       "id": 378,
@@ -1056,7 +1062,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "9.3.2",
+      "pluginVersion": "10.1.1",
       "pointradius": 0.5,
       "points": true,
       "renderer": "flot",
@@ -1131,7 +1137,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 25
+        "y": 33
       },
       "hiddenSeries": false,
       "id": 376,
@@ -1153,7 +1159,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "9.3.2",
+      "pluginVersion": "10.1.1",
       "pointradius": 0.5,
       "points": true,
       "renderer": "flot",
@@ -1233,6 +1239,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1257,7 +1264,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 25
+        "y": 33
       },
       "id": 532,
       "options": {
@@ -1334,6 +1341,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1358,7 +1366,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 33
+        "y": 41
       },
       "id": 531,
       "options": {
@@ -1441,6 +1449,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1465,7 +1474,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 33
+        "y": 41
       },
       "id": 534,
       "options": {
@@ -1516,7 +1525,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 40
+        "y": 48
       },
       "id": 535,
       "options": {
@@ -1620,7 +1629,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 40
+        "y": 48
       },
       "id": 537,
       "options": {
@@ -1669,7 +1678,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 48
+        "y": 56
       },
       "id": 541,
       "panels": [],
@@ -1700,7 +1709,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 49
+        "y": 57
       },
       "id": 543,
       "options": {
@@ -1778,7 +1787,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 49
+        "y": 57
       },
       "id": 545,
       "options": {
@@ -1880,7 +1889,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 57
+        "y": 65
       },
       "id": 539,
       "options": {
@@ -1925,7 +1934,7 @@
     }
   ],
   "refresh": "10s",
-  "schemaVersion": 37,
+  "schemaVersion": 38,
   "style": "dark",
   "tags": [
     "lodestar"
