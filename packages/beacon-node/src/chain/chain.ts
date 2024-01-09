@@ -470,22 +470,32 @@ export class BeaconChain implements IBeaconChain {
     return data && {block: data, executionOptimistic: false};
   }
 
-  produceBlock(
-    blockAttributes: BlockAttributes
-  ): Promise<{block: allForks.BeaconBlock; executionPayloadValue: Wei; consensusBlockValue: Gwei}> {
+  produceBlock(blockAttributes: BlockAttributes): Promise<{
+    block: allForks.BeaconBlock;
+    executionPayloadValue: Wei;
+    consensusBlockValue: Gwei;
+    shouldOverrideBuilder?: boolean;
+  }> {
     return this.produceBlockWrapper<BlockType.Full>(BlockType.Full, blockAttributes);
   }
 
-  produceBlindedBlock(
-    blockAttributes: BlockAttributes
-  ): Promise<{block: allForks.BlindedBeaconBlock; executionPayloadValue: Wei; consensusBlockValue: Gwei}> {
+  produceBlindedBlock(blockAttributes: BlockAttributes): Promise<{
+    block: allForks.BlindedBeaconBlock;
+    executionPayloadValue: Wei;
+    consensusBlockValue: Gwei;
+  }> {
     return this.produceBlockWrapper<BlockType.Blinded>(BlockType.Blinded, blockAttributes);
   }
 
   async produceBlockWrapper<T extends BlockType>(
     blockType: T,
     {randaoReveal, graffiti, slot, feeRecipient}: BlockAttributes
-  ): Promise<{block: AssembledBlockType<T>; executionPayloadValue: Wei; consensusBlockValue: Gwei}> {
+  ): Promise<{
+    block: AssembledBlockType<T>;
+    executionPayloadValue: Wei;
+    consensusBlockValue: Gwei;
+    shouldOverrideBuilder?: boolean;
+  }> {
     const head = this.forkChoice.getHead();
     const state = await this.regen.getBlockSlotState(
       head.blockRoot,
@@ -497,16 +507,21 @@ export class BeaconChain implements IBeaconChain {
     const proposerIndex = state.epochCtx.getBeaconProposer(slot);
     const proposerPubKey = state.epochCtx.index2pubkey[proposerIndex].toBytes();
 
-    const {body, blobs, executionPayloadValue} = await produceBlockBody.call(this, blockType, state, {
-      randaoReveal,
-      graffiti,
-      slot,
-      feeRecipient,
-      parentSlot: slot - 1,
-      parentBlockRoot,
-      proposerIndex,
-      proposerPubKey,
-    });
+    const {body, blobs, executionPayloadValue, shouldOverrideBuilder} = await produceBlockBody.call(
+      this,
+      blockType,
+      state,
+      {
+        randaoReveal,
+        graffiti,
+        slot,
+        feeRecipient,
+        parentSlot: slot - 1,
+        parentBlockRoot,
+        proposerIndex,
+        proposerPubKey,
+      }
+    );
 
     // The hashtree root computed here for debug log will get cached and hence won't introduce additional delays
     const bodyRoot =
@@ -557,7 +572,7 @@ export class BeaconChain implements IBeaconChain {
       this.metrics?.blockProductionCaches.producedContentsCache.set(this.producedContentsCache.size);
     }
 
-    return {block, executionPayloadValue, consensusBlockValue: proposerReward};
+    return {block, executionPayloadValue, consensusBlockValue: proposerReward, shouldOverrideBuilder};
   }
 
   /**

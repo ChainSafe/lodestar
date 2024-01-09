@@ -353,7 +353,7 @@ export function getValidatorApi({
       strictFeeRecipientCheck,
       skipHeadChecksAndUpdate,
     }: Omit<routes.validator.ExtraProduceBlockOps, "builderSelection"> & {skipHeadChecksAndUpdate?: boolean} = {}
-  ): Promise<routes.validator.ProduceBlockOrContentsRes> {
+  ): Promise<routes.validator.ProduceBlockOrContentsRes & {shouldOverrideBuilder?: boolean}> {
     const source = ProducedBlockSource.engine;
     metrics?.blockProductionRequests.inc({source});
 
@@ -371,7 +371,7 @@ export function getValidatorApi({
     let timer;
     try {
       timer = metrics?.blockProductionTime.startTimer();
-      const {block, executionPayloadValue, consensusBlockValue} = await chain.produceBlock({
+      const {block, executionPayloadValue, consensusBlockValue, shouldOverrideBuilder} = await chain.produceBlock({
         slot,
         randaoReveal,
         graffiti: toGraffitiBuffer(graffiti || ""),
@@ -408,9 +408,10 @@ export function getValidatorApi({
           version,
           executionPayloadValue,
           consensusBlockValue,
+          shouldOverrideBuilder,
         };
       } else {
-        return {data: block, version, executionPayloadValue, consensusBlockValue};
+        return {data: block, version, executionPayloadValue, consensusBlockValue, shouldOverrideBuilder};
       }
     } finally {
       if (timer) timer({source});
@@ -504,7 +505,10 @@ export function getValidatorApi({
         // reference index of promises in the race
         const promisesOrder = [ProducedBlockSource.builder, ProducedBlockSource.engine];
         [blindedBlock, fullBlock] = await racePromisesWithCutoff<
-          routes.validator.ProduceBlockOrContentsRes | routes.validator.ProduceBlindedBlockRes | null
+          | ((routes.validator.ProduceBlockOrContentsRes | routes.validator.ProduceBlindedBlockRes) & {
+              shouldOverrideBuilder?: boolean;
+            })
+          | null
         >(
           [blindedBlockPromise, fullBlockPromise],
           BLOCK_PRODUCTION_RACE_CUTOFF_MS,
@@ -552,8 +556,20 @@ export function getValidatorApi({
       const blockValueEngine = enginePayloadValue + gweiToWei(consensusBlockValueEngine); // Total block value is in wei
 
       let executionPayloadSource: ProducedBlockSource | null = null;
+      const shouldOverrideBuilder = fullBlock?.shouldOverrideBuilder ?? false;
 
-      if (fullBlock && blindedBlock) {
+      // handle the builder override case separately
+      if (shouldOverrideBuilder === true) {
+        executionPayloadSource = ProducedBlockSource.engine;
+        logger.info("Selected engine block as censorship suspected in builder blocks", {
+          // winston logger doesn't like bigint
+          enginePayloadValue: `${enginePayloadValue}`,
+          consensusBlockValueEngine: `${consensusBlockValueEngine}`,
+          blockValueEngine: `${blockValueEngine}`,
+          shouldOverrideBuilder,
+          slot,
+        });
+      } else if (fullBlock && blindedBlock) {
         switch (builderSelection) {
           case routes.validator.BuilderSelection.MaxProfit: {
             if (
@@ -579,7 +595,7 @@ export function getValidatorApi({
             executionPayloadSource = ProducedBlockSource.builder;
           }
         }
-        logger.verbose(`Selected executionPayloadSource=${executionPayloadSource} block`, {
+        logger.info(`Selected executionPayloadSource=${executionPayloadSource} block`, {
           builderSelection,
           // winston logger doesn't like bigint
           builderBoostFactor: `${builderBoostFactor}`,
@@ -589,24 +605,27 @@ export function getValidatorApi({
           consensusBlockValueBuilder: `${consensusBlockValueBuilder}`,
           blockValueEngine: `${blockValueEngine}`,
           blockValueBuilder: `${blockValueBuilder}`,
+          shouldOverrideBuilder,
           slot,
         });
       } else if (fullBlock && !blindedBlock) {
         executionPayloadSource = ProducedBlockSource.engine;
-        logger.verbose("Selected engine block: no builder block produced", {
+        logger.info("Selected engine block: no builder block produced", {
           // winston logger doesn't like bigint
           enginePayloadValue: `${enginePayloadValue}`,
           consensusBlockValueEngine: `${consensusBlockValueEngine}`,
           blockValueEngine: `${blockValueEngine}`,
+          shouldOverrideBuilder,
           slot,
         });
       } else if (blindedBlock && !fullBlock) {
         executionPayloadSource = ProducedBlockSource.builder;
-        logger.verbose("Selected builder block: no engine block produced", {
+        logger.info("Selected builder block: no engine block produced", {
           // winston logger doesn't like bigint
           builderPayloadValue: `${builderPayloadValue}`,
           consensusBlockValueBuilder: `${consensusBlockValueBuilder}`,
           blockValueBuilder: `${blockValueBuilder}`,
+          shouldOverrideBuilder,
           slot,
         });
       }
