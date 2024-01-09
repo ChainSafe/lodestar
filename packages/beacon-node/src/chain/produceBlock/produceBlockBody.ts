@@ -100,7 +100,12 @@ export async function produceBlockBody<T extends BlockType>(
     proposerPubKey: BLSPubkey;
     commonBlockBody?: CommonBlockBody;
   }
-): Promise<{body: AssembledBodyType<T>; blobs: BlobsResult; executionPayloadValue: Wei}> {
+): Promise<{
+  body: AssembledBodyType<T>;
+  blobs: BlobsResult;
+  executionPayloadValue: Wei;
+  shouldOverrideBuilder?: boolean;
+}> {
   const {
     slot: blockSlot,
     feeRecipient: requestedFeeRecipient,
@@ -114,6 +119,9 @@ export async function produceBlockBody<T extends BlockType>(
   // TODO: Does not guarantee that preDeneb enum goes with a preDeneb block
   let blobsResult: BlobsResult;
   let executionPayloadValue: Wei;
+  // even though shouldOverrideBuilder is relevant for the engine response, for simplicity of typing
+  // we just return it undefined for the builder which anyway doesn't get consumed downstream
+  let shouldOverrideBuilder: boolean | undefined;
   const fork = currentState.config.getForkName(blockSlot);
 
   const logMeta: Record<string, string | number | bigint> = {
@@ -245,9 +253,11 @@ export async function produceBlockBody<T extends BlockType>(
 
           const engineRes = await this.executionEngine.getPayload(fork, payloadId);
           const {executionPayload, blobsBundle} = engineRes;
+          shouldOverrideBuilder = engineRes.shouldOverrideBuilder;
+
           (blockBody as allForks.ExecutionBlockBody).executionPayload = executionPayload;
           executionPayloadValue = engineRes.executionPayloadValue;
-          Object.assign(logMeta, {transactions: executionPayload.transactions.length});
+          Object.assign(logMeta, {transactions: executionPayload.transactions.length, shouldOverrideBuilder});
 
           const fetchedTime = Date.now() / 1000 - computeTimeAtSlot(this.config, blockSlot, this.genesisTime);
           this.metrics?.blockPayload.payloadFetchedTime.observe({prepType}, fetchedTime);
@@ -328,7 +338,7 @@ export async function produceBlockBody<T extends BlockType>(
   Object.assign(logMeta, {executionPayloadValue});
   this.logger.verbose("Produced beacon block body", logMeta);
 
-  return {body: blockBody as AssembledBodyType<T>, blobs: blobsResult, executionPayloadValue};
+  return {body: blockBody as AssembledBodyType<T>, blobs: blobsResult, executionPayloadValue, shouldOverrideBuilder};
 }
 
 /**
