@@ -10,7 +10,7 @@ import {
   kzgCommitmentToVersionedHash,
 } from "@lodestar/state-transition";
 import {routes} from "@lodestar/api";
-import {ForkChoiceError, ForkChoiceErrorCode, EpochDifference, AncestorStatus} from "@lodestar/fork-choice";
+import {ForkChoiceError, ForkChoiceErrorCode, EpochDifference, AncestorStatus, UpdateHeadOpt} from "@lodestar/fork-choice";
 import {isErrorAborted} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {toCheckpointHex} from "../stateCache/index.js";
@@ -222,7 +222,7 @@ export async function importBlock(
   // 5. Compute head. If new head, immediately stateCache.setHeadState()
 
   const oldHead = this.forkChoice.getHead();
-  const newHead = this.recomputeForkChoiceHead();
+  const newHead = this.recomputeForkChoiceHead(); // TODO: Think about this. If we just proposed a new block and reorg-ed, we should just keep the old head. Else canonical head
   const currFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
 
   if (newHead.blockRoot !== oldHead.blockRoot) {
