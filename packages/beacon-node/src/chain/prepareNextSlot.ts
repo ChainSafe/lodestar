@@ -1,4 +1,4 @@
-import {computeEpochAtSlot, isExecutionStateType, computeTimeAtSlot} from "@lodestar/state-transition";
+import {computeEpochAtSlot, isExecutionStateType, computeTimeAtSlot, CachedBeaconStateExecutions} from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkSeq, SLOTS_PER_EPOCH, ForkExecution} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
@@ -11,6 +11,7 @@ import {isQueueErrorAborted} from "../util/queue/index.js";
 import {prepareExecutionPayload, getPayloadAttributesForSSE} from "./produceBlock/produceBlockBody.js";
 import {IBeaconChain} from "./interface.js";
 import {RegenCaller} from "./regen/index.js";
+import { UpdateHeadOpt } from "@lodestar/fork-choice";
 
 /* With 12s slot times, this scheduler will run 4s before the start of each slot (`12 / 3 = 4`). */
 export const SCHEDULER_LOOKAHEAD_FACTOR = 3;
@@ -125,7 +126,23 @@ export class PrepareNextSlotScheduler {
       if (isExecutionStateType(prepareState)) {
         const proposerIndex = prepareState.epochCtx.getBeaconProposer(prepareSlot);
         const feeRecipient = this.chain.beaconProposerCache.get(proposerIndex);
+        let updatedPrepareState = prepareState;
+
         if (feeRecipient) {
+          // If we are proposing next slot, we need to predict if we can proposer-boost-reorg or not
+          const {slot: proposerHeadSlot, blockRoot: proposerHeadRoot} = this.chain.recomputeForkChoiceHead(UpdateHeadOpt.GetPredictedProposerHead, clockSlot); 
+
+          // If we predict we can reorg, update prepareState with proposer head block
+          if (proposerHeadRoot !== headRoot || proposerHeadSlot !== headSlot) {
+            this.logger.verbose("Weak head detected. May build on this block instead:", {proposerHeadSlot, proposerHeadRoot});
+            updatedPrepareState = await this.chain.regen.getBlockSlotState(
+              proposerHeadRoot,
+              prepareSlot,
+              {dontTransferCache: !isEpochTransition},
+              RegenCaller.precomputeEpoch
+            ) as CachedBeaconStateExecutions;
+          }
+
           // Update the builder status, if enabled shoot an api call to check status
           this.chain.updateBuilderStatus(clockSlot);
           if (this.chain.executionBuilder?.status) {
@@ -151,7 +168,7 @@ export class PrepareNextSlotScheduler {
             fromHex(headRoot),
             safeBlockHash,
             finalizedBlockHash,
-            prepareState,
+            updatedPrepareState,
             feeRecipient
           );
           this.logger.verbose("PrepareNextSlotScheduler prepared new payload", {
@@ -164,7 +181,7 @@ export class PrepareNextSlotScheduler {
         // If emitPayloadAttributes is true emit a SSE payloadAttributes event
         if (this.chain.opts.emitPayloadAttributes === true) {
           const data = await getPayloadAttributesForSSE(fork as ForkExecution, this.chain, {
-            prepareState,
+            prepareState: updatedPrepareState,
             prepareSlot,
             parentBlockRoot: fromHex(headRoot),
             // The likely consumers of this API are builders and will anyway ignore the
