@@ -162,10 +162,10 @@ export class ForkChoice implements IForkChoice {
   }
 
   updateAndGetHead(mode: UpdateHeadOpt = UpdateHeadOpt.GetCanonicialHead, slot?: Slot): ProtoBlock {
-    const canonicialHeadBlock = this.updateHead();
+    const canonicialHeadBlock = mode === UpdateHeadOpt.GetPredictedProposerHead ? this.getHead() : this.updateHead();
     switch(mode) {
       case UpdateHeadOpt.GetPredictedProposerHead:
-        // return this.predictProposerHead(canonicialHeadBlock);
+        return this.predictProposerHead(canonicialHeadBlock, slot);
       case UpdateHeadOpt.GetProposerHead:
         if (slot !== undefined) {
           return this.getProposerHead(canonicialHeadBlock, slot);
@@ -185,29 +185,45 @@ export class ForkChoice implements IForkChoice {
     return this.proposerBoostRoot ?? HEX_ZERO_HASH;
   }
 
+  /**
+   * To predict the proposer head of the next slot. That is, to predict if proposer-boost-reorg could happen.
+   * Reason why we can't be certain is because information of the head block is not fully available yet 
+   * since the current slot hasn't ended especially the attesters' votes.
+   * 
+   * There is a chance we mispredict.
+   * 
+   * By calling this function, we assume we are the proposer of next slot
+   * 
+   * https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/bellatrix/fork-choice.md#should_override_forkchoice_update
+   */
+  predictProposerHead(headBlock: ProtoBlock, currentSlot?: Slot): ProtoBlock {
+    // Skip re-org attempt if proposer boost (reorg) are disabled
+    if (!this.opts?.proposerBoostEnabled || !this.opts?.proposerBoostReorgEnabled) {
+      return headBlock;
+    }
 
-
-  // https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#get_proposer_head
-  getProposerHead(headBlock: ProtoBlock, slot: Slot): ProtoBlock {
     const parentBlock = this.protoArray.getBlock(headBlock.parentRoot);
+    const proposalSlot = headBlock.slot + 1;
+    currentSlot = currentSlot ?? this.fcStore.currentSlot;
 
     // No reorg if parentBlock isn't available
     if (parentBlock === undefined) {
       return headBlock;
     }
 
-    // No reorg if headBlock is on time
-    // https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_head_late
-    if (headBlock.timeliness) {
+    const prelimProposerHeadBlock = this.getPreliminaryProposerHead(headBlock, parentBlock, proposalSlot);
+
+    if (prelimProposerHeadBlock === headBlock) {
       return headBlock;
     }
 
-    // No reorg if we are at epoch boundary where proposer shuffling could change
-    // https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_shuffling_stable
-    if (slot % SLOTS_PER_EPOCH === 0) {
+    const currentTimeOk = (headBlock.slot === currentSlot) 
+    if (!currentTimeOk) {
       return headBlock;
     }
 
+    return parentBlock;
+  }
 
     // No reorg if headBlock and parentBlock are not ffg competitive
     // https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_ffg_competitive
