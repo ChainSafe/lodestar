@@ -4,14 +4,19 @@ import {phase0, ssz} from "@lodestar/types";
 import {ensureDir, readFile, readFileNames, removeFile, writeIfNotExist} from "../../../util/file.js";
 import {CPStateDatastore, DatastoreKey} from "./types.js";
 
-export const CHECKPOINT_STATES_FOLDER = "./checkpoint_states";
+const CHECKPOINT_STATES_FOLDER = "checkpoint_states";
 const CHECKPOINT_FILE_NAME_LENGTH = 82;
 
 /**
  * Implementation of CPStatePersistentApis using file system, this is beneficial for debugging.
  */
 export class FileCPStateDatastore implements CPStateDatastore {
-  constructor(private readonly folderPath: string) {}
+  private readonly folderPath: string;
+
+  constructor(parentDir: string = ".") {
+    // by default use the beacon folder `/beacon/checkpoint_states`
+    this.folderPath = path.join(parentDir, CHECKPOINT_STATES_FOLDER);
+  }
 
   async init(): Promise<void> {
     try {

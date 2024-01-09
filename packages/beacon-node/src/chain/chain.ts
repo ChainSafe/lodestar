@@ -84,8 +84,8 @@ import {SeenGossipBlockInput} from "./seenCache/index.js";
 import {InMemoryCheckpointStateCache} from "./stateCache/stateContextCheckpointsCache.js";
 import {FIFOBlockStateCache} from "./stateCache/fifoBlockStateCache.js";
 import {PersistentCheckpointStateCache} from "./stateCache/persistentCheckpointsCache.js";
-import {CHECKPOINT_STATES_FOLDER, FileCPStateDatastore} from "./stateCache/datastore/file.js";
 import {DbCPStateDatastore} from "./stateCache/datastore/db.js";
+import {FileCPStateDatastore} from "./stateCache/datastore/file.js";
 
 /**
  * Arbitrary constants, blobs and payloads should be consumed immediately in the same slot
@@ -257,8 +257,10 @@ export class BeaconChain implements IBeaconChain {
             getHeadState: this.getHeadState.bind(this),
             bufferPool: new BufferPool(anchorState.type.tree_serializedSize(anchorState.node), metrics),
             datastore: fileDataStore
-              ? new FileCPStateDatastore(CHECKPOINT_STATES_FOLDER)
-              : new DbCPStateDatastore(this.db),
+              ? // debug option if we want to investigate any issues with the DB
+                new FileCPStateDatastore()
+              : // production option
+                new DbCPStateDatastore(this.db),
           },
           this.opts
         )
