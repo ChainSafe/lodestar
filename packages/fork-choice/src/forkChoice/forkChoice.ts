@@ -161,6 +161,14 @@ export class ForkChoice implements IForkChoice {
     return this.head;
   }
 
+  /**
+   * 
+   * A multiplexer to wrap around the traditional `updateHead()` according to the scenario
+   * Scenarios as follow:
+   *    Prepare to propose in the next slot: getHead() -> predictProposerHead()
+   *    Proposing in the current slot: updateHead() -> getProposerHead()
+   *    Others eg. initializing forkchoice, importBlock: updateHead()
+   */
   updateAndGetHead(mode: UpdateHeadOpt = UpdateHeadOpt.GetCanonicialHead, slot?: Slot): ProtoBlock {
     const canonicialHeadBlock = mode === UpdateHeadOpt.GetPredictedProposerHead ? this.getHead() : this.updateHead();
     switch(mode) {
@@ -225,33 +233,44 @@ export class ForkChoice implements IForkChoice {
     return parentBlock;
   }
 
-    // No reorg if headBlock and parentBlock are not ffg competitive
-    // https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_ffg_competitive
-    const {unrealizedJustifiedEpoch: headBlockCpEpoch, unrealizedFinalizedRoot: headBlockCpRoot} = headBlock;
-    const {unrealizedJustifiedEpoch: parentBlockCpEpoch, unrealizedFinalizedRoot: parentBlockCpRoot} = parentBlock;
-    if (headBlockCpEpoch !== parentBlockCpEpoch || headBlockCpRoot !== parentBlockCpRoot) {
+  /**
+   * 
+   * This function takes in the canonical head block and determine the proposer head (canonical head block or its parent)
+   * https://github.com/ethereum/consensus-specs/pull/3034 for info about proposer boost reorg 
+   * This function should only be called during block proposal and only be called after `updateHead()` in `updateAndGetHead()`
+   * 
+   * Same as https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#get_proposer_head
+   */
+  getProposerHead(headBlock: ProtoBlock, slot: Slot): ProtoBlock {
+    // Skip re-org attempt if proposer boost (reorg) are disabled
+    if (!this.opts?.proposerBoostEnabled || !this.opts?.proposerBoostReorgEnabled) {
       return headBlock;
     }
 
+    const parentBlock = this.protoArray.getBlock(headBlock.parentRoot);
 
-    // No reorg if chain is not finalizing within REORG_MAX_EPOCHS_SINCE_FINALIZATION
-    // https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_finalization_ok
-    const epochsSinceFinalization = computeEpochAtSlot(slot) - this.getFinalizedCheckpoint().epoch;
-    if (epochsSinceFinalization > this.config.REORG_MAX_EPOCHS_SINCE_FINALIZATION) {
+    // No reorg if parentBlock isn't available
+    if (parentBlock === undefined) {
       return headBlock;
     }
 
-    // -No reorg if we are not proposing on time.- 
-    // Skipping this check as store.time is stored in slot and not unix time
-    // https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_proposing_on_time
+    const prelimProposerHeadBlock = this.getPreliminaryProposerHead(headBlock, parentBlock, slot);
+
+    if (prelimProposerHeadBlock === headBlock) {
+      return headBlock;
+    }
+
 
     // No reorg if attempted reorg is more than a single slot
-    if ((parentBlock.slot + 1 !== headBlock.slot) || (headBlock.slot + 1) !== slot) {
+    // Half of single_slot_reorg check in the spec is done in getPreliminaryProposerHead()
+    const currentTimeOk = headBlock.slot + 1 === slot;
+    if (!currentTimeOk) {
       return headBlock;
     }
 
-    // No reorg if headBlock has proposer boost
-    if (this.proposerBoostRoot === headBlock.blockRoot) {
+    // No reorg if proposer boost is still in effect
+    const isProposerBoostWornOff = this.proposerBoostRoot !== headBlock.blockRoot;
+    if (!isProposerBoostWornOff) {
       return headBlock;
     }
 
@@ -280,7 +299,7 @@ export class ForkChoice implements IForkChoice {
     }
 
     // Reorg if all above checks fail
-    return parentBlock;
+    return (this.head = parentBlock);
   }
 
   /**
@@ -1323,6 +1342,60 @@ export class ForkChoice implements IForkChoice {
       this.fcStore.unrealizedFinalizedCheckpoint,
       () => this.fcStore.unrealizedJustified.balances
     );
+  }
+
+  /**
+   * 
+   * Common logic of get_proposer_head() and should_override_forkchoice_update()
+   * No one should be calling this function except these two
+   *
+   */
+  private getPreliminaryProposerHead(headBlock: ProtoBlock, parentBlock: ProtoBlock, slot: Slot) {
+    // No reorg if headBlock is on time
+    // https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_head_late
+    const isHeadLate = !headBlock.timeliness;
+    if (!isHeadLate) {
+      return headBlock;
+    }
+
+
+    // No reorg if we are at epoch boundary where proposer shuffling could change
+    // https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_shuffling_stable
+    const isShufflingStable = slot % SLOTS_PER_EPOCH !== 0;
+    if (!isShufflingStable) {
+      return headBlock;
+    }
+
+
+    // No reorg if headBlock and parentBlock are not ffg competitive
+    // https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_ffg_competitive
+    const {unrealizedJustifiedEpoch: headBlockCpEpoch, unrealizedFinalizedRoot: headBlockCpRoot} = headBlock;
+    const {unrealizedJustifiedEpoch: parentBlockCpEpoch, unrealizedFinalizedRoot: parentBlockCpRoot} = parentBlock;
+    const isFFGCompetitive = (headBlockCpEpoch === parentBlockCpEpoch) && (headBlockCpRoot === parentBlockCpRoot);
+    if (!isFFGCompetitive) {
+      return headBlock;
+    }
+
+
+    // No reorg if chain is not finalizing within REORG_MAX_EPOCHS_SINCE_FINALIZATION
+    // https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_finalization_ok
+    const epochsSinceFinalization = computeEpochAtSlot(slot) - this.getFinalizedCheckpoint().epoch;
+    const isFinalizationOk = epochsSinceFinalization <= this.config.REORG_MAX_EPOCHS_SINCE_FINALIZATION;
+    if (!isFinalizationOk) {
+      return headBlock;
+    }
+
+    // -No reorg if we are not proposing on time.- 
+    // Note: Skipping this check as store.time in Lodestar is stored in slot and not unix time
+    // https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_proposing_on_time
+
+    // No reorg if this reorg spans more than a single slot
+    const parentSlotOk = parentBlock.slot + 1 === headBlock.slot;
+    if (!parentSlotOk) {
+      return headBlock;
+    }
+
+    return parentBlock;
   }
 }
 
