@@ -49,6 +49,12 @@ export type ForkChoiceOpts = {
   computeUnrealized?: boolean;
 };
 
+export enum UpdateHeadOpt {
+  GetCanonicialHead, // Skip getProposerHead
+  GetProposerHead, // With getProposerHead
+  GetPredictedProposerHead, // With overrideForkchoiceUpdate
+};
+
 /**
  * Provides an implementation of "Ethereum Consensus -- Beacon Chain Fork Choice":
  *
@@ -155,12 +161,31 @@ export class ForkChoice implements IForkChoice {
     return this.head;
   }
 
+  updateAndGetHead(mode: UpdateHeadOpt = UpdateHeadOpt.GetCanonicialHead, slot?: Slot): ProtoBlock {
+    const canonicialHeadBlock = this.updateHead();
+    switch(mode) {
+      case UpdateHeadOpt.GetPredictedProposerHead:
+        // return this.predictProposerHead(canonicialHeadBlock);
+      case UpdateHeadOpt.GetProposerHead:
+        if (slot !== undefined) {
+          return this.getProposerHead(canonicialHeadBlock, slot);
+        } else {
+          // TODO: Error handling
+        }
+      case UpdateHeadOpt.GetCanonicialHead:
+      default:
+        return canonicialHeadBlock;
+    }
+  }
+
   /**
    * Get the proposer boost root
    */
   getProposerBoostRoot(): RootHex {
     return this.proposerBoostRoot ?? HEX_ZERO_HASH;
   }
+
+
 
   // https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#get_proposer_head
   getProposerHead(headBlock: ProtoBlock, slot: Slot): ProtoBlock {

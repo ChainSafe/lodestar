@@ -29,7 +29,7 @@ import {
   isBlindedBeaconBlock,
   Gwei,
 } from "@lodestar/types";
-import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {Logger, isErrorAborted, pruneSetToMax, sleep, toHex} from "@lodestar/utils";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -628,12 +628,12 @@ export class BeaconChain implements IBeaconChain {
     };
   }
 
-  recomputeForkChoiceHead(): ProtoBlock {
+  recomputeForkChoiceHead(mode: UpdateHeadOpt = UpdateHeadOpt.GetCanonicialHead, slot?: Slot): ProtoBlock {
     this.metrics?.forkChoice.requests.inc();
     const timer = this.metrics?.forkChoice.findHead.startTimer();
 
     try {
-      return this.forkChoice.updateHead();
+      return this.forkChoice.updateAndGetHead(mode, slot);
     } catch (e) {
       this.metrics?.forkChoice.errors.inc();
       throw e;

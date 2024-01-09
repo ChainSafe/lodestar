@@ -22,7 +22,7 @@ import {
 import {BeaconConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
 
-import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
 import {IExecutionEngine, IExecutionBuilder} from "../execution/index.js";
 import {Metrics} from "../metrics/metrics.js";
@@ -167,7 +167,7 @@ export interface IBeaconChain {
 
   getStatus(): phase0.Status;
 
-  recomputeForkChoiceHead(): ProtoBlock;
+  recomputeForkChoiceHead(mode?: UpdateHeadOpt, slot?: Slot): ProtoBlock;
 
   waitForBlock(slot: Slot, root: RootHex): Promise<boolean>;
 

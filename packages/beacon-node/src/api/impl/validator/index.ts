@@ -34,7 +34,7 @@ import {
   isBlindedBlockContents,
   phase0,
 } from "@lodestar/types";
-import {ExecutionStatus} from "@lodestar/fork-choice";
+import {ExecutionStatus, UpdateHeadOpt} from "@lodestar/fork-choice";
 import {toHex, racePromisesWithCutoff, RaceEvent} from "@lodestar/utils";
 import {AttestationError, AttestationErrorCode, GossipAction, SyncCommitteeError} from "../../../chain/errors/index.js";
 import {validateApiAggregateAndProof} from "../../../chain/validation/index.js";
@@ -308,7 +308,7 @@ export function getValidatorApi({
       // forkChoice.updateTime() might have already been called by the onSlot clock
       // handler, in which case this should just return.
       chain.forkChoice.updateTime(slot);
-      chain.recomputeForkChoiceHead();
+      chain.recomputeForkChoiceHead(UpdateHeadOpt.GetProposerHead, slot);
     }
 
     let timer;
@@ -374,7 +374,7 @@ export function getValidatorApi({
       // forkChoice.updateTime() might have already been called by the onSlot clock
       // handler, in which case this should just return.
       chain.forkChoice.updateTime(slot);
-      chain.recomputeForkChoiceHead();
+      chain.recomputeForkChoiceHead(UpdateHeadOpt.GetProposerHead, slot);
     }
 
     let timer;
@@ -440,7 +440,7 @@ export function getValidatorApi({
     // forkChoice.updateTime() might have already been called by the onSlot clock
     // handler, in which case this should just return.
     chain.forkChoice.updateTime(slot);
-    chain.recomputeForkChoiceHead();
+    chain.recomputeForkChoiceHead(UpdateHeadOpt.GetProposerHead, slot);
 
     const fork = config.getForkName(slot);
     // set some sensible opts
