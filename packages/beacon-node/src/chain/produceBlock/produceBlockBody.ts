@@ -1,8 +1,6 @@
 import {
   Bytes32,
-  phase0,
   allForks,
-  altair,
   Root,
   RootHex,
   Slot,
@@ -35,6 +33,7 @@ import {PayloadId, IExecutionEngine, IExecutionBuilder, PayloadAttributes} from 
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
 import {numToQuantity} from "../../eth1/provider/utils.js";
+import {CommonBlockBody} from "../interface.js";
 import {validateBlobsAndKzgCommitments} from "./validateBlobsAndKzgCommitments.js";
 
 // Time to provide the EL to generate a payload from new payload id
@@ -99,17 +98,16 @@ export async function produceBlockBody<T extends BlockType>(
     parentBlockRoot: Root;
     proposerIndex: ValidatorIndex;
     proposerPubKey: BLSPubkey;
-    phase0BlockBody?: phase0.BeaconBlockBody;
+    commonBlockBody?: CommonBlockBody;
   }
 ): Promise<{body: AssembledBodyType<T>; blobs: BlobsResult; executionPayloadValue: Wei}> {
   const {
     slot: blockSlot,
     feeRecipient: requestedFeeRecipient,
-    parentSlot,
     parentBlockRoot,
     proposerIndex,
     proposerPubKey,
-    phase0BlockBody,
+    commonBlockBody,
   } = blockAttr;
   // Type-safe for blobs variable. Translate 'null' value into 'preDeneb' enum
   // TODO: Not ideal, but better than just using null.
@@ -129,33 +127,9 @@ export async function produceBlockBody<T extends BlockType>(
       ? this.metrics?.executionBlockProductionTimeSteps
       : this.metrics?.builderBlockProductionTimeSteps;
 
-  // TODO:
-  // Iterate through the naive aggregation pool and ensure all the attestations from there
-  // are included in the operation pool.
-  // for (const attestation of db.attestationPool.getAll()) {
-  //   try {
-  //     opPool.insertAttestation(attestation);
-  //   } catch (e) {
-  //     // Don't stop block production if there's an error, just create a log.
-  //     logger.error("Attestation did not transfer to op pool", {}, e);
-  //   }
-  // }
-  const blockBody = phase0BlockBody ?? (await produceBlockBodyPhase0.call(this, blockType, currentState, blockAttr));
-  const blsToExecutionChanges = this.opPool.getBlsToExecutionChanges(currentState, blockType, this.metrics);
-  const {attestations, deposits, voluntaryExits, attesterSlashings, proposerSlashings} = blockBody;
-  const blockEpoch = computeEpochAtSlot(blockSlot);
-
-  const endSyncAggregate = stepsMetrics?.startTimer();
-  if (blockEpoch >= this.config.ALTAIR_FORK_EPOCH) {
-    const syncAggregate = this.syncContributionAndProofPool.getAggregate(parentSlot, parentBlockRoot);
-    this.metrics?.production.producedSyncAggregateParticipants.observe(
-      syncAggregate.syncCommitteeBits.getTrueBitIndexes().length
-    );
-    (blockBody as altair.BeaconBlockBody).syncAggregate = syncAggregate;
-  }
-  endSyncAggregate?.({
-    step: BlockProductionStep.syncAggregate,
-  });
+  const blockBody = commonBlockBody ?? (await produceCommonBlockBody.call(this, blockType, currentState, blockAttr));
+  const {attestations, deposits, voluntaryExits, attesterSlashings, proposerSlashings, blsToExecutionChanges} =
+    blockBody;
 
   Object.assign(logMeta, {
     attestations: attestations.length,
@@ -339,8 +313,6 @@ export async function produceBlockBody<T extends BlockType>(
   });
 
   if (ForkSeq[fork] >= ForkSeq.capella) {
-    // TODO: blsToExecutionChanges should be passed in the produceBlock call
-    (blockBody as capella.BeaconBlockBody).blsToExecutionChanges = blsToExecutionChanges;
     Object.assign(logMeta, {
       blsToExecutionChanges: blsToExecutionChanges.length,
     });
@@ -582,24 +554,42 @@ function preparePayloadAttributes(
   return payloadAttributes;
 }
 
-/** process_sync_committee_contributions is implemented in syncCommitteeContribution.getSyncAggregate */
-
-export async function produceBlockBodyPhase0<T extends BlockType>(
+export async function produceCommonBlockBody<T extends BlockType>(
   this: BeaconChain,
   blockType: T,
   currentState: CachedBeaconStateAllForks,
-  {randaoReveal, graffiti}: Pick<BlockAttributes, "randaoReveal" | "graffiti">
-): Promise<phase0.BeaconBlockBody> {
+  {
+    randaoReveal,
+    graffiti,
+    slot,
+    parentSlot,
+    parentBlockRoot,
+  }: BlockAttributes & {
+    parentSlot: Slot;
+    parentBlockRoot: Root;
+  }
+): Promise<CommonBlockBody> {
   const stepsMetrics =
     blockType === BlockType.Full
       ? this.metrics?.executionBlockProductionTimeSteps
       : this.metrics?.builderBlockProductionTimeSteps;
 
-  const [attesterSlashings, proposerSlashings, voluntaryExits] = this.opPool.getSlashingsAndExits(
-    currentState,
-    blockType,
-    this.metrics
-  );
+  const blockEpoch = computeEpochAtSlot(slot);
+  const fork = currentState.config.getForkName(slot);
+
+  // TODO:
+  // Iterate through the naive aggregation pool and ensure all the attestations from there
+  // are included in the operation pool.
+  // for (const attestation of db.attestationPool.getAll()) {
+  //   try {
+  //     opPool.insertAttestation(attestation);
+  //   } catch (e) {
+  //     // Don't stop block production if there's an error, just create a log.
+  //     logger.error("Attestation did not transfer to op pool", {}, e);
+  //   }
+  // }
+  const [attesterSlashings, proposerSlashings, voluntaryExits, blsToExecutionChanges] =
+    this.opPool.getSlashingsAndExits(currentState, blockType, this.metrics);
 
   const endAttestations = stepsMetrics?.startTimer();
   const attestations = this.aggregatedAttestationPool.getAttestationsForBlock(this.forkChoice, currentState);
@@ -613,7 +603,7 @@ export async function produceBlockBodyPhase0<T extends BlockType>(
     step: BlockProductionStep.eth1DataAndDeposits,
   });
 
-  const blockBody: phase0.BeaconBlockBody = {
+  const blockBody: Omit<CommonBlockBody, "blsToExecutionChanges" | "syncAggregate"> = {
     randaoReveal,
     graffiti,
     eth1Data,
@@ -624,5 +614,21 @@ export async function produceBlockBodyPhase0<T extends BlockType>(
     voluntaryExits,
   };
 
-  return blockBody;
+  if (ForkSeq[fork] >= ForkSeq.capella) {
+    (blockBody as CommonBlockBody).blsToExecutionChanges = blsToExecutionChanges;
+  }
+
+  const endSyncAggregate = stepsMetrics?.startTimer();
+  if (blockEpoch >= this.config.ALTAIR_FORK_EPOCH) {
+    const syncAggregate = this.syncContributionAndProofPool.getAggregate(parentSlot, parentBlockRoot);
+    this.metrics?.production.producedSyncAggregateParticipants.observe(
+      syncAggregate.syncCommitteeBits.getTrueBitIndexes().length
+    );
+    (blockBody as CommonBlockBody).syncAggregate = syncAggregate;
+  }
+  endSyncAggregate?.({
+    step: BlockProductionStep.syncAggregate,
+  });
+
+  return blockBody as CommonBlockBody;
 }

@@ -162,33 +162,6 @@ export class OpPool {
     });
   }
 
-  getBlsToExecutionChanges(
-    state: CachedBeaconStateAllForks,
-    blockType: BlockType,
-    metrics: Metrics | null
-  ): capella.SignedBLSToExecutionChange[] {
-    const stepsMetrics =
-      blockType === BlockType.Full
-        ? metrics?.executionBlockProductionTimeSteps
-        : metrics?.builderBlockProductionTimeSteps;
-
-    const endBlsToExecutionChanges = stepsMetrics?.startTimer();
-    const blsToExecutionChanges: capella.SignedBLSToExecutionChange[] = [];
-    for (const blsToExecutionChange of this.blsToExecutionChanges.values()) {
-      if (isValidBlsToExecutionChangeForBlockInclusion(state, blsToExecutionChange.data)) {
-        blsToExecutionChanges.push(blsToExecutionChange.data);
-        if (blsToExecutionChanges.length >= MAX_BLS_TO_EXECUTION_CHANGES) {
-          break;
-        }
-      }
-    }
-    endBlsToExecutionChanges?.({
-      step: BlockProductionStep.blsToExecutionChanges,
-    });
-
-    return blsToExecutionChanges;
-  }
-
   /**
    * Get proposer and attester slashings and voluntary exits and bls to execution change for inclusion in a block.
    *
@@ -199,7 +172,12 @@ export class OpPool {
     state: CachedBeaconStateAllForks,
     blockType: BlockType,
     metrics: Metrics | null
-  ): [phase0.AttesterSlashing[], phase0.ProposerSlashing[], phase0.SignedVoluntaryExit[]] {
+  ): [
+    phase0.AttesterSlashing[],
+    phase0.ProposerSlashing[],
+    phase0.SignedVoluntaryExit[],
+    capella.SignedBLSToExecutionChange[],
+  ] {
     const {config} = state;
     const stateEpoch = computeEpochAtSlot(state.slot);
     const stateFork = config.getForkName(state.slot);
@@ -283,7 +261,21 @@ export class OpPool {
       step: BlockProductionStep.voluntaryExits,
     });
 
-    return [attesterSlashings, proposerSlashings, voluntaryExits];
+    const endBlsToExecutionChanges = stepsMetrics?.startTimer();
+    const blsToExecutionChanges: capella.SignedBLSToExecutionChange[] = [];
+    for (const blsToExecutionChange of this.blsToExecutionChanges.values()) {
+      if (isValidBlsToExecutionChangeForBlockInclusion(state, blsToExecutionChange.data)) {
+        blsToExecutionChanges.push(blsToExecutionChange.data);
+        if (blsToExecutionChanges.length >= MAX_BLS_TO_EXECUTION_CHANGES) {
+          break;
+        }
+      }
+    }
+    endBlsToExecutionChanges?.({
+      step: BlockProductionStep.blsToExecutionChanges,
+    });
+
+    return [attesterSlashings, proposerSlashings, voluntaryExits, blsToExecutionChanges];
   }
 
   /** For beacon pool API */

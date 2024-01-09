@@ -44,7 +44,7 @@ import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {ChainEventEmitter, ChainEvent} from "./emitter.js";
-import {IBeaconChain, ProposerPreparationData, BlockHash, StateGetOpts} from "./interface.js";
+import {IBeaconChain, ProposerPreparationData, BlockHash, StateGetOpts, CommonBlockBody} from "./interface.js";
 import {IChainOptions} from "./options.js";
 import {QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
 import {initializeForkChoice} from "./forkChoice/index.js";
@@ -73,7 +73,7 @@ import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {AssembledBlockType, BlobsResultType, BlockType} from "./produceBlock/index.js";
-import {BlockAttributes, produceBlockBody, produceBlockBodyPhase0} from "./produceBlock/produceBlockBody.js";
+import {BlockAttributes, produceBlockBody, produceCommonBlockBody} from "./produceBlock/produceBlockBody.js";
 import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
 import {BlockInput} from "./blocks/types.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
@@ -470,9 +470,7 @@ export class BeaconChain implements IBeaconChain {
     return data && {block: data, executionOptimistic: false};
   }
 
-  async produceBlockBodyPhase0(
-    blockAttributes: Pick<BlockAttributes, "slot" | "graffiti" | "randaoReveal">
-  ): Promise<phase0.BeaconBlockBody> {
+  async produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody> {
     const {slot} = blockAttributes;
     const head = this.forkChoice.getHead();
     const state = await this.regen.getBlockSlotState(
@@ -481,34 +479,33 @@ export class BeaconChain implements IBeaconChain {
       {dontTransferCache: true},
       RegenCaller.produceBlock
     );
+    const parentBlockRoot = fromHexString(head.blockRoot);
 
     // TODO: To avoid breaking changes for metric define this attribute
     const blockType = BlockType.Full;
 
-    return produceBlockBodyPhase0.call(this, blockType, state, blockAttributes);
+    return produceCommonBlockBody.call(this, blockType, state, {
+      ...blockAttributes,
+      parentBlockRoot,
+      parentSlot: slot - 1,
+    });
   }
 
   produceBlock(
-    blockAttributes: BlockAttributes & {phase0BlockBody?: phase0.BeaconBlockBody}
+    blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}
   ): Promise<{block: allForks.BeaconBlock; executionPayloadValue: Wei; consensusBlockValue: Gwei}> {
     return this.produceBlockWrapper<BlockType.Full>(BlockType.Full, blockAttributes);
   }
 
   produceBlindedBlock(
-    blockAttributes: BlockAttributes & {phase0BlockBody?: phase0.BeaconBlockBody}
+    blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}
   ): Promise<{block: allForks.BlindedBeaconBlock; executionPayloadValue: Wei; consensusBlockValue: Gwei}> {
     return this.produceBlockWrapper<BlockType.Blinded>(BlockType.Blinded, blockAttributes);
   }
 
   async produceBlockWrapper<T extends BlockType>(
     blockType: T,
-    {
-      randaoReveal,
-      graffiti,
-      slot,
-      feeRecipient,
-      phase0BlockBody,
-    }: BlockAttributes & {phase0BlockBody?: phase0.BeaconBlockBody}
+    {randaoReveal, graffiti, slot, feeRecipient, commonBlockBody}: BlockAttributes & {commonBlockBody?: CommonBlockBody}
   ): Promise<{block: AssembledBlockType<T>; executionPayloadValue: Wei; consensusBlockValue: Gwei}> {
     const head = this.forkChoice.getHead();
     const state = await this.regen.getBlockSlotState(
@@ -530,7 +527,7 @@ export class BeaconChain implements IBeaconChain {
       parentBlockRoot,
       proposerIndex,
       proposerPubKey,
-      phase0BlockBody,
+      commonBlockBody,
     });
 
     // The hashtree root computed here for debug log will get cached and hence won't introduce additional delays

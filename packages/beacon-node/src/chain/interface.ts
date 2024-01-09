@@ -11,6 +11,8 @@ import {
   deneb,
   Wei,
   Gwei,
+  capella,
+  altair,
 } from "@lodestar/types";
 import {
   BeaconStateAllForks,
@@ -154,12 +156,12 @@ export interface IBeaconChain {
 
   getContents(beaconBlock: deneb.BeaconBlock): deneb.Contents;
 
-  produceBlockBodyPhase0(blockAttributes: BlockAttributes): Promise<phase0.BeaconBlockBody>;
+  produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody>;
   produceBlock(
-    blockAttributes: BlockAttributes & {phase0BlockBody?: phase0.BeaconBlockBody}
+    blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}
   ): Promise<{block: allForks.BeaconBlock; executionPayloadValue: Wei; consensusBlockValue: Gwei}>;
   produceBlindedBlock(
-    blockAttributes: BlockAttributes & {phase0BlockBody?: phase0.BeaconBlockBody}
+    blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}
   ): Promise<{block: allForks.BlindedBeaconBlock; executionPayloadValue: Wei; consensusBlockValue: Gwei}>;
 
   /** Process a block until complete */
@@ -200,3 +202,7 @@ export type SSZObjectType =
   | "signedAggregatedAndProof"
   | "syncCommittee"
   | "contributionAndProof";
+
+export type CommonBlockBody = phase0.BeaconBlockBody &
+  Pick<capella.BeaconBlockBody, "blsToExecutionChanges"> &
+  Pick<altair.BeaconBlockBody, "syncAggregate">;

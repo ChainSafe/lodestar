@@ -9,6 +9,7 @@ import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {testLogger} from "../../../../utils/logger.js";
 import {ApiImplTestModules, setupApiImplTestServer} from "../../../../__mocks__/apiMocks.js";
 import {ExecutionBuilderHttp} from "../../../../../src/execution/builder/http.js";
+import {CommonBlockBody} from "../../../../../src/chain/interface.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 describe("api/validator - produceBlockV3", function () {
@@ -85,7 +86,7 @@ describe("api/validator - produceBlockV3", function () {
         const api = getValidatorApi(modules);
 
         if (enginePayloadValue !== null) {
-          const phase0BlockBody: phase0.BeaconBlockBody = {
+          const commonBlockBody: CommonBlockBody = {
             attestations: fullBlock.body.attestations,
             attesterSlashings: fullBlock.body.attesterSlashings,
             deposits: fullBlock.body.deposits,
@@ -94,9 +95,11 @@ describe("api/validator - produceBlockV3", function () {
             graffiti: fullBlock.body.graffiti,
             randaoReveal: fullBlock.body.randaoReveal,
             voluntaryExits: fullBlock.body.voluntaryExits,
+            blsToExecutionChanges: [],
+            syncAggregate: fullBlock.body.syncAggregate,
           };
 
-          chainStub.produceBlockBodyPhase0.mockResolvedValue(phase0BlockBody);
+          chainStub.produceCommonBlockBody.mockResolvedValue(commonBlockBody);
 
           chainStub.produceBlock.mockResolvedValue({
             block: fullBlock,

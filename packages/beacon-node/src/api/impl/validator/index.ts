@@ -50,7 +50,7 @@ import {RegenCaller} from "../../../chain/regen/index.js";
 import {getValidatorStatus} from "../beacon/state/utils.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossipHandlers.js";
 import {SCHEDULER_LOOKAHEAD_FACTOR} from "../../../chain/prepareNextSlot.js";
-import {ChainEvent, CheckpointHex} from "../../../chain/index.js";
+import {ChainEvent, CheckpointHex, CommonBlockBody} from "../../../chain/index.js";
 import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices} from "./utils.js";
 
 /**
@@ -287,10 +287,10 @@ export function getValidatorApi({
     // as of now fee recipient checks can not be performed because builder does not return bid recipient
     {
       skipHeadChecksAndUpdate,
-      phase0BlockBody,
+      commonBlockBody,
     }: Omit<routes.validator.ExtraProduceBlockOps, "builderSelection"> & {
       skipHeadChecksAndUpdate?: boolean;
-      phase0BlockBody?: phase0.BeaconBlockBody;
+      commonBlockBody?: CommonBlockBody;
     } = {}
   ): Promise<routes.validator.ProduceBlindedBlockRes> {
     const version = config.getForkName(slot);
@@ -327,7 +327,7 @@ export function getValidatorApi({
         slot,
         randaoReveal,
         graffiti: toGraffitiBuffer(graffiti || ""),
-        phase0BlockBody,
+        commonBlockBody,
       });
 
       metrics?.blockProductionSuccess.inc({source});
@@ -357,10 +357,10 @@ export function getValidatorApi({
       feeRecipient,
       strictFeeRecipientCheck,
       skipHeadChecksAndUpdate,
-      phase0BlockBody,
+      commonBlockBody,
     }: Omit<routes.validator.ExtraProduceBlockOps, "builderSelection"> & {
       skipHeadChecksAndUpdate?: boolean;
-      phase0BlockBody?: phase0.BeaconBlockBody;
+      commonBlockBody?: CommonBlockBody;
     } = {}
   ): Promise<routes.validator.ProduceBlockOrContentsRes> {
     const source = ProducedBlockSource.engine;
@@ -385,7 +385,7 @@ export function getValidatorApi({
         randaoReveal,
         graffiti: toGraffitiBuffer(graffiti || ""),
         feeRecipient,
-        phase0BlockBody,
+        commonBlockBody,
       });
       const version = config.getForkName(block.slot);
       if (strictFeeRecipientCheck && feeRecipient && isForkExecution(version)) {
@@ -476,7 +476,7 @@ export function getValidatorApi({
       };
 
       logger.verbose("Assembling block with produceEngineOrBuilderBlock", loggerContext);
-      const beaconBlockBodyPhase0 = await chain.produceBlockBodyPhase0({
+      const commonBlockBody = await chain.produceCommonBlockBody({
         slot,
         randaoReveal,
         graffiti: toGraffitiBuffer(graffiti || ""),
@@ -490,7 +490,7 @@ export function getValidatorApi({
             feeRecipient,
             // skip checking and recomputing head in these individual produce calls
             skipHeadChecksAndUpdate: true,
-            phase0BlockBody: beaconBlockBodyPhase0,
+            commonBlockBody,
           }).catch((e) => {
             logger.error("produceBuilderBlindedBlock failed to produce block", {slot}, e);
             return null;
@@ -513,7 +513,7 @@ export function getValidatorApi({
               strictFeeRecipientCheck,
               // skip checking and recomputing head in these individual produce calls
               skipHeadChecksAndUpdate: true,
-              phase0BlockBody: beaconBlockBodyPhase0,
+              commonBlockBody,
             }).catch((e) => {
               logger.error("produceEngineFullBlockOrContents failed to produce block", {slot}, e);
               return null;
