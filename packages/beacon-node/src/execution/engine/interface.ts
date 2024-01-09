@@ -140,7 +140,7 @@ export interface IExecutionEngine {
     executionPayload: allForks.ExecutionPayload;
     executionPayloadValue: Wei;
     blobsBundle?: BlobsBundle;
-    shouldOverrideBuilder: boolean;
+    shouldOverrideBuilder?: boolean;
   }>;
 
   getPayloadBodiesByHash(blockHash: DATA[]): Promise<(ExecutionPayloadBody | null)[]>;

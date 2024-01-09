@@ -89,7 +89,6 @@ describe("api/validator - produceBlockV2", function () {
       block: fullBlock,
       executionPayloadValue,
       consensusBlockValue,
-      shouldOverrideBuilder: false,
     });
 
     // check if expectedFeeRecipient is passed to produceBlock
@@ -134,7 +133,6 @@ describe("api/validator - produceBlockV2", function () {
     executionEngineStub.getPayload.mockResolvedValue({
       executionPayload: ssz.bellatrix.ExecutionPayload.defaultValue(),
       executionPayloadValue,
-      shouldOverrideBuilder: false,
     });
 
     // use fee recipient passed in produceBlockBody call for payload gen in engine notifyForkchoiceUpdate

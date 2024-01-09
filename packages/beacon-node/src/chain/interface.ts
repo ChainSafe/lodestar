@@ -158,13 +158,13 @@ export interface IBeaconChain {
     block: allForks.BeaconBlock;
     executionPayloadValue: Wei;
     consensusBlockValue: Gwei;
-    shouldOverrideBuilder: boolean;
+    shouldOverrideBuilder?: boolean;
   }>;
   produceBlindedBlock(blockAttributes: BlockAttributes): Promise<{
     block: allForks.BlindedBeaconBlock;
     executionPayloadValue: Wei;
     consensusBlockValue: Gwei;
-    shouldOverrideBuilder: boolean;
+    shouldOverrideBuilder?: boolean;
   }>;
 
   /** Process a block until complete */

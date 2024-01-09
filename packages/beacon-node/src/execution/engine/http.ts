@@ -367,7 +367,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     executionPayload: allForks.ExecutionPayload;
     executionPayloadValue: Wei;
     blobsBundle?: BlobsBundle;
-    shouldOverrideBuilder: boolean;
+    shouldOverrideBuilder?: boolean;
   }> {
     const method =
       ForkSeq[fork] >= ForkSeq.deneb

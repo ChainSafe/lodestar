@@ -474,7 +474,7 @@ export class BeaconChain implements IBeaconChain {
     block: allForks.BeaconBlock;
     executionPayloadValue: Wei;
     consensusBlockValue: Gwei;
-    shouldOverrideBuilder: boolean;
+    shouldOverrideBuilder?: boolean;
   }> {
     return this.produceBlockWrapper<BlockType.Full>(BlockType.Full, blockAttributes);
   }
@@ -483,7 +483,7 @@ export class BeaconChain implements IBeaconChain {
     block: allForks.BlindedBeaconBlock;
     executionPayloadValue: Wei;
     consensusBlockValue: Gwei;
-    shouldOverrideBuilder: boolean;
+    shouldOverrideBuilder?: boolean;
   }> {
     return this.produceBlockWrapper<BlockType.Blinded>(BlockType.Blinded, blockAttributes);
   }
@@ -495,7 +495,7 @@ export class BeaconChain implements IBeaconChain {
     block: AssembledBlockType<T>;
     executionPayloadValue: Wei;
     consensusBlockValue: Gwei;
-    shouldOverrideBuilder: boolean;
+    shouldOverrideBuilder?: boolean;
   }> {
     const head = this.forkChoice.getHead();
     const state = await this.regen.getBlockSlotState(

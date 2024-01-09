@@ -288,7 +288,7 @@ export function getValidatorApi({
     {
       skipHeadChecksAndUpdate,
     }: Omit<routes.validator.ExtraProduceBlockOps, "builderSelection"> & {skipHeadChecksAndUpdate?: boolean} = {}
-  ): Promise<routes.validator.ProduceBlindedBlockRes & {shouldOverrideBuilder: boolean}> {
+  ): Promise<routes.validator.ProduceBlindedBlockRes> {
     const version = config.getForkName(slot);
     if (!isForkExecution(version)) {
       throw Error(`Invalid fork=${version} for produceBuilderBlindedBlock`);
@@ -319,12 +319,11 @@ export function getValidatorApi({
     let timer;
     try {
       timer = metrics?.blockProductionTime.startTimer();
-      const {block, executionPayloadValue, consensusBlockValue, shouldOverrideBuilder} =
-        await chain.produceBlindedBlock({
-          slot,
-          randaoReveal,
-          graffiti: toGraffitiBuffer(graffiti || ""),
-        });
+      const {block, executionPayloadValue, consensusBlockValue} = await chain.produceBlindedBlock({
+        slot,
+        randaoReveal,
+        graffiti: toGraffitiBuffer(graffiti || ""),
+      });
 
       metrics?.blockProductionSuccess.inc({source});
       metrics?.blockProductionNumAggregated.observe({source}, block.body.attestations.length);
@@ -339,7 +338,7 @@ export function getValidatorApi({
         void chain.persistBlock(block, "produced_builder_block");
       }
 
-      return {data: block, version, executionPayloadValue, consensusBlockValue, shouldOverrideBuilder};
+      return {data: block, version, executionPayloadValue, consensusBlockValue};
     } finally {
       if (timer) timer({source});
     }
@@ -354,7 +353,7 @@ export function getValidatorApi({
       strictFeeRecipientCheck,
       skipHeadChecksAndUpdate,
     }: Omit<routes.validator.ExtraProduceBlockOps, "builderSelection"> & {skipHeadChecksAndUpdate?: boolean} = {}
-  ): Promise<routes.validator.ProduceBlockOrContentsRes & {shouldOverrideBuilder: boolean}> {
+  ): Promise<routes.validator.ProduceBlockOrContentsRes & {shouldOverrideBuilder?: boolean}> {
     const source = ProducedBlockSource.engine;
     metrics?.blockProductionRequests.inc({source});
 
@@ -507,7 +506,7 @@ export function getValidatorApi({
         const promisesOrder = [ProducedBlockSource.builder, ProducedBlockSource.engine];
         [blindedBlock, fullBlock] = await racePromisesWithCutoff<
           | ((routes.validator.ProduceBlockOrContentsRes | routes.validator.ProduceBlindedBlockRes) & {
-              shouldOverrideBuilder: boolean;
+              shouldOverrideBuilder?: boolean;
             })
           | null
         >(
@@ -562,7 +561,7 @@ export function getValidatorApi({
       // handle the builder override case separately
       if (shouldOverrideBuilder === true) {
         executionPayloadSource = ProducedBlockSource.engine;
-        logger.verbose("Selected engine block as censorship suspected in builder blocks", {
+        logger.info("Selected engine block as censorship suspected in builder blocks", {
           // winston logger doesn't like bigint
           enginePayloadValue: `${enginePayloadValue}`,
           consensusBlockValueEngine: `${consensusBlockValueEngine}`,
@@ -596,7 +595,7 @@ export function getValidatorApi({
             executionPayloadSource = ProducedBlockSource.builder;
           }
         }
-        logger.verbose(`Selected executionPayloadSource=${executionPayloadSource} block`, {
+        logger.info(`Selected executionPayloadSource=${executionPayloadSource} block`, {
           builderSelection,
           // winston logger doesn't like bigint
           builderBoostFactor: `${builderBoostFactor}`,
@@ -611,7 +610,7 @@ export function getValidatorApi({
         });
       } else if (fullBlock && !blindedBlock) {
         executionPayloadSource = ProducedBlockSource.engine;
-        logger.verbose("Selected engine block: no builder block produced", {
+        logger.info("Selected engine block: no builder block produced", {
           // winston logger doesn't like bigint
           enginePayloadValue: `${enginePayloadValue}`,
           consensusBlockValueEngine: `${consensusBlockValueEngine}`,
@@ -621,7 +620,7 @@ export function getValidatorApi({
         });
       } else if (blindedBlock && !fullBlock) {
         executionPayloadSource = ProducedBlockSource.builder;
-        logger.verbose("Selected builder block: no engine block produced", {
+        logger.info("Selected builder block: no engine block produced", {
           // winston logger doesn't like bigint
           builderPayloadValue: `${builderPayloadValue}`,
           consensusBlockValueBuilder: `${consensusBlockValueBuilder}`,
