@@ -3,11 +3,11 @@ import {CPStateDatastore, checkpointToDatastoreKey} from "../../../../src/chain/
 
 export function getTestDatastore(fileApisBuffer: Map<string, Uint8Array>): CPStateDatastore {
   const datastore: CPStateDatastore = {
-    write: (cp, state) => {
+    write: (cp, stateBytes) => {
       const persistentKey = checkpointToDatastoreKey(cp);
       const stringKey = toHexString(persistentKey);
       if (!fileApisBuffer.has(stringKey)) {
-        fileApisBuffer.set(stringKey, state.serialize());
+        fileApisBuffer.set(stringKey, stateBytes);
       }
       return Promise.resolve(persistentKey);
     },
