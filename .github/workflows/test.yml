@@ -321,12 +321,15 @@ jobs:
       # Run them in different steps to quickly identifying which command failed
       # Otherwise just doing `yarn test:spec` you can't tell which specific suite failed
       # many of the suites have identical names for minimal and mainnet
-      - name: Spec tests bls-general
-        run: yarn test:spec-bls-general
+      - name: Spec tests general
+        run: yarn test:spec:general
         working-directory: packages/beacon-node
+      - name: Spec tests bls
+        run: yarn test:spec:bls
+        working-directory: packages/beacon-node        
       - name: Spec tests minimal
-        run: yarn test:spec-minimal
+        run: yarn test:spec:minimal
         working-directory: packages/beacon-node
       - name: Spec tests mainnet
-        run: NODE_OPTIONS='--max-old-space-size=4096' yarn test:spec-mainnet
+        run: NODE_OPTIONS='--max-old-space-size=4096' yarn test:spec:mainnet
         working-directory: packages/beacon-node
