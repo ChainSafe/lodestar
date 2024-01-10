@@ -220,7 +220,10 @@ export class EpochCache {
   /**
    * state.validators.length of every state at epoch boundary
    * They are saved in increasing order of epoch.
-   * The last validator length in the list corresponds to the latest checkpoint state.
+   * The first validator length in the list corresponds to the state AFTER the latest finalized checkpoint state. ie. state.finalizedCheckpoint.epoch - 1
+   * The last validator length corresponds to the latest epoch state ie. this.epoch
+   * eg. latest epoch = 105, latest finalized cp state epoch = 102
+   * then the list will be (in terms of epoch) [103, 104, 105]
    */
   historicalValidatorLengths: immutable.List<number>;
 
@@ -611,9 +614,19 @@ export class EpochCache {
     // eg. [100(epoch 1), 102(epoch 2)].push(104(epoch 3)), this.epoch = 3, finalized cp epoch = 1
     // We keep the last (3 - 1) items = [102, 104]
     if (currEpoch >= this.config.EIP6110_FORK_EPOCH) {
-      this.historicalValidatorLengths = this.historicalValidatorLengths
-        .push(state.validators.length)
-        .slice((this.epoch - state.finalizedCheckpoint.epoch) * -1);
+      this.historicalValidatorLengths = this.historicalValidatorLengths.push(state.validators.length);
+
+      // If number of validatorLengths we want to keep exceeds the current list size, it implies
+      // finalized checkpoint hasn't advanced, and no need to slice
+      const hasFinalizedCpAdvanced =
+        this.epoch - state.finalizedCheckpoint.epoch >= this.historicalValidatorLengths.size;
+
+      if (hasFinalizedCpAdvanced) {
+        // We use finalized cp epoch - this.epoch which is a negative number to keep the last n entries and discard the rest
+        this.historicalValidatorLengths = this.historicalValidatorLengths.slice(
+          state.finalizedCheckpoint.epoch - this.epoch
+        );
+      }
     }
   }
 

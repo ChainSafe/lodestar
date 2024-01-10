@@ -961,19 +961,21 @@ export class BeaconChain implements IBeaconChain {
     } else if (cpEpoch >= eip6110Epoch) {
       const headEpoch = headState.epochCtx.epoch;
 
-      // Set pivotValidatorIndex to 0 if `historicalValidatorLengths` does not
-      // contain validator length for cpEpoch to ensure `newFinalizedValidators` to be empty
-      const pivotValidatorIndex =
-        headState.epochCtx.historicalValidatorLengths.get((headEpoch - cpEpoch + 1) * -1) ?? 0;
+      // Get the validator.length from the state at cpEpoch
+      // We are confident the last element in the list is from headEpoch
+      // Thus we query from the end of the list. (cpEpoch - headEpoch - 1) is negative number
+      const pivotValidatorIndex = headState.epochCtx.historicalValidatorLengths.get(cpEpoch - headEpoch - 1);
 
-      // Note EIP-6914 will break this logic
-      const newFinalizedValidators = headState.epochCtx.unfinalizedPubkey2index.filter(
-        (index, _pubkey) => index < pivotValidatorIndex
-      );
+      if (pivotValidatorIndex !== undefined) {
+        // Note EIP-6914 will break this logic
+        const newFinalizedValidators = headState.epochCtx.unfinalizedPubkey2index.filter(
+          (index, _pubkey) => index < pivotValidatorIndex
+        );
 
-      // Populate finalized pubkey cache and remove unfinalized pubkey cache
-      if (!newFinalizedValidators.isEmpty()) {
-        this.regen.updateUnfinalizedPubkeys(newFinalizedValidators);
+        // Populate finalized pubkey cache and remove unfinalized pubkey cache
+        if (!newFinalizedValidators.isEmpty()) {
+          this.regen.updateUnfinalizedPubkeys(newFinalizedValidators);
+        }
       }
     }
 
