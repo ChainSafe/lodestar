@@ -180,7 +180,7 @@ export class OpPool {
   ] {
     const {config} = state;
     const stateEpoch = computeEpochAtSlot(state.slot);
-    const stateFork = config.getForkName(state.slot);
+    const stateFork = config.getForkSeq(state.slot);
     const toBeSlashedIndices = new Set<ValidatorIndex>();
     const proposerSlashings: phase0.ProposerSlashing[] = [];
 
@@ -249,7 +249,10 @@ export class OpPool {
         // Signature validation is skipped in `isValidVoluntaryExit(,,false)` since it was already validated in gossip
         // However we must make sure that the signature fork is the same, or it will become invalid if included through
         // a future fork.
-        stateFork === config.getForkName(computeStartSlotAtEpoch(voluntaryExit.message.epoch))
+        isVoluntaryExitSignatureIncludable(
+          stateFork,
+          config.getForkSeq(computeStartSlotAtEpoch(voluntaryExit.message.epoch))
+        )
       ) {
         voluntaryExits.push(voluntaryExit);
         if (voluntaryExits.length >= MAX_VOLUNTARY_EXITS) {
@@ -397,6 +400,19 @@ export class OpPool {
         }
       }
     }
+  }
+}
+
+/**
+ * Returns true if a pre-validated signature is still valid to be included in a specific block's fork
+ */
+function isVoluntaryExitSignatureIncludable(stateFork: ForkSeq, voluntaryExitFork: ForkSeq): boolean {
+  if (stateFork >= ForkSeq.deneb) {
+    // Exists are perpetually valid https://eips.ethereum.org/EIPS/eip-7044
+    return true
+  } else {
+    // Can only include exits from the current and previous fork
+    return voluntaryExitFork === stateFork || voluntaryExitFork === (stateFork - 1)
   }
 }
 
