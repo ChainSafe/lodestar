@@ -1,10 +1,8 @@
 export {goerliChainConfig as chainConfig} from "@lodestar/config/networks";
 
 export const depositContractDeployBlock = 4367322;
-export const genesisFileUrl =
-  "https://raw.githubusercontent.com/eth-clients/eth2-networks/master/shared/prater/genesis.ssz";
-export const bootnodesFileUrl =
-  "https://raw.githubusercontent.com/eth-clients/eth2-networks/master/shared/prater/bootstrap_nodes.txt";
+export const genesisFileUrl = "https://raw.githubusercontent.com/eth-clients/goerli/main/prater/genesis.ssz";
+export const bootnodesFileUrl = "https://raw.githubusercontent.com/eth-clients/goerli/main/prater/bootstrap_nodes.txt";
 
 export const bootEnrs = [
   "enr:-LK4QH1xnjotgXwg25IDPjrqRGFnH1ScgNHA3dv1Z8xHCp4uP3N3Jjl_aYv_WIxQRdwZvSukzbwspXZ7JjpldyeVDzMCh2F0dG5ldHOIAAAAAAAAAACEZXRoMpB53wQoAAAQIP__________gmlkgnY0gmlwhIe1te-Jc2VjcDI1NmsxoQOkcGXqbCJYbcClZ3z5f6NWhX_1YPFRYRRWQpJjwSHpVIN0Y3CCIyiDdWRwgiMo",
