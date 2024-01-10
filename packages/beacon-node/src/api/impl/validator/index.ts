@@ -482,7 +482,7 @@ export function getValidatorApi({
         randaoReveal,
         graffiti: toGraffitiBuffer(graffiti || ""),
       });
-      logger.debug("Produced phase 0 block body", loggerContext);
+      logger.debug("Produced common block body", loggerContext);
 
       // Start calls for building execution and builder blocks
       const blindedBlockPromise = isBuilderEnabled
