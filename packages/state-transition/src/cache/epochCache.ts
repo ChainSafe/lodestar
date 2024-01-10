@@ -621,7 +621,7 @@ export class EpochCache {
       // If number of validatorLengths we want to keep exceeds the current list size, it implies
       // finalized checkpoint hasn't advanced, and no need to slice
       const hasFinalizedCpAdvanced =
-        this.epoch - state.finalizedCheckpoint.epoch >= this.historicalValidatorLengths.size;
+        this.epoch - state.finalizedCheckpoint.epoch < this.historicalValidatorLengths.size;
 
       if (hasFinalizedCpAdvanced) {
         // We use finalized cp epoch - this.epoch which is a negative number to keep the last n entries and discard the rest
