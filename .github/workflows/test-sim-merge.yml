@@ -24,7 +24,7 @@ env:
 jobs:
   sim-merge-tests:
     name: Sim merge tests
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: Sim-Test-Github-runner
     steps:
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v3
