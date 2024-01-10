@@ -392,5 +392,5 @@ export type AllForksLightClientSSZTypes = {
 
 export type AllForksBlobsSSZTypes = {
   BlobSidecar: AllForksTypeOf<typeof denebSsz.BlobSidecar>;
-  ExecutionPayloadAndBlobsBundle: AllForksTypeOf<typeof denebSsz.ExecutionPayloadAndBlobsBundle>;
+  ExecutionPayloadAndBlobsBundle: AllForksTypeOf<typeof denebSsz.ExecutionPayloadAndBlobsBundle | typeof eip6110Ssz.ExecutionPayloadAndBlobsBundle>;
 };

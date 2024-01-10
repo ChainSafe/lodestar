@@ -100,7 +100,7 @@ export const SignedBlindedBeaconBlock = new ContainerType(
 export const BuilderBid = new ContainerType(
   {
     header: ExecutionPayloadHeader, // Modified in EIP6110
-    blindedBlobsBundle: denebSsz.BlindedBlobsBundle,
+    blindedBlobsBundle: denebSsz.BlobKzgCommitments,
     value: UintBn256,
     pubkey: BLSPubkey,
   },

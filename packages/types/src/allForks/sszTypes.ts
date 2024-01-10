@@ -193,7 +193,6 @@ export const allForksBlobs = {
   },
   eip6110: {
     BlobSidecar: deneb.BlobSidecar,
-    BlindedBlobSidecar: deneb.BlindedBlobSidecar,
     ExecutionPayloadAndBlobsBundle: eip6110.ExecutionPayloadAndBlobsBundle,
   },
 };
