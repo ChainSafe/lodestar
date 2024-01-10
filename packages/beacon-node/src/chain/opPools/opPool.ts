@@ -13,12 +13,14 @@ import {
   MAX_BLS_TO_EXECUTION_CHANGES,
   BLS_WITHDRAWAL_PREFIX,
   MAX_ATTESTER_SLASHINGS,
+  ForkSeq,
 } from "@lodestar/params";
-import {Epoch, phase0, capella, ssz, ValidatorIndex} from "@lodestar/types";
+import {Epoch, phase0, capella, ssz, ValidatorIndex, allForks} from "@lodestar/types";
 import {IBeaconDb} from "../../db/index.js";
 import {SignedBLSToExecutionChangeVersioned} from "../../util/types.js";
 import {BlockType} from "../interface.js";
 import {Metrics} from "../../metrics/metrics.js";
+import {BlockProductionStep} from "../produceBlock/produceBlockBody.js";
 import {isValidBlsToExecutionChangeForBlockInclusion} from "./utils.js";
 
 type HexRoot = string;
@@ -201,7 +203,7 @@ export class OpPool {
       }
     }
     endProposerSlashing?.({
-      step: "proposerSlashing",
+      step: BlockProductionStep.proposerSlashing,
     });
 
     const endAttesterSlashings = stepsMetrics?.startTimer();
@@ -235,7 +237,7 @@ export class OpPool {
       }
     }
     endAttesterSlashings?.({
-      step: "attesterSlashings",
+      step: BlockProductionStep.attesterSlashings,
     });
 
     const endVoluntaryExits = stepsMetrics?.startTimer();
@@ -256,7 +258,7 @@ export class OpPool {
       }
     }
     endVoluntaryExits?.({
-      step: "voluntaryExits",
+      step: BlockProductionStep.voluntaryExits,
     });
 
     const endBlsToExecutionChanges = stepsMetrics?.startTimer();
@@ -270,7 +272,7 @@ export class OpPool {
       }
     }
     endBlsToExecutionChanges?.({
-      step: "blsToExecutionChanges",
+      step: BlockProductionStep.blsToExecutionChanges,
     });
 
     return [attesterSlashings, proposerSlashings, voluntaryExits, blsToExecutionChanges];
@@ -299,11 +301,11 @@ export class OpPool {
   /**
    * Prune all types of transactions given the latest head state
    */
-  pruneAll(headState: CachedBeaconStateAllForks, finalizedState: CachedBeaconStateAllForks | null): void {
+  pruneAll(headBlock: allForks.SignedBeaconBlock, headState: CachedBeaconStateAllForks): void {
     this.pruneAttesterSlashings(headState);
     this.pruneProposerSlashings(headState);
     this.pruneVoluntaryExits(headState);
-    this.pruneBlsToExecutionChanges(headState, finalizedState);
+    this.pruneBlsToExecutionChanges(headBlock, headState);
   }
 
   /**
@@ -368,19 +370,28 @@ export class OpPool {
   }
 
   /**
-   * Call after finalizing
-   * Prune blsToExecutionChanges for validators which have been set with withdrawal
-   * credentials
+   * Prune BLS to execution changes that have been applied to the state more than 1 block ago.
+   * In the worse case where head block is reorged, the same BlsToExecutionChange message can be re-added
+   * to opPool once gossipsub seen cache TTL passes.
    */
   private pruneBlsToExecutionChanges(
-    headState: CachedBeaconStateAllForks,
-    finalizedState: CachedBeaconStateAllForks | null
+    headBlock: allForks.SignedBeaconBlock,
+    headState: CachedBeaconStateAllForks
   ): void {
+    const {config} = headState;
+    const recentBlsToExecutionChanges =
+      config.getForkSeq(headBlock.message.slot) >= ForkSeq.capella
+        ? (headBlock as capella.SignedBeaconBlock).message.body.blsToExecutionChanges
+        : [];
+
+    const recentBlsToExecutionChangeIndexes = new Set(
+      recentBlsToExecutionChanges.map((blsToExecutionChange) => blsToExecutionChange.message.validatorIndex)
+    );
+
     for (const [key, blsToExecutionChange] of this.blsToExecutionChanges.entries()) {
-      // TODO CAPELLA: We need the finalizedState to safely prune BlsToExecutionChanges. Finalized state may not be
-      // available in the cache, so it can be null. Once there's a head only prunning strategy, change
-      if (finalizedState !== null) {
-        const validator = finalizedState.validators.getReadonly(blsToExecutionChange.data.message.validatorIndex);
+      const {validatorIndex} = blsToExecutionChange.data.message;
+      if (!recentBlsToExecutionChangeIndexes.has(validatorIndex)) {
+        const validator = headState.validators.getReadonly(validatorIndex);
         if (validator.withdrawalCredentials[0] !== BLS_WITHDRAWAL_PREFIX) {
           this.blsToExecutionChanges.delete(key);
         }

@@ -80,6 +80,7 @@ import {BlockInput} from "./blocks/types.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {ShufflingCache} from "./shufflingCache.js";
 import {StateContextCache} from "./stateCache/stateContextCache.js";
+import {SeenGossipBlockInput} from "./seenCache/index.js";
 import {CheckpointStateCache} from "./stateCache/stateContextCheckpointsCache.js";
 
 /**
@@ -88,7 +89,6 @@ import {CheckpointStateCache} from "./stateCache/stateContextCheckpointsCache.js
  * allow some margin if the node overloads.
  */
 const DEFAULT_MAX_CACHED_PRODUCED_ROOTS = 4;
-const DEFAULT_MAX_CACHED_BLOB_SIDECARS = 4;
 
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: UintNum64;
@@ -126,6 +126,7 @@ export class BeaconChain implements IBeaconChain {
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
   readonly seenContributionAndProof: SeenContributionAndProof;
   readonly seenAttestationDatas: SeenAttestationDatas;
+  readonly seenGossipBlockInput = new SeenGossipBlockInput();
   // Seen cache for liveness checks
   readonly seenBlockAttesters = new SeenBlockAttesters();
 
@@ -137,8 +138,7 @@ export class BeaconChain implements IBeaconChain {
   readonly checkpointBalancesCache: CheckpointBalancesCache;
   readonly shufflingCache: ShufflingCache;
   /** Map keyed by executionPayload.blockHash of the block for those blobs */
-  readonly producedBlobSidecarsCache = new Map<BlockHash, deneb.BlobSidecars>();
-  readonly producedBlindedBlobSidecarsCache = new Map<BlockHash, deneb.BlindedBlobSidecars>();
+  readonly producedContentsCache = new Map<BlockHash, deneb.Contents>();
 
   // Cache payload from the local execution so that produceBlindedBlock or produceBlockV3 and
   // send and get signed/published blinded versions which beacon can assemble into full before
@@ -471,22 +471,32 @@ export class BeaconChain implements IBeaconChain {
     return data && {block: data, executionOptimistic: false};
   }
 
-  produceBlock(
-    blockAttributes: BlockAttributes
-  ): Promise<{block: allForks.BeaconBlock; executionPayloadValue: Wei; consensusBlockValue: Gwei}> {
+  produceBlock(blockAttributes: BlockAttributes): Promise<{
+    block: allForks.BeaconBlock;
+    executionPayloadValue: Wei;
+    consensusBlockValue: Gwei;
+    shouldOverrideBuilder?: boolean;
+  }> {
     return this.produceBlockWrapper<BlockType.Full>(BlockType.Full, blockAttributes);
   }
 
-  produceBlindedBlock(
-    blockAttributes: BlockAttributes
-  ): Promise<{block: allForks.BlindedBeaconBlock; executionPayloadValue: Wei; consensusBlockValue: Gwei}> {
+  produceBlindedBlock(blockAttributes: BlockAttributes): Promise<{
+    block: allForks.BlindedBeaconBlock;
+    executionPayloadValue: Wei;
+    consensusBlockValue: Gwei;
+  }> {
     return this.produceBlockWrapper<BlockType.Blinded>(BlockType.Blinded, blockAttributes);
   }
 
   async produceBlockWrapper<T extends BlockType>(
     blockType: T,
     {randaoReveal, graffiti, slot, feeRecipient}: BlockAttributes
-  ): Promise<{block: AssembledBlockType<T>; executionPayloadValue: Wei; consensusBlockValue: Gwei}> {
+  ): Promise<{
+    block: AssembledBlockType<T>;
+    executionPayloadValue: Wei;
+    consensusBlockValue: Gwei;
+    shouldOverrideBuilder?: boolean;
+  }> {
     const head = this.forkChoice.getHead();
     const state = await this.regen.getBlockSlotState(
       head.blockRoot,
@@ -498,16 +508,21 @@ export class BeaconChain implements IBeaconChain {
     const proposerIndex = state.epochCtx.getBeaconProposer(slot);
     const proposerPubKey = state.epochCtx.index2pubkey[proposerIndex].toBytes();
 
-    const {body, blobs, executionPayloadValue} = await produceBlockBody.call(this, blockType, state, {
-      randaoReveal,
-      graffiti,
-      slot,
-      feeRecipient,
-      parentSlot: slot - 1,
-      parentBlockRoot,
-      proposerIndex,
-      proposerPubKey,
-    });
+    const {body, blobs, executionPayloadValue, shouldOverrideBuilder} = await produceBlockBody.call(
+      this,
+      blockType,
+      state,
+      {
+        randaoReveal,
+        graffiti,
+        slot,
+        feeRecipient,
+        parentSlot: slot - 1,
+        parentBlockRoot,
+        proposerIndex,
+        proposerPubKey,
+      }
+    );
 
     // The hashtree root computed here for debug log will get cached and hence won't introduce additional delays
     const bodyRoot =
@@ -553,35 +568,12 @@ export class BeaconChain implements IBeaconChain {
     // publishing the blinded block's full version
     if (blobs.type === BlobsResultType.produced) {
       // body is of full type here
-      const blockHash = blobs.blockHash;
-      const blobSidecars = blobs.blobSidecars.map((blobSidecar) => ({
-        ...blobSidecar,
-        blockRoot,
-        slot,
-        blockParentRoot: parentBlockRoot,
-        proposerIndex,
-      }));
-
-      this.producedBlobSidecarsCache.set(blockHash, blobSidecars);
-      this.metrics?.blockProductionCaches.producedBlobSidecarsCache.set(this.producedBlobSidecarsCache.size);
-    } else if (blobs.type === BlobsResultType.blinded) {
-      // body is of blinded type here
-      const blockHash = blobs.blockHash;
-      const blindedBlobSidecars = blobs.blobSidecars.map((blindedBlobSidecar) => ({
-        ...blindedBlobSidecar,
-        blockRoot,
-        slot,
-        blockParentRoot: parentBlockRoot,
-        proposerIndex,
-      }));
-
-      this.producedBlindedBlobSidecarsCache.set(blockHash, blindedBlobSidecars);
-      this.metrics?.blockProductionCaches.producedBlindedBlobSidecarsCache.set(
-        this.producedBlindedBlobSidecarsCache.size
-      );
+      const {blockHash, contents} = blobs;
+      this.producedContentsCache.set(blockHash, contents);
+      this.metrics?.blockProductionCaches.producedContentsCache.set(this.producedContentsCache.size);
     }
 
-    return {block, executionPayloadValue, consensusBlockValue: proposerReward};
+    return {block, executionPayloadValue, consensusBlockValue: proposerReward, shouldOverrideBuilder};
   }
 
   /**
@@ -594,14 +586,14 @@ export class BeaconChain implements IBeaconChain {
    *       kzg_aggregated_proof=compute_proof_from_blobs(blobs),
    *   )
    */
-  getBlobSidecars(beaconBlock: deneb.BeaconBlock): deneb.BlobSidecars {
+  getContents(beaconBlock: deneb.BeaconBlock): deneb.Contents {
     const blockHash = toHex(beaconBlock.body.executionPayload.blockHash);
-    const blobSidecars = this.producedBlobSidecarsCache.get(blockHash);
-    if (!blobSidecars) {
-      throw Error(`No blobSidecars for executionPayload.blockHash ${blockHash}`);
+    const contents = this.producedContentsCache.get(blockHash);
+    if (!contents) {
+      throw Error(`No contents for executionPayload.blockHash ${blockHash}`);
     }
 
-    return blobSidecars;
+    return contents;
   }
 
   async processBlock(block: BlockInput, opts?: ImportBlockOpts): Promise<void> {
@@ -886,19 +878,8 @@ export class BeaconChain implements IBeaconChain {
     this.metrics?.blockProductionCaches.producedBlindedBlockRoot.set(this.producedBlindedBlockRoot.size);
 
     if (this.config.getForkSeq(slot) >= ForkSeq.deneb) {
-      pruneSetToMax(
-        this.producedBlobSidecarsCache,
-        this.opts.maxCachedBlobSidecars ?? DEFAULT_MAX_CACHED_BLOB_SIDECARS
-      );
-      this.metrics?.blockProductionCaches.producedBlobSidecarsCache.set(this.producedBlobSidecarsCache.size);
-
-      pruneSetToMax(
-        this.producedBlindedBlobSidecarsCache,
-        this.opts.maxCachedBlobSidecars ?? DEFAULT_MAX_CACHED_BLOB_SIDECARS
-      );
-      this.metrics?.blockProductionCaches.producedBlindedBlobSidecarsCache.set(
-        this.producedBlindedBlobSidecarsCache.size
-      );
+      pruneSetToMax(this.producedContentsCache, this.opts.maxCachedProducedRoots ?? DEFAULT_MAX_CACHED_PRODUCED_ROOTS);
+      this.metrics?.blockProductionCaches.producedContentsCache.set(this.producedContentsCache.size);
     }
 
     const metrics = this.metrics;
@@ -942,15 +923,20 @@ export class BeaconChain implements IBeaconChain {
     this.logger.verbose("Fork choice justified", {epoch: cp.epoch, root: cp.rootHex});
   }
 
-  private onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWithHex): void {
+  private async onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWithHex): Promise<void> {
     this.logger.verbose("Fork choice finalized", {epoch: cp.epoch, root: cp.rootHex});
     this.seenBlockProposers.prune(computeStartSlotAtEpoch(cp.epoch));
 
     // TODO: Improve using regen here
-    const headState = this.regen.getStateSync(this.forkChoice.getHead().stateRoot);
-    const finalizedState = this.regen.getCheckpointStateSync(cp);
+    const {blockRoot, stateRoot, slot} = this.forkChoice.getHead();
+    const headState = this.regen.getStateSync(stateRoot);
+    const headBlock = await this.db.block.get(fromHexString(blockRoot));
+    if (headBlock == null) {
+      throw Error(`Head block ${slot} ${headBlock} is not available in database`);
+    }
+
     if (headState) {
-      this.opPool.pruneAll(headState, finalizedState);
+      this.opPool.pruneAll(headBlock, headState);
     }
 
     const cpEpoch = cp.epoch;

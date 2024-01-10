@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect, vi} from "vitest";
 import axios from "axios";
 import {mainnetPreset} from "../../src/presets/mainnet.js";
 import {minimalPreset} from "../../src/presets/minimal.js";
@@ -8,10 +8,10 @@ import {loadConfigYaml} from "../yaml.js";
 // Not e2e, but slow. Run with e2e tests
 
 /** https://github.com/ethereum/consensus-specs/releases */
-const specConfigCommit = "v1.4.0-beta.2";
+const specConfigCommit = "v1.4.0-beta.5";
 
 describe("Ensure config is synced", function () {
-  this.timeout(60 * 1000);
+  vi.setConfig({testTimeout: 60 * 1000});
 
   it("mainnet", async function () {
     const remotePreset = await downloadRemoteConfig("mainnet", specConfigCommit);
@@ -27,10 +27,10 @@ describe("Ensure config is synced", function () {
 function assertCorrectPreset(localPreset: BeaconPreset, remotePreset: BeaconPreset): void {
   // Check each key for better debuggability
   for (const key of Object.keys(remotePreset) as (keyof BeaconPreset)[]) {
-    expect(localPreset[key]).to.equal(remotePreset[key], `Wrong ${key} value`);
+    expect(localPreset[key]).toBe(remotePreset[key]);
   }
 
-  expect(localPreset).to.deep.equal(remotePreset);
+  expect(localPreset).toEqual(remotePreset);
 }
 
 async function downloadRemoteConfig(preset: "mainnet" | "minimal", commit: string): Promise<BeaconPreset> {

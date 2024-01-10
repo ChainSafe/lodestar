@@ -34,7 +34,7 @@ const LAST_SEEN_VALIDATOR_TIMEOUT = 150;
 
 const gossipType = GossipType.beacon_attestation;
 
-enum SubnetSource {
+export enum SubnetSource {
   committee = "committee",
   random = "random",
 }

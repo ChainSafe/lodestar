@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import {expect} from "chai";
+import {describe, it, expect, beforeAll, afterAll} from "vitest";
 import yaml from "js-yaml";
 import {toHexString} from "@chainsafe/ssz";
 import {getTestdirPath} from "../../utils.js";
@@ -59,19 +59,18 @@ describe("config / beaconParams", () => {
     },
   ];
 
-  before("Write config file", () => {
+  beforeAll(() => {
     // eslint-disable-next-line @typescript-eslint/naming-convention
     fs.writeFileSync(paramsFilepath, yaml.dump({GENESIS_FORK_VERSION: GENESIS_FORK_VERSION_FILE}));
   });
 
-  after("Remove config file", () => {
+  afterAll(() => {
     if (fs.existsSync(paramsFilepath)) fs.unlinkSync(paramsFilepath);
   });
 
-  for (const {id, kwargs, GENESIS_FORK_VERSION} of testCases) {
-    it(id, () => {
-      const params = getBeaconParams(kwargs);
-      expect(toHexString(params.GENESIS_FORK_VERSION)).to.equal(GENESIS_FORK_VERSION);
-    });
-  }
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  it.each(testCases)("$id", ({kwargs, GENESIS_FORK_VERSION}) => {
+    const params = getBeaconParams(kwargs);
+    expect(toHexString(params.GENESIS_FORK_VERSION)).toBe(GENESIS_FORK_VERSION);
+  });
 });

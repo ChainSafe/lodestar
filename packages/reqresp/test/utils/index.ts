@@ -74,7 +74,7 @@ export function fromHexBuf(hex: string): Buffer {
   return Buffer.from(fromHex(hex));
 }
 
-export const ZERO_HASH = Buffer.alloc(32, 0);
+export const ZERO_HASH = new Uint8Array(32);
 
 export const onlySuccessResp = (resp: ResponseChunk): resp is {status: RespStatus.SUCCESS; payload: ResponseIncoming} =>
   resp.status === RespStatus.SUCCESS;

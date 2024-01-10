@@ -157,7 +157,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
         eth1: {enabled: false, providerUrls: [engineRpcUrl], jwtSecretHex},
         executionEngine: {urls: [engineRpcUrl], jwtSecretHex},
         executionBuilder: {
-          urls: [ethRpcUrl],
+          url: ethRpcUrl,
           enabled: true,
           issueLocalFcUWithFeeRecipient: feeRecipientMevBoost,
           allowedFaults: 16,

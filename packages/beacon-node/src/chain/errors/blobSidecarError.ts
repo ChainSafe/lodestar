@@ -21,6 +21,7 @@ export enum BlobSidecarErrorCode {
   PARENT_UNKNOWN = "BLOB_SIDECAR_ERROR_PARENT_UNKNOWN",
   NOT_LATER_THAN_PARENT = "BLOB_SIDECAR_ERROR_NOT_LATER_THAN_PARENT",
   PROPOSAL_SIGNATURE_INVALID = "BLOB_SIDECAR_ERROR_PROPOSAL_SIGNATURE_INVALID",
+  INCLUSION_PROOF_INVALID = "BLOB_SIDECAR_ERROR_INCLUSION_PROOF_INVALID",
   INCORRECT_PROPOSER = "BLOB_SIDECAR_ERROR_INCORRECT_PROPOSER",
 }
 
@@ -37,6 +38,7 @@ export type BlobSidecarErrorType =
   | {code: BlobSidecarErrorCode.PARENT_UNKNOWN; parentRoot: RootHex}
   | {code: BlobSidecarErrorCode.NOT_LATER_THAN_PARENT; parentSlot: Slot; slot: Slot}
   | {code: BlobSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID}
+  | {code: BlobSidecarErrorCode.INCLUSION_PROOF_INVALID; slot: Slot; blobIdx: number}
   | {code: BlobSidecarErrorCode.INCORRECT_PROPOSER; proposerIndex: ValidatorIndex};
 
 export class BlobSidecarGossipError extends GossipActionError<BlobSidecarErrorType> {}

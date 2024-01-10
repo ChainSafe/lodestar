@@ -15,6 +15,11 @@ export type HttpMetricsServer = {
   close(): Promise<void>;
 };
 
+enum RequestStatus {
+  success = "success",
+  error = "error",
+}
+
 export async function getHttpMetricsServer(
   opts: HttpMetricsServerOpts,
   {
@@ -26,7 +31,7 @@ export async function getHttpMetricsServer(
   // New registry to metric the metrics. Using the same registry would deadlock the .metrics promise
   const httpServerRegister = new RegistryMetricCreator();
 
-  const scrapeTimeMetric = httpServerRegister.histogram<"status">({
+  const scrapeTimeMetric = httpServerRegister.histogram<{status: RequestStatus}>({
     name: "lodestar_metrics_scrape_seconds",
     help: "Lodestar metrics server async time to scrape metrics",
     labelNames: ["status"],
@@ -40,7 +45,7 @@ export async function getHttpMetricsServer(
     if (req.method === "GET" && req.url && req.url.includes("/metrics")) {
       const timer = scrapeTimeMetric.startTimer();
       const metricsRes = await Promise.all([wrapError(register.metrics()), getOtherMetrics()]);
-      timer({status: metricsRes[0].err ? "error" : "success"});
+      timer({status: metricsRes[0].err ? RequestStatus.error : RequestStatus.success});
 
       // Ensure we only writeHead once
       if (metricsRes[0].err) {

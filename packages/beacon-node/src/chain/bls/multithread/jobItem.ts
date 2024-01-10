@@ -56,7 +56,7 @@ export function jobItemWorkReq(job: JobQueueItem, format: PointFormat, metrics: 
         opts: job.opts,
         sets: job.sets.map((set) => ({
           // this can throw, handled in the consumer code
-          publicKey: getAggregatedPubkey(set).toBytes(format),
+          publicKey: getAggregatedPubkey(set, metrics).toBytes(format),
           signature: set.signature,
           message: set.signingRoot,
         })),

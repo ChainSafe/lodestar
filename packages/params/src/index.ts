@@ -90,6 +90,7 @@ export const {
   FIELD_ELEMENTS_PER_BLOB,
   MAX_BLOB_COMMITMENTS_PER_BLOCK,
   MAX_BLOBS_PER_BLOCK,
+  KZG_COMMITMENT_INCLUSION_PROOF_DEPTH,
 
   MAX_DEPOSIT_RECEIPTS_PER_PAYLOAD,
 } = activePreset;
@@ -237,6 +238,13 @@ export const INTERVALS_PER_SLOT = 3;
 export const BYTES_PER_FIELD_ELEMENT = 32;
 export const BLOB_TX_TYPE = 0x03;
 export const VERSIONED_HASH_VERSION_KZG = 0x01;
+
+// ssz.deneb.BeaconBlockBody.getPathInfo(['blobKzgCommitments',0]).gindex
+export const KZG_COMMITMENT_GINDEX0 = ACTIVE_PRESET === PresetName.minimal ? 864 : 221184;
+export const KZG_COMMITMENT_SUBTREE_INDEX0 = KZG_COMMITMENT_GINDEX0 - 2 ** KZG_COMMITMENT_INCLUSION_PROOF_DEPTH;
+
+// ssz.deneb.BlobSidecars.elementType.fixedSize
+export const BLOBSIDECAR_FIXED_SIZE = ACTIVE_PRESET === PresetName.minimal ? 131672 : 131928;
 
 // EIP-6110 Misc
 export const UNSET_DEPOSIT_RECEIPTS_START_INDEX = 2n ** 64n - 1n;

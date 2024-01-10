@@ -15,7 +15,6 @@ export enum SignableMessageType {
   AGGREGATE_AND_PROOF = "AGGREGATE_AND_PROOF",
   ATTESTATION = "ATTESTATION",
   BLOCK_V2 = "BLOCK_V2",
-  BLOB = "BLOB",
   DEPOSIT = "DEPOSIT",
   RANDAO_REVEAL = "RANDAO_REVEAL",
   VOLUNTARY_EXIT = "VOLUNTARY_EXIT",
@@ -65,7 +64,6 @@ export type SignableMessage =
   | {type: SignableMessageType.AGGREGATE_AND_PROOF; data: phase0.AggregateAndProof}
   | {type: SignableMessageType.ATTESTATION; data: phase0.AttestationData}
   | {type: SignableMessageType.BLOCK_V2; data: allForks.FullOrBlindedBeaconBlock}
-  | {type: SignableMessageType.BLOB; data: allForks.FullOrBlindedBlobSidecar}
   | {type: SignableMessageType.DEPOSIT; data: ValueOf<typeof DepositType>}
   | {type: SignableMessageType.RANDAO_REVEAL; data: {epoch: Epoch}}
   | {type: SignableMessageType.VOLUNTARY_EXIT; data: phase0.VoluntaryExit}
@@ -88,7 +86,6 @@ const requiresForkInfo: Record<SignableMessageType, boolean> = {
   [SignableMessageType.SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF]: true,
   [SignableMessageType.VALIDATOR_REGISTRATION]: false,
   [SignableMessageType.BLS_TO_EXECUTION_CHANGE]: true,
-  [SignableMessageType.BLOB]: true,
 };
 
 type Web3SignerSerializedRequest = {
@@ -232,9 +229,5 @@ function serializerSignableMessagePayload(config: BeaconConfig, payload: Signabl
 
     case SignableMessageType.BLS_TO_EXECUTION_CHANGE:
       return {BLS_TO_EXECUTION_CHANGE: ssz.capella.BLSToExecutionChange.toJson(payload.data)};
-
-    case SignableMessageType.BLOB:
-      // TODO DENEB: freetheblobs
-      throw Error("web3signer for blob signing not yet implemented");
   }
 }

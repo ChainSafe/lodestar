@@ -136,7 +136,12 @@ export interface IExecutionEngine {
   getPayload(
     fork: ForkName,
     payloadId: PayloadId
-  ): Promise<{executionPayload: allForks.ExecutionPayload; executionPayloadValue: Wei; blobsBundle?: BlobsBundle}>;
+  ): Promise<{
+    executionPayload: allForks.ExecutionPayload;
+    executionPayloadValue: Wei;
+    blobsBundle?: BlobsBundle;
+    shouldOverrideBuilder?: boolean;
+  }>;
 
   getPayloadBodiesByHash(blockHash: DATA[]): Promise<(ExecutionPayloadBody | null)[]>;
 

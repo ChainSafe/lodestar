@@ -1,5 +1,4 @@
-import {expect} from "chai";
-import {init} from "@chainsafe/bls/switchable";
+import {describe, it, expect, afterEach, vi} from "vitest";
 import {JsonPath, toHexString} from "@chainsafe/ssz";
 import {computeDescriptor, TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -21,20 +20,14 @@ import {
   lastInMap,
 } from "../utils/utils.js";
 import {startServer, ServerOpts} from "../utils/server.js";
-import {isNode} from "../../src/utils/utils.js";
 import {computeSyncPeriodAtSlot} from "../../src/utils/clock.js";
 import {LightClientRestTransport} from "../../src/transport/rest.js";
 
 const SOME_HASH = Buffer.alloc(32, 0xff);
 
 describe("sync", () => {
+  vi.setConfig({testTimeout: 30_000});
   const afterEachCbs: (() => Promise<unknown> | unknown)[] = [];
-
-  before("init bls", async () => {
-    // This process has to be done manually because of an issue in Karma runner
-    // https://github.com/karma-runner/karma/issues/3804
-    await init(isNode ? "blst-native" : "herumi");
-  });
 
   afterEach(async () => {
     await Promise.all(afterEachCbs);
@@ -168,16 +161,13 @@ describe("sync", () => {
     });
 
     // Ensure that the lightclient head is correct
-    expect(lightclient.getHead().beacon.slot).to.equal(targetSlot, "lightclient.head is not the targetSlot head");
+    expect(lightclient.getHead().beacon.slot).toBe(targetSlot);
 
     // Fetch proof of "latestExecutionPayloadHeader.stateRoot"
     const {proof, header} = await getHeadStateProof(lightclient, api, [["latestExecutionPayloadHeader", "stateRoot"]]);
 
     const recoveredState = ssz.bellatrix.BeaconState.createFromProof(proof, header.beacon.stateRoot);
-    expect(toHexString(recoveredState.latestExecutionPayloadHeader.stateRoot)).to.equal(
-      toHexString(executionStateRoot),
-      "Recovered executionStateRoot from getHeadStateProof() not correct"
-    );
+    expect(toHexString(recoveredState.latestExecutionPayloadHeader.stateRoot)).toBe(toHexString(executionStateRoot));
   });
 });
 

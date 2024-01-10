@@ -1,5 +1,5 @@
 import {ForkName} from "@lodestar/params";
-import {ssz} from "@lodestar/types";
+import {ssz, ProducedBlockSource} from "@lodestar/types";
 import {Api} from "../../../../src/beacon/routes/validator.js";
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 
@@ -50,7 +50,13 @@ export const testData: GenericServerTestCases<Api> = {
       randaoReveal,
       graffiti,
       undefined,
-      {feeRecipient: undefined, builderSelection: undefined, strictFeeRecipientCheck: undefined},
+      {
+        feeRecipient,
+        builderSelection: undefined,
+        strictFeeRecipientCheck: undefined,
+        blindedLocal: undefined,
+        builderBoostFactor: 100n,
+      },
     ] as unknown as GenericServerTestCases<Api>["produceBlock"]["args"],
     res: {data: ssz.phase0.BeaconBlock.defaultValue()},
   },
@@ -60,7 +66,13 @@ export const testData: GenericServerTestCases<Api> = {
       randaoReveal,
       graffiti,
       undefined,
-      {feeRecipient: undefined, builderSelection: undefined, strictFeeRecipientCheck: undefined},
+      {
+        feeRecipient,
+        builderSelection: undefined,
+        strictFeeRecipientCheck: undefined,
+        blindedLocal: undefined,
+        builderBoostFactor: 100n,
+      },
     ] as unknown as GenericServerTestCases<Api>["produceBlockV2"]["args"],
     res: {
       data: ssz.altair.BeaconBlock.defaultValue(),
@@ -75,7 +87,13 @@ export const testData: GenericServerTestCases<Api> = {
       randaoReveal,
       graffiti,
       true,
-      {feeRecipient, builderSelection: undefined, strictFeeRecipientCheck: undefined},
+      {
+        feeRecipient,
+        builderSelection: undefined,
+        strictFeeRecipientCheck: undefined,
+        blindedLocal: undefined,
+        builderBoostFactor: 100n,
+      },
     ],
     res: {
       data: ssz.altair.BeaconBlock.defaultValue(),
@@ -83,6 +101,7 @@ export const testData: GenericServerTestCases<Api> = {
       executionPayloadValue: ssz.Wei.defaultValue(),
       consensusBlockValue: ssz.Gwei.defaultValue(),
       executionPayloadBlinded: false,
+      executionPayloadSource: ProducedBlockSource.engine,
     },
   },
   produceBlindedBlock: {
@@ -91,7 +110,13 @@ export const testData: GenericServerTestCases<Api> = {
       randaoReveal,
       graffiti,
       undefined,
-      {feeRecipient: undefined, builderSelection: undefined, strictFeeRecipientCheck: undefined},
+      {
+        feeRecipient,
+        builderSelection: undefined,
+        strictFeeRecipientCheck: undefined,
+        blindedLocal: undefined,
+        builderBoostFactor: 100n,
+      },
     ] as unknown as GenericServerTestCases<Api>["produceBlindedBlock"]["args"],
     res: {
       data: ssz.bellatrix.BlindedBeaconBlock.defaultValue(),
