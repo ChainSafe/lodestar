@@ -11,7 +11,6 @@ import {
   isCachedBeaconState,
   Index2PubkeyCache,
   PubkeyIndexMap,
-  CachedBeaconStateEIP6110,
   EpochShuffling,
 } from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
@@ -965,13 +964,15 @@ export class BeaconChain implements IBeaconChain {
       }
     }
 
-    if (finalizedState && finalizedState.epochCtx.isAfterEIP6110()) {
-      // finalizedState can be safely casted to 6110 state since cp is already post-6110
-      if (finalizedState.eth1DepositIndex >= (finalizedState as CachedBeaconStateEIP6110).depositReceiptsStartIndex) {
-        // Signal eth1 to stop polling eth1Data
-        this.eth1.stopPollingEth1Data();
-      }
-    }
+    // TODO-6110: Deprecating eth1Data poll requires a check on a finalized checkpoint state.
+    // Will resolve this later
+    // if (cpEpoch >= (this.config.EIP6110_FORK_EPOCH ?? Infinity)) {
+    //   // finalizedState can be safely casted to 6110 state since cp is already post-6110
+    //   if (finalizedState.eth1DepositIndex >= (finalizedState as CachedBeaconStateEIP6110).depositReceiptsStartIndex) {
+    //     // Signal eth1 to stop polling eth1Data
+    //     this.eth1.stopPollingEth1Data();
+    //   }
+    // }
   }
 
   async updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void> {
