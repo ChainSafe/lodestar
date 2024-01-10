@@ -409,10 +409,10 @@ export class OpPool {
 function isVoluntaryExitSignatureIncludable(stateFork: ForkSeq, voluntaryExitFork: ForkSeq): boolean {
   if (stateFork >= ForkSeq.deneb) {
     // Exists are perpetually valid https://eips.ethereum.org/EIPS/eip-7044
-    return true
+    return true;
   } else {
     // Can only include exits from the current and previous fork
-    return voluntaryExitFork === stateFork || voluntaryExitFork === (stateFork - 1)
+    return voluntaryExitFork === stateFork || voluntaryExitFork === stateFork - 1;
   }
 }
 
