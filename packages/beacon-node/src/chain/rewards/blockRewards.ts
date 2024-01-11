@@ -20,7 +20,8 @@ export type BlockRewards = {
 };
 
 /**
- * Calculate total proposer block rewards given block and the beacon state of the same slot before the block is applied
+ * Calculate total proposer block rewards given block and the beacon state of the same slot before the block is applied (preState)
+ * postState can be passed in to read reward cache if available
  * Standard (Non MEV) rewards for proposing a block consists of:
  *  1) Including attestations from (beacon) committee
  *  2) Including attestations from sync committee
@@ -28,10 +29,11 @@ export type BlockRewards = {
  */
 export async function computeBlockRewards(
   block: allForks.BeaconBlock,
-  preState: CachedBeaconStateAllForks
+  preState: CachedBeaconStateAllForks,
+  postState?: CachedBeaconStateAllForks
 ): Promise<BlockRewards> {
   const fork = preState.config.getForkName(block.slot);
-  const {attestations: cachedAttestationsReward, syncAggregate: cachedSyncAggregateReward} = preState.proposerRewards;
+  const {attestations: cachedAttestationsReward = 0, syncAggregate: cachedSyncAggregateReward = 0} = postState?.proposerRewards || {};
   let blockAttestationReward = cachedAttestationsReward;
   let syncAggregateReward = cachedSyncAggregateReward;
 

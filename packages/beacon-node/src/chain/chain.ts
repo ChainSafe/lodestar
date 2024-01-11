@@ -995,8 +995,8 @@ export class BeaconChain implements IBeaconChain {
 
   async getBlockRewards(block: allForks.FullOrBlindedBeaconBlock): Promise<BlockRewards> {
     const preState = (await this.regen.getPreState(block, {dontTransferCache: true}, RegenCaller.restApi)).clone();
-    preState.slot = block.slot; // regen.getPreState guarantees pre_state of the same epoch but not the same slot
-    const result = computeBlockRewards(block, preState);
+    const postState = this.regen.getStateSync(toHexString(block.stateRoot)) ?? undefined;
+    const result = computeBlockRewards(block, preState, postState);
     return result;
   }
 }
