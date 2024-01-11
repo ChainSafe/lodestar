@@ -135,7 +135,7 @@ export async function produceBlockBody<T extends BlockType>(
       ? this.metrics?.executionBlockProductionTimeSteps
       : this.metrics?.builderBlockProductionTimeSteps;
 
-  const blockBody = commonBlockBody ?? (await produceCommonBlockBody.call(this, blockType, currentState, blockAttr));
+  const blockBody = commonBlockBody ? Object.assign({}, commonBlockBody) : (await produceCommonBlockBody.call(this, blockType, currentState, blockAttr));
   const {attestations, deposits, voluntaryExits, attesterSlashings, proposerSlashings, blsToExecutionChanges} =
     blockBody;
 
@@ -267,6 +267,7 @@ export async function produceBlockBody<T extends BlockType>(
             prepType,
             payloadId,
             fetchedTime,
+            executionHeadBlockHash: toHex(engineRes.executionPayload.blockHash),
           });
           if (executionPayload.transactions.length === 0) {
             this.metrics?.blockPayload.emptyPayloads.inc({prepType});
