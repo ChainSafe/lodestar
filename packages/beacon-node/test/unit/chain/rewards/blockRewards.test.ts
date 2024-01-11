@@ -125,4 +125,53 @@ describe("chain / rewards / blockRewards", () => {
       expect(proposerSlashings + attesterSlashings).toBe(rewardCache.slashing);
     });
   }
+
+  // Check if `computeBlockRewards` consults reward cache in the post state first
+  it("Check reward cache", async () => {
+      const preState = generatePerfTestCachedStateAltair();
+      const {opts} = testCases[0];  // Use opts of `normal case`
+      const block = getBlockAltair(preState, testCases[0].opts);
+      // Populate permanent root caches of the block
+      ssz.altair.BeaconBlock.hashTreeRoot(block.message);
+      // Populate tree root caches of the state
+      preState.hashTreeRoot();
+      cachedStateAltairPopulateCaches(preState);
+
+      const postState = stateTransition(preState as CachedBeaconStateAllForks, block, {
+        executionPayloadStatus: ExecutionPayloadStatus.valid,
+        dataAvailableStatus: DataAvailableStatus.available,
+        verifyProposer: false,
+        verifySignatures: false,
+        verifyStateRoot: false,
+      });
+
+      // Set postState's reward cache
+      const rewardCache = postState.proposerRewards; // Grab original reward cache before overwritten
+      postState.proposerRewards = {attestations: 1000, syncAggregate: 1001, slashing: 1002};
+
+      const calculatedBlockReward = await computeBlockRewards(block.message, preState as CachedBeaconStateAllForks, postState);
+      const {proposerIndex, total, attestations, syncAggregate, proposerSlashings, attesterSlashings} =
+        calculatedBlockReward;
+
+      expect(proposerIndex).toBe(block.message.proposerIndex);
+      expect(total).toBe(attestations + syncAggregate + proposerSlashings + attesterSlashings);
+      if (opts.syncCommitteeBitsLen === 0) {
+        expect(syncAggregate).toBe(0);
+      }
+      if (opts.attestationLen === 0) {
+        expect(attestations).toBe(0);
+      }
+      if (opts.proposerSlashingLen === 0) {
+        expect(proposerSlashings).toBe(0);
+      }
+      if (opts.attesterSlashingLen === 0) {
+        expect(attesterSlashings).toBe(0);
+      }
+
+      // Cross check with rewardCache
+      expect(attestations).toBe(1000);
+      expect(syncAggregate).toBe(1001);
+      expect((proposerSlashings + attesterSlashings) === 1002).toBeFalsy();
+      expect(proposerSlashings + attesterSlashings).toBe(rewardCache.slashing);
+  });
 });
