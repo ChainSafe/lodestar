@@ -160,8 +160,8 @@ jobs:
           check-latest: true
           cache: yarn 
 
-      # Remove when finished debugging core dumps
-      - uses: './.github/actions/setup-debug-node'
+      # # Remove when finished debugging core dumps
+      # - uses: './.github/actions/setup-debug-node'
 
       - name: Restore build cache
         id: cache-primes-restore
@@ -184,13 +184,14 @@ jobs:
           key: spec-test-data-${{ hashFiles('packages/validator/test/spec/params.ts') }}
 
       - name: Unit tests
-        id: unit_tests
+        # id: unit_tests
         # Rever to "yarn test:unit" when finished debugging core dumps
-        run: sudo sh -c "ulimit -c unlimited && /usr/bin/node-with-debug $(which yarn) test:unit"
+        # run: sudo sh -c "ulimit -c unlimited && /usr/bin/node-with-debug $(which yarn) test:unit"
+        run: yarn test:unit
       
-      # Remove when finished debugging core dumps
-      - uses: './.github/actions/core-dump'
-        if: ${{ failure() && steps.unit_tests.conclusion == 'failure' }}
+      # # Remove when finished debugging core dumps
+      # - uses: './.github/actions/core-dump'
+      #   if: ${{ failure() && steps.unit_tests.conclusion == 'failure' }}
 
       - name: Upload coverage data
         run: yarn coverage
