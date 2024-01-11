@@ -37,17 +37,17 @@ export class BufferPool {
    * Grow the buffer if the requested size is larger than the current buffer.
    */
   alloc(size: number): {buffer: Uint8Array; key: number} | null {
-    return this._alloc(size, false);
+    return this.doAlloc(size, false);
   }
 
   /**
    * Same to alloc() but the buffer is not zeroed.
    */
   allocUnsafe(size: number): {buffer: Uint8Array; key: number} | null {
-    return this._alloc(size, true);
+    return this.doAlloc(size, true);
   }
 
-  _alloc(size: number, isUnsafe = false): {buffer: Uint8Array; key: number} | null {
+  private doAlloc(size: number, isUnsafe = false): {buffer: Uint8Array; key: number} | null {
     if (this.inUse) {
       this.metrics?.misses.inc();
       return null;
