@@ -30,6 +30,7 @@ describe.skip("serialize state and validators", function () {
   itBench({
     id: `serialize state ${valicatorCount} validators, alloc once`,
     fn: () => {
+      stateBytes.fill(0);
       stateType.tree_serializeToBytes({uint8Array: stateBytes, dataView: stateDataView}, 0, rootNode);
     },
   });
@@ -55,6 +56,7 @@ describe.skip("serialize state and validators", function () {
   itBench({
     id: `serialize state validators ${valicatorCount} validators, alloc once`,
     fn: () => {
+      validatorsBytes.fill(0);
       validatorsType.tree_serializeToBytes(
         {uint8Array: validatorsBytes, dataView: validatorsDataView},
         0,
