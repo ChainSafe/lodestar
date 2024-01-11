@@ -33,7 +33,8 @@ export async function computeBlockRewards(
   postState?: CachedBeaconStateAllForks
 ): Promise<BlockRewards> {
   const fork = preState.config.getForkName(block.slot);
-  const {attestations: cachedAttestationsReward = 0, syncAggregate: cachedSyncAggregateReward = 0} = postState?.proposerRewards || {};
+  const {attestations: cachedAttestationsReward = 0, syncAggregate: cachedSyncAggregateReward = 0} =
+    postState?.proposerRewards || {};
   let blockAttestationReward = cachedAttestationsReward;
   let syncAggregateReward = cachedSyncAggregateReward;
 
