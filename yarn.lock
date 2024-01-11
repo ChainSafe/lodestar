@@ -574,14 +574,14 @@
     node-fetch "^2.6.1"
     node-gyp "^8.4.0"
 
-"@chainsafe/discv5@^7.0.1":
-  version "7.0.1"
-  resolved "https://registry.yarnpkg.com/@chainsafe/discv5/-/discv5-7.0.1.tgz#7737c94f2c6bacf66bf79c636912995fb084b641"
-  integrity sha512-Vt0sPIHpIGVrJ0uRBIbr3m49GVRylrWDzp/btYfG2Day1h2YaypSwKgfMiimQEPJlMrqkvtcWYxNz+4QEgM0sQ==
+"@chainsafe/discv5@^7.1.0":
+  version "7.1.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/discv5/-/discv5-7.1.0.tgz#c892075c84bdc75428774d4993e7346205ff8724"
+  integrity sha512-spO801KWe0C9XrXkVt4E1paXP1ZtfsgxOf+FSW6yCDQTWFVGRfcl/ww4B7JtdJOnZauqaHqXxAuNBpSafJoalw==
   dependencies:
-    "@chainsafe/enr" "^2.0.1"
-    "@libp2p/crypto" "^3.0.0"
-    "@libp2p/interface" "^1.0.0"
+    "@chainsafe/enr" "^2.0.2"
+    "@libp2p/crypto" "^3.0.4"
+    "@libp2p/interface" "^1.1.1"
     "@multiformats/multiaddr" "^12.1.10"
     bcrypto "^5.4.0"
     bigint-buffer "^1.1.5"
@@ -591,14 +591,14 @@
     rlp "^2.2.6"
     strict-event-emitter-types "^2.0.0"
 
-"@chainsafe/enr@^2.0.1":
-  version "2.0.1"
-  resolved "https://registry.yarnpkg.com/@chainsafe/enr/-/enr-2.0.1.tgz#9761af5cfbbf7a92e4db7bcefe66958adbbca173"
-  integrity sha512-AYansuUh/mJ52rlllwjS8zH0+DrUYwlt5JI3ppUXwO0+24oYf9SSwf0uW0UfOOe2O2A8J9H0wD5e+XuOwZxJfw==
+"@chainsafe/enr@^2.0.2":
+  version "2.0.2"
+  resolved "https://registry.yarnpkg.com/@chainsafe/enr/-/enr-2.0.2.tgz#29814ae506a87d466640cddbac49369029334f09"
+  integrity sha512-90IEkHHb5ZHk2BuyX5QkLomaxH+HXF41wFOzDC2Hpla6c3ersxAJJms4kJSot7j20Uzfka4Xjxvkwjj8WfL77g==
   dependencies:
-    "@libp2p/crypto" "^3.0.0"
-    "@libp2p/interface" "^1.0.0"
-    "@libp2p/peer-id" "^4.0.0"
+    "@libp2p/crypto" "^3.0.4"
+    "@libp2p/interface" "^1.1.1"
+    "@libp2p/peer-id" "^4.0.4"
     "@multiformats/multiaddr" "^12.1.10"
     base64url "^3.0.1"
     bcrypto "^5.4.0"
