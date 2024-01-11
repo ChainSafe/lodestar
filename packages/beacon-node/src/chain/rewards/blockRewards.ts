@@ -28,26 +28,26 @@ export type BlockRewards = {
  */
 export async function computeBlockRewards(
   block: allForks.BeaconBlock,
-  state: CachedBeaconStateAllForks
+  preState: CachedBeaconStateAllForks
 ): Promise<BlockRewards> {
-  const fork = state.config.getForkName(block.slot);
-  const {attestations: cachedAttestationsReward, syncAggregate: cachedSyncAggregateReward} = state.proposerRewards;
+  const fork = preState.config.getForkName(block.slot);
+  const {attestations: cachedAttestationsReward, syncAggregate: cachedSyncAggregateReward} = preState.proposerRewards;
   let blockAttestationReward = cachedAttestationsReward;
   let syncAggregateReward = cachedSyncAggregateReward;
 
   if (blockAttestationReward === 0) {
     blockAttestationReward =
       fork === ForkName.phase0
-        ? computeBlockAttestationRewardPhase0(block as phase0.BeaconBlock, state as CachedBeaconStatePhase0)
-        : computeBlockAttestationRewardAltair(block as altair.BeaconBlock, state as CachedBeaconStateAltair);
+        ? computeBlockAttestationRewardPhase0(block as phase0.BeaconBlock, preState as CachedBeaconStatePhase0)
+        : computeBlockAttestationRewardAltair(block as altair.BeaconBlock, preState as CachedBeaconStateAltair);
   }
 
   if (syncAggregateReward === 0) {
-    syncAggregateReward = computeSyncAggregateReward(block as altair.BeaconBlock, state as CachedBeaconStateAltair);
+    syncAggregateReward = computeSyncAggregateReward(block as altair.BeaconBlock, preState as CachedBeaconStateAltair);
   }
 
-  const blockProposerSlashingReward = computeBlockProposerSlashingReward(block, state);
-  const blockAttesterSlashingReward = computeBlockAttesterSlashingReward(block, state);
+  const blockProposerSlashingReward = computeBlockProposerSlashingReward(block, preState);
+  const blockAttesterSlashingReward = computeBlockAttesterSlashingReward(block, preState);
 
   const total =
     blockAttestationReward + syncAggregateReward + blockProposerSlashingReward + blockAttesterSlashingReward;
@@ -110,7 +110,7 @@ function computeBlockProposerSlashingReward(
 
   for (const proposerSlashing of block.body.proposerSlashings) {
     const offendingProposerIndex = proposerSlashing.signedHeader1.message.proposerIndex;
-    const offendingProposerBalance = state.validators.get(offendingProposerIndex).effectiveBalance;
+    const offendingProposerBalance = state.validators.getReadonly(offendingProposerIndex).effectiveBalance;
 
     proposerSlashingReward += Math.floor(offendingProposerBalance / WHISTLEBLOWER_REWARD_QUOTIENT);
   }
@@ -124,13 +124,13 @@ function computeBlockProposerSlashingReward(
  */
 function computeBlockAttesterSlashingReward(
   block: allForks.BeaconBlock,
-  state: CachedBeaconStateAllForks
+  preState: CachedBeaconStateAllForks
 ): SubRewardValue {
   let attesterSlashingReward = 0;
 
   for (const attesterSlashing of block.body.attesterSlashings) {
     for (const offendingAttesterIndex of getAttesterSlashableIndices(attesterSlashing)) {
-      const offendingAttesterBalance = state.validators.get(offendingAttesterIndex).effectiveBalance;
+      const offendingAttesterBalance = preState.validators.getReadonly(offendingAttesterIndex).effectiveBalance;
 
       attesterSlashingReward += Math.floor(offendingAttesterBalance / WHISTLEBLOWER_REWARD_QUOTIENT);
     }
