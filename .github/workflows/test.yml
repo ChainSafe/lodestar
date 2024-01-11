@@ -154,10 +154,14 @@ jobs:
         node: [20]
     steps:
       - uses: actions/checkout@v3      
-      - uses: './.github/actions/setup-debug-node'
-        with: 
-          node-version: ${{matrix.node}}
-          debug: 'true'
+      - uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node }}
+          check-latest: true
+          cache: yarn 
+
+      # # Remove when finished debugging core dumps
+      # - uses: './.github/actions/setup-debug-node'
 
       - name: Restore build cache
         id: cache-primes-restore
@@ -180,11 +184,14 @@ jobs:
           key: spec-test-data-${{ hashFiles('packages/validator/test/spec/params.ts') }}
 
       - name: Unit tests
-        id: unit_tests
+        # id: unit_tests
+        # Rever to "yarn test:unit" when finished debugging core dumps
+        # run: sudo sh -c "ulimit -c unlimited && /usr/bin/node-with-debug $(which yarn) test:unit"
         run: yarn test:unit
       
-      - uses: './.github/actions/core-dump'
-        if: ${{ failure() && steps.unit_tests.conclusion == 'failure' }}
+      # # Remove when finished debugging core dumps
+      # - uses: './.github/actions/core-dump'
+      #   if: ${{ failure() && steps.unit_tests.conclusion == 'failure' }}
 
       - name: Upload coverage data
         run: yarn coverage
@@ -264,7 +271,10 @@ jobs:
             packages/*/.git-data.json
           key: ${{ runner.os }}-node-${{ matrix.node }}-${{ github.sha }}
           fail-on-cache-miss: true
-
+      - name: Install Chrome browser
+        run: npx @puppeteer/browsers install chromedriver@latest --path /tmp          
+      - name: Install Firefox browser
+        run: npx @puppeteer/browsers install firefox@latest --path /tmp
       - name: Browser tests
         run: |
           export DISPLAY=':99.0'

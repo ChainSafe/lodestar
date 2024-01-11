@@ -1,10 +1,13 @@
 import {BitArray, toHexString} from "@chainsafe/ssz";
-import {computeEpochAtSlot, computeSigningRoot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {
+  computeEpochAtSlot,
+  computeSigningRoot,
+  computeStartSlotAtEpoch,
+  getShufflingDecisionBlock,
+} from "@lodestar/state-transition";
 import {ProtoBlock, IForkChoice, ExecutionStatus} from "@lodestar/fork-choice";
 import {DOMAIN_BEACON_ATTESTER} from "@lodestar/params";
 import {phase0, Slot, ssz} from "@lodestar/types";
-import {config} from "@lodestar/config/default";
-import {BeaconConfig} from "@lodestar/config";
 import {
   generateTestCachedBeaconStateOnlyValidators,
   getSecretKeyFromIndexCached,
@@ -21,6 +24,7 @@ import {SeenAggregatedAttestations} from "../../../src/chain/seenCache/seenAggre
 import {SeenAttestationDatas} from "../../../src/chain/seenCache/seenAttestationData.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
 import {testLogger} from "../logger.js";
+import {ShufflingCache} from "../../../src/chain/shufflingCache.js";
 
 export type AttestationValidDataOpts = {
   currentSlot?: Slot;
@@ -73,6 +77,12 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
 
     ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
   };
+
+  const shufflingCache = new ShufflingCache();
+  shufflingCache.processState(state, state.epochCtx.currentShuffling.epoch);
+  shufflingCache.processState(state, state.epochCtx.nextShuffling.epoch);
+  const dependentRoot = getShufflingDecisionBlock(state, state.epochCtx.currentShuffling.epoch);
+
   const forkChoice = {
     getBlock: (root) => {
       if (!ssz.Root.equals(root, beaconBlockRoot)) return null;
@@ -82,6 +92,7 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
       if (rootHex !== toHexString(beaconBlockRoot)) return null;
       return headBlock;
     },
+    getDependentRoot: () => dependentRoot,
   } as Partial<IForkChoice> as IForkChoice;
 
   const committeeIndices = state.epochCtx.getBeaconCommittee(attSlot, attIndex);
@@ -117,11 +128,13 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
   // Add state to regen
   const regen = {
     getState: async () => state,
+    // TODO: remove this once we have a better way to get state
+    getStateSync: () => state,
   } as Partial<IStateRegenerator> as IStateRegenerator;
 
   const chain = {
     clock,
-    config: config as BeaconConfig,
+    config: state.config,
     forkChoice,
     regen,
     seenAttesters: new SeenAttesters(),
@@ -132,6 +145,7 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
       : new BlsMultiThreadWorkerPool({}, {logger: testLogger(), metrics: null}),
     waitForBlock: () => Promise.resolve(false),
     index2pubkey: state.epochCtx.index2pubkey,
+    shufflingCache,
     opts: defaultChainOptions,
   } as Partial<IBeaconChain> as IBeaconChain;
 

@@ -1,20 +1,19 @@
-import "../setup.js";
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {isPlainObject, objectToExpectedCase} from "../../src/index.js";
 
 describe("Objects helper", () => {
   it("should be plain object", () => {
-    expect(isPlainObject(Object.create({}))).to.equal(true);
-    expect(isPlainObject(Object.create(Object.create(Object.prototype)))).to.equal(true);
-    expect(isPlainObject({foo: "bar"})).to.equal(true);
-    expect(isPlainObject({})).to.equal(true);
+    expect(isPlainObject(Object.create({}))).toBe(true);
+    expect(isPlainObject(Object.create(Object.create(Object.prototype)))).toBe(true);
+    expect(isPlainObject({foo: "bar"})).toBe(true);
+    expect(isPlainObject({})).toBe(true);
   });
 
   it("should not be plain object", () => {
-    expect(isPlainObject(1)).to.equal(false);
-    expect(isPlainObject(["foo", "bar"])).to.equal(false);
-    expect(isPlainObject([])).to.equal(false);
-    expect(isPlainObject(null)).to.equal(false);
+    expect(isPlainObject(1)).toBe(false);
+    expect(isPlainObject(["foo", "bar"])).toBe(false);
+    expect(isPlainObject([])).toBe(false);
+    expect(isPlainObject(null)).toBe(false);
   });
 });
 
@@ -54,11 +53,11 @@ describe("objectToExpectedCase", () => {
   for (const {id, snake, camel} of testCases) {
     describe(id, () => {
       it("snake > camel", () => {
-        expect(objectToExpectedCase(snake, "camel")).to.deep.equal(camel);
+        expect(objectToExpectedCase(snake, "camel")).toEqual(camel);
       });
 
       it("camel > snake", () => {
-        expect(objectToExpectedCase(camel, "snake")).to.deep.equal(snake);
+        expect(objectToExpectedCase(camel, "snake")).toEqual(snake);
       });
     });
   }

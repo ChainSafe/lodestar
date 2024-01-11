@@ -210,5 +210,6 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     FIELD_ELEMENTS_PER_BLOB: denebForkRelevant,
     MAX_BLOBS_PER_BLOCK: denebForkRelevant,
     MAX_BLOB_COMMITMENTS_PER_BLOCK: denebForkRelevant,
+    KZG_COMMITMENT_INCLUSION_PROOF_DEPTH: denebForkRelevant,
   };
 }

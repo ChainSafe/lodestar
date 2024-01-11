@@ -3,15 +3,18 @@ import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {ArchiverOpts} from "./archiver/index.js";
 import {ForkChoiceOpts} from "./forkChoice/index.js";
 import {LightClientServerOpts} from "./lightClient/index.js";
+import {ShufflingCacheOpts} from "./shufflingCache.js";
 
 export type IChainOptions = BlockProcessOpts &
   PoolOpts &
   SeenCacheOpts &
   ForkChoiceOpts &
   ArchiverOpts &
+  ShufflingCacheOpts &
   LightClientServerOpts & {
     blsVerifyAllMainThread?: boolean;
     blsVerifyAllMultiThread?: boolean;
+    persistProducedBlocks?: boolean;
     persistInvalidSszObjects?: boolean;
     persistInvalidSszObjectsDir?: string;
     skipCreateStateCacheIfAvailable?: boolean;
@@ -38,7 +41,7 @@ export type BlockProcessOpts = {
   /**
    * Override SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY
    */
-  safeSlotsToImportOptimistically: number;
+  safeSlotsToImportOptimistically?: number;
   /**
    * Assert progressive balances the same to EpochTransitionCache
    */
@@ -53,6 +56,17 @@ export type BlockProcessOpts = {
    */
   disableImportExecutionFcU?: boolean;
   emitPayloadAttributes?: boolean;
+
+  /**
+   * Used to specify to specify to run verifications only and not
+   * to save the block or log transitions for e.g. doing
+   * broadcastValidation while publishing the block
+   */
+  verifyOnly?: boolean;
+  /** Used to specify to skip execution payload validation */
+  skipVerifyExecutionPayload?: boolean;
+  /** Used to specify to skip block signatures validation */
+  skipVerifyBlockSignatures?: boolean;
 };
 
 export type PoolOpts = {

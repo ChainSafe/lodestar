@@ -4,6 +4,16 @@ const __dirname = new URL(".", import.meta.url).pathname;
 
 export default defineConfig({
   test: {
+    pool: "threads",
+    include: ["**/*.test.ts"],
+    exclude: [
+      "**/*.browser.test.ts",
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/cypress/**",
+      "**/.{idea,git,cache,output,temp}/**",
+      "**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build}.config.*",
+    ],
     setupFiles: [path.join(__dirname, "./scripts/vitest/customMatchers.ts")],
     reporters: ["default", "hanging-process"],
     coverage: {

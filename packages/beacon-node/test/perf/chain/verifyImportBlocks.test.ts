@@ -7,11 +7,14 @@ import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 // eslint-disable-next-line import/no-relative-packages
 import {rangeSyncTest} from "../../../../state-transition/test/perf/params.js";
 import {
-  beforeValue,
   getNetworkCachedState,
   getNetworkCachedBlock,
   // eslint-disable-next-line import/no-relative-packages
-} from "../../../../state-transition/test/utils/index.js";
+} from "../../../../state-transition/test/utils/testFileCache.js";
+import {
+  beforeValue,
+  // eslint-disable-next-line import/no-relative-packages
+} from "../../../../state-transition/test/utils/beforeValueMocha.js";
 import {BeaconChain} from "../../../src/chain/index.js";
 import {ExecutionEngineDisabled} from "../../../src/execution/engine/index.js";
 import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";

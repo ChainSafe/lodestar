@@ -1,7 +1,7 @@
 import {IncomingMessage} from "node:http";
-import {expect} from "chai";
+import {describe, it, afterEach, expect} from "vitest";
 import fastify, {RouteOptions} from "fastify";
-import {ErrorAborted, TimeoutError} from "@lodestar/utils";
+import {ErrorAborted, TimeoutError, toBase64} from "@lodestar/utils";
 import {HttpClient, HttpError} from "../../../src/utils/client/index.js";
 import {HttpStatusCode} from "../../../src/utils/client/httpStatusCode.js";
 
@@ -52,8 +52,8 @@ describe("httpClient json client", () => {
 
     const {body: resBody, status} = await httpClient.json<User>({url, method: "GET"});
 
-    expect(status).to.equal(HttpStatusCode.OK);
-    expect(resBody).to.deep.equal({test: 1}, "Wrong res body");
+    expect(status).toBe(HttpStatusCode.OK);
+    expect(resBody).toEqual({test: 1});
   });
 
   it("should handle successful POST request correctly", async () => {
@@ -76,10 +76,10 @@ describe("httpClient json client", () => {
 
     const {body: resBodyReceived, status} = await httpClient.json<User>({url, method: "POST", query, body});
 
-    expect(status).to.equal(HttpStatusCode.OK);
-    expect(resBodyReceived).to.deep.equal(resBody, "Wrong resBody");
-    expect(queryReceived).to.deep.equal(query, "Wrong query");
-    expect(bodyReceived).to.deep.equal(body, "Wrong body");
+    expect(status).toBe(HttpStatusCode.OK);
+    expect(resBodyReceived).toEqual(resBody);
+    expect(queryReceived).toEqual(query);
+    expect(bodyReceived).toEqual(body);
   });
 
   it("should handle http status code 404 correctly", async () => {
@@ -94,8 +94,8 @@ describe("httpClient json client", () => {
       return Promise.reject(Error("did not throw")); // So it doesn't gets catch {}
     } catch (e) {
       if (!(e instanceof HttpError)) throw Error(`Not an HttpError: ${(e as Error).message}`);
-      expect(e.message).to.equal("Not Found: Route GET:/test-route not found", "Wrong error message");
-      expect(e.status).to.equal(404, "Wrong error status code");
+      expect(e.message).toBe("Not Found: Route GET:/test-route not found");
+      expect(e.status).toBe(404);
     }
   });
 
@@ -112,8 +112,8 @@ describe("httpClient json client", () => {
       return Promise.reject(Error("did not throw"));
     } catch (e) {
       if (!(e instanceof HttpError)) throw Error(`Not an HttpError: ${(e as Error).message}`);
-      expect(e.message).to.equal("Internal Server Error: Test error");
-      expect(e.status).to.equal(500, "Wrong error status code");
+      expect(e.message).toBe("Internal Server Error: Test error");
+      expect(e.status).toBe(500);
     }
   });
 
@@ -130,8 +130,8 @@ describe("httpClient json client", () => {
       return Promise.reject(Error("did not throw"));
     } catch (e) {
       if (!(e instanceof HttpError)) throw Error(`Not an HttpError: ${(e as Error).message}`);
-      expect(e.message).to.equal("Service Unavailable: Node is syncing");
-      expect(e.status).to.equal(503, "Wrong error status code");
+      expect(e.message).toBe("Service Unavailable: Node is syncing");
+      expect(e.status).toBe(503);
     }
   });
 
@@ -139,7 +139,7 @@ describe("httpClient json client", () => {
     const {baseUrl} = await getServer({
       ...testRoute,
       handler: async (req) => {
-        expect(req.headers.authorization).to.equal("Basic dXNlcjpwYXNzd29yZA==");
+        expect(req.headers.authorization).toBe("Basic dXNlcjpwYXNzd29yZA==");
         return {};
       },
     });
@@ -147,6 +147,29 @@ describe("httpClient json client", () => {
     url.username = "user";
     url.password = "password";
     const httpClient = new HttpClient({baseUrl: url.toString()});
+
+    await httpClient.json(testRoute);
+  });
+
+  it("should not URI-encode user credentials in Authorization header", async () => {
+    // Semi exhaustive set of characters that RFC-3986 allows in the userinfo portion of a URI
+    // Notably absent is `%`. See comment on isValidHttpUrl().
+    const username = "A1-._~!$'&\"()*+,;=";
+    const password = "b2-._~!$'&\"()*+,;=";
+    let {baseUrl} = await getServer({
+      ...testRoute,
+      handler: async (req) => {
+        expect(req.headers.authorization).toBe(`Basic ${toBase64(`${username}:${password}`)}`);
+        return {};
+      },
+    });
+    // Since `new URL()` is what URI-encodes, we have to do string manipulation to set the username/password
+    // First validate the assumption that the URL starts with http://
+    expect(baseUrl.indexOf("http://")).toBe(0);
+    // We avoid using baseUrl.replace() because it treats $ as a special character
+    baseUrl = `http://${username}:${password}@${baseUrl.substring("http://".length)}`;
+
+    const httpClient = new HttpClient({baseUrl: baseUrl});
 
     await httpClient.json(testRoute);
   });

@@ -1,6 +1,6 @@
 import path from "node:path";
 import {Multiaddr, multiaddr} from "@multiformats/multiaddr";
-import {Discv5} from "@chainsafe/discv5";
+import {Discv5, IDiscv5CreateOptions} from "@chainsafe/discv5";
 import {ENR} from "@chainsafe/enr";
 import {ErrorAborted} from "@lodestar/utils";
 import {HttpMetricsServer, RegistryMetricCreator, getHttpMetricsServer} from "@lodestar/beacon-node";
@@ -59,7 +59,7 @@ export async function bootnodeHandler(args: BootnodeArgs & GlobalArgs): Promise<
         ip6: bindAddrs.ip6 ? multiaddr(bindAddrs.ip6) : undefined,
       },
       config: {enrUpdate: !enr.ip && !enr.ip6},
-      metricsRegistry,
+      metricsRegistry: metricsRegistry as IDiscv5CreateOptions["metricsRegistry"],
     });
 
     // If there are any bootnodes, add them to the routing table

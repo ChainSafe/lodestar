@@ -9,6 +9,7 @@ import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {testLogger} from "../../../../utils/logger.js";
 import {ApiImplTestModules, setupApiImplTestServer} from "../../../../__mocks__/apiMocks.js";
 import {ExecutionBuilderHttp} from "../../../../../src/execution/builder/http.js";
+import {CommonBlockBody} from "../../../../../src/chain/interface.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 describe("api/validator - produceBlockV3", function () {
@@ -41,93 +42,127 @@ describe("api/validator - produceBlockV3", function () {
     vi.clearAllMocks();
   });
 
-  const testCases: [routes.validator.BuilderSelection, number | null, number | null, string][] = [
-    [routes.validator.BuilderSelection.MaxProfit, 1, 0, "builder"],
-    [routes.validator.BuilderSelection.MaxProfit, 1, 2, "engine"],
-    [routes.validator.BuilderSelection.MaxProfit, null, 0, "engine"],
-    [routes.validator.BuilderSelection.MaxProfit, 0, null, "builder"],
+  const testCases: [routes.validator.BuilderSelection, number | null, number | null, number, boolean, string][] = [
+    [routes.validator.BuilderSelection.MaxProfit, 1, 0, 0, false, "builder"],
+    [routes.validator.BuilderSelection.MaxProfit, 1, 2, 1, false, "engine"],
+    [routes.validator.BuilderSelection.MaxProfit, null, 0, 0, false, "engine"],
+    [routes.validator.BuilderSelection.MaxProfit, 0, null, 1, false, "builder"],
+    [routes.validator.BuilderSelection.MaxProfit, 0, null, 1, true, "builder"],
+    [routes.validator.BuilderSelection.MaxProfit, 1, 1, 1, true, "engine"],
+    [routes.validator.BuilderSelection.MaxProfit, 2, 1, 1, true, "engine"],
 
-    [routes.validator.BuilderSelection.BuilderAlways, 1, 2, "builder"],
-    [routes.validator.BuilderSelection.BuilderAlways, 1, 0, "builder"],
-    [routes.validator.BuilderSelection.BuilderAlways, null, 0, "engine"],
-    [routes.validator.BuilderSelection.BuilderAlways, 0, null, "builder"],
+    [routes.validator.BuilderSelection.BuilderAlways, 1, 2, 0, false, "builder"],
+    [routes.validator.BuilderSelection.BuilderAlways, 1, 0, 1, false, "builder"],
+    [routes.validator.BuilderSelection.BuilderAlways, null, 0, 0, false, "engine"],
+    [routes.validator.BuilderSelection.BuilderAlways, 0, null, 1, false, "builder"],
+    [routes.validator.BuilderSelection.BuilderAlways, 0, 1, 1, true, "engine"],
+    [routes.validator.BuilderSelection.BuilderAlways, 1, 1, 1, true, "engine"],
+    [routes.validator.BuilderSelection.BuilderAlways, 1, null, 1, true, "builder"],
 
-    [routes.validator.BuilderSelection.BuilderOnly, 0, 2, "builder"],
-    [routes.validator.BuilderSelection.ExecutionOnly, 2, 0, "execution"],
+    [routes.validator.BuilderSelection.BuilderOnly, 0, 2, 0, false, "builder"],
+    [routes.validator.BuilderSelection.ExecutionOnly, 2, 0, 1, false, "engine"],
+    [routes.validator.BuilderSelection.BuilderOnly, 1, 1, 0, true, "builder"],
+    [routes.validator.BuilderSelection.ExecutionOnly, 1, 1, 1, true, "engine"],
   ];
 
-  testCases.forEach(([builderSelection, builderPayloadValue, enginePayloadValue, finalSelection]) => {
-    it(`produceBlockV3  - ${finalSelection} produces block`, async () => {
-      syncStub = server.syncStub;
-      modules = {
-        chain: server.chainStub,
-        config,
-        db: server.dbStub,
-        logger,
-        network: server.networkStub,
-        sync: syncStub,
-        metrics: null,
-      };
+  testCases.forEach(
+    ([
+      builderSelection,
+      builderPayloadValue,
+      enginePayloadValue,
+      consensusBlockValue,
+      shouldOverrideBuilder,
+      finalSelection,
+    ]) => {
+      it(`produceBlockV3  - ${finalSelection} produces block`, async () => {
+        syncStub = server.syncStub;
+        modules = {
+          chain: server.chainStub,
+          config,
+          db: server.dbStub,
+          logger,
+          network: server.networkStub,
+          sync: syncStub,
+          metrics: null,
+        };
 
-      const fullBlock = ssz.bellatrix.BeaconBlock.defaultValue();
-      const blindedBlock = ssz.bellatrix.BlindedBeaconBlock.defaultValue();
+        const fullBlock = ssz.bellatrix.BeaconBlock.defaultValue();
+        const blindedBlock = ssz.bellatrix.BlindedBeaconBlock.defaultValue();
 
-      const slot = 1 * SLOTS_PER_EPOCH;
-      const randaoReveal = fullBlock.body.randaoReveal;
-      const graffiti = "a".repeat(32);
-      const feeRecipient = "0xccccccccccccccccccccccccccccccccccccccaa";
-      const currentSlot = 1 * SLOTS_PER_EPOCH;
+        const slot = 1 * SLOTS_PER_EPOCH;
+        const randaoReveal = fullBlock.body.randaoReveal;
+        const graffiti = "a".repeat(32);
+        const feeRecipient = "0xccccccccccccccccccccccccccccccccccccccaa";
+        const currentSlot = 1 * SLOTS_PER_EPOCH;
 
-      vi.spyOn(server.chainStub.clock, "currentSlot", "get").mockReturnValue(currentSlot);
-      vi.spyOn(syncStub, "state", "get").mockReturnValue(SyncState.Synced);
+        vi.spyOn(server.chainStub.clock, "currentSlot", "get").mockReturnValue(currentSlot);
+        vi.spyOn(syncStub, "state", "get").mockReturnValue(SyncState.Synced);
 
-      const api = getValidatorApi(modules);
+        const api = getValidatorApi(modules);
 
-      if (enginePayloadValue !== null) {
-        chainStub.produceBlock.mockResolvedValue({
-          block: fullBlock,
-          executionPayloadValue: BigInt(enginePayloadValue),
-        });
-      } else {
-        chainStub.produceBlock.mockRejectedValue(Error("not produced"));
-      }
+        if (enginePayloadValue !== null) {
+          const commonBlockBody: CommonBlockBody = {
+            attestations: fullBlock.body.attestations,
+            attesterSlashings: fullBlock.body.attesterSlashings,
+            deposits: fullBlock.body.deposits,
+            proposerSlashings: fullBlock.body.proposerSlashings,
+            eth1Data: fullBlock.body.eth1Data,
+            graffiti: fullBlock.body.graffiti,
+            randaoReveal: fullBlock.body.randaoReveal,
+            voluntaryExits: fullBlock.body.voluntaryExits,
+            blsToExecutionChanges: [],
+            syncAggregate: fullBlock.body.syncAggregate,
+          };
 
-      if (builderPayloadValue !== null) {
-        chainStub.produceBlindedBlock.mockResolvedValue({
-          block: blindedBlock,
-          executionPayloadValue: BigInt(builderPayloadValue),
-        });
-      } else {
-        chainStub.produceBlindedBlock.mockRejectedValue(Error("not produced"));
-      }
+          chainStub.produceCommonBlockBody.mockResolvedValue(commonBlockBody);
 
-      const _skipRandaoVerification = false;
-      const produceBlockOpts = {
-        strictFeeRecipientCheck: false,
-        builderSelection,
-        feeRecipient,
-      };
+          chainStub.produceBlock.mockResolvedValue({
+            block: fullBlock,
+            executionPayloadValue: BigInt(enginePayloadValue),
+            consensusBlockValue: BigInt(consensusBlockValue),
+            shouldOverrideBuilder,
+          });
+        } else {
+          chainStub.produceBlock.mockRejectedValue(Error("not produced"));
+        }
 
-      const block = await api.produceBlockV3(slot, randaoReveal, graffiti, _skipRandaoVerification, produceBlockOpts);
+        if (builderPayloadValue !== null) {
+          chainStub.produceBlindedBlock.mockResolvedValue({
+            block: blindedBlock,
+            executionPayloadValue: BigInt(builderPayloadValue),
+            consensusBlockValue: BigInt(consensusBlockValue),
+          });
+        } else {
+          chainStub.produceBlindedBlock.mockRejectedValue(Error("not produced"));
+        }
+        const _skipRandaoVerification = false;
+        const produceBlockOpts = {
+          strictFeeRecipientCheck: false,
+          builderSelection,
+          feeRecipient,
+        };
 
-      const expectedBlock = finalSelection === "builder" ? blindedBlock : fullBlock;
-      const expectedExecution = finalSelection === "builder" ? true : false;
+        const block = await api.produceBlockV3(slot, randaoReveal, graffiti, _skipRandaoVerification, produceBlockOpts);
 
-      expect(block.data).toEqual(expectedBlock);
-      expect(block.executionPayloadBlinded).toEqual(expectedExecution);
+        const expectedBlock = finalSelection === "builder" ? blindedBlock : fullBlock;
+        const expectedExecution = finalSelection === "builder" ? true : false;
 
-      // check call counts
-      if (builderSelection === routes.validator.BuilderSelection.ExecutionOnly) {
-        expect(chainStub.produceBlindedBlock).toBeCalledTimes(0);
-      } else {
-        expect(chainStub.produceBlindedBlock).toBeCalledTimes(1);
-      }
+        expect(block.data).toEqual(expectedBlock);
+        expect(block.executionPayloadBlinded).toEqual(expectedExecution);
 
-      if (builderSelection === routes.validator.BuilderSelection.BuilderOnly) {
-        expect(chainStub.produceBlock).toBeCalledTimes(0);
-      } else {
-        expect(chainStub.produceBlock).toBeCalledTimes(1);
-      }
-    });
-  });
+        // check call counts
+        if (builderSelection === routes.validator.BuilderSelection.ExecutionOnly) {
+          expect(chainStub.produceBlindedBlock).toBeCalledTimes(0);
+        } else {
+          expect(chainStub.produceBlindedBlock).toBeCalledTimes(1);
+        }
+
+        if (builderSelection === routes.validator.BuilderSelection.BuilderOnly) {
+          expect(chainStub.produceBlock).toBeCalledTimes(0);
+        } else {
+          expect(chainStub.produceBlock).toBeCalledTimes(1);
+        }
+      });
+    }
+  );
 });

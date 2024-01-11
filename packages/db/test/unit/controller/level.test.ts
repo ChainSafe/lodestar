@@ -1,6 +1,6 @@
 import {execSync} from "node:child_process";
 import os from "node:os";
-import {expect} from "chai";
+import {describe, it, expect, beforeAll, afterAll} from "vitest";
 import leveldown from "leveldown";
 import all from "it-all";
 import {getEnvLogger} from "@lodestar/logger/env";
@@ -10,11 +10,11 @@ describe("LevelDB controller", () => {
   const dbLocation = "./.__testdb";
   let db: LevelDbController;
 
-  before(async () => {
+  beforeAll(async () => {
     db = await LevelDbController.create({name: dbLocation}, {metrics: null, logger: getEnvLogger()});
   });
 
-  after(async () => {
+  afterAll(async () => {
     await db.close();
     await new Promise<void>((resolve, reject) => {
       leveldown.destroy(dbLocation, (err) => {
@@ -26,16 +26,16 @@ describe("LevelDB controller", () => {
 
   it("test get not found", async () => {
     const key = Buffer.from("not-existing-key");
-    expect(await db.get(key)).to.equal(null);
+    expect(await db.get(key)).toBe(null);
   });
 
   it("test put/get/delete", async () => {
     const key = Buffer.from("test");
     const value = Buffer.from("some value");
     await db.put(key, value);
-    expect(await db.get(key)).to.be.deep.equal(value);
+    expect(await db.get(key)).toEqual(value);
     await db.delete(key);
-    expect(await db.get(key)).to.equal(null);
+    expect(await db.get(key)).toBe(null);
   });
 
   it("test batchPut", async () => {
@@ -51,8 +51,8 @@ describe("LevelDB controller", () => {
         value: Buffer.from("value"),
       },
     ]);
-    expect(await db.get(k1)).to.not.be.null;
-    expect(await db.get(k2)).to.not.be.null;
+    expect(await db.get(k1)).not.toBeNull();
+    expect(await db.get(k2)).not.toBeNull();
   });
 
   it("test batch delete", async () => {
@@ -69,9 +69,9 @@ describe("LevelDB controller", () => {
         value: Buffer.from("value"),
       },
     ]);
-    expect((await db.entries()).length).to.equal(2);
+    expect((await db.entries()).length).toBe(2);
     await db.batchDelete([k1, k2]);
-    expect((await db.entries()).length).to.equal(0);
+    expect((await db.entries()).length).toBe(0);
   });
 
   it("test entries", async () => {
@@ -91,7 +91,7 @@ describe("LevelDB controller", () => {
       gte: k1,
       lte: k2,
     });
-    expect(result.length).to.be.equal(2);
+    expect(result.length).toBe(2);
   });
 
   it("test entriesStream", async () => {
@@ -112,7 +112,7 @@ describe("LevelDB controller", () => {
       lte: k2,
     });
     const result = await all(resultStream);
-    expect(result.length).to.be.equal(2);
+    expect(result.length).toBe(2);
   });
 
   it("test compactRange + approximateSize", async () => {
@@ -129,11 +129,11 @@ describe("LevelDB controller", () => {
     await db.compactRange(minKey, maxKey);
     const sizeAfterCompact = getDbSize();
 
-    expect(sizeAfterCompact).lt(sizeBeforeCompact, "Expected sizeAfterCompact < sizeBeforeCompact");
+    expect(sizeAfterCompact).toBeLessThan(sizeBeforeCompact);
 
     // approximateSize is not exact, just test a number is positive
     const approxSize = await db.approximateSize(minKey, maxKey);
-    expect(approxSize).gt(0, "approximateSize return not > 0");
+    expect(approxSize).toBeGreaterThan(0);
   });
 
   function getDuCommand(): string {
@@ -144,7 +144,8 @@ describe("LevelDB controller", () => {
           return "gdu";
         }
       } catch {
-        /* no-op */
+        /* eslint-disable no-console */
+        console.error("Cannot find gdu command, falling back to du");
       }
     }
     return "du";

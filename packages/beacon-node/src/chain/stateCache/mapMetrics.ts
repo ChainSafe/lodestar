@@ -1,8 +1,8 @@
-import {IAvgMinMax} from "../../metrics/index.js";
+import {AvgMinMax} from "@lodestar/utils";
 
 type MapTrackerMetrics = {
-  reads: IAvgMinMax;
-  secondsSinceLastRead: IAvgMinMax;
+  reads: AvgMinMax;
+  secondsSinceLastRead: AvgMinMax;
 };
 
 export class MapTracker<K, V> extends Map<K, V> {

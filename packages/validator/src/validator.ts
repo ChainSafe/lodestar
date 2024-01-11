@@ -2,7 +2,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {BLSPubkey, phase0, ssz} from "@lodestar/types";
 import {createBeaconConfig, BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {Genesis} from "@lodestar/types/phase0";
-import {Logger} from "@lodestar/utils";
+import {Logger, toSafePrintableUrl} from "@lodestar/utils";
 import {getClient, Api, routes, ApiError} from "@lodestar/api";
 import {computeEpochAtSlot, getCurrentSlot} from "@lodestar/state-transition";
 import {Clock, IClock} from "./util/clock.js";
@@ -57,6 +57,8 @@ export type ValidatorOptions = {
   valProposerConfig?: ValidatorProposerConfig;
   distributed?: boolean;
   useProduceBlockV3?: boolean;
+  broadcastValidation?: routes.beacon.BroadcastValidation;
+  blindedLocal?: boolean;
 };
 
 // TODO: Extend the timeout, and let it be customizable
@@ -207,7 +209,9 @@ export class Validator {
     const chainHeaderTracker = new ChainHeaderTracker(logger, api, emitter);
 
     const blockProposingService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, metrics, {
-      useProduceBlockV3: opts.useProduceBlockV3 ?? defaultOptions.useProduceBlockV3,
+      useProduceBlockV3: opts.useProduceBlockV3,
+      broadcastValidation: opts.broadcastValidation ?? defaultOptions.broadcastValidation,
+      blindedLocal: opts.blindedLocal ?? defaultOptions.blindedLocal,
     });
 
     const attestationService = new AttestationService(
@@ -266,10 +270,10 @@ export class Validator {
     let api: Api;
     if (typeof opts.api === "string" || Array.isArray(opts.api)) {
       const urls = typeof opts.api === "string" ? [opts.api] : opts.api;
-      logger.info("Beacon node", {urls: urls.toString()});
       // This new api instance can make do with default timeout as a faster timeout is
       // not necessary since this instance won't be used for validator duties
       api = getClient({urls, getAbortSignal: () => opts.abortController.signal}, {config, logger});
+      logger.info("Beacon node", {urls: urls.map(toSafePrintableUrl).toString()});
     } else {
       api = opts.api;
     }
@@ -285,13 +289,16 @@ export class Validator {
     await assertEqualGenesis(opts, genesis);
     logger.info("Verified connected beacon node and validator have the same genesisValidatorRoot");
 
-    const {useProduceBlockV3 = defaultOptions.useProduceBlockV3, valProposerConfig} = opts;
+    const {useProduceBlockV3, broadcastValidation = defaultOptions.broadcastValidation, valProposerConfig} = opts;
     const defaultBuilderSelection =
       valProposerConfig?.defaultConfig.builder?.selection ?? defaultOptions.builderSelection;
     const strictFeeRecipientCheck = valProposerConfig?.defaultConfig.strictFeeRecipientCheck ?? false;
     const suggestedFeeRecipient = valProposerConfig?.defaultConfig.feeRecipient ?? defaultOptions.suggestedFeeRecipient;
+
     logger.info("Initializing validator", {
-      useProduceBlockV3,
+      // if no explicit option is provided, useProduceBlockV3 will be auto enabled on/post deneb
+      useProduceBlockV3: useProduceBlockV3 === undefined ? "deneb+" : useProduceBlockV3,
+      broadcastValidation,
       defaultBuilderSelection,
       suggestedFeeRecipient,
       strictFeeRecipientCheck,

@@ -1,12 +1,12 @@
 import {ForkName} from "@lodestar/params";
-import {ssz} from "@lodestar/types";
+import {ssz, ProducedBlockSource} from "@lodestar/types";
 import {Api} from "../../../../src/beacon/routes/validator.js";
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 
-const ZERO_HASH = Buffer.alloc(32, 0);
-const ZERO_HASH_HEX = "0x" + ZERO_HASH.toString("hex");
-const randaoReveal = Buffer.alloc(96, 1);
-const selectionProof = Buffer.alloc(96, 1);
+const ZERO_HASH = new Uint8Array(32);
+const ZERO_HASH_HEX = "0x" + Buffer.from(ZERO_HASH).toString("hex");
+const randaoReveal = new Uint8Array(96).fill(1);
+const selectionProof = new Uint8Array(96).fill(1);
 const graffiti = "a".repeat(32);
 const feeRecipient = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 
@@ -17,7 +17,7 @@ export const testData: GenericServerTestCases<Api> = {
       executionOptimistic: true,
       data: [
         {
-          pubkey: Buffer.alloc(48, 1),
+          pubkey: new Uint8Array(48).fill(1),
           validatorIndex: 2,
           committeeIndex: 3,
           committeeLength: 4,
@@ -33,7 +33,7 @@ export const testData: GenericServerTestCases<Api> = {
     args: [1000],
     res: {
       executionOptimistic: true,
-      data: [{slot: 1, validatorIndex: 2, pubkey: Buffer.alloc(48, 3)}],
+      data: [{slot: 1, validatorIndex: 2, pubkey: new Uint8Array(48).fill(3)}],
       dependentRoot: ZERO_HASH_HEX,
     },
   },
@@ -41,19 +41,44 @@ export const testData: GenericServerTestCases<Api> = {
     args: [1000, [1, 2, 3]],
     res: {
       executionOptimistic: true,
-      data: [{pubkey: Buffer.alloc(48, 1), validatorIndex: 2, validatorSyncCommitteeIndices: [3]}],
+      data: [{pubkey: Uint8Array.from(Buffer.alloc(48, 1)), validatorIndex: 2, validatorSyncCommitteeIndices: [3]}],
     },
   },
   produceBlock: {
-    args: [32000, randaoReveal, graffiti],
+    args: [
+      32000,
+      randaoReveal,
+      graffiti,
+      undefined,
+      {
+        feeRecipient,
+        builderSelection: undefined,
+        strictFeeRecipientCheck: undefined,
+        blindedLocal: undefined,
+        builderBoostFactor: 100n,
+      },
+    ] as unknown as GenericServerTestCases<Api>["produceBlock"]["args"],
     res: {data: ssz.phase0.BeaconBlock.defaultValue()},
   },
   produceBlockV2: {
-    args: [32000, randaoReveal, graffiti],
+    args: [
+      32000,
+      randaoReveal,
+      graffiti,
+      undefined,
+      {
+        feeRecipient,
+        builderSelection: undefined,
+        strictFeeRecipientCheck: undefined,
+        blindedLocal: undefined,
+        builderBoostFactor: 100n,
+      },
+    ] as unknown as GenericServerTestCases<Api>["produceBlockV2"]["args"],
     res: {
       data: ssz.altair.BeaconBlock.defaultValue(),
       version: ForkName.altair,
       executionPayloadValue: ssz.Wei.defaultValue(),
+      consensusBlockValue: ssz.Gwei.defaultValue(),
     },
   },
   produceBlockV3: {
@@ -62,21 +87,42 @@ export const testData: GenericServerTestCases<Api> = {
       randaoReveal,
       graffiti,
       true,
-      {feeRecipient, builderSelection: undefined, strictFeeRecipientCheck: undefined},
+      {
+        feeRecipient,
+        builderSelection: undefined,
+        strictFeeRecipientCheck: undefined,
+        blindedLocal: undefined,
+        builderBoostFactor: 100n,
+      },
     ],
     res: {
       data: ssz.altair.BeaconBlock.defaultValue(),
       version: ForkName.altair,
       executionPayloadValue: ssz.Wei.defaultValue(),
+      consensusBlockValue: ssz.Gwei.defaultValue(),
       executionPayloadBlinded: false,
+      executionPayloadSource: ProducedBlockSource.engine,
     },
   },
   produceBlindedBlock: {
-    args: [32000, randaoReveal, graffiti],
+    args: [
+      32000,
+      randaoReveal,
+      graffiti,
+      undefined,
+      {
+        feeRecipient,
+        builderSelection: undefined,
+        strictFeeRecipientCheck: undefined,
+        blindedLocal: undefined,
+        builderBoostFactor: 100n,
+      },
+    ] as unknown as GenericServerTestCases<Api>["produceBlindedBlock"]["args"],
     res: {
       data: ssz.bellatrix.BlindedBeaconBlock.defaultValue(),
       version: ForkName.bellatrix,
       executionPayloadValue: ssz.Wei.defaultValue(),
+      consensusBlockValue: ssz.Gwei.defaultValue(),
     },
   },
   produceAttestationData: {

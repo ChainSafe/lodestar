@@ -11,7 +11,7 @@ type RouteUrl = string;
 /** "get" | "post" */
 type HttpMethod = string;
 
-type JsonSchema = {
+export type JsonSchema = {
   type: "object";
   properties?: Record<string, JsonSchema>;
   required?: string[];

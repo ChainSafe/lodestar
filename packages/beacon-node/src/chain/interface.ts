@@ -1,8 +1,23 @@
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
-import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex, deneb, Wei} from "@lodestar/types";
+import {
+  allForks,
+  UintNum64,
+  Root,
+  phase0,
+  Slot,
+  RootHex,
+  Epoch,
+  ValidatorIndex,
+  deneb,
+  Wei,
+  Gwei,
+  capella,
+  altair,
+} from "@lodestar/types";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
+  EpochShuffling,
   Index2PubkeyCache,
   PubkeyIndexMap,
 } from "@lodestar/state-transition";
@@ -36,6 +51,8 @@ import {CheckpointBalancesCache} from "./balancesCache.js";
 import {IChainOptions} from "./options.js";
 import {AssembledBlockType, BlockAttributes, BlockType} from "./produceBlock/produceBlockBody.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
+import {SeenGossipBlockInput} from "./seenCache/index.js";
+import {ShufflingCache} from "./shufflingCache.js";
 
 export {BlockType, type AssembledBlockType};
 export {type ProposerPreparationData};
@@ -88,14 +105,15 @@ export interface IBeaconChain {
   readonly seenSyncCommitteeMessages: SeenSyncCommitteeMessages;
   readonly seenContributionAndProof: SeenContributionAndProof;
   readonly seenAttestationDatas: SeenAttestationDatas;
+  readonly seenGossipBlockInput: SeenGossipBlockInput;
   // Seen cache for liveness checks
   readonly seenBlockAttesters: SeenBlockAttesters;
 
   readonly beaconProposerCache: BeaconProposerCache;
   readonly checkpointBalancesCache: CheckpointBalancesCache;
-  readonly producedBlobSidecarsCache: Map<BlockHash, deneb.BlobSidecars>;
+  readonly producedContentsCache: Map<BlockHash, deneb.Contents>;
   readonly producedBlockRoot: Map<RootHex, allForks.ExecutionPayload | null>;
-  readonly producedBlindedBlobSidecarsCache: Map<BlockHash, deneb.BlindedBlobSidecars>;
+  readonly shufflingCache: ShufflingCache;
   readonly producedBlindedBlockRoot: Set<RootHex>;
   readonly opts: IChainOptions;
 
@@ -136,12 +154,20 @@ export interface IBeaconChain {
    */
   getBlockByRoot(root: RootHex): Promise<{block: allForks.SignedBeaconBlock; executionOptimistic: boolean} | null>;
 
-  getBlobSidecars(beaconBlock: deneb.BeaconBlock): deneb.BlobSidecars;
+  getContents(beaconBlock: deneb.BeaconBlock): deneb.Contents;
 
-  produceBlock(blockAttributes: BlockAttributes): Promise<{block: allForks.BeaconBlock; executionPayloadValue: Wei}>;
-  produceBlindedBlock(
-    blockAttributes: BlockAttributes
-  ): Promise<{block: allForks.BlindedBeaconBlock; executionPayloadValue: Wei}>;
+  produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody>;
+  produceBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{
+    block: allForks.BeaconBlock;
+    executionPayloadValue: Wei;
+    consensusBlockValue: Gwei;
+    shouldOverrideBuilder?: boolean;
+  }>;
+  produceBlindedBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{
+    block: allForks.BlindedBeaconBlock;
+    executionPayloadValue: Wei;
+    consensusBlockValue: Gwei;
+  }>;
 
   /** Process a block until complete */
   processBlock(block: BlockInput, opts?: ImportBlockOpts): Promise<void>;
@@ -156,10 +182,17 @@ export interface IBeaconChain {
 
   updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void>;
 
+  persistBlock(data: allForks.BeaconBlock | allForks.BlindedBeaconBlock, suffix?: string): void;
   persistInvalidSszValue<T>(type: Type<T>, sszObject: T | Uint8Array, suffix?: string): void;
   persistInvalidSszBytes(type: string, sszBytes: Uint8Array, suffix?: string): void;
   /** Persist bad items to persistInvalidSszObjectsDir dir, for example invalid state, attestations etc. */
   persistInvalidSszView(view: TreeView<CompositeTypeAny>, suffix?: string): void;
+  regenStateForAttestationVerification(
+    attEpoch: Epoch,
+    shufflingDependentRoot: RootHex,
+    attHeadBlock: ProtoBlock,
+    regenCaller: RegenCaller
+  ): Promise<EpochShuffling>;
   updateBuilderStatus(clockSlot: Slot): void;
 
   regenCanAcceptWork(): boolean;
@@ -174,3 +207,7 @@ export type SSZObjectType =
   | "signedAggregatedAndProof"
   | "syncCommittee"
   | "contributionAndProof";
+
+export type CommonBlockBody = phase0.BeaconBlockBody &
+  Pick<capella.BeaconBlockBody, "blsToExecutionChanges"> &
+  Pick<altair.BeaconBlockBody, "syncAggregate">;

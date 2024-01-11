@@ -34,4 +34,7 @@ export const goerliChainConfig: ChainConfig = {
   // Capella
   CAPELLA_FORK_VERSION: b("0x03001020"),
   CAPELLA_FORK_EPOCH: 162304,
+  // Deneb
+  DENEB_FORK_VERSION: b("0x04001020"),
+  DENEB_FORK_EPOCH: 231680,
 };

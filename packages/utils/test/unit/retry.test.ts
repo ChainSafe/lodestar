@@ -1,5 +1,4 @@
-import "../setup.js";
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {retry, RetryOptions} from "../../src/retry.js";
 
 describe("retry", () => {
@@ -39,9 +38,9 @@ describe("retry", () => {
   for (const {id, fn, opts, result} of testCases) {
     it(id, async () => {
       if (result instanceof Error) {
-        await expect(retry(fn, opts)).to.be.rejectedWith(result);
+        await expect(retry(fn, opts)).rejects.toThrow(result);
       } else {
-        expect(await retry(fn, opts)).to.deep.equal(result);
+        expect(await retry(fn, opts)).toEqual(result);
       }
     });
   }

@@ -1,16 +1,17 @@
 import inquirer from "inquirer";
+import bls from "@chainsafe/bls";
 import {
-  computeSigningRoot,
   computeEpochAtSlot,
+  computeSigningRoot,
   computeStartSlotAtEpoch,
   getCurrentSlot,
 } from "@lodestar/state-transition";
 import {createBeaconConfig} from "@lodestar/config";
-import {ssz, phase0} from "@lodestar/types";
+import {phase0, ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
-import {Signer, SignerLocal, SignerType} from "@lodestar/validator";
+import {externalSignerPostSignature, SignableMessageType, Signer, SignerType} from "@lodestar/validator";
 import {Api, ApiError, getClient} from "@lodestar/api";
-import {ensure0xPrefix, CliCommand, YargsError} from "../../util/index.js";
+import {CliCommand, ensure0xPrefix, YargsError} from "../../util/index.js";
 import {GlobalArgs} from "../../options/index.js";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {IValidatorCliArgs} from "./options.js";
@@ -36,6 +37,12 @@ If no `pubkeys` are provided, it will exit all validators that have been importe
       command: "validator voluntary-exit --network goerli --pubkeys 0xF00",
       description: "Perform a voluntary exit for the validator who has a public key 0xF00",
     },
+    {
+      command:
+        "validator voluntary-exit --network goerli --externalSigner.url http://signer:9000 --externalSigner.fetch --pubkeys 0xF00",
+      description:
+        "Perform a voluntary exit for the validator who has a public key 0xF00 and its secret key is on a remote signer",
+    },
   ],
 
   options: {
@@ -46,7 +53,7 @@ If no `pubkeys` are provided, it will exit all validators that have been importe
     },
 
     pubkeys: {
-      description: "Public keys to exit, must be available as local signers",
+      description: "Public keys to exit",
       type: "array",
       string: true, // Ensures the pubkey string is not automatically converted to numbers
       coerce: (pubkeys: string[]): string[] =>
@@ -82,9 +89,12 @@ If no `pubkeys` are provided, it will exit all validators that have been importe
     // Select signers to exit
     const signers = await getSignersFromArgs(args, network, {logger: console, signal: new AbortController().signal});
     if (signers.length === 0) {
-      throw new YargsError(`No local keystores found with current args.
+      throw new YargsError(`No validators to exit found with current args.
    Ensure --dataDir and --network match values used when importing keys via validator import
-   or alternatively, import keys by providing --importKeystores arg to voluntary-exit command.`);
+   or alternatively, import keys by providing --importKeystores arg to voluntary-exit command.
+   If attempting to exit validators on a remote signer, make sure values are provided for
+   the necessary --externalSigner options.
+    `);
     }
     const signersToExit = selectSignersToExit(args, signers);
     const validatorsToExit = await resolveValidatorIndexes(client, signersToExit);
@@ -106,25 +116,41 @@ ${validatorsToExit.map((v) => `${v.pubkey} ${v.index} ${v.status}`).join("\n")}`
     }
 
     for (const [i, {index, signer, pubkey}] of validatorsToExit.entries()) {
-      const domain = config.getDomainForVoluntaryExit(computeStartSlotAtEpoch(exitEpoch));
+      const slot = computeStartSlotAtEpoch(exitEpoch);
+      const domain = config.getDomainForVoluntaryExit(slot);
       const voluntaryExit: phase0.VoluntaryExit = {epoch: exitEpoch, validatorIndex: index};
       const signingRoot = computeSigningRoot(ssz.phase0.VoluntaryExit, voluntaryExit, domain);
 
+      let signature;
+      switch (signer.type) {
+        case SignerType.Local:
+          signature = signer.secretKey.sign(signingRoot);
+          break;
+        case SignerType.Remote: {
+          const signatureHex = await externalSignerPostSignature(config, signer.url, pubkey, signingRoot, slot, {
+            data: voluntaryExit,
+            type: SignableMessageType.VOLUNTARY_EXIT,
+          });
+          signature = bls.Signature.fromHex(signatureHex);
+          break;
+        }
+        default:
+          throw new YargsError(`Unexpected signer type for ${pubkey}`);
+      }
       ApiError.assert(
         await client.beacon.submitPoolVoluntaryExit({
           message: voluntaryExit,
-          signature: signer.secretKey.sign(signingRoot).toBytes(),
+          signature: signature.toBytes(),
         })
       );
-
       console.log(`Submitted voluntary exit for ${pubkey} ${i + 1}/${signersToExit.length}`);
     }
   },
 };
 
-type SignerLocalPubkey = {signer: SignerLocal; pubkey: string};
+type SignerPubkey = {signer: Signer; pubkey: string};
 
-function selectSignersToExit(args: VoluntaryExitArgs, signers: Signer[]): SignerLocalPubkey[] {
+function selectSignersToExit(args: VoluntaryExitArgs, signers: Signer[]): SignerPubkey[] {
   const signersWithPubkey = signers.map((signer) => ({
     signer,
     pubkey: getSignerPubkeyHex(signer),
@@ -132,14 +158,12 @@ function selectSignersToExit(args: VoluntaryExitArgs, signers: Signer[]): Signer
 
   if (args.pubkeys) {
     const signersByPubkey = new Map<string, Signer>(signersWithPubkey.map(({pubkey, signer}) => [pubkey, signer]));
-    const selectedSigners: SignerLocalPubkey[] = [];
+    const selectedSigners: SignerPubkey[] = [];
 
     for (const pubkey of args.pubkeys) {
       const signer = signersByPubkey.get(pubkey);
       if (!signer) {
         throw new YargsError(`Unknown pubkey ${pubkey}`);
-      } else if (signer.type !== SignerType.Local) {
-        throw new YargsError(`pubkey ${pubkey} is not a local signer`);
       } else {
         selectedSigners.push({pubkey, signer});
       }
@@ -147,12 +171,12 @@ function selectSignersToExit(args: VoluntaryExitArgs, signers: Signer[]): Signer
 
     return selectedSigners;
   } else {
-    return signersWithPubkey.filter((signer): signer is SignerLocalPubkey => signer.signer.type === SignerType.Local);
+    return signersWithPubkey;
   }
 }
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-async function resolveValidatorIndexes(client: Api, signersToExit: SignerLocalPubkey[]) {
+async function resolveValidatorIndexes(client: Api, signersToExit: SignerPubkey[]) {
   const pubkeys = signersToExit.map(({pubkey}) => pubkey);
 
   const res = await client.beacon.getStateValidators("head", {id: pubkeys});

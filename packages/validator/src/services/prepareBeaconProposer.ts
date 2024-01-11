@@ -86,7 +86,8 @@ export function pollBuilderValidatorRegistration(
       .filter(
         (pubkeyHex): pubkeyHex is string =>
           pubkeyHex !== undefined &&
-          validatorStore.getBuilderSelection(pubkeyHex) !== routes.validator.BuilderSelection.ExecutionOnly
+          validatorStore.getBuilderSelectionParams(pubkeyHex).selection !==
+            routes.validator.BuilderSelection.ExecutionOnly
       );
 
     if (pubkeyHexes.length > 0) {

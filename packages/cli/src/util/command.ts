@@ -1,17 +1,32 @@
 import {Options, Argv} from "yargs";
 
+export interface CliExample {
+  command: string;
+  title?: string;
+  description?: string;
+}
+
+export interface CliOptionDefinition extends Options {
+  example?: Omit<CliExample, "title">;
+}
+
 export type CliCommandOptions<OwnArgs> = Required<{
   [K in keyof OwnArgs]: undefined extends OwnArgs[K]
-    ? Options
+    ? CliOptionDefinition
     : // If arg cannot be undefined it must specify a default value
-      Options & Required<Pick<Options, "default">>;
+      CliOptionDefinition & Required<Pick<Options, "default">>;
 }>;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export interface CliCommand<OwnArgs = Record<never, never>, ParentArgs = Record<never, never>, R = any> {
   command: string;
   describe: string;
-  examples?: {command: string; description: string}[];
+  /**
+   * The folder in docs/pages that the cli.md should be placed in.  If not provided no
+   * cli flags page will be generated for the command
+   */
+  docsFolder?: string;
+  examples?: CliExample[];
   options?: CliCommandOptions<OwnArgs>;
   // 1st arg: any = free own sub command options
   // 2nd arg: subcommand parent options is = to this command options + parent options
@@ -37,7 +52,7 @@ export function registerCommandToYargs(yargs: Argv, cliCommand: CliCommand<any, 
       }
       if (cliCommand.examples) {
         for (const example of cliCommand.examples) {
-          yargsBuilder.example(`$0 ${example.command}`, example.description);
+          yargsBuilder.example(`$0 ${example.command}`, example.description ?? "");
         }
       }
       return yargs;

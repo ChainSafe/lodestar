@@ -1,17 +1,17 @@
 import path from "node:path";
+import {describe, it, beforeAll, vi} from "vitest";
 import {rimraf} from "rimraf";
 import {Interchange} from "@lodestar/validator";
 import {ApiError} from "@lodestar/api";
-import {getMochaContext} from "@lodestar/test-utils/mocha";
+import {getKeystoresStr} from "@lodestar/test-utils";
 import {testFilesDir} from "../utils.js";
 import {cachedPubkeysHex, cachedSeckeysHex} from "../utils/cachedKeys.js";
 import {expectDeepEquals} from "../utils/runUtils.js";
 import {startValidatorWithKeyManager} from "../utils/validator.js";
-import {getKeystoresStr} from "../utils/keystores.js";
 
 describe("import keystores from api, test DefaultProposerConfig", function () {
-  this.timeout("30s");
-  const testContext = getMochaContext(this);
+  vi.setConfig({testTimeout: 30_000});
+
   const dataDir = path.join(testFilesDir, "proposer-config-test");
 
   const defaultOptions = {
@@ -26,7 +26,7 @@ describe("import keystores from api, test DefaultProposerConfig", function () {
     graffiti: "bbbb",
   };
 
-  before("Clean dataDir", () => {
+  beforeAll(() => {
     rimraf.sync(dataDir);
   });
 
@@ -51,7 +51,6 @@ describe("import keystores from api, test DefaultProposerConfig", function () {
   it("1 . run 'validator' import keys from API, getdefaultfeeRecipient", async () => {
     const {keymanagerClient} = await startValidatorWithKeyManager([`--graffiti ${defaultOptions.graffiti}`], {
       dataDir,
-      testContext,
     });
     // Produce and encrypt keystores
     // Import test keys
@@ -122,7 +121,6 @@ describe("import keystores from api, test DefaultProposerConfig", function () {
   it("2 . run 'validator' Check last feeRecipient and gasLimit persists", async () => {
     const {keymanagerClient} = await startValidatorWithKeyManager([`--graffiti ${defaultOptions.graffiti}`], {
       dataDir,
-      testContext,
     });
 
     // next time check edited feeRecipient persists
@@ -185,7 +183,6 @@ describe("import keystores from api, test DefaultProposerConfig", function () {
   it("3 . run 'validator' FeeRecipient and GasLimit should be default after delete", async () => {
     const {keymanagerClient} = await startValidatorWithKeyManager([`--graffiti ${defaultOptions.graffiti}`], {
       dataDir,
-      testContext,
     });
 
     const feeRecipient0 = await keymanagerClient.listFeeRecipient(pubkeys[0]);

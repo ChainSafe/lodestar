@@ -5,22 +5,23 @@ import {
   isStateValidatorsNodesPopulated,
   DataAvailableStatus,
 } from "@lodestar/state-transition";
-import {bellatrix} from "@lodestar/types";
+import {bellatrix, deneb} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
-import {ProtoBlock} from "@lodestar/fork-choice";
+import {ProtoBlock, ExecutionStatus} from "@lodestar/fork-choice";
 import {ChainForkConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {RegenCaller} from "../regen/index.js";
 import type {BeaconChain} from "../chain.js";
-import {BlockInput, ImportBlockOpts} from "./types.js";
+import {BlockInput, ImportBlockOpts, BlockInputType} from "./types.js";
 import {POS_PANDA_MERGE_TRANSITION_BANNER} from "./utils/pandaMergeTransitionBanner.js";
 import {CAPELLA_OWL_BANNER} from "./utils/ownBanner.js";
 import {DENEB_BLOWFISH_BANNER} from "./utils/blowfishBanner.js";
 import {verifyBlocksStateTransitionOnly} from "./verifyBlocksStateTransitionOnly.js";
 import {verifyBlocksSignatures} from "./verifyBlocksSignatures.js";
 import {verifyBlocksExecutionPayload, SegmentExecStatus} from "./verifyBlocksExecutionPayloads.js";
+import {verifyBlocksDataAvailability} from "./verifyBlocksDataAvailability.js";
 import {writeBlockInputToDb} from "./writeBlockInputToDb.js";
 
 /**
@@ -38,12 +39,12 @@ export async function verifyBlocksInEpoch(
   this: BeaconChain,
   parentBlock: ProtoBlock,
   blocksInput: BlockInput[],
-  dataAvailabilityStatuses: DataAvailableStatus[],
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<{
   postStates: CachedBeaconStateAllForks[];
   proposerBalanceDeltas: number[];
   segmentExecStatus: SegmentExecStatus;
+  dataAvailabilityStatuses: DataAvailableStatus[];
 }> {
   const blocks = blocksInput.map(({block}) => block);
   if (blocks.length === 0) {
@@ -88,15 +89,31 @@ export async function verifyBlocksInEpoch(
 
   try {
     // batch all I/O operations to reduce overhead
-    const [segmentExecStatus, {postStates, proposerBalanceDeltas}] = await Promise.all([
+    const [
+      segmentExecStatus,
+      {dataAvailabilityStatuses, availableTime},
+      {postStates, proposerBalanceDeltas, verifyStateTime},
+      {verifySignaturesTime},
+    ] = await Promise.all([
       // Execution payloads
-      verifyBlocksExecutionPayload(this, parentBlock, blocks, preState0, abortController.signal, opts),
+      opts.skipVerifyExecutionPayload !== true
+        ? verifyBlocksExecutionPayload(this, parentBlock, blocks, preState0, abortController.signal, opts)
+        : Promise.resolve({
+            execAborted: null,
+            executionStatuses: blocks.map((_blk) => ExecutionStatus.Syncing),
+            mergeBlockFound: null,
+          } as SegmentExecStatus),
+
+      // data availability for the blobs
+      verifyBlocksDataAvailability(this, blocksInput, opts),
+
       // Run state transition only
       // TODO: Ensure it yields to allow flushing to workers and engine API
       verifyBlocksStateTransitionOnly(
         preState0,
         blocksInput,
-        dataAvailabilityStatuses,
+        // hack availability for state transition eval as availability is separately determined
+        blocks.map(() => DataAvailableStatus.available),
         this.logger,
         this.metrics,
         abortController.signal,
@@ -104,41 +121,75 @@ export async function verifyBlocksInEpoch(
       ),
 
       // All signatures at once
-      verifyBlocksSignatures(this.bls, this.logger, this.metrics, preState0, blocks, opts),
+      opts.skipVerifyBlockSignatures !== true
+        ? verifyBlocksSignatures(this.bls, this.logger, this.metrics, preState0, blocks, opts)
+        : Promise.resolve({verifySignaturesTime: Date.now()}),
 
       // ideally we want to only persist blocks after verifying them however the reality is there are
       // rarely invalid blocks we'll batch all I/O operation here to reduce the overhead if there's
       // an error, we'll remove blocks not in forkchoice
-      opts.eagerPersistBlock ? writeBlockInputToDb.call(this, blocksInput) : Promise.resolve(),
+      opts.verifyOnly !== true && opts.eagerPersistBlock
+        ? writeBlockInputToDb.call(this, blocksInput)
+        : Promise.resolve(),
     ]);
 
-    if (segmentExecStatus.execAborted === null && segmentExecStatus.mergeBlockFound !== null) {
-      // merge block found and is fully valid = state transition + signatures + execution payload.
-      // TODO: Will this banner be logged during syncing?
-      logOnPowBlock(this.logger, this.config, segmentExecStatus.mergeBlockFound);
-    }
+    if (opts.verifyOnly !== true) {
+      if (segmentExecStatus.execAborted === null && segmentExecStatus.mergeBlockFound !== null) {
+        // merge block found and is fully valid = state transition + signatures + execution payload.
+        // TODO: Will this banner be logged during syncing?
+        logOnPowBlock(this.logger, this.config, segmentExecStatus.mergeBlockFound);
+      }
 
-    const fromFork = this.config.getForkName(parentBlock.slot);
-    const toFork = this.config.getForkName(blocks[blocks.length - 1].message.slot);
+      const fromFork = this.config.getForkName(parentBlock.slot);
+      const toFork = this.config.getForkName(blocks[blocks.length - 1].message.slot);
 
-    // If transition through toFork, note won't happen if ${toFork}_EPOCH = 0, will log double on re-org
-    if (toFork !== fromFork) {
-      switch (toFork) {
-        case ForkName.capella:
-          this.logger.info(CAPELLA_OWL_BANNER);
-          this.logger.info("Activating withdrawals", {epoch: this.config.CAPELLA_FORK_EPOCH});
-          break;
+      // If transition through toFork, note won't happen if ${toFork}_EPOCH = 0, will log double on re-org
+      if (toFork !== fromFork) {
+        switch (toFork) {
+          case ForkName.capella:
+            this.logger.info(CAPELLA_OWL_BANNER);
+            this.logger.info("Activating withdrawals", {epoch: this.config.CAPELLA_FORK_EPOCH});
+            break;
 
-        case ForkName.deneb:
-          this.logger.info(DENEB_BLOWFISH_BANNER);
-          this.logger.info("Activating blobs", {epoch: this.config.DENEB_FORK_EPOCH});
-          break;
+          case ForkName.deneb:
+            this.logger.info(DENEB_BLOWFISH_BANNER);
+            this.logger.info("Activating blobs", {epoch: this.config.DENEB_FORK_EPOCH});
+            break;
 
-        default:
+          default:
+        }
       }
     }
 
-    return {postStates, proposerBalanceDeltas, segmentExecStatus};
+    if (segmentExecStatus.execAborted === null) {
+      const {executionStatuses, executionTime} = segmentExecStatus;
+      if (
+        blocksInput.length === 1 &&
+        // gossip blocks have seenTimestampSec
+        opts.seenTimestampSec !== undefined &&
+        blocksInput[0].type !== BlockInputType.preDeneb &&
+        executionStatuses[0] === ExecutionStatus.Valid
+      ) {
+        // Find the max time when the block was actually verified
+        const fullyVerifiedTime = Math.max(executionTime, verifyStateTime, verifySignaturesTime);
+        const recvTofullyVerifedTime = fullyVerifiedTime / 1000 - opts.seenTimestampSec;
+        this.metrics?.gossipBlock.receivedToFullyVerifiedTime.observe(recvTofullyVerifedTime);
+
+        const verifiedToBlobsAvailabiltyTime = Math.max(availableTime - fullyVerifiedTime, 0) / 1000;
+        const numBlobs = (blocksInput[0].block as deneb.SignedBeaconBlock).message.body.blobKzgCommitments.length;
+
+        this.metrics?.gossipBlock.verifiedToBlobsAvailabiltyTime.observe({numBlobs}, verifiedToBlobsAvailabiltyTime);
+        this.logger.verbose("Verified blockInput fully with blobs availability", {
+          slot: blocksInput[0].block.message.slot,
+          recvTofullyVerifedTime,
+          verifiedToBlobsAvailabiltyTime,
+          type: blocksInput[0].type,
+          numBlobs,
+        });
+      }
+    }
+
+    return {postStates, dataAvailabilityStatuses, proposerBalanceDeltas, segmentExecStatus};
   } finally {
     abortController.abort();
   }

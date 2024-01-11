@@ -7,7 +7,6 @@ import {
   computeStartSlotAtEpoch,
   isStateValidatorsNodesPopulated,
   RootCache,
-  kzgCommitmentToVersionedHash,
 } from "@lodestar/state-transition";
 import {routes} from "@lodestar/api";
 import {ForkChoiceError, ForkChoiceErrorCode, EpochDifference, AncestorStatus} from "@lodestar/fork-choice";
@@ -16,6 +15,7 @@ import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {toCheckpointHex} from "../stateCache/index.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
+import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {ChainEvent, ReorgEventData} from "../emitter.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
 import type {BeaconChain} from "../chain.js";
@@ -63,6 +63,7 @@ export async function importBlock(
   const blockRootHex = toHexString(blockRoot);
   const currentEpoch = computeEpochAtSlot(this.forkChoice.getTime());
   const blockEpoch = computeEpochAtSlot(block.message.slot);
+  const parentEpoch = computeEpochAtSlot(parentBlockSlot);
   const prevFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
   const blockDelaySec = (fullyVerifiedBlock.seenTimestampSec - postState.genesisTime) % this.config.SECONDS_PER_SLOT;
 
@@ -345,6 +346,12 @@ export async function importBlock(
 
   if (!isStateValidatorsNodesPopulated(postState)) {
     this.logger.verbose("After importBlock caching postState without SSZ cache", {slot: postState.slot});
+  }
+
+  if (parentEpoch < blockEpoch) {
+    // current epoch and previous epoch are likely cached in previous states
+    this.shufflingCache.processState(postState, postState.epochCtx.nextShuffling.epoch);
+    this.logger.verbose("Processed shuffling for next epoch", {parentEpoch, blockEpoch, slot: block.message.slot});
   }
 
   if (block.message.slot % SLOTS_PER_EPOCH === 0) {

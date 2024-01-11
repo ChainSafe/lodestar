@@ -54,3 +54,15 @@ export function blockToHeader(config: ChainForkConfig, block: allForks.BeaconBlo
     bodyRoot: config.getForkTypes(block.slot).BeaconBlockBody.hashTreeRoot(block.body),
   };
 }
+
+export function signedBlockToSignedHeader(
+  config: ChainForkConfig,
+  signedBlock: allForks.SignedBeaconBlock
+): phase0.SignedBeaconBlockHeader {
+  const message = blockToHeader(config, signedBlock.message);
+  const signature = signedBlock.signature;
+  return {
+    message,
+    signature,
+  };
+}

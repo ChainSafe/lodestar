@@ -1,17 +1,21 @@
 import {Epoch} from "@lodestar/types";
+import {Gauge, Histogram} from "@lodestar/utils";
 import {CachedBeaconStateAllForks} from "./types.js";
+import {StateCloneSource, StateHashTreeRootSource} from "./stateTransition.js";
 import {AttesterStatus} from "./util/attesterStatus.js";
+import {EpochTransitionStep} from "./epoch/index.js";
 
 export type BeaconStateTransitionMetrics = {
   epochTransitionTime: Histogram;
   epochTransitionCommitTime: Histogram;
+  epochTransitionStepTime: Histogram<{step: EpochTransitionStep}>;
   processBlockTime: Histogram;
   processBlockCommitTime: Histogram;
-  stateHashTreeRootTime: Histogram;
-  preStateBalancesNodesPopulatedMiss: Gauge<"source">;
-  preStateBalancesNodesPopulatedHit: Gauge<"source">;
-  preStateValidatorsNodesPopulatedMiss: Gauge<"source">;
-  preStateValidatorsNodesPopulatedHit: Gauge<"source">;
+  stateHashTreeRootTime: Histogram<{source: StateHashTreeRootSource}>;
+  preStateBalancesNodesPopulatedMiss: Gauge<{source: StateCloneSource}>;
+  preStateBalancesNodesPopulatedHit: Gauge<{source: StateCloneSource}>;
+  preStateValidatorsNodesPopulatedMiss: Gauge<{source: StateCloneSource}>;
+  preStateValidatorsNodesPopulatedHit: Gauge<{source: StateCloneSource}>;
   preStateClonedCount: Histogram;
   postStateBalancesNodesPopulatedMiss: Gauge;
   postStateBalancesNodesPopulatedHit: Gauge;
@@ -20,26 +24,10 @@ export type BeaconStateTransitionMetrics = {
   registerValidatorStatuses: (currentEpoch: Epoch, statuses: AttesterStatus[], balances?: number[]) => void;
 };
 
-type LabelValues<T extends string> = Partial<Record<T, string | number>>;
-
-interface Histogram<T extends string = string> {
-  startTimer(): () => void;
-
-  observe(value: number): void;
-  observe(labels: LabelValues<T>, values: number): void;
-  observe(arg1: LabelValues<T> | number, arg2?: number): void;
-}
-
-interface Gauge<T extends string = string> {
-  inc(value?: number): void;
-  inc(labels: LabelValues<T>, value?: number): void;
-  inc(arg1?: LabelValues<T> | number, arg2?: number): void;
-}
-
 export function onStateCloneMetrics(
   state: CachedBeaconStateAllForks,
   metrics: BeaconStateTransitionMetrics,
-  source: "stateTransition" | "processSlots"
+  source: StateCloneSource
 ): void {
   metrics.preStateClonedCount.observe(state.clonedCount);
 

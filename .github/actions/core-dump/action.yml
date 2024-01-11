@@ -3,11 +3,14 @@ description: 'List down and upload core dumps as artifacts'
 runs:
   using: "composite"
   steps:
-    - run: ls -l
+    - name: List down core dump files 
+      run: |
+        ls -lah /cores/
+        sudo chmod -R +rwx /cores/*
       shell: sh
       
     - name: Backup core dump 
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: core-dump
-        path: core.*
+        path: /cores/*

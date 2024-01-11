@@ -1,4 +1,4 @@
-import {assert} from "chai";
+import {expect, it, describe} from "vitest";
 
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Epoch, phase0, ssz} from "@lodestar/types";
@@ -11,7 +11,7 @@ describe("isSlashableAttestationData", () => {
     const epoch2 = epoch1 + 1;
     const a1 = getAttestationDataAt(epoch1, epoch2);
     const a2 = getAttestationDataAt(epoch1 - 1, epoch2);
-    assert.isTrue(isSlashableAttestationData(a1, a2));
+    expect(isSlashableAttestationData(a1, a2)).toBe(true);
   });
 
   it("Attestation data with disjoint source/target epochs should return false", () => {
@@ -21,7 +21,7 @@ describe("isSlashableAttestationData", () => {
     const epoch4 = epoch1 + 3;
     const a1 = getAttestationDataAt(epoch1, epoch2);
     const a2 = getAttestationDataAt(epoch3, epoch4);
-    assert.isFalse(isSlashableAttestationData(a1, a2));
+    expect(isSlashableAttestationData(a1, a2)).toBe(false);
   });
 
   it("Should return false if the second attestation does not have a greater source epoch", () => {
@@ -35,12 +35,12 @@ describe("isSlashableAttestationData", () => {
     const a1 = getAttestationDataAt(sourceEpoch1, targetEpoch1);
     const a2Hi = getAttestationDataAt(sourceEpoch2Hi, targetEpoch2);
 
-    assert.isFalse(isSlashableAttestationData(a1, a2Hi));
+    expect(isSlashableAttestationData(a1, a2Hi)).toBe(false);
 
     // Second attestation has a smaller source epoch.
     const sourceEpoch2Lo = sourceEpoch1 - 1;
     const a2Lo = getAttestationDataAt(sourceEpoch2Lo, targetEpoch2);
-    assert.isFalse(isSlashableAttestationData(a1, a2Lo));
+    expect(isSlashableAttestationData(a1, a2Lo)).toBe(false);
   });
 
   it("Should return false if the second attestation does not have a smaller target epoch", () => {
@@ -58,14 +58,14 @@ describe("isSlashableAttestationData", () => {
     let a1 = getAttestationDataAt(targetSlot1, sourceEpoch1);
     let a2 = getAttestationDataAt(targetSlot2, sourceEpoch2);
 
-    assert.isFalse(isSlashableAttestationData(a1, a2));
+    expect(isSlashableAttestationData(a1, a2)).toBe(false);
 
     // Second attestation has a greater target epoch.
     targetSlot1 = targetEpoch * SLOTS_PER_EPOCH;
     targetSlot2 = (targetEpoch + 1) * SLOTS_PER_EPOCH;
     a1 = getAttestationDataAt(targetSlot1, sourceEpoch1);
     a2 = getAttestationDataAt(targetSlot2, sourceEpoch2);
-    assert.isFalse(isSlashableAttestationData(a1, a2));
+    expect(isSlashableAttestationData(a1, a2)).toBe(false);
   });
 });
 

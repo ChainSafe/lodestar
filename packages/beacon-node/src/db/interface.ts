@@ -19,6 +19,7 @@ import {
   BLSToExecutionChangeRepository,
 } from "./repositories/index.js";
 import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single/index.js";
+import {CheckpointStateRepository} from "./repositories/checkpointState.js";
 
 /**
  * The DB service manages the data layer of the beacon chain
@@ -36,6 +37,8 @@ export interface IBeaconDb {
 
   // finalized states
   stateArchive: StateArchiveRepository;
+  // checkpoint states
+  checkpointState: CheckpointStateRepository;
 
   // op pool
   voluntaryExit: VoluntaryExitRepository;

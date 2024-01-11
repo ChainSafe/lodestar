@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 
 import {toHexString} from "@chainsafe/ssz";
 import {GENESIS_EPOCH, GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -16,7 +16,7 @@ describe("getRandaoMix", () => {
     state.randaoMixes.set(0, randaoMix1);
 
     const res = getRandaoMix(state, GENESIS_EPOCH);
-    expect(toHexString(res)).to.equal(toHexString(randaoMix1));
+    expect(toHexString(res)).toBe(toHexString(randaoMix1));
   });
   it("should return second randao mix for GENESIS_EPOCH + 1", () => {
     // Empty state in 2nd epoch
@@ -25,6 +25,6 @@ describe("getRandaoMix", () => {
     state.randaoMixes.set(1, randaoMix2);
 
     const res = getRandaoMix(state, GENESIS_EPOCH + 1);
-    expect(toHexString(res)).to.equal(toHexString(randaoMix2));
+    expect(toHexString(res)).toBe(toHexString(randaoMix2));
   });
 });

@@ -1,6 +1,6 @@
 {
   "name": "@lodestar/db",
-  "version": "1.12.0",
+  "version": "1.13.0",
   "description": "DB modules of Lodestar",
   "author": "ChainSafe Systems",
   "homepage": "https://github.com/ChainSafe/lodestar#readme",
@@ -33,18 +33,18 @@
     "lint:fix": "yarn run lint --fix",
     "pretest": "yarn run check-types",
     "test": "yarn test:unit",
-    "test:unit": "mocha 'test/unit/**/*.test.ts'",
+    "test:unit": "vitest --run --dir test/unit/ --coverage",
     "check-readme": "typescript-docs-verifier"
   },
   "dependencies": {
     "@chainsafe/ssz": "^0.14.0",
-    "@lodestar/config": "^1.12.0",
-    "@lodestar/utils": "^1.12.0",
+    "@lodestar/config": "^1.13.0",
+    "@lodestar/utils": "^1.13.0",
     "@types/levelup": "^4.3.3",
     "it-all": "^3.0.4",
     "level": "^8.0.0"
   },
   "devDependencies": {
-    "@lodestar/logger": "^1.12.0"
+    "@lodestar/logger": "^1.13.0"
   }
 }

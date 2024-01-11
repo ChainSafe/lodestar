@@ -43,7 +43,7 @@ enum QueryStatusCode {
 }
 type QueryStatus = {code: QueryStatusCode.NotActive} | {code: QueryStatusCode.Active; count: number};
 
-enum DiscoveredPeerStatus {
+export enum DiscoveredPeerStatus {
   bad_score = "bad_score",
   already_connected = "already_connected",
   already_dialing = "already_dialing",

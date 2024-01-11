@@ -72,6 +72,7 @@ describe("api/validator - produceBlockV2", function () {
 
     const fullBlock = ssz.bellatrix.BeaconBlock.defaultValue();
     const executionPayloadValue = ssz.Wei.defaultValue();
+    const consensusBlockValue = ssz.Gwei.defaultValue();
 
     const currentSlot = 100000;
     vi.spyOn(server.chainStub.clock, "currentSlot", "get").mockReturnValue(currentSlot);
@@ -84,7 +85,11 @@ describe("api/validator - produceBlockV2", function () {
     const feeRecipient = "0xcccccccccccccccccccccccccccccccccccccccc";
 
     const api = getValidatorApi(modules);
-    server.chainStub.produceBlock.mockResolvedValue({block: fullBlock, executionPayloadValue});
+    server.chainStub.produceBlock.mockResolvedValue({
+      block: fullBlock,
+      executionPayloadValue,
+      consensusBlockValue,
+    });
 
     // check if expectedFeeRecipient is passed to produceBlock
     await api.produceBlockV2(slot, randaoReveal, graffiti, {feeRecipient});
