@@ -208,12 +208,14 @@ const unknownBlockSync = await env.createNodePair({
       clientOptions: {
         "network.allowPublishToZeroPeers": true,
         "sync.disableRangeSync": true,
-        // unknownBlockSync node start when other nodes are multiple epoch ahead and
-        // unknown block sync can work only if the gap is maximum `slotImportTolerance * 2`
-        // default value for slotImportTolerance is one epoch, so if gap is more than 2 epoch
-        // unknown block sync will not work. So why we have to increase it for tests.
-        // Adding SLOTS_PER_EPOCH will cover the case if the node starts on the last slot of epoch
-        "sync.slotImportTolerance": headForUnknownBlockSync.response.data.message.slot / 2 + SLOTS_PER_EPOCH,
+        /*
+        Initiation of the 'unknownBlockSync' node occurs when other nodes are several epochs ahead.
+        The effectiveness of the 'unknown block sync' is contingent on the gap being at most 'slotImportTolerance * 2'.
+        The default 'slotImportTolerance' value is one epoch; thus, if the gap exceeds 2 epochs,
+        the 'unknown block sync' won't function properly. Moreover, the 'unknownBlockSync' requires some startup time,
+        contributing to the overall gap. For stability in our CI, we've opted to set a higher limit on this constraint.
+        */
+        "sync.slotImportTolerance": lastForkEpoch * SLOTS_PER_EPOCH,
       },
     },
   },
