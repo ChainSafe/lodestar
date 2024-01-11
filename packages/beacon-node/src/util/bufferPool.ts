@@ -32,11 +32,22 @@ export class BufferPool {
   }
 
   /**
-   * Returns a buffer of the given size.
+   * Returns a buffer of the given size with all 0.
    * If the buffer is already in use, return null.
    * Grow the buffer if the requested size is larger than the current buffer.
    */
   alloc(size: number): {buffer: Uint8Array; key: number} | null {
+    return this._alloc(size, false);
+  }
+
+  /**
+   * Same to alloc() but the buffer is not zeroed.
+   */
+  allocUnsafe(size: number): {buffer: Uint8Array; key: number} | null {
+    return this._alloc(size, true);
+  }
+
+  _alloc(size: number, isUnsafe = false): {buffer: Uint8Array; key: number} | null {
     if (this.inUse) {
       this.metrics?.misses.inc();
       return null;
@@ -48,7 +59,11 @@ export class BufferPool {
       this.metrics?.grows.inc();
       this.buffer = new Uint8Array(Math.floor(size * GROW_RATIO));
     }
-    return {buffer: this.buffer.subarray(0, size), key: this.currentKey};
+    const bytes = this.buffer.subarray(0, size);
+    if (!isUnsafe) {
+      bytes.fill(0);
+    }
+    return {buffer: bytes, key: this.currentKey};
   }
 
   /**
