@@ -126,15 +126,13 @@ export const defaultOptions = {
   builderSelection: routes.validator.BuilderSelection.ExecutionOnly,
   builderAliasSelection: routes.validator.BuilderSelection.MaxProfit,
   builderBoostFactor: BigInt(100),
-  // turn it off by default, turn it back on once other clients support v3 api
-  useProduceBlockV3: false,
   // spec asks for gossip validation by default
   broadcastValidation: routes.beacon.BroadcastValidation.gossip,
   // should request fetching the locally produced block in blinded format
   blindedLocal: false,
 };
 
-export const MAX_BUILDER_BOOST_FACTOR = BigInt(2 ** 64 - 1);
+export const MAX_BUILDER_BOOST_FACTOR = 2n ** 64n - 1n;
 
 /**
  * Service that sets up and handles validator attester duties.

@@ -30,7 +30,7 @@ To start a new release, one of the Lodestar developers will communicate this via
   - This script may alternatively be run on the checked out `HEAD`:
     - `git checkout 9fceb02`
     - `yarn release:create-rc 1.1.0`
-- Open draft PR from `rc/v1.1.0` to `stable` with title `v1.1.0 release`.
+- Open draft PR from `rc/v1.1.0` to `stable` with title `chore: v1.1.0 release`.
 
 #### Manual steps (for example version `v1.1.0`, commit `9fceb02`):
 
@@ -42,7 +42,7 @@ To start a new release, one of the Lodestar developers will communicate this via
 - Commit changes
   - `git commit -am "v1.1.0"`
   - `git push origin rc/v1.1.0`
-- Open draft PR from `rc/v1.1.0` to `stable` with title `v1.1.0 release`.
+- Open draft PR from `rc/v1.1.0` to `stable` with title `chore: v1.1.0 release`.
 
 ### 2. Tag release candidate
 
@@ -76,13 +76,13 @@ For example: After 3-5 days of testing, is performance equal to or better than l
 - **Yes**: Continue to the next release step
 - **No**: If it a small issue fixable quickly (hot-fix)?
   - **Yes**: Merge fix(es) to `unstable`, push the fix(es) to `rc/v1.1.0` branch, go to step 2, incrementing the rc version
-  - **No**: abort the release. Close the `v1.1.0 release` PR, delete the branch, and start the whole release process over.
+  - **No**: abort the release. Close the `chore: v1.1.0 release` PR, delete the branch, and start the whole release process over.
 
 ### 4. Merge release candidate
 
 - Ensure step 2 testing is successful and there is sufficient consensus to release `v1.1.0`.
-- Approving the `v1.1.0 release` PR means a team member marks the release as safe, after personally reviewing and / or testing it.
-- Merge `v1.1.0 release` PR to stable **with "merge commit"** strategy to preserve all history.
+- Approving the `chore: v1.1.0 release` PR means a team member marks the release as safe, after personally reviewing and / or testing it.
+- Merge `chore: v1.1.0 release` PR to stable **with "merge commit"** strategy to preserve all history.
 - Merge stable `stable` into `unstable` **with merge commit** strategy. Due to branch protections in `unstable` must open a PR. If there are conflicts, those must be resolved manually. Gitflow may cause changes that conflict between stable and unstable, for example due to a hotfix that is backported. If that happens, disable branch protections in unstable, merge locally fixing conflicts, run lint + tests, push, and re-enable branch protections.
 
 ### 5. Tag stable release
@@ -130,7 +130,7 @@ A similar process for a stable release is used, with the three differences.
 - Switch to the hotfix release branch and cherrypick the inclusion(s) from the `unstable` branch to the hotfix release.
   - `git checkout rc/v1.1.1`
   - `git cherry-pick {commit}`
-- Open draft PR from `rc/v1.1.1` to `stable` with the title `v1.1.1 release`.
+- Open draft PR from `rc/v1.1.1` to `stable` with the title `chore: v1.1.1 release`.
 
 #### Manual steps (for example version `v1.1.1`, commit `8eb8dce`):
 
@@ -144,7 +144,7 @@ A similar process for a stable release is used, with the three differences.
 - Commit changes
   - `git commit -am "v1.1.1"`
   - `git push origin rc/v1.1.1`
-    Open draft PR from `rc/v1.1.1` to `stable` with the title `v1.1.1 release`.
+    Open draft PR from `rc/v1.1.1` to `stable` with the title `chore: v1.1.1 release`.
 
 ### 2. Tag release candidate
 

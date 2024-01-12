@@ -1,5 +1,18 @@
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
-import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex, deneb, Wei} from "@lodestar/types";
+import {
+  allForks,
+  UintNum64,
+  Root,
+  phase0,
+  Slot,
+  RootHex,
+  Epoch,
+  ValidatorIndex,
+  deneb,
+  Wei,
+  capella,
+  altair,
+} from "@lodestar/types";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
@@ -142,13 +155,14 @@ export interface IBeaconChain {
 
   getContents(beaconBlock: deneb.BeaconBlock): deneb.Contents;
 
-  produceBlock(blockAttributes: BlockAttributes): Promise<{
+  produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody>;
+  produceBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{
     block: allForks.BeaconBlock;
     executionPayloadValue: Wei;
     consensusBlockValue: Wei;
     shouldOverrideBuilder?: boolean;
   }>;
-  produceBlindedBlock(blockAttributes: BlockAttributes): Promise<{
+  produceBlindedBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{
     block: allForks.BlindedBeaconBlock;
     executionPayloadValue: Wei;
     consensusBlockValue: Wei;
@@ -192,3 +206,7 @@ export type SSZObjectType =
   | "signedAggregatedAndProof"
   | "syncCommittee"
   | "contributionAndProof";
+
+export type CommonBlockBody = phase0.BeaconBlockBody &
+  Pick<capella.BeaconBlockBody, "blsToExecutionChanges"> &
+  Pick<altair.BeaconBlockBody, "syncAggregate">;
