@@ -72,13 +72,13 @@ Libp2p operates at the lower levels of the OSI model, particularly at the Transp
 
 If your setup is behind a firewall there are a few ports that will need to be opened to allow for P2P discovery and communication. There are also some ports that need to be protected to prevent unwanted access or DDOS attacks on your node.
 
-Ports that should be opened:
+Ports that must be opened:
 
 - 30303/TCP+UDP - Execution layer P2P communication port
 - 9000/TCP+UDP - Beacon node IPv4 P2P communication port
 - 9090/TCP+UDP - Beacon node IPv6 P2P communication port
 
-Ports that should be protected:
+Ports that must be protected:
 
 - 9596/TCP - Beacon node REST API port
 - 5062/TCP - Validator key manager API port
