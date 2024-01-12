@@ -80,7 +80,7 @@ Ports that should be opened:
 
 Ports that should be protected:
 
-- 9596/TCP - Beacon node API port
+- 9596/TCP - Beacon node REST API port
 - 5062/TCP - Validator key manager API port
 - 18550/TCP - MEV-boost/Builder port
 - 8008/TCP - Beacon node metrics port
