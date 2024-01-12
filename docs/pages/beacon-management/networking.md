@@ -1,6 +1,6 @@
 # Networking
 
-Lodestar will automatically start connecting to peers on startup. Those peers are found through the discv5 protocol and once peers are established communications happen via gossipsub over libp2p. While not necessary, having a basic understanding of how the various protocols and transports work will help with debugging and troubleshooting as some of the more common challenges come up with [firewalls](#firewall-management) and [NAT traversal](#nat-traversal).
+Lodestar will automatically connect to peers on startup. Peers are found through the discv5 protocol and once peers are established communications happen via gossipsub over libp2p. While not necessary, having a basic understanding of how the various protocols and transports work will help with debugging and troubleshooting as some of the more common challenges come up with [firewalls](#firewall-management) and [NAT traversal](#nat-traversal).
 
 ## Networking Flags
 
@@ -82,7 +82,7 @@ Ports that must be protected:
 
 - 9596/TCP - Beacon node REST API port
 - 5062/TCP - Validator key manager API port
-- 18550/TCP - MEV-boost/Builder port
+- 18550/TCP - MEV-Boost/Builder port
 - 8008/TCP - Beacon node metrics port
 - 5064/TCP - Validator metrics port
 - 8545/TCP - Execution client JSON RPC port
