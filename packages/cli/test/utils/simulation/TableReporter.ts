@@ -11,6 +11,7 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
   private lastPrintedSlot = -1;
 
   private table = new TableRenderer({
+    time: 14,
     fork: 10,
     eph: 5,
     slot: 4,
@@ -106,7 +107,11 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
       heads.length === nodes.length &&
       heads.every((head) => head0 && !isNullish(head0.blockRoot) && head?.blockRoot === head0.blockRoot);
 
+    const date = new Date();
+    const currentTime = `${date.getUTCHours()}:${date.getUTCMinutes()}:${date.getUTCSeconds()}.${date.getUTCMilliseconds()}`
+
     this.table.addRow({
+      time: currentTime,
       fork: forkName,
       eph: epochStr,
       slot: head0 ? head0.slot : "---",
