@@ -38,6 +38,7 @@ const baseChainConfig: ChainConfig = {
   // Deneb
   DENEB_FORK_VERSION: b("0x5000101b"),
   DENEB_FORK_EPOCH: 5,
+
   // Deposit contract
   // ---------------------------------------------------------------
   DEPOSIT_CHAIN_ID: 39438000,
