@@ -44,7 +44,7 @@ export function defineSimTestConfig(
     bellatrixForkEpoch: opts.BELLATRIX_FORK_EPOCH ?? Infinity,
     secondsPerSlot: opts.SECONDS_PER_SLOT ?? SIM_TESTS_SECONDS_PER_SLOT,
     cliqueSealingPeriod: opts.cliqueSealingPeriod ?? CLIQUE_SEALING_PERIOD,
-    additionalSlots: opts.additionalSlotsForTTD ?? 2,
+    additionalSlots: opts.additionalSlotsForTTD ?? activePreset.SLOTS_PER_EPOCH - 2,
   });
 
   /* eslint-disable @typescript-eslint/naming-convention */
