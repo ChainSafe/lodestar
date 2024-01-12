@@ -44,7 +44,8 @@ export function defineSimTestConfig(
     bellatrixForkEpoch: opts.BELLATRIX_FORK_EPOCH ?? Infinity,
     secondsPerSlot: opts.SECONDS_PER_SLOT ?? SIM_TESTS_SECONDS_PER_SLOT,
     cliqueSealingPeriod: opts.cliqueSealingPeriod ?? CLIQUE_SEALING_PERIOD,
-    additionalSlots: opts.additionalSlotsForTTD ?? 0,
+    // To make sure bellatrix already started
+    additionalSlots: opts.additionalSlotsForTTD ?? 2,
   });
 
   /* eslint-disable @typescript-eslint/naming-convention */
@@ -98,7 +99,7 @@ export const getEstimatedTTD = ({
   // Need to investigate why TTD always remain 1 epoch ahead, for now just subtract 1 epoch
   const secondsTillBellatrix =
     genesisDelaySeconds +
-    (bellatrixForkEpoch - 2) * activePreset.SLOTS_PER_EPOCH * secondsPerSlot +
+    (bellatrixForkEpoch - 1) * activePreset.SLOTS_PER_EPOCH * secondsPerSlot +
     additionalSlots * secondsPerSlot;
 
   return BigInt(Math.ceil(secondsTillBellatrix / cliqueSealingPeriod) * ETH_TTD_INCREMENT);
