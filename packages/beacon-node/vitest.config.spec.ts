@@ -1,5 +1,5 @@
 import {defineConfig, mergeConfig} from "vitest/config";
-import vitestConfig from "../../vitest.base.config";
+import vitestConfig from "root/vitest.base.config";
 
 export default mergeConfig(
   vitestConfig,
@@ -7,6 +7,8 @@ export default mergeConfig(
     test: {
       globalSetup: ["./test/globalSetup.ts"],
       testTimeout: 60_000,
+      passWithNoTests: true,
+      pool: "forks",
     },
   })
 );
