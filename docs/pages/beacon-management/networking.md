@@ -42,7 +42,13 @@ The primary purpose of ENRs is to facilitate node discovery and connectivity in 
 
 Note that bootnodes are announced via ENR.
 
-Lodestar prints out its own ENR on startup, or it can alternatively be retrieved from the beacon node API by querying the [getNetworkIdentity](https://ethereum.github.io/beacon-APIs/#/Node/getNetworkIdentity) endpoint.
+Lodestar prints out its own ENR on startup, the logs will show something similar to the following
+
+```
+info: discv5 worker started peerId=16Uiu...t9LQ3, initialENR=enr:-Iu4QGE...WRwgiMo, bindAddr4=/ip4/0.0.0.0/udp/9000
+```
+
+Alternatively, the ENR can also be retrieved from the beacon node API by querying the [getNetworkIdentity](https://ethereum.github.io/beacon-APIs/#/Node/getNetworkIdentity) endpoint.
 
 [ENR Viewer](https://enr-viewer.com/) provides a simple and convenient option to decode and inspect ENRs.
 
