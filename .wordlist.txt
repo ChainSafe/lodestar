@@ -122,6 +122,7 @@ envs
 ephemery
 flamegraph
 flamegraphs
+getNetworkIdentity
 gnosis
 goerli
 heapdump
