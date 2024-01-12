@@ -25,7 +25,7 @@ export type SimulationOptions = {
   logsDir: string;
   rootDir: string;
   controller: AbortController;
-  elGenesisTime: number;
+  genesisTime: number;
 };
 
 export enum BeaconClient {

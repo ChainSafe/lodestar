@@ -58,7 +58,7 @@ export class SimulationEnvironment {
     this.options = options;
 
     this.clock = new EpochClock({
-      genesisTime: this.options.elGenesisTime + this.forkConfig.GENESIS_DELAY,
+      genesisTime: this.options.genesisTime + this.forkConfig.GENESIS_DELAY,
       secondsPerSlot: this.forkConfig.SECONDS_PER_SLOT,
       slotsPerEpoch: activePreset.SLOTS_PER_EPOCH,
       signal: this.options.controller.signal,
@@ -82,7 +82,7 @@ export class SimulationEnvironment {
     const env = new SimulationEnvironment(forkConfig, {
       logsDir,
       id,
-      elGenesisTime: Math.floor(Date.now() / 1000),
+      genesisTime: Math.floor(Date.now() / 1000),
       controller: new AbortController(),
       rootDir: path.join(tmp.dirSync({unsafeCleanup: true, tmpdir: "/tmp", template: "sim-XXXXXX"}).name, id),
     });
@@ -217,7 +217,7 @@ export class SimulationEnvironment {
       forkConfig: this.forkConfig,
       runner: this.runner,
       address: "0.0.0.0",
-      genesisTime: this.options.elGenesisTime,
+      genesisTime: this.options.genesisTime,
     };
 
     // Execution Node
@@ -298,7 +298,7 @@ export class SimulationEnvironment {
       }
 
       const genesisState = nodeUtils.initDevState(this.forkConfig, this.keysCount, {
-        genesisTime: this.options.elGenesisTime + this.forkConfig.GENESIS_DELAY,
+        genesisTime: this.options.genesisTime + this.forkConfig.GENESIS_DELAY,
         eth1BlockHash: fromHexString(eth1Genesis.hash),
       }).state;
 

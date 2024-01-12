@@ -96,7 +96,6 @@ export const getEstimatedTTD = ({
   secondsPerSlot: number;
   bellatrixForkEpoch: number;
 }): bigint => {
-  // Need to investigate why TTD always remain 1 epoch ahead, for now just subtract 1 epoch
   const secondsTillBellatrix =
     genesisDelaySeconds +
     (bellatrixForkEpoch - 1) * activePreset.SLOTS_PER_EPOCH * secondsPerSlot +
