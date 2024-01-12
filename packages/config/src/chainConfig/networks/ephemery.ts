@@ -7,7 +7,7 @@ import {chainConfig as mainnet} from "../presets/mainnet.js";
 // https://github.com/ephemery-testnet/ephemery-genesis/blob/master/cl-config.yaml
 
 // Ephemery specification:
-// https://github.com/taxmeifyoucan/EIPs/blob/d298cdd8eaf47a21e7770e5c6efef870587c924d/EIPS/eip-6916.md
+// https://eips.ethereum.org/EIPS/eip-6916
 
 // iteration 0, "base"-genesis
 const baseChainConfig: ChainConfig = {
@@ -37,7 +37,7 @@ const baseChainConfig: ChainConfig = {
   CAPELLA_FORK_EPOCH: 0,
   // Deneb
   DENEB_FORK_VERSION: b("0x5000101b"),
-
+  DENEB_FORK_EPOCH: 5,
   // Deposit contract
   // ---------------------------------------------------------------
   DEPOSIT_CHAIN_ID: 39438000,
