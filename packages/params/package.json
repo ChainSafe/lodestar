@@ -1,6 +1,6 @@
 {
   "name": "@lodestar/params",
-  "version": "1.13.0",
+  "version": "1.14.0",
   "description": "Chain parameters required for lodestar",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",
@@ -52,7 +52,7 @@
     "check-types": "tsc",
     "lint": "eslint --color --ext .ts src/ test/",
     "lint:fix": "yarn run lint --fix",
-    "test": "yarn run check-types",    
+    "test": "yarn run check-types",
     "test:unit": "vitest --run --dir test/unit/ --coverage",
     "test:browsers": "yarn test:browsers:chrome && yarn test:browsers:firefox && yarn test:browsers:electron",
     "test:browsers:chrome": "vitest --run --browser chrome --config ./vitest.browser.config.ts --dir test/unit",
