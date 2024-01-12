@@ -51,7 +51,7 @@ export interface IForkChoiceStore {
  */
 export class ForkChoiceStore implements IForkChoiceStore {
   private _justified: CheckpointHexWithTotalBalance;
-  unrealizedJustified: CheckpointHexWithTotalBalance;
+  unrealizedJustified: CheckpointHexWithBalance;
   private _finalizedCheckpoint: CheckpointWithHex;
   unrealizedFinalizedCheckpoint: CheckpointWithHex;
   equivocatingIndices = new Set<ValidatorIndex>();
