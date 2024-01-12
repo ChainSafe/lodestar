@@ -19,7 +19,6 @@ import {
   StringType,
   SubcommitteeIndex,
   Wei,
-  Gwei,
   ProducedBlockSource,
 } from "@lodestar/types";
 import {ApiClientResponse} from "../../interfaces.js";
@@ -59,11 +58,11 @@ export type ExtraProduceBlockOps = {
   blindedLocal?: boolean;
 };
 
-export type ProduceBlockOrContentsRes = {executionPayloadValue: Wei; consensusBlockValue: Gwei} & (
+export type ProduceBlockOrContentsRes = {executionPayloadValue: Wei; consensusBlockValue: Wei} & (
   | {data: allForks.BeaconBlock; version: ForkPreBlobs}
   | {data: allForks.BlockContents; version: ForkBlobs}
 );
-export type ProduceBlindedBlockRes = {executionPayloadValue: Wei; consensusBlockValue: Gwei} & {
+export type ProduceBlindedBlockRes = {executionPayloadValue: Wei; consensusBlockValue: Wei} & {
   data: allForks.BlindedBeaconBlock;
   version: ForkExecution;
 };

@@ -27,11 +27,10 @@ import {
   Wei,
   bellatrix,
   isBlindedBeaconBlock,
-  Gwei,
 } from "@lodestar/types";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
-import {Logger, isErrorAborted, pruneSetToMax, sleep, toHex} from "@lodestar/utils";
+import {Logger, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toHex} from "@lodestar/utils";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
@@ -473,7 +472,7 @@ export class BeaconChain implements IBeaconChain {
   produceBlock(blockAttributes: BlockAttributes): Promise<{
     block: allForks.BeaconBlock;
     executionPayloadValue: Wei;
-    consensusBlockValue: Gwei;
+    consensusBlockValue: Wei;
     shouldOverrideBuilder?: boolean;
   }> {
     return this.produceBlockWrapper<BlockType.Full>(BlockType.Full, blockAttributes);
@@ -482,7 +481,7 @@ export class BeaconChain implements IBeaconChain {
   produceBlindedBlock(blockAttributes: BlockAttributes): Promise<{
     block: allForks.BlindedBeaconBlock;
     executionPayloadValue: Wei;
-    consensusBlockValue: Gwei;
+    consensusBlockValue: Wei;
   }> {
     return this.produceBlockWrapper<BlockType.Blinded>(BlockType.Blinded, blockAttributes);
   }
@@ -493,7 +492,7 @@ export class BeaconChain implements IBeaconChain {
   ): Promise<{
     block: AssembledBlockType<T>;
     executionPayloadValue: Wei;
-    consensusBlockValue: Gwei;
+    consensusBlockValue: Wei;
     shouldOverrideBuilder?: boolean;
   }> {
     const head = this.forkChoice.getHead();
@@ -572,7 +571,7 @@ export class BeaconChain implements IBeaconChain {
       this.metrics?.blockProductionCaches.producedContentsCache.set(this.producedContentsCache.size);
     }
 
-    return {block, executionPayloadValue, consensusBlockValue: proposerReward, shouldOverrideBuilder};
+    return {block, executionPayloadValue, consensusBlockValue: gweiToWei(proposerReward), shouldOverrideBuilder};
   }
 
   /**

@@ -2,6 +2,7 @@
  * A simple data structure to store rewards payable to block proposer in the memory.
  * Rewards are updated throughout the state transition
  * Should only hold info for one state transition
+ * All values are in Gwei
  */
 export type RewardCache = {
   attestations: number;

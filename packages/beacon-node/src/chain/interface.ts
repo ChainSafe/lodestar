@@ -1,17 +1,5 @@
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
-import {
-  allForks,
-  UintNum64,
-  Root,
-  phase0,
-  Slot,
-  RootHex,
-  Epoch,
-  ValidatorIndex,
-  deneb,
-  Wei,
-  Gwei,
-} from "@lodestar/types";
+import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex, deneb, Wei} from "@lodestar/types";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
@@ -157,13 +145,13 @@ export interface IBeaconChain {
   produceBlock(blockAttributes: BlockAttributes): Promise<{
     block: allForks.BeaconBlock;
     executionPayloadValue: Wei;
-    consensusBlockValue: Gwei;
+    consensusBlockValue: Wei;
     shouldOverrideBuilder?: boolean;
   }>;
   produceBlindedBlock(blockAttributes: BlockAttributes): Promise<{
     block: allForks.BlindedBeaconBlock;
     executionPayloadValue: Wei;
-    consensusBlockValue: Gwei;
+    consensusBlockValue: Wei;
   }>;
 
   /** Process a block until complete */

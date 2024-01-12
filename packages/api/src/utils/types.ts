@@ -179,7 +179,7 @@ export function WithExecutionOptimistic<T extends {data: unknown}>(
 }
 
 /**
- * SSZ factory helper to wrap an existing type with `{executionPayloadValue: Wei, consensusBlockValue: GWei}`
+ * SSZ factory helper to wrap an existing type with `{executionPayloadValue: Wei, consensusBlockValue: Wei}`
  */
 export function WithBlockValues<T extends {data: unknown}>(
   type: TypeJson<T>
