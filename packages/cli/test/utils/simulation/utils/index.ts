@@ -28,7 +28,7 @@ export function defineSimTestConfig(
   forkConfig: ChainForkConfig;
 } {
   const genesisDelaySeconds =
-    (process.env.GENESIS_DELAY_SLOTS ? parseInt(process.env.GENESIS_DELAY_SLOTS) : 20) * SIM_TESTS_SECONDS_PER_SLOT;
+    (process.env.GENESIS_DELAY_SLOTS ? parseInt(process.env.GENESIS_DELAY_SLOTS) : 40) * SIM_TESTS_SECONDS_PER_SLOT;
 
   const estimatedTimeoutMs =
     getEstimatedTimeInSecForRun({
