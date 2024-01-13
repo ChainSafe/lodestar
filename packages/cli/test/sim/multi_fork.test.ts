@@ -215,7 +215,7 @@ const unknownBlockSync = await env.createNodePair({
         the 'unknown block sync' won't function properly. Moreover, the 'unknownBlockSync' requires some startup time,
         contributing to the overall gap. For stability in our CI, we've opted to set a higher limit on this constraint.
         */
-        "sync.slotImportTolerance": lastForkEpoch * SLOTS_PER_EPOCH,
+        "sync.slotImportTolerance": headForUnknownBlockSync.response.data.message.slot,
       },
     },
   },
