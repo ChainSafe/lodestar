@@ -2,7 +2,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {deneb, RootHex, ssz, allForks} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {pruneSetToMax} from "@lodestar/utils";
-import {BLOBSIDECAR_FIXED_SIZE} from "@lodestar/params";
+import {BLOBSIDECAR_FIXED_SIZE, ForkSeq} from "@lodestar/params";
 
 import {
   BlockInput,
@@ -29,9 +29,11 @@ type BlockInputCacheType = {
 const MAX_GOSSIPINPUT_CACHE = 5;
 
 /**
- * SeenGossipBlockInput tracks and caches the live blobs and blocks on the network to solve data availability
- * for the blockInput. If no block has been seen yet for some already seen blobs, it responds will null, but
- * on the first block or the consequent blobs it responds with blobs promise till all blobs become available.
+ * For predeneb, SeenGossipBlockInput only tracks and caches block so that we don't need to download known block
+ * roots. From deneb, it serves same purpose plus tracks and caches the live blobs and blocks on the network to
+ * solve data availability for the blockInput. If no block has been seen yet for some already seen blobs, it
+ * responds will null, but on the first block or the consequent blobs it responds with blobs promise till all blobs
+ * become available.
  *
  * One can start processing block on blobs promise blockInput response and can await on the promise before
  * fully importing the block. The blobs promise is gets resolved as soon as all blobs corresponding to that
@@ -87,9 +89,16 @@ export class SeenGossipBlockInput {
     if (!this.blockInputCache.has(blockHex)) {
       this.blockInputCache.set(blockHex, blockCache);
     }
+
     const {block: signedBlock, blockBytes, blobsCache, availabilityPromise, resolveAvailability} = blockCache;
 
     if (signedBlock !== undefined) {
+      if (config.getForkSeq(signedBlock.message.slot) < ForkSeq.deneb) {
+        return {
+          blockInput: getBlockInput.preDeneb(config, signedBlock, BlockSource.gossip, blockBytes ?? null),
+          blockInputMeta: {pending: null, haveBlobs: 0, expectedBlobs: 0},
+        };
+      }
       // block is available, check if all blobs have shown up
       const {slot, body} = signedBlock.message;
       const {blobKzgCommitments} = body as deneb.BeaconBlockBody;

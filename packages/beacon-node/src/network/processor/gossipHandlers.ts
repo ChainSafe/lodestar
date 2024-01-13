@@ -45,13 +45,7 @@ import {PeerAction} from "../peers/index.js";
 import {validateLightClientFinalityUpdate} from "../../chain/validation/lightClientFinalityUpdate.js";
 import {validateLightClientOptimisticUpdate} from "../../chain/validation/lightClientOptimisticUpdate.js";
 import {validateGossipBlobSidecar} from "../../chain/validation/blobSidecar.js";
-import {
-  BlockInput,
-  BlockSource,
-  getBlockInput,
-  GossipedInputType,
-  BlobSidecarValidation,
-} from "../../chain/blocks/types.js";
+import {BlockInput, GossipedInputType, BlobSidecarValidation} from "../../chain/blocks/types.js";
 import {sszDeserialize} from "../gossip/topic.js";
 import {INetworkCore} from "../core/index.js";
 import {INetwork} from "../interface.js";
@@ -123,29 +117,21 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
     const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
     const recvToVal = Date.now() / 1000 - seenTimestampSec;
 
-    let blockInput;
-    let blockInputMeta;
-
     // always set block to seen cache for all forks so that we don't need to download it
     const blockInputRes = chain.seenGossipBlockInput.getGossipBlockInput(config, {
       type: GossipedInputType.block,
       signedBlock,
       blockBytes,
     });
-    if (config.getForkSeq(signedBlock.message.slot) >= ForkSeq.deneb) {
-      blockInput = blockInputRes.blockInput;
-      blockInputMeta = blockInputRes.blockInputMeta;
-
-      // blockInput can't be returned null, improve by enforcing via return types
-      if (blockInput === null) {
-        throw Error(
-          `Invalid null blockInput returned by getGossipBlockInput for type=${GossipedInputType.block} blockHex=${blockHex} slot=${slot}`
-        );
-      }
-    } else {
-      blockInput = getBlockInput.preDeneb(config, signedBlock, BlockSource.gossip, blockBytes);
-      blockInputMeta = {};
+    const blockInput = blockInputRes.blockInput;
+    // blockInput can't be returned null, improve by enforcing via return types
+    if (blockInput === null) {
+      throw Error(
+        `Invalid null blockInput returned by getGossipBlockInput for type=${GossipedInputType.block} blockHex=${blockHex} slot=${slot}`
+      );
     }
+    const blockInputMeta =
+      config.getForkSeq(signedBlock.message.slot) >= ForkSeq.deneb ? blockInputRes.blockInputMeta : {};
 
     metrics?.gossipBlock.receivedToGossipValidate.observe(recvToVal);
     logger.verbose("Received gossip block", {
