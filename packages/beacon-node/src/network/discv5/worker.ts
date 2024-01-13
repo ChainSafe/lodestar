@@ -5,7 +5,7 @@ import {createFromProtobuf} from "@libp2p/peer-id-factory";
 import {Multiaddr, multiaddr} from "@multiformats/multiaddr";
 import {expose} from "@chainsafe/threads/worker";
 import {Observable, Subject} from "@chainsafe/threads/observable";
-import {Discv5, IDiscv5CreateOptions} from "@chainsafe/discv5";
+import {Discv5} from "@chainsafe/discv5";
 import {createPrivateKeyFromPeerId, ENR, ENRData, SignableENR, SignableENRData} from "@chainsafe/enr";
 import {createBeaconConfig} from "@lodestar/config";
 import {getNodeLogger} from "@lodestar/logger/node";
@@ -57,7 +57,7 @@ const discv5 = Discv5.create({
     ip6: workerData.bindAddrs.ip6 ? multiaddr(workerData.bindAddrs.ip6) : undefined,
   },
   config: workerData.config,
-  metricsRegistry: metricsRegistry as IDiscv5CreateOptions["metricsRegistry"],
+  metricsRegistry,
 });
 
 // Load boot enrs

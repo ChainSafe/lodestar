@@ -90,9 +90,7 @@ export async function createNodeJsLibp2p(
       ? prometheusMetrics({
           collectDefaultMetrics: false,
           preserveExistingMetrics: true,
-          // TODO fix type here
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
-          registry: nodeJsLibp2pOpts.metricsRegistry as any,
+          registry: nodeJsLibp2pOpts.metricsRegistry,
         })
       : undefined,
     connectionManager: {
