@@ -125,13 +125,14 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
 
     let blockInput;
     let blockInputMeta;
-    if (config.getForkSeq(signedBlock.message.slot) >= ForkSeq.deneb) {
-      const blockInputRes = chain.seenGossipBlockInput.getGossipBlockInput(config, {
-        type: GossipedInputType.block,
-        signedBlock,
-        blockBytes,
-      });
 
+    // always set block to seen cache for all forks so that we don't need to download it
+    const blockInputRes = chain.seenGossipBlockInput.getGossipBlockInput(config, {
+      type: GossipedInputType.block,
+      signedBlock,
+      blockBytes,
+    });
+    if (config.getForkSeq(signedBlock.message.slot) >= ForkSeq.deneb) {
       blockInput = blockInputRes.blockInput;
       blockInputMeta = blockInputRes.blockInputMeta;
 

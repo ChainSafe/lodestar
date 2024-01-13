@@ -44,6 +44,10 @@ export class SeenGossipBlockInput {
     pruneSetToMax(this.blockInputCache, MAX_GOSSIPINPUT_CACHE);
   }
 
+  hasBlock(blockRoot: RootHex): boolean {
+    return this.blockInputCache.has(blockRoot);
+  }
+
   getGossipBlockInput(
     config: ChainForkConfig,
     gossipedInput: GossipedBlockInput

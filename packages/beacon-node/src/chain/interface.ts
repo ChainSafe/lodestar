@@ -119,6 +119,8 @@ export interface IBeaconChain {
 
   /** Stop beacon chain processing */
   close(): Promise<void>;
+  /** Chain has seen the specified block root or not. The block may not be processed yet, use forkchoice.hasBlock to check it  */
+  seenBlock(blockRoot: RootHex): boolean;
   /** Populate in-memory caches with persisted data. Call at least once on startup */
   loadFromDisk(): Promise<void>;
   /** Persist in-memory data to the DB. Call at least once before stopping the process */
