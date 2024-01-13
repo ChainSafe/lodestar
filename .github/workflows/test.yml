@@ -13,6 +13,7 @@ on:
   workflow_dispatch:
 
 env:
+  NODE_DEBUG: true
   GETH_DOCKER_IMAGE: ethereum/client-go:v1.11.6
   NETHERMIND_DOCKER_IMAGE: nethermind/nethermind:1.18.0
 
@@ -32,6 +33,9 @@ jobs:
           node-version: ${{matrix.node}}
           check-latest: true
           cache: yarn
+      - name: Use Debug Version of Node
+        uses: './.github/actions/setup-debug-node'
+        if: env.NODE_DEBUG == 'true'
       - name: Node.js version
         id: node
         run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT
@@ -47,11 +51,24 @@ jobs:
             packages/*/.git-data.json
           key: ${{ runner.os }}-node-${{ matrix.node }}-${{ github.sha }}
       - name: Install & build
+        id: install_and_build
         if: steps.cache-build-restore.outputs.cache-hit != 'true'
-        run: yarn install --frozen-lockfile && yarn build
+        run: |
+          if [ "${{ env.NODE_DEBUG }}" == "true" ]; then
+            sudo sh -c "ulimit -c unlimited"
+          fi
+          yarn install --frozen-lockfile && yarn build
       - name: Build
+        id: build
         if: steps.cache-build-restore.outputs.cache-hit == 'true'
-        run: yarn build
+        run: |
+          if [ "${{ env.NODE_DEBUG }}" == "true" ]; then
+            sudo sh -c "ulimit -c unlimited"
+          fi
+          yarn build
+      - uses: './.github/actions/core-dump'
+        if: ${{ env.NODE_DEBUG == 'true' && always() && (steps.install_and_build.conclusion == 'failure' || steps.build.conclusion == 'failure') }}
+
       - name: Check Build
         run: yarn check-build
       - name: Test root binary exists
@@ -159,9 +176,8 @@ jobs:
           node-version: ${{ matrix.node }}
           check-latest: true
           cache: yarn 
-
-      # # Remove when finished debugging core dumps
-      # - uses: './.github/actions/setup-debug-node'
+      - uses: './.github/actions/setup-debug-node'
+        if: env.NODE_DEBUG == 'true'
 
       - name: Restore build cache
         id: cache-primes-restore
@@ -184,14 +200,15 @@ jobs:
           key: spec-test-data-${{ hashFiles('packages/validator/test/spec/params.ts') }}
 
       - name: Unit tests
-        # id: unit_tests
-        # Rever to "yarn test:unit" when finished debugging core dumps
-        # run: sudo sh -c "ulimit -c unlimited && /usr/bin/node-with-debug $(which yarn) test:unit"
-        run: yarn test:unit
-      
-      # # Remove when finished debugging core dumps
-      # - uses: './.github/actions/core-dump'
-      #   if: ${{ failure() && steps.unit_tests.conclusion == 'failure' }}
+        id: unit_tests
+        run: |
+          if [ "${{ env.NODE_DEBUG }}" == "true" ]; then
+            sudo sh -c "ulimit -c unlimited"
+          fi
+          yarn test:unit
+
+      - uses: './.github/actions/core-dump'
+        if: ${{ always() && env.NODE_DEBUG == 'true' && steps.unit_tests.conclusion == 'failure' }}
 
       - name: Upload coverage data
         run: yarn coverage
@@ -212,6 +229,10 @@ jobs:
           node-version: ${{matrix.node}}
           check-latest: true
           cache: yarn
+      - name: Use Debug Version of Node
+        uses: './.github/actions/setup-debug-node'
+        if: env.NODE_DEBUG == 'true'
+
       - name: Restore build cache
         id: cache-primes-restore
         uses: actions/cache/restore@v3
@@ -229,9 +250,18 @@ jobs:
         run: scripts/run_e2e_env.sh start
 
       - name: E2E tests
-        run: yarn test:e2e
+        id: e2e_tests
         env:
           GOERLI_RPC_URL: ${{ secrets.GOERLI_RPC_URL!=0 && secrets.GOERLI_RPC_URL || env.GOERLI_RPC_DEFAULT_URL }}
+        run: |
+          if [ "${{ env.NODE_DEBUG }}" == "true" ]; then
+            sudo sh -c "ulimit -c unlimited"
+          fi
+          yarn test:e2e
+
+      # Conditional core-dump action based on NODE_DEBUG and test failure
+      - uses: './.github/actions/core-dump'
+        if: ${{ env.NODE_DEBUG == 'true' && failure() && steps.e2e_tests.conclusion == 'failure' }}
 
       - name: Stop the e2e test environment
         run: scripts/run_e2e_env.sh stop
@@ -296,6 +326,9 @@ jobs:
           node-version: ${{matrix.node}}
           check-latest: true
           cache: yarn
+      - name: Use Debug Version of Node
+        uses: './.github/actions/setup-debug-node'
+        if: env.NODE_DEBUG == 'true'
       - name: Restore build cache
         id: cache-primes-restore
         uses: actions/cache/restore@v3
@@ -318,15 +351,38 @@ jobs:
       - name: Download spec tests
         run: yarn download-spec-tests
         working-directory: packages/beacon-node
+
       # Run them in different steps to quickly identifying which command failed
       # Otherwise just doing `yarn test:spec` you can't tell which specific suite failed
       # many of the suites have identical names for minimal and mainnet
+      # Spec tests with IDs
       - name: Spec tests bls-general
-        run: yarn test:spec-bls-general
+        id: spec_bls_general
         working-directory: packages/beacon-node
+        run: |
+          if [ "${{ env.NODE_DEBUG }}" == "true" ]; then
+            sudo sh -c "ulimit -c unlimited"
+          fi
+          yarn test:spec-bls-general
+
       - name: Spec tests minimal
-        run: yarn test:spec-minimal
+        id: spec_minimal
         working-directory: packages/beacon-node
+        run: |
+          if [ "${{ env.NODE_DEBUG }}" == "true" ]; then
+            sudo sh -c "ulimit -c unlimited"
+          fi
+          yarn test:spec-minimal
+
       - name: Spec tests mainnet
-        run: NODE_OPTIONS='--max-old-space-size=4096' yarn test:spec-mainnet
+        id: spec_mainnet
         working-directory: packages/beacon-node
+        run: |
+          if [ "${{ env.NODE_DEBUG }}" == "true" ]; then
+            sudo sh -c "ulimit -c unlimited"
+          fi
+          NODE_OPTIONS='--max-old-space-size=4096' yarn test:spec-mainnet
+
+      - uses: './.github/actions/core-dump'
+        if: ${{ always() && env.NODE_DEBUG == 'true' && (steps.spec_bls_general.outcome == 'failure' || steps.spec_minimal.outcome == 'failure' || steps.spec_mainnet.outcome == 'failure') }}
+  
