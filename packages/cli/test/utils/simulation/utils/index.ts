@@ -100,21 +100,19 @@ export const getEstimatedTTD = ({
 };
 
 export const getEstimatedShanghaiTime = ({
-  genesisDelaySeconds,
-  eth1GenesisTime,
+  genesisTime,
   secondsPerSlot,
   capellaForkEpoch,
   additionalSlots,
 }: {
-  genesisDelaySeconds: number;
-  eth1GenesisTime: number;
+  genesisTime: number;
   secondsPerSlot: number;
   capellaForkEpoch: number;
   additionalSlots: number;
 }): number => {
   const secondsTillCapella = capellaForkEpoch * activePreset.SLOTS_PER_EPOCH * secondsPerSlot;
 
-  return eth1GenesisTime + genesisDelaySeconds + secondsTillCapella + additionalSlots * secondsPerSlot;
+  return genesisTime + secondsTillCapella + additionalSlots * secondsPerSlot;
 };
 
 export const squeezeString = (val: string, length: number, sep = "..."): string => {
