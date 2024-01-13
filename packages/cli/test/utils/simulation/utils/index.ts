@@ -28,7 +28,7 @@ export function defineSimTestConfig(
   forkConfig: ChainForkConfig;
 } {
   const genesisDelaySeconds =
-    (process.env.GENESIS_DELAY_SLOTS ? parseInt(process.env.GENESIS_DELAY_SLOTS) : 40) * SIM_TESTS_SECONDS_PER_SLOT;
+    (process.env.GENESIS_DELAY_SLOTS ? parseInt(process.env.GENESIS_DELAY_SLOTS) : 20) * SIM_TESTS_SECONDS_PER_SLOT;
 
   const estimatedTimeoutMs =
     getEstimatedTimeInSecForRun({
@@ -40,7 +40,6 @@ export function defineSimTestConfig(
     }) * 1000;
 
   const ttd = getEstimatedTTD({
-    genesisDelaySeconds,
     bellatrixForkEpoch: opts.BELLATRIX_FORK_EPOCH ?? Infinity,
     secondsPerSlot: opts.SECONDS_PER_SLOT ?? SIM_TESTS_SECONDS_PER_SLOT,
     cliqueSealingPeriod: opts.cliqueSealingPeriod ?? CLIQUE_SEALING_PERIOD,
@@ -84,22 +83,18 @@ export const getEstimatedTimeInSecForRun = ({
 };
 
 export const getEstimatedTTD = ({
-  genesisDelaySeconds,
   cliqueSealingPeriod,
   secondsPerSlot,
   additionalSlots,
   bellatrixForkEpoch,
 }: {
-  genesisDelaySeconds: number;
   cliqueSealingPeriod: number;
   additionalSlots: number;
   secondsPerSlot: number;
   bellatrixForkEpoch: number;
 }): bigint => {
   const secondsTillBellatrix =
-    genesisDelaySeconds +
-    (bellatrixForkEpoch - 1) * activePreset.SLOTS_PER_EPOCH * secondsPerSlot +
-    additionalSlots * secondsPerSlot;
+    bellatrixForkEpoch * activePreset.SLOTS_PER_EPOCH * secondsPerSlot + additionalSlots * secondsPerSlot;
 
   return BigInt(Math.ceil(secondsTillBellatrix / cliqueSealingPeriod) * ETH_TTD_INCREMENT);
 };

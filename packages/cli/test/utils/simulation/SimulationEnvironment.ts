@@ -217,7 +217,7 @@ export class SimulationEnvironment {
       forkConfig: this.forkConfig,
       runner: this.runner,
       address: "0.0.0.0",
-      genesisTime: this.options.genesisTime,
+      genesisTime: this.options.genesisTime + this.forkConfig.GENESIS_DELAY,
     };
 
     // Execution Node
