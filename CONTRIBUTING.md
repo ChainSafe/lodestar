@@ -229,6 +229,25 @@ Run script to download dashboards to `./dashboards` folder
 node scripts/download_dashboards.mjs
 ```
 
+## Contributing to Documentation
+
+When submitting PRs for documentation updates, build the docs locally and ensure functionality before submission. To build docs locally, ensure you have Python installed, then follow these steps:
+
+```sh
+pip install -r docs/requirements.txt
+yarn build:docs
+cd docs
+mkdocs serve --watch pages
+```
+
+Your locally served docs will then be accessible at http://localhost:8000.
+
+If you run into build issues due to circular dependencies, branch switching or other incompatibilities, try cleaning your modules and rebuild your dependencies with:
+
+```
+yarn clean && yarn clean:nm && yarn && yarn build
+```
+
 ## Label Guide
 
 Issues and pull requests are subject to the following labeling guidelines.
