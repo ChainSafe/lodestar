@@ -253,7 +253,7 @@ export class BeaconChain implements IBeaconChain {
       cachedState,
       opts,
       this.justifiedBalancesGetter.bind(this),
-      logger,
+      logger
     );
     const regen = new QueuedStateRegenerator({
       config,

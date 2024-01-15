@@ -16,11 +16,11 @@ import {
   isMergeTransitionComplete,
 } from "@lodestar/state-transition";
 
+import {Logger} from "@lodestar/utils";
 import {computeAnchorCheckpoint} from "../initState.js";
 import {ChainEventEmitter} from "../emitter.js";
 import {ChainEvent} from "../emitter.js";
 import {GENESIS_SLOT} from "../../constants/index.js";
-import { Logger } from "@lodestar/utils";
 
 export type {ForkChoiceOpts};
 
@@ -93,6 +93,6 @@ export function initializeForkChoice(
     ),
 
     logger,
-    opts,
+    opts
   );
 }
