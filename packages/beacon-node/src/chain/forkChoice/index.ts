@@ -20,6 +20,7 @@ import {computeAnchorCheckpoint} from "../initState.js";
 import {ChainEventEmitter} from "../emitter.js";
 import {ChainEvent} from "../emitter.js";
 import {GENESIS_SLOT} from "../../constants/index.js";
+import { Logger } from "@lodestar/utils";
 
 export type {ForkChoiceOpts};
 
@@ -32,7 +33,8 @@ export function initializeForkChoice(
   currentSlot: Slot,
   state: CachedBeaconStateAllForks,
   opts: ForkChoiceOpts,
-  justifiedBalancesGetter: JustifiedBalancesGetter
+  justifiedBalancesGetter: JustifiedBalancesGetter,
+  logger: Logger
 ): ForkChoice {
   const {blockHeader, checkpoint} = computeAnchorCheckpoint(config, state);
   const finalizedCheckpoint = {...checkpoint};
@@ -90,6 +92,7 @@ export function initializeForkChoice(
       currentSlot
     ),
 
-    opts
+    logger,
+    opts,
   );
 }

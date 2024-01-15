@@ -1,5 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
-import {fromHex} from "@lodestar/utils";
+import {Logger, fromHex} from "@lodestar/utils";
 import {SLOTS_PER_HISTORICAL_ROOT, SLOTS_PER_EPOCH, INTERVALS_PER_SLOT} from "@lodestar/params";
 import {bellatrix, Slot, ValidatorIndex, phase0, allForks, ssz, RootHex, Epoch, Root} from "@lodestar/types";
 import {
@@ -52,7 +52,7 @@ export type ForkChoiceOpts = {
 export enum UpdateHeadOpt {
   GetCanonicialHead, // Skip getProposerHead
   GetProposerHead, // With getProposerHead
-  GetPredictedProposerHead, // With overrideForkchoiceUpdate
+  GetPredictedProposerHead, // With predictProposerHead
 }
 
 /**
@@ -114,6 +114,7 @@ export class ForkChoice implements IForkChoice {
     private readonly fcStore: IForkChoiceStore,
     /** The underlying representation of the block DAG. */
     private readonly protoArray: ProtoArray,
+    private readonly logger: Logger,
     private readonly opts?: ForkChoiceOpts
   ) {
     this.head = this.updateHead();
@@ -178,7 +179,7 @@ export class ForkChoice implements IForkChoice {
         if (slot !== undefined) {
           return this.getProposerHead(canonicialHeadBlock, slot);
         } else {
-          // TODO: Error handling
+          throw Error("Calling updateAndGetHead with GetProposerHead must provide a slot");
         }
       case UpdateHeadOpt.GetCanonicialHead:
       default:
@@ -207,6 +208,7 @@ export class ForkChoice implements IForkChoice {
   predictProposerHead(headBlock: ProtoBlock, currentSlot?: Slot): ProtoBlock {
     // Skip re-org attempt if proposer boost (reorg) are disabled
     if (!this.opts?.proposerBoostEnabled || !this.opts?.proposerBoostReorgEnabled) {
+      this.logger.verbose("No proposer boot reorg prediction since the related flags are disabled");
       return headBlock;
     }
 
@@ -230,6 +232,7 @@ export class ForkChoice implements IForkChoice {
       return headBlock;
     }
 
+    this.logger.info("Current head is weak. Predicting next block to be built on parent of head");
     return parentBlock;
   }
 
@@ -244,6 +247,7 @@ export class ForkChoice implements IForkChoice {
   getProposerHead(headBlock: ProtoBlock, slot: Slot): ProtoBlock {
     // Skip re-org attempt if proposer boost (reorg) are disabled
     if (!this.opts?.proposerBoostEnabled || !this.opts?.proposerBoostReorgEnabled) {
+      this.logger.verbose("No proposer boot reorg attempt since the related flags are disabled");
       return headBlock;
     }
 
@@ -298,6 +302,7 @@ export class ForkChoice implements IForkChoice {
     }
 
     // Reorg if all above checks fail
+    this.logger.info("Will perform single-slot reorg to reorg out current weak head");
     return (this.head = parentBlock);
   }
 
