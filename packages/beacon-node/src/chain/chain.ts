@@ -301,6 +301,10 @@ export class BeaconChain implements IBeaconChain {
     await this.bls.close();
   }
 
+  seenBlock(blockRoot: RootHex): boolean {
+    return this.seenGossipBlockInput.hasBlock(blockRoot) || this.forkChoice.hasBlockHex(blockRoot);
+  }
+
   regenCanAcceptWork(): boolean {
     return this.regen.canAcceptWork();
   }
