@@ -7,6 +7,7 @@ export default mergeConfig(
     test: {
       globalSetup: ["./test/globalSetup.ts"],
       testTimeout: 60_000,
+      passWithNoTests: true,
     },
   })
 );

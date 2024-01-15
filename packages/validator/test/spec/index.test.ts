@@ -31,7 +31,7 @@ describe("slashing-protection custom tests", () => {
     const block2: SlashingProtectionBlock = {slot: block1.slot, signingRoot: Buffer.alloc(32, 2)};
 
     await slashingProtection.checkAndInsertBlockProposal(pubkey, block1);
-    await expect(slashingProtection.checkAndInsertBlockProposal(pubkey, block2)).to.be.rejectedWith(InvalidBlockError);
+    await expect(slashingProtection.checkAndInsertBlockProposal(pubkey, block2)).rejects.toThrow(InvalidBlockError);
   });
 
   it("Should reject same attestation", async () => {
@@ -48,7 +48,7 @@ describe("slashing-protection custom tests", () => {
     };
 
     await slashingProtection.checkAndInsertAttestation(pubkey, attestation1);
-    await expect(slashingProtection.checkAndInsertAttestation(pubkey, attestation2)).to.be.rejectedWith(
+    await expect(slashingProtection.checkAndInsertAttestation(pubkey, attestation2)).rejects.toThrow(
       InvalidAttestationError
     );
   });
