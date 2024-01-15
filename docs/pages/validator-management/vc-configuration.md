@@ -97,7 +97,7 @@ With produceBlockV3 (enabled automatically after the Deneb hard fork), the `--bu
 With Lodestar's `--builder.selection` validator options, you can select:
 
 - `maxprofit`: Default setting for Lodestar set at `--builder.boostFactor=100`. This default setting will always choose the more profitable block. Using this option, you may customize your `--builder.boostFactor` to your preference. Examples of its usage are below.
-- `executiononly`: Validator will not select the builder block even if builder relays are configured on the beacon node. This option will always select the local execution block.
+- `executiononly`: Beacon node will be requested to produce local execution block even if builder relays are configured. This option will always select the local execution block and will error if it couldn't produce one.
 - `builderalways`: An alias of `--builder.boostFactor=18446744073709551615` (2**64 - 1), which will select the builder block, unless the builder block fails to produce. The builder block may fail to produce if it's not available, not timely or there is an indication of censorship via `shouldOverrideBuilder` from the execution payload response.
 - `builderonly`: Generally used for distributed validators (DVs). No execution block production will be triggered. Therefore, if a builder block is not produced, the API will fail and _no block will be produced_.
 
