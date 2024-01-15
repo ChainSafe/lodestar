@@ -81,20 +81,21 @@ nav:
       - Starting a Node: getting-started/starting-a-node.md
   - Data Retention: data-retention.md
   - Beacon Node:
-      - Configuration: beacon-management/beacon-cli.md
+      - Beacon CLI Reference: beacon-management/beacon-cli.md
       - Networking: beacon-management/networking.md
       - MEV and Builder Integration: beacon-management/mev-and-builder-integration.md
       - Syncing: beacon-management/syncing.md
   - Validator:
-      - Configuration: validator-management/validator-cli.md
+      - Configuration: validator-management/vc-configuration.md
+      - Validator CLI Reference: validator-management/validator-cli.md
       # - Key Management: validator-management/key-management.md
       # - Withdrawals: validator-management/withdrawals.md
       # - Multiple and Fall-Back Validation: validator-management/multiple-and-fallback-validation.md
   - Bootnode:
-      - Configuration: bootnode/bootnode-cli.md
+      - Bootnode CLI Reference: bootnode/bootnode-cli.md
   - Light Client and Prover:
       - Light Client: lightclient-prover/lightclient.md
-      - Light Client Configuration: lightclient-prover/lightclient-cli.md
+      - Light Client CLI Reference: lightclient-prover/lightclient-cli.md
       - Prover: lightclient-prover/prover.md
       # - Prover Configuration: lightclient-prover/prover-cli.md
   - Logging and Metrics:
