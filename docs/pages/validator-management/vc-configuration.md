@@ -101,13 +101,19 @@ With Lodestar's `--builder.selection` validator options, you can select:
 - `builderalways`: An alias of `--builder.boostFactor=18446744073709551615` (2**64 - 1), which will select the builder block, unless the builder block fails to produce. The builder block may fail to produce if it's not available, not timely or there is an indication of censorship via `shouldOverrideBuilder` from the execution payload response.
 - `builderonly`: Generally used for distributed validators (DVs). No execution block production will be triggered. Therefore, if a builder block is not produced, the API will fail and _no block will be produced_.
 
-#### Examples using builder boost factor
+#### Calculating builder boost factor with examples
 
-Example 1: Setting a `--builder.boostFactor=0` will always prefer the local execution block, but will produce an available builder block if the local execution block fails.
+To calculate the builder boost factor setting, you need to know what percentage you will accept a builder block for against a local execution block using the following formula: `100*100/(100+percentage)`.
 
-Example 2: Setting a `--builder.boostFactor=100` is the same as signaling `--builder.selection maxprofit` where the validator will always select the most profitable block between the local execution engine and the builder block from the relay.
+Example 1: I will only accept a builder block with 20% more value than the local execution block.
+```
+10000/(100+20) = 83.3
+```
+Therefore, `--builder.boostFactor=83.3`.
 
-Example 3: Setting `--builder.boostFactor=80` allows you to signal that your builder block bid needs 20% more in value comparatively to your local execution block to be selected.
+Example 2: Setting a `--builder.boostFactor=0` will always prefer the local execution block, but will produce an available builder block if the local execution block fails.
+
+Example 3: Setting a `--builder.boostFactor=100` is the same as signaling `--builder.selection maxprofit` where the validator will always select the most profitable block between the local execution engine and the builder block from the relay.
 
 ### Submit a validator deposit
 
