@@ -1,5 +1,5 @@
 import {describe, it, afterEach, expect} from "vitest";
-import {Connection} from "@libp2p/interface/connection";
+import {Connection} from "@libp2p/interface";
 import {CustomEvent} from "@libp2p/interface";
 import sinon from "sinon";
 import {BitArray} from "@chainsafe/ssz";

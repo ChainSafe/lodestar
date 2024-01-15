@@ -1,6 +1,5 @@
-import {PeerId} from "@libp2p/interface/peer-id";
+import {Connection, PeerId} from "@libp2p/interface";
 import {multiaddr} from "@multiformats/multiaddr";
-import {Connection} from "@libp2p/interface/connection";
 import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/dist/src/score/peer-score.js";
 import {fromHexString} from "@chainsafe/ssz";

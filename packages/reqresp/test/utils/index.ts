@@ -1,4 +1,4 @@
-import {Direction, ReadStatus, Stream, StreamStatus, WriteStatus} from "@libp2p/interface/connection";
+import {Direction, ReadStatus, Stream, StreamStatus, WriteStatus} from "@libp2p/interface";
 import {logger} from "@libp2p/logger";
 import {expect} from "chai";
 import {Uint8ArrayList} from "uint8arraylist";

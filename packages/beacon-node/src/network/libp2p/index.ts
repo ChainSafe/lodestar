@@ -1,4 +1,4 @@
-import {PeerId} from "@libp2p/interface/peer-id";
+import {PeerId} from "@libp2p/interface";
 import {Registry} from "prom-client";
 import {ENR} from "@chainsafe/enr";
 import {identify} from "@libp2p/identify";

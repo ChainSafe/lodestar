@@ -1,4 +1,4 @@
-import {Connection, StreamStatus} from "@libp2p/interface/connection";
+import {Connection, StreamStatus} from "@libp2p/interface";
 import {routes} from "@lodestar/api";
 
 /**

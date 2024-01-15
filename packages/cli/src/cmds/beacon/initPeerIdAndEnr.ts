@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
-import type {PeerId} from "@libp2p/interface/peer-id";
+import type {PeerId} from "@libp2p/interface";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {Multiaddr} from "@multiformats/multiaddr";
 import {createPrivateKeyFromPeerId, SignableENR} from "@chainsafe/enr";
