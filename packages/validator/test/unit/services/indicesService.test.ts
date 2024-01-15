@@ -1,6 +1,5 @@
+import {describe, it, expect, beforeAll} from "vitest";
 import {toBufferBE} from "bigint-buffer";
-import {expect} from "chai";
-import sinon from "sinon";
 import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
 import {getApiClientStub} from "../../utils/apiStub.js";
@@ -8,13 +7,12 @@ import {testLogger} from "../../utils/logger.js";
 import {IndicesService} from "../../../src/services/indices.js";
 
 describe("IndicesService", function () {
-  const sandbox = sinon.createSandbox();
   const logger = testLogger();
-  const api = getApiClientStub(sandbox);
+  const api = getApiClientStub();
 
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
 
-  before(() => {
+  beforeAll(() => {
     const secretKeys = [
       bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32)),
       bls.SecretKey.fromBytes(toBufferBE(BigInt(99), 32)),
@@ -39,18 +37,12 @@ describe("IndicesService", function () {
     // remove pubkey2
     indicesService.removeForKey(pubkey2);
 
-    expect(Object.fromEntries(indicesService.index2pubkey)).to.deep.equal(
-      {
-        "0": `${pubkey1}`,
-      },
-      "Wrong indicesService.index2pubkey Map"
-    );
+    expect(Object.fromEntries(indicesService.index2pubkey)).toEqual({
+      "0": `${pubkey1}`,
+    });
 
-    expect(Object.fromEntries(indicesService.pubkey2index)).to.deep.equal(
-      {
-        [`${pubkey1}`]: 0,
-      },
-      "Wrong indicesService.pubkey2index Map"
-    );
+    expect(Object.fromEntries(indicesService.pubkey2index)).toEqual({
+      [`${pubkey1}`]: 0,
+    });
   });
 });

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {Root, ssz} from "@lodestar/types";
 import {
@@ -29,6 +29,6 @@ describe("interchange", () => {
     const interchangeLodestar = parseInterchange(interchange, expectedGenesisValidatorsRoot);
     const serializedInterchange = serializeInterchange(interchangeLodestar, {format: "complete", version: "4"});
     // Stringify and parse to simulate writing and reading. It ignores undefined values
-    expect(JSON.parse(JSON.stringify(serializedInterchange))).to.deep.equal(interchange);
+    expect(JSON.parse(JSON.stringify(serializedInterchange))).toEqual(interchange);
   });
 });

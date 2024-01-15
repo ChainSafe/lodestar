@@ -1,6 +1,5 @@
+import {describe, it, expect, beforeAll, vi, Mocked, beforeEach, afterEach} from "vitest";
 import {toBufferBE} from "bigint-buffer";
-import {expect} from "chai";
-import sinon from "sinon";
 import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
 import {chainConfig} from "@lodestar/config/default";
@@ -16,14 +15,15 @@ import {initValidatorStore} from "../../utils/validatorStore.js";
 import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker.js";
 import {ZERO_HASH_HEX} from "../../utils/types.js";
 
+vi.mock("../../../src/services/chainHeaderTracker.js");
+
 describe("AttestationDutiesService", function () {
-  const sandbox = sinon.createSandbox();
-  const api = getApiClientStub(sandbox);
+  const api = getApiClientStub();
 
   let validatorStore: ValidatorStore;
 
-  const chainHeadTracker = sinon.createStubInstance(ChainHeaderTracker) as ChainHeaderTracker &
-    sinon.SinonStubbedInstance<ChainHeaderTracker>;
+  // @ts-expect-error - Mocked class don't need parameters
+  const chainHeadTracker = new ChainHeaderTracker() as Mocked<ChainHeaderTracker>;
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
 
   // Sample validator
@@ -36,14 +36,16 @@ describe("AttestationDutiesService", function () {
     validator: ssz.phase0.Validator.defaultValue(),
   };
 
-  before(async () => {
+  beforeAll(async () => {
     const secretKeys = [bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32))];
     pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
     validatorStore = await initValidatorStore(secretKeys, api, chainConfig);
   });
 
   let controller: AbortController; // To stop clock
-  beforeEach(() => (controller = new AbortController()));
+  beforeEach(() => {
+    controller = new AbortController();
+  });
   afterEach(() => controller.abort());
 
   it("Should fetch indexes and duties", async function () {
@@ -53,7 +55,7 @@ describe("AttestationDutiesService", function () {
       index,
       validator: {...defaultValidator.validator, pubkey: pubkeys[0]},
     };
-    api.beacon.getStateValidators.resolves({
+    api.beacon.getStateValidators.mockResolvedValue({
       response: {data: [validatorResponse], executionOptimistic: false},
       ok: true,
       status: HttpStatusCode.OK,
@@ -71,14 +73,18 @@ describe("AttestationDutiesService", function () {
       validatorIndex: index,
       pubkey: pubkeys[0],
     };
-    api.validator.getAttesterDuties.resolves({
+    api.validator.getAttesterDuties.mockResolvedValue({
       response: {dependentRoot: ZERO_HASH_HEX, data: [duty], executionOptimistic: false},
       ok: true,
       status: HttpStatusCode.OK,
     });
 
     // Accept all subscriptions
-    api.validator.prepareBeaconCommitteeSubnet.resolves();
+    api.validator.prepareBeaconCommitteeSubnet.mockResolvedValue({
+      response: undefined,
+      ok: true,
+      status: HttpStatusCode.OK,
+    });
 
     // Clock will call runAttesterDutiesTasks() immediately
     const clock = new ClockMock();
@@ -88,38 +94,24 @@ describe("AttestationDutiesService", function () {
     await clock.tickEpochFns(0, controller.signal);
 
     // Validator index should be persisted
-    expect(validatorStore.getAllLocalIndices()).to.deep.equal([index], "Wrong local indices");
-    expect(validatorStore.getPubkeyOfIndex(index)).equals(toHexString(pubkeys[0]), "Wrong pubkey");
+    expect(validatorStore.getAllLocalIndices()).toEqual([index]);
+    expect(validatorStore.getPubkeyOfIndex(index)).toBe(toHexString(pubkeys[0]));
 
     // Duties for this and next epoch should be persisted
-    expect(
-      Object.fromEntries(dutiesService["dutiesByIndexByEpoch"].get(epoch)?.dutiesByIndex || new Map())
-    ).to.deep.equal(
-      {
-        // Since the ZERO_HASH won't pass the isAggregator test, selectionProof is null
-        [index]: {duty, selectionProof: null},
-      },
-      "Wrong dutiesService.attesters Map at current epoch"
-    );
+    expect(Object.fromEntries(dutiesService["dutiesByIndexByEpoch"].get(epoch)?.dutiesByIndex || new Map())).toEqual({
+      // Since the ZERO_HASH won't pass the isAggregator test, selectionProof is null
+      [index]: {duty, selectionProof: null},
+    });
     expect(
       Object.fromEntries(dutiesService["dutiesByIndexByEpoch"].get(epoch + 1)?.dutiesByIndex || new Map())
-    ).to.deep.equal(
-      {
-        // Since the ZERO_HASH won't pass the isAggregator test, selectionProof is null
-        [index]: {duty, selectionProof: null},
-      },
-      "Wrong dutiesService.attesters Map at next epoch"
-    );
+    ).toEqual({
+      // Since the ZERO_HASH won't pass the isAggregator test, selectionProof is null
+      [index]: {duty, selectionProof: null},
+    });
 
-    expect(dutiesService.getDutiesAtSlot(slot)).to.deep.equal(
-      [{duty, selectionProof: null}],
-      "Wrong getAttestersAtSlot()"
-    );
+    expect(dutiesService.getDutiesAtSlot(slot)).toEqual([{duty, selectionProof: null}]);
 
-    expect(api.validator.prepareBeaconCommitteeSubnet.callCount).to.equal(
-      1,
-      "prepareBeaconCommitteeSubnet() must be called once after getting the duties"
-    );
+    expect(api.validator.prepareBeaconCommitteeSubnet).toHaveBeenCalledOnce();
   });
 
   it("Should remove signer from attestation duties", async function () {
@@ -129,7 +121,7 @@ describe("AttestationDutiesService", function () {
       index,
       validator: {...defaultValidator.validator, pubkey: pubkeys[0]},
     };
-    api.beacon.getStateValidators.resolves({
+    api.beacon.getStateValidators.mockResolvedValue({
       response: {data: [validatorResponse], executionOptimistic: false},
       ok: true,
       status: HttpStatusCode.OK,
@@ -146,14 +138,18 @@ describe("AttestationDutiesService", function () {
       validatorIndex: index,
       pubkey: pubkeys[0],
     };
-    api.validator.getAttesterDuties.resolves({
+    api.validator.getAttesterDuties.mockResolvedValue({
       response: {data: [duty], dependentRoot: ZERO_HASH_HEX, executionOptimistic: false},
       ok: true,
       status: HttpStatusCode.OK,
     });
 
     // Accept all subscriptions
-    api.validator.prepareBeaconCommitteeSubnet.resolves();
+    api.validator.prepareBeaconCommitteeSubnet.mockResolvedValue({
+      ok: true,
+      status: HttpStatusCode.OK,
+      response: undefined,
+    });
 
     // Clock will call runAttesterDutiesTasks() immediately
     const clock = new ClockMock();
@@ -163,23 +159,14 @@ describe("AttestationDutiesService", function () {
     await clock.tickEpochFns(0, controller.signal);
 
     // first confirm duties for this and next epoch should be persisted
-    expect(Object.fromEntries(dutiesService["dutiesByIndexByEpoch"].get(0)?.dutiesByIndex || new Map())).to.deep.equal(
-      {
-        4: {duty: duty, selectionProof: null},
-      },
-      "Wrong dutiesService.attesters Map at current epoch"
-    );
-    expect(Object.fromEntries(dutiesService["dutiesByIndexByEpoch"].get(1)?.dutiesByIndex || new Map())).to.deep.equal(
-      {
-        4: {duty: duty, selectionProof: null},
-      },
-      "Wrong dutiesService.attesters Map at current epoch"
-    );
+    expect(Object.fromEntries(dutiesService["dutiesByIndexByEpoch"].get(0)?.dutiesByIndex || new Map())).toEqual({
+      4: {duty: duty, selectionProof: null},
+    });
+    expect(Object.fromEntries(dutiesService["dutiesByIndexByEpoch"].get(1)?.dutiesByIndex || new Map())).toEqual({
+      4: {duty: duty, selectionProof: null},
+    });
     // then remove
     dutiesService.removeDutiesForKey(toHexString(pubkeys[0]));
-    expect(Object.fromEntries(dutiesService["dutiesByIndexByEpoch"])).to.deep.equal(
-      {},
-      "Wrong dutiesService.attesters Map at current epoch after removal"
-    );
+    expect(Object.fromEntries(dutiesService["dutiesByIndexByEpoch"])).toEqual({});
   });
 });
