@@ -82,22 +82,6 @@ function wrapLogWriter(...writers: [writer: object, ...keys: string[]][]): {
   };
 }
 
-export function stubLoggerForProcessStd<T extends Logger>(
-  logger: T
-): T & {getLogs: () => string[]; restoreStubs: () => void} {
-  const {flush: flushStdout, restore: restoreStdout} = wrapLogWriter(
-    [process.stdout, "write"],
-    [process.stderr, "write"]
-  );
-
-  return Object.assign(logger, {
-    getLogs: () => flushStdout(),
-    restoreStubs: () => {
-      restoreStdout();
-    },
-  });
-}
-
 export function stubLoggerForConsole<T extends Logger>(
   logger: T
 ): T & {getLogs: () => string[]; restoreStubs: () => void} {

@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import {expect} from "chai";
+import {expect} from "vitest";
 import {apiTokenFileName} from "../../src/cmds/validator/keymanager/server.js";
 import {recursiveLookup} from "../../src/util/index.js";
 
@@ -17,12 +17,14 @@ export function findApiToken(dirpath: string): string {
 }
 
 export function expectDeepEquals<T>(a: T, b: T, message: string): void {
-  expect(a).deep.equals(b, message);
+  expect(a).toEqualWithMessage(b, message);
 }
 
 /**
  * Similar to `expectDeepEquals` but only checks presence of all elements in array, irrespective of their order.
  */
 export function expectDeepEqualsUnordered<T>(a: T[], b: T[], message: string): void {
-  expect(a).to.have.deep.members(b, message);
+  expect(a).toEqualWithMessage(expect.arrayContaining(b), message);
+  expect(b).toEqualWithMessage(expect.arrayContaining(a), message);
+  expect(a).toHaveLength(b.length);
 }

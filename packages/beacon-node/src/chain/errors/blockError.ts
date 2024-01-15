@@ -63,6 +63,8 @@ export enum BlockErrorCode {
   /** The attestation head block is too far behind the attestation slot, causing many skip slots.
   This is deemed a DoS risk */
   TOO_MANY_SKIPPED_SLOTS = "TOO_MANY_SKIPPED_SLOTS",
+  /** The blobs are unavailable */
+  DATA_UNAVAILABLE = "BLOCK_ERROR_DATA_UNAVAILABLE",
 }
 
 type ExecutionErrorStatus = Exclude<
@@ -103,7 +105,8 @@ export type BlockErrorType =
   | {code: BlockErrorCode.TOO_MUCH_GAS_USED; gasUsed: number; gasLimit: number}
   | {code: BlockErrorCode.SAME_PARENT_HASH; blockHash: RootHex}
   | {code: BlockErrorCode.TRANSACTIONS_TOO_BIG; size: number; max: number}
-  | {code: BlockErrorCode.EXECUTION_ENGINE_ERROR; execStatus: ExecutionErrorStatus; errorMessage: string};
+  | {code: BlockErrorCode.EXECUTION_ENGINE_ERROR; execStatus: ExecutionErrorStatus; errorMessage: string}
+  | {code: BlockErrorCode.DATA_UNAVAILABLE};
 
 export class BlockGossipError extends GossipActionError<BlockErrorType> {}
 

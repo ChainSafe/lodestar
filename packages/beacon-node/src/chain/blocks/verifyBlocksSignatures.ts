@@ -20,7 +20,7 @@ export async function verifyBlocksSignatures(
   preState0: CachedBeaconStateAllForks,
   blocks: allForks.SignedBeaconBlock[],
   opts: ImportBlockOpts
-): Promise<void> {
+): Promise<{verifySignaturesTime: number}> {
   const isValidPromises: Promise<boolean>[] = [];
 
   // Verifies signatures after running state transition, so all SyncCommittee signed roots are known at this point.
@@ -46,17 +46,20 @@ export async function verifyBlocksSignatures(
     }
   }
 
-  if (blocks.length === 1 && opts.seenTimestampSec !== undefined) {
-    const recvToSigVer = Date.now() / 1000 - opts.seenTimestampSec;
-    metrics?.gossipBlock.receivedToSignaturesVerification.observe(recvToSigVer);
-    logger.verbose("Verified block signatures", {slot: blocks[0].message.slot, recvToSigVer});
-  }
-
   // `rejectFirstInvalidResolveAllValid()` returns on isValid result with its index
   const res = await rejectFirstInvalidResolveAllValid(isValidPromises);
   if (!res.allValid) {
     throw new BlockError(blocks[res.index], {code: BlockErrorCode.INVALID_SIGNATURE, state: preState0});
   }
+
+  const verifySignaturesTime = Date.now();
+  if (blocks.length === 1 && opts.seenTimestampSec !== undefined) {
+    const recvToSigVer = verifySignaturesTime / 1000 - opts.seenTimestampSec;
+    metrics?.gossipBlock.receivedToSignaturesVerification.observe(recvToSigVer);
+    logger.verbose("Verified block signatures", {slot: blocks[0].message.slot, recvToSigVer});
+  }
+
+  return {verifySignaturesTime};
 }
 
 type AllValidRes = {allValid: true} | {allValid: false; index: number};

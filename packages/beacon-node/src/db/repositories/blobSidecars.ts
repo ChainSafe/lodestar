@@ -2,6 +2,7 @@ import {ValueOf, ContainerType} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {Db, Repository} from "@lodestar/db";
 import {ssz} from "@lodestar/types";
+
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 export const blobSidecarsWrapperSsz = new ContainerType(
@@ -14,10 +15,7 @@ export const blobSidecarsWrapperSsz = new ContainerType(
 );
 
 export type BlobSidecarsWrapper = ValueOf<typeof blobSidecarsWrapperSsz>;
-
 export const BLOB_SIDECARS_IN_WRAPPER_INDEX = 44;
-// ssz.deneb.BlobSidecars.elementType.fixedSize;
-export const BLOBSIDECAR_FIXED_SIZE = 131256;
 
 /**
  * blobSidecarsWrapper by block root (= hash_tree_root(SignedBeaconBlock.message))

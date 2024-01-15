@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect, beforeEach, beforeAll} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
 import {RootHex, Slot} from "@lodestar/types";
@@ -121,12 +121,12 @@ describe("Forkchoice", function () {
     const forkchoice = new ForkChoice(config, fcStore, protoArr);
     const summaries = forkchoice.getAllAncestorBlocks(getBlockRoot(genesisSlot + 1));
     // there are 2 blocks in protoArray but iterateAncestorBlocks should only return non-finalized blocks
-    expect(summaries.length).to.be.equals(1, "should not return the finalized block");
-    expect(summaries[0]).to.be.deep.include(block, "the block summary is not correct");
+    expect(summaries).toHaveLength(1);
+    expect(summaries[0]).toEqual({...block, bestChild: undefined, bestDescendant: undefined, parent: 0, weight: 0});
   });
 
-  before("Assert SLOTS_PER_EPOCH", () => {
-    expect(SLOTS_PER_EPOCH).equals(32, "Unexpected SLOTS_PER_EPOCH value");
+  beforeAll(() => {
+    expect(SLOTS_PER_EPOCH).toBe(32);
   });
 
   const dependentRootTestCases: {atSlot: Slot; pivotSlot: Slot; epoch: EpochDifference; skipped: Slot[]}[] = [
@@ -164,10 +164,7 @@ describe("Forkchoice", function () {
 
       const expectedDependentRoot = getBlockRoot(pivotSlot);
 
-      expect(forkchoice.getDependentRoot(block, epoch)).to.be.equal(
-        expectedDependentRoot,
-        "incorrect attester dependent root"
-      );
+      expect(forkchoice.getDependentRoot(block, epoch)).toBe(expectedDependentRoot);
     });
   }
 

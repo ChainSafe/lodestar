@@ -1,4 +1,4 @@
-import {IGauge, IHistogram} from "../../metrics/index.js";
+import {Gauge, GaugeExtra, Histogram} from "@lodestar/utils";
 
 export enum QueueType {
   FIFO = "FIFO",
@@ -19,12 +19,12 @@ export type JobQueueOpts = {
 };
 
 export type QueueMetrics = {
-  length: IGauge;
-  droppedJobs: IGauge;
+  length: GaugeExtra;
+  droppedJobs: Gauge;
   /** Compute async utilization rate with `rate(metrics_name[1m])` */
-  jobTime: IHistogram;
-  jobWaitTime: IHistogram;
-  concurrency: IGauge;
+  jobTime: Histogram;
+  jobWaitTime: Histogram;
+  concurrency: Gauge;
 };
 
 export const defaultQueueOpts: Required<

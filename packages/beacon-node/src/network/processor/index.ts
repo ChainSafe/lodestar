@@ -93,7 +93,7 @@ const PROCESS_UNKNOWN_BLOCK_GOSSIP_OBJECTS_YIELD_EVERY_MS = 50;
 /**
  * Reprocess reject reason for metrics
  */
-enum ReprocessRejectReason {
+export enum ReprocessRejectReason {
   /**
    * There are too many attestations that have unknown block root.
    */
@@ -107,9 +107,9 @@ enum ReprocessRejectReason {
 /**
  * Cannot accept work reason for metrics
  */
-enum CannotAcceptWorkReason {
+export enum CannotAcceptWorkReason {
   /**
-   * Validating or procesing gossip block at current slot.
+   * Validating or processing gossip block at current slot.
    */
   processingCurrentSlotBlock = "processing_current_slot_block",
   /**
@@ -344,7 +344,10 @@ export class NetworkProcessor {
         for (const gossipMessages of gossipMessagesByRoot.values()) {
           for (const message of gossipMessages) {
             this.metrics?.reprocessGossipAttestations.reject.inc({reason: ReprocessRejectReason.expired});
-            this.metrics?.reprocessGossipAttestations.waitSecBeforeReject.set(nowSec - message.seenTimestampSec);
+            this.metrics?.reprocessGossipAttestations.waitSecBeforeReject.set(
+              {reason: ReprocessRejectReason.expired},
+              nowSec - message.seenTimestampSec
+            );
             // TODO: Should report the dropped job to gossip? It will be eventually pruned from the mcache
           }
         }

@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {createChainForkConfig} from "@lodestar/config";
 import {ssz} from "@lodestar/types";
 import {assertValidTerminalPowBlock, ExecutionStatus} from "../../../src/index.js";
@@ -17,7 +17,7 @@ describe("assertValidTerminalPowBlock", function () {
     };
     expect(() =>
       assertValidTerminalPowBlock(config, block, {executionStatus, powBlockParent: null, powBlock})
-    ).to.not.throw();
+    ).not.toThrow();
   });
 
   it("should require powBlockParent if powBlock not genesis", function () {
@@ -29,7 +29,7 @@ describe("assertValidTerminalPowBlock", function () {
     };
     expect(() =>
       assertValidTerminalPowBlock(config, block, {executionStatus, powBlockParent: null, powBlock})
-    ).to.throw();
+    ).toThrow();
   });
 
   it("should require powBlock >= ttd", function () {
@@ -41,7 +41,7 @@ describe("assertValidTerminalPowBlock", function () {
     };
     expect(() =>
       assertValidTerminalPowBlock(config, block, {executionStatus, powBlockParent: powBlock, powBlock})
-    ).to.throw();
+    ).toThrow();
   });
 
   it("should require powBlockParent < ttd", function () {
@@ -53,7 +53,7 @@ describe("assertValidTerminalPowBlock", function () {
     };
     expect(() =>
       assertValidTerminalPowBlock(config, block, {executionStatus, powBlockParent: powBlock, powBlock})
-    ).to.throw();
+    ).toThrow();
   });
 
   it("should accept powBlockParent < ttd and powBlock >= ttd", function () {
@@ -67,8 +67,6 @@ describe("assertValidTerminalPowBlock", function () {
       ...powBlock,
       totalDifficulty: BigInt(9),
     };
-    expect(() =>
-      assertValidTerminalPowBlock(config, block, {executionStatus, powBlockParent, powBlock})
-    ).to.not.throw();
+    expect(() => assertValidTerminalPowBlock(config, block, {executionStatus, powBlockParent, powBlock})).not.toThrow();
   });
 });

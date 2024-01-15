@@ -167,6 +167,23 @@ export class ShufflingCache {
     }
   }
 
+  /**
+   * Same to get() function but synchronous.
+   */
+  getSync(shufflingEpoch: Epoch, decisionRootHex: RootHex): EpochShuffling | null {
+    const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(shufflingEpoch).get(decisionRootHex);
+    if (cacheItem === undefined) {
+      return null;
+    }
+
+    if (isShufflingCacheItem(cacheItem)) {
+      return cacheItem.shuffling;
+    }
+
+    // ignore promise
+    return null;
+  }
+
   private add(shufflingEpoch: Epoch, decisionBlock: RootHex, cacheItem: CacheItem): void {
     this.itemsByDecisionRootByEpoch.getOrDefault(shufflingEpoch).set(decisionBlock, cacheItem);
     pruneSetToMax(this.itemsByDecisionRootByEpoch, this.maxEpochs);

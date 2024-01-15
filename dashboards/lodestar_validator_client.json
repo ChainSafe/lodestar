@@ -84,6 +84,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -213,7 +214,7 @@
         "text": {},
         "textMode": "name"
       },
-      "pluginVersion": "9.3.2",
+      "pluginVersion": "10.1.1",
       "targets": [
         {
           "datasource": {
@@ -269,7 +270,7 @@
         "text": {},
         "textMode": "name"
       },
-      "pluginVersion": "9.3.2",
+      "pluginVersion": "10.1.1",
       "targets": [
         {
           "datasource": {
@@ -323,7 +324,7 @@
         "text": {},
         "textMode": "name"
       },
-      "pluginVersion": "9.3.2",
+      "pluginVersion": "10.1.1",
       "targets": [
         {
           "datasource": {
@@ -377,7 +378,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "9.3.2",
+      "pluginVersion": "10.1.1",
       "targets": [
         {
           "datasource": {
@@ -430,7 +431,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "9.3.2",
+      "pluginVersion": "10.1.1",
       "targets": [
         {
           "datasource": {
@@ -483,7 +484,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "9.3.2",
+      "pluginVersion": "10.1.1",
       "targets": [
         {
           "datasource": {
@@ -521,7 +522,7 @@
         "content": "_Validator metrics =D_",
         "mode": "markdown"
       },
-      "pluginVersion": "9.3.2",
+      "pluginVersion": "10.1.1",
       "targets": [
         {
           "datasource": {
@@ -557,6 +558,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -721,6 +723,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -869,7 +872,7 @@
           "unit": "s"
         }
       },
-      "pluginVersion": "9.3.2",
+      "pluginVersion": "10.1.1",
       "reverseYBuckets": false,
       "targets": [
         {
@@ -983,7 +986,7 @@
           "unit": "s"
         }
       },
-      "pluginVersion": "9.3.2",
+      "pluginVersion": "10.1.1",
       "reverseYBuckets": false,
       "targets": [
         {
@@ -2014,7 +2017,7 @@
   ],
   "refresh": "10s",
   "revision": 1,
-  "schemaVersion": 37,
+  "schemaVersion": 38,
   "style": "dark",
   "tags": [
     "lodestar"

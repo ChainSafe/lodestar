@@ -1,6 +1,6 @@
 import fs from "node:fs";
+import {describe, it, expect, beforeEach, afterEach} from "vitest";
 import tmp from "tmp";
-import {expect} from "chai";
 import {initPeerIdAndEnr} from "../../../src/cmds/beacon/initPeerIdAndEnr.js";
 import {BeaconArgs} from "../../../src/cmds/beacon/options.js";
 import {testLogger} from "../../utils.js";
@@ -23,12 +23,11 @@ describe("initPeerIdAndEnr", () => {
       testLogger(),
       true
     );
-    expect((await enr.peerId()).toString(), "enr peer id doesn't equal the returned peer id").to.equal(
-      peerId.toString()
-    );
-    expect(enr.seq).to.equal(BigInt(1));
-    expect(enr.tcp).to.equal(undefined);
-    expect(enr.tcp6).to.equal(undefined);
+    // "enr peer id doesn't equal the returned peer id"
+    expect((await enr.peerId()).toString()).toBe(peerId.toString());
+    expect(enr.seq).toBe(BigInt(1));
+    expect(enr.tcp).toBeUndefined();
+    expect(enr.tcp6).toBeUndefined();
   });
 
   it("second time should use ths existing enr and peer id", async () => {
@@ -46,7 +45,7 @@ describe("initPeerIdAndEnr", () => {
       true
     );
 
-    expect(run1.peerId.toString()).to.equal(run2.peerId.toString());
-    expect(run1.enr.encodeTxt()).to.equal(run2.enr.encodeTxt());
+    expect(run1.peerId.toString()).toBe(run2.peerId.toString());
+    expect(run1.enr.encodeTxt()).toBe(run2.enr.encodeTxt());
   });
 });

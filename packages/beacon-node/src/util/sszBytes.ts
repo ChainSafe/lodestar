@@ -1,6 +1,7 @@
 import {BitArray, deserializeUint8ArrayBitListFromBytes} from "@chainsafe/ssz";
 import {BLSSignature, RootHex, Slot} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
+import {BYTES_PER_FIELD_ELEMENT, FIELD_ELEMENTS_PER_BLOB} from "@lodestar/params";
 
 export type BlockRootHex = RootHex;
 export type AttDataBase64 = string;
@@ -180,23 +181,18 @@ export function getSlotFromSignedBeaconBlockSerialized(data: Uint8Array): Slot |
 }
 
 /**
- * 4 + 96 = 100
- * ```
- * class SignedBlobSidecar(Container):
- *   message: BlobSidecar [fixed]
- *   signature: BLSSignature [fixed]
- *
  * class BlobSidecar(Container):
- *   blockRoot: Root [fixed - 32 bytes ],
- *   index: BlobIndex [fixed - 8 bytes ],
- *   slot: Slot [fixed - 8 bytes]
- *   ...
- * ```
+ *  index: BlobIndex [fixed - 8 bytes ],
+ *  blob: Blob, BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB
+ *  kzgCommitment: Bytes48,
+ *  kzgProof: Bytes48,
+ *  signedBlockHeader:
+ *    slot: 8 bytes
  */
 
-const SLOT_BYTES_POSITION_IN_SIGNED_BLOB_SIDECAR = 32 + 8;
+const SLOT_BYTES_POSITION_IN_SIGNED_BLOB_SIDECAR = 8 + BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB + 48 + 48;
 
-export function getSlotFromSignedBlobSidecarSerialized(data: Uint8Array): Slot | null {
+export function getSlotFromBlobSidecarSerialized(data: Uint8Array): Slot | null {
   if (data.length < SLOT_BYTES_POSITION_IN_SIGNED_BLOB_SIDECAR + SLOT_SIZE) {
     return null;
   }

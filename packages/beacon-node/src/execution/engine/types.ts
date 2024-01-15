@@ -107,6 +107,7 @@ type ExecutionPayloadRpcWithValue = {
   // even though CL tracks this as executionPayloadValue, EL returns this as blockValue
   blockValue: QUANTITY;
   blobsBundle?: BlobsBundleRpc;
+  shouldOverrideBuilder?: boolean;
 };
 type ExecutionPayloadResponse = ExecutionPayloadRpc | ExecutionPayloadRpcWithValue;
 
@@ -207,19 +208,28 @@ export function hasPayloadValue(response: ExecutionPayloadResponse): response is
 export function parseExecutionPayload(
   fork: ForkName,
   response: ExecutionPayloadResponse
-): {executionPayload: allForks.ExecutionPayload; executionPayloadValue: Wei; blobsBundle?: BlobsBundle} {
+): {
+  executionPayload: allForks.ExecutionPayload;
+  executionPayloadValue: Wei;
+  blobsBundle?: BlobsBundle;
+  shouldOverrideBuilder?: boolean;
+} {
   let data: ExecutionPayloadRpc;
   let executionPayloadValue: Wei;
   let blobsBundle: BlobsBundle | undefined;
+  let shouldOverrideBuilder: boolean;
+
   if (hasPayloadValue(response)) {
     executionPayloadValue = quantityToBigint(response.blockValue);
     data = response.executionPayload;
     blobsBundle = response.blobsBundle ? parseBlobsBundle(response.blobsBundle) : undefined;
+    shouldOverrideBuilder = response.shouldOverrideBuilder ?? false;
   } else {
     data = response;
     // Just set it to zero as default
     executionPayloadValue = BigInt(0);
     blobsBundle = undefined;
+    shouldOverrideBuilder = false;
   }
 
   const executionPayload = {
@@ -269,7 +279,7 @@ export function parseExecutionPayload(
     (executionPayload as deneb.ExecutionPayload).excessBlobGas = quantityToBigint(excessBlobGas);
   }
 
-  return {executionPayload, executionPayloadValue, blobsBundle};
+  return {executionPayload, executionPayloadValue, blobsBundle, shouldOverrideBuilder};
 }
 
 export function serializePayloadAttributes(data: PayloadAttributes): PayloadAttributesRpc {

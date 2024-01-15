@@ -25,9 +25,7 @@ export interface IExecutionBuilder {
   ): Promise<{
     header: allForks.ExecutionPayloadHeader;
     executionPayloadValue: Wei;
-    blindedBlobsBundle?: deneb.BlindedBlobsBundle;
+    blobKzgCommitments?: deneb.BlobKzgCommitments;
   }>;
-  submitBlindedBlock(
-    signedBlock: allForks.SignedBlindedBeaconBlockOrContents
-  ): Promise<allForks.SignedBeaconBlockOrContents>;
+  submitBlindedBlock(signedBlock: allForks.SignedBlindedBeaconBlock): Promise<allForks.SignedBeaconBlockOrContents>;
 }

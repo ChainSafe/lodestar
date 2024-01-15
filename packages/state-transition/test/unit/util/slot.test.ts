@@ -1,4 +1,4 @@
-import {assert} from "chai";
+import {describe, it, expect} from "vitest";
 
 import {Slot} from "@lodestar/types";
 import {computeSlotsSinceEpochStart} from "../../../src/util/index.js";
@@ -14,7 +14,7 @@ describe("computeSlotsSinceEpochStart", () => {
   for (const pair of pairs) {
     it(`Slot ${pair.test} is ${pair.expected} from current Epoch start`, () => {
       const result: Slot = computeSlotsSinceEpochStart(pair.test);
-      assert.equal(result, pair.expected);
+      expect(result).toEqual(pair.expected);
     });
   }
 
@@ -23,6 +23,6 @@ describe("computeSlotsSinceEpochStart", () => {
     const slot = 70;
     const result = computeSlotsSinceEpochStart(slot, epoch);
     // 70 - NUM_SLOT_PER_EPOCH
-    assert.equal(result, 38);
+    expect(result).toEqual(38);
   });
 });

@@ -34,7 +34,7 @@ export type Api = {
       HttpStatusCode.NOT_FOUND | HttpStatusCode.BAD_REQUEST
     >
   >;
-  submitBlindedBlock(signedBlock: allForks.SignedBlindedBeaconBlockOrContents): Promise<
+  submitBlindedBlock(signedBlock: allForks.SignedBlindedBeaconBlock): Promise<
     ApiClientResponse<
       {
         [HttpStatusCode.OK]: {

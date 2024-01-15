@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {
   INACTIVITY_SCORE_SIZE,
   findModifiedInactivityScores,
@@ -27,7 +27,7 @@ describe("findModifiedInactivityScores", () => {
       }
       const modifiedValidators: number[] = [];
       findModifiedInactivityScores(inactivityScoresBytes, inactivityScoresBytes2, modifiedValidators);
-      expect(modifiedValidators.sort((a, b) => a - b)).to.be.deep.equal(expectedModifiedValidators);
+      expect(modifiedValidators.sort((a, b) => a - b)).toEqual(expectedModifiedValidators);
     });
   }
 });

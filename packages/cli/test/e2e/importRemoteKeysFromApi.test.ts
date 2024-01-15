@@ -1,10 +1,9 @@
 import path from "node:path";
+import {describe, it, expect, beforeAll, vi} from "vitest";
 import {rimraf} from "rimraf";
-import {expect} from "chai";
 import {Api, DeleteRemoteKeyStatus, getClient, ImportRemoteKeyStatus} from "@lodestar/api/keymanager";
 import {config} from "@lodestar/config/default";
 import {ApiError, HttpStatusCode} from "@lodestar/api";
-import {getMochaContext} from "@lodestar/test-utils/mocha";
 import {testFilesDir} from "../utils.js";
 import {cachedPubkeysHex} from "../utils/cachedKeys.js";
 import {expectDeepEquals} from "../utils/runUtils.js";
@@ -23,12 +22,11 @@ async function expectKeys(keymanagerClient: Api, expectedPubkeys: string[], mess
 }
 
 describe("import remoteKeys from api", function () {
-  const testContext = getMochaContext(this);
-  this.timeout("30s");
+  vi.setConfig({testTimeout: 30_000});
 
   const dataDir = path.join(testFilesDir, "import-remoteKeys-test");
 
-  before("Clean dataDir", () => {
+  beforeAll(() => {
     rimraf.sync(dataDir);
   });
 
@@ -36,7 +34,7 @@ describe("import remoteKeys from api", function () {
   const pubkeysToAdd = [cachedPubkeysHex[0], cachedPubkeysHex[1]];
 
   it("run 'validator' and import remote keys from API", async () => {
-    const {keymanagerClient} = await startValidatorWithKeyManager([], {dataDir, testContext});
+    const {keymanagerClient} = await startValidatorWithKeyManager([], {dataDir});
 
     // Wrap in retry since the API may not be listening yet
     await expectKeys(keymanagerClient, [], "Wrong listRemoteKeys before importing");
@@ -64,7 +62,7 @@ describe("import remoteKeys from api", function () {
   });
 
   it("run 'validator' check keys are loaded + delete", async function () {
-    const {keymanagerClient} = await startValidatorWithKeyManager([], {dataDir, testContext});
+    const {keymanagerClient} = await startValidatorWithKeyManager([], {dataDir});
     // Check that keys imported in previous it() are still there
     await expectKeys(keymanagerClient, pubkeysToAdd, "Wrong listRemoteKeys before deleting");
 
@@ -82,11 +80,11 @@ describe("import remoteKeys from api", function () {
   });
 
   it("reject calls without bearerToken", async function () {
-    await startValidatorWithKeyManager([], {dataDir, testContext});
+    await startValidatorWithKeyManager([], {dataDir});
     const keymanagerUrl = "http://localhost:38011";
     const keymanagerClientNoAuth = getClient({baseUrl: keymanagerUrl, bearerToken: undefined}, {config});
     const res = await keymanagerClientNoAuth.listRemoteKeys();
-    expect(res.ok).to.be.false;
-    expect(res.error?.code).to.be.eql(HttpStatusCode.UNAUTHORIZED);
+    expect(res.ok).toBe(false);
+    expect(res.error?.code).toEqual(HttpStatusCode.UNAUTHORIZED);
   });
 });

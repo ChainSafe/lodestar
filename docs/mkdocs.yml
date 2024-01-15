@@ -73,6 +73,7 @@ extra:
 nav:
   - Home: index.md
   - Introduction: introduction.md
+  - Security: security.md
   - Getting Started:
       - Quick Start: getting-started/quick-start.md
       - Installation: getting-started/installation.md
@@ -121,7 +122,7 @@ nav:
       - Dependency Graph: contribution/depgraph.md
       # - Repo: contribution/repo.md
       - Testing:
-          - Overview: contribution/testing/overview.md
+          - Overview: contribution/testing/index.md
           # - Unit Tests: contribution/testing/unit-tests.md
           # - Integration Tests: contribution/testing/integration-tests.md
           # - E2E Tests: contribution/testing/e2e-tests.md

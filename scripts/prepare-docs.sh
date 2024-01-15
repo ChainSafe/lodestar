@@ -8,6 +8,7 @@ set -e
 
 # Copy contributing docs
 cp CONTRIBUTING.md $DOCS_DIR/pages/contribution/getting-started.md
+cp SECURITY.md $DOCS_DIR/pages/security.md
 
 # Copy package README.md to docs
 cp -r packages/light-client/README.md $DOCS_DIR/pages/lightclient-prover/lightclient.md

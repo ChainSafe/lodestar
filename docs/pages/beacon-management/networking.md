@@ -1,38 +1,38 @@
 # Networking
 
-Starting up Lodestar will automatically connect it to peers on the network. Peers are found through the discv5 protocol and one peers are established communications happen via gossipsub over libp2p. While not necessary, having a basic understanding of how the various protocols and transport work will help with debugging and troubleshooting as some of the more common challenges come up with [firewalls](#firewall-management) and [NAT traversal](#nat-traversal).
+Lodestar will automatically connect to peers on the network. Peers are found through the discv5 protocol and once peers are established communications happen via gossipsub over libp2p. While not necessary, having a basic understanding of how the various protocols and transports work will help with debugging and troubleshooting as some of the more common challenges come up with [firewalls](#firewall-management) and [NAT traversal](#nat-traversal).
 
 ## Networking Flags
 
 Some of the important Lodestar flags related to networking are:
 
-- [`--discv5`](./configuration.md#--discv5)
-- [`--listenAddress`](./configuration.md#--listenAddress)
-- [`--port`](./configuration.md#--port)
-- [`--discoveryPort`](./configuration.md#--discoveryPort)
-- [`--listenAddress6`](./configuration.md#--listenAddress6)
-- [`--port6`](./configuration.md#--port6)
-- [`--discoveryPort6`](./configuration.md#--discoveryPort6)
-- [`--bootnodes`](./configuration.md#--bootnodes)
-- [`--deterministicLongLivedAttnets`](./configuration.md#--deterministicLongLivedAttnets)
-- [`--subscribeAllSubnets`](./configuration.md#--subscribeAllSubnets)
-- [`--disablePeerScoring`](./configuration.md#--disablePeerScoring)
-- [`--enr.ip`](./configuration.md#--enr.ip)
-- [`--enr.tcp`](./configuration.md#--enr.tcp)
-- [`--enr.udp`](./configuration.md#--enr.udp)
-- [`--enr.ip6`](./configuration.md#--enr.ip6)
-- [`--enr.tcp6`](./configuration.md#--enr.tcp6)
-- [`--enr.udp6`](./configuration.md#--enr.udp6)
-- [`--nat`](./configuration.md#--nat)
-- [`--private`](./configuration.md#`--private`)
+- [`--discv5`](./beacon-cli.md#-discv5)
+- [`--listenAddress`](./beacon-cli.md#-listenaddress)
+- [`--port`](./beacon-cli.md#-port)
+- [`--discoveryPort`](./beacon-cli.md#-discoveryport)
+- [`--listenAddress6`](./beacon-cli.md#-listenaddress6)
+- [`--port6`](./beacon-cli.md#-port6)
+- [`--discoveryPort6`](./beacon-cli.md#-discoveryport6)
+- [`--bootnodes`](./beacon-cli.md#-bootnodes)
+- [`--deterministicLongLivedAttnets`](./beacon-cli.md#-deterministiclonglivedattnets)
+- [`--subscribeAllSubnets`](./beacon-cli.md#-subscribeallsubnets)
+- [`--disablePeerScoring`](./beacon-cli.md#-disablepeerscoring)
+- [`--enr.ip`](./beacon-cli.md#-enrip)
+- [`--enr.tcp`](./beacon-cli.md#-enrtcp)
+- [`--enr.udp`](./beacon-cli.md#-enrudp)
+- [`--enr.ip6`](./beacon-cli.md#-enrip6)
+- [`--enr.tcp6`](./beacon-cli.md#-enrtcp6)
+- [`--enr.udp6`](./beacon-cli.md#-enrudp6)
+- [`--nat`](./beacon-cli.md#-nat)
+- [`--private`](./beacon-cli.md#`-private`)
 
 ## Peer Discovery (Discv5)
 
-In Ethereum, discv5 plays a pivotal role in the peer discovery process, facilitating nodes to find and locate each other in order to form the peer-to-peer network​. The process begins with an interaction between new nodes and bootnodes at start-up. Bootnodes are nodes with hard-coded addresses, or can be overridden via the cli flag `--bootnodes`, to bootstrap the discovery process​. Through a method called FINDNODE-NODES, a new node establishes a bond with each bootnode, and it returns a list of peers for the new node to connect to. Following this trail, the new node engages through FINDNODE-NODES with the provided peers to further establish a web of connections​.
+In Ethereum, discv5 plays a pivotal role in the peer discovery process, facilitating nodes to find and locate each other in order to form the peer-to-peer network​. The process begins with an interaction between new nodes and bootnodes at start-up. Bootnodes are nodes with hard-coded addresses, or can be overridden via the cli flag [`--bootnodes`](./beacon-cli.md#-bootnodes), to bootstrap the discovery process​. Through a method called FINDNODE-NODES, a new node establishes a bond with each bootnode, and it returns a list of peers for the new node to connect to. Following this trail, the new node engages through FINDNODE-NODES with the provided peers to further establish a web of connections​.
 
 Discv5 operates as a peer advertisement medium in this network, where nodes can act as both providers and consumers of data. Every participating node in the Discv5 protocol discovers peer data from other nodes and later relays it, making the discovery process dynamic and efficient​.
 
-Discv5 is designed to be a standalone protocol running via UDP on a dedicated port solely for peer discovery. Peer data is exchanged via self-certified, flexible peer records (ENRs). These key features cater to the Ethereum network​ and being a good peer often means running a discv5 worker​. Lodestar offers simple configuration to setup and run a bootnode independently of a beacon node. See [bootnode](./bootnode.md) for more information and configuration options.
+Discv5 is designed to be a standalone protocol running via UDP on a dedicated port solely for peer discovery. Peer data is exchanged via self-certified, flexible peer records (ENRs). These key features cater to the Ethereum network​ and being a good peer often means running a discv5 worker​. Lodestar offers simple configuration to setup and run a bootnode independently of a beacon node. See the [bootnode cli](../bootnode/bootnode-cli.md) page for more information and configuration options.
 
 ## ENR
 
@@ -41,6 +41,16 @@ Ethereum Node Records (ENRs) are a standardized format utilized for peer discove
 The primary purpose of ENRs is to facilitate node discovery and connectivity in the Ethereum network. Nodes use ENRs to announce their presence and capabilities to other nodes, making it easier to establish and maintain a robust, interconnected network.
 
 Note that bootnodes are announced via ENR.
+
+Lodestar prints out its own ENR on startup, the logs will show something similar to the following
+
+```
+info: discv5 worker started peerId=16Uiu...t9LQ3, initialENR=enr:-Iu4QGE...WRwgiMo, bindAddr4=/ip4/0.0.0.0/udp/9000
+```
+
+Alternatively, the ENR can also be retrieved from the beacon node API by querying the [getNetworkIdentity](https://ethereum.github.io/beacon-APIs/#/Node/getNetworkIdentity) endpoint.
+
+[ENR Viewer](https://enr-viewer.com/) provides a simple and convenient option to decode and inspect ENRs.
 
 ## Peer Communication (gossipsub and ReqResp)
 
@@ -68,22 +78,20 @@ Libp2p operates at the lower levels of the OSI model, particularly at the Transp
 
 If your setup is behind a firewall there are a few ports that will need to be opened to allow for P2P discovery and communication. There are also some ports that need to be protected to prevent unwanted access or DDOS attacks on your node.
 
-Ports that should be opened:
+Ports that must be opened:
 
-- 30303/TCP+UDP - Execution layer p2p communication port
-- 9000/TCP+UDP - Beacon Node P2P communication port
-- 9090/TCP - Lodestar IPv6 P2P communication port
-- 13000/TCP - Prysm P2P communication port
-- 12000/UDP - Prysm P2P communication port
+- 30303/TCP+UDP - Execution layer P2P communication port
+- 9000/TCP+UDP - Beacon node IPv4 P2P communication port
+- 9090/TCP+UDP - Beacon node IPv6 P2P communication port
 
-Ports that should be inbound protected:
+Ports that must be protected:
 
-- 9596/TCP - Lodestar Beacon-Node JSON RPC api calls
-- 5062/TCP - Lodestar validator key manager api calls
-- 18550/TCP - Lodestar MEV Boost/Builder port
-- 8008/TCP - Lodestar Metrics
-- 5064/TCP - Validator Metrics
-- 8545/TCP - Execution client JSON RPC port api calls
+- 9596/TCP - Beacon node REST API port
+- 5062/TCP - Validator key manager API port
+- 18550/TCP - MEV-Boost/Builder port
+- 8008/TCP - Beacon node metrics port
+- 5064/TCP - Validator metrics port
+- 8545/TCP - Execution client JSON RPC port
 - 8551/TCP - Execution engine port for Lodestar to communicate with the execution client
 
 ## NAT Traversal

@@ -1,7 +1,7 @@
 import path from "node:path";
 import fs from "node:fs";
 import {fileURLToPath} from "node:url";
-import {expect} from "chai";
+import {describe, it, expect, vi, beforeEach, afterEach} from "vitest";
 import {sleep} from "@lodestar/utils";
 import {LoggerWorker, getLoggerWorker} from "./workerLoggerHandler.js";
 
@@ -11,7 +11,7 @@ import {LoggerWorker, getLoggerWorker} from "./workerLoggerHandler.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 describe("worker logs", function () {
-  this.timeout(60_000);
+  vi.setConfig({testTimeout: 60_000});
 
   const logFilepath = path.join(__dirname, "../../../test-logs/test_worker_logs.log");
   let loggerWorker: LoggerWorker;
@@ -36,7 +36,7 @@ describe("worker logs", function () {
     fs.createWriteStream(logFilepath, {flags: "a"}).write(logTextMainThread);
 
     const data = await waitForFileSize(logFilepath, logTextMainThread.length);
-    expect(data).includes(logTextMainThread);
+    expect(data).toContain(logTextMainThread);
   });
 
   it("worker writes to file", async () => {
@@ -44,7 +44,7 @@ describe("worker logs", function () {
     loggerWorker.log(logTextWorker);
 
     const data = await waitForFileSize(logFilepath, logTextWorker.length);
-    expect(data).includes(logTextWorker);
+    expect(data).toContain(logTextWorker);
   });
 
   it("concurrent write from two write streams in different threads", async () => {
@@ -57,8 +57,8 @@ describe("worker logs", function () {
     file.write(logTextMainThread + "\n");
 
     const data = await waitForFileSize(logFilepath, logTextWorker.length + logTextMainThread.length);
-    expect(data).includes(logTextWorker);
-    expect(data).includes(logTextMainThread);
+    expect(data).toContain(logTextWorker);
+    expect(data).toContain(logTextMainThread);
   });
 });
 

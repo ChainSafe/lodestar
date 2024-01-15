@@ -45,6 +45,9 @@ export class LinkedList<T> {
     return this._length;
   }
 
+  /**
+   * Add to the end of the list
+   */
   push(data: T): void {
     if (this._length === 0) {
       this.tail = this.head = new Node(data);
@@ -64,6 +67,9 @@ export class LinkedList<T> {
     this._length++;
   }
 
+  /**
+   * Add to the beginning of the list
+   */
   unshift(data: T): void {
     if (this._length === 0) {
       this.tail = this.head = new Node(data);
@@ -80,6 +86,25 @@ export class LinkedList<T> {
     newHead.next = this.head;
     this.head.prev = newHead;
     this.head = newHead;
+    this._length++;
+  }
+
+  insertAfter(after: T, data: T): void {
+    const node = this.findNode(after);
+    if (!node) {
+      return;
+    }
+
+    if (node === this.tail) {
+      this.push(data);
+      return;
+    }
+
+    const newNode = new Node(data);
+    newNode.next = node.next;
+    newNode.prev = node;
+    node.next = newNode;
+    if (newNode.next) newNode.next.prev = newNode;
     this._length++;
   }
 
@@ -173,6 +198,48 @@ export class LinkedList<T> {
     return false;
   }
 
+  /**
+   * Move an existing item to the head of the list.
+   * If the item is not found, do nothing.
+   */
+  moveToHead(item: T): void {
+    // if this is head, do nothing
+    if (this.head?.data === item) {
+      return;
+    }
+
+    const found = this.deleteFirst(item);
+    if (found) {
+      this.unshift(item);
+    }
+  }
+
+  /**
+   * Move an existing item to the second position of the list.
+   * If the item is not found, do nothing.
+   */
+  moveToSecond(item: T): void {
+    // if this is head or second, do nothing
+    if (this.head?.data === item || this.head?.next?.data === item) {
+      return;
+    }
+
+    const found = this.deleteFirst(item);
+    if (found) {
+      if (this.head?.next) {
+        const oldSecond = this.head.next;
+        const newSecond = new Node(item);
+        this.head.next = newSecond;
+        newSecond.next = oldSecond;
+        newSecond.prev = this.head;
+        oldSecond.prev = newSecond;
+      } else {
+        // only 1 item in the list
+        this.push(item);
+      }
+    }
+  }
+
   next(): IteratorResult<T> {
     if (!this.pointer) {
       return {done: true, value: undefined};
@@ -221,5 +288,24 @@ export class LinkedList<T> {
     }
 
     return arr;
+  }
+
+  /**
+   * Check if the item is in the list.
+   * @returns
+   */
+  has(item: T): boolean {
+    return this.findNode(item) !== null;
+  }
+
+  private findNode(item: T): Node<T> | null {
+    let node = this.head;
+    while (node) {
+      if (node.data === item) {
+        return node;
+      }
+      node = node.next;
+    }
+    return null;
   }
 }

@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {racePromisesWithCutoff, RaceEvent} from "../../src/promise.js";
 
 describe("racePromisesWithCutoff", () => {
@@ -98,7 +98,7 @@ describe("racePromisesWithCutoff", () => {
         testEvents.push(event)
       );
       const testResultsCmp = testResults.map((res: string | Error) => (res instanceof Error ? res.message : res));
-      expect({results: testResultsCmp, events: testEvents}).to.be.deep.equal({results, events});
+      expect({results: testResultsCmp, events: testEvents}).toEqual({results, events});
     });
   }
 });

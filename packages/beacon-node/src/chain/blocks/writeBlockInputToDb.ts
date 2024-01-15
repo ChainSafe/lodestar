@@ -13,7 +13,7 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInput: BlockI
   const fnPromises: Promise<void>[] = [];
 
   for (const blockInput of blocksInput) {
-    const {block, blockBytes, type} = blockInput;
+    const {block, blockBytes} = blockInput;
     const blockRoot = this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
     const blockRootHex = toHex(blockRoot);
     if (blockBytes) {
@@ -29,8 +29,13 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInput: BlockI
       root: blockRootHex,
     });
 
-    if (type === BlockInputType.postDeneb) {
-      const {blobs: blobSidecars} = blockInput;
+    if (blockInput.type === BlockInputType.postDeneb || blockInput.type === BlockInputType.blobsPromise) {
+      const blobSidecars =
+        blockInput.type == BlockInputType.postDeneb
+          ? blockInput.blobs
+          : // At this point of import blobs are available and can be safely awaited
+            (await blockInput.availabilityPromise).blobs;
+
       // NOTE: Old blobs are pruned on archive
       fnPromises.push(this.db.blobSidecars.add({blockRoot, slot: block.message.slot, blobSidecars}));
       this.logger.debug("Persisted blobSidecars to hot DB", {

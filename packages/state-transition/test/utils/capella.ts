@@ -1,7 +1,12 @@
 import crypto from "node:crypto";
 import {ssz} from "@lodestar/types";
 import {config} from "@lodestar/config/default";
-import {BLS_WITHDRAWAL_PREFIX, ETH1_ADDRESS_WITHDRAWAL_PREFIX, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {
+  BLS_WITHDRAWAL_PREFIX,
+  ETH1_ADDRESS_WITHDRAWAL_PREFIX,
+  SLOTS_PER_EPOCH,
+  SLOTS_PER_HISTORICAL_ROOT,
+} from "@lodestar/params";
 import {BeaconStateCapella, CachedBeaconStateCapella} from "../../src/index.js";
 import {createCachedBeaconStateTest} from "./state.js";
 import {mulberry32} from "./rand.js";
@@ -67,10 +72,17 @@ export function newStateWithValidators(numValidator: number): BeaconStateCapella
   const capellaStateType = ssz.capella.BeaconState;
   const stateView = capellaStateType.defaultViewDU();
   stateView.slot = config.CAPELLA_FORK_EPOCH * SLOTS_PER_EPOCH + 100;
+  for (let i = 0; i < SLOTS_PER_HISTORICAL_ROOT; i++) {
+    stateView.blockRoots.set(i, crypto.randomBytes(32));
+  }
 
   for (let i = 0; i < numValidator; i++) {
     const validator = ssz.phase0.Validator.defaultViewDU();
     validator.pubkey = pubkeys[i];
+    // make all validators active
+    validator.activationEpoch = 0;
+    validator.exitEpoch = Infinity;
+    validator.effectiveBalance = 32e9;
     stateView.validators.push(validator);
     stateView.balances.push(32);
     stateView.inactivityScores.push(0);
@@ -85,8 +97,9 @@ export function newStateWithValidators(numValidator: number): BeaconStateCapella
  * Modify a state without changing number of validators
  */
 export function modifyStateSameValidator(seedState: BeaconStateCapella): BeaconStateCapella {
+  const slotDiff = 10;
   const state = seedState.clone();
-  state.slot = seedState.slot + 10;
+  state.slot = seedState.slot + slotDiff;
   state.latestBlockHeader = ssz.phase0.BeaconBlockHeader.toViewDU({
     slot: state.slot,
     proposerIndex: 0,
@@ -94,6 +107,9 @@ export function modifyStateSameValidator(seedState: BeaconStateCapella): BeaconS
     stateRoot: state.hashTreeRoot(),
     bodyRoot: ssz.phase0.BeaconBlockBody.hashTreeRoot(ssz.phase0.BeaconBlockBody.defaultValue()),
   });
+  for (let i = 1; i <= slotDiff; i++) {
+    state.blockRoots.set((seedState.slot + i) % SLOTS_PER_HISTORICAL_ROOT, crypto.randomBytes(32));
+  }
   state.blockRoots.set(0, crypto.randomBytes(32));
   state.stateRoots.set(0, crypto.randomBytes(32));
   state.historicalRoots.push(crypto.randomBytes(32));
