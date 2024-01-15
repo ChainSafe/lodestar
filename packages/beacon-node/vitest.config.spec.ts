@@ -8,7 +8,12 @@ export default mergeConfig(
       globalSetup: ["./test/globalSetup.ts"],
       testTimeout: 60_000,
       passWithNoTests: true,
-      pool: "forks",
+      pool: "threads",
+      poolOptions: {
+        threads: {
+          isolate: false,
+        },
+      },
     },
   })
 );

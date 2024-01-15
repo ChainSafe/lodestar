@@ -9,6 +9,11 @@ export default mergeConfig(
       testTimeout: 60_000,
       passWithNoTests: true,
       pool: "threads",
+      poolOptions: {
+        threads: {
+          isolate: false,
+        },
+      },
     },
   })
 );
