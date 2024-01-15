@@ -2,7 +2,7 @@ import {describe, it, afterEach, beforeEach, expect, vi} from "vitest";
 import {PeerId} from "@libp2p/interface/peer-id";
 import {multiaddr} from "@multiformats/multiaddr";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
-import {SignableENR} from "@chainsafe/discv5";
+import {SignableENR} from "@chainsafe/enr";
 import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
