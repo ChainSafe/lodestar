@@ -105,11 +105,11 @@ With Lodestar's `--builder.selection` validator options, you can select:
 
 To calculate the builder boost factor setting, you need to know what percentage you will accept a builder block for against a local execution block using the following formula: `100*100/(100+percentage)`.
 
-Example 1: I will only accept a builder block with 20% more value than the local execution block.
+Example 1: I will only accept a builder block with 25% more value than the local execution block.
 ```
-10000/(100+20) = 83.3
+10000/(100+25) = 80
 ```
-Therefore, `--builder.boostFactor=83.3`.
+Therefore, `--builder.boostFactor=80`.
 
 Example 2: Setting a `--builder.boostFactor=0` will always prefer the local execution block, but will produce an available builder block if the local execution block fails.
 
