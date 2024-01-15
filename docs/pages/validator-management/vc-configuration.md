@@ -90,7 +90,7 @@ You may choose to use the `--strictFeeRecipientCheck` flag to enable a strict ch
 
 ### Configure your builder selection and/or builder boost factor
 
-If you are running a Lodestar beacon with connected builder relays, you may use these validator configurations to signal which block (builder vs. local execution) for the beacon node to propose. 
+If you are running a beacon node with connected builder relays, you may use these validator configurations to signal which block (builder vs. local execution) the beacon node should produce.
 
 With produceBlockV3 (enabled automatically after the Deneb hard fork), the `builder.boostFactor` is a percentage multiplier the block producing beacon node must apply to boost (>100) or dampen (<100) builder block value for selection against execution block. The multiplier is ignored if `--builder.selection` is set to anything other than `maxprofit`. Even though this is set on the validator client, the calculation is applied on the beacon node itself. For more information, see the [produceBlockV3 Beacon API](https://ethereum.github.io/beacon-APIs/#/ValidatorRequiredApi/produceBlockV3).
 
