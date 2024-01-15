@@ -75,6 +75,8 @@ describe("getAttestationsForBlock", () => {
         unrealizedFinalizedRoot: toHexString(finalizedCheckpoint.root),
         executionPayloadBlockHash: null,
         executionStatus: ExecutionStatus.PreMerge,
+
+        timeliness: false,
       },
       originalState.slot
     );
@@ -98,6 +100,7 @@ describe("getAttestationsForBlock", () => {
           unrealizedFinalizedRoot: toHexString(finalizedCheckpoint.root),
           executionPayloadBlockHash: null,
           executionStatus: ExecutionStatus.PreMerge,
+          timeliness: false,
         },
         slot
       );

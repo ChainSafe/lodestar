@@ -100,6 +100,8 @@ describe("Forkchoice", function () {
 
       executionPayloadBlockHash: null,
       executionStatus: ExecutionStatus.PreMerge,
+
+      timeliness: false,
     };
   };
 

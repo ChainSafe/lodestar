@@ -114,7 +114,7 @@ export class ForkChoice implements IForkChoice {
     private readonly fcStore: IForkChoiceStore,
     /** The underlying representation of the block DAG. */
     private readonly protoArray: ProtoArray,
-    private readonly logger: Logger,
+    private readonly logger?: Logger,
     private readonly opts?: ForkChoiceOpts
   ) {
     this.head = this.updateHead();
@@ -208,7 +208,7 @@ export class ForkChoice implements IForkChoice {
   predictProposerHead(headBlock: ProtoBlock, currentSlot?: Slot): ProtoBlock {
     // Skip re-org attempt if proposer boost (reorg) are disabled
     if (!this.opts?.proposerBoostEnabled || !this.opts?.proposerBoostReorgEnabled) {
-      this.logger.verbose("No proposer boot reorg prediction since the related flags are disabled");
+      this.logger?.verbose("No proposer boot reorg prediction since the related flags are disabled");
       return headBlock;
     }
 
@@ -232,7 +232,7 @@ export class ForkChoice implements IForkChoice {
       return headBlock;
     }
 
-    this.logger.info("Current head is weak. Predicting next block to be built on parent of head");
+    this.logger?.info("Current head is weak. Predicting next block to be built on parent of head");
     return parentBlock;
   }
 
@@ -247,7 +247,7 @@ export class ForkChoice implements IForkChoice {
   getProposerHead(headBlock: ProtoBlock, slot: Slot): ProtoBlock {
     // Skip re-org attempt if proposer boost (reorg) are disabled
     if (!this.opts?.proposerBoostEnabled || !this.opts?.proposerBoostReorgEnabled) {
-      this.logger.verbose("No proposer boot reorg attempt since the related flags are disabled");
+      this.logger?.verbose("No proposer boot reorg attempt since the related flags are disabled");
       return headBlock;
     }
 
@@ -302,7 +302,7 @@ export class ForkChoice implements IForkChoice {
     }
 
     // Reorg if all above checks fail
-    this.logger.info("Will perform single-slot reorg to reorg out current weak head");
+    this.logger?.info("Will perform single-slot reorg to reorg out current weak head");
     return (this.head = parentBlock);
   }
 
