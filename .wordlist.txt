@@ -14,6 +14,7 @@ Chai
 ChainSafe
 Customizations
 DPoS
+DVs
 Discv
 DockerHub
 Dockerized
@@ -173,6 +174,7 @@ scalability
 secp
 sepolia
 sharding
+shouldOverrideBuilder
 ssz
 stakers
 subnet
