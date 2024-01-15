@@ -31,7 +31,7 @@
     "test:unit": "nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'",
     "test": "yarn test:unit",
     "test:spec": "vitest --run --config vitest.config.spec.ts --dir test/spec/",
-    "test:e2e": "LODESTAR_PRESET=minimal mocha 'test/e2e/**/*.test.ts'",
+    "test:e2e": "mocha 'test/e2e/**/*.test.ts'",
     "download-spec-tests": "node --loader=ts-node/esm test/spec/downloadTests.ts",
     "coverage": "codecov -F lodestar-validator",
     "check-readme": "typescript-docs-verifier"
