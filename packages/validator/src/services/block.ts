@@ -265,7 +265,7 @@ export class BlockProposingService {
     } else {
       Object.assign(debugLogCtx, {api: "produceBlindedBlock"});
       const res = await this.api.validator.produceBlindedBlock(slot, randaoReveal, graffiti);
-      ApiError.assert(res, "Failed to produce block: validator.produceBlockV2");
+      ApiError.assert(res, "Failed to produce block: validator.produceBlindedBlock");
       const {response} = res;
       const executionPayloadSource = ProducedBlockSource.builder;
 
