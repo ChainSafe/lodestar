@@ -15,6 +15,7 @@ import {
   ForkChoiceErrorCode,
   EpochDifference,
   AncestorStatus,
+  UpdateHeadOpt,
 } from "@lodestar/fork-choice";
 import {isErrorAborted} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
@@ -226,8 +227,10 @@ export async function importBlock(
 
   // 5. Compute head. If new head, immediately stateCache.setHeadState()
 
+  const {proposerIndex, slot} = block.message;
+  const useProposerHead = this.beaconProposerCache.get(proposerIndex) !== undefined; // If the block is proposed by us, we calculate newHead using GetProposerHead, else GetCanonicialHead
   const oldHead = this.forkChoice.getHead();
-  const newHead = this.recomputeForkChoiceHead(); // TODO: Think about this. If we just proposed a new block and reorg-ed, we should just keep the old head. Else canonical head
+  const newHead = useProposerHead ? this.recomputeForkChoiceHead(UpdateHeadOpt.GetPredictedProposerHead, slot) : this.recomputeForkChoiceHead();
   const currFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
 
   if (newHead.blockRoot !== oldHead.blockRoot) {
