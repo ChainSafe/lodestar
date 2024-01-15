@@ -1,6 +1,6 @@
-# Validator management
+# Validator Configuration
 
-The following instructions are required for stakers utilizing Lodestar.
+The following instructions are for stakers utilizing the Lodestar validator client.
 
 [TOC]
 
@@ -17,7 +17,7 @@ The mnemonic is randomly generated during wallet creation and printed out to the
 
 ### Create a wallet
 
-Lodestar is deprecating its functionality to create wallets.
+Lodestar has deprecated its functionality to create wallets.
 
 To create a wallet, we recommend using the official [`staking-deposit-cli`](https://github.com/ethereum/staking-deposit-cli/releases) from the Ethereum Foundation for users comfortable with command line interfaces.
 
@@ -88,11 +88,22 @@ Configure your validator client's fee recipient address by using the `--suggeste
 
 You may choose to use the `--strictFeeRecipientCheck` flag to enable a strict check of the fee recipient address with the one returned by the beacon node for added reassurance.
 
+### Configure your builder selection and/or builder boost factor
+
+If you are running Lodestar with connected builder relays, you may use this configuration to determine which block to propose. With produceBlockV3, the `builder.boostFactor` allows you to set a percentage multiplier to compare against the local engine block reward versus the builder block's reward from the relays (if the beacon node is connected to builder relays).   
+
+This is similar to our previous `builder.selection` options for how the validator chooses which block to propose in its production flow. With produceBlockV3 (enabled automatically after the Deneb hard fork), the `builder.boostFactor` will be available and maintained as part of `consensus-specs/apis/validator/block.v3.yaml` for a more fine-tuned selection strategy. The `builder.selection` options of `maxprofit` | `executiononly` | `builderonly` | `builderalways` is still available for use. 
+
+Examples comparing `builder.boostFactor` to our previous `builder.selection` implementation, setting a `builder.boostFactor` of `0` is the same as signaling `builder.selection executiononly` where the validator will always select the local execution block if available.
+
+Setting a `builder.boostFactor` of `100` is the same as signaling `builder.selection maxprofit` where the validator will always select the most profitable block between the local execution engine and the builder block from the relay.
+
+Otherwise, custom setting `builder.boostFactor` of `80` as an example, allows you to signal that your builder block bid needs 20% more in value comparatively to your local execution block to be selected. 
+
 ### Submit a validator deposit
 
-Please use the official tools to perform your deposits
+Please use the official Ethereum Launchpad to perform your deposits
 
-- `staking-deposit-cli`: <https://github.com/ethereum/staking-deposit-cli>
 - Ethereum Foundation launchpad: <https://launchpad.ethereum.org>
 
 ## Run the validator
@@ -105,7 +116,7 @@ To start a Lodestar validator run the command:
 
 You should see confirmation that modules have started.
 
-```bash
+```ts
 Nov-29 10:47:13.647[]                 info: Lodestar network=sepolia, version=v1.2.2/f093b46, commit=f093b468ec3ab0dbbe8e2d2c8175f52ad88aa35f
 Nov-29 10:47:13.649[]                 info: Connecting to LevelDB database path=/home/user/.local/share/lodestar/sepolia/validator-db
 Nov-29 10:47:51.732[]                 info: 3 local keystores
