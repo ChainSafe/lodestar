@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {expect} from "vitest";
 import {Node} from "@chainsafe/persistent-merkle-tree";
 import {Type, CompositeType, fromHexString, toHexString} from "@chainsafe/ssz";
 

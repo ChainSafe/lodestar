@@ -1,5 +1,5 @@
 import path from "node:path";
-import {expect} from "chai";
+import {expect} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {BeaconStateAllForks, isExecutionStateType, signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {InputType} from "@lodestar/spec-test-util";
@@ -8,7 +8,7 @@ import {phase0, allForks, bellatrix, ssz, RootHex, deneb} from "@lodestar/types"
 import {bnToNum, fromHex} from "@lodestar/utils";
 import {createBeaconConfig} from "@lodestar/config";
 import {ACTIVE_PRESET, ForkSeq, isForkBlobs} from "@lodestar/params";
-import {BeaconChain} from "../../../src/chain/index.js";
+import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
 import {ClockEvent} from "../../../src/util/clock.js";
 import {computeInclusionProof} from "../../../src/util/blobs.js";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
@@ -111,6 +111,9 @@ const forkChoiceTest =
             executionBuilder: undefined,
           }
         );
+
+        // The handler of `ChainEvent.forkChoiceFinalized` access `db.block` and raise error if not found.
+        chain.emitter.removeAllListeners(ChainEvent.forkChoiceFinalized);
 
         const stepsLen = steps.length;
         logger.debug("Fork choice test", {steps: stepsLen});
