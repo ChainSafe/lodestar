@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {expect, describe, it, vi, beforeAll, afterAll} from "vitest";
 import {fromHex, toHex} from "@lodestar/utils";
 import {config} from "@lodestar/config/default";
 import {computeStartSlotAtEpoch, interopSecretKey, interopSecretKeys} from "@lodestar/state-transition";
@@ -13,7 +13,7 @@ import {IndicesService} from "../../src/services/indices.js";
 import {testLogger} from "../utils/logger.js";
 
 describe("web3signer signature test", function () {
-  this.timeout("60s");
+  vi.setConfig({testTimeout: 60_000, hookTimeout: 60_000});
 
   const altairSlot = 2375711;
   const epoch = 0;
@@ -39,7 +39,7 @@ describe("web3signer signature test", function () {
     pubkey: pubkeyBytes,
   };
 
-  before("set up validator stores", async () => {
+  beforeAll(async () => {
     validatorStoreLocal = await getValidatorStore({type: SignerType.Local, secretKey: secretKey});
 
     const password = "password";
@@ -57,15 +57,16 @@ describe("web3signer signature test", function () {
     });
   });
 
-  after("stop external signer container", async () => {
+  afterAll(async () => {
     await externalSigner.container.stop();
   });
 
   for (const fork of config.forksAscendingEpochOrder) {
-    it(`signBlock ${fork.name}`, async function () {
+    it(`signBlock ${fork.name}`, async ({skip}) => {
       // Only test till the fork the signer version supports
       if (ForkSeq[fork.name] > externalSigner.supportedForkSeq) {
-        this.skip();
+        skip();
+        return;
       }
 
       const block = ssz[fork.name].BeaconBlock.defaultValue();

@@ -1,6 +1,5 @@
+import {describe, it, expect, beforeEach, afterEach, vi} from "vitest";
 import {toBufferBE} from "bigint-buffer";
-import {expect} from "chai";
-import sinon from "sinon";
 import bls from "@chainsafe/bls";
 import {toHexString, fromHexString} from "@chainsafe/ssz";
 import {chainConfig} from "@lodestar/config/default";
@@ -11,18 +10,15 @@ import {ValidatorStore} from "../../src/services/validatorStore.js";
 import {getApiClientStub} from "../utils/apiStub.js";
 import {initValidatorStore} from "../utils/validatorStore.js";
 import {ValidatorProposerConfig} from "../../src/services/validatorStore.js";
-import {SinonStubFn} from "..//utils/types.js";
 
 describe("ValidatorStore", function () {
-  const sandbox = sinon.createSandbox();
-  const api = getApiClientStub(sandbox);
+  const api = getApiClientStub();
 
   let validatorStore: ValidatorStore;
 
   let valProposerConfig: ValidatorProposerConfig;
-  let signValidatorStub: SinonStubFn<ValidatorStore["signValidatorRegistration"]>;
 
-  before(async () => {
+  beforeEach(async () => {
     valProposerConfig = {
       proposerConfig: {
         [toHexString(pubkeys[0])]: {
@@ -46,43 +42,37 @@ describe("ValidatorStore", function () {
     };
 
     validatorStore = await initValidatorStore(secretKeys, api, chainConfig, valProposerConfig);
-    signValidatorStub = sinon.stub(validatorStore, "signValidatorRegistration");
   });
 
-  after(() => {
-    sandbox.restore();
+  afterEach(() => {
+    vi.resetAllMocks();
   });
 
   it("Should validate graffiti,feeRecipient etc. from valProposerConfig and ValidatorStore", async function () {
     //pubkeys[0] values
-    expect(validatorStore.getGraffiti(toHexString(pubkeys[0]))).to.be.equal(
+    expect(validatorStore.getGraffiti(toHexString(pubkeys[0]))).toBe(
       valProposerConfig.proposerConfig[toHexString(pubkeys[0])].graffiti
     );
-    expect(validatorStore.getFeeRecipient(toHexString(pubkeys[0]))).to.be.equal(
+    expect(validatorStore.getFeeRecipient(toHexString(pubkeys[0]))).toBe(
       valProposerConfig.proposerConfig[toHexString(pubkeys[0])].feeRecipient
     );
-    expect(validatorStore.strictFeeRecipientCheck(toHexString(pubkeys[0]))).to.be.equal(
+    expect(validatorStore.strictFeeRecipientCheck(toHexString(pubkeys[0]))).toBe(
       valProposerConfig.proposerConfig[toHexString(pubkeys[0])].strictFeeRecipientCheck
     );
-    expect(validatorStore.getGasLimit(toHexString(pubkeys[0]))).to.be.equal(
+    expect(validatorStore.getGasLimit(toHexString(pubkeys[0]))).toBe(
       valProposerConfig.proposerConfig[toHexString(pubkeys[0])].builder?.gasLimit
     );
 
     // default values
-    expect(validatorStore.getGraffiti(toHexString(pubkeys[1]))).to.be.equal(valProposerConfig.defaultConfig.graffiti);
-    expect(validatorStore.getFeeRecipient(toHexString(pubkeys[1]))).to.be.equal(
-      valProposerConfig.defaultConfig.feeRecipient
-    );
-    expect(validatorStore.strictFeeRecipientCheck(toHexString(pubkeys[1]))).to.be.equal(
+    expect(validatorStore.getGraffiti(toHexString(pubkeys[1]))).toBe(valProposerConfig.defaultConfig.graffiti);
+    expect(validatorStore.getFeeRecipient(toHexString(pubkeys[1]))).toBe(valProposerConfig.defaultConfig.feeRecipient);
+    expect(validatorStore.strictFeeRecipientCheck(toHexString(pubkeys[1]))).toBe(
       valProposerConfig.defaultConfig.strictFeeRecipientCheck
     );
-    expect(validatorStore.getGasLimit(toHexString(pubkeys[1]))).to.be.equal(
-      valProposerConfig.defaultConfig.builder?.gasLimit
-    );
+    expect(validatorStore.getGasLimit(toHexString(pubkeys[1]))).toBe(valProposerConfig.defaultConfig.builder?.gasLimit);
   });
 
   it("Should create/update builder data and return from cache next time", async () => {
-    let signCallCount = 0;
     let slot = 0;
     const testCases: [bellatrix.SignedValidatorRegistrationV1, string, number][] = [
       [valRegF00G100, "0x00", 100],
@@ -90,19 +80,14 @@ describe("ValidatorStore", function () {
       [valRegF10G200, "0x10", 200],
     ];
     for (const [valReg, feeRecipient, gasLimit] of testCases) {
-      signValidatorStub.resolves(valReg);
+      vi.spyOn(validatorStore, "signValidatorRegistration").mockResolvedValue(valReg);
+
       const val1 = await validatorStore.getValidatorRegistration(pubkeys[0], {feeRecipient, gasLimit}, slot++);
-      expect(JSON.stringify(val1)).to.be.eql(JSON.stringify(valReg));
-      expect(signValidatorStub.callCount).to.equal(
-        ++signCallCount,
-        `signValidatorRegistration() must be updated for new feeRecipient=${feeRecipient} gasLimit=${gasLimit} combo `
-      );
+      expect(JSON.stringify(val1)).toEqual(JSON.stringify(valReg));
+      expect(validatorStore.signValidatorRegistration).toHaveBeenCalledOnce();
       const val2 = await validatorStore.getValidatorRegistration(pubkeys[0], {feeRecipient, gasLimit}, slot++);
-      expect(JSON.stringify(val2)).to.be.eql(JSON.stringify(valReg));
-      expect(signValidatorStub.callCount).to.equal(
-        signCallCount,
-        `signValidatorRegistration() must be updated for same feeRecipient=${feeRecipient} gasLimit=${gasLimit} combo `
-      );
+      expect(JSON.stringify(val2)).toEqual(JSON.stringify(valReg));
+      expect(validatorStore.signValidatorRegistration).toHaveBeenCalledOnce();
     }
   });
 });
