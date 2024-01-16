@@ -20,7 +20,7 @@
       
       
       <link rel="icon" href="../../assets/round-icon.ico">
-      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.3">
+      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.4">
     
     
       
@@ -908,6 +908,15 @@
   <a href="#-builderselection" class="md-nav__link">
     <span class="md-ellipsis">
       --builder.selection
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-builderboostfactor" class="md-nav__link">
+    <span class="md-ellipsis">
+      --builder.boostFactor
     </span>
   </a>
   
@@ -2314,6 +2323,15 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#-builderboostfactor" class="md-nav__link">
+    <span class="md-ellipsis">
+      --builder.boostFactor
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#-useproduceblockv3" class="md-nav__link">
     <span class="md-ellipsis">
       --useProduceBlockV3
@@ -2952,10 +2970,14 @@
 <p>type: <code>string</code></p>
 <p>default: <code>"executiononly"</code></p>
 <p><br /></p>
+<h4 id="-builderboostfactor"><code>--builder.boostFactor</code><a class="headerlink" href="#-builderboostfactor" title="Permanent link">&para;</a></h4>
+<p>description: Percentage multiplier the block producing beacon node must apply to boost (&gt;100) or dampen (&lt;100) builder block value for selection against execution block. The multiplier is ignored if <code>--builder.selection</code> is set to anything other than <code>maxprofit</code></p>
+<p>type: <code>string</code></p>
+<p>default: <code>"100"</code></p>
+<p><br /></p>
 <h4 id="-useproduceblockv3"><code>--useProduceBlockV3</code><a class="headerlink" href="#-useproduceblockv3" title="Permanent link">&para;</a></h4>
-<p>description: Enable/disable usage of produceBlockV3 that might not be supported by all beacon clients yet</p>
+<p>description: Enable/disable usage of produceBlockV3 for block production, is auto enabled on deneb+ blocks</p>
 <p>type: <code>boolean</code></p>
-<p>default: <code>false</code></p>
 <p><br /></p>
 <h4 id="-broadcastvalidation"><code>--broadcastValidation</code><a class="headerlink" href="#-broadcastvalidation" title="Permanent link">&para;</a></h4>
 <p>description: Validations to be run by beacon node for the signed block prior to publishing</p>
@@ -3233,10 +3255,10 @@
     </div>
     
     
-    <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.f886a092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.c011b7c0.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.d7c377c4.min.js"></script>
+      <script src="../../assets/javascripts/bundle.7389ff0e.min.js"></script>
       
     
   </body>
