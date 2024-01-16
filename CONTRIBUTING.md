@@ -231,9 +231,9 @@ node scripts/download_dashboards.mjs
 
 ## Contributing to Documentation
 
-When submitting PRs for documentation updates, build and run the docs locally to ensure functionality before submission. To build the docs locally, ensure you have Python installed, then simply execute `yarn build:docs` 
+When submitting PRs for documentation updates, build and run the documentation locally to ensure functionality before submission. To build the documentation locally, ensure you have Python installed, then simply execute `yarn build:docs` 
 
-Your locally served docs will then be accessible at http://localhost:8000.
+Your locally served documentation will then be accessible at http://localhost:8000.
 
 If you run into build issues due to circular dependencies, branch switching or other incompatibilities, try cleaning your modules and rebuild your dependencies with:
 
