@@ -13,7 +13,7 @@ import {IndicesService} from "../../src/services/indices.js";
 import {testLogger} from "../utils/logger.js";
 
 describe("web3signer signature test", function () {
-  vi.setConfig({testTimeout: 60_000});
+  vi.setConfig({testTimeout: 60_000, hookTimeout: 60_000});
 
   const altairSlot = 2375711;
   const epoch = 0;
