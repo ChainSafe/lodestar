@@ -28,10 +28,10 @@
     "lint": "eslint --color --ext .ts src/ test/",
     "lint:fix": "yarn run lint --fix",
     "pretest": "yarn run check-types",
-    "test:unit": "vitest --run --dir test/unit --coverage",
+    "test:unit": "vitest --run --dir test/unit/",
     "test": "yarn test:unit",
     "test:spec": "vitest --run --config vitest.config.spec.ts --dir test/spec/",
-    "test:e2e": "LODESTAR_PRESET=mainnet vitest --run --poolOptions.threads.singleThread true --dir test/e2e",
+    "test:e2e": "LODESTAR_PRESET=mainnet vitest --run --config vitest.config.e2e.ts --dir test/e2e",
     "download-spec-tests": "node --loader=ts-node/esm test/spec/downloadTests.ts",
     "coverage": "codecov -F lodestar-validator",
     "check-readme": "typescript-docs-verifier"
