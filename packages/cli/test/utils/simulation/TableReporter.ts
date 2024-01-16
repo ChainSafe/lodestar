@@ -108,7 +108,7 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
       heads.every((head) => head0 && !isNullish(head0.blockRoot) && head?.blockRoot === head0.blockRoot);
 
     const date = new Date();
-    const currentTime = `${date.getUTCHours()}:${date.getUTCMinutes()}:${date.getUTCSeconds()}.${date.getUTCMilliseconds()}`
+    const currentTime = `${date.getUTCHours()}:${date.getUTCMinutes()}:${date.getUTCSeconds()}.${date.getUTCMilliseconds()}`;
 
     this.table.addRow({
       time: currentTime,

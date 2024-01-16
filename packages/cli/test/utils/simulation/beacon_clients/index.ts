@@ -16,7 +16,7 @@ export async function createBeaconNode<B extends BeaconClient>(
     genesisState?: BeaconStateAllForks;
   }
 ): Promise<BeaconNode> {
-  const {runner, forkConfig: config, genesisState} = options;
+  const {runner, genesisState} = options;
   const clId = `${options.id}-${client}`;
 
   const opts: BeaconGeneratorOptions = {
