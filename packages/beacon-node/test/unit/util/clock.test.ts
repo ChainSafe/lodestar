@@ -26,6 +26,7 @@ describe("Clock", function () {
   });
 
   // TODO: Debug why this test is fragile after migrating to vitest
+  // eslint-disable-next-line vitest/no-disabled-tests
   it.skip("Should notify on new slot", function () {
     const spy = vi.fn();
     clock.on(ClockEvent.slot, spy);

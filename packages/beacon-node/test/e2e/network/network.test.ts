@@ -96,7 +96,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
 
   // Current implementation of discv5 consumer doesn't allow to deterministically force a peer to be found
   // a random find node lookup can yield no results if there are too few peers in the DHT
-  // it.skip("should connect to new peer by subnet", async function () {});
+  it.todo("should connect to new peer by subnet", async function () {});
 
   it("Should goodbye peers on stop", async function () {
     const [netA, netB] = await createTestNodesAB();

@@ -100,6 +100,7 @@ describe("Sync Committee Signature validation", function () {
    * Skip this spec check: [REJECT] The subnet_id is correct, i.e. subnet_id in compute_subnets_for_sync_committee(state, sync_committee_signature.validator_index)
    * because it's the same to VALIDATOR_NOT_IN_SYNC_COMMITTEE
    */
+  // eslint-disable-next-line vitest/no-disabled-tests
   it.skip("should throw error - incorrect subnet", async function () {
     const syncCommittee = getSyncCommitteeSignature(currentSlot, 1);
     const headState = generateCachedAltairState({slot: currentSlot}, altairForkEpoch);

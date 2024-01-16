@@ -19,19 +19,19 @@ describe("ShufflingCache", function () {
 
   it("should get shuffling from cache", async function () {
     const decisionRoot = getShufflingDecisionBlock(state, currentEpoch);
-    expect(await shufflingCache.get(currentEpoch, decisionRoot)).to.deep.equal(state.epochCtx.currentShuffling);
+    expect(await shufflingCache.get(currentEpoch, decisionRoot)).toEqual(state.epochCtx.currentShuffling);
   });
 
   it("should bound by maxSize(=1)", async function () {
     const decisionRoot = getShufflingDecisionBlock(state, currentEpoch);
-    expect(await shufflingCache.get(currentEpoch, decisionRoot)).to.deep.equal(state.epochCtx.currentShuffling);
+    expect(await shufflingCache.get(currentEpoch, decisionRoot)).toEqual(state.epochCtx.currentShuffling);
     // insert promises at the same epoch does not prune the cache
     shufflingCache.insertPromise(currentEpoch, "0x00");
-    expect(await shufflingCache.get(currentEpoch, decisionRoot)).to.deep.equal(state.epochCtx.currentShuffling);
+    expect(await shufflingCache.get(currentEpoch, decisionRoot)).toEqual(state.epochCtx.currentShuffling);
     // insert shufflings at other epochs does prune the cache
     shufflingCache.processState(state, currentEpoch + 1);
     // the current shuffling is not available anymore
-    expect(await shufflingCache.get(currentEpoch, decisionRoot)).to.be.null;
+    expect(await shufflingCache.get(currentEpoch, decisionRoot)).toBeNull();
   });
 
   it("should return shuffling from promise", async function () {
@@ -40,8 +40,8 @@ describe("ShufflingCache", function () {
     const shufflingRequest0 = shufflingCache.get(currentEpoch + 1, nextDecisionRoot);
     const shufflingRequest1 = shufflingCache.get(currentEpoch + 1, nextDecisionRoot);
     shufflingCache.processState(state, currentEpoch + 1);
-    expect(await shufflingRequest0).to.deep.equal(state.epochCtx.nextShuffling);
-    expect(await shufflingRequest1).to.deep.equal(state.epochCtx.nextShuffling);
+    expect(await shufflingRequest0).toEqual(state.epochCtx.nextShuffling);
+    expect(await shufflingRequest1).toEqual(state.epochCtx.nextShuffling);
   });
 
   it("should support up to 2 promises at a time", async function () {
@@ -49,6 +49,6 @@ describe("ShufflingCache", function () {
     shufflingCache.insertPromise(currentEpoch, "0x00");
     shufflingCache.insertPromise(currentEpoch, "0x01");
     // inserting other promise should throw error
-    expect(() => shufflingCache.insertPromise(currentEpoch, "0x02")).to.throw();
+    expect(() => shufflingCache.insertPromise(currentEpoch, "0x02")).toThrow();
   });
 });

@@ -55,9 +55,4 @@ describe("rateLimiterGRCA", () => {
       expect(rateLimiter.allows(null, 10)).toBe(true);
     });
   });
-
-  // This is a private behavior but important to test to avoid memory leaks
-  // describe("prune()", () => {
-  //   it.skip("should remove old entries", () => {});
-  // });
 });

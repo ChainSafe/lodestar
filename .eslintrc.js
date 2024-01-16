@@ -206,9 +206,8 @@ module.exports = {
       extends: ["plugin:vitest/recommended"],
       rules: {
         "vitest/no-disabled-tests": "error",
-        "vitest/consistent-test-it": "error",
+        "vitest/consistent-test-it": ["error", {fn: "it", withinDescribe: "it"}],
         "vitest/no-focused-tests": "error",
-        "vitest/no-duplicate-hooks": "error",
         "vitest/prefer-called-with": "error",
         "vitest/prefer-spy-on": "error",
         // We use a lot dynamic assertions so tests may not have usage of expect

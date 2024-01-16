@@ -500,7 +500,7 @@ describe("getShufflingForAttestationVerification", () => {
       attHeadBlock,
       RegenCaller.validateGossipAttestation
     );
-    expect(resultShuffling).to.be.deep.equal(expectedShuffling);
+    expect(resultShuffling).toEqual(expectedShuffling);
   });
 
   it("block epoch is previous attestation epoch", async () => {
@@ -532,7 +532,7 @@ describe("getShufflingForAttestationVerification", () => {
       attHeadBlock,
       RegenCaller.validateGossipAttestation
     );
-    expect(resultShuffling).to.be.deep.equal(expectedShuffling);
+    expect(resultShuffling).toEqual(expectedShuffling);
   });
 
   it("block epoch is attestation epoch - 2", async () => {
@@ -566,7 +566,7 @@ describe("getShufflingForAttestationVerification", () => {
     );
     // sandbox.assert.notCalled(forkchoiceStub.getDependentRoot);
     expect(forkchoiceStub.getDependentRoot).not.toHaveBeenCalledTimes(1);
-    expect(resultShuffling).to.be.deep.equal(expectedShuffling);
+    expect(resultShuffling).toEqual(expectedShuffling);
   });
 
   it("block epoch is attestation epoch + 1", async () => {
@@ -585,7 +585,7 @@ describe("getShufflingForAttestationVerification", () => {
       );
       expect.fail("Expect error because attestation epoch is greater than block epoch");
     } catch (e) {
-      expect(e instanceof Error).to.be.true;
+      expect(e instanceof Error).toBeTruthy();
     }
   });
 });

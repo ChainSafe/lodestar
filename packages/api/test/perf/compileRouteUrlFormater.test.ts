@@ -3,6 +3,7 @@ import {compileRouteUrlFormater} from "../../src/utils/urlFormat.js";
 /* eslint-disable no-console */
 
 describe("route parse", () => {
+  // eslint-disable-next-line vitest/no-disabled-tests
   it.skip("Benchmark compileRouteUrlFormater", () => {
     const path = "/eth/v1/validator/:name/attester/:epoch";
     const args = {epoch: 5, name: "HEAD"};

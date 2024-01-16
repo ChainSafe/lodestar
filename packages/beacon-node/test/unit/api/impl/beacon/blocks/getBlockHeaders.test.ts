@@ -21,6 +21,7 @@ describe("api - beacon - getBlockHeaders", function () {
     vi.clearAllMocks();
   });
 
+  // eslint-disable-next-line vitest/no-disabled-tests
   it.skip("no filters - assume head slot", async function () {
     server.forkChoiceStub.getHead.mockReturnValue(generateProtoBlock({slot: 1}));
     when(server.chainStub.getCanonicalBlockAtSlot)
@@ -76,6 +77,7 @@ describe("api - beacon - getBlockHeaders", function () {
     expect(blockHeaders.length).toBe(0);
   });
 
+  // eslint-disable-next-line vitest/no-disabled-tests
   it.skip("parent root filter - both finalized and non finalized results", async function () {
     server.dbStub.blockArchive.getByParentRoot.mockResolvedValue(ssz.phase0.SignedBeaconBlock.defaultValue());
     server.forkChoiceStub.getBlockSummariesByParentRoot.mockReturnValue([

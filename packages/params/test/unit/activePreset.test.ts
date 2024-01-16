@@ -1,4 +1,4 @@
-import {describe, it, expect} from "vitest";
+import {describe, it, expect, beforeAll} from "vitest";
 import {mainnetPreset} from "../../src/presets/mainnet.js";
 import {minimalPreset} from "../../src/presets/minimal.js";
 import {gnosisPreset as gnosisParams} from "../../src/presets/gnosis.js";
@@ -6,8 +6,13 @@ import {ACTIVE_PRESET, PresetName} from "../../src/index.js";
 import {setActivePreset} from "../../src/setPreset.js";
 import {setActivePreset as setActivePresetLib} from "../../src/setPreset.js";
 
-describe("active preset", async () => {
-  const exports = (await import("../../src/index.js")) as Record<string, unknown>;
+describe("active preset", () => {
+  let exports: Record<string, unknown>;
+
+  beforeAll(async () => {
+    exports = (await import("../../src/index.js")) as Record<string, unknown>;
+  });
+
   const params = {
     [PresetName.mainnet]: mainnetPreset,
     [PresetName.minimal]: minimalPreset,

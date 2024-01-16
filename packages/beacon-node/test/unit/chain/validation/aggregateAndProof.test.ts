@@ -123,6 +123,7 @@ describe("chain / validation / aggregateAndProof", () => {
 
   // TODO: Need to manipulate state quite a bit to force modulo > 1. When the state has a low validator count
   // all validators are aggregators.
+  // eslint-disable-next-line vitest/no-disabled-tests
   it.skip("INVALID_AGGREGATOR", async () => {
     const {chain, signedAggregateAndProof} = getValidData();
 

@@ -199,7 +199,7 @@ describe("sync by UnknownBlockSync", () => {
         const [_, requestedRoots] = await sendBeaconBlocksByRootPromise;
         await sleep(200);
         // should not send the invalid root block to chain
-        expect(processBlockSpy).toBeCalled();
+        expect(processBlockSpy).toHaveBeenCalledOnce();
         for (const requestedRoot of requestedRoots) {
           expect(syncService["pendingBlocks"].get(toHexString(requestedRoot))?.downloadAttempts).toEqual(1);
         }

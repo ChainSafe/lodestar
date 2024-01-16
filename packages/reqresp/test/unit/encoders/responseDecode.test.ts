@@ -18,7 +18,7 @@ describe("encoders / responseDecode", () => {
       );
 
       const expectedResponses = responseChunks.filter(onlySuccessResp).map((r) => r.payload);
-      expect(responses).to.deep.equal(expectedResponses);
+      expect(responses).toEqual(expectedResponses);
     });
   });
 

@@ -29,7 +29,7 @@ describe("util / getShufflingDependentRoot", () => {
         throw new Error("should not be called");
       }
     });
-    expect(getShufflingDependentRoot(forkchoiceStub, attEpoch, blockEpoch, headBattHeadBlock)).to.be.equal("current");
+    expect(getShufflingDependentRoot(forkchoiceStub, attEpoch, blockEpoch, headBattHeadBlock)).toEqual("current");
   });
 
   it("should return next dependent root", () => {
@@ -42,7 +42,7 @@ describe("util / getShufflingDependentRoot", () => {
         throw new Error("should not be called");
       }
     });
-    expect(getShufflingDependentRoot(forkchoiceStub, attEpoch, blockEpoch, headBattHeadBlock)).to.be.equal("0x000");
+    expect(getShufflingDependentRoot(forkchoiceStub, attEpoch, blockEpoch, headBattHeadBlock)).toEqual("0x000");
   });
 
   it("should return head block root as dependent root", () => {
@@ -51,7 +51,7 @@ describe("util / getShufflingDependentRoot", () => {
     forkchoiceStub.getDependentRoot.mockImplementation(() => {
       throw Error("should not be called");
     });
-    expect(getShufflingDependentRoot(forkchoiceStub, attEpoch, blockEpoch, headBattHeadBlock)).to.be.equal(
+    expect(getShufflingDependentRoot(forkchoiceStub, attEpoch, blockEpoch, headBattHeadBlock)).toEqual(
       headBattHeadBlock.blockRoot
     );
   });
@@ -62,6 +62,6 @@ describe("util / getShufflingDependentRoot", () => {
     forkchoiceStub.getDependentRoot.mockImplementation(() => {
       throw Error("should not be called");
     });
-    expect(() => getShufflingDependentRoot(forkchoiceStub, attEpoch, blockEpoch, headBattHeadBlock)).to.throw();
+    expect(() => getShufflingDependentRoot(forkchoiceStub, attEpoch, blockEpoch, headBattHeadBlock)).toThrow();
   });
 });

@@ -122,7 +122,7 @@ await env.tracker.assert("BN Not Synced", async () => {
   const res = await node.api.node.getSyncingStatus();
   ApiError.assert(res);
 
-  expect(res.response.data).to.be.deep.equal(expectedSyncStatus);
+  expect(res.response.data).toEqual(expectedSyncStatus);
 });
 
 await env.tracker.assert("Return READY pre genesis", async () => {

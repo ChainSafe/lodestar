@@ -114,9 +114,9 @@ describe("SeenGossipBlockInput", () => {
             if (expectedResponseType instanceof Error) {
               expect.fail(`expected to fail with error: ${expectedResponseType.message}`);
             } else if (expectedResponseType === null) {
-              expect(blockInputRes).toBeNull;
+              expect(blockInputRes).toBeNull();
             } else {
-              expect(blockInputRes.blockInput?.type).to.be.equal(expectedResponseType);
+              expect(blockInputRes.blockInput?.type).toEqual(expectedResponseType);
             }
           } else {
             const index = parseInt(inputEvent.split("blob")[1] ?? "0");
@@ -132,9 +132,9 @@ describe("SeenGossipBlockInput", () => {
             if (expectedResponseType instanceof Error) {
               expect.fail(`expected to fail with error: ${expectedResponseType.message}`);
             } else if (expectedResponseType === null) {
-              expect(blockInputRes).toBeNull;
+              expect(blockInputRes).toBeNull();
             } else {
-              expect(blockInputRes.blockInput?.type).to.equal(expectedResponseType);
+              expect(blockInputRes.blockInput?.type).toEqual(expectedResponseType);
             }
           }
         } catch (e) {

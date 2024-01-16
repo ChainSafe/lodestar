@@ -268,13 +268,13 @@ const forkChoiceTest =
               const proposerBootRoot = (chain.forkChoice as ForkChoice).getProposerBoostRoot();
 
               if (step.checks.head !== undefined) {
-                expect({slot: head.slot, root: head.blockRoot}).deep.equals(
+                expect({slot: head.slot, root: head.blockRoot}).toEqualWithMessage(
                   {slot: bnToNum(step.checks.head.slot), root: step.checks.head.root},
                   `Invalid head at step ${i}`
                 );
               }
               if (step.checks.proposer_boost_root !== undefined) {
-                expect(proposerBootRoot).to.be.equal(
+                expect(proposerBootRoot).toEqualWithMessage(
                   step.checks.proposer_boost_root,
                   `Invalid proposer boost root at step ${i}`
                 );
@@ -283,18 +283,18 @@ const forkChoiceTest =
               // Compare in slots because proposer boost steps doesn't always come on
               // slot boundary.
               if (step.checks.time !== undefined && step.checks.time > 0)
-                expect(chain.forkChoice.getTime()).to.be.equal(
+                expect(chain.forkChoice.getTime()).toEqualWithMessage(
                   Math.floor(bnToNum(step.checks.time) / config.SECONDS_PER_SLOT),
                   `Invalid forkchoice time at step ${i}`
                 );
               if (step.checks.justified_checkpoint) {
-                expect(toSpecTestCheckpoint(chain.forkChoice.getJustifiedCheckpoint())).to.be.deep.equal(
+                expect(toSpecTestCheckpoint(chain.forkChoice.getJustifiedCheckpoint())).toEqualWithMessage(
                   step.checks.justified_checkpoint,
                   `Invalid justified checkpoint at step ${i}`
                 );
               }
               if (step.checks.finalized_checkpoint) {
-                expect(toSpecTestCheckpoint(chain.forkChoice.getFinalizedCheckpoint())).to.be.deep.equal(
+                expect(toSpecTestCheckpoint(chain.forkChoice.getFinalizedCheckpoint())).toEqualWithMessage(
                   step.checks.finalized_checkpoint,
                   `Invalid finalized checkpoint at step ${i}`
                 );

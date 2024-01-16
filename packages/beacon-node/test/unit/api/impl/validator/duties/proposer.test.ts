@@ -15,6 +15,7 @@ import {MockedBeaconChain} from "../../../../../__mocks__/mockedBeaconChain.js";
 import {MockedBeaconDb} from "../../../../../__mocks__/mockedBeaconDb.js";
 import {MockedBeaconSync} from "../../../../../__mocks__/beaconSyncMock.js";
 
+// eslint-disable-next-line vitest/no-disabled-tests
 describe.skip("get proposers api impl", function () {
   const logger = testLogger();
 
@@ -73,9 +74,9 @@ describe.skip("get proposers api impl", function () {
     const {data: result} = await api.getProposerDuties(1);
     expect(result.length).toBe(SLOTS_PER_EPOCH);
     // "stubGetBeaconProposer function should not have been called"
-    expect(stubGetNextBeaconProposer).toHaveBeenCalled();
+    expect(stubGetNextBeaconProposer).toHaveBeenCalledWith();
     // "stubGetBeaconProposer function should have been called"
-    expect(stubGetBeaconProposer).not.toHaveBeenCalled();
+    expect(stubGetBeaconProposer).not.toHaveBeenCalledWith();
   });
 
   it("should have different proposer for current and next epoch", async function () {
@@ -125,6 +126,6 @@ describe.skip("get proposers api impl", function () {
     chainStub.getHeadStateAtCurrentEpoch.mockResolvedValue(cachedState);
     const stubGetBeaconProposer = vi.spyOn(cachedState.epochCtx, "getBeaconProposer");
     await expect(stubGetBeaconProposer).rejects.toThrow();
-    await expect(api.getProposerDuties(2), "calling getProposerDuties should throw").rejects.toThrow();
+    await expect(api.getProposerDuties(2)).rejects.toThrow();
   });
 });

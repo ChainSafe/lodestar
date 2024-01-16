@@ -7,7 +7,7 @@ import {loadEthereumTrustedSetup, initCKZG, ckzg, FIELD_ELEMENTS_PER_BLOB_MAINNE
 import {validateBlobSidecars, validateGossipBlobSidecar} from "../../../src/chain/validation/blobSidecar.js";
 import {getMockedBeaconChain} from "../../__mocks__/mockedBeaconChain.js";
 
-describe("C-KZG", async () => {
+describe("C-KZG", () => {
   const afterEachCallbacks: (() => Promise<unknown> | void)[] = [];
   afterEach(async () => {
     while (afterEachCallbacks.length > 0) {

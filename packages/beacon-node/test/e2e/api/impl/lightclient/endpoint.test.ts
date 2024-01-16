@@ -106,6 +106,7 @@ describe("lightclient api", function () {
     expect(update.version).toBe(ForkName.altair);
   });
 
+  // eslint-disable-next-line vitest/no-disabled-tests
   it.skip("getFinalityUpdate()", async function () {
     // TODO: not sure how this causes subsequent tests failed
     await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, routes.events.EventType.finalizedCheckpoint, 240000);

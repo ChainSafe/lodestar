@@ -52,10 +52,10 @@ for (const fnName of readdirSyncSpec(blsSpecTests.outputDir)) {
         // Test format: https://github.com/ethereum/bls12-381-tests
         if (testData.output === null) {
           // Expect failure
-          expect(() => fn(testData.input) as never).to.throw();
+          expect(() => fn(testData.input) as never).toThrow();
         } else {
           // Expect success
-          expect(fn(testData.input)).to.deep.equals(testData.output);
+          expect(fn(testData.input)).toEqual(testData.output);
         }
       });
     }
