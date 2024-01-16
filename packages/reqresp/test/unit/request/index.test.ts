@@ -1,5 +1,5 @@
 import {describe, it, expect, vi, beforeEach, afterEach} from "vitest";
-import {PeerId} from "@libp2p/interface/peer-id";
+import {PeerId} from "@libp2p/interface";
 import all from "it-all";
 import {pipe} from "it-pipe";
 import {Libp2p} from "libp2p";

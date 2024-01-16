@@ -41,7 +41,7 @@
     "@lodestar/config": "^1.14.0",
     "@lodestar/utils": "^1.14.0",
     "@types/levelup": "^4.3.3",
-    "it-all": "^3.0.2",
+    "it-all": "^3.0.4",
     "level": "^8.0.0"
   },
   "devDependencies": {

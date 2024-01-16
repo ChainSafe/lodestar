@@ -1,10 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
-import type {PeerId} from "@libp2p/interface/peer-id";
+import type {PeerId} from "@libp2p/interface";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {Multiaddr} from "@multiformats/multiaddr";
-import {createKeypairFromPeerId, SignableENR} from "@chainsafe/discv5";
+import {createPrivateKeyFromPeerId, SignableENR} from "@chainsafe/enr";
 import {Logger} from "@lodestar/utils";
 import {exportToJSON, readPeerId} from "../../config/index.js";
 import {writeFile600Perm} from "../../util/file.js";
@@ -142,7 +142,7 @@ export async function initPeerIdAndEnr(
 
   const newPeerIdAndENR = async (): Promise<{peerId: PeerId; enr: SignableENR}> => {
     const peerId = await createSecp256k1PeerId();
-    const enr = SignableENR.createV4(createKeypairFromPeerId(peerId));
+    const enr = SignableENR.createV4(createPrivateKeyFromPeerId(peerId).privateKey);
     return {peerId, enr};
   };
 
@@ -162,16 +162,16 @@ export async function initPeerIdAndEnr(
     }
     // attempt to read stored enr
     try {
-      enr = SignableENR.decodeTxt(fs.readFileSync(enrFile, "utf-8"), createKeypairFromPeerId(peerId));
+      enr = SignableENR.decodeTxt(fs.readFileSync(enrFile, "utf-8"), createPrivateKeyFromPeerId(peerId).privateKey);
     } catch (e) {
       logger.warn("Unable to decode stored local ENR, creating a new ENR");
-      enr = SignableENR.createV4(createKeypairFromPeerId(peerId));
+      enr = SignableENR.createV4(createPrivateKeyFromPeerId(peerId).privateKey);
       return {peerId, enr, newEnr: true};
     }
     // check stored peer id against stored enr
     if (!peerId.equals(await enr.peerId())) {
       logger.warn("Stored local ENR doesn't match peerIdFile, creating a new ENR");
-      enr = SignableENR.createV4(createKeypairFromPeerId(peerId));
+      enr = SignableENR.createV4(createPrivateKeyFromPeerId(peerId).privateKey);
       return {peerId, enr, newEnr: true};
     }
     return {peerId, enr, newEnr: false};

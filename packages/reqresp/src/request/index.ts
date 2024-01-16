@@ -1,5 +1,5 @@
 import {pipe} from "it-pipe";
-import {PeerId} from "@libp2p/interface/peer-id";
+import {PeerId} from "@libp2p/interface";
 import type {Libp2p} from "libp2p";
 import {Uint8ArrayList} from "uint8arraylist";
 import {ErrorAborted, Logger, withTimeout, TimeoutError} from "@lodestar/utils";
