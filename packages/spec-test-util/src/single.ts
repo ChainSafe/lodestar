@@ -112,7 +112,7 @@ export function describeDirectorySpecTest<TestCase extends {meta?: any}, Result>
         continue;
       }
 
-      // Use full path here, not just `testSubDirname` to allow usage of `vitest --grep`
+      // Use full path here, not just `testSubDirname` to allow usage of `vitest -t`
       const testName = `${name}/${testSubDirname}`;
       it(testName, async function (context) {
         // some tests require to load meta.yaml first in order to know respective ssz types.
