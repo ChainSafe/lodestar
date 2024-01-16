@@ -13,12 +13,11 @@ import {
   EpochDifference,
   ProtoBlock,
 } from "../../../src/index.js";
-import { getBlockRoot, getStateRoot } from "./forkChoice.test.js";
+import {getBlockRoot, getStateRoot} from "./forkChoice.test.js";
 
 type ProtoBlockWithWeight = ProtoBlock & {weight: number}; // weight of the block itself
 
 describe("Forkchoice / GetProposerHead", function () {
-
   const genesisSlot = 0;
   const genesisEpoch = 0;
   const genesisRoot = "0x0000000000000000000000000000000000000000000000000000000000000000";
@@ -56,7 +55,6 @@ describe("Forkchoice / GetProposerHead", function () {
     blockRoot: getBlockRoot(headSlot),
     targetRoot: getBlockRoot(headSlot),
 
-    
     justifiedEpoch: genesisEpoch,
     justifiedRoot: genesisRoot,
     finalizedEpoch: genesisEpoch,
@@ -81,7 +79,6 @@ describe("Forkchoice / GetProposerHead", function () {
     blockRoot: getBlockRoot(parentSlot),
     targetRoot: getBlockRoot(parentSlot),
 
-    
     justifiedEpoch: genesisEpoch,
     justifiedRoot: genesisRoot,
     finalizedEpoch: genesisEpoch,
@@ -108,14 +105,28 @@ describe("Forkchoice / GetProposerHead", function () {
       checkpoint: {epoch: genesisEpoch, root: fromHexString(genesisBlock.blockRoot), rootHex: genesisBlock.blockRoot},
       balances: new Uint8Array(Array(32).fill(150)),
     },
-    finalizedCheckpoint: {epoch: genesisEpoch, root: fromHexString(genesisBlock.blockRoot), rootHex: genesisBlock.blockRoot},
-    unrealizedFinalizedCheckpoint: {epoch: genesisEpoch, root: fromHexString(genesisBlock.blockRoot), rootHex: genesisBlock.blockRoot},
+    finalizedCheckpoint: {
+      epoch: genesisEpoch,
+      root: fromHexString(genesisBlock.blockRoot),
+      rootHex: genesisBlock.blockRoot,
+    },
+    unrealizedFinalizedCheckpoint: {
+      epoch: genesisEpoch,
+      root: fromHexString(genesisBlock.blockRoot),
+      rootHex: genesisBlock.blockRoot,
+    },
     justifiedBalancesGetter: () => new Uint8Array(Array(32).fill(150)),
     equivocatingIndices: new Set(),
   };
 
   // head block's weight < 30 is considered weak. parent block's total weight > 240 is considered strong
-  const testCases: {id: string, parentBlock: ProtoBlockWithWeight, headBlock: ProtoBlockWithWeight, expectReorg: boolean, currentSlot?: Slot}[] = [
+  const testCases: {
+    id: string;
+    parentBlock: ProtoBlockWithWeight;
+    headBlock: ProtoBlockWithWeight;
+    expectReorg: boolean;
+    currentSlot?: Slot;
+  }[] = [
     {
       id: "Case that meets all conditions to be re-orged",
       parentBlock: {...baseParentHeadBlock},
@@ -152,7 +163,7 @@ describe("Forkchoice / GetProposerHead", function () {
       parentBlock: {...baseParentHeadBlock},
       headBlock: {...baseHeadBlock},
       expectReorg: false,
-      currentSlot: (genesisEpoch + 2) * SLOTS_PER_EPOCH + 1
+      currentSlot: (genesisEpoch + 2) * SLOTS_PER_EPOCH + 1,
     },
     {
       id: "No reorg if reorg spans more than a single slot",
@@ -182,22 +193,18 @@ describe("Forkchoice / GetProposerHead", function () {
   ];
 
   beforeEach(() => {
-    protoArr = ProtoArray.initialize(
-      genesisBlock,
-      genesisSlot
-    );
+    protoArr = ProtoArray.initialize(genesisBlock, genesisSlot);
   });
 
-
   for (const {id, parentBlock, headBlock, expectReorg, currentSlot: proposalSlot} of testCases) {
-    it(`${id}`, async() => {
+    it(`${id}`, async () => {
       protoArr.onBlock(parentBlock, parentBlock.slot);
       protoArr.onBlock(headBlock, headBlock.slot);
 
       const currentSlot = proposalSlot ?? headBlock.slot + 1;
       protoArr.applyScoreChanges({
-        deltas: [0, parentBlock.weight, headBlock.weight], 
-        proposerBoost: null, 
+        deltas: [0, parentBlock.weight, headBlock.weight],
+        proposerBoost: null,
         justifiedEpoch: genesisEpoch,
         justifiedRoot: genesisRoot,
         finalizedEpoch: genesisEpoch,
@@ -205,13 +212,14 @@ describe("Forkchoice / GetProposerHead", function () {
         currentSlot,
       });
 
-      const forkChoice = new ForkChoice(config, fcStore, protoArr, undefined, {proposerBoostEnabled: true, proposerBoostReorgEnabled: true});
+      const forkChoice = new ForkChoice(config, fcStore, protoArr, undefined, {
+        proposerBoostEnabled: true,
+        proposerBoostReorgEnabled: true,
+      });
 
       const proposerHead = forkChoice.getProposerHead(headBlock, currentSlot);
 
-      expect(proposerHead.blockRoot).toBe(expectReorg ? parentBlock.blockRoot: headBlock.blockRoot);
-
+      expect(proposerHead.blockRoot).toBe(expectReorg ? parentBlock.blockRoot : headBlock.blockRoot);
     });
   }
-
 });
