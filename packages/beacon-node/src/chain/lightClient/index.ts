@@ -227,7 +227,8 @@ export class LightClientServer {
   onImportBlockHead(
     block: allForks.AllForksLightClient["BeaconBlock"],
     postState: CachedBeaconStateAltair,
-    parentBlockSlot: Slot
+    parentBlockSlot: Slot,
+    fork: ForkName
   ): void {
     // TEMP: To disable this functionality for fork_choice spec tests.
     // Since the tests have deep-reorgs attested data is not available often printing lots of error logs.
@@ -247,7 +248,7 @@ export class LightClientServer {
     const signedBlockRoot = block.parentRoot;
     const syncPeriod = computeSyncPeriodAtSlot(block.slot);
 
-    this.onSyncAggregate(syncPeriod, block.body.syncAggregate, block.slot, signedBlockRoot).catch((e) => {
+    this.onSyncAggregate(syncPeriod, block.body.syncAggregate, block.slot, signedBlockRoot, fork).catch((e) => {
       this.logger.error("Error onSyncAggregate", {}, e);
       this.metrics?.lightclientServer.onSyncAggregate.inc({event: "error"});
     });
@@ -455,7 +456,8 @@ export class LightClientServer {
     syncPeriod: SyncPeriod,
     syncAggregate: altair.SyncAggregate,
     signatureSlot: Slot,
-    signedBlockRoot: Root
+    signedBlockRoot: Root,
+    fork: ForkName
   ): Promise<void> {
     this.metrics?.lightclientServer.onSyncAggregate.inc({event: "processed"});
 
@@ -496,7 +498,7 @@ export class LightClientServer {
 
     // Emit update
     // Note: Always emit optimistic update even if we have emitted one with higher or equal attested_header.slot
-    this.emitter.emit(routes.events.EventType.lightClientOptimisticUpdate, headerUpdate);
+    this.emitter.emit(routes.events.EventType.lightClientOptimisticUpdate, {version: fork, data: headerUpdate});
 
     // Persist latest best update for getLatestHeadUpdate()
     // TODO: Once SyncAggregate are constructed from P2P too, count bits to decide "best"
@@ -529,8 +531,8 @@ export class LightClientServer {
         };
         this.metrics?.lightclientServer.onSyncAggregate.inc({event: "update_latest_finalized_update"});
 
-        // Note: Ignores gossip rule to always emit finaly_update with higher finalized_header.slot, for simplicity
-        this.emitter.emit(routes.events.EventType.lightClientFinalityUpdate, this.finalized);
+        // Note: Ignores gossip rule to always emit finality_update with higher finalized_header.slot, for simplicity
+        this.emitter.emit(routes.events.EventType.lightClientFinalityUpdate, {version: attestedFork, data: this.finalized});
       }
     }
 

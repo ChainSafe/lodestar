@@ -107,8 +107,8 @@ export type EventData = {
     executionOptimistic: boolean;
   };
   [EventType.contributionAndProof]: altair.SignedContributionAndProof;
-  [EventType.lightClientOptimisticUpdate]: allForks.LightClientOptimisticUpdate;
-  [EventType.lightClientFinalityUpdate]: allForks.LightClientFinalityUpdate;
+  [EventType.lightClientOptimisticUpdate]: {version: ForkName; data: allForks.LightClientOptimisticUpdate};
+  [EventType.lightClientFinalityUpdate]: {version: ForkName; data: allForks.LightClientFinalityUpdate};
   [EventType.lightClientUpdate]: allForks.LightClientUpdate;
   [EventType.payloadAttributes]: {version: ForkName; data: allForks.SSEPayloadAttributes};
   [EventType.blobSidecar]: BlobSidecarSSE;
@@ -208,28 +208,24 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
     ),
     [EventType.blobSidecar]: blobSidecarSSE,
 
-    [EventType.lightClientOptimisticUpdate]: {
-      toJson: (data) =>
-        getLightClientTypeFromHeader((data as unknown as allForks.LightClientOptimisticUpdate).attestedHeader)[
+    [EventType.lightClientOptimisticUpdate]: WithVersion(
+        (_, data) => getLightClientTypeFromHeader((data as allForks.LightClientOptimisticUpdate).attestedHeader)[
           "LightClientOptimisticUpdate"
-        ].toJson(data),
-      fromJson: (data) =>
-        getLightClientTypeFromHeader(
+        ],
+        (_, data) => getLightClientTypeFromHeader(
           // eslint-disable-next-line @typescript-eslint/naming-convention
           (data as {attested_header: allForks.LightClientHeader}).attested_header
-        )["LightClientOptimisticUpdate"].fromJson(data),
-    },
-    [EventType.lightClientFinalityUpdate]: {
-      toJson: (data) =>
-        getLightClientTypeFromHeader((data as unknown as allForks.LightClientFinalityUpdate).attestedHeader)[
+        )["LightClientOptimisticUpdate"]
+    ),
+    [EventType.lightClientFinalityUpdate]: WithVersion(
+        (_, data) => getLightClientTypeFromHeader((data as unknown as allForks.LightClientFinalityUpdate).attestedHeader)[
           "LightClientFinalityUpdate"
-        ].toJson(data),
-      fromJson: (data) =>
-        getLightClientTypeFromHeader(
+        ],
+        (_, data) => getLightClientTypeFromHeader(
           // eslint-disable-next-line @typescript-eslint/naming-convention
           (data as {attested_header: allForks.LightClientHeader}).attested_header
-        )["LightClientFinalityUpdate"].fromJson(data),
-    },
+        )["LightClientFinalityUpdate"]
+    ),
     [EventType.lightClientUpdate]: {
       toJson: (data) =>
         getLightClientTypeFromHeader((data as unknown as allForks.LightClientUpdate).attestedHeader)[
