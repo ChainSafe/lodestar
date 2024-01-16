@@ -532,7 +532,10 @@ export class LightClientServer {
         this.metrics?.lightclientServer.onSyncAggregate.inc({event: "update_latest_finalized_update"});
 
         // Note: Ignores gossip rule to always emit finality_update with higher finalized_header.slot, for simplicity
-        this.emitter.emit(routes.events.EventType.lightClientFinalityUpdate, {version: attestedFork, data: this.finalized});
+        this.emitter.emit(routes.events.EventType.lightClientFinalityUpdate, {
+          version: attestedFork,
+          data: this.finalized,
+        });
       }
     }
 

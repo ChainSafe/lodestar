@@ -139,7 +139,10 @@ export function ContainerDataExecutionOptimistic<T>(
  * version: ForkName
  * ```
  */
-export function WithVersion<T>(getTypeTo: (fork: ForkName, data: unknown) => TypeJson<T>, getTypeFrom: (fork: ForkName, data: unknown) => TypeJson<T> = getTypeTo): TypeJson<{data: T; version: ForkName}> {
+export function WithVersion<T>(
+  getTypeTo: (fork: ForkName, data: unknown) => TypeJson<T>,
+  getTypeFrom: (fork: ForkName, data: unknown) => TypeJson<T> = getTypeTo
+): TypeJson<{data: T; version: ForkName}> {
   return {
     toJson: ({data, version}) => ({
       data: getTypeTo(version ?? ForkName.phase0, data).toJson(data),

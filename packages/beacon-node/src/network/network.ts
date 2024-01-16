@@ -105,8 +105,12 @@ export class Network implements INetwork {
     this.events.on(NetworkEvent.peerConnected, this.onPeerConnected);
     this.events.on(NetworkEvent.peerDisconnected, this.onPeerDisconnected);
     this.chain.emitter.on(routes.events.EventType.head, this.onHead);
-    this.chain.emitter.on(routes.events.EventType.lightClientFinalityUpdate, ({data}) => this.onLightClientFinalityUpdate(data));
-    this.chain.emitter.on(routes.events.EventType.lightClientOptimisticUpdate, ({data}) => this.onLightClientOptimisticUpdate(data));
+    this.chain.emitter.on(routes.events.EventType.lightClientFinalityUpdate, ({data}) =>
+      this.onLightClientFinalityUpdate(data)
+    );
+    this.chain.emitter.on(routes.events.EventType.lightClientOptimisticUpdate, ({data}) =>
+      this.onLightClientOptimisticUpdate(data)
+    );
   }
 
   static async init({

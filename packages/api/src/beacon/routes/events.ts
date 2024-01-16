@@ -209,19 +209,23 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
     [EventType.blobSidecar]: blobSidecarSSE,
 
     [EventType.lightClientOptimisticUpdate]: WithVersion(
-        (_, data) => getLightClientTypeFromHeader((data as allForks.LightClientOptimisticUpdate).attestedHeader)[
+      (_, data) =>
+        getLightClientTypeFromHeader((data as allForks.LightClientOptimisticUpdate).attestedHeader)[
           "LightClientOptimisticUpdate"
         ],
-        (_, data) => getLightClientTypeFromHeader(
+      (_, data) =>
+        getLightClientTypeFromHeader(
           // eslint-disable-next-line @typescript-eslint/naming-convention
           (data as {attested_header: allForks.LightClientHeader}).attested_header
         )["LightClientOptimisticUpdate"]
     ),
     [EventType.lightClientFinalityUpdate]: WithVersion(
-        (_, data) => getLightClientTypeFromHeader((data as unknown as allForks.LightClientFinalityUpdate).attestedHeader)[
+      (_, data) =>
+        getLightClientTypeFromHeader((data as allForks.LightClientFinalityUpdate).attestedHeader)[
           "LightClientFinalityUpdate"
         ],
-        (_, data) => getLightClientTypeFromHeader(
+      (_, data) =>
+        getLightClientTypeFromHeader(
           // eslint-disable-next-line @typescript-eslint/naming-convention
           (data as {attested_header: allForks.LightClientHeader}).attested_header
         )["LightClientFinalityUpdate"]
