@@ -5,7 +5,7 @@ import {
   isStateValidatorsNodesPopulated,
   DataAvailableStatus,
 } from "@lodestar/state-transition";
-import {bellatrix} from "@lodestar/types";
+import {bellatrix, deneb} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 import {ProtoBlock, ExecutionStatus} from "@lodestar/fork-choice";
 import {ChainForkConfig} from "@lodestar/config";
@@ -14,13 +14,14 @@ import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {RegenCaller} from "../regen/index.js";
 import type {BeaconChain} from "../chain.js";
-import {BlockInput, ImportBlockOpts} from "./types.js";
+import {BlockInput, ImportBlockOpts, BlockInputType} from "./types.js";
 import {POS_PANDA_MERGE_TRANSITION_BANNER} from "./utils/pandaMergeTransitionBanner.js";
 import {CAPELLA_OWL_BANNER} from "./utils/ownBanner.js";
 import {DENEB_BLOWFISH_BANNER} from "./utils/blowfishBanner.js";
 import {verifyBlocksStateTransitionOnly} from "./verifyBlocksStateTransitionOnly.js";
 import {verifyBlocksSignatures} from "./verifyBlocksSignatures.js";
 import {verifyBlocksExecutionPayload, SegmentExecStatus} from "./verifyBlocksExecutionPayloads.js";
+import {verifyBlocksDataAvailability} from "./verifyBlocksDataAvailability.js";
 import {writeBlockInputToDb} from "./writeBlockInputToDb.js";
 
 /**
@@ -38,12 +39,12 @@ export async function verifyBlocksInEpoch(
   this: BeaconChain,
   parentBlock: ProtoBlock,
   blocksInput: BlockInput[],
-  dataAvailabilityStatuses: DataAvailableStatus[],
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<{
   postStates: CachedBeaconStateAllForks[];
   proposerBalanceDeltas: number[];
   segmentExecStatus: SegmentExecStatus;
+  dataAvailabilityStatuses: DataAvailableStatus[];
 }> {
   const blocks = blocksInput.map(({block}) => block);
   if (blocks.length === 0) {
@@ -88,7 +89,12 @@ export async function verifyBlocksInEpoch(
 
   try {
     // batch all I/O operations to reduce overhead
-    const [segmentExecStatus, {postStates, proposerBalanceDeltas}] = await Promise.all([
+    const [
+      segmentExecStatus,
+      {dataAvailabilityStatuses, availableTime},
+      {postStates, proposerBalanceDeltas, verifyStateTime},
+      {verifySignaturesTime},
+    ] = await Promise.all([
       // Execution payloads
       opts.skipVerifyExecutionPayload !== true
         ? verifyBlocksExecutionPayload(this, parentBlock, blocks, preState0, abortController.signal, opts)
@@ -98,12 +104,16 @@ export async function verifyBlocksInEpoch(
             mergeBlockFound: null,
           } as SegmentExecStatus),
 
+      // data availability for the blobs
+      verifyBlocksDataAvailability(this, blocksInput, opts),
+
       // Run state transition only
       // TODO: Ensure it yields to allow flushing to workers and engine API
       verifyBlocksStateTransitionOnly(
         preState0,
         blocksInput,
-        dataAvailabilityStatuses,
+        // hack availability for state transition eval as availability is separately determined
+        blocks.map(() => DataAvailableStatus.available),
         this.logger,
         this.metrics,
         abortController.signal,
@@ -113,7 +123,7 @@ export async function verifyBlocksInEpoch(
       // All signatures at once
       opts.skipVerifyBlockSignatures !== true
         ? verifyBlocksSignatures(this.bls, this.logger, this.metrics, preState0, blocks, opts)
-        : Promise.resolve(),
+        : Promise.resolve({verifySignaturesTime: Date.now()}),
 
       // ideally we want to only persist blocks after verifying them however the reality is there are
       // rarely invalid blocks we'll batch all I/O operation here to reduce the overhead if there's
@@ -151,7 +161,35 @@ export async function verifyBlocksInEpoch(
       }
     }
 
-    return {postStates, proposerBalanceDeltas, segmentExecStatus};
+    if (segmentExecStatus.execAborted === null) {
+      const {executionStatuses, executionTime} = segmentExecStatus;
+      if (
+        blocksInput.length === 1 &&
+        // gossip blocks have seenTimestampSec
+        opts.seenTimestampSec !== undefined &&
+        blocksInput[0].type !== BlockInputType.preDeneb &&
+        executionStatuses[0] === ExecutionStatus.Valid
+      ) {
+        // Find the max time when the block was actually verified
+        const fullyVerifiedTime = Math.max(executionTime, verifyStateTime, verifySignaturesTime);
+        const recvTofullyVerifedTime = fullyVerifiedTime / 1000 - opts.seenTimestampSec;
+        this.metrics?.gossipBlock.receivedToFullyVerifiedTime.observe(recvTofullyVerifedTime);
+
+        const verifiedToBlobsAvailabiltyTime = Math.max(availableTime - fullyVerifiedTime, 0) / 1000;
+        const numBlobs = (blocksInput[0].block as deneb.SignedBeaconBlock).message.body.blobKzgCommitments.length;
+
+        this.metrics?.gossipBlock.verifiedToBlobsAvailabiltyTime.observe({numBlobs}, verifiedToBlobsAvailabiltyTime);
+        this.logger.verbose("Verified blockInput fully with blobs availability", {
+          slot: blocksInput[0].block.message.slot,
+          recvTofullyVerifedTime,
+          verifiedToBlobsAvailabiltyTime,
+          type: blocksInput[0].type,
+          numBlobs,
+        });
+      }
+    }
+
+    return {postStates, dataAvailabilityStatuses, proposerBalanceDeltas, segmentExecStatus};
   } finally {
     abortController.abort();
   }

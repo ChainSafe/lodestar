@@ -1,5 +1,4 @@
-import "../../setup.js";
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {formatEpochSlotTime} from "../../../src/utils/timeFormat.js";
 
 describe("logger / util / formatEpochSlotTime", () => {
@@ -17,7 +16,7 @@ describe("logger / util / formatEpochSlotTime", () => {
     const expectLog = `Eph ${epoch}/${slot} ${sec}`; // "Eph 3/6 11.423";
     it(expectLog, () => {
       const genesisTime = nowSec - epoch * slotsPerEpoch * secondsPerSlot - slot * secondsPerSlot - sec;
-      expect(formatEpochSlotTime({genesisTime, secondsPerSlot, slotsPerEpoch}, nowSec * 1000)).to.equal(expectLog);
+      expect(formatEpochSlotTime({genesisTime, secondsPerSlot, slotsPerEpoch}, nowSec * 1000)).toBe(expectLog);
     });
   }
 });

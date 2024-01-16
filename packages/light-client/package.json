@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.13.0",
+  "version": "1.14.0",
   "type": "module",
   "exports": {
     ".": {
@@ -59,20 +59,23 @@
     "lint:fix": "yarn run lint --fix",
     "pretest": "yarn run check-types",
     "test": "yarn test:unit && yarn test:e2e",
-    "test:browsers": "yarn karma start karma.config.cjs",
-    "test:unit": "LODESTAR_PRESET=minimal nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'",
+    "test:unit": "vitest --run --dir test/unit/ --coverage",
+    "test:browsers": "yarn test:browsers:chrome && yarn test:browsers:firefox && yarn test:browsers:electron",
+    "test:browsers:chrome": "vitest --run --browser chrome --config ./vitest.browser.config.ts --dir test/unit",
+    "test:browsers:firefox": "vitest --run --browser firefox --config ./vitest.browser.config.ts --dir test/unit",
+    "test:browsers:electron": "echo 'Electron tests will be introduced back in the future as soon vitest supports electron.'",
     "check-readme": "typescript-docs-verifier"
   },
   "dependencies": {
     "@chainsafe/bls": "7.1.1",
     "@chainsafe/persistent-merkle-tree": "^0.6.1",
     "@chainsafe/ssz": "^0.14.0",
-    "@lodestar/api": "^1.13.0",
-    "@lodestar/config": "^1.13.0",
-    "@lodestar/params": "^1.13.0",
-    "@lodestar/state-transition": "^1.13.0",
-    "@lodestar/types": "^1.13.0",
-    "@lodestar/utils": "^1.13.0",
+    "@lodestar/api": "^1.14.0",
+    "@lodestar/config": "^1.14.0",
+    "@lodestar/params": "^1.14.0",
+    "@lodestar/state-transition": "^1.14.0",
+    "@lodestar/types": "^1.14.0",
+    "@lodestar/utils": "^1.14.0",
     "mitt": "^3.0.0",
     "strict-event-emitter-types": "^2.0.0"
   },

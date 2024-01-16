@@ -1,7 +1,7 @@
 import path from "node:path";
 import {expect} from "chai";
 import {toHexString} from "@chainsafe/ssz";
-import {BeaconStateAllForks, isExecutionStateType} from "@lodestar/state-transition";
+import {BeaconStateAllForks, isExecutionStateType, signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {InputType} from "@lodestar/spec-test-util";
 import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
 import {phase0, allForks, bellatrix, ssz, RootHex, deneb} from "@lodestar/types";
@@ -10,6 +10,7 @@ import {createBeaconConfig} from "@lodestar/config";
 import {ACTIVE_PRESET, ForkSeq, isForkBlobs} from "@lodestar/params";
 import {BeaconChain} from "../../../src/chain/index.js";
 import {ClockEvent} from "../../../src/util/clock.js";
+import {computeInclusionProof} from "../../../src/util/blobs.js";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {testLogger} from "../../utils/logger.js";
 import {getConfig} from "../../utils/config.js";
@@ -195,20 +196,14 @@ const forkChoiceTest =
                     throw Error("Invalid blobs or proofs lengths");
                   }
 
-                  const blockRoot = config
-                    .getForkTypes(signedBlock.message.slot)
-                    .BeaconBlock.hashTreeRoot(signedBlock.message);
                   const blobSidecars: deneb.BlobSidecars = blobs.map((blob, index) => {
                     return {
-                      blockRoot,
                       index,
-                      slot,
                       blob,
-                      // proofs isn't undefined here but typescript(check types) can't figure it out
-                      kzgProof: (proofs ?? [])[index],
                       kzgCommitment: commitments[index],
-                      blockParentRoot: signedBlock.message.parentRoot,
-                      proposerIndex: signedBlock.message.proposerIndex,
+                      kzgProof: (proofs ?? [])[index],
+                      signedBlockHeader: signedBlockToSignedHeader(config, signedBlock),
+                      kzgCommitmentInclusionProof: computeInclusionProof(fork, signedBlock.message.body, index),
                     };
                   });
 

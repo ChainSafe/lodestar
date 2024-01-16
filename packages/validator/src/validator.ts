@@ -58,6 +58,7 @@ export type ValidatorOptions = {
   distributed?: boolean;
   useProduceBlockV3?: boolean;
   broadcastValidation?: routes.beacon.BroadcastValidation;
+  blindedLocal?: boolean;
 };
 
 // TODO: Extend the timeout, and let it be customizable
@@ -208,8 +209,9 @@ export class Validator {
     const chainHeaderTracker = new ChainHeaderTracker(logger, api, emitter);
 
     const blockProposingService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, metrics, {
-      useProduceBlockV3: opts.useProduceBlockV3 ?? defaultOptions.useProduceBlockV3,
+      useProduceBlockV3: opts.useProduceBlockV3,
       broadcastValidation: opts.broadcastValidation ?? defaultOptions.broadcastValidation,
+      blindedLocal: opts.blindedLocal ?? defaultOptions.blindedLocal,
     });
 
     const attestationService = new AttestationService(
@@ -287,18 +289,15 @@ export class Validator {
     await assertEqualGenesis(opts, genesis);
     logger.info("Verified connected beacon node and validator have the same genesisValidatorRoot");
 
-    const {
-      useProduceBlockV3 = defaultOptions.useProduceBlockV3,
-      broadcastValidation = defaultOptions.broadcastValidation,
-      valProposerConfig,
-    } = opts;
+    const {useProduceBlockV3, broadcastValidation = defaultOptions.broadcastValidation, valProposerConfig} = opts;
     const defaultBuilderSelection =
       valProposerConfig?.defaultConfig.builder?.selection ?? defaultOptions.builderSelection;
     const strictFeeRecipientCheck = valProposerConfig?.defaultConfig.strictFeeRecipientCheck ?? false;
     const suggestedFeeRecipient = valProposerConfig?.defaultConfig.feeRecipient ?? defaultOptions.suggestedFeeRecipient;
 
     logger.info("Initializing validator", {
-      useProduceBlockV3,
+      // if no explicit option is provided, useProduceBlockV3 will be auto enabled on/post deneb
+      useProduceBlockV3: useProduceBlockV3 === undefined ? "deneb+" : useProduceBlockV3,
       broadcastValidation,
       defaultBuilderSelection,
       suggestedFeeRecipient,

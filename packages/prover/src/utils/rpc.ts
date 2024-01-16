@@ -100,6 +100,6 @@ export class ELRpc {
 
   getRequestId(): string {
     // TODO: Find better way to generate random id
-    return (Math.random() * 10000).toFixed(0);
+    return (Math.random() * 100000000000000000).toFixed(0);
   }
 }

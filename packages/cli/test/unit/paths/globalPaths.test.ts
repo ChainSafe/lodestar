@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {getGlobalPaths} from "../../../src/paths/global.js";
 
 describe("paths / global", () => {
@@ -36,7 +36,7 @@ describe("paths / global", () => {
 
   for (const {id, args, globalPaths} of testCases) {
     it(id, () => {
-      expect(getGlobalPaths(args, args.network ?? network)).to.deep.equal(globalPaths);
+      expect(getGlobalPaths(args, args.network ?? network)).toEqual(globalPaths);
     });
   }
 });

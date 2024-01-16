@@ -159,9 +159,9 @@ export function createCachedBeaconState<T extends BeaconStateAllForks>(
  * Create a CachedBeaconState given a cached seed state and state bytes
  * This guarantees that the returned state shares the same tree with the seed state
  * Check loadState() api for more details
- * TODO: after EIP-6110 need to provide a pivotValidatorIndex to decide which comes to finalized validators cache, which comes to unfinalized cache
+ * // TODO: rename to loadUnfinalizedCachedBeaconState() due to EIP-6110
  */
-export function loadUnfinalizedCachedBeaconState<T extends BeaconStateAllForks & BeaconStateCache>(
+export function loadCachedBeaconState<T extends BeaconStateAllForks & BeaconStateCache>(
   cachedSeedState: T,
   stateBytes: Uint8Array,
   opts?: EpochCacheOpts

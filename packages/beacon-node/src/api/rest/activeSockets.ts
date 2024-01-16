@@ -1,12 +1,11 @@
 import http, {Server} from "node:http";
 import {Socket} from "node:net";
-import {waitFor} from "@lodestar/utils";
-import {IGauge} from "../../metrics/index.js";
+import {Gauge, GaugeExtra, waitFor} from "@lodestar/utils";
 
 export type SocketMetrics = {
-  activeSockets: IGauge;
-  socketsBytesRead: IGauge;
-  socketsBytesWritten: IGauge;
+  activeSockets: GaugeExtra;
+  socketsBytesRead: Gauge;
+  socketsBytesWritten: Gauge;
 };
 
 // Use relatively short timeout to speed up shutdown

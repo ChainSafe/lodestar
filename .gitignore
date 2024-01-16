@@ -43,6 +43,7 @@ packages/**/typedocs
 docs/pages/**/*-cli.md
 docs/pages/assets
 docs/pages/images
+docs/pages/security.md
 docs/pages/lightclient-prover/lightclient.md
 docs/pages/lightclient-prover/prover.md
 docs/pages/api/api-reference.md

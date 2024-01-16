@@ -1,8 +1,7 @@
 import {EventEmitter} from "events";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {fetch} from "@lodestar/api";
-import {ErrorAborted, TimeoutError, isValidHttpUrl, retry} from "@lodestar/utils";
-import {IGauge, IHistogram} from "../../metrics/interface.js";
+import {ErrorAborted, Gauge, Histogram, TimeoutError, isValidHttpUrl, retry} from "@lodestar/utils";
 import {IJson, RpcPayload} from "../interface.js";
 import {JwtClaim, encodeJwtToken} from "./jwt.js";
 
@@ -58,13 +57,13 @@ export type ReqOpts = {
 };
 
 export type JsonRpcHttpClientMetrics = {
-  requestTime: IHistogram<"routeId">;
-  streamTime: IHistogram<"routeId">;
-  requestErrors: IGauge<"routeId">;
-  requestUsedFallbackUrl: IGauge<"routeId">;
-  activeRequests: IGauge<"routeId">;
-  configUrlsCount: IGauge;
-  retryCount: IGauge<"routeId">;
+  requestTime: Histogram<{routeId: string}>;
+  streamTime: Histogram<{routeId: string}>;
+  requestErrors: Gauge<{routeId: string}>;
+  requestUsedFallbackUrl: Gauge<{routeId: string}>;
+  activeRequests: Gauge<{routeId: string}>;
+  configUrlsCount: Gauge;
+  retryCount: Gauge<{routeId: string}>;
 };
 
 export interface IJsonRpcHttpClient {

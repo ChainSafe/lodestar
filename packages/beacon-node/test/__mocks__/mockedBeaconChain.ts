@@ -79,6 +79,7 @@ vi.mock("../../src/chain/index.js", async (requireActual) => {
       // @ts-expect-error
       beaconProposerCache: new BeaconProposerCache(),
       shufflingCache: new ShufflingCache(),
+      produceCommonBlockBody: vi.fn(),
       produceBlock: vi.fn(),
       produceBlindedBlock: vi.fn(),
       getCanonicalBlockAtSlot: vi.fn(),

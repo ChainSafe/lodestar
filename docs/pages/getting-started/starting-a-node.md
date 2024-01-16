@@ -14,7 +14,7 @@ Make sure Lodestar is installed in your local environment, following the chosen 
 ./lodestar --help
 ```
 
-For a complete list of beacon node CLI commands and options, see the [Command Line Reference](../../reference/cli/)
+For a complete list of beacon node CLI commands and options, see the [`beacon` CLI Command](../beacon-management/beacon-cli.md) section.
 
 To select a known testnet or mainnet, use the `--network` flag. `mainnet` is selected by default, and a list of available networks is listed with the `--help` flag. Setting the `--network` flag will conveniently configure the beacon node or validator client for the selected network. For power users, any configuration option should be able to be overridden.
 
@@ -181,4 +181,4 @@ Apr-20 15:16:17.017[]                 info: Synced - slot: 6264979 - head: 0xde9
 
 6. Peer info: Current total number of outbound or inbound peers, for e.g.: `peers: 27`
 
-For more insight into how a Lodestar beacon node is functioning, you may setup lodestar metrics and use the prepared Grafana dashboards that are found in the repository. Check out our section on [Prometheus and Grafana](./prometheus-grafana.md) for more details.
+For more insight into how a Lodestar beacon node is functioning, you may setup lodestar metrics and use the prepared Grafana dashboards that are found in the repository. Check out our section on [Prometheus and Grafana](../logging-and-metrics/prometheus-grafana.md) for more details.

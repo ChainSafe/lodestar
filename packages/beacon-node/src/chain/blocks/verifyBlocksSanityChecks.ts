@@ -1,12 +1,11 @@
-import {computeStartSlotAtEpoch, DataAvailableStatus} from "@lodestar/state-transition";
+import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {Slot, deneb} from "@lodestar/types";
+import {Slot} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
 import {IClock} from "../../util/clock.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
-import {validateBlobSidecars} from "../validation/blobSidecar.js";
-import {BlockInput, BlockInputType, ImportBlockOpts, BlobSidecarValidation} from "./types.js";
+import {BlockInput, ImportBlockOpts} from "./types.js";
 
 /**
  * Verifies some early cheap sanity checks on the block before running the full state transition.
@@ -26,7 +25,6 @@ export function verifyBlocksSanityChecks(
   opts: ImportBlockOpts
 ): {
   relevantBlocks: BlockInput[];
-  dataAvailabilityStatuses: DataAvailableStatus[];
   parentSlots: Slot[];
   parentBlock: ProtoBlock | null;
 } {
@@ -35,7 +33,6 @@ export function verifyBlocksSanityChecks(
   }
 
   const relevantBlocks: BlockInput[] = [];
-  const dataAvailabilityStatuses: DataAvailableStatus[] = [];
   const parentSlots: Slot[] = [];
   let parentBlock: ProtoBlock | null = null;
 
@@ -63,10 +60,6 @@ export function verifyBlocksSanityChecks(
         throw new BlockError(block, {code: BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT, blockSlot, finalizedSlot});
       }
     }
-
-    // Validate status of only not yet finalized blocks, we don't need yet to propogate the status
-    // as it is not used upstream anywhere
-    const dataAvailabilityStatus = maybeValidateBlobs(chain.config, blockInput, opts);
 
     let parentBlockSlot: Slot;
 
@@ -105,7 +98,6 @@ export function verifyBlocksSanityChecks(
 
     // Block is relevant
     relevantBlocks.push(blockInput);
-    dataAvailabilityStatuses.push(dataAvailabilityStatus);
     parentSlots.push(parentBlockSlot);
   }
 
@@ -115,35 +107,5 @@ export function verifyBlocksSanityChecks(
     throw Error(`Internal error, parentBlock should not be null for relevantBlocks=${relevantBlocks.length}`);
   }
 
-  return {relevantBlocks, dataAvailabilityStatuses, parentSlots, parentBlock};
-}
-
-function maybeValidateBlobs(
-  config: ChainForkConfig,
-  blockInput: BlockInput,
-  opts: ImportBlockOpts
-): DataAvailableStatus {
-  switch (blockInput.type) {
-    case BlockInputType.postDeneb: {
-      if (opts.validBlobSidecars === BlobSidecarValidation.Full) {
-        return DataAvailableStatus.available;
-      }
-
-      // run full validation
-      const {block, blobs} = blockInput;
-      const blockSlot = block.message.slot;
-      const {blobKzgCommitments} = (block as deneb.SignedBeaconBlock).message.body;
-      const beaconBlockRoot = config.getForkTypes(blockSlot).BeaconBlock.hashTreeRoot(block.message);
-
-      // if the blob siddecars have been individually verified then we can skip kzg proof check
-      // but other checks to match blobs with block data still need to be performed
-      const skipProofsCheck = opts.validBlobSidecars === BlobSidecarValidation.Individual;
-      validateBlobSidecars(blockSlot, beaconBlockRoot, blobKzgCommitments, blobs, {skipProofsCheck});
-
-      return DataAvailableStatus.available;
-    }
-
-    case BlockInputType.preDeneb:
-      return DataAvailableStatus.preDeneb;
-  }
+  return {relevantBlocks, parentSlots, parentBlock};
 }

@@ -3,9 +3,8 @@ import fastify, {FastifyInstance} from "fastify";
 import fastifyCors from "@fastify/cors";
 import bearerAuthPlugin from "@fastify/bearer-auth";
 import {RouteConfig} from "@lodestar/api/beacon/server";
-import {ErrorAborted, Logger} from "@lodestar/utils";
+import {ErrorAborted, Gauge, Histogram, Logger} from "@lodestar/utils";
 import {isLocalhostIP} from "../../util/ip.js";
-import {IGauge, IHistogram} from "../../metrics/index.js";
 import {ApiError, NodeIsSyncing} from "../impl/errors.js";
 import {HttpActiveSocketsTracker, SocketMetrics} from "./activeSockets.js";
 
@@ -25,9 +24,9 @@ export type RestApiServerModules = {
 };
 
 export type RestApiServerMetrics = SocketMetrics & {
-  requests: IGauge<"operationId">;
-  responseTime: IHistogram<"operationId">;
-  errors: IGauge<"operationId">;
+  requests: Gauge<{operationId: string}>;
+  responseTime: Histogram<{operationId: string}>;
+  errors: Gauge<{operationId: string}>;
 };
 
 /**
@@ -88,6 +87,11 @@ export class RestApiServer {
       const {operationId} = req.routeConfig as RouteConfig;
       this.logger.debug(`Req ${req.id as string} ${req.ip} ${operationId}`);
       metrics?.requests.inc({operationId});
+    });
+
+    server.addHook("preHandler", async (req, _res) => {
+      const {operationId} = req.routeConfig as RouteConfig;
+      this.logger.debug(`Exec ${req.id as string} ${req.ip} ${operationId}`);
     });
 
     // Log after response

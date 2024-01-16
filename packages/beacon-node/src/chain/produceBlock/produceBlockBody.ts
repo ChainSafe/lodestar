@@ -1,8 +1,6 @@
 import {
   Bytes32,
-  phase0,
   allForks,
-  altair,
   Root,
   RootHex,
   Slot,
@@ -35,17 +33,31 @@ import {PayloadId, IExecutionEngine, IExecutionBuilder, PayloadAttributes} from 
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
 import {numToQuantity} from "../../eth1/provider/utils.js";
-import {
-  validateBlobsAndKzgCommitments,
-  validateBlindedBlobsAndKzgCommitments,
-} from "./validateBlobsAndKzgCommitments.js";
+import {CommonBlockBody} from "../interface.js";
+import {validateBlobsAndKzgCommitments} from "./validateBlobsAndKzgCommitments.js";
 
 // Time to provide the EL to generate a payload from new payload id
 const PAYLOAD_GENERATION_TIME_MS = 500;
-enum PayloadPreparationType {
+
+export enum PayloadPreparationType {
   Fresh = "Fresh",
   Cached = "Cached",
   Reorged = "Reorged",
+  Blinded = "Blinded",
+}
+
+/**
+ * Block production steps tracked in metrics
+ */
+export enum BlockProductionStep {
+  proposerSlashing = "proposerSlashing",
+  attesterSlashings = "attesterSlashings",
+  voluntaryExits = "voluntaryExits",
+  blsToExecutionChanges = "blsToExecutionChanges",
+  attestations = "attestations",
+  eth1DataAndDeposits = "eth1DataAndDeposits",
+  syncAggregate = "syncAggregate",
+  executionPayload = "executionPayload",
 }
 
 export type BlockAttributes = {
@@ -74,34 +86,42 @@ export enum BlobsResultType {
 
 export type BlobsResult =
   | {type: BlobsResultType.preDeneb}
-  | {type: BlobsResultType.produced; blobSidecars: deneb.BlobSidecars; blockHash: RootHex}
-  | {type: BlobsResultType.blinded; blobSidecars: deneb.BlindedBlobSidecars; blockHash: RootHex};
+  | {type: BlobsResultType.produced; contents: deneb.Contents; blockHash: RootHex}
+  | {type: BlobsResultType.blinded};
 
 export async function produceBlockBody<T extends BlockType>(
   this: BeaconChain,
   blockType: T,
   currentState: CachedBeaconStateAllForks,
-  {
-    randaoReveal,
-    graffiti,
-    slot: blockSlot,
-    feeRecipient: requestedFeeRecipient,
-    parentSlot,
-    parentBlockRoot,
-    proposerIndex,
-    proposerPubKey,
-  }: BlockAttributes & {
+  blockAttr: BlockAttributes & {
     parentSlot: Slot;
     parentBlockRoot: Root;
     proposerIndex: ValidatorIndex;
     proposerPubKey: BLSPubkey;
+    commonBlockBody?: CommonBlockBody;
   }
-): Promise<{body: AssembledBodyType<T>; blobs: BlobsResult; executionPayloadValue: Wei}> {
+): Promise<{
+  body: AssembledBodyType<T>;
+  blobs: BlobsResult;
+  executionPayloadValue: Wei;
+  shouldOverrideBuilder?: boolean;
+}> {
+  const {
+    slot: blockSlot,
+    feeRecipient: requestedFeeRecipient,
+    parentBlockRoot,
+    proposerIndex,
+    proposerPubKey,
+    commonBlockBody,
+  } = blockAttr;
   // Type-safe for blobs variable. Translate 'null' value into 'preDeneb' enum
   // TODO: Not ideal, but better than just using null.
   // TODO: Does not guarantee that preDeneb enum goes with a preDeneb block
   let blobsResult: BlobsResult;
   let executionPayloadValue: Wei;
+  // even though shouldOverrideBuilder is relevant for the engine response, for simplicity of typing
+  // we just return it undefined for the builder which anyway doesn't get consumed downstream
+  let shouldOverrideBuilder: boolean | undefined;
   const fork = currentState.config.getForkName(blockSlot);
 
   const logMeta: Record<string, string | number | bigint> = {
@@ -110,63 +130,17 @@ export async function produceBlockBody<T extends BlockType>(
     slot: blockSlot,
   };
   this.logger.verbose("Producing beacon block body", logMeta);
-
-  // TODO:
-  // Iterate through the naive aggregation pool and ensure all the attestations from there
-  // are included in the operation pool.
-  // for (const attestation of db.attestationPool.getAll()) {
-  //   try {
-  //     opPool.insertAttestation(attestation);
-  //   } catch (e) {
-  //     // Don't stop block production if there's an error, just create a log.
-  //     logger.error("Attestation did not transfer to op pool", {}, e);
-  //   }
-  // }
-
   const stepsMetrics =
     blockType === BlockType.Full
       ? this.metrics?.executionBlockProductionTimeSteps
       : this.metrics?.builderBlockProductionTimeSteps;
 
-  const [attesterSlashings, proposerSlashings, voluntaryExits, blsToExecutionChanges] =
-    this.opPool.getSlashingsAndExits(currentState, blockType, this.metrics);
+  const blockBody = commonBlockBody
+    ? Object.assign({}, commonBlockBody)
+    : await produceCommonBlockBody.call(this, blockType, currentState, blockAttr);
 
-  const endAttestations = stepsMetrics?.startTimer();
-  const attestations = this.aggregatedAttestationPool.getAttestationsForBlock(this.forkChoice, currentState);
-  endAttestations?.({
-    step: "attestations",
-  });
-
-  const endEth1DataAndDeposits = stepsMetrics?.startTimer();
-  const {eth1Data, deposits} = await this.eth1.getEth1DataAndDeposits(currentState);
-  endEth1DataAndDeposits?.({
-    step: "eth1DataAndDeposits",
-  });
-
-  const blockBody: phase0.BeaconBlockBody = {
-    randaoReveal,
-    graffiti,
-    eth1Data,
-    proposerSlashings,
-    attesterSlashings,
-    attestations,
-    deposits,
-    voluntaryExits,
-  };
-
-  const blockEpoch = computeEpochAtSlot(blockSlot);
-
-  const endSyncAggregate = stepsMetrics?.startTimer();
-  if (blockEpoch >= this.config.ALTAIR_FORK_EPOCH) {
-    const syncAggregate = this.syncContributionAndProofPool.getAggregate(parentSlot, parentBlockRoot);
-    this.metrics?.production.producedSyncAggregateParticipants.observe(
-      syncAggregate.syncCommitteeBits.getTrueBitIndexes().length
-    );
-    (blockBody as altair.BeaconBlockBody).syncAggregate = syncAggregate;
-  }
-  endSyncAggregate?.({
-    step: "syncAggregate",
-  });
+  const {attestations, deposits, voluntaryExits, attesterSlashings, proposerSlashings, blsToExecutionChanges} =
+    blockBody;
 
   Object.assign(logMeta, {
     attestations: attestations.length,
@@ -221,7 +195,7 @@ export async function produceBlockBody<T extends BlockType>(
       executionPayloadValue = builderRes.executionPayloadValue;
 
       const fetchedTime = Date.now() / 1000 - computeTimeAtSlot(this.config, blockSlot, this.genesisTime);
-      const prepType = "blinded";
+      const prepType = PayloadPreparationType.Blinded;
       this.metrics?.blockPayload.payloadFetchedTime.observe({prepType}, fetchedTime);
       this.logger.verbose("Fetched execution payload header from builder", {
         slot: blockSlot,
@@ -231,35 +205,14 @@ export async function produceBlockBody<T extends BlockType>(
       });
 
       if (ForkSeq[fork] >= ForkSeq.deneb) {
-        const {blindedBlobsBundle} = builderRes;
-        if (blindedBlobsBundle === undefined) {
-          throw Error(`Invalid builder getHeader response for fork=${fork}, missing blindedBlobsBundle`);
+        const {blobKzgCommitments} = builderRes;
+        if (blobKzgCommitments === undefined) {
+          throw Error(`Invalid builder getHeader response for fork=${fork}, missing blobKzgCommitments`);
         }
 
-        // validate blindedBlobsBundle
-        if (this.opts.sanityCheckExecutionEngineBlobs) {
-          validateBlindedBlobsAndKzgCommitments(builderRes.header, blindedBlobsBundle);
-        }
-
-        (blockBody as deneb.BlindedBeaconBlockBody).blobKzgCommitments = blindedBlobsBundle.commitments;
-        const blockHash = toHex(builderRes.header.blockHash);
-
-        const blobSidecars = Array.from({length: blindedBlobsBundle.blobRoots.length}, (_v, index) => {
-          const blobRoot = blindedBlobsBundle.blobRoots[index];
-          const commitment = blindedBlobsBundle.commitments[index];
-          const proof = blindedBlobsBundle.proofs[index];
-          const blindedBlobSidecar = {
-            index,
-            blobRoot,
-            kzgProof: proof,
-            kzgCommitment: commitment,
-          };
-          // Other fields will be injected after postState is calculated
-          return blindedBlobSidecar;
-        }) as deneb.BlindedBlobSidecars;
-        blobsResult = {type: BlobsResultType.blinded, blobSidecars, blockHash};
-
-        Object.assign(logMeta, {blobs: blindedBlobsBundle.commitments.length});
+        (blockBody as deneb.BlindedBeaconBlockBody).blobKzgCommitments = blobKzgCommitments;
+        blobsResult = {type: BlobsResultType.blinded};
+        Object.assign(logMeta, {blobs: blobKzgCommitments.length});
       } else {
         blobsResult = {type: BlobsResultType.preDeneb};
       }
@@ -303,9 +256,11 @@ export async function produceBlockBody<T extends BlockType>(
 
           const engineRes = await this.executionEngine.getPayload(fork, payloadId);
           const {executionPayload, blobsBundle} = engineRes;
+          shouldOverrideBuilder = engineRes.shouldOverrideBuilder;
+
           (blockBody as allForks.ExecutionBlockBody).executionPayload = executionPayload;
           executionPayloadValue = engineRes.executionPayloadValue;
-          Object.assign(logMeta, {transactions: executionPayload.transactions.length});
+          Object.assign(logMeta, {transactions: executionPayload.transactions.length, shouldOverrideBuilder});
 
           const fetchedTime = Date.now() / 1000 - computeTimeAtSlot(this.config, blockSlot, this.genesisTime);
           this.metrics?.blockPayload.payloadFetchedTime.observe({prepType}, fetchedTime);
@@ -315,6 +270,7 @@ export async function produceBlockBody<T extends BlockType>(
             prepType,
             payloadId,
             fetchedTime,
+            executionHeadBlockHash: toHex(engineRes.executionPayload.blockHash),
           });
           if (executionPayload.transactions.length === 0) {
             this.metrics?.blockPayload.emptyPayloads.inc({prepType});
@@ -332,23 +288,10 @@ export async function produceBlockBody<T extends BlockType>(
 
             (blockBody as deneb.BeaconBlockBody).blobKzgCommitments = blobsBundle.commitments;
             const blockHash = toHex(executionPayload.blockHash);
+            const contents = {kzgProofs: blobsBundle.proofs, blobs: blobsBundle.blobs};
+            blobsResult = {type: BlobsResultType.produced, contents, blockHash};
 
-            const blobSidecars = Array.from({length: blobsBundle.blobs.length}, (_v, index) => {
-              const blob = blobsBundle.blobs[index];
-              const commitment = blobsBundle.commitments[index];
-              const proof = blobsBundle.proofs[index];
-              const blobSidecar = {
-                index,
-                blob,
-                kzgProof: proof,
-                kzgCommitment: commitment,
-              };
-              // Other fields will be injected after postState is calculated
-              return blobSidecar;
-            }) as deneb.BlobSidecars;
-            blobsResult = {type: BlobsResultType.produced, blobSidecars, blockHash};
-
-            Object.assign(logMeta, {blobs: blobSidecars.length});
+            Object.assign(logMeta, {blobs: blobsBundle.commitments.length});
           } else {
             blobsResult = {type: BlobsResultType.preDeneb};
           }
@@ -380,12 +323,10 @@ export async function produceBlockBody<T extends BlockType>(
     executionPayloadValue = BigInt(0);
   }
   endExecutionPayload?.({
-    step: "executionPayload",
+    step: BlockProductionStep.executionPayload,
   });
 
   if (ForkSeq[fork] >= ForkSeq.capella) {
-    // TODO: blsToExecutionChanges should be passed in the produceBlock call
-    (blockBody as capella.BeaconBlockBody).blsToExecutionChanges = blsToExecutionChanges;
     Object.assign(logMeta, {
       blsToExecutionChanges: blsToExecutionChanges.length,
     });
@@ -401,7 +342,7 @@ export async function produceBlockBody<T extends BlockType>(
   Object.assign(logMeta, {executionPayloadValue});
   this.logger.verbose("Produced beacon block body", logMeta);
 
-  return {body: blockBody as AssembledBodyType<T>, blobs: blobsResult, executionPayloadValue};
+  return {body: blockBody as AssembledBodyType<T>, blobs: blobsResult, executionPayloadValue, shouldOverrideBuilder};
 }
 
 /**
@@ -502,7 +443,7 @@ async function prepareExecutionPayloadHeader(
 ): Promise<{
   header: allForks.ExecutionPayloadHeader;
   executionPayloadValue: Wei;
-  blindedBlobsBundle?: deneb.BlindedBlobsBundle;
+  blobKzgCommitments?: deneb.BlobKzgCommitments;
 }> {
   if (!chain.executionBuilder) {
     throw Error("executionBuilder required");
@@ -627,4 +568,81 @@ function preparePayloadAttributes(
   return payloadAttributes;
 }
 
-/** process_sync_committee_contributions is implemented in syncCommitteeContribution.getSyncAggregate */
+export async function produceCommonBlockBody<T extends BlockType>(
+  this: BeaconChain,
+  blockType: T,
+  currentState: CachedBeaconStateAllForks,
+  {
+    randaoReveal,
+    graffiti,
+    slot,
+    parentSlot,
+    parentBlockRoot,
+  }: BlockAttributes & {
+    parentSlot: Slot;
+    parentBlockRoot: Root;
+  }
+): Promise<CommonBlockBody> {
+  const stepsMetrics =
+    blockType === BlockType.Full
+      ? this.metrics?.executionBlockProductionTimeSteps
+      : this.metrics?.builderBlockProductionTimeSteps;
+
+  const blockEpoch = computeEpochAtSlot(slot);
+  const fork = currentState.config.getForkName(slot);
+
+  // TODO:
+  // Iterate through the naive aggregation pool and ensure all the attestations from there
+  // are included in the operation pool.
+  // for (const attestation of db.attestationPool.getAll()) {
+  //   try {
+  //     opPool.insertAttestation(attestation);
+  //   } catch (e) {
+  //     // Don't stop block production if there's an error, just create a log.
+  //     logger.error("Attestation did not transfer to op pool", {}, e);
+  //   }
+  // }
+  const [attesterSlashings, proposerSlashings, voluntaryExits, blsToExecutionChanges] =
+    this.opPool.getSlashingsAndExits(currentState, blockType, this.metrics);
+
+  const endAttestations = stepsMetrics?.startTimer();
+  const attestations = this.aggregatedAttestationPool.getAttestationsForBlock(this.forkChoice, currentState);
+  endAttestations?.({
+    step: BlockProductionStep.attestations,
+  });
+
+  const endEth1DataAndDeposits = stepsMetrics?.startTimer();
+  const {eth1Data, deposits} = await this.eth1.getEth1DataAndDeposits(currentState);
+  endEth1DataAndDeposits?.({
+    step: BlockProductionStep.eth1DataAndDeposits,
+  });
+
+  const blockBody: Omit<CommonBlockBody, "blsToExecutionChanges" | "syncAggregate"> = {
+    randaoReveal,
+    graffiti,
+    eth1Data,
+    proposerSlashings,
+    attesterSlashings,
+    attestations,
+    deposits,
+    voluntaryExits,
+  };
+
+  if (ForkSeq[fork] >= ForkSeq.capella) {
+    (blockBody as CommonBlockBody).blsToExecutionChanges = blsToExecutionChanges;
+  }
+
+  const endSyncAggregate = stepsMetrics?.startTimer();
+  if (blockEpoch >= this.config.ALTAIR_FORK_EPOCH) {
+    const syncAggregate = this.syncContributionAndProofPool.getAggregate(parentSlot, parentBlockRoot);
+    this.metrics?.production.producedSyncAggregateParticipants.observe(
+      syncAggregate.syncCommitteeBits.getTrueBitIndexes().length
+    );
+    (blockBody as CommonBlockBody).syncAggregate = syncAggregate;
+  }
+  endSyncAggregate?.({
+    step: BlockProductionStep.syncAggregate,
+  });
+
+  return blockBody as CommonBlockBody;
+}

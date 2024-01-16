@@ -1,10 +1,10 @@
 import childProcess from "node:child_process";
+import {afterEach} from "vitest";
 import {retry} from "@lodestar/utils";
 import {Api, getClient} from "@lodestar/api/keymanager";
 import {config} from "@lodestar/config/default";
 import {ApiError} from "@lodestar/api";
 import {spawnCliCommand, gracefullyStopChildProcess} from "@lodestar/test-utils";
-import {TestContext} from "@lodestar/test-utils/mocha";
 import {getMockBeaconApiServer} from "./mockBeaconApiServer.js";
 import {expectDeepEqualsUnordered, findApiToken} from "./runUtils.js";
 
@@ -13,10 +13,8 @@ export async function startValidatorWithKeyManager(
   {
     dataDir,
     logPrefix,
-    testContext,
   }: {
     dataDir: string;
-    testContext?: TestContext;
     logPrefix?: string;
   }
 ): Promise<{
@@ -76,9 +74,7 @@ export async function startValidatorWithKeyManager(
     await gracefullyStopChildProcess(validatorProc, 3000);
   };
 
-  if (testContext) {
-    testContext.afterEach(stopValidator);
-  }
+  afterEach(stopValidator);
 
   return {
     validator: validatorProc,

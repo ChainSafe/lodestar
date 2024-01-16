@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {getTestdirPath} from "../../utils.js";
 import {writePeerId, readPeerId} from "../../../src/config/index.js";
@@ -11,6 +11,6 @@ describe("config / peerId", () => {
     writePeerId(peerIdFilepath, peerId);
     const peerIdRead = await readPeerId(peerIdFilepath);
 
-    expect(peerIdRead.toString()).to.equal(peerId.toString());
+    expect(peerIdRead.toString()).toBe(peerId.toString());
   });
 });
