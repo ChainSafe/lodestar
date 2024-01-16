@@ -295,7 +295,7 @@ export class ForkChoice implements IForkChoice {
       slotsPerEpoch: SLOTS_PER_EPOCH,
       committeePercent: this.config.REORG_PARENT_WEIGHT_THRESHOLD,
     });
-    const parentNode = this.protoArray.getNode(headBlock.blockRoot);
+    const parentNode = this.protoArray.getNode(parentBlock.blockRoot);
     // If parentNode is unavailable, give up reorg
     if (parentNode === undefined || parentNode.weight <= parentThreshold) {
       return headBlock;
@@ -1371,8 +1371,8 @@ export class ForkChoice implements IForkChoice {
 
     // No reorg if headBlock and parentBlock are not ffg competitive
     // https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_ffg_competitive
-    const {unrealizedJustifiedEpoch: headBlockCpEpoch, unrealizedFinalizedRoot: headBlockCpRoot} = headBlock;
-    const {unrealizedJustifiedEpoch: parentBlockCpEpoch, unrealizedFinalizedRoot: parentBlockCpRoot} = parentBlock;
+    const {unrealizedJustifiedEpoch: headBlockCpEpoch, unrealizedJustifiedRoot: headBlockCpRoot} = headBlock;
+    const {unrealizedJustifiedEpoch: parentBlockCpEpoch, unrealizedJustifiedRoot: parentBlockCpRoot} = parentBlock;
     const isFFGCompetitive = headBlockCpEpoch === parentBlockCpEpoch && headBlockCpRoot === parentBlockCpRoot;
     if (!isFFGCompetitive) {
       return headBlock;
@@ -1468,8 +1468,8 @@ function computeCommitteeFraction(
   const avgBalanceByIncrement = Math.floor(justifiedTotalActiveBalanceByIncrement / justifiedActiveValidators);
   const committeeSize = Math.floor(justifiedActiveValidators / config.slotsPerEpoch);
   const committeeWeight = committeeSize * avgBalanceByIncrement;
-  const proposerScore = Math.floor((committeeWeight * config.committeePercent) / 100);
-  return proposerScore;
+  const committeeFraction = Math.floor((committeeWeight * config.committeePercent) / 100);
+  return committeeFraction;
 }
 
 // Approximate https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/fork-choice.md#calculate_committee_fraction
