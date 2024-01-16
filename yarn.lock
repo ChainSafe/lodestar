@@ -636,10 +636,10 @@
   resolved "https://registry.yarnpkg.com/@chainsafe/is-ip/-/is-ip-2.0.2.tgz#7311e7403f11d8c5cfa48111f56fcecaac37c9f6"
   integrity sha512-ndGqEMG1W5WkGagaqOZHpPU172AGdxr+LD15sv3WIUvT5oCFUrG1Y0CW/v2Egwj4JXEvSibaIIIqImsm98y1nA==
 
-"@chainsafe/libp2p-gossipsub@^11.0.1":
-  version "11.0.1"
-  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-gossipsub/-/libp2p-gossipsub-11.0.1.tgz#ff804772b7626bf9fc32a27ccd3cbdda0a4f05a1"
-  integrity sha512-T2a+ubIDbWKAiPimOqUuMLJJjSQjXCavyVU9vTeCnlGq/nySwoMYH5xiUCJ+2SDNtMAJjrEn/nCp1cIBMb4xMg==
+"@chainsafe/libp2p-gossipsub@^11.1.0":
+  version "11.1.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-gossipsub/-/libp2p-gossipsub-11.1.0.tgz#e5ebd8dd08601845073f3b8c9601e047d7bdc279"
+  integrity sha512-6baEtpC9gu5D9bXv86zIdNIOekKgQPV3KRWvnsldtsKpiWtUv6K2mLsl3wsDi0nW/c3zxTAneaJMTLQoSXysJQ==
   dependencies:
     "@libp2p/crypto" "^3.0.1"
     "@libp2p/interface" "^1.0.1"
@@ -3711,12 +3711,30 @@
     "@vitest/utils" "1.1.0"
     chai "^4.3.10"
 
+"@vitest/expect@1.2.0":
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/@vitest/expect/-/expect-1.2.0.tgz#de93f5c32c2781c41415a8c3a6e48e1c023d6613"
+  integrity sha512-H+2bHzhyvgp32o7Pgj2h9RTHN0pgYaoi26Oo3mE+dCi1PAqV31kIIVfTbqMO3Bvshd5mIrJLc73EwSRrbol9Lw==
+  dependencies:
+    "@vitest/spy" "1.2.0"
+    "@vitest/utils" "1.2.0"
+    chai "^4.3.10"
+
 "@vitest/runner@1.1.0":
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/@vitest/runner/-/runner-1.1.0.tgz#b3bf60f4a78f4324ca09811dd0f87b721a96b534"
   integrity sha512-zdNLJ00pm5z/uhbWF6aeIJCGMSyTyWImy3Fcp9piRGvueERFlQFbUwCpzVce79OLm2UHk9iwaMSOaU9jVHgNVw==
   dependencies:
     "@vitest/utils" "1.1.0"
+    p-limit "^5.0.0"
+    pathe "^1.1.1"
+
+"@vitest/runner@1.2.0":
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/@vitest/runner/-/runner-1.2.0.tgz#84775f0f5c48620ff1943a45c19863355791c6d9"
+  integrity sha512-vaJkDoQaNUTroT70OhM0NPznP7H3WyRwt4LvGwCVYs/llLaqhoSLnlIhUClZpbF5RgAee29KRcNz0FEhYcgxqA==
+  dependencies:
+    "@vitest/utils" "1.2.0"
     p-limit "^5.0.0"
     pathe "^1.1.1"
 
@@ -3729,10 +3747,26 @@
     pathe "^1.1.1"
     pretty-format "^29.7.0"
 
+"@vitest/snapshot@1.2.0":
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/@vitest/snapshot/-/snapshot-1.2.0.tgz#2fcddb5c6e8a9d2fc9f18ea2f8fd39b1b6e691b4"
+  integrity sha512-P33EE7TrVgB3HDLllrjK/GG6WSnmUtWohbwcQqmm7TAk9AVHpdgf7M3F3qRHKm6vhr7x3eGIln7VH052Smo6Kw==
+  dependencies:
+    magic-string "^0.30.5"
+    pathe "^1.1.1"
+    pretty-format "^29.7.0"
+
 "@vitest/spy@1.1.0":
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/@vitest/spy/-/spy-1.1.0.tgz#7f40697e4fc217ac8c3cc89a865d1751b263f561"
   integrity sha512-sNOVSU/GE+7+P76qYo+VXdXhXffzWZcYIPQfmkiRxaNCSPiLANvQx5Mx6ZURJ/ndtEkUJEpvKLXqAYTKEY+lTg==
+  dependencies:
+    tinyspy "^2.2.0"
+
+"@vitest/spy@1.2.0":
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/@vitest/spy/-/spy-1.2.0.tgz#61104de4c19a3addefff021d884c9e20dc17ebcd"
+  integrity sha512-MNxSAfxUaCeowqyyGwC293yZgk7cECZU9wGb8N1pYQ0yOn/SIr8t0l9XnGRdQZvNV/ZHBYu6GO/W3tj5K3VN1Q==
   dependencies:
     tinyspy "^2.2.0"
 
@@ -3742,6 +3776,16 @@
   integrity sha512-z+s510fKmYz4Y41XhNs3vcuFTFhcij2YF7F8VQfMEYAAUfqQh0Zfg7+w9xdgFGhPf3tX3TicAe+8BDITk6ampQ==
   dependencies:
     diff-sequences "^29.6.3"
+    loupe "^2.3.7"
+    pretty-format "^29.7.0"
+
+"@vitest/utils@1.2.0":
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/@vitest/utils/-/utils-1.2.0.tgz#deb9bdc3d094bf47f93a592a6a0b3946aa575e7a"
+  integrity sha512-FyD5bpugsXlwVpTcGLDf3wSPYy8g541fQt14qtzo8mJ4LdEpDKZ9mQy2+qdJm2TZRpjY5JLXihXCgIxiRJgi5g==
+  dependencies:
+    diff-sequences "^29.6.3"
+    estree-walker "^3.0.3"
     loupe "^2.3.7"
     pretty-format "^29.7.0"
 
@@ -4052,6 +4096,11 @@ acorn-walk@^8.3.0:
   version "8.3.0"
   resolved "https://registry.yarnpkg.com/acorn-walk/-/acorn-walk-8.3.0.tgz#2097665af50fd0cf7a2dfccd2b9368964e66540f"
   integrity sha512-FS7hV565M5l1R08MXqo8odwMTB02C2UqzB17RVgu9EyuYFBqJZ3/ZY97sQD5FewVu1UyDFc1yztUDrAwT0EypA==
+
+acorn-walk@^8.3.1:
+  version "8.3.2"
+  resolved "https://registry.yarnpkg.com/acorn-walk/-/acorn-walk-8.3.2.tgz#7703af9415f1b6db9315d6895503862e231d34aa"
+  integrity sha512-cjkyv4OtNCIeqhHrfS81QWXoCBPExR/J62oyEqepVw8WaQeSqpW2uhuLPh1m9eWhDuOo/jUXVTlifvesOWp/4A==
 
 acorn@^8.10.0, acorn@^8.9.0:
   version "8.10.0"
@@ -15006,6 +15055,17 @@ vite-node@1.1.0:
     picocolors "^1.0.0"
     vite "^5.0.0"
 
+vite-node@1.2.0:
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/vite-node/-/vite-node-1.2.0.tgz#9a359804469203a54ac49daad3065f2fd0bfb9c3"
+  integrity sha512-ETnQTHeAbbOxl7/pyBck9oAPZZZo+kYnFt1uQDD+hPReOc+wCjXw4r4jHriBRuVDB5isHmPXxrfc1yJnfBERqg==
+  dependencies:
+    cac "^6.7.14"
+    debug "^4.3.4"
+    pathe "^1.1.1"
+    picocolors "^1.0.0"
+    vite "^5.0.0"
+
 vite-plugin-node-polyfills@^0.18.0:
   version "0.18.0"
   resolved "https://registry.yarnpkg.com/vite-plugin-node-polyfills/-/vite-plugin-node-polyfills-0.18.0.tgz#2ad147960f7a35dbbb1c9f9c1ae928bd0f438c1e"
@@ -15038,6 +15098,33 @@ vitest-when@^0.3.0:
   version "0.3.0"
   resolved "https://registry.yarnpkg.com/vitest-when/-/vitest-when-0.3.0.tgz#663d4274f1e7302bd24ec00dda8269d20b2eff04"
   integrity sha512-wYfmzd+GkvdNNhbeb/40PnKpetUP5I7qxvdbu1OAXRXaLrnLfSrJTa/dMIbqqrc8SA0vhonpw5p0RHDXwhDM1Q==
+
+vitest@^1.0.2:
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/vitest/-/vitest-1.2.0.tgz#2ddff4a32ed992339655f243525c0e187b5af6d9"
+  integrity sha512-Ixs5m7BjqvLHXcibkzKRQUvD/XLw0E3rvqaCMlrm/0LMsA0309ZqYvTlPzkhh81VlEyVZXFlwWnkhb6/UMtcaQ==
+  dependencies:
+    "@vitest/expect" "1.2.0"
+    "@vitest/runner" "1.2.0"
+    "@vitest/snapshot" "1.2.0"
+    "@vitest/spy" "1.2.0"
+    "@vitest/utils" "1.2.0"
+    acorn-walk "^8.3.1"
+    cac "^6.7.14"
+    chai "^4.3.10"
+    debug "^4.3.4"
+    execa "^8.0.1"
+    local-pkg "^0.5.0"
+    magic-string "^0.30.5"
+    pathe "^1.1.1"
+    picocolors "^1.0.0"
+    std-env "^3.5.0"
+    strip-literal "^1.3.0"
+    tinybench "^2.5.1"
+    tinypool "^0.8.1"
+    vite "^5.0.0"
+    vite-node "1.2.0"
+    why-is-node-running "^2.2.2"
 
 vitest@^1.1.0:
   version "1.1.0"
