@@ -10,9 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://chainsafe.github.io/lodestar/validator-management/validator-management/">
+        <link rel="canonical" href="https://chainsafe.github.io/lodestar/validator-management/vc-configuration/">
       
       
+        <link rel="prev" href="../../beacon-management/syncing/">
+      
+      
+        <link rel="next" href="../validator-cli/">
       
       
       <link rel="icon" href="../../assets/round-icon.ico">
@@ -20,7 +24,7 @@
     
     
       
-        <title>Validator management - Lodestar Documentation</title>
+        <title>Configuration - Lodestar Documentation</title>
       
     
     
@@ -74,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#validator-management" class="md-skip">
+        <a href="#validator-configuration" class="md-skip">
           Skip to content
         </a>
       
@@ -109,7 +113,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Validator management
+              Configuration
             
           </span>
         </div>
@@ -479,7 +483,7 @@
         
   
   <span class="md-ellipsis">
-    Configuration
+    CLI Reference
   </span>
   
 
@@ -563,19 +567,21 @@
       
   
   
+    
   
   
+  
     
     
     
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" checked>
         
           
           <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
@@ -589,12 +595,196 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_7">
             <span class="md-nav__icon md-icon"></span>
             Validator
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Configuration
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Configuration
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#wallet-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Wallet configuration
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Wallet configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#create-a-wallet" class="md-nav__link">
+    <span class="md-ellipsis">
+      Create a wallet
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#setup-your-validator" class="md-nav__link">
+    <span class="md-ellipsis">
+      Setup your validator
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Setup your validator">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#import-a-validator-keystore-from-your-wallet-to-lodestar" class="md-nav__link">
+    <span class="md-ellipsis">
+      Import a validator keystore from your wallet to Lodestar
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Import a validator keystore from your wallet to Lodestar">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#option-1-import-keys-to-lodestars-keystores-folder" class="md-nav__link">
+    <span class="md-ellipsis">
+      Option 1: Import Keys To Lodestar's Keystores Folder
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-2-import-keys-when-starting-the-validator" class="md-nav__link">
+    <span class="md-ellipsis">
+      Option 2: Import Keys When Starting the Validator
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configuring-the-fee-recipient-address" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuring the fee recipient address
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configure-your-builder-selection-andor-builder-boost-factor" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configure your builder selection and/or builder boost factor
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configure your builder selection and/or builder boost factor">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#calculating-builder-boost-factor-with-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Calculating builder boost factor with examples
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#submit-a-validator-deposit" class="md-nav__link">
+    <span class="md-ellipsis">
+      Submit a validator deposit
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#run-the-validator" class="md-nav__link">
+    <span class="md-ellipsis">
+      Run the validator
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
             
               
                 
@@ -607,7 +797,7 @@
         
   
   <span class="md-ellipsis">
-    Configuration
+    CLI Reference
   </span>
   
 
@@ -672,7 +862,7 @@
         
   
   <span class="md-ellipsis">
-    Configuration
+    CLI Reference
   </span>
   
 
@@ -758,7 +948,7 @@
         
   
   <span class="md-ellipsis">
-    Light Client Configuration
+    Light Client CLI Reference
   </span>
   
 
@@ -1350,6 +1540,30 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#configure-your-builder-selection-andor-builder-boost-factor" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configure your builder selection and/or builder boost factor
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configure your builder selection and/or builder boost factor">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#calculating-builder-boost-factor-with-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Calculating builder boost factor with examples
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#submit-a-validator-deposit" class="md-nav__link">
     <span class="md-ellipsis">
       Submit a validator deposit
@@ -1390,11 +1604,11 @@
   
 
 
-<h1 id="validator-management">Validator management<a class="headerlink" href="#validator-management" title="Permanent link">&para;</a></h1>
-<p>The following instructions are required for stakers utilizing Lodestar.</p>
+<h1 id="validator-configuration">Validator Configuration<a class="headerlink" href="#validator-configuration" title="Permanent link">&para;</a></h1>
+<p>The following instructions are for stakers utilizing the Lodestar validator client.</p>
 <div class="toc">
 <ul>
-<li><a href="#validator-management">Validator management</a><ul>
+<li><a href="#validator-configuration">Validator Configuration</a><ul>
 <li><a href="#wallet-configuration">Wallet configuration</a><ul>
 <li><a href="#create-a-wallet">Create a wallet</a></li>
 </ul>
@@ -1406,6 +1620,10 @@
 </ul>
 </li>
 <li><a href="#configuring-the-fee-recipient-address">Configuring the fee recipient address</a></li>
+<li><a href="#configure-your-builder-selection-andor-builder-boost-factor">Configure your builder selection and/or builder boost factor</a><ul>
+<li><a href="#calculating-builder-boost-factor-with-examples">Calculating builder boost factor with examples</a></li>
+</ul>
+</li>
 <li><a href="#submit-a-validator-deposit">Submit a validator deposit</a></li>
 </ul>
 </li>
@@ -1425,7 +1643,7 @@
 <!-- prettier-ignore-end -->
 
 <h3 id="create-a-wallet">Create a wallet<a class="headerlink" href="#create-a-wallet" title="Permanent link">&para;</a></h3>
-<p>Lodestar is deprecating its functionality to create wallets.</p>
+<p>Lodestar has removed its functionality to create wallets.</p>
 <p>To create a wallet, we recommend using the official <a href="https://github.com/ethereum/staking-deposit-cli/releases"><code>staking-deposit-cli</code></a> from the Ethereum Foundation for users comfortable with command line interfaces.</p>
 <p>Alternatively, for a graphical user interface, you can use the <a href="https://wagyu.gg/">Stakehouse Wagyu Key Generator</a> developed by members of the EthStaker community.</p>
 <!-- prettier-ignore-start -->
@@ -1474,10 +1692,27 @@
 <p>Post-Merge Ethereum requires validators to set a <strong>Fee Recipient</strong> which allows you to receive priority fees when proposing blocks. If you do not set this address, your priority fees will be sent to the <a href="https://etherscan.io/address/0x0000000000000000000000000000000000000000">burn address</a>.</p>
 <p>Configure your validator client's fee recipient address by using the <code>--suggestedFeeRecipient</code> flag. Ensure you specify an Ethereum address you control. An example of a fee recipient set with the address <code>0xB7576e9d314Df41EC5506494293Afb1bd5D3f65d</code> would add the following flag to their configuration: <code>--suggestedFeeRecipient 0xB7576e9d314Df41EC5506494293Afb1bd5D3f65d</code>.</p>
 <p>You may choose to use the <code>--strictFeeRecipientCheck</code> flag to enable a strict check of the fee recipient address with the one returned by the beacon node for added reassurance.</p>
-<h3 id="submit-a-validator-deposit">Submit a validator deposit<a class="headerlink" href="#submit-a-validator-deposit" title="Permanent link">&para;</a></h3>
-<p>Please use the official tools to perform your deposits</p>
+<h3 id="configure-your-builder-selection-andor-builder-boost-factor">Configure your builder selection and/or builder boost factor<a class="headerlink" href="#configure-your-builder-selection-andor-builder-boost-factor" title="Permanent link">&para;</a></h3>
+<p>If you are running a beacon node with connected builder relays, you may use these validator configurations to signal which block (builder vs. local execution) the beacon node should produce.</p>
+<p>With produceBlockV3 (enabled automatically after the Deneb hard fork), the <code>--builder.boostFactor</code> is a percentage multiplier the block producing beacon node must apply to boost (&gt;100) or dampen (&lt;100) builder block value for selection against execution block. The multiplier is ignored if <code>--builder.selection</code> is set to anything other than <code>maxprofit</code>. Even though this is set on the validator client, the calculation is requested and applied on the beacon node itself. For more information, see the <a href="https://ethereum.github.io/beacon-APIs/#/ValidatorRequiredApi/produceBlockV3">produceBlockV3 Beacon API</a>.</p>
+<p>With Lodestar's <code>--builder.selection</code> validator options, you can select:</p>
 <ul>
-<li><code>staking-deposit-cli</code>: <a href="https://github.com/ethereum/staking-deposit-cli">https://github.com/ethereum/staking-deposit-cli</a></li>
+<li><code>maxprofit</code>: Default setting for Lodestar set at <code>--builder.boostFactor=100</code>. This default setting will always choose the more profitable block. Using this option, you may customize your <code>--builder.boostFactor</code> to your preference. Examples of its usage are below.</li>
+<li><code>executiononly</code>: Beacon node will be requested to produce local execution block even if builder relays are configured. This option will always select the local execution block and will error if it couldn't produce one.</li>
+<li><code>builderalways</code>: An alias of <code>--builder.boostFactor=18446744073709551615</code> (2**64 - 1), which will select the builder block, unless the builder block fails to produce. The builder block may fail to produce if it's not available, not timely or there is an indication of censorship via <code>shouldOverrideBuilder</code> from the execution payload response.</li>
+<li><code>builderonly</code>: Generally used for distributed validators (DVs). No execution block production will be triggered. Therefore, if a builder block is not produced, the API will fail and <em>no block will be produced</em>.</li>
+</ul>
+<h4 id="calculating-builder-boost-factor-with-examples">Calculating builder boost factor with examples<a class="headerlink" href="#calculating-builder-boost-factor-with-examples" title="Permanent link">&para;</a></h4>
+<p>To calculate the builder boost factor setting, you need to know what percentage you will accept a builder block for against a local execution block using the following formula: <code>100*100/(100+percentage)</code>.</p>
+<p>Example 1: I will only accept a builder block with 25% more value than the local execution block.</p>
+<div class="highlight"><pre><span></span><code>10000/(100+25) = 80
+</code></pre></div>
+<p>Therefore, <code>--builder.boostFactor=80</code>.</p>
+<p>Example 2: Setting a <code>--builder.boostFactor=0</code> will always prefer the local execution block, but will produce an available builder block if the local execution block fails.</p>
+<p>Example 3: Setting a <code>--builder.boostFactor=100</code> is the same as signaling <code>--builder.selection maxprofit</code> where the validator will always select the most profitable block between the local execution engine and the builder block from the relay.</p>
+<h3 id="submit-a-validator-deposit">Submit a validator deposit<a class="headerlink" href="#submit-a-validator-deposit" title="Permanent link">&para;</a></h3>
+<p>Please use the official Ethereum Launchpad to perform your deposits</p>
+<ul>
 <li>Ethereum Foundation launchpad: <a href="https://launchpad.ethereum.org">https://launchpad.ethereum.org</a></li>
 </ul>
 <h2 id="run-the-validator">Run the validator<a class="headerlink" href="#run-the-validator" title="Permanent link">&para;</a></h2>
@@ -1485,21 +1720,21 @@
 <div class="highlight"><pre><span></span><code>./lodestar<span class="w"> </span>validator<span class="w"> </span>--network<span class="w"> </span><span class="nv">$NETWORK_NAME</span>
 </code></pre></div>
 <p>You should see confirmation that modules have started.</p>
-<div class="highlight"><pre><span></span><code>Nov-29<span class="w"> </span><span class="m">10</span>:47:13.647<span class="o">[]</span><span class="w">                 </span>info:<span class="w"> </span>Lodestar<span class="w"> </span><span class="nv">network</span><span class="o">=</span>sepolia,<span class="w"> </span><span class="nv">version</span><span class="o">=</span>v1.2.2/f093b46,<span class="w"> </span><span class="nv">commit</span><span class="o">=</span>f093b468ec3ab0dbbe8e2d2c8175f52ad88aa35f
-Nov-29<span class="w"> </span><span class="m">10</span>:47:13.649<span class="o">[]</span><span class="w">                 </span>info:<span class="w"> </span>Connecting<span class="w"> </span>to<span class="w"> </span>LevelDB<span class="w"> </span>database<span class="w"> </span><span class="nv">path</span><span class="o">=</span>/home/user/.local/share/lodestar/sepolia/validator-db
-Nov-29<span class="w"> </span><span class="m">10</span>:47:51.732<span class="o">[]</span><span class="w">                 </span>info:<span class="w"> </span><span class="m">3</span><span class="w"> </span><span class="nb">local</span><span class="w"> </span>keystores
-Nov-29<span class="w"> </span><span class="m">10</span>:47:51.735<span class="o">[]</span><span class="w">                 </span>info:<span class="w"> </span>0x800f6be579b31ea950a50be65f7de8f678b23b7466579c01ac26ebf9c19599fb2b446da40ad4fc92c6109fcd6793303f
-Nov-29<span class="w"> </span><span class="m">10</span>:47:51.735<span class="o">[]</span><span class="w">                 </span>info:<span class="w"> </span>0x81337ebe90d6942d8b61922ea880c4d28ebc745ddc10a1acc85b745a15c6c8754af1a73b1b3483b6a5024b783510b35c
-Nov-29<span class="w"> </span><span class="m">10</span>:47:51.757<span class="o">[]</span><span class="w">                 </span>info:<span class="w"> </span>0xb95fc0ec39596deee2c4363f57bb4786f5bb8dfb345c1e5b14e2927be482615971d0d81f9a88b3389fac7079b3cb2f46
-Nov-29<span class="w"> </span><span class="m">10</span>:47:51.776<span class="o">[]</span><span class="w">                 </span>info:<span class="w"> </span>Genesis<span class="w"> </span>fetched<span class="w"> </span>from<span class="w"> </span>the<span class="w"> </span>beacon<span class="w"> </span>node
-Nov-29<span class="w"> </span><span class="m">10</span>:47:51.781<span class="o">[]</span><span class="w">                 </span>info:<span class="w"> </span>Verified<span class="w"> </span>connected<span class="w"> </span>beacon<span class="w"> </span>node<span class="w"> </span>and<span class="w"> </span>validator<span class="w"> </span>have<span class="w"> </span>same<span class="w"> </span>the<span class="w"> </span>config
-Nov-29<span class="w"> </span><span class="m">10</span>:47:51.837<span class="o">[]</span><span class="w">                 </span>info:<span class="w"> </span>Verified<span class="w"> </span>connected<span class="w"> </span>beacon<span class="w"> </span>node<span class="w"> </span>and<span class="w"> </span>validator<span class="w"> </span>have<span class="w"> </span>the<span class="w"> </span>same<span class="w"> </span>genesisValidatorRoot
-Nov-29<span class="w"> </span><span class="m">10</span>:47:51.914<span class="o">[]</span><span class="w">                 </span>info:<span class="w"> </span>Discovered<span class="w"> </span>new<span class="w"> </span>validators<span class="w"> </span><span class="nv">count</span><span class="o">=</span><span class="m">100</span>
-Nov-29<span class="w"> </span><span class="m">10</span>:48:00.197<span class="o">[]</span><span class="w">                 </span>info:<span class="w"> </span>Published<span class="w"> </span>SyncCommitteeMessage<span class="w"> </span><span class="nv">slot</span><span class="o">=</span><span class="m">1165140</span>,<span class="w"> </span><span class="nv">count</span><span class="o">=</span><span class="m">27</span>
-Nov-29<span class="w"> </span><span class="m">10</span>:48:02.296<span class="o">[]</span><span class="w">                 </span>info:<span class="w"> </span>Published<span class="w"> </span>attestations<span class="w"> </span><span class="nv">slot</span><span class="o">=</span><span class="m">1165140</span>,<span class="w"> </span><span class="nv">count</span><span class="o">=</span><span class="m">6</span>
-Nov-29<span class="w"> </span><span class="m">10</span>:48:08.122<span class="o">[]</span><span class="w">                 </span>info:<span class="w"> </span>Published<span class="w"> </span>aggregateAndProofs<span class="w"> </span><span class="nv">slot</span><span class="o">=</span><span class="m">1165140</span>,<span class="w"> </span><span class="nv">index</span><span class="o">=</span><span class="m">0</span>,<span class="w"> </span><span class="nv">count</span><span class="o">=</span><span class="m">2</span>
-Nov-29<span class="w"> </span><span class="m">10</span>:48:12.102<span class="o">[]</span><span class="w">                 </span>info:<span class="w"> </span>Published<span class="w"> </span>SyncCommitteeMessage<span class="w"> </span><span class="nv">slot</span><span class="o">=</span><span class="m">1165141</span>,<span class="w"> </span><span class="nv">count</span><span class="o">=</span><span class="m">27</span>
-Nov-29<span class="w"> </span><span class="m">10</span>:48:14.236<span class="o">[]</span><span class="w">                 </span>info:<span class="w"> </span>Published<span class="w"> </span>attestations<span class="w"> </span><span class="nv">slot</span><span class="o">=</span><span class="m">1165141</span>,<span class="w"> </span><span class="nv">count</span><span class="o">=</span><span class="m">4</span>
+<div class="highlight"><pre><span></span><code>Nov-29 10:47:13.647[]                 info: Lodestar network=sepolia, version=v1.2.2/f093b46, commit=f093b468ec3ab0dbbe8e2d2c8175f52ad88aa35f
+Nov-29 10:47:13.649[]                 info: Connecting to LevelDB database path=/home/user/.local/share/lodestar/sepolia/validator-db
+Nov-29 10:47:51.732[]                 info: 3 local keystores
+Nov-29 10:47:51.735[]                 info: 0x800f6be579b31ea950a50be65f7de8f678b23b7466579c01ac26ebf9c19599fb2b446da40ad4fc92c6109fcd6793303f
+Nov-29 10:47:51.735[]                 info: 0x81337ebe90d6942d8b61922ea880c4d28ebc745ddc10a1acc85b745a15c6c8754af1a73b1b3483b6a5024b783510b35c
+Nov-29 10:47:51.757[]                 info: 0xb95fc0ec39596deee2c4363f57bb4786f5bb8dfb345c1e5b14e2927be482615971d0d81f9a88b3389fac7079b3cb2f46
+Nov-29 10:47:51.776[]                 info: Genesis fetched from the beacon node
+Nov-29 10:47:51.781[]                 info: Verified connected beacon node and validator have same the config
+Nov-29 10:47:51.837[]                 info: Verified connected beacon node and validator have the same genesisValidatorRoot
+Nov-29 10:47:51.914[]                 info: Discovered new validators count=100
+Nov-29 10:48:00.197[]                 info: Published SyncCommitteeMessage slot=1165140, count=27
+Nov-29 10:48:02.296[]                 info: Published attestations slot=1165140, count=6
+Nov-29 10:48:08.122[]                 info: Published aggregateAndProofs slot=1165140, index=0, count=2
+Nov-29 10:48:12.102[]                 info: Published SyncCommitteeMessage slot=1165141, count=27
+Nov-29 10:48:14.236[]                 info: Published attestations slot=1165141, count=4
 </code></pre></div>
 
 

@@ -485,7 +485,7 @@
         
   
   <span class="md-ellipsis">
-    Configuration
+    CLI Reference
   </span>
   
 
@@ -736,11 +736,32 @@
   
   
     <li class="md-nav__item">
-      <a href="../../validator-management/validator-cli/" class="md-nav__link">
+      <a href="../../validator-management/vc-configuration/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
     Configuration
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../validator-management/validator-cli/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    CLI Reference
   </span>
   
 
@@ -805,7 +826,7 @@
         
   
   <span class="md-ellipsis">
-    Configuration
+    CLI Reference
   </span>
   
 
@@ -891,7 +912,7 @@
         
   
   <span class="md-ellipsis">
-    Light Client Configuration
+    Light Client CLI Reference
   </span>
   
 
@@ -1512,7 +1533,7 @@
 
 
 <h1 id="networking">Networking<a class="headerlink" href="#networking" title="Permanent link">&para;</a></h1>
-<p>Starting up Lodestar will automatically connect it to peers on the network. Peers are found through the discv5 protocol and once peers are established communications happen via gossipsub over libp2p. While not necessary, having a basic understanding of how the various protocols and transport work will help with debugging and troubleshooting as some of the more common challenges come up with <a href="#firewall-management">firewalls</a> and <a href="#nat-traversal">NAT traversal</a>.</p>
+<p>Lodestar will automatically connect to peers on the network. Peers are found through the discv5 protocol and once peers are established communications happen via gossipsub over libp2p. While not necessary, having a basic understanding of how the various protocols and transports work will help with debugging and troubleshooting as some of the more common challenges come up with <a href="#firewall-management">firewalls</a> and <a href="#nat-traversal">NAT traversal</a>.</p>
 <h2 id="networking-flags">Networking Flags<a class="headerlink" href="#networking-flags" title="Permanent link">&para;</a></h2>
 <p>Some of the important Lodestar flags related to networking are:</p>
 <ul>
@@ -1544,6 +1565,11 @@
 <p>Ethereum Node Records (ENRs) are a standardized format utilized for peer discovery - see <a href="https://eips.ethereum.org/EIPS/eip-778">EIP-778</a> for the specification. An ENR consists of a set of key-value pairs. These pairs include crucial information such as the node's ID, IP address, the port on which it's listening, and the protocols it supports. This information helps other nodes in the network locate and connect to the node.</p>
 <p>The primary purpose of ENRs is to facilitate node discovery and connectivity in the Ethereum network. Nodes use ENRs to announce their presence and capabilities to other nodes, making it easier to establish and maintain a robust, interconnected network.</p>
 <p>Note that bootnodes are announced via ENR.</p>
+<p>Lodestar prints out its own ENR on startup, the logs will show something similar to the following</p>
+<div class="highlight"><pre><span></span><code>info: discv5 worker started peerId=16Uiu...t9LQ3, initialENR=enr:-Iu4QGE...WRwgiMo, bindAddr4=/ip4/0.0.0.0/udp/9000
+</code></pre></div>
+<p>Alternatively, the ENR can also be retrieved from the beacon node API by querying the <a href="https://ethereum.github.io/beacon-APIs/#/Node/getNetworkIdentity">getNetworkIdentity</a> endpoint.</p>
+<p><a href="https://enr-viewer.com/">ENR Viewer</a> provides a simple and convenient option to decode and inspect ENRs.</p>
 <h2 id="peer-communication-gossipsub-and-reqresp">Peer Communication (gossipsub and ReqResp)<a class="headerlink" href="#peer-communication-gossipsub-and-reqresp" title="Permanent link">&para;</a></h2>
 <p>Gossipsub and ReqResp are the two mechanisms that beacon nodes use to exchange chain data. Gossipsub is used disseminate the most recent relevant data proactively throughout the network. ReqResp is used to directly ask specific peers for specific information (eg: during syncing).</p>
 <h3 id="gossipsub">Gossipsub<a class="headerlink" href="#gossipsub" title="Permanent link">&para;</a></h3>
@@ -1557,22 +1583,20 @@
 <p>Libp2p operates at the lower levels of the OSI model, particularly at the Transport and Network layers. Libp2p supports both TCP and UDP protocols for establishing connections and data transmission. Combined with libp2p's modular design it can integrate with various networking technologies to facilitating both routing and addressing.</p>
 <h2 id="firewall-management">Firewall Management<a class="headerlink" href="#firewall-management" title="Permanent link">&para;</a></h2>
 <p>If your setup is behind a firewall there are a few ports that will need to be opened to allow for P2P discovery and communication. There are also some ports that need to be protected to prevent unwanted access or DDOS attacks on your node.</p>
-<p>Ports that should be opened:</p>
+<p>Ports that must be opened:</p>
 <ul>
-<li>30303/TCP+UDP - Execution layer p2p communication port</li>
-<li>9000/TCP+UDP - Beacon Node P2P communication port</li>
-<li>9090/TCP - Lodestar IPv6 P2P communication port</li>
-<li>13000/TCP - Prysm P2P communication port</li>
-<li>12000/UDP - Prysm P2P communication port</li>
+<li>30303/TCP+UDP - Execution layer P2P communication port</li>
+<li>9000/TCP+UDP - Beacon node IPv4 P2P communication port</li>
+<li>9090/TCP+UDP - Beacon node IPv6 P2P communication port</li>
 </ul>
-<p>Ports that should be inbound protected:</p>
+<p>Ports that must be protected:</p>
 <ul>
-<li>9596/TCP - Lodestar Beacon-Node JSON RPC api calls</li>
-<li>5062/TCP - Lodestar validator key manager api calls</li>
-<li>18550/TCP - Lodestar MEV Boost/Builder port</li>
-<li>8008/TCP - Lodestar Metrics</li>
-<li>5064/TCP - Validator Metrics</li>
-<li>8545/TCP - Execution client JSON RPC port api calls</li>
+<li>9596/TCP - Beacon node REST API port</li>
+<li>5062/TCP - Validator key manager API port</li>
+<li>18550/TCP - MEV-Boost/Builder port</li>
+<li>8008/TCP - Beacon node metrics port</li>
+<li>5064/TCP - Validator metrics port</li>
+<li>8545/TCP - Execution client JSON RPC port</li>
 <li>8551/TCP - Execution engine port for Lodestar to communicate with the execution client</li>
 </ul>
 <h2 id="nat-traversal">NAT Traversal<a class="headerlink" href="#nat-traversal" title="Permanent link">&para;</a></h2>
