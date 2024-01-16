@@ -21,14 +21,24 @@ export async function* arrToSource<T>(arr: T[]): AsyncGenerator<T> {
  * Wrapper for type-safety to ensure and array of Buffers is equal with a diff in hex
  */
 export function expectEqualByteChunks(chunks: Uint8Array[], expectedChunks: Uint8Array[], message?: string): void {
-  expect(chunks.map(toHexString).join("").replace(/0x/g, "")).toEqualWithMessage(
-    expectedChunks.map(toHexString).join("").replace(/0x/g, ""),
-    message
-  );
+  if (message) {
+    expect(chunks.map(toHexString).join("").replace(/0x/g, "")).toEqualWithMessage(
+      expectedChunks.map(toHexString).join("").replace(/0x/g, ""),
+      message
+    );
+  } else {
+    expect(chunks.map(toHexString).join("").replace(/0x/g, "")).toEqual(
+      expectedChunks.map(toHexString).join("").replace(/0x/g, "")
+    );
+  }
 }
 
 export function expectInEqualByteChunks(chunks: Uint8Array[], expectedChunks: Uint8Array[], message?: string): void {
-  expect(chunks.map(toHexString)).not.toEqualWithMessage(expectedChunks.map(toHexString), message);
+  if (message) {
+    expect(chunks.map(toHexString)).not.toEqualWithMessage(expectedChunks.map(toHexString), message);
+  } else {
+    expect(chunks.map(toHexString)).not.toEqual(expectedChunks.map(toHexString));
+  }
 }
 
 /**
