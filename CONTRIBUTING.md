@@ -241,7 +241,7 @@ If you run into build issues due to circular dependencies, branch switching or o
 yarn clean && yarn clean:nm && yarn && yarn build
 ```
 
-We also use a spelling [wordlist](https://github.com/ChainSafe/lodestar/blob/unstable/.wordlist.txt) as part of our documentation checks. If using unrecognized words or abbreviations, please extend the wordlist to pass checks. Make sure the list is sorted with `./scripts/wordlist_sort.sh`.
+We also use a spelling [wordlist](https://github.com/ChainSafe/lodestar/blob/unstable/.wordlist.txt) as part of our documentation checks. If using unrecognized words or abbreviations, please extend the wordlist to pass checks. Make sure the list is sorted with `./scripts/wordlist_sort.sh` and checked with `./scripts/wordlist_sort_check.sh` for sorting and duplicates.
 
 ## Label Guide
 
