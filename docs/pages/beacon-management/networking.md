@@ -1,6 +1,6 @@
 # Networking
 
-Starting up Lodestar will automatically connect it to peers on the network. Peers are found through the discv5 protocol and once peers are established communications happen via gossipsub over libp2p. While not necessary, having a basic understanding of how the various protocols and transport work will help with debugging and troubleshooting as some of the more common challenges come up with [firewalls](#firewall-management) and [NAT traversal](#nat-traversal).
+Lodestar will automatically connect to peers on the network. Peers are found through the discv5 protocol and once peers are established communications happen via gossipsub over libp2p. While not necessary, having a basic understanding of how the various protocols and transports work will help with debugging and troubleshooting as some of the more common challenges come up with [firewalls](#firewall-management) and [NAT traversal](#nat-traversal).
 
 ## Networking Flags
 
@@ -42,6 +42,16 @@ The primary purpose of ENRs is to facilitate node discovery and connectivity in 
 
 Note that bootnodes are announced via ENR.
 
+Lodestar prints out its own ENR on startup, the logs will show something similar to the following
+
+```
+info: discv5 worker started peerId=16Uiu...t9LQ3, initialENR=enr:-Iu4QGE...WRwgiMo, bindAddr4=/ip4/0.0.0.0/udp/9000
+```
+
+Alternatively, the ENR can also be retrieved from the beacon node API by querying the [getNetworkIdentity](https://ethereum.github.io/beacon-APIs/#/Node/getNetworkIdentity) endpoint.
+
+[ENR Viewer](https://enr-viewer.com/) provides a simple and convenient option to decode and inspect ENRs.
+
 ## Peer Communication (gossipsub and ReqResp)
 
 Gossipsub and ReqResp are the two mechanisms that beacon nodes use to exchange chain data. Gossipsub is used disseminate the most recent relevant data proactively throughout the network. ReqResp is used to directly ask specific peers for specific information (eg: during syncing).
@@ -68,22 +78,20 @@ Libp2p operates at the lower levels of the OSI model, particularly at the Transp
 
 If your setup is behind a firewall there are a few ports that will need to be opened to allow for P2P discovery and communication. There are also some ports that need to be protected to prevent unwanted access or DDOS attacks on your node.
 
-Ports that should be opened:
+Ports that must be opened:
 
-- 30303/TCP+UDP - Execution layer p2p communication port
-- 9000/TCP+UDP - Beacon Node P2P communication port
-- 9090/TCP - Lodestar IPv6 P2P communication port
-- 13000/TCP - Prysm P2P communication port
-- 12000/UDP - Prysm P2P communication port
+- 30303/TCP+UDP - Execution layer P2P communication port
+- 9000/TCP+UDP - Beacon node IPv4 P2P communication port
+- 9090/TCP+UDP - Beacon node IPv6 P2P communication port
 
-Ports that should be inbound protected:
+Ports that must be protected:
 
-- 9596/TCP - Lodestar Beacon-Node JSON RPC api calls
-- 5062/TCP - Lodestar validator key manager api calls
-- 18550/TCP - Lodestar MEV Boost/Builder port
-- 8008/TCP - Lodestar Metrics
-- 5064/TCP - Validator Metrics
-- 8545/TCP - Execution client JSON RPC port api calls
+- 9596/TCP - Beacon node REST API port
+- 5062/TCP - Validator key manager API port
+- 18550/TCP - MEV-Boost/Builder port
+- 8008/TCP - Beacon node metrics port
+- 5064/TCP - Validator metrics port
+- 8545/TCP - Execution client JSON RPC port
 - 8551/TCP - Execution engine port for Lodestar to communicate with the execution client
 
 ## NAT Traversal

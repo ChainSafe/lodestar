@@ -1,5 +1,5 @@
 import path from "node:path";
-import {expect} from "chai";
+import {expect} from "vitest";
 import {ProofType, SingleProof, Tree} from "@chainsafe/persistent-merkle-tree";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";

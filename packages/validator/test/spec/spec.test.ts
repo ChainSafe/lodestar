@@ -1,5 +1,5 @@
 import path from "node:path";
-import {expect} from "chai";
+import {describe, it, beforeAll, beforeEach, afterAll, expect} from "vitest";
 import {rimraf} from "rimraf";
 import {fromHexString} from "@chainsafe/ssz";
 import {LevelDbController} from "@lodestar/db";
@@ -22,12 +22,12 @@ describe("slashing-protection-interchange-tests", () => {
   let db: LevelDbController;
   let slashingProtection: SlashingProtection;
 
-  before(async () => {
+  beforeAll(async () => {
     db = await LevelDbController.create({name: dbLocation}, {logger: testLogger()});
     slashingProtection = new SlashingProtection(db);
   });
 
-  after(async () => {
+  afterAll(async () => {
     await db.close();
     rimraf.sync(dbLocation);
   });
@@ -35,29 +35,31 @@ describe("slashing-protection-interchange-tests", () => {
   for (const testCase of testCases) {
     describe(testCase.name, () => {
       for (const step of testCase.steps) {
-        beforeEach(async () => {
-          await db.clear();
-        });
+        // If there is no `it` block then we should skip to avoid running `beforeEach` hooks
+        if (step.blocks.length === 0 && step.attestations.length === 0) {
+          continue;
+        }
 
         // Import
-        beforeEach("Import interchange", async () => {
-          expect(await db.keys()).lengthOf(0, "DB is not empty");
+        beforeEach(async () => {
+          await db.clear();
+          expect(await db.keys()).toHaveLength(0);
 
           const genesisValidatorsRoot = fromHexString(testCase.genesis_validators_root);
           if (step.should_succeed) {
             if (step.contains_slashable_data) {
               await expect(
                 slashingProtection.importInterchange(step.interchange, genesisValidatorsRoot)
-              ).to.be.rejectedWith(InterchangeError);
+              ).rejects.toThrow(InterchangeError);
             } else {
               await expect(
                 slashingProtection.importInterchange(step.interchange, genesisValidatorsRoot)
-              ).to.not.be.rejectedWith(InterchangeError);
+              ).resolves.toBeUndefined();
             }
           } else {
             await expect(
               slashingProtection.importInterchange(step.interchange, genesisValidatorsRoot)
-            ).to.not.be.rejectedWith(InterchangeError);
+            ).resolves.toBeUndefined();
           }
         });
 
@@ -71,9 +73,9 @@ describe("slashing-protection-interchange-tests", () => {
                 signingRoot: blockRaw.signing_root ? fromHexString(blockRaw.signing_root) : ZERO_HASH,
               };
               if (blockRaw.should_succeed) {
-                await slashingProtection.checkAndInsertBlockProposal(pubkey, block);
+                await expect(slashingProtection.checkAndInsertBlockProposal(pubkey, block)).resolves.toBeUndefined();
               } else {
-                await expect(slashingProtection.checkAndInsertBlockProposal(pubkey, block)).to.be.rejectedWith(
+                await expect(slashingProtection.checkAndInsertBlockProposal(pubkey, block)).rejects.toThrow(
                   InvalidBlockError
                 );
               }
@@ -90,9 +92,11 @@ describe("slashing-protection-interchange-tests", () => {
                 signingRoot: attestationRaw.signing_root ? fromHexString(attestationRaw.signing_root) : ZERO_HASH,
               };
               if (attestationRaw.should_succeed) {
-                await slashingProtection.checkAndInsertAttestation(pubkey, attestation);
+                await expect(
+                  slashingProtection.checkAndInsertAttestation(pubkey, attestation)
+                ).resolves.toBeUndefined();
               } else {
-                await expect(slashingProtection.checkAndInsertAttestation(pubkey, attestation)).to.be.rejectedWith(
+                await expect(slashingProtection.checkAndInsertAttestation(pubkey, attestation)).rejects.toThrow(
                   InvalidAttestationError
                 );
               }
