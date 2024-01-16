@@ -36,18 +36,18 @@ export class BufferPool {
    * If the buffer is already in use, return null.
    * Grow the buffer if the requested size is larger than the current buffer.
    */
-  alloc(size: number): {buffer: Uint8Array; key: number} | null {
+  alloc(size: number): BufferWithKey | null {
     return this.doAlloc(size, false);
   }
 
   /**
    * Same to alloc() but the buffer is not zeroed.
    */
-  allocUnsafe(size: number): {buffer: Uint8Array; key: number} | null {
+  allocUnsafe(size: number): BufferWithKey | null {
     return this.doAlloc(size, true);
   }
 
-  private doAlloc(size: number, isUnsafe = false): {buffer: Uint8Array; key: number} | null {
+  private doAlloc(size: number, isUnsafe = false): BufferWithKey | null {
     if (this.inUse) {
       this.metrics?.misses.inc();
       return null;
@@ -63,7 +63,7 @@ export class BufferPool {
     if (!isUnsafe) {
       bytes.fill(0);
     }
-    return {buffer: bytes, key: this.currentKey};
+    return new BufferWithKey(bytes, this.currentKey, this);
   }
 
   /**
@@ -73,5 +73,17 @@ export class BufferPool {
     if (key === this.currentKey) {
       this.inUse = false;
     }
+  }
+}
+
+export class BufferWithKey implements Disposable {
+  constructor(
+    readonly buffer: Uint8Array,
+    private readonly key: number,
+    private readonly pool: BufferPool
+  ) {}
+
+  [Symbol.dispose](): void {
+    this.pool.free(this.key);
   }
 }

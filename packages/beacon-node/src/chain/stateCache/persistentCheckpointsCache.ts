@@ -8,7 +8,7 @@ import {INTERVALS_PER_SLOT} from "@lodestar/params";
 import {Metrics} from "../../metrics/index.js";
 import {IClock} from "../../util/clock.js";
 import {ShufflingCache} from "../shufflingCache.js";
-import {BufferPool} from "../../util/bufferPool.js";
+import {BufferPool, BufferWithKey} from "../../util/bufferPool.js";
 import {MapTracker} from "./mapMetrics.js";
 import {CPStateDatastore, DatastoreKey, datastoreKeyToCheckpoint} from "./datastore/index.js";
 import {CheckpointHex, CacheItemType, CheckpointStateCache} from "./types.js";
@@ -200,11 +200,17 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     this.metrics?.stateReloadEpochDiff.observe(Math.abs(seedState.epochCtx.epoch - cp.epoch));
     this.logger.debug("Reload: found seed state", {...logMeta, seedSlot: seedState.slot});
 
-    let bufferPoolKey: number | undefined = undefined;
     try {
       // 80% of validators serialization time comes from memory allocation, this is to avoid it
-      const bytesWithKey = this.serializeStateValidators(seedState);
-      bufferPoolKey = bytesWithKey.key;
+      const sszTimer = this.metrics?.stateReloadValidatorsSszDuration.startTimer();
+      using validatorsBytesWithKey = this.serializeStateValidators(seedState);
+      let validatorsBytes = validatorsBytesWithKey?.buffer;
+      if (validatorsBytes == null) {
+        // fallback logic in case we can't use the buffer pool
+        this.metrics?.stateReloadValidatorsSszAllocCount.inc();
+        validatorsBytes = seedState.validators.serialize();
+      }
+      sszTimer?.();
       const timer = this.metrics?.stateReloadDuration.startTimer();
       const newCachedState = loadCachedBeaconState(
         seedState,
@@ -218,7 +224,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
             return shuffling;
           },
         },
-        bytesWithKey.data
+        validatorsBytes
       );
       newCachedState.commit();
       const stateRoot = toHexString(newCachedState.hashTreeRoot());
@@ -239,10 +245,6 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     } catch (e) {
       this.logger.debug("Reload: error loading cached state", logMeta, e as Error);
       return null;
-    } finally {
-      if (bufferPoolKey !== undefined) {
-        this.bufferPool?.free(bufferPoolKey);
-      }
     }
   }
 
@@ -627,17 +629,17 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
             // persist and do not update epochIndex
             this.metrics?.statePersistSecFromSlot.observe(this.clock?.secFromSlot(this.clock?.currentSlot ?? 0) ?? 0);
             const cpPersist = {epoch: epoch, root: epochBoundaryRoot};
-            let bufferPoolKey: number | undefined = undefined;
-            try {
+            {
               const timer = this.metrics?.statePersistDuration.startTimer();
-              const stateBytesWithKey = this.serializeState(state);
-              bufferPoolKey = stateBytesWithKey.key;
-              persistedKey = await this.datastore.write(cpPersist, stateBytesWithKey.data);
-              timer?.();
-            } finally {
-              if (bufferPoolKey !== undefined) {
-                this.bufferPool?.free(bufferPoolKey);
+              using stateBytesWithKey = this.serializeState(state);
+              let stateBytes = stateBytesWithKey?.buffer;
+              if (stateBytes == null) {
+                // fallback logic to use regular way to get state ssz bytes
+                this.metrics?.persistedStateAllocCount.inc();
+                stateBytes = state.serialize();
               }
+              persistedKey = await this.datastore.write(cpPersist, stateBytes);
+              timer?.();
             }
             persistCount++;
             this.logger.verbose("Pruned checkpoint state from memory and persisted to disk", {
@@ -703,7 +705,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
    *   - It also helps the state reload to save ~500ms in average (4.3s vs 3.8s)
    *   - Also `serializeState.test.ts` perf test shows a lot of differences allocating ~240MB once vs per state serialization
    */
-  private serializeState(state: CachedBeaconStateAllForks): {data: Uint8Array; key?: number} {
+  private serializeState(state: CachedBeaconStateAllForks): BufferWithKey | null {
     const size = state.type.tree_serializedSize(state.node);
     if (this.bufferPool) {
       const bufferWithKey = this.bufferPool.alloc(size);
@@ -711,12 +713,11 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
         const stateBytes = bufferWithKey.buffer;
         const dataView = new DataView(stateBytes.buffer, stateBytes.byteOffset, stateBytes.byteLength);
         state.type.tree_serializeToBytes({uint8Array: stateBytes, dataView}, 0, state.node);
-        return {data: stateBytes, key: bufferWithKey.key};
+        return bufferWithKey;
       }
     }
 
-    this.metrics?.persistedStateAllocCount.inc();
-    return {data: state.serialize()};
+    return null;
   }
 
   /**
@@ -726,8 +727,8 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
    * This is 2x - 3x faster than allocating memory every time.
    * TODO: consider serializing validators manually like in `serializeState.test.ts` perf test, this could be 3x faster than this
    */
-  private serializeStateValidators(state: CachedBeaconStateAllForks): {data: Uint8Array; key?: number} {
-    const validatorsSszTimer = this.metrics?.stateReloadValidatorsSszDuration.startTimer();
+  private serializeStateValidators(state: CachedBeaconStateAllForks): BufferWithKey | null {
+    // const validatorsSszTimer = this.metrics?.stateReloadValidatorsSszDuration.startTimer();
     const type = state.type.fields.validators;
     const size = type.tree_serializedSize(state.validators.node);
     if (this.bufferPool) {
@@ -736,13 +737,11 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
         const validatorsBytes = bufferWithKey.buffer;
         const dataView = new DataView(validatorsBytes.buffer, validatorsBytes.byteOffset, validatorsBytes.byteLength);
         type.tree_serializeToBytes({uint8Array: validatorsBytes, dataView}, 0, state.validators.node);
-        return {data: validatorsBytes, key: bufferWithKey.key};
+        return bufferWithKey;
       }
     }
 
-    this.metrics?.stateReloadValidatorsSszAllocCount.inc();
-    validatorsSszTimer?.();
-    return {data: state.validators.serialize()};
+    return null;
   }
 }
 
