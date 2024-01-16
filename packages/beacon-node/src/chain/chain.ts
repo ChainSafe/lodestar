@@ -963,9 +963,9 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void> {
-    proposers.forEach((proposer) => {
+    for (const proposer of proposers) {
       this.beaconProposerCache.add(epoch, proposer);
-    });
+    }
   }
 
   updateBuilderStatus(clockSlot: Slot): void {
