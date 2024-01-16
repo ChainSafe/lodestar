@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import {Context} from "mocha";
+import {describe, it, afterAll, afterEach, vi} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
 import {isExecutionStateType, isMergeTransitionComplete} from "@lodestar/state-transition";
 import {LogLevel, sleep} from "@lodestar/utils";
@@ -39,7 +39,7 @@ import {shell} from "./shell.js";
 // ```
 // $ EL_BINARY_DIR=/home/lion/Code/eth2.0/merge-interop/go-ethereum/build/bin \
 //   EL_SCRIPT_DIR=geth ETH_PORT=8545 ENGINE_PORT=8551 TX_SCENARIOS=simple \
-//   ../../node_modules/.bin/mocha test/sim/merge.test.ts
+//   ../../node_modules/.bin/vitest --run test/sim/merge.test.ts
 // ```
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention, quotes */
@@ -58,7 +58,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       `EL ENV must be provided, EL_BINARY_DIR: ${process.env.EL_BINARY_DIR}, EL_SCRIPT_DIR: ${process.env.EL_SCRIPT_DIR}`
     );
   }
-  this.timeout("10min");
+  vi.setConfig({testTimeout: 10 * 60 * 1000});
 
   const dataPath = fs.mkdtempSync("lodestar-test-merge-interop");
   const elSetupConfig = {
@@ -73,7 +73,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
   };
 
   const controller = new AbortController();
-  after(async () => {
+  afterAll(async () => {
     controller?.abort();
     await shell(`sudo rm -rf ${dataPath}`);
   });
@@ -86,6 +86,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     }
   });
 
+  // eslint-disable-next-line vitest/expect-expect
   it("Send stub payloads to EL", async () => {
     const {elClient, tearDownCallBack} = await runEL(
       {...elSetupConfig, mode: ELStartMode.PostMerge},
@@ -202,6 +203,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
      */
   });
 
+  // eslint-disable-next-line vitest/expect-expect
   it("Post-merge, run for a few blocks", async function () {
     console.log("\n\nPost-merge, run for a few blocks\n\n");
     const {elClient, tearDownCallBack} = await runEL(
@@ -211,13 +213,14 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     );
     afterEachCallbacks.push(() => tearDownCallBack());
 
-    await runNodeWithEL.bind(this)({
+    await runNodeWithEL({
       elClient,
       bellatrixEpoch: 0,
       testName: "post-merge",
     });
   });
 
+  // eslint-disable-next-line vitest/expect-expect
   it("Pre-merge, run for a few blocks", async function () {
     console.log("\n\nPre-merge, run for a few blocks\n\n");
     const {elClient, tearDownCallBack} = await runEL(
@@ -227,17 +230,22 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     );
     afterEachCallbacks.push(() => tearDownCallBack());
 
-    await runNodeWithEL.bind(this)({
+    await runNodeWithEL({
       elClient,
       bellatrixEpoch: 1,
       testName: "pre-merge",
     });
   });
 
-  async function runNodeWithEL(
-    this: Context,
-    {elClient, bellatrixEpoch, testName}: {elClient: ELClient; bellatrixEpoch: Epoch; testName: string}
-  ): Promise<void> {
+  async function runNodeWithEL({
+    elClient,
+    bellatrixEpoch,
+    testName,
+  }: {
+    elClient: ELClient;
+    bellatrixEpoch: Epoch;
+    testName: string;
+  }): Promise<void> {
     const {genesisBlockHash, ttd, engineRpcUrl, ethRpcUrl} = elClient;
     const validatorClientCount = 1;
     const validatorsPerClient = 32;
@@ -261,7 +269,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       testParams.SECONDS_PER_SLOT *
       1000;
 
-    this.timeout(timeout + 2 * timeoutSetupMargin);
+    vi.setConfig({testTimeout: timeout + 2 * timeoutSetupMargin});
 
     const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
 

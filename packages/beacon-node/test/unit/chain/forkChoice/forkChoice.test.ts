@@ -86,7 +86,6 @@ describe("LodestarForkChoice", function () {
       const parentBlockHex = ssz.phase0.BeaconBlock.hashTreeRoot(parentBlock.message);
       const orphanedBlockHex = ssz.phase0.BeaconBlock.hashTreeRoot(orphanedBlock.message);
       // forkchoice tie-break condition is based on root hex
-      // eslint-disable-next-line chai-expect/no-inner-compare
       expect(orphanedBlockHex > parentBlockHex).toBe(true);
       const currentSlot = childBlock.message.slot;
       forkChoice.updateTime(currentSlot);

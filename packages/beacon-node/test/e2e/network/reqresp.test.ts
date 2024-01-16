@@ -13,7 +13,6 @@ import {GetReqRespHandlerFn, ReqRespMethod} from "../../../src/network/reqresp/t
 import {PeerIdStr} from "../../../src/util/peerId.js";
 
 /* eslint-disable
-    mocha/no-top-level-hooks,
     require-yield,
     @typescript-eslint/naming-convention,
     @typescript-eslint/explicit-function-return-type

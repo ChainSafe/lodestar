@@ -1,3 +1,4 @@
+// eslint-disable-next-line vitest/no-disabled-tests
 describe.skip("array creation", function () {
   const testCases: {id: string; fn: (n: number) => void}[] = [
     {

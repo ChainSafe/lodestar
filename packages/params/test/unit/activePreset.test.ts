@@ -30,8 +30,6 @@ describe("active preset", async () => {
 
   it("Should not allow to change preset", () => {
     expect(() => {
-      // I'm not sure if mocha is requiring from src or lib. Each file has different state.
-      // To ensure this throws, call setActivePreset on both the src and lib file.
       setActivePreset(PresetName.minimal);
       setActivePresetLib(PresetName.minimal);
     }).toThrow();

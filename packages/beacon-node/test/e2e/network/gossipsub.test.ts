@@ -23,8 +23,6 @@ describe(
   {timeout: 10_000}
 );
 
-/* eslint-disable mocha/no-top-level-hooks */
-
 function runTests({useWorker}: {useWorker: boolean}): void {
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
   afterEach(async () => {

@@ -22,7 +22,7 @@ const CURRENT_SYNC_COMMITTEE_DEPTH = 5;
 /**
  * To enable debug logs run with
  * ```
- * DEBUG=true mocha ...
+ * DEBUG=true vitest ...
  * ```
  */
 export const testLogger = getLcLoggerConsole({logDebug: Boolean(process.env.DEBUG)});

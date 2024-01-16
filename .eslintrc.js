@@ -4,6 +4,7 @@ module.exports = {
     browser: true,
     es6: true,
     node: true,
+    // Performance tests still use mocha
     mocha: true,
   },
   globals: {
@@ -201,24 +202,19 @@ module.exports = {
     },
     {
       files: ["**/test/**/*.test.ts"],
-      plugins: ["mocha", "chai-expect"],
-      extends: ["plugin:mocha/recommended", "plugin:chai-expect/recommended"],
+      plugins: ["vitest"],
+      extends: ["plugin:vitest/recommended"],
       rules: {
-        // We observed that having multiple top level "describe" save valuable indentation
-        // https://github.com/lo1tuma/eslint-plugin-mocha/blob/master/docs/rules/max-top-level-suites.md
-        "mocha/max-top-level-suites": "off",
-        // We need to disable because we disabled "mocha/no-setup-in-describe" rule
-        // TODO: Move all setup code to before/beforeEach and then disable async describe
-        // https://github.com/lo1tuma/eslint-plugin-mocha/blob/master/docs/rules/no-async-describe.md
-        "mocha/no-async-describe": "off",
-        // Use of arrow functions are very common
-        "mocha/no-mocha-arrows": "off",
-        // It's common to call function inside describe block
-        // https://github.com/lo1tuma/eslint-plugin-mocha/blob/master/docs/rules/no-setup-in-describe.md
-        "mocha/no-setup-in-describe": "off",
-        // We use to split before in small isolated tasks
-        // https://github.com/lo1tuma/eslint-plugin-mocha/blob/master/docs/rules/no-sibling-hooks.md
-        "mocha/no-sibling-hooks": "off",
+        "vitest/no-disabled-tests": "error",
+        "vitest/consistent-test-it": "error",
+        "vitest/no-focused-tests": "error",
+        "vitest/no-duplicate-hooks": "error",
+        "vitest/prefer-called-with": "error",
+        "vitest/prefer-spy-on": "error",
+        // We use a lot dynamic assertions so tests may not have usage of expect
+        "vitest/expect-expect": "off",
+        // Our usage contains dynamic test title, this rule enforce static string value
+        "vitest/valid-title": "off",
       },
     },
     {

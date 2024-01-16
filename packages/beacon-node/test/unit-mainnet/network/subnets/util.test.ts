@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {expect} from "vitest";
 import {bigIntToBytes} from "@lodestar/utils";
 import {computeSubscribedSubnet} from "../../../../src/network/subnets/util.js";
 
@@ -61,7 +61,7 @@ describe("computeSubscribedSubnet", () => {
   for (const [index, {nodeId, epoch, expected}] of testCases.entries()) {
     it(`test case ${index}`, () => {
       // node is is of type uint256 = 32 bytes
-      expect(computeSubscribedSubnet(bigIntToBytes(BigInt(nodeId), 32, "be"), epoch)).to.deep.equal(expected);
+      expect(computeSubscribedSubnet(bigIntToBytes(BigInt(nodeId), 32, "be"), epoch)).toEqual(expected);
     });
   }
 });

@@ -1,5 +1,6 @@
 import {itBench} from "@dapplion/benchmark";
 
+// eslint-disable-next-line vitest/no-disabled-tests
 describe.skip("shuffle number math ops", () => {
   const forRuns = 100e5;
   const j = forRuns / 2;
