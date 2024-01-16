@@ -1,8 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import path from "node:path";
 import {sleep, toHex, toHexString} from "@lodestar/utils";
-import {ApiError} from "@lodestar/api";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ApiError, routes} from "@lodestar/api";
 import {AssertionMatch, BeaconClient, ExecutionClient, ValidatorClient} from "../utils/simulation/interfaces.js";
 import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
 import {defineSimTestConfig, logFilesDir} from "../utils/simulation/utils/index.js";
@@ -230,7 +229,11 @@ await connectNewNode(unknownBlockSync, env.nodes);
 await sleep(5000);
 
 try {
-  ApiError.assert(await unknownBlockSync.beacon.api.beacon.publishBlockV2(headForUnknownBlockSync.response.data));
+  ApiError.assert(
+    await unknownBlockSync.beacon.api.beacon.publishBlockV2(headForUnknownBlockSync.response.data, {
+      broadcastValidation: routes.beacon.BroadcastValidation.none,
+    })
+  );
 
   env.tracker.record({
     message: "Publishing unknown block should fail",
