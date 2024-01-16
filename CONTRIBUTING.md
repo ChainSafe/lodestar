@@ -231,7 +231,7 @@ node scripts/download_dashboards.mjs
 
 ## Contributing to Documentation
 
-When submitting PRs for documentation updates, build and run the documentation locally to ensure functionality before submission. To build the documentation locally, ensure you have Python installed, then simply execute `yarn build:docs` 
+When submitting PRs for documentation updates, build and run the documentation locally to ensure functionality before submission. For first time documentation contributors, install the python dependencies with `yarn docs:install`. Build the documentation locally with `yarn docs:build` and serve with `yarn docs:serve`
 
 Your locally served documentation will then be accessible at http://localhost:8000.
 
@@ -241,7 +241,7 @@ If you run into build issues due to circular dependencies, branch switching or o
 yarn clean && yarn clean:nm && yarn && yarn build
 ```
 
-We also use a spelling [word list](https://github.com/ChainSafe/lodestar/blob/unstable/.wordlist.txt) as part of our documentation checks. If using unrecognized words or abbreviations, please extend the wordlist to pass checks. Make sure the list is sorted with `./scripts/wordlist_sort.sh` and checked with `./scripts/wordlist_sort_check.sh` for sorting and duplicates.
+We also use a spelling [word list](https://github.com/ChainSafe/lodestar/blob/unstable/.wordlist.txt) as part of our documentation checks. If using unrecognized words or abbreviations, please extend the word list to pass checks. Make sure the list is sorted with `./scripts/wordlist_sort.sh` and checked with `./scripts/wordlist_sort_check.sh` for sorting and duplicates.
 
 ## Label Guide
 
