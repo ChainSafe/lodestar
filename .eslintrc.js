@@ -205,13 +205,13 @@ module.exports = {
       plugins: ["vitest"],
       extends: ["plugin:vitest/recommended"],
       rules: {
-        "vitest/no-disabled-tests": "error",
         "vitest/consistent-test-it": ["error", {fn: "it", withinDescribe: "it"}],
+        // We use a lot dynamic assertions so tests may not have usage of expect
+        "vitest/expect-expect": "off",                
+        "vitest/no-disabled-tests": "error",
         "vitest/no-focused-tests": "error",
         "vitest/prefer-called-with": "error",
         "vitest/prefer-spy-on": "error",
-        // We use a lot dynamic assertions so tests may not have usage of expect
-        "vitest/expect-expect": "off",
         // Our usage contains dynamic test title, this rule enforce static string value
         "vitest/valid-title": "off",
       },
