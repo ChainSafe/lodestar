@@ -34,7 +34,7 @@ export function initializeForkChoice(
   state: CachedBeaconStateAllForks,
   opts: ForkChoiceOpts,
   justifiedBalancesGetter: JustifiedBalancesGetter,
-  logger: Logger
+  logger?: Logger
 ): ForkChoice {
   const {blockHeader, checkpoint} = computeAnchorCheckpoint(config, state);
   const finalizedCheckpoint = {...checkpoint};
