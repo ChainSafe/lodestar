@@ -1,3 +1,4 @@
+import {vi} from "vitest";
 import {IBeaconDb} from "../../../src/db/index.js";
 import {CheckpointStateRepository} from "../../../src/db/repositories/checkpointState.js";
 import {
@@ -20,7 +21,8 @@ import {
   BLSToExecutionChangeRepository,
 } from "../../../src/db/repositories/index.js";
 import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "../../../src/db/single/index.js";
-import {createStubInstance} from "../types.js";
+
+vi.mock("../../../src/db/repositories/index.js");
 
 /* eslint-disable @typescript-eslint/no-empty-function */
 
@@ -30,39 +32,59 @@ import {createStubInstance} from "../types.js";
 export function getStubbedBeaconDb(): IBeaconDb {
   return {
     // unfinalized blocks
-    block: createStubInstance(BlockRepository),
+    // @ts-expect-error - Mocked constructor does not need arguments
+    block: vi.mocked(new BlockRepository()),
     // finalized blocks
-    blockArchive: createStubInstance(BlockArchiveRepository),
+    // @ts-expect-error - Mocked constructor does not need arguments
+    blockArchive: vi.mocked(new BlockArchiveRepository()),
 
-    blobSidecars: createStubInstance(BlobSidecarsRepository),
-    blobSidecarsArchive: createStubInstance(BlobSidecarsArchiveRepository),
+    // @ts-expect-error - Mocked constructor does not need arguments
+    blobSidecars: vi.mocked(new BlobSidecarsRepository()),
+    // @ts-expect-error - Mocked constructor does not need arguments
+    blobSidecarsArchive: vi.mocked(new BlobSidecarsArchiveRepository()),
 
     // finalized states
-    stateArchive: createStubInstance(StateArchiveRepository),
-    checkpointState: createStubInstance(CheckpointStateRepository),
+    // @ts-expect-error - Mocked constructor does not need arguments
+    stateArchive: vi.mocked(new StateArchiveRepository()),
+    // @ts-expect-error - Mocked constructor does not need arguments
+    checkpointState: vi.mocked(new CheckpointStateRepository()),
 
     // op pool
-    voluntaryExit: createStubInstance(VoluntaryExitRepository),
-    proposerSlashing: createStubInstance(ProposerSlashingRepository),
-    attesterSlashing: createStubInstance(AttesterSlashingRepository),
-    depositEvent: createStubInstance(DepositEventRepository),
-    blsToExecutionChange: createStubInstance(BLSToExecutionChangeRepository),
+    // @ts-expect-error - Mocked constructor does not need arguments
+    voluntaryExit: vi.mocked(new VoluntaryExitRepository()),
+    // @ts-expect-error - Mocked constructor does not need arguments
+    proposerSlashing: vi.mocked(new ProposerSlashingRepository()),
+    // @ts-expect-error - Mocked constructor does not need arguments
+    attesterSlashing: vi.mocked(new AttesterSlashingRepository()),
+    // @ts-expect-error - Mocked constructor does not need arguments
+    depositEvent: vi.mocked(new DepositEventRepository()),
+    // @ts-expect-error - Mocked constructor does not need arguments
+    blsToExecutionChange: vi.mocked(new BLSToExecutionChangeRepository()),
 
     // eth1 processing
-    preGenesisState: createStubInstance(PreGenesisState),
-    preGenesisStateLastProcessedBlock: createStubInstance(PreGenesisStateLastProcessedBlock),
+    // @ts-expect-error - Mocked constructor does not need arguments
+    preGenesisState: vi.mocked(new PreGenesisState()),
+    // @ts-expect-error - Mocked constructor does not need arguments
+    preGenesisStateLastProcessedBlock: vi.mocked(new PreGenesisStateLastProcessedBlock()),
 
     // all deposit data roots and merkle tree
-    depositDataRoot: createStubInstance(DepositDataRootRepository),
-    eth1Data: createStubInstance(Eth1DataRepository),
+    // @ts-expect-error - Mocked constructor does not need arguments
+    depositDataRoot: vi.mocked(new DepositDataRootRepository()),
+    // @ts-expect-error - Mocked constructor does not need arguments
+    eth1Data: vi.mocked(new Eth1DataRepository()),
 
     // lightclient
-    bestLightClientUpdate: createStubInstance(BestLightClientUpdateRepository),
-    checkpointHeader: createStubInstance(CheckpointHeaderRepository),
-    syncCommittee: createStubInstance(SyncCommitteeRepository),
-    syncCommitteeWitness: createStubInstance(SyncCommitteeWitnessRepository),
+    // @ts-expect-error - Mocked constructor does not need arguments
+    bestLightClientUpdate: vi.mocked(new BestLightClientUpdateRepository()),
+    // @ts-expect-error - Mocked constructor does not need arguments
+    checkpointHeader: vi.mocked(new CheckpointHeaderRepository()),
+    // @ts-expect-error - Mocked constructor does not need arguments
+    syncCommittee: vi.mocked(new SyncCommitteeRepository()),
+    // @ts-expect-error - Mocked constructor does not need arguments
+    syncCommitteeWitness: vi.mocked(new SyncCommitteeWitnessRepository()),
 
-    backfilledRanges: createStubInstance(BackfilledRanges),
+    // @ts-expect-error - Mocked constructor does not need arguments
+    backfilledRanges: vi.mocked(new BackfilledRanges()),
 
     async close(): Promise<void> {},
     /** To inject metrics after CLI initialization */
