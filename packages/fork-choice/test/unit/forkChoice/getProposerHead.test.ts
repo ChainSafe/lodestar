@@ -1,18 +1,10 @@
-import {describe, it, expect, beforeEach, beforeAll} from "vitest";
+import {describe, it, expect, beforeEach} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
-import {RootHex, Slot} from "@lodestar/types";
+import {Slot} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
-import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {
-  ForkChoice,
-  IForkChoiceStore,
-  ProtoArray,
-  ExecutionStatus,
-  EpochDifference,
-  ProtoBlock,
-} from "../../../src/index.js";
+import {ForkChoice, IForkChoiceStore, ProtoArray, ExecutionStatus, ProtoBlock} from "../../../src/index.js";
 import {getBlockRoot, getStateRoot} from "./forkChoice.test.js";
 
 type ProtoBlockWithWeight = ProtoBlock & {weight: number}; // weight of the block itself
