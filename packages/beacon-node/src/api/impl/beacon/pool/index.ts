@@ -8,7 +8,12 @@ import {validateApiVoluntaryExit} from "../../../../chain/validation/voluntaryEx
 import {validateApiBlsToExecutionChange} from "../../../../chain/validation/blsToExecutionChange.js";
 import {validateApiSyncCommittee} from "../../../../chain/validation/syncCommittee.js";
 import {ApiModules} from "../../types.js";
-import {AttestationError, GossipAction, SyncCommitteeError} from "../../../../chain/errors/index.js";
+import {
+  AttestationError,
+  AttestationErrorCode,
+  GossipAction,
+  SyncCommitteeError,
+} from "../../../../chain/errors/index.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../../network/processor/gossipHandlers.js";
 
 export function getBeaconPoolApi({
@@ -77,12 +82,17 @@ export function getBeaconPoolApi({
             const sentPeers = await network.publishBeaconAttestation(attestation, subnet);
             metrics?.onPoolSubmitUnaggregatedAttestation(seenTimestampSec, indexedAttestation, subnet, sentPeers);
           } catch (e) {
+            const logCtx = {slot: attestation.data.slot, index: attestation.data.index};
+
+            if (e instanceof AttestationError && e.type.code === AttestationErrorCode.ATTESTATION_ALREADY_KNOWN) {
+              logger.debug("Ignoring known attestation", logCtx);
+              // Attestations might already be published by another node as part of a fallback setup or DVT cluster
+              // and can reach our node by gossip before the api. The error can be ignored and should not result in a 500 response.
+              return;
+            }
+
             errors.push(e as Error);
-            logger.error(
-              `Error on submitPoolAttestations [${i}]`,
-              {slot: attestation.data.slot, index: attestation.data.index},
-              e as Error
-            );
+            logger.error(`Error on submitPoolAttestations [${i}]`, logCtx, e as Error);
             if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
               chain.persistInvalidSszValue(ssz.phase0.Attestation, attestation, "api_reject");
             }
