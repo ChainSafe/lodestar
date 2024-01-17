@@ -234,7 +234,7 @@ export function getBeaconPoolApi({
       );
 
       if (errors.length > 1) {
-        throw Error("Multiple errors on publishAggregateAndProofs\n" + errors.map((e) => e.message).join("\n"));
+        throw Error("Multiple errors on submitPoolSyncCommitteeSignatures\n" + errors.map((e) => e.message).join("\n"));
       } else if (errors.length === 1) {
         throw errors[0];
       }
