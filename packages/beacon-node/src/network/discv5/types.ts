@@ -1,4 +1,5 @@
-import {Discv5, ENRData, SignableENRData} from "@chainsafe/discv5";
+import {Discv5} from "@chainsafe/discv5";
+import {ENRData, SignableENRData} from "@chainsafe/enr";
 import {Observable} from "@chainsafe/threads/observable";
 import {ChainConfig} from "@lodestar/config";
 import {LoggerNodeOpts} from "@lodestar/logger/node";

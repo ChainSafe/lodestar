@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {differenceHex} from "../../../src/util/difference.js";
 
 describe("utils / differenceHex", () => {
@@ -9,11 +9,11 @@ describe("utils / differenceHex", () => {
 
   it("Return new hex items", () => {
     const additionalRoots = differenceHex([root0, root1a], [root1b, root2]);
-    expect(additionalRoots).to.deep.equal([root2]);
+    expect(additionalRoots).toEqual([root2]);
   });
 
   it("Return no new hex items", () => {
     const additionalRoots = differenceHex([root0, root1a], [root1b]);
-    expect(additionalRoots).to.deep.equal([]);
+    expect(additionalRoots).toEqual([]);
   });
 });

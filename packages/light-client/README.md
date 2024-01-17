@@ -51,18 +51,20 @@ lodestar lightclient \
 For this example we will assume there is a running beacon node at `https://beacon-node.your-domain.com`
 
 ```ts
-import {Api} from "@lodestar/api/beacon";
+import type {Api} from "@lodestar/api/beacon";
 import {ApiError} from "@lodestar/api";
-import {Bytes32} from "@lodestar/types";
+import type {Bytes32} from "@lodestar/types";
 import {createChainForkConfig} from "@lodestar/config";
 import {networksChainConfig} from "@lodestar/config/networks";
 import {
-    GenesisData,
+    type GenesisData,
     Lightclient,
     LightclientEvent,
-    RunStatusCode,
-    getLcLoggerConsole
-} from `@lodestar/lightclient`;
+    RunStatusCode
+} from "@lodestar/light-client";
+import {getClient} from "@lodestar/api";
+import {LightClientRestTransport} from "@lodestar/light-client/transport";
+import {getLcLoggerConsole} from "@lodestar/light-client/utils";
 
 async function getGenesisData(api: Pick<Api, "beacon">): Promise<GenesisData> {
     const res = await api.beacon.getGenesis();
@@ -104,7 +106,7 @@ const lightclient = await Lightclient.initializeFromCheckpointRoot({
 await new Promise<void>((resolve) => {
     const lightclientStarted = (status: RunStatusCode): void => {
         if (status === RunStatusCode.started) {
-            this.lightclient?.emitter.off(LightclientEvent.statusChange, lightclientStarted);
+            lightclient?.emitter.off(LightclientEvent.statusChange, lightclientStarted);
             resolve();
         }
     };

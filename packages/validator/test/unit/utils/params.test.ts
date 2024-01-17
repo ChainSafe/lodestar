@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {chainConfigToJson, ChainConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {networksChainConfig} from "@lodestar/config/networks";
@@ -28,7 +28,7 @@ describe("utils / params / assertEqualParams", () => {
     // Force ALTAIR_FORK_EPOCH value to be different
     const otherConfig = {...chainConfigJson, ALTAIR_FORK_EPOCH: String(ALTAIR_FORK_EPOCH + 1)};
 
-    expect(() => assertEqualParams(localConfig, otherConfig)).to.throw(NotEqualParamsError);
+    expect(() => assertEqualParams(localConfig, otherConfig)).toThrow(NotEqualParamsError);
   });
 
   it("should fill missing remote values with default and be equal", () => {

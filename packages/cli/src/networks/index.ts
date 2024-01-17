@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import got from "got";
-import {ENR} from "@chainsafe/discv5";
+import {ENR} from "@chainsafe/enr";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ApiError, getClient} from "@lodestar/api";
 import {getStateTypeFromBytes} from "@lodestar/beacon-node";

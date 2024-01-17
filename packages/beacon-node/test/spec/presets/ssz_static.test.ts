@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import {it, vi} from "vitest";
 import {Type} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
 import {ACTIVE_PRESET, ForkName, ForkLightClient} from "@lodestar/params";
@@ -58,7 +59,7 @@ const sszStatic =
       it(testCase, function () {
         // Mainnet must deal with big full states and hash each one multiple times
         if (ACTIVE_PRESET === "mainnet") {
-          this.timeout(30 * 1000);
+          vi.setConfig({testTimeout: 30 * 1000});
         }
 
         const testData = parseSszStaticTestcase(path.join(testSuiteDirpath, testCase));

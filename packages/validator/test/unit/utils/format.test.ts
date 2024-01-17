@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {formatBigDecimal} from "../../../src/util/format.js";
 
 describe("util / formatBigDecimal", function () {
@@ -15,7 +15,7 @@ describe("util / formatBigDecimal", function () {
   ];
   for (const [numerator, denominator, decimalFactor, expectedString] of testCases) {
     it(`format ${numerator} / ${denominator} correctly to ${expectedString}`, () => {
-      expect(formatBigDecimal(numerator, denominator, decimalFactor)).to.be.equal(expectedString);
+      expect(formatBigDecimal(numerator, denominator, decimalFactor)).toBe(expectedString);
     });
   }
 });

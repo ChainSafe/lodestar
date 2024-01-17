@@ -149,6 +149,11 @@ export function getBeaconBlockApi({
         break;
       }
 
+      case routes.beacon.BroadcastValidation.none: {
+        chain.logger.debug("Skipping broadcast validation", valLogMeta);
+        break;
+      }
+
       default: {
         // error or log warning we do not support this validation
         const message = `Broadcast validation of ${broadcastValidation} type not implemented yet`;
