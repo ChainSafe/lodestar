@@ -8,7 +8,7 @@ const CHECKPOINT_STATES_FOLDER = "checkpoint_states";
 const CHECKPOINT_FILE_NAME_LENGTH = 82;
 
 /**
- * Implementation of CPStatePersistentApis using file system, this is beneficial for debugging.
+ * Implementation of CPStateDatastore using file system, this is beneficial for debugging.
  */
 export class FileCPStateDatastore implements CPStateDatastore {
   private readonly folderPath: string;

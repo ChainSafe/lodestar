@@ -1,10 +1,6 @@
 import {describe, it, expect} from "vitest";
 import {BufferPool} from "../../../src/util/bufferPool.js";
 
-/**
- * As of Jan 2024, I get this error: Error: Using declaration is not enabled. Set jsc.parser.usingDecl to true
- * need to wait for this https://github.com/rollup/rollup/issues/5113
- */
 describe("BufferPool", () => {
   const pool = new BufferPool(100);
 
@@ -23,6 +19,7 @@ describe("BufferPool", () => {
       if (mem === null) {
         throw Error("Expected non-null mem");
       }
+      // in the same scope we can't allocate again
       expect(pool.alloc(20)).toEqual(null);
     }
 

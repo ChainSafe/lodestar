@@ -14,9 +14,9 @@ import {CPStateDatastore, DatastoreKey, datastoreKeyToCheckpoint} from "./datast
 import {CheckpointHex, CacheItemType, CheckpointStateCache} from "./types.js";
 
 export type PersistentCheckpointStateCacheOpts = {
-  // Keep max n states in memory, persist the rest to disk
+  /** Keep max n states in memory, persist the rest to disk */
   maxCPStateEpochsInMemory?: number;
-  // for test only
+  /** for testing only */
   processLateBlock?: boolean;
 };
 
@@ -203,6 +203,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     try {
       // 80% of validators serialization time comes from memory allocation, this is to avoid it
       const sszTimer = this.metrics?.stateReloadValidatorsSszDuration.startTimer();
+      // automatically free the buffer pool after this scope
       using validatorsBytesWithKey = this.serializeStateValidators(seedState);
       let validatorsBytes = validatorsBytesWithKey?.buffer;
       if (validatorsBytes == null) {
@@ -631,6 +632,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
             const cpPersist = {epoch: epoch, root: epochBoundaryRoot};
             {
               const timer = this.metrics?.statePersistDuration.startTimer();
+              // automatically free the buffer pool after this scope
               using stateBytesWithKey = this.serializeState(state);
               let stateBytes = stateBytesWithKey?.buffer;
               if (stateBytes == null) {
