@@ -1079,20 +1079,18 @@ export function getValidatorApi({
             const sentPeers = await network.publishBeaconAggregateAndProof(signedAggregateAndProof);
             metrics?.onPoolSubmitAggregatedAttestation(seenTimestampSec, indexedAttestation, sentPeers);
           } catch (e) {
+            const logCtx = {
+              slot: signedAggregateAndProof.message.aggregate.data.slot,
+              index: signedAggregateAndProof.message.aggregate.data.index,
+            };
+
             if (e instanceof AttestationError && e.type.code === AttestationErrorCode.AGGREGATOR_ALREADY_KNOWN) {
-              logger.debug("Ignoring known signedAggregateAndProof");
+              logger.debug("Ignoring known signedAggregateAndProof", logCtx);
               return; // Ok to submit the same aggregate twice
             }
 
             errors.push(e as Error);
-            logger.error(
-              `Error on publishAggregateAndProofs [${i}]`,
-              {
-                slot: signedAggregateAndProof.message.aggregate.data.slot,
-                index: signedAggregateAndProof.message.aggregate.data.index,
-              },
-              e as Error
-            );
+            logger.error(`Error on publishAggregateAndProofs [${i}]`, logCtx, e as Error);
             if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
               chain.persistInvalidSszValue(ssz.phase0.SignedAggregateAndProof, signedAggregateAndProof, "api_reject");
             }
