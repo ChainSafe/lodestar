@@ -36,7 +36,13 @@ import {
 } from "@lodestar/types";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {toHex, racePromisesWithCutoff, RaceEvent} from "@lodestar/utils";
-import {AttestationError, AttestationErrorCode, GossipAction, SyncCommitteeError} from "../../../chain/errors/index.js";
+import {
+  AttestationError,
+  AttestationErrorCode,
+  GossipAction,
+  SyncCommitteeError,
+  SyncCommitteeErrorCode,
+} from "../../../chain/errors/index.js";
 import {validateApiAggregateAndProof} from "../../../chain/validation/index.js";
 import {ZERO_HASH} from "../../../constants/index.js";
 import {SyncState} from "../../../sync/index.js";
@@ -1128,15 +1134,21 @@ export function getValidatorApi({
             );
             await network.publishContributionAndProof(contributionAndProof);
           } catch (e) {
+            const logCtx = {
+              slot: contributionAndProof.message.contribution.slot,
+              subcommitteeIndex: contributionAndProof.message.contribution.subcommitteeIndex,
+            };
+
+            if (
+              e instanceof SyncCommitteeError &&
+              e.type.code === SyncCommitteeErrorCode.SYNC_COMMITTEE_AGGREGATOR_ALREADY_KNOWN
+            ) {
+              logger.debug("Ignoring known contributionAndProof", logCtx);
+              return; // Ok to submit the same aggregate twice
+            }
+
             errors.push(e as Error);
-            logger.error(
-              `Error on publishContributionAndProofs [${i}]`,
-              {
-                slot: contributionAndProof.message.contribution.slot,
-                subcommitteeIndex: contributionAndProof.message.contribution.subcommitteeIndex,
-              },
-              e as Error
-            );
+            logger.error(`Error on publishContributionAndProofs [${i}]`, logCtx, e as Error);
             if (e instanceof SyncCommitteeError && e.action === GossipAction.REJECT) {
               chain.persistInvalidSszValue(ssz.altair.SignedContributionAndProof, contributionAndProof, "api_reject");
             }
