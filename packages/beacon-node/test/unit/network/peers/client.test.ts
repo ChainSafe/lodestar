@@ -1,5 +1,5 @@
 import {describe, it, expect} from "vitest";
-import {clientFromAgentVersion, ClientKind} from "../../../../src/network/peers/client.js";
+import {getKnownClientFromAgentVersion, ClientKind} from "../../../../src/network/peers/client.js";
 
 describe("clientFromAgentVersion", () => {
   const testCases: {name: string; agentVersion: string; client: ClientKind}[] = [
@@ -32,7 +32,7 @@ describe("clientFromAgentVersion", () => {
 
   for (const {name, agentVersion, client} of testCases) {
     it(name, () => {
-      expect(clientFromAgentVersion(agentVersion)).toBe(client);
+      expect(getKnownClientFromAgentVersion(agentVersion)).toBe(client);
     });
   }
 });
