@@ -1,6 +1,5 @@
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {Epoch, phase0, capella, Slot, ssz, StringType, RootHex, altair, UintNum64, allForks} from "@lodestar/types";
-import {ChainForkConfig} from "@lodestar/config";
 import {isForkExecution, ForkName, isForkLightClient} from "@lodestar/params";
 
 import {RouteDef, TypeJson, WithVersion} from "../../utils/index.js";
@@ -146,10 +145,7 @@ export type ReqTypes = {
 // It doesn't make sense to define a getReqSerializers() here given the exotic argument of eventstream()
 // The request is very simple: (topics) => {query: {topics}}, and the test will ensure compatibility server - client
 
-export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: TypeJson<EventData[K]>} {
-  const getLightClientTypeFromHeader = (data: allForks.LightClientHeader): allForks.AllForksLightClientSSZTypes => {
-    return config.getLightClientForkTypes(data.beacon.slot);
-  };
+export function getTypeByEvent(): {[K in EventType]: TypeJson<EventData[K]>} {
   const getLightClientType = (fork: ForkName): allForks.AllForksLightClientSSZTypes => {
     if (!isForkLightClient(fork)) {
       throw Error(`Invalid fork=${fork} for lightclient fork types`);
@@ -223,8 +219,8 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
 }
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-export function getEventSerdes(config: ChainForkConfig) {
-  const typeByEvent = getTypeByEvent(config);
+export function getEventSerdes() {
+  const typeByEvent = getTypeByEvent();
 
   return {
     toJson: (event: BeaconEvent): unknown => {
