@@ -1,7 +1,7 @@
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {Epoch, phase0, capella, Slot, ssz, StringType, RootHex, altair, UintNum64, allForks} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
-import {isForkExecution, ForkName} from "@lodestar/params";
+import {isForkExecution, ForkName, isForkLightClient} from "@lodestar/params";
 
 import {RouteDef, TypeJson, WithVersion} from "../../utils/index.js";
 import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
@@ -150,6 +150,12 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
   const getLightClientTypeFromHeader = (data: allForks.LightClientHeader): allForks.AllForksLightClientSSZTypes => {
     return config.getLightClientForkTypes(data.beacon.slot);
   };
+  const getLightClientType = (fork: ForkName): allForks.AllForksLightClientSSZTypes => {
+    if (!isForkLightClient(fork)) {
+      throw Error(`Invalid fork=${fork} for lightclient fork types`);
+    }
+    return ssz.allForksLightClient[fork];
+  };
 
   return {
     [EventType.head]: new ContainerType(
@@ -209,27 +215,9 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
     [EventType.blobSidecar]: blobSidecarSSE,
 
     [EventType.lightClientOptimisticUpdate]: WithVersion(
-      (_, data) =>
-        getLightClientTypeFromHeader((data as allForks.LightClientOptimisticUpdate).attestedHeader)[
-          "LightClientOptimisticUpdate"
-        ],
-      (_, data) =>
-        getLightClientTypeFromHeader(
-          // eslint-disable-next-line @typescript-eslint/naming-convention
-          (data as {attested_header: allForks.LightClientHeader}).attested_header
-        )["LightClientOptimisticUpdate"]
+      (fork) => getLightClientType(fork).LightClientOptimisticUpdate
     ),
-    [EventType.lightClientFinalityUpdate]: WithVersion(
-      (_, data) =>
-        getLightClientTypeFromHeader((data as allForks.LightClientFinalityUpdate).attestedHeader)[
-          "LightClientFinalityUpdate"
-        ],
-      (_, data) =>
-        getLightClientTypeFromHeader(
-          // eslint-disable-next-line @typescript-eslint/naming-convention
-          (data as {attested_header: allForks.LightClientHeader}).attested_header
-        )["LightClientFinalityUpdate"]
-    ),
+    [EventType.lightClientFinalityUpdate]: WithVersion((fork) => getLightClientType(fork).LightClientFinalityUpdate),
     [EventType.lightClientUpdate]: {
       toJson: (data) =>
         getLightClientTypeFromHeader((data as unknown as allForks.LightClientUpdate).attestedHeader)[

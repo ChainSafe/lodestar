@@ -139,13 +139,10 @@ export function ContainerDataExecutionOptimistic<T>(
  * version: ForkName
  * ```
  */
-export function WithVersion<T>(
-  getTypeTo: (fork: ForkName, data: unknown) => TypeJson<T>,
-  getTypeFrom: (fork: ForkName, data: unknown) => TypeJson<T> = getTypeTo
-): TypeJson<{data: T; version: ForkName}> {
+export function WithVersion<T>(getType: (fork: ForkName) => TypeJson<T>): TypeJson<{data: T; version: ForkName}> {
   return {
     toJson: ({data, version}) => ({
-      data: getTypeTo(version ?? ForkName.phase0, data).toJson(data),
+      data: getType(version ?? ForkName.phase0).toJson(data),
       version,
     }),
     fromJson: ({data, version}: {data: unknown; version: string}) => {
@@ -156,7 +153,7 @@ export function WithVersion<T>(
       if (!(version in ForkName)) throw Error(`Invalid version ${version}`);
 
       return {
-        data: getTypeFrom(version as ForkName, data).fromJson(data),
+        data: getType(version as ForkName).fromJson(data),
         version: version as ForkName,
       };
     },
