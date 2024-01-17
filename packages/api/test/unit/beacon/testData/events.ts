@@ -150,7 +150,10 @@ export const eventTestData: EventData = {
       signatureSlot: 1,
     },
   },
-  [EventType.lightClientUpdate]: ssz.altair.LightClientUpdate.defaultValue(),
+  [EventType.lightClientUpdate]: {
+    version: ForkName.altair,
+    data: ssz.altair.LightClientUpdate.defaultValue()
+  },
   [EventType.payloadAttributes]: {
     version: ForkName.bellatrix,
     data: ssz.bellatrix.SSEPayloadAttributes.defaultValue(),

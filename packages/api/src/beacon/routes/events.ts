@@ -109,7 +109,7 @@ export type EventData = {
   [EventType.contributionAndProof]: altair.SignedContributionAndProof;
   [EventType.lightClientOptimisticUpdate]: {version: ForkName; data: allForks.LightClientOptimisticUpdate};
   [EventType.lightClientFinalityUpdate]: {version: ForkName; data: allForks.LightClientFinalityUpdate};
-  [EventType.lightClientUpdate]: allForks.LightClientUpdate;
+  [EventType.lightClientUpdate]: {version: ForkName; data: allForks.LightClientUpdate};
   [EventType.payloadAttributes]: {version: ForkName; data: allForks.SSEPayloadAttributes};
   [EventType.blobSidecar]: BlobSidecarSSE;
 };
@@ -218,17 +218,7 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
       (fork) => getLightClientType(fork).LightClientOptimisticUpdate
     ),
     [EventType.lightClientFinalityUpdate]: WithVersion((fork) => getLightClientType(fork).LightClientFinalityUpdate),
-    [EventType.lightClientUpdate]: {
-      toJson: (data) =>
-        getLightClientTypeFromHeader((data as unknown as allForks.LightClientUpdate).attestedHeader)[
-          "LightClientUpdate"
-        ].toJson(data),
-      fromJson: (data) =>
-        getLightClientTypeFromHeader(
-          // eslint-disable-next-line @typescript-eslint/naming-convention
-          (data as {attested_header: allForks.LightClientHeader}).attested_header
-        )["LightClientUpdate"].fromJson(data),
-    },
+    [EventType.lightClientUpdate]: WithVersion((fork) => getLightClientType(fork).LightClientUpdate),
   };
 }
 
