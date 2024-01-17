@@ -1,7 +1,6 @@
-import {describe, it, afterEach, expect} from "vitest";
+import {describe, it, afterEach, expect, vi} from "vitest";
 import {Connection} from "@libp2p/interface";
 import {CustomEvent} from "@libp2p/interface";
-import sinon from "sinon";
 import {BitArray} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
 import {altair, phase0, ssz} from "@lodestar/types";
@@ -102,10 +101,10 @@ describe("network / peers / PeerManager", function () {
 
   // Create a real event emitter with stubbed methods
   class ReqRespFake implements IReqRespBeaconNodePeerManager {
-    sendStatus = sinon.stub();
-    sendMetadata = sinon.stub();
-    sendGoodbye = sinon.stub();
-    sendPing = sinon.stub();
+    sendStatus = vi.fn();
+    sendMetadata = vi.fn();
+    sendGoodbye = vi.fn();
+    sendPing = vi.fn();
   }
 
   it("Should request metadata on receivedPing of unknown peer", async () => {
@@ -126,7 +125,7 @@ describe("network / peers / PeerManager", function () {
     const metadata: phase0.Metadata = {seqNumber, attnets: BitArray.fromBitLen(0)};
 
     // Simulate peer1 responding with its metadata
-    reqResp.sendMetadata.resolves(metadata);
+    reqResp.sendMetadata.mockResolvedValue(metadata);
 
     // We get a ping by peer1, don't have it's metadata so it gets requested
     networkEventBus.emit(NetworkEvent.reqRespRequest, {
@@ -134,20 +133,20 @@ describe("network / peers / PeerManager", function () {
       peer: peerId1,
     });
 
-    expect(reqResp.sendMetadata.callCount).toBe(1);
-    expect(reqResp.sendMetadata.getCall(0).args[0]).toBe(peerId1);
+    expect(reqResp.sendMetadata).toHaveBeenCalledOnce();
+    expect(reqResp.sendMetadata).toHaveBeenNthCalledWith(1, peerId1);
 
     // Allow requestMetadata promise to resolve
     await sleep(0);
 
     // We get another ping by peer1, but with an already known seqNumber
-    reqResp.sendMetadata.reset();
+    reqResp.sendMetadata.mockReset();
     networkEventBus.emit(NetworkEvent.reqRespRequest, {
       request: {method: ReqRespMethod.Ping, body: seqNumber},
       peer: peerId1,
     });
 
-    expect(reqResp.sendMetadata.callCount).toBe(0);
+    expect(reqResp.sendMetadata).not.toHaveBeenCalledOnce();
   });
 
   const libp2pConnectionOutboud = {
@@ -187,9 +186,9 @@ describe("network / peers / PeerManager", function () {
     // Simulate peer1 returning a PING and STATUS message
     const remoteStatus = statusCache.get();
     const remoteMetadata: altair.Metadata = {seqNumber: BigInt(1), attnets: getAttnets(), syncnets: getSyncnets()};
-    reqResp.sendPing.resolves(remoteMetadata.seqNumber);
-    reqResp.sendStatus.resolves(remoteStatus);
-    reqResp.sendMetadata.resolves(remoteMetadata);
+    reqResp.sendPing.mockResolvedValue(remoteMetadata.seqNumber);
+    reqResp.sendStatus.mockResolvedValue(remoteStatus);
+    reqResp.sendMetadata.mockResolvedValue(remoteMetadata);
 
     // Simualate a peer connection, get() should return truthy
     getConnectionsMap(libp2p).set(peerId1.toString(), [libp2pConnectionOutboud]);
@@ -207,9 +206,9 @@ describe("network / peers / PeerManager", function () {
     // 2. Call reqResp.sendStatus
     // 3. Receive ping result (1) and call reqResp.sendMetadata
     // 4. Receive status result (2) assert peer relevance and emit `PeerManagerEvent.peerConnected`
-    expect(reqResp.sendPing.callCount).toBe(1);
-    expect(reqResp.sendStatus.callCount).toBe(1);
-    expect(reqResp.sendMetadata.callCount).toBe(1);
+    expect(reqResp.sendPing).toHaveBeenCalledOnce();
+    expect(reqResp.sendStatus).toHaveBeenCalledOnce();
+    expect(reqResp.sendMetadata).toHaveBeenCalledOnce();
 
     expect(peerManager["connectedPeers"].get(peerId1.toString())?.metadata).toEqual(remoteMetadata);
   });

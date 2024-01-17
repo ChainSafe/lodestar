@@ -1,17 +1,5 @@
-import sinon from "sinon";
-import {IForkChoice, ProtoBlock, ExecutionStatus, ForkChoice} from "@lodestar/fork-choice";
-import {IBeaconChain, BeaconChain} from "../../../src/chain/index.js";
+import {ProtoBlock, ExecutionStatus} from "@lodestar/fork-choice";
 import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
-import {StubbedChainMutable, StubbedOf} from "../stub/index.js";
-import {Mutable} from "../types.js";
-
-export function getMockBeaconChain<T extends keyof IBeaconChain>(): StubbedChainMutable<T> {
-  return sinon.createStubInstance(BeaconChain) as StubbedChainMutable<T>;
-}
-
-export function getMockForkChoice<K extends keyof IForkChoice>(): StubbedOf<Mutable<IForkChoice, K>> {
-  return sinon.createStubInstance(ForkChoice) as StubbedOf<Mutable<IForkChoice, K>>;
-}
 
 export const zeroProtoBlock: ProtoBlock = {
   slot: 0,

@@ -1,4 +1,3 @@
-import sinon from "sinon";
 import {itBench} from "@dapplion/benchmark";
 import {expect} from "chai";
 import {BitArray, toHexString} from "@chainsafe/ssz";
@@ -29,7 +28,6 @@ describe("getAttestationsForBlock", () => {
   let originalState: CachedBeaconStateAltair;
   let protoArray: ProtoArray;
   let forkchoice: ForkChoice;
-  const sandbox = sinon.createSandbox();
 
   before(function () {
     this.timeout(2 * 60 * 1000); // Generating the states for the first time is very slow
@@ -119,10 +117,6 @@ describe("getAttestationsForBlock", () => {
       equivocatingIndices: new Set(),
     };
     forkchoice = new ForkChoice(originalState.config, fcStore, protoArray);
-  });
-
-  after(() => {
-    sandbox.restore();
   });
 
   itBench({

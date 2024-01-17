@@ -1,5 +1,4 @@
 import {describe, it, expect, beforeAll, beforeEach, afterEach, vi} from "vitest";
-import sinon from "sinon";
 import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
@@ -98,7 +97,7 @@ describe("AttestationService", function () {
         });
 
         // Mock duties service to return some duties directly
-        attestationService["dutiesService"].getDutiesAtSlot = sinon.stub().returns(duties);
+        attestationService["dutiesService"].getDutiesAtSlot = vi.fn().mockReturnValue(duties);
 
         // Mock beacon's attestation and aggregates endpoints
 

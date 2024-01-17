@@ -91,7 +91,7 @@ export async function getNetworkForTest(
       // eslint-disable-next-line @typescript-eslint/no-empty-function
       processShutdownCallback: () => {},
       // set genesis time so that we are at ALTAIR_FORK_EPOCH
-      // sinon mock timer does not work on worker thread
+      // mock timer does not work on worker thread
       clock: new ClockStatic(startSlot, Math.floor(Date.now() / 1000) - startSlot * beaconConfig.SECONDS_PER_SLOT),
       metrics: null,
       anchorState: createCachedBeaconStateTest(state, beaconConfig),
