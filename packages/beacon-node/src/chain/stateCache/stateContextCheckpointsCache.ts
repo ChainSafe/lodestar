@@ -167,6 +167,10 @@ export class CheckpointStateCache implements CheckpointStateCacheInterface {
     }));
   }
 
+  getStateIterator(): Iterator<CachedBeaconStateAllForks> {
+    return this.cache.values();
+  }
+
   /** ONLY FOR DEBUGGING PURPOSES. For spec tests on error */
   dumpCheckpointKeys(): string[] {
     return Array.from(this.cache.keys());

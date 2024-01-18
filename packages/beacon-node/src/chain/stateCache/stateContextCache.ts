@@ -150,6 +150,10 @@ export class StateContextCache implements BlockStateCache {
     }));
   }
 
+  getStateIterator(): Iterator<CachedBeaconStateAllForks> {
+    return this.cache.values();
+  }
+
   private deleteAllEpochItems(epoch: Epoch): void {
     for (const rootHex of this.epochIndex.get(epoch) || []) {
       this.cache.delete(rootHex);
