@@ -10,7 +10,7 @@ import {
   stateTransition,
 } from "@lodestar/state-transition";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {sleep} from "@lodestar/utils";
+import {Logger, sleep} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
 import {Metrics} from "../../metrics/index.js";
@@ -28,6 +28,7 @@ export type RegenModules = {
   checkpointStateCache: CheckpointStateCache;
   config: ChainForkConfig;
   emitter: ChainEventEmitter;
+  logger: Logger;
   metrics: Metrics | null;
 };
 
@@ -127,14 +128,14 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     // If a checkpoint state exists with the given checkpoint root, it either is in requested epoch
     // or needs to have empty slots processed until the requested epoch
     if (latestCheckpointStateCtx) {
-      return processSlotsByCheckpoint(this.modules, latestCheckpointStateCtx, slot, opts);
+      return processSlotsByCheckpoint(this.modules, latestCheckpointStateCtx, slot, rCaller, opts);
     }
 
     // Otherwise, use the fork choice to get the stateRoot from block at the checkpoint root
     // regenerate that state,
     // then process empty slots until the requested epoch
     const blockStateCtx = await this.getState(block.stateRoot, rCaller, shouldReload);
-    return processSlotsByCheckpoint(this.modules, blockStateCtx, slot, opts);
+    return processSlotsByCheckpoint(this.modules, blockStateCtx, slot, rCaller, opts);
   }
 
   /**
@@ -189,6 +190,8 @@ export class StateRegenerator implements IStateRegeneratorInternal {
       });
     }
 
+    const replaySlots = blocksToReplay.map((b) => b.slot).join(",");
+    this.modules.logger.debug("Replaying blocks to get state", {stateRoot, replaySlots});
     for (const b of blocksToReplay.reverse()) {
       const block = await this.modules.db.block.get(fromHexString(b.blockRoot));
       if (!block) {
@@ -212,7 +215,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
             verifyProposer: false,
             verifySignatures: false,
           },
-          null
+          this.modules.metrics
         );
 
         const stateRoot = toHexString(state.hashTreeRoot());
@@ -239,6 +242,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
         });
       }
     }
+    this.modules.logger.debug("Replayed blocks to get state", {stateRoot, replaySlots});
 
     return state;
   }
@@ -266,9 +270,10 @@ async function processSlotsByCheckpoint(
   modules: {checkpointStateCache: CheckpointStateCache; metrics: Metrics | null; emitter: ChainEventEmitter},
   preState: CachedBeaconStateAllForks,
   slot: Slot,
+  rCaller: RegenCaller,
   opts: StateCloneOpts
 ): Promise<CachedBeaconStateAllForks> {
-  let postState = await processSlotsToNearestCheckpoint(modules, preState, slot, opts);
+  let postState = await processSlotsToNearestCheckpoint(modules, preState, slot, rCaller, opts);
   if (postState.slot < slot) {
     postState = processSlots(postState, slot, opts, modules.metrics);
   }
@@ -286,6 +291,7 @@ async function processSlotsToNearestCheckpoint(
   modules: {checkpointStateCache: CheckpointStateCache; metrics: Metrics | null; emitter: ChainEventEmitter},
   preState: CachedBeaconStateAllForks,
   slot: Slot,
+  rCaller: RegenCaller,
   opts: StateCloneOpts
 ): Promise<CachedBeaconStateAllForks> {
   const preSlot = preState.slot;
@@ -301,6 +307,7 @@ async function processSlotsToNearestCheckpoint(
   ) {
     // processSlots calls .clone() before mutating
     postState = processSlots(postState, nextEpochSlot, opts, metrics);
+    modules.metrics?.epochTransitionByCaller.inc({caller: rCaller});
 
     // this is usually added when we prepare for next slot or validate gossip block
     // then when we process the 1st block of epoch, we don't have to do state transition again
@@ -309,7 +316,7 @@ async function processSlotsToNearestCheckpoint(
     const checkpointState = postState;
     const cp = getCheckpointFromState(checkpointState);
     checkpointStateCache.add(cp, checkpointState);
-    emitter.emit(ChainEvent.checkpoint, cp, checkpointState);
+    emitter.emit(ChainEvent.checkpoint, cp, checkpointState.clone());
 
     // this avoids keeping our node busy processing blocks
     await sleep(0);

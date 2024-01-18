@@ -18,7 +18,6 @@ const REGEN_CAN_ACCEPT_WORK_THRESHOLD = 16;
 
 type QueuedStateRegeneratorModules = RegenModules & {
   signal: AbortSignal;
-  logger: Logger;
 };
 
 type RegenRequestKey = keyof IStateRegeneratorInternal;
