@@ -6,6 +6,7 @@ import {generatePerfTestCachedStateAltair} from "../util.js";
  * This shows different statistics between allocating memory once vs every time.
  * Due to gc, the test is not consistent so skipping it for CI.
  */
+// eslint-disable-next-line vitest/no-disabled-tests
 describe.skip("serialize state and validators", function () {
   this.timeout(0);
 
