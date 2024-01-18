@@ -1,8 +1,6 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {EpochShuffling, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../../../mocks/mockedBeaconChain.js";
-// Don't import it before the mock is set up
-// eslint-disable-next-line import/order
+import {EpochShuffling, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {EpochDifference, ProtoBlock} from "@lodestar/fork-choice";
 import {RegenCaller} from "../../../../../src/chain/regen/interface.js";
 import {getShufflingForAttestationVerification} from "../../../../../src/chain/validation/index.js";
