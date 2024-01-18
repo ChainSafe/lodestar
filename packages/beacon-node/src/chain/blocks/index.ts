@@ -1,5 +1,5 @@
 import {allForks} from "@lodestar/types";
-import {toHex, isErrorAborted} from "@lodestar/utils";
+import {toHex, isErrorAborted, toHexString} from "@lodestar/utils";
 import {JobItemQueue, isQueueErrorAborted} from "../../util/queue/index.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {BlockError, BlockErrorCode, isBlockErrorAborted} from "../errors/index.js";
@@ -11,6 +11,7 @@ import {assertLinearChainSegment} from "./utils/chainSegment.js";
 import {BlockInput, FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
 import {verifyBlocksSanityChecks} from "./verifyBlocksSanityChecks.js";
 import {removeEagerlyPersistedBlockInputs} from "./writeBlockInputToDb.js";
+import { computeEpochAtSlot } from "@lodestar/state-transition";
 export {type ImportBlockOpts, AttestationImportOpt} from "./types.js";
 
 const QUEUE_MAX_LENGTH = 256;
@@ -134,6 +135,24 @@ export async function processBlocks(
         this.persistInvalidSszValue(forkTypes.SignedBeaconBlock, signedBlock, suffix);
         this.persistInvalidSszView(preState, `${suffix}_preState`);
         this.persistInvalidSszView(postState, `${suffix}_postState`);
+        // there is INVALID_STATE_ROOT issue at start of epoch, need to also persist parentState
+        const parentBlock = this.forkChoice.getBlock(signedBlock.message.parentRoot);
+        if (parentBlock !== null) {
+          const parentEpoch = computeEpochAtSlot(parentBlock.slot);
+          const blockEpoch = computeEpochAtSlot(blockSlot);
+          if (parentEpoch < blockEpoch) {
+            const parentStateRoot = parentBlock.stateRoot;
+            const parentState = this.regen.getStateSync(parentStateRoot);
+            if (parentState) {
+              this.logger.debug("Found parent state", {
+                slot: parentState.slot,
+                parentStateRoot,
+                computedStateRoot: toHexString(parentState.hashTreeRoot()),
+              });
+              this.persistInvalidSszView(parentState, `${suffix}_parentState`);
+            }
+          }
+        }
       }
     }
 
