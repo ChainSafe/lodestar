@@ -20,8 +20,8 @@ import {getExecutionEngineFromBackend} from "../../../src/execution/index.js";
 import {ExecutionPayloadStatus} from "../../../src/execution/engine/interface.js";
 import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
-import {getStubbedBeaconDb} from "../../utils/mocks/db.js";
-import {ClockStopped} from "../../utils/mocks/clock.js";
+import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
+import {ClockStopped} from "../../mocks/clock.js";
 import {
   getBlockInput,
   AttestationImportOpt,
@@ -99,7 +99,7 @@ const forkChoiceTest =
           },
           {
             config: createBeaconConfig(config, state.genesisValidatorsRoot),
-            db: getStubbedBeaconDb(),
+            db: getMockedBeaconDb(),
             logger,
             // eslint-disable-next-line @typescript-eslint/no-empty-function
             processShutdownCallback: () => {},

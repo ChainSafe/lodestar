@@ -20,9 +20,9 @@ import {defaultNetworkOptions, NetworkOptions} from "../../src/network/options.j
 import {BeaconChain} from "../../src/chain/chain.js";
 import {ExecutionEngineDisabled} from "../../src/execution/index.js";
 import {PeerIdStr} from "../../src/util/peerId.js";
+import {getMockedBeaconDb} from "../mocks/mockedBeaconDb.js";
 import {testLogger} from "./logger.js";
 import {generateState} from "./state.js";
-import {getStubbedBeaconDb} from "./mocks/db.js";
 import {ClockStatic} from "./clock.js";
 import {createCachedBeaconStateTest} from "./cachedBeaconState.js";
 
@@ -70,7 +70,7 @@ export async function getNetworkForTest(
   );
 
   const beaconConfig = createBeaconConfig(config, state.genesisValidatorsRoot);
-  const db = getStubbedBeaconDb();
+  const db = getMockedBeaconDb();
 
   const chain = new BeaconChain(
     {

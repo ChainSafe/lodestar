@@ -1,11 +1,12 @@
-import {describe, it, expect, beforeEach, afterEach, vi} from "vitest";
-import {EpochDifference, ProtoBlock} from "@lodestar/fork-choice";
+import {describe, it, expect, beforeEach, afterEach, vi, Mocked} from "vitest";
+import {EpochDifference, ProtoBlock, ForkChoice} from "@lodestar/fork-choice";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {getShufflingDependentRoot} from "../../../src/util/dependentRoot.js";
-import {MockedBeaconChain, getMockedBeaconChain} from "../../__mocks__/mockedBeaconChain.js";
+
+vi.mock("@lodestar/fork-choice");
 
 describe("util / getShufflingDependentRoot", () => {
-  let forkchoiceStub: MockedBeaconChain["forkChoice"];
+  let forkchoiceStub: Mocked<ForkChoice>;
 
   const headBattHeadBlock = {
     slot: 100,
@@ -13,7 +14,7 @@ describe("util / getShufflingDependentRoot", () => {
   const blockEpoch = computeEpochAtSlot(headBattHeadBlock.slot);
 
   beforeEach(() => {
-    forkchoiceStub = getMockedBeaconChain().forkChoice;
+    forkchoiceStub = vi.mocked(new ForkChoice({} as any, {} as any, {} as any));
   });
 
   afterEach(() => {

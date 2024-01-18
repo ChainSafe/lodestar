@@ -1,7 +1,7 @@
-import {vi, MockedObject} from "vitest";
+import {vi, Mocked} from "vitest";
 import {Logger} from "@lodestar/logger";
 
-export type MockedLogger = MockedObject<Logger>;
+export type MockedLogger = Mocked<Logger>;
 
 export function getMockedLogger(): MockedLogger {
   return {

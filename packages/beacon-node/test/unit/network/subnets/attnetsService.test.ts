@@ -127,8 +127,8 @@ describe("AttnetsService", function () {
       vi.advanceTimersByTime(SLOTS_PER_EPOCH * SECONDS_PER_SLOT * 1000);
     }
     // may call 2 times, 1 for committee subnet, 1 for random subnet
-    expect(gossipStub.unsubscribeTopic).toHaveBeenCalledWith();
-    // rebalance twice
+    expect(gossipStub.unsubscribeTopic).toHaveBeenCalledWith(expect.any(Object));
+    // rebalanced twice
     expect(metadata.seqNumber).toBe(BigInt(2));
   });
 

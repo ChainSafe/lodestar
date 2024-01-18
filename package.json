@@ -51,8 +51,8 @@
     "@types/node": "^20.6.5",
     "@typescript-eslint/eslint-plugin": "6.7.2",
     "@typescript-eslint/parser": "6.7.2",
-    "@vitest/coverage-v8": "^1.2.0",
-    "@vitest/browser": "^1.2.0",
+    "@vitest/coverage-v8": "^1.2.1",
+    "@vitest/browser": "^1.2.1",
     "codecov": "^3.8.3",
     "crypto-browserify": "^3.12.0",
     "electron": "^26.2.2",
@@ -79,10 +79,10 @@
     "typescript-docs-verifier": "^2.5.0",
     "vite-plugin-node-polyfills": "^0.19.0",
     "vite-plugin-top-level-await": "^1.4.1",
-    "vitest": "^1.2.0",
+    "vitest": "^1.2.1",
     "vitest-when": "^0.3.1",
     "wait-port": "^1.1.0",
-    "webdriverio": "^8.27.2"
+    "webdriverio": "^8.28.0"
   },
   "resolutions": {
     "dns-over-http-resolver": "^2.1.1",

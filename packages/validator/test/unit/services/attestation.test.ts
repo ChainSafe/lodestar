@@ -97,10 +97,9 @@ describe("AttestationService", function () {
         });
 
         // Mock duties service to return some duties directly
-        attestationService["dutiesService"].getDutiesAtSlot = vi.fn().mockReturnValue(duties);
+        vi.spyOn(attestationService["dutiesService"], "getDutiesAtSlot").mockImplementation(() => duties);
 
         // Mock beacon's attestation and aggregates endpoints
-
         api.validator.produceAttestationData.mockResolvedValue({
           response: {data: attestation.data},
           ok: true,

@@ -1,4 +1,4 @@
-import {expect} from "vitest";
+import {describe, it, expect} from "vitest";
 import {TopicScoreParams} from "@chainsafe/libp2p-gossipsub/score";
 import {ATTESTATION_SUBNET_COUNT, ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {createBeaconConfig} from "@lodestar/config";

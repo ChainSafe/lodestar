@@ -1,4 +1,4 @@
-import {expect} from "vitest";
+import {describe, it, expect} from "vitest";
 import {bigIntToBytes} from "@lodestar/utils";
 import {computeSubscribedSubnet} from "../../../../src/network/subnets/util.js";
 

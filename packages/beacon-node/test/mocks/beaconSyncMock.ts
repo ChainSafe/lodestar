@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import {MockedObject, vi} from "vitest";
+import {Mocked, vi} from "vitest";
 import {BeaconSync} from "../../src/sync/index.js";
 
-export type MockedBeaconSync = MockedObject<BeaconSync>;
+export type MockedBeaconSync = Mocked<BeaconSync>;
 
-vi.mock("../../src/sync/index.js", async (requireActual) => {
-  const mod = await requireActual<typeof import("../../src/sync/index.js")>();
+vi.mock("../../src/sync/index.js", async (importActual) => {
+  const mod = await importActual<typeof import("../../src/sync/index.js")>();
 
   const BeaconSync = vi.fn().mockImplementation(() => {
     const sync = {};
@@ -21,7 +21,7 @@ vi.mock("../../src/sync/index.js", async (requireActual) => {
 });
 
 export function getMockedBeaconSync(): MockedBeaconSync {
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-expect-error
-  return vi.mocked(new BeaconSync({})) as MockedBeaconSync;
+  return vi.mocked(new BeaconSync({} as any, {} as any));
 }
+
+vi.resetModules();

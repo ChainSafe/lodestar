@@ -6,18 +6,18 @@ import {createChainForkConfig} from "@lodestar/config";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ssz} from "@lodestar/types";
 import {notNullish, sleep} from "@lodestar/utils";
+import {MockedBeaconChain, getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
 import {IBeaconChain} from "../../../src/chain/index.js";
 import {INetwork, NetworkEvent, NetworkEventBus, PeerAction} from "../../../src/network/index.js";
 import {UnknownBlockSync} from "../../../src/sync/unknownBlock.js";
 import {testLogger} from "../../utils/logger.js";
 import {getRandPeerIdStr} from "../../utils/peer.js";
 import {BlockSource, getBlockInput} from "../../../src/chain/blocks/types.js";
-import {ClockStopped} from "../../utils/mocks/clock.js";
+import {ClockStopped} from "../../mocks/clock.js";
 import {SeenBlockProposers} from "../../../src/chain/seenCache/seenBlockProposers.js";
 import {BlockError, BlockErrorCode} from "../../../src/chain/errors/blockError.js";
 import {defaultSyncOptions} from "../../../src/sync/options.js";
 import {ZERO_HASH} from "../../../src/constants/constants.js";
-import {MockedBeaconChain, getMockedBeaconChain} from "../../__mocks__/mockedBeaconChain.js";
 
 describe("sync by UnknownBlockSync", () => {
   const logger = testLogger();
