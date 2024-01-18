@@ -1,6 +1,5 @@
 import {pipe} from "it-pipe";
-import {PeerId} from "@libp2p/interface/peer-id";
-import {Stream} from "@libp2p/interface/connection";
+import {PeerId, Stream} from "@libp2p/interface";
 import {Uint8ArrayList} from "uint8arraylist";
 import {Logger, TimeoutError, withTimeout} from "@lodestar/utils";
 import {prettyPrintPeerId} from "../utils/index.js";

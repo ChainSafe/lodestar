@@ -1,4 +1,4 @@
-import {PeerId} from "@libp2p/interface/peer-id";
+import {PeerId} from "@libp2p/interface";
 import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
 import {BeaconConfig} from "@lodestar/config";

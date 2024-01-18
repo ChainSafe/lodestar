@@ -547,7 +547,9 @@ export class ForkChoice implements IForkChoice {
   onAttesterSlashing(attesterSlashing: phase0.AttesterSlashing): void {
     // TODO: we already call in in state-transition, find a way not to recompute it again
     const intersectingIndices = getAttesterSlashableIndices(attesterSlashing);
-    intersectingIndices.forEach((validatorIndex) => this.fcStore.equivocatingIndices.add(validatorIndex));
+    for (const validatorIndex of intersectingIndices) {
+      this.fcStore.equivocatingIndices.add(validatorIndex);
+    }
   }
 
   getLatestMessage(validatorIndex: ValidatorIndex): LatestMessage | undefined {

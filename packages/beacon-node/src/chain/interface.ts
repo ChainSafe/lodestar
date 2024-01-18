@@ -10,7 +10,6 @@ import {
   ValidatorIndex,
   deneb,
   Wei,
-  Gwei,
   capella,
   altair,
 } from "@lodestar/types";
@@ -162,13 +161,13 @@ export interface IBeaconChain {
   produceBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{
     block: allForks.BeaconBlock;
     executionPayloadValue: Wei;
-    consensusBlockValue: Gwei;
+    consensusBlockValue: Wei;
     shouldOverrideBuilder?: boolean;
   }>;
   produceBlindedBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{
     block: allForks.BlindedBeaconBlock;
     executionPayloadValue: Wei;
-    consensusBlockValue: Gwei;
+    consensusBlockValue: Wei;
   }>;
 
   /** Process a block until complete */

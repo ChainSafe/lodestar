@@ -1086,6 +1086,25 @@ export function createLodestarMetrics(
       }),
     },
 
+    bufferPool: {
+      length: register.gauge({
+        name: "lodestar_buffer_pool_length",
+        help: "Buffer pool length",
+      }),
+      hits: register.counter({
+        name: "lodestar_buffer_pool_hits_total",
+        help: "Total number of buffer pool hits",
+      }),
+      misses: register.counter({
+        name: "lodestar_buffer_pool_misses_total",
+        help: "Total number of buffer pool misses",
+      }),
+      grows: register.counter({
+        name: "lodestar_buffer_pool_grows_total",
+        help: "Total number of buffer pool length increases",
+      }),
+    },
+
     cpStateCache: {
       lookups: register.gauge({
         name: "lodestar_cp_state_cache_lookups_total",
@@ -1136,6 +1155,19 @@ export function createLodestarMetrics(
         help: "Histogram of time to persist state to db since the clock slot",
         buckets: [0, 2, 4, 6, 8, 10, 12],
       }),
+      stateReloadValidatorsSszDuration: register.histogram({
+        name: "lodestar_cp_state_cache_state_reload_validators_ssz_seconds",
+        help: "Histogram of time to serialize validators",
+        buckets: [0.1, 0.2, 0.5, 1],
+      }),
+      stateReloadValidatorsSszAllocCount: register.counter({
+        name: "lodestar_cp_state_cache_state_reload_validators_ssz_alloc_count",
+        help: "Total number time to allocate memory for validators serialization",
+      }),
+      stateReloadShufflingCacheMiss: register.counter({
+        name: "lodestar_cp_state_cache_state_reload_shuffling_cache_miss_count",
+        help: "Total number of shuffling cache misses when loading a state",
+      }),
       stateReloadDuration: register.histogram({
         name: "lodestar_cp_state_cache_state_reload_seconds",
         help: "Histogram of time to load state from db",
@@ -1159,6 +1191,10 @@ export function createLodestarMetrics(
       persistedStateRemoveCount: register.gauge({
         name: "lodestar_cp_state_cache_persisted_state_remove_count",
         help: "Total number of persisted states removed",
+      }),
+      persistedStateAllocCount: register.counter({
+        name: "lodestar_cp_state_cache_persisted_state_alloc_count",
+        help: "Total number time to allocate memory for persisted state",
       }),
     },
 

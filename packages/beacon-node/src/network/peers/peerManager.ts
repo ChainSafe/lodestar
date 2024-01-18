@@ -1,5 +1,4 @@
-import {Connection} from "@libp2p/interface/connection";
-import {PeerId} from "@libp2p/interface/peer-id";
+import {Connection, PeerId} from "@libp2p/interface";
 import {BitArray} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {BeaconConfig} from "@lodestar/config";

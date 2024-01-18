@@ -72,7 +72,7 @@ describe("api/validator - produceBlockV2", function () {
 
     const fullBlock = ssz.bellatrix.BeaconBlock.defaultValue();
     const executionPayloadValue = ssz.Wei.defaultValue();
-    const consensusBlockValue = ssz.Gwei.defaultValue();
+    const consensusBlockValue = ssz.Wei.defaultValue();
 
     const currentSlot = 100000;
     vi.spyOn(server.chainStub.clock, "currentSlot", "get").mockReturnValue(currentSlot);

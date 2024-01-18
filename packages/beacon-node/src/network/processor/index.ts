@@ -433,7 +433,9 @@ export class NetworkProcessor {
         ];
 
     if (Array.isArray(messageOrArray)) {
-      messageOrArray.forEach((msg) => this.trackJobTime(msg, messageOrArray.length));
+      for (const msg of messageOrArray) {
+        this.trackJobTime(msg, messageOrArray.length);
+      }
     } else {
       this.trackJobTime(messageOrArray, 1);
     }
