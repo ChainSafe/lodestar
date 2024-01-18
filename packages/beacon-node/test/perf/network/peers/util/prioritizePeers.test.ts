@@ -5,7 +5,7 @@ import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/p
 import {altair, phase0} from "@lodestar/types";
 import {defaultNetworkOptions} from "../../../../../src/network/options.js";
 import {prioritizePeers, RequestedSubnet} from "../../../../../src/network/peers/utils/index.js";
-import {getAttnets, getSyncnets} from "../../../../utils/network.js";
+import {getAttnets, getSyncnets} from "../../../../utils/networkData.js";
 
 describe("prioritizePeers", () => {
   const seedPeers: {id: PeerId; attnets: phase0.AttestationSubnets; syncnets: altair.SyncSubnets; score: number}[] = [];

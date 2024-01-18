@@ -10,7 +10,8 @@ import {ReqRespMethod} from "../../../../src/network/reqresp/ReqRespBeaconNode.j
 import {PeerRpcScoreStore, PeerManager, IReqRespBeaconNodePeerManager} from "../../../../src/network/peers/index.js";
 import {Eth2Gossipsub, getConnectionsMap, NetworkEvent, NetworkEventBus} from "../../../../src/network/index.js";
 import {PeersData} from "../../../../src/network/peers/peersData.js";
-import {createNode, getAttnets, getSyncnets} from "../../../utils/network.js";
+import {createNode} from "../../../utils/network.js";
+import {getAttnets, getSyncnets} from "../../../utils/networkData.js";
 import {generateState} from "../../../utils/state.js";
 import {waitForEvent} from "../../../utils/events/resolver.js";
 import {testLogger} from "../../../utils/logger.js";
