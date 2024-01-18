@@ -225,7 +225,7 @@ export class EpochCache {
    * eg. latest epoch = 105, latest finalized cp state epoch = 102
    * then the list will be (in terms of epoch) [103, 104, 105]
    */
-  historicalValidatorLengths: immutable.List<number>;
+  private historicalValidatorLengths: immutable.List<number>;
 
   constructor(data: {
     config: BeaconConfig;
@@ -971,6 +971,25 @@ export class EpochCache {
 
   isAfterEIP6110(): boolean {
     return this.epoch >= (this.config.EIP6110_FORK_EPOCH ?? Infinity);
+  }
+
+  getValidatorCountAtEpoch(targetEpoch: Epoch): number | undefined {
+    const currentEpoch = this.epoch;
+
+    if (targetEpoch === currentEpoch) {
+      return this.historicalValidatorLengths.get(-1);
+    }
+
+    // Attempt to get validator count from future epoch
+    if (targetEpoch > currentEpoch) {
+      return undefined;
+    }
+
+    // targetEpoch is so far back that historicalValidatorLengths doesnt contain such info
+    if (targetEpoch < currentEpoch - this.historicalValidatorLengths.size + 1) {
+      return undefined;
+    }
+    return this.historicalValidatorLengths.get(targetEpoch - currentEpoch - 1);
   }
 }
 

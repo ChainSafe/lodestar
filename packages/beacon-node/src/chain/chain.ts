@@ -944,12 +944,10 @@ export class BeaconChain implements IBeaconChain {
     if (headState === null) {
       this.logger.verbose("Head state is null");
     } else if (cpEpoch >= eip6110Epoch) {
-      const headEpoch = headState.epochCtx.epoch;
-
       // Get the validator.length from the state at cpEpoch
       // We are confident the last element in the list is from headEpoch
       // Thus we query from the end of the list. (cpEpoch - headEpoch - 1) is negative number
-      const pivotValidatorIndex = headState.epochCtx.historicalValidatorLengths.get(cpEpoch - headEpoch - 1);
+      const pivotValidatorIndex = headState.epochCtx.getValidatorCountAtEpoch(cpEpoch);
 
       if (pivotValidatorIndex !== undefined) {
         // Note EIP-6914 will break this logic
