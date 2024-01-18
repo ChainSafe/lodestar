@@ -84,6 +84,8 @@ UPnP
 UTF
 VM
 Vitalik
+vitest
+Vitest
 Wagyu
 api
 async
