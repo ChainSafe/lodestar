@@ -150,10 +150,6 @@ export const eventTestData: EventData = {
       signature_slot: 1,
     }),
   },
-  [EventType.lightClientUpdate]: {
-    version: ForkName.altair,
-    data: ssz.altair.LightClientUpdate.defaultValue(),
-  },
   [EventType.payloadAttributes]: {
     version: ForkName.bellatrix,
     data: ssz.bellatrix.SSEPayloadAttributes.defaultValue(),

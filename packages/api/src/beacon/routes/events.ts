@@ -47,8 +47,6 @@ export enum EventType {
   lightClientOptimisticUpdate = "light_client_optimistic_update",
   /** New or better finality update available */
   lightClientFinalityUpdate = "light_client_finality_update",
-  /** New or better light client update available */
-  lightClientUpdate = "light_client_update",
   /** Payload attributes for block proposal */
   payloadAttributes = "payload_attributes",
   /** The node has received a valid blobSidecar (from P2P or API) */
@@ -66,7 +64,6 @@ export const eventTypes: {[K in EventType]: K} = {
   [EventType.contributionAndProof]: EventType.contributionAndProof,
   [EventType.lightClientOptimisticUpdate]: EventType.lightClientOptimisticUpdate,
   [EventType.lightClientFinalityUpdate]: EventType.lightClientFinalityUpdate,
-  [EventType.lightClientUpdate]: EventType.lightClientUpdate,
   [EventType.payloadAttributes]: EventType.payloadAttributes,
   [EventType.blobSidecar]: EventType.blobSidecar,
 };
@@ -108,7 +105,6 @@ export type EventData = {
   [EventType.contributionAndProof]: altair.SignedContributionAndProof;
   [EventType.lightClientOptimisticUpdate]: {version: ForkName; data: allForks.LightClientOptimisticUpdate};
   [EventType.lightClientFinalityUpdate]: {version: ForkName; data: allForks.LightClientFinalityUpdate};
-  [EventType.lightClientUpdate]: {version: ForkName; data: allForks.LightClientUpdate};
   [EventType.payloadAttributes]: {version: ForkName; data: allForks.SSEPayloadAttributes};
   [EventType.blobSidecar]: BlobSidecarSSE;
 };
@@ -214,7 +210,6 @@ export function getTypeByEvent(): {[K in EventType]: TypeJson<EventData[K]>} {
       (fork) => getLightClientType(fork).LightClientOptimisticUpdate
     ),
     [EventType.lightClientFinalityUpdate]: WithVersion((fork) => getLightClientType(fork).LightClientFinalityUpdate),
-    [EventType.lightClientUpdate]: WithVersion((fork) => getLightClientType(fork).LightClientUpdate),
   };
 }
 
