@@ -116,6 +116,7 @@ export class Eth1DepositDataTracker {
     }
   }
 
+  // TODO 6110: Figure out how an elegant way to stop eth1data polling
   stopPollingEth1Data(): void {
     this.stopPolling = true;
   }
