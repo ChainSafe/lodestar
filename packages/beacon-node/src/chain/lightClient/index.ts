@@ -227,8 +227,7 @@ export class LightClientServer {
   onImportBlockHead(
     block: allForks.AllForksLightClient["BeaconBlock"],
     postState: CachedBeaconStateAltair,
-    parentBlockSlot: Slot,
-    fork: ForkName
+    parentBlockSlot: Slot
   ): void {
     // TEMP: To disable this functionality for fork_choice spec tests.
     // Since the tests have deep-reorgs attested data is not available often printing lots of error logs.
@@ -248,7 +247,7 @@ export class LightClientServer {
     const signedBlockRoot = block.parentRoot;
     const syncPeriod = computeSyncPeriodAtSlot(block.slot);
 
-    this.onSyncAggregate(syncPeriod, block.body.syncAggregate, block.slot, signedBlockRoot, fork).catch((e) => {
+    this.onSyncAggregate(syncPeriod, block.body.syncAggregate, block.slot, signedBlockRoot).catch((e) => {
       this.logger.error("Error onSyncAggregate", {}, e);
       this.metrics?.lightclientServer.onSyncAggregate.inc({event: "error"});
     });
@@ -456,8 +455,7 @@ export class LightClientServer {
     syncPeriod: SyncPeriod,
     syncAggregate: altair.SyncAggregate,
     signatureSlot: Slot,
-    signedBlockRoot: Root,
-    fork: ForkName
+    signedBlockRoot: Root
   ): Promise<void> {
     this.metrics?.lightclientServer.onSyncAggregate.inc({event: "processed"});
 
@@ -496,9 +494,15 @@ export class LightClientServer {
       return;
     }
 
+    // Fork of LightClientOptimisticUpdate and LightClientFinalityUpdate is based off on attested header's fork
+    const attestedFork = this.config.getForkName(attestedHeader.beacon.slot);
+
     // Emit update
     // Note: Always emit optimistic update even if we have emitted one with higher or equal attested_header.slot
-    this.emitter.emit(routes.events.EventType.lightClientOptimisticUpdate, {version: fork, data: headerUpdate});
+    this.emitter.emit(routes.events.EventType.lightClientOptimisticUpdate, {
+      version: attestedFork,
+      data: headerUpdate,
+    });
 
     // Persist latest best update for getLatestHeadUpdate()
     // TODO: Once SyncAggregate are constructed from P2P too, count bits to decide "best"
@@ -517,8 +521,6 @@ export class LightClientServer {
           finalizedHeader.beacon.slot > this.finalized.finalizedHeader.beacon.slot ||
           syncAggregateParticipation > sumBits(this.finalized.syncAggregate.syncCommitteeBits))
       ) {
-        // Fork of LightClientFinalityUpdate is based off on attested header's fork
-        const attestedFork = this.config.getForkName(attestedHeader.beacon.slot);
         if (this.config.getForkName(finalizedHeader.beacon.slot) !== attestedFork) {
           finalizedHeader = upgradeLightClientHeader(this.config, attestedFork, finalizedHeader);
         }

@@ -157,7 +157,7 @@ describe("sync", () => {
         lightclientServerApi.latestHeadUpdate = headUpdate;
         eventsServerApi.emit({
           type: routes.events.EventType.lightClientOptimisticUpdate,
-          message: {version: config.getForkName(slot), data: headUpdate},
+          message: {version: config.getForkName(headUpdate.attestedHeader.beacon.slot), data: headUpdate},
         });
         testLogger.debug("Emitted EventType.lightClientOptimisticUpdate", {slot});
       }

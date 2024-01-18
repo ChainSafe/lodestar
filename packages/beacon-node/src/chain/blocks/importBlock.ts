@@ -294,8 +294,7 @@ export async function importBlock(
           this.lightClientServer.onImportBlockHead(
             block.message as allForks.AllForksLightClient["BeaconBlock"],
             postState as CachedBeaconStateAltair,
-            parentBlockSlot,
-            this.config.getForkName(block.message.slot)
+            parentBlockSlot
           );
         } catch (e) {
           this.logger.verbose("Error lightClientServer.onImportBlock", {slot: blockSlot}, e as Error);
