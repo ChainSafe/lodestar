@@ -494,9 +494,15 @@ export class LightClientServer {
       return;
     }
 
+    // Fork of LightClientOptimisticUpdate and LightClientFinalityUpdate is based off on attested header's fork
+    const attestedFork = this.config.getForkName(attestedHeader.beacon.slot);
+
     // Emit update
     // Note: Always emit optimistic update even if we have emitted one with higher or equal attested_header.slot
-    this.emitter.emit(routes.events.EventType.lightClientOptimisticUpdate, headerUpdate);
+    this.emitter.emit(routes.events.EventType.lightClientOptimisticUpdate, {
+      version: attestedFork,
+      data: headerUpdate,
+    });
 
     // Persist latest best update for getLatestHeadUpdate()
     // TODO: Once SyncAggregate are constructed from P2P too, count bits to decide "best"
@@ -515,8 +521,6 @@ export class LightClientServer {
           finalizedHeader.beacon.slot > this.finalized.finalizedHeader.beacon.slot ||
           syncAggregateParticipation > sumBits(this.finalized.syncAggregate.syncCommitteeBits))
       ) {
-        // Fork of LightClientFinalityUpdate is based off on attested header's fork
-        const attestedFork = this.config.getForkName(attestedHeader.beacon.slot);
         if (this.config.getForkName(finalizedHeader.beacon.slot) !== attestedFork) {
           finalizedHeader = upgradeLightClientHeader(this.config, attestedFork, finalizedHeader);
         }
@@ -529,8 +533,11 @@ export class LightClientServer {
         };
         this.metrics?.lightclientServer.onSyncAggregate.inc({event: "update_latest_finalized_update"});
 
-        // Note: Ignores gossip rule to always emit finaly_update with higher finalized_header.slot, for simplicity
-        this.emitter.emit(routes.events.EventType.lightClientFinalityUpdate, this.finalized);
+        // Note: Ignores gossip rule to always emit finality_update with higher finalized_header.slot, for simplicity
+        this.emitter.emit(routes.events.EventType.lightClientFinalityUpdate, {
+          version: attestedFork,
+          data: this.finalized,
+        });
       }
     }
 
