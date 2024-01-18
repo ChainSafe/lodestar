@@ -84,7 +84,6 @@ UPnP
 UTF
 VM
 Vitalik
-vitest
 Vitest
 Wagyu
 api
@@ -190,6 +189,7 @@ util
 utils
 validator
 validators
+vitest
 wip
 xcode
 yaml
