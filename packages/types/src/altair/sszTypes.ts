@@ -186,15 +186,13 @@ export const LightClientBootstrap = new ContainerType(
   {typeName: "LightClientBootstrap", jsonCase: "eth2"}
 );
 
-export const FinalityBranch = new VectorCompositeType(Bytes32, FINALIZED_ROOT_DEPTH);
-
 export const LightClientUpdate = new ContainerType(
   {
     attestedHeader: LightClientHeader,
     nextSyncCommittee: SyncCommittee,
     nextSyncCommitteeBranch: new VectorCompositeType(Bytes32, NEXT_SYNC_COMMITTEE_DEPTH),
     finalizedHeader: LightClientHeader,
-    finalityBranch: FinalityBranch,
+    finalityBranch: new VectorCompositeType(Bytes32, FINALIZED_ROOT_DEPTH),
     syncAggregate: SyncAggregate,
     signatureSlot: Slot,
   },
@@ -205,7 +203,7 @@ export const LightClientFinalityUpdate = new ContainerType(
   {
     attestedHeader: LightClientHeader,
     finalizedHeader: LightClientHeader,
-    finalityBranch: FinalityBranch,
+    finalityBranch: new VectorCompositeType(Bytes32, FINALIZED_ROOT_DEPTH),
     syncAggregate: SyncAggregate,
     signatureSlot: Slot,
   },
