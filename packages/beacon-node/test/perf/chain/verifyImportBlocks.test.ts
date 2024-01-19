@@ -31,7 +31,6 @@ const slotCount = endSlot - startSlot;
 const timeoutInfura = 300_000;
 const logger = testLogger();
 
-// eslint-disable-next-line vitest/no-disabled-tests
 describe.skip("verify+import blocks - range sync perf test", () => {
   setBenchOpts({
     yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902

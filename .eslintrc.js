@@ -212,7 +212,7 @@ module.exports = {
         "vitest/consistent-test-it": ["error", {fn: "it", withinDescribe: "it"}],
         // We use a lot dynamic assertions so tests may not have usage of expect
         "vitest/expect-expect": "off",
-        "vitest/no-disabled-tests": "error",
+        "vitest/no-disabled-tests": "warn",
         "vitest/no-focused-tests": "error",
         "vitest/prefer-called-with": "error",
         "vitest/prefer-spy-on": "error",

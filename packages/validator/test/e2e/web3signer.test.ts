@@ -137,7 +137,6 @@ describe("web3signer signature test", function () {
 
   // ValidatorRegistration includes a timestamp so it's possible that web3signer instance and local instance
   // sign different messages and this test fails. Disabling unless it can be proven deterministic
-  // eslint-disable-next-line vitest/no-disabled-tests
   it.skip("signValidatorRegistration", async () => {
     const regAttributes = {
       feeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",

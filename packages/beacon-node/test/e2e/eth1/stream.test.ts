@@ -6,7 +6,6 @@ import {getGoerliRpcUrl} from "../../testParams.js";
 import {Eth1Options} from "../../../src/eth1/options.js";
 
 // https://github.com/ChainSafe/lodestar/issues/5967
-// eslint-disable-next-line vitest/no-disabled-tests
 describe.skip("Eth1 streams", function () {
   let controller: AbortController;
   beforeEach(() => {

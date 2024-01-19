@@ -1,6 +1,5 @@
 import {FLAG_PREV_SOURCE_ATTESTER, FLAG_UNSLASHED} from "../../../src/index.js";
 
-// eslint-disable-next-line vitest/no-disabled-tests
 describe.skip("bit opts", function () {
   this.timeout(0);
 

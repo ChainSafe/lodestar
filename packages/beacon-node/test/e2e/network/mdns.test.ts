@@ -21,7 +21,6 @@ let port = 9000;
 const mu = "/ip4/127.0.0.1/tcp/0";
 
 // https://github.com/ChainSafe/lodestar/issues/5967
-// eslint-disable-next-line vitest/no-disabled-tests
 describe.skip("mdns", function () {
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
   afterEach(async () => {

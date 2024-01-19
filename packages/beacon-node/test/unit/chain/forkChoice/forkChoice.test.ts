@@ -75,7 +75,6 @@ describe("LodestarForkChoice", function () {
      *                     \
      *                       parent (37) - child (38)
      */
-    // eslint-disable-next-line vitest/no-disabled-tests
     it.skip("getHead - should not consider orphaned block as head", () => {
       const {blockHeader} = computeAnchorCheckpoint(config, anchorState);
       const finalizedRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader);
@@ -235,7 +234,6 @@ describe("LodestarForkChoice", function () {
      *
      * To simplify, go with epoch 0, 1, 2 instead of 9, 10, 11
      */
-    // eslint-disable-next-line vitest/no-disabled-tests
     it.skip("should not filter blocks with unrealized checkpoints = store checkpoints", () => {
       const blockDelaySec = 0;
       // C9 is the justified/finalized block

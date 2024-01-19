@@ -2,7 +2,6 @@ import {describe, it, expect} from "vitest";
 import {TimeSeries} from "../../../src/util/timeSeries.js";
 
 // Even with rounding to 3 decimals, the test still breaks sometimes...
-// eslint-disable-next-line vitest/no-disabled-tests
 describe.skip("util / TimeSeries", () => {
   const decimals = 3;
 

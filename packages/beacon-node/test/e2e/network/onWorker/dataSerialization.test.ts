@@ -24,7 +24,6 @@ import {CommitteeSubscription} from "../../../../src/network/subnets/interface.j
 import {EchoWorker, getEchoWorker} from "./workerEchoHandler.js";
 
 // TODO: Need to find the way to load the echoWorker in the test environment
-// eslint-disable-next-line vitest/no-disabled-tests
 describe.skip("data serialization through worker boundary", function () {
   let echoWorker: EchoWorker;
 

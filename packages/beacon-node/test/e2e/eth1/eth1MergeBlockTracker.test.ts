@@ -16,7 +16,6 @@ import {getGoerliRpcUrl} from "../../testParams.js";
 // It's OKAY to disable temporarily since this functionality is tested indirectly by the sim merge tests.
 // See https://github.com/ChainSafe/lodestar/issues/4197
 // https://github.com/ChainSafe/lodestar/issues/5967
-// eslint-disable-next-line vitest/no-disabled-tests
 describe.skip("eth1 / Eth1MergeBlockTracker", function () {
   const logger = testLogger();
 

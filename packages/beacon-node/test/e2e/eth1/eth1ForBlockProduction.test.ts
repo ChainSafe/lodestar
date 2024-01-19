@@ -27,7 +27,6 @@ const pyrmontDepositsDataRoot = [
 ];
 
 // https://github.com/ChainSafe/lodestar/issues/5967
-// eslint-disable-next-line vitest/no-disabled-tests
 describe.skip("eth1 / Eth1Provider", function () {
   const controller = new AbortController();
 

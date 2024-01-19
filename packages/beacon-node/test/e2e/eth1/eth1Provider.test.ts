@@ -8,7 +8,6 @@ import {Eth1Block} from "../../../src/eth1/interface.js";
 import {getGoerliRpcUrl} from "../../testParams.js";
 
 // https://github.com/ChainSafe/lodestar/issues/5967
-// eslint-disable-next-line vitest/no-disabled-tests
 describe.skip("eth1 / Eth1Provider", function () {
   let controller: AbortController;
   beforeEach(() => {

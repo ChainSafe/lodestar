@@ -8,7 +8,6 @@ import {generateState, zeroProtoBlock} from "../../../../../utils/state.js";
 import {generateValidators} from "../../../../../utils/validator.js";
 import {createCachedBeaconStateTest} from "../../../../../utils/cachedBeaconState.js";
 
-// eslint-disable-next-line vitest/no-disabled-tests
 describe.skip("get proposers api impl", function () {
   let api: ReturnType<typeof getValidatorApi>;
   let modules: ApiTestModules;
