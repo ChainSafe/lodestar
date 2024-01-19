@@ -27,11 +27,17 @@ export async function callFnWhenAwait<T>(
   return t;
 }
 
-export class PromiseWithStatus<T> implements Promise<T> {
+/**
+ * Promise that can be evaluated but does not throw error when it is not resolved.
+ * It is useful when you want to get the state and response of a promise as an object
+ */
+export class MutedPromise<T> implements Promise<T> {
   private readonly _promise: Promise<T>;
   private _status: "pending" | "fulfilled" | "rejected" = "pending";
   private _value?: T;
   private _reason: unknown;
+  readonly startedAt: number;
+  private _finishedAt?: number;
 
   constructor(...args: ConstructorParameters<typeof Promise<T>> | [Promise<T>]) {
     if (args.length === 1 && args[0] instanceof Promise) {
@@ -40,21 +46,32 @@ export class PromiseWithStatus<T> implements Promise<T> {
       this._promise = new Promise<T>(...(args as ConstructorParameters<typeof Promise<T>>));
     }
 
+    this.startedAt = Date.now();
+
     this._promise.then(
       (value) => {
         this._status = "fulfilled";
         this._value = value;
-        return value;
+        this._finishedAt = Date.now();
       },
       (reason) => {
         // We suppress error here to avoid unhandled promise rejection and handle the error with status
         this._status = "rejected";
         this._reason = reason;
+        this._finishedAt = Date.now();
       }
     );
   }
 
   [Symbol.toStringTag] = "Promise" as const;
+
+  get durationMs(): number | undefined {
+    return this._finishedAt != null ? this._finishedAt - this.startedAt : undefined;
+  }
+
+  get finishedAt(): number | undefined {
+    return this._finishedAt;
+  }
 
   get status(): "pending" | "fulfilled" | "rejected" {
     return this._status;
@@ -101,13 +118,13 @@ export class PromiseWithStatus<T> implements Promise<T> {
 }
 
 type ReturnPromiseWithTuple<Tuple extends NonEmptyArray<unknown>> = {
-  [Index in keyof ArrayToTuple<Tuple>]: PromiseWithStatus<Awaited<Tuple[Index]>>;
+  [Index in keyof ArrayToTuple<Tuple>]: MutedPromise<Awaited<Tuple[Index]>>;
 };
 
 /**
  * Resolve all promises till `resolveTimeoutMs` if not then race them till `raceTimeoutMs`
  */
-export async function resolveOrRacePromises<T extends NonEmptyArray<Promise<unknown> | PromiseWithStatus<unknown>>>(
+export async function resolveOrRacePromises<T extends NonEmptyArray<Promise<unknown> | MutedPromise<unknown>>>(
   promises: T,
   {
     resolveTimeoutMs,
@@ -123,7 +140,7 @@ export async function resolveOrRacePromises<T extends NonEmptyArray<Promise<unkn
     throw new Error("Race time mus tbe greater than resolve time");
   }
 
-  const promisesWithStatuses = promises.map((p) => (p instanceof PromiseWithStatus ? p : new PromiseWithStatus(p)));
+  const mutedPromises = promises.map((p) => (p instanceof MutedPromise ? p : new MutedPromise(p)));
   const resolveTimeoutError = new TimeoutError(
     `Given promises can't be resolved within resolveTimeoutMs=${resolveTimeoutMs}`
   );
@@ -133,12 +150,12 @@ export async function resolveOrRacePromises<T extends NonEmptyArray<Promise<unkn
 
   try {
     await Promise.race([
-      Promise.allSettled(promisesWithStatuses),
+      Promise.allSettled(mutedPromises),
       sleep(resolveTimeoutMs, signal).then(() => {
         throw resolveTimeoutError;
       }),
     ]);
-    return promisesWithStatuses as ReturnPromiseWithTuple<T>;
+    return mutedPromises as ReturnPromiseWithTuple<T>;
   } catch (err) {
     if (err !== resolveTimeoutError) {
       throw err;
@@ -147,7 +164,7 @@ export async function resolveOrRacePromises<T extends NonEmptyArray<Promise<unkn
 
   try {
     await Promise.race([
-      Promise.any(promisesWithStatuses),
+      Promise.any(mutedPromises),
       sleep(raceTimeoutMs - resolveTimeoutMs, signal).then(() => {
         throw raceTimeoutError;
       }),
@@ -158,5 +175,5 @@ export async function resolveOrRacePromises<T extends NonEmptyArray<Promise<unkn
     }
   }
 
-  return promisesWithStatuses as ReturnPromiseWithTuple<T>;
+  return mutedPromises as ReturnPromiseWithTuple<T>;
 }

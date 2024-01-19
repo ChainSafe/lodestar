@@ -35,7 +35,7 @@ import {
   phase0,
 } from "@lodestar/types";
 import {ExecutionStatus} from "@lodestar/fork-choice";
-import {toHex, racePromisesWithCutoff, RaceEvent} from "@lodestar/utils";
+import {toHex, resolveOrRacePromises} from "@lodestar/utils";
 import {
   AttestationError,
   AttestationErrorCode,
@@ -57,7 +57,7 @@ import {getValidatorStatus} from "../beacon/state/utils.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossipHandlers.js";
 import {SCHEDULER_LOOKAHEAD_FACTOR} from "../../../chain/prepareNextSlot.js";
 import {ChainEvent, CheckpointHex, CommonBlockBody} from "../../../chain/index.js";
-import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices} from "./utils.js";
+import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices, selectBlockProductionSource} from "./utils.js";
 
 /**
  * If the node is within this many epochs from the head, we declare it to be synced regardless of
@@ -472,6 +472,15 @@ export function getValidatorApi({
         chain.executionBuilder !== undefined &&
         builderSelection !== routes.validator.BuilderSelection.ExecutionOnly;
 
+      // At any point either the builder or execution or both flows should be active.
+      //
+      // Ideally such a scenario should be prevented on startup, but proposerSettingsFile or keymanager
+      // configurations could cause a validator pubkey to have builder disabled with builder selection builder only
+      // (TODO: independently make sure such an options update is not successful for a validator pubkey)
+      //
+      // So if builder is disabled ignore builder selection of builderonly if caused by user mistake
+      const isEngineEnabled = !isBuilderEnabled || builderSelection !== routes.validator.BuilderSelection.BuilderOnly;
+
       const loggerContext = {
         fork,
         builderSelection,
@@ -490,196 +499,184 @@ export function getValidatorApi({
       });
       logger.debug("Produced common block body", loggerContext);
 
+      logger.info("Block production race (builder vs execution) starting", {
+        ...loggerContext,
+        cutoffMs: BLOCK_PRODUCTION_RACE_CUTOFF_MS,
+        timeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
+      });
+
       // Start calls for building execution and builder blocks
-      const blindedBlockPromise = isBuilderEnabled
-        ? // can't do fee recipient checks as builder bid doesn't return feeRecipient as of now
-          produceBuilderBlindedBlock(slot, randaoReveal, graffiti, {
-            feeRecipient,
-            // skip checking and recomputing head in these individual produce calls
-            skipHeadChecksAndUpdate: true,
-            commonBlockBody,
-          }).catch((e) => {
-            logger.error("produceBuilderBlindedBlock failed to produce block", {slot}, e);
-            return null;
-          })
-        : null;
+      const builderDisabledError = new Error("Builder disabled");
+      const engineDisabledError = new Error("Engine disabled");
+      const [builder, engine] = await resolveOrRacePromises(
+        [
+          isBuilderEnabled
+            ? // can't do fee recipient checks as builder bid doesn't return feeRecipient as of now
+              produceBuilderBlindedBlock(slot, randaoReveal, graffiti, {
+                feeRecipient,
+                // skip checking and recomputing head in these individual produce calls
+                skipHeadChecksAndUpdate: true,
+                commonBlockBody,
+              })
+            : Promise.reject<ReturnType<typeof produceBuilderBlindedBlock>>(builderDisabledError),
 
-      const fullBlockPromise =
-        // At any point either the builder or execution or both flows should be active.
-        //
-        // Ideally such a scenario should be prevented on startup, but proposerSettingsFile or keymanager
-        // configurations could cause a validator pubkey to have builder disabled with builder selection builder only
-        // (TODO: independently make sure such an options update is not successful for a validator pubkey)
-        //
-        // So if builder is disabled ignore builder selection of builderonly if caused by user mistake
-        !isBuilderEnabled || builderSelection !== routes.validator.BuilderSelection.BuilderOnly
-          ? // TODO deneb: builderSelection needs to be figured out if to be done beacon side
-            // || builderSelection !== BuilderSelection.BuilderOnly
-            produceEngineFullBlockOrContents(slot, randaoReveal, graffiti, {
-              feeRecipient,
-              strictFeeRecipientCheck,
-              // skip checking and recomputing head in these individual produce calls
-              skipHeadChecksAndUpdate: true,
-              commonBlockBody,
-            }).catch((e) => {
-              logger.error("produceEngineFullBlockOrContents failed to produce block", {slot}, e);
-              return null;
-            })
-          : null;
+          isEngineEnabled // TODO deneb: builderSelection needs to be figured out if to be done beacon side
+            ? // || builderSelection !== BuilderSelection.BuilderOnly
+              produceEngineFullBlockOrContents(slot, randaoReveal, graffiti, {
+                feeRecipient,
+                strictFeeRecipientCheck,
+                // skip checking and recomputing head in these individual produce calls
+                skipHeadChecksAndUpdate: true,
+                commonBlockBody,
+              })
+            : Promise.reject<ReturnType<typeof produceEngineFullBlockOrContents>>(engineDisabledError),
+        ],
+        {
+          resolveTimeoutMs: BLOCK_PRODUCTION_RACE_CUTOFF_MS,
+          raceTimeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
+        }
+      );
 
-      let blindedBlock, fullBlock;
-      if (blindedBlockPromise !== null && fullBlockPromise !== null) {
-        // reference index of promises in the race
-        const promisesOrder = [ProducedBlockSource.builder, ProducedBlockSource.engine];
-        [blindedBlock, fullBlock] = await racePromisesWithCutoff<
-          | ((routes.validator.ProduceBlockOrContentsRes | routes.validator.ProduceBlindedBlockRes) & {
-              shouldOverrideBuilder?: boolean;
-            })
-          | null
-        >(
-          [blindedBlockPromise, fullBlockPromise],
-          BLOCK_PRODUCTION_RACE_CUTOFF_MS,
-          BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
-          // Callback to log the race events for better debugging capability
-          (event: RaceEvent, delayMs: number, index?: number) => {
-            const eventRef = index !== undefined ? {source: promisesOrder[index]} : {};
-            logger.verbose("Block production race (builder vs execution)", {
-              event,
-              ...eventRef,
-              delayMs,
-              cutoffMs: BLOCK_PRODUCTION_RACE_CUTOFF_MS,
-              timeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
-              slot,
-            });
-          }
-        );
-        if (blindedBlock instanceof Error) {
-          // error here means race cutoff exceeded
-          logger.error("Failed to produce builder block", {slot}, blindedBlock);
-          blindedBlock = null;
-        }
-        if (fullBlock instanceof Error) {
-          logger.error("Failed to produce execution block", {slot}, fullBlock);
-          fullBlock = null;
-        }
-      } else if (blindedBlockPromise !== null && fullBlockPromise === null) {
-        blindedBlock = await blindedBlockPromise;
-        fullBlock = null;
-      } else if (blindedBlockPromise === null && fullBlockPromise !== null) {
-        blindedBlock = null;
-        fullBlock = await fullBlockPromise;
-      } else {
+      if (
+        builder.status === "rejected" &&
+        builder.reason === builderDisabledError &&
+        engine.status === "rejected" &&
+        engine.reason === engineDisabledError
+      ) {
         throw Error(
           `Internal Error: Neither builder nor execution proposal flow activated isBuilderEnabled=${isBuilderEnabled} builderSelection=${builderSelection}`
         );
       }
 
-      const builderPayloadValue = blindedBlock?.executionPayloadValue ?? BigInt(0);
-      const enginePayloadValue = fullBlock?.executionPayloadValue ?? BigInt(0);
-      const consensusBlockValueBuilder = blindedBlock?.consensusBlockValue ?? BigInt(0);
-      const consensusBlockValueEngine = fullBlock?.consensusBlockValue ?? BigInt(0);
+      if (builder.status === "rejected" && builder.reason !== builderDisabledError) {
+        logger.warn(
+          "Builder failed to produce the block",
+          {
+            durationMs: builder.durationMs,
+            slot,
+          },
+          builder.reason as Error
+        );
+      }
 
-      const blockValueBuilder = builderPayloadValue + consensusBlockValueBuilder; // Total block value is in wei
-      const blockValueEngine = enginePayloadValue + consensusBlockValueEngine; // Total block value is in wei
+      if (engine.status === "rejected" && engine.reason !== engineDisabledError) {
+        logger.warn(
+          "Engine failed to produce the block",
+          {
+            durationMs: engine.durationMs,
+            slot,
+          },
+          engine.reason as Error
+        );
+      }
 
-      let executionPayloadSource: ProducedBlockSource | null = null;
-      const shouldOverrideBuilder = fullBlock?.shouldOverrideBuilder ?? false;
+      if (builder.status === "pending" && engine.status === "pending") {
+        throw Error(
+          `Builder and execution both timeout to proposed the block in ${BLOCK_PRODUCTION_RACE_TIMEOUT_MS}ms`
+        );
+      }
 
-      // handle the builder override case separately
-      if (shouldOverrideBuilder === true) {
-        executionPayloadSource = ProducedBlockSource.engine;
-        logger.info("Selected engine block as censorship suspected in builder blocks", {
-          // winston logger doesn't like bigint
-          enginePayloadValue: `${enginePayloadValue}`,
-          consensusBlockValueEngine: `${consensusBlockValueEngine}`,
-          blockValueEngine: `${blockValueEngine}`,
-          shouldOverrideBuilder,
+      if (builder.status === "fulfilled" && engine.status !== "fulfilled") {
+        const builderBlock = builder.value;
+        const builderPayloadValue = builderBlock.executionPayloadValue ?? BigInt(0);
+        const builderConsensusValue = builderBlock.consensusBlockValue ?? BigInt(0);
+        const builderBlockValue = builderPayloadValue + builderConsensusValue;
+
+        logger.info("Selected builder block: no engine block produced", {
+          durationMs: builder.durationMs,
           slot,
+          builderPayloadValue: `${builderPayloadValue}`,
+          builderConsensusValue: `${builderConsensusValue}`,
+          builderBlockValue: `${builderBlockValue}`,
         });
-      } else if (fullBlock && blindedBlock) {
-        switch (builderSelection) {
-          case routes.validator.BuilderSelection.MaxProfit: {
-            if (
-              // explicitly handle the two special values mentioned in spec for builder preferred / engine preferred
-              builderBoostFactor !== MAX_BUILDER_BOOST_FACTOR &&
-              (builderBoostFactor === BigInt(0) ||
-                blockValueEngine >= (blockValueBuilder * builderBoostFactor) / BigInt(100))
-            ) {
-              executionPayloadSource = ProducedBlockSource.engine;
-            } else {
-              executionPayloadSource = ProducedBlockSource.builder;
-            }
-            break;
-          }
 
-          case routes.validator.BuilderSelection.ExecutionOnly: {
-            executionPayloadSource = ProducedBlockSource.engine;
-            break;
-          }
+        return {...builder.value, executionPayloadBlinded: true, executionPayloadSource: ProducedBlockSource.builder};
+      }
 
-          // For everything else just select the builder
-          default: {
-            executionPayloadSource = ProducedBlockSource.builder;
-          }
+      if (engine.status === "fulfilled" && builder.status !== "fulfilled") {
+        const engineBlock = engine.value;
+        const enginePayloadValue = engineBlock.executionPayloadValue ?? BigInt(0);
+        const engineConsensusValue = engineBlock.consensusBlockValue ?? BigInt(0);
+        const engineBlockValue = enginePayloadValue + engineConsensusValue;
+
+        logger.info("Selected engine block: no builder block produced", {
+          durationMs: engine.durationMs,
+          slot,
+          enginePayloadValue: `${enginePayloadValue}`,
+          engineConsensusValue: `${engineConsensusValue}`,
+          engineBlockValue: `${engineBlockValue}`,
+        });
+
+        return {...engine.value, executionPayloadBlinded: false, executionPayloadSource: ProducedBlockSource.engine};
+      }
+
+      if (engine.status === "fulfilled" && builder.status === "fulfilled") {
+        const engineBlock = engine.value;
+        const enginePayloadValue = engineBlock.executionPayloadValue ?? BigInt(0);
+        const engineConsensusValue = engineBlock.consensusBlockValue ?? BigInt(0);
+        const engineBlockValue = enginePayloadValue + engineConsensusValue;
+
+        const builderBlock = builder.value;
+        const builderPayloadValue = builderBlock.executionPayloadValue ?? BigInt(0);
+        const builderConsensusValue = builderBlock.consensusBlockValue ?? BigInt(0);
+        const builderBlockValue = builderPayloadValue + builderConsensusValue;
+
+        if (engineBlock.shouldOverrideBuilder) {
+          logger.info("Selected engine block as censorship suspected in builder blocks", {
+            // winston logger doesn't like bigint
+            enginePayloadValue: `${enginePayloadValue}`,
+            engineConsensusValue: `${engineConsensusValue}`,
+            engineBlockValue: `${engineBlockValue}`,
+            shouldOverrideBuilder: engineBlock.shouldOverrideBuilder,
+            slot,
+          });
+
+          return {...engine.value, executionPayloadBlinded: false, executionPayloadSource: ProducedBlockSource.engine};
         }
+
+        const executionPayloadSource = selectBlockProductionSource({
+          builderBlockValue,
+          engineBlockValue,
+          builderBoostFactor,
+          builderSelection,
+        });
+
         logger.info(`Selected executionPayloadSource=${executionPayloadSource} block`, {
           builderSelection,
           // winston logger doesn't like bigint
           builderBoostFactor: `${builderBoostFactor}`,
           enginePayloadValue: `${enginePayloadValue}`,
           builderPayloadValue: `${builderPayloadValue}`,
-          consensusBlockValueEngine: `${consensusBlockValueEngine}`,
-          consensusBlockValueBuilder: `${consensusBlockValueBuilder}`,
-          blockValueEngine: `${blockValueEngine}`,
-          blockValueBuilder: `${blockValueBuilder}`,
-          shouldOverrideBuilder,
+          engineConsensusValue: `${engineConsensusValue}`,
+          builderConsensusValue: `${builderConsensusValue}`,
+          engineBlockValue: `${engineBlockValue}`,
+          builderBlockValue: `${builderBlockValue}`,
+          shouldOverrideBuilder: engineBlock.shouldOverrideBuilder,
           slot,
         });
-      } else if (fullBlock && !blindedBlock) {
-        executionPayloadSource = ProducedBlockSource.engine;
-        logger.info("Selected engine block: no builder block produced", {
-          // winston logger doesn't like bigint
-          enginePayloadValue: `${enginePayloadValue}`,
-          consensusBlockValueEngine: `${consensusBlockValueEngine}`,
-          blockValueEngine: `${blockValueEngine}`,
-          shouldOverrideBuilder,
-          slot,
-        });
-      } else if (blindedBlock && !fullBlock) {
-        executionPayloadSource = ProducedBlockSource.builder;
-        logger.info("Selected builder block: no engine block produced", {
-          // winston logger doesn't like bigint
-          builderPayloadValue: `${builderPayloadValue}`,
-          consensusBlockValueBuilder: `${consensusBlockValueBuilder}`,
-          blockValueBuilder: `${blockValueBuilder}`,
-          shouldOverrideBuilder,
-          slot,
-        });
+
+        if (executionPayloadSource === ProducedBlockSource.engine) {
+          return {
+            ...engineBlock,
+            executionPayloadBlinded: false,
+            executionPayloadSource,
+          } as routes.validator.ProduceBlockOrContentsRes & {
+            executionPayloadBlinded: false;
+            executionPayloadSource: ProducedBlockSource;
+          };
+        } else {
+          return {
+            ...builderBlock,
+            executionPayloadBlinded: true,
+            executionPayloadSource,
+          } as routes.validator.ProduceBlindedBlockRes & {
+            executionPayloadBlinded: true;
+            executionPayloadSource: ProducedBlockSource;
+          };
+        }
       }
 
-      if (executionPayloadSource === null) {
-        throw Error(`Failed to produce engine or builder block for slot=${slot}`);
-      }
-
-      if (executionPayloadSource === ProducedBlockSource.engine) {
-        return {
-          ...fullBlock,
-          executionPayloadBlinded: false,
-          executionPayloadSource,
-        } as routes.validator.ProduceBlockOrContentsRes & {
-          executionPayloadBlinded: false;
-          executionPayloadSource: ProducedBlockSource;
-        };
-      } else {
-        return {
-          ...blindedBlock,
-          executionPayloadBlinded: true,
-          executionPayloadSource,
-        } as routes.validator.ProduceBlindedBlockRes & {
-          executionPayloadBlinded: true;
-          executionPayloadSource: ProducedBlockSource;
-        };
-      }
+      throw Error("Unreachable error occurred during the builder and execution block production");
     };
 
   const produceBlock: ServerApi<routes.validator.Api>["produceBlock"] = async function produceBlock(

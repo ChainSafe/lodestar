@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {resolveOrRacePromises} from "../../src/promise.js";
 import {NonEmptyArray} from "../../src/types.js";
 
