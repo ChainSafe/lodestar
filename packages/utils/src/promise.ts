@@ -137,7 +137,7 @@ export async function resolveOrRacePromises<T extends NonEmptyArray<Promise<unkn
   }
 ): Promise<ReturnPromiseWithTuple<T>> | never {
   if (raceTimeoutMs <= resolveTimeoutMs) {
-    throw new Error("Race time mus tbe greater than resolve time");
+    throw new Error("Race time must be greater than resolve time");
   }
 
   const mutedPromises = promises.map((p) => (p instanceof MutedPromise ? p : new MutedPromise(p)));
