@@ -90,12 +90,13 @@ describe.skip("doppelganger / doppelganger test", function () {
     const pubKey = validatorUnderTest.validatorStore.votingPubkeys()[0];
     const beaconBlock = ssz.allForks.phase0.BeaconBlock.defaultValue();
 
-    // Signing should be possible if starting at genesis since doppelganger should be off
     await expect(
       validatorUnderTest.validatorStore.signBlock(fromHexString(pubKey), beaconBlock, bn.chain.clock.currentSlot)
-    ).resolves.toBeUndefined();
+    ).resolves.toBeWithMessage(
+      undefined,
+      "Signing should be possible if starting at genesis since doppelganger should be off"
+    );
 
-    // Signing should be possible if starting at genesis since doppelganger should be off
     await expect(
       validatorUnderTest.validatorStore.signAttestation(
         createAttesterDuty(fromHexString(pubKey), bn.chain.clock.currentSlot, committeeIndex, validatorIndex),
@@ -107,7 +108,10 @@ describe.skip("doppelganger / doppelganger test", function () {
         ),
         bn.chain.clock.currentEpoch
       )
-    ).resolves.toBeUndefined();
+    ).resolves.toBeWithMessage(
+      undefined,
+      "Signing should be possible if starting at genesis since doppelganger should be off"
+    );
   });
 
   it("should shut down validator if same key is active and started after genesis", async function () {
