@@ -175,6 +175,7 @@ scalability
 secp
 sepolia
 sharding
+src
 ssz
 stakers
 subnet
