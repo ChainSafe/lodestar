@@ -30,8 +30,12 @@ type Types = Record<string, Type<any>>;
 //
 
 const sszStatic =
-  (skippedTypes?: string[]) =>
+  (skippedFork: string, skippedTypes?: string[]) =>
   (fork: ForkName, typeName: string, testSuite: string, testSuiteDirpath: string): void => {
+    if (fork === skippedFork) {
+      return;
+    }
+
     // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
     if (skippedTypes?.includes(typeName)) {
       return;
@@ -71,6 +75,7 @@ specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIV
   // eslint-disable-next-line @typescript-eslint/naming-convention
   ssz_static: {
     type: RunnerType.custom,
-    fn: sszStatic(),
+    // starting from v1.4.0-beta.6, there is "whisk" fork in ssz_static tests but we ignore them
+    fn: sszStatic("whisk"),
   },
 });
