@@ -2,7 +2,7 @@ import {fromHexString} from "@chainsafe/ssz";
 import {Epoch, Slot, RootHex} from "@lodestar/types";
 import {IForkChoice} from "@lodestar/fork-choice";
 import {Logger, toHex} from "@lodestar/utils";
-import {ForkSeq, SLOTS_PER_EPOCH, MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS} from "@lodestar/params";
+import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {KeyValue} from "@lodestar/db";
 import {ChainForkConfig} from "@lodestar/config";
@@ -83,7 +83,7 @@ export async function archiveBlocks(
   // Delete expired blobs
   // Keep only `[max(GENESIS_EPOCH, current_epoch - MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS), current_epoch]`
   if (finalizedPostDeneb) {
-    const blobSidecarsMinEpoch = currentEpoch - MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS;
+    const blobSidecarsMinEpoch = currentEpoch - config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS;
     if (blobSidecarsMinEpoch >= config.DENEB_FORK_EPOCH) {
       const slotsToDelete = await db.blobSidecarsArchive.keys({lt: computeStartSlotAtEpoch(blobSidecarsMinEpoch)});
       if (slotsToDelete.length > 0) {

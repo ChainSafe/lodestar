@@ -63,6 +63,9 @@ export type ChainConfig = {
   DEPOSIT_CHAIN_ID: number;
   DEPOSIT_NETWORK_ID: number;
   DEPOSIT_CONTRACT_ADDRESS: Uint8Array;
+
+  // Networking
+  MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: number;
 };
 
 export const chainConfigTypes: SpecTypes<ChainConfig> = {
@@ -116,6 +119,9 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   DEPOSIT_CHAIN_ID: "number",
   DEPOSIT_NETWORK_ID: "number",
   DEPOSIT_CONTRACT_ADDRESS: "bytes",
+
+  // Networking
+  MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: "number",
 };
 
 /** Allows values in a Spec file */

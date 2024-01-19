@@ -79,4 +79,11 @@ export const chainConfig: ChainConfig = {
   DEPOSIT_CHAIN_ID: 1,
   DEPOSIT_NETWORK_ID: 1,
   DEPOSIT_CONTRACT_ADDRESS: b("0x00000000219ab540356cBB839Cbe05303d7705Fa"),
+
+  // Networking
+  // ---------------------------------------------------------------
+
+  // Deneb
+  // `2**12` (= 4096 epochs, ~18 days)
+  MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: 4096,
 };
