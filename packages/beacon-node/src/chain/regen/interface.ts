@@ -35,6 +35,7 @@ export interface IStateRegenerator extends IStateRegeneratorInternal {
   dropCache(): void;
   dumpCacheSummary(): routes.lodestar.StateCacheItem[];
   getStateSync(stateRoot: RootHex): CachedBeaconStateAllForks | null;
+  getCheckpointStateOrBytes(cp: CheckpointHex): Promise<CachedBeaconStateAllForks | Uint8Array | null>;
   getCheckpointStateSync(cp: CheckpointHex): CachedBeaconStateAllForks | null;
   getClosestHeadState(head: ProtoBlock): CachedBeaconStateAllForks | null;
   pruneOnCheckpoint(finalizedEpoch: Epoch, justifiedEpoch: Epoch, headStateRoot: RootHex): void;

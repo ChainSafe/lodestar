@@ -5,7 +5,7 @@ import {MapDef} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
 import {Metrics} from "../../metrics/index.js";
 import {MapTracker} from "./mapMetrics.js";
-import {CheckpointStateCache as CheckpointStateCacheInterface, CacheItemType} from "./types.js";
+import {CheckpointStateCache, CacheItemType} from "./types.js";
 
 export type CheckpointHex = {epoch: Epoch; rootHex: RootHex};
 const MAX_EPOCHS = 10;
@@ -15,9 +15,8 @@ const MAX_EPOCHS = 10;
  * belonging to checkpoint
  *
  * Similar API to Repository
- * TODO: rename to MemoryCheckpointStateCache in the next PR of n-historical states
  */
-export class CheckpointStateCache implements CheckpointStateCacheInterface {
+export class InMemoryCheckpointStateCache implements CheckpointStateCache {
   private readonly cache: MapTracker<string, CachedBeaconStateAllForks>;
   /** Epoch -> Set<blockRoot> */
   private readonly epochIndex = new MapDef<Epoch, Set<string>>(() => new Set<string>());

@@ -187,7 +187,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   async getOrReload(cp: CheckpointHex): Promise<CachedBeaconStateAllForks | null> {
     const stateOrStateBytesData = await this.getStateOrLoadDb(cp);
     if (stateOrStateBytesData === null || isCachedBeaconState(stateOrStateBytesData)) {
-      return stateOrStateBytesData;
+      return stateOrStateBytesData?.clone() ?? null;
     }
     const {persistedKey, stateBytes} = stateOrStateBytesData;
     const logMeta = {persistedKey: toHexString(persistedKey)};
@@ -242,7 +242,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       this.cache.set(cpKey, {type: CacheItemType.inMemory, state: newCachedState, persistedKey});
       this.epochIndex.getOrDefault(cp.epoch).add(cp.rootHex);
       // don't prune from memory here, call it at the last 1/3 of slot 0 of an epoch
-      return newCachedState;
+      return newCachedState.clone();
     } catch (e) {
       this.logger.debug("Reload: error loading cached state", logMeta, e as Error);
       return null;
@@ -312,7 +312,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     if (isInMemoryCacheItem(cacheItem)) {
       const {state} = cacheItem;
       this.metrics?.stateClonedCount.observe(state.clonedCount);
-      return state;
+      return state.clone();
     }
 
     return null;
@@ -354,7 +354,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       if (this.epochIndex.get(epoch)?.has(rootHex)) {
         const inMemoryState = this.get({rootHex, epoch});
         if (inMemoryState) {
-          return inMemoryState;
+          return inMemoryState.clone();
         }
       }
     }
@@ -378,7 +378,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
         try {
           const state = await this.getOrReload({rootHex, epoch});
           if (state) {
-            return state;
+            return state.clone();
           }
         } catch (e) {
           this.logger.debug("Error get or reload state", {epoch, rootHex}, e as Error);
