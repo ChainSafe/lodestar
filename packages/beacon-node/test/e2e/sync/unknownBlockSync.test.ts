@@ -1,4 +1,4 @@
-import {describe, it, afterEach, vi} from "vitest";
+import {describe, it, afterEach} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
 import {ChainConfig} from "@lodestar/config";
 import {phase0} from "@lodestar/types";
