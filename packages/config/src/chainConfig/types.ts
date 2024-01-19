@@ -56,7 +56,7 @@ export type ChainConfig = {
   MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT: number;
   CHURN_LIMIT_QUOTIENT: number;
 
-  // Proposer boost
+  // Fork choice
   PROPOSER_SCORE_BOOST: number;
 
   // Deposit contract
@@ -112,7 +112,7 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT: "number",
   CHURN_LIMIT_QUOTIENT: "number",
 
-  // Proposer boost
+  // Fork choice
   PROPOSER_SCORE_BOOST: "number",
 
   // Deposit contract

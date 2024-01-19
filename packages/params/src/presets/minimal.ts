@@ -42,12 +42,6 @@ export const minimalPreset: BeaconPreset = {
   EPOCHS_PER_ETH1_VOTING_PERIOD: 4,
   // [customized] smaller state
   SLOTS_PER_HISTORICAL_ROOT: 64,
-  /*
-  // 2**8 (= 256) epochs
-  MIN_VALIDATOR_WITHDRAWABILITY_DELAY: 256,
-  // [customized] higher frequency of committee turnover and faster time to acceptable voluntary exit
-  SHARD_COMMITTEE_PERIOD: 64,
-  */
   // 2**2 (= 4) epochs
   MIN_EPOCHS_TO_INACTIVITY_PENALTY: 4,
 

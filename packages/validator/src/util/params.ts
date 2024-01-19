@@ -121,7 +121,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT: denebForkRelevant,
     CHURN_LIMIT_QUOTIENT: true,
 
-    // Proposer boost
+    // Fork choice
     PROPOSER_SCORE_BOOST: false, // Ignored as it's changing https://github.com/ethereum/consensus-specs/pull/2895
 
     // Deposit contract
