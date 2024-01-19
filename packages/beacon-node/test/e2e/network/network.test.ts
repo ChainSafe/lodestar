@@ -5,7 +5,8 @@ import {phase0} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {Network, NetworkEvent, ReqRespMethod} from "../../../src/network/index.js";
 import {GoodByeReasonCode} from "../../../src/constants/index.js";
-import {connect, disconnect, onPeerConnect, onPeerDisconnect, getNetworkForTest} from "../../utils/network.js";
+import {connect, disconnect, onPeerConnect, onPeerDisconnect} from "../../utils/network.js";
+import {getNetworkForTest} from "../../utils/networkWithMockDb.js";
 import {getValidPeerId} from "../../utils/peer.js";
 
 describe(

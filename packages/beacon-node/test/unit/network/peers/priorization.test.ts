@@ -9,7 +9,7 @@ import {
   PrioritizePeersOpts,
   sortPeersToPrune,
 } from "../../../../src/network/peers/utils/prioritizePeers.js";
-import {getAttnets, getSyncnets} from "../../../utils/networkData.js";
+import {getAttnets, getSyncnets} from "../../../utils/network.js";
 import {RequestedSubnet} from "../../../../src/network/peers/utils/index.js";
 
 type Result = ReturnType<typeof prioritizePeers>;

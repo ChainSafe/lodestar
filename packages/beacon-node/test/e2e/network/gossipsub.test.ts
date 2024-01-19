@@ -5,7 +5,8 @@ import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {Network} from "../../../src/network/index.js";
 import {GossipType, GossipHandlers, GossipHandlerParamGeneric} from "../../../src/network/gossip/index.js";
-import {connect, onPeerConnect, getNetworkForTest} from "../../utils/network.js";
+import {getNetworkForTest} from "../../utils/networkWithMockDb.js";
+import {connect, onPeerConnect} from "../../utils/network.js";
 
 describe(
   "gossipsub / main thread",
