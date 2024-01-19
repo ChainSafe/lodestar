@@ -57,7 +57,7 @@ If you observe following error running any of the test files that means you are 
 - To then run only that failed test you can run against a specific file as use vitest's filters to run only one case
 
 ```sh
-LODESTAR_PRESET=minimal ../../node_modules/.bin/vitest --config vitest.config.spec.ts --run test/spec/phase0/sanity.test.ts
+LODESTAR_PRESET=minimal yarn vitest --run --config vitest.config.spec.ts test/spec/phase0/sanity.test.ts
 ```
 
 ## Docker
