@@ -4,6 +4,9 @@ import {PresetName} from "@lodestar/params";
 import {ChainConfig} from "../types.js";
 import {chainConfig as mainnet} from "../presets/mainnet.js";
 
+// Chiado beacon chain config:
+// https://github.com/gnosischain/configs/blob/main/chiado/config.yaml
+
 export const chiadoChainConfig: ChainConfig = {
   ...mainnet,
 

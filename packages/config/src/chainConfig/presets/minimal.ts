@@ -3,6 +3,9 @@ import {fromHexString as b} from "@chainsafe/ssz";
 import {PresetName} from "@lodestar/params";
 import {ChainConfig} from "../types.js";
 
+// Minimal config
+// https://github.com/ethereum/consensus-specs/blob/dev/configs/minimal.yaml
+
 export const chainConfig: ChainConfig = {
   // Extends the minimal preset
   PRESET_BASE: PresetName.minimal,

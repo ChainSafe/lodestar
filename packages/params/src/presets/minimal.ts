@@ -1,5 +1,8 @@
 import {BeaconPreset} from "../types.js";
 
+// Minimal preset
+// https://github.com/ethereum/consensus-specs/tree/dev/presets/minimal
+
 /* eslint-disable @typescript-eslint/naming-convention */
 export const minimalPreset: BeaconPreset = {
   // Misc
@@ -112,7 +115,6 @@ export const minimalPreset: BeaconPreset = {
 
   // DENEB
   ///////////
-  // https://github.com/ethereum/consensus-specs/blob/dev/presets/minimal/eip4844.yaml
   FIELD_ELEMENTS_PER_BLOB: 4096,
   MAX_BLOB_COMMITMENTS_PER_BLOCK: 16,
   MAX_BLOBS_PER_BLOCK: 6,

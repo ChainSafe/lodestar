@@ -3,6 +3,9 @@ import {fromHexString as b} from "@chainsafe/ssz";
 import {PresetName} from "@lodestar/params";
 import {ChainConfig} from "../types.js";
 
+// Mainnet config
+// https://github.com/ethereum/consensus-specs/blob/dev/configs/mainnet.yaml
+
 export const chainConfig: ChainConfig = {
   // Extends the mainnet preset
   PRESET_BASE: PresetName.mainnet,

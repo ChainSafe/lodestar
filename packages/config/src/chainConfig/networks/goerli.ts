@@ -3,6 +3,9 @@ import {fromHexString as b} from "@chainsafe/ssz";
 import {ChainConfig} from "../types.js";
 import {chainConfig as mainnet} from "../presets/mainnet.js";
 
+// Goerli beacon chain config:
+// https://github.com/eth-clients/goerli/blob/main/prater/config.yaml
+
 export const goerliChainConfig: ChainConfig = {
   ...mainnet,
 
