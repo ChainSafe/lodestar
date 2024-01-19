@@ -290,7 +290,11 @@ export function createLodestarMetrics(
     },
 
     // Beacon state transition metrics
-
+    epochTransitionByCaller: register.gauge<{caller: RegenCaller}>({
+      name: "lodestar_epoch_transition_by_caller_total",
+      help: "Total count of epoch transition by caller",
+      labelNames: ["caller"],
+    }),
     epochTransitionTime: register.histogram({
       name: "lodestar_stfn_epoch_transition_seconds",
       help: "Time to process a single epoch transition in seconds",

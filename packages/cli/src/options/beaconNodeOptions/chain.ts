@@ -26,6 +26,10 @@ export type ChainArgs = {
   broadcastValidationStrictness?: string;
   "chain.minSameMessageSignatureSetsToBatch"?: number;
   "chain.maxShufflingCacheEpochs"?: number;
+  "chain.nHistoricalStates"?: boolean;
+  "chain.nHistoricalStatesFileDataStore"?: boolean;
+  "chain.maxBlockStates"?: number;
+  "chain.maxCPStateEpochsInMemory"?: number;
 };
 
 export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
@@ -53,6 +57,11 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     minSameMessageSignatureSetsToBatch:
       args["chain.minSameMessageSignatureSetsToBatch"] ?? defaultOptions.chain.minSameMessageSignatureSetsToBatch,
     maxShufflingCacheEpochs: args["chain.maxShufflingCacheEpochs"] ?? defaultOptions.chain.maxShufflingCacheEpochs,
+    nHistoricalStates: args["chain.nHistoricalStates"] ?? defaultOptions.chain.nHistoricalStates,
+    nHistoricalStatesFileDataStore:
+      args["chain.nHistoricalStatesFileDataStore"] ?? defaultOptions.chain.nHistoricalStatesFileDataStore,
+    maxBlockStates: args["chain.maxBlockStates"] ?? defaultOptions.chain.maxBlockStates,
+    maxCPStateEpochsInMemory: args["chain.maxCPStateEpochsInMemory"] ?? defaultOptions.chain.maxCPStateEpochsInMemory,
   };
 }
 
@@ -210,6 +219,39 @@ Will double processing times. Use only for debugging purposes.",
     description: "Maximum ShufflingCache epochs to keep in memory",
     type: "number",
     default: defaultOptions.chain.maxShufflingCacheEpochs,
+    group: "chain",
+  },
+
+  "chain.nHistoricalStates": {
+    hidden: true,
+    description:
+      "Use the new FIFOBlockStateCache and PersistentCheckpointStateCache or not which make lodestar heap size bounded instead of unbounded as before",
+    type: "boolean",
+    default: defaultOptions.chain.nHistoricalStates,
+    group: "chain",
+  },
+
+  "chain.nHistoricalStatesFileDataStore": {
+    hidden: true,
+    description: "Use fs to store checkpoint state for PersistentCheckpointStateCache or not",
+    type: "boolean",
+    default: defaultOptions.chain.nHistoricalStatesFileDataStore,
+    group: "chain",
+  },
+
+  "chain.maxBlockStates": {
+    hidden: true,
+    description: "Max block states to cache in memory, used for FIFOBlockStateCache",
+    type: "number",
+    default: defaultOptions.chain.maxBlockStates,
+    group: "chain",
+  },
+
+  "chain.maxCPStateEpochsInMemory": {
+    hidden: true,
+    description: "Max epochs to cache checkpoint states in memory, used for PersistentCheckpointStateCache",
+    type: "number",
+    default: defaultOptions.chain.maxCPStateEpochsInMemory,
     group: "chain",
   },
 };

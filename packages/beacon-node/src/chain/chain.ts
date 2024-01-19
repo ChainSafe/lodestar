@@ -41,6 +41,7 @@ import {IExecutionEngine, IExecutionBuilder} from "../execution/index.js";
 import {Clock, ClockEvent, IClock} from "../util/clock.js";
 import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
+import {BufferPool} from "../util/bufferPool.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {ChainEventEmitter, ChainEvent} from "./emitter.js";
 import {IBeaconChain, ProposerPreparationData, BlockHash, StateGetOpts, CommonBlockBody} from "./interface.js";
@@ -79,7 +80,11 @@ import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {ShufflingCache} from "./shufflingCache.js";
 import {StateContextCache} from "./stateCache/stateContextCache.js";
 import {SeenGossipBlockInput} from "./seenCache/index.js";
-import {CheckpointStateCache} from "./stateCache/stateContextCheckpointsCache.js";
+import {InMemoryCheckpointStateCache} from "./stateCache/stateContextCheckpointsCache.js";
+import {FIFOBlockStateCache} from "./stateCache/fifoBlockStateCache.js";
+import {PersistentCheckpointStateCache} from "./stateCache/persistentCheckpointsCache.js";
+import {DbCPStateDatastore} from "./stateCache/datastore/db.js";
+import {FileCPStateDatastore} from "./stateCache/datastore/file.js";
 
 /**
  * Arbitrary constants, blobs and payloads should be consumed immediately in the same slot
@@ -237,9 +242,28 @@ export class BeaconChain implements IBeaconChain {
     this.pubkey2index = cachedState.epochCtx.pubkey2index;
     this.index2pubkey = cachedState.epochCtx.index2pubkey;
 
-    const stateCache = new StateContextCache({metrics});
-    const checkpointStateCache = new CheckpointStateCache({metrics});
-
+    const fileDataStore = opts.nHistoricalStatesFileDataStore ?? false;
+    const stateCache = this.opts.nHistoricalStates
+      ? new FIFOBlockStateCache(this.opts, {metrics})
+      : new StateContextCache({metrics});
+    const checkpointStateCache = this.opts.nHistoricalStates
+      ? new PersistentCheckpointStateCache(
+          {
+            metrics,
+            logger,
+            clock,
+            shufflingCache: this.shufflingCache,
+            getHeadState: this.getHeadState.bind(this),
+            bufferPool: new BufferPool(anchorState.type.tree_serializedSize(anchorState.node), metrics),
+            datastore: fileDataStore
+              ? // debug option if we want to investigate any issues with the DB
+                new FileCPStateDatastore()
+              : // production option
+                new DbCPStateDatastore(this.db),
+          },
+          this.opts
+        )
+      : new InMemoryCheckpointStateCache({metrics});
     const {checkpoint} = computeAnchorCheckpoint(config, anchorState);
     stateCache.add(cachedState);
     stateCache.setHeadState(cachedState);
@@ -333,6 +357,7 @@ export class BeaconChain implements IBeaconChain {
 
   /** Populate in-memory caches with persisted data. Call at least once on startup */
   async loadFromDisk(): Promise<void> {
+    await this.regen.init();
     await this.opPool.fromPersisted(this.db);
   }
 
