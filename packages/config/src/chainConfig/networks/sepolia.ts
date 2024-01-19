@@ -30,6 +30,9 @@ export const sepoliaChainConfig: ChainConfig = {
   // Capella
   CAPELLA_FORK_VERSION: b("0x90000072"),
   CAPELLA_FORK_EPOCH: 56832,
+  // Deneb
+  DENEB_FORK_VERSION: b("0x90000073"),
+  DENEB_FORK_EPOCH: 132608,
 
   // Deposit contract
   // ---------------------------------------------------------------
