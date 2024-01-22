@@ -377,8 +377,8 @@ describe("executionEngine / ExecutionEngineHttp", function () {
         `Unfinalized cache is missing the expected validator. Size: ${epochCtx.unfinalizedPubkey2index.size}`
       );
     }
-    // epochCtx.historicalValidatorsLength should be empty since no epoch transition has happened.
-    if (!epochCtx.historicalValidatorLengths.isEmpty()) {
+    // validator count at epoch 1 should be empty at this point since no epoch transition has happened.
+    if (epochCtx.getValidatorCountAtEpoch(1) !== undefined) {
       throw Error("Historical validator lengths is modified");
     }
 
@@ -412,10 +412,17 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       throw Error("Unfinalized cache still contains new validator");
     }
     // After 4 epochs, headState's finalized cp epoch should be 2
-    // Its historicalValidatorLengths should store lengths for epoch 3 and 4 hence size should be 2
-    console.log(`haha ${epochCtx.historicalValidatorLengths.size}`);
-    if (epochCtx.historicalValidatorLengths.size !== 2) {
-      throw Error("Historical validator lengths is not updated correctly");
+    // epochCtx should only have validator count for epoch 3 and 4.
+    if (epochCtx.getValidatorCountAtEpoch(4) === undefined || epochCtx.getValidatorCountAtEpoch(3) === undefined) {
+      throw Error("Missing historical validator length for epoch 3 or 4");
+    }
+
+    if (epochCtx.getValidatorCountAtEpoch(4) !== 33 || epochCtx.getValidatorCountAtEpoch(3) !== 33) {
+      throw Error("Incorrect historical validator length for epoch 3 or 4");
+    }
+
+    if (epochCtx.getValidatorCountAtEpoch(2) !== undefined || epochCtx.getValidatorCountAtEpoch(1) !== undefined) {
+      throw Error("Historical validator length for epoch 1 or 2 is not dropped properly");
     }
 
     if (headState.depositReceiptsStartIndex === UNSET_DEPOSIT_RECEIPTS_START_INDEX) {

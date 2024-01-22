@@ -130,7 +130,6 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     const states = this.stateCache.getStates();
     const cpStates = this.checkpointStateCache.getStates();
 
-
     // Add finalized pubkeys to all states.
     const addTimer = this.metrics?.regenFnAddPubkeyTime.startTimer();
 

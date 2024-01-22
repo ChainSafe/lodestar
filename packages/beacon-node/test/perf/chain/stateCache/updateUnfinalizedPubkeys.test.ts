@@ -1,14 +1,14 @@
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {Map} from "immutable";
-import {type CachedBeaconStateAllForks, PubkeyIndexMap} from "@lodestar/state-transition";
-import {ssz} from "@lodestar/types";
-import {generateCached6110State} from "../../../utils/state.js";
-import {CheckpointStateCache, StateContextCache} from "../../../../src/chain/stateCache/index.js";
 import {toBufferBE} from "bigint-buffer";
 import {digest} from "@chainsafe/as-sha256";
 import type {SecretKey} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
+import {ssz} from "@lodestar/types";
+import {type CachedBeaconStateAllForks, PubkeyIndexMap} from "@lodestar/state-transition";
 import {bytesToBigInt, intToBytes} from "@lodestar/utils";
+import {CheckpointStateCache, StateContextCache} from "../../../../src/chain/stateCache/index.js";
+import {generateCached6110State} from "../../../utils/state.js";
 
 // Benchmark date from Mon Nov 21 2023 - Intel Core i7-9750H @ 2.60Ghz
 // ✔ updateUnfinalizedPubkeys - updating 10 pubkeys                      1444.173 ops/s    692.4380 us/op        -       1057 runs   6.03 s
@@ -72,11 +72,10 @@ describe("updateUnfinalizedPubkeys perf tests", function () {
         for (const s of states) {
           s.epochCtx.deleteUnfinalizedPubkeys(pubkeysToDelete);
         }
-    
+
         for (const s of cpStates) {
           s.epochCtx.deleteUnfinalizedPubkeys(pubkeysToDelete);
         }
-
       },
     });
   }
