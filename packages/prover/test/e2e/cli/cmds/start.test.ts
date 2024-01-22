@@ -73,7 +73,6 @@ describe("prover/start", () => {
       await sleep(3000);
     }, 50000);
 
-    
     afterAll(async () => {
       if (proc) {
         await stopChildProcess(proc);
