@@ -76,7 +76,7 @@ function computeBlockAttestationRewardPhase0(
 }
 
 /**
- * Calculate rewards received by block proposer for incuding attestations since Altair.
+ * Calculate rewards received by block proposer for including attestations since Altair.
  * Reuses `processAttestationsAltair()`. Has dependency on RewardCache
  */
 function computeBlockAttestationRewardAltair(
