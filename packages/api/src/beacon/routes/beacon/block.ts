@@ -229,8 +229,12 @@ export type Api = {
    * Retrieves BlobSidecar included in requested block.
    * @param blockId Block identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
+  * @param indices Array of indices for blob sidecars to request for in the specified block. Returns all blob sidecars in the block if not specified.
    */
-  getBlobSidecars(blockId: BlockId): Promise<
+  getBlobSidecars(
+    blockId: BlockId,
+    indices?: string[]
+  ): Promise<
     ApiClientResponse<{
       [HttpStatusCode.OK]: {executionOptimistic: ExecutionOptimistic; data: deneb.BlobSidecars};
     }>
@@ -270,7 +274,7 @@ export type ReqTypes = {
   publishBlockV2: {body: unknown; query: {broadcast_validation?: string}};
   publishBlindedBlock: {body: unknown};
   publishBlindedBlockV2: {body: unknown; query: {broadcast_validation?: string}};
-  getBlobSidecars: BlockIdOnlyReq;
+  getBlobSidecars: {params: {block_id: string}; query: {indices?: string[]}};
 };
 
 export function getReqSerializers(config: ChainForkConfig): ReqSerializers<Api, ReqTypes> {
@@ -356,7 +360,16 @@ export function getReqSerializers(config: ChainForkConfig): ReqSerializers<Api, 
         query: {broadcast_validation: Schema.String},
       },
     },
-    getBlobSidecars: blockIdOnlyReq,
+    getBlobSidecars: {
+      writeReq: (block_id, indices = []) => ({
+        params: {block_id: String(block_id)},
+        query: {indices},
+      }),
+      parseReq: ({params, query}) => [params.block_id, query.indices],
+      schema: {
+        query: {indices: Schema.StringArray},
+      },
+    },
   };
 }
 

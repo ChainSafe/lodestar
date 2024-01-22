@@ -406,7 +406,7 @@ export function getBeaconBlockApi({
       await publishBlock(signedBlockOrContents, opts);
     },
 
-    async getBlobSidecars(blockId) {
+    async getBlobSidecars(blockId, indices = []) {
       const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
       const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
 
@@ -418,9 +418,11 @@ export function getBeaconBlockApi({
       if (!blobSidecars) {
         throw Error(`blobSidecars not found in db for slot=${block.message.slot} root=${toHexString(blockRoot)}`);
       }
+
+      const indicesSet = new Set(indices?.map((index) => parseInt(index)));
       return {
         executionOptimistic,
-        data: blobSidecars,
+        data: blobSidecars.filter(({index}) => indicesSet.has(index)),
       };
     },
   };
