@@ -129,7 +129,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     DEPOSIT_NETWORK_ID: false, // Non-critical
     DEPOSIT_CONTRACT_ADDRESS: true,
 
-    // Networking
+    // Networking (non-critical as those do not affect consensus)
     MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: false,
 
     // # Phase0Preset
