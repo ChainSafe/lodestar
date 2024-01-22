@@ -2,7 +2,13 @@ import worker from "node:worker_threads";
 import {expose} from "@chainsafe/threads/worker";
 import {createBeaconConfig, chainConfigFromJson} from "@lodestar/config";
 import {getNodeLogger} from "@lodestar/logger/node";
-import {BeaconStateTransitionMetrics, PubkeyIndexMap} from "@lodestar/state-transition";
+import {
+  BeaconStateTransitionMetrics,
+  EpochTransitionStep,
+  PubkeyIndexMap,
+  StateCloneSource,
+  StateHashTreeRootSource,
+} from "@lodestar/state-transition";
 import {LevelDbController} from "@lodestar/db";
 import {RegistryMetricCreator, collectNodeJSMetrics} from "../../metrics/index.js";
 import {JobFnQueue} from "../../util/queue/fnQueue.js";
@@ -47,6 +53,12 @@ if (metricsRegister) {
       help: "Time to call commit after process a single epoch transition in seconds",
       buckets: [0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1],
     }),
+    epochTransitionStepTime: metricsRegister.histogram<{step: EpochTransitionStep}>({
+      name: "lodestar_stfn_epoch_transition_step_seconds",
+      help: "Time to call each step of epoch transition in seconds",
+      labelNames: ["step"],
+      buckets: [0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1],
+    }),
     processBlockTime: metricsRegister.histogram({
       name: "lodestar_historical_state_stfn_process_block_seconds",
       help: "Time to process a single block in seconds",
@@ -59,28 +71,29 @@ if (metricsRegister) {
       help: "Time to call commit after process a single block in seconds",
       buckets: [0.005, 0.01, 0.02, 0.05, 0.1, 1],
     }),
-    stateHashTreeRootTime: metricsRegister.histogram({
+    stateHashTreeRootTime: metricsRegister.histogram<{source: StateHashTreeRootSource}>({
       name: "lodestar_stfn_hash_tree_root_seconds",
       help: "Time to compute the hash tree root of a post state in seconds",
-      buckets: [0.005, 0.01, 0.02, 0.05, 0.1, 1],
+      buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5],
+      labelNames: ["source"],
     }),
-    preStateBalancesNodesPopulatedMiss: metricsRegister.gauge<"source">({
-      name: "lodestar_historical_state_stfn_balances_nodes_populated_miss_total",
+    preStateBalancesNodesPopulatedMiss: metricsRegister.gauge<{source: StateCloneSource}>({
+      name: "lodestar_stfn_balances_nodes_populated_miss_total",
       help: "Total count state.balances nodesPopulated is false on stfn",
       labelNames: ["source"],
     }),
-    preStateBalancesNodesPopulatedHit: metricsRegister.gauge<"source">({
-      name: "lodestar_historical_state_stfn_balances_nodes_populated_hit_total",
+    preStateBalancesNodesPopulatedHit: metricsRegister.gauge<{source: StateCloneSource}>({
+      name: "lodestar_stfn_balances_nodes_populated_hit_total",
       help: "Total count state.balances nodesPopulated is true on stfn",
       labelNames: ["source"],
     }),
-    preStateValidatorsNodesPopulatedMiss: metricsRegister.gauge<"source">({
-      name: "lodestar_historical_state_stfn_validators_nodes_populated_miss_total",
+    preStateValidatorsNodesPopulatedMiss: metricsRegister.gauge<{source: StateCloneSource}>({
+      name: "lodestar_stfn_validators_nodes_populated_miss_total",
       help: "Total count state.validators nodesPopulated is false on stfn",
       labelNames: ["source"],
     }),
-    preStateValidatorsNodesPopulatedHit: metricsRegister.gauge<"source">({
-      name: "lodestar_historical_state_stfn_validators_nodes_populated_hit_total",
+    preStateValidatorsNodesPopulatedHit: metricsRegister.gauge<{source: StateCloneSource}>({
+      name: "lodestar_stfn_validators_nodes_populated_hit_total",
       help: "Total count state.validators nodesPopulated is true on stfn",
       labelNames: ["source"],
     }),

@@ -50,7 +50,7 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
       new ClassicLevel(opts.name || "beaconchain", {
         keyEncoding: "binary",
         valueEncoding: "binary",
-        allowMultiThreading: true,
+        multithreading: true,
       });
 
     try {
