@@ -88,7 +88,6 @@ const ignoredOperations = [
   /* missing route */
   /* https://github.com/ChainSafe/lodestar/issues/5694 */
   "getSyncCommitteeRewards",
-  "getBlockRewards",
   "getAttestationsRewards",
   "getDepositSnapshot", // Won't fix for now, see https://github.com/ChainSafe/lodestar/issues/5697
   "getBlindedBlock", // https://github.com/ChainSafe/lodestar/issues/5699
