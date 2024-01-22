@@ -3,7 +3,7 @@ import {ChildProcess} from "node:child_process";
 import type {SecretKey} from "@chainsafe/bls/types";
 import {Api} from "@lodestar/api";
 import {Api as KeyManagerApi} from "@lodestar/api/keymanager";
-import {ChainConfig, ChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {Slot, allForks, Epoch} from "@lodestar/types";
 import {BeaconArgs} from "../../../src/cmds/beacon/options.js";
@@ -17,7 +17,7 @@ export type NodeId = string;
 export type SimulationInitOptions = {
   id: string;
   logsDir: string;
-  chainConfig: AtLeast<ChainConfig, "ALTAIR_FORK_EPOCH" | "BELLATRIX_FORK_EPOCH" | "GENESIS_DELAY">;
+  forkConfig: ChainForkConfig;
 };
 
 export type SimulationOptions = {
@@ -25,7 +25,7 @@ export type SimulationOptions = {
   logsDir: string;
   rootDir: string;
   controller: AbortController;
-  elGenesisTime: number;
+  genesisTime: number;
 };
 
 export enum BeaconClient {

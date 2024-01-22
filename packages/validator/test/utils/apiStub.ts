@@ -1,24 +1,29 @@
-import sinon, {SinonSandbox} from "sinon";
-import {getClient, Api} from "@lodestar/api";
-import {config} from "@lodestar/config/default";
+import {vi, Mocked} from "vitest";
+import {Api} from "@lodestar/api";
 
-export function getApiClientStub(
-  sandbox: SinonSandbox = sinon
-): Api & {[K in keyof Api]: sinon.SinonStubbedInstance<Api[K]>} {
-  const api = getClient({baseUrl: "http://localhost:9596"}, {config});
-
+export function getApiClientStub(): {[K in keyof Api]: Mocked<Api[K]>} {
   return {
-    beacon: sandbox.stub(api.beacon),
-    config: sandbox.stub(api.config),
-    // Typescript errors due to the multiple return types of debug.getState()
-    // Since the return type of this function is typed, casting to any to patch the error quickly
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    debug: sandbox.stub(api.debug) as any,
-    events: sandbox.stub(api.events),
-    lightclient: sandbox.stub(api.lightclient),
-    lodestar: sandbox.stub(api.lodestar),
-    node: sandbox.stub(api.node),
-    proof: sandbox.stub(api.proof),
-    validator: sandbox.stub(api.validator),
-  };
+    beacon: {
+      getStateValidators: vi.fn(),
+      publishBlindedBlockV2: vi.fn(),
+      publishBlockV2: vi.fn(),
+      submitPoolSyncCommitteeSignatures: vi.fn(),
+      submitPoolAttestations: vi.fn(),
+    },
+    validator: {
+      getProposerDuties: vi.fn(),
+      getAttesterDuties: vi.fn(),
+      prepareBeaconCommitteeSubnet: vi.fn(),
+      produceBlockV3: vi.fn(),
+      getSyncCommitteeDuties: vi.fn(),
+      prepareSyncCommitteeSubnets: vi.fn(),
+      produceSyncCommitteeContribution: vi.fn(),
+      publishContributionAndProofs: vi.fn(),
+      submitSyncCommitteeSelections: vi.fn(),
+      produceAttestationData: vi.fn(),
+      getAggregatedAttestation: vi.fn(),
+      publishAggregateAndProofs: vi.fn(),
+      submitBeaconCommitteeSelections: vi.fn(),
+    },
+  } as unknown as {[K in keyof Api]: Mocked<Api[K]>};
 }

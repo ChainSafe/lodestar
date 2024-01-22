@@ -1,10 +1,9 @@
-import {ChainForkConfig} from "@lodestar/config";
 import {Api, ReqTypes, routesData, getEventSerdes, eventTypes} from "../routes/events.js";
 import {ApiError, ServerRoutes} from "../../utils/server/index.js";
 import {ServerApi} from "../../interfaces.js";
 
-export function getRoutes(config: ChainForkConfig, api: ServerApi<Api>): ServerRoutes<Api, ReqTypes> {
-  const eventSerdes = getEventSerdes(config);
+export function getRoutes(api: ServerApi<Api>): ServerRoutes<Api, ReqTypes> {
+  const eventSerdes = getEventSerdes();
 
   return {
     // Non-JSON route. Server Sent Events (SSE)

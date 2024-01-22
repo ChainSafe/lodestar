@@ -16,13 +16,13 @@ export async function createBeaconNode<B extends BeaconClient>(
     genesisState?: BeaconStateAllForks;
   }
 ): Promise<BeaconNode> {
-  const {runner, forkConfig: config, genesisState} = options;
+  const {runner, genesisState} = options;
   const clId = `${options.id}-${client}`;
 
   const opts: BeaconGeneratorOptions = {
     ...options,
     id: clId,
-    genesisTime: options.genesisTime + config.GENESIS_DELAY,
+    genesisTime: options.genesisTime,
     engineMock: options.engineMock ?? false,
     clientOptions: options.clientOptions ?? {},
     address: "127.0.0.1",

@@ -164,9 +164,15 @@ export function createCachedBeaconState<T extends BeaconStateAllForks>(
 export function loadCachedBeaconState<T extends BeaconStateAllForks & BeaconStateCache>(
   cachedSeedState: T,
   stateBytes: Uint8Array,
-  opts?: EpochCacheOpts
+  opts?: EpochCacheOpts,
+  seedValidatorsBytes?: Uint8Array
 ): T {
-  const {state: migratedState, modifiedValidators} = loadState(cachedSeedState.config, cachedSeedState, stateBytes);
+  const {state: migratedState, modifiedValidators} = loadState(
+    cachedSeedState.config,
+    cachedSeedState,
+    stateBytes,
+    seedValidatorsBytes
+  );
   const {pubkey2index, index2pubkey} = cachedSeedState.epochCtx;
   // Get the validators sub tree once for all the loop
   const validators = migratedState.validators;

@@ -227,6 +227,7 @@ function getProposerConfigFromArgs(
       selection: parseBuilderSelection(
         args["builder.selection"] ?? (args["builder"] ? defaultOptions.builderAliasSelection : undefined)
       ),
+      boostFactor: args["builder.boostFactor"] !== undefined ? BigInt(args["builder.boostFactor"]) : undefined,
     },
   };
 

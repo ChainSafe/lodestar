@@ -29,9 +29,8 @@ export async function createExecutionNode<E extends ExecutionClient>(
     shanghaiTime:
       options.shanghaiTime ??
       getEstimatedShanghaiTime({
-        genesisDelaySeconds: forkConfig.GENESIS_DELAY,
         capellaForkEpoch: forkConfig.CAPELLA_FORK_EPOCH,
-        eth1GenesisTime: options.genesisTime,
+        genesisTime: options.genesisTime,
         secondsPerSlot: forkConfig.SECONDS_PER_SLOT,
         additionalSlots: 0,
       }),

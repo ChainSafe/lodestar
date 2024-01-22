@@ -39,12 +39,12 @@ jobs:
         run: scripts/wordlist_sort_check.sh
 
       - name: Build and collect docs
-        run: yarn build:docs
+        run: yarn docs:build
 
       # Run prettier check with fix after generating the docs. The CLI reference is formatted with prettier for
       # deployed version so this will fail if not "fixable"
       - name: Check docs format
-        run: yarn lint-docs:fix
+        run: yarn docs:lint:fix
 
       # Run spellcheck AFTER building docs, in case the CLI reference has issues
       - name: Spellcheck

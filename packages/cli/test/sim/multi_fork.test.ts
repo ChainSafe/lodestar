@@ -1,12 +1,10 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import path from "node:path";
 import {sleep, toHex, toHexString} from "@lodestar/utils";
-import {ApiError} from "@lodestar/api";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {CLIQUE_SEALING_PERIOD, SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/constants.js";
+import {ApiError, routes} from "@lodestar/api";
 import {AssertionMatch, BeaconClient, ExecutionClient, ValidatorClient} from "../utils/simulation/interfaces.js";
 import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
-import {getEstimatedTimeInSecForRun, getEstimatedTTD, logFilesDir} from "../utils/simulation/utils/index.js";
+import {defineSimTestConfig, logFilesDir} from "../utils/simulation/utils/index.js";
 import {
   connectAllNodes,
   connectNewNode,
@@ -18,43 +16,24 @@ import {nodeAssertion} from "../utils/simulation/assertions/nodeAssertion.js";
 import {mergeAssertion} from "../utils/simulation/assertions/mergeAssertion.js";
 import {createForkAssertion} from "../utils/simulation/assertions/forkAssertion.js";
 
-const genesisDelaySeconds = 20 * SIM_TESTS_SECONDS_PER_SLOT;
 const altairForkEpoch = 2;
 const bellatrixForkEpoch = 4;
 const capellaForkEpoch = 6;
-// Make sure bellatrix started before TTD reach
-const additionalSlotsForTTD = 2;
 const runTillEpoch = 8;
 const syncWaitEpoch = 2;
 
-const runTimeoutMs =
-  getEstimatedTimeInSecForRun({
-    genesisDelaySeconds,
-    secondsPerSlot: SIM_TESTS_SECONDS_PER_SLOT,
-    runTill: runTillEpoch + syncWaitEpoch,
-    // After adding Nethermind its took longer to complete
-    graceExtraTimeFraction: 0.3,
-  }) * 1000;
-
-const ttd = getEstimatedTTD({
-  genesisDelaySeconds,
-  bellatrixForkEpoch,
-  secondsPerSlot: SIM_TESTS_SECONDS_PER_SLOT,
-  cliqueSealingPeriod: CLIQUE_SEALING_PERIOD,
-  additionalSlots: additionalSlotsForTTD,
+const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
+  ALTAIR_FORK_EPOCH: altairForkEpoch,
+  BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
+  CAPELLA_FORK_EPOCH: capellaForkEpoch,
+  runTillEpoch: runTillEpoch + syncWaitEpoch,
 });
 
 const env = await SimulationEnvironment.initWithDefaults(
   {
     id: "multi-fork",
     logsDir: path.join(logFilesDir, "multi-fork"),
-    chainConfig: {
-      ALTAIR_FORK_EPOCH: altairForkEpoch,
-      BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
-      CAPELLA_FORK_EPOCH: capellaForkEpoch,
-      GENESIS_DELAY: genesisDelaySeconds,
-      TERMINAL_TOTAL_DIFFICULTY: ttd,
-    },
+    forkConfig,
   },
   [
     // put 1 lodestar node on produceBlockV3, and 2nd on produceBlindedBlock and 3rd on produceBlockV2
@@ -144,13 +123,13 @@ env.tracker.register({
   ...mergeAssertion,
   match: ({slot}) => {
     // Check at the end of bellatrix fork, merge should happen by then
-    return slot === env.clock.getLastSlotOfEpoch(bellatrixForkEpoch) - 1
+    return slot === env.clock.getLastSlotOfEpoch(bellatrixForkEpoch)
       ? AssertionMatch.Assert | AssertionMatch.Remove
       : AssertionMatch.None;
   },
 });
 
-await env.start({runTimeoutMs});
+await env.start({runTimeoutMs: estimatedTimeoutMs});
 await connectAllNodes(env.nodes);
 
 let lastForkEpoch = 0;
@@ -228,12 +207,14 @@ const unknownBlockSync = await env.createNodePair({
       clientOptions: {
         "network.allowPublishToZeroPeers": true,
         "sync.disableRangeSync": true,
-        // unknownBlockSync node start when other nodes are multiple epoch ahead and
-        // unknown block sync can work only if the gap is maximum `slotImportTolerance * 2`
-        // default value for slotImportTolerance is one epoch, so if gap is more than 2 epoch
-        // unknown block sync will not work. So why we have to increase it for tests.
-        // Adding SLOTS_PER_EPOCH will cover the case if the node starts on the last slot of epoch
-        "sync.slotImportTolerance": headForUnknownBlockSync.response.data.message.slot / 2 + SLOTS_PER_EPOCH,
+        /*
+        Initiation of the 'unknownBlockSync' node occurs when other nodes are several epochs ahead.
+        The effectiveness of the 'unknown block sync' is contingent on the gap being at most 'slotImportTolerance * 2'.
+        The default 'slotImportTolerance' value is one epoch; thus, if the gap exceeds 2 epochs,
+        the 'unknown block sync' won't function properly. Moreover, the 'unknownBlockSync' requires some startup time,
+        contributing to the overall gap. For stability in our CI, we've opted to set a higher limit on this constraint.
+        */
+        "sync.slotImportTolerance": headForUnknownBlockSync.response.data.message.slot,
       },
     },
   },
@@ -248,7 +229,11 @@ await connectNewNode(unknownBlockSync, env.nodes);
 await sleep(5000);
 
 try {
-  ApiError.assert(await unknownBlockSync.beacon.api.beacon.publishBlockV2(headForUnknownBlockSync.response.data));
+  ApiError.assert(
+    await unknownBlockSync.beacon.api.beacon.publishBlockV2(headForUnknownBlockSync.response.data, {
+      broadcastValidation: routes.beacon.BroadcastValidation.none,
+    })
+  );
 
   env.tracker.record({
     message: "Publishing unknown block should fail",

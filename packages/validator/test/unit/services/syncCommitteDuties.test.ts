@@ -1,6 +1,6 @@
+import {describe, it, expect, beforeAll, beforeEach, afterEach} from "vitest";
+import {when} from "vitest-when";
 import {toBufferBE} from "bigint-buffer";
-import {expect} from "chai";
-import sinon from "sinon";
 import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
 import {createChainForkConfig} from "@lodestar/config";
@@ -22,9 +22,7 @@ import {syncCommitteeIndicesToSubnets} from "../../../src/services/utils.js";
 /* eslint-disable @typescript-eslint/naming-convention */
 
 describe("SyncCommitteeDutiesService", function () {
-  const sandbox = sinon.createSandbox();
-
-  const api = getApiClientStub(sandbox);
+  const api = getApiClientStub();
 
   let validatorStore: ValidatorStore;
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
@@ -43,7 +41,7 @@ describe("SyncCommitteeDutiesService", function () {
     validator: ssz.phase0.Validator.defaultValue(),
   };
 
-  before(async () => {
+  beforeAll(async () => {
     const secretKeys = [
       bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32)),
       bls.SecretKey.fromBytes(toBufferBE(BigInt(99), 32)),
@@ -61,7 +59,7 @@ describe("SyncCommitteeDutiesService", function () {
       index: indices[i],
       validator: {...defaultValidator.validator, pubkey: pubkeys[i]},
     }));
-    api.beacon.getStateValidators.resolves({
+    api.beacon.getStateValidators.mockResolvedValue({
       response: {data: validatorResponses, executionOptimistic: false},
       ok: true,
       status: HttpStatusCode.OK,
@@ -77,14 +75,18 @@ describe("SyncCommitteeDutiesService", function () {
       validatorIndex: indices[0],
       validatorSyncCommitteeIndices: [7],
     };
-    api.validator.getSyncCommitteeDuties.resolves({
+    api.validator.getSyncCommitteeDuties.mockResolvedValue({
       response: {data: [duty], executionOptimistic: false},
       ok: true,
       status: HttpStatusCode.OK,
     });
 
     // Accept all subscriptions
-    api.validator.prepareSyncCommitteeSubnets.resolves();
+    api.validator.prepareSyncCommitteeSubnets.mockResolvedValue({
+      ok: true,
+      status: HttpStatusCode.OK,
+      response: undefined,
+    });
 
     // Clock will call runAttesterDutiesTasks() immediately
     const clock = new ClockMock();
@@ -95,9 +97,9 @@ describe("SyncCommitteeDutiesService", function () {
 
     // Validator index should be persisted
     // Validator index should be persisted
-    expect(validatorStore.getAllLocalIndices()).to.deep.equal(indices, "Wrong local indices");
+    expect(validatorStore.getAllLocalIndices()).toEqual(indices);
     for (let i = 0; i < indices.length; i++) {
-      expect(validatorStore.getPubkeyOfIndex(indices[i])).equals(toHexString(pubkeys[i]), `Wrong pubkey[${i}]`);
+      expect(validatorStore.getPubkeyOfIndex(indices[i])).toBe(toHexString(pubkeys[i]));
     }
 
     // Duties for this and next epoch should be persisted
@@ -108,25 +110,16 @@ describe("SyncCommitteeDutiesService", function () {
       ])
     );
 
-    expect(dutiesByIndexByPeriodObj).to.deep.equal(
-      {
-        0: {[indices[0]]: {duty: toSyncDutySubnet(duty)}},
-        1: {[indices[0]]: {duty: toSyncDutySubnet(duty)}},
-      } as typeof dutiesByIndexByPeriodObj,
-      "Wrong dutiesService.dutiesByIndexByPeriod Map"
-    );
+    expect(dutiesByIndexByPeriodObj).toEqual({
+      0: {[indices[0]]: {duty: toSyncDutySubnet(duty)}},
+      1: {[indices[0]]: {duty: toSyncDutySubnet(duty)}},
+    } as typeof dutiesByIndexByPeriodObj);
 
-    expect(await dutiesService.getDutiesAtSlot(slot)).to.deep.equal(
-      [
-        {duty: toSyncDutySubnet(duty), selectionProofs: [{selectionProof: null, subcommitteeIndex: 0}]},
-      ] as SyncDutyAndProofs[],
-      "Wrong getAttestersAtSlot()"
-    );
+    expect(await dutiesService.getDutiesAtSlot(slot)).toEqual([
+      {duty: toSyncDutySubnet(duty), selectionProofs: [{selectionProof: null, subcommitteeIndex: 0}]},
+    ] as SyncDutyAndProofs[]);
 
-    expect(api.validator.prepareSyncCommitteeSubnets.callCount).to.equal(
-      1,
-      "prepareSyncCommitteeSubnets() must be called once after getting the duties"
-    );
+    expect(api.validator.prepareSyncCommitteeSubnets).toHaveBeenCalledOnce();
   });
 
   /**
@@ -139,24 +132,24 @@ describe("SyncCommitteeDutiesService", function () {
       validatorIndex: indices[0],
       validatorSyncCommitteeIndices: [7],
     };
-    api.validator.getSyncCommitteeDuties
-      .withArgs(0, sinon.match.any)
-      .resolves({response: {data: [duty], executionOptimistic: false}, ok: true, status: HttpStatusCode.OK});
+    when(api.validator.getSyncCommitteeDuties)
+      .calledWith(0, expect.any(Array))
+      .thenResolve({response: {data: [duty], executionOptimistic: false}, ok: true, status: HttpStatusCode.OK});
     // sync period 1 should all return empty
-    api.validator.getSyncCommitteeDuties
-      .withArgs(256, sinon.match.any)
-      .resolves({response: {data: [], executionOptimistic: false}, ok: true, status: HttpStatusCode.OK});
-    api.validator.getSyncCommitteeDuties
-      .withArgs(257, sinon.match.any)
-      .resolves({response: {data: [], executionOptimistic: false}, ok: true, status: HttpStatusCode.OK});
+    when(api.validator.getSyncCommitteeDuties)
+      .calledWith(256, expect.any(Array))
+      .thenResolve({response: {data: [], executionOptimistic: false}, ok: true, status: HttpStatusCode.OK});
+    when(api.validator.getSyncCommitteeDuties)
+      .calledWith(257, expect.any(Array))
+      .thenResolve({response: {data: [], executionOptimistic: false}, ok: true, status: HttpStatusCode.OK});
     const duty2: routes.validator.SyncDuty = {
       pubkey: pubkeys[1],
       validatorIndex: indices[1],
       validatorSyncCommitteeIndices: [5],
     };
-    api.validator.getSyncCommitteeDuties
-      .withArgs(1, sinon.match.any)
-      .resolves({response: {data: [duty2], executionOptimistic: false}, ok: true, status: HttpStatusCode.OK});
+    when(api.validator.getSyncCommitteeDuties)
+      .calledWith(1, expect.any(Array))
+      .thenResolve({response: {data: [duty2], executionOptimistic: false}, ok: true, status: HttpStatusCode.OK});
 
     // Clock will call runAttesterDutiesTasks() immediately
     const clock = new ClockMock();
@@ -172,13 +165,10 @@ describe("SyncCommitteeDutiesService", function () {
         Object.fromEntries(dutiesByIndex),
       ])
     );
-    expect(dutiesByIndexByPeriodObj).to.deep.equal(
-      {
-        0: {[indices[0]]: {duty: toSyncDutySubnet(duty)}},
-        1: {},
-      } as typeof dutiesByIndexByPeriodObj,
-      "Wrong dutiesService.dutiesByIndexByPeriod Map"
-    );
+    expect(dutiesByIndexByPeriodObj).toEqual({
+      0: {[indices[0]]: {duty: toSyncDutySubnet(duty)}},
+      1: {},
+    } as typeof dutiesByIndexByPeriodObj);
 
     await clock.tickEpochFns(1, controller.signal);
 
@@ -188,13 +178,10 @@ describe("SyncCommitteeDutiesService", function () {
         Object.fromEntries(dutiesByIndex),
       ])
     );
-    expect(dutiesByIndexByPeriodObj).to.deep.equal(
-      {
-        0: {[indices[1]]: {duty: toSyncDutySubnet(duty2)}},
-        1: {},
-      } as typeof dutiesByIndexByPeriodObj,
-      "Wrong dutiesService.dutiesByIndexByPeriod Map"
-    );
+    expect(dutiesByIndexByPeriodObj).toEqual({
+      0: {[indices[1]]: {duty: toSyncDutySubnet(duty2)}},
+      1: {},
+    } as typeof dutiesByIndexByPeriodObj);
   });
 
   it("Should remove signer from sync committee duties", async function () {
@@ -209,12 +196,16 @@ describe("SyncCommitteeDutiesService", function () {
       validatorIndex: indices[1],
       validatorSyncCommitteeIndices: [7],
     };
-    api.validator.getSyncCommitteeDuties
-      .withArgs(sinon.match.any, sinon.match.any)
-      .resolves({response: {data: [duty1, duty2], executionOptimistic: false}, ok: true, status: HttpStatusCode.OK});
+    when(api.validator.getSyncCommitteeDuties)
+      .calledWith(expect.any(Number), expect.any(Array))
+      .thenResolve({response: {data: [duty1, duty2], executionOptimistic: false}, ok: true, status: HttpStatusCode.OK});
 
     // Accept all subscriptions
-    api.validator.prepareSyncCommitteeSubnets.resolves();
+    api.validator.prepareSyncCommitteeSubnets.mockResolvedValue({
+      ok: true,
+      status: HttpStatusCode.OK,
+      response: undefined,
+    });
 
     // Clock will call runAttesterDutiesTasks() immediately
     const clock = new ClockMock();
@@ -231,19 +222,16 @@ describe("SyncCommitteeDutiesService", function () {
       ])
     );
 
-    expect(dutiesByIndexByPeriodObj).to.deep.equal(
-      {
-        0: {
-          [indices[0]]: {duty: toSyncDutySubnet(duty1)},
-          [indices[1]]: {duty: toSyncDutySubnet(duty2)},
-        },
-        1: {
-          [indices[0]]: {duty: toSyncDutySubnet(duty1)},
-          [indices[1]]: {duty: toSyncDutySubnet(duty2)},
-        },
-      } as typeof dutiesByIndexByPeriodObj,
-      "Wrong dutiesService.dutiesByIndexByPeriod Map"
-    );
+    expect(dutiesByIndexByPeriodObj).toEqual({
+      0: {
+        [indices[0]]: {duty: toSyncDutySubnet(duty1)},
+        [indices[1]]: {duty: toSyncDutySubnet(duty2)},
+      },
+      1: {
+        [indices[0]]: {duty: toSyncDutySubnet(duty1)},
+        [indices[1]]: {duty: toSyncDutySubnet(duty2)},
+      },
+    } as typeof dutiesByIndexByPeriodObj);
     // then remove signer with pubkeys[0]
     dutiesService.removeDutiesForKey(toHexString(pubkeys[0]));
 
@@ -254,13 +242,10 @@ describe("SyncCommitteeDutiesService", function () {
         Object.fromEntries(dutiesByIndex),
       ])
     );
-    expect(dutiesByIndexByPeriodObjAfterRemoval).to.deep.equal(
-      {
-        0: {[indices[1]]: {duty: toSyncDutySubnet(duty2)}},
-        1: {[indices[1]]: {duty: toSyncDutySubnet(duty2)}},
-      } as typeof dutiesByIndexByPeriodObjAfterRemoval,
-      "Wrong dutiesService.dutiesByIndexByPeriod Map"
-    );
+    expect(dutiesByIndexByPeriodObjAfterRemoval).toEqual({
+      0: {[indices[1]]: {duty: toSyncDutySubnet(duty2)}},
+      1: {[indices[1]]: {duty: toSyncDutySubnet(duty2)}},
+    } as typeof dutiesByIndexByPeriodObjAfterRemoval);
   });
 });
 

@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {expect, describe, it, beforeAll, afterAll} from "vitest";
 import {rimraf} from "rimraf";
 import {LevelDbController} from "@lodestar/db";
 import {
@@ -15,11 +15,11 @@ describe("slashing-protection custom tests", () => {
   const pubkey = Buffer.alloc(96, 1);
   let db: LevelDbController;
 
-  before(async () => {
+  beforeAll(async () => {
     db = await LevelDbController.create({name: dbLocation}, {logger: testLogger()});
   });
 
-  after(async () => {
+  afterAll(async () => {
     await db.clear();
     await db.close();
     rimraf.sync(dbLocation);
@@ -31,7 +31,7 @@ describe("slashing-protection custom tests", () => {
     const block2: SlashingProtectionBlock = {slot: block1.slot, signingRoot: Buffer.alloc(32, 2)};
 
     await slashingProtection.checkAndInsertBlockProposal(pubkey, block1);
-    await expect(slashingProtection.checkAndInsertBlockProposal(pubkey, block2)).to.be.rejectedWith(InvalidBlockError);
+    await expect(slashingProtection.checkAndInsertBlockProposal(pubkey, block2)).rejects.toThrow(InvalidBlockError);
   });
 
   it("Should reject same attestation", async () => {
@@ -48,7 +48,7 @@ describe("slashing-protection custom tests", () => {
     };
 
     await slashingProtection.checkAndInsertAttestation(pubkey, attestation1);
-    await expect(slashingProtection.checkAndInsertAttestation(pubkey, attestation2)).to.be.rejectedWith(
+    await expect(slashingProtection.checkAndInsertAttestation(pubkey, attestation2)).rejects.toThrow(
       InvalidAttestationError
     );
   });

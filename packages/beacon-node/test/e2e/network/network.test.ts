@@ -1,5 +1,5 @@
 import {describe, it, expect, afterEach, beforeEach, vi} from "vitest";
-import {PeerId} from "@libp2p/interface/peer-id";
+import {PeerId} from "@libp2p/interface";
 import {config} from "@lodestar/config/default";
 import {phase0} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";

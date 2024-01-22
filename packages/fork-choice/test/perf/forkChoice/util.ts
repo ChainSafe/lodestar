@@ -1,6 +1,7 @@
 import {fromHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
 import {ExecutionStatus, ForkChoice, IForkChoiceStore, ProtoBlock, ProtoArray} from "../../../src/index.js";
+import {computeTotalBalance} from "../../../src/forkChoice/store.js";
 
 const genesisSlot = 0;
 const genesisEpoch = 0;
@@ -39,6 +40,7 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
     justified: {
       checkpoint: {epoch: genesisEpoch, root: fromHexString(genesisRoot), rootHex: genesisRoot},
       balances,
+      totalBalance: computeTotalBalance(balances),
     },
     unrealizedJustified: {
       checkpoint: {epoch: genesisEpoch, root: fromHexString(genesisRoot), rootHex: genesisRoot},

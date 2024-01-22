@@ -4,7 +4,6 @@ import {Api, EventData, EventType, blobSidecarSSE} from "../../../../src/beacon/
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 
 const abortController = new AbortController();
-const root = new Uint8Array(32);
 
 /* eslint-disable @typescript-eslint/no-empty-function, @typescript-eslint/naming-convention */
 
@@ -93,18 +92,64 @@ export const eventTestData: EventData = {
       "0xac118511474a94f857300b315c50585c32a713e4452e26a6bb98cdb619936370f126ed3b6bb64469259ee92e69791d9e12d324ce6fd90081680ce72f39d85d50b0ff977260a8667465e613362c6d6e6e745e1f9323ec1d6f16041c4e358839ac",
   }),
   [EventType.lightClientOptimisticUpdate]: {
-    syncAggregate: ssz.altair.SyncAggregate.defaultValue(),
-    attestedHeader: ssz.altair.LightClientHeader.defaultValue(),
-    signatureSlot: ssz.Slot.defaultValue(),
+    version: ForkName.altair,
+    data: ssz.altair.LightClientOptimisticUpdate.fromJson({
+      attested_header: {
+        beacon: {
+          slot: "1",
+          proposer_index: "1",
+          parent_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+          state_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+          body_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        },
+      },
+      sync_aggregate: {
+        sync_committee_bits:
+          "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbfffffffffffffffffffffffbffffffffffffffffffffbffffffffffffff",
+        sync_committee_signature:
+          "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
+      },
+      signature_slot: "1",
+    }),
   },
   [EventType.lightClientFinalityUpdate]: {
-    attestedHeader: ssz.altair.LightClientHeader.defaultValue(),
-    finalizedHeader: ssz.altair.LightClientHeader.defaultValue(),
-    finalityBranch: [root],
-    syncAggregate: ssz.altair.SyncAggregate.defaultValue(),
-    signatureSlot: ssz.Slot.defaultValue(),
+    version: ForkName.altair,
+    data: ssz.altair.LightClientFinalityUpdate.fromJson({
+      attested_header: {
+        beacon: {
+          slot: "1",
+          proposer_index: "1",
+          parent_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+          state_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+          body_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        },
+      },
+      finalized_header: {
+        beacon: {
+          slot: "1",
+          proposer_index: "1",
+          parent_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+          state_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+          body_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        },
+      },
+      finality_branch: [
+        "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+      ],
+      sync_aggregate: {
+        sync_committee_bits:
+          "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbfffffffffffffffffffffffbffffffffffffffffffffbffffffffffffff",
+        sync_committee_signature:
+          "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
+      },
+      signature_slot: "1",
+    }),
   },
-  [EventType.lightClientUpdate]: ssz.altair.LightClientUpdate.defaultValue(),
   [EventType.payloadAttributes]: {
     version: ForkName.bellatrix,
     data: ssz.bellatrix.SSEPayloadAttributes.defaultValue(),

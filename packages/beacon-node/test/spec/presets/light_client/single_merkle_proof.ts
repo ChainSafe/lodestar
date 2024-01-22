@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {expect} from "vitest";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {TreeViewDU, Type} from "@chainsafe/ssz";
 import {RootHex, ssz} from "@lodestar/types";

@@ -28,7 +28,7 @@ export function getClient(opts: HttpClientOptions, modules: ClientModules): Api 
     beacon: beacon.getClient(config, httpClient),
     config: configApi.getClient(config, httpClient),
     debug: debug.getClient(config, httpClient),
-    events: events.getClient(config, httpClient.baseUrl),
+    events: events.getClient(httpClient.baseUrl),
     lightclient: lightclient.getClient(config, httpClient),
     lodestar: lodestar.getClient(config, httpClient),
     node: node.getClient(config, httpClient),
