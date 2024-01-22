@@ -406,17 +406,24 @@ export class BeaconChain implements IBeaconChain {
         return state && {state, executionOptimistic: isOptimisticBlock(block)};
       }
     } else {
-      // request for finalized state using historical state regen
-      const stateSerialized = await this.historicalStateRegen?.getHistoricalState(slot);
-      if (!stateSerialized) {
-        return null;
-      }
-      const state = this.config
-        .getForkTypes(slot)
-        .BeaconState.deserialize(stateSerialized) as unknown as BeaconStateAllForks;
-
-      return {state, executionOptimistic: false};
+      return null;
     }
+  }
+
+  async getHistoricalStateBySlot(slot: number): Promise<{state: Uint8Array; executionOptimistic: boolean} | null> {
+    const finalizedBlock = this.forkChoice.getFinalizedBlock();
+
+    if (slot >= finalizedBlock.slot) {
+      return null;
+    }
+
+    // request for finalized state using historical state regen
+    const stateSerialized = await this.historicalStateRegen?.getHistoricalState(slot);
+    if (!stateSerialized) {
+      return null;
+    }
+
+    return {state: stateSerialized, executionOptimistic: false};
   }
 
   async getStateByStateRoot(

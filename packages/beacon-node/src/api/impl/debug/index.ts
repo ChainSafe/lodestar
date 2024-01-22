@@ -1,6 +1,5 @@
 import {routes, ServerApi, ResponseFormat} from "@lodestar/api";
-import {allForks} from "@lodestar/types";
-import {resolveStateId} from "../beacon/state/utils.js";
+import {deserializeBeaconStateSerialized, getStateResponseWithRegen} from "../beacon/state/utils.js";
 import {ApiModules} from "../types.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
 
@@ -38,35 +37,40 @@ export function getDebugApi({chain, config}: Pick<ApiModules, "chain" | "config"
     },
 
     async getState(stateId: string | number, format?: ResponseFormat) {
-      const {state} = await resolveStateId(chain, stateId, {allowRegen: true});
+      const {state} = await getStateResponseWithRegen(chain, stateId);
       if (format === "ssz") {
-        // Casting to any otherwise Typescript doesn't like the multi-type return
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
-        return state.serialize() as any;
+        if (state instanceof Uint8Array) {
+          return state;
+        }
+        return state.serialize();
       } else {
+        if (state instanceof Uint8Array) {
+          return {data: deserializeBeaconStateSerialized(config, state)};
+        }
         return {data: state.toValue()};
       }
     },
 
     async getStateV2(stateId: string | number, format?: ResponseFormat) {
-      const {state} = await resolveStateId(chain, stateId, {allowRegen: true});
+      const {state, executionOptimistic} = await getStateResponseWithRegen(chain, stateId);
       if (format === "ssz") {
-        // Casting to any otherwise Typescript doesn't like the multi-type return
-        if (typeof state.serialize === "function") {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
-          return state.serialize() as any;
+        if (state instanceof Uint8Array) {
+          return state;
         }
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
-        return config.getForkTypes(state.slot).BeaconState.serialize(state as unknown as allForks.BeaconState) as any;
+        return state.serialize();
       } else {
-        if (typeof state.toValue === "function") {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
-          return state.toValue() as any;
+        if (state instanceof Uint8Array) {
+          const data = deserializeBeaconStateSerialized(config, state);
+          return {
+            data,
+            version: config.getForkName(data.slot),
+            executionOptimistic,
+          };
         }
         return {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
-          data: config.getForkTypes(state.slot).BeaconState.toJson(state as unknown as allForks.BeaconState),
+          data: state.toValue(),
           version: config.getForkName(state.slot),
+          executionOptimistic,
         };
       }
     },
