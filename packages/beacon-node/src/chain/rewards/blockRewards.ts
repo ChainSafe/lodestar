@@ -66,7 +66,7 @@ export async function computeBlockRewards(
 }
 
 /**
- * TODO: Calculate rewards received by block proposer for incuding attestations.
+ * TODO: Calculate rewards received by block proposer for including attestations.
  */
 function computeBlockAttestationRewardPhase0(
   _block: phase0.BeaconBlock,
