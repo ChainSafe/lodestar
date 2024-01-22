@@ -1,4 +1,6 @@
 import {ByteVectorType, UintNumberType, UintBigintType, BooleanType} from "@chainsafe/ssz";
+import {ByteArray} from "@chainsafe/ssz/lib/type/byteArray";
+import {toChecksumAddress} from "web3-utils";
 
 export const Boolean = new BooleanType();
 export const Byte = new UintNumberType(1);
@@ -54,6 +56,15 @@ export const Wei = UintBn256;
 export const Root = new ByteVectorType(32);
 export const BlobIndex = UintNum64;
 
+class ExecutionAddressType extends ByteVectorType {
+    constructor() {
+        super(20);
+    }
+    toJson(value: ByteArray): unknown {
+        return toChecksumAddress(super.toJson(value) as string);
+    }
+};
+
 export const Version = Bytes4;
 export const DomainType = Bytes4;
 export const ForkDigest = Bytes4;
@@ -61,4 +72,4 @@ export const BLSPubkey = Bytes48;
 export const BLSSignature = Bytes96;
 export const Domain = Bytes32;
 export const ParticipationFlags = new UintNumberType(1, {setBitwiseOR: true});
-export const ExecutionAddress = Bytes20;
+export const ExecutionAddress = new ExecutionAddressType();
