@@ -73,7 +73,7 @@ export class Eth1DepositDataTracker {
   private eth1GetLogsBatchSizeDynamic = MAX_BLOCKS_PER_LOG_QUERY;
   private readonly forcedEth1DataVote: phase0.Eth1Data | null;
   /** To stop `runAutoUpdate()` in addition to AbortSignal */
-  private stopPolling: boolean = false;
+  private stopPolling: boolean;
 
   constructor(
     opts: Eth1Options,
@@ -88,6 +88,8 @@ export class Eth1DepositDataTracker {
     this.depositsCache = new Eth1DepositsCache(opts, config, db);
     this.eth1DataCache = new Eth1DataCache(config, db);
     this.eth1FollowDistance = config.ETH1_FOLLOW_DISTANCE;
+    // TODO 6110: fix scenario where node starts post-6110 and `stopPolling` will always be false
+    this.stopPolling = false;
 
     this.forcedEth1DataVote = opts.forcedEth1DataVote
       ? ssz.phase0.Eth1Data.deserialize(fromHex(opts.forcedEth1DataVote))
