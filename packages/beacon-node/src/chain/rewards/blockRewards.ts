@@ -122,7 +122,7 @@ function computeBlockProposerSlashingReward(
 }
 
 /**
- * Calculate rewards received by block proposer for include attester slashings.
+ * Calculate rewards received by block proposer for including attester slashings.
  * All attester slashing rewards go to block proposer and none to whistleblower as of Deneb
  */
 function computeBlockAttesterSlashingReward(
