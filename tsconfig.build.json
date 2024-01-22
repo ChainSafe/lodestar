@@ -25,10 +25,8 @@
     "incremental": true,
     "preserveWatchOutput": true,
 
-
-    // There are two duplicate type definitions included from `chai` and `vitest` packages.
-    // There is one invalid type declaration introduced from `webdriverio -> got` package. 
-    // TODO: Once we completely remove `chai` and upgrade `webdriverio` we can enable this check again.  
+    // TODO: Investigate following errors:
+    // - Cannot find module 'rollup/parseAst' or its corresponding type declarations
     "skipLibCheck": true,
   }
 }

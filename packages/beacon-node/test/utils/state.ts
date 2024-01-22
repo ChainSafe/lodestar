@@ -12,6 +12,8 @@ import {allForks, altair, bellatrix, ssz} from "@lodestar/types";
 import {createBeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {FAR_FUTURE_EPOCH, ForkName, ForkSeq, MAX_EFFECTIVE_BALANCE, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 
+import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {ZERO_HASH_HEX} from "../../src/constants/constants.js";
 import {generateValidator, generateValidators} from "./validator.js";
 import {getConfig} from "./config.js";
 
@@ -134,3 +136,22 @@ export function generateCachedBellatrixState(opts?: TestBeaconState): CachedBeac
     index2pubkey: [],
   });
 }
+
+export const zeroProtoBlock: ProtoBlock = {
+  slot: 0,
+  blockRoot: ZERO_HASH_HEX,
+  parentRoot: ZERO_HASH_HEX,
+  stateRoot: ZERO_HASH_HEX,
+  targetRoot: ZERO_HASH_HEX,
+
+  justifiedEpoch: 0,
+  justifiedRoot: ZERO_HASH_HEX,
+  finalizedEpoch: 0,
+  finalizedRoot: ZERO_HASH_HEX,
+  unrealizedJustifiedEpoch: 0,
+  unrealizedJustifiedRoot: ZERO_HASH_HEX,
+  unrealizedFinalizedEpoch: 0,
+  unrealizedFinalizedRoot: ZERO_HASH_HEX,
+
+  ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
+};

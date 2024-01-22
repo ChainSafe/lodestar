@@ -50,7 +50,7 @@
     "lint": "eslint --color --ext .ts src/",
     "lint:fix": "yarn run lint --fix",
     "pretest": "yarn run check-types",
-    "test:unit": "yarn vitest --run --dir test/unit/ --coverage",
+    "test:unit": "yarn vitest --run --dir test/unit/",
     "check-readme": "typescript-docs-verifier"
   },
   "repository": {

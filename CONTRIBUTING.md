@@ -39,15 +39,25 @@ Contributing to tests:
   - Do not pull unpinned versions from DockerHub (use deterministic tag) or Github (checkout commit not branch).
   - Carefully design tests that depend on timing sensitive events like p2p network e2e tests. Consider that Github runners are significantly less powerful than your development environment.
 
+### Common Issues
+
+**Error: [vitest] Cannot mock "../../src/db/repositories/index.js" because it is already loaded by "src/db/beacon.ts"**
+
+If you observe any error in tests with matching to above error message, that implies you are loading the mocks in the wrong order. The correct order is to import the mocks first and then the actual module. We suggest to import the mocks on very top before any local modules. 
+
+**✖ Error: Cannot find package 'async_hooks' imported from**
+
+If you observe following error running any of the test files that means you are running a file which itself or any dependency of that file imports `vitest`, but you are not running that file with `vitest` runner. Try running it with `yarn vitest` command, not with `node` command.
+
 ### Debugging Spec Tests
 
 - To fix errors always focus on passing all minimal tests first without running mainnet tests.
-- Spec tests often compare full expected vs actual states in JSON format. To better understand the diff it's convenient to use mocha's option `--inline-diffs`.
-- A single logical error can cause many spec tests to fail. To focus on a single test at a time you can use mocha's option `--bail` to stop at the first failed test
-- To then run only that failed test you can run against a specific file as use mocha's option `--grep` to run only one case
+- Spec tests often compare full expected vs actual states in JSON format.
+- A single logical error can cause many spec tests to fail. To focus on a single test at a time you can use vitest's option `--bail` to stop at the first failed test
+- To then run only that failed test you can run against a specific file as use vitest's filters to run only one case
 
 ```sh
-LODESTAR_PRESET=minimal ../../node_modules/.bin/mocha --config .mocharc.spec.yml test/spec/phase0/sanity.test.ts --inline-diffs --bail --grep "attestation"
+LODESTAR_PRESET=minimal yarn vitest --run --config vitest.config.spec.ts test/spec/phase0/sanity.test.ts
 ```
 
 ## Docker

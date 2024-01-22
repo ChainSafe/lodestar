@@ -46,7 +46,7 @@ describe("BlsVerifier ", function () {
       it("should return false if at least one signature is malformed", async () => {
         // signature is malformed
         const malformedSignature = Buffer.alloc(96, 10);
-        expect(() => bls.Signature.fromBytes(malformedSignature, CoordType.affine, true)).to.throws();
+        expect(() => bls.Signature.fromBytes(malformedSignature, CoordType.affine, true)).toThrow();
         sets[1].signature = malformedSignature;
         expect(await verifier.verifySignatureSets(sets)).toBe(false);
       });
@@ -79,7 +79,7 @@ describe("BlsVerifier ", function () {
       it("should return false for malformed signature", async () => {
         // signature is malformed
         const malformedSignature = Buffer.alloc(96, 10);
-        expect(() => bls.Signature.fromBytes(malformedSignature, CoordType.affine, true)).to.throws();
+        expect(() => bls.Signature.fromBytes(malformedSignature, CoordType.affine, true)).toThrow();
         sets[1].signature = malformedSignature;
         expect(await verifier.verifySignatureSetsSameMessage(sets, signingRoot)).toEqual([true, false, true]);
       });

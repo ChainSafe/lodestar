@@ -87,18 +87,18 @@ describe("database repository", function () {
 
   it("should store with hashTreeRoot as id", async function () {
     const item = {bool: true, bytes: Buffer.alloc(32)};
-    expect(repository.add(item)).not.rejects;
+    await expect(repository.add(item)).resolves.toBeUndefined();
     expect(controller.put).toHaveBeenCalledTimes(1);
   });
 
   it("should store with given id", async function () {
     const item = {bool: true, bytes: Buffer.alloc(32)};
-    expect(repository.put("1", item)).not.rejects;
+    await expect(repository.put("1", item)).resolves.toBeUndefined();
     expect(controller.put).toHaveBeenCalledTimes(1);
   });
 
   it("should delete", async function () {
-    expect(repository.delete("1")).not.rejects;
+    await expect(repository.delete("1")).resolves.toBeUndefined();
     expect(controller.delete).toHaveBeenCalledTimes(1);
   });
 

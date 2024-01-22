@@ -6,24 +6,21 @@ import {SignableENR} from "@chainsafe/enr";
 import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
-
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {getMockedBeaconChain} from "../../mocks/mockedBeaconChain.js";
+import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
 import {Network, NetworkInitModules, getReqRespHandlers} from "../../../src/network/index.js";
 import {defaultNetworkOptions, NetworkOptions} from "../../../src/network/options.js";
-import {zeroProtoBlock} from "../../utils/mocks/chain.js";
 import {createNetworkModules, onPeerConnect} from "../../utils/network.js";
-import {generateState} from "../../utils/state.js";
+import {generateState, zeroProtoBlock} from "../../utils/state.js";
 import {testLogger} from "../../utils/logger.js";
 import {GossipHandlers} from "../../../src/network/gossip/index.js";
 import {memoOnce} from "../../utils/cache.js";
-import {getMockedBeaconChain} from "../../__mocks__/mockedBeaconChain.js";
-import {getMockedBeaconDb} from "../../__mocks__/mockedBeaconDb.js";
 
 let port = 9000;
 const mu = "/ip4/127.0.0.1/tcp/0";
 
 // https://github.com/ChainSafe/lodestar/issues/5967
-// eslint-disable-next-line mocha/no-skipped-tests
 describe.skip("mdns", function () {
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
   afterEach(async () => {

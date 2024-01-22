@@ -38,8 +38,8 @@ export class PeersData {
     return this.connectedPeers.get(peerIdStr)?.agentVersion ?? "NA";
   }
 
-  getPeerKind(peerIdStr: string): ClientKind {
-    return this.connectedPeers.get(peerIdStr)?.agentClient ?? ClientKind.Unknown;
+  getPeerKind(peerIdStr: string): ClientKind | null {
+    return this.connectedPeers.get(peerIdStr)?.agentClient ?? null;
   }
 
   getEncodingPreference(peerIdStr: string): Encoding | null {

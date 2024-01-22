@@ -2,7 +2,7 @@
 
 > This package is part of [ChainSafe's Lodestar](https://lodestar.chainsafe.io) project
 
-Mocha / Chai and other utility to reuse across testing of other packages.
+Vitest and other utility to reuse across testing of other packages.
 
 For usage see [spec tests]("https://github.com/ChainSafe/lodestar/tree/unstable/packages/beacon-node/test/spec")
 

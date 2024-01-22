@@ -17,6 +17,7 @@ export default defineConfig({
     setupFiles: [path.join(__dirname, "./scripts/vitest/customMatchers.ts")],
     reporters: ["default", "hanging-process"],
     coverage: {
+      enabled: process.env.CI === "true",
       clean: true,
       all: false,
       extension: [".ts"],

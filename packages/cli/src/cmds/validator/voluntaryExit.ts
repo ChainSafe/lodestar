@@ -6,12 +6,12 @@ import {
   computeStartSlotAtEpoch,
   getCurrentSlot,
 } from "@lodestar/state-transition";
-import {createBeaconConfig} from "@lodestar/config";
-import {phase0, ssz} from "@lodestar/types";
+import {createBeaconConfig, BeaconConfig} from "@lodestar/config";
+import {phase0, ssz, ValidatorIndex, Epoch} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {externalSignerPostSignature, SignableMessageType, Signer, SignerType} from "@lodestar/validator";
 import {Api, ApiError, getClient} from "@lodestar/api";
-import {CliCommand, ensure0xPrefix, YargsError} from "../../util/index.js";
+import {CliCommand, ensure0xPrefix, YargsError, wrapError} from "../../util/index.js";
 import {GlobalArgs} from "../../options/index.js";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {IValidatorCliArgs} from "./options.js";
@@ -115,38 +115,68 @@ ${validatorsToExit.map((v) => `${v.pubkey} ${v.index} ${v.status}`).join("\n")}`
       }
     }
 
-    for (const [i, {index, signer, pubkey}] of validatorsToExit.entries()) {
-      const slot = computeStartSlotAtEpoch(exitEpoch);
-      const domain = config.getDomainForVoluntaryExit(slot);
-      const voluntaryExit: phase0.VoluntaryExit = {epoch: exitEpoch, validatorIndex: index};
-      const signingRoot = computeSigningRoot(ssz.phase0.VoluntaryExit, voluntaryExit, domain);
-
-      let signature;
-      switch (signer.type) {
-        case SignerType.Local:
-          signature = signer.secretKey.sign(signingRoot);
-          break;
-        case SignerType.Remote: {
-          const signatureHex = await externalSignerPostSignature(config, signer.url, pubkey, signingRoot, slot, {
-            data: voluntaryExit,
-            type: SignableMessageType.VOLUNTARY_EXIT,
-          });
-          signature = bls.Signature.fromHex(signatureHex);
-          break;
+    const alreadySubmitted = [];
+    for (const [i, validatorToExit] of validatorsToExit.entries()) {
+      const {err} = await wrapError(processVoluntaryExit({config, client}, exitEpoch, validatorToExit));
+      const {pubkey, index} = validatorToExit;
+      if (err === null) {
+        console.log(`Submitted voluntary exit for ${pubkey} (${index}) ${i + 1}/${signersToExit.length}`);
+      } else {
+        if (err.message.includes("ALREADY_EXISTS")) {
+          alreadySubmitted.push(validatorToExit);
+        } else {
+          console.log(
+            `Voluntary exit errored for ${pubkey} (${index}) ${i + 1}/${signersToExit.length}: ${err.message}`
+          );
         }
-        default:
-          throw new YargsError(`Unexpected signer type for ${pubkey}`);
       }
-      ApiError.assert(
-        await client.beacon.submitPoolVoluntaryExit({
-          message: voluntaryExit,
-          signature: signature.toBytes(),
-        })
-      );
-      console.log(`Submitted voluntary exit for ${pubkey} ${i + 1}/${signersToExit.length}`);
+    }
+
+    if (alreadySubmitted.length > 0) {
+      console.log(`Voluntary exit already submitted for ${alreadySubmitted.length}/${signersToExit.length}`);
+      for (const validatorToExit of alreadySubmitted) {
+        const {index, pubkey} = validatorToExit;
+        console.log(`  - ${pubkey} (${index})`);
+      }
     }
   },
 };
+
+async function processVoluntaryExit(
+  {config, client}: {config: BeaconConfig; client: Api},
+  exitEpoch: Epoch,
+  validatorToExit: {index: ValidatorIndex; signer: Signer; pubkey: string}
+): Promise<void> {
+  const {index, signer, pubkey} = validatorToExit;
+  const slot = computeStartSlotAtEpoch(exitEpoch);
+  const domain = config.getDomainForVoluntaryExit(slot);
+  const voluntaryExit: phase0.VoluntaryExit = {epoch: exitEpoch, validatorIndex: index};
+  const signingRoot = computeSigningRoot(ssz.phase0.VoluntaryExit, voluntaryExit, domain);
+
+  let signature;
+  switch (signer.type) {
+    case SignerType.Local:
+      signature = signer.secretKey.sign(signingRoot);
+      break;
+    case SignerType.Remote: {
+      const signatureHex = await externalSignerPostSignature(config, signer.url, pubkey, signingRoot, slot, {
+        data: voluntaryExit,
+        type: SignableMessageType.VOLUNTARY_EXIT,
+      });
+      signature = bls.Signature.fromHex(signatureHex);
+      break;
+    }
+    default:
+      throw new YargsError(`Unexpected signer type for ${pubkey}`);
+  }
+
+  ApiError.assert(
+    await client.beacon.submitPoolVoluntaryExit({
+      message: voluntaryExit,
+      signature: signature.toBytes(),
+    })
+  );
+}
 
 type SignerPubkey = {signer: Signer; pubkey: string};
 
