@@ -201,8 +201,6 @@ export function getSlotFromBlobSidecarSerialized(data: Uint8Array): Slot | null 
 }
 
 function getSlotFromOffset(data: Uint8Array, offset: number): Slot {
-  // TODO: Optimize
-  const dv = new DataView(data.buffer, data.byteOffset, data.byteLength);
   // Read only the first 4 bytes of Slot, max value is 4,294,967,295 will be reached 1634 years after genesis
-  return dv.getUint32(offset, true);
+  return (data[offset] | (data[offset + 1] << 8) | (data[offset + 2] << 16) | (data[offset + 3] << 24)) >>> 0;
 }
