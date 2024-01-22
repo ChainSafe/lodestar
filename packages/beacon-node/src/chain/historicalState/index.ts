@@ -1,3 +1,4 @@
+import path from "node:path";
 import {ModuleThread, Thread, spawn, Worker} from "@chainsafe/threads";
 import {chainConfigToJson} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
@@ -7,6 +8,9 @@ import {
   HistoricalStateWorkerApi,
   HistoricalStateWorkerData,
 } from "./types.js";
+
+// Worker constructor consider the path relative to the current working directory
+const WORKER_DIR = process.env.NODE_ENV === "test" ? "../../../lib/chain/historicalState" : "./";
 
 /**
  * HistoricalStateRegen limits the damage from recreating historical states
@@ -32,7 +36,7 @@ export class HistoricalStateRegen implements HistoricalStateWorkerApi {
       loggerOpts: modules.logger.toOpts(),
     };
 
-    const worker = new Worker("./worker.js", {
+    const worker = new Worker(path.join(WORKER_DIR, "worker.js"), {
       workerData,
     } as ConstructorParameters<typeof Worker>[1]);
 
