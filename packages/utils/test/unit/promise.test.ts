@@ -1,8 +1,69 @@
 import {describe, it, expect} from "vitest";
-import {resolveOrRacePromises} from "../../src/promise.js";
+import {PromiseWithStatus, resolveOrRacePromises} from "../../src/promise.js";
 import {NonEmptyArray} from "../../src/types.js";
 
 describe("promise", () => {
+  describe("PromiseWithStatus", () => {
+    it("should resolve to value for a resolved promise", async () => {
+      const pro = new PromiseWithStatus(Promise.resolve("my value"));
+      await expect(pro).resolves.toBe("my value");
+    });
+
+    it("should have initial status to pending", async () => {
+      const pro = new PromiseWithStatus(Promise.resolve("my value"));
+      expect(pro.status).toBe("pending");
+    });
+
+    it("should throw error for rejected promise", async () => {
+      const pro = new PromiseWithStatus(Promise.reject("test error"));
+      await expect(pro).rejects.toThrow("test error");
+    });
+
+    it("should have rejected status for rejected promise", async () => {
+      const pro = new PromiseWithStatus(Promise.reject("test error"));
+
+      await expect(pro).rejects.toBeDefined();
+
+      expect(pro.status).toBe("rejected");
+    });
+
+    it("should have rejected error as reason for the promise object", async () => {
+      const error = new Error("test error");
+      const pro = new PromiseWithStatus(Promise.reject(error));
+
+      await expect(pro).rejects.toBeDefined();
+
+      expect(pro.reason).toBe(error);
+    });
+
+    it("should have correct durationMs attribute for promise which is resolved", async () => {
+      const pro = new PromiseWithStatus((resolve) => {
+        setTimeout(() => {
+          resolve("Resolved Value");
+        }, 100);
+      });
+
+      await expect(pro).resolves.toBeDefined();
+      expect(pro.durationMs).toBeGreaterThanOrEqual(100);
+      // Some margin for execution
+      expect(pro.durationMs).toBeLessThanOrEqual(110);
+    });
+
+    it("should have correct durationMs attribute for promise which is rejected", async () => {
+      const pro = new PromiseWithStatus((_, reject) => {
+        setTimeout(() => {
+          reject("Rejected Value");
+        }, 100);
+      });
+
+      await expect(pro).rejects.toBeDefined();
+
+      expect(pro.durationMs).toBeGreaterThanOrEqual(100);
+      // Some margin for execution
+      expect(pro.durationMs).toBeLessThanOrEqual(110);
+    });
+  });
+
   describe("resolveOrRacePromises", () => {
     const cutoffMs = 1000;
     const timeoutMs = 1500;
@@ -80,7 +141,7 @@ describe("promise", () => {
               return "pending";
           }
         });
-        expect(testResultsCmp).to.be.deep.equal(results);
+        expect(testResultsCmp).toEqual(results);
       });
     }
   });

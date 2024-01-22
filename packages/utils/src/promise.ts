@@ -28,10 +28,10 @@ export async function callFnWhenAwait<T>(
 }
 
 /**
- * Promise that can be evaluated but does not throw error when it is not resolved.
- * It is useful when you want to get the state and response of a promise as an object
+ * Promise that can be evaluated as normal promise but keep track of the status of promise and its response
+ * It is useful when you want to process multiple promises and want know their status individually afterwards
  */
-export class MutedPromise<T> implements Promise<T> {
+export class PromiseWithStatus<T> implements Promise<T> {
   private readonly _promise: Promise<T>;
   private _status: "pending" | "fulfilled" | "rejected" = "pending";
   private _value?: T;
@@ -40,22 +40,21 @@ export class MutedPromise<T> implements Promise<T> {
   private _finishedAt?: number;
 
   constructor(...args: ConstructorParameters<typeof Promise<T>> | [Promise<T>]) {
-    if (args.length === 1 && args[0] instanceof Promise) {
-      this._promise = args[0];
-    } else {
-      this._promise = new Promise<T>(...(args as ConstructorParameters<typeof Promise<T>>));
-    }
-
     this.startedAt = Date.now();
+
+    this._promise =
+      args.length === 1 && args[0] instanceof Promise
+        ? args[0]
+        : new Promise<T>(...(args as ConstructorParameters<typeof Promise<T>>));
 
     this._promise.then(
       (value) => {
         this._status = "fulfilled";
         this._value = value;
         this._finishedAt = Date.now();
+        return value;
       },
       (reason) => {
-        // We suppress error here to avoid unhandled promise rejection and handle the error with status
         this._status = "rejected";
         this._reason = reason;
         this._finishedAt = Date.now();
@@ -100,7 +99,7 @@ export class MutedPromise<T> implements Promise<T> {
   }
 
   async then<TResult1 = T, TResult2 = never>(
-    onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined,
+    onfulfilled: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null,
     onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | undefined
   ): Promise<TResult1 | TResult2> {
     return this._promise.then(onfulfilled, onrejected);
@@ -108,7 +107,7 @@ export class MutedPromise<T> implements Promise<T> {
 
   async catch<TResult = never>(
     onrejected?: ((reason: unknown) => TResult | PromiseLike<TResult>) | undefined
-  ): Promise<T | TResult> {
+  ): Promise<TResult | T> {
     return this._promise.catch(onrejected);
   }
 
@@ -123,13 +122,13 @@ export class MutedPromise<T> implements Promise<T> {
  * eg: `[1, 2, 3]` from type `number[]` to `[number, number, number]`
  */
 type ReturnPromiseWithTuple<Tuple extends NonEmptyArray<unknown>> = {
-  [Index in keyof ArrayToTuple<Tuple>]: MutedPromise<Awaited<Tuple[Index]>>;
+  [Index in keyof ArrayToTuple<Tuple>]: PromiseWithStatus<Awaited<Tuple[Index]>>;
 };
 
 /**
  * Resolve all promises till `resolveTimeoutMs` if not then race them till `raceTimeoutMs`
  */
-export async function resolveOrRacePromises<T extends NonEmptyArray<Promise<unknown> | MutedPromise<unknown>>>(
+export async function resolveOrRacePromises<T extends NonEmptyArray<Promise<unknown> | PromiseWithStatus<unknown>>>(
   promises: T,
   {
     resolveTimeoutMs,
@@ -145,7 +144,7 @@ export async function resolveOrRacePromises<T extends NonEmptyArray<Promise<unkn
     throw new Error("Race time must be greater than resolve time");
   }
 
-  const mutedPromises = promises.map((p) => (p instanceof MutedPromise ? p : new MutedPromise(p)));
+  const mutedPromises = promises.map((p) => (p instanceof PromiseWithStatus ? p : new PromiseWithStatus(p)));
   const resolveTimeoutError = new TimeoutError(
     `Given promises can't be resolved within resolveTimeoutMs=${resolveTimeoutMs}`
   );
