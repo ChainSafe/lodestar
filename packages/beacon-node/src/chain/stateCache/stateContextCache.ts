@@ -22,7 +22,7 @@ export class StateContextCache implements BlockStateCache {
   private readonly cache: MapTracker<string, CachedBeaconStateAllForks>;
   /** Epoch -> Set<blockRoot> */
   private readonly epochIndex = new Map<Epoch, Set<string>>();
-  private readonly metrics: (Metrics["stateCache"] & Metrics["epochCache"]) | null | undefined;
+  private readonly metrics: (Metrics["stateCache"]) | null | undefined;
   /**
    * Strong reference to prevent head state from being pruned.
    * null if head state is being regen and not available at the moment.
@@ -83,29 +83,6 @@ export class StateContextCache implements BlockStateCache {
 
   get size(): number {
     return this.cache.size;
-  }
-
-  updateUnfinalizedPubkeys(validators: UnfinalizedPubkeyIndexMap): void {
-    let totalNumStatesUpdated = 0;
-
-    const addTimer = this.metrics?.addPubkeyTime.startTimer();
-    // Don't use a try/catch, only count run without exceptions
-    if (this.cache.size > 0) {
-      const st = this.cache.values().next().value as CachedBeaconStateAllForks;
-      // Only need to insert once since finalized cache is shared across all states globally
-      st.epochCtx.addFinalizedPubkeys(validators, this.metrics ?? undefined);
-    }
-    addTimer?.();
-
-    const deleteTimer = this.metrics?.deletePubkeyTime.startTimer();
-    // Don't use a try/catch, only count run without exceptions
-    for (const cachedState of this.cache.values()) {
-      cachedState.epochCtx.deleteUnfinalizedPubkeys(validators.keys());
-      totalNumStatesUpdated++;
-    }
-    deleteTimer?.();
-
-    this.metrics?.numStatesUpdated.observe(totalNumStatesUpdated);
   }
 
   /**

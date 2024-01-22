@@ -126,9 +126,6 @@ export class QueuedStateRegenerator implements IStateRegenerator {
    * and add them to epochCtx.pubkey2index and epochCtx.index2pubkey
    */
   updateUnfinalizedPubkeys(validators: UnfinalizedPubkeyIndexMap): void {
-    this.stateCache.updateUnfinalizedPubkeys(validators);
-    this.stateCache.updateUnfinalizedPubkeys.bind(this.checkpointStateCache)(validators);
-
     let numStatesUpdated = 0;
     const states = this.stateCache.getStates();
     const cpStates = this.checkpointStateCache.getStates();

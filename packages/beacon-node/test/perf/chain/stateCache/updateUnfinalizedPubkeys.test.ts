@@ -1,6 +1,6 @@
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {Map} from "immutable";
-import {PubkeyIndexMap} from "@lodestar/state-transition";
+import {type CachedBeaconStateAllForks, PubkeyIndexMap} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {generateCached6110State} from "../../../utils/state.js";
 import {CheckpointStateCache, StateContextCache} from "../../../../src/chain/stateCache/index.js";
@@ -11,9 +11,9 @@ import bls from "@chainsafe/bls";
 import {bytesToBigInt, intToBytes} from "@lodestar/utils";
 
 // Benchmark date from Mon Nov 21 2023 - Intel Core i7-9750H @ 2.60Ghz
-// ✔ updateUnfinalizedPubkeys - updating 10 pubkeys                      1496.612 ops/s    668.1760 us/op        -        276 runs   3.39 s
-// ✔ updateUnfinalizedPubkeys - updating 100 pubkeys                     174.9926 ops/s    5.714528 ms/op        -        142 runs   2.19 s
-// ✔ updateUnfinalizedPubkeys - updating 1000 pubkeys                    10.17848 ops/s    98.24650 ms/op        -         28 runs   3.75 s
+// ✔ updateUnfinalizedPubkeys - updating 10 pubkeys                      1444.173 ops/s    692.4380 us/op        -       1057 runs   6.03 s
+// ✔ updateUnfinalizedPubkeys - updating 100 pubkeys                     189.5965 ops/s    5.274358 ms/op        -         57 runs   1.15 s
+// ✔ updateUnfinalizedPubkeys - updating 1000 pubkeys                    12.90495 ops/s    77.48967 ms/op        -         13 runs   1.62 s
 describe("updateUnfinalizedPubkeys perf tests", function () {
   setBenchOpts({noThreshold: true});
 
@@ -58,8 +58,25 @@ describe("updateUnfinalizedPubkeys perf tests", function () {
         const newFinalizedValidators = baseState.epochCtx.unfinalizedPubkey2index.filter(
           (index, _pubkey) => index < numPubkeysToBeFinalized
         );
-        stateCache.updateUnfinalizedPubkeys(newFinalizedValidators);
-        stateCache.updateUnfinalizedPubkeys.bind(checkpointStateCache)(newFinalizedValidators);
+
+        const states = stateCache.getStates();
+        const cpStates = checkpointStateCache.getStates();
+
+        const firstState = states.next().value as CachedBeaconStateAllForks;
+        firstState.epochCtx.addFinalizedPubkeys(newFinalizedValidators);
+
+        const pubkeysToDelete = Array.from(newFinalizedValidators.keys());
+
+        firstState.epochCtx.deleteUnfinalizedPubkeys(pubkeysToDelete);
+
+        for (const s of states) {
+          s.epochCtx.deleteUnfinalizedPubkeys(pubkeysToDelete);
+        }
+    
+        for (const s of cpStates) {
+          s.epochCtx.deleteUnfinalizedPubkeys(pubkeysToDelete);
+        }
+
       },
     });
   }
