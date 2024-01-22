@@ -2,9 +2,13 @@ import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {Map} from "immutable";
 import {PubkeyIndexMap} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {interopPubkeysCached} from "@lodestar/state-transition/test/utils/interop.js";
 import {generateCached6110State} from "../../../utils/state.js";
 import {CheckpointStateCache, StateContextCache} from "../../../../src/chain/stateCache/index.js";
+import {toBufferBE} from "bigint-buffer";
+import {digest} from "@chainsafe/as-sha256";
+import type {SecretKey} from "@chainsafe/bls/types";
+import bls from "@chainsafe/bls";
+import {bytesToBigInt, intToBytes} from "@lodestar/utils";
 
 // Benchmark date from Mon Nov 21 2023 - Intel Core i7-9750H @ 2.60Ghz
 // ✔ updateUnfinalizedPubkeys - updating 10 pubkeys                      1496.612 ops/s    668.1760 us/op        -        276 runs   3.39 s
@@ -62,12 +66,29 @@ describe("updateUnfinalizedPubkeys perf tests", function () {
 
   function generatePubkey2Index(startIndex: number, endIndex: number): PubkeyIndexMap {
     const pubkey2Index = new PubkeyIndexMap();
-    const pubkeys = interopPubkeysCached(endIndex - startIndex);
+    const pubkeys = generatePubkeys(endIndex - startIndex);
 
     for (let i = startIndex; i < endIndex; i++) {
       pubkey2Index.set(pubkeys[i], i);
     }
 
     return pubkey2Index;
+  }
+
+  function generatePubkeys(validatorCount: number): Uint8Array[] {
+    const keys = [];
+
+    for (let i = 0; i < validatorCount; i++) {
+      const sk = generatePrivateKey(i);
+      const pk = sk.toPublicKey().toBytes();
+      keys.push(pk);
+    }
+
+    return keys;
+  }
+
+  function generatePrivateKey(index: number): SecretKey {
+    const secretKeyBytes = toBufferBE(bytesToBigInt(digest(intToBytes(index, 32))) % BigInt("38581184513"), 32);
+    return bls.SecretKey.fromBytes(secretKeyBytes);
   }
 });
