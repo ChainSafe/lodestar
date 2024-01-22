@@ -128,6 +128,49 @@ export class QueuedStateRegenerator implements IStateRegenerator {
   updateUnfinalizedPubkeys(validators: UnfinalizedPubkeyIndexMap): void {
     this.stateCache.updateUnfinalizedPubkeys(validators);
     this.stateCache.updateUnfinalizedPubkeys.bind(this.checkpointStateCache)(validators);
+
+    let numStatesUpdated = 0;
+    const states = this.stateCache.getStates();
+    const cpStates = this.checkpointStateCache.getStates();
+
+
+    // Add finalized pubkeys to all states.
+    const addTimer = this.metrics?.regenFnAddPubkeyTime.startTimer();
+
+    // We only need to add pubkeys to any one of the states since the finalized caches is shared globally across all states
+    const firstState = (states.next().value ?? cpStates.next().value) as CachedBeaconStateAllForks | undefined;
+
+    if (firstState !== undefined) {
+      firstState.epochCtx.addFinalizedPubkeys(validators, this.metrics?.epochCache ?? undefined);
+    } else {
+      this.logger.warn("Attempt to delete finalized pubkey from unfinalized pubkey cache. But no state is available");
+    }
+
+    addTimer?.();
+
+    // Delete finalized pubkeys from unfinalized pubkey cache for all states
+    const deleteTimer = this.metrics?.regenFnDeletePubkeyTime.startTimer();
+    const pubkeysToDelete = Array.from(validators.keys());
+
+    for (const s of states) {
+      s.epochCtx.deleteUnfinalizedPubkeys(pubkeysToDelete);
+      numStatesUpdated++;
+    }
+
+    for (const s of cpStates) {
+      s.epochCtx.deleteUnfinalizedPubkeys(pubkeysToDelete);
+      numStatesUpdated++;
+    }
+
+    // Since first state is consumed from the iterator. Will need to perform delete explicitly
+    if (firstState !== undefined) {
+      firstState?.epochCtx.deleteUnfinalizedPubkeys(pubkeysToDelete);
+      numStatesUpdated++;
+    }
+
+    deleteTimer?.();
+
+    this.metrics?.regenFnNumStatesUpdated.observe(numStatesUpdated);
   }
 
   /**

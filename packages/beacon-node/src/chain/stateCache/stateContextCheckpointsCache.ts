@@ -167,7 +167,7 @@ export class CheckpointStateCache implements CheckpointStateCacheInterface {
     }));
   }
 
-  getStateIterator(): Iterator<CachedBeaconStateAllForks> {
+  getStates(): IterableIterator<CachedBeaconStateAllForks> {
     return this.cache.values();
   }
 

@@ -150,7 +150,7 @@ export class StateContextCache implements BlockStateCache {
     }));
   }
 
-  getStateIterator(): Iterator<CachedBeaconStateAllForks> {
+  getStates(): IterableIterator<CachedBeaconStateAllForks> {
     return this.cache.values();
   }
 
