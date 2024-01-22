@@ -478,7 +478,8 @@ export function getValidatorApi({
       // configurations could cause a validator pubkey to have builder disabled with builder selection builder only
       // (TODO: independently make sure such an options update is not successful for a validator pubkey)
       //
-      // So if builder is disabled ignore builder selection of builderonly if caused by user mistake
+      // So if builder is disabled ignore builder selection of builder only if caused by user mistake
+      // https://github.com/ChainSafe/lodestar/issues/6338
       const isEngineEnabled = !isBuilderEnabled || builderSelection !== routes.validator.BuilderSelection.BuilderOnly;
 
       const loggerContext = {
@@ -486,6 +487,7 @@ export function getValidatorApi({
         builderSelection,
         slot,
         isBuilderEnabled,
+        isEngineEnabled,
         strictFeeRecipientCheck,
         // winston logger doesn't like bigint
         builderBoostFactor: `${builderBoostFactor}`,
@@ -520,9 +522,8 @@ export function getValidatorApi({
               })
             : Promise.reject<ReturnType<typeof produceBuilderBlindedBlock>>(builderDisabledError),
 
-          isEngineEnabled // TODO deneb: builderSelection needs to be figured out if to be done beacon side
-            ? // || builderSelection !== BuilderSelection.BuilderOnly
-              produceEngineFullBlockOrContents(slot, randaoReveal, graffiti, {
+          isEngineEnabled
+            ? produceEngineFullBlockOrContents(slot, randaoReveal, graffiti, {
                 feeRecipient,
                 strictFeeRecipientCheck,
                 // skip checking and recomputing head in these individual produce calls

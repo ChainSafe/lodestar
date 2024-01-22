@@ -117,6 +117,11 @@ export class MutedPromise<T> implements Promise<T> {
   }
 }
 
+/**
+ * ArrayToTuple converts an `Array<T>` to `[T, ...T]`
+ *
+ * eg: `[1, 2, 3]` from type `number[]` to `[number, number, number]`
+ */
 type ReturnPromiseWithTuple<Tuple extends NonEmptyArray<unknown>> = {
   [Index in keyof ArrayToTuple<Tuple>]: MutedPromise<Awaited<Tuple[Index]>>;
 };
