@@ -1,5 +1,5 @@
 import worker from "node:worker_threads";
-import {expose} from "@chainsafe/threads/worker";
+import {Transfer, expose} from "@chainsafe/threads/worker";
 import {createBeaconConfig, chainConfigFromJson} from "@lodestar/config";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {
@@ -166,7 +166,10 @@ const api: HistoricalStateWorkerApi = {
     return metricsRegister?.metrics() ?? "";
   },
   async getHistoricalState(slot) {
-    return queue.push(() => getHistoricalState(slot, config, db, pubkey2index, stateTransitionMetrics));
+    const state = await queue.push<Uint8Array>(() =>
+      getHistoricalState(slot, config, db, pubkey2index, stateTransitionMetrics)
+    );
+    return Transfer(state, [state.buffer]) as unknown as Uint8Array;
   },
 };
 
