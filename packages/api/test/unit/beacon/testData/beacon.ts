@@ -170,7 +170,7 @@ export const testData: GenericServerTestCases<Api> = {
 
   // reward
 
-  getProposerRewards: {
+  getBlockRewards: {
     args: ["head"],
     res: {
       executionOptimistic: true,

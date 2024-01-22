@@ -5,19 +5,11 @@ import {
   getAttesterSlashableIndices,
   processAttestationsAltair,
 } from "@lodestar/state-transition";
-import {ValidatorIndex, allForks, altair, phase0} from "@lodestar/types";
+import {allForks, altair, phase0} from "@lodestar/types";
 import {ForkName, WHISTLEBLOWER_REWARD_QUOTIENT} from "@lodestar/params";
+import {type BlockRewards} from "@lodestar/api";
 
 type SubRewardValue = number; // All reward values should be integer
-
-export type BlockRewards = {
-  proposerIndex: ValidatorIndex;
-  total: SubRewardValue;
-  attestations: SubRewardValue;
-  syncAggregate: SubRewardValue;
-  proposerSlashings: SubRewardValue;
-  attesterSlashings: SubRewardValue;
-};
 
 /**
  * Calculate total proposer block rewards given block and the beacon state of the same slot before the block is applied (preState)

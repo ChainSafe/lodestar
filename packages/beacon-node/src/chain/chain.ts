@@ -33,6 +33,7 @@ import {ProcessShutdownCallback} from "@lodestar/validator";
 import {Logger, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toHex} from "@lodestar/utils";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 
+import {type BlockRewards} from "@lodestar/api";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {Metrics} from "../metrics/index.js";
@@ -76,7 +77,7 @@ import {BlockAttributes, produceBlockBody, produceCommonBlockBody} from "./produ
 import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
 import {BlockInput} from "./blocks/types.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
-import {BlockRewards, computeBlockRewards} from "./rewards/blockRewards.js";
+import {computeBlockRewards} from "./rewards/blockRewards.js";
 import {ShufflingCache} from "./shufflingCache.js";
 import {StateContextCache} from "./stateCache/stateContextCache.js";
 import {SeenGossipBlockInput} from "./seenCache/index.js";

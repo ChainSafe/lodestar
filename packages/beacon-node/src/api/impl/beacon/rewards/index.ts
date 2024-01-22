@@ -4,7 +4,7 @@ import {resolveBlockId} from "../blocks/utils.js";
 
 export function getBeaconRewardsApi({chain}: Pick<ApiModules, "chain">): ServerApi<routes.beacon.rewards.Api> {
   return {
-    async getProposerRewards(blockId) {
+    async getBlockRewards(blockId) {
       const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
       const data = await chain.getBlockRewards(block.message);
       return {data, executionOptimistic};
