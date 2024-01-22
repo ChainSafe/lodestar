@@ -15,7 +15,7 @@ import {JobFnQueue} from "../../util/queue/fnQueue.js";
 import {QueueMetrics} from "../../util/queue/options.js";
 import {BeaconDb} from "../../db/index.js";
 import {HistoricalStateWorkerApi, HistoricalStateWorkerData} from "./types.js";
-import {getHistoricalState as _getHistoricalState} from "./getHistoricalState.js";
+import {getHistoricalState} from "./getHistoricalState.js";
 
 // most of this setup copied from networkCoreWorker.ts
 
@@ -166,7 +166,7 @@ const api: HistoricalStateWorkerApi = {
     return metricsRegister?.metrics() ?? "";
   },
   async getHistoricalState(slot) {
-    return queue.push(() => _getHistoricalState(slot, config, db, pubkey2index, stateTransitionMetrics));
+    return queue.push(() => getHistoricalState(slot, config, db, pubkey2index, stateTransitionMetrics));
   },
 };
 
