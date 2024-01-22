@@ -91,9 +91,11 @@ describe.skip("doppelganger / doppelganger test", function () {
     const beaconBlock = ssz.allForks.phase0.BeaconBlock.defaultValue();
 
     await expect(
-      validatorUnderTest.validatorStore.signBlock(fromHexString(pubKey), beaconBlock, bn.chain.clock.currentSlot),
+      validatorUnderTest.validatorStore.signBlock(fromHexString(pubKey), beaconBlock, bn.chain.clock.currentSlot)
+    ).resolves.toBeWithMessage(
+      undefined,
       "Signing should be possible if starting at genesis since doppelganger should be off"
-    ).to.eventually.be.fulfilled;
+    );
 
     await expect(
       validatorUnderTest.validatorStore.signAttestation(
@@ -105,9 +107,11 @@ describe.skip("doppelganger / doppelganger test", function () {
           bn.chain.clock.currentSlot
         ),
         bn.chain.clock.currentEpoch
-      ),
+      )
+    ).resolves.toBeWithMessage(
+      undefined,
       "Signing should be possible if starting at genesis since doppelganger should be off"
-    ).to.eventually.be.fulfilled;
+    );
   });
 
   it("should shut down validator if same key is active and started after genesis", async function () {
@@ -241,18 +245,18 @@ describe.skip("doppelganger / doppelganger test", function () {
 
     await expect(
       validatorUnderTest.validatorStore.signBlock(fromHexString(pubKey), beaconBlock, bn.chain.clock.currentSlot)
-    ).to.eventually.be.rejectedWith(`Doppelganger state for key ${pubKey} is not safe`);
+    ).rejects.toThrow(`Doppelganger state for key ${pubKey} is not safe`);
 
     await expect(
       validatorUnderTest.validatorStore.signBlock(fromHexString(pubKey), beaconBlock, bn.chain.clock.currentSlot)
-    ).to.eventually.be.rejectedWith(`Doppelganger state for key ${pubKey} is not safe`);
+    ).rejects.toThrow(`Doppelganger state for key ${pubKey} is not safe`);
 
     await waitForEvent<phase0.Checkpoint>(bn.chain.clock, ClockEvent.epoch, timeout);
 
+    // Signing should be possible after doppelganger check has elapsed
     await expect(
-      validatorUnderTest.validatorStore.signBlock(fromHexString(pubKey), beaconBlock, bn.chain.clock.currentSlot),
-      "Signing should be possible after doppelganger check has elapsed"
-    ).to.eventually.be.fulfilled;
+      validatorUnderTest.validatorStore.signBlock(fromHexString(pubKey), beaconBlock, bn.chain.clock.currentSlot)
+    ).resolves.toBeUndefined();
   });
 
   it("should not sign attestations if doppelganger period has not passed and started after genesis", async function () {
@@ -282,7 +286,7 @@ describe.skip("doppelganger / doppelganger test", function () {
         ),
         bn.chain.clock.currentEpoch
       )
-    ).to.eventually.be.rejectedWith(`Doppelganger state for key ${pubKey} is not safe`);
+    ).rejects.toThrow(`Doppelganger state for key ${pubKey} is not safe`);
 
     await expect(
       validatorUnderTest.validatorStore.signAttestation(
@@ -290,10 +294,11 @@ describe.skip("doppelganger / doppelganger test", function () {
         generateAttestationData(bn.chain.clock.currentSlot, bn.chain.clock.currentEpoch),
         bn.chain.clock.currentEpoch
       )
-    ).to.eventually.be.rejectedWith(`Doppelganger state for key ${pubKey} is not safe`);
+    ).rejects.toThrow(`Doppelganger state for key ${pubKey} is not safe`);
 
     await waitForEvent<phase0.Checkpoint>(bn.chain.clock, ClockEvent.epoch, timeout);
 
+    // Signing should be possible after doppelganger check has elapsed
     await expect(
       validatorUnderTest.validatorStore.signAttestation(
         createAttesterDuty(fromHexString(pubKey), bn.chain.clock.currentSlot, committeeIndex, validatorIndex),
@@ -304,9 +309,8 @@ describe.skip("doppelganger / doppelganger test", function () {
           bn.chain.clock.currentSlot
         ),
         bn.chain.clock.currentEpoch
-      ),
-      "Signing should be possible after doppelganger check has elapsed"
-    ).to.eventually.be.fulfilled;
+      )
+    ).resolves.toBeUndefined();
   });
 });
 

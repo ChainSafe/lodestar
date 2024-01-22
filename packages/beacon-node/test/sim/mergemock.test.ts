@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import {Context} from "mocha";
+import {describe, it, afterAll, afterEach, vi} from "vitest";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {LogLevel, sleep} from "@lodestar/utils";
 import {TimestampFormatCode} from "@lodestar/logger";
@@ -22,7 +22,7 @@ import {logFilesDir} from "./params.js";
 import {shell} from "./shell.js";
 
 // NOTE: How to run
-// EL_BINARY_DIR=g11tech/mergemock:latest EL_SCRIPT_DIR=mergemock LODESTAR_PRESET=mainnet ETH_PORT=8661 ENGINE_PORT=8551 yarn mocha test/sim/mergemock.test.ts
+// EL_BINARY_DIR=g11tech/mergemock:latest EL_SCRIPT_DIR=mergemock LODESTAR_PRESET=mainnet ETH_PORT=8661 ENGINE_PORT=8551 yarn vitest --run test/sim/mergemock.test.ts
 // ```
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention */
@@ -35,7 +35,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       `EL ENV must be provided, EL_BINARY_DIR: ${process.env.EL_BINARY_DIR}, EL_SCRIPT_DIR: ${process.env.EL_SCRIPT_DIR}`
     );
   }
-  this.timeout("10min");
+  vi.setConfig({testTimeout: 10 * 60 * 1000});
 
   const dataPath = fs.mkdtempSync("lodestar-test-mergemock");
   const elSetupConfig = {
@@ -50,7 +50,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
   };
 
   const controller = new AbortController();
-  after(async () => {
+  afterAll(async () => {
     controller?.abort();
     await shell(`sudo rm -rf ${dataPath}`);
   });
@@ -64,6 +64,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
   });
 
   for (const useProduceBlockV3 of [false, true]) {
+    // eslint-disable-next-line vitest/expect-expect
     it(`Test builder with useProduceBlockV3=${useProduceBlockV3}`, async function () {
       console.log("\n\nPost-merge, run for a few blocks\n\n");
       const {elClient, tearDownCallBack} = await runEL(
@@ -73,7 +74,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       );
       afterEachCallbacks.push(() => tearDownCallBack());
 
-      await runNodeWithEL.bind(this)({
+      await runNodeWithEL({
         elClient,
         bellatrixEpoch: 0,
         testName: "post-merge",
@@ -84,10 +85,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
   type RunOpts = {elClient: ELClient; bellatrixEpoch: Epoch; testName: string; useProduceBlockV3: boolean};
 
-  async function runNodeWithEL(
-    this: Context,
-    {elClient, bellatrixEpoch, testName, useProduceBlockV3}: RunOpts
-  ): Promise<void> {
+  async function runNodeWithEL({elClient, bellatrixEpoch, testName, useProduceBlockV3}: RunOpts): Promise<void> {
     const {genesisBlockHash, ttd, engineRpcUrl, ethRpcUrl} = elClient;
     const validatorClientCount = 1;
     const validatorsPerClient = 32;
@@ -123,7 +121,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       testParams.SECONDS_PER_SLOT *
       1000;
 
-    this.timeout(timeout + 2 * timeoutSetupMargin);
+    vi.setConfig({testTimeout: timeout + 2 * timeoutSetupMargin});
 
     const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
 

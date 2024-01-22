@@ -1,48 +1,26 @@
-import type {Suite} from "mocha";
+import {vi, MockInstance} from "vitest";
 import {Logger} from "@lodestar/utils";
-import {TestContext} from "./interfaces.js";
-export type {TestContext} from "./interfaces.js";
+
+type Callback = () => void;
+type Handler = (cb: Callback) => void;
 
 /**
- * Create a Mocha context object that can be used to register callbacks that will be executed
+ * Stub the logger methods
  */
-export function getMochaContext(suite: Suite): TestContext {
-  const afterEachCallbacks: (() => Promise<void> | void)[] = [];
-  const beforeEachCallbacks: (() => Promise<void> | void)[] = [];
-  const afterAllCallbacks: (() => Promise<void> | void)[] = [];
+export function stubLogger(context: {beforeEach: Handler; afterEach: Handler}, logger = console): void {
+  context.beforeEach(() => {
+    vi.spyOn(logger, "info");
+    vi.spyOn(logger, "log");
+    vi.spyOn(logger, "warn");
+    vi.spyOn(logger, "error");
+  });
 
-  const context: TestContext = {
-    afterEach: (cb) => afterEachCallbacks.push(cb),
-    beforeEach: (cb) => beforeEachCallbacks.push(cb),
-    afterAll: (cb) => afterAllCallbacks.push(cb),
-  };
-
-  const callbacks = [afterEachCallbacks, beforeEachCallbacks, afterAllCallbacks];
-  const hooks = [suite.afterEach, suite.beforeEach, suite.afterAll];
-
-  for (const [index, cbs] of callbacks.entries()) {
-    const hook = hooks[index].bind(suite);
-
-    hook(async function mochaHook() {
-      // Add increased timeout for that hook
-      this.timeout(10000);
-
-      const errs: Error[] = [];
-      for (const cb of cbs) {
-        try {
-          await cb();
-        } catch (e) {
-          errs.push(e as Error);
-        }
-      }
-      cbs.length = 0; // Reset array
-      if (errs.length > 0) {
-        throw errs[0];
-      }
-    });
-  }
-
-  return context;
+  context.afterEach(() => {
+    (logger.info as unknown as MockInstance).mockRestore();
+    (logger.log as unknown as MockInstance).mockRestore();
+    (logger.warn as unknown as MockInstance).mockRestore();
+    (logger.error as unknown as MockInstance).mockRestore();
+  });
 }
 
 // Typescript does not support array of generics so have to use this flexible workaround

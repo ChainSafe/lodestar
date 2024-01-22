@@ -110,8 +110,6 @@ describe.skip("eth1 / Eth1MergeBlockTracker", function () {
     // Given the total difficulty offset the block that has TTD is the `difficultyOffset`nth block
     const mergeBlock = await eth1MergeBlockTracker.getTerminalPowBlock();
     if (!mergeBlock) throw Error("mergeBlock not found");
-    // Chai does not support bigint comparison
-    // eslint-disable-next-line chai-expect/no-inner-compare
     // "mergeBlock.totalDifficulty is not >= TTD"
     expect(mergeBlock.totalDifficulty).toBeGreaterThanOrEqual(terminalTotalDifficulty);
   });
@@ -146,8 +144,6 @@ describe.skip("eth1 / Eth1MergeBlockTracker", function () {
     // Given the total difficulty offset the block that has TTD is the `difficultyOffset`nth block
     const mergeBlock = await eth1MergeBlockTracker.getTerminalPowBlock();
     if (!mergeBlock) throw Error("mergeBlock not found");
-    // Chai does not support bigint comparison
-    // eslint-disable-next-line chai-expect/no-inner-compare
     // "mergeBlock.totalDifficulty is not >= TTD"
     expect(mergeBlock.totalDifficulty).toBeGreaterThanOrEqual(terminalTotalDifficulty);
   });

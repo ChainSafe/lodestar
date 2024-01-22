@@ -5,6 +5,7 @@ import {describe, it, expect, beforeEach, beforeAll, afterEach, vi} from "vitest
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz, phase0} from "@lodestar/types";
+import {MockedForkChoice, getMockedForkChoice} from "../../../mocks/mockedBeaconChain.js";
 import {
   AggregatedAttestationPool,
   aggregateInto,
@@ -17,7 +18,6 @@ import {generateCachedAltairState} from "../../../utils/state.js";
 import {renderBitArray} from "../../../utils/render.js";
 import {ZERO_HASH_HEX} from "../../../../src/constants/constants.js";
 import {generateProtoBlock} from "../../../utils/typeGenerator.js";
-import {MockedBeaconChain, getMockedBeaconChain} from "../../../__mocks__/mockedBeaconChain.js";
 
 /** Valid signature of random data to prevent BLS errors */
 const validSignature = fromHexString(
@@ -38,12 +38,12 @@ describe("AggregatedAttestationPool", function () {
   const attDataRootHex = toHexString(ssz.phase0.AttestationData.hashTreeRoot(attestation.data));
 
   const committee = [0, 1, 2, 3];
-  let forkchoiceStub: MockedBeaconChain["forkChoice"];
+  let forkchoiceStub: MockedForkChoice;
 
   beforeEach(() => {
     pool = new AggregatedAttestationPool();
     altairState = originalState.clone();
-    forkchoiceStub = getMockedBeaconChain().forkChoice;
+    forkchoiceStub = getMockedForkChoice();
   });
 
   afterEach(() => {

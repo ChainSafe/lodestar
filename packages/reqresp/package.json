@@ -50,7 +50,7 @@
     "lint:fix": "yarn run lint --fix",
     "pretest": "yarn run check-types",
     "test": "yarn test:unit",
-    "test:unit": "vitest --run --dir test/unit/ --coverage",
+    "test:unit": "vitest --run --dir test/unit/",
     "check-readme": "typescript-docs-verifier"
   },
   "dependencies": {

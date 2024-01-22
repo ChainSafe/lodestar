@@ -1,5 +1,5 @@
 import {defineConfig, mergeConfig} from "vitest/config";
-import vitestConfig from "../../vitest.base.config";
+import vitestConfig from "../../vitest.base.unit.config";
 
 export default mergeConfig(
   vitestConfig,

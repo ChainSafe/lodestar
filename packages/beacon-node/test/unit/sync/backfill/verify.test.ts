@@ -25,7 +25,9 @@ describe("backfill sync - verify block sequence", function () {
   it("should verify valid chain of blocks", function () {
     const blocks = getBlocks();
 
-    expect(() => verifyBlockSequence(beaconConfig, blocks.slice(0, 2), blocks[2].data.message.parentRoot)).to.not.throw;
+    expect(() =>
+      verifyBlockSequence(beaconConfig, blocks.slice(0, 2), blocks[2].data.message.parentRoot)
+    ).not.toThrow();
   });
 
   it("should fail with sequence not anchored", function () {

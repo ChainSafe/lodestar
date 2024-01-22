@@ -11,12 +11,12 @@ import {
 import {phase0, ssz} from "@lodestar/types";
 import {DOMAIN_VOLUNTARY_EXIT, FAR_FUTURE_EPOCH, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {createBeaconConfig} from "@lodestar/config";
+import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {generateState} from "../../../utils/state.js";
 import {validateGossipVoluntaryExit} from "../../../../src/chain/validation/voluntaryExit.js";
 import {VoluntaryExitErrorCode} from "../../../../src/chain/errors/voluntaryExitError.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState.js";
-import {MockedBeaconChain, getMockedBeaconChain} from "../../../__mocks__/mockedBeaconChain.js";
 
 describe("validate voluntary exit", () => {
   let chainStub: MockedBeaconChain;
