@@ -12,6 +12,9 @@ import {SignedBeaconBlock} from "@lodestar/types/allForks";
 import {BeaconConfig} from "@lodestar/config";
 import {IBeaconDb} from "../../db/index.js";
 
+/**
+ * Populate a PubkeyIndexMap with any new entries based on a BeaconState
+ */
 export function syncPubkeyCache(state: BeaconStateAllForks, pubkey2index: PubkeyIndexMap): void {
   // Get the validators sub tree once for all the loop
   const validators = state.validators;
@@ -23,6 +26,9 @@ export function syncPubkeyCache(state: BeaconStateAllForks, pubkey2index: Pubkey
   }
 }
 
+/**
+ * Get the nearest BeaconState at or before a slot
+ */
 export async function getNearestState(
   slot: number,
   config: BeaconConfig,
@@ -50,10 +56,16 @@ export async function getNearestState(
   );
 }
 
+/**
+ * Get blocks (from, to]
+ */
 export function getBlocksBetween(from: number, to: number, db: IBeaconDb): AsyncIterable<SignedBeaconBlock> {
   return db.blockArchive.valuesStream({gt: from, lte: to});
 }
 
+/**
+ * Get and regenerate a historical state
+ */
 export async function getHistoricalState(
   slot: number,
   config: BeaconConfig,
