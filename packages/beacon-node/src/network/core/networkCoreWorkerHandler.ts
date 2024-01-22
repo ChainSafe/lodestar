@@ -3,7 +3,7 @@ import worker_threads from "node:worker_threads";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/dist/src/score/peer-score.js";
 import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {ModuleThread, Thread, Worker, spawn} from "@chainsafe/threads";
-import {PeerId} from "@libp2p/interface/peer-id";
+import {PeerId} from "@libp2p/interface";
 import {exportToProtobuf} from "@libp2p/peer-id-factory";
 import {routes} from "@lodestar/api";
 import {BeaconConfig, chainConfigToJson} from "@lodestar/config";
@@ -141,7 +141,7 @@ export class WorkerNetworkCore implements INetworkCore {
       // A Lodestar Node may do very expensive task at start blocking the event loop and causing
       // the initialization to timeout. The number below is big enough to almost disable the timeout
       timeout: 5 * 60 * 1000,
-      // TODO: types are broken on spawn, which claims that `NetworkWorkerApi` does not satifies its contrains
+      // TODO: types are broken on spawn, which claims that `NetworkWorkerApi` does not satisfies its contrains
     })) as unknown as ModuleThread<NetworkWorkerApi>;
 
     return new WorkerNetworkCore({
@@ -248,6 +248,12 @@ export class WorkerNetworkCore implements INetworkCore {
   }
   writeDiscv5Profile(durationMs: number, dirpath: string): Promise<string> {
     return this.getApi().writeDiscv5Profile(durationMs, dirpath);
+  }
+  writeNetworkHeapSnapshot(prefix: string, dirpath: string): Promise<string> {
+    return this.getApi().writeHeapSnapshot(prefix, dirpath);
+  }
+  writeDiscv5HeapSnapshot(prefix: string, dirpath: string): Promise<string> {
+    return this.getApi().writeDiscv5HeapSnapshot(prefix, dirpath);
   }
 
   private getApi(): ModuleThread<NetworkWorkerApi> {

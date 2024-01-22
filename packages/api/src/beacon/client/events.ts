@@ -1,20 +1,18 @@
-import {ChainForkConfig} from "@lodestar/config";
 import {Api, BeaconEvent, routesData, getEventSerdes} from "../routes/events.js";
-import {stringifyQuery} from "../../utils/client/format.js";
+import {stringifyQuery, urlJoin} from "../../utils/client/format.js";
 import {getEventSource} from "../../utils/client/eventSource.js";
 import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
 
 /**
  * REST HTTP client for events routes
  */
-export function getClient(config: ChainForkConfig, baseUrl: string): Api {
-  const eventSerdes = getEventSerdes(config);
+export function getClient(baseUrl: string): Api {
+  const eventSerdes = getEventSerdes();
 
   return {
     eventstream: async (topics, signal, onEvent) => {
       const query = stringifyQuery({topics});
-      // TODO: Use a proper URL formatter
-      const url = `${baseUrl}${routesData.eventstream.url}?${query}`;
+      const url = `${urlJoin(baseUrl, routesData.eventstream.url)}?${query}`;
       // eslint-disable-next-line @typescript-eslint/naming-convention
       const EventSource = await getEventSource();
       const eventSource = new EventSource(url);
@@ -58,4 +56,4 @@ export function getClient(config: ChainForkConfig, baseUrl: string): Api {
 }
 
 // https://github.com/EventSource/eventsource/blob/82e034389bd2c08d532c63172b8e858c5b185338/lib/eventsource.js#L143
-type EventSourceError = {status: number; message: string};
+type EventSourceError = {status?: number; message: string};

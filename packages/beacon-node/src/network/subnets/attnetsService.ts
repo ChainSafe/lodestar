@@ -34,14 +34,14 @@ const LAST_SEEN_VALIDATOR_TIMEOUT = 150;
 
 const gossipType = GossipType.beacon_attestation;
 
-enum SubnetSource {
+export enum SubnetSource {
   committee = "committee",
   random = "random",
 }
 
 /**
  * Manage random (long lived) subnets and committee (short lived) subnets.
- * - PeerManager uses attnetsService to know which peers are requried for duties
+ * - PeerManager uses attnetsService to know which peers are required for duties
  * - Network call addCommitteeSubscriptions() from API calls
  * - Gossip handler checks shouldProcess to know if validator is aggregator
  */

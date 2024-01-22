@@ -17,7 +17,7 @@ export type AttestationDataCacheEntry = {
   subnet: number;
 };
 
-enum RejectReason {
+export enum RejectReason {
   // attestation data reaches MAX_CACHE_SIZE_PER_SLOT
   reached_limit = "reached_limit",
   // attestation data is too old

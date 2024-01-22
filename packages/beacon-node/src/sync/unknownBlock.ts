@@ -408,15 +408,7 @@ export class UnknownBlockSync {
     for (let i = 0; i < MAX_ATTEMPTS_PER_BLOCK; i++) {
       const peer = shuffledPeers[i % shuffledPeers.length];
       try {
-        // TODO DENEB: Use
-        const [blockInput] = await beaconBlocksMaybeBlobsByRoot(
-          this.config,
-          this.network,
-          peer,
-          [blockRoot],
-          this.chain.clock.currentSlot,
-          this.chain.forkChoice.getFinalizedBlock().slot
-        );
+        const [blockInput] = await beaconBlocksMaybeBlobsByRoot(this.config, this.network, peer, [blockRoot]);
 
         // Peer does not have the block, try with next peer
         if (blockInput === undefined) {

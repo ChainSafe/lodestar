@@ -1,7 +1,6 @@
-import {PeerId} from "@libp2p/interface/peer-id";
 import {Multiaddr} from "@multiformats/multiaddr";
-import type {PeerInfo} from "@libp2p/interface/peer-info";
-import {ENR} from "@chainsafe/discv5";
+import type {PeerId, PeerInfo} from "@libp2p/interface";
+import {ENR} from "@chainsafe/enr";
 import {BeaconConfig} from "@lodestar/config";
 import {pruneSetToMax, sleep} from "@lodestar/utils";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
@@ -43,7 +42,7 @@ enum QueryStatusCode {
 }
 type QueryStatus = {code: QueryStatusCode.NotActive} | {code: QueryStatusCode.Active; count: number};
 
-enum DiscoveredPeerStatus {
+export enum DiscoveredPeerStatus {
   bad_score = "bad_score",
   already_connected = "already_connected",
   already_dialing = "already_dialing",

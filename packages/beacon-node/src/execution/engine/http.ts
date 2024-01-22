@@ -55,6 +55,14 @@ export type ExecutionEngineHttpOpts = {
    * +-5 seconds interval.
    */
   jwtSecretHex?: string;
+  /**
+   * An identifier string passed as CLI arg that will be set in `id` field of jwt claims
+   */
+  jwtId?: string;
+  /**
+   * A version string that will be set in `clv` field of jwt claims
+   */
+  jwtVersion?: string;
 };
 
 export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
@@ -355,7 +363,12 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   async getPayload(
     fork: ForkName,
     payloadId: PayloadId
-  ): Promise<{executionPayload: allForks.ExecutionPayload; blockValue: Wei; blobsBundle?: BlobsBundle}> {
+  ): Promise<{
+    executionPayload: allForks.ExecutionPayload;
+    executionPayloadValue: Wei;
+    blobsBundle?: BlobsBundle;
+    shouldOverrideBuilder?: boolean;
+  }> {
     const method =
       ForkSeq[fork] >= ForkSeq.deneb
         ? "engine_getPayloadV3"

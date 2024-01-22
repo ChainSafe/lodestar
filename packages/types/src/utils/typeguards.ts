@@ -1,16 +1,19 @@
 import {
+  FullOrBlindedBeaconBlockOrContents,
   FullOrBlindedBeaconBlock,
   FullOrBlindedSignedBeaconBlock,
   FullOrBlindedBeaconBlockBody,
   FullOrBlindedExecutionPayload,
   ExecutionPayloadHeader,
-  FullOrBlindedBlobSidecar,
-  FullOrBlindedSignedBlobSidecar,
   BlindedBeaconBlockBody,
   BlindedBeaconBlock,
+  BlockContents,
+  SignedBlindedBeaconBlock,
+  SignedBlockContents,
+  SignedBeaconBlock,
+  ExecutionPayload,
+  ExecutionPayloadAndBlobsBundle,
 } from "../allForks/types.js";
-import {ts as bellatrix} from "../bellatrix/index.js";
-import {ts as deneb} from "../deneb/index.js";
 
 export function isBlindedExecution(payload: FullOrBlindedExecutionPayload): payload is ExecutionPayloadHeader {
   // we just check transactionsRoot for determinging as it the base field
@@ -18,8 +21,9 @@ export function isBlindedExecution(payload: FullOrBlindedExecutionPayload): payl
   return (payload as ExecutionPayloadHeader).transactionsRoot !== undefined;
 }
 
-export function isBlindedBeaconBlock(block: FullOrBlindedBeaconBlock): block is BlindedBeaconBlock {
-  return isBlindedBeaconBlockBody(block.body);
+export function isBlindedBeaconBlock(block: FullOrBlindedBeaconBlockOrContents): block is BlindedBeaconBlock {
+  const body = (block as FullOrBlindedBeaconBlock).body;
+  return body !== undefined && isBlindedBeaconBlockBody(body);
 }
 
 export function isBlindedBeaconBlockBody(body: FullOrBlindedBeaconBlockBody): body is BlindedBeaconBlockBody {
@@ -28,16 +32,20 @@ export function isBlindedBeaconBlockBody(body: FullOrBlindedBeaconBlockBody): bo
 
 export function isBlindedSignedBeaconBlock(
   signedBlock: FullOrBlindedSignedBeaconBlock
-): signedBlock is bellatrix.SignedBlindedBeaconBlock {
-  return (signedBlock as bellatrix.SignedBlindedBeaconBlock).message.body.executionPayloadHeader !== undefined;
+): signedBlock is SignedBlindedBeaconBlock {
+  return (signedBlock as SignedBlindedBeaconBlock).message.body.executionPayloadHeader !== undefined;
 }
 
-export function isBlindedBlobSidecar(blob: FullOrBlindedBlobSidecar): blob is deneb.BlindedBlobSidecar {
-  return (blob as deneb.BlindedBlobSidecar).blobRoot !== undefined;
+export function isBlockContents(data: FullOrBlindedBeaconBlockOrContents): data is BlockContents {
+  return (data as BlockContents).kzgProofs !== undefined;
 }
 
-export function isBlindedSignedBlobSidecar(
-  blob: FullOrBlindedSignedBlobSidecar
-): blob is deneb.SignedBlindedBlobSidecar {
-  return (blob as deneb.SignedBlindedBlobSidecar).message.blobRoot !== undefined;
+export function isSignedBlockContents(data: SignedBeaconBlock | SignedBlockContents): data is SignedBlockContents {
+  return (data as SignedBlockContents).kzgProofs !== undefined;
+}
+
+export function isExecutionPayloadAndBlobsBundle(
+  data: ExecutionPayload | ExecutionPayloadAndBlobsBundle
+): data is ExecutionPayloadAndBlobsBundle {
+  return (data as ExecutionPayloadAndBlobsBundle).blobsBundle !== undefined;
 }

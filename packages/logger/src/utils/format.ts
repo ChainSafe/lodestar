@@ -1,4 +1,5 @@
 import winston from "winston";
+import {LodestarError, isEmptyObject} from "@lodestar/utils";
 import {LoggerOptions, TimestampFormatCode} from "../interface.js";
 import {logCtxToJson, logCtxToString, LogData} from "./json.js";
 import {formatEpochSlotTime} from "./timeFormat.js";
@@ -86,8 +87,15 @@ function humanReadableTemplateFn(_info: {[key: string]: any; level: string; mess
 
   str += `[${infoString}] ${info.level.padStart(infoPad)}: ${info.message}`;
 
-  if (info.context !== undefined) str += " " + logCtxToString(info.context);
-  if (info.error !== undefined) str += " - " + logCtxToString(info.error);
+  if (info.context !== undefined && !isEmptyObject(info.context)) str += " " + logCtxToString(info.context);
+  if (info.error !== undefined) {
+    str +=
+      // LodestarError is formatted in the same way as context, it is either appended to
+      // the log message (" ") or extends existing context properties (", "). For any other
+      // error, the message is printed out and clearly separated from the log message (" - ").
+      (info.error instanceof LodestarError ? (isEmptyObject(info.context) ? " " : ", ") : " - ") +
+      logCtxToString(info.error);
+  }
 
   return str;
 }

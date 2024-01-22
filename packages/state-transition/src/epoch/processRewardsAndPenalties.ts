@@ -14,7 +14,11 @@ import {getRewardsAndPenaltiesAltair} from "./getRewardsAndPenalties.js";
  *
  * PERF: Cost = 'proportional' to $VALIDATOR_COUNT. Extra work is done per validator the more status flags are set
  */
-export function processRewardsAndPenalties(state: CachedBeaconStateAllForks, cache: EpochTransitionCache): void {
+export function processRewardsAndPenalties(
+  state: CachedBeaconStateAllForks,
+  cache: EpochTransitionCache,
+  slashingPenalties: number[] = []
+): void {
   // No rewards are applied at the end of `GENESIS_EPOCH` because rewards are for work done in the previous epoch
   if (cache.currentEpoch === GENESIS_EPOCH) {
     return;
@@ -24,7 +28,7 @@ export function processRewardsAndPenalties(state: CachedBeaconStateAllForks, cac
   const balances = state.balances.getAll();
 
   for (let i = 0, len = rewards.length; i < len; i++) {
-    balances[i] += rewards[i] - penalties[i];
+    balances[i] += rewards[i] - penalties[i] - (slashingPenalties[i] ?? 0);
   }
 
   // important: do not change state one balance at a time. Set them all at once, constructing the tree in one go

@@ -1,7 +1,6 @@
-import {Options} from "yargs";
 import {beaconNodeOptions, paramsOptions, BeaconNodeArgs} from "../../options/index.js";
 import {LogArgs, logOptions} from "../../options/logOptions.js";
-import {CliCommandOptions} from "../../util/index.js";
+import {CliCommandOptions, CliOptionDefinition} from "../../util/index.js";
 import {defaultBeaconPaths, BeaconPaths} from "./paths.js";
 
 type BeaconExtraArgs = {
@@ -117,7 +116,8 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
   },
 
   private: {
-    description: "Do not send implementation details over p2p identify protocol and in builder requests",
+    description:
+      "Do not send implementation details over p2p identify protocol and in builder, execution engine and eth1 requests",
     type: "boolean",
   },
 
@@ -143,7 +143,7 @@ type ENRArgs = {
   nat?: boolean;
 };
 
-const enrOptions: Record<string, Options> = {
+const enrOptions: Record<string, CliOptionDefinition> = {
   "enr.ip": {
     description: "Override ENR IP entry",
     type: "string",
@@ -183,7 +183,7 @@ const enrOptions: Record<string, Options> = {
 
 export type BeaconArgs = BeaconExtraArgs & LogArgs & BeaconPaths & BeaconNodeArgs & ENRArgs;
 
-export const beaconOptions: {[k: string]: Options} = {
+export const beaconOptions: {[k: string]: CliOptionDefinition} = {
   ...beaconExtraOptions,
   ...logOptions,
   ...beaconNodeOptions,

@@ -20,22 +20,26 @@ export enum ForkSeq {
   deneb = 4,
 }
 
-export type ForkLightClient = Exclude<ForkName, ForkName.phase0>;
+export type ForkPreLightClient = ForkName.phase0;
+export type ForkLightClient = Exclude<ForkName, ForkPreLightClient>;
 export function isForkLightClient(fork: ForkName): fork is ForkLightClient {
   return fork !== ForkName.phase0;
 }
 
-export type ForkExecution = Exclude<ForkLightClient, ForkName.altair>;
+export type ForkPreExecution = ForkPreLightClient | ForkName.altair;
+export type ForkExecution = Exclude<ForkName, ForkPreExecution>;
 export function isForkExecution(fork: ForkName): fork is ForkExecution {
   return isForkLightClient(fork) && fork !== ForkName.altair;
 }
 
-export type ForkWithdrawals = Exclude<ForkExecution, ForkName.bellatrix>;
+export type ForkPreWithdrawals = ForkPreExecution | ForkName.bellatrix;
+export type ForkWithdrawals = Exclude<ForkName, ForkPreWithdrawals>;
 export function isForkWithdrawals(fork: ForkName): fork is ForkWithdrawals {
   return isForkExecution(fork) && fork !== ForkName.bellatrix;
 }
 
-export type ForkBlobs = Exclude<ForkExecution, ForkName.bellatrix | ForkName.capella>;
+export type ForkPreBlobs = ForkPreWithdrawals | ForkName.capella;
+export type ForkBlobs = Exclude<ForkName, ForkPreBlobs>;
 export function isForkBlobs(fork: ForkName): fork is ForkBlobs {
   return isForkWithdrawals(fork) && fork !== ForkName.capella;
 }

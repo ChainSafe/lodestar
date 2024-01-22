@@ -45,6 +45,11 @@ export type IValidatorCliArgs = AccountValidatorArgs &
 
     builder?: boolean;
     "builder.selection"?: string;
+    "builder.boostFactor"?: bigint;
+
+    useProduceBlockV3?: boolean;
+    broadcastValidation?: string;
+    blindedLocal?: boolean;
 
     importKeystores?: string[];
     importKeystoresPassword?: string;
@@ -231,15 +236,40 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
 
   builder: {
     type: "boolean",
-    description: "Enable execution payload production via a builder for better rewards",
+    description: `An alias for \`--builder.selection ${defaultOptions.builderAliasSelection}\` for the builder flow, ignored if \`--builder.selection\` is explicitly provided`,
     group: "builder",
   },
 
   "builder.selection": {
     type: "string",
-    description: "Default builder block selection strategy: `maxprofit`, `builderalways`, or `builderonly`",
-    defaultDescription: `\`${defaultOptions.builderSelection}\``,
+    description: "Builder block selection strategy `maxprofit`, `builderalways`, `builderonly` or `executiononly`",
+    defaultDescription: `${defaultOptions.builderSelection}`,
     group: "builder",
+  },
+
+  "builder.boostFactor": {
+    type: "string",
+    description:
+      "Percentage multiplier the block producing beacon node must apply to boost (>100) or dampen (<100) builder block value for selection against execution block. The multiplier is ignored if `--builder.selection` is set to anything other than `maxprofit`",
+    defaultDescription: `${defaultOptions.builderBoostFactor}`,
+    group: "builder",
+  },
+
+  useProduceBlockV3: {
+    type: "boolean",
+    description: "Enable/disable usage of produceBlockV3 for block production, is auto enabled on deneb+ blocks",
+  },
+
+  broadcastValidation: {
+    type: "string",
+    description: "Validations to be run by beacon node for the signed block prior to publishing",
+    defaultDescription: `${defaultOptions.broadcastValidation}`,
+  },
+
+  blindedLocal: {
+    type: "string",
+    description: "Request fetching local block in blinded format for produceBlockV3",
+    defaultDescription: `${defaultOptions.blindedLocal}`,
   },
 
   importKeystores: {
@@ -252,7 +282,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
   importKeystoresPassword: {
     alias: ["passphraseFile"], // Backwards compatibility with old `validator import` cmd
     description: "Path to a file with password to decrypt all keystores from `importKeystores` option",
-    defaultDescription: "`./password.txt`",
+    defaultDescription: "./password.txt",
     type: "string",
   },
 
@@ -262,8 +292,6 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     default: false,
     type: "boolean",
   },
-
-  // HIDDEN INTEROP OPTIONS
 
   // Remote signer
 
@@ -275,7 +303,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
 
   "externalSigner.pubkeys": {
     description:
-      "List of validator public keys used by an external signer. May also provide a single string a comma separated public keys",
+      "List of validator public keys used by an external signer. May also provide a single string of comma-separated public keys",
     type: "array",
     string: true, // Ensures the pubkey string is not automatically converted to numbers
     coerce: (pubkeys: string[]): string[] =>
@@ -289,7 +317,8 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
 
   "externalSigner.fetch": {
     conflicts: ["externalSigner.pubkeys"],
-    description: "Fetch then list of public keys to validate from an external signer",
+    description:
+      "Fetch the list of public keys to validate from an external signer. Cannot be used in combination with `--externalSigner.pubkeys`",
     type: "boolean",
     group: "externalSignerUrl",
   },

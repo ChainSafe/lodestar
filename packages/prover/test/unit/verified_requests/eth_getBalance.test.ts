@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {createForkConfig} from "@lodestar/config";
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
 import {VERIFICATION_FAILED_RESPONSE_CODE} from "../../../src/constants.js";
@@ -25,7 +25,7 @@ describe("verified_requests / eth_getBalance", () => {
             params: [data.request.params[0], data.request.params[1]],
           },
         });
-        expect(response).to.eql(data.response);
+        expect(response).toEqual(data.response);
       });
 
       it("should return the json-rpc response with error for an invalid account", async () => {
@@ -43,7 +43,7 @@ describe("verified_requests / eth_getBalance", () => {
           },
         });
 
-        expect(response).to.eql({
+        expect(response).toEqual({
           jsonrpc: "2.0",
           id: data.request.id,
           error: {code: VERIFICATION_FAILED_RESPONSE_CODE, message: getVerificationFailedMessage("eth_getBalance")},

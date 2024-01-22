@@ -9,7 +9,8 @@ import {
 } from "../../../../src/beacon/routes/beacon/index.js";
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 
-const root = Buffer.alloc(32, 1);
+const root = new Uint8Array(32).fill(1);
+const randao = new Uint8Array(32).fill(1);
 const balance = 32e9;
 const pubkeyHex = toHexString(Buffer.alloc(48, 1));
 
@@ -58,7 +59,7 @@ export const testData: GenericServerTestCases<Api> = {
     res: undefined,
   },
   publishBlockV2: {
-    args: [ssz.phase0.SignedBeaconBlock.defaultValue(), {broadcastValidation: BroadcastValidation.none}],
+    args: [ssz.phase0.SignedBeaconBlock.defaultValue(), {broadcastValidation: BroadcastValidation.consensus}],
     res: undefined,
   },
   publishBlindedBlock: {
@@ -66,7 +67,7 @@ export const testData: GenericServerTestCases<Api> = {
     res: undefined,
   },
   publishBlindedBlockV2: {
-    args: [getDefaultBlindedBlock(64), {broadcastValidation: BroadcastValidation.none}],
+    args: [getDefaultBlindedBlock(64), {broadcastValidation: BroadcastValidation.consensus}],
     res: undefined,
   },
   getBlobSidecars: {
@@ -130,6 +131,10 @@ export const testData: GenericServerTestCases<Api> = {
   getStateFork: {
     args: ["head"],
     res: {executionOptimistic: true, data: ssz.phase0.Fork.defaultValue()},
+  },
+  getStateRandao: {
+    args: ["head", 1],
+    res: {executionOptimistic: true, data: {randao}},
   },
   getStateFinalityCheckpoints: {
     args: ["head"],

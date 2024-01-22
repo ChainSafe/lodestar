@@ -26,7 +26,7 @@ const finality: TestRunnerFn<FinalityTestCase, BeaconStateAllForks> = (fork) => 
         const signedBlock = testcase[`blocks_${i}`] as bellatrix.SignedBeaconBlock;
 
         state = stateTransition(state, signedBlock, {
-          // TODO DENEB: Should assume valid and available for this test?
+          // Should assume payload valid and blob data available for this test
           executionPayloadStatus: ExecutionPayloadStatus.valid,
           dataAvailableStatus: DataAvailableStatus.available,
           verifyStateRoot: false,

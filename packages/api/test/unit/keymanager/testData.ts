@@ -11,7 +11,9 @@ import {GenericServerTestCases} from "../../utils/genericServerTest.js";
 // randomly pregenerated pubkey
 const pubkeyRand = "0x84105a985058fc8740a48bf1ede9d223ef09e8c6b1735ba0a55cf4a9ff2ff92376b778798365e488dab07a652eb04576";
 const ethaddressRand = "0xabcf8e0d4e9587369b2301d0790347320302cc09";
+const graffitiRandUtf8 = "636861696e736166652f6c6f64657374";
 const gasLimitRand = 30_000_000;
+const builderBoostFactorRand = BigInt(100);
 
 export const testData: GenericServerTestCases<Api> = {
   listKeys: {
@@ -69,6 +71,19 @@ export const testData: GenericServerTestCases<Api> = {
     res: undefined,
   },
 
+  listGraffiti: {
+    args: [pubkeyRand],
+    res: {data: {pubkey: pubkeyRand, graffiti: graffitiRandUtf8}},
+  },
+  setGraffiti: {
+    args: [pubkeyRand, graffitiRandUtf8],
+    res: undefined,
+  },
+  deleteGraffiti: {
+    args: [pubkeyRand],
+    res: undefined,
+  },
+
   getGasLimit: {
     args: [pubkeyRand],
     res: {data: {pubkey: pubkeyRand, gasLimit: gasLimitRand}},
@@ -84,5 +99,17 @@ export const testData: GenericServerTestCases<Api> = {
   signVoluntaryExit: {
     args: [pubkeyRand, 1],
     res: {data: ssz.phase0.SignedVoluntaryExit.defaultValue()},
+  },
+  getBuilderBoostFactor: {
+    args: [pubkeyRand],
+    res: {data: {pubkey: pubkeyRand, builderBoostFactor: builderBoostFactorRand}},
+  },
+  setBuilderBoostFactor: {
+    args: [pubkeyRand, builderBoostFactorRand],
+    res: undefined,
+  },
+  deleteBuilderBoostFactor: {
+    args: [pubkeyRand],
+    res: undefined,
   },
 };

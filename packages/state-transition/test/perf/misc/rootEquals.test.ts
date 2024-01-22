@@ -2,12 +2,11 @@ import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {byteArrayEquals, fromHexString} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
 
-// As of Jun 17 2021
-// Compare state root
-// ================================================================
-// ssz.Root.equals                                                        891265.6 ops/s      1.122000 us/op 10017946 runs    15.66 s
-// ssz.Root.equals with valueOf()                                         692041.5 ops/s      1.445000 us/op 8179741 runs    15.28 s
-// byteArrayEquals with valueOf()                                         853971.0 ops/s      1.171000 us/op 9963051 runs    16.07 s
+// As of Sep 2023
+// root equals
+// ✔ ssz.Root.equals                                                  2.703872e+7 ops/s    36.98400 ns/op        -      74234 runs   2.83 s
+// ✔ byteArrayEquals                                                  2.773617e+7 ops/s    36.05400 ns/op        -      15649 runs  0.606 s
+// ✔ Buffer.compare                                                   7.099247e+7 ops/s    14.08600 ns/op        -      26965 runs  0.404 s
 
 describe("root equals", () => {
   setBenchOpts({noThreshold: true});
@@ -16,11 +15,34 @@ describe("root equals", () => {
   const rootTree = ssz.Root.toViewDU(stateRoot);
 
   // This benchmark is very unstable in CI. We already know that "ssz.Root.equals" is the fastest
-  itBench("ssz.Root.equals", () => {
-    ssz.Root.equals(rootTree, stateRoot);
+  const runsFactor = 1000;
+  itBench({
+    id: "ssz.Root.equals",
+    fn: () => {
+      for (let i = 0; i < runsFactor; i++) {
+        ssz.Root.equals(rootTree, stateRoot);
+      }
+    },
+    runsFactor,
   });
 
-  itBench("byteArrayEquals", () => {
-    byteArrayEquals(rootTree, stateRoot);
+  itBench({
+    id: "byteArrayEquals",
+    fn: () => {
+      for (let i = 0; i < runsFactor; i++) {
+        byteArrayEquals(rootTree, stateRoot);
+      }
+    },
+    runsFactor,
+  });
+
+  itBench({
+    id: "Buffer.compare",
+    fn: () => {
+      for (let i = 0; i < runsFactor; i++) {
+        Buffer.compare(rootTree, stateRoot);
+      }
+    },
+    runsFactor,
   });
 });

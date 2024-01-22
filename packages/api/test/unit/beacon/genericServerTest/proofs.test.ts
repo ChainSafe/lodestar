@@ -1,3 +1,4 @@
+import {describe} from "vitest";
 import {config} from "@lodestar/config/default";
 import {Api, ReqTypes} from "../../../../src/beacon/routes/proof.js";
 import {getClient} from "../../../../src/beacon/client/proof.js";

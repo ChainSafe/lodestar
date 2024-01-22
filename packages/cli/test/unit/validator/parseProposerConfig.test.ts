@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import path from "node:path";
 import {fileURLToPath} from "node:url";
-import {expect} from "chai";
-import {BuilderSelection} from "@lodestar/validator";
+import {describe, it, expect} from "vitest";
+import {routes} from "@lodestar/api";
 
 import {parseProposerConfig} from "../../../src/util/index.js";
 
@@ -15,7 +15,6 @@ const testValue = {
       strictFeeRecipientCheck: true,
       feeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       builder: {
-        enabled: true,
         gasLimit: 30000000,
         selection: undefined,
       },
@@ -25,9 +24,8 @@ const testValue = {
       strictFeeRecipientCheck: undefined,
       feeRecipient: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
       builder: {
-        enabled: true,
         gasLimit: 35000000,
-        selection: BuilderSelection.MaxProfit,
+        selection: routes.validator.BuilderSelection.MaxProfit,
       },
     },
   },
@@ -36,21 +34,20 @@ const testValue = {
     strictFeeRecipientCheck: true,
     feeRecipient: "0xcccccccccccccccccccccccccccccccccccccccc",
     builder: {
-      enabled: true,
       gasLimit: 30000000,
-      selection: BuilderSelection.BuilderAlways,
+      selection: routes.validator.BuilderSelection.BuilderAlways,
     },
   },
 };
 
 describe("validator / valid Proposer", () => {
   it("parse Valid proposer", () => {
-    expect(parseProposerConfig(path.join(__dirname, "./proposerConfigs/validData.yaml"))).to.be.deep.equal(testValue);
+    expect(parseProposerConfig(path.join(__dirname, "./proposerConfigs/validData.yaml"))).toEqual(testValue);
   });
 });
 
 describe("validator / invalid Proposer", () => {
   it("should throw error", () => {
-    expect(() => parseProposerConfig(path.join(__dirname, "./proposerConfigs/invalidData.yaml"))).to.throw();
+    expect(() => parseProposerConfig(path.join(__dirname, "./proposerConfigs/invalidData.yaml"))).toThrow();
   });
 });

@@ -1,8 +1,7 @@
 import {Registry} from "prom-client";
 import {fetch} from "@lodestar/api";
-import {ErrorAborted, Logger, TimeoutError} from "@lodestar/utils";
+import {ErrorAborted, Histogram, Logger, TimeoutError} from "@lodestar/utils";
 import {RegistryMetricCreator} from "../metrics/index.js";
-import {HistogramExtra} from "../metrics/utils/histogram.js";
 import {defaultMonitoringOptions, MonitoringOptions} from "./options.js";
 import {createClientStats} from "./clientStats.js";
 import {ClientStats} from "./types.js";
@@ -25,6 +24,11 @@ enum Status {
   Closed = "closed",
 }
 
+enum SendDataStatus {
+  Success = "success",
+  Error = "error",
+}
+
 export type Client = "beacon" | "validator";
 
 /**
@@ -38,8 +42,8 @@ export class MonitoringService {
   private readonly register: Registry;
   private readonly logger: Logger;
 
-  private readonly collectDataMetric: HistogramExtra<string>;
-  private readonly sendDataMetric: HistogramExtra<"status">;
+  private readonly collectDataMetric: Histogram;
+  private readonly sendDataMetric: Histogram<{status: SendDataStatus}>;
 
   private status = Status.Started;
   private initialDelayTimeout?: NodeJS.Timeout;
@@ -193,7 +197,7 @@ export class MonitoringService {
         throw e;
       }
     } finally {
-      timer({status: res?.ok ? "success" : "error"});
+      timer({status: res?.ok ? SendDataStatus.Success : SendDataStatus.Error});
       clearTimeout(timeout);
     }
   }

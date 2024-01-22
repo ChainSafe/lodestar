@@ -1,14 +1,14 @@
-import {PeerId} from "@libp2p/interface/peer-id";
+import {Connection, PeerId} from "@libp2p/interface";
 import {multiaddr} from "@multiformats/multiaddr";
-import {Connection} from "@libp2p/interface/connection";
 import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/dist/src/score/peer-score.js";
 import {fromHexString} from "@chainsafe/ssz";
-import {ENR} from "@chainsafe/discv5";
+import {ENR} from "@chainsafe/enr";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {Epoch, phase0} from "@lodestar/types";
+import {withTimeout} from "@lodestar/utils";
 import {ForkName} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
 import {Libp2p} from "../interface.js";
@@ -268,7 +268,10 @@ export class NetworkCore implements INetworkCore {
     this.logger.debug("network reqResp closed");
     this.attnetsService.close();
     this.syncnetsService.close();
-    await this.libp2p.stop();
+    // In some cases, `libp2p.stop` never resolves, it is required
+    // to wrap the call with a timeout to allow for a timely shutdown
+    // See https://github.com/ChainSafe/lodestar/issues/6053
+    await withTimeout(async () => this.libp2p.stop(), 5000);
     this.logger.debug("network lib2p closed");
 
     this.closed = true;
@@ -423,6 +426,14 @@ export class NetworkCore implements INetworkCore {
 
   async writeDiscv5Profile(durationMs: number, dirpath: string): Promise<string> {
     return this.peerManager["discovery"]?.discv5.writeProfile(durationMs, dirpath) ?? "no discv5";
+  }
+
+  writeNetworkHeapSnapshot(): Promise<string> {
+    throw new Error("Method not implemented, please configure network thread");
+  }
+
+  writeDiscv5HeapSnapshot(prefix: string, dirpath: string): Promise<string> {
+    return this.peerManager["discovery"]?.discv5.writeHeapSnapshot(prefix, dirpath) ?? Promise.resolve("no discv5");
   }
 
   /**

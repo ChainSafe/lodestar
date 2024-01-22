@@ -1,3 +1,4 @@
+import {describe} from "vitest";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {Api, ReqTypes} from "../../../../src/beacon/routes/beacon/index.js";
 import {getClient} from "../../../../src/beacon/client/beacon.js";

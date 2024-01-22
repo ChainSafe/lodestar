@@ -1,30 +1,32 @@
 import path from "node:path";
+import {describe, it, beforeAll, vi} from "vitest";
 import {rimraf} from "rimraf";
 import {Interchange} from "@lodestar/validator";
 import {ApiError} from "@lodestar/api";
-import {getMochaContext} from "@lodestar/test-utils/mocha";
+import {getKeystoresStr} from "@lodestar/test-utils";
 import {testFilesDir} from "../utils.js";
 import {cachedPubkeysHex, cachedSeckeysHex} from "../utils/cachedKeys.js";
 import {expectDeepEquals} from "../utils/runUtils.js";
 import {startValidatorWithKeyManager} from "../utils/validator.js";
-import {getKeystoresStr} from "../utils/keystores.js";
 
 describe("import keystores from api, test DefaultProposerConfig", function () {
-  this.timeout("30s");
-  const testContext = getMochaContext(this);
+  vi.setConfig({testTimeout: 30_000});
+
   const dataDir = path.join(testFilesDir, "proposer-config-test");
 
   const defaultOptions = {
     suggestedFeeRecipient: "0x0000000000000000000000000000000000000000",
     gasLimit: 30_000_000,
+    graffiti: "aaaa",
   };
 
   const updatedOptions = {
     suggestedFeeRecipient: "0xcccccccccccccccccccccccccccccccccccccccc",
     gasLimit: 35_000_000,
+    graffiti: "bbbb",
   };
 
-  before("Clean dataDir", () => {
+  beforeAll(() => {
     rimraf.sync(dataDir);
   });
 
@@ -47,7 +49,9 @@ describe("import keystores from api, test DefaultProposerConfig", function () {
   const slashingProtectionStr = JSON.stringify(slashingProtection);
 
   it("1 . run 'validator' import keys from API, getdefaultfeeRecipient", async () => {
-    const {keymanagerClient} = await startValidatorWithKeyManager([], {dataDir, testContext});
+    const {keymanagerClient} = await startValidatorWithKeyManager([`--graffiti ${defaultOptions.graffiti}`], {
+      dataDir,
+    });
     // Produce and encrypt keystores
     // Import test keys
     const keystoresStr = await getKeystoresStr(passphrase, secretKeys);
@@ -73,6 +77,26 @@ describe("import keystores from api, test DefaultProposerConfig", function () {
       "FeeRecipient Check updated"
     );
 
+    //////////////// Graffiti
+
+    let graffiti0 = await keymanagerClient.listGraffiti(pubkeys[0]);
+    ApiError.assert(graffiti0);
+    expectDeepEquals(
+      graffiti0.response.data,
+      {pubkey: pubkeys[0], graffiti: defaultOptions.graffiti},
+      "Graffiti Check default"
+    );
+
+    // Set Graffiti to updatedOptions
+    ApiError.assert(await keymanagerClient.setGraffiti(pubkeys[0], updatedOptions.graffiti));
+    graffiti0 = await keymanagerClient.listGraffiti(pubkeys[0]);
+    ApiError.assert(graffiti0);
+    expectDeepEquals(
+      graffiti0.response.data,
+      {pubkey: pubkeys[0], graffiti: updatedOptions.graffiti},
+      "FeeRecipient Check updated"
+    );
+
     /////////// GasLimit
 
     let gasLimit0 = await keymanagerClient.getGasLimit(pubkeys[0]);
@@ -95,7 +119,9 @@ describe("import keystores from api, test DefaultProposerConfig", function () {
   });
 
   it("2 . run 'validator' Check last feeRecipient and gasLimit persists", async () => {
-    const {keymanagerClient} = await startValidatorWithKeyManager([], {dataDir, testContext});
+    const {keymanagerClient} = await startValidatorWithKeyManager([`--graffiti ${defaultOptions.graffiti}`], {
+      dataDir,
+    });
 
     // next time check edited feeRecipient persists
     let feeRecipient0 = await keymanagerClient.listFeeRecipient(pubkeys[0]);
@@ -113,6 +139,25 @@ describe("import keystores from api, test DefaultProposerConfig", function () {
     expectDeepEquals(
       feeRecipient0.response.data,
       {pubkey: pubkeys[0], ethaddress: defaultOptions.suggestedFeeRecipient},
+      "FeeRecipient Check default after delete"
+    );
+
+    // graffiti persists
+    let graffiti0 = await keymanagerClient.listGraffiti(pubkeys[0]);
+    ApiError.assert(graffiti0);
+    expectDeepEquals(
+      graffiti0.response.data,
+      {pubkey: pubkeys[0], graffiti: updatedOptions.graffiti},
+      "FeeRecipient Check default persists"
+    );
+
+    // after deletion  graffiti restored to default
+    ApiError.assert(await keymanagerClient.deleteGraffiti(pubkeys[0]));
+    graffiti0 = await keymanagerClient.listGraffiti(pubkeys[0]);
+    ApiError.assert(graffiti0);
+    expectDeepEquals(
+      graffiti0.response.data,
+      {pubkey: pubkeys[0], graffiti: defaultOptions.graffiti},
       "FeeRecipient Check default after delete"
     );
 
@@ -136,7 +181,9 @@ describe("import keystores from api, test DefaultProposerConfig", function () {
   });
 
   it("3 . run 'validator' FeeRecipient and GasLimit should be default after delete", async () => {
-    const {keymanagerClient} = await startValidatorWithKeyManager([], {dataDir, testContext});
+    const {keymanagerClient} = await startValidatorWithKeyManager([`--graffiti ${defaultOptions.graffiti}`], {
+      dataDir,
+    });
 
     const feeRecipient0 = await keymanagerClient.listFeeRecipient(pubkeys[0]);
     ApiError.assert(feeRecipient0);
@@ -146,10 +193,17 @@ describe("import keystores from api, test DefaultProposerConfig", function () {
       "FeeRecipient Check default persists"
     );
 
-    let gasLimit0 = await keymanagerClient.getGasLimit(pubkeys[0]);
+    ApiError.assert(await keymanagerClient.deleteGraffiti(pubkeys[0]));
+    const graffiti0 = await keymanagerClient.listGraffiti(pubkeys[0]);
+    ApiError.assert(graffiti0);
+    expectDeepEquals(
+      graffiti0.response.data,
+      {pubkey: pubkeys[0], graffiti: defaultOptions.graffiti},
+      "FeeRecipient Check default persists"
+    );
 
     ApiError.assert(await keymanagerClient.deleteGasLimit(pubkeys[0]));
-    gasLimit0 = await keymanagerClient.getGasLimit(pubkeys[0]);
+    const gasLimit0 = await keymanagerClient.getGasLimit(pubkeys[0]);
     ApiError.assert(gasLimit0);
     expectDeepEquals(
       gasLimit0.response.data,

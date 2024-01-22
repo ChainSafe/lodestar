@@ -1,4 +1,4 @@
-import {assert} from "chai";
+import {describe, it, expect} from "vitest";
 import {intToBytes} from "@lodestar/utils";
 import {BUCKET_LENGTH, encodeKey} from "../../src/index.js";
 
@@ -25,7 +25,7 @@ describe("encodeKey", () => {
         expected = Buffer.concat([intToBytes(bucket, BUCKET_LENGTH, "le"), intToBytes(BigInt(key), 8, "be")]);
       }
       const actual = encodeKey(bucket, key);
-      assert.deepEqual(actual, expected);
+      expect(actual).toEqual(expected);
     });
   }
 });

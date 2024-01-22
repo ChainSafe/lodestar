@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import {describe, it} from "vitest";
 import {ForkName} from "@lodestar/params";
 import {describeDirectorySpecTest} from "@lodestar/spec-test-util";
 import {RunnerType, TestRunner} from "./types.js";
@@ -64,6 +65,7 @@ export const defaultSkipOpts: SkipOpts = {
     "capella/light_client/single_merkle_proof/BeaconBlockBody",
     "deneb/light_client/single_merkle_proof/BeaconBlockBody",
   ],
+  skippedRunners: ["merkle_proof"],
 };
 
 /**

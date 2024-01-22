@@ -50,7 +50,7 @@ export function assertPeerRelevance(
     !isZeroRoot(remote.finalizedRoot) &&
     !isZeroRoot(local.finalizedRoot)
   ) {
-    // NOTE: due to prefering to not access chain state here, we can't check the finalized root against our history.
+    // NOTE: due to preferring to not access chain state here, we can't check the finalized root against our history.
     // The impact of not doing check is low: peers that are behind us we can't confirm they are in the same chain as us.
     // In the worst case they will attempt to sync from us, fail and disconnect. The ENR fork check should be sufficient
     // to differentiate most peers in normal network conditions.

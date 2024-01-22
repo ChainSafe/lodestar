@@ -1,0 +1,145 @@
+site_name: Lodestar Documentation
+site_description: Lodestar Documentation - Typescript Ethereum Consensus client
+site_url: https://chainsafe.github.io/lodestar
+
+repo_name: chainsafe/lodestar
+repo_url: https://github.com/chainsafe/lodestar
+
+docs_dir: pages
+
+# Configuration
+theme:
+  name: material
+  logo: assets/lodestar_icon_300.png
+  favicon: assets/round-icon.ico
+  nav_style: dark
+  palette:
+    - scheme: preference
+      media: "(prefers-color-scheme: light)"
+      primary: black
+      accent: deep purple
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - scheme: slate
+      media: "(prefers-color-scheme: dark)"
+      primary: black
+      accent: deep purple
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+plugins:
+  - search
+  - mermaid2:
+      version: 8.6.4
+      arguments:
+        theme: |
+          ^(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light'
+
+markdown_extensions:
+  - meta
+  - codehilite:
+      guess_lang: false
+  - admonition
+  - toc:
+      permalink: true
+  - pymdownx.superfences:
+      # make exceptions to highlighting of code (for mermaid):
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:mermaid2.fence_mermaid
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+extra_css:
+  - stylesheets/extras.css
+
+# Socials
+extra:
+  social:
+    - icon: fontawesome/brands/github-alt
+      link: https://github.com/ChainSafe/lodestar
+    - icon: fontawesome/brands/twitter
+      link: https://twitter.com/lodestar_eth
+    - icon: fontawesome/brands/discord
+      link: https://discord.gg/yjyvFRP
+    - icon: fontawesome/brands/medium
+      link: https://blog.chainsafe.io
+
+# Customize left navigation menu
+nav:
+  - Home: index.md
+  - Introduction: introduction.md
+  - Security: security.md
+  - Getting Started:
+      - Quick Start: getting-started/quick-start.md
+      - Installation: getting-started/installation.md
+      # - Creating a JWT: getting-started/creating-a-jwt.md
+      - Starting a Node: getting-started/starting-a-node.md
+  - Data Retention: data-retention.md
+  - Beacon Node:
+      - CLI Reference: beacon-management/beacon-cli.md
+      - Networking: beacon-management/networking.md
+      - MEV and Builder Integration: beacon-management/mev-and-builder-integration.md
+      - Syncing: beacon-management/syncing.md
+  - Validator:
+      - Configuration: validator-management/vc-configuration.md
+      - CLI Reference: validator-management/validator-cli.md
+      # - Key Management: validator-management/key-management.md
+      # - Withdrawals: validator-management/withdrawals.md
+      # - Multiple and Fall-Back Validation: validator-management/multiple-and-fallback-validation.md
+  - Bootnode:
+      - CLI Reference: bootnode/bootnode-cli.md
+  - Light Client and Prover:
+      - Light Client: lightclient-prover/lightclient.md
+      - Light Client CLI Reference: lightclient-prover/lightclient-cli.md
+      - Prover: lightclient-prover/prover.md
+      # - Prover Configuration: lightclient-prover/prover-cli.md
+  - Logging and Metrics:
+      - Prometheus and Grafana: logging-and-metrics/prometheus-grafana.md
+      - Client Monitoring: logging-and-metrics/client-monitoring.md
+      # - Log Management: logging-and-metrics/log-management.md
+      # - Metrics Management: logging-and-metrics/metrics-management.md
+      # - Dashboards: logging-and-metrics/dashboards.md
+  # - Api:
+      # - Using the API: api/using-the-api.md
+      # - API Reference: api/api-reference.md // Auto-generate from API endpoint
+  # - Troubleshooting:
+    # - Installation Issues: troubleshooting/installation-issues.md
+    # - Syncing Issues: troubleshooting/syncing-issues.md
+    # - Validation Issues: troubleshooting/validation-issues.md
+    # - Execution Layer Issues: troubleshooting/execution-layer-issues.md
+  - Supporting Libraries: supporting-libraries/index.md
+      # - libp2p: supporting-libraries/libp2p.md
+      # - "@chainsafe/ssz": supporting-libraries/ssz.md
+      # - "@chainsafe/blst": supporting-libraries/blst.md
+      # - "@chainsafe/libp2p-gossipsub": supporting-libraries/gossipsub.md
+  - Contributing:
+      - Getting Started: contribution/getting-started.md
+      # - Bug Reports: contribution/bug-reports.md
+      - Dependency Graph: contribution/depgraph.md
+      # - Repo: contribution/repo.md
+      - Testing:
+          - Overview: contribution/testing/index.md
+          # - Unit Tests: contribution/testing/unit-tests.md
+          # - Integration Tests: contribution/testing/integration-tests.md
+          # - E2E Tests: contribution/testing/e2e-tests.md
+          - Simulation Tests: contribution/testing/simulation-tests.md
+          # - Spec Tests: contribution/testing/spec-tests.md
+          # - Performance Tests: contribution/testing/performance-tests.md
+      # - PR Submission: contribution/pr-submission.md
+  - Tools:
+      # - Debugging: tools/debugging.md
+      # - perf: tools/perf.md
+      - Flame Graphs: tools/flamegraphs.md
+      - Heap Dumps: tools/heap-dumps.md
+      - Core Dumps: tools/core-dumps.md
+  - Advanced Topics:
+      # - Migrating from Other Clients: advanced-topics/migrating-from-other-clients.md
+      # - Block Exploration: advanced-topics/block-exploration.md
+      # - Slashing Protection: advanced-topics/slashing-protection.md
+      - Setting Up a Testnet: advanced-topics/setting-up-a-testnet.md
+      # - Doppelganger Detection: advanced-topics/doppelganger-detection.md

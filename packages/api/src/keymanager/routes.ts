@@ -64,9 +64,17 @@ export type FeeRecipientData = {
   pubkey: string;
   ethaddress: string;
 };
+export type GraffitiData = {
+  pubkey: string;
+  graffiti: string;
+};
 export type GasLimitData = {
   pubkey: string;
   gasLimit: number;
+};
+export type BuilderBoostFactorData = {
+  pubkey: string;
+  builderBoostFactor: bigint;
 };
 
 export type SignerDefinition = {
@@ -205,6 +213,25 @@ export type Api = {
     >
   >;
 
+  listGraffiti(pubkey: string): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: GraffitiData}}>>;
+  setGraffiti(
+    pubkey: string,
+    graffiti: string
+  ): Promise<
+    ApiClientResponse<
+      {[HttpStatusCode.OK]: void; [HttpStatusCode.NO_CONTENT]: void},
+      HttpStatusCode.UNAUTHORIZED | HttpStatusCode.FORBIDDEN | HttpStatusCode.NOT_FOUND
+    >
+  >;
+  deleteGraffiti(
+    pubkey: string
+  ): Promise<
+    ApiClientResponse<
+      {[HttpStatusCode.OK]: void; [HttpStatusCode.NO_CONTENT]: void},
+      HttpStatusCode.UNAUTHORIZED | HttpStatusCode.FORBIDDEN | HttpStatusCode.NOT_FOUND
+    >
+  >;
+
   getGasLimit(pubkey: string): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: GasLimitData}}>>;
   setGasLimit(
     pubkey: string,
@@ -216,6 +243,27 @@ export type Api = {
     >
   >;
   deleteGasLimit(
+    pubkey: string
+  ): Promise<
+    ApiClientResponse<
+      {[HttpStatusCode.OK]: void; [HttpStatusCode.NO_CONTENT]: void},
+      HttpStatusCode.UNAUTHORIZED | HttpStatusCode.FORBIDDEN | HttpStatusCode.NOT_FOUND
+    >
+  >;
+
+  getBuilderBoostFactor(
+    pubkey: string
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: BuilderBoostFactorData}}>>;
+  setBuilderBoostFactor(
+    pubkey: string,
+    builderBoostFactor: bigint
+  ): Promise<
+    ApiClientResponse<
+      {[HttpStatusCode.OK]: void; [HttpStatusCode.NO_CONTENT]: void},
+      HttpStatusCode.UNAUTHORIZED | HttpStatusCode.FORBIDDEN | HttpStatusCode.NOT_FOUND
+    >
+  >;
+  deleteBuilderBoostFactor(
     pubkey: string
   ): Promise<
     ApiClientResponse<
@@ -259,9 +307,17 @@ export const routesData: RoutesData<Api> = {
   setFeeRecipient: {url: "/eth/v1/validator/{pubkey}/feerecipient", method: "POST", statusOk: 202},
   deleteFeeRecipient: {url: "/eth/v1/validator/{pubkey}/feerecipient", method: "DELETE", statusOk: 204},
 
+  listGraffiti: {url: "/eth/v1/validator/{pubkey}/graffiti", method: "GET"},
+  setGraffiti: {url: "/eth/v1/validator/{pubkey}/graffiti", method: "POST", statusOk: 202},
+  deleteGraffiti: {url: "/eth/v1/validator/{pubkey}/graffiti", method: "DELETE", statusOk: 204},
+
   getGasLimit: {url: "/eth/v1/validator/{pubkey}/gas_limit", method: "GET"},
   setGasLimit: {url: "/eth/v1/validator/{pubkey}/gas_limit", method: "POST", statusOk: 202},
   deleteGasLimit: {url: "/eth/v1/validator/{pubkey}/gas_limit", method: "DELETE", statusOk: 204},
+
+  getBuilderBoostFactor: {url: "/eth/v1/validator/{pubkey}/builder_boost_factor", method: "GET"},
+  setBuilderBoostFactor: {url: "/eth/v1/validator/{pubkey}/builder_boost_factor", method: "POST", statusOk: 202},
+  deleteBuilderBoostFactor: {url: "/eth/v1/validator/{pubkey}/builder_boost_factor", method: "DELETE", statusOk: 204},
 
   signVoluntaryExit: {url: "/eth/v1/validator/{pubkey}/voluntary_exit", method: "POST"},
 };
@@ -291,9 +347,17 @@ export type ReqTypes = {
   setFeeRecipient: {params: {pubkey: string}; body: {ethaddress: string}};
   deleteFeeRecipient: {params: {pubkey: string}};
 
+  listGraffiti: {params: {pubkey: string}};
+  setGraffiti: {params: {pubkey: string}; body: {graffiti: string}};
+  deleteGraffiti: {params: {pubkey: string}};
+
   getGasLimit: {params: {pubkey: string}};
   setGasLimit: {params: {pubkey: string}; body: {gas_limit: string}};
   deleteGasLimit: {params: {pubkey: string}};
+
+  getBuilderBoostFactor: {params: {pubkey: string}};
+  setBuilderBoostFactor: {params: {pubkey: string}; body: {builder_boost_factor: string}};
+  deleteBuilderBoostFactor: {params: {pubkey: string}};
 
   signVoluntaryExit: {params: {pubkey: string}; query: {epoch?: number}};
 };
@@ -347,6 +411,29 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       },
     },
 
+    listGraffiti: {
+      writeReq: (pubkey) => ({params: {pubkey}}),
+      parseReq: ({params: {pubkey}}) => [pubkey],
+      schema: {
+        params: {pubkey: Schema.StringRequired},
+      },
+    },
+    setGraffiti: {
+      writeReq: (pubkey, graffiti) => ({params: {pubkey}, body: {graffiti}}),
+      parseReq: ({params: {pubkey}, body: {graffiti}}) => [pubkey, graffiti],
+      schema: {
+        params: {pubkey: Schema.StringRequired},
+        body: Schema.Object,
+      },
+    },
+    deleteGraffiti: {
+      writeReq: (pubkey) => ({params: {pubkey}}),
+      parseReq: ({params: {pubkey}}) => [pubkey],
+      schema: {
+        params: {pubkey: Schema.StringRequired},
+      },
+    },
+
     getGasLimit: {
       writeReq: (pubkey) => ({params: {pubkey}}),
       parseReq: ({params: {pubkey}}) => [pubkey],
@@ -369,6 +456,33 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
         params: {pubkey: Schema.StringRequired},
       },
     },
+
+    getBuilderBoostFactor: {
+      writeReq: (pubkey) => ({params: {pubkey}}),
+      parseReq: ({params: {pubkey}}) => [pubkey],
+      schema: {
+        params: {pubkey: Schema.StringRequired},
+      },
+    },
+    setBuilderBoostFactor: {
+      writeReq: (pubkey, builderBoostFactor) => ({
+        params: {pubkey},
+        body: {builder_boost_factor: builderBoostFactor.toString(10)},
+      }),
+      parseReq: ({params: {pubkey}, body: {builder_boost_factor}}) => [pubkey, BigInt(builder_boost_factor)],
+      schema: {
+        params: {pubkey: Schema.StringRequired},
+        body: Schema.Object,
+      },
+    },
+    deleteBuilderBoostFactor: {
+      writeReq: (pubkey) => ({params: {pubkey}}),
+      parseReq: ({params: {pubkey}}) => [pubkey],
+      schema: {
+        params: {pubkey: Schema.StringRequired},
+      },
+    },
+
     signVoluntaryExit: {
       writeReq: (pubkey, epoch) => ({params: {pubkey}, query: epoch !== undefined ? {epoch} : {}}),
       parseReq: ({params: {pubkey}, query: {epoch}}) => [pubkey, epoch],
@@ -391,11 +505,21 @@ export function getReturnTypes(): ReturnTypes<Api> {
     deleteRemoteKeys: jsonType("snake"),
 
     listFeeRecipient: jsonType("snake"),
+    listGraffiti: jsonType("snake"),
     getGasLimit: ContainerData(
       new ContainerType(
         {
           pubkey: stringType,
           gasLimit: ssz.UintNum64,
+        },
+        {jsonCase: "eth2"}
+      )
+    ),
+    getBuilderBoostFactor: ContainerData(
+      new ContainerType(
+        {
+          pubkey: stringType,
+          builderBoostFactor: ssz.UintBn64,
         },
         {jsonCase: "eth2"}
       )

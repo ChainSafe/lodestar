@@ -1,4 +1,4 @@
-import {PeerId} from "@libp2p/interface/peer-id";
+import {PeerId} from "@libp2p/interface";
 import {NetworkCoreMetrics} from "../../core/metrics.js";
 
 export type PeerIdStr = string;

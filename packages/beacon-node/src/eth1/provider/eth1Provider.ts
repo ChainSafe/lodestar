@@ -1,7 +1,7 @@
 import {toHexString} from "@chainsafe/ssz";
 import {phase0} from "@lodestar/types";
 import {ChainConfig} from "@lodestar/config";
-import {fromHex, isErrorAborted, createElapsedTimeTracker} from "@lodestar/utils";
+import {fromHex, isErrorAborted, createElapsedTimeTracker, toSafePrintableUrl} from "@lodestar/utils";
 import {Logger} from "@lodestar/logger";
 
 import {FetchError, isFetchError} from "@lodestar/api";
@@ -64,20 +64,27 @@ export class Eth1Provider implements IEth1Provider {
 
   constructor(
     config: Pick<ChainConfig, "DEPOSIT_CONTRACT_ADDRESS">,
-    opts: Pick<Eth1Options, "depositContractDeployBlock" | "providerUrls" | "jwtSecretHex"> & {logger?: Logger},
+    opts: Pick<Eth1Options, "depositContractDeployBlock" | "providerUrls" | "jwtSecretHex" | "jwtId" | "jwtVersion"> & {
+      logger?: Logger;
+    },
     signal?: AbortSignal,
     metrics?: JsonRpcHttpClientMetrics | null
   ) {
     this.logger = opts.logger;
     this.deployBlock = opts.depositContractDeployBlock ?? 0;
     this.depositContractAddress = toHexString(config.DEPOSIT_CONTRACT_ADDRESS);
-    this.rpc = new JsonRpcHttpClient(opts.providerUrls ?? DEFAULT_PROVIDER_URLS, {
+
+    const providerUrls = opts.providerUrls ?? DEFAULT_PROVIDER_URLS;
+    this.rpc = new JsonRpcHttpClient(providerUrls, {
       signal,
       // Don't fallback with is truncated error. Throw early and let the retry on this class handle it
       shouldNotFallback: isJsonRpcTruncatedError,
       jwtSecret: opts.jwtSecretHex ? fromHex(opts.jwtSecretHex) : undefined,
+      jwtId: opts.jwtId,
+      jwtVersion: opts.jwtVersion,
       metrics: metrics,
     });
+    this.logger?.info("Eth1 provider", {urls: providerUrls.map(toSafePrintableUrl).toString()});
 
     this.rpc.emitter.on(JsonRpcHttpClientEvent.RESPONSE, () => {
       const oldState = this.state;

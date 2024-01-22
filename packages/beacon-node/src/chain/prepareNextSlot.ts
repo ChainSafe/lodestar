@@ -1,4 +1,9 @@
-import {computeEpochAtSlot, isExecutionStateType, computeTimeAtSlot} from "@lodestar/state-transition";
+import {
+  computeEpochAtSlot,
+  isExecutionStateType,
+  computeTimeAtSlot,
+  StateHashTreeRootSource,
+} from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkSeq, SLOTS_PER_EPOCH, ForkExecution} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
@@ -6,7 +11,6 @@ import {Logger, sleep, fromHex, isErrorAborted} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
 import {GENESIS_SLOT, ZERO_HASH_HEX} from "../constants/constants.js";
 import {Metrics} from "../metrics/index.js";
-import {TransitionConfigurationV1} from "../execution/engine/interface.js";
 import {ClockEvent} from "../util/clock.js";
 import {isQueueErrorAborted} from "../util/queue/index.js";
 import {prepareExecutionPayload, getPayloadAttributesForSSE} from "./produceBlock/produceBlockBody.js";
@@ -31,7 +35,6 @@ const PREPARE_EPOCH_LIMIT = 1;
  *
  */
 export class PrepareNextSlotScheduler {
-  private transitionConfig: TransitionConfigurationV1 | null = null;
   constructor(
     private readonly chain: IBeaconChain,
     private readonly config: ChainForkConfig,
@@ -94,15 +97,28 @@ export class PrepareNextSlotScheduler {
         headRoot,
         isEpochTransition,
       });
+      const precomputeEpochTransitionTimer = isEpochTransition
+        ? this.metrics?.precomputeNextEpochTransition.duration.startTimer()
+        : null;
       // No need to wait for this or the clock drift
       // Pre Bellatrix: we only do precompute state transition for the last slot of epoch
       // For Bellatrix, we always do the `processSlots()` to prepare payload for the next slot
       const prepareState = await this.chain.regen.getBlockSlotState(
         headRoot,
         prepareSlot,
-        {dontTransferCache: true},
+        // the slot 0 of next epoch will likely use this Previous Root Checkpoint state for state transition so we transfer cache here
+        // for other slots dontTransferCached=true because we don't run state transition on this state
+        {dontTransferCache: !isEpochTransition},
         RegenCaller.precomputeEpoch
       );
+
+      // cache HashObjects for faster hashTreeRoot() later, especially for computeNewStateRoot() if we need to produce a block at slot 0 of epoch
+      // see https://github.com/ChainSafe/lodestar/issues/6194
+      const hashTreeRootTimer = this.metrics?.stateHashTreeRootTime.startTimer({
+        source: StateHashTreeRootSource.prepareNextSlot,
+      });
+      prepareState.hashTreeRoot();
+      hashTreeRootTimer?.();
 
       // assuming there is no reorg, it caches the checkpoint state & helps avoid doing a full state transition in the next slot
       //  + when gossip block comes, we need to validate and run state transition
@@ -118,7 +134,10 @@ export class PrepareNextSlotScheduler {
           nextEpoch,
           headSlot,
           prepareSlot,
+          previousHits,
         });
+
+        precomputeEpochTransitionTimer?.();
       }
 
       if (isExecutionStateType(prepareState)) {

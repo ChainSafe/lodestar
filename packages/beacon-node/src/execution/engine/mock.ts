@@ -1,5 +1,4 @@
 import crypto from "node:crypto";
-import {kzgCommitmentToVersionedHash} from "@lodestar/state-transition";
 import {bellatrix, deneb, RootHex, ssz} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
 import {
@@ -12,6 +11,7 @@ import {
 } from "@lodestar/params";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {ckzg} from "../../util/kzg.js";
+import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {quantityToNum} from "../../eth1/provider/utils.js";
 import {
   EngineApiRpcParamTypes,
@@ -136,7 +136,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
    */
   private notifyNewPayload(
     executionPayloadRpc: EngineApiRpcParamTypes["engine_newPayloadV1"][0],
-    // TODO deneb: add versionedHashes validation
+    // add versionedHashes validation later if required
     _versionedHashes?: EngineApiRpcParamTypes["engine_newPayloadV3"][1]
   ): EngineApiRpcReturnTypes["engine_newPayloadV1"] {
     const blockHash = executionPayloadRpc.blockHash;

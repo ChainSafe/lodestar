@@ -1,6 +1,5 @@
-import {expect} from "chai";
+import {describe, it, expect, beforeEach, afterEach, vi} from "vitest";
 import {Libp2p} from "libp2p";
-import sinon from "sinon";
 import {Logger} from "@lodestar/utils";
 import {getEmptyLogger} from "@lodestar/logger/empty";
 import {RespStatus} from "../../src/interface.js";
@@ -18,7 +17,7 @@ describe("ResResp", () => {
 
   beforeEach(() => {
     libp2p = {
-      dialProtocol: sinon.stub().resolves(
+      dialProtocol: vi.fn().mockResolvedValue(
         new MockLibP2pStream(
           responseEncode(
             [
@@ -32,7 +31,7 @@ describe("ResResp", () => {
           ping.method
         )
       ),
-      handle: sinon.spy(),
+      handle: vi.fn(),
     } as unknown as Libp2p;
 
     logger = getEmptyLogger();
@@ -44,12 +43,16 @@ describe("ResResp", () => {
     });
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   describe("dial only protocol", () => {
     it("should register protocol and dial", async () => {
       reqresp.registerDialOnlyProtocol(numberToStringProtocolDialOnly);
 
-      expect(reqresp.getRegisteredProtocols()).to.eql(["/eth2/beacon_chain/req/number_to_string/1/ssz_snappy"]);
-      expect((libp2p.handle as sinon.SinonSpy).calledOnce).to.be.false;
+      expect(reqresp.getRegisteredProtocols()).toEqual(["/eth2/beacon_chain/req/number_to_string/1/ssz_snappy"]);
+      expect(libp2p.handle).not.toHaveBeenCalledOnce();
     });
   });
 
@@ -57,8 +60,8 @@ describe("ResResp", () => {
     it("should register protocol and dial", async () => {
       await reqresp.registerProtocol(numberToStringProtocol);
 
-      expect(reqresp.getRegisteredProtocols()).to.eql(["/eth2/beacon_chain/req/number_to_string/1/ssz_snappy"]);
-      expect((libp2p.handle as sinon.SinonSpy).calledOnce).to.be.true;
+      expect(reqresp.getRegisteredProtocols()).toEqual(["/eth2/beacon_chain/req/number_to_string/1/ssz_snappy"]);
+      expect(libp2p.handle).toHaveBeenCalledOnce();
     });
   });
 });

@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {Err, isErr, mapOkResults, mapOkResultsAsync, Result} from "../../src/err.js";
 import {expectDeepEquals, expectEquals} from "../utils/chai.js";
 
@@ -46,7 +46,7 @@ describe("Result Err", () => {
     });
 
     it("throw for different length", () => {
-      expect(() => mapOkResults([], () => [0])).to.throw();
+      expect(() => mapOkResults([], () => [0])).toThrow();
     });
 
     it("num to string mixed results", () => {

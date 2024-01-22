@@ -29,7 +29,7 @@ export type RouteDef = {
 
 export type ReqGeneric = {
   params?: Record<string, string | number>;
-  query?: Record<string, string | number | (string | number)[]>;
+  query?: Record<string, string | number | boolean | (string | number)[]>;
   body?: any;
   headers?: Record<string, string[] | string | undefined>;
 };
@@ -179,18 +179,26 @@ export function WithExecutionOptimistic<T extends {data: unknown}>(
 }
 
 /**
- * SSZ factory helper to wrap an existing type with `{blockValue: Wei}`
+ * SSZ factory helper to wrap an existing type with `{executionPayloadValue: Wei, consensusBlockValue: Wei}`
  */
-export function WithBlockValue<T extends {data: unknown}>(type: TypeJson<T>): TypeJson<T & {blockValue: bigint}> {
+export function WithBlockValues<T extends {data: unknown}>(
+  type: TypeJson<T>
+): TypeJson<T & {executionPayloadValue: bigint; consensusBlockValue: bigint}> {
   return {
-    toJson: ({blockValue, ...data}) => ({
+    toJson: ({executionPayloadValue, consensusBlockValue, ...data}) => ({
       ...(type.toJson(data as unknown as T) as Record<string, unknown>),
-      block_value: blockValue.toString(),
+      execution_payload_value: executionPayloadValue.toString(),
+      consensus_block_value: consensusBlockValue.toString(),
     }),
-    fromJson: ({block_value, ...data}: T & {block_value: string}) => ({
+    fromJson: ({
+      execution_payload_value,
+      consensus_block_value,
+      ...data
+    }: T & {execution_payload_value: string; consensus_block_value: string}) => ({
       ...type.fromJson(data),
-      // For cross client usage where beacon or validator are of separate clients, blockValue could be missing
-      blockValue: BigInt(block_value ?? "0"),
+      // For cross client usage where beacon or validator are of separate clients, executionPayloadValue could be missing
+      executionPayloadValue: BigInt(execution_payload_value ?? "0"),
+      consensusBlockValue: BigInt(consensus_block_value ?? "0"),
     }),
   };
 }

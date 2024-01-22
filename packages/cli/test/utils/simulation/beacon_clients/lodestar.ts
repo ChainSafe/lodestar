@@ -53,7 +53,7 @@ export const generateLodestarBeaconNode: BeaconNodeGenerator<BeaconClient.Lodest
     logLevel: LogLevel.debug,
     logFileDailyRotate: 0,
     logFile: "none",
-    "jwt-secret": jwtsecretFilePath,
+    jwtSecret: jwtsecretFilePath,
     paramsFile: paramsPath,
     ...clientOptions,
   } as unknown as BeaconArgs & GlobalArgs;

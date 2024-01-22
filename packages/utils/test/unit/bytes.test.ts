@@ -1,6 +1,5 @@
-import "../setup.js";
-import {assert, expect} from "chai";
-import {intToBytes, bytesToInt} from "../../src/index.js";
+import {describe, it, expect} from "vitest";
+import {intToBytes, bytesToInt, toHex, fromHex, toHexString} from "../../src/index.js";
 
 describe("intToBytes", () => {
   const zeroedArray = (length: number): number[] => Array.from({length}, () => 0);
@@ -27,7 +26,7 @@ describe("intToBytes", () => {
     const type = typeof input;
     const length = input[1];
     it(`should correctly serialize ${type} to bytes length ${length}`, () => {
-      assert(intToBytes(input[0], input[1]).equals(output));
+      expect(intToBytes(input[0], input[1])).toEqual(output);
     });
   }
 });
@@ -43,7 +42,58 @@ describe("bytesToInt", () => {
   ];
   for (const {input, output} of testCases) {
     it(`should produce ${output}`, () => {
-      expect(bytesToInt(input)).to.be.equal(output);
+      expect(bytesToInt(input)).toBe(output);
+    });
+  }
+});
+
+describe("toHex", () => {
+  const testCases: {input: Buffer | Uint8Array | string; output: string}[] = [
+    {input: Buffer.from("Hello, World!", "utf-8"), output: "0x48656c6c6f2c20576f726c6421"},
+    {input: new Uint8Array([72, 101, 108, 108, 111]), output: "0x48656c6c6f"},
+    {input: Buffer.from([72, 101, 108, 108, 111]), output: "0x48656c6c6f"},
+    {input: Buffer.from([]), output: "0x"},
+  ];
+  for (const {input, output} of testCases) {
+    it(`should convert Uint8Array to hex string ${output}`, () => {
+      expect(toHex(input)).toBe(output);
+    });
+  }
+});
+
+describe("fromHex", () => {
+  const testCases: {input: string; output: Buffer | Uint8Array}[] = [
+    {
+      input: "0x48656c6c6f2c20576f726c6421",
+      output: new Uint8Array([72, 101, 108, 108, 111, 44, 32, 87, 111, 114, 108, 100, 33]),
+    },
+    {
+      input: "48656c6c6f2c20576f726c6421",
+      output: new Uint8Array([72, 101, 108, 108, 111, 44, 32, 87, 111, 114, 108, 100, 33]),
+    },
+    {input: "0x", output: new Uint8Array([])},
+  ];
+
+  for (const {input, output} of testCases) {
+    it(`should convert hex string ${input} to Uint8Array`, () => {
+      expect(fromHex(input)).toEqual(output);
+    });
+  }
+});
+
+describe("toHexString", () => {
+  const testCases: {input: Uint8Array; output: string}[] = [
+    {input: new Uint8Array([1, 2, 3]), output: "0x010203"},
+    {input: new Uint8Array([72, 101, 108, 108, 111]), output: "0x48656c6c6f"},
+    {input: new Uint8Array([]), output: "0x"},
+    {input: new Uint8Array([0, 0, 0, 0]), output: "0x00000000"},
+    {input: new Uint8Array([15, 255, 16, 0, 127]), output: "0x0fff10007f"},
+    {input: new Uint8Array(5).fill(255), output: "0x" + "ff".repeat(5)},
+  ];
+
+  for (const {input, output} of testCases) {
+    it(`should convert Uint8Array to hex string ${output}`, () => {
+      expect(toHexString(input)).toBe(output);
     });
   }
 });

@@ -1,3 +1,5 @@
+import {MetricsRegisterExtra} from "@lodestar/utils";
+
 export enum MessageSource {
   forward = "forward",
   publish = "publish",
@@ -9,64 +11,6 @@ export enum BeaconHealth {
   NOT_INITIALIZED_OR_ISSUES = 2,
   UNKNOWN = 3,
   ERROR = 4,
-}
-
-type LabelsGeneric = Record<string, string | undefined>;
-type CollectFn<Labels extends LabelsGeneric> = (metric: Gauge<Labels>) => void;
-
-interface Gauge<Labels extends LabelsGeneric = never> {
-  // Sorry for this mess, `prom-client` API choices are not great
-  // If the function signature was `inc(value: number, labels?: Labels)`, this would be simpler
-  inc(value?: number): void;
-  inc(labels: Labels, value?: number): void;
-  inc(arg1?: Labels | number, arg2?: number): void;
-
-  dec(value?: number): void;
-  dec(labels: Labels, value?: number): void;
-  dec(arg1?: Labels | number, arg2?: number): void;
-
-  set(value: number): void;
-  set(labels: Labels, value: number): void;
-  set(arg1?: Labels | number, arg2?: number): void;
-
-  addCollect(collectFn: CollectFn<Labels>): void;
-}
-
-interface Histogram<Labels extends LabelsGeneric = never> {
-  startTimer(): () => number;
-
-  observe(value: number): void;
-  observe(labels: Labels, values: number): void;
-  observe(arg1: Labels | number, arg2?: number): void;
-
-  reset(): void;
-}
-
-interface AvgMinMax<Labels extends LabelsGeneric = never> {
-  set(values: number[]): void;
-  set(labels: Labels, values: number[]): void;
-  set(arg1?: Labels | number[], arg2?: number[]): void;
-}
-
-type GaugeConfig<Labels extends LabelsGeneric> = {
-  name: string;
-  help: string;
-  labelNames?: keyof Labels extends string ? (keyof Labels)[] : undefined;
-};
-
-type HistogramConfig<Labels extends LabelsGeneric> = {
-  name: string;
-  help: string;
-  labelNames?: (keyof Labels)[];
-  buckets?: number[];
-};
-
-type AvgMinMaxConfig<Labels extends LabelsGeneric> = GaugeConfig<Labels>;
-
-export interface MetricsRegister {
-  gauge<T extends LabelsGeneric>(config: GaugeConfig<T>): Gauge<T>;
-  histogram<T extends LabelsGeneric>(config: HistogramConfig<T>): Histogram<T>;
-  avgMinMax<T extends LabelsGeneric>(config: AvgMinMaxConfig<T>): AvgMinMax<T>;
 }
 
 export type Metrics = ReturnType<typeof getMetrics>;
@@ -81,10 +25,10 @@ export type LodestarGitData = {
 };
 
 /**
- * A collection of metrics used throughout the Gossipsub behaviour.
+ * A collection of metrics used by the validator client
  */
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) {
+export function getMetrics(register: MetricsRegisterExtra, gitData: LodestarGitData) {
   // Using function style instead of class to prevent having to re-declare all MetricsPrometheus types.
 
   // Track version, same as https://github.com/ChainSafe/lodestar/blob/6df28de64f12ea90b341b219229a47c8a25c9343/packages/lodestar/src/metrics/metrics/lodestar.ts#L17
@@ -92,7 +36,7 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
     .gauge<LodestarGitData>({
       name: "lodestar_version",
       help: "Lodestar version",
-      labelNames: Object.keys(gitData) as (keyof LodestarGitData)[],
+      labelNames: Object.keys(gitData) as [keyof LodestarGitData],
     })
     .set(gitData, 1);
 
@@ -203,7 +147,7 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
 
     attesterDutiesReorg: register.gauge({
       name: "vc_attestation_duties_reorg_total",
-      help: "Total count of instances the attester duties dependant root changed",
+      help: "Total count of instances the attester duties dependent root changed",
     }),
 
     attesterDutiesNextSlot: register.gauge({
@@ -241,7 +185,7 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
 
     proposerDutiesReorg: register.gauge({
       name: "vc_proposer_duties_reorg_total",
-      help: "Total count of instances the proposer duties dependant root changed",
+      help: "Total count of instances the proposer duties dependent root changed",
     }),
 
     newProposalDutiesDetected: register.gauge({
@@ -287,14 +231,14 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
 
     syncCommitteeDutiesReorg: register.gauge({
       name: "vc_sync_committee_duties_reorg_total",
-      help: "Total count of instances the sync committee duties dependant root changed",
+      help: "Total count of instances the sync committee duties dependent root changed",
     }),
 
     // ValidatorStore
 
     signers: register.gauge({
       name: "vc_signers_count",
-      help: "Total count of instances the sync committee duties dependant root changed",
+      help: "Total count of instances the sync committee duties dependent root changed",
     }),
 
     localSignTime: register.histogram({
@@ -367,7 +311,7 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
         labelNames: ["routeId"],
       }),
 
-      urlsScore: register.gauge<{urlIndex: string}>({
+      urlsScore: register.gauge<{urlIndex: number}>({
         name: "vc_rest_api_client_urls_score",
         help: "Current score of REST API URLs by url index",
         labelNames: ["urlIndex"],

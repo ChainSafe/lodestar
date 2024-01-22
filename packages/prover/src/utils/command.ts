@@ -1,6 +1,16 @@
 import {Options, Argv} from "yargs";
 
-export type CliCommandOptions<OwnArgs> = Required<{[key in keyof OwnArgs]: Options}>;
+export interface CliExample {
+  command: string;
+  title?: string;
+  description?: string;
+}
+
+export interface CliOptionDefinition extends Options {
+  example?: CliExample;
+}
+
+export type CliCommandOptions<OwnArgs> = Required<{[key in keyof OwnArgs]: CliOptionDefinition}>;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export interface CliCommand<OwnArgs = Record<never, never>, ParentArgs = Record<never, never>, R = any> {

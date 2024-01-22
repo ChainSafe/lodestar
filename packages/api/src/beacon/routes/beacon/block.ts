@@ -1,7 +1,7 @@
 import {ContainerType} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
-import {phase0, allForks, Slot, Root, ssz, RootHex, deneb} from "@lodestar/types";
+import {phase0, allForks, Slot, Root, ssz, RootHex, deneb, isSignedBlockContents} from "@lodestar/types";
 
 import {
   RoutesData,
@@ -20,14 +20,7 @@ import {
 import {HttpStatusCode} from "../../../utils/client/httpStatusCode.js";
 import {parseAcceptHeader, writeAcceptHeader} from "../../../utils/acceptHeader.js";
 import {ApiClientResponse, ResponseFormat} from "../../../interfaces.js";
-import {
-  SignedBlockContents,
-  SignedBlindedBlockContents,
-  isSignedBlockContents,
-  isSignedBlindedBlockContents,
-  AllForksSignedBlockContentsReqSerializer,
-  AllForksSignedBlindedBlockContentsReqSerializer,
-} from "../../../utils/routes.js";
+import {allForksSignedBlockContentsReqSerializer} from "../../../utils/routes.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -46,6 +39,13 @@ export type BlockHeaderResponse = {
 };
 
 export enum BroadcastValidation {
+  /* 
+  NOTE: The value `none` is not part of the spec. 
+
+  In case a node is configured only with the unknownBlockSync, it needs to know the unknown parent blocks on the network 
+  to initiate the syncing process. Such cases can be covered only if we publish blocks and make sure no gossip validation 
+  is performed on those. But this behavior is not the default.
+  */
   none = "none",
   gossip = "gossip",
   consensus = "consensus",
@@ -175,7 +175,7 @@ export type Api = {
    * @param requestBody The `SignedBeaconBlock` object composed of `BeaconBlock` object (produced by beacon node) and validator signature.
    * @returns any The block was validated successfully and has been broadcast. It has also been integrated into the beacon node's database.
    */
-  publishBlock(blockOrContents: allForks.SignedBeaconBlock | SignedBlockContents): Promise<
+  publishBlock(blockOrContents: allForks.SignedBeaconBlockOrContents): Promise<
     ApiClientResponse<
       {
         [HttpStatusCode.OK]: void;
@@ -186,8 +186,8 @@ export type Api = {
   >;
 
   publishBlockV2(
-    blockOrContents: allForks.SignedBeaconBlock | SignedBlockContents,
-    opts: {broadcastValidation?: BroadcastValidation}
+    blockOrContents: allForks.SignedBeaconBlockOrContents,
+    opts?: {broadcastValidation?: BroadcastValidation}
   ): Promise<
     ApiClientResponse<
       {
@@ -202,7 +202,7 @@ export type Api = {
    * Publish a signed blinded block by submitting it to the mev relay and patching in the block
    * transactions beacon node gets in response.
    */
-  publishBlindedBlock(blindedBlockOrContents: allForks.SignedBlindedBeaconBlock | SignedBlindedBlockContents): Promise<
+  publishBlindedBlock(blindedBlock: allForks.SignedBlindedBeaconBlock): Promise<
     ApiClientResponse<
       {
         [HttpStatusCode.OK]: void;
@@ -213,7 +213,7 @@ export type Api = {
   >;
 
   publishBlindedBlockV2(
-    blindedBlockOrContents: allForks.SignedBlindedBeaconBlock | SignedBlindedBlockContents,
+    blindedBlockOrContents: allForks.SignedBlindedBeaconBlock,
     opts: {broadcastValidation?: BroadcastValidation}
   ): Promise<
     ApiClientResponse<
@@ -293,15 +293,15 @@ export function getReqSerializers(config: ChainForkConfig): ReqSerializers<Api, 
   const getSignedBeaconBlockType = (data: allForks.SignedBeaconBlock): allForks.AllForksSSZTypes["SignedBeaconBlock"] =>
     config.getForkTypes(data.message.slot).SignedBeaconBlock;
 
-  const AllForksSignedBlockOrContents: TypeJson<allForks.SignedBeaconBlock | SignedBlockContents> = {
+  const AllForksSignedBlockOrContents: TypeJson<allForks.SignedBeaconBlockOrContents> = {
     toJson: (data) =>
       isSignedBlockContents(data)
-        ? AllForksSignedBlockContentsReqSerializer(getSignedBeaconBlockType).toJson(data)
+        ? allForksSignedBlockContentsReqSerializer(getSignedBeaconBlockType).toJson(data)
         : getSignedBeaconBlockType(data).toJson(data),
 
     fromJson: (data) =>
       (data as {signed_block: unknown}).signed_block !== undefined
-        ? AllForksSignedBlockContentsReqSerializer(getSignedBeaconBlockType).fromJson(data)
+        ? allForksSignedBlockContentsReqSerializer(getSignedBeaconBlockType).fromJson(data)
         : getSignedBeaconBlockType(data as allForks.SignedBeaconBlock).fromJson(data),
   };
 
@@ -310,18 +310,10 @@ export function getReqSerializers(config: ChainForkConfig): ReqSerializers<Api, 
   ): allForks.AllForksBlindedSSZTypes["SignedBeaconBlock"] =>
     config.getBlindedForkTypes(data.message.slot).SignedBeaconBlock;
 
-  const AllForksSignedBlindedBlockOrContents: TypeJson<allForks.SignedBlindedBeaconBlock | SignedBlindedBlockContents> =
-    {
-      toJson: (data) =>
-        isSignedBlindedBlockContents(data)
-          ? AllForksSignedBlindedBlockContentsReqSerializer(getSignedBlindedBeaconBlockType).toJson(data)
-          : getSignedBlindedBeaconBlockType(data).toJson(data),
-
-      fromJson: (data) =>
-        (data as {signed_blinded_block: unknown}).signed_blinded_block !== undefined
-          ? AllForksSignedBlindedBlockContentsReqSerializer(getSignedBlindedBeaconBlockType).fromJson(data)
-          : getSignedBlindedBeaconBlockType(data as allForks.SignedBlindedBeaconBlock).fromJson(data),
-    };
+  const AllForksSignedBlindedBlock: TypeJson<allForks.SignedBlindedBeaconBlock> = {
+    toJson: (data) => getSignedBlindedBeaconBlockType(data).toJson(data),
+    fromJson: (data) => getSignedBlindedBeaconBlockType(data as allForks.SignedBlindedBeaconBlock).fromJson(data),
+  };
 
   return {
     getBlock: getBlockReq,
@@ -336,7 +328,7 @@ export function getReqSerializers(config: ChainForkConfig): ReqSerializers<Api, 
     getBlockRoot: blockIdOnlyReq,
     publishBlock: reqOnlyBody(AllForksSignedBlockOrContents, Schema.Object),
     publishBlockV2: {
-      writeReq: (item, {broadcastValidation}) => ({
+      writeReq: (item, {broadcastValidation} = {}) => ({
         body: AllForksSignedBlockOrContents.toJson(item),
         query: {broadcast_validation: broadcastValidation},
       }),
@@ -349,14 +341,14 @@ export function getReqSerializers(config: ChainForkConfig): ReqSerializers<Api, 
         query: {broadcast_validation: Schema.String},
       },
     },
-    publishBlindedBlock: reqOnlyBody(AllForksSignedBlindedBlockOrContents, Schema.Object),
+    publishBlindedBlock: reqOnlyBody(AllForksSignedBlindedBlock, Schema.Object),
     publishBlindedBlockV2: {
       writeReq: (item, {broadcastValidation}) => ({
-        body: AllForksSignedBlindedBlockOrContents.toJson(item),
+        body: AllForksSignedBlindedBlock.toJson(item),
         query: {broadcast_validation: broadcastValidation},
       }),
       parseReq: ({body, query}) => [
-        AllForksSignedBlindedBlockOrContents.fromJson(body),
+        AllForksSignedBlindedBlock.fromJson(body),
         {broadcastValidation: query.broadcast_validation as BroadcastValidation},
       ],
       schema: {

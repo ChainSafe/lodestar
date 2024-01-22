@@ -1,5 +1,5 @@
-import {PeerId} from "@libp2p/interface/peer-id";
-import {expect} from "chai";
+import {describe, it, expect, beforeEach, afterEach} from "vitest";
+import {PeerId} from "@libp2p/interface";
 import {LodestarError, fromHex} from "@lodestar/utils";
 import {getEmptyLogger} from "@lodestar/logger/empty";
 import {Protocol, RespStatus} from "../../../src/index.js";
@@ -54,30 +54,28 @@ describe("response / handleRequest", () => {
 
   afterEach(() => controller.abort());
 
-  for (const {id, requestChunks, protocol, expectedResponseChunks, expectedError} of testCases) {
-    it(id, async () => {
-      const stream = new MockLibP2pStream(requestChunks as any);
-      const rateLimiter = new ReqRespRateLimiter({rateLimitMultiplier: 0});
+  it.each(testCases)("$id", async ({requestChunks, protocol, expectedResponseChunks, expectedError}) => {
+    const stream = new MockLibP2pStream(requestChunks as any);
+    const rateLimiter = new ReqRespRateLimiter({rateLimitMultiplier: 0});
 
-      const resultPromise = handleRequest({
-        logger,
-        metrics: null,
-        protocol,
-        protocolID: protocol.method,
-        stream,
-        peerId,
-        signal: controller.signal,
-        rateLimiter,
-      });
-
-      // Make sure the test error-ed with expected error, otherwise it's hard to debug with responseChunks
-      if (expectedError) {
-        await expectRejectedWithLodestarError(resultPromise, expectedError);
-      } else {
-        await expect(resultPromise).to.not.rejectedWith();
-      }
-
-      expectEqualByteChunks(stream.resultChunks, expectedResponseChunks, "Wrong response chunks");
+    const resultPromise = handleRequest({
+      logger,
+      metrics: null,
+      protocol,
+      protocolID: protocol.method,
+      stream,
+      peerId,
+      signal: controller.signal,
+      rateLimiter,
     });
-  }
+
+    // Make sure the test error-ed with expected error, otherwise it's hard to debug with responseChunks
+    if (expectedError) {
+      await expectRejectedWithLodestarError(resultPromise, expectedError);
+    } else {
+      await expect(resultPromise).resolves.toBeUndefined();
+    }
+
+    expectEqualByteChunks(stream.resultChunks, expectedResponseChunks, "Wrong response chunks");
+  });
 });

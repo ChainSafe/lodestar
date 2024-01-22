@@ -1,3 +1,4 @@
+import {describe} from "vitest";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {Api, ReqTypes} from "../../../src/builder/routes.js";
 import {getClient} from "../../../src/builder/client.js";

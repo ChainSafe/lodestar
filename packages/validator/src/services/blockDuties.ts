@@ -133,7 +133,9 @@ export class BlockDutiesService {
     const isLastSlotEpoch = computeStartSlotAtEpoch(nextEpoch) === currentSlot + 1;
     if (isLastSlotEpoch) {
       // no need to await for other steps, just poll proposers for next epoch
-      void this.pollBeaconProposersNextEpoch(currentSlot, nextEpoch, signal);
+      this.pollBeaconProposersNextEpoch(currentSlot, nextEpoch, signal).catch((e) => {
+        this.logger.error("Error on pollBeaconProposersNextEpoch", {}, e);
+      });
     }
 
     // Notify the block proposal service for any proposals that we have in our cache.
@@ -163,7 +165,7 @@ export class BlockDutiesService {
   }
 
   /**
-   * This is to avoid some delay on the first slot of the opoch when validators has proposal duties.
+   * This is to avoid some delay on the first slot of the epoch when validators have proposal duties.
    * See https://github.com/ChainSafe/lodestar/issues/5792
    */
   private async pollBeaconProposersNextEpoch(currentSlot: Slot, nextEpoch: Epoch, signal: AbortSignal): Promise<void> {

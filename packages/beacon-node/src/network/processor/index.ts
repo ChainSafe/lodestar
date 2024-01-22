@@ -50,7 +50,7 @@ const MAX_UNKNOWN_ROOTS_SLOT_CACHE_SIZE = 3;
  * If message slots are withint this window, it'll likely to be filtered by gossipsub seenCache.
  * This is mainly for DOS protection, see https://github.com/ChainSafe/lodestar/issues/5393
  */
-const EARLIEST_PERMISSABLE_SLOT_DISTANCE = 32;
+const EARLIEST_PERMISSIBLE_SLOT_DISTANCE = 32;
 
 type WorkOpts = {
   bypassQueue?: boolean;
@@ -93,7 +93,7 @@ const PROCESS_UNKNOWN_BLOCK_GOSSIP_OBJECTS_YIELD_EVERY_MS = 50;
 /**
  * Reprocess reject reason for metrics
  */
-enum ReprocessRejectReason {
+export enum ReprocessRejectReason {
   /**
    * There are too many attestations that have unknown block root.
    */
@@ -107,9 +107,9 @@ enum ReprocessRejectReason {
 /**
  * Cannot accept work reason for metrics
  */
-enum CannotAcceptWorkReason {
+export enum CannotAcceptWorkReason {
   /**
-   * Validating or procesing gossip block at current slot.
+   * Validating or processing gossip block at current slot.
    */
   processingCurrentSlotBlock = "processing_current_slot_block",
   /**
@@ -231,11 +231,12 @@ export class NetworkProcessor {
   }
 
   searchUnknownSlotRoot({slot, root}: SlotRootHex, peer?: PeerIdStr): void {
-    // Search for the unknown block
-    if (!this.unknownRootsBySlot.getOrDefault(slot).has(root)) {
-      this.unknownRootsBySlot.getOrDefault(slot).add(root);
-      this.events.emit(NetworkEvent.unknownBlock, {rootHex: root, peer});
+    if (this.chain.seenBlock(root) || this.unknownRootsBySlot.getOrDefault(slot).has(root)) {
+      return;
     }
+    // Search for the unknown block
+    this.unknownRootsBySlot.getOrDefault(slot).add(root);
+    this.events.emit(NetworkEvent.unknownBlock, {rootHex: root, peer});
   }
 
   private onPendingGossipsubMessage(message: PendingGossipsubMessage): void {
@@ -249,7 +250,7 @@ export class NetworkProcessor {
       if (slotRoot) {
         // DOS protection: avoid processing messages that are too old
         const {slot, root} = slotRoot;
-        if (slot < this.chain.clock.currentSlot - EARLIEST_PERMISSABLE_SLOT_DISTANCE) {
+        if (slot < this.chain.clock.currentSlot - EARLIEST_PERMISSIBLE_SLOT_DISTANCE) {
           // TODO: Should report the dropped job to gossip? It will be eventually pruned from the mcache
           this.metrics?.networkProcessor.gossipValidationError.inc({
             topic: topicType,
@@ -344,7 +345,10 @@ export class NetworkProcessor {
         for (const gossipMessages of gossipMessagesByRoot.values()) {
           for (const message of gossipMessages) {
             this.metrics?.reprocessGossipAttestations.reject.inc({reason: ReprocessRejectReason.expired});
-            this.metrics?.reprocessGossipAttestations.waitSecBeforeReject.set(nowSec - message.seenTimestampSec);
+            this.metrics?.reprocessGossipAttestations.waitSecBeforeReject.set(
+              {reason: ReprocessRejectReason.expired},
+              nowSec - message.seenTimestampSec
+            );
             // TODO: Should report the dropped job to gossip? It will be eventually pruned from the mcache
           }
         }
@@ -429,7 +433,9 @@ export class NetworkProcessor {
         ];
 
     if (Array.isArray(messageOrArray)) {
-      messageOrArray.forEach((msg) => this.trackJobTime(msg, messageOrArray.length));
+      for (const msg of messageOrArray) {
+        this.trackJobTime(msg, messageOrArray.length);
+      }
     } else {
       this.trackJobTime(messageOrArray, 1);
     }

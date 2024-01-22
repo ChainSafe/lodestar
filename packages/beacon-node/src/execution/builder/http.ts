@@ -1,16 +1,18 @@
 import {byteArrayEquals, toHexString} from "@chainsafe/ssz";
 import {allForks, bellatrix, Slot, Root, BLSPubkey, ssz, deneb, Wei} from "@lodestar/types";
+import {parseExecutionPayloadAndBlobsBundle, reconstructFullBlockOrContents} from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
+import {Logger} from "@lodestar/logger";
 import {getClient, Api as BuilderApi} from "@lodestar/api/builder";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
-
+import {SLOTS_PER_EPOCH, ForkExecution} from "@lodestar/params";
+import {toSafePrintableUrl} from "@lodestar/utils";
 import {ApiError} from "@lodestar/api";
 import {Metrics} from "../../metrics/metrics.js";
 import {IExecutionBuilder} from "./interface.js";
 
 export type ExecutionBuilderHttpOpts = {
   enabled: boolean;
-  urls: string[];
+  url: string;
   timeout?: number;
   faultInspectionWindow?: number;
   allowedFaults?: number;
@@ -23,7 +25,7 @@ export type ExecutionBuilderHttpOpts = {
 
 export const defaultExecutionBuilderHttpOpts: ExecutionBuilderHttpOpts = {
   enabled: false,
-  urls: ["http://localhost:8661"],
+  url: "http://localhost:8661",
   timeout: 12000,
 };
 
@@ -36,8 +38,13 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
   faultInspectionWindow: number;
   allowedFaults: number;
 
-  constructor(opts: ExecutionBuilderHttpOpts, config: ChainForkConfig, metrics: Metrics | null = null) {
-    const baseUrl = opts.urls[0];
+  constructor(
+    opts: ExecutionBuilderHttpOpts,
+    config: ChainForkConfig,
+    metrics: Metrics | null = null,
+    logger?: Logger
+  ) {
+    const baseUrl = opts.url;
     if (!baseUrl) throw Error("No Url provided for executionBuilder");
     this.api = getClient(
       {
@@ -47,6 +54,7 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
       },
       {config, metrics: metrics?.builderHttpClient}
     );
+    logger?.info("External builder", {url: toSafePrintableUrl(baseUrl)});
     this.config = config;
     this.issueLocalFcUWithFeeRecipient = opts.issueLocalFcUWithFeeRecipient;
 
@@ -91,27 +99,33 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
   }
 
   async getHeader(
+    fork: ForkExecution,
     slot: Slot,
     parentHash: Root,
     proposerPubKey: BLSPubkey
   ): Promise<{
     header: allForks.ExecutionPayloadHeader;
-    blockValue: Wei;
+    executionPayloadValue: Wei;
     blobKzgCommitments?: deneb.BlobKzgCommitments;
   }> {
     const res = await this.api.getHeader(slot, parentHash, proposerPubKey);
     ApiError.assert(res, "execution.builder.getheader");
-    const {header, value: blockValue} = res.response.data.message;
-    const {blobKzgCommitments} = res.response.data.message as {blobKzgCommitments?: deneb.BlobKzgCommitments};
-    return {header, blockValue, blobKzgCommitments};
+    const {header, value: executionPayloadValue} = res.response.data.message;
+    const {blobKzgCommitments} = res.response.data.message as deneb.BuilderBid;
+    return {header, executionPayloadValue, blobKzgCommitments};
   }
 
-  async submitBlindedBlock(signedBlock: allForks.SignedBlindedBeaconBlock): Promise<allForks.SignedBeaconBlock> {
-    const res = await this.api.submitBlindedBlock(signedBlock);
+  async submitBlindedBlock(
+    signedBlindedBlock: allForks.SignedBlindedBeaconBlock
+  ): Promise<allForks.SignedBeaconBlockOrContents> {
+    const res = await this.api.submitBlindedBlock(signedBlindedBlock);
     ApiError.assert(res, "execution.builder.submitBlindedBlock");
-    const executionPayload = res.response.data;
-    const expectedTransactionsRoot = signedBlock.message.body.executionPayloadHeader.transactionsRoot;
-    const actualTransactionsRoot = ssz.bellatrix.Transactions.hashTreeRoot(res.response.data.transactions);
+    const {data} = res.response;
+
+    const {executionPayload, blobsBundle} = parseExecutionPayloadAndBlobsBundle(data);
+    // some validations for execution payload
+    const expectedTransactionsRoot = signedBlindedBlock.message.body.executionPayloadHeader.transactionsRoot;
+    const actualTransactionsRoot = ssz.bellatrix.Transactions.hashTreeRoot(executionPayload.transactions);
     if (!byteArrayEquals(expectedTransactionsRoot, actualTransactionsRoot)) {
       throw Error(
         `Invalid transactionsRoot of the builder payload, expected=${toHexString(
@@ -119,10 +133,8 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
         )}, actual=${toHexString(actualTransactionsRoot)}`
       );
     }
-    const fullySignedBlock: bellatrix.SignedBeaconBlock = {
-      ...signedBlock,
-      message: {...signedBlock.message, body: {...signedBlock.message.body, executionPayload}},
-    };
-    return fullySignedBlock;
+
+    const contents = blobsBundle ? {blobs: blobsBundle.blobs, kzgProofs: blobsBundle.proofs} : null;
+    return reconstructFullBlockOrContents(signedBlindedBlock, {executionPayload, contents});
   }
 }

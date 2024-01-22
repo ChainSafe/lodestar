@@ -3,15 +3,16 @@ import path from "node:path";
 import fs from "node:fs";
 import {createFromProtobuf} from "@libp2p/peer-id-factory";
 import {Multiaddr, multiaddr} from "@multiformats/multiaddr";
-import {Gauge} from "prom-client";
 import {expose} from "@chainsafe/threads/worker";
 import {Observable, Subject} from "@chainsafe/threads/observable";
-import {createKeypairFromPeerId, Discv5, ENR, ENRData, SignableENR, SignableENRData} from "@chainsafe/discv5";
+import {Discv5} from "@chainsafe/discv5";
+import {createPrivateKeyFromPeerId, ENR, ENRData, SignableENR, SignableENRData} from "@chainsafe/enr";
 import {createBeaconConfig} from "@lodestar/config";
 import {getNodeLogger} from "@lodestar/logger/node";
+import {Gauge} from "@lodestar/utils";
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {collectNodeJSMetrics} from "../../metrics/nodeJsMetrics.js";
-import {profileNodeJS} from "../../util/profile.js";
+import {profileNodeJS, writeHeapSnapshot} from "../../util/profile.js";
 import {Discv5WorkerApi, Discv5WorkerData} from "./types.js";
 import {enrRelevance, ENRRelevance} from "./utils.js";
 
@@ -28,14 +29,14 @@ const logger = getNodeLogger(workerData.loggerOpts);
 
 // Set up metrics, nodejs and discv5-specific
 let metricsRegistry: RegistryMetricCreator | undefined;
-let enrRelevanceMetric: Gauge<"status"> | undefined;
+let enrRelevanceMetric: Gauge<{status: string}> | undefined;
 let closeMetrics: () => void | undefined;
 if (workerData.metrics) {
   metricsRegistry = new RegistryMetricCreator();
   closeMetrics = collectNodeJSMetrics(metricsRegistry, "discv5_worker_");
 
   // add enr relevance metric
-  enrRelevanceMetric = metricsRegistry.gauge<"status">({
+  enrRelevanceMetric = metricsRegistry.gauge<{status: string}>({
     name: "lodestar_discv5_discovered_status_total_count",
     help: "Total count of status results of enrRelevance() function",
     labelNames: ["status"],
@@ -43,13 +44,13 @@ if (workerData.metrics) {
 }
 
 const peerId = await createFromProtobuf(workerData.peerIdProto);
-const keypair = createKeypairFromPeerId(peerId);
+const keypair = createPrivateKeyFromPeerId(peerId);
 
 const config = createBeaconConfig(workerData.chainConfig, workerData.genesisValidatorsRoot);
 
 // Initialize discv5
 const discv5 = Discv5.create({
-  enr: SignableENR.decodeTxt(workerData.enr, keypair),
+  enr: SignableENR.decodeTxt(workerData.enr, keypair.privateKey),
   peerId,
   bindAddrs: {
     ip4: (workerData.bindAddrs.ip4 ? multiaddr(workerData.bindAddrs.ip4) : undefined) as Multiaddr,
@@ -106,6 +107,9 @@ const module: Discv5WorkerApi = {
     const filePath = path.join(dirpath, `discv5_thread_${new Date().toISOString()}.cpuprofile`);
     fs.writeFileSync(filePath, profile);
     return filePath;
+  },
+  writeHeapSnapshot: async (prefix: string, dirpath: string) => {
+    return writeHeapSnapshot(prefix, dirpath);
   },
   async close() {
     closeMetrics?.();

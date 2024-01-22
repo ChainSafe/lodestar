@@ -1,4 +1,4 @@
-import {PeerId} from "@libp2p/interface/peer-id";
+import {PeerId} from "@libp2p/interface";
 import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
 import {BeaconConfig} from "@lodestar/config";
@@ -8,7 +8,7 @@ import {computeStartSlotAtEpoch, computeTimeAtSlot} from "@lodestar/state-transi
 import {phase0, allForks, deneb, altair, Root, capella, SlotRootHex} from "@lodestar/types";
 import {routes} from "@lodestar/api";
 import {ResponseIncoming} from "@lodestar/reqresp";
-import {ForkName, ForkSeq, MAX_BLOBS_PER_BLOCK} from "@lodestar/params";
+import {ForkSeq, MAX_BLOBS_PER_BLOCK} from "@lodestar/params";
 import {Metrics, RegistryMetricCreator} from "../metrics/index.js";
 import {IBeaconChain} from "../chain/index.js";
 import {IBeaconDb} from "../db/interface.js";
@@ -33,6 +33,7 @@ import {GetReqRespHandlerFn, Version, requestSszTypeByMethod, responseSszTypeByM
 import {collectSequentialBlocksInRange} from "./reqresp/utils/collectSequentialBlocksInRange.js";
 import {getGossipSSZType, gossipTopicIgnoreDuplicatePublishError, stringifyGossipTopic} from "./gossip/topic.js";
 import {AggregatorTracker} from "./processor/aggregatorTracker.js";
+import {getActiveForks} from "./forks.js";
 
 type NetworkModules = {
   opts: NetworkOptions;
@@ -104,8 +105,12 @@ export class Network implements INetwork {
     this.events.on(NetworkEvent.peerConnected, this.onPeerConnected);
     this.events.on(NetworkEvent.peerDisconnected, this.onPeerDisconnected);
     this.chain.emitter.on(routes.events.EventType.head, this.onHead);
-    this.chain.emitter.on(routes.events.EventType.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
-    this.chain.emitter.on(routes.events.EventType.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
+    this.chain.emitter.on(routes.events.EventType.lightClientFinalityUpdate, ({data}) =>
+      this.onLightClientFinalityUpdate(data)
+    );
+    this.chain.emitter.on(routes.events.EventType.lightClientOptimisticUpdate, ({data}) =>
+      this.onLightClientOptimisticUpdate(data)
+    );
   }
 
   static async init({
@@ -287,14 +292,14 @@ export class Network implements INetwork {
     });
   }
 
-  async publishBlobSidecar(signedBlobSidecar: deneb.SignedBlobSidecar): Promise<number> {
-    const fork = this.config.getForkName(signedBlobSidecar.message.slot);
-    const index = signedBlobSidecar.message.index;
-    return this.publishGossip<GossipType.blob_sidecar>(
-      {type: GossipType.blob_sidecar, fork, index},
-      signedBlobSidecar,
-      {ignoreDuplicatePublishError: true}
-    );
+  async publishBlobSidecar(blobSidecar: deneb.BlobSidecar): Promise<number> {
+    const slot = blobSidecar.signedBlockHeader.message.slot;
+    const fork = this.config.getForkName(slot);
+    const index = blobSidecar.index;
+
+    return this.publishGossip<GossipType.blob_sidecar>({type: GossipType.blob_sidecar, fork, index}, blobSidecar, {
+      ignoreDuplicatePublishError: true,
+    });
   }
 
   async publishBeaconAggregateAndProof(aggregateAndProof: phase0.SignedAggregateAndProof): Promise<number> {
@@ -323,11 +328,22 @@ export class Network implements INetwork {
   }
 
   async publishBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange): Promise<number> {
-    return this.publishGossip<GossipType.bls_to_execution_change>(
-      {type: GossipType.bls_to_execution_change, fork: ForkName.capella},
-      blsToExecutionChange,
-      {ignoreDuplicatePublishError: true}
-    );
+    const publishChanges = [];
+    for (const fork of getActiveForks(this.config, this.clock.currentEpoch)) {
+      if (ForkSeq[fork] >= ForkSeq.capella) {
+        const publishPromise = this.publishGossip<GossipType.bls_to_execution_change>(
+          {type: GossipType.bls_to_execution_change, fork},
+          blsToExecutionChange,
+          {ignoreDuplicatePublishError: true}
+        );
+        publishChanges.push(publishPromise);
+      }
+    }
+
+    if (publishChanges.length === 0) {
+      throw Error("No capella+ fork active yet to publish blsToExecutionChange");
+    }
+    return Promise.any(publishChanges);
   }
 
   async publishProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<number> {
@@ -543,6 +559,14 @@ export class Network implements INetwork {
 
   async writeDiscv5Profile(durationMs: number, dirpath: string): Promise<string> {
     return this.core.writeDiscv5Profile(durationMs, dirpath);
+  }
+
+  async writeNetworkHeapSnapshot(prefix: string, dirpath: string): Promise<string> {
+    return this.core.writeNetworkHeapSnapshot(prefix, dirpath);
+  }
+
+  async writeDiscv5HeapSnapshot(prefix: string, dirpath: string): Promise<string> {
+    return this.core.writeDiscv5HeapSnapshot(prefix, dirpath);
   }
 
   private onLightClientFinalityUpdate = async (finalityUpdate: allForks.LightClientFinalityUpdate): Promise<void> => {

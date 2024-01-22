@@ -1,4 +1,4 @@
-import {PeerId} from "@libp2p/interface/peer-id";
+import {PeerId} from "@libp2p/interface";
 import {Libp2p} from "libp2p";
 import {BeaconConfig} from "@lodestar/config";
 import {ForkName, ForkSeq} from "@lodestar/params";
@@ -88,7 +88,8 @@ export class ReqRespBeaconNode extends ReqResp {
           metrics?.reqResp.rateLimitErrors.inc({method});
         },
         getPeerLogMetadata(peerId) {
-          return peersData.getPeerKind(peerId);
+          // this logs the whole agent version for unknown client which is good for debugging
+          return peersData.getPeerKind(peerId) ?? peersData.getAgentVersion(peerId);
         },
       }
     );
@@ -147,10 +148,10 @@ export class ReqRespBeaconNode extends ReqResp {
     versions: number[],
     requestData: Uint8Array
   ): AsyncIterable<ResponseIncoming> {
-    // Remember prefered encoding
+    // Remember preferred encoding
     const encoding = this.peersData.getEncodingPreference(peerId.toString()) ?? Encoding.SSZ_SNAPPY;
 
-    // Overwritte placeholder requestData from main thread with correct sequenceNumber
+    // Overwrite placeholder requestData from main thread with correct sequenceNumber
     if (method === ReqRespMethod.Ping) {
       requestData = requestSszTypeByMethod[ReqRespMethod.Ping].serialize(this.metadataController.seqNumber);
     }
@@ -258,12 +259,12 @@ export class ReqRespBeaconNode extends ReqResp {
   protected onIncomingRequestBody(request: RequestTypedContainer, peer: PeerId): void {
     // Allow onRequest to return and close the stream
     // For Goodbye there may be a race condition where the listener of `receivedGoodbye`
-    // disconnects in the same syncronous call, preventing the stream from ending cleanly
+    // disconnects in the same synchronous call, preventing the stream from ending cleanly
     setTimeout(() => this.networkEventBus.emit(NetworkEvent.reqRespRequest, {request, peer}), 0);
   }
 
   protected onIncomingRequest(peerId: PeerId, protocol: ProtocolDescriptor): void {
-    // Remember prefered encoding
+    // Remember preferred encoding
     if (protocol.method === ReqRespMethod.Status) {
       this.peersData.setEncodingPreference(peerId.toString(), protocol.encoding);
     }

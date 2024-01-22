@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.11.3",
+  "version": "1.14.0",
   "type": "module",
   "exports": {
     ".": {
@@ -61,14 +61,19 @@
     "check-types": "tsc",
     "lint": "eslint --color --ext .ts src/ test/",
     "lint:fix": "yarn run lint --fix",
-    "test:unit": "mocha 'test/**/*.test.ts'",
-    "test:browsers": "yarn karma start karma.config.cjs",
+    "test:constants:minimal": "LODESTAR_PRESET=minimal vitest --run --dir test/constants/ --coverage",
+    "test:constants:mainnet": "LODESTAR_PRESET=mainnet vitest --run --dir test/constants/ --coverage",
+    "test:unit": "wrapper() { yarn test:constants:minimal $@ && yarn test:constants:mainnet $@ && vitest --run --dir test/unit/ --coverage $@; }; wrapper",
+    "test:browsers": "yarn test:browsers:chrome && yarn test:browsers:firefox && yarn test:browsers:electron",
+    "test:browsers:chrome": "vitest --run --browser chrome --config ./vitest.browser.config.ts --dir test/unit",
+    "test:browsers:firefox": "vitest --run --browser firefox --config ./vitest.browser.config.ts --dir test/unit",
+    "test:browsers:electron": "echo 'Electron tests will be introduced back in the future as soon vitest supports electron.'",
     "check-readme": "typescript-docs-verifier"
   },
   "types": "lib/index.d.ts",
   "dependencies": {
-    "@chainsafe/ssz": "^0.13.0",
-    "@lodestar/params": "^1.11.3"
+    "@chainsafe/ssz": "^0.14.0",
+    "@lodestar/params": "^1.14.0"
   },
   "keywords": [
     "ethereum",

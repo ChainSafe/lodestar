@@ -29,11 +29,11 @@ export function toExpectedCase(
   }
 }
 
-function isObjectObject(val: unknown): boolean {
+function isObjectObject(val: unknown): val is object {
   return val != null && typeof val === "object" && Array.isArray(val) === false;
 }
 
-export function isPlainObject(o: unknown): boolean {
+export function isPlainObject(o: unknown): o is object {
   if (isObjectObject(o) === false) return false;
 
   // If has modified constructor
@@ -51,6 +51,10 @@ export function isPlainObject(o: unknown): boolean {
 
   // Most likely a plain Object
   return true;
+}
+
+export function isEmptyObject(value: unknown): boolean {
+  return isObjectObject(value) && Object.keys(value).length === 0;
 }
 
 /**

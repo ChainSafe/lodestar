@@ -97,7 +97,7 @@ export class AttestationService {
         )
       );
     } else {
-      // Beacon node's endpoint produceAttestationData return data is not dependant on committeeIndex.
+      // Beacon node's endpoint produceAttestationData return data is not dependent on committeeIndex.
       // Produce a single attestation for all committees and submit unaggregated attestations in one go.
       try {
         await this.runAttestationTasksGrouped(duties, slot, signal);
@@ -159,7 +159,7 @@ export class AttestationService {
 
   /**
    * Performs the first step of the attesting process: downloading one `Attestation` object.
-   * Beacon node's endpoint produceAttestationData return data is not dependant on committeeIndex.
+   * Beacon node's endpoint produceAttestationData return data is not dependent on committeeIndex.
    * For a validator client with many validators this allows to do a single call for all committees
    * in a slot, saving resources in both the vc and beacon node
    *

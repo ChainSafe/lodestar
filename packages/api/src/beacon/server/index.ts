@@ -37,7 +37,7 @@ export function registerRoutes(
     beacon: () => beacon.getRoutes(config, api.beacon),
     config: () => configApi.getRoutes(config, api.config),
     debug: () => debug.getRoutes(config, api.debug),
-    events: () => events.getRoutes(config, api.events),
+    events: () => events.getRoutes(api.events),
     lightclient: () => lightclient.getRoutes(config, api.lightclient),
     lodestar: () => lodestar.getRoutes(config, api.lodestar),
     node: () => node.getRoutes(config, api.node),

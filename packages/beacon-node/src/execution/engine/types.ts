@@ -102,12 +102,14 @@ export type EngineApiRpcReturnTypes = {
   engine_getPayloadBodiesByRangeV1: (ExecutionPayloadBodyRpc | null)[];
 };
 
-type ExecutionPayloadRpcWithBlockValue = {
+type ExecutionPayloadRpcWithValue = {
   executionPayload: ExecutionPayloadRpc;
+  // even though CL tracks this as executionPayloadValue, EL returns this as blockValue
   blockValue: QUANTITY;
   blobsBundle?: BlobsBundleRpc;
+  shouldOverrideBuilder?: boolean;
 };
-type ExecutionPayloadResponse = ExecutionPayloadRpc | ExecutionPayloadRpcWithBlockValue;
+type ExecutionPayloadResponse = ExecutionPayloadRpc | ExecutionPayloadRpcWithValue;
 
 export type ExecutionPayloadBodyRpc = {transactions: DATA[]; withdrawals: WithdrawalV1[] | null};
 
@@ -199,26 +201,35 @@ export function serializeVersionedHashes(vHashes: VersionedHashes): VersionedHas
   return vHashes.map(bytesToData);
 }
 
-export function hasBlockValue(response: ExecutionPayloadResponse): response is ExecutionPayloadRpcWithBlockValue {
-  return (response as ExecutionPayloadRpcWithBlockValue).blockValue !== undefined;
+export function hasPayloadValue(response: ExecutionPayloadResponse): response is ExecutionPayloadRpcWithValue {
+  return (response as ExecutionPayloadRpcWithValue).blockValue !== undefined;
 }
 
 export function parseExecutionPayload(
   fork: ForkName,
   response: ExecutionPayloadResponse
-): {executionPayload: allForks.ExecutionPayload; blockValue: Wei; blobsBundle?: BlobsBundle} {
+): {
+  executionPayload: allForks.ExecutionPayload;
+  executionPayloadValue: Wei;
+  blobsBundle?: BlobsBundle;
+  shouldOverrideBuilder?: boolean;
+} {
   let data: ExecutionPayloadRpc;
-  let blockValue: Wei;
+  let executionPayloadValue: Wei;
   let blobsBundle: BlobsBundle | undefined;
-  if (hasBlockValue(response)) {
-    blockValue = quantityToBigint(response.blockValue);
+  let shouldOverrideBuilder: boolean;
+
+  if (hasPayloadValue(response)) {
+    executionPayloadValue = quantityToBigint(response.blockValue);
     data = response.executionPayload;
     blobsBundle = response.blobsBundle ? parseBlobsBundle(response.blobsBundle) : undefined;
+    shouldOverrideBuilder = response.shouldOverrideBuilder ?? false;
   } else {
     data = response;
     // Just set it to zero as default
-    blockValue = BigInt(0);
+    executionPayloadValue = BigInt(0);
     blobsBundle = undefined;
+    shouldOverrideBuilder = false;
   }
 
   const executionPayload = {
@@ -268,7 +279,7 @@ export function parseExecutionPayload(
     (executionPayload as deneb.ExecutionPayload).excessBlobGas = quantityToBigint(excessBlobGas);
   }
 
-  return {executionPayload, blockValue, blobsBundle};
+  return {executionPayload, executionPayloadValue, blobsBundle, shouldOverrideBuilder};
 }
 
 export function serializePayloadAttributes(data: PayloadAttributes): PayloadAttributesRpc {

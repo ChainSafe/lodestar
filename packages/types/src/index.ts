@@ -4,3 +4,5 @@ export * as ssz from "./sszTypes.js";
 export * from "./utils/typeguards.js";
 // String type
 export {StringType, stringType} from "./utils/StringType.js";
+// Container utils
+export * from "./utils/container.js";

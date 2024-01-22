@@ -1,6 +1,6 @@
 {
   "name": "@lodestar/params",
-  "version": "1.11.3",
+  "version": "1.14.0",
   "description": "Chain parameters required for lodestar",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",
@@ -53,9 +53,12 @@
     "lint": "eslint --color --ext .ts src/ test/",
     "lint:fix": "yarn run lint --fix",
     "test": "yarn run check-types",
-    "test:unit": "mocha 'test/unit/**/*.test.ts'",
-    "test:browsers": "yarn karma start karma.config.cjs",
-    "test:e2e": "LODESTAR_PRESET=minimal mocha 'test/e2e/**/*.test.ts'",
+    "test:unit": "vitest --run --dir test/unit/ --coverage",
+    "test:browsers": "yarn test:browsers:chrome && yarn test:browsers:firefox && yarn test:browsers:electron",
+    "test:browsers:chrome": "vitest --run --browser chrome --config ./vitest.browser.config.ts --dir test/unit",
+    "test:browsers:firefox": "vitest --run --browser firefox --config ./vitest.browser.config.ts --dir test/unit",
+    "test:browsers:electron": "echo 'Electron tests will be introduced back in the future as soon vitest supports electron.'",
+    "test:e2e": "LODESTAR_PRESET=minimal vitest --run --dir test/e2e/",
     "check-readme": "typescript-docs-verifier"
   },
   "repository": {

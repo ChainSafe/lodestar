@@ -17,5 +17,5 @@ export const LogLevels = Object.values(LogLevel);
 
 export type LogHandler = (message: string, context?: LogData, error?: Error) => void;
 
-type LogDataBasic = string | number | bigint | boolean | null | undefined;
+export type LogDataBasic = string | number | bigint | boolean | null | undefined;
 export type LogData = LogDataBasic | Record<string, LogDataBasic> | LogDataBasic[] | Record<string, LogDataBasic>[];

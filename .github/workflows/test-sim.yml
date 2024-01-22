@@ -16,6 +16,11 @@ on:
         description: Runtime DEBUG value
         required: false
         default: ""
+      genesisDelaySlots:
+        description: 'Number of slots delay before genesis'
+        required: true
+        type: number
+        default: 40
 
 env:
   GETH_DOCKER_IMAGE: ethereum/client-go:v1.11.6
@@ -56,6 +61,8 @@ jobs:
       - name: Sim tests multifork
         run: DEBUG='${{github.event.inputs.debug}}' yarn test:sim:multifork
         working-directory: packages/cli
+        env: 
+          GENESIS_DELAY_SLOTS: ${{github.event.inputs.genesisDelaySlots}}
 
       - name: Sim tests endpoints
         run: yarn test:sim:endpoints

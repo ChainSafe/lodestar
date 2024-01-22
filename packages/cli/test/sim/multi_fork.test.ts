@@ -1,11 +1,10 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import path from "node:path";
 import {sleep, toHex, toHexString} from "@lodestar/utils";
-import {ApiError} from "@lodestar/api";
-import {CLIQUE_SEALING_PERIOD, SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/constants.js";
-import {AssertionMatch, BeaconClient, ExecutionClient} from "../utils/simulation/interfaces.js";
+import {ApiError, routes} from "@lodestar/api";
+import {AssertionMatch, BeaconClient, ExecutionClient, ValidatorClient} from "../utils/simulation/interfaces.js";
 import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
-import {getEstimatedTimeInSecForRun, getEstimatedTTD, logFilesDir} from "../utils/simulation/utils/index.js";
+import {defineSimTestConfig, logFilesDir} from "../utils/simulation/utils/index.js";
 import {
   connectAllNodes,
   connectNewNode,
@@ -17,49 +16,99 @@ import {nodeAssertion} from "../utils/simulation/assertions/nodeAssertion.js";
 import {mergeAssertion} from "../utils/simulation/assertions/mergeAssertion.js";
 import {createForkAssertion} from "../utils/simulation/assertions/forkAssertion.js";
 
-const genesisDelaySeconds = 20 * SIM_TESTS_SECONDS_PER_SLOT;
 const altairForkEpoch = 2;
 const bellatrixForkEpoch = 4;
 const capellaForkEpoch = 6;
-// Make sure bellatrix started before TTD reach
-const additionalSlotsForTTD = 2;
 const runTillEpoch = 8;
 const syncWaitEpoch = 2;
 
-const runTimeoutMs =
-  getEstimatedTimeInSecForRun({
-    genesisDelaySeconds,
-    secondsPerSlot: SIM_TESTS_SECONDS_PER_SLOT,
-    runTill: runTillEpoch + syncWaitEpoch,
-    // After adding Nethermind its took longer to complete
-    graceExtraTimeFraction: 0.3,
-  }) * 1000;
-
-const ttd = getEstimatedTTD({
-  genesisDelaySeconds,
-  bellatrixForkEpoch,
-  secondsPerSlot: SIM_TESTS_SECONDS_PER_SLOT,
-  cliqueSealingPeriod: CLIQUE_SEALING_PERIOD,
-  additionalSlots: additionalSlotsForTTD,
+const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
+  ALTAIR_FORK_EPOCH: altairForkEpoch,
+  BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
+  CAPELLA_FORK_EPOCH: capellaForkEpoch,
+  runTillEpoch: runTillEpoch + syncWaitEpoch,
 });
 
 const env = await SimulationEnvironment.initWithDefaults(
   {
     id: "multi-fork",
     logsDir: path.join(logFilesDir, "multi-fork"),
-    chainConfig: {
-      ALTAIR_FORK_EPOCH: altairForkEpoch,
-      BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
-      CAPELLA_FORK_EPOCH: capellaForkEpoch,
-      GENESIS_DELAY: genesisDelaySeconds,
-      TERMINAL_TOTAL_DIFFICULTY: ttd,
-    },
+    forkConfig,
   },
   [
-    {id: "node-1", beacon: BeaconClient.Lodestar, execution: ExecutionClient.Geth, keysCount: 32, mining: true},
-    {id: "node-2", beacon: BeaconClient.Lodestar, execution: ExecutionClient.Nethermind, keysCount: 32, remote: true},
-    {id: "node-3", beacon: BeaconClient.Lodestar, execution: ExecutionClient.Nethermind, keysCount: 32},
-    {id: "node-4", beacon: BeaconClient.Lighthouse, execution: ExecutionClient.Geth, keysCount: 32},
+    // put 1 lodestar node on produceBlockV3, and 2nd on produceBlindedBlock and 3rd on produceBlockV2
+    // specifying the useProduceBlockV3 options despite whatever default is set
+    {
+      id: "node-1",
+      beacon: BeaconClient.Lodestar,
+      validator: {
+        type: ValidatorClient.Lodestar,
+        options: {
+          // this will cause race in beacon but since builder is not attached will
+          // return with engine full block and publish via publishBlockV2
+          clientOptions: {
+            useProduceBlockV3: true,
+            "builder.selection": "maxprofit",
+          },
+        },
+      },
+      execution: ExecutionClient.Geth,
+      keysCount: 32,
+      mining: true,
+    },
+    {
+      id: "node-2",
+      beacon: BeaconClient.Lodestar,
+      validator: {
+        type: ValidatorClient.Lodestar,
+        options: {
+          // this will make the beacon respond with blinded version of the local block as no
+          // builder is attached to beacon, and publish via publishBlindedBlockV2
+          clientOptions: {
+            useProduceBlockV3: true,
+            "builder.selection": "maxprofit",
+            blindedLocal: true,
+          },
+        },
+      },
+      execution: ExecutionClient.Nethermind,
+      keysCount: 32,
+      remote: true,
+    },
+    {
+      id: "node-3",
+      beacon: BeaconClient.Lodestar,
+      validator: {
+        type: ValidatorClient.Lodestar,
+        options: {
+          // this builder selection will make it use produceBlockV2 and respond with full block
+          clientOptions: {
+            useProduceBlockV3: false,
+            "builder.selection": "executiononly",
+          },
+        },
+      },
+      execution: ExecutionClient.Nethermind,
+      keysCount: 32,
+    },
+    {
+      id: "node-4",
+      beacon: BeaconClient.Lodestar,
+      validator: {
+        type: ValidatorClient.Lodestar,
+        options: {
+          // this builder selection will make it use produceBlindedBlockV2 and respond with blinded version
+          // of local block and subsequent publishing via publishBlindedBlock
+          clientOptions: {
+            useProduceBlockV3: false,
+            "builder.selection": "maxprofit",
+          },
+        },
+      },
+      execution: ExecutionClient.Nethermind,
+      keysCount: 32,
+    },
+    {id: "node-5", beacon: BeaconClient.Lighthouse, execution: ExecutionClient.Geth, keysCount: 32},
   ]
 );
 
@@ -74,13 +123,13 @@ env.tracker.register({
   ...mergeAssertion,
   match: ({slot}) => {
     // Check at the end of bellatrix fork, merge should happen by then
-    return slot === env.clock.getLastSlotOfEpoch(bellatrixForkEpoch) - 1
+    return slot === env.clock.getLastSlotOfEpoch(bellatrixForkEpoch)
       ? AssertionMatch.Assert | AssertionMatch.Remove
       : AssertionMatch.None;
   },
 });
 
-await env.start({runTimeoutMs});
+await env.start({runTimeoutMs: estimatedTimeoutMs});
 await connectAllNodes(env.nodes);
 
 let lastForkEpoch = 0;
@@ -148,26 +197,43 @@ await checkpointSync.execution.job.stop();
 
 // Unknown block sync
 // ========================================================
+const headForUnknownBlockSync = await env.nodes[0].beacon.api.beacon.getBlockV2("head");
+ApiError.assert(headForUnknownBlockSync);
 const unknownBlockSync = await env.createNodePair({
   id: "unknown-block-sync-node",
   beacon: {
     type: BeaconClient.Lodestar,
-    options: {clientOptions: {"network.allowPublishToZeroPeers": true, "sync.disableRangeSync": true}},
+    options: {
+      clientOptions: {
+        "network.allowPublishToZeroPeers": true,
+        "sync.disableRangeSync": true,
+        /*
+        Initiation of the 'unknownBlockSync' node occurs when other nodes are several epochs ahead.
+        The effectiveness of the 'unknown block sync' is contingent on the gap being at most 'slotImportTolerance * 2'.
+        The default 'slotImportTolerance' value is one epoch; thus, if the gap exceeds 2 epochs,
+        the 'unknown block sync' won't function properly. Moreover, the 'unknownBlockSync' requires some startup time,
+        contributing to the overall gap. For stability in our CI, we've opted to set a higher limit on this constraint.
+        */
+        "sync.slotImportTolerance": headForUnknownBlockSync.response.data.message.slot,
+      },
+    },
   },
   execution: ExecutionClient.Geth,
   keysCount: 0,
 });
 await unknownBlockSync.execution.job.start();
 await unknownBlockSync.beacon.job.start();
-const headForUnknownBlockSync = await env.nodes[0].beacon.api.beacon.getBlockV2("head");
-ApiError.assert(headForUnknownBlockSync);
 await connectNewNode(unknownBlockSync, env.nodes);
 
 // Wait for EL node to start and sync
 await sleep(5000);
 
 try {
-  ApiError.assert(await unknownBlockSync.beacon.api.beacon.publishBlock(headForUnknownBlockSync.response.data));
+  ApiError.assert(
+    await unknownBlockSync.beacon.api.beacon.publishBlockV2(headForUnknownBlockSync.response.data, {
+      broadcastValidation: routes.beacon.BroadcastValidation.none,
+    })
+  );
 
   env.tracker.record({
     message: "Publishing unknown block should fail",

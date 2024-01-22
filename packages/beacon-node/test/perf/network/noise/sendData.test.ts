@@ -3,7 +3,9 @@ import {duplexPair} from "it-pair/duplex";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {pipe} from "it-pipe";
 import drain from "it-drain";
-import {createNoise} from "../../../../src/network/libp2p/noise.js";
+import {defaultLogger} from "@libp2p/logger";
+import {noise} from "@chainsafe/libp2p-noise";
+import {Uint8ArrayList} from "uint8arraylist";
 
 describe("network / noise / sendData", () => {
   const numberOfMessages = 1000;
@@ -24,10 +26,10 @@ describe("network / noise / sendData", () => {
       beforeEach: async () => {
         const peerA = await createSecp256k1PeerId();
         const peerB = await createSecp256k1PeerId();
-        const noiseA = createNoise()();
-        const noiseB = createNoise()();
+        const noiseA = noise()({logger: defaultLogger()});
+        const noiseB = noise()({logger: defaultLogger()});
 
-        const [inboundConnection, outboundConnection] = duplexPair<Uint8Array>();
+        const [inboundConnection, outboundConnection] = duplexPair<Uint8Array | Uint8ArrayList>();
         const [outbound, inbound] = await Promise.all([
           noiseA.secureOutbound(peerA, outboundConnection, peerB),
           noiseB.secureInbound(peerB, inboundConnection, peerA),

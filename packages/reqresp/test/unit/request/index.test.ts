@@ -1,9 +1,8 @@
-import {PeerId} from "@libp2p/interface/peer-id";
+import {describe, it, expect, vi, beforeEach, afterEach} from "vitest";
+import {PeerId} from "@libp2p/interface";
 import all from "it-all";
 import {pipe} from "it-pipe";
-import {expect} from "chai";
 import {Libp2p} from "libp2p";
-import sinon from "sinon";
 import {getEmptyLogger} from "@lodestar/logger/empty";
 import {LodestarError, sleep} from "@lodestar/utils";
 import {RequestError, RequestErrorCode, sendRequest, SendRequestOpts} from "../../../src/request/index.js";
@@ -21,7 +20,6 @@ describe("request / sendRequest", () => {
   let controller: AbortController;
   let peerId: PeerId;
   let libp2p: Libp2p;
-  const sandbox = sinon.createSandbox();
   const emptyProtocol = pingProtocol(getEmptyHandler());
   const EMPTY_REQUEST = new Uint8Array();
 
@@ -36,9 +34,9 @@ describe("request / sendRequest", () => {
       id: "Return first chunk only for a single-chunk method",
       protocols: [emptyProtocol],
       requestBody: sszSnappyPing.binaryPayload,
-      expectedReturn: [sszSnappyPing.binaryPayload],
+      expectedReturn: [{...sszSnappyPing.binaryPayload, data: Buffer.from(sszSnappyPing.binaryPayload.data)}],
     },
-    // limit to max responses is no longer the responsability of this package
+    // limit to max responses is no longer the responsibility of this package
     // {
     //   id: "Return up to maxResponses for a multi-chunk method",
     //   protocols: [customProtocol({})],
@@ -53,16 +51,16 @@ describe("request / sendRequest", () => {
   });
 
   afterEach(() => {
-    sandbox.restore();
+    vi.restoreAllMocks();
     controller.abort();
   });
 
   for (const {id, protocols, expectedReturn, requestBody} of testCases) {
     it(id, async () => {
       libp2p = {
-        dialProtocol: sinon
-          .stub()
-          .resolves(
+        dialProtocol: vi
+          .fn()
+          .mockResolvedValue(
             new MockLibP2pStream(
               responseEncode([{status: RespStatus.SUCCESS, payload: requestBody}], protocols[0] as Protocol),
               protocols[0].method
@@ -81,7 +79,7 @@ describe("request / sendRequest", () => {
         ),
         all
       );
-      expect(responses).to.deep.equal(expectedReturn);
+      expect(responses).toEqual(expectedReturn);
     });
   }
 
@@ -138,7 +136,7 @@ describe("request / sendRequest", () => {
     for (const {id, source, opts, error} of timeoutTestCases) {
       it(id, async () => {
         libp2p = {
-          dialProtocol: sinon.stub().resolves(new MockLibP2pStream(source(), testMethod)),
+          dialProtocol: vi.fn().mockResolvedValue(new MockLibP2pStream(source(), testMethod)),
         } as unknown as Libp2p;
 
         await expectRejectedWithLodestarError(

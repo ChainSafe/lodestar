@@ -1,37 +1,28 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import path from "node:path";
-import {expect} from "chai";
 import {toHexString} from "@chainsafe/ssz";
-import {routes} from "@lodestar/api";
-import {ApiError} from "@lodestar/api";
-import {BeaconClient, ExecutionClient} from "../utils/simulation/interfaces.js";
+import {expect} from "chai";
+import {ApiError, routes} from "@lodestar/api";
 import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
-import {getEstimatedTimeInSecForRun, logFilesDir} from "../utils/simulation/utils/index.js";
+import {BeaconClient, ExecutionClient} from "../utils/simulation/interfaces.js";
+import {defineSimTestConfig, logFilesDir} from "../utils/simulation/utils/index.js";
 import {waitForSlot} from "../utils/simulation/utils/network.js";
-import {SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/constants.js";
 
-const genesisDelaySeconds = 10 * SIM_TESTS_SECONDS_PER_SLOT;
 const altairForkEpoch = 2;
 const bellatrixForkEpoch = 4;
 const validatorCount = 2;
-const runTimeoutMs =
-  getEstimatedTimeInSecForRun({
-    genesisDelaySeconds,
-    secondsPerSlot: SIM_TESTS_SECONDS_PER_SLOT,
-    runTill: 2,
-    // After adding Nethermind its took longer to complete
-    graceExtraTimeFraction: 0.1,
-  }) * 1000;
+
+const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
+  ALTAIR_FORK_EPOCH: altairForkEpoch,
+  BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
+  runTillEpoch: 2,
+});
 
 const env = await SimulationEnvironment.initWithDefaults(
   {
     id: "beacon-endpoints",
     logsDir: path.join(logFilesDir, "beacon-endpoints"),
-    chainConfig: {
-      ALTAIR_FORK_EPOCH: altairForkEpoch,
-      BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
-      GENESIS_DELAY: genesisDelaySeconds,
-    },
+    forkConfig,
   },
   [
     {
@@ -43,7 +34,7 @@ const env = await SimulationEnvironment.initWithDefaults(
     },
   ]
 );
-await env.start({runTimeoutMs});
+await env.start({runTimeoutMs: estimatedTimeoutMs});
 
 const node = env.nodes[0].beacon;
 await waitForSlot(2, env.nodes, {env, silent: true});

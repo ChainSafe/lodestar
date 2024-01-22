@@ -15,10 +15,11 @@ import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {toCheckpointHex} from "../stateCache/index.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
+import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {ChainEvent, ReorgEventData} from "../emitter.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
 import type {BeaconChain} from "../chain.js";
-import {FullyVerifiedBlock, ImportBlockOpts, AttestationImportOpt} from "./types.js";
+import {FullyVerifiedBlock, ImportBlockOpts, AttestationImportOpt, BlockInputType} from "./types.js";
 import {getCheckpointFromState} from "./utils/checkpoint.js";
 import {writeBlockInputToDb} from "./writeBlockInputToDb.js";
 
@@ -58,10 +59,12 @@ export async function importBlock(
 ): Promise<void> {
   const {blockInput, postState, parentBlockSlot, executionStatus} = fullyVerifiedBlock;
   const {block, source} = blockInput;
-  const blockRoot = this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
+  const {slot: blockSlot} = block.message;
+  const blockRoot = this.config.getForkTypes(blockSlot).BeaconBlock.hashTreeRoot(block.message);
   const blockRootHex = toHexString(blockRoot);
   const currentEpoch = computeEpochAtSlot(this.forkChoice.getTime());
-  const blockEpoch = computeEpochAtSlot(block.message.slot);
+  const blockEpoch = computeEpochAtSlot(blockSlot);
+  const parentEpoch = computeEpochAtSlot(parentBlockSlot);
   const prevFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
   const blockDelaySec = (fullyVerifiedBlock.seenTimestampSec - postState.genesisTime) % this.config.SECONDS_PER_SLOT;
 
@@ -85,17 +88,31 @@ export async function importBlock(
 
   // This adds the state necessary to process the next block
   // Some block event handlers require state being in state cache so need to do this before emitting EventType.block
-  this.regen.addPostState(postState);
+  this.regen.processState(blockRootHex, postState);
 
   this.metrics?.importBlock.bySource.inc({source});
-  this.logger.verbose("Added block to forkchoice and state cache", {slot: block.message.slot, root: blockRootHex});
+  this.logger.verbose("Added block to forkchoice and state cache", {slot: blockSlot, root: blockRootHex});
+
   // We want to import block asap so call all event handler in the next event loop
   setTimeout(() => {
     this.emitter.emit(routes.events.EventType.block, {
-      block: toHexString(this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)),
-      slot: block.message.slot,
+      block: blockRootHex,
+      slot: blockSlot,
       executionOptimistic: blockSummary != null && isOptimisticBlock(blockSummary),
     });
+
+    if (blockInput.type === BlockInputType.postDeneb) {
+      for (const blobSidecar of blockInput.blobs) {
+        const {index, kzgCommitment} = blobSidecar;
+        this.emitter.emit(routes.events.EventType.blobSidecar, {
+          blockRoot: blockRootHex,
+          slot: blockSlot,
+          index,
+          kzgCommitment: toHexString(kzgCommitment),
+          versionedHash: toHexString(kzgCommitmentToVersionedHash(kzgCommitment)),
+        });
+      }
+    }
   }, 0);
 
   // 3. Import attestations to fork choice
@@ -154,7 +171,7 @@ export async function importBlock(
           correctHead,
           missedSlotVote,
           blockRootHex,
-          block.message.slot
+          blockSlot
         );
       } catch (e) {
         // a block has a lot of attestations and it may has same error, we don't want to log all of them
@@ -168,7 +185,7 @@ export async function importBlock(
           }
         } else {
           // always log other errors
-          this.logger.warn("Error processing attestation from block", {slot: block.message.slot}, e as Error);
+          this.logger.warn("Error processing attestation from block", {slot: blockSlot}, e as Error);
         }
       }
     }
@@ -176,7 +193,7 @@ export async function importBlock(
     for (const {error, count} of invalidAttestationErrorsByCode.values()) {
       this.logger.warn(
         "Error processing attestations from block",
-        {slot: block.message.slot, erroredAttestations: count},
+        {slot: blockSlot, erroredAttestations: count},
         error
       );
     }
@@ -197,7 +214,7 @@ export async function importBlock(
         // all AttesterSlashings are valid before reaching this
         this.forkChoice.onAttesterSlashing(slashing);
       } catch (e) {
-        this.logger.warn("Error processing AttesterSlashing from block", {slot: block.message.slot}, e as Error);
+        this.logger.warn("Error processing AttesterSlashing from block", {slot: blockSlot}, e as Error);
       }
     }
   }
@@ -280,7 +297,7 @@ export async function importBlock(
             parentBlockSlot
           );
         } catch (e) {
-          this.logger.verbose("Error lightClientServer.onImportBlock", {slot: block.message.slot}, e as Error);
+          this.logger.verbose("Error lightClientServer.onImportBlock", {slot: blockSlot}, e as Error);
         }
       }, 0);
     }
@@ -331,7 +348,13 @@ export async function importBlock(
     this.logger.verbose("After importBlock caching postState without SSZ cache", {slot: postState.slot});
   }
 
-  if (block.message.slot % SLOTS_PER_EPOCH === 0) {
+  if (parentEpoch < blockEpoch) {
+    // current epoch and previous epoch are likely cached in previous states
+    this.shufflingCache.processState(postState, postState.epochCtx.nextShuffling.epoch);
+    this.logger.verbose("Processed shuffling for next epoch", {parentEpoch, blockEpoch, slot: blockSlot});
+  }
+
+  if (blockSlot % SLOTS_PER_EPOCH === 0) {
     // Cache state to preserve epoch transition work
     const checkpointState = postState;
     const cp = getCheckpointFromState(checkpointState);
@@ -374,7 +397,7 @@ export async function importBlock(
 
   // Send block events, only for recent enough blocks
 
-  if (this.clock.currentSlot - block.message.slot < EVENTSTREAM_EMIT_RECENT_BLOCK_SLOTS) {
+  if (this.clock.currentSlot - blockSlot < EVENTSTREAM_EMIT_RECENT_BLOCK_SLOTS) {
     // NOTE: Skip looping if there are no listeners from the API
     if (this.emitter.listenerCount(routes.events.EventType.voluntaryExit)) {
       for (const voluntaryExit of block.message.body.voluntaryExits) {
@@ -394,10 +417,10 @@ export async function importBlock(
   }
 
   // Register stat metrics about the block after importing it
-  this.metrics?.parentBlockDistance.observe(block.message.slot - parentBlockSlot);
+  this.metrics?.parentBlockDistance.observe(blockSlot - parentBlockSlot);
   this.metrics?.proposerBalanceDeltaAny.observe(fullyVerifiedBlock.proposerBalanceDelta);
   this.metrics?.registerImportedBlock(block.message, fullyVerifiedBlock);
-  if (this.config.getForkSeq(block.message.slot) >= ForkSeq.altair) {
+  if (this.config.getForkSeq(blockSlot) >= ForkSeq.altair) {
     this.metrics?.registerSyncAggregateInBlock(
       blockEpoch,
       (block as altair.SignedBeaconBlock).message.body.syncAggregate,
@@ -410,18 +433,18 @@ export async function importBlock(
   // Gossip blocks need to be imported as soon as possible, waiting attestations could be processed
   // in the next event loop. See https://github.com/ChainSafe/lodestar/issues/4789
   setTimeout(() => {
-    this.reprocessController.onBlockImported({slot: block.message.slot, root: blockRootHex}, advancedSlot);
+    this.reprocessController.onBlockImported({slot: blockSlot, root: blockRootHex}, advancedSlot);
   }, 0);
 
   if (opts.seenTimestampSec !== undefined) {
     const recvToImportedBlock = Date.now() / 1000 - opts.seenTimestampSec;
     this.metrics?.gossipBlock.receivedToBlockImport.observe(recvToImportedBlock);
-    this.logger.verbose("Imported block", {slot: block.message.slot, recvToImportedBlock});
+    this.logger.verbose("Imported block", {slot: blockSlot, recvToImportedBlock});
   }
 
   this.logger.verbose("Block processed", {
-    slot: block.message.slot,
+    slot: blockSlot,
     root: blockRootHex,
-    delaySec: this.clock.secFromSlot(block.message.slot),
+    delaySec: this.clock.secFromSlot(blockSlot),
   });
 }

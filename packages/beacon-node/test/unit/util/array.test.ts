@@ -102,6 +102,72 @@ describe("LinkedList", () => {
     expect(list.last()).toBe(98);
   });
 
+  describe("moveToHead", () => {
+    let list: LinkedList<number>;
+
+    beforeEach(() => {
+      list = new LinkedList<number>();
+      list.push(1);
+      list.push(2);
+      list.push(3);
+    });
+
+    it("item is head", () => {
+      list.moveToHead(1);
+      expect(list.toArray()).toEqual([1, 2, 3]);
+      expect(list.first()).toBe(1);
+    });
+
+    it("item is middle", () => {
+      list.moveToHead(2);
+      expect(list.toArray()).toEqual([2, 1, 3]);
+      expect(list.first()).toBe(2);
+    });
+
+    it("item is tail", () => {
+      list.moveToHead(3);
+      expect(list.toArray()).toEqual([3, 1, 2]);
+      expect(list.first()).toBe(3);
+    });
+  });
+
+  describe("moveToSecond", () => {
+    let list: LinkedList<number>;
+
+    beforeEach(() => {
+      list = new LinkedList<number>();
+      list.push(1);
+      list.push(2);
+      list.push(3);
+      list.push(4);
+    });
+
+    it("item is head", () => {
+      list.moveToSecond(1);
+      expect(list.toArray()).toEqual([1, 2, 3, 4]);
+      expect(list.first()).toBe(1);
+    });
+
+    it("item is second", () => {
+      list.moveToSecond(2);
+      expect(list.toArray()).toEqual([1, 2, 3, 4]);
+      expect(list.first()).toBe(1);
+    });
+
+    it("item is third", () => {
+      list.moveToSecond(3);
+      expect(list.toArray()).toEqual([1, 3, 2, 4]);
+      expect(list.first()).toBe(1);
+    });
+
+    it("item is tail", () => {
+      list.moveToSecond(4);
+      expect(list.toArray()).toEqual([1, 4, 2, 3]);
+      expect(list.first()).toBe(1);
+      expect(list.last()).toBe(3);
+    });
+  });
+
   it("values", () => {
     expect(Array.from(list.values())).toEqual([]);
     const count = 100;
@@ -165,6 +231,46 @@ describe("LinkedList", () => {
     });
   });
 
+  describe("insertAfter", () => {
+    let list: LinkedList<number>;
+
+    beforeEach(() => {
+      list = new LinkedList<number>();
+      list.push(1);
+      list.push(2);
+      list.push(3);
+    });
+
+    it("insert after 0", () => {
+      // should do nothing
+      list.insertAfter(0, 4);
+      expect(list.toArray()).toEqual([1, 2, 3]);
+      expect(list.first()).toBe(1);
+      expect(list.last()).toBe(3);
+    });
+
+    it("insert after 1", () => {
+      list.insertAfter(1, 4);
+      expect(list.toArray()).toEqual([1, 4, 2, 3]);
+      expect(list.first()).toBe(1);
+      expect(list.last()).toBe(3);
+    });
+
+    it("insert after 2", () => {
+      list.insertAfter(2, 4);
+      expect(list.toArray()).toEqual([1, 2, 4, 3]);
+      expect(list.first()).toBe(1);
+      expect(list.last()).toBe(3);
+    });
+
+    it("insert after 3", () => {
+      list.insertAfter(3, 4);
+      expect(list.toArray()).toEqual([1, 2, 3, 4]);
+      expect(list.first()).toBe(1);
+      expect(list.last()).toBe(4);
+    });
+  });
+
   it("toArray", () => {
     expect(list.toArray()).toEqual([]);
 
@@ -204,5 +310,23 @@ describe("LinkedList", () => {
         expect(list.toArray()).toEqual(Array.from({length: count}, (_, i) => i));
       });
     }
+  });
+
+  describe("has", () => {
+    let list: LinkedList<number>;
+
+    beforeEach(() => {
+      list = new LinkedList<number>();
+      list.push(1);
+      list.push(2);
+      list.push(3);
+    });
+
+    it("should return true if the item is in the list", () => {
+      expect(list.has(1)).toBe(true);
+      expect(list.has(2)).toBe(true);
+      expect(list.has(3)).toBe(true);
+      expect(list.has(4)).toBe(false);
+    });
   });
 });

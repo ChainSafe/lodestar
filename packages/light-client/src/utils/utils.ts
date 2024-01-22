@@ -1,4 +1,4 @@
-import bls from "@chainsafe/bls/switchable";
+import bls from "@chainsafe/bls";
 import type {PublicKey} from "@chainsafe/bls/types";
 import {BitArray} from "@chainsafe/ssz";
 import {altair, Root, ssz} from "@lodestar/types";

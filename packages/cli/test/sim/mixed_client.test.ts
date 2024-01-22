@@ -2,48 +2,28 @@
 import path from "node:path";
 import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
 import {nodeAssertion} from "../utils/simulation/assertions/nodeAssertion.js";
-import {CLIQUE_SEALING_PERIOD, SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/constants.js";
 import {AssertionMatch, BeaconClient, ExecutionClient, ValidatorClient} from "../utils/simulation/interfaces.js";
-import {getEstimatedTTD, getEstimatedTimeInSecForRun, logFilesDir} from "../utils/simulation/utils/index.js";
+import {defineSimTestConfig, logFilesDir} from "../utils/simulation/utils/index.js";
 import {connectAllNodes, waitForSlot} from "../utils/simulation/utils/network.js";
 
-const genesisDelaySeconds = 20 * SIM_TESTS_SECONDS_PER_SLOT;
 const altairForkEpoch = 2;
 const bellatrixForkEpoch = 4;
 const capellaForkEpoch = 6;
-// Make sure bellatrix started before TTD reach
-const additionalSlotsForTTD = 2;
 const runTillEpoch = 8;
 const syncWaitEpoch = 2;
 
-const runTimeoutMs =
-  getEstimatedTimeInSecForRun({
-    genesisDelaySeconds,
-    secondsPerSlot: SIM_TESTS_SECONDS_PER_SLOT,
-    runTill: runTillEpoch + syncWaitEpoch,
-    // After adding Nethermind its took longer to complete
-    graceExtraTimeFraction: 0.3,
-  }) * 1000;
-
-const ttd = getEstimatedTTD({
-  genesisDelaySeconds,
-  bellatrixForkEpoch,
-  secondsPerSlot: SIM_TESTS_SECONDS_PER_SLOT,
-  cliqueSealingPeriod: CLIQUE_SEALING_PERIOD,
-  additionalSlots: additionalSlotsForTTD,
+const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
+  ALTAIR_FORK_EPOCH: altairForkEpoch,
+  BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
+  CAPELLA_FORK_EPOCH: capellaForkEpoch,
+  runTillEpoch: runTillEpoch + syncWaitEpoch,
 });
 
 const env = await SimulationEnvironment.initWithDefaults(
   {
     id: "mixed-clients",
     logsDir: path.join(logFilesDir, "mixed-clients"),
-    chainConfig: {
-      ALTAIR_FORK_EPOCH: altairForkEpoch,
-      BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
-      CAPELLA_FORK_EPOCH: capellaForkEpoch,
-      GENESIS_DELAY: genesisDelaySeconds,
-      TERMINAL_TOTAL_DIFFICULTY: ttd,
-    },
+    forkConfig,
   },
   [
     {
@@ -60,7 +40,21 @@ const env = await SimulationEnvironment.initWithDefaults(
       keysCount: 32,
       remote: true,
       beacon: BeaconClient.Lighthouse,
-      validator: ValidatorClient.Lodestar,
+      // for cross client make sure lodestar doesn't use v3 for now untill lighthouse supports
+      validator: {
+        type: ValidatorClient.Lodestar,
+        options: {
+          clientOptions: {
+            useProduceBlockV3: false,
+            // this should cause usage of produceBlockV2
+            //
+            // but if blinded production is enabled in lighthouse beacon then this should cause
+            // usage of produce blinded block which should return execution block in blinded format
+            // but only enable that after testing lighthouse beacon
+            "builder.selection": "executiononly",
+          },
+        },
+      },
     },
   ]
 );
@@ -72,7 +66,7 @@ env.tracker.register({
   },
 });
 
-await env.start({runTimeoutMs});
+await env.start({runTimeoutMs: estimatedTimeoutMs});
 await connectAllNodes(env.nodes);
 
 await waitForSlot(env.clock.getLastSlotOfEpoch(capellaForkEpoch + 1), env.nodes, {env, silent: true});

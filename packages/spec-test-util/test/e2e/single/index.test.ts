@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
+import {beforeAll, afterAll} from "vitest";
 import {ContainerType, Type} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
 import {describeDirectorySpecTest, InputType, loadYamlFile} from "../../../src/single.js";
@@ -31,14 +32,14 @@ const sampleContainerType = new ContainerType({
   number: ssz.UintNum64,
 });
 
-before(() => {
+beforeAll(() => {
   yamlToSSZ(path.join(__dirname, "../_test_files/single/case0/input.yaml"), sampleContainerType);
   yamlToSSZ(path.join(__dirname, "../_test_files/single/case0/output.yaml"), ssz.UintNum64);
   yamlToSSZ(path.join(__dirname, "../_test_files/single/case1/input.yaml"), sampleContainerType);
   yamlToSSZ(path.join(__dirname, "../_test_files/single/case1/output.yaml"), ssz.UintNum64);
 });
 
-after(() => {
+afterAll(() => {
   fs.unlinkSync(path.join(__dirname, "../_test_files/single/case0/input.ssz"));
   fs.unlinkSync(path.join(__dirname, "../_test_files/single/case0/output.ssz"));
   fs.unlinkSync(path.join(__dirname, "../_test_files/single/case1/input.ssz"));

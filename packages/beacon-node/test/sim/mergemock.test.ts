@@ -6,7 +6,7 @@ import {TimestampFormatCode} from "@lodestar/logger";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ChainConfig} from "@lodestar/config";
 import {Epoch, allForks, bellatrix} from "@lodestar/types";
-import {ValidatorProposerConfig, BuilderSelection} from "@lodestar/validator";
+import {ValidatorProposerConfig} from "@lodestar/validator";
 import {routes} from "@lodestar/api";
 
 import {ClockEvent} from "../../src/util/clock.js";
@@ -22,8 +22,7 @@ import {logFilesDir} from "./params.js";
 import {shell} from "./shell.js";
 
 // NOTE: How to run
-// EL_BINARY_DIR=g11tech/mergemock:latest EL_SCRIPT_DIR=mergemock LODESTAR_PRESET=mainnet \
-// ETH_PORT=8661 ENGINE_PORT=8551 yarn mocha test/sim/mergemock.test.ts
+// EL_BINARY_DIR=g11tech/mergemock:latest EL_SCRIPT_DIR=mergemock LODESTAR_PRESET=mainnet ETH_PORT=8661 ENGINE_PORT=8551 yarn mocha test/sim/mergemock.test.ts
 // ```
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention */
@@ -64,25 +63,30 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     }
   });
 
-  it("Post-merge, run for a few blocks", async function () {
-    console.log("\n\nPost-merge, run for a few blocks\n\n");
-    const {elClient, tearDownCallBack} = await runEL(
-      {...elSetupConfig, mode: ELStartMode.PostMerge},
-      {...elRunOptions, ttd: BigInt(0)},
-      controller.signal
-    );
-    afterEachCallbacks.push(() => tearDownCallBack());
+  for (const useProduceBlockV3 of [false, true]) {
+    it(`Test builder with useProduceBlockV3=${useProduceBlockV3}`, async function () {
+      console.log("\n\nPost-merge, run for a few blocks\n\n");
+      const {elClient, tearDownCallBack} = await runEL(
+        {...elSetupConfig, mode: ELStartMode.PostMerge},
+        {...elRunOptions, ttd: BigInt(0)},
+        controller.signal
+      );
+      afterEachCallbacks.push(() => tearDownCallBack());
 
-    await runNodeWithEL.bind(this)({
-      elClient,
-      bellatrixEpoch: 0,
-      testName: "post-merge",
+      await runNodeWithEL.bind(this)({
+        elClient,
+        bellatrixEpoch: 0,
+        testName: "post-merge",
+        useProduceBlockV3,
+      });
     });
-  });
+  }
+
+  type RunOpts = {elClient: ELClient; bellatrixEpoch: Epoch; testName: string; useProduceBlockV3: boolean};
 
   async function runNodeWithEL(
     this: Context,
-    {elClient, bellatrixEpoch, testName}: {elClient: ELClient; bellatrixEpoch: Epoch; testName: string}
+    {elClient, bellatrixEpoch, testName, useProduceBlockV3}: RunOpts
   ): Promise<void> {
     const {genesisBlockHash, ttd, engineRpcUrl, ethRpcUrl} = elClient;
     const validatorClientCount = 1;
@@ -153,7 +157,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
         eth1: {enabled: false, providerUrls: [engineRpcUrl], jwtSecretHex},
         executionEngine: {urls: [engineRpcUrl], jwtSecretHex},
         executionBuilder: {
-          urls: [ethRpcUrl],
+          url: ethRpcUrl,
           enabled: true,
           issueLocalFcUWithFeeRecipient: feeRecipientMevBoost,
           allowedFaults: 16,
@@ -184,9 +188,8 @@ describe("executionEngine / ExecutionEngineHttp", function () {
         strictFeeRecipientCheck: true,
         feeRecipient: feeRecipientEngine,
         builder: {
-          enabled: true,
           gasLimit: 30000000,
-          selection: BuilderSelection.BuilderAlways,
+          selection: routes.validator.BuilderSelection.BuilderAlways,
         },
       },
     } as ValidatorProposerConfig;
@@ -201,6 +204,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       useRestApi: true,
       testLoggerOpts,
       valProposerConfig,
+      useProduceBlockV3,
     });
 
     afterEachCallbacks.push(async function () {

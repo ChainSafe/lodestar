@@ -1,6 +1,6 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {ssz, allForks, bellatrix, Slot, Root, BLSPubkey} from "@lodestar/types";
-import {ForkName, isForkExecution} from "@lodestar/params";
+import {ForkName, isForkExecution, isForkBlobs} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
 
 import {
@@ -18,7 +18,6 @@ import {
 import {getReqSerializers as getBeaconReqSerializers} from "../beacon/routes/beacon/block.js";
 import {HttpStatusCode} from "../utils/client/httpStatusCode.js";
 import {ApiClientResponse} from "../interfaces.js";
-import {SignedBlindedBlockContents} from "../utils/routes.js";
 
 export type Api = {
   status(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.SERVICE_UNAVAILABLE>>;
@@ -35,11 +34,14 @@ export type Api = {
       HttpStatusCode.NOT_FOUND | HttpStatusCode.BAD_REQUEST
     >
   >;
-  submitBlindedBlock(
-    signedBlock: allForks.SignedBlindedBeaconBlock | SignedBlindedBlockContents
-  ): Promise<
+  submitBlindedBlock(signedBlock: allForks.SignedBlindedBeaconBlock): Promise<
     ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: allForks.ExecutionPayload; version: ForkName}},
+      {
+        [HttpStatusCode.OK]: {
+          data: allForks.ExecutionPayload | allForks.ExecutionPayloadAndBlobsBundle;
+          version: ForkName;
+        };
+      },
       HttpStatusCode.SERVICE_UNAVAILABLE
     >
   >;
@@ -85,8 +87,13 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getHeader: WithVersion((fork: ForkName) =>
       isForkExecution(fork) ? ssz.allForksExecution[fork].SignedBuilderBid : ssz.bellatrix.SignedBuilderBid
     ),
-    submitBlindedBlock: WithVersion((fork: ForkName) =>
-      isForkExecution(fork) ? ssz.allForksExecution[fork].ExecutionPayload : ssz.bellatrix.ExecutionPayload
+    submitBlindedBlock: WithVersion<allForks.ExecutionPayload | allForks.ExecutionPayloadAndBlobsBundle>(
+      (fork: ForkName) =>
+        isForkBlobs(fork)
+          ? ssz.allForksBlobs[fork].ExecutionPayloadAndBlobsBundle
+          : isForkExecution(fork)
+          ? ssz.allForksExecution[fork].ExecutionPayload
+          : ssz.bellatrix.ExecutionPayload
     ),
   };
 }

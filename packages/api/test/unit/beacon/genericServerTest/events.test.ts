@@ -1,6 +1,5 @@
-import {expect} from "chai";
+import {describe, it, expect, beforeEach, afterEach} from "vitest";
 import {sleep} from "@lodestar/utils";
-import {config} from "@lodestar/config/default";
 import {Api, routesData, EventType, BeaconEvent} from "../../../../src/beacon/routes/events.js";
 import {getClient} from "../../../../src/beacon/client/events.js";
 import {getRoutes} from "../../../../src/beacon/server/events.js";
@@ -11,12 +10,14 @@ import {eventTestData} from "../testData/events.js";
 describe("beacon / events", () => {
   const {baseUrl, server} = getTestServer();
   const mockApi = getMockApi<Api>(routesData);
-  for (const route of Object.values(getRoutes(config, mockApi))) {
+  for (const route of Object.values(getRoutes(mockApi))) {
     registerRoute(server, route);
   }
 
   let controller: AbortController;
-  beforeEach(() => (controller = new AbortController()));
+  beforeEach(() => {
+    controller = new AbortController();
+  });
   afterEach(() => controller.abort());
 
   it("Receive events", async () => {
@@ -38,9 +39,9 @@ describe("beacon / events", () => {
     const eventsReceived: BeaconEvent[] = [];
 
     await new Promise<void>((resolve, reject) => {
-      mockApi.eventstream.callsFake(async (topics, signal, onEvent) => {
+      mockApi.eventstream.mockImplementation(async (topics, signal, onEvent) => {
         try {
-          expect(topics).to.deep.equal(topicsToRequest, "Wrong received topics");
+          expect(topics).toEqual(topicsToRequest);
           for (const event of eventsToSend) {
             onEvent(event);
             await sleep(5);
@@ -51,13 +52,13 @@ describe("beacon / events", () => {
       });
 
       // Capture them on the client
-      const client = getClient(config, baseUrl);
+      const client = getClient(baseUrl);
       void client.eventstream(topicsToRequest, controller.signal, (event) => {
         eventsReceived.push(event);
         if (eventsReceived.length >= eventsToSend.length) resolve();
       });
     });
 
-    expect(eventsReceived).to.deep.equal(eventsToSend, "Wrong received events");
+    expect(eventsReceived).toEqual(eventsToSend);
   });
 });

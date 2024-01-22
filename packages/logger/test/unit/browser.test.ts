@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {LogLevel} from "@lodestar/utils";
 import {stubLoggerForConsole} from "@lodestar/test-utils/mocha";
 import {TimestampFormatCode, logFormats} from "../../src/index.js";
@@ -22,7 +22,7 @@ describe("browser logger", () => {
 
           logger.warn(message, context, error);
           logger.restoreStubs();
-          expect(logger.getLogs()).deep.equals([output[format]]);
+          expect(logger.getLogs()).toEqual([output[format]]);
         });
       }
     }

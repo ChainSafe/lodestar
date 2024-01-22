@@ -71,7 +71,8 @@ describe("api/validator - produceBlockV2", function () {
     };
 
     const fullBlock = ssz.bellatrix.BeaconBlock.defaultValue();
-    const blockValue = ssz.Wei.defaultValue();
+    const executionPayloadValue = ssz.Wei.defaultValue();
+    const consensusBlockValue = ssz.Wei.defaultValue();
 
     const currentSlot = 100000;
     vi.spyOn(server.chainStub.clock, "currentSlot", "get").mockReturnValue(currentSlot);
@@ -81,18 +82,22 @@ describe("api/validator - produceBlockV2", function () {
     const slot = 100000;
     const randaoReveal = fullBlock.body.randaoReveal;
     const graffiti = "a".repeat(32);
-    const expectedFeeRecipient = "0xcccccccccccccccccccccccccccccccccccccccc";
+    const feeRecipient = "0xcccccccccccccccccccccccccccccccccccccccc";
 
     const api = getValidatorApi(modules);
-    server.chainStub.produceBlock.mockResolvedValue({block: fullBlock, blockValue});
+    server.chainStub.produceBlock.mockResolvedValue({
+      block: fullBlock,
+      executionPayloadValue,
+      consensusBlockValue,
+    });
 
     // check if expectedFeeRecipient is passed to produceBlock
-    await api.produceBlockV2(slot, randaoReveal, graffiti, expectedFeeRecipient);
+    await api.produceBlockV2(slot, randaoReveal, graffiti, {feeRecipient});
     expect(server.chainStub.produceBlock).toBeCalledWith({
       randaoReveal,
       graffiti: toGraffitiBuffer(graffiti),
       slot,
-      feeRecipient: expectedFeeRecipient,
+      feeRecipient,
     });
 
     // check that no feeRecipient is passed to produceBlock so that produceBlockBody will
@@ -108,11 +113,11 @@ describe("api/validator - produceBlockV2", function () {
 
   it("correctly use passed feeRecipient in notifyForkchoiceUpdate", async () => {
     const fullBlock = ssz.bellatrix.BeaconBlock.defaultValue();
-    const blockValue = ssz.Wei.defaultValue();
+    const executionPayloadValue = ssz.Wei.defaultValue();
     const slot = 100000;
     const randaoReveal = fullBlock.body.randaoReveal;
     const graffiti = "a".repeat(32);
-    const expectedFeeRecipient = "0xccccccccccccccccccccccccccccccccccccccaa";
+    const feeRecipient = "0xccccccccccccccccccccccccccccccccccccccaa";
 
     const headSlot = 0;
     forkChoiceStub.getHead.mockReturnValue(generateProtoBlock({slot: headSlot}));
@@ -127,7 +132,7 @@ describe("api/validator - produceBlockV2", function () {
     executionEngineStub.notifyForkchoiceUpdate.mockResolvedValue("0x");
     executionEngineStub.getPayload.mockResolvedValue({
       executionPayload: ssz.bellatrix.ExecutionPayload.defaultValue(),
-      blockValue,
+      executionPayloadValue,
     });
 
     // use fee recipient passed in produceBlockBody call for payload gen in engine notifyForkchoiceUpdate
@@ -135,7 +140,7 @@ describe("api/validator - produceBlockV2", function () {
       randaoReveal,
       graffiti: toGraffitiBuffer(graffiti),
       slot,
-      feeRecipient: expectedFeeRecipient,
+      feeRecipient,
       parentSlot: slot - 1,
       parentBlockRoot: fromHexString(ZERO_HASH_HEX),
       proposerIndex: 0,
@@ -150,7 +155,7 @@ describe("api/validator - produceBlockV2", function () {
       {
         timestamp: computeTimeAtSlot(chainStub.config, state.slot, state.genesisTime),
         prevRandao: Uint8Array.from(Buffer.alloc(32, 0)),
-        suggestedFeeRecipient: expectedFeeRecipient,
+        suggestedFeeRecipient: feeRecipient,
       }
     );
 

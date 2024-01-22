@@ -2,6 +2,7 @@ export * from "./stateTransition.js";
 export * from "./constants/index.js";
 export * from "./util/index.js";
 export * from "./signatureSets/index.js";
+export type {EpochTransitionStep} from "./epoch/index.js";
 export type {BeaconStateTransitionMetrics} from "./metrics.js";
 
 export type {
@@ -25,6 +26,7 @@ export type {
 // Main state caches
 export {
   createCachedBeaconState,
+  loadCachedBeaconState,
   type BeaconStateCache,
   isCachedBeaconState,
   isStateBalancesNodesPopulated,
@@ -59,4 +61,3 @@ export {ExecutionPayloadStatus, DataAvailableStatus, type BlockExternalData} fro
 export {becomesNewEth1Data} from "./block/processEth1Data.js";
 // Withdrawals for new blocks
 export {getExpectedWithdrawals} from "./block/processWithdrawals.js";
-export {executionPayloadToPayloadHeader} from "./block/processExecutionPayload.js";

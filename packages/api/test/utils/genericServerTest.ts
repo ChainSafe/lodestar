@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {it, expect, MockInstance} from "vitest";
 import {ChainForkConfig} from "@lodestar/config";
 import {ReqGeneric, Resolves} from "../../src/utils/index.js";
 import {FetchOpts, HttpClient, IHttpClient} from "../../src/utils/client/index.js";
@@ -44,24 +44,25 @@ export function runGenericServerTest<
     it(routeId as string, async () => {
       // Register mock data for this route
       // TODO: Look for the type error
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-expect-error
-      mockApi[routeId].resolves(testCases[routeId].res);
+      (mockApi[routeId] as MockInstance).mockResolvedValue(testCases[routeId].res);
 
       // Do the call
       const res = await (client[routeId] as APIClientHandler)(...(testCase.args as any[]));
 
       // Use spy to assert argument serialization
       if (testCase.query) {
-        expect(httpClient.opts?.query).to.deep.equal(testCase.query, "Wrong fetch opts.query");
+        expect(httpClient.opts?.query).toEqual(testCase.query);
       }
 
       // Assert server handler called with correct args
-      expect(mockApi[routeId].callCount).to.equal(1, `mockApi[${routeId as string}] must be called once`);
-      expect(mockApi[routeId].getCall(0).args).to.deep.equal(testCase.args, `mockApi[${routeId as string}] wrong args`);
+      expect(mockApi[routeId] as MockInstance).toHaveBeenCalledTimes(1);
+
+      // if mock api args are > testcase args, there may be some undefined extra args parsed towards the end
+      // to obtain a match, ignore the extra args
+      expect(mockApi[routeId] as MockInstance).toHaveBeenNthCalledWith(1, ...(testCase.args as any[]));
 
       // Assert returned value is correct
-      expect(res.response).to.deep.equal(testCase.res, "Wrong returned value");
+      expect(res.response).toEqual(testCase.res);
     });
   }
 }

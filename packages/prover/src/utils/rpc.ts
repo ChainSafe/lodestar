@@ -27,6 +27,8 @@ export class ELRpc {
   private handler: ELRequestHandler;
   private logger: Logger;
 
+  private requestId = 0;
+
   constructor(handler: ELRequestHandler, logger: Logger) {
     this.handler = handler;
     this.logger = logger;
@@ -99,7 +101,6 @@ export class ELRpc {
   }
 
   getRequestId(): string {
-    // TODO: Find better way to generate random id
-    return (Math.random() * 10000).toFixed(0);
+    return (++this.requestId).toString();
   }
 }

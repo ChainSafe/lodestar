@@ -2,15 +2,12 @@ import path from "node:path";
 import util from "node:util";
 import child from "node:child_process";
 import {fileURLToPath} from "node:url";
-import {expect, use} from "chai";
-import chaiAsPromised from "chai-as-promised";
+import {describe, it, expect, vi} from "vitest";
 
 const scriptNames = {
   ok: "overridePresetOk.ts",
   error: "overridePresetError.ts",
 };
-
-use(chaiAsPromised);
 
 const exec = util.promisify(child.exec);
 
@@ -21,7 +18,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 describe("Override preset", function () {
   // Allow time for ts-node to compile Typescript source
-  this.timeout(30_000);
+  vi.setConfig({testTimeout: 30_000});
 
   it("Should correctly override preset", async () => {
     // These commands can not run with minimal preset
@@ -31,7 +28,7 @@ describe("Override preset", function () {
   });
 
   it("Should throw trying to override preset in the wrong order", async () => {
-    await expect(exec(`node --loader ts-node/esm ${path.join(__dirname, scriptNames.error)}`)).to.be.rejectedWith(
+    await expect(exec(`node --loader ts-node/esm ${path.join(__dirname, scriptNames.error)}`)).rejects.toThrow(
       "Lodestar preset is already frozen"
     );
   });

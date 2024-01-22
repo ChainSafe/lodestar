@@ -68,13 +68,21 @@ export type FullOrBlindedBeaconBlockBody = BeaconBlockBody | BlindedBeaconBlockB
 export type FullOrBlindedBeaconBlock = BeaconBlock | BlindedBeaconBlock;
 export type FullOrBlindedSignedBeaconBlock = SignedBeaconBlock | SignedBlindedBeaconBlock;
 
-export type FullOrBlindedBlobSidecar = deneb.BlobSidecar | deneb.BlindedBlobSidecar;
-export type FullOrBlindedSignedBlobSidecar = deneb.SignedBlobSidecar | deneb.SignedBlindedBlobSidecar;
+export type BlockContents = {block: BeaconBlock; kzgProofs: deneb.KZGProofs; blobs: deneb.Blobs};
+export type SignedBlockContents = {
+  signedBlock: SignedBeaconBlock;
+  kzgProofs: deneb.KZGProofs;
+  blobs: deneb.Blobs;
+};
 
-export type FullOrBlindedBlobSidecars = deneb.BlobSidecars | deneb.BlindedBlobSidecars;
+export type BeaconBlockOrContents = BeaconBlock | BlockContents;
+export type SignedBeaconBlockOrContents = SignedBeaconBlock | SignedBlockContents;
+
+export type FullOrBlindedBeaconBlockOrContents = BeaconBlockOrContents | BlindedBeaconBlock;
 
 export type BuilderBid = bellatrix.BuilderBid | capella.BuilderBid | deneb.BuilderBid;
 export type SignedBuilderBid = bellatrix.SignedBuilderBid | capella.SignedBuilderBid | deneb.SignedBuilderBid;
+export type ExecutionPayloadAndBlobsBundle = deneb.ExecutionPayloadAndBlobsBundle;
 
 export type LightClientHeader = altair.LightClientHeader | capella.LightClientHeader | deneb.LightClientHeader;
 export type LightClientBootstrap =
@@ -286,5 +294,5 @@ export type AllForksLightClientSSZTypes = {
 
 export type AllForksBlobsSSZTypes = {
   BlobSidecar: AllForksTypeOf<typeof denebSsz.BlobSidecar>;
-  BlindedBlobSidecar: AllForksTypeOf<typeof denebSsz.BlindedBlobSidecar>;
+  ExecutionPayloadAndBlobsBundle: AllForksTypeOf<typeof denebSsz.ExecutionPayloadAndBlobsBundle>;
 };

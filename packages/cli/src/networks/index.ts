@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import got from "got";
-import {ENR} from "@chainsafe/discv5";
+import {ENR} from "@chainsafe/enr";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ApiError, getClient} from "@lodestar/api";
 import {getStateTypeFromBytes} from "@lodestar/beacon-node";
@@ -18,8 +18,18 @@ import * as ropsten from "./ropsten.js";
 import * as sepolia from "./sepolia.js";
 import * as holesky from "./holesky.js";
 import * as chiado from "./chiado.js";
+import * as ephemery from "./ephemery.js";
 
-export type NetworkName = "mainnet" | "dev" | "gnosis" | "goerli" | "ropsten" | "sepolia" | "holesky" | "chiado";
+export type NetworkName =
+  | "mainnet"
+  | "dev"
+  | "gnosis"
+  | "goerli"
+  | "ropsten"
+  | "sepolia"
+  | "holesky"
+  | "chiado"
+  | "ephemery";
 export const networkNames: NetworkName[] = [
   "mainnet",
   "gnosis",
@@ -28,6 +38,7 @@ export const networkNames: NetworkName[] = [
   "sepolia",
   "holesky",
   "chiado",
+  "ephemery",
 
   // Leave always as last network. The order matters for the --help printout
   "dev",
@@ -69,6 +80,8 @@ export function getNetworkData(network: NetworkName): {
       return holesky;
     case "chiado":
       return chiado;
+    case "ephemery":
+      return ephemery;
     default:
       throw Error(`Network not supported: ${network}`);
   }

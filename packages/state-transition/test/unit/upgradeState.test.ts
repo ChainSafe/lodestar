@@ -1,11 +1,12 @@
-import {expect} from "chai";
+import {expect, describe, it} from "vitest";
 import {ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
-import {createCachedBeaconState, PubkeyIndexMap} from "@lodestar/state-transition";
 import {createBeaconConfig, ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {config as chainConfig} from "@lodestar/config/default";
 
 import {upgradeStateToDeneb} from "../../src/slot/upgradeStateToDeneb.js";
+import {createCachedBeaconState} from "../../src/cache/stateCache.js";
+import {PubkeyIndexMap} from "../../src/cache/pubkeyCache.js";
 
 describe("upgradeState", () => {
   it("upgradeStateToDeneb", () => {
@@ -21,7 +22,7 @@ describe("upgradeState", () => {
       {skipSyncCommitteeCache: true}
     );
     const newState = upgradeStateToDeneb(stateView);
-    expect(() => newState.toValue()).to.not.throw();
+    expect(() => newState.toValue()).not.toThrow();
   });
 });
 

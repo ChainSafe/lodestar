@@ -26,12 +26,13 @@ import {
   computeProposers,
   getActivationChurnLimit,
 } from "../util/index.js";
-import {computeEpochShuffling, EpochShuffling} from "../util/epochShuffling.js";
+import {computeEpochShuffling, EpochShuffling, getShufflingDecisionBlock} from "../util/epochShuffling.js";
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
 import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
+import {getTotalSlashingsByIncrement} from "../epoch/processSlashings.js";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements.js";
 import {Index2PubkeyCache, PubkeyIndexMap, syncPubkeys} from "./pubkeyCache.js";
-import {BeaconStateAllForks, BeaconStateAltair} from "./types.js";
+import {BeaconStateAllForks, BeaconStateAltair, ShufflingGetter} from "./types.js";
 import {
   computeSyncCommitteeCache,
   getSyncCommitteeCache,
@@ -51,6 +52,7 @@ export type EpochCacheImmutableData = {
 export type EpochCacheOpts = {
   skipSyncCommitteeCache?: boolean;
   skipSyncPubkeys?: boolean;
+  shufflingGetter?: ShufflingGetter;
 };
 
 /** Defers computing proposers by persisting only the seed, and dropping it once indexes are computed */
@@ -130,6 +132,10 @@ export class EpochCache {
    * Effective balances, for altair processAttestations()
    */
   effectiveBalanceIncrements: EffectiveBalanceIncrements;
+  /**
+   * Total state.slashings by increment, for processSlashing()
+   */
+  totalSlashingsByIncrement: number;
   syncParticipantReward: number;
   syncProposerReward: number;
   /**
@@ -205,6 +211,7 @@ export class EpochCache {
     currentShuffling: EpochShuffling;
     nextShuffling: EpochShuffling;
     effectiveBalanceIncrements: EffectiveBalanceIncrements;
+    totalSlashingsByIncrement: number;
     syncParticipantReward: number;
     syncProposerReward: number;
     baseRewardPerIncrement: number;
@@ -230,6 +237,7 @@ export class EpochCache {
     this.currentShuffling = data.currentShuffling;
     this.nextShuffling = data.nextShuffling;
     this.effectiveBalanceIncrements = data.effectiveBalanceIncrements;
+    this.totalSlashingsByIncrement = data.totalSlashingsByIncrement;
     this.syncParticipantReward = data.syncParticipantReward;
     this.syncProposerReward = data.syncProposerReward;
     this.baseRewardPerIncrement = data.baseRewardPerIncrement;
@@ -276,9 +284,19 @@ export class EpochCache {
     const validatorCount = validators.length;
 
     const effectiveBalanceIncrements = getEffectiveBalanceIncrementsWithLen(validatorCount);
+    const totalSlashingsByIncrement = getTotalSlashingsByIncrement(state);
     const previousActiveIndices: ValidatorIndex[] = [];
     const currentActiveIndices: ValidatorIndex[] = [];
     const nextActiveIndices: ValidatorIndex[] = [];
+
+    // BeaconChain could provide a shuffling cache to avoid re-computing shuffling every epoch
+    // in that case, we don't need to compute shufflings again
+    const previousShufflingDecisionBlock = getShufflingDecisionBlock(state, previousEpoch);
+    const cachedPreviousShuffling = opts?.shufflingGetter?.(previousEpoch, previousShufflingDecisionBlock);
+    const currentShufflingDecisionBlock = getShufflingDecisionBlock(state, currentEpoch);
+    const cachedCurrentShuffling = opts?.shufflingGetter?.(currentEpoch, currentShufflingDecisionBlock);
+    const nextShufflingDecisionBlock = getShufflingDecisionBlock(state, nextEpoch);
+    const cachedNextShuffling = opts?.shufflingGetter?.(nextEpoch, nextShufflingDecisionBlock);
 
     for (let i = 0; i < validatorCount; i++) {
       const validator = validators[i];
@@ -286,15 +304,19 @@ export class EpochCache {
       // Note: Not usable for fork-choice balances since in-active validators are not zero'ed
       effectiveBalanceIncrements[i] = Math.floor(validator.effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
 
-      if (isActiveValidator(validator, previousEpoch)) {
+      // we only need to track active indices for previous, current and next epoch if we have to compute shufflings
+      // skip doing that if we already have cached shufflings
+      if (cachedPreviousShuffling == null && isActiveValidator(validator, previousEpoch)) {
         previousActiveIndices.push(i);
       }
       if (isActiveValidator(validator, currentEpoch)) {
-        currentActiveIndices.push(i);
+        if (cachedCurrentShuffling == null) {
+          currentActiveIndices.push(i);
+        }
         // We track totalActiveBalanceIncrements as ETH to fit total network balance in a JS number (53 bits)
         totalActiveBalanceIncrements += effectiveBalanceIncrements[i];
       }
-      if (isActiveValidator(validator, nextEpoch)) {
+      if (cachedNextShuffling == null && isActiveValidator(validator, nextEpoch)) {
         nextActiveIndices.push(i);
       }
 
@@ -317,11 +339,11 @@ export class EpochCache {
       throw Error("totalActiveBalanceIncrements >= Number.MAX_SAFE_INTEGER. MAX_EFFECTIVE_BALANCE is too low.");
     }
 
-    const currentShuffling = computeEpochShuffling(state, currentActiveIndices, currentEpoch);
-    const previousShuffling = isGenesis
-      ? currentShuffling
-      : computeEpochShuffling(state, previousActiveIndices, previousEpoch);
-    const nextShuffling = computeEpochShuffling(state, nextActiveIndices, nextEpoch);
+    const currentShuffling = cachedCurrentShuffling ?? computeEpochShuffling(state, currentActiveIndices, currentEpoch);
+    const previousShuffling =
+      cachedPreviousShuffling ??
+      (isGenesis ? currentShuffling : computeEpochShuffling(state, previousActiveIndices, previousEpoch));
+    const nextShuffling = cachedNextShuffling ?? computeEpochShuffling(state, nextActiveIndices, nextEpoch);
 
     const currentProposerSeed = getSeed(state, currentEpoch, DOMAIN_BEACON_PROPOSER);
 
@@ -368,7 +390,7 @@ export class EpochCache {
     // ```
     // So the returned value of is_active_validator(epoch) is guaranteed to not change during `MAX_SEED_LOOKAHEAD` epochs.
     //
-    // activeIndices size is dependant on the state epoch. The epoch is advanced after running the epoch transition, and
+    // activeIndices size is dependent on the state epoch. The epoch is advanced after running the epoch transition, and
     // the first block of the epoch process_block() call. So churnLimit must be computed at the end of the before epoch
     // transition and the result is valid until the end of the next epoch transition
     const churnLimit = getChurnLimit(config, currentShuffling.activeIndices.length);
@@ -413,6 +435,7 @@ export class EpochCache {
       currentShuffling,
       nextShuffling,
       effectiveBalanceIncrements,
+      totalSlashingsByIncrement,
       syncParticipantReward,
       syncProposerReward,
       baseRewardPerIncrement,
@@ -452,6 +475,7 @@ export class EpochCache {
       // Uint8Array, requires cloning, but it is cloned only when necessary before an epoch transition
       // See EpochCache.beforeEpochTransition()
       effectiveBalanceIncrements: this.effectiveBalanceIncrements,
+      totalSlashingsByIncrement: this.totalSlashingsByIncrement,
       // Basic types (numbers) cloned implicitly
       syncParticipantReward: this.syncParticipantReward,
       syncProposerReward: this.syncProposerReward,
@@ -514,7 +538,7 @@ export class EpochCache {
     // ```
     // So the returned value of is_active_validator(epoch) is guaranteed to not change during `MAX_SEED_LOOKAHEAD` epochs.
     //
-    // activeIndices size is dependant on the state epoch. The epoch is advanced after running the epoch transition, and
+    // activeIndices size is dependent on the state epoch. The epoch is advanced after running the epoch transition, and
     // the first block of the epoch process_block() call. So churnLimit must be computed at the end of the before epoch
     // transition and the result is valid until the end of the next epoch transition
     this.churnLimit = getChurnLimit(this.config, this.currentShuffling.activeIndices.length);

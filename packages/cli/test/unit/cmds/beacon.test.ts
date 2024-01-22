@@ -1,9 +1,9 @@
 import path from "node:path";
 import fs from "node:fs";
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {createFromJSON, createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {multiaddr} from "@multiformats/multiaddr";
-import {createKeypairFromPeerId, ENR, SignableENR} from "@chainsafe/discv5";
+import {createPrivateKeyFromPeerId, ENR, SignableENR} from "@chainsafe/enr";
 import {chainConfig} from "@lodestar/config/default";
 import {chainConfigToJson} from "@lodestar/config";
 import {LogLevel} from "@lodestar/utils";
@@ -33,8 +33,8 @@ describe("cmds / beacon / args handler", () => {
     });
 
     const bootEnrs = options.network.discv5?.bootEnrs ?? [];
-    expect(bootEnrs.includes(enr1)).to.be.true;
-    expect(bootEnrs.includes(enr2)).to.be.true;
+    expect(bootEnrs.includes(enr1)).toBe(true);
+    expect(bootEnrs.includes(enr2)).toBe(true);
   });
 
   it("Over-write ENR fields", async () => {
@@ -50,15 +50,15 @@ describe("cmds / beacon / args handler", () => {
 
     const enr = ENR.decodeTxt(options.network.discv5?.enr as string);
 
-    expect(enr.ip).to.equal(enrIp, "wrong enr.ip");
-    expect(enr.tcp).to.equal(enrTcp, "wrong enr.tcp");
+    expect(enr.ip).toBe(enrIp);
+    expect(enr.tcp).toBe(enrTcp);
   });
 
   it("Create different PeerId every run", async () => {
     const {peerId: peerId1} = await runBeaconHandlerInit({});
     const {peerId: peerId2} = await runBeaconHandlerInit({});
 
-    expect(peerId1.toString()).not.equal(peerId2.toString(), "peer ids must be different");
+    expect(peerId1.toString()).not.toBe(peerId2.toString());
   });
 
   it("Re-use existing peer", async () => {
@@ -66,7 +66,7 @@ describe("cmds / beacon / args handler", () => {
 
     const peerIdFile = path.join(testFilesDir, "peer-id.json");
     fs.writeFileSync(peerIdFile, JSON.stringify(exportToJSON(prevPeerId)));
-    const enr = SignableENR.createV4(createKeypairFromPeerId(prevPeerId));
+    const enr = SignableENR.createV4(createPrivateKeyFromPeerId(prevPeerId).privateKey);
     const enrFilePath = path.join(testFilesDir, "enr");
     fs.writeFileSync(enrFilePath, enr.encodeTxt());
 
@@ -74,7 +74,7 @@ describe("cmds / beacon / args handler", () => {
       persistNetworkIdentity: true,
     });
 
-    expect(peerId.toString()).equal(prevPeerId.toString(), "peer must be equal to persisted");
+    expect(peerId.toString()).toBe(prevPeerId.toString());
   });
 
   it("Set known deposit contract", async () => {
@@ -83,7 +83,7 @@ describe("cmds / beacon / args handler", () => {
     });
 
     // Okay to hardcode, since this value will never change
-    expect(options.eth1.depositContractDeployBlock).equal(11052984, "Wrong mainnet eth1.depositContractDeployBlock");
+    expect(options.eth1.depositContractDeployBlock).toBe(11052984);
   });
 
   it("Apply custom network name from config file", async () => {
@@ -99,19 +99,19 @@ describe("cmds / beacon / args handler", () => {
     });
 
     // Okay to hardcode, since this value will never change
-    expect(network).equal(networkName, "Wrong network name");
+    expect(network).toBe(networkName);
   });
 });
 
 describe("Test isLocalMultiAddr", () => {
   it("should return true for 127.0.0.1", () => {
     const multi0 = multiaddr("/ip4/127.0.0.1/udp/30303");
-    expect(isLocalMultiAddr(multi0)).to.equal(true);
+    expect(isLocalMultiAddr(multi0)).toBe(true);
   });
 
   it("should return false for 0.0.0.0", () => {
     const multi0 = multiaddr("/ip4/0.0.0.0/udp/30303");
-    expect(isLocalMultiAddr(multi0)).to.equal(false);
+    expect(isLocalMultiAddr(multi0)).toBe(false);
   });
 });
 
@@ -128,7 +128,7 @@ describe("initPeerIdAndEnr", () => {
       testLogger()
     );
 
-    expect(peerId1.toString()).not.equal(peerId2.toString(), "peer ids must be different");
+    expect(peerId1.toString()).not.toBe(peerId2.toString());
   });
 
   it("should reuse peer id, persistNetworkIdentity=true", async () => {
@@ -143,7 +143,7 @@ describe("initPeerIdAndEnr", () => {
       testLogger()
     );
 
-    expect(peerId1.toString()).to.equal(peerId2.toString(), "peer ids must be equal");
+    expect(peerId1.toString()).toBe(peerId2.toString());
   });
 
   it("should overwrite invalid peer id", async () => {
@@ -157,8 +157,8 @@ describe("initPeerIdAndEnr", () => {
     );
     const filePeerId = await createFromJSON(JSON.parse(fs.readFileSync(peerIdFile, "utf-8")));
 
-    expect(peerId1Str).not.equal(peerId2.toString(), "peer ids must be different");
-    expect(filePeerId.toString()).to.equal(peerId2.toString(), "peer ids must be equal");
+    expect(peerId1Str).not.toBe(peerId2.toString());
+    expect(filePeerId.toString()).toBe(peerId2.toString());
   });
 
   it("should overwrite invalid enr", async () => {
@@ -170,7 +170,7 @@ describe("initPeerIdAndEnr", () => {
 
     const validEnr = fs.readFileSync(enrFilePath, "utf-8");
 
-    expect(validEnr).not.equal(invalidEnr, "enrs must be different");
+    expect(validEnr).not.toBe(invalidEnr);
   });
 
   it("should overwrite enr that doesn't match peer id", async () => {
@@ -182,7 +182,7 @@ describe("initPeerIdAndEnr", () => {
 
     const {enr} = await initPeerIdAndEnr({persistNetworkIdentity: true} as BeaconArgs, testFilesDir, testLogger());
 
-    expect(enr.nodeId).not.equal(otherEnr, "enrs must be different");
+    expect(enr.nodeId).not.toBe(otherEnr);
   });
 });
 

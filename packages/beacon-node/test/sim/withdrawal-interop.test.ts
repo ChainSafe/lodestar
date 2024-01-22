@@ -27,7 +27,7 @@ import {logFilesDir} from "./params.js";
 import {shell} from "./shell.js";
 
 // NOTE: How to run
-// EL_BINARY_DIR=g11tech/geth:withdrawals EL_SCRIPT_DIR=gethdocker yarn mocha test/sim/withdrawal-interop.test.ts
+// EL_BINARY_DIR=g11tech/geth:withdrawalsfeb8 EL_SCRIPT_DIR=gethdocker yarn mocha test/sim/withdrawal-interop.test.ts
 // ```
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention */
@@ -160,8 +160,8 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     if (!payloadId) throw Error("InvalidPayloadId");
 
     // 2. Get the payload
-    const payloadAndBlockValue = await executionEngine.getPayload(ForkName.capella, payloadId);
-    const payload = payloadAndBlockValue.executionPayload;
+    const payloadWithValue = await executionEngine.getPayload(ForkName.capella, payloadId);
+    const payload = payloadWithValue.executionPayload;
 
     const stateRoot = toHexString(payload.stateRoot);
     const expectedStateRoot = "0x6160c5b91ea5ded26da07f6655762deddefdbed6ddab2edc60484cfb38ef16be";
