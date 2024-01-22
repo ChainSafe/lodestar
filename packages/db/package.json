@@ -42,7 +42,7 @@
     "@lodestar/utils": "^1.14.0",
     "@types/levelup": "^4.3.3",
     "it-all": "^3.0.4",
-    "classic-level": "matthewkeil/classic-level#temp-dep-install"
+    "classic-level": "^1.4.1"
   },
   "devDependencies": {
     "@lodestar/logger": "^1.14.0"
