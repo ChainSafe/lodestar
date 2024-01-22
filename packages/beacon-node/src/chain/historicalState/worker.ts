@@ -54,7 +54,7 @@ if (metricsRegister) {
       buckets: [0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1],
     }),
     epochTransitionStepTime: metricsRegister.histogram<{step: EpochTransitionStep}>({
-      name: "lodestar_stfn_epoch_transition_step_seconds",
+      name: "lodestar_historical_state_stfn_epoch_transition_step_seconds",
       help: "Time to call each step of epoch transition in seconds",
       labelNames: ["step"],
       buckets: [0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1],
@@ -72,28 +72,28 @@ if (metricsRegister) {
       buckets: [0.005, 0.01, 0.02, 0.05, 0.1, 1],
     }),
     stateHashTreeRootTime: metricsRegister.histogram<{source: StateHashTreeRootSource}>({
-      name: "lodestar_stfn_hash_tree_root_seconds",
+      name: "lodestar_historical_state_stfn_hash_tree_root_seconds",
       help: "Time to compute the hash tree root of a post state in seconds",
       buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5],
       labelNames: ["source"],
     }),
     preStateBalancesNodesPopulatedMiss: metricsRegister.gauge<{source: StateCloneSource}>({
-      name: "lodestar_stfn_balances_nodes_populated_miss_total",
+      name: "lodestar_historical_state_stfn_balances_nodes_populated_miss_total",
       help: "Total count state.balances nodesPopulated is false on stfn",
       labelNames: ["source"],
     }),
     preStateBalancesNodesPopulatedHit: metricsRegister.gauge<{source: StateCloneSource}>({
-      name: "lodestar_stfn_balances_nodes_populated_hit_total",
+      name: "lodestar_historical_state_stfn_balances_nodes_populated_hit_total",
       help: "Total count state.balances nodesPopulated is true on stfn",
       labelNames: ["source"],
     }),
     preStateValidatorsNodesPopulatedMiss: metricsRegister.gauge<{source: StateCloneSource}>({
-      name: "lodestar_stfn_validators_nodes_populated_miss_total",
+      name: "lodestar_historical_state_stfn_validators_nodes_populated_miss_total",
       help: "Total count state.validators nodesPopulated is false on stfn",
       labelNames: ["source"],
     }),
     preStateValidatorsNodesPopulatedHit: metricsRegister.gauge<{source: StateCloneSource}>({
-      name: "lodestar_stfn_validators_nodes_populated_hit_total",
+      name: "lodestar_historical_state_stfn_validators_nodes_populated_hit_total",
       help: "Total count state.validators nodesPopulated is true on stfn",
       labelNames: ["source"],
     }),
