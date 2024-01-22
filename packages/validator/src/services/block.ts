@@ -223,7 +223,7 @@ export class BlockProposingService {
       executionPayloadValue: `${formatBigDecimal(response.executionPayloadValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)} ETH`,
       consensusBlockValue: `${formatBigDecimal(response.consensusBlockValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)} ETH`,
       totalBlockValue: `${formatBigDecimal(
-        response.executionPayloadValue + gweiToWei(response.consensusBlockValue),
+        response.executionPayloadValue + response.consensusBlockValue,
         ETH_TO_WEI,
         MAX_DECIMAL_FACTOR
       )} ETH`,
