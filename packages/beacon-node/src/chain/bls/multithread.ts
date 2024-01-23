@@ -474,7 +474,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     // However, for normal node with only 2 to 7 subnet subscriptions per epoch this works until 27M validators
     // and not a problem in the near future
     // this is monitored on v1.11.0 https://github.com/ChainSafe/lodestar/pull/5912#issuecomment-1700320307
-    const timer = this.metrics?.bls.mainThread.signatureDeserializationDuration.startTimer();
+    // const timer = this.metrics?.bls.mainThread.signatureDeserializationDuration.startTimer();
     const signature = aggregateSignatures(
       job.sets.map((set) => {
         const sig = Signature.deserialize(set.signature, CoordType.affine);
@@ -482,7 +482,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
         return sig;
       })
     );
-    if (timer) timer();
+    // if (timer) timer();
 
     return {
       opts: job.opts,
@@ -611,7 +611,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       this.metrics?.bls.threadPool.batchRetries.inc(batchRetries);
       this.metrics?.bls.threadPool.batchSigsSuccess.inc(batchSigsSuccess);
       if (this.blsPoolType === BlsPoolType.workers) {
-        this.metrics?.bls.threadPool.jobsWorkerTime.inc({workerId}, workerJobTimeSec);
+        this.metrics?.bls.threadPool.jobsWorkerTime.inc({workerId: workerId ?? 0}, workerJobTimeSec);
         this.metrics?.bls.threadPool.latencyToWorker.observe(latencyToWorkerSec);
         this.metrics?.bls.threadPool.latencyFromWorker.observe(latencyFromWorkerSec);
       }

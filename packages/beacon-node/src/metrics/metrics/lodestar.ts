@@ -1,7 +1,7 @@
 import {EpochTransitionStep, StateCloneSource, StateHashTreeRootSource} from "@lodestar/state-transition";
 import {allForks} from "@lodestar/types";
 import {BlockSource} from "../../chain/blocks/types.js";
-import {JobQueueItemType} from "../../chain/bls/index.js";
+import {QueueJobType} from "../../chain/bls/types.js";
 import {BlockErrorCode} from "../../chain/errors/index.js";
 import {InsertOutcome} from "../../chain/opPools/types.js";
 import {RegenCaller, RegenFnName} from "../../chain/regen/interface.js";
@@ -420,7 +420,7 @@ export function createLodestarMetrics(
           name: "lodestar_bls_thread_pool_success_jobs_signature_sets_count",
           help: "Count of total verified signature sets",
         }),
-        errorAggregateSignatureSetsCount: register.gauge<{type: JobQueueItemType}>({
+        errorAggregateSignatureSetsCount: register.gauge<{type: QueueJobType}>({
           name: "lodestar_bls_thread_pool_error_aggregate_signature_sets_count",
           help: "Count of error when aggregating pubkeys or signatures",
           labelNames: ["type"],
@@ -446,12 +446,12 @@ export function createLodestarMetrics(
           name: "lodestar_bls_thread_pool_job_groups_started_total",
           help: "Count of total jobs groups started in bls thread pool, job groups include +1 jobs",
         }),
-        totalJobsStarted: register.gauge<{type: JobQueueItemType}>({
+        totalJobsStarted: register.gauge<{type: QueueJobType}>({
           name: "lodestar_bls_thread_pool_jobs_started_total",
           help: "Count of total jobs started in bls thread pool, jobs include +1 signature sets",
           labelNames: ["type"],
         }),
-        totalSigSetsStarted: register.gauge<{type: JobQueueItemType}>({
+        totalSigSetsStarted: register.gauge<{type: QueueJobType}>({
           name: "lodestar_bls_thread_pool_sig_sets_started_total",
           help: "Count of total signature sets started in bls thread pool, sig sets include 1 pk, msg, sig",
           labelNames: ["type"],
