@@ -17,6 +17,8 @@ import {
 import {nodeAssertion} from "../utils/simulation/assertions/nodeAssertion.js";
 import {mergeAssertion} from "../utils/simulation/assertions/mergeAssertion.js";
 import {createForkAssertion} from "../utils/simulation/assertions/forkAssertion.js";
+import {createAccountBalanceAssertion} from "../utils/simulation/assertions/accountBalanceAssertion.js";
+import {createExecutionHeadAssertion} from "../utils/simulation/assertions/executionHeadAssertion.js";
 
 const altairForkEpoch = 2;
 const bellatrixForkEpoch = 4;
@@ -78,40 +80,40 @@ const env = await SimulationEnvironment.initWithDefaults(
       keysCount: 32,
       remote: true,
     },
-    {
-      id: "node-3",
-      beacon: BeaconClient.Lodestar,
-      validator: {
-        type: ValidatorClient.Lodestar,
-        options: {
-          // this builder selection will make it use produceBlockV2 and respond with full block
-          clientOptions: {
-            useProduceBlockV3: false,
-            "builder.selection": "executiononly",
-          },
-        },
-      },
-      execution: ExecutionClient.Nethermind,
-      keysCount: 32,
-    },
-    {
-      id: "node-4",
-      beacon: BeaconClient.Lodestar,
-      validator: {
-        type: ValidatorClient.Lodestar,
-        options: {
-          // this builder selection will make it use produceBlindedBlockV2 and respond with blinded version
-          // of local block and subsequent publishing via publishBlindedBlock
-          clientOptions: {
-            useProduceBlockV3: false,
-            "builder.selection": "maxprofit",
-          },
-        },
-      },
-      execution: ExecutionClient.Nethermind,
-      keysCount: 32,
-    },
-    {id: "node-5", beacon: BeaconClient.Lighthouse, execution: ExecutionClient.Geth, keysCount: 32},
+    // {
+    //   id: "node-3",
+    //   beacon: BeaconClient.Lodestar,
+    //   validator: {
+    //     type: ValidatorClient.Lodestar,
+    //     options: {
+    //       // this builder selection will make it use produceBlockV2 and respond with full block
+    //       clientOptions: {
+    //         useProduceBlockV3: false,
+    //         "builder.selection": "executiononly",
+    //       },
+    //     },
+    //   },
+    //   execution: ExecutionClient.Nethermind,
+    //   keysCount: 32,
+    // },
+    // {
+    //   id: "node-4",
+    //   beacon: BeaconClient.Lodestar,
+    //   validator: {
+    //     type: ValidatorClient.Lodestar,
+    //     options: {
+    //       // this builder selection will make it use produceBlindedBlockV2 and respond with blinded version
+    //       // of local block and subsequent publishing via publishBlindedBlock
+    //       clientOptions: {
+    //         useProduceBlockV3: false,
+    //         "builder.selection": "maxprofit",
+    //       },
+    //     },
+    //   },
+    //   execution: ExecutionClient.Nethermind,
+    //   keysCount: 32,
+    // },
+    // {id: "node-5", beacon: BeaconClient.Lighthouse, execution: ExecutionClient.Geth, keysCount: 32},
   ]
 );
 
@@ -131,6 +133,25 @@ env.tracker.register({
       : AssertionMatch.None;
   },
 });
+
+env.tracker.register(
+  createAccountBalanceAssertion({
+    address: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    sendTransactionsAtSlot: [
+      env.clock.getFirstSlotOfEpoch(altairForkEpoch) + 4,
+      env.clock.getFirstSlotOfEpoch(bellatrixForkEpoch) + 4,
+    ],
+    validateTotalBalanceAt: [env.clock.getFirstSlotOfEpoch(bellatrixForkEpoch + 1) + 4],
+    targetNode: env.nodes[0],
+  })
+);
+
+env.tracker.register(
+  createExecutionHeadAssertion({
+    // Second last slot of second bellatrix epoch
+    checkForSlot: [env.clock.getLastSlotOfEpoch(bellatrixForkEpoch + 1) - 1],
+  })
+);
 
 await env.start({runTimeoutMs: estimatedTimeoutMs});
 await connectAllNodes(env.nodes);
