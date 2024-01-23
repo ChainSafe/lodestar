@@ -39,7 +39,7 @@ export const generateLodestarValidatorNode: ValidatorNodeGenerator<ValidatorClie
     logFile: "none",
     importKeystores: keystoresDir,
     importKeystoresPassword: keystoresSecretFilePath,
-    useProduceBlockV3: useProduceBlockV3 ?? defaultOptions.useProduceBlockV3,
+    useProduceBlockV3: useProduceBlockV3 ?? false,
     "builder.selection": builderSelection ?? defaultOptions.builderSelection,
     blindedLocal: blindedLocal ?? defaultOptions.blindedLocal,
   } as unknown as IValidatorCliArgs & GlobalArgs;

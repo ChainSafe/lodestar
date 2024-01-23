@@ -102,7 +102,7 @@ describe("beacon state api utils", function () {
     });
   });
 
-  describe("getStateValidatorIndex", async function () {
+  describe("getStateValidatorIndex", () => {
     const state = generateCachedAltairState();
     const pubkey2index = state.epochCtx.pubkey2index;
 

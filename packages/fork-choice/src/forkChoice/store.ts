@@ -1,7 +1,7 @@
 import {toHexString} from "@chainsafe/ssz";
 import {EffectiveBalanceIncrements, CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {phase0, Slot, RootHex, ValidatorIndex} from "@lodestar/types";
-import {CheckpointHexWithBalance} from "./interface.js";
+import {CheckpointHexWithTotalBalance, CheckpointHexWithBalance} from "./interface.js";
 
 /**
  * Stores checkpoints in a hybrid format:
@@ -37,7 +37,8 @@ export type JustifiedBalancesGetter = (
  */
 export interface IForkChoiceStore {
   currentSlot: Slot;
-  justified: CheckpointHexWithBalance;
+  get justified(): CheckpointHexWithTotalBalance;
+  set justified(justified: CheckpointHexWithBalance);
   unrealizedJustified: CheckpointHexWithBalance;
   finalizedCheckpoint: CheckpointWithHex;
   unrealizedFinalizedCheckpoint: CheckpointWithHex;
@@ -49,7 +50,7 @@ export interface IForkChoiceStore {
  * IForkChoiceStore implementer which emits forkChoice events on updated justified and finalized checkpoints.
  */
 export class ForkChoiceStore implements IForkChoiceStore {
-  private _justified: CheckpointHexWithBalance;
+  private _justified: CheckpointHexWithTotalBalance;
   unrealizedJustified: CheckpointHexWithBalance;
   private _finalizedCheckpoint: CheckpointWithHex;
   unrealizedFinalizedCheckpoint: CheckpointWithHex;
@@ -66,9 +67,10 @@ export class ForkChoiceStore implements IForkChoiceStore {
       onFinalized: (cp: CheckpointWithHex) => void;
     }
   ) {
-    const justified: CheckpointHexWithBalance = {
+    const justified = {
       checkpoint: toCheckpointWithHex(justifiedCheckpoint),
       balances: justifiedBalances,
+      totalBalance: computeTotalBalance(justifiedBalances),
     };
     this._justified = justified;
     this.unrealizedJustified = justified;
@@ -76,11 +78,11 @@ export class ForkChoiceStore implements IForkChoiceStore {
     this.unrealizedFinalizedCheckpoint = this._finalizedCheckpoint;
   }
 
-  get justified(): CheckpointHexWithBalance {
+  get justified(): CheckpointHexWithTotalBalance {
     return this._justified;
   }
   set justified(justified: CheckpointHexWithBalance) {
-    this._justified = justified;
+    this._justified = {...justified, totalBalance: computeTotalBalance(justified.balances)};
     this.events?.onJustified(justified.checkpoint);
   }
 
@@ -107,4 +109,12 @@ export function toCheckpointWithHex(checkpoint: phase0.Checkpoint): CheckpointWi
 
 export function equalCheckpointWithHex(a: CheckpointWithHex, b: CheckpointWithHex): boolean {
   return a.epoch === b.epoch && a.rootHex === b.rootHex;
+}
+
+export function computeTotalBalance(balances: EffectiveBalanceIncrements): number {
+  let totalBalance = 0;
+  for (let i = 0; i < balances.length; i++) {
+    totalBalance += balances[i];
+  }
+  return totalBalance;
 }

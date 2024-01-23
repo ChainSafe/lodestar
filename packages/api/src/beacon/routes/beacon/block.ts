@@ -39,6 +39,14 @@ export type BlockHeaderResponse = {
 };
 
 export enum BroadcastValidation {
+  /* 
+  NOTE: The value `none` is not part of the spec. 
+
+  In case a node is configured only with the unknownBlockSync, it needs to know the unknown parent blocks on the network 
+  to initiate the syncing process. Such cases can be covered only if we publish blocks and make sure no gossip validation 
+  is performed on those. But this behavior is not the default.
+  */
+  none = "none",
   gossip = "gossip",
   consensus = "consensus",
   consensusAndEquivocation = "consensus_and_equivocation",

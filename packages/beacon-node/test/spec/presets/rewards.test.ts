@@ -1,5 +1,5 @@
 import path from "node:path";
-import {expect} from "chai";
+import {expect} from "vitest";
 import {VectorCompositeType} from "@chainsafe/ssz";
 import {BeaconStateAllForks, beforeProcessEpoch} from "@lodestar/state-transition";
 import {getRewardsAndPenalties} from "@lodestar/state-transition/epoch";
@@ -58,7 +58,7 @@ const rewards: TestRunnerFn<RewardTestCase, Deltas> = (fork) => {
           testCase.inactivity_penalty_deltas,
         ]),
       expectFunc: (testCase, expected, actual) => {
-        expect(actual).to.deep.equal(expected);
+        expect(actual).toEqual(expected);
       },
       // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
     },

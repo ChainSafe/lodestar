@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {expect} from "vitest";
 import {LodestarError, mapValues} from "@lodestar/utils";
 
 export function expectThrowsLodestarError(fn: () => void, expectedErr: LodestarError<any> | string): void {
@@ -36,7 +36,7 @@ export function expectLodestarErrorCode<T extends {code: string}>(err: LodestarE
   if (!(err instanceof LodestarError)) throw Error(`err not instanceof LodestarError: ${(err as Error).stack}`);
 
   const code = err.type.code;
-  expect(code).to.deep.equal(expectedCode, "Wrong LodestarError code");
+  expect(code).toEqualWithMessage(expectedCode, "Wrong LodestarError code");
 }
 
 export function expectLodestarError<T extends {code: string}>(err1: LodestarError<T>, err2: LodestarError<T>): void {
@@ -47,7 +47,7 @@ export function expectLodestarError<T extends {code: string}>(err1: LodestarErro
 
   const errMeta1 = getErrorMetadata(err1);
   const errMeta2 = getErrorMetadata(err2);
-  expect(errMeta1).to.deep.equal(errMeta2, "Wrong LodestarError metadata");
+  expect(errMeta1).toEqualWithMessage(errMeta2, "Wrong LodestarError metadata");
 }
 
 export function getErrorMetadata<T extends {code: string}>(err: LodestarError<T> | Error | unknown): unknown {

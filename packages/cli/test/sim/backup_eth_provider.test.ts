@@ -1,53 +1,28 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import path from "node:path";
 import {activePreset} from "@lodestar/params";
-import {nodeAssertion} from "../utils/simulation/assertions/nodeAssertion.js";
-import {CLIQUE_SEALING_PERIOD, SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/constants.js";
-import {AssertionMatch, BeaconClient, ExecutionClient} from "../utils/simulation/interfaces.js";
 import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
-import {
-  getEstimatedTimeInSecForRun,
-  getEstimatedTTD,
-  logFilesDir,
-  replaceIpFromUrl,
-} from "../utils/simulation/utils/index.js";
+import {nodeAssertion} from "../utils/simulation/assertions/nodeAssertion.js";
+import {AssertionMatch, BeaconClient, ExecutionClient} from "../utils/simulation/interfaces.js";
+import {defineSimTestConfig, logFilesDir, replaceIpFromUrl} from "../utils/simulation/utils/index.js";
 import {connectAllNodes, waitForSlot} from "../utils/simulation/utils/network.js";
 
-const genesisDelaySeconds = 20 * SIM_TESTS_SECONDS_PER_SLOT;
 const altairForkEpoch = 2;
 const bellatrixForkEpoch = 4;
-// Make sure bellatrix started before TTD reach
-const additionalSlotsForTTD = activePreset.SLOTS_PER_EPOCH - 2;
 const runTillEpoch = 6;
 const syncWaitEpoch = 2;
 
-const runTimeoutMs =
-  getEstimatedTimeInSecForRun({
-    genesisDelaySeconds,
-    secondsPerSlot: SIM_TESTS_SECONDS_PER_SLOT,
-    runTill: runTillEpoch + syncWaitEpoch,
-    // After adding Nethermind its took longer to complete
-    graceExtraTimeFraction: 0.3,
-  }) * 1000;
-
-const ttd = getEstimatedTTD({
-  genesisDelaySeconds,
-  bellatrixForkEpoch: bellatrixForkEpoch,
-  secondsPerSlot: SIM_TESTS_SECONDS_PER_SLOT,
-  cliqueSealingPeriod: CLIQUE_SEALING_PERIOD,
-  additionalSlots: additionalSlotsForTTD,
+const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
+  ALTAIR_FORK_EPOCH: altairForkEpoch,
+  BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
+  runTillEpoch: runTillEpoch + syncWaitEpoch,
 });
 
 const env = await SimulationEnvironment.initWithDefaults(
   {
     id: "backup-eth-provider",
     logsDir: path.join(logFilesDir, "backup-eth-provider"),
-    chainConfig: {
-      ALTAIR_FORK_EPOCH: altairForkEpoch,
-      BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
-      GENESIS_DELAY: genesisDelaySeconds,
-      TERMINAL_TOTAL_DIFFICULTY: ttd,
-    },
+    forkConfig,
   },
   [{id: "node-1", beacon: BeaconClient.Lodestar, execution: ExecutionClient.Geth, keysCount: 32, mining: true}]
 );
@@ -88,7 +63,7 @@ const node3 = await env.createNodePair({
 env.nodes.push(node2);
 env.nodes.push(node3);
 
-await env.start({runTimeoutMs});
+await env.start({runTimeoutMs: estimatedTimeoutMs});
 await connectAllNodes(env.nodes);
 
 await waitForSlot(env.clock.getLastSlotOfEpoch(1), env.nodes, {silent: true, env});

@@ -43,7 +43,7 @@ describe("beacon state api", function () {
     await bn.close();
   });
 
-  describe("getEpochCommittees", async () => {
+  describe("getEpochCommittees", () => {
     it("should return all committees for the given state", async () => {
       const res = await client.getEpochCommittees("head");
       ApiError.assert(res);

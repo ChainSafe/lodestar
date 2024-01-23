@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {expect} from "vitest";
 import {altair, ssz, allForks} from "@lodestar/types";
 import {isForkLightClient} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";

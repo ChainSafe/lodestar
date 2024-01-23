@@ -201,7 +201,7 @@ export class ForkChoice implements IForkChoice {
     if (this.opts?.proposerBoostEnabled && this.proposerBoostRoot) {
       const proposerBoostScore =
         this.justifiedProposerBoostScore ??
-        computeProposerBoostScoreFromBalances(this.fcStore.justified.balances, {
+        getProposerScore(this.fcStore.justified.totalBalance, {
           slotsPerEpoch: SLOTS_PER_EPOCH,
           proposerScoreBoost: this.config.PROPOSER_SCORE_BOOST,
         });
@@ -547,7 +547,9 @@ export class ForkChoice implements IForkChoice {
   onAttesterSlashing(attesterSlashing: phase0.AttesterSlashing): void {
     // TODO: we already call in in state-transition, find a way not to recompute it again
     const intersectingIndices = getAttesterSlashableIndices(attesterSlashing);
-    intersectingIndices.forEach((validatorIndex) => this.fcStore.equivocatingIndices.add(validatorIndex));
+    for (const validatorIndex of intersectingIndices) {
+      this.fcStore.equivocatingIndices.add(validatorIndex);
+    }
   }
 
   getLatestMessage(validatorIndex: ValidatorIndex): LatestMessage | undefined {
@@ -1260,32 +1262,10 @@ export function assertValidTerminalPowBlock(
   }
 }
 
-function computeProposerBoostScore(
-  {
-    justifiedTotalActiveBalanceByIncrement,
-    justifiedActiveValidators,
-  }: {justifiedTotalActiveBalanceByIncrement: number; justifiedActiveValidators: number},
+export function getProposerScore(
+  justifiedTotalActiveBalanceByIncrement: number,
   config: {slotsPerEpoch: number; proposerScoreBoost: number}
 ): number {
-  const avgBalanceByIncrement = Math.floor(justifiedTotalActiveBalanceByIncrement / justifiedActiveValidators);
-  const committeeSize = Math.floor(justifiedActiveValidators / config.slotsPerEpoch);
-  const committeeWeight = committeeSize * avgBalanceByIncrement;
-  const proposerScore = Math.floor((committeeWeight * config.proposerScoreBoost) / 100);
-  return proposerScore;
-}
-
-export function computeProposerBoostScoreFromBalances(
-  justifiedBalances: EffectiveBalanceIncrements,
-  config: {slotsPerEpoch: number; proposerScoreBoost: number}
-): number {
-  let justifiedTotalActiveBalanceByIncrement = 0,
-    justifiedActiveValidators = 0;
-  for (let i = 0; i < justifiedBalances.length; i++) {
-    if (justifiedBalances[i] > 0) {
-      justifiedActiveValidators += 1;
-      // justified balances here are by increment
-      justifiedTotalActiveBalanceByIncrement += justifiedBalances[i];
-    }
-  }
-  return computeProposerBoostScore({justifiedTotalActiveBalanceByIncrement, justifiedActiveValidators}, config);
+  const committeeWeight = Math.floor(justifiedTotalActiveBalanceByIncrement / config.slotsPerEpoch);
+  return Math.floor((committeeWeight * config.proposerScoreBoost) / 100);
 }

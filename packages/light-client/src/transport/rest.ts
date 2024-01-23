@@ -80,11 +80,11 @@ export class LightClientRestTransport extends (EventEmitter as {new (): RestEven
       (event) => {
         switch (event.type) {
           case routes.events.EventType.lightClientOptimisticUpdate:
-            this.eventEmitter.emit(routes.events.EventType.lightClientOptimisticUpdate, event.message);
+            this.eventEmitter.emit(routes.events.EventType.lightClientOptimisticUpdate, event.message.data);
             break;
 
           case routes.events.EventType.lightClientFinalityUpdate:
-            this.eventEmitter.emit(routes.events.EventType.lightClientFinalityUpdate, event.message);
+            this.eventEmitter.emit(routes.events.EventType.lightClientFinalityUpdate, event.message.data);
             break;
         }
       }

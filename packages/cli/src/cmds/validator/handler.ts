@@ -227,7 +227,7 @@ function getProposerConfigFromArgs(
       selection: parseBuilderSelection(
         args["builder.selection"] ?? (args["builder"] ? defaultOptions.builderAliasSelection : undefined)
       ),
-      boostFactor: args["builder.boostFactor"],
+      boostFactor: parseBuilderBoostFactor(args["builder.boostFactor"]),
     },
   };
 
@@ -266,7 +266,7 @@ function parseBuilderSelection(builderSelection?: string): routes.validator.Buil
       case "executiononly":
         break;
       default:
-        throw Error("Invalid input for builder selection, check help.");
+        throw new YargsError("Invalid input for builder selection, check help");
     }
   }
   return builderSelection as routes.validator.BuilderSelection;
@@ -280,9 +280,19 @@ function parseBroadcastValidation(broadcastValidation?: string): routes.beacon.B
       case "consensus_and_equivocation":
         break;
       default:
-        throw Error("Invalid input for broadcastValidation, check help");
+        throw new YargsError("Invalid input for broadcastValidation, check help");
     }
   }
 
   return broadcastValidation as routes.beacon.BroadcastValidation;
+}
+
+function parseBuilderBoostFactor(boostFactor?: string): bigint | undefined {
+  if (boostFactor === undefined) return;
+
+  if (!/^\d+$/.test(boostFactor)) {
+    throw new YargsError("Invalid input for builder boost factor, must be a valid number without decimals");
+  }
+
+  return BigInt(boostFactor);
 }

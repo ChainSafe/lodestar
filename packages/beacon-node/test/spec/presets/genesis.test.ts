@@ -1,6 +1,6 @@
 import path from "node:path";
-import {expect} from "chai";
-import {phase0, Root, ssz, TimeSeconds, allForks, eip6110} from "@lodestar/types";
+import {expect} from "vitest";
+import {phase0, Root, ssz, TimeSeconds, allForks, deneb, eip6110} from "@lodestar/types";
 import {InputType} from "@lodestar/spec-test-util";
 import {
   BeaconStateAllForks,
@@ -109,7 +109,7 @@ const genesisValidity: TestRunnerFn<GenesisValidityTestCase, boolean> = (fork) =
       },
       getExpected: (testCase) => testCase.is_valid,
       expectFunc: (testCase, expected, actual) => {
-        expect(actual).to.be.equal(expected, "isValidGenesisState is not" + expected);
+        expect(actual).toEqualWithMessage(expected, "isValidGenesisState is not" + expected);
       },
     },
   };

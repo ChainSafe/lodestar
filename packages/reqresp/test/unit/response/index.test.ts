@@ -1,5 +1,5 @@
 import {describe, it, expect, beforeEach, afterEach} from "vitest";
-import {PeerId} from "@libp2p/interface/peer-id";
+import {PeerId} from "@libp2p/interface";
 import {LodestarError, fromHex} from "@lodestar/utils";
 import {getEmptyLogger} from "@lodestar/logger/empty";
 import {Protocol, RespStatus} from "../../../src/index.js";

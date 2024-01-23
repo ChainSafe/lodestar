@@ -27,11 +27,10 @@ import {
   Wei,
   bellatrix,
   isBlindedBeaconBlock,
-  Gwei,
 } from "@lodestar/types";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
-import {Logger, isErrorAborted, pruneSetToMax, sleep, toHex} from "@lodestar/utils";
+import {Logger, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toHex} from "@lodestar/utils";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
@@ -44,7 +43,7 @@ import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {ChainEventEmitter, ChainEvent} from "./emitter.js";
-import {IBeaconChain, ProposerPreparationData, BlockHash, StateGetOpts} from "./interface.js";
+import {IBeaconChain, ProposerPreparationData, BlockHash, StateGetOpts, CommonBlockBody} from "./interface.js";
 import {IChainOptions} from "./options.js";
 import {QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
 import {initializeForkChoice} from "./forkChoice/index.js";
@@ -73,7 +72,7 @@ import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {AssembledBlockType, BlobsResultType, BlockType} from "./produceBlock/index.js";
-import {BlockAttributes, produceBlockBody} from "./produceBlock/produceBlockBody.js";
+import {BlockAttributes, produceBlockBody, produceCommonBlockBody} from "./produceBlock/produceBlockBody.js";
 import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
 import {BlockInput} from "./blocks/types.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
@@ -301,6 +300,10 @@ export class BeaconChain implements IBeaconChain {
     await this.bls.close();
   }
 
+  seenBlock(blockRoot: RootHex): boolean {
+    return this.seenGossipBlockInput.hasBlock(blockRoot) || this.forkChoice.hasBlockHex(blockRoot);
+  }
+
   regenCanAcceptWork(): boolean {
     return this.regen.canAcceptWork();
   }
@@ -463,37 +466,58 @@ export class BeaconChain implements IBeaconChain {
         return {block: data, executionOptimistic: isOptimisticBlock(block)};
       }
       // If block is not found in hot db, try cold db since there could be an archive cycle happening
-      // TODO: Add a lock to the archiver to have determinstic behaviour on where are blocks
+      // TODO: Add a lock to the archiver to have deterministic behavior on where are blocks
     }
 
     const data = await this.db.blockArchive.getByRoot(fromHexString(root));
     return data && {block: data, executionOptimistic: false};
   }
 
-  produceBlock(blockAttributes: BlockAttributes): Promise<{
+  async produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody> {
+    const {slot} = blockAttributes;
+    const head = this.forkChoice.getHead();
+    const state = await this.regen.getBlockSlotState(
+      head.blockRoot,
+      slot,
+      {dontTransferCache: true},
+      RegenCaller.produceBlock
+    );
+    const parentBlockRoot = fromHexString(head.blockRoot);
+
+    // TODO: To avoid breaking changes for metric define this attribute
+    const blockType = BlockType.Full;
+
+    return produceCommonBlockBody.call(this, blockType, state, {
+      ...blockAttributes,
+      parentBlockRoot,
+      parentSlot: slot - 1,
+    });
+  }
+
+  produceBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{
     block: allForks.BeaconBlock;
     executionPayloadValue: Wei;
-    consensusBlockValue: Gwei;
+    consensusBlockValue: Wei;
     shouldOverrideBuilder?: boolean;
   }> {
     return this.produceBlockWrapper<BlockType.Full>(BlockType.Full, blockAttributes);
   }
 
-  produceBlindedBlock(blockAttributes: BlockAttributes): Promise<{
+  produceBlindedBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{
     block: allForks.BlindedBeaconBlock;
     executionPayloadValue: Wei;
-    consensusBlockValue: Gwei;
+    consensusBlockValue: Wei;
   }> {
     return this.produceBlockWrapper<BlockType.Blinded>(BlockType.Blinded, blockAttributes);
   }
 
   async produceBlockWrapper<T extends BlockType>(
     blockType: T,
-    {randaoReveal, graffiti, slot, feeRecipient}: BlockAttributes
+    {randaoReveal, graffiti, slot, feeRecipient, commonBlockBody}: BlockAttributes & {commonBlockBody?: CommonBlockBody}
   ): Promise<{
     block: AssembledBlockType<T>;
     executionPayloadValue: Wei;
-    consensusBlockValue: Gwei;
+    consensusBlockValue: Wei;
     shouldOverrideBuilder?: boolean;
   }> {
     const head = this.forkChoice.getHead();
@@ -520,6 +544,7 @@ export class BeaconChain implements IBeaconChain {
         parentBlockRoot,
         proposerIndex,
         proposerPubKey,
+        commonBlockBody,
       }
     );
 
@@ -572,7 +597,7 @@ export class BeaconChain implements IBeaconChain {
       this.metrics?.blockProductionCaches.producedContentsCache.set(this.producedContentsCache.size);
     }
 
-    return {block, executionPayloadValue, consensusBlockValue: proposerReward, shouldOverrideBuilder};
+    return {block, executionPayloadValue, consensusBlockValue: gweiToWei(proposerReward), shouldOverrideBuilder};
   }
 
   /**
@@ -974,9 +999,9 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void> {
-    proposers.forEach((proposer) => {
+    for (const proposer of proposers) {
       this.beaconProposerCache.add(epoch, proposer);
-    });
+    }
   }
 
   updateBuilderStatus(clockSlot: Slot): void {

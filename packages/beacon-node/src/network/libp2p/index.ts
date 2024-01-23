@@ -1,18 +1,17 @@
-import {PeerId} from "@libp2p/interface/peer-id";
+import {PeerId} from "@libp2p/interface";
 import {Registry} from "prom-client";
-import {ENR} from "@chainsafe/discv5";
-import type {Components} from "libp2p/components";
-import {identifyService} from "libp2p/identify";
+import {ENR} from "@chainsafe/enr";
+import {identify} from "@libp2p/identify";
 import {bootstrap} from "@libp2p/bootstrap";
 import {mdns} from "@libp2p/mdns";
 import {createLibp2p} from "libp2p";
 import {mplex} from "@libp2p/mplex";
 import {prometheusMetrics} from "@libp2p/prometheus-metrics";
 import {tcp} from "@libp2p/tcp";
+import {noise} from "@chainsafe/libp2p-noise";
 import {defaultNetworkOptions, NetworkOptions} from "../options.js";
 import {Eth2PeerDataStore} from "../peers/datastore.js";
-import {Libp2p} from "../interface.js";
-import {createNoise} from "./noise.js";
+import {Libp2p, LodestarComponents} from "../interface.js";
 
 export type NodeJsLibp2pOpts = {
   peerStoreDir?: string;
@@ -70,7 +69,7 @@ export async function createNodeJsLibp2p(
       listen: localMultiaddrs,
       announce: [],
     },
-    connectionEncryption: [createNoise()],
+    connectionEncryption: [noise()],
     // Reject connections when the server's connection count gets high
     transports: [
       tcp({
@@ -98,7 +97,6 @@ export async function createNodeJsLibp2p(
       // dialer config
       maxParallelDials: 100,
       maxPeerAddrsToDial: 4,
-      maxParallelDialsPerPeer: 2,
       dialTimeout: 30_000,
 
       // Rely entirely on lodestar's peer manager to prune connections
@@ -111,13 +109,15 @@ export async function createNodeJsLibp2p(
     },
     datastore,
     services: {
-      identify: identifyService({
+      identify: identify({
         agentVersion: networkOpts.private ? "" : networkOpts.version ? `lodestar/${networkOpts.version}` : "lodestar",
       }),
       // individual components are specified because the components object is a Proxy
       // and passing it here directly causes problems downstream, not to mention is slowwww
-      components: (components: Components) => ({
+      components: (components: LodestarComponents) => ({
         peerId: components.peerId,
+        nodeInfo: components.nodeInfo,
+        logger: components.logger,
         events: components.events,
         addressManager: components.addressManager,
         peerStore: components.peerStore,

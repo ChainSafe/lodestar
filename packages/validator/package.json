@@ -1,6 +1,6 @@
 {
   "name": "@lodestar/validator",
-  "version": "1.13.0",
+  "version": "1.14.0",
   "description": "A Typescript implementation of the validator client",
   "author": "ChainSafe Systems",
   "license": "LGPL-3.0",
@@ -28,11 +28,10 @@
     "lint": "eslint --color --ext .ts src/ test/",
     "lint:fix": "yarn run lint --fix",
     "pretest": "yarn run check-types",
-    "test:unit": "nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'",
+    "test:unit": "vitest --run --dir test/unit/",
     "test": "yarn test:unit",
-    "test:e2e:only": "mocha 'test/e2e/**/*.test.ts'",
-    "test:spec": "mocha 'test/spec/**/*.test.ts'",
-    "test:e2e": "LODESTAR_PRESET=minimal yarn run download-spec-tests && yarn test:spec && yarn test:e2e:only",
+    "test:spec": "vitest --run --config vitest.config.spec.ts --dir test/spec/",
+    "test:e2e": "LODESTAR_PRESET=mainnet vitest --run --config vitest.config.e2e.ts --dir test/e2e",
     "download-spec-tests": "node --loader=ts-node/esm test/spec/downloadTests.ts",
     "coverage": "codecov -F lodestar-validator",
     "check-readme": "typescript-docs-verifier"
@@ -50,18 +49,18 @@
   "dependencies": {
     "@chainsafe/bls": "7.1.1",
     "@chainsafe/ssz": "^0.14.0",
-    "@lodestar/api": "^1.13.0",
-    "@lodestar/config": "^1.13.0",
-    "@lodestar/db": "^1.13.0",
-    "@lodestar/params": "^1.13.0",
-    "@lodestar/state-transition": "^1.13.0",
-    "@lodestar/types": "^1.13.0",
-    "@lodestar/utils": "^1.13.0",
+    "@lodestar/api": "^1.14.0",
+    "@lodestar/config": "^1.14.0",
+    "@lodestar/db": "^1.14.0",
+    "@lodestar/params": "^1.14.0",
+    "@lodestar/state-transition": "^1.14.0",
+    "@lodestar/types": "^1.14.0",
+    "@lodestar/utils": "^1.14.0",
     "bigint-buffer": "^1.1.5",
     "strict-event-emitter-types": "^2.0.0"
   },
   "devDependencies": {
-    "@lodestar/test-utils": "^1.13.0",
+    "@lodestar/test-utils": "^1.14.0",
     "bigint-buffer": "^1.1.5",
     "rimraf": "^4.4.1"
   }

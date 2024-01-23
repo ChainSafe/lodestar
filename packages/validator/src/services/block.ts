@@ -11,7 +11,7 @@ import {
 } from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPreBlobs, ForkBlobs, ForkSeq, ForkExecution} from "@lodestar/params";
-import {ETH_TO_GWEI, ETH_TO_WEI, extendError, gweiToWei, prettyBytes} from "@lodestar/utils";
+import {ETH_TO_WEI, extendError, prettyBytes} from "@lodestar/utils";
 import {Api, ApiError, routes} from "@lodestar/api";
 import {IClock, LoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
@@ -55,7 +55,7 @@ type FullOrBlindedBlockWithContents =
 
 type DebugLogCtx = {debugLogCtx: Record<string, string | boolean | undefined>};
 type BlockProposalOpts = {
-  useProduceBlockV3: boolean;
+  useProduceBlockV3?: boolean;
   broadcastValidation: routes.beacon.BroadcastValidation;
   blindedLocal: boolean;
 };
@@ -125,6 +125,7 @@ export class BlockProposingService {
         this.validatorStore.getBuilderSelectionParams(pubkeyHex);
       const feeRecipient = this.validatorStore.getFeeRecipient(pubkeyHex);
       const blindedLocal = this.opts.blindedLocal;
+      const useProduceBlockV3 = this.opts.useProduceBlockV3 ?? this.config.getForkSeq(slot) >= ForkSeq.deneb;
 
       this.logger.debug("Producing block", {
         ...debugLogCtx,
@@ -132,12 +133,12 @@ export class BlockProposingService {
         builderBoostFactor,
         feeRecipient,
         strictFeeRecipientCheck,
-        useProduceBlockV3: this.opts.useProduceBlockV3,
+        useProduceBlockV3,
         blindedLocal,
       });
       this.metrics?.proposerStepCallProduceBlock.observe(this.clock.secFromSlot(slot));
 
-      const produceBlockFn = this.opts.useProduceBlockV3 ? this.produceBlockWrapper : this.produceBlockV2Wrapper;
+      const produceBlockFn = useProduceBlockV3 ? this.produceBlockWrapper : this.produceBlockV2Wrapper;
       const produceOpts = {
         feeRecipient,
         strictFeeRecipientCheck,
@@ -220,9 +221,9 @@ export class BlockProposingService {
       executionPayloadBlinded: response.executionPayloadBlinded,
       // winston logger doesn't like bigint
       executionPayloadValue: `${formatBigDecimal(response.executionPayloadValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)} ETH`,
-      consensusBlockValue: `${formatBigDecimal(response.consensusBlockValue, ETH_TO_GWEI, MAX_DECIMAL_FACTOR)} ETH`,
+      consensusBlockValue: `${formatBigDecimal(response.consensusBlockValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)} ETH`,
       totalBlockValue: `${formatBigDecimal(
-        response.executionPayloadValue + gweiToWei(response.consensusBlockValue),
+        response.executionPayloadValue + response.consensusBlockValue,
         ETH_TO_WEI,
         MAX_DECIMAL_FACTOR
       )} ETH`,
@@ -264,7 +265,7 @@ export class BlockProposingService {
     } else {
       Object.assign(debugLogCtx, {api: "produceBlindedBlock"});
       const res = await this.api.validator.produceBlindedBlock(slot, randaoReveal, graffiti);
-      ApiError.assert(res, "Failed to produce block: validator.produceBlockV2");
+      ApiError.assert(res, "Failed to produce block: validator.produceBlindedBlock");
       const {response} = res;
       const executionPayloadSource = ProducedBlockSource.builder;
 

@@ -112,7 +112,7 @@ describe("AttnetsService", function () {
     expect(metadata.seqNumber).toBe(BigInt(1));
     expect(EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION * SLOTS_PER_EPOCH).toBeGreaterThan(150);
     vi.advanceTimersByTime(150 * SLOTS_PER_EPOCH * SECONDS_PER_SLOT * 1000);
-    expect(gossipStub.unsubscribeTopic).toHaveBeenCalled();
+    expect(gossipStub.unsubscribeTopic).toHaveBeenCalledOnce();
     // subscribe then unsubscribe
     expect(metadata.seqNumber).toBe(BigInt(2));
   });
@@ -127,8 +127,8 @@ describe("AttnetsService", function () {
       vi.advanceTimersByTime(SLOTS_PER_EPOCH * SECONDS_PER_SLOT * 1000);
     }
     // may call 2 times, 1 for committee subnet, 1 for random subnet
-    expect(gossipStub.unsubscribeTopic).toHaveBeenCalled();
-    // rebalance twice
+    expect(gossipStub.unsubscribeTopic).toHaveBeenCalledWith(expect.any(Object));
+    // rebalanced twice
     expect(metadata.seqNumber).toBe(BigInt(2));
   });
 

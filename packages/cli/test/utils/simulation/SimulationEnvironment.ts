@@ -6,7 +6,7 @@ import path from "node:path";
 import tmp from "tmp";
 import {fromHexString} from "@chainsafe/ssz";
 import {nodeUtils} from "@lodestar/beacon-node";
-import {ChainForkConfig, createChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {activePreset} from "@lodestar/params";
 import {BeaconStateAllForks, interopSecretKey} from "@lodestar/state-transition";
 import {EpochClock, MS_IN_SEC} from "./EpochClock.js";
@@ -14,13 +14,7 @@ import {ExternalSignerServer} from "./ExternalSignerServer.js";
 import {SimulationTracker} from "./SimulationTracker.js";
 import {createBeaconNode} from "./beacon_clients/index.js";
 import {createValidatorNode, getValidatorForBeaconNode} from "./validator_clients/index.js";
-import {
-  CLIQUE_SEALING_PERIOD,
-  MOCK_ETH1_GENESIS_HASH,
-  SIM_ENV_CHAIN_ID,
-  SIM_ENV_NETWORK_ID,
-  SIM_TESTS_SECONDS_PER_SLOT,
-} from "./constants.js";
+import {MOCK_ETH1_GENESIS_HASH} from "./constants.js";
 import {createExecutionNode} from "./execution_clients/index.js";
 import {
   BeaconClient,
@@ -35,7 +29,7 @@ import {
   GeneratorOptions,
 } from "./interfaces.js";
 import {Runner} from "./runner/index.js";
-import {getEstimatedTTD, registerProcessHandler, replaceIpFromUrl} from "./utils/index.js";
+import {registerProcessHandler, replaceIpFromUrl} from "./utils/index.js";
 import {getNodePaths} from "./utils/paths.js";
 
 interface StartOpts {
@@ -64,7 +58,7 @@ export class SimulationEnvironment {
     this.options = options;
 
     this.clock = new EpochClock({
-      genesisTime: this.options.elGenesisTime + this.forkConfig.GENESIS_DELAY,
+      genesisTime: this.options.genesisTime + this.forkConfig.GENESIS_DELAY,
       secondsPerSlot: this.forkConfig.SECONDS_PER_SLOT,
       slotsPerEpoch: activePreset.SLOTS_PER_EPOCH,
       signal: this.options.controller.signal,
@@ -82,36 +76,13 @@ export class SimulationEnvironment {
   }
 
   static async initWithDefaults(
-    {chainConfig, logsDir, id}: SimulationInitOptions,
+    {forkConfig, logsDir, id}: SimulationInitOptions,
     clients: NodePairDefinition[]
   ): Promise<SimulationEnvironment> {
-    const secondsPerSlot = chainConfig.SECONDS_PER_SLOT ?? SIM_TESTS_SECONDS_PER_SLOT;
-    const genesisTime = Math.floor(Date.now() / 1000);
-    const ttd =
-      chainConfig.TERMINAL_TOTAL_DIFFICULTY ??
-      getEstimatedTTD({
-        genesisDelaySeconds: chainConfig.GENESIS_DELAY,
-        bellatrixForkEpoch: chainConfig.BELLATRIX_FORK_EPOCH,
-        secondsPerSlot: secondsPerSlot,
-        cliqueSealingPeriod: CLIQUE_SEALING_PERIOD,
-        // Make sure bellatrix started before TTD reach, so we wait for few more slots to be sure
-        additionalSlots: activePreset.SLOTS_PER_EPOCH - 2,
-      });
-
-    const forkConfig = createChainForkConfig({
-      ...chainConfig,
-      SECONDS_PER_SLOT: secondsPerSlot,
-      TERMINAL_TOTAL_DIFFICULTY: ttd,
-      DEPOSIT_CHAIN_ID: SIM_ENV_CHAIN_ID,
-      DEPOSIT_NETWORK_ID: SIM_ENV_NETWORK_ID,
-      SECONDS_PER_ETH1_BLOCK: CLIQUE_SEALING_PERIOD,
-      ETH1_FOLLOW_DISTANCE: 1,
-    });
-
     const env = new SimulationEnvironment(forkConfig, {
       logsDir,
       id,
-      elGenesisTime: genesisTime,
+      genesisTime: Math.floor(Date.now() / 1000),
       controller: new AbortController(),
       rootDir: path.join(tmp.dirSync({unsafeCleanup: true, tmpdir: "/tmp", template: "sim-XXXXXX"}).name, id),
     });
@@ -246,7 +217,7 @@ export class SimulationEnvironment {
       forkConfig: this.forkConfig,
       runner: this.runner,
       address: "0.0.0.0",
-      genesisTime: this.options.elGenesisTime,
+      genesisTime: this.options.genesisTime + this.forkConfig.GENESIS_DELAY,
     };
 
     // Execution Node
@@ -327,7 +298,7 @@ export class SimulationEnvironment {
       }
 
       const genesisState = nodeUtils.initDevState(this.forkConfig, this.keysCount, {
-        genesisTime: this.options.elGenesisTime + this.forkConfig.GENESIS_DELAY,
+        genesisTime: this.options.genesisTime + this.forkConfig.GENESIS_DELAY,
         eth1BlockHash: fromHexString(eth1Genesis.hash),
       }).state;
 
