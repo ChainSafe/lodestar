@@ -40,8 +40,7 @@ WORKDIR /usr/app
 COPY --from=build_deps /usr/app .
 
 # NodeJS applications have a default memory limit of 2.5GB.
-# This limit is bit tight for a Prater node, it is recommended to raise the limit
-# since memory may spike during certain network conditions.
-ENV NODE_OPTIONS=--max-old-space-size=4096
+# This limit is too low for a Holesky node, it is required to raise the limit
+ENV NODE_OPTIONS=--max-old-space-size=8192
 
 ENTRYPOINT ["node", "./packages/cli/bin/lodestar"]
