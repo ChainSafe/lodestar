@@ -55,18 +55,18 @@ export function selectBlockProductionSource({
   builderBlockValue: bigint;
   builderBoostFactor: bigint;
 }): ProducedBlockSource {
-  if (builderSelection === routes.validator.BuilderSelection.ExecutionOnly) {
-    return ProducedBlockSource.engine;
-  }
+  switch (builderSelection) {
+    case routes.validator.BuilderSelection.ExecutionOnly:
+      return ProducedBlockSource.engine;
 
-  if (builderSelection === routes.validator.BuilderSelection.MaxProfit) {
-    // explicitly handle the two special values mentioned in spec for builder preferred / engine preferred
-    return builderBoostFactor !== MAX_BUILDER_BOOST_FACTOR &&
-      (builderBoostFactor === BigInt(0) || engineBlockValue >= (builderBlockValue * builderBoostFactor) / BigInt(100))
-      ? ProducedBlockSource.engine
-      : ProducedBlockSource.builder;
-  }
+    case routes.validator.BuilderSelection.MaxProfit:
+      return builderBoostFactor !== MAX_BUILDER_BOOST_FACTOR &&
+        (builderBoostFactor === BigInt(0) || engineBlockValue >= (builderBlockValue * builderBoostFactor) / BigInt(100))
+        ? ProducedBlockSource.engine
+        : ProducedBlockSource.builder;
 
-  // For everything else just select the builder
-  return ProducedBlockSource.builder;
+    default:
+      // For everything else just select the builder
+      return ProducedBlockSource.builder;
+  }
 }
