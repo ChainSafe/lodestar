@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {fromHexString as b} from "@chainsafe/ssz";
 import {ChainConfig} from "../types.js";
-import {chainConfig as mainnet} from "../presets/mainnet.js";
+import {chainConfig as mainnet} from "../configs/mainnet.js";
 
 // Holesky beacon chain config:
 // https://github.com/eth-clients/holesky/blob/main/custom_config_data/config.yaml

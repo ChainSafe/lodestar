@@ -2,7 +2,10 @@
 import {fromHexString as b} from "@chainsafe/ssz";
 import {PresetName} from "@lodestar/params";
 import {ChainConfig} from "../types.js";
-import {chainConfig as mainnet} from "../presets/mainnet.js";
+import {chainConfig as mainnet} from "../configs/mainnet.js";
+
+// Gnosis beacon chain config:
+// https://github.com/gnosischain/configs/blob/main/mainnet/config.yaml
 
 export const gnosisChainConfig: ChainConfig = {
   ...mainnet,

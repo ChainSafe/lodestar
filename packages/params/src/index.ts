@@ -181,7 +181,6 @@ export const SYNC_COMMITTEE_SUBNET_SIZE = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_
 export const MAX_REQUEST_BLOCKS = 2 ** 10; // 1024
 export const MAX_REQUEST_BLOCKS_DENEB = 2 ** 7; // 128
 export const MAX_REQUEST_BLOB_SIDECARS = MAX_REQUEST_BLOCKS_DENEB * MAX_BLOBS_PER_BLOCK;
-export const MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS = 2 ** 12; // 4096 epochs, ~18 days
 
 // Lightclient pre-computed
 /**

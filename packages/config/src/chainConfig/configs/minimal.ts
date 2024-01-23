@@ -3,6 +3,9 @@ import {fromHexString as b} from "@chainsafe/ssz";
 import {PresetName} from "@lodestar/params";
 import {ChainConfig} from "../types.js";
 
+// Minimal config
+// https://github.com/ethereum/consensus-specs/blob/dev/configs/minimal.yaml
+
 export const chainConfig: ChainConfig = {
   // Extends the minimal preset
   PRESET_BASE: PresetName.minimal,
@@ -69,9 +72,14 @@ export const chainConfig: ChainConfig = {
   EJECTION_BALANCE: 16000000000,
   // 2**2 (= 4)
   MIN_PER_EPOCH_CHURN_LIMIT: 2,
+  // [customized]
   MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT: 4,
   // [customized] scale queue churn at much lower validator counts for testing
   CHURN_LIMIT_QUOTIENT: 32,
+
+  // Fork choice
+  // ---------------------------------------------------------------
+  // 40%
   PROPOSER_SCORE_BOOST: 40,
 
   // Deposit contract
@@ -81,4 +89,11 @@ export const chainConfig: ChainConfig = {
   DEPOSIT_NETWORK_ID: 5,
   // Configured on a per testnet basis
   DEPOSIT_CONTRACT_ADDRESS: b("0x1234567890123456789012345678901234567890"),
+
+  // Networking
+  // ---------------------------------------------------------------
+
+  // Deneb
+  // `2**12` (= 4096 epochs, ~18 days)
+  MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: 4096,
 };

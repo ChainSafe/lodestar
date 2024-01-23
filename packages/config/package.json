@@ -19,8 +19,8 @@
     "./networks": {
       "import": "./lib/networks.js"
     },
-    "./presets": {
-      "import": "./lib/presets.js"
+    "./configs": {
+      "import": "./lib/configs.js"
     }
   },
   "typesVersions": {
