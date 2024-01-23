@@ -3,6 +3,9 @@ import {fromHexString as b} from "@chainsafe/ssz";
 import {ChainConfig} from "../types.js";
 import {gnosisChainConfig as gnosis} from "./gnosis.js";
 
+// Chiado beacon chain config:
+// https://github.com/gnosischain/configs/blob/main/chiado/config.yaml
+
 export const chiadoChainConfig: ChainConfig = {
   ...gnosis,
 
