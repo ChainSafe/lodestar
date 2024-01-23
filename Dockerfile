@@ -40,7 +40,7 @@ WORKDIR /usr/app
 COPY --from=build_deps /usr/app .
 
 # NodeJS applications have a default memory limit of 4GB on most machines.
-# This limit is bit tight for a Holesky node, it is recommended to raise the limit
+# This limit is bit tight for a Mainnet node, it is recommended to raise the limit
 # since memory may spike during certain network conditions.
 ENV NODE_OPTIONS=--max-old-space-size=8192
 
