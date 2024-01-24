@@ -64,7 +64,7 @@
     "snappy": "^7.2.2",
     "snappyjs": "^0.7.0",
     "uint8-varint": "^2.0.2",
-    "uint8arraylist": "^2.4.7"
+    "uint8arraylist": "^2.4.3"
   },
   "devDependencies": {
     "@lodestar/logger": "^1.14.0",

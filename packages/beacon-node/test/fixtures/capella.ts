@@ -10,7 +10,7 @@ export function generateBlsToExecutionChanges(
   for (const validatorIndex of state.epochCtx.proposers) {
     result.push({
       message: {
-        fromBlsPubkey: state.epochCtx.index2pubkey[validatorIndex].toBytes(),
+        fromBlsPubkey: state.epochCtx.index2pubkey[validatorIndex].serialize(),
         toExecutionAddress: Buffer.alloc(20),
         validatorIndex,
       },

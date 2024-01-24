@@ -154,7 +154,7 @@
     "strict-event-emitter-types": "^2.0.0",
     "systeminformation": "^5.17.12",
     "uint8-varint": "^2.0.2",
-    "uint8arraylist": "^2.4.7",
+    "uint8arraylist": "^2.4.3",
     "uint8arrays": "^4.0.9",
     "xxhash-wasm": "1.0.2"
   },

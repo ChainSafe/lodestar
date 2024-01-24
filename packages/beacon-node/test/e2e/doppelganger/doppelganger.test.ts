@@ -54,7 +54,7 @@ describe.skip("doppelganger / doppelganger test", function () {
       options: {
         sync: {isSingleNode: true},
         api: {rest: {enabled: false}},
-        chain: {blsVerifySingleThreaded: true},
+        chain: {blsVerifyAllMainThread: true},
       },
       validatorCount,
       logger: loggerNodeA,

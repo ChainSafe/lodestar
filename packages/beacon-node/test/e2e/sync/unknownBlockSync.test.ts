@@ -68,7 +68,7 @@ describe("sync / unknown block sync", function () {
         options: {
           sync: {isSingleNode: true},
           network: {allowPublishToZeroPeers: true},
-          chain: {blsVerifySingleThreaded: true},
+          chain: {blsVerifyAllMainThread: true},
         },
         validatorCount,
         logger: loggerNodeA,
@@ -97,7 +97,7 @@ describe("sync / unknown block sync", function () {
         options: {
           api: {rest: {enabled: false}},
           sync: {disableRangeSync: true},
-          chain: {blsVerifySingleThreaded: true},
+          chain: {blsVerifyAllMainThread: true},
         },
         validatorCount,
         genesisTime: bn.chain.getHeadState().genesisTime,

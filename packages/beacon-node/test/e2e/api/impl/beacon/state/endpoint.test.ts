@@ -31,7 +31,7 @@ describe("beacon state api", function () {
             port: restPort,
           },
         },
-        chain: {blsVerifySingleThreaded: true},
+        chain: {blsVerifyAllMainThread: true},
       },
       validatorCount,
       logger: testLogger("Node-A", {level: LogLevel.info}),

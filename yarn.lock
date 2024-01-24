@@ -13221,13 +13221,6 @@ uint8arraylist@^2.0.0, uint8arraylist@^2.4.1, uint8arraylist@^2.4.3:
   dependencies:
     uint8arrays "^4.0.2"
 
-uint8arraylist@^2.4.7:
-  version "2.4.8"
-  resolved "https://registry.yarnpkg.com/uint8arraylist/-/uint8arraylist-2.4.8.tgz#5a4d17f4defd77799cb38e93fd5db0f0dceddc12"
-  integrity sha512-vc1PlGOzglLF0eae1M8mLRTBivsvrGsdmJ5RbK3e+QRvRLOZfZhQROTwH/OfyF3+ZVUg9/8hE8bmKP2CvP9quQ==
-  dependencies:
-    uint8arrays "^5.0.1"
-
 uint8arrays@^4.0.2:
   version "4.0.2"
   resolved "https://registry.npmjs.org/uint8arrays/-/uint8arrays-4.0.2.tgz"
@@ -13249,7 +13242,7 @@ uint8arrays@^4.0.9:
   dependencies:
     multiformats "^12.0.1"
 
-uint8arrays@^5.0.0, uint8arrays@^5.0.1:
+uint8arrays@^5.0.0:
   version "5.0.1"
   resolved "https://registry.yarnpkg.com/uint8arrays/-/uint8arrays-5.0.1.tgz#6016ef944379eabb6de605934ead4d7a698c9f07"
   integrity sha512-ND5RpJAnPgHmZT7hWD/2T4BwRp04j8NLKvMKC/7bhiEwEjUMkQ4kvBKiH6hOqbljd6qJ2xS8reL3vl1e33grOQ==
