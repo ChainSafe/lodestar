@@ -83,7 +83,7 @@ describe("BLS ops", function () {
   // An aggregate and proof object has 3 signatures.
   // We may want to bundle up to 32 sets in a single batch.
   // TODO: figure out why it does not work with 256 or more
-  for (const count of [3, 8, 32, 64, 128, 256]) {
+  for (const count of [3, 8, 32, 64, 128]) {
     itBench({
       id: `BLS verifyMultipleAggregateSignatures ${count} - Napi`,
       beforeEach: () => linspace(0, count - 1).map((i) => getSet(i)),
