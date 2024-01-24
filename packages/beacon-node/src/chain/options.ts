@@ -95,7 +95,6 @@ export const defaultChainOptions: IChainOptions = {
   blsVerifyAllMainThread: false,
   blsVerifyAllMultiThread: false,
   disableBlsBatchVerify: false,
-  blsPoolType: BlsPoolType.workers,
   proposerBoostEnabled: true,
   computeUnrealized: true,
   safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,

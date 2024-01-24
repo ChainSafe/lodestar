@@ -13,9 +13,7 @@ const {
   Signature,
   aggregatePublicKeys,
   aggregateSignatures,
-  aggregateVerify,
   verifyMultipleAggregateSignatures,
-  asyncAggregateVerify,
   asyncVerifyMultipleAggregateSignatures,
 } = bindings;
 
@@ -38,11 +36,25 @@ export {
   Signature,
   aggregatePublicKeys,
   aggregateSignatures,
-  aggregateVerify,
   verifyMultipleAggregateSignatures,
-  asyncAggregateVerify,
   asyncVerifyMultipleAggregateSignatures,
 };
+
+export function aggregateVerify(msgs, pks, sig) {
+  try {
+    return bindings.aggregateVerify(msgs, pks, sig);
+  } catch {
+    return false;
+  }
+}
+
+export async function asyncAggregateVerify(msgs, pks, sig) {
+  try {
+    return await bindings.asyncAggregateVerify(msgs, pks, sig);
+  } catch {
+    return false;
+  }
+}
 
 export function verify(msg, pk, sig) {
   return bindings.aggregateVerify([msg], [pk], sig);

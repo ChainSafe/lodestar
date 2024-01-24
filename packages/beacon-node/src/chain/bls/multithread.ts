@@ -141,7 +141,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     this.logger = logger;
     this.metrics = metrics;
     this.blsVerifyAllInQueue = options.blsVerifyAllInQueue ?? false;
-    this.blsPoolType = options.blsPoolType ?? BlsPoolType.workers;
+    this.blsPoolType = options.blsPoolType ?? BlsPoolType.libuv;
 
     this.logger.info(`Starting BLS with blsPoolType: ${this.blsPoolType}`);
     if (this.blsPoolType === BlsPoolType.workers) {

@@ -9,8 +9,8 @@ import {
   fastAggregateVerify,
   aggregatePublicKeys,
 } from "@chainsafe/blst-ts";
-import {fromHexString} from "@chainsafe/ssz";
 import {InputType} from "@lodestar/spec-test-util";
+import {fromHex} from "@lodestar/utils";
 import {TestRunnerFn} from "../utils/types.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -42,7 +42,11 @@ export const blsTestRunner: TestRunnerFn<BlsTestCase, unknown> = (fork, testName
         return testFn(data.input) as unknown;
       } catch (e) {
         const {message} = e as Error;
-        if (message.includes("BLST_ERROR") || message === "EMPTY_AGGREGATE_ARRAY" || message === "ZERO_SECRET_KEY") {
+        if (
+          message.includes("BLST_ERROR")
+          // || message === "EMPTY_AGGREGATE_ARRAY"
+          // || message === "ZERO_SECRET_KEY"
+        ) {
           return null;
         } else {
           throw e;
@@ -72,7 +76,7 @@ type BlsTestCase = {
  * ```
  */
 function aggregate(input: string[]): string {
-  const pks = input.map((pkHex) => Signature.deserialize(Buffer.from(pkHex)));
+  const pks = input.map((pkHex) => Signature.deserialize(fromHex(pkHex)));
   const agg = aggregateSignatures(pks);
   return agg.toHex();
 }
@@ -88,7 +92,7 @@ function aggregate(input: string[]): string {
  */
 function aggregate_verify(input: {pubkeys: string[]; messages: string[]; signature: string}): boolean {
   const {pubkeys, messages, signature} = input;
-  return aggregateVerify(messages.map(fromHexString), pubkeys.map(fromHexString), fromHexString(signature));
+  return aggregateVerify(messages.map(fromHex), pubkeys.map(fromHex), fromHex(signature));
 }
 
 /**
@@ -103,7 +107,7 @@ function eth_aggregate_pubkeys(input: string[]): string | null {
     if (pk === G1_POINT_AT_INFINITY) return null;
   }
 
-  return aggregatePublicKeys(input.map((hex) => fromHexString(hex))).toHex();
+  return aggregatePublicKeys(input.map((hex) => fromHex(hex))).toHex();
 }
 
 /**
@@ -128,9 +132,9 @@ function eth_fast_aggregate_verify(input: {pubkeys: string[]; message: string; s
   }
 
   return fastAggregateVerify(
-    fromHexString(message),
-    pubkeys.map((hex) => fromHexString(hex)),
-    fromHexString(signature)
+    fromHex(message),
+    pubkeys.map((hex) => fromHex(hex)),
+    fromHex(signature)
   );
 }
 
@@ -146,14 +150,14 @@ function eth_fast_aggregate_verify(input: {pubkeys: string[]; message: string; s
 function fast_aggregate_verify(input: {pubkeys: string[]; message: string; signature: string}): boolean | null {
   const {pubkeys, message, signature} = input;
   try {
-    const sig = Signature.deserialize(fromHexString(signature));
+    const sig = Signature.deserialize(fromHex(signature));
     const pks = pubkeys.map((hex) => {
-      const pk = PublicKey.deserialize(fromHexString(hex), CoordType.jacobian);
+      const pk = PublicKey.deserialize(fromHex(hex), CoordType.jacobian);
       pk.keyValidate();
       return pk;
     });
     sig.sigValidate();
-    return fastAggregateVerify(fromHexString(message), pks, sig);
+    return fastAggregateVerify(fromHex(message), pks, sig);
   } catch (e) {
     return false;
   }
@@ -167,8 +171,8 @@ function fast_aggregate_verify(input: {pubkeys: string[]; message: string; signa
  */
 function sign(input: {privkey: string; message: string}): string | null {
   const {privkey, message} = input;
-  const sk = SecretKey.deserialize(fromHexString(privkey));
-  return sk.sign(fromHexString(message)).toHex();
+  const sk = SecretKey.deserialize(fromHex(privkey));
+  return sk.sign(fromHex(message)).toHex();
 }
 
 /**
@@ -181,7 +185,7 @@ function sign(input: {privkey: string; message: string}): string | null {
 function verify(input: {pubkey: string; message: string; signature: string}): boolean {
   try {
     const {pubkey, message, signature} = input;
-    return VERIFY(fromHexString(message), fromHexString(pubkey), fromHexString(signature));
+    return VERIFY(fromHex(message), fromHex(pubkey), fromHex(signature));
   } catch {
     return false;
   }
