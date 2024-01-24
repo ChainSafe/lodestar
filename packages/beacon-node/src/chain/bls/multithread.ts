@@ -36,7 +36,7 @@ import {
 } from "./types.js";
 
 // Worker constructor consider the path relative to the current working directory
-const workerDir = process.env.NODE_ENV === "test" ? "../../../../lib/chain/bls/multithread" : "./";
+const workerDir = process.env.NODE_ENV === "test" ? "../../../lib/chain/bls" : "./";
 
 export type BlsMultiThreadWorkerPoolModules = {
   logger: Logger;

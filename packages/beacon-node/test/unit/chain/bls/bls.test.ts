@@ -1,9 +1,10 @@
-import {describe, it, expect, beforeEach} from "vitest";
+import {describe, it, expect, beforeEach, beforeAll} from "vitest";
 import {CoordType, PublicKey, SecretKey, Signature} from "@chainsafe/blst-ts";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {BlsSingleThreadVerifier} from "../../../../src/chain/bls/singleThread.js";
 import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/multithread.js";
 import {testLogger} from "../../../utils/logger.js";
+import {BlsPoolType} from "../../../../src/chain/options.js";
 
 describe("BlsVerifier ", function () {
   // take time for creating thread pool
@@ -11,8 +12,22 @@ describe("BlsVerifier ", function () {
   const secretKeys = Array.from({length: numKeys}, (_, i) => SecretKey.fromKeygen(Buffer.alloc(32, i)));
   const verifiers = [
     new BlsSingleThreadVerifier({metrics: null}),
-    new BlsMultiThreadWorkerPool({}, {metrics: null, logger: testLogger()}),
+    new BlsMultiThreadWorkerPool({blsPoolType: BlsPoolType.libuv}, {metrics: null, logger: testLogger()}),
+    new BlsMultiThreadWorkerPool({blsPoolType: BlsPoolType.workers}, {metrics: null, logger: testLogger()}),
   ];
+
+  beforeAll(async () => {
+    for (const verifier of verifiers) {
+      /* eslint-disable @typescript-eslint/ban-ts-comment */
+      // @ts-ignore
+      if (typeof verifier["waitTillInitialized"] === "function") {
+        // @ts-ignore
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+        await verifier["waitTillInitialized"]();
+      }
+      /* eslint-enable @typescript-eslint/ban-ts-comment */
+    }
+  });
 
   for (const verifier of verifiers) {
     describe(`${verifier.constructor.name} - verifySignatureSets`, () => {
@@ -50,7 +65,7 @@ describe("BlsVerifier ", function () {
       });
     });
 
-    describe(`${verifier.constructor.name} - verifySignatureSetsSameMessage`, () => {
+    describe(`${verifier.constructor.name} - verifySignatureSetsSameMessage`, function () {
       let sets: {publicKey: PublicKey; signature: Uint8Array}[] = [];
       // same signing root for all sets
       const signingRoot = Buffer.alloc(32, 100);

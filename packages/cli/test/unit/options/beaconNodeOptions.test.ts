@@ -2,7 +2,7 @@ import fs from "node:fs";
 import {describe, it, expect} from "vitest";
 import {IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {RecursivePartial} from "@lodestar/utils";
-import {BlsPoolType} from "@lodestar/beacon-node/lib/chain/options.js";
+import {BlsPoolType} from "@lodestar/beacon-node/chain";
 import {parseBeaconNodeArgs, BeaconNodeArgs} from "../../../src/options/beaconNodeOptions/index.js";
 import {getTestdirPath} from "../../utils.js";
 

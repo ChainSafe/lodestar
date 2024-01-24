@@ -70,7 +70,7 @@ describe("keystoreCache", () => {
       await writeKeystoreCache(keystoreCacheFile, signers, passwords);
       const result = await loadKeystoreCache(keystoreCacheFile, definitions);
 
-      expect(result.map((r) => r.secretKey.toBytes())).toEqual(secretKeys);
+      expect(result.map((r) => r.secretKey.serialize())).toEqual(secretKeys);
     });
 
     it("should raise error for mismatch public key", async () => {
