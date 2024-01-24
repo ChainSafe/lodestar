@@ -422,7 +422,8 @@ export function getBeaconBlockApi({
       const indicesSet = new Set(indices?.map((index) => parseInt(index)));
       return {
         executionOptimistic,
-        data: blobSidecars.filter(({index}) => indicesSet.has(index)),
+        // Returnonly  all sidecars if no indices are specified, only the requested ones (identified by `indices`) otherwise
+        data: indicesSet.size == 0 ? blobSidecars : blobSidecars.filter(({index}) => indicesSet.has(index)),
       };
     },
   };

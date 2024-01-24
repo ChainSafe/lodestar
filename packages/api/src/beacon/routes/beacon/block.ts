@@ -229,7 +229,7 @@ export type Api = {
    * Retrieves BlobSidecar included in requested block.
    * @param blockId Block identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
-  * @param indices Array of indices for blob sidecars to request for in the specified block. Returns all blob sidecars in the block if not specified.
+   * @param indices Array of indices for blob sidecars to request for in the specified block. Returns all blob sidecars in the block if not specified.
    */
   getBlobSidecars(
     blockId: BlockId,
