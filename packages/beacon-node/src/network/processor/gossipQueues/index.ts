@@ -39,6 +39,11 @@ const defaultGossipQueueOpts: {
     type: QueueType.FIFO,
     dropOpts: {type: DropType.count, count: 1},
   },
+  [GossipType.data_column_sidecar]: {
+    maxLength: 4096,
+    type: QueueType.FIFO,
+    dropOpts: {type: DropType.count, count: 1},
+  },
   // lighthoue has aggregate_queue 4096 and unknown_block_aggregate_queue 1024, we use single queue
   [GossipType.beacon_aggregate_and_proof]: {
     maxLength: 5120,

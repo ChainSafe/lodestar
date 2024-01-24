@@ -22,6 +22,7 @@ import {initializeExecutionEngine, initializeExecutionBuilder} from "../executio
 import {initializeEth1ForBlockProduction} from "../eth1/index.js";
 import {initCKZG, loadEthereumTrustedSetup, TrustedFileMode} from "../util/kzg.js";
 import {HistoricalStateRegen} from "../chain/historicalState/index.js";
+import {NodeId} from "../network/subnets/interface.js";
 import {IBeaconNodeOptions} from "./options.js";
 import {runNodeNotifier} from "./notifier.js";
 
@@ -50,6 +51,7 @@ export type BeaconNodeInitModules = {
   logger: LoggerNode;
   processShutdownCallback: ProcessShutdownCallback;
   peerId: PeerId;
+  nodeId: NodeId;
   peerStoreDir?: string;
   anchorState: BeaconStateAllForks;
   wsCheckpoint?: phase0.Checkpoint;
@@ -147,6 +149,7 @@ export class BeaconNode {
     logger,
     processShutdownCallback,
     peerId,
+    nodeId,
     peerStoreDir,
     anchorState,
     wsCheckpoint,
@@ -207,6 +210,7 @@ export class BeaconNode {
     });
 
     const chain = new BeaconChain(opts.chain, {
+      nodeId,
       config,
       db,
       logger: logger.child({module: LoggerModule.chain}),
@@ -244,6 +248,7 @@ export class BeaconNode {
       chain,
       db,
       peerId,
+      nodeId,
       peerStoreDir,
       getReqRespHandler: getReqRespHandlers({db, chain}),
     });

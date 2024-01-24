@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import deepmerge from "deepmerge";
 import tmp from "tmp";
 import {PeerId} from "@libp2p/interface";
@@ -19,6 +20,7 @@ import {defaultOptions} from "../../../src/node/options.js";
 import {BeaconDb} from "../../../src/db/index.js";
 import {testLogger} from "../logger.js";
 import {InteropStateOpts} from "../../../src/node/utils/interop/state.js";
+import {NodeId} from "../../../src/network/subnets/interface.js";
 
 export async function getDevBeaconNode(
   opts: {
@@ -27,15 +29,17 @@ export async function getDevBeaconNode(
     validatorCount?: number;
     logger?: LoggerNode;
     peerId?: PeerId;
+    nodeId?: NodeId;
     peerStoreDir?: string;
     anchorState?: BeaconStateAllForks;
     wsCheckpoint?: phase0.Checkpoint;
   } & InteropStateOpts
 ): Promise<BeaconNode> {
   const {params, validatorCount = 8, peerStoreDir} = opts;
-  let {options = {}, logger, peerId} = opts;
+  let {options = {}, logger, peerId, nodeId} = opts;
 
   if (!peerId) peerId = await createSecp256k1PeerId();
+  if (!nodeId) nodeId = crypto.randomBytes(32);
   const tmpDir = tmp.dirSync({unsafeCleanup: true});
   const config = createChainForkConfig({...minimalConfig, ...params});
   logger = logger ?? testLogger();
@@ -94,6 +98,7 @@ export async function getDevBeaconNode(
     logger,
     processShutdownCallback: () => {},
     peerId,
+    nodeId,
     peerStoreDir,
     anchorState,
     wsCheckpoint: opts.wsCheckpoint,

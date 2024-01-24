@@ -80,3 +80,9 @@ export const forkBlobs = exclude(forkAll, [ForkName.phase0, ForkName.altair, For
 export function isForkBlobs(fork: ForkName): fork is ForkBlobs {
   return isForkWithdrawals(fork) && fork !== ForkName.capella;
 }
+
+export type ForkPrePeerDAS = ForkPreBlobs | ForkName.deneb;
+export type ForkPeerDAS = Exclude<ForkName, ForkPrePeerDAS>;
+export function isForkPeerDAS(fork: ForkName): fork is ForkPeerDAS {
+  return isForkBlobs(fork) && fork !== ForkName.deneb;
+}

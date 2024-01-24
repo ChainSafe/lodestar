@@ -26,13 +26,16 @@ import {
   capella,
   deneb,
   phase0,
+  electra
 } from "@lodestar/types";
 import {PeerIdStr} from "../util/peerId.js";
+import {CustodyConfig} from "../util/dataColumns.js";
 import {INetworkEventBus} from "./events.js";
 import {INetworkCorePublic} from "./core/types.js";
 import {GossipType} from "./gossip/interface.js";
 import {PendingGossipsubMessage} from "./processor/types.js";
 import {PeerAction} from "./peers/index.js";
+import {NodeId} from "./subnets/interface.js";
 
 export type WithBytes<T> = {data: T; bytes: Uint8Array};
 
@@ -46,6 +49,9 @@ export type WithBytes<T> = {data: T; bytes: Uint8Array};
  */
 
 export interface INetwork extends INetworkCorePublic {
+  readonly nodeId: NodeId;
+  readonly peerId: PeerId;
+  readonly custodyConfig: CustodyConfig;
   readonly closed: boolean;
   events: INetworkEventBus;
 
@@ -67,10 +73,19 @@ export interface INetwork extends INetworkCorePublic {
   ): Promise<WithBytes<SignedBeaconBlock>[]>;
   sendBlobSidecarsByRange(peerId: PeerIdStr, request: deneb.BlobSidecarsByRangeRequest): Promise<deneb.BlobSidecar[]>;
   sendBlobSidecarsByRoot(peerId: PeerIdStr, request: deneb.BlobSidecarsByRootRequest): Promise<deneb.BlobSidecar[]>;
+  sendDataColumnSidecarsByRange(
+    peerId: PeerIdStr,
+    request: electra.DataColumnSidecarsByRangeRequest
+  ): Promise<electra.DataColumnSidecar[]>;
+  sendDataColumnSidecarsByRoot(
+    peerId: PeerIdStr,
+    request: electra.DataColumnSidecarsByRootRequest
+  ): Promise<electra.DataColumnSidecar[]>;
 
   // Gossip
   publishBeaconBlock(signedBlock: SignedBeaconBlock): Promise<number>;
   publishBlobSidecar(blobSidecar: deneb.BlobSidecar): Promise<number>;
+  publishDataColumnSidecar(dataColumnSideCar: electra.DataColumnSidecar): Promise<number>;
   publishBeaconAggregateAndProof(aggregateAndProof: phase0.SignedAggregateAndProof): Promise<number>;
   publishBeaconAttestation(attestation: phase0.Attestation, subnet: number): Promise<number>;
   publishVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<number>;

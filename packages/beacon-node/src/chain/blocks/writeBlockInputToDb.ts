@@ -1,4 +1,6 @@
+import {ForkName} from "@lodestar/params";
 import {toHex} from "@lodestar/utils";
+import {electra, ssz} from "@lodestar/types";
 import {BeaconChain} from "../chain.js";
 import {BlockInput, BlockInputType} from "./types.js";
 
@@ -30,19 +32,44 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInput: BlockI
     });
 
     if (blockInput.type === BlockInputType.availableData || blockInput.type === BlockInputType.dataPromise) {
-      const blobSidecars =
-        blockInput.type == BlockInputType.availableData
-          ? blockInput.blockData.blobs
-          : // At this point of import blobs are available and can be safely awaited
-            (await blockInput.cachedData.availabilityPromise).blobs;
+      const blockData =
+        blockInput.type === BlockInputType.availableData
+          ? blockInput.blockData
+          : await blockInput.cachedData.availabilityPromise;
 
-      // NOTE: Old blobs are pruned on archive
-      fnPromises.push(this.db.blobSidecars.add({blockRoot, slot: block.message.slot, blobSidecars}));
-      this.logger.debug("Persisted blobSidecars to hot DB", {
-        blobsLen: blobSidecars.length,
-        slot: block.message.slot,
-        root: blockRootHex,
-      });
+      // NOTE: Old data is pruned on archive
+      if (blockData.fork === ForkName.deneb) {
+        const blobSidecars = blockData.blobs;
+        fnPromises.push(this.db.blobSidecars.add({blockRoot, slot: block.message.slot, blobSidecars}));
+        this.logger.debug("Persisted blobSidecars to hot DB", {
+          blobsLen: blobSidecars.length,
+          slot: block.message.slot,
+          root: blockRootHex,
+        });
+      } else {
+        const {dataColumnsLen, dataColumnsIndex, dataColumns: dataColumnSidecars} = blockData;
+        const blobsLen = (block.message as electra.BeaconBlock).body.blobKzgCommitments.length;
+
+        const dataColumnsSize =
+          ssz.electra.DataColumnSidecar.minSize +
+          blobsLen * (ssz.electra.Cell.fixedSize + ssz.deneb.KZGCommitment.fixedSize + ssz.deneb.KZGProof.fixedSize);
+        const slot = block.message.slot;
+        const writeData = {
+          blockRoot,
+          slot,
+          dataColumnsLen,
+          dataColumnsSize,
+          dataColumnsIndex,
+          dataColumnSidecars,
+        };
+        fnPromises.push(this.db.dataColumnSidecars.add(writeData));
+
+        this.logger.debug("Persisted dataColumnSidecars to hot DB", {
+          dataColumnsLen: dataColumnSidecars.length,
+          slot: block.message.slot,
+          root: blockRootHex,
+        });
+      }
     }
   }
 
@@ -55,17 +82,35 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInput: BlockI
 export async function removeEagerlyPersistedBlockInputs(this: BeaconChain, blockInputs: BlockInput[]): Promise<void> {
   const blockToRemove = [];
   const blobsToRemove = [];
+  const dataColumnsToRemove = [];
 
   for (const blockInput of blockInputs) {
     const {block, type} = blockInput;
-    const blockRoot = this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
+    const slot = block.message.slot;
+    const blockRoot = this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message);
     const blockRootHex = toHex(blockRoot);
     if (!this.forkChoice.hasBlockHex(blockRootHex)) {
       blockToRemove.push(block);
 
       if (type === BlockInputType.availableData) {
-        const blobSidecars = blockInput.blockData.blobs;
-        blobsToRemove.push({blockRoot, slot: block.message.slot, blobSidecars});
+        const {blockData} = blockInput;
+        if (blockData.fork === ForkName.deneb) {
+          const blobSidecars = blockData.blobs;
+          blobsToRemove.push({blockRoot, slot, blobSidecars});
+        } else {
+          const {dataColumnsLen, dataColumnsIndex, dataColumns: dataColumnSidecars} = blockData;
+          const blobsLen = (block.message as electra.BeaconBlock).body.blobKzgCommitments.length;
+          const dataColumnsSize = ssz.electra.Cell.fixedSize * blobsLen;
+
+          dataColumnsToRemove.push({
+            blockRoot,
+            slot,
+            dataColumnsLen,
+            dataColumnsSize,
+            dataColumnsIndex,
+            dataColumnSidecars,
+          });
+        }
       }
     }
   }
@@ -74,5 +119,6 @@ export async function removeEagerlyPersistedBlockInputs(this: BeaconChain, block
     // TODO: Batch DB operations not with Promise.all but with level db ops
     this.db.block.batchRemove(blockToRemove),
     this.db.blobSidecars.batchRemove(blobsToRemove),
+    this.db.dataColumnSidecars.batchRemove(dataColumnsToRemove),
   ]);
 }

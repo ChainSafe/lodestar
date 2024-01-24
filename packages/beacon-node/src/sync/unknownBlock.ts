@@ -2,7 +2,7 @@ import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {Logger, pruneSetToMax} from "@lodestar/utils";
 import {Root, RootHex, deneb} from "@lodestar/types";
-import {INTERVALS_PER_SLOT} from "@lodestar/params";
+import {INTERVALS_PER_SLOT, ForkName} from "@lodestar/params";
 import {sleep} from "@lodestar/utils";
 import {INetwork, NetworkEvent, NetworkEventData, PeerAction} from "../network/index.js";
 import {PeerIdStr} from "../util/peerId.js";
@@ -515,21 +515,28 @@ export class UnknownBlockSync {
 
     const shuffledPeers = shuffle(connectedPeers);
     let blockRootHex;
-    let pendingBlobs;
     let blobKzgCommitmentsLen;
     let blockRoot;
+    const dataMeta: Record<string, unknown> = {};
 
     if (unavailableBlockInput.block === null) {
       blockRootHex = unavailableBlockInput.blockRootHex;
       blockRoot = fromHexString(blockRootHex);
     } else {
-      const unavailableBlock = unavailableBlockInput.block;
+      const {cachedData, block: unavailableBlock} = unavailableBlockInput;
       blockRoot = this.config
         .getForkTypes(unavailableBlock.message.slot)
         .BeaconBlock.hashTreeRoot(unavailableBlock.message);
       blockRootHex = toHexString(blockRoot);
       blobKzgCommitmentsLen = (unavailableBlock.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length;
-      pendingBlobs = blobKzgCommitmentsLen - unavailableBlockInput.cachedData.blobsCache.size;
+
+      if (cachedData.fork === ForkName.deneb) {
+        const pendingBlobs = blobKzgCommitmentsLen - cachedData.blobsCache.size;
+        Object.assign(dataMeta, {pendingBlobs});
+      } else if (cachedData.fork === ForkName.electra) {
+        const pendingColumns = this.network.custodyConfig.custodyColumnsLen - cachedData.dataColumnsCache.size;
+        Object.assign(dataMeta, {pendingColumns});
+      }
     }
 
     let lastError: Error | null = null;
@@ -559,7 +566,7 @@ export class UnknownBlockSync {
         if (unavailableBlockInput.block === null) {
           this.logger.debug("Fetched  NullBlockInput", {attempts: i, blockRootHex});
         } else {
-          this.logger.debug("Fetched UnavailableBlockInput", {attempts: i, pendingBlobs, blobKzgCommitmentsLen});
+          this.logger.debug("Fetched UnavailableBlockInput", {attempts: i, ...dataMeta, blobKzgCommitmentsLen});
         }
 
         return {blockInput, peerIdStr: peer};

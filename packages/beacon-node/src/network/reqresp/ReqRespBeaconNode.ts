@@ -255,6 +255,13 @@ export class ReqRespBeaconNode extends ReqResp {
       );
     }
 
+    if (ForkSeq[fork] >= ForkSeq.electra) {
+      protocolsAtFork.push(
+        [protocols.DataColumnSidecarsByRoot(this.config), this.getHandler(ReqRespMethod.DataColumnSidecarsByRoot)],
+        [protocols.DataColumnSidecarsByRange(this.config), this.getHandler(ReqRespMethod.DataColumnSidecarsByRange)]
+      );
+    }
+
     return protocolsAtFork;
   }
 

@@ -63,3 +63,4 @@ export const BLSSignature = Bytes96;
 export const Domain = Bytes32;
 export const ParticipationFlags = new UintNumberType(1, {setBitwiseOR: true});
 export const ExecutionAddress = new ExecutionAddressType();
+export const ColumnIndex = UintNum64;

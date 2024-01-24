@@ -6,9 +6,10 @@ import {
   reconstructFullBlockOrContents,
   signedBeaconBlockToBlinded,
 } from "@lodestar/state-transition";
-import {ForkExecution, SLOTS_PER_HISTORICAL_ROOT, isForkExecution} from "@lodestar/params";
+import {ForkExecution, SLOTS_PER_HISTORICAL_ROOT, isForkExecution, ForkName} from "@lodestar/params";
 import {sleep, fromHex, toHex} from "@lodestar/utils";
 import {
+  electra,
   deneb,
   isSignedBlockContents,
   ProducedBlockSource,
@@ -23,10 +24,13 @@ import {
   BlockInput,
   BlobsSource,
   BlockInputDataBlobs,
+  BlockInputDataDataColumns,
+  DataColumnsSource,
+  BlockInputData,
 } from "../../../../chain/blocks/types.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
-import {computeBlobSidecars} from "../../../../util/blobs.js";
+import {computeBlobSidecars, computeDataColumnSidecars} from "../../../../util/blobs.js";
 import {BlockError, BlockErrorCode, BlockGossipError} from "../../../../chain/errors/index.js";
 import {OpSource} from "../../../../metrics/validatorMonitor.js";
 import {NetworkEvent} from "../../../../network/index.js";
@@ -65,17 +69,40 @@ export function getBeaconBlockApi({
     opts: PublishBlockOpts = {}
   ) => {
     const seenTimestampSec = Date.now() / 1000;
-    let blockForImport: BlockInput, signedBlock: SignedBeaconBlock, blobSidecars: deneb.BlobSidecars;
+    let blockForImport: BlockInput,
+      signedBlock: SignedBeaconBlock,
+      blobSidecars: deneb.BlobSidecars,
+      dataColumnSidecars: electra.DataColumnSidecars;
 
     if (isSignedBlockContents(signedBlockOrContents)) {
       ({signedBlock} = signedBlockOrContents);
-      blobSidecars = computeBlobSidecars(config, signedBlock, signedBlockOrContents);
-      const blockData = {
-        fork: config.getForkName(signedBlock.message.slot),
-        blobs: blobSidecars,
-        blobsSource: BlobsSource.api,
-        blobsBytes: blobSidecars.map(() => null),
-      } as BlockInputDataBlobs;
+      const fork = config.getForkName(signedBlock.message.slot);
+      let blockData: BlockInputData;
+      if (fork === ForkName.electra) {
+        dataColumnSidecars = computeDataColumnSidecars(config, signedBlock, signedBlockOrContents);
+        blockData = {
+          fork,
+          dataColumnsLen: dataColumnSidecars.length,
+          // custodyColumns is a 1 based index of ith column present in dataColumns[custodyColumns[i-1]]
+          dataColumnsIndex: new Uint8Array(Array.from({length: dataColumnSidecars.length}, (_, j) => 1 + j)),
+          dataColumns: dataColumnSidecars,
+          dataColumnsBytes: dataColumnSidecars.map(() => null),
+          dataColumnsSource: DataColumnsSource.api,
+        } as BlockInputDataDataColumns;
+        blobSidecars = [];
+      } else if (fork === ForkName.deneb) {
+        blobSidecars = computeBlobSidecars(config, signedBlock, signedBlockOrContents);
+        blockData = {
+          fork,
+          blobs: blobSidecars,
+          blobsSource: BlobsSource.api,
+          blobsBytes: blobSidecars.map(() => null),
+        } as BlockInputDataBlobs;
+        dataColumnSidecars = [];
+      } else {
+        throw Error(`Invalid data fork=${fork} for publish`);
+      }
+
       blockForImport = getBlockInput.availableData(
         config,
         signedBlock,
@@ -87,6 +114,7 @@ export function getBeaconBlockApi({
     } else {
       signedBlock = signedBlockOrContents;
       blobSidecars = [];
+      dataColumnSidecars = [];
       blockForImport = getBlockInput.preData(config, signedBlock, BlockSource.api, context?.sszBytes ?? null);
     }
 
@@ -221,6 +249,7 @@ export function getBeaconBlockApi({
       //     b) they might require more hops to reach recipients in peerDAS kind of setup where
       //        blobs might need to hop between nodes because of partial subnet subscription
       ...blobSidecars.map((blobSidecar) => () => network.publishBlobSidecar(blobSidecar)),
+      ...dataColumnSidecars.map((dataColumnSidecar) => () => network.publishDataColumnSidecar(dataColumnSidecar)),
       () => network.publishBeaconBlock(signedBlock) as Promise<unknown>,
       () =>
         // there is no rush to persist block since we published it to gossip anyway

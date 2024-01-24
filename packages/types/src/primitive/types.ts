@@ -47,3 +47,4 @@ export type ExecutionAddress = Bytes20;
 export type RootHex = string;
 /** Non-spec type to signal time is represented in seconds */
 export type TimeSeconds = number;
+export type ColumnIndex = UintNum64;

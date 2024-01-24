@@ -19,6 +19,18 @@ export let ckzg: {
   computeBlobKzgProof(blob: Uint8Array, commitment: Uint8Array): Uint8Array;
   verifyBlobKzgProof(blob: Uint8Array, commitment: Uint8Array, proof: Uint8Array): boolean;
   verifyBlobKzgProofBatch(blobs: Uint8Array[], expectedKzgCommitments: Uint8Array[], kzgProofs: Uint8Array[]): boolean;
+  computeCells(blob: Uint8Array): Uint8Array[];
+  computeCellsAndKzgProofs(blob: Uint8Array): [Uint8Array[], Uint8Array[]];
+  cellsToBlob(cells: Uint8Array[]): Uint8Array;
+  recoverAllCells(cellIds: number[], cells: Uint8Array[]): Uint8Array[];
+  verifyCellKzgProof(commitmentBytes: Uint8Array, cellId: number, cell: Uint8Array, proofBytes: Uint8Array): boolean;
+  verifyCellKzgProofBatch(
+    commitmentsBytes: Uint8Array[],
+    rowIndices: number[],
+    columnIndices: number[],
+    cells: Uint8Array[],
+    proofsBytes: Uint8Array[]
+  ): boolean;
 } = {
   freeTrustedSetup: ckzgNotLoaded,
   loadTrustedSetup: ckzgNotLoaded,
@@ -26,6 +38,12 @@ export let ckzg: {
   computeBlobKzgProof: ckzgNotLoaded,
   verifyBlobKzgProof: ckzgNotLoaded,
   verifyBlobKzgProofBatch: ckzgNotLoaded,
+  computeCells: ckzgNotLoaded,
+  computeCellsAndKzgProofs: ckzgNotLoaded,
+  cellsToBlob: ckzgNotLoaded,
+  recoverAllCells: ckzgNotLoaded,
+  verifyCellKzgProof: ckzgNotLoaded,
+  verifyCellKzgProofBatch: ckzgNotLoaded,
 };
 
 // Global variable __dirname no longer available in ES6 modules.

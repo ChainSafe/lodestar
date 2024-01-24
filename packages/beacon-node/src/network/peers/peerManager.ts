@@ -1,5 +1,5 @@
 import {Connection, PeerId} from "@libp2p/interface";
-import {BitArray} from "@chainsafe/ssz";
+import {BitArray, toHexString} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {BeaconConfig} from "@lodestar/config";
 import {Metadata, altair, phase0} from "@lodestar/types";
@@ -17,6 +17,7 @@ import {Eth2Gossipsub} from "../gossip/gossipsub.js";
 import {StatusCache} from "../statusCache.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";
 import {LodestarDiscv5Opts} from "../discv5/types.js";
+import {getCustodyColumns} from "../../util/dataColumns.js";
 import {PeerDiscovery, SubnetDiscvQueryMs} from "./discover.js";
 import {PeersData, PeerData} from "./peersData.js";
 import {getKnownClientFromAgentVersion, ClientKind} from "./client.js";
@@ -376,7 +377,15 @@ export class PeerManager {
       peerData.relevantStatus = RelevantPeerStatus.relevant;
     }
     if (getConnection(this.libp2p, peer.toString())) {
-      this.networkEventBus.emit(NetworkEvent.peerConnected, {peer: peer.toString(), status});
+      const nodeId = peerData?.nodeId ?? this.discovery?.["peerIdToNodeId"].get(peer.toString());
+      const custodySubnetCount =
+        peerData?.custodySubnetCount ?? this.discovery?.["peerIdToCustodySubnetCount"].get(peer.toString());
+      this.logger.warn("onStatus", {nodeId: nodeId ? toHexString(nodeId) : undefined, peerId: peer.toString()});
+
+      if (nodeId !== undefined && custodySubnetCount !== undefined) {
+        const dataColumns = getCustodyColumns(nodeId, custodySubnetCount);
+        this.networkEventBus.emit(NetworkEvent.peerConnected, {peer: peer.toString(), status, dataColumns});
+      }
     }
   }
 
@@ -586,6 +595,8 @@ export class PeerManager {
     // NOTE: libp2p may emit two "peer:connect" events: One for inbound, one for outbound
     // If that happens, it's okay. Only the "outbound" connection triggers immediate action
     const now = Date.now();
+    const nodeId = this.discovery?.["peerIdToNodeId"].get(remotePeer.toString()) ?? null;
+    const custodySubnetCount = this.discovery?.["peerIdToCustodySubnetCount"].get(remotePeer.toString()) ?? null;
     const peerData: PeerData = {
       lastReceivedMsgUnixTsMs: direction === "outbound" ? 0 : now,
       // If inbound, request after STATUS_INBOUND_GRACE_PERIOD
@@ -593,11 +604,13 @@ export class PeerManager {
       connectedUnixTsMs: now,
       relevantStatus: RelevantPeerStatus.Unknown,
       direction,
+      nodeId,
       peerId: remotePeer,
       metadata: null,
       agentVersion: null,
       agentClient: null,
       encodingPreference: null,
+      custodySubnetCount,
     };
     this.connectedPeers.set(remotePeer.toString(), peerData);
 

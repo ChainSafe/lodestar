@@ -2,6 +2,8 @@ import {toHexString} from "@chainsafe/ssz";
 import {Epoch, Root, Slot, phase0} from "@lodestar/types";
 import {ErrorAborted, Logger} from "@lodestar/utils";
 import {ChainForkConfig} from "@lodestar/config";
+import {ForkName} from "@lodestar/params";
+
 import {BlockInput, BlockInputType} from "../../chain/blocks/types.js";
 import {PeerAction} from "../../network/index.js";
 import {ItTrigger} from "../../util/itTrigger.js";
@@ -404,14 +406,27 @@ export class SyncChain {
         const blobs = res.result.reduce((acc, blockInput) => {
           hasPostDenebBlocks ||= blockInput.type === BlockInputType.availableData;
           return hasPostDenebBlocks
-            ? acc + (blockInput.type === BlockInputType.availableData ? blockInput.blockData.blobs.length : 0)
+            ? acc +
+                (blockInput.type === BlockInputType.availableData && blockInput.blockData.fork === ForkName.deneb
+                  ? blockInput.blockData.blobs.length
+                  : 0)
             : 0;
         }, 0);
+        const dataColumns = res.result.reduce((acc, blockInput) => {
+          hasPostDenebBlocks ||= blockInput.type === BlockInputType.availableData;
+          return hasPostDenebBlocks
+            ? acc +
+                (blockInput.type === BlockInputType.availableData && blockInput.blockData.fork === ForkName.electra
+                  ? blockInput.blockData.dataColumns.length
+                  : 0)
+            : 0;
+        }, 0);
+
         const downloadInfo = {blocks: res.result.length};
         if (hasPostDenebBlocks) {
-          Object.assign(downloadInfo, {blobs});
+          Object.assign(downloadInfo, {blobs, dataColumns});
         }
-        this.logger.debug("Downloaded batch", {id: this.logId, ...batch.getMetadata(), ...downloadInfo});
+        this.logger.debug("Downloaded batch", {id: this.logId, ...batch.getMetadata(), ...downloadInfo, peer});
         this.triggerBatchProcessor();
       } else {
         this.logger.verbose("Batch download error", {id: this.logId, ...batch.getMetadata()}, res.err);

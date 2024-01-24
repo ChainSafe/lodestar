@@ -132,7 +132,7 @@
     "@lodestar/utils": "^1.21.0",
     "@lodestar/validator": "^1.21.0",
     "@multiformats/multiaddr": "^12.1.3",
-    "c-kzg": "^2.1.2",
+    "c-kzg": "matthewkeil/c-kzg-4844#67bf9367817f0fa5ebd390aeb8c3ae88bdbc170e",
     "datastore-core": "^9.1.1",
     "datastore-level": "^10.1.1",
     "deepmerge": "^4.3.1",
