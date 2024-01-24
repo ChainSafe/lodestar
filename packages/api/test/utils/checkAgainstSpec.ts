@@ -204,6 +204,8 @@ function stringifyProperties(obj: Record<string, unknown>): Record<string, unkno
     const value = obj[key];
     if (typeof value === "number") {
       obj[key] = value.toString(10);
+    } else if (Array.isArray(value)) {
+      obj[key] = value.map((value) => value.toString(10));
     }
   }
 

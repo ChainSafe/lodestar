@@ -233,7 +233,7 @@ export type Api = {
    */
   getBlobSidecars(
     blockId: BlockId,
-    indices?: string[]
+    indices?: number[]
   ): Promise<
     ApiClientResponse<{
       [HttpStatusCode.OK]: {executionOptimistic: ExecutionOptimistic; data: deneb.BlobSidecars};
@@ -274,7 +274,7 @@ export type ReqTypes = {
   publishBlockV2: {body: unknown; query: {broadcast_validation?: string}};
   publishBlindedBlock: {body: unknown};
   publishBlindedBlockV2: {body: unknown; query: {broadcast_validation?: string}};
-  getBlobSidecars: {params: {block_id: string}; query: {indices?: string[]}};
+  getBlobSidecars: {params: {block_id: string}; query: {indices?: number[]}};
 };
 
 export function getReqSerializers(config: ChainForkConfig): ReqSerializers<Api, ReqTypes> {
@@ -361,13 +361,13 @@ export function getReqSerializers(config: ChainForkConfig): ReqSerializers<Api, 
       },
     },
     getBlobSidecars: {
-      writeReq: (block_id, indices = []) => ({
+      writeReq: (block_id, indices) => ({
         params: {block_id: String(block_id)},
         query: {indices},
       }),
       parseReq: ({params, query}) => [params.block_id, query.indices],
       schema: {
-        query: {indices: Schema.StringArray},
+        query: {indices: Schema.UintArray},
       },
     },
   };

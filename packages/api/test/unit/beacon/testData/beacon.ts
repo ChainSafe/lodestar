@@ -71,7 +71,7 @@ export const testData: GenericServerTestCases<Api> = {
     res: undefined,
   },
   getBlobSidecars: {
-    args: ["head", ["0"]],
+    args: ["head", [0]],
     res: {executionOptimistic: true, data: ssz.deneb.BlobSidecars.defaultValue()},
   },
 
