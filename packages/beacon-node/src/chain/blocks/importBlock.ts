@@ -231,7 +231,7 @@ export async function importBlock(
   const useProposerHead = this.beaconProposerCache.get(proposerIndex) !== undefined; // If the block is proposed by us, we calculate newHead using GetProposerHead, else GetCanonicialHead
   const oldHead = this.forkChoice.getHead();
   const newHead = useProposerHead
-    ? this.recomputeForkChoiceHead(UpdateHeadOpt.GetPredictedProposerHead, slot)
+    ? this.recomputeForkChoiceHead(UpdateHeadOpt.GetProposerHead, slot)
     : this.recomputeForkChoiceHead();
   const currFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
 
