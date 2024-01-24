@@ -1,7 +1,7 @@
 import {toHexString} from "@chainsafe/ssz";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {LogLevel, Logger, prettyBytes} from "@lodestar/utils";
-import {Root, Slot, ssz, deneb, UintNum64, SignedBeaconBlock} from "@lodestar/types";
+import {Root, Slot, ssz, deneb, UintNum64, SignedBeaconBlock, electra} from "@lodestar/types";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {routes} from "@lodestar/api";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
@@ -15,6 +15,8 @@ import {
   BlockGossipError,
   BlobSidecarErrorCode,
   BlobSidecarGossipError,
+  DataColumnSidecarGossipError,
+  DataColumnSidecarErrorCode,
   GossipAction,
   GossipActionError,
   SyncCommitteeError,
@@ -46,6 +48,7 @@ import {PeerAction} from "../peers/index.js";
 import {validateLightClientFinalityUpdate} from "../../chain/validation/lightClientFinalityUpdate.js";
 import {validateLightClientOptimisticUpdate} from "../../chain/validation/lightClientOptimisticUpdate.js";
 import {validateGossipBlobSidecar} from "../../chain/validation/blobSidecar.js";
+import {validateGossipDataColumnSidecar} from "../../chain/validation/dataColumnSidecar.js";
 import {
   BlockInput,
   GossipedInputType,
@@ -252,6 +255,74 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
     }
   }
 
+  async function validateBeaconDataColumn(
+    dataColumnSidecar: electra.DataColumnSidecar,
+    dataColumnBytes: Uint8Array,
+    gossipIndex: number,
+    peerIdStr: string,
+    seenTimestampSec: number
+  ): Promise<BlockInput | NullBlockInput> {
+    const dataColumnBlockHeader = dataColumnSidecar.signedBlockHeader.message;
+    const slot = dataColumnBlockHeader.slot;
+    const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(dataColumnBlockHeader);
+    const blockHex = prettyBytes(blockRoot);
+
+    const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
+    const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
+
+    const {blockInput, blockInputMeta} = chain.seenGossipBlockInput.getGossipBlockInput(
+      config,
+      {
+        type: GossipedInputType.dataColumn,
+        dataColumnSidecar,
+        dataColumnBytes,
+      },
+      metrics
+    );
+
+    try {
+      await validateGossipDataColumnSidecar(chain, dataColumnSidecar, gossipIndex);
+      const recvToValidation = Date.now() / 1000 - seenTimestampSec;
+      const validationTime = recvToValidation - recvToValLatency;
+
+      metrics?.gossipBlob.recvToValidation.observe(recvToValidation);
+      metrics?.gossipBlob.validationTime.observe(validationTime);
+
+      logger.debug("Received gossip dataColumn", {
+        slot: slot,
+        root: blockHex,
+        curentSlot: chain.clock.currentSlot,
+        peerId: peerIdStr,
+        delaySec,
+        gossipIndex,
+        ...blockInputMeta,
+        recvToValLatency,
+        recvToValidation,
+        validationTime,
+      });
+
+      return blockInput;
+    } catch (e) {
+      if (e instanceof DataColumnSidecarGossipError) {
+        // Don't trigger this yet if full block and blobs haven't arrived yet
+        if (e.type.code === DataColumnSidecarErrorCode.PARENT_UNKNOWN && blockInput.block !== null) {
+          logger.debug("Gossip dataColumn has error", {slot, root: blockHex, code: e.type.code});
+          events.emit(NetworkEvent.unknownBlockParent, {blockInput, peer: peerIdStr});
+        }
+
+        if (e.action === GossipAction.REJECT) {
+          chain.persistInvalidSszValue(
+            ssz.electra.DataColumnSidecar,
+            dataColumnSidecar,
+            `gossip_reject_slot_${slot}_index_${dataColumnSidecar.index}`
+          );
+        }
+      }
+
+      throw e;
+    }
+  }
+
   function handleValidBeaconBlock(blockInput: BlockInput, peerIdStr: string, seenTimestampSec: number): void {
     const signedBlock = blockInput.block;
 
@@ -367,6 +438,63 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
       }
       const blockInput = await validateBeaconBlob(
         blobSidecar,
+        serializedData,
+        topic.index,
+        peerIdStr,
+        seenTimestampSec
+      );
+      if (blockInput.block !== null) {
+        // we can just queue up the blockInput in the processor, but block gossip handler would have already
+        // queued it up.
+        //
+        // handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
+      } else {
+        // wait for the block to arrive till some cutoff else emit unknownBlockInput event
+        chain.logger.debug("Block not yet available, racing with cutoff", {blobSlot, index});
+        const normalBlockInput = await raceWithCutoff(
+          chain,
+          blobSlot,
+          blockInput.blockInputPromise,
+          BLOCK_AVAILABILITY_CUTOFF_MS
+        ).catch((_e) => {
+          return null;
+        });
+
+        if (normalBlockInput !== null) {
+          chain.logger.debug("Block corresponding to blob is now available for processing", {blobSlot, index});
+          // we can directly send it for processing but block gossip handler will queue it up anyway
+          // if we see any issues later, we can send it to handleValidBeaconBlock
+          //
+          // handleValidBeaconBlock(normalBlockInput, peerIdStr, seenTimestampSec);
+          //
+          // however we can emit the event which will atleast add the peer to the list of peers to pull
+          // data from
+          if (normalBlockInput.type === BlockInputType.dataPromise) {
+            events.emit(NetworkEvent.unknownBlockInput, {blockInput: normalBlockInput, peer: peerIdStr});
+          }
+        } else {
+          chain.logger.debug("Block not available till BLOCK_AVAILABILITY_CUTOFF_MS", {blobSlot, index});
+          events.emit(NetworkEvent.unknownBlockInput, {blockInput, peer: peerIdStr});
+        }
+      }
+    },
+
+    [GossipType.data_column_sidecar]: async ({
+      gossipData,
+      topic,
+      peerIdStr,
+      seenTimestampSec,
+    }: GossipHandlerParamGeneric<GossipType.data_column_sidecar>) => {
+      const {serializedData} = gossipData;
+      const dataColumnSidecar = sszDeserialize(topic, serializedData);
+      const blobSlot = dataColumnSidecar.signedBlockHeader.message.slot;
+      const index = dataColumnSidecar.index;
+
+      if (config.getForkSeq(blobSlot) < ForkSeq.deneb) {
+        throw new GossipActionError(GossipAction.REJECT, {code: "PRE_DENEB_BLOCK"});
+      }
+      const blockInput = await validateBeaconDataColumn(
+        dataColumnSidecar,
         serializedData,
         topic.index,
         peerIdStr,

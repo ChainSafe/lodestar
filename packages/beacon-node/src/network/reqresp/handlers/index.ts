@@ -7,6 +7,8 @@ import {onBeaconBlocksByRange} from "./beaconBlocksByRange.js";
 import {onBeaconBlocksByRoot} from "./beaconBlocksByRoot.js";
 import {onBlobSidecarsByRoot} from "./blobSidecarsByRoot.js";
 import {onBlobSidecarsByRange} from "./blobSidecarsByRange.js";
+import {onDataColumnSidecarsByRange} from "./dataColumnSidecarsByRange.js";
+import {onDataColumnSidecarsByRoot} from "./dataColumnSidecarsByRoot.js";
 import {onLightClientBootstrap} from "./lightClientBootstrap.js";
 import {onLightClientFinalityUpdate} from "./lightClientFinalityUpdate.js";
 import {onLightClientOptimisticUpdate} from "./lightClientOptimisticUpdate.js";
@@ -44,6 +46,15 @@ export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconCh
       const body = ssz.deneb.BlobSidecarsByRangeRequest.deserialize(req.data);
       return onBlobSidecarsByRange(body, chain, db);
     },
+    [ReqRespMethod.DataColumnSidecarsByRange]: (req) => {
+      const body = ssz.electra.DataColumnSidecarsByRangeRequest.deserialize(req.data);
+      return onDataColumnSidecarsByRange(body, chain, db);
+    },
+    [ReqRespMethod.DataColumnSidecarsByRoot]: (req) => {
+      const body = ssz.electra.DataColumnSidecarsByRootRequest.deserialize(req.data);
+      return onDataColumnSidecarsByRoot(body, chain, db);
+    },
+
     [ReqRespMethod.LightClientBootstrap]: (req) => {
       const body = ssz.Root.deserialize(req.data);
       return onLightClientBootstrap(body, chain);

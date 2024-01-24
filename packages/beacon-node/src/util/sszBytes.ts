@@ -198,6 +198,26 @@ export function getSlotFromBlobSidecarSerialized(data: Uint8Array): Slot | null 
   return getSlotFromOffset(data, SLOT_BYTES_POSITION_IN_SIGNED_BLOB_SIDECAR);
 }
 
+/**
+ * {
+    index: ColumnIndex [ fixed - 8 bytes],
+    column: DataColumn BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_CELL * <some non fixed length>,
+    kzgCommitments: denebSsz.BlobKzgCommitments,
+    kzgProofs: denebSsz.KZGProofs,
+    signedBlockHeader: phase0Ssz.SignedBeaconBlockHeader,
+    kzgCommitmentsInclusionProof: KzgCommitmentsInclusionProof,
+  }
+ */
+
+const SLOT_BYTES_POSITION_IN_SIGNED_DATA_COLUMN_SIDECAR = 20;
+export function getSlotFromDataColumnSidecarSerialized(data: Uint8Array): Slot | null {
+  if (data.length < SLOT_BYTES_POSITION_IN_SIGNED_DATA_COLUMN_SIDECAR + SLOT_SIZE) {
+    return null;
+  }
+
+  return getSlotFromOffset(data, SLOT_BYTES_POSITION_IN_SIGNED_DATA_COLUMN_SIDECAR);
+}
+
 function getSlotFromOffset(data: Uint8Array, offset: number): Slot {
   // TODO: Optimize
   const dv = new DataView(data.buffer, data.byteOffset, data.byteLength);

@@ -1,16 +1,20 @@
 import {Multiaddr} from "@multiformats/multiaddr";
 import type {PeerId, PeerInfo} from "@libp2p/interface";
 import {ENR} from "@chainsafe/enr";
+import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {pruneSetToMax, sleep} from "@lodestar/utils";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {LoggerNode} from "@lodestar/logger/node";
+import {ssz} from "@lodestar/types";
 import {NetworkCoreMetrics} from "../core/metrics.js";
 import {Libp2p} from "../interface.js";
 import {ENRKey, SubnetType} from "../metadata.js";
 import {getConnectionsMap, prettyPrintPeerId} from "../util.js";
 import {Discv5Worker} from "../discv5/index.js";
 import {LodestarDiscv5Opts} from "../discv5/types.js";
+import {NodeId} from "../subnets/interface.js";
+import {getCustodyColumnSubnets} from "../../util/dataColumns.js";
 import {deserializeEnrSubnets, zeroAttnets, zeroSyncnets} from "./utils/enrSubnetsDeserialize.js";
 import {IPeerRpcScoreStore, ScoreState} from "./score/index.js";
 
@@ -18,6 +22,8 @@ import {IPeerRpcScoreStore, ScoreState} from "./score/index.js";
 const MAX_CACHED_ENRS = 100;
 /** Max age a cached ENR will be considered for dial */
 const MAX_CACHED_ENR_AGE_MS = 5 * 60 * 1000;
+
+const MAX_CACHED_NODEIDS = 10000;
 
 export type PeerDiscoveryOpts = {
   maxPeers: number;
@@ -76,6 +82,7 @@ type CachedENR = {
   multiaddrTCP: Multiaddr;
   subnets: Record<SubnetType, boolean[]>;
   addedUnixMs: number;
+  custodySubnetCount: number;
 };
 
 /**
@@ -85,11 +92,15 @@ type CachedENR = {
 export class PeerDiscovery {
   readonly discv5: Discv5Worker;
   private libp2p: Libp2p;
+  private nodeId: NodeId;
+  private custodySubnets: number[];
   private peerRpcScores: IPeerRpcScoreStore;
   private metrics: NetworkCoreMetrics | null;
   private logger: LoggerNode;
   private config: BeaconConfig;
   private cachedENRs = new Map<PeerIdStr, CachedENR>();
+  private peerIdToNodeId = new Map<PeerIdStr, NodeId>();
+  private peerIdToCustodySubnetCount = new Map<PeerIdStr, number>();
   private randomNodeQuery: QueryStatus = {code: QueryStatusCode.NotActive};
   private peersToConnect = 0;
   private subnetRequests: Record<SubnetType, Map<number, SubnetRequestInfo>> = {
@@ -112,6 +123,10 @@ export class PeerDiscovery {
     this.logger = logger;
     this.config = config;
     this.discv5 = discv5;
+    this.nodeId = fromHexString(ENR.decodeTxt(opts.discv5.enr).nodeId);
+    // we will only connect to peers that can provide us custody
+    this.custodySubnets = getCustodyColumnSubnets(this.nodeId, config.CUSTODY_REQUIREMENT);
+
     this.maxPeers = opts.maxPeers;
     this.discv5StartMs = 0;
     this.discv5StartMs = Date.now();
@@ -304,7 +319,9 @@ export class PeerDiscovery {
 
     const attnets = zeroAttnets;
     const syncnets = zeroSyncnets;
-    const status = this.handleDiscoveredPeer(id, multiaddrs[0], attnets, syncnets);
+    const custodySubnetCount = 0;
+
+    const status = this.handleDiscoveredPeer(id, multiaddrs[0], attnets, syncnets, custodySubnetCount);
     this.metrics?.discovery.discoveredStatus.inc({status});
   };
 
@@ -317,6 +334,11 @@ export class PeerDiscovery {
     }
     // async due to some crypto that's no longer necessary
     const peerId = await enr.peerId();
+
+    const nodeId = fromHexString(enr.nodeId);
+    this.peerIdToNodeId.set(peerId.toString(), nodeId);
+    pruneSetToMax(this.peerIdToNodeId, MAX_CACHED_NODEIDS);
+
     // tcp multiaddr is known to be be present, checked inside the worker
     const multiaddrTCP = enr.getLocationMultiaddr(ENRKey.tcp);
     if (!multiaddrTCP) {
@@ -327,6 +349,7 @@ export class PeerDiscovery {
     // Are this fields mandatory?
     const attnetsBytes = enr.kvs.get(ENRKey.attnets); // 64 bits
     const syncnetsBytes = enr.kvs.get(ENRKey.syncnets); // 4 bits
+    const custodySubnetCountBytes = enr.kvs.get(ENRKey.custody_subnet_count); // 64 bits
 
     // Use faster version than ssz's implementation that leverages pre-cached.
     // Some nodes don't serialize the bitfields properly, encoding the syncnets as attnets,
@@ -334,8 +357,10 @@ export class PeerDiscovery {
     // never throw and treat too long or too short bitfields as zero-ed
     const attnets = attnetsBytes ? deserializeEnrSubnets(attnetsBytes, ATTESTATION_SUBNET_COUNT) : zeroAttnets;
     const syncnets = syncnetsBytes ? deserializeEnrSubnets(syncnetsBytes, SYNC_COMMITTEE_SUBNET_COUNT) : zeroSyncnets;
+    const custodySubnetCount = custodySubnetCountBytes ? ssz.UintNum64.deserialize(custodySubnetCountBytes) : 1;
+    this.peerIdToCustodySubnetCount.set(peerId.toString(), custodySubnetCount);
 
-    const status = this.handleDiscoveredPeer(peerId, multiaddrTCP, attnets, syncnets);
+    const status = this.handleDiscoveredPeer(peerId, multiaddrTCP, attnets, syncnets, custodySubnetCount);
     this.metrics?.discovery.discoveredStatus.inc({status});
   };
 
@@ -346,8 +371,11 @@ export class PeerDiscovery {
     peerId: PeerId,
     multiaddrTCP: Multiaddr,
     attnets: boolean[],
-    syncnets: boolean[]
+    syncnets: boolean[],
+    custodySubnetCount: number
   ): DiscoveredPeerStatus {
+    const nodeId = this.peerIdToNodeId.get(peerId.toString());
+    this.logger.warn("handleDiscoveredPeer", {nodeId: nodeId ? toHexString(nodeId) : null, peerId: peerId.toString()});
     try {
       // Check if peer is not banned or disconnected
       if (this.peerRpcScores.getScoreState(peerId) !== ScoreState.Healthy) {
@@ -374,6 +402,7 @@ export class PeerDiscovery {
         multiaddrTCP,
         subnets: {attnets, syncnets},
         addedUnixMs: Date.now(),
+        custodySubnetCount,
       };
 
       // Only dial peer if necessary
@@ -394,6 +423,27 @@ export class PeerDiscovery {
   }
 
   private shouldDialPeer(peer: CachedENR): boolean {
+    const nodeId = this.peerIdToNodeId.get(peer.peerId.toString());
+    if (nodeId === undefined) {
+      return false;
+    }
+    const peerCustodySubnetCount = peer.custodySubnetCount;
+    const peerCustodySubnets = getCustodyColumnSubnets(nodeId, peerCustodySubnetCount);
+    const hasAllColumns = this.custodySubnets.reduce((acc, elem) => acc && peerCustodySubnets.includes(elem), true);
+
+    this.logger.debug("peerCustodySubnets", {
+      peerId: peer.peerId.toString(),
+      peerNodeId: toHexString(nodeId),
+      hasAllColumns,
+      peerCustodySubnetCount,
+      peerCustodySubnets: peerCustodySubnets.join(","),
+      custodySubnets: this.custodySubnets.join(","),
+      nodeId: `${toHexString(this.nodeId)}`,
+    });
+    if (!hasAllColumns) {
+      return false;
+    }
+
     for (const type of [SubnetType.attnets, SubnetType.syncnets]) {
       for (const [subnet, {toUnixMs, peersToConnect}] of this.subnetRequests[type].entries()) {
         if (toUnixMs < Date.now() || peersToConnect === 0) {

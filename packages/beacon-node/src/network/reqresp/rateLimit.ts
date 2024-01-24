@@ -3,6 +3,8 @@ import {
   MAX_REQUEST_LIGHT_CLIENT_UPDATES,
   MAX_BLOBS_PER_BLOCK,
   MAX_REQUEST_BLOB_SIDECARS,
+  MAX_REQUEST_BLOCKS_DENEB,
+  NUMBER_OF_COLUMNS,
 } from "@lodestar/params";
 import {InboundRateLimitQuota} from "@lodestar/reqresp";
 import {ReqRespMethod, RequestBodyByMethod} from "./types.js";
@@ -45,6 +47,16 @@ export const rateLimitQuotas: Record<ReqRespMethod, InboundRateLimitQuota> = {
     // Rationale: quota of BeaconBlocksByRoot * MAX_BLOBS_PER_BLOCK
     byPeer: {quota: 128 * MAX_BLOBS_PER_BLOCK, quotaTimeMs: 10_000},
     getRequestCount: getRequestCountFn(ReqRespMethod.BlobSidecarsByRoot, (req) => req.length),
+  },
+  [ReqRespMethod.DataColumnSidecarsByRange]: {
+    // Rationale: MAX_REQUEST_BLOCKS_DENEB * NUMBER_OF_COLUMNS
+    byPeer: {quota: MAX_REQUEST_BLOCKS_DENEB * NUMBER_OF_COLUMNS, quotaTimeMs: 10_000},
+    getRequestCount: getRequestCountFn(ReqRespMethod.DataColumnSidecarsByRange, (req) => req.count),
+  },
+  [ReqRespMethod.DataColumnSidecarsByRoot]: {
+    // Rationale: quota of BeaconBlocksByRoot * NUMBER_OF_COLUMNS
+    byPeer: {quota: 128 * NUMBER_OF_COLUMNS, quotaTimeMs: 10_000},
+    getRequestCount: getRequestCountFn(ReqRespMethod.DataColumnSidecarsByRoot, (req) => req.length),
   },
   [ReqRespMethod.LightClientBootstrap]: {
     // As similar in the nature of `Status` protocol so we use the same rate limits.

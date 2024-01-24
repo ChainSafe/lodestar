@@ -1,7 +1,17 @@
 import {ValueOf} from "@chainsafe/ssz";
 import * as ssz from "./sszTypes.js";
 
-export type BlobSidecar = ValueOf<typeof ssz.BlobSidecar>;
+export type Cell = ValueOf<typeof ssz.Cell>;
+export type DataColumn = ValueOf<typeof ssz.DataColumn>;
+export type ExtendedMatrix = ValueOf<typeof ssz.ExtendedMatrix>;
+export type KzgCommitmentsInclusionProof = ValueOf<typeof ssz.KzgCommitmentsInclusionProof>;
+export type DataColumnSidecar = ValueOf<typeof ssz.DataColumnSidecar>;
+export type DataColumnSidecars = ValueOf<typeof ssz.DataColumnSidecars>;
+
+export type DataColumnIdentifier = ValueOf<typeof ssz.DataColumnIdentifier>;
+export type DataColumnSidecarsByRootRequest = ValueOf<typeof ssz.DataColumnSidecarsByRootRequest>;
+export type DataColumnSidecarsByRangeRequest = ValueOf<typeof ssz.DataColumnSidecarsByRangeRequest>;
+
 export type ExecutionPayloadAndBlobsBundle = ValueOf<typeof ssz.ExecutionPayloadAndBlobsBundle>;
 
 export type ExecutionPayload = ValueOf<typeof ssz.ExecutionPayload>;

@@ -21,6 +21,12 @@ describe("network / gossip / topic", function () {
         topicStr: "/eth2/46acb19a/blob_sidecar_1/ssz_snappy",
       },
     ],
+    [GossipType.data_column_sidecar]: [
+      {
+        topic: {type: GossipType.data_column_sidecar, index: 1, fork: ForkName.electra, encoding},
+        topicStr: "/eth2/46acb19a/data_column_sidecar/ssz_snappy",
+      },
+    ],
     [GossipType.beacon_aggregate_and_proof]: [
       {
         topic: {type: GossipType.beacon_aggregate_and_proof, fork: ForkName.phase0, encoding},

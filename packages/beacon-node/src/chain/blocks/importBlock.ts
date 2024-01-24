@@ -1,6 +1,6 @@
 import {toHexString} from "@chainsafe/ssz";
 import {capella, ssz, altair, BeaconBlock} from "@lodestar/types";
-import {ForkLightClient, ForkSeq, INTERVALS_PER_SLOT, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkName, ForkLightClient, ForkSeq, INTERVALS_PER_SLOT, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   CachedBeaconStateAltair,
   computeEpochAtSlot,
@@ -113,18 +113,23 @@ export async function importBlock(
     // out of data range blocks and import then in forkchoice although one would not be able to
     // attest and propose with such head similar to optimistic sync
     if (blockInput.type === BlockInputType.availableData) {
-      const {blobsSource, blobs} = blockInput.blockData;
+      const {blockData} = blockInput;
+      if (blockData.fork === ForkName.deneb) {
+        const {blobsSource, blobs} = blockData;
 
-      this.metrics?.importBlock.blobsBySource.inc({blobsSource});
-      for (const blobSidecar of blobs) {
-        const {index, kzgCommitment} = blobSidecar;
-        this.emitter.emit(routes.events.EventType.blobSidecar, {
-          blockRoot: blockRootHex,
-          slot: blockSlot,
-          index,
-          kzgCommitment: toHexString(kzgCommitment),
-          versionedHash: toHexString(kzgCommitmentToVersionedHash(kzgCommitment)),
-        });
+        this.metrics?.importBlock.blobsBySource.inc({blobsSource});
+        for (const blobSidecar of blobs) {
+          const {index, kzgCommitment} = blobSidecar;
+          this.emitter.emit(routes.events.EventType.blobSidecar, {
+            blockRoot: blockRootHex,
+            slot: blockSlot,
+            index,
+            kzgCommitment: toHexString(kzgCommitment),
+            versionedHash: toHexString(kzgCommitmentToVersionedHash(kzgCommitment)),
+          });
+        }
+      } else if (blockData.fork === ForkName.electra) {
+        // TODO peerDAS build and emit the event for the datacolumns
       }
     }
   });

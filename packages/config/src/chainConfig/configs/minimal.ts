@@ -100,4 +100,8 @@ export const chainConfig: ChainConfig = {
   // Deneb
   // `2**12` (= 4096 epochs, ~18 days)
   MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: 4096,
+
+  // Electra
+  SAMPLES_PER_SLOT: 8,
+  CUSTODY_REQUIREMENT: 1,
 };

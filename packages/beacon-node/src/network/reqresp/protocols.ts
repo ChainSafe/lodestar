@@ -71,6 +71,18 @@ export const BlobSidecarsByRoot = toProtocol({
   contextBytesType: ContextBytesType.ForkDigest,
 });
 
+export const DataColumnSidecarsByRange = toProtocol({
+  method: ReqRespMethod.DataColumnSidecarsByRange,
+  version: Version.V1,
+  contextBytesType: ContextBytesType.ForkDigest,
+});
+
+export const DataColumnSidecarsByRoot = toProtocol({
+  method: ReqRespMethod.DataColumnSidecarsByRoot,
+  version: Version.V1,
+  contextBytesType: ContextBytesType.ForkDigest,
+});
+
 export const LightClientBootstrap = toProtocol({
   method: ReqRespMethod.LightClientBootstrap,
   version: Version.V1,

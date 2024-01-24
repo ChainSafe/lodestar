@@ -11,6 +11,7 @@ import {
   phase0,
   SignedBeaconBlock,
   Slot,
+  electra
 } from "@lodestar/types";
 import {BeaconConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
@@ -22,6 +23,7 @@ import {GossipActionError} from "../../chain/errors/gossipValidation.js";
 export enum GossipType {
   beacon_block = "beacon_block",
   blob_sidecar = "blob_sidecar",
+  data_column_sidecar = "data_column_sidecar",
   beacon_aggregate_and_proof = "beacon_aggregate_and_proof",
   beacon_attestation = "beacon_attestation",
   voluntary_exit = "voluntary_exit",
@@ -50,6 +52,7 @@ export interface IGossipTopic {
 export type GossipTopicTypeMap = {
   [GossipType.beacon_block]: {type: GossipType.beacon_block};
   [GossipType.blob_sidecar]: {type: GossipType.blob_sidecar; index: number};
+  [GossipType.data_column_sidecar]: {type: GossipType.data_column_sidecar; index: number};
   [GossipType.beacon_aggregate_and_proof]: {type: GossipType.beacon_aggregate_and_proof};
   [GossipType.beacon_attestation]: {type: GossipType.beacon_attestation; subnet: number};
   [GossipType.voluntary_exit]: {type: GossipType.voluntary_exit};
@@ -80,6 +83,7 @@ export type SSZTypeOfGossipTopic<T extends GossipTopic> = T extends {type: infer
 export type GossipTypeMap = {
   [GossipType.beacon_block]: SignedBeaconBlock;
   [GossipType.blob_sidecar]: deneb.BlobSidecar;
+  [GossipType.data_column_sidecar]: electra.DataColumnSidecar;
   [GossipType.beacon_aggregate_and_proof]: phase0.SignedAggregateAndProof;
   [GossipType.beacon_attestation]: phase0.Attestation;
   [GossipType.voluntary_exit]: phase0.SignedVoluntaryExit;
@@ -95,6 +99,7 @@ export type GossipTypeMap = {
 export type GossipFnByType = {
   [GossipType.beacon_block]: (signedBlock: SignedBeaconBlock) => Promise<void> | void;
   [GossipType.blob_sidecar]: (blobSidecar: deneb.BlobSidecar) => Promise<void> | void;
+  [GossipType.data_column_sidecar]: (blobSidecar: electra.DataColumnSidecar) => Promise<void> | void;
   [GossipType.beacon_aggregate_and_proof]: (aggregateAndProof: phase0.SignedAggregateAndProof) => Promise<void> | void;
   [GossipType.beacon_attestation]: (attestation: phase0.Attestation) => Promise<void> | void;
   [GossipType.voluntary_exit]: (voluntaryExit: phase0.SignedVoluntaryExit) => Promise<void> | void;
