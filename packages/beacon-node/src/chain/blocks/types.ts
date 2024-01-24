@@ -36,7 +36,7 @@ export enum GossipedInputType {
 
 type BlobsCacheMap = Map<number, {blobSidecar: deneb.BlobSidecar; blobBytes: Uint8Array | null}>;
 
-type ForkBlobsInfo = {fork: ForkName.deneb};
+type ForkBlobsInfo = {fork: ForkName.deneb | ForkName.electra};
 type BlobsData = {blobs: deneb.BlobSidecars; blobsBytes: (Uint8Array | null)[]; blobsSource: BlobsSource};
 export type BlockInputDataBlobs = ForkBlobsInfo & BlobsData;
 export type BlockInputData = BlockInputDataBlobs;
