@@ -5,9 +5,10 @@ import {ssz as altair} from "./altair/index.js";
 import {ssz as bellatrix} from "./bellatrix/index.js";
 import {ssz as capella} from "./capella/index.js";
 import {ssz as deneb} from "./deneb/index.js";
+import {ssz as electra} from "./electra/index.js";
 
 export * from "./primitive/sszTypes.js";
-export {phase0, altair, bellatrix, capella, deneb};
+export {phase0, altair, bellatrix, capella, deneb, electra};
 
 /**
  * Index the ssz types that differ by fork
@@ -98,14 +99,42 @@ const typesByFork = {
     SSEPayloadAttributes: deneb.SSEPayloadAttributes,
     ExecutionPayloadAndBlobsBundle: deneb.ExecutionPayloadAndBlobsBundle,
   },
+  [ForkName.electra]: {
+    BeaconBlock: electra.BeaconBlock,
+    BeaconBlockBody: electra.BeaconBlockBody,
+    BeaconState: electra.BeaconState,
+    SignedBeaconBlock: electra.SignedBeaconBlock,
+    Metadata: altair.Metadata,
+    LightClientHeader: electra.LightClientHeader,
+    LightClientBootstrap: electra.LightClientBootstrap,
+    LightClientUpdate: electra.LightClientUpdate,
+    LightClientFinalityUpdate: electra.LightClientFinalityUpdate,
+    LightClientOptimisticUpdate: electra.LightClientOptimisticUpdate,
+    LightClientStore: electra.LightClientStore,
+    BlindedBeaconBlock: electra.BlindedBeaconBlock,
+    BlindedBeaconBlockBody: electra.BlindedBeaconBlockBody,
+    SignedBlindedBeaconBlock: electra.SignedBlindedBeaconBlock,
+    ExecutionPayload: electra.ExecutionPayload,
+    ExecutionPayloadHeader: electra.ExecutionPayloadHeader,
+    BuilderBid: electra.BuilderBid,
+    SignedBuilderBid: electra.SignedBuilderBid,
+    SSEPayloadAttributes: electra.SSEPayloadAttributes,
+    ExecutionPayloadAndBlobsBundle: electra.ExecutionPayloadAndBlobsBundle,
+  },
 };
 
 const pick = <T extends Record<ForkName, unknown>, K extends keyof T>(obj: T, ...keys: K[]): Pick<T, K> =>
   Object.fromEntries(keys.filter((key) => key in obj).map((key) => [key, obj[key]])) as Pick<T, K>;
 
-const executionForks: ForkExecution[] = [ForkName.bellatrix, ForkName.capella, ForkName.deneb];
-const lightCLientForks: ForkLightClient[] = [ForkName.altair, ForkName.bellatrix, ForkName.capella, ForkName.deneb];
-const blobsForks: ForkBlobs[] = [ForkName.deneb];
+const executionForks: ForkExecution[] = [ForkName.bellatrix, ForkName.capella, ForkName.deneb, ForkName.electra];
+const lightCLientForks: ForkLightClient[] = [
+  ForkName.altair,
+  ForkName.bellatrix,
+  ForkName.capella,
+  ForkName.deneb,
+  ForkName.electra,
+];
+const blobsForks: ForkBlobs[] = [ForkName.deneb, ForkName.electra];
 
 export const allForksExecution = pick(typesByFork, ...executionForks);
 export const allForksLightClient = pick(typesByFork, ...lightCLientForks);
