@@ -3,6 +3,7 @@ import {ssz as altair} from "../altair/index.js";
 import {ssz as bellatrix} from "../bellatrix/index.js";
 import {ssz as capella} from "../capella/index.js";
 import {ssz as deneb} from "../deneb/index.js";
+import {ssz as electra} from "../electra/index.js";
 
 /**
  * Index the ssz types that differ by fork
@@ -42,6 +43,13 @@ export const allForks = {
     BeaconBlock: deneb.BeaconBlock,
     SignedBeaconBlock: deneb.SignedBeaconBlock,
     BeaconState: deneb.BeaconState,
+    Metadata: altair.Metadata,
+  },
+  electra: {
+    BeaconBlockBody: electra.BeaconBlockBody,
+    BeaconBlock: electra.BeaconBlock,
+    SignedBeaconBlock: electra.SignedBeaconBlock,
+    BeaconState: electra.BeaconState,
     Metadata: altair.Metadata,
   },
 };
@@ -85,6 +93,17 @@ export const allForksExecution = {
     SignedBuilderBid: deneb.SignedBuilderBid,
     SSEPayloadAttributes: deneb.SSEPayloadAttributes,
   },
+  electra: {
+    BeaconBlockBody: electra.BeaconBlockBody,
+    BeaconBlock: electra.BeaconBlock,
+    SignedBeaconBlock: electra.SignedBeaconBlock,
+    BeaconState: electra.BeaconState,
+    ExecutionPayload: electra.ExecutionPayload,
+    ExecutionPayloadHeader: electra.ExecutionPayloadHeader,
+    BuilderBid: electra.BuilderBid,
+    SignedBuilderBid: electra.SignedBuilderBid,
+    SSEPayloadAttributes: electra.SSEPayloadAttributes,
+  },
 };
 
 /**
@@ -106,6 +125,11 @@ export const allForksBlinded = {
     BeaconBlockBody: deneb.BlindedBeaconBlockBody,
     BeaconBlock: deneb.BlindedBeaconBlock,
     SignedBeaconBlock: deneb.SignedBlindedBeaconBlock,
+  },
+  electra: {
+    BeaconBlockBody: electra.BlindedBeaconBlockBody,
+    BeaconBlock: electra.BlindedBeaconBlock,
+    SignedBeaconBlock: electra.SignedBlindedBeaconBlock,
   },
 };
 
@@ -150,11 +174,25 @@ export const allForksLightClient = {
     LightClientOptimisticUpdate: deneb.LightClientOptimisticUpdate,
     LightClientStore: deneb.LightClientStore,
   },
+  electra: {
+    BeaconBlock: electra.BeaconBlock,
+    BeaconBlockBody: electra.BeaconBlockBody,
+    LightClientHeader: electra.LightClientHeader,
+    LightClientBootstrap: electra.LightClientBootstrap,
+    LightClientUpdate: electra.LightClientUpdate,
+    LightClientFinalityUpdate: electra.LightClientFinalityUpdate,
+    LightClientOptimisticUpdate: electra.LightClientOptimisticUpdate,
+    LightClientStore: electra.LightClientStore,
+  },
 };
 
 export const allForksBlobs = {
   deneb: {
     BlobSidecar: deneb.BlobSidecar,
     ExecutionPayloadAndBlobsBundle: deneb.ExecutionPayloadAndBlobsBundle,
+  },
+  electra: {
+    BlobSidecar: electra.BlobSidecar,
+    ExecutionPayloadAndBlobsBundle: electra.ExecutionPayloadAndBlobsBundle,
   },
 };
