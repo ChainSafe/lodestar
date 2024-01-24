@@ -1,4 +1,4 @@
-import {TimeoutError} from "./errors.js";
+import {ErrorAborted, TimeoutError} from "./errors.js";
 import {sleep} from "./sleep.js";
 import {ArrayToTuple, NonEmptyArray} from "./types.js";
 
@@ -161,6 +161,9 @@ export async function resolveOrRacePromises<T extends NonEmptyArray<Promise<unkn
     ]);
     return mutedPromises as ReturnPromiseWithTuple<T>;
   } catch (err) {
+    if (err instanceof ErrorAborted) {
+      return mutedPromises as ReturnPromiseWithTuple<T>;
+    }
     if (err !== resolveTimeoutError) {
       throw err;
     }
@@ -174,6 +177,9 @@ export async function resolveOrRacePromises<T extends NonEmptyArray<Promise<unkn
       }),
     ]);
   } catch (err) {
+    if (err instanceof ErrorAborted) {
+      return mutedPromises as ReturnPromiseWithTuple<T>;
+    }
     if (err !== raceTimeoutError && !(err instanceof AggregateError)) {
       throw err;
     }

@@ -177,6 +177,18 @@ export function getValidatorApi({
     return computeEpochAtSlot(getCurrentSlot(config, chain.genesisTime - MAX_API_CLOCK_DISPARITY_SEC));
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+  function getBlockValueLogInfo(block: {executionPayloadValue: bigint; consensusBlockValue: bigint}) {
+    const executionValue = block.executionPayloadValue ?? BigInt(0);
+    const consensusValue = block.consensusBlockValue ?? BigInt(0);
+    const totalValue = executionValue + consensusValue; // Total block value is in wei
+    return {
+      executionPayloadValue: `${executionValue}`,
+      consensusBlockValue: `${consensusValue}`,
+      blockTotalValue: `${totalValue}`,
+    };
+  }
+
   /**
    * This function is called 1s before next epoch, usually at that time PrepareNextSlotScheduler finishes
    * so we should have checkpoint state, otherwise wait for up to the slot 1 of epoch.
@@ -510,6 +522,8 @@ export function getValidatorApi({
       // Start calls for building execution and builder blocks
       const builderDisabledError = new Error("Builder disabled");
       const engineDisabledError = new Error("Engine disabled");
+      // use abort controller to stop waiting for both block sources
+      const controller = new AbortController();
       const [builder, engine] = await resolveOrRacePromises(
         [
           isBuilderEnabled
@@ -523,18 +537,28 @@ export function getValidatorApi({
             : Promise.reject<ReturnType<typeof produceBuilderBlindedBlock>>(builderDisabledError),
 
           isEngineEnabled
-            ? produceEngineFullBlockOrContents(slot, randaoReveal, graffiti, {
+            ? (produceEngineFullBlockOrContents(slot, randaoReveal, graffiti, {
                 feeRecipient,
                 strictFeeRecipientCheck,
                 // skip checking and recomputing head in these individual produce calls
                 skipHeadChecksAndUpdate: true,
                 commonBlockBody,
-              })
+              }).then((engine) => {
+                // Once the engine returns a block, in the event of either:
+                // - suspected builder censorship
+                // - sufficiently small builder boost
+                // we should not wait for the builder promise to resolve
+                if (engine.shouldOverrideBuilder || builderBoostFactor === BigInt(0)) {
+                  controller.abort();
+                }
+                return engine;
+              }) as ReturnType<typeof produceEngineFullBlockOrContents>)
             : Promise.reject<ReturnType<typeof produceEngineFullBlockOrContents>>(engineDisabledError),
         ],
         {
           resolveTimeoutMs: BLOCK_PRODUCTION_RACE_CUTOFF_MS,
           raceTimeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
+          signal: controller.signal,
         }
       );
 
@@ -577,63 +601,52 @@ export function getValidatorApi({
         );
       }
 
-      if (builder.status === "fulfilled" && engine.status !== "fulfilled") {
-        const builderBlock = builder.value;
-        const builderPayloadValue = builderBlock.executionPayloadValue ?? BigInt(0);
-        const builderConsensusValue = builderBlock.consensusBlockValue ?? BigInt(0);
-        const builderBlockValue = builderPayloadValue + builderConsensusValue;
-
-        logger.info("Selected builder block: no engine block produced", {
-          durationMs: builder.durationMs,
+      // handle builder override case separately
+      const shouldOverrideBuilder = engine.status === "fulfilled" && engine.value.shouldOverrideBuilder;
+      if (shouldOverrideBuilder) {
+        logger.info("Selected engine block as censorship suspected in builder blocks", {
           slot,
-          builderPayloadValue: `${builderPayloadValue}`,
-          builderConsensusValue: `${builderConsensusValue}`,
-          builderBlockValue: `${builderBlockValue}`,
+          durationMs: engine.durationMs,
+          shouldOverrideBuilder,
+          ...getBlockValueLogInfo(engine.value),
+        });
+
+        return {...engine.value, executionPayloadBlinded: false, executionPayloadSource: ProducedBlockSource.engine};
+      }
+
+      if (builder.status === "fulfilled" && engine.status !== "fulfilled") {
+        logger.info("Selected builder block: no engine block produced", {
+          slot,
+          durationMs: builder.durationMs,
+          ...getBlockValueLogInfo(builder.value),
         });
 
         return {...builder.value, executionPayloadBlinded: true, executionPayloadSource: ProducedBlockSource.builder};
       }
 
       if (engine.status === "fulfilled" && builder.status !== "fulfilled") {
-        const engineBlock = engine.value;
-        const enginePayloadValue = engineBlock.executionPayloadValue ?? BigInt(0);
-        const engineConsensusValue = engineBlock.consensusBlockValue ?? BigInt(0);
-        const engineBlockValue = enginePayloadValue + engineConsensusValue;
-
         logger.info("Selected engine block: no builder block produced", {
-          durationMs: engine.durationMs,
           slot,
-          enginePayloadValue: `${enginePayloadValue}`,
-          engineConsensusValue: `${engineConsensusValue}`,
-          engineBlockValue: `${engineBlockValue}`,
+          durationMs: engine.durationMs,
+          ...getBlockValueLogInfo(engine.value),
         });
 
         return {...engine.value, executionPayloadBlinded: false, executionPayloadSource: ProducedBlockSource.engine};
       }
 
       if (engine.status === "fulfilled" && builder.status === "fulfilled") {
-        const engineBlock = engine.value;
-        const enginePayloadValue = engineBlock.executionPayloadValue ?? BigInt(0);
-        const engineConsensusValue = engineBlock.consensusBlockValue ?? BigInt(0);
-        const engineBlockValue = enginePayloadValue + engineConsensusValue;
-
-        const builderBlock = builder.value;
-        const builderPayloadValue = builderBlock.executionPayloadValue ?? BigInt(0);
-        const builderConsensusValue = builderBlock.consensusBlockValue ?? BigInt(0);
-        const builderBlockValue = builderPayloadValue + builderConsensusValue;
-
-        if (engineBlock.shouldOverrideBuilder) {
-          logger.info("Selected engine block as censorship suspected in builder blocks", {
-            // winston logger doesn't like bigint
-            enginePayloadValue: `${enginePayloadValue}`,
-            engineConsensusValue: `${engineConsensusValue}`,
-            engineBlockValue: `${engineBlockValue}`,
-            shouldOverrideBuilder: engineBlock.shouldOverrideBuilder,
-            slot,
-          });
-
-          return {...engine.value, executionPayloadBlinded: false, executionPayloadSource: ProducedBlockSource.engine};
-        }
+        const engineBlockValue = engine.value.executionPayloadValue ?? 0n + engine.value.consensusBlockValue ?? 0n;
+        const builderBlockValue = builder.value.executionPayloadValue ?? 0n + builder.value.consensusBlockValue ?? 0n;
+        const {
+          executionPayloadValue: engineExecutionPayloadValue,
+          consensusBlockValue: engineConsensusBlockValue,
+          blockTotalValue: engineBlockTotalValue,
+        } = getBlockValueLogInfo(engine.value);
+        const {
+          executionPayloadValue: builderExecutionPayloadValue,
+          consensusBlockValue: builderConsensusBlockValue,
+          blockTotalValue: builderBlockTotalValue,
+        } = getBlockValueLogInfo(builder.value);
 
         const executionPayloadSource = selectBlockProductionSource({
           builderBlockValue,
@@ -643,22 +656,23 @@ export function getValidatorApi({
         });
 
         logger.info(`Selected executionPayloadSource=${executionPayloadSource} block`, {
-          builderSelection,
-          // winston logger doesn't like bigint
-          builderBoostFactor: `${builderBoostFactor}`,
-          enginePayloadValue: `${enginePayloadValue}`,
-          builderPayloadValue: `${builderPayloadValue}`,
-          engineConsensusValue: `${engineConsensusValue}`,
-          builderConsensusValue: `${builderConsensusValue}`,
-          engineBlockValue: `${engineBlockValue}`,
-          builderBlockValue: `${builderBlockValue}`,
-          shouldOverrideBuilder: engineBlock.shouldOverrideBuilder,
           slot,
+          builderSelection,
+          builderBoostFactor: `${builderBoostFactor}`,
+          shouldOverrideBuilder,
+          engineDurationMs: engine.durationMs,
+          engineExecutionPayloadValue,
+          engineConsensusBlockValue,
+          engineBlockTotalValue,
+          builderDurationMs: builder.durationMs,
+          builderExecutionPayloadValue,
+          builderConsensusBlockValue,
+          builderBlockTotalValue,
         });
 
         if (executionPayloadSource === ProducedBlockSource.engine) {
           return {
-            ...engineBlock,
+            ...engine.value,
             executionPayloadBlinded: false,
             executionPayloadSource,
           } as routes.validator.ProduceBlockOrContentsRes & {
@@ -667,7 +681,7 @@ export function getValidatorApi({
           };
         } else {
           return {
-            ...builderBlock,
+            ...builder.value,
             executionPayloadBlinded: true,
             executionPayloadSource,
           } as routes.validator.ProduceBlindedBlockRes & {
