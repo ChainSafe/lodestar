@@ -406,7 +406,7 @@ export function getBeaconBlockApi({
       await publishBlock(signedBlockOrContents, opts);
     },
 
-    async getBlobSidecars(blockId, indices = []) {
+    async getBlobSidecars(blockId, indices) {
       const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
       const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
 

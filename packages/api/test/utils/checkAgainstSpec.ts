@@ -202,10 +202,7 @@ function prettyAjvErrors(errors: ErrorObject[] | null | undefined): string {
 type StringifiedProperty = string | StringifiedProperty[] | null | undefined;
 
 function stringifyProperty(value: unknown): StringifiedProperty {
-  if (value === undefined || value === null || typeof value === "string") {
-    // Handle specifically null as `typeof null === "object"`
-    return value;
-  } else if (typeof value === "number") {
+  if (typeof value === "number") {
     return value.toString(10);
   } else if (Array.isArray(value)) {
     return value.map(stringifyProperty);
