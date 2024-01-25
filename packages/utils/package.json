@@ -44,6 +44,7 @@
     "bigint-buffer": "^1.1.5",
     "case": "^1.6.3",
     "chalk": "^5.2.0",
+    "ethereum-cryptography": "^1.2.0",
     "js-yaml": "^4.1.0"
   },
   "devDependencies": {
