@@ -1,6 +1,5 @@
-import {PublicKey, Signature} from "@chainsafe/bls/types";
+import {CoordType, PublicKey, Signature} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
-import {CoordType} from "@chainsafe/blst";
 import {ISignatureSet} from "@lodestar/state-transition";
 import {Metrics} from "../../metrics/index.js";
 import {IBlsVerifier} from "./interface.js";
