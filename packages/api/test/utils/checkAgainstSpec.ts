@@ -199,14 +199,24 @@ function prettyAjvErrors(errors: ErrorObject[] | null | undefined): string {
   return errors.map((e) => `${e.instancePath ?? "."} - ${e.message}`).join("\n");
 }
 
+type StringifiedProperty = string | StringifiedProperty[] | null | undefined;
+
+function stringifyProperty(value: unknown): StringifiedProperty {
+  if (value === undefined || value === null || typeof value === "string") {
+    // Handle specifically null as `typeof null === "object"`
+    return value;
+  } else if (typeof value === "number") {
+    return value.toString(10);
+  } else if (Array.isArray(value)) {
+    return value.map(stringifyProperty);
+  }
+  return String(value);
+}
+
 function stringifyProperties(obj: Record<string, unknown>): Record<string, unknown> {
   for (const key of Object.keys(obj)) {
     const value = obj[key];
-    if (typeof value === "number") {
-      obj[key] = value.toString(10);
-    } else if (Array.isArray(value)) {
-      obj[key] = value.map((value) => value.toString(10));
-    }
+    obj[key] = stringifyProperty(value);
   }
 
   return obj;
