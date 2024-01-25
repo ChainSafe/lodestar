@@ -52,8 +52,8 @@ export const eventTestData: EventData = {
     message: {
       validator_index: "1",
       from_bls_pubkey:
-        "0x9048a71944feba4695ef870dfb5745c934d81c5efd934c0250a12942fcc2a2dfd6b20d53314379dec7aae5ca5fe9e9c4",
-      to_execution_address: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "0x933ad9491b62059dd065b560d256d8957a8c402cc6e8d8ee7290ae11e8f7329267a8811c397529dac52ae1342ba58c95",
+      to_execution_address: "0x9Be8d619c56699667c1feDCD15f6b14D8B067F72",
     },
     signature:
       "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
@@ -151,8 +151,34 @@ export const eventTestData: EventData = {
     }),
   },
   [EventType.payloadAttributes]: {
-    version: ForkName.bellatrix,
-    data: ssz.bellatrix.SSEPayloadAttributes.defaultValue(),
+    version: ForkName.capella,
+    data: ssz.capella.SSEPayloadAttributes.fromJson({
+      proposer_index: "123",
+      proposal_slot: "10",
+      parent_block_number: "9",
+      parent_block_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+      parent_block_hash: "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",
+      payload_attributes: {
+        timestamp: "123456",
+        prev_randao: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        suggested_fee_recipient: "0x0000000000000000000000000000000000000000",
+        withdrawals: [
+          {
+            index: "5",
+            validator_index: "10",
+            address: "0x0000000000000000000000000000000000000000",
+            amount: "15640",
+          },
+        ],
+      },
+    }),
   },
-  [EventType.blobSidecar]: blobSidecarSSE.defaultValue(),
+  [EventType.blobSidecar]: blobSidecarSSE.fromJson({
+    block_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+    index: "1",
+    kzg_commitment:
+      "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
+    slot: "1",
+    versioned_hash: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+  }),
 };
