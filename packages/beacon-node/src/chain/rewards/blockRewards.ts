@@ -27,7 +27,7 @@ export async function computeBlockRewards(
 ): Promise<BlockRewards> {
   const fork = preState.config.getForkName(block.slot);
   const {attestations: cachedAttestationsReward = 0, syncAggregate: cachedSyncAggregateReward = 0} =
-    postState?.proposerRewards || {};
+    postState?.proposerRewards ?? {};
   let blockAttestationReward = cachedAttestationsReward;
   let syncAggregateReward = cachedSyncAggregateReward;
 
@@ -65,7 +65,7 @@ function computeBlockAttestationRewardPhase0(
   _block: phase0.BeaconBlock,
   _preState: CachedBeaconStatePhase0
 ): SubRewardValue {
-  throw new Error("Unsupported fork! Block attestation reward calculation is not yet available in phase0");
+  throw new Error("Unsupported fork! Block attestation reward calculation is not available in phase0");
 }
 
 /**
