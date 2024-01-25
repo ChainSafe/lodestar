@@ -59,7 +59,7 @@
   "types": "lib/index.d.ts",
   "dependencies": {
     "@chainsafe/as-sha256": "^0.4.1",
-    "@chainsafe/bls": "7.1.3",
+    "@chainsafe/bls": "ChainSafe/bls#mkeil\/napi-blst",
     "@chainsafe/blst": "^0.2.9",
     "@chainsafe/persistent-merkle-tree": "^0.6.1",
     "@chainsafe/persistent-ts": "^0.19.1",
