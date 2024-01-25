@@ -81,7 +81,7 @@ import {ShufflingCache} from "./shufflingCache.js";
 import {StateContextCache} from "./stateCache/stateContextCache.js";
 import {SeenGossipBlockInput} from "./seenCache/index.js";
 import {CheckpointStateCache} from "./stateCache/stateContextCheckpointsCache.js";
-import { SyncCommitteeRewards, computeSyncCommitteeRewards } from "./rewards/syncCommitteeRewards.js";
+import {SyncCommitteeRewards, computeSyncCommitteeRewards} from "./rewards/syncCommitteeRewards.js";
 
 /**
  * Arbitrary constants, blobs and payloads should be consumed immediately in the same slot
@@ -1001,10 +1001,13 @@ export class BeaconChain implements IBeaconChain {
     return result;
   }
 
-  async getSyncCommitteeRewards(block: allForks.FullOrBlindedBeaconBlock, filter?: (ValidatorIndex | string)[]): Promise<SyncCommitteeRewards>{
+  async getSyncCommitteeRewards(
+    block: allForks.FullOrBlindedBeaconBlock,
+    filter?: (ValidatorIndex | string)[]
+  ): Promise<SyncCommitteeRewards> {
     const preState = (await this.regen.getPreState(block, {dontTransferCache: true}, RegenCaller.restApi)).clone();
     preState.slot = block.slot; // regen.getPreState guarantees pre_state of the same epoch but not the same slot
-    const result = computeSyncCommitteeRewards(block, preState);
+    const result = computeSyncCommitteeRewards(block, preState, filter);
     return result;
   }
 }

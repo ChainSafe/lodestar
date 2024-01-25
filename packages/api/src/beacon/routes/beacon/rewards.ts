@@ -12,7 +12,7 @@ import {
 import {HttpStatusCode} from "../../../utils/client/httpStatusCode.js";
 import {ApiClientResponse} from "../../../interfaces.js";
 import {BlockId} from "./block.js";
-import { ValidatorId } from "./state.js";
+import {ValidatorId} from "./state.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -31,7 +31,7 @@ export type ProposerRewardsResponse = {
   attesterSlashings: number;
 };
 
-export type SyncCommitteeRewardsResponse = {validatorIndex: ValidatorIndex, reward: number}[];
+export type SyncCommitteeRewardsResponse = {validatorIndex: ValidatorIndex; reward: number}[];
 
 export type Api = {
   /**
@@ -49,10 +49,15 @@ export type Api = {
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
     >
   >;
-  getSyncCommitteeRewards(blockId: BlockId, filters?: ValidatorId[]): Promise<ApiClientResponse<
+  getSyncCommitteeRewards(
+    blockId: BlockId,
+    filters?: ValidatorId[]
+  ): Promise<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: SyncCommitteeRewardsResponse; executionOptimistic: ExecutionOptimistic}},
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
-  >>;
+    >
+  >;
 };
 
 /**
@@ -82,8 +87,8 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       schema: {
         params: {block_id: Schema.StringRequired},
         body: Schema.UintOrStringArray,
-      }
-    }
+      },
+    },
   };
 }
 
