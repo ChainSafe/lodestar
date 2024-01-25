@@ -62,7 +62,7 @@ export async function computeBlockRewards(
  */
 function computeBlockAttestationRewardPhase0(
   _block: phase0.BeaconBlock,
-  _state: CachedBeaconStatePhase0
+  _preState: CachedBeaconStatePhase0
 ): SubRewardValue {
   throw new Error("Unsupported fork! Block attestation reward calculation is not yet available in phase0");
 }
@@ -73,20 +73,20 @@ function computeBlockAttestationRewardPhase0(
  */
 function computeBlockAttestationRewardAltair(
   block: altair.BeaconBlock,
-  state: CachedBeaconStateAltair
+  preState: CachedBeaconStateAltair
 ): SubRewardValue {
-  const fork = state.config.getForkSeq(block.slot);
+  const fork = preState.config.getForkSeq(block.slot);
   const {attestations} = block.body;
 
-  processAttestationsAltair(fork, state, attestations, false);
+  processAttestationsAltair(fork, preState, attestations, false);
 
-  return state.proposerRewards.attestations;
+  return preState.proposerRewards.attestations;
 }
 
-function computeSyncAggregateReward(block: altair.BeaconBlock, state: CachedBeaconStateAltair): SubRewardValue {
+function computeSyncAggregateReward(block: altair.BeaconBlock, preState: CachedBeaconStateAltair): SubRewardValue {
   if (block.body.syncAggregate !== undefined) {
     const {syncCommitteeBits} = block.body.syncAggregate;
-    const {syncProposerReward} = state.epochCtx;
+    const {syncProposerReward} = preState.epochCtx;
 
     return syncCommitteeBits.getTrueBitIndexes().length * Math.floor(syncProposerReward); // syncProposerReward should already be integer
   } else {
