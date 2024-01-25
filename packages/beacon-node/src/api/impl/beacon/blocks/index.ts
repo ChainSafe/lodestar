@@ -421,8 +421,7 @@ export function getBeaconBlockApi({
 
       return {
         executionOptimistic,
-        // Return all sidecars if no indices are specified, only the requested ones (identified by `indices`) otherwise
-        data: indices.length == 0 ? blobSidecars : blobSidecars.filter(({index}) => indices.includes(index)),
+        data: indices ? blobSidecars.filter(({index}) => indices.includes(index)) : blobSidecars,
       };
     },
   };
