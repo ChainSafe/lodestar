@@ -24,12 +24,18 @@ export type ExecutionOptimistic = boolean;
  * Rewards info for a single block. Every reward value is in Gwei.
  */
 export type BlockRewards = {
-  proposerIndex: ValidatorIndex; // proposer of the block, the proposer index who receives these rewards
-  total: number; // total block reward, equal to attestations + sync_aggregate + proposer_slashings + attester_slashings
-  attestations: number; // block reward component due to included attestations
-  syncAggregate: number; // block reward component due to included sync_aggregate
-  proposerSlashings: number; // block reward component due to included proposer_slashings
-  attesterSlashings: number; // block reward component due to included attester_slashings
+  /** Proposer of the block, the proposer index who receives these rewards */
+  proposerIndex: ValidatorIndex;
+  /** Total block reward, equal to attestations + sync_aggregate + proposer_slashings + attester_slashings */
+  total: number;
+  /** Block reward component due to included attestations */
+  attestations: number;
+  /** Block reward component due to included sync_aggregate */
+  syncAggregate: number;
+  /** Block reward component due to included proposer_slashings */
+  proposerSlashings: number;
+  /** Block reward component due to included attester_slashings */
+  attesterSlashings: number;
 };
 
 export type Api = {
