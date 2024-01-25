@@ -152,14 +152,7 @@ runTestCheckAgainstSpec(
   returnTypes,
   testDatas,
   {
-    // TODO: Investigate why schema validation fails otherwise (see https://github.com/ChainSafe/lodestar/issues/6187)
-    routesDropOneOf: [
-      "produceBlockV2",
-      "produceBlockV3",
-      "produceBlindedBlock",
-      "publishBlindedBlock",
-      "publishBlindedBlockV2",
-    ],
+    routesDropOneOf: [],
   },
   ignoredOperations,
   ignoredProperties
@@ -167,21 +160,12 @@ runTestCheckAgainstSpec(
 
 const ignoredTopics = [
   /*
-   https://github.com/ChainSafe/lodestar/issues/6167
-   eventTestData[bls_to_execution_change] does not match spec's example
-   */
-  "bls_to_execution_change",
-  /*
-   https://github.com/ChainSafe/lodestar/issues/6170
-   Error: Invalid slot=0 fork=phase0 for lightclient fork types
   */
-  "light_client_finality_update",
-  "light_client_optimistic_update",
+  "proposer_slashing",
+
   /*
-   https://github.com/ethereum/beacon-APIs/pull/379
-   SyntaxError: Unexpected non-whitespace character after JSON at position 629 (line 1 column 630)
   */
-  "payload_attributes",
+  "attester_slashing",
 ];
 
 // eventstream types are defined as comments in the description of "examples".

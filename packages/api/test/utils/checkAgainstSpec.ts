@@ -6,8 +6,6 @@ import {GenericServerTestCases} from "./genericServerTest.js";
 
 const ajv = new Ajv({
   strict: true,
-  strictTypes: false, // TODO Enable once beacon-APIs is fixed. See https://github.com/ChainSafe/lodestar/issues/6206
-  allErrors: true,
 });
 
 // Ensure embedded schema 'example' do not fail validation
@@ -106,15 +104,6 @@ export function runTestCheckAgainstSpec(
         it(`${operationId}_request`, function () {
           const reqJson = reqSerializers[routeId].writeReq(...(testData.args as [never])) as unknown;
 
-          if (operationId === "publishBlock" || operationId === "publishBlindedBlock") {
-            // For some reason AJV invalidates valid blocks if multiple forks are defined with oneOf
-            // `.data - should match exactly one schema in oneOf`
-            // Dropping all definitions except (phase0) pases the validation
-            if (routeSpec.requestSchema?.oneOf) {
-              routeSpec.requestSchema = routeSpec.requestSchema?.oneOf[0];
-            }
-          }
-
           // Stringify param and query to simulate rendering in HTTP query
           // TODO: Review conversions in fastify and other servers
           stringifyProperties((reqJson as ReqGeneric).params ?? {});
@@ -136,16 +125,6 @@ export function runTestCheckAgainstSpec(
       if (responseOkSchema) {
         it(`${operationId}_response`, function () {
           const resJson = returnTypes[operationId].toJson(testData.res as any);
-
-          // Patch for getBlockV2
-          if (operationId === "getBlockV2" || operationId === "getStateV2") {
-            // For some reason AJV invalidates valid blocks if multiple forks are defined with oneOf
-            // `.data - should match exactly one schema in oneOf`
-            // Dropping all definitions except (phase0) pases the validation
-            if (responseOkSchema.properties?.data.oneOf) {
-              responseOkSchema.properties.data = responseOkSchema.properties.data.oneOf[1];
-            }
-          }
 
           const ignoredProperties = ignoredProperty?.response;
           if (ignoredProperties) {
