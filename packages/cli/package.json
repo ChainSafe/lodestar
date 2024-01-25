@@ -54,7 +54,7 @@
   ],
   "dependencies": {
     "@chainsafe/as-sha256": "^0.3.1",
-    "@chainsafe/bls": "7.1.1",
+    "@chainsafe/bls": "ChainSafe/bls#mkeil\/napi-blst",
     "@chainsafe/bls-keygen": "^0.3.0",
     "@chainsafe/bls-keystore": "^3.0.0",
     "@chainsafe/blst": "^0.2.9",

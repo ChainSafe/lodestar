@@ -310,14 +310,21 @@
     ethereum-cryptography "^1.0.0"
     uuid "8.3.2"
 
-"@chainsafe/bls@7.1.1":
-  version "7.1.1"
-  resolved "https://registry.npmjs.org/@chainsafe/bls/-/bls-7.1.1.tgz"
-  integrity sha512-56hjFJujW0Z0Ntkr8y22xIAfT4SChYWQtCGM8dfUMkWWX8xLOXkhBFFSNTvPXA5cBlsFlo102CtBo+6A60II2w==
+"@chainsafe/bls@ChainSafe/bls#mkeil/napi-blst":
+  version "7.1.2"
+  resolved "https://codeload.github.com/ChainSafe/bls/tar.gz/842cf377d65c1090d9618e92f4625ad3ef82298a"
   dependencies:
     "@chainsafe/bls-keygen" "^0.4.0"
+    "@chainsafe/blst-ts" "file:../../../../Library/Caches/Yarn/v6/npm-@chainsafe-bls-7.1.2/node_modules/@chainsafe/bls/temp-deps/blst-ts"
     bls-eth-wasm "^0.4.8"
     randombytes "^2.1.0"
+
+"@chainsafe/blst-ts@file:../../../../Library/Caches/Yarn/v6/npm-@chainsafe-bls-7.1.2-842cf377d65c1090d9618e92f4625ad3ef82298a/node_modules/@chainsafe/bls/temp-deps/blst-ts":
+  version "1.0.0"
+  dependencies:
+    bindings "^1.5.0"
+    node-addon-api "^6.1.0"
+    node-gyp "^9.3.1"
 
 "@chainsafe/blst@^0.2.9":
   version "0.2.9"
@@ -9919,6 +9926,11 @@ node-addon-api@^5.0.0:
   resolved "https://registry.yarnpkg.com/node-addon-api/-/node-addon-api-5.1.0.tgz#49da1ca055e109a23d537e9de43c09cca21eb762"
   integrity sha512-eh0GgfEkpnoWDq+VY8OyvYhFEzBk6jIYbRKdIlyTiAXIVJ8PyBaKb0rp7oDtoddbdoHWhq8wwr+XZ81F1rpNdA==
 
+node-addon-api@^6.1.0:
+  version "6.1.0"
+  resolved "https://registry.yarnpkg.com/node-addon-api/-/node-addon-api-6.1.0.tgz#ac8470034e58e67d0c6f1204a18ae6995d9c0d76"
+  integrity sha512-+eawOlIgy680F0kBzPUNFhMZGtJ1YmqM6l4+Crf4IkImjYrO/mqPwRMh352g23uIaQKFItcQ64I7KMaJxHgAVA==
+
 node-domexception@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/node-domexception/-/node-domexception-1.0.0.tgz#6888db46a1f71c0b76b3f7555016b63fe64766e5"
@@ -9981,6 +9993,23 @@ node-gyp@^9.0.0:
     graceful-fs "^4.2.6"
     make-fetch-happen "^10.0.3"
     nopt "^5.0.0"
+    npmlog "^6.0.0"
+    rimraf "^3.0.2"
+    semver "^7.3.5"
+    tar "^6.1.2"
+    which "^2.0.2"
+
+node-gyp@^9.3.1:
+  version "9.4.1"
+  resolved "https://registry.yarnpkg.com/node-gyp/-/node-gyp-9.4.1.tgz#8a1023e0d6766ecb52764cc3a734b36ff275e185"
+  integrity sha512-OQkWKbjQKbGkMf/xqI1jjy3oCTgMKJac58G2+bjZb3fza6gW2YrCSdMQYaoTb70crvE//Gngr4f0AgVHmqHvBQ==
+  dependencies:
+    env-paths "^2.2.0"
+    exponential-backoff "^3.1.1"
+    glob "^7.1.4"
+    graceful-fs "^4.2.6"
+    make-fetch-happen "^10.0.3"
+    nopt "^6.0.0"
     npmlog "^6.0.0"
     rimraf "^3.0.2"
     semver "^7.3.5"
