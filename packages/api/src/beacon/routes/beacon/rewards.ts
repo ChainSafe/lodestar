@@ -20,13 +20,16 @@ import {BlockId} from "./block.js";
  */
 export type ExecutionOptimistic = boolean;
 
+/**
+ * Rewards info for a single block. Every reward value is in Gwei.
+ */
 export type BlockRewards = {
-  proposerIndex: ValidatorIndex;
-  total: number;
-  attestations: number;
-  syncAggregate: number;
-  proposerSlashings: number;
-  attesterSlashings: number;
+  proposerIndex: ValidatorIndex; // proposer of the block, the proposer index who receives these rewards
+  total: number; // total block reward, equal to attestations + sync_aggregate + proposer_slashings + attester_slashings
+  attestations: number; // block reward component due to included attestations
+  syncAggregate: number; // block reward component due to included sync_aggregate
+  proposerSlashings: number; // block reward component due to included proposer_slashings
+  attesterSlashings: number; // block reward component due to included attester_slashings
 };
 
 export type Api = {
