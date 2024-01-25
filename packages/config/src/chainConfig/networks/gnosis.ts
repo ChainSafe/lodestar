@@ -2,7 +2,10 @@
 import {fromHexString as b} from "@chainsafe/ssz";
 import {PresetName} from "@lodestar/params";
 import {ChainConfig} from "../types.js";
-import {chainConfig as mainnet} from "../presets/mainnet.js";
+import {chainConfig as mainnet} from "../configs/mainnet.js";
+
+// Gnosis beacon chain config:
+// https://github.com/gnosischain/configs/blob/main/mainnet/config.yaml
 
 export const gnosisChainConfig: ChainConfig = {
   ...mainnet,
@@ -13,18 +16,23 @@ export const gnosisChainConfig: ChainConfig = {
 
   // Transition
   TERMINAL_TOTAL_DIFFICULTY: BigInt("8626000000000000000000058750000000000000000000"),
-  TERMINAL_BLOCK_HASH: b("0x0000000000000000000000000000000000000000000000000000000000000000"),
-  TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH: Infinity,
 
+  // Time parameters
   SECONDS_PER_SLOT: 5,
   SECONDS_PER_ETH1_BLOCK: 6,
   ETH1_FOLLOW_DISTANCE: 1024,
   CHURN_LIMIT_QUOTIENT: 4096,
 
-  // Ethereum Goerli testnet
+  // Validator cycle
+  MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT: 2,
+
+  // Deposit contract
   DEPOSIT_CHAIN_ID: 100,
   DEPOSIT_NETWORK_ID: 100,
   DEPOSIT_CONTRACT_ADDRESS: b("0x0b98057ea310f4d31f2a452b414647007d1645d9"),
+
+  // Networking
+  MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: 16384,
 
   // Dec 8, 2021, 13:00 UTC
   MIN_GENESIS_TIME: 1638968400,
@@ -41,4 +49,7 @@ export const gnosisChainConfig: ChainConfig = {
   // Capella
   CAPELLA_FORK_VERSION: b("0x03000064"),
   CAPELLA_FORK_EPOCH: 648704, // 2023-08-01T11:34:20.000Z
+  // Deneb
+  DENEB_FORK_VERSION: b("0x04000064"),
+  DENEB_FORK_EPOCH: Infinity,
 };

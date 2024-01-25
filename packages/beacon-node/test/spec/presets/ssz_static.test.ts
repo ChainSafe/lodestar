@@ -60,6 +60,7 @@ const sszStatic =
 
     for (const testCase of fs.readdirSync(testSuiteDirpath)) {
       // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
+      // eslint-disable-next-line vitest/consistent-test-it
       it(testCase, function () {
         // Mainnet must deal with big full states and hash each one multiple times
         if (ACTIVE_PRESET === "mainnet") {

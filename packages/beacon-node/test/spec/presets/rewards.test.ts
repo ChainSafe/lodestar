@@ -58,7 +58,7 @@ const rewards: TestRunnerFn<RewardTestCase, Deltas> = (fork) => {
           testCase.inactivity_penalty_deltas,
         ]),
       expectFunc: (testCase, expected, actual) => {
-        expect(actual).to.deep.equal(expected);
+        expect(actual).toEqual(expected);
       },
       // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
     },

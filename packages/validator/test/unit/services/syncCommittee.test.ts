@@ -109,7 +109,7 @@ describe("SyncCommitteeService", function () {
         });
 
         // Mock duties service to return some duties directly
-        syncCommitteeService["dutiesService"].getDutiesAtSlot = vi.fn().mockReturnValue(duties);
+        vi.spyOn(syncCommitteeService["dutiesService"], "getDutiesAtSlot").mockResolvedValue(duties);
 
         // Mock beacon's sync committee and contribution routes
 

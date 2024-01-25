@@ -5,9 +5,9 @@ import {ClockMock} from "./clock.js";
 /**
  * Run the test with ENVs to control log level:
  * ```
- * LOG_LEVEL=debug mocha .ts
- * DEBUG=1 mocha .ts
- * VERBOSE=1 mocha .ts
+ * LOG_LEVEL=debug vitest .ts
+ * DEBUG=1 vitest .ts
+ * VERBOSE=1 vitest .ts
  * ```
  */
 export const testLogger = getEnvLogger;

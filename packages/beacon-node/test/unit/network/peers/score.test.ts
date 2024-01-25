@@ -9,10 +9,10 @@ import {
   RealScore,
 } from "../../../../src/network/peers/score/index.js";
 
-vi.mock("../../../../src/network/peers/score/index.js", async (requireActual) => {
-  const mod = await requireActual<typeof import("../../../../src/network/peers/score/index.js")>();
+vi.mock("../../../../src/network/peers/score/index.js", async (importActual) => {
+  const mod = await importActual<typeof import("../../../../src/network/peers/score/index.js")>();
 
-  mod.PeerRpcScoreStore.prototype.updateGossipsubScore = vi.fn();
+  vi.spyOn(mod.PeerRpcScoreStore.prototype, "updateGossipsubScore").mockImplementation(() => {});
 
   return {
     ...mod,

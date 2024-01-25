@@ -187,7 +187,7 @@ export const responseEncodersTestCases: {
     skipEncoding: true,
   },
   {
-    id: "Decode successfully response_chunk as a single concated chunk",
+    id: "Decode successfully response_chunk as a single concatenated chunk",
     protocol: pingNoHandler,
     responseChunks: [
       {status: RespStatus.SUCCESS, payload: sszSnappyPing.binaryPayload},

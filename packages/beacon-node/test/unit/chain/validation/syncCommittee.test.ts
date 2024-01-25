@@ -3,13 +3,13 @@ import {describe, it, expect, afterEach, beforeEach, beforeAll, afterAll, vi, Mo
 import {altair, Epoch, Slot} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {SyncCommitteeErrorCode} from "../../../../src/chain/errors/syncCommitteeError.js";
 import {validateGossipSyncCommittee} from "../../../../src/chain/validation/syncCommittee.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {generateCachedAltairState} from "../../../utils/state.js";
 import {SeenSyncCommitteeMessages} from "../../../../src/chain/seenCache/index.js";
 import {ZERO_HASH} from "../../../../src/constants/constants.js";
-import {MockedBeaconChain, getMockedBeaconChain} from "../../../__mocks__/mockedBeaconChain.js";
 
 // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/altair/p2p-interface.md
 describe("Sync Committee Signature validation", function () {
