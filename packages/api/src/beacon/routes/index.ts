@@ -30,8 +30,6 @@ export type Api = {
   validator: ValidatorApi;
 };
 
-export type {BlockRewards} from "./beacon/index.js";
-
 // Reasoning of the API definitions
 // ================================
 //

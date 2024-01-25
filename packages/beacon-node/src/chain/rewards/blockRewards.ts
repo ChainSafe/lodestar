@@ -7,8 +7,9 @@ import {
 } from "@lodestar/state-transition";
 import {allForks, altair, phase0} from "@lodestar/types";
 import {ForkName, WHISTLEBLOWER_REWARD_QUOTIENT} from "@lodestar/params";
-import {type BlockRewards} from "@lodestar/api";
+import {routes} from "@lodestar/api";
 
+export type BlockRewards = routes.beacon.BlockRewards;
 type SubRewardValue = number; // All reward values should be integer
 
 /**

@@ -24,7 +24,6 @@ import {BeaconConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
 
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {type BlockRewards} from "@lodestar/api";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
 import {IExecutionEngine, IExecutionBuilder} from "../execution/index.js";
 import {Metrics} from "../metrics/metrics.js";
@@ -53,6 +52,7 @@ import {AssembledBlockType, BlockAttributes, BlockType} from "./produceBlock/pro
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {SeenGossipBlockInput} from "./seenCache/index.js";
 import {ShufflingCache} from "./shufflingCache.js";
+import {BlockRewards} from "./rewards/blockRewards.js";
 
 export {BlockType, type AssembledBlockType};
 export {type ProposerPreparationData};
