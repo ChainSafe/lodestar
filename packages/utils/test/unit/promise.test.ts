@@ -134,12 +134,12 @@ describe("promise", () => {
     const cutoffMs = 1000;
     const timeoutMs = 1500;
 
-    const resolveAfter = (value: string, delay: number): Promise<string> =>
-      new Promise((resolve) => {
+    const resolveAfter = (value: string, delay: number): ExtendedPromise<string> =>
+      new ExtendedPromise((resolve) => {
         setTimeout(() => resolve(value), delay);
       });
-    const rejectAfter = (value: string, delay: number): Promise<string> =>
-      new Promise((_resolve, reject) => {
+    const rejectAfter = (value: string, delay: number): ExtendedPromise<string> =>
+      new ExtendedPromise((_resolve, reject) => {
         setTimeout(() => reject(Error(value)), delay);
       });
 
@@ -193,17 +193,17 @@ describe("promise", () => {
             return rejectAfter(`${timeMs}`, -timeMs);
           }
         });
-        const testResults = await resolveOrRacePromises(testPromises as NonEmptyArray<Promise<unknown>>, {
+        const testResults = await resolveOrRacePromises(testPromises as NonEmptyArray<ExtendedPromise<string>>, {
           resolveTimeoutMs: cutoffMs,
           raceTimeoutMs: timeoutMs,
         });
         const testResultsCmp = testResults.map((r) => {
-          switch (r.status) {
+          switch ((r as ExtendedPromise<string>).status) {
             case ExtendedPromiseStatus.Fulfilled:
-              return r.value;
+              return (r as ExtendedPromise<string>).value;
             case ExtendedPromiseStatus.Rejected:
             case ExtendedPromiseStatus.Aborted:
-              return (r.reason as Error).message;
+              return ((r as ExtendedPromise<string>).reason as Error).message;
             case ExtendedPromiseStatus.Pending:
               return "pending";
           }
