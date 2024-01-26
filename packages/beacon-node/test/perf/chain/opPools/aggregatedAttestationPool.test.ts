@@ -20,11 +20,11 @@ const vc = 1_500_000;
 /**
  * Jan 2024
  *   getAttestationsForBlock
-    ✔ notSeenSlots=1 numMissedVotes=1 numBadVotes=10                      1.023498 ops/s    977.0415 ms/op        -         13 runs   27.2 s
-    ✔ notSeenSlots=1 numMissedVotes=0 numBadVotes=4                       1.997617 ops/s    500.5965 ms/op        -         12 runs   15.2 s
-    ✔ notSeenSlots=2 numMissedVotes=1 numBadVotes=10                      25.31025 ops/s    39.50969 ms/op        -         15 runs   31.3 s
+    ✔ notSeenSlots=1 numMissedVotes=1 numBadVotes=10                      9.152280 ops/s    109.2624 ms/op        -         48 runs   60.3 s
+    ✔ notSeenSlots=1 numMissedVotes=0 numBadVotes=4                       9.173290 ops/s    109.0121 ms/op        -         52 runs   38.1 s
+    ✔ notSeenSlots=2 numMissedVotes=1 numBadVotes=10                      18.10215 ops/s    55.24205 ms/op        -         18 runs   34.0 s   ✔ notSeenSlots=2 numMissedVotes=1 numBadVotes=10                      25.31025 ops/s    39.50969 ms/op        -         15 runs   31.3 s
  */
-describe("getAttestationsForBlock", () => {
+describe(`getAttestationsForBlock vc=${vc}`, () => {
   let originalState: CachedBeaconStateAltair;
   let protoArray: ProtoArray;
   let forkchoice: ForkChoice;
@@ -116,15 +116,11 @@ describe("getAttestationsForBlock", () => {
     forkchoice = new ForkChoice(originalState.config, fcStore, protoArray);
   });
 
-  after(() => {
-    sandbox.restore();
-  });
-
   // notSeenSlots should be >=1
   for (const [notSeenSlots, numMissedVotes, numBadVotes] of [
     [1, 1, 10],
     [1, 0, 4],
-    // best case scenario
+    // notSeenSlots=2 means the previous block slot is missed
     [2, 1, 10],
   ]) {
     itBench({
