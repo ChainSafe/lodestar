@@ -178,10 +178,19 @@ export function getValidatorApi({
   }
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  function getBlockValueLogInfo(block: {executionPayloadValue: bigint; consensusBlockValue: bigint}) {
+  function getBlockValueLogInfo(block: {executionPayloadValue: bigint; consensusBlockValue: bigint}, prefix?: string) {
     const executionValue = block.executionPayloadValue ?? BigInt(0);
     const consensusValue = block.consensusBlockValue ?? BigInt(0);
     const totalValue = executionValue + consensusValue; // Total block value is in wei
+
+    if (prefix) {
+      return {
+        [`${prefix}ExecutionPayloadValue`]: `${executionValue}`,
+        [`${prefix}ConsensusBlockValue`]: `${consensusValue}`,
+        [`${prefix}BlockTotalValue`]: `${totalValue}`,
+      };
+    }
+
     return {
       executionPayloadValue: `${executionValue}`,
       consensusBlockValue: `${consensusValue}`,
@@ -645,9 +654,7 @@ export function getValidatorApi({
         if (engineBlock.shouldOverrideBuilder) {
           logger.info("Selected engine block as censorship suspected in builder blocks", {
             ...loggerContext,
-            enginePayloadValue: `${enginePayloadValue}`,
-            engineConsensusValue: `${engineConsensusValue}`,
-            engineBlockValue: `${engineBlockValue}`,
+            ...getBlockValueLogInfo(engine.value, "engine"),
             shouldOverrideBuilder: engineBlock.shouldOverrideBuilder,
             slot,
           });
@@ -667,13 +674,9 @@ export function getValidatorApi({
           builderSelection,
           // winston logger doesn't like bigint
           builderBoostFactor: `${builderBoostFactor}`,
-          enginePayloadValue: `${enginePayloadValue}`,
-          builderPayloadValue: `${builderPayloadValue}`,
-          engineConsensusValue: `${engineConsensusValue}`,
-          builderConsensusValue: `${builderConsensusValue}`,
-          engineBlockValue: `${engineBlockValue}`,
-          builderBlockValue: `${builderBlockValue}`,
           shouldOverrideBuilder: engineBlock.shouldOverrideBuilder,
+          ...getBlockValueLogInfo(engine.value, "engine"),
+          ...getBlockValueLogInfo(builder.value, "builder"),
         });
 
         if (executionPayloadSource === ProducedBlockSource.engine) {
