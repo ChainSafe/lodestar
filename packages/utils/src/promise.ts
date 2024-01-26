@@ -1,4 +1,4 @@
-import {TimeoutError} from "./errors.js";
+import {ErrorAborted, TimeoutError} from "./errors.js";
 import {sleep} from "./sleep.js";
 import {ArrayToTuple, NonEmptyArray} from "./types.js";
 
@@ -27,35 +27,72 @@ export async function callFnWhenAwait<T>(
   return t;
 }
 
+export interface Abortable {
+  abort: (reason: string) => void;
+  readonly reason?: unknown;
+}
+
+export enum ExtendedPromiseStatus {
+  Pending = "pending",
+  Fulfilled = "fulfilled",
+  Rejected = "rejected",
+  Aborted = "aborted",
+}
+
+export const defaultAbortReason = "Aborted";
+
 /**
- * Promise that can be evaluated as normal promise but keep track of the status of promise and its response
+ * Promise that can be evaluated as normal but with extended features
+ *  - Keep track of the status of promise as enum value
+ *  - Keep track of the promise response as attribute
+ *  - Allow to abort a promise from internal or external source
+ *
  * It is useful when you want to process multiple promises and want know their status individually afterwards
  */
-export class PromiseWithStatus<T> implements Promise<T> {
-  private readonly _promise: Promise<T>;
-  private _status: "pending" | "fulfilled" | "rejected" = "pending";
+export class ExtendedPromise<T> implements Promise<T>, Abortable {
+  private _promise: Promise<T>;
+  private _status: ExtendedPromiseStatus = ExtendedPromiseStatus.Pending;
   private _value?: T;
-  private _reason: unknown;
+  private _reason: unknown; // For rejected or aborted case
   readonly startedAt: number;
   private _finishedAt?: number;
+  private _abortController = new AbortController();
 
-  constructor(...args: ConstructorParameters<typeof Promise<T>> | [Promise<T>]) {
+  constructor(
+    executor: (resolve: (value: PromiseLike<T> | T) => void, reject: (reason: unknown) => void) => void,
+    signal?: AbortSignal
+  ) {
     this.startedAt = Date.now();
+    this._promise = new Promise<T>((resolve, reject) => {
+      const abortHandler = (): void => {
+        if (this._reason instanceof ErrorAborted) {
+          reject(this._reason);
+        } else if (typeof this._reason === "string") {
+          reject(new ErrorAborted(this._reason));
+        } else if (this._reason instanceof Error) {
+          reject(new ErrorAborted(this._reason.message));
+        } else {
+          reject(new ErrorAborted(defaultAbortReason));
+        }
+      };
 
-    this._promise =
-      args.length === 1 && args[0] instanceof Promise
-        ? args[0]
-        : new Promise<T>(...(args as ConstructorParameters<typeof Promise<T>>));
+      this._abortController.signal.addEventListener("abort", abortHandler);
+
+      // An external signal can also be used to abort the promise
+      signal?.addEventListener("abort", abortHandler);
+
+      executor(resolve, reject);
+    });
 
     this._promise.then(
       (value) => {
-        this._status = "fulfilled";
+        this._status = ExtendedPromiseStatus.Fulfilled;
         this._value = value;
         this._finishedAt = Date.now();
         return value;
       },
       (reason) => {
-        this._status = "rejected";
+        this._status = reason instanceof ErrorAborted ? ExtendedPromiseStatus.Aborted : ExtendedPromiseStatus.Rejected;
         this._reason = reason;
         this._finishedAt = Date.now();
       }
@@ -63,6 +100,21 @@ export class PromiseWithStatus<T> implements Promise<T> {
   }
 
   [Symbol.toStringTag] = "Promise" as const;
+
+  static from = <T>(promise: PromiseLike<T>, signal?: AbortSignal): ExtendedPromise<T> => {
+    if (promise instanceof ExtendedPromise) {
+      return promise as ExtendedPromise<T>;
+    }
+
+    return new ExtendedPromise<T>((resolve, reject) => {
+      promise.then(resolve, reject);
+    }, signal);
+  };
+
+  abort(reason: unknown): void {
+    this._reason = typeof reason === "string" ? new ErrorAborted(reason) : reason;
+    this._abortController.abort();
+  }
 
   get durationMs(): number | undefined {
     return this._finishedAt != null ? this._finishedAt - this.startedAt : undefined;
@@ -72,28 +124,30 @@ export class PromiseWithStatus<T> implements Promise<T> {
     return this._finishedAt;
   }
 
-  get status(): "pending" | "fulfilled" | "rejected" {
+  get status(): ExtendedPromiseStatus {
     return this._status;
   }
 
   get value(): T {
     switch (this.status) {
-      case "fulfilled":
+      case ExtendedPromiseStatus.Fulfilled:
         return this._value as T;
-      case "rejected":
+      case ExtendedPromiseStatus.Rejected:
+      case ExtendedPromiseStatus.Aborted:
         throw this._reason;
-      case "pending":
+      case ExtendedPromiseStatus.Pending:
         throw new Error("Promise is still pending");
     }
   }
 
   get reason(): unknown {
     switch (this.status) {
-      case "fulfilled":
+      case ExtendedPromiseStatus.Fulfilled:
         throw new Error("Promise is fulfilled");
-      case "rejected":
+      case ExtendedPromiseStatus.Rejected:
+      case ExtendedPromiseStatus.Aborted:
         return this._reason;
-      case "pending":
+      case ExtendedPromiseStatus.Pending:
         throw new Error("Promise is still pending");
     }
   }
@@ -122,13 +176,13 @@ export class PromiseWithStatus<T> implements Promise<T> {
  * eg: `[1, 2, 3]` from type `number[]` to `[number, number, number]`
  */
 type ReturnPromiseWithTuple<Tuple extends NonEmptyArray<unknown>> = {
-  [Index in keyof ArrayToTuple<Tuple>]: PromiseWithStatus<Awaited<Tuple[Index]>>;
+  [Index in keyof ArrayToTuple<Tuple>]: PromiseLike<Awaited<Tuple[Index]>>;
 };
 
 /**
  * Resolve all promises till `resolveTimeoutMs` if not then race them till `raceTimeoutMs`
  */
-export async function resolveOrRacePromises<T extends NonEmptyArray<Promise<unknown> | PromiseWithStatus<unknown>>>(
+export async function resolveOrRacePromises<T extends NonEmptyArray<PromiseLike<unknown>>>(
   promises: T,
   {
     resolveTimeoutMs,
@@ -144,7 +198,7 @@ export async function resolveOrRacePromises<T extends NonEmptyArray<Promise<unkn
     throw new Error("Race time must be greater than resolve time");
   }
 
-  const mutedPromises = promises.map((p) => (p instanceof PromiseWithStatus ? p : new PromiseWithStatus(p)));
+  const extendedPromises = promises.map((p) => (p instanceof ExtendedPromise ? p : ExtendedPromise.from(p, signal)));
   const resolveTimeoutError = new TimeoutError(
     `Given promises can't be resolved within resolveTimeoutMs=${resolveTimeoutMs}`
   );
@@ -154,12 +208,12 @@ export async function resolveOrRacePromises<T extends NonEmptyArray<Promise<unkn
 
   try {
     await Promise.race([
-      Promise.allSettled(mutedPromises),
+      Promise.allSettled(extendedPromises),
       sleep(resolveTimeoutMs, signal).then(() => {
         throw resolveTimeoutError;
       }),
     ]);
-    return mutedPromises as ReturnPromiseWithTuple<T>;
+    return extendedPromises as ReturnPromiseWithTuple<T>;
   } catch (err) {
     if (err !== resolveTimeoutError) {
       throw err;
@@ -168,7 +222,7 @@ export async function resolveOrRacePromises<T extends NonEmptyArray<Promise<unkn
 
   try {
     await Promise.race([
-      Promise.any(mutedPromises),
+      Promise.any(extendedPromises),
       sleep(raceTimeoutMs - resolveTimeoutMs, signal).then(() => {
         throw raceTimeoutError;
       }),
@@ -179,5 +233,5 @@ export async function resolveOrRacePromises<T extends NonEmptyArray<Promise<unkn
     }
   }
 
-  return mutedPromises as ReturnPromiseWithTuple<T>;
+  return extendedPromises as ReturnPromiseWithTuple<T>;
 }
