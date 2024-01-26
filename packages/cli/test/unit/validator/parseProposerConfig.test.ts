@@ -17,6 +17,7 @@ const testValue = {
       builder: {
         gasLimit: 30000000,
         selection: undefined,
+        boostFactor: undefined,
       },
     },
     "0xa4855c83d868f772a579133d9f23818008417b743e8447e235d8eb78b1d8f8a9f63f98c551beb7de254400f89592314d": {
@@ -26,6 +27,7 @@ const testValue = {
       builder: {
         gasLimit: 35000000,
         selection: routes.validator.BuilderSelection.MaxProfit,
+        boostFactor: BigInt(18446744073709551616),
       },
     },
   },
@@ -36,6 +38,7 @@ const testValue = {
     builder: {
       gasLimit: 30000000,
       selection: routes.validator.BuilderSelection.BuilderAlways,
+      boostFactor: BigInt(100),
     },
   },
 };

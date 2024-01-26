@@ -20,6 +20,7 @@ type ProposerConfigFileSection = {
     // for js-yaml
     gas_limit?: number;
     selection?: routes.validator.BuilderSelection;
+    boost_factor?: bigint;
   };
 };
 
@@ -57,7 +58,7 @@ function parseProposerConfigSection(
   overrideConfig?: ProposerConfig
 ): ProposerConfig {
   const {graffiti, strict_fee_recipient_check, fee_recipient, builder} = proposerFileSection;
-  const {gas_limit, selection: builderSelection} = builder || {};
+  const {gas_limit, selection: builderSelection, boost_factor} = builder || {};
 
   if (graffiti !== undefined && typeof graffiti !== "string") {
     throw Error("graffiti is not 'string");
@@ -79,6 +80,9 @@ function parseProposerConfigSection(
       throw Error("(Number.isNaN(Number(gas_limit)) 2");
     }
   }
+  if (boost_factor !== undefined && typeof boost_factor !== "string") {
+    throw Error("boost_factor is not 'string");
+  }
 
   return {
     graffiti: overrideConfig?.graffiti ?? graffiti,
@@ -89,6 +93,8 @@ function parseProposerConfigSection(
     builder: {
       gasLimit: overrideConfig?.builder?.gasLimit ?? (gas_limit !== undefined ? Number(gas_limit) : undefined),
       selection: overrideConfig?.builder?.selection ?? builderSelection,
+      boostFactor:
+        overrideConfig?.builder?.boostFactor ?? (boost_factor !== undefined ? BigInt(boost_factor) : undefined),
     },
   };
 }
