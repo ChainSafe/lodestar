@@ -35,7 +35,14 @@ import {
   phase0,
 } from "@lodestar/types";
 import {ExecutionStatus} from "@lodestar/fork-choice";
-import {toHex, resolveOrRacePromises, ExtendedPromise, ExtendedPromiseStatus} from "@lodestar/utils";
+import {
+  toHex,
+  resolveOrRacePromises,
+  ExtendedPromise,
+  ExtendedPromiseStatus,
+  formatBigDecimal,
+  ETH_TO_WEI,
+} from "@lodestar/utils";
 import {
   AttestationError,
   AttestationErrorCode,
@@ -177,6 +184,9 @@ export function getValidatorApi({
     return computeEpochAtSlot(getCurrentSlot(config, chain.genesisTime - MAX_API_CLOCK_DISPARITY_SEC));
   }
 
+  // display upto 5 decimal places
+  const MAX_DECIMAL_FACTOR = BigInt("100000");
+
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   function getBlockValueLogInfo(block: {executionPayloadValue: bigint; consensusBlockValue: bigint}, prefix?: string) {
     const executionValue = block.executionPayloadValue ?? BigInt(0);
@@ -185,16 +195,16 @@ export function getValidatorApi({
 
     if (prefix) {
       return {
-        [`${prefix}ExecutionPayloadValue`]: `${executionValue}`,
-        [`${prefix}ConsensusBlockValue`]: `${consensusValue}`,
-        [`${prefix}BlockTotalValue`]: `${totalValue}`,
+        [`${prefix}ExecutionPayloadValue`]: `${formatBigDecimal(executionValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)} ETH`,
+        [`${prefix}ConsensusBlockValue`]: `${formatBigDecimal(consensusValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)} ETH`,
+        [`${prefix}BlockTotalValue`]: `${formatBigDecimal(totalValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)} ETH`,
       };
     }
 
     return {
-      executionPayloadValue: `${executionValue}`,
-      consensusBlockValue: `${consensusValue}`,
-      blockTotalValue: `${totalValue}`,
+      executionPayloadValue: `${formatBigDecimal(executionValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)} ETH`,
+      consensusBlockValue: `${formatBigDecimal(consensusValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)} ETH`,
+      blockTotalValue: `${formatBigDecimal(totalValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)} ETH`,
     };
   }
 
