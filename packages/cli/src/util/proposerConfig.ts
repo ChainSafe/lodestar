@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import {ValidatorProposerConfig} from "@lodestar/validator";
 import {routes} from "@lodestar/api";
+import {parseBuilderBoostFactor} from "../cmds/validator/handler.js";
 
 import {parseFeeRecipient} from "./feeRecipient.js";
 
@@ -93,8 +94,7 @@ function parseProposerConfigSection(
     builder: {
       gasLimit: overrideConfig?.builder?.gasLimit ?? (gas_limit !== undefined ? Number(gas_limit) : undefined),
       selection: overrideConfig?.builder?.selection ?? builderSelection,
-      boostFactor:
-        overrideConfig?.builder?.boostFactor ?? (boost_factor !== undefined ? BigInt(boost_factor) : undefined),
+      boostFactor: overrideConfig?.builder?.boostFactor ?? parseBuilderBoostFactor(boost_factor),
     },
   };
 }

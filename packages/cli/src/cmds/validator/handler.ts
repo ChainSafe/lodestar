@@ -287,7 +287,7 @@ function parseBroadcastValidation(broadcastValidation?: string): routes.beacon.B
   return broadcastValidation as routes.beacon.BroadcastValidation;
 }
 
-function parseBuilderBoostFactor(boostFactor?: string): bigint | undefined {
+export function parseBuilderBoostFactor(boostFactor?: string): bigint | undefined {
   if (boostFactor === undefined) return;
 
   if (!/^\d+$/.test(boostFactor)) {
