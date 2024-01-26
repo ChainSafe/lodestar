@@ -82,6 +82,12 @@ export type BeaconPreset = {
   MAX_BLOB_COMMITMENTS_PER_BLOCK: number;
   MAX_BLOBS_PER_BLOCK: number;
   KZG_COMMITMENT_INCLUSION_PROOF_DEPTH: number;
+
+  // ELECTRA
+  ///////////
+  FIELD_ELEMENTS_PER_CELL: number,
+  KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH: number,
+  NUMBER_OF_COLUMNS: number,
 };
 
 /**
@@ -167,6 +173,12 @@ export const beaconPresetTypes: BeaconPresetTypes = {
   MAX_BLOB_COMMITMENTS_PER_BLOCK: "number",
   MAX_BLOBS_PER_BLOCK: "number",
   KZG_COMMITMENT_INCLUSION_PROOF_DEPTH: "number",
+
+  // ELECTRA
+  ///////////
+  FIELD_ELEMENTS_PER_CELL: "number",
+  KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH: "number",
+  NUMBER_OF_COLUMNS: "number",
 };
 
 type BeaconPresetTypes = {
