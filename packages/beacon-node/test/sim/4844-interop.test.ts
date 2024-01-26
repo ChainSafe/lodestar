@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import {Context} from "mocha";
+import {describe, it, vi, afterAll, afterEach} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
 import {LogLevel, sleep} from "@lodestar/utils";
 import {TimestampFormatCode} from "@lodestar/logger";
@@ -24,7 +24,7 @@ import {logFilesDir} from "./params.js";
 import {shell} from "./shell.js";
 
 // NOTE: How to run
-// DEV_RUN=true EL_BINARY_DIR=g11tech/ethereumjs:devnet6-32aaac EL_SCRIPT_DIR=ethereumjsdocker yarn mocha test/sim/4844-interop.test.ts
+// DEV_RUN=true EL_BINARY_DIR=g11tech/ethereumjs:devnet6-32aaac EL_SCRIPT_DIR=ethereumjsdocker yarn vitest --run test/sim/4844-interop.test.ts
 // ```
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention */
@@ -37,7 +37,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       `EL ENV must be provided, EL_BINARY_DIR: ${process.env.EL_BINARY_DIR}, EL_SCRIPT_DIR: ${process.env.EL_SCRIPT_DIR}`
     );
   }
-  this.timeout("10min");
+  vi.setConfig({testTimeout: 1000 * 60 * 10, hookTimeout: 1000 * 60 * 10});
 
   const dataPath = fs.mkdtempSync("lodestar-test-4844");
   const elSetupConfig = {
@@ -52,7 +52,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
   };
 
   const controller = new AbortController();
-  after(async () => {
+  afterAll(async () => {
     controller?.abort();
     await shell(`sudo rm -rf ${dataPath}`);
   });
@@ -65,6 +65,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     }
   });
 
+  // eslint-disable-next-line vitest/expect-expect
   it("Post-merge, run for a few blocks", async function () {
     console.log("\n\nPost-merge, run for a few blocks\n\n");
     const {elClient, tearDownCallBack} = await runEL(
@@ -74,17 +75,22 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     );
     afterEachCallbacks.push(() => tearDownCallBack());
 
-    await runNodeWithEL.bind(this)({
+    await runNodeWithEL({
       elClient,
       denebEpoch: 0,
       testName: "post-merge",
     });
   });
 
-  async function runNodeWithEL(
-    this: Context,
-    {elClient, denebEpoch, testName}: {elClient: ELClient; denebEpoch: Epoch; testName: string}
-  ): Promise<void> {
+  async function runNodeWithEL({
+    elClient,
+    denebEpoch,
+    testName,
+  }: {
+    elClient: ELClient;
+    denebEpoch: Epoch;
+    testName: string;
+  }): Promise<void> {
     const {genesisBlockHash, ttd, engineRpcUrl, ethRpcUrl} = elClient;
     const validatorClientCount = 1;
     const validatorsPerClient = 8;
@@ -112,8 +118,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       ((epochsOfMargin + 10 * expectedEpochsToFinish) * SLOTS_PER_EPOCH + genesisSlotsDelay) *
       testParams.SECONDS_PER_SLOT *
       1000;
-
-    this.timeout(timeout + 2 * timeoutSetupMargin);
+    vi.setConfig({testTimeout: timeout + 2 * timeoutSetupMargin});
 
     const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
 

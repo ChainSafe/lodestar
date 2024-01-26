@@ -84,6 +84,7 @@ UPnP
 UTF
 VM
 Vitalik
+Vitest
 Wagyu
 api
 async
@@ -174,6 +175,7 @@ scalability
 secp
 sepolia
 sharding
+src
 ssz
 stakers
 subnet
@@ -188,6 +190,7 @@ util
 utils
 validator
 validators
+vitest
 wip
 xcode
 yaml

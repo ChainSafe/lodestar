@@ -6,7 +6,7 @@ import {deserializeEnrSubnets} from "../../../../src/network/peers/utils/enrSubn
 
 /**
  * Ideally we want to sleep between requests to test the prune.
- * But adding sinon mock timer here make it impossible to benchmark.
+ * But adding mock timer here make it impossible to benchmark.
  */
 describe("network / peers / deserializeEnrSubnets", () => {
   const attnets = Buffer.from("feffb7f7fdfffefd", "hex");

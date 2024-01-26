@@ -35,20 +35,14 @@ for (const fnName of readdirSyncSpec(blsSpecTests.outputDir)) {
 
     const fnTestDirpath = path.join(blsSpecTests.outputDir, fnName);
     for (const testName of readdirSyncSpec(fnTestDirpath)) {
-      // TODO: Will be removed when we remove chai/mocha eslint rules
-      // eslint-disable-next-line mocha/handle-done-callback
       it(`${fnName}/${testName}`, function (context) {
         if (fn === "skip") {
-          // TODO: Will be removed when we remove chai/mocha eslint rules
-          // eslint-disable-next-line mocha/no-nested-tests
           context.skip();
           return;
         }
 
         // Do not manually skip tests here, do it in the top of the file
         if (skippedTestNames.includes(testName)) {
-          // TODO: Will be removed when we remove chai/mocha eslint rules
-          // eslint-disable-next-line mocha/no-nested-tests
           context.skip();
           return;
         }
@@ -58,10 +52,10 @@ for (const fnName of readdirSyncSpec(blsSpecTests.outputDir)) {
         // Test format: https://github.com/ethereum/bls12-381-tests
         if (testData.output === null) {
           // Expect failure
-          expect(() => fn(testData.input) as never).to.throw();
+          expect(() => fn(testData.input) as never).toThrow();
         } else {
           // Expect success
-          expect(fn(testData.input)).to.deep.equals(testData.output);
+          expect(fn(testData.input)).toEqual(testData.output);
         }
       });
     }

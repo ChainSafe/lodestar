@@ -1,5 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
-import {describe, it, expect, beforeEach, beforeAll} from "vitest";
+import {describe, it, expect, beforeEach, beforeAll, vi} from "vitest";
 import {config} from "@lodestar/config/default";
 import {CheckpointWithHex, ExecutionStatus, ForkChoice} from "@lodestar/fork-choice";
 import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
@@ -15,6 +15,9 @@ import {generateSignedBlockAtSlot} from "../../../utils/typeGenerator.js";
 import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState.js";
 import {generateState} from "../../../utils/state.js";
 import {generateValidators} from "../../../utils/validator.js";
+
+// We mock this package globally
+vi.unmock("@lodestar/fork-choice");
 
 describe("LodestarForkChoice", function () {
   let forkChoice: ForkChoice;
@@ -86,7 +89,6 @@ describe("LodestarForkChoice", function () {
       const parentBlockHex = ssz.phase0.BeaconBlock.hashTreeRoot(parentBlock.message);
       const orphanedBlockHex = ssz.phase0.BeaconBlock.hashTreeRoot(orphanedBlock.message);
       // forkchoice tie-break condition is based on root hex
-      // eslint-disable-next-line chai-expect/no-inner-compare
       expect(orphanedBlockHex > parentBlockHex).toBe(true);
       const currentSlot = childBlock.message.slot;
       forkChoice.updateTime(currentSlot);

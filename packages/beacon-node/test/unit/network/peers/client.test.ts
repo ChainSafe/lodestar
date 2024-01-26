@@ -1,8 +1,8 @@
 import {describe, it, expect} from "vitest";
-import {clientFromAgentVersion, ClientKind} from "../../../../src/network/peers/client.js";
+import {getKnownClientFromAgentVersion, ClientKind} from "../../../../src/network/peers/client.js";
 
 describe("clientFromAgentVersion", () => {
-  const testCases: {name: string; agentVersion: string; client: ClientKind}[] = [
+  const testCases: {name: string; agentVersion: string; client: ClientKind | null}[] = [
     {
       name: "lighthouse",
       agentVersion: "Lighthouse/v2.0.1-fff01b2/x86_64-linux",
@@ -28,11 +28,16 @@ describe("clientFromAgentVersion", () => {
       agentVersion: "js-libp2p/0.32.4",
       client: ClientKind.Lodestar,
     },
+    {
+      name: "unknown client",
+      agentVersion: "strange-client-agent-version",
+      client: null,
+    },
   ];
 
   for (const {name, agentVersion, client} of testCases) {
     it(name, () => {
-      expect(clientFromAgentVersion(agentVersion)).toBe(client);
+      expect(getKnownClientFromAgentVersion(agentVersion)).toBe(client);
     });
   }
 });

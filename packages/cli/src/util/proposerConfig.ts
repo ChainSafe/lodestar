@@ -8,6 +8,7 @@ import {routes} from "@lodestar/api";
 import {parseFeeRecipient} from "./feeRecipient.js";
 
 import {readFile} from "./file.js";
+import {YargsError} from "./index.js";
 
 type ProposerConfig = ValidatorProposerConfig["defaultConfig"];
 
@@ -20,6 +21,7 @@ type ProposerConfigFileSection = {
     // for js-yaml
     gas_limit?: number;
     selection?: routes.validator.BuilderSelection;
+    boost_factor?: bigint;
   };
 };
 
@@ -57,7 +59,7 @@ function parseProposerConfigSection(
   overrideConfig?: ProposerConfig
 ): ProposerConfig {
   const {graffiti, strict_fee_recipient_check, fee_recipient, builder} = proposerFileSection;
-  const {gas_limit, selection: builderSelection} = builder || {};
+  const {gas_limit, selection: builderSelection, boost_factor} = builder || {};
 
   if (graffiti !== undefined && typeof graffiti !== "string") {
     throw Error("graffiti is not 'string");
@@ -79,6 +81,9 @@ function parseProposerConfigSection(
       throw Error("(Number.isNaN(Number(gas_limit)) 2");
     }
   }
+  if (boost_factor !== undefined && typeof boost_factor !== "string") {
+    throw Error("boost_factor is not 'string");
+  }
 
   return {
     graffiti: overrideConfig?.graffiti ?? graffiti,
@@ -88,7 +93,8 @@ function parseProposerConfigSection(
     feeRecipient: overrideConfig?.feeRecipient ?? (fee_recipient ? parseFeeRecipient(fee_recipient) : undefined),
     builder: {
       gasLimit: overrideConfig?.builder?.gasLimit ?? (gas_limit !== undefined ? Number(gas_limit) : undefined),
-      selection: overrideConfig?.builder?.selection ?? builderSelection,
+      selection: overrideConfig?.builder?.selection ?? parseBuilderSelection(builderSelection),
+      boostFactor: overrideConfig?.builder?.boostFactor ?? parseBuilderBoostFactor(boost_factor),
     },
   };
 }
@@ -97,4 +103,32 @@ export function readProposerConfigDir(filepath: string, filename: string): Propo
   const proposerConfigStr = fs.readFileSync(path.join(filepath, filename), "utf8");
   const proposerConfigJSON = JSON.parse(proposerConfigStr) as ProposerConfigFileSection;
   return proposerConfigJSON;
+}
+
+export function parseBuilderSelection(builderSelection?: string): routes.validator.BuilderSelection | undefined {
+  if (builderSelection) {
+    switch (builderSelection) {
+      case "maxprofit":
+        break;
+      case "builderalways":
+        break;
+      case "builderonly":
+        break;
+      case "executiononly":
+        break;
+      default:
+        throw new YargsError("Invalid input for builder selection, check help");
+    }
+  }
+  return builderSelection as routes.validator.BuilderSelection;
+}
+
+export function parseBuilderBoostFactor(boostFactor?: string): bigint | undefined {
+  if (boostFactor === undefined) return;
+
+  if (!/^\d+$/.test(boostFactor)) {
+    throw new YargsError("Invalid input for builder boost factor, must be a valid number without decimals");
+  }
+
+  return BigInt(boostFactor);
 }

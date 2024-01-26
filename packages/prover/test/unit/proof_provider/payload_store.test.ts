@@ -67,13 +67,13 @@ describe("proof_provider/payload_store", function () {
 
   describe("finalized", () => {
     it("should return undefined for an empty store", () => {
-      expect(store.finalized).to.undefined;
+      expect(store.finalized).toBeUndefined();
     });
 
     it("should return undefined if no finalized block", () => {
       store.set(buildPayload({blockNumber: 10}), false);
 
-      expect(store.finalized).to.undefined;
+      expect(store.finalized).toBeUndefined();
     });
 
     it("should return finalized payload", () => {
@@ -95,7 +95,7 @@ describe("proof_provider/payload_store", function () {
 
   describe("latest", () => {
     it("should return undefined for an empty store", () => {
-      expect(store.latest).to.undefined;
+      expect(store.latest).toBeUndefined();
     });
 
     it("should return latest payload if finalized", () => {
@@ -260,8 +260,7 @@ describe("proof_provider/payload_store", function () {
         const executionPayload = (blockResponse.response?.data as capella.SignedBeaconBlock).message.body
           .executionPayload;
         api.beacon.getBlockV2.mockResolvedValue(blockResponse);
-
-        expect(store.finalized).to.undefined;
+        expect(store.finalized).toBeUndefined();
         // First process as unfinalized
         await store.processLCHeader(header, false);
 
@@ -269,7 +268,7 @@ describe("proof_provider/payload_store", function () {
         await store.processLCHeader(header, true);
 
         // Called only once when we process unfinalized
-        expect(api.beacon.getBlockV2).to.be.toHaveBeenCalledOnce();
+        expect(api.beacon.getBlockV2).toHaveBeenCalledOnce();
         expect(store.finalized).toEqual(executionPayload);
       });
     });
@@ -318,7 +317,7 @@ describe("proof_provider/payload_store", function () {
 
   describe("prune", () => {
     it("should prune without error for empty store", () => {
-      expect(() => store.prune()).not.to.throw;
+      expect(() => store.prune()).not.toThrow();
     });
 
     it("should prune the existing payloads if larger than MAX_PAYLOAD_HISTORY", () => {

@@ -91,15 +91,15 @@ describe("FIFOBlockStateCache", function () {
     it(name, () => {
       // move to head this state
       cache.setHeadState(headState);
-      expect(cache.size).to.be.equal(2, "Size must be same as initial 2");
+      expect(cache.size).toEqualWithMessage(2, "Size must be same as initial 2");
       for (const addAsHead of addAsHeadArr) {
         cache.add(state3, addAsHead);
       }
-      expect(cache.size).to.be.equal(2, "Size should reduce to initial 2 after prunning");
+      expect(cache.size).toEqualWithMessage(2, "Size should reduce to initial 2 after prunning");
       expect(cache.dumpKeyOrder()).toEqual(keptStates);
       expect(cache.get(prunedState)).toBeNull();
       for (const key of keptStates) {
-        expect(cache.get(key), `must have key ${key}`).to.be.not.null;
+        expect(cache.get(key)).not.toBeNull();
       }
     });
   }
