@@ -177,6 +177,18 @@ export function getValidatorApi({
     return computeEpochAtSlot(getCurrentSlot(config, chain.genesisTime - MAX_API_CLOCK_DISPARITY_SEC));
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+  function getBlockValueLogInfo(block: {executionPayloadValue: bigint; consensusBlockValue: bigint}) {
+    const executionValue = block.executionPayloadValue ?? BigInt(0);
+    const consensusValue = block.consensusBlockValue ?? BigInt(0);
+    const totalValue = executionValue + consensusValue; // Total block value is in wei
+    return {
+      executionPayloadValue: `${executionValue}`,
+      consensusBlockValue: `${consensusValue}`,
+      blockTotalValue: `${totalValue}`,
+    };
+  }
+
   /**
    * This function is called 1s before next epoch, usually at that time PrepareNextSlotScheduler finishes
    * so we should have checkpoint state, otherwise wait for up to the slot 1 of epoch.
@@ -599,36 +611,21 @@ export function getValidatorApi({
       }
 
       if (builder.status === ExtendedPromiseStatus.Fulfilled && engine.status !== ExtendedPromiseStatus.Fulfilled) {
-        const builderBlock = builder.value;
-        const builderPayloadValue = builderBlock.executionPayloadValue ?? BigInt(0);
-        const builderConsensusValue = builderBlock.consensusBlockValue ?? BigInt(0);
-        const builderBlockValue = builderPayloadValue + builderConsensusValue;
-
         logger.info("Selected builder block: no engine block produced", {
           ...loggerContext,
           durationMs: builder.durationMs,
-          slot,
-          builderPayloadValue: `${builderPayloadValue}`,
-          builderConsensusValue: `${builderConsensusValue}`,
-          builderBlockValue: `${builderBlockValue}`,
+          ...getBlockValueLogInfo(builder.value),
         });
 
         return {...builder.value, executionPayloadBlinded: true, executionPayloadSource: ProducedBlockSource.builder};
       }
 
       if (engine.status === ExtendedPromiseStatus.Fulfilled && builder.status !== ExtendedPromiseStatus.Fulfilled) {
-        const engineBlock = engine.value;
-        const enginePayloadValue = engineBlock.executionPayloadValue ?? BigInt(0);
-        const engineConsensusValue = engineBlock.consensusBlockValue ?? BigInt(0);
-        const engineBlockValue = enginePayloadValue + engineConsensusValue;
-
         logger.info("Selected engine block: no builder block produced", {
           ...loggerContext,
           durationMs: engine.durationMs,
-          slot,
-          enginePayloadValue: `${enginePayloadValue}`,
-          engineConsensusValue: `${engineConsensusValue}`,
-          engineBlockValue: `${engineBlockValue}`,
+          shouldOverrideBuilder: engine.value.shouldOverrideBuilder,
+          ...getBlockValueLogInfo(engine.value),
         });
 
         return {...engine.value, executionPayloadBlinded: false, executionPayloadSource: ProducedBlockSource.engine};
@@ -677,12 +674,11 @@ export function getValidatorApi({
           engineBlockValue: `${engineBlockValue}`,
           builderBlockValue: `${builderBlockValue}`,
           shouldOverrideBuilder: engineBlock.shouldOverrideBuilder,
-          slot,
         });
 
         if (executionPayloadSource === ProducedBlockSource.engine) {
           return {
-            ...engineBlock,
+            ...engine.value,
             executionPayloadBlinded: false,
             executionPayloadSource,
           } as routes.validator.ProduceBlockOrContentsRes & {
@@ -691,7 +687,7 @@ export function getValidatorApi({
           };
         } else {
           return {
-            ...builderBlock,
+            ...builder.value,
             executionPayloadBlinded: true,
             executionPayloadSource,
           } as routes.validator.ProduceBlindedBlockRes & {

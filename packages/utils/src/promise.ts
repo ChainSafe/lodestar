@@ -215,6 +215,9 @@ export async function resolveOrRacePromises<T extends NonEmptyArray<PromiseLike<
     ]);
     return extendedPromises as ReturnPromiseWithTuple<T>;
   } catch (err) {
+    if (err instanceof ErrorAborted) {
+      return mutedPromises as ReturnPromiseWithTuple<T>;
+    }
     if (err !== resolveTimeoutError) {
       throw err;
     }
@@ -228,6 +231,9 @@ export async function resolveOrRacePromises<T extends NonEmptyArray<PromiseLike<
       }),
     ]);
   } catch (err) {
+    if (err instanceof ErrorAborted) {
+      return mutedPromises as ReturnPromiseWithTuple<T>;
+    }
     if (err !== raceTimeoutError && !(err instanceof AggregateError)) {
       throw err;
     }
