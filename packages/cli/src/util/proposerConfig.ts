@@ -4,11 +4,11 @@ import fs from "node:fs";
 import path from "node:path";
 import {ValidatorProposerConfig} from "@lodestar/validator";
 import {routes} from "@lodestar/api";
-import {parseBuilderBoostFactor} from "../cmds/validator/handler.js";
 
 import {parseFeeRecipient} from "./feeRecipient.js";
 
 import {readFile} from "./file.js";
+import {YargsError} from "./index.js";
 
 type ProposerConfig = ValidatorProposerConfig["defaultConfig"];
 
@@ -93,7 +93,7 @@ function parseProposerConfigSection(
     feeRecipient: overrideConfig?.feeRecipient ?? (fee_recipient ? parseFeeRecipient(fee_recipient) : undefined),
     builder: {
       gasLimit: overrideConfig?.builder?.gasLimit ?? (gas_limit !== undefined ? Number(gas_limit) : undefined),
-      selection: overrideConfig?.builder?.selection ?? builderSelection,
+      selection: overrideConfig?.builder?.selection ?? parseBuilderSelection(builderSelection),
       boostFactor: overrideConfig?.builder?.boostFactor ?? parseBuilderBoostFactor(boost_factor),
     },
   };
@@ -103,4 +103,32 @@ export function readProposerConfigDir(filepath: string, filename: string): Propo
   const proposerConfigStr = fs.readFileSync(path.join(filepath, filename), "utf8");
   const proposerConfigJSON = JSON.parse(proposerConfigStr) as ProposerConfigFileSection;
   return proposerConfigJSON;
+}
+
+export function parseBuilderSelection(builderSelection?: string): routes.validator.BuilderSelection | undefined {
+  if (builderSelection) {
+    switch (builderSelection) {
+      case "maxprofit":
+        break;
+      case "builderalways":
+        break;
+      case "builderonly":
+        break;
+      case "executiononly":
+        break;
+      default:
+        throw new YargsError("Invalid input for builder selection, check help");
+    }
+  }
+  return builderSelection as routes.validator.BuilderSelection;
+}
+
+export function parseBuilderBoostFactor(boostFactor?: string): bigint | undefined {
+  if (boostFactor === undefined) return;
+
+  if (!/^\d+$/.test(boostFactor)) {
+    throw new YargsError("Invalid input for builder boost factor, must be a valid number without decimals");
+  }
+
+  return BigInt(boostFactor);
 }
