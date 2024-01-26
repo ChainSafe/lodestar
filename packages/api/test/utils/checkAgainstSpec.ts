@@ -199,7 +199,7 @@ function prettyAjvErrors(errors: ErrorObject[] | null | undefined): string {
   return errors.map((e) => `${e.instancePath ?? "."} - ${e.message}`).join("\n");
 }
 
-type StringifiedProperty = string | StringifiedProperty[] | null | undefined;
+type StringifiedProperty = string | StringifiedProperty[];
 
 function stringifyProperty(value: unknown): StringifiedProperty {
   if (typeof value === "number") {
