@@ -279,30 +279,29 @@ export class ProtoArray {
       // Mark chain ii) as Invalid if LVH is found and non null, else only invalidate invalid_payload
       // if its in fcU.
       //
-      const {invalidateFromParentBlockHash, latestValidExecHash} = execResponse;
-      const invalidateFromParentIndex = this.indices.get(invalidateFromParentBlockHash);
+      const {invalidateFromParentBlockRoot, latestValidExecHash} = execResponse;
+      const invalidateFromParentIndex = this.indices.get(invalidateFromParentBlockRoot);
       if (invalidateFromParentIndex === undefined) {
-        throw Error(`Unable to find invalidateFromParentBlockHash=${invalidateFromParentBlockHash} in forkChoice`);
+        throw Error(`Unable to find invalidateFromParentBlockRoot=${invalidateFromParentBlockRoot} in forkChoice`);
       }
       const latestValidHashIndex =
         latestValidExecHash !== null ? this.getNodeIndexFromLVH(latestValidExecHash, invalidateFromParentIndex) : null;
       if (latestValidHashIndex === null) {
         /**
-         *  If the LVH is null or not found, represented with latestValidHashIndex=undefined,
-         *   then just invalidate the invalid_payload and bug out.
+         * The LVH (latest valid hash) is null or not found.
          *
-         *   Ideally in not found scenario we should invalidate the entire chain upwards, but
-         *   it is possible (and observed in the testnets) that the EL was
+         * The spec gives an allowance for the EL being able to return a nullish LVH if it could not
+         * "determine" one. There are two interpretations:
          *
-         *     i) buggy: that the LVH was not really the parent of the invalid block, but on
-         *        some side chain
-         *     ii) lazy: that invalidation was result of simple check and the EL just
-         *         responded with a bogus LVH
+         * - "the LVH is unknown" - simply throw and move on. We can't determine which chain to invalidate
+         *   since we don't know which ancestor is valid.
          *
-         *   In such case for robustness, lets not process this invalidation into forkchoice
-         *   as it might poision it since the invalidations can't be processed unless latestValidHashIndex
-         *   is known as invalidateFromParentIndex is the parent of the payload being verified which has not
-         *   been imported yet into forkchoice.
+         * - "the LVH doesn't exist" - this means that the entire ancestor chain is invalid, and should
+         *   be marked as such.
+         *
+         * The more robust approach is to treat nullish LVH as "the LVH is unknown" rather than
+         * "the LVH doesn't exist". The alternative means that we will poison a valid chain when the
+         * EL is lazy (or buggy) with its LVH response.
          */
         throw Error(`Unable to find latestValidExecHash=${latestValidExecHash} in the forkchoice`);
       } else {
