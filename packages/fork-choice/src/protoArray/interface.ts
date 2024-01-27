@@ -29,7 +29,7 @@ export type LVHValidResponse = {
 export type LVHInvalidResponse = {
   executionStatus: ExecutionStatus.Invalid;
   latestValidExecHash: RootHex | null;
-  invalidateFromBlockHash: RootHex;
+  invalidateFromParentBlockHash: RootHex;
 };
 export type LVHExecResponse = LVHValidResponse | LVHInvalidResponse;
 

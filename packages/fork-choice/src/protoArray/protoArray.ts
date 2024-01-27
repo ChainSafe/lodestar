@@ -279,13 +279,13 @@ export class ProtoArray {
       // Mark chain ii) as Invalid if LVH is found and non null, else only invalidate invalid_payload
       // if its in fcU.
       //
-      const {invalidateFromBlockHash, latestValidExecHash} = execResponse;
-      const invalidateFromIndex = this.indices.get(invalidateFromBlockHash);
-      if (invalidateFromIndex === undefined) {
-        throw Error(`Unable to find invalidateFromBlockHash=${invalidateFromBlockHash} in forkChoice`);
+      const {invalidateFromParentBlockHash, latestValidExecHash} = execResponse;
+      const invalidateFromParentIndex = this.indices.get(invalidateFromParentBlockHash);
+      if (invalidateFromParentIndex === undefined) {
+        throw Error(`Unable to find invalidateFromParentBlockHash=${invalidateFromParentBlockHash} in forkChoice`);
       }
       const latestValidHashIndex =
-        latestValidExecHash !== null ? this.getNodeIndexFromLVH(latestValidExecHash, invalidateFromIndex) : null;
+        latestValidExecHash !== null ? this.getNodeIndexFromLVH(latestValidExecHash, invalidateFromParentIndex) : null;
       if (latestValidHashIndex === null) {
         /**
          *  If the LVH is null or not found, represented with latestValidHashIndex=undefined,
@@ -301,12 +301,12 @@ export class ProtoArray {
          *
          *   In such case for robustness, lets not process this invalidation into forkchoice
          *   as it might poision it since the invalidations can't be processed unless latestValidHashIndex
-         *   is known as invalidateFromIndex is the parent of the payload being verified which has not been
-         *   imported yet into forkchoice.
+         *   is known as invalidateFromParentIndex is the parent of the payload being verified which has not
+         *   been imported yet into forkchoice.
          */
         throw Error(`Unable to find latestValidExecHash=${latestValidExecHash} in the forkchoice`);
       } else {
-        this.propagateInValidExecutionStatusByIndex(invalidateFromIndex, latestValidHashIndex, currentSlot);
+        this.propagateInValidExecutionStatusByIndex(invalidateFromParentIndex, latestValidHashIndex, currentSlot);
       }
     }
   }
@@ -335,12 +335,12 @@ export class ProtoArray {
    */
 
   private propagateInValidExecutionStatusByIndex(
-    invalidateFromIndex: number,
+    invalidateFromParentIndex: number,
     latestValidHashIndex: number,
     currentSlot: Slot
   ): void {
-    // Pass 1: mark invalidateFromIndex and its parents invalid
-    let invalidateIndex: number | undefined = invalidateFromIndex;
+    // Pass 1: mark invalidateFromParentIndex and its parents invalid
+    let invalidateIndex: number | undefined = invalidateFromParentIndex;
     while (invalidateIndex !== undefined && invalidateIndex > latestValidHashIndex) {
       const invalidNode = this.invalidateNodeByIndex(invalidateIndex);
       invalidateIndex = invalidNode.parent;
