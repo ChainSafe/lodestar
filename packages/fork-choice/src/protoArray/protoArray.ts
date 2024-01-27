@@ -370,8 +370,8 @@ export class ProtoArray {
     });
   }
 
-  private getNodeIndexFromLVH(latestValidExecHash: RootHex, ancestorOfIndex: number): number | null {
-    let nodeIndex = this.nodes[ancestorOfIndex].parent;
+  private getNodeIndexFromLVH(latestValidExecHash: RootHex, ancestorFromIndex: number): number | null {
+    let nodeIndex: number | undefined = ancestorFromIndex;
     while (nodeIndex !== undefined && nodeIndex >= 0) {
       const node = this.getNodeFromIndex(nodeIndex);
       if (
