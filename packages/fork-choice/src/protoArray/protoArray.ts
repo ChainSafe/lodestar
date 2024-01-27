@@ -299,10 +299,12 @@ export class ProtoArray {
          *     ii) lazy: that invalidation was result of simple check and the EL just
          *         responded with a bogus LVH
          *
-         *   So we will just invalidate the current payload and let future responses take care
-         *   to be as robust as possible.
+         *   In such case for robustness, lets not process this invalidation into forkchoice
+         *   as it might poision it since the invalidations can't be processed unless latestValidHashIndex
+         *   is known as invalidateFromIndex is the parent of the payload being verified which has not been
+         *   imported yet into forkchoice.
          */
-        this.invalidateNodeByIndex(invalidateFromIndex);
+        throw Error(`Unable to find latestValidExecHash=${latestValidExecHash} in the forkchoice`);
       } else {
         this.propagateInValidExecutionStatusByIndex(invalidateFromIndex, latestValidHashIndex, currentSlot);
       }
