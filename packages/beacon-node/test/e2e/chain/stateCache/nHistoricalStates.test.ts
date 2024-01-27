@@ -12,7 +12,7 @@ import {waitForEvent} from "../../../utils/events/resolver.js";
 import {ChainEvent, ReorgEventData} from "../../../../src/chain/emitter.js";
 import {connect} from "../../../utils/network.js";
 import {CacheItemType} from "../../../../src/chain/stateCache/types.js";
-import {ReorgedForkChoice} from "../../../utils/chain/forkchoice.js";
+import {ReorgedForkChoice} from "../../../mocks/forkchoice.js";
 
 /**
  * Test different reorg scenarios to make sure the StateCache implementations are correct.
