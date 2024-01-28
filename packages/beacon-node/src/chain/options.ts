@@ -4,6 +4,7 @@ import {ArchiverOpts} from "./archiver/index.js";
 import {ForkChoiceOpts} from "./forkChoice/index.js";
 import {LightClientServerOpts} from "./lightClient/index.js";
 import {ShufflingCacheOpts} from "./shufflingCache.js";
+import {BlsPoolType} from "./bls/index.js";
 
 export type IChainOptions = BlockProcessOpts &
   PoolOpts &
@@ -12,6 +13,7 @@ export type IChainOptions = BlockProcessOpts &
   ArchiverOpts &
   ShufflingCacheOpts &
   LightClientServerOpts & {
+    blsPoolType?: BlsPoolType;
     blsVerifyAllMainThread?: boolean;
     blsVerifyAllMultiThread?: boolean;
     persistProducedBlocks?: boolean;
@@ -84,6 +86,7 @@ export type SeenCacheOpts = {
 };
 
 export const defaultChainOptions: IChainOptions = {
+  blsPoolType: BlsPoolType.libuv,
   blsVerifyAllMainThread: false,
   blsVerifyAllMultiThread: false,
   disableBlsBatchVerify: false,

@@ -1,6 +1,5 @@
 import bls from "@chainsafe/bls";
-import {CoordType} from "@chainsafe/blst";
-import {PublicKey} from "@chainsafe/bls/types";
+import {PublicKey, CoordType} from "@chainsafe/bls/types";
 import {describe, it, expect, beforeEach} from "vitest";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {BlsSingleThreadVerifier} from "../../../../src/chain/bls/singleThread.js";
