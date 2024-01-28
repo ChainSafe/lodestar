@@ -12,7 +12,7 @@ export function lockFilepath(filepath: string): void {
     });
   } catch (e) {
     if (isLockfileError(e) && e.code === "ELOCKED") {
-      e.message = `${filepath} is already in use by another Lodestar instance`;
+      e.message = `${filepath} is already in use by another process`;
     }
     throw e;
   }
