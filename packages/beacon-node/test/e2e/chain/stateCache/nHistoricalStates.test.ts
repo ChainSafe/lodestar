@@ -10,7 +10,7 @@ import {getDevBeaconNode} from "../../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../../utils/node/validator.js";
 import {waitForEvent} from "../../../utils/events/resolver.js";
 import {ChainEvent, ReorgEventData} from "../../../../src/chain/emitter.js";
-import {connect} from "../../../utils/network.js";
+import {connect, onPeerConnect} from "../../../utils/network.js";
 import {CacheItemType} from "../../../../src/chain/stateCache/types.js";
 import {ReorgedForkChoice} from "../../../mocks/forkchoice.js";
 
@@ -257,7 +257,7 @@ describe(
     } of testCases) {
       it(`${name} reorgedSlot=${reorgedSlot} reorgDistance=${reorgDistance}`, async function () {
         // the node needs time to transpile/initialize bls worker threads
-        const genesisSlotsDelay = 7;
+        const genesisSlotsDelay = 11;
         const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
         const testLoggerOpts: TestLoggerOpts = {
           level: LogLevel.debug,
@@ -291,18 +291,6 @@ describe(
         // stop bn after validators
         afterEachCallbacks.push(() => reorgedBn.close());
 
-        const {validators} = await getAndInitDevValidators({
-          node: reorgedBn,
-          logPrefix: "bn-a",
-          validatorsPerClient: validatorCount,
-          validatorClientCount: 1,
-          startIndex: 0,
-          useRestApi: false,
-          testLoggerOpts,
-        });
-
-        afterEachCallbacks.push(() => Promise.all(validators.map((v) => v.close())));
-
         const followupBn = await getDevBeaconNode({
           params: testParams,
           options: {
@@ -325,7 +313,22 @@ describe(
 
         afterEachCallbacks.push(() => followupBn.close());
 
+        const connected = Promise.all([onPeerConnect(followupBn.network), onPeerConnect(reorgedBn.network)]);
         await connect(followupBn.network, reorgedBn.network);
+        await connected;
+        loggerNodeB.info("Node B connected to Node A");
+
+        const {validators} = await getAndInitDevValidators({
+          node: reorgedBn,
+          logPrefix: "Val-Node-A",
+          validatorsPerClient: validatorCount,
+          validatorClientCount: 1,
+          startIndex: 0,
+          useRestApi: false,
+          testLoggerOpts,
+        });
+
+        afterEachCallbacks.push(() => Promise.all(validators.map((v) => v.close())));
 
         // wait for checkpoint 3 at slot 24, both nodes should reach same checkpoint
         const checkpoints = await Promise.all(
