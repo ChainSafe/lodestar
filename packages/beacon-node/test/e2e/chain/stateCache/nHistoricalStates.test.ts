@@ -419,7 +419,5 @@ describe(
       });
     }
   },
-  // on local environment, it takes around 70s for 2 checkpoints so make it 96s for CI
-  // on CI, got Test timed out in 96000ms
-  {timeout: 120_000}
+  {timeout: 96_000}
 );
