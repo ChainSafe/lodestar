@@ -295,7 +295,7 @@
 
 "@chainsafe/bls@ChainSafe/bls#mkeil/napi-blst":
   version "7.1.2"
-  resolved "https://codeload.github.com/ChainSafe/bls/tar.gz/102bff530c281c5e72e898045e6783af3481c7ab"
+  resolved "https://codeload.github.com/ChainSafe/bls/tar.gz/324d3d0313b7f5dccf496487a0aa22a968199773"
   dependencies:
     "@chainsafe/bls-keygen" "^0.4.0"
     "@chainsafe/blst-ts" "file:../../../../Library/Caches/Yarn/v6/npm-@chainsafe-bls-7.1.2/node_modules/@chainsafe/bls/temp-deps/blst-ts"
