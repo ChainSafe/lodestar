@@ -257,7 +257,7 @@ describe(
     } of testCases) {
       it(`${name} reorgedSlot=${reorgedSlot} reorgDistance=${reorgDistance}`, async function () {
         // the node needs time to transpile/initialize bls worker threads
-        const genesisSlotsDelay = 11;
+        const genesisSlotsDelay = 7;
         const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
         const testLoggerOpts: TestLoggerOpts = {
           level: LogLevel.debug,
@@ -285,6 +285,7 @@ describe(
             },
           },
           validatorCount,
+          genesisTime,
           logger: loggerNodeA,
         });
 
@@ -307,7 +308,7 @@ describe(
             metrics: {enabled: true},
           },
           validatorCount,
-          genesisTime: reorgedBn.chain.getHeadState().genesisTime,
+          genesisTime,
           logger: loggerNodeB,
         });
 
