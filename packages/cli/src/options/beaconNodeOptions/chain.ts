@@ -1,9 +1,11 @@
 import * as path from "node:path";
 import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
+import {BlsPoolType} from "@lodestar/beacon-node/chain";
 import {CliCommandOptions} from "@lodestar/utils";
 
 export type ChainArgs = {
   suggestedFeeRecipient: string;
+  "chain.blsPoolType"?: BlsPoolType;
   "chain.blsVerifyAllMultiThread"?: boolean;
   "chain.blsVerifyAllMainThread"?: boolean;
   "chain.disableBlsBatchVerify"?: boolean;
@@ -36,6 +38,7 @@ export type ChainArgs = {
 export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
   return {
     suggestedFeeRecipient: args["suggestedFeeRecipient"],
+    blsPoolType: args["chain.blsPoolType"],
     blsVerifyAllMultiThread: args["chain.blsVerifyAllMultiThread"],
     blsVerifyAllMainThread: args["chain.blsVerifyAllMainThread"],
     disableBlsBatchVerify: args["chain.disableBlsBatchVerify"],
@@ -80,6 +83,14 @@ export const options: CliCommandOptions<ChainArgs> = {
     type: "boolean",
     defaultDescription: String(defaultOptions.chain.emitPayloadAttributes),
     description: "Flag to SSE emit execution `payloadAttributes` before every slot",
+    group: "chain",
+  },
+
+  "chain.blsPoolType": {
+    hidden: true,
+    choices: Object.values(BlsPoolType),
+    type: "string",
+    description: "Selects between using a Worker pool or using the native libuv thread pool for BLS verification",
     group: "chain",
   },
 

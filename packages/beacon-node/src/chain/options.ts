@@ -7,6 +7,7 @@ import {ShufflingCacheOpts} from "./shufflingCache.js";
 import {DEFAULT_MAX_BLOCK_STATES, FIFOBlockStateCacheOpts} from "./stateCache/fifoBlockStateCache.js";
 import {PersistentCheckpointStateCacheOpts} from "./stateCache/persistentCheckpointsCache.js";
 import {DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY} from "./stateCache/persistentCheckpointsCache.js";
+import {BlsPoolType} from "./bls/index.js";
 
 export type IChainOptions = BlockProcessOpts &
   PoolOpts &
@@ -17,6 +18,7 @@ export type IChainOptions = BlockProcessOpts &
   PersistentCheckpointStateCacheOpts &
   ShufflingCacheOpts &
   LightClientServerOpts & {
+    blsPoolType?: BlsPoolType;
     blsVerifyAllMainThread?: boolean;
     blsVerifyAllMultiThread?: boolean;
     persistProducedBlocks?: boolean;
@@ -92,6 +94,7 @@ export type SeenCacheOpts = {
 };
 
 export const defaultChainOptions: IChainOptions = {
+  blsPoolType: BlsPoolType.libuv,
   blsVerifyAllMainThread: false,
   blsVerifyAllMultiThread: false,
   disableBlsBatchVerify: false,
