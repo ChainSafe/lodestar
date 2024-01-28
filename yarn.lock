@@ -295,7 +295,7 @@
 
 "@chainsafe/bls@ChainSafe/bls#mkeil/napi-blst":
   version "7.1.2"
-  resolved "https://codeload.github.com/ChainSafe/bls/tar.gz/102bff530c281c5e72e898045e6783af3481c7ab"
+  resolved "https://codeload.github.com/ChainSafe/bls/tar.gz/324d3d0313b7f5dccf496487a0aa22a968199773"
   dependencies:
     "@chainsafe/bls-keygen" "^0.4.0"
     bls-eth-wasm "^0.4.8"
