@@ -5,7 +5,7 @@ import {VerifySignatureOpts} from "../interface.js";
 import {getAggregatedPubkey} from "../utils.js";
 import {LinkedList} from "../../../util/array.js";
 import {Metrics} from "../../../metrics/metrics.js";
-import {BlsWorkReq} from "./types.js";
+import {BlsWorkReq, WorkRequestSet} from "./types.js";
 
 export type JobQueueItem = JobQueueItemDefault | JobQueueItemSameMessage;
 
@@ -49,17 +49,32 @@ export function jobItemSigSets(job: JobQueueItem): number {
  * Prepare BlsWorkReq from JobQueueItem
  * WARNING: May throw with untrusted user input
  */
-export function jobItemWorkReq(job: JobQueueItem, format: PointFormat, metrics: Metrics | null): BlsWorkReq {
+export function jobItemWorkReq(
+  deserialized: boolean,
+  job: JobQueueItem,
+  format: PointFormat,
+  metrics: Metrics | null
+): BlsWorkReq {
   switch (job.type) {
     case JobQueueItemType.default:
       return {
         opts: job.opts,
-        sets: job.sets.map((set) => ({
-          // this can throw, handled in the consumer code
-          publicKey: getAggregatedPubkey(set, metrics).toBytes(format),
-          signature: set.signature,
-          message: set.signingRoot,
-        })),
+        sets: job.sets.map(
+          (set) =>
+            ({
+              // this can throw, but likely keys will not unless there is a code error
+              // so handled in the consumer code
+              //
+              // only serialize the keys to cross the worker boundary. signatures stay
+              // serialized until inside try/catch with verification functions as they
+              // come across the network and are not trusted
+              publicKey: deserialized
+                ? getAggregatedPubkey(set, metrics)
+                : getAggregatedPubkey(set, metrics).toBytes(format),
+              signature: set.signature,
+              message: set.signingRoot,
+            }) as WorkRequestSet
+        ),
       };
     case JobQueueItemType.sameMessage: {
       // validate signature = true, this is slow code on main thread so should only run with network thread mode (useWorker=true)
@@ -73,14 +88,18 @@ export function jobItemWorkReq(job: JobQueueItem, format: PointFormat, metrics: 
       const signatures = job.sets.map((set) => bls.Signature.fromBytes(set.signature, CoordType.affine, true));
       timer?.();
 
+      const publicKey = bls.PublicKey.aggregate(job.sets.map((set) => set.publicKey));
+      // TODO: verify this is correct!!
+      // @tuyennhv why should this not be done in the verification try/catch.  can throw for malformed signature
+      const signature = bls.Signature.aggregate(signatures);
       return {
         opts: job.opts,
         sets: [
           {
-            publicKey: bls.PublicKey.aggregate(job.sets.map((set) => set.publicKey)).toBytes(format),
-            signature: bls.Signature.aggregate(signatures).toBytes(format),
+            publicKey: deserialized ? publicKey : publicKey.toBytes(format),
+            signature: deserialized ? signature : signature.toBytes(format),
             message: job.message,
-          },
+          } as WorkRequestSet,
         ],
       };
     }
@@ -90,7 +109,10 @@ export function jobItemWorkReq(job: JobQueueItem, format: PointFormat, metrics: 
 /**
  * Convert a JobQueueItemSameMessage into multiple JobQueueItemDefault linked to the original promise
  */
-export function jobItemSameMessageToMultiSet(job: JobQueueItemSameMessage): LinkedList<JobQueueItemDefault> {
+export function jobItemSameMessageToMultiSet(
+  deserialized: boolean,
+  job: JobQueueItemSameMessage
+): LinkedList<JobQueueItemDefault> {
   // Retry each individually
   // Create new jobs for each pubkey set, and Promise.all all the results
   const promises: Promise<boolean>[] = [];
@@ -108,6 +130,8 @@ export function jobItemSameMessageToMultiSet(job: JobQueueItemSameMessage): Link
           sets: [
             {
               type: SignatureSetType.single,
+              // TODO: verify this is correct!!
+              // @tuyennhv this is not a serialized pubkey for crossing the worker thread?
               pubkey: set.publicKey,
               signature: set.signature,
               signingRoot: job.message,

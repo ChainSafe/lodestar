@@ -5,6 +5,7 @@ import {Metrics} from "../../metrics/index.js";
 import {IBlsVerifier} from "./interface.js";
 import {verifySignatureSetsMaybeBatch} from "./maybeBatch.js";
 import {getAggregatedPubkey, getAggregatedPubkeysCount} from "./utils.js";
+import {WorkRequestSet} from "./multithread/types.js";
 
 export class BlsSingleThreadVerifier implements IBlsVerifier {
   private readonly metrics: Metrics | null;
@@ -16,22 +17,26 @@ export class BlsSingleThreadVerifier implements IBlsVerifier {
   async verifySignatureSets(sets: ISignatureSet[]): Promise<boolean> {
     this.metrics?.bls.aggregatedPubkeys.inc(getAggregatedPubkeysCount(sets));
 
-    const setsAggregated = sets.map((set) => ({
-      publicKey: getAggregatedPubkey(set),
-      message: set.signingRoot,
-      signature: set.signature,
-    }));
+    try {
+      const setsAggregated: WorkRequestSet[] = sets.map((set) => ({
+        message: set.signingRoot,
+        publicKey: getAggregatedPubkey(set),
+        signature: bls.Signature.fromBytes(set.signature, CoordType.affine, true),
+      }));
 
-    // Count time after aggregating
-    const timer = this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.startTimer();
-    const isValid = verifySignatureSetsMaybeBatch(setsAggregated);
+      // Count time after aggregating
+      const timer = this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.startTimer();
+      const isValid = verifySignatureSetsMaybeBatch(setsAggregated);
 
-    // Don't use a try/catch, only count run without exceptions
-    if (timer) {
-      timer();
+      // Don't use a try/catch, only count run without exceptions
+      if (timer) {
+        timer();
+      }
+
+      return isValid;
+    } catch {
+      return false;
     }
-
-    return isValid;
   }
 
   async verifySignatureSetsSameMessage(
