@@ -48,7 +48,7 @@
     "lint:fix": "yarn run lint --fix",
     "test": "yarn test:unit && yarn test:e2e",
     "test:unit": "vitest --run --passWithNoTests --dir test/unit/",
-    "test:e2e": "vitest --run --config vitest.config.e2e.ts --dir test/e2e/",
+    "test:e2e": "vitest --run --config vitest.e2e.config.ts --dir test/e2e/",
     "check-readme": "typescript-docs-verifier"
   },
   "repository": {

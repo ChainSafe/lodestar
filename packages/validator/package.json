@@ -29,8 +29,8 @@
     "lint:fix": "yarn run lint --fix",
     "test:unit": "vitest --run --dir test/unit/",
     "test": "yarn test:unit && yarn test:e2e",
-    "test:spec": "vitest --run --config vitest.config.spec.ts --dir test/spec/",
-    "test:e2e": "LODESTAR_PRESET=mainnet vitest --run --config vitest.config.e2e.ts --dir test/e2e",
+    "test:spec": "vitest --run --config vitest.spec.config.ts --dir test/spec/",
+    "test:e2e": "LODESTAR_PRESET=mainnet vitest --run --config vitest.e2e.config.ts --dir test/e2e",
     "download-spec-tests": "node --loader=ts-node/esm test/spec/downloadTests.ts",
     "coverage": "codecov -F lodestar-validator",
     "check-readme": "typescript-docs-verifier"
