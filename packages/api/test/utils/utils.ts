@@ -38,7 +38,6 @@ export function getTestServer(): {baseUrl: string; server: FastifyInstance} {
   return {baseUrl, server};
 }
 
-/** Type helper to get a Sinon mock object type with Api */
 export function getMockApi<Api extends Record<string, any>>(
   routeIds: Record<string, any>
 ): MockedObject<ServerApi<Api>> & ServerApi<Api> {

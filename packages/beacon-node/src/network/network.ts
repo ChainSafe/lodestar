@@ -1,4 +1,4 @@
-import {PeerId} from "@libp2p/interface/peer-id";
+import {PeerId} from "@libp2p/interface";
 import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
 import {BeaconConfig} from "@lodestar/config";
@@ -105,8 +105,12 @@ export class Network implements INetwork {
     this.events.on(NetworkEvent.peerConnected, this.onPeerConnected);
     this.events.on(NetworkEvent.peerDisconnected, this.onPeerDisconnected);
     this.chain.emitter.on(routes.events.EventType.head, this.onHead);
-    this.chain.emitter.on(routes.events.EventType.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
-    this.chain.emitter.on(routes.events.EventType.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
+    this.chain.emitter.on(routes.events.EventType.lightClientFinalityUpdate, ({data}) =>
+      this.onLightClientFinalityUpdate(data)
+    );
+    this.chain.emitter.on(routes.events.EventType.lightClientOptimisticUpdate, ({data}) =>
+      this.onLightClientOptimisticUpdate(data)
+    );
   }
 
   static async init({

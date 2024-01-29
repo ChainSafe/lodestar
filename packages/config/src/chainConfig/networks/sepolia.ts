@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {fromHexString as b} from "@chainsafe/ssz";
 import {ChainConfig} from "../types.js";
-import {chainConfig as mainnet} from "../presets/mainnet.js";
+import {chainConfig as mainnet} from "../configs/mainnet.js";
 
 // Sepolia beacon chain config:
-// https://github.com/eth-clients/merge-testnets/blob/main/sepolia-beacon-chain/config.yaml
+// https://github.com/eth-clients/sepolia/blob/main/bepolia/config.yaml
 
 export const sepoliaChainConfig: ChainConfig = {
   ...mainnet,
@@ -30,6 +30,9 @@ export const sepoliaChainConfig: ChainConfig = {
   // Capella
   CAPELLA_FORK_VERSION: b("0x90000072"),
   CAPELLA_FORK_EPOCH: 56832,
+  // Deneb
+  DENEB_FORK_VERSION: b("0x90000073"),
+  DENEB_FORK_EPOCH: 132608,
 
   // Deposit contract
   // ---------------------------------------------------------------

@@ -1,5 +1,4 @@
-import {expect} from "chai";
-import sinon from "sinon";
+import {describe, it, expect, beforeAll, beforeEach, afterEach, vi} from "vitest";
 import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
 import {createChainForkConfig} from "@lodestar/config";
@@ -16,18 +15,19 @@ import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker.js";
 import {ZERO_HASH} from "../../utils/types.js";
 import {ValidatorEventEmitter} from "../../../src/services/emitter.js";
 
+vi.mock("../../../src/services/validatorStore.js");
+vi.mock("../../../src/services/emitter.js");
+vi.mock("../../../src/services/chainHeaderTracker.js");
+
 /* eslint-disable @typescript-eslint/naming-convention */
 
 describe("SyncCommitteeService", function () {
-  const sandbox = sinon.createSandbox();
-
-  const api = getApiClientStub(sandbox);
-  const validatorStore = sinon.createStubInstance(ValidatorStore) as ValidatorStore &
-    sinon.SinonStubbedInstance<ValidatorStore>;
-  const emitter = sinon.createStubInstance(ValidatorEventEmitter) as ValidatorEventEmitter &
-    sinon.SinonStubbedInstance<ValidatorEventEmitter>;
-  const chainHeaderTracker = sinon.createStubInstance(ChainHeaderTracker) as ChainHeaderTracker &
-    sinon.SinonStubbedInstance<ChainHeaderTracker>;
+  const api = getApiClientStub();
+  // @ts-expect-error - Mocked class don't need parameters
+  const validatorStore = vi.mocked(new ValidatorStore());
+  const emitter = vi.mocked(new ValidatorEventEmitter());
+  // @ts-expect-error - Mocked class don't need parameters
+  const chainHeaderTracker = vi.mocked(new ChainHeaderTracker());
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
 
   const config = createChainForkConfig({
@@ -36,20 +36,22 @@ describe("SyncCommitteeService", function () {
     ALTAIR_FORK_EPOCH: 0, // Activate Altair immediately
   });
 
-  before(() => {
+  beforeAll(() => {
     const secretKeys = Array.from({length: 1}, (_, i) => bls.SecretKey.fromBytes(Buffer.alloc(32, i + 1)));
     pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
-    validatorStore.votingPubkeys.returns(pubkeys.map(toHexString));
-    validatorStore.hasVotingPubkey.returns(true);
-    validatorStore.hasSomeValidators.returns(true);
-    validatorStore.signAttestationSelectionProof.resolves(ZERO_HASH);
+    validatorStore.votingPubkeys.mockReturnValue(pubkeys.map(toHexString));
+    validatorStore.hasVotingPubkey.mockReturnValue(true);
+    validatorStore.hasSomeValidators.mockReturnValue(true);
+    validatorStore.signAttestationSelectionProof.mockResolvedValue(ZERO_HASH);
   });
 
   let controller: AbortController; // To stop clock
-  beforeEach(() => (controller = new AbortController()));
+  beforeEach(() => {
+    controller = new AbortController();
+  });
   afterEach(() => {
     controller.abort();
-    sandbox.resetHistory();
+    vi.resetAllMocks();
   });
 
   const testContexts: [string, SyncCommitteeServiceOpts][] = [
@@ -58,7 +60,7 @@ describe("SyncCommitteeService", function () {
   ];
 
   for (const [title, opts] of testContexts) {
-    context(title, () => {
+    describe(title, () => {
       it("Should produce, sign, and publish a sync committee + contribution", async () => {
         const clock = new ClockMock();
         const syncCommitteeService = new SyncCommitteeService(
@@ -95,34 +97,34 @@ describe("SyncCommitteeService", function () {
         ];
 
         // Return empty replies to duties service
-        api.beacon.getStateValidators.resolves({
+        api.beacon.getStateValidators.mockResolvedValue({
           response: {data: [], executionOptimistic: false},
           ok: true,
           status: HttpStatusCode.OK,
         });
-        api.validator.getSyncCommitteeDuties.resolves({
+        api.validator.getSyncCommitteeDuties.mockResolvedValue({
           response: {data: [], executionOptimistic: false},
           ok: true,
           status: HttpStatusCode.OK,
         });
 
         // Mock duties service to return some duties directly
-        syncCommitteeService["dutiesService"].getDutiesAtSlot = sinon.stub().returns(duties);
+        vi.spyOn(syncCommitteeService["dutiesService"], "getDutiesAtSlot").mockResolvedValue(duties);
 
         // Mock beacon's sync committee and contribution routes
 
-        chainHeaderTracker.getCurrentChainHead.returns(beaconBlockRoot);
-        api.beacon.submitPoolSyncCommitteeSignatures.resolves({
+        chainHeaderTracker.getCurrentChainHead.mockReturnValue(beaconBlockRoot);
+        api.beacon.submitPoolSyncCommitteeSignatures.mockResolvedValue({
           response: undefined,
           ok: true,
           status: HttpStatusCode.OK,
         });
-        api.validator.produceSyncCommitteeContribution.resolves({
+        api.validator.produceSyncCommitteeContribution.mockResolvedValue({
           response: {data: contribution},
           ok: true,
           status: HttpStatusCode.OK,
         });
-        api.validator.publishContributionAndProofs.resolves({
+        api.validator.publishContributionAndProofs.mockResolvedValue({
           response: undefined,
           ok: true,
           status: HttpStatusCode.OK,
@@ -131,7 +133,7 @@ describe("SyncCommitteeService", function () {
         if (opts.distributedAggregationSelection) {
           // Mock distributed validator middleware client selections endpoint
           // and return a selection proof that passes `is_sync_committee_aggregator` test
-          api.validator.submitSyncCommitteeSelections.resolves({
+          api.validator.submitSyncCommitteeSelections.mockResolvedValue({
             response: {
               data: [{validatorIndex: 0, slot: 0, subcommitteeIndex: 0, selectionProof: Buffer.alloc(1, 0x19)}],
             },
@@ -141,8 +143,8 @@ describe("SyncCommitteeService", function () {
         }
 
         // Mock signing service
-        validatorStore.signSyncCommitteeSignature.resolves(syncCommitteeSignature);
-        validatorStore.signContributionAndProof.resolves(contributionAndProof);
+        validatorStore.signSyncCommitteeSignature.mockResolvedValue(syncCommitteeSignature);
+        validatorStore.signContributionAndProof.mockResolvedValue(contributionAndProof);
 
         // Trigger clock onSlot for slot 0
         await clock.tickSlotFns(0, controller.signal);
@@ -155,35 +157,17 @@ describe("SyncCommitteeService", function () {
             subcommitteeIndex: 0,
             selectionProof: ZERO_HASH,
           };
-          expect(api.validator.submitSyncCommitteeSelections.callCount).to.equal(
-            1,
-            "submitSyncCommitteeSelections() must be called once"
-          );
-          expect(api.validator.submitSyncCommitteeSelections.getCall(0).args).to.deep.equal(
-            [[selection]], // 1 arg, = selection[]
-            "wrong submitSyncCommitteeSelections() args"
-          );
+          expect(api.validator.submitSyncCommitteeSelections).toHaveBeenCalledOnce();
+          expect(api.validator.submitSyncCommitteeSelections).toHaveBeenCalledWith([selection]);
         }
 
         // Must submit the signature received through signSyncCommitteeSignature()
-        expect(api.beacon.submitPoolSyncCommitteeSignatures.callCount).to.equal(
-          1,
-          "submitPoolSyncCommitteeSignatures() must be called once"
-        );
-        expect(api.beacon.submitPoolSyncCommitteeSignatures.getCall(0).args).to.deep.equal(
-          [[syncCommitteeSignature]], // 1 arg, = syncCommitteeSignature[]
-          "wrong submitPoolSyncCommitteeSignatures() args"
-        );
+        expect(api.beacon.submitPoolSyncCommitteeSignatures).toHaveBeenCalledOnce();
+        expect(api.beacon.submitPoolSyncCommitteeSignatures).toHaveBeenCalledWith([syncCommitteeSignature]);
 
         // Must submit the aggregate received through produceSyncCommitteeContribution() then signContributionAndProof()
-        expect(api.validator.publishContributionAndProofs.callCount).to.equal(
-          1,
-          "publishContributionAndProofs() must be called once"
-        );
-        expect(api.validator.publishContributionAndProofs.getCall(0).args).to.deep.equal(
-          [[contributionAndProof]], // 1 arg, = contributionAndProof[]
-          "wrong publishContributionAndProofs() args"
-        );
+        expect(api.validator.publishContributionAndProofs).toHaveBeenCalledOnce();
+        expect(api.validator.publishContributionAndProofs).toHaveBeenCalledWith([contributionAndProof]);
       });
     });
   }

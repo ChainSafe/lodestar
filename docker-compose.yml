@@ -11,11 +11,11 @@ services:
       - "9000:9000" # P2P port
     #  - "9596:9596" # REST API port
     command: beacon --dataDir /data --rest --rest.address 0.0.0.0 --metrics --logFile /logs/beacon.log --logFileLevel debug --logFileDailyRotate 5
-    # NodeJS applications have a default memory limit of 2.5GB.
-    # This limit is bit tight for a Prater node, it is recommended to raise the limit
+    # NodeJS applications have a default memory limit of 4GB on most machines.
+    # This limit is bit tight for a Mainnet node, it is recommended to raise the limit
     # since memory may spike during certain network conditions.
     environment:
-      NODE_OPTIONS: --max-old-space-size=4096
+      NODE_OPTIONS: --max-old-space-size=8192
 
   prometheus:
     build: docker/prometheus

@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {
   MinMaxSurround,
   MinMaxSurroundAttestation,
@@ -204,7 +204,7 @@ describe("surroundTests", () => {
         } catch (e) {
           if (e instanceof SurroundAttestationError) {
             if (slashableEpoch !== undefined) {
-              expect(e.type.attestation2Target).to.equal(slashableEpoch, "Wrong slashableEpoch");
+              expect(e.type.attestation2Target).toBe(slashableEpoch);
             }
           } else {
             throw Error(`Wrong error type: ${(e as Error).stack}`);

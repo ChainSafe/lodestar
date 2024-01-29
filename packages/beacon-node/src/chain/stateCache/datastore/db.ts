@@ -1,4 +1,3 @@
-import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
 import {IBeaconDb} from "../../../db/interface.js";
 import {CPStateDatastore, DatastoreKey} from "./types.js";
@@ -9,9 +8,8 @@ import {CPStateDatastore, DatastoreKey} from "./types.js";
 export class DbCPStateDatastore implements CPStateDatastore {
   constructor(private readonly db: IBeaconDb) {}
 
-  async write(cpKey: phase0.Checkpoint, state: CachedBeaconStateAllForks): Promise<DatastoreKey> {
+  async write(cpKey: phase0.Checkpoint, stateBytes: Uint8Array): Promise<DatastoreKey> {
     const serializedCheckpoint = checkpointToDatastoreKey(cpKey);
-    const stateBytes = state.serialize();
     await this.db.checkpointState.putBinary(serializedCheckpoint, stateBytes);
     return serializedCheckpoint;
   }

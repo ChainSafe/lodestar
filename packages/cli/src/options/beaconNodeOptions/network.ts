@@ -1,5 +1,5 @@
 import {multiaddr} from "@multiformats/multiaddr";
-import {ENR} from "@chainsafe/discv5";
+import {ENR} from "@chainsafe/enr";
 import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {CliCommandOptions, YargsError} from "../../util/index.js";
 

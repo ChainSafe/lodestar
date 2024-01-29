@@ -3,7 +3,7 @@ import fs from "node:fs";
 import {describe, it, expect} from "vitest";
 import {createFromJSON, createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {multiaddr} from "@multiformats/multiaddr";
-import {createKeypairFromPeerId, ENR, SignableENR} from "@chainsafe/discv5";
+import {createPrivateKeyFromPeerId, ENR, SignableENR} from "@chainsafe/enr";
 import {chainConfig} from "@lodestar/config/default";
 import {chainConfigToJson} from "@lodestar/config";
 import {LogLevel} from "@lodestar/utils";
@@ -66,7 +66,7 @@ describe("cmds / beacon / args handler", () => {
 
     const peerIdFile = path.join(testFilesDir, "peer-id.json");
     fs.writeFileSync(peerIdFile, JSON.stringify(exportToJSON(prevPeerId)));
-    const enr = SignableENR.createV4(createKeypairFromPeerId(prevPeerId));
+    const enr = SignableENR.createV4(createPrivateKeyFromPeerId(prevPeerId).privateKey);
     const enrFilePath = path.join(testFilesDir, "enr");
     fs.writeFileSync(enrFilePath, enr.encodeTxt());
 

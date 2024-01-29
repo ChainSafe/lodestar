@@ -19,7 +19,7 @@ describe(`${constants.ACTIVE_PRESET}/ blobs pre-computed constants`, () => {
 
   for (const [key, expectedValue] of Object.entries(correctConstants)) {
     it(key, () => {
-      expect((constants as unknown as Record<string, number>)[key]).to.equal(expectedValue);
+      expect((constants as unknown as Record<string, number>)[key]).toEqual(expectedValue);
     });
   }
 });

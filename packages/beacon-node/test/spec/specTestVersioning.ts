@@ -1,6 +1,6 @@
 import path from "node:path";
 import {fileURLToPath} from "node:url";
-import {DownloadTestsOptions} from "@lodestar/spec-test-util";
+import {DownloadTestsOptions} from "@lodestar/spec-test-util/downloadTests";
 
 // WARNING! Don't move or rename this file !!!
 //
@@ -15,7 +15,7 @@ import {DownloadTestsOptions} from "@lodestar/spec-test-util";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export const ethereumConsensusSpecsTests: DownloadTestsOptions = {
-  specVersion: "v1.4.0-beta.5",
+  specVersion: "v1.4.0-beta.6",
   // Target directory is the host package root: 'packages/*/spec-tests'
   outputDir: path.join(__dirname, "../../spec-tests"),
   specTestsRepoUrl: "https://github.com/ethereum/consensus-spec-tests",

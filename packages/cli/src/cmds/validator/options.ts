@@ -45,7 +45,7 @@ export type IValidatorCliArgs = AccountValidatorArgs &
 
     builder?: boolean;
     "builder.selection"?: string;
-    "builder.boostFactor"?: bigint;
+    "builder.boostFactor"?: string;
 
     useProduceBlockV3?: boolean;
     broadcastValidation?: string;

@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {deneb, Epoch, phase0, allForks, Slot} from "@lodestar/types";
-import {ForkSeq, MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS} from "@lodestar/params";
+import {ForkSeq} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 
 import {BlockInput, BlockSource, getBlockInput} from "../../chain/blocks/types.js";
@@ -37,7 +37,7 @@ export async function beaconBlocksMaybeBlobsByRange(
   }
 
   // Only request blobs if they are recent enough
-  else if (computeEpochAtSlot(startSlot) >= currentEpoch - MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS) {
+  else if (computeEpochAtSlot(startSlot) >= currentEpoch - config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS) {
     const [allBlocks, allBlobSidecars] = await Promise.all([
       network.sendBeaconBlocksByRange(peerId, request),
       network.sendBlobSidecarsByRange(peerId, request),

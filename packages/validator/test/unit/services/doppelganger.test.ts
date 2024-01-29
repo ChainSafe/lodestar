@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {Epoch, Slot, ValidatorIndex} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
@@ -130,7 +130,7 @@ describe("doppelganger service", () => {
 
         // Assert doppelganger status
         const status = doppelganger.getStatus(pubkeyHex);
-        expect(status).equal(expectedStatus, `Wrong status at step ${step}`);
+        expect(status).toBe(expectedStatus);
       }
     });
   }
@@ -172,7 +172,7 @@ describe("doppelganger service", () => {
 
     // Assert doppelganger status right away
     const status = doppelganger.getStatus(pubkeyHex);
-    expect(status).equal(DoppelgangerStatus.VerifiedSafe);
+    expect(status).toBe(DoppelgangerStatus.VerifiedSafe);
   });
 });
 

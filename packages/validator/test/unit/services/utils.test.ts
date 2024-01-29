@@ -1,10 +1,10 @@
-import {expect} from "chai";
+import {describe, it, expect, beforeAll} from "vitest";
 import {SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {syncCommitteeIndicesToSubnets} from "../../../src/services/utils.js";
 
 describe("services / utils / syncCommitteeIndicesToSubnets", () => {
-  before("Check SYNC_COMMITTEE_SUBNET_SIZE", () => {
-    expect(SYNC_COMMITTEE_SUBNET_SIZE).equals(128);
+  beforeAll(() => {
+    expect(SYNC_COMMITTEE_SUBNET_SIZE).toBe(128);
   });
 
   const testCases: {indexes: number[]; subnets: number[]}[] = [
@@ -19,7 +19,7 @@ describe("services / utils / syncCommitteeIndicesToSubnets", () => {
 
   for (const {indexes, subnets} of testCases) {
     it(indexes.join(","), () => {
-      expect(syncCommitteeIndicesToSubnets(indexes)).deep.equals(subnets);
+      expect(syncCommitteeIndicesToSubnets(indexes)).toEqual(subnets);
     });
   }
 });

@@ -1,5 +1,4 @@
-import {Connection} from "@libp2p/interface/connection";
-import {PeerId} from "@libp2p/interface/peer-id";
+import {Connection, PeerId} from "@libp2p/interface";
 import {BitArray} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {BeaconConfig} from "@lodestar/config";
@@ -20,7 +19,7 @@ import {NetworkCoreMetrics} from "../core/metrics.js";
 import {LodestarDiscv5Opts} from "../discv5/types.js";
 import {PeerDiscovery, SubnetDiscvQueryMs} from "./discover.js";
 import {PeersData, PeerData} from "./peersData.js";
-import {clientFromAgentVersion, ClientKind} from "./client.js";
+import {getKnownClientFromAgentVersion, ClientKind} from "./client.js";
 import {
   getConnectedPeerIds,
   hasSomeConnectedPeer,
@@ -616,7 +615,7 @@ export class PeerManager {
         if (agentVersionBytes) {
           const agentVersion = new TextDecoder().decode(agentVersionBytes) || "N/A";
           peerData.agentVersion = agentVersion;
-          peerData.agentClient = clientFromAgentVersion(agentVersion);
+          peerData.agentClient = getKnownClientFromAgentVersion(agentVersion);
         }
       },
       {retries: 3, retryDelay: 1000}

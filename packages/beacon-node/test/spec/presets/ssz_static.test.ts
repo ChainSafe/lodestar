@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import {it, vi} from "vitest";
 import {Type} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
 import {ACTIVE_PRESET, ForkName, ForkLightClient} from "@lodestar/params";
@@ -30,8 +31,12 @@ type Types = Record<string, Type<any>>;
 //
 
 const sszStatic =
-  (skippedTypes?: string[]) =>
+  (skippedFork: string, skippedTypes?: string[]) =>
   (fork: ForkName, typeName: string, testSuite: string, testSuiteDirpath: string): void => {
+    if (fork === skippedFork) {
+      return;
+    }
+
     // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
     if (skippedTypes?.includes(typeName)) {
       return;
@@ -55,10 +60,11 @@ const sszStatic =
 
     for (const testCase of fs.readdirSync(testSuiteDirpath)) {
       // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
+      // eslint-disable-next-line vitest/consistent-test-it
       it(testCase, function () {
         // Mainnet must deal with big full states and hash each one multiple times
         if (ACTIVE_PRESET === "mainnet") {
-          this.timeout(30 * 1000);
+          vi.setConfig({testTimeout: 30 * 1000});
         }
 
         const testData = parseSszStaticTestcase(path.join(testSuiteDirpath, testCase));
@@ -71,6 +77,7 @@ specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIV
   // eslint-disable-next-line @typescript-eslint/naming-convention
   ssz_static: {
     type: RunnerType.custom,
-    fn: sszStatic(),
+    // starting from v1.4.0-beta.6, there is "whisk" fork in ssz_static tests but we ignore them
+    fn: sszStatic("whisk"),
   },
 });

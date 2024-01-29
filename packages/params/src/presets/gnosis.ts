@@ -1,6 +1,9 @@
 import {BeaconPreset} from "../types.js";
 import {mainnetPreset} from "./mainnet.js";
 
+// Gnosis preset
+// https://github.com/gnosischain/specs/tree/master/consensus/preset/gnosis
+
 /* eslint-disable @typescript-eslint/naming-convention */
 export const gnosisPreset: BeaconPreset = {
   ...mainnetPreset,

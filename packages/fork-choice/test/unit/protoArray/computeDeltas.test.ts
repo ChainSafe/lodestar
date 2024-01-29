@@ -132,52 +132,6 @@ describe("computeDeltas", () => {
     }
   });
 
-  /**
-   * Starting Aug 2023, this test case is not valid because when an attestation is added
-   * to forkchoice, the block should come first, i.e. nextIndex should be a number
-   */
-  // it("move out of tree", () => {
-  //   const balance = 42;
-
-  //   const indices = new Map();
-  //   // there is only one block
-  //   indices.set("2", 0);
-
-  //   // There are two validators
-  //   const votes = [
-  //     // one validator moves their vote from the block to the zero hash
-  //     {
-  //       currentRoot: "2",
-  //       nextRoot: "0",
-  //       nextEpoch: 0,
-  //     },
-  //     // one validator moves their vote from the block to something outside the tree
-  //     {
-  //       currentRoot: "2",
-  //       nextRoot: "1337",
-  //       nextEpoch: 0,
-  //     },
-  //   ];
-
-  //   const oldBalances = getEffectiveBalanceIncrementsZeroed(votes.length);
-  //   const newBalances = getEffectiveBalanceIncrementsZeroed(votes.length);
-  //   for (const balances of [oldBalances, newBalances]) {
-  //     for (let i = 0; i < votes.length; i++) {
-  //       balances[i] = balance;
-  //     }
-  //   }
-
-  //   const deltas = computeDeltas(indices, votes, oldBalances, newBalances, new Set());
-
-  //   expect(deltas.length).to.eql(1);
-
-  //   expect(deltas[0].toString()).to.eql((0 - balance * 2).toString());
-
-  //   for (const vote of votes) {
-  //     expect(vote.currentRoot).to.equal(vote.nextRoot);
-  //   }
-  // });
-
   it("changing balances", () => {
     const oldBalance = 42;
     const newBalance = 42 * 2;
