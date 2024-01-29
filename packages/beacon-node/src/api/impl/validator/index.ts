@@ -195,16 +195,16 @@ export function getValidatorApi({
 
     if (prefix) {
       return {
-        [`${prefix}ExecutionPayloadValue`]: `${formatBigDecimal(executionValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)} ETH`,
-        [`${prefix}ConsensusBlockValue`]: `${formatBigDecimal(consensusValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)} ETH`,
-        [`${prefix}BlockTotalValue`]: `${formatBigDecimal(totalValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)} ETH`,
+        [`${prefix}ExecutionPayloadValue`]: `${formatBigDecimal(executionValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)}ETH`,
+        [`${prefix}ConsensusBlockValue`]: `${formatBigDecimal(consensusValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)}ETH`,
+        [`${prefix}BlockTotalValue`]: `${formatBigDecimal(totalValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)}ETH`,
       };
     }
 
     return {
-      executionPayloadValue: `${formatBigDecimal(executionValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)} ETH`,
-      consensusBlockValue: `${formatBigDecimal(consensusValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)} ETH`,
-      blockTotalValue: `${formatBigDecimal(totalValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)} ETH`,
+      executionPayloadValue: `${formatBigDecimal(executionValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)}ETH`,
+      consensusBlockValue: `${formatBigDecimal(consensusValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)}ETH`,
+      blockTotalValue: `${formatBigDecimal(totalValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)}ETH`,
     };
   }
 
