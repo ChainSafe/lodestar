@@ -7,6 +7,7 @@ import {cachedSeckeysHex} from "../../utils/cachedKeys.js";
 import {testFilesDir} from "../../utils.js";
 import {decryptKeystoreDefinitions} from "../../../src/cmds/validator/keymanager/decryptKeystoreDefinitions.js";
 import {LocalKeystoreDefinition} from "../../../src/cmds/validator/keymanager/interface.js";
+import {LockfileError, unlockFilepath} from "../../../src/util/lockfile.js";
 
 describe("decryptKeystoreDefinitions", () => {
   vi.setConfig({testTimeout: 100_000});
@@ -22,6 +23,10 @@ describe("decryptKeystoreDefinitions", () => {
   let definitions: LocalKeystoreDefinition[] = [];
 
   beforeEach(async () => {
+    // remove lockfiles from proper-lockfile cache
+    for (const {keystorePath} of definitions) {
+      unlockFilepath(keystorePath);
+    }
     rimraf.sync(dataDir);
     rimraf.sync(importFromDir);
 
@@ -46,7 +51,9 @@ describe("decryptKeystoreDefinitions", () => {
       expect(fs.existsSync(cacheFilePath)).toBe(true);
 
       // remove lockfiles created during cache file preparation
-      rimraf.sync(path.join(importFromDir, "*.lock"), {glob: true});
+      for (const {keystorePath} of definitions) {
+        unlockFilepath(keystorePath);
+      }
     });
 
     testDecryptKeystoreDefinitions(cacheFilePath);
@@ -75,14 +82,14 @@ describe("decryptKeystoreDefinitions", () => {
         await decryptKeystoreDefinitions(definitions, {logger: console, signal, cacheFilePath});
         expect.fail("Second decrypt should fail due to failure to get lockfile");
       } catch (e) {
-        expect((e as Error).message.startsWith("EEXIST: file already exists")).toBe(true);
+        expect((e as LockfileError).code).toBe<LockfileError["code"]>("ELOCKED");
       }
     });
 
     it("decrypt keystores if lockfiles already exist if ignoreLockFile=true", async () => {
       await decryptKeystoreDefinitions(definitions, {logger: console, signal, cacheFilePath});
-
       // lockfiles should exist after the first run
+
       await decryptKeystoreDefinitions(definitions, {logger: console, signal, cacheFilePath, ignoreLockFile: true});
     });
   }
