@@ -180,25 +180,27 @@ export function getValidatorApi({
   // display upto 5 decimal places
   const MAX_DECIMAL_FACTOR = BigInt("100000");
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  function getBlockValueLogInfo(block: {executionPayloadValue: bigint; consensusBlockValue: bigint}, prefix?: string) {
+  function getBlockValueLogInfo(
+    block: {executionPayloadValue: bigint; consensusBlockValue: bigint},
+    source: ProducedBlockSource
+  ): Record<string, string> {
     const executionValue = block.executionPayloadValue ?? BigInt(0);
     const consensusValue = block.consensusBlockValue ?? BigInt(0);
-    const totalValue = executionValue + consensusValue; // Total block value is in wei
+    const totalValue = executionValue + consensusValue;
 
-    if (prefix) {
+    if (source === ProducedBlockSource.builder) {
       return {
-        [`${prefix}ExecutionPayloadValue`]: `${formatBigDecimal(executionValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)}ETH`,
-        [`${prefix}ConsensusBlockValue`]: `${formatBigDecimal(consensusValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)}ETH`,
-        [`${prefix}BlockTotalValue`]: `${formatBigDecimal(totalValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)}ETH`,
+        builderExecutionPayloadValueEth: `${formatBigDecimal(executionValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)}ETH`,
+        builderConsensusBlockValueEth: `${formatBigDecimal(consensusValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)}ETH`,
+        builderBlockTotalValueEth: `${formatBigDecimal(totalValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)}ETH`,
+      };
+    } else {
+      return {
+        engineExecutionPayloadValueEth: `${formatBigDecimal(executionValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)}ETH`,
+        engineConsensusBlockValueEth: `${formatBigDecimal(consensusValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)}ETH`,
+        engineBlockTotalValueEth: `${formatBigDecimal(totalValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)}ETH`,
       };
     }
-
-    return {
-      executionPayloadValue: `${formatBigDecimal(executionValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)}ETH`,
-      consensusBlockValue: `${formatBigDecimal(consensusValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)}ETH`,
-      blockTotalValue: `${formatBigDecimal(totalValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)}ETH`,
-    };
   }
 
   /**
@@ -621,7 +623,7 @@ export function getValidatorApi({
         logger.info("Selected builder block: no engine block produced", {
           ...loggerContext,
           durationMs: builder.durationMs,
-          ...getBlockValueLogInfo(builder.value),
+          ...getBlockValueLogInfo(builder.value, ProducedBlockSource.builder),
         });
 
         return {...builder.value, executionPayloadBlinded: true, executionPayloadSource: ProducedBlockSource.builder};
@@ -632,7 +634,7 @@ export function getValidatorApi({
           ...loggerContext,
           durationMs: engine.durationMs,
           shouldOverrideBuilder: engine.value.shouldOverrideBuilder,
-          ...getBlockValueLogInfo(engine.value),
+          ...getBlockValueLogInfo(engine.value, ProducedBlockSource.engine),
         });
 
         return {...engine.value, executionPayloadBlinded: false, executionPayloadSource: ProducedBlockSource.engine};
@@ -652,7 +654,7 @@ export function getValidatorApi({
         if (engineBlock.shouldOverrideBuilder) {
           logger.info("Selected engine block as censorship suspected in builder blocks", {
             ...loggerContext,
-            ...getBlockValueLogInfo(engine.value, "engine"),
+            ...getBlockValueLogInfo(engine.value, ProducedBlockSource.engine),
             shouldOverrideBuilder: engineBlock.shouldOverrideBuilder,
             slot,
           });
@@ -673,8 +675,8 @@ export function getValidatorApi({
           // winston logger doesn't like bigint
           builderBoostFactor: `${builderBoostFactor}`,
           shouldOverrideBuilder: engineBlock.shouldOverrideBuilder,
-          ...getBlockValueLogInfo(engine.value, "engine"),
-          ...getBlockValueLogInfo(builder.value, "builder"),
+          ...getBlockValueLogInfo(engine.value, ProducedBlockSource.engine),
+          ...getBlockValueLogInfo(builder.value, ProducedBlockSource.builder),
         });
 
         if (executionPayloadSource === ProducedBlockSource.engine) {
