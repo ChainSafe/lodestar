@@ -20,7 +20,7 @@
       
       
       <link rel="icon" href="../../assets/round-icon.ico">
-      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.4">
+      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.6">
     
     
       
@@ -1062,6 +1062,15 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#common-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      Common Issues
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#debugging-spec-tests" class="md-nav__link">
     <span class="md-ellipsis">
       Debugging Spec Tests
@@ -1234,6 +1243,15 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#contributing-to-documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Contributing to Documentation
+    </span>
+  </a>
   
 </li>
       
@@ -1663,6 +1681,15 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#common-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      Common Issues
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#debugging-spec-tests" class="md-nav__link">
     <span class="md-ellipsis">
       Debugging Spec Tests
@@ -1839,6 +1866,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#contributing-to-documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Contributing to Documentation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#label-guide" class="md-nav__link">
     <span class="md-ellipsis">
       Label Guide
@@ -1953,14 +1989,19 @@
 <li>Do not pull unpinned versions from DockerHub (use deterministic tag) or Github (checkout commit not branch).</li>
 <li>Carefully design tests that depend on timing sensitive events like p2p network e2e tests. Consider that Github runners are significantly less powerful than your development environment.</li>
 </ul>
+<h3 id="common-issues">Common Issues<a class="headerlink" href="#common-issues" title="Permanent link">&para;</a></h3>
+<p><strong>Error: [vitest] Cannot mock "../../src/db/repositories/index.js" because it is already loaded by "src/db/beacon.ts"</strong></p>
+<p>If you observe any error in tests with matching to above error message, that implies you are loading the mocks in the wrong order. The correct order is to import the mocks first and then the actual module. We suggest to import the mocks on very top before any local modules. </p>
+<p><strong>✖ Error: Cannot find package 'async_hooks' imported from</strong></p>
+<p>If you observe following error running any of the test files that means you are running a file which itself or any dependency of that file imports <code>vitest</code>, but you are not running that file with <code>vitest</code> runner. Try running it with <code>yarn vitest</code> command, not with <code>node</code> command.</p>
 <h3 id="debugging-spec-tests">Debugging Spec Tests<a class="headerlink" href="#debugging-spec-tests" title="Permanent link">&para;</a></h3>
 <ul>
 <li>To fix errors always focus on passing all minimal tests first without running mainnet tests.</li>
-<li>Spec tests often compare full expected vs actual states in JSON format. To better understand the diff it's convenient to use mocha's option <code>--inline-diffs</code>.</li>
-<li>A single logical error can cause many spec tests to fail. To focus on a single test at a time you can use mocha's option <code>--bail</code> to stop at the first failed test</li>
-<li>To then run only that failed test you can run against a specific file as use mocha's option <code>--grep</code> to run only one case</li>
+<li>Spec tests often compare full expected vs actual states in JSON format.</li>
+<li>A single logical error can cause many spec tests to fail. To focus on a single test at a time you can use vitest's option <code>--bail</code> to stop at the first failed test</li>
+<li>To then run only that failed test you can run against a specific file as use vitest's filters to run only one case</li>
 </ul>
-<div class="highlight"><pre><span></span><code><span class="nv">LODESTAR_PRESET</span><span class="o">=</span>minimal<span class="w"> </span>../../node_modules/.bin/mocha<span class="w"> </span>--config<span class="w"> </span>.mocharc.spec.yml<span class="w"> </span>test/spec/phase0/sanity.test.ts<span class="w"> </span>--inline-diffs<span class="w"> </span>--bail<span class="w"> </span>--grep<span class="w"> </span><span class="s2">&quot;attestation&quot;</span>
+<div class="highlight"><pre><span></span><code><span class="nv">LODESTAR_PRESET</span><span class="o">=</span>minimal<span class="w"> </span>yarn<span class="w"> </span>vitest<span class="w"> </span>--run<span class="w"> </span>--config<span class="w"> </span>vitest.config.spec.ts<span class="w"> </span>test/spec/phase0/sanity.test.ts
 </code></pre></div>
 <h2 id="docker">Docker<a class="headerlink" href="#docker" title="Permanent link">&para;</a></h2>
 <p>The docker-compose file requires that a <code>.env</code> file be present in this directory. The <code>default.env</code> file provides a template and can be copied <code>.env</code>:</p>
@@ -2107,6 +2148,13 @@
 <p>Run script to download dashboards to <code>./dashboards</code> folder</p>
 <div class="highlight"><pre><span></span><code>node<span class="w"> </span>scripts/download_dashboards.mjs
 </code></pre></div>
+<h2 id="contributing-to-documentation">Contributing to Documentation<a class="headerlink" href="#contributing-to-documentation" title="Permanent link">&para;</a></h2>
+<p>When submitting PRs for documentation updates, build and run the documentation locally to ensure functionality before submission. For first time documentation contributors, install the python dependencies with <code>yarn docs:install</code>. Build the documentation locally with <code>yarn docs:build</code> and serve with <code>yarn docs:serve</code></p>
+<p>Your locally served documentation will then be accessible at http://localhost:8000.</p>
+<p>If you run into build issues due to circular dependencies, branch switching or other incompatibilities, try cleaning your modules and rebuild your dependencies with:</p>
+<div class="highlight"><pre><span></span><code>yarn<span class="w"> </span>clean<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>yarn<span class="w"> </span>clean:nm<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>yarn<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>yarn<span class="w"> </span>build
+</code></pre></div>
+<p>We also use a spelling <a href="https://github.com/ChainSafe/lodestar/blob/unstable/.wordlist.txt">word list</a> as part of our documentation checks. If using unrecognized words or abbreviations, please extend the word list to pass checks. Make sure the list is sorted with <code>./scripts/wordlist_sort.sh</code> and checked with <code>./scripts/wordlist_sort_check.sh</code> for sorting and duplicates.</p>
 <h2 id="label-guide">Label Guide<a class="headerlink" href="#label-guide" title="Permanent link">&para;</a></h2>
 <p>Issues and pull requests are subject to the following labeling guidelines.</p>
 <ul>
@@ -2219,10 +2267,10 @@
     </div>
     
     
-    <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.c011b7c0.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.7389ff0e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.e1c3ead8.min.js"></script>
       
     
   </body>
