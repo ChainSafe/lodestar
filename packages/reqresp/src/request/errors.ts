@@ -31,6 +31,8 @@ export enum RequestErrorCode {
   RESP_TIMEOUT = "REQUEST_ERROR_RESP_TIMEOUT",
   /** Request rate limited */
   REQUEST_RATE_LIMITED = "REQUEST_ERROR_RATE_LIMITED",
+  /** */
+  SSZ_OVER_MAX_SIZE = "SSZ_SNAPPY_ERROR_OVER_SSZ_MAX_SIZE",
 }
 
 type RequestErrorType =
@@ -47,7 +49,8 @@ type RequestErrorType =
   | {code: RequestErrorCode.EMPTY_RESPONSE}
   | {code: RequestErrorCode.TTFB_TIMEOUT}
   | {code: RequestErrorCode.RESP_TIMEOUT}
-  | {code: RequestErrorCode.REQUEST_RATE_LIMITED};
+  | {code: RequestErrorCode.REQUEST_RATE_LIMITED}
+  | {code: RequestErrorCode.SSZ_OVER_MAX_SIZE};
 
 export const REQUEST_ERROR_CLASS_NAME = "RequestError";
 
