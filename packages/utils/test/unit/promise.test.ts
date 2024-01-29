@@ -1,3 +1,5 @@
+/* Causing this error on usage of expect.any(Number)  */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {describe, it, expect} from "vitest";
 import {ExtendedPromiseStatus, ExtendedPromise} from "../../src/promise.js";
 import {ErrorAborted, TimeoutError} from "../../src/errors.js";

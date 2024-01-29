@@ -45,7 +45,7 @@ export type ExtendedPromiseSuccessResult<T> = {
   readonly value: T;
 };
 
-export type ExtendedPromiseErrorResult<T> =
+export type ExtendedPromiseErrorResult =
   | {
       readonly startedAt: number;
       readonly finishedAt: number;
@@ -60,7 +60,7 @@ export type ExtendedPromiseErrorResult<T> =
       readonly status: ExtendedPromiseStatus.Timeout;
     };
 
-export type ExtendedPromiseResult<T> = ExtendedPromiseSuccessResult<T> | ExtendedPromiseErrorResult<T>;
+export type ExtendedPromiseResult<T> = ExtendedPromiseSuccessResult<T> | ExtendedPromiseErrorResult;
 
 /**
  * Promise that has extended features. To make it type-safe it is not extending Promise class.
@@ -158,7 +158,7 @@ export class ExtendedPromise<T, R = ExtendedPromiseResult<T>> extends Promise<R>
     this._abortController.signal.addEventListener("abort", () => abortHandler(this._abortController.signal.reason));
     opts?.signal?.addEventListener("abort", () => abortHandler(opts?.signal?.reason));
 
-    if (opts?.timeoutMs) {
+    if (opts?.timeoutMs != null) {
       timeoutId = setTimeout(
         () => {
           newReject(new TimeoutError());
@@ -170,22 +170,22 @@ export class ExtendedPromise<T, R = ExtendedPromiseResult<T>> extends Promise<R>
     executor(newResolve, newReject);
   }
 
-  public abort(reason: unknown): void {
+  abort(reason: unknown): void {
     this._abortController.abort(reason);
   }
 
   /**
    * Useful to set timeout status instead of abort from using an external timer
    */
-  public timeout(reason: string): void {
+  timeout(reason: string): void {
     this._abortController.abort(new TimeoutError(reason));
   }
 
-  public get status(): ExtendedPromiseStatus {
+  get status(): ExtendedPromiseStatus {
     return this._status;
   }
 
-  public static from<T>(
+  static from<T>(
     promise: PromiseLike<T>,
     opts?: {signal?: AbortSignal; timeoutMs?: number; raiseError?: boolean}
   ): ExtendedPromise<T> {
@@ -194,8 +194,8 @@ export class ExtendedPromise<T, R = ExtendedPromiseResult<T>> extends Promise<R>
     }, opts);
   }
 
-  public static async any(promises: ExtendedPromise<unknown>[]): Promise<ExtendedPromiseResult<unknown>> {
-    const res = (await Promise.any(promises)) as ExtendedPromiseResult<unknown>;
+  static async any(promises: ExtendedPromise<unknown>[]): Promise<ExtendedPromiseResult<unknown>> {
+    const res = await Promise.any(promises);
     if (res.status === ExtendedPromiseStatus.Fulfilled) {
       return res;
     }
@@ -264,7 +264,7 @@ export async function resolveOrRacePromises<T extends NonEmptyArray<PromiseLike<
 
   try {
     await Promise.race([
-      ExtendedPromise.any(extendedPromises.filter(p => p.status === ExtendedPromiseStatus.Pending)),
+      ExtendedPromise.any(extendedPromises.filter((p) => p.status === ExtendedPromiseStatus.Pending)),
       sleep(raceTimeoutMs - resolveTimeoutMs, signal).then(() => {
         throw raceTimeoutError;
       }),
