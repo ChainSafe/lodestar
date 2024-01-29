@@ -277,6 +277,7 @@ export class ValidatorStore {
         boostFactor = MAX_BUILDER_BOOST_FACTOR;
         break;
 
+      case routes.validator.BuilderSelection.ExecutionAlways:
       case routes.validator.BuilderSelection.ExecutionOnly:
         boostFactor = BigInt(0);
     }

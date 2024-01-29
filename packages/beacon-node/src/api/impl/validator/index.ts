@@ -612,6 +612,7 @@ export function getValidatorApi({
             break;
           }
 
+          case routes.validator.BuilderSelection.ExecutionAlways:
           case routes.validator.BuilderSelection.ExecutionOnly: {
             executionPayloadSource = ProducedBlockSource.engine;
             break;
