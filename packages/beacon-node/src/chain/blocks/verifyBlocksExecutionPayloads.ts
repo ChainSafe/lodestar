@@ -319,7 +319,7 @@ export async function verifyBlockExecutionPayload(
       const lvhResponse = {
         executionStatus,
         latestValidExecHash: execResult.latestValidHash,
-        invalidateFromBlockHash: toHexString(block.message.parentRoot),
+        invalidateFromParentBlockRoot: toHexString(block.message.parentRoot),
       };
       const execError = new BlockError(block, {
         code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
@@ -416,7 +416,7 @@ function getSegmentErrorResponse(
       invalidSegmentLVH = {
         executionStatus: ExecutionStatus.Invalid,
         latestValidExecHash: lvhResponse.latestValidExecHash,
-        invalidateFromBlockHash: parentBlock.blockRoot,
+        invalidateFromParentBlockRoot: parentBlock.blockRoot,
       };
     }
   }
