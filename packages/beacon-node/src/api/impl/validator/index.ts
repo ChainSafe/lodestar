@@ -35,7 +35,7 @@ import {
   phase0,
 } from "@lodestar/types";
 import {ExecutionStatus} from "@lodestar/fork-choice";
-import {toHex, resolveOrRacePromises, wrapPromise, formatBigDecimal, ETH_TO_WEI} from "@lodestar/utils";
+import {toHex, resolveOrRacePromises, prettyWeiToEth} from "@lodestar/utils";
 import {
   AttestationError,
   AttestationErrorCode,
@@ -177,28 +177,31 @@ export function getValidatorApi({
     return computeEpochAtSlot(getCurrentSlot(config, chain.genesisTime - MAX_API_CLOCK_DISPARITY_SEC));
   }
 
-  // display upto 5 decimal places
-  const MAX_DECIMAL_FACTOR = BigInt("100000");
-
   function getBlockValueLogInfo(
     block: {executionPayloadValue: bigint; consensusBlockValue: bigint},
-    source: ProducedBlockSource
+    source?: ProducedBlockSource
   ): Record<string, string> {
     const executionValue = block.executionPayloadValue ?? BigInt(0);
     const consensusValue = block.consensusBlockValue ?? BigInt(0);
     const totalValue = executionValue + consensusValue;
 
-    if (source === ProducedBlockSource.builder) {
+    if (source == null) {
       return {
-        builderExecutionPayloadValueEth: `${formatBigDecimal(executionValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)}ETH`,
-        builderConsensusBlockValueEth: `${formatBigDecimal(consensusValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)}ETH`,
-        builderBlockTotalValueEth: `${formatBigDecimal(totalValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)}ETH`,
+        executionPayloadValueEth: prettyWeiToEth(executionValue),
+        consensusBlockValueEth: prettyWeiToEth(consensusValue),
+        blockTotalValueEth: prettyWeiToEth(totalValue),
+      };
+    } else if (source === ProducedBlockSource.builder) {
+      return {
+        builderExecutionPayloadValueEth: prettyWeiToEth(executionValue),
+        builderConsensusBlockValueEth: prettyWeiToEth(consensusValue),
+        builderBlockTotalValueEth: prettyWeiToEth(totalValue),
       };
     } else {
       return {
-        engineExecutionPayloadValueEth: `${formatBigDecimal(executionValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)}ETH`,
-        engineConsensusBlockValueEth: `${formatBigDecimal(consensusValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)}ETH`,
-        engineBlockTotalValueEth: `${formatBigDecimal(totalValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)}ETH`,
+        engineExecutionPayloadValueEth: prettyWeiToEth(executionValue),
+        engineConsensusBlockValueEth: prettyWeiToEth(consensusValue),
+        engineBlockTotalValueEth: prettyWeiToEth(totalValue),
       };
     }
   }
@@ -540,12 +543,12 @@ export function getValidatorApi({
       });
 
       // use abort controller to stop waiting for both block sources
-      const builderController = new AbortController();
+      const controller = new AbortController();
+
       // Start calls for building execution and builder blocks
-      const builderDisabledError = new Error("Builder disabled");
-      const engineDisabledError = new Error("Engine disabled");
 
       // can't do fee recipient checks as builder bid doesn't return feeRecipient as of now
+
       const builderPromise = isBuilderEnabled
         ? produceBuilderBlindedBlock(slot, randaoReveal, graffiti, {
             feeRecipient,
@@ -553,8 +556,7 @@ export function getValidatorApi({
             skipHeadChecksAndUpdate: true,
             commonBlockBody,
           })
-        : Promise.reject(builderDisabledError);
-      const builder = wrapPromise(builderPromise);
+        : Promise.reject(new Error("Builder disabled"));
 
       const enginePromise = isEngineEnabled
         ? produceEngineFullBlockOrContents(slot, randaoReveal, graffiti, {
@@ -563,28 +565,22 @@ export function getValidatorApi({
             // skip checking and recomputing head in these individual produce calls
             skipHeadChecksAndUpdate: true,
             commonBlockBody,
+          }).then((engineBlock) => {
+            // Once the engine returns a block, in the event of either:
+            // - suspected builder censorship
+            // - builder boost factor set to 0
+            // we don't need to wait for builder block as engine block will always be selected
+            if (engineBlock.shouldOverrideBuilder || builderBoostFactor === BigInt(0)) {
+              controller.abort();
+            }
+            return engineBlock;
           })
-        : Promise.reject(engineDisabledError);
-      const engine = wrapPromise(enginePromise);
+        : Promise.reject(new Error("Engine disabled"));
 
-      void enginePromise.then((engineBlock) => {
-        // Once the engine returns a block, in the event of either:
-        // - suspected builder censorship
-        // - builder boost factor set to 0
-        // we don't need to wait for builder block as engine block will always be selected
-        if (builder.status === "pending" && (engineBlock.shouldOverrideBuilder || builderBoostFactor === BigInt(0))) {
-          builderController.abort();
-          logger.warn("Builder was aborted", {
-            ...loggerContext,
-          });
-        }
-        return engineBlock;
-      });
-
-      await resolveOrRacePromises([builder.promise, engine.promise], {
+      const [builder, engine] = await resolveOrRacePromises([builderPromise, enginePromise], {
         resolveTimeoutMs: BLOCK_PRODUCTION_RACE_CUTOFF_MS,
         raceTimeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
-        signal: builderController.signal,
+        signal: controller.signal,
       });
 
       if (builder.status === "pending" && engine.status === "pending") {
@@ -597,7 +593,7 @@ export function getValidatorApi({
         throw Error("Builder and engine both failed to produce the block");
       }
 
-      if (engine.status === "rejected" && engine.reason !== engineDisabledError) {
+      if (engine.status === "rejected" && isEngineEnabled) {
         logger.warn(
           "Engine failed to produce the block",
           {
@@ -608,7 +604,7 @@ export function getValidatorApi({
         );
       }
 
-      if (builder.status === "rejected" && builder.reason !== builderDisabledError) {
+      if (builder.status === "rejected" && isBuilderEnabled) {
         logger.warn(
           "Builder failed to produce the block",
           {
@@ -619,11 +615,23 @@ export function getValidatorApi({
         );
       }
 
+      // handle shouldOverrideBuilder separately
+      if (engine.status === "fulfilled" && engine.value.shouldOverrideBuilder) {
+        logger.info("Selected engine block: censorship suspected in builder blocks", {
+          ...loggerContext,
+          durationMs: engine.durationMs,
+          shouldOverrideBuilder: engine.value.shouldOverrideBuilder,
+          ...getBlockValueLogInfo(engine.value),
+        });
+
+        return {...engine.value, executionPayloadBlinded: false, executionPayloadSource: ProducedBlockSource.engine};
+      }
+
       if (builder.status === "fulfilled" && engine.status !== "fulfilled") {
         logger.info("Selected builder block: no engine block produced", {
           ...loggerContext,
           durationMs: builder.durationMs,
-          ...getBlockValueLogInfo(builder.value, ProducedBlockSource.builder),
+          ...getBlockValueLogInfo(builder.value),
         });
 
         return {...builder.value, executionPayloadBlinded: true, executionPayloadSource: ProducedBlockSource.builder};
@@ -633,49 +641,27 @@ export function getValidatorApi({
         logger.info("Selected engine block: no builder block produced", {
           ...loggerContext,
           durationMs: engine.durationMs,
-          shouldOverrideBuilder: engine.value.shouldOverrideBuilder,
-          ...getBlockValueLogInfo(engine.value, ProducedBlockSource.engine),
+          ...getBlockValueLogInfo(engine.value),
         });
 
         return {...engine.value, executionPayloadBlinded: false, executionPayloadSource: ProducedBlockSource.engine};
       }
 
       if (engine.status === "fulfilled" && builder.status === "fulfilled") {
-        const engineBlock = engine.value;
-        const enginePayloadValue = engineBlock.executionPayloadValue ?? BigInt(0);
-        const engineConsensusValue = engineBlock.consensusBlockValue ?? BigInt(0);
-        const engineBlockValue = enginePayloadValue + engineConsensusValue;
-
-        const builderBlock = builder.value;
-        const builderPayloadValue = builderBlock.executionPayloadValue ?? BigInt(0);
-        const builderConsensusValue = builderBlock.consensusBlockValue ?? BigInt(0);
-        const builderBlockValue = builderPayloadValue + builderConsensusValue;
-
-        if (engineBlock.shouldOverrideBuilder) {
-          logger.info("Selected engine block as censorship suspected in builder blocks", {
-            ...loggerContext,
-            ...getBlockValueLogInfo(engine.value, ProducedBlockSource.engine),
-            shouldOverrideBuilder: engineBlock.shouldOverrideBuilder,
-            slot,
-          });
-
-          return {...engine.value, executionPayloadBlinded: false, executionPayloadSource: ProducedBlockSource.engine};
-        }
-
         const executionPayloadSource = selectBlockProductionSource({
-          builderBlockValue,
-          engineBlockValue,
+          builderBlockValue:
+            (builder.value.executionPayloadValue ?? BigInt(0)) + (builder.value.consensusBlockValue ?? BigInt(0)),
+          engineBlockValue:
+            (engine.value.executionPayloadValue ?? BigInt(0)) + (engine.value.consensusBlockValue ?? BigInt(0)),
           builderBoostFactor,
           builderSelection,
         });
 
-        logger.info(`Selected executionPayloadSource=${executionPayloadSource} block`, {
+        logger.info(`Selected ${executionPayloadSource} block`, {
           ...loggerContext,
-          builderSelection,
-          // winston logger doesn't like bigint
-          builderBoostFactor: `${builderBoostFactor}`,
-          shouldOverrideBuilder: engineBlock.shouldOverrideBuilder,
+          engineDurationMs: engine.durationMs,
           ...getBlockValueLogInfo(engine.value, ProducedBlockSource.engine),
+          builderDurationMs: builder.durationMs,
           ...getBlockValueLogInfo(builder.value, ProducedBlockSource.builder),
         });
 
@@ -684,18 +670,12 @@ export function getValidatorApi({
             ...engine.value,
             executionPayloadBlinded: false,
             executionPayloadSource,
-          } as routes.validator.ProduceBlockOrContentsRes & {
-            executionPayloadBlinded: false;
-            executionPayloadSource: ProducedBlockSource;
           };
         } else {
           return {
             ...builder.value,
             executionPayloadBlinded: true,
             executionPayloadSource,
-          } as routes.validator.ProduceBlindedBlockRes & {
-            executionPayloadBlinded: true;
-            executionPayloadSource: ProducedBlockSource;
           };
         }
       }

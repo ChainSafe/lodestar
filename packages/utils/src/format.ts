@@ -1,4 +1,5 @@
 import {toHexString} from "./bytes.js";
+import { ETH_TO_WEI } from "./ethConversion.js";
 
 /**
  * Format bytes as `0x1234…1234`
@@ -38,4 +39,14 @@ export function formatBigDecimal(numerator: bigint, denominator: bigint, maxDeci
   // zeros to be added post decimal are number of zeros in maxDecimalFactor - number of digits in fraction
   const zerosPostDecimal = String(maxDecimalFactor).length - 1 - String(fraction).length;
   return `${full}.${"0".repeat(zerosPostDecimal)}${fraction}`;
+}
+
+// display upto 5 decimal places
+const MAX_DECIMAL_FACTOR = BigInt("100000");
+
+/**
+ * Format wei as ETH, with up to 5 decimals
+ */
+export function prettyWeiToEth(wei: bigint): string {
+  return formatBigDecimal(wei, ETH_TO_WEI, MAX_DECIMAL_FACTOR);
 }

@@ -1,4 +1,4 @@
-import {TimeoutError} from "./errors.js";
+import {ErrorAborted, TimeoutError} from "./errors.js";
 import {sleep} from "./sleep.js";
 import {ArrayToTuple, NonEmptyArray} from "./types.js";
 
@@ -53,23 +53,21 @@ export type PromiseRejectedResult<T> = PromiseResult<T> & {status: "rejected"};
 export function wrapPromise<T>(promise: PromiseLike<T>): PromiseResult<T> {
   const startedAt = Date.now();
 
-  const result: PromiseResult<T> = {
-    promise,
+  const result = {
+    promise: promise.then(
+      (value) => {
+        result.status = "fulfilled";
+        (result as PromiseFulfilledResult<T>).value = value;
+        (result as PromiseFulfilledResult<T>).durationMs = Date.now() - startedAt;
+      },
+      (reason: unknown) => {
+        result.status = "rejected";
+        (result as PromiseRejectedResult<T>).reason = reason;
+        (result as PromiseRejectedResult<T>).durationMs = Date.now() - startedAt;
+      }
+    ),
     status: "pending",
   } as PromiseResult<T>;
-
-  promise.then(
-    (value) => {
-      result.status = "fulfilled";
-      (result as PromiseFulfilledResult<T>).value = value;
-      (result as PromiseFulfilledResult<T>).durationMs = Date.now() - startedAt;
-    },
-    (reason: unknown) => {
-      result.status = "rejected";
-      (result as PromiseRejectedResult<T>).reason = reason;
-      (result as PromiseRejectedResult<T>).durationMs = Date.now() - startedAt;
-    }
-  );
 
   return result;
 }
@@ -80,7 +78,7 @@ export function wrapPromise<T>(promise: PromiseLike<T>): PromiseResult<T> {
  * eg: `[1, 2, 3]` from type `number[]` to `[number, number, number]`
  */
 type ReturnPromiseWithTuple<Tuple extends NonEmptyArray<PromiseLike<unknown>>> = {
-  [Index in keyof ArrayToTuple<Tuple>]: Awaited<Tuple[Index]>;
+  [Index in keyof ArrayToTuple<Tuple>]: PromiseResult<Awaited<Tuple[Index]>>;
 };
 
 /**
@@ -109,6 +107,7 @@ export async function resolveOrRacePromises<T extends NonEmptyArray<PromiseLike<
   );
 
   const promiseResults = promises.map((p) => wrapPromise(p)) as ReturnPromiseWithTuple<T>;
+  promises = (promiseResults as PromiseResult<T>[]).map((p) => p.promise) as unknown as T;
 
   try {
     await Promise.race([
@@ -120,6 +119,9 @@ export async function resolveOrRacePromises<T extends NonEmptyArray<PromiseLike<
 
     return promiseResults;
   } catch (err) {
+    if (err instanceof ErrorAborted) {
+      return promiseResults;
+    }
     if (err !== resolveTimeoutError) {
       throw err;
     }
@@ -127,11 +129,7 @@ export async function resolveOrRacePromises<T extends NonEmptyArray<PromiseLike<
 
   try {
     await Promise.race([
-      Promise.any(
-        promiseResults
-          .filter((r) => (r as PromiseResult<unknown>).status === "pending")
-          .map((r) => (r as PromiseResult<unknown>).promise)
-      ),
+      Promise.any(promises),
       sleep(raceTimeoutMs - resolveTimeoutMs, signal).then(() => {
         throw raceTimeoutError;
       }),
