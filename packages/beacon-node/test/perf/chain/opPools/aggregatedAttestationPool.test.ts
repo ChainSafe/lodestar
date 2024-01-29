@@ -165,6 +165,51 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
   }
 });
 
+describe.skip("getAttestationsForBlock aggregationBits intersectValues vs get", () => {
+  const runsFactor = 1000;
+  // As of Jan 2004
+  const committeeLen = 450;
+  const aggregationBits = BitArray.fromBoolArray(Array.from({length: committeeLen}, () => true));
+  const notSeenValidatorIndices = Array.from({length: committeeLen}, (_, i) => i);
+
+  itBench({
+    id: "aggregationBits.intersectValues()",
+    fn: () => {
+      for (let i = 0; i < runsFactor; i++) {
+        aggregationBits.intersectValues(notSeenValidatorIndices);
+      }
+    },
+    runsFactor,
+  });
+
+  itBench({
+    id: "aggregationBits.get()",
+    fn: () => {
+      for (let i = 0; i < runsFactor; i++) {
+        for (let j = 0; j < committeeLen; j++) {
+          aggregationBits.get(j);
+        }
+      }
+    },
+    runsFactor,
+  });
+
+  itBench({
+    id: "aggregationBits.get() with push()",
+    fn: () => {
+      for (let i = 0; i < runsFactor; i++) {
+        const arr: number[] = [];
+        for (let j = 0; j < committeeLen; j++) {
+          if (aggregationBits.get(j)) {
+            arr.push(j);
+          }
+        }
+      }
+    },
+    runsFactor,
+  });
+});
+
 /**
  * Create the pool with the following properties:
  * - state: at slot n
@@ -201,8 +246,8 @@ function getAggregatedAttestationPool(
 
       // for each good att data group, there are 4 versions of aggregation bits
       const committee = state.epochCtx.getBeaconCommittee(slot, committeeIndex);
-      const committeeSize = committee.length;
-      const goodVoteBits = BitArray.fromBoolArray(Array.from({length: committeeSize}, () => true));
+      const committeeLen = committee.length;
+      const goodVoteBits = BitArray.fromBoolArray(Array.from({length: committeeLen}, () => true));
       // n first validators are totally missed
       for (let i = 0; i < numMissedVotes; i++) {
         goodVoteBits.set(i, false);
@@ -215,10 +260,10 @@ function getAggregatedAttestationPool(
       // there are 4 different versions of the good vote
       for (const endingBits of [0b1000, 0b0100, 0b0010, 0b0001]) {
         const aggregationBits = goodVoteBits.clone();
-        aggregationBits.set(committeeSize - 1, Boolean(endingBits & 0b0001));
-        aggregationBits.set(committeeSize - 2, Boolean(endingBits & 0b0010));
-        aggregationBits.set(committeeSize - 3, Boolean(endingBits & 0b0100));
-        aggregationBits.set(committeeSize - 4, Boolean(endingBits & 0b1000));
+        aggregationBits.set(committeeLen - 1, Boolean(endingBits & 0b0001));
+        aggregationBits.set(committeeLen - 2, Boolean(endingBits & 0b0010));
+        aggregationBits.set(committeeLen - 3, Boolean(endingBits & 0b0100));
+        aggregationBits.set(committeeLen - 4, Boolean(endingBits & 0b1000));
 
         const attestation = {
           aggregationBits,
@@ -241,7 +286,7 @@ function getAggregatedAttestationPool(
         continue;
       }
 
-      const zeroAggregationBits = BitArray.fromBoolArray(Array.from({length: committeeSize}, () => false));
+      const zeroAggregationBits = BitArray.fromBoolArray(Array.from({length: committeeLen}, () => false));
 
       // n first validator votes for n different bad votes, that makes n different att data in the same slot/index
       // these votes/attestations will NOT be included in block as they are seen in the state

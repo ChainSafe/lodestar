@@ -86,10 +86,13 @@ describe("AggregatedAttestationPool", function () {
     const notSeenValidatorFn = getNotSeenValidatorsFn(altairState);
     const participation = notSeenValidatorFn(currentEpoch, committee);
     // seen attesting indices are 0, 1 => not seen are 2, 3
-    expect(participation).toEqual({
-      validatorIndices: [null, null, committee[2], committee[3]],
-      attestingIndices: new Set([2, 3]),
-    });
+    expect(participation).toEqual(
+      // {
+      // validatorIndices: [null, null, committee[2], committee[3]],
+      // attestingIndices: new Set([2, 3]),
+      // }
+      new Set([2, 3])
+    );
   });
 
   // previousEpochParticipation and currentEpochParticipation is created inside generateCachedState
@@ -267,16 +270,16 @@ describe("MatchingDataAttestationGroup.getAttestationsForBlock", () => {
       }
 
       const notSeenAggBits = new BitArray(new Uint8Array(notSeenAttestingBits), 8);
-      const notSeenValidatorIndices: (ValidatorIndex | null)[] = [];
+      // const notSeenValidatorIndices: (ValidatorIndex | null)[] = [];
       const notSeenAttestingIndices = new Set<number>();
       for (let i = 0; i < committee.length; i++) {
-        notSeenValidatorIndices.push(notSeenAggBits.get(i) ? committee[i] : null);
+        // notSeenValidatorIndices.push(notSeenAggBits.get(i) ? committee[i] : null);
         if (notSeenAggBits.get(i)) {
           notSeenAttestingIndices.add(i);
         }
       }
       const attestationsForBlock = attestationGroup.getAttestationsForBlock(
-        notSeenValidatorIndices,
+        // notSeenValidatorIndices,
         notSeenAttestingIndices
       );
 

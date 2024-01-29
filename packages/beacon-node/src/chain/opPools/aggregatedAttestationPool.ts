@@ -22,13 +22,11 @@ type CommitteeIndex = number;
 
 type AttestationWithScore = {attestation: phase0.Attestation; score: number};
 
-type NotSeenValidators = {validatorIndices: (ValidatorIndex | null)[]; attestingIndices: Set<number>};
 /**
  * This function returns not seen participation for a given epoch and committee.
- * Mark null at an index for seen participant, return the same length array as committee.
  * Return null if all validators are seen or no info to check.
  */
-type GetNotSeenValidatorsFn = (epoch: Epoch, committee: number[]) => NotSeenValidators | null;
+type GetNotSeenValidatorsFn = (epoch: Epoch, committee: number[]) => Set<number> | null;
 
 type ValidateAttestationDataFn = (attData: phase0.AttestationData) => boolean;
 
@@ -162,13 +160,10 @@ export class AggregatedAttestationPool {
         }
 
         const committee = slotCommittees[committeeIndex];
-        const notSeenValidators = notSeenValidatorsFn(epoch, committee);
-        if (notSeenValidators === null) {
+        const notSeenAttestingIndices = notSeenValidatorsFn(epoch, committee);
+        if (notSeenAttestingIndices === null || notSeenAttestingIndices.size === 0) {
           continue;
         }
-
-        const {validatorIndices: notSeenValidatorIndices, attestingIndices: notSeenAttestingIndices} =
-          notSeenValidators;
 
         if (
           slotCount > 2 &&
@@ -195,7 +190,6 @@ export class AggregatedAttestationPool {
           // IF they have to be validated, do it only with one attestation per group since same data
           // The committeeCountPerSlot can be precomputed once per slot
           for (const {attestation, notSeenAttesterCount} of attestationGroup.getAttestationsForBlock(
-            notSeenValidatorIndices,
             notSeenAttestingIndices
           )) {
             const score = notSeenAttesterCount / slotDelta;
@@ -339,43 +333,22 @@ export class MatchingDataAttestationGroup {
 
   /**
    * Get AttestationNonParticipant for this groups of same attestation data.
-   * @param notSeenValidatorIndices validator index if not seen, null for seen, has the same length to committee
    * @param notSeenAttestingIndices not seen attestting indices, i.e. indices in the same committee
    * @returns an array of AttestationNonParticipant
    */
-  getAttestationsForBlock(
-    notSeenValidatorIndices: (ValidatorIndex | null)[],
-    notSeenAttestingIndices: Set<number>
-  ): AttestationNonParticipant[] {
+  getAttestationsForBlock(notSeenAttestingIndices: Set<number>): AttestationNonParticipant[] {
     const attestations: AttestationNonParticipant[] = [];
-    // TODO: new benchmark to test, avoid magic number
-    if (notSeenAttestingIndices.size > 0.1 * this.committee.length) {
-      for (const {attestation} of this.attestations) {
-        const {aggregationBits} = attestation;
-        const notSeenIndices = aggregationBits
-          .intersectValues(notSeenValidatorIndices)
-          .filter((validatorIndex) => validatorIndex !== null);
-        const notSeenAttesterCount = notSeenIndices.length;
-
-        if (notSeenAttesterCount > 0) {
-          attestations.push({attestation, notSeenAttesterCount});
+    for (const {attestation} of this.attestations) {
+      let notSeenAttesterCount = 0;
+      const {aggregationBits} = attestation;
+      for (const notSeenIndex of notSeenAttestingIndices) {
+        if (aggregationBits.get(notSeenIndex)) {
+          notSeenAttesterCount++;
         }
       }
-    } else {
-      // for old attestations, notSeenValidatorIndices is like 2004 null null null null while notSeenAttestingIndices is very short
-      // it's better to use aggregationBits directly instead of scanning through them
-      for (const {attestation} of this.attestations) {
-        let notSeenAttesterCount = 0;
-        const {aggregationBits} = attestation;
-        for (const notSeenIndex of notSeenAttestingIndices) {
-          if (aggregationBits.get(notSeenIndex)) {
-            notSeenAttesterCount++;
-          }
-        }
 
-        if (notSeenAttesterCount > 0) {
-          attestations.push({attestation, notSeenAttesterCount});
-        }
+      if (notSeenAttesterCount > 0) {
+        attestations.push({attestation, notSeenAttesterCount});
       }
     }
 
@@ -416,21 +389,29 @@ export function getNotSeenValidatorsFn(state: CachedBeaconStateAllForks): GetNot
     const phase0State = state as CachedBeaconStatePhase0;
     const stateEpoch = computeEpochAtSlot(state.slot);
 
-    const previousEpochParticipants = extractNotSeenValidators(
+    const previousEpochParticipants = extractParticipationPhase0(
       phase0State.previousEpochAttestations.getAllReadonly(),
       state
     );
-    const currentEpochParticipants = extractNotSeenValidators(
+    const currentEpochParticipants = extractParticipationPhase0(
       phase0State.currentEpochAttestations.getAllReadonly(),
       state
     );
 
-    return (epoch: Epoch) => {
-      return epoch === stateEpoch
-        ? currentEpochParticipants
-        : epoch === stateEpoch - 1
-        ? previousEpochParticipants
-        : null;
+    return (epoch: Epoch, committee: number[]) => {
+      const participants =
+        epoch === stateEpoch ? currentEpochParticipants : epoch === stateEpoch - 1 ? previousEpochParticipants : null;
+      if (participants === null) {
+        return null;
+      }
+
+      const notSeenAttestingIndices = new Set<number>();
+      for (const [i, validatorIndex] of committee.entries()) {
+        if (!participants.has(validatorIndex)) {
+          notSeenAttestingIndices.add(i);
+        }
+      }
+      return notSeenAttestingIndices.size === 0 ? null : notSeenAttestingIndices;
     };
   }
 
@@ -449,52 +430,41 @@ export function getNotSeenValidatorsFn(state: CachedBeaconStateAllForks): GetNot
       const participationStatus =
         epoch === stateEpoch ? currentParticipation : epoch === stateEpoch - 1 ? previousParticipation : null;
 
-      if (participationStatus === null) return null;
+      if (participationStatus === null) {
+        return null;
+      }
 
-      const notSeenValidatorIndices = new Array<ValidatorIndex | null>(committee.length);
       const notSeenAttestingIndices = new Set<number>();
-      let allSeen = true;
       for (const [i, validatorIndex] of committee.entries()) {
         // no need to check flagIsTimelySource as if validator is not seen, it's participation status is 0
         if (participationStatus[validatorIndex] === 0) {
-          allSeen = false;
-          notSeenValidatorIndices[i] = validatorIndex;
           notSeenAttestingIndices.add(i);
-        } else {
-          notSeenValidatorIndices[i] = null;
         }
       }
       // if all validators are seen then return null, we don't need to check for any attestations of same committee again
-      return allSeen ? null : {validatorIndices: notSeenValidatorIndices, attestingIndices: notSeenAttestingIndices};
+      return notSeenAttestingIndices.size === 0 ? null : notSeenAttestingIndices;
     };
   }
 }
 
-export function extractNotSeenValidators(
+export function extractParticipationPhase0(
   attestations: phase0.PendingAttestation[],
   state: CachedBeaconStateAllForks
-): NotSeenValidators {
+): Set<ValidatorIndex> {
   const {epochCtx} = state;
-  const notSeenValidatorIndices = new Array<ValidatorIndex | null>();
-  const notSeenAttestingIndices = new Set<number>();
-
+  const allParticipants = new Set<ValidatorIndex>();
   for (const att of attestations) {
     const aggregationBits = att.aggregationBits;
     const attData = att.data;
     const attSlot = attData.slot;
     const committeeIndex = attData.index;
     const committee = epochCtx.getBeaconCommittee(attSlot, committeeIndex);
-    for (let i = 0; i < committee.length; i++) {
-      notSeenValidatorIndices[i] = aggregationBits.get(i) ? null : committee[i];
-      if (aggregationBits.get(i)) {
-        notSeenValidatorIndices[i] = null;
-      } else {
-        notSeenValidatorIndices[i] = committee[i];
-        notSeenAttestingIndices.add(i);
-      }
+    const participants = aggregationBits.intersectValues(committee);
+    for (const participant of participants) {
+      allParticipants.add(participant);
     }
   }
-  return {validatorIndices: notSeenValidatorIndices, attestingIndices: notSeenAttestingIndices};
+  return allParticipants;
 }
 
 /**
