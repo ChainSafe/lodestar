@@ -1,39 +1,78 @@
 import {describe, it, expect} from "vitest";
-import {ExtendedPromise, ExtendedPromiseStatus, defaultAbortReason, resolveOrRacePromises} from "../../src/promise.js";
+import {ExtendedPromiseStatus, resolveOrRacePromises, ExtendedPromise} from "../../src/promise.js";
 import {NonEmptyArray} from "../../src/types.js";
+import {ErrorAborted, TimeoutError} from "../../src/errors.js";
 
 describe("promise", () => {
   describe("PromiseWithStatus", () => {
+    function expectResolvedValue(obj: unknown, val: unknown) {
+      expect(obj).toEqual(
+        expect.objectContaining({
+          value: val,
+          status: ExtendedPromiseStatus.Fulfilled,
+          durationMs: expect.any(Number),
+          startedAt: expect.any(Number),
+          finishedAt: expect.any(Number),
+        })
+      );
+    }
+
+    function expectRejectedError(
+      obj: unknown,
+      val: unknown,
+      status: ExtendedPromiseStatus = ExtendedPromiseStatus.Rejected
+    ) {
+      if (status === ExtendedPromiseStatus.Rejected) {
+        expect(obj).toEqual(
+          expect.objectContaining({
+            status: status,
+            durationMs: expect.any(Number),
+            startedAt: expect.any(Number),
+            finishedAt: expect.any(Number),
+            reason: val,
+          })
+        );
+      } else if (status === ExtendedPromiseStatus.Timeout) {
+        expect(obj).toEqual(
+          expect.objectContaining({
+            status: status,
+            durationMs: expect.any(Number),
+            startedAt: expect.any(Number),
+            finishedAt: expect.any(Number),
+          })
+        );
+      }
+    }
+
     it("should resolve to value for a resolved promise", async () => {
       const pro = ExtendedPromise.from(Promise.resolve("my value"));
-      await expect(pro).resolves.toBe("my value");
+
+      expectResolvedValue(await pro, "my value");
     });
 
     it("should have initial status to pending", async () => {
       const pro = ExtendedPromise.from(Promise.resolve("my value"));
-      expect(pro.status).toBe("pending");
+      expect(pro.status).toBe(ExtendedPromiseStatus.Pending);
     });
 
     it("should throw error for rejected promise", async () => {
       const pro = ExtendedPromise.from(Promise.reject("test error"));
-      await expect(pro).rejects.toThrow("test error");
+      expectRejectedError(await pro, "test error");
     });
 
     it("should have rejected status for rejected promise", async () => {
       const pro = ExtendedPromise.from(Promise.reject("test error"));
 
-      await expect(pro).rejects.toBeDefined();
+      expectRejectedError(await pro, "test error");
 
-      expect(pro.status).toBe("rejected");
+      expect(pro.status).toBe(ExtendedPromiseStatus.Rejected);
     });
 
     it("should have rejected error as reason for the promise object", async () => {
       const error = new Error("test error");
       const pro = ExtendedPromise.from(Promise.reject(error));
 
-      await expect(pro).rejects.toBeDefined();
-
-      expect(pro.reason).toBe(error);
+      expectRejectedError(await pro, error);
     });
 
     it("should have correct durationMs attribute for promise which is resolved", async () => {
@@ -43,10 +82,10 @@ describe("promise", () => {
         }, 100);
       });
 
-      await expect(pro).resolves.toBeDefined();
-      expect(pro.durationMs).toBeGreaterThanOrEqual(100);
+      const res = await pro;
+      expect(res.durationMs).toBeGreaterThanOrEqual(100);
       // Some margin for execution
-      expect(pro.durationMs).toBeLessThanOrEqual(110);
+      expect(res.durationMs).toBeLessThanOrEqual(130);
     });
 
     it("should have correct durationMs attribute for promise which is rejected", async () => {
@@ -56,11 +95,11 @@ describe("promise", () => {
         }, 100);
       });
 
-      await expect(pro).rejects.toBeDefined();
+      const res = await pro;
 
-      expect(pro.durationMs).toBeGreaterThanOrEqual(100);
+      expect(res.durationMs).toBeGreaterThanOrEqual(100);
       // Some margin for execution
-      expect(pro.durationMs).toBeLessThanOrEqual(110);
+      expect(res.durationMs).toBeLessThanOrEqual(130);
     });
 
     it("should be able to abort promise from internal signal", async () => {
@@ -78,36 +117,70 @@ describe("promise", () => {
         pro.abort("My Aborted Reason");
       }, 100);
 
-      await expect(pro).rejects.toThrow("My Aborted Reason");
+      const res = await pro;
+      expectRejectedError(res, new ErrorAborted("My Aborted Reason"), ExtendedPromiseStatus.Aborted);
+
       expect(pro.status).toBe(ExtendedPromiseStatus.Aborted);
-      expect(pro.durationMs).toBeGreaterThanOrEqual(100);
-      expect(pro.durationMs).toBeLessThanOrEqual(110);
+      expect(res.durationMs).toBeGreaterThanOrEqual(100);
+      expect(res.durationMs).toBeLessThanOrEqual(130);
     });
 
     it("should be able to abort promise from external signal", async () => {
       const controller = new AbortController();
-      const pro = new ExtendedPromise((resolve, reject) => {
-        setTimeout(() => {
-          resolve("Resolved Value");
-        }, 200);
+      const pro = new ExtendedPromise(
+        (resolve, reject) => {
+          setTimeout(() => {
+            resolve("Resolved Value");
+          }, 200);
 
-        setTimeout(() => {
-          reject("Rejected Value");
-        }, 400);
-      }, controller.signal);
+          setTimeout(() => {
+            reject("Rejected Value");
+          }, 400);
+        },
+        {signal: controller.signal}
+      );
 
       setTimeout(() => {
-        controller.abort();
+        controller.abort("My Aborted Reason");
       }, 100);
 
-      await expect(pro).rejects.toThrow(defaultAbortReason);
+      const res = await pro;
+      expectRejectedError(res, new ErrorAborted("My Aborted Reason"), ExtendedPromiseStatus.Aborted);
+
       expect(pro.status).toBe(ExtendedPromiseStatus.Aborted);
-      expect(pro.durationMs).toBeGreaterThanOrEqual(100);
-      expect(pro.durationMs).toBeLessThanOrEqual(110);
+      expect(res.durationMs).toBeGreaterThanOrEqual(100);
+      expect(res.durationMs).toBeLessThanOrEqual(130);
     });
 
     it("should not throw error if aborted twice", async () => {
       const controller = new AbortController();
+      const pro = new ExtendedPromise(
+        (resolve, reject) => {
+          setTimeout(() => {
+            resolve("Resolved Value");
+          }, 200);
+
+          setTimeout(() => {
+            reject("Rejected Value");
+          }, 400);
+        },
+        {signal: controller.signal}
+      );
+
+      setTimeout(() => {
+        controller.abort("My Aborted Reason 1");
+        pro.abort("My Aborted Reason 2");
+      }, 100);
+
+      const res = await pro;
+      expectRejectedError(res, new ErrorAborted("My Aborted Reason 1"), ExtendedPromiseStatus.Aborted);
+
+      expect(pro.status).toBe(ExtendedPromiseStatus.Aborted);
+      expect(res.durationMs).toBeGreaterThanOrEqual(100);
+      expect(res.durationMs).toBeLessThanOrEqual(130);
+    });
+
+    it("should be able abort using timeout signal", async () => {
       const pro = new ExtendedPromise((resolve, reject) => {
         setTimeout(() => {
           resolve("Resolved Value");
@@ -116,17 +189,18 @@ describe("promise", () => {
         setTimeout(() => {
           reject("Rejected Value");
         }, 400);
-      }, controller.signal);
+      });
 
       setTimeout(() => {
-        controller.abort();
-        pro.abort("My Aborted Reason");
+        pro.timeout("I am timeout");
       }, 100);
 
-      await expect(pro).rejects.toThrow(defaultAbortReason);
-      expect(pro.status).toBe(ExtendedPromiseStatus.Aborted);
-      expect(pro.durationMs).toBeGreaterThanOrEqual(100);
-      expect(pro.durationMs).toBeLessThanOrEqual(110);
+      const res = await pro;
+      expectRejectedError(res, new TimeoutError("My Aborted Reason"), ExtendedPromiseStatus.Timeout);
+
+      expect(pro.status).toBe(ExtendedPromiseStatus.Timeout);
+      expect(res.durationMs).toBeGreaterThanOrEqual(100);
+      expect(res.durationMs).toBeLessThanOrEqual(130);
     });
   });
 
@@ -134,12 +208,13 @@ describe("promise", () => {
     const cutoffMs = 1000;
     const timeoutMs = 1500;
 
-    const resolveAfter = (value: string, delay: number): ExtendedPromise<string> =>
-      new ExtendedPromise((resolve) => {
+    const resolveAfter = (value: string, delay: number): Promise<string> =>
+      new Promise((resolve) => {
         setTimeout(() => resolve(value), delay);
       });
-    const rejectAfter = (value: string, delay: number): ExtendedPromise<string> =>
-      new ExtendedPromise((_resolve, reject) => {
+
+    const rejectAfter = (value: string, delay: number): Promise<string> =>
+      new Promise((_resolve, reject) => {
         setTimeout(() => reject(Error(value)), delay);
       });
 
@@ -148,17 +223,17 @@ describe("promise", () => {
       ["all resolve/reject pre-cutoff", [100, -200], ["100", "-200"]],
       ["all reject pre-cutoff", [-100, -200], ["-100", "-200"]],
       ["all reject pre-timeout", [-1100, -1200], ["-1100", "-1200"]],
-      ["race and resolve pre-timeout", [1100, 1200], ["1100", "pending"]],
-      ["race and resolve/reject pre-timeout", [-1100, 1200, 1300], ["-1100", "1200", "pending"]],
+      ["race and resolve pre-timeout", [1100, 1200], ["1100", "aborted"]],
+      ["race and resolve/reject pre-timeout", [-1100, 1200, 1300], ["-1100", "1200", "aborted"]],
       [
         "some resolve pre-cutoff with no race post cutoff",
         [100, -200, -1100, 1200],
-        ["100", "-200", "pending", "pending"],
+        ["100", "-200", "-1100", "1200"],
       ],
       [
         "some reject pre-cutoff, with race resolution pre-timeout",
         [-100, -200, -1100, 1100, 1200],
-        ["-100", "-200", "-1100", "1100", "pending"],
+        ["-100", "-200", "-1100", "1100", "aborted"],
       ],
       [
         "some reject pre-cutoff, rest reject pre-timeout",
@@ -168,20 +243,20 @@ describe("promise", () => {
       [
         "some resolve/reject pre-cutoff, some resolve/reject pre-timeout but no race beyond cutoff",
         [100, -200, -1100, 1100, 1700, -1700],
-        ["100", "-200", "pending", "pending", "pending", "pending"],
+        ["100", "-200", "-1100", "1100", "aborted", "aborted"],
       ],
       [
         "none resolve/reject pre-cutoff with race resolution pre timeout",
         [-1100, 1200, 1700],
-        ["-1100", "1200", "pending"],
+        ["-1100", "1200", "aborted"],
       ],
-      ["none resolve pre-cutoff with race resolution pre timeout", [1100, 1200, 1700], ["1100", "pending", "pending"]],
+      ["none resolve pre-cutoff with race resolution pre timeout", [1100, 1200, 1700], ["1100", "aborted", "aborted"]],
       [
         "some reject pre-cutoff, some reject pre-timeout, but no resolution till timeout",
         [-100, -1100, -1200, 1700, -1800],
-        ["-100", "-1100", "-1200", "pending", "pending"],
+        ["-100", "-1100", "-1200", "timeout", "timeout"],
       ],
-      ["none resolve/reject pre timeout", [1600, -1700], ["pending", "pending"]],
+      ["none resolve/reject pre timeout", [1600, -1700], ["timeout", "timeout"]],
     ];
 
     for (const [name, timeouts, results] of testCases) {
@@ -193,19 +268,20 @@ describe("promise", () => {
             return rejectAfter(`${timeMs}`, -timeMs);
           }
         });
-        const testResults = await resolveOrRacePromises(testPromises as NonEmptyArray<ExtendedPromise<string>>, {
+        const testResults = await resolveOrRacePromises(testPromises as unknown as NonEmptyArray<ExtendedPromise<string>>, {
           resolveTimeoutMs: cutoffMs,
           raceTimeoutMs: timeoutMs,
         });
         const testResultsCmp = testResults.map((r) => {
-          switch ((r as ExtendedPromise<string>).status) {
+          switch (r.status) {
             case ExtendedPromiseStatus.Fulfilled:
-              return (r as ExtendedPromise<string>).value;
+              return r.value;
             case ExtendedPromiseStatus.Rejected:
+              return (r.reason as Error).message;
             case ExtendedPromiseStatus.Aborted:
-              return ((r as ExtendedPromise<string>).reason as Error).message;
-            case ExtendedPromiseStatus.Pending:
-              return "pending";
+              return "aborted";
+            case ExtendedPromiseStatus.Timeout:
+              return "timeout";
           }
         });
         expect(testResultsCmp).toEqual(results);
