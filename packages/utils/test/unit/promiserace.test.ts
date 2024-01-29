@@ -1,5 +1,5 @@
 import {describe, it, expect} from "vitest";
-import {ExtendedPromiseStatus, resolveOrRacePromises, ExtendedPromise} from "../../src/promise.js";
+import {resolveOrRacePromises, PromiseResult} from "../../src/promise.js";
 import {NonEmptyArray} from "../../src/types.js";
 
 describe("resolveOrRacePromises", () => {
@@ -21,32 +21,32 @@ describe("resolveOrRacePromises", () => {
     ["all resolve/reject pre-cutoff", [100, -200], ["100", "-200"]],
     ["all reject pre-cutoff", [-100, -200], ["-100", "-200"]],
     ["all reject pre-timeout", [-1100, -1200], ["-1100", "-1200"]],
-    ["race and resolve pre-timeout", [1100, 1200], ["1100", "aborted"]],
-    ["race and resolve/reject pre-timeout", [-1100, 1200, 1300], ["-1100", "1200", "aborted"]],
+    ["race and resolve pre-timeout", [1100, 1200], ["1100", "pending"]],
+    ["race and resolve/reject pre-timeout", [-1100, 1200, 1300], ["-1100", "1200", "pending"]],
     ["some resolve pre-cutoff with no race post cutoff", [100, -200, -1100, 1200], ["100", "-200", "-1100", "1200"]],
     [
       "some reject pre-cutoff, with race resolution pre-timeout",
       [-100, -200, -1100, 1100, 1200],
-      ["-100", "-200", "-1100", "1100", "aborted"],
+      ["-100", "-200", "-1100", "1100", "pending"],
     ],
     ["some reject pre-cutoff, rest reject pre-timeout", [-100, -200, -1100, -1200], ["-100", "-200", "-1100", "-1200"]],
     [
       "some resolve/reject pre-cutoff, some resolve/reject pre-timeout but no race beyond cutoff",
       [100, -200, -1100, 1100, 1700, -1700],
-      ["100", "-200", "-1100", "1100", "aborted", "aborted"],
+      ["100", "-200", "-1100", "1100", "pending", "pending"],
     ],
     [
       "none resolve/reject pre-cutoff with race resolution pre timeout",
       [-1100, 1200, 1700],
-      ["-1100", "1200", "aborted"],
+      ["-1100", "1200", "pending"],
     ],
-    ["none resolve pre-cutoff with race resolution pre timeout", [1100, 1200, 1700], ["1100", "aborted", "aborted"]],
+    ["none resolve pre-cutoff with race resolution pre timeout", [1100, 1200, 1700], ["1100", "pending", "pending"]],
     [
       "some reject pre-cutoff, some reject pre-timeout, but no resolution till timeout",
       [-100, -1100, -1200, 1700, -1800],
-      ["-100", "-1100", "-1200", "timeout", "timeout"],
+      ["-100", "-1100", "-1200", "pending", "pending"],
     ],
-    ["none resolve/reject pre timeout", [1600, -1700], ["timeout", "timeout"]],
+    ["none resolve/reject pre timeout", [1600, -1700], ["pending", "pending"]],
   ];
 
   for (const [name, timeouts, results] of testCases) {
@@ -58,23 +58,18 @@ describe("resolveOrRacePromises", () => {
           return rejectAfter(`${timeMs}`, -timeMs);
         }
       });
-      const testResults = await resolveOrRacePromises(
-        testPromises as unknown as NonEmptyArray<ExtendedPromise<string>>,
-        {
-          resolveTimeoutMs: cutoffMs,
-          raceTimeoutMs: timeoutMs,
-        }
-      );
+      const testResults = (await resolveOrRacePromises(testPromises as unknown as NonEmptyArray<PromiseLike<unknown>>, {
+        resolveTimeoutMs: cutoffMs,
+        raceTimeoutMs: timeoutMs,
+      })) as PromiseResult<string>[];
       const testResultsCmp = testResults.map((r) => {
         switch (r.status) {
-          case ExtendedPromiseStatus.Fulfilled:
+          case "fulfilled":
             return r.value;
-          case ExtendedPromiseStatus.Rejected:
+          case "rejected":
             return (r.reason as Error).message;
-          case ExtendedPromiseStatus.Aborted:
-            return "aborted";
-          case ExtendedPromiseStatus.Timeout:
-            return "timeout";
+          default:
+            return "pending";
         }
       });
       expect(testResultsCmp).toEqual(results);

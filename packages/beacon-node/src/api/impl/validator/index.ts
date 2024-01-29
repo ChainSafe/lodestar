@@ -35,14 +35,7 @@ import {
   phase0,
 } from "@lodestar/types";
 import {ExecutionStatus} from "@lodestar/fork-choice";
-import {
-  toHex,
-  resolveOrRacePromises,
-  ExtendedPromise,
-  ExtendedPromiseStatus,
-  formatBigDecimal,
-  ETH_TO_WEI,
-} from "@lodestar/utils";
+import {toHex, resolveOrRacePromises, wrapPromise, formatBigDecimal, ETH_TO_WEI} from "@lodestar/utils";
 import {
   AttestationError,
   AttestationErrorCode,
@@ -544,60 +537,65 @@ export function getValidatorApi({
         timeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
       });
 
+      // use abort controller to stop waiting for both block sources
+      const builderController = new AbortController();
       // Start calls for building execution and builder blocks
       const builderDisabledError = new Error("Builder disabled");
       const engineDisabledError = new Error("Engine disabled");
-      const builderOverrideError = new Error("Engine requested to override builder block");
 
-      const builderPromise = ExtendedPromise.from(
-        // can't do fee recipient checks as builder bid doesn't return feeRecipient as of now
-        isBuilderEnabled
-          ? produceBuilderBlindedBlock(slot, randaoReveal, graffiti, {
-              feeRecipient,
-              // skip checking and recomputing head in these individual produce calls
-              skipHeadChecksAndUpdate: true,
-              commonBlockBody,
-            })
-          : Promise.reject(builderDisabledError)
-      );
+      // can't do fee recipient checks as builder bid doesn't return feeRecipient as of now
+      const builderPromise = isBuilderEnabled
+        ? produceBuilderBlindedBlock(slot, randaoReveal, graffiti, {
+            feeRecipient,
+            // skip checking and recomputing head in these individual produce calls
+            skipHeadChecksAndUpdate: true,
+            commonBlockBody,
+          })
+        : Promise.reject(builderDisabledError);
+      const builder = wrapPromise(builderPromise);
 
-      const enginePromise = ExtendedPromise.from(
-        isEngineEnabled
-          ? produceEngineFullBlockOrContents(slot, randaoReveal, graffiti, {
-              feeRecipient,
-              strictFeeRecipientCheck,
-              // skip checking and recomputing head in these individual produce calls
-              skipHeadChecksAndUpdate: true,
-              commonBlockBody,
-            })
-          : Promise.reject(engineDisabledError)
-      );
+      const enginePromise = isEngineEnabled
+        ? produceEngineFullBlockOrContents(slot, randaoReveal, graffiti, {
+            feeRecipient,
+            strictFeeRecipientCheck,
+            // skip checking and recomputing head in these individual produce calls
+            skipHeadChecksAndUpdate: true,
+            commonBlockBody,
+          })
+        : Promise.reject(engineDisabledError);
+      const engine = wrapPromise(enginePromise);
 
       void enginePromise.then((engineBlock) => {
-        if (
-          engineBlock.status === ExtendedPromiseStatus.Fulfilled &&
-          (engineBlock.value.shouldOverrideBuilder || builderBoostFactor === BigInt(0))
-        ) {
-          builderPromise.abort(builderOverrideError);
+        // Once the engine returns a block, in the event of either:
+        // - suspected builder censorship
+        // - builder boost factor set to 0
+        // we don't need to wait for builder block as engine block will always be selected
+        if (builder.status === "pending" && (engineBlock.shouldOverrideBuilder || builderBoostFactor === BigInt(0))) {
+          builderController.abort();
+          logger.warn("Builder was aborted", {
+            ...loggerContext,
+          });
         }
+        return engineBlock;
       });
 
-      const [builder, engine] = await resolveOrRacePromises([builderPromise, enginePromise], {
+      await resolveOrRacePromises([builder.promise, engine.promise], {
         resolveTimeoutMs: BLOCK_PRODUCTION_RACE_CUTOFF_MS,
         raceTimeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
+        signal: builderController.signal,
       });
 
-      if (builder.status === ExtendedPromiseStatus.Timeout && engine.status === ExtendedPromiseStatus.Timeout) {
+      if (builder.status === "pending" && engine.status === "pending") {
         throw Error(
           `Builder and execution both timeout to proposed the block in ${BLOCK_PRODUCTION_RACE_TIMEOUT_MS}ms`
         );
       }
 
-      if (builder.status === ExtendedPromiseStatus.Rejected && engine.status === ExtendedPromiseStatus.Rejected) {
+      if (builder.status === "rejected" && engine.status === "rejected") {
         throw Error("Builder and engine both failed to produce the block");
       }
 
-      if (engine.status === ExtendedPromiseStatus.Rejected && engine.reason !== engineDisabledError) {
+      if (engine.status === "rejected" && engine.reason !== engineDisabledError) {
         logger.warn(
           "Engine failed to produce the block",
           {
@@ -608,7 +606,7 @@ export function getValidatorApi({
         );
       }
 
-      if (builder.status === ExtendedPromiseStatus.Rejected && builder.reason !== builderDisabledError) {
+      if (builder.status === "rejected" && builder.reason !== builderDisabledError) {
         logger.warn(
           "Builder failed to produce the block",
           {
@@ -619,18 +617,7 @@ export function getValidatorApi({
         );
       }
 
-      if (builder.status === ExtendedPromiseStatus.Aborted) {
-        logger.warn(
-          "Builder was aborted",
-          {
-            ...loggerContext,
-            durationMs: builder.durationMs,
-          },
-          builder.reason as Error
-        );
-      }
-
-      if (builder.status === ExtendedPromiseStatus.Fulfilled && engine.status !== ExtendedPromiseStatus.Fulfilled) {
+      if (builder.status === "fulfilled" && engine.status !== "fulfilled") {
         logger.info("Selected builder block: no engine block produced", {
           ...loggerContext,
           durationMs: builder.durationMs,
@@ -640,7 +627,7 @@ export function getValidatorApi({
         return {...builder.value, executionPayloadBlinded: true, executionPayloadSource: ProducedBlockSource.builder};
       }
 
-      if (engine.status === ExtendedPromiseStatus.Fulfilled && builder.status !== ExtendedPromiseStatus.Fulfilled) {
+      if (engine.status === "fulfilled" && builder.status !== "fulfilled") {
         logger.info("Selected engine block: no builder block produced", {
           ...loggerContext,
           durationMs: engine.durationMs,
@@ -651,7 +638,7 @@ export function getValidatorApi({
         return {...engine.value, executionPayloadBlinded: false, executionPayloadSource: ProducedBlockSource.engine};
       }
 
-      if (engine.status === ExtendedPromiseStatus.Fulfilled && builder.status === ExtendedPromiseStatus.Fulfilled) {
+      if (engine.status === "fulfilled" && builder.status === "fulfilled") {
         const engineBlock = engine.value;
         const enginePayloadValue = engineBlock.executionPayloadValue ?? BigInt(0);
         const engineConsensusValue = engineBlock.consensusBlockValue ?? BigInt(0);
