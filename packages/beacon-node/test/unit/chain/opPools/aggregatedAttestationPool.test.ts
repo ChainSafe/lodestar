@@ -2,11 +2,11 @@ import type {SecretKey} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
 import {BitArray, fromHexString, toHexString} from "@chainsafe/ssz";
 import {describe, it, expect, beforeEach, beforeAll, afterEach, vi} from "vitest";
-import {MockedForkChoice, getMockedForkChoice} from "../../../mocks/mockedBeaconChain.js";
 import {CachedBeaconStateAllForks, newFilledArray} from "@lodestar/state-transition";
 import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {ssz, phase0, ValidatorIndex} from "@lodestar/types";
+import {ssz, phase0} from "@lodestar/types";
 import {CachedBeaconStateAltair} from "@lodestar/state-transition/src/types.js";
+import {MockedForkChoice, getMockedForkChoice} from "../../../mocks/mockedBeaconChain.js";
 import {
   AggregatedAttestationPool,
   aggregateInto,

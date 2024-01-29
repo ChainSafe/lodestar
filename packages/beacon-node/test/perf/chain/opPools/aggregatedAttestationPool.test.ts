@@ -19,10 +19,10 @@ const vc = 1_500_000;
 
 /**
  * Jan 2024
- *   getAttestationsForBlock
-    ✔ notSeenSlots=1 numMissedVotes=1 numBadVotes=10                      9.152280 ops/s    109.2624 ms/op        -         48 runs   60.3 s
-    ✔ notSeenSlots=1 numMissedVotes=0 numBadVotes=4                       9.173290 ops/s    109.0121 ms/op        -         52 runs   38.1 s
-    ✔ notSeenSlots=2 numMissedVotes=1 numBadVotes=10                      18.10215 ops/s    55.24205 ms/op        -         18 runs   34.0 s   ✔ notSeenSlots=2 numMissedVotes=1 numBadVotes=10                      25.31025 ops/s    39.50969 ms/op        -         15 runs   31.3 s
+ *  getAttestationsForBlock vc=1500000
+ *   ✔ notSeenSlots=1 numMissedVotes=1 numBadVotes=10                      10.48105 ops/s    95.41024 ms/op        -         12 runs   18.2 s
+ *   ✔ notSeenSlots=1 numMissedVotes=0 numBadVotes=4                       11.44517 ops/s    87.37307 ms/op        -         13 runs   14.5 s
+ *   ✔ notSeenSlots=2 numMissedVotes=1 numBadVotes=10                      23.86144 ops/s    41.90862 ms/op        -         18 runs   34.1 s
  */
 describe(`getAttestationsForBlock vc=${vc}`, () => {
   let originalState: CachedBeaconStateAltair;
@@ -165,6 +165,9 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
   }
 });
 
+/**
+ * Fir dev purpose to find the best way to get not seen validators.
+ */
 describe.skip("getAttestationsForBlock aggregationBits intersectValues vs get", () => {
   const runsFactor = 1000;
   // As of Jan 2004
