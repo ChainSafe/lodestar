@@ -61,6 +61,7 @@ export type ExtendedPromiseErrorResult =
     };
 
 export type ExtendedPromiseResult<T> = ExtendedPromiseSuccessResult<T> | ExtendedPromiseErrorResult;
+export type ExtendedPromiseOptions<E extends boolean> = {signal?: AbortSignal; timeoutMs?: number; raiseError?: E};
 
 /**
  * Promise that has extended features. To make it type-safe it is not extending Promise class.
@@ -72,7 +73,11 @@ export type ExtendedPromiseResult<T> = ExtendedPromiseSuccessResult<T> | Extende
  *
  * It is useful when you want to process multiple promises and want know their status individually afterwards
  */
-export class ExtendedPromise<T, R = ExtendedPromiseResult<T>> extends Promise<R> {
+export class ExtendedPromise<
+  T,
+  E extends boolean = false,
+  R = E extends undefined | false ? ExtendedPromiseResult<T> : ExtendedPromiseSuccessResult<T>,
+> extends Promise<R> {
   raiseError: boolean = false;
 
   private readonly _startedAt = Date.now();
@@ -82,7 +87,7 @@ export class ExtendedPromise<T, R = ExtendedPromiseResult<T>> extends Promise<R>
 
   constructor(
     executor: (resolve: (value: T) => void, reject: (reason?: unknown) => void) => void,
-    opts?: {signal?: AbortSignal; timeoutMs?: number; raiseError?: boolean}
+    opts?: ExtendedPromiseOptions<E>
   ) {
     let _resolve: (val: R) => void;
     let _reject: (reason: unknown) => void;
@@ -185,11 +190,8 @@ export class ExtendedPromise<T, R = ExtendedPromiseResult<T>> extends Promise<R>
     return this._status;
   }
 
-  static from<T>(
-    promise: PromiseLike<T>,
-    opts?: {signal?: AbortSignal; timeoutMs?: number; raiseError?: boolean}
-  ): ExtendedPromise<T> {
-    return new ExtendedPromise((resolve, reject) => {
+  static from<T, E extends boolean>(promise: PromiseLike<T>, opts?: ExtendedPromiseOptions<E>): ExtendedPromise<T, E> {
+    return new ExtendedPromise<T, E>((resolve, reject) => {
       promise.then(resolve, reject);
     }, opts);
   }
