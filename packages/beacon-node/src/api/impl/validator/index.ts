@@ -573,7 +573,7 @@ export function getValidatorApi({
           : Promise.reject(engineDisabledError)
       );
 
-      enginePromise.then((engineBlock) => {
+      void enginePromise.then((engineBlock) => {
         if (
           engineBlock.status === ExtendedPromiseStatus.Fulfilled &&
           (engineBlock.value.shouldOverrideBuilder || builderBoostFactor === BigInt(0))
