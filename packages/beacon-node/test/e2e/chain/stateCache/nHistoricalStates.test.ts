@@ -276,7 +276,7 @@ describe(
           params: testParams,
           options: {
             sync: {isSingleNode: true},
-            network: {allowPublishToZeroPeers: true, mdns: true},
+            network: {allowPublishToZeroPeers: true, mdns: true, useWorker: false},
             // run the first bn with ReorgedForkChoice, no nHistoricalStates flag so it does not have to reload
             chain: {
               blsVerifyAllMainThread: true,
@@ -296,7 +296,7 @@ describe(
           params: testParams,
           options: {
             api: {rest: {enabled: false}},
-            network: {mdns: true},
+            network: {mdns: true, useWorker: false},
             // run the 2nd bn with nHistoricalStates flag and the configured maxBlockStates, maxCPStateEpochsInMemory
             chain: {
               blsVerifyAllMainThread: true,
