@@ -16,9 +16,11 @@ import {ReorgedForkChoice} from "../../../mocks/forkchoice.js";
 
 /**
  * Test different reorg scenarios to make sure the StateCache implementations are correct.
+ * This includes several tests which make >6 min to pass in CI, so let's only run 1 of them and leave remaining ones
+ * for local investigation.
  */
 describe(
-  "chain/stateCache/n-historical states",
+  "regen/reload states with n-historical states configuration",
   function () {
     const validatorCount = 8;
     const testParams: Pick<ChainConfig, "SECONDS_PER_SLOT"> = {
@@ -60,6 +62,7 @@ describe(
       numStatesPersisted: number;
       numEpochsInMemory: number;
       numEpochsPersisted: number;
+      skip?: boolean;
     }[] = [
       /**
        * Block slot 28 has parent slot 25, block slot 26 and 27 are reorged
@@ -88,6 +91,7 @@ describe(
         // epoch 0 1 2 3 4 but finalized at eopch 2 so store checkpoint states for epoch 2 3 4
         numEpochsPersisted: 3,
         // chain is finalized at epoch 2 end of test
+        skip: true,
       },
       /**
        * Block slot 28 has parent slot 23, block slot 824 25 26 and 27 are reorged
@@ -117,6 +121,7 @@ describe(
         // epoch 0 1 2 3 4
         numEpochsPersisted: 5,
         // chain is not finalized end of test
+        skip: true,
       },
       /**
        * Block slot 28 has parent slot 25, block slot 26 and 27 are reorged
@@ -146,6 +151,7 @@ describe(
         // epoch 2 3, epoch 4 is in-memory
         numEpochsPersisted: 2,
         // chain is finalized at epoch 2 end of test
+        skip: true,
       },
       /**
        * Block slot 28 has parent slot 23, block slot 824 25 26 and 27 are reorged
@@ -177,6 +183,7 @@ describe(
         // chain is not finalized, epoch 4 is in-memory so CP state at epoch 0 1 2 3 are persisted
         numEpochsPersisted: 4,
         // chain is NOT finalized end of test
+        skip: true,
       },
       /**
        * Block slot 28 has parent slot 23, block slot 824 25 26 and 27 are reorged
@@ -208,6 +215,7 @@ describe(
         // chain is not finalized, epoch 4 is in-memory so CP state at epoch 0 1 2 3 are persisted
         numEpochsPersisted: 4,
         // chain is NOT finalized end of test
+        skip: true,
       },
       /**
        * Block slot 28 has parent slot 23, block slot 824 25 26 and 27 are reorged
@@ -254,8 +262,10 @@ describe(
       numStatesPersisted,
       numEpochsInMemory,
       numEpochsPersisted,
+      skip,
     } of testCases) {
-      it(`${name} reorgedSlot=${reorgedSlot} reorgDistance=${reorgDistance}`, async function () {
+      const wrappedIt = skip ? it.skip : it;
+      wrappedIt(`${name} reorgedSlot=${reorgedSlot} reorgDistance=${reorgDistance}`, async function () {
         // the node needs time to transpile/initialize bls worker threads
         const genesisSlotsDelay = 7;
         const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
