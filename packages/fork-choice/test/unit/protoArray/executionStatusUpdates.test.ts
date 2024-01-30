@@ -149,7 +149,7 @@ describe("executionStatus / normal updates", () => {
     {
       executionStatus: ExecutionStatus.Invalid,
       latestValidExecHash: "2C",
-      invalidateFromBlockHash: "3C",
+      invalidateFromParentBlockRoot: "3C",
     },
     3
   );
@@ -212,7 +212,7 @@ describe("executionStatus / normal updates", () => {
     {
       executionStatus: ExecutionStatus.Invalid,
       latestValidExecHash: "1A",
-      invalidateFromBlockHash: "3A",
+      invalidateFromParentBlockRoot: "3A",
     },
     3
   );
@@ -259,7 +259,7 @@ describe("executionStatus / invalidate all postmerge chain", () => {
     {
       executionStatus: ExecutionStatus.Invalid,
       latestValidExecHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
-      invalidateFromBlockHash: "3B",
+      invalidateFromParentBlockRoot: "3B",
     },
     3
   );
@@ -336,7 +336,7 @@ describe("executionStatus / poision forkchoice if we invalidate previous valid",
         {
           executionStatus: ExecutionStatus.Invalid,
           latestValidExecHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
-          invalidateFromBlockHash: "3A",
+          invalidateFromParentBlockRoot: "3A",
         },
         3
       )
@@ -373,7 +373,7 @@ describe("executionStatus / poision forkchoice if we validate previous invalid",
     {
       executionStatus: ExecutionStatus.Invalid,
       latestValidExecHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
-      invalidateFromBlockHash: "3B",
+      invalidateFromParentBlockRoot: "3B",
     },
     3
   );

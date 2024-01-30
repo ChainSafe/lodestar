@@ -49,6 +49,14 @@ export type BlockId = RootHex | Slot | "head" | "genesis" | "finalized";
 export type ExecutionOptimistic = boolean;
 
 export enum BroadcastValidation {
+  /* 
+  NOTE: The value `none` is not part of the spec. 
+
+  In case a node is configured only with the unknownBlockSync, it needs to know the unknown parent blocks on the network 
+  to initiate the syncing process. Such cases can be covered only if we publish blocks and make sure no gossip validation 
+  is performed on those. But this behavior is not the default.
+  */
+  none = "none",
   gossip = "gossip",
   consensus = "consensus",
   consensusAndEquivocation = "consensus_and_equivocation",
@@ -201,6 +209,7 @@ export type Endpoints = {
    *
    * param blockId Block identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
+   * @param indices Array of indices for blob sidecars to request for in the specified block. Returns all blob sidecars in the block if not specified.
    */
   getBlobSidecars: Endpoint<
     "GET",

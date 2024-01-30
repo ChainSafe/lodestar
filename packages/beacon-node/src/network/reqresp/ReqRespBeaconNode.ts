@@ -1,4 +1,4 @@
-import {PeerId} from "@libp2p/interface/peer-id";
+import {PeerId} from "@libp2p/interface";
 import {Libp2p} from "libp2p";
 import {BeaconConfig} from "@lodestar/config";
 import {ForkName, ForkSeq} from "@lodestar/params";
@@ -88,7 +88,8 @@ export class ReqRespBeaconNode extends ReqResp {
           metrics?.reqResp.rateLimitErrors.inc({method});
         },
         getPeerLogMetadata(peerId) {
-          return peersData.getPeerKind(peerId);
+          // this logs the whole agent version for unknown client which is good for debugging
+          return peersData.getPeerKind(peerId) ?? peersData.getAgentVersion(peerId);
         },
       }
     );

@@ -57,10 +57,10 @@ jobs:
         if: steps.cache-deps.outputs.cache-hit == 'true'
 
       - name: Build and collect docs
-        run: yarn build:docs
+        run: yarn docs:build
 
       - name: Lint built docs
-        run: yarn lint-docs:fix
+        run: yarn docs:lint:fix
 
       - name: Set up Python
         uses: actions/setup-python@v1

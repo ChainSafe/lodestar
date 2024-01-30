@@ -1,6 +1,5 @@
 import {describe, it, expect, beforeEach, afterEach} from "vitest";
 import {sleep} from "@lodestar/utils";
-import {config} from "@lodestar/config/default";
 import {Api, routesData, EventType, BeaconEvent} from "../../../../src/beacon/routes/events.js";
 import {getClient} from "../../../../src/beacon/client/events.js";
 import {getRoutes} from "../../../../src/beacon/server/events.js";
@@ -11,7 +10,7 @@ import {eventTestData} from "../testData/events.js";
 describe("beacon / events", () => {
   const {baseUrl, server} = getTestServer();
   const mockApi = getMockApi<Api>(routesData);
-  for (const route of Object.values(getRoutes(config, mockApi))) {
+  for (const route of Object.values(getRoutes(mockApi))) {
     registerRoute(server, route);
   }
 
@@ -53,7 +52,7 @@ describe("beacon / events", () => {
       });
 
       // Capture them on the client
-      const client = getClient(config, baseUrl);
+      const client = getClient(baseUrl);
       void client.eventstream(topicsToRequest, controller.signal, (event) => {
         eventsReceived.push(event);
         if (eventsReceived.length >= eventsToSend.length) resolve();

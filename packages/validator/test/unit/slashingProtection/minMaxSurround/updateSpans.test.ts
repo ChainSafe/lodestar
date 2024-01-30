@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {describe, it, expect} from "vitest";
 import {MinMaxSurroundAttestation, MinMaxSurround} from "../../../../src/slashingProtection/minMaxSurround/index.js";
 import {DistanceStoreMemory, storeToSpansPerEpoch, emptyPubkey} from "./utils.js";
 
@@ -39,7 +39,7 @@ describe("Update spans test", () => {
       await minMaxSurround.insertAttestation(emptyPubkey, att);
 
       const spansByEpochResult = await storeToSpansPerEpoch(store);
-      expect(spansByEpochResult).to.deep.equal(spansByEpoch);
+      expect(spansByEpochResult).toEqual(spansByEpoch);
     });
   }
 });

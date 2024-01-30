@@ -231,11 +231,12 @@ export class NetworkProcessor {
   }
 
   searchUnknownSlotRoot({slot, root}: SlotRootHex, peer?: PeerIdStr): void {
-    // Search for the unknown block
-    if (!this.unknownRootsBySlot.getOrDefault(slot).has(root)) {
-      this.unknownRootsBySlot.getOrDefault(slot).add(root);
-      this.events.emit(NetworkEvent.unknownBlock, {rootHex: root, peer});
+    if (this.chain.seenBlock(root) || this.unknownRootsBySlot.getOrDefault(slot).has(root)) {
+      return;
     }
+    // Search for the unknown block
+    this.unknownRootsBySlot.getOrDefault(slot).add(root);
+    this.events.emit(NetworkEvent.unknownBlock, {rootHex: root, peer});
   }
 
   private onPendingGossipsubMessage(message: PendingGossipsubMessage): void {
@@ -432,7 +433,9 @@ export class NetworkProcessor {
         ];
 
     if (Array.isArray(messageOrArray)) {
-      messageOrArray.forEach((msg) => this.trackJobTime(msg, messageOrArray.length));
+      for (const msg of messageOrArray) {
+        this.trackJobTime(msg, messageOrArray.length);
+      }
     } else {
       this.trackJobTime(messageOrArray, 1);
     }

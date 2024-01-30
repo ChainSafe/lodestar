@@ -1,5 +1,5 @@
 import {Libp2p} from "libp2p";
-import {Message, TopicValidatorResult} from "@libp2p/interface/pubsub";
+import {Message, TopicValidatorResult} from "@libp2p/interface";
 import {PeerIdStr} from "@chainsafe/libp2p-gossipsub/types";
 import {ForkName} from "@lodestar/params";
 import {allForks, altair, capella, deneb, phase0, Slot} from "@lodestar/types";

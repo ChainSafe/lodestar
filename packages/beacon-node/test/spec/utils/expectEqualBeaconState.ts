@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {expect} from "vitest";
 import {allForks, ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";

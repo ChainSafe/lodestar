@@ -12,7 +12,7 @@ import {waitForEvent} from "../../utils/events/resolver.js";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
 import {ChainEvent} from "../../../src/chain/index.js";
 import {NetworkEvent} from "../../../src/network/index.js";
-import {connect} from "../../utils/network.js";
+import {connect, onPeerConnect} from "../../utils/network.js";
 import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger.js";
 import {BlockError, BlockErrorCode} from "../../../src/chain/errors/index.js";
 import {BlockSource, getBlockInput} from "../../../src/chain/blocks/types.js";
@@ -48,7 +48,7 @@ describe("sync / unknown block sync", function () {
   for (const {id, event} of testCases) {
     it(id, async function () {
       // the node needs time to transpile/initialize bls worker threads
-      const genesisSlotsDelay = 7;
+      const genesisSlotsDelay = 4;
       const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
       const testLoggerOpts: TestLoggerOpts = {
         level: LogLevel.info,
@@ -71,6 +71,7 @@ describe("sync / unknown block sync", function () {
           chain: {blsVerifyAllMainThread: true},
         },
         validatorCount,
+        genesisTime,
         logger: loggerNodeA,
       });
 
@@ -100,7 +101,7 @@ describe("sync / unknown block sync", function () {
           chain: {blsVerifyAllMainThread: true},
         },
         validatorCount,
-        genesisTime: bn.chain.getHeadState().genesisTime,
+        genesisTime,
         logger: loggerNodeB,
       });
 
@@ -116,7 +117,11 @@ describe("sync / unknown block sync", function () {
         ({block}) => block === headSummary.blockRoot
       );
 
+      const connected = Promise.all([onPeerConnect(bn2.network), onPeerConnect(bn.network)]);
       await connect(bn2.network, bn.network);
+      await connected;
+      loggerNodeA.info("Node A connected to Node B");
+
       const headInput = getBlockInput.preDeneb(config, head, BlockSource.gossip, null);
 
       switch (event) {
@@ -147,4 +152,4 @@ describe("sync / unknown block sync", function () {
       await waitForSynced;
     });
   }
-}, {timeout: 30_000});
+}, {timeout: 40_000});

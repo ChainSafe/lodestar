@@ -1,5 +1,4 @@
-import {expect} from "chai";
-import sinon from "sinon";
+import {describe, it, expect, beforeAll, beforeEach, afterEach, vi} from "vitest";
 import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
 import {createChainForkConfig} from "@lodestar/config";
@@ -15,30 +14,32 @@ import {loggerVc} from "../../utils/logger.js";
 import {ClockMock} from "../../utils/clock.js";
 import {ZERO_HASH_HEX} from "../../utils/types.js";
 
-describe("BlockDutiesService", function () {
-  const sandbox = sinon.createSandbox();
+vi.mock("../../../src/services/validatorStore.js");
 
-  const api = getApiClientStub(sandbox);
-  const validatorStore = sinon.createStubInstance(ValidatorStore) as ValidatorStore &
-    sinon.SinonStubbedInstance<ValidatorStore>;
+describe("BlockDutiesService", function () {
+  const api = getApiClientStub();
+  // @ts-expect-error - Mocked class don't need parameters
+  const validatorStore = vi.mocked(new ValidatorStore());
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
 
   const config = createChainForkConfig(mainnetConfig);
 
-  before(() => {
+  beforeAll(() => {
     const secretKeys = Array.from({length: 2}, (_, i) => bls.SecretKey.fromBytes(Buffer.alloc(32, i + 1)));
     pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
-    validatorStore.votingPubkeys.returns(pubkeys.map(toHexString));
+    validatorStore.votingPubkeys.mockReturnValue(pubkeys.map(toHexString));
   });
 
   let controller: AbortController; // To stop clock
-  beforeEach(() => (controller = new AbortController()));
+  beforeEach(() => {
+    controller = new AbortController();
+  });
   afterEach(() => controller.abort());
 
   it("Should produce, sign, and publish a block", async function () {
     // Reply with some duties
     const slot = 0; // genesisTime is right now, so test with slot = currentSlot
-    api.validator.getProposerDuties.resolves({
+    api.validator.getProposerDuties.mockResolvedValue({
       response: {
         dependentRoot: ZERO_HASH_HEX,
         executionOptimistic: false,
@@ -57,9 +58,20 @@ describe("BlockDutiesService", function () {
     });
 
     const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
-    validatorStore.signRandao.resolves(signedBlock.message.body.randaoReveal);
-    validatorStore.signBlock.callsFake(async (_, block) => ({message: block, signature: signedBlock.signature}));
-    api.validator.produceBlockV3.resolves({
+    validatorStore.signRandao.mockResolvedValue(signedBlock.message.body.randaoReveal);
+    validatorStore.signBlock.mockImplementation(async (_, block) => ({
+      message: block,
+      signature: signedBlock.signature,
+    }));
+    validatorStore.getBuilderSelectionParams.mockReturnValue({
+      selection: routes.validator.BuilderSelection.MaxProfit,
+      boostFactor: BigInt(100),
+    });
+    validatorStore.getGraffiti.mockReturnValue("aaaa");
+    validatorStore.getFeeRecipient.mockReturnValue("0x00");
+    validatorStore.strictFeeRecipientCheck.mockReturnValue(false);
+
+    api.validator.produceBlockV3.mockResolvedValue({
       response: {
         data: signedBlock.message,
         version: ForkName.bellatrix,
@@ -71,7 +83,7 @@ describe("BlockDutiesService", function () {
       ok: true,
       status: HttpStatusCode.OK,
     });
-    api.beacon.publishBlockV2.resolves();
+    api.beacon.publishBlockV2.mockResolvedValue({ok: true, status: HttpStatusCode.OK, response: undefined});
 
     // Trigger block production for slot 1
     const notifyBlockProductionFn = blockService["dutiesService"]["notifyBlockProductionFn"];
@@ -81,17 +93,32 @@ describe("BlockDutiesService", function () {
     await sleep(20, controller.signal);
 
     // Must have submitted the block received on signBlock()
-    expect(api.beacon.publishBlockV2.callCount).to.equal(1, "publishBlock() must be called once");
-    expect(api.beacon.publishBlockV2.getCall(0).args).to.deep.equal(
-      [signedBlock, {broadcastValidation: routes.beacon.BroadcastValidation.consensus}],
-      "wrong publishBlock() args"
-    );
+    expect(api.beacon.publishBlockV2).toHaveBeenCalledOnce();
+    expect(api.beacon.publishBlockV2.mock.calls[0]).toEqual([
+      signedBlock,
+      {broadcastValidation: routes.beacon.BroadcastValidation.consensus},
+    ]);
+
+    // ProduceBlockV3 is called with all correct arguments
+    expect(api.validator.produceBlockV3.mock.calls[0]).toEqual([
+      1,
+      signedBlock.message.body.randaoReveal,
+      "aaaa",
+      false,
+      {
+        feeRecipient: "0x00",
+        builderSelection: routes.validator.BuilderSelection.MaxProfit,
+        strictFeeRecipientCheck: false,
+        blindedLocal: false,
+        builderBoostFactor: BigInt(100),
+      },
+    ]);
   });
 
   it("Should produce, sign, and publish a blinded block", async function () {
     // Reply with some duties
     const slot = 0; // genesisTime is right now, so test with slot = currentSlot
-    api.validator.getProposerDuties.resolves({
+    api.validator.getProposerDuties.mockResolvedValue({
       response: {
         dependentRoot: ZERO_HASH_HEX,
         executionOptimistic: false,
@@ -110,9 +137,12 @@ describe("BlockDutiesService", function () {
     });
 
     const signedBlock = ssz.bellatrix.SignedBlindedBeaconBlock.defaultValue();
-    validatorStore.signRandao.resolves(signedBlock.message.body.randaoReveal);
-    validatorStore.signBlock.callsFake(async (_, block) => ({message: block, signature: signedBlock.signature}));
-    api.validator.produceBlockV3.resolves({
+    validatorStore.signRandao.mockResolvedValue(signedBlock.message.body.randaoReveal);
+    validatorStore.signBlock.mockImplementation(async (_, block) => ({
+      message: block,
+      signature: signedBlock.signature,
+    }));
+    api.validator.produceBlockV3.mockResolvedValue({
       response: {
         data: signedBlock.message,
         version: ForkName.bellatrix,
@@ -124,7 +154,7 @@ describe("BlockDutiesService", function () {
       ok: true,
       status: HttpStatusCode.OK,
     });
-    api.beacon.publishBlindedBlockV2.resolves();
+    api.beacon.publishBlindedBlockV2.mockResolvedValue({ok: true, status: HttpStatusCode.OK, response: undefined});
 
     // Trigger block production for slot 1
     const notifyBlockProductionFn = blockService["dutiesService"]["notifyBlockProductionFn"];
@@ -134,10 +164,10 @@ describe("BlockDutiesService", function () {
     await sleep(20, controller.signal);
 
     // Must have submitted the block received on signBlock()
-    expect(api.beacon.publishBlindedBlockV2.callCount).to.equal(1, "publishBlindedBlockV2() must be called once");
-    expect(api.beacon.publishBlindedBlockV2.getCall(0).args).to.deep.equal(
-      [signedBlock, {broadcastValidation: routes.beacon.BroadcastValidation.consensus}],
-      "wrong publishBlock() args"
-    );
+    expect(api.beacon.publishBlindedBlockV2).toHaveBeenCalledOnce();
+    expect(api.beacon.publishBlindedBlockV2.mock.calls[0]).toEqual([
+      signedBlock,
+      {broadcastValidation: routes.beacon.BroadcastValidation.consensus},
+    ]);
   });
 });

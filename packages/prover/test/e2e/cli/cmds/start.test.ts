@@ -43,7 +43,7 @@ describe("prover/start", () => {
   });
 
   describe("when started", () => {
-    let proc: childProcess.ChildProcess;
+    let proc: childProcess.ChildProcess | null = null;
     const paramsFilePath = path.join("/tmp", "e2e-test-env", "params.json");
     const web3: Web3 = new Web3(proxyUrl);
 
@@ -74,7 +74,9 @@ describe("prover/start", () => {
     }, 50000);
 
     afterAll(async () => {
-      await stopChildProcess(proc);
+      if (proc) {
+        await stopChildProcess(proc);
+      }
     });
 
     it("should respond to verified calls", async () => {

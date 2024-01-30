@@ -32,6 +32,14 @@ To run tests:
 - :test_tube: Run `yarn check-types` to check TypeScript types.
 - :test_tube: Run `yarn lint` to run the linter (ESLint).
 
+Note that to run `test:e2e`, first ensure that the environment is correctly setup by running the `run_e2e_env.sh` script.
+
+```sh
+GETH_DOCKER_IMAGE=ethereum/client-go:v1.11.6  NETHERMIND_DOCKER_IMAGE=nethermind/nethermind:1.18.0 ./scripts/run_e2e_env.sh start
+```
+
+Similarly, run `yarn download-spec-tests` before running `yarn test:spec`.
+
 Contributing to tests:
 
 - Test must not depend on external live resources, such that running tests for a commit must be deterministic:
@@ -39,15 +47,25 @@ Contributing to tests:
   - Do not pull unpinned versions from DockerHub (use deterministic tag) or Github (checkout commit not branch).
   - Carefully design tests that depend on timing sensitive events like p2p network e2e tests. Consider that Github runners are significantly less powerful than your development environment.
 
+### Common Issues
+
+**Error: [vitest] Cannot mock "../../src/db/repositories/index.js" because it is already loaded by "src/db/beacon.ts"**
+
+If you observe any error in tests with matching to above error message, that implies you are loading the mocks in the wrong order. The correct order is to import the mocks first and then the actual module. We suggest to import the mocks on very top before any local modules. 
+
+**✖ Error: Cannot find package 'async_hooks' imported from**
+
+If you observe following error running any of the test files that means you are running a file which itself or any dependency of that file imports `vitest`, but you are not running that file with `vitest` runner. Try running it with `yarn vitest` command, not with `node` command.
+
 ### Debugging Spec Tests
 
 - To fix errors always focus on passing all minimal tests first without running mainnet tests.
-- Spec tests often compare full expected vs actual states in JSON format. To better understand the diff it's convenient to use mocha's option `--inline-diffs`.
-- A single logical error can cause many spec tests to fail. To focus on a single test at a time you can use mocha's option `--bail` to stop at the first failed test
-- To then run only that failed test you can run against a specific file as use mocha's option `--grep` to run only one case
+- Spec tests often compare full expected vs actual states in JSON format.
+- A single logical error can cause many spec tests to fail. To focus on a single test at a time you can use vitest's option `--bail` to stop at the first failed test
+- To then run only that failed test you can run against a specific file as use vitest's filters to run only one case
 
 ```sh
-LODESTAR_PRESET=minimal ../../node_modules/.bin/mocha --config .mocharc.spec.yml test/spec/phase0/sanity.test.ts --inline-diffs --bail --grep "attestation"
+LODESTAR_PRESET=minimal yarn vitest --run --config vitest.spec.config.ts test/spec/phase0/sanity.test.ts
 ```
 
 ## Docker
@@ -228,6 +246,20 @@ Run script to download dashboards to `./dashboards` folder
 ```sh
 node scripts/download_dashboards.mjs
 ```
+
+## Contributing to Documentation
+
+When submitting PRs for documentation updates, build and run the documentation locally to ensure functionality before submission. For first time documentation contributors, install the python dependencies with `yarn docs:install`. Build the documentation locally with `yarn docs:build` and serve with `yarn docs:serve`
+
+Your locally served documentation will then be accessible at http://localhost:8000.
+
+If you run into build issues due to circular dependencies, branch switching or other incompatibilities, try cleaning your modules and rebuild your dependencies with:
+
+```sh
+yarn clean && yarn clean:nm && yarn && yarn build
+```
+
+We also use a spelling [word list](https://github.com/ChainSafe/lodestar/blob/unstable/.wordlist.txt) as part of our documentation checks. If using unrecognized words or abbreviations, please extend the word list to pass checks. Make sure the list is sorted with `./scripts/wordlist_sort.sh` and checked with `./scripts/wordlist_sort_check.sh` for sorting and duplicates.
 
 ## Label Guide
 

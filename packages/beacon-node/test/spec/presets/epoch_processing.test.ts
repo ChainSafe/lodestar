@@ -1,5 +1,5 @@
 import path from "node:path";
-import {expect} from "chai";
+import {expect} from "vitest";
 import {
   CachedBeaconStateAllForks,
   EpochTransitionCache,
@@ -71,7 +71,7 @@ const epochProcessing =
         if (testcase.post === undefined) {
           // If post.ssz_snappy is not value, the sub-transition processing is aborted
           // https://github.com/ethereum/consensus-specs/blob/dev/tests/formats/epoch_processing/README.md#postssz_snappy
-          expect(() => epochTransitionFn(state, epochTransitionCache)).to.throw();
+          expect(() => epochTransitionFn(state, epochTransitionCache)).toThrow();
         } else {
           epochTransitionFn(state, epochTransitionCache);
         }

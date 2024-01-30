@@ -9,9 +9,9 @@ import {verifyBlocksSanityChecks as verifyBlocksImportSanityChecks} from "../../
 import {BlockErrorCode} from "../../../../src/chain/errors/index.js";
 import {expectThrowsLodestarError} from "../../../utils/errors.js";
 import {IClock} from "../../../../src/util/clock.js";
-import {ClockStopped} from "../../../utils/mocks/clock.js";
+import {ClockStopped} from "../../../mocks/clock.js";
 import {BlockSource, getBlockInput} from "../../../../src/chain/blocks/types.js";
-import {MockedBeaconChain, getMockedBeaconChain} from "../../../__mocks__/mockedBeaconChain.js";
+import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 
 describe("chain / blocks / verifyBlocksSanityChecks", function () {
   let forkChoice: MockedBeaconChain["forkChoice"];

@@ -1,5 +1,5 @@
 import path from "node:path";
-import {expect} from "chai";
+import {expect} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {BeaconStateAllForks, isExecutionStateType, signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {InputType} from "@lodestar/spec-test-util";
@@ -8,7 +8,7 @@ import {phase0, allForks, bellatrix, ssz, RootHex, deneb} from "@lodestar/types"
 import {bnToNum, fromHex} from "@lodestar/utils";
 import {createBeaconConfig} from "@lodestar/config";
 import {ACTIVE_PRESET, ForkSeq, isForkBlobs} from "@lodestar/params";
-import {BeaconChain} from "../../../src/chain/index.js";
+import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
 import {ClockEvent} from "../../../src/util/clock.js";
 import {computeInclusionProof} from "../../../src/util/blobs.js";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
@@ -20,8 +20,8 @@ import {getExecutionEngineFromBackend} from "../../../src/execution/index.js";
 import {ExecutionPayloadStatus} from "../../../src/execution/engine/interface.js";
 import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
-import {getStubbedBeaconDb} from "../../utils/mocks/db.js";
-import {ClockStopped} from "../../utils/mocks/clock.js";
+import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
+import {ClockStopped} from "../../mocks/clock.js";
 import {
   getBlockInput,
   AttestationImportOpt,
@@ -99,7 +99,7 @@ const forkChoiceTest =
           },
           {
             config: createBeaconConfig(config, state.genesisValidatorsRoot),
-            db: getStubbedBeaconDb(),
+            db: getMockedBeaconDb(),
             logger,
             // eslint-disable-next-line @typescript-eslint/no-empty-function
             processShutdownCallback: () => {},
@@ -111,6 +111,9 @@ const forkChoiceTest =
             executionBuilder: undefined,
           }
         );
+
+        // The handler of `ChainEvent.forkChoiceFinalized` access `db.block` and raise error if not found.
+        chain.emitter.removeAllListeners(ChainEvent.forkChoiceFinalized);
 
         const stepsLen = steps.length;
         logger.debug("Fork choice test", {steps: stepsLen});
@@ -265,13 +268,13 @@ const forkChoiceTest =
               const proposerBootRoot = (chain.forkChoice as ForkChoice).getProposerBoostRoot();
 
               if (step.checks.head !== undefined) {
-                expect({slot: head.slot, root: head.blockRoot}).deep.equals(
+                expect({slot: head.slot, root: head.blockRoot}).toEqualWithMessage(
                   {slot: bnToNum(step.checks.head.slot), root: step.checks.head.root},
                   `Invalid head at step ${i}`
                 );
               }
               if (step.checks.proposer_boost_root !== undefined) {
-                expect(proposerBootRoot).to.be.equal(
+                expect(proposerBootRoot).toEqualWithMessage(
                   step.checks.proposer_boost_root,
                   `Invalid proposer boost root at step ${i}`
                 );
@@ -280,18 +283,18 @@ const forkChoiceTest =
               // Compare in slots because proposer boost steps doesn't always come on
               // slot boundary.
               if (step.checks.time !== undefined && step.checks.time > 0)
-                expect(chain.forkChoice.getTime()).to.be.equal(
+                expect(chain.forkChoice.getTime()).toEqualWithMessage(
                   Math.floor(bnToNum(step.checks.time) / config.SECONDS_PER_SLOT),
                   `Invalid forkchoice time at step ${i}`
                 );
               if (step.checks.justified_checkpoint) {
-                expect(toSpecTestCheckpoint(chain.forkChoice.getJustifiedCheckpoint())).to.be.deep.equal(
+                expect(toSpecTestCheckpoint(chain.forkChoice.getJustifiedCheckpoint())).toEqualWithMessage(
                   step.checks.justified_checkpoint,
                   `Invalid justified checkpoint at step ${i}`
                 );
               }
               if (step.checks.finalized_checkpoint) {
-                expect(toSpecTestCheckpoint(chain.forkChoice.getFinalizedCheckpoint())).to.be.deep.equal(
+                expect(toSpecTestCheckpoint(chain.forkChoice.getFinalizedCheckpoint())).toEqualWithMessage(
                   step.checks.finalized_checkpoint,
                   `Invalid finalized checkpoint at step ${i}`
                 );

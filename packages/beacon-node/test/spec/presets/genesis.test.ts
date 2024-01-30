@@ -1,5 +1,5 @@
 import path from "node:path";
-import {expect} from "chai";
+import {expect} from "vitest";
 import {phase0, Root, ssz, TimeSeconds, allForks, deneb} from "@lodestar/types";
 import {InputType} from "@lodestar/spec-test-util";
 import {
@@ -109,7 +109,7 @@ const genesisValidity: TestRunnerFn<GenesisValidityTestCase, boolean> = (fork) =
       },
       getExpected: (testCase) => testCase.is_valid,
       expectFunc: (testCase, expected, actual) => {
-        expect(actual).to.be.equal(expected, "isValidGenesisState is not" + expected);
+        expect(actual).toEqualWithMessage(expected, "isValidGenesisState is not" + expected);
       },
     },
   };

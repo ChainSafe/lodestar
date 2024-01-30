@@ -1,8 +1,8 @@
 import EventEmitter from "events";
-import {PeerId} from "@libp2p/interface/peer-id";
+import {PeerId} from "@libp2p/interface";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {exportToProtobuf} from "@libp2p/peer-id-factory";
-import {createKeypairFromPeerId, ENR, ENRData, IKeypair, SignableENR} from "@chainsafe/discv5";
+import {createPrivateKeyFromPeerId, ENR, ENRData, SignableENR} from "@chainsafe/enr";
 import {spawn, Thread, Worker} from "@chainsafe/threads";
 import {chainConfigFromJson, chainConfigToJson, BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
@@ -25,7 +25,7 @@ export type Discv5Events = {
  * Wrapper class abstracting the details of discv5 worker instantiation and message-passing
  */
 export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<EventEmitter, Discv5Events>}) {
-  private readonly keypair: IKeypair;
+  private readonly keypair;
   private readonly subscription: {unsubscribe: () => void};
   private closed = false;
 
@@ -35,7 +35,7 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
   ) {
     super();
 
-    this.keypair = createKeypairFromPeerId(this.opts.peerId);
+    this.keypair = createPrivateKeyFromPeerId(this.opts.peerId);
     this.subscription = workerApi.discovered().subscribe((enrObj) => this.onDiscovered(enrObj));
   }
 
@@ -80,7 +80,7 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
 
   async enr(): Promise<SignableENR> {
     const obj = await this.workerApi.enr();
-    return new SignableENR(obj.kvs, obj.seq, this.keypair);
+    return new SignableENR(obj.kvs, obj.seq, this.keypair.privateKey);
   }
 
   setEnrValue(key: string, value: Uint8Array): Promise<void> {

@@ -22,6 +22,7 @@ import {GlobalArgs} from "../../options/index.js";
 import {YargsError, cleanOldLogFiles, getDefaultGraffiti, mkdir, parseLoggerArgs} from "../../util/index.js";
 import {onGracefulShutdown, parseFeeRecipient, parseProposerConfig} from "../../util/index.js";
 import {getVersionData} from "../../util/version.js";
+import {parseBuilderSelection, parseBuilderBoostFactor} from "../../util/proposerConfig.js";
 import {getAccountPaths, getValidatorPaths} from "./paths.js";
 import {IValidatorCliArgs, validatorMetricsDefaultOptions, validatorMonitoringDefaultOptions} from "./options.js";
 import {getSignersFromArgs} from "./signers/index.js";
@@ -227,6 +228,7 @@ function getProposerConfigFromArgs(
       selection: parseBuilderSelection(
         args["builder.selection"] ?? (args["builder"] ? defaultOptions.builderAliasSelection : undefined)
       ),
+      boostFactor: parseBuilderBoostFactor(args["builder.boostFactor"]),
     },
   };
 
@@ -253,24 +255,6 @@ function getProposerConfigFromArgs(
   return valProposerConfig;
 }
 
-function parseBuilderSelection(builderSelection?: string): routes.validator.BuilderSelection | undefined {
-  if (builderSelection) {
-    switch (builderSelection) {
-      case "maxprofit":
-        break;
-      case "builderalways":
-        break;
-      case "builderonly":
-        break;
-      case "executiononly":
-        break;
-      default:
-        throw Error("Invalid input for builder selection, check help.");
-    }
-  }
-  return builderSelection as routes.validator.BuilderSelection;
-}
-
 function parseBroadcastValidation(broadcastValidation?: string): routes.beacon.BroadcastValidation | undefined {
   if (broadcastValidation) {
     switch (broadcastValidation) {
@@ -279,7 +263,7 @@ function parseBroadcastValidation(broadcastValidation?: string): routes.beacon.B
       case "consensus_and_equivocation":
         break;
       default:
-        throw Error("Invalid input for broadcastValidation, check help");
+        throw new YargsError("Invalid input for broadcastValidation, check help");
     }
   }
 

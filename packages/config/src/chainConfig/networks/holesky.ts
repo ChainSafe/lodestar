@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {fromHexString as b} from "@chainsafe/ssz";
 import {ChainConfig} from "../types.js";
-import {chainConfig as mainnet} from "../presets/mainnet.js";
+import {chainConfig as mainnet} from "../configs/mainnet.js";
 
 // Holesky beacon chain config:
 // https://github.com/eth-clients/holesky/blob/main/custom_config_data/config.yaml
@@ -31,6 +31,9 @@ export const holeskyChainConfig: ChainConfig = {
   // Capella
   CAPELLA_FORK_VERSION: b("0x04017000"),
   CAPELLA_FORK_EPOCH: 256,
+  // Deneb
+  DENEB_FORK_VERSION: b("0x05017000"),
+  DENEB_FORK_EPOCH: 29696,
 
   // # 28,000,000,000 Gwei to ensure quicker ejection
   EJECTION_BALANCE: 28000000000,

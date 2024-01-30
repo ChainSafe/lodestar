@@ -1,4 +1,4 @@
-import {expect} from "chai";
+import {expect} from "vitest";
 import {init} from "@chainsafe/bls/switchable";
 import {isForkLightClient} from "@lodestar/params";
 import {altair, phase0, RootHex, Slot, ssz} from "@lodestar/types";

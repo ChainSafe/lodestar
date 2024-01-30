@@ -1,5 +1,5 @@
 import path from "node:path";
-import {expect} from "chai";
+import {expect} from "vitest";
 import {ProofType, SingleProof, Tree} from "@chainsafe/persistent-merkle-tree";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
@@ -23,7 +23,7 @@ const merkle: TestRunnerFn<MerkleTestCase, IProof> = (fork) => {
       const leafIndex = Number(specTestProof.leaf_index);
       const depth = Math.floor(Math.log2(leafIndex));
       const verified = verifyMerkleBranch(leaf, branch, depth, leafIndex % 2 ** depth, stateRoot);
-      expect(verified).to.equal(true, "invalid merkle branch");
+      expect(verified).toEqualWithMessage(true, "invalid merkle branch");
 
       const lodestarProof = new Tree(state.node).getProof({
         gindex: specTestProof.leaf_index,
@@ -48,7 +48,7 @@ const merkle: TestRunnerFn<MerkleTestCase, IProof> = (fork) => {
       timeout: 10000,
       getExpected: (testCase) => testCase.proof,
       expectFunc: (testCase, expected, actual) => {
-        expect(actual).to.be.deep.equal(expected, "incorrect proof");
+        expect(actual).toEqualWithMessage(expected, "incorrect proof");
       },
       // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
     },

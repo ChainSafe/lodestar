@@ -11,6 +11,7 @@ import {
   Root,
   Slot,
   ssz,
+  UintBn64,
   ValidatorIndex,
   ProducedBlockSource,
   stringType,
@@ -48,6 +49,7 @@ export enum BuilderSelection {
 export type ExtraProduceBlockOps = {
   feeRecipient?: string;
   builderSelection?: BuilderSelection;
+  builderBoostFactor?: UintBn64;
   strictFeeRecipientCheck?: boolean;
   blindedLocal?: boolean;
 };
@@ -337,6 +339,7 @@ export type Endpoints = {
         skip_randao_verification?: boolean;
         fee_recipient?: string;
         builder_selection?: string;
+        builder_boost_factor?: string;
         strict_fee_recipient_check?: boolean;
         blinded_local?: boolean;
       };
@@ -685,6 +688,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
         skipRandaoVerification,
         feeRecipient,
         builderSelection,
+        builderBoostFactor,
         strictFeeRecipientCheck,
         blindedLocal,
       }) => ({
@@ -695,6 +699,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
           skip_randao_verification: skipRandaoVerification,
           fee_recipient: feeRecipient,
           builder_selection: builderSelection,
+          builder_boost_factor: builderBoostFactor?.toString(),
           strict_fee_recipient_check: strictFeeRecipientCheck,
           blinded_local: blindedLocal,
         },
@@ -706,6 +711,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
         skipRandaoVerification: query.skip_randao_verification,
         feeRecipient: query.fee_recipient,
         builderSelection: query.builder_selection as BuilderSelection,
+        builderBoostFactor: parseBuilderBoostFactor(query.builder_boost_factor),
         strictFeeRecipientCheck: query.strict_fee_recipient_check,
         blindedLocal: query.blinded_local,
       }),
@@ -717,6 +723,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
           skip_randao_verification: Schema.Boolean,
           fee_recipient: Schema.String,
           builder_selection: Schema.String,
+          builder_boost_factor: Schema.String,
           strict_fee_recipient_check: Schema.Boolean,
           blinded_local: Schema.Boolean,
         },
@@ -995,3 +1002,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
     resp: EmptyResponseCodec as ResponseCodec<AnyPostEndpoint>,
   },
 };
+
+function parseBuilderBoostFactor(builderBoostFactorInput?: string | number | bigint): bigint | undefined {
+  return builderBoostFactorInput !== undefined ? BigInt(builderBoostFactorInput) : undefined;
+}

@@ -40,7 +40,7 @@ export function getClient(
     beacon: createApiClientMethods(beacon.getDefinitions(config), httpClient),
     config: createApiClientMethods(configApi.definitions, httpClient),
     debug: createApiClientMethods(debug.definitions, httpClient),
-    events: events.getClient(config, httpClient),
+    events: events.getClient(httpClient),
     lightclient: createApiClientMethods(lightclient.getDefinitions(config), httpClient),
     lodestar: createApiClientMethods(lodestar.definitions, httpClient),
     node: createApiClientMethods(node.definitions, httpClient),

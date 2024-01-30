@@ -1,4 +1,4 @@
-import {ENR} from "@chainsafe/discv5";
+import {ENR} from "@chainsafe/enr";
 import {BeaconConfig} from "@lodestar/config";
 import {ENRKey} from "../metadata.js";
 

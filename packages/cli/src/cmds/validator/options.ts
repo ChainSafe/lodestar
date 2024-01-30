@@ -45,6 +45,7 @@ export type IValidatorCliArgs = AccountValidatorArgs &
 
     builder?: boolean;
     "builder.selection"?: string;
+    "builder.boostFactor"?: string;
 
     useProduceBlockV3?: boolean;
     broadcastValidation?: string;
@@ -246,10 +247,17 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     group: "builder",
   },
 
+  "builder.boostFactor": {
+    type: "string",
+    description:
+      "Percentage multiplier the block producing beacon node must apply to boost (>100) or dampen (<100) builder block value for selection against execution block. The multiplier is ignored if `--builder.selection` is set to anything other than `maxprofit`",
+    defaultDescription: `${defaultOptions.builderBoostFactor}`,
+    group: "builder",
+  },
+
   useProduceBlockV3: {
     type: "boolean",
-    description: "Enable/disable usage of produceBlockV3 that might not be supported by all beacon clients yet",
-    defaultDescription: `${defaultOptions.useProduceBlockV3}`,
+    description: "Enable/disable usage of produceBlockV3 for block production, is auto enabled on deneb+ blocks",
   },
 
   broadcastValidation: {

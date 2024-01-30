@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import jsyaml from "js-yaml";
-import {expect} from "chai";
+import {expect, describe, it} from "vitest";
 import {blsSpecTests} from "../specTestVersioning.js";
 import {readdirSyncSpec} from "../utils/specTestIterator.js";
 import {testFnByType} from "./bls.js";
@@ -35,15 +35,15 @@ for (const fnName of readdirSyncSpec(blsSpecTests.outputDir)) {
 
     const fnTestDirpath = path.join(blsSpecTests.outputDir, fnName);
     for (const testName of readdirSyncSpec(fnTestDirpath)) {
-      it(`${fnName}/${testName}`, function () {
+      it(`${fnName}/${testName}`, function (context) {
         if (fn === "skip") {
-          this.skip();
+          context.skip();
           return;
         }
 
         // Do not manually skip tests here, do it in the top of the file
         if (skippedTestNames.includes(testName)) {
-          this.skip();
+          context.skip();
           return;
         }
 
@@ -52,10 +52,10 @@ for (const fnName of readdirSyncSpec(blsSpecTests.outputDir)) {
         // Test format: https://github.com/ethereum/bls12-381-tests
         if (testData.output === null) {
           // Expect failure
-          expect(() => fn(testData.input) as never).to.throw();
+          expect(() => fn(testData.input) as never).toThrow();
         } else {
           // Expect success
-          expect(fn(testData.input)).to.deep.equals(testData.output);
+          expect(fn(testData.input)).toEqual(testData.output);
         }
       });
     }

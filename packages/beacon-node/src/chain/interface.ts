@@ -10,7 +10,8 @@ import {
   ValidatorIndex,
   deneb,
   Wei,
-  Gwei,
+  capella,
+  altair,
 } from "@lodestar/types";
 import {
   BeaconStateAllForks,
@@ -117,6 +118,8 @@ export interface IBeaconChain {
 
   /** Stop beacon chain processing */
   close(): Promise<void>;
+  /** Chain has seen the specified block root or not. The block may not be processed yet, use forkchoice.hasBlock to check it  */
+  seenBlock(blockRoot: RootHex): boolean;
   /** Populate in-memory caches with persisted data. Call at least once on startup */
   loadFromDisk(): Promise<void>;
   /** Persist in-memory data to the DB. Call at least once before stopping the process */
@@ -154,12 +157,18 @@ export interface IBeaconChain {
 
   getContents(beaconBlock: deneb.BeaconBlock): deneb.Contents;
 
-  produceBlock(
-    blockAttributes: BlockAttributes
-  ): Promise<{block: allForks.BeaconBlock; executionPayloadValue: Wei; consensusBlockValue: Gwei}>;
-  produceBlindedBlock(
-    blockAttributes: BlockAttributes
-  ): Promise<{block: allForks.BlindedBeaconBlock; executionPayloadValue: Wei; consensusBlockValue: Gwei}>;
+  produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody>;
+  produceBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{
+    block: allForks.BeaconBlock;
+    executionPayloadValue: Wei;
+    consensusBlockValue: Wei;
+    shouldOverrideBuilder?: boolean;
+  }>;
+  produceBlindedBlock(blockAttributes: BlockAttributes & {commonBlockBody?: CommonBlockBody}): Promise<{
+    block: allForks.BlindedBeaconBlock;
+    executionPayloadValue: Wei;
+    consensusBlockValue: Wei;
+  }>;
 
   /** Process a block until complete */
   processBlock(block: BlockInput, opts?: ImportBlockOpts): Promise<void>;
@@ -199,3 +208,7 @@ export type SSZObjectType =
   | "signedAggregatedAndProof"
   | "syncCommittee"
   | "contributionAndProof";
+
+export type CommonBlockBody = phase0.BeaconBlockBody &
+  Pick<capella.BeaconBlockBody, "blsToExecutionChanges"> &
+  Pick<altair.BeaconBlockBody, "syncAggregate">;

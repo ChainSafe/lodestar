@@ -14,13 +14,12 @@ import {
   ForkName,
 } from "@lodestar/params";
 import {createBeaconConfig} from "@lodestar/config";
-
+import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {generateState} from "../../../utils/state.js";
 import {validateGossipBlsToExecutionChange} from "../../../../src/chain/validation/blsToExecutionChange.js";
 import {BlsToExecutionChangeErrorCode} from "../../../../src/chain/errors/blsToExecutionChangeError.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState.js";
-import {MockedBeaconChain, getMockedBeaconChain} from "../../../__mocks__/mockedBeaconChain.js";
 
 describe("validate bls to execution change", () => {
   let chainStub: MockedBeaconChain;

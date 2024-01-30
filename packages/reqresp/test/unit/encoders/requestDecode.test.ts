@@ -9,7 +9,7 @@ describe("encoders / requestDecode", () => {
   describe("valid cases", () => {
     it.each(requestEncodersCases)("$id", async ({protocol, requestBody, chunks}) => {
       const decodedBody = await pipe(arrToSource(chunks), requestDecode(protocol));
-      expect(decodedBody).to.deep.equal(requestBody);
+      expect(decodedBody).toEqual(requestBody);
     });
   });
 

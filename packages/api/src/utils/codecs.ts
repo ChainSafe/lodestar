@@ -2,7 +2,7 @@
 
 import {ArrayType, ListBasicType, ListCompositeType, Type, isBasicType, isCompositeType} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
-import {Gwei, Root, Wei} from "@lodestar/types";
+import {Root, Wei} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
 import {ExecutionOptimistic} from "../beacon/routes/beacon/block.js";
 import {
@@ -29,7 +29,7 @@ export type ExecutionOptimisticMeta = {executionOptimistic: ExecutionOptimistic}
 export type VersionMeta = {version: ForkName};
 export type ExecutionOptimisticAndVersionMeta = ExecutionOptimisticMeta & VersionMeta;
 export type ExecutionOptimisticAndDependentRootMeta = {executionOptimistic: ExecutionOptimistic; dependentRoot: Root};
-export type BlockValuesMeta = {executionPayloadValue: Wei; consensusBlockValue: Gwei};
+export type BlockValuesMeta = {executionPayloadValue: Wei; consensusBlockValue: Wei};
 
 /** Shortcut for routes that have no params, query */
 export const EmptyGetRequestCodec: GetRequestCodec<AnyGetEndpoint> = {
