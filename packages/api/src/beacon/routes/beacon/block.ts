@@ -367,6 +367,7 @@ export function getReqSerializers(config: ChainForkConfig): ReqSerializers<Api, 
       }),
       parseReq: ({params, query}) => [params.block_id, query.indices],
       schema: {
+        params: {block_id: Schema.StringRequired},
         query: {indices: Schema.UintArray},
       },
     },
