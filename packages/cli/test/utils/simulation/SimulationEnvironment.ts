@@ -9,6 +9,7 @@ import {nodeUtils} from "@lodestar/beacon-node";
 import {ChainForkConfig} from "@lodestar/config";
 import {activePreset} from "@lodestar/params";
 import {BeaconStateAllForks, interopSecretKey} from "@lodestar/state-transition";
+import {formatTime} from "@lodestar/test-utils";
 import {EpochClock, MS_IN_SEC} from "./EpochClock.js";
 import {ExternalSignerServer} from "./ExternalSignerServer.js";
 import {SimulationTracker} from "./SimulationTracker.js";
@@ -96,6 +97,11 @@ export class SimulationEnvironment {
 
   async start(opts: StartOpts): Promise<void> {
     const currentTime = Date.now();
+    console.log(
+      `Starting simulation environment "${this.options.id}". currentTime=${new Date(
+        currentTime
+      ).toISOString()} simulationTimeout=${formatTime(opts.runTimeoutMs)}`
+    );
     if (opts.runTimeoutMs > 0) {
       setTimeout(() => {
         const slots = this.clock.getSlotFor((currentTime + opts.runTimeoutMs) / MS_IN_SEC);
@@ -119,6 +125,7 @@ export class SimulationEnvironment {
         `Start sequence not completed before genesis, in ${msToGenesis}ms (approx. ${epoch}/${slot}).`
       ).catch((e) => console.error("Error on stop", e));
     }, msToGenesis);
+    console.log(`Waiting for genesis for ${formatTime(msToGenesis)} else simulation will stop.`);
 
     try {
       registerProcessHandler(this);
@@ -126,21 +133,27 @@ export class SimulationEnvironment {
         await mkdir(this.options.rootDir);
       }
 
+      console.log("Starting the simulation runner");
       await this.runner.start();
+
+      console.log("Starting execution nodes");
       await Promise.all(this.nodes.map((node) => node.execution.job.start()));
 
+      console.log("Initializing genesis state for beacon nodes");
       await this.initGenesisState();
       if (!this.genesisState) {
         throw new Error("The genesis state for CL clients is not defined.");
       }
 
+      console.log("Starting beacon nodes");
       await Promise.all(this.nodes.map((node) => node.beacon.job.start()));
+
+      console.log("Starting validators");
       await Promise.all(this.nodes.map((node) => node.validator?.job.start()));
 
       if (this.nodes.some((node) => node.validator?.keys.type === "remote")) {
-        console.log("Starting external signer...");
+        console.log("Starting external signer");
         await this.externalSigner.start();
-        console.log("Started external signer");
 
         for (const node of this.nodes) {
           if (node.validator?.keys.type === "remote") {
@@ -156,6 +169,7 @@ export class SimulationEnvironment {
         }
       }
 
+      console.log("Starting the simulation tracker");
       await this.tracker.start();
       await Promise.all(this.nodes.map((node) => this.tracker.track(node)));
     } catch (error) {

@@ -5,6 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import {sleep} from "@lodestar/utils";
 import {TestContext} from "./interfaces.js";
+import {formatTime} from "./format.js";
 
 /**
  * If timeout is greater than 0, the parent will send the signal
@@ -201,11 +202,6 @@ const defaultStartOpts = {
   logHealthChecksAfterMs: 3000,
   resolveOn: ChildProcessResolve.Immediate,
 };
-
-function formatTime(timeMs: number): string {
-  const d = new Date(timeMs);
-  return `${d.getHours()}:${d.getMinutes()}:${d.getSeconds()}.${d.getMilliseconds()}`;
-}
 
 /**
  * Spawn child process and return it
