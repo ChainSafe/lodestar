@@ -324,6 +324,7 @@ export async function spawnChildProcess(
 
         const healthTimeoutId = setTimeout(() => {
           clearTimeout(healthTimeoutId);
+          clearInterval(intervalId);
 
           if (intervalId !== undefined) {
             reject(
