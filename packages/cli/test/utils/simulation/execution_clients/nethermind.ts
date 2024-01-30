@@ -105,6 +105,7 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
         await got.post(ethRpcPublicUrl, {json: {jsonrpc: "2.0", method: "net_version", params: [], id: 67}});
         return {ok: true};
       } catch (err) {
+        console.log(err);
         return {ok: false, reason: (err as Error).message, checkId: "JSON RPC query net_version"};
       }
     },
