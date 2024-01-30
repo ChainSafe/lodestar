@@ -101,7 +101,7 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
       stdoutFilePath: logFilePath,
     },
     health: async () => {
-      console.log("Starting health check for nethermind.....");
+      console.log("Starting health check for nethermind.....", ethRpcPublicUrl);
       try {
         await got.post(ethRpcPublicUrl, {json: {jsonrpc: "2.0", method: "net_version", params: [], id: 67}});
         console.log("Nethermind seems healthy.....");
