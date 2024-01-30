@@ -1,4 +1,5 @@
-import {compress, uncompress} from "snappyjs";
+import * as snappyjs from "snappyjs";
+import * as snappy from "snappy";
 import xxhashFactory from "xxhash-wasm";
 import {Message} from "@libp2p/interface";
 import {digest} from "@chainsafe/as-sha256";
@@ -61,6 +62,11 @@ export function msgIdFn(gossipTopicCache: GossipTopicCache, msg: Message): Uint8
   return Buffer.from(digest(Buffer.concat(vec))).subarray(0, 20);
 }
 
+/** Snappyjs is faster at compressing small buffers */
+const SNAPPYJS_COMPRESS_THRESHOLD = 200;
+/** Snappyjs is faster at uncompressing small buffers */
+const SNAPPYJS_UNCOMPRESS_THRESHOLD = 500;
+
 export class DataTransformSnappy {
   constructor(
     private readonly gossipTopicCache: GossipTopicCache,
@@ -74,7 +80,12 @@ export class DataTransformSnappy {
    * - `outboundTransform()`: compress snappy payload
    */
   inboundTransform(topicStr: string, data: Uint8Array): Uint8Array {
-    const uncompressedData = uncompress(data, this.maxSizePerMessage);
+    let uncompressedData: Uint8Array;
+    if (data.length < SNAPPYJS_UNCOMPRESS_THRESHOLD) {
+      uncompressedData = snappyjs.uncompress(data, this.maxSizePerMessage);
+    } else {
+      uncompressedData = snappy.uncompressSync(Buffer.from(data)) as Uint8Array;
+    }
 
     // check uncompressed data length before we extract beacon block root, slot or
     // attestation data at later steps
@@ -101,6 +112,10 @@ export class DataTransformSnappy {
       throw Error(`ssz_snappy encoded data length ${length} > ${this.maxSizePerMessage}`);
     }
     // No need to parse topic, everything is snappy compressed
-    return compress(data);
+    if (data.length < SNAPPYJS_COMPRESS_THRESHOLD) {
+      return snappyjs.compress(data);
+    } else {
+      return snappy.compressSync(Buffer.from(data));
+    }
   }
 }
