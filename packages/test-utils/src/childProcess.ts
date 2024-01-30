@@ -219,6 +219,8 @@ export async function spawnChildProcess(
   const options = {...defaultStartOpts, ...opts};
   const {env, pipeStdioToFile, pipeStdioToParent, logPrefix, pipeOnlyError, signal} = options;
   const {health, resolveOn, healthCheckIntervalMs, logHealthChecksAfterMs, healthTimeoutMs, testContext} = options;
+  console.log(`Starting child process command="${command} ${args.join(" ")}"`);
+  console.log(options);
 
   return new Promise<childProcess.ChildProcessWithoutNullStreams>((resolve, reject) => {
     void (async () => {
@@ -283,7 +285,7 @@ export async function spawnChildProcess(
       if (!health && resolveOn === ChildProcessResolve.Completion) {
         proc.once("exit", (code: number) => {
           if (code > 0) {
-            reject(new Error(`process exited. pid=${proc.pid}, code=${code}, command="${command} ${args.join(" ")}"`));
+            reject(new Error(`Process exited. pid=${proc.pid}, code=${code}, command="${command} ${args.join(" ")}"`));
           } else {
             resolve(proc);
           }
@@ -296,6 +298,7 @@ export async function spawnChildProcess(
       if (health) {
         const startHealthCheckMs = Date.now();
         const intervalId = setInterval(() => {
+          console.log(`Health check for ${logPrefix}`);
           health()
             .then((isHealthy) => {
               if (isHealthy.healthy) {
@@ -315,7 +318,7 @@ export async function spawnChildProcess(
               }
             })
             .catch((e) => {
-              console.error("error on health check, health functions must never throw", e);
+              console.error("Error on health check, health functions must never throw", e);
             });
         }, healthCheckIntervalMs);
 
@@ -341,7 +344,7 @@ export async function spawnChildProcess(
 
           reject(
             new Error(
-              `process exited before healthy. logPrefix=${logPrefix} pid=${proc.pid} healthTimeout=${formatTime(
+              `Process exited before healthy. logPrefix=${logPrefix} pid=${proc.pid} healthTimeout=${formatTime(
                 healthTimeoutMs ?? 0
               )} code=${code} command="${command} ${args.join(" ")}"`
             )
