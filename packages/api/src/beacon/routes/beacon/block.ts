@@ -209,12 +209,12 @@ export type Endpoints = {
    *
    * param blockId Block identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
-   * @param indices Array of indices for blob sidecars to request for in the specified block. Returns all blob sidecars in the block if not specified.
+   * indices Array of indices for blob sidecars to request for in the specified block. Returns all blob sidecars in the block if not specified.
    */
   getBlobSidecars: Endpoint<
     "GET",
-    {blockId: BlockId},
-    {params: {block_id: string}},
+    {blockId: BlockId; indices?: number[]},
+    {params: {block_id: string}; query: {indices?: number[]}},
     deneb.BlobSidecars,
     ExecutionOptimisticMeta
   >;
@@ -524,7 +524,11 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
     getBlobSidecars: {
       url: "/eth/v1/beacon/blob_sidecars/{block_id}",
       method: "GET",
-      req: blockIdOnlyReq,
+      req: {
+        writeReq: ({blockId, indices}) => ({params: {block_id: String(blockId)}, query: {indices}}),
+        parseReq: ({params, query}) => ({blockId: params.block_id, indices: query.indices}),
+        schema: {params: {block_id: Schema.StringRequired}, query: {indices: Schema.UintArray}},
+      },
       resp: {
         data: ssz.deneb.BlobSidecars,
         meta: ExecutionOptimisticCodec,
