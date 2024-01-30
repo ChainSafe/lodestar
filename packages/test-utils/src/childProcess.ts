@@ -301,6 +301,7 @@ export async function spawnChildProcess(
           console.log(`Health check for ${logPrefix}`);
           health()
             .then((isHealthy) => {
+              console.log({isHealthy});
               if (isHealthy.healthy) {
                 clearInterval(intervalId);
                 clearTimeout(healthTimeoutId);

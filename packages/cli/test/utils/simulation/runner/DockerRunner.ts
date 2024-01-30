@@ -106,6 +106,7 @@ export class DockerRunner implements RunnerEnv<RunnerType.Docker> {
             return status.ok ? {healthy: true} : {healthy: false};
           })
           .catch((error) => {
+            console.log("Docker runner health check", error);
             return {healthy: false, message: (error as Error).message};
           });
     } else {
