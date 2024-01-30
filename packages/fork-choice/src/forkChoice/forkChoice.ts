@@ -279,7 +279,7 @@ export class ForkChoice implements IForkChoice {
 
     // No reorg if headBlock is "not weak" ie. headBlock's weight exceeds (REORG_HEAD_WEIGHT_THRESHOLD = 20)% of total attester weight
     // https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_head_weak
-    const reorgThreshold = computeCommitteeFractionFromBalances(this.fcStore.justified.balances, {
+    const reorgThreshold = getCommitteeFraction(this.fcStore.justified.totalBalance, {
       slotsPerEpoch: SLOTS_PER_EPOCH,
       committeePercent: this.config.REORG_HEAD_WEIGHT_THRESHOLD,
     });
@@ -291,7 +291,7 @@ export class ForkChoice implements IForkChoice {
 
     // No reorg if parentBlock is "not strong" ie. parentBlock's weight is less than or equal to (REORG_PARENT_WEIGHT_THRESHOLD = 160)% of total attester weight
     // https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/fork-choice.md#is_parent_strong
-    const parentThreshold = computeCommitteeFractionFromBalances(this.fcStore.justified.balances, {
+    const parentThreshold = getCommitteeFraction(this.fcStore.justified.totalBalance, {
       slotsPerEpoch: SLOTS_PER_EPOCH,
       committeePercent: this.config.REORG_PARENT_WEIGHT_THRESHOLD,
     });
@@ -346,7 +346,7 @@ export class ForkChoice implements IForkChoice {
     if (this.opts?.proposerBoostEnabled && this.proposerBoostRoot) {
       const proposerBoostScore =
         this.justifiedProposerBoostScore ??
-        getProposerScore(this.fcStore.justified.totalBalance, {
+        getCommitteeFraction(this.fcStore.justified.totalBalance, {
           slotsPerEpoch: SLOTS_PER_EPOCH,
           committeePercent: this.config.PROPOSER_SCORE_BOOST,
         });
@@ -1459,11 +1459,12 @@ export function assertValidTerminalPowBlock(
     }
   }
 }
-
-export function getProposerScore(
+// Approximate https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/fork-choice.md#calculate_committee_fraction
+// Calculates proposer boost score when committeePercent = config.PROPOSER_SCORE_BOOST
+export function getCommitteeFraction(
   justifiedTotalActiveBalanceByIncrement: number,
-  config: {slotsPerEpoch: number; proposerScoreBoost: number}
+  config: {slotsPerEpoch: number; committeePercent: number}
 ): number {
   const committeeWeight = Math.floor(justifiedTotalActiveBalanceByIncrement / config.slotsPerEpoch);
-  return Math.floor((committeeWeight * config.proposerScoreBoost) / 100);
+  return Math.floor((committeeWeight * config.committeePercent) / 100);
 }
