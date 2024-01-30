@@ -92,7 +92,7 @@ export type Api = {
     format?: ResponseFormat
   ): Promise<
     ApiClientResponse<{
-      [HttpStatusCode.OK]: Uint8Array | {data: allForks.BeaconState; executionOptimistic: ExecutionOptimistic};
+      [HttpStatusCode.OK]: Uint8Array | {data: allForks.BeaconState};
     }>
   >;
 

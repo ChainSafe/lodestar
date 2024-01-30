@@ -46,7 +46,7 @@ export const testData: GenericServerTestCases<Api> = {
   },
   getState: {
     args: ["head", "json"],
-    res: {executionOptimistic: true, data: ssz.phase0.BeaconState.defaultValue()},
+    res: {data: ssz.phase0.BeaconState.defaultValue()},
   },
   getStateV2: {
     args: ["head", "json"],

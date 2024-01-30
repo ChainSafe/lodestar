@@ -76,6 +76,7 @@ import {BlockAttributes, produceBlockBody, produceCommonBlockBody} from "./produ
 import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
 import {BlockInput} from "./blocks/types.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
+import {HistoricalStateRegen} from "./historicalState/index.js";
 import {ShufflingCache} from "./shufflingCache.js";
 import {StateContextCache} from "./stateCache/stateContextCache.js";
 import {SeenGossipBlockInput} from "./seenCache/index.js";
@@ -108,6 +109,7 @@ export class BeaconChain implements IBeaconChain {
   readonly regen: QueuedStateRegenerator;
   readonly lightClientServer: LightClientServer;
   readonly reprocessController: ReprocessController;
+  readonly historicalStateRegen?: HistoricalStateRegen;
 
   // Ops pool
   readonly attestationPool: AttestationPool;
@@ -165,6 +167,7 @@ export class BeaconChain implements IBeaconChain {
       eth1,
       executionEngine,
       executionBuilder,
+      historicalStateRegen,
     }: {
       config: BeaconConfig;
       db: IBeaconDb;
@@ -177,6 +180,7 @@ export class BeaconChain implements IBeaconChain {
       eth1: IEth1ForBlockProduction;
       executionEngine: IExecutionEngine;
       executionBuilder?: IExecutionBuilder;
+      historicalStateRegen?: HistoricalStateRegen;
     }
   ) {
     this.opts = opts;
@@ -191,6 +195,7 @@ export class BeaconChain implements IBeaconChain {
     this.eth1 = eth1;
     this.executionEngine = executionEngine;
     this.executionBuilder = executionBuilder;
+    this.historicalStateRegen = historicalStateRegen;
     const signal = this.abortController.signal;
     const emitter = new ChainEventEmitter();
     // by default, verify signatures on both main threads and worker threads
@@ -401,12 +406,24 @@ export class BeaconChain implements IBeaconChain {
         return state && {state, executionOptimistic: isOptimisticBlock(block)};
       }
     } else {
-      // request for finalized state
-
-      // do not attempt regen, just check if state is already in DB
-      const state = await this.db.stateArchive.get(slot);
-      return state && {state, executionOptimistic: false};
+      return null;
     }
+  }
+
+  async getHistoricalStateBySlot(slot: number): Promise<{state: Uint8Array; executionOptimistic: boolean} | null> {
+    const finalizedBlock = this.forkChoice.getFinalizedBlock();
+
+    if (slot >= finalizedBlock.slot) {
+      return null;
+    }
+
+    // request for finalized state using historical state regen
+    const stateSerialized = await this.historicalStateRegen?.getHistoricalState(slot);
+    if (!stateSerialized) {
+      return null;
+    }
+
+    return {state: stateSerialized, executionOptimistic: false};
   }
 
   async getStateByStateRoot(

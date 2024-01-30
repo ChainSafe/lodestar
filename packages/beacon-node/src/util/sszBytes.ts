@@ -6,6 +6,18 @@ import {BYTES_PER_FIELD_ELEMENT, FIELD_ELEMENTS_PER_BLOB} from "@lodestar/params
 export type BlockRootHex = RootHex;
 export type AttDataBase64 = string;
 
+// class BeaconState(Container):
+//   genesis_time: uint64              - 8
+//   genesis_validators_root: bytes32  - 32
+//   slot: uint64
+//   ...
+
+const STATE_SLOT_OFFSET = 40;
+
+export function getSlotFromBeaconStateSerialized(data: Uint8Array): Slot {
+  return getSlotFromOffset(data, STATE_SLOT_OFFSET);
+}
+
 // class Attestation(Container):
 //   aggregation_bits: Bitlist[MAX_VALIDATORS_PER_COMMITTEE] - offset 4
 //   data: AttestationData - target data - 128
@@ -201,8 +213,6 @@ export function getSlotFromBlobSidecarSerialized(data: Uint8Array): Slot | null 
 }
 
 function getSlotFromOffset(data: Uint8Array, offset: number): Slot {
-  // TODO: Optimize
-  const dv = new DataView(data.buffer, data.byteOffset, data.byteLength);
   // Read only the first 4 bytes of Slot, max value is 4,294,967,295 will be reached 1634 years after genesis
-  return dv.getUint32(offset, true);
+  return (data[offset] | (data[offset + 1] << 8) | (data[offset + 2] << 16) | (data[offset + 3] << 24)) >>> 0;
 }
