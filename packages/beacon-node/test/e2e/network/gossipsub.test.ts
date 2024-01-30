@@ -16,7 +16,12 @@ describe(
   {timeout: 3000}
 );
 
-describe(
+/**
+ * This is nice to have to investigate networking issue in local environment.
+ * Since we use vitest to run tests in parallel, including this causes the test to be unstable.
+ * See https://github.com/ChainSafe/lodestar/issues/6358
+ */
+describe.skip(
   "gossipsub / worker",
   function () {
     runTests({useWorker: true});
