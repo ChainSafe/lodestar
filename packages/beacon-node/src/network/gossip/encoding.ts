@@ -65,7 +65,7 @@ export function msgIdFn(gossipTopicCache: GossipTopicCache, msg: Message): Uint8
 /** Snappyjs is faster at compressing small buffers */
 const SNAPPYJS_COMPRESS_THRESHOLD = 200;
 /** Snappyjs is faster at uncompressing small buffers */
-const SNAPPYJS_UNCOMPRESS_THRESHOLD = 500;
+const SNAPPYJS_UNCOMPRESS_THRESHOLD = 400;
 
 export class DataTransformSnappy {
   constructor(

@@ -4,7 +4,7 @@ import * as snappy from "snappy";
 import {itBench} from "@dapplion/benchmark";
 
 describe("network / gossip / snappy", () => {
-  for (const msgLen of [200, 500, 1000, 10000, 100000]) {
+  for (const msgLen of [100, 200, 300, 400, 500, 1000, 10000, 100000]) {
     const uncompressed = randomBytes(msgLen);
     const compressed = snappyjs.compress(uncompressed);
 
