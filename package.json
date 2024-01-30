@@ -31,6 +31,7 @@
     "test:browsers": "lerna run test:browsers",
     "test:e2e": "lerna run test:e2e --concurrency 1",
     "test:e2e:sim": "lerna run test:e2e:sim",
+    "download-spec-tests": "lerna run download-spec-tests",
     "test:spec": "lerna run test:spec",
     "test-coverage:unit": "c8 --config .c8rc.json --report-dir coverage/unit/ --all npm run test:unit",
     "test-coverage:browsers": "c8 --config .c8rc.json --report-dir coverage/browsers/ --all npm run test:browsers",

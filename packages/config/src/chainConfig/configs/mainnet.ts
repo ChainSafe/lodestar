@@ -3,7 +3,11 @@ import {fromHexString as b} from "@chainsafe/ssz";
 import {PresetName} from "@lodestar/params";
 import {ChainConfig} from "../types.js";
 
+// Mainnet config
+// https://github.com/ethereum/consensus-specs/blob/dev/configs/mainnet.yaml
+
 export const chainConfig: ChainConfig = {
+  // Extends the mainnet preset
   PRESET_BASE: PresetName.mainnet,
   CONFIG_NAME: "mainnet",
 
@@ -41,7 +45,7 @@ export const chainConfig: ChainConfig = {
   CAPELLA_FORK_VERSION: b("0x03000000"),
   CAPELLA_FORK_EPOCH: 194048, // April 12 (epoch: 194048    slot: 6209536    UTC: 4/12/2023, 10:27:35 PM)
 
-  // DENEB
+  // Deneb
   DENEB_FORK_VERSION: b("0x04000000"),
   DENEB_FORK_EPOCH: Infinity,
 
@@ -68,9 +72,14 @@ export const chainConfig: ChainConfig = {
   EJECTION_BALANCE: 16000000000,
   // 2**2 (= 4)
   MIN_PER_EPOCH_CHURN_LIMIT: 4,
+  // 2**3 (= 8)
   MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT: 8,
   // 2**16 (= 65,536)
   CHURN_LIMIT_QUOTIENT: 65536,
+
+  // Fork choice
+  // ---------------------------------------------------------------
+  // 40%
   PROPOSER_SCORE_BOOST: 40,
 
   // Deposit contract
@@ -79,4 +88,11 @@ export const chainConfig: ChainConfig = {
   DEPOSIT_CHAIN_ID: 1,
   DEPOSIT_NETWORK_ID: 1,
   DEPOSIT_CONTRACT_ADDRESS: b("0x00000000219ab540356cBB839Cbe05303d7705Fa"),
+
+  // Networking
+  // ---------------------------------------------------------------
+
+  // Deneb
+  // `2**12` (= 4096 epochs, ~18 days)
+  MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: 4096,
 };

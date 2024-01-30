@@ -130,12 +130,6 @@ const ignoredProperties: Record<string, IgnoredProperty> = {
    */
   getHealth: {request: ["query.syncing_status"]},
 
-  /**
-   * https://github.com/ChainSafe/lodestar/issues/6185
-   *  - must have required property 'query'
-   */
-  getBlobSidecars: {request: ["query"]},
-
   /* 
    https://github.com/ChainSafe/lodestar/issues/4638 
    /query - must have required property 'skip_randao_verification'

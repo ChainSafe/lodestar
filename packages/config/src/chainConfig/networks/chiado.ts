@@ -3,6 +3,9 @@ import {fromHexString as b} from "@chainsafe/ssz";
 import {ChainConfig} from "../types.js";
 import {gnosisChainConfig as gnosis} from "./gnosis.js";
 
+// Chiado beacon chain config:
+// https://github.com/gnosischain/configs/blob/main/chiado/config.yaml
+
 export const chiadoChainConfig: ChainConfig = {
   ...gnosis,
 
@@ -34,4 +37,5 @@ export const chiadoChainConfig: ChainConfig = {
   CAPELLA_FORK_EPOCH: 244224, // Wed May 24 2023 13:12:00 GMT+0000
   // Deneb
   DENEB_FORK_VERSION: b("0x0400006f"),
+  DENEB_FORK_EPOCH: 516608, // Wed Jan 31 2024 18:15:40 GMT+0000
 };

@@ -2,6 +2,6 @@
 
 # Convenience script to run the lodestar binary from built source
 #
-# ./lodestar.sh beacon --network prater
+# ./lodestar.sh beacon --network mainnet
 
-node --trace-deprecation --max-old-space-size=4096 ./packages/cli/bin/lodestar.js "$@"
+node --trace-deprecation --max-old-space-size=8192 ./packages/cli/bin/lodestar.js "$@"
