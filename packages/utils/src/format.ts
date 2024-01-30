@@ -1,5 +1,5 @@
 import {toHexString} from "./bytes.js";
-import { ETH_TO_WEI } from "./ethConversion.js";
+import {ETH_TO_WEI} from "./ethConversion.js";
 
 /**
  * Format bytes as `0x1234…1234`
