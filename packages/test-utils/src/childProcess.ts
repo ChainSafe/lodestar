@@ -199,7 +199,7 @@ const defaultStartOpts = {
   pipeOnlyError: false,
   logPrefix: "",
   healthCheckIntervalMs: 1000,
-  logHealthChecksAfterMs: 3000,
+  logHealthChecksAfterMs: 2000,
   resolveOn: ChildProcessResolve.Immediate,
 };
 
