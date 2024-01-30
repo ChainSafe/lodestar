@@ -198,9 +198,14 @@ const defaultStartOpts = {
   pipeOnlyError: false,
   logPrefix: "",
   healthCheckIntervalMs: 1000,
-  logHealthChecksAfterMs: 2000,
+  logHealthChecksAfterMs: 3000,
   resolveOn: ChildProcessResolve.Immediate,
 };
+
+function formatTime(timeMs: number): string {
+  const d = new Date(timeMs);
+  return `${d.getHours()}:${d.getMinutes()}:${d.getSeconds()}.${d.getMilliseconds()}`;
+}
 
 /**
  * Spawn child process and return it
@@ -306,7 +311,9 @@ export async function spawnChildProcess(
                 const timeSinceHealthCheckStart = Date.now() - startHealthCheckMs;
                 if (timeSinceHealthCheckStart > logHealthChecksAfterMs) {
                   console.log(
-                    `Health check unsuccessful. logPrefix=${logPrefix} pid=${proc.pid}  timeSinceHealthCheckStart=${timeSinceHealthCheckStart}`
+                    `Health check unsuccessful. logPrefix=${logPrefix} pid=${
+                      proc.pid
+                    } timeSinceHealthCheckStart=${formatTime(timeSinceHealthCheckStart)}`
                   );
                 }
               }
@@ -322,7 +329,9 @@ export async function spawnChildProcess(
           if (intervalId !== undefined) {
             reject(
               new Error(
-                `Health check timeout. logPrefix=${logPrefix} pid=${proc.pid}  healthTimeoutMs=${healthTimeoutMs}`
+                `Health check timeout. logPrefix=${logPrefix} pid=${proc.pid} healthTimeout=${formatTime(
+                  healthTimeoutMs ?? 0
+                )}`
               )
             );
           }
@@ -336,9 +345,9 @@ export async function spawnChildProcess(
 
           reject(
             new Error(
-              `process exited before healthy. logPrefix=${logPrefix} pid=${
-                proc.pid
-              } healthTimeoutMs=${healthTimeoutMs} code=${code} command="${command} ${args.join(" ")}"`
+              `process exited before healthy. logPrefix=${logPrefix} pid=${proc.pid} healthTimeout=${formatTime(
+                healthTimeoutMs ?? 0
+              )} code=${code} command="${command} ${args.join(" ")}"`
             )
           );
         });

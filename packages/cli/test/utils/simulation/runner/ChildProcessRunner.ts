@@ -7,6 +7,7 @@ import {
   ChildProcessResolve,
 } from "@lodestar/test-utils";
 import {Job, JobOptions, RunnerEnv, RunnerType} from "../interfaces.js";
+import {JOB_HEALTH_TIMEOUT} from "../constants.js";
 
 export class ChildProcessRunner implements RunnerEnv<RunnerType.ChildProcess> {
   type = RunnerType.ChildProcess as const;
@@ -23,7 +24,7 @@ export class ChildProcessRunner implements RunnerEnv<RunnerType.ChildProcess> {
     const health = jobOption.health;
 
     if (health) {
-      spawnOpts.healthTimeoutMs = 30000;
+      spawnOpts.healthTimeoutMs = JOB_HEALTH_TIMEOUT;
       spawnOpts.health = async (): Promise<ChildProcessHealthStatus> =>
         health()
           .then((status) => {
