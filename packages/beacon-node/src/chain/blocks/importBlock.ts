@@ -9,13 +9,7 @@ import {
   RootCache,
 } from "@lodestar/state-transition";
 import {routes} from "@lodestar/api";
-import {
-  ForkChoiceError,
-  ForkChoiceErrorCode,
-  EpochDifference,
-  AncestorStatus,
-  UpdateHeadOpt,
-} from "@lodestar/fork-choice";
+import {ForkChoiceError, ForkChoiceErrorCode, EpochDifference, AncestorStatus} from "@lodestar/fork-choice";
 import {isErrorAborted} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {toCheckpointHex} from "../stateCache/index.js";
@@ -227,12 +221,8 @@ export async function importBlock(
 
   // 5. Compute head. If new head, immediately stateCache.setHeadState()
 
-  const {proposerIndex, slot} = block.message;
-  const useProposerHead = this.beaconProposerCache.get(proposerIndex) !== undefined; // If the block is proposed by us, we calculate newHead using GetProposerHead, else GetCanonicialHead
   const oldHead = this.forkChoice.getHead();
-  const newHead = useProposerHead
-    ? this.recomputeForkChoiceHead(UpdateHeadOpt.GetProposerHead, slot)
-    : this.recomputeForkChoiceHead();
+  const newHead = this.recomputeForkChoiceHead();
   const currFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
 
   if (newHead.blockRoot !== oldHead.blockRoot) {
