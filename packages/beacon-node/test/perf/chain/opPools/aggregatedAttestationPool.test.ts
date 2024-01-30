@@ -106,11 +106,17 @@ describe("getAttestationsForBlock", () => {
       );
     }
 
+    let totalBalance = 0;
+    for (let i = 0; i < originalState.epochCtx.effectiveBalanceIncrements.length; i++) {
+      totalBalance += originalState.epochCtx.effectiveBalanceIncrements[i];
+    }
+
     const fcStore: IForkChoiceStore = {
       currentSlot: originalState.slot,
       justified: {
         checkpoint: {...justifiedCheckpoint, rootHex: toHexString(justifiedCheckpoint.root)},
         balances: originalState.epochCtx.effectiveBalanceIncrements,
+        totalBalance,
       },
       unrealizedJustified: {
         checkpoint: {...justifiedCheckpoint, rootHex: toHexString(justifiedCheckpoint.root)},

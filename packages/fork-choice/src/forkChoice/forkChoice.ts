@@ -346,7 +346,7 @@ export class ForkChoice implements IForkChoice {
     if (this.opts?.proposerBoostEnabled && this.proposerBoostRoot) {
       const proposerBoostScore =
         this.justifiedProposerBoostScore ??
-        computeCommitteeFractionFromBalances(this.fcStore.justified.balances, {
+        getProposerScore(this.fcStore.justified.totalBalance, {
           slotsPerEpoch: SLOTS_PER_EPOCH,
           committeePercent: this.config.PROPOSER_SCORE_BOOST,
         });
@@ -1460,34 +1460,10 @@ export function assertValidTerminalPowBlock(
   }
 }
 
-function computeCommitteeFraction(
-  {
-    justifiedTotalActiveBalanceByIncrement,
-    justifiedActiveValidators,
-  }: {justifiedTotalActiveBalanceByIncrement: number; justifiedActiveValidators: number},
-  config: {slotsPerEpoch: number; committeePercent: number}
+export function getProposerScore(
+  justifiedTotalActiveBalanceByIncrement: number,
+  config: {slotsPerEpoch: number; proposerScoreBoost: number}
 ): number {
-  const avgBalanceByIncrement = Math.floor(justifiedTotalActiveBalanceByIncrement / justifiedActiveValidators);
-  const committeeSize = Math.floor(justifiedActiveValidators / config.slotsPerEpoch);
-  const committeeWeight = committeeSize * avgBalanceByIncrement;
-  const committeeFraction = Math.floor((committeeWeight * config.committeePercent) / 100);
-  return committeeFraction;
-}
-
-// Approximate https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/fork-choice.md#calculate_committee_fraction
-// Calculates proposer boost score when committeePercent = config.PROPOSER_SCORE_BOOST
-export function computeCommitteeFractionFromBalances(
-  justifiedBalances: EffectiveBalanceIncrements,
-  config: {slotsPerEpoch: number; committeePercent: number}
-): number {
-  let justifiedTotalActiveBalanceByIncrement = 0,
-    justifiedActiveValidators = 0;
-  for (let i = 0; i < justifiedBalances.length; i++) {
-    if (justifiedBalances[i] > 0) {
-      justifiedActiveValidators += 1;
-      // justified balances here are by increment
-      justifiedTotalActiveBalanceByIncrement += justifiedBalances[i];
-    }
-  }
-  return computeCommitteeFraction({justifiedTotalActiveBalanceByIncrement, justifiedActiveValidators}, config);
+  const committeeWeight = Math.floor(justifiedTotalActiveBalanceByIncrement / config.slotsPerEpoch);
+  return Math.floor((committeeWeight * config.proposerScoreBoost) / 100);
 }

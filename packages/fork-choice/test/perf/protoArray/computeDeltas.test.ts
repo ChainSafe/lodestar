@@ -2,7 +2,6 @@ import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsZeroed} from "@lodestar/state-transition";
 import {VoteTracker} from "../../../src/protoArray/interface.js";
 import {computeDeltas} from "../../../src/protoArray/computeDeltas.js";
-import {computeCommitteeFractionFromBalances} from "../../../src/forkChoice/forkChoice.js";
 
 describe("computeDeltas", () => {
   let oldBalances: EffectiveBalanceIncrements;
@@ -50,14 +49,5 @@ describe("computeDeltas", () => {
         },
       });
     }
-  }
-
-  for (const numValidator of numValidators) {
-    itBench({
-      id: `computeCommitteeFractionFromBalances ${numValidator} validators`,
-      fn: () => {
-        computeCommitteeFractionFromBalances(newBalances, {slotsPerEpoch: 32, committeePercent: 70});
-      },
-    });
   }
 });

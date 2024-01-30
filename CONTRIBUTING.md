@@ -229,6 +229,20 @@ Run script to download dashboards to `./dashboards` folder
 node scripts/download_dashboards.mjs
 ```
 
+## Contributing to Documentation
+
+When submitting PRs for documentation updates, build and run the documentation locally to ensure functionality before submission. For first time documentation contributors, install the python dependencies with `yarn docs:install`. Build the documentation locally with `yarn docs:build` and serve with `yarn docs:serve`
+
+Your locally served documentation will then be accessible at http://localhost:8000.
+
+If you run into build issues due to circular dependencies, branch switching or other incompatibilities, try cleaning your modules and rebuild your dependencies with:
+
+```sh
+yarn clean && yarn clean:nm && yarn && yarn build
+```
+
+We also use a spelling [word list](https://github.com/ChainSafe/lodestar/blob/unstable/.wordlist.txt) as part of our documentation checks. If using unrecognized words or abbreviations, please extend the word list to pass checks. Make sure the list is sorted with `./scripts/wordlist_sort.sh` and checked with `./scripts/wordlist_sort_check.sh` for sorting and duplicates.
+
 ## Label Guide
 
 Issues and pull requests are subject to the following labeling guidelines.

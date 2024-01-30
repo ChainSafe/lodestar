@@ -11,7 +11,7 @@ import {
 } from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPreBlobs, ForkBlobs, ForkSeq, ForkExecution} from "@lodestar/params";
-import {ETH_TO_WEI, extendError, gweiToWei, prettyBytes} from "@lodestar/utils";
+import {ETH_TO_WEI, extendError, prettyBytes} from "@lodestar/utils";
 import {Api, ApiError, routes} from "@lodestar/api";
 import {IClock, LoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
@@ -223,7 +223,7 @@ export class BlockProposingService {
       executionPayloadValue: `${formatBigDecimal(response.executionPayloadValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)} ETH`,
       consensusBlockValue: `${formatBigDecimal(response.consensusBlockValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)} ETH`,
       totalBlockValue: `${formatBigDecimal(
-        response.executionPayloadValue + gweiToWei(response.consensusBlockValue),
+        response.executionPayloadValue + response.consensusBlockValue,
         ETH_TO_WEI,
         MAX_DECIMAL_FACTOR
       )} ETH`,

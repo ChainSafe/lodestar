@@ -1,7 +1,6 @@
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {Epoch, phase0, capella, Slot, ssz, StringType, RootHex, altair, UintNum64, allForks} from "@lodestar/types";
-import {ChainForkConfig} from "@lodestar/config";
-import {isForkExecution, ForkName} from "@lodestar/params";
+import {isForkExecution, ForkName, isForkLightClient} from "@lodestar/params";
 
 import {RouteDef, TypeJson, WithVersion} from "../../utils/index.js";
 import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
@@ -48,8 +47,6 @@ export enum EventType {
   lightClientOptimisticUpdate = "light_client_optimistic_update",
   /** New or better finality update available */
   lightClientFinalityUpdate = "light_client_finality_update",
-  /** New or better light client update available */
-  lightClientUpdate = "light_client_update",
   /** Payload attributes for block proposal */
   payloadAttributes = "payload_attributes",
   /** The node has received a valid blobSidecar (from P2P or API) */
@@ -67,7 +64,6 @@ export const eventTypes: {[K in EventType]: K} = {
   [EventType.contributionAndProof]: EventType.contributionAndProof,
   [EventType.lightClientOptimisticUpdate]: EventType.lightClientOptimisticUpdate,
   [EventType.lightClientFinalityUpdate]: EventType.lightClientFinalityUpdate,
-  [EventType.lightClientUpdate]: EventType.lightClientUpdate,
   [EventType.payloadAttributes]: EventType.payloadAttributes,
   [EventType.blobSidecar]: EventType.blobSidecar,
 };
@@ -107,9 +103,8 @@ export type EventData = {
     executionOptimistic: boolean;
   };
   [EventType.contributionAndProof]: altair.SignedContributionAndProof;
-  [EventType.lightClientOptimisticUpdate]: allForks.LightClientOptimisticUpdate;
-  [EventType.lightClientFinalityUpdate]: allForks.LightClientFinalityUpdate;
-  [EventType.lightClientUpdate]: allForks.LightClientUpdate;
+  [EventType.lightClientOptimisticUpdate]: {version: ForkName; data: allForks.LightClientOptimisticUpdate};
+  [EventType.lightClientFinalityUpdate]: {version: ForkName; data: allForks.LightClientFinalityUpdate};
   [EventType.payloadAttributes]: {version: ForkName; data: allForks.SSEPayloadAttributes};
   [EventType.blobSidecar]: BlobSidecarSSE;
 };
@@ -146,9 +141,12 @@ export type ReqTypes = {
 // It doesn't make sense to define a getReqSerializers() here given the exotic argument of eventstream()
 // The request is very simple: (topics) => {query: {topics}}, and the test will ensure compatibility server - client
 
-export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: TypeJson<EventData[K]>} {
-  const getLightClientTypeFromHeader = (data: allForks.LightClientHeader): allForks.AllForksLightClientSSZTypes => {
-    return config.getLightClientForkTypes(data.beacon.slot);
+export function getTypeByEvent(): {[K in EventType]: TypeJson<EventData[K]>} {
+  const getLightClientType = (fork: ForkName): allForks.AllForksLightClientSSZTypes => {
+    if (!isForkLightClient(fork)) {
+      throw Error(`Invalid fork=${fork} for lightclient fork types`);
+    }
+    return ssz.allForksLightClient[fork];
   };
 
   return {
@@ -208,45 +206,16 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
     ),
     [EventType.blobSidecar]: blobSidecarSSE,
 
-    [EventType.lightClientOptimisticUpdate]: {
-      toJson: (data) =>
-        getLightClientTypeFromHeader((data as unknown as allForks.LightClientOptimisticUpdate).attestedHeader)[
-          "LightClientOptimisticUpdate"
-        ].toJson(data),
-      fromJson: (data) =>
-        getLightClientTypeFromHeader(
-          // eslint-disable-next-line @typescript-eslint/naming-convention
-          (data as {attested_header: allForks.LightClientHeader}).attested_header
-        )["LightClientOptimisticUpdate"].fromJson(data),
-    },
-    [EventType.lightClientFinalityUpdate]: {
-      toJson: (data) =>
-        getLightClientTypeFromHeader((data as unknown as allForks.LightClientFinalityUpdate).attestedHeader)[
-          "LightClientFinalityUpdate"
-        ].toJson(data),
-      fromJson: (data) =>
-        getLightClientTypeFromHeader(
-          // eslint-disable-next-line @typescript-eslint/naming-convention
-          (data as {attested_header: allForks.LightClientHeader}).attested_header
-        )["LightClientFinalityUpdate"].fromJson(data),
-    },
-    [EventType.lightClientUpdate]: {
-      toJson: (data) =>
-        getLightClientTypeFromHeader((data as unknown as allForks.LightClientUpdate).attestedHeader)[
-          "LightClientUpdate"
-        ].toJson(data),
-      fromJson: (data) =>
-        getLightClientTypeFromHeader(
-          // eslint-disable-next-line @typescript-eslint/naming-convention
-          (data as {attested_header: allForks.LightClientHeader}).attested_header
-        )["LightClientUpdate"].fromJson(data),
-    },
+    [EventType.lightClientOptimisticUpdate]: WithVersion(
+      (fork) => getLightClientType(fork).LightClientOptimisticUpdate
+    ),
+    [EventType.lightClientFinalityUpdate]: WithVersion((fork) => getLightClientType(fork).LightClientFinalityUpdate),
   };
 }
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-export function getEventSerdes(config: ChainForkConfig) {
-  const typeByEvent = getTypeByEvent(config);
+export function getEventSerdes() {
+  const typeByEvent = getTypeByEvent();
 
   return {
     toJson: (event: BeaconEvent): unknown => {

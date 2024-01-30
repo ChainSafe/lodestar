@@ -51,6 +51,7 @@ describe("Forkchoice", function () {
     justified: {
       checkpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
       balances: new Uint8Array([32]),
+      totalBalance: 32,
     },
     unrealizedJustified: {
       checkpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},

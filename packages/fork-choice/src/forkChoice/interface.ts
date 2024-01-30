@@ -20,6 +20,10 @@ export type CheckpointHexWithBalance = {
   balances: EffectiveBalanceIncrements;
 };
 
+export type CheckpointHexWithTotalBalance = CheckpointHexWithBalance & {
+  totalBalance: number;
+};
+
 export enum EpochDifference {
   current = 0,
   previous = 1,
