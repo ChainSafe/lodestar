@@ -78,7 +78,7 @@
     "@lodestar/params": "^1.15.0",
     "@lodestar/types": "^1.15.0",
     "@lodestar/utils": "^1.15.0",
-    "ethereum-cryptography": "^1.2.0",
+    "ethereum-cryptography": "^2.0.0",
     "find-up": "^6.3.0",
     "http-proxy": "^1.18.1",
     "js-yaml": "^4.1.0",
