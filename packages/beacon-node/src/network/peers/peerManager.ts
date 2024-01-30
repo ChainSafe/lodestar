@@ -620,7 +620,10 @@ export class PeerManager {
       },
       {retries: 3, retryDelay: 1000}
     ).catch((err) => {
-      this.logger.error("Error setting agentVersion for the peer", {peerId: peerData.peerId.toString()}, err);
+      // Ignore Not Found error if peer was disconnected
+      if (err instanceof Error && !err.message.includes("NotFound")) {
+        this.logger.error("Error setting agentVersion for the peer", {peerId: peerData.peerId.toString()}, err);
+      }
     });
   };
 
