@@ -62,7 +62,7 @@
     "@lodestar/params": "^1.15.0",
     "@lodestar/utils": "^1.15.0",
     "axios": "^1.3.4",
-    "testcontainers": "^10.2.1",
+    "testcontainers": "^10.6.0",
     "tmp": "^0.2.1",
     "vitest": "^1.2.1"
   },
