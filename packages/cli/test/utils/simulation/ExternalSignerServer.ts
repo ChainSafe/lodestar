@@ -1,14 +1,14 @@
 import fastify from "fastify";
 import {fromHexString} from "@chainsafe/ssz";
 import type {SecretKey} from "@chainsafe/bls/types";
-import {DOCKET_NETWORK_GATEWAY, EXTERNAL_SIGNER_BASE_PORT} from "./constants.js";
+import {EXTERNAL_SIGNER_BASE_PORT} from "./constants.js";
 
 /* eslint-disable no-console */
 
 export class ExternalSignerServer {
   static totalProcessCount = 0;
 
-  readonly address: string = DOCKET_NETWORK_GATEWAY;
+  readonly address: string = "127.0.0.1";
   readonly port: number;
 
   private server: ReturnType<typeof fastify>;
