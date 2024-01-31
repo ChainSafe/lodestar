@@ -12,17 +12,7 @@ import {BeaconClient, BeaconNodeGenerator, RunnerType} from "../interfaces.js";
 import {getNodePorts} from "../utils/ports.js";
 
 export const generateLodestarBeaconNode: BeaconNodeGenerator<BeaconClient.Lodestar> = (opts, runner) => {
-  const {
-    address,
-    id,
-    forkConfig: config,
-    genesisTime,
-    engineUrls,
-    engineMock,
-    clientOptions,
-    nodeIndex,
-    metrics,
-  } = opts;
+  const {id, forkConfig: config, genesisTime, engineUrls, engineMock, clientOptions, nodeIndex, metrics} = opts;
   const {
     paths: {jwtsecretFilePath, rootDir, genesisFilePath, logFilePath},
   } = opts;
@@ -96,7 +86,7 @@ export const generateLodestarBeaconNode: BeaconNodeGenerator<BeaconClient.Lodest
       },
       health: async () => {
         try {
-          await got.get(`http://${address}:${ports.beacon.httpPort}/eth/v1/node/health`);
+          await got.get(`http://127.0.0.1:${ports.beacon.httpPort}/eth/v1/node/health`);
           return {ok: true};
         } catch (err) {
           return {ok: false, reason: (err as Error).message, checkId: "eth/v1/node/health query"};

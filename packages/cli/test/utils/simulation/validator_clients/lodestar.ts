@@ -8,7 +8,7 @@ import {LogLevel} from "@lodestar/utils";
 import {defaultOptions} from "@lodestar/validator";
 import {IValidatorCliArgs} from "../../../../src/cmds/validator/options.js";
 import {GlobalArgs} from "../../../../src/options/globalOptions.js";
-import {DOCKET_NETWORK_GATEWAY, LODESTAR_BINARY_PATH} from "../constants.js";
+import {LODESTAR_BINARY_PATH} from "../constants.js";
 import {RunnerType, ValidatorClient, ValidatorNodeGenerator} from "../interfaces.js";
 import {getNodePorts} from "../utils/ports.js";
 
@@ -70,7 +70,7 @@ export const generateLodestarValidatorNode: ValidatorNodeGenerator<ValidatorClie
       },
       health: async () => {
         try {
-          await got.get(`http://${DOCKET_NETWORK_GATEWAY}:${ports.validator.keymanagerPort}/eth/v1/keystores`);
+          await got.get(`http://127.0.0.1:${ports.validator.keymanagerPort}/eth/v1/keystores`);
           return {ok: true};
         } catch (err) {
           return {ok: false, reason: (err as Error).message, checkId: "eth/v1/keystores query"};
@@ -84,7 +84,7 @@ export const generateLodestarValidatorNode: ValidatorNodeGenerator<ValidatorClie
     client: ValidatorClient.Lodestar,
     keys,
     keyManager: keyManagerGetClient(
-      {baseUrl: `http://${DOCKET_NETWORK_GATEWAY}:${ports.validator.keymanagerPort}`},
+      {baseUrl: `http://127.0.0.1:${ports.validator.keymanagerPort}`},
       {config: forkConfig}
     ),
     job,
