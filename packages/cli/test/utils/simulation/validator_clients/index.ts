@@ -23,7 +23,7 @@ export async function createValidatorNode<V extends ValidatorClient>(
     keys: options.keys ?? {type: "no-keys"},
     genesisTime: options.genesisTime + forkConfig.GENESIS_DELAY,
     clientOptions: options.clientOptions ?? {},
-    address: DOCKET_NETWORK_GATEWAY,
+    address: "127.0.0.1",
   };
 
   const metricServer = process.env.SIM_METRIC_SERVER_URL;
@@ -45,14 +45,11 @@ export async function createValidatorNode<V extends ValidatorClient>(
       return generateLodestarValidatorNode(
         {
           ...opts,
-          address: DOCKET_NETWORK_GATEWAY,
+          address: "127.0.0.1",
           beaconUrls:
             opts.beaconUrls.length > 0
-              ? makeUniqueArray([
-                  `http://${DOCKET_NETWORK_GATEWAY}:${BN_REST_BASE_PORT + opts.nodeIndex + 1}`,
-                  ...opts.beaconUrls,
-                ])
-              : [`http://${DOCKET_NETWORK_GATEWAY}:${BN_REST_BASE_PORT + opts.nodeIndex + 1}`],
+              ? makeUniqueArray([`http://127.0.0.1:${BN_REST_BASE_PORT + opts.nodeIndex + 1}`, ...opts.beaconUrls])
+              : [`http://127.0.0.1:${BN_REST_BASE_PORT + opts.nodeIndex + 1}`],
         },
         runner
       );
@@ -65,7 +62,7 @@ export async function createValidatorNode<V extends ValidatorClient>(
           beaconUrls:
             opts.beaconUrls.length > 0
               ? makeUniqueArray([...opts.beaconUrls])
-              : [`http://${DOCKET_NETWORK_GATEWAY}:${BN_REST_BASE_PORT + opts.nodeIndex + 1}`],
+              : [`http://127.0.0.1:${BN_REST_BASE_PORT + opts.nodeIndex + 1}`],
         },
         runner
       );

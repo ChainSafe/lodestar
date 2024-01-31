@@ -7,7 +7,7 @@ import {chainConfigToJson} from "@lodestar/config";
 import {LogLevel} from "@lodestar/utils";
 import {BeaconArgs} from "../../../../src/cmds/beacon/options.js";
 import {GlobalArgs} from "../../../../src/options/globalOptions.js";
-import {DOCKET_NETWORK_GATEWAY, LODESTAR_BINARY_PATH} from "../constants.js";
+import {LODESTAR_BINARY_PATH} from "../constants.js";
 import {BeaconClient, BeaconNodeGenerator, RunnerType} from "../interfaces.js";
 import {getNodePorts} from "../utils/ports.js";
 
@@ -108,10 +108,10 @@ export const generateLodestarBeaconNode: BeaconNodeGenerator<BeaconClient.Lodest
   return {
     id,
     client: BeaconClient.Lodestar,
-    restPublicUrl: `http://${DOCKET_NETWORK_GATEWAY}:${ports.beacon.httpPort}`,
+    restPublicUrl: `http://127.0.0.1:${ports.beacon.httpPort}`,
     // Lodestar runs on the host machine, so it don't have a private url
-    restPrivateUrl: `http://${DOCKET_NETWORK_GATEWAY}:${ports.beacon.httpPort}`,
-    api: getClient({baseUrl: `http://${DOCKET_NETWORK_GATEWAY}:${ports.beacon.httpPort}`}, {config}),
+    restPrivateUrl: `http://127.0.0.1:${ports.beacon.httpPort}`,
+    api: getClient({baseUrl: `http://127.0.0.1:${ports.beacon.httpPort}`}, {config}),
     job,
   };
 };

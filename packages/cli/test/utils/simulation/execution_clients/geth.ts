@@ -134,7 +134,7 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
         "--unlock",
         GENESIS_ACCOUNT,
         "--password",
-        "/data/password.txt",
+        passwordPathMounted,
         "--syncmode",
         "full",
         "--networkid",

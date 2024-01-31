@@ -54,7 +54,7 @@ export async function createBeaconNode<B extends BeaconClient>(
       return generateLodestarBeaconNode(
         {
           ...opts,
-          address: DOCKET_NETWORK_GATEWAY,
+          address: "127.0.0.1",
           engineUrls:
             opts.engineUrls.length > 0
               ? makeUniqueArray([
