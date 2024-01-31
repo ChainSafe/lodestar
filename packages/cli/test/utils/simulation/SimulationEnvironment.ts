@@ -15,7 +15,7 @@ import {ExternalSignerServer} from "./ExternalSignerServer.js";
 import {SimulationTracker} from "./SimulationTracker.js";
 import {createBeaconNode} from "./beacon_clients/index.js";
 import {createValidatorNode, getValidatorForBeaconNode} from "./validator_clients/index.js";
-import {MOCK_ETH1_GENESIS_HASH} from "./constants.js";
+import {DOCKET_NETWORK_GATEWAY, MOCK_ETH1_GENESIS_HASH} from "./constants.js";
 import {createExecutionNode} from "./execution_clients/index.js";
 import {
   BeaconClient,
@@ -290,7 +290,7 @@ export class SimulationEnvironment {
       // As lodestar is running on host machine, need to connect through docker named host
       beaconType === BeaconClient.Lodestar && validatorType !== ValidatorClient.Lodestar
         ? replaceIpFromUrl(beaconNode.restPrivateUrl, "host.docker.internal")
-        : beaconNode.restPrivateUrl,
+        : replaceIpFromUrl(beaconNode.restPrivateUrl, DOCKET_NETWORK_GATEWAY),
       ...(validatorOptions?.beaconUrls ?? []),
     ];
 
