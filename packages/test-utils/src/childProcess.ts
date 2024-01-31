@@ -219,8 +219,6 @@ export async function spawnChildProcess(
   const options = {...defaultStartOpts, ...opts};
   const {env, pipeStdioToFile, pipeStdioToParent, logPrefix, pipeOnlyError, signal} = options;
   const {health, resolveOn, healthCheckIntervalMs, logHealthChecksAfterMs, healthTimeoutMs, testContext} = options;
-  console.log(`Starting child process command="${command} ${args.join(" ")}"`);
-  console.log(options);
 
   return new Promise<childProcess.ChildProcessWithoutNullStreams>((resolve, reject) => {
     void (async () => {
@@ -298,10 +296,8 @@ export async function spawnChildProcess(
       if (health) {
         const startHealthCheckMs = Date.now();
         const intervalId = setInterval(() => {
-          console.log(`Health check for ${logPrefix}`);
           health()
             .then((isHealthy) => {
-              console.log({isHealthy});
               if (isHealthy.healthy) {
                 clearInterval(intervalId);
                 clearTimeout(healthTimeoutId);
