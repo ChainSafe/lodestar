@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 /* eslint-disable no-console */
 import stream from "node:stream";
 import fs from "node:fs";
@@ -13,6 +14,25 @@ import {
 } from "testcontainers";
 import {Job, JobOptions, RunnerEnv, RunnerType} from "../interfaces.js";
 import {DOCKER_NETWORK_NAME, DOCKET_NETWORK_RANGE, DOCKET_NETWORK_SUBNET} from "../constants.js";
+
+class SimContainer extends GenericContainer {
+  withAutoRemove(autoRemove: boolean): this {
+    this.hostConfig.AutoRemove = autoRemove;
+    return this;
+  }
+  withNetworkAndIp(network: StartedNetwork, ip: string): this {
+    super.withNetwork(network);
+
+    this.createOpts.NetworkingConfig = {
+      ...this.createOpts.NetworkingConfig,
+      EndpointsConfig: {
+        ...this.createOpts.NetworkingConfig?.EndpointsConfig,
+        [network.getName()]: {IPAMConfig: {IPv4Address: ip}},
+      },
+    };
+    return this;
+  }
+}
 
 class HealthWaitStrategy extends StartupCheckStrategy {
   constructor(
@@ -72,7 +92,6 @@ export class DockerRunner implements RunnerEnv<RunnerType.Docker> {
 
   async start(): Promise<void> {
     const docker = await getContainerRuntimeClient();
-    /* eslint-disable @typescript-eslint/naming-convention, @typescript-eslint/no-unsafe-assignment */
     let network = await docker.network.getById(DOCKER_NETWORK_NAME);
     try {
       await network.inspect();
@@ -112,7 +131,8 @@ export class DockerRunner implements RunnerEnv<RunnerType.Docker> {
 
   create(jobOption: Omit<JobOptions<RunnerType.Docker>, "children">): Job {
     let startedContainer: StartedTestContainer | undefined;
-    const container = new GenericContainer(jobOption.options.image)
+    const container = new SimContainer(jobOption.options.image)
+      .withAutoRemove(true)
       .withName(jobOption.id)
       .withLabels({jobId: jobOption.id})
       .withExtraHosts([{host: "host.docker.internal", ipAddress: "host-gateway"}]);
@@ -155,7 +175,7 @@ export class DockerRunner implements RunnerEnv<RunnerType.Docker> {
       id: jobOption.id,
       start: async () => {
         if (jobOption.options.dockerNetworkIp) {
-          container.withNetwork(this.dockerNetwork);
+          container.withNetworkAndIp(this.dockerNetwork, jobOption.options.dockerNetworkIp);
           // jobArgs.push("--ip", jobOption.options.dockerNetworkIp);
         }
 
