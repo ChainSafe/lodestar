@@ -53,6 +53,7 @@ export class SimulationEnvironment {
   private keysCount = 0;
   private nodePairCount = 0;
   private genesisState?: BeaconStateAllForks;
+  private stopHandlers: (() => Promise<void>)[] = [];
 
   private constructor(forkConfig: ChainForkConfig, options: SimulationOptions) {
     this.forkConfig = forkConfig;
@@ -179,12 +180,19 @@ export class SimulationEnvironment {
     }
   }
 
+  onStop(handler: () => Promise<void>): void {
+    this.stopHandlers.push(handler);
+  }
+
   async stop(code = 0, message = "On completion."): Promise<void> {
     process.removeAllListeners("unhandledRejection");
     process.removeAllListeners("uncaughtException");
     process.removeAllListeners("SIGTERM");
     process.removeAllListeners("SIGINT");
     console.log(`Simulation environment "${this.options.id}" is stopping: ${message}`);
+    for (const handler of this.stopHandlers) {
+      await handler();
+    }
     await this.tracker.stop();
     await Promise.all(this.nodes.map((node) => node.validator?.job.stop()));
     await Promise.all(this.nodes.map((node) => node.beacon.job.stop()));

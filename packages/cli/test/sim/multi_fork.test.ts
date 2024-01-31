@@ -173,10 +173,18 @@ const checkpointSync = await env.createNodePair({
 
 await rangeSync.execution.job.start();
 await rangeSync.beacon.job.start();
+env.onStop(async () => {
+  await rangeSync.execution.job.stop();
+  await rangeSync.beacon.job.stop();
+});
 await connectNewNode(rangeSync, env.nodes);
 
 await checkpointSync.execution.job.start();
 await checkpointSync.beacon.job.start();
+env.onStop(async () => {
+  await checkpointSync.beacon.job.stop();
+  await checkpointSync.execution.job.stop();
+});
 await connectNewNode(checkpointSync, env.nodes);
 
 await Promise.all([
@@ -189,11 +197,6 @@ await Promise.all([
     slot: env.clock.getLastSlotOfEpoch(headForCheckpointSync.epoch),
   }),
 ]);
-
-await rangeSync.beacon.job.stop();
-await rangeSync.execution.job.stop();
-await checkpointSync.beacon.job.stop();
-await checkpointSync.execution.job.stop();
 
 // Unknown block sync
 // ========================================================
@@ -223,6 +226,10 @@ const unknownBlockSync = await env.createNodePair({
 });
 await unknownBlockSync.execution.job.start();
 await unknownBlockSync.beacon.job.start();
+env.onStop(async () => {
+  await unknownBlockSync.execution.job.stop();
+  await unknownBlockSync.beacon.job.stop();
+});
 await connectNewNode(unknownBlockSync, env.nodes);
 
 // Wait for EL node to start and sync
