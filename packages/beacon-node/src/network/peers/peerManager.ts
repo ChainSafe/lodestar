@@ -619,13 +619,8 @@ export class PeerManager {
         }
       },
       {retries: 3, retryDelay: 1000}
-    ).catch((err: Error) => {
-      if (err.message.includes("NotFound")) {
-        return this.logger.debug("Peer not found when attempting to set agentVersion", {
-          peerId: peerData.peerId.toString(),
-        });
-      }
-      this.logger.error("Error setting agentVersion for the peer", {peerId: peerData.peerId.toString()}, err);
+    ).catch((err) => {
+      this.logger.debug("Error setting agentVersion for the peer", {peerId: peerData.peerId.toString()}, err);
     });
   };
 
