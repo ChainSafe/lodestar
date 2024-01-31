@@ -168,8 +168,10 @@ export class DockerRunner implements RunnerEnv<RunnerType.Docker> {
       },
       stop: async () => {
         // It should be running if we had a health check else it would have run and execute command
-        if (jobOption.health) {
-          await startedContainer?.stop({timeout: 1000});
+        try {
+          await startedContainer?.stop({timeout: 1000, remove: true});
+        } catch {
+          // Container is already stopped
         }
       },
     };
