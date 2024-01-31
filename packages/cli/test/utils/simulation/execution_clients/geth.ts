@@ -3,7 +3,7 @@ import {writeFile} from "node:fs/promises";
 import path from "node:path";
 import got from "got";
 import {ZERO_HASH} from "@lodestar/state-transition";
-import {SHARED_JWT_SECRET, SIM_ENV_NETWORK_ID} from "../constants.js";
+import {DOCKET_NETWORK_GATEWAY, SHARED_JWT_SECRET, SIM_ENV_NETWORK_ID} from "../constants.js";
 import {Eth1ProviderWithAdmin} from "../Eth1ProviderWithAdmin.js";
 import {ExecutionClient, ExecutionNodeGenerator, ExecutionStartMode, JobOptions, RunnerType} from "../interfaces.js";
 import {getNodeMountedPaths} from "../utils/paths.js";
@@ -28,9 +28,9 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
     "/data",
     isDocker
   );
-  const engineRpcPublicUrl = `http://127.0.0.1:${ports.execution.enginePort}`;
+  const engineRpcPublicUrl = `http://${DOCKET_NETWORK_GATEWAY}:${ports.execution.enginePort}`;
   const engineRpcPrivateUrl = `http://${address}:${ports.execution.enginePort}`;
-  const ethRpcPublicUrl = `http://127.0.0.1:${ports.execution.httpPort}`;
+  const ethRpcPublicUrl = `http://${DOCKET_NETWORK_GATEWAY}:${ports.execution.httpPort}`;
   const ethRpcPrivateUrl = `http://${address}:${ports.execution.httpPort}`;
 
   const skPath = path.join(rootDir, "sk.json");
@@ -60,7 +60,7 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
       env: {},
     },
     logs: {
-      stdoutFilePath: logFilePath,
+      stdoutFilePath: path.join(path.dirname(logFilePath), `${id}-init.log`),
     },
   };
 
@@ -93,7 +93,7 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
       env: {},
     },
     logs: {
-      stdoutFilePath: logFilePath,
+      stdoutFilePath: path.join(path.dirname(logFilePath), `${id}-import.log`),
     },
   };
 
@@ -134,7 +134,7 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
         "--unlock",
         GENESIS_ACCOUNT,
         "--password",
-        passwordPathMounted,
+        "/data/password.txt",
         "--syncmode",
         "full",
         "--networkid",

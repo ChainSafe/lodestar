@@ -1,6 +1,6 @@
 import {writeFile} from "node:fs/promises";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
-import {EL_ENGINE_BASE_PORT, SHARED_JWT_SECRET} from "../constants.js";
+import {DOCKET_NETWORK_GATEWAY, EL_ENGINE_BASE_PORT, SHARED_JWT_SECRET} from "../constants.js";
 import {AtLeast, BeaconClient, BeaconGeneratorOptions, BeaconNode} from "../interfaces.js";
 import {makeUniqueArray} from "../utils/index.js";
 import {ensureDirectories} from "../utils/paths.js";
@@ -25,7 +25,7 @@ export async function createBeaconNode<B extends BeaconClient>(
     genesisTime: options.genesisTime,
     engineMock: options.engineMock ?? false,
     clientOptions: options.clientOptions ?? {},
-    address: "127.0.0.1",
+    address: DOCKET_NETWORK_GATEWAY,
     engineUrls: options.engineUrls ?? [],
   };
 
@@ -54,11 +54,14 @@ export async function createBeaconNode<B extends BeaconClient>(
       return generateLodestarBeaconNode(
         {
           ...opts,
-          address: "127.0.0.1",
+          address: DOCKET_NETWORK_GATEWAY,
           engineUrls:
             opts.engineUrls.length > 0
-              ? makeUniqueArray([`http://127.0.0.1:${EL_ENGINE_BASE_PORT + opts.nodeIndex + 1}`, ...opts.engineUrls])
-              : [`http://127.0.0.1:${EL_ENGINE_BASE_PORT + opts.nodeIndex + 1}`],
+              ? makeUniqueArray([
+                  `http://${DOCKET_NETWORK_GATEWAY}:${EL_ENGINE_BASE_PORT + opts.nodeIndex + 1}`,
+                  ...opts.engineUrls,
+                ])
+              : [`http://${DOCKET_NETWORK_GATEWAY}:${EL_ENGINE_BASE_PORT + opts.nodeIndex + 1}`],
         },
         runner
       );
@@ -71,7 +74,7 @@ export async function createBeaconNode<B extends BeaconClient>(
           engineUrls:
             opts.engineUrls.length > 0
               ? makeUniqueArray([...opts.engineUrls])
-              : [`http://127.0.0.1:${EL_ENGINE_BASE_PORT + opts.nodeIndex + 1}`],
+              : [`http://${DOCKET_NETWORK_GATEWAY}:${EL_ENGINE_BASE_PORT + opts.nodeIndex + 1}`],
         },
         runner
       );

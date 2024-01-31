@@ -1,5 +1,5 @@
 import {writeFile} from "node:fs/promises";
-import {SHARED_JWT_SECRET, SHARED_VALIDATOR_PASSWORD, BN_REST_BASE_PORT} from "../constants.js";
+import {SHARED_JWT_SECRET, SHARED_VALIDATOR_PASSWORD, BN_REST_BASE_PORT, DOCKET_NETWORK_GATEWAY} from "../constants.js";
 import {AtLeast, BeaconClient, ValidatorClient, ValidatorGeneratorOptions, ValidatorNode} from "../interfaces.js";
 import {makeUniqueArray} from "../utils/index.js";
 import {createKeystores} from "../utils/keys.js";
@@ -23,7 +23,7 @@ export async function createValidatorNode<V extends ValidatorClient>(
     keys: options.keys ?? {type: "no-keys"},
     genesisTime: options.genesisTime + forkConfig.GENESIS_DELAY,
     clientOptions: options.clientOptions ?? {},
-    address: "127.0.0.1",
+    address: DOCKET_NETWORK_GATEWAY,
   };
 
   const metricServer = process.env.SIM_METRIC_SERVER_URL;
@@ -45,11 +45,14 @@ export async function createValidatorNode<V extends ValidatorClient>(
       return generateLodestarValidatorNode(
         {
           ...opts,
-          address: "127.0.0.1",
+          address: DOCKET_NETWORK_GATEWAY,
           beaconUrls:
             opts.beaconUrls.length > 0
-              ? makeUniqueArray([`http://127.0.0.1:${BN_REST_BASE_PORT + opts.nodeIndex + 1}`, ...opts.beaconUrls])
-              : [`http://127.0.0.1:${BN_REST_BASE_PORT + opts.nodeIndex + 1}`],
+              ? makeUniqueArray([
+                  `http://${DOCKET_NETWORK_GATEWAY}:${BN_REST_BASE_PORT + opts.nodeIndex + 1}`,
+                  ...opts.beaconUrls,
+                ])
+              : [`http://${DOCKET_NETWORK_GATEWAY}:${BN_REST_BASE_PORT + opts.nodeIndex + 1}`],
         },
         runner
       );
@@ -62,7 +65,7 @@ export async function createValidatorNode<V extends ValidatorClient>(
           beaconUrls:
             opts.beaconUrls.length > 0
               ? makeUniqueArray([...opts.beaconUrls])
-              : [`http://127.0.0.1:${BN_REST_BASE_PORT + opts.nodeIndex + 1}`],
+              : [`http://${DOCKET_NETWORK_GATEWAY}:${BN_REST_BASE_PORT + opts.nodeIndex + 1}`],
         },
         runner
       );

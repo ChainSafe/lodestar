@@ -4,6 +4,7 @@
 export const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 import path from "node:path";
+import os from "node:os";
 import {fileURLToPath} from "node:url";
 
 export const FAR_FUTURE_EPOCH = 10 ** 12;
@@ -24,3 +25,7 @@ export const MOCK_ETH1_GENESIS_HASH = "0xfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbf
 export const SHARED_JWT_SECRET = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
 export const SHARED_VALIDATOR_PASSWORD = "passwrod";
 export const JOB_HEALTH_TIMEOUT = 60000;
+export const DOCKET_NETWORK_GATEWAY = os.platform() === "darwin" ? "127.0.0.1" : "192.168.0.1";
+export const DOCKET_NETWORK_RANGE = "192.168.0";
+export const DOCKET_NETWORK_SUBNET = "192.168.0.0/24";
+export const DOCKER_NETWORK_NAME = "sim-env-net";

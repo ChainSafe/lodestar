@@ -9,6 +9,7 @@ import {chainConfigToJson} from "@lodestar/config";
 import {BeaconClient, BeaconNodeGenerator, LighthouseAPI, RunnerType} from "../interfaces.js";
 import {getNodeMountedPaths} from "../utils/paths.js";
 import {getNodePorts} from "../utils/ports.js";
+import {DOCKET_NETWORK_GATEWAY} from "../constants.js";
 
 export const generateLighthouseBeaconNode: BeaconNodeGenerator<BeaconClient.Lighthouse> = (opts, runner) => {
   if (!process.env.LIGHTHOUSE_BINARY_PATH && !process.env.LIGHTHOUSE_DOCKER_IMAGE) {
@@ -93,7 +94,7 @@ export const generateLighthouseBeaconNode: BeaconNodeGenerator<BeaconClient.Ligh
       },
       health: async () => {
         try {
-          await got.get(`http://127.0.0.1:${ports.beacon.httpPort}/eth/v1/node/health`);
+          await got.get(`http://${DOCKET_NETWORK_GATEWAY}:${ports.beacon.httpPort}/eth/v1/node/health`);
           return {ok: true};
         } catch (err) {
           if (err instanceof RequestError && err.code !== "ECONNREFUSED") {
@@ -105,9 +106,9 @@ export const generateLighthouseBeaconNode: BeaconNodeGenerator<BeaconClient.Ligh
     },
   ]);
 
-  const httpClient = new HttpClient({baseUrl: `http://127.0.0.1:${ports.beacon.httpPort}`});
+  const httpClient = new HttpClient({baseUrl: `http://${DOCKET_NETWORK_GATEWAY}:${ports.beacon.httpPort}`});
   const api = getClient(
-    {baseUrl: `http://127.0.0.1:${ports.beacon.httpPort}`},
+    {baseUrl: `http://${DOCKET_NETWORK_GATEWAY}:${ports.beacon.httpPort}`},
     {config: forkConfig}
   ) as unknown as LighthouseAPI;
   api.lighthouse = {
@@ -119,7 +120,7 @@ export const generateLighthouseBeaconNode: BeaconNodeGenerator<BeaconClient.Ligh
   return {
     id,
     client: BeaconClient.Lighthouse,
-    restPublicUrl: `http://127.0.0.1:${ports.beacon.httpPort}`,
+    restPublicUrl: `http://${DOCKET_NETWORK_GATEWAY}:${ports.beacon.httpPort}`,
     restPrivateUrl: `http://${address}:${ports.beacon.httpPort}`,
     api,
     job,

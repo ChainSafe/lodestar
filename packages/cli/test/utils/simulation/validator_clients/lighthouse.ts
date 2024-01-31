@@ -9,6 +9,7 @@ import {RunnerType, ValidatorClient, ValidatorNodeGenerator} from "../interfaces
 import {updateKeystoresPath} from "../utils/keys.js";
 import {getNodeMountedPaths} from "../utils/paths.js";
 import {getNodePorts} from "../utils/ports.js";
+import {DOCKET_NETWORK_GATEWAY} from "../constants.js";
 
 export const generateLighthouseValidatorNode: ValidatorNodeGenerator<ValidatorClient.Lighthouse> = (opts, runner) => {
   if (!process.env.LIGHTHOUSE_BINARY_PATH && !process.env.LIGHTHOUSE_DOCKER_IMAGE) {
@@ -84,7 +85,7 @@ export const generateLighthouseValidatorNode: ValidatorNodeGenerator<ValidatorCl
       },
       health: async () => {
         try {
-          await got.get(`http://127.0.0.1:${ports.validator.keymanagerPort}/lighthouse/health`);
+          await got.get(`http://${DOCKET_NETWORK_GATEWAY}:${ports.validator.keymanagerPort}/lighthouse/health`);
           return {ok: true};
         } catch (err) {
           if (err instanceof RequestError) {
@@ -101,7 +102,7 @@ export const generateLighthouseValidatorNode: ValidatorNodeGenerator<ValidatorCl
     client: ValidatorClient.Lighthouse,
     keys,
     keyManager: keyManagerGetClient(
-      {baseUrl: `http://127.0.0.1:${ports.validator.keymanagerPort}`},
+      {baseUrl: `http://${DOCKET_NETWORK_GATEWAY}:${ports.validator.keymanagerPort}`},
       {config: forkConfig}
     ),
     job,

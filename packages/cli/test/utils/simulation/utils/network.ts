@@ -5,6 +5,7 @@ import {sleep} from "@lodestar/utils";
 import {BeaconClient, BeaconNode, ExecutionClient, ExecutionNode, NodePair} from "../interfaces.js";
 import {SimulationEnvironment} from "../SimulationEnvironment.js";
 import {SimulationTrackerEvent} from "../SimulationTracker.js";
+import {DOCKET_NETWORK_GATEWAY} from "../constants.js";
 
 export async function connectAllNodes(nodes: NodePair[]): Promise<void> {
   for (const node of nodes) {
@@ -37,7 +38,9 @@ export async function connectNewCLNode(newNode: BeaconNode, nodes: BeaconNode[])
         clIdentity.peerId,
         // As the lodestar is always running on host
         // convert the address to local host to connect the container node
-        clIdentity.p2pAddresses.map((str) => str.replace(/(\/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\/)/, "/127.0.0.1/"))
+        clIdentity.p2pAddresses.map((str) =>
+          str.replace(/(\/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\/)/, `/${DOCKET_NETWORK_GATEWAY}/`)
+        )
       );
       ApiError.assert(res);
     }

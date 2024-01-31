@@ -7,7 +7,7 @@ import {Eth1ProviderWithAdmin} from "../Eth1ProviderWithAdmin.js";
 import {ExecutionClient, ExecutionNodeGenerator, JobOptions, RunnerType} from "../interfaces.js";
 import {getNethermindChainSpec} from "../utils/execution_genesis.js";
 import {getNodeMountedPaths} from "../utils/paths.js";
-import {SHARED_JWT_SECRET} from "../constants.js";
+import {DOCKET_NETWORK_GATEWAY, SHARED_JWT_SECRET} from "../constants.js";
 import {getNodePorts} from "../utils/ports.js";
 
 export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Nethermind> = (opts, runner) => {
@@ -27,9 +27,9 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
 
   // Docker will be executed on entrypoint automatically
   const binaryPath = "";
-  const engineRpcPublicUrl = `http://127.0.0.1:${ports.execution.enginePort}`;
+  const engineRpcPublicUrl = `http://${DOCKET_NETWORK_GATEWAY}:${ports.execution.enginePort}`;
   const engineRpcPrivateUrl = `http://${address}:${ports.execution.enginePort}`;
-  const ethRpcPublicUrl = `http://127.0.0.1:${ports.execution.httpPort}`;
+  const ethRpcPublicUrl = `http://${DOCKET_NETWORK_GATEWAY}:${ports.execution.httpPort}`;
   const ethRpcPrivateUrl = `http://${address}:${ports.execution.httpPort}`;
 
   const chainSpecPath = path.join(rootDir, "chain.json");
@@ -101,13 +101,10 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
       stdoutFilePath: logFilePath,
     },
     health: async () => {
-      console.log("Starting health check for nethermind.....", ethRpcPublicUrl);
       try {
         await got.post(ethRpcPublicUrl, {json: {jsonrpc: "2.0", method: "net_version", params: [], id: 67}});
-        console.log("Nethermind seems healthy.....");
         return {ok: true};
       } catch (err) {
-        console.log(err);
         return {ok: false, reason: (err as Error).message, checkId: "JSON RPC query net_version"};
       }
     },
