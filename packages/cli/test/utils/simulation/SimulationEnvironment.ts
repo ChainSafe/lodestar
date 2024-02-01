@@ -288,13 +288,21 @@ export class SimulationEnvironment {
         ? getValidatorForBeaconNode(beaconType)
         : validator;
     const validatorOptions = typeof validator === "object" ? validator.options : {};
-    const beaconUrls = [
-      // As lodestar is running on host machine, need to connect through docker named host
-      beaconType === BeaconClient.Lodestar && validatorType !== ValidatorClient.Lodestar
-        ? replaceIpFromUrl(beaconNode.restPrivateUrl, "host.docker.internal")
-        : replaceIpFromUrl(beaconNode.restPrivateUrl, DOCKET_NETWORK_GATEWAY),
-      ...(validatorOptions?.beaconUrls ?? []),
-    ];
+
+    let beaconUrls: string[] = [];
+    if (beaconType === BeaconClient.Lodestar && validatorType === ValidatorClient.Lodestar) {
+      // Both are running on host machine, need to connect through local exposed ports
+      beaconUrls = [beaconNode.restPublicUrl];
+    } else if (beaconType === BeaconClient.Lodestar && validatorType !== ValidatorClient.Lodestar) {
+      // Beacon node running on host machine, validator node running on docker
+      beaconUrls = [replaceIpFromUrl(beaconNode.restPrivateUrl, "host.docker.internal")];
+    } else if (beaconType !== BeaconClient.Lodestar && validatorType === ValidatorClient.Lodestar) {
+      // Beacon node running on docker, validator node running on host machine
+      beaconUrls = [replaceIpFromUrl(beaconNode.restPrivateUrl, DOCKET_NETWORK_GATEWAY)];
+    } else {
+      beaconUrls = [beaconNode.restPrivateUrl];
+    }
+    beaconUrls = [...beaconUrls, ...(validatorOptions?.beaconUrls ?? [])];
 
     const validatorNode = await createValidatorNode(validatorType, {
       ...validatorOptions,

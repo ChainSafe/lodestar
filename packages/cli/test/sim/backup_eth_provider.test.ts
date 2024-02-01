@@ -37,7 +37,6 @@ env.tracker.register({
 });
 
 const node1EthProviderUrl = replaceIpFromUrl(env.nodes[0].execution.engineRpcPublicUrl, DOCKET_NETWORK_GATEWAY);
-console.log({node1EthProviderUrl});
 
 // Create node2 with additional engine url pointing to node1
 const node2 = await env.createNodePair({
