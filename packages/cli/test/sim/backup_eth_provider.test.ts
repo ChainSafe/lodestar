@@ -16,6 +16,7 @@ const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
   ALTAIR_FORK_EPOCH: altairForkEpoch,
   BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
   runTillEpoch: runTillEpoch + syncWaitEpoch,
+  initialNodes: 3,
 });
 
 const env = await SimulationEnvironment.initWithDefaults(
