@@ -138,7 +138,7 @@ export class DockerRunner implements RunnerEnv<RunnerType.Docker> {
       });
       this.dockerNetwork = new StartedNetwork(docker, DOCKER_NETWORK_NAME, network);
     } catch (err) {
-      if (isDockerApiError(err) && err.statusCode === 409) {
+      if (isDockerApiError(err) && err.statusCode === 403) {
         // Network already exists so we can ignore for now.
       } else {
         throw err;
