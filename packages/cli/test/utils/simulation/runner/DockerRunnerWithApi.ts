@@ -4,7 +4,6 @@ import stream from "node:stream";
 import fs from "node:fs";
 import path from "node:path";
 import {
-  Network,
   GenericContainer,
   StartedNetwork,
   StartedTestContainer,
@@ -123,28 +122,26 @@ export class DockerRunner implements RunnerEnv<RunnerType.Docker> {
   async start(): Promise<void> {
     const docker = await getContainerRuntimeClient();
     let network = docker.network.getById(DOCKER_NETWORK_NAME);
-    // Had to add IP table rules to of CI server to allow docker containers to connect to host
-    // sudo iptables -I INPUT -i br-c7f7f7346e1c -j ACCEPT
 
-    // try {
-    //   await network.inspect();
-    //   await retry(
-    //     async () => {
-    //       try {
-    //         await network.remove();
-    //       } catch (err) {
-    //         if (isDockerApiError(err) && err.statusCode === 404) {
-    //           // Network already removed
-    //           return;
-    //         }
-    //         throw err;
-    //       }
-    //     },
-    //     {retries: 5, retryDelay: 500}
-    //   );
-    // } catch {
-    //   // Network does not exist
-    // }
+    try {
+      await network.inspect();
+      await retry(
+        async () => {
+          try {
+            await network.remove();
+          } catch (err) {
+            if (isDockerApiError(err) && err.statusCode === 404) {
+              // Network already removed
+              return;
+            }
+            throw err;
+          }
+        },
+        {retries: 5, retryDelay: 500}
+      );
+    } catch {
+      // Network does not exist
+    }
 
     try {
       network = await docker.network.create({
@@ -168,12 +165,11 @@ export class DockerRunner implements RunnerEnv<RunnerType.Docker> {
   }
 
   async stop(): Promise<void> {
-    // Because of IP table rules configuration on CI server we can't remove network after tests
-    // try {
-    //   // await this.dockerNetwork.stop();
-    // } catch (e) {
-    //   // Network does not exist or containers are stopping
-    // }
+    try {
+      await this.dockerNetwork.stop();
+    } catch (e) {
+      // Network does not exist or containers are stopping
+    }
   }
 
   getNextIp(): string {
