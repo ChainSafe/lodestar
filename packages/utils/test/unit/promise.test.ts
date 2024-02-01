@@ -4,7 +4,7 @@ import {describe, it, expect} from "vitest";
 import {wrapPromise, PromiseRejectedResult, PromiseFulfilledResult} from "../../src/promise.js";
 
 describe("promise", () => {
-  describe("PromiseWithStatus", () => {
+  describe("wrapPromise", () => {
     const timeoutMs = 100;
     // TODO: Debug how promise is resolved quicker than the timeout
     const promiseDurationMin = timeoutMs - 1;

@@ -67,7 +67,7 @@ describe("resolveOrRacePromises", () => {
           case "fulfilled":
             return r.value;
           case "rejected":
-            return (r.reason as Error).message;
+            return r.reason.message;
           default:
             return "pending";
         }

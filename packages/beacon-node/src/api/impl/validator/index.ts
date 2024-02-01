@@ -181,27 +181,27 @@ export function getValidatorApi({
     block: {executionPayloadValue: bigint; consensusBlockValue: bigint},
     source?: ProducedBlockSource
   ): Record<string, string> {
-    const executionValue = block.executionPayloadValue ?? BigInt(0);
-    const consensusValue = block.consensusBlockValue ?? BigInt(0);
+    const executionValue = block.executionPayloadValue;
+    const consensusValue = block.consensusBlockValue;
     const totalValue = executionValue + consensusValue;
 
     if (source == null) {
       return {
-        executionPayloadValueEth: prettyWeiToEth(executionValue),
-        consensusBlockValueEth: prettyWeiToEth(consensusValue),
-        blockTotalValueEth: prettyWeiToEth(totalValue),
+        executionPayloadValue: prettyWeiToEth(executionValue, true),
+        consensusBlockValue: prettyWeiToEth(consensusValue, true),
+        blockTotalValue: prettyWeiToEth(totalValue, true),
       };
     } else if (source === ProducedBlockSource.builder) {
       return {
-        builderExecutionPayloadValueEth: prettyWeiToEth(executionValue),
-        builderConsensusBlockValueEth: prettyWeiToEth(consensusValue),
-        builderBlockTotalValueEth: prettyWeiToEth(totalValue),
+        builderExecutionPayloadValue: prettyWeiToEth(executionValue, true),
+        builderConsensusBlockValue: prettyWeiToEth(consensusValue, true),
+        builderBlockTotalValue: prettyWeiToEth(totalValue, true),
       };
     } else {
       return {
-        engineExecutionPayloadValueEth: prettyWeiToEth(executionValue),
-        engineConsensusBlockValueEth: prettyWeiToEth(consensusValue),
-        engineBlockTotalValueEth: prettyWeiToEth(totalValue),
+        engineExecutionPayloadValue: prettyWeiToEth(executionValue, true),
+        engineConsensusBlockValue: prettyWeiToEth(consensusValue, true),
+        engineBlockTotalValue: prettyWeiToEth(totalValue, true),
       };
     }
   }
@@ -536,7 +536,7 @@ export function getValidatorApi({
       });
       logger.debug("Produced common block body", loggerContext);
 
-      logger.info("Block production race (builder vs execution) starting", {
+      logger.verbose("Block production race (builder vs execution) starting", {
         ...loggerContext,
         cutoffMs: BLOCK_PRODUCTION_RACE_CUTOFF_MS,
         timeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
@@ -547,11 +547,11 @@ export function getValidatorApi({
 
       // Start calls for building execution and builder blocks
 
-      // can't do fee recipient checks as builder bid doesn't return feeRecipient as of now
-
       const builderPromise = isBuilderEnabled
         ? produceBuilderBlindedBlock(slot, randaoReveal, graffiti, {
             feeRecipient,
+            // can't do fee recipient checks as builder bid doesn't return feeRecipient as of now
+            strictFeeRecipientCheck: false,
             // skip checking and recomputing head in these individual produce calls
             skipHeadChecksAndUpdate: true,
             commonBlockBody,
@@ -584,9 +584,7 @@ export function getValidatorApi({
       });
 
       if (builder.status === "pending" && engine.status === "pending") {
-        throw Error(
-          `Builder and engine both failed to produce the block within timeout`
-        );
+        throw Error("Builder and engine both failed to produce the block within timeout");
       }
 
       if (builder.status === "rejected" && engine.status === "rejected") {
@@ -600,7 +598,7 @@ export function getValidatorApi({
             ...loggerContext,
             durationMs: engine.durationMs,
           },
-          engine.reason as Error
+          engine.reason
         );
       }
 
@@ -611,7 +609,7 @@ export function getValidatorApi({
             ...loggerContext,
             durationMs: builder.durationMs,
           },
-          builder.reason as Error
+          builder.reason
         );
       }
 
@@ -649,10 +647,8 @@ export function getValidatorApi({
 
       if (engine.status === "fulfilled" && builder.status === "fulfilled") {
         const executionPayloadSource = selectBlockProductionSource({
-          builderBlockValue:
-            (builder.value.executionPayloadValue ?? BigInt(0)) + (builder.value.consensusBlockValue ?? BigInt(0)),
-          engineBlockValue:
-            (engine.value.executionPayloadValue ?? BigInt(0)) + (engine.value.consensusBlockValue ?? BigInt(0)),
+          builderBlockValue: builder.value.executionPayloadValue + builder.value.consensusBlockValue,
+          engineBlockValue: engine.value.executionPayloadValue + engine.value.consensusBlockValue,
           builderBoostFactor,
           builderSelection,
         });

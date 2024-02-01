@@ -40,7 +40,7 @@ export type PromiseResult<T> = {
     }
   | {
       status: "rejected";
-      reason: unknown;
+      reason: Error;
       durationMs: number;
     }
 );
@@ -59,10 +59,11 @@ export function wrapPromise<T>(promise: PromiseLike<T>): PromiseResult<T> {
         result.status = "fulfilled";
         (result as PromiseFulfilledResult<T>).value = value;
         (result as PromiseFulfilledResult<T>).durationMs = Date.now() - startedAt;
+        return value;
       },
       (reason: unknown) => {
         result.status = "rejected";
-        (result as PromiseRejectedResult<T>).reason = reason;
+        (result as PromiseRejectedResult<T>).reason = reason as Error;
         (result as PromiseRejectedResult<T>).durationMs = Date.now() - startedAt;
       }
     ),
@@ -82,7 +83,11 @@ type ReturnPromiseWithTuple<Tuple extends NonEmptyArray<PromiseLike<unknown>>> =
 };
 
 /**
- * Resolve all promises till `resolveTimeoutMs` if not then race them till `raceTimeoutMs`
+ * Two phased approach for resolving promises:
+ * - first wait `resolveTimeoutMs` or until all promises settle
+ * - then wait `raceTimeoutMs - resolveTimeoutMs` or until at least a single promise resolves
+ *
+ * Returns a list of promise results, see `PromiseResult`
  */
 export async function resolveOrRacePromises<T extends NonEmptyArray<PromiseLike<unknown>>>(
   promises: T,
