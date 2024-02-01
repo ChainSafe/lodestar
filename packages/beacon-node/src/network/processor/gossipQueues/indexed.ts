@@ -9,10 +9,10 @@ type QueueItem<T> = {
 
 /**
  * Enforce minimum wait time for each key. On a mainnet node, wait time for beacon_attestation
- * is ~ 200ms for a node subscribing to all subnets , it's worth to take 1/2 of that to help batch more items.
+ * is ~ 500ms for a node subscribing to all subnets , it's worth to take 1/10 of that to help batch more items.
  * This is only needed for key item < minChunkSize.
  */
-export const MINIMUM_WAIT_TIME_MS = 100;
+export const MINIMUM_WAIT_TIME_MS = 50;
 
 /**
  * This implementation tries to get the most items with same key:

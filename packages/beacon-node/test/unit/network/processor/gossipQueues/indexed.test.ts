@@ -1,5 +1,8 @@
 import {describe, it, expect, beforeEach, afterEach, vi} from "vitest";
-import {IndexedGossipQueueMinSize, MINIMUM_WAIT_TIME_MS} from "../../../../../src/network/processor/gossipQueues/indexed.js";
+import {
+  IndexedGossipQueueMinSize,
+  MINIMUM_WAIT_TIME_MS,
+} from "../../../../../src/network/processor/gossipQueues/indexed.js";
 
 type Item = {
   key: string;
