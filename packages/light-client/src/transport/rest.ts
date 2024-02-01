@@ -1,25 +1,21 @@
 import EventEmitter from "events";
-import StrictEventEmitter from "strict-event-emitter-types";
-import {allForks, SyncPeriod} from "@lodestar/types";
-import {Api, ApiError, routes} from "@lodestar/api";
-import {ForkName} from "@lodestar/params";
-import {LightClientTransport} from "./interface.js";
+import {type StrictEventEmitter} from "strict-event-emitter-types";
+import {type allForks, type SyncPeriod} from "@lodestar/types";
+import {type Api, ApiError, routes} from "@lodestar/api";
+import {type ForkName} from "@lodestar/params";
+import {type LightClientTransport} from "./interface.js";
 
 export type LightClientRestEvents = {
   [routes.events.EventType.lightClientFinalityUpdate]: allForks.LightClientFinalityUpdate;
   [routes.events.EventType.lightClientOptimisticUpdate]: allForks.LightClientOptimisticUpdate;
 };
 
-type RestEvents = StrictEventEmitter<EventEmitter, LightClientRestEvents>;
-
-export class LightClientRestTransport extends (EventEmitter as {new (): RestEvents}) implements LightClientTransport {
+export class LightClientRestTransport implements LightClientTransport {
   private controller = new AbortController();
   private readonly eventEmitter: StrictEventEmitter<EventEmitter, LightClientRestEvents> = new EventEmitter();
   private subscribedEventstream = false;
 
-  constructor(private readonly api: Api) {
-    super();
-  }
+  constructor(private readonly api: Api) {}
 
   async getUpdates(
     startPeriod: SyncPeriod,
