@@ -49,6 +49,12 @@ describe("api/validator - produceBlockV3", function () {
     [routes.validator.BuilderSelection.BuilderAlways, 1, 1, 1, true, "engine"],
     [routes.validator.BuilderSelection.BuilderAlways, 1, null, 1, true, "builder"],
 
+    [routes.validator.BuilderSelection.ExecutionAlways, 2, 1, 0, false, "engine"],
+    [routes.validator.BuilderSelection.ExecutionAlways, 0, 1, 1, false, "engine"],
+    [routes.validator.BuilderSelection.ExecutionAlways, 0, null, 0, false, "builder"],
+    [routes.validator.BuilderSelection.ExecutionAlways, null, 0, 1, false, "engine"],
+    [routes.validator.BuilderSelection.ExecutionAlways, 1, 1, 1, true, "engine"],
+
     [routes.validator.BuilderSelection.BuilderOnly, 0, 2, 0, false, "builder"],
     [routes.validator.BuilderSelection.ExecutionOnly, 2, 0, 1, false, "engine"],
     [routes.validator.BuilderSelection.BuilderOnly, 1, 1, 0, true, "builder"],

@@ -47,7 +47,7 @@ Use the `--JsonRpc.JwtSecretFile /data/jwtsecret` flag to configure the secret. 
 Use the `--engine-jwt-secret=<FILE>` flag to configure the secret. Use their documentation [here](https://besu.hyperledger.org/en/stable/Reference/CLI/CLI-Syntax/#engine-jwt-secret).
 
 **For Erigon:**
-Use the `--authrpc.jwtsecret` flag to configure the secret. Use their documentation [here](https://github.com/ledgerwatch/erigon#authentication-api).
+Use the `--authrpc.jwtsecret` flag to configure the secret. Use their documentation [here](https://github.com/ledgerwatch/erigon?tab=readme-ov-file#beacon-chain-consensus-layer).
 
 ## Run a beacon node
 

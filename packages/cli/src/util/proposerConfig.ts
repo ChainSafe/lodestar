@@ -8,7 +8,6 @@ import {routes} from "@lodestar/api";
 import {parseFeeRecipient} from "./feeRecipient.js";
 
 import {readFile} from "./file.js";
-import {YargsError} from "./index.js";
 
 type ProposerConfig = ValidatorProposerConfig["defaultConfig"];
 
@@ -114,10 +113,12 @@ export function parseBuilderSelection(builderSelection?: string): routes.validat
         break;
       case "builderonly":
         break;
+      case "executionalways":
+        break;
       case "executiononly":
         break;
       default:
-        throw new YargsError("Invalid input for builder selection, check help");
+        throw Error("Invalid input for builder selection, check help");
     }
   }
   return builderSelection as routes.validator.BuilderSelection;
@@ -127,7 +128,7 @@ export function parseBuilderBoostFactor(boostFactor?: string): bigint | undefine
   if (boostFactor === undefined) return;
 
   if (!/^\d+$/.test(boostFactor)) {
-    throw new YargsError("Invalid input for builder boost factor, must be a valid number without decimals");
+    throw Error("Invalid input for builder boost factor, must be a valid number without decimals");
   }
 
   return BigInt(boostFactor);

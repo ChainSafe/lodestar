@@ -56,6 +56,7 @@ export function selectBlockProductionSource({
   builderBoostFactor: bigint;
 }): ProducedBlockSource {
   switch (builderSelection) {
+    case routes.validator.BuilderSelection.ExecutionAlways:
     case routes.validator.BuilderSelection.ExecutionOnly:
       return ProducedBlockSource.engine;
 
