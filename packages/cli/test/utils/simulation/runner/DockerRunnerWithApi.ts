@@ -12,6 +12,7 @@ import {
   getContainerRuntimeClient,
   ContainerRuntimeClient,
 } from "testcontainers";
+import {retry} from "@lodestar/utils";
 import {Job, JobOptions, RunnerEnv, RunnerType} from "../interfaces.js";
 import {DOCKER_NETWORK_NAME, DOCKET_NETWORK_RANGE, DOCKET_NETWORK_SUBNET} from "../constants.js";
 
@@ -79,6 +80,34 @@ class DelayStrategy extends StartupCheckStrategy {
   }
 }
 
+type DockerApiError = {
+  statusCode: number;
+};
+function isDockerApiError(err: any): err is DockerApiError {
+  return "statusCode" in err;
+}
+
+async function stopContainerWithRetries(container: StartedTestContainer): Promise<void> {
+  return retry(
+    async () => {
+      try {
+        await container.stop({remove: true});
+      } catch (err) {
+        if (isDockerApiError(err) && err.statusCode === 404) {
+          // Container already stopped
+          return;
+        } else {
+          throw err;
+        }
+      }
+    },
+    {
+      retries: 5,
+      retryDelay: 500,
+    }
+  );
+}
+
 export class DockerRunner implements RunnerEnv<RunnerType.Docker> {
   type = RunnerType.Docker as const;
 
@@ -91,30 +120,30 @@ export class DockerRunner implements RunnerEnv<RunnerType.Docker> {
   }
 
   async start(): Promise<void> {
-    const docker = await getContainerRuntimeClient();
-    let network = await docker.network.getById(DOCKER_NETWORK_NAME);
     try {
-      await network.inspect();
-      await network.remove();
-    } catch (e) {
-      // Network does not exist
+      const docker = await getContainerRuntimeClient();
+      const network = await docker.network.create({
+        Name: DOCKER_NETWORK_NAME,
+        Driver: "bridge",
+        CheckDuplicate: false,
+        IPAM: {
+          Driver: "default",
+          Options: {},
+          Config: [
+            {
+              Subnet: DOCKET_NETWORK_SUBNET,
+            },
+          ],
+        },
+      });
+      this.dockerNetwork = new StartedNetwork(docker, DOCKER_NETWORK_NAME, network);
+    } catch (err) {
+      if (isDockerApiError(err) && err.statusCode === 409) {
+        // Network already exists so we can ignore for now.
+      } else {
+        throw err;
+      }
     }
-    network = await docker.network.create({
-      Name: DOCKER_NETWORK_NAME,
-      Driver: "bridge",
-      CheckDuplicate: false,
-      IPAM: {
-        Driver: "default",
-        Options: {},
-        Config: [
-          {
-            Subnet: DOCKET_NETWORK_SUBNET,
-          },
-        ],
-      },
-    });
-    /* eslint-enable @typescript-eslint/naming-convention */
-    this.dockerNetwork = new StartedNetwork(docker, DOCKER_NETWORK_NAME, network);
   }
 
   async stop(): Promise<void> {
@@ -187,12 +216,7 @@ export class DockerRunner implements RunnerEnv<RunnerType.Docker> {
         startedContainer = await container.start();
       },
       stop: async () => {
-        // It should be running if we had a health check else it would have run and execute command
-        try {
-          await startedContainer?.stop({timeout: 1000, remove: true});
-        } catch {
-          // Container is already stopped
-        }
+        if (startedContainer) await stopContainerWithRetries(startedContainer);
       },
     };
   }
