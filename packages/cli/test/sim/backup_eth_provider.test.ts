@@ -6,6 +6,7 @@ import {nodeAssertion} from "../utils/simulation/assertions/nodeAssertion.js";
 import {AssertionMatch, BeaconClient, ExecutionClient} from "../utils/simulation/interfaces.js";
 import {defineSimTestConfig, logFilesDir, replaceIpFromUrl} from "../utils/simulation/utils/index.js";
 import {connectAllNodes, waitForSlot} from "../utils/simulation/utils/network.js";
+import {DOCKET_NETWORK_GATEWAY} from "../utils/simulation/constants.js";
 
 const altairForkEpoch = 2;
 const bellatrixForkEpoch = 4;
@@ -42,7 +43,7 @@ const node2 = await env.createNodePair({
   // we have to replace the IP with the local ip to connect to the geth
   beacon: {
     type: BeaconClient.Lodestar,
-    options: {engineUrls: [replaceIpFromUrl(env.nodes[0].execution.engineRpcPublicUrl, "127.0.0.1")]},
+    options: {engineUrls: [replaceIpFromUrl(env.nodes[0].execution.engineRpcPublicUrl, DOCKET_NETWORK_GATEWAY)]},
   },
   execution: ExecutionClient.Geth,
   keysCount: 32,
@@ -55,7 +56,7 @@ const node3 = await env.createNodePair({
   // we have to replace the IP with the local ip to connect to the geth
   beacon: {
     type: BeaconClient.Lodestar,
-    options: {engineUrls: [replaceIpFromUrl(env.nodes[0].execution.engineRpcPublicUrl, "127.0.0.1")]},
+    options: {engineUrls: [replaceIpFromUrl(env.nodes[0].execution.engineRpcPublicUrl, DOCKET_NETWORK_GATEWAY)]},
   },
   execution: ExecutionClient.Geth,
   keysCount: 0,
