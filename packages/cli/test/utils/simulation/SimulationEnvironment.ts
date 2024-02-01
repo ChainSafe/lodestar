@@ -303,6 +303,7 @@ export class SimulationEnvironment {
       beaconUrls = [beaconNode.restPrivateUrl];
     }
     beaconUrls = [...beaconUrls, ...(validatorOptions?.beaconUrls ?? [])];
+    console.log(`Beacon URLs for validator ${id}: ${beaconUrls.join(", ")}`);
 
     const validatorNode = await createValidatorNode(validatorType, {
       ...validatorOptions,

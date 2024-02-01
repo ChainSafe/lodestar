@@ -175,6 +175,8 @@ export class DockerRunner implements RunnerEnv<RunnerType.Docker> {
     let startedContainer: StartedTestContainer | undefined;
     const container = new SimContainer(jobOption.options.image)
       .withAutoRemove(true)
+      // Using same name cause error switching between tests which use same names for nodes
+      // Error: (HTTP code 409) unexpected - can not get logs from container which is dead or marked for removal
       // .withName(jobOption.id)
       .withLabels({jobId: jobOption.id})
       .withExtraHosts([{host: "host.docker.internal", ipAddress: "host-gateway"}]);
