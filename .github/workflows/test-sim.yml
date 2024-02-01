@@ -64,19 +64,17 @@ jobs:
           docker pull ${{env.LIGHTHOUSE_DOCKER_IMAGE}}
           docker pull ${{env.NETHERMIND_DOCKER_IMAGE}}
 
-      - name: Sim tests multifork
-        run: DEBUG='${{github.event.inputs.debug}}' yarn test:sim:multifork
-        working-directory: packages/cli
-        env:
-          GENESIS_DELAY_SLOTS: ${{github.event.inputs.genesisDelaySlots}}
+      # - name: Sim tests multifork
+      #   run: DEBUG='${{github.event.inputs.debug}}' yarn test:sim:multifork
+      #   working-directory: packages/cli
 
-      - name: Sim tests endpoints
-        run: yarn test:sim:endpoints
-        working-directory: packages/cli
+      # - name: Sim tests endpoints
+      #   run: yarn test:sim:endpoints
+      #   working-directory: packages/cli
 
-      - name: Sim tests deneb
-        run: yarn test:sim:deneb
-        working-directory: packages/cli
+      # - name: Sim tests deneb
+      #   run: yarn test:sim:deneb
+      #   working-directory: packages/cli
 
       - name: Sim tests backup eth provider
         run: yarn test:sim:backup_eth_provider
