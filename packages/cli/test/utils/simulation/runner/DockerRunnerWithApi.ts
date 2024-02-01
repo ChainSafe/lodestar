@@ -4,6 +4,7 @@ import stream from "node:stream";
 import fs from "node:fs";
 import path from "node:path";
 import {
+  Network,
   GenericContainer,
   StartedNetwork,
   StartedTestContainer,
@@ -122,49 +123,57 @@ export class DockerRunner implements RunnerEnv<RunnerType.Docker> {
   async start(): Promise<void> {
     const docker = await getContainerRuntimeClient();
     let network = docker.network.getById(DOCKER_NETWORK_NAME);
-    try {
-      await network.inspect();
-      await retry(
-        async () => {
-          try {
-            await network.remove();
-          } catch (err) {
-            if (isDockerApiError(err) && err.statusCode === 404) {
-              // Network already removed
-              return;
-            }
-            throw err;
-          }
-        },
-        {retries: 5, retryDelay: 500}
-      );
-    } catch {
-      // Network does not exist
-    }
+    // Had to add IP table rules to of CI server to allow docker containers to connect to host
+    // sudo iptables -I INPUT -i br-c7f7f7346e1c -j ACCEPT
 
-    network = await docker.network.create({
-      Name: DOCKER_NETWORK_NAME,
-      Driver: "bridge",
-      CheckDuplicate: false,
-      IPAM: {
-        Driver: "default",
-        Options: {},
-        Config: [
-          {
-            Subnet: DOCKET_NETWORK_SUBNET,
-          },
-        ],
-      },
-    });
-    this.dockerNetwork = new StartedNetwork(docker, DOCKER_NETWORK_NAME, network);
+    // try {
+    //   await network.inspect();
+    //   await retry(
+    //     async () => {
+    //       try {
+    //         await network.remove();
+    //       } catch (err) {
+    //         if (isDockerApiError(err) && err.statusCode === 404) {
+    //           // Network already removed
+    //           return;
+    //         }
+    //         throw err;
+    //       }
+    //     },
+    //     {retries: 5, retryDelay: 500}
+    //   );
+    // } catch {
+    //   // Network does not exist
+    // }
+
+    try {
+      network = await docker.network.create({
+        Name: DOCKER_NETWORK_NAME,
+        Driver: "bridge",
+        CheckDuplicate: false,
+        IPAM: {
+          Driver: "default",
+          Options: {},
+          Config: [
+            {
+              Subnet: DOCKET_NETWORK_SUBNET,
+            },
+          ],
+        },
+      });
+      this.dockerNetwork = new StartedNetwork(docker, DOCKER_NETWORK_NAME, network);
+    } catch (err) {
+      this.dockerNetwork = new StartedNetwork(docker, DOCKER_NETWORK_NAME, network);
+    }
   }
 
   async stop(): Promise<void> {
-    try {
-      await this.dockerNetwork.stop();
-    } catch (e) {
-      // Network does not exist or containers are stopping
-    }
+    // Because of IP table rules configuration on CI server we can't remove network after tests
+    // try {
+    //   // await this.dockerNetwork.stop();
+    // } catch (e) {
+    //   // Network does not exist or containers are stopping
+    // }
   }
 
   getNextIp(): string {
