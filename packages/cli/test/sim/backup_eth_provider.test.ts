@@ -36,6 +36,9 @@ env.tracker.register({
   },
 });
 
+const node1EthProviderUrl = replaceIpFromUrl(env.nodes[0].execution.engineRpcPublicUrl, DOCKET_NETWORK_GATEWAY);
+console.log({node1EthProviderUrl});
+
 // Create node2 with additional engine url pointing to node1
 const node2 = await env.createNodePair({
   id: "node-2",
@@ -43,7 +46,7 @@ const node2 = await env.createNodePair({
   // we have to replace the IP with the local ip to connect to the geth
   beacon: {
     type: BeaconClient.Lodestar,
-    options: {engineUrls: [replaceIpFromUrl(env.nodes[0].execution.engineRpcPublicUrl, DOCKET_NETWORK_GATEWAY)]},
+    options: {engineUrls: [node1EthProviderUrl]},
   },
   execution: ExecutionClient.Geth,
   keysCount: 32,
@@ -56,7 +59,7 @@ const node3 = await env.createNodePair({
   // we have to replace the IP with the local ip to connect to the geth
   beacon: {
     type: BeaconClient.Lodestar,
-    options: {engineUrls: [replaceIpFromUrl(env.nodes[0].execution.engineRpcPublicUrl, DOCKET_NETWORK_GATEWAY)]},
+    options: {engineUrls: [node1EthProviderUrl]},
   },
   execution: ExecutionClient.Geth,
   keysCount: 0,
