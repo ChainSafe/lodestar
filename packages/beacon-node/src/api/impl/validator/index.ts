@@ -585,7 +585,7 @@ export function getValidatorApi({
 
       if (builder.status === "pending" && engine.status === "pending") {
         throw Error(
-          `Builder and execution both timeout to proposed the block in ${BLOCK_PRODUCTION_RACE_TIMEOUT_MS}ms`
+          `Builder and engine both failed to produce the block within timeout`
         );
       }
 
