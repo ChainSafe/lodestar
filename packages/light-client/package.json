@@ -79,10 +79,10 @@
     "strict-event-emitter-types": "^2.0.0"
   },
   "devDependencies": {
-    "@chainsafe/as-sha256": "^0.3.1",
+    "@chainsafe/as-sha256": "^0.4.1",
     "@types/qs": "^6.9.7",
     "qs": "^6.11.1",
-    "uint8arrays": "^4.0.9"
+    "uint8arrays": "^5.0.1"
   },
   "keywords": [
     "ethereum",
