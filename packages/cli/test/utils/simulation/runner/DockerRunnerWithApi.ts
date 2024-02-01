@@ -175,7 +175,7 @@ export class DockerRunner implements RunnerEnv<RunnerType.Docker> {
     let startedContainer: StartedTestContainer | undefined;
     const container = new SimContainer(jobOption.options.image)
       .withAutoRemove(true)
-      .withName(jobOption.id)
+      // .withName(jobOption.id)
       .withLabels({jobId: jobOption.id})
       .withExtraHosts([{host: "host.docker.internal", ipAddress: "host-gateway"}]);
 
