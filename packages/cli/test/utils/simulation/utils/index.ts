@@ -18,7 +18,12 @@ export const avg = (arr: number[]): number => {
 };
 
 function getGenesisDelaySlots(initialNodes?: number): number {
-  // if (process.env.GENESIS_DELAY_SLOTS) return parseInt(process.env.GENESIS_DELAY_SLOTS);
+  if (process.env.GENESIS_DELAY_SLOTS) {
+    const genesisDelaySlots = parseInt(process.env.GENESIS_DELAY_SLOTS);
+    // If custom job is invoked and want to use default genesis delay then provider -1 as value
+    if (genesisDelaySlots >= 0) return genesisDelaySlots;
+  }
+
   if (initialNodes == null) return 40;
   // Considering each node consists of EN, BN, VC and KM
   // EN - Execution Node - 5s
