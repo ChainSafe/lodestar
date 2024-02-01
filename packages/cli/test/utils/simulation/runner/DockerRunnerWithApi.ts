@@ -120,30 +120,43 @@ export class DockerRunner implements RunnerEnv<RunnerType.Docker> {
   }
 
   async start(): Promise<void> {
+    const docker = await getContainerRuntimeClient();
+    let network = docker.network.getById(DOCKER_NETWORK_NAME);
     try {
-      const docker = await getContainerRuntimeClient();
-      const network = await docker.network.create({
-        Name: DOCKER_NETWORK_NAME,
-        Driver: "bridge",
-        CheckDuplicate: false,
-        IPAM: {
-          Driver: "default",
-          Options: {},
-          Config: [
-            {
-              Subnet: DOCKET_NETWORK_SUBNET,
-            },
-          ],
+      await network.inspect();
+      await retry(
+        async () => {
+          try {
+            await network.remove();
+          } catch (err) {
+            if (isDockerApiError(err) && err.statusCode === 404) {
+              // Network already removed
+              return;
+            }
+            throw err;
+          }
         },
-      });
-      this.dockerNetwork = new StartedNetwork(docker, DOCKER_NETWORK_NAME, network);
-    } catch (err) {
-      if (isDockerApiError(err) && err.statusCode === 403) {
-        // Network already exists so we can ignore for now.
-      } else {
-        throw err;
-      }
+        {retries: 5, retryDelay: 500}
+      );
+    } catch {
+      // Network does not exist
     }
+
+    network = await docker.network.create({
+      Name: DOCKER_NETWORK_NAME,
+      Driver: "bridge",
+      CheckDuplicate: false,
+      IPAM: {
+        Driver: "default",
+        Options: {},
+        Config: [
+          {
+            Subnet: DOCKET_NETWORK_SUBNET,
+          },
+        ],
+      },
+    });
+    this.dockerNetwork = new StartedNetwork(docker, DOCKER_NETWORK_NAME, network);
   }
 
   async stop(): Promise<void> {
