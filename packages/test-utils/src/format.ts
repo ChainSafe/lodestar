@@ -4,6 +4,6 @@
  * @returns
  */
 export function formatTime(timeMs: number): string {
-  const date = new Date(timeMs);
+  const date = new Date(0, 0, 0, 0, 0, 0, timeMs);
   return `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}.${date.getMilliseconds()}`;
 }

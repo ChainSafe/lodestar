@@ -124,7 +124,7 @@ export class SimulationEnvironment {
 
       this.stop(
         1,
-        `Start sequence not completed before genesis, in ${msToGenesis}ms (approx. ${epoch}/${slot}).`
+        `Start sequence not completed before genesis, in ${formatTime(msToGenesis)} (approx. ${epoch}/${slot}).`
       ).catch((e) => console.error("Error on stop", e));
     }, msToGenesis);
     console.log(`Waiting for genesis for ${formatTime(msToGenesis)} else simulation will stop.`);
