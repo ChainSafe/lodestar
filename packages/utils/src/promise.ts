@@ -137,6 +137,9 @@ export async function resolveOrRacePromises<T extends NonEmptyArray<PromiseLike<
 
     return promiseResults;
   } catch (err) {
+    if (err instanceof ErrorAborted) {
+      return promiseResults;
+    }
     if (err !== raceTimeoutError && !(err instanceof AggregateError)) {
       throw err;
     }
