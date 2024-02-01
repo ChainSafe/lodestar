@@ -1,5 +1,5 @@
 import {describe, it, expect, beforeEach, afterEach, vi} from "vitest";
-import {IndexedGossipQueueMinSize} from "../../../../../src/network/processor/gossipQueues/indexed.js";
+import {IndexedGossipQueueMinSize, MINIMUM_WAIT_TIME_MS} from "../../../../../src/network/processor/gossipQueues/indexed.js";
 
 type Item = {
   key: string;
@@ -49,13 +49,13 @@ describe("IndexedGossipQueueMinSize", () => {
     expect(gossipQueue.next()).toBeNull();
     vi.advanceTimersByTime(20);
     expect(gossipQueue.next()).toBeNull();
-    vi.advanceTimersByTime(30);
-    // should pick items of the last key
-    expect(gossipQueue.next()).toEqual(["c0"].map(toIndexedItem));
+    vi.advanceTimersByTime(MINIMUM_WAIT_TIME_MS - 20);
+    // should pick items with longest items
+    expect(gossipQueue.next()).toEqual(["a0"].map(toIndexedItem));
     expect(gossipQueue.length).toBe(2);
     expect(gossipQueue.next()).toEqual(["b0"].map(toIndexedItem));
     expect(gossipQueue.length).toBe(1);
-    expect(gossipQueue.next()).toEqual(["a0"].map(toIndexedItem));
+    expect(gossipQueue.next()).toEqual(["c0"].map(toIndexedItem));
     expect(gossipQueue.length).toBe(0);
     expect(gossipQueue.next()).toBeNull();
   });

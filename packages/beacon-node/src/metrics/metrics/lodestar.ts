@@ -648,7 +648,7 @@ export function createLodestarMetrics(
       attestationBatchHistogram: register.histogram({
         name: "lodestar_gossip_attestation_verified_in_batch_histogram",
         help: "Number of attestations verified in batch",
-        buckets: [1, 2, 4, 8, 16, 32, 64, 128],
+        buckets: [1, 2, 4, 8, 16, 32],
       }),
       attestationNonBatchCount: register.gauge({
         name: "lodestar_gossip_attestation_verified_non_batch_count",

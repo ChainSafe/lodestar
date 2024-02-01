@@ -17,13 +17,14 @@ import {IndexedGossipQueueAvgTime} from "./indexedAvgTime.js";
 /**
  * In normal condition, the higher this value the more efficient the signature verification.
  * However, if at least 1 signature is invalid, we need to verify each signature separately.
+ * Metrics show that there are very few batch with > 32 signatures, so we set this value to 32.
  */
-const MAX_GOSSIP_ATTESTATION_BATCH_SIZE = 128;
+const MAX_GOSSIP_ATTESTATION_BATCH_SIZE = 32;
 
 /**
- * Minimum signature sets to batch verify without waiting for 50ms.
+ * Minimum signature sets to batch verify without waiting for MINIMUM_WAIT_TIME_MS.
  */
-export const MIN_SIGNATURE_SETS_TO_BATCH_VERIFY = 32;
+export const MIN_SIGNATURE_SETS_TO_BATCH_VERIFY = 16;
 
 /**
  * Numbers from https://github.com/sigp/lighthouse/blob/b34a79dc0b02e04441ba01fd0f304d1e203d877d/beacon_node/network/src/beacon_processor/mod.rs#L69

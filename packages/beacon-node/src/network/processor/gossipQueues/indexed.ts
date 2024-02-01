@@ -9,10 +9,10 @@ type QueueItem<T> = {
 
 /**
  * Enforce minimum wait time for each key. On a mainnet node, wait time for beacon_attestation
- * is more than 500ms, it's worth to take 1/10 of that to help batch more items.
+ * is ~ 200ms for a node subscribing to all subnets , it's worth to take 1/2 of that to help batch more items.
  * This is only needed for key item < minChunkSize.
  */
-const MINIMUM_WAIT_TIME_MS = 50;
+export const MINIMUM_WAIT_TIME_MS = 100;
 
 /**
  * This implementation tries to get the most items with same key:
@@ -134,7 +134,7 @@ export class IndexedGossipQueueMinSize<T extends {indexed?: string; queueAddedMs
   next(): T[] | null {
     let key: string | null = this.minChunkSizeKeys.last();
     if (key == null) {
-      key = this.lastMinWaitKey();
+      key = this.longestMinWaitKey();
     }
 
     if (key == null) {
@@ -181,11 +181,13 @@ export class IndexedGossipQueueMinSize<T extends {indexed?: string; queueAddedMs
   }
 
   /**
+   * Previously we search for the last key >= MINIMUM_WAIT_TIME_MS old to minic the LIFO behavior.
+   * Starting Jan 2024, we switch to new bls with faster signature verification, so we switch to
+   * searching for the longest queue item with >= MINIMUM_WAIT_TIME_MS old and return the key
    * `indexedItems` is already sorted by key, so we can just iterate through it
-   * Search for the last key with >= MINIMUM_WAIT_TIME_MS old
    * Do not search again if we already searched recently
    */
-  private lastMinWaitKey(): string | null {
+  private longestMinWaitKey(): string | null {
     const now = Date.now();
     // searched recently, skip
     if (this.nextWaitTimeMs != null && now - this.lastWaitTimeCheckedMs < this.nextWaitTimeMs) {
@@ -194,12 +196,14 @@ export class IndexedGossipQueueMinSize<T extends {indexed?: string; queueAddedMs
 
     this.lastWaitTimeCheckedMs = now;
     this.nextWaitTimeMs = null;
-    let resultedKey: string | null = null;
+    let resultedKey: {key: string; queueItemLength: number} | null = null;
     for (const [key, queueItem] of this.indexedItems.entries()) {
       if (now - queueItem.firstSeenMs >= MINIMUM_WAIT_TIME_MS) {
         // found, do not return to find the last key with >= MINIMUM_WAIT_TIME_MS old
         this.nextWaitTimeMs = null;
-        resultedKey = key;
+        if (resultedKey === null || resultedKey.queueItemLength < queueItem.listItems.length) {
+          resultedKey = {key, queueItemLength: queueItem.listItems.length};
+        }
       } else {
         // if a key is not at least MINIMUM_WAIT_TIME_MS old, all remaining keys are not either
         break;
@@ -212,8 +216,9 @@ export class IndexedGossipQueueMinSize<T extends {indexed?: string; queueAddedMs
       if (firstValue != null) {
         this.nextWaitTimeMs = Math.max(0, MINIMUM_WAIT_TIME_MS - (now - firstValue.firstSeenMs));
       }
+      return null;
     }
 
-    return resultedKey;
+    return resultedKey.key;
   }
 }
