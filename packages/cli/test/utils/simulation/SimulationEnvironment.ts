@@ -54,6 +54,7 @@ export class SimulationEnvironment {
   private nodePairCount = 0;
   private genesisState?: BeaconStateAllForks;
   private stopHandlers: (() => Promise<void>)[] = [];
+  private runTimeout?: NodeJS.Timeout;
 
   private constructor(forkConfig: ChainForkConfig, options: SimulationOptions) {
     this.forkConfig = forkConfig;
@@ -104,7 +105,7 @@ export class SimulationEnvironment {
       ).toISOString()} simulationTimeout=${formatTime(opts.runTimeoutMs)}`
     );
     if (opts.runTimeoutMs > 0) {
-      setTimeout(() => {
+      this.runTimeout = setTimeout(() => {
         const slots = this.clock.getSlotFor((currentTime + opts.runTimeoutMs) / MS_IN_SEC);
         const epoch = this.clock.getEpochForSlot(slots);
         const slot = this.clock.getSlotIndexInEpoch(slots);
@@ -185,6 +186,7 @@ export class SimulationEnvironment {
   }
 
   async stop(code = 0, message = "On completion."): Promise<void> {
+    clearTimeout(this.runTimeout);
     process.removeAllListeners("unhandledRejection");
     process.removeAllListeners("uncaughtException");
     process.removeAllListeners("SIGTERM");
