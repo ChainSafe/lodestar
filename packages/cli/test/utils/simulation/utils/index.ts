@@ -25,7 +25,8 @@ function getGenesisDelaySlots(initialNodes?: number): number {
   // BN - Beacon Node - 10s
   // VC - Validator Client - 5s
   // KM - Key Manager - 3s
-  return ((5 + 10 + 5 + 3) * initialNodes) / SIM_TESTS_SECONDS_PER_SLOT;
+  // Initial script launch time - 10s
+  return Math.ceil(((5 + 10 + 5 + 3) * initialNodes + 10) / SIM_TESTS_SECONDS_PER_SLOT);
 }
 
 export function defineSimTestConfig(
