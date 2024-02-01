@@ -66,8 +66,8 @@ export function selectBlockProductionSource({
         ? ProducedBlockSource.engine
         : ProducedBlockSource.builder;
 
-    default:
-      // For everything else just select the builder
+    case routes.validator.BuilderSelection.BuilderAlways:
+    case routes.validator.BuilderSelection.BuilderOnly:
       return ProducedBlockSource.builder;
   }
 }
