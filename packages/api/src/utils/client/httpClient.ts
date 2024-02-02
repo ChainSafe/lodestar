@@ -1,4 +1,4 @@
-import {ErrorAborted, Logger, TimeoutError, isValidHttpUrl, toBase64} from "@lodestar/utils";
+import {ErrorAborted, Logger, TimeoutError, isValidHttpUrl, toBase64, retry} from "@lodestar/utils";
 import {ReqGeneric, RouteDef} from "../index.js";
 import {ApiClientResponse, ApiClientSuccessResponse} from "../../interfaces.js";
 import {fetch, isFetchError} from "./fetch.js";
@@ -70,6 +70,7 @@ export type FetchOpts = {
   /** Optional, for metrics */
   routeId?: string;
   timeoutMs?: number;
+  retryAttempts?: number;
 };
 
 export interface IHttpClient {
@@ -179,6 +180,18 @@ export class HttpClient implements IHttpClient {
   }
 
   private async requestWithBodyWithRetries<T>(
+    opts: FetchOpts,
+    getBody: (res: Response) => Promise<T>
+  ): Promise<{status: HttpStatusCode; body: T}> {
+    return retry(
+      async (_attempt) => {
+        return this.requestWithBodyWithFallbacks<T>(opts, getBody);
+      },
+      {retries: opts?.retryAttempts ?? 1, retryDelay: 10}
+    );
+  }
+
+  private async requestWithBodyWithFallbacks<T>(
     opts: FetchOpts,
     getBody: (res: Response) => Promise<T>
   ): Promise<{status: HttpStatusCode; body: T}> {
