@@ -34,7 +34,7 @@ export const generateLodestarValidatorNode: ValidatorNodeGenerator<ValidatorClie
     "keymanager.address": "127.0.0.1",
     "keymanager.port": ports.validator.keymanagerPort,
     logPrefix: id,
-    logFormatGenesisTime: genesisTime,
+    logFormatGenesisTime: `${genesisTime}`,
     logLevel: LogLevel.debug,
     logFile: "none",
     importKeystores: keystoresDir,

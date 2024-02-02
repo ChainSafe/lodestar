@@ -14,14 +14,14 @@ export async function createValidatorNode<V extends ValidatorClient>(
     "id" | "paths" | "forkConfig" | "nodeIndex" | "genesisTime" | "runner" | "beaconUrls"
   >
 ): Promise<ValidatorNode> {
-  const {runner, forkConfig} = options;
+  const {runner} = options;
   const clId = `${options.id}-${client}`;
 
   const opts: ValidatorGeneratorOptions = {
     ...options,
     id: clId,
     keys: options.keys ?? {type: "no-keys"},
-    genesisTime: options.genesisTime + forkConfig.GENESIS_DELAY,
+    genesisTime: options.genesisTime,
     clientOptions: options.clientOptions ?? {},
     address: "127.0.0.1",
   };

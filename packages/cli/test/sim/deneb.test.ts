@@ -22,8 +22,8 @@ const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
 
 const env = await SimulationEnvironment.initWithDefaults(
   {
-    id: "multi-fork",
-    logsDir: path.join(logFilesDir, "multi-fork"),
+    id: "deneb",
+    logsDir: path.join(logFilesDir, "deneb"),
     forkConfig,
   },
   [
