@@ -29,6 +29,7 @@ export type ApplicationResponse<E extends Endpoint> = HasOnlyOptionalProps<Appli
   ? ApplicationResponseObject<E> | void
   : ApplicationResponseObject<E>;
 
+// TODO: what's the purpose of this?
 export type ApplicationError = ApiError | Error;
 
 type GenericOptions = Record<string, unknown>;
@@ -56,11 +57,16 @@ export type FastifyRouteConfig = fastify.FastifyContextConfig & {
   operationId: string;
 };
 
+export type FastifySchema = fastify.FastifySchema & {
+  operationId: string;
+  tags?: string[];
+};
+
 export type FastifyRoute<E extends Endpoint> = {
   url: string;
   method: fastify.HTTPMethods;
   handler: FastifyHandler<E>;
-  schema?: fastify.FastifySchema;
+  schema: FastifySchema;
   config: FastifyRouteConfig;
 };
 export type FastifyRoutes<Es extends Record<string, Endpoint>> = {[K in keyof Es]: FastifyRoute<Es[K]>};
@@ -145,28 +151,26 @@ export function createFastifyHandler<E extends Endpoint>(
 export function createFastifyRoute<E extends Endpoint>(
   definition: RouteDefinition<E>,
   method: ApplicationMethod<E>,
-  operationId: string,
-  namespace?: string
+  operationId: string
 ): FastifyRoute<E> {
+  const url = toColonNotationPath(definition.url);
   return {
-    url: toColonNotationPath(definition.url),
+    url,
     method: definition.method,
     handler: createFastifyHandler(definition, method, operationId),
     schema: {
       ...getFastifySchema(definition.req.schema),
-      ...(namespace ? {tags: [namespace]} : undefined),
       operationId,
-    } as fastify.FastifySchema,
-    config: {operationId} as FastifyRouteConfig,
+    },
+    config: {url, method: definition.method, operationId},
   };
 }
 
 export function createFastifyRoutes<Es extends Record<string, Endpoint>>(
   definitions: RouteDefinitions<Es>,
-  methods: ApplicationMethods<Es>,
-  namespace?: string
+  methods: ApplicationMethods<Es>
 ): FastifyRoutes<Es> {
   return mapValues(definitions, (definition, operationId) =>
-    createFastifyRoute(definition, methods[operationId], operationId as string, namespace)
+    createFastifyRoute(definition, methods[operationId], operationId as string)
   );
 }
