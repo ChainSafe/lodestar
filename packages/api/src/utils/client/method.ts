@@ -35,9 +35,9 @@ export function createApiClientMethod<E extends Endpoint>(
       return client.request(definitionExtended, undefined, init ?? {});
     }) as ApiClientMethod<E>;
   }
-  return (async (args?: E["args"], init?: ApiRequestInit) => {
+  return async (args?: E["args"], init?: ApiRequestInit) => {
     return client.request(definitionExtended, args, init ?? {});
-  }) as ApiClientMethod<E>;
+  };
 }
 
 export function createApiClientMethods<Es extends Record<string, Endpoint>>(
