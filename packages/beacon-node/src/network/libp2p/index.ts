@@ -142,7 +142,6 @@ export async function createNodeJsLibp2p(
   // libp2p:mplex initiator stream with id 8 and protocol undefined ended
   // libp2p:mplex:stream:initiator:8 selected protocol /ipfs/id/push/1.0.0
   await libp2p.unhandle(["/ipfs/id/push/1.0.0"]);
-  await libp2p.unhandle(["/meshsub/1.1.0"]);
 
   return libp2p;
 }
