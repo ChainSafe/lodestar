@@ -246,6 +246,7 @@ export class SimulationEnvironment {
     const beaconNode = await createBeaconNode(beaconType, {
       ...beaconOptions,
       ...commonOptions,
+      genesisState: this.genesisState,
       engineUrls,
       paths: getNodePaths({id, logsDir: this.options.logsDir, client: beaconType, root: this.options.rootDir}),
     });
