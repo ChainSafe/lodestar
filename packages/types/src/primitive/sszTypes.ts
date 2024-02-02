@@ -1,7 +1,5 @@
 import {ByteVectorType, UintNumberType, UintBigintType, BooleanType} from "@chainsafe/ssz";
-/* eslint-disable no-restricted-imports */
-import {ByteArray} from "@chainsafe/ssz/lib/type/byteArray";
-import {toChecksumAddress} from "@lodestar/utils";
+import {ExecutionAddressType} from "../utils/ExecutionAddress.js";
 
 export const Boolean = new BooleanType();
 export const Byte = new UintNumberType(1);
@@ -56,16 +54,6 @@ export const Gwei = UintBn64;
 export const Wei = UintBn256;
 export const Root = new ByteVectorType(32);
 export const BlobIndex = UintNum64;
-
-export class ExecutionAddressType extends ByteVectorType {
-  constructor() {
-    super(20);
-  }
-  toJson(value: ByteArray): unknown {
-    const string = super.toJson(value) as string;
-    return toChecksumAddress(string);
-  }
-}
 
 export const Version = Bytes4;
 export const DomainType = Bytes4;
