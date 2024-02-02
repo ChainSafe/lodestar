@@ -1,13 +1,14 @@
-import {BeaconEvent, getEventSerdes, Endpoints, definitions} from "../routes/events.js";
+import {ChainForkConfig} from "@lodestar/config";
 import {getEventSource} from "../../utils/client/eventSource.js";
 import {IHttpClient} from "../../utils/client/httpClient.js";
 import {ApiClientMethods} from "../../utils/client/method.js";
 import {compileRouteUrlFormater} from "../../utils/urlFormat.js";
+import {BeaconEvent, Endpoints, definitions, getEventSerdes} from "../routes/events.js";
 
 /**
  * REST HTTP client for events routes
  */
-export function getClient(client: IHttpClient): ApiClientMethods<Endpoints> {
+export function getClient(_config: ChainForkConfig, client: IHttpClient): ApiClientMethods<Endpoints> {
   const eventSerdes = getEventSerdes();
 
   const urlFormatter = compileRouteUrlFormater(definitions.eventstream.url);
