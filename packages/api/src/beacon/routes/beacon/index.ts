@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {phase0, ssz} from "@lodestar/types";
-import {Endpoint} from "../../../utils/types.js";
+import {Endpoint, RouteDefinitions} from "../../../utils/types.js";
 import {EmptyArgs, EmptyGetRequestCodec, EmptyMeta, EmptyMetaCodec, EmptyRequest} from "../../../utils/codecs.js";
 import * as block from "./block.js";
 import * as pool from "./pool.js";
@@ -41,12 +41,11 @@ export type Endpoints = block.Endpoints &
     >;
   };
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-export function getDefinitions(config: ChainForkConfig) {
+export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoints> {
   return {
     getGenesis: {
       url: "/eth/v1/beacon/genesis",
-      method: "GET" as const,
+      method: "GET",
       req: EmptyGetRequestCodec,
       resp: {
         data: ssz.phase0.Genesis,
