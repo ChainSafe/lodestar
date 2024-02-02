@@ -63,7 +63,7 @@ export async function createNodeJsLibp2p(
     }
   }
 
-  return createLibp2p({
+  const libp2p = await createLibp2p({
     peerId,
     addresses: {
       listen: localMultiaddrs,
@@ -134,4 +134,11 @@ export async function createNodeJsLibp2p(
       }),
     },
   });
+
+  // We use `/ipfs/id/1.0.0` protocol and `/ipfs/id/push/1.0.0` is causing following errors
+  // libp2p:mplex initiator stream with id 8 and protocol undefined ended
+  // libp2p:mplex:stream:initiator:8 selected protocol /ipfs/id/push/1.0.0
+  await libp2p.unhandle(["/ipfs/id/push/1.0.0"]);
+
+  return libp2p;
 }
