@@ -1,24 +1,19 @@
 import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
-import {ChainForkConfig} from "@lodestar/config";
-import {Api, ReqTypes, routesData, getReturnTypes, getReqSerializers} from "../routes/proof.js";
-import {ServerRoutes, getGenericJsonServer} from "../../utils/server/index.js";
-import {ServerApi} from "../../interfaces.js";
+import {ApplicationMethods, FastifyRoutes, createFastifyRoutes} from "../../utils/server.js";
+import {Endpoints, definitions} from "../routes/proof.js";
 
-export function getRoutes(config: ChainForkConfig, api: ServerApi<Api>): ServerRoutes<Api, ReqTypes> {
-  const reqSerializers = getReqSerializers();
-  const serverRoutes = getGenericJsonServer<ServerApi<Api>, ReqTypes>(
-    {routesData, getReturnTypes, getReqSerializers},
-    config,
-    api
-  );
+// TODO: revisit, do we need still need to override handlers?
+
+export function getRoutes(methods: ApplicationMethods<Endpoints>): FastifyRoutes<Endpoints> {
+  const serverRoutes = createFastifyRoutes(definitions, methods);
 
   return {
     // Non-JSON routes. Return binary
     getStateProof: {
       ...serverRoutes.getStateProof,
       handler: async (req) => {
-        const args = reqSerializers.getStateProof.parseReq(req);
-        const {data} = await api.getStateProof(...args);
+        const args = definitions.getStateProof.req.parseReq(req);
+        const {data} = await methods.getStateProof(args);
         const leaves = (data as CompactMultiProof).leaves;
         const response = new Uint8Array(32 * leaves.length);
         for (let i = 0; i < leaves.length; i++) {
@@ -31,8 +26,8 @@ export function getRoutes(config: ChainForkConfig, api: ServerApi<Api>): ServerR
     getBlockProof: {
       ...serverRoutes.getBlockProof,
       handler: async (req) => {
-        const args = reqSerializers.getBlockProof.parseReq(req);
-        const {data} = await api.getBlockProof(...args);
+        const args = definitions.getBlockProof.req.parseReq(req);
+        const {data} = await methods.getBlockProof(args);
         const leaves = (data as CompactMultiProof).leaves;
         const response = new Uint8Array(32 * leaves.length);
         for (let i = 0; i < leaves.length; i++) {
