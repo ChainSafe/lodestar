@@ -12,7 +12,7 @@ import {LocalKeystoreDefinition} from "../../../../../src/cmds/validator/keymana
 const numberOfSigners = 10;
 
 describe("keystoreCache", () => {
-  vi.setConfig({testTimeout: 10000, hookTimeout: 10000});
+  vi.setConfig({testTimeout: 10000, hookTimeout: 50000});
   let definitions: LocalKeystoreDefinition[];
   let signers: SignerLocal[];
   let secretKeys: Uint8Array[];
@@ -51,7 +51,7 @@ describe("keystoreCache", () => {
       passwords.push(password);
       secretKeys.push(secretKey.toBytes());
     }
-  }, 50000);
+  });
 
   describe("writeKeystoreCache", () => {
     it("should write a valid keystore cache file", async () => {
