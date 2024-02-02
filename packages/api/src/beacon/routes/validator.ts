@@ -38,6 +38,7 @@ import {
 
 export enum BuilderSelection {
   BuilderAlways = "builderalways",
+  ExecutionAlways = "executionalways",
   MaxProfit = "maxprofit",
   /** Only activate builder flow for DVT block proposal protocols */
   BuilderOnly = "builderonly",
