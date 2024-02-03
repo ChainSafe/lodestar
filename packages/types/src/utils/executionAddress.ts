@@ -1,5 +1,5 @@
 import {keccak256} from "ethereum-cryptography/keccak.js";
-import {ByteVectorType, fromHexString, toHexString} from "@chainsafe/ssz";
+import {ByteVectorType} from "@chainsafe/ssz";
 
 export type ByteVector = Uint8Array;
 
