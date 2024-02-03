@@ -75,8 +75,7 @@
   "dependencies": {
     "@chainsafe/ssz": "^0.14.0",
     "@lodestar/params": "^1.15.0",
-    "@lodestar/utils": "^1.15.0",
-    "ethereum-cryptography": "^1.2.0"
+    "ethereum-cryptography": "^2.0.0"
   },
   "keywords": [
     "ethereum",

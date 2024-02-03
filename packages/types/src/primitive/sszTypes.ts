@@ -1,5 +1,5 @@
 import {ByteVectorType, UintNumberType, UintBigintType, BooleanType} from "@chainsafe/ssz";
-import {ExecutionAddressType} from "../utils/ExecutionAddress.js";
+import {ExecutionAddressType} from "../utils/executionAddress.js";
 
 export const Boolean = new BooleanType();
 export const Byte = new UintNumberType(1);
