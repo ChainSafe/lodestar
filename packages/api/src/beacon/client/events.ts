@@ -1,65 +1,52 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {getEventSource} from "../../utils/client/eventSource.js";
-import {IHttpClient} from "../../utils/client/httpClient.js";
+import {stringifyQuery, urlJoin} from "../../utils/client/format.js";
 import {ApiClientMethods} from "../../utils/client/method.js";
-import {compileRouteUrlFormater} from "../../utils/urlFormat.js";
+import {RouteDefinitionExtra} from "../../utils/client/request.js";
+import {ApiResponse} from "../../utils/client/response.js";
 import {BeaconEvent, Endpoints, definitions, getEventSerdes} from "../routes/events.js";
 
 /**
  * REST HTTP client for events routes
  */
-export function getClient(_config: ChainForkConfig, client: IHttpClient): ApiClientMethods<Endpoints> {
+export function getClient(_config: ChainForkConfig, baseUrl: string): ApiClientMethods<Endpoints> {
   const eventSerdes = getEventSerdes();
 
-  const urlFormatter = compileRouteUrlFormater(definitions.eventstream.url);
-  const eventstreamDefinitionExtended = {
-    ...definitions.eventstream,
-    urlFormatter,
-    operationId: "eventstream",
-  };
-
   return {
-    eventstream: async (args, init) => {
-      const fetch = async (input: RequestInfo | URL): Promise<Response> => {
-        const url = input instanceof Request ? input.url : input;
-        // eslint-disable-next-line @typescript-eslint/naming-convention
-        const EventSource = await getEventSource();
-        const eventSource = new EventSource(url);
+    eventstream: async ({topics, signal, onEvent, onError, onClose}) => {
+      const query = stringifyQuery({topics});
+      const url = `${urlJoin(baseUrl, definitions.eventstream.url)}?${query}`;
+      // eslint-disable-next-line @typescript-eslint/naming-convention
+      const EventSource = await getEventSource();
+      const eventSource = new EventSource(url);
 
-        const {topics, signal, onEvent, onError, onClose} = args;
+      const close = (): void => {
+        eventSource.close();
+        onClose?.();
+        signal.removeEventListener("abort", close);
+      };
+      signal.addEventListener("abort", close, {once: true});
 
-        const close = (): void => {
-          eventSource.close();
-          onClose?.();
-          signal.removeEventListener("abort", close);
-        };
-        signal.addEventListener("abort", close, {once: true});
+      for (const topic of topics) {
+        eventSource.addEventListener(topic, (event: MessageEvent) => {
+          const message = eventSerdes.fromJson(topic, JSON.parse(event.data));
+          onEvent({type: topic, message} as BeaconEvent);
+        });
+      }
 
-        for (const topic of topics) {
-          eventSource.addEventListener(topic, ((event: MessageEvent) => {
-            const message = eventSerdes.fromJson(topic, JSON.parse(event.data));
-            onEvent({type: topic, message} as BeaconEvent);
-          }) as EventListener);
+      // EventSource will try to reconnect always on all errors
+      // `eventSource.onerror` events are informative but don't indicate the EventSource closed
+      // The only way to abort the connection from the client is via eventSource.close()
+      eventSource.onerror = function onerror(err) {
+        const errEs = err as unknown as EventSourceError;
+        onError?.(new Error(errEs.message));
+        // Consider 400 and 500 status errors unrecoverable, close the eventsource
+        if (errEs.status === 400 || errEs.status === 500) {
+          close();
         }
-
-        // EventSource will try to reconnect always on all errors
-        // `eventSource.onerror` events are informative but don't indicate the EventSource closed
-        // The only way to abort the connection from the client is via eventSource.close()
-        eventSource.onerror = function onerror(err) {
-          const errEs = err as unknown as EventSourceError;
-          onError?.(errEs);
-          // Consider 400 and 500 status errors unrecoverable, close the eventsource
-          if (errEs.status === 400 || errEs.status === 500) {
-            close();
-          }
-          // TODO: else log the error somewhere
-          // console.log("eventstream client error", errEs);
-        };
-
-        return new Response();
       };
 
-      return client.request(eventstreamDefinitionExtended, args, init ?? {}, fetch);
+      return new ApiResponse(definitions.eventstream as RouteDefinitionExtra<Endpoints["eventstream"]>);
     },
   };
 }
