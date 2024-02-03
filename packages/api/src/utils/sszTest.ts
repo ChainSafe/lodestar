@@ -24,6 +24,8 @@ import {createApiClientMethods} from "./client/method.js";
 import {WireFormat} from "./headers.js";
 import {IHttpClient} from "./client/httpClient.js";
 
+// TODO: delete this file
+
 // ssz types -- assumed to already be defined
 
 const ValidatorIndices = new ListBasicType(ssz.ValidatorIndex, 2 ** 40);

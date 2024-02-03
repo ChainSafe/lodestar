@@ -316,6 +316,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
     resp: {
       onlySupport: WireFormat.json,
       data: {
+        // TODO: add wrapper, onlyJson
         toJson: (data) => data,
         fromJson: (data) => data as {version: string},
         serialize: () => {

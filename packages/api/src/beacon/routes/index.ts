@@ -30,6 +30,7 @@ export type Endpoints = {
   validator: ValidatorEndpoints;
 };
 
+// TODO: update to reflect new design
 // Reasoning of the API definitions
 // ================================
 //
