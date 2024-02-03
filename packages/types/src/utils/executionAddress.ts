@@ -25,7 +25,7 @@ export function toChecksumAddress(address: string): string {
     throw Error(`Invalid address: ${address}`);
   }
 
-  const rawAddress = address.toLowerCase().startsWith("0x") ? address.slice(2) : address;
+  const rawAddress = (address.startsWith("0x") ? address.slice(2) : address).toLowerCase();
   const chars = rawAddress.split("");
 
   // Inspired by https://github.com/ethers-io/ethers.js/blob/cac1da1f912c2ae9ba20f25aa51a91766673cd76/src.ts/address/address.ts#L8
