@@ -1,14 +1,14 @@
-import type {Api} from "./routes/index.js";
+import type {Endpoints} from "./routes/index.js";
 
 // NOTE: Don't export server here so it's not bundled to all consumers
 
 export * as routes from "./routes/index.js";
 export {getClient} from "./client/index.js";
-export type {Api};
+export type {Endpoints};
 
 // Declare namespaces for CLI options
-export type ApiNamespace = keyof Api;
-const allNamespacesObj: {[K in keyof Api]: true} = {
+export type ApiNamespace = keyof Endpoints;
+const allNamespacesObj: {[K in keyof Endpoints]: true} = {
   beacon: true,
   config: true,
   debug: true,
