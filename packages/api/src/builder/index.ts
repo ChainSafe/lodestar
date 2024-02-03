@@ -1,8 +1,9 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {HttpClient, HttpClientModules, HttpClientOptions, IHttpClient} from "../utils/client/httpClient.js";
 import {ApiClientMethods} from "../utils/client/method.js";
-import * as builder from "./client.js";
 import {Endpoints} from "./routes.js";
+
+import * as builder from "./client.js";
 
 // NOTE: Don't export server here so it's not bundled to all consumers
 
