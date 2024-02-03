@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
-import {phase0, CommitteeIndex, Slot, Epoch, ssz, RootHex} from "@lodestar/types";
+import {phase0, CommitteeIndex, Slot, Epoch, ssz, RootHex, StringType} from "@lodestar/types";
 import {Endpoint, RequestCodec, RouteDefinitions, Schema} from "../../../utils/index.js";
 import {ArrayOf, ExecutionOptimisticCodec, ExecutionOptimisticMeta} from "../../../utils/codecs.js";
 import {RootResponse, RootResponseType} from "./block.js";
@@ -10,18 +10,17 @@ import {RootResponse, RootResponseType} from "./block.js";
 export type StateId = RootHex | Slot | "head" | "genesis" | "finalized" | "justified";
 export type ValidatorId = string | number;
 
-export enum ValidatorStatus {
-  "active",
-  "pending_initialized",
-  "pending_queued",
-  "active_ongoing",
-  "active_exiting",
-  "active_slashed",
-  "exited_unslashed",
-  "exited_slashed",
-  "withdrawal_possible",
-  "withdrawal_done",
-}
+export type ValidatorStatus =
+  | "active"
+  | "pending_initialized"
+  | "pending_queued"
+  | "active_ongoing"
+  | "active_exiting"
+  | "active_slashed"
+  | "exited_unslashed"
+  | "exited_slashed"
+  | "withdrawal_possible"
+  | "withdrawal_done";
 
 export const RandaoResponseType = new ContainerType({
   randao: ssz.Root,
@@ -34,7 +33,7 @@ export const FinalityCheckpointsType = new ContainerType({
 export const ValidatorResponseType = new ContainerType({
   index: ssz.ValidatorIndex,
   balance: ssz.UintNum64,
-  status: ssz.Uint8,
+  status: new StringType<ValidatorStatus>(),
   validator: ssz.phase0.Validator,
 });
 export const EpochCommitteeResponseType = new ContainerType({
