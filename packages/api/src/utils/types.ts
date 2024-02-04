@@ -109,29 +109,29 @@ export type RequestCodec<E extends Endpoint> = E["method"] extends "GET" ? GetRe
 
 // Response codec
 
-export type ResponseDataCodec<T, M> = {
+export type ResponseDataCodec<T extends Endpoint["return"], M extends Endpoint["meta"]> = {
   toJson: (data: T, meta: M) => unknown; // server
   fromJson: (data: unknown, meta: M) => T; // client
   serialize: (data: T, meta: M) => Uint8Array; // server
   deserialize: (data: Uint8Array, meta: M) => T; // client
 };
 
-export type ResponseMetadataCodec<T> = {
+export type ResponseMetadataCodec<T extends Endpoint["return"]> = {
   toJson: (val: T) => unknown; // server
   fromJson: (val: unknown) => T; // client
   toHeadersObject: (val: T) => Record<string, string>; // server
   fromHeaders: (val: Headers) => T; // server
 };
 
-export type ResponseCodec<E extends Endpoint> = {
-  data: ResponseDataCodec<E["return"], E["meta"]>;
-  meta: ResponseMetadataCodec<E["meta"]>;
+export type ResponseCodec<T extends Endpoint["return"], M extends Endpoint["meta"]> = {
+  data: ResponseDataCodec<T, M>;
+  meta: ResponseMetadataCodec<M>;
   /** Occasionally, json responses require an extra transformation to separate the data from metadata */
   transform?: {
-    toResponse: (data: E["return"], meta: E["meta"]) => unknown;
+    toResponse: (data: T, meta: M) => unknown;
     fromResponse: (resp: unknown) => {
-      data: E["return"];
-    } & (E["meta"] extends EmptyMeta ? {meta?: never} : {meta: E["meta"]});
+      data: T;
+    } & (M extends EmptyMeta ? {meta?: never} : {meta: M});
   };
   /** Support ssz-only or json-only responses */
   onlySupport?: WireFormat;
@@ -149,7 +149,7 @@ export type RouteDefinition<E extends AnyEndpoint> = {
   // TODO remove?
   statusOk?: number; // only used for keymanager to set non-200 ok
   req: RequestCodec<E>;
-  resp: ResponseCodec<E>;
+  resp: ResponseCodec<E["return"], E["meta"]>;
 };
 
 export type RouteDefinitions<Es extends Record<string, AnyEndpoint>> = {[K in keyof Es]: RouteDefinition<Es[K]>};
