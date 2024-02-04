@@ -345,6 +345,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         },
         schema: {
           body: Schema.Object,
+          headers: {"Eth-Consensus-Version": Schema.StringRequired},
         },
       },
       resp: {
@@ -415,6 +416,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         schema: {
           body: Schema.Object,
           query: {broadcast_validation: Schema.String},
+          headers: {"Eth-Consensus-Version": Schema.StringRequired},
         },
       },
       resp: {
@@ -462,6 +464,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         },
         schema: {
           body: Schema.Object,
+          headers: {"Eth-Consensus-Version": Schema.StringRequired},
         },
       },
       resp: {
@@ -514,6 +517,8 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         },
         schema: {
           body: Schema.Object,
+          query: {broadcast_validation: Schema.String},
+          headers: {"Eth-Consensus-Version": Schema.StringRequired},
         },
       },
       resp: {

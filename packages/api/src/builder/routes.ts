@@ -153,6 +153,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         },
         schema: {
           body: Schema.Object,
+          headers: {"Eth-Consensus-Version": Schema.StringRequired},
         },
       },
       resp: {
