@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {ByteListType, ContainerType, OptionalType} from "@chainsafe/ssz";
 import {allForks, altair, ssz} from "@lodestar/types";
-import {AnyGetEndpoint, Endpoint, ResponseCodec, RouteDefinitions, Schema} from "../../utils/index.js";
+import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {
   ArrayOf,
   EmptyArgs,
@@ -356,6 +356,6 @@ export const definitions: RouteDefinitions<Endpoints> = {
       parseReq: ({query}) => ({syncingStatus: query.syncing_status}),
       schema: {query: {syncing_status: Schema.Uint}},
     },
-    resp: EmptyResponseCodec as ResponseCodec<AnyGetEndpoint>,
+    resp: EmptyResponseCodec,
   },
 };

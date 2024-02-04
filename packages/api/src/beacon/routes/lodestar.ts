@@ -1,5 +1,5 @@
 import {Epoch, RootHex, Slot} from "@lodestar/types";
-import {Schema, Endpoint, RouteDefinitions, ResponseCodec, AnyPostEndpoint, AnyGetEndpoint} from "../../utils/index.js";
+import {Schema, Endpoint, RouteDefinitions} from "../../utils/index.js";
 import {
   EmptyArgs,
   EmptyGetRequestCodec,
@@ -264,7 +264,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
       parseReqSsz: ({query}) => ({thread: query.thread, dirpath: query.dirpath}),
       schema: {query: {thread: Schema.String, dirpath: Schema.String}},
     },
-    resp: JsonOnlyResponseCodec as ResponseCodec<AnyPostEndpoint>,
+    resp: JsonOnlyResponseCodec,
   },
   writeProfile: {
     url: "/eth/v1/lodestar/write_profile",
@@ -276,19 +276,19 @@ export const definitions: RouteDefinitions<Endpoints> = {
       parseReqSsz: ({query}) => ({thread: query.thread, duration: query.duration, dirpath: query.dirpath}),
       schema: {query: {thread: Schema.String, duration: Schema.Uint, dirpath: Schema.String}},
     },
-    resp: JsonOnlyResponseCodec as ResponseCodec<AnyPostEndpoint>,
+    resp: JsonOnlyResponseCodec,
   },
   getLatestWeakSubjectivityCheckpointEpoch: {
     url: "/eth/v1/lodestar/ws_epoch",
     method: "GET",
     req: EmptyGetRequestCodec,
-    resp: JsonOnlyResponseCodec as ResponseCodec<AnyGetEndpoint>,
+    resp: JsonOnlyResponseCodec,
   },
   getSyncChainsDebugState: {
     url: "/eth/v1/lodestar/sync_chains_debug_state",
     method: "GET",
     req: EmptyGetRequestCodec,
-    resp: JsonOnlyResponseCodec as ResponseCodec<AnyGetEndpoint>,
+    resp: JsonOnlyResponseCodec,
   },
   getGossipQueueItems: {
     url: "/eth/v1/lodestar/gossip_queue_items/:gossipType",
@@ -298,49 +298,49 @@ export const definitions: RouteDefinitions<Endpoints> = {
       parseReq: ({params}) => ({gossipType: params.gossipType}),
       schema: {params: {gossipType: Schema.StringRequired}},
     },
-    resp: JsonOnlyResponseCodec as ResponseCodec<AnyGetEndpoint>,
+    resp: JsonOnlyResponseCodec,
   },
   getRegenQueueItems: {
     url: "/eth/v1/lodestar/regen_queue_items",
     method: "GET",
     req: EmptyGetRequestCodec,
-    resp: JsonOnlyResponseCodec as ResponseCodec<AnyGetEndpoint>,
+    resp: JsonOnlyResponseCodec,
   },
   getBlockProcessorQueueItems: {
     url: "/eth/v1/lodestar/block_processor_queue_items",
     method: "GET",
     req: EmptyGetRequestCodec,
-    resp: JsonOnlyResponseCodec as ResponseCodec<AnyGetEndpoint>,
+    resp: JsonOnlyResponseCodec,
   },
   getStateCacheItems: {
     url: "/eth/v1/lodestar/state_cache_items",
     method: "GET",
     req: EmptyGetRequestCodec,
-    resp: JsonOnlyResponseCodec as ResponseCodec<AnyGetEndpoint>,
+    resp: JsonOnlyResponseCodec,
   },
   getGossipPeerScoreStats: {
     url: "/eth/v1/lodestar/gossip_peer_score_stats",
     method: "GET",
     req: EmptyGetRequestCodec,
-    resp: JsonOnlyResponseCodec as ResponseCodec<AnyGetEndpoint>,
+    resp: JsonOnlyResponseCodec,
   },
   getLodestarPeerScoreStats: {
     url: "/eth/v1/lodestar/lodestar_peer_score_stats",
     method: "GET",
     req: EmptyGetRequestCodec,
-    resp: JsonOnlyResponseCodec as ResponseCodec<AnyGetEndpoint>,
+    resp: JsonOnlyResponseCodec,
   },
   runGC: {
     url: "/eth/v1/lodestar/gc",
     method: "POST",
     req: EmptyPostRequestCodec,
-    resp: EmptyResponseCodec as ResponseCodec<AnyPostEndpoint>,
+    resp: EmptyResponseCodec,
   },
   dropStateCache: {
     url: "/eth/v1/lodestar/drop_state_cache",
     method: "POST",
     req: EmptyPostRequestCodec,
-    resp: EmptyResponseCodec as ResponseCodec<AnyPostEndpoint>,
+    resp: EmptyResponseCodec,
   },
   connectPeer: {
     url: "/eth/v1/lodestar/connect_peer",
@@ -352,7 +352,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
       parseReqSsz: ({query}) => ({peerId: query.peerId, multiaddrs: query.multiaddr}),
       schema: {query: {peerId: Schema.StringRequired, multiaddr: Schema.StringArray}},
     },
-    resp: EmptyResponseCodec as ResponseCodec<AnyPostEndpoint>,
+    resp: EmptyResponseCodec,
   },
   disconnectPeer: {
     url: "/eth/v1/lodestar/disconnect_peer",
@@ -364,7 +364,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
       parseReqSsz: ({query}) => ({peerId: query.peerId}),
       schema: {query: {peerId: Schema.StringRequired}},
     },
-    resp: EmptyResponseCodec as ResponseCodec<AnyPostEndpoint>,
+    resp: EmptyResponseCodec,
   },
   getPeers: {
     url: "/eth/v1/lodestar/peers",
@@ -374,13 +374,13 @@ export const definitions: RouteDefinitions<Endpoints> = {
       parseReq: ({query}) => ({state: query.state, direction: query.direction}),
       schema: {query: {state: Schema.StringArray, direction: Schema.StringArray}},
     },
-    resp: JsonOnlyResponseCodec as ResponseCodec<AnyGetEndpoint>,
+    resp: JsonOnlyResponseCodec,
   },
   discv5GetKadValues: {
     url: "/eth/v1/debug/discv5_kad_values",
     method: "GET",
     req: EmptyGetRequestCodec,
-    resp: JsonOnlyResponseCodec as ResponseCodec<AnyGetEndpoint>,
+    resp: JsonOnlyResponseCodec,
   },
   dumpDbBucketKeys: {
     url: "/eth/v1/debug/dump_db_bucket_keys/:bucket",
@@ -390,12 +390,12 @@ export const definitions: RouteDefinitions<Endpoints> = {
       parseReq: ({params}) => ({bucket: params.bucket}),
       schema: {params: {bucket: Schema.String}},
     },
-    resp: JsonOnlyResponseCodec as ResponseCodec<AnyGetEndpoint>,
+    resp: JsonOnlyResponseCodec,
   },
   dumpDbStateIndex: {
     url: "/eth/v1/debug/dump_db_state_index",
     method: "GET",
     req: EmptyGetRequestCodec,
-    resp: JsonOnlyResponseCodec as ResponseCodec<AnyGetEndpoint>,
+    resp: JsonOnlyResponseCodec,
   },
 };

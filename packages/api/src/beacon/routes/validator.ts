@@ -16,7 +16,7 @@ import {
   ProducedBlockSource,
   stringType,
 } from "@lodestar/types";
-import {AnyPostEndpoint, Endpoint, ResponseCodec, RouteDefinitions, Schema} from "../../utils/index.js";
+import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {fromGraffitiHex, toForkName, toGraffitiHex} from "../../utils/serdes.js";
 import {
   ArrayOf,
@@ -880,7 +880,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
         body: Schema.ObjectArray,
       },
     },
-    resp: EmptyResponseCodec as ResponseCodec<AnyPostEndpoint>,
+    resp: EmptyResponseCodec,
   },
   publishContributionAndProofs: {
     url: "/eth/v1/validator/contribution_and_proofs",
@@ -898,7 +898,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
         body: Schema.ObjectArray,
       },
     },
-    resp: EmptyResponseCodec as ResponseCodec<AnyPostEndpoint>,
+    resp: EmptyResponseCodec,
   },
   prepareBeaconCommitteeSubnet: {
     url: "/eth/v1/validator/beacon_committee_subscriptions",
@@ -910,7 +910,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
       parseReqSsz: ({body}) => ({subscriptions: BeaconCommitteeSubscriptionListType.deserialize(body)}),
       schema: {body: Schema.ObjectArray},
     },
-    resp: EmptyResponseCodec as ResponseCodec<AnyPostEndpoint>,
+    resp: EmptyResponseCodec,
   },
   prepareSyncCommitteeSubnets: {
     url: "/eth/v1/validator/sync_committee_subscriptions",
@@ -922,7 +922,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
       parseReqSsz: ({body}) => ({subscriptions: SyncCommitteeSubscriptionListType.deserialize(body)}),
       schema: {body: Schema.ObjectArray},
     },
-    resp: EmptyResponseCodec as ResponseCodec<AnyPostEndpoint>,
+    resp: EmptyResponseCodec,
   },
   prepareBeaconProposer: {
     url: "/eth/v1/validator/prepare_beacon_proposer",
@@ -934,7 +934,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
       parseReqSsz: ({body}) => ({proposers: ProposerPreparationDataListType.deserialize(body)}),
       schema: {body: Schema.ObjectArray},
     },
-    resp: EmptyResponseCodec as ResponseCodec<AnyPostEndpoint>,
+    resp: EmptyResponseCodec,
   },
   submitBeaconCommitteeSelections: {
     url: "/eth/v1/validator/beacon_committee_selections",
@@ -1000,7 +1000,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
         body: Schema.ObjectArray,
       },
     },
-    resp: EmptyResponseCodec as ResponseCodec<AnyPostEndpoint>,
+    resp: EmptyResponseCodec,
   },
 };
 

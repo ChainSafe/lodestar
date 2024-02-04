@@ -4,7 +4,7 @@ import {ssz, allForks, bellatrix, Slot, Root, BLSPubkey} from "@lodestar/types";
 import {ForkName, isForkExecution, isForkBlobs, ForkSeq} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
 
-import {AnyGetEndpoint, AnyPostEndpoint, Endpoint, ResponseCodec, RouteDefinitions, Schema} from "../utils/index.js";
+import {Endpoint, RouteDefinitions, Schema} from "../utils/index.js";
 import {
   ArrayOf,
   EmptyArgs,
@@ -71,7 +71,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       url: "/eth/v1/builder/status",
       method: "GET",
       req: EmptyGetRequestCodec,
-      resp: EmptyResponseCodec as ResponseCodec<AnyGetEndpoint>,
+      resp: EmptyResponseCodec,
     },
     registerValidator: {
       url: "/eth/v1/builder/validators",
@@ -88,7 +88,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         schema: {body: Schema.ObjectArray},
         onlySupport: WireFormat.json,
       },
-      resp: EmptyResponseCodec as ResponseCodec<AnyPostEndpoint>,
+      resp: EmptyResponseCodec,
     },
     getHeader: {
       url: "/eth/v1/builder/header/{slot}/{parent_hash}/{pubkey}",

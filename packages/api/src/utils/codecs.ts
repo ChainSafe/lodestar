@@ -186,12 +186,12 @@ export function WithBlockValues<M extends Record<string, unknown>>(
   };
 }
 
-export const EmptyResponseCodec: ResponseCodec<AnyEndpoint> = {
+export const EmptyResponseCodec: ResponseCodec<AnyEndpoint["return"], AnyEndpoint["meta"]> = {
   data: EmptyResponseDataCodec,
   meta: EmptyMetaCodec,
 };
 
-export const JsonOnlyResponseCodec: ResponseCodec<AnyEndpoint> = {
+export const JsonOnlyResponseCodec: ResponseCodec<AnyEndpoint["return"], AnyEndpoint["meta"]> = {
   data: {
     toJson: (d) => d as unknown,
     fromJson: (d) => d,
