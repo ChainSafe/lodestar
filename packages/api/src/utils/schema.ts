@@ -1,25 +1,28 @@
-import {ReqGeneric} from "./types.js";
+import {Endpoint, PathParams, QueryParams} from "./types.js";
 
 // Reasoning: Allows to declare JSON schemas for server routes in a succinct typesafe way.
 // The enums exposed here are very feature incomplete but cover the minimum necessary for
 // the existing routes. Since the arguments for Ethereum Consensus server routes are very simple it suffice.
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type JsonSchema = Record<string, any>;
+type JsonSchema = Record<string, unknown>;
 type JsonSchemaObj = {
   type: "object";
   required: string[];
   properties: Record<string, JsonSchema>;
 };
 
-export type SchemaDefinition<ReqType extends ReqGeneric> = {
-  params?: {
-    [K in keyof ReqType["params"]]: Schema;
-  };
-  query?: {
-    [K in keyof ReqType["query"]]: Schema;
-  };
-  body?: Schema;
+export type SchemaDefinition<ReqType extends Endpoint["request"]> = {
+  params: ReqType["params"] extends PathParams
+    ? {
+        [K in keyof ReqType["params"]]: Schema;
+      }
+    : never;
+  query: ReqType["query"] extends QueryParams
+    ? {
+        [K in keyof ReqType["query"]]: Schema;
+      }
+    : never;
+  body: ReqType["body"] extends undefined ? never : Schema;
 };
 
 export enum Schema {
@@ -87,7 +90,7 @@ function isRequired(schema: Schema): boolean {
   }
 }
 
-export function getFastifySchema(schemaDef: SchemaDefinition<ReqGeneric>): JsonSchema {
+export function getFastifySchema(schemaDef: SchemaDefinition<Endpoint["request"]>): JsonSchema {
   const schema: {params?: JsonSchemaObj; querystring?: JsonSchemaObj; body?: JsonSchema} = {};
 
   if (schemaDef.body != null) {
@@ -97,9 +100,9 @@ export function getFastifySchema(schemaDef: SchemaDefinition<ReqGeneric>): JsonS
   if (schemaDef.params) {
     schema.params = {type: "object", required: [] as string[], properties: {}};
 
-    for (const [key, def] of Object.entries(schemaDef.params)) {
-      schema.params.properties[key] = getJsonSchemaItem(def as Schema);
-      if (isRequired(def as Schema)) {
+    for (const [key, def] of Object.entries<Schema>(schemaDef.params)) {
+      schema.params.properties[key] = getJsonSchemaItem(def);
+      if (isRequired(def)) {
         schema.params.required.push(key);
       }
     }
@@ -108,9 +111,9 @@ export function getFastifySchema(schemaDef: SchemaDefinition<ReqGeneric>): JsonS
   if (schemaDef.query) {
     schema.querystring = {type: "object", required: [] as string[], properties: {}};
 
-    for (const [key, def] of Object.entries(schemaDef.query)) {
-      schema.querystring.properties[key] = getJsonSchemaItem(def as Schema);
-      if (isRequired(def as Schema)) {
+    for (const [key, def] of Object.entries<Schema>(schemaDef.query)) {
+      schema.querystring.properties[key] = getJsonSchemaItem(def);
+      if (isRequired(def)) {
         schema.querystring.required.push(key);
       }
     }
