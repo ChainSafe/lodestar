@@ -10,25 +10,14 @@ type JsonSchemaObj = {
   required: string[];
   properties: Record<string, JsonSchema>;
 };
+type RequireSchema<T> = {[K in keyof T]-?: Schema};
 
-export type SchemaDefinition<ReqType extends Endpoint["request"]> = {
-  params: ReqType["params"] extends PathParams
-    ? {
-        [K in keyof ReqType["params"]]: Schema;
-      }
-    : never;
-  query: ReqType["query"] extends QueryParams
-    ? {
-        [K in keyof ReqType["query"]]: Schema;
-      }
-    : never;
-  headers: ReqType["headers"] extends HeaderParams
-    ? {
-        [K in keyof ReqType["headers"]]: Schema;
-      }
-    : never;
-  body: ReqType["body"] extends undefined ? never : Schema;
-};
+export type SchemaDefinition<ReqType extends Endpoint["request"]> = (ReqType["params"] extends PathParams
+  ? {params: RequireSchema<ReqType["params"]>}
+  : {params?: never}) &
+  (ReqType["query"] extends QueryParams ? {query: RequireSchema<ReqType["query"]>} : {query?: never}) &
+  (ReqType["headers"] extends HeaderParams ? {headers: RequireSchema<ReqType["headers"]>} : {headers?: never}) &
+  (ReqType extends {body: unknown} ? {body: Schema} : {body?: never});
 
 export enum Schema {
   Uint,
@@ -95,7 +84,7 @@ function isRequired(schema: Schema): boolean {
   }
 }
 
-export function getFastifySchema(schemaDef: SchemaDefinition<Endpoint["request"]>): JsonSchema {
+export function getFastifySchema<T extends Endpoint["request"]>(schemaDef: SchemaDefinition<T>): JsonSchema {
   const schema: {params?: JsonSchemaObj; querystring?: JsonSchemaObj; headers?: JsonSchemaObj; body?: JsonSchema} = {};
 
   if (schemaDef.body != null) {
