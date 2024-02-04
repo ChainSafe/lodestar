@@ -1,4 +1,4 @@
-import {Endpoint, PathParams, QueryParams} from "./types.js";
+import {Endpoint, HeaderParams, PathParams, QueryParams} from "./types.js";
 
 // Reasoning: Allows to declare JSON schemas for server routes in a succinct typesafe way.
 // The enums exposed here are very feature incomplete but cover the minimum necessary for
@@ -20,6 +20,11 @@ export type SchemaDefinition<ReqType extends Endpoint["request"]> = {
   query: ReqType["query"] extends QueryParams
     ? {
         [K in keyof ReqType["query"]]: Schema;
+      }
+    : never;
+  headers: ReqType["headers"] extends HeaderParams
+    ? {
+        [K in keyof ReqType["headers"]]: Schema;
       }
     : never;
   body: ReqType["body"] extends undefined ? never : Schema;
@@ -91,7 +96,7 @@ function isRequired(schema: Schema): boolean {
 }
 
 export function getFastifySchema(schemaDef: SchemaDefinition<Endpoint["request"]>): JsonSchema {
-  const schema: {params?: JsonSchemaObj; querystring?: JsonSchemaObj; body?: JsonSchema} = {};
+  const schema: {params?: JsonSchemaObj; querystring?: JsonSchemaObj; headers?: JsonSchemaObj; body?: JsonSchema} = {};
 
   if (schemaDef.body != null) {
     schema.body = getJsonSchemaItem(schemaDef.body);
@@ -115,6 +120,17 @@ export function getFastifySchema(schemaDef: SchemaDefinition<Endpoint["request"]
       schema.querystring.properties[key] = getJsonSchemaItem(def);
       if (isRequired(def)) {
         schema.querystring.required.push(key);
+      }
+    }
+  }
+
+  if (schemaDef.headers) {
+    schema.headers = {type: "object", required: [] as string[], properties: {}};
+
+    for (const [key, def] of Object.entries<Schema>(schemaDef.headers)) {
+      schema.headers.properties[key] = getJsonSchemaItem(def);
+      if (isRequired(def)) {
+        schema.headers.required.push(key);
       }
     }
   }
