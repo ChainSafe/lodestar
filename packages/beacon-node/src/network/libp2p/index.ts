@@ -1,7 +1,8 @@
 import {PeerId} from "@libp2p/interface";
 import {Registry} from "prom-client";
 import {ENR} from "@chainsafe/enr";
-import {identify} from "@libp2p/identify";
+// TODO: We should use this fork until https://github.com/libp2p/js-libp2p/pull/2387
+import {identify} from "@chainsafe/libp2p-identify";
 import {bootstrap} from "@libp2p/bootstrap";
 import {mdns} from "@libp2p/mdns";
 import {createLibp2p} from "libp2p";
@@ -63,7 +64,7 @@ export async function createNodeJsLibp2p(
     }
   }
 
-  const libp2p = await createLibp2p({
+  return createLibp2p({
     peerId,
     addresses: {
       listen: localMultiaddrs,
@@ -84,9 +85,7 @@ export async function createNodeJsLibp2p(
         },
       }),
     ],
-    // libp2p:mplex rate limit hit when receiving messages for streams that do not exist - closing remote connection
-    // libp2p:gossipsub:error Error: Too many messages for missing streams
-    streamMuxers: [mplex({maxInboundStreams: 256, disconnectThreshold: 50})],
+    streamMuxers: [mplex({maxInboundStreams: 256})],
     peerDiscovery,
     metrics: nodeJsLibp2pOpts.metrics
       ? prometheusMetrics({
@@ -136,12 +135,4 @@ export async function createNodeJsLibp2p(
       }),
     },
   });
-
-  // TODO: Remove this once https://github.com/libp2p/js-libp2p/pull/2387 is published
-  // We use `/ipfs/id/1.0.0` protocol and `/ipfs/id/push/1.0.0` is causing following errors
-  // libp2p:mplex initiator stream with id 8 and protocol undefined ended
-  // libp2p:mplex:stream:initiator:8 selected protocol /ipfs/id/push/1.0.0
-  await libp2p.unhandle(["/ipfs/id/push/1.0.0"]);
-
-  return libp2p;
 }

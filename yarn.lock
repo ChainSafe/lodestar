@@ -385,6 +385,23 @@
     uint8arraylist "^2.4.8"
     uint8arrays "^5.0.1"
 
+"@chainsafe/libp2p-identify@^1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-identify/-/libp2p-identify-1.0.0.tgz#28191e619715a87c140d8b516ee85cb7d39e41e0"
+  integrity sha512-X+VWUC0xeCFIulE4BU5M8FmTxZ/OKzku+9/1UaX2EG1LcqQkCDrPi6CCODbE0SraqImG4aVHRbiCFWxKEfE8wQ==
+  dependencies:
+    "@libp2p/interface" "^1.1.2"
+    "@libp2p/interface-internal" "^1.0.7"
+    "@libp2p/peer-id" "^4.0.5"
+    "@libp2p/peer-record" "^7.0.7"
+    "@multiformats/multiaddr" "^12.1.10"
+    "@multiformats/multiaddr-matcher" "^1.1.0"
+    it-protobuf-stream "^1.1.1"
+    protons-runtime "^5.0.0"
+    uint8arraylist "^2.4.7"
+    uint8arrays "^5.0.0"
+    wherearewe "^2.0.1"
+
 "@chainsafe/libp2p-noise@^14.1.0":
   version "14.1.0"
   resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-noise/-/libp2p-noise-14.1.0.tgz#4084a448cec73a941fddfc94751f6ce2e23c07cd"
@@ -1627,6 +1644,21 @@
     protons-runtime "^5.0.0"
     uint8-varint "^2.0.0"
     uint8arraylist "^2.4.3"
+    uint8arrays "^5.0.0"
+
+"@libp2p/peer-record@^7.0.7":
+  version "7.0.7"
+  resolved "https://registry.yarnpkg.com/@libp2p/peer-record/-/peer-record-7.0.7.tgz#e55145b2509592696f42ff73c38f813efbbbc688"
+  integrity sha512-RsggFJVAWQBA2z+ZJsK5nKHDKLmSd89IhFiE5GyImedQFiMkJz/gDFROzfNF2NdOyEBNdRy5SmC9scNFRQQD9A==
+  dependencies:
+    "@libp2p/crypto" "^4.0.1"
+    "@libp2p/interface" "^1.1.2"
+    "@libp2p/peer-id" "^4.0.5"
+    "@libp2p/utils" "^5.2.3"
+    "@multiformats/multiaddr" "^12.1.10"
+    protons-runtime "^5.0.0"
+    uint8-varint "^2.0.2"
+    uint8arraylist "^2.4.7"
     uint8arrays "^5.0.0"
 
 "@libp2p/peer-store@^10.0.5":
@@ -8048,6 +8080,16 @@ it-protobuf-stream@^1.0.2:
   version "1.1.1"
   resolved "https://registry.yarnpkg.com/it-protobuf-stream/-/it-protobuf-stream-1.1.1.tgz#cc303ac31b9de768d24288b0898c18ebd7624868"
   integrity sha512-H7fiC+m85AAz84I8SQOKHKZTDREFrsYfKxEhWTlhAdySoUyiC72Xe2ocqBFy3zUWCGYq6rCTMGnCbTKntSlcog==
+  dependencies:
+    it-length-prefixed-stream "^1.0.0"
+    it-stream-types "^2.0.1"
+    protons-runtime "^5.0.0"
+    uint8arraylist "^2.4.1"
+
+it-protobuf-stream@^1.1.1:
+  version "1.1.2"
+  resolved "https://registry.yarnpkg.com/it-protobuf-stream/-/it-protobuf-stream-1.1.2.tgz#4444d78fcae0fce949b4cbea622bf1d92667e64f"
+  integrity sha512-epZBuG+7cPaTxCR/Lf3ApshBdA9qfflGPQLfLLrp9VQ0w67Z2xo4H+SLLetav57/29oPtAXwVaoyemg99JOWzA==
   dependencies:
     it-length-prefixed-stream "^1.0.0"
     it-stream-types "^2.0.1"
