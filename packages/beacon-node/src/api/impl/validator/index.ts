@@ -570,7 +570,11 @@ export function getValidatorApi({
             // - suspected builder censorship
             // - builder boost factor set to 0
             // we don't need to wait for builder block as engine block will always be selected
-            if (engineBlock.shouldOverrideBuilder || builderBoostFactor === BigInt(0)) {
+            if (
+              engineBlock.shouldOverrideBuilder ||
+              builderBoostFactor === BigInt(0) ||
+              builderSelection === routes.validator.BuilderSelection.ExecutionOnly
+            ) {
               controller.abort();
             }
             return engineBlock;
