@@ -65,6 +65,7 @@ export function wrapPromise<T>(promise: PromiseLike<T>): PromiseResult<T> {
         result.status = "rejected";
         (result as PromiseRejectedResult<T>).reason = reason as Error;
         (result as PromiseRejectedResult<T>).durationMs = Date.now() - startedAt;
+        throw reason;
       }
     ),
     status: "pending",

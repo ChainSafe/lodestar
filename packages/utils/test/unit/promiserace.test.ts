@@ -23,7 +23,11 @@ describe("resolveOrRacePromises", () => {
     ["all reject pre-timeout", [-1100, -1200], ["-1100", "-1200"]],
     ["race and resolve pre-timeout", [1100, 1200], ["1100", "pending"]],
     ["race and resolve/reject pre-timeout", [-1100, 1200, 1300], ["-1100", "1200", "pending"]],
-    ["some resolve pre-cutoff with no race post cutoff", [100, -200, -1100, 1200], ["100", "-200", "-1100", "1200"]],
+    [
+      "some resolve pre-cutoff with no race post cutoff",
+      [100, -200, -1100, 1200],
+      ["100", "-200", "pending", "pending"],
+    ],
     [
       "some reject pre-cutoff, with race resolution pre-timeout",
       [-100, -200, -1100, 1100, 1200],
@@ -33,7 +37,7 @@ describe("resolveOrRacePromises", () => {
     [
       "some resolve/reject pre-cutoff, some resolve/reject pre-timeout but no race beyond cutoff",
       [100, -200, -1100, 1100, 1700, -1700],
-      ["100", "-200", "-1100", "1100", "pending", "pending"],
+      ["100", "-200", "pending", "pending", "pending", "pending"],
     ],
     [
       "none resolve/reject pre-cutoff with race resolution pre timeout",
