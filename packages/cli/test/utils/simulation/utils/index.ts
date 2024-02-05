@@ -17,18 +17,36 @@ export const avg = (arr: number[]): number => {
   return arr.length === 0 ? 0 : arr.reduce((p, c) => p + c, 0) / arr.length;
 };
 
+function getGenesisDelaySlots(initialNodes?: number): number {
+  if (process.env.GENESIS_DELAY_SLOTS) {
+    const genesisDelaySlots = parseInt(process.env.GENESIS_DELAY_SLOTS);
+    // If custom job is invoked and want to use default genesis delay then provider -1 as value
+    if (genesisDelaySlots >= 0) return genesisDelaySlots;
+  }
+
+  if (initialNodes == null) return 40;
+  // Considering each node consists of EN, BN, VC and KM
+  // EN - Execution Node - 5s
+  // BN - Beacon Node - 10s
+  // VC - Validator Client - 5s
+  // KM - Key Manager - 3s
+  // Initial script launch time - 10s
+  return Math.ceil(((5 + 10 + 5 + 3) * initialNodes + 10) / SIM_TESTS_SECONDS_PER_SLOT);
+}
+
 export function defineSimTestConfig(
   opts: Partial<ChainConfig> & {
     cliqueSealingPeriod?: number;
     additionalSlotsForTTD?: number;
     runTillEpoch: number;
+    // Used to calculate genesis delay
+    initialNodes?: number;
   }
 ): {
   estimatedTimeoutMs: number;
   forkConfig: ChainForkConfig;
 } {
-  const genesisDelaySeconds =
-    (process.env.GENESIS_DELAY_SLOTS ? parseInt(process.env.GENESIS_DELAY_SLOTS) : 40) * SIM_TESTS_SECONDS_PER_SLOT;
+  const genesisDelaySeconds = getGenesisDelaySlots(opts.initialNodes) * SIM_TESTS_SECONDS_PER_SLOT;
 
   const estimatedTimeoutMs =
     getEstimatedTimeInSecForRun({
