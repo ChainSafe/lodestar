@@ -26,6 +26,7 @@ export type ChainArgs = {
   broadcastValidationStrictness?: string;
   "chain.minSameMessageSignatureSetsToBatch"?: number;
   "chain.maxShufflingCacheEpochs"?: number;
+  "chain.archiveBlobs"?: number;
 };
 
 export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
@@ -53,6 +54,7 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     minSameMessageSignatureSetsToBatch:
       args["chain.minSameMessageSignatureSetsToBatch"] ?? defaultOptions.chain.minSameMessageSignatureSetsToBatch,
     maxShufflingCacheEpochs: args["chain.maxShufflingCacheEpochs"] ?? defaultOptions.chain.maxShufflingCacheEpochs,
+    archiveBlobs: args["chain.archiveBlobs"],
   };
 }
 
@@ -211,5 +213,13 @@ Will double processing times. Use only for debugging purposes.",
     type: "number",
     default: defaultOptions.chain.maxShufflingCacheEpochs,
     group: "chain",
+  },
+
+  "chain.archiveBlobs": {
+    description:
+      "Number of epochs to retain the finalized blobs (min MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS), set to infinity (retain all) with just --chain.archiveBlobs",
+    type: "number",
+    group: "chain",
+    coerce: (arg: number | boolean | undefined) => arg ?? Infinity,
   },
 };

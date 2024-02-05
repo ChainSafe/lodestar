@@ -30,6 +30,7 @@ export type IChainOptions = BlockProcessOpts &
     trustedSetup?: string;
     broadcastValidationStrictness?: string;
     minSameMessageSignatureSetsToBatch: number;
+    archiveBlobs?: number;
   };
 
 export type BlockProcessOpts = {
