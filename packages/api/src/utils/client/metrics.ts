@@ -4,6 +4,6 @@ export type Metrics = {
   requestTime: Histogram<{routeId: string}>;
   streamTime: Histogram<{routeId: string}>;
   requestErrors: Gauge<{routeId: string}>;
-  requestToFallbacks: Gauge<{routeId: string}>;
-  urlsScore: GaugeExtra<{urlIndex: number}>;
+  requestToFallbacks: Gauge<{routeId: string; baseUrl: string}>;
+  urlsScore: GaugeExtra<{urlIndex: number; baseUrl: string}>;
 };

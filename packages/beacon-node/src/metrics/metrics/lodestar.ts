@@ -1627,16 +1627,16 @@ export function createLodestarMetrics(
         help: "Total count of errors on builder http client requests by routeId",
         labelNames: ["routeId"],
       }),
-      requestToFallbacks: register.gauge<{routeId: string}>({
+      requestToFallbacks: register.gauge<{routeId: string; baseUrl: string}>({
         name: "lodestar_builder_http_client_request_to_fallbacks_total",
         help: "Total count of requests to fallback URLs on builder http API by routeId",
-        labelNames: ["routeId"],
+        labelNames: ["routeId", "baseUrl"],
       }),
 
-      urlsScore: register.gauge<{urlIndex: number}>({
+      urlsScore: register.gauge<{urlIndex: number; baseUrl: string}>({
         name: "lodestar_builder_http_client_urls_score",
         help: "Current score of builder http URLs by url index",
-        labelNames: ["urlIndex"],
+        labelNames: ["urlIndex", "baseUrl"],
       }),
     },
 
