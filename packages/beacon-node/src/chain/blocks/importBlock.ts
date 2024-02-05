@@ -414,6 +414,16 @@ export async function importBlock(
         this.emitter.emit(routes.events.EventType.attestation, attestation);
       }
     }
+    if (this.emitter.listenerCount(routes.events.EventType.attesterSlashing)) {
+      for (const attesterSlashing of block.message.body.attesterSlashings) {
+        this.emitter.emit(routes.events.EventType.attesterSlashing, attesterSlashing);
+      }
+    }
+    if (this.emitter.listenerCount(routes.events.EventType.proposerSlashing)) {
+      for (const proposerSlashing of block.message.body.proposerSlashings) {
+        this.emitter.emit(routes.events.EventType.proposerSlashing, proposerSlashing);
+      }
+    }
   }
 
   // Register stat metrics about the block after importing it
