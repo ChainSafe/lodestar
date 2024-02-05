@@ -568,12 +568,12 @@ export function getValidatorApi({
           }).then((engineBlock) => {
             // Once the engine returns a block, in the event of either:
             // - suspected builder censorship
-            // - builder boost factor set to 0
+            // - builder boost factor set to 0 or builder selection `executionalways`
             // we don't need to wait for builder block as engine block will always be selected
             if (
               engineBlock.shouldOverrideBuilder ||
               builderBoostFactor === BigInt(0) ||
-              builderSelection === routes.validator.BuilderSelection.ExecutionOnly
+              builderSelection === routes.validator.BuilderSelection.ExecutionAlways
             ) {
               controller.abort();
             }
