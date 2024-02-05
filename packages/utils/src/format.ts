@@ -1,4 +1,5 @@
 import {toHexString} from "./bytes.js";
+import {ETH_TO_WEI} from "./ethConversion.js";
 
 /**
  * Format bytes as `0x1234…1234`
@@ -26,4 +27,30 @@ export function prettyBytesShort(root: Uint8Array | string): string {
 export function truncBytes(root: Uint8Array | string): string {
   const str = typeof root === "string" ? root : toHexString(root);
   return str.slice(0, 14);
+}
+
+/**
+ * Format a bigint value as a decimal string
+ */
+export function formatBigDecimal(numerator: bigint, denominator: bigint, maxDecimalFactor: bigint): string {
+  const full = numerator / denominator;
+  const fraction = ((numerator - full * denominator) * maxDecimalFactor) / denominator;
+
+  // zeros to be added post decimal are number of zeros in maxDecimalFactor - number of digits in fraction
+  const zerosPostDecimal = String(maxDecimalFactor).length - 1 - String(fraction).length;
+  return `${full}.${"0".repeat(zerosPostDecimal)}${fraction}`;
+}
+
+// display upto 5 decimal places
+const MAX_DECIMAL_FACTOR = BigInt("100000");
+
+/**
+ * Format wei as ETH, with up to 5 decimals
+ *
+ * if suffix is true, append ' ETH'
+ */
+export function prettyWeiToEth(wei: bigint, suffix = false): string {
+  let eth = formatBigDecimal(wei, ETH_TO_WEI, MAX_DECIMAL_FACTOR);
+  if (suffix) eth += " ETH";
+  return eth;
 }
