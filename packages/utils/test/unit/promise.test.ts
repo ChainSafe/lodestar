@@ -33,7 +33,8 @@ describe("promise", () => {
       const promise = Promise.reject("test error");
       const result = wrapPromise(promise);
 
-      await expect(promise).rejects.toBe("test error");
+      await expect(promise).rejects.toThrow("test error");
+      await expect(result.promise).rejects.toThrow("test error");
       expect(result).toEqual({
         reason: "test error",
         status: "rejected",
@@ -63,7 +64,8 @@ describe("promise", () => {
       });
       const result = wrapPromise(promise);
 
-      await expect(promise).rejects.toBe("Rejected Error");
+      await expect(promise).rejects.toThrow("Rejected Error");
+      await expect(result.promise).rejects.toThrow("Rejected Error");
       expect((result as PromiseRejectedResult<string>).durationMs).toBeGreaterThanOrEqual(promiseDurationMin);
       expect((result as PromiseRejectedResult<string>).durationMs).toBeLessThanOrEqual(promiseDurationMax);
     });
