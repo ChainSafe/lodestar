@@ -86,8 +86,8 @@ export async function archiveBlocks(
   // if archiveBlobs set to Infinity do not prune`
   if (finalizedPostDeneb) {
     if (archiveBlobs !== Infinity) {
-      const blobsArchibeWindow = Math.max(config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, archiveBlobs ?? 0);
-      const blobSidecarsMinEpoch = currentEpoch - blobsArchibeWindow;
+      const blobsArchiveWindow = Math.max(config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, archiveBlobs ?? 0);
+      const blobSidecarsMinEpoch = currentEpoch - blobsArchiveWindow;
       if (blobSidecarsMinEpoch >= config.DENEB_FORK_EPOCH) {
         const slotsToDelete = await db.blobSidecarsArchive.keys({lt: computeStartSlotAtEpoch(blobSidecarsMinEpoch)});
         if (slotsToDelete.length > 0) {
@@ -100,7 +100,7 @@ export async function archiveBlocks(
         }
       }
     } else {
-      logger.verbose("blobSidecars prunimng skipped: archiveBlobs set to Infinity");
+      logger.verbose("blobSidecars pruning skipped: archiveBlobs set to Infinity");
     }
   }
 
