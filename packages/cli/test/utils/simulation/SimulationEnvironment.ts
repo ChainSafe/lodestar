@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import {EventEmitter} from "node:events";
 import fs from "node:fs";
 import {mkdir, writeFile} from "node:fs/promises";
 import path from "node:path";
@@ -9,6 +8,7 @@ import {nodeUtils} from "@lodestar/beacon-node";
 import {ChainForkConfig} from "@lodestar/config";
 import {activePreset} from "@lodestar/params";
 import {BeaconStateAllForks, interopSecretKey} from "@lodestar/state-transition";
+import {prettyMsToTime} from "@lodestar/utils";
 import {EpochClock, MS_IN_SEC} from "./EpochClock.js";
 import {ExternalSignerServer} from "./ExternalSignerServer.js";
 import {SimulationTracker} from "./SimulationTracker.js";
@@ -42,7 +42,6 @@ export class SimulationEnvironment {
   readonly nodes: NodePair[] = [];
   readonly clock: EpochClock;
   readonly tracker: SimulationTracker;
-  readonly emitter: EventEmitter;
   readonly runner: IRunner;
   readonly externalSigner: ExternalSignerServer;
 
@@ -52,6 +51,7 @@ export class SimulationEnvironment {
   private keysCount = 0;
   private nodePairCount = 0;
   private genesisState?: BeaconStateAllForks;
+  private runTimeout?: NodeJS.Timeout;
 
   private constructor(forkConfig: ChainForkConfig, options: SimulationOptions) {
     this.forkConfig = forkConfig;
@@ -64,7 +64,6 @@ export class SimulationEnvironment {
       signal: this.options.controller.signal,
     });
 
-    this.emitter = new EventEmitter();
     this.externalSigner = new ExternalSignerServer([]);
     this.runner = new Runner({logsDir: this.options.logsDir});
     this.tracker = SimulationTracker.initWithDefaultAssertions({
@@ -96,8 +95,14 @@ export class SimulationEnvironment {
 
   async start(opts: StartOpts): Promise<void> {
     const currentTime = Date.now();
+    console.log(
+      `Starting simulation environment "${this.options.id}". currentTime=${new Date(
+        currentTime
+      ).toISOString()} simulationTimeout=${prettyMsToTime(opts.runTimeoutMs)}`
+    );
+
     if (opts.runTimeoutMs > 0) {
-      setTimeout(() => {
+      this.runTimeout = setTimeout(() => {
         const slots = this.clock.getSlotFor((currentTime + opts.runTimeoutMs) / MS_IN_SEC);
         const epoch = this.clock.getEpochForSlot(slots);
         const slot = this.clock.getSlotIndexInEpoch(slots);
@@ -116,7 +121,7 @@ export class SimulationEnvironment {
 
       this.stop(
         1,
-        `Start sequence not completed before genesis, in ${msToGenesis}ms (approx. ${epoch}/${slot}).`
+        `Start sequence not completed before genesis, in ${prettyMsToTime(msToGenesis)} (approx. ${epoch}/${slot}).`
       ).catch((e) => console.error("Error on stop", e));
     }, msToGenesis);
 
@@ -126,21 +131,27 @@ export class SimulationEnvironment {
         await mkdir(this.options.rootDir);
       }
 
+      console.log("Starting the simulation runner");
       await this.runner.start();
+
+      console.log("Starting execution nodes");
       await Promise.all(this.nodes.map((node) => node.execution.job.start()));
 
+      console.log("Initializing genesis state for beacon nodes");
       await this.initGenesisState();
       if (!this.genesisState) {
         throw new Error("The genesis state for CL clients is not defined.");
       }
 
+      console.log("Starting beacon nodes");
       await Promise.all(this.nodes.map((node) => node.beacon.job.start()));
+
+      console.log("Starting validators");
       await Promise.all(this.nodes.map((node) => node.validator?.job.start()));
 
       if (this.nodes.some((node) => node.validator?.keys.type === "remote")) {
-        console.log("Starting external signer...");
+        console.log("Starting external signer");
         await this.externalSigner.start();
-        console.log("Started external signer");
 
         for (const node of this.nodes) {
           if (node.validator?.keys.type === "remote") {
@@ -156,6 +167,7 @@ export class SimulationEnvironment {
         }
       }
 
+      console.log("Starting the simulation tracker");
       await this.tracker.start();
       await Promise.all(this.nodes.map((node) => this.tracker.track(node)));
     } catch (error) {
@@ -178,6 +190,10 @@ export class SimulationEnvironment {
     await this.externalSigner.stop();
     await this.runner.stop();
     this.options.controller.abort();
+
+    if (this.runTimeout) {
+      clearTimeout(this.runTimeout);
+    }
 
     if (this.tracker.getErrorCount() > 0) {
       this.tracker.reporter.summary();

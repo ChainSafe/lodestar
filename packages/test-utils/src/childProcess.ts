@@ -3,7 +3,7 @@ import childProcess from "node:child_process";
 import stream from "node:stream";
 import fs from "node:fs";
 import path from "node:path";
-import {sleep} from "@lodestar/utils";
+import {prettyMsToTime, sleep} from "@lodestar/utils";
 import {TestContext} from "./interfaces.js";
 
 /**
@@ -328,13 +328,15 @@ export async function spawnChildProcess(
                 const timeSinceHealthCheckStart = Date.now() - startHealthCheckMs;
                 if (timeSinceHealthCheckStart > logHealthChecksAfterMs) {
                   console.log(
-                    `Health check unsuccessful. logPrefix=${logPrefix} pid=${proc.pid}  timeSinceHealthCheckStart=${timeSinceHealthCheckStart}`
+                    `Health check unsuccessful. logPrefix=${logPrefix} pid=${
+                      proc.pid
+                    } timeSinceHealthCheckStart=${prettyMsToTime(timeSinceHealthCheckStart)}`
                   );
                 }
               }
             })
             .catch((e) => {
-              console.error("error on health check, health functions must never throw", e);
+              console.error("Error on health check, health functions must never throw", e);
             });
         }, healthCheckIntervalMs);
 
@@ -344,7 +346,9 @@ export async function spawnChildProcess(
           if (intervalId !== undefined) {
             reject(
               new Error(
-                `Health check timeout. logPrefix=${logPrefix} pid=${proc.pid}  healthTimeoutMs=${healthTimeoutMs}`
+                `Health check timeout. logPrefix=${logPrefix} pid=${proc.pid} healthTimeout=${prettyMsToTime(
+                  healthTimeoutMs ?? 0
+                )}`
               )
             );
           }
@@ -358,9 +362,9 @@ export async function spawnChildProcess(
 
           reject(
             new Error(
-              `process exited before healthy. logPrefix=${logPrefix} pid=${
-                proc.pid
-              } healthTimeoutMs=${healthTimeoutMs} code=${code} command="${command} ${args.join(" ")}"`
+              `Process exited before healthy. logPrefix=${logPrefix} pid=${proc.pid} healthTimeout=${prettyMsToTime(
+                healthTimeoutMs ?? 0
+              )} code=${code} command="${command} ${args.join(" ")}"`
             )
           );
         });

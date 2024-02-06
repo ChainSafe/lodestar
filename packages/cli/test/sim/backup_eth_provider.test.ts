@@ -79,4 +79,7 @@ await waitForSlot(env.clock.getLastSlotOfEpoch(bellatrixForkEpoch) + activePrese
   env,
 });
 
+await node2.beacon.job.stop();
+await node3.beacon.job.stop();
+
 await env.stop();

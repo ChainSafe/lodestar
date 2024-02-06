@@ -259,4 +259,7 @@ await waitForHead(env, unknownBlockSync, {
   slot: headForUnknownBlockSync.response.data.message.slot,
 });
 
+await unknownBlockSync.beacon.job.stop();
+await unknownBlockSync.execution.job.stop();
+
 await env.stop();
