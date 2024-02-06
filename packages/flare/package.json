@@ -58,7 +58,7 @@
     "blockchain"
   ],
   "dependencies": {
-    "@chainsafe/bls": "ChainSafe/bls#mkeil\/napi-blst",
+    "@chainsafe/bls": "ChainSafe/bls#e1db506be29e2c8d176844eba130628f83a9d72b",
     "@chainsafe/bls-keygen": "^0.4.0",
     "@lodestar/api": "^1.17.0",
     "@lodestar/config": "^1.17.0",

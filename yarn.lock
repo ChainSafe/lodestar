@@ -293,7 +293,7 @@
     ethereum-cryptography "^2.0.0"
     uuid "^9.0.0"
 
-"@chainsafe/bls@ChainSafe/bls#mkeil/napi-blst":
+"@chainsafe/bls@ChainSafe/bls#e1db506be29e2c8d176844eba130628f83a9d72b":
   version "7.1.2"
   resolved "https://codeload.github.com/ChainSafe/bls/tar.gz/e1db506be29e2c8d176844eba130628f83a9d72b"
   dependencies:
