@@ -11,8 +11,7 @@ describe("util / Clock", function () {
 
   beforeEach(() => {
     controller = new AbortController();
-    // Feb 6, 2024 11:21:17.786 AM
-    vi.useFakeTimers({now: 1707214877786});
+    vi.useFakeTimers({now: Date.now()});
   });
 
   afterEach(() => {
