@@ -56,7 +56,7 @@ export function prettyWeiToEth(wei: bigint, suffix = false): string {
 }
 
 /**
- * Format mille-seconds to time format HH:MM:SS.ms
+ * Format milliseconds to time format HH:MM:SS.ms
  */
 export function prettyMsToTime(timeMs: number): string {
   const date = new Date(0, 0, 0, 0, 0, 0, timeMs);
