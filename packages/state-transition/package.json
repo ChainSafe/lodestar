@@ -59,7 +59,7 @@
   "types": "lib/index.d.ts",
   "dependencies": {
     "@chainsafe/as-sha256": "^0.4.1",
-    "@chainsafe/bls": "ChainSafe/bls#e1db506be29e2c8d176844eba130628f83a9d72b",
+    "@chainsafe/bls": "ChainSafe/bls#e8bbc1a2dd803294c24a4db2ed2c9e05b714b92d",
     "@chainsafe/blst": "^0.2.9",
     "@chainsafe/persistent-merkle-tree": "^0.6.1",
     "@chainsafe/persistent-ts": "^0.19.1",
