@@ -295,7 +295,7 @@
 
 "@chainsafe/bls@ChainSafe/bls#mkeil/napi-blst":
   version "7.1.2"
-  resolved "https://codeload.github.com/ChainSafe/bls/tar.gz/324d3d0313b7f5dccf496487a0aa22a968199773"
+  resolved "https://codeload.github.com/ChainSafe/bls/tar.gz/e1db506be29e2c8d176844eba130628f83a9d72b"
   dependencies:
     "@chainsafe/bls-keygen" "^0.4.0"
     bls-eth-wasm "^0.4.8"
@@ -8634,7 +8634,7 @@ make-fetch-happen@^10.0.3:
     socks-proxy-agent "^7.0.0"
     ssri "^9.0.0"
 
-make-fetch-happen@^11.0.0, make-fetch-happen@^11.0.1, make-fetch-happen@^11.1.1:
+make-fetch-happen@^11.0.0, make-fetch-happen@^11.0.1, make-fetch-happen@^11.0.3, make-fetch-happen@^11.1.1:
   version "11.1.1"
   resolved "https://registry.yarnpkg.com/make-fetch-happen/-/make-fetch-happen-11.1.1.tgz#85ceb98079584a9523d4bf71d32996e7e208549f"
   integrity sha512-rLWS7GCSTcEujjVBs2YqG7Y4643u8ucvCJeSRqiLYhesrDuzeuFIk37xREzAsfQaqzl8b9rNCE4m6J8tvX4Q8w==
