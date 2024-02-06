@@ -11,12 +11,10 @@ import {registerRoute} from "../../../../src/utils/server/registerRoute.js";
 import {HttpClient} from "../../../../src/utils/client/httpClient.js";
 import {testData} from "../testData/debug.js";
 
-describe(
+describe.sequential(
   "beacon / debug",
-  function () {
-    describe("Run generic server test", () => {
-      runGenericServerTest<Api, ReqTypes>(config, getClient, getRoutes, testData);
-    });
+  () => {
+    runGenericServerTest<Api, ReqTypes>(config, getClient, getRoutes, testData);
 
     // Get state by SSZ
 

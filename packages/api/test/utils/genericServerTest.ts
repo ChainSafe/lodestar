@@ -1,4 +1,4 @@
-import {it, expect, MockInstance} from "vitest";
+import {it, expect, MockInstance, describe} from "vitest";
 import {ChainForkConfig} from "@lodestar/config";
 import {ReqGeneric, Resolves} from "../../src/utils/index.js";
 import {FetchOpts, HttpClient, IHttpClient} from "../../src/utils/client/index.js";
@@ -37,17 +37,17 @@ export function runGenericServerTest<
     registerRoute(server, route);
   }
 
-  for (const key of Object.keys(testCases)) {
-    const routeId = key as keyof Api;
-    const testCase = testCases[routeId];
+  describe("run generic server tests", () => {
+    it.each(Object.keys(testCases))("%s", async (key) => {
+      const routeId = key as keyof Api;
+      const testCase = testCases[routeId];
 
-    it(routeId as string, async () => {
       // Register mock data for this route
       // TODO: Look for the type error
       (mockApi[routeId] as MockInstance).mockResolvedValue(testCases[routeId].res);
 
       // Do the call
-      const res = await (client[routeId] as APIClientHandler)(...(testCase.args as any[]));
+      const res = await client[routeId](...(testCase.args as any[]));
 
       // Use spy to assert argument serialization
       if (testCase.query) {
@@ -64,7 +64,7 @@ export function runGenericServerTest<
       // Assert returned value is correct
       expect(res.response).toEqual(testCase.res);
     });
-  }
+  });
 }
 
 class HttpClientSpy extends HttpClient {
