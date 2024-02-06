@@ -3,6 +3,6 @@ export * as ssz from "./sszTypes.js";
 // Typeguards
 export * from "./utils/typeguards.js";
 // String type
-export {StringType, stringType} from "./utils/StringType.js";
+export {StringType, stringType} from "./utils/stringType.js";
 // Container utils
 export * from "./utils/container.js";
