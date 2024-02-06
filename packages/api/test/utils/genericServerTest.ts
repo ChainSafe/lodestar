@@ -1,4 +1,5 @@
-import {it, expect, MockInstance, describe} from "vitest";
+import {it, expect, MockInstance, describe, beforeAll, afterAll} from "vitest";
+import {FastifyInstance} from "fastify";
 import {ChainForkConfig} from "@lodestar/config";
 import {ReqGeneric, Resolves} from "../../src/utils/index.js";
 import {FetchOpts, HttpClient, IHttpClient} from "../../src/utils/client/index.js";
@@ -28,14 +29,27 @@ export function runGenericServerTest<
   testCases: GenericServerTestCases<Api>
 ): void {
   const mockApi = getMockApi<Api>(testCases);
-  const {baseUrl, server} = getTestServer();
+  let server: FastifyInstance;
 
-  const httpClient = new HttpClientSpy({baseUrl});
-  const client = getClient(config, httpClient);
+  let client: Api;
+  let httpClient: HttpClientSpy;
 
-  for (const route of Object.values(getRoutes(config, mockApi))) {
-    registerRoute(server, route);
-  }
+  beforeAll(async () => {
+    const res = getTestServer();
+    server = res.server;
+
+    for (const route of Object.values(getRoutes(config, mockApi))) {
+      registerRoute(server, route);
+    }
+
+    const baseUrl = await res.start();
+    httpClient = new HttpClientSpy({baseUrl});
+    client = getClient(config, httpClient);
+  });
+
+  afterAll(async () => {
+    if (server !== undefined) await server.close();
+  });
 
   describe("run generic server tests", () => {
     it.each(Object.keys(testCases))("%s", async (key) => {

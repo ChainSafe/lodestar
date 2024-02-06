@@ -8,7 +8,7 @@ import {testData} from "../testData/config.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
-describe.sequential("beacon / config", () => {
+describe("beacon / config", () => {
   runGenericServerTest<Api, ReqTypes>(config, getClient, getRoutes, testData);
 
   it("Serialize Partial Spec object", () => {

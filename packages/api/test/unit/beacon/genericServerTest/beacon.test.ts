@@ -6,7 +6,7 @@ import {getRoutes} from "../../../../src/beacon/server/beacon.js";
 import {runGenericServerTest} from "../../../utils/genericServerTest.js";
 import {testData} from "../testData/beacon.js";
 
-describe.sequential("beacon / beacon", () => {
+describe("beacon / beacon", () => {
   runGenericServerTest<Api, ReqTypes>(
     // eslint-disable-next-line @typescript-eslint/naming-convention
     createChainForkConfig({...defaultChainConfig, ALTAIR_FORK_EPOCH: 1, BELLATRIX_FORK_EPOCH: 2}),

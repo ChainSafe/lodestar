@@ -6,7 +6,7 @@ import {getRoutes} from "../../../../src/beacon/server/validator.js";
 import {runGenericServerTest} from "../../../utils/genericServerTest.js";
 import {testData} from "../testData/validator.js";
 
-describe.sequential("beacon / validator", () => {
+describe("beacon / validator", () => {
   runGenericServerTest<Api, ReqTypes>(config, getClient, getRoutes, testData);
 
   // TODO: Extra tests to implement maybe

@@ -6,7 +6,7 @@ import {getRoutes} from "../../../src/builder/server/index.js";
 import {runGenericServerTest} from "../../utils/genericServerTest.js";
 import {testData} from "./testData.js";
 
-describe.sequential("builder", () => {
+describe("builder", () => {
   runGenericServerTest<Api, ReqTypes>(
     createChainForkConfig({
       ...defaultChainConfig,

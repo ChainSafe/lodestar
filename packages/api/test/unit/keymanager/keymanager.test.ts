@@ -6,6 +6,6 @@ import {getRoutes} from "../../../src/keymanager/server/index.js";
 import {runGenericServerTest} from "../../utils/genericServerTest.js";
 import {testData} from "./testData.js";
 
-describe.sequential("keymanager", () => {
+describe("keymanager", () => {
   runGenericServerTest<Api, ReqTypes>(config, getClient, getRoutes, testData);
 });

@@ -6,6 +6,6 @@ import {getRoutes} from "../../../../src/beacon/server/node.js";
 import {runGenericServerTest} from "../../../utils/genericServerTest.js";
 import {testData} from "../testData/node.js";
 
-describe.sequential("beacon / node", () => {
+describe("beacon / node", () => {
   runGenericServerTest<Api, ReqTypes>(config, getClient, getRoutes, testData);
 });
