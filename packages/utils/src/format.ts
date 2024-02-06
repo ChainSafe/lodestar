@@ -54,3 +54,11 @@ export function prettyWeiToEth(wei: bigint, suffix = false): string {
   if (suffix) eth += " ETH";
   return eth;
 }
+
+/**
+ * Format mille-seconds to time format HH:MM:SS.ms
+ */
+export function prettyMsToTime(timeMs: number): string {
+  const date = new Date(0, 0, 0, 0, 0, 0, timeMs);
+  return `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}.${date.getMilliseconds()}`;
+}
