@@ -58,6 +58,12 @@ jobs:
         if: steps.cache-deps.outputs.cache-hit == 'true'
       # </common-build>
 
+      - name: Download required docker images before running tests
+        run: |
+          docker pull ${{env.GETH_DOCKER_IMAGE}}
+          docker pull ${{env.LIGHTHOUSE_DOCKER_IMAGE}}
+          docker pull ${{env.NETHERMIND_DOCKER_IMAGE}}
+
       - name: Sim tests multifork
         run: DEBUG='${{github.event.inputs.debug}}' yarn test:sim:multifork
         working-directory: packages/cli
@@ -65,20 +71,28 @@ jobs:
           GENESIS_DELAY_SLOTS: ${{github.event.inputs.genesisDelaySlots}}
 
       - name: Sim tests endpoints
-        run: yarn test:sim:endpoints
+        run: DEBUG='${{github.event.inputs.debug}}'  yarn test:sim:endpoints
         working-directory: packages/cli
+        env: 
+          GENESIS_DELAY_SLOTS: ${{github.event.inputs.genesisDelaySlots}}        
 
       - name: Sim tests deneb
-        run: yarn test:sim:deneb
+        run: DEBUG='${{github.event.inputs.debug}}' yarn test:sim:deneb
         working-directory: packages/cli
+        env: 
+          GENESIS_DELAY_SLOTS: ${{github.event.inputs.genesisDelaySlots}}        
 
       - name: Sim tests backup eth provider
-        run: yarn test:sim:backup_eth_provider
+        run: DEBUG='${{github.event.inputs.debug}}' yarn test:sim:backup_eth_provider
         working-directory: packages/cli
+        env: 
+          GENESIS_DELAY_SLOTS: ${{github.event.inputs.genesisDelaySlots}}        
 
       - name: Sim tests mixed client
         run: DEBUG='${{github.event.inputs.debug}}' yarn test:sim:mixedclient
         working-directory: packages/cli
+        env: 
+          GENESIS_DELAY_SLOTS: ${{github.event.inputs.genesisDelaySlots}}        
 
       - name: Upload debug log test files for "packages/cli"
         if: ${{ always() }}

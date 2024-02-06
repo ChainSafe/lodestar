@@ -1,7 +1,8 @@
 import {PeerId} from "@libp2p/interface";
 import {Registry} from "prom-client";
 import {ENR} from "@chainsafe/enr";
-import {identify} from "@libp2p/identify";
+// TODO: We should use this fork until https://github.com/libp2p/js-libp2p/pull/2387
+import {identify} from "@chainsafe/libp2p-identify";
 import {bootstrap} from "@libp2p/bootstrap";
 import {mdns} from "@libp2p/mdns";
 import {createLibp2p} from "libp2p";

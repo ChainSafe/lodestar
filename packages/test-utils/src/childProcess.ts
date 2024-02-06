@@ -79,6 +79,19 @@ export async function execChildProcess(cmd: string | string[], options?: ExecChi
   });
 }
 
+/**
+ * Check if process with given pid is running
+ */
+export function isPidRunning(pid: number): boolean {
+  try {
+    // Signal 0 is a special signal that checks if the process exists
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export const stopChildProcess = async (
   childProcess: childProcess.ChildProcess,
   signal: NodeJS.Signals | number = "SIGTERM"
@@ -87,11 +100,20 @@ export const stopChildProcess = async (
     return;
   }
 
-  return new Promise((resolve, reject) => {
+  const pid = childProcess.pid;
+
+  await new Promise((resolve, reject) => {
     childProcess.once("error", reject);
-    childProcess.once("close", resolve);
+    // We use `exit` instead of `close` as multiple processes can share same `stdio`
+    childProcess.once("exit", resolve);
     childProcess.kill(signal);
   });
+
+  if (pid != null && isPidRunning(pid)) {
+    // Wait for sometime and try to kill this time
+    await sleep(500);
+    await stopChildProcess(childProcess, "SIGKILL");
+  }
 };
 
 /**
