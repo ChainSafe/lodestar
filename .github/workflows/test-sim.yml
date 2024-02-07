@@ -60,7 +60,7 @@ jobs:
 
       - name: Load env variables 
         uses: ./.github/actions/dotenv
-
+        
       - name: Download required docker images before running tests
         run: |
           docker pull ${{env.GETH_DOCKER_IMAGE}}
