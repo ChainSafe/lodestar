@@ -9,7 +9,7 @@ import {
 import {ssz as primitiveSsz} from "../primitive/index.js";
 import {ssz as phase0Ssz} from "../phase0/index.js";
 import {ssz as altairSsz} from "../altair/index.js";
-import {stringType} from "../utils/StringType.js";
+import {stringType} from "../utils/stringType.js";
 
 const {
   Bytes32,
