@@ -22,11 +22,6 @@ on:
         type: number
         default: 40
 
-env:
-  GETH_DOCKER_IMAGE: ethereum/client-go:v1.13.11
-  LIGHTHOUSE_DOCKER_IMAGE: sigp/lighthouse:v4.6.0-amd64-modern-dev
-  NETHERMIND_DOCKER_IMAGE: nethermind/nethermind:1.25.3
-
 jobs:
   tests-sim:
     name: Sim tests
