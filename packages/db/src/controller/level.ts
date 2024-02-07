@@ -52,7 +52,7 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
       await db.open();
     } catch (e) {
       if ((e as LevelDbError).cause?.code === "LEVEL_LOCKED") {
-        throw new Error("Database is already in use by another process");
+        throw new Error("Database is already in use by another Lodestar instance");
       }
       throw e;
     }

@@ -267,7 +267,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
   },
 
   blindedLocal: {
-    type: "boolean",
+    type: "string",
     description: "Request fetching local block in blinded format for produceBlockV3",
     defaultDescription: `${defaultOptions.blindedLocal}`,
   },
