@@ -18,9 +18,6 @@ if (result.error) {
   for (const key in result.parsed) {
     const value = result.parsed[key];
     core.setOutput(key, value);
-
-    if (exportVariables) {
-      core.exportVariable(key, value);
-    }
+    core.exportVariable(key, value);
   }
 }
