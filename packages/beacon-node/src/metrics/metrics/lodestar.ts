@@ -1622,10 +1622,10 @@ export function createLodestarMetrics(
         // Provide max resolution on problematic values around 1 second
         buckets: [0.1, 0.5, 1, 2, 5, 15],
       }),
-      requestErrors: register.gauge<{routeId: string}>({
+      requestErrors: register.gauge<{routeId: string; baseUrl: string}>({
         name: "lodestar_builder_http_client_request_errors_total",
         help: "Total count of errors on builder http client requests by routeId",
-        labelNames: ["routeId"],
+        labelNames: ["routeId", "baseUrl"],
       }),
       requestToFallbacks: register.gauge<{routeId: string; baseUrl: string}>({
         name: "lodestar_builder_http_client_request_to_fallbacks_total",

@@ -319,7 +319,7 @@ export class HttpClient implements IHttpClient {
       this.logger?.debug("HttpClient response", {routeId});
       return {status: res.status, body};
     } catch (e) {
-      this.metrics?.requestErrors.inc({routeId});
+      this.metrics?.requestErrors.inc({routeId, baseUrl});
 
       if (isAbortedError(e as Error)) {
         if (signalGlobal?.aborted) {

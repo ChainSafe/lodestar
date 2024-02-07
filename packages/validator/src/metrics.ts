@@ -299,10 +299,10 @@ export function getMetrics(register: MetricsRegisterExtra, gitData: LodestarGitD
         buckets: [0.01, 0.1, 1, 2, 5],
       }),
 
-      requestErrors: register.gauge<{routeId: string}>({
+      requestErrors: register.gauge<{routeId: string; baseUrl: string}>({
         name: "vc_rest_api_client_request_errors_total",
         help: "Total count of errors on REST API client requests by routeId",
-        labelNames: ["routeId"],
+        labelNames: ["routeId", "baseUrl"],
       }),
 
       requestToFallbacks: register.gauge<{routeId: string; baseUrl: string}>({
