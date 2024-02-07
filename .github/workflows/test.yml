@@ -23,8 +23,6 @@ jobs:
     steps:
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v3
-      - name: Load env variables 
-        uses: ./.github/actions/dotenv      
       - uses: actions/setup-node@v3
         with:
           node-version: ${{matrix.node}}
@@ -223,6 +221,9 @@ jobs:
           key: ${{ runner.os }}-node-${{ matrix.node }}-${{ github.sha }}
           fail-on-cache-miss: true
 
+      - name: Load env variables 
+        uses: ./.github/actions/dotenv
+        
       - name: Run the e2e test environment
         run: scripts/run_e2e_env.sh start
 
