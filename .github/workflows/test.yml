@@ -11,7 +11,7 @@ on:
     branches: [unstable, stable]
   pull_request:
   workflow_dispatch:
-    
+
 jobs:
   build:
     name: Build
@@ -21,10 +21,10 @@ jobs:
       matrix:
         node: [20]
     steps:
-      - name: Load env variables 
-        uses: ./.github/actions/dotenv      
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v3
+      - name: Load env variables 
+        uses: ./.github/actions/dotenv      
       - uses: actions/setup-node@v3
         with:
           node-version: ${{matrix.node}}

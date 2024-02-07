@@ -32,10 +32,10 @@ jobs:
     name: Sim tests
     runs-on: buildjet-4vcpu-ubuntu-2204
     steps:
-      - name: Load env variables 
-        uses: ./.github/actions/dotenv
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v3
+      - name: Load env variables 
+        uses: ./.github/actions/dotenv
       - uses: actions/setup-node@v3
         with:
           node-version: 20
