@@ -11,11 +11,7 @@ on:
     branches: [unstable, stable]
   pull_request:
   workflow_dispatch:
-
-env:
-  GETH_DOCKER_IMAGE: ethereum/client-go:v1.11.6
-  NETHERMIND_DOCKER_IMAGE: nethermind/nethermind:1.18.0
-
+    
 jobs:
   build:
     name: Build
@@ -25,6 +21,8 @@ jobs:
       matrix:
         node: [20]
     steps:
+      - name: Load env variables 
+        uses: ./.github/actions/dotenv      
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
