@@ -364,10 +364,9 @@
   resolved "https://registry.yarnpkg.com/@chainsafe/is-ip/-/is-ip-2.0.2.tgz#7311e7403f11d8c5cfa48111f56fcecaac37c9f6"
   integrity sha512-ndGqEMG1W5WkGagaqOZHpPU172AGdxr+LD15sv3WIUvT5oCFUrG1Y0CW/v2Egwj4JXEvSibaIIIqImsm98y1nA==
 
-"@chainsafe/libp2p-gossipsub@^11.2.1":
+"@chainsafe/libp2p-gossipsub@github://tuyennhv/js-libp2p-gossipsub#tuyen_v11.2.1_protons_4":
   version "11.2.1"
-  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-gossipsub/-/libp2p-gossipsub-11.2.1.tgz#80a993cca657084c861b78513ee0ff516bfb96f9"
-  integrity sha512-2NvlOY4Jfwn7U/sKF0kILl3+luHxq9hhEiBqZRqLTIV8LYmMQl9VpTMgMvRwKzgn/NDeZzsPb8olk2o00tkmZw==
+  resolved "https://codeload.github.com/tuyennhv/js-libp2p-gossipsub/tar.gz/26fb28fc39ab57564003233ff098ae3d6908425f"
   dependencies:
     "@libp2p/crypto" "^4.0.1"
     "@libp2p/interface" "^1.1.2"
@@ -381,6 +380,7 @@
     it-pushable "^3.2.3"
     multiformats "^13.0.1"
     protobufjs "^7.2.6"
+    protons-runtime "^5.1.0"
     uint8arraylist "^2.4.8"
     uint8arrays "^5.0.1"
 
@@ -12516,6 +12516,13 @@ uint8arraylist@^2.0.0, uint8arraylist@^2.4.1, uint8arraylist@^2.4.3, uint8arrayl
   integrity sha512-vc1PlGOzglLF0eae1M8mLRTBivsvrGsdmJ5RbK3e+QRvRLOZfZhQROTwH/OfyF3+ZVUg9/8hE8bmKP2CvP9quQ==
   dependencies:
     uint8arrays "^5.0.1"
+
+uint8arrays@^4.0.6:
+  version "4.0.10"
+  resolved "https://registry.yarnpkg.com/uint8arrays/-/uint8arrays-4.0.10.tgz#3ec5cde3348903c140e87532fc53f46b8f2e921f"
+  integrity sha512-AnJNUGGDJAgFw/eWu/Xb9zrVKEGlwJJCaeInlf3BkecE/zcTobk5YXYIPNQJO1q5Hh1QZrQQHf0JvcHqz2hqoA==
+  dependencies:
+    multiformats "^12.0.1"
 
 uint8arrays@^5.0.0, uint8arrays@^5.0.1:
   version "5.0.1"
