@@ -364,9 +364,9 @@
   resolved "https://registry.yarnpkg.com/@chainsafe/is-ip/-/is-ip-2.0.2.tgz#7311e7403f11d8c5cfa48111f56fcecaac37c9f6"
   integrity sha512-ndGqEMG1W5WkGagaqOZHpPU172AGdxr+LD15sv3WIUvT5oCFUrG1Y0CW/v2Egwj4JXEvSibaIIIqImsm98y1nA==
 
-"@chainsafe/libp2p-gossipsub@github://tuyennhv/js-libp2p-gossipsub#tuyen_v11.2.1_protons_5":
+"@chainsafe/libp2p-gossipsub@github://tuyennhv/js-libp2p-gossipsub#tuyen_protons_7_dist":
   version "11.2.1"
-  resolved "https://codeload.github.com/tuyennhv/js-libp2p-gossipsub/tar.gz/875e5246a102fc7f29f5696db20923da8a1a89dd"
+  resolved "https://codeload.github.com/tuyennhv/js-libp2p-gossipsub/tar.gz/8d2ccf1859161ce45cc947fb4ec5e7cb17eb4f0c"
   dependencies:
     "@libp2p/crypto" "^4.0.1"
     "@libp2p/interface" "^1.1.2"
@@ -379,8 +379,7 @@
     it-pipe "^3.0.1"
     it-pushable "^3.2.3"
     multiformats "^13.0.1"
-    protobufjs "^7.2.6"
-    protons-runtime "^5.1.0"
+    protons-runtime "^5.3.0"
     uint8arraylist "^2.4.8"
     uint8arrays "^5.0.1"
 
@@ -10584,7 +10583,7 @@ properties-reader@^2.2.0:
   dependencies:
     mkdirp "^1.0.4"
 
-protobufjs@^7.0.0, protobufjs@^7.2.6:
+protobufjs@^7.0.0:
   version "7.2.6"
   resolved "https://registry.yarnpkg.com/protobufjs/-/protobufjs-7.2.6.tgz#4a0ccd79eb292717aacf07530a07e0ed20278215"
   integrity sha512-dgJaEDDL6x8ASUZ1YqWciTRrdOuYNzoOf27oHNfdyvKqHr5i0FV7FSLU+aIeFjyFgVxrpTOtQUi0BLLBymZaBw==
@@ -10615,13 +10614,14 @@ protons-runtime@^5.0.0:
     protobufjs "^7.0.0"
     uint8arraylist "^2.4.3"
 
-protons-runtime@^5.1.0:
-  version "5.1.0"
-  resolved "https://registry.yarnpkg.com/protons-runtime/-/protons-runtime-5.1.0.tgz#1a63e409f06e974ff24dd08bf4ab3ce8b99ede75"
-  integrity sha512-9zUaikdZj2u9Z/lFKH+qmtewvQdB1fIKTyN5Iytpdlt0rsHrfw8a14CqXKMWY4ow25HyGuu4D8+7wUbjmI/sdA==
+protons-runtime@^5.3.0:
+  version "5.4.0"
+  resolved "https://registry.yarnpkg.com/protons-runtime/-/protons-runtime-5.4.0.tgz#2751ce22cae6c35eebba89acfd9d783419ae3726"
+  integrity sha512-XfA++W/WlQOSyjUyuF5lgYBfXZUEMP01Oh1C2dSwZAlF2e/ZrMRPfWonXj6BGM+o8Xciv7w0tsRMKYwYEuQvaw==
   dependencies:
+    uint8-varint "^2.0.2"
     uint8arraylist "^2.4.3"
-    uint8arrays "^4.0.6"
+    uint8arrays "^5.0.1"
 
 proxy-addr@^2.0.7:
   version "2.0.7"
@@ -12516,13 +12516,6 @@ uint8arraylist@^2.0.0, uint8arraylist@^2.4.1, uint8arraylist@^2.4.3, uint8arrayl
   integrity sha512-vc1PlGOzglLF0eae1M8mLRTBivsvrGsdmJ5RbK3e+QRvRLOZfZhQROTwH/OfyF3+ZVUg9/8hE8bmKP2CvP9quQ==
   dependencies:
     uint8arrays "^5.0.1"
-
-uint8arrays@^4.0.6:
-  version "4.0.10"
-  resolved "https://registry.yarnpkg.com/uint8arrays/-/uint8arrays-4.0.10.tgz#3ec5cde3348903c140e87532fc53f46b8f2e921f"
-  integrity sha512-AnJNUGGDJAgFw/eWu/Xb9zrVKEGlwJJCaeInlf3BkecE/zcTobk5YXYIPNQJO1q5Hh1QZrQQHf0JvcHqz2hqoA==
-  dependencies:
-    multiformats "^12.0.1"
 
 uint8arrays@^5.0.0, uint8arrays@^5.0.1:
   version "5.0.1"
