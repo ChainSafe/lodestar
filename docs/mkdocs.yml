@@ -79,6 +79,7 @@ nav:
       - Installation: getting-started/installation.md
       # - Creating a JWT: getting-started/creating-a-jwt.md
       - Starting a Node: getting-started/starting-a-node.md
+  - Frequently Asked Questions: faqs.md
   - Data Retention: data-retention.md
   - Beacon Node:
       - CLI Reference: beacon-management/beacon-cli.md
