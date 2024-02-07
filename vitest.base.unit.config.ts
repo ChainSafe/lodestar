@@ -1,6 +1,6 @@
 import path from "node:path";
 import {defineConfig} from "vitest/config";
-const __dirname = new URL(".", import.meta.url).pathname;
+const currentDir = new URL(".", import.meta.url).pathname;
 
 export default defineConfig({
   test: {
@@ -14,7 +14,10 @@ export default defineConfig({
       "**/.{idea,git,cache,output,temp}/**",
       "**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build}.config.*",
     ],
-    setupFiles: [path.join(__dirname, "./scripts/vitest/customMatchers.ts")],
+    setupFiles: [
+      path.join(currentDir, "./scripts/vitest/setupFiles/customMatchers.ts"),
+      path.join(currentDir, "./scripts/vitest/setupFiles/dotenv.ts"),
+    ],
     reporters: ["default", "hanging-process"],
     coverage: {
       enabled: process.env.CI === "true",

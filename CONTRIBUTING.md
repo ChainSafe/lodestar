@@ -35,7 +35,7 @@ To run tests:
 Note that to run `test:e2e`, first ensure that the environment is correctly setup by running the `run_e2e_env.sh` script.
 
 ```sh
-GETH_DOCKER_IMAGE=ethereum/client-go:v1.11.6  NETHERMIND_DOCKER_IMAGE=nethermind/nethermind:1.18.0 ./scripts/run_e2e_env.sh start
+./scripts/run_e2e_env.sh start
 ```
 
 Similarly, run `yarn download-spec-tests` before running `yarn test:spec`.

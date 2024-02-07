@@ -1,7 +1,7 @@
 const fs = require("fs");
 const core = require("@actions/core");
 const dotEnv = require("dotenv");
-const envFile = "test.env";
+const envFile = ".env.test";
 
 if (!fs.existsSync(envFile)) {
   core.setFailed("File .env not found");
