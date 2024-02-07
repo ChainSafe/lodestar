@@ -3,4 +3,3 @@ description: "Load .env file from root of repo and setup for git runner"
 runs:
   using: "node20"
   main: index.js
-  
