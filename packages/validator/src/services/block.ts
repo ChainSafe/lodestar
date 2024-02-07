@@ -212,7 +212,7 @@ export class BlockProposingService {
       blindedLocal,
       builderBoostFactor,
     });
-    ApiError.assert(res, "Failed to produce block: validator.produceBlockV2");
+    ApiError.assert(res, "Failed to produce block: validator.produceBlockV3");
     const {response} = res;
 
     const debugLogCtx = {
