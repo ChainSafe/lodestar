@@ -199,6 +199,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
           verbose: true # optional (default = false)
+          flags: "unit"
 
   e2e-tests:
     name: E2E Tests

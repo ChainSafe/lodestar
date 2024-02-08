@@ -32,7 +32,6 @@
     "test:spec": "vitest --run --config vitest.spec.config.ts --dir test/spec/",
     "test:e2e": "LODESTAR_PRESET=mainnet vitest --run --config vitest.e2e.config.ts --dir test/e2e",
     "download-spec-tests": "node --loader=ts-node/esm test/spec/downloadTests.ts",
-    "coverage": "codecov -F validator",
     "check-readme": "typescript-docs-verifier"
   },
   "repository": {
