@@ -21,8 +21,7 @@ describe("Override preset", function () {
   vi.setConfig({testTimeout: 30_000});
 
   it("Should correctly override preset", async () => {
-    // These commands can not run with minimal preset
-    if (process.env.LODESTAR_PRESET === "minimal") delete process.env.LODESTAR_PRESET;
+    if (process.env.LODESTAR_PRESET) delete process.env.LODESTAR_PRESET;
 
     await exec(`node --loader ts-node/esm ${path.join(__dirname, scriptNames.ok)}`);
   });
