@@ -66,7 +66,7 @@ If you observe following error running any of the test files that means you are 
 - Before running the tests, make sure to switch to the package directory (e.g. `packages/beacon-node`) to speed up test execution
 
 ```sh
-yarn vitest --run --bail 1 --config vitest.spec.config.ts test/spec/presets/sanity.test.ts -t attester_slashing
+LODESTAR_PRESET=minimal yarn vitest --run --bail 1 --config vitest.spec.config.ts test/spec/presets/sanity.test.ts -t attester_slashing
 ```
 
 ## Docker
