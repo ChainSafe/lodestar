@@ -96,7 +96,7 @@ jobs:
 
       - name: Upload debug log test files for "packages/cli"
         if: ${{ always() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: debug-test-logs-cli
           path: packages/cli/test-logs

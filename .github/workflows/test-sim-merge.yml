@@ -92,7 +92,7 @@ jobs:
 
       - name: Upload debug log test files
         if: ${{ always() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: debug-test-logs
           path: packages/beacon-node/test-logs
@@ -144,7 +144,7 @@ jobs:
 
       - name: Upload debug log test files
         if: ${{ always() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: debug-test-logs
           path: packages/beacon-node/test-logs
