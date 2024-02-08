@@ -64,7 +64,7 @@
     "test": "yarn test:unit",
     "test:constants:minimal": "LODESTAR_PRESET=minimal vitest --run --dir test/constants/",
     "test:constants:mainnet": "LODESTAR_PRESET=mainnet vitest --run --dir test/constants/",
-    "test:unit": "wrapper() { yarn test:constants:minimal $@ && yarn test:constants:mainnet $@ && vitest --run --dir test/unit/ $@; }; wrapper",
+    "test:unit": "wrapper() { yarn test:constants:minimal $@ && yarn test:constants:mainnet $@ && LODESTAR_PRESET=mainnet vitest --run --dir test/unit/ $@; }; wrapper",
     "test:browsers": "yarn test:browsers:chrome && yarn test:browsers:firefox && yarn test:browsers:electron",
     "test:browsers:chrome": "vitest --run --browser chrome --config ./vitest.browser.config.ts --dir test/unit",
     "test:browsers:firefox": "vitest --run --browser firefox --config ./vitest.browser.config.ts --dir test/unit",
