@@ -21,7 +21,7 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
   const {id, mode, ttd, address, mining, clientOptions, nodeIndex} = opts;
   const ports = getNodePorts(nodeIndex);
 
-  const isDocker = !process.env.GETH_DOCKER_IMAGE;
+  const isDocker = !!process.env.GETH_DOCKER_IMAGE;
   const binaryPath = isDocker ? "" : `${process.env.GETH_BINARY_DIR}/geth`;
   const {rootDir, rootDirMounted, genesisFilePathMounted, logFilePath, jwtsecretFilePathMounted} = getNodeMountedPaths(
     opts.paths,
