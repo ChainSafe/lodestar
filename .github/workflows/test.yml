@@ -194,7 +194,7 @@ jobs:
       #   if: ${{ failure() && steps.unit_tests.conclusion == 'failure' }}
 
       - name: Upload coverage data
-        run: yarn coverage
+        run: yarn coverage -F unit
 
   e2e-tests:
     name: E2E Tests

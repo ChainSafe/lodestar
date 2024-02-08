@@ -47,6 +47,7 @@
     "build:watch": "yarn run build --watch",
     "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\"",
     "check-types": "tsc",
+    "coverage": "codecov -F config",
     "lint": "eslint --color --ext .ts src/",
     "lint:fix": "yarn run lint --fix",
     "test": "yarn test:unit",

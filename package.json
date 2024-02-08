@@ -20,7 +20,7 @@
     "check-readme": "lerna run check-readme",
     "check-types": "lerna run check-types",
     "check-spelling": "pyspelling -c .pyspelling.yml -v",
-    "coverage": "lerna run coverage",
+    "coverage": "lerna run coverage --",
     "docs:install": "pip install --user -r docs/requirements.txt",
     "docs:build": "lerna run check-readme && lerna run docs:build && ./scripts/prepare-docs.sh",
     "docs:lint": "prettier '**/*.md' --check",

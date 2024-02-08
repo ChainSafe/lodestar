@@ -72,7 +72,7 @@
     "build:release": "yarn clean && yarn run build",
     "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\"",
     "check-types": "tsc",
-    "coverage": "codecov -F lodestar",
+    "coverage": "codecov -F beacon-node",
     "lint": "eslint --color --ext .ts src/ test/",
     "lint:fix": "yarn run lint --fix",
     "test": "yarn test:unit && yarn test:e2e",
