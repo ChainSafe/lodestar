@@ -63,9 +63,9 @@ If you observe following error running any of the test files that means you are 
 - Spec tests often compare full expected vs actual states in JSON format.
 - A single logical error can cause many spec tests to fail. To focus on a single test at a time you can use vitest's option `--bail 1` to stop at the first failed test
 - To then run only that failed test you can run against a specific file as use vitest's filters option `-t <pattern>` to run only one case
+- Before running the tests, make sure to switch to the package directory (e.g. `packages/beacon-node`) to speed up test execution
 
 ```sh
-cd packages/beacon-node
 yarn vitest --run --bail 1 --config vitest.spec.config.ts test/spec/presets/sanity.test.ts -t attester_slashing
 ```
 
