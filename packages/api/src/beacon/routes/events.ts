@@ -35,9 +35,9 @@ export enum EventType {
   attestation = "attestation",
   /** The node has received a valid voluntary exit (from P2P or API) */
   voluntaryExit = "voluntary_exit",
-  /** The node has received a ProposerSlashing (from P2P or API) that passes validation rules of the `proposer_slashing` topic */
+  /** The node has received a valid proposer slashing (from P2P or API) */
   proposerSlashing = "proposer_slashing",
-  /** The node has received an AttesterSlashing (from P2P or API) that passes validation rules of the `attester_slashing` topic */
+  /** The node has received a valid attester slashing (from P2P or API) */
   attesterSlashing = "attester_slashing",
   /** The node has received a valid blsToExecutionChange (from P2P or API) */
   blsToExecutionChange = "bls_to_execution_change",
