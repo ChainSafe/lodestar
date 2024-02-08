@@ -36,7 +36,7 @@ export async function archiveBlocks(
   logger: Logger,
   finalizedCheckpoint: CheckpointHex,
   currentEpoch: Epoch,
-  archiveBlobs?: number
+  archiveBlobEpochs?: number
 ): Promise<void> {
   // Use fork choice to determine the blocks to archive and delete
   // getAllAncestorBlocks response includes the finalized block, so it's also moved to the cold db
@@ -82,11 +82,11 @@ export async function archiveBlocks(
   }
 
   // Delete expired blobs
-  // Keep only `[current_epoch - max(MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, archiveBlobs)]
-  // if archiveBlobs set to Infinity do not prune`
+  // Keep only `[current_epoch - max(MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, archiveBlobEpochs)]
+  // if archiveBlobEpochs set to Infinity do not prune`
   if (finalizedPostDeneb) {
-    if (archiveBlobs !== Infinity) {
-      const blobsArchiveWindow = Math.max(config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, archiveBlobs ?? 0);
+    if (archiveBlobEpochs !== Infinity) {
+      const blobsArchiveWindow = Math.max(config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, archiveBlobEpochs ?? 0);
       const blobSidecarsMinEpoch = currentEpoch - blobsArchiveWindow;
       if (blobSidecarsMinEpoch >= config.DENEB_FORK_EPOCH) {
         const slotsToDelete = await db.blobSidecarsArchive.keys({lt: computeStartSlotAtEpoch(blobSidecarsMinEpoch)});
@@ -100,7 +100,7 @@ export async function archiveBlocks(
         }
       }
     } else {
-      logger.verbose("blobSidecars pruning skipped: archiveBlobs set to Infinity");
+      logger.verbose("blobSidecars pruning skipped: archiveBlobEpochs set to Infinity");
     }
   }
 

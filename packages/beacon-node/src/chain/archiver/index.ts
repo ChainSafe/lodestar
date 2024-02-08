@@ -11,7 +11,7 @@ const PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN = 256;
 
 export type ArchiverOpts = StatesArchiverOpts & {
   disableArchiveOnCheckpoint?: boolean;
-  archiveBlobs?: number;
+  archiveBlobEpochs?: number;
 };
 
 type ProposalStats = {
@@ -38,7 +38,7 @@ export class Archiver {
 
   private prevFinalized: CheckpointWithHex;
   private readonly statesArchiver: StatesArchiver;
-  private archiveBlobs?: number;
+  private archiveBlobEpochs?: number;
 
   constructor(
     private readonly db: IBeaconDb,
@@ -47,7 +47,7 @@ export class Archiver {
     signal: AbortSignal,
     opts: ArchiverOpts
   ) {
-    this.archiveBlobs = opts.archiveBlobs;
+    this.archiveBlobEpochs = opts.archiveBlobEpochs;
     this.statesArchiver = new StatesArchiver(chain.regen, db, logger, opts);
     this.prevFinalized = chain.forkChoice.getFinalizedCheckpoint();
     this.jobQueue = new JobItemQueue<[CheckpointWithHex], void>(this.processFinalizedCheckpoint, {
@@ -100,7 +100,7 @@ export class Archiver {
         this.logger,
         finalized,
         this.chain.clock.currentEpoch,
-        this.archiveBlobs
+        this.archiveBlobEpochs
       );
       this.prevFinalized = finalized;
 

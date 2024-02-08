@@ -87,7 +87,6 @@ Vitalik
 Vitest
 Wagyu
 api
-archiveBlobs
 async
 backfill
 beaconcha
