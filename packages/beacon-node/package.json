@@ -79,7 +79,7 @@
     "test:unit:minimal": "vitest --run --segfaultRetry 3 --dir test/unit/",
     "test:unit:mainnet": "LODESTAR_PRESET=mainnet vitest --run --dir test/unit-mainnet",
     "test:unit": "wrapper() { yarn test:unit:minimal $@ && yarn test:unit:mainnet $@; }; wrapper",
-    "test:e2e": "LODESTAR_PRESET=minimal vitest --run --segfaultRetry 3 --config vitest.e2e.config.ts --dir test/e2e",
+    "test:e2e": "vitest --run --segfaultRetry 3 --config vitest.e2e.config.ts --dir test/e2e",
     "test:sim": "vitest --run test/sim/**/*.test.ts",
     "test:sim:merge-interop": "vitest --run test/sim/merge-interop.test.ts",
     "test:sim:mergemock": "vitest --run test/sim/mergemock.test.ts",
@@ -88,7 +88,7 @@
     "download-spec-tests": "node --loader=ts-node/esm test/spec/downloadTests.ts",
     "test:spec:bls": "vitest --run --config vitest.spec.config.ts --dir test/spec/bls/",
     "test:spec:general": "vitest --run --config vitest.spec.config.ts --dir test/spec/general/",
-    "test:spec:minimal": "LODESTAR_PRESET=minimal vitest --run --config vitest.spec.config.ts --dir test/spec/presets/",
+    "test:spec:minimal": "vitest --run --config vitest.spec.config.ts --dir test/spec/presets/",
     "test:spec:mainnet": "LODESTAR_PRESET=mainnet vitest --run --config vitest.spec.config.ts --dir test/spec/presets/",
     "test:spec": "yarn test:spec:bls && yarn test:spec:general && yarn test:spec:minimal && yarn test:spec:mainnet",
     "check-readme": "typescript-docs-verifier"

@@ -58,7 +58,7 @@
     "test:browsers:chrome": "vitest --run --browser chrome --config ./vitest.browser.config.ts --dir test/unit",
     "test:browsers:firefox": "vitest --run --browser firefox --config ./vitest.browser.config.ts --dir test/unit",
     "test:browsers:electron": "echo 'Electron tests will be introduced back in the future as soon vitest supports electron.'",
-    "test:e2e": "LODESTAR_PRESET=minimal vitest --run --config vitest.e2e.config.ts --dir test/e2e/",
+    "test:e2e": "vitest --run --config vitest.e2e.config.ts --dir test/e2e/",
     "check-readme": "typescript-docs-verifier"
   },
   "repository": {

@@ -2,7 +2,6 @@
 
 function start_app() {
   mkdir -p test-logs/e2e-test-env
-  export LODESTAR_PRESET=minimal
   source ../.env.test
   nohup node --loader ts-node/esm packages/cli/test/scripts/e2e_test_env.ts > test-logs/e2e-test-env/simulation.out 2>&1 &
   echo $! > test-logs/e2e-test-env/simulation.pid
