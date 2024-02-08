@@ -38,5 +38,5 @@ ignore:
 flags:
   unit:
     paths:
-      - packages/**/test/unit
+      - ".*"
     carryforward: true
