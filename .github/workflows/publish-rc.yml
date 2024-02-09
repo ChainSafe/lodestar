@@ -15,7 +15,7 @@ jobs:
     runs-on: buildjet-4vcpu-ubuntu-2204
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -49,10 +49,10 @@ jobs:
     if: needs.tag.outputs.is_rc == 'true'
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Needs full depth for changelog generation
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
           check-latest: true
@@ -132,7 +132,7 @@ jobs:
     needs: [tag, npm]
     if: needs.tag.outputs.is_rc == 'true'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - run: scripts/await-release.sh ${{ needs.tag.outputs.tag }} rc 900
       # https://github.com/docker/setup-qemu-action
       - name: Set up QEMU

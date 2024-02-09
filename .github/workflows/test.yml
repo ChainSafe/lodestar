@@ -26,8 +26,8 @@ jobs:
         node: [20]
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{matrix.node}}
           check-latest: true
@@ -36,7 +36,7 @@ jobs:
         id: node
         run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT
       - name: Restore build
-        uses: actions/cache/restore@v3
+        uses: actions/cache/restore@v4
         id: cache-build-restore
         with:
           path: |
@@ -81,15 +81,15 @@ jobs:
       matrix:
         node: [20]
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
           check-latest: true
           cache: yarn
       - name: Restore build cache
         id: cache-primes-restore
-        uses: actions/cache/restore@v3
+        uses: actions/cache/restore@v4
         with:
           path: |
             node_modules
@@ -119,15 +119,15 @@ jobs:
       matrix:
         node: [20]
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
           check-latest: true
           cache: yarn
       - name: Restore build cache
         id: cache-primes-restore
-        uses: actions/cache/restore@v3
+        uses: actions/cache/restore@v4
         with:
           path: |
             node_modules
@@ -153,8 +153,8 @@ jobs:
       matrix:
         node: [20]
     steps:
-      - uses: actions/checkout@v3      
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4      
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
           check-latest: true
@@ -165,7 +165,7 @@ jobs:
 
       - name: Restore build cache
         id: cache-primes-restore
-        uses: actions/cache/restore@v3
+        uses: actions/cache/restore@v4
         with:
           path: |
             node_modules
@@ -194,7 +194,12 @@ jobs:
       #   if: ${{ failure() && steps.unit_tests.conclusion == 'failure' }}
 
       - name: Upload coverage data
-        run: yarn coverage
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
+          verbose: true # optional (default = false)
+          flags: "unit"
 
   e2e-tests:
     name: E2E Tests
@@ -206,15 +211,15 @@ jobs:
         node: [20]
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{matrix.node}}
           check-latest: true
           cache: yarn
       - name: Restore build cache
         id: cache-primes-restore
-        uses: actions/cache/restore@v3
+        uses: actions/cache/restore@v4
         with:
           path: |
             node_modules
@@ -238,7 +243,7 @@ jobs:
 
       - name: Upload debug log test for test env
         if: ${{ always() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: debug-e2e-test-logs-node-${{matrix.node}}
           path: test-logs/e2e-test-env
@@ -253,15 +258,15 @@ jobs:
         node: [20]
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{matrix.node}}
           check-latest: true
           cache: yarn
       - name: Restore build cache
         id: cache-primes-restore
-        uses: actions/cache/restore@v3
+        uses: actions/cache/restore@v4
         with:
           path: |
             node_modules
@@ -290,15 +295,15 @@ jobs:
       matrix:
         node: [20]
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{matrix.node}}
           check-latest: true
           cache: yarn
       - name: Restore build cache
         id: cache-primes-restore
-        uses: actions/cache/restore@v3
+        uses: actions/cache/restore@v4
         with:
           path: |
             node_modules

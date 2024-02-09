@@ -453,6 +453,8 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
       } catch (e) {
         logger.error("Error adding attesterSlashing to pool", {}, e as Error);
       }
+
+      chain.emitter.emit(routes.events.EventType.attesterSlashing, attesterSlashing);
     },
 
     [GossipType.proposer_slashing]: async ({
@@ -470,6 +472,8 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
       } catch (e) {
         logger.error("Error adding attesterSlashing to pool", {}, e as Error);
       }
+
+      chain.emitter.emit(routes.events.EventType.proposerSlashing, proposerSlashing);
     },
 
     [GossipType.voluntary_exit]: async ({gossipData, topic}: GossipHandlerParamGeneric<GossipType.voluntary_exit>) => {

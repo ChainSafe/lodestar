@@ -25,11 +25,11 @@ jobs:
           echo "Deploying ref: $DEPLOY_REF"
 
       # Checkout the correct ref being deployed
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           ref: ${{ env.DEPLOY_REF }}
 
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
           check-latest: true

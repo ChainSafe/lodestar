@@ -38,7 +38,6 @@
     "test:sim:deneb": "LODESTAR_PRESET=minimal node --loader ts-node/esm test/sim/deneb.test.ts",
     "test:sim:backup_eth_provider": "LODESTAR_PRESET=minimal node --loader ts-node/esm test/sim/backup_eth_provider.test.ts",
     "test": "yarn test:unit && yarn test:e2e",
-    "coverage": "codecov -F lodestar",
     "check-readme": "typescript-docs-verifier"
   },
   "repository": {
