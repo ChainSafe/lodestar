@@ -42,6 +42,7 @@ markdown_extensions:
   - codehilite:
       guess_lang: false
   - admonition
+  - pymdownx.details
   - toc:
       permalink: true
   - pymdownx.superfences:
@@ -79,7 +80,6 @@ nav:
       - Installation: getting-started/installation.md
       # - Creating a JWT: getting-started/creating-a-jwt.md
       - Starting a Node: getting-started/starting-a-node.md
-  - Frequently Asked Questions: faqs.md
   - Data Retention: data-retention.md
   - Beacon Node:
       - CLI Reference: beacon-management/beacon-cli.md
@@ -144,3 +144,4 @@ nav:
       # - Slashing Protection: advanced-topics/slashing-protection.md
       - Setting Up a Testnet: advanced-topics/setting-up-a-testnet.md
       # - Doppelganger Detection: advanced-topics/doppelganger-detection.md
+  - Frequently Asked Questions: faqs.md
