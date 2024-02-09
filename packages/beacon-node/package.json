@@ -100,7 +100,7 @@
     "@chainsafe/blst": "^0.2.9",
     "@chainsafe/discv5": "^9.0.0",
     "@chainsafe/enr": "^3.0.0",
-    "@chainsafe/libp2p-gossipsub": "github://tuyennhv/js-libp2p-gossipsub#tuyen_protons_7_dist",
+    "@chainsafe/libp2p-gossipsub": "github://tuyennhv/js-libp2p-gossipsub#tuyen_protons_7_dist_2",
     "@chainsafe/libp2p-noise": "^14.1.0",
     "@chainsafe/libp2p-identify": "^1.0.0",
     "@chainsafe/persistent-merkle-tree": "^0.6.1",
