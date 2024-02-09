@@ -151,9 +151,6 @@ runTestCheckAgainstSpec(
   reqSerializers,
   returnTypes,
   testDatas,
-  {
-    routesDropOneOf: [],
-  },
   ignoredOperations,
   ignoredProperties
 );

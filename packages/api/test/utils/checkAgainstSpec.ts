@@ -1,7 +1,7 @@
 import Ajv, {ErrorObject} from "ajv";
 import {expect, describe, beforeAll, it} from "vitest";
 import {ReqGeneric, ReqSerializer, ReturnTypes, RouteDef} from "../../src/utils/types.js";
-import {applyRecursively, JsonSchema, OpenApiJson, parseOpenApiSpec, ParseOpenApiSpecOpts} from "./parseOpenApiSpec.js";
+import {applyRecursively, JsonSchema, OpenApiJson, parseOpenApiSpec} from "./parseOpenApiSpec.js";
 import {GenericServerTestCases} from "./genericServerTest.js";
 
 const ajv = new Ajv({
@@ -66,11 +66,10 @@ export function runTestCheckAgainstSpec(
   reqSerializers: Record<string, ReqSerializer<any, any>>,
   returnTypes: Record<string, ReturnTypes<any>[string]>,
   testDatas: Record<string, GenericServerTestCases<any>[string]>,
-  opts?: ParseOpenApiSpecOpts,
   ignoredOperations: string[] = [],
   ignoredProperties: Record<string, IgnoredProperty> = {}
 ): void {
-  const openApiSpec = parseOpenApiSpec(openApiJson, opts);
+  const openApiSpec = parseOpenApiSpec(openApiJson);
 
   for (const [operationId, routeSpec] of openApiSpec.entries()) {
     const isIgnored = ignoredOperations.some((id) => id === operationId);
