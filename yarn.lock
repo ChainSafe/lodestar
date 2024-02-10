@@ -285,14 +285,13 @@
     ethereum-cryptography "^2.0.0"
     uuid "^9.0.0"
 
-"@chainsafe/bls@7.1.1":
-  version "7.1.1"
-  resolved "https://registry.npmjs.org/@chainsafe/bls/-/bls-7.1.1.tgz"
-  integrity sha512-56hjFJujW0Z0Ntkr8y22xIAfT4SChYWQtCGM8dfUMkWWX8xLOXkhBFFSNTvPXA5cBlsFlo102CtBo+6A60II2w==
+"@chainsafe/bls@7.1.3":
+  version "7.1.3"
+  resolved "https://registry.yarnpkg.com/@chainsafe/bls/-/bls-7.1.3.tgz#8d488357b187a511cfb94c96eddc7aa9f62644a9"
+  integrity sha512-d21eYdWxDSb63n7nB+viD+3U4yJW8huiKRibJyh8X7btPLoXkvtmDf7geYyHVbKfLDgbuHkc+b48pfPQkUTLxA==
   dependencies:
     "@chainsafe/bls-keygen" "^0.4.0"
     bls-eth-wasm "^0.4.8"
-    randombytes "^2.1.0"
 
 "@chainsafe/blst@^0.2.9":
   version "0.2.9"

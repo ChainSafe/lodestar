@@ -95,7 +95,7 @@
   "dependencies": {
     "@chainsafe/as-chacha20poly1305": "^0.1.0",
     "@chainsafe/as-sha256": "^0.4.1",
-    "@chainsafe/bls": "7.1.1",
+    "@chainsafe/bls": "7.1.3",
     "@chainsafe/blst": "^0.2.9",
     "@chainsafe/discv5": "^9.0.0",
     "@chainsafe/enr": "^3.0.0",
