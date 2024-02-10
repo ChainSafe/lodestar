@@ -15,7 +15,7 @@ describe("UpgradeLightClientHeader", function () {
     BELLATRIX_FORK_EPOCH: 2,
     CAPELLA_FORK_EPOCH: 3,
     DENEB_FORK_EPOCH: 4,
-    EIP6110_FORK_EPOCH: 5,
+    ELECTRA_FORK_EPOCH: 5,
   });
 
   const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
@@ -28,7 +28,7 @@ describe("UpgradeLightClientHeader", function () {
       capella: ssz.capella.LightClientHeader.defaultValue(),
       bellatrix: ssz.altair.LightClientHeader.defaultValue(),
       deneb: ssz.deneb.LightClientHeader.defaultValue(),
-      eip6110: ssz.eip6110.LightClientHeader.defaultValue(),
+      electra: ssz.electra.LightClientHeader.defaultValue(),
     };
 
     testSlots = {
@@ -37,12 +37,18 @@ describe("UpgradeLightClientHeader", function () {
       bellatrix: 17,
       capella: 25,
       deneb: 33,
-      eip6110: 41,
+      electra: 41,
     };
   });
 
-  for (let i = ForkSeq.altair; i < Object.values(ForkName).length; i++) {
-    for (let j = i + 1; j < Object.values(ForkName).length; j++) {
+  // Since electra is not implemented for loop is till deneb (Object.values(ForkName).length-1)
+  // Once electra is implemnted run for loop till Object.values(ForkName).length
+
+  // for (let i = ForkSeq.altair; i < Object.values(ForkName).length; i++) {
+  //   for (let j = i + 1; j < Object.values(ForkName).length; j++) {
+
+  for (let i = ForkSeq.altair; i < Object.values(ForkName).length - 1; i++) {
+    for (let j = i + 1; j < Object.values(ForkName).length - 1; j++) {
       const fromFork = ForkName[ForkSeq[i] as ForkName];
       const toFork = ForkName[ForkSeq[j] as ForkName];
 
@@ -56,7 +62,27 @@ describe("UpgradeLightClientHeader", function () {
     }
   }
 
+  // for electra not implemented
   for (let i = ForkSeq.altair; i < Object.values(ForkName).length; i++) {
+    const fromFork = ForkName[ForkSeq[i] as ForkName];
+    const toFork = ForkName["electra"];
+
+    it(`Throw error ${fromFork}=>${toFork}`, function () {
+      lcHeaderByFork[fromFork].beacon.slot = testSlots[fromFork];
+      lcHeaderByFork[toFork].beacon.slot = testSlots[fromFork];
+
+      expect(() => {
+        upgradeLightClientHeader(config, toFork, lcHeaderByFork[fromFork]);
+      }).toThrow("Not Implemented");
+    });
+  }
+
+  // Since electra is not implemented for loop is till deneb (Object.values(ForkName).length-1)
+  // Once electra is implemnted run for loop till Object.values(ForkName).length
+
+  // for (let i = ForkSeq.altair; i < Object.values(ForkName).length; i++) {
+
+  for (let i = ForkSeq.altair; i < Object.values(ForkName).length - 1; i++) {
     for (let j = i; j > 0; j--) {
       const fromFork = ForkName[ForkSeq[i] as ForkName];
       const toFork = ForkName[ForkSeq[j] as ForkName];

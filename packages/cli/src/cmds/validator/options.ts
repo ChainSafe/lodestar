@@ -242,7 +242,8 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
 
   "builder.selection": {
     type: "string",
-    description: "Builder block selection strategy `maxprofit`, `builderalways`, `builderonly` or `executiononly`",
+    description:
+      "Builder block selection strategy `maxprofit`, `builderalways`, `builderonly`, `executionalways`, or `executiononly`",
     defaultDescription: `${defaultOptions.builderSelection}`,
     group: "builder",
   },
@@ -267,7 +268,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
   },
 
   blindedLocal: {
-    type: "string",
+    type: "boolean",
     description: "Request fetching local block in blinded format for produceBlockV3",
     defaultDescription: `${defaultOptions.blindedLocal}`,
   },

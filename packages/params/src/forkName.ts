@@ -7,7 +7,7 @@ export enum ForkName {
   bellatrix = "bellatrix",
   capella = "capella",
   deneb = "deneb",
-  eip6110 = "eip6110",
+  electra = "electra",
 }
 
 /**
@@ -19,7 +19,7 @@ export enum ForkSeq {
   bellatrix = 2,
   capella = 3,
   deneb = 4,
-  eip6110 = 5,
+  electra = 5,
 }
 
 export type ForkPreLightClient = ForkName.phase0;

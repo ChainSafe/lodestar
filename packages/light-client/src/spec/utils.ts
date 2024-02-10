@@ -107,12 +107,12 @@ export function upgradeLightClientHeader(
       if (ForkSeq[targetFork] <= ForkSeq.deneb) break;
 
     // eslint-disable-next-line no-fallthrough
-    case ForkName.eip6110:
-      (upgradedHeader as eip6110.LightClientHeader).execution.depositReceiptsRoot =
-        ssz.eip6110.LightClientHeader.fields.execution.fields.depositReceiptsRoot.defaultValue();
+    case ForkName.electra:
+      (upgradedHeader as electra.LightClientHeader).execution.depositReceiptsRoot =
+        ssz.electra.LightClientHeader.fields.execution.fields.depositReceiptsRoot.defaultValue();
 
       // Break if no further upgrades is required else fall through
-      if (ForkSeq[targetFork] <= ForkSeq.eip6110) break;
+      if (ForkSeq[targetFork] <= ForkSeq.electra) break;
   }
   return upgradedHeader;
 }

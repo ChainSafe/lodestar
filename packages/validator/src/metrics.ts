@@ -299,22 +299,22 @@ export function getMetrics(register: MetricsRegisterExtra, gitData: LodestarGitD
         buckets: [0.01, 0.1, 1, 2, 5],
       }),
 
-      requestErrors: register.gauge<{routeId: string}>({
+      requestErrors: register.gauge<{routeId: string; baseUrl: string}>({
         name: "vc_rest_api_client_request_errors_total",
         help: "Total count of errors on REST API client requests by routeId",
-        labelNames: ["routeId"],
+        labelNames: ["routeId", "baseUrl"],
       }),
 
-      requestToFallbacks: register.gauge<{routeId: string}>({
+      requestToFallbacks: register.gauge<{routeId: string; baseUrl: string}>({
         name: "vc_rest_api_client_request_to_fallbacks_total",
         help: "Total count of requests to fallback URLs on REST API by routeId",
-        labelNames: ["routeId"],
+        labelNames: ["routeId", "baseUrl"],
       }),
 
-      urlsScore: register.gauge<{urlIndex: number}>({
+      urlsScore: register.gauge<{urlIndex: number; baseUrl: string}>({
         name: "vc_rest_api_client_urls_score",
         help: "Current score of REST API URLs by url index",
-        labelNames: ["urlIndex"],
+        labelNames: ["urlIndex", "baseUrl"],
       }),
     },
 

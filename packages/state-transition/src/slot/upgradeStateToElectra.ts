@@ -6,7 +6,7 @@ import {CachedBeaconStateEIP6110, getCachedBeaconState} from "../cache/stateCach
 /**
  * Upgrade a state from Capella to Deneb.
  */
-export function upgradeStateToEIP6110(stateDeneb: CachedBeaconStateDeneb): CachedBeaconStateEIP6110 {
+export function upgradeStateToElectra(stateDeneb: CachedBeaconStateDeneb): CachedBeaconStateEIP6110 {
   const {config} = stateDeneb;
 
   const stateEIP6110Node = ssz.deneb.BeaconState.commitViewDU(stateDeneb);

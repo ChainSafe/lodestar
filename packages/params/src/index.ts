@@ -28,7 +28,9 @@ presetStatus.frozen = true;
  * The active preset can be manually overridden with `setActivePreset`
  */
 export const ACTIVE_PRESET =
-  userSelectedPreset ?? PresetName[process?.env?.LODESTAR_PRESET as PresetName] ?? PresetName.mainnet;
+  userSelectedPreset ??
+  (typeof process !== "undefined" ? PresetName[process?.env?.LODESTAR_PRESET as PresetName] : undefined) ??
+  PresetName.mainnet;
 export const activePreset = {...presets[ACTIVE_PRESET], ...userOverrides};
 
 // These variables must be exported individually and explicitly

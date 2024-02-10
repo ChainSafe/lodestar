@@ -18,7 +18,7 @@ Next we need to update the Lodestar service by modifying the start script. We ne
 ```sh
 node \
   --perf-basic-prof \
-  --max-old-space-size=4096 \
+  --max-old-space-size=8192 \
   /usr/src/lodestar/packages/cli/bin/lodestar \
   beacon \
   --rcConfig /home/devops/beacon/rcconfig.yml

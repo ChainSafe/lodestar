@@ -35,6 +35,10 @@ export enum EventType {
   attestation = "attestation",
   /** The node has received a valid voluntary exit (from P2P or API) */
   voluntaryExit = "voluntary_exit",
+  /** The node has received a valid proposer slashing (from P2P or API) */
+  proposerSlashing = "proposer_slashing",
+  /** The node has received a valid attester slashing (from P2P or API) */
+  attesterSlashing = "attester_slashing",
   /** The node has received a valid blsToExecutionChange (from P2P or API) */
   blsToExecutionChange = "bls_to_execution_change",
   /** Finalized checkpoint has been updated */
@@ -58,6 +62,8 @@ export const eventTypes: {[K in EventType]: K} = {
   [EventType.block]: EventType.block,
   [EventType.attestation]: EventType.attestation,
   [EventType.voluntaryExit]: EventType.voluntaryExit,
+  [EventType.proposerSlashing]: EventType.proposerSlashing,
+  [EventType.attesterSlashing]: EventType.attesterSlashing,
   [EventType.blsToExecutionChange]: EventType.blsToExecutionChange,
   [EventType.finalizedCheckpoint]: EventType.finalizedCheckpoint,
   [EventType.chainReorg]: EventType.chainReorg,
@@ -85,6 +91,8 @@ export type EventData = {
   };
   [EventType.attestation]: phase0.Attestation;
   [EventType.voluntaryExit]: phase0.SignedVoluntaryExit;
+  [EventType.proposerSlashing]: phase0.ProposerSlashing;
+  [EventType.attesterSlashing]: phase0.AttesterSlashing;
   [EventType.blsToExecutionChange]: capella.SignedBLSToExecutionChange;
   [EventType.finalizedCheckpoint]: {
     block: RootHex;
@@ -174,6 +182,8 @@ export function getTypeByEvent(): {[K in EventType]: TypeJson<EventData[K]>} {
 
     [EventType.attestation]: ssz.phase0.Attestation,
     [EventType.voluntaryExit]: ssz.phase0.SignedVoluntaryExit,
+    [EventType.proposerSlashing]: ssz.phase0.ProposerSlashing,
+    [EventType.attesterSlashing]: ssz.phase0.AttesterSlashing,
     [EventType.blsToExecutionChange]: ssz.capella.SignedBLSToExecutionChange,
 
     [EventType.finalizedCheckpoint]: new ContainerType(

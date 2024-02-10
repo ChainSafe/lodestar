@@ -19,7 +19,7 @@ import {
   upgradeStateToBellatrix,
   upgradeStateToCapella,
   upgradeStateToDeneb,
-  upgradeStateToEIP6110,
+  upgradeStateToElectra,
 } from "./slot/index.js";
 import {processBlock} from "./block/index.js";
 import {EpochTransitionStep, processEpoch} from "./epoch/index.js";
@@ -233,7 +233,7 @@ function processSlotsWithTransientCache(
         postState = upgradeStateToDeneb(postState as CachedBeaconStateCapella) as CachedBeaconStateAllForks;
       }
       if (stateSlot === config.EIP6110_FORK_EPOCH) {
-        postState = upgradeStateToEIP6110(postState as CachedBeaconStateDeneb) as CachedBeaconStateAllForks;
+        postState = upgradeStateToElectra(postState as CachedBeaconStateDeneb) as CachedBeaconStateAllForks;
       }
     } else {
       postState.slot++;

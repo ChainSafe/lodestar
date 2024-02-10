@@ -11,12 +11,11 @@ import {
 } from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPreBlobs, ForkBlobs, ForkSeq, ForkExecution} from "@lodestar/params";
-import {ETH_TO_WEI, extendError, prettyBytes} from "@lodestar/utils";
+import {ETH_TO_WEI, extendError, formatBigDecimal, prettyBytes} from "@lodestar/utils";
 import {Api, ApiError, routes} from "@lodestar/api";
 import {IClock, LoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
-import {formatBigDecimal} from "../util/format.js";
 import {ValidatorStore} from "./validatorStore.js";
 import {BlockDutiesService, GENESIS_SLOT} from "./blockDuties.js";
 
@@ -213,7 +212,7 @@ export class BlockProposingService {
       blindedLocal,
       builderBoostFactor,
     });
-    ApiError.assert(res, "Failed to produce block: validator.produceBlockV2");
+    ApiError.assert(res, "Failed to produce block: validator.produceBlockV3");
     const {response} = res;
 
     const debugLogCtx = {

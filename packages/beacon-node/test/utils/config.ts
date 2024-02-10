@@ -31,13 +31,13 @@ export function getConfig(fork: ForkName, forkEpoch = 0): ChainForkConfig {
         CAPELLA_FORK_EPOCH: 0,
         DENEB_FORK_EPOCH: forkEpoch,
       });
-    case ForkName.eip6110:
+    case ForkName.electra:
       return createChainForkConfig({
         ALTAIR_FORK_EPOCH: 0,
         BELLATRIX_FORK_EPOCH: 0,
         CAPELLA_FORK_EPOCH: 0,
         DENEB_FORK_EPOCH: 0,
-        EIP6110_FORK_EPOCH: forkEpoch,
+        ELECTRA_FORK_EPOCH: forkEpoch,
       });
   }
 }

@@ -1,4 +1,5 @@
 import {ByteVectorType, UintNumberType, UintBigintType, BooleanType} from "@chainsafe/ssz";
+import {ExecutionAddressType} from "../utils/executionAddress.js";
 
 export const Boolean = new BooleanType();
 export const Byte = new UintNumberType(1);
@@ -62,4 +63,4 @@ export const BLSPubkey = Bytes48;
 export const BLSSignature = Bytes96;
 export const Domain = Bytes32;
 export const ParticipationFlags = new UintNumberType(1, {setBitwiseOR: true});
-export const ExecutionAddress = Bytes20;
+export const ExecutionAddress = new ExecutionAddressType();

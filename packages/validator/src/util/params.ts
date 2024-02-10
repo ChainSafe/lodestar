@@ -73,7 +73,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
   const bellatrixForkRelevant = localConfig.BELLATRIX_FORK_EPOCH < Infinity;
   const capellaForkRelevant = localConfig.CAPELLA_FORK_EPOCH < Infinity;
   const denebForkRelevant = localConfig.DENEB_FORK_EPOCH < Infinity;
-  const eip6110ForkRelevant = localConfig.EIP6110_FORK_EPOCH < Infinity;
+  const electraForkRelevant = localConfig.ELECTRA_FORK_EPOCH < Infinity;
 
   return {
     // # Config
@@ -106,9 +106,9 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     // Deneb
     DENEB_FORK_VERSION: denebForkRelevant,
     DENEB_FORK_EPOCH: denebForkRelevant,
-    // EIP6110
-    EIP6110_FORK_VERSION: eip6110ForkRelevant,
-    EIP6110_FORK_EPOCH: eip6110ForkRelevant,
+    // electra
+    ELECTRA_FORK_VERSION: electraForkRelevant,
+    ELECTRA_FORK_EPOCH: electraForkRelevant,
 
     // Time parameters
     SECONDS_PER_SLOT: true,

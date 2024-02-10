@@ -964,11 +964,11 @@ export class BeaconChain implements IBeaconChain {
     }
 
     const cpEpoch = cp.epoch;
-    const eip6110Epoch = headState?.config.EIP6110_FORK_EPOCH ?? Infinity;
+    const electraEpoch = headState?.config.ELECTRA_FORK_EPOCH ?? Infinity;
 
     if (headState === null) {
       this.logger.verbose("Head state is null");
-    } else if (cpEpoch >= eip6110Epoch) {
+    } else if (cpEpoch >= electraEpoch) {
       // Get the validator.length from the state at cpEpoch
       // We are confident the last element in the list is from headEpoch
       // Thus we query from the end of the list. (cpEpoch - headEpoch - 1) is negative number
@@ -989,7 +989,7 @@ export class BeaconChain implements IBeaconChain {
 
     // TODO-6110: Deprecating eth1Data poll requires a check on a finalized checkpoint state.
     // Will resolve this later
-    // if (cpEpoch >= (this.config.EIP6110_FORK_EPOCH ?? Infinity)) {
+    // if (cpEpoch >= (this.config.ELECTRA_FORK_EPOCH ?? Infinity)) {
     //   // finalizedState can be safely casted to 6110 state since cp is already post-6110
     //   if (finalizedState.eth1DepositIndex >= (finalizedState as CachedBeaconStateEIP6110).depositReceiptsStartIndex) {
     //     // Signal eth1 to stop polling eth1Data

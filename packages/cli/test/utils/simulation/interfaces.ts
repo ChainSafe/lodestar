@@ -29,19 +29,19 @@ export type SimulationOptions = {
 };
 
 export enum BeaconClient {
-  Lodestar = "beacon_lodestar",
-  Lighthouse = "beacon_lighthouse",
+  Lodestar = "beacon-lodestar",
+  Lighthouse = "beacon-lighthouse",
 }
 
 export enum ValidatorClient {
-  Lodestar = "validator_lodestar",
-  Lighthouse = "validator_lighthouse",
+  Lodestar = "validator-lodestar",
+  Lighthouse = "validator-lighthouse",
 }
 
 export enum ExecutionClient {
-  Mock = "execution_mock",
-  Geth = "execution_geth",
-  Nethermind = "execution_nethermind",
+  Mock = "execution-mock",
+  Geth = "execution-geth",
+  Nethermind = "execution-nethermind",
 }
 
 export enum ExecutionStartMode {

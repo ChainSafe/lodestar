@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.14.0",
+  "version": "1.15.1",
   "type": "module",
   "exports": {
     ".": {
@@ -52,21 +52,22 @@
     "check-types": "tsc",
     "lint": "eslint --color --ext .ts src/ test/",
     "lint:fix": "yarn run lint --fix",
+    "test": "yarn test:unit",
     "test:unit": "vitest --run --dir test/unit/",
     "check-readme": "typescript-docs-verifier"
   },
   "types": "lib/index.d.ts",
   "dependencies": {
-    "@chainsafe/as-sha256": "^0.3.1",
-    "@chainsafe/bls": "7.1.1",
+    "@chainsafe/as-sha256": "^0.4.1",
+    "@chainsafe/bls": "7.1.3",
     "@chainsafe/blst": "^0.2.9",
     "@chainsafe/persistent-merkle-tree": "^0.6.1",
     "@chainsafe/persistent-ts": "^0.19.1",
     "@chainsafe/ssz": "^0.14.0",
-    "@lodestar/config": "^1.14.0",
-    "@lodestar/params": "^1.14.0",
-    "@lodestar/types": "^1.14.0",
-    "@lodestar/utils": "^1.14.0",
+    "@lodestar/config": "^1.15.1",
+    "@lodestar/params": "^1.15.1",
+    "@lodestar/types": "^1.15.1",
+    "@lodestar/utils": "^1.15.1",
     "bigint-buffer": "^1.1.5",
     "buffer-xor": "^2.0.2",
     "immutable": "^4.3.2"

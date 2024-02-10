@@ -6,7 +6,7 @@ export {ts as altair} from "./altair/index.js";
 export {ts as bellatrix} from "./bellatrix/index.js";
 export {ts as capella} from "./capella/index.js";
 export {ts as deneb} from "./deneb/index.js";
-export {ts as eip6110} from "./eip6110/index.js";
+export {ts as electra} from "./electra/index.js";
 
 export {ts as allForks} from "./allForks/index.js";
 

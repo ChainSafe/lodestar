@@ -160,7 +160,7 @@ export class HttpClient implements IHttpClient {
     if (metrics) {
       metrics.urlsScore.addCollect(() => {
         for (let i = 0; i < this.urlsScore.length; i++) {
-          metrics.urlsScore.set({urlIndex: i}, this.urlsScore[i]);
+          metrics.urlsScore.set({urlIndex: i, baseUrl: this.urlsOpts[i].baseUrl}, this.urlsScore[i]);
         }
       });
     }
@@ -211,7 +211,7 @@ export class HttpClient implements IHttpClient {
             const routeId = opts.routeId ?? DEFAULT_ROUTE_ID;
 
             if (i > 0) {
-              this.metrics?.requestToFallbacks.inc({routeId});
+              this.metrics?.requestToFallbacks.inc({routeId, baseUrl});
               this.logger?.debug("Requesting fallback URL", {routeId, baseUrl, score: this.urlsScore[i]});
             }
 
@@ -319,7 +319,7 @@ export class HttpClient implements IHttpClient {
       this.logger?.debug("HttpClient response", {routeId});
       return {status: res.status, body};
     } catch (e) {
-      this.metrics?.requestErrors.inc({routeId});
+      this.metrics?.requestErrors.inc({routeId, baseUrl});
 
       if (isAbortedError(e as Error)) {
         if (signalGlobal?.aborted) {
