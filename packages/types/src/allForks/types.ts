@@ -315,28 +315,40 @@ export type AllForksLightClientSSZTypes = {
     | typeof electraSsz.BeaconBlockBody
   >;
   LightClientHeader: AllForksTypeOf<
-    typeof altairSsz.LightClientHeader | typeof capellaSsz.LightClientHeader | typeof denebSsz.LightClientHeader
+    | typeof altairSsz.LightClientHeader
+    | typeof capellaSsz.LightClientHeader
+    | typeof denebSsz.LightClientHeader
+    | typeof electraSsz.LightClientHeader
   >;
   LightClientBootstrap: AllForksTypeOf<
     | typeof altairSsz.LightClientBootstrap
     | typeof capellaSsz.LightClientBootstrap
     | typeof denebSsz.LightClientBootstrap
+    | typeof electraSsz.LightClientBootstrap
   >;
   LightClientUpdate: AllForksTypeOf<
-    typeof altairSsz.LightClientUpdate | typeof capellaSsz.LightClientUpdate | typeof denebSsz.LightClientUpdate
+    | typeof altairSsz.LightClientUpdate
+    | typeof capellaSsz.LightClientUpdate
+    | typeof denebSsz.LightClientUpdate
+    | typeof electraSsz.LightClientUpdate
   >;
   LightClientFinalityUpdate: AllForksTypeOf<
     | typeof altairSsz.LightClientFinalityUpdate
     | typeof capellaSsz.LightClientFinalityUpdate
     | typeof denebSsz.LightClientFinalityUpdate
+    | typeof electraSsz.LightClientFinalityUpdate
   >;
   LightClientOptimisticUpdate: AllForksTypeOf<
     | typeof altairSsz.LightClientOptimisticUpdate
     | typeof capellaSsz.LightClientOptimisticUpdate
     | typeof denebSsz.LightClientOptimisticUpdate
+    | typeof electraSsz.LightClientOptimisticUpdate
   >;
   LightClientStore: AllForksTypeOf<
-    typeof altairSsz.LightClientStore | typeof capellaSsz.LightClientStore | typeof denebSsz.LightClientStore
+    | typeof altairSsz.LightClientStore
+    | typeof capellaSsz.LightClientStore
+    | typeof denebSsz.LightClientStore
+    | typeof electraSsz.LightClientOptimisticUpdate
   >;
 };
 
