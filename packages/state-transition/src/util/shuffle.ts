@@ -4,12 +4,12 @@ import {ValidatorIndex, Bytes32} from "@lodestar/types";
 import {assert, bytesToBigInt} from "@lodestar/utils";
 
 // ShuffleList shuffles a list, using the given seed for randomness. Mutates the input list.
-export function shuffleList(input: ValidatorIndex[], seed: Bytes32): void {
+export function shuffleList(input: Uint32Array | ValidatorIndex[], seed: Bytes32): void {
   innerShuffleList(input, seed, true);
 }
 
 // UnshuffleList undoes a list shuffling using the seed of the shuffling. Mutates the input list.
-export function unshuffleList(input: ValidatorIndex[], seed: Bytes32): void {
+export function unshuffleList(input: Uint32Array | ValidatorIndex[], seed: Bytes32): void {
   innerShuffleList(input, seed, false);
 }
 
@@ -70,7 +70,7 @@ function setPositionUint32(value: number, buf: Buffer): void {
 }
 
 // Shuffles or unshuffles, depending on the `dir` (true for shuffling, false for unshuffling
-function innerShuffleList(input: ValidatorIndex[], seed: Bytes32, dir: boolean): void {
+function innerShuffleList(input: Uint32Array | ValidatorIndex[], seed: Bytes32, dir: boolean): void {
   if (input.length <= 1) {
     // nothing to (un)shuffle
     return;

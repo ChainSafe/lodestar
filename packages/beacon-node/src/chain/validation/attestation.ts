@@ -319,7 +319,7 @@ async function validateGossipAttestationNoSignatureCheck(
     });
   }
 
-  let committeeIndices: number[];
+  let committeeIndices: Uint32Array;
   let getSigningRoot: () => Uint8Array;
   let expectedSubnet: number;
   if (attestationOrCache.cache) {
@@ -702,7 +702,7 @@ export function getCommitteeIndices(
   shuffling: EpochShuffling,
   attestationSlot: Slot,
   attestationIndex: number
-): number[] {
+): Uint32Array {
   const {committees} = shuffling;
   const slotCommittees = committees[attestationSlot % SLOTS_PER_EPOCH];
 

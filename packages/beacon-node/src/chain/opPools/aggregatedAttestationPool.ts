@@ -26,7 +26,7 @@ type AttestationWithScore = {attestation: phase0.Attestation; score: number};
  * This function returns not seen participation for a given epoch and committee.
  * Return null if all validators are seen or no info to check.
  */
-type GetNotSeenValidatorsFn = (epoch: Epoch, committee: number[]) => Set<number> | null;
+type GetNotSeenValidatorsFn = (epoch: Epoch, committee: Uint32Array) => Set<number> | null;
 
 type ValidateAttestationDataFn = (attData: phase0.AttestationData) => boolean;
 
@@ -79,7 +79,7 @@ export class AggregatedAttestationPool {
     attestation: phase0.Attestation,
     dataRootHex: RootHex,
     attestingIndicesCount: number,
-    committee: ValidatorIndex[]
+    committee: Uint32Array
   ): InsertOutcome {
     const slot = attestation.data.slot;
     const lowestPermissibleSlot = this.lowestPermissibleSlot;
@@ -271,7 +271,7 @@ export class MatchingDataAttestationGroup {
 
   constructor(
     // TODO: no need committee here
-    readonly committee: ValidatorIndex[],
+    readonly committee: Uint32Array,
     readonly data: phase0.AttestationData
   ) {}
 
@@ -398,7 +398,7 @@ export function getNotSeenValidatorsFn(state: CachedBeaconStateAllForks): GetNot
       state
     );
 
-    return (epoch: Epoch, committee: number[]) => {
+    return (epoch: Epoch, committee: number[] | Uint32Array) => {
       const participants =
         epoch === stateEpoch ? currentEpochParticipants : epoch === stateEpoch - 1 ? previousEpochParticipants : null;
       if (participants === null) {
@@ -426,7 +426,7 @@ export function getNotSeenValidatorsFn(state: CachedBeaconStateAllForks): GetNot
     const currentParticipation = altairState.currentEpochParticipation.getAll();
     const stateEpoch = computeEpochAtSlot(state.slot);
 
-    return (epoch: Epoch, committee: number[]) => {
+    return (epoch: Epoch, committee: number[] | Uint32Array) => {
       const participationStatus =
         epoch === stateEpoch ? currentParticipation : epoch === stateEpoch - 1 ? previousParticipation : null;
 

@@ -12,8 +12,8 @@ describe("StateContextCache", function () {
   let key1: Root, key2: Root;
   const shuffling: EpochShuffling = {
     epoch: 0,
-    activeIndices: [],
-    shuffling: [],
+    activeIndices: new Uint32Array(),
+    shuffling: new Uint32Array(),
     committees: [],
     committeesPerSlot: 1,
   };
