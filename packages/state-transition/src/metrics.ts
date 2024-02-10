@@ -26,6 +26,7 @@ export type BeaconStateTransitionMetrics = {
 
 export type EpochCacheMetrics = {
   finalizedPubkeyDuplicateInsert: Gauge;
+  newUnFinalizedPubkey: Gauge;
 };
 
 export function onStateCloneMetrics(

@@ -38,7 +38,7 @@ describe("upgradeState", () => {
       {skipSyncCommitteeCache: true}
     );
     const newState = upgradeStateToEIP6110(stateView);
-    expect(() => newState.toValue()).to.not.throw();
+    expect(() => newState.toValue()).not.toThrow();
   });
 });
 

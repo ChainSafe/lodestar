@@ -1,6 +1,7 @@
 import {CoordType, PublicKey} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
 import * as immutable from "immutable";
+import {fromHexString} from "@chainsafe/ssz";
 import {BLSSignature, CommitteeIndex, Epoch, Slot, ValidatorIndex, phase0, SyncPeriod} from "@lodestar/types";
 import {createBeaconConfig, BeaconConfig, ChainConfig} from "@lodestar/config";
 import {
@@ -841,11 +842,17 @@ export class EpochCache {
    */
   addPubkey(index: ValidatorIndex, pubkey: Uint8Array): void {
     if (this.isAfterEIP6110()) {
-      this.unfinalizedPubkey2index = this.unfinalizedPubkey2index.set(toMemoryEfficientHexStr(pubkey), index);
+      this.addUnFinalizedPubkey(index, pubkey);
     } else {
-      this.pubkey2index.set(pubkey, index);
-      this.index2pubkey[index] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian);
+      // deposit mechanism pre 6110 follows a safe distance with assumption
+      // that they are already canonical
+      this.addFinalizedPubkey(index, pubkey);
     }
+  }
+
+  addUnFinalizedPubkey(index: ValidatorIndex, pubkey: PubkeyHex | Uint8Array, metrics?: EpochCacheMetrics): void {
+    this.unfinalizedPubkey2index = this.unfinalizedPubkey2index.set(toMemoryEfficientHexStr(pubkey), index);
+    metrics?.newUnFinalizedPubkey.inc();
   }
 
   addFinalizedPubkeys(pubkeyMap: UnfinalizedPubkeyIndexMap, metrics?: EpochCacheMetrics): void {
@@ -856,14 +863,10 @@ export class EpochCache {
    * Add finalized validator index and pubkey into finalized cache.
    * Since addFinalizedPubkey() primarily takes pubkeys from unfinalized cache, it can take pubkey hex string directly
    */
-  addFinalizedPubkey(index: ValidatorIndex, pubkey: PubkeyHex, metrics?: EpochCacheMetrics): void {
-    if (!this.isAfterEIP6110()) {
-      throw new Error("addFInalizedPubkey is not available pre EIP-6110");
-    }
-
+  addFinalizedPubkey(index: ValidatorIndex, pubkey: PubkeyHex | Uint8Array, metrics?: EpochCacheMetrics): void {
     const existingIndex = this.pubkey2index.get(pubkey);
 
-    if (existingIndex != undefined) {
+    if (existingIndex !== undefined) {
       if (existingIndex === index) {
         // Repeated insert.
         metrics?.finalizedPubkeyDuplicateInsert.inc();
@@ -875,7 +878,8 @@ export class EpochCache {
     }
 
     this.pubkey2index.set(pubkey, index);
-    this.index2pubkey[index] = bls.PublicKey.fromHex(pubkey);
+    const pubkeyBytes = pubkey instanceof Uint8Array ? pubkey : fromHexString(pubkey);
+    this.index2pubkey[index] = bls.PublicKey.fromBytes(pubkeyBytes, CoordType.jacobian);
   }
 
   /**
@@ -959,11 +963,26 @@ export class EpochCache {
   }
 
   effectiveBalanceIncrementsSet(index: number, effectiveBalance: number): void {
-    if (index >= this.effectiveBalanceIncrements.length) {
-      // Clone and extend effectiveBalanceIncrements
+    if (this.isAfterEIP6110()) {
+      // TODO: electra
+      // getting length and setting getEffectiveBalanceIncrementsByteLen is not fork safe
+      // so each time we add an index, we should new the Uint8Array to keep it forksafe
+      // one simple optimization could be to increment the length once per block rather
+      // on each add/set
+      //
+      // there could still be some unused length remaining from the prev 6110 padding
+      const newLength =
+        index >= this.effectiveBalanceIncrements.length ? index + 1 : this.effectiveBalanceIncrements.length;
       const effectiveBalanceIncrements = this.effectiveBalanceIncrements;
-      this.effectiveBalanceIncrements = new Uint8Array(getEffectiveBalanceIncrementsByteLen(index + 1));
+      this.effectiveBalanceIncrements = new Uint8Array(newLength);
       this.effectiveBalanceIncrements.set(effectiveBalanceIncrements, 0);
+    } else {
+      if (index >= this.effectiveBalanceIncrements.length) {
+        // Clone and extend effectiveBalanceIncrements
+        const effectiveBalanceIncrements = this.effectiveBalanceIncrements;
+        this.effectiveBalanceIncrements = new Uint8Array(getEffectiveBalanceIncrementsByteLen(index + 1));
+        this.effectiveBalanceIncrements.set(effectiveBalanceIncrements, 0);
+      }
     }
 
     this.effectiveBalanceIncrements[index] = Math.floor(effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
