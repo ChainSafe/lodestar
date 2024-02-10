@@ -18,7 +18,7 @@ You will need to go over the [specification](https://github.com/ethereum/consens
 ## Getting started
 
 - Follow the [installation guide](https://chainsafe.github.io/lodestar/) to install Lodestar.
-- Quickly try out the whole stack by [starting a local testnet](https://chainsafe.github.io/lodestar/usage/local).
+- Quickly try out the whole stack by [starting a local testnet](https://chainsafe.github.io/lodestar/advanced-topics/setting-up-a-testnet/).
 
 ## Contributors
 
