@@ -12,10 +12,6 @@ on:
   pull_request:
   workflow_dispatch:
 
-env:
-  GETH_DOCKER_IMAGE: ethereum/client-go:v1.11.6
-  NETHERMIND_DOCKER_IMAGE: nethermind/nethermind:1.18.0
-
 jobs:
   build:
     name: Build
@@ -230,6 +226,9 @@ jobs:
           key: ${{ runner.os }}-node-${{ matrix.node }}-${{ github.sha }}
           fail-on-cache-miss: true
 
+      - name: Load env variables 
+        uses: ./.github/actions/dotenv
+        
       - name: Run the e2e test environment
         run: scripts/run_e2e_env.sh start
 

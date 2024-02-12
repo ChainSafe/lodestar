@@ -38,13 +38,14 @@
     "test-coverage:e2e-sim": "c8 --config .c8rc.json --report-dir coverage/e2e-sim/ --all npm run test:e2e:sim",
     "test-coverage:spec": "c8 --config .c8rc.json --report-dir coverage/spec/ --all npm run test:spec",
     "benchmark": "yarn benchmark:files 'packages/*/test/perf/**/*.test.ts'",
-    "benchmark:files": "LODESTAR_PRESET=mainnet NODE_OPTIONS='--max-old-space-size=4096 --loader=ts-node/esm' benchmark --config .benchrc.yaml --defaultBranch unstable",
+    "benchmark:files": "NODE_OPTIONS='--max-old-space-size=4096 --loader=ts-node/esm' benchmark --config .benchrc.yaml --defaultBranch unstable",
     "release:create-rc": "node scripts/release/create_rc.mjs",
     "release:tag-rc": "node scripts/release/tag_rc.mjs",
     "release:tag-stable": "node scripts/release/tag_stable.mjs",
     "release:publish": "lerna publish from-package --yes --no-verify-access"
   },
   "devDependencies": {
+    "@actions/core": "^1.10.1",
     "@chainsafe/eslint-plugin-node": "^11.2.3",
     "@dapplion/benchmark": "^0.2.4",
     "@types/mocha": "^10.0.6",
@@ -54,6 +55,7 @@
     "@vitest/coverage-v8": "^1.2.1",
     "@vitest/browser": "^1.2.1",
     "crypto-browserify": "^3.12.0",
+    "dotenv": "^16.4.1",
     "electron": "^26.2.2",
     "eslint": "^8.50.0",
     "eslint-import-resolver-typescript": "^3.6.1",
