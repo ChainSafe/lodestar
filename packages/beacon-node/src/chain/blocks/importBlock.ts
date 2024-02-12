@@ -350,7 +350,7 @@ export async function importBlock(
 
   if (parentEpoch < blockEpoch) {
     // current epoch and previous epoch are likely cached in previous states
-    this.shufflingCache.processState(postState, postState.epochCtx.nextShuffling.epoch);
+    this.shufflingCache.processState(postState, postState.epochCtx.nextEpoch);
     this.logger.verbose("Processed shuffling for next epoch", {parentEpoch, blockEpoch, slot: blockSlot});
   }
 
