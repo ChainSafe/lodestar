@@ -64,6 +64,10 @@ module.exports = {
       },
       //ignore rules on destructured params
       {selector: "variable", modifiers: ["destructured"], format: null},
+      {
+        selector: "import",
+        format: ["camelCase", "PascalCase"]
+      },
     ],
     "@typescript-eslint/no-explicit-any": "error",
     "@typescript-eslint/no-floating-promises": "error",
@@ -159,6 +163,7 @@ module.exports = {
     "prettier/prettier": "error",
     quotes: ["error", "double"],
     semi: "off",
+    "import/namespace": "off",
   },
   settings: {
     "import/core-modules": [
