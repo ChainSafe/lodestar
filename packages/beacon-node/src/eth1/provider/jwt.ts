@@ -1,8 +1,6 @@
 import type {TAlgorithm} from "jwt-simple";
 // TODO: fix jwt-simple types
-import jwt from "jwt-simple";
-
-const {encode, decode} = jwt;
+import {encode, decode} from "jwt-simple";
 
 /**
  * jwt token has iat which is issued at unix timestamp, an optional exp for expiry,

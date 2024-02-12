@@ -3,12 +3,12 @@ import {createForkConfig} from "@lodestar/config";
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
 import {VERIFICATION_FAILED_RESPONSE_CODE} from "../../../src/constants.js";
 import {eth_getBalance} from "../../../src/verified_requests/eth_getBalance.js";
-import eth_getBalance_eoa from "../../fixtures/sepolia/eth_getBalance_eoa.json" assert {type: "json"};
-import eth_getBalance_contract from "../../fixtures/sepolia/eth_getBalance_contract.json" assert {type: "json"};
+import ethGetBalanceEoa from "../../fixtures/sepolia/eth_getBalance_eoa.json" assert {type: "json"};
+import ethGetBalanceContract from "../../fixtures/sepolia/eth_getBalance_contract.json" assert {type: "json"};
 import {cloneTestFixture, generateReqHandlerOptionsMock} from "../../mocks/request_handler.js";
 import {getVerificationFailedMessage} from "../../../src/utils/json_rpc.js";
 
-const testCases = [eth_getBalance_eoa, eth_getBalance_contract];
+const testCases = [ethGetBalanceEoa, ethGetBalanceContract];
 
 describe("verified_requests / eth_getBalance", () => {
   for (const testCase of testCases) {

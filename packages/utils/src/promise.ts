@@ -113,6 +113,8 @@ export async function resolveOrRacePromises<T extends NonEmptyArray<PromiseLike<
   );
 
   const promiseResults = promises.map((p) => wrapPromise(p)) as ReturnPromiseWithTuple<T>;
+  // We intentionally want an array of promises here
+  // eslint-disable-next-line @typescript-eslint/no-floating-promises
   promises = (promiseResults as PromiseResult<T>[]).map((p) => p.promise) as unknown as T;
 
   try {

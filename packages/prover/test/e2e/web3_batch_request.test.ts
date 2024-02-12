@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {describe, it, expect, beforeAll} from "vitest";
-import Web3 from "web3";
+import {Web3} from "web3";
 import {LCTransport} from "../../src/interfaces.js";
 import {createVerifiedExecutionProvider} from "../../src/web3_provider.js";
 import {rpcUrl, beaconUrl, config, waitForCapellaFork} from "../utils/e2e_env.js";

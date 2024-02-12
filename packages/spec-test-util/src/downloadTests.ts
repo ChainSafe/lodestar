@@ -5,7 +5,7 @@ import stream from "node:stream";
 import {promisify} from "node:util";
 import {rimraf} from "rimraf";
 import axios from "axios";
-import tar from "tar";
+import {x as extractTar} from "tar";
 import retry from "async-retry";
 
 export const defaultSpecTestsRepoUrl = "https://github.com/ethereum/consensus-spec-tests";
@@ -81,7 +81,7 @@ export async function downloadGenericSpecTests<TestNames extends string>(
           log(`Downloading ${url} - ${totalSize} bytes`);
 
           // extract tar into output directory
-          await promisify(stream.pipeline)(data, tar.x({cwd: outputDir}));
+          await promisify(stream.pipeline)(data, extractTar({cwd: outputDir}));
 
           log(`Downloaded  ${url}`);
         },

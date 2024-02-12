@@ -1,5 +1,5 @@
 import {EventEmitter} from "events";
-import StrictEventEmitter from "strict-event-emitter-types";
+import {StrictEventEmitter} from "strict-event-emitter-types";
 import {Slot} from "@lodestar/types";
 import {HeadEventData} from "./chainHeaderTracker.js";
 
