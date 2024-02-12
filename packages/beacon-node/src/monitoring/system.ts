@@ -1,3 +1,5 @@
+// We want to keep `system` export to be used as namespace
+/* eslint-disable import/no-named-as-default-member */
 import os from "node:os";
 import path from "node:path";
 // We want to keep `system` export as it's more readable and easier to understand
@@ -58,8 +60,6 @@ class System {
   private async collectStaticData(): Promise<void> {
     if (this.staticDataCollected) return;
 
-    // Usage of `system.cpu()` is more readable than `cpu()`
-    // eslint-disable-next-line import/no-named-as-default-member
     const cpu = await system.cpu();
     // Note: inside container this might be inaccurate as
     // physicalCores in some cases is the count of logical CPU cores
@@ -89,8 +89,6 @@ class System {
   }
 
   private async collectMemoryData(): Promise<void> {
-    // Usage of `system.mem()` is more readable than `mem()`
-    // eslint-disable-next-line import/no-named-as-default-member
     const memory = await system.mem();
     this.memoryNodeBytesTotal = memory.total;
     this.memoryNodeBytesFree = memory.free;
@@ -99,8 +97,6 @@ class System {
   }
 
   private async collectDiskData(): Promise<void> {
-    // Usage of `system.fsSize()` is more readable than `fsSize()`
-    // eslint-disable-next-line import/no-named-as-default-member
     const fileSystems = await system.fsSize();
     // get file system root, on windows this is the name of the hard disk partition
     const rootFs = process.platform === "win32" ? process.cwd().split(path.sep)[0] : "/";
@@ -110,8 +106,6 @@ class System {
     this.diskNodeBytesFree = fileSystem.available;
 
     if (this.diskIOMeasurable) {
-      // Usage of `system.disksIO()` is more readable than `disksIO()`
-      // eslint-disable-next-line import/no-named-as-default-member
       const disk = await system.disksIO();
       if (disk != null && disk.rIO !== 0) {
         // Note: rIO and wIO might not be available inside container
@@ -126,9 +120,6 @@ class System {
 
   private async collectNetworkData(): Promise<void> {
     // defaults to first external network interface
-
-    // Usage of `system.networkStats()` is more readable than `networkStats()`
-    // eslint-disable-next-line import/no-named-as-default-member
     const [network] = await system.networkStats();
     // Note: rx_bytes and tx_bytes will be inaccurate if process
     // runs inside container as it only captures local network traffic
