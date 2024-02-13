@@ -1,5 +1,5 @@
 import EventEmitter from "node:events";
-import Debug from "debug";
+import createDebug from "debug";
 import {routes} from "@lodestar/api/beacon";
 import {ChainForkConfig} from "@lodestar/config";
 import {Epoch, Slot} from "@lodestar/types";
@@ -20,7 +20,7 @@ import {defaultAssertions} from "./assertions/defaults/index.js";
 import {TableReporter} from "./TableReporter.js";
 import {fetchBlock} from "./utils/network.js";
 
-const debug = Debug("lodestar:sim:tracker");
+const debug = createDebug("lodestar:sim:tracker");
 
 interface SimulationTrackerInitOptions {
   nodes: NodePair[];

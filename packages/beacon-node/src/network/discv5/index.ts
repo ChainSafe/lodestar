@@ -1,6 +1,6 @@
 import EventEmitter from "events";
 import {PeerId} from "@libp2p/interface";
-import StrictEventEmitter from "strict-event-emitter-types";
+import {StrictEventEmitter} from "strict-event-emitter-types";
 import {exportToProtobuf} from "@libp2p/peer-id-factory";
 import {createPrivateKeyFromPeerId, ENR, ENRData, SignableENR} from "@chainsafe/enr";
 import {spawn, Thread, Worker} from "@chainsafe/threads";

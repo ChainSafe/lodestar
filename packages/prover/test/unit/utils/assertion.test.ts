@@ -1,6 +1,6 @@
 import {describe, it, expect} from "vitest";
 import {ethers} from "ethers";
-import Web3 from "web3";
+import {Web3} from "web3";
 import {isSendProvider, isWeb3jsProvider, isEthersProvider} from "../../../src/utils/assertion.js";
 
 describe("utils/assertion", () => {
