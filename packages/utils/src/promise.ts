@@ -74,11 +74,6 @@ export function wrapPromise<T>(promise: PromiseLike<T>): PromiseResult<T> {
   return result;
 }
 
-/**
- * ArrayToTuple converts an `Array<T>` to `[T, ...T]`
- *
- * eg: `[1, 2, 3]` from type `number[]` to `[number, number, number]`
- */
 type ReturnPromiseWithTuple<Tuple extends NonEmptyArray<PromiseLike<unknown>>> = {
   [Index in keyof ArrayToTuple<Tuple>]: PromiseResult<Awaited<Tuple[Index]>>;
 };

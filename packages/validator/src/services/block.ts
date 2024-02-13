@@ -11,16 +11,13 @@ import {
 } from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPreBlobs, ForkBlobs, ForkSeq, ForkExecution} from "@lodestar/params";
-import {ETH_TO_WEI, extendError, formatBigDecimal, prettyBytes} from "@lodestar/utils";
+import {extendError, prettyBytes, prettyWeiToEth} from "@lodestar/utils";
 import {Api, ApiError, routes} from "@lodestar/api";
 import {IClock, LoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
 import {ValidatorStore} from "./validatorStore.js";
 import {BlockDutiesService, GENESIS_SLOT} from "./blockDuties.js";
-
-// display upto 5 decimal places
-const MAX_DECIMAL_FACTOR = BigInt("100000");
 
 // The following combination of blocks and blobs can be produced
 //  i) a full block pre deneb
@@ -218,14 +215,9 @@ export class BlockProposingService {
     const debugLogCtx = {
       executionPayloadSource: response.executionPayloadSource,
       executionPayloadBlinded: response.executionPayloadBlinded,
-      // winston logger doesn't like bigint
-      executionPayloadValue: `${formatBigDecimal(response.executionPayloadValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)} ETH`,
-      consensusBlockValue: `${formatBigDecimal(response.consensusBlockValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)} ETH`,
-      totalBlockValue: `${formatBigDecimal(
-        response.executionPayloadValue + response.consensusBlockValue,
-        ETH_TO_WEI,
-        MAX_DECIMAL_FACTOR
-      )} ETH`,
+      executionPayloadValue: prettyWeiToEth(response.executionPayloadValue),
+      consensusBlockValue: prettyWeiToEth(response.consensusBlockValue),
+      totalBlockValue: prettyWeiToEth(response.executionPayloadValue + response.consensusBlockValue),
       // TODO PR: should be used in api call instead of adding in log
       strictFeeRecipientCheck,
       builderSelection,
