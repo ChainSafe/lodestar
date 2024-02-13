@@ -26,18 +26,13 @@ import {
   computeProposers,
   getActivationChurnLimit,
 } from "../util/index.js";
-import {
-  computeEpochShuffling,
-  EpochShuffling,
-  getShufflingDecisionBlock,
-  IShufflingCache,
-} from "../util/epochShuffling.js";
+import {EpochShuffling, getShufflingDecisionBlock, IShufflingCache} from "../util/epochShuffling.js";
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
 import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
 import {getTotalSlashingsByIncrement} from "../epoch/processSlashings.js";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements.js";
 import {Index2PubkeyCache, PubkeyIndexMap, syncPubkeys} from "./pubkeyCache.js";
-import {BeaconStateAllForks, BeaconStateAltair, ShufflingGetter} from "./types.js";
+import {BeaconStateAllForks, BeaconStateAltair} from "./types.js";
 import {
   computeSyncCommitteeCache,
   getSyncCommitteeCache,
@@ -58,7 +53,6 @@ export type EpochCacheImmutableData = {
 export type EpochCacheOpts = {
   skipSyncCommitteeCache?: boolean;
   skipSyncPubkeys?: boolean;
-  shufflingGetter?: ShufflingGetter;
 };
 
 /** Defers computing proposers by persisting only the seed, and dropping it once indexes are computed */
@@ -130,20 +124,20 @@ export class EpochCache {
   previousShufflingDecisionBlock: string;
   currentShufflingDecisionBlock: string;
   nextShufflingDecisionBlock: string;
-  
+
   /**
    * Previous, current and next epoch number
    */
   previousEpoch: number;
   currentEpoch: number;
   nextEpoch: number;
-  
+
   /**
    * Validator activeIndices for the current and next epoch
    */
   currentActiveIndices: ValidatorIndex[];
   nextActiveIndices: ValidatorIndex[];
-  
+
   /**
    * Effective balances, for altair processAttestations()
    */
