@@ -122,6 +122,7 @@ nav:
       # - Bug Reports: contribution/bug-reports.md
       - Dependency Graph: contribution/depgraph.md
       # - Repo: contribution/repo.md
+      - Dev CLI Reference: contribution/dev-cli.md
       - Testing:
           - Overview: contribution/testing/index.md
           # - Unit Tests: contribution/testing/unit-tests.md
