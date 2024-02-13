@@ -113,7 +113,9 @@ function renderOption(optionName: string, option: CliOptionDefinition): string |
       if (!defaultValue.includes(`"`)) {
         defaultValue = `"${defaultValue}"`;
       }
-      defaultValue = `[ ${defaultValue} ]`;
+      if (!defaultValue.startsWith("[")) {
+        defaultValue = `[ ${defaultValue} ]`;
+      }
     }
     commandOption.push(`default: \`${defaultValue}\``);
   }
