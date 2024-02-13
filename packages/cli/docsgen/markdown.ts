@@ -6,7 +6,7 @@ const LINE_BREAK = "\n\n<br />";
 
 function renderExampleBody(example: CliExample, lodestarCommand?: string): string {
   const cliExample = [
-    `\`\`\`
+    `\`\`\`sh
 ${lodestarCommand ? `${lodestarCommand} ` : ""}${example.command}
 \`\`\``,
   ];
