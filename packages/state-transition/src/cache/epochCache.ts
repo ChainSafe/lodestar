@@ -125,27 +125,25 @@ export class EpochCache {
   proposersNextEpoch: ProposersDeferred;
 
   /**
-   * Shuffling of validator indexes. Immutable through the epoch, then it's replaced entirely.
-   * Note: Per spec definition, shuffling will always be defined. They are never called before loadState()
-   *
-   * $VALIDATOR_COUNT x Number
+   * Decision blocks to get shuffling from ShufflingCache
    */
-  // previousShuffling: EpochShuffling;
-  /** Same as previousShuffling */
-  // currentShuffling: EpochShuffling;
-  /** Same as previousShuffling */
-  // nextShuffling: EpochShuffling;
+  previousShufflingDecisionBlock: string;
+  currentShufflingDecisionBlock: string;
+  nextShufflingDecisionBlock: string;
+  
   /**
    * Previous, current and next epoch number
    */
   previousEpoch: number;
   currentEpoch: number;
   nextEpoch: number;
+  
   /**
    * Validator activeIndices for the current and next epoch
    */
   currentActiveIndices: ValidatorIndex[];
   nextActiveIndices: ValidatorIndex[];
+  
   /**
    * Effective balances, for altair processAttestations()
    */
@@ -228,9 +226,9 @@ export class EpochCache {
     proposersNextEpoch: ProposersDeferred;
     currentActiveIndices: ValidatorIndex[];
     nextActiveIndices: ValidatorIndex[];
-    // previousShuffling: EpochShuffling;
-    // currentShuffling: EpochShuffling;
-    // nextShuffling: EpochShuffling;
+    previousShufflingDecisionBlock: string;
+    currentShufflingDecisionBlock: string;
+    nextShufflingDecisionBlock: string;
     previousEpoch: number;
     currentEpoch: number;
     nextEpoch: number;
@@ -258,9 +256,9 @@ export class EpochCache {
     this.proposers = data.proposers;
     this.proposersPrevEpoch = data.proposersPrevEpoch;
     this.proposersNextEpoch = data.proposersNextEpoch;
-    // this.previousShuffling = data.previousShuffling;
-    // this.currentShuffling = data.currentShuffling;
-    // this.nextShuffling = data.nextShuffling;
+    this.previousShufflingDecisionBlock = data.previousShufflingDecisionBlock;
+    this.currentShufflingDecisionBlock = data.currentShufflingDecisionBlock;
+    this.nextShufflingDecisionBlock = data.nextShufflingDecisionBlock;
     this.previousEpoch = data.previousEpoch;
     this.currentEpoch = data.currentEpoch;
     this.nextEpoch = data.nextEpoch;
@@ -467,9 +465,9 @@ export class EpochCache {
       // On first epoch, set to null to prevent unnecessary work since this is only used for metrics
       proposersPrevEpoch: null,
       proposersNextEpoch,
-      // previousShuffling,
-      // currentShuffling,
-      // nextShuffling,
+      previousShufflingDecisionBlock,
+      currentShufflingDecisionBlock,
+      nextShufflingDecisionBlock,
       previousEpoch,
       currentEpoch,
       nextEpoch,
@@ -511,9 +509,9 @@ export class EpochCache {
       proposers: this.proposers,
       proposersPrevEpoch: this.proposersPrevEpoch,
       proposersNextEpoch: this.proposersNextEpoch,
-      // previousShuffling: this.previousShuffling,
-      // currentShuffling: this.currentShuffling,
-      // nextShuffling: this.nextShuffling,
+      previousShufflingDecisionBlock: this.previousShufflingDecisionBlock,
+      currentShufflingDecisionBlock: this.currentShufflingDecisionBlock,
+      nextShufflingDecisionBlock: this.nextShufflingDecisionBlock,
       previousEpoch: this.previousEpoch,
       currentEpoch: this.currentEpoch,
       nextEpoch: this.nextEpoch,
@@ -554,10 +552,14 @@ export class EpochCache {
   ): void {
     // Shuffling will move out and these will be the epoch source of truth
     this.previousEpoch = this.currentEpoch;
-    this.currentEpoch = this.nextEpoch;
-    this.nextEpoch = this.currentEpoch + 1;
+    this.previousShufflingDecisionBlock = this.currentShufflingDecisionBlock;
 
+    this.currentEpoch = this.nextEpoch;
     this.currentActiveIndices = this.nextActiveIndices;
+    this.currentShufflingDecisionBlock = this.nextShufflingDecisionBlock;
+
+    this.nextEpoch = this.currentEpoch + 1;
+    this.nextShufflingDecisionBlock = getShufflingDecisionBlock(state, this.nextEpoch);
     this.nextActiveIndices = this.shufflingCache.getOrBuildSync(
       this.nextEpoch,
       state,
@@ -844,11 +846,11 @@ export class EpochCache {
 
   getShufflingAtEpochOrNull(epoch: Epoch): EpochShuffling | null {
     if (epoch === this.previousEpoch) {
-      return this.previousShuffling;
+      return this.shufflingCache.getSync(epoch, this.previousShufflingDecisionBlock);
     } else if (epoch === this.currentEpoch) {
-      return this.currentShuffling;
+      return this.shufflingCache.getSync(epoch, this.currentShufflingDecisionBlock);
     } else if (epoch === this.nextEpoch) {
-      return this.nextShuffling;
+      return this.shufflingCache.getSync(epoch, this.nextShufflingDecisionBlock);
     } else {
       return null;
     }
