@@ -66,7 +66,7 @@ module.exports = {
       {selector: "variable", modifiers: ["destructured"], format: null},
       {
         selector: "import",
-        format: ["camelCase", "PascalCase"]
+        format: ["camelCase", "PascalCase"],
       },
     ],
     "@typescript-eslint/no-explicit-any": "error",
@@ -98,6 +98,7 @@ module.exports = {
     "func-call-spacing": "off",
     // Force to add names to all functions to ease CPU profiling
     "func-names": ["error", "always"],
+    "import/namespace": "off",
     //if --fix is run it messes imports like /lib/presets/minimal & /lib/presets/mainnet
     "import/no-duplicates": "off",
     "import/no-extraneous-dependencies": [
@@ -163,7 +164,6 @@ module.exports = {
     "prettier/prettier": "error",
     quotes: ["error", "double"],
     semi: "off",
-    "import/namespace": "off",
   },
   settings: {
     "import/core-modules": [
