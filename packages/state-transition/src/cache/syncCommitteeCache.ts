@@ -81,7 +81,7 @@ function computeSyncCommitteeIndices(
   const pubkeys = syncCommittee.pubkeys.getAllReadonly();
   for (const pubkey of pubkeys) {
     const validatorIndex = pubkey2index.get(pubkey);
-    if (validatorIndex === undefined) {
+    if (validatorIndex == null) {
       throw Error(`SyncCommittee pubkey is unknown ${toHexString(pubkey)}`);
     }
 

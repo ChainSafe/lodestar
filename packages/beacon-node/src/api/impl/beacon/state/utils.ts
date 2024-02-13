@@ -138,7 +138,7 @@ export function getStateValidatorIndex(
   state: BeaconStateAllForks,
   pubkey2index: PubkeyIndexMap
 ): StateValidatorIndexResponse {
-  let validatorIndex: ValidatorIndex | undefined;
+  let validatorIndex: ValidatorIndex | null;
   if (typeof id === "string") {
     if (id.startsWith("0x")) {
       // mutate `id` and fallthrough to below
@@ -162,7 +162,7 @@ export function getStateValidatorIndex(
 
   // typeof id === Uint8Array
   validatorIndex = pubkey2index.get(id as BLSPubkey);
-  if (validatorIndex === undefined) {
+  if (validatorIndex == null) {
     return {valid: false, code: 404, reason: "Validator pubkey not found in state"};
   }
   if (validatorIndex >= state.validators.length) {

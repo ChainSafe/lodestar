@@ -1,0 +1,45 @@
+import {PublicKey} from "@chainsafe/bls/types";
+import {ValidatorIndex} from "@lodestar/types";
+
+export type Index2PubkeyCache = PublicKey[];
+
+type PubkeyHex = string;
+
+/**
+ * toHexString() creates hex strings via string concatenation, which are very memory inefficient.
+ * Memory benchmarks show that Buffer.toString("hex") produces strings with 10x less memory.
+ *
+ * Does not prefix to save memory, thus the prefix is removed from an already string representation.
+ *
+ * See https://github.com/ChainSafe/lodestar/issues/3446
+ */
+function toMemoryEfficientHexStr(hex: Uint8Array | string): string {
+  if (typeof hex === "string") {
+    if (hex.startsWith("0x")) {
+      hex = hex.slice(2);
+    }
+    return hex;
+  }
+
+  return Buffer.from(hex).toString("hex");
+}
+
+export class PubkeyIndexMap {
+  // We don't really need the full pubkey. We could just use the first 20 bytes like an Ethereum address
+  readonly map = new Map<PubkeyHex, ValidatorIndex>();
+
+  get size(): number {
+    return this.map.size;
+  }
+
+  /**
+   * Must support reading with string for API support where pubkeys are already strings
+   */
+  get(key: Uint8Array | PubkeyHex): ValidatorIndex | undefined {
+    return this.map.get(toMemoryEfficientHexStr(key));
+  }
+
+  set(key: Uint8Array, value: ValidatorIndex): void {
+    this.map.set(toMemoryEfficientHexStr(key), value);
+  }
+}

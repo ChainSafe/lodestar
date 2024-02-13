@@ -64,6 +64,7 @@
     "@chainsafe/persistent-merkle-tree": "^0.6.1",
     "@chainsafe/persistent-ts": "^0.19.1",
     "@chainsafe/ssz": "^0.14.0",
+    "@chainsafe/pubkey-index-map": "^2.0.0",
     "@lodestar/config": "^1.15.1",
     "@lodestar/params": "^1.15.1",
     "@lodestar/types": "^1.15.1",

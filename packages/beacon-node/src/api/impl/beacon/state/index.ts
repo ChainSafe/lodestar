@@ -8,6 +8,7 @@ import {
   getRandaoMix,
 } from "@lodestar/state-transition";
 import {EPOCHS_PER_HISTORICAL_VECTOR} from "@lodestar/params";
+import {fromHex} from "@lodestar/utils";
 import {ApiError} from "../../errors.js";
 import {ApiModules} from "../../types.js";
 import {
@@ -161,7 +162,7 @@ export function getBeaconStateApi({
             }
             balances.push({index: id, balance: state.balances.get(id)});
           } else {
-            const index = headState.epochCtx.pubkey2index.get(id);
+            const index = headState.epochCtx.pubkey2index.get(fromHex(id));
             if (index != null && index <= state.validators.length) {
               balances.push({index, balance: state.balances.get(index)});
             }
