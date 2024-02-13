@@ -26,7 +26,12 @@ import {
   computeProposers,
   getActivationChurnLimit,
 } from "../util/index.js";
-import {computeEpochShuffling, EpochShuffling, getShufflingDecisionBlock} from "../util/epochShuffling.js";
+import {
+  computeEpochShuffling,
+  EpochShuffling,
+  getShufflingDecisionBlock,
+  IShufflingCache,
+} from "../util/epochShuffling.js";
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
 import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
 import {getTotalSlashingsByIncrement} from "../epoch/processSlashings.js";
@@ -45,6 +50,7 @@ export const PROPOSER_WEIGHT_FACTOR = PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PR
 
 export type EpochCacheImmutableData = {
   config: BeaconConfig;
+  shufflingCache: IShufflingCache;
   pubkey2index: PubkeyIndexMap;
   index2pubkey: Index2PubkeyCache;
 };
@@ -82,6 +88,7 @@ type ProposersDeferred = {computed: false; seed: Uint8Array} | {computed: true; 
  **/
 export class EpochCache {
   config: BeaconConfig;
+  shufflingCache: IShufflingCache;
   /**
    * Unique globally shared pubkey registry. There should only exist one for the entire application.
    *
@@ -208,6 +215,7 @@ export class EpochCache {
 
   constructor(data: {
     config: BeaconConfig;
+    shufflingCache: IShufflingCache;
     pubkey2index: PubkeyIndexMap;
     index2pubkey: Index2PubkeyCache;
     proposers: number[];
@@ -237,6 +245,7 @@ export class EpochCache {
     syncPeriod: SyncPeriod;
   }) {
     this.config = data.config;
+    this.shufflingCache = data.shufflingCache;
     this.pubkey2index = data.pubkey2index;
     this.index2pubkey = data.index2pubkey;
     this.proposers = data.proposers;
@@ -274,7 +283,7 @@ export class EpochCache {
    */
   static createFromState(
     state: BeaconStateAllForks,
-    {config, pubkey2index, index2pubkey}: EpochCacheImmutableData,
+    {config, shufflingCache, pubkey2index, index2pubkey}: EpochCacheImmutableData,
     opts?: EpochCacheOpts
   ): EpochCache {
     // syncPubkeys here to ensure EpochCacheImmutableData is popualted before computing the rest of caches
@@ -304,11 +313,11 @@ export class EpochCache {
     // BeaconChain could provide a shuffling cache to avoid re-computing shuffling every epoch
     // in that case, we don't need to compute shufflings again
     const previousShufflingDecisionBlock = getShufflingDecisionBlock(state, previousEpoch);
-    const cachedPreviousShuffling = opts?.shufflingGetter?.(previousEpoch, previousShufflingDecisionBlock);
     const currentShufflingDecisionBlock = getShufflingDecisionBlock(state, currentEpoch);
-    const cachedCurrentShuffling = opts?.shufflingGetter?.(currentEpoch, currentShufflingDecisionBlock);
     const nextShufflingDecisionBlock = getShufflingDecisionBlock(state, nextEpoch);
-    const cachedNextShuffling = opts?.shufflingGetter?.(nextEpoch, nextShufflingDecisionBlock);
+    const cachedPreviousShuffling = shufflingCache.getSync(previousEpoch, previousShufflingDecisionBlock);
+    const cachedCurrentShuffling = shufflingCache.getSync(currentEpoch, currentShufflingDecisionBlock);
+    const cachedNextShuffling = shufflingCache.getSync(nextEpoch, nextShufflingDecisionBlock);
 
     for (let i = 0; i < validatorCount; i++) {
       const validator = validators[i];
@@ -350,12 +359,12 @@ export class EpochCache {
     } else if (totalActiveBalanceIncrements >= Number.MAX_SAFE_INTEGER) {
       throw Error("totalActiveBalanceIncrements >= Number.MAX_SAFE_INTEGER. MAX_EFFECTIVE_BALANCE is too low.");
     }
-
-    const currentShuffling = cachedCurrentShuffling ?? computeEpochShuffling(state, currentActiveIndices, currentEpoch);
+    const currentShuffling =
+      cachedCurrentShuffling ?? shufflingCache.buildSync(state, currentActiveIndices, currentEpoch);
     const previousShuffling =
       cachedPreviousShuffling ??
-      (isGenesis ? currentShuffling : computeEpochShuffling(state, previousActiveIndices, previousEpoch));
-    const nextShuffling = cachedNextShuffling ?? computeEpochShuffling(state, nextActiveIndices, nextEpoch);
+      (isGenesis ? currentShuffling : shufflingCache.buildSync(state, previousActiveIndices, previousEpoch));
+    const nextShuffling = cachedNextShuffling ?? shufflingCache.buildSync(state, nextActiveIndices, nextEpoch);
 
     const currentProposerSeed = getSeed(state, currentEpoch, DOMAIN_BEACON_PROPOSER);
 
@@ -408,7 +417,7 @@ export class EpochCache {
     // the first block of the epoch process_block() call. So churnLimit must be computed at the end of the before epoch
     // transition and the result is valid until the end of the next epoch transition
     const churnLimit = getChurnLimit(config, currentShuffling.activeIndices.length);
-    // TODO: (matthewkeil) investigate how the line above and below need to get refactored 
+    // TODO: (matthewkeil) investigate how the line above and below need to get refactored
     const activationChurnLimit = getActivationChurnLimit(
       config,
       config.getForkSeq(state.slot),
@@ -440,6 +449,7 @@ export class EpochCache {
 
     return new EpochCache({
       config,
+      shufflingCache,
       pubkey2index,
       index2pubkey,
       proposers,
@@ -480,6 +490,7 @@ export class EpochCache {
     // All data is completely replaced, or only-appended
     return new EpochCache({
       config: this.config,
+      shufflingCache: this.shufflingCache,
       // Common append-only structures shared with all states, no need to clone
       pubkey2index: this.pubkey2index,
       index2pubkey: this.index2pubkey,
@@ -533,10 +544,10 @@ export class EpochCache {
     this.currentEpoch = this.nextEpoch;
     this.nextEpoch = this.currentEpoch + 1;
 
-    this.nextShuffling = computeEpochShuffling(
+    this.nextShuffling = this.shufflingCache.getOrBuildSync(
+      this.nextEpoch,
       state,
-      epochTransitionCache.nextEpochShufflingActiveValidatorIndices,
-      this.nextEpoch
+      epochTransitionCache.nextEpochShufflingActiveValidatorIndices
     );
 
     // Roll current proposers into previous proposers for metrics
@@ -566,7 +577,7 @@ export class EpochCache {
     // the first block of the epoch process_block() call. So churnLimit must be computed at the end of the before epoch
     // transition and the result is valid until the end of the next epoch transition
     this.churnLimit = getChurnLimit(this.config, this.currentShuffling.activeIndices.length);
-    // TODO: (matthewkeil) investigate how the line above and below need to get refactored 
+    // TODO: (matthewkeil) investigate how the line above and below need to get refactored
     this.activationChurnLimit = getActivationChurnLimit(
       this.config,
       this.config.getForkSeq(state.slot),
@@ -758,9 +769,7 @@ export class EpochCache {
    */
   getCommitteeAssignment(epoch: Epoch, validatorIndex: ValidatorIndex): phase0.CommitteeAssignment | null {
     if (epoch > this.currentEpoch + 1) {
-      throw Error(
-        `Requesting committee assignment for more than 1 epoch ahead: ${epoch} > ${this.currentEpoch} + 1`
-      );
+      throw Error(`Requesting committee assignment for more than 1 epoch ahead: ${epoch} > ${this.currentEpoch} + 1`);
     }
 
     const epochStartSlot = computeStartSlotAtEpoch(epoch);
@@ -922,10 +931,12 @@ export class EpochCacheError extends LodestarError<EpochCacheErrorType> {}
 
 export function createEmptyEpochCacheImmutableData(
   chainConfig: ChainConfig,
+  shufflingCache: IShufflingCache,
   state: Pick<BeaconStateAllForks, "genesisValidatorsRoot">
 ): EpochCacheImmutableData {
   return {
     config: createBeaconConfig(chainConfig, state.genesisValidatorsRoot),
+    shufflingCache,
     // This is a test state, there's no need to have a global shared cache of keys
     pubkey2index: new PubkeyIndexMap(),
     index2pubkey: [],
