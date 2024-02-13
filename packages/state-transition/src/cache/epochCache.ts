@@ -1,6 +1,6 @@
 import {CoordType} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
-import {BLSSignature, CommitteeIndex, Epoch, Slot, ValidatorIndex, phase0, SyncPeriod} from "@lodestar/types";
+import {BLSSignature, CommitteeIndex, Epoch, Slot, ValidatorIndex, phase0, SyncPeriod, RootHex} from "@lodestar/types";
 import {createBeaconConfig, BeaconConfig, ChainConfig} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
@@ -26,7 +26,8 @@ import {
   computeProposers,
   getActivationChurnLimit,
 } from "../util/index.js";
-import {EpochShuffling, getShufflingDecisionBlock, IShufflingCache} from "../util/epochShuffling.js";
+import type {IShufflingCache} from "../util/epochShuffling.js";
+import {EpochShuffling, getShufflingDecisionBlock} from "../util/epochShuffling.js";
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
 import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
 import {getTotalSlashingsByIncrement} from "../epoch/processSlashings.js";
