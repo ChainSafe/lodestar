@@ -51,6 +51,7 @@ export const bootnodeExtraOptions: CliCommandOptions<BootnodeExtraArgs> = {
   bootnodes: {
     type: "array",
     description: "Additional bootnodes for discv5 discovery",
+    defaultDescription: JSON.stringify([]),
     // Each bootnode entry could be comma separated, just deserialize it into a single array
     // as comma separated entries are generally most friendly in ansible kind of setups, i.e.
     // [ "en1", "en2,en3" ] => [ 'en1', 'en2', 'en3' ]
