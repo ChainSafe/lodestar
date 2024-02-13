@@ -130,17 +130,22 @@ export class EpochCache {
    *
    * $VALIDATOR_COUNT x Number
    */
-  previousShuffling: EpochShuffling;
+  // previousShuffling: EpochShuffling;
   /** Same as previousShuffling */
-  currentShuffling: EpochShuffling;
+  // currentShuffling: EpochShuffling;
   /** Same as previousShuffling */
-  nextShuffling: EpochShuffling;
+  // nextShuffling: EpochShuffling;
   /**
    * Previous, current and next epoch number
    */
   previousEpoch: number;
   currentEpoch: number;
   nextEpoch: number;
+  /**
+   * Validator activeIndices for the current and next epoch
+   */
+  currentActiveIndices: ValidatorIndex[];
+  nextActiveIndices: ValidatorIndex[];
   /**
    * Effective balances, for altair processAttestations()
    */
@@ -221,9 +226,11 @@ export class EpochCache {
     proposers: number[];
     proposersPrevEpoch: number[] | null;
     proposersNextEpoch: ProposersDeferred;
-    previousShuffling: EpochShuffling;
-    currentShuffling: EpochShuffling;
-    nextShuffling: EpochShuffling;
+    currentActiveIndices: ValidatorIndex[];
+    nextActiveIndices: ValidatorIndex[];
+    // previousShuffling: EpochShuffling;
+    // currentShuffling: EpochShuffling;
+    // nextShuffling: EpochShuffling;
     previousEpoch: number;
     currentEpoch: number;
     nextEpoch: number;
@@ -251,12 +258,14 @@ export class EpochCache {
     this.proposers = data.proposers;
     this.proposersPrevEpoch = data.proposersPrevEpoch;
     this.proposersNextEpoch = data.proposersNextEpoch;
-    this.previousShuffling = data.previousShuffling;
-    this.currentShuffling = data.currentShuffling;
-    this.nextShuffling = data.nextShuffling;
+    // this.previousShuffling = data.previousShuffling;
+    // this.currentShuffling = data.currentShuffling;
+    // this.nextShuffling = data.nextShuffling;
     this.previousEpoch = data.previousEpoch;
     this.currentEpoch = data.currentEpoch;
     this.nextEpoch = data.nextEpoch;
+    this.currentActiveIndices = data.currentActiveIndices;
+    this.nextActiveIndices = data.nextActiveIndices;
     this.effectiveBalanceIncrements = data.effectiveBalanceIncrements;
     this.totalSlashingsByIncrement = data.totalSlashingsByIncrement;
     this.syncParticipantReward = data.syncParticipantReward;
@@ -306,9 +315,9 @@ export class EpochCache {
 
     const effectiveBalanceIncrements = getEffectiveBalanceIncrementsWithLen(validatorCount);
     const totalSlashingsByIncrement = getTotalSlashingsByIncrement(state);
-    const previousActiveIndices: ValidatorIndex[] = [];
-    const currentActiveIndices: ValidatorIndex[] = [];
-    const nextActiveIndices: ValidatorIndex[] = [];
+    const previousValidators: ValidatorIndex[] = [];
+    const currentValidators: ValidatorIndex[] = [];
+    const nextValidators: ValidatorIndex[] = [];
 
     // BeaconChain could provide a shuffling cache to avoid re-computing shuffling every epoch
     // in that case, we don't need to compute shufflings again
@@ -328,17 +337,17 @@ export class EpochCache {
       // we only need to track active indices for previous, current and next epoch if we have to compute shufflings
       // skip doing that if we already have cached shufflings
       if (cachedPreviousShuffling == null && isActiveValidator(validator, previousEpoch)) {
-        previousActiveIndices.push(i);
+        previousValidators.push(i);
       }
       if (isActiveValidator(validator, currentEpoch)) {
         if (cachedCurrentShuffling == null) {
-          currentActiveIndices.push(i);
+          currentValidators.push(i);
         }
         // We track totalActiveBalanceIncrements as ETH to fit total network balance in a JS number (53 bits)
         totalActiveBalanceIncrements += effectiveBalanceIncrements[i];
       }
       if (cachedNextShuffling == null && isActiveValidator(validator, nextEpoch)) {
-        nextActiveIndices.push(i);
+        nextValidators.push(i);
       }
 
       const {exitEpoch} = validator;
@@ -359,20 +368,22 @@ export class EpochCache {
     } else if (totalActiveBalanceIncrements >= Number.MAX_SAFE_INTEGER) {
       throw Error("totalActiveBalanceIncrements >= Number.MAX_SAFE_INTEGER. MAX_EFFECTIVE_BALANCE is too low.");
     }
-    const currentShuffling =
-      cachedCurrentShuffling ?? shufflingCache.buildSync(state, currentActiveIndices, currentEpoch);
-    const previousShuffling =
-      cachedPreviousShuffling ??
-      (isGenesis ? currentShuffling : shufflingCache.buildSync(state, previousActiveIndices, previousEpoch));
-    const nextShuffling = cachedNextShuffling ?? shufflingCache.buildSync(state, nextActiveIndices, nextEpoch);
+    const currentActiveIndices =
+      cachedCurrentShuffling?.activeIndices ??
+      shufflingCache.buildSync(state, currentValidators, currentEpoch).activeIndices;
+    // const previousShuffling =
+    //   cachedPreviousShuffling ??
+    //   (isGenesis ? currentShuffling : shufflingCache.buildSync(state, previousValidators, previousEpoch));
+    const nextActiveIndices =
+      cachedNextShuffling?.activeIndices ?? shufflingCache.buildSync(state, nextValidators, nextEpoch).activeIndices;
 
     const currentProposerSeed = getSeed(state, currentEpoch, DOMAIN_BEACON_PROPOSER);
 
     // TODO: (matthewkeil) This needs to move to beacon-node PreComputationCache
     // Allow to create CachedBeaconState for empty states, or no active validators
     const proposers =
-      currentShuffling.activeIndices.length > 0
-        ? computeProposers(currentProposerSeed, currentShuffling, effectiveBalanceIncrements)
+      currentValidators.length > 0
+        ? computeProposers(currentEpoch, currentProposerSeed, currentValidators, effectiveBalanceIncrements)
         : [];
 
     // TODO: (matthewkeil) This needs to move to beacon-node PreComputationCache
@@ -416,12 +427,12 @@ export class EpochCache {
     // activeIndices size is dependent on the state epoch. The epoch is advanced after running the epoch transition, and
     // the first block of the epoch process_block() call. So churnLimit must be computed at the end of the before epoch
     // transition and the result is valid until the end of the next epoch transition
-    const churnLimit = getChurnLimit(config, currentShuffling.activeIndices.length);
+    const churnLimit = getChurnLimit(config, currentActiveIndices.length);
     // TODO: (matthewkeil) investigate how the line above and below need to get refactored
     const activationChurnLimit = getActivationChurnLimit(
       config,
       config.getForkSeq(state.slot),
-      currentShuffling.activeIndices.length
+      currentActiveIndices.length
     );
     if (exitQueueChurn >= churnLimit) {
       exitQueueEpoch += 1;
@@ -456,12 +467,14 @@ export class EpochCache {
       // On first epoch, set to null to prevent unnecessary work since this is only used for metrics
       proposersPrevEpoch: null,
       proposersNextEpoch,
-      previousShuffling,
-      currentShuffling,
-      nextShuffling,
+      // previousShuffling,
+      // currentShuffling,
+      // nextShuffling,
       previousEpoch,
       currentEpoch,
       nextEpoch,
+      currentActiveIndices,
+      nextActiveIndices,
       effectiveBalanceIncrements,
       totalSlashingsByIncrement,
       syncParticipantReward,
@@ -498,12 +511,14 @@ export class EpochCache {
       proposers: this.proposers,
       proposersPrevEpoch: this.proposersPrevEpoch,
       proposersNextEpoch: this.proposersNextEpoch,
-      previousShuffling: this.previousShuffling,
-      currentShuffling: this.currentShuffling,
-      nextShuffling: this.nextShuffling,
+      // previousShuffling: this.previousShuffling,
+      // currentShuffling: this.currentShuffling,
+      // nextShuffling: this.nextShuffling,
       previousEpoch: this.previousEpoch,
       currentEpoch: this.currentEpoch,
       nextEpoch: this.nextEpoch,
+      currentActiveIndices: this.currentActiveIndices,
+      nextActiveIndices: this.nextActiveIndices,
       // Uint8Array, requires cloning, but it is cloned only when necessary before an epoch transition
       // See EpochCache.beforeEpochTransition()
       effectiveBalanceIncrements: this.effectiveBalanceIncrements,
@@ -537,25 +552,29 @@ export class EpochCache {
       nextEpochTotalActiveBalanceByIncrement: number;
     }
   ): void {
-    this.previousShuffling = this.currentShuffling;
-    this.currentShuffling = this.nextShuffling;
     // Shuffling will move out and these will be the epoch source of truth
     this.previousEpoch = this.currentEpoch;
     this.currentEpoch = this.nextEpoch;
     this.nextEpoch = this.currentEpoch + 1;
 
-    this.nextShuffling = this.shufflingCache.getOrBuildSync(
+    this.currentActiveIndices = this.nextActiveIndices;
+    this.nextActiveIndices = this.shufflingCache.getOrBuildSync(
       this.nextEpoch,
       state,
       epochTransitionCache.nextEpochShufflingActiveValidatorIndices
-    );
+    ).activeIndices;
 
     // Roll current proposers into previous proposers for metrics
     this.proposersPrevEpoch = this.proposers;
 
     const currentProposerSeed = getSeed(state, this.currentEpoch, DOMAIN_BEACON_PROPOSER);
     // TODO: (matthewkeil) This needs to move to beacon-node PreComputationCache
-    this.proposers = computeProposers(currentProposerSeed, this.currentShuffling, this.effectiveBalanceIncrements);
+    this.proposers = computeProposers(
+      this.currentEpoch,
+      currentProposerSeed,
+      this.currentActiveIndices,
+      this.effectiveBalanceIncrements
+    );
 
     // Only pre-compute the seed since it's very cheap. Do the expensive computeProposers() call only on demand.
     this.proposersNextEpoch = {computed: false, seed: getSeed(state, this.nextEpoch, DOMAIN_BEACON_PROPOSER)};
@@ -576,12 +595,12 @@ export class EpochCache {
     // activeIndices size is dependent on the state epoch. The epoch is advanced after running the epoch transition, and
     // the first block of the epoch process_block() call. So churnLimit must be computed at the end of the before epoch
     // transition and the result is valid until the end of the next epoch transition
-    this.churnLimit = getChurnLimit(this.config, this.currentShuffling.activeIndices.length);
+    this.churnLimit = getChurnLimit(this.config, this.currentActiveIndices.length);
     // TODO: (matthewkeil) investigate how the line above and below need to get refactored
     this.activationChurnLimit = getActivationChurnLimit(
       this.config,
       this.config.getForkSeq(state.slot),
-      this.currentShuffling.activeIndices.length
+      this.currentActiveIndices.length
     );
 
     // Maybe advance exitQueueEpoch at the end of the epoch if there haven't been any exists for a while
@@ -702,8 +721,9 @@ export class EpochCache {
   getBeaconProposersNextEpoch(): ValidatorIndex[] {
     if (!this.proposersNextEpoch.computed) {
       const indexes = computeProposers(
+        this.nextEpoch,
         this.proposersNextEpoch.seed,
-        this.nextShuffling,
+        this.nextActiveIndices,
         this.effectiveBalanceIncrements
       );
       this.proposersNextEpoch = {computed: true, indexes};

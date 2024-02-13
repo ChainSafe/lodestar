@@ -20,17 +20,18 @@ import {computeEpochAtSlot} from "./epoch.js";
  * Compute proposer indices for an epoch
  */
 export function computeProposers(
+  epoch: Epoch,
   epochSeed: Uint8Array,
-  shuffling: {epoch: Epoch; activeIndices: ValidatorIndex[]},
+  activeIndices: ValidatorIndex[],
   effectiveBalanceIncrements: EffectiveBalanceIncrements
 ): number[] {
-  const startSlot = computeStartSlotAtEpoch(shuffling.epoch);
+  const startSlot = computeStartSlotAtEpoch(epoch);
   const proposers = [];
   for (let slot = startSlot; slot < startSlot + SLOTS_PER_EPOCH; slot++) {
     proposers.push(
       computeProposerIndex(
         effectiveBalanceIncrements,
-        shuffling.activeIndices,
+        activeIndices,
         digest(Buffer.concat([epochSeed, intToBytes(slot, 8)]))
       )
     );

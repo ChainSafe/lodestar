@@ -14,14 +14,10 @@ export function processSyncCommitteeUpdates(state: CachedBeaconStateAltair): voi
   const nextEpoch = state.epochCtx.epoch + 1;
 
   if (nextEpoch % EPOCHS_PER_SYNC_COMMITTEE_PERIOD === 0) {
-    const activeValidatorIndices = state.epochCtx.nextShuffling.activeIndices;
+    const {nextActiveIndices} = state.epochCtx;
     const {effectiveBalanceIncrements} = state.epochCtx;
 
-    const nextSyncCommitteeIndices = getNextSyncCommitteeIndices(
-      state,
-      activeValidatorIndices,
-      effectiveBalanceIncrements
-    );
+    const nextSyncCommitteeIndices = getNextSyncCommitteeIndices(state, nextActiveIndices, effectiveBalanceIncrements);
 
     // Using the index2pubkey cache is slower because it needs the serialized pubkey.
     const nextSyncCommitteePubkeys = nextSyncCommitteeIndices.map(
