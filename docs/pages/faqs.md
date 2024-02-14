@@ -5,8 +5,9 @@ This section of the documentation will cover common questions and encounters oft
 ## Troubleshooting Lodestar
 
 ### Using Kubernetes
+
 <!-- prettier-ignore-start -->
-???+ note "Unknown arguments error on Kubernetes"
+???+ note "Unknown arguments error"
     Lodestar reads all environment variables prefixed with `LODESTAR` and will try to parse
     them similar to command line arguments, meaning any unknown argument will cause an error.
     ```
