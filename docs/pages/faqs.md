@@ -14,8 +14,9 @@ This section of the documentation will cover common questions and encounters oft
     ✖ Unknown arguments: servicePort, servicePortEthConsensusP2p,
     port9000Tcp, port9000TcpPort, port9000TcpProto, port9000TcpAddr, serviceHost
     ```
-    The additional arguments are present because Kubernetes automatically creates environment
-    variables based on the name (`metadata.name`) defined in the `StatefulSet` or `Deployment`.
+    The extra arguments are present because Kubernetes automatically
+    [adds environment variables](https://kubernetes.io/docs/concepts/services-networking/service/#environment-variables)
+    to the Pod based on the name (`metadata.name`) defined in the associated `Service`.
     To resolve the issue, this name has to be changed to something that does not start with `lodestar`.
 
     Reference Issue: [#6045](https://github.com/ChainSafe/lodestar/issues/6045)
