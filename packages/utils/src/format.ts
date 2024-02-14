@@ -45,14 +45,10 @@ export function formatBigDecimal(numerator: bigint, denominator: bigint, maxDeci
 const MAX_DECIMAL_FACTOR = BigInt("100000");
 
 /**
- * Format wei as ETH, with up to 5 decimals
- *
- * if suffix is true, append ' ETH'
+ * Format wei as ETH, with up to 5 decimals and append ' ETH'
  */
-export function prettyWeiToEth(wei: bigint, suffix = false): string {
-  let eth = formatBigDecimal(wei, ETH_TO_WEI, MAX_DECIMAL_FACTOR);
-  if (suffix) eth += " ETH";
-  return eth;
+export function prettyWeiToEth(wei: bigint): string {
+  return `${formatBigDecimal(wei, ETH_TO_WEI, MAX_DECIMAL_FACTOR)} ETH`;
 }
 
 /**

@@ -12,10 +12,6 @@ on:
   pull_request:
   workflow_dispatch:
 
-env:
-  GETH_DOCKER_IMAGE: ethereum/client-go:v1.11.6
-  NETHERMIND_DOCKER_IMAGE: nethermind/nethermind:1.18.0
-
 jobs:
   build:
     name: Build
@@ -26,8 +22,8 @@ jobs:
         node: [20]
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{matrix.node}}
           check-latest: true
@@ -36,7 +32,7 @@ jobs:
         id: node
         run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT
       - name: Restore build
-        uses: actions/cache/restore@v3
+        uses: actions/cache/restore@v4
         id: cache-build-restore
         with:
           path: |
@@ -81,15 +77,15 @@ jobs:
       matrix:
         node: [20]
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
           check-latest: true
           cache: yarn
       - name: Restore build cache
         id: cache-primes-restore
-        uses: actions/cache/restore@v3
+        uses: actions/cache/restore@v4
         with:
           path: |
             node_modules
@@ -101,6 +97,8 @@ jobs:
           fail-on-cache-miss: true
       - name: Assert yarn prints no warnings
         run: scripts/assert_no_yarn_warnings.sh
+      - name: Lint yarn lockfile
+        run: npx lockfile-lint --path yarn.lock --allowed-hosts npm yarn --validate-https
       - name: Lint Code
         run: yarn lint
       - name: Lint Grafana dashboards
@@ -119,15 +117,15 @@ jobs:
       matrix:
         node: [20]
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
           check-latest: true
           cache: yarn
       - name: Restore build cache
         id: cache-primes-restore
-        uses: actions/cache/restore@v3
+        uses: actions/cache/restore@v4
         with:
           path: |
             node_modules
@@ -153,19 +151,19 @@ jobs:
       matrix:
         node: [20]
     steps:
-      - uses: actions/checkout@v3      
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
           check-latest: true
-          cache: yarn 
+          cache: yarn
 
       # # Remove when finished debugging core dumps
       # - uses: './.github/actions/setup-debug-node'
 
       - name: Restore build cache
         id: cache-primes-restore
-        uses: actions/cache/restore@v3
+        uses: actions/cache/restore@v4
         with:
           path: |
             node_modules
@@ -188,13 +186,18 @@ jobs:
         # Rever to "yarn test:unit" when finished debugging core dumps
         # run: sudo sh -c "ulimit -c unlimited && /usr/bin/node-with-debug $(which yarn) test:unit"
         run: yarn test:unit
-      
+
       # # Remove when finished debugging core dumps
       # - uses: './.github/actions/core-dump'
       #   if: ${{ failure() && steps.unit_tests.conclusion == 'failure' }}
 
       - name: Upload coverage data
-        run: yarn coverage
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
+          verbose: true # optional (default = false)
+          flags: "unit"
 
   e2e-tests:
     name: E2E Tests
@@ -206,15 +209,15 @@ jobs:
         node: [20]
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{matrix.node}}
           check-latest: true
           cache: yarn
       - name: Restore build cache
         id: cache-primes-restore
-        uses: actions/cache/restore@v3
+        uses: actions/cache/restore@v4
         with:
           path: |
             node_modules
@@ -225,6 +228,9 @@ jobs:
           key: ${{ runner.os }}-node-${{ matrix.node }}-${{ github.sha }}
           fail-on-cache-miss: true
 
+      - name: Load env variables 
+        uses: ./.github/actions/dotenv
+        
       - name: Run the e2e test environment
         run: scripts/run_e2e_env.sh start
 
@@ -238,7 +244,7 @@ jobs:
 
       - name: Upload debug log test for test env
         if: ${{ always() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: debug-e2e-test-logs-node-${{matrix.node}}
           path: test-logs/e2e-test-env
@@ -253,15 +259,15 @@ jobs:
         node: [20]
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{matrix.node}}
           check-latest: true
           cache: yarn
       - name: Restore build cache
         id: cache-primes-restore
-        uses: actions/cache/restore@v3
+        uses: actions/cache/restore@v4
         with:
           path: |
             node_modules
@@ -272,7 +278,7 @@ jobs:
           key: ${{ runner.os }}-node-${{ matrix.node }}-${{ github.sha }}
           fail-on-cache-miss: true
       - name: Install Chrome browser
-        run: npx @puppeteer/browsers install chromedriver@latest --path /tmp          
+        run: npx @puppeteer/browsers install chromedriver@latest --path /tmp
       - name: Install Firefox browser
         run: npx @puppeteer/browsers install firefox@latest --path /tmp
       - name: Browser tests
@@ -290,15 +296,15 @@ jobs:
       matrix:
         node: [20]
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{matrix.node}}
           check-latest: true
           cache: yarn
       - name: Restore build cache
         id: cache-primes-restore
-        uses: actions/cache/restore@v3
+        uses: actions/cache/restore@v4
         with:
           path: |
             node_modules
@@ -326,7 +332,7 @@ jobs:
         working-directory: packages/beacon-node
       - name: Spec tests bls
         run: yarn test:spec:bls
-        working-directory: packages/beacon-node        
+        working-directory: packages/beacon-node
       - name: Spec tests minimal
         run: yarn test:spec:minimal
         working-directory: packages/beacon-node

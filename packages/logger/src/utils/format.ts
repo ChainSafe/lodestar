@@ -1,10 +1,10 @@
-import winston from "winston";
+// We want to keep `winston` export as it's more readable and easier to understand
+// eslint-disable-next-line import/no-named-as-default-member
+import winston, {format} from "winston";
 import {LodestarError, isEmptyObject} from "@lodestar/utils";
 import {LoggerOptions, TimestampFormatCode} from "../interface.js";
 import {logCtxToJson, logCtxToString, LogData} from "./json.js";
 import {formatEpochSlotTime} from "./timeFormat.js";
-
-const {format} = winston;
 
 type Format = ReturnType<typeof winston.format.combine>;
 

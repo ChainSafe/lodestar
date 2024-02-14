@@ -15,6 +15,7 @@ import {
 } from "@libp2p/interface";
 import type {AddressManager, ConnectionManager, Registrar, TransportManager} from "@libp2p/interface-internal";
 import type {Datastore} from "interface-datastore";
+import {Identify} from "@chainsafe/libp2p-identify";
 import {Slot, SlotRootHex, allForks, altair, capella, deneb, phase0} from "@lodestar/types";
 import {PeerIdStr} from "../util/peerId.js";
 import {INetworkEventBus} from "./events.js";
@@ -98,4 +99,4 @@ export type LodestarComponents = {
   metrics?: Metrics;
 };
 
-export type Libp2p = ILibp2p<{components: LodestarComponents}>;
+export type Libp2p = ILibp2p<{components: LodestarComponents; identify: Identify}>;

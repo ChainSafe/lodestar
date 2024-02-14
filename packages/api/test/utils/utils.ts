@@ -1,6 +1,6 @@
 import {MockedObject, vi} from "vitest";
 import qs from "qs";
-import fastify, {FastifyInstance} from "fastify";
+import {FastifyInstance, fastify} from "fastify";
 import {mapValues} from "@lodestar/utils";
 import {ServerApi} from "../../src/interfaces.js";
 

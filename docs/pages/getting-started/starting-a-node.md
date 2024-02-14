@@ -68,7 +68,7 @@ In case execution-layer clients are available at different locations, use `--exe
 
 Immediately you should see confirmation that the node has started
 
-```bash
+```txt
 pr-20 15:12:45.274[]                 info: Lodestar network=mainnet, version=v1.7.2, commit=
 Apr-20 15:12:45.327[]                 info: Connected to LevelDB database path=/data/mt1/chain-db
 Apr-20 15:12:57.747[]                 info: Initializing beacon from a valid db state slot=6264480, epoch=195765, stateRoot=0x8133cd4d0be59c3e94405f902fe0ad68ffaa5013b525dddb6285b91ad79716f6, isWithinWeakSubjectivityPeriod=true
@@ -136,35 +136,35 @@ Lodestar beacon sync log aims to provide information of utmost importance about 
 
 See the following example of different kinds of sync log:
 
-```
+```txt
 Apr-20 15:24:08.034[]                 info: Searching peers - peers: 0 - slot: 6265018 - head: 6264018 0xed93…7b0a - exec-block: syncing(17088476 0x9649…) - finalized: 0xbf30…7e7c:195777
 Apr-20 15:24:17.000[]                 info: Searching peers - peers: 0 - slot: 6265019 - head: 6264018 0xed93…7b0a - exec-block: syncing(17088476 0x9649…) - finalized: 0xbf30…7e7c:195777
 ```
 
-```
+```txt
 Apr-20 15:13:41.298[]                 info: Syncing - 2.5 minutes left - 2.78 slots/s - slot: 6264966 - head: 6262966 0x5cec…f5b8 - exec-block: valid(17088105 0x6f74…) - finalized: 0x5cc0…3874:195764 - peers: 1
 Apr-20 15:13:41.298[]                 info: Syncing - 2 minutes left - 2.78 slots/s - slot: 6264967 - head: 6263965 0x5cec…f5b8 - exec-block: valid(17088105 0x6f74…) - finalized: 0x5cc0…3874:195764 - peers: 1
 ```
 
-```
+```txt
 Apr-20 15:13:53.151[]                 info: Syncing - 1.6 minutes left - 3.82 slots/s - slot: 6264967 - head: (slot -360) 0xe0cf…9f3c - exec-block: valid(17088167 0x2d6a…) - finalized: 0x8f3f…2f81:195766 - peers: 5
 Apr-20 15:14:05.425[]                 info: Syncing - 1.1 minutes left - 4.33 slots/s - slot: 6264968 - head: (slot -297) 0x3655…1658 - exec-block: valid(17088231 0xdafd…) - finalized: 0x9475…425a:195769 - peers: 2
 Apr-20 15:14:53.001[]                 info: Syncing - 9 seconds left - 5.00 slots/s - slot: 6264972 - head: (slot -45) 0x44e4…20a4 - exec-block: valid(17088475 0xca61…) - finalized: 0x9cbd…ba83:195776 - peers: 8
 ```
 
-```
+```txt
 Apr-20 15:15:01.443[network]          info: Subscribed gossip core topics
 Apr-20 15:15:01.446[sync]             info: Subscribed gossip core topics
 Apr-20 15:15:05.000[]                 info: Synced - slot: 6264973 - head: 0x90ea…c655 - exec-block: valid(17088521 0xca9b…) - finalized: 0x6981…682f:195778 - peers: 6
 Apr-20 15:15:17.003[]                 info: Synced - slot: 6264974 - head: 0x4f7e…0e3a - exec-block: valid(17088522 0x08b1…) - finalized: 0x6981…682f:195778 - peers: 6
 ```
 
-```
+```txt
 Apr-20 15:15:41.001[]                 info: Synced - slot: 6264976 - head: (slot -1) 0x17c6…71a7 - exec-block: valid(17088524 0x5bc1…) - finalized: 0x6981…682f:195778 - peers: 8
 Apr-20 15:15:53.001[]                 info: Synced - slot: 6264977 - head: (slot -2) 0x17c6…71a7 - exec-block: valid(17088524 0x5bc1…) - finalized: 0x6981…682f:195778 - peers: 8
 ```
 
-```
+```txt
 Apr-20 15:16:05.000[]                 info: Synced - slot: 6264978 - head: 0xc9fd…28c5 - exec-block: valid(17088526 0xb5bf…) - finalized: 0x6981…682f:195778 - peers: 8
 Apr-20 15:16:17.017[]                 info: Synced - slot: 6264979 - head: 0xde91…d4cb - exec-block: valid(17088527 0xa488…) - finalized: 0x6981…682f:195778 - peers: 7
 ```

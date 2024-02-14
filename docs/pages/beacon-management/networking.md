@@ -44,7 +44,7 @@ Note that bootnodes are announced via ENR.
 
 Lodestar prints out its own ENR on startup, the logs will show something similar to the following
 
-```
+```txt
 info: discv5 worker started peerId=16Uiu...t9LQ3, initialENR=enr:-Iu4QGE...WRwgiMo, bindAddr4=/ip4/0.0.0.0/udp/9000
 ```
 

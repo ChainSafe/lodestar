@@ -1,4 +1,4 @@
-import fastify from "fastify";
+import {fastify} from "fastify";
 import {afterAll, expect} from "vitest";
 import {RemoteServiceError} from "../../../src/monitoring/service.js";
 import {ProcessType} from "../../../src/monitoring/types.js";

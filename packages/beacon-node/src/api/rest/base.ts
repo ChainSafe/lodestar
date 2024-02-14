@@ -1,6 +1,6 @@
-import qs from "qs";
-import fastify, {FastifyInstance} from "fastify";
-import fastifyCors from "@fastify/cors";
+import {parse as parseQueryString} from "qs";
+import {FastifyInstance, fastify} from "fastify";
+import {fastifyCors} from "@fastify/cors";
 import bearerAuthPlugin from "@fastify/bearer-auth";
 import {RouteConfig} from "@lodestar/api/beacon/server";
 import {ErrorAborted, Gauge, Histogram, Logger} from "@lodestar/utils";
@@ -48,7 +48,7 @@ export class RestApiServer {
       logger: false,
       ajv: {customOptions: {coerceTypes: "array"}},
       querystringParser: (str) =>
-        qs.parse(str, {
+        parseQueryString(str, {
           // Array as comma-separated values must be supported to be OpenAPI spec compliant
           comma: true,
           // Drop support for array query strings like `id[0]=1&id[1]=2&id[2]=3` as those are not required to
