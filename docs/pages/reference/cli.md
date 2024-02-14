@@ -6,3 +6,4 @@ _**Welcome! This page has been moved. Please checkout our new docs layout from t
 - [Validator CLI](../validator-management/validator-cli.md)
 - [Bootnode CLI](../bootnode/bootnode-cli.md)
 - [Light Client CLI](../lightclient-prover/lightclient-cli.md)
+- [Dev CLI](../contribution/dev-cli.md)

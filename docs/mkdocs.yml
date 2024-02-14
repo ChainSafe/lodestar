@@ -60,9 +60,9 @@ extra_css:
 # Socials
 extra:
   social:
-    - icon: fontawesome/brands/github-alt
+    - icon: fontawesome/brands/github
       link: https://github.com/ChainSafe/lodestar
-    - icon: fontawesome/brands/twitter
+    - icon: fontawesome/brands/x-twitter
       link: https://twitter.com/lodestar_eth
     - icon: fontawesome/brands/discord
       link: https://discord.gg/yjyvFRP
@@ -122,6 +122,7 @@ nav:
       # - Bug Reports: contribution/bug-reports.md
       - Dependency Graph: contribution/depgraph.md
       # - Repo: contribution/repo.md
+      - Dev CLI Reference: contribution/dev-cli.md
       - Testing:
           - Overview: contribution/testing/index.md
           # - Unit Tests: contribution/testing/unit-tests.md
