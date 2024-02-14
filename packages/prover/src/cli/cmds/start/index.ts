@@ -4,7 +4,7 @@ import {proverProxyStartHandler} from "./handler.js";
 import {StartArgs, startOptions} from "./options.js";
 
 export const proverProxyStartCommand: CliCommand<StartArgs, GlobalArgs> = {
-  command: "start",
+  command: "proxy",
   describe: "Start proxy server",
   examples: [
     {

@@ -39,7 +39,7 @@ You can also invoke the package as binary.
 ```bash
 npm -i g @lodestar/prover
 
-lodestar-prover start \
+lodestar-prover proxy \
   --network sepolia \
   --execution-rpc https://lodestar-sepoliarpc.chainsafe.io \
   --mode rest \
