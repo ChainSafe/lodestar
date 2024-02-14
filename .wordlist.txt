@@ -179,7 +179,6 @@ sharding
 src
 ssz
 stakers
-stateful
 subnet
 subnets
 tcp
