@@ -1,15 +1,17 @@
-/* eslint-disable no-console */
 import {EventEmitter} from "node:events";
 import path from "node:path";
+import {Logger} from "@lodestar/logger";
 import {IRunner, Job, JobOptions, RunnerEvent, RunnerType} from "../interfaces.js";
 import {ChildProcessRunner} from "./ChildProcessRunner.js";
 import {DockerRunner} from "./DockerRunner.js";
 
 export class Runner implements IRunner {
+  readonly logger: Logger;
   private emitter = new EventEmitter({captureRejections: true});
   private runners: {[RunnerType.ChildProcess]: ChildProcessRunner; [RunnerType.Docker]: DockerRunner};
 
-  constructor({logsDir}: {logsDir: string}) {
+  constructor({logsDir, logger}: {logsDir: string; logger: Logger}) {
+    this.logger = logger;
     this.runners = {
       [RunnerType.ChildProcess]: new ChildProcessRunner(),
       [RunnerType.Docker]: new DockerRunner(path.join(logsDir, "docker_runner.log")),
@@ -51,25 +53,25 @@ export class Runner implements IRunner {
 
       startSequence.push(async () => {
         this.emitter.emit("starting", jobOption.id);
-        console.log(`Starting "${jobOption.id}"...`);
+        this.logger.info(`Starting "${jobOption.id}"...`);
 
         if (jobOption.bootstrap) await jobOption.bootstrap();
         await job.start();
 
         this.emitter.emit("started", jobOption.id);
-        console.log(`Started "${jobOption.id}" logFile=${jobOption.logs.stdoutFilePath}...`);
+        this.logger.info(`Started "${jobOption.id}" logFile=${jobOption.logs.stdoutFilePath}...`);
 
         if (childrenJob) await childrenJob.start();
       });
 
       stopSequence.push(async () => {
         this.emitter.emit("stopping", jobOption.id);
-        console.log(`Stopping "${jobOption.id}"...`);
+        this.logger.info(`Stopping "${jobOption.id}"...`);
         if (jobOption.teardown) await jobOption.teardown();
         if (childrenJob) await childrenJob.stop();
         await job.stop();
         this.emitter.emit("stopped", jobOption.id);
-        console.log(`Stopped "${jobOption.id}"...`);
+        this.logger.info(`Stopped "${jobOption.id}"...`);
       });
     }
 
