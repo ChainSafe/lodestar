@@ -1,12 +1,19 @@
+import {Logger} from "@lodestar/logger";
 import {strFixedSize} from "./utils/index.js";
 
+const V_SEP_M = " │ ";
+const V_SEP_S = "│ ";
+const V_SEP_E = " │";
+
 export class TableRenderer<Columns extends string[number]> {
+  readonly logger: Logger;
   private columnsSizes: Record<Columns, number>;
   private columns: Columns[];
   private rows: Record<Columns, unknown>[];
   private totalWidth: number;
 
-  constructor(columnWithSizes: Record<Columns, number>) {
+  constructor(columnWithSizes: Record<Columns, number>, {logger}: {logger: Logger}) {
+    this.logger = logger;
     this.columnsSizes = columnWithSizes;
     this.columns = Object.keys(columnWithSizes) as Columns[];
     this.rows = [];
@@ -20,54 +27,42 @@ export class TableRenderer<Columns extends string[number]> {
   }
 
   addEmptyRow(text: string): void {
-    this.printHSeparator(true);
-    this.printVSeparator("start");
-    process.stdout.write(strFixedSize(text, this.totalWidth - 4));
-    this.printVSeparator("end");
-    this.printHSeparator(true);
+    this.printHSeparator();
+    this.logger.info(`${V_SEP_S}${strFixedSize(text, this.totalWidth - 4)}${V_SEP_E}`);
+    this.printHSeparator();
   }
 
   printHeader(): void {
-    this.printHSeparator(true);
-    this.printVSeparator("start");
+    this.printHSeparator();
+    const output = [V_SEP_S];
     for (const [index, column] of this.columns.entries()) {
-      process.stdout.write(strFixedSize(column, this.columnsSizes[column]));
+      output.push(strFixedSize(column, this.columnsSizes[column]));
       if (index === this.columns.length - 1) {
-        this.printVSeparator("end");
+        output.push(V_SEP_E);
       } else {
-        this.printVSeparator();
+        output.push(V_SEP_M);
       }
     }
-    this.printHSeparator(true);
+    this.logger.info(output.join(""));
+    this.printHSeparator();
   }
 
   printRow(rowIndex: number): void {
     const row = this.rows[rowIndex];
-
-    this.printVSeparator("start");
+    const output = [V_SEP_S];
     for (const [index, column] of this.columns.entries()) {
       const value = String(row[column]);
-      process.stdout.write(value.padEnd(this.columnsSizes[column]));
+      output.push(value.padEnd(this.columnsSizes[column]));
       if (index === this.columns.length - 1) {
-        this.printVSeparator("end");
+        output.push(V_SEP_E);
       } else {
-        this.printVSeparator();
+        output.push(V_SEP_M);
       }
     }
+    this.logger.info(output.join(""));
   }
 
-  private printHSeparator(lineBreak: boolean): void {
-    process.stdout.write(`┼${"─".repeat(this.totalWidth - 2)}┼`);
-    if (lineBreak) process.stdout.write("\n");
-  }
-
-  private printVSeparator(mode?: "start" | "end"): void {
-    if (!mode) {
-      process.stdout.write(" │ ");
-    } else if (mode === "start") {
-      process.stdout.write("│ ");
-    } else if (mode === "end") {
-      process.stdout.write(" │\n");
-    }
+  private printHSeparator(): void {
+    this.logger.info(`┼${"─".repeat(this.totalWidth - 2)}┼`);
   }
 }

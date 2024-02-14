@@ -9,18 +9,21 @@ import {arrayGroupBy, avg, isSingletonArray} from "./utils/index.js";
 export class TableReporter extends SimulationReporter<typeof defaultAssertions> {
   private lastPrintedSlot = -1;
 
-  private table = new TableRenderer({
-    time: 14,
-    fork: 10,
-    eph: 5,
-    slot: 4,
-    head: 10,
-    finzed: 8,
-    peers: 8,
-    attCount: 8,
-    incDelay: 8,
-    errors: 10,
-  });
+  private table = new TableRenderer(
+    {
+      time: 14,
+      fork: 10,
+      eph: 5,
+      slot: 4,
+      head: 10,
+      finzed: 8,
+      peers: 8,
+      attCount: 8,
+      incDelay: 8,
+      errors: 10,
+    },
+    {logger: this.options.logger}
+  );
 
   bootstrap(): void {
     this.table.printHeader();

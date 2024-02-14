@@ -327,6 +327,11 @@ export interface SimulationAssertionInput<T, D extends Record<string, unknown> =
   dependantStores: D;
 }
 
+export interface SimulationDumpInput<T> extends Omit<AssertionInput, "node"> {
+  nodes: NodePair[];
+  store: Record<NodeId, Record<Slot, T>>;
+}
+
 export type SimulationMatcherInput = AssertionInput;
 
 /**
@@ -372,6 +377,10 @@ export interface SimulationAssertion<
     input: SimulationAssertionInput<ValueType, StoreTypes<Dependencies> & StoreType<IdType, ValueType>>
   ): Promise<AssertionResult[] | never>;
   dependencies?: Dependencies;
+  // Use to dump the data to CSV files, as each assertion implementation knows
+  // how to make the dump more readable, so we define it in assertion
+  // Return object as key-value pair for file name as dump data
+  dump?(input: SimulationDumpInput<ValueType>): Promise<Record<string, string>>;
 }
 export type AssertionResult = string | [string, Record<string, unknown>];
 

@@ -9,7 +9,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {activePreset} from "@lodestar/params";
 import {BeaconStateAllForks, interopSecretKey} from "@lodestar/state-transition";
 import {prettyMsToTime} from "@lodestar/utils";
-import {LogLevel} from "@lodestar/logger";
+import {LogLevel, TimestampFormatCode} from "@lodestar/logger";
 import {getNodeLogger, LoggerNode} from "@lodestar/logger/node";
 import {EpochClock, MS_IN_SEC} from "./EpochClock.js";
 import {ExternalSignerServer} from "./ExternalSignerServer.js";
@@ -60,6 +60,10 @@ export class SimulationEnvironment {
 
     this.logger = getNodeLogger({
       level: LogLevel.debug,
+      module: `sim-${this.options.id}`,
+      timestampFormat: {
+        format: TimestampFormatCode.DateRegular,
+      },
       file: {level: LogLevel.debug, filepath: path.join(options.logsDir, `simulation-${this.options.id}.log`)},
     });
     this.clock = new EpochClock({
@@ -70,9 +74,10 @@ export class SimulationEnvironment {
     });
 
     this.externalSigner = new ExternalSignerServer([]);
-    this.runner = new Runner({logsDir: this.options.logsDir});
+    this.runner = new Runner({logsDir: this.options.logsDir, logger: this.logger.child({module: "runner"})});
     this.tracker = SimulationTracker.initWithDefaultAssertions({
-      logger: this.logger.child({module: "tracker"}),
+      logsDir: options.logsDir,
+      logger: this.logger,
       nodes: [],
       config: this.forkConfig,
       clock: this.clock,
@@ -189,7 +194,7 @@ export class SimulationEnvironment {
     process.removeAllListeners("SIGTERM");
     process.removeAllListeners("SIGINT");
     this.logger.info(`Simulation environment "${this.options.id}" is stopping: ${message}`);
-    await this.tracker.stop();
+    await this.tracker.stop({dumpStores: true});
     await Promise.all(this.nodes.map((node) => node.validator?.job.stop()));
     await Promise.all(this.nodes.map((node) => node.beacon.job.stop()));
     await Promise.all(this.nodes.map((node) => node.execution.job.stop()));

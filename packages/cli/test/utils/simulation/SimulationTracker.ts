@@ -1,4 +1,6 @@
 import EventEmitter from "node:events";
+import path from "node:path";
+import fs from "node:fs/promises";
 import createDebug from "debug";
 import {routes} from "@lodestar/api/beacon";
 import {ChainForkConfig} from "@lodestar/config";
@@ -29,6 +31,7 @@ interface SimulationTrackerInitOptions {
   clock: EpochClock;
   signal: AbortSignal;
   logger: LoggerNode;
+  logsDir: string;
 }
 
 export enum SimulationTrackerEvent {
@@ -64,10 +67,20 @@ export function getStoresForAssertions<D extends SimulationAssertion[]>(
   return filterStores as StoreTypes<D>;
 }
 
+async function pathExists(filePath: string): Promise<boolean> {
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export class SimulationTracker {
   readonly emitter = new EventEmitter();
   readonly reporter: SimulationReporter<typeof defaultAssertions & StoreType<string, unknown>>;
   readonly logger: LoggerNode;
+  readonly logsDir: string;
 
   private lastSeenSlot: Map<NodeId, Slot> = new Map();
   private slotCapture: Map<Slot, NodeId[]> = new Map();
@@ -81,17 +94,18 @@ export class SimulationTracker {
   private stores: Stores;
   private assertions: SimulationAssertion[];
   private assertionIdsMap: Record<string, boolean> = {};
-  private constructor({signal, nodes, clock, config, logger}: SimulationTrackerInitOptions) {
+  private constructor({signal, nodes, clock, config, logger, logsDir}: SimulationTrackerInitOptions) {
     this.signal = signal;
     this.nodes = nodes;
     this.clock = clock;
     this.forkConfig = config;
-    this.logger = logger.child({module: "sim:tracker"});
+    this.logsDir = logsDir;
+    this.logger = logger.child({module: "tracker"});
 
     this.stores = {} as StoreTypes<typeof defaultAssertions> & StoreType<string, unknown>;
     this.assertions = [] as SimulationAssertion[];
     this.reporter = new TableReporter({
-      logger: this.logger.child({module: "sim:reporter"}),
+      logger: this.logger.child({module: "reporter"}),
       clock: this.clock,
       forkConfig: this.forkConfig,
       nodes: this.nodes,
@@ -170,8 +184,31 @@ export class SimulationTracker {
     });
   }
 
-  async stop(): Promise<void> {
+  async stop(opts: {dumpStores: boolean}): Promise<void> {
     this.running = false;
+
+    if (opts.dumpStores) {
+      if (!(await pathExists(path.join(this.logsDir, "data"))))
+        await fs.mkdir(path.join(this.logsDir, "data"), {recursive: true});
+
+      for (const assertion of this.assertions) {
+        if (!assertion.dump) continue;
+
+        const data = await assertion.dump({
+          fork: this.forkConfig.getForkName(this.clock.currentSlot),
+          forkConfig: this.forkConfig,
+          clock: this.clock,
+          epoch: this.clock.currentEpoch,
+          store: this.stores[assertion.id],
+          slot: this.clock.currentSlot,
+          nodes: this.nodes,
+        });
+
+        for (const filename of Object.keys(data)) {
+          await fs.writeFile(path.join(this.logsDir, "data", filename), data[filename]);
+        }
+      }
+    }
   }
 
   async clockLoop(slot: number): Promise<void> {
