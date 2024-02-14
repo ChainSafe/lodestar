@@ -7,6 +7,8 @@
 
 > This package is part of [ChainSafe's Lodestar](https://lodestar.chainsafe.io) project
 
+A set of tools allowing to verify EL client JSON-RPC calls.
+
 ## Usage
 
 You can use the `@lodestar/prover` in two ways, as a Web3 Provider and as proxy. For prover use case see below example.
@@ -35,12 +37,12 @@ console.log({balance, address});
 You can also invoke the package as binary.
 
 ```bash
-npm i g @lodestar/prover
+npm i -g @lodestar/prover
 
 lodestar-prover start \
   --network sepolia \
-  --execution-rpc-url https://lodestar-sepoliarpc.chainsafe.io \
-  --beacon-urls https://lodestar-sepolia.chainsafe.io \
+  --executionRpcUrl https://lodestar-sepoliarpc.chainsafe.io \
+  --beaconUrls https://lodestar-sepolia.chainsafe.io \
   --port 8080
 ```
 
