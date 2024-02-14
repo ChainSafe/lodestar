@@ -27,7 +27,7 @@ const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
   BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
   CAPELLA_FORK_EPOCH: capellaForkEpoch,
   runTillEpoch: runTillEpoch + syncWaitEpoch,
-  initialNodes: 2,
+  initialNodes: 5,
 });
 
 const env = await SimulationEnvironment.initWithDefaults(
@@ -76,40 +76,40 @@ const env = await SimulationEnvironment.initWithDefaults(
       keysCount: 32,
       remote: true,
     },
-    // {
-    //   id: "node-3",
-    //   beacon: BeaconClient.Lodestar,
-    //   validator: {
-    //     type: ValidatorClient.Lodestar,
-    //     options: {
-    //       // this builder selection will make it use produceBlockV2 and respond with full block
-    //       clientOptions: {
-    //         useProduceBlockV3: false,
-    //         "builder.selection": "executiononly",
-    //       },
-    //     },
-    //   },
-    //   execution: ExecutionClient.Nethermind,
-    //   keysCount: 32,
-    // },
-    // {
-    //   id: "node-4",
-    //   beacon: BeaconClient.Lodestar,
-    //   validator: {
-    //     type: ValidatorClient.Lodestar,
-    //     options: {
-    //       // this builder selection will make it use produceBlindedBlockV2 and respond with blinded version
-    //       // of local block and subsequent publishing via publishBlindedBlock
-    //       clientOptions: {
-    //         useProduceBlockV3: false,
-    //         "builder.selection": "maxprofit",
-    //       },
-    //     },
-    //   },
-    //   execution: ExecutionClient.Nethermind,
-    //   keysCount: 32,
-    // },
-    // {id: "node-5", beacon: BeaconClient.Lighthouse, execution: ExecutionClient.Geth, keysCount: 32},
+    {
+      id: "node-3",
+      beacon: BeaconClient.Lodestar,
+      validator: {
+        type: ValidatorClient.Lodestar,
+        options: {
+          // this builder selection will make it use produceBlockV2 and respond with full block
+          clientOptions: {
+            useProduceBlockV3: false,
+            "builder.selection": "executiononly",
+          },
+        },
+      },
+      execution: ExecutionClient.Nethermind,
+      keysCount: 32,
+    },
+    {
+      id: "node-4",
+      beacon: BeaconClient.Lodestar,
+      validator: {
+        type: ValidatorClient.Lodestar,
+        options: {
+          // this builder selection will make it use produceBlindedBlockV2 and respond with blinded version
+          // of local block and subsequent publishing via publishBlindedBlock
+          clientOptions: {
+            useProduceBlockV3: false,
+            "builder.selection": "maxprofit",
+          },
+        },
+      },
+      execution: ExecutionClient.Nethermind,
+      keysCount: 32,
+    },
+    {id: "node-5", beacon: BeaconClient.Lighthouse, execution: ExecutionClient.Geth, keysCount: 32},
   ]
 );
 
