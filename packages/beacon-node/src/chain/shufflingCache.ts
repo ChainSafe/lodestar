@@ -1,6 +1,13 @@
 import {toHexString} from "@chainsafe/ssz";
-import {CachedBeaconStateAllForks, EpochShuffling, getShufflingDecisionBlock} from "@lodestar/state-transition";
-import {Epoch, RootHex, ssz} from "@lodestar/types";
+import {
+  BeaconStateAllForks,
+  CachedBeaconStateAllForks,
+  EpochShuffling,
+  IShufflingCache,
+  computeEpochShuffling,
+  getShufflingDecisionBlock,
+} from "@lodestar/state-transition";
+import {Epoch, RootHex, ValidatorIndex, ssz} from "@lodestar/types";
 import {MapDef, pruneSetToMax} from "@lodestar/utils";
 import {GENESIS_SLOT} from "@lodestar/params";
 import {Metrics} from "../metrics/metrics.js";
@@ -48,7 +55,7 @@ export type ShufflingCacheOpts = {
  * - if a shuffling is not available (which does not happen with default chain option of maxSkipSlots = 32), track a promise to make sure we don't compute the same shuffling twice
  * - skip computing shuffling when loading state bytes from disk
  */
-export class ShufflingCache {
+export class ShufflingCache implements IShufflingCache {
   /** LRU cache implemented as a map, pruned every time we add an item */
   private readonly itemsByDecisionRootByEpoch: MapDef<Epoch, Map<RootHex, CacheItem>> = new MapDef(
     () => new Map<RootHex, CacheItem>()
@@ -76,19 +83,9 @@ export class ShufflingCache {
    */
   processState(state: CachedBeaconStateAllForks, shufflingEpoch: Epoch): EpochShuffling {
     const decisionBlockHex = getDecisionBlock(state, shufflingEpoch);
-    let shuffling: EpochShuffling;
-    switch (shufflingEpoch) {
-      case state.epochCtx.nextEpoch:
-        shuffling = state.epochCtx.nextShuffling;
-        break;
-      case state.epochCtx.currentEpoch:
-        shuffling = state.epochCtx.currentShuffling;
-        break;
-      case state.epochCtx.previousEpoch:
-        shuffling = state.epochCtx.previousShuffling;
-        break;
-      default:
-        throw new Error(`Shuffling not found from state ${state.slot} for epoch ${shufflingEpoch}`);
+    const shuffling = this.getSync(shufflingEpoch, decisionBlockHex);
+    if (!shuffling) {
+      throw new Error(`Shuffling not found from state ${state.slot} for epoch ${shufflingEpoch}`);
     }
 
     let cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(shufflingEpoch).get(decisionBlockHex);
@@ -182,6 +179,30 @@ export class ShufflingCache {
 
     // ignore promise
     return null;
+  }
+
+  buildSync(state: BeaconStateAllForks, activeIndices: number[], epoch: Epoch): EpochShuffling {
+    // this.logger.warn(`Shuffling not found in cache, computing shuffling for epoch ${epoch}`);
+
+    // shuffling = computeEpochShuffling(state, activeIndices, epoch);
+    // this.add(epoch, decisionRootHex, {type: CacheItemType.shuffling, shuffling});
+    // return shuffling;
+    state;
+    activeIndices;
+    epoch;
+    return undefined as unknown as EpochShuffling;
+  }
+
+  getOrBuildSync(epoch: Epoch, state: BeaconStateAllForks, activeIndices: number[]): EpochShuffling {
+    const shuffling = this.getSync(epoch, getShufflingDecisionBlock(state, epoch));
+    if (shuffling) return shuffling;
+    return this.buildSync(state, activeIndices, epoch);
+  }
+
+  computeNextEpochShuffling(state: BeaconStateAllForks, activeIndices: ValidatorIndex[], epoch: Epoch): void {
+    const shuffling = computeEpochShuffling(state, activeIndices, epoch);
+    const decisionBlock = getShufflingDecisionBlock(state, epoch);
+    this.add(epoch, decisionBlock, {type: CacheItemType.shuffling, shuffling});
   }
 
   private add(shufflingEpoch: Epoch, decisionBlock: RootHex, cacheItem: CacheItem): void {

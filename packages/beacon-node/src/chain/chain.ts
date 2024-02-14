@@ -216,6 +216,10 @@ export class BeaconChain implements IBeaconChain {
     this.checkpointBalancesCache = new CheckpointBalancesCache();
     this.shufflingCache = new ShufflingCache(metrics, this.opts);
 
+    if (isCachedBeaconState(anchorState)) {
+      anchorState.epochCtx.setShufflingCache(this.shufflingCache);
+    }
+
     // Restore state caches
     // anchorState may already by a CachedBeaconState. If so, don't create the cache again, since deserializing all
     // pubkeys takes ~30 seconds for 350k keys (mainnet 2022Q2).
@@ -226,6 +230,7 @@ export class BeaconChain implements IBeaconChain {
         ? anchorState
         : createCachedBeaconState(anchorState, {
             config,
+            shufflingCache: this.shufflingCache,
             pubkey2index: new PubkeyIndexMap(),
             index2pubkey: [],
           });

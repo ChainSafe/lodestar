@@ -27,7 +27,7 @@ import {
   getActivationChurnLimit,
 } from "../util/index.js";
 import type {IShufflingCache} from "../util/epochShuffling.js";
-import {EpochShuffling, getShufflingDecisionBlock} from "../util/epochShuffling.js";
+import {EpochShuffling, computeEpochShuffling, getShufflingDecisionBlock} from "../util/epochShuffling.js";
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
 import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
 import {getTotalSlashingsByIncrement} from "../epoch/processSlashings.js";
@@ -46,7 +46,7 @@ export const PROPOSER_WEIGHT_FACTOR = PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PR
 
 export type EpochCacheImmutableData = {
   config: BeaconConfig;
-  shufflingCache: IShufflingCache;
+  shufflingCache?: IShufflingCache;
   pubkey2index: PubkeyIndexMap;
   index2pubkey: Index2PubkeyCache;
 };
@@ -82,8 +82,14 @@ type ProposersDeferred = {computed: false; seed: Uint8Array} | {computed: true; 
  * - syncPeriod
  **/
 export class EpochCache {
-  config: BeaconConfig;
-  shufflingCache: IShufflingCache;
+  private config: BeaconConfig;
+  // Not exposed.  should use accessor methods on EpochCache to get shuffling
+  private shufflingCache?: IShufflingCache;
+
+  setShufflingCache(shufflingCache: IShufflingCache): void {
+    this.shufflingCache = shufflingCache;
+  }
+
   /**
    * Unique globally shared pubkey registry. There should only exist one for the entire application.
    *
@@ -213,7 +219,7 @@ export class EpochCache {
 
   constructor(data: {
     config: BeaconConfig;
-    shufflingCache: IShufflingCache;
+    shufflingCache?: IShufflingCache;
     pubkey2index: PubkeyIndexMap;
     index2pubkey: Index2PubkeyCache;
     proposers: number[];
@@ -317,9 +323,9 @@ export class EpochCache {
     const previousShufflingDecisionBlock = getShufflingDecisionBlock(state, previousEpoch);
     const currentShufflingDecisionBlock = getShufflingDecisionBlock(state, currentEpoch);
     const nextShufflingDecisionBlock = getShufflingDecisionBlock(state, nextEpoch);
-    const cachedPreviousShuffling = shufflingCache.getSync(previousEpoch, previousShufflingDecisionBlock);
-    const cachedCurrentShuffling = shufflingCache.getSync(currentEpoch, currentShufflingDecisionBlock);
-    const cachedNextShuffling = shufflingCache.getSync(nextEpoch, nextShufflingDecisionBlock);
+    const cachedPreviousShuffling = shufflingCache?.getSync(previousEpoch, previousShufflingDecisionBlock);
+    const cachedCurrentShuffling = shufflingCache?.getSync(currentEpoch, currentShufflingDecisionBlock);
+    const cachedNextShuffling = shufflingCache?.getSync(nextEpoch, nextShufflingDecisionBlock);
 
     for (let i = 0; i < validatorCount; i++) {
       const validator = validators[i];
@@ -363,12 +369,12 @@ export class EpochCache {
     }
     const currentActiveIndices =
       cachedCurrentShuffling?.activeIndices ??
-      shufflingCache.buildSync(state, currentValidators, currentEpoch).activeIndices;
+      computeEpochShuffling(state, currentValidators, currentEpoch).activeIndices;
     // const previousShuffling =
     //   cachedPreviousShuffling ??
     //   (isGenesis ? currentShuffling : shufflingCache.buildSync(state, previousValidators, previousEpoch));
     const nextActiveIndices =
-      cachedNextShuffling?.activeIndices ?? shufflingCache.buildSync(state, nextValidators, nextEpoch).activeIndices;
+      cachedNextShuffling?.activeIndices ?? computeEpochShuffling(state, nextValidators, nextEpoch).activeIndices;
 
     const currentProposerSeed = getSeed(state, currentEpoch, DOMAIN_BEACON_PROPOSER);
 
@@ -555,6 +561,9 @@ export class EpochCache {
 
     this.nextEpoch = this.currentEpoch + 1;
     this.nextShufflingDecisionBlock = getShufflingDecisionBlock(state, this.nextEpoch);
+    if (!this.shufflingCache) {
+      throw new Error("shufflingCache is not set. Cannot compute shuffling.");
+    }
     this.nextActiveIndices = this.shufflingCache.getOrBuildSync(
       this.nextEpoch,
       state,
@@ -840,6 +849,9 @@ export class EpochCache {
   }
 
   getShufflingAtEpochOrNull(epoch: Epoch): EpochShuffling | null {
+    if (!this.shufflingCache) {
+      throw new Error("shufflingCache is not set. Cannot get shuffling.");
+    }
     if (epoch === this.previousEpoch) {
       return this.shufflingCache.getSync(epoch, this.previousShufflingDecisionBlock);
     } else if (epoch === this.currentEpoch) {
@@ -948,12 +960,10 @@ export class EpochCacheError extends LodestarError<EpochCacheErrorType> {}
 
 export function createEmptyEpochCacheImmutableData(
   chainConfig: ChainConfig,
-  shufflingCache: IShufflingCache,
   state: Pick<BeaconStateAllForks, "genesisValidatorsRoot">
 ): EpochCacheImmutableData {
   return {
     config: createBeaconConfig(chainConfig, state.genesisValidatorsRoot),
-    shufflingCache,
     // This is a test state, there's no need to have a global shared cache of keys
     pubkey2index: new PubkeyIndexMap(),
     index2pubkey: [],

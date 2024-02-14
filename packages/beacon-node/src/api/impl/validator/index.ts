@@ -896,6 +896,7 @@ export function getValidatorApi({
       let indexes: ValidatorIndex[] = [];
 
       if (epoch === stateEpoch) {
+        // TODO: @tuyennhv why do we use the .proposers directly everywhere else but use the getter function here?
         indexes = state.epochCtx.getBeaconProposers();
       } else if (epoch === stateEpoch + 1) {
         // Requesting duties for next epoch is allow since they can be predicted with high probabilities.

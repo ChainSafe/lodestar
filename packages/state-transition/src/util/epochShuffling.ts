@@ -14,7 +14,7 @@ import {computeStartSlotAtEpoch} from "./epoch.js";
 import {getBlockRootAtSlot} from "./blockRoot.js";
 
 export interface IShufflingCache {
-  computeNextEpochShuffling: typeof computeEpochShuffling;
+  computeNextEpochShuffling: (state: BeaconStateAllForks, activeIndices: ValidatorIndex[], epoch: Epoch) => void;
   getSync: (shufflingEpoch: Epoch, dependentRoot: RootHex) => EpochShuffling | null;
   buildSync: (state: BeaconStateAllForks, activeIndexes: number[], epoch: Epoch) => EpochShuffling;
   getOrBuildSync: (epoch: Epoch, state: BeaconStateAllForks, activeIndexes: number[]) => EpochShuffling;
@@ -106,6 +106,9 @@ export function computeEpochShuffling(
   };
 }
 
+/**
+ * TODO: @tuyennhv why is the decision block 2 epochs back?
+ */
 export function getShufflingDecisionBlock(state: BeaconStateAllForks, epoch: Epoch): RootHex {
   const pivotSlot = computeStartSlotAtEpoch(epoch - 1) - 1;
   return toHexString(getBlockRootAtSlot(state, pivotSlot));

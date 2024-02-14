@@ -25,9 +25,9 @@ export function processEffectiveBalanceUpdates(state: CachedBeaconStateAllForks,
   const HYSTERESIS_INCREMENT = EFFECTIVE_BALANCE_INCREMENT / HYSTERESIS_QUOTIENT;
   const DOWNWARD_THRESHOLD = HYSTERESIS_INCREMENT * HYSTERESIS_DOWNWARD_MULTIPLIER;
   const UPWARD_THRESHOLD = HYSTERESIS_INCREMENT * HYSTERESIS_UPWARD_MULTIPLIER;
-  const {validators, epochCtx} = state;
+  const {validators, epochCtx, config} = state;
   const {effectiveBalanceIncrements} = epochCtx;
-  const forkSeq = epochCtx.config.getForkSeq(state.slot);
+  const forkSeq = config.getForkSeq(state.slot);
   let nextEpochTotalActiveBalanceByIncrement = 0;
 
   // update effective balances with hysteresis
