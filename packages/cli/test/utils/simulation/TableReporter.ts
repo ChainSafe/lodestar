@@ -134,7 +134,7 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
   summary(): void {
     const {errors} = this.options;
 
-    this.options.logger.info(`├${"─".repeat(10)} Errors (${errors.length}) ${"─".repeat(10)}┤`);
+    this.options.logger.error(`├${"─".repeat(10)} Errors (${errors.length}) ${"─".repeat(10)}┤`);
 
     const groupBySlot = arrayGroupBy(errors, (e) => String(e.slot as number));
 
@@ -146,7 +146,7 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
         if (assertionErrors.length > 0) this.options.logger.info(`├── Assertion: ${assertionId}`);
 
         for (const error of assertionErrors) {
-          this.options.logger.info(
+          this.options.logger.error(
             `├──── ${error.nodeId}: ${error.message} ${Object.entries(error.data ?? {})
               .map(([k, v]) => `${k}=${v as string}`)
               .join(" ")}`
