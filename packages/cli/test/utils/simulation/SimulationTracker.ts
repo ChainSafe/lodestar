@@ -3,6 +3,7 @@ import createDebug from "debug";
 import {routes} from "@lodestar/api/beacon";
 import {ChainForkConfig} from "@lodestar/config";
 import {Epoch, Slot} from "@lodestar/types";
+import {LoggerNode} from "@lodestar/logger/node";
 import {isNullish} from "../../utils.js";
 import {EpochClock} from "./EpochClock.js";
 import {
@@ -27,6 +28,7 @@ interface SimulationTrackerInitOptions {
   config: ChainForkConfig;
   clock: EpochClock;
   signal: AbortSignal;
+  logger: LoggerNode;
 }
 
 export enum SimulationTrackerEvent {
@@ -62,10 +64,10 @@ export function getStoresForAssertions<D extends SimulationAssertion[]>(
   return filterStores as StoreTypes<D>;
 }
 
-/* eslint-disable no-console */
 export class SimulationTracker {
   readonly emitter = new EventEmitter();
   readonly reporter: SimulationReporter<typeof defaultAssertions & StoreType<string, unknown>>;
+  readonly logger: LoggerNode;
 
   private lastSeenSlot: Map<NodeId, Slot> = new Map();
   private slotCapture: Map<Slot, NodeId[]> = new Map();
@@ -73,21 +75,23 @@ export class SimulationTracker {
   private nodes: NodePair[];
   private clock: EpochClock;
   private forkConfig: ChainForkConfig;
-  private running: boolean = false;
+  private running = false;
 
   private errors: SimulationAssertionError[] = [];
   private stores: Stores;
   private assertions: SimulationAssertion[];
   private assertionIdsMap: Record<string, boolean> = {};
-  private constructor({signal, nodes, clock, config}: SimulationTrackerInitOptions) {
+  private constructor({signal, nodes, clock, config, logger}: SimulationTrackerInitOptions) {
     this.signal = signal;
     this.nodes = nodes;
     this.clock = clock;
     this.forkConfig = config;
+    this.logger = logger.child({module: "sim:tracker"});
 
     this.stores = {} as StoreTypes<typeof defaultAssertions> & StoreType<string, unknown>;
     this.assertions = [] as SimulationAssertion[];
     this.reporter = new TableReporter({
+      logger: this.logger.child({module: "sim:reporter"}),
       clock: this.clock,
       forkConfig: this.forkConfig,
       nodes: this.nodes,
@@ -162,7 +166,7 @@ export class SimulationTracker {
 
     // Start clock loop on current slot or genesis
     this.clockLoop(Math.max(this.clock.currentSlot, 0)).catch((e) => {
-      console.error("error on clockLoop", e);
+      this.logger.error("error on clockLoop", e);
     });
   }
 
@@ -174,7 +178,7 @@ export class SimulationTracker {
     while (this.running && !this.signal.aborted) {
       // Wait for 2/3 of the slot to consider it missed
       await this.clock.waitForStartOfSlot(slot + 2 / 3, slot > 0).catch((e) => {
-        console.error("error on waitForStartOfSlot", e);
+        this.logger.error("error on waitForStartOfSlot", e);
       });
       this.reporter.progress(slot);
       slot++;

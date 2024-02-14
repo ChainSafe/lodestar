@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import {Slot} from "@lodestar/types";
 import {isNullish} from "../../utils.js";
 import {HeadSummary} from "./assertions/defaults/headAssertion.js";
@@ -132,19 +131,19 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
   summary(): void {
     const {errors} = this.options;
 
-    console.info(`├${"─".repeat(10)} Errors (${errors.length}) ${"─".repeat(10)}┤`);
+    this.options.logger.info(`├${"─".repeat(10)} Errors (${errors.length}) ${"─".repeat(10)}┤`);
 
     const groupBySlot = arrayGroupBy(errors, (e) => String(e.slot as number));
 
     for (const [slot, slotErrors] of Object.entries(groupBySlot)) {
-      if (slotErrors.length > 0) console.info(`├─ Slot: ${slot}`);
+      if (slotErrors.length > 0) this.options.logger.info(`├─ Slot: ${slot}`);
       const groupByAssertion = arrayGroupBy(slotErrors, (e) => e.assertionId);
 
       for (const [assertionId, assertionErrors] of Object.entries(groupByAssertion)) {
-        if (assertionErrors.length > 0) console.info(`├── Assertion: ${assertionId}`);
+        if (assertionErrors.length > 0) this.options.logger.info(`├── Assertion: ${assertionId}`);
 
         for (const error of assertionErrors) {
-          console.info(
+          this.options.logger.info(
             `├──── ${error.nodeId}: ${error.message} ${Object.entries(error.data ?? {})
               .map(([k, v]) => `${k}=${v as string}`)
               .join(" ")}`

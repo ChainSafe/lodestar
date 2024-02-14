@@ -6,6 +6,7 @@ import {Api as KeyManagerApi} from "@lodestar/api/keymanager";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {Slot, allForks, Epoch} from "@lodestar/types";
+import {Logger} from "@lodestar/logger";
 import {BeaconArgs} from "../../../src/cmds/beacon/options.js";
 import {IValidatorCliArgs} from "../../../src/cmds/validator/options.js";
 import {GlobalArgs} from "../../../src/options/index.js";
@@ -401,6 +402,7 @@ export abstract class SimulationReporter<T extends SimulationAssertion[]> {
       stores: StoreTypes<T>;
       nodes: NodePair[];
       errors: SimulationAssertionError[];
+      logger: Logger;
     }
   ) {}
   abstract bootstrap(): void;

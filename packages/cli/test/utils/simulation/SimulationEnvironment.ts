@@ -9,6 +9,8 @@ import {ChainForkConfig} from "@lodestar/config";
 import {activePreset} from "@lodestar/params";
 import {BeaconStateAllForks, interopSecretKey} from "@lodestar/state-transition";
 import {prettyMsToTime} from "@lodestar/utils";
+import {LogLevel} from "@lodestar/logger";
+import {getNodeLogger, LoggerNode} from "@lodestar/logger/node";
 import {EpochClock, MS_IN_SEC} from "./EpochClock.js";
 import {ExternalSignerServer} from "./ExternalSignerServer.js";
 import {SimulationTracker} from "./SimulationTracker.js";
@@ -36,14 +38,13 @@ interface StartOpts {
   runTimeoutMs: number;
 }
 
-/* eslint-disable no-console */
-
 export class SimulationEnvironment {
   readonly nodes: NodePair[] = [];
   readonly clock: EpochClock;
   readonly tracker: SimulationTracker;
   readonly runner: IRunner;
   readonly externalSigner: ExternalSignerServer;
+  readonly logger: LoggerNode;
 
   readonly forkConfig: ChainForkConfig;
   readonly options: SimulationOptions;
@@ -57,6 +58,10 @@ export class SimulationEnvironment {
     this.forkConfig = forkConfig;
     this.options = options;
 
+    this.logger = getNodeLogger({
+      level: LogLevel.debug,
+      file: {level: LogLevel.debug, filepath: path.join(options.logsDir, `simulation-${this.options.id}.log`)},
+    });
     this.clock = new EpochClock({
       genesisTime: this.options.genesisTime + this.forkConfig.GENESIS_DELAY,
       secondsPerSlot: this.forkConfig.SECONDS_PER_SLOT,
@@ -67,6 +72,7 @@ export class SimulationEnvironment {
     this.externalSigner = new ExternalSignerServer([]);
     this.runner = new Runner({logsDir: this.options.logsDir});
     this.tracker = SimulationTracker.initWithDefaultAssertions({
+      logger: this.logger.child({module: "tracker"}),
       nodes: [],
       config: this.forkConfig,
       clock: this.clock,
@@ -95,7 +101,7 @@ export class SimulationEnvironment {
 
   async start(opts: StartOpts): Promise<void> {
     const currentTime = Date.now();
-    console.log(
+    this.logger.info(
       `Starting simulation environment "${this.options.id}". currentTime=${new Date(
         currentTime
       ).toISOString()} simulationTimeout=${prettyMsToTime(opts.runTimeoutMs)}`
@@ -108,7 +114,7 @@ export class SimulationEnvironment {
         const slot = this.clock.getSlotIndexInEpoch(slots);
 
         this.stop(1, `Sim run timeout in ${opts.runTimeoutMs}ms (approx. ${epoch}/${slot}).`).catch((e) =>
-          console.error("Error on stop", e)
+          this.logger.error("Error on stop", e)
         );
       }, opts.runTimeoutMs);
     }
@@ -122,7 +128,7 @@ export class SimulationEnvironment {
       this.stop(
         1,
         `Start sequence not completed before genesis, in ${prettyMsToTime(msToGenesis)} (approx. ${epoch}/${slot}).`
-      ).catch((e) => console.error("Error on stop", e));
+      ).catch((e) => this.logger.error("Error on stop", e));
     }, msToGenesis);
 
     try {
@@ -131,26 +137,26 @@ export class SimulationEnvironment {
         await mkdir(this.options.rootDir);
       }
 
-      console.log("Starting the simulation runner");
+      this.logger.info("Starting the simulation runner");
       await this.runner.start();
 
-      console.log("Starting execution nodes");
+      this.logger.info("Starting execution nodes");
       await Promise.all(this.nodes.map((node) => node.execution.job.start()));
 
-      console.log("Initializing genesis state for beacon nodes");
+      this.logger.info("Initializing genesis state for beacon nodes");
       await this.initGenesisState();
       if (!this.genesisState) {
         throw new Error("The genesis state for CL clients is not defined.");
       }
 
-      console.log("Starting beacon nodes");
+      this.logger.info("Starting beacon nodes");
       await Promise.all(this.nodes.map((node) => node.beacon.job.start()));
 
-      console.log("Starting validators");
+      this.logger.info("Starting validators");
       await Promise.all(this.nodes.map((node) => node.validator?.job.start()));
 
       if (this.nodes.some((node) => node.validator?.keys.type === "remote")) {
-        console.log("Starting external signer");
+        this.logger.info("Starting external signer");
         await this.externalSigner.start();
 
         for (const node of this.nodes) {
@@ -162,12 +168,12 @@ export class SimulationEnvironment {
                 url: this.externalSigner.url,
               }))
             );
-            console.log(`Imported remote keys for node ${node.id}`);
+            this.logger.info(`Imported remote keys for node ${node.id}`);
           }
         }
       }
 
-      console.log("Starting the simulation tracker");
+      this.logger.info("Starting the simulation tracker");
       await this.tracker.start();
       await Promise.all(this.nodes.map((node) => this.tracker.track(node)));
     } catch (error) {
@@ -182,7 +188,7 @@ export class SimulationEnvironment {
     process.removeAllListeners("uncaughtException");
     process.removeAllListeners("SIGTERM");
     process.removeAllListeners("SIGINT");
-    console.log(`Simulation environment "${this.options.id}" is stopping: ${message}`);
+    this.logger.info(`Simulation environment "${this.options.id}" is stopping: ${message}`);
     await this.tracker.stop();
     await Promise.all(this.nodes.map((node) => node.validator?.job.stop()));
     await Promise.all(this.nodes.map((node) => node.beacon.job.stop()));
