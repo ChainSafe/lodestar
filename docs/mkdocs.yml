@@ -42,6 +42,7 @@ markdown_extensions:
   - codehilite:
       guess_lang: false
   - admonition
+  - pymdownx.details
   - toc:
       permalink: true
   - pymdownx.superfences:
@@ -144,3 +145,4 @@ nav:
       # - Slashing Protection: advanced-topics/slashing-protection.md
       - Setting Up a Testnet: advanced-topics/setting-up-a-testnet.md
       # - Doppelganger Detection: advanced-topics/doppelganger-detection.md
+  - Frequently Asked Questions: faqs.md
