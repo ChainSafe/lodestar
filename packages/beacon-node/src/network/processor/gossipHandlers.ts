@@ -278,7 +278,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
             case BlockErrorCode.PARENT_UNKNOWN:
             case BlockErrorCode.PRESTATE_MISSING:
             case BlockErrorCode.EXECUTION_ENGINE_ERROR:
-              // Errors might indicate an issue with our node, the connected execution client, or another client
+              // Errors might indicate an issue with our node or the connected EL client
               logLevel = LogLevel.error;
               break;
             default:
