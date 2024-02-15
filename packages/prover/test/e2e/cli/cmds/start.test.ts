@@ -11,15 +11,15 @@ import {rpcUrl, beaconUrl, proxyPort, proxyUrl, chainId, waitForCapellaFork, con
 
 const cli = getLodestarProverCli();
 
-describe("prover/start", () => {
+describe("prover/proxy", () => {
   it("should show help", async () => {
-    const output = await runCliCommand(cli, ["start", "--help"]);
+    const output = await runCliCommand(cli, ["proxy", "--help"]);
 
     expect(output).toEqual(expect.stringContaining("Show help"));
   });
 
   it("should fail when --executionRpcUrl is missing", async () => {
-    await expect(runCliCommand(cli, ["start", "--port", "8088"])).rejects.toThrow(
+    await expect(runCliCommand(cli, ["proxy", "--port", "8088"])).rejects.toThrow(
       "Missing required argument: executionRpcUrl"
     );
   });
@@ -27,7 +27,7 @@ describe("prover/start", () => {
   it("should fail when --beaconUrls and --beaconBootnodes are provided together", async () => {
     await expect(
       runCliCommand(cli, [
-        "start",
+        "proxy",
         "--beaconUrls",
         "http://localhost:4000",
         "--beaconBootnodes",
@@ -38,7 +38,7 @@ describe("prover/start", () => {
 
   it("should fail when both of --beaconUrls and --beaconBootnodes are not provided", async () => {
     await expect(
-      runCliCommand(cli, ["start", "--port", "8088", "--executionRpcUrl", "http://localhost:3000"])
+      runCliCommand(cli, ["proxy", "--port", "8088", "--executionRpcUrl", "http://localhost:3000"])
     ).rejects.toThrow("Either --beaconUrls or --beaconBootnodes must be provided");
   });
 
@@ -55,7 +55,7 @@ describe("prover/start", () => {
       proc = await spawnCliCommand(
         "packages/prover/bin/lodestar-prover.js",
         [
-          "start",
+          "proxy",
           "--port",
           String(proxyPort as number),
           "--executionRpcUrl",
