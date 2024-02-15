@@ -49,7 +49,7 @@ export function getLodestarProverCli(): yargs.Argv {
   }
 
   // Register the proxy command as the default one
-  registerCommandToYargs(prover, {...proverProxyStartCommand, command: '*'});
+  registerCommandToYargs(prover, {...proverProxyStartCommand, command: "*"});
 
   // throw an error if we see an unrecognized cmd
   prover.recommendCommands().strict();
