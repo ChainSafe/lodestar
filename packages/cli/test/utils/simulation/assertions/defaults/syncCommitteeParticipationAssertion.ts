@@ -7,9 +7,8 @@ export const expectedMinSyncParticipationRate = 0.9;
 
 export const syncCommitteeParticipationAssertion: SimulationAssertion<"syncCommitteeParticipation", number> = {
   id: "syncCommitteeParticipation",
-  match: ({slot, clock, epoch, forkConfig, fork}) => {
+  match: ({slot, clock, fork}) => {
     if (fork === ForkName.phase0) return AssertionMatch.None;
-    if (epoch < forkConfig.ALTAIR_FORK_EPOCH) return AssertionMatch.Capture;
 
     return clock.isLastSlotOfEpoch(slot) ? AssertionMatch.Capture | AssertionMatch.Assert : AssertionMatch.Capture;
   },
@@ -48,5 +47,20 @@ export const syncCommitteeParticipationAssertion: SimulationAssertion<"syncCommi
     }
 
     return errors;
+  },
+
+  async dump({store, slot, nodes}) {
+    /*
+     * | Slot | Node 1 | Node 2 |
+     * |------|--------|--------|
+     * | 1    | 16     | 18    |
+     * | 2    | 12    | 12     |
+     * | 3    | 14    | 14    |
+     */
+    const result = [`Slot,${nodes.map((n) => n.beacon.id).join(", ")}`];
+    for (let s = 1; s <= slot; s++) {
+      result.push(`${s}, ${nodes.map((n) => store[n.beacon.id][s] ?? "-").join(",")}`);
+    }
+    return {"syncCommitteeParticipationAssertion.csv": result.join("\n")};
   },
 };
