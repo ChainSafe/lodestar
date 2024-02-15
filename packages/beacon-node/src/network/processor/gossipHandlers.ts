@@ -1,6 +1,6 @@
 import {toHexString} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {Logger, prettyBytes} from "@lodestar/utils";
+import {LogLevel, Logger, prettyBytes} from "@lodestar/utils";
 import {Root, Slot, ssz, allForks, deneb} from "@lodestar/types";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {routes} from "@lodestar/api";
@@ -255,6 +255,9 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
         chain.seenGossipBlockInput.prune();
       })
       .catch((e) => {
+        // Any unexpected error
+        let logLevel = LogLevel.error;
+
         if (e instanceof BlockError) {
           switch (e.type.code) {
             case BlockErrorCode.DATA_UNAVAILABLE: {
@@ -264,6 +267,9 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
               const rootHex = toHexString(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
 
               events.emit(NetworkEvent.unknownBlock, {rootHex, peer: peerIdStr});
+
+              // Error is quite frequent and not critical
+              logLevel = LogLevel.debug;
               break;
             }
             // ALREADY_KNOWN should not happen with ignoreIfKnown=true above
@@ -272,14 +278,18 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
             case BlockErrorCode.PARENT_UNKNOWN:
             case BlockErrorCode.PRESTATE_MISSING:
             case BlockErrorCode.EXECUTION_ENGINE_ERROR:
+              // Errors might indicate an issue with our node or the connected execution client
+              logLevel = LogLevel.error;
               break;
             default:
               // TODO: Should it use PeerId or string?
               core.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadGossipBlock");
+              // Misbehaving peer, user cannot be expected to do something about this
+              logLevel = LogLevel.warn;
           }
         }
         metrics?.gossipBlock.processBlockErrors.inc({error: e instanceof BlockError ? e.type.code : "NOT_BLOCK_ERROR"});
-        logger.warn("Error receiving block", {slot: signedBlock.message.slot, peer: peerIdStr}, e as Error);
+        logger[logLevel]("Error receiving block", {slot: signedBlock.message.slot, peer: peerIdStr}, e as Error);
         chain.seenGossipBlockInput.prune();
       });
   }
