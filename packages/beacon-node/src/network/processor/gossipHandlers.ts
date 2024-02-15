@@ -278,13 +278,13 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
             case BlockErrorCode.PARENT_UNKNOWN:
             case BlockErrorCode.PRESTATE_MISSING:
             case BlockErrorCode.EXECUTION_ENGINE_ERROR:
-              // Errors might indicate an issue with our node or the connected execution client
+              // Errors might indicate an issue with our node, the connected execution client, or another client
               logLevel = LogLevel.error;
               break;
             default:
               // TODO: Should it use PeerId or string?
               core.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadGossipBlock");
-              // Misbehaving peer, user cannot be expected to do something about this
+              // Misbehaving peer, but could highlight an issue in another client
               logLevel = LogLevel.warn;
           }
         } else {
