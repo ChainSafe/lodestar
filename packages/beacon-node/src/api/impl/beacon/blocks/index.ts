@@ -179,6 +179,13 @@ export function getBeaconBlockApi({
     const publishPromises = [
       // Send the block, regardless of whether or not it is valid. The API
       // specification is very clear that this is the desired behaviour.
+      //
+      // i) Publish blobs and block before importing so that network can see them asap
+      // ii) publish blobs first because
+      //     a) by the times nodes see block, they might decide to pull blobs
+      //     b) they might require more hops to reach recipients in peerDAS kind of setup where
+      //        blobs might need to hop between nodes because of partial subnet subscription
+      ...blobSidecars.map((blobSidecar) => () => network.publishBlobSidecar(blobSidecar)),
       () => network.publishBeaconBlock(signedBlock) as Promise<unknown>,
       () =>
         // there is no rush to persist block since we published it to gossip anyway
@@ -191,7 +198,6 @@ export function getBeaconBlockApi({
           }
           throw e;
         }),
-      ...blobSidecars.map((blobSidecar) => () => network.publishBlobSidecar(blobSidecar)),
     ];
     await promiseAllMaybeAsync(publishPromises);
   };
