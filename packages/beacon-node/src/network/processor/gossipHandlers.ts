@@ -263,8 +263,9 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
               const forkTypes = config.getForkTypes(slot);
               const rootHex = toHexString(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
 
+              logger.debug("Blobs are unavailable within cutoff time", {slot, root: rootHex, peer: peerIdStr});
               events.emit(NetworkEvent.unknownBlock, {rootHex, peer: peerIdStr});
-              break;
+              return;
             }
             // ALREADY_KNOWN should not happen with ignoreIfKnown=true above
             // PARENT_UNKNOWN should not happen, we handled this in validateBeaconBlock() function above
