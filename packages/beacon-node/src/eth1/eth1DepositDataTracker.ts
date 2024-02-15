@@ -3,7 +3,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
-  CachedBeaconStateEIP6110,
+  CachedBeaconStateElectra,
   becomesNewEth1Data,
 } from "@lodestar/state-transition";
 import {ErrorAborted, TimeoutError, fromHex, Logger, isErrorAborted, sleep} from "@lodestar/utils";
@@ -88,7 +88,7 @@ export class Eth1DepositDataTracker {
     this.depositsCache = new Eth1DepositsCache(opts, config, db);
     this.eth1DataCache = new Eth1DataCache(config, db);
     this.eth1FollowDistance = config.ETH1_FOLLOW_DISTANCE;
-    // TODO 6110: fix scenario where node starts post-6110 and `stopPolling` will always be false
+    // TODO Electra: fix scenario where node starts post-Electra and `stopPolling` will always be false
     this.stopPolling = false;
 
     this.forcedEth1DataVote = opts.forcedEth1DataVote
@@ -118,7 +118,7 @@ export class Eth1DepositDataTracker {
     }
   }
 
-  // TODO 6110: Figure out how an elegant way to stop eth1data polling
+  // TODO Electra: Figure out how an elegant way to stop eth1data polling
   stopPollingEth1Data(): void {
     this.stopPolling = true;
   }
@@ -128,10 +128,10 @@ export class Eth1DepositDataTracker {
    */
   async getEth1DataAndDeposits(state: CachedBeaconStateAllForks): Promise<Eth1DataAndDeposits> {
     if (
-      state.epochCtx.isAfterEIP6110() &&
-      state.eth1DepositIndex >= (state as CachedBeaconStateEIP6110).depositReceiptsStartIndex
+      state.epochCtx.isAfterElectra() &&
+      state.eth1DepositIndex >= (state as CachedBeaconStateElectra).depositReceiptsStartIndex
     ) {
-      // No need to poll eth1Data since EIP6110 deprecates the mechanism after depositReceiptsStartIndex is reached
+      // No need to poll eth1Data since Electra deprecates the mechanism after depositReceiptsStartIndex is reached
       return {eth1Data: state.eth1Data, deposits: []};
     }
     const eth1Data = this.forcedEth1DataVote ?? (await this.getEth1Data(state));

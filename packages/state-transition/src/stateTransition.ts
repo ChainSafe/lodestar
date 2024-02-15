@@ -232,7 +232,7 @@ function processSlotsWithTransientCache(
       if (stateSlot === config.DENEB_FORK_EPOCH) {
         postState = upgradeStateToDeneb(postState as CachedBeaconStateCapella) as CachedBeaconStateAllForks;
       }
-      if (stateSlot === config.EIP6110_FORK_EPOCH) {
+      if (stateSlot === config.ELECTRA_FORK_EPOCH) {
         postState = upgradeStateToElectra(postState as CachedBeaconStateDeneb) as CachedBeaconStateAllForks;
       }
     } else {

@@ -188,7 +188,7 @@ describe("ExecutionEngine / http", () => {
               amount: "0x7b",
             },
           ],
-          depositReceipts: null, // depositReceipts is null pre-6110
+          depositReceipts: null, // depositReceipts is null pre-electra
         },
         null, // null returned for missing blocks
         {
@@ -197,7 +197,7 @@ describe("ExecutionEngine / http", () => {
             "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
           ],
           withdrawals: null, // withdrawals is null pre-capella
-          depositReceipts: null, // depositReceipts is null pre-6110
+          depositReceipts: null, // depositReceipts is null pre-electra
         },
       ],
     };
@@ -245,7 +245,7 @@ describe("ExecutionEngine / http", () => {
               amount: "0x7b",
             },
           ],
-          depositReceipts: null, // depositReceipts is null pre-6110
+          depositReceipts: null, // depositReceipts is null pre-electra
         },
         null, // null returned for missing blocks
         {
@@ -254,7 +254,7 @@ describe("ExecutionEngine / http", () => {
             "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
           ],
           withdrawals: null, // withdrawals is null pre-capella
-          depositReceipts: null, // depositReceipts is null pre-6110
+          depositReceipts: null, // depositReceipts is null pre-electra
         },
       ],
     };

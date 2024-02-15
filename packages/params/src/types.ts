@@ -83,7 +83,7 @@ export type BeaconPreset = {
   MAX_BLOBS_PER_BLOCK: number;
   KZG_COMMITMENT_INCLUSION_PROOF_DEPTH: number;
 
-  // EIP6110
+  // ELECTRA
   MAX_DEPOSIT_RECEIPTS_PER_PAYLOAD: number;
 };
 
@@ -171,7 +171,7 @@ export const beaconPresetTypes: BeaconPresetTypes = {
   MAX_BLOBS_PER_BLOCK: "number",
   KZG_COMMITMENT_INCLUSION_PROOF_DEPTH: "number",
 
-  // EIP6110
+  // ELECTRA
   MAX_DEPOSIT_RECEIPTS_PER_PAYLOAD: "number",
 };
 

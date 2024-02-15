@@ -35,7 +35,7 @@ export type ExecutionEngineMockOpts = {
   onlyPredefinedResponses?: boolean;
   capellaForkTimestamp?: number;
   denebForkTimestamp?: number;
-  eip6110ForkTimestamp?: number;
+  electraForkTimestamp?: number;
 };
 
 type ExecutionBlock = {
@@ -89,14 +89,14 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       engine_newPayloadV1: this.notifyNewPayload.bind(this),
       engine_newPayloadV2: this.notifyNewPayload.bind(this),
       engine_newPayloadV3: this.notifyNewPayload.bind(this),
-      engine_newPayloadV6110: this.notifyNewPayload.bind(this),
+      engine_newPayloadV4: this.notifyNewPayload.bind(this),
       engine_forkchoiceUpdatedV1: this.notifyForkchoiceUpdate.bind(this),
       engine_forkchoiceUpdatedV2: this.notifyForkchoiceUpdate.bind(this),
       engine_forkchoiceUpdatedV3: this.notifyForkchoiceUpdate.bind(this),
       engine_getPayloadV1: this.getPayload.bind(this),
       engine_getPayloadV2: this.getPayload.bind(this),
       engine_getPayloadV3: this.getPayload.bind(this),
-      engine_getPayloadV6110: this.getPayload.bind(this),
+      engine_getPayloadV4: this.getPayload.bind(this),
       engine_getPayloadBodiesByHashV1: this.getPayloadBodiesByHash.bind(this),
       engine_getPayloadBodiesByRangeV1: this.getPayloadBodiesByRange.bind(this),
     };
@@ -390,7 +390,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
   }
 
   private timestampToFork(timestamp: number): ForkExecution {
-    if (timestamp > (this.opts.eip6110ForkTimestamp ?? Infinity)) return ForkName.eip6110;
+    if (timestamp > (this.opts.electraForkTimestamp ?? Infinity)) return ForkName.electra;
     if (timestamp > (this.opts.denebForkTimestamp ?? Infinity)) return ForkName.deneb;
     if (timestamp > (this.opts.capellaForkTimestamp ?? Infinity)) return ForkName.capella;
     return ForkName.bellatrix;

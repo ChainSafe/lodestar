@@ -3,12 +3,12 @@ import {Context} from "mocha";
 import _ from "lodash";
 import {LogLevel, sleep} from "@lodestar/utils";
 import {ForkName, SLOTS_PER_EPOCH, UNSET_DEPOSIT_RECEIPTS_START_INDEX} from "@lodestar/params";
-import {eip6110, Epoch, Slot} from "@lodestar/types";
+import {electra, Epoch, Slot} from "@lodestar/types";
 import {ValidatorProposerConfig} from "@lodestar/validator";
 
 import {ChainConfig} from "@lodestar/config";
 import {TimestampFormatCode} from "@lodestar/logger";
-import {CachedBeaconStateEIP6110} from "@lodestar/state-transition";
+import {CachedBeaconStateElectra} from "@lodestar/state-transition";
 import {initializeExecutionEngine} from "../../src/execution/index.js";
 import {ExecutionPayloadStatus, PayloadAttributes} from "../../src/execution/engine/interface.js";
 
@@ -27,9 +27,9 @@ import {logFilesDir} from "./params.js";
 import {shell} from "./shell.js";
 
 // NOTE: How to run
-// DEV_RUN=true EL_BINARY_DIR=naviechan/besu:v6110 EL_SCRIPT_DIR=besudocker yarn mocha test/sim/6110-interop.test.ts
+// DEV_RUN=true EL_BINARY_DIR=naviechan/besu:v6110 EL_SCRIPT_DIR=besudocker yarn mocha test/sim/electra-interop.test.ts
 // or
-// DEV_RUN=true EL_BINARY_DIR=/Volumes/fast_boi/navie/Documents/workspace/besu/build/install/besu/bin EL_SCRIPT_DIR=besu yarn mocha test/sim/6110-interop.test.ts
+// DEV_RUN=true EL_BINARY_DIR=/Volumes/fast_boi/navie/Documents/workspace/besu/build/install/besu/bin EL_SCRIPT_DIR=besu yarn mocha test/sim/electra-interop.test.ts
 // ```
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention */
@@ -45,7 +45,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
   }
   this.timeout("10min");
 
-  const dataPath = fs.mkdtempSync("lodestar-test-6110");
+  const dataPath = fs.mkdtempSync("lodestar-test-electra");
   const elSetupConfig = {
     elScriptDir: process.env.EL_SCRIPT_DIR,
     elBinaryDir: process.env.EL_BINARY_DIR,
@@ -73,7 +73,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
   it("Send and get payloads with depositReceipts to/from EL", async () => {
     const {elClient, tearDownCallBack} = await runEL(
-      {...elSetupConfig, mode: ELStartMode.PostMerge, genesisTemplate: "6110.tmpl"},
+      {...elSetupConfig, mode: ELStartMode.PostMerge, genesisTemplate: "electra.tmpl"},
       {...elRunOptions, ttd: BigInt(0)},
       controller.signal
     );
@@ -98,7 +98,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       parentBeaconBlockRoot: dataToBytes("0x0000000000000000000000000000000000000000000000000000000000000000", 32),
     };
     const payloadId = await executionEngine.notifyForkchoiceUpdate(
-      ForkName.eip6110,
+      ForkName.electra,
       genesisBlockHash,
       //use finalizedBlockHash as safeBlockHash
       genesisBlockHash,
@@ -175,7 +175,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     };
     const parentBeaconBlockRoot = dataToBytes("0x0000000000000000000000000000000000000000000000000000000000000000", 32);
     const payloadResult = await executionEngine.notifyNewPayload(
-      ForkName.eip6110,
+      ForkName.electra,
       newPayload,
       [],
       parentBeaconBlockRoot
@@ -194,7 +194,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     };
 
     const payloadId2 = await executionEngine.notifyForkchoiceUpdate(
-      ForkName.eip6110,
+      ForkName.electra,
       newPayloadBlockHash,
       //use finalizedBlockHash as safeBlockHash
       newPayloadBlockHash,
@@ -206,8 +206,8 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     // 5. Get the payload.  Check depositReceipts field contains deposit
     // Wait a bit first for besu to pick up tx from the tx pool.
     await sleep(1000);
-    const payloadAndBlockValue = await executionEngine.getPayload(ForkName.eip6110, payloadId2);
-    const payload = payloadAndBlockValue.executionPayload as eip6110.ExecutionPayload;
+    const payloadAndBlockValue = await executionEngine.getPayload(ForkName.electra, payloadId2);
+    const payload = payloadAndBlockValue.executionPayload as electra.ExecutionPayload;
 
     if (payload.transactions.length !== 1) {
       throw Error(`Number of transactions mismatched. Expected: 1, actual: ${payload.transactions.length}`);
@@ -236,7 +236,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
   it("Post-merge, run for a few blocks", async function () {
     console.log("\n\nPost-merge, run for a few blocks\n\n");
     const {elClient, tearDownCallBack} = await runEL(
-      {...elSetupConfig, mode: ELStartMode.PostMerge, genesisTemplate: "6110.tmpl"},
+      {...elSetupConfig, mode: ELStartMode.PostMerge, genesisTemplate: "electra.tmpl"},
       {...elRunOptions, ttd: BigInt(0)},
       controller.signal
     );
@@ -244,7 +244,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
     await runNodeWithEL.bind(this)({
       elClient,
-      eip6110Epoch: 0,
+      electraEpoch: 0,
       testName: "post-merge",
     });
   });
@@ -256,7 +256,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
    */
   async function runNodeWithEL(
     this: Context,
-    {elClient, eip6110Epoch, testName}: {elClient: ELClient; eip6110Epoch: Epoch; testName: string}
+    {elClient, electraEpoch, testName}: {elClient: ELClient; electraEpoch: Epoch; testName: string}
   ): Promise<void> {
     const {genesisBlockHash, ttd, engineRpcUrl, ethRpcUrl} = elClient;
     const validatorClientCount = 1;
@@ -306,7 +306,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
         BELLATRIX_FORK_EPOCH: 0,
         CAPELLA_FORK_EPOCH: 0,
         DENEB_FORK_EPOCH: 0,
-        EIP6110_FORK_EPOCH: eip6110Epoch,
+        ELECTRA_FORK_EPOCH: electraEpoch,
         TERMINAL_TOTAL_DIFFICULTY: ttd,
       },
       options: {
@@ -399,7 +399,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     await sleep(500);
 
     // Check if new validator is in finalized cache
-    headState = bn.chain.getHeadState() as CachedBeaconStateEIP6110;
+    headState = bn.chain.getHeadState() as CachedBeaconStateElectra;
     epochCtx = headState.epochCtx;
 
     if (headState.validators.length !== 33 || headState.balances.length !== 33) {

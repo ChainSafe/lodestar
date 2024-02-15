@@ -120,6 +120,6 @@ export const minimalPreset: BeaconPreset = {
   MAX_BLOBS_PER_BLOCK: 6,
   KZG_COMMITMENT_INCLUSION_PROOF_DEPTH: 9,
 
-  // EIP6110
+  // ELECTRA
   MAX_DEPOSIT_RECEIPTS_PER_PAYLOAD: 4,
 };

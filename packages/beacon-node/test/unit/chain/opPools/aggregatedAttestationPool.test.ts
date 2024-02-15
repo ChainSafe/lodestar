@@ -61,9 +61,9 @@ describe("AggregatedAttestationPool", function () {
       epochParticipation[committee[i]] = 0b000;
     }
   }
-  (originalState as CachedBeaconStateAltair).previousEpochParticipation =
+  (originalState as unknown as CachedBeaconStateAltair).previousEpochParticipation =
     ssz.altair.EpochParticipation.toViewDU(epochParticipation);
-  (originalState as CachedBeaconStateAltair).currentEpochParticipation =
+  (originalState as unknown as CachedBeaconStateAltair).currentEpochParticipation =
     ssz.altair.EpochParticipation.toViewDU(epochParticipation);
   originalState.commit();
   let altairState: CachedBeaconStateAllForks;

@@ -219,7 +219,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     MAX_BLOB_COMMITMENTS_PER_BLOCK: denebForkRelevant,
     KZG_COMMITMENT_INCLUSION_PROOF_DEPTH: denebForkRelevant,
 
-    // EIP6110
-    MAX_DEPOSIT_RECEIPTS_PER_PAYLOAD: eip6110ForkRelevant,
+    // ELECTRA
+    MAX_DEPOSIT_RECEIPTS_PER_PAYLOAD: electraForkRelevant,
   };
 }

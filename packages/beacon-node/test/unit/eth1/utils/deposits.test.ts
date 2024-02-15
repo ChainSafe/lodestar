@@ -20,7 +20,7 @@ describe("eth1 / util / deposits", function () {
       depositIndexes: number[];
       expectedReturnedIndexes?: number[];
       error?: Eth1ErrorCode;
-      post6110?: boolean;
+      postElectra?: boolean;
     };
 
     const testCases: TestCase[] = [
@@ -74,48 +74,52 @@ describe("eth1 / util / deposits", function () {
         expectedReturnedIndexes: [],
       },
       {
-        id: "No deposits to be included post 6110 after deposit_receipts_start_index",
+        id: "No deposits to be included post Electra after deposit_receipts_start_index",
         depositCount: 2030,
         eth1DepositIndex: 2025,
         depositIndexes: Array.from({length: 2030}, (_, i) => i),
         expectedReturnedIndexes: [],
-        post6110: true,
+        postElectra: true,
       },
       {
-        id: "Should return deposits post 6110 before deposit_receipts_start_index",
+        id: "Should return deposits post Electra before deposit_receipts_start_index",
         depositCount: 2022,
         eth1DepositIndex: 2018,
         depositIndexes: Array.from({length: 2022}, (_, i) => i),
         expectedReturnedIndexes: [2018, 2019, 2020, 2021],
-        post6110: true,
+        postElectra: true,
       },
       {
-        id: "Should return deposits less than MAX_DEPOSITS post 6110 before deposit_receipts_start_index",
+        id: "Should return deposits less than MAX_DEPOSITS post Electra before deposit_receipts_start_index",
         depositCount: 10 * MAX_DEPOSITS,
         eth1DepositIndex: 0,
         depositIndexes: Array.from({length: 10 * MAX_DEPOSITS}, (_, i) => i),
         expectedReturnedIndexes: Array.from({length: MAX_DEPOSITS}, (_, i) => i),
-        post6110: true,
+        postElectra: true,
       },
     ];
 
     /* eslint-disable @typescript-eslint/naming-convention */
-    const post6110Config = createChainForkConfig({
+    const postElectraConfig = createChainForkConfig({
       ALTAIR_FORK_EPOCH: 1,
       BELLATRIX_FORK_EPOCH: 2,
       CAPELLA_FORK_EPOCH: 3,
       DENEB_FORK_EPOCH: 4,
-      EIP6110_FORK_EPOCH: 5,
+      ELECTRA_FORK_EPOCH: 5,
     });
-    const post6110Slot = post6110Config.EIP6110_FORK_EPOCH * SLOTS_PER_EPOCH + 1;
+    const postElectraSlot = postElectraConfig.ELECTRA_FORK_EPOCH * SLOTS_PER_EPOCH + 1;
 
     for (const testCase of testCases) {
-      const {id, depositIndexes, eth1DepositIndex, depositCount, expectedReturnedIndexes, error, post6110} = testCase;
+      const {id, depositIndexes, eth1DepositIndex, depositCount, expectedReturnedIndexes, error, postElectra} =
+        testCase;
       it(id, async function () {
-        const state = post6110
-          ? generateState({slot: post6110Slot, eth1DepositIndex}, post6110Config)
+        const state = postElectra
+          ? generateState({slot: postElectraSlot, eth1DepositIndex}, postElectraConfig)
           : generateState({eth1DepositIndex});
-        const cachedState = createCachedBeaconStateTest(state, post6110 ? post6110Config : createChainForkConfig({}));
+        const cachedState = createCachedBeaconStateTest(
+          state,
+          postElectra ? postElectraConfig : createChainForkConfig({})
+        );
         const eth1Data = generateEth1Data(depositCount);
         const deposits = depositIndexes.map((index) => generateDepositEvent(index));
         const depositsGetter: DepositGetter<phase0.DepositEvent> = async (indexRange) =>

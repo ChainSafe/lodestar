@@ -1,7 +1,7 @@
-import {allForks, capella, eip6110} from "@lodestar/types";
+import {allForks, capella, electra} from "@lodestar/types";
 import {ForkSeq} from "@lodestar/params";
 
-import {CachedBeaconStateAllForks, CachedBeaconStateCapella, CachedBeaconStateEIP6110} from "../types.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateCapella, CachedBeaconStateElectra} from "../types.js";
 import {getEth1DepositCount} from "../util/deposit.js";
 import {processAttestations} from "./processAttestations.js";
 import {processProposerSlashing} from "./processProposerSlashing.js";
@@ -58,9 +58,9 @@ export function processOperations(
     }
   }
 
-  if (fork >= ForkSeq.eip6110) {
-    for (const depositReceipt of (body as eip6110.BeaconBlockBody).executionPayload.depositReceipts) {
-      processDepositReceipt(fork, state as CachedBeaconStateEIP6110, depositReceipt);
+  if (fork >= ForkSeq.electra) {
+    for (const depositReceipt of (body as electra.BeaconBlockBody).executionPayload.depositReceipts) {
+      processDepositReceipt(fork, state as CachedBeaconStateElectra, depositReceipt);
     }
   }
 }

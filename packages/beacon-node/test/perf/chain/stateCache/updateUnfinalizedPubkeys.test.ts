@@ -8,7 +8,7 @@ import {ssz} from "@lodestar/types";
 import {type CachedBeaconStateAllForks, PubkeyIndexMap} from "@lodestar/state-transition";
 import {bytesToBigInt, intToBytes} from "@lodestar/utils";
 import {CheckpointStateCache, StateContextCache} from "../../../../src/chain/stateCache/index.js";
-import {generateCached6110State} from "../../../utils/state.js";
+import {generateCachedElectraState} from "../../../utils/state.js";
 
 // Benchmark date from Mon Nov 21 2023 - Intel Core i7-9750H @ 2.60Ghz
 // ✔ updateUnfinalizedPubkeys - updating 10 pubkeys                      1444.173 ops/s    692.4380 us/op        -       1057 runs   6.03 s
@@ -25,7 +25,7 @@ describe("updateUnfinalizedPubkeys perf tests", function () {
   let stateCache: StateContextCache;
 
   const unfinalizedPubkey2Index = generatePubkey2Index(0, Math.max.apply(null, numPubkeysToBeFinalizedCases));
-  const baseState = generateCached6110State();
+  const baseState = generateCachedElectraState();
 
   for (const numPubkeysToBeFinalized of numPubkeysToBeFinalizedCases) {
     itBench({

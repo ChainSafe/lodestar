@@ -1,4 +1,4 @@
-import {allForks, capella, deneb, Wei, bellatrix, Root, eip6110} from "@lodestar/types";
+import {allForks, capella, deneb, Wei, bellatrix, Root, electra} from "@lodestar/types";
 import {
   BYTES_PER_LOGS_BLOOM,
   FIELD_ELEMENTS_PER_BLOB,
@@ -28,7 +28,7 @@ export type EngineApiRpcParamTypes = {
   engine_newPayloadV1: [ExecutionPayloadRpc];
   engine_newPayloadV2: [ExecutionPayloadRpc];
   engine_newPayloadV3: [ExecutionPayloadRpc, VersionedHashesRpc, DATA];
-  engine_newPayloadV6110: [ExecutionPayloadRpc, VersionedHashesRpc, DATA];
+  engine_newPayloadV4: [ExecutionPayloadRpc, VersionedHashesRpc, DATA];
   /**
    * 1. Object - Payload validity status with respect to the consensus rules:
    *   - blockHash: DATA, 32 Bytes - block hash value of the payload
@@ -52,7 +52,7 @@ export type EngineApiRpcParamTypes = {
   engine_getPayloadV1: [QUANTITY];
   engine_getPayloadV2: [QUANTITY];
   engine_getPayloadV3: [QUANTITY];
-  engine_getPayloadV6110: [QUANTITY];
+  engine_getPayloadV4: [QUANTITY];
 
   /**
    * 1. Array of DATA - Array of block_hash field values of the ExecutionPayload structure
@@ -80,7 +80,7 @@ export type EngineApiRpcReturnTypes = {
   engine_newPayloadV1: PayloadStatus;
   engine_newPayloadV2: PayloadStatus;
   engine_newPayloadV3: PayloadStatus;
-  engine_newPayloadV6110: PayloadStatus;
+  engine_newPayloadV4: PayloadStatus;
   engine_forkchoiceUpdatedV1: {
     payloadStatus: PayloadStatus;
     payloadId: QUANTITY | null;
@@ -99,7 +99,7 @@ export type EngineApiRpcReturnTypes = {
   engine_getPayloadV1: ExecutionPayloadRpc;
   engine_getPayloadV2: ExecutionPayloadResponse;
   engine_getPayloadV3: ExecutionPayloadResponse;
-  engine_getPayloadV6110: ExecutionPayloadResponse;
+  engine_getPayloadV4: ExecutionPayloadResponse;
 
   engine_getPayloadBodiesByHashV1: (ExecutionPayloadBodyRpc | null)[];
 
@@ -124,7 +124,7 @@ export type ExecutionPayloadBodyRpc = {
 export type ExecutionPayloadBody = {
   transactions: bellatrix.Transaction[];
   withdrawals: capella.Withdrawals | null;
-  depositReceipts: eip6110.DepositReceipts | null;
+  depositReceipts: electra.DepositReceipts | null;
 };
 
 export type ExecutionPayloadRpc = {
@@ -146,7 +146,7 @@ export type ExecutionPayloadRpc = {
   blobGasUsed?: QUANTITY; // DENEB
   excessBlobGas?: QUANTITY; // DENEB
   parentBeaconBlockRoot?: QUANTITY; // DENEB
-  depositReceipts?: DepositReceiptRpc[]; // EIP6110
+  depositReceipts?: DepositReceiptRpc[]; // ELECTRA
 };
 
 export type WithdrawalRpc = {
@@ -215,9 +215,9 @@ export function serializeExecutionPayload(fork: ForkName, data: allForks.Executi
     payload.excessBlobGas = numToQuantity(excessBlobGas);
   }
 
-  // EIP6110 adds depositReceipts to the ExecutionPayload
-  if (ForkSeq[fork] >= ForkSeq.eip6110) {
-    const {depositReceipts} = data as eip6110.ExecutionPayload;
+  // ELECTRA adds depositReceipts to the ExecutionPayload
+  if (ForkSeq[fork] >= ForkSeq.electra) {
+    const {depositReceipts} = data as electra.ExecutionPayload;
     payload.depositReceipts = depositReceipts.map(serializeDepositReceipt);
   }
 
@@ -306,15 +306,15 @@ export function parseExecutionPayload(
     (executionPayload as deneb.ExecutionPayload).excessBlobGas = quantityToBigint(excessBlobGas);
   }
 
-  if (ForkSeq[fork] >= ForkSeq.eip6110) {
+  if (ForkSeq[fork] >= ForkSeq.electra) {
     const {depositReceipts} = data;
     // Geth can also reply with null
     if (depositReceipts == null) {
       throw Error(
-        `depositReceipts missing for ${fork} >= eip6110 executionPayload number=${executionPayload.blockNumber} hash=${data.blockHash}`
+        `depositReceipts missing for ${fork} >= electra executionPayload number=${executionPayload.blockNumber} hash=${data.blockHash}`
       );
     }
-    (executionPayload as eip6110.ExecutionPayload).depositReceipts = depositReceipts.map(deserializeDepositReceipts);
+    (executionPayload as electra.ExecutionPayload).depositReceipts = depositReceipts.map(deserializeDepositReceipts);
   }
 
   return {executionPayload, executionPayloadValue, blobsBundle, shouldOverrideBuilder};
@@ -383,7 +383,7 @@ export function deserializeWithdrawal(serialized: WithdrawalRpc): capella.Withdr
   } as capella.Withdrawal;
 }
 
-export function serializeDepositReceipt(depositReceipt: eip6110.DepositReceipt): DepositReceiptRpc {
+export function serializeDepositReceipt(depositReceipt: electra.DepositReceipt): DepositReceiptRpc {
   return {
     pubkey: bytesToData(depositReceipt.pubkey),
     withdrawalCredentials: bytesToData(depositReceipt.withdrawalCredentials),
@@ -393,14 +393,14 @@ export function serializeDepositReceipt(depositReceipt: eip6110.DepositReceipt):
   };
 }
 
-export function deserializeDepositReceipts(serialized: DepositReceiptRpc): eip6110.DepositReceipt {
+export function deserializeDepositReceipts(serialized: DepositReceiptRpc): electra.DepositReceipt {
   return {
     pubkey: dataToBytes(serialized.pubkey, 48),
     withdrawalCredentials: dataToBytes(serialized.withdrawalCredentials, 32),
     amount: quantityToNum(serialized.amount),
     signature: dataToBytes(serialized.signature, 96),
     index: quantityToNum(serialized.index),
-  } as eip6110.DepositReceipt;
+  } as electra.DepositReceipt;
 }
 
 export function deserializeExecutionPayloadBody(data: ExecutionPayloadBodyRpc | null): ExecutionPayloadBody | null {

@@ -7,7 +7,7 @@ export type BeaconStateAltair = CompositeViewDU<typeof ssz.altair.BeaconState>;
 export type BeaconStateBellatrix = CompositeViewDU<typeof ssz.bellatrix.BeaconState>;
 export type BeaconStateCapella = CompositeViewDU<typeof ssz.capella.BeaconState>;
 export type BeaconStateDeneb = CompositeViewDU<typeof ssz.deneb.BeaconState>;
-export type BeaconStateEIP6110 = CompositeViewDU<typeof ssz.eip6110.BeaconState>;
+export type BeaconStateElectra = CompositeViewDU<typeof ssz.electra.BeaconState>;
 
 // Union at the TreeViewDU level
 // - Works well as function argument and as generic type for allForks functions
@@ -20,8 +20,8 @@ export type BeaconStateAllForks =
   | BeaconStateBellatrix
   | BeaconStateCapella
   | BeaconStateDeneb
-  | BeaconStateEIP6110;
+  | BeaconStateElectra;
 
-export type BeaconStateExecutions = BeaconStateBellatrix | BeaconStateCapella | BeaconStateDeneb | BeaconStateEIP6110;
+export type BeaconStateExecutions = BeaconStateBellatrix | BeaconStateCapella | BeaconStateDeneb | BeaconStateElectra;
 
 export type ShufflingGetter = (shufflingEpoch: Epoch, dependentRoot: RootHex) => EpochShuffling | null;

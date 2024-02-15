@@ -7,10 +7,10 @@ import {
   PubkeyIndexMap,
   CachedBeaconStateBellatrix,
   BeaconStateBellatrix,
-  CachedBeaconStateEIP6110,
-  BeaconStateEIP6110,
+  CachedBeaconStateElectra,
+  BeaconStateElectra,
 } from "@lodestar/state-transition";
-import {allForks, altair, bellatrix, eip6110, ssz} from "@lodestar/types";
+import {allForks, altair, bellatrix, electra, ssz} from "@lodestar/types";
 import {createBeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {FAR_FUTURE_EPOCH, ForkName, ForkSeq, MAX_EFFECTIVE_BALANCE, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 
@@ -95,10 +95,10 @@ export function generateState(
     };
   }
 
-  if (forkSeq >= ForkSeq.eip6110) {
-    const stateEIP6110 = state as eip6110.BeaconState;
-    stateEIP6110.depositReceiptsStartIndex = 2023n;
-    stateEIP6110.latestExecutionPayloadHeader = ssz.eip6110.ExecutionPayloadHeader.defaultValue();
+  if (forkSeq >= ForkSeq.electra) {
+    const stateElectra = state as electra.BeaconState;
+    stateElectra.depositReceiptsStartIndex = 2023n;
+    stateElectra.latestExecutionPayloadHeader = ssz.electra.ExecutionPayloadHeader.defaultValue();
   }
 
   return config.getForkTypes(stateSlot).BeaconState.toViewDU(state);
@@ -149,10 +149,10 @@ export function generateCachedBellatrixState(opts?: TestBeaconState): CachedBeac
 /**
  * This generates state with default pubkey
  */
-export function generateCached6110State(opts?: TestBeaconState): CachedBeaconStateEIP6110 {
-  const config = getConfig(ForkName.eip6110);
+export function generateCachedElectraState(opts?: TestBeaconState): CachedBeaconStateElectra {
+  const config = getConfig(ForkName.electra);
   const state = generateState(opts, config);
-  return createCachedBeaconState(state as BeaconStateEIP6110, {
+  return createCachedBeaconState(state as BeaconStateElectra, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
     pubkey2index: new PubkeyIndexMap(),
     index2pubkey: [],

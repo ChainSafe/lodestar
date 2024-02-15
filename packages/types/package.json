@@ -32,8 +32,8 @@
     "./deneb": {
       "import": "./lib/deneb/index.js"
     },
-    "./eip6110": {
-      "import": "./lib/eip6110/index.js"
+    "./electra": {
+      "import": "./lib/electra/index.js"
     },
     "./phase0": {
       "import": "./lib/phase0/index.js"

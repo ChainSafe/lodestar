@@ -29,7 +29,7 @@ describe("CachedBeaconState", () => {
     expect(state2.epochCtx.epoch).toBe(0);
   });
 
-  it("Clone and mutate cache pre-6110", () => {
+  it("Clone and mutate cache pre-Electra", () => {
     const stateView = ssz.altair.BeaconState.defaultViewDU();
     const state1 = createCachedBeaconStateTest(stateView);
 
@@ -54,8 +54,8 @@ describe("CachedBeaconState", () => {
   });
 
   /* eslint-disable @typescript-eslint/naming-convention */
-  it("Clone and mutate cache post-6110", () => {
-    const stateView = ssz.eip6110.BeaconState.defaultViewDU();
+  it("Clone and mutate cache post-Electra", () => {
+    const stateView = ssz.electra.BeaconState.defaultViewDU();
     const state1 = createCachedBeaconStateTest(
       stateView,
       createChainForkConfig({
@@ -63,7 +63,7 @@ describe("CachedBeaconState", () => {
         BELLATRIX_FORK_EPOCH: 0,
         CAPELLA_FORK_EPOCH: 0,
         DENEB_FORK_EPOCH: 0,
-        EIP6110_FORK_EPOCH: 0,
+        ELECTRA_FORK_EPOCH: 0,
       }),
       {skipSyncCommitteeCache: true, skipSyncPubkeys: true}
     );

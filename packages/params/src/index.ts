@@ -247,5 +247,5 @@ export const KZG_COMMITMENT_SUBTREE_INDEX0 = KZG_COMMITMENT_GINDEX0 - 2 ** KZG_C
 // ssz.deneb.BlobSidecars.elementType.fixedSize
 export const BLOBSIDECAR_FIXED_SIZE = ACTIVE_PRESET === PresetName.minimal ? 131672 : 131928;
 
-// EIP-6110 Misc
+// Electra Misc
 export const UNSET_DEPOSIT_RECEIPTS_START_INDEX = 2n ** 64n - 1n;

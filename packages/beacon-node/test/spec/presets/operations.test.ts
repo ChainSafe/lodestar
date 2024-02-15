@@ -4,12 +4,12 @@ import {
   CachedBeaconStateAllForks,
   CachedBeaconStateBellatrix,
   CachedBeaconStateCapella,
-  CachedBeaconStateEIP6110,
+  CachedBeaconStateElectra,
   ExecutionPayloadStatus,
   getBlockRootAtSlot,
 } from "@lodestar/state-transition";
 import * as blockFns from "@lodestar/state-transition/block";
-import {ssz, phase0, altair, bellatrix, capella, eip6110} from "@lodestar/types";
+import {ssz, phase0, altair, bellatrix, capella, electra} from "@lodestar/types";
 import {InputType} from "@lodestar/spec-test-util";
 import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 
@@ -57,9 +57,9 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
     blockFns.processDeposit(fork, state, testCase.deposit);
   },
 
-  deposit_receipt: (state, testCase: {deposit_receipt: eip6110.DepositReceipt}) => {
+  deposit_receipt: (state, testCase: {deposit_receipt: electra.DepositReceipt}) => {
     const fork = state.config.getForkSeq(state.slot);
-    blockFns.processDepositReceipt(fork, state as CachedBeaconStateEIP6110, testCase.deposit_receipt);
+    blockFns.processDepositReceipt(fork, state as CachedBeaconStateElectra, testCase.deposit_receipt);
   },
 
   proposer_slashing: (state, testCase: {proposer_slashing: phase0.ProposerSlashing}) => {
@@ -127,7 +127,7 @@ const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork,
         block: ssz[fork].BeaconBlock,
         body: ssz[fork].BeaconBlockBody,
         deposit: ssz.phase0.Deposit,
-        deposit_receipt: ssz.eip6110.DepositReceipt,
+        deposit_receipt: ssz.electra.DepositReceipt,
         proposer_slashing: ssz.phase0.ProposerSlashing,
         voluntary_exit: ssz.phase0.SignedVoluntaryExit,
         // Altair

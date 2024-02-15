@@ -215,7 +215,7 @@ export function initializeBeaconStateFromEth1(
     | typeof ssz.bellatrix.ExecutionPayloadHeader
     | typeof ssz.capella.ExecutionPayloadHeader
     | typeof ssz.deneb.ExecutionPayloadHeader
-    | typeof ssz.eip6110.ExecutionPayloadHeader
+    | typeof ssz.electra.ExecutionPayloadHeader
   >
 ): CachedBeaconStateAllForks {
   const stateView = getGenesisBeaconState(
@@ -286,14 +286,14 @@ export function initializeBeaconStateFromEth1(
       ssz.deneb.ExecutionPayloadHeader.defaultViewDU();
   }
 
-  if (GENESIS_SLOT >= config.EIP6110_FORK_EPOCH) {
-    const stateEIP6110 = state as CompositeViewDU<typeof ssz.eip6110.BeaconState>;
-    stateEIP6110.fork.previousVersion = config.EIP6110_FORK_VERSION;
-    stateEIP6110.fork.currentVersion = config.EIP6110_FORK_VERSION;
-    stateEIP6110.latestExecutionPayloadHeader =
-      (executionPayloadHeader as CompositeViewDU<typeof ssz.eip6110.ExecutionPayloadHeader>) ??
-      ssz.eip6110.ExecutionPayloadHeader.defaultViewDU();
-    stateEIP6110.depositReceiptsStartIndex = UNSET_DEPOSIT_RECEIPTS_START_INDEX;
+  if (GENESIS_SLOT >= config.ELECTRA_FORK_EPOCH) {
+    const stateElectra = state as CompositeViewDU<typeof ssz.electra.BeaconState>;
+    stateElectra.fork.previousVersion = config.ELECTRA_FORK_VERSION;
+    stateElectra.fork.currentVersion = config.ELECTRA_FORK_VERSION;
+    stateElectra.latestExecutionPayloadHeader =
+      (executionPayloadHeader as CompositeViewDU<typeof ssz.electra.ExecutionPayloadHeader>) ??
+      ssz.electra.ExecutionPayloadHeader.defaultViewDU();
+    stateElectra.depositReceiptsStartIndex = UNSET_DEPOSIT_RECEIPTS_START_INDEX;
   }
 
   state.commit();

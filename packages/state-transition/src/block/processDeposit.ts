@@ -13,7 +13,7 @@ import {
 } from "@lodestar/params";
 
 import {DepositData} from "@lodestar/types/lib/phase0/types.js";
-import {DepositReceipt} from "@lodestar/types/lib/eip6110/types.js";
+import {DepositReceipt} from "@lodestar/types/lib/electra/types.js";
 import {ZERO_HASH} from "../constants/index.js";
 import {computeDomain, computeSigningRoot, increaseBalance} from "../util/index.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../types.js";

@@ -612,11 +612,11 @@ export class EpochCache {
     // ```
     this.epoch = computeEpochAtSlot(state.slot);
     this.syncPeriod = computeSyncPeriodAtEpoch(this.epoch);
-    // 6110 Only: Add current cpState.validators.length
+    // ELECTRA Only: Add current cpState.validators.length
     // Only keep validatorLength for epochs after finalized cpState.epoch
     // eg. [100(epoch 1), 102(epoch 2)].push(104(epoch 3)), this.epoch = 3, finalized cp epoch = 1
     // We keep the last (3 - 1) items = [102, 104]
-    if (currEpoch >= this.config.EIP6110_FORK_EPOCH) {
+    if (currEpoch >= this.config.ELECTRA_FORK_EPOCH) {
       this.historicalValidatorLengths = this.historicalValidatorLengths.push(state.validators.length);
 
       // If number of validatorLengths we want to keep exceeds the current list size, it implies
@@ -828,7 +828,7 @@ export class EpochCache {
   }
 
   getValidatorIndex(pubkey: Uint8Array | PubkeyHex): ValidatorIndex | undefined {
-    if (this.isAfterEIP6110()) {
+    if (this.isAfterElectra()) {
       return this.pubkey2index.get(pubkey) ?? this.unfinalizedPubkey2index.get(toMemoryEfficientHexStr(pubkey));
     } else {
       return this.pubkey2index.get(pubkey);
@@ -841,10 +841,10 @@ export class EpochCache {
    *
    */
   addPubkey(index: ValidatorIndex, pubkey: Uint8Array): void {
-    if (this.isAfterEIP6110()) {
+    if (this.isAfterElectra()) {
       this.addUnFinalizedPubkey(index, pubkey);
     } else {
-      // deposit mechanism pre 6110 follows a safe distance with assumption
+      // deposit mechanism pre ELECTRA follows a safe distance with assumption
       // that they are already canonical
       this.addFinalizedPubkey(index, pubkey);
     }
@@ -963,14 +963,14 @@ export class EpochCache {
   }
 
   effectiveBalanceIncrementsSet(index: number, effectiveBalance: number): void {
-    if (this.isAfterEIP6110()) {
+    if (this.isAfterElectra()) {
       // TODO: electra
       // getting length and setting getEffectiveBalanceIncrementsByteLen is not fork safe
       // so each time we add an index, we should new the Uint8Array to keep it forksafe
       // one simple optimization could be to increment the length once per block rather
       // on each add/set
       //
-      // there could still be some unused length remaining from the prev 6110 padding
+      // there could still be some unused length remaining from the prev ELECTRA padding
       const newLength =
         index >= this.effectiveBalanceIncrements.length ? index + 1 : this.effectiveBalanceIncrements.length;
       const effectiveBalanceIncrements = this.effectiveBalanceIncrements;
@@ -988,8 +988,8 @@ export class EpochCache {
     this.effectiveBalanceIncrements[index] = Math.floor(effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
   }
 
-  isAfterEIP6110(): boolean {
-    return this.epoch >= (this.config.EIP6110_FORK_EPOCH ?? Infinity);
+  isAfterElectra(): boolean {
+    return this.epoch >= (this.config.ELECTRA_FORK_EPOCH ?? Infinity);
   }
 
   getValidatorCountAtEpoch(targetEpoch: Epoch): number | undefined {

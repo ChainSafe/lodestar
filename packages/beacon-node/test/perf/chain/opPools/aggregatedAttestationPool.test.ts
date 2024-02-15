@@ -32,7 +32,7 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
   before(function () {
     this.timeout(5 * 60 * 1000); // Generating the states for the first time is very slow
 
-    originalState = generatePerfTestCachedStateAltair({goBackOneSlot: true, vc});
+    originalState = generatePerfTestCachedStateAltair({goBackOneSlot: true, vc}) as unknown as CachedBeaconStateAltair;
 
     const {blockHeader, checkpoint} = computeAnchorCheckpoint(originalState.config, originalState);
     // TODO figure out why getBlockRootAtSlot(originalState, justifiedSlot) is not the same to justifiedCheckpoint.root

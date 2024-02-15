@@ -8,7 +8,7 @@ import {
   BLOCK_BODY_EXECUTION_PAYLOAD_DEPTH as EXECUTION_PAYLOAD_DEPTH,
   BLOCK_BODY_EXECUTION_PAYLOAD_INDEX as EXECUTION_PAYLOAD_INDEX,
 } from "@lodestar/params";
-import {altair, phase0, ssz, allForks, capella, deneb, Slot, eip6110} from "@lodestar/types";
+import {altair, phase0, ssz, allForks, capella, deneb, Slot, electra} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 
@@ -146,8 +146,8 @@ export function isValidLightClientHeader(config: ChainForkConfig, header: allFor
     }
   }
 
-  if (epoch < config.EIP6110_FORK_EPOCH) {
-    if ((header as eip6110.LightClientHeader).execution.depositReceiptsRoot !== undefined) {
+  if (epoch < config.ELECTRA_FORK_EPOCH) {
+    if ((header as electra.LightClientHeader).execution.depositReceiptsRoot !== undefined) {
       return false;
     }
   }
