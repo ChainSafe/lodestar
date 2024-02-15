@@ -255,8 +255,8 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
         chain.seenGossipBlockInput.prune();
       })
       .catch((e) => {
-        // Any unexpected error
-        let logLevel = LogLevel.error;
+        // Adjust verbosity based on error type
+        let logLevel: LogLevel;
 
         if (e instanceof BlockError) {
           switch (e.type.code) {
@@ -287,6 +287,9 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
               // Misbehaving peer, user cannot be expected to do something about this
               logLevel = LogLevel.warn;
           }
+        } else {
+          // Any unexpected error
+          logLevel = LogLevel.error;
         }
         metrics?.gossipBlock.processBlockErrors.inc({error: e instanceof BlockError ? e.type.code : "NOT_BLOCK_ERROR"});
         logger[logLevel]("Error receiving block", {slot: signedBlock.message.slot, peer: peerIdStr}, e as Error);
