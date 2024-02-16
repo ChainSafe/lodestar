@@ -6,7 +6,7 @@ import {YargsError} from "../../../utils/errors.js";
 
 export type StartArgs = {
   port: number;
-  executionRpcUrl?: string;
+  executionRpcUrl: string;
   beaconUrls?: string[];
   beaconBootnodes?: string[];
   wsCheckpoint?: string;
@@ -84,10 +84,6 @@ export const startOptions: CliCommandOptions<StartArgs> = {
 export function parseStartArgs(args: StartArgs): StartOptions {
   if (!args.beaconUrls && !args.beaconBootnodes) {
     throw new YargsError("Either --beaconUrls or --beaconBootnodes must be provided");
-  }
-
-  if (!args.executionRpcUrl) {
-    throw new YargsError("--executionRpcUrl must be provided");
   }
 
   // Remove undefined values to allow deepmerge to inject default values downstream

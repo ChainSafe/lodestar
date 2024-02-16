@@ -14,7 +14,7 @@ import {getGenesisValidatorsRoot, getSlashingProtection} from "./utils.js";
 import {ISlashingProtectionArgs} from "./options.js";
 
 type ExportArgs = {
-  file?: string;
+  file: string;
   pubkeys?: string[];
 };
 
@@ -52,7 +52,6 @@ export const exportCmd: CliCommand<ExportArgs, ISlashingProtectionArgs & Account
 
     handler: async (args) => {
       const {file} = args;
-      if (!file) throw new YargsError("must provide file arg");
 
       const {config, network} = getBeaconConfigFromArgs(args);
       const validatorPaths = getValidatorPaths(args, network);
