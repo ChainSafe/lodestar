@@ -18,28 +18,10 @@ describe("prover/proxy", () => {
     expect(output).toEqual(expect.stringContaining("Show help"));
   });
 
-  it("should fail when --executionRpcUrl is missing", async () => {
+  it("should fail when --executionRpcUrl and --beaconUrls are missing", async () => {
     await expect(runCliCommand(cli, ["proxy", "--port", "8088"])).rejects.toThrow(
-      "Missing required argument: executionRpcUrl"
+      "Missing required arguments: executionRpcUrl, beaconUrls"
     );
-  });
-
-  it("should fail when --beaconUrls and --beaconBootnodes are provided together", async () => {
-    await expect(
-      runCliCommand(cli, [
-        "proxy",
-        "--beaconUrls",
-        "http://localhost:4000",
-        "--beaconBootnodes",
-        "http://localhost:0000",
-      ])
-    ).rejects.toThrow("Arguments beaconBootnodes and beaconUrls are mutually exclusive");
-  });
-
-  it("should fail when both of --beaconUrls and --beaconBootnodes are not provided", async () => {
-    await expect(
-      runCliCommand(cli, ["proxy", "--port", "8088", "--executionRpcUrl", "http://localhost:3000"])
-    ).rejects.toThrow("Either --beaconUrls or --beaconBootnodes must be provided");
   });
 
   describe("when started", () => {
