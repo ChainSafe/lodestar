@@ -61,7 +61,7 @@ export const startOptions: CliCommandOptions<StartArgs> = {
   },
 
   beaconBootnodes: {
-    description: "Urls of beacon bootnodes to connect to.",
+    description: "The beacon node PRC urls for 'p2p' mode.",
     type: "string",
     array: true,
     conflicts: ["beaconUrls"],
