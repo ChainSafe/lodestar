@@ -24,7 +24,7 @@ export interface CliOptionDefinition<T = any> extends Options {
 export type CliCommandOptions<OwnArgs> = Required<{
   [K in keyof OwnArgs]: undefined extends OwnArgs[K]
     ? CliOptionDefinition<OwnArgs[K]>
-    : // If arg cannot be undefined it must specify a default value or be required
+    : // If arg cannot be undefined it must specify a default value or be required arguments
       CliOptionDefinition<OwnArgs[K]> & (Required<Pick<Options, "default">> | {demandOption: true});
 }>;
 
