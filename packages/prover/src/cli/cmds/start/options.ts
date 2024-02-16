@@ -1,11 +1,12 @@
+import {CliCommandOptions} from "@lodestar/utils";
 import {DEFAULT_PROXY_REQUEST_TIMEOUT} from "../../../constants.js";
 import {LCTransport} from "../../../interfaces.js";
-import {CliCommandOptions} from "../../../utils/command.js";
 import {alwaysAllowedMethods} from "../../../utils/process.js";
+import {YargsError} from "../../../utils/errors.js";
 
 export type StartArgs = {
   port: number;
-  executionRpcUrl: string;
+  executionRpcUrl?: string;
   beaconUrls?: string[];
   beaconBootnodes?: string[];
   wsCheckpoint?: string;
@@ -54,16 +55,19 @@ export const startOptions: CliCommandOptions<StartArgs> = {
 
   beaconUrls: {
     description: "The beacon node PRC urls for 'rest' mode.",
-    type: "string",
-    array: true,
+    type: "array",
+    string: true,
+    coerce: (urls: string[]): string[] =>
+      // Parse ["url1,url2"] to ["url1", "url2"]
+      urls.map((item) => item.split(",")).flat(1),
     conflicts: ["beaconBootnodes"],
     group: "beacon",
   },
 
   beaconBootnodes: {
     description: "The beacon node PRC urls for 'p2p' mode.",
-    type: "string",
-    array: true,
+    type: "array",
+    string: true,
     conflicts: ["beaconUrls"],
     group: "beacon",
   },
@@ -79,7 +83,11 @@ export const startOptions: CliCommandOptions<StartArgs> = {
 
 export function parseStartArgs(args: StartArgs): StartOptions {
   if (!args.beaconUrls && !args.beaconBootnodes) {
-    throw new Error("Either --beaconUrls or --beaconBootnodes must be provided");
+    throw new YargsError("Either --beaconUrls or --beaconBootnodes must be provided");
+  }
+
+  if (!args.executionRpcUrl) {
+    throw new YargsError("--executionRpcUrl must be provided");
   }
 
   // Remove undefined values to allow deepmerge to inject default values downstream

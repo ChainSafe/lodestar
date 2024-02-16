@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import {defaultExecutionEngineHttpOpts, IBeaconNodeOptions} from "@lodestar/beacon-node";
-import {CliCommandOptions, extractJwtHexSecret} from "../../util/index.js";
+import {CliCommandOptions} from "@lodestar/utils";
+import {extractJwtHexSecret} from "../../util/index.js";
 
 export type ExecutionEngineArgs = {
   "execution.urls": string[];

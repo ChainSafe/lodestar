@@ -1,4 +1,4 @@
-import {CliOptionDefinition, CliCommand, CliExample, CliCommandOptions} from "../src/util/index.js";
+import {CliOptionDefinition, CliCommand, CliExample, CliCommandOptions} from "@lodestar/utils";
 import {toKebab} from "./changeCase.js";
 
 const DEFAULT_SEPARATOR = "\n\n";

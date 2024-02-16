@@ -1,5 +1,5 @@
+import {CliCommandOptions} from "@lodestar/utils";
 import {LogArgs, logOptions} from "../../options/logOptions.js";
-import {CliCommandOptions} from "../../util/index.js";
 
 export type ILightClientArgs = LogArgs & {
   beaconApiUrl?: string;

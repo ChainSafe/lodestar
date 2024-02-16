@@ -6,8 +6,9 @@ import {DOMAIN_BLS_TO_EXECUTION_CHANGE, ForkName} from "@lodestar/params";
 import {createBeaconConfig} from "@lodestar/config";
 import {ssz, capella} from "@lodestar/types";
 import {ApiError, getClient} from "@lodestar/api";
+import {CliCommand} from "@lodestar/utils";
 
-import {CliCommand, YargsError} from "../../util/index.js";
+import {YargsError} from "../../util/index.js";
 import {GlobalArgs} from "../../options/index.js";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {IValidatorCliArgs} from "./options.js";

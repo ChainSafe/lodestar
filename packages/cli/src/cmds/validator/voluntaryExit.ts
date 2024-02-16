@@ -8,10 +8,10 @@ import {
 } from "@lodestar/state-transition";
 import {createBeaconConfig, BeaconConfig} from "@lodestar/config";
 import {phase0, ssz, ValidatorIndex, Epoch} from "@lodestar/types";
-import {toHex} from "@lodestar/utils";
+import {CliCommand, toHex} from "@lodestar/utils";
 import {externalSignerPostSignature, SignableMessageType, Signer, SignerType} from "@lodestar/validator";
 import {Api, ApiError, getClient} from "@lodestar/api";
-import {CliCommand, ensure0xPrefix, YargsError, wrapError} from "../../util/index.js";
+import {ensure0xPrefix, YargsError, wrapError} from "../../util/index.js";
 import {GlobalArgs} from "../../options/index.js";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {IValidatorCliArgs} from "./options.js";
