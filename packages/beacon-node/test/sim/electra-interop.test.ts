@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import {Context} from "mocha";
+import {describe, it, vi, afterAll, afterEach} from "vitest";
 import _ from "lodash";
 import {LogLevel, sleep} from "@lodestar/utils";
 import {ForkName, SLOTS_PER_EPOCH, UNSET_DEPOSIT_RECEIPTS_START_INDEX} from "@lodestar/params";
@@ -27,9 +27,9 @@ import {logFilesDir} from "./params.js";
 import {shell} from "./shell.js";
 
 // NOTE: How to run
-// DEV_RUN=true EL_BINARY_DIR=naviechan/besu:v6110 EL_SCRIPT_DIR=besudocker yarn mocha test/sim/electra-interop.test.ts
+// DEV_RUN=true EL_BINARY_DIR=naviechan/besu:v6110 EL_SCRIPT_DIR=besudocker yarn vitest --run test/sim/electra-interop.test.ts
 // or
-// DEV_RUN=true EL_BINARY_DIR=/Volumes/fast_boi/navie/Documents/workspace/besu/build/install/besu/bin EL_SCRIPT_DIR=besu yarn mocha test/sim/electra-interop.test.ts
+// DEV_RUN=true EL_BINARY_DIR=/Volumes/fast_boi/navie/Documents/workspace/besu/build/install/besu/bin EL_SCRIPT_DIR=besu yarn vitest --run test/sim/electra-interop.test.ts
 // ```
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention */
@@ -43,7 +43,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       `EL ENV must be provided, EL_BINARY_DIR: ${process.env.EL_BINARY_DIR}, EL_SCRIPT_DIR: ${process.env.EL_SCRIPT_DIR}`
     );
   }
-  this.timeout("10min");
+  vi.setConfig({testTimeout: 1000 * 60 * 10, hookTimeout: 1000 * 60 * 10});
 
   const dataPath = fs.mkdtempSync("lodestar-test-electra");
   const elSetupConfig = {
@@ -58,7 +58,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
   };
 
   const controller = new AbortController();
-  after(async () => {
+  afterAll(async () => {
     controller?.abort();
     await shell(`sudo rm -rf ${dataPath}`);
   });
@@ -242,7 +242,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     );
     afterEachCallbacks.push(() => tearDownCallBack());
 
-    await runNodeWithEL.bind(this)({
+    await runNodeWithEL({
       elClient,
       electraEpoch: 0,
       testName: "post-merge",
@@ -254,10 +254,15 @@ describe("executionEngine / ExecutionEngineHttp", function () {
    * 1) Send two raw deposit transactions, and see if two new validators with corrent balances show up in the state.validators and unfinalized cache
    * 2) Upon state-transition, see if the two new validators move from unfinalized cache to finalized cache
    */
-  async function runNodeWithEL(
-    this: Context,
-    {elClient, electraEpoch, testName}: {elClient: ELClient; electraEpoch: Epoch; testName: string}
-  ): Promise<void> {
+  async function runNodeWithEL({
+    elClient,
+    electraEpoch,
+    testName,
+  }: {
+    elClient: ELClient;
+    electraEpoch: Epoch;
+    testName: string;
+  }): Promise<void> {
     const {genesisBlockHash, ttd, engineRpcUrl, ethRpcUrl} = elClient;
     const validatorClientCount = 1;
     const validatorsPerClient = 32;
@@ -280,7 +285,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       testParams.SECONDS_PER_SLOT *
       1000;
 
-    this.timeout(timeout + 2 * timeoutSetupMargin);
+    vi.setConfig({testTimeout: timeout + 2 * timeoutSetupMargin});
 
     const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
 
