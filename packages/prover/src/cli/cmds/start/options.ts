@@ -8,7 +8,6 @@ export type StartArgs = {
   port: number;
   executionRpcUrl: string;
   beaconUrls?: string[];
-  beaconBootnodes?: string[];
   wsCheckpoint?: string;
   unverifiedWhitelist?: string[];
   requestTimeout: number;
@@ -20,7 +19,7 @@ export type StartOptions = {
   wsCheckpoint?: string;
   unverifiedWhitelist?: string[];
   requestTimeout: number;
-} & ({transport: LCTransport.Rest; urls: string[]} | {transport: LCTransport.P2P; bootnodes: string[]});
+} & {transport: LCTransport.Rest; urls: string[]};
 
 export const startOptions: CliCommandOptions<StartArgs> = {
   port: {
@@ -54,21 +53,10 @@ export const startOptions: CliCommandOptions<StartArgs> = {
   },
 
   beaconUrls: {
-    description: "The beacon node PRC urls for 'rest' mode.",
-    type: "array",
-    string: true,
-    coerce: (urls: string[]): string[] =>
-      // Parse ["url1,url2"] to ["url1", "url2"]
-      urls.map((item) => item.split(",")).flat(1),
-    conflicts: ["beaconBootnodes"],
-    group: "beacon",
-  },
-
-  beaconBootnodes: {
-    description: "The beacon node PRC urls for 'p2p' mode.",
-    type: "array",
-    string: true,
-    conflicts: ["beaconUrls"],
+    description: "Urls of the beacon nodes to connect to.",
+    type: "string",
+    demandOption: true,
+    array: true,
     group: "beacon",
   },
 
@@ -82,17 +70,12 @@ export const startOptions: CliCommandOptions<StartArgs> = {
 };
 
 export function parseStartArgs(args: StartArgs): StartOptions {
-  if (!args.beaconUrls && !args.beaconBootnodes) {
-    throw new YargsError("Either --beaconUrls or --beaconBootnodes must be provided");
-  }
-
   // Remove undefined values to allow deepmerge to inject default values downstream
   return {
     port: args.port,
     executionRpcUrl: args.executionRpcUrl,
-    transport: args.beaconUrls ? LCTransport.Rest : LCTransport.P2P,
+    transport: LCTransport.Rest,
     urls: args.beaconUrls ?? [],
-    bootnodes: args.beaconBootnodes ?? [],
     wsCheckpoint: args.wsCheckpoint,
     unverifiedWhitelist: args.unverifiedWhitelist,
     requestTimeout: args.requestTimeout ?? DEFAULT_PROXY_REQUEST_TIMEOUT,
