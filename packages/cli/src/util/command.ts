@@ -6,15 +6,26 @@ export interface CliExample {
   description?: string;
 }
 
-export interface CliOptionDefinition extends Options {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export interface CliOptionDefinition<T = any> extends Options {
   example?: Omit<CliExample, "title">;
+  // Ensure `type` property matches type of `T`
+  type: T extends string
+    ? "string"
+    : T extends number
+    ? "number"
+    : T extends boolean
+    ? "boolean"
+    : T extends Array<unknown>
+    ? "array"
+    : never;
 }
 
 export type CliCommandOptions<OwnArgs> = Required<{
   [K in keyof OwnArgs]: undefined extends OwnArgs[K]
-    ? CliOptionDefinition
+    ? CliOptionDefinition<OwnArgs[K]>
     : // If arg cannot be undefined it must specify a default value
-      CliOptionDefinition & Required<Pick<Options, "default">>;
+      CliOptionDefinition<OwnArgs[K]> & Required<Pick<Options, "default">>;
 }>;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
