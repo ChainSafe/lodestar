@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import fs from "node:fs";
 import path from "node:path";
 import stream from "node:stream";
@@ -10,7 +10,6 @@ import retry from "async-retry";
 
 export const defaultSpecTestsRepoUrl = "https://github.com/ethereum/consensus-spec-tests";
 
-// eslint-disable-next-line @typescript-eslint/no-empty-function
 const logEmpty = (): void => {};
 
 export type DownloadTestsOptions = {

@@ -86,7 +86,6 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     }
   });
 
-  // eslint-disable-next-line vitest/expect-expect
   it("Send stub payloads to EL", async () => {
     const {elClient, tearDownCallBack} = await runEL(
       {...elSetupConfig, mode: ELStartMode.PostMerge},
@@ -203,7 +202,6 @@ describe("executionEngine / ExecutionEngineHttp", function () {
      */
   });
 
-  // eslint-disable-next-line vitest/expect-expect
   it("Post-merge, run for a few blocks", async function () {
     console.log("\n\nPost-merge, run for a few blocks\n\n");
     const {elClient, tearDownCallBack} = await runEL(
@@ -220,7 +218,6 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     });
   });
 
-  // eslint-disable-next-line vitest/expect-expect
   it("Pre-merge, run for a few blocks", async function () {
     console.log("\n\nPre-merge, run for a few blocks\n\n");
     const {elClient, tearDownCallBack} = await runEL(

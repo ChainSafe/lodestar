@@ -1,6 +1,6 @@
 // We want to keep `winston` export as it's more readable and easier to understand
-// eslint-disable-next-line import/no-named-as-default-member
-import winston, {createLogger as winstonCreateLogger} from "winston";
+/* eslint-disable import/no-named-as-default-member */
+import winston from "winston";
 import type {Logger as Winston} from "winston";
 import {Logger, LoggerOptions, LogLevel, logLevelNum} from "./interface.js";
 import {getFormat} from "./utils/format.js";
@@ -48,7 +48,7 @@ export class WinstonLogger implements Logger {
   static createWinstonInstance(options: Partial<LoggerOptions> = {}, transports?: winston.transport[]): Winston {
     const defaultMeta: DefaultMeta = {module: options?.module || ""};
 
-    return winstonCreateLogger({
+    return winston.createLogger({
       // Do not set level at the logger level. Always control by Transport, unless for testLogger
       level: options.level,
       defaultMeta,

@@ -1,4 +1,3 @@
-// eslint-disable-next-line import/no-relative-packages
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {expect} from "chai";
 import {ssz} from "@lodestar/types";
