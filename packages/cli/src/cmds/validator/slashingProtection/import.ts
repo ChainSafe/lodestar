@@ -3,7 +3,6 @@ import path from "node:path";
 import {Interchange} from "@lodestar/validator";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {CliCommand} from "@lodestar/utils";
-import {YargsError} from "../../../util/index.js";
 import {parseLoggerArgs} from "../../../util/logger.js";
 import {GlobalArgs} from "../../../options/index.js";
 import {LogArgs} from "../../../options/logOptions.js";
