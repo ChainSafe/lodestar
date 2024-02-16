@@ -143,7 +143,7 @@ type ENRArgs = {
   nat?: boolean;
 };
 
-const enrOptions: Record<string, CliOptionDefinition> = {
+const enrOptions: CliCommandOptions<ENRArgs> = {
   "enr.ip": {
     description: "Override ENR IP entry",
     type: "string",
