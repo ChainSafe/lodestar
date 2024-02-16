@@ -177,8 +177,8 @@ const checkpointSync = await env.createNodePair({
 // TODO: A workaround for this issue for sim tests only
 // 1. Start the execution node and let it connect to network
 // 2. Wait for few seconds
-// 2. And later start the beacon node and connect to network
-// 3. With this delay the execution node would be synced before the beacon node starts
+// 3. And later start the beacon node and connect to network
+// 4. With this delay the execution node would be synced before the beacon node starts
 // https://github.com/ChainSafe/lodestar/issues/6435
 // Revert to following code once the issue is fixed
 //    await rangeSync.execution.job.start();
