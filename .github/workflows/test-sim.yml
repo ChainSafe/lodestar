@@ -60,7 +60,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: sim-test-multifork-logs
-          path: packages/cli/test-logs                    
+          path: packages/cli/test-logs
 
   sim-test-endpoints:
     name: Endpoint sim tests
@@ -89,7 +89,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: sim-test-endpoints-logs
-          path: packages/cli/test-logs          
+          path: packages/cli/test-logs
 
   sim-test-deneb:
     name: Deneb sim tests
@@ -118,7 +118,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: sim-test-deneb-logs
-          path: packages/cli/test-logs      
+          path: packages/cli/test-logs
 
   sim-test-eth-backup-provider:
     name: Eth backup provider sim tests
@@ -148,7 +148,7 @@ jobs:
         with:
           name: sim-test-eth-backup-provider-logs
           path: packages/cli/test-logs
-  
+
   sim-test-mixed-clients:
     name: Mixed clients sim tests
     needs: build

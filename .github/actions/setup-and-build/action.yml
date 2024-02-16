@@ -40,11 +40,11 @@ runs:
     - name: Build
       if: steps.cache-build-restore.outputs.cache-hit == 'true'
       shell: bash
-      run: yarn build      
+      run: yarn build
 
     - name: Check Build
       shell: bash
-      run: yarn check-build      
+      run: yarn check-build
 
     - name: Cache build artifacts
       uses: actions/cache@master

@@ -23,13 +23,13 @@ jobs:
     steps:
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v4
-      - uses: './.github/actions/setup-and-build'
+      - uses: "./.github/actions/setup-and-build"
         with:
           node: ${{ matrix.node }}
 
       - name: Test root binary exists
         run: ./lodestar --version
-        
+
       - name: Reject yarn.lock changes
         run: .github/workflows/scripts/reject_yarn_lock_changes.sh
         # Run only on forks
@@ -45,7 +45,7 @@ jobs:
         node: [20]
     steps:
       - uses: actions/checkout@v4
-      - uses: './.github/actions/setup-and-build'
+      - uses: "./.github/actions/setup-and-build"
         with:
           node: ${{ matrix.node }}
 
@@ -78,7 +78,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: './.github/actions/setup-and-build'
+      - uses: "./.github/actions/setup-and-build"
         with:
           node: ${{ matrix.node }}
 
@@ -98,7 +98,7 @@ jobs:
         node: [20]
     steps:
       - uses: actions/checkout@v4
-      - uses: './.github/actions/setup-and-build'
+      - uses: "./.github/actions/setup-and-build"
         with:
           node: ${{ matrix.node }}
 
@@ -139,13 +139,13 @@ jobs:
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v4
 
-      - uses: './.github/actions/setup-and-build'
+      - uses: "./.github/actions/setup-and-build"
         with:
           node: ${{ matrix.node }}
 
-      - name: Load env variables 
+      - name: Load env variables
         uses: ./.github/actions/dotenv
-        
+
       - name: Run the e2e test environment
         run: scripts/run_e2e_env.sh start
 
@@ -175,7 +175,7 @@ jobs:
     steps:
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v4
-      - uses: './.github/actions/setup-and-build'
+      - uses: "./.github/actions/setup-and-build"
         with:
           node: ${{ matrix.node }}
       - name: Install Chrome browser
@@ -198,7 +198,7 @@ jobs:
         node: [20]
     steps:
       - uses: actions/checkout@v4
-      - uses: './.github/actions/setup-and-build'
+      - uses: "./.github/actions/setup-and-build"
         with:
           node: ${{ matrix.node }}
 
