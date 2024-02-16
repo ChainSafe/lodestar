@@ -53,7 +53,7 @@ export const startOptions: CliCommandOptions<StartArgs> = {
   },
 
   beaconUrls: {
-    description: "The beacon node PRC urls for 'rest' mode.",
+    description: "Urls of the beacon nodes to connect to.",
     type: "string",
     array: true,
     conflicts: ["beaconBootnodes"],
