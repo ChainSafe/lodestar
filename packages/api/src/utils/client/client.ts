@@ -5,9 +5,16 @@ import {APIClientHandler} from "../../interfaces.js";
 import {FetchOpts, HttpError, IHttpClient} from "./httpClient.js";
 import {HttpStatusCode} from "./httpStatusCode.js";
 
-// See /packages/api/src/routes/index.ts for reasoning
-
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
+type ExtraOpts = {retryAttempts?: number};
+type ParamatersWithOptionalExtaOpts<T extends (...args: any) => any> = [...Parameters<T>, ExtraOpts] | Parameters<T>;
+
+export type ApiWithExtraOpts<T extends Record<string, APIClientHandler>> = {
+  [K in keyof T]: (...args: ParamatersWithOptionalExtaOpts<T[K]>) => ReturnType<T[K]>;
+};
+
+// See /packages/api/src/routes/index.ts for reasoning
 
 /**
  * Format FetchFn opts from Fn arguments given a route definition and request serializer.
@@ -58,22 +65,38 @@ export function generateGenericJsonClient<
   reqSerializers: ReqSerializers<Api, ReqTypes>,
   returnTypes: ReturnTypes<Api>,
   fetchFn: IHttpClient
-): Api {
+): ApiWithExtraOpts<Api> {
   return mapValues(routesData, (routeDef, routeId) => {
     const fetchOptsSerializer = getFetchOptsSerializer(routeDef, reqSerializers[routeId], routeId as string);
     const returnType = returnTypes[routeId as keyof ReturnTypes<Api>] as TypeJson<any> | null;
 
-    return async function request(...args: Parameters<Api[keyof Api]>): Promise<ReturnType<Api[keyof Api]>> {
+    return async function request(
+      ...args: ParamatersWithOptionalExtaOpts<Api[keyof Api]>
+    ): Promise<ReturnType<Api[keyof Api]>> {
       try {
+        // extract the extraOpts if provided
+        //
+        const argLen = (args as any[])?.length ?? 0;
+        const lastArg = (args as any[])[argLen] as ExtraOpts | undefined;
+        const retryAttempts = lastArg?.retryAttempts;
+        const extraOpts = {retryAttempts};
+
         if (returnType) {
-          const res = await fetchFn.json<unknown>(fetchOptsSerializer(...args));
+          // open extraOpts first if some serializer wants to add some overriding param
+          const res = await fetchFn.json<unknown>({
+            ...extraOpts,
+            ...fetchOptsSerializer(...(args as Parameters<Api[keyof Api]>)),
+          });
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/return-await
           return {ok: true, response: returnType.fromJson(res.body), status: res.status} as ReturnType<Api[keyof Api]>;
         } else {
           // We need to avoid parsing the response as the servers might just
           // response status 200 and close the request instead of writing an
           // empty json response. We return the status code.
-          const res = await fetchFn.request(fetchOptsSerializer(...args));
+          const res = await fetchFn.request({
+            ...extraOpts,
+            ...fetchOptsSerializer(...(args as Parameters<Api[keyof Api]>)),
+          });
 
           // eslint-disable-next-line @typescript-eslint/return-await
           return {ok: true, response: undefined, status: res.status} as ReturnType<Api[keyof Api]>;
@@ -98,5 +121,5 @@ export function generateGenericJsonClient<
         throw err;
       }
     };
-  }) as unknown as Api;
+  }) as unknown as ApiWithExtraOpts<Api>;
 }
