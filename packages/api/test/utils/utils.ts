@@ -1,5 +1,5 @@
 import {MockedObject, vi} from "vitest";
-import qs from "qs";
+import {parse as parseQueryString} from "qs";
 import {FastifyInstance, fastify} from "fastify";
 import {mapValues} from "@lodestar/utils";
 import {ServerApi} from "../../src/interfaces.js";
@@ -7,7 +7,7 @@ import {ServerApi} from "../../src/interfaces.js";
 export function getTestServer(): {server: FastifyInstance; start: () => Promise<string>} {
   const server = fastify({
     ajv: {customOptions: {coerceTypes: "array"}},
-    querystringParser: (str) => qs.parse(str, {comma: true, parseArrays: false}),
+    querystringParser: (str) => parseQueryString(str, {comma: true, parseArrays: false}),
   });
 
   server.addHook("onError", (request, reply, error, done) => {

@@ -59,7 +59,6 @@ export class ReqResp {
   /** `${protocolPrefix}/${method}/${version}/${encoding}` */
   // Use any to avoid TS error on registering protocol
   // Type 'unknown' is not assignable to type 'Resp'
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private readonly registeredProtocols = new Map<ProtocolID, MixedProtocol>();
   private readonly dialOnlyProtocols = new Map<ProtocolID, boolean>();
 
@@ -251,7 +250,6 @@ export class ReqResp {
     // Override
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   protected onIncomingRequestError(_protocol: ProtocolDescriptor, _error: RequestError): void {
     // Override
   }
