@@ -58,11 +58,10 @@ export async function verifyBlocksSignatures(
     const recvToValidation = verifySignaturesTime / 1000 - opts.seenTimestampSec;
     const validationTime = recvToValidation - recvToValLatency;
 
-    metrics?.gossipBlock.signatureVerification.recvToValLatency.observe(recvToValLatency);
     metrics?.gossipBlock.signatureVerification.recvToValidation.observe(recvToValidation);
     metrics?.gossipBlock.signatureVerification.validationTime.observe(validationTime);
 
-    logger.verbose("Verified block signatures", {
+    logger.debug("Verified block signatures", {
       slot: blocks[0].message.slot,
       recvToValLatency,
       recvToValidation,

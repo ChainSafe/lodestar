@@ -100,11 +100,10 @@ export async function verifyBlocksStateTransitionOnly(
     const recvToValidation = verifyStateTime / 1000 - opts.seenTimestampSec;
     const validationTime = recvToValidation - recvToValLatency;
 
-    metrics?.gossipBlock.stateTransition.recvToValLatency.observe(recvToValLatency);
     metrics?.gossipBlock.stateTransition.recvToValidation.observe(recvToValidation);
     metrics?.gossipBlock.stateTransition.validationTime.observe(validationTime);
 
-    logger.verbose("Verified block state transition", {slot, recvToValLatency, recvToValidation, validationTime});
+    logger.debug("Verified block state transition", {slot, recvToValLatency, recvToValidation, validationTime});
   }
 
   return {postStates, proposerBalanceDeltas, verifyStateTime};

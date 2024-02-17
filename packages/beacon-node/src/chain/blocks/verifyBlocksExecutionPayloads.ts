@@ -250,11 +250,10 @@ export async function verifyBlocksExecutionPayload(
     const recvToValidation = executionTime / 1000 - opts.seenTimestampSec;
     const validationTime = recvToValidation - recvToValLatency;
 
-    chain.metrics?.gossipBlock.executionPayload.recvToValLatency.observe(recvToValLatency);
     chain.metrics?.gossipBlock.executionPayload.recvToValidation.observe(recvToValidation);
     chain.metrics?.gossipBlock.executionPayload.validationTime.observe(validationTime);
 
-    chain.logger.verbose("Verified execution payload", {
+    chain.logger.debug("Verified execution payload", {
       slot: blocks[0].message.slot,
       recvToValLatency,
       recvToValidation,

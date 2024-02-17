@@ -670,11 +670,6 @@ export function createLodestarMetrics(
       }),
 
       gossipValidation: {
-        recvToValLatency: register.histogram({
-          name: "lodestar_gossip_block_received_to_gossip_validate_latency",
-          help: "Time elapsed between block received and gossip validation start",
-          buckets: [0.05, 0.1, 0.3, 0.5, 0.7, 1, 1.3, 1.6, 2, 2.5, 3, 3.5, 4],
-        }),
         recvToValidation: register.histogram({
           name: "lodestar_gossip_block_received_to_gossip_validate",
           help: "Time elapsed between block received and block validated",
@@ -687,11 +682,6 @@ export function createLodestarMetrics(
         }),
       },
       stateTransition: {
-        recvToValLatency: register.histogram({
-          name: "lodestar_gossip_block_received_to_state_transition_latency",
-          help: "Time elapsed between block received and block state transition start",
-          buckets: [0.05, 0.1, 0.3, 0.5, 0.7, 1, 1.3, 1.6, 2, 2.5, 3, 3.5, 4],
-        }),
         recvToValidation: register.histogram({
           name: "lodestar_gossip_block_received_to_state_transition",
           help: "Time elapsed between block received and block state transition",
@@ -704,11 +694,6 @@ export function createLodestarMetrics(
         }),
       },
       signatureVerification: {
-        recvToValLatency: register.histogram({
-          name: "lodestar_gossip_block_received_to_signatures_verification_latency",
-          help: "Time elapsed between block recieved and the block signatures verification start",
-          buckets: [0.05, 0.1, 0.3, 0.5, 0.7, 1, 1.3, 1.6, 2, 2.5, 3, 3.5, 4],
-        }),
         recvToValidation: register.histogram({
           name: "lodestar_gossip_block_received_to_signatures_verification",
           help: "Time elapsed between block received and block signatures verification",
@@ -721,11 +706,6 @@ export function createLodestarMetrics(
         }),
       },
       executionPayload: {
-        recvToValLatency: register.histogram({
-          name: "lodestar_gossip_block_received_to_execution_payload_verification_latench",
-          help: "Time elapsed between block received and execution payload verification start",
-          buckets: [0.05, 0.1, 0.3, 0.5, 0.7, 1, 1.3, 1.6, 2, 2.5, 3, 3.5, 4],
-        }),
         recvToValidation: register.histogram({
           name: "lodestar_gossip_block_received_to_execution_payload_verification",
           help: "Time elapsed between block received and execution payload verification",
@@ -738,11 +718,6 @@ export function createLodestarMetrics(
         }),
       },
       blockImport: {
-        recvToValLatency: register.histogram({
-          name: "lodestar_gossip_block_received_to_block_import_latency",
-          help: "Time elapsed between block received and block import start",
-          buckets: [0.05, 0.1, 0.3, 0.5, 0.7, 1, 1.3, 1.6, 2, 2.5, 3, 3.5, 4],
-        }),
         recvToValidation: register.histogram({
           name: "lodestar_gossip_block_received_to_block_import",
           help: "Time elapsed between block received and block import",
@@ -780,11 +755,6 @@ export function createLodestarMetrics(
       }),
     },
     gossipBlob: {
-      recvToValLatency: register.histogram({
-        name: "lodestar_gossip_blob_received_to_gossip_validate_latency",
-        help: "Time elapsed between blob received and blob validation start",
-        buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
-      }),
       recvToValidation: register.histogram({
         name: "lodestar_gossip_blob_received_to_gossip_validate",
         help: "Time elapsed between blob received and blob validation",

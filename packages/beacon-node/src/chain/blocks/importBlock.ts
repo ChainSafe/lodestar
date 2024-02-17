@@ -451,11 +451,10 @@ export async function importBlock(
     const recvToValidation = Date.now() / 1000 - opts.seenTimestampSec;
     const validationTime = recvToValidation - recvToValLatency;
 
-    this.metrics?.gossipBlock.blockImport.recvToValLatency.observe(recvToValLatency);
     this.metrics?.gossipBlock.blockImport.recvToValidation.observe(recvToValidation);
     this.metrics?.gossipBlock.blockImport.validationTime.observe(validationTime);
 
-    this.logger.verbose("Imported block", {slot: blockSlot, recvToValLatency, recvToValidation, validationTime});
+    this.logger.debug("Imported block", {slot: blockSlot, recvToValLatency, recvToValidation, validationTime});
   }
 
   this.logger.verbose("Block processed", {

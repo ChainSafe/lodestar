@@ -139,11 +139,10 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
       const recvToValidation = Date.now() / 1000 - seenTimestampSec;
       const validationTime = recvToValidation - recvToValLatency;
 
-      metrics?.gossipBlock.gossipValidation.recvToValLatency.observe(recvToValLatency);
       metrics?.gossipBlock.gossipValidation.recvToValidation.observe(recvToValidation);
       metrics?.gossipBlock.gossipValidation.validationTime.observe(validationTime);
 
-      logger.verbose("Received gossip block", {
+      logger.debug("Received gossip block", {
         slot: slot,
         root: blockHex,
         curentSlot: chain.clock.currentSlot,
@@ -199,11 +198,10 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
       const recvToValidation = Date.now() / 1000 - seenTimestampSec;
       const validationTime = recvToValidation - recvToValLatency;
 
-      metrics?.gossipBlob.recvToValLatency.observe(recvToValLatency);
       metrics?.gossipBlob.recvToValidation.observe(recvToValidation);
       metrics?.gossipBlob.validationTime.observe(validationTime);
 
-      logger.verbose("Received gossip blob", {
+      logger.debug("Received gossip blob", {
         slot: slot,
         root: blockHex,
         curentSlot: chain.clock.currentSlot,
