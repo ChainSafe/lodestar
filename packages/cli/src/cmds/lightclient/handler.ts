@@ -18,9 +18,7 @@ export async function lightclientHandler(args: ILightClientArgs & GlobalArgs): P
     parseLoggerArgs(args, {defaultLogFilepath: path.join(globalPaths.dataDir, "lightclient.log")}, config)
   );
 
-  const {beaconApiUrl, checkpointRoot} = args;
-
-  const api = getClient({baseUrl: beaconApiUrl}, {config});
+  const api = getClient({baseUrl: args.beaconApiUrl}, {config});
   const res = await api.beacon.getGenesis();
   ApiError.assert(res, "Can not fetch genesis data");
 
@@ -31,7 +29,7 @@ export async function lightclientHandler(args: ILightClientArgs & GlobalArgs): P
       genesisTime: Number(res.response.data.genesisTime),
       genesisValidatorsRoot: res.response.data.genesisValidatorsRoot,
     },
-    checkpointRoot: fromHexString(checkpointRoot),
+    checkpointRoot: fromHexString(args.checkpointRoot),
     transport: new LightClientRestTransport(api),
   });
 
