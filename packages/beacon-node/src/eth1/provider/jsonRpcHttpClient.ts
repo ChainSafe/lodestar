@@ -214,8 +214,6 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
   }
 
   private async fetchJson<R, T = unknown>(json: T, opts?: ReqOpts): Promise<R> {
-    if (this.urls.length === 0) throw Error("No url provided");
-
     const routeId = opts?.routeId ?? "unknown";
     let lastError: Error | null = null;
 
