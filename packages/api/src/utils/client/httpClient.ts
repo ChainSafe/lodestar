@@ -183,12 +183,16 @@ export class HttpClient implements IHttpClient {
     opts: FetchOpts,
     getBody: (res: Response) => Promise<T>
   ): Promise<{status: HttpStatusCode; body: T}> {
-    return retry(
-      async (_attempt) => {
-        return this.requestWithBodyWithFallbacks<T>(opts, getBody);
-      },
-      {retries: opts?.retryAttempts ?? 1, retryDelay: 200}
-    );
+    if (opts.retryAttempts !== undefined) {
+      return retry(
+        async (_attempt) => {
+          return this.requestWithBodyWithFallbacks<T>(opts, getBody);
+        },
+        {retries: opts.retryAttempts, retryDelay: 200}
+      );
+    } else {
+      return this.requestWithBodyWithFallbacks<T>(opts, getBody);
+    }
   }
 
   private async requestWithBodyWithFallbacks<T>(
