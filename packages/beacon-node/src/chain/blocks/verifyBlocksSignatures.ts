@@ -22,6 +22,7 @@ export async function verifyBlocksSignatures(
   opts: ImportBlockOpts
 ): Promise<{verifySignaturesTime: number}> {
   const isValidPromises: Promise<boolean>[] = [];
+  const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
 
   // Verifies signatures after running state transition, so all SyncCommittee signed roots are known at this point.
   // We must ensure block.slot <= state.slot before running getAllBlockSignatureSets().
@@ -54,9 +55,18 @@ export async function verifyBlocksSignatures(
 
   const verifySignaturesTime = Date.now();
   if (blocks.length === 1 && opts.seenTimestampSec !== undefined) {
-    const recvToSigVer = verifySignaturesTime / 1000 - opts.seenTimestampSec;
-    metrics?.gossipBlock.receivedToSignaturesVerification.observe(recvToSigVer);
-    logger.verbose("Verified block signatures", {slot: blocks[0].message.slot, recvToSigVer});
+    const recvToValidation = verifySignaturesTime / 1000 - opts.seenTimestampSec;
+    const validationTime = recvToValidation - recvToValLatency;
+
+    metrics?.gossipBlock.signatureVerification.recvToValidation.observe(recvToValidation);
+    metrics?.gossipBlock.signatureVerification.validationTime.observe(validationTime);
+
+    logger.debug("Verified block signatures", {
+      slot: blocks[0].message.slot,
+      recvToValLatency,
+      recvToValidation,
+      validationTime,
+    });
   }
 
   return {verifySignaturesTime};
