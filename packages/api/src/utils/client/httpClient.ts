@@ -187,7 +187,7 @@ export class HttpClient implements IHttpClient {
       async (_attempt) => {
         return this.requestWithBodyWithFallbacks<T>(opts, getBody);
       },
-      {retries: opts?.retryAttempts ?? 1, retryDelay: 10}
+      {retries: opts?.retryAttempts ?? 1, retryDelay: 200}
     );
   }
 
