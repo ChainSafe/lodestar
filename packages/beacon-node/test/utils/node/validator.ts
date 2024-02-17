@@ -70,7 +70,6 @@ export async function getAndInitDevValidators({
         api: useRestApi ? getNodeApiUrl(node) : getApiFromServerHandlers(node.api),
         slashingProtection,
         logger,
-        // eslint-disable-next-line @typescript-eslint/no-empty-function
         processShutdownCallback: () => {},
         abortController,
         signers,

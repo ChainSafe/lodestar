@@ -13,7 +13,7 @@
     "build": "lerna run build",
     "build:watch": "lerna exec --parallel -- 'yarn run build:watch'",
     "build:ifchanged": "lerna exec -- ../../scripts/build_if_changed.sh",
-    "lint": "eslint --color --ext .ts packages/*/src packages/*/test",
+    "lint": "eslint --report-unused-disable-directives --color --ext .ts packages/*/src packages/*/test",
     "lint:fix": "yarn lint --fix",
     "lint-dashboards": "node scripts/lint-grafana-dashboards.mjs ./dashboards",
     "check-build": "lerna run check-build",

@@ -13,11 +13,7 @@ import {arrToSource} from "../../unit/network/reqresp/utils.js";
 import {GetReqRespHandlerFn, ReqRespMethod} from "../../../src/network/reqresp/types.js";
 import {PeerIdStr} from "../../../src/util/peerId.js";
 
-/* eslint-disable
-    require-yield,
-    @typescript-eslint/naming-convention,
-    @typescript-eslint/explicit-function-return-type
-*/
+/* eslint-disable require-yield, @typescript-eslint/naming-convention */
 
 describe(
   "network / reqresp / main thread",

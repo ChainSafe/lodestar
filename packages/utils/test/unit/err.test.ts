@@ -1,8 +1,6 @@
 import {describe, it, expect} from "vitest";
 import {Err, isErr, mapOkResults, mapOkResultsAsync, Result} from "../../src/err.js";
 
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-
 describe("Result Err", () => {
   describe("isErr works with any type", () => {
     const values: any[] = [
@@ -15,7 +13,6 @@ describe("Result Err", () => {
       null,
       [1, 2],
       new Uint8Array(1),
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
       function test() {},
       {a: 1},
       new AbortController(),

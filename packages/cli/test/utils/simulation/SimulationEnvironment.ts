@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import fs from "node:fs";
 import {mkdir, writeFile} from "node:fs/promises";
 import path from "node:path";

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import {describe, it, expect, beforeAll} from "vitest";
 import {Web3} from "web3";
 import {ethers} from "ethers";
