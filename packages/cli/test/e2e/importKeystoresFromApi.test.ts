@@ -95,10 +95,10 @@ describe("import keystores from api", function () {
       validator.on("exit", (code) => {
         if (code !== null && code > 0) {
           // process should exit with code > 0, and an error related to locks. Sample error:
-          // vc 351591:  ✖ Error: /tmp/tmp-5080-lwNxdM5Ok9ya/import-keystores-test/keystores/0x8be678633e927aa0435addad5dcd5283fef6110d91362519cd6d43e61f6c017d724fa579cc4b2972134e050b6ba120c0/voting-keystore.json is already in use by another process
+          // vc 351591:  ✖ Error: '/tmp/tmp-5080-lwNxdM5Ok9ya/import-keystores-test/keystores/0x8be678633e927aa0435addad5dcd5283fef6110d91362519cd6d43e61f6c017d724fa579cc4b2972134e050b6ba120c0/voting-keystore.json' already in use by another process
           // at /home/runner/actions-runner/_work/lodestar/lodestar/node_modules/proper-lockfile/lib/lockfile.js:68:47
           // ... more stack trace
-          if (/Error.*voting-keystore\.json is already in use by another process/.test(vcProc2Stderr.read())) {
+          if (/Error.*voting-keystore\.json' already in use by another process/.test(vcProc2Stderr.read())) {
             resolve();
           } else {
             reject(Error(`Second validator proc exited with unknown error. stderr:\n${vcProc2Stderr.read()}`));
