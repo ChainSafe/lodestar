@@ -61,7 +61,7 @@ const genesisInitialization: TestRunnerFn<GenesisInitSpecTest, BeaconStateAllFor
         undefined,
         testcase["execution_payload_header"] &&
           executionPayloadHeaderType.toViewDU(
-            testcase["execution_payload_header"] as ExecutionPayloadHeader<ForkName.deneb>
+            testcase["execution_payload_header"] as ExecutionPayloadHeader<ForkName.electra>
           )
       );
     },
