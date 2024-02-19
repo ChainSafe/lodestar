@@ -8,7 +8,7 @@ import {
   BLOCK_BODY_EXECUTION_PAYLOAD_DEPTH as EXECUTION_PAYLOAD_DEPTH,
   BLOCK_BODY_EXECUTION_PAYLOAD_INDEX as EXECUTION_PAYLOAD_INDEX,
 } from "@lodestar/params";
-import {altair, phase0, ssz, allForks, capella, deneb, Slot} from "@lodestar/types";
+import {altair, phase0, ssz, allForks, capella, deneb, Slot, electra} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 
 import {isValidMerkleBranch, computeEpochAtSlot, computeSyncPeriodAtSlot} from "../utils/index.js";
@@ -106,7 +106,11 @@ export function upgradeLightClientHeader(
 
     // eslint-disable-next-line no-fallthrough
     case ForkName.electra:
-      throw Error("Not Implemented");
+      (upgradedHeader as electra.LightClientHeader).execution.depositReceiptsRoot =
+        ssz.electra.LightClientHeader.fields.execution.fields.depositReceiptsRoot.defaultValue();
+
+      // Break if no further upgrades is required else fall through
+      if (ForkSeq[targetFork] <= ForkSeq.electra) break;
   }
   return upgradedHeader;
 }
@@ -136,6 +140,12 @@ export function isValidLightClientHeader(config: ChainForkConfig, header: allFor
       ((header as deneb.LightClientHeader).execution.excessBlobGas &&
         (header as deneb.LightClientHeader).execution.excessBlobGas !== BigInt(0))
     ) {
+      return false;
+    }
+  }
+
+  if (epoch < config.ELECTRA_FORK_EPOCH) {
+    if ((header as electra.LightClientHeader).execution.depositReceiptsRoot !== undefined) {
       return false;
     }
   }
