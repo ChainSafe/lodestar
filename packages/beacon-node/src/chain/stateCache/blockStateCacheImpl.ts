@@ -34,7 +34,7 @@ export class BlockStateCacheImpl implements BlockStateCache {
     this.maxStates = maxStates;
     this.cache = new MapTracker(metrics?.stateCache);
     if (metrics) {
-      this.metrics = metrics.stateCache;
+      this.metrics = {...metrics.stateCache, ...metrics.epochCache};
       metrics.stateCache.size.addCollect(() => metrics.stateCache.size.set(this.cache.size));
     }
   }
@@ -135,6 +135,10 @@ export class BlockStateCacheImpl implements BlockStateCache {
       lastRead: this.cache.lastRead.get(key) ?? 0,
       checkpointState: false,
     }));
+  }
+
+  getStates(): IterableIterator<CachedBeaconStateAllForks> {
+    return this.cache.values();
   }
 
   private deleteAllEpochItems(epoch: Epoch): void {

@@ -5,6 +5,7 @@ import {
   CachedBeaconStateAltair,
   CachedBeaconStatePhase0,
   CachedBeaconStateCapella,
+  CachedBeaconStateDeneb,
 } from "@lodestar/state-transition";
 import * as slotFns from "@lodestar/state-transition/slot";
 import {phase0, ssz} from "@lodestar/types";
@@ -36,7 +37,7 @@ const fork: TestRunnerFn<ForkStateCase, BeaconStateAllForks> = (forkNext) => {
         case ForkName.deneb:
           return slotFns.upgradeStateToDeneb(preState as CachedBeaconStateCapella);
         case ForkName.electra:
-          throw Error("not Implemented");
+          return slotFns.upgradeStateToElectra(preState as CachedBeaconStateDeneb);
       }
     },
     options: {

@@ -18,6 +18,14 @@ export type WithdrawalV1 = {
   amount: QUANTITY;
 };
 
+export type DepositReceiptV1 = {
+  pubkey: DATA;
+  withdrawalCredentials: DATA;
+  amount: QUANTITY;
+  signature: DATA;
+  index: QUANTITY;
+};
+
 type FcuAttributes = {headBlockHash: DATA; finalizedBlockHash: DATA} & Omit<PayloadAttributesRpc, "withdrawals">;
 
 export class PayloadIdCache {
