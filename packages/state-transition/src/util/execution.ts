@@ -2,6 +2,7 @@ import {
   bellatrix,
   capella,
   deneb,
+  electra,
   isBlindedBeaconBlockBody,
   ssz,
   BeaconBlock,
@@ -168,6 +169,11 @@ export function executionPayloadToPayloadHeader(fork: ForkSeq, payload: Executio
     (bellatrixPayloadFields as deneb.ExecutionPayloadHeader).excessBlobGas = (
       payload as deneb.ExecutionPayloadHeader | deneb.ExecutionPayload
     ).excessBlobGas;
+  }
+
+  if (fork >= ForkSeq.electra) {
+    (bellatrixPayloadFields as electra.ExecutionPayloadHeader).depositReceiptsRoot =
+      ssz.electra.DepositReceipts.hashTreeRoot((payload as electra.ExecutionPayload).depositReceipts);
   }
 
   return bellatrixPayloadFields;

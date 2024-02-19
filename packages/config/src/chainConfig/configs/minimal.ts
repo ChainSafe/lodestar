@@ -45,8 +45,7 @@ export const chainConfig: ChainConfig = {
   // Deneb
   DENEB_FORK_VERSION: b("0x04000001"),
   DENEB_FORK_EPOCH: Infinity,
-
-  // Electra
+  // ELECTRA
   ELECTRA_FORK_VERSION: b("0x05000001"),
   ELECTRA_FORK_EPOCH: Infinity,
 

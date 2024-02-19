@@ -5,6 +5,7 @@ import {createBeaconConfig, ChainForkConfig, createChainForkConfig} from "@lodes
 import {config as chainConfig} from "@lodestar/config/default";
 
 import {upgradeStateToDeneb} from "../../src/slot/upgradeStateToDeneb.js";
+import {upgradeStateToElectra} from "../../src/slot/upgradeStateToElectra.js";
 import {createCachedBeaconState} from "../../src/cache/stateCache.js";
 import {PubkeyIndexMap} from "../../src/cache/pubkeyCache.js";
 
@@ -22,6 +23,21 @@ describe("upgradeState", () => {
       {skipSyncCommitteeCache: true}
     );
     const newState = upgradeStateToDeneb(stateView);
+    expect(() => newState.toValue()).not.toThrow();
+  });
+  it("upgradeStateToElectra", () => {
+    const denebState = ssz.deneb.BeaconState.defaultViewDU();
+    const config = getConfig(ForkName.deneb);
+    const stateView = createCachedBeaconState(
+      denebState,
+      {
+        config: createBeaconConfig(config, denebState.genesisValidatorsRoot),
+        pubkey2index: new PubkeyIndexMap(),
+        index2pubkey: [],
+      },
+      {skipSyncCommitteeCache: true}
+    );
+    const newState = upgradeStateToElectra(stateView);
     expect(() => newState.toValue()).not.toThrow();
   });
 });
