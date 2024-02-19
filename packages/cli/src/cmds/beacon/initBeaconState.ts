@@ -15,7 +15,7 @@ import {
 } from "@lodestar/beacon-node";
 import {Checkpoint} from "@lodestar/types/phase0";
 
-import {downloadOrLoadFile} from "../../util/index.js";
+import {downloadOrLoadFile, wrapFnError} from "../../util/index.js";
 import {defaultNetwork, GlobalArgs} from "../../options/globalOptions.js";
 import {
   fetchWeakSubjectivityState,
@@ -31,7 +31,8 @@ async function initAndVerifyWeakSubjectivityState(
   logger: Logger,
   store: BeaconStateAllForks,
   wsState: BeaconStateAllForks,
-  wsCheckpoint: Checkpoint
+  wsCheckpoint: Checkpoint,
+  opts: {ignoreWeakSubjectivityCheck?: boolean} = {}
 ): Promise<{anchorState: BeaconStateAllForks; wsCheckpoint: Checkpoint}> {
   // Check if the store's state and wsState are compatible
   if (
@@ -56,12 +57,15 @@ async function initAndVerifyWeakSubjectivityState(
     );
   }
 
-  // Instead of warning user of wss check failure, we throw because user explicity wants to use
-  // the checkpoint sync
-  ensureWithinWeakSubjectivityPeriod(config, anchorState, anchorCheckpoint);
+  // Throw error unless user explicitly asked not to, in testnets can happen that wss period is too small
+  // that even some epochs of non finalization can cause finalized checkpoint to be out of valid range
+  const wssCheck = wrapFnError(() => ensureWithinWeakSubjectivityPeriod(config, anchorState, anchorCheckpoint));
+  if (wssCheck.err !== null && opts.ignoreWeakSubjectivityCheck !== true) {
+    throw wssCheck.err;
+  }
 
   anchorState = await initStateFromAnchorState(config, db, logger, anchorState, {
-    isWithinWeakSubjectivityPeriod: true,
+    isWithinWeakSubjectivityPeriod: wssCheck.err === null ? true : false,
     isCheckpointState,
   });
 
@@ -126,7 +130,8 @@ export async function initBeaconState(
       {checkpointState: args.checkpointState, wssCheckpoint: args.wssCheckpoint},
       chainForkConfig,
       db,
-      logger
+      logger,
+      {ignoreWeakSubjectivityCheck: args.ignoreWeakSubjectivityCheck}
     );
   } else if (args.checkpointSyncUrl) {
     return fetchWSStateFromBeaconApi(
@@ -134,7 +139,8 @@ export async function initBeaconState(
       {checkpointSyncUrl: args.checkpointSyncUrl, wssCheckpoint: args.wssCheckpoint},
       chainForkConfig,
       db,
-      logger
+      logger,
+      {ignoreWeakSubjectivityCheck: args.ignoreWeakSubjectivityCheck}
     );
   } else {
     const genesisStateFile = args.genesisStateFile || getGenesisFileUrl(args.network || defaultNetwork);
@@ -161,7 +167,8 @@ async function readWSState(
   wssOpts: {checkpointState: string; wssCheckpoint?: string},
   chainForkConfig: ChainForkConfig,
   db: IBeaconDb,
-  logger: Logger
+  logger: Logger,
+  opts: {ignoreWeakSubjectivityCheck?: boolean} = {}
 ): Promise<{anchorState: BeaconStateAllForks; wsCheckpoint?: Checkpoint}> {
   // weak subjectivity sync from a provided state file:
   // if a weak subjectivity checkpoint has been provided, it is used for additional verification
@@ -173,7 +180,7 @@ async function readWSState(
   const config = createBeaconConfig(chainForkConfig, wsState.genesisValidatorsRoot);
   const store = lastDbState ?? wsState;
   const checkpoint = wssCheckpoint ? getCheckpointFromArg(wssCheckpoint) : getCheckpointFromState(wsState);
-  return initAndVerifyWeakSubjectivityState(config, db, logger, store, wsState, checkpoint);
+  return initAndVerifyWeakSubjectivityState(config, db, logger, store, wsState, checkpoint, opts);
 }
 
 async function fetchWSStateFromBeaconApi(
@@ -181,7 +188,8 @@ async function fetchWSStateFromBeaconApi(
   wssOpts: {checkpointSyncUrl: string; wssCheckpoint?: string},
   chainForkConfig: ChainForkConfig,
   db: IBeaconDb,
-  logger: Logger
+  logger: Logger,
+  opts: {ignoreWeakSubjectivityCheck?: boolean} = {}
 ): Promise<{anchorState: BeaconStateAllForks; wsCheckpoint?: Checkpoint}> {
   // weak subjectivity sync from a state that needs to be fetched:
   // if a weak subjectivity checkpoint has been provided, it is used to inform which state to download and used for additional verification
@@ -201,5 +209,5 @@ async function fetchWSStateFromBeaconApi(
   const {wsState, wsCheckpoint} = await fetchWeakSubjectivityState(chainForkConfig, logger, wssOpts);
   const config = createBeaconConfig(chainForkConfig, wsState.genesisValidatorsRoot);
   const store = lastDbState ?? wsState;
-  return initAndVerifyWeakSubjectivityState(config, db, logger, store, wsState, wsCheckpoint);
+  return initAndVerifyWeakSubjectivityState(config, db, logger, store, wsState, wsCheckpoint, opts);
 }

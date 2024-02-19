@@ -11,3 +11,10 @@ export async function wrapError<T>(promise: Promise<T>): Promise<Result<T>> {
     return {err: err as Error};
   }
 }
+export function wrapFnError<T>(evalFn: () => T): Result<T> {
+  try {
+    return {err: null, result: evalFn()};
+  } catch (err) {
+    return {err: err as Error};
+  }
+}
