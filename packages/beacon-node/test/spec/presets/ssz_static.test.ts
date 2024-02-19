@@ -48,6 +48,7 @@ const sszStatic =
       // will help us get the right type for lightclient objects
       ((ssz.allForksLightClient[fork as ForkLightClient] || {}) as Types)[typeName] ||
       (ssz[fork] as Types)[typeName] ||
+      (ssz.deneb as Types)[typeName] ||
       (ssz.capella as Types)[typeName] ||
       (ssz.bellatrix as Types)[typeName] ||
       (ssz.altair as Types)[typeName] ||

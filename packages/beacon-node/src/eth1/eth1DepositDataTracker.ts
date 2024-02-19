@@ -1,6 +1,11 @@
 import {phase0, ssz} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
-import {BeaconStateAllForks, becomesNewEth1Data} from "@lodestar/state-transition";
+import {
+  BeaconStateAllForks,
+  CachedBeaconStateAllForks,
+  CachedBeaconStateElectra,
+  becomesNewEth1Data,
+} from "@lodestar/state-transition";
 import {ErrorAborted, TimeoutError, fromHex, Logger, isErrorAborted, sleep} from "@lodestar/utils";
 
 import {IBeaconDb} from "../db/index.js";
@@ -67,6 +72,8 @@ export class Eth1DepositDataTracker {
   /** Dynamically adjusted batch size to fetch deposit logs */
   private eth1GetLogsBatchSizeDynamic = MAX_BLOCKS_PER_LOG_QUERY;
   private readonly forcedEth1DataVote: phase0.Eth1Data | null;
+  /** To stop `runAutoUpdate()` in addition to AbortSignal */
+  private stopPolling: boolean;
 
   constructor(
     opts: Eth1Options,
@@ -81,6 +88,8 @@ export class Eth1DepositDataTracker {
     this.depositsCache = new Eth1DepositsCache(opts, config, db);
     this.eth1DataCache = new Eth1DataCache(config, db);
     this.eth1FollowDistance = config.ETH1_FOLLOW_DISTANCE;
+    // TODO Electra: fix scenario where node starts post-Electra and `stopPolling` will always be false
+    this.stopPolling = false;
 
     this.forcedEth1DataVote = opts.forcedEth1DataVote
       ? ssz.phase0.Eth1Data.deserialize(fromHex(opts.forcedEth1DataVote))
@@ -109,10 +118,22 @@ export class Eth1DepositDataTracker {
     }
   }
 
+  // TODO Electra: Figure out how an elegant way to stop eth1data polling
+  stopPollingEth1Data(): void {
+    this.stopPolling = true;
+  }
+
   /**
    * Return eth1Data and deposits ready for block production for a given state
    */
-  async getEth1DataAndDeposits(state: BeaconStateAllForks): Promise<Eth1DataAndDeposits> {
+  async getEth1DataAndDeposits(state: CachedBeaconStateAllForks): Promise<Eth1DataAndDeposits> {
+    if (
+      state.epochCtx.isAfterElectra() &&
+      state.eth1DepositIndex >= (state as CachedBeaconStateElectra).depositReceiptsStartIndex
+    ) {
+      // No need to poll eth1Data since Electra deprecates the mechanism after depositReceiptsStartIndex is reached
+      return {eth1Data: state.eth1Data, deposits: []};
+    }
     const eth1Data = this.forcedEth1DataVote ?? (await this.getEth1Data(state));
     const deposits = await this.getDeposits(state, eth1Data);
     return {eth1Data, deposits};
@@ -141,7 +162,10 @@ export class Eth1DepositDataTracker {
    * Returns deposits to be included for a given state and eth1Data vote.
    * Requires internal caches to be updated regularly to return good results
    */
-  private async getDeposits(state: BeaconStateAllForks, eth1DataVote: phase0.Eth1Data): Promise<phase0.Deposit[]> {
+  private async getDeposits(
+    state: CachedBeaconStateAllForks,
+    eth1DataVote: phase0.Eth1Data
+  ): Promise<phase0.Deposit[]> {
     // No new deposits have to be included, continue
     if (eth1DataVote.depositCount === state.eth1DepositIndex) {
       return [];
@@ -162,7 +186,7 @@ export class Eth1DepositDataTracker {
   private async runAutoUpdate(): Promise<void> {
     let lastRunMs = 0;
 
-    while (!this.signal.aborted) {
+    while (!this.signal.aborted && !this.stopPolling) {
       lastRunMs = Date.now();
 
       try {

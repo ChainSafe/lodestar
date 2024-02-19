@@ -1,6 +1,6 @@
 import {describe, it, expect, beforeEach} from "vitest";
 
-import {getShufflingDecisionBlock} from "@lodestar/state-transition";
+import {getShufflingDecisionBlock, CachedBeaconStateAllForks} from "@lodestar/state-transition";
 // eslint-disable-next-line import/no-relative-packages
 import {generateTestCachedBeaconStateOnlyValidators} from "../../../../state-transition/test/perf/util.js";
 import {ShufflingCache} from "../../../src/chain/shufflingCache.js";
@@ -14,7 +14,7 @@ describe("ShufflingCache", function () {
 
   beforeEach(() => {
     shufflingCache = new ShufflingCache(null, {maxShufflingCacheEpochs: 1});
-    shufflingCache.processState(state, currentEpoch);
+    shufflingCache.processState(state as unknown as CachedBeaconStateAllForks, currentEpoch);
   });
 
   it("should get shuffling from cache", async function () {
@@ -29,7 +29,7 @@ describe("ShufflingCache", function () {
     shufflingCache.insertPromise(currentEpoch, "0x00");
     expect(await shufflingCache.get(currentEpoch, decisionRoot)).toEqual(state.epochCtx.currentShuffling);
     // insert shufflings at other epochs does prune the cache
-    shufflingCache.processState(state, currentEpoch + 1);
+    shufflingCache.processState(state as unknown as CachedBeaconStateAllForks, currentEpoch + 1);
     // the current shuffling is not available anymore
     expect(await shufflingCache.get(currentEpoch, decisionRoot)).toBeNull();
   });
@@ -39,7 +39,7 @@ describe("ShufflingCache", function () {
     shufflingCache.insertPromise(currentEpoch + 1, nextDecisionRoot);
     const shufflingRequest0 = shufflingCache.get(currentEpoch + 1, nextDecisionRoot);
     const shufflingRequest1 = shufflingCache.get(currentEpoch + 1, nextDecisionRoot);
-    shufflingCache.processState(state, currentEpoch + 1);
+    shufflingCache.processState(state as unknown as CachedBeaconStateAllForks, currentEpoch + 1);
     expect(await shufflingRequest0).toEqual(state.epochCtx.nextShuffling);
     expect(await shufflingRequest1).toEqual(state.epochCtx.nextShuffling);
   });
