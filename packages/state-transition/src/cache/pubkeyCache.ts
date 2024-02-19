@@ -1,11 +1,19 @@
 import {CoordType, PublicKey} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
+import * as immutable from "immutable";
 import {ValidatorIndex} from "@lodestar/types";
 import {BeaconStateAllForks} from "./types.js";
 
 export type Index2PubkeyCache = PublicKey[];
+/**
+ * OrderedMap preserves the order of entries in which they are `set()`.
+ * We assume `values()` yields validator indices in strictly increasing order
+ * as new validator indices are assigned in increasing order.
+ * EIP-6914 will break this assumption.
+ */
+export type UnfinalizedPubkeyIndexMap = immutable.Map<PubkeyHex, ValidatorIndex>;
 
-type PubkeyHex = string;
+export type PubkeyHex = string;
 
 /**
  * toHexString() creates hex strings via string concatenation, which are very memory inefficient.
@@ -15,7 +23,7 @@ type PubkeyHex = string;
  *
  * See https://github.com/ChainSafe/lodestar/issues/3446
  */
-function toMemoryEfficientHexStr(hex: Uint8Array | string): string {
+export function toMemoryEfficientHexStr(hex: Uint8Array | string): string {
   if (typeof hex === "string") {
     if (hex.startsWith("0x")) {
       hex = hex.slice(2);
@@ -24,6 +32,13 @@ function toMemoryEfficientHexStr(hex: Uint8Array | string): string {
   }
 
   return Buffer.from(hex).toString("hex");
+}
+
+/**
+ * A wrapper for calling immutable.js. To abstract the initialization of UnfinalizedPubkeyIndexMap
+ */
+export function newUnfinalizedPubkeyIndexMap(): UnfinalizedPubkeyIndexMap {
+  return immutable.Map<PubkeyHex, ValidatorIndex>();
 }
 
 export class PubkeyIndexMap {
@@ -41,7 +56,7 @@ export class PubkeyIndexMap {
     return this.map.get(toMemoryEfficientHexStr(key));
   }
 
-  set(key: Uint8Array, value: ValidatorIndex): void {
+  set(key: Uint8Array | PubkeyHex, value: ValidatorIndex): void {
     this.map.set(toMemoryEfficientHexStr(key), value);
   }
 }

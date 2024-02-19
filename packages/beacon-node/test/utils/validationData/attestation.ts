@@ -4,6 +4,7 @@ import {
   computeSigningRoot,
   computeStartSlotAtEpoch,
   getShufflingDecisionBlock,
+  CachedBeaconStateAllForks,
 } from "@lodestar/state-transition";
 import {ProtoBlock, IForkChoice, ExecutionStatus} from "@lodestar/fork-choice";
 import {DOMAIN_BEACON_ATTESTER} from "@lodestar/params";
@@ -81,8 +82,8 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
   };
 
   const shufflingCache = new ShufflingCache();
-  shufflingCache.processState(state, state.epochCtx.currentShuffling.epoch);
-  shufflingCache.processState(state, state.epochCtx.nextShuffling.epoch);
+  shufflingCache.processState(state as unknown as CachedBeaconStateAllForks, state.epochCtx.currentShuffling.epoch);
+  shufflingCache.processState(state as unknown as CachedBeaconStateAllForks, state.epochCtx.nextShuffling.epoch);
   const dependentRoot = getShufflingDecisionBlock(state, state.epochCtx.currentShuffling.epoch);
 
   const forkChoice = {
@@ -132,7 +133,7 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
     getState: async () => state,
     // TODO: remove this once we have a better way to get state
     getStateSync: () => state,
-  } as Partial<IStateRegenerator> as IStateRegenerator;
+  } as unknown as Partial<IStateRegenerator> as IStateRegenerator;
 
   const chain = {
     clock,

@@ -32,6 +32,9 @@
     "./deneb": {
       "import": "./lib/deneb/index.js"
     },
+    "./electra": {
+      "import": "./lib/electra/index.js"
+    },
     "./phase0": {
       "import": "./lib/phase0/index.js"
     }
