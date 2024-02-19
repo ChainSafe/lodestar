@@ -115,7 +115,11 @@ export function upgradeLightClientHeader(
 
     // eslint-disable-next-line no-fallthrough
     case ForkName.electra:
-      throw Error("Not Implemented");
+      (upgradedHeader as LightClientHeader<ForkName.electra>).execution.depositReceiptsRoot =
+        ssz.electra.LightClientHeader.fields.execution.fields.depositReceiptsRoot.defaultValue();
+
+      // Break if no further upgrades is required else fall through
+      if (ForkSeq[targetFork] <= ForkSeq.electra) break;
   }
   return upgradedHeader;
 }
@@ -145,6 +149,12 @@ export function isValidLightClientHeader(config: ChainForkConfig, header: LightC
       ((header as LightClientHeader<ForkName.deneb>).execution.excessBlobGas &&
         (header as LightClientHeader<ForkName.deneb>).execution.excessBlobGas !== BigInt(0))
     ) {
+      return false;
+    }
+  }
+
+  if (epoch < config.ELECTRA_FORK_EPOCH) {
+    if ((header as LightClientHeader<ForkName.electra>).execution.depositReceiptsRoot !== undefined) {
       return false;
     }
   }

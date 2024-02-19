@@ -27,13 +27,12 @@ export function getIndexedAttestationBigintSignatureSet(
   state: CachedBeaconStateAllForks,
   indexedAttestation: phase0.IndexedAttestationBigint
 ): ISignatureSet {
-  const {index2pubkey} = state.epochCtx;
   const slot = computeStartSlotAtEpoch(Number(indexedAttestation.data.target.epoch as bigint));
   const domain = state.config.getDomain(state.slot, DOMAIN_BEACON_ATTESTER, slot);
 
   return {
     type: SignatureSetType.aggregate,
-    pubkeys: indexedAttestation.attestingIndices.map((i) => index2pubkey[i]),
+    pubkeys: indexedAttestation.attestingIndices.map((i) => state.epochCtx.index2pubkey[i]),
     signingRoot: computeSigningRoot(ssz.phase0.AttestationDataBigint, indexedAttestation.data, domain),
     signature: indexedAttestation.signature,
   };
