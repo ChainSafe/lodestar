@@ -45,6 +45,7 @@ const sszStatic =
     /* eslint-disable @typescript-eslint/strict-boolean-expressions */
     const sszType =
       (sszTypesFor(fork) as Types)[typeName] ||
+      (ssz.deneb as Types)[typeName] ||
       (ssz.capella as Types)[typeName] ||
       (ssz.bellatrix as Types)[typeName] ||
       (ssz.altair as Types)[typeName] ||
