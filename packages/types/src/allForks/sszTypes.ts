@@ -192,7 +192,7 @@ export const allForksBlobs = {
     ExecutionPayloadAndBlobsBundle: deneb.ExecutionPayloadAndBlobsBundle,
   },
   electra: {
-    BlobSidecar: electra.BlobSidecar,
+    BlobSidecar: deneb.BlobSidecar,
     ExecutionPayloadAndBlobsBundle: electra.ExecutionPayloadAndBlobsBundle,
   },
 };

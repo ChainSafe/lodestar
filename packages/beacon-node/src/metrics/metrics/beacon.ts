@@ -111,6 +111,13 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       }),
     },
 
+    headState: {
+      unfinalizedPubkeyCacheSize: register.gauge({
+        name: "head_state_unfinalized_pubkey_cache_size",
+        help: "Current size of the unfinalizedPubkey2Index cache in the head state",
+      }),
+    },
+
     parentBlockDistance: register.histogram({
       name: "beacon_imported_block_parent_distance",
       help: "Histogram of distance to parent block of valid imported blocks",
