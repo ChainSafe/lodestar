@@ -1027,6 +1027,9 @@ export class BeaconChain implements IBeaconChain {
     metrics.forkChoice.balancesLength.set(forkChoiceMetrics.balancesLength);
     metrics.forkChoice.nodes.set(forkChoiceMetrics.nodes);
     metrics.forkChoice.indices.set(forkChoiceMetrics.indices);
+
+    const headState = this.getHeadState();
+    metrics.headState.unfinalizedPubkeyCacheSize.set(headState.epochCtx.unfinalizedPubkey2index.size);
   }
 
   private onClockSlot(slot: Slot): void {
@@ -1115,6 +1118,40 @@ export class BeaconChain implements IBeaconChain {
     if (headState) {
       this.opPool.pruneAll(headBlock, headState);
     }
+
+    const cpEpoch = cp.epoch;
+    const electraEpoch = headState?.config.ELECTRA_FORK_EPOCH ?? Infinity;
+
+    if (headState === null) {
+      this.logger.verbose("Head state is null");
+    } else if (cpEpoch >= electraEpoch) {
+      // Get the validator.length from the state at cpEpoch
+      // We are confident the last element in the list is from headEpoch
+      // Thus we query from the end of the list. (cpEpoch - headEpoch - 1) is negative number
+      const pivotValidatorIndex = headState.epochCtx.getValidatorCountAtEpoch(cpEpoch);
+
+      if (pivotValidatorIndex !== undefined) {
+        // Note EIP-6914 will break this logic
+        const newFinalizedValidators = headState.epochCtx.unfinalizedPubkey2index.filter(
+          (index, _pubkey) => index < pivotValidatorIndex
+        );
+
+        // Populate finalized pubkey cache and remove unfinalized pubkey cache
+        if (!newFinalizedValidators.isEmpty()) {
+          this.regen.updateUnfinalizedPubkeys(newFinalizedValidators);
+        }
+      }
+    }
+
+    // TODO-Electra: Deprecating eth1Data poll requires a check on a finalized checkpoint state.
+    // Will resolve this later
+    // if (cpEpoch >= (this.config.ELECTRA_FORK_EPOCH ?? Infinity)) {
+    //   // finalizedState can be safely casted to Electra state since cp is already post-Electra
+    //   if (finalizedState.eth1DepositIndex >= (finalizedState as CachedBeaconStateElectra).depositReceiptsStartIndex) {
+    //     // Signal eth1 to stop polling eth1Data
+    //     this.eth1.stopPollingEth1Data();
+    //   }
+    // }
   }
 
   async updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void> {
