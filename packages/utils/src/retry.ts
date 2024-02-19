@@ -26,10 +26,12 @@ export type RetryOptions = {
  */
 export async function retry<A>(fn: (attempt: number) => A | Promise<A>, opts?: RetryOptions): Promise<A> {
   const maxRetries = opts?.retries ?? 5;
+  // The maximum number of attempts is the number of retries + the initial attempt
+  const maxAttempts = maxRetries + 1;
   const shouldRetry = opts?.shouldRetry;
 
   let lastError: Error = Error("RetryError");
-  for (let i = 1; i <= maxRetries; i++) {
+  for (let i = 1; i <= maxAttempts; i++) {
     try {
       return await fn(i);
     } catch (e) {
