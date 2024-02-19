@@ -12,6 +12,7 @@ type BeaconExtraArgs = {
   checkpointState?: string;
   wssCheckpoint?: string;
   forceCheckpointSync?: boolean;
+  ignoreWeakSubjectivityCheck?: boolean;
   beaconDir?: string;
   dbDir?: string;
   persistInvalidSszObjectsDir?: string;
@@ -71,6 +72,14 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
   forceCheckpointSync: {
     description:
       "Force syncing from checkpoint state even if db state is within weak subjectivity period. This helps to avoid long sync times after node has been offline for a while.",
+    type: "boolean",
+    group: "weak subjectivity",
+  },
+
+  ignoreWeakSubjectivityCheck: {
+    description:
+      "Ignore the checkpoint sync state failing the weak subjectivity check. This is relevant in testnets where the weak subjectivity period is too small for even few epochs of non finalization causing last finalized to be out of range. This flag is not recommended for mainnet use.",
+    hidden: true,
     type: "boolean",
     group: "weak subjectivity",
   },
