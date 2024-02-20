@@ -1,10 +1,5 @@
 import {BitArray, toHexString} from "@chainsafe/ssz";
-import {
-  computeEpochAtSlot,
-  computeSigningRoot,
-  computeStartSlotAtEpoch,
-  getShufflingDecisionBlock,
-} from "@lodestar/state-transition";
+import {computeEpochAtSlot, computeSigningRoot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ProtoBlock, IForkChoice, ExecutionStatus} from "@lodestar/fork-choice";
 import {DOMAIN_BEACON_ATTESTER} from "@lodestar/params";
 import {phase0, Slot, ssz} from "@lodestar/types";
@@ -81,7 +76,6 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
   const shufflingCache = new ShufflingCache();
   shufflingCache.processState(state, state.epochCtx.epoch);
   shufflingCache.processState(state, state.epochCtx.nextEpoch);
-  const dependentRoot = getShufflingDecisionBlock(state, state.epochCtx.epoch);
 
   const forkChoice = {
     getBlock: (root) => {
@@ -92,7 +86,7 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
       if (rootHex !== toHexString(beaconBlockRoot)) return null;
       return headBlock;
     },
-    getDependentRoot: () => dependentRoot,
+    getDependentRoot: () => state.epochCtx.currentShufflingDecisionRoot,
   } as Partial<IForkChoice> as IForkChoice;
 
   const committeeIndices = state.epochCtx.getBeaconCommittee(attSlot, attIndex);

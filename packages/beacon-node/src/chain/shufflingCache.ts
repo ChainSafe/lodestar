@@ -198,6 +198,7 @@ function isPromiseCacheItem(item: CacheItem): item is PromiseCacheItem {
   return item.type === CacheItemType.promise;
 }
 
+// TODO: @tuyennhv why is this here and not in state-transition with `getShufflingDecisionBlock`?
 /**
  * Get the shuffling decision block root for the given epoch of given state
  *   - Special case close to genesis block, return the genesis block root

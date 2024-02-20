@@ -1,13 +1,14 @@
 import {toHexString} from "@chainsafe/ssz";
-import {Epoch, RootHex, ValidatorIndex} from "@lodestar/types";
+import {ssz, Epoch, RootHex, ValidatorIndex} from "@lodestar/types";
 import {intDiv} from "@lodestar/utils";
 import {
   DOMAIN_BEACON_ATTESTER,
+  GENESIS_SLOT,
   MAX_COMMITTEES_PER_SLOT,
   SLOTS_PER_EPOCH,
   TARGET_COMMITTEE_SIZE,
 } from "@lodestar/params";
-import {BeaconStateAllForks} from "../types.js";
+import {BeaconStateAllForks, CachedBeaconStateAllForks} from "../types.js";
 import {getSeed} from "./seed.js";
 import {unshuffleList} from "./shuffle.js";
 import {computeStartSlotAtEpoch} from "./epoch.js";
