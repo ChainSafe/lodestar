@@ -1,6 +1,5 @@
 import {CompositeViewDU} from "@chainsafe/ssz";
-import {Epoch, RootHex, ssz} from "@lodestar/types";
-import {EpochShuffling} from "../util/epochShuffling.js";
+import {ssz} from "@lodestar/types";
 
 export type BeaconStatePhase0 = CompositeViewDU<typeof ssz.phase0.BeaconState>;
 export type BeaconStateAltair = CompositeViewDU<typeof ssz.altair.BeaconState>;
@@ -21,5 +20,3 @@ export type BeaconStateAllForks =
   | BeaconStateDeneb;
 
 export type BeaconStateExecutions = BeaconStateBellatrix | BeaconStateCapella | BeaconStateDeneb;
-
-export type ShufflingGetter = (shufflingEpoch: Epoch, dependentRoot: RootHex) => EpochShuffling | null;

@@ -223,17 +223,28 @@ export class BeaconChain implements IBeaconChain {
     // pubkeys takes ~30 seconds for 350k keys (mainnet 2022Q2).
     // When the BeaconStateCache is created in eth1 genesis builder it may be incorrect. Until we can ensure that
     // it's safe to re-use _ANY_ BeaconStateCache, this option is disabled by default and only used in tests.
-    const cachedState =
-      isCachedBeaconState(anchorState) && opts.skipCreateStateCacheIfAvailable
-        ? anchorState
-        : createCachedBeaconState(anchorState, {
-            config,
-            pubkey2index: new PubkeyIndexMap(),
-            index2pubkey: [],
-          });
-    this.shufflingCache.processState(cachedState, cachedState.epochCtx.previousEpoch);
-    this.shufflingCache.processState(cachedState, cachedState.epochCtx.epoch);
-    this.shufflingCache.processState(cachedState, cachedState.epochCtx.nextEpoch);
+    let cachedState: CachedBeaconStateAllForks;
+    if (isCachedBeaconState(anchorState) && opts.skipCreateStateCacheIfAvailable) {
+      cachedState = anchorState;
+      if (anchorState.epochCtx.shufflingCache.hasItems()) {
+        cachedState.epochCtx.shufflingCache = this.shufflingCache.clone(anchorState.epochCtx.shufflingCache);
+      }
+    } else {
+      cachedState = createCachedBeaconState(anchorState, {
+        config,
+        shufflingCache: this.shufflingCache,
+        pubkey2index: new PubkeyIndexMap(),
+        index2pubkey: [],
+      });
+    }
+    /**
+     * These should already be processed when creating the shufflingCache.fromState
+     * 
+     * TODO: (matthewkeil) double check this is correct
+     */
+    // this.shufflingCache.processState(cachedState, cachedState.epochCtx.previousEpoch);
+    // this.shufflingCache.processState(cachedState, cachedState.epochCtx.epoch);
+    // this.shufflingCache.processState(cachedState, cachedState.epochCtx.nextEpoch);
 
     // Persist single global instance of state caches
     this.pubkey2index = cachedState.epochCtx.pubkey2index;

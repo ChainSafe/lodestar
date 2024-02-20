@@ -187,6 +187,7 @@ export function loadCachedBeaconState<T extends BeaconStateAllForks & BeaconStat
     migratedState,
     {
       config: cachedSeedState.config,
+      shufflingCache: cachedSeedState.epochCtx.shufflingCache,
       pubkey2index,
       index2pubkey,
     },
