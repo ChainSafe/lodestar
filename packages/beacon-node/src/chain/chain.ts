@@ -1001,6 +1001,6 @@ export class BeaconChain implements IBeaconChain {
       throw Error(`Pre-state is unavailable given block's parent root ${toHexString(block.parentRoot)}`);
     }
 
-    return computeBlockRewards(block, preState, postState);
+    return computeBlockRewards(block, preState.clone(), postState?.clone());
   }
 }
