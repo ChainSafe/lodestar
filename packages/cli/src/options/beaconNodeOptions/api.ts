@@ -1,7 +1,12 @@
-import {defaultOptions, IBeaconNodeOptions, allNamespaces} from "@lodestar/beacon-node";
-import {CliCommandOptions} from "../../util/index.js";
+import { defaultOptions, IBeaconNodeOptions, allNamespaces } from "@lodestar/beacon-node";
+import { CliCommandOptions } from "../../util/index.js";
 
-const enabledAll = "*";
+// Before: Original value was "*"
+// The original value "*" is not very friendly to use in bash scripts as it's interpreted as a wildcard character.
+// This change replaces "*" with "all" to improve compatibility with bash scripts.
+
+// After: Changed to "all" for better compatibility with bash scripts
+const enabledAll = "all";
 
 export type ApiArgs = {
   "api.maxGindicesInProof"?: number;
@@ -49,8 +54,8 @@ export const options: CliCommandOptions<ApiArgs> = {
 
   "rest.namespace": {
     type: "array",
-    choices: [...allNamespaces, enabledAll],
-    description: `Pick namespaces to expose for HTTP API. Set to '${enabledAll}' to enable all namespaces`,
+    choices: [...allNamespaces, enabledAll], // Added 'enabledAll' to the list of choices
+    description: `Pick namespaces to expose for HTTP API. Set to '${enabledAll}' to enable all namespaces`, // Updated description
     defaultDescription: JSON.stringify(defaultOptions.api.rest.api),
     group: "api",
     coerce: (namespaces: string[]): string[] => {
