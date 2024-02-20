@@ -1,18 +1,14 @@
-import {toHexString} from "@chainsafe/ssz";
-import {ssz, Epoch, RootHex, ValidatorIndex} from "@lodestar/types";
+import {Epoch, ValidatorIndex} from "@lodestar/types";
 import {intDiv} from "@lodestar/utils";
 import {
   DOMAIN_BEACON_ATTESTER,
-  GENESIS_SLOT,
   MAX_COMMITTEES_PER_SLOT,
   SLOTS_PER_EPOCH,
   TARGET_COMMITTEE_SIZE,
 } from "@lodestar/params";
-import {BeaconStateAllForks, CachedBeaconStateAllForks} from "../types.js";
+import {BeaconStateAllForks} from "../types.js";
 import {getSeed} from "./seed.js";
 import {unshuffleList} from "./shuffle.js";
-import {computeStartSlotAtEpoch} from "./epoch.js";
-import {getBlockRootAtSlot} from "./blockRoot.js";
 
 /**
  * Readonly interface for EpochShuffling.
@@ -93,9 +89,4 @@ export function computeEpochShuffling(
     committees,
     committeesPerSlot,
   };
-}
-
-export function getShufflingDecisionBlock(state: BeaconStateAllForks, epoch: Epoch): RootHex {
-  const pivotSlot = computeStartSlotAtEpoch(epoch - 1) - 1;
-  return toHexString(getBlockRootAtSlot(state, pivotSlot));
 }

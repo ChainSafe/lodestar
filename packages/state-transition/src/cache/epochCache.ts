@@ -26,7 +26,9 @@ import {
   computeProposers,
   getActivationChurnLimit,
 } from "../util/index.js";
-import {computeEpochShuffling, EpochShuffling, getShufflingDecisionBlock} from "../util/epochShuffling.js";
+// TODO: (matthewkeil) why are the `util` imports below not from the index.js?
+import {getShufflingDecisionBlock} from "../util/shufflingDecisionRoot.js";
+import {computeEpochShuffling, EpochShuffling} from "../util/epochShuffling.js";
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
 import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
 import {getTotalSlashingsByIncrement} from "../epoch/processSlashings.js";
