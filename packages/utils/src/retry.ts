@@ -36,7 +36,11 @@ export async function retry<A>(fn: (attempt: number) => A | Promise<A>, opts?: R
       return await fn(i);
     } catch (e) {
       lastError = e as Error;
-      if (shouldRetry && !shouldRetry(lastError)) {
+
+      if (i == maxAttempts) {
+        // If we have reached the maximum number of attempts, there's no need to check if we should retry
+        break;
+      } else if (shouldRetry && !shouldRetry(lastError)) {
         break;
       } else if (opts?.retryDelay !== undefined) {
         await sleep(opts?.retryDelay, opts?.signal);
