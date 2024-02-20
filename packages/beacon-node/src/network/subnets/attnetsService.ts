@@ -147,7 +147,7 @@ export class AttnetsService implements IAttnetsService {
 
   /** Call ONLY ONCE: Two epoch before the fork, re-subscribe all existing random subscriptions to the new fork  */
   subscribeSubnetsToNextFork(nextFork: ForkName): void {
-    this.logger.info("Suscribing to random attnets to next fork", {nextFork});
+    this.logger.info("Subscribing to random attnets to next fork", {nextFork});
     for (const subnet of this.subscriptionsRandom.getAll()) {
       this.gossip.subscribeTopic({type: gossipType, fork: nextFork, subnet});
     }
@@ -155,7 +155,7 @@ export class AttnetsService implements IAttnetsService {
 
   /** Call  ONLY ONCE: Two epochs after the fork, un-subscribe all subnets from the old fork */
   unsubscribeSubnetsFromPrevFork(prevFork: ForkName): void {
-    this.logger.info("Unsuscribing to random attnets from prev fork", {prevFork});
+    this.logger.info("Unsubscribing to random attnets from prev fork", {prevFork});
     for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
       if (!this.opts.subscribeAllSubnets) {
         this.gossip.unsubscribeTopic({type: gossipType, fork: prevFork, subnet});
