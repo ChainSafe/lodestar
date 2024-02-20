@@ -82,13 +82,8 @@ type ProposersDeferred = {computed: false; seed: Uint8Array} | {computed: true; 
  * - syncPeriod
  **/
 export class EpochCache {
-  private config: BeaconConfig;
-  // Not exposed.  should use accessor methods on EpochCache to get shuffling
-  private shufflingCache?: IShufflingCache;
-
-  setShufflingCache(shufflingCache: IShufflingCache): void {
-    this.shufflingCache = shufflingCache;
-  }
+  config: BeaconConfig;
+  shufflingCache?: IShufflingCache;
 
   /**
    * Unique globally shared pubkey registry. There should only exist one for the entire application.

@@ -217,7 +217,7 @@ export class BeaconChain implements IBeaconChain {
     this.shufflingCache = new ShufflingCache(metrics, this.opts);
 
     if (isCachedBeaconState(anchorState)) {
-      anchorState.epochCtx.setShufflingCache(this.shufflingCache);
+      anchorState.epochCtx.shufflingCache = this.shufflingCache;
     }
 
     // Restore state caches

@@ -82,15 +82,15 @@ describe("loadState", function () {
         }
         // skip computimg shuffling in performance test because in reality we have a ShufflingCache
         // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-        const shufflingGetter = () => seedState.epochCtx.currentShuffling;
         createCachedBeaconState(
           migratedState,
           {
             config: seedState.config,
+            shufflingCache: seedState.epochCtx.shufflingCache,
             pubkey2index,
             index2pubkey,
           },
-          {skipSyncPubkeys: true, skipSyncCommitteeCache: true, shufflingGetter}
+          {skipSyncPubkeys: true, skipSyncCommitteeCache: true}
         );
       },
     });

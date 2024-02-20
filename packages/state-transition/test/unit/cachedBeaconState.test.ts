@@ -5,10 +5,11 @@ import {config as defaultConfig} from "@lodestar/config/default";
 import {createBeaconConfig} from "@lodestar/config";
 import {createCachedBeaconStateTest} from "../utils/state.js";
 import {PubkeyIndexMap} from "../../src/cache/pubkeyCache.js";
-import {createCachedBeaconState, loadCachedBeaconState} from "../../src/cache/stateCache.js";
+import {CachedBeaconStateAllForks, createCachedBeaconState, loadCachedBeaconState} from "../../src/cache/stateCache.js";
 import {interopPubkeysCached} from "../utils/interop.js";
 import {modifyStateSameValidator, newStateWithValidators} from "../utils/capella.js";
 import {EpochShuffling, getShufflingDecisionBlock} from "../../src/util/epochShuffling.js";
+import {MockShufflingCache} from "../utils/mockShufflingCache.js";
 
 describe("CachedBeaconState", () => {
   it("Clone and mutate", () => {
@@ -68,6 +69,8 @@ describe("CachedBeaconState", () => {
       },
       {skipSyncCommitteeCache: true}
     );
+    const shufflingCache = new MockShufflingCache(seedState);
+    (seedState as CachedBeaconStateAllForks).epochCtx.shufflingCache = shufflingCache;
 
     const capellaStateType = ssz.capella.BeaconState;
 
@@ -129,42 +132,45 @@ describe("CachedBeaconState", () => {
 
         // confirm loadState() result
         const stateBytes = state.serialize();
-        const newCachedState = loadCachedBeaconState(seedState, stateBytes, {skipSyncCommitteeCache: true});
+        const newCachedState = loadCachedBeaconState(seedState, stateBytes, shufflingCache, {
+          skipSyncCommitteeCache: true,
+        });
         const newStateBytes = newCachedState.serialize();
         expect(newStateBytes).toEqual(stateBytes);
         expect(newCachedState.hashTreeRoot()).toEqual(state.hashTreeRoot());
-        const shufflingGetter = (shufflingEpoch: Epoch, dependentRoot: RootHex): EpochShuffling | null => {
-          if (
-            shufflingEpoch === seedState.epochCtx.epoch - 1 &&
-            dependentRoot === getShufflingDecisionBlock(seedState, shufflingEpoch)
-          ) {
-            return seedState.epochCtx.previousShuffling;
-          }
+        // const shufflingGetter = (shufflingEpoch: Epoch, dependentRoot: RootHex): EpochShuffling | null => {
+        //   if (
+        //     shufflingEpoch === seedState.epochCtx.epoch - 1 &&
+        //     dependentRoot === getShufflingDecisionBlock(seedState, shufflingEpoch)
+        //   ) {
+        //     return seedState.epochCtx.getShufflingAtEpoch(seedState.epochCtx.epoch - 1);
+        //   }
 
-          if (
-            shufflingEpoch === seedState.epochCtx.epoch &&
-            dependentRoot === getShufflingDecisionBlock(seedState, shufflingEpoch)
-          ) {
-            return seedState.epochCtx.currentShuffling;
-          }
+        //   if (
+        //     shufflingEpoch === seedState.epochCtx.epoch &&
+        //     dependentRoot === getShufflingDecisionBlock(seedState, shufflingEpoch)
+        //   ) {
+        //     return seedState.epochCtx.getShufflingAtEpoch(seedState.epochCtx.epoch);
+        //   }
 
-          if (
-            shufflingEpoch === seedState.epochCtx.epoch + 1 &&
-            dependentRoot === getShufflingDecisionBlock(seedState, shufflingEpoch)
-          ) {
-            return seedState.epochCtx.nextShuffling;
-          }
+        //   if (
+        //     shufflingEpoch === seedState.epochCtx.epoch + 1 &&
+        //     dependentRoot === getShufflingDecisionBlock(seedState, shufflingEpoch)
+        //   ) {
+        //     return seedState.epochCtx.getShufflingAtEpoch(seedState.epochCtx.epoch + 1);
+        //   }
 
-          return null;
-        };
+        //   return null;
+        // };
         const cachedState = createCachedBeaconState(
           state,
           {
             config,
+            shufflingCache,
             pubkey2index: new PubkeyIndexMap(),
             index2pubkey: [],
           },
-          {skipSyncCommitteeCache: true, shufflingGetter}
+          {skipSyncCommitteeCache: true}
         );
         // validatorCountDelta < 0 is unrealistic and shuffling computation results in a different result
         if (validatorCountDelta >= 0) {

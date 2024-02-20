@@ -83,32 +83,42 @@ export class ShufflingCache implements IShufflingCache {
    */
   processState(state: CachedBeaconStateAllForks, shufflingEpoch: Epoch): EpochShuffling {
     const decisionBlockHex = getDecisionBlock(state, shufflingEpoch);
-    const shuffling = this.getSync(shufflingEpoch, decisionBlockHex);
-    if (!shuffling) {
-      throw new Error(`Shuffling not found from state ${state.slot} for epoch ${shufflingEpoch}`);
-    }
+    // const shuffling = this.getSync(shufflingEpoch, decisionBlockHex);
 
     let cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(shufflingEpoch).get(decisionBlockHex);
-    if (cacheItem !== undefined) {
-      // update existing promise
-      if (isPromiseCacheItem(cacheItem)) {
-        // unblock consumers of this promise
-        cacheItem.resolveFn(shuffling);
-        // then update item type to shuffling
+    if (!cacheItem) {
+      throw new Error(`Shuffling not found from state ${state.slot} for epoch ${shufflingEpoch}`);
+    }
+    if (isShufflingCacheItem(cacheItem)) {
+      // ShufflingCacheItem, do nothing
+      this.metrics?.shufflingCache.processStateNoOp.inc();
+      return cacheItem.shuffling;
+    }
+    cacheItem.promise
+      .then((shuffling) => {
         cacheItem = {
           type: CacheItemType.shuffling,
           shuffling,
         };
-        this.add(shufflingEpoch, decisionBlockHex, cacheItem);
+        this._add(shufflingEpoch, decisionBlockHex, cacheItem);
         // we updated type to CacheItemType.shuffling so the above fields are not used anyway
         this.metrics?.shufflingCache.processStateUpdatePromise.inc();
+      })
+      .catch((e) => {});
+    // unblock consumers of this promise
+    cacheItem.resolveFn(shuffling);
+    // then update item type to shuffling
+
+    if (cacheItem !== undefined) {
+      // update existing promise
+      if (isPromiseCacheItem(cacheItem)) {
       } else {
         // ShufflingCacheItem, do nothing
         this.metrics?.shufflingCache.processStateNoOp.inc();
       }
     } else {
       // not found, new shuffling
-      this.add(shufflingEpoch, decisionBlockHex, {type: CacheItemType.shuffling, shuffling});
+      this._add(shufflingEpoch, decisionBlockHex, {type: CacheItemType.shuffling, shuffling});
       this.metrics?.shufflingCache.processStateInsertNew.inc();
     }
 
@@ -141,7 +151,7 @@ export class ShufflingCache implements IShufflingCache {
       promise,
       resolveFn,
     };
-    this.add(shufflingEpoch, decisionRootHex, cacheItem);
+    this._add(shufflingEpoch, decisionRootHex, cacheItem);
     this.metrics?.shufflingCache.insertPromiseCount.inc();
   }
 
@@ -202,10 +212,14 @@ export class ShufflingCache implements IShufflingCache {
   computeNextEpochShuffling(state: BeaconStateAllForks, activeIndices: ValidatorIndex[], epoch: Epoch): void {
     const shuffling = computeEpochShuffling(state, activeIndices, epoch);
     const decisionBlock = getShufflingDecisionBlock(state, epoch);
-    this.add(epoch, decisionBlock, {type: CacheItemType.shuffling, shuffling});
+    this._add(epoch, decisionBlock, {type: CacheItemType.shuffling, shuffling});
   }
 
-  private add(shufflingEpoch: Epoch, decisionBlock: RootHex, cacheItem: CacheItem): void {
+  add(shuffling: EpochShuffling): void {
+    this._add(shuffling.epoch, shuffling.decisionBlock, {type: CacheItemType.shuffling, shuffling});
+  }
+
+  private _add(shufflingEpoch: Epoch, decisionBlock: RootHex, cacheItem: CacheItem): void {
     this.itemsByDecisionRootByEpoch.getOrDefault(shufflingEpoch).set(decisionBlock, cacheItem);
     pruneSetToMax(this.itemsByDecisionRootByEpoch, this.maxEpochs);
   }

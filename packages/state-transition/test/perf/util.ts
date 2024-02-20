@@ -32,6 +32,7 @@ import {interopPubkeysCached} from "../utils/interop.js";
 import {getNextSyncCommittee} from "../../src/util/syncCommittee.js";
 import {getEffectiveBalanceIncrements} from "../../src/cache/effectiveBalanceIncrements.js";
 import {processSlots} from "../../src/index.js";
+import {MockShufflingCache} from "../utils/mockShufflingCache.js";
 
 let phase0State: BeaconStatePhase0 | null = null;
 let phase0CachedState23637: CachedBeaconStatePhase0 | null = null;
@@ -226,12 +227,14 @@ export function generatePerfTestCachedStateAltair(opts?: {
   const altairConfig = createChainForkConfig({ALTAIR_FORK_EPOCH: 0});
 
   const origState = generatePerformanceStateAltair(pubkeys);
+  const shufflingCache = new MockShufflingCache(origState);
 
   if (!altairCachedState23637) {
     const state = origState.clone();
     state.slot -= 1;
     altairCachedState23637 = createCachedBeaconState(state, {
       config: createBeaconConfig(altairConfig, state.genesisValidatorsRoot),
+      shufflingCache,
       pubkey2index,
       index2pubkey,
     });
