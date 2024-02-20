@@ -9,7 +9,6 @@ import {generateCachedState} from "../../../utils/state.js";
 describe("FIFOBlockStateCache", function () {
   let cache: FIFOBlockStateCache;
   const shuffling: EpochShuffling = {
-    epoch: 0,
     activeIndices: new Uint32Array(),
     shuffling: new Uint32Array(),
     committees: [],
@@ -18,15 +17,15 @@ describe("FIFOBlockStateCache", function () {
 
   const state1 = generateCachedState({slot: 0});
   const key1 = toHexString(state1.hashTreeRoot());
-  state1.epochCtx.currentShuffling = {...shuffling, epoch: 0};
+  state1.epochCtx.currentShuffling = {...shuffling};
 
   const state2 = generateCachedState({slot: 1 * SLOTS_PER_EPOCH});
   const key2 = toHexString(state2.hashTreeRoot());
-  state2.epochCtx.currentShuffling = {...shuffling, epoch: 1};
+  state2.epochCtx.currentShuffling = {...shuffling};
 
   const state3 = generateCachedState({slot: 2 * SLOTS_PER_EPOCH});
   const key3 = toHexString(state3.hashTreeRoot());
-  state3.epochCtx.currentShuffling = {...shuffling, epoch: 2};
+  state3.epochCtx.currentShuffling = {...shuffling};
 
   beforeEach(function () {
     // max 2 items

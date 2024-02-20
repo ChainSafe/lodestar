@@ -23,11 +23,6 @@ export type ReadonlyEpochShuffling = {
 
 export type EpochShuffling = {
   /**
-   * Epoch being shuffled
-   */
-  epoch: Epoch;
-
-  /**
    * Non-shuffled active validator indices
    */
   activeIndices: Uint32Array;
@@ -92,7 +87,6 @@ export function computeEpochShuffling(
   }
 
   return {
-    epoch,
     activeIndices: _activeIndices,
     shuffling,
     committees,

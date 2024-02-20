@@ -88,7 +88,7 @@ describe("getEffectiveBalanceIncrementsZeroInactive", () => {
         ...generateValidators(5, {activation: Infinity, exit: Infinity, balance: 32e9}),
       ],
     });
-    const justifiedEpoch = justifiedState.epochCtx.currentShuffling.epoch;
+    const justifiedEpoch = justifiedState.epochCtx.epoch;
     const validators = justifiedState.validators.getAllReadonlyValues();
     const effectiveBalances = getEffectiveBalanceIncrementsZeroed(validators.length);
 

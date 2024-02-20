@@ -9,7 +9,7 @@ describe("ShufflingCache", function () {
   const vc = 64;
   const stateSlot = 100;
   const state = generateTestCachedBeaconStateOnlyValidators({vc, slot: stateSlot});
-  const currentEpoch = state.epochCtx.currentShuffling.epoch;
+  const currentEpoch = state.epochCtx.epoch;
   let shufflingCache: ShufflingCache;
 
   beforeEach(() => {

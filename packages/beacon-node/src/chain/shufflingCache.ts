@@ -78,13 +78,13 @@ export class ShufflingCache {
     const decisionBlockHex = getDecisionBlock(state, shufflingEpoch);
     let shuffling: EpochShuffling;
     switch (shufflingEpoch) {
-      case state.epochCtx.nextShuffling.epoch:
+      case state.epochCtx.nextEpoch:
         shuffling = state.epochCtx.nextShuffling;
         break;
-      case state.epochCtx.currentShuffling.epoch:
+      case state.epochCtx.epoch:
         shuffling = state.epochCtx.currentShuffling;
         break;
-      case state.epochCtx.previousShuffling.epoch:
+      case state.epochCtx.previousEpoch:
         shuffling = state.epochCtx.previousShuffling;
         break;
       default:

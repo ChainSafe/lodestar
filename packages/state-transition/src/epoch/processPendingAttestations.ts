@@ -24,7 +24,7 @@ export function processPendingAttestations(
   headFlag: number
 ): void {
   const {epochCtx, slot: stateSlot} = state;
-  const prevEpoch = epochCtx.previousShuffling.epoch;
+  const prevEpoch = epochCtx.previousEpoch;
   if (attestations.length === 0) {
     return;
   }

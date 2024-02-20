@@ -11,7 +11,6 @@ describe("StateContextCache", function () {
   let cache: StateContextCache;
   let key1: Root, key2: Root;
   const shuffling: EpochShuffling = {
-    epoch: 0,
     activeIndices: new Uint32Array(),
     shuffling: new Uint32Array(),
     committees: [],
@@ -23,18 +22,18 @@ describe("StateContextCache", function () {
     cache = new StateContextCache({maxStates: 2});
     const state1 = generateCachedState({slot: 0});
     key1 = state1.hashTreeRoot();
-    state1.epochCtx.currentShuffling = {...shuffling, epoch: 0};
+    state1.epochCtx.currentShuffling = {...shuffling};
     cache.add(state1);
     const state2 = generateCachedState({slot: 1 * SLOTS_PER_EPOCH});
     key2 = state2.hashTreeRoot();
-    state2.epochCtx.currentShuffling = {...shuffling, epoch: 1};
+    state2.epochCtx.currentShuffling = {...shuffling};
     cache.add(state2);
   });
 
   it("should prune", function () {
     expect(cache.size).toBe(2);
     const state3 = generateCachedState({slot: 2 * SLOTS_PER_EPOCH});
-    state3.epochCtx.currentShuffling = {...shuffling, epoch: 2};
+    state3.epochCtx.currentShuffling = {...shuffling};
 
     cache.add(state3);
     expect(cache.size).toBe(3);
