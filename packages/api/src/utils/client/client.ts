@@ -8,10 +8,10 @@ import {HttpStatusCode} from "./httpStatusCode.js";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 type ExtraOpts = {retryAttempts?: number};
-type ParamatersWithOptionalExtaOpts<T extends (...args: any) => any> = [...Parameters<T>, ExtraOpts] | Parameters<T>;
+type ParametersWithOptionalExtraOpts<T extends (...args: any) => any> = [...Parameters<T>, ExtraOpts] | Parameters<T>;
 
 export type ApiWithExtraOpts<T extends Record<string, APIClientHandler>> = {
-  [K in keyof T]: (...args: ParamatersWithOptionalExtaOpts<T[K]>) => ReturnType<T[K]>;
+  [K in keyof T]: (...args: ParametersWithOptionalExtraOpts<T[K]>) => ReturnType<T[K]>;
 };
 
 // See /packages/api/src/routes/index.ts for reasoning
@@ -71,7 +71,7 @@ export function generateGenericJsonClient<
     const returnType = returnTypes[routeId as keyof ReturnTypes<Api>] as TypeJson<any> | null;
 
     return async function request(
-      ...args: ParamatersWithOptionalExtaOpts<Api[keyof Api]>
+      ...args: ParametersWithOptionalExtraOpts<Api[keyof Api]>
     ): Promise<ReturnType<Api[keyof Api]>> {
       try {
         // extract the extraOpts if provided

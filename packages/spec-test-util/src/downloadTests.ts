@@ -6,7 +6,7 @@ import {promisify} from "node:util";
 import {rimraf} from "rimraf";
 import axios from "axios";
 import {x as extractTar} from "tar";
-import retry from "async-retry";
+import {retry} from "@lodestar/utils";
 
 export const defaultSpecTestsRepoUrl = "https://github.com/ethereum/consensus-spec-tests";
 
@@ -67,7 +67,6 @@ export async function downloadGenericSpecTests<TestNames extends string>(
       const url = `${specTestsRepoUrl ?? defaultSpecTestsRepoUrl}/releases/download/${specVersion}/${test}.tar.gz`;
 
       await retry(
-        // async (bail) => {
         async () => {
           const {data, headers} = await axios({
             method: "get",

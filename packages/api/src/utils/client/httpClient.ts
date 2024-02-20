@@ -184,11 +184,19 @@ export class HttpClient implements IHttpClient {
     getBody: (res: Response) => Promise<T>
   ): Promise<{status: HttpStatusCode; body: T}> {
     if (opts.retryAttempts !== undefined) {
+      const routeId = opts.routeId ?? DEFAULT_ROUTE_ID;
+
       return retry(
         async (_attempt) => {
           return this.requestWithBodyWithFallbacks<T>(opts, getBody);
         },
-        {retries: opts.retryAttempts, retryDelay: 200}
+        {
+          retries: opts.retryAttempts,
+          retryDelay: 200,
+          onRetry: (e, attempt) => {
+            this.logger?.debug("Retrying request", {routeId, attempt, lastError: e.message});
+          },
+        }
       );
     } else {
       return this.requestWithBodyWithFallbacks<T>(opts, getBody);
