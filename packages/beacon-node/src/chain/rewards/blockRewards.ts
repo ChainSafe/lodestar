@@ -94,6 +94,7 @@ function computeSyncAggregateReward(block: altair.BeaconBlock, preState: CachedB
     return 0; // phase0 block does not have syncAggregate
   }
 }
+
 /**
  * Calculate rewards received by block proposer for including proposer slashings.
  * All proposer slashing rewards go to block proposer and none to whistleblower as of Deneb
