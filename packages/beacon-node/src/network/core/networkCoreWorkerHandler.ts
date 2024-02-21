@@ -19,6 +19,7 @@ import {NetworkOptions} from "../options.js";
 import {PeerAction, PeerScoreStats} from "../peers/index.js";
 import {GetReqRespHandlerFn, IncomingRequestArgs, OutgoingRequestArgs} from "../reqresp/types.js";
 import {CommitteeSubscription} from "../subnets/interface.js";
+import {GossipBuffersSharedArrayBuffers} from "../processor/bufferedGossipMessage.js";
 import {
   NetworkWorkerThreadEventType,
   ReqRespBridgeEventBus,
@@ -46,6 +47,7 @@ export type WorkerNetworkCoreInitModules = {
   logger: LoggerNode;
   peerId: PeerId;
   events: NetworkEventBus;
+  gossipBufferSharedArrayBuffers: GossipBuffersSharedArrayBuffers;
   metrics: Metrics | null;
   getReqRespHandler: GetReqRespHandlerFn;
 };
@@ -118,6 +120,7 @@ export class WorkerNetworkCore implements INetworkCore {
       initialStatus,
       activeValidatorCount,
       loggerOpts: modules.logger.toOpts(),
+      gossipBufferSharedArrayBuffers: modules.gossipBufferSharedArrayBuffers,
     };
 
     const worker = new Worker(path.join(workerDir, "networkCoreWorker.js"), {

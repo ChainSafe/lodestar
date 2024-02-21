@@ -8,6 +8,7 @@ import {NetworkOptions} from "../options.js";
 import {CommitteeSubscription} from "../subnets/interface.js";
 import {PeerAction, PeerScoreStats} from "../peers/index.js";
 import {OutgoingRequestArgs} from "../reqresp/types.js";
+import {GossipBuffersSharedArrayBuffers} from "../processor/bufferedGossipMessage.js";
 
 export type MultiaddrStr = string;
 export type PeerIdStr = string;
@@ -83,6 +84,7 @@ export type NetworkWorkerData = {
   metricsEnabled: boolean;
   peerStoreDir?: string;
   loggerOpts: LoggerNodeOpts;
+  gossipBufferSharedArrayBuffers: GossipBuffersSharedArrayBuffers;
 };
 
 /**

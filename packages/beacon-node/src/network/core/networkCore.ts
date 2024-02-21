@@ -34,6 +34,7 @@ import {LocalStatusCache} from "../statusCache.js";
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {peerIdFromString, peerIdToString} from "../../util/peerId.js";
 import {DLLAttnetsService} from "../subnets/dllAttnetsService.js";
+import {GossipBuffers} from "../processor/bufferedGossipMessage.js";
 import {NetworkCoreMetrics, createNetworkCoreMetrics} from "./metrics.js";
 import {INetworkCore, MultiaddrStr, PeerIdStr} from "./types.js";
 
@@ -63,6 +64,7 @@ export type BaseNetworkInit = {
   metricsRegistry: RegistryMetricCreator | null;
   clock: IClock;
   events: NetworkEventBus;
+  buffers: GossipBuffers;
   getReqRespHandler: GetReqRespHandlerFn;
   activeValidatorCount: number;
   initialStatus: phase0.Status;
@@ -133,6 +135,7 @@ export class NetworkCore implements INetworkCore {
     logger,
     metricsRegistry,
     events,
+    buffers,
     clock,
     getReqRespHandler,
     activeValidatorCount,
@@ -186,6 +189,7 @@ export class NetworkCore implements INetworkCore {
       },
       peersData,
       events,
+      buffers,
     });
 
     // Note: should not be necessary, already called in createNodeJsLibp2p()

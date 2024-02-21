@@ -13,6 +13,7 @@ import {peerIdToString} from "../../util/peerId.js";
 import {profileNodeJS, writeHeapSnapshot} from "../../util/profile.js";
 import {NetworkEventBus, NetworkEventData, networkEventDirection} from "../events.js";
 import {wireEventsOnWorkerThread} from "../../util/workerEvents.js";
+import {GossipBuffers} from "../processor/bufferedGossipMessage.js";
 import {getNetworkCoreWorkerMetrics} from "./metrics.js";
 import {NetworkWorkerApi, NetworkWorkerData} from "./types.js";
 import {NetworkCore} from "./networkCore.js";
@@ -90,6 +91,8 @@ if (networkCoreWorkerMetrics) {
   });
 }
 
+const buffers = new GossipBuffers(workerData.gossipBufferSharedArrayBuffers);
+
 const core = await NetworkCore.init({
   opts: workerData.opts,
   config,
@@ -98,6 +101,7 @@ const core = await NetworkCore.init({
   logger,
   metricsRegistry: metricsRegister,
   events,
+  buffers,
   clock,
   getReqRespHandler: (method) => (req, peerId) =>
     reqRespBridgeRespCaller.getAsyncIterable({method, req, peerId: peerIdToString(peerId)}),

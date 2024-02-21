@@ -12,6 +12,7 @@ import {ClientKind} from "../peers/client.js";
 import {GOSSIP_MAX_SIZE, GOSSIP_MAX_SIZE_BELLATRIX} from "../../constants/network.js";
 import {Libp2p} from "../interface.js";
 import {NetworkEvent, NetworkEventBus, NetworkEventData} from "../events.js";
+import {GossipBuffers} from "../processor/bufferedGossipMessage.js";
 import {GossipTopic, GossipType} from "./interface.js";
 import {GossipTopicCache, stringifyGossipTopic, getCoreTopicsAtFork} from "./topic.js";
 import {DataTransformSnappy, fastMsgIdFn, msgIdFn, msgIdToStrFn} from "./encoding.js";
@@ -45,6 +46,7 @@ export type Eth2GossipsubModules = {
   eth2Context: Eth2Context;
   peersData: PeersData;
   events: NetworkEventBus;
+  buffers: GossipBuffers;
 };
 
 export type Eth2GossipsubOpts = {
@@ -75,6 +77,7 @@ export class Eth2Gossipsub extends GossipSub {
   private readonly logger: Logger;
   private readonly peersData: PeersData;
   private readonly events: NetworkEventBus;
+  private readonly buffers: GossipBuffers;
 
   // Internal caches
   private readonly gossipTopicCache: GossipTopicCache;
@@ -84,7 +87,7 @@ export class Eth2Gossipsub extends GossipSub {
     const gossipTopicCache = new GossipTopicCache(modules.config);
 
     const scoreParams = computeGossipPeerScoreParams(modules);
-    const {config, logger, metricsRegister, peersData, events} = modules;
+    const {config, logger, metricsRegister, peersData, events, buffers} = modules;
 
     // Gossipsub parameters defined here:
     // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
@@ -132,6 +135,7 @@ export class Eth2Gossipsub extends GossipSub {
     this.peersData = peersData;
     this.events = events;
     this.gossipTopicCache = gossipTopicCache;
+    this.buffers = buffers;
 
     if (metricsRegister) {
       const metrics = createEth2GossipsubMetrics(metricsRegister);
@@ -277,6 +281,16 @@ export class Eth2Gossipsub extends GossipSub {
 
     // Get seenTimestamp before adding the message to the queue or add async delays
     const seenTimestampSec = Date.now() / 1000;
+
+    this.buffers.writeObject(topic.type, {
+      msgTopic: msg.topic,
+      msgData: msg.data,
+      msgId,
+      propagationSource: propagationSource.toString(),
+      seenTimestampSec,
+    });
+
+    return;
 
     // Use setTimeout to yield to the macro queue
     // Without this we'll have huge event loop lag

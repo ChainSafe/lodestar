@@ -34,6 +34,7 @@ import {collectSequentialBlocksInRange} from "./reqresp/utils/collectSequentialB
 import {getGossipSSZType, gossipTopicIgnoreDuplicatePublishError, stringifyGossipTopic} from "./gossip/topic.js";
 import {AggregatorTracker} from "./processor/aggregatorTracker.js";
 import {getActiveForks} from "./forks.js";
+import {GossipBuffers, createGossipBuffersSharedArrayBuffers} from "./processor/bufferedGossipMessage.js";
 
 type NetworkModules = {
   opts: NetworkOptions;
@@ -135,6 +136,9 @@ export class Network implements INetwork {
       logger.info("running libp2p instance in worker thread");
     }
 
+    const gossipBufferSharedArrayBuffers = createGossipBuffersSharedArrayBuffers();
+    const buffers = new GossipBuffers(gossipBufferSharedArrayBuffers);
+
     const core = opts.useWorker
       ? await WorkerNetworkCore.init({
           opts: {
@@ -149,6 +153,7 @@ export class Network implements INetwork {
           peerId,
           logger,
           events,
+          gossipBufferSharedArrayBuffers,
           metrics,
           getReqRespHandler,
         })
@@ -160,6 +165,7 @@ export class Network implements INetwork {
           logger,
           clock: chain.clock,
           events,
+          buffers,
           getReqRespHandler,
           metricsRegistry: metrics ? new RegistryMetricCreator() : null,
           initialStatus,
@@ -167,7 +173,7 @@ export class Network implements INetwork {
         });
 
     const networkProcessor = new NetworkProcessor(
-      {chain, db, config, logger, metrics, events, gossipHandlers, core, aggregatorTracker},
+      {chain, db, config, logger, metrics, events, gossipHandlers, core, aggregatorTracker, buffers},
       opts
     );
 

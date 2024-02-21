@@ -18,11 +18,13 @@ import {
   GossipValidatorFn,
 } from "../gossip/interface.js";
 import {PeerIdStr} from "../peers/index.js";
+import {GossipTopicCache} from "../gossip/topic.js";
 import {createGossipQueues} from "./gossipQueues/index.js";
 import {PendingGossipsubMessage} from "./types.js";
 import {ValidatorFnsModules, GossipHandlerOpts, getGossipHandlers} from "./gossipHandlers.js";
 import {createExtractBlockSlotRootFns} from "./extractSlotRootFns.js";
 import {ValidatorFnModules, getGossipValidatorBatchFn, getGossipValidatorFn} from "./gossipValidatorFn.js";
+import {BufferedGossipsubMessage, GossipBuffers} from "./bufferedGossipMessage.js";
 
 export * from "./types.js";
 
@@ -33,6 +35,7 @@ export type NetworkProcessorModules = ValidatorFnsModules &
     events: NetworkEventBus;
     logger: Logger;
     metrics: Metrics | null;
+    buffers: GossipBuffers;
     // Optionally pass custom GossipHandlers, for testing
     gossipHandlers?: GossipHandlers;
   };
@@ -154,6 +157,9 @@ export class NetworkProcessor {
   private readonly gossipQueues: ReturnType<typeof createGossipQueues>;
   private readonly gossipTopicConcurrency: {[K in GossipType]: number};
   private readonly extractBlockSlotRootFns = createExtractBlockSlotRootFns();
+  private readonly buffers: GossipBuffers;
+  private readonly gossipTopicCache: GossipTopicCache;
+  private readonly controller: AbortController = new AbortController();
   // we may not receive the block for Attestation and SignedAggregateAndProof messages, in that case PendingGossipsubMessage needs
   // to be stored in this Map and reprocessed once the block comes
   private readonly awaitingGossipsubMessagesByRootBySlot: MapDef<Slot, MapDef<RootHex, Set<PendingGossipsubMessage>>>;
@@ -165,12 +171,14 @@ export class NetworkProcessor {
     modules: NetworkProcessorModules,
     private readonly opts: NetworkProcessorOpts
   ) {
-    const {chain, events, logger, metrics} = modules;
+    const {chain, events, logger, metrics, buffers} = modules;
     this.chain = chain;
     this.events = events;
     this.metrics = metrics;
     this.logger = logger;
     this.events = events;
+    this.buffers = buffers;
+    this.gossipTopicCache = new GossipTopicCache(chain.config);
     this.gossipQueues = createGossipQueues(this.opts.beaconAttestationBatchValidation);
     this.gossipTopicConcurrency = mapValues(this.gossipQueues, () => 0);
     this.gossipValidatorFn = getGossipValidatorFn(modules.gossipHandlers ?? getGossipHandlers(modules, opts), modules);
@@ -179,7 +187,7 @@ export class NetworkProcessor {
       modules
     );
 
-    events.on(NetworkEvent.pendingGossipsubMessage, this.onPendingGossipsubMessage.bind(this));
+    // events.on(NetworkEvent.pendingGossipsubMessage, this.onPendingGossipsubMessage.bind(this));
     this.chain.emitter.on(routes.events.EventType.block, this.onBlockProcessed.bind(this));
     this.chain.clock.on(ClockEvent.slot, this.onClockSlot.bind(this));
 
@@ -209,10 +217,13 @@ export class NetworkProcessor {
     // TODO: Pull new work when available
     // this.bls.onAvailable(() => this.executeWork());
     // this.regen.onAvailable(() => this.executeWork());
+
+    this.pollGossipBuffers().catch((e) => this.logger.error("pollGossipBuffers must not throw", {}, e));
   }
 
   async stop(): Promise<void> {
-    this.events.off(NetworkEvent.pendingGossipsubMessage, this.onPendingGossipsubMessage);
+    // this.events.off(NetworkEvent.pendingGossipsubMessage, this.onPendingGossipsubMessage);
+    this.controller.abort();
     this.chain.emitter.off(routes.events.EventType.block, this.onBlockProcessed);
     this.chain.emitter.off(ClockEvent.slot, this.onClockSlot);
   }
@@ -239,6 +250,52 @@ export class NetworkProcessor {
     // Search for the unknown block
     this.unknownRootsBySlot.getOrDefault(slot).add(root);
     this.events.emit(NetworkEvent.unknownBlock, {rootHex: root, peer});
+  }
+
+  private async pollGossipBuffers(): Promise<void> {
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      try {
+        await this.buffers.awaitNewData(this.controller.signal);
+      } catch (e) {
+        return;
+      }
+
+      const ordering = [
+        GossipType.beacon_block,
+        GossipType.blob_sidecar,
+        GossipType.beacon_aggregate_and_proof,
+        GossipType.beacon_attestation,
+        GossipType.voluntary_exit,
+        GossipType.proposer_slashing,
+        GossipType.attester_slashing,
+        GossipType.sync_committee_contribution_and_proof,
+        GossipType.sync_committee,
+        GossipType.light_client_finality_update,
+        GossipType.light_client_optimistic_update,
+        GossipType.bls_to_execution_change,
+      ];
+      for (const gossipType of ordering) {
+        let msg = this.buffers.readObject(gossipType);
+        while (msg !== undefined) {
+          this.onBufferedGossipsubMessage(msg);
+          msg = this.buffers.readObject(gossipType);
+        }
+      }
+    }
+  }
+
+  private onBufferedGossipsubMessage(message: BufferedGossipsubMessage): void {
+    // convert to pending gossipsub message
+    const pendingGossipsubMessage: PendingGossipsubMessage = {
+      msgId: message.msgId,
+      propagationSource: message.propagationSource,
+      topic: this.gossipTopicCache.getTopic(message.msgTopic),
+      msg: {type: "unsigned", topic: message.msgTopic, data: message.msgData},
+      seenTimestampSec: message.seenTimestampSec,
+      startProcessUnixSec: null,
+    };
+    this.onPendingGossipsubMessage(pendingGossipsubMessage);
   }
 
   private onPendingGossipsubMessage(message: PendingGossipsubMessage): void {

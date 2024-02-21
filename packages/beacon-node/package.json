@@ -90,6 +90,7 @@
     "test:spec:minimal": "LODESTAR_PRESET=minimal vitest --run --config vitest.spec.config.ts --dir test/spec/presets/",
     "test:spec:mainnet": "LODESTAR_PRESET=mainnet vitest --run --config vitest.spec.config.ts --dir test/spec/presets/",
     "test:spec": "yarn test:spec:bls && yarn test:spec:general && yarn test:spec:minimal && yarn test:spec:mainnet",
+    "vitest": "vitest",
     "check-readme": "typescript-docs-verifier"
   },
   "dependencies": {
