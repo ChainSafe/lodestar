@@ -10,6 +10,8 @@ import {BeaconNode} from "../../../../../../src/node/nodejs.js";
 import {getAndInitDevValidators} from "../../../../../utils/node/validator.js";
 
 describe("beacon node api", function () {
+  vi.setConfig({testTimeout: 60_000});
+
   const restPort = 9596;
   const config = createBeaconConfig(chainConfigDef, Buffer.alloc(32, 0xaa));
   const validatorCount = 8;
@@ -63,8 +65,6 @@ describe("beacon node api", function () {
     });
 
     it("should return 'el_offline' as 'true' when EL not available", async () => {
-      vi.setConfig({testTimeout: 60_000});
-
       const portElOffline = 9597;
       const bnElOffline = await getDevBeaconNode({
         params: {

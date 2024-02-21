@@ -11,6 +11,8 @@ import {ClockEvent} from "../../../../src/util/clock.js";
 import {BeaconNode} from "../../../../src/index.js";
 
 describe("api / impl / validator", function () {
+  vi.setConfig({testTimeout: 60_000});
+
   describe("getLiveness endpoint", function () {
     let bn: BeaconNode | undefined;
     const SECONDS_PER_SLOT = 2;
@@ -75,8 +77,6 @@ describe("api / impl / validator", function () {
     });
 
     it("Should return only for previous, current and next epoch", async function () {
-      vi.setConfig({testTimeout: 60_000});
-
       const chainConfig: ChainConfig = {...chainConfigDef, SECONDS_PER_SLOT, ALTAIR_FORK_EPOCH};
       const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
       const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
