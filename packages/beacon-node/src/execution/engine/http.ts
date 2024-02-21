@@ -45,7 +45,7 @@ export type ExecutionEngineModules = {
 
 export type ExecutionEngineHttpOpts = {
   urls: string[];
-  retryAttempts: number;
+  retries: number;
   retryDelay: number;
   timeout?: number;
   /**
@@ -72,7 +72,7 @@ export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
    * port/url, one can override this and skip providing a jwt secret.
    */
   urls: ["http://localhost:8551"],
-  retryAttempts: 2,
+  retries: 2,
   retryDelay: 2000,
   timeout: 12000,
 };
@@ -305,7 +305,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     // If we are just fcUing and not asking execution for payload, retry is not required
     // and we can move on, as the next fcU will be issued soon on the new slot
     const fcUReqOpts =
-      payloadAttributes !== undefined ? forkchoiceUpdatedV1Opts : {...forkchoiceUpdatedV1Opts, retryAttempts: 0};
+      payloadAttributes !== undefined ? forkchoiceUpdatedV1Opts : {...forkchoiceUpdatedV1Opts, retries: 0};
 
     const request = this.rpcFetchQueue.push({
       method,
