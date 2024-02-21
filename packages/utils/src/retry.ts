@@ -26,7 +26,6 @@ export type RetryOptions = {
  */
 export async function retry<A>(fn: (attempt: number) => A | Promise<A>, opts?: RetryOptions): Promise<A> {
   const maxRetries = opts?.retries ?? 5;
-  // The maximum number of attempts is the number of retries + the initial attempt
   const maxAttempts = maxRetries + 1;
   const shouldRetry = opts?.shouldRetry;
 
@@ -37,8 +36,8 @@ export async function retry<A>(fn: (attempt: number) => A | Promise<A>, opts?: R
     } catch (e) {
       lastError = e as Error;
 
-      if (i == maxAttempts) {
-        // If we have reached the maximum number of attempts, there's no need to check if we should retry
+      if (i === maxAttempts) {
+        // Reached maximum number of attempts, there's no need to check if we should retry
         break;
       } else if (shouldRetry && !shouldRetry(lastError)) {
         break;
