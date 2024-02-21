@@ -1,12 +1,13 @@
-import {describe, it, expect, beforeAll} from "vitest";
+import {describe, it, expect, beforeAll, vi} from "vitest";
 import {Web3} from "web3";
 import {LCTransport} from "../../src/interfaces.js";
 import {createVerifiedExecutionProvider} from "../../src/web3_provider.js";
 import {rpcUrl, beaconUrl, config, waitForCapellaFork} from "../utils/e2e_env.js";
 import {getVerificationFailedMessage} from "../../src/utils/json_rpc.js";
 
-/* prettier-ignore */
 describe("web3_batch_requests", function () {
+  vi.setConfig({testTimeout: 10_000});
+
   let web3: Web3;
 
   beforeAll(async () => {
@@ -69,4 +70,4 @@ describe("web3_batch_requests", function () {
       await expect(errorRequest).rejects.toThrow(getVerificationFailedMessage("eth_getBlockByHash"));
     });
   });
-}, {timeout: 10_000});
+});
