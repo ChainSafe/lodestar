@@ -11,8 +11,8 @@ export function lockFilepath(filepath: string): void {
       realpath: false,
     });
   } catch (e) {
-    if (isLockfileError(e) && e.code === "ELOCKED") {
-      e.message = `${filepath} is already in use by another process`;
+    if (isLockfileError(e) && (e.code === "ELOCKED" || e.code === "ENOTDIR")) {
+      e.message = `'${filepath}' already in use by another process`;
     }
     throw e;
   }
@@ -38,7 +38,7 @@ export function unlockFilepath(filepath: string): void {
 }
 
 // https://github.com/moxystudio/node-proper-lockfile/blob/9f8c303c91998e8404a911dc11c54029812bca69/lib/lockfile.js#L53
-export type LockfileError = Error & {code: "ELOCKED" | "ENOTACQUIRED"};
+export type LockfileError = Error & {code: "ELOCKED" | "ENOTACQUIRED" | "ENOTDIR"};
 
 function isLockfileError(e: unknown): e is LockfileError {
   return e instanceof Error && (e as LockfileError).code !== undefined;

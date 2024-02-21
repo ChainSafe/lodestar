@@ -6,11 +6,17 @@ export type RetryOptions = {
    */
   retries?: number;
   /**
-   * An optional Function that is invoked after the provided callback throws
-   * It expects a boolean to know if it should retry or not
-   * Useful to make retrying conditional on the type of error thrown
+   * An optional Function that is invoked after the provided callback throws.
+   * It expects a boolean to know if it should retry or not.
+   * Useful to make retrying conditional on the type of error thrown.
    */
   shouldRetry?: (lastError: Error) => boolean;
+  /**
+   * An optional Function that is invoked right before a retry is performed.
+   * It's passed the Error that triggered it and a number identifying the attempt.
+   * Useful to track number of retries and errors in logs or metrics.
+   */
+  onRetry?: (lastError: Error, attempt: number) => unknown;
   /**
    * Milliseconds to wait before retrying again
    */
@@ -28,10 +34,14 @@ export async function retry<A>(fn: (attempt: number) => A | Promise<A>, opts?: R
   const maxRetries = opts?.retries ?? 5;
   const maxAttempts = maxRetries + 1;
   const shouldRetry = opts?.shouldRetry;
+  const onRetry = opts?.onRetry;
 
   let lastError: Error = Error("RetryError");
   for (let i = 1; i <= maxAttempts; i++) {
     try {
+      // If not the first attempt, invoke right before retrying
+      if (i > 1) onRetry?.(lastError, i);
+
       return await fn(i);
     } catch (e) {
       lastError = e as Error;

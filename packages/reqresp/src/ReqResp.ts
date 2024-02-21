@@ -57,8 +57,6 @@ export class ReqResp {
   private readonly protocolPrefix: string;
 
   /** `${protocolPrefix}/${method}/${version}/${encoding}` */
-  // Use any to avoid TS error on registering protocol
-  // Type 'unknown' is not assignable to type 'Resp'
   private readonly registeredProtocols = new Map<ProtocolID, MixedProtocol>();
   private readonly dialOnlyProtocols = new Map<ProtocolID, boolean>();
 
@@ -79,13 +77,8 @@ export class ReqResp {
    *
    * Made it explicit method to avoid any developer mistake
    */
-  registerDialOnlyProtocol(protocol: DialOnlyProtocol, opts?: ReqRespRegisterOpts): void {
+  registerDialOnlyProtocol(protocol: DialOnlyProtocol): void {
     const protocolID = this.formatProtocolID(protocol);
-
-    // libp2p will throw on error on duplicates, allow to overwrite behavior
-    if (opts?.ignoreIfDuplicate && this.registeredProtocols.has(protocolID)) {
-      return;
-    }
 
     this.registeredProtocols.set(protocolID, protocol);
     this.dialOnlyProtocols.set(protocolID, true);
@@ -93,14 +86,20 @@ export class ReqResp {
 
   /**
    * Register protocol as supported and to libp2p.
-   * async because libp2p registar persists the new protocol list in the peer-store.
+   * async because libp2p registrar persists the new protocol list in the peer-store.
    * Throws if the same protocol is registered twice.
    * Can be called at any time, no concept of started / stopped
    */
   async registerProtocol(protocol: Protocol, opts?: ReqRespRegisterOpts): Promise<void> {
     const protocolID = this.formatProtocolID(protocol);
+
+    // libp2p will throw if handler for protocol is already registered, allow to overwrite behavior
+    if (opts?.ignoreIfDuplicate && this.registeredProtocols.has(protocolID)) {
+      return;
+    }
+
     const {handler: _handler, inboundRateLimits, ...rest} = protocol;
-    this.registerDialOnlyProtocol(rest, opts);
+    this.registerDialOnlyProtocol(rest);
     this.dialOnlyProtocols.set(protocolID, false);
 
     if (inboundRateLimits) {
@@ -112,7 +111,7 @@ export class ReqResp {
 
   /**
    * Remove protocol as supported and from libp2p.
-   * async because libp2p registar persists the new protocol list in the peer-store.
+   * async because libp2p registrar persists the new protocol list in the peer-store.
    * Does NOT throw if the protocolID is unknown.
    * Can be called at any time, no concept of started / stopped
    */

@@ -138,7 +138,7 @@ export class DLLAttnetsService implements IAttnetsService {
    * Call ONLY ONCE: Two epoch before the fork, re-subscribe all existing random subscriptions to the new fork
    **/
   subscribeSubnetsToNextFork(nextFork: ForkName): void {
-    this.logger.info("Suscribing to long lived attnets to next fork", {
+    this.logger.info("Subscribing to long lived attnets to next fork", {
       nextFork,
       subnets: Array.from(this.longLivedSubscriptions).join(","),
     });
@@ -152,7 +152,7 @@ export class DLLAttnetsService implements IAttnetsService {
    * Call  ONLY ONCE: Two epochs after the fork, un-subscribe all subnets from the old fork
    **/
   unsubscribeSubnetsFromPrevFork(prevFork: ForkName): void {
-    this.logger.info("Unsuscribing to long lived attnets from prev fork", {prevFork});
+    this.logger.info("Unsubscribing to long lived attnets from prev fork", {prevFork});
     for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
       if (!this.opts.subscribeAllSubnets) {
         this.gossip.unsubscribeTopic({type: gossipType, fork: prevFork, subnet});
