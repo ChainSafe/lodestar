@@ -6,7 +6,7 @@ import {createVerifiedExecutionProvider} from "../../src/web3_provider.js";
 import {waitForCapellaFork, testTimeout, rpcUrl, beaconUrl, config} from "../utils/e2e_env.js";
 
 describe("web3_provider", function () {
-  vi.setConfig({testTimeout});
+  vi.setConfig({hookTimeout: testTimeout});
 
   beforeAll(async () => {
     await waitForCapellaFork();
