@@ -193,6 +193,7 @@ export class HttpClient implements IHttpClient {
         {
           retries: opts.retryAttempts,
           retryDelay: 200,
+          signal: this.getAbortSignal?.(),
           onRetry: (e, attempt) => {
             this.logger?.debug("Retrying request", {routeId, attempt, lastError: e.message});
           },

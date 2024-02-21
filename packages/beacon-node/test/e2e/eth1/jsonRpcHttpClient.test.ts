@@ -287,7 +287,7 @@ describe("eth1 / jsonRpcHttpClient - with retries", function () {
     expect(requestCount).toBeWithMessage(retryAttempts + 1, "Timeout request should be retried before failing");
   });
 
-  it("should retry aborted", async function () {
+  it("should not retry aborted", async function () {
     let requestCount = 0;
     const server = http.createServer(() => {
       requestCount++;
@@ -314,7 +314,7 @@ describe("eth1 / jsonRpcHttpClient - with retries", function () {
     setTimeout(() => controller.abort(), 50);
     const eth1JsonRpcClient = new JsonRpcHttpClient([url], {signal: controller.signal});
     await expect(eth1JsonRpcClient.fetchWithRetries(payload, {retryAttempts, timeout})).rejects.toThrow("Aborted");
-    expect(requestCount).toBeWithMessage(1, "Aborted request should be retried before failing");
+    expect(requestCount).toBeWithMessage(1, "Aborted request should not be retried");
   });
 
   it("should not retry payload error", async function () {
