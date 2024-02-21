@@ -32,6 +32,7 @@ export type RetryOptions = {
  */
 export async function retry<A>(fn: (attempt: number) => A | Promise<A>, opts?: RetryOptions): Promise<A> {
   const maxRetries = opts?.retries ?? 5;
+  // Number of retries + the initial attempt
   const maxAttempts = maxRetries + 1;
   const shouldRetry = opts?.shouldRetry;
   const onRetry = opts?.onRetry;
