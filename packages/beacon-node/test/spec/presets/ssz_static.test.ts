@@ -63,7 +63,7 @@ const sszStatic =
       it(testCase, function () {
         // Mainnet must deal with big full states and hash each one multiple times
         if (ACTIVE_PRESET === "mainnet") {
-          vi.setConfig({testTimeout: 30_000});
+          vi.setConfig({testTimeout: 30 * 1000});
         }
 
         const testData = parseSszStaticTestcase(path.join(testSuiteDirpath, testCase));
