@@ -85,7 +85,7 @@ export async function downloadGenericSpecTests<TestNames extends string>(
           log(`Downloaded  ${url}`);
         },
         {
-          retries: 2,
+          retries: 3,
           onRetry: (e, attempt) => {
             log(`Download attempt ${attempt} for ${url} failed: ${e.message}`);
           },
