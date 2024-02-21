@@ -14,8 +14,8 @@ const bellatrixForkEpoch = 2;
 const capellaForkEpoch = 3;
 const genesisDelaySeconds = 30 * secondsPerSlot;
 
-// Wait for at least teh capella fork to be started
-export const testTimeout = (capellaForkEpoch + 2) * 8 * 4 * 1000;
+// Wait for at least the capella fork to be started
+export const hookTimeout = (capellaForkEpoch + 2) * 8 * 4 * 1000;
 
 export const config = {
   ALTAIR_FORK_EPOCH: altairForkEpoch,
