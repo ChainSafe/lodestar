@@ -277,7 +277,7 @@ describe("eth1 / jsonRpcHttpClient - with retries", function () {
     const url = `http://localhost:${port}`;
     const payload = {method: "get", params: []};
     const retryAttempts = 2;
-    const timeout = 2000;
+    const timeout = 200;
 
     const controller = new AbortController();
     const eth1JsonRpcClient = new JsonRpcHttpClient([url], {signal: controller.signal});
@@ -308,7 +308,7 @@ describe("eth1 / jsonRpcHttpClient - with retries", function () {
     const url = `http://localhost:${port}`;
     const payload = {method: "get", params: []};
     const retryAttempts = 2;
-    const timeout = 2000;
+    const timeout = 200;
 
     const controller = new AbortController();
     setTimeout(() => controller.abort(), 50);
