@@ -162,7 +162,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
           return this.fetchJson({jsonrpc: "2.0", id: this.id++, ...payload}, opts);
         },
         {
-          retries: opts?.retryAttempts ?? this.opts?.retryAttempts ?? 1,
+          retries: opts?.retryAttempts ?? this.opts?.retryAttempts ?? 0,
           retryDelay: opts?.retryDelay ?? this.opts?.retryDelay ?? 0,
           shouldRetry: opts?.shouldRetry,
           signal: this.opts?.signal,
