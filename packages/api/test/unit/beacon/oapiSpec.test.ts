@@ -23,6 +23,7 @@ import {testData as validatorTestData} from "./testData/validator.js";
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// TODO: update once release is out
 const version = "v2.4.2";
 const openApiFile: OpenApiFile = {
   url: `https://github.com/ethereum/beacon-APIs/releases/download/${version}/beacon-node-oapi.json`,
@@ -90,11 +91,14 @@ const ignoredOperations = [
   "getSyncCommitteeRewards",
   "getBlockRewards",
   "getAttestationsRewards",
+  /* https://github.com/ChainSafe/lodestar/issues/6058 */
+  "postStateValidators",
+  "postStateValidatorBalances",
   "getDepositSnapshot", // Won't fix for now, see https://github.com/ChainSafe/lodestar/issues/5697
   "getBlindedBlock", // https://github.com/ChainSafe/lodestar/issues/5699
   "getNextWithdrawals", // https://github.com/ChainSafe/lodestar/issues/5696
   "getDebugForkChoice", // https://github.com/ChainSafe/lodestar/issues/5700
-  /* https://github.com/ChainSafe/lodestar/issues/6080 */
+  /* Ensure operationId matches spec value, blocked by https://github.com/ChainSafe/lodestar/pull/6080 */
   "getLightClientBootstrap",
   "getLightClientUpdatesByRange",
   "getLightClientFinalityUpdate",
@@ -150,13 +154,8 @@ runTestCheckAgainstSpec(
 );
 
 const ignoredTopics = [
-  /*
-  */
-  "proposer_slashing",
-
-  /*
-  */
-  "attester_slashing",
+  // https://github.com/ChainSafe/lodestar/issues/6470
+  "block_gossip",
 ];
 
 // eventstream types are defined as comments in the description of "examples".
