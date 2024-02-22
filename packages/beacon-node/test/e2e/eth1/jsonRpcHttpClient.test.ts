@@ -1,15 +1,15 @@
 import crypto from "node:crypto";
 import http from "node:http";
-import {describe, it, expect, afterEach} from "vitest";
+import {describe, it, expect, afterEach, vi} from "vitest";
 import {FetchError} from "@lodestar/api";
 import {sleep} from "@lodestar/utils";
 import {JsonRpcHttpClient} from "../../../src/eth1/provider/jsonRpcHttpClient.js";
 import {getGoerliRpcUrl} from "../../testParams.js";
 import {RpcPayload} from "../../../src/eth1/interface.js";
 
-// To make the code review easy for code block below
-/* prettier-ignore */
 describe("eth1 / jsonRpcHttpClient", function () {
+  vi.setConfig({testTimeout: 10_000});
+
   const port = 36421;
   const noMethodError = {code: -32601, message: "Method not found"};
   const notInSpecError = "JSON RPC Error not in spec";
@@ -160,11 +160,11 @@ describe("eth1 / jsonRpcHttpClient", function () {
       expect.assertions(1);
     });
   }
-}, {timeout: 10_000});
+});
 
-// To make the code review easy for code block below
-/* prettier-ignore */
 describe("eth1 / jsonRpcHttpClient - with retries", function () {
+  vi.setConfig({testTimeout: 10_000});
+
   const port = 36421;
   const noMethodError = {code: -32601, message: "Method not found"};
   const afterHooks: (() => Promise<void>)[] = [];
@@ -281,9 +281,7 @@ describe("eth1 / jsonRpcHttpClient - with retries", function () {
 
     const controller = new AbortController();
     const eth1JsonRpcClient = new JsonRpcHttpClient([url], {signal: controller.signal});
-    await expect(eth1JsonRpcClient.fetchWithRetries(payload, {retries, timeout})).rejects.toThrow(
-      "Timeout request"
-    );
+    await expect(eth1JsonRpcClient.fetchWithRetries(payload, {retries, timeout})).rejects.toThrow("Timeout request");
     expect(requestCount).toBeWithMessage(retries + 1, "Timeout request should be retried before failing");
   });
 
@@ -346,4 +344,4 @@ describe("eth1 / jsonRpcHttpClient - with retries", function () {
     await expect(eth1JsonRpcClient.fetchWithRetries(payload, {retries})).rejects.toThrow("Method not found");
     expect(requestCount).toBeWithMessage(1, "Payload error (non-network error) should not be retried");
   });
-}, {timeout: 10_000});
+});
