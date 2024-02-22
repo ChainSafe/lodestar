@@ -11,7 +11,7 @@ describe("util / Clock", function () {
 
   beforeEach(() => {
     controller = new AbortController();
-    vi.useFakeTimers();
+    vi.useFakeTimers({now: Date.now()});
   });
 
   afterEach(() => {

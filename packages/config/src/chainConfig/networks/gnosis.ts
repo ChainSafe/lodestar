@@ -51,5 +51,5 @@ export const gnosisChainConfig: ChainConfig = {
   CAPELLA_FORK_EPOCH: 648704, // 2023-08-01T11:34:20.000Z
   // Deneb
   DENEB_FORK_VERSION: b("0x04000064"),
-  DENEB_FORK_EPOCH: Infinity,
+  DENEB_FORK_EPOCH: 889856, // 2024-03-11T18:30:20.000Z
 };

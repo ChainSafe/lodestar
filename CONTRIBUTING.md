@@ -32,6 +32,14 @@ To run tests:
 - :test_tube: Run `yarn check-types` to check TypeScript types.
 - :test_tube: Run `yarn lint` to run the linter (ESLint).
 
+Note that to run `test:e2e`, first ensure that the environment is correctly setup by running the `run_e2e_env.sh` script.
+
+```sh
+./scripts/run_e2e_env.sh start
+```
+
+Similarly, run `yarn download-spec-tests` before running `yarn test:spec`.
+
 Contributing to tests:
 
 - Test must not depend on external live resources, such that running tests for a commit must be deterministic:
@@ -53,11 +61,12 @@ If you observe following error running any of the test files that means you are 
 
 - To fix errors always focus on passing all minimal tests first without running mainnet tests.
 - Spec tests often compare full expected vs actual states in JSON format.
-- A single logical error can cause many spec tests to fail. To focus on a single test at a time you can use vitest's option `--bail` to stop at the first failed test
-- To then run only that failed test you can run against a specific file as use vitest's filters to run only one case
+- A single logical error can cause many spec tests to fail. To focus on a single test at a time you can use vitest's option `--bail 1` to stop at the first failed test
+- To then run only that failed test you can run against a specific file as use vitest's filters option `-t <pattern>` to run only one case
+- Before running the tests, make sure to switch to the package directory (e.g. `packages/beacon-node`) to speed up test execution
 
 ```sh
-LODESTAR_PRESET=minimal yarn vitest --run --config vitest.config.spec.ts test/spec/phase0/sanity.test.ts
+LODESTAR_PRESET=minimal yarn vitest --run --bail 1 --config vitest.spec.config.ts test/spec/presets/sanity.test.ts -t attester_slashing
 ```
 
 ## Docker

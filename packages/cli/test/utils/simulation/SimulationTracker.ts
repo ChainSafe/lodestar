@@ -1,8 +1,11 @@
 import EventEmitter from "node:events";
-import Debug from "debug";
+import path from "node:path";
+import fs from "node:fs/promises";
+import createDebug from "debug";
 import {routes} from "@lodestar/api/beacon";
 import {ChainForkConfig} from "@lodestar/config";
 import {Epoch, Slot} from "@lodestar/types";
+import {LoggerNode} from "@lodestar/logger/node";
 import {isNullish} from "../../utils.js";
 import {EpochClock} from "./EpochClock.js";
 import {
@@ -20,13 +23,15 @@ import {defaultAssertions} from "./assertions/defaults/index.js";
 import {TableReporter} from "./TableReporter.js";
 import {fetchBlock} from "./utils/network.js";
 
-const debug = Debug("lodestar:sim:tracker");
+const debug = createDebug("lodestar:sim:tracker");
 
 interface SimulationTrackerInitOptions {
   nodes: NodePair[];
   config: ChainForkConfig;
   clock: EpochClock;
   signal: AbortSignal;
+  logger: LoggerNode;
+  logsDir: string;
 }
 
 export enum SimulationTrackerEvent {
@@ -62,10 +67,20 @@ export function getStoresForAssertions<D extends SimulationAssertion[]>(
   return filterStores as StoreTypes<D>;
 }
 
-/* eslint-disable no-console */
+async function pathExists(filePath: string): Promise<boolean> {
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export class SimulationTracker {
   readonly emitter = new EventEmitter();
   readonly reporter: SimulationReporter<typeof defaultAssertions & StoreType<string, unknown>>;
+  readonly logger: LoggerNode;
+  readonly logsDir: string;
 
   private lastSeenSlot: Map<NodeId, Slot> = new Map();
   private slotCapture: Map<Slot, NodeId[]> = new Map();
@@ -73,21 +88,24 @@ export class SimulationTracker {
   private nodes: NodePair[];
   private clock: EpochClock;
   private forkConfig: ChainForkConfig;
-  private running: boolean = false;
+  private running = false;
 
   private errors: SimulationAssertionError[] = [];
   private stores: Stores;
   private assertions: SimulationAssertion[];
   private assertionIdsMap: Record<string, boolean> = {};
-  private constructor({signal, nodes, clock, config}: SimulationTrackerInitOptions) {
+  private constructor({signal, nodes, clock, config, logger, logsDir}: SimulationTrackerInitOptions) {
     this.signal = signal;
     this.nodes = nodes;
     this.clock = clock;
     this.forkConfig = config;
+    this.logsDir = logsDir;
+    this.logger = logger.child({module: "tracker"});
 
     this.stores = {} as StoreTypes<typeof defaultAssertions> & StoreType<string, unknown>;
     this.assertions = [] as SimulationAssertion[];
     this.reporter = new TableReporter({
+      logger: this.logger.child({module: "reporter"}),
       clock: this.clock,
       forkConfig: this.forkConfig,
       nodes: this.nodes,
@@ -162,19 +180,42 @@ export class SimulationTracker {
 
     // Start clock loop on current slot or genesis
     this.clockLoop(Math.max(this.clock.currentSlot, 0)).catch((e) => {
-      console.error("error on clockLoop", e);
+      this.logger.error("error on clockLoop", e);
     });
   }
 
-  async stop(): Promise<void> {
+  async stop(opts: {dumpStores: boolean}): Promise<void> {
     this.running = false;
+
+    if (opts.dumpStores) {
+      if (!(await pathExists(path.join(this.logsDir, "data"))))
+        await fs.mkdir(path.join(this.logsDir, "data"), {recursive: true});
+
+      for (const assertion of this.assertions) {
+        if (!assertion.dump) continue;
+
+        const data = await assertion.dump({
+          fork: this.forkConfig.getForkName(this.clock.currentSlot),
+          forkConfig: this.forkConfig,
+          clock: this.clock,
+          epoch: this.clock.currentEpoch,
+          store: this.stores[assertion.id],
+          slot: this.clock.currentSlot,
+          nodes: this.nodes,
+        });
+
+        for (const filename of Object.keys(data)) {
+          await fs.writeFile(path.join(this.logsDir, "data", filename), data[filename]);
+        }
+      }
+    }
   }
 
   async clockLoop(slot: number): Promise<void> {
     while (this.running && !this.signal.aborted) {
       // Wait for 2/3 of the slot to consider it missed
       await this.clock.waitForStartOfSlot(slot + 2 / 3, slot > 0).catch((e) => {
-        console.error("error on waitForStartOfSlot", e);
+        this.logger.error("error on waitForStartOfSlot", e);
       });
       this.reporter.progress(slot);
       slot++;

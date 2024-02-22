@@ -1,5 +1,5 @@
 import path from "node:path";
-import worker_threads from "node:worker_threads";
+import workerThreads from "node:worker_threads";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/dist/src/score/peer-score.js";
 import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {ModuleThread, Thread, Worker, spawn} from "@chainsafe/threads";
@@ -78,14 +78,14 @@ export class WorkerNetworkCore implements INetworkCore {
     wireEventsOnMainThread<NetworkEventData>(
       NetworkWorkerThreadEventType.networkEvent,
       modules.events,
-      modules.worker as unknown as worker_threads.Worker,
+      modules.worker as unknown as workerThreads.Worker,
       modules.metrics,
       networkEventDirection
     );
     wireEventsOnMainThread<ReqRespBridgeEventData>(
       NetworkWorkerThreadEventType.reqRespBridgeEvents,
       this.reqRespBridgeEventBus,
-      modules.worker as unknown as worker_threads.Worker,
+      modules.worker as unknown as workerThreads.Worker,
       modules.metrics,
       reqRespBridgeEventDirection
     );

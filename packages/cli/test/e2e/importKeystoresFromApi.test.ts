@@ -95,10 +95,10 @@ describe("import keystores from api", function () {
       validator.on("exit", (code) => {
         if (code !== null && code > 0) {
           // process should exit with code > 0, and an error related to locks. Sample error:
-          // vc 351591:  ✖ Error: EEXIST: file already exists, open '/tmp/tmp-351554-dMctEAj7sJIz/import-keystores-test/keystores/0x8be678633e927aa0435addad5dcd5283fef6110d91362519cd6d43e61f6c017d724fa579cc4b2972134e050b6ba120c0/voting-keystore.json.lock'
-          // at Object.openSync (node:fs:585:3)
-          // at Module.exports.lockSync (/home/lion/Code/eth2.0/lodestar/node_modules/lockfile/lockfile.js:277:17)
-          if (/EEXIST.*voting-keystore\.json\.lock/.test(vcProc2Stderr.read())) {
+          // vc 351591:  ✖ Error: '/tmp/tmp-5080-lwNxdM5Ok9ya/import-keystores-test/keystores/0x8be678633e927aa0435addad5dcd5283fef6110d91362519cd6d43e61f6c017d724fa579cc4b2972134e050b6ba120c0/voting-keystore.json' already in use by another process
+          // at /home/runner/actions-runner/_work/lodestar/lodestar/node_modules/proper-lockfile/lib/lockfile.js:68:47
+          // ... more stack trace
+          if (/Error.*voting-keystore\.json' already in use by another process/.test(vcProc2Stderr.read())) {
             resolve();
           } else {
             reject(Error(`Second validator proc exited with unknown error. stderr:\n${vcProc2Stderr.read()}`));

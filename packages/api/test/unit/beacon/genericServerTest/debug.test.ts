@@ -1,5 +1,6 @@
-import {describe, it, expect, MockInstance} from "vitest";
+import {describe, it, expect, MockInstance, beforeAll, afterAll} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
+import {FastifyInstance} from "fastify";
 import {ssz} from "@lodestar/types";
 import {config} from "@lodestar/config/default";
 import {Api, ReqTypes, routesData} from "../../../../src/beacon/routes/debug.js";
@@ -13,19 +14,28 @@ import {testData} from "../testData/debug.js";
 
 describe(
   "beacon / debug",
-  function () {
-    describe("Run generic server test", () => {
-      runGenericServerTest<Api, ReqTypes>(config, getClient, getRoutes, testData);
-    });
+  () => {
+    runGenericServerTest<Api, ReqTypes>(config, getClient, getRoutes, testData);
 
     // Get state by SSZ
 
     describe("getState() in SSZ format", () => {
-      const {baseUrl, server} = getTestServer();
       const mockApi = getMockApi<Api>(routesData);
-      for (const route of Object.values(getRoutes(config, mockApi))) {
-        registerRoute(server, route);
-      }
+      let baseUrl: string;
+      let server: FastifyInstance;
+
+      beforeAll(async () => {
+        const res = getTestServer();
+        server = res.server;
+        for (const route of Object.values(getRoutes(config, mockApi))) {
+          registerRoute(server, route);
+        }
+        baseUrl = await res.start();
+      });
+
+      afterAll(async () => {
+        if (server !== undefined) await server.close();
+      });
 
       for (const method of ["getState" as const, "getStateV2" as const]) {
         it(method, async () => {

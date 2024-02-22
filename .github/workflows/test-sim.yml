@@ -17,72 +17,163 @@ on:
         required: false
         default: ""
       genesisDelaySlots:
-        description: 'Number of slots delay before genesis'
+        description: "Number of slots delay before genesis"
         required: true
         type: number
         default: 40
 
-env:
-  GETH_DOCKER_IMAGE: ethereum/client-go:v1.11.6
-  LIGHTHOUSE_DOCKER_IMAGE: sigp/lighthouse:latest-amd64-modern-dev
-  NETHERMIND_DOCKER_IMAGE: nethermind/nethermind:1.18.0
-
 jobs:
-  tests-sim:
-    name: Sim tests
+  build:
+    name: Build
     runs-on: buildjet-4vcpu-ubuntu-2204
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: "./.github/actions/setup-and-build"
         with:
-          node-version: 20
-          check-latest: true
-          cache: yarn          
-      - name: Node.js version
-        id: node
-        run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT
-      - name: Restore dependencies
-        uses: actions/cache@master
-        id: cache-deps
-        with:
-          path: |
-            node_modules
-            packages/*/node_modules
-          key: ${{ runner.os }}-${{ steps.node.outputs.v8CppApiVersion }}-${{ hashFiles('**/yarn.lock', '**/package.json') }}
-      - name: Install & build
-        if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: yarn install --frozen-lockfile && yarn build
-      - name: Build
-        run: yarn build
-        if: steps.cache-deps.outputs.cache-hit == 'true'
-      # </common-build>
+          node: 20
 
+  sim-test-multifork:
+    name: Multifork sim test
+    needs: build
+    runs-on: buildjet-4vcpu-ubuntu-2204
+    steps:
+      # <common-build> - Uses YAML anchors in the future
+      - uses: actions/checkout@v4
+      - uses: "./.github/actions/setup-and-build"
+        with:
+          node: 20
+      - name: Load env variables
+        uses: ./.github/actions/dotenv
+      - name: Download required docker images before running tests
+        run: |
+          docker pull ${{env.GETH_DOCKER_IMAGE}}
+          docker pull ${{env.LIGHTHOUSE_DOCKER_IMAGE}}
+          docker pull ${{env.NETHERMIND_DOCKER_IMAGE}}
       - name: Sim tests multifork
         run: DEBUG='${{github.event.inputs.debug}}' yarn test:sim:multifork
         working-directory: packages/cli
-        env: 
+        env:
           GENESIS_DELAY_SLOTS: ${{github.event.inputs.genesisDelaySlots}}
+      - name: Upload debug log test files for "packages/cli"
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: sim-test-multifork-logs
+          path: packages/cli/test-logs
 
+  sim-test-endpoints:
+    name: Endpoint sim tests
+    needs: build
+    runs-on: buildjet-4vcpu-ubuntu-2204
+    steps:
+      # <common-build> - Uses YAML anchors in the future
+      - uses: actions/checkout@v4
+      - uses: "./.github/actions/setup-and-build"
+        with:
+          node: 20
+      - name: Load env variables
+        uses: ./.github/actions/dotenv
+      - name: Download required docker images before running tests
+        run: |
+          docker pull ${{env.GETH_DOCKER_IMAGE}}
+          docker pull ${{env.LIGHTHOUSE_DOCKER_IMAGE}}
+          docker pull ${{env.NETHERMIND_DOCKER_IMAGE}}
       - name: Sim tests endpoints
-        run: yarn test:sim:endpoints
+        run: DEBUG='${{github.event.inputs.debug}}'  yarn test:sim:endpoints
         working-directory: packages/cli
+        env:
+          GENESIS_DELAY_SLOTS: ${{github.event.inputs.genesisDelaySlots}}
+      - name: Upload debug log test files for "packages/cli"
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: sim-test-endpoints-logs
+          path: packages/cli/test-logs
 
+  sim-test-deneb:
+    name: Deneb sim tests
+    needs: build
+    runs-on: buildjet-4vcpu-ubuntu-2204
+    steps:
+      # <common-build> - Uses YAML anchors in the future
+      - uses: actions/checkout@v4
+      - uses: "./.github/actions/setup-and-build"
+        with:
+          node: 20
+      - name: Load env variables
+        uses: ./.github/actions/dotenv
+      - name: Download required docker images before running tests
+        run: |
+          docker pull ${{env.GETH_DOCKER_IMAGE}}
+          docker pull ${{env.LIGHTHOUSE_DOCKER_IMAGE}}
+          docker pull ${{env.NETHERMIND_DOCKER_IMAGE}}
       - name: Sim tests deneb
-        run: yarn test:sim:deneb
+        run: DEBUG='${{github.event.inputs.debug}}' yarn test:sim:deneb
         working-directory: packages/cli
+        env:
+          GENESIS_DELAY_SLOTS: ${{github.event.inputs.genesisDelaySlots}}
+      - name: Upload debug log test files for "packages/cli"
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: sim-test-deneb-logs
+          path: packages/cli/test-logs
 
+  sim-test-eth-backup-provider:
+    name: Eth backup provider sim tests
+    needs: build
+    runs-on: buildjet-4vcpu-ubuntu-2204
+    steps:
+      # <common-build> - Uses YAML anchors in the future
+      - uses: actions/checkout@v4
+      - uses: "./.github/actions/setup-and-build"
+        with:
+          node: 20
+      - name: Load env variables
+        uses: ./.github/actions/dotenv
+      - name: Download required docker images before running tests
+        run: |
+          docker pull ${{env.GETH_DOCKER_IMAGE}}
+          docker pull ${{env.LIGHTHOUSE_DOCKER_IMAGE}}
+          docker pull ${{env.NETHERMIND_DOCKER_IMAGE}}
       - name: Sim tests backup eth provider
-        run: yarn test:sim:backup_eth_provider
+        run: DEBUG='${{github.event.inputs.debug}}' yarn test:sim:backup_eth_provider
         working-directory: packages/cli
+        env:
+          GENESIS_DELAY_SLOTS: ${{github.event.inputs.genesisDelaySlots}}
+      - name: Upload debug log test files for "packages/cli"
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: sim-test-eth-backup-provider-logs
+          path: packages/cli/test-logs
 
+  sim-test-mixed-clients:
+    name: Mixed clients sim tests
+    needs: build
+    runs-on: buildjet-4vcpu-ubuntu-2204
+    steps:
+      # <common-build> - Uses YAML anchors in the future
+      - uses: actions/checkout@v4
+      - uses: "./.github/actions/setup-and-build"
+        with:
+          node: 20
+      - name: Load env variables
+        uses: ./.github/actions/dotenv
+      - name: Download required docker images before running tests
+        run: |
+          docker pull ${{env.GETH_DOCKER_IMAGE}}
+          docker pull ${{env.LIGHTHOUSE_DOCKER_IMAGE}}
+          docker pull ${{env.NETHERMIND_DOCKER_IMAGE}}
       - name: Sim tests mixed client
         run: DEBUG='${{github.event.inputs.debug}}' yarn test:sim:mixedclient
         working-directory: packages/cli
-
+        env:
+          GENESIS_DELAY_SLOTS: ${{github.event.inputs.genesisDelaySlots}}
       - name: Upload debug log test files for "packages/cli"
         if: ${{ always() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: debug-test-logs-cli
+          name: sim-test-mixed-clients-logs
           path: packages/cli/test-logs

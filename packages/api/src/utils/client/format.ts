@@ -1,11 +1,11 @@
-import qs from "qs";
+import {stringify as queryStringStringify} from "qs";
 
 /**
  * Ethereum Beacon API requires the query with format:
  * - arrayFormat: repeat `topic=topic1&topic=topic2`
  */
 export function stringifyQuery(query: unknown): string {
-  return qs.stringify(query, {arrayFormat: "repeat"});
+  return queryStringStringify(query, {arrayFormat: "repeat"});
 }
 
 /**

@@ -31,6 +31,7 @@ export async function verifyBlocksStateTransitionOnly(
 ): Promise<{postStates: CachedBeaconStateAllForks[]; proposerBalanceDeltas: number[]; verifyStateTime: number}> {
   const postStates: CachedBeaconStateAllForks[] = [];
   const proposerBalanceDeltas: number[] = [];
+  const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
 
   for (let i = 0; i < blocks.length; i++) {
     const {validProposerSignature, validSignatures} = opts;
@@ -96,9 +97,13 @@ export async function verifyBlocksStateTransitionOnly(
   const verifyStateTime = Date.now();
   if (blocks.length === 1 && opts.seenTimestampSec !== undefined) {
     const slot = blocks[0].block.message.slot;
-    const recvToTransition = verifyStateTime / 1000 - opts.seenTimestampSec;
-    metrics?.gossipBlock.receivedToStateTransition.observe(recvToTransition);
-    logger.verbose("Verified block state transition", {slot, recvToTransition});
+    const recvToValidation = verifyStateTime / 1000 - opts.seenTimestampSec;
+    const validationTime = recvToValidation - recvToValLatency;
+
+    metrics?.gossipBlock.stateTransition.recvToValidation.observe(recvToValidation);
+    metrics?.gossipBlock.stateTransition.validationTime.observe(validationTime);
+
+    logger.debug("Verified block state transition", {slot, recvToValLatency, recvToValidation, validationTime});
   }
 
   return {postStates, proposerBalanceDeltas, verifyStateTime};

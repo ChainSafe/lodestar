@@ -23,7 +23,7 @@ export function getNodePaths<
     return {
       rootDir: executionRootDir,
       dataDir: path.join(executionRootDir, "data"),
-      genesisFilePath: path.join(executionRootDir, "genesis.ssz"),
+      genesisFilePath: path.join(executionRootDir, "genesis.json"),
       jwtsecretFilePath: path.join(executionRootDir, "jwtsecret.txt"),
       logFilePath: path.join(logsDir, `${id}-${client}.log`),
     } as R;

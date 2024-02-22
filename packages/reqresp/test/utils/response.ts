@@ -8,11 +8,7 @@ import {arrToSource} from "../utils/index.js";
 export async function* responseEncode(responseChunks: ResponseChunk[], protocol: Protocol): AsyncIterable<Buffer> {
   for (const chunk of responseChunks) {
     if (chunk.status === RespStatus.SUCCESS) {
-      yield* pipe(
-        arrToSource([chunk.payload]),
-        // eslint-disable-next-line @typescript-eslint/no-empty-function
-        responseEncodeSuccess(protocol, {onChunk: () => {}})
-      );
+      yield* pipe(arrToSource([chunk.payload]), responseEncodeSuccess(protocol, {onChunk: () => {}}));
     } else {
       yield* responseEncodeError(protocol, chunk.status, chunk.errorMessage);
     }

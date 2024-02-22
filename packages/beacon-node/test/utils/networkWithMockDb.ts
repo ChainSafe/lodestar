@@ -59,7 +59,6 @@ export async function getNetworkForTest(
       config: beaconConfig,
       db,
       logger,
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
       processShutdownCallback: () => {},
       // set genesis time so that we are at ALTAIR_FORK_EPOCH
       // mock timer does not work on worker thread

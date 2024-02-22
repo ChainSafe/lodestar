@@ -16,6 +16,7 @@ const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
   ALTAIR_FORK_EPOCH: altairForkEpoch,
   BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
   runTillEpoch: runTillEpoch + syncWaitEpoch,
+  initialNodes: 3,
 });
 
 const env = await SimulationEnvironment.initWithDefaults(
@@ -77,5 +78,8 @@ await waitForSlot(env.clock.getLastSlotOfEpoch(bellatrixForkEpoch) + activePrese
   silent: true,
   env,
 });
+
+await node2.beacon.job.stop();
+await node3.beacon.job.stop();
 
 await env.stop();

@@ -56,11 +56,8 @@ export class MockLibP2pStream implements Stream {
       this.resultChunks.push(chunk.subarray());
     }
   };
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
   close: Stream["close"] = async () => {};
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
   closeRead = async (): Promise<void> => {};
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
   closeWrite = async (): Promise<void> => {};
   abort: Stream["abort"] = () => this.close();
 }

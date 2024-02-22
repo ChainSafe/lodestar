@@ -1,6 +1,4 @@
-// eslint-disable-next-line import/no-extraneous-dependencies
 import type {FastifyInstance, FastifyContextConfig} from "fastify";
-// eslint-disable-next-line import/no-extraneous-dependencies
 import type * as fastify from "fastify";
 import {ReqGeneric} from "../types.js";
 

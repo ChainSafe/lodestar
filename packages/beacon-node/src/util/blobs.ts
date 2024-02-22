@@ -1,4 +1,4 @@
-import SHA256 from "@chainsafe/as-sha256";
+import {digest as sha256Digest} from "@chainsafe/as-sha256";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {VERSIONED_HASH_VERSION_KZG, KZG_COMMITMENT_GINDEX0, ForkName} from "@lodestar/params";
 import {deneb, ssz, allForks} from "@lodestar/types";
@@ -8,7 +8,7 @@ import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 type VersionHash = Uint8Array;
 
 export function kzgCommitmentToVersionedHash(kzgCommitment: deneb.KZGCommitment): VersionHash {
-  const hash = SHA256.digest(kzgCommitment);
+  const hash = sha256Digest(kzgCommitment);
   // Equivalent to `VERSIONED_HASH_VERSION_KZG + hash(kzg_commitment)[1:]`
   hash[0] = VERSIONED_HASH_VERSION_KZG;
   return hash;

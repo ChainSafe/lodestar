@@ -70,7 +70,6 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     }
   });
 
-  // eslint-disable-next-line vitest/expect-expect
   it("Send stub payloads to EL", async () => {
     const {elClient, tearDownCallBack} = await runEL(
       {...elSetupConfig, mode: ELStartMode.PostMerge, genesisTemplate: "genesisPostWithdraw.tmpl"},
@@ -185,7 +184,6 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     );
   });
 
-  // eslint-disable-next-line vitest/expect-expect
   it("Post-merge, run for a few blocks", async function () {
     console.log("\n\nPost-merge, run for a few blocks\n\n");
     const {elClient, tearDownCallBack} = await runEL(
