@@ -281,9 +281,7 @@ describe("eth1 / jsonRpcHttpClient - with retries", function () {
 
     const controller = new AbortController();
     const eth1JsonRpcClient = new JsonRpcHttpClient([url], {signal: controller.signal});
-    await expect(eth1JsonRpcClient.fetchWithRetries(payload, {retries, timeout})).rejects.toThrow(
-      "Timeout request"
-    );
+    await expect(eth1JsonRpcClient.fetchWithRetries(payload, {retries, timeout})).rejects.toThrow("Timeout request");
     expect(requestCount).toBeWithMessage(retries + 1, "Timeout request should be retried before failing");
   });
 
