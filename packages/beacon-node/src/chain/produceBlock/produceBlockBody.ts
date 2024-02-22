@@ -519,7 +519,7 @@ export async function getPayloadAttributesForSSE(
     const ssePayloadAttributes: allForks.SSEPayloadAttributes = {
       proposerIndex: prepareState.epochCtx.getBeaconProposer(prepareSlot),
       proposalSlot: prepareSlot,
-      proposalBlockNumber: prepareState.latestExecutionPayloadHeader.blockNumber + 1,
+      parentBlockNumber: prepareState.latestExecutionPayloadHeader.blockNumber,
       parentBlockRoot,
       parentBlockHash: parentHash,
       payloadAttributes,
