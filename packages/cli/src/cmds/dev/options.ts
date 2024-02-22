@@ -1,4 +1,4 @@
-import {CliCommandOptions, CliOptionDefinition} from "../../util/index.js";
+import {CliCommandOptions, CliOptionDefinition} from "@lodestar/utils";
 import {beaconOptions, BeaconArgs} from "../beacon/options.js";
 import {NetworkName} from "../../networks/index.js";
 import {beaconNodeOptions, globalOptions} from "../../options/index.js";

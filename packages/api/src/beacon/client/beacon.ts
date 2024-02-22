@@ -11,7 +11,7 @@ export function getClient(config: ChainForkConfig, httpClient: IHttpClient): Api
   const reqSerializers = getReqSerializers(config);
   const returnTypes = getReturnTypes();
   // Some routes return JSON, use a client auto-generator
-  const client = generateGenericJsonClient<Api, ReqTypes>(routesData, reqSerializers, returnTypes, httpClient);
+  const client = generateGenericJsonClient<Api, ReqTypes>(routesData, reqSerializers, returnTypes, httpClient) as Api;
   const fetchOptsSerializer = getFetchOptsSerializers<Api, ReqTypes>(routesData, reqSerializers);
 
   return {

@@ -64,7 +64,6 @@ describe("executionEngine / ExecutionEngineHttp", function () {
   });
 
   for (const useProduceBlockV3 of [false, true]) {
-    // eslint-disable-next-line vitest/expect-expect
     it(`Test builder with useProduceBlockV3=${useProduceBlockV3}`, async function () {
       console.log("\n\nPost-merge, run for a few blocks\n\n");
       const {elClient, tearDownCallBack} = await runEL(

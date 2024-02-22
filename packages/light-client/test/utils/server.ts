@@ -1,4 +1,4 @@
-import {parse as queryStringParse} from "qs";
+import {parse as parseQueryString} from "qs";
 import {FastifyInstance, fastify} from "fastify";
 import {fastifyCors} from "@fastify/cors";
 import {Api, ServerApi} from "@lodestar/api";
@@ -18,7 +18,7 @@ export async function startServer(
   const server = fastify({
     logger: false,
     ajv: {customOptions: {coerceTypes: "array"}},
-    querystringParser: (str) => queryStringParse(str, {comma: true, parseArrays: false}),
+    querystringParser: (str) => parseQueryString(str, {comma: true, parseArrays: false}),
   });
 
   registerRoutes(server, config, api, ["lightclient", "proof", "events"]);

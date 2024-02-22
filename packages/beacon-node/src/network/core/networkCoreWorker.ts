@@ -30,7 +30,6 @@ const workerData = worker.workerData as NetworkWorkerData;
 const parentPort = worker.parentPort;
 // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
 if (!workerData) throw Error("workerData must be defined");
-// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
 if (!parentPort) throw Error("parentPort must be defined");
 
 const config = createBeaconConfig(chainConfigFromJson(workerData.chainConfigJson), workerData.genesisValidatorsRoot);

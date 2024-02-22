@@ -1,7 +1,8 @@
 import {multiaddr} from "@multiformats/multiaddr";
 import {ENR} from "@chainsafe/enr";
 import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
-import {CliCommandOptions, YargsError} from "../../util/index.js";
+import {CliCommandOptions} from "@lodestar/utils";
+import {YargsError} from "../../util/index.js";
 
 export const defaultListenAddress = "0.0.0.0";
 export const defaultP2pPort = 9000;

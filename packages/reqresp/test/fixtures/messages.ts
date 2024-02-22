@@ -181,5 +181,4 @@ const ALTAIR_FORK_EPOCH = Math.floor(slotBlockAltair / SLOTS_PER_EPOCH);
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const beaconConfig = createBeaconConfig({...chainConfig, ALTAIR_FORK_EPOCH}, ZERO_HASH);
 
-// eslint-disable-next-line @typescript-eslint/no-empty-function
 export const getEmptyHandler = <T = unknown>() => async function* emptyHandler(): AsyncGenerator<T> {};
