@@ -1,12 +1,12 @@
+import {CliCommandOptions} from "@lodestar/utils";
 import {DEFAULT_PROXY_REQUEST_TIMEOUT} from "../../../constants.js";
 import {LCTransport} from "../../../interfaces.js";
-import {CliCommandOptions} from "../../../utils/command.js";
 import {alwaysAllowedMethods} from "../../../utils/process.js";
 
 export type StartArgs = {
   port: number;
   executionRpcUrl: string;
-  beaconUrls?: string[];
+  beaconUrls: string[];
   wsCheckpoint?: string;
   unverifiedWhitelist?: string[];
   requestTimeout: number;
@@ -53,9 +53,12 @@ export const startOptions: CliCommandOptions<StartArgs> = {
 
   beaconUrls: {
     description: "Urls of the beacon nodes to connect to.",
-    type: "string",
+    type: "array",
+    string: true,
+    coerce: (urls: string[]): string[] =>
+      // Parse ["url1,url2"] to ["url1", "url2"]
+      urls.map((item) => item.split(",")).flat(),
     demandOption: true,
-    array: true,
     group: "beacon",
   },
 

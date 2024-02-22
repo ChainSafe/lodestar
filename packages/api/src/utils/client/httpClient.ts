@@ -70,7 +70,7 @@ export type FetchOpts = {
   /** Optional, for metrics */
   routeId?: string;
   timeoutMs?: number;
-  retryAttempts?: number;
+  retries?: number;
 };
 
 export interface IHttpClient {
@@ -183,7 +183,7 @@ export class HttpClient implements IHttpClient {
     opts: FetchOpts,
     getBody: (res: Response) => Promise<T>
   ): Promise<{status: HttpStatusCode; body: T}> {
-    if (opts.retryAttempts !== undefined) {
+    if (opts.retries !== undefined) {
       const routeId = opts.routeId ?? DEFAULT_ROUTE_ID;
 
       return retry(
@@ -191,7 +191,7 @@ export class HttpClient implements IHttpClient {
           return this.requestWithBodyWithFallbacks<T>(opts, getBody);
         },
         {
-          retries: opts.retryAttempts,
+          retries: opts.retries,
           retryDelay: 200,
           onRetry: (e, attempt) => {
             this.logger?.debug("Retrying request", {routeId, attempt, lastError: e.message});

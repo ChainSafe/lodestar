@@ -1,6 +1,6 @@
+import {CliCommandOptions, CliOptionDefinition} from "@lodestar/utils";
 import {beaconNodeOptions, paramsOptions, BeaconNodeArgs} from "../../options/index.js";
 import {LogArgs, logOptions} from "../../options/logOptions.js";
-import {CliCommandOptions, CliOptionDefinition} from "../../util/index.js";
 import {defaultBeaconPaths, BeaconPaths} from "./paths.js";
 
 type BeaconExtraArgs = {
