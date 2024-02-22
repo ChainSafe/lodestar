@@ -1,4 +1,4 @@
-import {CliOptionDefinition, CliCommand, CliExample, CliCommandOptions} from "../src/util/index.js";
+import {CliOptionDefinition, CliCommand, CliExample, CliCommandOptions} from "@lodestar/utils";
 import {toKebab} from "./changeCase.js";
 
 const DEFAULT_SEPARATOR = "\n\n";
@@ -6,7 +6,7 @@ const LINE_BREAK = "\n\n<br />";
 
 function renderExampleBody(example: CliExample, lodestarCommand?: string): string {
   const cliExample = [
-    `\`\`\`
+    `\`\`\`sh
 ${lodestarCommand ? `${lodestarCommand} ` : ""}${example.command}
 \`\`\``,
   ];
@@ -113,7 +113,9 @@ function renderOption(optionName: string, option: CliOptionDefinition): string |
       if (!defaultValue.includes(`"`)) {
         defaultValue = `"${defaultValue}"`;
       }
-      defaultValue = `[ ${defaultValue} ]`;
+      if (!defaultValue.startsWith("[")) {
+        defaultValue = `[ ${defaultValue} ]`;
+      }
     }
     commandOption.push(`default: \`${defaultValue}\``);
   }

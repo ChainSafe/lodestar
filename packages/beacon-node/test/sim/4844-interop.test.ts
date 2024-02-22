@@ -65,7 +65,6 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     }
   });
 
-  // eslint-disable-next-line vitest/expect-expect
   it("Post-merge, run for a few blocks", async function () {
     console.log("\n\nPost-merge, run for a few blocks\n\n");
     const {elClient, tearDownCallBack} = await runEL(

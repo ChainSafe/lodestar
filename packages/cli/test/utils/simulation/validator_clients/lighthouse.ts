@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import path from "node:path";
 import {writeFile} from "node:fs/promises";
 import got, {RequestError} from "got";

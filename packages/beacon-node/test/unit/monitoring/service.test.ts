@@ -257,7 +257,7 @@ describe("monitoring / service", () => {
     await waitForInterval();
 
     afterAll(() => {
-      service.close;
+      service.close();
     });
 
     return service;

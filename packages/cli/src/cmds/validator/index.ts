@@ -1,4 +1,4 @@
-import {CliCommand} from "../../util/index.js";
+import {CliCommand} from "@lodestar/utils";
 import {GlobalArgs} from "../../options/index.js";
 import {getAccountPaths} from "./paths.js";
 import {slashingProtection} from "./slashingProtection/index.js";

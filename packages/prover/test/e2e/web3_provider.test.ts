@@ -1,13 +1,13 @@
-/* eslint-disable @typescript-eslint/naming-convention */
-import {describe, it, expect, beforeAll} from "vitest";
-import Web3 from "web3";
+import {describe, it, expect, beforeAll, vi} from "vitest";
+import {Web3} from "web3";
 import {ethers} from "ethers";
 import {LCTransport} from "../../src/interfaces.js";
 import {createVerifiedExecutionProvider} from "../../src/web3_provider.js";
-import {waitForCapellaFork, testTimeout, rpcUrl, beaconUrl, config} from "../utils/e2e_env.js";
+import {waitForCapellaFork, minCapellaTimeMs, rpcUrl, beaconUrl, config} from "../utils/e2e_env.js";
 
-/* prettier-ignore */
 describe("web3_provider", function () {
+  vi.setConfig({hookTimeout: minCapellaTimeMs});
+
   beforeAll(async () => {
     await waitForCapellaFork();
   });
@@ -44,4 +44,4 @@ describe("web3_provider", function () {
       });
     });
   });
-}, {timeout: testTimeout});
+});

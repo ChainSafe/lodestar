@@ -506,6 +506,6 @@ function formatLibp2pDialError(e: Error): void {
     e.message.includes("stream ended before 1 bytes became available") ||
     e.message.includes("The operation was aborted")
   ) {
-    e.stack === undefined;
+    e.stack = undefined;
   }
 }

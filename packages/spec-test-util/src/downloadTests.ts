@@ -1,16 +1,15 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import fs from "node:fs";
 import path from "node:path";
 import stream from "node:stream";
 import {promisify} from "node:util";
 import {rimraf} from "rimraf";
 import axios from "axios";
-import tar from "tar";
-import retry from "async-retry";
+import {x as extractTar} from "tar";
+import {retry} from "@lodestar/utils";
 
 export const defaultSpecTestsRepoUrl = "https://github.com/ethereum/consensus-spec-tests";
 
-// eslint-disable-next-line @typescript-eslint/no-empty-function
 const logEmpty = (): void => {};
 
 export type DownloadTestsOptions = {
@@ -68,7 +67,6 @@ export async function downloadGenericSpecTests<TestNames extends string>(
       const url = `${specTestsRepoUrl ?? defaultSpecTestsRepoUrl}/releases/download/${specVersion}/${test}.tar.gz`;
 
       await retry(
-        // async (bail) => {
         async () => {
           const {data, headers} = await axios({
             method: "get",
@@ -81,7 +79,7 @@ export async function downloadGenericSpecTests<TestNames extends string>(
           log(`Downloading ${url} - ${totalSize} bytes`);
 
           // extract tar into output directory
-          await promisify(stream.pipeline)(data, tar.x({cwd: outputDir}));
+          await promisify(stream.pipeline)(data, extractTar({cwd: outputDir}));
 
           log(`Downloaded  ${url}`);
         },

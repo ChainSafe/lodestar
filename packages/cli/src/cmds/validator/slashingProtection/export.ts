@@ -2,7 +2,8 @@ import path from "node:path";
 import {toHexString} from "@chainsafe/ssz";
 import {InterchangeFormatVersion} from "@lodestar/validator";
 import {getNodeLogger} from "@lodestar/logger/node";
-import {CliCommand, YargsError, ensure0xPrefix, isValidatePubkeyHex, writeFile600Perm} from "../../../util/index.js";
+import {CliCommand} from "@lodestar/utils";
+import {YargsError, ensure0xPrefix, isValidatePubkeyHex, writeFile600Perm} from "../../../util/index.js";
 import {parseLoggerArgs} from "../../../util/logger.js";
 import {GlobalArgs} from "../../../options/index.js";
 import {LogArgs} from "../../../options/logOptions.js";
@@ -13,7 +14,7 @@ import {getGenesisValidatorsRoot, getSlashingProtection} from "./utils.js";
 import {ISlashingProtectionArgs} from "./options.js";
 
 type ExportArgs = {
-  file?: string;
+  file: string;
   pubkeys?: string[];
 };
 
@@ -51,7 +52,6 @@ export const exportCmd: CliCommand<ExportArgs, ISlashingProtectionArgs & Account
 
     handler: async (args) => {
       const {file} = args;
-      if (!file) throw new YargsError("must provide file arg");
 
       const {config, network} = getBeaconConfigFromArgs(args);
       const validatorPaths = getValidatorPaths(args, network);

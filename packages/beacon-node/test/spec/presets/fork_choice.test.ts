@@ -101,7 +101,6 @@ const forkChoiceTest =
             config: createBeaconConfig(config, state.genesisValidatorsRoot),
             db: getMockedBeaconDb(),
             logger,
-            // eslint-disable-next-line @typescript-eslint/no-empty-function
             processShutdownCallback: () => {},
             clock,
             metrics: null,
@@ -367,7 +366,6 @@ const forkChoiceTest =
           };
         },
         timeout: 10000,
-        // eslint-disable-next-line @typescript-eslint/no-empty-function
         expectFunc: () => {},
         // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
         // EXCEPTION : this test skipped here because prefix match can't be don't for this particular test

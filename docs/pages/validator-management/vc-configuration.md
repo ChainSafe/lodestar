@@ -132,7 +132,7 @@ To start a Lodestar validator run the command:
 
 You should see confirmation that modules have started.
 
-```
+```txt
 Nov-29 10:47:13.647[]                 info: Lodestar network=sepolia, version=v1.2.2/f093b46, commit=f093b468ec3ab0dbbe8e2d2c8175f52ad88aa35f
 Nov-29 10:47:13.649[]                 info: Connecting to LevelDB database path=/home/user/.local/share/lodestar/sepolia/validator-db
 Nov-29 10:47:51.732[]                 info: 3 local keystores

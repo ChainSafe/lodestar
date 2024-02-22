@@ -13,7 +13,6 @@ describe("encoders / responseDecode", () => {
     it.each(responseEncodersTestCases)("$id", async ({protocol, responseChunks, chunks}) => {
       const responses = (await pipe(
         arrToSource(chunks),
-        // eslint-disable-next-line @typescript-eslint/no-empty-function
         responseDecode(protocol, {onFirstHeader: () => {}, onFirstResponseChunk: () => {}}),
         all
       )) as ResponseIncoming[];
@@ -32,7 +31,6 @@ describe("encoders / responseDecode", () => {
         await expectRejectedWithLodestarError(
           pipe(
             arrToSource(chunks as Uint8Array[]),
-            // eslint-disable-next-line @typescript-eslint/no-empty-function
             responseDecode(protocol, {onFirstHeader: () => {}, onFirstResponseChunk: () => {}}),
             all
           ),
