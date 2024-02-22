@@ -1,5 +1,5 @@
 import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
-import {CliCommandOptions} from "../../util/index.js";
+import {CliCommandOptions} from "@lodestar/utils";
 
 export type MonitoringArgs = {
   "monitoring.endpoint"?: string;

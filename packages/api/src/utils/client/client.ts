@@ -7,7 +7,7 @@ import {HttpStatusCode} from "./httpStatusCode.js";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-type ExtraOpts = {retryAttempts?: number};
+type ExtraOpts = {retries?: number};
 type ParametersWithOptionalExtraOpts<T extends (...args: any) => any> = [...Parameters<T>, ExtraOpts] | Parameters<T>;
 
 export type ApiWithExtraOpts<T extends Record<string, APIClientHandler>> = {
@@ -78,8 +78,8 @@ export function generateGenericJsonClient<
         //
         const argLen = (args as any[])?.length ?? 0;
         const lastArg = (args as any[])[argLen] as ExtraOpts | undefined;
-        const retryAttempts = lastArg?.retryAttempts;
-        const extraOpts = {retryAttempts};
+        const retries = lastArg?.retries;
+        const extraOpts = {retries};
 
         if (returnType) {
           // open extraOpts first if some serializer wants to add some overriding param
