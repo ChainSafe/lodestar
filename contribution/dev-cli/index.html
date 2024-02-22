@@ -13,14 +13,18 @@
         <link rel="canonical" href="https://chainsafe.github.io/lodestar/contribution/dev-cli/">
       
       
+        <link rel="prev" href="../depgraph/">
+      
+      
+        <link rel="next" href="../testing/">
       
       
       <link rel="icon" href="../../assets/round-icon.ico">
-      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.8">
+      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.9">
     
     
       
-        <title>dev CLI Command - Lodestar Documentation</title>
+        <title>Dev CLI Reference - Lodestar Documentation</title>
       
     
     
@@ -109,7 +113,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              dev CLI Command
+              Dev CLI Reference
             
           </span>
         </div>
@@ -314,10 +318,8 @@
     
     
     
-    
     <li class="md-nav__item md-nav__item--nested">
       
-        
         
         
         <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
@@ -441,10 +443,8 @@
     
     
     
-    
     <li class="md-nav__item md-nav__item--nested">
       
-        
         
         
         <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
@@ -569,10 +569,8 @@
     
     
     
-    
     <li class="md-nav__item md-nav__item--nested">
       
-        
         
         
         <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
@@ -655,10 +653,8 @@
     
     
     
-    
     <li class="md-nav__item md-nav__item--nested">
       
-        
         
         
         <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
@@ -720,10 +716,8 @@
     
     
     
-    
     <li class="md-nav__item md-nav__item--nested">
       
-        
         
         
         <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
@@ -827,10 +821,8 @@
     
     
     
-    
     <li class="md-nav__item md-nav__item--nested">
       
-        
         
         
         <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
@@ -927,19 +919,19 @@
       
   
   
+    
   
   
+  
     
     
     
     
-    
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12" checked>
         
           
           <label class="md-nav__link" for="__nav_12" id="__nav_12_label" tabindex="0">
@@ -953,7 +945,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_12_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_12_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_12">
             <span class="md-nav__icon md-icon"></span>
             Contributing
@@ -1006,9 +998,921 @@
                 
   
   
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Dev CLI Reference
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Dev CLI Reference
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
   
   
     
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Examples
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dev-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      dev Options
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="dev Options">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#-datadir" class="md-nav__link">
+    <span class="md-ellipsis">
+      --dataDir
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-network" class="md-nav__link">
+    <span class="md-ellipsis">
+      --network
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-paramsfile" class="md-nav__link">
+    <span class="md-ellipsis">
+      --paramsFile
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-terminal-total-difficulty-override" class="md-nav__link">
+    <span class="md-ellipsis">
+      --terminal-total-difficulty-override
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-terminal-block-hash-override" class="md-nav__link">
+    <span class="md-ellipsis">
+      --terminal-block-hash-override
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-terminal-block-hash-epoch-override" class="md-nav__link">
+    <span class="md-ellipsis">
+      --terminal-block-hash-epoch-override
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-checkpointsyncurl" class="md-nav__link">
+    <span class="md-ellipsis">
+      --checkpointSyncUrl
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-checkpointstate" class="md-nav__link">
+    <span class="md-ellipsis">
+      --checkpointState
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-wsscheckpoint" class="md-nav__link">
+    <span class="md-ellipsis">
+      --wssCheckpoint
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-forcecheckpointsync" class="md-nav__link">
+    <span class="md-ellipsis">
+      --forceCheckpointSync
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-private" class="md-nav__link">
+    <span class="md-ellipsis">
+      --private
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-validatormonitorlogs" class="md-nav__link">
+    <span class="md-ellipsis">
+      --validatorMonitorLogs
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-loglevel" class="md-nav__link">
+    <span class="md-ellipsis">
+      --logLevel
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-logfile" class="md-nav__link">
+    <span class="md-ellipsis">
+      --logFile
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-logfilelevel" class="md-nav__link">
+    <span class="md-ellipsis">
+      --logFileLevel
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-logfiledailyrotate" class="md-nav__link">
+    <span class="md-ellipsis">
+      --logFileDailyRotate
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-rest" class="md-nav__link">
+    <span class="md-ellipsis">
+      --rest
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-restnamespace" class="md-nav__link">
+    <span class="md-ellipsis">
+      --rest.namespace
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-restcors" class="md-nav__link">
+    <span class="md-ellipsis">
+      --rest.cors
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-restaddress" class="md-nav__link">
+    <span class="md-ellipsis">
+      --rest.address
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-restport" class="md-nav__link">
+    <span class="md-ellipsis">
+      --rest.port
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-restswaggerui" class="md-nav__link">
+    <span class="md-ellipsis">
+      --rest.swaggerUI
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-suggestedfeerecipient" class="md-nav__link">
+    <span class="md-ellipsis">
+      --suggestedFeeRecipient
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-emitpayloadattributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      --emitPayloadAttributes
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-chainarchiveblobepochs" class="md-nav__link">
+    <span class="md-ellipsis">
+      --chain.archiveBlobEpochs
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-eth1" class="md-nav__link">
+    <span class="md-ellipsis">
+      --eth1
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-eth1providerurls" class="md-nav__link">
+    <span class="md-ellipsis">
+      --eth1.providerUrls
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-executionurls" class="md-nav__link">
+    <span class="md-ellipsis">
+      --execution.urls
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-executiontimeout" class="md-nav__link">
+    <span class="md-ellipsis">
+      --execution.timeout
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-executionretryattempts" class="md-nav__link">
+    <span class="md-ellipsis">
+      --execution.retryAttempts
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-executionretrydelay" class="md-nav__link">
+    <span class="md-ellipsis">
+      --execution.retryDelay
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-jwtsecret" class="md-nav__link">
+    <span class="md-ellipsis">
+      --jwtSecret
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-jwtid" class="md-nav__link">
+    <span class="md-ellipsis">
+      --jwtId
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-builder" class="md-nav__link">
+    <span class="md-ellipsis">
+      --builder
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-builderurl" class="md-nav__link">
+    <span class="md-ellipsis">
+      --builder.url
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-buildertimeout" class="md-nav__link">
+    <span class="md-ellipsis">
+      --builder.timeout
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-builderfaultinspectionwindow" class="md-nav__link">
+    <span class="md-ellipsis">
+      --builder.faultInspectionWindow
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-builderallowedfaults" class="md-nav__link">
+    <span class="md-ellipsis">
+      --builder.allowedFaults
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      --metrics
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-metricsport" class="md-nav__link">
+    <span class="md-ellipsis">
+      --metrics.port
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-metricsaddress" class="md-nav__link">
+    <span class="md-ellipsis">
+      --metrics.address
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-monitoringendpoint" class="md-nav__link">
+    <span class="md-ellipsis">
+      --monitoring.endpoint
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-monitoringinterval" class="md-nav__link">
+    <span class="md-ellipsis">
+      --monitoring.interval
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-discv5" class="md-nav__link">
+    <span class="md-ellipsis">
+      --discv5
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-listenaddress" class="md-nav__link">
+    <span class="md-ellipsis">
+      --listenAddress
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-port" class="md-nav__link">
+    <span class="md-ellipsis">
+      --port
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-discoveryport" class="md-nav__link">
+    <span class="md-ellipsis">
+      --discoveryPort
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-listenaddress6" class="md-nav__link">
+    <span class="md-ellipsis">
+      --listenAddress6
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-port6" class="md-nav__link">
+    <span class="md-ellipsis">
+      --port6
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-discoveryport6" class="md-nav__link">
+    <span class="md-ellipsis">
+      --discoveryPort6
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-bootnodes" class="md-nav__link">
+    <span class="md-ellipsis">
+      --bootnodes
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-targetpeers" class="md-nav__link">
+    <span class="md-ellipsis">
+      --targetPeers
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-deterministiclonglivedattnets" class="md-nav__link">
+    <span class="md-ellipsis">
+      --deterministicLongLivedAttnets
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-subscribeallsubnets" class="md-nav__link">
+    <span class="md-ellipsis">
+      --subscribeAllSubnets
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-disablepeerscoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      --disablePeerScoring
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-mdns" class="md-nav__link">
+    <span class="md-ellipsis">
+      --mdns
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-enrip" class="md-nav__link">
+    <span class="md-ellipsis">
+      --enr.ip
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-enrtcp" class="md-nav__link">
+    <span class="md-ellipsis">
+      --enr.tcp
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-enrudp" class="md-nav__link">
+    <span class="md-ellipsis">
+      --enr.udp
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-enrip6" class="md-nav__link">
+    <span class="md-ellipsis">
+      --enr.ip6
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-enrtcp6" class="md-nav__link">
+    <span class="md-ellipsis">
+      --enr.tcp6
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-enrudp6" class="md-nav__link">
+    <span class="md-ellipsis">
+      --enr.udp6
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-nat" class="md-nav__link">
+    <span class="md-ellipsis">
+      --nat
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-keymanager" class="md-nav__link">
+    <span class="md-ellipsis">
+      --keymanager
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-keymanagerauthenabled" class="md-nav__link">
+    <span class="md-ellipsis">
+      --keymanager.authEnabled
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-keymanagerport" class="md-nav__link">
+    <span class="md-ellipsis">
+      --keymanager.port
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-keymanageraddress" class="md-nav__link">
+    <span class="md-ellipsis">
+      --keymanager.address
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-keymanagercors" class="md-nav__link">
+    <span class="md-ellipsis">
+      --keymanager.cors
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-beaconnodes" class="md-nav__link">
+    <span class="md-ellipsis">
+      --beaconNodes
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-force" class="md-nav__link">
+    <span class="md-ellipsis">
+      --force
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-graffiti" class="md-nav__link">
+    <span class="md-ellipsis">
+      --graffiti
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-proposersettingsfile" class="md-nav__link">
+    <span class="md-ellipsis">
+      --proposerSettingsFile
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-strictfeerecipientcheck" class="md-nav__link">
+    <span class="md-ellipsis">
+      --strictFeeRecipientCheck
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-defaultgaslimit" class="md-nav__link">
+    <span class="md-ellipsis">
+      --defaultGasLimit
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-builderselection" class="md-nav__link">
+    <span class="md-ellipsis">
+      --builder.selection
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-builderboostfactor" class="md-nav__link">
+    <span class="md-ellipsis">
+      --builder.boostFactor
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-useproduceblockv3" class="md-nav__link">
+    <span class="md-ellipsis">
+      --useProduceBlockV3
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-broadcastvalidation" class="md-nav__link">
+    <span class="md-ellipsis">
+      --broadcastValidation
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-blindedlocal" class="md-nav__link">
+    <span class="md-ellipsis">
+      --blindedLocal
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-importkeystores" class="md-nav__link">
+    <span class="md-ellipsis">
+      --importKeystores
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-importkeystorespassword" class="md-nav__link">
+    <span class="md-ellipsis">
+      --importKeystoresPassword
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-doppelgangerprotection" class="md-nav__link">
+    <span class="md-ellipsis">
+      --doppelgangerProtection
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-externalsignerurl" class="md-nav__link">
+    <span class="md-ellipsis">
+      --externalSigner.url
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-externalsignerpubkeys" class="md-nav__link">
+    <span class="md-ellipsis">
+      --externalSigner.pubkeys
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-externalsignerfetch" class="md-nav__link">
+    <span class="md-ellipsis">
+      --externalSigner.fetch
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-distributed" class="md-nav__link">
+    <span class="md-ellipsis">
+      --distributed
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-genesiseth1hash" class="md-nav__link">
+    <span class="md-ellipsis">
+      --genesisEth1Hash
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-genesisvalidators" class="md-nav__link">
+    <span class="md-ellipsis">
+      --genesisValidators
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-startvalidators" class="md-nav__link">
+    <span class="md-ellipsis">
+      --startValidators
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-genesistime" class="md-nav__link">
+    <span class="md-ellipsis">
+      --genesisTime
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-reset" class="md-nav__link">
+    <span class="md-ellipsis">
+      --reset
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-dumptestnetfiles" class="md-nav__link">
+    <span class="md-ellipsis">
+      --dumpTestnetFiles
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
     
     
     
@@ -1017,11 +1921,10 @@
       
         
         
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12_4" >
         
           
-          <label class="md-nav__link" for="__nav_12_3" id="__nav_12_3_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_12_4" id="__nav_12_4_label" tabindex="0">
             
   
   <span class="md-ellipsis">
@@ -1032,8 +1935,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_12_3_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_12_3">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_12_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_12_4">
             <span class="md-nav__icon md-icon"></span>
             Testing
           </label>
@@ -1106,10 +2009,8 @@
     
     
     
-    
     <li class="md-nav__item md-nav__item--nested">
       
-        
         
         
         <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_13" >
@@ -1213,10 +2114,8 @@
     
     
     
-    
     <li class="md-nav__item md-nav__item--nested">
       
-        
         
         
         <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_14" >
@@ -1264,6 +2163,26 @@
           </ul>
         </nav>
       
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faqs/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Frequently Asked Questions
+  </span>
+  
+
+      </a>
     </li>
   
 
@@ -1524,6 +2443,15 @@
   <a href="#-emitpayloadattributes" class="md-nav__link">
     <span class="md-ellipsis">
       --emitPayloadAttributes
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-chainarchiveblobepochs" class="md-nav__link">
+    <span class="md-ellipsis">
+      --chain.archiveBlobEpochs
     </span>
   </a>
   
@@ -2161,7 +3089,7 @@
 <p><br /></p>
 <h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h2>
 <p>Start a single beacon node with 8 interop validators</p>
-<div class="highlight"><pre><span></span><code>./lodestar dev --genesisValidators 8 --reset
+<div class="highlight"><pre><span></span><code>./lodestar<span class="w"> </span>dev<span class="w"> </span>--genesisValidators<span class="w"> </span><span class="m">8</span><span class="w"> </span>--reset
 </code></pre></div>
 <p><br /></p>
 <h2 id="dev-options"><code>dev</code> Options<a class="headerlink" href="#dev-options" title="Permanent link">&para;</a></h2>
@@ -2245,7 +3173,7 @@
 <p>description: Pick namespaces to expose for HTTP API. Set to '*' to enable all namespaces</p>
 <p>type: <code>string[]</code></p>
 <p>choices: "beacon", "config", "debug", "events", "lightclient", "lodestar", "node", "proof", "validator", "*"</p>
-<p>default: <code>[ ["beacon","config","events","node","validator","lightclient"] ]</code></p>
+<p>default: <code>["beacon","config","events","node","validator","lightclient"]</code></p>
 <p><br /></p>
 <h4 id="-restcors"><code>--rest.cors</code><a class="headerlink" href="#-restcors" title="Permanent link">&para;</a></h4>
 <p>description: Configures the Access-Control-Allow-Origin CORS header for HTTP API</p>
@@ -2276,6 +3204,10 @@
 <p>description: Flag to SSE emit execution <code>payloadAttributes</code> before every slot</p>
 <p>type: <code>boolean</code></p>
 <p>default: <code>false</code></p>
+<p><br /></p>
+<h4 id="-chainarchiveblobepochs"><code>--chain.archiveBlobEpochs</code><a class="headerlink" href="#-chainarchiveblobepochs" title="Permanent link">&para;</a></h4>
+<p>description: Number of epochs to retain finalized blobs (minimum of MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS)</p>
+<p>type: <code>number</code></p>
 <p><br /></p>
 <h4 id="-eth1"><code>--eth1</code><a class="headerlink" href="#-eth1" title="Permanent link">&para;</a></h4>
 <p>description: Whether to follow the eth1 chain</p>
@@ -2503,7 +3435,7 @@
 <p>default: <code>30000000</code></p>
 <p><br /></p>
 <h4 id="-builderselection"><code>--builder.selection</code><a class="headerlink" href="#-builderselection" title="Permanent link">&para;</a></h4>
-<p>description: Builder block selection strategy <code>maxprofit</code>, <code>builderalways</code>, <code>builderonly</code> or <code>executiononly</code></p>
+<p>description: Builder block selection strategy <code>maxprofit</code>, <code>builderalways</code>, <code>builderonly</code>, <code>executionalways</code>, or <code>executiononly</code></p>
 <p>type: <code>string</code></p>
 <p>default: <code>"executiononly"</code></p>
 <p><br /></p>
@@ -2628,7 +3560,7 @@
       
     
     <a href="https://github.com/ChainSafe/lodestar" target="_blank" rel="noopener" title="github.com" class="md-social__link">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 512"><!--! Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M186.1 328.7c0 20.9-10.9 55.1-36.7 55.1s-36.7-34.2-36.7-55.1 10.9-55.1 36.7-55.1 36.7 34.2 36.7 55.1zM480 278.2c0 31.9-3.2 65.7-17.5 95-37.9 76.6-142.1 74.8-216.7 74.8-75.8 0-186.2 2.7-225.6-74.8-14.6-29-20.2-63.1-20.2-95 0-41.9 13.9-81.5 41.5-113.6-5.2-15.8-7.7-32.4-7.7-48.8 0-21.5 4.9-32.3 14.6-51.8 45.3 0 74.3 9 108.8 36 29-6.9 58.8-10 88.7-10 27 0 54.2 2.9 80.4 9.2 34-26.7 63-35.2 107.8-35.2 9.8 19.5 14.6 30.3 14.6 51.8 0 16.4-2.6 32.7-7.7 48.2 27.5 32.4 39 72.3 39 114.2zm-64.3 50.5c0-43.9-26.7-82.6-73.5-82.6-18.9 0-37 3.4-56 6-14.9 2.3-29.8 3.2-45.1 3.2-15.2 0-30.1-.9-45.1-3.2-18.7-2.6-37-6-56-6-46.8 0-73.5 38.7-73.5 82.6 0 87.8 80.4 101.3 150.4 101.3h48.2c70.3 0 150.6-13.4 150.6-101.3zm-82.6-55.1c-25.8 0-36.7 34.2-36.7 55.1s10.9 55.1 36.7 55.1 36.7-34.2 36.7-55.1-10.9-55.1-36.7-55.1z"/></svg>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
     </a>
   
     
@@ -2639,7 +3571,7 @@
       
     
     <a href="https://twitter.com/lodestar_eth" target="_blank" rel="noopener" title="twitter.com" class="md-social__link">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M459.37 151.716c.325 4.548.325 9.097.325 13.645 0 138.72-105.583 298.558-298.558 298.558-59.452 0-114.68-17.219-161.137-47.106 8.447.974 16.568 1.299 25.34 1.299 49.055 0 94.213-16.568 130.274-44.832-46.132-.975-84.792-31.188-98.112-72.772 6.498.974 12.995 1.624 19.818 1.624 9.421 0 18.843-1.3 27.614-3.573-48.081-9.747-84.143-51.98-84.143-102.985v-1.299c13.969 7.797 30.214 12.67 47.431 13.319-28.264-18.843-46.781-51.005-46.781-87.391 0-19.492 5.197-37.36 14.294-52.954 51.655 63.675 129.3 105.258 216.365 109.807-1.624-7.797-2.599-15.918-2.599-24.04 0-57.828 46.782-104.934 104.934-104.934 30.213 0 57.502 12.67 76.67 33.137 23.715-4.548 46.456-13.32 66.599-25.34-7.798 24.366-24.366 44.833-46.132 57.827 21.117-2.273 41.584-8.122 60.426-16.243-14.292 20.791-32.161 39.308-52.628 54.253z"/></svg>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M389.2 48h70.6L305.6 224.2 487 464H345L233.7 318.6 106.5 464H35.8l164.9-188.5L26.8 48h145.6l100.5 132.9L389.2 48zm-24.8 373.8h39.1L151.1 88h-42l255.3 333.8z"/></svg>
     </a>
   
     
