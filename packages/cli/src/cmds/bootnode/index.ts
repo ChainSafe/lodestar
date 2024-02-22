@@ -1,4 +1,4 @@
-import {CliCommand, CliCommandOptions} from "../../util/index.js";
+import {CliCommand, CliCommandOptions} from "@lodestar/utils";
 import {GlobalArgs} from "../../options/index.js";
 import {bootnodeOptions, BootnodeArgs} from "./options.js";
 import {bootnodeHandler} from "./handler.js";

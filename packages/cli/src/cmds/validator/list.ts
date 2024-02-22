@@ -1,4 +1,4 @@
-import {CliCommand} from "../../util/index.js";
+import {CliCommand} from "@lodestar/utils";
 import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
 import {GlobalArgs} from "../../options/index.js";
 import {IValidatorCliArgs} from "./options.js";

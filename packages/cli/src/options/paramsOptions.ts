@@ -1,6 +1,7 @@
 import {ChainConfig, chainConfigTypes} from "@lodestar/config";
+import {CliCommandOptions, CliOptionDefinition} from "@lodestar/utils";
 import {IBeaconParamsUnparsed} from "../config/types.js";
-import {ObjectKeys, CliCommandOptions, CliOptionDefinition} from "../util/index.js";
+import {ObjectKeys} from "../util/index.js";
 
 // No options are statically declared
 // If an arbitrary key notation is used, it removes type safety on most of this CLI arg parsing code.

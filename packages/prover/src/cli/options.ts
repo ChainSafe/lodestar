@@ -1,14 +1,14 @@
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
-import {LogLevel, LogLevels} from "@lodestar/utils";
+import {CliCommandOptions, LogLevel, LogLevels} from "@lodestar/utils";
 import {ACTIVE_PRESET} from "@lodestar/params";
-import {CliCommandOptions} from "../utils/command.js";
+import {YargsError} from "../utils/errors.js";
 
 export type GlobalArgs = {
-  network: string;
+  network?: string;
   logLevel: string;
   presetFile?: string;
   preset: string;
-  paramsFile: string;
+  paramsFile?: string;
 };
 
 export type GlobalOptions = {
@@ -62,8 +62,12 @@ export function parseGlobalArgs(args: GlobalArgs): GlobalOptions {
     };
   }
 
-  return {
-    logLevel: args.logLevel as LogLevel,
-    paramsFile: args.paramsFile,
-  };
+  if (args.paramsFile) {
+    return {
+      logLevel: args.logLevel as LogLevel,
+      paramsFile: args.paramsFile,
+    };
+  }
+
+  throw new YargsError("Either --network or --paramsFile must be provided");
 }
