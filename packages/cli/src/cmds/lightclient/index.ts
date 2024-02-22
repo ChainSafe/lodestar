@@ -1,4 +1,4 @@
-import {CliCommand} from "../../util/index.js";
+import {CliCommand} from "@lodestar/utils";
 import {GlobalArgs} from "../../options/index.js";
 import {ILightClientArgs, lightclientOptions} from "./options.js";
 import {lightclientHandler} from "./handler.js";

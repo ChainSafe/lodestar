@@ -10,7 +10,6 @@ export async function getEchoWorker(): Promise<EchoWorker> {
   const workerThreadjs = new Worker("./workerEcho.js");
   const worker = workerThreadjs as unknown as workerThreads.Worker;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await spawn<any>(workerThreadjs, {
     // A Lodestar Node may do very expensive task at start blocking the event loop and causing
     // the initialization to timeout. The number below is big enough to almost disable the timeout

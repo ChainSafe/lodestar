@@ -1,4 +1,4 @@
-import {CliCommand} from "../../utils/command.js";
+import {CliCommand} from "@lodestar/utils";
 import {GlobalArgs} from "../options.js";
 import {proverProxyStartCommand} from "./start/index.js";
 export {proverProxyStartCommand} from "./start/index.js";

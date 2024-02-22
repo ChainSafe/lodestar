@@ -1,4 +1,4 @@
-import {CliCommand, CliCommandOptions} from "../../util/index.js";
+import {CliCommand, CliCommandOptions} from "@lodestar/utils";
 import {GlobalArgs} from "../../options/index.js";
 import {beaconOptions, BeaconArgs} from "./options.js";
 import {beaconHandler} from "./handler.js";

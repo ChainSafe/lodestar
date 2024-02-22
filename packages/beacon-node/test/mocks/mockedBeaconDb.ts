@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {vi, Mocked} from "vitest";
 import {config as minimalConfig} from "@lodestar/config/default";
 import {

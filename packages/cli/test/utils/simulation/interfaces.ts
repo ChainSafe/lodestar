@@ -143,7 +143,6 @@ export interface ExecutionGeneratorOptions<E extends ExecutionClient = Execution
 
 export type LodestarAPI = Api;
 export type LighthouseAPI = Omit<Api, "lodestar"> & {
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   lighthouse: {
     getPeers(): Promise<{
       status: number;

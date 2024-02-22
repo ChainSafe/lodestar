@@ -7,7 +7,7 @@
 
 > This package is part of [ChainSafe's Lodestar](https://lodestar.chainsafe.io) project
 
-Typescript REST client for the [Ethereum Consensus API spec](https://github.com/ethereum/beacon-apis)
+A set of tools allowing to verify EL client JSON-RPC calls.
 
 ## Usage
 
@@ -37,13 +37,12 @@ console.log({balance, address});
 You can also invoke the package as binary.
 
 ```bash
-npm -i g @lodestar/prover
+npm i -g @lodestar/prover
 
 lodestar-prover proxy \
   --network sepolia \
-  --execution-rpc https://lodestar-sepoliarpc.chainsafe.io \
-  --mode rest \
-  --beacon-rpc https://lodestar-sepolia.chainsafe.io \
+  --executionRpcUrl https://lodestar-sepoliarpc.chainsafe.io \
+  --beaconUrls https://lodestar-sepolia.chainsafe.io \
   --port 8080
 ```
 

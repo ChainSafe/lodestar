@@ -34,7 +34,6 @@ describe(
     it("should do a finalized sync from another BN", async function () {
       // single node at beginning, use main thread to verify bls
       const genesisSlotsDelay = 4;
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
 
       const testLoggerOpts: TestLoggerOpts = {
