@@ -118,7 +118,7 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
   async submitBlindedBlock(
     signedBlindedBlock: allForks.SignedBlindedBeaconBlock
   ): Promise<allForks.SignedBeaconBlockOrContents> {
-    const res = await this.api.submitBlindedBlock(signedBlindedBlock, {retryAttempts: 2});
+    const res = await this.api.submitBlindedBlock(signedBlindedBlock, {retries: 2});
     ApiError.assert(res, "execution.builder.submitBlindedBlock");
     const {data} = res.response;
 
