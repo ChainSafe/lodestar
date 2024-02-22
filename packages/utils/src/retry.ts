@@ -1,3 +1,4 @@
+import {ErrorAborted} from "./errors.js";
 import {sleep} from "./sleep.js";
 
 export type RetryOptions = {
@@ -21,6 +22,9 @@ export type RetryOptions = {
    * Milliseconds to wait before retrying again
    */
   retryDelay?: number;
+  /**
+   * Abort signal to stop retrying
+   */
   signal?: AbortSignal;
 };
 
@@ -39,10 +43,16 @@ export async function retry<A>(fn: (attempt: number) => A | Promise<A>, opts?: R
 
   let lastError: Error = Error("RetryError");
   for (let i = 1; i <= maxAttempts; i++) {
-    try {
-      // If not the first attempt, invoke right before retrying
-      if (i > 1) onRetry?.(lastError, i);
+    // If not the first attempt
+    if (i > 1) {
+      if (opts?.signal?.aborted) {
+        throw new ErrorAborted("retry");
+      }
+      // Invoke right before retrying
+      onRetry?.(lastError, i);
+    }
 
+    try {
       return await fn(i);
     } catch (e) {
       lastError = e as Error;
