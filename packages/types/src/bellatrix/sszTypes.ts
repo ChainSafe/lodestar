@@ -222,7 +222,7 @@ export const SSEPayloadAttributesCommon = new ContainerType(
   {
     proposerIndex: UintNum64,
     proposalSlot: Slot,
-    proposalBlockNumber: UintNum64,
+    parentBlockNumber: UintNum64,
     parentBlockRoot: Root,
     parentBlockHash: Root,
   },
