@@ -89,19 +89,19 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
 
     for (const node of nodes) {
       const finalized = stores["finalized"][node.beacon.id][slot];
-      !isNullish(finalized) && finalizedSlots.push(finalized);
+      if (!isNullish(finalized)) finalizedSlots.push(finalized);
 
       const inclusionDelay = stores["inclusionDelay"][node.beacon.id][slot];
-      !isNullish(inclusionDelay) && inclusionDelays.push(inclusionDelay);
+      if (!isNullish(inclusionDelay)) inclusionDelays.push(inclusionDelay);
 
       const attestationsCount = stores["attestationsCount"][node.beacon.id][slot];
-      !isNullish(attestationsCount) && attestationCounts.push(attestationsCount);
+      if (!isNullish(attestationsCount)) attestationCounts.push(attestationsCount);
 
       const head = stores["head"][node.beacon.id][slot];
-      !isNullish(head) && heads.push(head);
+      if (!isNullish(head)) heads.push(head);
 
       const connectedPeerCount = stores["connectedPeerCount"][node.beacon.id][slot];
-      !isNullish(connectedPeerCount) && peersCount.push(connectedPeerCount);
+      if (!isNullish(connectedPeerCount)) peersCount.push(connectedPeerCount);
     }
 
     const head0 = heads.length > 0 ? heads[0] : null;

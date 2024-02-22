@@ -80,7 +80,6 @@ export function pickEth1Vote(state: BeaconStateAllForks, votesToConsider: phase0
   else {
     const latestMostVotedRoot =
       eth1DataVotesOrder[Math.max(...eth1DataRootsMaxVotes.map((root) => eth1DataVotesOrder.indexOf(root)))];
-    eth1DataHashToEth1Data;
     return eth1DataHashToEth1Data.get(latestMostVotedRoot) ?? state.eth1Data;
   }
 }
