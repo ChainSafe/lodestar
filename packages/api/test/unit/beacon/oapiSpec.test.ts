@@ -154,7 +154,7 @@ runTestCheckAgainstSpec(
 );
 
 const ignoredTopics = [
-  /* 
+  /*
    https://github.com/ChainSafe/lodestar/issues/6470
    topic block_gossip not implemented
    */
