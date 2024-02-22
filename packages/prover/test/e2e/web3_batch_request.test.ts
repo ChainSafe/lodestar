@@ -2,11 +2,11 @@ import {describe, it, expect, beforeAll, vi} from "vitest";
 import {Web3} from "web3";
 import {LCTransport} from "../../src/interfaces.js";
 import {createVerifiedExecutionProvider} from "../../src/web3_provider.js";
-import {rpcUrl, beaconUrl, config, waitForCapellaFork, hookTimeout} from "../utils/e2e_env.js";
+import {rpcUrl, beaconUrl, config, waitForCapellaFork, minCapellaTimeMs} from "../utils/e2e_env.js";
 import {getVerificationFailedMessage} from "../../src/utils/json_rpc.js";
 
 describe("web3_batch_requests", function () {
-  vi.setConfig({hookTimeout});
+  vi.setConfig({hookTimeout: minCapellaTimeMs});
 
   let web3: Web3;
 

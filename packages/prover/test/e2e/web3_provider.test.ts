@@ -3,10 +3,10 @@ import {Web3} from "web3";
 import {ethers} from "ethers";
 import {LCTransport} from "../../src/interfaces.js";
 import {createVerifiedExecutionProvider} from "../../src/web3_provider.js";
-import {waitForCapellaFork, hookTimeout, rpcUrl, beaconUrl, config} from "../utils/e2e_env.js";
+import {waitForCapellaFork, minCapellaTimeMs, rpcUrl, beaconUrl, config} from "../utils/e2e_env.js";
 
 describe("web3_provider", function () {
-  vi.setConfig({hookTimeout});
+  vi.setConfig({hookTimeout: minCapellaTimeMs});
 
   beforeAll(async () => {
     await waitForCapellaFork();
