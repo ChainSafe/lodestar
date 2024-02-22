@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import {Mocked} from "vitest";
 import {config} from "@lodestar/config/default";
 import {ForkChoice} from "@lodestar/fork-choice";

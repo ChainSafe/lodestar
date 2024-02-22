@@ -64,6 +64,10 @@ module.exports = {
       },
       //ignore rules on destructured params
       {selector: "variable", modifiers: ["destructured"], format: null},
+      {
+        selector: "import",
+        format: ["camelCase", "PascalCase"],
+      },
     ],
     "@typescript-eslint/no-explicit-any": "error",
     "@typescript-eslint/no-floating-promises": "error",
@@ -94,6 +98,7 @@ module.exports = {
     "func-call-spacing": "off",
     // Force to add names to all functions to ease CPU profiling
     "func-names": ["error", "always"],
+    "import/namespace": "off",
     //if --fix is run it messes imports like /lib/presets/minimal & /lib/presets/mainnet
     "import/no-duplicates": "off",
     "import/no-extraneous-dependencies": [

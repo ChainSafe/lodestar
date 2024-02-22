@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import {Slot} from "@lodestar/types";
 import {isNullish} from "../../utils.js";
 import {HeadSummary} from "./assertions/defaults/headAssertion.js";
@@ -10,18 +9,21 @@ import {arrayGroupBy, avg, isSingletonArray} from "./utils/index.js";
 export class TableReporter extends SimulationReporter<typeof defaultAssertions> {
   private lastPrintedSlot = -1;
 
-  private table = new TableRenderer({
-    time: 14,
-    fork: 10,
-    eph: 5,
-    slot: 4,
-    head: 10,
-    finzed: 8,
-    peers: 8,
-    attCount: 8,
-    incDelay: 8,
-    errors: 10,
-  });
+  private table = new TableRenderer(
+    {
+      time: 14,
+      fork: 10,
+      eph: 5,
+      slot: 4,
+      head: 10,
+      finzed: 8,
+      peers: 8,
+      attCount: 8,
+      incDelay: 8,
+      errors: 10,
+    },
+    {logger: this.options.logger}
+  );
 
   bootstrap(): void {
     this.table.printHeader();
@@ -132,19 +134,19 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
   summary(): void {
     const {errors} = this.options;
 
-    console.info(`├${"─".repeat(10)} Errors (${errors.length}) ${"─".repeat(10)}┤`);
+    this.options.logger.error(`├${"─".repeat(10)} Errors (${errors.length}) ${"─".repeat(10)}┤`);
 
     const groupBySlot = arrayGroupBy(errors, (e) => String(e.slot as number));
 
     for (const [slot, slotErrors] of Object.entries(groupBySlot)) {
-      if (slotErrors.length > 0) console.info(`├─ Slot: ${slot}`);
+      if (slotErrors.length > 0) this.options.logger.info(`├─ Slot: ${slot}`);
       const groupByAssertion = arrayGroupBy(slotErrors, (e) => e.assertionId);
 
       for (const [assertionId, assertionErrors] of Object.entries(groupByAssertion)) {
-        if (assertionErrors.length > 0) console.info(`├── Assertion: ${assertionId}`);
+        if (assertionErrors.length > 0) this.options.logger.info(`├── Assertion: ${assertionId}`);
 
         for (const error of assertionErrors) {
-          console.info(
+          this.options.logger.error(
             `├──── ${error.nodeId}: ${error.message} ${Object.entries(error.data ?? {})
               .map(([k, v]) => `${k}=${v as string}`)
               .join(" ")}`

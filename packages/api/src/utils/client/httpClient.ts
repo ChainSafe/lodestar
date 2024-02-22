@@ -1,4 +1,4 @@
-import {ErrorAborted, Logger, TimeoutError, isValidHttpUrl, toBase64} from "@lodestar/utils";
+import {ErrorAborted, Logger, TimeoutError, isValidHttpUrl, toBase64, retry} from "@lodestar/utils";
 import {ReqGeneric, RouteDef} from "../index.js";
 import {ApiClientResponse, ApiClientSuccessResponse} from "../../interfaces.js";
 import {fetch, isFetchError} from "./fetch.js";
@@ -70,6 +70,7 @@ export type FetchOpts = {
   /** Optional, for metrics */
   routeId?: string;
   timeoutMs?: number;
+  retryAttempts?: number;
 };
 
 export interface IHttpClient {
@@ -160,7 +161,7 @@ export class HttpClient implements IHttpClient {
     if (metrics) {
       metrics.urlsScore.addCollect(() => {
         for (let i = 0; i < this.urlsScore.length; i++) {
-          metrics.urlsScore.set({urlIndex: i}, this.urlsScore[i]);
+          metrics.urlsScore.set({urlIndex: i, baseUrl: this.urlsOpts[i].baseUrl}, this.urlsScore[i]);
         }
       });
     }
@@ -179,6 +180,30 @@ export class HttpClient implements IHttpClient {
   }
 
   private async requestWithBodyWithRetries<T>(
+    opts: FetchOpts,
+    getBody: (res: Response) => Promise<T>
+  ): Promise<{status: HttpStatusCode; body: T}> {
+    if (opts.retryAttempts !== undefined) {
+      const routeId = opts.routeId ?? DEFAULT_ROUTE_ID;
+
+      return retry(
+        async (_attempt) => {
+          return this.requestWithBodyWithFallbacks<T>(opts, getBody);
+        },
+        {
+          retries: opts.retryAttempts,
+          retryDelay: 200,
+          onRetry: (e, attempt) => {
+            this.logger?.debug("Retrying request", {routeId, attempt, lastError: e.message});
+          },
+        }
+      );
+    } else {
+      return this.requestWithBodyWithFallbacks<T>(opts, getBody);
+    }
+  }
+
+  private async requestWithBodyWithFallbacks<T>(
     opts: FetchOpts,
     getBody: (res: Response) => Promise<T>
   ): Promise<{status: HttpStatusCode; body: T}> {
@@ -211,7 +236,7 @@ export class HttpClient implements IHttpClient {
             const routeId = opts.routeId ?? DEFAULT_ROUTE_ID;
 
             if (i > 0) {
-              this.metrics?.requestToFallbacks.inc({routeId});
+              this.metrics?.requestToFallbacks.inc({routeId, baseUrl});
               this.logger?.debug("Requesting fallback URL", {routeId, baseUrl, score: this.urlsScore[i]});
             }
 
@@ -319,7 +344,7 @@ export class HttpClient implements IHttpClient {
       this.logger?.debug("HttpClient response", {routeId});
       return {status: res.status, body};
     } catch (e) {
-      this.metrics?.requestErrors.inc({routeId});
+      this.metrics?.requestErrors.inc({routeId, baseUrl});
 
       if (isAbortedError(e as Error)) {
         if (signalGlobal?.aborted) {

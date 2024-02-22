@@ -1,16 +1,17 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import {describe, it, expect, beforeAll} from "vitest";
-import Web3 from "web3";
+import {Web3} from "web3";
 import {LCTransport} from "../../src/interfaces.js";
 import {createVerifiedExecutionProvider} from "../../src/web3_provider.js";
-import {rpcUrl, beaconUrl, config} from "../utils/e2e_env.js";
+import {rpcUrl, beaconUrl, config, waitForCapellaFork} from "../utils/e2e_env.js";
 import {getVerificationFailedMessage} from "../../src/utils/json_rpc.js";
 
 /* prettier-ignore */
 describe("web3_batch_requests", function () {
   let web3: Web3;
 
-  beforeAll(() => {
+  beforeAll(async () => {
+    await waitForCapellaFork();
+
     const {provider} = createVerifiedExecutionProvider(new Web3.providers.HttpProvider(rpcUrl), {
       transport: LCTransport.Rest,
       urls: [beaconUrl],

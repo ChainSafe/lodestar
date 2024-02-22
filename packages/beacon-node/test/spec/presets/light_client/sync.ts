@@ -191,7 +191,6 @@ export const sync: TestRunnerFn<SyncTestCase, void> = (fork) => {
         } as SyncTestCase;
       },
       timeout: 10000,
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
       expectFunc: () => {},
       // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
     },

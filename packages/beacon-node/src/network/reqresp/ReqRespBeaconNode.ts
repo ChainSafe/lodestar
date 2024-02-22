@@ -212,7 +212,6 @@ export class ReqRespBeaconNode extends ReqResp {
    * Any protocol not in this list must be un-subscribed.
    */
   private getProtocolsAtFork(fork: ForkName): [ProtocolNoHandler, ProtocolHandler][] {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const protocolsAtFork: [ProtocolNoHandler, ProtocolHandler][] = [
       [protocols.Ping(this.config), this.onPing.bind(this)],
       [protocols.Status(this.config), this.onStatus.bind(this)],

@@ -16,7 +16,12 @@ describe(
   {timeout: 3000}
 );
 
-describe(
+/**
+ * This is nice to have to investigate networking issue in local environment.
+ * Since we use vitest to run tests in parallel, including this causes the test to be unstable.
+ * See https://github.com/ChainSafe/lodestar/issues/6358
+ */
+describe.skip(
   "gossipsub / worker",
   function () {
     runTests({useWorker: true});
@@ -131,6 +136,70 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     expect(Buffer.from(receivedblsToExec)).toEqual(
       Buffer.from(ssz.capella.SignedBLSToExecutionChange.serialize(blsToExec))
     );
+  });
+
+  it("Publish and receive an attesterSlashing", async function () {
+    let onAttesterSlashingChange: (payload: Uint8Array) => void;
+    const onAttesterSlashingChangePromise = new Promise<Uint8Array>((resolve) => (onAttesterSlashingChange = resolve));
+
+    const {netA, netB} = await mockModules({
+      [GossipType.attester_slashing]: async ({gossipData}: GossipHandlerParamGeneric<GossipType.attester_slashing>) => {
+        onAttesterSlashingChange(gossipData.serializedData);
+      },
+    });
+
+    await Promise.all([onPeerConnect(netA), onPeerConnect(netB), connect(netA, netB)]);
+    expect(netA.getConnectedPeerCount()).toBe(1);
+    expect(netB.getConnectedPeerCount()).toBe(1);
+
+    await netA.subscribeGossipCoreTopics();
+    await netB.subscribeGossipCoreTopics();
+
+    // Wait to have a peer connected to a topic
+    while (!netA.closed) {
+      await sleep(500);
+      if (await hasSomeMeshPeer(netA)) {
+        break;
+      }
+    }
+
+    const attesterSlashing = ssz.phase0.AttesterSlashing.defaultValue();
+    await netA.publishAttesterSlashing(attesterSlashing);
+
+    const received = await onAttesterSlashingChangePromise;
+    expect(Buffer.from(received)).toEqual(Buffer.from(ssz.phase0.AttesterSlashing.serialize(attesterSlashing)));
+  });
+
+  it("Publish and receive a proposerSlashing", async function () {
+    let onProposerSlashingChange: (payload: Uint8Array) => void;
+    const onProposerSlashingChangePromise = new Promise<Uint8Array>((resolve) => (onProposerSlashingChange = resolve));
+
+    const {netA, netB} = await mockModules({
+      [GossipType.proposer_slashing]: async ({gossipData}: GossipHandlerParamGeneric<GossipType.proposer_slashing>) => {
+        onProposerSlashingChange(gossipData.serializedData);
+      },
+    });
+
+    await Promise.all([onPeerConnect(netA), onPeerConnect(netB), connect(netA, netB)]);
+    expect(netA.getConnectedPeerCount()).toBe(1);
+    expect(netB.getConnectedPeerCount()).toBe(1);
+
+    await netA.subscribeGossipCoreTopics();
+    await netB.subscribeGossipCoreTopics();
+
+    // Wait to have a peer connected to a topic
+    while (!netA.closed) {
+      await sleep(500);
+      if (await hasSomeMeshPeer(netA)) {
+        break;
+      }
+    }
+
+    const proposerSlashing = ssz.phase0.ProposerSlashing.defaultValue();
+    await netA.publishProposerSlashing(proposerSlashing);
+
+    const received = await onProposerSlashingChangePromise;
+    expect(Buffer.from(received)).toEqual(Buffer.from(ssz.phase0.ProposerSlashing.serialize(proposerSlashing)));
   });
 
   it("Publish and receive a LightClientOptimisticUpdate", async function () {

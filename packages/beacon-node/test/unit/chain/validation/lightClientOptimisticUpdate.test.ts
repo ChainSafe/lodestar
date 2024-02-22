@@ -9,7 +9,6 @@ import {getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 
 describe("Light Client Optimistic Update validation", function () {
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   const config = createChainForkConfig({
     ...defaultChainConfig,
     /* eslint-disable @typescript-eslint/naming-convention */

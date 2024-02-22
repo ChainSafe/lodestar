@@ -14,6 +14,7 @@ const {forkConfig} = defineSimTestConfig({
   BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
   CAPELLA_FORK_EPOCH: capellaForkEpoch,
   runTillEpoch: Infinity,
+  initialNodes: 2,
 });
 
 const env = await SimulationEnvironment.initWithDefaults(

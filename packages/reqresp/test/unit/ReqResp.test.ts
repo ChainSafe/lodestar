@@ -63,5 +63,13 @@ describe("ResResp", () => {
       expect(reqresp.getRegisteredProtocols()).toEqual(["/eth2/beacon_chain/req/number_to_string/1/ssz_snappy"]);
       expect(libp2p.handle).toHaveBeenCalledOnce();
     });
+
+    it("should not register handler twice for same protocol if ignoreIfDuplicate=true", async () => {
+      await reqresp.registerProtocol(numberToStringProtocol, {ignoreIfDuplicate: true});
+      expect(libp2p.handle).toHaveBeenCalledOnce();
+
+      await reqresp.registerProtocol(numberToStringProtocol, {ignoreIfDuplicate: true});
+      expect(libp2p.handle).toHaveBeenCalledOnce();
+    });
   });
 });

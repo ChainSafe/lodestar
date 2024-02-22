@@ -7,7 +7,7 @@ Prometheus is an open-source monitoring system with efficient time series databa
 To start, download Prometheus from https://prometheus.io/download/.
 Unzip the downloaded .zip file and run Prometheus from its installed location with the lodestar `prometheus.yml` passed in as the configuration file
 
-```
+```sh
 ./prometheus --config.file=$dataDir/prometheus.yml
 ```
 
@@ -18,7 +18,7 @@ Unzip the downloaded .zip file and run Prometheus from its installed location wi
 
 Then run the Lodestar beacon node with
 
-```
+```sh
 lodestar --metrics=true --metrics.port=8008
 ```
 

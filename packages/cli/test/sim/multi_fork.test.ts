@@ -7,6 +7,8 @@ import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.j
 import {defineSimTestConfig, logFilesDir} from "../utils/simulation/utils/index.js";
 import {
   connectAllNodes,
+  connectNewCLNode,
+  connectNewELNode,
   connectNewNode,
   waitForHead,
   waitForNodeSync,
@@ -27,6 +29,7 @@ const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
   BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
   CAPELLA_FORK_EPOCH: capellaForkEpoch,
   runTillEpoch: runTillEpoch + syncWaitEpoch,
+  initialNodes: 5,
 });
 
 const env = await SimulationEnvironment.initWithDefaults(
@@ -171,9 +174,27 @@ const checkpointSync = await env.createNodePair({
   keysCount: 0,
 });
 
+// TODO: A workaround for this issue for sim tests only
+// 1. Start the execution node and let it connect to network
+// 2. Wait for few seconds
+// 3. And later start the beacon node and connect to network
+// 4. With this delay the execution node would be synced before the beacon node starts
+// https://github.com/ChainSafe/lodestar/issues/6435
+// Revert to following code once the issue is fixed
+//    await rangeSync.execution.job.start();
+//    await rangeSync.beacon.job.start();
+//    await connectNewNode(rangeSync, env.nodes);
 await rangeSync.execution.job.start();
+await connectNewELNode(
+  rangeSync.execution,
+  env.nodes.map((node) => node.execution)
+);
+await sleep(4000);
 await rangeSync.beacon.job.start();
-await connectNewNode(rangeSync, env.nodes);
+await connectNewCLNode(
+  rangeSync.beacon,
+  env.nodes.map((node) => node.beacon)
+);
 
 await checkpointSync.execution.job.start();
 await checkpointSync.beacon.job.start();
@@ -257,5 +278,8 @@ await waitForHead(env, unknownBlockSync, {
   ),
   slot: headForUnknownBlockSync.response.data.message.slot,
 });
+
+await unknownBlockSync.beacon.job.stop();
+await unknownBlockSync.execution.job.stop();
 
 await env.stop();

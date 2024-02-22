@@ -34,3 +34,9 @@ ignore:
   - "supporting-docs"
   - "docker"
   - ".github"
+
+flags:
+  unit:
+    paths:
+      - ".*"
+    carryforward: true

@@ -3,7 +3,7 @@ import childProcess from "node:child_process";
 import stream from "node:stream";
 import fs from "node:fs";
 import path from "node:path";
-import {sleep} from "@lodestar/utils";
+import {prettyMsToTime, sleep} from "@lodestar/utils";
 import {TestContext} from "./interfaces.js";
 
 /**
@@ -79,6 +79,19 @@ export async function execChildProcess(cmd: string | string[], options?: ExecChi
   });
 }
 
+/**
+ * Check if process with given pid is running
+ */
+export function isPidRunning(pid: number): boolean {
+  try {
+    // Signal 0 is a special signal that checks if the process exists
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export const stopChildProcess = async (
   childProcess: childProcess.ChildProcess,
   signal: NodeJS.Signals | number = "SIGTERM"
@@ -87,11 +100,20 @@ export const stopChildProcess = async (
     return;
   }
 
-  return new Promise((resolve, reject) => {
+  const pid = childProcess.pid;
+
+  await new Promise((resolve, reject) => {
     childProcess.once("error", reject);
-    childProcess.once("close", resolve);
+    // We use `exit` instead of `close` as multiple processes can share same `stdio`
+    childProcess.once("exit", resolve);
     childProcess.kill(signal);
   });
+
+  if (pid != null && isPidRunning(pid)) {
+    // Wait for sometime and try to kill this time
+    await sleep(500);
+    await stopChildProcess(childProcess, "SIGKILL");
+  }
 };
 
 /**
@@ -306,13 +328,15 @@ export async function spawnChildProcess(
                 const timeSinceHealthCheckStart = Date.now() - startHealthCheckMs;
                 if (timeSinceHealthCheckStart > logHealthChecksAfterMs) {
                   console.log(
-                    `Health check unsuccessful. logPrefix=${logPrefix} pid=${proc.pid}  timeSinceHealthCheckStart=${timeSinceHealthCheckStart}`
+                    `Health check unsuccessful. logPrefix=${logPrefix} pid=${
+                      proc.pid
+                    } timeSinceHealthCheckStart=${prettyMsToTime(timeSinceHealthCheckStart)}`
                   );
                 }
               }
             })
             .catch((e) => {
-              console.error("error on health check, health functions must never throw", e);
+              console.error("Error on health check, health functions must never throw", e);
             });
         }, healthCheckIntervalMs);
 
@@ -322,7 +346,9 @@ export async function spawnChildProcess(
           if (intervalId !== undefined) {
             reject(
               new Error(
-                `Health check timeout. logPrefix=${logPrefix} pid=${proc.pid}  healthTimeoutMs=${healthTimeoutMs}`
+                `Health check timeout. logPrefix=${logPrefix} pid=${proc.pid} healthTimeout=${prettyMsToTime(
+                  healthTimeoutMs ?? 0
+                )}`
               )
             );
           }
@@ -336,9 +362,9 @@ export async function spawnChildProcess(
 
           reject(
             new Error(
-              `process exited before healthy. logPrefix=${logPrefix} pid=${
-                proc.pid
-              } healthTimeoutMs=${healthTimeoutMs} code=${code} command="${command} ${args.join(" ")}"`
+              `Process exited before healthy. logPrefix=${logPrefix} pid=${proc.pid} healthTimeout=${prettyMsToTime(
+                healthTimeoutMs ?? 0
+              )} code=${code} command="${command} ${args.join(" ")}"`
             )
           );
         });

@@ -58,7 +58,6 @@ describe("network / peers / PeerManager", function () {
     const reqResp = new ReqRespFake();
     const peerRpcScores = new PeerRpcScoreStore();
     const networkEventBus = new NetworkEventBus();
-    /* eslint-disable @typescript-eslint/no-empty-function */
     const mockSubnetsService: IAttnetsService = {
       getActiveSubnets: () => [],
       shouldProcess: () => true,

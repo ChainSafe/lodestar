@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import path from "node:path";
 import {writeFile} from "node:fs/promises";
 import got, {RequestError} from "got";
@@ -39,7 +38,6 @@ export const generateLighthouseValidatorNode: ValidatorNodeGenerator<ValidatorCl
     "beacon-nodes": beaconUrls[0],
     "debug-level": "debug",
     "init-slashing-protection": null,
-    "allow-unsynced": null,
     http: null,
     "unencrypted-http-transport": null,
     "http-address": "0.0.0.0",

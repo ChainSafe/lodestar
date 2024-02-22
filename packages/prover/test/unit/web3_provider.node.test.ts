@@ -1,5 +1,5 @@
 import {describe, it, expect, afterEach, vi} from "vitest";
-import Web3 from "web3";
+import {Web3} from "web3";
 import {ethers} from "ethers";
 import {createVerifiedExecutionProvider, ProofProvider, LCTransport} from "@lodestar/prover/browser";
 import {ELRpc} from "../../src/utils/rpc.js";

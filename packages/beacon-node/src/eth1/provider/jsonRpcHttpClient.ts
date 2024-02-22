@@ -1,5 +1,5 @@
 import {EventEmitter} from "events";
-import StrictEventEmitter from "strict-event-emitter-types";
+import {StrictEventEmitter} from "strict-event-emitter-types";
 import {fetch} from "@lodestar/api";
 import {ErrorAborted, Gauge, Histogram, TimeoutError, isValidHttpUrl, retry} from "@lodestar/utils";
 import {IJson, RpcPayload} from "../interface.js";
@@ -158,11 +158,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
       const routeId = opts?.routeId ?? "unknown";
 
       const res = await retry<RpcResponse<R>>(
-        async (attempt) => {
-          /** If this is a retry, increment the retry counter for this method */
-          if (attempt > 1) {
-            this.opts?.metrics?.retryCount.inc({routeId});
-          }
+        async (_attempt) => {
           return this.fetchJson({jsonrpc: "2.0", id: this.id++, ...payload}, opts);
         },
         {
@@ -170,6 +166,9 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
           retryDelay: opts?.retryDelay ?? this.opts?.retryDelay ?? 0,
           shouldRetry: opts?.shouldRetry,
           signal: this.opts?.signal,
+          onRetry: () => {
+            this.opts?.metrics?.retryCount.inc({routeId});
+          },
         }
       );
       return parseRpcResponse(res, payload);
