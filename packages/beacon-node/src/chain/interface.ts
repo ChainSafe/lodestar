@@ -17,6 +17,7 @@ import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
   EpochShuffling,
+  IShufflingCache,
   Index2PubkeyCache,
   PubkeyIndexMap,
 } from "@lodestar/state-transition";
@@ -51,7 +52,6 @@ import {IChainOptions} from "./options.js";
 import {AssembledBlockType, BlockAttributes, BlockType} from "./produceBlock/produceBlockBody.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {SeenGossipBlockInput} from "./seenCache/index.js";
-import {ShufflingCache} from "./shufflingCache.js";
 import {BlockRewards} from "./rewards/blockRewards.js";
 import {SyncCommitteeRewards} from "./rewards/syncCommitteeRewards.js";
 
@@ -114,7 +114,7 @@ export interface IBeaconChain {
   readonly checkpointBalancesCache: CheckpointBalancesCache;
   readonly producedContentsCache: Map<BlockHash, deneb.Contents>;
   readonly producedBlockRoot: Map<RootHex, allForks.ExecutionPayload | null>;
-  readonly shufflingCache: ShufflingCache;
+  readonly shufflingCache: IShufflingCache;
   readonly producedBlindedBlockRoot: Set<RootHex>;
   readonly opts: IChainOptions;
 

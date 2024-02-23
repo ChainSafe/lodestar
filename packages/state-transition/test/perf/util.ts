@@ -1,6 +1,7 @@
 import {CoordType, PublicKey, SecretKey} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
 import {BitArray, fromHexString} from "@chainsafe/ssz";
+import {getNodeLogger} from "@lodestar/logger/node";
 import {allForks, phase0, ssz, Slot, altair} from "@lodestar/types";
 import {config} from "@lodestar/config/default";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
@@ -12,6 +13,7 @@ import {
   SLOTS_PER_EPOCH,
   SLOTS_PER_HISTORICAL_ROOT,
 } from "@lodestar/params";
+import {LogLevel} from "@lodestar/utils";
 import {
   interopSecretKey,
   computeEpochAtSlot,
@@ -20,6 +22,7 @@ import {
   newFilledArray,
   createCachedBeaconState,
   computeCommitteeCount,
+  BaseShufflingCache,
 } from "../../src/index.js";
 import {
   CachedBeaconStateAllForks,
@@ -127,6 +130,8 @@ export function generatePerfTestCachedStatePhase0(opts?: {goBackOneSlot: boolean
     state.slot -= 1;
     phase0CachedState23637 = createCachedBeaconState(state, {
       config: createBeaconConfig(config, state.genesisValidatorsRoot),
+      logger: getNodeLogger({level: LogLevel.info}),
+      shufflingCache: new BaseShufflingCache(),
       pubkey2index,
       index2pubkey,
     });
@@ -232,6 +237,8 @@ export function generatePerfTestCachedStateAltair(opts?: {
     state.slot -= 1;
     altairCachedState23637 = createCachedBeaconState(state, {
       config: createBeaconConfig(altairConfig, state.genesisValidatorsRoot),
+      logger: getNodeLogger({level: LogLevel.info}),
+      shufflingCache: new BaseShufflingCache(),
       pubkey2index,
       index2pubkey,
     });
@@ -435,6 +442,8 @@ export function generateTestCachedBeaconStateOnlyValidators({
     state,
     {
       config: createBeaconConfig(config, state.genesisValidatorsRoot),
+      logger: getNodeLogger({level: LogLevel.info}),
+      shufflingCache: new BaseShufflingCache(),
       pubkey2index,
       index2pubkey,
     },

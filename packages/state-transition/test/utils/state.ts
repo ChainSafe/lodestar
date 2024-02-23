@@ -10,6 +10,8 @@ import {phase0, ssz} from "@lodestar/types";
 import {config} from "@lodestar/config/default";
 
 import {createBeaconConfig, ChainForkConfig} from "@lodestar/config";
+import {getNodeLogger} from "@lodestar/logger/node";
+import {LogLevel} from "@lodestar/utils";
 import {ZERO_HASH} from "../../src/constants/index.js";
 import {newZeroedArray} from "../../src/util/index.js";
 
@@ -22,6 +24,7 @@ import {
 } from "../../src/index.js";
 import {BeaconStateCache} from "../../src/cache/stateCache.js";
 import {EpochCacheOpts} from "../../src/cache/epochCache.js";
+import {BaseShufflingCache} from "../../src/cache/baseShufflingCache.js";
 
 /**
  * Copy of BeaconState, but all fields are marked optional to allow for swapping out variables as needed.
@@ -91,6 +94,8 @@ export function generateCachedState(
   const state = generateState(opts);
   return createCachedBeaconState(state, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
+    logger: getNodeLogger({level: LogLevel.error}),
+    shufflingCache: new BaseShufflingCache(),
     // This is a test state, there's no need to have a global shared cache of keys
     pubkey2index: new PubkeyIndexMap(),
     index2pubkey: [],
@@ -106,6 +111,8 @@ export function createCachedBeaconStateTest<T extends BeaconStateAllForks>(
     state,
     {
       config: createBeaconConfig(configCustom, state.genesisValidatorsRoot),
+      logger: getNodeLogger({level: LogLevel.error}),
+      shufflingCache: new BaseShufflingCache(),
       // This is a test state, there's no need to have a global shared cache of keys
       pubkey2index: new PubkeyIndexMap(),
       index2pubkey: [],

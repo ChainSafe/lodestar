@@ -13,7 +13,7 @@ import {
   SLOTS_PER_EPOCH,
   WEIGHT_DENOMINATOR,
 } from "@lodestar/params";
-import {LodestarError} from "@lodestar/utils";
+import {LodestarError, Logger} from "@lodestar/utils";
 import {
   computeActivationExitEpoch,
   computeEpochAtSlot,
@@ -48,6 +48,7 @@ export const PROPOSER_WEIGHT_FACTOR = PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PR
 
 export type EpochCacheImmutableData = {
   config: BeaconConfig;
+  logger: Logger;
   shufflingCache: IShufflingCache;
   pubkey2index: PubkeyIndexMap;
   index2pubkey: Index2PubkeyCache;
@@ -85,6 +86,7 @@ type ProposersDeferred = {computed: false; seed: Uint8Array} | {computed: true; 
  **/
 export class EpochCache {
   config: BeaconConfig;
+  logger: Logger;
   shufflingCache: IShufflingCache;
 
   /**
@@ -219,6 +221,7 @@ export class EpochCache {
 
   constructor(data: {
     config: BeaconConfig;
+    logger: Logger;
     shufflingCache: IShufflingCache;
     pubkey2index: PubkeyIndexMap;
     index2pubkey: Index2PubkeyCache;
@@ -249,6 +252,7 @@ export class EpochCache {
     syncPeriod: SyncPeriod;
   }) {
     this.config = data.config;
+    this.logger = data.logger;
     this.shufflingCache = data.shufflingCache;
     this.pubkey2index = data.pubkey2index;
     this.index2pubkey = data.index2pubkey;
@@ -287,7 +291,7 @@ export class EpochCache {
    */
   static createFromState(
     state: BeaconStateAllForks,
-    {config, shufflingCache, pubkey2index, index2pubkey}: EpochCacheImmutableData,
+    {config, logger, shufflingCache, pubkey2index, index2pubkey}: EpochCacheImmutableData,
     opts?: EpochCacheOpts
   ): EpochCache {
     // syncPubkeys here to ensure EpochCacheImmutableData is popualted before computing the rest of caches
@@ -465,6 +469,7 @@ export class EpochCache {
 
     return new EpochCache({
       config,
+      logger,
       shufflingCache,
       pubkey2index,
       index2pubkey,
@@ -506,6 +511,7 @@ export class EpochCache {
     // All data is completely replaced, or only-appended
     return new EpochCache({
       config: this.config,
+      logger: this.logger,
       shufflingCache: this.shufflingCache,
       // Common append-only structures shared with all states, no need to clone
       pubkey2index: this.pubkey2index,
@@ -570,7 +576,14 @@ export class EpochCache {
 
     this.nextActiveIndices = epochTransitionCache.nextEpochShufflingActiveValidatorIndices;
     this.nextShufflingDecisionRoot = getShufflingDecisionBlock(state, this.nextEpoch);
-    this.shufflingCache.buildSync(state, this.nextEpoch, this.nextShufflingDecisionRoot, this.nextActiveIndices);
+    this.shufflingCache
+      .build(state, this.nextEpoch, this.nextShufflingDecisionRoot, this.nextActiveIndices)
+      .catch((e) =>
+        this.logger.error(
+          `Error building shuffling cache for epoch ${this.nextEpoch} on decisionRoot ${this.nextShufflingDecisionRoot}`,
+          e
+        )
+      );
 
     // Roll current proposers into previous proposers for metrics
     this.proposersPrevEpoch = this.proposers;
@@ -944,10 +957,12 @@ export class EpochCacheError extends LodestarError<EpochCacheErrorType> {}
 
 export function createEmptyEpochCacheImmutableData(
   chainConfig: ChainConfig,
+  logger: Logger,
   state: Pick<BeaconStateAllForks, "genesisValidatorsRoot">
 ): EpochCacheImmutableData {
   return {
     config: createBeaconConfig(chainConfig, state.genesisValidatorsRoot),
+    logger,
     shufflingCache: new BaseShufflingCache(),
     // This is a test state, there's no need to have a global shared cache of keys
     pubkey2index: new PubkeyIndexMap(),

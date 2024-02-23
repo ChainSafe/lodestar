@@ -215,7 +215,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       sszTimer?.();
       const timer = this.metrics?.stateReloadDuration.startTimer();
       // @tuyennhv why are we not passing through the EpochCacheOptions from the seed state?
-      const newCachedState = loadCachedBeaconState(seedState, stateBytes, {}, validatorsBytes);
+      const newCachedState = loadCachedBeaconState(seedState, stateBytes, this.logger, {}, validatorsBytes);
       newCachedState.commit();
       const stateRoot = toHexString(newCachedState.hashTreeRoot());
       timer?.();

@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import {rimraf} from "rimraf";
-import {toHex, fromHex} from "@lodestar/utils";
+import {toHex, fromHex, LogLevel} from "@lodestar/utils";
 import {nodeUtils} from "@lodestar/beacon-node";
+import {getNodeLogger} from "@lodestar/logger/lib/node.js";
 import {GlobalArgs} from "../../options/index.js";
 import {mkdir, onGracefulShutdown} from "../../util/index.js";
 import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
@@ -59,8 +60,10 @@ export async function devHandler(args: IDevArgs & GlobalArgs): Promise<void> {
     const validatorCount = args.genesisValidators ?? 8;
     const genesisTime = args.genesisTime ?? Math.floor(Date.now() / 1000) + 5;
     const eth1BlockHash = fromHex(args.genesisEth1Hash ?? toHex(Buffer.alloc(32, 0x0b)));
+    // dummy logger to init state for serialization
+    const logger = getNodeLogger({level: LogLevel.info});
 
-    const {state} = nodeUtils.initDevState(config, validatorCount, {genesisTime, eth1BlockHash});
+    const {state} = nodeUtils.initDevState(config, logger, validatorCount, {genesisTime, eth1BlockHash});
 
     args.genesisStateFile = "genesis.ssz";
     fs.writeFileSync(args.genesisStateFile, state.serialize());

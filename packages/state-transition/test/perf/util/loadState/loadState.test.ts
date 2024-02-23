@@ -1,10 +1,13 @@
 import bls from "@chainsafe/bls";
 import {CoordType} from "@chainsafe/bls/types";
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
+import {getNodeLogger} from "@lodestar/logger/node";
+import {LogLevel} from "@lodestar/utils";
 import {loadState} from "../../../../src/util/loadState/loadState.js";
 import {createCachedBeaconState} from "../../../../src/cache/stateCache.js";
 import {Index2PubkeyCache, PubkeyIndexMap} from "../../../../src/cache/pubkeyCache.js";
 import {generatePerfTestCachedStateAltair} from "../../util.js";
+import {BaseShufflingCache} from "../../../../src/index.js";
 
 /**
  * This benchmark shows a stable performance from 2s to 3s on a Mac M1. And it does not really depend on the seed validators,
@@ -62,12 +65,14 @@ describe("loadState", function () {
         }
 
         const newStateBytes = newState.serialize();
-        return {seedState, newStateBytes};
+        const logger = getNodeLogger({level: LogLevel.error});
+        const shufflingCache = new BaseShufflingCache();
+        return {seedState, newStateBytes, logger, shufflingCache};
       },
-      beforeEach: ({seedState, newStateBytes}) => {
-        return {seedState: seedState.clone(), newStateBytes};
+      beforeEach: ({seedState, newStateBytes, logger, shufflingCache}) => {
+        return {seedState: seedState.clone(), newStateBytes, logger, shufflingCache};
       },
-      fn: ({seedState, newStateBytes}) => {
+      fn: ({seedState, newStateBytes, logger, shufflingCache}) => {
         const {state: migratedState, modifiedValidators} = loadState(seedState.config, seedState, newStateBytes);
         migratedState.hashTreeRoot();
         // Get the validators sub tree once for all the loop
@@ -80,17 +85,16 @@ describe("loadState", function () {
           pubkey2index.set(pubkey, validatorIndex);
           index2pubkey[validatorIndex] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian);
         }
-        // skip computimg shuffling in performance test because in reality we have a ShufflingCache
-        // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-        const shufflingGetter = () => seedState.epochCtx.currentShuffling;
         createCachedBeaconState(
           migratedState,
           {
             config: seedState.config,
+            logger,
+            shufflingCache,
             pubkey2index,
             index2pubkey,
           },
-          {skipSyncPubkeys: true, skipSyncCommitteeCache: true, shufflingGetter}
+          {skipSyncPubkeys: true, skipSyncCommitteeCache: true}
         );
       },
     });

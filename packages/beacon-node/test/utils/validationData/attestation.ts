@@ -73,10 +73,6 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
     ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
   };
 
-  const shufflingCache = new ShufflingCache();
-  shufflingCache.processState(state, state.epochCtx.epoch);
-  shufflingCache.processState(state, state.epochCtx.nextEpoch);
-
   const forkChoice = {
     getBlock: (root) => {
       if (!ssz.Root.equals(root, beaconBlockRoot)) return null;
@@ -139,7 +135,7 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
       : new BlsMultiThreadWorkerPool({}, {logger: testLogger(), metrics: null}),
     waitForBlock: () => Promise.resolve(false),
     index2pubkey: state.epochCtx.index2pubkey,
-    shufflingCache,
+    shufflingCache: state.epochCtx.shufflingCache,
     opts: defaultChainOptions,
   } as Partial<IBeaconChain> as IBeaconChain;
 

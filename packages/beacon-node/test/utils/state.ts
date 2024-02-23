@@ -7,12 +7,15 @@ import {
   PubkeyIndexMap,
   CachedBeaconStateBellatrix,
   BeaconStateBellatrix,
+  BaseShufflingCache,
 } from "@lodestar/state-transition";
 import {allForks, altair, bellatrix, ssz} from "@lodestar/types";
 import {createBeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {FAR_FUTURE_EPOCH, ForkName, ForkSeq, MAX_EFFECTIVE_BALANCE, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {getNodeLogger} from "@lodestar/logger/node";
+import {LogLevel} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../src/constants/constants.js";
 import {generateValidator, generateValidators} from "./validator.js";
 import {getConfig} from "./config.js";
@@ -103,6 +106,8 @@ export function generateCachedState(opts?: TestBeaconState): CachedBeaconStateAl
   const state = generateState(opts, config);
   return createCachedBeaconState(state, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
+    logger: getNodeLogger({level: LogLevel.debug}),
+    shufflingCache: new BaseShufflingCache(),
     // This is a performance test, there's no need to have a global shared cache of keys
     pubkey2index: new PubkeyIndexMap(),
     index2pubkey: [],
@@ -117,6 +122,8 @@ export function generateCachedAltairState(opts?: TestBeaconState, altairForkEpoc
   const state = generateState(opts, config);
   return createCachedBeaconState(state, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
+    logger: getNodeLogger({level: LogLevel.debug}),
+    shufflingCache: new BaseShufflingCache(),
     // This is a performance test, there's no need to have a global shared cache of keys
     pubkey2index: new PubkeyIndexMap(),
     index2pubkey: [],
@@ -131,6 +138,8 @@ export function generateCachedBellatrixState(opts?: TestBeaconState): CachedBeac
   const state = generateState(opts, config);
   return createCachedBeaconState(state as BeaconStateBellatrix, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
+    logger: getNodeLogger({level: LogLevel.debug}),
+    shufflingCache: new BaseShufflingCache(),
     // This is a performance test, there's no need to have a global shared cache of keys
     pubkey2index: new PubkeyIndexMap(),
     index2pubkey: [],

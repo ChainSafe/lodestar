@@ -31,7 +31,7 @@ describe("epoch shufflings", () => {
       computeProposers(
         state.epochCtx.nextEpoch,
         epochSeed,
-        state.epochCtx.nextShuffling.activeIndices,
+        state.epochCtx.nextActiveIndices,
         state.epochCtx.effectiveBalanceIncrements
       );
     },
@@ -40,18 +40,14 @@ describe("epoch shufflings", () => {
   itBench({
     id: `computeEpochShuffling - vc ${numValidators}`,
     fn: () => {
-      computeEpochShuffling(state, state.epochCtx.nextShuffling.activeIndices, nextEpoch);
+      computeEpochShuffling(state, state.epochCtx.nextActiveIndices, nextEpoch);
     },
   });
 
   itBench({
     id: `getNextSyncCommittee - vc ${numValidators}`,
     fn: () => {
-      getNextSyncCommittee(
-        state,
-        state.epochCtx.nextShuffling.activeIndices,
-        state.epochCtx.effectiveBalanceIncrements
-      );
+      getNextSyncCommittee(state, state.epochCtx.nextActiveIndices, state.epochCtx.effectiveBalanceIncrements);
     },
   });
 });

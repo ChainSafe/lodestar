@@ -3,10 +3,13 @@ import {ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 import {createBeaconConfig, ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {config as chainConfig} from "@lodestar/config/default";
+import {getNodeLogger} from "@lodestar/logger/node";
+import {LogLevel} from "@lodestar/utils";
 
 import {upgradeStateToDeneb} from "../../src/slot/upgradeStateToDeneb.js";
 import {createCachedBeaconState} from "../../src/cache/stateCache.js";
 import {PubkeyIndexMap} from "../../src/cache/pubkeyCache.js";
+import {BaseShufflingCache} from "../../src/cache/baseShufflingCache.js";
 
 describe("upgradeState", () => {
   it("upgradeStateToDeneb", () => {
@@ -16,6 +19,8 @@ describe("upgradeState", () => {
       capellaState,
       {
         config: createBeaconConfig(config, capellaState.genesisValidatorsRoot),
+        logger: getNodeLogger({level: LogLevel.error}),
+        shufflingCache: new BaseShufflingCache(),
         pubkey2index: new PubkeyIndexMap(),
         index2pubkey: [],
       },

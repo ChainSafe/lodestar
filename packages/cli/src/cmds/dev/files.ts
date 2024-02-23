@@ -3,8 +3,9 @@ import path from "node:path";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {nodeUtils} from "@lodestar/beacon-node";
 import {chainConfigToJson, ChainForkConfig} from "@lodestar/config";
-import {dumpYaml} from "@lodestar/utils";
+import {dumpYaml, LogLevel} from "@lodestar/utils";
 import {interopSecretKey} from "@lodestar/state-transition";
+import {getNodeLogger} from "@lodestar/logger/node";
 import {PersistedKeysBackend} from "../validator/keymanager/persistedKeys.js";
 
 /* eslint-disable no-console */
@@ -17,7 +18,9 @@ export async function writeTestnetFiles(
   const genesisTime = Math.floor(Date.now() / 1000);
   const eth1BlockHash = Buffer.alloc(32, 0);
 
-  const {state} = nodeUtils.initDevState(config, genesisValidators, {genesisTime, eth1BlockHash});
+  // dummy logger to init state for serialization
+  const logger = getNodeLogger({level: LogLevel.info});
+  const {state} = nodeUtils.initDevState(config, logger, genesisValidators, {genesisTime, eth1BlockHash});
 
   // Write testnet data
   fs.mkdirSync(targetDir, {recursive: true});

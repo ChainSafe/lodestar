@@ -1,6 +1,7 @@
 import bls from "@chainsafe/bls";
 import {CoordType} from "@chainsafe/bls/types";
 import {BeaconConfig} from "@lodestar/config";
+import {Logger} from "@lodestar/utils";
 import {loadState} from "../util/loadState/loadState.js";
 import {EpochCache, EpochCacheImmutableData, EpochCacheOpts} from "./epochCache.js";
 import {
@@ -164,6 +165,7 @@ export function createCachedBeaconState<T extends BeaconStateAllForks>(
 export function loadCachedBeaconState<T extends BeaconStateAllForks & BeaconStateCache>(
   cachedSeedState: T,
   stateBytes: Uint8Array,
+  logger: Logger,
   opts?: EpochCacheOpts,
   seedValidatorsBytes?: Uint8Array
 ): T {
@@ -187,6 +189,7 @@ export function loadCachedBeaconState<T extends BeaconStateAllForks & BeaconStat
     migratedState,
     {
       config: cachedSeedState.config,
+      logger,
       shufflingCache: cachedSeedState.epochCtx.shufflingCache,
       pubkey2index,
       index2pubkey,
