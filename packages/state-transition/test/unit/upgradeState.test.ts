@@ -9,7 +9,7 @@ import {LogLevel} from "@lodestar/utils";
 import {upgradeStateToDeneb} from "../../src/slot/upgradeStateToDeneb.js";
 import {createCachedBeaconState} from "../../src/cache/stateCache.js";
 import {PubkeyIndexMap} from "../../src/cache/pubkeyCache.js";
-import {BaseShufflingCache} from "../../src/cache/baseShufflingCache.js";
+import {ShufflingCache} from "../../src/cache/shufflingCache.js";
 
 describe("upgradeState", () => {
   it("upgradeStateToDeneb", () => {
@@ -20,7 +20,7 @@ describe("upgradeState", () => {
       {
         config: createBeaconConfig(config, capellaState.genesisValidatorsRoot),
         logger: getNodeLogger({level: LogLevel.error}),
-        shufflingCache: new BaseShufflingCache(),
+        shufflingCache: new ShufflingCache(),
         pubkey2index: new PubkeyIndexMap(),
         index2pubkey: [],
       },

@@ -24,7 +24,7 @@ import {
 } from "../../src/index.js";
 import {BeaconStateCache} from "../../src/cache/stateCache.js";
 import {EpochCacheOpts} from "../../src/cache/epochCache.js";
-import {BaseShufflingCache} from "../../src/cache/baseShufflingCache.js";
+import {ShufflingCache} from "../../src/cache/shufflingCache.js";
 
 /**
  * Copy of BeaconState, but all fields are marked optional to allow for swapping out variables as needed.
@@ -95,7 +95,7 @@ export function generateCachedState(
   return createCachedBeaconState(state, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
     logger: getNodeLogger({level: LogLevel.error}),
-    shufflingCache: new BaseShufflingCache(),
+    shufflingCache: new ShufflingCache(),
     // This is a test state, there's no need to have a global shared cache of keys
     pubkey2index: new PubkeyIndexMap(),
     index2pubkey: [],
@@ -112,7 +112,7 @@ export function createCachedBeaconStateTest<T extends BeaconStateAllForks>(
     {
       config: createBeaconConfig(configCustom, state.genesisValidatorsRoot),
       logger: getNodeLogger({level: LogLevel.error}),
-      shufflingCache: new BaseShufflingCache(),
+      shufflingCache: new ShufflingCache(),
       // This is a test state, there's no need to have a global shared cache of keys
       pubkey2index: new PubkeyIndexMap(),
       index2pubkey: [],

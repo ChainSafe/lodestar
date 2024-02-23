@@ -1,9 +1,9 @@
 import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@lodestar/params";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
+import {ShufflingCacheOptions} from "@lodestar/state-transition";
 import {ArchiverOpts} from "./archiver/index.js";
 import {ForkChoiceOpts} from "./forkChoice/index.js";
 import {LightClientServerOpts} from "./lightClient/index.js";
-import {ShufflingCacheOptions} from "./shufflingCache.js";
 
 export type IChainOptions = BlockProcessOpts &
   PoolOpts &

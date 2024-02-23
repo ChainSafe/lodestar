@@ -41,7 +41,7 @@ import {
   SyncCommitteeCache,
   SyncCommitteeCacheEmpty,
 } from "./syncCommitteeCache.js";
-import {BaseShufflingCache, IShufflingCache} from "./baseShufflingCache.js";
+import {ShufflingCache, IShufflingCache} from "./shufflingCache.js";
 
 /** `= PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT)` */
 export const PROPOSER_WEIGHT_FACTOR = PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT);
@@ -963,7 +963,7 @@ export function createEmptyEpochCacheImmutableData(
   return {
     config: createBeaconConfig(chainConfig, state.genesisValidatorsRoot),
     logger,
-    shufflingCache: new BaseShufflingCache(),
+    shufflingCache: new ShufflingCache(),
     // This is a test state, there's no need to have a global shared cache of keys
     pubkey2index: new PubkeyIndexMap(),
     index2pubkey: [],

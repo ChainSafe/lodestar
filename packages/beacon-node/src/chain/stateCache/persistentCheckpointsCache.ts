@@ -1,13 +1,17 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {phase0, Epoch, RootHex} from "@lodestar/types";
-import {CachedBeaconStateAllForks, computeStartSlotAtEpoch, getBlockRootAtSlot} from "@lodestar/state-transition";
+import {
+  loadCachedBeaconState,
+  ShufflingCache,
+  CachedBeaconStateAllForks,
+  computeStartSlotAtEpoch,
+  getBlockRootAtSlot,
+} from "@lodestar/state-transition";
 import {Logger, MapDef, sleep} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
-import {loadCachedBeaconState} from "@lodestar/state-transition";
 import {INTERVALS_PER_SLOT} from "@lodestar/params";
 import {Metrics} from "../../metrics/index.js";
 import {IClock} from "../../util/clock.js";
-import {ShufflingCache} from "../shufflingCache.js";
 import {BufferPool, BufferWithKey} from "../../util/bufferPool.js";
 import {StateCloneOpts} from "../regen/interface.js";
 import {MapTracker} from "./mapMetrics.js";

@@ -1,4 +1,5 @@
 import {Epoch, RootHex} from "@lodestar/types";
+import type {Metrics} from "@lodestar/beacon-node";
 import {LodestarError, MapDef, pruneSetToMax} from "@lodestar/utils";
 import {EpochShuffling, computeEpochShuffling} from "../util/index.js";
 import {BeaconStateAllForks} from "./types.js";
@@ -20,6 +21,7 @@ const SHUFFLING_CACHE_MAX_EPOCHS = 4;
 export interface IShufflingCache {
   add(shufflingEpoch: Epoch, shufflingDecisionRoot: RootHex, shuffling: EpochShuffling): void;
   get(shufflingEpoch: Epoch, shufflingDecisionRoot: RootHex): Promise<EpochShuffling | null>;
+  // getAll(): MapDef<Epoch, Map<RootHex, ShufflingCacheItem>>;
   getOrNull(shufflingEpoch: Epoch, shufflingDecisionRoot: RootHex): EpochShuffling | null;
   getOrError(shufflingEpoch: Epoch, shufflingDecisionRoot: RootHex): EpochShuffling;
   buildSync(
@@ -38,11 +40,13 @@ export interface IShufflingCache {
 
 export enum ShufflingCacheErrorCode {
   NO_SHUFFLING_FOUND = "EPOCH_SHUFFLING_NO_SHUFFLING_FOUND",
+  REGEN_ERROR_NO_SHUFFLING_FOUND = "REGEN_ERROR_NO_SHUFFLING_FOUND",
   SHUFFLING_PROMISE_NOT_RESOLVED = "EPOCH_SHUFFLING_SHUFFLING_PROMISE_NOT_RESOLVED",
 }
 
 type ShufflingCacheErrorType =
   | {code: ShufflingCacheErrorCode.NO_SHUFFLING_FOUND; epoch: Epoch; shufflingDecisionRoot: RootHex}
+  | {code: ShufflingCacheErrorCode.REGEN_ERROR_NO_SHUFFLING_FOUND; epoch: Epoch; shufflingDecisionRoot: RootHex}
   | {code: ShufflingCacheErrorCode.SHUFFLING_PROMISE_NOT_RESOLVED; epoch: Epoch; shufflingDecisionRoot: RootHex};
 
 export class ShufflingCacheError extends LodestarError<ShufflingCacheErrorType> {}
@@ -67,19 +71,39 @@ export type ShufflingCacheItem = ShufflingCacheShufflingItem | ShufflingCachePro
 
 type ShufflingResolution = (shuffling: EpochShuffling) => void;
 
-export interface BaseShufflingCacheOptions {
+export interface ShufflingCacheOptions {
   maxShufflingCacheEpochs?: number;
 }
 
-export class BaseShufflingCache implements IShufflingCache {
+/**
+ * A shuffling cache to help:
+ * - get committee quickly for attestation verification
+ * - if a shuffling is not available (which does not happen with default chain option of maxSkipSlots = 32), track a promise to make sure we don't compute the same shuffling twice
+ * - skip computing shuffling when loading state bytes from disk
+ */
+export class ShufflingCache implements IShufflingCache {
   /** LRU cache implemented as a map, pruned every time we add an item */
-  protected readonly itemsByDecisionRootByEpoch: MapDef<Epoch, Map<RootHex, ShufflingCacheItem>> = new MapDef(
+  private readonly itemsByDecisionRootByEpoch: MapDef<Epoch, Map<RootHex, ShufflingCacheItem>> = new MapDef(
     () => new Map<RootHex, ShufflingCacheItem>()
   );
-  protected readonly maxEpochs: number;
+  private readonly maxEpochs: number;
 
-  constructor(opts: BaseShufflingCacheOptions = {}) {
+  constructor(
+    private metrics: Metrics | null = null,
+    opts: ShufflingCacheOptions = {}
+  ) {
     this.maxEpochs = opts.maxShufflingCacheEpochs ?? SHUFFLING_CACHE_MAX_EPOCHS;
+    if (metrics) {
+      metrics.shufflingCache.size.addCollect(() =>
+        metrics.shufflingCache.size.set(
+          Array.from(this.itemsByDecisionRootByEpoch.values()).reduce((total, innerMap) => total + innerMap.size, 0)
+        )
+      );
+    }
+  }
+
+  addMetrics(metrics: Metrics): void {
+    this.metrics = metrics;
   }
 
   async get(shufflingEpoch: Epoch, shufflingDecisionRoot: RootHex): Promise<EpochShuffling | null> {
@@ -135,18 +159,22 @@ export class BaseShufflingCache implements IShufflingCache {
     activeIndexes: number[]
   ): EpochShuffling {
     const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(shufflingEpoch).get(shufflingDecisionRoot);
-    if (!cacheItem) {
-      // TODO: (matthewkeil) Add metric here for cache miss
-      return this._build(state, shufflingEpoch, shufflingDecisionRoot, activeIndexes);
-    }
-    if (this.isShufflingCacheItem(cacheItem)) {
+    let resolveFn: ShufflingResolution;
+    if (cacheItem) {
       // TODO: (matthewkeil) Add metric here for cache hit
-      return cacheItem.shuffling;
+      if (this.isShufflingCacheItem(cacheItem)) {
+        return cacheItem.shuffling;
+      }
+      // Perhaps we should throw an error instead. Should not happen ideally
+      //
+      // TODO: (matthewkeil) Add metric here for race condition recreating the shuffling
+      //       because this sync call will finish first if its running on thread
+      resolveFn = cacheItem.resolveFn;
+    } else {
+      // TODO: (matthewkeil) Add metric here for cache miss
+      resolveFn = this._insertShufflingPromise(shufflingEpoch, shufflingDecisionRoot);
     }
-    // Perhaps we should throw an error instead
-    //
-    // TODO: (matthewkeil) Add metric here for throwing away and recreating the shuffling
-    const resolveFn = cacheItem.resolveFn;
+
     const shuffling = this._build(state, shufflingEpoch, shufflingDecisionRoot, activeIndexes);
     resolveFn(shuffling);
     return shuffling;
@@ -159,27 +187,29 @@ export class BaseShufflingCache implements IShufflingCache {
     activeIndexes: number[]
   ): Promise<EpochShuffling> {
     const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(shufflingEpoch).get(shufflingDecisionRoot);
-    if (!!cacheItem && this.isShufflingCacheItem(cacheItem)) {
+    if (cacheItem) {
       // TODO: (matthewkeil) Add metric here for cache hit
-      return cacheItem.shuffling;
+      if (this.isShufflingCacheItem(cacheItem)) {
+        return cacheItem.shuffling;
+      }
+      return cacheItem.promise;
     }
 
     // TODO: (matthewkeil) Add metric here for cache miss
-    let resolveFn: ShufflingResolution;
-    if (!cacheItem) {
-      resolveFn = this._insertShufflingPromise(shufflingEpoch, shufflingDecisionRoot);
-    } else {
-      resolveFn = cacheItem.resolveFn;
-    }
-
+    //
+    // this is to prevent multiple calls to get shuffling for the same epoch and dependent root
+    // any subsequent calls of the same epoch and dependent root will wait for this promise to resolve
+    const resolveFn = this._insertShufflingPromise(shufflingEpoch, shufflingDecisionRoot);
     // TODO: (matthewkeil) replace this sync call with a worker and async build function that uses
     //       a nice'd thread to build in core idle time
+    //
+    // Building will overwrite the ShufflingCachePromiseItem with the ShufflingCacheShufflingItem
     const shuffling = this._build(state, shufflingEpoch, shufflingDecisionRoot, activeIndexes);
     resolveFn(shuffling);
     return shuffling;
   }
 
-  protected _build(
+  private _build(
     state: BeaconStateAllForks,
     shufflingEpoch: Epoch,
     shufflingDecisionRoot: RootHex,
@@ -190,7 +220,7 @@ export class BaseShufflingCache implements IShufflingCache {
     return shuffling;
   }
 
-  protected _insertShufflingPromise(shufflingEpoch: Epoch, shufflingDecisionRoot: RootHex): ShufflingResolution {
+  private _insertShufflingPromise(shufflingEpoch: Epoch, shufflingDecisionRoot: RootHex): ShufflingResolution {
     const promiseCount = Array.from(this.itemsByDecisionRootByEpoch.values())
       .flatMap((innerMap) => Array.from(innerMap.values()))
       .filter((item) => this.isPromiseCacheItem(item)).length;
@@ -209,11 +239,11 @@ export class BaseShufflingCache implements IShufflingCache {
     return resolveFn;
   }
 
-  protected isShufflingCacheItem(item: ShufflingCacheItem): item is ShufflingCacheShufflingItem {
+  private isShufflingCacheItem(item: ShufflingCacheItem): item is ShufflingCacheShufflingItem {
     return item.type === ShufflingCacheItemType.shuffling;
   }
 
-  protected isPromiseCacheItem(item: ShufflingCacheItem): item is ShufflingCachePromiseItem {
+  private isPromiseCacheItem(item: ShufflingCacheItem): item is ShufflingCachePromiseItem {
     return item.type === ShufflingCacheItemType.promise;
   }
 }

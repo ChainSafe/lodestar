@@ -22,7 +22,7 @@ import {
   newFilledArray,
   createCachedBeaconState,
   computeCommitteeCount,
-  BaseShufflingCache,
+  ShufflingCache,
 } from "../../src/index.js";
 import {
   CachedBeaconStateAllForks,
@@ -131,7 +131,7 @@ export function generatePerfTestCachedStatePhase0(opts?: {goBackOneSlot: boolean
     phase0CachedState23637 = createCachedBeaconState(state, {
       config: createBeaconConfig(config, state.genesisValidatorsRoot),
       logger: getNodeLogger({level: LogLevel.info}),
-      shufflingCache: new BaseShufflingCache(),
+      shufflingCache: new ShufflingCache(),
       pubkey2index,
       index2pubkey,
     });
@@ -238,7 +238,7 @@ export function generatePerfTestCachedStateAltair(opts?: {
     altairCachedState23637 = createCachedBeaconState(state, {
       config: createBeaconConfig(altairConfig, state.genesisValidatorsRoot),
       logger: getNodeLogger({level: LogLevel.info}),
-      shufflingCache: new BaseShufflingCache(),
+      shufflingCache: new ShufflingCache(),
       pubkey2index,
       index2pubkey,
     });
@@ -443,7 +443,7 @@ export function generateTestCachedBeaconStateOnlyValidators({
     {
       config: createBeaconConfig(config, state.genesisValidatorsRoot),
       logger: getNodeLogger({level: LogLevel.info}),
-      shufflingCache: new BaseShufflingCache(),
+      shufflingCache: new ShufflingCache(),
       pubkey2index,
       index2pubkey,
     },

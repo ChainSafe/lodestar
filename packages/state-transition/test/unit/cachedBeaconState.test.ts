@@ -11,7 +11,7 @@ import {interopPubkeysCached} from "../utils/interop.js";
 import {modifyStateSameValidator, newStateWithValidators} from "../utils/capella.js";
 import {EpochShuffling} from "../../src/util/epochShuffling.js";
 import {getShufflingDecisionBlock} from "../../src/util/shufflingDecisionRoot.js";
-import {BaseShufflingCache} from "../../src/cache/baseShufflingCache.js";
+import {ShufflingCache} from "../../src/cache/shufflingCache.js";
 
 describe("CachedBeaconState", () => {
   it("Clone and mutate", () => {
@@ -68,7 +68,7 @@ describe("CachedBeaconState", () => {
       {
         config,
         logger,
-        shufflingCache: new BaseShufflingCache(),
+        shufflingCache: new ShufflingCache(),
         pubkey2index: new PubkeyIndexMap(),
         index2pubkey: [],
       },

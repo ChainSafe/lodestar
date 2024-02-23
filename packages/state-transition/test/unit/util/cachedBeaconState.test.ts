@@ -4,7 +4,7 @@ import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {LogLevel} from "@lodestar/utils";
-import {BaseShufflingCache} from "../../../src/cache/baseShufflingCache.js";
+import {ShufflingCache} from "../../../src/cache/shufflingCache.js";
 import {PubkeyIndexMap} from "../../../src/cache/pubkeyCache.js";
 import {createCachedBeaconState} from "../../../src/cache/stateCache.js";
 
@@ -15,7 +15,7 @@ describe("CachedBeaconState", () => {
     createCachedBeaconState(emptyState, {
       config: createBeaconConfig(config, emptyState.genesisValidatorsRoot),
       logger: getNodeLogger({level: LogLevel.info}),
-      shufflingCache: new BaseShufflingCache(),
+      shufflingCache: new ShufflingCache(),
       pubkey2index: new PubkeyIndexMap(),
       index2pubkey: [],
     });

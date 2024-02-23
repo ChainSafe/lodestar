@@ -7,7 +7,7 @@ import {loadState} from "../../../../src/util/loadState/loadState.js";
 import {createCachedBeaconState} from "../../../../src/cache/stateCache.js";
 import {Index2PubkeyCache, PubkeyIndexMap} from "../../../../src/cache/pubkeyCache.js";
 import {generatePerfTestCachedStateAltair} from "../../util.js";
-import {BaseShufflingCache} from "../../../../src/index.js";
+import {ShufflingCache} from "../../../../src/index.js";
 
 /**
  * This benchmark shows a stable performance from 2s to 3s on a Mac M1. And it does not really depend on the seed validators,
@@ -66,7 +66,7 @@ describe("loadState", function () {
 
         const newStateBytes = newState.serialize();
         const logger = getNodeLogger({level: LogLevel.error});
-        const shufflingCache = new BaseShufflingCache();
+        const shufflingCache = new ShufflingCache();
         return {seedState, newStateBytes, logger, shufflingCache};
       },
       beforeEach: ({seedState, newStateBytes, logger, shufflingCache}) => {
