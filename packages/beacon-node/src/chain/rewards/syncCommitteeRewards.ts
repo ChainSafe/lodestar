@@ -1,12 +1,9 @@
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "@lodestar/state-transition";
 import {ValidatorIndex, allForks, altair} from "@lodestar/types";
 import {ForkName, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
+import {routes} from "@lodestar/api";
 
-// Note: This excludes sync aggregate reward. The reward for proposer here only reflect the sync committee participation portion
-export type SyncCommitteeRewards = {
-  validatorIndex: ValidatorIndex;
-  reward: number;
-}[];
+export type SyncCommitteeRewards = routes.beacon.SyncCommitteeRewards;
 
 export async function computeSyncCommitteeRewards(
   block: allForks.BeaconBlock,

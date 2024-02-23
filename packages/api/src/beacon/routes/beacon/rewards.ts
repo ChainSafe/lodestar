@@ -40,7 +40,11 @@ export type BlockRewards = {
   attesterSlashings: number;
 };
 
-export type SyncCommitteeRewardsResponse = {validatorIndex: ValidatorIndex; reward: number}[];
+/**
+ * Rewards info for sync committee participation. Every reward value is in Gwei.
+ * Note: This excludes sync aggregate reward. The reward for proposer here only reflect the sync committee participation portion
+ */
+export type SyncCommitteeRewards = {validatorIndex: ValidatorIndex; reward: number}[];
 
 export type Api = {
   /**
@@ -63,7 +67,7 @@ export type Api = {
     filters?: ValidatorId[]
   ): Promise<
     ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: SyncCommitteeRewardsResponse; executionOptimistic: ExecutionOptimistic}},
+      {[HttpStatusCode.OK]: {data: SyncCommitteeRewards; executionOptimistic: ExecutionOptimistic}},
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
     >
   >;
@@ -114,7 +118,7 @@ export function getReturnTypes(): ReturnTypes<Api> {
     {jsonCase: "eth2"}
   );
 
-  const SyncCommitteeRewards = new ContainerType(
+  const SyncCommitteeRewardsResponse = new ContainerType(
     {
       validatorIndex: ssz.ValidatorIndex,
       reward: ssz.UintNum64,
@@ -124,6 +128,6 @@ export function getReturnTypes(): ReturnTypes<Api> {
 
   return {
     getBlockRewards: ContainerDataExecutionOptimistic(BlockRewardsResponse),
-    getSyncCommitteeRewards: ContainerDataExecutionOptimistic(ArrayOf(SyncCommitteeRewards)),
+    getSyncCommitteeRewards: ContainerDataExecutionOptimistic(ArrayOf(SyncCommitteeRewardsResponse)),
   };
 }

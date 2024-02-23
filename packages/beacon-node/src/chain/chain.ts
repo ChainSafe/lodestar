@@ -1009,9 +1009,12 @@ export class BeaconChain implements IBeaconChain {
     block: allForks.FullOrBlindedBeaconBlock,
     filter?: (ValidatorIndex | string)[]
   ): Promise<SyncCommitteeRewards> {
-    const preState = (await this.regen.getPreState(block, {dontTransferCache: true}, RegenCaller.restApi)).clone();
-    preState.slot = block.slot; // regen.getPreState guarantees pre_state of the same epoch but not the same slot
-    const result = computeSyncCommitteeRewards(block, preState, filter);
-    return result;
+    const preState = this.regen.getPreStateSync(block);
+
+    if (preState === null) {
+      throw Error(`Pre-state is unavailable given block's parent root ${toHexString(block.parentRoot)}`);
+    }
+
+    return computeSyncCommitteeRewards(block, preState.clone(), filter);
   }
 }
