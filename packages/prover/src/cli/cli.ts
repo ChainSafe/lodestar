@@ -1,9 +1,9 @@
 // Must not use `* as yargs`, see https://github.com/yargs/yargs/issues/1131
 import yargs from "yargs";
 import {hideBin} from "yargs/helpers";
-import {registerCommandToYargs} from "../utils/command.js";
+import {registerCommandToYargs} from "@lodestar/utils";
 import {getVersionData} from "../utils/version.js";
-import {cmds} from "./cmds/index.js";
+import {cmds, proverProxyStartCommand} from "./cmds/index.js";
 import {globalOptions} from "./options.js";
 
 const {version} = getVersionData();
@@ -47,6 +47,9 @@ export function getLodestarProverCli(): yargs.Argv {
   for (const cmd of cmds) {
     registerCommandToYargs(prover, cmd);
   }
+
+  // Register the proxy command as the default one
+  registerCommandToYargs(prover, {...proverProxyStartCommand, command: "*"});
 
   // throw an error if we see an unrecognized cmd
   prover.recommendCommands().strict();

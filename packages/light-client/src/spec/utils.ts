@@ -80,7 +80,6 @@ export function upgradeLightClientHeader(
         `Invalid startUpgradeFromFork=${startUpgradeFromFork} for headerFork=${headerFork} in upgradeLightClientHeader to targetFork=${targetFork}`
       );
 
-    // eslint-disable-next-line no-fallthrough
     case ForkName.altair:
     case ForkName.bellatrix:
       // Break if no further upgradation is required else fall through

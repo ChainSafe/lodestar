@@ -1,6 +1,6 @@
 import {IncomingMessage} from "node:http";
 import {describe, it, afterEach, expect} from "vitest";
-import fastify, {RouteOptions} from "fastify";
+import {RouteOptions, fastify} from "fastify";
 import {ErrorAborted, TimeoutError, toBase64} from "@lodestar/utils";
 import {HttpClient, HttpError} from "../../../src/utils/client/index.js";
 import {HttpStatusCode} from "../../../src/utils/client/httpStatusCode.js";

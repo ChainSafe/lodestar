@@ -1,6 +1,8 @@
 import {BeaconStateAllForks, computeSlotsSinceEpochStart} from "@lodestar/state-transition";
 import {ATTESTATION_SUBNET_COUNT} from "@lodestar/params";
-import {BLSPubkey, CommitteeIndex, Slot, ValidatorIndex} from "@lodestar/types";
+import {routes} from "@lodestar/api";
+import {BLSPubkey, CommitteeIndex, ProducedBlockSource, Slot, ValidatorIndex} from "@lodestar/types";
+import {MAX_BUILDER_BOOST_FACTOR} from "@lodestar/validator";
 
 export function computeSubnetForCommitteesAtSlot(
   slot: Slot,
@@ -40,4 +42,32 @@ export function getPubkeysForIndices(
   }
 
   return pubkeys;
+}
+
+export function selectBlockProductionSource({
+  builderSelection,
+  engineBlockValue,
+  builderBlockValue,
+  builderBoostFactor,
+}: {
+  builderSelection: routes.validator.BuilderSelection;
+  engineBlockValue: bigint;
+  builderBlockValue: bigint;
+  builderBoostFactor: bigint;
+}): ProducedBlockSource {
+  switch (builderSelection) {
+    case routes.validator.BuilderSelection.ExecutionAlways:
+    case routes.validator.BuilderSelection.ExecutionOnly:
+      return ProducedBlockSource.engine;
+
+    case routes.validator.BuilderSelection.MaxProfit:
+      return builderBoostFactor !== MAX_BUILDER_BOOST_FACTOR &&
+        (builderBoostFactor === BigInt(0) || engineBlockValue >= (builderBlockValue * builderBoostFactor) / BigInt(100))
+        ? ProducedBlockSource.engine
+        : ProducedBlockSource.builder;
+
+    case routes.validator.BuilderSelection.BuilderAlways:
+    case routes.validator.BuilderSelection.BuilderOnly:
+      return ProducedBlockSource.builder;
+  }
 }

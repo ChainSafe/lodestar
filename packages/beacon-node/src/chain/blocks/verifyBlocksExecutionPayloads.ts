@@ -75,6 +75,7 @@ export async function verifyBlocksExecutionPayload(
 ): Promise<SegmentExecStatus> {
   const executionStatuses: MaybeValidExecutionStatus[] = [];
   let mergeBlockFound: bellatrix.BeaconBlock | null = null;
+  const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
 
   // Error in the same way as verifyBlocksSanityChecks if empty blocks
   if (blocks.length === 0) {
@@ -246,11 +247,17 @@ export async function verifyBlocksExecutionPayload(
 
   const executionTime = Date.now();
   if (blocks.length === 1 && opts.seenTimestampSec !== undefined && executionStatuses[0] === ExecutionStatus.Valid) {
-    const recvToVerifiedExecPayload = executionTime / 1000 - opts.seenTimestampSec;
-    chain.metrics?.gossipBlock.receivedToExecutionPayloadVerification.observe(recvToVerifiedExecPayload);
-    chain.logger.verbose("Verified execution payload", {
+    const recvToValidation = executionTime / 1000 - opts.seenTimestampSec;
+    const validationTime = recvToValidation - recvToValLatency;
+
+    chain.metrics?.gossipBlock.executionPayload.recvToValidation.observe(recvToValidation);
+    chain.metrics?.gossipBlock.executionPayload.validationTime.observe(validationTime);
+
+    chain.logger.debug("Verified execution payload", {
       slot: blocks[0].message.slot,
-      recvToVerifiedExecPayload,
+      recvToValLatency,
+      recvToValidation,
+      validationTime,
     });
   }
 
@@ -319,7 +326,7 @@ export async function verifyBlockExecutionPayload(
       const lvhResponse = {
         executionStatus,
         latestValidExecHash: execResult.latestValidHash,
-        invalidateFromBlockHash: toHexString(block.message.parentRoot),
+        invalidateFromParentBlockRoot: toHexString(block.message.parentRoot),
       };
       const execError = new BlockError(block, {
         code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
@@ -416,7 +423,7 @@ function getSegmentErrorResponse(
       invalidSegmentLVH = {
         executionStatus: ExecutionStatus.Invalid,
         latestValidExecHash: lvhResponse.latestValidExecHash,
-        invalidateFromBlockHash: parentBlock.blockRoot,
+        invalidateFromParentBlockRoot: parentBlock.blockRoot,
       };
     }
   }

@@ -1,4 +1,5 @@
-import {it, expect, MockInstance} from "vitest";
+import {it, expect, MockInstance, describe, beforeAll, afterAll} from "vitest";
+import {FastifyInstance} from "fastify";
 import {ChainForkConfig} from "@lodestar/config";
 import {ReqGeneric, Resolves} from "../../src/utils/index.js";
 import {FetchOpts, HttpClient, IHttpClient} from "../../src/utils/client/index.js";
@@ -28,26 +29,39 @@ export function runGenericServerTest<
   testCases: GenericServerTestCases<Api>
 ): void {
   const mockApi = getMockApi<Api>(testCases);
-  const {baseUrl, server} = getTestServer();
+  let server: FastifyInstance;
 
-  const httpClient = new HttpClientSpy({baseUrl});
-  const client = getClient(config, httpClient);
+  let client: Api;
+  let httpClient: HttpClientSpy;
 
-  for (const route of Object.values(getRoutes(config, mockApi))) {
-    registerRoute(server, route);
-  }
+  beforeAll(async () => {
+    const res = getTestServer();
+    server = res.server;
 
-  for (const key of Object.keys(testCases)) {
-    const routeId = key as keyof Api;
-    const testCase = testCases[routeId];
+    for (const route of Object.values(getRoutes(config, mockApi))) {
+      registerRoute(server, route);
+    }
 
-    it(routeId as string, async () => {
+    const baseUrl = await res.start();
+    httpClient = new HttpClientSpy({baseUrl});
+    client = getClient(config, httpClient);
+  });
+
+  afterAll(async () => {
+    if (server !== undefined) await server.close();
+  });
+
+  describe("run generic server tests", () => {
+    it.each(Object.keys(testCases))("%s", async (key) => {
+      const routeId = key as keyof Api;
+      const testCase = testCases[routeId];
+
       // Register mock data for this route
       // TODO: Look for the type error
       (mockApi[routeId] as MockInstance).mockResolvedValue(testCases[routeId].res);
 
       // Do the call
-      const res = await (client[routeId] as APIClientHandler)(...(testCase.args as any[]));
+      const res = await client[routeId](...(testCase.args as any[]));
 
       // Use spy to assert argument serialization
       if (testCase.query) {
@@ -64,7 +78,7 @@ export function runGenericServerTest<
       // Assert returned value is correct
       expect(res.response).toEqual(testCase.res);
     });
-  }
+  });
 }
 
 class HttpClientSpy extends HttpClient {

@@ -995,10 +995,14 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async getBlockRewards(block: allForks.FullOrBlindedBeaconBlock): Promise<BlockRewards> {
-    const preState = (await this.regen.getPreState(block, {dontTransferCache: true}, RegenCaller.restApi)).clone();
-    preState.slot = block.slot; // regen.getPreState guarantees pre_state of the same epoch but not the same slot
-    const result = computeBlockRewards(block, preState);
-    return result;
+    const preState = this.regen.getPreStateSync(block);
+    const postState = this.regen.getStateSync(toHexString(block.stateRoot)) ?? undefined;
+
+    if (preState === null) {
+      throw Error(`Pre-state is unavailable given block's parent root ${toHexString(block.parentRoot)}`);
+    }
+
+    return computeBlockRewards(block, preState.clone(), postState?.clone());
   }
 
   async getSyncCommitteeRewards(

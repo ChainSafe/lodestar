@@ -57,7 +57,6 @@ describe("sync / range / chain", () => {
   const zeroBlockBody = ssz.phase0.BeaconBlockBody.defaultValue();
   const interval: NodeJS.Timeout | null = null;
 
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
   const reportPeer: SyncChainFns["reportPeer"] = () => {};
 
   afterEach(() => {
@@ -124,7 +123,6 @@ describe("sync / range / chain", () => {
     const targetEpoch = 16;
     const peers = [peer];
 
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
     const processChainSegment: SyncChainFns["processChainSegment"] = async () => {};
     const downloadBeaconBlocksByRange: SyncChainFns["downloadBeaconBlocksByRange"] = async (peer, request) => {
       const blocks: BlockInput[] = [];

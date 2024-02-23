@@ -22,12 +22,21 @@ import {ValidatorId} from "./state.js";
  */
 export type ExecutionOptimistic = boolean;
 
-export type ProposerRewardsResponse = {
+/**
+ * Rewards info for a single block. Every reward value is in Gwei.
+ */
+export type BlockRewards = {
+  /** Proposer of the block, the proposer index who receives these rewards */
   proposerIndex: ValidatorIndex;
+  /** Total block reward, equal to attestations + sync_aggregate + proposer_slashings + attester_slashings */
   total: number;
+  /** Block reward component due to included attestations */
   attestations: number;
+  /** Block reward component due to included sync_aggregate */
   syncAggregate: number;
+  /** Block reward component due to included proposer_slashings */
   proposerSlashings: number;
+  /** Block reward component due to included attester_slashings */
   attesterSlashings: number;
 };
 
@@ -41,11 +50,11 @@ export type Api = {
    * @param blockId Block identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
    */
-  getProposerRewards(
+  getBlockRewards(
     blockId: BlockId
   ): Promise<
     ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: ProposerRewardsResponse; executionOptimistic: ExecutionOptimistic}},
+      {[HttpStatusCode.OK]: {data: BlockRewards; executionOptimistic: ExecutionOptimistic}},
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
     >
   >;
@@ -64,19 +73,19 @@ export type Api = {
  * Define javascript values for each route
  */
 export const routesData: RoutesData<Api> = {
-  getProposerRewards: {url: "/eth/v1/beacon/rewards/blocks/{block_id}", method: "GET"},
+  getBlockRewards: {url: "/eth/v1/beacon/rewards/blocks/{block_id}", method: "GET"},
   getSyncCommitteeRewards: {url: "/eth/v1/beacon/rewards/sync_committee/{block_id}", method: "POST"},
 };
 
 export type ReqTypes = {
   /* eslint-disable @typescript-eslint/naming-convention */
-  getProposerRewards: {params: {block_id: string}};
+  getBlockRewards: {params: {block_id: string}};
   getSyncCommitteeRewards: {params: {block_id: string}; body: ValidatorId[]};
 };
 
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
   return {
-    getProposerRewards: {
+    getBlockRewards: {
       writeReq: (block_id) => ({params: {block_id: String(block_id)}}),
       parseReq: ({params}) => [params.block_id],
       schema: {params: {block_id: Schema.StringRequired}},
@@ -93,7 +102,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 }
 
 export function getReturnTypes(): ReturnTypes<Api> {
-  const ProposerRewardsResponse = new ContainerType(
+  const BlockRewardsResponse = new ContainerType(
     {
       proposerIndex: ssz.ValidatorIndex,
       total: ssz.UintNum64,
@@ -114,7 +123,7 @@ export function getReturnTypes(): ReturnTypes<Api> {
   );
 
   return {
-    getProposerRewards: ContainerDataExecutionOptimistic(ProposerRewardsResponse),
+    getBlockRewards: ContainerDataExecutionOptimistic(BlockRewardsResponse),
     getSyncCommitteeRewards: ContainerDataExecutionOptimistic(ArrayOf(SyncCommitteeRewards)),
   };
 }

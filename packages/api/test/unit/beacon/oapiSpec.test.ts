@@ -88,7 +88,6 @@ const ignoredOperations = [
   /* missing route */
   /* https://github.com/ChainSafe/lodestar/issues/5694 */
   "getSyncCommitteeRewards",
-  "getBlockRewards",
   "getAttestationsRewards",
   "getDepositSnapshot", // Won't fix for now, see https://github.com/ChainSafe/lodestar/issues/5697
   "getBlindedBlock", // https://github.com/ChainSafe/lodestar/issues/5699
@@ -123,18 +122,13 @@ const ignoredProperties: Record<string, IgnoredProperty> = {
   getBlockRoot: {response: ["finalized"]},
   getBlockAttestations: {response: ["finalized"]},
   getStateV2: {response: ["finalized"]},
+  getBlockRewards: {response: ["finalized"]},
 
   /* 
    https://github.com/ChainSafe/lodestar/issues/6168
    /query/syncing_status - must be integer
    */
   getHealth: {request: ["query.syncing_status"]},
-
-  /**
-   * https://github.com/ChainSafe/lodestar/issues/6185
-   *  - must have required property 'query'
-   */
-  getBlobSidecars: {request: ["query"]},
 
   /* 
    https://github.com/ChainSafe/lodestar/issues/4638 

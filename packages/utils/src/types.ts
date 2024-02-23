@@ -14,3 +14,14 @@ export type RecursivePartial<T> = {
 export function bnToNum(bn: bigint): number {
   return Number(bn);
 }
+
+export type NonEmptyArray<T> = [T, ...T[]];
+
+/**
+ * ArrayToTuple converts an `Array<T>` to `[T, ...T]`
+ *
+ * eg: `[1, 2, 3]` from type `number[]` to `[number, number, number]`
+ */
+export type ArrayToTuple<Tuple extends NonEmptyArray<unknown>> = {
+  [Index in keyof Tuple]: Tuple[Index];
+};

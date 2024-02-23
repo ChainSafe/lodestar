@@ -1,5 +1,5 @@
 import {EventEmitter} from "events";
-import StrictEventEmitter from "strict-event-emitter-types";
+import {StrictEventEmitter} from "strict-event-emitter-types";
 
 import {routes} from "@lodestar/api";
 import {phase0} from "@lodestar/types";

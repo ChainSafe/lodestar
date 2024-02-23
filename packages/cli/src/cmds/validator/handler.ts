@@ -22,6 +22,7 @@ import {GlobalArgs} from "../../options/index.js";
 import {YargsError, cleanOldLogFiles, getDefaultGraffiti, mkdir, parseLoggerArgs} from "../../util/index.js";
 import {onGracefulShutdown, parseFeeRecipient, parseProposerConfig} from "../../util/index.js";
 import {getVersionData} from "../../util/version.js";
+import {parseBuilderSelection, parseBuilderBoostFactor} from "../../util/proposerConfig.js";
 import {getAccountPaths, getValidatorPaths} from "./paths.js";
 import {IValidatorCliArgs, validatorMetricsDefaultOptions, validatorMonitoringDefaultOptions} from "./options.js";
 import {getSignersFromArgs} from "./signers/index.js";
@@ -254,24 +255,6 @@ function getProposerConfigFromArgs(
   return valProposerConfig;
 }
 
-function parseBuilderSelection(builderSelection?: string): routes.validator.BuilderSelection | undefined {
-  if (builderSelection) {
-    switch (builderSelection) {
-      case "maxprofit":
-        break;
-      case "builderalways":
-        break;
-      case "builderonly":
-        break;
-      case "executiononly":
-        break;
-      default:
-        throw new YargsError("Invalid input for builder selection, check help");
-    }
-  }
-  return builderSelection as routes.validator.BuilderSelection;
-}
-
 function parseBroadcastValidation(broadcastValidation?: string): routes.beacon.BroadcastValidation | undefined {
   if (broadcastValidation) {
     switch (broadcastValidation) {
@@ -285,14 +268,4 @@ function parseBroadcastValidation(broadcastValidation?: string): routes.beacon.B
   }
 
   return broadcastValidation as routes.beacon.BroadcastValidation;
-}
-
-function parseBuilderBoostFactor(boostFactor?: string): bigint | undefined {
-  if (boostFactor === undefined) return;
-
-  if (!/^\d+$/.test(boostFactor)) {
-    throw new YargsError("Invalid input for builder boost factor, must be a valid number without decimals");
-  }
-
-  return BigInt(boostFactor);
 }

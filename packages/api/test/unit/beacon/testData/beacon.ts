@@ -72,7 +72,7 @@ export const testData: GenericServerTestCases<Api> = {
     res: undefined,
   },
   getBlobSidecars: {
-    args: ["head"],
+    args: ["head", [0]],
     res: {executionOptimistic: true, data: ssz.deneb.BlobSidecars.defaultValue()},
   },
 
@@ -171,7 +171,7 @@ export const testData: GenericServerTestCases<Api> = {
 
   // reward
 
-  getProposerRewards: {
+  getBlockRewards: {
     args: ["head"],
     res: {
       executionOptimistic: true,

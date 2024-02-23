@@ -57,7 +57,6 @@ newUpdate = ${renderUpdate(newUpdate)}
           ? ssz.allForksLightClient[fork].LightClientUpdate
           : ssz.altair.LightClientUpdate,
       },
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
       expectFunc: () => {},
       // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
     },

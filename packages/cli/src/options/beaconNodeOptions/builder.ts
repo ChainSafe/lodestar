@@ -1,5 +1,6 @@
 import {defaultExecutionBuilderHttpOpts, IBeaconNodeOptions} from "@lodestar/beacon-node";
-import {CliCommandOptions, YargsError} from "../../util/index.js";
+import {CliCommandOptions} from "@lodestar/utils";
+import {YargsError} from "../../util/index.js";
 
 export type ExecutionBuilderArgs = {
   builder: boolean;
