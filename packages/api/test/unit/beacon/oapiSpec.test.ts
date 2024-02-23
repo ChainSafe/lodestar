@@ -87,7 +87,6 @@ const testDatas = {
 const ignoredOperations = [
   /* missing route */
   /* https://github.com/ChainSafe/lodestar/issues/5694 */
-  "getSyncCommitteeRewards",
   "getAttestationsRewards",
   "getDepositSnapshot", // Won't fix for now, see https://github.com/ChainSafe/lodestar/issues/5697
   "getBlindedBlock", // https://github.com/ChainSafe/lodestar/issues/5699
@@ -123,6 +122,7 @@ const ignoredProperties: Record<string, IgnoredProperty> = {
   getBlockAttestations: {response: ["finalized"]},
   getStateV2: {response: ["finalized"]},
   getBlockRewards: {response: ["finalized"]},
+  getSyncCommitteeRewards: {response: ["finalized"]},
 
   /* 
    https://github.com/ChainSafe/lodestar/issues/6168
