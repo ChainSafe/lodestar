@@ -21,7 +21,7 @@ export const beaconRestApiServerOpts: BeaconRestApiServerOpts = {
   port: 9596,
   cors: "*",
   // beacon -> validator API is trusted, and for large amounts of keys the payload is multi-MB
-  bodyLimit: 10 * 1024 * 1024, // 10MB
+  bodyLimit: 20 * 1024 * 1024, // 20MB for big block + blobs
 };
 
 export type BeaconRestApiServerModules = RestApiServerModules & {
