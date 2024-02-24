@@ -5,7 +5,7 @@ Thanks for your interest in contributing to Lodestar. It's people like you that 
 ## Prerequisites
 
 - :gear: [NodeJS](https://nodejs.org/) (LTS)
-- :toolbox: [Yarn](https://yarnpkg.com/)
+- :toolbox: [Yarn](https://classic.yarnpkg.com/lang/en/)
 
 ### MacOS Specifics
 
