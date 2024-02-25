@@ -13,12 +13,12 @@ import {
   EmptyMetaCodec,
   EmptyRequest,
   EmptyResponseData,
-  EmptyResponseDataCodec,
   ExecutionOptimisticAndDependentRootMeta,
   ExecutionOptimisticAndDependentRootCodec,
   ExecutionOptimisticAndVersionMeta,
   ExecutionOptimisticAndVersionCodec,
   WithVersion,
+  EmptyResponseCodec,
 } from "./codecs.js";
 import {createApiClientMethods} from "./client/method.js";
 import {WireFormat} from "./headers.js";
@@ -141,10 +141,7 @@ export const definitions: RouteDefinitions<TestEndpoints> = {
       writeReq: ({syncingStatus}) => ({query: {syncing_status: syncingStatus}}),
       schema: {query: {syncing_status: Schema.Uint}},
     },
-    resp: {
-      data: EmptyResponseDataCodec,
-      meta: EmptyMetaCodec,
-    },
+    resp: EmptyResponseCodec,
   },
 };
 

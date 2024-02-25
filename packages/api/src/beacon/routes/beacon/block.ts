@@ -7,8 +7,8 @@ import {Endpoint, RequestCodec, RouteDefinitions, Schema} from "../../../utils/i
 import {
   EmptyMeta,
   EmptyMetaCodec,
+  EmptyResponseCodec,
   EmptyResponseData,
-  EmptyResponseDataCodec,
   ExecutionOptimisticAndVersionCodec,
   ExecutionOptimisticAndVersionMeta,
   ExecutionOptimisticCodec,
@@ -348,10 +348,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           headers: {"Eth-Consensus-Version": Schema.StringRequired},
         },
       },
-      resp: {
-        data: EmptyResponseDataCodec,
-        meta: EmptyMetaCodec,
-      },
+      resp: EmptyResponseCodec,
     },
     publishBlockV2: {
       url: "/eth/v2/beacon/blocks",
@@ -419,10 +416,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           headers: {"Eth-Consensus-Version": Schema.StringRequired},
         },
       },
-      resp: {
-        data: EmptyResponseDataCodec,
-        meta: EmptyMetaCodec,
-      },
+      resp: EmptyResponseCodec,
     },
     publishBlindedBlock: {
       url: "/eth/v1/beacon/blinded_blocks",
@@ -467,10 +461,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           headers: {"Eth-Consensus-Version": Schema.StringRequired},
         },
       },
-      resp: {
-        data: EmptyResponseDataCodec,
-        meta: EmptyMetaCodec,
-      },
+      resp: EmptyResponseCodec,
     },
     publishBlindedBlockV2: {
       url: "/eth/v2/beacon/blinded_blocks",
@@ -521,10 +512,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           headers: {"Eth-Consensus-Version": Schema.StringRequired},
         },
       },
-      resp: {
-        data: EmptyResponseDataCodec,
-        meta: EmptyMetaCodec,
-      },
+      resp: EmptyResponseCodec,
     },
     getBlobSidecars: {
       url: "/eth/v1/beacon/blob_sidecars/{block_id}",

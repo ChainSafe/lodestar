@@ -3,7 +3,7 @@ import {Epoch, phase0, capella, Slot, ssz, StringType, RootHex, altair, UintNum6
 import {isForkExecution, ForkName, isForkLightClient} from "@lodestar/params";
 
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
-import {EmptyMeta, EmptyMetaCodec, EmptyResponseData, EmptyResponseDataCodec} from "../../utils/codecs.js";
+import {EmptyMeta, EmptyResponseCodec, EmptyResponseData} from "../../utils/codecs.js";
 import {toForkName} from "../../utils/serdes.js";
 
 const stringType = new StringType();
@@ -150,10 +150,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
         query: {topics: Schema.StringArray},
       },
     },
-    resp: {
-      data: EmptyResponseDataCodec,
-      meta: EmptyMetaCodec,
-    },
+    resp: EmptyResponseCodec,
   },
 };
 

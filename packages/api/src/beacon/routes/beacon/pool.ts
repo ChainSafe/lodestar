@@ -9,8 +9,8 @@ import {
   EmptyMeta,
   EmptyMetaCodec,
   EmptyRequest,
+  EmptyResponseCodec,
   EmptyResponseData,
-  EmptyResponseDataCodec,
 } from "../../../utils/codecs.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
@@ -233,10 +233,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
         body: Schema.ObjectArray,
       },
     },
-    resp: {
-      data: EmptyResponseDataCodec,
-      meta: EmptyMetaCodec,
-    },
+    resp: EmptyResponseCodec,
   },
   submitPoolAttesterSlashings: {
     url: "/eth/v1/beacon/pool/attester_slashings",
@@ -250,10 +247,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
         body: Schema.Object,
       },
     },
-    resp: {
-      data: EmptyResponseDataCodec,
-      meta: EmptyMetaCodec,
-    },
+    resp: EmptyResponseCodec,
   },
   submitPoolProposerSlashings: {
     url: "/eth/v1/beacon/pool/proposer_slashings",
@@ -267,10 +261,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
         body: Schema.Object,
       },
     },
-    resp: {
-      data: EmptyResponseDataCodec,
-      meta: EmptyMetaCodec,
-    },
+    resp: EmptyResponseCodec,
   },
   submitPoolVoluntaryExit: {
     url: "/eth/v1/beacon/pool/voluntary_exits",
@@ -284,10 +275,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
         body: Schema.Object,
       },
     },
-    resp: {
-      data: EmptyResponseDataCodec,
-      meta: EmptyMetaCodec,
-    },
+    resp: EmptyResponseCodec,
   },
   submitPoolBlsToExecutionChange: {
     url: "/eth/v1/beacon/pool/bls_to_execution_changes",
@@ -305,10 +293,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
         body: Schema.Object,
       },
     },
-    resp: {
-      data: EmptyResponseDataCodec,
-      meta: EmptyMetaCodec,
-    },
+    resp: EmptyResponseCodec,
   },
   submitPoolSyncCommitteeSignatures: {
     url: "/eth/v1/beacon/pool/sync_committees",
@@ -322,9 +307,6 @@ export const definitions: RouteDefinitions<Endpoints> = {
         body: Schema.AnyArray,
       },
     },
-    resp: {
-      data: EmptyResponseDataCodec,
-      meta: EmptyMetaCodec,
-    },
+    resp: EmptyResponseCodec,
   },
 };
