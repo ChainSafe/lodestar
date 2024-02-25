@@ -1,5 +1,5 @@
-import { defaultOptions, IBeaconNodeOptions, allNamespaces } from "@lodestar/beacon-node";
-import { CliCommandOptions } from "../../util/index.js";
+import {defaultOptions, IBeaconNodeOptions, allNamespaces} from "@lodestar/beacon-node";
+import {CliCommandOptions} from "../../util/index.js";
 
 const enabledAll = "all";
 
