@@ -35,3 +35,17 @@ export class OnlySupportedByDVT extends ApiError {
     super(501, "Only supported by distributed validator middleware clients");
   }
 }
+
+export class MultipleError extends ApiError {
+  failures: {index: number; message: string}[];
+
+  constructor(message: string, errors: {index: number; error: Error}[]) {
+    super(400, message);
+
+    const failures = [];
+    for (const {index, error} of errors) {
+      failures.push({index: index, message: error.message});
+    }
+    this.failures = failures;
+  }
+}

@@ -15,6 +15,7 @@ import {
   SyncCommitteeError,
 } from "../../../../chain/errors/index.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../../network/processor/gossipHandlers.js";
+import { MultipleError } from "../../errors.js";
 
 export function getBeaconPoolApi({
   chain,
@@ -52,7 +53,7 @@ export function getBeaconPoolApi({
 
     async submitPoolAttestations(attestations) {
       const seenTimestampSec = Date.now() / 1000;
-      const errors: Error[] = [];
+      const errors: {index: number; error: Error}[] = [];
 
       await Promise.all(
         attestations.map(async (attestation, i) => {
@@ -91,7 +92,7 @@ export function getBeaconPoolApi({
               return;
             }
 
-            errors.push(e as Error);
+            errors.push({index: i, error: e as Error});
             logger.error(`Error on submitPoolAttestations [${i}]`, logCtx, e as Error);
             if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
               chain.persistInvalidSszValue(ssz.phase0.Attestation, attestation, "api_reject");
@@ -100,10 +101,8 @@ export function getBeaconPoolApi({
         })
       );
 
-      if (errors.length > 1) {
-        throw Error("Multiple errors on submitPoolAttestations\n" + errors.map((e) => e.message).join("\n"));
-      } else if (errors.length === 1) {
-        throw errors[0];
+      if (errors.length > 0) {
+        throw new MultipleError("Some errors on submitPoolAttestations", errors);
       }
     },
 
