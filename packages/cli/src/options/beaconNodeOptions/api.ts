@@ -49,8 +49,8 @@ export const options: CliCommandOptions<ApiArgs> = {
 
   "rest.namespace": {
     type: "array",
-    choices: [...allNamespaces, enabledAll], // Added 'enabledAll' to the list of choices
-    description: `Pick namespaces to expose for HTTP API. Set to '${enabledAll}' to enable all namespaces`, // Updated description
+    choices: [...allNamespaces, enabledAll],
+    description: `Pick namespaces to expose for HTTP API. Set to '${enabledAll}' to enable all namespaces`,
     defaultDescription: JSON.stringify(defaultOptions.api.rest.api),
     group: "api",
     coerce: (namespaces: string[]): string[] => {
