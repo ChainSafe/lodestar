@@ -1,11 +1,6 @@
 import { defaultOptions, IBeaconNodeOptions, allNamespaces } from "@lodestar/beacon-node";
 import { CliCommandOptions } from "../../util/index.js";
 
-// Before: Original value was "*"
-// The original value "*" is not very friendly to use in bash scripts as it's interpreted as a wildcard character.
-// This change replaces "*" with "all" to improve compatibility with bash scripts.
-
-// After: Changed to "all" for better compatibility with bash scripts
 const enabledAll = "all";
 
 export type ApiArgs = {
