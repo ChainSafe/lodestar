@@ -1,17 +1,18 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 import {ContainerType} from "@chainsafe/ssz";
 import {Epoch, phase0, ssz, stringType} from "@lodestar/types";
-import {ApiClientResponse} from "../interfaces.js";
-import {HttpStatusCode} from "../utils/client/httpStatusCode.js";
+import {Schema, Endpoint, RouteDefinitions} from "../utils/index.js";
 import {
-  ReturnTypes,
-  RoutesData,
-  Schema,
-  reqEmpty,
-  ReqSerializers,
-  ReqEmpty,
-  jsonType,
-  ContainerData,
-} from "../utils/index.js";
+  EmptyArgs,
+  EmptyGetRequestCodec,
+  EmptyMeta,
+  EmptyMetaCodec,
+  EmptyRequest,
+  EmptyResponseCodec,
+  EmptyResponseData,
+  JsonOnlyResponseCodec,
+} from "../utils/codecs.js";
+import {WireFormat} from "../utils/headers.js";
 
 export enum ImportStatus {
   /** Keystore successfully decrypted and imported to keymanager permanent storage */
@@ -61,19 +62,19 @@ export type ResponseStatus<Status> = {
 };
 
 export type FeeRecipientData = {
-  pubkey: string;
-  ethaddress: string;
+  pubkey: PubkeyHex;
+  ethaddress: EthAddress;
 };
 export type GraffitiData = {
-  pubkey: string;
-  graffiti: string;
+  pubkey: PubkeyHex;
+  graffiti: Graffiti;
 };
 export type GasLimitData = {
-  pubkey: string;
+  pubkey: PubkeyHex;
   gasLimit: number;
 };
 export type BuilderBoostFactorData = {
-  pubkey: string;
+  pubkey: PubkeyHex;
   builderBoostFactor: bigint;
 };
 
@@ -87,6 +88,8 @@ export type SignerDefinition = {
   /** The signer associated with this pubkey cannot be deleted from the API */
   readonly: boolean;
 };
+
+export type RemoteSignerDefinition = Pick<SignerDefinition, "pubkey" | "url">;
 
 /**
  * JSON serialized representation of a single keystore in EIP-2335: BLS12-381 Keystore format.
@@ -112,24 +115,40 @@ export type SlashingProtectionData = string;
  */
 export type PubkeyHex = string;
 
-export type Api = {
+/**
+ * An address on the execution (Ethereum 1) network.
+ * ```
+ * "0xAbcF8e0d4e9587369b2301D0790347320302cc09"
+ * ```
+ */
+export type EthAddress = string;
+
+/**
+ * Arbitrary data to set in the graffiti field of BeaconBlockBody
+ * ```
+ * "plain text value"
+ * ```
+ */
+export type Graffiti = string;
+
+export type Endpoints = {
   /**
    * List all validating pubkeys known to and decrypted by this keymanager binary
    *
    * https://github.com/ethereum/keymanager-APIs/blob/0c975dae2ac6053c8245ebdb6a9f27c2f114f407/keymanager-oapi.yaml
    */
-  listKeys(): Promise<
-    ApiClientResponse<{
-      [HttpStatusCode.OK]: {
-        data: {
-          validatingPubkey: PubkeyHex;
-          /** The derivation path (if present in the imported keystore) */
-          derivationPath?: string;
-          /** The key associated with this pubkey cannot be deleted from the API */
-          readonly?: boolean;
-        }[];
-      };
-    }>
+  listKeys: Endpoint<
+    "GET",
+    EmptyArgs,
+    EmptyRequest,
+    {
+      validatingPubkey: PubkeyHex;
+      /** The derivation path (if present in the imported keystore) */
+      derivationPath?: string;
+      /** The key associated with this pubkey cannot be deleted from the API */
+      readonly?: boolean;
+    }[],
+    EmptyMeta
   >;
 
   /**
@@ -138,18 +157,24 @@ export type Api = {
    * Users SHOULD send slashing_protection data associated with the imported pubkeys. MUST follow the format defined in
    * EIP-3076: Slashing Protection Interchange Format.
    *
-   * @param keystores JSON-encoded keystore files generated with the Launchpad
-   * @param passwords Passwords to unlock imported keystore files. `passwords[i]` must unlock `keystores[i]`
-   * @param slashingProtection Slashing protection data for some of the keys of `keystores`
    * @returns Status result of each `request.keystores` with same length and order of `request.keystores`
    *
    * https://github.com/ethereum/keymanager-APIs/blob/0c975dae2ac6053c8245ebdb6a9f27c2f114f407/keymanager-oapi.yaml
    */
-  importKeystores(
-    keystoresStr: KeystoreStr[],
-    passwords: string[],
-    slashingProtectionStr?: SlashingProtectionData
-  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: ResponseStatus<ImportStatus>[]}}>>;
+  importKeystores: Endpoint<
+    "POST",
+    {
+      /** JSON-encoded keystore files generated with the Launchpad */
+      keystores: KeystoreStr[];
+      /** Passwords to unlock imported keystore files. `passwords[i]` must unlock `keystores[i]` */
+      passwords: string[];
+      /** Slashing protection data for some of the keys of `keystores` */
+      slashingProtection?: SlashingProtectionData;
+    },
+    {body: {keystores: KeystoreStr[]; passwords: string[]; slashing_protection?: SlashingProtectionData}},
+    ResponseStatus<ImportStatus>[],
+    EmptyMeta
+  >;
 
   /**
    * DELETE must delete all keys from `request.pubkeys` that are known to the keymanager and exist in its
@@ -167,109 +192,144 @@ export type Api = {
    * Slashing protection data must only be returned for keys from `request.pubkeys` for which a
    * `deleted` or `not_active` status is returned.
    *
-   * @param pubkeys List of public keys to delete.
    * @returns Deletion status of all keys in `request.pubkeys` in the same order.
    *
    * https://github.com/ethereum/keymanager-APIs/blob/0c975dae2ac6053c8245ebdb6a9f27c2f114f407/keymanager-oapi.yaml
    */
-  deleteKeys(pubkeysHex: string[]): Promise<
-    ApiClientResponse<{
-      [HttpStatusCode.OK]: {data: ResponseStatus<DeletionStatus>[]; slashingProtection: SlashingProtectionData};
-    }>
+  deleteKeys: Endpoint<
+    "DELETE",
+    {
+      /** List of public keys to delete */
+      pubkeys: PubkeyHex[];
+    },
+    {body: {pubkeys: string[]}},
+    {statuses: ResponseStatus<DeletionStatus>[]; slashingProtection: SlashingProtectionData},
+    EmptyMeta
   >;
 
   /**
    * List all remote validating pubkeys known to this validator client binary
    */
-  listRemoteKeys(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: SignerDefinition[]}}>>;
+  listRemoteKeys: Endpoint<
+    //
+    "GET",
+    EmptyArgs,
+    EmptyRequest,
+    SignerDefinition[],
+    EmptyMeta
+  >;
 
   /**
    * Import remote keys for the validator client to request duties for
    */
-  importRemoteKeys(
-    remoteSigners: Pick<SignerDefinition, "pubkey" | "url">[]
-  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: ResponseStatus<ImportRemoteKeyStatus>[]}}>>;
-
-  deleteRemoteKeys(
-    pubkeys: PubkeyHex[]
-  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: ResponseStatus<DeleteRemoteKeyStatus>[]}}>>;
-
-  listFeeRecipient(pubkey: string): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: FeeRecipientData}}>>;
-  setFeeRecipient(
-    pubkey: string,
-    ethaddress: string
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: void; [HttpStatusCode.NO_CONTENT]: void},
-      HttpStatusCode.UNAUTHORIZED | HttpStatusCode.FORBIDDEN | HttpStatusCode.NOT_FOUND
-    >
-  >;
-  deleteFeeRecipient(
-    pubkey: string
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: void; [HttpStatusCode.NO_CONTENT]: void},
-      HttpStatusCode.UNAUTHORIZED | HttpStatusCode.FORBIDDEN | HttpStatusCode.NOT_FOUND
-    >
+  importRemoteKeys: Endpoint<
+    "POST",
+    {remoteSigners: RemoteSignerDefinition[]},
+    {body: {remote_keys: RemoteSignerDefinition[]}},
+    ResponseStatus<ImportRemoteKeyStatus>[],
+    EmptyMeta
   >;
 
-  listGraffiti(pubkey: string): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: GraffitiData}}>>;
-  setGraffiti(
-    pubkey: string,
-    graffiti: string
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: void; [HttpStatusCode.NO_CONTENT]: void},
-      HttpStatusCode.UNAUTHORIZED | HttpStatusCode.FORBIDDEN | HttpStatusCode.NOT_FOUND
-    >
-  >;
-  deleteGraffiti(
-    pubkey: string
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: void; [HttpStatusCode.NO_CONTENT]: void},
-      HttpStatusCode.UNAUTHORIZED | HttpStatusCode.FORBIDDEN | HttpStatusCode.NOT_FOUND
-    >
+  deleteRemoteKeys: Endpoint<
+    "DELETE",
+    {pubkeys: PubkeyHex[]},
+    {body: {pubkeys: string[]}},
+    ResponseStatus<DeleteRemoteKeyStatus>[],
+    EmptyMeta
   >;
 
-  getGasLimit(pubkey: string): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: GasLimitData}}>>;
-  setGasLimit(
-    pubkey: string,
-    gasLimit: number
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: void; [HttpStatusCode.NO_CONTENT]: void},
-      HttpStatusCode.UNAUTHORIZED | HttpStatusCode.FORBIDDEN | HttpStatusCode.NOT_FOUND
-    >
+  listFeeRecipient: Endpoint<
+    //
+    "GET",
+    {pubkey: PubkeyHex},
+    {params: {pubkey: string}},
+    FeeRecipientData,
+    EmptyMeta
   >;
-  deleteGasLimit(
-    pubkey: string
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: void; [HttpStatusCode.NO_CONTENT]: void},
-      HttpStatusCode.UNAUTHORIZED | HttpStatusCode.FORBIDDEN | HttpStatusCode.NOT_FOUND
-    >
+  setFeeRecipient: Endpoint<
+    "POST",
+    {pubkey: PubkeyHex; ethaddress: EthAddress},
+    {params: {pubkey: string}; body: {ethaddress: string}},
+    EmptyResponseData,
+    EmptyMeta
+  >;
+  deleteFeeRecipient: Endpoint<
+    //
+    "DELETE",
+    {pubkey: PubkeyHex},
+    {params: {pubkey: string}},
+    EmptyResponseData,
+    EmptyMeta
   >;
 
-  getBuilderBoostFactor(
-    pubkey: string
-  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: BuilderBoostFactorData}}>>;
-  setBuilderBoostFactor(
-    pubkey: string,
-    builderBoostFactor: bigint
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: void; [HttpStatusCode.NO_CONTENT]: void},
-      HttpStatusCode.UNAUTHORIZED | HttpStatusCode.FORBIDDEN | HttpStatusCode.NOT_FOUND
-    >
+  listGraffiti: Endpoint<
+    //
+    "GET",
+    {pubkey: PubkeyHex},
+    {params: {pubkey: string}},
+    GraffitiData,
+    EmptyMeta
   >;
-  deleteBuilderBoostFactor(
-    pubkey: string
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: void; [HttpStatusCode.NO_CONTENT]: void},
-      HttpStatusCode.UNAUTHORIZED | HttpStatusCode.FORBIDDEN | HttpStatusCode.NOT_FOUND
-    >
+  setGraffiti: Endpoint<
+    "POST",
+    {pubkey: PubkeyHex; graffiti: Graffiti},
+    {params: {pubkey: string}; body: {graffiti: string}},
+    EmptyResponseData,
+    EmptyMeta
+  >;
+  deleteGraffiti: Endpoint<
+    //
+    "DELETE",
+    {pubkey: PubkeyHex},
+    {params: {pubkey: string}},
+    EmptyResponseData,
+    EmptyMeta
+  >;
+
+  getGasLimit: Endpoint<
+    //
+    "GET",
+    {pubkey: PubkeyHex},
+    {params: {pubkey: string}},
+    GasLimitData,
+    EmptyMeta
+  >;
+  setGasLimit: Endpoint<
+    "POST",
+    {pubkey: PubkeyHex; gasLimit: number},
+    {params: {pubkey: string}; body: {gas_limit: string}},
+    EmptyResponseData,
+    EmptyMeta
+  >;
+  deleteGasLimit: Endpoint<
+    //
+    "DELETE",
+    {pubkey: PubkeyHex},
+    {params: {pubkey: string}},
+    EmptyResponseData,
+    EmptyMeta
+  >;
+
+  getBuilderBoostFactor: Endpoint<
+    "GET",
+    {pubkey: PubkeyHex},
+    {params: {pubkey: string}},
+    BuilderBoostFactorData,
+    EmptyMeta
+  >;
+  setBuilderBoostFactor: Endpoint<
+    "POST",
+    {pubkey: PubkeyHex; builderBoostFactor: bigint},
+    {params: {pubkey: string}; body: {builder_boost_factor: string}},
+    EmptyResponseData,
+    EmptyMeta
+  >;
+  deleteBuilderBoostFactor: Endpoint<
+    "DELETE",
+    {pubkey: PubkeyHex},
+    {params: {pubkey: string}},
+    EmptyResponseData,
+    EmptyMeta
   >;
 
   /**
@@ -277,256 +337,392 @@ export type Api = {
    * client. This endpoint returns a `SignedVoluntaryExit` object, which can be used to initiate voluntary exit via the
    * beacon node's [submitPoolVoluntaryExit](https://ethereum.github.io/beacon-APIs/#/Beacon/submitPoolVoluntaryExit) endpoint.
    *
-   * @param pubkey Public key of an active validator known to the validator client
-   * @param epoch Minimum epoch for processing exit. Defaults to the current epoch if not set
    * @returns Signed voluntary exit message
    *
    * https://github.com/ethereum/keymanager-APIs/blob/7105e749e11dd78032ea275cc09bf62ecd548fca/keymanager-oapi.yaml
    */
-  signVoluntaryExit(
-    pubkey: PubkeyHex,
-    epoch?: Epoch
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: phase0.SignedVoluntaryExit}},
-      HttpStatusCode.UNAUTHORIZED | HttpStatusCode.FORBIDDEN | HttpStatusCode.NOT_FOUND
-    >
+  signVoluntaryExit: Endpoint<
+    "POST",
+    {
+      /** Public key of an active validator known to the validator client */
+      pubkey: PubkeyHex;
+      /** Minimum epoch for processing exit. Defaults to the current epoch if not set */
+      epoch?: Epoch;
+    },
+    {params: {pubkey: string}; query: {epoch?: number}},
+    phase0.SignedVoluntaryExit,
+    EmptyMeta
   >;
 };
 
-export const routesData: RoutesData<Api> = {
-  listKeys: {url: "/eth/v1/keystores", method: "GET"},
-  importKeystores: {url: "/eth/v1/keystores", method: "POST"},
-  deleteKeys: {url: "/eth/v1/keystores", method: "DELETE"},
-
-  listRemoteKeys: {url: "/eth/v1/remotekeys", method: "GET"},
-  importRemoteKeys: {url: "/eth/v1/remotekeys", method: "POST"},
-  deleteRemoteKeys: {url: "/eth/v1/remotekeys", method: "DELETE"},
-
-  listFeeRecipient: {url: "/eth/v1/validator/{pubkey}/feerecipient", method: "GET"},
-  setFeeRecipient: {url: "/eth/v1/validator/{pubkey}/feerecipient", method: "POST", statusOk: 202},
-  deleteFeeRecipient: {url: "/eth/v1/validator/{pubkey}/feerecipient", method: "DELETE", statusOk: 204},
-
-  listGraffiti: {url: "/eth/v1/validator/{pubkey}/graffiti", method: "GET"},
-  setGraffiti: {url: "/eth/v1/validator/{pubkey}/graffiti", method: "POST", statusOk: 202},
-  deleteGraffiti: {url: "/eth/v1/validator/{pubkey}/graffiti", method: "DELETE", statusOk: 204},
-
-  getGasLimit: {url: "/eth/v1/validator/{pubkey}/gas_limit", method: "GET"},
-  setGasLimit: {url: "/eth/v1/validator/{pubkey}/gas_limit", method: "POST", statusOk: 202},
-  deleteGasLimit: {url: "/eth/v1/validator/{pubkey}/gas_limit", method: "DELETE", statusOk: 204},
-
-  getBuilderBoostFactor: {url: "/eth/v1/validator/{pubkey}/builder_boost_factor", method: "GET"},
-  setBuilderBoostFactor: {url: "/eth/v1/validator/{pubkey}/builder_boost_factor", method: "POST", statusOk: 202},
-  deleteBuilderBoostFactor: {url: "/eth/v1/validator/{pubkey}/builder_boost_factor", method: "DELETE", statusOk: 204},
-
-  signVoluntaryExit: {url: "/eth/v1/validator/{pubkey}/voluntary_exit", method: "POST"},
-};
-
-/* eslint-disable @typescript-eslint/naming-convention */
-
-export type ReqTypes = {
-  listKeys: ReqEmpty;
+export const definitions: RouteDefinitions<Endpoints> = {
+  listKeys: {
+    url: "/eth/v1/keystores",
+    method: "GET",
+    req: EmptyGetRequestCodec,
+    resp: JsonOnlyResponseCodec,
+  },
   importKeystores: {
-    body: {
-      keystores: KeystoreStr[];
-      passwords: string[];
-      slashing_protection?: SlashingProtectionData;
-    };
-  };
-  deleteKeys: {body: {pubkeys: string[]}};
-
-  listRemoteKeys: ReqEmpty;
-  importRemoteKeys: {
-    body: {
-      remote_keys: Pick<SignerDefinition, "pubkey" | "url">[];
-    };
-  };
-  deleteRemoteKeys: {body: {pubkeys: string[]}};
-
-  listFeeRecipient: {params: {pubkey: string}};
-  setFeeRecipient: {params: {pubkey: string}; body: {ethaddress: string}};
-  deleteFeeRecipient: {params: {pubkey: string}};
-
-  listGraffiti: {params: {pubkey: string}};
-  setGraffiti: {params: {pubkey: string}; body: {graffiti: string}};
-  deleteGraffiti: {params: {pubkey: string}};
-
-  getGasLimit: {params: {pubkey: string}};
-  setGasLimit: {params: {pubkey: string}; body: {gas_limit: string}};
-  deleteGasLimit: {params: {pubkey: string}};
-
-  getBuilderBoostFactor: {params: {pubkey: string}};
-  setBuilderBoostFactor: {params: {pubkey: string}; body: {builder_boost_factor: string}};
-  deleteBuilderBoostFactor: {params: {pubkey: string}};
-
-  signVoluntaryExit: {params: {pubkey: string}; query: {epoch?: number}};
-};
-
-export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
-  return {
-    listKeys: reqEmpty,
-    importKeystores: {
-      writeReq: (keystores, passwords, slashing_protection) => ({body: {keystores, passwords, slashing_protection}}),
-      parseReq: ({body: {keystores, passwords, slashing_protection}}) => [keystores, passwords, slashing_protection],
-      schema: {body: Schema.Object},
-    },
-    deleteKeys: {
-      writeReq: (pubkeys) => ({body: {pubkeys}}),
-      parseReq: ({body: {pubkeys}}) => [pubkeys],
-      schema: {body: Schema.Object},
-    },
-
-    listRemoteKeys: reqEmpty,
-    importRemoteKeys: {
-      writeReq: (remote_keys) => ({body: {remote_keys}}),
-      parseReq: ({body: {remote_keys}}) => [remote_keys],
-      schema: {body: Schema.Object},
-    },
-    deleteRemoteKeys: {
-      writeReq: (pubkeys) => ({body: {pubkeys}}),
-      parseReq: ({body: {pubkeys}}) => [pubkeys],
-      schema: {body: Schema.Object},
-    },
-
-    listFeeRecipient: {
-      writeReq: (pubkey) => ({params: {pubkey}}),
-      parseReq: ({params: {pubkey}}) => [pubkey],
-      schema: {
-        params: {pubkey: Schema.StringRequired},
-      },
-    },
-    setFeeRecipient: {
-      writeReq: (pubkey, ethaddress) => ({params: {pubkey}, body: {ethaddress}}),
-      parseReq: ({params: {pubkey}, body: {ethaddress}}) => [pubkey, ethaddress],
-      schema: {
-        params: {pubkey: Schema.StringRequired},
-        body: Schema.Object,
-      },
-    },
-    deleteFeeRecipient: {
-      writeReq: (pubkey) => ({params: {pubkey}}),
-      parseReq: ({params: {pubkey}}) => [pubkey],
-      schema: {
-        params: {pubkey: Schema.StringRequired},
-      },
-    },
-
-    listGraffiti: {
-      writeReq: (pubkey) => ({params: {pubkey}}),
-      parseReq: ({params: {pubkey}}) => [pubkey],
-      schema: {
-        params: {pubkey: Schema.StringRequired},
-      },
-    },
-    setGraffiti: {
-      writeReq: (pubkey, graffiti) => ({params: {pubkey}, body: {graffiti}}),
-      parseReq: ({params: {pubkey}, body: {graffiti}}) => [pubkey, graffiti],
-      schema: {
-        params: {pubkey: Schema.StringRequired},
-        body: Schema.Object,
-      },
-    },
-    deleteGraffiti: {
-      writeReq: (pubkey) => ({params: {pubkey}}),
-      parseReq: ({params: {pubkey}}) => [pubkey],
-      schema: {
-        params: {pubkey: Schema.StringRequired},
-      },
-    },
-
-    getGasLimit: {
-      writeReq: (pubkey) => ({params: {pubkey}}),
-      parseReq: ({params: {pubkey}}) => [pubkey],
-      schema: {
-        params: {pubkey: Schema.StringRequired},
-      },
-    },
-    setGasLimit: {
-      writeReq: (pubkey, gasLimit) => ({params: {pubkey}, body: {gas_limit: gasLimit.toString(10)}}),
-      parseReq: ({params: {pubkey}, body: {gas_limit}}) => [pubkey, parseGasLimit(gas_limit)],
-      schema: {
-        params: {pubkey: Schema.StringRequired},
-        body: Schema.Object,
-      },
-    },
-    deleteGasLimit: {
-      writeReq: (pubkey) => ({params: {pubkey}}),
-      parseReq: ({params: {pubkey}}) => [pubkey],
-      schema: {
-        params: {pubkey: Schema.StringRequired},
-      },
-    },
-
-    getBuilderBoostFactor: {
-      writeReq: (pubkey) => ({params: {pubkey}}),
-      parseReq: ({params: {pubkey}}) => [pubkey],
-      schema: {
-        params: {pubkey: Schema.StringRequired},
-      },
-    },
-    setBuilderBoostFactor: {
-      writeReq: (pubkey, builderBoostFactor) => ({
-        params: {pubkey},
-        body: {builder_boost_factor: builderBoostFactor.toString(10)},
+    url: "/eth/v1/keystores",
+    method: "POST",
+    req: {
+      writeReqJson: ({keystores, passwords, slashingProtection}) => ({
+        body: {keystores, passwords, slashing_protection: slashingProtection},
       }),
-      parseReq: ({params: {pubkey}, body: {builder_boost_factor}}) => [pubkey, BigInt(builder_boost_factor)],
+      parseReqJson: ({body: {keystores, passwords, slashing_protection}}) => ({
+        keystores,
+        passwords,
+        slashingProtection: slashing_protection,
+      }),
+      writeReqSsz: () => {
+        throw new Error("Not implemented");
+      },
+      parseReqSsz: () => {
+        throw new Error("Not implemented");
+      },
+      schema: {body: Schema.Object},
+      onlySupport: WireFormat.json,
+    },
+    resp: JsonOnlyResponseCodec,
+  },
+  deleteKeys: {
+    url: "/eth/v1/keystores",
+    method: "DELETE",
+    req: {
+      writeReqJson: ({pubkeys}) => ({body: {pubkeys}}),
+      parseReqJson: ({body: {pubkeys}}) => ({pubkeys}),
+      writeReqSsz: () => {
+        throw new Error("Not implemented");
+      },
+      parseReqSsz: () => {
+        throw new Error("Not implemented");
+      },
+      schema: {body: Schema.Object},
+      onlySupport: WireFormat.json,
+    },
+    resp: {
+      data: JsonOnlyResponseCodec.data,
+      meta: EmptyMetaCodec,
+      onlySupport: WireFormat.json,
+      transform: {
+        toResponse: (data) => ({data: data.statuses, slashing_protection: data.slashingProtection}),
+        fromResponse: (resp) => {
+          const {data, slashing_protection} = resp as {
+            data: ResponseStatus<DeletionStatus>[];
+            slashing_protection: SlashingProtectionData;
+          };
+          return {data: {statuses: data, slashingProtection: slashing_protection}};
+        },
+      },
+    },
+  },
+
+  listRemoteKeys: {
+    url: "/eth/v1/remotekeys",
+    method: "GET",
+    req: EmptyGetRequestCodec,
+    resp: JsonOnlyResponseCodec,
+  },
+  importRemoteKeys: {
+    url: "/eth/v1/remotekeys",
+    method: "POST",
+    req: {
+      writeReqJson: ({remoteSigners}) => ({body: {remote_keys: remoteSigners}}),
+      parseReqJson: ({body: {remote_keys}}) => ({remoteSigners: remote_keys}),
+      writeReqSsz: () => {
+        throw new Error("Not implemented");
+      },
+      parseReqSsz: () => {
+        throw new Error("Not implemented");
+      },
+      schema: {body: Schema.Object},
+      onlySupport: WireFormat.json,
+    },
+    resp: JsonOnlyResponseCodec,
+  },
+  deleteRemoteKeys: {
+    url: "/eth/v1/remotekeys",
+    method: "DELETE",
+    req: {
+      writeReqJson: ({pubkeys}) => ({body: {pubkeys}}),
+      parseReqJson: ({body: {pubkeys}}) => ({pubkeys}),
+      writeReqSsz: () => {
+        throw new Error("Not implemented");
+      },
+      parseReqSsz: () => {
+        throw new Error("Not implemented");
+      },
+      schema: {body: Schema.Object},
+      onlySupport: WireFormat.json,
+    },
+    resp: JsonOnlyResponseCodec,
+  },
+
+  listFeeRecipient: {
+    url: "/eth/v1/validator/{pubkey}/feerecipient",
+    method: "GET",
+    req: {
+      writeReq: ({pubkey}) => ({params: {pubkey}}),
+      parseReq: ({params: {pubkey}}) => ({pubkey}),
+      schema: {
+        params: {pubkey: Schema.StringRequired},
+      },
+    },
+    resp: JsonOnlyResponseCodec,
+  },
+  setFeeRecipient: {
+    url: "/eth/v1/validator/{pubkey}/feerecipient",
+    method: "POST",
+    req: {
+      writeReqJson: ({pubkey, ethaddress}) => ({params: {pubkey}, body: {ethaddress}}),
+      parseReqJson: ({params: {pubkey}, body: {ethaddress}}) => ({pubkey, ethaddress}),
+      writeReqSsz: () => {
+        throw new Error("Not implemented");
+      },
+      parseReqSsz: () => {
+        throw new Error("Not implemented");
+      },
       schema: {
         params: {pubkey: Schema.StringRequired},
         body: Schema.Object,
       },
+      onlySupport: WireFormat.json,
     },
-    deleteBuilderBoostFactor: {
-      writeReq: (pubkey) => ({params: {pubkey}}),
-      parseReq: ({params: {pubkey}}) => [pubkey],
+    resp: EmptyResponseCodec,
+    statusOk: 202,
+  },
+  deleteFeeRecipient: {
+    url: "/eth/v1/validator/{pubkey}/feerecipient",
+    method: "DELETE",
+    req: {
+      writeReqJson: ({pubkey}) => ({params: {pubkey}}),
+      parseReqJson: ({params: {pubkey}}) => ({pubkey}),
+      writeReqSsz: () => {
+        throw new Error("Not implemented");
+      },
+      parseReqSsz: () => {
+        throw new Error("Not implemented");
+      },
+      schema: {
+        params: {pubkey: Schema.StringRequired},
+      },
+      onlySupport: WireFormat.json,
+    },
+    resp: EmptyResponseCodec,
+    statusOk: 204,
+  },
+
+  listGraffiti: {
+    url: "/eth/v1/validator/{pubkey}/graffiti",
+    method: "GET",
+    req: {
+      writeReq: ({pubkey}) => ({params: {pubkey}}),
+      parseReq: ({params: {pubkey}}) => ({pubkey}),
       schema: {
         params: {pubkey: Schema.StringRequired},
       },
     },
-
-    signVoluntaryExit: {
-      writeReq: (pubkey, epoch) => ({params: {pubkey}, query: epoch !== undefined ? {epoch} : {}}),
-      parseReq: ({params: {pubkey}, query: {epoch}}) => [pubkey, epoch],
+    resp: JsonOnlyResponseCodec,
+  },
+  setGraffiti: {
+    url: "/eth/v1/validator/{pubkey}/graffiti",
+    method: "POST",
+    req: {
+      writeReqJson: ({pubkey, graffiti}) => ({params: {pubkey}, body: {graffiti}}),
+      parseReqJson: ({params: {pubkey}, body: {graffiti}}) => ({pubkey, graffiti}),
+      writeReqSsz: () => {
+        throw new Error("Not implemented");
+      },
+      parseReqSsz: () => {
+        throw new Error("Not implemented");
+      },
       schema: {
         params: {pubkey: Schema.StringRequired},
-        query: {epoch: Schema.Uint},
+        body: Schema.Object,
+      },
+      onlySupport: WireFormat.json,
+    },
+    resp: EmptyResponseCodec,
+    statusOk: 202,
+  },
+  deleteGraffiti: {
+    url: "/eth/v1/validator/{pubkey}/graffiti",
+    method: "DELETE",
+    req: {
+      writeReqJson: ({pubkey}) => ({params: {pubkey}}),
+      parseReqJson: ({params: {pubkey}}) => ({pubkey}),
+      writeReqSsz: () => {
+        throw new Error("Not implemented");
+      },
+      parseReqSsz: () => {
+        throw new Error("Not implemented");
+      },
+      schema: {
+        params: {pubkey: Schema.StringRequired},
+      },
+      onlySupport: WireFormat.json,
+    },
+    resp: EmptyResponseCodec,
+    statusOk: 204,
+  },
+
+  getGasLimit: {
+    url: "/eth/v1/validator/{pubkey}/gas_limit",
+    method: "GET",
+    req: {
+      writeReq: ({pubkey}) => ({params: {pubkey}}),
+      parseReq: ({params: {pubkey}}) => ({pubkey}),
+      schema: {
+        params: {pubkey: Schema.StringRequired},
       },
     },
-  };
-}
-
-export function getReturnTypes(): ReturnTypes<Api> {
-  return {
-    listKeys: jsonType("snake"),
-    importKeystores: jsonType("snake"),
-    deleteKeys: jsonType("snake"),
-
-    listRemoteKeys: jsonType("snake"),
-    importRemoteKeys: jsonType("snake"),
-    deleteRemoteKeys: jsonType("snake"),
-
-    listFeeRecipient: jsonType("snake"),
-    listGraffiti: jsonType("snake"),
-    getGasLimit: ContainerData(
-      new ContainerType(
+    resp: {
+      data: new ContainerType(
         {
           pubkey: stringType,
           gasLimit: ssz.UintNum64,
         },
         {jsonCase: "eth2"}
-      )
-    ),
-    getBuilderBoostFactor: ContainerData(
-      new ContainerType(
+      ),
+      meta: EmptyMetaCodec,
+      onlySupport: WireFormat.json,
+    },
+  },
+  setGasLimit: {
+    url: "/eth/v1/validator/{pubkey}/gas_limit",
+    method: "POST",
+    req: {
+      writeReqJson: ({pubkey, gasLimit}) => ({params: {pubkey}, body: {gas_limit: gasLimit.toString(10)}}),
+      parseReqJson: ({params: {pubkey}, body: {gas_limit}}) => ({pubkey, gasLimit: parseGasLimit(gas_limit)}),
+      writeReqSsz: () => {
+        throw new Error("Not implemented");
+      },
+      parseReqSsz: () => {
+        throw new Error("Not implemented");
+      },
+      schema: {
+        params: {pubkey: Schema.StringRequired},
+        body: Schema.Object,
+      },
+      onlySupport: WireFormat.json,
+    },
+    resp: EmptyResponseCodec,
+    statusOk: 202,
+  },
+  deleteGasLimit: {
+    url: "/eth/v1/validator/{pubkey}/gas_limit",
+    method: "DELETE",
+    req: {
+      writeReqJson: ({pubkey}) => ({params: {pubkey}}),
+      parseReqJson: ({params: {pubkey}}) => ({pubkey}),
+      writeReqSsz: () => {
+        throw new Error("Not implemented");
+      },
+      parseReqSsz: () => {
+        throw new Error("Not implemented");
+      },
+      schema: {
+        params: {pubkey: Schema.StringRequired},
+      },
+      onlySupport: WireFormat.json,
+    },
+    resp: EmptyResponseCodec,
+    statusOk: 204,
+  },
+
+  getBuilderBoostFactor: {
+    url: "/eth/v1/validator/{pubkey}/builder_boost_factor",
+    method: "GET",
+    req: {
+      writeReq: ({pubkey}) => ({params: {pubkey}}),
+      parseReq: ({params: {pubkey}}) => ({pubkey}),
+      schema: {
+        params: {pubkey: Schema.StringRequired},
+      },
+    },
+    resp: {
+      data: new ContainerType(
         {
           pubkey: stringType,
           builderBoostFactor: ssz.UintBn64,
         },
         {jsonCase: "eth2"}
-      )
-    ),
-    signVoluntaryExit: ContainerData(ssz.phase0.SignedVoluntaryExit),
-  };
-}
+      ),
+      meta: EmptyMetaCodec,
+    },
+  },
+  setBuilderBoostFactor: {
+    url: "/eth/v1/validator/{pubkey}/builder_boost_factor",
+    method: "POST",
+    req: {
+      writeReqJson: ({pubkey, builderBoostFactor}) => ({
+        params: {pubkey},
+        body: {builder_boost_factor: builderBoostFactor.toString(10)},
+      }),
+      parseReqJson: ({params: {pubkey}, body: {builder_boost_factor}}) => ({
+        pubkey,
+        builderBoostFactor: BigInt(builder_boost_factor),
+      }),
+      writeReqSsz: () => {
+        throw new Error("Not implemented");
+      },
+      parseReqSsz: () => {
+        throw new Error("Not implemented");
+      },
+      schema: {
+        params: {pubkey: Schema.StringRequired},
+        body: Schema.Object,
+      },
+      onlySupport: WireFormat.json,
+    },
+    resp: EmptyResponseCodec,
+    statusOk: 202,
+  },
+  deleteBuilderBoostFactor: {
+    url: "/eth/v1/validator/{pubkey}/builder_boost_factor",
+    method: "DELETE",
+    req: {
+      writeReqJson: ({pubkey}) => ({params: {pubkey}}),
+      parseReqJson: ({params: {pubkey}}) => ({pubkey}),
+      writeReqSsz: () => {
+        throw new Error("Not implemented");
+      },
+      parseReqSsz: () => {
+        throw new Error("Not implemented");
+      },
+      schema: {
+        params: {pubkey: Schema.StringRequired},
+      },
+      onlySupport: WireFormat.json,
+    },
+    resp: EmptyResponseCodec,
+    statusOk: 204,
+  },
+
+  signVoluntaryExit: {
+    url: "/eth/v1/validator/{pubkey}/voluntary_exit",
+    method: "POST",
+    req: {
+      writeReqJson: ({pubkey, epoch}) => ({params: {pubkey}, query: epoch !== undefined ? {epoch} : {}}),
+      parseReqJson: ({params: {pubkey}, query: {epoch}}) => ({pubkey, epoch}),
+      writeReqSsz: () => {
+        throw new Error("Not implemented");
+      },
+      parseReqSsz: () => {
+        throw new Error("Not implemented");
+      },
+      schema: {
+        params: {pubkey: Schema.StringRequired},
+        query: {epoch: Schema.Uint},
+      },
+      onlySupport: WireFormat.json,
+    },
+    resp: {
+      data: ssz.phase0.SignedVoluntaryExit,
+      meta: EmptyMetaCodec,
+    },
+  },
+};
 
 function parseGasLimit(gasLimitInput: string | number): number {
   if ((typeof gasLimitInput !== "string" && typeof gasLimitInput !== "number") || `${gasLimitInput}`.trim() === "") {
