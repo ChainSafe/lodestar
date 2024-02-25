@@ -3,7 +3,7 @@
 import {ArrayType, ListBasicType, ListCompositeType, Type, isBasicType, isCompositeType} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
 import {Root, Wei} from "@lodestar/types";
-import {fromHex, toHex} from "@lodestar/utils";
+import {fromHex, objectToExpectedCase, toHex} from "@lodestar/utils";
 import {ExecutionOptimistic} from "../beacon/routes/beacon/block.js";
 import {
   AnyEndpoint,
@@ -193,13 +193,13 @@ export const EmptyResponseCodec: ResponseCodec<AnyEndpoint["return"], AnyEndpoin
 
 export const JsonOnlyResponseCodec: ResponseCodec<AnyEndpoint["return"], AnyEndpoint["meta"]> = {
   data: {
-    toJson: (d) => d as unknown,
-    fromJson: (d) => d,
+    toJson: (d) => objectToExpectedCase(d as Record<string, unknown>, "snake"),
+    fromJson: (d) => objectToExpectedCase(d as Record<string, unknown>, "camel"),
     serialize: () => {
-      throw new Error("unimplemented");
+      throw new Error("Not implemented");
     },
     deserialize: () => {
-      throw new Error("unimplemented");
+      throw new Error("Not implemented");
     },
   },
   meta: EmptyMetaCodec,

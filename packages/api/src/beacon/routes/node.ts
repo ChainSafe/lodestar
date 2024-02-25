@@ -11,6 +11,7 @@ import {
   EmptyRequest,
   EmptyResponseCodec,
   EmptyResponseData,
+  JsonOnlyResponseCodec,
 } from "../../utils/codecs.js";
 import {HttpStatusCode} from "../../utils/httpStatusCode.js";
 import {WireFormat} from "../../utils/headers.js";
@@ -275,78 +276,25 @@ export const definitions: RouteDefinitions<Endpoints> = {
       parseReq: ({params}) => ({peerId: params.peer_id}),
       schema: {params: {peer_id: Schema.StringRequired}},
     },
-    resp: {
-      onlySupport: WireFormat.json,
-      data: {
-        toJson: (data) => data,
-        fromJson: (data) => data as NodePeer,
-        serialize: () => {
-          throw new Error("Not implemented");
-        },
-        deserialize: () => {
-          throw new Error("Not implemented");
-        },
-      },
-      meta: EmptyMetaCodec,
-    },
+    resp: JsonOnlyResponseCodec,
   },
   getPeerCount: {
     url: "/eth/v1/node/peer_count",
     method: "GET",
     req: EmptyGetRequestCodec,
-    resp: {
-      onlySupport: WireFormat.json,
-      data: {
-        toJson: (data) => data,
-        fromJson: (data) => data as PeerCount,
-        serialize: () => {
-          throw new Error("Not implemented");
-        },
-        deserialize: () => {
-          throw new Error("Not implemented");
-        },
-      },
-      meta: EmptyMetaCodec,
-    },
+    resp: JsonOnlyResponseCodec,
   },
   getNodeVersion: {
     url: "/eth/v1/node/version",
     method: "GET",
     req: EmptyGetRequestCodec,
-    resp: {
-      onlySupport: WireFormat.json,
-      data: {
-        // TODO: add wrapper, onlyJson
-        toJson: (data) => data,
-        fromJson: (data) => data as {version: string},
-        serialize: () => {
-          throw new Error("Not implemented");
-        },
-        deserialize: () => {
-          throw new Error("Not implemented");
-        },
-      },
-      meta: EmptyMetaCodec,
-    },
+    resp: JsonOnlyResponseCodec,
   },
   getSyncingStatus: {
     url: "/eth/v1/node/syncing",
     method: "GET",
     req: EmptyGetRequestCodec,
-    resp: {
-      onlySupport: WireFormat.json,
-      data: {
-        toJson: (data) => data,
-        fromJson: (data) => data as SyncingStatus,
-        serialize: () => {
-          throw new Error("Not implemented");
-        },
-        deserialize: () => {
-          throw new Error("Not implemented");
-        },
-      },
-      meta: EmptyMetaCodec,
-    },
+    resp: JsonOnlyResponseCodec,
   },
   getHealth: {
     url: "/eth/v1/node/health",
