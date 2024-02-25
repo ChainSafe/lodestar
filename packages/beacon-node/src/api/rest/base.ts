@@ -1,8 +1,8 @@
 import qs from "qs";
-import fastify, {FastifyBodyParser, FastifyContentTypeParser, FastifyInstance, FastifyRequest} from "fastify";
-import fastifyCors from "@fastify/cors";
+import {FastifyInstance, FastifyRequest, fastify} from "fastify";
+import {fastifyCors} from "@fastify/cors";
 import bearerAuthPlugin from "@fastify/bearer-auth";
-import {RouteConfig} from "@lodestar/api/beacon/server";
+import {FastifyRouteConfig} from "@lodestar/api/beacon/server";
 import {ErrorAborted, Gauge, Histogram, Logger} from "@lodestar/utils";
 import {isLocalhostIP} from "../../util/ip.js";
 import {ApiError, NodeIsSyncing} from "../impl/errors.js";
@@ -92,19 +92,19 @@ export class RestApiServer {
     // Log all incoming request to debug (before parsing). TODO: Should we hook latter in the lifecycle? https://www.fastify.io/docs/latest/Lifecycle/
     // Note: Must be an async method so fastify can continue the release lifecycle. Otherwise we must call done() or the request stalls
     server.addHook("onRequest", async (req, _res) => {
-      const {operationId} = req.routeConfig as RouteConfig;
+      const {operationId} = req.routeConfig as FastifyRouteConfig;
       this.logger.debug(`Req ${req.id as string} ${req.ip} ${operationId}`);
       metrics?.requests.inc({operationId});
     });
 
     server.addHook("preHandler", async (req, _res) => {
-      const {operationId} = req.routeConfig as RouteConfig;
+      const {operationId} = req.routeConfig as FastifyRouteConfig;
       this.logger.debug(`Exec ${req.id as string} ${req.ip} ${operationId}`);
     });
 
     // Log after response
     server.addHook("onResponse", async (req, res) => {
-      const {operationId} = req.routeConfig as RouteConfig;
+      const {operationId} = req.routeConfig as FastifyRouteConfig;
       this.logger.debug(`Res ${req.id as string} ${operationId} - ${res.raw.statusCode}`);
       metrics?.responseTime.observe({operationId}, res.getResponseTime() / 1000);
     });
@@ -114,7 +114,7 @@ export class RestApiServer {
       // Don't log NodeISSyncing errors, they happen very frequently while syncing and the validator polls duties
       if (err instanceof ErrorAborted || err instanceof NodeIsSyncing) return;
 
-      const {operationId} = req.routeConfig as RouteConfig;
+      const {operationId} = req.routeConfig as FastifyRouteConfig;
 
       if (err instanceof ApiError) {
         this.logger.warn(`Req ${req.id as string} ${operationId} failed`, {reason: err.message});

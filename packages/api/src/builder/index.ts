@@ -16,6 +16,9 @@ type ClientModules = HttpClientModules & {
   httpClient?: IHttpClient;
 };
 
+/**
+ * REST HTTP client for builder routes
+ */
 export function getClient(opts: HttpClientOptions, modules: ClientModules): ApiClientMethods<Endpoints> {
   const {config} = modules;
   const httpClient = modules.httpClient ?? new HttpClient(opts, modules);
