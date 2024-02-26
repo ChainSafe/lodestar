@@ -996,11 +996,12 @@ export class BeaconChain implements IBeaconChain {
 
   async getBlockRewards(block: allForks.FullOrBlindedBeaconBlock): Promise<BlockRewards> {
     const preState = this.regen.getPreStateSync(block);
-    const postState = this.regen.getStateSync(toHexString(block.stateRoot)) ?? undefined;
 
     if (preState === null) {
       throw Error(`Pre-state is unavailable given block's parent root ${toHexString(block.parentRoot)}`);
     }
+
+    const postState = this.regen.getStateSync(toHexString(block.stateRoot)) ?? undefined;
 
     return computeBlockRewards(block, preState.clone(), postState?.clone());
   }
