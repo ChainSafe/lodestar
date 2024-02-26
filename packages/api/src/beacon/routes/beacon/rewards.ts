@@ -62,6 +62,16 @@ export type Api = {
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
     >
   >;
+
+  /**
+   * Get sync committee rewards
+   * Returns participant reward value for each sync committee member at the given block. Optional filters can be
+   * passed in to filter the result
+   *
+   * @param blockId Block identifier.
+   * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
+   * @param filters List of validator indices or pubkeys to filter in
+   */
   getSyncCommitteeRewards(
     blockId: BlockId,
     filters?: ValidatorId[]
