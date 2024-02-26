@@ -21,8 +21,10 @@ export type {
   SlashingProtectionData,
   PubkeyHex,
   Endpoints,
-  EthAddress,
-  Graffiti,
+  FeeRecipientData,
+  GraffitiData,
+  GasLimitData,
+  BuilderBoostFactorData,
 } from "./routes.js";
 
 type ClientModules = HttpClientModules & {

@@ -9,12 +9,14 @@ import {
   ResponseStatus,
   KeystoreStr,
   PubkeyHex,
-  EthAddress,
-  Graffiti,
   SlashingProtectionData,
   SignerDefinition,
   RemoteSignerDefinition,
   ImportRemoteKeyStatus,
+  FeeRecipientData,
+  GraffitiData,
+  GasLimitData,
+  BuilderBoostFactorData,
 } from "@lodestar/api/keymanager";
 import {Interchange, SignerType, Validator} from "@lodestar/validator";
 import {ApplicationMethods} from "@lodestar/api";
@@ -45,7 +47,7 @@ export class KeymanagerApi implements Api {
     return {data: {pubkey, ethaddress: this.validator.validatorStore.getFeeRecipient(pubkey)}};
   }
 
-  async setFeeRecipient({pubkey, ethaddress}: {pubkey: PubkeyHex; ethaddress: EthAddress}): Promise<void> {
+  async setFeeRecipient({pubkey, ethaddress}: FeeRecipientData): Promise<void> {
     this.checkIfProposerWriteEnabled();
     this.validator.validatorStore.setFeeRecipient(pubkey, parseFeeRecipient(ethaddress));
     this.persistedKeysBackend.writeProposerConfig(pubkey, this.validator.validatorStore.getProposerConfig(pubkey));
@@ -61,7 +63,7 @@ export class KeymanagerApi implements Api {
     return {data: {pubkey, graffiti: this.validator.validatorStore.getGraffiti(pubkey)}};
   }
 
-  async setGraffiti({pubkey, graffiti}: {pubkey: PubkeyHex; graffiti: Graffiti}): Promise<void> {
+  async setGraffiti({pubkey, graffiti}: GraffitiData): Promise<void> {
     this.checkIfProposerWriteEnabled();
     this.validator.validatorStore.setGraffiti(pubkey, graffiti);
     this.persistedKeysBackend.writeProposerConfig(pubkey, this.validator.validatorStore.getProposerConfig(pubkey));
@@ -78,7 +80,7 @@ export class KeymanagerApi implements Api {
     return {data: {pubkey, gasLimit}};
   }
 
-  async setGasLimit({pubkey, gasLimit}: {pubkey: PubkeyHex; gasLimit: number}): Promise<void> {
+  async setGasLimit({pubkey, gasLimit}: GasLimitData): Promise<void> {
     this.checkIfProposerWriteEnabled();
     this.validator.validatorStore.setGasLimit(pubkey, gasLimit);
     this.persistedKeysBackend.writeProposerConfig(pubkey, this.validator.validatorStore.getProposerConfig(pubkey));
@@ -388,13 +390,7 @@ export class KeymanagerApi implements Api {
     return {data: {pubkey, builderBoostFactor}};
   }
 
-  async setBuilderBoostFactor({
-    pubkey,
-    builderBoostFactor,
-  }: {
-    pubkey: PubkeyHex;
-    builderBoostFactor: bigint;
-  }): Promise<void> {
+  async setBuilderBoostFactor({pubkey, builderBoostFactor}: BuilderBoostFactorData): Promise<void> {
     this.checkIfProposerWriteEnabled();
     this.validator.validatorStore.setBuilderBoostFactor(pubkey, builderBoostFactor);
     this.persistedKeysBackend.writeProposerConfig(pubkey, this.validator.validatorStore.getProposerConfig(pubkey));
