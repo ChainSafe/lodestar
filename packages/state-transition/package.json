@@ -73,9 +73,7 @@
   },
   "devDependencies": {
     "@chainsafe/blst": "^0.2.9",
-    "@types/buffer-xor": "^2.0.0",
-    "@types/mockery": "^1.4.30",
-    "mockery": "^2.1.0"
+    "@types/buffer-xor": "^2.0.0"
   },
   "keywords": [
     "ethereum",

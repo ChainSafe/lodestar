@@ -42,7 +42,6 @@
     "level": "^8.0.0"
   },
   "devDependencies": {
-    "@lodestar/logger": "^1.16.0",
-    "@types/levelup": "^4.3.3"
+    "@lodestar/logger": "^1.16.0"
   }
 }
