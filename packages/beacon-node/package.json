@@ -80,7 +80,6 @@
     "test:unit": "wrapper() { yarn test:unit:minimal $@ && yarn test:unit:mainnet $@; }; wrapper",
     "test:e2e": "LODESTAR_PRESET=minimal vitest --run --segfaultRetry 3 --config vitest.e2e.config.ts --dir test/e2e",
     "test:sim": "vitest --run test/sim/**/*.test.ts",
-    "test:sim:merge-interop": "vitest --run test/sim/merge-interop.test.ts",
     "test:sim:mergemock": "vitest --run test/sim/mergemock.test.ts",
     "test:sim:withdrawals": "vitest --run test/sim/withdrawal-interop.test.ts",
     "test:sim:blobs": "vitest --run test/sim/4844-interop.test.ts",
