@@ -1,5 +1,4 @@
-import {byteArrayEquals, toHexString} from "@chainsafe/ssz";
-import {allForks, bellatrix, Slot, Root, BLSPubkey, ssz, deneb, Wei} from "@lodestar/types";
+import {allForks, bellatrix, Slot, Root, BLSPubkey, deneb, Wei} from "@lodestar/types";
 import {parseExecutionPayloadAndBlobsBundle, reconstructFullBlockOrContents} from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/logger";
