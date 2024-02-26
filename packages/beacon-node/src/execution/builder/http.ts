@@ -126,7 +126,7 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
     // for the sake of timely proposals we can skip matching the payload with payloadHeader
     // if the roots (transactions, withdrawals) don't match, this will likely lead to a block with
     // invalid signature, but there is no recourse to this anyway so lets just proceed and will
-    // need probably need diagonis if this block turns out to be invalid because of some bug
+    // probably need diagonis if this block turns out to be invalid because of some bug
     //
     const contents = blobsBundle ? {blobs: blobsBundle.blobs, kzgProofs: blobsBundle.proofs} : null;
     return reconstructFullBlockOrContents(signedBlindedBlock, {executionPayload, contents});
