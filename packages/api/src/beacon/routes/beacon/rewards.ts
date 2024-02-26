@@ -42,7 +42,9 @@ export type BlockRewards = {
 
 /**
  * Rewards info for sync committee participation. Every reward value is in Gwei.
- * Note: This excludes sync aggregate reward. The reward for proposer here only reflect the sync committee participation portion
+ * Note: In the case that block proposer is present in `SyncCommitteeRewards`, the reward value only reflects rewards for
+ * participating in sync committee. Please refer to `BlockRewards.syncAggregate` for rewards of proposer including sync committee
+ * outputs into their block
  */
 export type SyncCommitteeRewards = {validatorIndex: ValidatorIndex; reward: number}[];
 
