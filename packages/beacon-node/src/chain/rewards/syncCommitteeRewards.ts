@@ -12,7 +12,7 @@ export async function computeSyncCommitteeRewards(
 ): Promise<SyncCommitteeRewards> {
   const fork = preState.config.getForkName(block.slot);
   if (fork === ForkName.phase0) {
-    throw Error("Cannot get sync rewards as phase0 block does not have sync committee!");
+    throw Error("Cannot get sync rewards as phase0 block does not have sync committee");
   }
 
   const altairBlock = block as altair.BeaconBlock;
