@@ -15,7 +15,7 @@ import {
   SyncCommitteeError,
 } from "../../../../chain/errors/index.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../../network/processor/gossipHandlers.js";
-import { MultipleError } from "../../errors.js";
+import {IndexedError} from "../../errors.js";
 
 export function getBeaconPoolApi({
   chain,
@@ -102,7 +102,7 @@ export function getBeaconPoolApi({
       );
 
       if (errors.length > 0) {
-        throw new MultipleError("Some errors on submitPoolAttestations", errors);
+        throw new IndexedError("Some errors submitting attestations", errors);
       }
     },
 

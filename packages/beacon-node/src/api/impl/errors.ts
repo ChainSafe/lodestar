@@ -36,7 +36,7 @@ export class OnlySupportedByDVT extends ApiError {
   }
 }
 
-export class MultipleError extends ApiError {
+export class IndexedError extends ApiError {
   failures: {index: number; message: string}[];
 
   constructor(message: string, errors: {index: number; error: Error}[]) {

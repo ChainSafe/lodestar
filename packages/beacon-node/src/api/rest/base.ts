@@ -5,7 +5,7 @@ import bearerAuthPlugin from "@fastify/bearer-auth";
 import {RouteConfig} from "@lodestar/api/beacon/server";
 import {ErrorAborted, Gauge, Histogram, Logger} from "@lodestar/utils";
 import {isLocalhostIP} from "../../util/ip.js";
-import {ApiError, MultipleError, NodeIsSyncing} from "../impl/errors.js";
+import {ApiError, IndexedError, NodeIsSyncing} from "../impl/errors.js";
 import {HttpActiveSocketsTracker, SocketMetrics} from "./activeSockets.js";
 
 export type RestApiServerOpts = {
@@ -66,8 +66,8 @@ export class RestApiServer {
     server.setErrorHandler((err, req, res) => {
       if (err.validation) {
         void res.status(400).send(err.validation);
-      } else if (err instanceof MultipleError) {
-        // api's returning multiple errors need to formatted in a certain way
+      } else if (err instanceof IndexedError) {
+        // api's returning IndexedError need to formatted in a certain way
         const body = {
           code: err.statusCode,
           message: err.message,
