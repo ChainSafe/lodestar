@@ -1,15 +1,21 @@
 import {digest} from "@chainsafe/as-sha256";
 import {SHUFFLE_ROUND_COUNT} from "@lodestar/params";
-import {ValidatorIndex, Bytes32} from "@lodestar/types";
+import {Bytes32} from "@lodestar/types";
 import {assert, bytesToBigInt} from "@lodestar/utils";
 
+// ArrayLike<number> but with settable indices
+type Shuffleable = {
+  readonly length: number;
+  [index: number]: number;
+};
+
 // ShuffleList shuffles a list, using the given seed for randomness. Mutates the input list.
-export function shuffleList(input: Uint32Array | ValidatorIndex[], seed: Bytes32): void {
+export function shuffleList(input: Shuffleable, seed: Bytes32): void {
   innerShuffleList(input, seed, true);
 }
 
 // UnshuffleList undoes a list shuffling using the seed of the shuffling. Mutates the input list.
-export function unshuffleList(input: Uint32Array | ValidatorIndex[], seed: Bytes32): void {
+export function unshuffleList(input: Shuffleable, seed: Bytes32): void {
   innerShuffleList(input, seed, false);
 }
 
@@ -70,7 +76,7 @@ function setPositionUint32(value: number, buf: Buffer): void {
 }
 
 // Shuffles or unshuffles, depending on the `dir` (true for shuffling, false for unshuffling
-function innerShuffleList(input: Uint32Array | ValidatorIndex[], seed: Bytes32, dir: boolean): void {
+function innerShuffleList(input: Shuffleable, seed: Bytes32, dir: boolean): void {
   if (input.length <= 1) {
     // nothing to (un)shuffle
     return;

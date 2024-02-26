@@ -398,7 +398,7 @@ export function getNotSeenValidatorsFn(state: CachedBeaconStateAllForks): GetNot
       state
     );
 
-    return (epoch: Epoch, committee: number[] | Uint32Array) => {
+    return (epoch: Epoch, committee: Uint32Array) => {
       const participants =
         epoch === stateEpoch ? currentEpochParticipants : epoch === stateEpoch - 1 ? previousEpochParticipants : null;
       if (participants === null) {
@@ -426,7 +426,7 @@ export function getNotSeenValidatorsFn(state: CachedBeaconStateAllForks): GetNot
     const currentParticipation = altairState.currentEpochParticipation.getAll();
     const stateEpoch = computeEpochAtSlot(state.slot);
 
-    return (epoch: Epoch, committee: number[] | Uint32Array) => {
+    return (epoch: Epoch, committee: Uint32Array) => {
       const participationStatus =
         epoch === stateEpoch ? currentParticipation : epoch === stateEpoch - 1 ? previousParticipation : null;
 
