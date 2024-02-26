@@ -133,7 +133,6 @@
     "@lodestar/utils": "^1.16.0",
     "@lodestar/validator": "^1.16.0",
     "@multiformats/multiaddr": "^12.1.3",
-    "@types/datastore-level": "^3.0.0",
     "buffer-xor": "^2.0.2",
     "c-kzg": "^2.1.2",
     "datastore-core": "^9.1.1",
@@ -157,6 +156,7 @@
     "xxhash-wasm": "1.0.2"
   },
   "devDependencies": {
+    "@types/datastore-level": "^3.0.0",
     "@types/eventsource": "^1.1.11",
     "@types/leveldown": "^4.0.3",
     "@types/qs": "^6.9.7",
