@@ -1,5 +1,4 @@
-import {byteArrayEquals, toHexString} from "@chainsafe/ssz";
-import {allForks, bellatrix, Slot, Root, BLSPubkey, ssz, deneb, Wei} from "@lodestar/types";
+import {allForks, bellatrix, Slot, Root, BLSPubkey, deneb, Wei} from "@lodestar/types";
 import {parseExecutionPayloadAndBlobsBundle, reconstructFullBlockOrContents} from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/logger";
@@ -123,17 +122,12 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
     const {data} = res.response;
 
     const {executionPayload, blobsBundle} = parseExecutionPayloadAndBlobsBundle(data);
-    // some validations for execution payload
-    const expectedTransactionsRoot = signedBlindedBlock.message.body.executionPayloadHeader.transactionsRoot;
-    const actualTransactionsRoot = ssz.bellatrix.Transactions.hashTreeRoot(executionPayload.transactions);
-    if (!byteArrayEquals(expectedTransactionsRoot, actualTransactionsRoot)) {
-      throw Error(
-        `Invalid transactionsRoot of the builder payload, expected=${toHexString(
-          expectedTransactionsRoot
-        )}, actual=${toHexString(actualTransactionsRoot)}`
-      );
-    }
 
+    // for the sake of timely proposals we can skip matching the payload with payloadHeader
+    // if the roots (transactions, withdrawals) don't match, this will likely lead to a block with
+    // invalid signature, but there is no recourse to this anyway so lets just proceed and will
+    // probably need diagonis if this block turns out to be invalid because of some bug
+    //
     const contents = blobsBundle ? {blobs: blobsBundle.blobs, kzgProofs: blobsBundle.proofs} : null;
     return reconstructFullBlockOrContents(signedBlindedBlock, {executionPayload, contents});
   }
