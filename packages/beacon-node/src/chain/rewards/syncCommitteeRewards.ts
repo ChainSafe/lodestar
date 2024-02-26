@@ -4,6 +4,7 @@ import {ForkName, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {routes} from "@lodestar/api";
 
 export type SyncCommitteeRewards = routes.beacon.SyncCommitteeRewards;
+type BalanceRecord = {val: number}; // Use val for convenient way to increment/decrement balance
 
 export async function computeSyncCommitteeRewards(
   block: allForks.BeaconBlock,
@@ -28,13 +29,12 @@ export async function computeSyncCommitteeRewards(
   const {syncCommitteeBits} = altairBlock.body.syncAggregate;
 
   // Use balance of each committee as starting point such that we cap the penalty to avoid balance dropping below 0
-  const balances: Map<ValidatorIndex, {val: number}> = new Map(
+  const balances: Map<ValidatorIndex, BalanceRecord> = new Map(
     committeeIndices.map((i) => [i, {val: preStateAltair.balances.get(i)}])
-  ); // Use val for convenient way to increment/decrement balance
+  );
 
   for (const i of committeeIndices) {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const balanceRecord = balances.get(i)!; // We are certain i is in balances
+    const balanceRecord = balances.get(i) as BalanceRecord;
     if (syncCommitteeBits.get(i)) {
       // Positive rewards for participants
       balanceRecord.val += syncParticipantReward;
@@ -49,8 +49,7 @@ export async function computeSyncCommitteeRewards(
 
   if (filters !== undefined) {
     return rewards.filter(
-      (reward) =>
-        filtersSet.has(reward.validatorIndex) || filtersSet.has(index2pubkey[reward.validatorIndex].toHex())
+      (reward) => filtersSet.has(reward.validatorIndex) || filtersSet.has(index2pubkey[reward.validatorIndex].toHex())
     );
   } else {
     return Array.from(balances, ([validatorIndex, v]) => ({validatorIndex, reward: v.val}));
