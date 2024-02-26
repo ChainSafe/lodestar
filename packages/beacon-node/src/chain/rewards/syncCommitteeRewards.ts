@@ -45,12 +45,12 @@ export async function computeSyncCommitteeRewards(
   }
 
   const rewards = Array.from(balances, ([validatorIndex, v]) => ({validatorIndex, reward: v.val}));
+  const filtersSet = new Set(filters);
 
   if (filters !== undefined) {
-    // Might be a bit slow. But this is only called by rewards api which is insensitive to performance
     return rewards.filter(
       (reward) =>
-        filters.includes(reward.validatorIndex) || filters.includes(index2pubkey[reward.validatorIndex].toHex())
+        filtersSet.has(reward.validatorIndex) || filtersSet.has(index2pubkey[reward.validatorIndex].toHex())
     );
   } else {
     return Array.from(balances, ([validatorIndex, v]) => ({validatorIndex, reward: v.val}));
