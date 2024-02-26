@@ -18,12 +18,13 @@ const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
   ALTAIR_FORK_EPOCH: altairForkEpoch,
   BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
   runTillEpoch: runTillEpoch + syncWaitEpoch,
+  initialNodes: 2,
 });
 
 const env = await SimulationEnvironment.initWithDefaults(
   {
-    id: "multi-fork",
-    logsDir: path.join(logFilesDir, "multi-fork"),
+    id: "deneb",
+    logsDir: path.join(logFilesDir, "deneb"),
     forkConfig,
   },
   [

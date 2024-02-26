@@ -1,7 +1,8 @@
 import {PeerId} from "@libp2p/interface";
 import {Registry} from "prom-client";
 import {ENR} from "@chainsafe/enr";
-import {identify} from "@libp2p/identify";
+// TODO: We should use this fork until https://github.com/libp2p/js-libp2p/pull/2387
+import {identify} from "@chainsafe/libp2p-identify";
 import {bootstrap} from "@libp2p/bootstrap";
 import {mdns} from "@libp2p/mdns";
 import {createLibp2p} from "libp2p";
@@ -111,6 +112,7 @@ export async function createNodeJsLibp2p(
     services: {
       identify: identify({
         agentVersion: networkOpts.private ? "" : networkOpts.version ? `lodestar/${networkOpts.version}` : "lodestar",
+        runOnConnectionOpen: false,
       }),
       // individual components are specified because the components object is a Proxy
       // and passing it here directly causes problems downstream, not to mention is slowwww

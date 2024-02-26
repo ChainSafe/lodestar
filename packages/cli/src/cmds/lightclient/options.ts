@@ -1,9 +1,9 @@
+import {CliCommandOptions} from "@lodestar/utils";
 import {LogArgs, logOptions} from "../../options/logOptions.js";
-import {CliCommandOptions} from "../../util/index.js";
 
 export type ILightClientArgs = LogArgs & {
-  beaconApiUrl?: string;
-  checkpointRoot?: string;
+  beaconApiUrl: string;
+  checkpointRoot: string;
 };
 
 export const lightclientOptions: CliCommandOptions<ILightClientArgs> = {
@@ -11,9 +11,11 @@ export const lightclientOptions: CliCommandOptions<ILightClientArgs> = {
   beaconApiUrl: {
     description: "Url to a beacon node that support lightclient API",
     type: "string",
+    demandOption: true,
   },
   checkpointRoot: {
     description: "Checkpoint root hex string to sync the lightclient from, start with 0x",
     type: "string",
+    demandOption: true,
   },
 };

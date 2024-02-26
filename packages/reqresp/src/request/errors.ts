@@ -31,7 +31,7 @@ export enum RequestErrorCode {
   RESP_TIMEOUT = "REQUEST_ERROR_RESP_TIMEOUT",
   /** Request rate limited */
   REQUEST_RATE_LIMITED = "REQUEST_ERROR_RATE_LIMITED",
-  /** */
+  /** For malformed SSZ (metadata) responses */
   SSZ_OVER_MAX_SIZE = "SSZ_SNAPPY_ERROR_OVER_SSZ_MAX_SIZE",
 }
 

@@ -30,4 +30,19 @@ export const inclusionDelayAssertion: SimulationAssertion<"inclusionDelay", numb
 
     return errors;
   },
+
+  async dump({store, slot, nodes}) {
+    /*
+     * | Slot | Node 1 | Node 2 |
+     * |------|--------|--------|
+     * | 1    | 1.0   | 1.0   |
+     * | 2    | 0.8   | 0.8   |
+     * | 3    | 0.5  | 0.95   |
+     */
+    const result = [`Slot,${nodes.map((n) => n.beacon.id).join(", ")}`];
+    for (let s = 1; s <= slot; s++) {
+      result.push(`${s}, ${nodes.map((n) => store[n.beacon.id][s] ?? "-").join(",")}`);
+    }
+    return {"inclusionDelayAssertion.csv": result.join("\n")};
+  },
 };

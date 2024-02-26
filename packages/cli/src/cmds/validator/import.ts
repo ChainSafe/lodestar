@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import {Keystore} from "@chainsafe/bls-keystore";
-import {YargsError, CliCommand, getPubkeyHexFromKeystore} from "../../util/index.js";
+import {CliCommand} from "@lodestar/utils";
+import {YargsError, getPubkeyHexFromKeystore} from "../../util/index.js";
 import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
 import {GlobalArgs} from "../../options/index.js";
 import {validatorOptions, IValidatorCliArgs} from "./options.js";

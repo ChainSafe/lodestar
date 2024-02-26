@@ -2,7 +2,7 @@ import childProcess from "node:child_process";
 import {writeFile, mkdir} from "node:fs/promises";
 import path from "node:path";
 import {describe, it, expect, beforeAll, afterAll} from "vitest";
-import Web3 from "web3";
+import {Web3} from "web3";
 import {runCliCommand, spawnCliCommand, stopChildProcess} from "@lodestar/test-utils";
 import {sleep} from "@lodestar/utils";
 import {ChainConfig, chainConfigToJson} from "@lodestar/config";
@@ -11,35 +11,17 @@ import {rpcUrl, beaconUrl, proxyPort, proxyUrl, chainId, waitForCapellaFork, con
 
 const cli = getLodestarProverCli();
 
-describe("prover/start", () => {
+describe("prover/proxy", () => {
   it("should show help", async () => {
-    const output = await runCliCommand(cli, ["start", "--help"]);
+    const output = await runCliCommand(cli, ["proxy", "--help"]);
 
     expect(output).toEqual(expect.stringContaining("Show help"));
   });
 
-  it("should fail when --executionRpcUrl is missing", async () => {
-    await expect(runCliCommand(cli, ["start", "--port", "8088"])).rejects.toThrow(
-      "Missing required argument: executionRpcUrl"
+  it("should fail when --executionRpcUrl and --beaconUrls are missing", async () => {
+    await expect(runCliCommand(cli, ["proxy", "--port", "8088"])).rejects.toThrow(
+      "Missing required arguments: executionRpcUrl, beaconUrls"
     );
-  });
-
-  it("should fail when --beaconUrls and --beaconBootnodes are provided together", async () => {
-    await expect(
-      runCliCommand(cli, [
-        "start",
-        "--beaconUrls",
-        "http://localhost:4000",
-        "--beaconBootnodes",
-        "http://localhost:0000",
-      ])
-    ).rejects.toThrow("Arguments beaconBootnodes and beaconUrls are mutually exclusive");
-  });
-
-  it("should fail when both of --beaconUrls and --beaconBootnodes are not provided", async () => {
-    await expect(
-      runCliCommand(cli, ["start", "--port", "8088", "--executionRpcUrl", "http://localhost:3000"])
-    ).rejects.toThrow("Either --beaconUrls or --beaconBootnodes must be provided");
   });
 
   describe("when started", () => {
@@ -55,7 +37,7 @@ describe("prover/start", () => {
       proc = await spawnCliCommand(
         "packages/prover/bin/lodestar-prover.js",
         [
-          "start",
+          "proxy",
           "--port",
           String(proxyPort as number),
           "--executionRpcUrl",

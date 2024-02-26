@@ -1,10 +1,8 @@
-import winston from "winston";
+import winston, {format} from "winston";
 import {LodestarError, isEmptyObject} from "@lodestar/utils";
 import {LoggerOptions, TimestampFormatCode} from "../interface.js";
 import {logCtxToJson, logCtxToString, LogData} from "./json.js";
 import {formatEpochSlotTime} from "./timeFormat.js";
-
-const {format} = winston;
 
 type Format = ReturnType<typeof winston.format.combine>;
 

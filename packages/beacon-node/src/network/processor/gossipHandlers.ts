@@ -1,6 +1,6 @@
 import {toHexString} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {Logger, prettyBytes} from "@lodestar/utils";
+import {LogLevel, Logger, prettyBytes} from "@lodestar/utils";
 import {Root, Slot, ssz, allForks, deneb} from "@lodestar/types";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {routes} from "@lodestar/api";
@@ -115,7 +115,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
     const forkTypes = config.getForkTypes(slot);
     const blockHex = prettyBytes(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
     const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
-    const recvToVal = Date.now() / 1000 - seenTimestampSec;
+    const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
 
     // always set block to seen cache for all forks so that we don't need to download it
     const blockInputRes = chain.seenGossipBlockInput.getGossipBlockInput(config, {
@@ -133,19 +133,27 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
     const blockInputMeta =
       config.getForkSeq(signedBlock.message.slot) >= ForkSeq.deneb ? blockInputRes.blockInputMeta : {};
 
-    metrics?.gossipBlock.receivedToGossipValidate.observe(recvToVal);
-    logger.verbose("Received gossip block", {
-      slot: slot,
-      root: blockHex,
-      curentSlot: chain.clock.currentSlot,
-      peerId: peerIdStr,
-      delaySec,
-      recvToVal,
-      ...blockInputMeta,
-    });
-
     try {
       await validateGossipBlock(config, chain, signedBlock, fork);
+
+      const recvToValidation = Date.now() / 1000 - seenTimestampSec;
+      const validationTime = recvToValidation - recvToValLatency;
+
+      metrics?.gossipBlock.gossipValidation.recvToValidation.observe(recvToValidation);
+      metrics?.gossipBlock.gossipValidation.validationTime.observe(validationTime);
+
+      logger.debug("Received gossip block", {
+        slot: slot,
+        root: blockHex,
+        curentSlot: chain.clock.currentSlot,
+        peerId: peerIdStr,
+        delaySec,
+        ...blockInputMeta,
+        recvToValLatency,
+        recvToValidation,
+        validationTime,
+      });
+
       return blockInput;
     } catch (e) {
       if (e instanceof BlockGossipError) {
@@ -177,7 +185,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
     const blockHex = prettyBytes(blockRoot);
 
     const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
-    const recvToVal = Date.now() / 1000 - seenTimestampSec;
+    const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
 
     const {blockInput, blockInputMeta} = chain.seenGossipBlockInput.getGossipBlockInput(config, {
       type: GossipedInputType.blob,
@@ -185,20 +193,27 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
       blobBytes,
     });
 
-    metrics?.gossipBlob.receivedToGossipValidate.observe(recvToVal);
-    logger.verbose("Received gossip blob", {
-      slot: slot,
-      root: blockHex,
-      curentSlot: chain.clock.currentSlot,
-      peerId: peerIdStr,
-      delaySec,
-      recvToVal,
-      gossipIndex,
-      ...blockInputMeta,
-    });
-
     try {
       await validateGossipBlobSidecar(chain, blobSidecar, gossipIndex);
+      const recvToValidation = Date.now() / 1000 - seenTimestampSec;
+      const validationTime = recvToValidation - recvToValLatency;
+
+      metrics?.gossipBlob.recvToValidation.observe(recvToValidation);
+      metrics?.gossipBlob.validationTime.observe(validationTime);
+
+      logger.debug("Received gossip blob", {
+        slot: slot,
+        root: blockHex,
+        curentSlot: chain.clock.currentSlot,
+        peerId: peerIdStr,
+        delaySec,
+        gossipIndex,
+        ...blockInputMeta,
+        recvToValLatency,
+        recvToValidation,
+        validationTime,
+      });
+
       return blockInput;
     } catch (e) {
       if (e instanceof BlobSidecarGossipError) {
@@ -255,6 +270,9 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
         chain.seenGossipBlockInput.prune();
       })
       .catch((e) => {
+        // Adjust verbosity based on error type
+        let logLevel: LogLevel;
+
         if (e instanceof BlockError) {
           switch (e.type.code) {
             case BlockErrorCode.DATA_UNAVAILABLE: {
@@ -264,6 +282,9 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
               const rootHex = toHexString(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
 
               events.emit(NetworkEvent.unknownBlock, {rootHex, peer: peerIdStr});
+
+              // Error is quite frequent and not critical
+              logLevel = LogLevel.debug;
               break;
             }
             // ALREADY_KNOWN should not happen with ignoreIfKnown=true above
@@ -272,14 +293,21 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
             case BlockErrorCode.PARENT_UNKNOWN:
             case BlockErrorCode.PRESTATE_MISSING:
             case BlockErrorCode.EXECUTION_ENGINE_ERROR:
+              // Errors might indicate an issue with our node or the connected EL client
+              logLevel = LogLevel.error;
               break;
             default:
               // TODO: Should it use PeerId or string?
               core.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadGossipBlock");
+              // Misbehaving peer, but could highlight an issue in another client
+              logLevel = LogLevel.warn;
           }
+        } else {
+          // Any unexpected error
+          logLevel = LogLevel.error;
         }
         metrics?.gossipBlock.processBlockErrors.inc({error: e instanceof BlockError ? e.type.code : "NOT_BLOCK_ERROR"});
-        logger.error("Error receiving block", {slot: signedBlock.message.slot, peer: peerIdStr}, e as Error);
+        logger[logLevel]("Error receiving block", {slot: signedBlock.message.slot, peer: peerIdStr}, e as Error);
         chain.seenGossipBlockInput.prune();
       });
   }
@@ -453,6 +481,8 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
       } catch (e) {
         logger.error("Error adding attesterSlashing to pool", {}, e as Error);
       }
+
+      chain.emitter.emit(routes.events.EventType.attesterSlashing, attesterSlashing);
     },
 
     [GossipType.proposer_slashing]: async ({
@@ -470,6 +500,8 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
       } catch (e) {
         logger.error("Error adding attesterSlashing to pool", {}, e as Error);
       }
+
+      chain.emitter.emit(routes.events.EventType.proposerSlashing, proposerSlashing);
     },
 
     [GossipType.voluntary_exit]: async ({gossipData, topic}: GossipHandlerParamGeneric<GossipType.voluntary_exit>) => {

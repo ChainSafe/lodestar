@@ -1,4 +1,4 @@
-import {describe, it, expect, afterEach} from "vitest";
+import {describe, it, expect, afterEach, vi} from "vitest";
 import {JsonPath, toHexString, fromHexString} from "@chainsafe/ssz";
 import {computeDescriptor, TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
 import {ChainConfig} from "@lodestar/config";
@@ -14,9 +14,9 @@ import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
 import {HeadEventData} from "../../../src/chain/index.js";
 
-// To make the code review easy for code block below
-/* prettier-ignore */
 describe("chain / lightclient", function () {
+  vi.setConfig({testTimeout: 600_000});
+
   /**
    * Max distance between beacon node head and lightclient head
    * If SECONDS_PER_SLOT === 1, there should be some margin for slow blocks,
@@ -178,7 +178,7 @@ describe("chain / lightclient", function () {
     const head = await bn.db.block.get(fromHexString(headSummary.blockRoot));
     if (!head) throw Error("First beacon node has no head block");
   });
-}, {timeout: 600_000});
+});
 
 // TODO: Re-incorporate for REST-only light-client
 async function getHeadStateProof(

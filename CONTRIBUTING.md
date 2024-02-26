@@ -5,7 +5,7 @@ Thanks for your interest in contributing to Lodestar. It's people like you that 
 ## Prerequisites
 
 - :gear: [NodeJS](https://nodejs.org/) (LTS)
-- :toolbox: [Yarn](https://yarnpkg.com/)
+- :toolbox: [Yarn](https://classic.yarnpkg.com/lang/en/)
 
 ### MacOS Specifics
 
@@ -35,7 +35,7 @@ To run tests:
 Note that to run `test:e2e`, first ensure that the environment is correctly setup by running the `run_e2e_env.sh` script.
 
 ```sh
-GETH_DOCKER_IMAGE=ethereum/client-go:v1.11.6  NETHERMIND_DOCKER_IMAGE=nethermind/nethermind:1.18.0 ./scripts/run_e2e_env.sh start
+./scripts/run_e2e_env.sh start
 ```
 
 Similarly, run `yarn download-spec-tests` before running `yarn test:spec`.
@@ -61,11 +61,12 @@ If you observe following error running any of the test files that means you are 
 
 - To fix errors always focus on passing all minimal tests first without running mainnet tests.
 - Spec tests often compare full expected vs actual states in JSON format.
-- A single logical error can cause many spec tests to fail. To focus on a single test at a time you can use vitest's option `--bail` to stop at the first failed test
-- To then run only that failed test you can run against a specific file as use vitest's filters to run only one case
+- A single logical error can cause many spec tests to fail. To focus on a single test at a time you can use vitest's option `--bail 1` to stop at the first failed test
+- To then run only that failed test you can run against a specific file as use vitest's filters option `-t <pattern>` to run only one case
+- Before running the tests, make sure to switch to the package directory (e.g. `packages/beacon-node`) to speed up test execution
 
 ```sh
-LODESTAR_PRESET=minimal yarn vitest --run --config vitest.spec.config.ts test/spec/phase0/sanity.test.ts
+LODESTAR_PRESET=minimal yarn vitest --run --bail 1 --config vitest.spec.config.ts test/spec/presets/sanity.test.ts -t attester_slashing
 ```
 
 ## Docker

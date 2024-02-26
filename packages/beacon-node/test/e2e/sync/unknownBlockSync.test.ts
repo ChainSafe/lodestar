@@ -1,4 +1,4 @@
-import {describe, it, afterEach} from "vitest";
+import {describe, it, afterEach, vi} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
 import {ChainConfig} from "@lodestar/config";
 import {phase0} from "@lodestar/types";
@@ -17,9 +17,9 @@ import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger.js";
 import {BlockError, BlockErrorCode} from "../../../src/chain/errors/index.js";
 import {BlockSource, getBlockInput} from "../../../src/chain/blocks/types.js";
 
-// To make the code review easy for code block below
-/* prettier-ignore */
 describe("sync / unknown block sync", function () {
+  vi.setConfig({testTimeout: 40_000});
+
   const validatorCount = 8;
   const testParams: Pick<ChainConfig, "SECONDS_PER_SLOT"> = {
     // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -152,4 +152,4 @@ describe("sync / unknown block sync", function () {
       await waitForSynced;
     });
   }
-}, {timeout: 40_000});
+});

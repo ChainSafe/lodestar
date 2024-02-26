@@ -1,6 +1,8 @@
 import path from "node:path";
 import DailyRotateFile from "winston-daily-rotate-file";
 import TransportStream from "winston-transport";
+// We want to keep `winston` export as it's more readable and easier to understand
+/* eslint-disable import/no-named-as-default-member */
 import winston from "winston";
 import type {Logger as Winston} from "winston";
 import {Logger, LogLevel, TimestampFormat} from "./interface.js";

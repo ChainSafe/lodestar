@@ -48,6 +48,7 @@ JSON
 JSObjects
 JWT
 KDE
+Kubernetes
 LGPL
 LGPLv
 LMD
