@@ -20,8 +20,6 @@ The images used by this test during CI are:
 - `GETH_WITHDRAWALS_IMAGE: g11tech/geth:withdrawalsfeb8`
 - `ETHEREUMJS_WITHDRAWALS_IMAGE: g11tech/ethereumjs:blobs-b6b63`
 
-#### `test:sim:merge-interop`
-
 #### `test:sim:mergemock`
 
 #### `yarn test:sim:blobs`

@@ -23,3 +23,6 @@ export const LODESTAR_BINARY_PATH = `${__dirname}/../../../bin/lodestar.js`;
 export const MOCK_ETH1_GENESIS_HASH = "0xfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfb";
 export const SHARED_JWT_SECRET = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
 export const SHARED_VALIDATOR_PASSWORD = "passwrod";
+export const EL_GENESIS_SECRET_KEY = "45a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065ff2d8";
+export const EL_GENESIS_PASSWORD = "12345678";
+export const EL_GENESIS_ACCOUNT = "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b";

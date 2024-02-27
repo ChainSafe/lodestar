@@ -71,6 +71,40 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     return this.stateCache.get(stateRoot);
   }
 
+  getPreStateSync(block: allForks.BeaconBlock): CachedBeaconStateAllForks | null {
+    const parentRoot = toHexString(block.parentRoot);
+    const parentBlock = this.forkChoice.getBlockHex(parentRoot);
+    if (!parentBlock) {
+      throw new RegenError({
+        code: RegenErrorCode.BLOCK_NOT_IN_FORKCHOICE,
+        blockRoot: block.parentRoot,
+      });
+    }
+
+    const parentEpoch = computeEpochAtSlot(parentBlock.slot);
+    const blockEpoch = computeEpochAtSlot(block.slot);
+
+    // Check the checkpoint cache (if the pre-state is a checkpoint state)
+    if (parentEpoch < blockEpoch) {
+      const checkpointState = this.checkpointStateCache.getLatest(parentRoot, blockEpoch);
+      if (checkpointState && computeEpochAtSlot(checkpointState.slot) === blockEpoch) {
+        return checkpointState;
+      }
+    }
+
+    // Check the state cache, only if the state doesn't need to go through an epoch transition.
+    // Otherwise the state transition may not be cached and wasted. Queue for regen since the
+    // work required will still be significant.
+    if (parentEpoch === blockEpoch) {
+      const state = this.stateCache.get(parentBlock.stateRoot);
+      if (state) {
+        return state;
+      }
+    }
+
+    return null;
+  }
+
   getCheckpointStateSync(cp: CheckpointHex): CachedBeaconStateAllForks | null {
     return this.checkpointStateCache.get(cp);
   }
@@ -137,34 +171,10 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     this.metrics?.regenFnCallTotal.inc({caller: rCaller, entrypoint: RegenFnName.getPreState});
 
     // First attempt to fetch the state from caches before queueing
-    const parentRoot = toHexString(block.parentRoot);
-    const parentBlock = this.forkChoice.getBlockHex(parentRoot);
-    if (!parentBlock) {
-      throw new RegenError({
-        code: RegenErrorCode.BLOCK_NOT_IN_FORKCHOICE,
-        blockRoot: block.parentRoot,
-      });
-    }
+    const cachedState = this.getPreStateSync(block);
 
-    const parentEpoch = computeEpochAtSlot(parentBlock.slot);
-    const blockEpoch = computeEpochAtSlot(block.slot);
-
-    // Check the checkpoint cache (if the pre-state is a checkpoint state)
-    if (parentEpoch < blockEpoch) {
-      const checkpointState = this.checkpointStateCache.getLatest(parentRoot, blockEpoch);
-      if (checkpointState && computeEpochAtSlot(checkpointState.slot) === blockEpoch) {
-        return checkpointState;
-      }
-    }
-
-    // Check the state cache, only if the state doesn't need to go through an epoch transition.
-    // Otherwise the state transition may not be cached and wasted. Queue for regen since the
-    // work required will still be significant.
-    if (parentEpoch === blockEpoch) {
-      const state = this.stateCache.get(parentBlock.stateRoot);
-      if (state) {
-        return state;
-      }
+    if (cachedState !== null) {
+      return cachedState;
     }
 
     // The state is not immediately available in the caches, enqueue the job

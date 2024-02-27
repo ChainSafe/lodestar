@@ -163,7 +163,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
         },
         {
           retries: opts?.retries ?? this.opts?.retries ?? 0,
-          retryDelay: opts?.retryDelay ?? this.opts?.retryDelay ?? 0,
+          retryDelay: opts?.retryDelay ?? this.opts?.retryDelay,
           shouldRetry: opts?.shouldRetry,
           signal: this.opts?.signal,
           onRetry: () => {

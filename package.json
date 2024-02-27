@@ -86,6 +86,7 @@
     "webdriverio": "^8.28.0"
   },
   "resolutions": {
+    "@puppeteer/browsers": "^2.1.0",
     "dns-over-http-resolver": "^2.1.1",
     "loupe": "^2.3.6",
     "vite": "^5.0.0"

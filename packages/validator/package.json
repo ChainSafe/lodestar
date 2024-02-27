@@ -54,7 +54,6 @@
     "@lodestar/state-transition": "^1.16.0",
     "@lodestar/types": "^1.16.0",
     "@lodestar/utils": "^1.16.0",
-    "bigint-buffer": "^1.1.5",
     "strict-event-emitter-types": "^2.0.0"
   },
   "devDependencies": {

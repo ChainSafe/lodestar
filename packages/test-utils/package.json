@@ -67,9 +67,7 @@
     "vitest": "^1.2.1"
   },
   "devDependencies": {
-    "@types/dockerode": "^3.3.19",
-    "@types/yargs": "^17.0.24",
-    "yargs": "^17.7.1"
+    "@types/yargs": "^17.0.24"
   },
   "peerDependencies": {
     "vitest": "^1.2.1"
