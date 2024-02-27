@@ -68,12 +68,10 @@
     "@lodestar/params": "^1.16.0",
     "@lodestar/types": "^1.16.0",
     "@lodestar/utils": "^1.16.0",
-    "bigint-buffer": "^1.1.5",
-    "buffer-xor": "^2.0.2"
+    "bigint-buffer": "^1.1.5"
   },
   "devDependencies": {
-    "@chainsafe/blst": "^0.2.9",
-    "@types/buffer-xor": "^2.0.0"
+    "@chainsafe/blst": "^0.2.9"
   },
   "keywords": [
     "ethereum",
