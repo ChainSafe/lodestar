@@ -1,5 +1,5 @@
 import {ContainerType} from "@chainsafe/ssz";
-import {ssz, ValidatorIndex} from "@lodestar/types";
+import {Epoch, ssz, ValidatorIndex} from "@lodestar/types";
 
 import {
   RoutesData,
@@ -7,10 +7,12 @@ import {
   Schema,
   ReqSerializers,
   ContainerDataExecutionOptimistic,
+  ArrayOf,
 } from "../../../utils/index.js";
 import {HttpStatusCode} from "../../../utils/client/httpStatusCode.js";
 import {ApiClientResponse} from "../../../interfaces.js";
 import {BlockId} from "./block.js";
+import { ValidatorId } from "./state.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -38,6 +40,38 @@ export type BlockRewards = {
   attesterSlashings: number;
 };
 
+/**
+ * Rewards for a single (ideal or actual depending on usage) attestation. Reward value is in Gwei 
+ */
+type AttestationRewards = {
+  /* Reward for head vote. Could be negative to indicate penalty */
+  head: number, 
+  /* Reward for target vote. Could be negative to indicate penalty */
+  target: number,
+  /* Reward for source vote. Could be negative to indicate penalty */
+  source: number,
+  /* Inclusion delay reward (phase0 only) */
+  inclusionDelay: number,
+  /* Inactivity penalty. Should be a negative number to indicate penalty */
+  inactivity: number
+};
+
+/**
+ * Rewards info for ideal attestations ie. Maximum rewards could be earned by making timely head, target and source vote.
+ * `effectiveBalance` is in gwei
+ */
+type IdealAttestationsRewards = (AttestationRewards & {effectiveBalance: number})[];
+
+/**
+ * Rewards info for actual attestations
+ */
+type totalAttestationsRewards = (AttestationRewards & {validatorIndex: ValidatorIndex})[];
+
+export type AttestationsRewards = {
+  idealRewards: IdealAttestationsRewards,
+  totalRewards: totalAttestationsRewards,
+}
+
 export type Api = {
   /**
    * Get block rewards
@@ -54,6 +88,18 @@ export type Api = {
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
     >
   >;
+  /**
+   * 
+   */
+  getAttestationsRewards(
+    epoch: Epoch,
+    filters?: ValidatorId[]
+  ): Promise<
+    ApiClientResponse<
+      {[HttpStatusCode.OK]: {data: AttestationsRewards; executionOptimistic: ExecutionOptimistic}},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
+    >
+  >;
 };
 
 /**
@@ -61,11 +107,13 @@ export type Api = {
  */
 export const routesData: RoutesData<Api> = {
   getBlockRewards: {url: "/eth/v1/beacon/rewards/blocks/{block_id}", method: "GET"},
+  getAttestationsRewards: {url: "/eth/v1/beacon/rewards/attestations/{epoch}", method: "POST"},
 };
 
 export type ReqTypes = {
   /* eslint-disable @typescript-eslint/naming-convention */
   getBlockRewards: {params: {block_id: string}};
+  getAttestationsRewards: {params: {epoch: number}; body: ValidatorId[]};
 };
 
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
@@ -74,6 +122,14 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       writeReq: (block_id) => ({params: {block_id: String(block_id)}}),
       parseReq: ({params}) => [params.block_id],
       schema: {params: {block_id: Schema.StringRequired}},
+    },
+    getAttestationsRewards: {
+      writeReq: (epoch, filters) => ({params: {epoch: epoch}, body: filters || []}),
+      parseReq: ({params, body}) => [params.epoch, body],
+      schema: {
+        params: {epoch: Schema.UintRequired},
+        body: Schema.UintOrStringArray,
+      },
     },
   };
 }
@@ -91,7 +147,41 @@ export function getReturnTypes(): ReturnTypes<Api> {
     {jsonCase: "eth2"}
   );
 
+  const IdealAttestationsRewardsResponse = new ContainerType(
+    {
+      head: ssz.UintNum64,
+      target: ssz.UintNum64,
+      source: ssz.UintNum64,
+      inclusionDelay: ssz.UintNum64,
+      inactivity: ssz.UintNum64,
+      effectiveBalance: ssz.UintNum64,
+    },
+    {jsonCase: "eth2"}
+  );
+  
+  const TotalAttestationsRewardsResponse = new ContainerType(
+    {
+      head: ssz.UintNum64,
+      target: ssz.UintNum64,
+      source: ssz.UintNum64,
+      inclusionDelay: ssz.UintNum64,
+      inactivity: ssz.UintNum64,
+      validatorIndex: ssz.ValidatorIndex,
+    },
+    {jsonCase: "eth2"}
+  );
+
+  const AttestationsRewardsResponse = new ContainerType(
+    {
+      idealRewards: ArrayOf(IdealAttestationsRewardsResponse),
+      totalRewards: ArrayOf(TotalAttestationsRewardsResponse),
+    },
+    {jsonCase: "eth2"}
+  );
+
+
   return {
     getBlockRewards: ContainerDataExecutionOptimistic(BlockRewardsResponse),
+    getAttestationsRewards: ContainerDataExecutionOptimistic(AttestationsRewardsResponse),
   };
 }

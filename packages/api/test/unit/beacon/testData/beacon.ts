@@ -185,6 +185,31 @@ export const testData: GenericServerTestCases<Api> = {
     },
   },
 
+  getAttestationsRewards: {
+    args: [10, ["1300"]],
+    res: {
+      executionOptimistic: true, 
+      data: {
+        idealRewards: [{
+          head: 0,
+          target: 10,
+          source: 20,
+          inclusionDelay: 30,
+          inactivity: 40,
+          effectiveBalance: 50,
+        }],
+        totalRewards: [{
+          head: 0,
+          target: 10,
+          source: 20,
+          inclusionDelay: 30,
+          inactivity: 40,
+          validatorIndex: 50,
+        }],
+      }
+    },
+  },
+
   // -
 
   getGenesis: {
