@@ -13,7 +13,7 @@ export async function fetchNearestBlock(
 ): Promise<capella.SignedBeaconBlock> {
   const res = await api.beacon.getBlockV2(slot);
 
-  if (res.ok) return res.response.data;
+  if (res.ok) return res.response.data as capella.SignedBeaconBlock;
 
   if (!res.ok && res.error.code === 404) {
     return fetchNearestBlock(api, direction === "down" ? slot - 1 : slot + 1);
