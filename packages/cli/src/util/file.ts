@@ -1,8 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import stream from "node:stream";
-import {promisify} from "node:util";
-import got from "got";
 import yaml from "js-yaml";
 const {load, dump, FAILSAFE_SCHEMA, Type} = yaml;
 
@@ -130,11 +127,7 @@ export async function downloadOrCopyFile(pathDest: string, urlOrPathSrc: string)
 export async function downloadFile(pathDest: string, url: string): Promise<void> {
   if (!fs.existsSync(pathDest)) {
     const res = await fetch(url);
-    if (!res.ok) {
-      throw new Error(`Failed to fetch ${url}: ${res.status} ${res.statusText}`);
-    }
-    const arrayBuffer = await res.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    const buffer = new Uint8Array(await res.arrayBuffer());
     await fs.promises.writeFile(pathDest, buffer);
   }
 }
@@ -146,11 +139,7 @@ export async function downloadFile(pathDest: string, url: string): Promise<void>
 export async function downloadOrLoadFile(pathOrUrl: string): Promise<Uint8Array> {
   if (isUrl(pathOrUrl)) {
     const res = await fetch(pathOrUrl);
-    if (!res.ok) {
-      throw new Error(`Failed to fetch ${pathOrUrl}: ${res.status} ${res.statusText}`);
-    }
-    const buffer = await res.arrayBuffer();
-    const rawBody = Buffer.from(buffer);
+    const rawBody = new Uint8Array(await res.arrayBuffer())
     return rawBody;
   } else {
     return fs.promises.readFile(pathOrUrl);
