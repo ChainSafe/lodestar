@@ -13,12 +13,12 @@ export interface CliOptionDefinition<T = any> extends Options {
   type: T extends string
     ? "string"
     : T extends number
-    ? "number"
-    : T extends boolean
-    ? "boolean"
-    : T extends Array<unknown>
-    ? "array"
-    : never;
+      ? "number"
+      : T extends boolean
+        ? "boolean"
+        : T extends Array<unknown>
+          ? "array"
+          : never;
 }
 
 export type CliCommandOptions<OwnArgs> = Required<{

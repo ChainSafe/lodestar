@@ -155,8 +155,8 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
     const firstSlot = dbFilterOpts.gt
       ? this.decodeKey(dbFilterOpts.gt) + 1
       : dbFilterOpts.gte
-      ? this.decodeKey(dbFilterOpts.gte)
-      : null;
+        ? this.decodeKey(dbFilterOpts.gte)
+        : null;
     if (firstSlot === null) throw Error("specify opts.gt or opts.gte");
 
     return firstSlot;

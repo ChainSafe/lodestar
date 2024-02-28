@@ -122,8 +122,8 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
         finalizedSlots.length === 0
           ? "---"
           : isSingletonArray(finalizedSlots)
-          ? finalizedSlots[0]
-          : finalizedSlots.join(","),
+            ? finalizedSlots[0]
+            : finalizedSlots.join(","),
       peers: peersCount.length === 0 ? "---" : isSingletonArray(peersCount) ? peersCount[0] : peersCount.join(","),
       attCount: attestationCounts.length > 0 && isSingletonArray(attestationCounts) ? attestationCounts[0] : "---",
       incDelay: inclusionDelays.length > 0 && isSingletonArray(inclusionDelays) ? inclusionDelays[0].toFixed(2) : "---",

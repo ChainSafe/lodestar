@@ -349,11 +349,8 @@ export enum AssertionMatch {
   Remove = 1 << 2,
 }
 export type AssertionMatcher = (input: SimulationMatcherInput) => AssertionMatch;
-export type ExtractAssertionType<T, I> = T extends SimulationAssertion<infer A, infer B>
-  ? A extends I
-    ? B
-    : never
-  : never;
+export type ExtractAssertionType<T, I> =
+  T extends SimulationAssertion<infer A, infer B> ? (A extends I ? B : never) : never;
 export type ExtractAssertionId<T> = T extends SimulationAssertion<infer A, any> ? A : never;
 export type StoreType<AssertionId extends string, Value = unknown> = Record<
   AssertionId,
