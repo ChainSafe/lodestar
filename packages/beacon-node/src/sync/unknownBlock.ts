@@ -1,13 +1,13 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {Logger, pruneSetToMax} from "@lodestar/utils";
-import {Root, RootHex} from "@lodestar/types";
+import {Root, RootHex, deneb} from "@lodestar/types";
 import {INTERVALS_PER_SLOT} from "@lodestar/params";
 import {sleep} from "@lodestar/utils";
 import {INetwork, NetworkEvent, NetworkEventData, PeerAction} from "../network/index.js";
 import {PeerIdStr} from "../util/peerId.js";
 import {IBeaconChain} from "../chain/index.js";
-import {BlockInput} from "../chain/blocks/types.js";
+import {BlockInput, BlockInputType} from "../chain/blocks/types.js";
 import {Metrics} from "../metrics/index.js";
 import {shuffle} from "../util/shuffle.js";
 import {byteArrayEquals} from "../util/bytes.js";
@@ -468,12 +468,19 @@ export class UnknownBlockSync {
     unavailableBlockInput: BlockInput,
     connectedPeers: PeerIdStr[]
   ): Promise<{blockInput: BlockInput; peerIdStr: string}> {
+    if (unavailableBlockInput.type !== BlockInputType.blobsPromise) {
+      return {blockInput: unavailableBlockInput, peerIdStr: ""};
+    }
+
     const shuffledPeers = shuffle(connectedPeers);
     const unavailableBlock = unavailableBlockInput.block;
     const blockRoot = this.config
       .getForkTypes(unavailableBlock.message.slot)
       .BeaconBlock.hashTreeRoot(unavailableBlock.message);
     const blockRootHex = toHexString(blockRoot);
+
+    const blobKzgCommitmentsLen = (unavailableBlock.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length;
+    const pendingBlobs = blobKzgCommitmentsLen - unavailableBlockInput.blobsCache.size;
 
     let lastError: Error | null = null;
     for (let i = 0; i < MAX_ATTEMPTS_PER_BLOCK; i++) {
@@ -492,6 +499,7 @@ export class UnknownBlockSync {
         if (!byteArrayEquals(receivedBlockRoot, blockRoot)) {
           throw Error(`Wrong block received by peer, got ${toHexString(receivedBlockRoot)} expected ${blockRootHex}`);
         }
+        this.logger.debug("Fetched UnavailableBlockInput", {attempts: i, pendingBlobs, blobKzgCommitmentsLen});
 
         return {blockInput, peerIdStr: peer};
       } catch (e) {
