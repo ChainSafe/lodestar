@@ -59,7 +59,7 @@ export async function verifyBlocksDataAvailability(
 }
 
 async function maybeValidateBlobs(
-  chain: {config: ChainForkConfig; genesisTime: UintNum64},
+  chain: {config: ChainForkConfig; genesisTime: UintNum64; logger: Logger},
   blockInput: BlockInput,
   opts: ImportBlockOpts
 ): Promise<DataAvailableStatus> {
@@ -102,7 +102,7 @@ async function maybeValidateBlobs(
  * which may try unknownblock/blobs fill (by root).
  */
 async function raceWithCutoff<T>(
-  chain: {config: ChainForkConfig; genesisTime: UintNum64},
+  chain: {config: ChainForkConfig; genesisTime: UintNum64; logger: Logger},
   blockInput: BlockInput,
   availabilityPromise: Promise<T>
 ): Promise<T> {
@@ -114,6 +114,7 @@ async function raceWithCutoff<T>(
     0
   );
   const cutoffTimeout = new Promise((_resolve, reject) => setTimeout(reject, cutoffTime));
+  chain.logger.debug("Racing for blob availabilityPromise", {blockSlot, cutoffTime});
 
   try {
     await Promise.race([availabilityPromise, cutoffTimeout]);
