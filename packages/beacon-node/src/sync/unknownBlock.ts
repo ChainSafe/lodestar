@@ -174,7 +174,10 @@ export class UnknownBlockSync {
         downloadAttempts: 0,
       };
       this.pendingBlocks.set(blockRootHex, pendingBlock);
-      this.logger.verbose("Added unknown block to pendingBlocks", {root: blockRootHex});
+      this.logger.verbose("Added unknown block to pendingBlocks", {
+        root: blockRootHex,
+        slot: blockInput?.block.message.slot ?? "unknown",
+      });
     }
 
     if (peerIdStr) {
@@ -245,6 +248,7 @@ export class UnknownBlockSync {
       root: block.blockRootHex,
       pendingBlocks: this.pendingBlocks.size,
       blockInputType: block.blockInput !== null ? block.blockInput.type.toString() : "unknown",
+      slot: block.blockInput?.block.message.slot ?? "unknown",
     });
 
     block.status = PendingBlockStatus.fetching;

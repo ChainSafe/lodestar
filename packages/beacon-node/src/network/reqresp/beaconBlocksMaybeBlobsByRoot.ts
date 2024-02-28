@@ -55,13 +55,10 @@ export async function unavailableBeaconBlobsByRoot(
 
   const slot = block.message.slot;
   const blockRoot = config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message);
-  const fork = config.getForkName(slot);
 
-  if (ForkSeq[fork] >= ForkSeq.deneb) {
-    const blobKzgCommitmentsLen = (block.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length;
-    for (let index = 0; index < blobKzgCommitmentsLen; index++) {
-      if (blobsCache.has(index) === false) blobIdentifiers.push({blockRoot, index});
-    }
+  const blobKzgCommitmentsLen = (block.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length;
+  for (let index = 0; index < blobKzgCommitmentsLen; index++) {
+    if (blobsCache.has(index) === false) blobIdentifiers.push({blockRoot, index});
   }
 
   let allBlobSidecars: deneb.BlobSidecar[];
@@ -79,8 +76,11 @@ export async function unavailableBeaconBlobsByRoot(
   // check and see if all blobs are now available and in that case resolve availablity
   // if not this will error and the leftover blobs will be tried from another peer
   const allBlobs = getBlockInputBlobs(blobsCache);
-  resolveAvailability(allBlobs);
   const {blobs, blobsBytes} = allBlobs;
+  if (blobs.length !== blobKzgCommitmentsLen) {
+    throw Error(`Not all blobs fetched missingBlobs=${blobKzgCommitmentsLen - blobs.length}`);
+  }
 
+  resolveAvailability(allBlobs);
   return getBlockInput.postDeneb(config, block, BlockSource.byRoot, blobs, blockBytes, blobsBytes);
 }

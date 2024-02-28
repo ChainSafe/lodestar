@@ -7,6 +7,7 @@ import {
   UnknownAndAncestorBlocks,
   UnknownBlock,
 } from "../interface.js";
+import {BlockInputType} from "../../chain/blocks/types.js";
 
 export function getAllDescendantBlocks(blockRootHex: RootHex, blocks: Map<RootHex, PendingBlock>): PendingBlock[] {
   // Do one pass over all blocks to index by parent
@@ -62,7 +63,11 @@ export function getUnknownAndAncestorBlocks(blocks: Map<RootHex, PendingBlock>):
 
   for (const block of blocks.values()) {
     const parentHex = block.parentBlockRootHex;
-    if (block.status === PendingBlockStatus.pending && block.blockInput == null && parentHex == null) {
+    if (
+      block.status === PendingBlockStatus.pending &&
+      (block.blockInput == null || block.blockInput.type === BlockInputType.blobsPromise) &&
+      parentHex == null
+    ) {
       unknowns.push(block);
     }
 
