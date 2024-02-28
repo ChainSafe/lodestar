@@ -1,6 +1,5 @@
 import {writeFile} from "node:fs/promises";
 import path from "node:path";
-import got, {RequestError} from "got";
 import yaml from "js-yaml";
 import {HttpClient} from "@lodestar/api";
 import {getClient} from "@lodestar/api/beacon";
@@ -92,10 +91,10 @@ export const generateLighthouseBeaconNode: BeaconNodeGenerator<BeaconClient.Ligh
       },
       health: async () => {
         try {
-          await got.get(`http://127.0.0.1:${ports.beacon.httpPort}/eth/v1/node/health`);
+          await fetch(`http://127.0.0.1:${ports.beacon.httpPort}/eth/v1/node/health`);
           return {ok: true};
         } catch (err) {
-          if (err instanceof RequestError && err.code !== "ECONNREFUSED") {
+          if (err instanceof Error && !err.message.includes('ECONNREFUSED')) {
             return {ok: true};
           }
           return {ok: false, reason: (err as Error).message, checkId: "/eth/v1/node/health query"};

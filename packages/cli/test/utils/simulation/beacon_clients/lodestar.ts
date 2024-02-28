@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {writeFile} from "node:fs/promises";
 import path from "node:path";
-import got from "got";
 import {getClient} from "@lodestar/api/beacon";
 import {chainConfigToJson} from "@lodestar/config";
 import {LogLevel} from "@lodestar/utils";
@@ -96,7 +95,7 @@ export const generateLodestarBeaconNode: BeaconNodeGenerator<BeaconClient.Lodest
       },
       health: async () => {
         try {
-          await got.get(`http://${address}:${ports.beacon.httpPort}/eth/v1/node/health`);
+          await fetch(`http://${address}:${ports.beacon.httpPort}/eth/v1/node/health`);
           return {ok: true};
         } catch (err) {
           return {ok: false, reason: (err as Error).message, checkId: "eth/v1/node/health query"};

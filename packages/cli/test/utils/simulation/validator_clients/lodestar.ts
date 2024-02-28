@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {writeFile} from "node:fs/promises";
 import path from "node:path";
-import got from "got";
 import {getClient as keyManagerGetClient} from "@lodestar/api/keymanager";
 import {chainConfigToJson} from "@lodestar/config";
 import {LogLevel} from "@lodestar/utils";
@@ -70,7 +69,7 @@ export const generateLodestarValidatorNode: ValidatorNodeGenerator<ValidatorClie
       },
       health: async () => {
         try {
-          await got.get(`http://127.0.0.1:${ports.validator.keymanagerPort}/eth/v1/keystores`);
+          await fetch(`http://127.0.0.1:${ports.validator.keymanagerPort}/eth/v1/keystores`);
           return {ok: true};
         } catch (err) {
           return {ok: false, reason: (err as Error).message, checkId: "eth/v1/keystores query"};

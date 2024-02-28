@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {writeFile} from "node:fs/promises";
 import path from "node:path";
-import got from "got";
 import {ZERO_HASH} from "@lodestar/state-transition";
 import {Eth1ProviderWithAdmin} from "../Eth1ProviderWithAdmin.js";
 import {ExecutionClient, ExecutionNodeGenerator, JobOptions, RunnerType} from "../interfaces.js";
@@ -102,7 +101,18 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
     },
     health: async () => {
       try {
-        await got.post(ethRpcPublicUrl, {json: {jsonrpc: "2.0", method: "net_version", params: [], id: 67}});
+        await fetch(ethRpcPublicUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            method: "net_version",
+            params: [],
+            id: 67
+          })
+        });
         return {ok: true};
       } catch (err) {
         return {ok: false, reason: (err as Error).message, checkId: "JSON RPC query net_version"};

@@ -1,5 +1,4 @@
 import fs from "node:fs";
-import got from "got";
 import {ENR} from "@chainsafe/enr";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ApiError, getClient} from "@lodestar/api";
@@ -107,8 +106,8 @@ export async function fetchBootnodes(network: NetworkName): Promise<string[]> {
   if (bootnodesFileUrl === null) {
     return [];
   }
-
-  const bootnodesFile = await got.get(bootnodesFileUrl).text();
+  const res = await fetch(bootnodesFileUrl);
+  const bootnodesFile = await res.text();
   return parseBootnodesFile(bootnodesFile);
 }
 

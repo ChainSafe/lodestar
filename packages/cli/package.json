@@ -78,7 +78,6 @@
     "deepmerge": "^4.3.1",
     "ethers": "^6.7.0",
     "find-up": "^6.3.0",
-    "got": "^11.8.6",
     "inquirer": "^9.1.5",
     "js-yaml": "^4.1.0",
     "prom-client": "^15.1.0",

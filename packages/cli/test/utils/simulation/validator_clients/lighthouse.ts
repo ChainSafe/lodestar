@@ -1,6 +1,5 @@
 import path from "node:path";
 import {writeFile} from "node:fs/promises";
-import got, {RequestError} from "got";
 import yaml from "js-yaml";
 import {getClient as keyManagerGetClient} from "@lodestar/api/keymanager";
 import {chainConfigToJson} from "@lodestar/config";
@@ -82,10 +81,10 @@ export const generateLighthouseValidatorNode: ValidatorNodeGenerator<ValidatorCl
       },
       health: async () => {
         try {
-          await got.get(`http://127.0.0.1:${ports.validator.keymanagerPort}/lighthouse/health`);
+          await fetch(`http://127.0.0.1:${ports.validator.keymanagerPort}/lighthouse/health`);
           return {ok: true};
         } catch (err) {
-          if (err instanceof RequestError) {
+          if (err instanceof Error && !err.message.includes('ECONNREFUSED')) {
             return {ok: true};
           }
           return {ok: false, reason: (err as Error).message, checkId: "/lighthouse/health query"};
