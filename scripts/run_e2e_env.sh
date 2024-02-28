@@ -16,7 +16,11 @@ function stop_app() {
   kill -s TERM $(cat test-logs/e2e-test-env/simulation.pid)
 }
 
-
+docker version > /dev/null 2>&1
+if [ $? -ne 0 ]; then
+  echo "Docker is not running. Please start Docker and try again."
+  exit 1
+fi
 
 case "$1" in 
     start)   start_app ;;
