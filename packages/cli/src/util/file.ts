@@ -129,8 +129,10 @@ export async function downloadOrCopyFile(pathDest: string, urlOrPathSrc: string)
  */
 export async function downloadFile(pathDest: string, url: string): Promise<void> {
   if (!fs.existsSync(pathDest)) {
-    mkdir(path.dirname(pathDest));
-    await promisify(stream.pipeline)(got.stream(url), fs.createWriteStream(pathDest));
+    const response = await fetch(url);
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    await fs.promises.writeFile(pathDest, buffer);
   }
 }
 
@@ -140,8 +142,13 @@ export async function downloadFile(pathDest: string, url: string): Promise<void>
  */
 export async function downloadOrLoadFile(pathOrUrl: string): Promise<Uint8Array> {
   if (isUrl(pathOrUrl)) {
-    const res = await got.get(pathOrUrl, {encoding: "binary"});
-    return res.rawBody;
+    const res = await fetch(pathOrUrl);
+    if (!res.ok) {
+      throw new Error(`Failed to fetch ${pathOrUrl}: ${res.status} ${res.statusText}`);
+    }
+    const buffer = await res.arrayBuffer();
+    const rawBody = Buffer.from(buffer);
+    return rawBody;
   } else {
     return fs.promises.readFile(pathOrUrl);
   }
