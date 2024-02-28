@@ -140,7 +140,7 @@ describe("sync / unknown block sync", function () {
           break;
         case NetworkEvent.unknownBlock:
           bn2.network.events.emit(NetworkEvent.unknownBlock, {
-            rootHex: headSummary.blockRoot,
+            blockInputOrRootHex: headSummary.blockRoot,
             peer: bn2.network.peerId.toString(),
           });
           break;

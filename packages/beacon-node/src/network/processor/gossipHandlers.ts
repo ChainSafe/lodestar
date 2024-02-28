@@ -45,7 +45,7 @@ import {PeerAction} from "../peers/index.js";
 import {validateLightClientFinalityUpdate} from "../../chain/validation/lightClientFinalityUpdate.js";
 import {validateLightClientOptimisticUpdate} from "../../chain/validation/lightClientOptimisticUpdate.js";
 import {validateGossipBlobSidecar} from "../../chain/validation/blobSidecar.js";
-import {BlockInput, GossipedInputType, BlobSidecarValidation} from "../../chain/blocks/types.js";
+import {BlockInput, GossipedInputType, BlobSidecarValidation, BlockInputType} from "../../chain/blocks/types.js";
 import {sszDeserialize} from "../gossip/topic.js";
 import {INetworkCore} from "../core/index.js";
 import {INetwork} from "../interface.js";
@@ -242,6 +242,10 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
     // Handler - MUST NOT `await`, to allow validation result to be propagated
 
     metrics?.registerBeaconBlock(OpSource.gossip, seenTimestampSec, signedBlock.message);
+    // if blobs are not yet fully available start an aggressive blob pull
+    if (blockInput.type === BlockInputType.blobsPromise) {
+      events.emit(NetworkEvent.unknownBlock, {blockInputOrRootHex: blockInput, peer: peerIdStr});
+    }
 
     chain
       .processBlock(blockInput, {
@@ -281,7 +285,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
               const forkTypes = config.getForkTypes(slot);
               const rootHex = toHexString(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
 
-              events.emit(NetworkEvent.unknownBlock, {rootHex, peer: peerIdStr});
+              events.emit(NetworkEvent.unknownBlock, {blockInputOrRootHex: rootHex, peer: peerIdStr});
 
               // Error is quite frequent and not critical
               logLevel = LogLevel.debug;

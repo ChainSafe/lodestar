@@ -7,9 +7,9 @@ import {validateBlobSidecars} from "../validation/blobSidecar.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {BlockInput, BlockInputType, ImportBlockOpts, BlobSidecarValidation} from "./types.js";
 
-// proposer boost is not available post 3 sec so try pulling using unknown block hash
-// post 3 sec after throwing the availability error
-const BLOB_AVAILABILITY_TIMEOUT = 3_000;
+// we can now wait for full 12 seconds because unavailable block sync will try pulling
+// the blobs from the network anyway after 500ms of seeing the block
+const BLOB_AVAILABILITY_TIMEOUT = 12_000;
 
 /**
  * Verifies some early cheap sanity checks on the block before running the full state transition.

@@ -77,7 +77,11 @@ type PendingBlockCommon = {
 export type UnknownBlock = PendingBlockCommon & {
   status: PendingBlockStatus.pending | PendingBlockStatus.fetching;
   parentBlockRootHex: null;
-  blockInput: null;
+  /**
+   * either full blockinput is unavailable or
+   * partial post deneb missing blobs and/or missing block
+   */
+  blockInput: null | BlockInput;
 };
 
 export type DownloadedBlock = PendingBlockCommon & {

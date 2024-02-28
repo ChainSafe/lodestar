@@ -30,7 +30,7 @@ export type NetworkEventData = {
   [NetworkEvent.peerDisconnected]: {peer: PeerIdStr};
   [NetworkEvent.reqRespRequest]: {request: RequestTypedContainer; peer: PeerId};
   [NetworkEvent.unknownBlockParent]: {blockInput: BlockInput; peer: PeerIdStr};
-  [NetworkEvent.unknownBlock]: {rootHex: RootHex; peer?: PeerIdStr};
+  [NetworkEvent.unknownBlock]: {blockInputOrRootHex: BlockInput | RootHex; peer?: PeerIdStr};
   [NetworkEvent.pendingGossipsubMessage]: PendingGossipsubMessage;
   [NetworkEvent.gossipMessageValidationResult]: {
     msgId: string;

@@ -11,6 +11,7 @@ import {
   BlockInputBlobs,
   BlobsCache,
   GossipedInputType,
+  getBlockInputBlobs,
 } from "../blocks/types.js";
 
 type GossipedBlockInput =
@@ -133,7 +134,8 @@ export class SeenGossipBlockInput {
             BlockSource.gossip,
             blobsCache,
             blockBytes ?? null,
-            availabilityPromise
+            availabilityPromise,
+            resolveAvailability
           ),
           blockInputMeta: {
             pending: GossipedInputType.blob,
@@ -164,20 +166,4 @@ function getEmptyBlockInputCacheEntry(): BlockInputCacheType {
   }
   const blobsCache = new Map();
   return {availabilityPromise, resolveAvailability, blobsCache};
-}
-
-function getBlockInputBlobs(blobsCache: BlobsCache): BlockInputBlobs {
-  const blobs = [];
-  const blobsBytes = [];
-
-  for (let index = 0; index < blobsCache.size; index++) {
-    const blobCache = blobsCache.get(index);
-    if (blobCache === undefined) {
-      throw Error(`Missing blobSidecar at index=${index}`);
-    }
-    const {blobSidecar, blobBytes} = blobCache;
-    blobs.push(blobSidecar);
-    blobsBytes.push(blobBytes);
-  }
-  return {blobs, blobsBytes};
 }

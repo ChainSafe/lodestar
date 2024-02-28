@@ -238,7 +238,7 @@ export class NetworkProcessor {
     }
     // Search for the unknown block
     this.unknownRootsBySlot.getOrDefault(slot).add(root);
-    this.events.emit(NetworkEvent.unknownBlock, {rootHex: root, peer});
+    this.events.emit(NetworkEvent.unknownBlock, {blockInputOrRootHex: root, peer});
   }
 
   private onPendingGossipsubMessage(message: PendingGossipsubMessage): void {

@@ -12,7 +12,10 @@ import {Metrics} from "../metrics/index.js";
 import {shuffle} from "../util/shuffle.js";
 import {byteArrayEquals} from "../util/bytes.js";
 import {BlockError, BlockErrorCode} from "../chain/errors/index.js";
-import {beaconBlocksMaybeBlobsByRoot} from "../network/reqresp/beaconBlocksMaybeBlobsByRoot.js";
+import {
+  beaconBlocksMaybeBlobsByRoot,
+  unavailableBeaconBlobsByRoot,
+} from "../network/reqresp/beaconBlocksMaybeBlobsByRoot.js";
 import {wrapError} from "../util/wrapError.js";
 import {PendingBlock, PendingBlockStatus, PendingBlockType} from "./interface.js";
 import {getDescendantBlocks, getAllDescendantBlocks, getUnknownAndAncestorBlocks} from "./utils/pendingBlocksTree.js";
@@ -90,7 +93,7 @@ export class UnknownBlockSync {
    */
   private onUnknownBlock = (data: NetworkEventData[NetworkEvent.unknownBlock]): void => {
     try {
-      this.addUnknownBlock(data.rootHex, data.peer);
+      this.addUnknownBlock(data.blockInputOrRootHex, data.peer);
       this.triggerUnknownBlockSearch();
       this.metrics?.syncUnknownBlock.requests.inc({type: PendingBlockType.UNKNOWN_BLOCK});
     } catch (e) {
@@ -147,13 +150,25 @@ export class UnknownBlockSync {
     this.addUnknownBlock(parentBlockRootHex, peerIdStr);
   }
 
-  private addUnknownBlock(blockRootHex: RootHex, peerIdStr?: string): void {
+  private addUnknownBlock(blockInputOrRootHex: RootHex | BlockInput, peerIdStr?: string): void {
+    let blockRootHex;
+    let blockInput: BlockInput | null;
+
+    if (typeof blockInputOrRootHex === "string") {
+      blockRootHex = blockInputOrRootHex;
+      blockInput = null;
+    } else {
+      const {block} = blockInputOrRootHex;
+      blockRootHex = toHexString(this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));
+      blockInput = blockInputOrRootHex;
+    }
+
     let pendingBlock = this.pendingBlocks.get(blockRootHex);
     if (!pendingBlock) {
       pendingBlock = {
         blockRootHex,
         parentBlockRootHex: null,
-        blockInput: null,
+        blockInput,
         peerIdStrs: new Set(),
         status: PendingBlockStatus.pending,
         downloadAttempts: 0,
@@ -229,10 +244,17 @@ export class UnknownBlockSync {
     this.logger.verbose("Downloading unknown block", {
       root: block.blockRootHex,
       pendingBlocks: this.pendingBlocks.size,
+      blockInputType: block.blockInput !== null ? block.blockInput.type.toString() : "unknown",
     });
 
     block.status = PendingBlockStatus.fetching;
-    const res = await wrapError(this.fetchUnknownBlockRoot(fromHexString(block.blockRootHex), connectedPeers));
+
+    let res;
+    if (block.blockInput === null) {
+      res = await wrapError(this.fetchUnknownBlockRoot(fromHexString(block.blockRootHex), connectedPeers));
+    } else {
+      res = await wrapError(this.fetchUnavailableBlock(block.blockInput, connectedPeers));
+    }
 
     if (res.err) this.metrics?.syncUnknownBlock.downloadedBlocksError.inc();
     else this.metrics?.syncUnknownBlock.downloadedBlocksSuccess.inc();
@@ -256,6 +278,7 @@ export class UnknownBlockSync {
         root: block.blockRootHex,
         pendingBlocks: this.pendingBlocks.size,
         parentInForkchoice,
+        blockInputType: blockInput.type,
       });
 
       if (parentInForkchoice) {
@@ -434,6 +457,50 @@ export class UnknownBlockSync {
       throw lastError;
     } else {
       throw Error(`Error fetching UnknownBlockRoot after ${MAX_ATTEMPTS_PER_BLOCK}: unknown error`);
+    }
+  }
+
+  private async fetchUnavailableBlock(
+    unavailableBlockInput: BlockInput,
+    connectedPeers: PeerIdStr[]
+  ): Promise<{blockInput: BlockInput; peerIdStr: string}> {
+    const shuffledPeers = shuffle(connectedPeers);
+    const unavailableBlock = unavailableBlockInput.block;
+    const blockRoot = this.config
+      .getForkTypes(unavailableBlock.message.slot)
+      .BeaconBlock.hashTreeRoot(unavailableBlock.message);
+    const blockRootHex = toHexString(blockRoot);
+
+    let lastError: Error | null = null;
+    for (let i = 0; i < MAX_ATTEMPTS_PER_BLOCK; i++) {
+      const peer = shuffledPeers[i % shuffledPeers.length];
+      try {
+        const blockInput = await unavailableBeaconBlobsByRoot(this.config, this.network, peer, unavailableBlockInput);
+
+        // Peer does not have the block, try with next peer
+        if (blockInput === undefined) {
+          continue;
+        }
+
+        // Verify block root is correct
+        const block = blockInput.block.message;
+        const receivedBlockRoot = this.config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block);
+        if (!byteArrayEquals(receivedBlockRoot, blockRoot)) {
+          throw Error(`Wrong block received by peer, got ${toHexString(receivedBlockRoot)} expected ${blockRootHex}`);
+        }
+
+        return {blockInput, peerIdStr: peer};
+      } catch (e) {
+        this.logger.debug("Error fetching UnavailableBlockInput", {attempt: i, blockRootHex, peer}, e as Error);
+        lastError = e as Error;
+      }
+    }
+
+    if (lastError) {
+      lastError.message = `Error fetching UnavailableBlockInput after ${MAX_ATTEMPTS_PER_BLOCK} attempts: ${lastError.message}`;
+      throw lastError;
+    } else {
+      throw Error(`Error fetching UnavailableBlockInput after ${MAX_ATTEMPTS_PER_BLOCK}: unknown error`);
     }
   }
 
