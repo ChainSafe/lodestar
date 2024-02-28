@@ -158,8 +158,8 @@ export async function produceBlockBody<T extends BlockType>(
     const feeRecipientType = requestedFeeRecipient
       ? "requested"
       : this.beaconProposerCache.get(proposerIndex)
-      ? "cached"
-      : "default";
+        ? "cached"
+        : "default";
 
     Object.assign(logMeta, {feeRecipientType, feeRecipient});
 
