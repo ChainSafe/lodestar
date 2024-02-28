@@ -129,8 +129,11 @@ export async function downloadOrCopyFile(pathDest: string, urlOrPathSrc: string)
  */
 export async function downloadFile(pathDest: string, url: string): Promise<void> {
   if (!fs.existsSync(pathDest)) {
-    const response = await fetch(url);
-    const arrayBuffer = await response.arrayBuffer();
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`Failed to fetch ${url}: ${res.status} ${res.statusText}`);
+    }
+    const arrayBuffer = await res.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     await fs.promises.writeFile(pathDest, buffer);
   }
