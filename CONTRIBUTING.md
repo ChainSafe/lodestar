@@ -32,7 +32,7 @@ To run tests:
 - :test_tube: Run `yarn check-types` to check TypeScript types.
 - :test_tube: Run `yarn lint` to run the linter (ESLint).
 
-Note that to run `test:e2e`, first ensure that the environment is correctly setup by running the `run_e2e_env.sh` script.
+Note that to run `test:e2e`, first ensure that the environment is correctly setup by running the `run_e2e_env.sh` script. This script requires a running docker engine.
 
 ```sh
 ./scripts/run_e2e_env.sh start
