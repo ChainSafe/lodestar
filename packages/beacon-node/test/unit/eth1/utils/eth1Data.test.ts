@@ -276,7 +276,7 @@ function getMockDeposit({blockNumber, index}: {blockNumber: number; index: numbe
 
 function pick<T, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> {
   return keys.reduce((acc, key) => {
-      if (obj && Object.prototype.hasOwnProperty.call(obj, key)) {
+      if (obj && Object.prototype.hasOwnProperty(key)) {
           acc[key] = obj[key];
       }
       return acc;
