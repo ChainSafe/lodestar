@@ -96,7 +96,6 @@ export const generateLodestarBeaconNode: BeaconNodeGenerator<BeaconClient.Lodest
       health: async () => {
         try {
           return await fetch(`http://${address}:${ports.beacon.httpPort}/eth/v1/node/health`);
-          return {ok: true};
         } catch (err) {
           return {ok: false, reason: (err as Error).message, checkId: "eth/v1/node/health query"};
         }

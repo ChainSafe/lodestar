@@ -154,7 +154,7 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
     },
     health: async () => {
       try {
-        await fetch(ethRpcPublicUrl, {
+        return await fetch(ethRpcPublicUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -166,7 +166,6 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
             id: 67,
           }),
         });
-        return {ok: true};
       } catch (err) {
         return {ok: false, reason: (err as Error).message, checkId: "JSON RPC query net_version"};
       }

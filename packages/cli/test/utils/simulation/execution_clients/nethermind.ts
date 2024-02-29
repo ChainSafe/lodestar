@@ -101,7 +101,7 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
     },
     health: async () => {
       try {
-        await fetch(ethRpcPublicUrl, {
+        return await fetch(ethRpcPublicUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -113,7 +113,6 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
             id: 67,
           }),
         });
-        return {ok: true};
       } catch (err) {
         return {ok: false, reason: (err as Error).message, checkId: "JSON RPC query net_version"};
       }
