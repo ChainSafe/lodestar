@@ -102,16 +102,16 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
     health: async () => {
       try {
         await fetch(ethRpcPublicUrl, {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json'
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
             jsonrpc: "2.0",
             method: "net_version",
             params: [],
-            id: 67
-          })
+            id: 67,
+          }),
         });
         return {ok: true};
       } catch (err) {
