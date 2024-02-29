@@ -68,12 +68,14 @@ export async function unavailableBeaconBlobsByRoot(
     allBlobSidecars = [];
   }
 
-  // add them in cache, this way may be wait on availability might be resolved
+  // add them in cache so that its reflected in all the blockInputs that carry this
+  // for e.g. a blockInput that might be awaiting blobs promise fullfillment in
+  // verifyBlocksDataAvailability
   for (const blobSidecar of allBlobSidecars) {
     blobsCache.set(blobSidecar.index, {blobSidecar, blobBytes: null});
   }
 
-  // check and see if all blobs are now available and in that case resolve availablity
+  // check and see if all blobs are now available and in that case resolve availability
   // if not this will error and the leftover blobs will be tried from another peer
   const allBlobs = getBlockInputBlobs(blobsCache);
   const {blobs, blobsBytes} = allBlobs;
