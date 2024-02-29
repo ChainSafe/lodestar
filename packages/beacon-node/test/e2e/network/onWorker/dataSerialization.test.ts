@@ -89,7 +89,7 @@ describe.skip("data serialization through worker boundary", function () {
       peer,
     },
     [NetworkEvent.unknownBlock]: {
-      rootHex: ZERO_HASH_HEX,
+      blockInputOrRootHex: ZERO_HASH_HEX,
       peer,
     },
     [NetworkEvent.pendingGossipsubMessage]: {
