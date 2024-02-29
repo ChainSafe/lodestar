@@ -1,4 +1,3 @@
-import pick from "lodash/pick.js";
 import {describe, it, expect} from "vitest";
 import {Root, phase0, ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
@@ -273,4 +272,13 @@ function getMockDeposit({blockNumber, index}: {blockNumber: number; index: numbe
     index,
     depositData: {} as phase0.DepositData, // Not used
   };
+}
+
+function pick<T, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> {
+  return keys.reduce((acc, key) => {
+      if (obj && Object.prototype.hasOwnProperty.call(obj, key)) {
+          acc[key] = obj[key];
+      }
+      return acc;
+  }, {} as Pick<T, K>);
 }
