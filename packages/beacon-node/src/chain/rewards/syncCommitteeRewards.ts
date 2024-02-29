@@ -45,9 +45,9 @@ export async function computeSyncCommitteeRewards(
   }
 
   const rewards = Array.from(balances, ([validatorIndex, v]) => ({validatorIndex, reward: v.val}));
-  const filtersSet = new Set(filters);
 
   if (filters !== undefined) {
+    const filtersSet = new Set(filters);
     return rewards.filter(
       (reward) => filtersSet.has(reward.validatorIndex) || filtersSet.has(index2pubkey[reward.validatorIndex].toHex())
     );

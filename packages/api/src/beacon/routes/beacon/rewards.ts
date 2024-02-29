@@ -67,8 +67,7 @@ export type Api = {
 
   /**
    * Get sync committee rewards
-   * Returns participant reward value for each sync committee member at the given block. Optional filters can be
-   * passed in to filter the result
+   * Returns participant reward value for each sync committee member at the given block. 
    *
    * @param blockId Block identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
