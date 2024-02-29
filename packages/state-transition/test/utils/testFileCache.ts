@@ -102,12 +102,11 @@ async function downloadTestFile(fileId: string): Promise<Buffer> {
   const fileUrl = `${TEST_FILES_BASE_URL}/${fileId}`;
   // eslint-disable-next-line no-console
   console.log(`Downloading file ${fileUrl}`);
-  try {
-    const res = await fetch(fileUrl);
-    return Buffer.from(await res.arrayBuffer());
-  } catch (e) {
-    throw `Error downloading ${fileUrl}: ${e}`;
-  }
+  const res = await fetch(fileUrl).catch((e: Error) => {
+    e.message = `Error downloading ${fileUrl}: ${e.message}`;
+    throw e;
+  });
+  return Buffer.from(await res.arrayBuffer());
 }
 
 async function tryEach<T>(promises: (() => Promise<T>)[]): Promise<T> {
