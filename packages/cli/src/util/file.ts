@@ -140,7 +140,6 @@ export async function downloadOrLoadFile(pathOrUrl: string): Promise<Uint8Array>
   if (isUrl(pathOrUrl)) {
     const res = await fetch(pathOrUrl);
     return new Uint8Array(await res.arrayBuffer());
-    return rawBody;
   } else {
     return fs.promises.readFile(pathOrUrl);
   }
