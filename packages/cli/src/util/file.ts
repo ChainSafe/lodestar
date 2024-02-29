@@ -109,17 +109,6 @@ export function readFileIfExists<T>(filepath: string, acceptedFormats?: string[]
 }
 
 /**
- * Downloads a genesis file per network if it does not exist
- */
-export async function downloadFile(pathDest: string, url: string): Promise<void> {
-  if (!fs.existsSync(pathDest)) {
-    const res = await fetch(url);
-    const buffer = new Uint8Array(await res.arrayBuffer());
-    await fs.promises.writeFile(pathDest, buffer);
-  }
-}
-
-/**
  * Download from URL to memory or load from local filesystem
  * @param urlOrPathSrc "/path/to/file.szz" | "https://url.to/file.szz"
  */
