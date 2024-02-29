@@ -204,7 +204,7 @@ export interface IBeaconChain {
   getBlockRewards(blockRef: allForks.FullOrBlindedBeaconBlock): Promise<BlockRewards>;
   getSyncCommitteeRewards(
     blockRef: allForks.FullOrBlindedBeaconBlock,
-    filter?: (ValidatorIndex | string)[]
+    validatorIds?: (ValidatorIndex | string)[]
   ): Promise<SyncCommitteeRewards>;
 }
 

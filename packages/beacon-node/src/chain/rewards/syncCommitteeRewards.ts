@@ -9,7 +9,7 @@ type BalanceRecord = {val: number}; // Use val for convenient way to increment/d
 export async function computeSyncCommitteeRewards(
   block: allForks.BeaconBlock,
   preState: CachedBeaconStateAllForks,
-  filters?: (ValidatorIndex | string)[]
+  validatorIds?: (ValidatorIndex | string)[]
 ): Promise<SyncCommitteeRewards> {
   const fork = preState.config.getForkName(block.slot);
   if (fork === ForkName.phase0) {
@@ -46,12 +46,12 @@ export async function computeSyncCommitteeRewards(
 
   const rewards = Array.from(balances, ([validatorIndex, v]) => ({validatorIndex, reward: v.val}));
 
-  if (filters !== undefined) {
-    const filtersSet = new Set(filters);
+  if (validatorIds !== undefined) {
+    const filtersSet = new Set(validatorIds);
     return rewards.filter(
       (reward) => filtersSet.has(reward.validatorIndex) || filtersSet.has(index2pubkey[reward.validatorIndex].toHex())
     );
   } else {
-    return rewards;
+    return Array.from(balances, ([validatorIndex, v]) => ({validatorIndex, reward: v.val}));
   }
 }

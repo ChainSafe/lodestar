@@ -1008,7 +1008,7 @@ export class BeaconChain implements IBeaconChain {
 
   async getSyncCommitteeRewards(
     block: allForks.FullOrBlindedBeaconBlock,
-    filter?: (ValidatorIndex | string)[]
+    validatorIds?: (ValidatorIndex | string)[]
   ): Promise<SyncCommitteeRewards> {
     const preState = this.regen.getPreStateSync(block);
 
@@ -1016,6 +1016,6 @@ export class BeaconChain implements IBeaconChain {
       throw Error(`Pre-state is unavailable given block's parent root ${toHexString(block.parentRoot)}`);
     }
 
-    return computeSyncCommitteeRewards(block, preState.clone(), filter);
+    return computeSyncCommitteeRewards(block, preState.clone(), validatorIds);
   }
 }
