@@ -52,6 +52,6 @@ export async function computeSyncCommitteeRewards(
       (reward) => filtersSet.has(reward.validatorIndex) || filtersSet.has(index2pubkey[reward.validatorIndex].toHex())
     );
   } else {
-    return Array.from(balances, ([validatorIndex, v]) => ({validatorIndex, reward: v.val}));
+    return rewards;
   }
 }
