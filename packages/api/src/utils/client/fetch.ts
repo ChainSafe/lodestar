@@ -5,7 +5,7 @@
  */
 async function wrappedFetch(url: string | URL, init?: RequestInit): Promise<Response> {
   try {
-    // This function wraps global fetch and we should only directly call it here
+    // This function wraps global `fetch` which should only be directly called here
     // eslint-disable-next-line no-restricted-globals
     return await fetch(url, init);
   } catch (e) {
