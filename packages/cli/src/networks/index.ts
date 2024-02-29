@@ -107,6 +107,9 @@ export async function fetchBootnodes(network: NetworkName): Promise<string[]> {
     return [];
   }
   const res = await fetch(bootnodesFileUrl);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch bootnodes file. Status: ${res.status} ${res.statusText}`);
+  }
   const bootnodesFile = await res.text();
   return parseBootnodesFile(bootnodesFile);
 }
