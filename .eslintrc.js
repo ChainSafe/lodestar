@@ -134,6 +134,13 @@ module.exports = {
     "no-console": "error",
     "no-loss-of-precision": "error",
     "no-prototype-builtins": 0,
+    "no-restricted-globals": [
+      "error",
+      {
+        name: "fetch",
+        message: "Please use 'fetch' from '@lodestar/api' instead.",
+      },
+    ],
     "no-restricted-imports": [
       "error",
       {
