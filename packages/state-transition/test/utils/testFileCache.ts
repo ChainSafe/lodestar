@@ -104,8 +104,7 @@ async function downloadTestFile(fileId: string): Promise<Buffer> {
   console.log(`Downloading file ${fileUrl}`);
   try {
     const res = await fetch(fileUrl);
-    const buffer = Buffer.from(await res.arrayBuffer());
-    return buffer
+    return Buffer.from(await res.arrayBuffer());
   } catch (e) {
     throw `Error downloading ${fileUrl}: ${e}`;
   }
