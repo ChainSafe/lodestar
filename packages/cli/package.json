@@ -90,7 +90,6 @@
   "devDependencies": {
     "@lodestar/test-utils": "^1.16.0",
     "@types/debug": "^4.1.7",
-    "@types/got": "^9.6.12",
     "@types/inquirer": "^9.0.3",
     "@types/proper-lockfile": "^4.1.4",
     "@types/yargs": "^17.0.24"
