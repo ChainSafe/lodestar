@@ -109,19 +109,6 @@ export function readFileIfExists<T>(filepath: string, acceptedFormats?: string[]
 }
 
 /**
- * Download from URL or copy from local filesystem
- * @param urlOrPathSrc "/path/to/file.szz" | "https://url.to/file.szz"
- */
-export async function downloadOrCopyFile(pathDest: string, urlOrPathSrc: string): Promise<void> {
-  if (isUrl(urlOrPathSrc)) {
-    await downloadFile(pathDest, urlOrPathSrc);
-  } else {
-    mkdir(path.dirname(pathDest));
-    await fs.promises.copyFile(urlOrPathSrc, pathDest);
-  }
-}
-
-/**
  * Downloads a genesis file per network if it does not exist
  */
 export async function downloadFile(pathDest: string, url: string): Promise<void> {
