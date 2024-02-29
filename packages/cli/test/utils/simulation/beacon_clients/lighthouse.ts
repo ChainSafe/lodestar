@@ -94,7 +94,7 @@ export const generateLighthouseBeaconNode: BeaconNodeGenerator<BeaconClient.Ligh
           await fetch(`http://127.0.0.1:${ports.beacon.httpPort}/eth/v1/node/health`);
           return {ok: true};
         } catch (err) {
-          if (err instanceof Error && !err.message.includes('ECONNREFUSED')) {
+          if (err instanceof FetchError && err.code !== "ECONNREFUSED") {
             return {ok: true};
           }
           return {ok: false, reason: (err as Error).message, checkId: "/eth/v1/node/health query"};
