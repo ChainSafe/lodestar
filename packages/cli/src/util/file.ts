@@ -139,7 +139,7 @@ export async function downloadFile(pathDest: string, url: string): Promise<void>
 export async function downloadOrLoadFile(pathOrUrl: string): Promise<Uint8Array> {
   if (isUrl(pathOrUrl)) {
     const res = await fetch(pathOrUrl);
-    const rawBody = new Uint8Array(await res.arrayBuffer())
+    return new Uint8Array(await res.arrayBuffer());
     return rawBody;
   } else {
     return fs.promises.readFile(pathOrUrl);
