@@ -1,4 +1,10 @@
+import {PublicKey, Signature} from "@chainsafe/bls/types";
 import {VerifySignatureOpts} from "../interface.js";
+
+export enum BlsPoolType {
+  workers = "workers",
+  libuv = "libuv",
+}
 
 export type WorkerData = {
   implementation: "herumi" | "blst-native";
@@ -11,9 +17,23 @@ export type SerializedSet = {
   signature: Uint8Array;
 };
 
+export type DeserializedKeySet = {
+  publicKey: PublicKey;
+  message: Uint8Array;
+  signature: Uint8Array;
+};
+
+export type DeserializedSet = {
+  publicKey: PublicKey;
+  message: Uint8Array;
+  signature: Signature;
+};
+
+export type WorkRequestSet = SerializedSet | DeserializedKeySet | DeserializedSet;
+
 export type BlsWorkReq = {
   opts: VerifySignatureOpts;
-  sets: SerializedSet[];
+  sets: WorkRequestSet[];
 };
 
 export enum WorkResultCode {
@@ -26,7 +46,7 @@ export type WorkResult<R> = {code: WorkResultCode.success; result: R} | WorkResu
 
 export type BlsWorkResult = {
   /** Ascending integer identifying the worker for metrics */
-  workerId: number;
+  workerId?: number;
   /** Total num of batches that had to be retried */
   batchRetries: number;
   /** Total num of sigs that have been successfully verified with batching */

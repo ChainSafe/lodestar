@@ -10,6 +10,7 @@ export function getAggregatedPubkey(signatureSet: ISignatureSet, metrics: Metric
 
     case SignatureSetType.aggregate: {
       const timer = metrics?.blsThreadPool.pubkeysAggregationMainThreadDuration.startTimer();
+      metrics?.bls.aggregatedPubkeys.inc(signatureSet.pubkeys.length);
       const pubkeys = bls.PublicKey.aggregate(signatureSet.pubkeys);
       timer?.();
       return pubkeys;

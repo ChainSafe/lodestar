@@ -174,7 +174,7 @@ describe("CachedBeaconState", () => {
         // confirm loadCachedBeaconState() result
         for (let i = 0; i < newCachedState.validators.length; i++) {
           expect(newCachedState.epochCtx.pubkey2index.get(newCachedState.validators.get(i).pubkey)).toBe(i);
-          expect(newCachedState.epochCtx.index2pubkey[i].toBytes()).toEqual(pubkeys[i]);
+          expect(Uint8Array.from(newCachedState.epochCtx.index2pubkey[i].toBytes())).toEqual(pubkeys[i]);
         }
       });
     }
