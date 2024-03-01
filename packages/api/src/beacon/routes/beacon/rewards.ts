@@ -71,11 +71,11 @@ export type Api = {
    *
    * @param blockId Block identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
-   * @param ids List of validator indices or pubkeys to filter in
+   * @param validatorIds List of validator indices or pubkeys to filter in
    */
   getSyncCommitteeRewards(
     blockId: BlockId,
-    ids?: ValidatorId[]
+    validatorIds?: ValidatorId[]
   ): Promise<
     ApiClientResponse<
       {[HttpStatusCode.OK]: {data: SyncCommitteeRewards; executionOptimistic: ExecutionOptimistic}},
@@ -106,7 +106,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       schema: {params: {block_id: Schema.StringRequired}},
     },
     getSyncCommitteeRewards: {
-      writeReq: (block_id, ids) => ({params: {block_id: String(block_id)}, body: ids || []}),
+      writeReq: (block_id, validatorIds) => ({params: {block_id: String(block_id)}, body: validatorIds || []}),
       parseReq: ({params, body}) => [params.block_id, body],
       schema: {
         params: {block_id: Schema.StringRequired},
