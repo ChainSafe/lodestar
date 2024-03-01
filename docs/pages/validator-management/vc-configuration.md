@@ -105,7 +105,7 @@ Example 3: Setting a `--builder.boostFactor=100` is the same as signaling `--bui
 
 ### Submit a validator deposit
 
-Please use the official Ethereum Launchpad to perform your deposits. Ensure your deposits are sent to the proper beacon chain deposit address for the proper network.
+Please use the official Ethereum Launchpad to perform your deposits. Ensure your deposits are sent to the proper beacon chain deposit address on the correct network.
 
 #### Mainnet
 - [Ethereum Mainnet Launchpad](https://launchpad.ethereum.org)
