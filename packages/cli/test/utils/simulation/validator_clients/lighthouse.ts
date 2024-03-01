@@ -84,9 +84,6 @@ export const generateLighthouseValidatorNode: ValidatorNodeGenerator<ValidatorCl
         try {
           return await fetch(`http://127.0.0.1:${ports.validator.keymanagerPort}/lighthouse/health`);
         } catch (err) {
-          if (err instanceof FetchError && err.code !== "ECONNREFUSED") {
-            return {ok: true};
-          }
           return {ok: false, reason: (err as Error).message, checkId: "/lighthouse/health query"};
         }
       },
