@@ -91,7 +91,7 @@ export const generateLighthouseBeaconNode: BeaconNodeGenerator<BeaconClient.Ligh
       },
       health: async () => {
         try {
-          return await fetch(`http://127.0.0.1:${ports.beacon.httpPort}/eth/v1/node/health`) as HealthStatus;
+          return (await fetch(`http://127.0.0.1:${ports.beacon.httpPort}/eth/v1/node/health`)) as HealthStatus;
         } catch (err) {
           return {ok: false, reason: (err as Error).message, checkId: "/eth/v1/node/health query"};
         }

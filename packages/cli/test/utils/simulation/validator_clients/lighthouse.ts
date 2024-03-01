@@ -82,7 +82,7 @@ export const generateLighthouseValidatorNode: ValidatorNodeGenerator<ValidatorCl
       },
       health: async () => {
         try {
-          return await fetch(`http://127.0.0.1:${ports.validator.keymanagerPort}/lighthouse/health`) as HealthStatus;
+          return (await fetch(`http://127.0.0.1:${ports.validator.keymanagerPort}/lighthouse/health`)) as HealthStatus;
         } catch (err) {
           return {ok: false, reason: (err as Error).message, checkId: "/lighthouse/health query"};
         }
