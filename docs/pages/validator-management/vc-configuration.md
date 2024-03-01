@@ -4,6 +4,10 @@ The following instructions are for stakers utilizing the Lodestar validator clie
 
 [TOC]
 
+## Setup your validator
+
+Validators are represented by a BLS keypair. Use your generated mnemonic from one of the tools above to generate the keystore files required for validator duties on Ethereum using the Lodestar validator client.
+
 ### Create a keystore
 
 To create a keystore, we recommend using the official [Staking Deposit CLI](https://github.com/ethereum/staking-deposit-cli/releases) from the Ethereum Foundation for users comfortable with command line interfaces.
@@ -14,10 +18,6 @@ Alternatively, for a graphical user interface, you can use the [Stakehouse Wagyu
 !!! warning
     These tools will generate keystore files for staking validators as well as the important mnemonic. This mnemonic must be handled and stored securely.
 <!-- prettier-ignore-end -->
-
-## Setup your validator
-
-Validators are represented by a BLS keypair. Use your generated mnemonic from one of the tools above to generate the keystore files required for validator duties on Ethereum using the Lodestar validator client.
 
 ### Import a validator keystore to Lodestar
 
