@@ -2,6 +2,7 @@
 import {writeFile} from "node:fs/promises";
 import path from "node:path";
 import {ZERO_HASH} from "@lodestar/state-transition";
+import {fetch} from "@lodestar/api";
 import {Eth1ProviderWithAdmin} from "../Eth1ProviderWithAdmin.js";
 import {ExecutionClient, ExecutionNodeGenerator, JobOptions, RunnerType} from "../interfaces.js";
 import {getNethermindChainSpec} from "../utils/execution_genesis.js";

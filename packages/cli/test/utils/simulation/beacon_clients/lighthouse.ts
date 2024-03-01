@@ -1,7 +1,7 @@
 import {writeFile} from "node:fs/promises";
 import path from "node:path";
 import yaml from "js-yaml";
-import {HttpClient} from "@lodestar/api";
+import {HttpClient, fetch} from "@lodestar/api";
 import {getClient} from "@lodestar/api/beacon";
 import {chainConfigToJson} from "@lodestar/config";
 import {BeaconClient, BeaconNodeGenerator, LighthouseAPI, RunnerType} from "../interfaces.js";

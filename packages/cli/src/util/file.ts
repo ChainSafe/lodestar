@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import yaml from "js-yaml";
+import {fetch} from "@lodestar/api";
 const {load, dump, FAILSAFE_SCHEMA, Type} = yaml;
 
 import {mkdir} from "./fs.js";

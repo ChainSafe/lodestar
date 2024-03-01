@@ -2,6 +2,7 @@
 import {writeFile} from "node:fs/promises";
 import path from "node:path";
 import {ZERO_HASH} from "@lodestar/state-transition";
+import {fetch} from "@lodestar/api";
 import {
   EL_GENESIS_ACCOUNT,
   EL_GENESIS_PASSWORD,

@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import {ApiError, getClient} from "@lodestar/api";
+import {ApiError, getClient, fetch} from "@lodestar/api";
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
 import {createChainForkConfig, ChainForkConfig} from "@lodestar/config";
 import {allForks} from "@lodestar/types";

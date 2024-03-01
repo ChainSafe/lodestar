@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import {ENR} from "@chainsafe/enr";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {ApiError, getClient} from "@lodestar/api";
+import {ApiError, getClient, fetch} from "@lodestar/api";
 import {getStateTypeFromBytes} from "@lodestar/beacon-node";
 import {ChainConfig, ChainForkConfig} from "@lodestar/config";
 import {Checkpoint} from "@lodestar/types/phase0";
@@ -101,7 +101,7 @@ export function getGenesisFileUrl(network: NetworkName): string | null {
  * Fetches the latest list of bootnodes for a network
  * Bootnodes file is expected to contain bootnode ENR's concatenated by newlines
  */
-export async function fetchBootnodes(network: NetworkName): Promise<string[]> {
+async function fetchBootnodes(network: NetworkName): Promise<string[]> {
   const bootnodesFileUrl = getNetworkData(network).bootnodesFileUrl;
   if (bootnodesFileUrl === null) {
     return [];

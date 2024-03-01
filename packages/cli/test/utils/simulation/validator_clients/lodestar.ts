@@ -5,6 +5,7 @@ import {getClient as keyManagerGetClient} from "@lodestar/api/keymanager";
 import {chainConfigToJson} from "@lodestar/config";
 import {LogLevel} from "@lodestar/utils";
 import {defaultOptions} from "@lodestar/validator";
+import {fetch} from "@lodestar/api";
 import {IValidatorCliArgs} from "../../../../src/cmds/validator/options.js";
 import {GlobalArgs} from "../../../../src/options/globalOptions.js";
 import {LODESTAR_BINARY_PATH} from "../constants.js";
