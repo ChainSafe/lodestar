@@ -109,11 +109,11 @@ Please use the official Ethereum Launchpad to perform your deposits. Ensure your
 
 #### Mainnet
 - [Ethereum Mainnet Launchpad](https://launchpad.ethereum.org)
-- [Beacon Chain Deposit Contract: `0x00000000219ab540356cBB839Cbe05303d7705Fa`](https://etherscan.io/address/0x00000000219ab540356cbb839cbe05303d7705fa)
+- [Beacon Chain Deposit Contract](https://etherscan.io/address/0x00000000219ab540356cbb839cbe05303d7705fa) `0x00000000219ab540356cBB839Cbe05303d7705Fa`
 
 #### Holesky Testnet
 - [Ethereum Holesky Testnet Launchpad](https://holesky.launchpad.ethereum.org)
-- [Holesky Beacon Chain Deposit Contract: `0x4242424242424242424242424242424242424242`](https://holesky.etherscan.io/address/0x4242424242424242424242424242424242424242)
+- [Holesky Beacon Chain Deposit Contract](https://holesky.etherscan.io/address/0x4242424242424242424242424242424242424242) `0x4242424242424242424242424242424242424242`
 
 #### Ephemery Testnet
 - [Ethereum Ephemery Testnet Launchpad](https://launchpad.ephemery.dev/)
