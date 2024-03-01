@@ -4,7 +4,7 @@ import yaml from "js-yaml";
 import {HttpClient, fetch} from "@lodestar/api";
 import {getClient} from "@lodestar/api/beacon";
 import {chainConfigToJson} from "@lodestar/config";
-import {BeaconClient, BeaconNodeGenerator, LighthouseAPI, RunnerType} from "../interfaces.js";
+import {BeaconClient, BeaconNodeGenerator, HealthStatus, LighthouseAPI, RunnerType} from "../interfaces.js";
 import {getNodeMountedPaths} from "../utils/paths.js";
 import {getNodePorts} from "../utils/ports.js";
 
@@ -91,7 +91,7 @@ export const generateLighthouseBeaconNode: BeaconNodeGenerator<BeaconClient.Ligh
       },
       health: async () => {
         try {
-          return await fetch(`http://127.0.0.1:${ports.beacon.httpPort}/eth/v1/node/health`);
+          return await fetch(`http://127.0.0.1:${ports.beacon.httpPort}/eth/v1/node/health`) as HealthStatus;
         } catch (err) {
           return {ok: false, reason: (err as Error).message, checkId: "/eth/v1/node/health query"};
         }

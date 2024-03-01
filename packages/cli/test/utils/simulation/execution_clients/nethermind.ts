@@ -4,7 +4,7 @@ import path from "node:path";
 import {ZERO_HASH} from "@lodestar/state-transition";
 import {fetch} from "@lodestar/api";
 import {Eth1ProviderWithAdmin} from "../Eth1ProviderWithAdmin.js";
-import {ExecutionClient, ExecutionNodeGenerator, JobOptions, RunnerType} from "../interfaces.js";
+import {ExecutionClient, ExecutionNodeGenerator, HealthStatus, JobOptions, RunnerType} from "../interfaces.js";
 import {getNethermindChainSpec} from "../utils/execution_genesis.js";
 import {getNodeMountedPaths} from "../utils/paths.js";
 import {SHARED_JWT_SECRET} from "../constants.js";
@@ -113,7 +113,7 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
             params: [],
             id: 67,
           }),
-        });
+        }) as HealthStatus;
       } catch (err) {
         return {ok: false, reason: (err as Error).message, checkId: "JSON RPC query net_version"};
       }

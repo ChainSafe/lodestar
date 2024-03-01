@@ -11,7 +11,7 @@ import {
   SIM_ENV_NETWORK_ID,
 } from "../constants.js";
 import {Eth1ProviderWithAdmin} from "../Eth1ProviderWithAdmin.js";
-import {ExecutionClient, ExecutionNodeGenerator, ExecutionStartMode, JobOptions, RunnerType} from "../interfaces.js";
+import {ExecutionClient, ExecutionNodeGenerator, ExecutionStartMode, HealthStatus, JobOptions, RunnerType} from "../interfaces.js";
 import {getNodeMountedPaths} from "../utils/paths.js";
 import {getNodePorts} from "../utils/ports.js";
 
@@ -166,7 +166,7 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
             params: [],
             id: 67,
           }),
-        });
+        }) as HealthStatus;
       } catch (err) {
         return {ok: false, reason: (err as Error).message, checkId: "JSON RPC query net_version"};
       }
