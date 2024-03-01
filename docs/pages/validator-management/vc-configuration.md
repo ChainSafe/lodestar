@@ -4,37 +4,24 @@ The following instructions are for stakers utilizing the Lodestar validator clie
 
 [TOC]
 
-## Wallet configuration
+### Create a keystore
 
-A wallet helps to manage many validators from a group of 12/24 words (also known as a "mnemonic" or "recovery phrase"). All validators and withdrawal keys can be re-generated from a backed-up mnemonic.
-
-The mnemonic is randomly generated during wallet creation and printed out to the terminal. It's important to make one or more backups of the mnemonic to ensure your ETH wallets are not lost in the case of data loss.
-
-<!-- prettier-ignore-start -->
-!!! danger
-    It is very important to keep your mnemonic private as it represents the ultimate control of your ETH wallets.
-<!-- prettier-ignore-end -->
-
-### Create a wallet
-
-Lodestar has removed its functionality to create wallets.
-
-To create a wallet, we recommend using the official [`staking-deposit-cli`](https://github.com/ethereum/staking-deposit-cli/releases) from the Ethereum Foundation for users comfortable with command line interfaces.
+To create a keystore, we recommend using the official [Staking Deposit CLI](https://github.com/ethereum/staking-deposit-cli/releases) from the Ethereum Foundation for users comfortable with command line interfaces.
 
 Alternatively, for a graphical user interface, you can use the [Stakehouse Wagyu Key Generator](https://wagyu.gg/) developed by members of the EthStaker community.
 
 <!-- prettier-ignore-start -->
-!!! info
-    These tools will generate files for staking validators as well as the important mnemonic. This mnemonic must be handled and stored securely.
+!!! warning
+    These tools will generate keystore files for staking validators as well as the important mnemonic. This mnemonic must be handled and stored securely.
 <!-- prettier-ignore-end -->
 
 ## Setup your validator
 
-Validators are represented by a BLS keypair. Use your generated mnemonic from one of the tools above to generate the keystore files required for validator duties on Lodestar.
+Validators are represented by a BLS keypair. Use your generated mnemonic from one of the tools above to generate the keystore files required for validator duties on Ethereum using the Lodestar validator client.
 
-### Import a validator keystore from your wallet to Lodestar
+### Import a validator keystore to Lodestar
 
-To import a validator keystore that was created via one of the methods described above, you must locate the validator JSON keystores exported by those tools (ex. `keystore-m_12381_3600_0_0_0-1654128694.json`).
+To import a validator JSON keystore that was created via one of the methods described above, you must locate the file for import (ex. `keystore-m_12381_3600_0_0_0-1654128694.json`).
 
 Inside the keystore JSON file, you should have an [EIP-2335 keystore file](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-2335.md#json-schema).
 
@@ -60,7 +47,7 @@ _Plaintext passphrase file import_
 !!! info
     The interactive passphrase import method will prompt every keystore in the `validator_keys` folder for import and will ask for the individual password for each keystore. **This method will allow you to import multiple keystores with different passwords.**
 
-    The plaintext passphrase file import method will allow  to import all keystores in the `validator_keys` folder with the same password contained in `password.txt` for efficiency. 
+    The plaintext passphrase file import method will allow you to import all keystores in the `validator_keys` folder encrypted with the same password contained in `password.txt` for efficiency. 
 <!-- prettier-ignore-end -->
 
 Once imported with either method, these keystores will be automatically loaded when you start the validator. To list the imported keystores, use the `validator list` command.
@@ -118,9 +105,19 @@ Example 3: Setting a `--builder.boostFactor=100` is the same as signaling `--bui
 
 ### Submit a validator deposit
 
-Please use the official Ethereum Launchpad to perform your deposits
+Please use the official Ethereum Launchpad to perform your deposits. Ensure your deposits are sent to the proper beacon chain deposit address for the proper network.
 
-- Ethereum Foundation launchpad: <https://launchpad.ethereum.org>
+#### Mainnet
+- [Ethereum Mainnet Launchpad](https://launchpad.ethereum.org)
+- [Beacon Chain Deposit Contract: `0x00000000219ab540356cBB839Cbe05303d7705Fa`](https://etherscan.io/address/0x00000000219ab540356cbb839cbe05303d7705fa)
+
+#### Holesky Testnet
+- [Ethereum Holesky Testnet Launchpad](https://holesky.launchpad.ethereum.org)
+- [Holesky Beacon Chain Deposit Contract: `0x4242424242424242424242424242424242424242`](https://holesky.etherscan.io/address/0x4242424242424242424242424242424242424242)
+
+#### Ephemery Testnet
+- [Ethereum Ephemery Testnet Launchpad](https://launchpad.ephemery.dev/)
+- [Ephemeral Testnet Resources](https://ephemery.dev/)
 
 ## Run the validator
 
@@ -133,19 +130,20 @@ To start a Lodestar validator run the command:
 You should see confirmation that modules have started.
 
 ```txt
-Nov-29 10:47:13.647[]                 info: Lodestar network=sepolia, version=v1.2.2/f093b46, commit=f093b468ec3ab0dbbe8e2d2c8175f52ad88aa35f
-Nov-29 10:47:13.649[]                 info: Connecting to LevelDB database path=/home/user/.local/share/lodestar/sepolia/validator-db
-Nov-29 10:47:51.732[]                 info: 3 local keystores
-Nov-29 10:47:51.735[]                 info: 0x800f6be579b31ea950a50be65f7de8f678b23b7466579c01ac26ebf9c19599fb2b446da40ad4fc92c6109fcd6793303f
-Nov-29 10:47:51.735[]                 info: 0x81337ebe90d6942d8b61922ea880c4d28ebc745ddc10a1acc85b745a15c6c8754af1a73b1b3483b6a5024b783510b35c
-Nov-29 10:47:51.757[]                 info: 0xb95fc0ec39596deee2c4363f57bb4786f5bb8dfb345c1e5b14e2927be482615971d0d81f9a88b3389fac7079b3cb2f46
-Nov-29 10:47:51.776[]                 info: Genesis fetched from the beacon node
-Nov-29 10:47:51.781[]                 info: Verified connected beacon node and validator have same the config
-Nov-29 10:47:51.837[]                 info: Verified connected beacon node and validator have the same genesisValidatorRoot
-Nov-29 10:47:51.914[]                 info: Discovered new validators count=100
-Nov-29 10:48:00.197[]                 info: Published SyncCommitteeMessage slot=1165140, count=27
-Nov-29 10:48:02.296[]                 info: Published attestations slot=1165140, count=6
-Nov-29 10:48:08.122[]                 info: Published aggregateAndProofs slot=1165140, index=0, count=2
-Nov-29 10:48:12.102[]                 info: Published SyncCommitteeMessage slot=1165141, count=27
-Nov-29 10:48:14.236[]                 info: Published attestations slot=1165141, count=4
+Mar-01 03:06:35.048[]                 info: Lodestar network=holesky, version=v1.16.0/6ad9740, commit=6ad9740a085574306cf46c7642e749d6ec9a4264
+Mar-01 03:06:35.050[]                 info: Connecting to LevelDB database path=/keystoresDir/validator-db-holesky
+Mar-01 03:06:35.697[]                 info: 100% of keystores imported. current=2 total=2 rate=1318.68keys/m
+Mar-01 03:06:35.698[]                 info: 2 local keystores
+Mar-01 03:06:35.698[]                 info: 0xa6fcfca12e1db6c7341d82327010cd57224dc239d1c5e4fb18286cc32edb877d813c5af1c870d474aef7b3ff7ab927ea
+Mar-01 03:06:35.698[]                 info: 0x8f868e53bbe1451bcf6d42c9ab6d292cbd7fbfa09c59b6b99c1dd6a4977e2e7b4b752c328784ca2788dd6f63ffcbdb7e
+Mar-01 03:06:35.732[]                 info: Beacon node urls=http://127.0.0.1:9596
+Mar-01 03:09:23.813[]                 info: Genesis fetched from the beacon node
+Mar-01 03:09:23.816[]                 info: Verified connected beacon node and validator have same the config
+Mar-01 03:09:23.818[]                 info: Verified connected beacon node and validator have the same genesisValidatorRoot
+Mar-01 03:09:23.818[]                 info: Initializing validator useProduceBlockV3=deneb+, broadcastValidation=gossip, defaultBuilderSelection=executiononly, suggestedFeeRecipient=0xeeef273281fB83F56182eE960aA4bAfe7fE075DE, strictFeeRecipientCheck=false
+Mar-01 03:09:23.830[]                 info: Validator seen on beacon chain validatorIndex=1234567, pubKey=0xa6fcfca12e1db6c7341d82327010cd57224dc239d1c5e4fb18286cc32edb877d813c5af1c870d474aef7b3ff7ab927ea
+Mar-01 03:09:23.830[]                 info: Validator seen on beacon chain validatorIndex=1234568, pubKey=0x8f868e53bbe1451bcf6d42c9ab6d292cbd7fbfa09c59b6b99c1dd6a4977e2e7b4b752c328784ca2788dd6f63ffcbdb7e
+Mar-01 03:09:23.830[]                 info: Validator statuses active=2, total=2
+Mar-01 03:15:50.191[]                 info: Published attestations slot=1113379, count=1
+Mar-01 03:16:02.728[]                 info: Published attestations slot=1113380, count=1
 ```
