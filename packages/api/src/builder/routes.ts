@@ -92,8 +92,8 @@ export function getReturnTypes(): ReturnTypes<Api> {
         isForkBlobs(fork)
           ? ssz.allForksBlobs[fork].ExecutionPayloadAndBlobsBundle
           : isForkExecution(fork)
-          ? ssz.allForksExecution[fork].ExecutionPayload
-          : ssz.bellatrix.ExecutionPayload
+            ? ssz.allForksExecution[fork].ExecutionPayload
+            : ssz.bellatrix.ExecutionPayload
     ),
   };
 }

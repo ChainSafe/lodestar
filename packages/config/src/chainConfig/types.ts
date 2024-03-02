@@ -131,12 +131,12 @@ export type SpecValue = number | bigint | Uint8Array | string;
 export type SpecValueType<V extends SpecValue> = V extends number
   ? "number"
   : V extends bigint
-  ? "bigint"
-  : V extends Uint8Array
-  ? "bytes"
-  : V extends string
-  ? "string"
-  : never;
+    ? "bigint"
+    : V extends Uint8Array
+      ? "bytes"
+      : V extends string
+        ? "string"
+        : never;
 
 /** All possible type names for a SpecValue */
 export type SpecValueTypeName = SpecValueType<SpecValue>;

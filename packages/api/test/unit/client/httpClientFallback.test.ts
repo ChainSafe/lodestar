@@ -1,5 +1,5 @@
 import {describe, it, beforeEach, afterEach, expect, vi} from "vitest";
-import {HttpClient} from "../../../src/utils/client/index.js";
+import {HttpClient, fetch} from "../../../src/utils/client/index.js";
 
 describe("httpClient fallback", () => {
   const testRoute = {url: "/test-route", method: "GET" as const};
@@ -7,7 +7,7 @@ describe("httpClient fallback", () => {
 
   // Using fetchSub instead of actually setting up servers because there are some strange
   // race conditions, where the server stub doesn't count the call in time before the test is over.
-  const fetchStub = vi.fn();
+  const fetchStub = vi.fn<Parameters<typeof fetch>, ReturnType<typeof fetch>>();
 
   let httpClient: HttpClient;
 
@@ -20,7 +20,7 @@ describe("httpClient fallback", () => {
   const serverErrors = new Map<number, boolean>();
 
   // With baseURLs above find the server index associated with that URL
-  function getServerIndex(url: URL): number {
+  function getServerIndex(url: URL | string): number {
     const i = baseUrls.findIndex((baseUrl) => url.toString().startsWith(baseUrl));
     if (i < 0) {
       throw Error(`fetch called with unknown url ${url.toString()}`);
@@ -33,7 +33,7 @@ describe("httpClient fallback", () => {
     httpClient = new HttpClient({
       baseUrl: "",
       urls: baseUrls.map((baseUrl) => ({baseUrl})),
-      fetch: fetchStub as typeof fetch,
+      fetch: fetchStub,
     });
 
     fetchStub.mockImplementation(async (url) => {
@@ -57,7 +57,7 @@ describe("httpClient fallback", () => {
     const callCounts: number[] = [];
     for (let i = 0; i < serverCount; i++) callCounts[i] = 0;
     for (const call of fetchStub.mock.calls) {
-      callCounts[getServerIndex(call)]++;
+      callCounts[getServerIndex(call[0])]++;
     }
 
     expect(callCounts.join(",")).toBe(expectedCallCounts.join(","));

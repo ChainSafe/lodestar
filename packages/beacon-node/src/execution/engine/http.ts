@@ -179,8 +179,8 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       ForkSeq[fork] >= ForkSeq.deneb
         ? "engine_newPayloadV3"
         : ForkSeq[fork] >= ForkSeq.capella
-        ? "engine_newPayloadV2"
-        : "engine_newPayloadV1";
+          ? "engine_newPayloadV2"
+          : "engine_newPayloadV1";
 
     const serializedExecutionPayload = serializeExecutionPayload(fork, executionPayload);
 
@@ -299,8 +299,8 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       ForkSeq[fork] >= ForkSeq.deneb
         ? "engine_forkchoiceUpdatedV3"
         : ForkSeq[fork] >= ForkSeq.capella
-        ? "engine_forkchoiceUpdatedV2"
-        : "engine_forkchoiceUpdatedV1";
+          ? "engine_forkchoiceUpdatedV2"
+          : "engine_forkchoiceUpdatedV1";
     const payloadAttributesRpc = payloadAttributes ? serializePayloadAttributes(payloadAttributes) : undefined;
     // If we are just fcUing and not asking execution for payload, retry is not required
     // and we can move on, as the next fcU will be issued soon on the new slot
@@ -373,8 +373,8 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       ForkSeq[fork] >= ForkSeq.deneb
         ? "engine_getPayloadV3"
         : ForkSeq[fork] >= ForkSeq.capella
-        ? "engine_getPayloadV2"
-        : "engine_getPayloadV1";
+          ? "engine_getPayloadV2"
+          : "engine_getPayloadV1";
     const payloadResponse = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]

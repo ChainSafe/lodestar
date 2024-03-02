@@ -121,8 +121,8 @@ export function getExecutionEngineState<S extends ExecutionPayloadStatus | undef
     targetState !== undefined
       ? targetState
       : payloadStatus === undefined
-      ? getExecutionEngineStateForPayloadError(payloadError, oldState)
-      : getExecutionEngineStateForPayloadStatus(payloadStatus);
+        ? getExecutionEngineStateForPayloadError(payloadError, oldState)
+        : getExecutionEngineStateForPayloadStatus(payloadStatus);
 
   if (newState === oldState) return oldState;
 
