@@ -127,6 +127,7 @@ export async function getNetworkBootnodes(network: NetworkName): Promise<string[
       const bootEnrs = await fetchBootnodes(network);
       bootnodes.push(...bootEnrs);
     } catch (e) {
+      // eslint-disable-next-line no-console
       if (e instanceof FetchBootFileError) {
         console.error(`${(e as Error).stack}`);
       } else {
