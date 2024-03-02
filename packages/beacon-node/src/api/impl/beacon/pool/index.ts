@@ -126,7 +126,7 @@ export function getBeaconPoolApi({
     },
 
     async submitPoolBlsToExecutionChange(blsToExecutionChanges) {
-      const errors: Error[] = [];
+      const errors: {index: number; error: Error}[] = [];
 
       await Promise.all(
         blsToExecutionChanges.map(async (blsToExecutionChange, i) => {
@@ -142,7 +142,7 @@ export function getBeaconPoolApi({
               await network.publishBlsToExecutionChange(blsToExecutionChange);
             }
           } catch (e) {
-            errors.push(e as Error);
+            errors.push({index: i, error: e as Error});
             logger.error(
               `Error on submitPoolBlsToExecutionChange [${i}]`,
               {validatorIndex: blsToExecutionChange.message.validatorIndex},
@@ -152,10 +152,8 @@ export function getBeaconPoolApi({
         })
       );
 
-      if (errors.length > 1) {
-        throw Error("Multiple errors on submitPoolBlsToExecutionChange\n" + errors.map((e) => e.message).join("\n"));
-      } else if (errors.length === 1) {
-        throw errors[0];
+      if (errors.length > 0) {
+        throw new IndexedError("Some errors submitting BLS to execution change", errors);
       }
     },
 
