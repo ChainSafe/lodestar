@@ -273,4 +273,3 @@ function getMockDeposit({blockNumber, index}: {blockNumber: number; index: numbe
     depositData: {} as phase0.DepositData, // Not used
   };
 }
-
