@@ -106,7 +106,7 @@ describe("eth1 / util / getEth1DataForBlocks", function () {
 
       if (expectedEth1Data) {
         const eth1Datas = await eth1DatasPromise;
-        const eth1DatasPartial = eth1Datas.map((eth1Data) => pick(eth1Data, Object.keys(expectedEth1Data[0])));
+        const eth1DatasPartial = eth1Datas.map(({blockNumber, depositCount}) => ({blockNumber, depositCount}));
         expect(eth1DatasPartial).toEqual(expectedEth1Data);
       } else if (error != null) {
         await expectRejectedWithLodestarError(eth1DatasPromise, error);
@@ -274,14 +274,3 @@ function getMockDeposit({blockNumber, index}: {blockNumber: number; index: numbe
   };
 }
 
-function pick<T, K extends keyof T>(obj: T, keys: string[]): Pick<T, K> {
-  return (keys as K[]).reduce(
-    (acc, key) => {
-      if (obj && obj.hasOwnProperty(key)) {
-        acc[key] = obj[key];
-      }
-      return acc;
-    },
-    {} as Pick<T, K>
-  );
-}
