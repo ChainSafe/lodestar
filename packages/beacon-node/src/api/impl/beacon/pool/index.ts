@@ -177,7 +177,7 @@ export function getBeaconPoolApi({
       // TODO: Fetch states at signature slots
       const state = chain.getHeadState();
 
-      const errors: Error[] = [];
+      const errors: {index: number; error: Error}[] = [];
 
       await Promise.all(
         signatures.map(async (signature, i) => {
@@ -217,7 +217,7 @@ export function getBeaconPoolApi({
               return;
             }
 
-            errors.push(e as Error);
+            errors.push({index: i, error: e as Error});
             logger.debug(
               `Error on submitPoolSyncCommitteeSignatures [${i}]`,
               {slot: signature.slot, validatorIndex: signature.validatorIndex},
@@ -230,10 +230,8 @@ export function getBeaconPoolApi({
         })
       );
 
-      if (errors.length > 1) {
-        throw Error("Multiple errors on submitPoolSyncCommitteeSignatures\n" + errors.map((e) => e.message).join("\n"));
-      } else if (errors.length === 1) {
-        throw errors[0];
+      if (errors.length > 0) {
+        throw new IndexedError("Some errors submitting sync committee signatures", errors);
       }
     },
   };
