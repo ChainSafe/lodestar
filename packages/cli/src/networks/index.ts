@@ -101,14 +101,19 @@ export function getGenesisFileUrl(network: NetworkName): string | null {
  * Fetches the latest list of bootnodes for a network
  * Bootnodes file is expected to contain bootnode ENR's concatenated by newlines
  */
+
+
+class FetchBootFileError extends Error {}
+
 async function fetchBootnodes(network: NetworkName): Promise<string[]> {
   const bootnodesFileUrl = getNetworkData(network).bootnodesFileUrl;
   if (bootnodesFileUrl === null) {
     return [];
   }
-  const res = await fetch(bootnodesFileUrl);
+  //const res = await fetch(bootnodesFileUrl);
+  const res = await fetch("https://example-example-e.com/notfound");
   if (!res.ok) {
-    throw new Error(`Error fetching bootnodes file: Status Code ${res.status} (${res.statusText})`);
+    throw new FetchBootFileError(`Error fetching bootnodes file: Status Code ${res.status} (${res.statusText})`);
   }
   const bootnodesFile = await res.text();
   return parseBootnodesFile(bootnodesFile);
@@ -124,7 +129,11 @@ export async function getNetworkBootnodes(network: NetworkName): Promise<string[
       bootnodes.push(...bootEnrs);
     } catch (e) {
       // eslint-disable-next-line no-console
-      console.error(`Error fetching latest bootnodes: ${(e as Error).stack}`);
+      if(e  instanceof  FetchBootFileError){
+        console.error(`${(e as Error).stack}`);
+      }else{
+        console.error(`Error fetching latest bootnodes: ${(e as Error).stack}`);
+      }
     }
   }
 
