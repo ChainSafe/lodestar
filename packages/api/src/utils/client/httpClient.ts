@@ -373,8 +373,8 @@ function isAbortedError(e: Error): boolean {
 
 function getErrorMessage(errBody: string): string {
   try {
-    const errJson = JSON.parse(errBody) as {message: string};
-    if (errJson.message) {
+    const errJson = JSON.parse(errBody) as {message: string; failures?: {index: number; message: string}[]};
+    if (errJson.message && !errJson.failures) {
       return errJson.message;
     } else {
       return errBody;
