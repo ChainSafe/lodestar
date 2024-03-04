@@ -115,7 +115,7 @@ export function createFastifyHandler<E extends Endpoint>(
     let wireResponse;
     switch (responseWireFormat) {
       case WireFormat.json: {
-        await resp.header("content-type", "application/json");
+        void resp.header("content-type", "application/json");
         const data =
           response?.data instanceof Uint8Array
             ? definition.resp.data.toJson(definition.resp.data.deserialize(response.data, response.meta), response.meta)
@@ -133,7 +133,7 @@ export function createFastifyHandler<E extends Endpoint>(
       case WireFormat.ssz: {
         const meta = definition.resp.meta.toHeadersObject(response?.meta);
         meta["content-type"] = "application/octet-stream";
-        await resp.headers(meta);
+        void resp.headers(meta);
         const data =
           response?.data instanceof Uint8Array
             ? response.data
