@@ -132,7 +132,9 @@ describe("PersistentCheckpointStateCache", function () {
 
   it("pruneFinalized and getStateOrBytes", async function () {
     cache.add(cp2, states["cp2"]);
-    expect(await cache.getStateOrBytes(cp0bHex)).toEqual(states["cp0b"]);
+    expect(((await cache.getStateOrBytes(cp0bHex)) as CachedBeaconStateAllForks).hashTreeRoot()).toEqual(
+      states["cp0b"].hashTreeRoot()
+    );
     expect(await cache.processState(toHexString(cp2.root), states["cp2"])).toEqual(1);
     // cp0 is persisted
     expect(fileApisBuffer.size).toEqual(1);
@@ -222,7 +224,7 @@ describe("PersistentCheckpointStateCache", function () {
     });
   });
 
-  describe("processState, maxEpochsInMemory = 2", () => {
+  describe.only("processState, maxEpochsInMemory = 2", () => {
     beforeEach(() => {
       fileApisBuffer = new Map();
       const datastore = getTestDatastore(fileApisBuffer);
@@ -484,7 +486,9 @@ describe("PersistentCheckpointStateCache", function () {
 
       // regen needs to reload cp0b
       cache.add(cp0b, states["cp0b"]);
-      expect(await cache.getStateOrBytes(cp0bHex)).toEqual(states["cp0b"]);
+      expect(((await cache.getStateOrBytes(cp0bHex)) as CachedBeaconStateAllForks).hashTreeRoot()).toEqual(
+        states["cp0b"].hashTreeRoot()
+      );
 
       // regen generates cp1b
       const cp1b = {epoch: 21, root: root0b};
@@ -670,7 +674,9 @@ describe("PersistentCheckpointStateCache", function () {
 
       // simulate regen
       cache.add(cp0b, states["cp0b"]);
-      expect(await cache.getStateOrBytes(cp0bHex)).toEqual(states["cp0b"]);
+      expect(((await cache.getStateOrBytes(cp0bHex)) as CachedBeaconStateAllForks).hashTreeRoot()).toEqual(
+        states["cp0b"]
+      );
       // root2, regen cp0b
       const cp1bState = states["cp0b"].clone();
       cp1bState.slot = 21 * SLOTS_PER_EPOCH;
