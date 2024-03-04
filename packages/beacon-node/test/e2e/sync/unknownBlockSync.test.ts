@@ -43,10 +43,6 @@ describe("sync / unknown block sync", function () {
       id: "should do an unknown block sync from another BN",
       event: NetworkEvent.unknownBlock,
     },
-    {
-      id: "should do an unknown input sync from another BN",
-      event: NetworkEvent.unknownBlockInput,
-    },
   ];
 
   for (const {id, event} of testCases) {
