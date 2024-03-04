@@ -43,6 +43,10 @@ describe("sync / unknown block sync", function () {
       id: "should do an unknown block sync from another BN",
       event: NetworkEvent.unknownBlock,
     },
+    {
+      id: "should do an unknown input sync from another BN",
+      event: NetworkEvent.unknownBlockInput,
+    },
   ];
 
   for (const {id, event} of testCases) {
@@ -140,7 +144,7 @@ describe("sync / unknown block sync", function () {
           break;
         case NetworkEvent.unknownBlock:
           bn2.network.events.emit(NetworkEvent.unknownBlock, {
-            blockInputOrRootHex: headSummary.blockRoot,
+            rootHex: headSummary.blockRoot,
             peer: bn2.network.peerId.toString(),
           });
           break;

@@ -192,7 +192,7 @@ describe("sync by UnknownBlockSync", () => {
           peer,
         });
       } else {
-        network.events?.emit(NetworkEvent.unknownBlock, {blockInputOrRootHex: blockRootHexC, peer});
+        network.events?.emit(NetworkEvent.unknownBlock, {rootHex: blockRootHexC, peer});
       }
 
       if (wrongBlockRoot) {

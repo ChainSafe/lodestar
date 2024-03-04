@@ -244,7 +244,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
     metrics?.registerBeaconBlock(OpSource.gossip, seenTimestampSec, signedBlock.message);
     // if blobs are not yet fully available start an aggressive blob pull
     if (blockInput.type === BlockInputType.blobsPromise) {
-      events.emit(NetworkEvent.unknownBlock, {blockInputOrRootHex: blockInput, peer: peerIdStr});
+      events.emit(NetworkEvent.unknownBlockInput, {blockInput: blockInput, peer: peerIdStr});
     }
 
     chain
@@ -284,7 +284,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
               const forkTypes = config.getForkTypes(slot);
               const rootHex = toHexString(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
 
-              events.emit(NetworkEvent.unknownBlock, {blockInputOrRootHex: rootHex, peer: peerIdStr});
+              events.emit(NetworkEvent.unknownBlock, {rootHex: rootHex, peer: peerIdStr});
 
               // Error is quite frequent and not critical
               logLevel = LogLevel.debug;

@@ -62,6 +62,7 @@ export class UnknownBlockSync {
       if (!this.subscribedToNetworkEvents) {
         this.logger.verbose("UnknownBlockSync enabled.");
         this.network.events.on(NetworkEvent.unknownBlock, this.onUnknownBlock);
+        this.network.events.on(NetworkEvent.unknownBlockInput, this.onUnknownBlockInput);
         this.network.events.on(NetworkEvent.unknownBlockParent, this.onUnknownParent);
         this.network.events.on(NetworkEvent.peerConnected, this.triggerUnknownBlockSearch);
         this.subscribedToNetworkEvents = true;
@@ -74,6 +75,7 @@ export class UnknownBlockSync {
   unsubscribeFromNetwork(): void {
     this.logger.verbose("UnknownBlockSync disabled.");
     this.network.events.off(NetworkEvent.unknownBlock, this.onUnknownBlock);
+    this.network.events.off(NetworkEvent.unknownBlockInput, this.onUnknownBlockInput);
     this.network.events.off(NetworkEvent.unknownBlockParent, this.onUnknownParent);
     this.network.events.off(NetworkEvent.peerConnected, this.triggerUnknownBlockSearch);
     this.subscribedToNetworkEvents = false;
@@ -93,11 +95,24 @@ export class UnknownBlockSync {
    */
   private onUnknownBlock = (data: NetworkEventData[NetworkEvent.unknownBlock]): void => {
     try {
-      this.addUnknownBlock(data.blockInputOrRootHex, data.peer);
+      this.addUnknownBlock(data.rootHex, data.peer);
       this.triggerUnknownBlockSearch();
       this.metrics?.syncUnknownBlock.requests.inc({type: PendingBlockType.UNKNOWN_BLOCK});
     } catch (e) {
       this.logger.debug("Error handling unknownBlock event", {}, e as Error);
+    }
+  };
+
+  /**
+   * Process an unknownBlockInput event and register the block in `pendingBlocks` Map.
+   */
+  private onUnknownBlockInput = (data: NetworkEventData[NetworkEvent.unknownBlockInput]): void => {
+    try {
+      this.addUnknownBlock(data.blockInput, data.peer);
+      this.triggerUnknownBlockSearch();
+      this.metrics?.syncUnknownBlock.requests.inc({type: PendingBlockType.UNKNOWN_BLOCKINPUT});
+    } catch (e) {
+      this.logger.debug("Error handling unknownBlockInput event", {}, e as Error);
     }
   };
 

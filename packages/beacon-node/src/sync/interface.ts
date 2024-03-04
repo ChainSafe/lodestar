@@ -111,4 +111,6 @@ export enum PendingBlockType {
    * During gossip time, we may get a block but the parent root is unknown (not in forkchoice).
    */
   UNKNOWN_PARENT = "unknown_parent",
+
+  UNKNOWN_BLOCKINPUT = "unknown_blockinput",
 }
