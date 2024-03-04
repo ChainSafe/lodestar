@@ -168,16 +168,24 @@ export class UnknownBlockSync {
       pendingBlock = {
         blockRootHex,
         parentBlockRootHex: null,
-        blockInput,
+        blockInput: blockInput?.type === BlockInputType.blobsPromise ? blockInput : null,
         peerIdStrs: new Set(),
         status: PendingBlockStatus.pending,
         downloadAttempts: 0,
-      };
+      } as PendingBlock;
       this.pendingBlocks.set(blockRootHex, pendingBlock);
-      this.logger.verbose("Added unknown block to pendingBlocks", {
-        root: blockRootHex,
-        slot: blockInput?.block.message.slot ?? "unknown",
-      });
+
+      if (pendingBlock.blockInput?.type === BlockInputType.blobsPromise) {
+        this.logger.verbose("Added blockInput with unknown blobs to pendingBlocks", {
+          root: blockRootHex,
+          slot: blockInput?.block.message.slot ?? "unknown",
+        });
+      } else {
+        this.logger.verbose("Added unknown block to pendingBlocks", {
+          root: blockRootHex,
+          slot: blockInput?.block.message.slot ?? "unknown",
+        });
+      }
     }
 
     if (peerIdStr) {
@@ -244,12 +252,20 @@ export class UnknownBlockSync {
       return;
     }
 
-    this.logger.verbose("Downloading unknown block", {
-      root: block.blockRootHex,
-      pendingBlocks: this.pendingBlocks.size,
-      blockInputType: block.blockInput !== null ? block.blockInput.type.toString() : "unknown",
-      slot: block.blockInput?.block.message.slot ?? "unknown",
-    });
+    if (block.blockInput?.type === BlockInputType.blobsPromise) {
+      this.logger.verbose("Downloading unknown blockInput", {
+        root: block.blockRootHex,
+        pendingBlocks: this.pendingBlocks.size,
+        blockInputType: block.blockInput.type,
+        slot: block.blockInput?.block.message.slot ?? "unknown",
+      });
+    } else {
+      this.logger.verbose("Downloading unknown block", {
+        root: block.blockRootHex,
+        pendingBlocks: this.pendingBlocks.size,
+        slot: block.blockInput?.block.message.slot ?? "unknown",
+      });
+    }
 
     block.status = PendingBlockStatus.fetching;
 
@@ -257,7 +273,7 @@ export class UnknownBlockSync {
     if (block.blockInput === null) {
       res = await wrapError(this.fetchUnknownBlockRoot(fromHexString(block.blockRootHex), connectedPeers));
     } else {
-      res = await wrapError(this.fetchUnavailableBlock(block.blockInput, connectedPeers));
+      res = await wrapError(this.fetchUnavailableBlockInput(block.blockInput, connectedPeers));
     }
 
     if (res.err) this.metrics?.syncUnknownBlock.downloadedBlocksError.inc();
@@ -278,12 +294,22 @@ export class UnknownBlockSync {
       this.metrics?.syncUnknownBlock.elapsedTimeTillReceived.observe(delaySec);
 
       const parentInForkchoice = this.chain.forkChoice.hasBlock(blockInput.block.message.parentRoot);
-      this.logger.verbose("Downloaded unknown block", {
-        root: block.blockRootHex,
-        pendingBlocks: this.pendingBlocks.size,
-        parentInForkchoice,
-        blockInputType: blockInput.type,
-      });
+
+      if (block.blockInput.type === BlockInputType.blobsPromise) {
+        this.logger.verbose("Downloaded unknown blobs", {
+          root: block.blockRootHex,
+          pendingBlocks: this.pendingBlocks.size,
+          parentInForkchoice,
+          blockInputType: blockInput.type,
+        });
+      } else {
+        this.logger.verbose("Downloaded unknown block", {
+          root: block.blockRootHex,
+          pendingBlocks: this.pendingBlocks.size,
+          parentInForkchoice,
+          blockInputType: blockInput.type,
+        });
+      }
 
       if (parentInForkchoice) {
         // Bingo! Process block. Add to pending blocks anyway for recycle the cache that prevents duplicate processing
@@ -464,7 +490,11 @@ export class UnknownBlockSync {
     }
   }
 
-  private async fetchUnavailableBlock(
+  /**
+   * Fetches missing blobs for the blockinput, in future can also pull block is thats also missing
+   * along with the blobs (i.e. only some blobs are available)
+   */
+  private async fetchUnavailableBlockInput(
     unavailableBlockInput: BlockInput,
     connectedPeers: PeerIdStr[]
   ): Promise<{blockInput: BlockInput; peerIdStr: string}> {

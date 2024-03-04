@@ -2,7 +2,7 @@ import {Logger} from "@lodestar/utils";
 import {RootHex, Slot, phase0} from "@lodestar/types";
 import {BeaconConfig} from "@lodestar/config";
 import {routes} from "@lodestar/api";
-import {BlockInput} from "../chain/blocks/types.js";
+import {BlockInput, BlockInputType} from "../chain/blocks/types.js";
 import {INetwork} from "../network/index.js";
 import {IBeaconChain} from "../chain/index.js";
 import {Metrics} from "../metrics/index.js";
@@ -56,7 +56,7 @@ export interface SyncModules {
 }
 
 export type UnknownAndAncestorBlocks = {
-  unknowns: UnknownBlock[];
+  unknowns: (UnknownBlock | UnknownBlockInput)[];
   ancestors: DownloadedBlock[];
 };
 
@@ -66,7 +66,7 @@ export type UnknownAndAncestorBlocks = {
  *   - store 1 record with known parentBlockRootHex & blockInput, blockRootHex as key, status downloaded
  *   - store 1 record with undefined parentBlockRootHex & blockInput, parentBlockRootHex as key, status pending
  */
-export type PendingBlock = UnknownBlock | DownloadedBlock;
+export type PendingBlock = UnknownBlock | UnknownBlockInput | DownloadedBlock;
 
 type PendingBlockCommon = {
   blockRootHex: RootHex;
@@ -77,11 +77,16 @@ type PendingBlockCommon = {
 export type UnknownBlock = PendingBlockCommon & {
   status: PendingBlockStatus.pending | PendingBlockStatus.fetching;
   parentBlockRootHex: null;
-  /**
-   * either full blockinput is unavailable or
-   * partial post deneb missing blobs and/or missing block
-   */
-  blockInput: null | BlockInput;
+  blockInput: null;
+};
+
+/**
+ * either the blobs are unknown or in future some blobs and even the block is unknown
+ */
+export type UnknownBlockInput = PendingBlockCommon & {
+  status: PendingBlockStatus.pending | PendingBlockStatus.fetching;
+  parentBlockRootHex: null;
+  blockInput: BlockInput & {type: BlockInputType.blobsPromise};
 };
 
 export type DownloadedBlock = PendingBlockCommon & {

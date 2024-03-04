@@ -280,7 +280,6 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
         if (e instanceof BlockError) {
           switch (e.type.code) {
             case BlockErrorCode.DATA_UNAVAILABLE: {
-              // TODO: create a newevent unknownBlobs and only pull blobs
               const slot = signedBlock.message.slot;
               const forkTypes = config.getForkTypes(slot);
               const rootHex = toHexString(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));

@@ -5,6 +5,7 @@ import {
   PendingBlock,
   PendingBlockStatus,
   UnknownAndAncestorBlocks,
+  UnknownBlockInput,
   UnknownBlock,
 } from "../interface.js";
 import {BlockInputType} from "../../chain/blocks/types.js";
@@ -58,7 +59,7 @@ export function getDescendantBlocks(blockRootHex: RootHex, blocks: Map<RootHex, 
  *   return {unknowns: [], ancestors: [n]}
  */
 export function getUnknownAndAncestorBlocks(blocks: Map<RootHex, PendingBlock>): UnknownAndAncestorBlocks {
-  const unknowns: UnknownBlock[] = [];
+  const unknowns: (UnknownBlock | UnknownBlockInput)[] = [];
   const ancestors: DownloadedBlock[] = [];
 
   for (const block of blocks.values()) {
@@ -71,7 +72,7 @@ export function getUnknownAndAncestorBlocks(blocks: Map<RootHex, PendingBlock>):
       unknowns.push(block);
     }
 
-    if (parentHex && !blocks.has(parentHex)) {
+    if (block.status === PendingBlockStatus.downloaded && parentHex && !blocks.has(parentHex)) {
       ancestors.push(block);
     }
   }
