@@ -224,7 +224,7 @@ describe("PersistentCheckpointStateCache", function () {
     });
   });
 
-  describe.only("processState, maxEpochsInMemory = 2", () => {
+  describe("processState, maxEpochsInMemory = 2", () => {
     beforeEach(() => {
       fileApisBuffer = new Map();
       const datastore = getTestDatastore(fileApisBuffer);
@@ -675,7 +675,7 @@ describe("PersistentCheckpointStateCache", function () {
       // simulate regen
       cache.add(cp0b, states["cp0b"]);
       expect(((await cache.getStateOrBytes(cp0bHex)) as CachedBeaconStateAllForks).hashTreeRoot()).toEqual(
-        states["cp0b"]
+        states["cp0b"].hashTreeRoot()
       );
       // root2, regen cp0b
       const cp1bState = states["cp0b"].clone();
@@ -853,7 +853,9 @@ describe("PersistentCheckpointStateCache", function () {
 
         // simulate reload cp1b
         cache.add(cp0b, states["cp0b"]);
-        expect(await cache.getStateOrBytes(cp0bHex)).toEqual(states["cp0b"]);
+        expect(((await cache.getStateOrBytes(cp0bHex)) as CachedBeaconStateAllForks).hashTreeRoot()).toEqual(
+          states["cp0b"].hashTreeRoot()
+        );
         const root1b = Buffer.alloc(32, 101);
         const state1b = states["cp0b"].clone();
         state1b.slot = state1a.slot + 1;
