@@ -80,7 +80,7 @@ export class FIFOBlockStateCache implements BlockStateCache {
     this.metrics?.hits.inc();
     this.metrics?.stateClonedCount.observe(item.clonedCount);
 
-    return item.clone();
+    return item.clone(true);
   }
 
   /**
