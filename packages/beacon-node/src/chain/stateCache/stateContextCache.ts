@@ -48,7 +48,7 @@ export class StateContextCache implements BlockStateCache {
     this.metrics?.hits.inc();
     this.metrics?.stateClonedCount.observe(item.clonedCount);
 
-    return item;
+    return item.clone();
   }
 
   add(item: CachedBeaconStateAllForks): void {

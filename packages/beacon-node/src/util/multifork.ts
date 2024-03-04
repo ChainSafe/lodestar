@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {allForks} from "@lodestar/types";
+import {Slot, allForks} from "@lodestar/types";
 import {bytesToInt} from "@lodestar/utils";
 import {getSlotFromSignedBeaconBlockSerialized} from "./sszBytes.js";
 
@@ -36,8 +36,12 @@ export function getStateTypeFromBytes(
   config: ChainForkConfig,
   bytes: Buffer | Uint8Array
 ): allForks.AllForksSSZTypes["BeaconState"] {
-  const slot = bytesToInt(bytes.subarray(SLOT_BYTES_POSITION_IN_STATE, SLOT_BYTES_POSITION_IN_STATE + SLOT_BYTE_COUNT));
+  const slot = getStateSlotFromBytes(bytes);
   return config.getForkTypes(slot).BeaconState;
+}
+
+export function getStateSlotFromBytes(bytes: Uint8Array): Slot {
+  return bytesToInt(bytes.subarray(SLOT_BYTES_POSITION_IN_STATE, SLOT_BYTES_POSITION_IN_STATE + SLOT_BYTE_COUNT));
 }
 
 /**
