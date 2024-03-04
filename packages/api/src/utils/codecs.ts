@@ -6,14 +6,12 @@ import {Root, Wei} from "@lodestar/types";
 import {fromHex, objectToExpectedCase, toHex} from "@lodestar/utils";
 import {ExecutionOptimistic} from "../beacon/routes/beacon/block.js";
 import {
-  AnyEndpoint,
-  AnyGetEndpoint,
-  AnyPostEndpoint,
   GetRequestCodec,
   PostRequestCodec,
   ResponseCodec,
   ResponseDataCodec,
   ResponseMetadataCodec,
+  Endpoint,
 } from "./types.js";
 import {WireFormat} from "./headers.js";
 import {toForkName} from "./serdes.js";
@@ -21,7 +19,7 @@ import {toForkName} from "./serdes.js";
 // Utility types / codecs
 
 export type EmptyArgs = void;
-export type EmptyRequest = Record<string, never>;
+export type EmptyRequest = Record<string, void>;
 export type EmptyResponseData = void;
 
 export type EmptyMeta = Record<string, never>;
@@ -31,16 +29,22 @@ export type ExecutionOptimisticAndVersionMeta = ExecutionOptimisticMeta & Versio
 export type ExecutionOptimisticAndDependentRootMeta = {executionOptimistic: ExecutionOptimistic; dependentRoot: Root};
 export type BlockValuesMeta = {executionPayloadValue: Wei; consensusBlockValue: Wei};
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+export type AnyEndpoint = Endpoint<any, any, any, any, any>;
+export type EmptyRequestEndpoint = Endpoint<any, EmptyArgs, EmptyRequest, any, any>;
+export type EmptyResponseEndpoint = Endpoint<any, any, any, EmptyResponseData, EmptyMeta>;
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
 /** Shortcut for routes that have no params, query */
-export const EmptyGetRequestCodec: GetRequestCodec<AnyGetEndpoint> = {
+export const EmptyGetRequestCodec: GetRequestCodec<EmptyRequestEndpoint> = {
   writeReq: () => ({}),
   parseReq: () => {},
   schema: {},
 };
-export const EmptyPostRequestCodec: PostRequestCodec<AnyPostEndpoint> = {
+export const EmptyPostRequestCodec: PostRequestCodec<EmptyRequestEndpoint> = {
   writeReqJson: () => ({}),
   parseReqJson: () => {},
-  writeReqSsz: () => ({body: new Uint8Array()}),
+  writeReqSsz: () => ({body: new Uint8Array() as never}),
   parseReqSsz: () => {},
   schema: {},
 };
@@ -186,12 +190,12 @@ export function WithBlockValues<M extends Record<string, unknown>>(
   };
 }
 
-export const EmptyResponseCodec: ResponseCodec<AnyEndpoint["return"], AnyEndpoint["meta"]> = {
+export const EmptyResponseCodec: ResponseCodec<EmptyResponseEndpoint> = {
   data: EmptyResponseDataCodec,
   meta: EmptyMetaCodec,
 };
 
-export const JsonOnlyResponseCodec: ResponseCodec<AnyEndpoint["return"], AnyEndpoint["meta"]> = {
+export const JsonOnlyResponseCodec: ResponseCodec<AnyEndpoint> = {
   data: {
     toJson: (d) => objectToExpectedCase(d as Record<string, unknown>, "snake"),
     fromJson: (d) => objectToExpectedCase(d as Record<string, unknown>, "camel"),
