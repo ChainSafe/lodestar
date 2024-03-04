@@ -1,5 +1,6 @@
 import mitt from "mitt";
 import {init as initBls} from "@chainsafe/bls/switchable";
+import {Implementation} from "@chainsafe/bls/types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD} from "@lodestar/params";
 import {phase0, RootHex, Slot, SyncPeriod, allForks} from "@lodestar/types";
@@ -108,7 +109,7 @@ export class Lightclient {
 
   private runStatus: RunStatus = {code: RunStatusCode.stopped};
 
-  constructor({config, logger, genesisData, bootstrap, transport}: LightclientInitArgs) {
+  private constructor({config, logger, genesisData, bootstrap, transport}: LightclientInitArgs) {
     this.genesisTime = genesisData.genesisTime;
     this.genesisValidatorsRoot =
       typeof genesisData.genesisValidatorsRoot === "string"
@@ -149,15 +150,16 @@ export class Lightclient {
   static async initializeFromCheckpointRoot(
     args: Omit<LightclientInitArgs, "bootstrap"> & {
       checkpointRoot: phase0.Checkpoint["root"];
+      blsImplementation?: Implementation;
     }
   ): Promise<Lightclient> {
-    const {transport, checkpointRoot} = args;
+    const {transport, checkpointRoot, blsImplementation} = args;
 
     // Initialize the BLS implementation. This may requires initializing the WebAssembly instance
     // so why it's an async process. This should be initialized once before any bls operations.
     // This process has to be done manually because of an issue in Karma runner
     // https://github.com/karma-runner/karma/issues/3804
-    await initBls(isNode ? "blst-native" : "herumi");
+    await initBls(blsImplementation ?? (isNode ? "blst-native" : "herumi"));
 
     // Fetch bootstrap state with proof at the trusted block root
     const {data: bootstrap} = await transport.getBootstrap(toHexString(checkpointRoot));
@@ -189,12 +191,6 @@ export class Lightclient {
   }
 
   async sync(fromPeriod: SyncPeriod, toPeriod: SyncPeriod): Promise<void> {
-    // Initialize the BLS implementation. This may requires initializing the WebAssembly instance
-    // so why it's a an async process. This should be initialized once before any bls operations.
-    // This process has to be done manually because of an issue in Karma runner
-    // https://github.com/karma-runner/karma/issues/3804
-    await initBls(isNode ? "blst-native" : "herumi");
-
     const periodRanges = chunkifyInclusiveRange(fromPeriod, toPeriod, MAX_PERIODS_PER_REQUEST);
 
     for (const [fromPeriodRng, toPeriodRng] of periodRanges) {
@@ -211,12 +207,6 @@ export class Lightclient {
   }
 
   private async runLoop(): Promise<void> {
-    // Initialize the BLS implementation. This may requires initializing the WebAssembly instance
-    // so why it's a an async process. This should be initialized once before any bls operations.
-    // This process has to be done manually because of an issue in Karma runner
-    // https://github.com/karma-runner/karma/issues/3804
-    await initBls(isNode ? "blst-native" : "herumi");
-
     // eslint-disable-next-line no-constant-condition
     while (true) {
       const currentPeriod = computeSyncPeriodAtSlot(this.currentSlot);
