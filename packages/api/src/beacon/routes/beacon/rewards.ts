@@ -12,7 +12,7 @@ import {
 import {HttpStatusCode} from "../../../utils/client/httpStatusCode.js";
 import {ApiClientResponse} from "../../../interfaces.js";
 import {BlockId} from "./block.js";
-import { ValidatorId } from "./state.js";
+import {ValidatorId} from "./state.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -72,6 +72,14 @@ export type AttestationsRewards = {
   totalRewards: totalAttestationsRewards,
 }
 
+/**
+ * Rewards info for sync committee participation. Every reward value is in Gwei.
+ * Note: In the case that block proposer is present in `SyncCommitteeRewards`, the reward value only reflects rewards for
+ * participating in sync committee. Please refer to `BlockRewards.syncAggregate` for rewards of proposer including sync committee
+ * outputs into their block
+ */
+export type SyncCommitteeRewards = {validatorIndex: ValidatorIndex; reward: number}[];
+
 export type Api = {
   /**
    * Get block rewards
@@ -100,6 +108,24 @@ export type Api = {
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
     >
   >;
+
+  /**
+   * Get sync committee rewards
+   * Returns participant reward value for each sync committee member at the given block.
+   *
+   * @param blockId Block identifier.
+   * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
+   * @param validatorIds List of validator indices or pubkeys to filter in
+   */
+  getSyncCommitteeRewards(
+    blockId: BlockId,
+    validatorIds?: ValidatorId[]
+  ): Promise<
+    ApiClientResponse<
+      {[HttpStatusCode.OK]: {data: SyncCommitteeRewards; executionOptimistic: ExecutionOptimistic}},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
+    >
+  >;
 };
 
 /**
@@ -108,12 +134,14 @@ export type Api = {
 export const routesData: RoutesData<Api> = {
   getBlockRewards: {url: "/eth/v1/beacon/rewards/blocks/{block_id}", method: "GET"},
   getAttestationsRewards: {url: "/eth/v1/beacon/rewards/attestations/{epoch}", method: "POST"},
+  getSyncCommitteeRewards: {url: "/eth/v1/beacon/rewards/sync_committee/{block_id}", method: "POST"},
 };
 
 export type ReqTypes = {
   /* eslint-disable @typescript-eslint/naming-convention */
   getBlockRewards: {params: {block_id: string}};
   getAttestationsRewards: {params: {epoch: number}; body: ValidatorId[]};
+  getSyncCommitteeRewards: {params: {block_id: string}; body: ValidatorId[]};
 };
 
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
@@ -128,6 +156,14 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       parseReq: ({params, body}) => [params.epoch, body],
       schema: {
         params: {epoch: Schema.UintRequired},
+        body: Schema.UintOrStringArray,
+      },
+    },
+    getSyncCommitteeRewards: {
+      writeReq: (block_id, validatorIds) => ({params: {block_id: String(block_id)}, body: validatorIds || []}),
+      parseReq: ({params, body}) => [params.block_id, body],
+      schema: {
+        params: {block_id: Schema.StringRequired},
         body: Schema.UintOrStringArray,
       },
     },
@@ -180,8 +216,17 @@ export function getReturnTypes(): ReturnTypes<Api> {
   );
 
 
+  const SyncCommitteeRewardsResponse = new ContainerType(
+    {
+      validatorIndex: ssz.ValidatorIndex,
+      reward: ssz.UintNum64,
+    },
+    {jsonCase: "eth2"}
+  );
+
   return {
     getBlockRewards: ContainerDataExecutionOptimistic(BlockRewardsResponse),
     getAttestationsRewards: ContainerDataExecutionOptimistic(AttestationsRewardsResponse),
+    getSyncCommitteeRewards: ContainerDataExecutionOptimistic(ArrayOf(SyncCommitteeRewardsResponse)),
   };
 }

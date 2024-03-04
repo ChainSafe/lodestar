@@ -94,7 +94,7 @@
   "dependencies": {
     "@chainsafe/as-sha256": "^0.4.1",
     "@chainsafe/bls": "7.1.3",
-    "@chainsafe/blst": "^0.2.9",
+    "@chainsafe/blst": "^0.2.10",
     "@chainsafe/discv5": "^9.0.0",
     "@chainsafe/enr": "^3.0.0",
     "@chainsafe/libp2p-gossipsub": "^11.2.1",
@@ -139,7 +139,6 @@
     "interface-datastore": "^8.2.7",
     "it-all": "^3.0.4",
     "it-pipe": "^3.0.1",
-    "lodash": "^4.17.21",
     "jwt-simple": "0.5.6",
     "libp2p": "1.1.1",
     "multiformats": "^11.0.1",
@@ -154,7 +153,6 @@
   "devDependencies": {
     "@types/datastore-level": "^3.0.0",
     "@types/leveldown": "^4.0.3",
-    "@types/lodash": "^4.14.192",
     "@types/qs": "^6.9.7",
     "@types/tmp": "^0.2.3",
     "it-drain": "^3.0.3",

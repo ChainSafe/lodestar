@@ -81,6 +81,7 @@ import {ShufflingCache} from "./shufflingCache.js";
 import {StateContextCache} from "./stateCache/stateContextCache.js";
 import {SeenGossipBlockInput} from "./seenCache/index.js";
 import {CheckpointStateCache} from "./stateCache/stateContextCheckpointsCache.js";
+import {SyncCommitteeRewards, computeSyncCommitteeRewards} from "./rewards/syncCommitteeRewards.js";
 
 /**
  * Arbitrary constants, blobs and payloads should be consumed immediately in the same slot
@@ -995,12 +996,26 @@ export class BeaconChain implements IBeaconChain {
 
   async getBlockRewards(block: allForks.FullOrBlindedBeaconBlock): Promise<BlockRewards> {
     const preState = this.regen.getPreStateSync(block);
-    const postState = this.regen.getStateSync(toHexString(block.stateRoot)) ?? undefined;
 
     if (preState === null) {
       throw Error(`Pre-state is unavailable given block's parent root ${toHexString(block.parentRoot)}`);
     }
 
+    const postState = this.regen.getStateSync(toHexString(block.stateRoot)) ?? undefined;
+
     return computeBlockRewards(block, preState.clone(), postState?.clone());
+  }
+
+  async getSyncCommitteeRewards(
+    block: allForks.FullOrBlindedBeaconBlock,
+    validatorIds?: (ValidatorIndex | string)[]
+  ): Promise<SyncCommitteeRewards> {
+    const preState = this.regen.getPreStateSync(block);
+
+    if (preState === null) {
+      throw Error(`Pre-state is unavailable given block's parent root ${toHexString(block.parentRoot)}`);
+    }
+
+    return computeSyncCommitteeRewards(block, preState.clone(), validatorIds);
   }
 }

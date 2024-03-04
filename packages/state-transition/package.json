@@ -60,7 +60,7 @@
   "dependencies": {
     "@chainsafe/as-sha256": "^0.4.1",
     "@chainsafe/bls": "7.1.3",
-    "@chainsafe/blst": "^0.2.9",
+    "@chainsafe/blst": "^0.2.10",
     "@chainsafe/persistent-merkle-tree": "^0.6.1",
     "@chainsafe/persistent-ts": "^0.19.1",
     "@chainsafe/ssz": "^0.14.0",
@@ -72,7 +72,6 @@
     "buffer-xor": "^2.0.2"
   },
   "devDependencies": {
-    "@chainsafe/blst": "^0.2.9",
     "@types/buffer-xor": "^2.0.0"
   },
   "keywords": [
