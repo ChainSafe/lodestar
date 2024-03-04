@@ -374,12 +374,6 @@ export const definitions: RouteDefinitions<Endpoints> = {
         passwords,
         slashingProtection: slashing_protection,
       }),
-      writeReqSsz: () => {
-        throw new Error("Not implemented");
-      },
-      parseReqSsz: () => {
-        throw new Error("Not implemented");
-      },
       schema: {body: Schema.Object},
       onlySupport: WireFormat.json,
     },
@@ -391,12 +385,6 @@ export const definitions: RouteDefinitions<Endpoints> = {
     req: {
       writeReqJson: ({pubkeys}) => ({body: {pubkeys}}),
       parseReqJson: ({body: {pubkeys}}) => ({pubkeys}),
-      writeReqSsz: () => {
-        throw new Error("Not implemented");
-      },
-      parseReqSsz: () => {
-        throw new Error("Not implemented");
-      },
       schema: {body: Schema.Object},
       onlySupport: WireFormat.json,
     },
@@ -429,12 +417,6 @@ export const definitions: RouteDefinitions<Endpoints> = {
     req: {
       writeReqJson: ({remoteSigners}) => ({body: {remote_keys: remoteSigners}}),
       parseReqJson: ({body: {remote_keys}}) => ({remoteSigners: remote_keys}),
-      writeReqSsz: () => {
-        throw new Error("Not implemented");
-      },
-      parseReqSsz: () => {
-        throw new Error("Not implemented");
-      },
       schema: {body: Schema.Object},
       onlySupport: WireFormat.json,
     },
@@ -446,12 +428,6 @@ export const definitions: RouteDefinitions<Endpoints> = {
     req: {
       writeReqJson: ({pubkeys}) => ({body: {pubkeys}}),
       parseReqJson: ({body: {pubkeys}}) => ({pubkeys}),
-      writeReqSsz: () => {
-        throw new Error("Not implemented");
-      },
-      parseReqSsz: () => {
-        throw new Error("Not implemented");
-      },
       schema: {body: Schema.Object},
       onlySupport: WireFormat.json,
     },
@@ -476,12 +452,6 @@ export const definitions: RouteDefinitions<Endpoints> = {
     req: {
       writeReqJson: ({pubkey, ethaddress}) => ({params: {pubkey}, body: {ethaddress}}),
       parseReqJson: ({params: {pubkey}, body: {ethaddress}}) => ({pubkey, ethaddress}),
-      writeReqSsz: () => {
-        throw new Error("Not implemented");
-      },
-      parseReqSsz: () => {
-        throw new Error("Not implemented");
-      },
       schema: {
         params: {pubkey: Schema.StringRequired},
         body: Schema.Object,
@@ -497,12 +467,6 @@ export const definitions: RouteDefinitions<Endpoints> = {
     req: {
       writeReqJson: ({pubkey}) => ({params: {pubkey}}),
       parseReqJson: ({params: {pubkey}}) => ({pubkey}),
-      writeReqSsz: () => {
-        throw new Error("Not implemented");
-      },
-      parseReqSsz: () => {
-        throw new Error("Not implemented");
-      },
       schema: {
         params: {pubkey: Schema.StringRequired},
       },
@@ -530,12 +494,6 @@ export const definitions: RouteDefinitions<Endpoints> = {
     req: {
       writeReqJson: ({pubkey, graffiti}) => ({params: {pubkey}, body: {graffiti}}),
       parseReqJson: ({params: {pubkey}, body: {graffiti}}) => ({pubkey, graffiti}),
-      writeReqSsz: () => {
-        throw new Error("Not implemented");
-      },
-      parseReqSsz: () => {
-        throw new Error("Not implemented");
-      },
       schema: {
         params: {pubkey: Schema.StringRequired},
         body: Schema.Object,
@@ -551,12 +509,6 @@ export const definitions: RouteDefinitions<Endpoints> = {
     req: {
       writeReqJson: ({pubkey}) => ({params: {pubkey}}),
       parseReqJson: ({params: {pubkey}}) => ({pubkey}),
-      writeReqSsz: () => {
-        throw new Error("Not implemented");
-      },
-      parseReqSsz: () => {
-        throw new Error("Not implemented");
-      },
       schema: {
         params: {pubkey: Schema.StringRequired},
       },
@@ -594,12 +546,6 @@ export const definitions: RouteDefinitions<Endpoints> = {
     req: {
       writeReqJson: ({pubkey, gasLimit}) => ({params: {pubkey}, body: {gas_limit: gasLimit.toString(10)}}),
       parseReqJson: ({params: {pubkey}, body: {gas_limit}}) => ({pubkey, gasLimit: parseGasLimit(gas_limit)}),
-      writeReqSsz: () => {
-        throw new Error("Not implemented");
-      },
-      parseReqSsz: () => {
-        throw new Error("Not implemented");
-      },
       schema: {
         params: {pubkey: Schema.StringRequired},
         body: Schema.Object,
@@ -615,12 +561,6 @@ export const definitions: RouteDefinitions<Endpoints> = {
     req: {
       writeReqJson: ({pubkey}) => ({params: {pubkey}}),
       parseReqJson: ({params: {pubkey}}) => ({pubkey}),
-      writeReqSsz: () => {
-        throw new Error("Not implemented");
-      },
-      parseReqSsz: () => {
-        throw new Error("Not implemented");
-      },
       schema: {
         params: {pubkey: Schema.StringRequired},
       },
@@ -663,12 +603,6 @@ export const definitions: RouteDefinitions<Endpoints> = {
         pubkey,
         builderBoostFactor: BigInt(builder_boost_factor),
       }),
-      writeReqSsz: () => {
-        throw new Error("Not implemented");
-      },
-      parseReqSsz: () => {
-        throw new Error("Not implemented");
-      },
       schema: {
         params: {pubkey: Schema.StringRequired},
         body: Schema.Object,
@@ -684,12 +618,6 @@ export const definitions: RouteDefinitions<Endpoints> = {
     req: {
       writeReqJson: ({pubkey}) => ({params: {pubkey}}),
       parseReqJson: ({params: {pubkey}}) => ({pubkey}),
-      writeReqSsz: () => {
-        throw new Error("Not implemented");
-      },
-      parseReqSsz: () => {
-        throw new Error("Not implemented");
-      },
       schema: {
         params: {pubkey: Schema.StringRequired},
       },
@@ -705,12 +633,6 @@ export const definitions: RouteDefinitions<Endpoints> = {
     req: {
       writeReqJson: ({pubkey, epoch}) => ({params: {pubkey}, query: epoch !== undefined ? {epoch} : {}}),
       parseReqJson: ({params: {pubkey}, query: {epoch}}) => ({pubkey, epoch}),
-      writeReqSsz: () => {
-        throw new Error("Not implemented");
-      },
-      parseReqSsz: () => {
-        throw new Error("Not implemented");
-      },
       schema: {
         params: {pubkey: Schema.StringRequired},
         query: {epoch: Schema.Uint},

@@ -79,12 +79,6 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       req: {
         writeReqJson: ({registrations}) => ({body: RegistrationsType.toJson(registrations)}),
         parseReqJson: ({body}) => ({registrations: RegistrationsType.fromJson(body)}),
-        writeReqSsz: () => {
-          throw new Error("Not implemented");
-        },
-        parseReqSsz: () => {
-          throw new Error("Not implemented");
-        },
         schema: {body: Schema.ObjectArray},
         onlySupport: WireFormat.json,
       },

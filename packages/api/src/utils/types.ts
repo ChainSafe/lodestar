@@ -73,20 +73,37 @@ export type Endpoint<
 
 /** Encode / decode requests to & from function params, as well as schema definitions */
 export type GetRequestCodec<E extends Endpoint> = {
-  writeReq: (p: E["args"]) => E["request"]; // for the client
-  parseReq: (r: E["request"]) => E["args"]; // for the server
+  writeReq: (p: E["args"]) => E["request"]; // client
+  parseReq: (r: E["request"]) => E["args"]; // server
   schema: SchemaDefinition<E["request"]>;
 };
 
-export type PostRequestCodec<E extends Endpoint> = {
-  writeReqJson: (p: E["args"]) => E["request"];
-  parseReqJson: (r: E["request"]) => E["args"];
-  writeReqSsz: (p: E["args"]) => SszPostRequestData<E["request"]>;
-  parseReqSsz: (r: SszPostRequestData<E["request"]>) => E["args"];
-  schema: SchemaDefinition<E["request"]>;
-  /** Support ssz-only or json-only requests */
-  onlySupport?: WireFormat;
+type JsonRequestMethods<E extends Endpoint> = {
+  writeReqJson: (p: E["args"]) => E["request"]; // client
+  parseReqJson: (r: E["request"]) => E["args"]; // server
 };
+
+type SszRequestMethods<E extends Endpoint> = {
+  writeReqSsz: (p: E["args"]) => SszPostRequestData<E["request"]>; // client
+  parseReqSsz: (r: SszPostRequestData<E["request"]>) => E["args"]; // server
+};
+
+export type RequestMethods<E extends Endpoint> = JsonRequestMethods<E> & SszRequestMethods<E>;
+
+export type PostRequestCodec<E extends Endpoint> = {
+  schema: SchemaDefinition<E["request"]>;
+} & (
+  | ({
+      onlySupport: WireFormat.json;
+    } & JsonRequestMethods<E>)
+  | ({
+      onlySupport: WireFormat.ssz;
+    } & SszRequestMethods<E>)
+  | ({
+      /** Support ssz-only or json-only requests */
+      onlySupport?: never;
+    } & RequestMethods<E>)
+);
 
 /**
  * Previously called ReqSerializer

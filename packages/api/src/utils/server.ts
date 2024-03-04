@@ -8,7 +8,7 @@ import {
   GetRequestData,
   HasOnlyOptionalProps,
   JsonPostRequestData,
-  PostRequestCodec,
+  RequestMethods,
   RouteDefinition,
   RouteDefinitions,
   SszPostRequestData,
@@ -91,11 +91,11 @@ export function createFastifyHandler<E extends Endpoint>(
       const requestWireFormat = getWireFormat(mediaType as MediaType);
       switch (requestWireFormat) {
         case WireFormat.json:
-          response = await method((definition.req as PostRequestCodec<E>).parseReqJson(req as JsonPostRequestData));
+          response = await method((definition.req as RequestMethods<E>).parseReqJson(req as JsonPostRequestData));
           break;
         case WireFormat.ssz:
           response = await method(
-            (definition.req as PostRequestCodec<E>).parseReqSsz(req as SszPostRequestData<E["request"]>)
+            (definition.req as RequestMethods<E>).parseReqSsz(req as SszPostRequestData<E["request"]>)
           );
           break;
       }
