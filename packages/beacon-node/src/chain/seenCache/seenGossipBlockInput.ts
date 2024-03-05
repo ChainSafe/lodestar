@@ -13,6 +13,8 @@ import {
   GossipedInputType,
   getBlockInputBlobs,
 } from "../blocks/types.js";
+import {Metrics} from "../../metrics/index.js";
+import {BlockInputAvailabilitySource} from "../../sync/index.js";
 
 type GossipedBlockInput =
   | {type: GossipedInputType.block; signedBlock: allForks.SignedBeaconBlock; blockBytes: Uint8Array | null}
@@ -53,7 +55,8 @@ export class SeenGossipBlockInput {
 
   getGossipBlockInput(
     config: ChainForkConfig,
-    gossipedInput: GossipedBlockInput
+    gossipedInput: GossipedBlockInput,
+    metrics: Metrics | null
   ):
     | {
         blockInput: BlockInput;
@@ -114,6 +117,7 @@ export class SeenGossipBlockInput {
       if (blobKzgCommitments.length === blobsCache.size) {
         const allBlobs = getBlockInputBlobs(blobsCache);
         resolveAvailability(allBlobs);
+        metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.GOSSIP});
         const {blobs, blobsBytes} = allBlobs;
         return {
           blockInput: getBlockInput.postDeneb(

@@ -114,3 +114,8 @@ export enum PendingBlockType {
 
   UNKNOWN_BLOCKINPUT = "unknown_blockinput",
 }
+
+export enum BlockInputAvailabilitySource {
+  GOSSIP = "gossip",
+  UNKNOWN_SYNC = "unknown_sync",
+}

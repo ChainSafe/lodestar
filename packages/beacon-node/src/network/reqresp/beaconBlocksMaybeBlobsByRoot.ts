@@ -4,6 +4,8 @@ import {ForkSeq} from "@lodestar/params";
 import {BlockInput, BlockInputType, BlockSource, getBlockInputBlobs, getBlockInput} from "../../chain/blocks/types.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {INetwork} from "../interface.js";
+import {BlockInputAvailabilitySource} from "../../sync/index.js";
+import {Metrics} from "../../metrics/index.js";
 import {matchBlockWithBlobs} from "./beaconBlocksMaybeBlobsByRange.js";
 
 export async function beaconBlocksMaybeBlobsByRoot(
@@ -44,7 +46,8 @@ export async function unavailableBeaconBlobsByRoot(
   config: ChainForkConfig,
   network: INetwork,
   peerId: PeerIdStr,
-  unavailableBlockInput: BlockInput
+  unavailableBlockInput: BlockInput,
+  metrics: Metrics | null
 ): Promise<BlockInput> {
   if (unavailableBlockInput.type !== BlockInputType.blobsPromise) {
     return unavailableBlockInput;
@@ -84,5 +87,6 @@ export async function unavailableBeaconBlobsByRoot(
   }
 
   resolveAvailability(allBlobs);
+  metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.UNKNOWN_SYNC});
   return getBlockInput.postDeneb(config, block, BlockSource.byRoot, blobs, blockBytes, blobsBytes);
 }

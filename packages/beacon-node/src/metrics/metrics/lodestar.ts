@@ -11,7 +11,7 @@ import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {GossipType} from "../../network/index.js";
 import {CannotAcceptWorkReason, ReprocessRejectReason} from "../../network/processor/index.js";
 import {BackfillSyncMethod} from "../../sync/backfill/backfill.js";
-import {PendingBlockType} from "../../sync/interface.js";
+import {PendingBlockType, BlockInputAvailabilitySource} from "../../sync/index.js";
 import {PeerSyncType, RangeSyncType} from "../../sync/utils/remoteSyncType.js";
 import {LodestarMetadata} from "../options.js";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
@@ -586,6 +586,11 @@ export function createLodestarMetrics(
         name: "lodestar_sync_unknown_block_elapsed_time_till_received",
         help: "Time elapsed between block slot time and the time block received via unknown block sync",
         buckets: [0.5, 1, 2, 4, 6, 12],
+      }),
+      resolveAvailabilitySource: register.gauge<{source: BlockInputAvailabilitySource}>({
+        name: "lodestar_sync_blockinput_availability_source",
+        help: "Total number of blocks whose data availability was resolved",
+        labelNames: ["source"],
       }),
     },
 
