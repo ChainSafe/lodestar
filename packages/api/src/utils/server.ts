@@ -94,7 +94,7 @@ export function createFastifyHandler<E extends Endpoint>(
       const requestWireFormat = getWireFormat(mediaType as MediaType);
       switch (requestWireFormat) {
         case WireFormat.json:
-          if (onlySupport != undefined && onlySupport !== WireFormat.json) {
+          if (onlySupport !== undefined && onlySupport !== WireFormat.json) {
             throw new ServerError(415, `Endpoint only supports ${onlySupport} requests`);
           }
           response = await method((definition.req as JsonRequestMethods<E>).parseReqJson(req as JsonPostRequestData));
