@@ -1,5 +1,12 @@
 import {WireFormat, mergeHeaders, setAuthorizationHeader} from "../headers.js";
-import {Endpoint, GetRequestCodec, PostRequestCodec, RouteDefinition} from "../types.js";
+import {
+  Endpoint,
+  GetRequestCodec,
+  JsonRequestMethods,
+  PostRequestCodec,
+  RouteDefinition,
+  SszRequestMethods,
+} from "../types.js";
 import {stringifyQuery, urlJoin} from "./format.js";
 
 export type ExtraRequestInit = {
@@ -34,13 +41,14 @@ export function createApiRequest<E extends Endpoint>(
   if (definition.method === "GET") {
     req = (definition.req as GetRequestCodec<E>).writeReq(args);
   } else {
-    switch (init.requestWireFormat) {
+    const requestWireFormat = (definition.req as PostRequestCodec<E>).onlySupport ?? init.requestWireFormat;
+    switch (requestWireFormat) {
       case WireFormat.json:
-        req = (definition.req as PostRequestCodec<E>).writeReqJson(args);
+        req = (definition.req as JsonRequestMethods<E>).writeReqJson(args);
         headers.set("content-type", "application/json");
         break;
       case WireFormat.ssz:
-        req = (definition.req as PostRequestCodec<E>).writeReqSsz(args);
+        req = (definition.req as SszRequestMethods<E>).writeReqSsz(args);
         headers.set("content-type", "application/octet-stream");
         break;
     }

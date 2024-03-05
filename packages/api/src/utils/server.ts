@@ -1,17 +1,19 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import type * as fastify from "fastify";
 import {mapValues} from "@lodestar/utils";
-import {ApiError} from "./error.js";
+import {ServerError} from "./error.js";
 import {
   Endpoint,
   GetRequestCodec,
   GetRequestData,
   HasOnlyOptionalProps,
   JsonPostRequestData,
-  RequestMethods,
+  JsonRequestMethods,
+  PostRequestCodec,
   RouteDefinition,
   RouteDefinitions,
   SszPostRequestData,
+  SszRequestMethods,
 } from "./types.js";
 import {MediaType, WireFormat, getWireFormat, parseAcceptHeader, parseContentTypeHeader} from "./headers.js";
 import {toColonNotationPath} from "./urlFormat.js";
@@ -30,7 +32,7 @@ export type ApplicationResponse<E extends Endpoint> = HasOnlyOptionalProps<Appli
   : ApplicationResponseObject<E>;
 
 // TODO: what's the purpose of this?
-export type ApplicationError = ApiError | Error;
+// export type ApplicationError = ApiError | Error;
 
 type GenericOptions = Record<string, unknown>;
 
@@ -83,19 +85,26 @@ export function createFastifyHandler<E extends Endpoint>(
     } else {
       // const contentType = req.headers["content-type"];
       const mediaType = parseContentTypeHeader(req.headers["content-type"]);
+      // TODO: We might not need to validate request media types as this is already handled by Fastify
       // if (mediaType === null) {
-      //   throw new ServerApiError(415, `Unsupported request media type: ${contentType?.split(";", 1)[0]}`);
+      //   throw new ServerError(415, `Unsupported request media type: ${contentType?.split(";", 1)[0]}`);
       // }
 
-      // TODO: We might not need to validate request media types as this is already handled by Fastify
+      const {onlySupport} = definition.req as PostRequestCodec<E>;
       const requestWireFormat = getWireFormat(mediaType as MediaType);
       switch (requestWireFormat) {
         case WireFormat.json:
-          response = await method((definition.req as RequestMethods<E>).parseReqJson(req as JsonPostRequestData));
+          if (onlySupport != undefined && onlySupport !== WireFormat.json) {
+            throw new ServerError(415, `${operationId} only supports JSON requests`);
+          }
+          response = await method((definition.req as JsonRequestMethods<E>).parseReqJson(req as JsonPostRequestData));
           break;
         case WireFormat.ssz:
+          if (onlySupport !== undefined && onlySupport !== WireFormat.ssz) {
+            throw new ServerError(415, `${operationId} only supports SSZ requests`);
+          }
           response = await method(
-            (definition.req as RequestMethods<E>).parseReqSsz(req as SszPostRequestData<E["request"]>)
+            (definition.req as SszRequestMethods<E>).parseReqSsz(req as SszPostRequestData<E["request"]>)
           );
           break;
       }
@@ -103,12 +112,12 @@ export function createFastifyHandler<E extends Endpoint>(
 
     const acceptHeader = req.headers.accept;
     if (acceptHeader === undefined) {
-      throw new ApiError("No Accept header found in request", 415, operationId);
+      throw new ServerError(415, "No Accept header found in request");
     }
 
     const mediaType = parseAcceptHeader(acceptHeader);
     if (mediaType === null) {
-      throw new ApiError(`Only unsupported media types are accepted: ${acceptHeader}`, 415, operationId);
+      throw new ServerError(415, `Only unsupported media types are accepted: ${acceptHeader}`);
     }
 
     const responseWireFormat = getWireFormat(mediaType);
