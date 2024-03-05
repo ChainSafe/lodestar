@@ -12,6 +12,8 @@ import {
   ResponseDataCodec,
   ResponseMetadataCodec,
   Endpoint,
+  SszRequestMethods,
+  JsonRequestMethods,
 } from "./types.js";
 import {WireFormat} from "./headers.js";
 import {toForkName} from "./serdes.js";
@@ -48,6 +50,36 @@ export const EmptyPostRequestCodec: PostRequestCodec<EmptyRequestEndpoint> = {
   parseReqSsz: () => {},
   schema: {},
 };
+
+export function JsonOnlyReq<E extends Endpoint>(
+  req: Omit<PostRequestCodec<E>, keyof SszRequestMethods<E>>
+): PostRequestCodec<E> {
+  return {
+    ...req,
+    writeReqSsz: () => {
+      throw Error("Not implemented");
+    },
+    parseReqSsz: () => {
+      throw Error("Not implemented");
+    },
+    onlySupport: WireFormat.json,
+  };
+}
+
+export function SszOnlyReq<E extends Endpoint>(
+  req: Omit<PostRequestCodec<E>, keyof JsonRequestMethods<E>>
+): PostRequestCodec<E> {
+  return {
+    ...req,
+    writeReqJson: () => {
+      throw Error("Not implemented");
+    },
+    parseReqJson: () => {
+      throw Error("Not implemented");
+    },
+    onlySupport: WireFormat.ssz,
+  };
+}
 
 export const EmptyResponseDataCodec: ResponseDataCodec<EmptyResponseData, EmptyMeta> = {
   toJson: () => ({}),
@@ -200,10 +232,10 @@ export const JsonOnlyResponseCodec: ResponseCodec<AnyEndpoint> = {
     toJson: (d) => objectToExpectedCase(d as Record<string, unknown>, "snake"),
     fromJson: (d) => objectToExpectedCase(d as Record<string, unknown>, "camel"),
     serialize: () => {
-      throw new Error("Not implemented");
+      throw Error("Not implemented");
     },
     deserialize: () => {
-      throw new Error("Not implemented");
+      throw Error("Not implemented");
     },
   },
   meta: EmptyMetaCodec,

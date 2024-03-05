@@ -10,6 +10,7 @@ import {
   EmptyRequest,
   EmptyResponseCodec,
   EmptyResponseData,
+  JsonOnlyReq,
   JsonOnlyResponseCodec,
 } from "../utils/codecs.js";
 import {WireFormat} from "../utils/headers.js";
@@ -365,7 +366,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
   importKeystores: {
     url: "/eth/v1/keystores",
     method: "POST",
-    req: {
+    req: JsonOnlyReq({
       writeReqJson: ({keystores, passwords, slashingProtection}) => ({
         body: {keystores, passwords, slashing_protection: slashingProtection},
       }),
@@ -375,23 +376,21 @@ export const definitions: RouteDefinitions<Endpoints> = {
         slashingProtection: slashing_protection,
       }),
       schema: {body: Schema.Object},
-      onlySupport: WireFormat.json,
-    },
+    }),
     resp: JsonOnlyResponseCodec,
   },
   deleteKeys: {
     url: "/eth/v1/keystores",
     method: "DELETE",
-    req: {
+    req: JsonOnlyReq({
       writeReqJson: ({pubkeys}) => ({body: {pubkeys}}),
       parseReqJson: ({body: {pubkeys}}) => ({pubkeys}),
       schema: {body: Schema.Object},
-      onlySupport: WireFormat.json,
-    },
+    }),
     resp: {
+      onlySupport: WireFormat.json,
       data: JsonOnlyResponseCodec.data,
       meta: EmptyMetaCodec,
-      onlySupport: WireFormat.json,
       transform: {
         toResponse: (data) => ({data: data.statuses, slashing_protection: data.slashingProtection}),
         fromResponse: (resp) => {
@@ -414,23 +413,21 @@ export const definitions: RouteDefinitions<Endpoints> = {
   importRemoteKeys: {
     url: "/eth/v1/remotekeys",
     method: "POST",
-    req: {
+    req: JsonOnlyReq({
       writeReqJson: ({remoteSigners}) => ({body: {remote_keys: remoteSigners}}),
       parseReqJson: ({body: {remote_keys}}) => ({remoteSigners: remote_keys}),
       schema: {body: Schema.Object},
-      onlySupport: WireFormat.json,
-    },
+    }),
     resp: JsonOnlyResponseCodec,
   },
   deleteRemoteKeys: {
     url: "/eth/v1/remotekeys",
     method: "DELETE",
-    req: {
+    req: JsonOnlyReq({
       writeReqJson: ({pubkeys}) => ({body: {pubkeys}}),
       parseReqJson: ({body: {pubkeys}}) => ({pubkeys}),
       schema: {body: Schema.Object},
-      onlySupport: WireFormat.json,
-    },
+    }),
     resp: JsonOnlyResponseCodec,
   },
 
@@ -449,29 +446,27 @@ export const definitions: RouteDefinitions<Endpoints> = {
   setFeeRecipient: {
     url: "/eth/v1/validator/{pubkey}/feerecipient",
     method: "POST",
-    req: {
+    req: JsonOnlyReq({
       writeReqJson: ({pubkey, ethaddress}) => ({params: {pubkey}, body: {ethaddress}}),
       parseReqJson: ({params: {pubkey}, body: {ethaddress}}) => ({pubkey, ethaddress}),
       schema: {
         params: {pubkey: Schema.StringRequired},
         body: Schema.Object,
       },
-      onlySupport: WireFormat.json,
-    },
+    }),
     resp: EmptyResponseCodec,
     statusOk: 202,
   },
   deleteFeeRecipient: {
     url: "/eth/v1/validator/{pubkey}/feerecipient",
     method: "DELETE",
-    req: {
+    req: JsonOnlyReq({
       writeReqJson: ({pubkey}) => ({params: {pubkey}}),
       parseReqJson: ({params: {pubkey}}) => ({pubkey}),
       schema: {
         params: {pubkey: Schema.StringRequired},
       },
-      onlySupport: WireFormat.json,
-    },
+    }),
     resp: EmptyResponseCodec,
     statusOk: 204,
   },
@@ -491,29 +486,27 @@ export const definitions: RouteDefinitions<Endpoints> = {
   setGraffiti: {
     url: "/eth/v1/validator/{pubkey}/graffiti",
     method: "POST",
-    req: {
+    req: JsonOnlyReq({
       writeReqJson: ({pubkey, graffiti}) => ({params: {pubkey}, body: {graffiti}}),
       parseReqJson: ({params: {pubkey}, body: {graffiti}}) => ({pubkey, graffiti}),
       schema: {
         params: {pubkey: Schema.StringRequired},
         body: Schema.Object,
       },
-      onlySupport: WireFormat.json,
-    },
+    }),
     resp: EmptyResponseCodec,
     statusOk: 202,
   },
   deleteGraffiti: {
     url: "/eth/v1/validator/{pubkey}/graffiti",
     method: "DELETE",
-    req: {
+    req: JsonOnlyReq({
       writeReqJson: ({pubkey}) => ({params: {pubkey}}),
       parseReqJson: ({params: {pubkey}}) => ({pubkey}),
       schema: {
         params: {pubkey: Schema.StringRequired},
       },
-      onlySupport: WireFormat.json,
-    },
+    }),
     resp: EmptyResponseCodec,
     statusOk: 204,
   },
@@ -529,6 +522,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
       },
     },
     resp: {
+      onlySupport: WireFormat.json,
       data: new ContainerType(
         {
           pubkey: stringType,
@@ -537,35 +531,32 @@ export const definitions: RouteDefinitions<Endpoints> = {
         {jsonCase: "eth2"}
       ),
       meta: EmptyMetaCodec,
-      onlySupport: WireFormat.json,
     },
   },
   setGasLimit: {
     url: "/eth/v1/validator/{pubkey}/gas_limit",
     method: "POST",
-    req: {
+    req: JsonOnlyReq({
       writeReqJson: ({pubkey, gasLimit}) => ({params: {pubkey}, body: {gas_limit: gasLimit.toString(10)}}),
       parseReqJson: ({params: {pubkey}, body: {gas_limit}}) => ({pubkey, gasLimit: parseGasLimit(gas_limit)}),
       schema: {
         params: {pubkey: Schema.StringRequired},
         body: Schema.Object,
       },
-      onlySupport: WireFormat.json,
-    },
+    }),
     resp: EmptyResponseCodec,
     statusOk: 202,
   },
   deleteGasLimit: {
     url: "/eth/v1/validator/{pubkey}/gas_limit",
     method: "DELETE",
-    req: {
+    req: JsonOnlyReq({
       writeReqJson: ({pubkey}) => ({params: {pubkey}}),
       parseReqJson: ({params: {pubkey}}) => ({pubkey}),
       schema: {
         params: {pubkey: Schema.StringRequired},
       },
-      onlySupport: WireFormat.json,
-    },
+    }),
     resp: EmptyResponseCodec,
     statusOk: 204,
   },
@@ -594,7 +585,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
   setBuilderBoostFactor: {
     url: "/eth/v1/validator/{pubkey}/builder_boost_factor",
     method: "POST",
-    req: {
+    req: JsonOnlyReq({
       writeReqJson: ({pubkey, builderBoostFactor}) => ({
         params: {pubkey},
         body: {builder_boost_factor: builderBoostFactor.toString(10)},
@@ -607,22 +598,20 @@ export const definitions: RouteDefinitions<Endpoints> = {
         params: {pubkey: Schema.StringRequired},
         body: Schema.Object,
       },
-      onlySupport: WireFormat.json,
-    },
+    }),
     resp: EmptyResponseCodec,
     statusOk: 202,
   },
   deleteBuilderBoostFactor: {
     url: "/eth/v1/validator/{pubkey}/builder_boost_factor",
     method: "DELETE",
-    req: {
+    req: JsonOnlyReq({
       writeReqJson: ({pubkey}) => ({params: {pubkey}}),
       parseReqJson: ({params: {pubkey}}) => ({pubkey}),
       schema: {
         params: {pubkey: Schema.StringRequired},
       },
-      onlySupport: WireFormat.json,
-    },
+    }),
     resp: EmptyResponseCodec,
     statusOk: 204,
   },
@@ -630,15 +619,14 @@ export const definitions: RouteDefinitions<Endpoints> = {
   signVoluntaryExit: {
     url: "/eth/v1/validator/{pubkey}/voluntary_exit",
     method: "POST",
-    req: {
+    req: JsonOnlyReq({
       writeReqJson: ({pubkey, epoch}) => ({params: {pubkey}, query: epoch !== undefined ? {epoch} : {}}),
       parseReqJson: ({params: {pubkey}, query: {epoch}}) => ({pubkey, epoch}),
       schema: {
         params: {pubkey: Schema.StringRequired},
         query: {epoch: Schema.Uint},
       },
-      onlySupport: WireFormat.json,
-    },
+    }),
     resp: {
       data: ssz.phase0.SignedVoluntaryExit,
       meta: EmptyMetaCodec,

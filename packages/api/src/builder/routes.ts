@@ -13,11 +13,11 @@ import {
   EmptyRequest,
   EmptyResponseCodec,
   EmptyResponseData,
+  JsonOnlyReq,
   VersionCodec,
   VersionMeta,
   WithVersion,
 } from "../utils/codecs.js";
-import {WireFormat} from "../utils/headers.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -76,12 +76,11 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
     registerValidator: {
       url: "/eth/v1/builder/validators",
       method: "POST",
-      req: {
+      req: JsonOnlyReq({
         writeReqJson: ({registrations}) => ({body: RegistrationsType.toJson(registrations)}),
         parseReqJson: ({body}) => ({registrations: RegistrationsType.fromJson(body)}),
         schema: {body: Schema.ObjectArray},
-        onlySupport: WireFormat.json,
-      },
+      }),
       resp: EmptyResponseCodec,
     },
     getHeader: {

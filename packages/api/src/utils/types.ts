@@ -90,21 +90,11 @@ export type SszRequestMethods<E extends Endpoint> = {
 
 export type RequestMethods<E extends Endpoint> = JsonRequestMethods<E> & SszRequestMethods<E>;
 
-export type PostRequestCodec<E extends Endpoint> = {
+export type PostRequestCodec<E extends Endpoint> = RequestMethods<E> & {
   schema: SchemaDefinition<E["request"]>;
   /** Support ssz-only or json-only requests */
   onlySupport?: WireFormat;
-} & (
-  | ({
-      onlySupport: WireFormat.json;
-    } & JsonRequestMethods<E>)
-  | ({
-      onlySupport: WireFormat.ssz;
-    } & SszRequestMethods<E>)
-  | ({
-      onlySupport?: never;
-    } & RequestMethods<E>)
-);
+};
 
 /**
  * Previously called ReqSerializer
