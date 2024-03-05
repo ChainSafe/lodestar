@@ -41,9 +41,9 @@ export type BlockRewards = {
 };
 
 /**
- * Rewards for a single (ideal or actual depending on usage) attestation. Reward value is in Gwei 
+ * Rewards for a single set of (ideal or actual depending on usage) attestations. Reward value is in Gwei 
  */
-type AttestationRewards = {
+type AttestationsReward = {
   /* Reward for head vote. Could be negative to indicate penalty */
   head: number, 
   /* Reward for target vote. Could be negative to indicate penalty */
@@ -60,16 +60,16 @@ type AttestationRewards = {
  * Rewards info for ideal attestations ie. Maximum rewards could be earned by making timely head, target and source vote.
  * `effectiveBalance` is in gwei
  */
-type IdealAttestationsRewards = (AttestationRewards & {effectiveBalance: number})[];
+export type IdealAttestationsReward = (AttestationsReward & {effectiveBalance: number});
 
 /**
  * Rewards info for actual attestations
  */
-type totalAttestationsRewards = (AttestationRewards & {validatorIndex: ValidatorIndex})[];
+export type TotalAttestationsReward = (AttestationsReward & {validatorIndex: ValidatorIndex});
 
 export type AttestationsRewards = {
-  idealRewards: IdealAttestationsRewards,
-  totalRewards: totalAttestationsRewards,
+  idealRewards: IdealAttestationsReward[],
+  totalRewards: TotalAttestationsReward[],
 }
 
 /**
