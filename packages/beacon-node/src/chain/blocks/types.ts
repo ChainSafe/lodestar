@@ -29,7 +29,12 @@ export type BlockInputBlobs = {blobs: deneb.BlobSidecars; blobsBytes: (Uint8Arra
 export type BlockInput = {block: allForks.SignedBeaconBlock; source: BlockSource; blockBytes: Uint8Array | null} & (
   | {type: BlockInputType.preDeneb}
   | ({type: BlockInputType.postDeneb} & BlockInputBlobs)
-  | {type: BlockInputType.blobsPromise; blobsCache: BlobsCache; availabilityPromise: Promise<BlockInputBlobs>}
+  | {
+      type: BlockInputType.blobsPromise;
+      blobsCache: BlobsCache;
+      availabilityPromise: Promise<BlockInputBlobs>;
+      resolveAvailability: (blobs: BlockInputBlobs) => void;
+    }
 );
 
 export function blockRequiresBlobs(config: ChainForkConfig, blockSlot: Slot, clockSlot: Slot): boolean {
@@ -85,7 +90,8 @@ export const getBlockInput = {
     source: BlockSource,
     blobsCache: BlobsCache,
     blockBytes: Uint8Array | null,
-    availabilityPromise: Promise<BlockInputBlobs>
+    availabilityPromise: Promise<BlockInputBlobs>,
+    resolveAvailability: (blobs: BlockInputBlobs) => void
   ): BlockInput {
     if (config.getForkSeq(block.message.slot) < ForkSeq.deneb) {
       throw Error(`Pre Deneb block slot ${block.message.slot}`);
@@ -97,9 +103,26 @@ export const getBlockInput = {
       blobsCache,
       blockBytes,
       availabilityPromise,
+      resolveAvailability,
     };
   },
 };
+
+export function getBlockInputBlobs(blobsCache: BlobsCache): BlockInputBlobs {
+  const blobs = [];
+  const blobsBytes = [];
+
+  for (let index = 0; index < blobsCache.size; index++) {
+    const blobCache = blobsCache.get(index);
+    if (blobCache === undefined) {
+      throw Error(`Missing blobSidecar at index=${index}`);
+    }
+    const {blobSidecar, blobBytes} = blobCache;
+    blobs.push(blobSidecar);
+    blobsBytes.push(blobBytes);
+  }
+  return {blobs, blobsBytes};
+}
 
 export enum AttestationImportOpt {
   Skip,

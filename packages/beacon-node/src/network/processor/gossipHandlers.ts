@@ -45,7 +45,7 @@ import {PeerAction} from "../peers/index.js";
 import {validateLightClientFinalityUpdate} from "../../chain/validation/lightClientFinalityUpdate.js";
 import {validateLightClientOptimisticUpdate} from "../../chain/validation/lightClientOptimisticUpdate.js";
 import {validateGossipBlobSidecar} from "../../chain/validation/blobSidecar.js";
-import {BlockInput, GossipedInputType, BlobSidecarValidation} from "../../chain/blocks/types.js";
+import {BlockInput, GossipedInputType, BlobSidecarValidation, BlockInputType} from "../../chain/blocks/types.js";
 import {sszDeserialize} from "../gossip/topic.js";
 import {INetworkCore} from "../core/index.js";
 import {INetwork} from "../interface.js";
@@ -118,11 +118,15 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
     const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
 
     // always set block to seen cache for all forks so that we don't need to download it
-    const blockInputRes = chain.seenGossipBlockInput.getGossipBlockInput(config, {
-      type: GossipedInputType.block,
-      signedBlock,
-      blockBytes,
-    });
+    const blockInputRes = chain.seenGossipBlockInput.getGossipBlockInput(
+      config,
+      {
+        type: GossipedInputType.block,
+        signedBlock,
+        blockBytes,
+      },
+      metrics
+    );
     const blockInput = blockInputRes.blockInput;
     // blockInput can't be returned null, improve by enforcing via return types
     if (blockInput === null) {
@@ -187,11 +191,15 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
     const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
     const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
 
-    const {blockInput, blockInputMeta} = chain.seenGossipBlockInput.getGossipBlockInput(config, {
-      type: GossipedInputType.blob,
-      blobSidecar,
-      blobBytes,
-    });
+    const {blockInput, blockInputMeta} = chain.seenGossipBlockInput.getGossipBlockInput(
+      config,
+      {
+        type: GossipedInputType.blob,
+        blobSidecar,
+        blobBytes,
+      },
+      metrics
+    );
 
     try {
       await validateGossipBlobSidecar(chain, blobSidecar, gossipIndex);
@@ -242,6 +250,10 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
     // Handler - MUST NOT `await`, to allow validation result to be propagated
 
     metrics?.registerBeaconBlock(OpSource.gossip, seenTimestampSec, signedBlock.message);
+    // if blobs are not yet fully available start an aggressive blob pull
+    if (blockInput.type === BlockInputType.blobsPromise) {
+      events.emit(NetworkEvent.unknownBlockInput, {blockInput: blockInput, peer: peerIdStr});
+    }
 
     chain
       .processBlock(blockInput, {
@@ -276,7 +288,6 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
         if (e instanceof BlockError) {
           switch (e.type.code) {
             case BlockErrorCode.DATA_UNAVAILABLE: {
-              // TODO: create a newevent unknownBlobs and only pull blobs
               const slot = signedBlock.message.slot;
               const forkTypes = config.getForkTypes(slot);
               const rootHex = toHexString(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));

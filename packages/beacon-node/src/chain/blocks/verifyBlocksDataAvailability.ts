@@ -7,9 +7,9 @@ import {validateBlobSidecars} from "../validation/blobSidecar.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {BlockInput, BlockInputType, ImportBlockOpts, BlobSidecarValidation} from "./types.js";
 
-// proposer boost is not available post 3 sec so try pulling using unknown block hash
-// post 3 sec after throwing the availability error
-const BLOB_AVAILABILITY_TIMEOUT = 3_000;
+// we can now wait for full 12 seconds because unavailable block sync will try pulling
+// the blobs from the network anyway after 500ms of seeing the block
+const BLOB_AVAILABILITY_TIMEOUT = 12_000;
 
 /**
  * Verifies some early cheap sanity checks on the block before running the full state transition.
@@ -59,7 +59,7 @@ export async function verifyBlocksDataAvailability(
 }
 
 async function maybeValidateBlobs(
-  chain: {config: ChainForkConfig; genesisTime: UintNum64},
+  chain: {config: ChainForkConfig; genesisTime: UintNum64; logger: Logger},
   blockInput: BlockInput,
   opts: ImportBlockOpts
 ): Promise<DataAvailableStatus> {
@@ -102,7 +102,7 @@ async function maybeValidateBlobs(
  * which may try unknownblock/blobs fill (by root).
  */
 async function raceWithCutoff<T>(
-  chain: {config: ChainForkConfig; genesisTime: UintNum64},
+  chain: {config: ChainForkConfig; genesisTime: UintNum64; logger: Logger},
   blockInput: BlockInput,
   availabilityPromise: Promise<T>
 ): Promise<T> {
@@ -114,6 +114,7 @@ async function raceWithCutoff<T>(
     0
   );
   const cutoffTimeout = new Promise((_resolve, reject) => setTimeout(reject, cutoffTime));
+  chain.logger.debug("Racing for blob availabilityPromise", {blockSlot, cutoffTime});
 
   try {
     await Promise.race([availabilityPromise, cutoffTimeout]);
