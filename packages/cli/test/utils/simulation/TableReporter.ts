@@ -122,8 +122,8 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
         finalizedSlots.length === 0
           ? "---"
           : isSingletonArray(finalizedSlots)
-          ? finalizedSlots[0]
-          : finalizedSlots.join(","),
+            ? finalizedSlots[0]
+            : finalizedSlots.join(","),
       peers: peersCount.length === 0 ? "---" : isSingletonArray(peersCount) ? peersCount[0] : peersCount.join(","),
       attCount: attestationCounts.length > 0 && isSingletonArray(attestationCounts) ? attestationCounts[0] : "---",
       incDelay: inclusionDelays.length > 0 && isSingletonArray(inclusionDelays) ? inclusionDelays[0].toFixed(2) : "---",
@@ -139,11 +139,11 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
     const groupBySlot = arrayGroupBy(errors, (e) => String(e.slot as number));
 
     for (const [slot, slotErrors] of Object.entries(groupBySlot)) {
-      if (slotErrors.length > 0) this.options.logger.info(`├─ Slot: ${slot}`);
+      if (slotErrors.length > 0) this.options.logger.error(`├─ Slot: ${slot}`);
       const groupByAssertion = arrayGroupBy(slotErrors, (e) => e.assertionId);
 
       for (const [assertionId, assertionErrors] of Object.entries(groupByAssertion)) {
-        if (assertionErrors.length > 0) this.options.logger.info(`├── Assertion: ${assertionId}`);
+        if (assertionErrors.length > 0) this.options.logger.error(`├── Assertion: ${assertionId}`);
 
         for (const error of assertionErrors) {
           this.options.logger.error(
