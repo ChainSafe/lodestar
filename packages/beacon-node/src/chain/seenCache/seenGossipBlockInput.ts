@@ -14,7 +14,11 @@ import {
   getBlockInputBlobs,
 } from "../blocks/types.js";
 import {Metrics} from "../../metrics/index.js";
-import {BlockInputAvailabilitySource} from "../../sync/index.js";
+
+export enum BlockInputAvailabilitySource {
+  GOSSIP = "gossip",
+  UNKNOWN_SYNC = "unknown_sync",
+}
 
 type GossipedBlockInput =
   | {type: GossipedInputType.block; signedBlock: allForks.SignedBeaconBlock; blockBytes: Uint8Array | null}

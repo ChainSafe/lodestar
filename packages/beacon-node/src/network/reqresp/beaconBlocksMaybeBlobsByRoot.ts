@@ -4,7 +4,7 @@ import {ForkSeq} from "@lodestar/params";
 import {BlockInput, BlockInputType, BlockSource, getBlockInputBlobs, getBlockInput} from "../../chain/blocks/types.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {INetwork} from "../interface.js";
-import {BlockInputAvailabilitySource} from "../../sync/index.js";
+import {BlockInputAvailabilitySource} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {Metrics} from "../../metrics/index.js";
 import {matchBlockWithBlobs} from "./beaconBlocksMaybeBlobsByRange.js";
 
