@@ -95,13 +95,13 @@ export function createFastifyHandler<E extends Endpoint>(
       switch (requestWireFormat) {
         case WireFormat.json:
           if (onlySupport != undefined && onlySupport !== WireFormat.json) {
-            throw new ServerError(415, `${operationId} only supports JSON requests`);
+            throw new ServerError(415, `${operationId} only supports ${WireFormat.json} requests`);
           }
           response = await method((definition.req as JsonRequestMethods<E>).parseReqJson(req as JsonPostRequestData));
           break;
         case WireFormat.ssz:
           if (onlySupport !== undefined && onlySupport !== WireFormat.ssz) {
-            throw new ServerError(415, `${operationId} only supports SSZ requests`);
+            throw new ServerError(415, `${operationId} only supports ${WireFormat.ssz} requests`);
           }
           response = await method(
             (definition.req as SszRequestMethods<E>).parseReqSsz(req as SszPostRequestData<E["request"]>)
@@ -120,7 +120,7 @@ export function createFastifyHandler<E extends Endpoint>(
       throw new ServerError(415, `Only unsupported media types are accepted: ${acceptHeader}`);
     }
 
-    const responseWireFormat = getWireFormat(mediaType);
+    const responseWireFormat = definition.resp.onlySupport ?? getWireFormat(mediaType);
     let wireResponse;
     switch (responseWireFormat) {
       case WireFormat.json: {

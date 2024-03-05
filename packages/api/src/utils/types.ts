@@ -78,12 +78,12 @@ export type GetRequestCodec<E extends Endpoint> = {
   schema: SchemaDefinition<E["request"]>;
 };
 
-type JsonRequestMethods<E extends Endpoint> = {
+export type JsonRequestMethods<E extends Endpoint> = {
   writeReqJson: (p: E["args"]) => E["request"]; // client
   parseReqJson: (r: E["request"]) => E["args"]; // server
 };
 
-type SszRequestMethods<E extends Endpoint> = {
+export type SszRequestMethods<E extends Endpoint> = {
   writeReqSsz: (p: E["args"]) => SszPostRequestData<E["request"]>; // client
   parseReqSsz: (r: SszPostRequestData<E["request"]>) => E["args"]; // server
 };
@@ -92,6 +92,8 @@ export type RequestMethods<E extends Endpoint> = JsonRequestMethods<E> & SszRequ
 
 export type PostRequestCodec<E extends Endpoint> = {
   schema: SchemaDefinition<E["request"]>;
+  /** Support ssz-only or json-only requests */
+  onlySupport?: WireFormat;
 } & (
   | ({
       onlySupport: WireFormat.json;
@@ -100,7 +102,6 @@ export type PostRequestCodec<E extends Endpoint> = {
       onlySupport: WireFormat.ssz;
     } & SszRequestMethods<E>)
   | ({
-      /** Support ssz-only or json-only requests */
       onlySupport?: never;
     } & RequestMethods<E>)
 );

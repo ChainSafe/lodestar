@@ -28,7 +28,14 @@ export class ApiResponse<E extends Endpoint> extends Response {
       throw Error(`Unsupported response media type: ${contentType.split(";", 1)[0]}`);
     }
 
-    return getWireFormat(mediaType);
+    const wireFormat = getWireFormat(mediaType);
+
+    const {onlySupport} = this.definition.resp;
+    if (onlySupport !== undefined && wireFormat !== onlySupport) {
+      throw Error(`${this.definition.operationId} only supports ${onlySupport} responses`);
+    }
+
+    return wireFormat;
   }
 
   async rawBody(): Promise<RawBody> {
