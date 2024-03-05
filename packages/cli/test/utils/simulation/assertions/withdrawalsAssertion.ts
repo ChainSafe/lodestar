@@ -65,7 +65,7 @@ export function createWithdrawalAssertions<T extends string>(
 
       for (const {currentBalance, withdrawalAmount, balanceInLastSlot} of Object.values(store[slot].validators)) {
         // A validator can get sync committee reward, so difference must be greater than zero
-        if (currentBalance >= balanceInLastSlot - withdrawalAmount) {
+        if (currentBalance < balanceInLastSlot - withdrawalAmount) {
           errors.push(
             `Withdrawal amount ${withdrawalAmount} does not match the difference between balances. balanceInLastSlot=${balanceInLastSlot}, currentBalance=${currentBalance}`
           );
