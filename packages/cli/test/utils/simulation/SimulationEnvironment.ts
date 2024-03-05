@@ -108,7 +108,7 @@ export class SimulationEnvironment {
     this.logger.info(
       `Starting simulation environment "${this.options.id}". currentTime=${new Date(
         currentTime
-      ).toISOString()} simulationTimeout=${prettyMsToTime(opts.runTimeoutMs)}`
+      ).toISOString()} simulationTimeout=${prettyMsToTime(opts.runTimeoutMs)} rootDir=${this.options.rootDir}`
     );
 
     if (opts.runTimeoutMs > 0) {
@@ -234,8 +234,8 @@ export class SimulationEnvironment {
       interopKeys.length > 0 && remote
         ? {type: "remote", secretKeys: interopKeys}
         : interopKeys.length > 0
-        ? {type: "local", secretKeys: interopKeys}
-        : {type: "no-keys"};
+          ? {type: "local", secretKeys: interopKeys}
+          : {type: "no-keys"};
 
     const commonOptions: GeneratorOptions = {
       id,
@@ -287,8 +287,8 @@ export class SimulationEnvironment {
       typeof validator === "object"
         ? validator.type
         : validator === undefined
-        ? getValidatorForBeaconNode(beaconType)
-        : validator;
+          ? getValidatorForBeaconNode(beaconType)
+          : validator;
     const validatorOptions = typeof validator === "object" ? validator.options : {};
     const beaconUrls = [
       // As lodestar is running on host machine, need to connect through docker named host
@@ -326,6 +326,7 @@ export class SimulationEnvironment {
       const genesisState = nodeUtils.initDevState(this.forkConfig, this.keysCount, {
         genesisTime: this.options.genesisTime + this.forkConfig.GENESIS_DELAY,
         eth1BlockHash: fromHexString(eth1Genesis.hash),
+        withEth1Credentials: true,
       }).state;
 
       this.genesisState = genesisState;
