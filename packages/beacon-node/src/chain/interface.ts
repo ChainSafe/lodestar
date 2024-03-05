@@ -203,7 +203,10 @@ export interface IBeaconChain {
   blsThreadPoolCanAcceptWork(): boolean;
 
   getBlockRewards(blockRef: allForks.FullOrBlindedBeaconBlock): Promise<BlockRewards>;
-  getAttestationsRewards(epoch: Epoch, validatorIds?: (ValidatorIndex | string)[]): Promise<AttestationsRewards>;
+  getAttestationsRewards(
+    epoch: Epoch,
+    validatorIds?: (ValidatorIndex | string)[]
+  ): Promise<[AttestationsRewards, boolean]>;
   getSyncCommitteeRewards(
     blockRef: allForks.FullOrBlindedBeaconBlock,
     validatorIds?: (ValidatorIndex | string)[]
