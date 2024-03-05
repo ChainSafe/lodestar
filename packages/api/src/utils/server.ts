@@ -76,7 +76,7 @@ export type FastifyRoutes<Es extends Record<string, Endpoint>> = {[K in keyof Es
 export function createFastifyHandler<E extends Endpoint>(
   definition: RouteDefinition<E>,
   method: ApplicationMethod<E>,
-  operationId: string
+  _operationId: string
 ): FastifyHandler<E> {
   return async (req, resp) => {
     let response: ApplicationResponse<E>;
@@ -95,13 +95,13 @@ export function createFastifyHandler<E extends Endpoint>(
       switch (requestWireFormat) {
         case WireFormat.json:
           if (onlySupport != undefined && onlySupport !== WireFormat.json) {
-            throw new ServerError(415, `${operationId} only supports ${WireFormat.json} requests`);
+            throw new ServerError(415, `Endpoint only supports ${onlySupport} requests`);
           }
           response = await method((definition.req as JsonRequestMethods<E>).parseReqJson(req as JsonPostRequestData));
           break;
         case WireFormat.ssz:
           if (onlySupport !== undefined && onlySupport !== WireFormat.ssz) {
-            throw new ServerError(415, `${operationId} only supports ${WireFormat.ssz} requests`);
+            throw new ServerError(415, `Endpoint only supports ${onlySupport} requests`);
           }
           response = await method(
             (definition.req as SszRequestMethods<E>).parseReqSsz(req as SszPostRequestData<E["request"]>)
