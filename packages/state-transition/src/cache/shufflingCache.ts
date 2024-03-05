@@ -1,6 +1,5 @@
 import {Epoch, RootHex} from "@lodestar/types";
-import type {Metrics} from "@lodestar/beacon-node";
-import {LodestarError, MapDef, pruneSetToMax} from "@lodestar/utils";
+import {GaugeExtra, LodestarError, MapDef, NoLabels, pruneSetToMax} from "@lodestar/utils";
 import {EpochShuffling, computeEpochShuffling} from "../util/index.js";
 import {BeaconStateAllForks} from "./types.js";
 
@@ -8,7 +7,7 @@ import {BeaconStateAllForks} from "./types.js";
  * With default chain option of maxSkipSlots = 32, there should be no shuffling promise. If that happens a lot, it could blow up Lodestar,
  * with MAX_EPOCHS = 4, only allow 2 promise at a time. Note that regen already bounds number of concurrent requests at 1 already.
  */
-const MAX_PROMISES = 2;
+export const SHUFFLING_CACHE_MAX_PROMISES = 2;
 
 /**
  * Same value to CheckpointBalancesCache, with the assumption that we don't have to use it for old epochs. In the worse case:
@@ -16,14 +15,26 @@ const MAX_PROMISES = 2;
  * - don't have shuffling to verify attestations, need to do 1 epoch transition to add shuffling to this cache. This never happens
  * with default chain option of maxSkipSlots = 32
  **/
-const SHUFFLING_CACHE_MAX_EPOCHS = 4;
+export const SHUFFLING_CACHE_MAX_EPOCHS = 4;
+
+export enum ShufflingCacheCaller {
+  testing = "testing",
+  buildShuffling = "buildShuffling",
+  attestationVerification = "attestationVerification",
+  createFromState = "createFromState",
+  getBeaconCommittee = "getBeaconCommittee",
+  getEpochCommittees = "getEpochCommittees",
+  getAttestationsForBlock = "getAttestationsForBlock",
+  getCommitteeCountPerSlot = "getCommitteeCountPerSlot",
+  getCommitteeAssignments = "getCommitteeAssignments",
+}
 
 export interface IShufflingCache {
   add(shufflingEpoch: Epoch, shufflingDecisionRoot: RootHex, shuffling: EpochShuffling): void;
   get(shufflingEpoch: Epoch, shufflingDecisionRoot: RootHex): Promise<EpochShuffling | null>;
   // getAll(): MapDef<Epoch, Map<RootHex, ShufflingCacheItem>>;
-  getOrNull(shufflingEpoch: Epoch, shufflingDecisionRoot: RootHex): EpochShuffling | null;
-  getOrError(shufflingEpoch: Epoch, shufflingDecisionRoot: RootHex): EpochShuffling;
+  getOrNull(shufflingEpoch: Epoch, shufflingDecisionRoot: RootHex, isReload?: boolean): EpochShuffling | null;
+  getOrError(shufflingEpoch: Epoch, shufflingDecisionRoot: RootHex, caller: ShufflingCacheCaller): EpochShuffling;
   buildSync(
     state: BeaconStateAllForks,
     shufflingEpoch: Epoch,
@@ -36,6 +47,22 @@ export interface IShufflingCache {
     shufflingDecisionRoot: RootHex,
     activeIndexes: number[]
   ): Promise<EpochShuffling>;
+}
+
+export interface ShufflingCacheMetrics {
+  shufflingCache: {
+    size: GaugeExtra<NoLabels>;
+
+    cacheMiss: GaugeExtra<{caller: ShufflingCacheCaller}>;
+    cacheMissUnresolvedPromise: GaugeExtra<{caller: ShufflingCacheCaller}>;
+    cacheHit: GaugeExtra<{caller: ShufflingCacheCaller}>;
+    cacheHitUnresolvedPromise: GaugeExtra<{caller: ShufflingCacheCaller}>;
+    cacheHitRebuildPromise: GaugeExtra<NoLabels>;
+
+    reloadCacheMiss: GaugeExtra<NoLabels>;
+    reloadCacheMissUnresolvedPromise: GaugeExtra<NoLabels>;
+    reloadCacheHit: GaugeExtra<NoLabels>;
+  };
 }
 
 export enum ShufflingCacheErrorCode {
@@ -87,62 +114,67 @@ export class ShufflingCache implements IShufflingCache {
     () => new Map<RootHex, ShufflingCacheItem>()
   );
   private readonly maxEpochs: number;
+  private metrics: ShufflingCacheMetrics | null = null;
 
-  constructor(
-    private metrics: Metrics | null = null,
-    opts: ShufflingCacheOptions = {}
-  ) {
+  constructor(metrics: ShufflingCacheMetrics | null = null, opts: ShufflingCacheOptions = {}) {
     this.maxEpochs = opts.maxShufflingCacheEpochs ?? SHUFFLING_CACHE_MAX_EPOCHS;
-    if (metrics) {
-      metrics.shufflingCache.size.addCollect(() =>
-        metrics.shufflingCache.size.set(
-          Array.from(this.itemsByDecisionRootByEpoch.values()).reduce((total, innerMap) => total + innerMap.size, 0)
-        )
-      );
+    this.addMetrics(metrics);
+  }
+
+  addMetrics(metrics: ShufflingCacheMetrics | null): void {
+    if (!this.metrics) {
+      this.metrics = metrics;
+      if (metrics) {
+        metrics.shufflingCache.size.addCollect(() =>
+          metrics.shufflingCache.size.set(
+            Array.from(this.itemsByDecisionRootByEpoch.values()).reduce((total, innerMap) => total + innerMap.size, 0)
+          )
+        );
+      }
     }
   }
 
-  addMetrics(metrics: Metrics): void {
-    this.metrics = metrics;
-  }
-
+  /**
+   * Used for attestation verifications.  Will immediately return a shuffling if it is available,
+   * otherwise it will return the promise for the shuffling and the consumer will need to wait for
+   * it to be calculated.  Consumer await covers both cases.  If shuffling is not available returns
+   * null and does not attempt to compute shuffling.
+   */
   async get(shufflingEpoch: Epoch, shufflingDecisionRoot: RootHex): Promise<EpochShuffling | null> {
     const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(shufflingEpoch).get(shufflingDecisionRoot);
     if (cacheItem === undefined) {
+      this.metrics?.shufflingCache.cacheMiss.inc({caller: ShufflingCacheCaller.attestationVerification});
       return null;
     }
     if (this.isShufflingCacheItem(cacheItem)) {
+      this.metrics?.shufflingCache.cacheHit.inc({
+        caller: ShufflingCacheCaller.attestationVerification,
+      });
       return cacheItem.shuffling;
     } else {
+      this.metrics?.shufflingCache.cacheHitUnresolvedPromise.inc({
+        caller: ShufflingCacheCaller.attestationVerification,
+      });
       return cacheItem.promise;
     }
   }
 
-  getOrError(shufflingEpoch: Epoch, shufflingDecisionRoot: RootHex): EpochShuffling {
-    const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(shufflingEpoch).get(shufflingDecisionRoot);
-    if (cacheItem === undefined) {
-      throw new ShufflingCacheError({
-        code: ShufflingCacheErrorCode.NO_SHUFFLING_FOUND,
-        epoch: shufflingEpoch,
-        shufflingDecisionRoot,
-      });
-    }
-    if (this.isPromiseCacheItem(cacheItem)) {
-      throw new ShufflingCacheError({
-        code: ShufflingCacheErrorCode.SHUFFLING_PROMISE_NOT_RESOLVED,
-        epoch: shufflingEpoch,
-        shufflingDecisionRoot,
-      });
-    }
-    return cacheItem.shuffling;
+  /**
+   * Will synchronously get a shuffling if it is available or will throw an error if not. Metrics are collected
+   * by this._get
+   */
+  getOrError(shufflingEpoch: Epoch, shufflingDecisionRoot: RootHex, caller: ShufflingCacheCaller): EpochShuffling {
+    // Will throw for error case so always returns a value
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    return this._get(shufflingEpoch, shufflingDecisionRoot, false, true, caller)!;
   }
 
-  getOrNull(shufflingEpoch: Epoch, shufflingDecisionRoot: RootHex): EpochShuffling | null {
-    const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(shufflingEpoch).get(shufflingDecisionRoot);
-    if (cacheItem === undefined || this.isPromiseCacheItem(cacheItem)) {
-      return null;
-    }
-    return cacheItem.shuffling;
+  /**
+   * Will synchronously get a shuffling if it is available or will return null if not. The consumer
+   * will have to then submit for building the shuffling. Metrics are collected by this._get
+   */
+  getOrNull(shufflingEpoch: Epoch, shufflingDecisionRoot: RootHex, isReload = false): EpochShuffling | null {
+    return this._get(shufflingEpoch, shufflingDecisionRoot, isReload, false, ShufflingCacheCaller.createFromState);
   }
 
   add(shufflingEpoch: Epoch, shufflingDecisionRoot: RootHex, shuffling: EpochShuffling): void {
@@ -161,17 +193,17 @@ export class ShufflingCache implements IShufflingCache {
     const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(shufflingEpoch).get(shufflingDecisionRoot);
     let resolveFn: ShufflingResolution;
     if (cacheItem) {
-      // TODO: (matthewkeil) Add metric here for cache hit
       if (this.isShufflingCacheItem(cacheItem)) {
+        this.metrics?.shufflingCache.cacheHit.inc({caller: ShufflingCacheCaller.buildShuffling});
         return cacheItem.shuffling;
       }
-      // Perhaps we should throw an error instead. Should not happen ideally
+      // Add metric here for race condition recreating the shuffling because
+      // this sync call will finish first if its running on thread
       //
-      // TODO: (matthewkeil) Add metric here for race condition recreating the shuffling
-      //       because this sync call will finish first if its running on thread
+      // TODO: (matthewkeil) Perhaps we should throw an error instead. Should not happen ideally
+      this.metrics?.shufflingCache.cacheHitRebuildPromise.inc();
       resolveFn = cacheItem.resolveFn;
     } else {
-      // TODO: (matthewkeil) Add metric here for cache miss
       resolveFn = this._insertShufflingPromise(shufflingEpoch, shufflingDecisionRoot);
     }
 
@@ -188,15 +220,14 @@ export class ShufflingCache implements IShufflingCache {
   ): Promise<EpochShuffling> {
     const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(shufflingEpoch).get(shufflingDecisionRoot);
     if (cacheItem) {
-      // TODO: (matthewkeil) Add metric here for cache hit
       if (this.isShufflingCacheItem(cacheItem)) {
+        this.metrics?.shufflingCache.cacheHit.inc({caller: ShufflingCacheCaller.buildShuffling});
         return cacheItem.shuffling;
       }
+      this.metrics?.shufflingCache.cacheHitUnresolvedPromise.inc({caller: ShufflingCacheCaller.buildShuffling});
       return cacheItem.promise;
     }
 
-    // TODO: (matthewkeil) Add metric here for cache miss
-    //
     // this is to prevent multiple calls to get shuffling for the same epoch and dependent root
     // any subsequent calls of the same epoch and dependent root will wait for this promise to resolve
     const resolveFn = this._insertShufflingPromise(shufflingEpoch, shufflingDecisionRoot);
@@ -207,6 +238,44 @@ export class ShufflingCache implements IShufflingCache {
     const shuffling = this._build(state, shufflingEpoch, shufflingDecisionRoot, activeIndexes);
     resolveFn(shuffling);
     return shuffling;
+  }
+
+  private _get(
+    shufflingEpoch: Epoch,
+    shufflingDecisionRoot: RootHex,
+    isReload: boolean,
+    shouldError: boolean,
+    caller: ShufflingCacheCaller
+  ): EpochShuffling | null {
+    const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(shufflingEpoch).get(shufflingDecisionRoot);
+    if (cacheItem === undefined) {
+      isReload
+        ? this.metrics?.shufflingCache.reloadCacheMiss.inc()
+        : this.metrics?.shufflingCache.cacheMiss.inc({caller});
+      if (shouldError) {
+        throw new ShufflingCacheError({
+          code: ShufflingCacheErrorCode.NO_SHUFFLING_FOUND,
+          epoch: shufflingEpoch,
+          shufflingDecisionRoot,
+        });
+      }
+      return null;
+    }
+    if (this.isPromiseCacheItem(cacheItem)) {
+      isReload
+        ? this.metrics?.shufflingCache.reloadCacheMissUnresolvedPromise.inc()
+        : this.metrics?.shufflingCache.cacheMissUnresolvedPromise.inc({caller});
+      if (shouldError) {
+        throw new ShufflingCacheError({
+          code: ShufflingCacheErrorCode.SHUFFLING_PROMISE_NOT_RESOLVED,
+          epoch: shufflingEpoch,
+          shufflingDecisionRoot,
+        });
+      }
+      return null;
+    }
+    isReload ? this.metrics?.shufflingCache.reloadCacheHit.inc() : this.metrics?.shufflingCache.cacheHit.inc({caller});
+    return cacheItem.shuffling;
   }
 
   private _build(
@@ -224,7 +293,7 @@ export class ShufflingCache implements IShufflingCache {
     const promiseCount = Array.from(this.itemsByDecisionRootByEpoch.values())
       .flatMap((innerMap) => Array.from(innerMap.values()))
       .filter((item) => this.isPromiseCacheItem(item)).length;
-    if (promiseCount >= MAX_PROMISES) {
+    if (promiseCount >= SHUFFLING_CACHE_MAX_PROMISES) {
       throw new Error(
         `Too many shuffling promises: ${promiseCount}, shufflingEpoch: ${shufflingEpoch}, shufflingDecisionRoot: ${shufflingDecisionRoot}`
       );

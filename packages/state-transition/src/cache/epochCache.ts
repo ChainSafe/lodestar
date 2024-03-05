@@ -41,7 +41,7 @@ import {
   SyncCommitteeCache,
   SyncCommitteeCacheEmpty,
 } from "./syncCommitteeCache.js";
-import {ShufflingCache, IShufflingCache} from "./shufflingCache.js";
+import {ShufflingCache, IShufflingCache, ShufflingCacheCaller} from "./shufflingCache.js";
 
 /** `= PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT)` */
 export const PROPOSER_WEIGHT_FACTOR = PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT);
@@ -55,6 +55,7 @@ export type EpochCacheImmutableData = {
 };
 
 export type EpochCacheOpts = {
+  isReload?: boolean;
   skipSyncCommitteeCache?: boolean;
   skipSyncPubkeys?: boolean;
 };
@@ -321,11 +322,15 @@ export class EpochCache {
     // BeaconChain could provide a shuffling cache to avoid re-computing shuffling every epoch
     // in that case, we don't need to compute shufflings again
     const previousShufflingDecisionRoot = getShufflingDecisionBlock(state, previousEpoch);
-    const cachedPreviousShuffling = shufflingCache.getOrNull(previousEpoch, previousShufflingDecisionRoot);
+    const cachedPreviousShuffling = shufflingCache.getOrNull(
+      previousEpoch,
+      previousShufflingDecisionRoot,
+      opts?.isReload
+    );
     const currentShufflingDecisionRoot = getShufflingDecisionBlock(state, currentEpoch);
-    const cachedCurrentShuffling = shufflingCache.getOrNull(currentEpoch, currentShufflingDecisionRoot);
+    const cachedCurrentShuffling = shufflingCache.getOrNull(currentEpoch, currentShufflingDecisionRoot, opts?.isReload);
     const nextShufflingDecisionRoot = getShufflingDecisionBlock(state, nextEpoch);
-    const cachedNextShuffling = shufflingCache.getOrNull(nextEpoch, nextShufflingDecisionRoot);
+    const cachedNextShuffling = shufflingCache.getOrNull(nextEpoch, nextShufflingDecisionRoot, opts?.isReload);
 
     for (let i = 0; i < validatorCount; i++) {
       const validator = validators[i];
@@ -369,23 +374,14 @@ export class EpochCache {
     }
 
     if (!cachedCurrentShuffling) {
-      // this.metrics?.stateReloadShufflingCacheMiss.inc();
       shufflingCache.buildSync(state, currentEpoch, currentShufflingDecisionRoot, currentActiveIndices);
     }
     if (!cachedPreviousShuffling) {
-      // this.metrics?.stateReloadShufflingCacheMiss.inc();
-      if (isGenesis) {
-        shufflingCache.add(
-          GENESIS_EPOCH,
-          previousShufflingDecisionRoot,
-          shufflingCache.getOrNull(currentEpoch, currentShufflingDecisionRoot) as EpochShuffling
-        );
-      } else {
+      if (!isGenesis) {
         shufflingCache.buildSync(state, previousEpoch, previousShufflingDecisionRoot, previousActiveIndices);
       }
     }
     if (!cachedNextShuffling) {
-      // this.metrics?.stateReloadShufflingCacheMiss.inc();
       shufflingCache.buildSync(state, nextEpoch, nextShufflingDecisionRoot, nextActiveIndices);
     }
 
@@ -650,7 +646,9 @@ export class EpochCache {
    * Return the beacon committee at slot for index.
    */
   getBeaconCommittee(slot: Slot, index: CommitteeIndex): Uint32Array {
-    const slotCommittees = this.getShufflingAtSlot(slot).committees[slot % SLOTS_PER_EPOCH];
+    const slotCommittees = this.getShufflingAtSlot(slot, ShufflingCacheCaller.getBeaconCommittee).committees[
+      slot % SLOTS_PER_EPOCH
+    ];
     if (index >= slotCommittees.length) {
       throw new EpochCacheError({
         code: EpochCacheErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE,
@@ -662,7 +660,7 @@ export class EpochCache {
   }
 
   getCommitteeCountPerSlot(epoch: Epoch): number {
-    return this.getShufflingAtEpoch(epoch).committeesPerSlot;
+    return this.getShufflingAtEpoch(epoch, ShufflingCacheCaller.getCommitteeCountPerSlot).committeesPerSlot;
   }
 
   /**
@@ -766,7 +764,7 @@ export class EpochCache {
     const requestedValidatorIndicesSet = new Set(requestedValidatorIndices);
     const duties = new Map<ValidatorIndex, AttesterDuty>();
 
-    const epochCommittees = this.getShufflingAtEpoch(epoch).committees;
+    const epochCommittees = this.getShufflingAtEpoch(epoch, ShufflingCacheCaller.getCommitteeAssignments).committees;
     for (let epochSlot = 0; epochSlot < SLOTS_PER_EPOCH; epochSlot++) {
       const slotCommittees = epochCommittees[epochSlot];
       for (let i = 0, committeesAtSlot = slotCommittees.length; i < committeesAtSlot; i++) {
@@ -845,13 +843,13 @@ export class EpochCache {
     }
   }
 
-  getShufflingAtSlot(slot: Slot): EpochShuffling {
+  getShufflingAtSlot(slot: Slot, caller: ShufflingCacheCaller): EpochShuffling {
     const epoch = computeEpochAtSlot(slot);
-    return this.shufflingCache.getOrError(epoch, this.getShufflingDecisionRootAtEpoch(epoch));
+    return this.shufflingCache.getOrError(epoch, this.getShufflingDecisionRootAtEpoch(epoch), caller);
   }
 
-  getShufflingAtEpoch(epoch: Epoch): EpochShuffling {
-    return this.shufflingCache.getOrError(epoch, this.getShufflingDecisionRootAtEpoch(epoch));
+  getShufflingAtEpoch(epoch: Epoch, caller: ShufflingCacheCaller): EpochShuffling {
+    return this.shufflingCache.getOrError(epoch, this.getShufflingDecisionRootAtEpoch(epoch), caller);
   }
 
   /**
