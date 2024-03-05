@@ -41,36 +41,36 @@ export type BlockRewards = {
 };
 
 /**
- * Rewards for a single set of (ideal or actual depending on usage) attestations. Reward value is in Gwei 
+ * Rewards for a single set of (ideal or actual depending on usage) attestations. Reward value is in Gwei
  */
 type AttestationsReward = {
   /* Reward for head vote. Could be negative to indicate penalty */
-  head: number, 
+  head: number;
   /* Reward for target vote. Could be negative to indicate penalty */
-  target: number,
+  target: number;
   /* Reward for source vote. Could be negative to indicate penalty */
-  source: number,
+  source: number;
   /* Inclusion delay reward (phase0 only) */
-  inclusionDelay: number,
+  inclusionDelay: number;
   /* Inactivity penalty. Should be a negative number to indicate penalty */
-  inactivity: number
+  inactivity: number;
 };
 
 /**
  * Rewards info for ideal attestations ie. Maximum rewards could be earned by making timely head, target and source vote.
  * `effectiveBalance` is in gwei
  */
-export type IdealAttestationsReward = (AttestationsReward & {effectiveBalance: number});
+export type IdealAttestationsReward = AttestationsReward & {effectiveBalance: number};
 
 /**
  * Rewards info for actual attestations
  */
-export type TotalAttestationsReward = (AttestationsReward & {validatorIndex: ValidatorIndex});
+export type TotalAttestationsReward = AttestationsReward & {validatorIndex: ValidatorIndex};
 
 export type AttestationsRewards = {
-  idealRewards: IdealAttestationsReward[],
-  totalRewards: TotalAttestationsReward[],
-}
+  idealRewards: IdealAttestationsReward[];
+  totalRewards: TotalAttestationsReward[];
+};
 
 /**
  * Rewards info for sync committee participation. Every reward value is in Gwei.
@@ -97,7 +97,7 @@ export type Api = {
     >
   >;
   /**
-   * 
+   *
    */
   getAttestationsRewards(
     epoch: Epoch,
@@ -194,7 +194,7 @@ export function getReturnTypes(): ReturnTypes<Api> {
     },
     {jsonCase: "eth2"}
   );
-  
+
   const TotalAttestationsRewardsResponse = new ContainerType(
     {
       head: ssz.UintNum64,
@@ -214,7 +214,6 @@ export function getReturnTypes(): ReturnTypes<Api> {
     },
     {jsonCase: "eth2"}
   );
-
 
   const SyncCommitteeRewardsResponse = new ContainerType(
     {
