@@ -9,8 +9,9 @@ export function getBeaconRewardsApi({chain}: Pick<ApiModules, "chain">): ServerA
       const data = await chain.getBlockRewards(block.message);
       return {data, executionOptimistic};
     },
-    async getAttestationsRewards(epoch, filters) {
-
+    async getAttestationsRewards(epoch, validatorIds) {
+      const data = await chain.getAttestationsRewards(epoch, validatorIds);
+      return {data, executionOptimistic: true};
     },
     async getSyncCommitteeRewards(blockId, validatorIds) {
       const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
