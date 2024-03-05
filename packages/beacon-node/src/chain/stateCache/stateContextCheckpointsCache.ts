@@ -72,7 +72,7 @@ export class CheckpointStateCache implements CheckpointStateCacheInterface {
 
     this.metrics?.stateClonedCount.observe(item.clonedCount);
 
-    return item;
+    return item.clone(true);
   }
 
   add(cp: phase0.Checkpoint, item: CachedBeaconStateAllForks): void {

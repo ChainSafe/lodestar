@@ -319,7 +319,7 @@ async function processSlotsToNearestCheckpoint(
     const checkpointState = postState;
     const cp = getCheckpointFromState(checkpointState);
     checkpointStateCache.add(cp, checkpointState);
-    emitter.emit(ChainEvent.checkpoint, cp, checkpointState.clone());
+    emitter.emit(ChainEvent.checkpoint, cp, checkpointState.clone(true));
 
     // this avoids keeping our node busy processing blocks
     await sleep(0);

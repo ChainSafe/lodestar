@@ -360,7 +360,7 @@ export async function importBlock(
     const checkpointState = postState;
     const cp = getCheckpointFromState(checkpointState);
     this.regen.addCheckpointState(cp, checkpointState);
-    this.emitter.emit(ChainEvent.checkpoint, cp, checkpointState);
+    this.emitter.emit(ChainEvent.checkpoint, cp, checkpointState.clone(true));
 
     // Note: in-lined code from previos handler of ChainEvent.checkpoint
     this.logger.verbose("Checkpoint processed", toCheckpointHex(cp));
