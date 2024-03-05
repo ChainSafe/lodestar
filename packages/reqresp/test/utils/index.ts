@@ -1,6 +1,6 @@
 import {Direction, ReadStatus, Stream, StreamStatus, WriteStatus} from "@libp2p/interface";
 import {logger} from "@libp2p/logger";
-import {expect} from "chai";
+import {expect} from "vitest";
 import {Uint8ArrayList} from "uint8arraylist";
 import {toHexString} from "@chainsafe/ssz";
 import {fromHex} from "@lodestar/utils";
@@ -21,14 +21,24 @@ export async function* arrToSource<T>(arr: T[]): AsyncGenerator<T> {
  * Wrapper for type-safety to ensure and array of Buffers is equal with a diff in hex
  */
 export function expectEqualByteChunks(chunks: Uint8Array[], expectedChunks: Uint8Array[], message?: string): void {
-  expect(chunks.map(toHexString).join("").replace(/0x/g, "")).to.deep.equal(
-    expectedChunks.map(toHexString).join("").replace(/0x/g, ""),
-    message
-  );
+  if (message) {
+    expect(chunks.map(toHexString).join("").replace(/0x/g, "")).toEqualWithMessage(
+      expectedChunks.map(toHexString).join("").replace(/0x/g, ""),
+      message
+    );
+  } else {
+    expect(chunks.map(toHexString).join("").replace(/0x/g, "")).toEqual(
+      expectedChunks.map(toHexString).join("").replace(/0x/g, "")
+    );
+  }
 }
 
 export function expectInEqualByteChunks(chunks: Uint8Array[], expectedChunks: Uint8Array[], message?: string): void {
-  expect(chunks.map(toHexString)).not.to.deep.equal(expectedChunks.map(toHexString), message);
+  if (message) {
+    expect(chunks.map(toHexString)).not.toEqualWithMessage(expectedChunks.map(toHexString), message);
+  } else {
+    expect(chunks.map(toHexString)).not.toEqual(expectedChunks.map(toHexString));
+  }
 }
 
 /**
@@ -63,11 +73,8 @@ export class MockLibP2pStream implements Stream {
     }
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
   close: Stream["close"] = async () => {};
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
   closeRead = async (): Promise<void> => {};
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
   closeWrite = async (): Promise<void> => {};
   abort: Stream["abort"] = () => this.close();
 }

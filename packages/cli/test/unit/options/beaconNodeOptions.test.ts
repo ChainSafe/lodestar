@@ -37,6 +37,7 @@ describe("options / beaconNodeOptions", () => {
       "chain.trustedSetup": "",
       "chain.minSameMessageSignatureSetsToBatch": 32,
       "chain.maxShufflingCacheEpochs": 100,
+      "chain.archiveBlobEpochs": 10000,
       emitPayloadAttributes: false,
 
       eth1: true,
@@ -51,7 +52,7 @@ describe("options / beaconNodeOptions", () => {
       "execution.urls": ["http://localhost:8551"],
       "execution.timeout": 12000,
       "execution.retryDelay": 2000,
-      "execution.retryAttempts": 1,
+      "execution.retries": 1,
 
       builder: false,
       "builder.url": "http://localhost:8661",
@@ -141,6 +142,7 @@ describe("options / beaconNodeOptions", () => {
         trustedSetup: "",
         minSameMessageSignatureSetsToBatch: 32,
         maxShufflingCacheEpochs: 100,
+        archiveBlobEpochs: 10000,
       },
       eth1: {
         enabled: true,
@@ -153,7 +155,7 @@ describe("options / beaconNodeOptions", () => {
       },
       executionEngine: {
         urls: ["http://localhost:8551"],
-        retryAttempts: 1,
+        retries: 1,
         retryDelay: 2000,
         timeout: 12000,
       },

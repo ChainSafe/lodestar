@@ -5,7 +5,8 @@ import {phase0} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {Network, NetworkEvent, ReqRespMethod} from "../../../src/network/index.js";
 import {GoodByeReasonCode} from "../../../src/constants/index.js";
-import {connect, disconnect, onPeerConnect, onPeerDisconnect, getNetworkForTest} from "../../utils/network.js";
+import {connect, disconnect, onPeerConnect, onPeerDisconnect} from "../../utils/network.js";
+import {getNetworkForTest} from "../../utils/networkWithMockDb.js";
 import {getValidPeerId} from "../../utils/peer.js";
 
 describe(
@@ -23,8 +24,6 @@ describe(
   },
   {timeout: 10_000}
 );
-
-/* eslint-disable mocha/no-top-level-hooks */
 
 function runTests({useWorker}: {useWorker: boolean}): void {
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
@@ -98,7 +97,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
 
   // Current implementation of discv5 consumer doesn't allow to deterministically force a peer to be found
   // a random find node lookup can yield no results if there are too few peers in the DHT
-  // it.skip("should connect to new peer by subnet", async function () {});
+  it.todo("should connect to new peer by subnet", async function () {});
 
   it("Should goodbye peers on stop", async function () {
     const [netA, netB] = await createTestNodesAB();

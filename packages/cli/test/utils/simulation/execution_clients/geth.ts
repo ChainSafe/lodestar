@@ -3,15 +3,17 @@ import {writeFile} from "node:fs/promises";
 import path from "node:path";
 import got from "got";
 import {ZERO_HASH} from "@lodestar/state-transition";
-import {SHARED_JWT_SECRET, SIM_ENV_NETWORK_ID} from "../constants.js";
+import {
+  EL_GENESIS_ACCOUNT,
+  EL_GENESIS_PASSWORD,
+  EL_GENESIS_SECRET_KEY,
+  SHARED_JWT_SECRET,
+  SIM_ENV_NETWORK_ID,
+} from "../constants.js";
 import {Eth1ProviderWithAdmin} from "../Eth1ProviderWithAdmin.js";
 import {ExecutionClient, ExecutionNodeGenerator, ExecutionStartMode, JobOptions, RunnerType} from "../interfaces.js";
 import {getNodeMountedPaths} from "../utils/paths.js";
 import {getNodePorts} from "../utils/ports.js";
-
-const SECRET_KEY = "45a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065ff2d8";
-const PASSWORD = "12345678";
-const GENESIS_ACCOUNT = "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b";
 
 export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (opts, runner) => {
   if (!process.env.GETH_BINARY_DIR && !process.env.GETH_DOCKER_IMAGE) {
@@ -21,7 +23,7 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
   const {id, mode, ttd, address, mining, clientOptions, nodeIndex} = opts;
   const ports = getNodePorts(nodeIndex);
 
-  const isDocker = process.env.GETH_DOCKER_IMAGE !== undefined;
+  const isDocker = !!process.env.GETH_DOCKER_IMAGE;
   const binaryPath = isDocker ? "" : `${process.env.GETH_BINARY_DIR}/geth`;
   const {rootDir, rootDirMounted, genesisFilePathMounted, logFilePath, jwtsecretFilePathMounted} = getNodeMountedPaths(
     opts.paths,
@@ -74,8 +76,8 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
         }
       : undefined,
     bootstrap: async () => {
-      await writeFile(skPath, SECRET_KEY);
-      await writeFile(passwordPath, PASSWORD);
+      await writeFile(skPath, EL_GENESIS_SECRET_KEY);
+      await writeFile(passwordPath, EL_GENESIS_PASSWORD);
     },
     cli: {
       command: binaryPath,
@@ -132,7 +134,7 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
         rootDirMounted,
         "--allow-insecure-unlock",
         "--unlock",
-        GENESIS_ACCOUNT,
+        EL_GENESIS_ACCOUNT,
         "--password",
         passwordPathMounted,
         "--syncmode",
@@ -142,7 +144,7 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
         // Logging verbosity: 0=silent, 1=error, 2=warn, 3=info, 4=debug, 5=detail
         "--verbosity",
         "5",
-        ...(mining ? ["--mine", "--miner.etherbase", GENESIS_ACCOUNT] : []),
+        ...(mining ? ["--mine", "--miner.etherbase", EL_GENESIS_ACCOUNT] : []),
         ...(mode == ExecutionStartMode.PreMerge ? ["--nodiscover"] : []),
         ...clientOptions,
       ],

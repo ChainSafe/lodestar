@@ -71,7 +71,7 @@ export const testData: GenericServerTestCases<Api> = {
     res: undefined,
   },
   getBlobSidecars: {
-    args: ["head"],
+    args: ["head", [0]],
     res: {executionOptimistic: true, data: ssz.deneb.BlobSidecars.defaultValue()},
   },
 
@@ -166,6 +166,23 @@ export const testData: GenericServerTestCases<Api> = {
   getEpochSyncCommittees: {
     args: ["head", 1],
     res: {executionOptimistic: true, data: {validators: [1300], validatorAggregates: [[1300]]}},
+  },
+
+  // reward
+
+  getBlockRewards: {
+    args: ["head"],
+    res: {
+      executionOptimistic: true,
+      data: {
+        proposerIndex: 0,
+        total: 15,
+        attestations: 8,
+        syncAggregate: 4,
+        proposerSlashings: 2,
+        attesterSlashings: 1,
+      },
+    },
   },
 
   // -

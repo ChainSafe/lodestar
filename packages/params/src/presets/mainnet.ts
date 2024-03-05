@@ -1,5 +1,8 @@
 import {BeaconPreset} from "../types.js";
 
+// Mainnet preset
+// https://github.com/ethereum/consensus-specs/tree/dev/presets/mainnet
+
 /* eslint-disable @typescript-eslint/naming-convention */
 export const mainnetPreset: BeaconPreset = {
   // Misc
@@ -111,7 +114,6 @@ export const mainnetPreset: BeaconPreset = {
 
   // DENEB
   ///////////
-  // https://github.com/ethereum/consensus-specs/blob/dev/presets/mainnet/eip4844.yaml
   FIELD_ELEMENTS_PER_BLOB: 4096,
   MAX_BLOB_COMMITMENTS_PER_BLOCK: 4096,
   MAX_BLOBS_PER_BLOCK: 6,

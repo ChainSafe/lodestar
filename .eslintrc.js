@@ -4,6 +4,7 @@ module.exports = {
     browser: true,
     es6: true,
     node: true,
+    // Performance tests still use mocha
     mocha: true,
   },
   globals: {
@@ -63,6 +64,10 @@ module.exports = {
       },
       //ignore rules on destructured params
       {selector: "variable", modifiers: ["destructured"], format: null},
+      {
+        selector: "import",
+        format: ["camelCase", "PascalCase"],
+      },
     ],
     "@typescript-eslint/no-explicit-any": "error",
     "@typescript-eslint/no-floating-promises": "error",
@@ -75,6 +80,7 @@ module.exports = {
     "@typescript-eslint/no-unsafe-call": "error",
     "@typescript-eslint/no-unsafe-member-access": "error",
     "@typescript-eslint/no-unsafe-return": "error",
+    "@typescript-eslint/no-unused-expressions": "error",
     "@typescript-eslint/no-unused-vars": ["error", {varsIgnorePattern: "^_", argsIgnorePattern: "^_"}],
     "@typescript-eslint/no-use-before-define": "off",
     "@typescript-eslint/restrict-template-expressions": [
@@ -93,6 +99,7 @@ module.exports = {
     "func-call-spacing": "off",
     // Force to add names to all functions to ease CPU profiling
     "func-names": ["error", "always"],
+    "import/namespace": "off",
     //if --fix is run it messes imports like /lib/presets/minimal & /lib/presets/mainnet
     "import/no-duplicates": "off",
     "import/no-extraneous-dependencies": [
@@ -110,7 +117,11 @@ module.exports = {
       "error",
       {
         groups: ["builtin", "external", "internal", "parent", "sibling", "index"],
-        pathGroups: [{pattern: "@lodestar/**", group: "internal"}],
+        pathGroups: [
+          {pattern: "@lodestar/**", group: "internal"},
+          // We want mocks to be imported before any internal code
+          {pattern: "**/mocks/**", group: "internal"},
+        ],
         pathGroupsExcludedImportTypes: ["builtin"],
       },
     ],
@@ -123,6 +134,13 @@ module.exports = {
     "no-console": "error",
     "no-loss-of-precision": "error",
     "no-prototype-builtins": 0,
+    "no-restricted-globals": [
+      "error",
+      {
+        name: "fetch",
+        message: "Please use 'fetch' from '@lodestar/api' instead.",
+      },
+    ],
     "no-restricted-imports": [
       "error",
       {
@@ -200,25 +218,26 @@ module.exports = {
       },
     },
     {
-      files: ["**/test/**/*.test.ts"],
-      plugins: ["mocha", "chai-expect"],
-      extends: ["plugin:mocha/recommended", "plugin:chai-expect/recommended"],
+      files: ["**/perf/**/*.ts"],
       rules: {
-        // We observed that having multiple top level "describe" save valuable indentation
-        // https://github.com/lo1tuma/eslint-plugin-mocha/blob/master/docs/rules/max-top-level-suites.md
-        "mocha/max-top-level-suites": "off",
-        // We need to disable because we disabled "mocha/no-setup-in-describe" rule
-        // TODO: Move all setup code to before/beforeEach and then disable async describe
-        // https://github.com/lo1tuma/eslint-plugin-mocha/blob/master/docs/rules/no-async-describe.md
-        "mocha/no-async-describe": "off",
-        // Use of arrow functions are very common
-        "mocha/no-mocha-arrows": "off",
-        // It's common to call function inside describe block
-        // https://github.com/lo1tuma/eslint-plugin-mocha/blob/master/docs/rules/no-setup-in-describe.md
-        "mocha/no-setup-in-describe": "off",
-        // We use to split before in small isolated tasks
-        // https://github.com/lo1tuma/eslint-plugin-mocha/blob/master/docs/rules/no-sibling-hooks.md
-        "mocha/no-sibling-hooks": "off",
+        // A lot of benchmarks just need to execute expressions without using the result
+        "@typescript-eslint/no-unused-expressions": "off",
+      },
+    },
+    {
+      files: ["**/test/**/*.test.ts"],
+      plugins: ["vitest"],
+      extends: ["plugin:vitest/recommended"],
+      rules: {
+        "vitest/consistent-test-it": ["error", {fn: "it", withinDescribe: "it"}],
+        // We use a lot dynamic assertions so tests may not have usage of expect
+        "vitest/expect-expect": "off",
+        "vitest/no-disabled-tests": "warn",
+        "vitest/no-focused-tests": "error",
+        "vitest/prefer-called-with": "error",
+        "vitest/prefer-spy-on": "error",
+        // Our usage contains dynamic test title, this rule enforce static string value
+        "vitest/valid-title": "off",
       },
     },
     {

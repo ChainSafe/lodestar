@@ -1,16 +1,13 @@
-import {beforeAll, afterAll, MockedObject, vi} from "vitest";
-import qs from "qs";
-import fastify, {FastifyInstance} from "fastify";
+import {MockedObject, vi} from "vitest";
+import {parse as parseQueryString} from "qs";
+import {FastifyInstance, fastify} from "fastify";
 import {mapValues} from "@lodestar/utils";
 import {ServerApi} from "../../src/interfaces.js";
 
-export function getTestServer(): {baseUrl: string; server: FastifyInstance} {
-  const port = Math.floor(Math.random() * (65535 - 49152)) + 49152;
-  const baseUrl = `http://localhost:${port}`;
-
+export function getTestServer(): {server: FastifyInstance; start: () => Promise<string>} {
   const server = fastify({
     ajv: {customOptions: {coerceTypes: "array"}},
-    querystringParser: (str) => qs.parse(str, {comma: true, parseArrays: false}),
+    querystringParser: (str) => parseQueryString(str, {comma: true, parseArrays: false}),
   });
 
   server.addHook("onError", (request, reply, error, done) => {
@@ -19,9 +16,9 @@ export function getTestServer(): {baseUrl: string; server: FastifyInstance} {
     done();
   });
 
-  beforeAll(async () => {
-    await new Promise((resolve, reject) => {
-      server.listen({port}, function (err, address) {
+  const start = (): Promise<string> =>
+    new Promise<string>((resolve, reject) => {
+      server.listen({port: 0}, function (err, address) {
         if (err !== null && err != undefined) {
           reject(err);
         } else {
@@ -29,16 +26,10 @@ export function getTestServer(): {baseUrl: string; server: FastifyInstance} {
         }
       });
     });
-  });
 
-  afterAll(async () => {
-    await server.close();
-  });
-
-  return {baseUrl, server};
+  return {start, server};
 }
 
-/** Type helper to get a Sinon mock object type with Api */
 export function getMockApi<Api extends Record<string, any>>(
   routeIds: Record<string, any>
 ): MockedObject<ServerApi<Api>> & ServerApi<Api> {

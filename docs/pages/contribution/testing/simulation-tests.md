@@ -12,7 +12,7 @@ There are a number of sim tests that are available and each has a slightly diffe
 
 ### Environment Variables
 
-To see what typical values for these are check out the `test-sim.yaml` workflow file in the `.github/workflows` directory.
+To see what typical values for these are check out the `.env.test` file in the root directory.
 
 - `GETH_DOCKER_IMAGE`: The geth docker image that will be used
 - `NETHERMIND_IMAGE`: The nethermind docker image that will be used
@@ -23,10 +23,7 @@ To see what typical values for these are check out the `test-sim.yaml` workflow 
 The multi-fork sim test checks most of the functionality Lodestar provides. Is verifies that Lodestar is capable of peering, moving through all of the forks and using various sync methods in a testnet environment. Lodestar is tested with both Geth and Nethermind as the execution client. It also checks a Lighthouse/Geth node for cross client compatibility.
 
 ```sh
-GETH_DOCKER_IMAGE=ethereum/client-go:v1.11.6 \
-    LIGHTHOUSE_DOCKER_IMAGE=sigp/lighthouse:latest-amd64-modern-dev \
-    NETHERMIND_DOCKER_IMAGE=nethermind/nethermind:1.18.0 \
-    yarn workspace @chainsafe/lodestar test:sim:multifork
+yarn workspace @chainsafe/lodestar test:sim:multifork
 ```
 
 ### `test:sim:endpoints`
@@ -34,8 +31,7 @@ GETH_DOCKER_IMAGE=ethereum/client-go:v1.11.6 \
 This tests that various endpoints of the beacon node and validator client are working as expected.
 
 ```sh
-GETH_DOCKER_IMAGE=ethereum/client-go:v1.11.6 \
-    yarn workspace @chainsafe/lodestar test:sim:endpoints
+yarn workspace @chainsafe/lodestar test:sim:endpoints
 ```
 
 ### `test:sim:deneb`
@@ -47,9 +43,7 @@ This test is still included in our CI but is no longer as important as it once w
 Checks that Lodestar is compatible with other consensus validators and vice-versa. All tests use Geth as the EL.
 
 ```sh
-GETH_DOCKER_IMAGE=ethereum/client-go:v1.11.6 \
-    LIGHTHOUSE_DOCKER_IMAGE=sigp/lighthouse:latest-amd64-modern-dev \
-    yarn workspace @chainsafe/lodestar test:sim:mixedclient
+yarn workspace @chainsafe/lodestar test:sim:mixedclient
 ```
 
 ## Sim Test Infrastructure

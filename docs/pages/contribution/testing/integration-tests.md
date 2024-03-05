@@ -13,14 +13,12 @@ There are two ENV variables that are required to run this test:
 
 The command to run this test is:
 
-`EL_BINARY_DIR=g11tech/geth:withdrawals EL_SCRIPT_DIR=gethdocker yarn mocha test/sim/withdrawal-interop.test.ts`
+`EL_BINARY_DIR=g11tech/geth:withdrawals EL_SCRIPT_DIR=gethdocker yarn vitest --run test/sim/withdrawal-interop.test.ts`
 
 The images used by this test during CI are:
 
 - `GETH_WITHDRAWALS_IMAGE: g11tech/geth:withdrawalsfeb8`
 - `ETHEREUMJS_WITHDRAWALS_IMAGE: g11tech/ethereumjs:blobs-b6b63`
-
-#### `test:sim:merge-interop`
 
 #### `test:sim:mergemock`
 

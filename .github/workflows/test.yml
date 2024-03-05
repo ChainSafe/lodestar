@@ -12,10 +12,6 @@ on:
   pull_request:
   workflow_dispatch:
 
-env:
-  GETH_DOCKER_IMAGE: ethereum/client-go:v1.11.6
-  NETHERMIND_DOCKER_IMAGE: nethermind/nethermind:1.18.0
-
 jobs:
   build:
     name: Build
@@ -26,51 +22,18 @@ jobs:
         node: [20]
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: "./.github/actions/setup-and-build"
         with:
-          node-version: ${{matrix.node}}
-          check-latest: true
-          cache: yarn
-      - name: Node.js version
-        id: node
-        run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT
-      - name: Restore build
-        uses: actions/cache/restore@v3
-        id: cache-build-restore
-        with:
-          path: |
-            node_modules
-            packages/*/node_modules
-            lib/
-            packages/*/lib
-            packages/*/.git-data.json
-          key: ${{ runner.os }}-node-${{ matrix.node }}-${{ github.sha }}
-      - name: Install & build
-        if: steps.cache-build-restore.outputs.cache-hit != 'true'
-        run: yarn install --frozen-lockfile && yarn build
-      - name: Build
-        if: steps.cache-build-restore.outputs.cache-hit == 'true'
-        run: yarn build
-      - name: Check Build
-        run: yarn check-build
+          node: ${{ matrix.node }}
+
       - name: Test root binary exists
         run: ./lodestar --version
+
       - name: Reject yarn.lock changes
         run: .github/workflows/scripts/reject_yarn_lock_changes.sh
         # Run only on forks
         if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
-      - name: Cache build artifacts
-        uses: actions/cache@master
-        id: cache-build
-        with:
-          path: |
-            node_modules
-            packages/*/node_modules
-            lib/
-            packages/*/lib
-            packages/*/.git-data.json
-          key: ${{ runner.os }}-node-${{ matrix.node }}-${{ github.sha }}
 
   lint:
     name: Lint
@@ -81,32 +44,26 @@ jobs:
       matrix:
         node: [20]
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: "./.github/actions/setup-and-build"
         with:
-          node-version: ${{ matrix.node }}
-          check-latest: true
-          cache: yarn
-      - name: Restore build cache
-        id: cache-primes-restore
-        uses: actions/cache/restore@v3
-        with:
-          path: |
-            node_modules
-            packages/*/node_modules
-            lib/
-            packages/*/lib
-            packages/*/.git-data.json
-          key: ${{ runner.os }}-node-${{ matrix.node }}-${{ github.sha }}
-          fail-on-cache-miss: true
+          node: ${{ matrix.node }}
+
       - name: Assert yarn prints no warnings
         run: scripts/assert_no_yarn_warnings.sh
+
+      - name: Lint yarn lockfile
+        run: npx lockfile-lint --path yarn.lock --allowed-hosts npm yarn --validate-https
+
       - name: Lint Code
         run: yarn lint
+
       - name: Lint Grafana dashboards
         run: scripts/validate-grafana-dashboards.sh
+
       - name: Assert ESM module exports
         run: node scripts/assert_exports.mjs
+
       - name: Assert eslintrc rules sorted
         run: scripts/assert_eslintrc_sorted.mjs
 
@@ -119,24 +76,11 @@ jobs:
       matrix:
         node: [20]
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+
+      - uses: "./.github/actions/setup-and-build"
         with:
-          node-version: ${{ matrix.node }}
-          check-latest: true
-          cache: yarn
-      - name: Restore build cache
-        id: cache-primes-restore
-        uses: actions/cache/restore@v3
-        with:
-          path: |
-            node_modules
-            packages/*/node_modules
-            lib/
-            packages/*/lib
-            packages/*/.git-data.json
-          key: ${{ runner.os }}-node-${{ matrix.node }}-${{ github.sha }}
-          fail-on-cache-miss: true
+          node: ${{ matrix.node }}
 
       - name: Check Types
         run: yarn check-types
@@ -153,28 +97,10 @@ jobs:
       matrix:
         node: [20]
     steps:
-      - uses: actions/checkout@v3      
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: "./.github/actions/setup-and-build"
         with:
-          node-version: ${{ matrix.node }}
-          check-latest: true
-          cache: yarn 
-
-      # # Remove when finished debugging core dumps
-      # - uses: './.github/actions/setup-debug-node'
-
-      - name: Restore build cache
-        id: cache-primes-restore
-        uses: actions/cache/restore@v3
-        with:
-          path: |
-            node_modules
-            packages/*/node_modules
-            lib/
-            packages/*/lib
-            packages/*/.git-data.json
-          key: ${{ runner.os }}-node-${{ matrix.node }}-${{ github.sha }}
-          fail-on-cache-miss: true
+          node: ${{ matrix.node }}
 
       # Cache validator slashing protection data tests
       - name: Restore spec tests cache
@@ -188,13 +114,18 @@ jobs:
         # Rever to "yarn test:unit" when finished debugging core dumps
         # run: sudo sh -c "ulimit -c unlimited && /usr/bin/node-with-debug $(which yarn) test:unit"
         run: yarn test:unit
-      
+
       # # Remove when finished debugging core dumps
       # - uses: './.github/actions/core-dump'
       #   if: ${{ failure() && steps.unit_tests.conclusion == 'failure' }}
 
       - name: Upload coverage data
-        run: yarn coverage
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
+          verbose: true # optional (default = false)
+          flags: "unit"
 
   e2e-tests:
     name: E2E Tests
@@ -206,24 +137,14 @@ jobs:
         node: [20]
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+
+      - uses: "./.github/actions/setup-and-build"
         with:
-          node-version: ${{matrix.node}}
-          check-latest: true
-          cache: yarn
-      - name: Restore build cache
-        id: cache-primes-restore
-        uses: actions/cache/restore@v3
-        with:
-          path: |
-            node_modules
-            packages/*/node_modules
-            lib/
-            packages/*/lib
-            packages/*/.git-data.json
-          key: ${{ runner.os }}-node-${{ matrix.node }}-${{ github.sha }}
-          fail-on-cache-miss: true
+          node: ${{ matrix.node }}
+
+      - name: Load env variables
+        uses: ./.github/actions/dotenv
 
       - name: Run the e2e test environment
         run: scripts/run_e2e_env.sh start
@@ -238,7 +159,7 @@ jobs:
 
       - name: Upload debug log test for test env
         if: ${{ always() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: debug-e2e-test-logs-node-${{matrix.node}}
           path: test-logs/e2e-test-env
@@ -253,26 +174,12 @@ jobs:
         node: [20]
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: "./.github/actions/setup-and-build"
         with:
-          node-version: ${{matrix.node}}
-          check-latest: true
-          cache: yarn
-      - name: Restore build cache
-        id: cache-primes-restore
-        uses: actions/cache/restore@v3
-        with:
-          path: |
-            node_modules
-            packages/*/node_modules
-            lib/
-            packages/*/lib
-            packages/*/.git-data.json
-          key: ${{ runner.os }}-node-${{ matrix.node }}-${{ github.sha }}
-          fail-on-cache-miss: true
+          node: ${{ matrix.node }}
       - name: Install Chrome browser
-        run: npx @puppeteer/browsers install chromedriver@latest --path /tmp          
+        run: npx @puppeteer/browsers install chromedriver@latest --path /tmp
       - name: Install Firefox browser
         run: npx @puppeteer/browsers install firefox@latest --path /tmp
       - name: Browser tests
@@ -290,24 +197,10 @@ jobs:
       matrix:
         node: [20]
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: "./.github/actions/setup-and-build"
         with:
-          node-version: ${{matrix.node}}
-          check-latest: true
-          cache: yarn
-      - name: Restore build cache
-        id: cache-primes-restore
-        uses: actions/cache/restore@v3
-        with:
-          path: |
-            node_modules
-            packages/*/node_modules
-            lib/
-            packages/*/lib
-            packages/*/.git-data.json
-          key: ${{ runner.os }}-node-${{ matrix.node }}-${{ github.sha }}
-          fail-on-cache-miss: true
+          node: ${{ matrix.node }}
 
       # Download spec tests with cache
       - name: Restore spec tests cache
@@ -326,7 +219,7 @@ jobs:
         working-directory: packages/beacon-node
       - name: Spec tests bls
         run: yarn test:spec:bls
-        working-directory: packages/beacon-node        
+        working-directory: packages/beacon-node
       - name: Spec tests minimal
         run: yarn test:spec:minimal
         working-directory: packages/beacon-node

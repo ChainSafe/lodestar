@@ -1,3 +1,5 @@
+// We want to keep `winston` export as it's more readable and easier to understand
+/* eslint-disable import/no-named-as-default-member */
 import winston from "winston";
 import type {Logger as Winston} from "winston";
 import {Logger, LoggerOptions, LogLevel, logLevelNum} from "./interface.js";

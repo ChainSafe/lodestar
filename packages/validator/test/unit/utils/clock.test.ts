@@ -11,7 +11,7 @@ describe("util / Clock", function () {
 
   beforeEach(() => {
     controller = new AbortController();
-    vi.useFakeTimers();
+    vi.useFakeTimers({now: Date.now()});
   });
 
   afterEach(() => {
@@ -89,12 +89,11 @@ describe("util / Clock", function () {
       {name: "should return next slot after 12s", delta: 12},
       {name: "should return next slot after 12.5s", delta: 12.5},
     ];
-    for (const {name, delta} of testCase) {
-      it(name, async function () {
-        const currentSlot = getCurrentSlotAround(testConfig, genesisTime);
-        vi.advanceTimersByTime(delta * 1000);
-        expect(getCurrentSlotAround(testConfig, genesisTime)).toBe(currentSlot + 1);
-      });
-    }
+
+    it.each(testCase)("$name", async function ({delta}) {
+      const currentSlot = getCurrentSlotAround(testConfig, genesisTime);
+      vi.advanceTimersByTime(delta * 1000);
+      expect(getCurrentSlotAround(testConfig, genesisTime)).toBe(currentSlot + 1);
+    });
   });
 });

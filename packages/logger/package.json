@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.14.0",
+  "version": "1.16.0",
   "type": "module",
   "exports": {
     ".": {
@@ -55,27 +55,26 @@
     "check-types": "tsc",
     "lint": "eslint --color --ext .ts src/ test/",
     "lint:fix": "yarn run lint --fix",
-    "pretest": "yarn run check-types",
-    "test:unit": "vitest --run --dir test/unit/ --coverage",
+    "test": "yarn test:unit && yarn test:e2e",
+    "test:unit": "vitest --run --dir test/unit/",
     "test:browsers": "yarn test:browsers:chrome && yarn test:browsers:firefox && yarn test:browsers:electron",
     "test:browsers:chrome": "vitest --run --browser chrome --config ./vitest.browser.config.ts --dir test/unit",
     "test:browsers:firefox": "vitest --run --browser firefox --config ./vitest.browser.config.ts --dir test/unit",
     "test:browsers:electron": "echo 'Electron tests will be introduced back in the future as soon vitest supports electron.'",
-    "test:e2e": "LODESTAR_PRESET=minimal vitest --run --dir test/e2e",
+    "test:e2e": "vitest --run --config vitest.e2e.config.ts --dir test/e2e",
     "check-readme": "typescript-docs-verifier"
   },
   "types": "lib/index.d.ts",
   "dependencies": {
-    "@lodestar/utils": "^1.14.0",
+    "@lodestar/utils": "^1.16.0",
     "winston": "^3.8.2",
     "winston-daily-rotate-file": "^4.7.1",
     "winston-transport": "^4.5.0"
   },
   "devDependencies": {
     "@chainsafe/threads": "^1.11.1",
-    "@lodestar/test-utils": "^1.14.0",
+    "@lodestar/test-utils": "^1.16.0",
     "@types/triple-beam": "^1.3.2",
-    "rimraf": "^4.4.1",
     "triple-beam": "^1.3.0"
   },
   "keywords": [

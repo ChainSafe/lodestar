@@ -109,7 +109,7 @@ const genesisValidity: TestRunnerFn<GenesisValidityTestCase, boolean> = (fork) =
       },
       getExpected: (testCase) => testCase.is_valid,
       expectFunc: (testCase, expected, actual) => {
-        expect(actual).to.be.equal(expected, "isValidGenesisState is not" + expected);
+        expect(actual).toEqualWithMessage(expected, "isValidGenesisState is not" + expected);
       },
     },
   };

@@ -1,7 +1,7 @@
 import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
 import {ChainConfig} from "./types.js";
-import {chainConfig as mainnet} from "./presets/mainnet.js";
-import {chainConfig as minimal} from "./presets/minimal.js";
+import {chainConfig as mainnet} from "./configs/mainnet.js";
+import {chainConfig as minimal} from "./configs/minimal.js";
 
 let defaultChainConfig: ChainConfig;
 

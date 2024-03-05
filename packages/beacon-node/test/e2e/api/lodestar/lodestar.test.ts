@@ -1,4 +1,4 @@
-import {describe, it, afterEach, expect} from "vitest";
+import {describe, it, afterEach, expect, vi} from "vitest";
 import {createBeaconConfig, ChainConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {phase0} from "@lodestar/types";
@@ -11,6 +11,8 @@ import {ClockEvent} from "../../../../src/util/clock.js";
 import {BeaconNode} from "../../../../src/index.js";
 
 describe("api / impl / validator", function () {
+  vi.setConfig({testTimeout: 60_000});
+
   describe("getLiveness endpoint", function () {
     let bn: BeaconNode | undefined;
     const SECONDS_PER_SLOT = 2;
@@ -74,8 +76,6 @@ describe("api / impl / validator", function () {
       });
     });
 
-    // To make the code review easy for code block below
-    /* prettier-ignore */
     it("Should return only for previous, current and next epoch", async function () {
       const chainConfig: ChainConfig = {...chainConfigDef, SECONDS_PER_SLOT, ALTAIR_FORK_EPOCH};
       const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
@@ -128,7 +128,6 @@ describe("api / impl / validator", function () {
           `Request epoch ${currentEpoch - 2} is more than one epoch before or after the current epoch ${currentEpoch}`
         )
       );
-    },
-    {timeout: 60_000});
+    });
   });
 });

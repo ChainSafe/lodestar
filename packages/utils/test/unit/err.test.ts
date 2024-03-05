@@ -1,8 +1,5 @@
 import {describe, it, expect} from "vitest";
 import {Err, isErr, mapOkResults, mapOkResultsAsync, Result} from "../../src/err.js";
-import {expectDeepEquals, expectEquals} from "../utils/chai.js";
-
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 
 describe("Result Err", () => {
   describe("isErr works with any type", () => {
@@ -16,7 +13,6 @@ describe("Result Err", () => {
       null,
       [1, 2],
       new Uint8Array(1),
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
       function test() {},
       {a: 1},
       new AbortController(),
@@ -28,21 +24,18 @@ describe("Result Err", () => {
     for (const [i, value] of values.entries()) {
       it(`${i} Ok(${String(value)})`, () => {
         // Any value must not be detected as error
-        expectEquals(isErr(value), false);
+        expect(isErr(value)).toBeFalsy();
       });
       it(`${i} Err(${String(value)})`, () => {
         // Any value can be wrapped in Err
-        expectEquals(isErr(Err(value)), true);
+        expect(isErr(Err(value))).toBeTruthy();
       });
     }
   });
 
   describe("mapOkResults", () => {
     it("empty case", () => {
-      expectDeepEquals(
-        mapOkResults([], () => []),
-        []
-      );
+      expect(mapOkResults([], () => [])).toEqual([]);
     });
 
     it("throw for different length", () => {
@@ -54,13 +47,13 @@ describe("Result Err", () => {
       const results1 = mapOkResults(results0, (resultsOk) =>
         resultsOk.map((num) => (num >= 5 ? Err(num) : String(num)))
       );
-      expectDeepEquals(results1, ["0", Err(1), "2", Err(3), "4", Err(5), Err(6), Err(7)]);
+      expect(results1).toEqual(["0", Err(1), "2", Err(3), "4", Err(5), Err(6), Err(7)]);
     });
   });
 
   describe("mapOkResultsAsync", () => {
     it("empty case", async () => {
-      expectDeepEquals(await mapOkResultsAsync([], async () => []), []);
+      expect(await mapOkResultsAsync([], async () => [])).toEqual([]);
     });
 
     it("reject for different length", async () => {
@@ -77,7 +70,7 @@ describe("Result Err", () => {
       const results1 = await mapOkResultsAsync(results0, async (resultsOk) =>
         resultsOk.map((num) => (num >= 5 ? Err(num) : String(num)))
       );
-      expectDeepEquals(results1, ["0", Err(1), "2", Err(3), "4", Err(5), Err(6), Err(7)]);
+      expect(results1).toEqual(["0", Err(1), "2", Err(3), "4", Err(5), Err(6), Err(7)]);
     });
   });
 });

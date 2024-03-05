@@ -67,6 +67,7 @@ export async function importBlock(
   const parentEpoch = computeEpochAtSlot(parentBlockSlot);
   const prevFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
   const blockDelaySec = (fullyVerifiedBlock.seenTimestampSec - postState.genesisTime) % this.config.SECONDS_PER_SLOT;
+  const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
 
   // 1. Persist block to hot DB (pre-emptively)
   // If eagerPersistBlock = true we do that in verifyBlocksInEpoch to batch all I/O operations to save block time to head
@@ -414,6 +415,16 @@ export async function importBlock(
         this.emitter.emit(routes.events.EventType.attestation, attestation);
       }
     }
+    if (this.emitter.listenerCount(routes.events.EventType.attesterSlashing)) {
+      for (const attesterSlashing of block.message.body.attesterSlashings) {
+        this.emitter.emit(routes.events.EventType.attesterSlashing, attesterSlashing);
+      }
+    }
+    if (this.emitter.listenerCount(routes.events.EventType.proposerSlashing)) {
+      for (const proposerSlashing of block.message.body.proposerSlashings) {
+        this.emitter.emit(routes.events.EventType.proposerSlashing, proposerSlashing);
+      }
+    }
   }
 
   // Register stat metrics about the block after importing it
@@ -437,9 +448,13 @@ export async function importBlock(
   }, 0);
 
   if (opts.seenTimestampSec !== undefined) {
-    const recvToImportedBlock = Date.now() / 1000 - opts.seenTimestampSec;
-    this.metrics?.gossipBlock.receivedToBlockImport.observe(recvToImportedBlock);
-    this.logger.verbose("Imported block", {slot: blockSlot, recvToImportedBlock});
+    const recvToValidation = Date.now() / 1000 - opts.seenTimestampSec;
+    const validationTime = recvToValidation - recvToValLatency;
+
+    this.metrics?.gossipBlock.blockImport.recvToValidation.observe(recvToValidation);
+    this.metrics?.gossipBlock.blockImport.validationTime.observe(validationTime);
+
+    this.logger.debug("Imported block", {slot: blockSlot, recvToValLatency, recvToValidation, validationTime});
   }
 
   this.logger.verbose("Block processed", {

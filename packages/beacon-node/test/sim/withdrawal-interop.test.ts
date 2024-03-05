@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import {Context} from "mocha";
+import {describe, it, afterAll, afterEach, vi} from "vitest";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {LogLevel, sleep} from "@lodestar/utils";
 import {TimestampFormatCode} from "@lodestar/logger";
@@ -27,13 +27,13 @@ import {logFilesDir} from "./params.js";
 import {shell} from "./shell.js";
 
 // NOTE: How to run
-// EL_BINARY_DIR=g11tech/geth:withdrawalsfeb8 EL_SCRIPT_DIR=gethdocker yarn mocha test/sim/withdrawal-interop.test.ts
+// EL_BINARY_DIR=g11tech/geth:withdrawalsfeb8 EL_SCRIPT_DIR=gethdocker yarn vitest --run test/sim/withdrawal-interop.test.ts
 // ```
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention */
 
 const jwtSecretHex = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
-const retryAttempts = defaultExecutionEngineHttpOpts.retryAttempts;
+const retries = defaultExecutionEngineHttpOpts.retries;
 const retryDelay = defaultExecutionEngineHttpOpts.retryDelay;
 
 describe("executionEngine / ExecutionEngineHttp", function () {
@@ -42,7 +42,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       `EL ENV must be provided, EL_BINARY_DIR: ${process.env.EL_BINARY_DIR}, EL_SCRIPT_DIR: ${process.env.EL_SCRIPT_DIR}`
     );
   }
-  this.timeout("10min");
+  vi.setConfig({testTimeout: 10 * 60 * 1000});
 
   const dataPath = fs.mkdtempSync("lodestar-test-withdrawal");
   const elSetupConfig = {
@@ -57,7 +57,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
   };
 
   const controller = new AbortController();
-  after(async () => {
+  afterAll(async () => {
     controller?.abort();
     await shell(`sudo rm -rf ${dataPath}`);
   });
@@ -82,7 +82,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
     //const controller = new AbortController();
     const executionEngine = initializeExecutionEngine(
-      {mode: "http", urls: [engineRpcUrl], jwtSecretHex, retryAttempts, retryDelay},
+      {mode: "http", urls: [engineRpcUrl], jwtSecretHex, retries, retryDelay},
       {signal: controller.signal, logger: testLogger("executionEngine")}
     );
 
@@ -193,17 +193,22 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     );
     afterEachCallbacks.push(() => tearDownCallBack());
 
-    await runNodeWithEL.bind(this)({
+    await runNodeWithEL({
       elClient,
       capellaEpoch: 0,
       testName: "post-merge",
     });
   });
 
-  async function runNodeWithEL(
-    this: Context,
-    {elClient, capellaEpoch, testName}: {elClient: ELClient; capellaEpoch: Epoch; testName: string}
-  ): Promise<void> {
+  async function runNodeWithEL({
+    elClient,
+    capellaEpoch,
+    testName,
+  }: {
+    elClient: ELClient;
+    capellaEpoch: Epoch;
+    testName: string;
+  }): Promise<void> {
     const {genesisBlockHash, ttd, engineRpcUrl} = elClient;
     const validatorClientCount = 1;
     const validatorsPerClient = 32;
@@ -229,7 +234,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       testParams.SECONDS_PER_SLOT *
       1000;
 
-    this.timeout(timeout + 2 * timeoutSetupMargin);
+    vi.setConfig({testTimeout: timeout + 2 * timeoutSetupMargin});
 
     const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
 

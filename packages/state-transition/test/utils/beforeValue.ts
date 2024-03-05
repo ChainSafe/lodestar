@@ -3,7 +3,7 @@ import {beforeAll} from "vitest";
 export type LazyValue<T> = {value: T};
 
 /**
- * Register a callback to compute a value in the before() block of mocha tests
+ * Register a callback to compute a value in the before() block of vitest tests
  * ```ts
  * const state = beforeValue(() => getState())
  * it("test", () => {

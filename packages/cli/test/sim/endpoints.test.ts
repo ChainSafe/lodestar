@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import path from "node:path";
+import assert from "node:assert";
 import {toHexString} from "@chainsafe/ssz";
-import {expect} from "chai";
 import {ApiError, routes} from "@lodestar/api";
 import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
 import {BeaconClient, ExecutionClient} from "../utils/simulation/interfaces.js";
@@ -16,6 +16,7 @@ const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
   ALTAIR_FORK_EPOCH: altairForkEpoch,
   BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
   runTillEpoch: 2,
+  initialNodes: 1,
 });
 
 const env = await SimulationEnvironment.initWithDefaults(
@@ -44,15 +45,15 @@ ApiError.assert(res);
 const stateValidators = res.response.data;
 
 await env.tracker.assert("should have correct validators count called without filters", async () => {
-  expect(stateValidators.length).to.be.equal(validatorCount);
+  assert.equal(stateValidators.length, validatorCount);
 });
 
 await env.tracker.assert("should have correct validator index for first validator filters", async () => {
-  expect(stateValidators[0].index).to.be.equal(0);
+  assert.equal(stateValidators[0].index, 0);
 });
 
 await env.tracker.assert("should have correct validator index for second validator filters", async () => {
-  expect(stateValidators[1].index).to.be.equal(1);
+  assert.equal(stateValidators[1].index, 1);
 });
 
 await env.tracker.assert(
@@ -66,7 +67,7 @@ await env.tracker.assert(
     });
     ApiError.assert(res);
 
-    expect(res.response.data.length).to.be.equal(1);
+    assert.equal(res.response.data.length, 1);
   }
 );
 
@@ -81,7 +82,7 @@ await env.tracker.assert(
     });
     ApiError.assert(res);
 
-    expect(toHexString(res.response.data[0].validator.pubkey)).to.be.equal(filterPubKey);
+    assert.equal(toHexString(res.response.data[0].validator.pubkey), filterPubKey);
   }
 );
 
@@ -93,7 +94,7 @@ await env.tracker.assert(
     const res = await node.api.beacon.getStateValidator("head", validatorIndex);
     ApiError.assert(res);
 
-    expect(res.response.data.index).to.be.equal(validatorIndex);
+    assert.equal(res.response.data.index, validatorIndex);
   }
 );
 
@@ -106,7 +107,7 @@ await env.tracker.assert(
     const res = await node.api.beacon.getStateValidator("head", hexPubKey);
     ApiError.assert(res);
 
-    expect(toHexString(res.response.data.validator.pubkey)).to.be.equal(hexPubKey);
+    assert.equal(toHexString(res.response.data.validator.pubkey), hexPubKey);
   }
 );
 
@@ -122,13 +123,13 @@ await env.tracker.assert("BN Not Synced", async () => {
   const res = await node.api.node.getSyncingStatus();
   ApiError.assert(res);
 
-  expect(res.response.data).to.be.deep.equal(expectedSyncStatus);
+  assert.deepEqual(res.response.data, expectedSyncStatus);
 });
 
 await env.tracker.assert("Return READY pre genesis", async () => {
   const {status} = await node.api.node.getHealth();
 
-  expect(status).to.be.equal(routes.node.NodeHealth.READY);
+  assert.equal(status, routes.node.NodeHealth.READY);
 });
 
 await env.stop();

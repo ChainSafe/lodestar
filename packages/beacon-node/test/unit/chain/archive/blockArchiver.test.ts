@@ -6,8 +6,8 @@ import {ZERO_HASH_HEX} from "../../../../src/constants/index.js";
 import {generateProtoBlock} from "../../../utils/typeGenerator.js";
 import {testLogger} from "../../../utils/logger.js";
 import {archiveBlocks} from "../../../../src/chain/archiver/archiveBlocks.js";
-import {MockedBeaconDb, getMockedBeaconDb} from "../../../__mocks__/mockedBeaconDb.js";
-import {MockedBeaconChain, getMockedBeaconChain} from "../../../__mocks__/mockedBeaconChain.js";
+import {MockedBeaconDb, getMockedBeaconDb} from "../../../mocks/mockedBeaconDb.js";
+import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 
 describe("block archiver task", function () {
   const logger = testLogger();

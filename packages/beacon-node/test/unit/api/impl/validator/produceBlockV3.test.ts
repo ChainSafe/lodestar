@@ -1,26 +1,17 @@
-import {describe, it, expect, beforeEach, afterEach, MockedObject, vi} from "vitest";
+import {describe, it, expect, beforeEach, afterEach, vi} from "vitest";
 import {ssz} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {ApiTestModules, getApiTestModules} from "../../../../utils/api.js";
 import {SyncState} from "../../../../../src/sync/interface.js";
-import {ApiModules} from "../../../../../src/api/impl/types.js";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
-import {testLogger} from "../../../../utils/logger.js";
-import {ApiImplTestModules, setupApiImplTestServer} from "../../../../__mocks__/apiMocks.js";
-import {ExecutionBuilderHttp} from "../../../../../src/execution/builder/http.js";
 import {CommonBlockBody} from "../../../../../src/chain/interface.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 describe("api/validator - produceBlockV3", function () {
-  const logger = testLogger();
-
-  let modules: ApiModules;
-  let server: ApiImplTestModules;
-
-  let chainStub: ApiImplTestModules["chainStub"];
-  let executionBuilderStub: MockedObject<ExecutionBuilderHttp>;
-  let syncStub: ApiImplTestModules["syncStub"];
+  let modules: ApiTestModules;
+  let api: ReturnType<typeof getValidatorApi>;
 
   const chainConfig = createChainForkConfig({
     ...defaultChainConfig,
@@ -31,13 +22,12 @@ describe("api/validator - produceBlockV3", function () {
   const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
 
   beforeEach(() => {
-    server = setupApiImplTestServer();
-    chainStub = server.chainStub;
-    executionBuilderStub = server.chainStub.executionBuilder;
-    syncStub = server.syncStub;
+    modules = getApiTestModules();
+    api = getValidatorApi({...modules, config});
 
-    executionBuilderStub.status = true;
+    modules.chain.executionBuilder.status = true;
   });
+
   afterEach(() => {
     vi.clearAllMocks();
   });
@@ -59,6 +49,12 @@ describe("api/validator - produceBlockV3", function () {
     [routes.validator.BuilderSelection.BuilderAlways, 1, 1, 1, true, "engine"],
     [routes.validator.BuilderSelection.BuilderAlways, 1, null, 1, true, "builder"],
 
+    [routes.validator.BuilderSelection.ExecutionAlways, 2, 1, 0, false, "engine"],
+    [routes.validator.BuilderSelection.ExecutionAlways, 0, 1, 1, false, "engine"],
+    [routes.validator.BuilderSelection.ExecutionAlways, 0, null, 0, false, "builder"],
+    [routes.validator.BuilderSelection.ExecutionAlways, null, 0, 1, false, "engine"],
+    [routes.validator.BuilderSelection.ExecutionAlways, 1, 1, 1, true, "engine"],
+
     [routes.validator.BuilderSelection.BuilderOnly, 0, 2, 0, false, "builder"],
     [routes.validator.BuilderSelection.ExecutionOnly, 2, 0, 1, false, "engine"],
     [routes.validator.BuilderSelection.BuilderOnly, 1, 1, 0, true, "builder"],
@@ -75,17 +71,6 @@ describe("api/validator - produceBlockV3", function () {
       finalSelection,
     ]) => {
       it(`produceBlockV3  - ${finalSelection} produces block`, async () => {
-        syncStub = server.syncStub;
-        modules = {
-          chain: server.chainStub,
-          config,
-          db: server.dbStub,
-          logger,
-          network: server.networkStub,
-          sync: syncStub,
-          metrics: null,
-        };
-
         const fullBlock = ssz.bellatrix.BeaconBlock.defaultValue();
         const blindedBlock = ssz.bellatrix.BlindedBeaconBlock.defaultValue();
 
@@ -95,10 +80,8 @@ describe("api/validator - produceBlockV3", function () {
         const feeRecipient = "0xccccccccccccccccccccccccccccccccccccccaa";
         const currentSlot = 1 * SLOTS_PER_EPOCH;
 
-        vi.spyOn(server.chainStub.clock, "currentSlot", "get").mockReturnValue(currentSlot);
-        vi.spyOn(syncStub, "state", "get").mockReturnValue(SyncState.Synced);
-
-        const api = getValidatorApi(modules);
+        vi.spyOn(modules.chain.clock, "currentSlot", "get").mockReturnValue(currentSlot);
+        vi.spyOn(modules.sync, "state", "get").mockReturnValue(SyncState.Synced);
 
         if (enginePayloadValue !== null) {
           const commonBlockBody: CommonBlockBody = {
@@ -114,26 +97,26 @@ describe("api/validator - produceBlockV3", function () {
             syncAggregate: fullBlock.body.syncAggregate,
           };
 
-          chainStub.produceCommonBlockBody.mockResolvedValue(commonBlockBody);
+          modules.chain.produceCommonBlockBody.mockResolvedValue(commonBlockBody);
 
-          chainStub.produceBlock.mockResolvedValue({
+          modules.chain.produceBlock.mockResolvedValue({
             block: fullBlock,
             executionPayloadValue: BigInt(enginePayloadValue),
             consensusBlockValue: BigInt(consensusBlockValue),
             shouldOverrideBuilder,
           });
         } else {
-          chainStub.produceBlock.mockRejectedValue(Error("not produced"));
+          modules.chain.produceBlock.mockRejectedValue(Error("not produced"));
         }
 
         if (builderPayloadValue !== null) {
-          chainStub.produceBlindedBlock.mockResolvedValue({
+          modules.chain.produceBlindedBlock.mockResolvedValue({
             block: blindedBlock,
             executionPayloadValue: BigInt(builderPayloadValue),
             consensusBlockValue: BigInt(consensusBlockValue),
           });
         } else {
-          chainStub.produceBlindedBlock.mockRejectedValue(Error("not produced"));
+          modules.chain.produceBlindedBlock.mockRejectedValue(Error("not produced"));
         }
         const _skipRandaoVerification = false;
         const produceBlockOpts = {
@@ -152,15 +135,15 @@ describe("api/validator - produceBlockV3", function () {
 
         // check call counts
         if (builderSelection === routes.validator.BuilderSelection.ExecutionOnly) {
-          expect(chainStub.produceBlindedBlock).toBeCalledTimes(0);
+          expect(modules.chain.produceBlindedBlock).toBeCalledTimes(0);
         } else {
-          expect(chainStub.produceBlindedBlock).toBeCalledTimes(1);
+          expect(modules.chain.produceBlindedBlock).toBeCalledTimes(1);
         }
 
         if (builderSelection === routes.validator.BuilderSelection.BuilderOnly) {
-          expect(chainStub.produceBlock).toBeCalledTimes(0);
+          expect(modules.chain.produceBlock).toBeCalledTimes(0);
         } else {
-          expect(chainStub.produceBlock).toBeCalledTimes(1);
+          expect(modules.chain.produceBlock).toBeCalledTimes(1);
         }
       });
     }

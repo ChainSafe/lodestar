@@ -17,6 +17,7 @@ const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
   BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
   CAPELLA_FORK_EPOCH: capellaForkEpoch,
   runTillEpoch: runTillEpoch + syncWaitEpoch,
+  initialNodes: 2,
 });
 
 const env = await SimulationEnvironment.initWithDefaults(
@@ -69,6 +70,7 @@ env.tracker.register({
 await env.start({runTimeoutMs: estimatedTimeoutMs});
 await connectAllNodes(env.nodes);
 
-await waitForSlot(env.clock.getLastSlotOfEpoch(capellaForkEpoch + 1), env.nodes, {env, silent: true});
+// Stopping at last slot usually cause assertion to fail because of missing data as node are shutting down
+await waitForSlot(env.clock.getLastSlotOfEpoch(capellaForkEpoch + 1) + 2, env.nodes, {env, silent: true});
 
 await env.stop();

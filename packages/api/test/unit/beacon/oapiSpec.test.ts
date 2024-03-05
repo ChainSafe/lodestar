@@ -23,7 +23,7 @@ import {testData as validatorTestData} from "./testData/validator.js";
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const version = "v2.4.2";
+const version = "v2.5.0";
 const openApiFile: OpenApiFile = {
   url: `https://github.com/ethereum/beacon-APIs/releases/download/${version}/beacon-node-oapi.json`,
   filepath: path.join(__dirname, "../../../oapi-schemas/beacon-node-oapi.json"),
@@ -88,13 +88,15 @@ const ignoredOperations = [
   /* missing route */
   /* https://github.com/ChainSafe/lodestar/issues/5694 */
   "getSyncCommitteeRewards",
-  "getBlockRewards",
   "getAttestationsRewards",
+  /* https://github.com/ChainSafe/lodestar/issues/6058 */
+  "postStateValidators",
+  "postStateValidatorBalances",
   "getDepositSnapshot", // Won't fix for now, see https://github.com/ChainSafe/lodestar/issues/5697
   "getBlindedBlock", // https://github.com/ChainSafe/lodestar/issues/5699
   "getNextWithdrawals", // https://github.com/ChainSafe/lodestar/issues/5696
   "getDebugForkChoice", // https://github.com/ChainSafe/lodestar/issues/5700
-  /* https://github.com/ChainSafe/lodestar/issues/6080 */
+  /* Ensure operationId matches spec value, blocked by https://github.com/ChainSafe/lodestar/pull/6080 */
   "getLightClientBootstrap",
   "getLightClientUpdatesByRange",
   "getLightClientFinalityUpdate",
@@ -123,18 +125,13 @@ const ignoredProperties: Record<string, IgnoredProperty> = {
   getBlockRoot: {response: ["finalized"]},
   getBlockAttestations: {response: ["finalized"]},
   getStateV2: {response: ["finalized"]},
+  getBlockRewards: {response: ["finalized"]},
 
   /* 
    https://github.com/ChainSafe/lodestar/issues/6168
    /query/syncing_status - must be integer
    */
   getHealth: {request: ["query.syncing_status"]},
-
-  /**
-   * https://github.com/ChainSafe/lodestar/issues/6185
-   *  - must have required property 'query'
-   */
-  getBlobSidecars: {request: ["query"]},
 
   /* 
    https://github.com/ChainSafe/lodestar/issues/4638 
@@ -151,37 +148,16 @@ runTestCheckAgainstSpec(
   reqSerializers,
   returnTypes,
   testDatas,
-  {
-    // TODO: Investigate why schema validation fails otherwise (see https://github.com/ChainSafe/lodestar/issues/6187)
-    routesDropOneOf: [
-      "produceBlockV2",
-      "produceBlockV3",
-      "produceBlindedBlock",
-      "publishBlindedBlock",
-      "publishBlindedBlockV2",
-    ],
-  },
   ignoredOperations,
   ignoredProperties
 );
 
 const ignoredTopics = [
   /*
-   https://github.com/ChainSafe/lodestar/issues/6167
-   eventTestData[bls_to_execution_change] does not match spec's example
+   https://github.com/ChainSafe/lodestar/issues/6470
+   topic block_gossip not implemented
    */
-  "bls_to_execution_change",
-  /*
-   https://github.com/ChainSafe/lodestar/issues/6170
-   Error: Invalid slot=0 fork=phase0 for lightclient fork types
-  */
-  "light_client_finality_update",
-  "light_client_optimistic_update",
-  /*
-   https://github.com/ethereum/beacon-APIs/pull/379
-   SyntaxError: Unexpected non-whitespace character after JSON at position 629 (line 1 column 630)
-  */
-  "payload_attributes",
+  "block_gossip",
 ];
 
 // eventstream types are defined as comments in the description of "examples".

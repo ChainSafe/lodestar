@@ -56,7 +56,7 @@ export type ChainConfig = {
   MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT: number;
   CHURN_LIMIT_QUOTIENT: number;
 
-  // Proposer boost
+  // Fork choice
   PROPOSER_SCORE_BOOST: number;
   REORG_HEAD_WEIGHT_THRESHOLD: number;
   REORG_PARENT_WEIGHT_THRESHOLD: number;
@@ -66,6 +66,9 @@ export type ChainConfig = {
   DEPOSIT_CHAIN_ID: number;
   DEPOSIT_NETWORK_ID: number;
   DEPOSIT_CONTRACT_ADDRESS: Uint8Array;
+
+  // Networking
+  MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: number;
 };
 
 export const chainConfigTypes: SpecTypes<ChainConfig> = {
@@ -112,7 +115,7 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT: "number",
   CHURN_LIMIT_QUOTIENT: "number",
 
-  // Proposer boost
+  // Fork choice
   PROPOSER_SCORE_BOOST: "number",
   REORG_HEAD_WEIGHT_THRESHOLD: "number",
   REORG_PARENT_WEIGHT_THRESHOLD: "number",
@@ -122,6 +125,9 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   DEPOSIT_CHAIN_ID: "number",
   DEPOSIT_NETWORK_ID: "number",
   DEPOSIT_CONTRACT_ADDRESS: "bytes",
+
+  // Networking
+  MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: "number",
 };
 
 /** Allows values in a Spec file */
@@ -131,12 +137,12 @@ export type SpecValue = number | bigint | Uint8Array | string;
 export type SpecValueType<V extends SpecValue> = V extends number
   ? "number"
   : V extends bigint
-  ? "bigint"
-  : V extends Uint8Array
-  ? "bytes"
-  : V extends string
-  ? "string"
-  : never;
+    ? "bigint"
+    : V extends Uint8Array
+      ? "bytes"
+      : V extends string
+        ? "string"
+        : never;
 
 /** All possible type names for a SpecValue */
 export type SpecValueTypeName = SpecValueType<SpecValue>;

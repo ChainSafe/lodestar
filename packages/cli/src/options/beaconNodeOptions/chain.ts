@@ -1,6 +1,6 @@
 import * as path from "node:path";
 import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
-import {CliCommandOptions} from "../../util/index.js";
+import {CliCommandOptions} from "@lodestar/utils";
 
 export type ChainArgs = {
   suggestedFeeRecipient: string;
@@ -27,6 +27,7 @@ export type ChainArgs = {
   broadcastValidationStrictness?: string;
   "chain.minSameMessageSignatureSetsToBatch"?: number;
   "chain.maxShufflingCacheEpochs"?: number;
+  "chain.archiveBlobEpochs"?: number;
 };
 
 export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
@@ -55,6 +56,7 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     minSameMessageSignatureSetsToBatch:
       args["chain.minSameMessageSignatureSetsToBatch"] ?? defaultOptions.chain.minSameMessageSignatureSetsToBatch,
     maxShufflingCacheEpochs: args["chain.maxShufflingCacheEpochs"] ?? defaultOptions.chain.maxShufflingCacheEpochs,
+    archiveBlobEpochs: args["chain.archiveBlobEpochs"],
   };
 }
 
@@ -220,6 +222,12 @@ Will double processing times. Use only for debugging purposes.",
     description: "Maximum ShufflingCache epochs to keep in memory",
     type: "number",
     default: defaultOptions.chain.maxShufflingCacheEpochs,
+    group: "chain",
+  },
+
+  "chain.archiveBlobEpochs": {
+    description: "Number of epochs to retain finalized blobs (minimum of MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS)",
+    type: "number",
     group: "chain",
   },
 };

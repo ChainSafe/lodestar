@@ -42,7 +42,6 @@ describe("produceBlockBody", () => {
         config: state.config,
         db,
         logger,
-        // eslint-disable-next-line @typescript-eslint/no-empty-function
         processShutdownCallback: () => {},
         metrics: null,
         anchorState: state,

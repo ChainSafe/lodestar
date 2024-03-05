@@ -2,7 +2,7 @@ import {fromHexString} from "@chainsafe/ssz";
 import {Epoch, Slot, RootHex} from "@lodestar/types";
 import {IForkChoice} from "@lodestar/fork-choice";
 import {Logger, toHex} from "@lodestar/utils";
-import {ForkSeq, SLOTS_PER_EPOCH, MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS} from "@lodestar/params";
+import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {KeyValue} from "@lodestar/db";
 import {ChainForkConfig} from "@lodestar/config";
@@ -35,7 +35,8 @@ export async function archiveBlocks(
   lightclientServer: LightClientServer,
   logger: Logger,
   finalizedCheckpoint: CheckpointHex,
-  currentEpoch: Epoch
+  currentEpoch: Epoch,
+  archiveBlobEpochs?: number
 ): Promise<void> {
   // Use fork choice to determine the blocks to archive and delete
   // getAllAncestorBlocks response includes the finalized block, so it's also moved to the cold db
@@ -81,19 +82,25 @@ export async function archiveBlocks(
   }
 
   // Delete expired blobs
-  // Keep only `[max(GENESIS_EPOCH, current_epoch - MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS), current_epoch]`
+  // Keep only `[current_epoch - max(MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, archiveBlobEpochs)]
+  // if archiveBlobEpochs set to Infinity do not prune`
   if (finalizedPostDeneb) {
-    const blobSidecarsMinEpoch = currentEpoch - MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS;
-    if (blobSidecarsMinEpoch >= config.DENEB_FORK_EPOCH) {
-      const slotsToDelete = await db.blobSidecarsArchive.keys({lt: computeStartSlotAtEpoch(blobSidecarsMinEpoch)});
-      if (slotsToDelete.length > 0) {
-        await db.blobSidecarsArchive.batchDelete(slotsToDelete);
-        logger.verbose(
-          `blobSidecars prune: batchDelete range ${slotsToDelete[0]}..${slotsToDelete[slotsToDelete.length - 1]}`
-        );
-      } else {
-        logger.verbose(`blobSidecars prune: no entries before epoch ${blobSidecarsMinEpoch}`);
+    if (archiveBlobEpochs !== Infinity) {
+      const blobsArchiveWindow = Math.max(config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, archiveBlobEpochs ?? 0);
+      const blobSidecarsMinEpoch = currentEpoch - blobsArchiveWindow;
+      if (blobSidecarsMinEpoch >= config.DENEB_FORK_EPOCH) {
+        const slotsToDelete = await db.blobSidecarsArchive.keys({lt: computeStartSlotAtEpoch(blobSidecarsMinEpoch)});
+        if (slotsToDelete.length > 0) {
+          await db.blobSidecarsArchive.batchDelete(slotsToDelete);
+          logger.verbose(
+            `blobSidecars prune: batchDelete range ${slotsToDelete[0]}..${slotsToDelete[slotsToDelete.length - 1]}`
+          );
+        } else {
+          logger.verbose(`blobSidecars prune: no entries before epoch ${blobSidecarsMinEpoch}`);
+        }
       }
+    } else {
+      logger.verbose("blobSidecars pruning skipped: archiveBlobEpochs set to Infinity");
     }
   }
 

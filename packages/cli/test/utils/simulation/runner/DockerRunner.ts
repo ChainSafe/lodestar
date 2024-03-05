@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import {ChildProcess} from "node:child_process";
 import {sleep} from "@lodestar/utils";
 import {
