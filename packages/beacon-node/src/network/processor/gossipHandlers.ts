@@ -284,7 +284,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
               const forkTypes = config.getForkTypes(slot);
               const rootHex = toHexString(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
 
-              events.emit(NetworkEvent.unknownBlock, {rootHex: rootHex, peer: peerIdStr});
+              events.emit(NetworkEvent.unknownBlock, {rootHex, peer: peerIdStr});
 
               // Error is quite frequent and not critical
               logLevel = LogLevel.debug;
