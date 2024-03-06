@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {describe, it, expect} from "vitest";
 import {optimizeNextBlockDiffForGenesis} from "../../../../src/eth1/utils/optimizeNextBlockDiffForGenesis.js";
 import {Eth1Block} from "../../../../src/eth1/interface.js";

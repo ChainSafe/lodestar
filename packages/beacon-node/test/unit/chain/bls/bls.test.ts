@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import bls from "@chainsafe/bls";
 import {CoordType} from "@chainsafe/blst";
 import {PublicKey} from "@chainsafe/bls/types";

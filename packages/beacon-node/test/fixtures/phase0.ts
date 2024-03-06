@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   CachedBeaconStateAltair,

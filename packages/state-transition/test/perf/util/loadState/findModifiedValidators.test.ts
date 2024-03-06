@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {expect} from "chai";
 import {itBench} from "@dapplion/benchmark";
 import {CompositeViewDU} from "@chainsafe/ssz";

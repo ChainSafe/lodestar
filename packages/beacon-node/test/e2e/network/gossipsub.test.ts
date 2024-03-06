@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {describe, it, expect, afterEach} from "vitest";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {sleep} from "@lodestar/utils";

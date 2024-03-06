@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {writeEncodedPayload} from "../encodingStrategies/index.js";
 import {encodeErrorMessage} from "../utils/index.js";
 import {ContextBytesType, ContextBytesFactory, MixedProtocol, Protocol, ResponseOutgoing} from "../types.js";

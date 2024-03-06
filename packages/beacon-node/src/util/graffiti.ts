@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {GRAFFITI_SIZE} from "../constants/index.js";
 
 /**

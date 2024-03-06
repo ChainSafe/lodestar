@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import type {SecretKey} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
 import {BitArray} from "@chainsafe/ssz";

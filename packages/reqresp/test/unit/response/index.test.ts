@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {describe, it, expect, beforeEach, afterEach} from "vitest";
 import {PeerId} from "@libp2p/interface";
 import {LodestarError, fromHex} from "@lodestar/utils";

@@ -1,3 +1,5 @@
+import {Buffer} from "node:buffer";
+
 const hasBufferFrom = typeof Buffer !== "undefined" && typeof Buffer.from === "function";
 
 export function toBase64(value: string): string {

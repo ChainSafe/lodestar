@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {ForkName} from "@lodestar/params";
 import {LodestarError} from "@lodestar/utils";
 import {SszSnappyError, SszSnappyErrorCode} from "../../src/encodingStrategies/sszSnappy/index.js";

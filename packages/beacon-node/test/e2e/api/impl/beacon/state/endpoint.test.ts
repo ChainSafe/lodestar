@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {describe, beforeAll, afterAll, it, expect} from "vitest";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {createBeaconConfig} from "@lodestar/config";

@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {toHexString} from "@chainsafe/ssz";
 import {describe, it} from "vitest";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";

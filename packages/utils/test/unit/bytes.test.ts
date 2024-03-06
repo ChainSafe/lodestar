@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {describe, it, expect} from "vitest";
 import {intToBytes, bytesToInt, toHex, fromHex, toHexString} from "../../src/index.js";
 

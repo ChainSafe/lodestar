@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {Bytes32, phase0, ssz, TimeSeconds} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {BeaconStateAllForks, initializeBeaconStateFromEth1} from "@lodestar/state-transition";

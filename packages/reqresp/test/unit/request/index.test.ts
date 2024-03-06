@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {describe, it, expect, vi, beforeEach, afterEach} from "vitest";
 import {PeerId} from "@libp2p/interface";
 import all from "it-all";

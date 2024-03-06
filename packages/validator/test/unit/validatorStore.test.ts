@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {describe, it, expect, beforeEach, afterEach, vi} from "vitest";
 import {toBufferBE} from "bigint-buffer";
 import bls from "@chainsafe/bls";

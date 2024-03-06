@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {digest, digest64} from "@chainsafe/as-sha256";
 
 export function hash(...inputs: Uint8Array[]): Uint8Array {

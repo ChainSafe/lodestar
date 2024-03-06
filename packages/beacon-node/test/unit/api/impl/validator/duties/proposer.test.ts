@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {describe, it, expect, beforeEach, vi} from "vitest";
 import {config} from "@lodestar/config/default";
 import {MAX_EFFECTIVE_BALANCE, SLOTS_PER_EPOCH} from "@lodestar/params";

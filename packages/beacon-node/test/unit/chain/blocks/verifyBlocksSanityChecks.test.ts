@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {describe, it, expect, beforeEach} from "vitest";
 import {config} from "@lodestar/config/default";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";

@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {config as minimalConfig} from "@lodestar/config/default";
 import {
   EPOCHS_PER_HISTORICAL_VECTOR,

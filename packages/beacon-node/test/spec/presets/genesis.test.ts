@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import path from "node:path";
 import {expect} from "vitest";
 import {phase0, Root, ssz, TimeSeconds, allForks, deneb} from "@lodestar/types";

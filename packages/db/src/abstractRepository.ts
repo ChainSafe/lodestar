@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {Type} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {BUCKET_LENGTH} from "./const.js";

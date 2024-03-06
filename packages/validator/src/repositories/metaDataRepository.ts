@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {encodeKey, DbReqOpts} from "@lodestar/db";
 import {Root, UintNum64} from "@lodestar/types";
 import {ssz} from "@lodestar/types";

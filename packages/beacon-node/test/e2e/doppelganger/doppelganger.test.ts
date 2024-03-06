@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {describe, afterEach, it, expect} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api/beacon";

@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {CoordType, PublicKey, SecretKey} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
 import {BitArray, fromHexString} from "@chainsafe/ssz";

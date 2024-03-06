@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {ApiError, getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {NetworkName} from "@lodestar/config/networks.js";

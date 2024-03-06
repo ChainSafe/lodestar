@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {PeerId} from "@libp2p/interface";
 import {peerIdFromBytes} from "@libp2p/peer-id";
 

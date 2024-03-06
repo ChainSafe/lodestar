@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {ChainForkConfig} from "@lodestar/config";
 import {ssz} from "@lodestar/types";
 import {Api, ReqTypes, routesData, getReturnTypes, getReqSerializers} from "../routes/beacon/index.js";

@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import crypto from "node:crypto";
 import {describe, it, expect} from "vitest";
 import bls from "@chainsafe/bls";

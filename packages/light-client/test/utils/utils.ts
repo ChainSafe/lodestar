@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import bls from "@chainsafe/bls";
 import {PointFormat, PublicKey, SecretKey} from "@chainsafe/bls/types";
 import {hasher, Tree} from "@chainsafe/persistent-merkle-tree";

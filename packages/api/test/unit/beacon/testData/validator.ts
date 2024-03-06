@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {ForkName} from "@lodestar/params";
 import {ssz, ProducedBlockSource} from "@lodestar/types";
 import {Api} from "../../../../src/beacon/routes/validator.js";

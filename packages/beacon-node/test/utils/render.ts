@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {BitArray} from "@chainsafe/ssz";
 
 export function renderBitArray(bitArray: BitArray): string {

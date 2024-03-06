@@ -1,4 +1,5 @@
 /* eslint-disable no-console */
+import {Buffer} from "node:buffer";
 import childProcess from "node:child_process";
 import stream from "node:stream";
 import fs from "node:fs";

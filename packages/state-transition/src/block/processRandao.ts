@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import xor from "buffer-xor";
 import {digest} from "@chainsafe/as-sha256";
 import {allForks} from "@lodestar/types";

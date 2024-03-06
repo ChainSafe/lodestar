@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {describe, it, expect, beforeEach, afterEach, vi} from "vitest";
 import {ssz} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";

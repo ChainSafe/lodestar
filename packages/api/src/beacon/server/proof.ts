@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
 import {ChainForkConfig} from "@lodestar/config";
 import {Api, ReqTypes, routesData, getReturnTypes, getReqSerializers} from "../routes/proof.js";

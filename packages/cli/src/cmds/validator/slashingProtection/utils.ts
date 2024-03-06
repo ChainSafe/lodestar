@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {Root} from "@lodestar/types";
 import {ApiError, getClient} from "@lodestar/api";
 import {fromHex, Logger} from "@lodestar/utils";

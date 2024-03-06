@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {fromHexString} from "@chainsafe/ssz";
 import {itBench} from "@dapplion/benchmark";
 import {config} from "@lodestar/config/default";

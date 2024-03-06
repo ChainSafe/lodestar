@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {describe, it, expect} from "vitest";
 import {intToBytes} from "@lodestar/utils";
 import {BUCKET_LENGTH, encodeKey} from "../../src/index.js";

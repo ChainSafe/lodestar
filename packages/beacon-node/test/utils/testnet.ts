@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {fromHexString} from "@chainsafe/ssz";
 import {phase0} from "@lodestar/types";
 import {createChainForkConfig, ChainForkConfig} from "@lodestar/config";

@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import type {SecretKey} from "@chainsafe/bls/types";
 import {ApiError, getClient} from "@lodestar/api";
 import {phase0, ssz} from "@lodestar/types";

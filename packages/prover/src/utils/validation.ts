@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {Block} from "@ethereumjs/block";
 import {RLP} from "@ethereumjs/rlp";
 import {Trie} from "@ethereumjs/trie";

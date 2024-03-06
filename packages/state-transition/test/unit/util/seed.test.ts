@@ -1,5 +1,5 @@
+import {Buffer} from "node:buffer";
 import {describe, it, expect} from "vitest";
-
 import {toHexString} from "@chainsafe/ssz";
 import {GENESIS_EPOCH, GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {getRandaoMix} from "../../../src/util/index.js";

@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import bls from "@chainsafe/bls";
 import type {PublicKey, SecretKey} from "@chainsafe/bls/types";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";

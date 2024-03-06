@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {LevelDatastore} from "datastore-level";
 import {Key} from "interface-datastore";
 import {describe, it, expect, beforeEach, afterEach, vi, MockedObject} from "vitest";

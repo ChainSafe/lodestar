@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {ContainerType, UintNumberType, ListBasicType, ValueOf} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";

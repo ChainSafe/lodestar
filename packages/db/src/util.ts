@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {intToBytes} from "@lodestar/utils";
 import {BUCKET_LENGTH} from "./const.js";
 

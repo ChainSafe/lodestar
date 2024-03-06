@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {describe, it, expect, afterEach, vi} from "vitest";
 import {JsonPath, toHexString} from "@chainsafe/ssz";
 import {computeDescriptor, TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";

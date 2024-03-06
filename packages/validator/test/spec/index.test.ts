@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {expect, describe, it, beforeAll, afterAll} from "vitest";
 import {rimraf} from "rimraf";
 import {LevelDbController} from "@lodestar/db";

@@ -147,6 +147,7 @@ module.exports = {
         patterns: ["../lib/*", "@chainsafe/*/lib/*"],
         paths: [
           ...restrictNodeModuleImports(
+            "buffer",
             "child_process",
             "crypto",
             "fs",
@@ -175,6 +176,7 @@ module.exports = {
   },
   settings: {
     "import/core-modules": [
+      "node:buffer",
       "node:child_process",
       "node:crypto",
       "node:fs",

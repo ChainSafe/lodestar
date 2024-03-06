@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {itBench} from "@dapplion/benchmark";
 
 describe("bytes utils", function () {

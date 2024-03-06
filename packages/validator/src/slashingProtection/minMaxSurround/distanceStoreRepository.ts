@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {Type} from "@chainsafe/ssz";
 import {encodeKey, DbReqOpts} from "@lodestar/db";
 import {BLSPubkey, Epoch, ssz} from "@lodestar/types";

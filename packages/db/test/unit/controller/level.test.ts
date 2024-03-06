@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {execSync} from "node:child_process";
 import os from "node:os";
 import {describe, it, expect, beforeAll, afterAll} from "vitest";

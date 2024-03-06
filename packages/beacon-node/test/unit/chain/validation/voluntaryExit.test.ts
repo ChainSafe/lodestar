@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import bls from "@chainsafe/bls";
 import {PointFormat} from "@chainsafe/bls/types";
 import {describe, it, beforeEach, beforeAll, vi, afterEach} from "vitest";

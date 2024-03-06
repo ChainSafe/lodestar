@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {digest} from "@chainsafe/as-sha256";
 import bls from "@chainsafe/bls";
 import {PointFormat} from "@chainsafe/bls/types";

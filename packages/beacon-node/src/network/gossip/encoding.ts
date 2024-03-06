@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {compress, uncompress} from "snappyjs";
 import xxhashFactory from "xxhash-wasm";
 import {Message} from "@libp2p/interface";

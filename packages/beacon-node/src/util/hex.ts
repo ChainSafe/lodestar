@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {RootHex} from "@lodestar/types";
 
 export function bufferToHex(buffer: Buffer): RootHex {

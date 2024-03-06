@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {SecretKey} from "@chainsafe/bls/types";
 import {Api} from "@lodestar/api";
 import {chainConfig} from "@lodestar/config/default";

@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {ContainerType, Type} from "@chainsafe/ssz";
 import {BLSPubkey, Epoch, ssz} from "@lodestar/types";
 import {intToBytes, bytesToInt} from "@lodestar/utils";

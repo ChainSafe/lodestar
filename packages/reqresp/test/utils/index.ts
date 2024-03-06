@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {Direction, ReadStatus, Stream, StreamStatus, WriteStatus} from "@libp2p/interface";
 import {logger} from "@libp2p/logger";
 import {expect} from "vitest";

@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {fromHexString} from "@chainsafe/ssz";
 import {FAR_FUTURE_EPOCH} from "@lodestar/params";
 import {phase0} from "@lodestar/types";

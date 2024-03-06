@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import crypto from "node:crypto";
 import {itBench} from "@dapplion/benchmark";
 import {toHexString} from "@chainsafe/ssz";

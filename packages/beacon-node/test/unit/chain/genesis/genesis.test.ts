@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/naming-convention */
+import {Buffer} from "node:buffer";
 import type {SecretKey, PublicKey} from "@chainsafe/bls/types";
 import {toHexString} from "@chainsafe/ssz";
 import {describe, it, expect} from "vitest";

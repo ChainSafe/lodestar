@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {describe, it, expect} from "vitest";
 import {encodeJwtToken, decodeJwtToken} from "../../../src/eth1/provider/jwt.js";
 

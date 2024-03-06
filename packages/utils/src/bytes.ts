@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {toBufferLE, toBigIntLE, toBufferBE, toBigIntBE} from "bigint-buffer";
 
 type Endianness = "le" | "be";

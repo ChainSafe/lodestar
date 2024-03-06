@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {describe, it, expect, afterEach, beforeAll} from "vitest";
 import {bellatrix, deneb, ssz} from "@lodestar/types";
 import {BYTES_PER_FIELD_ELEMENT, BLOB_TX_TYPE} from "@lodestar/params";

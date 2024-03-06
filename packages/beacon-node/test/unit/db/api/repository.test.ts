@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import all from "it-all";
 import {ContainerType} from "@chainsafe/ssz";
 import {describe, it, expect, beforeEach, vi, afterEach, MockedObject} from "vitest";

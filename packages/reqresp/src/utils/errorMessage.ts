@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {encodeSszSnappy} from "../encodingStrategies/sszSnappy/encode.js";
 import {Encoding} from "../types.js";
 

@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {Level} from "level";
 import type {ClassicLevel} from "classic-level";
 import {Logger} from "@lodestar/utils";

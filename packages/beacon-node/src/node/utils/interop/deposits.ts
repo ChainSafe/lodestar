@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {digest} from "@chainsafe/as-sha256";
 import {toGindex, Tree} from "@chainsafe/persistent-merkle-tree";
 import {phase0, ssz} from "@lodestar/types";

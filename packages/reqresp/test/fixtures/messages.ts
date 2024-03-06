@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {fromHexString} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";

@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {describe, it, expect, beforeAll, beforeEach, afterEach, vi} from "vitest";
 import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";

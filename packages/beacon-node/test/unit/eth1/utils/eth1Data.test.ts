@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {describe, it, expect} from "vitest";
 import {Root, phase0, ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";

@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {describe, it, expect, beforeAll} from "vitest";
 import {ApiTestModules, getApiTestModules} from "../../../../utils/api.js";
 import {getBeaconApi} from "../../../../../src/api/impl/beacon/index.js";

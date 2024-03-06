@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {fastify} from "fastify";
 import {fromHexString} from "@chainsafe/ssz";
 import {describe, it, expect, beforeAll, afterAll} from "vitest";

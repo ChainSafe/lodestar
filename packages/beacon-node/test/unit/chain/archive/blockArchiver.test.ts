@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {describe, it, expect, beforeEach, vi, afterEach} from "vitest";
 import {ssz} from "@lodestar/types";

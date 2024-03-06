@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {describe, beforeAll, afterAll, it, expect, vi} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";

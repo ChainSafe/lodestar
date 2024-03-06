@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {BitArray} from "@chainsafe/ssz";
 import {describe, it, expect} from "vitest";
 import {SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";

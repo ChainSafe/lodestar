@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 export enum ChunkType {
   IDENTIFIER = 0xff,
   COMPRESSED = 0x00,

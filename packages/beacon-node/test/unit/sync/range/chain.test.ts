@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {describe, it, afterEach} from "vitest";
 import {config} from "@lodestar/config/default";
 import {Logger} from "@lodestar/utils";

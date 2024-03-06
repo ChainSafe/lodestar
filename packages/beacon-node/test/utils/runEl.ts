@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import fs from "node:fs";
 import net from "node:net";
 import {spawn} from "node:child_process";

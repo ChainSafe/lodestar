@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {describe, it, beforeEach, afterEach, expect} from "vitest";
 import bls from "@chainsafe/bls";
 import {createBeaconConfig, ChainConfig} from "@lodestar/config";

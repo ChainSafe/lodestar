@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {promisify} from "node:util";
 import {describe, it, beforeAll, afterAll, expect} from "vitest";
 import leveldown from "leveldown";

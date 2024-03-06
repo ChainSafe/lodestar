@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {digest} from "@chainsafe/as-sha256";
 import {fromHexString, toHexString} from "@chainsafe/ssz";

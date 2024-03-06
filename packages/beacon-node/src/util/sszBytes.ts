@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {BitArray, deserializeUint8ArrayBitListFromBytes} from "@chainsafe/ssz";
 import {BLSSignature, RootHex, Slot} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";

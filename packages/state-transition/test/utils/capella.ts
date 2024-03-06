@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import crypto from "node:crypto";
 import {ssz} from "@lodestar/types";
 import {config} from "@lodestar/config/default";

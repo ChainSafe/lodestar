@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import bls from "@chainsafe/bls";
 import {toGindex, Tree} from "@chainsafe/persistent-merkle-tree";
 import {BitArray} from "@chainsafe/ssz";

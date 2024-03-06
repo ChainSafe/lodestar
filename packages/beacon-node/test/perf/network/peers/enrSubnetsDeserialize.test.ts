@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {itBench} from "@dapplion/benchmark";
 import {expect} from "chai";
 import {SYNC_COMMITTEE_SUBNET_COUNT, ATTESTATION_SUBNET_COUNT} from "@lodestar/params";

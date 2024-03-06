@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {CachedBeaconStateAltair} from "@lodestar/state-transition";
 import {capella} from "@lodestar/types";
 

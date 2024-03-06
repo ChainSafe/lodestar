@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {describe, it, expect, beforeAll} from "vitest";
 import {ssz, deneb} from "@lodestar/types";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";

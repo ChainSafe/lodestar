@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {GossipEncoding} from "./interface.js";
 
 export const GOSSIP_MSGID_LENGTH = 20;

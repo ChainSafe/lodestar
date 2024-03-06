@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import crypto from "node:crypto";
 import {toHexString} from "@chainsafe/ssz";
 import {testRunnerMemory} from "./testRunnerMemory.js";

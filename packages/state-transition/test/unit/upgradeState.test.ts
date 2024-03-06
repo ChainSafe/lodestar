@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {expect, describe, it} from "vitest";
 import {ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";

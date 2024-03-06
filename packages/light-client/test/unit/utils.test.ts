@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {describe, it, expect} from "vitest";
 import {isValidMerkleBranch} from "../../src/utils/verifyMerkleBranch.js";
 import {computeMerkleBranch} from "../utils/utils.js";

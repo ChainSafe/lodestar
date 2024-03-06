@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {itBench} from "@dapplion/benchmark";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {AttestationData, IndexedAttestation} from "@lodestar/types/phase0";

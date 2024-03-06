@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {describe, it, expect} from "vitest";
 import {Uint8ArrayList} from "uint8arraylist";
 import {pipe} from "it-pipe";

@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {itBench} from "@dapplion/benchmark";
 import {BitArray, toHexString} from "@chainsafe/ssz";
 import {

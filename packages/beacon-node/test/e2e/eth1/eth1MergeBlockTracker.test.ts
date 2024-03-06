@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {describe, it, beforeAll, expect, beforeEach, afterEach} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
 import {ChainConfig} from "@lodestar/config";

@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {Uint8ArrayList} from "uint8arraylist";
 import {ForkName} from "@lodestar/params";
 import {BufferedSource, decodeErrorMessage} from "../utils/index.js";

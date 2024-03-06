@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import snappy from "snappy";
 import crc32c from "@chainsafe/fast-crc32c";
 import {ChunkType, IDENTIFIER_FRAME} from "./common.js";

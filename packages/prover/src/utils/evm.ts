@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {Blockchain} from "@ethereumjs/blockchain";
 import {Account, Address} from "@ethereumjs/util";
 import {VM, RunTxResult} from "@ethereumjs/vm";

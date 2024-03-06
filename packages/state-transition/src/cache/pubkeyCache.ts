@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {CoordType, PublicKey} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
 import {ValidatorIndex} from "@lodestar/types";

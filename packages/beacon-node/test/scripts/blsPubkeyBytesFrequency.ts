@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import fs from "node:fs";
 import {digest} from "@chainsafe/as-sha256";
 import {ApiError, getClient} from "@lodestar/api";

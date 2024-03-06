@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {ContainerType, ListCompositeType} from "@chainsafe/ssz";
 import {phase0, ssz} from "@lodestar/types";

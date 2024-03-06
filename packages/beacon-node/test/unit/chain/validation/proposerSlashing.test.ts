@@ -1,3 +1,4 @@
+import {Buffer} from "node:buffer";
 import {describe, it, beforeEach, afterEach, vi} from "vitest";
 import {phase0, ssz} from "@lodestar/types";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
