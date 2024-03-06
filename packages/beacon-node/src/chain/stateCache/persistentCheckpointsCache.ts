@@ -9,6 +9,7 @@ import {Metrics} from "../../metrics/index.js";
 import {IClock} from "../../util/clock.js";
 import {ShufflingCache} from "../shufflingCache.js";
 import {BufferPool, BufferWithKey} from "../../util/bufferPool.js";
+import {StateCloneOpts} from "../regen/interface.js";
 import {MapTracker} from "./mapMetrics.js";
 import {CPStateDatastore, DatastoreKey, datastoreKeyToCheckpoint} from "./datastore/index.js";
 import {CheckpointHex, CacheItemType, CheckpointStateCache} from "./types.js";
@@ -184,10 +185,10 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
    * - Get block for processing
    * - Regen head state
    */
-  async getOrReload(cp: CheckpointHex): Promise<CachedBeaconStateAllForks | null> {
-    const stateOrStateBytesData = await this.getStateOrLoadDb(cp);
+  async getOrReload(cp: CheckpointHex, opts?: StateCloneOpts): Promise<CachedBeaconStateAllForks | null> {
+    const stateOrStateBytesData = await this.getStateOrLoadDb(cp, opts);
     if (stateOrStateBytesData === null || isCachedBeaconState(stateOrStateBytesData)) {
-      return stateOrStateBytesData?.clone(true) ?? null;
+      return stateOrStateBytesData?.clone(opts?.dontTransferCache) ?? null;
     }
     const {persistedKey, stateBytes} = stateOrStateBytesData;
     const logMeta = {persistedKey: toHexString(persistedKey)};
@@ -242,7 +243,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       this.cache.set(cpKey, {type: CacheItemType.inMemory, state: newCachedState, persistedKey});
       this.epochIndex.getOrDefault(cp.epoch).add(cp.rootHex);
       // don't prune from memory here, call it at the last 1/3 of slot 0 of an epoch
-      return newCachedState.clone(true);
+      return newCachedState.clone(opts?.dontTransferCache);
     } catch (e) {
       this.logger.debug("Reload: error loading cached state", logMeta, e as Error);
       return null;
@@ -253,7 +254,8 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
    * Return either state or state bytes loaded from db.
    */
   async getStateOrBytes(cp: CheckpointHex): Promise<CachedBeaconStateAllForks | Uint8Array | null> {
-    const stateOrLoadedState = await this.getStateOrLoadDb(cp);
+    // don't have to transfer cache for this specific api
+    const stateOrLoadedState = await this.getStateOrLoadDb(cp, {dontTransferCache: true});
     if (stateOrLoadedState === null || isCachedBeaconState(stateOrLoadedState)) {
       return stateOrLoadedState;
     }
@@ -263,9 +265,12 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   /**
    * Return either state or state bytes with persisted key loaded from db.
    */
-  async getStateOrLoadDb(cp: CheckpointHex): Promise<CachedBeaconStateAllForks | LoadedStateBytesData | null> {
+  async getStateOrLoadDb(
+    cp: CheckpointHex,
+    opts?: StateCloneOpts
+  ): Promise<CachedBeaconStateAllForks | LoadedStateBytesData | null> {
     const cpKey = toCacheKey(cp);
-    const inMemoryState = this.get(cpKey);
+    const inMemoryState = this.get(cpKey, opts);
     if (inMemoryState) {
       return inMemoryState;
     }
@@ -294,7 +299,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   /**
    * Similar to get() api without reloading from disk
    */
-  get(cpOrKey: CheckpointHex | string): CachedBeaconStateAllForks | null {
+  get(cpOrKey: CheckpointHex | string, opts?: StateCloneOpts): CachedBeaconStateAllForks | null {
     this.metrics?.lookups.inc();
     const cpKey = typeof cpOrKey === "string" ? cpOrKey : toCacheKey(cpOrKey);
     const cacheItem = this.cache.get(cpKey);
@@ -312,7 +317,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     if (isInMemoryCacheItem(cacheItem)) {
       const {state} = cacheItem;
       this.metrics?.stateClonedCount.observe(state.clonedCount);
-      return state.clone(true);
+      return state.clone(opts?.dontTransferCache);
     }
 
     return null;
@@ -345,14 +350,14 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   /**
    * Searches in-memory state for the latest cached state with a `root` without reload, starting with `epoch` and descending
    */
-  getLatest(rootHex: RootHex, maxEpoch: Epoch): CachedBeaconStateAllForks | null {
+  getLatest(rootHex: RootHex, maxEpoch: Epoch, opts?: StateCloneOpts): CachedBeaconStateAllForks | null {
     // sort epochs in descending order, only consider epochs lte `epoch`
     const epochs = Array.from(this.epochIndex.keys())
       .sort((a, b) => b - a)
       .filter((e) => e <= maxEpoch);
     for (const epoch of epochs) {
       if (this.epochIndex.get(epoch)?.has(rootHex)) {
-        const inMemoryClonedState = this.get({rootHex, epoch});
+        const inMemoryClonedState = this.get({rootHex, epoch}, opts);
         if (inMemoryClonedState) {
           return inMemoryClonedState;
         }
@@ -368,7 +373,11 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
    * - Get block for processing
    * - Regen head state
    */
-  async getOrReloadLatest(rootHex: RootHex, maxEpoch: Epoch): Promise<CachedBeaconStateAllForks | null> {
+  async getOrReloadLatest(
+    rootHex: RootHex,
+    maxEpoch: Epoch,
+    opts?: StateCloneOpts
+  ): Promise<CachedBeaconStateAllForks | null> {
     // sort epochs in descending order, only consider epochs lte `epoch`
     const epochs = Array.from(this.epochIndex.keys())
       .sort((a, b) => b - a)
@@ -376,7 +385,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     for (const epoch of epochs) {
       if (this.epochIndex.get(epoch)?.has(rootHex)) {
         try {
-          const clonedState = await this.getOrReload({rootHex, epoch});
+          const clonedState = await this.getOrReload({rootHex, epoch}, opts);
           if (clonedState) {
             return clonedState;
           }
