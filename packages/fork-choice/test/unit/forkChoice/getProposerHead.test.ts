@@ -92,6 +92,7 @@ describe("Forkchoice / GetProposerHead", function () {
     justified: {
       checkpoint: {epoch: genesisEpoch, root: fromHexString(genesisBlock.blockRoot), rootHex: genesisBlock.blockRoot},
       balances: new Uint8Array(Array(32).fill(150)),
+      totalBalance: 32 * 150,
     },
     unrealizedJustified: {
       checkpoint: {epoch: genesisEpoch, root: fromHexString(genesisBlock.blockRoot), rootHex: genesisBlock.blockRoot},
