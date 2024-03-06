@@ -9,6 +9,7 @@ import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   getBlockRootAtSlot,
+  ShufflingCacheCaller,
 } from "@lodestar/state-transition";
 import {IForkChoice, EpochDifference} from "@lodestar/fork-choice";
 import {toHex, MapDef} from "@lodestar/utils";
@@ -149,7 +150,7 @@ export class AggregatedAttestationPool {
       }
 
       const slotDelta = stateSlot - slot;
-      const shuffling = state.epochCtx.getShufflingAtEpoch(epoch);
+      const shuffling = state.epochCtx.getShufflingAtEpoch(epoch, ShufflingCacheCaller.getAttestationsForBlock);
       const slotCommittees = shuffling.committees[slot % SLOTS_PER_EPOCH];
       for (const [committeeIndex, attestationGroupByData] of attestationGroupByDataHashByIndex.entries()) {
         // all attestations will be validated against the state in next step so we can get committee from the state

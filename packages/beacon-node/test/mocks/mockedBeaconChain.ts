@@ -4,6 +4,7 @@ import {config as defaultConfig} from "@lodestar/config/default";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkChoice, ProtoBlock, EpochDifference} from "@lodestar/fork-choice";
 import {Logger} from "@lodestar/utils";
+import {ShufflingCache} from "@lodestar/state-transition";
 import {BeaconChain} from "../../src/chain/chain.js";
 import {ChainEventEmitter} from "../../src/chain/emitter.js";
 import {ExecutionEngineHttp} from "../../src/execution/engine/index.js";
@@ -14,8 +15,8 @@ import {BeaconProposerCache} from "../../src/chain/beaconProposerCache.js";
 import {LightClientServer} from "../../src/chain/lightClient/index.js";
 import {Clock} from "../../src/util/clock.js";
 import {QueuedStateRegenerator} from "../../src/chain/regen/index.js";
-import {ShufflingCache} from "../../src/chain/shufflingCache.js";
 import {getMockedLogger} from "./loggerMock.js";
+import {getMockedShufflingCache} from "./shufflingMock.js";
 
 export type MockedBeaconChain = Mocked<BeaconChain> & {
   logger: Mocked<Logger>;
@@ -70,7 +71,6 @@ vi.mock("@lodestar/fork-choice", async (importActual) => {
 vi.mock("../../src/chain/regen/index.js");
 vi.mock("../../src/eth1/index.js");
 vi.mock("../../src/chain/beaconProposerCache.js");
-vi.mock("../../src/chain/shufflingCache.js");
 vi.mock("../../src/chain/lightClient/index.js");
 
 vi.mock("../../src/chain/opPools/index.js", async (importActual) => {
@@ -131,7 +131,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-expect-error
       beaconProposerCache: new BeaconProposerCache(),
-      shufflingCache: new ShufflingCache(),
+      shufflingCache: getMockedShufflingCache(),
       produceCommonBlockBody: vi.fn(),
       produceBlock: vi.fn(),
       produceBlindedBlock: vi.fn(),

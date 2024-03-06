@@ -23,6 +23,7 @@ import {
   createCachedBeaconState,
   computeCommitteeCount,
   ShufflingCache,
+  ShufflingCacheCaller,
 } from "../../src/index.js";
 import {
   CachedBeaconStateAllForks,
@@ -147,7 +148,10 @@ export function generatePerfTestCachedStatePhase0(opts?: {goBackOneSlot: boolean
       const slotInEpoch = i % SLOTS_PER_EPOCH;
       const slot = previousEpoch * SLOTS_PER_EPOCH + slotInEpoch;
       const index = i % committeesPerSlot;
-      const shuffling = phase0CachedState23637.epochCtx.getShufflingAtEpoch(previousEpoch);
+      const shuffling = phase0CachedState23637.epochCtx.getShufflingAtEpoch(
+        previousEpoch,
+        ShufflingCacheCaller.testing
+      );
       const committee = shuffling.committees[slotInEpoch][index];
       phase0CachedState23637.previousEpochAttestations.push(
         ssz.phase0.PendingAttestation.toViewDU({
@@ -171,7 +175,10 @@ export function generatePerfTestCachedStatePhase0(opts?: {goBackOneSlot: boolean
       const slotInEpoch = i % SLOTS_PER_EPOCH;
       const slot = currentEpoch * SLOTS_PER_EPOCH + slotInEpoch;
       const index = i % committeesPerSlot;
-      const shuffling = phase0CachedState23637.epochCtx.getShufflingAtEpoch(previousEpoch);
+      const shuffling = phase0CachedState23637.epochCtx.getShufflingAtEpoch(
+        previousEpoch,
+        ShufflingCacheCaller.testing
+      );
       const committee = shuffling.committees[slotInEpoch][index];
 
       phase0CachedState23637.currentEpochAttestations.push(
@@ -388,9 +395,11 @@ function buildPerformanceStatePhase0(pubkeysArg?: Uint8Array[]): phase0.BeaconSt
 export function generateTestCachedBeaconStateOnlyValidators({
   vc,
   slot,
+  maxShufflingCacheEpochs,
 }: {
   vc: number;
   slot: Slot;
+  maxShufflingCacheEpochs?: number;
 }): CachedBeaconStateAllForks {
   // Generate only some publicKeys
   const {pubkeys, pubkeysMod, pubkeysModObj} = getPubkeys(vc);
@@ -443,7 +452,7 @@ export function generateTestCachedBeaconStateOnlyValidators({
     {
       config: createBeaconConfig(config, state.genesisValidatorsRoot),
       logger: getNodeLogger({level: LogLevel.info}),
-      shufflingCache: new ShufflingCache(),
+      shufflingCache: new ShufflingCache(null, {maxShufflingCacheEpochs}),
       pubkey2index,
       index2pubkey,
     },

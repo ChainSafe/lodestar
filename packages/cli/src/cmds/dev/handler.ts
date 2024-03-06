@@ -2,7 +2,7 @@ import fs from "node:fs";
 import {rimraf} from "rimraf";
 import {toHex, fromHex, LogLevel} from "@lodestar/utils";
 import {nodeUtils} from "@lodestar/beacon-node";
-import {getNodeLogger} from "@lodestar/logger/lib/node.js";
+import {getNodeLogger} from "@lodestar/logger/node";
 import {GlobalArgs} from "../../options/index.js";
 import {mkdir, onGracefulShutdown} from "../../util/index.js";
 import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";

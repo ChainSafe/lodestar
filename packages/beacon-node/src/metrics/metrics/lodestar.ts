@@ -1,4 +1,9 @@
-import {EpochTransitionStep, StateCloneSource, StateHashTreeRootSource} from "@lodestar/state-transition";
+import {
+  EpochTransitionStep,
+  ShufflingCacheCaller,
+  StateCloneSource,
+  StateHashTreeRootSource,
+} from "@lodestar/state-transition";
 import {allForks} from "@lodestar/types";
 import {BlockSource} from "../../chain/blocks/types.js";
 import {JobQueueItemType} from "../../chain/bls/index.js";
@@ -1273,21 +1278,29 @@ export function createLodestarMetrics(
         name: "lodestar_shuffling_cache_size",
         help: "Shuffling cache size",
       }),
-      processStateInsertNew: register.gauge({
-        name: "lodestar_shuffling_cache_process_state_insert_new_total",
-        help: "Total number of times processState is called resulting a new shuffling",
+      cacheMiss: register.gauge<{caller: ShufflingCacheCaller}>({
+        name: "lodestar_shuffling_cache_miss_total",
+        help: "Total number of times a request to get a shuffling missed",
+        labelNames: ["caller"],
       }),
-      processStateUpdatePromise: register.gauge({
-        name: "lodestar_shuffling_cache_process_state_update_promise_total",
-        help: "Total number of times processState is called resulting a promise being updated with shuffling",
+      cacheMissUnresolvedPromise: register.gauge<{caller: ShufflingCacheCaller}>({
+        name: "lodestar_shuffling_cache_miss_unresolved_promise_total",
+        help: "Total number of times a request to synchronously get a shuffling but the promise for the shuffling was not resolved yet",
+        labelNames: ["caller"],
       }),
-      processStateNoOp: register.gauge({
-        name: "lodestar_shuffling_cache_process_state_no_op_total",
-        help: "Total number of times processState is called resulting no changes",
+      cacheHit: register.gauge<{caller: ShufflingCacheCaller}>({
+        name: "lodestar_shuffling_cache_hit_total",
+        help: "Total number of times a request to get a shuffling returned a shuffling immediately",
+        labelNames: ["caller"],
       }),
-      insertPromiseCount: register.gauge({
-        name: "lodestar_shuffling_cache_insert_promise_count",
-        help: "Total number of times insertPromise is called",
+      cacheHitUnresolvedPromise: register.gauge<{caller: ShufflingCacheCaller}>({
+        name: "lodestar_shuffling_cache_hit_unresolved_promise_total",
+        help: "Total number of times a request to get a shuffling returned a promise to be resolved by the consumer",
+        labelNames: ["caller"],
+      }),
+      cacheHitRebuildPromise: register.gauge({
+        name: "lodestar_shuffling_cache_hit_rebuild_promise_total",
+        help: "Total number of times a synchronous request to build a shuffling threw away an existing promise and rebuilt a new one",
       }),
     },
 

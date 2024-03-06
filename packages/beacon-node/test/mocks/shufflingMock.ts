@@ -1,10 +1,9 @@
 import {vi, Mocked} from "vitest";
-import {ShufflingCache} from "../../src/chain/shufflingCache.js";
+// eslint-disable-next-line import/no-relative-packages
+import {ShufflingCache} from "../../../state-transition/src/cache/shufflingCache.js";
 
-export type MockedShufflingCache = Mocked<ShufflingCache>;
+vi.mock("../../../state-transition/src/cache/shufflingCache.js");
 
-vi.mock("../../src/chain/shufflingCache.js");
-
-export function getMockedShufflingCache(): MockedShufflingCache {
+export function getMockedShufflingCache(): Mocked<ShufflingCache> {
   return vi.mocked(new ShufflingCache({} as any));
 }

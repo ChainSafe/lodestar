@@ -12,6 +12,9 @@ import {
   Index2PubkeyCache,
   PubkeyIndexMap,
   EpochShuffling,
+  ShufflingCache,
+  ShufflingCacheError,
+  ShufflingCacheErrorCode,
 } from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
 import {
@@ -77,7 +80,6 @@ import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
 import {BlockInput} from "./blocks/types.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {BlockRewards, computeBlockRewards} from "./rewards/blockRewards.js";
-import {ShufflingCache} from "./shufflingCache.js";
 import {StateContextCache} from "./stateCache/stateContextCache.js";
 import {SeenGossipBlockInput} from "./seenCache/index.js";
 import {CheckpointStateCache} from "./stateCache/stateContextCheckpointsCache.js";
@@ -216,7 +218,6 @@ export class BeaconChain implements IBeaconChain {
 
     this.beaconProposerCache = new BeaconProposerCache(opts);
     this.checkpointBalancesCache = new CheckpointBalancesCache();
-    this.shufflingCache = new ShufflingCache(metrics, this.opts);
 
     // Restore state caches
     // anchorState may already by a CachedBeaconState. If so, don't create the cache again, since deserializing all
@@ -226,25 +227,18 @@ export class BeaconChain implements IBeaconChain {
     let cachedState: CachedBeaconStateAllForks;
     if (isCachedBeaconState(anchorState) && opts.skipCreateStateCacheIfAvailable) {
       cachedState = anchorState;
-      if (anchorState.epochCtx.shufflingCache.hasItems()) {
-        cachedState.epochCtx.shufflingCache = this.shufflingCache.clone(anchorState.epochCtx.shufflingCache);
-      }
+      cachedState.epochCtx.shufflingCache.addMetrics(metrics);
+      this.shufflingCache = cachedState.epochCtx.shufflingCache;
     } else {
+      this.shufflingCache = new ShufflingCache(metrics, this.opts);
       cachedState = createCachedBeaconState(anchorState, {
         config,
+        logger: this.logger,
         shufflingCache: this.shufflingCache,
         pubkey2index: new PubkeyIndexMap(),
         index2pubkey: [],
       });
     }
-    /**
-     * These should already be processed when creating the shufflingCache.fromState
-     * 
-     * TODO: (matthewkeil) double check this is correct
-     */
-    // this.shufflingCache.processState(cachedState, cachedState.epochCtx.previousEpoch);
-    // this.shufflingCache.processState(cachedState, cachedState.epochCtx.epoch);
-    // this.shufflingCache.processState(cachedState, cachedState.epochCtx.nextEpoch);
 
     // Persist single global instance of state caches
     this.pubkey2index = cachedState.epochCtx.pubkey2index;
@@ -722,22 +716,13 @@ export class BeaconChain implements IBeaconChain {
     attHeadBlock: ProtoBlock,
     regenCaller: RegenCaller
   ): Promise<EpochShuffling> {
-    // this is to prevent multiple calls to get shuffling for the same epoch and dependent root
-    // any subsequent calls of the same epoch and dependent root will wait for this promise to resolve
-    this.shufflingCache.insertPromise(attEpoch, shufflingDependentRoot);
     const blockEpoch = computeEpochAtSlot(attHeadBlock.slot);
 
-    let state: CachedBeaconStateAllForks;
     if (blockEpoch < attEpoch - 1) {
       // thanks to one epoch look ahead, we don't need to dial up to attEpoch
       const targetSlot = computeStartSlotAtEpoch(attEpoch - 1);
       this.metrics?.gossipAttestation.useHeadBlockStateDialedToTargetEpoch.inc({caller: regenCaller});
-      state = await this.regen.getBlockSlotState(
-        attHeadBlock.blockRoot,
-        targetSlot,
-        {dontTransferCache: true},
-        regenCaller
-      );
+      await this.regen.getBlockSlotState(attHeadBlock.blockRoot, targetSlot, {dontTransferCache: true}, regenCaller);
     } else if (blockEpoch > attEpoch) {
       // should not happen, handled inside attestation verification code
       throw Error(`Block epoch ${blockEpoch} is after attestation epoch ${attEpoch}`);
@@ -746,11 +731,19 @@ export class BeaconChain implements IBeaconChain {
       // it's not likely to hit this since these shufflings are cached already
       // so handle just in case
       this.metrics?.gossipAttestation.useHeadBlockState.inc({caller: regenCaller});
-      state = await this.regen.getState(attHeadBlock.stateRoot, regenCaller);
+      await this.regen.getState(attHeadBlock.stateRoot, regenCaller);
     }
 
     // resolve the promise to unblock other calls of the same epoch and dependent root
-    return this.shufflingCache.processState(state, attEpoch);
+    const shuffling = await this.shufflingCache.get(attEpoch, shufflingDependentRoot);
+    if (!shuffling) {
+      throw new ShufflingCacheError({
+        code: ShufflingCacheErrorCode.REGEN_ERROR_NO_SHUFFLING_FOUND,
+        epoch: attEpoch,
+        shufflingDecisionRoot: shufflingDependentRoot,
+      });
+    }
+    return shuffling;
   }
 
   /**

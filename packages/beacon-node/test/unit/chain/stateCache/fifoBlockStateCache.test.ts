@@ -1,6 +1,5 @@
 import {describe, it, expect, beforeEach} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
-import {EpochShuffling} from "@lodestar/state-transition";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition/src/types.js";
 import {FIFOBlockStateCache} from "../../../../src/chain/stateCache/index.js";
@@ -8,24 +7,15 @@ import {generateCachedState} from "../../../utils/state.js";
 
 describe("FIFOBlockStateCache", function () {
   let cache: FIFOBlockStateCache;
-  const shuffling: EpochShuffling = {
-    activeIndices: new Uint32Array(),
-    shuffling: new Uint32Array(),
-    committees: [],
-    committeesPerSlot: 1,
-  };
 
   const state1 = generateCachedState({slot: 0});
   const key1 = toHexString(state1.hashTreeRoot());
-  state1.epochCtx.currentShuffling = {...shuffling};
 
   const state2 = generateCachedState({slot: 1 * SLOTS_PER_EPOCH});
   const key2 = toHexString(state2.hashTreeRoot());
-  state2.epochCtx.currentShuffling = {...shuffling};
 
   const state3 = generateCachedState({slot: 2 * SLOTS_PER_EPOCH});
   const key3 = toHexString(state3.hashTreeRoot());
-  state3.epochCtx.currentShuffling = {...shuffling};
 
   beforeEach(function () {
     // max 2 items

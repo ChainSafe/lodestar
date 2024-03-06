@@ -11,7 +11,7 @@ import {
   SYNC_COMMITTEE_SIZE,
 } from "@lodestar/params";
 import {phase0} from "@lodestar/types";
-import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../../../src/index.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateAltair, ShufflingCacheCaller} from "../../../src/index.js";
 import {processAttestationsAltair} from "../../../src/block/processAttestationsAltair.js";
 import {generatePerfTestCachedStateAltair, perfStateId} from "../util.js";
 import {BlockAltairOpts, getBlockAltair} from "./util.js";
@@ -118,7 +118,7 @@ describe("altair processAttestation - CachedEpochParticipation.setStatus", () =>
         const numAttesters = Math.floor((state.epochCtx.currentActiveIndices.length * ratio) / SLOTS_PER_EPOCH);
         // just get committees of slot 10
         let count = 0;
-        for (const committees of state.epochCtx.getShufflingAtSlot(state.slot).committees[10]) {
+        for (const committees of state.epochCtx.getShufflingAtSlot(state.slot, ShufflingCacheCaller.testing).committees[10]) {
           for (const committee of committees) {
             currentEpochParticipation.set(committee, 0b111);
             count++;

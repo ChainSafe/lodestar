@@ -19,7 +19,6 @@ import {SeenAggregatedAttestations} from "../../../src/chain/seenCache/seenAggre
 import {SeenAttestationDatas} from "../../../src/chain/seenCache/seenAttestationData.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
 import {testLogger} from "../logger.js";
-import {ShufflingCache} from "../../../src/chain/shufflingCache.js";
 
 export type AttestationValidDataOpts = {
   currentSlot?: Slot;
