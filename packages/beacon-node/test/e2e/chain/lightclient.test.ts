@@ -131,7 +131,7 @@ describe("chain / lightclient", function () {
       });
 
       loggerLC.info("Initialized lightclient", {headSlot: lightclient.getHead().beacon.slot});
-      lightclient.start();
+      void lightclient.start();
 
       return new Promise<void>((resolve, reject) => {
         bn.chain.emitter.on(routes.events.EventType.head, async (head) => {

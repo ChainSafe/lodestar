@@ -33,5 +33,5 @@ export async function lightclientHandler(args: ILightClientArgs & GlobalArgs): P
     transport: new LightClientRestTransport(api),
   });
 
-  client.start();
+  void client.start();
 }

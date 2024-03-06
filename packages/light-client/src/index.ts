@@ -167,10 +167,23 @@ export class Lightclient {
     return new Lightclient({...args, bootstrap});
   }
 
-  start(): void {
-    this.runLoop().catch((e) => {
-      this.logger.error("Error on runLoop", {}, e as Error);
+  /**
+   * @returns a `Promise` that will resolve once `LightclientEvent.statusChange` with `RunStatusCode.started` value is emitted
+   */
+  start(): Promise<void> {
+    const startPromise = new Promise<void>((resolve) => {
+      const lightclientStarted = (status: RunStatusCode): void => {
+        if (status === RunStatusCode.started) {
+          this.emitter.off(LightclientEvent.statusChange, lightclientStarted);
+          resolve();
+        }
+      };
+      this.emitter.on(LightclientEvent.statusChange, lightclientStarted);
     });
+
+    void this.runLoop();
+
+    return startPromise;
   }
 
   stop(): void {
