@@ -75,7 +75,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     }
 
     // Otherwise, get the state normally.
-    return this.getState(parentBlock.stateRoot, regenCaller, allowDiskReload);
+    return this.getState(parentBlock.stateRoot, regenCaller, opts, allowDiskReload);
   }
 
   /**
@@ -121,8 +121,8 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     const {checkpointStateCache} = this.modules;
     const epoch = computeEpochAtSlot(slot);
     const latestCheckpointStateCtx = allowDiskReload
-      ? await checkpointStateCache.getOrReloadLatest(blockRoot, epoch)
-      : checkpointStateCache.getLatest(blockRoot, epoch);
+      ? await checkpointStateCache.getOrReloadLatest(blockRoot, epoch, opts)
+      : checkpointStateCache.getLatest(blockRoot, epoch, opts);
 
     // If a checkpoint state exists with the given checkpoint root, it either is in requested epoch
     // or needs to have empty slots processed until the requested epoch
@@ -133,7 +133,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     // Otherwise, use the fork choice to get the stateRoot from block at the checkpoint root
     // regenerate that state,
     // then process empty slots until the requested epoch
-    const blockStateCtx = await this.getState(block.stateRoot, regenCaller, allowDiskReload);
+    const blockStateCtx = await this.getState(block.stateRoot, regenCaller, opts, allowDiskReload);
     return processSlotsByCheckpoint(this.modules, blockStateCtx, slot, regenCaller, opts);
   }
 
@@ -145,10 +145,12 @@ export class StateRegenerator implements IStateRegeneratorInternal {
   async getState(
     stateRoot: RootHex,
     _rCaller: RegenCaller,
+    opts?: StateCloneOpts,
+    // internal option, don't want to expose to external caller
     allowDiskReload = false
   ): Promise<CachedBeaconStateAllForks> {
     // Trivial case, state at stateRoot is already cached
-    const cachedStateCtx = this.modules.stateCache.get(stateRoot);
+    const cachedStateCtx = this.modules.stateCache.get(stateRoot, opts);
     if (cachedStateCtx) {
       return cachedStateCtx;
     }
@@ -165,14 +167,14 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     const {checkpointStateCache} = this.modules;
     // iterateAncestorBlocks only returns ancestor blocks, not the block itself
     for (const b of this.modules.forkChoice.iterateAncestorBlocks(block.blockRoot)) {
-      state = this.modules.stateCache.get(b.stateRoot);
+      state = this.modules.stateCache.get(b.stateRoot, opts);
       if (state) {
         break;
       }
       const epoch = computeEpochAtSlot(blocksToReplay[blocksToReplay.length - 1].slot - 1);
       state = allowDiskReload
-        ? await checkpointStateCache.getOrReloadLatest(b.blockRoot, epoch)
-        : checkpointStateCache.getLatest(b.blockRoot, epoch);
+        ? await checkpointStateCache.getOrReloadLatest(b.blockRoot, epoch, opts)
+        : checkpointStateCache.getLatest(b.blockRoot, epoch, opts);
       if (state) {
         break;
       }
@@ -319,6 +321,7 @@ async function processSlotsToNearestCheckpoint(
     const checkpointState = postState;
     const cp = getCheckpointFromState(checkpointState);
     checkpointStateCache.add(cp, checkpointState);
+    // consumers should not mutate or get the transfered cache
     emitter.emit(ChainEvent.checkpoint, cp, checkpointState.clone(true));
 
     // this avoids keeping our node busy processing blocks

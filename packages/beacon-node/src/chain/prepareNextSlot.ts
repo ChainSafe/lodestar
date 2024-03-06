@@ -107,6 +107,7 @@ export class PrepareNextSlotScheduler {
         headRoot,
         prepareSlot,
         // the slot 0 of next epoch will likely use this Previous Root Checkpoint state for state transition so we transfer cache here
+        // the resulting state with cache will be cached in Checkpoint State Cache which is used for the upcoming block processing
         // for other slots dontTransferCached=true because we don't run state transition on this state
         {dontTransferCache: !isEpochTransition},
         RegenCaller.precomputeEpoch
