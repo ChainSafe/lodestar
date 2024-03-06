@@ -130,7 +130,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
    * Get checkpoint state from cache, this function is not for block processing so don't transfer cache
    */
   getCheckpointStateSync(cp: CheckpointHex): CachedBeaconStateAllForks | null {
-    return this.checkpointStateCache.get(cp, opts, {dontTransferCache: true});
+    return this.checkpointStateCache.get(cp, {dontTransferCache: true});
   }
 
   /**
