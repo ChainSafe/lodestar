@@ -51,51 +51,23 @@ lodestar lightclient \
 For this example we will assume there is a running beacon node at `https://beacon-node.your-domain.com`
 
 ```ts
-import type {Api} from "@lodestar/api/beacon";
-import {ApiError} from "@lodestar/api";
-import type {Bytes32} from "@lodestar/types";
+import {getClient} from "@lodestar/api";
 import {createChainForkConfig} from "@lodestar/config";
 import {networksChainConfig} from "@lodestar/config/networks";
-import {
-    type GenesisData,
-    Lightclient,
-    LightclientEvent,
-    RunStatusCode
-} from "@lodestar/light-client";
-import {getClient} from "@lodestar/api";
+import {Lightclient, LightclientEvent} from "@lodestar/light-client";
 import {LightClientRestTransport} from "@lodestar/light-client/transport";
-import {getLcLoggerConsole} from "@lodestar/light-client/utils";
-
-async function getGenesisData(api: Pick<Api, "beacon">): Promise<GenesisData> {
-    const res = await api.beacon.getGenesis();
-    ApiError.assert(res);
-
-    return {
-        genesisTime: Number(res.response.data.genesisTime),
-        genesisValidatorsRoot: res.response.data.genesisValidatorsRoot,
-    };
-}
-
-async function getSyncCheckpoint(api: Pick<Api, "beacon">): Promise<Bytes32> {
-    const res = await api.beacon.getStateFinalityCheckpoints("head");
-    ApiError.assert(res);
-    return res.response.data.finalized.root;
-}
+import {getFinalizedSyncCheckpoint, getGenesisData, getLcLoggerConsole} from "@lodestar/light-client/utils";
 
 const config = createChainForkConfig(networksChainConfig.mainnet);
-
 const logger = getLcLoggerConsole({logDebug: Boolean(process.env.DEBUG)});
-
 const api = getClient({urls: ["https://beacon-node.your-domain.com"]}, {config});
-
-const transport = new LightClientRestTransport(api);
 
 const lightclient = await Lightclient.initializeFromCheckpointRoot({
     config,
     logger,
-    transport,
+    transport: new LightClientRestTransport(api),
     genesisData: await getGenesisData(api),
-    checkpointRoot: await getSyncCheckpoint(api),
+    checkpointRoot: await getFinalizedSyncCheckpoint(api),
     opts: {
         allowForcedUpdates: true,
         updateHeadersOnForcedUpdate: true,
@@ -103,26 +75,16 @@ const lightclient = await Lightclient.initializeFromCheckpointRoot({
 });
 
 // Wait for the lightclient to start
-await new Promise<void>((resolve) => {
-    const lightclientStarted = (status: RunStatusCode): void => {
-        if (status === RunStatusCode.started) {
-            lightclient?.emitter.off(LightclientEvent.statusChange, lightclientStarted);
-            resolve();
-        }
-    };
-    lightclient?.emitter.on(LightclientEvent.statusChange, lightclientStarted);
-    logger.info("Initiating lightclient");
-    lightclient?.start();
-});
+await lightclient.start();
 
 logger.info("Lightclient synced");
 
 lightclient.emitter.on(LightclientEvent.lightClientFinalityHeader, async (finalityUpdate) => {
-    console.log(finalityUpdate);
+    logger.info(finalityUpdate);
 });
 
 lightclient.emitter.on(LightclientEvent.lightClientOptimisticHeader, async (optimisticUpdate) => {
-    console.log(optimisticUpdate);
+    logger.info(optimisticUpdate);
 });
 ```
 

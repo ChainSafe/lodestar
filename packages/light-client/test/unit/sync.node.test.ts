@@ -104,7 +104,7 @@ describe("sync", () => {
           resolve();
         }
       });
-      lightclient.start();
+      void lightclient.start();
     });
 
     // Wait for lightclient to subscribe to header updates
