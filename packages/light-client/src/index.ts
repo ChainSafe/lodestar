@@ -1,13 +1,10 @@
 import mitt from "mitt";
-import {init as initBls} from "@chainsafe/bls/switchable";
-import {Implementation} from "@chainsafe/bls/types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD} from "@lodestar/params";
 import {phase0, RootHex, Slot, SyncPeriod, allForks} from "@lodestar/types";
 import {createBeaconConfig, BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {isErrorAborted, sleep} from "@lodestar/utils";
 import {getCurrentSlot, slotWithFutureTolerance, timeUntilNextEpoch} from "./utils/clock.js";
-import {isNode} from "./utils/utils.js";
 import {chunkifyInclusiveRange} from "./utils/chunkify.js";
 import {LightclientEmitter, LightclientEvent} from "./events.js";
 import {getLcLoggerConsole, ILcLogger} from "./utils/logger.js";
@@ -109,7 +106,7 @@ export class Lightclient {
 
   private runStatus: RunStatus = {code: RunStatusCode.stopped};
 
-  private constructor({config, logger, genesisData, bootstrap, transport}: LightclientInitArgs) {
+  constructor({config, logger, genesisData, bootstrap, transport}: LightclientInitArgs) {
     this.genesisTime = genesisData.genesisTime;
     this.genesisValidatorsRoot =
       typeof genesisData.genesisValidatorsRoot === "string"
@@ -150,16 +147,9 @@ export class Lightclient {
   static async initializeFromCheckpointRoot(
     args: Omit<LightclientInitArgs, "bootstrap"> & {
       checkpointRoot: phase0.Checkpoint["root"];
-      blsImplementation?: Implementation;
     }
   ): Promise<Lightclient> {
-    const {transport, checkpointRoot, blsImplementation} = args;
-
-    // Initialize the BLS implementation. This may requires initializing the WebAssembly instance
-    // so why it's an async process. This should be initialized once before any bls operations.
-    // This process has to be done manually because of an issue in Karma runner
-    // https://github.com/karma-runner/karma/issues/3804
-    await initBls(blsImplementation ?? (isNode ? "blst-native" : "herumi"));
+    const {transport, checkpointRoot} = args;
 
     // Fetch bootstrap state with proof at the trusted block root
     const {data: bootstrap} = await transport.getBootstrap(toHexString(checkpointRoot));
