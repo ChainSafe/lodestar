@@ -59,13 +59,24 @@ export function createApiRequest<E extends Endpoint>(
   );
   setAuthorizationHeader(url, headers, init);
 
-  switch (init.responseWireFormat) {
-    case WireFormat.json:
-      headers.set("accept", "application/json;q=1,application/octet-stream;q=0.9");
-      break;
-    case WireFormat.ssz:
-      headers.set("accept", "application/octet-stream;q=1,application/json;q=0.9");
-      break;
+  if (definition.resp.onlySupport !== undefined) {
+    switch (definition.resp.onlySupport) {
+      case WireFormat.json:
+        headers.set("accept", "application/json");
+        break;
+      case WireFormat.ssz:
+        headers.set("accept", "application/octet-stream");
+        break;
+    }
+  } else {
+    switch (init.responseWireFormat) {
+      case WireFormat.json:
+        headers.set("accept", "application/json;q=1,application/octet-stream;q=0.9");
+        break;
+      case WireFormat.ssz:
+        headers.set("accept", "application/octet-stream;q=1,application/json;q=0.9");
+        break;
+    }
   }
 
   return new Request(url, {
