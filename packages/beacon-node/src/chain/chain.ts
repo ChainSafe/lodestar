@@ -1017,7 +1017,7 @@ export class BeaconChain implements IBeaconChain {
     const stateResult = await this.getStateBySlot(slot, {allowRegen: false}); // No regen if state not in cache
 
     if (stateResult === null) {
-      throw Error(`State is unavailable given at slot ${slot}`);
+      throw Error(`State is unavailable for slot ${slot}`);
     }
 
     const {executionOptimistic} = stateResult;
