@@ -1026,7 +1026,7 @@ export class BeaconChain implements IBeaconChain {
     const cachedState = this.regen.getStateSync(stateRoot);
 
     if (cachedState === null) {
-      throw Error(`State is not in cache given at slot ${slot}`);
+      throw Error(`State is not in cache for slot ${slot}`);
     }
 
     const attestationsRewards = await computeAttestationsRewards(epoch, cachedState, this.config, validatorIds);
