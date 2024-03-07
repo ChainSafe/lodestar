@@ -66,4 +66,19 @@ export const attestationsCountAssertion: SimulationAssertion<
 
     return errors;
   },
+
+  async dump({store, slot, nodes}) {
+    /*
+     * | Slot | Node 1 | Node 2 | Node 3 |
+     * |------|--------|--------|--------|
+     * | 1    | 10     | 10     | 10     |
+     * | 2    | 10     | 10     | 10     |
+     * | 3    | 10     | 10     | 10     |
+     */
+    const result = [`Slot,${nodes.map((n) => n.beacon.id).join(", ")}`];
+    for (let s = 1; s <= slot; s++) {
+      result.push(`${s}, ${nodes.map((n) => store[n.beacon.id][s] ?? "-").join(",")}`);
+    }
+    return {"attestationsCountAssertion.csv": result.join("\n")};
+  },
 };

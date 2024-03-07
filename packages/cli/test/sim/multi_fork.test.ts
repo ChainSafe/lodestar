@@ -7,6 +7,8 @@ import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.j
 import {defineSimTestConfig, logFilesDir} from "../utils/simulation/utils/index.js";
 import {
   connectAllNodes,
+  connectNewCLNode,
+  connectNewELNode,
   connectNewNode,
   waitForHead,
   waitForNodeSync,
@@ -15,6 +17,8 @@ import {
 import {nodeAssertion} from "../utils/simulation/assertions/nodeAssertion.js";
 import {mergeAssertion} from "../utils/simulation/assertions/mergeAssertion.js";
 import {createForkAssertion} from "../utils/simulation/assertions/forkAssertion.js";
+import {createAccountBalanceAssertion} from "../utils/simulation/assertions/accountBalanceAssertion.js";
+import {createExecutionHeadAssertion} from "../utils/simulation/assertions/executionHeadAssertion.js";
 
 const altairForkEpoch = 2;
 const bellatrixForkEpoch = 4;
@@ -130,6 +134,25 @@ env.tracker.register({
   },
 });
 
+env.tracker.register(
+  createAccountBalanceAssertion({
+    address: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    sendTransactionsAtSlot: [
+      env.clock.getFirstSlotOfEpoch(altairForkEpoch) + 4,
+      env.clock.getFirstSlotOfEpoch(bellatrixForkEpoch) + 4,
+    ],
+    validateTotalBalanceAt: [env.clock.getFirstSlotOfEpoch(bellatrixForkEpoch + 1) + 4],
+    targetNode: env.nodes[0],
+  })
+);
+
+env.tracker.register(
+  createExecutionHeadAssertion({
+    // Second last slot of second bellatrix epoch
+    checkForSlot: [env.clock.getLastSlotOfEpoch(bellatrixForkEpoch + 1) - 1],
+  })
+);
+
 await env.start({runTimeoutMs: estimatedTimeoutMs});
 await connectAllNodes(env.nodes);
 
@@ -172,9 +195,27 @@ const checkpointSync = await env.createNodePair({
   keysCount: 0,
 });
 
+// TODO: A workaround for this issue for sim tests only
+// 1. Start the execution node and let it connect to network
+// 2. Wait for few seconds
+// 3. And later start the beacon node and connect to network
+// 4. With this delay the execution node would be synced before the beacon node starts
+// https://github.com/ChainSafe/lodestar/issues/6435
+// Revert to following code once the issue is fixed
+//    await rangeSync.execution.job.start();
+//    await rangeSync.beacon.job.start();
+//    await connectNewNode(rangeSync, env.nodes);
 await rangeSync.execution.job.start();
+await connectNewELNode(
+  rangeSync.execution,
+  env.nodes.map((node) => node.execution)
+);
+await sleep(4000);
 await rangeSync.beacon.job.start();
-await connectNewNode(rangeSync, env.nodes);
+await connectNewCLNode(
+  rangeSync.beacon,
+  env.nodes.map((node) => node.beacon)
+);
 
 await checkpointSync.execution.job.start();
 await checkpointSync.beacon.job.start();

@@ -1,6 +1,7 @@
 import {defaultOptions} from "@lodestar/validator";
+import {CliCommandOptions} from "@lodestar/utils";
 import {LogArgs, logOptions} from "../../options/logOptions.js";
-import {ensure0xPrefix, CliCommandOptions} from "../../util/index.js";
+import {ensure0xPrefix} from "../../util/index.js";
 import {keymanagerRestApiServerOptsDefault} from "./keymanager/server.js";
 import {defaultAccountPaths, defaultValidatorPaths} from "./paths.js";
 
@@ -268,7 +269,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
   },
 
   blindedLocal: {
-    type: "string",
+    type: "boolean",
     description: "Request fetching local block in blinded format for produceBlockV3",
     defaultDescription: `${defaultOptions.blindedLocal}`,
   },

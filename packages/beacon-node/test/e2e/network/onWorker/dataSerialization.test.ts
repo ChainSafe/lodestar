@@ -15,7 +15,7 @@ import {
   ReqRespMethod,
   networkEventDirection,
 } from "../../../../src/network/index.js";
-import {BlockInputType, BlockSource} from "../../../../src/chain/blocks/types.js";
+import {BlockInputType, BlockSource, BlockInputBlobs, BlockInput} from "../../../../src/chain/blocks/types.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../../../src/constants/constants.js";
 import {IteratorEventType} from "../../../../src/util/asyncIterableToEvents.js";
 import {NetworkWorkerApi} from "../../../../src/network/core/index.js";
@@ -90,6 +90,10 @@ describe.skip("data serialization through worker boundary", function () {
     },
     [NetworkEvent.unknownBlock]: {
       rootHex: ZERO_HASH_HEX,
+      peer,
+    },
+    [NetworkEvent.unknownBlockInput]: {
+      blockInput: getEmptyBlockInput(),
       peer,
     },
     [NetworkEvent.pendingGossipsubMessage]: {
@@ -240,3 +244,23 @@ describe.skip("data serialization through worker boundary", function () {
 });
 
 type Resolves<T extends Promise<unknown>> = T extends Promise<infer U> ? (U extends void ? null : U) : never;
+
+function getEmptyBlockInput(): BlockInput {
+  let resolveAvailability: ((blobs: BlockInputBlobs) => void) | null = null;
+  const availabilityPromise = new Promise<BlockInputBlobs>((resolveCB) => {
+    resolveAvailability = resolveCB;
+  });
+  if (resolveAvailability === null) {
+    throw Error("Promise Constructor was not executed immediately");
+  }
+  const blobsCache = new Map();
+  return {
+    type: BlockInputType.blobsPromise,
+    block: ssz.deneb.SignedBeaconBlock.defaultValue(),
+    source: BlockSource.gossip,
+    blockBytes: ZERO_HASH,
+    blobsCache,
+    availabilityPromise,
+    resolveAvailability,
+  };
+}

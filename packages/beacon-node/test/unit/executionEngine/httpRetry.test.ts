@@ -49,7 +49,7 @@ describe("ExecutionEngine / http ", () => {
       {
         mode: "http",
         urls: [baseUrl],
-        retryAttempts: defaultExecutionEngineHttpOpts.retryAttempts,
+        retries: defaultExecutionEngineHttpOpts.retries,
         retryDelay: defaultExecutionEngineHttpOpts.retryDelay,
       },
       {signal: controller.signal, logger: console as unknown as Logger}
@@ -86,7 +86,7 @@ describe("ExecutionEngine / http ", () => {
     });
 
     it("notifyForkchoiceUpdate with retry when pay load attributes", async function () {
-      errorResponsesBeforeSuccess = defaultExecutionEngineHttpOpts.retryAttempts - 1;
+      errorResponsesBeforeSuccess = defaultExecutionEngineHttpOpts.retries - 1;
       const forkChoiceHeadData = {
         headBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
         safeBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",

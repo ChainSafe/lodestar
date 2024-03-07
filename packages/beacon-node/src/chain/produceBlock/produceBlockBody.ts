@@ -158,8 +158,8 @@ export async function produceBlockBody<T extends BlockType>(
     const feeRecipientType = requestedFeeRecipient
       ? "requested"
       : this.beaconProposerCache.get(proposerIndex)
-      ? "cached"
-      : "default";
+        ? "cached"
+        : "default";
 
     Object.assign(logMeta, {feeRecipientType, feeRecipient});
 
@@ -519,7 +519,7 @@ export async function getPayloadAttributesForSSE(
     const ssePayloadAttributes: allForks.SSEPayloadAttributes = {
       proposerIndex: prepareState.epochCtx.getBeaconProposer(prepareSlot),
       proposalSlot: prepareSlot,
-      proposalBlockNumber: prepareState.latestExecutionPayloadHeader.blockNumber + 1,
+      parentBlockNumber: prepareState.latestExecutionPayloadHeader.blockNumber,
       parentBlockRoot,
       parentBlockHash: parentHash,
       payloadAttributes,

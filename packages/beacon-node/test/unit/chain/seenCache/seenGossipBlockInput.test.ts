@@ -105,11 +105,15 @@ describe("SeenGossipBlockInput", () => {
 
         try {
           if (eventType === GossipedInputType.block) {
-            const blockInputRes = seenGossipBlockInput.getGossipBlockInput(config, {
-              type: GossipedInputType.block,
-              signedBlock,
-              blockBytes: null,
-            });
+            const blockInputRes = seenGossipBlockInput.getGossipBlockInput(
+              config,
+              {
+                type: GossipedInputType.block,
+                signedBlock,
+                blockBytes: null,
+              },
+              null
+            );
 
             if (expectedResponseType instanceof Error) {
               expect.fail(`expected to fail with error: ${expectedResponseType.message}`);
@@ -123,11 +127,15 @@ describe("SeenGossipBlockInput", () => {
             const blobSidecar = blobSidecars[index];
             expect(blobSidecar).not.toBeUndefined();
 
-            const blobInputRes = seenGossipBlockInput.getGossipBlockInput(config, {
-              type: GossipedInputType.blob,
-              blobSidecar,
-              blobBytes: null,
-            });
+            const blobInputRes = seenGossipBlockInput.getGossipBlockInput(
+              config,
+              {
+                type: GossipedInputType.blob,
+                blobSidecar,
+                blobBytes: null,
+              },
+              null
+            );
 
             if (expectedResponseType instanceof Error) {
               expect.fail(`expected to fail with error: ${expectedResponseType.message}`);

@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import {Slot} from "@lodestar/types";
 import {isNullish} from "../../utils.js";
 import {HeadSummary} from "./assertions/defaults/headAssertion.js";
@@ -10,18 +9,21 @@ import {arrayGroupBy, avg, isSingletonArray} from "./utils/index.js";
 export class TableReporter extends SimulationReporter<typeof defaultAssertions> {
   private lastPrintedSlot = -1;
 
-  private table = new TableRenderer({
-    time: 14,
-    fork: 10,
-    eph: 5,
-    slot: 4,
-    head: 10,
-    finzed: 8,
-    peers: 8,
-    attCount: 8,
-    incDelay: 8,
-    errors: 10,
-  });
+  private table = new TableRenderer(
+    {
+      time: 14,
+      fork: 10,
+      eph: 5,
+      slot: 4,
+      head: 10,
+      finzed: 8,
+      peers: 8,
+      attCount: 8,
+      incDelay: 8,
+      errors: 10,
+    },
+    {logger: this.options.logger}
+  );
 
   bootstrap(): void {
     this.table.printHeader();
@@ -87,19 +89,19 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
 
     for (const node of nodes) {
       const finalized = stores["finalized"][node.beacon.id][slot];
-      !isNullish(finalized) && finalizedSlots.push(finalized);
+      if (!isNullish(finalized)) finalizedSlots.push(finalized);
 
       const inclusionDelay = stores["inclusionDelay"][node.beacon.id][slot];
-      !isNullish(inclusionDelay) && inclusionDelays.push(inclusionDelay);
+      if (!isNullish(inclusionDelay)) inclusionDelays.push(inclusionDelay);
 
       const attestationsCount = stores["attestationsCount"][node.beacon.id][slot];
-      !isNullish(attestationsCount) && attestationCounts.push(attestationsCount);
+      if (!isNullish(attestationsCount)) attestationCounts.push(attestationsCount);
 
       const head = stores["head"][node.beacon.id][slot];
-      !isNullish(head) && heads.push(head);
+      if (!isNullish(head)) heads.push(head);
 
       const connectedPeerCount = stores["connectedPeerCount"][node.beacon.id][slot];
-      !isNullish(connectedPeerCount) && peersCount.push(connectedPeerCount);
+      if (!isNullish(connectedPeerCount)) peersCount.push(connectedPeerCount);
     }
 
     const head0 = heads.length > 0 ? heads[0] : null;
@@ -120,8 +122,8 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
         finalizedSlots.length === 0
           ? "---"
           : isSingletonArray(finalizedSlots)
-          ? finalizedSlots[0]
-          : finalizedSlots.join(","),
+            ? finalizedSlots[0]
+            : finalizedSlots.join(","),
       peers: peersCount.length === 0 ? "---" : isSingletonArray(peersCount) ? peersCount[0] : peersCount.join(","),
       attCount: attestationCounts.length > 0 && isSingletonArray(attestationCounts) ? attestationCounts[0] : "---",
       incDelay: inclusionDelays.length > 0 && isSingletonArray(inclusionDelays) ? inclusionDelays[0].toFixed(2) : "---",
@@ -132,19 +134,19 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
   summary(): void {
     const {errors} = this.options;
 
-    console.info(`├${"─".repeat(10)} Errors (${errors.length}) ${"─".repeat(10)}┤`);
+    this.options.logger.error(`├${"─".repeat(10)} Errors (${errors.length}) ${"─".repeat(10)}┤`);
 
     const groupBySlot = arrayGroupBy(errors, (e) => String(e.slot as number));
 
     for (const [slot, slotErrors] of Object.entries(groupBySlot)) {
-      if (slotErrors.length > 0) console.info(`├─ Slot: ${slot}`);
+      if (slotErrors.length > 0) this.options.logger.info(`├─ Slot: ${slot}`);
       const groupByAssertion = arrayGroupBy(slotErrors, (e) => e.assertionId);
 
       for (const [assertionId, assertionErrors] of Object.entries(groupByAssertion)) {
-        if (assertionErrors.length > 0) console.info(`├── Assertion: ${assertionId}`);
+        if (assertionErrors.length > 0) this.options.logger.info(`├── Assertion: ${assertionId}`);
 
         for (const error of assertionErrors) {
-          console.info(
+          this.options.logger.error(
             `├──── ${error.nodeId}: ${error.message} ${Object.entries(error.data ?? {})
               .map(([k, v]) => `${k}=${v as string}`)
               .join(" ")}`

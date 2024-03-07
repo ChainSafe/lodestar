@@ -5,6 +5,7 @@ import {EmptyArgs, EmptyGetRequestCodec, EmptyMeta, EmptyMetaCodec, EmptyRequest
 import * as block from "./block.js";
 import * as pool from "./pool.js";
 import * as state from "./state.js";
+import * as rewards from "./rewards.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -14,6 +15,7 @@ import * as state from "./state.js";
 export * as block from "./block.js";
 export * as pool from "./pool.js";
 export * as state from "./state.js";
+export * as rewards from "./rewards.js";
 export {BroadcastValidation} from "./block.js";
 export type {BlockId, BlockHeaderResponse} from "./block.js";
 // TODO: Review if re-exporting all these types is necessary

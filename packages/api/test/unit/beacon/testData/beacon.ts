@@ -12,6 +12,7 @@ import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 const root = new Uint8Array(32).fill(1);
 const randao = new Uint8Array(32).fill(1);
 const balance = 32e9;
+const reward = 32e9;
 const pubkeyHex = toHexString(Buffer.alloc(48, 1));
 
 const blockHeaderResponse: BlockHeaderResponse = {
@@ -166,6 +167,27 @@ export const testData: GenericServerTestCases<Api> = {
   getEpochSyncCommittees: {
     args: ["head", 1],
     res: {executionOptimistic: true, data: {validators: [1300], validatorAggregates: [[1300]]}},
+  },
+
+  // reward
+
+  getBlockRewards: {
+    args: ["head"],
+    res: {
+      executionOptimistic: true,
+      data: {
+        proposerIndex: 0,
+        total: 15,
+        attestations: 8,
+        syncAggregate: 4,
+        proposerSlashings: 2,
+        attesterSlashings: 1,
+      },
+    },
+  },
+  getSyncCommitteeRewards: {
+    args: ["head", ["1300"]],
+    res: {executionOptimistic: true, data: [{validatorIndex: 1300, reward}]},
   },
 
   // -

@@ -187,21 +187,21 @@ export function getValidatorApi({
 
     if (source == null) {
       return {
-        executionPayloadValue: prettyWeiToEth(executionValue, true),
-        consensusBlockValue: prettyWeiToEth(consensusValue, true),
-        blockTotalValue: prettyWeiToEth(totalValue, true),
+        executionPayloadValue: prettyWeiToEth(executionValue),
+        consensusBlockValue: prettyWeiToEth(consensusValue),
+        blockTotalValue: prettyWeiToEth(totalValue),
       };
     } else if (source === ProducedBlockSource.builder) {
       return {
-        builderExecutionPayloadValue: prettyWeiToEth(executionValue, true),
-        builderConsensusBlockValue: prettyWeiToEth(consensusValue, true),
-        builderBlockTotalValue: prettyWeiToEth(totalValue, true),
+        builderExecutionPayloadValue: prettyWeiToEth(executionValue),
+        builderConsensusBlockValue: prettyWeiToEth(consensusValue),
+        builderBlockTotalValue: prettyWeiToEth(totalValue),
       };
     } else {
       return {
-        engineExecutionPayloadValue: prettyWeiToEth(executionValue, true),
-        engineConsensusBlockValue: prettyWeiToEth(consensusValue, true),
-        engineBlockTotalValue: prettyWeiToEth(totalValue, true),
+        engineExecutionPayloadValue: prettyWeiToEth(executionValue),
+        engineConsensusBlockValue: prettyWeiToEth(consensusValue),
+        engineBlockTotalValue: prettyWeiToEth(totalValue),
       };
     }
   }

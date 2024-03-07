@@ -64,6 +64,10 @@ module.exports = {
       },
       //ignore rules on destructured params
       {selector: "variable", modifiers: ["destructured"], format: null},
+      {
+        selector: "import",
+        format: ["camelCase", "PascalCase"],
+      },
     ],
     "@typescript-eslint/no-explicit-any": "error",
     "@typescript-eslint/no-floating-promises": "error",
@@ -76,6 +80,7 @@ module.exports = {
     "@typescript-eslint/no-unsafe-call": "error",
     "@typescript-eslint/no-unsafe-member-access": "error",
     "@typescript-eslint/no-unsafe-return": "error",
+    "@typescript-eslint/no-unused-expressions": "error",
     "@typescript-eslint/no-unused-vars": ["error", {varsIgnorePattern: "^_", argsIgnorePattern: "^_"}],
     "@typescript-eslint/no-use-before-define": "off",
     "@typescript-eslint/restrict-template-expressions": [
@@ -94,6 +99,7 @@ module.exports = {
     "func-call-spacing": "off",
     // Force to add names to all functions to ease CPU profiling
     "func-names": ["error", "always"],
+    "import/namespace": "off",
     //if --fix is run it messes imports like /lib/presets/minimal & /lib/presets/mainnet
     "import/no-duplicates": "off",
     "import/no-extraneous-dependencies": [
@@ -128,6 +134,13 @@ module.exports = {
     "no-console": "error",
     "no-loss-of-precision": "error",
     "no-prototype-builtins": 0,
+    "no-restricted-globals": [
+      "error",
+      {
+        name: "fetch",
+        message: "Please use 'fetch' from '@lodestar/api' instead.",
+      },
+    ],
     "no-restricted-imports": [
       "error",
       {
@@ -202,6 +215,13 @@ module.exports = {
         "import/no-extraneous-dependencies": "off",
         // Turned off as it floods log with warnings. Underlying issue is not critical so switching off is acceptable
         "import/no-named-as-default-member": "off",
+      },
+    },
+    {
+      files: ["**/perf/**/*.ts"],
+      rules: {
+        // A lot of benchmarks just need to execute expressions without using the result
+        "@typescript-eslint/no-unused-expressions": "off",
       },
     },
     {

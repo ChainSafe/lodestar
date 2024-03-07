@@ -45,7 +45,7 @@ export type ExecutionEngineModules = {
 
 export type ExecutionEngineHttpOpts = {
   urls: string[];
-  retryAttempts: number;
+  retries: number;
   retryDelay: number;
   timeout?: number;
   /**
@@ -72,7 +72,7 @@ export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
    * port/url, one can override this and skip providing a jwt secret.
    */
   urls: ["http://localhost:8551"],
-  retryAttempts: 3,
+  retries: 2,
   retryDelay: 2000,
   timeout: 12000,
 };
@@ -179,8 +179,8 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       ForkSeq[fork] >= ForkSeq.deneb
         ? "engine_newPayloadV3"
         : ForkSeq[fork] >= ForkSeq.capella
-        ? "engine_newPayloadV2"
-        : "engine_newPayloadV1";
+          ? "engine_newPayloadV2"
+          : "engine_newPayloadV1";
 
     const serializedExecutionPayload = serializeExecutionPayload(fork, executionPayload);
 
@@ -299,13 +299,13 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       ForkSeq[fork] >= ForkSeq.deneb
         ? "engine_forkchoiceUpdatedV3"
         : ForkSeq[fork] >= ForkSeq.capella
-        ? "engine_forkchoiceUpdatedV2"
-        : "engine_forkchoiceUpdatedV1";
+          ? "engine_forkchoiceUpdatedV2"
+          : "engine_forkchoiceUpdatedV1";
     const payloadAttributesRpc = payloadAttributes ? serializePayloadAttributes(payloadAttributes) : undefined;
     // If we are just fcUing and not asking execution for payload, retry is not required
     // and we can move on, as the next fcU will be issued soon on the new slot
     const fcUReqOpts =
-      payloadAttributes !== undefined ? forkchoiceUpdatedV1Opts : {...forkchoiceUpdatedV1Opts, retryAttempts: 1};
+      payloadAttributes !== undefined ? forkchoiceUpdatedV1Opts : {...forkchoiceUpdatedV1Opts, retries: 0};
 
     const request = this.rpcFetchQueue.push({
       method,
@@ -373,8 +373,8 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       ForkSeq[fork] >= ForkSeq.deneb
         ? "engine_getPayloadV3"
         : ForkSeq[fork] >= ForkSeq.capella
-        ? "engine_getPayloadV2"
-        : "engine_getPayloadV1";
+          ? "engine_getPayloadV2"
+          : "engine_getPayloadV1";
     const payloadResponse = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]

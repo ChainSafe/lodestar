@@ -11,7 +11,14 @@ import {
   BlockInputBlobs,
   BlobsCache,
   GossipedInputType,
+  getBlockInputBlobs,
 } from "../blocks/types.js";
+import {Metrics} from "../../metrics/index.js";
+
+export enum BlockInputAvailabilitySource {
+  GOSSIP = "gossip",
+  UNKNOWN_SYNC = "unknown_sync",
+}
 
 type GossipedBlockInput =
   | {type: GossipedInputType.block; signedBlock: allForks.SignedBeaconBlock; blockBytes: Uint8Array | null}
@@ -52,7 +59,8 @@ export class SeenGossipBlockInput {
 
   getGossipBlockInput(
     config: ChainForkConfig,
-    gossipedInput: GossipedBlockInput
+    gossipedInput: GossipedBlockInput,
+    metrics: Metrics | null
   ):
     | {
         blockInput: BlockInput;
@@ -113,6 +121,7 @@ export class SeenGossipBlockInput {
       if (blobKzgCommitments.length === blobsCache.size) {
         const allBlobs = getBlockInputBlobs(blobsCache);
         resolveAvailability(allBlobs);
+        metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.GOSSIP});
         const {blobs, blobsBytes} = allBlobs;
         return {
           blockInput: getBlockInput.postDeneb(
@@ -133,7 +142,8 @@ export class SeenGossipBlockInput {
             BlockSource.gossip,
             blobsCache,
             blockBytes ?? null,
-            availabilityPromise
+            availabilityPromise,
+            resolveAvailability
           ),
           blockInputMeta: {
             pending: GossipedInputType.blob,
@@ -164,20 +174,4 @@ function getEmptyBlockInputCacheEntry(): BlockInputCacheType {
   }
   const blobsCache = new Map();
   return {availabilityPromise, resolveAvailability, blobsCache};
-}
-
-function getBlockInputBlobs(blobsCache: BlobsCache): BlockInputBlobs {
-  const blobs = [];
-  const blobsBytes = [];
-
-  for (let index = 0; index < blobsCache.size; index++) {
-    const blobCache = blobsCache.get(index);
-    if (blobCache === undefined) {
-      throw Error(`Missing blobSidecar at index=${index}`);
-    }
-    const {blobSidecar, blobBytes} = blobCache;
-    blobs.push(blobSidecar);
-    blobsBytes.push(blobBytes);
-  }
-  return {blobs, blobsBytes};
 }

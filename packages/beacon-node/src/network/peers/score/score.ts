@@ -139,14 +139,12 @@ export class MaxScore implements IPeerScore {
     return DEFAULT_SCORE;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
   add(): void {}
 
   update(): number {
     return MAX_SCORE;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
   updateGossipsubScore(): void {}
 
   getStat(): PeerScoreStat {

@@ -58,7 +58,7 @@ The exact ENR of node to connect to is then supplied via the `--bootnodes` flag.
 
 Once the second node starts, you should see an output similar to the following in either of the terminals:
 
-```
+```txt
 Eph 167991/6 6.007 []  info: Searching peers - peers: 1 - slot: 5375718 (skipped 5375718) - head: 0 0xcc67…3345 - finalized: 0x0000…0000:0
 ```
 
@@ -70,7 +70,7 @@ For example, making the request on the first node via the following command:
 
 will give a result similar to the following:
 
-```
+```json
 {
   "data": [
     {

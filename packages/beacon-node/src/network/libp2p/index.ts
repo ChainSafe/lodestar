@@ -112,6 +112,7 @@ export async function createNodeJsLibp2p(
     services: {
       identify: identify({
         agentVersion: networkOpts.private ? "" : networkOpts.version ? `lodestar/${networkOpts.version}` : "lodestar",
+        runOnConnectionOpen: false,
       }),
       // individual components are specified because the components object is a Proxy
       // and passing it here directly causes problems downstream, not to mention is slowwww

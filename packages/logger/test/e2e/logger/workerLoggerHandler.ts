@@ -1,4 +1,4 @@
-import worker_threads from "node:worker_threads";
+import workerThreads from "node:worker_threads";
 import {spawn, Worker} from "@chainsafe/threads";
 
 export type LoggerWorker = {
@@ -12,9 +12,8 @@ export async function getLoggerWorker(opts: WorkerData): Promise<LoggerWorker> {
   const workerThreadjs = new Worker("./workerLogger.js", {
     workerData: opts,
   });
-  const worker = workerThreadjs as unknown as worker_threads.Worker;
+  const worker = workerThreadjs as unknown as workerThreads.Worker;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await spawn<any>(workerThreadjs, {
     // A Lodestar Node may do very expensive task at start blocking the event loop and causing
     // the initialization to timeout. The number below is big enough to almost disable the timeout

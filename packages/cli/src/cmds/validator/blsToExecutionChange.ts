@@ -6,8 +6,8 @@ import {DOMAIN_BLS_TO_EXECUTION_CHANGE, ForkName} from "@lodestar/params";
 import {createBeaconConfig} from "@lodestar/config";
 import {ssz, capella} from "@lodestar/types";
 import {ApiError, getClient} from "@lodestar/api";
+import {CliCommand} from "@lodestar/utils";
 
-import {CliCommand, YargsError} from "../../util/index.js";
 import {GlobalArgs} from "../../options/index.js";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {IValidatorCliArgs} from "./options.js";
@@ -15,9 +15,9 @@ import {IValidatorCliArgs} from "./options.js";
 /* eslint-disable no-console */
 
 type BlsToExecutionChangeArgs = {
-  publicKey?: string;
-  fromBlsPrivkey?: string;
-  toExecutionAddress?: string;
+  publicKey: string;
+  fromBlsPrivkey: string;
+  toExecutionAddress: string;
 };
 
 export const blsToExecutionChange: CliCommand<BlsToExecutionChangeArgs, IValidatorCliArgs & GlobalArgs> = {
@@ -39,26 +39,22 @@ like to choose for BLS To Execution Change.",
     publicKey: {
       description: "Validator public key for which to set withdrawal address hence enabling withdrawals",
       type: "string",
-      string: true,
+      demandOption: true,
     },
     fromBlsPrivkey: {
       description: "Bls withdrawals private key to sign the message",
       type: "string",
-      string: true,
+      demandOption: true,
     },
     toExecutionAddress: {
       description: "Address to which the validator's balances will be set to be withdrawn.",
       type: "string",
-      string: true,
+      demandOption: true,
     },
   },
 
   handler: async (args) => {
-    const {publicKey, fromBlsPrivkey, toExecutionAddress} = args;
-    if (!publicKey) throw new YargsError("must provide publicKey arg");
-    if (!fromBlsPrivkey) throw new YargsError("must provide fromBlsPrivkey arg");
-    if (!toExecutionAddress) throw new YargsError("must provide toExecutionAddress arg");
-
+    const {publicKey} = args;
     // Fetch genesisValidatorsRoot always from beacon node as anyway beacon node is needed for
     // submitting the signed message
     const {config: chainForkConfig} = getBeaconConfigFromArgs(args);
@@ -76,13 +72,13 @@ like to choose for BLS To Execution Change.",
       throw new Error(`Validator pubkey ${publicKey} not found in state`);
     }
 
-    const blsPrivkey = bls.SecretKey.fromBytes(fromHexString(fromBlsPrivkey));
+    const blsPrivkey = bls.SecretKey.fromBytes(fromHexString(args.fromBlsPrivkey));
     const fromBlsPubkey = blsPrivkey.toPublicKey().toBytes(PointFormat.compressed);
 
     const blsToExecutionChange: capella.BLSToExecutionChange = {
       validatorIndex: stateValidator.index,
       fromBlsPubkey,
-      toExecutionAddress: fromHexString(toExecutionAddress),
+      toExecutionAddress: fromHexString(args.toExecutionAddress),
     };
 
     const signatureFork = ForkName.phase0;

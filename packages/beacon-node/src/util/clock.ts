@@ -1,5 +1,5 @@
 import EventEmitter from "node:events";
-import type StrictEventEmitter from "strict-event-emitter-types";
+import type {StrictEventEmitter} from "strict-event-emitter-types";
 import type {Epoch, Slot} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {ErrorAborted} from "@lodestar/utils";

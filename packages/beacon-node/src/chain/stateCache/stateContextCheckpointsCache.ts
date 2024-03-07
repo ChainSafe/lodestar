@@ -4,6 +4,7 @@ import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {MapDef} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
 import {Metrics} from "../../metrics/index.js";
+import {StateCloneOpts} from "../regen/interface.js";
 import {MapTracker} from "./mapMetrics.js";
 import {CheckpointStateCache as CheckpointStateCacheInterface, CacheItemType} from "./types.js";
 
@@ -38,16 +39,21 @@ export class CheckpointStateCache implements CheckpointStateCacheInterface {
     }
   }
 
-  async getOrReload(cp: CheckpointHex): Promise<CachedBeaconStateAllForks | null> {
-    return this.get(cp);
+  async getOrReload(cp: CheckpointHex, opts?: StateCloneOpts): Promise<CachedBeaconStateAllForks | null> {
+    return this.get(cp, opts);
   }
 
   async getStateOrBytes(cp: CheckpointHex): Promise<Uint8Array | CachedBeaconStateAllForks | null> {
-    return this.get(cp);
+    // no need to transfer cache for this api
+    return this.get(cp, {dontTransferCache: true});
   }
 
-  async getOrReloadLatest(rootHex: string, maxEpoch: number): Promise<CachedBeaconStateAllForks | null> {
-    return this.getLatest(rootHex, maxEpoch);
+  async getOrReloadLatest(
+    rootHex: string,
+    maxEpoch: number,
+    opts?: StateCloneOpts
+  ): Promise<CachedBeaconStateAllForks | null> {
+    return this.getLatest(rootHex, maxEpoch, opts);
   }
 
   async processState(): Promise<number> {
@@ -55,7 +61,7 @@ export class CheckpointStateCache implements CheckpointStateCacheInterface {
     return 0;
   }
 
-  get(cp: CheckpointHex): CachedBeaconStateAllForks | null {
+  get(cp: CheckpointHex, opts?: StateCloneOpts): CachedBeaconStateAllForks | null {
     this.metrics?.lookups.inc();
     const cpKey = toCheckpointKey(cp);
     const item = this.cache.get(cpKey);
@@ -72,7 +78,7 @@ export class CheckpointStateCache implements CheckpointStateCacheInterface {
 
     this.metrics?.stateClonedCount.observe(item.clonedCount);
 
-    return item;
+    return item.clone(opts?.dontTransferCache);
   }
 
   add(cp: phase0.Checkpoint, item: CachedBeaconStateAllForks): void {
@@ -89,14 +95,14 @@ export class CheckpointStateCache implements CheckpointStateCacheInterface {
   /**
    * Searches for the latest cached state with a `root`, starting with `epoch` and descending
    */
-  getLatest(rootHex: RootHex, maxEpoch: Epoch): CachedBeaconStateAllForks | null {
+  getLatest(rootHex: RootHex, maxEpoch: Epoch, opts?: StateCloneOpts): CachedBeaconStateAllForks | null {
     // sort epochs in descending order, only consider epochs lte `epoch`
     const epochs = Array.from(this.epochIndex.keys())
       .sort((a, b) => b - a)
       .filter((e) => e <= maxEpoch);
     for (const epoch of epochs) {
       if (this.epochIndex.get(epoch)?.has(rootHex)) {
-        return this.get({rootHex, epoch});
+        return this.get({rootHex, epoch}, opts);
       }
     }
     return null;

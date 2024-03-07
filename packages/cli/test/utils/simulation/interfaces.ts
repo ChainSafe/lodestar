@@ -6,6 +6,7 @@ import {Api as KeyManagerApi} from "@lodestar/api/keymanager";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {Slot, allForks, Epoch} from "@lodestar/types";
+import {Logger} from "@lodestar/logger";
 import {BeaconArgs} from "../../../src/cmds/beacon/options.js";
 import {IValidatorCliArgs} from "../../../src/cmds/validator/options.js";
 import {GlobalArgs} from "../../../src/options/index.js";
@@ -142,7 +143,6 @@ export interface ExecutionGeneratorOptions<E extends ExecutionClient = Execution
 
 export type LodestarAPI = Api;
 export type LighthouseAPI = Omit<Api, "lodestar"> & {
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   lighthouse: {
     getPeers(): Promise<{
       status: number;
@@ -326,6 +326,11 @@ export interface SimulationAssertionInput<T, D extends Record<string, unknown> =
   dependantStores: D;
 }
 
+export interface SimulationDumpInput<T> extends Omit<AssertionInput, "node"> {
+  nodes: NodePair[];
+  store: Record<NodeId, Record<Slot, T>>;
+}
+
 export type SimulationMatcherInput = AssertionInput;
 
 /**
@@ -344,11 +349,8 @@ export enum AssertionMatch {
   Remove = 1 << 2,
 }
 export type AssertionMatcher = (input: SimulationMatcherInput) => AssertionMatch;
-export type ExtractAssertionType<T, I> = T extends SimulationAssertion<infer A, infer B>
-  ? A extends I
-    ? B
-    : never
-  : never;
+export type ExtractAssertionType<T, I> =
+  T extends SimulationAssertion<infer A, infer B> ? (A extends I ? B : never) : never;
 export type ExtractAssertionId<T> = T extends SimulationAssertion<infer A, any> ? A : never;
 export type StoreType<AssertionId extends string, Value = unknown> = Record<
   AssertionId,
@@ -371,6 +373,10 @@ export interface SimulationAssertion<
     input: SimulationAssertionInput<ValueType, StoreTypes<Dependencies> & StoreType<IdType, ValueType>>
   ): Promise<AssertionResult[] | never>;
   dependencies?: Dependencies;
+  // Use to dump the data to CSV files, as each assertion implementation knows
+  // how to make the dump more readable, so we define it in assertion
+  // Return object as key-value pair for file name as dump data
+  dump?(input: SimulationDumpInput<ValueType>): Promise<Record<string, string>>;
 }
 export type AssertionResult = string | [string, Record<string, unknown>];
 
@@ -401,6 +407,7 @@ export abstract class SimulationReporter<T extends SimulationAssertion[]> {
       stores: StoreTypes<T>;
       nodes: NodePair[];
       errors: SimulationAssertionError[];
+      logger: Logger;
     }
   ) {}
   abstract bootstrap(): void;

@@ -1,4 +1,4 @@
-import {CliCommand} from "../util/command.js";
+import {CliCommand} from "@lodestar/utils";
 import {selfSlashProposer} from "./selfSlashProposer.js";
 import {selfSlashAttester} from "./selfSlashAttester.js";
 

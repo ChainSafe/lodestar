@@ -1,4 +1,4 @@
-import {Options, Argv} from "yargs";
+import type {Options, Argv} from "yargs";
 
 export interface CliExample {
   command: string;
@@ -6,15 +6,26 @@ export interface CliExample {
   description?: string;
 }
 
-export interface CliOptionDefinition extends Options {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export interface CliOptionDefinition<T = any> extends Options {
   example?: Omit<CliExample, "title">;
+  // Ensure `type` property matches type of `T`
+  type: T extends string
+    ? "string"
+    : T extends number
+      ? "number"
+      : T extends boolean
+        ? "boolean"
+        : T extends Array<unknown>
+          ? "array"
+          : never;
 }
 
 export type CliCommandOptions<OwnArgs> = Required<{
   [K in keyof OwnArgs]: undefined extends OwnArgs[K]
-    ? CliOptionDefinition
-    : // If arg cannot be undefined it must specify a default value
-      CliOptionDefinition & Required<Pick<Options, "default">>;
+    ? CliOptionDefinition<OwnArgs[K]>
+    : // If arg cannot be undefined it must specify a default value or be provided by the user
+      CliOptionDefinition<OwnArgs[K]> & (Required<Pick<Options, "default">> | {demandOption: true});
 }>;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -46,8 +57,8 @@ export function registerCommandToYargs(yargs: Argv, cliCommand: CliCommand<any, 
     command: cliCommand.command,
     describe: cliCommand.describe,
     builder: (yargsBuilder) => {
-      yargsBuilder.options(cliCommand.options || {});
-      for (const subcommand of cliCommand.subcommands || []) {
+      yargsBuilder.options(cliCommand.options ?? {});
+      for (const subcommand of cliCommand.subcommands ?? []) {
         registerCommandToYargs(yargsBuilder, subcommand);
       }
       if (cliCommand.examples) {
@@ -57,7 +68,6 @@ export function registerCommandToYargs(yargs: Argv, cliCommand: CliCommand<any, 
       }
       return yargs;
     },
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
-    handler: cliCommand.handler || function emptyHandler(): void {},
+    handler: cliCommand.handler ?? function emptyHandler(): void {},
   });
 }

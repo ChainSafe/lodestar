@@ -96,18 +96,10 @@ export class ProofProvider {
     });
 
     assertLightClient(this.lightClient);
+
+    this.logger.info("Initiating lightclient");
     // Wait for the lightclient to start
-    await new Promise<void>((resolve) => {
-      const lightClientStarted = (status: RunStatusCode): void => {
-        if (status === RunStatusCode.started) {
-          this.lightClient?.emitter.off(LightclientEvent.statusChange, lightClientStarted);
-          resolve();
-        }
-      };
-      this.lightClient?.emitter.on(LightclientEvent.statusChange, lightClientStarted);
-      this.logger.info("Initiating lightclient");
-      this.lightClient?.start();
-    });
+    await this.lightClient?.start();
     this.logger.info("Lightclient synced", this.getStatus());
     this.registerEvents();
 

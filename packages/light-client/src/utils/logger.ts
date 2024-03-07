@@ -18,7 +18,6 @@ export function getLcLoggerConsole(opts?: {logDebug?: boolean}): ILcLogger {
     error: console.error,
     warn: console.warn,
     info: console.log,
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
     debug: opts?.logDebug ? console.log : () => {},
   };
 }

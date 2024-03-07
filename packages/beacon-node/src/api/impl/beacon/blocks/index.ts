@@ -8,7 +8,7 @@ import {BlockSource, getBlockInput, ImportBlockOpts, BlockInput} from "../../../
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 import {computeBlobSidecars} from "../../../../util/blobs.js";
-import {BlockError, BlockErrorCode} from "../../../../chain/errors/index.js";
+import {BlockError, BlockErrorCode, BlockGossipError} from "../../../../chain/errors/index.js";
 import {OpSource} from "../../../../metrics/validatorMonitor.js";
 import {NetworkEvent} from "../../../../network/index.js";
 import {ApiModules} from "../../types.js";
@@ -86,6 +86,13 @@ export function getBeaconBlockApi({
           try {
             await validateGossipBlock(config, chain, signedBlock, fork);
           } catch (error) {
+            if (error instanceof BlockGossipError && error.type.code === BlockErrorCode.ALREADY_KNOWN) {
+              chain.logger.debug("Ignoring known block during publishing", valLogMeta);
+              // Blocks might already be published by another node as part of a fallback setup or DVT cluster
+              // and can reach our node by gossip before the api. The error can be ignored and should not result in a 500 response.
+              return;
+            }
+
             chain.logger.error("Gossip validations failed while publishing the block", valLogMeta, error as Error);
             chain.persistInvalidSszValue(
               chain.config.getForkTypes(slot).SignedBeaconBlock,
@@ -182,6 +189,13 @@ export function getBeaconBlockApi({
     const publishPromises = [
       // Send the block, regardless of whether or not it is valid. The API
       // specification is very clear that this is the desired behaviour.
+      //
+      // i) Publish blobs and block before importing so that network can see them asap
+      // ii) publish blobs first because
+      //     a) by the times nodes see block, they might decide to pull blobs
+      //     b) they might require more hops to reach recipients in peerDAS kind of setup where
+      //        blobs might need to hop between nodes because of partial subnet subscription
+      ...blobSidecars.map((blobSidecar) => () => network.publishBlobSidecar(blobSidecar)),
       () => network.publishBeaconBlock(signedBlock) as Promise<unknown>,
       () =>
         // there is no rush to persist block since we published it to gossip anyway
@@ -194,7 +208,6 @@ export function getBeaconBlockApi({
           }
           throw e;
         }),
-      ...blobSidecars.map((blobSidecar) => () => network.publishBlobSidecar(blobSidecar)),
     ];
     await promiseAllMaybeAsync(publishPromises);
   };
