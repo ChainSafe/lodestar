@@ -172,7 +172,7 @@ function computeTotalAttestationsRewardsAltair(
     } else {
       currentRewards.target = penalties[effectiveBalanceIncrement].target * -1;
 
-      // Also incure inactivity penalty if not voting target correctly
+      // Also incur inactivity penalty if not voting target correctly
       const inactivityPenaltyNumerator =
         effectiveBalanceIncrement * EFFECTIVE_BALANCE_INCREMENT * state.inactivityScores.get(i);
       currentRewards.inactivity = Math.floor(inactivityPenaltyNumerator / inactivityPenaltyDenominator) * -1;
