@@ -105,7 +105,7 @@ export type Api = {
    */
   getAttestationsRewards(
     epoch: Epoch,
-    filters?: ValidatorId[]
+    validatorIds?: ValidatorId[]
   ): Promise<
     ApiClientResponse<
       {[HttpStatusCode.OK]: {data: AttestationsRewards; executionOptimistic: ExecutionOptimistic}},
