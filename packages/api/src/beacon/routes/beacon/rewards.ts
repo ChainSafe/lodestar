@@ -98,7 +98,7 @@ export type Api = {
   >;
   /**
    * Get attestations rewards
-   * Negative values indicate penalties. `inactivity` can only be either 0 or neg number since it is penalty only
+   * Negative values indicate penalties. `inactivity` can only be either 0 or negative number since it is penalty only
    *
    * @param epoch get rewards for attestations that took place in the epoch period.
    * @param validatorIds List of validator indices or pubkeys to filter in
