@@ -28,7 +28,8 @@ import {BeaconConfig} from "@lodestar/config";
 export type AttestationsRewards = routes.beacon.AttestationsRewards;
 type IdealAttestationsReward = routes.beacon.IdealAttestationsReward;
 type TotalAttestationsReward = routes.beacon.TotalAttestationsReward;
-type AttestationsPenalty = {target: number; source: number; effectiveBalance: number}; // Attestations penalty wrt effective balance increment
+// Attestations penalty with respect to effective balance in gwei
+type AttestationsPenalty = {target: number; source: number; effectiveBalance: number}; 
 
 const defaultAttestationsReward = {head: 0, target: 0, source: 0, inclusionDelay: 0, inactivity: 0};
 const defaultAttestationsPenalty = {target: 0, source: 0};

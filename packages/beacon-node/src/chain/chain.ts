@@ -1012,7 +1012,7 @@ export class BeaconChain implements IBeaconChain {
     epoch: Epoch,
     validatorIds?: (ValidatorIndex | string)[]
   ): Promise<[AttestationsRewards, boolean]> {
-    // We use end slot of (epoch + 1) to ensure we have seen all attestations. On-time or late. Any late attestations beyond this slot yield 0 reward
+    // We use end slot of (epoch + 1) to ensure we have seen all attestations. On-time or late. Any late attestation beyond this slot is not considered
     const slot = computeEndSlotAtEpoch(epoch + 1);
     const stateResult = await this.getStateBySlot(slot, {allowRegen: false}); // No regen if state not in cache
 
