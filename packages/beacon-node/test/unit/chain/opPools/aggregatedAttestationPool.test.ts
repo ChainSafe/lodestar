@@ -181,7 +181,7 @@ describe("MatchingDataAttestationGroup.add()", () => {
   ];
 
   const attestationData = ssz.phase0.AttestationData.defaultValue();
-  const committee = linspace(0, 7);
+  const committee = Uint32Array.from(linspace(0, 7));
 
   for (const {id, attestationsToAdd} of testCases) {
     it(id, () => {
@@ -251,7 +251,7 @@ describe("MatchingDataAttestationGroup.getAttestationsForBlock", () => {
   ];
 
   const attestationData = ssz.phase0.AttestationData.defaultValue();
-  const committee = linspace(0, 7);
+  const committee = Uint32Array.from(linspace(0, 7));
 
   for (const {id, notSeenAttestingBits, attestationsToAdd} of testCases) {
     it(id, () => {

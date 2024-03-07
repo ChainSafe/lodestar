@@ -66,7 +66,7 @@ export type ValidatorBalance = {
 export type EpochCommitteeResponse = {
   index: CommitteeIndex;
   slot: Slot;
-  validators: ValidatorIndex[];
+  validators: ArrayLike<ValidatorIndex>;
 };
 
 export type EpochSyncCommitteeResponse = {
