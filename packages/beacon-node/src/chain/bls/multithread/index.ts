@@ -39,6 +39,7 @@ export type BlsMultiThreadWorkerPoolModules = {
 
 export type BlsMultiThreadWorkerPoolOptions = {
   blsVerifyAllMultiThread?: boolean;
+  blsAddVerificationRandomness?: boolean;
 };
 
 export type {JobQueueItemType};
@@ -115,6 +116,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   private readonly logger: Logger;
   private readonly metrics: Metrics | null;
 
+  private readonly blsAddVerificationRandomness: boolean;
   private readonly format: PointFormat;
   private readonly workers: WorkerDescriptor[];
   private readonly jobs = new LinkedList<JobQueueItem>();
@@ -134,9 +136,14 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     this.logger = logger;
     this.metrics = metrics;
     this.blsVerifyAllMultiThread = options.blsVerifyAllMultiThread ?? false;
+    this.blsAddVerificationRandomness = options.blsAddVerificationRandomness ?? true;
 
     // TODO: Allow to customize implementation
     const implementation = bls.implementation;
+    if (implementation === "herumi") {
+      // mult not implemented by base herumi library
+      this.blsAddVerificationRandomness = false;
+    }
 
     // Use compressed for herumi for now.
     // THe worker is not able to deserialize from uncompressed
@@ -230,7 +237,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
               resolve,
               reject,
               addedTimeMs: Date.now(),
-              opts,
+              opts: {...opts, addVerificationRandomness: this.blsAddVerificationRandomness},
               sets: setsChunk,
               message,
             });

@@ -22,6 +22,14 @@ export type VerifySignatureOpts = {
   priority?: boolean;
 };
 
+export interface QueuedVerificationOptions extends VerifySignatureOpts {
+  /**
+   * Include multiplying in randomization factor for verification. Only applicable for verification
+   * of same message batches.  Applied via the worker pool options
+   */
+  addVerificationRandomness?: boolean;
+}
+
 export interface IBlsVerifier {
   /**
    * Verify 1 or more signature sets. Sets may be verified on batch or not depending on their count
