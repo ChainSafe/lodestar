@@ -270,8 +270,8 @@ export class KeymanagerApi implements Api {
       const status = deletedKey[i]
         ? DeletionStatus.deleted
         : pubkeysWithSlashingProtectionData.has(pubkeys[i])
-        ? DeletionStatus.not_active
-        : DeletionStatus.not_found;
+          ? DeletionStatus.not_active
+          : DeletionStatus.not_found;
       statuses[i] = {status};
     }
 

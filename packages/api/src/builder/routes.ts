@@ -155,8 +155,8 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
             isForkBlobs(fork)
               ? ssz.allForksBlobs[fork].ExecutionPayloadAndBlobsBundle
               : isForkExecution(fork)
-              ? ssz.allForksExecution[fork].ExecutionPayload
-              : ssz.bellatrix.ExecutionPayload
+                ? ssz.allForksExecution[fork].ExecutionPayload
+                : ssz.bellatrix.ExecutionPayload
         ),
         meta: VersionCodec,
       },

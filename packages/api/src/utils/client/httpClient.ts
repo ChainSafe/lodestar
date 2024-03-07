@@ -4,7 +4,7 @@ import {Endpoint} from "../types.js";
 import {ApiRequestInit, ApiRequestInitRequired, RouteDefinitionExtra, createApiRequest} from "./request.js";
 import {ApiResponse} from "./response.js";
 import {Metrics} from "./metrics.js";
-import {isFetchError} from "./fetch.js";
+import {fetch, isFetchError} from "./fetch.js";
 
 /** A higher default timeout, validator will sets its own shorter timeoutMs */
 const DEFAULT_TIMEOUT_MS = 60_000;
@@ -100,7 +100,7 @@ export class HttpClient implements IHttpClient {
     if (metrics) {
       metrics.urlsScore.addCollect(() => {
         for (let i = 0; i < this.urlsScore.length; i++) {
-          metrics.urlsScore.set({urlIndex: i, baseUrl: this.urlsOpts[i].baseUrl}, this.urlsScore[i]);
+          metrics.urlsScore.set({urlIndex: i, baseUrl: this.urlsInits[i].baseUrl}, this.urlsScore[i]);
         }
       });
     }
@@ -227,7 +227,7 @@ export class HttpClient implements IHttpClient {
 
       if (!apiResponse.ok) {
         this.logger?.debug("API response error", {routeId});
-        this.metrics?.requestErrors.inc({routeId});
+        this.metrics?.requestErrors.inc({routeId, baseUrl: init.baseUrl});
         return apiResponse;
       }
 
@@ -240,7 +240,7 @@ export class HttpClient implements IHttpClient {
         streamTimer?.();
       }
     } catch (e) {
-      this.metrics?.requestErrors.inc({routeId, baseUrl});
+      this.metrics?.requestErrors.inc({routeId, baseUrl: init.baseUrl});
 
       if (isAbortedError(e)) {
         if (signalGlobal?.aborted || signalLocal?.aborted) {
