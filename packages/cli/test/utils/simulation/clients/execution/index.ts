@@ -3,6 +3,7 @@ import {SHARED_JWT_SECRET, CLIQUE_SEALING_PERIOD} from "../../constants.js";
 import {
   AtLeast,
   ExecutionClient,
+  ExecutionClientsOptions,
   ExecutionGeneratorOptions,
   ExecutionGenesisOptions,
   ExecutionNode,
@@ -14,6 +15,7 @@ import {ensureDirectories} from "../../utils/paths.js";
 import {generateGethNode} from "./geth.js";
 import {generateMockNode} from "./mock.js";
 import {generateNethermindNode} from "./nethermind.js";
+import {generateBuilderNode} from "./builder.js";
 
 export async function createExecutionNode<E extends ExecutionClient>(
   client: E,
@@ -42,7 +44,7 @@ export async function createExecutionNode<E extends ExecutionClient>(
         secondsPerSlot: forkConfig.SECONDS_PER_SLOT,
         additionalSlots: 0,
       }),
-    clientOptions: options.clientOptions ?? [],
+    clientOptions: (options.clientOptions ?? []) as ExecutionClientsOptions[E],
   };
 
   const opts: ExecutionGeneratorOptions<E> = {
@@ -66,6 +68,9 @@ export async function createExecutionNode<E extends ExecutionClient>(
     }
     case ExecutionClient.Geth: {
       return generateGethNode(opts as ExecutionGeneratorOptions<ExecutionClient.Geth>, runner);
+    }
+    case ExecutionClient.Builder: {
+      return generateBuilderNode(opts as ExecutionGeneratorOptions<ExecutionClient.Builder>, runner);
     }
     case ExecutionClient.Nethermind: {
       return generateNethermindNode(opts as ExecutionGeneratorOptions<ExecutionClient.Nethermind>, runner);
