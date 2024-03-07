@@ -84,7 +84,8 @@ export function jobItemWorkReq(job: JobQueueItem, format: PointFormat, metrics: 
           // cast to unknown here because the blst-native version of the bls library extends the
           // PublicKey from the blst library, but the herumi version does not so the interface does
           // not show that this is possible
-          pkPoint.add((job.sets[i].publicKey as unknown as blst.PublicKey).jacobian.mult(randomness));
+          const dup = (job.sets[i].publicKey as unknown as blst.PublicKey).value.dup() as swigBindings.P1;
+          pkPoint.add(dup.mult(randomness));
           const sig = blst.Signature.fromBytes(job.sets[i].signature, CoordType.affine);
           sig.sigValidate();
           sigPoint.add(sig.jacobian.mult(randomness));
