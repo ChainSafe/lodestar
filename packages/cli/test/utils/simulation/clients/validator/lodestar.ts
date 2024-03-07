@@ -42,6 +42,7 @@ export const generateLodestarValidatorNode: ValidatorNodeGenerator<ValidatorClie
     useProduceBlockV3: useProduceBlockV3 ?? false,
     "builder.selection": builderSelection ?? defaultOptions.builderSelection,
     blindedLocal: blindedLocal ?? defaultOptions.blindedLocal,
+    ...clientOptions,
   } as unknown as IValidatorCliArgs & GlobalArgs;
 
   const job = runner.create([
