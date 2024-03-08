@@ -17,7 +17,7 @@ import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
   EpochShuffling,
-  ShufflingCache,
+  IShufflingCache,
   Index2PubkeyCache,
   PubkeyIndexMap,
 } from "@lodestar/state-transition";
@@ -114,7 +114,7 @@ export interface IBeaconChain {
   readonly checkpointBalancesCache: CheckpointBalancesCache;
   readonly producedContentsCache: Map<BlockHash, deneb.Contents>;
   readonly producedBlockRoot: Map<RootHex, allForks.ExecutionPayload | null>;
-  readonly shufflingCache: ShufflingCache;
+  readonly shufflingCache: IShufflingCache;
   readonly producedBlindedBlockRoot: Set<RootHex>;
   readonly opts: IChainOptions;
 

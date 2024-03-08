@@ -79,13 +79,33 @@ export interface ShufflingCacheOptions {
   maxShufflingCacheEpochs?: number;
 }
 
+export interface IShufflingCache {
+  addMetrics(metrics: ShufflingCacheMetrics | null): void;
+  get(shufflingEpoch: Epoch, shufflingDecisionRoot: RootHex): Promise<EpochShuffling | null>;
+  getOrError(shufflingEpoch: Epoch, shufflingDecisionRoot: RootHex, caller: ShufflingCacheCaller): EpochShuffling;
+  getOrNull(shufflingEpoch: Epoch, shufflingDecisionRoot: RootHex, isReload?: boolean): EpochShuffling | null;
+  add(shufflingEpoch: Epoch, shufflingDecisionRoot: RootHex, shuffling: EpochShuffling): void;
+  buildSync(
+    state: BeaconStateAllForks,
+    shufflingEpoch: Epoch,
+    shufflingDecisionRoot: RootHex,
+    activeIndexes: number[]
+  ): EpochShuffling;
+  build(
+    state: BeaconStateAllForks,
+    shufflingEpoch: Epoch,
+    shufflingDecisionRoot: RootHex,
+    activeIndexes: number[]
+  ): Promise<EpochShuffling>;
+}
+
 /**
  * A shuffling cache to help:
  * - get committee quickly for attestation verification
  * - if a shuffling is not available (which does not happen with default chain option of maxSkipSlots = 32), track a promise to make sure we don't compute the same shuffling twice
  * - skip computing shuffling when loading state bytes from disk
  */
-export class ShufflingCache {
+export class ShufflingCache implements IShufflingCache {
   /** LRU cache implemented as a map, pruned every time we add an item */
   private readonly itemsByDecisionRootByEpoch: MapDef<Epoch, Map<RootHex, ShufflingCacheItem>> = new MapDef(
     () => new Map<RootHex, ShufflingCacheItem>()

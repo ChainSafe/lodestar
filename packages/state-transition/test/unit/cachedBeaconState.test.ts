@@ -1,5 +1,5 @@
 import {describe, it, expect} from "vitest";
-import {Epoch, ssz, RootHex} from "@lodestar/types";
+import {ssz} from "@lodestar/types";
 import {LogLevel, toHexString} from "@lodestar/utils";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {createBeaconConfig} from "@lodestar/config";
@@ -9,8 +9,6 @@ import {PubkeyIndexMap} from "../../src/cache/pubkeyCache.js";
 import {createCachedBeaconState, loadCachedBeaconState} from "../../src/cache/stateCache.js";
 import {interopPubkeysCached} from "../utils/interop.js";
 import {modifyStateSameValidator, newStateWithValidators} from "../utils/capella.js";
-import {EpochShuffling} from "../../src/util/epochShuffling.js";
-import {getShufflingDecisionBlock} from "../../src/util/shufflingDecisionRoot.js";
 import {ShufflingCache} from "../../src/cache/shufflingCache.js";
 
 describe("CachedBeaconState", () => {

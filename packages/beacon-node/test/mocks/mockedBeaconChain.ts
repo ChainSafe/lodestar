@@ -4,7 +4,7 @@ import {config as defaultConfig} from "@lodestar/config/default";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkChoice, ProtoBlock, EpochDifference} from "@lodestar/fork-choice";
 import {Logger} from "@lodestar/utils";
-import {ShufflingCache} from "@lodestar/state-transition";
+import {IShufflingCache} from "@lodestar/state-transition";
 import {BeaconChain} from "../../src/chain/chain.js";
 import {ChainEventEmitter} from "../../src/chain/emitter.js";
 import {ExecutionEngineHttp} from "../../src/execution/engine/index.js";
@@ -28,7 +28,7 @@ export type MockedBeaconChain = Mocked<BeaconChain> & {
   opPool: Mocked<OpPool>;
   aggregatedAttestationPool: Mocked<AggregatedAttestationPool>;
   beaconProposerCache: Mocked<BeaconProposerCache>;
-  shufflingCache: Mocked<ShufflingCache>;
+  shufflingCache: Mocked<IShufflingCache>;
   regen: Mocked<QueuedStateRegenerator>;
   bls: {
     verifySignatureSets: Mock<[boolean]>;

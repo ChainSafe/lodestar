@@ -13,6 +13,7 @@ import {
   PubkeyIndexMap,
   EpochShuffling,
   ShufflingCache,
+  IShufflingCache,
   ShufflingCacheError,
   ShufflingCacheErrorCode,
 } from "@lodestar/state-transition";
@@ -138,7 +139,7 @@ export class BeaconChain implements IBeaconChain {
 
   readonly beaconProposerCache: BeaconProposerCache;
   readonly checkpointBalancesCache: CheckpointBalancesCache;
-  readonly shufflingCache: ShufflingCache;
+  readonly shufflingCache: IShufflingCache;
   /** Map keyed by executionPayload.blockHash of the block for those blobs */
   readonly producedContentsCache = new Map<BlockHash, deneb.Contents>();
 

@@ -41,7 +41,7 @@ import {
   SyncCommitteeCache,
   SyncCommitteeCacheEmpty,
 } from "./syncCommitteeCache.js";
-import {ShufflingCache, ShufflingCacheCaller} from "./shufflingCache.js";
+import {ShufflingCache, IShufflingCache, ShufflingCacheCaller} from "./shufflingCache.js";
 
 /** `= PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT)` */
 export const PROPOSER_WEIGHT_FACTOR = PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT);
@@ -49,7 +49,7 @@ export const PROPOSER_WEIGHT_FACTOR = PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PR
 export type EpochCacheImmutableData = {
   config: BeaconConfig;
   logger: Logger;
-  shufflingCache: ShufflingCache;
+  shufflingCache: IShufflingCache;
   pubkey2index: PubkeyIndexMap;
   index2pubkey: Index2PubkeyCache;
 };
@@ -88,7 +88,7 @@ type ProposersDeferred = {computed: false; seed: Uint8Array} | {computed: true; 
 export class EpochCache {
   config: BeaconConfig;
   logger: Logger;
-  shufflingCache: ShufflingCache;
+  shufflingCache: IShufflingCache;
 
   /**
    * Unique globally shared pubkey registry. There should only exist one for the entire application.
@@ -223,7 +223,7 @@ export class EpochCache {
   constructor(data: {
     config: BeaconConfig;
     logger: Logger;
-    shufflingCache: ShufflingCache;
+    shufflingCache: IShufflingCache;
     pubkey2index: PubkeyIndexMap;
     index2pubkey: Index2PubkeyCache;
     proposers: number[];

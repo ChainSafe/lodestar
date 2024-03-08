@@ -2,7 +2,7 @@ import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {phase0, Epoch, RootHex} from "@lodestar/types";
 import {
   loadCachedBeaconState,
-  ShufflingCache,
+  IShufflingCache,
   CachedBeaconStateAllForks,
   computeStartSlotAtEpoch,
   getBlockRootAtSlot,
@@ -32,7 +32,7 @@ type PersistentCheckpointStateCacheModules = {
   logger: Logger;
   clock?: IClock | null;
   signal?: AbortSignal;
-  shufflingCache: ShufflingCache;
+  shufflingCache: IShufflingCache;
   datastore: CPStateDatastore;
   getHeadState?: GetHeadStateFn;
   bufferPool?: BufferPool;
@@ -107,7 +107,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   private readonly maxEpochsInMemory: number;
   private readonly processLateBlock: boolean;
   private readonly datastore: CPStateDatastore;
-  private readonly shufflingCache: ShufflingCache;
+  private readonly shufflingCache: IShufflingCache;
   private readonly getHeadState?: GetHeadStateFn;
   private readonly bufferPool?: BufferPool;
 
