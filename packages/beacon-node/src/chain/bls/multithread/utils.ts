@@ -27,7 +27,7 @@ export function chunkifyMaximizeChunkSize<T>(arr: T[], minPerChunk: number): T[]
 export function randomBytesNonZero(bytesCount: number): Buffer {
   const rand = crypto.randomBytes(bytesCount);
   for (let i = 0; i < bytesCount; i++) {
-    if (rand[0] !== 0) return rand;
+    if (rand[i] !== 0) return rand;
   }
   rand[0] = 1;
   return rand;
