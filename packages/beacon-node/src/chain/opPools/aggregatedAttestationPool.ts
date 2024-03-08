@@ -1,6 +1,6 @@
 import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
-import {ForkName, MAX_ATTESTATIONS, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkName, ForkSeq, MAX_ATTESTATIONS, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {phase0, Epoch, Slot, ssz, ValidatorIndex, RootHex} from "@lodestar/types";
 import {
   CachedBeaconStateAllForks,
@@ -117,7 +117,11 @@ export class AggregatedAttestationPool {
   /**
    * Get attestations to be included in a block. Returns $MAX_ATTESTATIONS items
    */
-  getAttestationsForBlock(forkChoice: IForkChoice, state: CachedBeaconStateAllForks): phase0.Attestation[] {
+  getAttestationsForBlock(
+    fork: ForkName,
+    forkChoice: IForkChoice,
+    state: CachedBeaconStateAllForks
+  ): phase0.Attestation[] {
     const stateSlot = state.slot;
     const stateEpoch = state.epochCtx.epoch;
     const statePrevEpoch = stateEpoch - 1;
@@ -144,7 +148,13 @@ export class AggregatedAttestationPool {
         continue; // Invalid attestations
       }
       // validateAttestation condition: Attestation slot not within inclusion window
-      if (!(slot + MIN_ATTESTATION_INCLUSION_DELAY <= stateSlot && stateSlot <= slot + SLOTS_PER_EPOCH)) {
+      if (
+        !(
+          slot + MIN_ATTESTATION_INCLUSION_DELAY <= stateSlot &&
+          // Post deneb, attestations are valid for current and previous epoch
+          (ForkSeq[fork] >= ForkSeq.deneb || stateSlot <= slot + SLOTS_PER_EPOCH)
+        )
+      ) {
         continue; // Invalid attestations
       }
 
