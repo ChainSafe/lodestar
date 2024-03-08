@@ -79,12 +79,12 @@ export function jobItemWorkReq(job: JobQueueItem, format: PointFormat, metrics: 
       if (job.opts.addVerificationRandomness) {
         const pkPoint = new swigBindings.blst.P1();
         const sigPoint = new swigBindings.blst.P2();
-        for (let i = 0; i < job.sets.length; i++) {
+        for (const set of job.sets) {
           const randomness = randomBytesNonZero(8);
           // cast to unknown here because the blst-native version of the bls library extends the
           // PublicKey from the blst library, but the herumi version does not so the interface does
           // not show that this is possible
-          const {value} = job.sets[i].publicKey as unknown as blst.PublicKey;
+          const {value} = set.publicKey as unknown as blst.PublicKey;
           let dup: swigBindings.P1;
           if (typeof (value as swigBindings.P1_Affine).to_jacobian === "function") {
             dup = (value as swigBindings.P1_Affine).to_jacobian();
@@ -92,7 +92,7 @@ export function jobItemWorkReq(job: JobQueueItem, format: PointFormat, metrics: 
             dup = value.dup() as swigBindings.P1;
           }
           pkPoint.add(dup.mult(randomness));
-          const sig = blst.Signature.fromBytes(job.sets[i].signature, CoordType.affine);
+          const sig = blst.Signature.fromBytes(set.signature, CoordType.affine);
           sig.sigValidate();
           sigPoint.add(sig.jacobian.mult(randomness));
         }
