@@ -159,7 +159,7 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
         return {state, pool};
       },
       fn: ({state, pool}) => {
-        pool.getAttestationsForBlock(forkchoice, state);
+        pool.getAttestationsForBlock(state.config.getForkName(state.slot), forkchoice, state);
       },
     });
   }
