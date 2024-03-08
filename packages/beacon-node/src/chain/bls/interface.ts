@@ -1,7 +1,7 @@
 import {PublicKey} from "@chainsafe/bls/types";
 import {ISignatureSet} from "@lodestar/state-transition";
 
-export type VerifySignatureOpts = {
+export type VerifySignatureOptions = {
   /**
    * A batchable set MAY be verified with more sets to reduce the verification costs.
    * Multiple sets may be merged and verified as one set. If the result is correct, success is returned
@@ -22,7 +22,7 @@ export type VerifySignatureOpts = {
   priority?: boolean;
 };
 
-export interface QueuedVerificationOptions extends VerifySignatureOpts {
+export interface QueuedVerificationOptions extends VerifySignatureOptions {
   /**
    * Include multiplying in randomization factor for verification. Only applicable for verification
    * of same message batches.  Applied via the worker pool options
@@ -52,7 +52,7 @@ export interface IBlsVerifier {
    * Signatures have already been checked for subgroup
    * Signature checks above could be done here for convienence as well
    */
-  verifySignatureSets(sets: ISignatureSet[], opts?: VerifySignatureOpts): Promise<boolean>;
+  verifySignatureSets(sets: ISignatureSet[], opts?: VerifySignatureOptions): Promise<boolean>;
 
   /**
    * Similar to verifySignatureSets but:
@@ -63,7 +63,7 @@ export interface IBlsVerifier {
   verifySignatureSetsSameMessage(
     sets: {publicKey: PublicKey; signature: Uint8Array}[],
     messsage: Uint8Array,
-    opts?: Omit<VerifySignatureOpts, "verifyOnMainThread">
+    opts?: Omit<VerifySignatureOptions, "verifyOnMainThread">
   ): Promise<boolean[]>;
 
   /** For multithread pool awaits terminating all workers */

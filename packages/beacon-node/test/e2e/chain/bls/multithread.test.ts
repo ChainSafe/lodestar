@@ -4,7 +4,7 @@ import {PublicKey} from "@chainsafe/bls/types";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/multithread/index.js";
 import {testLogger} from "../../../utils/logger.js";
-import {VerifySignatureOpts} from "../../../../src/chain/bls/interface.js";
+import {VerifySignatureOptions} from "../../../../src/chain/bls/interface.js";
 
 describe("chain / bls / multithread queue", function () {
   const logger = testLogger();
@@ -57,7 +57,7 @@ describe("chain / bls / multithread queue", function () {
 
   async function testManyValidSignatures(
     testOpts: {sleep?: boolean},
-    verifySignatureOpts?: VerifySignatureOpts
+    verifySignatureOpts?: VerifySignatureOptions
   ): Promise<void> {
     const pool = await initializePool();
 

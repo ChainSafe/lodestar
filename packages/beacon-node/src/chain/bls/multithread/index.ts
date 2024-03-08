@@ -13,7 +13,7 @@ import {Logger} from "@lodestar/utils";
 import {ISignatureSet} from "@lodestar/state-transition";
 import {QueueError, QueueErrorCode} from "../../../util/queue/index.js";
 import {Metrics} from "../../../metrics/index.js";
-import {IBlsVerifier, VerifySignatureOpts} from "../interface.js";
+import {IBlsVerifier, VerifySignatureOptions} from "../interface.js";
 import {getAggregatedPubkey, getAggregatedPubkeysCount} from "../utils.js";
 import {verifySignatureSetsMaybeBatch} from "../maybeBatch.js";
 import {LinkedList} from "../../../util/array.js";
@@ -167,7 +167,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     );
   }
 
-  async verifySignatureSets(sets: ISignatureSet[], opts: VerifySignatureOpts = {}): Promise<boolean> {
+  async verifySignatureSets(sets: ISignatureSet[], opts: VerifySignatureOptions = {}): Promise<boolean> {
     // Pubkeys are aggregated in the main thread regardless if verified in workers or in main thread
     this.metrics?.bls.aggregatedPubkeys.inc(getAggregatedPubkeysCount(sets));
     this.metrics?.blsThreadPool.totalSigSets.inc(sets.length);
@@ -225,7 +225,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   async verifySignatureSetsSameMessage(
     sets: {publicKey: PublicKey; signature: Uint8Array}[],
     message: Uint8Array,
-    opts: Omit<VerifySignatureOpts, "verifyOnMainThread"> = {}
+    opts: Omit<VerifySignatureOptions, "verifyOnMainThread"> = {}
   ): Promise<boolean[]> {
     // chunkify so that it reduce the risk of retrying when there is at least one invalid signature
     const results = await Promise.all(
