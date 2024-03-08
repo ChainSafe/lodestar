@@ -110,7 +110,7 @@ shell(`git checkout -b ${rcBranchName} ${commit}`);
 shell(`lerna version ${packageVersion} --no-git-tag-version --force-publish --yes`);
 
 // Commit changes
-shell(`git commit -am "v${versionMMP}"`);
+shell(`git commit -am "chore: v${versionMMP}"`);
 
 // Push branch, specifying upstream
 shell(`git push ${GIT_REPO_URL} ${rcBranchName}`);
