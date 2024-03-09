@@ -162,7 +162,8 @@ export class HttpClient implements IHttpClient {
                   if (++errorCount >= requestCount) {
                     resolve(res);
                   } else {
-                    this.logger?.debug("Request error, retrying", {routeId, baseUrl}, (await res.error()) as Error);
+                    const err = await res.error();
+                    this.logger?.debug("Request error, retrying", {routeId, baseUrl}, err as Error);
                   }
                 }
               },
