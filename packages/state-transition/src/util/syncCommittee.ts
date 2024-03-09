@@ -20,7 +20,7 @@ import {getNextSyncCommitteeIndices} from "./seed.js";
  */
 export function getNextSyncCommittee(
   state: BeaconStateAllForks,
-  activeValidatorIndices: ValidatorIndex[],
+  activeValidatorIndices: ArrayLike<ValidatorIndex>,
   effectiveBalanceIncrements: EffectiveBalanceIncrements
 ): {indices: ValidatorIndex[]; syncCommittee: altair.SyncCommittee} {
   const indices = getNextSyncCommitteeIndices(state, activeValidatorIndices, effectiveBalanceIncrements);
