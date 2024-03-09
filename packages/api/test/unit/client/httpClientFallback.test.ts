@@ -41,6 +41,7 @@ describe("httpClient fallback", () => {
       await new Promise((r) => setTimeout(r, 10));
       const i = getServerIndex(url);
       if (serverErrors.get(i)) {
+        // TODO: make sure to test this with {ok: false} and Error
         throw Error(`test_error_server_${i}`);
       } else {
         return {ok: true} as Response;

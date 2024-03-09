@@ -147,13 +147,24 @@ export class HttpClient implements IHttpClient {
             }
 
             // eslint-disable-next-line @typescript-eslint/naming-convention
-            const i_ = i; // Keep local copy of i variable to index urlScore after requestWithBody() resolves
+            const i_ = i; // Keep local copy of i variable to index urlScore after _request() resolves
 
             this._request(definition, args, localInit, i).then(
-              (res) => {
-                this.urlsScore[i_] = Math.min(URL_SCORE_MAX, this.urlsScore[i_] + URL_SCORE_DELTA_SUCCESS);
-                // Resolve immediately on success
-                resolve(res);
+              async (res) => {
+                if (res.ok) {
+                  this.urlsScore[i_] = Math.min(URL_SCORE_MAX, this.urlsScore[i_] + URL_SCORE_DELTA_SUCCESS);
+                  // Resolve immediately on success
+                  resolve(res);
+                } else {
+                  this.urlsScore[i_] = Math.max(URL_SCORE_MIN, this.urlsScore[i_] - URL_SCORE_DELTA_ERROR);
+
+                  // Resolve failed response only when all queried URLs have errored
+                  if (++errorCount >= requestCount) {
+                    resolve(res);
+                  } else {
+                    this.logger?.debug("Request error, retrying", {routeId, baseUrl}, (await res.error()) as Error);
+                  }
+                }
               },
               (err) => {
                 this.urlsScore[i_] = Math.max(URL_SCORE_MIN, this.urlsScore[i_] - URL_SCORE_DELTA_ERROR);
