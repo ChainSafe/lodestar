@@ -8,8 +8,8 @@ import {ApiResponse} from "./response.js";
 export type ApiClientMethod<E extends Endpoint> = E["args"] extends void
   ? (init?: ApiRequestInit) => Promise<ApiResponse<E>>
   : HasOnlyOptionalProps<E["args"]> extends true
-  ? (args?: E["args"], init?: ApiRequestInit) => Promise<ApiResponse<E>>
-  : (args: E["args"], init?: ApiRequestInit) => Promise<ApiResponse<E>>;
+    ? (args?: E["args"], init?: ApiRequestInit) => Promise<ApiResponse<E>>
+    : (args: E["args"], init?: ApiRequestInit) => Promise<ApiResponse<E>>;
 
 export type ApiClientMethods<Es extends Record<string, Endpoint>> = {[K in keyof Es]: ApiClientMethod<Es[K]>};
 

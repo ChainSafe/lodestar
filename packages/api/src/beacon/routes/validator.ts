@@ -736,8 +736,8 @@ export const definitions: RouteDefinitions<Endpoints> = {
           (executionPayloadBlinded
             ? ssz.allForksBlinded[isForkExecution(version) ? version : ForkName.bellatrix].BeaconBlock
             : isForkBlobs(version)
-            ? BlockContentsType
-            : ssz[version].BeaconBlock) as Type<allForks.FullOrBlindedBeaconBlockOrContents>
+              ? BlockContentsType
+              : ssz[version].BeaconBlock) as Type<allForks.FullOrBlindedBeaconBlockOrContents>
       ),
       meta: WithBlockValues({
         toJson: (meta) => ({
