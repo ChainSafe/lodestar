@@ -14,6 +14,8 @@ export type ExtraRequestInit = {
   requestWireFormat?: WireFormat;
   responseWireFormat?: WireFormat;
   timeoutMs?: number;
+  retries?: number;
+  retryDelay?: number;
 };
 
 export type OptionalRequestInit = {
