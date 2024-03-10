@@ -18,6 +18,7 @@ export * as state from "./state.js";
 export * as rewards from "./rewards.js";
 export {BroadcastValidation} from "./block.js";
 export type {BlockId, BlockHeaderResponse} from "./block.js";
+export type {BlockRewards, SyncCommitteeRewards} from "./rewards.js";
 // TODO: Review if re-exporting all these types is necessary
 export type {
   StateId,
@@ -32,7 +33,8 @@ export type {
 
 export type Endpoints = block.Endpoints &
   pool.Endpoints &
-  state.Endpoints & {
+  state.Endpoints &
+  rewards.Endpoints & {
     getGenesis: Endpoint<
       //
       "GET",
@@ -57,5 +59,6 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
     ...block.getDefinitions(config),
     ...pool.definitions,
     ...state.definitions,
+    ...rewards.definitions,
   };
 }
