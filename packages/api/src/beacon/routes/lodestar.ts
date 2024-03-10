@@ -260,7 +260,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
     req: {
       writeReqJson: ({thread, dirpath}) => ({query: {thread, dirpath}}),
       parseReqJson: ({query}) => ({thread: query.thread, dirpath: query.dirpath}),
-      writeReqSsz: ({thread, dirpath}) => ({query: {thread, dirpath}, body: new Uint8Array()}),
+      writeReqSsz: ({thread, dirpath}) => ({query: {thread, dirpath}}),
       parseReqSsz: ({query}) => ({thread: query.thread, dirpath: query.dirpath}),
       schema: {query: {thread: Schema.String, dirpath: Schema.String}},
     },
@@ -272,7 +272,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
     req: {
       writeReqJson: ({thread, duration, dirpath}) => ({query: {thread, duration, dirpath}}),
       parseReqJson: ({query}) => ({thread: query.thread, duration: query.duration, dirpath: query.dirpath}),
-      writeReqSsz: ({thread, duration, dirpath}) => ({query: {thread, duration, dirpath}, body: new Uint8Array()}),
+      writeReqSsz: ({thread, duration, dirpath}) => ({query: {thread, duration, dirpath}}),
       parseReqSsz: ({query}) => ({thread: query.thread, duration: query.duration, dirpath: query.dirpath}),
       schema: {query: {thread: Schema.String, duration: Schema.Uint, dirpath: Schema.String}},
     },
@@ -348,7 +348,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
     req: {
       writeReqJson: ({peerId, multiaddrs}) => ({query: {peerId, multiaddr: multiaddrs}}),
       parseReqJson: ({query}) => ({peerId: query.peerId, multiaddrs: query.multiaddr}),
-      writeReqSsz: ({peerId, multiaddrs}) => ({query: {peerId, multiaddr: multiaddrs}, body: new Uint8Array()}),
+      writeReqSsz: ({peerId, multiaddrs}) => ({query: {peerId, multiaddr: multiaddrs}}),
       parseReqSsz: ({query}) => ({peerId: query.peerId, multiaddrs: query.multiaddr}),
       schema: {query: {peerId: Schema.StringRequired, multiaddr: Schema.StringArray}},
     },
@@ -360,7 +360,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
     req: {
       writeReqJson: ({peerId}) => ({query: {peerId}}),
       parseReqJson: ({query}) => ({peerId: query.peerId}),
-      writeReqSsz: ({peerId}) => ({query: {peerId}, body: new Uint8Array()}),
+      writeReqSsz: ({peerId}) => ({query: {peerId}}),
       parseReqSsz: ({query}) => ({peerId: query.peerId}),
       schema: {query: {peerId: Schema.StringRequired}},
     },

@@ -31,9 +31,8 @@ export type JsonPostRequestData<
   body?: B;
 };
 
-export type SszPostRequestData<P extends JsonPostRequestData> = Omit<P, "body"> & {
-  body: P["body"] extends undefined ? undefined : Uint8Array;
-};
+export type SszPostRequestData<P extends JsonPostRequestData> = Omit<P, "body"> &
+  ("body" extends keyof P ? (P["body"] extends void ? {body?: never} : {body: Uint8Array}) : {body?: never});
 
 export type HttpMethod = "GET" | "POST" | "DELETE";
 

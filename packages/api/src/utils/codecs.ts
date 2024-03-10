@@ -46,7 +46,7 @@ export const EmptyGetRequestCodec: GetRequestCodec<EmptyRequestEndpoint> = {
 export const EmptyPostRequestCodec: PostRequestCodec<EmptyRequestEndpoint> = {
   writeReqJson: () => ({}),
   parseReqJson: () => {},
-  writeReqSsz: () => ({body: new Uint8Array() as never}),
+  writeReqSsz: () => ({}),
   parseReqSsz: () => {},
   schema: {},
 };
