@@ -1978,7 +1978,7 @@
 <h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
 <ul>
 <li><img alt="⚙" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/2699.svg" title=":gear:" /> <a href="https://nodejs.org/">NodeJS</a> (LTS)</li>
-<li><img alt="🧰" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/1f9f0.svg" title=":toolbox:" /> <a href="https://yarnpkg.com/">Yarn</a></li>
+<li><img alt="🧰" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/1f9f0.svg" title=":toolbox:" /> <a href="https://classic.yarnpkg.com/lang/en/">Yarn</a></li>
 </ul>
 <h3 id="macos-specifics">MacOS Specifics<a class="headerlink" href="#macos-specifics" title="Permanent link">&para;</a></h3>
 <p>When using MacOS, there are a couple of extra prerequisites that are required.</p>
@@ -2003,7 +2003,7 @@
 <li><img alt="🧪" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/1f9ea.svg" title=":test_tube:" /> Run <code>yarn check-types</code> to check TypeScript types.</li>
 <li><img alt="🧪" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/1f9ea.svg" title=":test_tube:" /> Run <code>yarn lint</code> to run the linter (ESLint).</li>
 </ul>
-<p>Note that to run <code>test:e2e</code>, first ensure that the environment is correctly setup by running the <code>run_e2e_env.sh</code> script.</p>
+<p>Note that to run <code>test:e2e</code>, first ensure that the environment is correctly setup by running the <code>run_e2e_env.sh</code> script. This script requires a running docker engine.</p>
 <div class="highlight"><pre><span></span><code>./scripts/run_e2e_env.sh<span class="w"> </span>start
 </code></pre></div>
 <p>Similarly, run <code>yarn download-spec-tests</code> before running <code>yarn test:spec</code>.</p>
