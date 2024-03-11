@@ -7,6 +7,7 @@ export type RawBody = {type: WireFormat.json; value: unknown} | {type: WireForma
 
 export class ApiResponse<E extends Endpoint> extends Response {
   private definition: RouteDefinitionExtra<E>;
+  private _wireFormat?: WireFormat;
   private _rawBody?: RawBody;
   private _errorBody?: string;
   private _meta?: E["meta"];
@@ -18,24 +19,27 @@ export class ApiResponse<E extends Endpoint> extends Response {
   }
 
   wireFormat(): WireFormat {
-    const contentType = this.headers.get("content-type");
-    if (contentType === null) {
-      throw Error("No Content-Type header found in response");
+    if (this._wireFormat === undefined) {
+      const contentType = this.headers.get("content-type");
+      if (contentType === null) {
+        throw Error("No Content-Type header found in response");
+      }
+
+      const mediaType = parseContentTypeHeader(contentType);
+      if (mediaType === null) {
+        throw Error(`Unsupported response media type: ${contentType.split(";", 1)[0]}`);
+      }
+
+      const wireFormat = getWireFormat(mediaType);
+
+      const {onlySupport} = this.definition.resp;
+      if (onlySupport !== undefined && wireFormat !== onlySupport) {
+        throw Error(`Method only supports ${onlySupport} responses`);
+      }
+
+      this._wireFormat = wireFormat;
     }
-
-    const mediaType = parseContentTypeHeader(contentType);
-    if (mediaType === null) {
-      throw Error(`Unsupported response media type: ${contentType.split(";", 1)[0]}`);
-    }
-
-    const wireFormat = getWireFormat(mediaType);
-
-    const {onlySupport} = this.definition.resp;
-    if (onlySupport !== undefined && wireFormat !== onlySupport) {
-      throw Error(`Method only supports ${onlySupport} responses`);
-    }
-
-    return wireFormat;
+    return this._wireFormat;
   }
 
   async rawBody(): Promise<RawBody> {
