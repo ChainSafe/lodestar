@@ -114,7 +114,7 @@ lodestar-prover proxy \
 ## Prerequisites
 
 - [NodeJS](https://nodejs.org/) (LTS)
-- [Yarn](https://yarnpkg.com/)
+- [Yarn](https://classic.yarnpkg.com/lang/en/)
 
 ## What you need
 

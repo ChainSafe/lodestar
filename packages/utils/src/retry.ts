@@ -1,3 +1,4 @@
+import {ErrorAborted} from "./errors.js";
 import {sleep} from "./sleep.js";
 
 export type RetryOptions = {
@@ -21,6 +22,9 @@ export type RetryOptions = {
    * Milliseconds to wait before retrying again
    */
   retryDelay?: number;
+  /**
+   * Abort signal to stop retrying
+   */
   signal?: AbortSignal;
 };
 
@@ -32,19 +36,31 @@ export type RetryOptions = {
  */
 export async function retry<A>(fn: (attempt: number) => A | Promise<A>, opts?: RetryOptions): Promise<A> {
   const maxRetries = opts?.retries ?? 5;
+  // Number of retries + the initial attempt
+  const maxAttempts = maxRetries + 1;
   const shouldRetry = opts?.shouldRetry;
   const onRetry = opts?.onRetry;
 
   let lastError: Error = Error("RetryError");
-  for (let i = 1; i <= maxRetries; i++) {
-    try {
-      // If not the first attempt, invoke right before retrying
-      if (i > 1) onRetry?.(lastError, i);
+  for (let i = 1; i <= maxAttempts; i++) {
+    // If not the first attempt
+    if (i > 1) {
+      if (opts?.signal?.aborted) {
+        throw new ErrorAborted("retry");
+      }
+      // Invoke right before retrying
+      onRetry?.(lastError, i);
+    }
 
+    try {
       return await fn(i);
     } catch (e) {
       lastError = e as Error;
-      if (shouldRetry && !shouldRetry(lastError)) {
+
+      if (i === maxAttempts) {
+        // Reached maximum number of attempts, there's no need to check if we should retry
+        break;
+      } else if (shouldRetry && !shouldRetry(lastError)) {
         break;
       } else if (opts?.retryDelay !== undefined) {
         await sleep(opts?.retryDelay, opts?.signal);

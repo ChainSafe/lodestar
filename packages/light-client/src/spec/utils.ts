@@ -10,9 +10,8 @@ import {
 } from "@lodestar/params";
 import {altair, phase0, ssz, allForks, capella, deneb, Slot} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
-import {computeEpochAtSlot} from "@lodestar/state-transition";
 
-import {isValidMerkleBranch, computeSyncPeriodAtSlot} from "../utils/index.js";
+import {isValidMerkleBranch, computeEpochAtSlot, computeSyncPeriodAtSlot} from "../utils/index.js";
 import {LightClientStore} from "./store.js";
 
 export const GENESIS_SLOT = 0;

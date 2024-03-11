@@ -17,6 +17,8 @@ import {
 import {nodeAssertion} from "../utils/simulation/assertions/nodeAssertion.js";
 import {mergeAssertion} from "../utils/simulation/assertions/mergeAssertion.js";
 import {createForkAssertion} from "../utils/simulation/assertions/forkAssertion.js";
+import {createAccountBalanceAssertion} from "../utils/simulation/assertions/accountBalanceAssertion.js";
+import {createExecutionHeadAssertion} from "../utils/simulation/assertions/executionHeadAssertion.js";
 
 const altairForkEpoch = 2;
 const bellatrixForkEpoch = 4;
@@ -131,6 +133,25 @@ env.tracker.register({
       : AssertionMatch.None;
   },
 });
+
+env.tracker.register(
+  createAccountBalanceAssertion({
+    address: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    sendTransactionsAtSlot: [
+      env.clock.getFirstSlotOfEpoch(altairForkEpoch) + 4,
+      env.clock.getFirstSlotOfEpoch(bellatrixForkEpoch) + 4,
+    ],
+    validateTotalBalanceAt: [env.clock.getFirstSlotOfEpoch(bellatrixForkEpoch + 1) + 4],
+    targetNode: env.nodes[0],
+  })
+);
+
+env.tracker.register(
+  createExecutionHeadAssertion({
+    // Second last slot of second bellatrix epoch
+    checkForSlot: [env.clock.getLastSlotOfEpoch(bellatrixForkEpoch + 1) - 1],
+  })
+);
 
 await env.start({runTimeoutMs: estimatedTimeoutMs});
 await connectAllNodes(env.nodes);

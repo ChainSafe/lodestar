@@ -1,6 +1,6 @@
 import {toHexString} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
-import {phase0, RootHex, ssz, ValidatorIndex} from "@lodestar/types";
+import {phase0, RootHex, ssz} from "@lodestar/types";
 import {
   computeEpochAtSlot,
   isAggregatorFromCommitteeLength,
@@ -21,7 +21,7 @@ import {
 
 export type AggregateAndProofValidationResult = {
   indexedAttestation: phase0.IndexedAttestation;
-  committeeIndices: ValidatorIndex[];
+  committeeIndices: Uint32Array;
   attDataRootHex: RootHex;
 };
 
@@ -148,7 +148,7 @@ async function validateAggregateAndProof(
     RegenCaller.validateGossipAttestation
   );
 
-  const committeeIndices: number[] = cachedAttData
+  const committeeIndices = cachedAttData
     ? cachedAttData.committeeIndices
     : getCommitteeIndices(shuffling, attSlot, attIndex);
 

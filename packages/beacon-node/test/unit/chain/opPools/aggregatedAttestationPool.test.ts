@@ -3,7 +3,7 @@ import bls from "@chainsafe/bls";
 import {BitArray, fromHexString, toHexString} from "@chainsafe/ssz";
 import {describe, it, expect, beforeEach, beforeAll, afterEach, vi} from "vitest";
 import {CachedBeaconStateAllForks, newFilledArray} from "@lodestar/state-transition";
-import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {FAR_FUTURE_EPOCH, ForkName, MAX_EFFECTIVE_BALANCE, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz, phase0} from "@lodestar/types";
 import {CachedBeaconStateAltair} from "@lodestar/state-transition/src/types.js";
 import {MockedForkChoice, getMockedForkChoice} from "../../../mocks/mockedBeaconChain.js";
@@ -28,6 +28,7 @@ const validSignature = fromHexString(
 
 describe("AggregatedAttestationPool", function () {
   let pool: AggregatedAttestationPool;
+  const fork = ForkName.altair;
   const altairForkEpoch = 2020;
   const currentEpoch = altairForkEpoch + 10;
   const currentSlot = SLOTS_PER_EPOCH * currentEpoch;
@@ -115,9 +116,9 @@ describe("AggregatedAttestationPool", function () {
       forkchoiceStub.getBlockHex.mockReturnValue(generateProtoBlock());
       forkchoiceStub.getDependentRoot.mockReturnValue(ZERO_HASH_HEX);
       if (isReturned) {
-        expect(pool.getAttestationsForBlock(forkchoiceStub, altairState).length).toBeGreaterThan(0);
+        expect(pool.getAttestationsForBlock(fork, forkchoiceStub, altairState).length).toBeGreaterThan(0);
       } else {
-        expect(pool.getAttestationsForBlock(forkchoiceStub, altairState).length).toEqual(0);
+        expect(pool.getAttestationsForBlock(fork, forkchoiceStub, altairState).length).toEqual(0);
       }
       // "forkchoice should be called to check pivot block"
       expect(forkchoiceStub.getDependentRoot).toHaveBeenCalledTimes(1);
@@ -129,7 +130,7 @@ describe("AggregatedAttestationPool", function () {
     // all attesters are not seen
     const attestingIndices = [2, 3];
     pool.add(attestation, attDataRootHex, attestingIndices.length, committee);
-    expect(pool.getAttestationsForBlock(forkchoiceStub, altairState)).toEqual([]);
+    expect(pool.getAttestationsForBlock(fork, forkchoiceStub, altairState)).toEqual([]);
     // "forkchoice should not be called"
     expect(forkchoiceStub.iterateAncestorBlocks).not.toHaveBeenCalledTimes(1);
   });
@@ -140,7 +141,7 @@ describe("AggregatedAttestationPool", function () {
     pool.add(attestation, attDataRootHex, attestingIndices.length, committee);
     forkchoiceStub.getBlockHex.mockReturnValue(generateProtoBlock());
     forkchoiceStub.getDependentRoot.mockReturnValue("0xWeird");
-    expect(pool.getAttestationsForBlock(forkchoiceStub, altairState)).toEqual([]);
+    expect(pool.getAttestationsForBlock(fork, forkchoiceStub, altairState)).toEqual([]);
     // "forkchoice should be called to check pivot block"
     expect(forkchoiceStub.getDependentRoot).toHaveBeenCalledTimes(1);
   });
@@ -181,7 +182,7 @@ describe("MatchingDataAttestationGroup.add()", () => {
   ];
 
   const attestationData = ssz.phase0.AttestationData.defaultValue();
-  const committee = linspace(0, 7);
+  const committee = Uint32Array.from(linspace(0, 7));
 
   for (const {id, attestationsToAdd} of testCases) {
     it(id, () => {
@@ -251,7 +252,7 @@ describe("MatchingDataAttestationGroup.getAttestationsForBlock", () => {
   ];
 
   const attestationData = ssz.phase0.AttestationData.defaultValue();
-  const committee = linspace(0, 7);
+  const committee = Uint32Array.from(linspace(0, 7));
 
   for (const {id, notSeenAttestingBits, attestationsToAdd} of testCases) {
     it(id, () => {

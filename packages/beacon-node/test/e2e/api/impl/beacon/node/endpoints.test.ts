@@ -1,4 +1,4 @@
-import {describe, beforeAll, afterAll, it, expect} from "vitest";
+import {describe, beforeAll, afterAll, it, expect, vi} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {Api, getClient} from "@lodestar/api/beacon";
@@ -10,6 +10,8 @@ import {BeaconNode} from "../../../../../../src/node/nodejs.js";
 import {getAndInitDevValidators} from "../../../../../utils/node/validator.js";
 
 describe("beacon node api", function () {
+  vi.setConfig({testTimeout: 60_000});
+
   const restPort = 9596;
   const config = createBeaconConfig(chainConfigDef, Buffer.alloc(32, 0xaa));
   const validatorCount = 8;
@@ -62,8 +64,6 @@ describe("beacon node api", function () {
       expect(res.response.data.elOffline).toEqual(false);
     });
 
-    // To make the code review easy for code block below
-    /* prettier-ignore */
     it("should return 'el_offline' as 'true' when EL not available", async () => {
       const portElOffline = 9597;
       const bnElOffline = await getDevBeaconNode({
@@ -109,8 +109,7 @@ describe("beacon node api", function () {
 
       await Promise.all(validators.map((v) => v.close()));
       await bnElOffline.close();
-    },
-    {timeout: 60_000});
+    });
   });
 
   describe("getHealth", () => {

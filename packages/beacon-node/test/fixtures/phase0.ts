@@ -20,7 +20,7 @@ export function generateIndexedAttestations(
 
     for (let committeeIndex = 0; committeeIndex < committeeCount; committeeIndex++) {
       result.push({
-        attestingIndices: state.epochCtx.getBeaconCommittee(slot, committeeIndex),
+        attestingIndices: Array.from(state.epochCtx.getBeaconCommittee(slot, committeeIndex)),
         data: {
           slot: slot,
           index: committeeIndex,

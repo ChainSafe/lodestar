@@ -80,6 +80,7 @@ module.exports = {
     "@typescript-eslint/no-unsafe-call": "error",
     "@typescript-eslint/no-unsafe-member-access": "error",
     "@typescript-eslint/no-unsafe-return": "error",
+    "@typescript-eslint/no-unused-expressions": "error",
     "@typescript-eslint/no-unused-vars": ["error", {varsIgnorePattern: "^_", argsIgnorePattern: "^_"}],
     "@typescript-eslint/no-use-before-define": "off",
     "@typescript-eslint/restrict-template-expressions": [
@@ -133,6 +134,13 @@ module.exports = {
     "no-console": "error",
     "no-loss-of-precision": "error",
     "no-prototype-builtins": 0,
+    "no-restricted-globals": [
+      "error",
+      {
+        name: "fetch",
+        message: "Please use 'fetch' from '@lodestar/api' instead.",
+      },
+    ],
     "no-restricted-imports": [
       "error",
       {
@@ -207,6 +215,13 @@ module.exports = {
         "import/no-extraneous-dependencies": "off",
         // Turned off as it floods log with warnings. Underlying issue is not critical so switching off is acceptable
         "import/no-named-as-default-member": "off",
+      },
+    },
+    {
+      files: ["**/perf/**/*.ts"],
+      rules: {
+        // A lot of benchmarks just need to execute expressions without using the result
+        "@typescript-eslint/no-unused-expressions": "off",
       },
     },
     {

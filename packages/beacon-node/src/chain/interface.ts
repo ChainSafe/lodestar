@@ -52,6 +52,8 @@ import {AssembledBlockType, BlockAttributes, BlockType} from "./produceBlock/pro
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {SeenGossipBlockInput} from "./seenCache/index.js";
 import {ShufflingCache} from "./shufflingCache.js";
+import {BlockRewards} from "./rewards/blockRewards.js";
+import {SyncCommitteeRewards} from "./rewards/syncCommitteeRewards.js";
 
 export {BlockType, type AssembledBlockType};
 export {type ProposerPreparationData};
@@ -198,6 +200,12 @@ export interface IBeaconChain {
 
   regenCanAcceptWork(): boolean;
   blsThreadPoolCanAcceptWork(): boolean;
+
+  getBlockRewards(blockRef: allForks.FullOrBlindedBeaconBlock): Promise<BlockRewards>;
+  getSyncCommitteeRewards(
+    blockRef: allForks.FullOrBlindedBeaconBlock,
+    validatorIds?: (ValidatorIndex | string)[]
+  ): Promise<SyncCommitteeRewards>;
 }
 
 export type SSZObjectType =

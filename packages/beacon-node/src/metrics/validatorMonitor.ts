@@ -340,9 +340,9 @@ export function createValidatorMonitor(
             ? // altair, attestation is not missed
               attestationMinBlockInclusionDistance
             : summary.inclusionDistance
-            ? // phase0, this is from the state transition
-              summary.inclusionDistance
-            : null;
+              ? // phase0, this is from the state transition
+                summary.inclusionDistance
+              : null;
 
         if (inclusionDistance !== null) {
           metrics.validatorMonitor.prevEpochOnChainInclusionDistance.observe(inclusionDistance);

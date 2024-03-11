@@ -33,7 +33,7 @@ import {shell} from "./shell.js";
 /* eslint-disable no-console, @typescript-eslint/naming-convention */
 
 const jwtSecretHex = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
-const retryAttempts = defaultExecutionEngineHttpOpts.retryAttempts;
+const retries = defaultExecutionEngineHttpOpts.retries;
 const retryDelay = defaultExecutionEngineHttpOpts.retryDelay;
 
 describe("executionEngine / ExecutionEngineHttp", function () {
@@ -82,7 +82,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
     //const controller = new AbortController();
     const executionEngine = initializeExecutionEngine(
-      {mode: "http", urls: [engineRpcUrl], jwtSecretHex, retryAttempts, retryDelay},
+      {mode: "http", urls: [engineRpcUrl], jwtSecretHex, retries, retryDelay},
       {signal: controller.signal, logger: testLogger("executionEngine")}
     );
 

@@ -17,6 +17,7 @@ export enum NetworkEvent {
   // TODO remove this event, this is not a network-level concern, rather a chain / sync concern
   unknownBlockParent = "unknownBlockParent",
   unknownBlock = "unknownBlock",
+  unknownBlockInput = "unknownBlockInput",
 
   // Network processor events
   /** (Network -> App) A gossip message is ready for validation */
@@ -31,6 +32,7 @@ export type NetworkEventData = {
   [NetworkEvent.reqRespRequest]: {request: RequestTypedContainer; peer: PeerId};
   [NetworkEvent.unknownBlockParent]: {blockInput: BlockInput; peer: PeerIdStr};
   [NetworkEvent.unknownBlock]: {rootHex: RootHex; peer?: PeerIdStr};
+  [NetworkEvent.unknownBlockInput]: {blockInput: BlockInput; peer?: PeerIdStr};
   [NetworkEvent.pendingGossipsubMessage]: PendingGossipsubMessage;
   [NetworkEvent.gossipMessageValidationResult]: {
     msgId: string;
@@ -45,6 +47,7 @@ export const networkEventDirection: Record<NetworkEvent, EventDirection> = {
   [NetworkEvent.reqRespRequest]: EventDirection.none, // Only used internally in NetworkCore
   [NetworkEvent.unknownBlockParent]: EventDirection.workerToMain,
   [NetworkEvent.unknownBlock]: EventDirection.workerToMain,
+  [NetworkEvent.unknownBlockInput]: EventDirection.workerToMain,
   [NetworkEvent.pendingGossipsubMessage]: EventDirection.workerToMain,
   [NetworkEvent.gossipMessageValidationResult]: EventDirection.mainToWorker,
 };

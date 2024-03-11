@@ -82,23 +82,17 @@ enum ContentType {
   json = "application/json",
 }
 
-export type ParseOpenApiSpecOpts = {
-  routesDropOneOf?: string[];
-};
-
-export function parseOpenApiSpec(openApiJson: OpenApiJson, opts?: ParseOpenApiSpecOpts): Map<OperationId, RouteSpec> {
+export function parseOpenApiSpec(openApiJson: OpenApiJson): Map<OperationId, RouteSpec> {
   const routes = new Map<OperationId, RouteSpec>();
 
   for (const [routeUrl, routesByMethod] of Object.entries(openApiJson.paths)) {
     for (const [httpMethod, routeDefinition] of Object.entries(routesByMethod)) {
       const responseOkSchema = routeDefinition.responses[StatusCode.ok]?.content?.[ContentType.json]?.schema;
 
-      const dropOneOf = opts?.routesDropOneOf?.includes(routeDefinition.operationId);
-
       // Force all properties to have required, else ajv won't validate missing properties
       if (responseOkSchema) {
         try {
-          preprocessSchema(responseOkSchema, {dropOneOf});
+          preprocessSchema(responseOkSchema);
         } catch (e) {
           // eslint-disable-next-line no-console
           console.log(responseOkSchema);
@@ -107,7 +101,7 @@ export function parseOpenApiSpec(openApiJson: OpenApiJson, opts?: ParseOpenApiSp
       }
 
       const requestSchema = buildReqSchema(routeDefinition);
-      preprocessSchema(requestSchema, {dropOneOf});
+      preprocessSchema(requestSchema);
 
       routes.set(routeDefinition.operationId, {
         url: routeUrl,
@@ -121,7 +115,7 @@ export function parseOpenApiSpec(openApiJson: OpenApiJson, opts?: ParseOpenApiSp
   return routes;
 }
 
-function preprocessSchema(schema: JsonSchema, opts?: {dropOneOf?: boolean}): void {
+function preprocessSchema(schema: JsonSchema): void {
   // Require all properties
   applyRecursively(schema, (obj) => {
     if (obj.type === "object" && obj.properties && !obj.required) {
@@ -140,16 +134,6 @@ function preprocessSchema(schema: JsonSchema, opts?: {dropOneOf?: boolean}): voi
       delete obj.required;
     }
   });
-
-  if (opts?.dropOneOf) {
-    // Pick single oneOf, AJV has trouble validating against blocks and states
-    applyRecursively(schema, (obj) => {
-      if (obj.oneOf) {
-        // splice(1) = mutate array in place to drop all items after index 1 (included)
-        obj.oneOf.splice(1);
-      }
-    });
-  }
 
   // Remove non-intersecting allOf enum
   applyRecursively(schema, (obj) => {

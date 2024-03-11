@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
-import {CliCommandOptions, extractJwtHexSecret} from "../../util/index.js";
+import {CliCommandOptions} from "@lodestar/utils";
+import {extractJwtHexSecret} from "../../util/index.js";
 import {ExecutionEngineArgs} from "./execution.js";
 
 export type Eth1Args = {

@@ -7,11 +7,12 @@ import {InsertOutcome} from "../../chain/opPools/types.js";
 import {RegenCaller, RegenFnName} from "../../chain/regen/interface.js";
 import {ReprocessStatus} from "../../chain/reprocess.js";
 import {RejectReason} from "../../chain/seenCache/seenAttestationData.js";
+import {BlockInputAvailabilitySource} from "../../chain/seenCache/seenGossipBlockInput.js";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {GossipType} from "../../network/index.js";
 import {CannotAcceptWorkReason, ReprocessRejectReason} from "../../network/processor/index.js";
 import {BackfillSyncMethod} from "../../sync/backfill/backfill.js";
-import {PendingBlockType} from "../../sync/interface.js";
+import {PendingBlockType} from "../../sync/index.js";
 import {PeerSyncType, RangeSyncType} from "../../sync/utils/remoteSyncType.js";
 import {LodestarMetadata} from "../options.js";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
@@ -291,6 +292,11 @@ export function createLodestarMetrics(
 
     // Beacon state transition metrics
 
+    epochTransitionByCaller: register.gauge<{caller: RegenCaller}>({
+      name: "lodestar_epoch_transition_by_caller_total",
+      help: "Total count of epoch transition by caller",
+      labelNames: ["caller"],
+    }),
     epochTransitionTime: register.histogram({
       name: "lodestar_stfn_epoch_transition_seconds",
       help: "Time to process a single epoch transition in seconds",
@@ -586,6 +592,11 @@ export function createLodestarMetrics(
         name: "lodestar_sync_unknown_block_elapsed_time_till_received",
         help: "Time elapsed between block slot time and the time block received via unknown block sync",
         buckets: [0.5, 1, 2, 4, 6, 12],
+      }),
+      resolveAvailabilitySource: register.gauge<{source: BlockInputAvailabilitySource}>({
+        name: "lodestar_sync_blockinput_availability_source",
+        help: "Total number of blocks whose data availability was resolved",
+        labelNames: ["source"],
       }),
     },
 

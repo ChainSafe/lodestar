@@ -1,4 +1,4 @@
-import {CliCommand} from "../../../util/index.js";
+import {CliCommand} from "@lodestar/utils";
 import {AccountValidatorArgs} from "../options.js";
 import {ISlashingProtectionArgs, slashingProtectionOptions} from "./options.js";
 import {importCmd} from "./import.js";

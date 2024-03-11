@@ -29,7 +29,7 @@
 ## Prerequisites
 
 - :gear: [NodeJS](https://nodejs.org/) (LTS)
-- :toolbox: [Yarn](https://yarnpkg.com/)
+- :toolbox: [Yarn](https://classic.yarnpkg.com/lang/en/)
 
 ###### Developer Quickstart:
 

@@ -4,6 +4,7 @@ import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {routes} from "@lodestar/api";
 import {Metrics} from "../../metrics/index.js";
 import {LinkedList} from "../../util/array.js";
+import {StateCloneOpts} from "../regen/interface.js";
 import {MapTracker} from "./mapMetrics.js";
 import {BlockStateCache} from "./types.js";
 
@@ -70,7 +71,7 @@ export class FIFOBlockStateCache implements BlockStateCache {
   /**
    * Get a state from this cache given a state root hex.
    */
-  get(rootHex: RootHex): CachedBeaconStateAllForks | null {
+  get(rootHex: RootHex, opts?: StateCloneOpts): CachedBeaconStateAllForks | null {
     this.metrics?.lookups.inc();
     const item = this.cache.get(rootHex);
     if (!item) {
@@ -80,7 +81,7 @@ export class FIFOBlockStateCache implements BlockStateCache {
     this.metrics?.hits.inc();
     this.metrics?.stateClonedCount.observe(item.clonedCount);
 
-    return item;
+    return item.clone(opts?.dontTransferCache);
   }
 
   /**

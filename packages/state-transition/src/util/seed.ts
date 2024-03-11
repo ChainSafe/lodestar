@@ -21,7 +21,7 @@ import {computeEpochAtSlot} from "./epoch.js";
  */
 export function computeProposers(
   epochSeed: Uint8Array,
-  shuffling: {epoch: Epoch; activeIndices: ValidatorIndex[]},
+  shuffling: {epoch: Epoch; activeIndices: ArrayLike<ValidatorIndex>},
   effectiveBalanceIncrements: EffectiveBalanceIncrements
 ): number[] {
   const startSlot = computeStartSlotAtEpoch(shuffling.epoch);
@@ -45,7 +45,7 @@ export function computeProposers(
  */
 export function computeProposerIndex(
   effectiveBalanceIncrements: EffectiveBalanceIncrements,
-  indices: ValidatorIndex[],
+  indices: ArrayLike<ValidatorIndex>,
   seed: Uint8Array
 ): ValidatorIndex {
   if (indices.length === 0) {
@@ -91,7 +91,7 @@ export function computeProposerIndex(
  */
 export function getNextSyncCommitteeIndices(
   state: BeaconStateAllForks,
-  activeValidatorIndices: ValidatorIndex[],
+  activeValidatorIndices: ArrayLike<ValidatorIndex>,
   effectiveBalanceIncrements: EffectiveBalanceIncrements
 ): ValidatorIndex[] {
   // TODO: Bechmark if it's necessary to inline outside of this function
