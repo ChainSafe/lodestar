@@ -68,9 +68,9 @@ export class ApiResponse<E extends Endpoint> extends Response {
 
   async meta(): Promise<E["meta"]> {
     if (!this._meta) {
-      const rawBody = await this.rawBody();
-      switch (rawBody.type) {
+      switch (this.wireFormat()) {
         case WireFormat.json: {
+          const rawBody = await this.rawBody();
           const metaJson = this.definition.resp.transform
             ? this.definition.resp.transform.fromResponse(rawBody.value).meta
             : rawBody.value;
