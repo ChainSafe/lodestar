@@ -125,25 +125,28 @@ export function createFastifyHandler<E extends Endpoint>(
     let wireResponse;
     switch (responseWireFormat) {
       case WireFormat.json: {
-        void resp.header("content-type", "application/json");
+        const metaHeaders = definition.resp.meta.toHeadersObject(response?.meta);
+        metaHeaders["content-type"] = "application/json";
+        void resp.headers(metaHeaders);
         const data =
           response?.data instanceof Uint8Array
             ? definition.resp.data.toJson(definition.resp.data.deserialize(response.data, response.meta), response.meta)
             : definition.resp.data.toJson(response?.data, response?.meta);
-        const meta = definition.resp.meta.toJson(response?.meta);
+        const metaJson = definition.resp.meta.toJson(response?.meta);
         if (definition.resp.transform) {
-          return definition.resp.transform.toResponse(data, meta);
+          wireResponse = definition.resp.transform.toResponse(data, metaJson);
+        } else {
+          wireResponse = {
+            data,
+            ...(metaJson as object),
+          };
         }
-        wireResponse = {
-          data,
-          ...(meta as object),
-        };
         break;
       }
       case WireFormat.ssz: {
-        const meta = definition.resp.meta.toHeadersObject(response?.meta);
-        meta["content-type"] = "application/octet-stream";
-        void resp.headers(meta);
+        const metaHeaders = definition.resp.meta.toHeadersObject(response?.meta);
+        metaHeaders["content-type"] = "application/octet-stream";
+        void resp.headers(metaHeaders);
         const data =
           response?.data instanceof Uint8Array
             ? response.data
