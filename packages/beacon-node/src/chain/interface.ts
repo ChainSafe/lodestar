@@ -206,7 +206,7 @@ export interface IBeaconChain {
   getAttestationsRewards(
     epoch: Epoch,
     validatorIds?: (ValidatorIndex | string)[]
-  ): Promise<{data: AttestationsRewards, executionOptimistic: boolean}>;
+  ): Promise<{data: AttestationsRewards; executionOptimistic: boolean}>;
   getSyncCommitteeRewards(
     blockRef: allForks.FullOrBlindedBeaconBlock,
     validatorIds?: (ValidatorIndex | string)[]
