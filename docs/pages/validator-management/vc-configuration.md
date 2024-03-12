@@ -1,8 +1,10 @@
+---
+title: Configuration
+---
+
 # Validator Configuration
 
 The following instructions are for stakers utilizing the Lodestar validator client.
-
-[TOC]
 
 ## Setup your validator
 
@@ -14,10 +16,9 @@ To create a keystore, we recommend using the official [Staking Deposit CLI](http
 
 Alternatively, for a graphical user interface, you can use the [Stakehouse Wagyu Key Generator](https://wagyu.gg/) developed by members of the EthStaker community.
 
-<!-- prettier-ignore-start -->
-!!! warning
-    These tools will generate keystore files for staking validators as well as the important mnemonic. This mnemonic must be handled and stored securely.
-<!-- prettier-ignore-end -->
+:::warning
+These tools will generate keystore files for staking validators as well as the important mnemonic. This mnemonic must be handled and stored securely.
+:::
 
 ### Import a validator keystore to Lodestar
 
@@ -43,12 +44,11 @@ _Plaintext passphrase file import_
 ./lodestar validator import --importKeystores ./validator_keys --importKeystoresPassword ./password.txt
 ```
 
-<!-- prettier-ignore-start -->
-!!! info
-    The interactive passphrase import method will prompt every keystore in the `validator_keys` folder for import and will ask for the individual password for each keystore. **This method will allow you to import multiple keystores with different passwords.**
+:::info
+The interactive passphrase import method will prompt every keystore in the `validator_keys` folder for import and will ask for the individual password for each keystore. **This method will allow you to import multiple keystores with different passwords.**
 
-    The plaintext passphrase file import method will allow you to import all keystores in the `validator_keys` folder encrypted with the same password contained in `password.txt` for efficiency. 
-<!-- prettier-ignore-end -->
+The plaintext passphrase file import method will allow you to import all keystores in the `validator_keys` folder encrypted with the same password contained in `password.txt` for efficiency. 
+:::
 
 Once imported with either method, these keystores will be automatically loaded when you start the validator. To list the imported keystores, use the `validator list` command.
 
@@ -62,10 +62,9 @@ To import keys when you start the validator specify the `--importKeystores` and 
 ./lodestar validator --importKeystores ./validator_keys --importKeystoresPassword ./password.txt
 ```
 
-<!-- prettier-ignore-start -->
-!!! warning
-    If you import keys using `--importKeystores` at runtime (Option 2) any keys loaded to the keystores folder from Option 1 will be ignored.
-<!-- prettier-ignore-end -->
+:::warning
+If you import keys using `--importKeystores` at runtime (Option 2) any keys loaded to the keystores folder from Option 1 will be ignored.
+:::
 
 ### Configuring the fee recipient address
 
@@ -79,7 +78,7 @@ You may choose to use the `--strictFeeRecipientCheck` flag to enable a strict ch
 
 If you are running a beacon node with connected builder relays, you may use these validator configurations to signal which block (builder vs. local execution) the beacon node should produce.
 
-With produceBlockV3 (enabled automatically after the Deneb hard fork), the `--builder.boostFactor` is a percentage multiplier the block producing beacon node must apply to boost (>100) or dampen (<100) builder block value for selection against execution block. The multiplier is ignored if `--builder.selection` is set to anything other than `maxprofit`. Even though this is set on the validator client, the calculation is requested and applied on the beacon node itself. For more information, see the [produceBlockV3 Beacon API](https://ethereum.github.io/beacon-APIs/#/ValidatorRequiredApi/produceBlockV3).
+With produceBlockV3 (enabled automatically after the Deneb hard fork), the `--builder.boostFactor` is a percentage multiplier the block producing beacon node must apply to boost (&gt;100) or dampen (&lt;100) builder block value for selection against execution block. The multiplier is ignored if `--builder.selection` is set to anything other than `maxprofit`. Even though this is set on the validator client, the calculation is requested and applied on the beacon node itself. For more information, see the [produceBlockV3 Beacon API](https://ethereum.github.io/beacon-APIs/#/ValidatorRequiredApi/produceBlockV3).
 
 With Lodestar's `--builder.selection` validator options, you can select:
 

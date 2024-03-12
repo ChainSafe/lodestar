@@ -4,7 +4,7 @@ Lodestar has the ability to send client stats to a remote service for collection
 At the moment, the main service offering remote monitoring is [beaconcha.in](https://beaconcha.in/).
 
 Instructions for setting up client monitoring with _beaconcha.in_ can be found in their docs about
-[Mobile App <> Node Monitoring](https://kb.beaconcha.in/beaconcha.in-explorer/mobile-app-less-than-greater-than-beacon-node)
+[Mobile App &lt&gt; Node Monitoring](https://kb.beaconcha.in/beaconcha.in-explorer/mobile-app-less-than-greater-than-beacon-node)
 and in your [account settings](https://beaconcha.in/user/settings#app).
 
 ## Configuration
@@ -22,15 +22,14 @@ Client monitoring can be enabled by setting the `--monitoring.endpoint` flag to 
 In case of _beaconcha.in_, the API key can be found in your [account settings](https://beaconcha.in/user/settings#api).
 Setting the machine is optional but it is especially useful if you are monitoring multiple nodes.
 
-<!-- prettier-ignore-start -->
-!!! note
-    When sending data to a remote service you should be conscious about security:
+:::note
+When sending data to a remote service you should be conscious about security:
 
-    - Only use a service that you trust as this will send information which may identify you
-      and associate your validators, IP address and other personal information.
-    - Always use a HTTPS connection (i.e. a URL starting with `https://`) to prevent the traffic
-      from being intercepted in transit and leaking information.
-<!-- prettier-ignore-end -->
+- Only use a service that you trust as this will send information which may identify you
+  and associate your validators, IP address and other personal information.
+- Always use a HTTPS connection (i.e. a URL starting with `https://`) to prevent the traffic
+  from being intercepted in transit and leaking information.
+:::
 
 More details about the data sent to the remote service can be found in the [specification](https://docs.google.com/document/d/1qPWAVRjPCENlyAjUBwGkHMvz9qLdd_6u9DPZcNxDBpc).
 

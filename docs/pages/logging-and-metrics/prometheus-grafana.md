@@ -11,10 +11,9 @@ Unzip the downloaded .zip file and run Prometheus from its installed location wi
 ./prometheus --config.file=$dataDir/prometheus.yml
 ```
 
-<!-- prettier-ignore-start -->
-!!! info
-    8008 is also the default port specified in the `prometheus.yml` in the lodestar repository
-<!-- prettier-ignore-end -->
+:::info
+8008 is also the default port specified in the `prometheus.yml` in the lodestar repository
+:::
 
 Then run the Lodestar beacon node with
 

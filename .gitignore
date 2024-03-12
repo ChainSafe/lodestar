@@ -77,3 +77,7 @@ packages/cli/.git-data.json
 dictionary.dic
 
 temp/
+
+# Docusaurus
+.docusaurus
+build/

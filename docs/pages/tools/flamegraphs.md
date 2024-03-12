@@ -1,3 +1,7 @@
+---
+title: Flame Graphs
+---
+
 # Generating Flamegraphs for a Running Node Service on Linux
 
 This guide assumes a running instance of Lodestar and will walk through how to generate a flamegraph for the process while running on Linux. While it is possible to run Lodestar in a number of ways, for performance profiling it is recommended to not use Dockerized implementations. It is best to run Lodestar as a service on a Linux machine. Follow the Lodestar docs to get the service installed and running. Then come back here when you are ready to generate the flamegraph.
@@ -130,11 +134,11 @@ sed -r -e "/( __libc_start| uv_| LazyCompile | v8::internal::| node::| Builtins_
 
 ### List of Web References
 
-- <https://www.brendangregg.com/flamegraphs.html>
-- <https://nodejs.org/en/docs/guides/diagnostics-flamegraph>
-- <https://netflixtechblog.com/netflix-flamescope-a57ca19d47bb>
-- <https://jaanhio.me/blog/nodejs-flamegraph-analysis/> (this was a great one about filtering methodology)
-- <https://medium.com/voodoo-engineering/node-js-and-cpu-profiling-on-production-in-real-time-without-downtime-d6e62af173e2>
+- https://www.brendangregg.com/flamegraphs.html
+- https://nodejs.org/en/docs/guides/diagnostics-flamegraph
+- https://netflixtechblog.com/netflix-flamescope-a57ca19d47bb
+- [https://jaanhio.me/blog/nodejs-flamegraph-analysis/](this was a great one about filtering methodology)
+- https://medium.com/voodoo-engineering/node-js-and-cpu-profiling-on-production-in-real-time-without-downtime-d6e62af173e2
 
 ### Visualization Tools
 
@@ -142,13 +146,13 @@ sed -r -e "/( __libc_start| uv_| LazyCompile | v8::internal::| node::| Builtins_
 
 ### Collecting on Linux
 
-- <https://www.brendangregg.com/perf.html>
-- <https://www.brendangregg.com/linuxperf.html>
-- <https://www.brendangregg.com/blog/2014-09-17/node-flame-graphs-on-linux.html>
-- <https://perf.wiki.kernel.org/index.php/Main_Page>
+- https://www.brendangregg.com/perf.html
+- https://www.brendangregg.com/linuxperf.html
+- https://www.brendangregg.com/blog/2014-09-17/node-flame-graphs-on-linux.html
+- https://perf.wiki.kernel.org/index.php/Main_Page
 
 ### Collecting on MacOS
 
-- <https://gist.github.com/zeusdeux/aac6f8500917319213c5>
-- <https://gist.github.com/loderunner/36724cc9ee8db66db305>
-- <https://keith.github.io/xcode-man-pages/xctrace.1.html>
+- https://gist.github.com/zeusdeux/aac6f8500917319213c5
+- https://gist.github.com/loderunner/36724cc9ee8db66db305
+- https://keith.github.io/xcode-man-pages/xctrace.1.html

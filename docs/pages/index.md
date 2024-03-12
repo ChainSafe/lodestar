@@ -1,4 +1,8 @@
-![lodestar logo](assets/lodestar_icon_text_black_stroke.png)
+---
+title: Home
+---
+
+![lodestar logo](../../assets/lodestar_icon_text_black_stroke.png)
 
 ## Welcome to the Lodestar documentation
 
