@@ -2,7 +2,7 @@ import {Logger} from "@lodestar/utils";
 import {RootHex, Slot, phase0} from "@lodestar/types";
 import {BeaconConfig} from "@lodestar/config";
 import {routes} from "@lodestar/api";
-import {BlockInput, BlockInputType} from "../chain/blocks/types.js";
+import {BlockInput, BlockInputType, NullBlockInput} from "../chain/blocks/types.js";
 import {INetwork} from "../network/index.js";
 import {IBeaconChain} from "../chain/index.js";
 import {Metrics} from "../metrics/index.js";
@@ -86,7 +86,7 @@ export type UnknownBlock = PendingBlockCommon & {
 export type UnknownBlockInput = PendingBlockCommon & {
   status: PendingBlockStatus.pending | PendingBlockStatus.fetching;
   parentBlockRootHex: null;
-  blockInput: BlockInput & {type: BlockInputType.blobsPromise};
+  blockInput: (BlockInput & {type: BlockInputType.blobsPromise}) | NullBlockInput;
 };
 
 export type DownloadedBlock = PendingBlockCommon & {

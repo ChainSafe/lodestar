@@ -7,7 +7,7 @@ import {sleep} from "@lodestar/utils";
 import {INetwork, NetworkEvent, NetworkEventData, PeerAction} from "../network/index.js";
 import {PeerIdStr} from "../util/peerId.js";
 import {IBeaconChain} from "../chain/index.js";
-import {BlockInput, BlockInputType} from "../chain/blocks/types.js";
+import {BlockInput, BlockInputType, NullBlockInput} from "../chain/blocks/types.js";
 import {Metrics} from "../metrics/index.js";
 import {shuffle} from "../util/shuffle.js";
 import {byteArrayEquals} from "../util/bytes.js";
@@ -165,16 +165,22 @@ export class UnknownBlockSync {
     this.addUnknownBlock(parentBlockRootHex, peerIdStr);
   }
 
-  private addUnknownBlock(blockInputOrRootHex: RootHex | BlockInput, peerIdStr?: string): void {
+  private addUnknownBlock(blockInputOrRootHex: RootHex | BlockInput | NullBlockInput, peerIdStr?: string): void {
     let blockRootHex;
-    let blockInput: BlockInput | null;
+    let blockInput: BlockInput | NullBlockInput | null;
 
     if (typeof blockInputOrRootHex === "string") {
       blockRootHex = blockInputOrRootHex;
       blockInput = null;
     } else {
-      const {block} = blockInputOrRootHex;
-      blockRootHex = toHexString(this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));
+      if (blockInputOrRootHex.block !== null) {
+        const {block} = blockInputOrRootHex;
+        blockRootHex = toHexString(
+          this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)
+        );
+      } else {
+        blockRootHex = blockInputOrRootHex.blockRootHex;
+      }
       blockInput = blockInputOrRootHex;
     }
 
@@ -183,22 +189,28 @@ export class UnknownBlockSync {
       pendingBlock = {
         blockRootHex,
         parentBlockRootHex: null,
-        blockInput: blockInput?.type === BlockInputType.blobsPromise ? blockInput : null,
+        blockInput,
+        // blockInput: blockInput?.type === BlockInputType.blobsPromise ? blockInput : null,
         peerIdStrs: new Set(),
         status: PendingBlockStatus.pending,
         downloadAttempts: 0,
       } as PendingBlock;
       this.pendingBlocks.set(blockRootHex, pendingBlock);
 
-      if (pendingBlock.blockInput?.type === BlockInputType.blobsPromise) {
+      if (pendingBlock.blockInput?.block === null) {
+        this.logger.verbose("Added blockInput with unknown block to pendingBlocks", {
+          root: pendingBlock.blockInput.blockRootHex,
+          slot: "unknown",
+        });
+      } else if (pendingBlock.blockInput?.type === BlockInputType.blobsPromise) {
         this.logger.verbose("Added blockInput with unknown blobs to pendingBlocks", {
           root: blockRootHex,
-          slot: blockInput?.block.message.slot ?? "unknown",
+          slot: blockInput?.block?.message.slot ?? "unknown",
         });
       } else {
         this.logger.verbose("Added unknown block to pendingBlocks", {
           root: blockRootHex,
-          slot: blockInput?.block.message.slot ?? "unknown",
+          slot: blockInput?.block?.message.slot ?? "unknown",
         });
       }
     }
@@ -267,18 +279,31 @@ export class UnknownBlockSync {
       return;
     }
 
-    if (block.blockInput?.type === BlockInputType.blobsPromise) {
+    let unknownBlockType;
+    if (block.blockInput === null) {
+      unknownBlockType = "UnknownBlock";
+      this.logger.verbose("Downloading unknown block", {
+        root: block.blockRootHex,
+        pendingBlocks: this.pendingBlocks.size,
+        slot: "unknown",
+        unknownBlockType,
+      });
+    } else if (block.blockInput.block === null) {
+      unknownBlockType = "NullBlockInput";
+      this.logger.verbose("Downloading unknown block with known blobs", {
+        root: block.blockInput.blockRootHex,
+        pendingBlocks: this.pendingBlocks.size,
+        unknownBlockType,
+      });
+    } else {
+      // blockInput with blobsPromise
+      unknownBlockType = "UnknownBlobs";
       this.logger.verbose("Downloading unknown blockInput", {
         root: block.blockRootHex,
         pendingBlocks: this.pendingBlocks.size,
         blockInputType: block.blockInput.type,
-        slot: block.blockInput?.block.message.slot ?? "unknown",
-      });
-    } else {
-      this.logger.verbose("Downloading unknown block", {
-        root: block.blockRootHex,
-        pendingBlocks: this.pendingBlocks.size,
-        slot: block.blockInput?.block.message.slot ?? "unknown",
+        slot: block.blockInput?.block?.message.slot ?? "unknown",
+        unknownBlockType,
       });
     }
 
@@ -309,22 +334,13 @@ export class UnknownBlockSync {
       this.metrics?.syncUnknownBlock.elapsedTimeTillReceived.observe(delaySec);
 
       const parentInForkchoice = this.chain.forkChoice.hasBlock(blockInput.block.message.parentRoot);
-
-      if (block.blockInput.type === BlockInputType.blobsPromise) {
-        this.logger.verbose("Downloaded unknown blobs", {
-          root: block.blockRootHex,
-          pendingBlocks: this.pendingBlocks.size,
-          parentInForkchoice,
-          blockInputType: blockInput.type,
-        });
-      } else {
-        this.logger.verbose("Downloaded unknown block", {
-          root: block.blockRootHex,
-          pendingBlocks: this.pendingBlocks.size,
-          parentInForkchoice,
-          blockInputType: blockInput.type,
-        });
-      }
+      this.logger.verbose("Downloaded unknown block", {
+        root: block.blockRootHex,
+        pendingBlocks: this.pendingBlocks.size,
+        parentInForkchoice,
+        blockInputType: blockInput.type,
+        unknownBlockType,
+      });
 
       if (parentInForkchoice) {
         // Bingo! Process block. Add to pending blocks anyway for recycle the cache that prevents duplicate processing
@@ -342,6 +358,7 @@ export class UnknownBlockSync {
           finalizedSlot,
           blockSlot,
           parentRoot: toHexString(blockRoot),
+          unknownBlockType,
         });
         this.removeAndDownscoreAllDescendants(block);
       } else {
@@ -352,7 +369,7 @@ export class UnknownBlockSync {
       block.status = PendingBlockStatus.pending;
       // parentSlot > finalizedSlot, continue downloading parent of parent
       block.downloadAttempts++;
-      const errorData = {root: block.blockRootHex, attempts: block.downloadAttempts};
+      const errorData = {root: block.blockRootHex, attempts: block.downloadAttempts, unknownBlockType};
       if (block.downloadAttempts > MAX_ATTEMPTS_PER_BLOCK) {
         // Give up on this block and assume it does not exist, penalizing all peers as if it was a bad block
         this.logger.debug("Ignoring unknown block root after many failed downloads", errorData, res.err);
@@ -510,22 +527,31 @@ export class UnknownBlockSync {
    * along with the blobs (i.e. only some blobs are available)
    */
   private async fetchUnavailableBlockInput(
-    unavailableBlockInput: BlockInput,
+    unavailableBlockInput: BlockInput | NullBlockInput,
     connectedPeers: PeerIdStr[]
   ): Promise<{blockInput: BlockInput; peerIdStr: string}> {
-    if (unavailableBlockInput.type !== BlockInputType.blobsPromise) {
-      return {blockInput: unavailableBlockInput, peerIdStr: ""};
+    if (unavailableBlockInput.block !== null && unavailableBlockInput.type !== BlockInputType.blobsPromise) {
+      return {blockInput: unavailableBlockInput as BlockInput, peerIdStr: ""};
     }
 
     const shuffledPeers = shuffle(connectedPeers);
-    const unavailableBlock = unavailableBlockInput.block;
-    const blockRoot = this.config
-      .getForkTypes(unavailableBlock.message.slot)
-      .BeaconBlock.hashTreeRoot(unavailableBlock.message);
-    const blockRootHex = toHexString(blockRoot);
+    let blockRootHex;
+    let pendingBlobs;
+    let blobKzgCommitmentsLen;
+    let blockRoot;
 
-    const blobKzgCommitmentsLen = (unavailableBlock.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length;
-    const pendingBlobs = blobKzgCommitmentsLen - unavailableBlockInput.blobsCache.size;
+    if (unavailableBlockInput.block === null) {
+      blockRootHex = unavailableBlockInput.blockRootHex;
+      blockRoot = fromHexString(blockRootHex);
+    } else {
+      const unavailableBlock = unavailableBlockInput.block;
+      blockRoot = this.config
+        .getForkTypes(unavailableBlock.message.slot)
+        .BeaconBlock.hashTreeRoot(unavailableBlock.message);
+      blockRootHex = toHexString(blockRoot);
+      blobKzgCommitmentsLen = (unavailableBlock.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length;
+      pendingBlobs = blobKzgCommitmentsLen - unavailableBlockInput.blobsCache.size;
+    }
 
     let lastError: Error | null = null;
     for (let i = 0; i < MAX_ATTEMPTS_PER_BLOCK; i++) {
@@ -547,10 +573,15 @@ export class UnknownBlockSync {
         // Verify block root is correct
         const block = blockInput.block.message;
         const receivedBlockRoot = this.config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block);
+
         if (!byteArrayEquals(receivedBlockRoot, blockRoot)) {
           throw Error(`Wrong block received by peer, got ${toHexString(receivedBlockRoot)} expected ${blockRootHex}`);
         }
-        this.logger.debug("Fetched UnavailableBlockInput", {attempts: i, pendingBlobs, blobKzgCommitmentsLen});
+        if (unavailableBlockInput.block === null) {
+          this.logger.debug("Fetched  NullBlockInput", {attempts: i, blockRootHex});
+        } else {
+          this.logger.debug("Fetched UnavailableBlockInput", {attempts: i, pendingBlobs, blobKzgCommitmentsLen});
+        }
 
         return {blockInput, peerIdStr: peer};
       } catch (e) {

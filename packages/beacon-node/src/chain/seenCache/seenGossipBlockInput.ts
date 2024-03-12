@@ -6,6 +6,7 @@ import {BLOBSIDECAR_FIXED_SIZE, ForkSeq} from "@lodestar/params";
 
 import {
   BlockInput,
+  NullBlockInput,
   getBlockInput,
   BlockSource,
   BlockInputBlobs,
@@ -28,9 +29,12 @@ type BlockInputCacheType = {
   block?: allForks.SignedBeaconBlock;
   blockBytes?: Uint8Array | null;
   blobsCache: BlobsCache;
-  // promise and its callback cached for delayed resolution
+  // blobs promise and its callback cached for delayed resolution
   availabilityPromise: Promise<BlockInputBlobs>;
   resolveAvailability: (blobs: BlockInputBlobs) => void;
+  // block promise and its callback cached for delayed resolution
+  blockInputPromise: Promise<BlockInput>;
+  resolveBlock: (blockInput: BlockInput) => void;
 };
 
 const MAX_GOSSIPINPUT_CACHE = 5;
@@ -66,7 +70,10 @@ export class SeenGossipBlockInput {
         blockInput: BlockInput;
         blockInputMeta: {pending: GossipedInputType.blob | null; haveBlobs: number; expectedBlobs: number};
       }
-    | {blockInput: null; blockInputMeta: {pending: GossipedInputType.block; haveBlobs: number; expectedBlobs: null}} {
+    | {
+        blockInput: NullBlockInput;
+        blockInputMeta: {pending: GossipedInputType.block; haveBlobs: number; expectedBlobs: null};
+      } {
     let blockHex;
     let blockCache;
 
@@ -98,7 +105,15 @@ export class SeenGossipBlockInput {
       this.blockInputCache.set(blockHex, blockCache);
     }
 
-    const {block: signedBlock, blockBytes, blobsCache, availabilityPromise, resolveAvailability} = blockCache;
+    const {
+      block: signedBlock,
+      blockBytes,
+      blobsCache,
+      availabilityPromise,
+      resolveAvailability,
+      blockInputPromise,
+      resolveBlock,
+    } = blockCache;
 
     if (signedBlock !== undefined) {
       if (config.getForkSeq(signedBlock.message.slot) < ForkSeq.deneb) {
@@ -123,28 +138,34 @@ export class SeenGossipBlockInput {
         resolveAvailability(allBlobs);
         metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.GOSSIP});
         const {blobs, blobsBytes} = allBlobs;
+        const blockInput = getBlockInput.postDeneb(
+          config,
+          signedBlock,
+          BlockSource.gossip,
+          blobs,
+          blockBytes ?? null,
+          blobsBytes
+        );
+
+        resolveBlock(blockInput);
         return {
-          blockInput: getBlockInput.postDeneb(
-            config,
-            signedBlock,
-            BlockSource.gossip,
-            blobs,
-            blockBytes ?? null,
-            blobsBytes
-          ),
+          blockInput,
           blockInputMeta: {pending: null, haveBlobs: blobs.length, expectedBlobs: blobKzgCommitments.length},
         };
       } else {
+        const blockInput = getBlockInput.blobsPromise(
+          config,
+          signedBlock,
+          BlockSource.gossip,
+          blobsCache,
+          blockBytes ?? null,
+          availabilityPromise,
+          resolveAvailability
+        );
+
+        resolveBlock(blockInput);
         return {
-          blockInput: getBlockInput.blobsPromise(
-            config,
-            signedBlock,
-            BlockSource.gossip,
-            blobsCache,
-            blockBytes ?? null,
-            availabilityPromise,
-            resolveAvailability
-          ),
+          blockInput,
           blockInputMeta: {
             pending: GossipedInputType.blob,
             haveBlobs: blobsCache.size,
@@ -155,7 +176,14 @@ export class SeenGossipBlockInput {
     } else {
       // will need to wait for the block to showup
       return {
-        blockInput: null,
+        blockInput: {
+          block: null,
+          blockRootHex: blockHex,
+          blobsCache,
+          availabilityPromise,
+          resolveAvailability,
+          blockInputPromise,
+        },
         blockInputMeta: {pending: GossipedInputType.block, haveBlobs: blobsCache.size, expectedBlobs: null},
       };
     }
@@ -163,15 +191,21 @@ export class SeenGossipBlockInput {
 }
 
 function getEmptyBlockInputCacheEntry(): BlockInputCacheType {
-  // Capture both the promise and its callbacks.
+  // Capture both the promise and its callbacks for blockInput and final availability
   // It is not spec'ed but in tests in Firefox and NodeJS the promise constructor is run immediately
+  let resolveBlock: ((block: BlockInput) => void) | null = null;
+  const blockInputPromise = new Promise<BlockInput>((resolveCB) => {
+    resolveBlock = resolveCB;
+  });
+
   let resolveAvailability: ((blobs: BlockInputBlobs) => void) | null = null;
   const availabilityPromise = new Promise<BlockInputBlobs>((resolveCB) => {
     resolveAvailability = resolveCB;
   });
-  if (resolveAvailability === null) {
+
+  if (resolveAvailability === null || resolveBlock === null) {
     throw Error("Promise Constructor was not executed immediately");
   }
   const blobsCache = new Map();
-  return {availabilityPromise, resolveAvailability, blobsCache};
+  return {blockInputPromise, resolveBlock, availabilityPromise, resolveAvailability, blobsCache};
 }
