@@ -18,7 +18,7 @@ import {
   getActiveValidatorIndices,
   PubkeyIndexMap,
   newFilledArray,
-  createCachedBeaconState,
+  createFinalizedCachedBeaconState,
   computeCommitteeCount,
 } from "../../src/index.js";
 import {
@@ -125,7 +125,7 @@ export function generatePerfTestCachedStatePhase0(opts?: {goBackOneSlot: boolean
   if (!phase0CachedState23637) {
     const state = phase0State.clone();
     state.slot -= 1;
-    phase0CachedState23637 = createCachedBeaconState(state, {
+    phase0CachedState23637 = createFinalizedCachedBeaconState(state, {
       config: createBeaconConfig(config, state.genesisValidatorsRoot),
       finalizedPubkey2index,
       finalizedIndex2pubkey,
@@ -230,7 +230,7 @@ export function generatePerfTestCachedStateAltair(opts?: {
   if (!altairCachedState23637) {
     const state = origState.clone();
     state.slot -= 1;
-    altairCachedState23637 = createCachedBeaconState(state, {
+    altairCachedState23637 = createFinalizedCachedBeaconState(state, {
       config: createBeaconConfig(altairConfig, state.genesisValidatorsRoot),
       finalizedPubkey2index,
       finalizedIndex2pubkey,
@@ -431,7 +431,7 @@ export function generateTestCachedBeaconStateOnlyValidators({
     throw Error(`Wrong number of validators in the state: ${state.validators.length} !== ${vc}`);
   }
 
-  return createCachedBeaconState(
+  return createFinalizedCachedBeaconState(
     state,
     {
       config: createBeaconConfig(config, state.genesisValidatorsRoot),

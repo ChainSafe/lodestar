@@ -14,7 +14,7 @@ import {BeaconDb} from "../../../src/db/index.js";
 import {generateState} from "../../utils/state.js";
 import {Eth1Provider} from "../../../src/eth1/provider/eth1Provider.js";
 import {getGoerliRpcUrl} from "../../testParams.js";
-import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
+import {createFinalizedCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 
 const dbLocation = "./.__testdb";
 
@@ -112,7 +112,7 @@ describe.skip("eth1 / Eth1Provider", function () {
       config
     );
 
-    const state = createCachedBeaconStateTest(tbState, config);
+    const state = createFinalizedCachedBeaconStateTest(tbState, config);
 
     const result = await eth1ForBlockProduction.getEth1DataAndDeposits(state);
     expect(result.eth1Data).toEqual(latestEth1Data);

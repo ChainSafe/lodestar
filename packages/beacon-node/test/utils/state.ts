@@ -3,7 +3,7 @@ import {config as minimalConfig} from "@lodestar/config/default";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
-  createCachedBeaconState,
+  createFinalizedCachedBeaconState,
   PubkeyIndexMap,
   CachedBeaconStateBellatrix,
   BeaconStateBellatrix,
@@ -110,7 +110,7 @@ export function generateState(
 export function generateCachedState(opts?: TestBeaconState): CachedBeaconStateAllForks {
   const config = getConfig(ForkName.phase0);
   const state = generateState(opts, config);
-  return createCachedBeaconState(state, {
+  return createFinalizedCachedBeaconState(state, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
     // This is a performance test, there's no need to have a global shared cache of keys
     finalizedPubkey2index: new PubkeyIndexMap(),
@@ -124,7 +124,7 @@ export function generateCachedState(opts?: TestBeaconState): CachedBeaconStateAl
 export function generateCachedAltairState(opts?: TestBeaconState, altairForkEpoch = 0): CachedBeaconStateAllForks {
   const config = getConfig(ForkName.altair, altairForkEpoch);
   const state = generateState(opts, config);
-  return createCachedBeaconState(state, {
+  return createFinalizedCachedBeaconState(state, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
     // This is a performance test, there's no need to have a global shared cache of keys
     finalizedPubkey2index: new PubkeyIndexMap(),
@@ -138,7 +138,7 @@ export function generateCachedAltairState(opts?: TestBeaconState, altairForkEpoc
 export function generateCachedBellatrixState(opts?: TestBeaconState): CachedBeaconStateBellatrix {
   const config = getConfig(ForkName.bellatrix);
   const state = generateState(opts, config);
-  return createCachedBeaconState(state as BeaconStateBellatrix, {
+  return createFinalizedCachedBeaconState(state as BeaconStateBellatrix, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
     // This is a performance test, there's no need to have a global shared cache of keys
     finalizedPubkey2index: new PubkeyIndexMap(),
@@ -152,7 +152,7 @@ export function generateCachedBellatrixState(opts?: TestBeaconState): CachedBeac
 export function generateCachedElectraState(opts?: TestBeaconState): CachedBeaconStateElectra {
   const config = getConfig(ForkName.electra);
   const state = generateState(opts, config);
-  return createCachedBeaconState(state as BeaconStateElectra, {
+  return createFinalizedCachedBeaconState(state as BeaconStateElectra, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
     finalizedPubkey2index: new PubkeyIndexMap(),
     finalizedIndex2pubkey: [],

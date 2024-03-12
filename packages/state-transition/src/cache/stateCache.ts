@@ -138,9 +138,9 @@ export type CachedBeaconStateAllForks = CachedBeaconState<BeaconStateAllForks>;
 export type CachedBeaconStateExecutions = CachedBeaconState<BeaconStateExecutions>;
 /**
  * Create CachedBeaconState computing a new EpochCache instance
- * TODO ELECTRA: rename this to createFinalizedCachedBeaconState() as it's intended for finalized state only
+ * Note: this is intended for finalized state only
  */
-export function createCachedBeaconState<T extends BeaconStateAllForks>(
+export function createFinalizedCachedBeaconState<T extends BeaconStateAllForks>(
   state: T,
   immutableData: EpochCacheImmutableData,
   opts?: EpochCacheOpts
@@ -162,9 +162,9 @@ export function createCachedBeaconState<T extends BeaconStateAllForks>(
  * Create a CachedBeaconState given a cached seed state and state bytes
  * This guarantees that the returned state shares the same tree with the seed state
  * Check loadState() api for more details
- * // TODO: rename to loadUnfinalizedCachedBeaconState() due to ELECTRA
+ * Note: This only loads unfinalized beacon state
  */
-export function loadCachedBeaconState<T extends BeaconStateAllForks & BeaconStateCache>(
+export function loadUnfinalizedCachedBeaconState<T extends BeaconStateAllForks & BeaconStateCache>(
   cachedSeedState: T,
   stateBytes: Uint8Array,
   opts?: EpochCacheOpts,
@@ -186,7 +186,7 @@ export function loadCachedBeaconState<T extends BeaconStateAllForks & BeaconStat
     finalizedIndex2pubkey[validatorIndex] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian);
   }
 
-  return createCachedBeaconState(
+  return createFinalizedCachedBeaconState(
     migratedState,
     {
       config: cachedSeedState.config,

@@ -9,7 +9,7 @@ import {
   applyTimestamp,
   applyEth1BlockHash,
   CachedBeaconStateAllForks,
-  createCachedBeaconState,
+  createFinalizedCachedBeaconState,
   BeaconStateAllForks,
   createEmptyEpochCacheImmutableData,
   getActiveValidatorIndices,
@@ -86,7 +86,7 @@ export class GenesisBuilder implements IGenesisBuilder {
     }
 
     // TODO - PENDING: Ensure EpochCacheImmutableData is created only once
-    this.state = createCachedBeaconState(stateView, createEmptyEpochCacheImmutableData(config, stateView));
+    this.state = createFinalizedCachedBeaconState(stateView, createEmptyEpochCacheImmutableData(config, stateView));
     this.config = this.state.config;
     this.activatedValidatorCount = getActiveValidatorIndices(stateView, GENESIS_EPOCH).length;
   }

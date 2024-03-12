@@ -9,7 +9,7 @@ import {
 import * as epochFns from "@lodestar/state-transition/epoch";
 import {ssz} from "@lodestar/types";
 import {ACTIVE_PRESET} from "@lodestar/params";
-import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
+import {createFinalizedCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {getConfig} from "../../utils/config.js";
 import {RunnerType, TestRunnerFn} from "../utils/types.js";
@@ -64,7 +64,7 @@ const epochProcessing =
     return {
       testFunction: (testcase) => {
         const stateTB = testcase.pre.clone();
-        const state = createCachedBeaconStateTest(stateTB, config);
+        const state = createFinalizedCachedBeaconStateTest(stateTB, config);
 
         const epochTransitionCache = beforeProcessEpoch(state, {assertCorrectProgressiveBalances});
 

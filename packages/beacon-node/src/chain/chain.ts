@@ -5,7 +5,7 @@ import {
   CachedBeaconStateAllForks,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
-  createCachedBeaconState,
+  createFinalizedCachedBeaconState,
   EffectiveBalanceIncrements,
   getEffectiveBalanceIncrementsZeroInactive,
   isCachedBeaconState,
@@ -233,7 +233,7 @@ export class BeaconChain implements IBeaconChain {
     const cachedState =
       isCachedBeaconState(anchorState) && opts.skipCreateStateCacheIfAvailable
         ? anchorState
-        : createCachedBeaconState(anchorState, {
+        : createFinalizedCachedBeaconState(anchorState, {
             config,
             finalizedPubkey2index: new PubkeyIndexMap(),
             finalizedIndex2pubkey: [],

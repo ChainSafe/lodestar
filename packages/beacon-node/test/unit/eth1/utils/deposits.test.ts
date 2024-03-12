@@ -9,7 +9,7 @@ import {generateState} from "../../../utils/state.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {getDeposits, getDepositsWithProofs, DepositGetter} from "../../../../src/eth1/utils/deposits.js";
 import {DepositTree} from "../../../../src/db/repositories/depositDataRoot.js";
-import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState.js";
+import {createFinalizedCachedBeaconStateTest} from "../../../utils/cachedBeaconState.js";
 
 describe("eth1 / util / deposits", function () {
   describe("getDeposits", () => {
@@ -116,7 +116,7 @@ describe("eth1 / util / deposits", function () {
         const state = postElectra
           ? generateState({slot: postElectraSlot, eth1DepositIndex}, postElectraConfig)
           : generateState({eth1DepositIndex});
-        const cachedState = createCachedBeaconStateTest(
+        const cachedState = createFinalizedCachedBeaconStateTest(
           state,
           postElectra ? postElectraConfig : createChainForkConfig({})
         );

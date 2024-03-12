@@ -7,7 +7,7 @@ import {
 } from "@lodestar/state-transition";
 import {altair, bellatrix, ssz} from "@lodestar/types";
 import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
-import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
+import {createFinalizedCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {RunnerType, shouldVerify, TestRunnerFn} from "../utils/types.js";
 import {getConfig} from "../../utils/config.js";
@@ -20,7 +20,7 @@ import {specTestIterator} from "../utils/specTestIterator.js";
 const finality: TestRunnerFn<FinalityTestCase, BeaconStateAllForks> = (fork) => {
   return {
     testFunction: (testcase) => {
-      let state = createCachedBeaconStateTest(testcase.pre, getConfig(fork));
+      let state = createFinalizedCachedBeaconStateTest(testcase.pre, getConfig(fork));
       const verify = shouldVerify(testcase);
       for (let i = 0; i < testcase.meta.blocks_count; i++) {
         const signedBlock = testcase[`blocks_${i}`] as bellatrix.SignedBeaconBlock;

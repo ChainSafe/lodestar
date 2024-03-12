@@ -4,7 +4,7 @@ import {Epoch, ssz, RootHex} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
-import {createCachedBeaconStateTest} from "../utils/state.js";
+import {createFinalizedCachedBeaconStateTest} from "../utils/state.js";
 import {PubkeyIndexMap} from "../../src/cache/pubkeyCache.js";
 import {createFinalizedCachedBeaconState, loadUnfinalizedCachedBeaconState} from "../../src/cache/stateCache.js";
 import {interopPubkeysCached} from "../utils/interop.js";
@@ -14,7 +14,7 @@ import {EpochShuffling, getShufflingDecisionBlock} from "../../src/util/epochShu
 describe("CachedBeaconState", () => {
   it("Clone and mutate", () => {
     const stateView = ssz.altair.BeaconState.defaultViewDU();
-    const state1 = createCachedBeaconStateTest(stateView);
+    const state1 = createFinalizedCachedBeaconStateTest(stateView);
     const state2 = state1.clone();
 
     state1.slot = 1;
@@ -31,7 +31,7 @@ describe("CachedBeaconState", () => {
 
   it("Clone and mutate cache pre-Electra", () => {
     const stateView = ssz.altair.BeaconState.defaultViewDU();
-    const state1 = createCachedBeaconStateTest(stateView);
+    const state1 = createFinalizedCachedBeaconStateTest(stateView);
 
     const pubkey1 = fromHexString(
       "0x84105a985058fc8740a48bf1ede9d223ef09e8c6b1735ba0a55cf4a9ff2ff92376b778798365e488dab07a652eb04576"
@@ -56,7 +56,7 @@ describe("CachedBeaconState", () => {
   /* eslint-disable @typescript-eslint/naming-convention */
   it("Clone and mutate cache post-Electra", () => {
     const stateView = ssz.electra.BeaconState.defaultViewDU();
-    const state1 = createCachedBeaconStateTest(
+    const state1 = createFinalizedCachedBeaconStateTest(
       stateView,
       createChainForkConfig({
         ALTAIR_FORK_EPOCH: 0,
@@ -113,7 +113,7 @@ describe("CachedBeaconState", () => {
     expect(toHexString(cp1.serialize())).toBe(toHexString(cp2.serialize()));
   });
 
-  describe("loadCachedBeaconState", () => {
+  describe("loadUnfinalizedCachedBeaconState", () => {
     const numValidator = 16;
     const pubkeys = interopPubkeysCached(2 * numValidator);
 
@@ -132,7 +132,7 @@ describe("CachedBeaconState", () => {
     const capellaStateType = ssz.capella.BeaconState;
 
     for (let validatorCountDelta = -numValidator; validatorCountDelta <= numValidator; validatorCountDelta++) {
-      const testName = `loadCachedBeaconState - ${validatorCountDelta > 0 ? "more" : "less"} ${Math.abs(
+      const testName = `loadUnfinalizedCachedBeaconState - ${validatorCountDelta > 0 ? "more" : "less"} ${Math.abs(
         validatorCountDelta
       )} validators`;
       it(testName, () => {
@@ -231,7 +231,7 @@ describe("CachedBeaconState", () => {
           expect(newCachedState.epochCtx).toEqual(cachedState.epochCtx);
         }
 
-        // confirm loadCachedBeaconState() result
+        // confirm loadUnfinalizedCachedBeaconState() result
         for (let i = 0; i < newCachedState.validators.length; i++) {
           expect(newCachedState.epochCtx.finalizedPubkey2index.get(newCachedState.validators.get(i).pubkey)).toBe(i);
           expect(newCachedState.epochCtx.finalizedIndex2pubkey[i].toBytes()).toEqual(pubkeys[i]);

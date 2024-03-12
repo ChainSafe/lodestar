@@ -10,7 +10,7 @@ import {
 import {allForks, deneb, ssz} from "@lodestar/types";
 import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 import {bnToNum} from "@lodestar/utils";
-import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
+import {createFinalizedCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {RunnerType, shouldVerify, TestRunnerFn} from "../utils/types.js";
 import {getConfig} from "../../utils/config.js";
@@ -35,7 +35,7 @@ const sanitySlots: TestRunnerFn<SanitySlotsTestCase, BeaconStateAllForks> = (for
   return {
     testFunction: (testcase) => {
       const stateTB = testcase.pre.clone();
-      const state = createCachedBeaconStateTest(stateTB, getConfig(fork));
+      const state = createFinalizedCachedBeaconStateTest(stateTB, getConfig(fork));
       const postState = processSlots(state, state.slot + bnToNum(testcase.slots), {assertCorrectProgressiveBalances});
       // TODO: May be part of runStateTranstion, necessary to commit again?
       postState.commit();
@@ -62,7 +62,7 @@ const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllForks> = (f
   return {
     testFunction: (testcase) => {
       const stateTB = testcase.pre;
-      let wrappedState = createCachedBeaconStateTest(stateTB, getConfig(fork));
+      let wrappedState = createFinalizedCachedBeaconStateTest(stateTB, getConfig(fork));
       const verify = shouldVerify(testcase);
       for (let i = 0; i < testcase.meta.blocks_count; i++) {
         const signedBlock = testcase[`blocks_${i}`] as deneb.SignedBeaconBlock;
