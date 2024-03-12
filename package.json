@@ -21,7 +21,7 @@
     "check-types": "lerna run check-types",
     "check-spelling": "pyspelling -c .pyspelling.yml -v",
     "docs:install": "pip install --user -r docs/requirements.txt",
-    "docs:build": "lerna run check-readme && lerna run docs:build && ./scripts/prepare-docs.sh",
+    "docs:build": "lerna run check-readme && lerna run docs:build --scope @chainsafe/lodestar && ./scripts/prepare-docs.sh",
     "docs:lint": "prettier '**/*.md' --check",
     "docs:lint:fix": "prettier '**/*.md' --write",
     "docs:serve": "mkdocs serve --watch docs/pages --config-file docs/mkdocs.yml",
