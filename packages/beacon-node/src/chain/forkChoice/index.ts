@@ -7,7 +7,7 @@ import {
   ForkChoiceStore,
   ExecutionStatus,
   JustifiedBalancesGetter,
-  ForkChoiceOpts,
+  ForkChoiceOpts as RealForkChoiceOpts,
 } from "@lodestar/fork-choice";
 import {
   CachedBeaconStateAllForks,
@@ -21,7 +21,10 @@ import {ChainEventEmitter} from "../emitter.js";
 import {ChainEvent} from "../emitter.js";
 import {GENESIS_SLOT} from "../../constants/index.js";
 
-export type {ForkChoiceOpts};
+export type ForkChoiceOpts = RealForkChoiceOpts & {
+  // for testing only
+  forkchoiceConstructor?: typeof ForkChoice;
+};
 
 /**
  * Fork Choice extended with a ChainEventEmitter
@@ -47,7 +50,11 @@ export function initializeForkChoice(
 
   const justifiedBalances = getEffectiveBalanceIncrementsZeroInactive(state);
 
-  return new ForkChoice(
+  // forkchoiceConstructor is only used for some test cases
+  // production code use ForkChoice constructor directly
+  const forkchoiceConstructor = opts.forkchoiceConstructor ?? ForkChoice;
+
+  return new forkchoiceConstructor(
     config,
 
     new ForkChoiceStore(
