@@ -73,8 +73,7 @@
     "@lodestar/params": "^1.17.0",
     "@lodestar/types": "^1.17.0",
     "@lodestar/utils": "^1.17.0",
-    "mitt": "^3.0.0",
-    "strict-event-emitter-types": "^2.0.0"
+    "mitt": "^3.0.0"
   },
   "devDependencies": {
     "@chainsafe/as-sha256": "^0.4.1",
