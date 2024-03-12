@@ -1,7 +1,7 @@
 import path from "node:path";
 import {fileURLToPath} from "node:url";
 import {OpenApiFile} from "../../utils/parseOpenApiSpec.js";
-import {routesData, getReqSerializers, getReturnTypes} from "../../../src/keymanager/routes.js";
+import {definitions} from "../../../src/keymanager/routes.js";
 import {runTestCheckAgainstSpec} from "../../utils/checkAgainstSpec.js";
 import {fetchOpenApiSpec} from "../../utils/fetchOpenApiSpec.js";
 import {testData} from "./testData.js";
@@ -18,9 +18,5 @@ const openApiFile: OpenApiFile = {
   version: RegExp(version),
 };
 
-// TODO: un-skip in follow-up PR, this PR only adds basic infra for spec testing
-const reqSerializers = getReqSerializers();
-const returnTypes = getReturnTypes();
-
 const openApiJson = await fetchOpenApiSpec(openApiFile);
-runTestCheckAgainstSpec(openApiJson, routesData, reqSerializers, returnTypes, testData);
+runTestCheckAgainstSpec(openApiJson, definitions, testData);

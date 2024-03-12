@@ -1,6 +1,6 @@
 import Ajv, {ErrorObject} from "ajv";
 import {expect, describe, beforeAll, it} from "vitest";
-import {ReqGeneric, ReqSerializer, ReturnTypes, RouteDef} from "../../src/utils/types.js";
+import {Endpoint, GetRequestCodec, PostRequestCodec, RouteDefinitions} from "../../src/utils/types.js";
 import {applyRecursively, JsonSchema, OpenApiJson, parseOpenApiSpec} from "./parseOpenApiSpec.js";
 import {GenericServerTestCases} from "./genericServerTest.js";
 
@@ -60,12 +60,10 @@ function deleteNested(schema: JsonSchema | undefined, property: string): void {
   }
 }
 
-export function runTestCheckAgainstSpec(
+export function runTestCheckAgainstSpec<Es extends Record<string, Endpoint>>(
   openApiJson: OpenApiJson,
-  routesData: Record<string, RouteDef>,
-  reqSerializers: Record<string, ReqSerializer<any, any>>,
-  returnTypes: Record<string, ReturnTypes<any>[string]>,
-  testDatas: Record<string, GenericServerTestCases<any>[string]>,
+  definitions: RouteDefinitions<Es>,
+  testCases: GenericServerTestCases<Es>,
   ignoredOperations: string[] = [],
   ignoredProperties: Record<string, IgnoredProperty> = {}
 ): void {
@@ -82,12 +80,12 @@ export function runTestCheckAgainstSpec(
     describe(operationId, () => {
       const {requestSchema, responseOkSchema} = routeSpec;
       const routeId = operationId;
-      const testData = testDatas[routeId];
-      const routeData = routesData[routeId];
+      const testData = testCases[routeId];
+      const routeDef = definitions[routeId];
 
       beforeAll(() => {
-        if (routeData == null) {
-          throw Error(`No routeData for ${routeId}`);
+        if (routeDef == null) {
+          throw Error(`No routeDef for ${routeId}`);
         }
         if (testData == null) {
           throw Error(`No testData for ${routeId}`);
@@ -95,18 +93,21 @@ export function runTestCheckAgainstSpec(
       });
 
       it(`${operationId}_route`, function () {
-        expect(routeData.method.toLowerCase()).to.equal(routeSpec.method.toLowerCase(), "Wrong method");
-        expect(routeData.url).to.equal(routeSpec.url, "Wrong url");
+        expect(routeDef.method.toLowerCase()).toBe(routeSpec.method.toLowerCase());
+        expect(routeDef.url).toBe(routeSpec.url);
       });
 
       if (requestSchema != null) {
         it(`${operationId}_request`, function () {
-          const reqJson = reqSerializers[routeId].writeReq(...(testData.args as [never])) as unknown;
+          const reqJson =
+            routeDef.method === "GET"
+              ? (routeDef.req as GetRequestCodec<Es[string]>).writeReq(testData.args)
+              : (routeDef.req as PostRequestCodec<Es[string]>).writeReqJson(testData.args);
 
           // Stringify param and query to simulate rendering in HTTP query
           // TODO: Review conversions in fastify and other servers
-          stringifyProperties((reqJson as ReqGeneric).params ?? {});
-          stringifyProperties((reqJson as ReqGeneric).query ?? {});
+          stringifyProperties(reqJson.params ?? {});
+          stringifyProperties(reqJson.query ?? {});
 
           const ignoredProperties = ignoredProperty?.request;
           if (ignoredProperties) {
@@ -123,7 +124,13 @@ export function runTestCheckAgainstSpec(
 
       if (responseOkSchema) {
         it(`${operationId}_response`, function () {
-          const resJson = returnTypes[operationId].toJson(testData.res as any);
+          const data = routeDef.resp.data.toJson(testData.res?.data, testData.res?.meta);
+          const metaJson = routeDef.resp.meta.toJson(testData.res?.meta);
+
+          const resJson = {
+            data,
+            ...(metaJson as object),
+          };
 
           const ignoredProperties = ignoredProperty?.response;
           if (ignoredProperties) {

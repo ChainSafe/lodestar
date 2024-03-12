@@ -36,14 +36,14 @@ export function registerRoutes(
   } = {
     // Initializes route types and their definitions
     beacon: () => beacon.getRoutes(config, methods.beacon),
-    config: () => configApi.getRoutes(methods.config),
-    debug: () => debug.getRoutes(methods.debug),
-    events: () => events.getRoutes(methods.events),
+    config: () => configApi.getRoutes(config, methods.config),
+    debug: () => debug.getRoutes(config, methods.debug),
+    events: () => events.getRoutes(config, methods.events),
     lightclient: () => lightclient.getRoutes(config, methods.lightclient),
-    lodestar: () => lodestar.getRoutes(methods.lodestar),
-    node: () => node.getRoutes(methods.node),
-    proof: () => proof.getRoutes(methods.proof),
-    validator: () => validator.getRoutes(methods.validator),
+    lodestar: () => lodestar.getRoutes(config, methods.lodestar),
+    node: () => node.getRoutes(config, methods.node),
+    proof: () => proof.getRoutes(config, methods.proof),
+    validator: () => validator.getRoutes(config, methods.validator),
   };
 
   for (const namespace of enabledNamespaces) {

@@ -26,7 +26,7 @@ export interface IHttpClient {
   request<E extends Endpoint>(
     definition: RouteDefinitionExtra<E>,
     args: E["args"],
-    localInit: ApiRequestInit
+    localInit?: ApiRequestInit
   ): Promise<ApiResponse<E>>;
 }
 
@@ -116,7 +116,7 @@ export class HttpClient implements IHttpClient {
   async request<E extends Endpoint>(
     definition: RouteDefinitionExtra<E>,
     args: E["args"],
-    localInit: ApiRequestInit
+    localInit: ApiRequestInit = {}
   ): Promise<ApiResponse<E>> {
     const retries = localInit.retries ?? this.globalInit.retries;
 

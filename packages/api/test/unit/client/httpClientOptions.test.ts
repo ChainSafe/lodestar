@@ -8,18 +8,20 @@ describe("HTTPClient options", () => {
   const bearerToken2 = "token-2";
 
   it("Single root baseUrl option", () => {
-    const httpClient = new HttpClient({baseUrl: baseUrl1, bearerToken: bearerToken1});
+    const httpClient = new HttpClient({baseUrl: baseUrl1, globalInit: {bearerToken: bearerToken1}});
 
-    expect(httpClient["urlsOpts"]).toEqual([{baseUrl: baseUrl1, bearerToken: bearerToken1}]);
+    expect(httpClient["urlsInits"]).toEqual([{baseUrl: baseUrl1, bearerToken: bearerToken1}]);
   });
 
   it("Multiple urls option with common bearerToken", () => {
     const httpClient = new HttpClient({
       urls: [baseUrl1, baseUrl2],
-      bearerToken: bearerToken1,
+      globalInit: {
+        bearerToken: bearerToken1,
+      },
     });
 
-    expect(httpClient["urlsOpts"]).toEqual([
+    expect(httpClient["urlsInits"]).toEqual([
       {baseUrl: baseUrl1, bearerToken: bearerToken1},
       {baseUrl: baseUrl2, bearerToken: bearerToken1},
     ]);
@@ -33,7 +35,7 @@ describe("HTTPClient options", () => {
       ],
     });
 
-    expect(httpClient["urlsOpts"]).toEqual([
+    expect(httpClient["urlsInits"]).toEqual([
       {baseUrl: baseUrl1, bearerToken: bearerToken1},
       {baseUrl: baseUrl2, bearerToken: bearerToken2},
     ]);
@@ -42,11 +44,11 @@ describe("HTTPClient options", () => {
   it("baseUrl and urls option", () => {
     const httpClient = new HttpClient({
       baseUrl: baseUrl1,
-      bearerToken: bearerToken1,
+      globalInit: {bearerToken: bearerToken1},
       urls: [{baseUrl: baseUrl2, bearerToken: bearerToken2}],
     });
 
-    expect(httpClient["urlsOpts"]).toEqual([
+    expect(httpClient["urlsInits"]).toEqual([
       {baseUrl: baseUrl1, bearerToken: bearerToken1},
       {baseUrl: baseUrl2, bearerToken: bearerToken2},
     ]);
@@ -55,14 +57,14 @@ describe("HTTPClient options", () => {
   it("de-duplicate urls", () => {
     const httpClient = new HttpClient({
       baseUrl: baseUrl1,
-      bearerToken: bearerToken1,
+      globalInit: {bearerToken: bearerToken1},
       urls: [
         {baseUrl: baseUrl2, bearerToken: bearerToken2},
         {baseUrl: baseUrl1, bearerToken: bearerToken1},
         {baseUrl: baseUrl2, bearerToken: bearerToken2},
       ],
     });
-    expect(httpClient["urlsOpts"]).toEqual([
+    expect(httpClient["urlsInits"]).toEqual([
       {baseUrl: baseUrl1, bearerToken: bearerToken1},
       {baseUrl: baseUrl2, bearerToken: bearerToken2},
     ]);

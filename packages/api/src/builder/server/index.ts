@@ -1,7 +1,14 @@
 import type {FastifyInstance} from "fastify";
 import {ChainForkConfig} from "@lodestar/config";
-import {ApplicationMethods, FastifyRouteConfig, FastifyRoutes, createFastifyRoutes} from "../../utils/server.js";
+import {
+  ApplicationMethods,
+  FastifyRoute,
+  FastifyRouteConfig,
+  FastifyRoutes,
+  createFastifyRoutes,
+} from "../../utils/server.js";
 import {Endpoints, getDefinitions} from "../routes.js";
+import {AnyEndpoint} from "../../utils/codecs.js";
 
 // Re-export for convenience
 export type {FastifyRouteConfig};
@@ -18,6 +25,7 @@ export function registerRoutes(
   const routes = getRoutes(config, methods);
 
   for (const route of Object.values(routes)) {
-    server.route(route);
+    // TODO: investigate type issue
+    server.route(route as FastifyRoute<AnyEndpoint>);
   }
 }

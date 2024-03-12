@@ -32,11 +32,11 @@ export function createApiClientMethod<E extends Endpoint>(
     definition.req.schema.query === undefined
   ) {
     return (async (init?: ApiRequestInit) => {
-      return client.request(definitionExtended, undefined, init ?? {});
+      return client.request(definitionExtended, undefined, init);
     }) as ApiClientMethod<E>;
   }
   return async (args?: E["args"], init?: ApiRequestInit) => {
-    return client.request(definitionExtended, args, init ?? {});
+    return client.request(definitionExtended, args, init);
   };
 }
 

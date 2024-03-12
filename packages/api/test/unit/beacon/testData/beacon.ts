@@ -1,10 +1,10 @@
 import {toHexString} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
-import {ssz, Slot, allForks} from "@lodestar/types";
+import {Slot, allForks, ssz} from "@lodestar/types";
 import {
-  Api,
   BlockHeaderResponse,
   BroadcastValidation,
+  Endpoints,
   ValidatorResponse,
 } from "../../../../src/beacon/routes/beacon/index.js";
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
@@ -28,153 +28,158 @@ const validatorResponse: ValidatorResponse = {
   validator: ssz.phase0.Validator.defaultValue(),
 };
 
-export const testData: GenericServerTestCases<Api> = {
+export const testData: GenericServerTestCases<Endpoints> = {
   // block
 
   getBlock: {
-    args: ["head", "json"],
+    args: {blockId: "head"},
     res: {data: ssz.phase0.SignedBeaconBlock.defaultValue()},
   },
   getBlockV2: {
-    args: ["head", "json"],
-    res: {executionOptimistic: true, data: ssz.bellatrix.SignedBeaconBlock.defaultValue(), version: ForkName.bellatrix},
+    args: {blockId: "head"},
+    res: {
+      data: ssz.bellatrix.SignedBeaconBlock.defaultValue(),
+      meta: {executionOptimistic: true, version: ForkName.bellatrix},
+    },
   },
   getBlockAttestations: {
-    args: ["head"],
-    res: {executionOptimistic: true, data: [ssz.phase0.Attestation.defaultValue()]},
+    args: {blockId: "head"},
+    res: {data: [ssz.phase0.Attestation.defaultValue()], meta: {executionOptimistic: true}},
   },
   getBlockHeader: {
-    args: ["head"],
-    res: {executionOptimistic: true, data: blockHeaderResponse},
+    args: {blockId: "head"},
+    res: {data: blockHeaderResponse, meta: {executionOptimistic: true}},
   },
   getBlockHeaders: {
-    args: [{slot: 1, parentRoot: toHexString(root)}],
-    res: {executionOptimistic: true, data: [blockHeaderResponse]},
+    args: {slot: 1, parentRoot: toHexString(root)},
+    res: {data: [blockHeaderResponse], meta: {executionOptimistic: true}},
   },
   getBlockRoot: {
-    args: ["head"],
-    res: {executionOptimistic: true, data: {root}},
+    args: {blockId: "head"},
+    res: {data: {root}, meta: {executionOptimistic: true}},
   },
   publishBlock: {
-    args: [ssz.phase0.SignedBeaconBlock.defaultValue()],
+    args: {signedBlockOrContents: ssz.phase0.SignedBeaconBlock.defaultValue()},
     res: undefined,
   },
   publishBlockV2: {
-    args: [ssz.phase0.SignedBeaconBlock.defaultValue(), {broadcastValidation: BroadcastValidation.consensus}],
+    args: {
+      signedBlockOrContents: ssz.phase0.SignedBeaconBlock.defaultValue(),
+      broadcastValidation: BroadcastValidation.consensus,
+    },
     res: undefined,
   },
   publishBlindedBlock: {
-    args: [getDefaultBlindedBlock(64)],
+    args: {signedBlindedBlock: getDefaultBlindedBlock(64)},
     res: undefined,
   },
   publishBlindedBlockV2: {
-    args: [getDefaultBlindedBlock(64), {broadcastValidation: BroadcastValidation.consensus}],
+    args: {signedBlindedBlock: getDefaultBlindedBlock(64), broadcastValidation: BroadcastValidation.consensus},
     res: undefined,
   },
   getBlobSidecars: {
-    args: ["head", [0]],
-    res: {executionOptimistic: true, data: ssz.deneb.BlobSidecars.defaultValue()},
+    args: {blockId: "head", indices: [0]},
+    res: {data: ssz.deneb.BlobSidecars.defaultValue(), meta: {executionOptimistic: true}},
   },
 
   // pool
 
   getPoolAttestations: {
-    args: [{slot: 1, committeeIndex: 2}],
+    args: {slot: 1, committeeIndex: 2},
     res: {data: [ssz.phase0.Attestation.defaultValue()]},
   },
   getPoolAttesterSlashings: {
-    args: [],
+    args: undefined,
     res: {data: [ssz.phase0.AttesterSlashing.defaultValue()]},
   },
   getPoolProposerSlashings: {
-    args: [],
+    args: undefined,
     res: {data: [ssz.phase0.ProposerSlashing.defaultValue()]},
   },
   getPoolVoluntaryExits: {
-    args: [],
+    args: undefined,
     res: {data: [ssz.phase0.SignedVoluntaryExit.defaultValue()]},
   },
   getPoolBlsToExecutionChanges: {
-    args: [],
+    args: undefined,
     res: {data: [ssz.capella.SignedBLSToExecutionChange.defaultValue()]},
   },
   submitPoolAttestations: {
-    args: [[ssz.phase0.Attestation.defaultValue()]],
+    args: {attestations: [ssz.phase0.Attestation.defaultValue()]},
     res: undefined,
   },
   submitPoolAttesterSlashings: {
-    args: [ssz.phase0.AttesterSlashing.defaultValue()],
+    args: {slashing: ssz.phase0.AttesterSlashing.defaultValue()},
     res: undefined,
   },
   submitPoolProposerSlashings: {
-    args: [ssz.phase0.ProposerSlashing.defaultValue()],
+    args: {slashing: ssz.phase0.ProposerSlashing.defaultValue()},
     res: undefined,
   },
   submitPoolVoluntaryExit: {
-    args: [ssz.phase0.SignedVoluntaryExit.defaultValue()],
+    args: {exit: ssz.phase0.SignedVoluntaryExit.defaultValue()},
     res: undefined,
   },
   submitPoolBlsToExecutionChange: {
-    args: [[ssz.capella.SignedBLSToExecutionChange.defaultValue()]],
+    args: {changes: [ssz.capella.SignedBLSToExecutionChange.defaultValue()]},
     res: undefined,
   },
   submitPoolSyncCommitteeSignatures: {
-    args: [[ssz.altair.SyncCommitteeMessage.defaultValue()]],
+    args: {signatures: [ssz.altair.SyncCommitteeMessage.defaultValue()]},
     res: undefined,
   },
 
   // state
 
   getStateRoot: {
-    args: ["head"],
-    res: {executionOptimistic: true, data: {root}},
+    args: {stateId: "head"},
+    res: {data: {root}, meta: {executionOptimistic: true}},
   },
   getStateFork: {
-    args: ["head"],
-    res: {executionOptimistic: true, data: ssz.phase0.Fork.defaultValue()},
+    args: {stateId: "head"},
+    res: {data: ssz.phase0.Fork.defaultValue(), meta: {executionOptimistic: true}},
   },
   getStateRandao: {
-    args: ["head", 1],
-    res: {executionOptimistic: true, data: {randao}},
+    args: {stateId: "head", epoch: 1},
+    res: {data: {randao}, meta: {executionOptimistic: true}},
   },
   getStateFinalityCheckpoints: {
-    args: ["head"],
+    args: {stateId: "head"},
     res: {
-      executionOptimistic: true,
       data: {
         previousJustified: ssz.phase0.Checkpoint.defaultValue(),
         currentJustified: ssz.phase0.Checkpoint.defaultValue(),
         finalized: ssz.phase0.Checkpoint.defaultValue(),
       },
+      meta: {executionOptimistic: true},
     },
   },
   getStateValidators: {
-    args: ["head", {id: [pubkeyHex, "1300"], status: ["active_ongoing"]}],
-    res: {executionOptimistic: true, data: [validatorResponse]},
+    args: {stateId: "head", id: [pubkeyHex, "1300"], status: ["active_ongoing"]},
+    res: {data: [validatorResponse], meta: {executionOptimistic: true}},
   },
   getStateValidator: {
-    args: ["head", pubkeyHex],
-    res: {executionOptimistic: true, data: validatorResponse},
+    args: {stateId: "head", validatorId: pubkeyHex},
+    res: {data: validatorResponse, meta: {executionOptimistic: true}},
   },
   getStateValidatorBalances: {
-    args: ["head", ["1300"]],
-    res: {executionOptimistic: true, data: [{index: 1300, balance}]},
+    args: {stateId: "head", indices: ["1300"]},
+    res: {data: [{index: 1300, balance}], meta: {executionOptimistic: true}},
   },
   getEpochCommittees: {
-    args: ["head", {index: 1, slot: 2, epoch: 3}],
-    res: {executionOptimistic: true, data: [{index: 1, slot: 2, validators: [1300]}]},
+    args: {stateId: "head", index: 1, slot: 2, epoch: 3},
+    res: {data: [{index: 1, slot: 2, validators: [1300]}], meta: {executionOptimistic: true}},
   },
   getEpochSyncCommittees: {
-    args: ["head", 1],
-    res: {executionOptimistic: true, data: {validators: [1300], validatorAggregates: [[1300]]}},
+    args: {stateId: "head", epoch: 1},
+    res: {data: {validators: [1300], validatorAggregates: [[1300]]}, meta: {executionOptimistic: true}},
   },
 
   // reward
 
   getBlockRewards: {
-    args: ["head"],
+    args: {blockId: "head"},
     res: {
-      executionOptimistic: true,
       data: {
         proposerIndex: 0,
         total: 15,
@@ -183,17 +188,18 @@ export const testData: GenericServerTestCases<Api> = {
         proposerSlashings: 2,
         attesterSlashings: 1,
       },
+      meta: {executionOptimistic: true},
     },
   },
   getSyncCommitteeRewards: {
-    args: ["head", ["1300"]],
-    res: {executionOptimistic: true, data: [{validatorIndex: 1300, reward}]},
+    args: {blockId: "head", validatorIds: ["1300"]},
+    res: {data: {validatorIndex: 1300, reward}, meta: {executionOptimistic: true}},
   },
 
   // -
 
   getGenesis: {
-    args: [],
+    args: undefined,
     res: {data: ssz.phase0.Genesis.defaultValue()},
   },
 };

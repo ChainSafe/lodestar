@@ -4,8 +4,6 @@ import {describe, it, beforeAll, expect} from "vitest";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {OpenApiFile} from "../../utils/parseOpenApiSpec.js";
 import {routes} from "../../../src/beacon/index.js";
-import {ReqSerializers} from "../../../src/utils/types.js";
-import {Schema} from "../../../src/utils/schema.js";
 import {IgnoredProperty, runTestCheckAgainstSpec} from "../../utils/checkAgainstSpec.js";
 import {fetchOpenApiSpec} from "../../utils/fetchOpenApiSpec.js";
 // Import all testData and merge below
@@ -30,47 +28,19 @@ const openApiFile: OpenApiFile = {
   version: RegExp(version),
 };
 
-const routesData = {
-  ...routes.beacon.routesData,
-  ...routes.config.routesData,
-  ...routes.debug.routesData,
-  ...routes.events.routesData,
-  ...routes.lightclient.routesData,
-  ...routes.node.routesData,
-  ...routes.proof.routesData,
-  ...routes.validator.routesData,
-};
-
-// Additional definition not used in production
-const getEventsReqSerializers = (): ReqSerializers<routes.events.Api, routes.events.ReqTypes> => ({
-  eventstream: {
-    writeReq: (topics) => ({query: {topics}}),
-    parseReq: ({query}) => [query.topics, null as any, null as any],
-    schema: {query: {topics: Schema.StringArray}},
-  },
-});
-
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const config = createChainForkConfig({...defaultChainConfig, ALTAIR_FORK_EPOCH: 1, BELLATRIX_FORK_EPOCH: 2});
-const reqSerializers = {
-  ...routes.beacon.getReqSerializers(config),
-  ...routes.config.getReqSerializers(),
-  ...routes.debug.getReqSerializers(),
-  ...getEventsReqSerializers(),
-  ...routes.lightclient.getReqSerializers(),
-  ...routes.node.getReqSerializers(),
-  ...routes.proof.getReqSerializers(),
-  ...routes.validator.getReqSerializers(),
-};
 
-const returnTypes = {
-  ...routes.beacon.getReturnTypes(),
-  ...routes.config.getReturnTypes(),
-  ...routes.debug.getReturnTypes(),
-  ...routes.lightclient.getReturnTypes(),
-  ...routes.node.getReturnTypes(),
-  ...routes.proof.getReturnTypes(),
-  ...routes.validator.getReturnTypes(),
+const definitions = {
+  // TODO: unify interface, always use getDefinitions?
+  ...routes.beacon.getDefinitions(config),
+  ...routes.config.definitions,
+  ...routes.debug.definitions,
+  ...routes.events.definitions,
+  ...routes.lightclient.getDefinitions(config),
+  ...routes.node.definitions,
+  ...routes.proof.definitions,
+  ...routes.validator.definitions,
 };
 
 const testDatas = {
@@ -142,15 +112,7 @@ const ignoredProperties: Record<string, IgnoredProperty> = {
 };
 
 const openApiJson = await fetchOpenApiSpec(openApiFile);
-runTestCheckAgainstSpec(
-  openApiJson,
-  routesData,
-  reqSerializers,
-  returnTypes,
-  testDatas,
-  ignoredOperations,
-  ignoredProperties
-);
+runTestCheckAgainstSpec(openApiJson, definitions, testDatas, ignoredOperations, ignoredProperties);
 
 const ignoredTopics = [
   /*

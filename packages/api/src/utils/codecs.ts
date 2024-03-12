@@ -24,7 +24,7 @@ export type EmptyArgs = void;
 export type EmptyRequest = Record<string, void>;
 export type EmptyResponseData = void;
 
-export type EmptyMeta = Record<string, never>;
+export type EmptyMeta = void;
 export type ExecutionOptimisticMeta = {executionOptimistic: ExecutionOptimistic};
 export type VersionMeta = {version: ForkName};
 export type ExecutionOptimisticAndVersionMeta = ExecutionOptimisticMeta & VersionMeta;
@@ -82,17 +82,17 @@ export function SszOnlyReq<E extends Endpoint>(
 }
 
 export const EmptyResponseDataCodec: ResponseDataCodec<EmptyResponseData, EmptyMeta> = {
-  toJson: () => ({}),
+  toJson: () => {},
   fromJson: () => {},
   serialize: () => new Uint8Array(),
   deserialize: () => {},
 };
 
 export const EmptyMetaCodec: ResponseMetadataCodec<EmptyMeta> = {
-  toJson: () => ({}),
-  fromJson: () => ({}),
+  toJson: () => {},
+  fromJson: () => {},
   toHeadersObject: () => ({}),
-  fromHeaders: () => ({}),
+  fromHeaders: () => {},
 };
 
 /** SSZ factory helper + typed. limit = 1e6 as a big enough random number */

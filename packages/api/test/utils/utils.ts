@@ -2,7 +2,8 @@ import {MockedObject, vi} from "vitest";
 import {parse as parseQueryString} from "qs";
 import {FastifyInstance, fastify} from "fastify";
 import {mapValues} from "@lodestar/utils";
-import {ServerApi} from "../../src/interfaces.js";
+import {Endpoint} from "../../src/utils/index.js";
+import {ApplicationMethods} from "../../src/utils/server.js";
 
 export function getTestServer(): {server: FastifyInstance; start: () => Promise<string>} {
   const server = fastify({
@@ -10,7 +11,7 @@ export function getTestServer(): {server: FastifyInstance; start: () => Promise<
     querystringParser: (str) => parseQueryString(str, {comma: true, parseArrays: false}),
   });
 
-  server.addHook("onError", (request, reply, error, done) => {
+  server.addHook("onError", (_request, _reply, error, done) => {
     // eslint-disable-next-line no-console
     console.log(`onError: ${error.toString()}`);
     done();
@@ -30,8 +31,8 @@ export function getTestServer(): {server: FastifyInstance; start: () => Promise<
   return {start, server};
 }
 
-export function getMockApi<Api extends Record<string, any>>(
+export function getMockApi<Es extends Record<string, Endpoint>>(
   routeIds: Record<string, any>
-): MockedObject<ServerApi<Api>> & ServerApi<Api> {
-  return mapValues(routeIds, () => vi.fn()) as MockedObject<ServerApi<Api>> & ServerApi<Api>;
+): MockedObject<ApplicationMethods<Es>> & ApplicationMethods<Es> {
+  return mapValues(routeIds, () => vi.fn()) as MockedObject<ApplicationMethods<Es>> & ApplicationMethods<Es>;
 }

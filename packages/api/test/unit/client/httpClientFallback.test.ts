@@ -1,8 +1,18 @@
-import {describe, it, beforeEach, afterEach, expect, vi} from "vitest";
-import {HttpClient, fetch} from "../../../src/utils/client/index.js";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {HttpClient, RouteDefinitionExtra, fetch} from "../../../src/utils/client/index.js";
+import {AnyEndpoint, EmptyGetRequestCodec, EmptyResponseCodec} from "../../../src/utils/codecs.js";
+import {compileRouteUrlFormater} from "../../../src/utils/urlFormat.js";
 
 describe("httpClient fallback", () => {
-  const testRoute = {url: "/test-route", method: "GET" as const};
+  const url = "/test-route";
+  const testDefinition: RouteDefinitionExtra<AnyEndpoint> = {
+    url,
+    method: "GET",
+    req: EmptyGetRequestCodec,
+    resp: EmptyResponseCodec,
+    operationId: "test",
+    urlFormatter: compileRouteUrlFormater(url),
+  };
   const DEBUG_LOGS = Boolean(process.env.DEBUG);
 
   // Using fetchSub instead of actually setting up servers because there are some strange
@@ -70,7 +80,7 @@ describe("httpClient fallback", () => {
   }
 
   async function requestTestRoute(): Promise<void> {
-    await httpClient.request(testRoute);
+    await httpClient.request(testDefinition, {}, {});
   }
 
   it("Should only call server 0", async () => {

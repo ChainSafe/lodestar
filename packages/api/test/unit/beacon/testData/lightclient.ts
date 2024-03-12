@@ -1,7 +1,7 @@
 import {toHexString} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
-import {Api} from "../../../../src/beacon/routes/lightclient.js";
+import {Endpoints} from "../../../../src/beacon/routes/lightclient.js";
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 
 const root = Uint8Array.from(Buffer.alloc(32, 1));
@@ -11,19 +11,18 @@ const syncAggregate = ssz.altair.SyncAggregate.defaultValue();
 const header = ssz.altair.LightClientHeader.defaultValue();
 const signatureSlot = ssz.Slot.defaultValue();
 
-export const testData: GenericServerTestCases<Api> = {
+export const testData: GenericServerTestCases<Endpoints> = {
   getUpdates: {
-    args: [1, 2],
-    res: [{version: ForkName.bellatrix, data: lightClientUpdate}],
+    args: {startPeriod: 1, count: 2},
+    res: {data: [lightClientUpdate], meta: {version: [ForkName.bellatrix]}},
   },
   getOptimisticUpdate: {
-    args: [],
-    res: {version: ForkName.bellatrix, data: {syncAggregate, attestedHeader: header, signatureSlot}},
+    args: undefined,
+    res: {data: {syncAggregate, attestedHeader: header, signatureSlot}, meta: {version: ForkName.bellatrix}},
   },
   getFinalityUpdate: {
-    args: [],
+    args: undefined,
     res: {
-      version: ForkName.bellatrix,
       data: {
         syncAggregate,
         attestedHeader: header,
@@ -31,21 +30,22 @@ export const testData: GenericServerTestCases<Api> = {
         finalityBranch: lightClientUpdate.finalityBranch,
         signatureSlot: lightClientUpdate.attestedHeader.beacon.slot + 1,
       },
+      meta: {version: ForkName.bellatrix},
     },
   },
   getBootstrap: {
-    args: [toHexString(root)],
+    args: {blockRoot: toHexString(root)},
     res: {
-      version: ForkName.bellatrix,
       data: {
         header,
         currentSyncCommittee: lightClientUpdate.nextSyncCommittee,
         currentSyncCommitteeBranch: [root, root, root, root, root], // Vector(Root, 5)
       },
+      meta: {version: ForkName.bellatrix},
     },
   },
   getCommitteeRoot: {
-    args: [1, 2],
+    args: {startPeriod: 1, count: 2},
     res: {data: [Uint8Array.from(Buffer.alloc(32, 0)), Uint8Array.from(Buffer.alloc(32, 1))]},
   },
 };

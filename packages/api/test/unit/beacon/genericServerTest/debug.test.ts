@@ -1,27 +1,30 @@
-import {describe, it, expect, MockInstance, beforeAll, afterAll, vi} from "vitest";
+import {describe, it, expect, beforeAll, afterAll, vi} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {FastifyInstance} from "fastify";
+import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {config} from "@lodestar/config/default";
-import {Api, ReqTypes, routesData} from "../../../../src/beacon/routes/debug.js";
+import {Endpoints, definitions} from "../../../../src/beacon/routes/debug.js";
 import {getClient} from "../../../../src/beacon/client/debug.js";
 import {getRoutes} from "../../../../src/beacon/server/debug.js";
 import {runGenericServerTest} from "../../../utils/genericServerTest.js";
 import {getMockApi, getTestServer} from "../../../utils/utils.js";
-import {registerRoute} from "../../../../src/utils/server/registerRoute.js";
 import {HttpClient} from "../../../../src/utils/client/httpClient.js";
 import {testData} from "../testData/debug.js";
+import {FastifyRoute} from "../../../../src/index.js";
+import {AnyEndpoint} from "../../../../src/utils/codecs.js";
+import {WireFormat} from "../../../../src/utils/headers.js";
 
 describe("beacon / debug", () => {
   // Extend timeout since states are very big
   vi.setConfig({testTimeout: 30_000});
 
-  runGenericServerTest<Api, ReqTypes>(config, getClient, getRoutes, testData);
+  runGenericServerTest<Endpoints>(config, getClient, getRoutes, testData);
 
   // Get state by SSZ
 
   describe("getState() in SSZ format", () => {
-    const mockApi = getMockApi<Api>(routesData);
+    const mockApi = getMockApi<Endpoints>(definitions);
     let baseUrl: string;
     let server: FastifyInstance;
 
@@ -29,7 +32,8 @@ describe("beacon / debug", () => {
       const res = getTestServer();
       server = res.server;
       for (const route of Object.values(getRoutes(config, mockApi))) {
-        registerRoute(server, route);
+        // TODO: investigate type issue
+        server.route(route as FastifyRoute<AnyEndpoint>);
       }
       baseUrl = await res.start();
     });
@@ -42,17 +46,20 @@ describe("beacon / debug", () => {
       it(method, async () => {
         const state = ssz.phase0.BeaconState.defaultValue();
         const stateSerialized = ssz.phase0.BeaconState.serialize(state);
-        (mockApi[method] as MockInstance).mockResolvedValue(stateSerialized);
+        mockApi[method].mockResolvedValue({
+          data: stateSerialized,
+          meta: {version: ForkName.phase0, executionOptimistic: false},
+        });
 
         const httpClient = new HttpClient({baseUrl});
         const client = getClient(config, httpClient);
 
-        const res = await client[method]("head", "ssz");
+        const res = await client[method]({stateId: "head"}, {responseWireFormat: WireFormat.ssz});
 
         expect(res.ok).toBe(true);
 
         if (res.ok) {
-          expect(toHexString(res.response)).toBe(toHexString(stateSerialized));
+          expect(toHexString(await res.ssz())).toBe(toHexString(stateSerialized));
         }
       });
     }

@@ -194,6 +194,7 @@ function buildReqSchema(routeDefinition: RouteDefinition): JsonSchema {
         break;
 
       // case "header"
+      // TODO:
     }
   }
 

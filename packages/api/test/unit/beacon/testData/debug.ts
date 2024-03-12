@@ -1,22 +1,22 @@
 import {toHexString} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {Api} from "../../../../src/beacon/routes/debug.js";
+import {Endpoints} from "../../../../src/beacon/routes/debug.js";
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 
 const rootHex = toHexString(Buffer.alloc(32, 1));
 
-export const testData: GenericServerTestCases<Api> = {
+export const testData: GenericServerTestCases<Endpoints> = {
   getDebugChainHeads: {
-    args: [],
+    args: undefined,
     res: {data: [{slot: 1, root: rootHex}]},
   },
   getDebugChainHeadsV2: {
-    args: [],
+    args: undefined,
     res: {data: [{slot: 1, root: rootHex, executionOptimistic: true}]},
   },
   getProtoArrayNodes: {
-    args: [],
+    args: undefined,
     res: {
       data: [
         {
@@ -45,11 +45,11 @@ export const testData: GenericServerTestCases<Api> = {
     },
   },
   getState: {
-    args: ["head", "json"],
-    res: {executionOptimistic: true, data: ssz.phase0.BeaconState.defaultValue()},
+    args: {stateId: "head"},
+    res: {data: ssz.phase0.BeaconState.defaultValue(), meta: {executionOptimistic: true}},
   },
   getStateV2: {
-    args: ["head", "json"],
-    res: {executionOptimistic: true, data: ssz.altair.BeaconState.defaultValue(), version: ForkName.altair},
+    args: {stateId: "head"},
+    res: {data: ssz.altair.BeaconState.defaultValue(), meta: {executionOptimistic: true, version: ForkName.altair}},
   },
 };
