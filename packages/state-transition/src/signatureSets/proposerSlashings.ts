@@ -11,7 +11,7 @@ export function getProposerSlashingSignatureSets(
   proposerSlashing: phase0.ProposerSlashing
 ): ISignatureSet[] {
   const {epochCtx} = state;
-  const pubkey = epochCtx.index2pubkey[proposerSlashing.signedHeader1.message.proposerIndex];
+  const pubkey = epochCtx.finalizedIndex2pubkey[proposerSlashing.signedHeader1.message.proposerIndex];
 
   // In state transition, ProposerSlashing headers are only partially validated. Their slot could be higher than the
   // clock and the slashing would still be valid. Must use bigint variants to hash correctly to all possible values

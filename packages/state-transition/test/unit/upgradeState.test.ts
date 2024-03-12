@@ -6,19 +6,19 @@ import {config as chainConfig} from "@lodestar/config/default";
 
 import {upgradeStateToDeneb} from "../../src/slot/upgradeStateToDeneb.js";
 import {upgradeStateToElectra} from "../../src/slot/upgradeStateToElectra.js";
-import {createCachedBeaconState} from "../../src/cache/stateCache.js";
+import {createFinalizedCachedBeaconState} from "../../src/cache/stateCache.js";
 import {PubkeyIndexMap} from "../../src/cache/pubkeyCache.js";
 
 describe("upgradeState", () => {
   it("upgradeStateToDeneb", () => {
     const capellaState = ssz.capella.BeaconState.defaultViewDU();
     const config = getConfig(ForkName.capella);
-    const stateView = createCachedBeaconState(
+    const stateView = createFinalizedCachedBeaconState(
       capellaState,
       {
         config: createBeaconConfig(config, capellaState.genesisValidatorsRoot),
-        pubkey2index: new PubkeyIndexMap(),
-        index2pubkey: [],
+        finalizedPubkey2index: new PubkeyIndexMap(),
+        finalizedIndex2pubkey: [],
       },
       {skipSyncCommitteeCache: true}
     );
@@ -28,12 +28,12 @@ describe("upgradeState", () => {
   it("upgradeStateToElectra", () => {
     const denebState = ssz.deneb.BeaconState.defaultViewDU();
     const config = getConfig(ForkName.deneb);
-    const stateView = createCachedBeaconState(
+    const stateView = createFinalizedCachedBeaconState(
       denebState,
       {
         config: createBeaconConfig(config, denebState.genesisValidatorsRoot),
-        pubkey2index: new PubkeyIndexMap(),
-        index2pubkey: [],
+        finalizedPubkey2index: new PubkeyIndexMap(),
+        finalizedIndex2pubkey: [],
       },
       {skipSyncCommitteeCache: true}
     );

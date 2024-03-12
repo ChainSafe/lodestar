@@ -64,7 +64,7 @@ describe("produceBlockBody", () => {
     beforeEach: async () => {
       const head = chain.forkChoice.getHead();
       const proposerIndex = state.epochCtx.getBeaconProposer(state.slot);
-      const proposerPubKey = state.epochCtx.index2pubkey[proposerIndex].toBytes();
+      const proposerPubKey = state.epochCtx.finalizedIndex2pubkey[proposerIndex].toBytes();
 
       return {chain, state, head, proposerIndex, proposerPubKey};
     },

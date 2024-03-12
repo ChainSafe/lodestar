@@ -8,9 +8,9 @@ import {linspace} from "../../../../../src/util/numpy.js";
 // Using state.validators.persistent is the fastest way of retrieving pubkeys by far
 // Benchmark data from Wed Jun 30 2021 - Intel(R) Core(TM) i5-8250U CPU @ 1.60GHz
 //
-// ✓ getPubkeys - index2pubkey - req 1 vs - 200000 vc                    836120.4 ops/s    1.196000 us/op        -    1224786 runs   2.07 s
-// ✓ getPubkeys - index2pubkey - req 100 vs - 200000 vc                  10347.15 ops/s    96.64500 us/op        -      20602 runs   2.00 s
-// ✓ getPubkeys - index2pubkey - req 1000 vs - 200000 vc                 1248.985 ops/s    800.6500 us/op        -       2518 runs   2.02 s
+// ✓ getPubkeys - finalizedIndex2pubkey - req 1 vs - 200000 vc                    836120.4 ops/s    1.196000 us/op        -    1224786 runs   2.07 s
+// ✓ getPubkeys - finalizedIndex2pubkey - req 100 vs - 200000 vc                  10347.15 ops/s    96.64500 us/op        -      20602 runs   2.00 s
+// ✓ getPubkeys - finalizedIndex2pubkey - req 1000 vs - 200000 vc                 1248.985 ops/s    800.6500 us/op        -       2518 runs   2.02 s
 // ✓ getPubkeys - validatorsArr - req 1 vs - 200000 vc                   1109878 ops/s    901.0000 ns/op        -    1714328 runs   2.09 s
 // ✓ getPubkeys - validatorsArr - req 100 vs - 200000 vc                19937.00 ops/s    50.15800 us/op        -      39548 runs   2.00 s
 // ✓ getPubkeys - validatorsArr - req 1000 vs - 200000 vc               2475.542 ops/s    403.9520 us/op        -       4947 runs   2.00 s
@@ -31,11 +31,11 @@ describe("api / impl / validator", () => {
 
   for (const reqCount of reqCounts) {
     itBench({
-      id: `getPubkeys - index2pubkey - req ${reqCount} vs - ${numValidators} vc`,
+      id: `getPubkeys - finalizedIndex2pubkey - req ${reqCount} vs - ${numValidators} vc`,
       noThreshold: true,
       fn: () => {
         for (let i = 0; i < reqCount; i++) {
-          const pubkey = state.epochCtx.index2pubkey[i];
+          const pubkey = state.epochCtx.finalizedIndex2pubkey[i];
           pubkey.toBytes(PointFormat.compressed);
         }
       },

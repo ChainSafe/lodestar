@@ -85,32 +85,32 @@ export function getSecretKeyFromIndexCached(validatorIndex: number): SecretKey {
 }
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-function getPubkeyCaches({pubkeysMod, pubkeysModObj}: ReturnType<typeof getPubkeys>) {
+function getFinalizedPubkeyCaches({pubkeysMod, pubkeysModObj}: ReturnType<typeof getPubkeys>) {
   // Manually sync pubkeys to prevent doing BLS opts 110_000 times
-  const pubkey2index = new PubkeyIndexMap();
-  const index2pubkey = [] as PublicKey[];
+  const finalizedPubkey2index = new PubkeyIndexMap();
+  const finalizedIndex2pubkey = [] as PublicKey[];
   for (let i = 0; i < numValidators; i++) {
     const pubkey = pubkeysMod[i % keypairsMod];
     const pubkeyObj = pubkeysModObj[i % keypairsMod];
-    pubkey2index.set(pubkey, i);
-    index2pubkey.push(pubkeyObj);
+    finalizedPubkey2index.set(pubkey, i);
+    finalizedIndex2pubkey.push(pubkeyObj);
   }
 
-  // Since most pubkeys are equal the size of pubkey2index is not numValidators.
+  // Since most pubkeys are equal the size of finalizedPubkey2index is not numValidators.
   // Fill with junk up to numValidators
-  for (let i = pubkey2index.size; i < numValidators; i++) {
+  for (let i = finalizedPubkey2index.size; i < numValidators; i++) {
     const buf = Buffer.alloc(48, 0);
     buf.writeInt32LE(i);
-    pubkey2index.set(buf, i);
+    finalizedPubkey2index.set(buf, i);
   }
 
-  return {pubkey2index, index2pubkey};
+  return {finalizedPubkey2index, finalizedIndex2pubkey};
 }
 
 export function generatePerfTestCachedStatePhase0(opts?: {goBackOneSlot: boolean}): CachedBeaconStatePhase0 {
   // Generate only some publicKeys
   const {pubkeys, pubkeysMod, pubkeysModObj} = getPubkeys();
-  const {pubkey2index, index2pubkey} = getPubkeyCaches({pubkeys, pubkeysMod, pubkeysModObj});
+  const {finalizedPubkey2index, finalizedIndex2pubkey} = getFinalizedPubkeyCaches({pubkeys, pubkeysMod, pubkeysModObj});
 
   if (!phase0State) {
     const state = buildPerformanceStatePhase0();
@@ -127,8 +127,8 @@ export function generatePerfTestCachedStatePhase0(opts?: {goBackOneSlot: boolean
     state.slot -= 1;
     phase0CachedState23637 = createCachedBeaconState(state, {
       config: createBeaconConfig(config, state.genesisValidatorsRoot),
-      pubkey2index,
-      index2pubkey,
+      finalizedPubkey2index,
+      finalizedIndex2pubkey,
     });
 
     const currentEpoch = computeEpochAtSlot(state.slot - 1);
@@ -220,7 +220,7 @@ export function generatePerfTestCachedStateAltair(opts?: {
   vc?: number;
 }): CachedBeaconStateAltair {
   const {pubkeys, pubkeysMod, pubkeysModObj} = getPubkeys(opts?.vc);
-  const {pubkey2index, index2pubkey} = getPubkeyCaches({pubkeys, pubkeysMod, pubkeysModObj});
+  const {finalizedPubkey2index, finalizedIndex2pubkey} = getFinalizedPubkeyCaches({pubkeys, pubkeysMod, pubkeysModObj});
 
   // eslint-disable-next-line @typescript-eslint/naming-convention
   const altairConfig = createChainForkConfig({ALTAIR_FORK_EPOCH: 0});
@@ -232,8 +232,8 @@ export function generatePerfTestCachedStateAltair(opts?: {
     state.slot -= 1;
     altairCachedState23637 = createCachedBeaconState(state, {
       config: createBeaconConfig(altairConfig, state.genesisValidatorsRoot),
-      pubkey2index,
-      index2pubkey,
+      finalizedPubkey2index,
+      finalizedIndex2pubkey,
     });
   }
   if (!altairCachedState23638) {
@@ -389,13 +389,13 @@ export function generateTestCachedBeaconStateOnlyValidators({
   const {pubkeys, pubkeysMod, pubkeysModObj} = getPubkeys(vc);
 
   // Manually sync pubkeys to prevent doing BLS opts 110_000 times
-  const pubkey2index = new PubkeyIndexMap();
-  const index2pubkey = [] as PublicKey[];
+  const finalizedPubkey2index = new PubkeyIndexMap();
+  const finalizedIndex2pubkey = [] as PublicKey[];
   for (let i = 0; i < vc; i++) {
     const pubkey = pubkeysMod[i % keypairsMod];
     const pubkeyObj = pubkeysModObj[i % keypairsMod];
-    pubkey2index.set(pubkey, i);
-    index2pubkey.push(pubkeyObj);
+    finalizedPubkey2index.set(pubkey, i);
+    finalizedIndex2pubkey.push(pubkeyObj);
   }
 
   const state = ssz.phase0.BeaconState.defaultViewDU();
@@ -435,8 +435,8 @@ export function generateTestCachedBeaconStateOnlyValidators({
     state,
     {
       config: createBeaconConfig(config, state.genesisValidatorsRoot),
-      pubkey2index,
-      index2pubkey,
+      finalizedPubkey2index,
+      finalizedIndex2pubkey,
     },
     {skipSyncPubkeys: true}
   );
