@@ -9,7 +9,7 @@ import {getExpectedWithdrawalsTestData, WithdrawalOpts} from "../../utils/capell
 //    having BLS withdrawal credential prefix as that validator probe is wasted.
 //
 // Best case:
-//  All Validator have balances > MAX_EFFECTIVE_BALANCE and ETH1 withdrawal credential prefix set
+//  All Validator have balances > MAX_EFFECTIVE_BALANCE and ETH1 withdrawal credential prefix set // TODO Electra: Not true anymore
 //
 // Worst case:
 //  All balances are low enough or withdrawal credential not set
