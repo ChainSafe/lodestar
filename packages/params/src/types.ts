@@ -17,7 +17,7 @@ export type BeaconPreset = {
 
   // Gwei Values
   MIN_DEPOSIT_AMOUNT: number;
-  MIN_ACTIVATION_BALANCE: number;
+  MAX_EFFECTIVE_BALANCE: number;
   EFFECTIVE_BALANCE_INCREMENT: number;
 
   // Time parameters
@@ -85,7 +85,9 @@ export type BeaconPreset = {
 
   // ELECTRA
   ///////////
-  MAX_EFFECTIVE_BALANCE: number;
+  MAX_EFFECTIVE_BALANCE_ELECTRA: number;
+  MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA: number;
+  MIN_ACTIVATION_BALANCE: number;
   PENDING_BALANCE_DEPOSITS_LIMIT: number;
   PENDING_PARTIAL_WITHDRAWALS_LIMIT: number;
   PENDING_CONSOLIDATIONS_LIMIT: number;
@@ -178,6 +180,8 @@ export const beaconPresetTypes: BeaconPresetTypes = {
 
   // ELECTRA
   ///////////
+  MAX_EFFECTIVE_BALANCE_ELECTRA: "number",
+  MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA: "number",
   MIN_ACTIVATION_BALANCE: "number",
   PENDING_BALANCE_DEPOSITS_LIMIT: "number",
   PENDING_PARTIAL_WITHDRAWALS_LIMIT: "number",
