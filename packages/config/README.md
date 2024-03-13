@@ -54,7 +54,7 @@ import {createChainConfig, ChainConfig, chainConfigFromJson} from "@lodestar/con
 // example config
 let chainConfigObj: Record<string, unknown> = {
   // phase0
-  MIN_PER_EPOCH_CHURN_LIMIT: 4,
+  MIN_PER_EPOCH_CHURN_LIMIT: 128000000000,
   CHURN_LIMIT_QUOTIENT: 65536,
   MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: 128,
   MIN_GENESIS_TIME: 1621504614,
