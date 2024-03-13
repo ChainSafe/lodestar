@@ -24,8 +24,11 @@ import {ssz as altairSsz} from "../altair/index.js";
 import {ssz as bellatrixSsz} from "../bellatrix/index.js";
 import {ssz as capellaSsz} from "../capella/index.js";
 import {ssz as denebSsz} from "../deneb/index.js";
+import { MAX_CONSOLIDATIONS, PENDING_BALANCE_DEPOSITS_LIMIT, PENDING_CONSOLIDATIONS_LIMIT, PENDING_PARTIAL_WITHDRAWALS_LIMIT } from "@lodestar/params";
 
 const {
+  Epoch,
+  Gwei,
   UintNum64,
   Slot,
   Root,
@@ -148,6 +151,40 @@ export const ExecutionPayloadHeader = new ContainerType(
   {typeName: "ExecutionPayloadHeader", jsonCase: "eth2"}
 );
 
+export const Consolidation = new ContainerType(
+  {
+    sourceIndex: ValidatorIndex,
+    targetIndex: ValidatorIndex,
+    epoch: Epoch,
+  },
+  {typeName: "Consolidation", jsonCase: "eth2"}
+);
+
+export const SignedConsolidation = new ContainerType(
+  {
+    message: Consolidation,
+    signature: BLSSignature,
+  },
+  {typeName: "SignedConsolidation", jsonCase: "eth2"}
+);
+
+export const Consolidation = new ContainerType(
+  {
+    sourceIndex: ValidatorIndex,
+    targetIndex: ValidatorIndex,
+    epoch: Epoch,
+  },
+  {typeName: "Consolidation", jsonCase: "eth2"}
+);
+
+export const SignedConsolidation = new ContainerType(
+  {
+    message: Consolidation,
+    signature: BLSSignature,
+  },
+  {typeName: "SignedConsolidation", jsonCase: "eth2"}
+);
+
 // We have to preserve Fields ordering while changing the type of ExecutionPayload
 export const BeaconBlockBody = new ContainerType(
   {
@@ -163,6 +200,7 @@ export const BeaconBlockBody = new ContainerType(
     executionPayload: ExecutionPayload, // Modified in ELECTRA
     blsToExecutionChanges: capellaSsz.BeaconBlockBody.fields.blsToExecutionChanges,
     blobKzgCommitments: denebSsz.BeaconBlockBody.fields.blobKzgCommitments,
+    consolidations: new ListCompositeType(SignedConsolidation, MAX_CONSOLIDATIONS), // [New in Electra]
   },
   {typeName: "BeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
@@ -243,8 +281,32 @@ export const ExecutionPayloadAndBlobsBundle = new ContainerType(
   {typeName: "ExecutionPayloadAndBlobsBundle", jsonCase: "eth2"}
 );
 
-// We don't spread deneb.BeaconState fields since we need to replace
-// latestExecutionPayloadHeader and we cannot keep order doing that
+export const PendingBalanceDeposit = new ContainerType(
+  {
+    index: ValidatorIndex,
+    amount: Gwei,
+  },
+  {typeName: "PendingBalanceDeposit", jsonCase: "eth2"}
+);
+
+export const PartialWithdrawal = new ContainerType(
+  {
+    index: ValidatorIndex,
+    amount: Gwei,
+    withdrawableEpoch: Epoch,
+  },
+  {typeName: "PartialWithdrawal", jsonCase: "eth2"}
+);
+
+export const PendingConsolidation = new ContainerType(
+  {
+    sourceIndex: ValidatorIndex,
+    targetIndex: ValidatorIndex,
+  },
+  {typeName: "PendingConsolidation", jsonCase: "eth2"}
+);
+
+// In EIP-7251, we spread deneb fields as new fields are appended at the end
 export const BeaconState = new ContainerType(
   {
     genesisTime: UintNum64,
@@ -288,6 +350,14 @@ export const BeaconState = new ContainerType(
     // Deep history valid from Capella onwards
     historicalSummaries: capellaSsz.BeaconState.fields.historicalSummaries,
     depositReceiptsStartIndex: UintBn64, // New in ELECTRA
+    depositBalanceToConsume: Gwei, // [New in Electra]
+    exitBalanceToConsume: Gwei, // [New in Electra]
+    earliestExitEpoch: Epoch, // [New in Electra]
+    consolidationBalanceToConsume: Gwei, // [New in Electra]
+    earliestConsolidationEpoch: Epoch, // [New in Electra]
+    pendingBalanceDeposits: new ListCompositeType(PendingBalanceDeposit, PENDING_BALANCE_DEPOSITS_LIMIT), // [New in Electra]
+    pendingPartialWithdrawals: new ListCompositeType(PartialWithdrawal, PENDING_PARTIAL_WITHDRAWALS_LIMIT), // [New in Electra]
+    pendingConsolidations: new ListCompositeType(PendingConsolidation, PENDING_CONSOLIDATIONS_LIMIT), // [New in Electra]
   },
   {typeName: "BeaconState", jsonCase: "eth2"}
 );
@@ -366,4 +436,13 @@ export const SSEPayloadAttributes = new ContainerType(
     payloadAttributes: PayloadAttributes,
   },
   {typeName: "SSEPayloadAttributes", jsonCase: "eth2"}
+);
+
+export const ExecutionLayerWithdrawRequest = new ContainerType(
+  {
+    sourceAddress: ExecutionAddress,
+    validatorPubkey: BLSPubkey,
+    amount: Gwei,
+  },
+  {typeName: "ExecutionLayerWithdrawRequest", jsonCase: "eth2"}
 );
