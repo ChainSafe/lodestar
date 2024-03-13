@@ -40,6 +40,10 @@ export function computeActivationExitEpoch(epoch: Epoch): Epoch {
 }
 
 /**
+ * TODO Electra: compute_exit_epoch_and_update_churn()
+ */
+
+/**
  * Return the current epoch of the given state.
  */
 export function getCurrentEpoch(state: Pick<allForks.BeaconState, "slot">): Epoch {

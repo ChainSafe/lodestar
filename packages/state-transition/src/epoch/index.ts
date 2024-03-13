@@ -120,6 +120,11 @@ export function processEpoch(
 
   processEth1DataReset(state, cache);
 
+  if (fork >= ForkSeq.electra) {
+    // TODO Electra: processPendingBalanceDeposits
+    // TODO Electra: processPendingConsolidations
+  }
+
   {
     const timer = metrics?.epochTransitionStepTime.startTimer({
       step: EpochTransitionStep.processEffectiveBalanceUpdates,

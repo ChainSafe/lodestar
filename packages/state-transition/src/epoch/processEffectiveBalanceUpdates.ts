@@ -49,7 +49,7 @@ export function processEffectiveBalanceUpdates(state: CachedBeaconStateAllForks,
       // Too small. Check effectiveBalance < MAX_EFFECTIVE_BALANCE to prevent unnecessary updates
       (effectiveBalance < MAX_EFFECTIVE_BALANCE && effectiveBalance < balance - UPWARD_THRESHOLD)
     ) {
-      effectiveBalance = Math.min(balance - (balance % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE);
+      effectiveBalance = Math.min(balance - (balance % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE); // TODO Electra: Minimum is now dictated by EFFECTIVE_BALANCE_LIMIT instead of MAX_EB
       // Update the state tree
       // Should happen rarely, so it's fine to update the tree
       const validator = validators.get(i);

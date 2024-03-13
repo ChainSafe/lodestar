@@ -89,7 +89,7 @@ export interface EpochTransitionCache {
   /**
    * Indices of validators that just joined and will be eligible for the active queue.
    * ```
-   * v.activationEligibilityEpoch === FAR_FUTURE_EPOCH && v.effectiveBalance === MAX_EFFECTIVE_BALANCE
+   * v.activationEligibilityEpoch === FAR_FUTURE_EPOCH && v.effectiveBalance >= MAX_EFFECTIVE_BALANCE
    * ```
    * All validators in indicesEligibleForActivationQueue get activationEligibilityEpoch set. So it can only include
    * validators that have just joined the registry through a valid full deposit(s).
@@ -243,12 +243,12 @@ export function beforeProcessEpoch(
     // def is_eligible_for_activation_queue(validator: Validator) -> bool:
     //   return (
     //     validator.activation_eligibility_epoch == FAR_FUTURE_EPOCH
-    //     and validator.effective_balance == MAX_EFFECTIVE_BALANCE
+    //     and validator.effective_balance >= MAX_EFFECTIVE_BALANCE # [Modified in Electra]
     //   )
     // ```
     if (
       validator.activationEligibilityEpoch === FAR_FUTURE_EPOCH &&
-      validator.effectiveBalance === MAX_EFFECTIVE_BALANCE
+      validator.effectiveBalance >= MAX_EFFECTIVE_BALANCE
     ) {
       indicesEligibleForActivationQueue.push(i);
     }

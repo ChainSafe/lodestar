@@ -309,7 +309,7 @@ export class EpochCache {
     const nextEpoch = currentEpoch + 1;
 
     let totalActiveBalanceIncrements = 0;
-    let exitQueueEpoch = computeActivationExitEpoch(currentEpoch);
+    let exitQueueEpoch = computeActivationExitEpoch(currentEpoch); // TODO Electra: New exit epoch calculation
     let exitQueueChurn = 0;
 
     const validators = state.validators.getAllReadonlyValues();
@@ -588,7 +588,7 @@ export class EpochCache {
     );
 
     // Maybe advance exitQueueEpoch at the end of the epoch if there haven't been any exists for a while
-    const exitQueueEpoch = computeActivationExitEpoch(currEpoch);
+    const exitQueueEpoch = computeActivationExitEpoch(currEpoch);  // TODO Electra: New exit epoch calculation
     if (exitQueueEpoch > this.exitQueueEpoch) {
       this.exitQueueEpoch = exitQueueEpoch;
       this.exitQueueChurn = 0;

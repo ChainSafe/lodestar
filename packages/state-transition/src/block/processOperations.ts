@@ -70,5 +70,7 @@ export function processOperations(
     for (const depositReceipt of (body as electra.BeaconBlockBody).executionPayload.depositReceipts) {
       processDepositReceipt(fork, state as CachedBeaconStateElectra, depositReceipt);
     }
+    // TODO Electra: add process_execution_layer_withdraw_request
+    // TODO Electra: add process_consolidation
   }
 }
