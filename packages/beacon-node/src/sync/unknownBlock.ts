@@ -95,9 +95,9 @@ export class UnknownBlockSync {
    */
   private onUnknownBlock = (data: NetworkEventData[NetworkEvent.unknownBlock]): void => {
     try {
-      this.addUnknownBlock(data.rootHex, data.peer);
+      const unknownBlockType = this.addUnknownBlock(data.rootHex, data.peer);
       this.triggerUnknownBlockSearch();
-      this.metrics?.syncUnknownBlock.requests.inc({type: PendingBlockType.UNKNOWN_BLOCK});
+      this.metrics?.syncUnknownBlock.requests.inc({type: unknownBlockType});
     } catch (e) {
       this.logger.debug("Error handling unknownBlock event", {}, e as Error);
     }
@@ -108,9 +108,9 @@ export class UnknownBlockSync {
    */
   private onUnknownBlockInput = (data: NetworkEventData[NetworkEvent.unknownBlockInput]): void => {
     try {
-      this.addUnknownBlock(data.blockInput, data.peer);
+      const unknownBlockType = this.addUnknownBlock(data.blockInput, data.peer);
       this.triggerUnknownBlockSearch();
-      this.metrics?.syncUnknownBlock.requests.inc({type: PendingBlockType.UNKNOWN_BLOCKINPUT});
+      this.metrics?.syncUnknownBlock.requests.inc({type: unknownBlockType});
     } catch (e) {
       this.logger.debug("Error handling unknownBlockInput event", {}, e as Error);
     }
@@ -165,20 +165,27 @@ export class UnknownBlockSync {
     this.addUnknownBlock(parentBlockRootHex, peerIdStr);
   }
 
-  private addUnknownBlock(blockInputOrRootHex: RootHex | BlockInput | NullBlockInput, peerIdStr?: string): void {
+  private addUnknownBlock(
+    blockInputOrRootHex: RootHex | BlockInput | NullBlockInput,
+    peerIdStr?: string
+  ): Exclude<PendingBlockType, PendingBlockType.UNKNOWN_PARENT> {
     let blockRootHex;
     let blockInput: BlockInput | NullBlockInput | null;
+    let unknownBlockType: Exclude<PendingBlockType, PendingBlockType.UNKNOWN_PARENT>;
 
     if (typeof blockInputOrRootHex === "string") {
       blockRootHex = blockInputOrRootHex;
       blockInput = null;
+      unknownBlockType = PendingBlockType.UNKNOWN_BLOCK;
     } else {
       if (blockInputOrRootHex.block !== null) {
         const {block} = blockInputOrRootHex;
         blockRootHex = toHexString(
           this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)
         );
+        unknownBlockType = PendingBlockType.UNKNOWN_BLOBS;
       } else {
+        unknownBlockType = PendingBlockType.UNKNOWN_BLOCKINPUT;
         blockRootHex = blockInputOrRootHex.blockRootHex;
       }
       blockInput = blockInputOrRootHex;
@@ -187,10 +194,10 @@ export class UnknownBlockSync {
     let pendingBlock = this.pendingBlocks.get(blockRootHex);
     if (!pendingBlock) {
       pendingBlock = {
+        unknownBlockType,
         blockRootHex,
         parentBlockRootHex: null,
         blockInput,
-        // blockInput: blockInput?.type === BlockInputType.blobsPromise ? blockInput : null,
         peerIdStrs: new Set(),
         status: PendingBlockStatus.pending,
         downloadAttempts: 0,
@@ -224,6 +231,8 @@ export class UnknownBlockSync {
     if (prunedItemCount > 0) {
       this.logger.warn(`Pruned ${prunedItemCount} pending blocks from UnknownBlockSync`);
     }
+
+    return unknownBlockType;
   }
 
   /**
@@ -279,9 +288,8 @@ export class UnknownBlockSync {
       return;
     }
 
-    let unknownBlockType;
+    const unknownBlockType = block.unknownBlockType;
     if (block.blockInput === null) {
-      unknownBlockType = "UnknownBlock";
       this.logger.verbose("Downloading unknown block", {
         root: block.blockRootHex,
         pendingBlocks: this.pendingBlocks.size,
@@ -289,16 +297,13 @@ export class UnknownBlockSync {
         unknownBlockType,
       });
     } else if (block.blockInput.block === null) {
-      unknownBlockType = "NullBlockInput";
       this.logger.verbose("Downloading unknown block with known blobs", {
         root: block.blockInput.blockRootHex,
         pendingBlocks: this.pendingBlocks.size,
         unknownBlockType,
       });
     } else {
-      // blockInput with blobsPromise
-      unknownBlockType = "UnknownBlobs";
-      this.logger.verbose("Downloading unknown blockInput", {
+      this.logger.verbose("Downloading unknown blobs", {
         root: block.blockRootHex,
         pendingBlocks: this.pendingBlocks.size,
         blockInputType: block.blockInput.type,

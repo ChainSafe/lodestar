@@ -34,7 +34,7 @@ type BlockInputCacheType = {
   resolveAvailability: (blobs: BlockInputBlobs) => void;
   // block promise and its callback cached for delayed resolution
   blockInputPromise: Promise<BlockInput>;
-  resolveBlock: (blockInput: BlockInput) => void;
+  resolveBlockInput: (blockInput: BlockInput) => void;
 };
 
 const MAX_GOSSIPINPUT_CACHE = 5;
@@ -112,7 +112,7 @@ export class SeenGossipBlockInput {
       availabilityPromise,
       resolveAvailability,
       blockInputPromise,
-      resolveBlock,
+      resolveBlockInput,
     } = blockCache;
 
     if (signedBlock !== undefined) {
@@ -147,7 +147,7 @@ export class SeenGossipBlockInput {
           blobsBytes
         );
 
-        resolveBlock(blockInput);
+        resolveBlockInput(blockInput);
         return {
           blockInput,
           blockInputMeta: {pending: null, haveBlobs: blobs.length, expectedBlobs: blobKzgCommitments.length},
@@ -163,7 +163,7 @@ export class SeenGossipBlockInput {
           resolveAvailability
         );
 
-        resolveBlock(blockInput);
+        resolveBlockInput(blockInput);
         return {
           blockInput,
           blockInputMeta: {
@@ -193,9 +193,9 @@ export class SeenGossipBlockInput {
 function getEmptyBlockInputCacheEntry(): BlockInputCacheType {
   // Capture both the promise and its callbacks for blockInput and final availability
   // It is not spec'ed but in tests in Firefox and NodeJS the promise constructor is run immediately
-  let resolveBlock: ((block: BlockInput) => void) | null = null;
+  let resolveBlockInput: ((block: BlockInput) => void) | null = null;
   const blockInputPromise = new Promise<BlockInput>((resolveCB) => {
-    resolveBlock = resolveCB;
+    resolveBlockInput = resolveCB;
   });
 
   let resolveAvailability: ((blobs: BlockInputBlobs) => void) | null = null;
@@ -203,9 +203,9 @@ function getEmptyBlockInputCacheEntry(): BlockInputCacheType {
     resolveAvailability = resolveCB;
   });
 
-  if (resolveAvailability === null || resolveBlock === null) {
+  if (resolveAvailability === null || resolveBlockInput === null) {
     throw Error("Promise Constructor was not executed immediately");
   }
   const blobsCache = new Map();
-  return {blockInputPromise, resolveBlock, availabilityPromise, resolveAvailability, blobsCache};
+  return {blockInputPromise, resolveBlockInput, availabilityPromise, resolveAvailability, blobsCache};
 }
