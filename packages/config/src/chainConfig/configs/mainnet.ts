@@ -74,8 +74,8 @@ export const chainConfig: ChainConfig = {
   INACTIVITY_SCORE_RECOVERY_RATE: 16,
   // 2**4 * 10**9 (= 16,000,000,000) Gwei
   EJECTION_BALANCE: 16000000000,
-  // 2**7 * 10**9 (= 128,000,000,000)
-  MIN_PER_EPOCH_CHURN_LIMIT: 128000000000,
+  // 2**2 (= 4)
+  MIN_PER_EPOCH_CHURN_LIMIT: 4,
   // 2**8 * 10**9 (= 256,000,000,000)
   MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT: 256000000000,
   // 2**16 (= 65,536)
@@ -99,4 +99,9 @@ export const chainConfig: ChainConfig = {
   // Deneb
   // `2**12` (= 4096 epochs, ~18 days)
   MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: 4096,
+
+
+  // Electra
+  // 2**7 * 10**9 (= 128,000,000,000)
+  MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA: 128000000000,
 };
