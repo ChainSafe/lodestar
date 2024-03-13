@@ -26,8 +26,8 @@ export const mainnetPreset: BeaconPreset = {
   // ---------------------------------------------------------------
   // 2**0 * 10**9 (= 1,000,000,000) Gwei
   MIN_DEPOSIT_AMOUNT: 1000000000,
-  // 2**5 * 10**9 (= 32,000,000,000) Gwei
-  MAX_EFFECTIVE_BALANCE: 32000000000,
+  // 2**11 * 10**9 (= 2,048,000,000,000) Gwei
+  MAX_EFFECTIVE_BALANCE: 2048000000000,
   // 2**0 * 10**9 (= 1,000,000,000) Gwei
   EFFECTIVE_BALANCE_INCREMENT: 1000000000,
 
@@ -69,8 +69,8 @@ export const mainnetPreset: BeaconPreset = {
   PROPOSER_REWARD_QUOTIENT: 8,
   // 2**26 (= 67,108,864)
   INACTIVITY_PENALTY_QUOTIENT: 67108864,
-  // 2**7 (= 128) (lower safety margin at Phase 0 genesis)
-  MIN_SLASHING_PENALTY_QUOTIENT: 128,
+  // 2**16 (= 65536)
+  MIN_SLASHING_PENALTY_QUOTIENT: 65536,
   PROPORTIONAL_SLASHING_MULTIPLIER: 1,
 
   // Max operations per block
@@ -118,4 +118,12 @@ export const mainnetPreset: BeaconPreset = {
   MAX_BLOB_COMMITMENTS_PER_BLOCK: 4096,
   MAX_BLOBS_PER_BLOCK: 6,
   KZG_COMMITMENT_INCLUSION_PROOF_DEPTH: 17,
+
+  // ELECTRA
+  ///////////
+  MIN_ACTIVATION_BALANCE: 32000000000,
+  PENDING_BALANCE_DEPOSITS_LIMIT: 134217728,
+  PENDING_PARTIAL_WITHDRAWALS_LIMIT: 134217728,
+  PENDING_CONSOLIDATIONS_LIMIT: 262144,
+  MAX_CONSOLIDATIONS: 1,
 };

@@ -17,7 +17,7 @@ export type BeaconPreset = {
 
   // Gwei Values
   MIN_DEPOSIT_AMOUNT: number;
-  MAX_EFFECTIVE_BALANCE: number;
+  MIN_ACTIVATION_BALANCE: number;
   EFFECTIVE_BALANCE_INCREMENT: number;
 
   // Time parameters
@@ -82,6 +82,14 @@ export type BeaconPreset = {
   MAX_BLOB_COMMITMENTS_PER_BLOCK: number;
   MAX_BLOBS_PER_BLOCK: number;
   KZG_COMMITMENT_INCLUSION_PROOF_DEPTH: number;
+
+  // ELECTRA
+  ///////////
+  MAX_EFFECTIVE_BALANCE: number;
+  PENDING_BALANCE_DEPOSITS_LIMIT: number;
+  PENDING_PARTIAL_WITHDRAWALS_LIMIT: number;
+  PENDING_CONSOLIDATIONS_LIMIT: number;
+  MAX_CONSOLIDATIONS: number;
 };
 
 /**
@@ -167,6 +175,14 @@ export const beaconPresetTypes: BeaconPresetTypes = {
   MAX_BLOB_COMMITMENTS_PER_BLOCK: "number",
   MAX_BLOBS_PER_BLOCK: "number",
   KZG_COMMITMENT_INCLUSION_PROOF_DEPTH: "number",
+
+  // ELECTRA
+  ///////////
+  MIN_ACTIVATION_BALANCE: "number",
+  PENDING_BALANCE_DEPOSITS_LIMIT: "number",
+  PENDING_PARTIAL_WITHDRAWALS_LIMIT: "number",
+  PENDING_CONSOLIDATIONS_LIMIT: "number",
+  MAX_CONSOLIDATIONS: "number",
 };
 
 type BeaconPresetTypes = {
