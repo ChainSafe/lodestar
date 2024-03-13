@@ -46,6 +46,6 @@ export function initiateValidatorExit(
   }
 
   // set validator exit epoch and withdrawable epoch
-  validator.exitEpoch = epochCtx.exitQueueEpoch;
+  validator.exitEpoch = epochCtx.exitQueueEpoch; // TODO Electra: calculate exit epoch
   validator.withdrawableEpoch = epochCtx.exitQueueEpoch + config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY;
 }

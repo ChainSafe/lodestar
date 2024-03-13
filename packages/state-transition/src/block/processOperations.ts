@@ -54,4 +54,9 @@ export function processOperations(
       processBlsToExecutionChange(state as CachedBeaconStateCapella, blsToExecutionChange);
     }
   }
+
+  if (fork >= ForkSeq.electra) {
+    // TODO Electra: add process_execution_layer_withdraw_request
+    // TODO Electra: add process_consolidation
+  }
 }

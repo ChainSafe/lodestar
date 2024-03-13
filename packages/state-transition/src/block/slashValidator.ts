@@ -6,6 +6,7 @@ import {
   MIN_SLASHING_PENALTY_QUOTIENT,
   MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR,
   MIN_SLASHING_PENALTY_QUOTIENT_BELLATRIX,
+  MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA,
   PROPOSER_REWARD_QUOTIENT,
   PROPOSER_WEIGHT,
   TIMELY_TARGET_FLAG_INDEX,
@@ -52,7 +53,9 @@ export function slashValidator(
       ? MIN_SLASHING_PENALTY_QUOTIENT
       : fork === ForkSeq.altair
       ? MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR
-      : MIN_SLASHING_PENALTY_QUOTIENT_BELLATRIX;
+      : fork === ForkSeq.bellatrix
+      ? MIN_SLASHING_PENALTY_QUOTIENT_BELLATRIX
+      : MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA;
   decreaseBalance(state, slashedIndex, Math.floor(effectiveBalance / minSlashingPenaltyQuotient));
 
   // apply proposer and whistleblower rewards
