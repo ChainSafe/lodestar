@@ -227,6 +227,8 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD: electraForkRelevant,
     MAX_ATTESTER_SLASHINGS_ELECTRA: electraForkRelevant,
     MAX_ATTESTATIONS_ELECTRA: electraForkRelevant,
+    MAX_EFFECTIVE_BALANCE_ELECTRA: electraForkRelevant,
+    MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA: electraForkRelevant,
     MIN_ACTIVATION_BALANCE: electraForkRelevant,
     PENDING_BALANCE_DEPOSITS_LIMIT: electraForkRelevant,
     PENDING_PARTIAL_WITHDRAWALS_LIMIT: electraForkRelevant,
