@@ -52,7 +52,7 @@ export class ApiResponse<E extends Endpoint> extends Response {
         case WireFormat.json:
           this._rawBody = {
             type: WireFormat.json,
-            value: await this.json(),
+            value: await super.json(),
           };
           break;
         case WireFormat.ssz:
@@ -103,6 +103,16 @@ export class ApiResponse<E extends Endpoint> extends Response {
       }
     }
     return this._value;
+  }
+
+  async json(): Promise<unknown> {
+    const rawBody = await this.rawBody();
+    switch (rawBody.type) {
+      case WireFormat.json:
+        return rawBody.value;
+      case WireFormat.ssz:
+        return this.definition.resp.data.toJson(await this.value(), await this.meta());
+    }
   }
 
   async ssz(): Promise<Uint8Array> {
