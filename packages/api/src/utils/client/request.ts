@@ -47,6 +47,7 @@ export function createApiRequest<E extends Endpoint>(
     switch (requestWireFormat) {
       case WireFormat.json:
         req = (definition.req as JsonRequestMethods<E>).writeReqJson(args);
+        req.body = req.body ? JSON.stringify(req.body) : undefined; // TODO: default to `{}`?
         headers.set("content-type", "application/json");
         break;
       case WireFormat.ssz:
