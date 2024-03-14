@@ -86,7 +86,6 @@ const testDatas = {
 
 const ignoredOperations = [
   /* missing route */
-  /* https://github.com/ChainSafe/lodestar/issues/5694 */
   /* https://github.com/ChainSafe/lodestar/issues/6058 */
   "postStateValidators",
   "postStateValidatorBalances",
