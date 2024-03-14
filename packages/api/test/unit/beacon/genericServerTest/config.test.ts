@@ -12,6 +12,8 @@ describe("beacon / config", () => {
   runGenericServerTest<Endpoints>(config, getClient, getRoutes, testData);
 
   it("Serialize Partial Spec object", () => {
+    const definition = definitions.getSpec;
+
     const partialJsonSpec: Record<string, string> = {
       PRESET_BASE: "mainnet",
       DEPOSIT_CONTRACT_ADDRESS: "0xff50ed3d0ec03ac01d4c79aad74928bff48a7b2b",
@@ -20,11 +22,9 @@ describe("beacon / config", () => {
       MIN_GENESIS_TIME: "1606824000",
     };
 
-    const jsonRes = definitions.getSpec.resp.data.toJson(
-      Object.entries(partialJsonSpec).map(([key, value]) => ({key, value}))
-    );
-    const specRes = definitions.getSpec.resp.data.fromJson(jsonRes);
+    const jsonRes = definition.resp.data.toJson(Object.entries(partialJsonSpec).map(([key, value]) => ({key, value})));
+    const specRes = definition.resp.transform?.toResponse(definition.resp.data.fromJson(jsonRes));
 
-    expect(specRes).toEqual({data: partialJsonSpec});
+    expect(specRes).toEqual(partialJsonSpec);
   });
 });
