@@ -10,6 +10,8 @@ export const DepositContractType = new ContainerType({
   chainId: ssz.UintNum64,
   address: ssz.Bytes32,
 });
+
+// TODO: consider dropping this type if we cant support ssz anyways
 export const StringRecordType = ArrayOf(
   new ContainerType({
     key: new StringType(),
@@ -97,6 +99,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
       meta: EmptyMetaCodec,
       transform: {
         toResponse: (data) => {
+          // TODO: shouldn't this be wrapped inside `{data: ...}`?
           return data.reduce((json, {key, value}) => ((json[key] = value), json), {} as Record<string, string>);
         },
         fromResponse: (resp) => {

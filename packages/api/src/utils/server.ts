@@ -151,6 +151,7 @@ export function createFastifyHandler<E extends Endpoint>(
           response?.data instanceof Uint8Array
             ? response.data
             : definition.resp.data.serialize(response?.data, response?.meta);
+        //TODO: Do we need to convert to buffer here? https://github.com/fastify/fastify/issues/5118
         wireResponse = Buffer.from(data);
       }
     }

@@ -24,6 +24,7 @@ export interface IHttpClient {
   readonly baseUrl: string;
 
   request<E extends Endpoint>(
+    // TODO: make http client simpler to use? providing a definition is quite involved
     definition: RouteDefinitionExtra<E>,
     args: E["args"],
     localInit?: ApiRequestInit
