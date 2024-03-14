@@ -204,22 +204,11 @@ export class UnknownBlockSync {
       } as PendingBlock;
       this.pendingBlocks.set(blockRootHex, pendingBlock);
 
-      if (pendingBlock.blockInput?.block === null) {
-        this.logger.verbose("Added blockInput with unknown block to pendingBlocks", {
-          root: pendingBlock.blockInput.blockRootHex,
-          slot: "unknown",
-        });
-      } else if (pendingBlock.blockInput?.type === BlockInputType.blobsPromise) {
-        this.logger.verbose("Added blockInput with unknown blobs to pendingBlocks", {
-          root: blockRootHex,
-          slot: blockInput?.block?.message.slot ?? "unknown",
-        });
-      } else {
-        this.logger.verbose("Added unknown block to pendingBlocks", {
-          root: blockRootHex,
-          slot: blockInput?.block?.message.slot ?? "unknown",
-        });
-      }
+      this.logger.verbose("Added unknown block to pendingBlocks", {
+        unknownBlockType,
+        root: blockRootHex,
+        slot: blockInput?.block?.message.slot ?? "unknown",
+      });
     }
 
     if (peerIdStr) {
@@ -289,28 +278,13 @@ export class UnknownBlockSync {
     }
 
     const unknownBlockType = block.unknownBlockType;
-    if (block.blockInput === null) {
-      this.logger.verbose("Downloading unknown block", {
-        root: block.blockRootHex,
-        pendingBlocks: this.pendingBlocks.size,
-        slot: "unknown",
-        unknownBlockType,
-      });
-    } else if (block.blockInput.block === null) {
-      this.logger.verbose("Downloading unknown block with known blobs", {
-        root: block.blockInput.blockRootHex,
-        pendingBlocks: this.pendingBlocks.size,
-        unknownBlockType,
-      });
-    } else {
-      this.logger.verbose("Downloading unknown blobs", {
-        root: block.blockRootHex,
-        pendingBlocks: this.pendingBlocks.size,
-        blockInputType: block.blockInput.type,
-        slot: block.blockInput?.block?.message.slot ?? "unknown",
-        unknownBlockType,
-      });
-    }
+
+    this.logger.verbose("Downloading unknown block", {
+      root: block.blockRootHex,
+      pendingBlocks: this.pendingBlocks.size,
+      slot: block.blockInput?.block?.message.slot ?? "unknown",
+      unknownBlockType,
+    });
 
     block.status = PendingBlockStatus.fetching;
 
