@@ -6,6 +6,13 @@ import {Logger} from "@lodestar/utils";
 import {MAX_PAYLOAD_HISTORY} from "../constants.js";
 import {hexToBuffer} from "./conversion.js";
 
+export async function fetchBlock(api: Api, slot: number): Promise<capella.SignedBeaconBlock | undefined> {
+  const res = await api.beacon.getBlockV2(slot);
+
+  if (res.ok) return res.response.data as capella.SignedBeaconBlock;
+  return;
+}
+
 export async function fetchNearestBlock(
   api: Api,
   slot: number,
@@ -43,7 +50,7 @@ export async function getExecutionPayloads({
   startSlot: number;
   endSlot: number;
   logger: Logger;
-}): Promise<Record<number, allForks.ExecutionPayload>> {
+}): Promise<Map<number, allForks.ExecutionPayload>> {
   [startSlot, endSlot] = [Math.min(startSlot, endSlot), Math.max(startSlot, endSlot)];
   if (startSlot === endSlot) {
     logger.debug("Fetching EL payload", {slot: startSlot});
@@ -51,18 +58,18 @@ export async function getExecutionPayloads({
     logger.debug("Fetching EL payloads", {startSlot, endSlot});
   }
 
-  const payloads: Record<number, allForks.ExecutionPayload> = {};
+  const payloads = new Map<number, allForks.ExecutionPayload>();
 
   let slot = endSlot;
-  let block = await fetchNearestBlock(api, slot, "down");
-  payloads[block.message.slot] = block.message.body.executionPayload;
+  let block = await fetchNearestBlock(api, slot);
+  payloads.set(block.message.slot, block.message.body.executionPayload);
   slot = block.message.slot - 1;
 
   while (slot >= startSlot) {
-    const previousBlock = await fetchNearestBlock(api, block.message.slot - 1, "down");
+    const previousBlock = await fetchNearestBlock(api, block.message.slot - 1);
 
     if (block.message.body.executionPayload.parentHash === previousBlock.message.body.executionPayload.blockHash) {
-      payloads[block.message.slot] = block.message.body.executionPayload;
+      payloads.set(block.message.slot, block.message.body.executionPayload);
     }
 
     slot = block.message.slot - 1;
@@ -76,16 +83,16 @@ export async function getExecutionPayloadForBlockNumber(
   api: Api,
   startSlot: number,
   blockNumber: number
-): Promise<Record<number, allForks.ExecutionPayload>> {
-  const payloads: Record<number, allForks.ExecutionPayload> = {};
+): Promise<Map<number, allForks.ExecutionPayload>> {
+  const payloads = new Map<number, allForks.ExecutionPayload>();
 
-  let block = await fetchNearestBlock(api, startSlot, "down");
-  payloads[block.message.slot] = block.message.body.executionPayload;
+  let block = await fetchNearestBlock(api, startSlot);
+  payloads.set(block.message.slot, block.message.body.executionPayload);
 
-  while (payloads[block.message.slot].blockNumber !== blockNumber) {
-    const previousBlock = await fetchNearestBlock(api, block.message.slot - 1, "down");
+  while (payloads.get(block.message.slot)?.blockNumber !== blockNumber) {
+    const previousBlock = await fetchNearestBlock(api, block.message.slot - 1);
     block = previousBlock;
-    payloads[block.message.slot] = block.message.body.executionPayload;
+    payloads.set(block.message.slot, block.message.body.executionPayload);
   }
 
   return payloads;

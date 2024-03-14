@@ -2,11 +2,15 @@ import {Api} from "@lodestar/api";
 import {allForks, capella} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {MAX_PAYLOAD_HISTORY} from "../constants.js";
-import {getExecutionPayloadForBlockNumber, getExecutionPayloads} from "../utils/consensus.js";
+import {fetchBlock, getExecutionPayloadForBlockNumber} from "../utils/consensus.js";
 import {bufferToHex, hexToNumber} from "../utils/conversion.js";
 import {OrderedMap} from "./ordered_map.js";
 
 type BlockELRoot = string;
+type BlockELRootAndSlot = {
+  blockELRoot: BlockELRoot;
+  slot: number;
+};
 type BlockCLRoot = string;
 
 /**
@@ -15,7 +19,7 @@ type BlockCLRoot = string;
 export class PayloadStore {
   // We store the block root from execution for finalized blocks
   // As these blocks are finalized, so not to be worried about conflicting roots
-  private finalizedRoots = new OrderedMap<BlockELRoot>();
+  private finalizedRoots = new OrderedMap<BlockELRootAndSlot>();
 
   // Unfinalized blocks may change over time and may have conflicting roots
   // We can receive multiple light-client headers for the same block of execution
@@ -39,7 +43,7 @@ export class PayloadStore {
 
     const finalizedMaxRoot = this.finalizedRoots.get(maxBlockNumberForFinalized);
     if (finalizedMaxRoot) {
-      return this.payloads.get(finalizedMaxRoot);
+      return this.payloads.get(finalizedMaxRoot.blockELRoot);
     }
 
     return undefined;
@@ -94,35 +98,39 @@ export class PayloadStore {
     let blockELRoot = this.finalizedRoots.get(blockNumber);
     // check if we have payload cached locally else fetch from api
     if (!blockELRoot) {
-      const payloads = await getExecutionPayloadForBlockNumber(this.opts.api, minBlockNumberForFinalized, blockNumber);
-      for (const payload of Object.values(payloads)) {
-        this.set(payload, true);
+      const finalizedMaxRoot = this.finalizedRoots.get(maxBlockNumberForFinalized);
+      const slot = finalizedMaxRoot?.slot;
+      if (slot !== undefined) {
+        const payloads = await getExecutionPayloadForBlockNumber(this.opts.api, slot, blockNumber);
+        for (const [slot, payload] of payloads.entries()) {
+          this.set(payload, slot, true);
+        }
       }
     }
 
     blockELRoot = this.finalizedRoots.get(blockNumber);
     if (blockELRoot) {
-      return this.payloads.get(blockELRoot);
+      return this.payloads.get(blockELRoot.blockELRoot);
     }
 
     return undefined;
   }
 
-  set(payload: allForks.ExecutionPayload, finalized: boolean): void {
-    const blockRoot = bufferToHex(payload.blockHash);
-    this.payloads.set(blockRoot, payload);
+  set(payload: allForks.ExecutionPayload, slot: number, finalized: boolean): void {
+    const blockELRoot = bufferToHex(payload.blockHash);
+    this.payloads.set(blockELRoot, payload);
 
     if (this.latestBlockRoot) {
       const latestPayload = this.payloads.get(this.latestBlockRoot);
       if (latestPayload && latestPayload.blockNumber < payload.blockNumber) {
-        this.latestBlockRoot = blockRoot;
+        this.latestBlockRoot = blockELRoot;
       }
     } else {
-      this.latestBlockRoot = blockRoot;
+      this.latestBlockRoot = blockELRoot;
     }
 
     if (finalized) {
-      this.finalizedRoots.set(payload.blockNumber, blockRoot);
+      this.finalizedRoots.set(payload.blockNumber, {blockELRoot, slot});
     }
   }
 
@@ -136,7 +144,7 @@ export class PayloadStore {
     // ==== Finalized blocks ====
     // if the block is finalized, we need to update the finalizedRoots map
     if (finalized) {
-      this.finalizedRoots.set(blockNumber, blockELRoot);
+      this.finalizedRoots.set(blockNumber, {blockELRoot, slot: blockSlot});
 
       // If the block is finalized and we already have the payload
       // We can remove it from the unfinalizedRoots map and do nothing else
@@ -147,17 +155,12 @@ export class PayloadStore {
       // If the block is finalized and we do not have the payload
       // We need to fetch and set the payload
       else {
-        this.payloads.set(
-          bufferToHex(header.execution.blockHash),
-          (
-            await getExecutionPayloads({
-              api: this.opts.api,
-              startSlot: blockSlot,
-              endSlot: blockSlot,
-              logger: this.opts.logger,
-            })
-          )[blockSlot]
-        );
+        const block = await fetchBlock(this.opts.api, blockSlot);
+        if (block) {
+          this.payloads.set(blockELRoot, block.message.body.executionPayload);
+        } else {
+          this.opts.logger.error("Failed to fetch block", blockSlot);
+        }
       }
 
       return;
@@ -178,15 +181,12 @@ export class PayloadStore {
     this.unfinalizedRoots.set(blockCLRoot, blockELRoot);
 
     // We do not have the payload for this block, we need to fetch it
-    const payload = (
-      await getExecutionPayloads({
-        api: this.opts.api,
-        startSlot: blockSlot,
-        endSlot: blockSlot,
-        logger: this.opts.logger,
-      })
-    )[blockSlot];
-    this.set(payload, false);
+    const block = await fetchBlock(this.opts.api, blockSlot);
+    if (block) {
+      this.set(block.message.body.executionPayload, blockSlot, false);
+    } else {
+      this.opts.logger.error("Failed to fetch finalized block", blockSlot);
+    }
     this.prune();
   }
 
@@ -202,7 +202,7 @@ export class PayloadStore {
     ) {
       const blockELRoot = this.finalizedRoots.get(blockNumber);
       if (blockELRoot) {
-        this.payloads.delete(blockELRoot);
+        this.payloads.delete(blockELRoot.blockELRoot);
         this.finalizedRoots.delete(blockNumber);
       }
     }

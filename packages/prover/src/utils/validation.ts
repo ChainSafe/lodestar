@@ -104,28 +104,27 @@ export async function isValidBlock({
   logger: Logger;
   config: ChainForkConfig;
 }): Promise<boolean> {
-  const common = getChainCommon(config.PRESET_BASE);
-  common.setHardforkByBlockNumber(executionPayload.blockNumber, undefined, executionPayload.timestamp);
-
-  const blockObject = Block.fromBlockData(blockDataFromELBlock(block), {common});
-
-  if (bufferToHex(executionPayload.blockHash) !== bufferToHex(blockObject.hash())) {
+  if (bufferToHex(executionPayload.blockHash) !== block.hash) {
     logger.error("Block hash does not match", {
-      rpcBlockHash: bufferToHex(blockObject.hash()),
+      rpcBlockHash: block.hash,
       beaconExecutionBlockHash: bufferToHex(executionPayload.blockHash),
     });
 
     return false;
   }
 
-  if (bufferToHex(executionPayload.parentHash) !== bufferToHex(blockObject.header.parentHash)) {
+  if (bufferToHex(executionPayload.parentHash) !== block.parentHash) {
     logger.error("Block parent hash does not match", {
-      rpcBlockHash: bufferToHex(blockObject.header.parentHash),
+      rpcBlockHash: block.parentHash,
       beaconExecutionBlockHash: bufferToHex(executionPayload.parentHash),
     });
 
     return false;
   }
+
+  const common = getChainCommon(config.PRESET_BASE);
+  common.setHardforkByBlockNumber(executionPayload.blockNumber, undefined, executionPayload.timestamp);
+  const blockObject = Block.fromBlockData(blockDataFromELBlock(block), {common});
 
   if (!(await blockObject.validateTransactionsTrie())) {
     logger.error("Block transactions could not be verified.", {
