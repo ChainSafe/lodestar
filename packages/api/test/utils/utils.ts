@@ -1,6 +1,6 @@
 import {MockedObject, vi} from "vitest";
 import {parse as parseQueryString} from "qs";
-import {FastifyInstance, fastify} from "fastify";
+import {FastifyInstance, FastifyRequest, fastify} from "fastify";
 import {mapValues} from "@lodestar/utils";
 import {Endpoint} from "../../src/utils/index.js";
 import {ApplicationMethods} from "../../src/utils/server.js";
@@ -10,6 +10,14 @@ export function getTestServer(): {server: FastifyInstance; start: () => Promise<
     ajv: {customOptions: {coerceTypes: "array"}},
     querystringParser: (str) => parseQueryString(str, {comma: true, parseArrays: false}),
   });
+
+  server.addContentTypeParser(
+    "application/octet-stream",
+    {parseAs: "buffer"},
+    async (_request: FastifyRequest, payload: Buffer) => {
+      return payload;
+    }
+  );
 
   server.addHook("onError", (_request, _reply, error, done) => {
     // eslint-disable-next-line no-console

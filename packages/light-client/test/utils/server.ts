@@ -1,5 +1,5 @@
 import {parse as parseQueryString} from "qs";
-import {FastifyInstance, fastify} from "fastify";
+import {FastifyInstance, FastifyRequest, fastify} from "fastify";
 import {fastifyCors} from "@fastify/cors";
 import {Api, ServerApi} from "@lodestar/api";
 import {registerRoutes} from "@lodestar/api/beacon/server";
@@ -20,6 +20,14 @@ export async function startServer(
     ajv: {customOptions: {coerceTypes: "array"}},
     querystringParser: (str) => parseQueryString(str, {comma: true, parseArrays: false}),
   });
+
+  server.addContentTypeParser(
+    "application/octet-stream",
+    {parseAs: "buffer"},
+    async (_request: FastifyRequest, payload: Buffer) => {
+      return payload;
+    }
+  );
 
   registerRoutes(server, config, api, ["lightclient", "proof", "events"]);
 
