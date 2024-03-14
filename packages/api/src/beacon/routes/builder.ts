@@ -1,5 +1,5 @@
 import {Slot, ValidatorIndex, WithdrawalIndex} from "@lodestar/types";
-import {ReturnTypes, RoutesData, Schema, sameType, ReqSerializers} from "../../utils/index.js";
+import {ReturnTypes, RoutesData, Schema, ReqSerializers, jsonType} from "../../utils/index.js";
 import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
 import {ApiClientResponse} from "../../interfaces.js";
 import {StateId, ExecutionOptimistic} from "./beacon/state.js";
@@ -59,7 +59,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 
 export function getReturnTypes(): ReturnTypes<Api> {
   return {
-    // Just sent the proof JSON as-is
-    getExpectedWithdrawals: sameType(),
+    // Just sent the JSON as snake case
+    getExpectedWithdrawals: jsonType("snake"),
   };
 }
