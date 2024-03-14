@@ -7,6 +7,7 @@ import {Api as LodestarApi} from "./lodestar.js";
 import {Api as NodeApi} from "./node.js";
 import {Api as ProofApi} from "./proof.js";
 import {Api as ValidatorApi} from "./validator.js";
+import {Api as BuilderApi} from "./builder.js";
 
 export * as beacon from "./beacon/index.js";
 export * as config from "./config.js";
@@ -17,6 +18,7 @@ export * as lodestar from "./lodestar.js";
 export * as node from "./node.js";
 export * as proof from "./proof.js";
 export * as validator from "./validator.js";
+export * as builder from "./builder.js";
 
 export type Api = {
   beacon: BeaconApi;
@@ -28,6 +30,7 @@ export type Api = {
   node: NodeApi;
   proof: ProofApi;
   validator: ValidatorApi;
+  builder: BuilderApi;
 };
 
 // Reasoning of the API definitions

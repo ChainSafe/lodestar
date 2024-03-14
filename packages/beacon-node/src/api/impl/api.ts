@@ -10,6 +10,7 @@ import {getLodestarApi} from "./lodestar/index.js";
 import {getNodeApi} from "./node/index.js";
 import {getProofApi} from "./proof/index.js";
 import {getValidatorApi} from "./validator/index.js";
+import {getBuilderApi} from "./builder/index.js";
 
 export function getApi(opts: ApiOptions, modules: ApiModules): {[K in keyof Api]: ServerApi<Api[K]>} {
   return {
@@ -22,5 +23,6 @@ export function getApi(opts: ApiOptions, modules: ApiModules): {[K in keyof Api]
     node: getNodeApi(opts, modules),
     proof: getProofApi(opts, modules),
     validator: getValidatorApi(modules),
+    builder: getBuilderApi(modules),
   };
 }

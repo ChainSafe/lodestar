@@ -18,5 +18,6 @@ const allNamespacesObj: {[K in keyof Api]: true} = {
   node: true,
   proof: true,
   validator: true,
+  builder: true,
 };
 export const allNamespaces = Object.keys(allNamespacesObj) as ApiNamespace[];

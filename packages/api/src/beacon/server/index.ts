@@ -12,6 +12,7 @@ import * as lodestar from "./lodestar.js";
 import * as node from "./node.js";
 import * as proof from "./proof.js";
 import * as validator from "./validator.js";
+import * as builder from "./builder.js";
 
 // Re-export for usage in beacon-node
 export {ApiError};
@@ -43,6 +44,7 @@ export function registerRoutes(
     node: () => node.getRoutes(config, api.node),
     proof: () => proof.getRoutes(config, api.proof),
     validator: () => validator.getRoutes(config, api.validator),
+    builder: () => builder.getRoutes(config, api.builder),
   };
 
   for (const namespace of enabledNamespaces) {
