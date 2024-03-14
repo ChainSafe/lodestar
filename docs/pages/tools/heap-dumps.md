@@ -108,7 +108,7 @@ $ ./configure --debug
 # that a release version of node is already installed on the system
 $ make -C out BUILDTYPE=Debug -j$(nproc --all)
 
-# Move the debug version of node the the same folder that the release
+# Move the debug version of node the same folder that the release
 # version is installed in and name it `node_debug`.  This will put the
 # debug binary on the path and allow you to run it with the
 # `node_debug` command
@@ -127,7 +127,7 @@ $ yarn install
 
 # Ensure that all native modules are rebuilt with debug symbols. Some
 # modules are prebuilt, like classic-level, and the debug symbols may
-# not be included. If the the debugging exercise is focussed around
+# not be included. If the debugging exercise is focussed around
 # one of these dependencies, then you will need to manually clone those
 # repos and manually build them with debug symbols.
 $ npm rebuild --debug
