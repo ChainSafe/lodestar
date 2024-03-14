@@ -15,6 +15,7 @@ import {
   WithVersion,
 } from "../../utils/codecs.js";
 import {Endpoint, RouteDefinitions} from "../../utils/types.js";
+import {WireFormat} from "../../utils/headers.js";
 import {Schema} from "../../utils/schema.js";
 import {StateId} from "./beacon/state.js";
 
@@ -150,6 +151,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
     resp: {
       data: SlotRootListType,
       meta: EmptyMetaCodec,
+      onlySupport: WireFormat.json,
     },
   },
   getDebugChainHeadsV2: {
@@ -159,6 +161,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
     resp: {
       data: SlotRootExecutionOptimisticListType,
       meta: EmptyMetaCodec,
+      onlySupport: WireFormat.json,
     },
   },
   getProtoArrayNodes: {
@@ -168,6 +171,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
     resp: {
       data: ProtoNodeResponseListType,
       meta: EmptyMetaCodec,
+      onlySupport: WireFormat.json,
     },
   },
   getState: {

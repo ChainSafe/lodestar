@@ -3,12 +3,13 @@ import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {StringType, ssz} from "@lodestar/types";
 import {ArrayOf, EmptyArgs, EmptyGetRequestCodec, EmptyMeta, EmptyMetaCodec, EmptyRequest} from "../../utils/codecs.js";
 import {Endpoint, RouteDefinitions} from "../../utils/index.js";
+import {WireFormat} from "../../utils/headers.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
 export const DepositContractType = new ContainerType({
   chainId: ssz.UintNum64,
-  address: ssz.Bytes32,
+  address: ssz.ExecutionAddress,
 });
 
 // TODO: consider dropping this type if we cant support ssz anyways
@@ -106,6 +107,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
           return {data: Object.entries(resp as Record<string, string>).map(([key, value]) => ({key, value}))};
         },
       },
+      onlySupport: WireFormat.json,
     },
   },
 };

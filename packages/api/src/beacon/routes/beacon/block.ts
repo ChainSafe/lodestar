@@ -222,7 +222,7 @@ export type Endpoints = {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const blockIdOnlyReq: RequestCodec<Endpoint<"GET", {blockId: BlockId}, {params: {block_id: string}}, any, any>> = {
-  writeReq: (block_id) => ({params: {block_id: String(block_id)}}),
+  writeReq: ({blockId}) => ({params: {block_id: String(blockId)}}),
   parseReq: ({params}) => ({blockId: params.block_id}),
   schema: {params: {block_id: Schema.StringRequired}},
 };
