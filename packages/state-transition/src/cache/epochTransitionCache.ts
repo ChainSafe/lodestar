@@ -175,7 +175,7 @@ export function beforeProcessEpoch(
   const {config, epochCtx} = state;
   const forkSeq = config.getForkSeq(state.slot);
   const currentEpoch = epochCtx.epoch;
-  const prevEpoch = epochCtx.previousShuffling.epoch;
+  const prevEpoch = epochCtx.previousEpoch;
   const nextEpoch = currentEpoch + 1;
   // active validator indices for nextShuffling is ready, we want to precalculate for the one after that
   const nextEpoch2 = currentEpoch + 2;

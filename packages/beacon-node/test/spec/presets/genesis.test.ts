@@ -8,10 +8,11 @@ import {
   initializeBeaconStateFromEth1,
   isValidGenesisState,
 } from "@lodestar/state-transition";
-import {bnToNum} from "@lodestar/utils";
+import {LogLevel, bnToNum} from "@lodestar/utils";
 import {ForkName} from "@lodestar/params";
 
 import {ACTIVE_PRESET} from "@lodestar/params";
+import {getNodeLogger} from "@lodestar/logger/node";
 import {expectEqualBeaconState} from "../utils/expectEqualBeaconState.js";
 import {TestRunnerFn} from "../utils/types.js";
 import {getConfig} from "../../utils/config.js";
@@ -42,7 +43,7 @@ const genesisInitialization: TestRunnerFn<GenesisInitSpecTest, BeaconStateAllFor
       }
 
       const config = getConfig(fork);
-      const immutableData = createEmptyEpochCacheImmutableData(config, {
+      const immutableData = createEmptyEpochCacheImmutableData(config, getNodeLogger({level: LogLevel.info}), {
         // TODO: Should the genesisValidatorsRoot be random here?
         genesisValidatorsRoot: Buffer.alloc(32, 0),
       });

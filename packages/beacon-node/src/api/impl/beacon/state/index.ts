@@ -6,6 +6,7 @@ import {
   computeStartSlotAtEpoch,
   getCurrentEpoch,
   getRandaoMix,
+  ShufflingCacheCaller,
 } from "@lodestar/state-transition";
 import {EPOCHS_PER_HISTORICAL_VECTOR} from "@lodestar/params";
 import {ApiError} from "../../errors.js";
@@ -195,7 +196,7 @@ export function getBeaconStateApi({
 
       const epoch = filters?.epoch ?? computeEpochAtSlot(state.slot);
       const startSlot = computeStartSlotAtEpoch(epoch);
-      const shuffling = stateCached.epochCtx.getShufflingAtEpoch(epoch);
+      const shuffling = stateCached.epochCtx.getShufflingAtEpoch(epoch, ShufflingCacheCaller.getEpochCommittees);
       const committees = shuffling.committees;
       const committeesFlat = committees.flatMap((slotCommittees, slotInEpoch) => {
         const slot = startSlot + slotInEpoch;

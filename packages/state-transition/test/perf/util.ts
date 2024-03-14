@@ -1,6 +1,7 @@
 import {CoordType, PublicKey, SecretKey} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
 import {BitArray, fromHexString} from "@chainsafe/ssz";
+import {getNodeLogger} from "@lodestar/logger/node";
 import {allForks, phase0, ssz, Slot, altair} from "@lodestar/types";
 import {config} from "@lodestar/config/default";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
@@ -12,6 +13,7 @@ import {
   SLOTS_PER_EPOCH,
   SLOTS_PER_HISTORICAL_ROOT,
 } from "@lodestar/params";
+import {LogLevel} from "@lodestar/utils";
 import {
   interopSecretKey,
   computeEpochAtSlot,
@@ -20,6 +22,8 @@ import {
   newFilledArray,
   createCachedBeaconState,
   computeCommitteeCount,
+  ShufflingCache,
+  ShufflingCacheCaller,
 } from "../../src/index.js";
 import {
   CachedBeaconStateAllForks,
@@ -127,6 +131,8 @@ export function generatePerfTestCachedStatePhase0(opts?: {goBackOneSlot: boolean
     state.slot -= 1;
     phase0CachedState23637 = createCachedBeaconState(state, {
       config: createBeaconConfig(config, state.genesisValidatorsRoot),
+      logger: getNodeLogger({level: LogLevel.info}),
+      shufflingCache: new ShufflingCache(),
       pubkey2index,
       index2pubkey,
     });
@@ -142,7 +148,10 @@ export function generatePerfTestCachedStatePhase0(opts?: {goBackOneSlot: boolean
       const slotInEpoch = i % SLOTS_PER_EPOCH;
       const slot = previousEpoch * SLOTS_PER_EPOCH + slotInEpoch;
       const index = i % committeesPerSlot;
-      const shuffling = phase0CachedState23637.epochCtx.getShufflingAtEpoch(previousEpoch);
+      const shuffling = phase0CachedState23637.epochCtx.getShufflingAtEpoch(
+        previousEpoch,
+        ShufflingCacheCaller.testing
+      );
       const committee = shuffling.committees[slotInEpoch][index];
       phase0CachedState23637.previousEpochAttestations.push(
         ssz.phase0.PendingAttestation.toViewDU({
@@ -166,7 +175,10 @@ export function generatePerfTestCachedStatePhase0(opts?: {goBackOneSlot: boolean
       const slotInEpoch = i % SLOTS_PER_EPOCH;
       const slot = currentEpoch * SLOTS_PER_EPOCH + slotInEpoch;
       const index = i % committeesPerSlot;
-      const shuffling = phase0CachedState23637.epochCtx.getShufflingAtEpoch(previousEpoch);
+      const shuffling = phase0CachedState23637.epochCtx.getShufflingAtEpoch(
+        previousEpoch,
+        ShufflingCacheCaller.testing
+      );
       const committee = shuffling.committees[slotInEpoch][index];
 
       phase0CachedState23637.currentEpochAttestations.push(
@@ -232,6 +244,8 @@ export function generatePerfTestCachedStateAltair(opts?: {
     state.slot -= 1;
     altairCachedState23637 = createCachedBeaconState(state, {
       config: createBeaconConfig(altairConfig, state.genesisValidatorsRoot),
+      logger: getNodeLogger({level: LogLevel.info}),
+      shufflingCache: new ShufflingCache(),
       pubkey2index,
       index2pubkey,
     });
@@ -381,9 +395,11 @@ function buildPerformanceStatePhase0(pubkeysArg?: Uint8Array[]): phase0.BeaconSt
 export function generateTestCachedBeaconStateOnlyValidators({
   vc,
   slot,
+  maxShufflingCacheEpochs,
 }: {
   vc: number;
   slot: Slot;
+  maxShufflingCacheEpochs?: number;
 }): CachedBeaconStateAllForks {
   // Generate only some publicKeys
   const {pubkeys, pubkeysMod, pubkeysModObj} = getPubkeys(vc);
@@ -435,6 +451,8 @@ export function generateTestCachedBeaconStateOnlyValidators({
     state,
     {
       config: createBeaconConfig(config, state.genesisValidatorsRoot),
+      logger: getNodeLogger({level: LogLevel.info}),
+      shufflingCache: new ShufflingCache(null, {maxShufflingCacheEpochs}),
       pubkey2index,
       index2pubkey,
     },

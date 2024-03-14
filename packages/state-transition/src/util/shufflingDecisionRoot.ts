@@ -1,7 +1,16 @@
-import {Epoch, Root, Slot} from "@lodestar/types";
-import {CachedBeaconStateAllForks} from "../types.js";
+import {Epoch, Root, RootHex, Slot} from "@lodestar/types";
+import {toHexString} from "@lodestar/utils";
+import {BeaconStateAllForks, CachedBeaconStateAllForks} from "../types.js";
 import {getBlockRootAtSlot} from "./blockRoot.js";
 import {computeStartSlotAtEpoch} from "./epoch.js";
+
+/**
+ * Returns hex string representation of the block root for a given state and epoch
+ */
+export function getShufflingDecisionBlock(state: BeaconStateAllForks, epoch: Epoch): RootHex {
+  const pivotSlot = computeStartSlotAtEpoch(epoch - 1) - 1;
+  return toHexString(getBlockRootAtSlot(state, pivotSlot));
+}
 
 /**
  * Returns the block root which decided the proposer shuffling for the current epoch. This root

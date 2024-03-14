@@ -323,7 +323,7 @@ export class SimulationEnvironment {
         throw new Error(`Eth1 genesis not found for node "${this.nodes[i].id}"`);
       }
 
-      const genesisState = nodeUtils.initDevState(this.forkConfig, this.keysCount, {
+      const genesisState = nodeUtils.initDevState(this.forkConfig, this.logger, this.keysCount, {
         genesisTime: this.options.genesisTime + this.forkConfig.GENESIS_DELAY,
         eth1BlockHash: fromHexString(eth1Genesis.hash),
       }).state;

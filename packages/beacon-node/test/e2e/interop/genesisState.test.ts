@@ -2,6 +2,8 @@ import {describe, it, expect} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
+import {getNodeLogger} from "@lodestar/logger/node";
+import {LogLevel} from "@lodestar/utils";
 import {initDevState} from "../../../src/node/utils/state.js";
 import {interopDeposits} from "../../../src/node/utils/interop/deposits.js";
 
@@ -60,7 +62,7 @@ describe("interop / initDevState", () => {
 
   it("Create correct genesisState", () => {
     const validatorCount = 8;
-    const {state} = initDevState(config, validatorCount, {
+    const {state} = initDevState(config, getNodeLogger({level: LogLevel.info}), validatorCount, {
       genesisTime: 1644000000,
       eth1BlockHash: Buffer.alloc(32, 0xaa),
       eth1Timestamp: 1644000000,

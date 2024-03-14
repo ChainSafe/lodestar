@@ -1,12 +1,16 @@
 import {describe, it, expect, beforeAll, beforeEach} from "vitest";
 import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
-import {CachedBeaconStateAllForks, computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {
+  CachedBeaconStateAllForks,
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
+  ShufflingCache,
+} from "@lodestar/state-transition";
 import {RootHex, phase0} from "@lodestar/types";
 import {mapValues, toHexString} from "@lodestar/utils";
 import {PersistentCheckpointStateCache} from "../../../../src/chain/stateCache/persistentCheckpointsCache.js";
 import {checkpointToDatastoreKey} from "../../../../src/chain/stateCache/datastore/index.js";
 import {generateCachedState} from "../../../utils/state.js";
-import {ShufflingCache} from "../../../../src/chain/shufflingCache.js";
 import {testLogger} from "../../../utils/logger.js";
 import {getTestDatastore} from "../../../utils/chain/stateCache/datastore.js";
 import {CheckpointHex} from "../../../../src/chain/stateCache/types.js";

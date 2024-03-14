@@ -45,7 +45,7 @@ describe("getShufflingForAttestationVerification", () => {
         throw new Error("Unexpected input");
       }
     });
-    const expectedShuffling = {epoch: attEpoch} as EpochShuffling;
+    const expectedShuffling = {epoch: attEpoch} as unknown as EpochShuffling;
     shufflingCacheStub.get.mockImplementationOnce((epoch, root) => {
       if (epoch === attEpoch && root === previousDependentRoot) {
         return Promise.resolve(expectedShuffling);
@@ -77,7 +77,7 @@ describe("getShufflingForAttestationVerification", () => {
         throw new Error("Unexpected input");
       }
     });
-    const expectedShuffling = {epoch: attEpoch} as EpochShuffling;
+    const expectedShuffling = {epoch: attEpoch} as unknown as EpochShuffling;
     shufflingCacheStub.get.mockImplementationOnce((epoch, root) => {
       if (epoch === attEpoch && root === currentDependentRoot) {
         return Promise.resolve(expectedShuffling);
@@ -101,7 +101,7 @@ describe("getShufflingForAttestationVerification", () => {
       stateRoot: ZERO_HASH_HEX,
       blockRoot,
     } as Partial<ProtoBlock>;
-    const expectedShuffling = {epoch: attEpoch} as EpochShuffling;
+    const expectedShuffling = {epoch: attEpoch} as unknown as EpochShuffling;
     let callCount = 0;
     shufflingCacheStub.get.mockImplementationOnce((epoch, root) => {
       if (epoch === attEpoch && root === blockRoot) {

@@ -1,5 +1,4 @@
-import {toHexString} from "@chainsafe/ssz";
-import {Epoch, RootHex, ValidatorIndex} from "@lodestar/types";
+import {Epoch, ValidatorIndex} from "@lodestar/types";
 import {intDiv} from "@lodestar/utils";
 import {
   DOMAIN_BEACON_ATTESTER,
@@ -10,8 +9,6 @@ import {
 import {BeaconStateAllForks} from "../types.js";
 import {getSeed} from "./seed.js";
 import {unshuffleList} from "./shuffle.js";
-import {computeStartSlotAtEpoch} from "./epoch.js";
-import {getBlockRootAtSlot} from "./blockRoot.js";
 
 /**
  * Readonly interface for EpochShuffling.
@@ -22,11 +19,6 @@ export type ReadonlyEpochShuffling = {
 };
 
 export type EpochShuffling = {
-  /**
-   * Epoch being shuffled
-   */
-  epoch: Epoch;
-
   /**
    * Non-shuffled active validator indices
    */
@@ -92,15 +84,9 @@ export function computeEpochShuffling(
   }
 
   return {
-    epoch,
     activeIndices: _activeIndices,
     shuffling,
     committees,
     committeesPerSlot,
   };
-}
-
-export function getShufflingDecisionBlock(state: BeaconStateAllForks, epoch: Epoch): RootHex {
-  const pivotSlot = computeStartSlotAtEpoch(epoch - 1) - 1;
-  return toHexString(getBlockRootAtSlot(state, pivotSlot));
 }

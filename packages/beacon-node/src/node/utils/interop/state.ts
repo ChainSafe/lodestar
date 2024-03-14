@@ -4,6 +4,7 @@ import {BeaconStateAllForks, initializeBeaconStateFromEth1} from "@lodestar/stat
 import {createEmptyEpochCacheImmutableData} from "@lodestar/state-transition";
 import {ForkName, GENESIS_SLOT} from "@lodestar/params";
 
+import {Logger} from "@lodestar/utils";
 import {DepositTree} from "../../../db/repositories/depositDataRoot.js";
 
 export const INTEROP_BLOCK_HASH = Buffer.alloc(32, "B");
@@ -23,6 +24,7 @@ export type InteropStateOpts = {
 
 export function getInteropState(
   config: ChainForkConfig,
+  logger: Logger,
   {
     genesisTime = Math.floor(Date.now() / 1000),
     eth1BlockHash = INTEROP_BLOCK_HASH,
@@ -45,7 +47,7 @@ export function getInteropState(
   latestPayloadHeader.baseFeePerGas = GENESIS_BASE_FEE_PER_GAS;
   const state = initializeBeaconStateFromEth1(
     config,
-    createEmptyEpochCacheImmutableData(config, {genesisValidatorsRoot: Buffer.alloc(32, 0)}),
+    createEmptyEpochCacheImmutableData(config, logger, {genesisValidatorsRoot: Buffer.alloc(32, 0)}),
     eth1BlockHash,
     eth1Timestamp,
     deposits,

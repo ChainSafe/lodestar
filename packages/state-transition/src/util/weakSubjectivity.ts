@@ -36,7 +36,7 @@ export function computeWeakSubjectivityPeriodCachedState(
   config: ChainForkConfig,
   state: CachedBeaconStateAllForks
 ): number {
-  const activeValidatorCount = state.epochCtx.currentShuffling.activeIndices.length;
+  const activeValidatorCount = state.epochCtx.currentActiveIndices.length;
   return computeWeakSubjectivityPeriodFromConstituents(
     activeValidatorCount,
     state.epochCtx.totalActiveBalanceIncrements,

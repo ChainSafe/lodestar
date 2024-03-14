@@ -1,13 +1,17 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {phase0, Epoch, RootHex} from "@lodestar/types";
-import {CachedBeaconStateAllForks, computeStartSlotAtEpoch, getBlockRootAtSlot} from "@lodestar/state-transition";
+import {
+  loadCachedBeaconState,
+  IShufflingCache,
+  CachedBeaconStateAllForks,
+  computeStartSlotAtEpoch,
+  getBlockRootAtSlot,
+} from "@lodestar/state-transition";
 import {Logger, MapDef, sleep} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
-import {loadCachedBeaconState} from "@lodestar/state-transition";
 import {INTERVALS_PER_SLOT} from "@lodestar/params";
 import {Metrics} from "../../metrics/index.js";
 import {IClock} from "../../util/clock.js";
-import {ShufflingCache} from "../shufflingCache.js";
 import {BufferPool, BufferWithKey} from "../../util/bufferPool.js";
 import {StateCloneOpts} from "../regen/interface.js";
 import {MapTracker} from "./mapMetrics.js";
@@ -28,7 +32,7 @@ type PersistentCheckpointStateCacheModules = {
   logger: Logger;
   clock?: IClock | null;
   signal?: AbortSignal;
-  shufflingCache: ShufflingCache;
+  shufflingCache: IShufflingCache;
   datastore: CPStateDatastore;
   getHeadState?: GetHeadStateFn;
   bufferPool?: BufferPool;
@@ -103,7 +107,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   private readonly maxEpochsInMemory: number;
   private readonly processLateBlock: boolean;
   private readonly datastore: CPStateDatastore;
-  private readonly shufflingCache: ShufflingCache;
+  private readonly shufflingCache: IShufflingCache;
   private readonly getHeadState?: GetHeadStateFn;
   private readonly bufferPool?: BufferPool;
 
@@ -214,18 +218,12 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       }
       sszTimer?.();
       const timer = this.metrics?.stateReloadDuration.startTimer();
+      // @tuyennhv why are we not passing through the EpochCacheOptions from the seed state?
       const newCachedState = loadCachedBeaconState(
         seedState,
         stateBytes,
-        {
-          shufflingGetter: (shufflingEpoch, decisionRootHex) => {
-            const shuffling = this.shufflingCache.getSync(shufflingEpoch, decisionRootHex);
-            if (shuffling == null) {
-              this.metrics?.stateReloadShufflingCacheMiss.inc();
-            }
-            return shuffling;
-          },
-        },
+        this.logger,
+        {isReload: true},
         validatorsBytes
       );
       newCachedState.commit();

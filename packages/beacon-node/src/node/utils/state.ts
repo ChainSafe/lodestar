@@ -1,12 +1,14 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
+import {Logger} from "@lodestar/utils";
 import {IBeaconDb} from "../../db/index.js";
 import {interopDeposits} from "./interop/deposits.js";
 import {getInteropState, InteropStateOpts} from "./interop/state.js";
 
 export function initDevState(
   config: ChainForkConfig,
+  logger: Logger,
   validatorCount: number,
   interopStateOpts: InteropStateOpts
 ): {deposits: phase0.Deposit[]; state: BeaconStateAllForks} {
@@ -16,7 +18,7 @@ export function initDevState(
     validatorCount,
     interopStateOpts
   );
-  const state = getInteropState(config, interopStateOpts, deposits);
+  const state = getInteropState(config, logger, interopStateOpts, deposits);
   return {deposits, state};
 }
 

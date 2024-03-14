@@ -51,7 +51,7 @@ export function decreaseBalance(state: BeaconStateAllForks, index: ValidatorInde
 export function getEffectiveBalanceIncrementsZeroInactive(
   justifiedState: CachedBeaconStateAllForks
 ): EffectiveBalanceIncrements {
-  const {activeIndices} = justifiedState.epochCtx.currentShuffling;
+  const {currentActiveIndices} = justifiedState.epochCtx;
   // 5x faster than reading from state.validators, with validator Nodes as values
   const validatorCount = justifiedState.validators.length;
   const {effectiveBalanceIncrements} = justifiedState.epochCtx;
@@ -66,7 +66,7 @@ export function getEffectiveBalanceIncrementsZeroInactive(
   const validators = justifiedState.validators.getAllReadonly();
   let j = 0;
   for (let i = 0; i < validatorCount; i++) {
-    if (i === activeIndices[j]) {
+    if (i === currentActiveIndices[j]) {
       // active validator
       j++;
       if (validators[i].slashed) {

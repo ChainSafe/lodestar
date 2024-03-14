@@ -70,7 +70,7 @@ export async function getDevBeaconNode(
 
   let anchorState = opts.anchorState;
   if (!anchorState) {
-    const {state, deposits} = initDevState(config, validatorCount, opts);
+    const {state, deposits} = initDevState(config, logger, validatorCount, opts);
     anchorState = state;
 
     // Is it necessary to persist deposits and genesis block?
