@@ -130,6 +130,7 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
         `extip:${address}`,
         "--authrpc.jwtsecret",
         jwtsecretFilePathMounted,
+        "--nodiscover",
         "--datadir",
         rootDirMounted,
         "--allow-insecure-unlock",
