@@ -11,6 +11,8 @@ export function getTestServer(): {server: FastifyInstance; start: () => Promise<
     querystringParser: (str) => parseQueryString(str, {comma: true, parseArrays: false}),
   });
 
+  // TODO: why is json schema validation called for octet-stream body?
+  // https://github.com/fastify/help/issues/1012
   server.addContentTypeParser(
     "application/octet-stream",
     {parseAs: "buffer"},
