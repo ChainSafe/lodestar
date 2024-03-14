@@ -1011,7 +1011,7 @@ export class BeaconChain implements IBeaconChain {
   async getAttestationsRewards(
     epoch: Epoch,
     validatorIds?: (ValidatorIndex | string)[]
-  ): Promise<{data: AttestationsRewards; executionOptimistic: boolean}> {
+  ): Promise<{rewards: AttestationsRewards; executionOptimistic: boolean}> {
     // We use end slot of (epoch + 1) to ensure we have seen all attestations. On-time or late. Any late attestation beyond this slot is not considered
     const slot = computeEndSlotAtEpoch(epoch + 1);
     const stateResult = await this.getStateBySlot(slot, {allowRegen: false}); // No regen if state not in cache
@@ -1029,9 +1029,9 @@ export class BeaconChain implements IBeaconChain {
       throw Error(`State is not in cache for slot ${slot}`);
     }
 
-    const attestationsRewards = await computeAttestationsRewards(epoch, cachedState, this.config, validatorIds);
+    const rewards = await computeAttestationsRewards(epoch, cachedState, this.config, validatorIds);
 
-    return {data: attestationsRewards, executionOptimistic};
+    return {rewards, executionOptimistic};
   }
 
   async getSyncCommitteeRewards(

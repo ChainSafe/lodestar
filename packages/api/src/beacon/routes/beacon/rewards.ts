@@ -44,21 +44,21 @@ export type BlockRewards = {
  * Rewards for a single set of (ideal or actual depending on usage) attestations. Reward value is in Gwei
  */
 type AttestationsReward = {
-  /* Reward for head vote. Could be negative to indicate penalty */
+  /** Reward for head vote. Could be negative to indicate penalty */
   head: number;
-  /* Reward for target vote. Could be negative to indicate penalty */
+  /** Reward for target vote. Could be negative to indicate penalty */
   target: number;
-  /* Reward for source vote. Could be negative to indicate penalty */
+  /** Reward for source vote. Could be negative to indicate penalty */
   source: number;
-  /* Inclusion delay reward (phase0 only) */
+  /** Inclusion delay reward (phase0 only) */
   inclusionDelay: number;
-  /* Inactivity penalty. Should be a negative number to indicate penalty */
+  /** Inactivity penalty. Should be a negative number to indicate penalty */
   inactivity: number;
 };
 
 /**
  * Rewards info for ideal attestations ie. Maximum rewards could be earned by making timely head, target and source vote.
- * `effectiveBalance` is in gwei
+ * `effectiveBalance` is in Gwei
  */
 export type IdealAttestationsReward = AttestationsReward & {effectiveBalance: number};
 
@@ -156,7 +156,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       schema: {params: {block_id: Schema.StringRequired}},
     },
     getAttestationsRewards: {
-      writeReq: (epoch, filters) => ({params: {epoch: epoch}, body: filters || []}),
+      writeReq: (epoch, validatorIds) => ({params: {epoch: epoch}, body: validatorIds || []}),
       parseReq: ({params, body}) => [params.epoch, body],
       schema: {
         params: {epoch: Schema.UintRequired},
