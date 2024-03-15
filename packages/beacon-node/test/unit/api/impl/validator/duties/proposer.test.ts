@@ -1,6 +1,6 @@
 import {describe, it, expect, beforeEach, afterEach, vi} from "vitest";
 import {config} from "@lodestar/config/default";
-import {MAX_EFFECTIVE_BALANCE, SLOTS_PER_EPOCH, activePreset} from "@lodestar/params";
+import {MAX_EFFECTIVE_BALANCE, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {ApiTestModules, getApiTestModules} from "../../../../../utils/api.js";
 import {FAR_FUTURE_EPOCH} from "../../../../../../src/constants/index.js";
