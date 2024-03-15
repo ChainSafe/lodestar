@@ -912,7 +912,7 @@ export function getValidatorApi({
       // TODO: Add a flag to just send 0x00 as pubkeys since the Lodestar validator does not need them.
       const pubkeys = getPubkeysForIndices(state.validators, indexes);
 
-      const startSlot = computeStartSlotAtEpoch(stateEpoch);
+      const startSlot = computeStartSlotAtEpoch(epoch);
       const duties: routes.validator.ProposerDuty[] = [];
       for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
         duties.push({slot: startSlot + i, validatorIndex: indexes[i], pubkey: pubkeys[i]});
