@@ -72,7 +72,7 @@ import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices, selectBlockProdu
  * they are 8 epochs apart) and causes an OOM. Research a proper solution once regen and the state
  * caches are better.
  */
-const SYNC_TOLERANCE_EPOCHS = 1;
+export const SYNC_TOLERANCE_EPOCHS = 1;
 
 /**
  * Cutoff time to wait for execution and builder block production apis to resolve

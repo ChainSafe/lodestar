@@ -105,18 +105,25 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
   const BeaconChain = vi.fn().mockImplementation(({clock, genesisTime, config}: MockedBeaconChainOptions) => {
     const logger = getMockedLogger();
 
+    const clk =
+      clock === "real"
+        ? new Clock({config, genesisTime: 0, signal: new AbortController().signal})
+        : {
+            get currentSlot() {
+              return 0;
+            },
+            get currentEpoch() {
+              return 0;
+            },
+            currentSlotWithGossipDisparity: undefined,
+            isCurrentSlotGivenGossipDisparity: vi.fn(),
+          };
+
     return {
       config,
       opts: {},
       genesisTime,
-      clock:
-        clock === "real"
-          ? new Clock({config, genesisTime: 0, signal: new AbortController().signal})
-          : {
-              currentSlot: undefined,
-              currentSlotWithGossipDisparity: undefined,
-              isCurrentSlotGivenGossipDisparity: vi.fn(),
-            },
+      clock: clk,
       forkChoice: getMockedForkChoice(),
       executionEngine: {
         notifyForkchoiceUpdate: vi.fn(),
@@ -162,7 +169,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
   };
 });
 
-type MockedBeaconChainOptions = {
+export type MockedBeaconChainOptions = {
   clock: "real" | "fake";
   genesisTime: number;
   config: ChainForkConfig;
