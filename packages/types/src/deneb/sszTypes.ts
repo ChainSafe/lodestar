@@ -98,7 +98,7 @@ export const BeaconBlockBody = new ContainerType(
 
 export const BeaconBlock = new ContainerType(
   {
-    ...capellaSsz.BeaconBlock.fields,
+    ...phase0Ssz.BeaconBlock.fields,
     body: BeaconBlockBody, // Modified in DENEB
   },
   {typeName: "BeaconBlock", jsonCase: "eth2", cachePermanentRootStruct: true}
@@ -149,7 +149,7 @@ export const BlindedBeaconBlockBody = new ContainerType(
 
 export const BlindedBeaconBlock = new ContainerType(
   {
-    ...capellaSsz.BlindedBeaconBlock.fields,
+    ...bellatrixSsz.BlindedBeaconBlock.fields,
     body: BlindedBeaconBlockBody, // Modified in DENEB
   },
   {typeName: "BlindedBeaconBlock", jsonCase: "eth2", cachePermanentRootStruct: true}

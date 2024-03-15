@@ -45,3 +45,9 @@ export type ForkBlobs = Exclude<ForkName, ForkPreBlobs>;
 export function isForkBlobs(fork: ForkName): fork is ForkBlobs {
   return isForkWithdrawals(fork) && fork !== ForkName.capella;
 }
+
+export type ForkPreILs = ForkPreBlobs | ForkName.deneb;
+export type ForkILs = Exclude<ForkName, ForkPreILs>;
+export function isForkILs(fork: ForkName): fork is ForkILs {
+  return isForkBlobs(fork) && fork !== ForkName.deneb;
+}
