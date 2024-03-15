@@ -16,6 +16,7 @@ import {Clock} from "../../src/util/clock.js";
 import {QueuedStateRegenerator} from "../../src/chain/regen/index.js";
 import {ShufflingCache} from "../../src/chain/shufflingCache.js";
 import {getMockedLogger} from "./loggerMock.js";
+import {getMockedClock} from "./clock.js";
 
 export type MockedBeaconChain = Mocked<BeaconChain> & {
   logger: Mocked<Logger>;
@@ -105,25 +106,12 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
   const BeaconChain = vi.fn().mockImplementation(({clock, genesisTime, config}: MockedBeaconChainOptions) => {
     const logger = getMockedLogger();
 
-    const clk =
-      clock === "real"
-        ? new Clock({config, genesisTime: 0, signal: new AbortController().signal})
-        : {
-            get currentSlot() {
-              return 0;
-            },
-            get currentEpoch() {
-              return 0;
-            },
-            currentSlotWithGossipDisparity: undefined,
-            isCurrentSlotGivenGossipDisparity: vi.fn(),
-          };
-
     return {
       config,
       opts: {},
       genesisTime,
-      clock: clk,
+      clock:
+        clock === "real" ? new Clock({config, genesisTime, signal: new AbortController().signal}) : getMockedClock(),
       forkChoice: getMockedForkChoice(),
       executionEngine: {
         notifyForkchoiceUpdate: vi.fn(),
