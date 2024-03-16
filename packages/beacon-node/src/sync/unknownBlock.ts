@@ -529,7 +529,7 @@ export class UnknownBlockSync {
         .BeaconBlock.hashTreeRoot(unavailableBlock.message);
       blockRootHex = toHexString(blockRoot);
       blobKzgCommitmentsLen = (unavailableBlock.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length;
-      pendingBlobs = blobKzgCommitmentsLen - unavailableBlockInput.blobsCache.size;
+      pendingBlobs = blobKzgCommitmentsLen - unavailableBlockInput.cachedData.blobsCache.size;
     }
 
     let lastError: Error | null = null;

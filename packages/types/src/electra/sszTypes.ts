@@ -27,6 +27,7 @@ export const SignedInclusionListSummary = new ContainerType(
 
 export const NewInclusionListRequest = new ContainerType(
   {
+    slot: Slot,
     inclusionList: ILTransactions,
     summary: ILSummary,
     parentBlockHash: Root,

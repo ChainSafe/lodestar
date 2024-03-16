@@ -65,6 +65,7 @@ type WorkOpts = {
 const executeGossipWorkOrderObj: Record<GossipType, WorkOpts> = {
   [GossipType.beacon_block]: {bypassQueue: true},
   [GossipType.blob_sidecar]: {bypassQueue: true},
+  [GossipType.inclusion_list]: {bypassQueue: true},
   [GossipType.beacon_aggregate_and_proof]: {},
   [GossipType.voluntary_exit]: {},
   [GossipType.bls_to_execution_change]: {},

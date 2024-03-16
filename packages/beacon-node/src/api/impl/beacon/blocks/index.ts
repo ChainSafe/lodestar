@@ -1,7 +1,7 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {routes, ServerApi, ResponseFormat} from "@lodestar/api";
 import {computeTimeAtSlot, reconstructFullBlockOrContents} from "@lodestar/state-transition";
-import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {SLOTS_PER_HISTORICAL_ROOT, ForkName} from "@lodestar/params";
 import {sleep, toHex} from "@lodestar/utils";
 import {allForks, deneb, isSignedBlockContents, ProducedBlockSource} from "@lodestar/types";
 import {BlockSource, getBlockInput, ImportBlockOpts, BlockInput} from "../../../../chain/blocks/types.js";
@@ -50,11 +50,9 @@ export function getBeaconBlockApi({
       blockForImport = getBlockInput.postDeneb(
         config,
         signedBlock,
-        BlockSource.api,
-        blobSidecars,
-        // don't bundle any bytes for block and blobs
         null,
-        blobSidecars.map(() => null)
+        {fork: ForkName.deneb, blobs: blobSidecars, blobsBytes: [null]},
+        BlockSource.api
       );
     } else {
       signedBlock = signedBlockOrContents;

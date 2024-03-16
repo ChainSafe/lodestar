@@ -61,6 +61,7 @@ export function stringifyGossipTopic(forkDigestContext: ForkDigestContext, topic
 function stringifyGossipTopicType(topic: GossipTopic): string {
   switch (topic.type) {
     case GossipType.beacon_block:
+    case GossipType.inclusion_list:
     case GossipType.beacon_aggregate_and_proof:
     case GossipType.voluntary_exit:
     case GossipType.proposer_slashing:
@@ -86,6 +87,8 @@ export function getGossipSSZType(topic: GossipTopic) {
       return ssz[topic.fork].SignedBeaconBlock;
     case GossipType.blob_sidecar:
       return ssz.deneb.BlobSidecar;
+    case GossipType.inclusion_list:
+      return ssz.electra.NewInclusionListRequest;
     case GossipType.beacon_aggregate_and_proof:
       return ssz.phase0.SignedAggregateAndProof;
     case GossipType.beacon_attestation:
@@ -162,6 +165,7 @@ export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr:
     // Inline-d the parseGossipTopicType() function since spreading the resulting object x4 the time to parse a topicStr
     switch (gossipTypeStr) {
       case GossipType.beacon_block:
+      case GossipType.inclusion_list:
       case GossipType.beacon_aggregate_and_proof:
       case GossipType.voluntary_exit:
       case GossipType.proposer_slashing:
@@ -212,6 +216,11 @@ export function getCoreTopicsAtFork(
     {type: GossipType.attester_slashing},
   ];
 
+  // electra
+  if (ForkSeq[fork] >= ForkSeq.electra) {
+    topics.push({type: GossipType.inclusion_list});
+  }
+
   // After Deneb also track blob_sidecar_{index}
   if (ForkSeq[fork] >= ForkSeq.deneb) {
     for (let index = 0; index < MAX_BLOBS_PER_BLOCK; index++) {
@@ -261,6 +270,7 @@ function parseEncodingStr(encodingStr: string): GossipEncoding {
 // TODO: Review which yes, and which not
 export const gossipTopicIgnoreDuplicatePublishError: Record<GossipType, boolean> = {
   [GossipType.beacon_block]: true,
+  [GossipType.inclusion_list]: true,
   [GossipType.blob_sidecar]: true,
   [GossipType.beacon_aggregate_and_proof]: true,
   [GossipType.beacon_attestation]: true,

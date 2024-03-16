@@ -404,7 +404,7 @@ export class SyncChain {
         const blobs = res.result.reduce((acc, blockInput) => {
           hasPostDenebBlocks ||= blockInput.type === BlockInputType.postDeneb;
           return hasPostDenebBlocks
-            ? acc + (blockInput.type === BlockInputType.postDeneb ? blockInput.blobs.length : 0)
+            ? acc + (blockInput.type === BlockInputType.postDeneb ? blockInput.blockData.blobs.length : 0)
             : 0;
         }, 0);
         const downloadInfo = {blocks: res.result.length};

@@ -1,8 +1,8 @@
 import {toHexString} from "@chainsafe/ssz";
-import {deneb, RootHex, ssz, allForks} from "@lodestar/types";
+import {deneb, electra, RootHex, ssz, allForks} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {pruneSetToMax} from "@lodestar/utils";
-import {BLOBSIDECAR_FIXED_SIZE, ForkSeq, ForkName} from "@lodestar/params";
+import {BLOBSIDECAR_FIXED_SIZE, ForkSeq, ForkName, isForkBlobs, isForkILs} from "@lodestar/params";
 
 import {
   BlockInput,
@@ -13,6 +13,7 @@ import {
   CachedData,
   GossipedInputType,
   getBlockInputBlobs,
+  BlockInputDataIls,
 } from "../blocks/types.js";
 import {Metrics} from "../../metrics/index.js";
 
@@ -23,7 +24,12 @@ export enum BlockInputAvailabilitySource {
 
 type GossipedBlockInput =
   | {type: GossipedInputType.block; signedBlock: allForks.SignedBeaconBlock; blockBytes: Uint8Array | null}
-  | {type: GossipedInputType.blob; blobSidecar: deneb.BlobSidecar; blobBytes: Uint8Array | null};
+  | {type: GossipedInputType.blob; blobSidecar: deneb.BlobSidecar; blobBytes: Uint8Array | null}
+  | {
+      type: GossipedInputType.ilist;
+      inclusionList: electra.NewInclusionListRequest;
+      inclusionListBytes: Uint8Array | null;
+    };
 
 type BlockInputCacheType = {
   block?: allForks.SignedBeaconBlock;
@@ -75,7 +81,9 @@ export class SeenGossipBlockInput {
     let blockCache;
     let fork;
 
-    if (gossipedInput.type === GossipedInputType.block) {
+    if (gossipedInput.type === GossipedInputType.ilist) {
+      throw Error("Inclusion list gossip handling not implemented");
+    } else if (gossipedInput.type === GossipedInputType.block) {
       const {signedBlock, blockBytes} = gossipedInput;
       fork = config.getForkName(signedBlock.message.slot);
 
@@ -205,13 +213,13 @@ function getEmptyBlockInputCacheEntry(fork: ForkName): BlockInputCacheType {
     throw Error("Promise Constructor was not executed immediately");
   }
 
-  if (ForkSeq[fork] < ForkSeq.deneb) {
+  if (!isForkBlobs(fork)) {
     return {blockInputPromise, resolveBlockInput};
   }
-
   const blobsCache = new Map();
 
-  if (fork === ForkName.deneb) {
+  if (!isForkILs(fork)) {
+    // blobs availability
     let resolveAvailability: ((blobs: BlockInputDataBlobs) => void) | null = null;
     const availabilityPromise = new Promise<BlockInputDataBlobs>((resolveCB) => {
       resolveAvailability = resolveCB;
@@ -223,6 +231,16 @@ function getEmptyBlockInputCacheEntry(fork: ForkName): BlockInputCacheType {
     const cachedData: CachedData = {fork, blobsCache, availabilityPromise, resolveAvailability};
     return {blockInputPromise, resolveBlockInput, cachedData};
   } else {
-    throw Error("il cache not implemented");
+    // il availability (with blobs)
+    let resolveAvailability: ((blobs: BlockInputDataIls) => void) | null = null;
+    const availabilityPromise = new Promise<BlockInputDataIls>((resolveCB) => {
+      resolveAvailability = resolveCB;
+    });
+
+    if (resolveAvailability === null) {
+      throw Error("Promise Constructor was not executed immediately");
+    }
+    const cachedData: CachedData = {fork, blobsCache, availabilityPromise, resolveAvailability, inclusionLists: []};
+    return {blockInputPromise, resolveBlockInput, cachedData};
   }
 }
