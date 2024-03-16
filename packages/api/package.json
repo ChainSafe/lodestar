@@ -67,8 +67,8 @@
     "check-readme": "typescript-docs-verifier"
   },
   "dependencies": {
-    "@chainsafe/persistent-merkle-tree": "^0.6.1",
-    "@chainsafe/ssz": "^0.14.3",
+    "@chainsafe/persistent-merkle-tree": "^0.7.1",
+    "@chainsafe/ssz": "^0.15.1",
     "@lodestar/config": "^1.17.0",
     "@lodestar/params": "^1.17.0",
     "@lodestar/types": "^1.17.0",
