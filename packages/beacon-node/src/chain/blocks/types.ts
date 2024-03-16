@@ -1,7 +1,7 @@
 import {CachedBeaconStateAllForks, computeEpochAtSlot, DataAvailableStatus} from "@lodestar/state-transition";
 import {MaybeValidExecutionStatus} from "@lodestar/fork-choice";
-import {allForks, deneb, Slot, RootHex} from "@lodestar/types";
-import {ForkSeq} from "@lodestar/params";
+import {allForks, deneb, electra, Slot, RootHex} from "@lodestar/types";
+import {ForkSeq, ForkName, ForkPreBlobs, ForkILs} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
 
 export enum BlockInputType {
@@ -23,20 +23,38 @@ export enum GossipedInputType {
   blob = "blob",
 }
 
+type ForkBlobsInfo = {fork: ForkName.deneb};
+type ForkILsInfo = {fork: ForkILs};
+
 export type BlobsCache = Map<number, {blobSidecar: deneb.BlobSidecar; blobBytes: Uint8Array | null}>;
-export type BlockInputBlobs = {blobs: deneb.BlobSidecars; blobsBytes: (Uint8Array | null)[]};
-type CachedBlobs = {
-  blobsCache: BlobsCache;
-  availabilityPromise: Promise<BlockInputBlobs>;
-  resolveAvailability: (blobs: BlockInputBlobs) => void;
-};
+
+type BlobsData = {blobs: deneb.BlobSidecars; blobsBytes: (Uint8Array | null)[]};
+type ILsData = BlobsData & {ilSummary: electra.ILSummary; inclusionLists: electra.ILTransactions[]};
+
+export type BlockInputDataBlobs = ForkBlobsInfo & BlobsData;
+export type BlockInputDataIls = ForkILsInfo & ILsData;
+export type BlockInputData = BlockInputDataBlobs | BlockInputDataIls;
+
+type BlobsInputCache = {blobsCache: BlobsCache};
+type ForkILsCache = BlobsInputCache & {ilSummary?: electra.ILSummary; inclusionLists: electra.ILTransactions[]};
+
+export type BlockInputCacheBlobs = ForkBlobsInfo & BlobsInputCache;
+export type BlockInputCacheILs = ForkILsInfo & ForkILsCache;
+export type BlockInputCache = (ForkBlobsInfo & BlobsInputCache) | (ForkILsInfo & ForkILsCache);
+
+type Availability<T> = {availabilityPromise: Promise<T>; resolveAvailability: (data: T) => void};
+export type CachedData =
+  | (ForkBlobsInfo & BlobsInputCache & Availability<BlockInputDataBlobs>)
+  | (ForkILsInfo & ForkILsCache & Availability<BlockInputDataIls>);
 
 export type BlockInput = {block: allForks.SignedBeaconBlock; source: BlockSource; blockBytes: Uint8Array | null} & (
   | {type: BlockInputType.preDeneb}
-  | ({type: BlockInputType.postDeneb} & BlockInputBlobs)
-  | ({type: BlockInputType.blobsPromise} & CachedBlobs)
+  | ({type: BlockInputType.postDeneb} & {blockData: BlockInputData})
+  | ({type: BlockInputType.blobsPromise} & {cachedData: CachedData})
 );
-export type NullBlockInput = {block: null; blockRootHex: RootHex; blockInputPromise: Promise<BlockInput>} & CachedBlobs;
+export type NullBlockInput = {block: null; blockRootHex: RootHex; blockInputPromise: Promise<BlockInput>} & {
+  cachedData: CachedData;
+};
 
 export function blockRequiresBlobs(config: ChainForkConfig, blockSlot: Slot, clockSlot: Slot): boolean {
   return (
@@ -67,10 +85,9 @@ export const getBlockInput = {
   postDeneb(
     config: ChainForkConfig,
     block: allForks.SignedBeaconBlock,
-    source: BlockSource,
-    blobs: deneb.BlobSidecars,
     blockBytes: Uint8Array | null,
-    blobsBytes: (Uint8Array | null)[]
+    blockData: BlockInputData,
+    source: BlockSource
   ): BlockInput {
     if (config.getForkSeq(block.message.slot) < ForkSeq.deneb) {
       throw Error(`Pre Deneb block slot ${block.message.slot}`);
@@ -78,21 +95,18 @@ export const getBlockInput = {
     return {
       type: BlockInputType.postDeneb,
       block,
-      source,
-      blobs,
       blockBytes,
-      blobsBytes,
+      blockData,
+      source,
     };
   },
 
   blobsPromise(
     config: ChainForkConfig,
     block: allForks.SignedBeaconBlock,
-    source: BlockSource,
-    blobsCache: BlobsCache,
     blockBytes: Uint8Array | null,
-    availabilityPromise: Promise<BlockInputBlobs>,
-    resolveAvailability: (blobs: BlockInputBlobs) => void
+    cachedData: CachedData,
+    source: BlockSource
   ): BlockInput {
     if (config.getForkSeq(block.message.slot) < ForkSeq.deneb) {
       throw Error(`Pre Deneb block slot ${block.message.slot}`);
@@ -100,16 +114,14 @@ export const getBlockInput = {
     return {
       type: BlockInputType.blobsPromise,
       block,
-      source,
-      blobsCache,
       blockBytes,
-      availabilityPromise,
-      resolveAvailability,
+      source,
+      cachedData,
     };
   },
 };
 
-export function getBlockInputBlobs(blobsCache: BlobsCache): BlockInputBlobs {
+export function getBlockInputBlobs(blobsCache: BlobsCache): BlobsData {
   const blobs = [];
   const blobsBytes = [];
 
