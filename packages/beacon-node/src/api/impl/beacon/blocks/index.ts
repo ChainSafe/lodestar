@@ -64,6 +64,10 @@ export function getBeaconBlockApi({
         const ilSummary = ssz.electra.ILSummary.defaultValue();
         const ilTransactions = [ssz.electra.ILTransactions.defaultValue()];
         inclusionLists = [ssz.electra.NewInclusionListRequest.defaultValue()];
+        inclusionLists[0].slot = slot;
+        inclusionLists[0].parentBlockHash = (
+          signedBlock as electra.SignedBeaconBlock
+        ).message.body.executionPayload.parentHash;
         blockData = {fork, blobs: blobSidecars, blobsBytes: [null], ilSummary, inclusionLists: ilTransactions};
       }
 

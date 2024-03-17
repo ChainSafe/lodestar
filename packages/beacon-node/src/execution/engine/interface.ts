@@ -1,6 +1,6 @@
 import {ForkName} from "@lodestar/params";
 import {KZGCommitment, Blob, KZGProof} from "@lodestar/types/deneb";
-import {Root, RootHex, allForks, capella, Wei} from "@lodestar/types";
+import {Root, RootHex, allForks, capella, electra, Wei} from "@lodestar/types";
 
 import {DATA} from "../../eth1/provider/utils.js";
 import {PayloadIdCache, PayloadId, WithdrawalV1} from "./payloadIdCache.js";
@@ -90,6 +90,7 @@ export type VersionedHashes = Uint8Array[];
  */
 export interface IExecutionEngine {
   payloadIdCache: PayloadIdCache;
+  notifyNewInclusionList(InclusionList: electra.NewInclusionListRequest): Promise<ExecutePayloadResponse>;
   /**
    * A state transition function which applies changes to the self.execution_state.
    * Returns ``True`` iff ``execution_payload`` is valid with respect to ``self.execution_state``.

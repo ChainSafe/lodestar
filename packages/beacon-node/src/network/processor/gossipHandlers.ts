@@ -15,6 +15,8 @@ import {
   BlockGossipError,
   BlobSidecarErrorCode,
   BlobSidecarGossipError,
+  InclusionListGossipError,
+  InclusionListErrorCode,
   GossipAction,
   GossipActionError,
   SyncCommitteeError,
@@ -136,6 +138,10 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
       },
       metrics
     );
+    if (blockInputRes === null) {
+      throw Error("Invalid blockInputRes=null returned for gossip block in cache processing");
+    }
+
     const blockInput = blockInputRes.blockInput;
     // blockInput can't be returned null, improve by enforcing via return types
     if (blockInput.block === null) {
@@ -200,7 +206,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
     const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
     const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
 
-    const {blockInput, blockInputMeta} = chain.seenGossipBlockInput.getGossipBlockInput(
+    const blockInputRes = chain.seenGossipBlockInput.getGossipBlockInput(
       config,
       {
         type: GossipedInputType.blob,
@@ -209,7 +215,11 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
       },
       metrics
     );
+    if (blockInputRes === null) {
+      throw Error("Invalid blockInputRes=null returned for gossip blob in cache processing");
+    }
 
+    const {blockInput, blockInputMeta} = blockInputRes;
     try {
       await validateGossipBlobSidecar(chain, blobSidecar, gossipIndex);
       const recvToValidation = Date.now() / 1000 - seenTimestampSec;
@@ -258,12 +268,12 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
     inclusionListBytes: Uint8Array,
     peerIdStr: string,
     seenTimestampSec: number
-  ): Promise<BlockInput | NullBlockInput> {
+  ): Promise<BlockInput | NullBlockInput | null> {
     const slot = inclusionList.slot;
     const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
     const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
 
-    const {blockInput, blockInputMeta} = chain.seenGossipBlockInput.getGossipBlockInput(
+    const blockInputRes = chain.seenGossipBlockInput.getGossipBlockInput(
       config,
       {
         type: GossipedInputType.ilist,
@@ -273,7 +283,9 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
       metrics
     );
 
+    const blockInput = blockInputRes?.blockInput ?? null;
     try {
+      const blockInputMeta = blockInputRes?.blockInputMeta ?? {};
       await validateGossipInclusionList(chain, inclusionList);
       const recvToValidation = Date.now() / 1000 - seenTimestampSec;
       const validationTime = recvToValidation - recvToValLatency;
@@ -295,7 +307,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
     } catch (e) {
       if (e instanceof BlobSidecarGossipError) {
         // Don't trigger this yet if full block and blobs haven't arrived yet
-        if (e.type.code === BlobSidecarErrorCode.PARENT_UNKNOWN && blockInput.block !== null) {
+        if (e.type.code === BlobSidecarErrorCode.PARENT_UNKNOWN && blockInput !== null && blockInput.block !== null) {
           logger.debug("Gossip inclusion list has error", {code: e.type.code});
           events.emit(NetworkEvent.unknownBlockParent, {blockInput, peer: peerIdStr});
         }
@@ -384,6 +396,64 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
         }
         metrics?.gossipBlock.processBlockErrors.inc({error: e instanceof BlockError ? e.type.code : "NOT_BLOCK_ERROR"});
         logger[logLevel]("Error receiving block", {slot: signedBlock.message.slot, peer: peerIdStr}, e as Error);
+        chain.seenGossipBlockInput.prune();
+      });
+  }
+
+  function handleValidInclusionList(
+    inclusionList: electra.NewInclusionListRequest,
+    peerIdStr: string,
+    seenTimestampSec: number
+  ): void {
+    // Handler - MUST NOT `await`, to allow validation result to be propagated
+
+    // metrics?.registerInclusionList(OpSource.gossip, seenTimestampSec, inclusionList);
+    // if blobs are not yet fully available start an aggressive blob pull
+
+    chain
+      .processInclusionList(inclusionList, {
+        // block may be downloaded and processed by UnknownBlockSync
+        ignoreIfKnown: true,
+        // proposer signature already checked in validateBeaconBlock()
+        validProposerSignature: true,
+        blsVerifyOnMainThread: true,
+        // to track block process steps
+        seenTimestampSec,
+      })
+      .then(() => {
+        // Returns the delay between the start of `block.slot` and `current time`
+        const delaySec = chain.clock.secFromSlot(inclusionList.slot);
+        metrics?.gossipBlock.elapsedTimeTillProcessed.observe(delaySec);
+        chain.seenGossipBlockInput.prune();
+      })
+      .catch((e) => {
+        // Adjust verbosity based on error type
+        let logLevel: LogLevel;
+
+        if (e instanceof InclusionListGossipError) {
+          switch (e.type.code) {
+            // ALREADY_KNOWN should not happen with ignoreIfKnown=true above
+            // PARENT_UNKNOWN should not happen, we handled this in validateBeaconBlock() function above
+            case InclusionListErrorCode.ALREADY_KNOWN:
+            case InclusionListErrorCode.PARENT_UNKNOWN:
+            case InclusionListErrorCode.EXECUTION_ENGINE_ERROR:
+              // Errors might indicate an issue with our node or the connected EL client
+              logLevel = LogLevel.error;
+              break;
+            default:
+              // TODO: Should it use PeerId or string?
+              core.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadGossipInclusionList");
+              // Misbehaving peer, but could highlight an issue in another client
+              logLevel = LogLevel.warn;
+          }
+        } else {
+          // Any unexpected error
+          logLevel = LogLevel.error;
+        }
+        metrics?.gossipInclusionList.processInclusionListErrors.inc({
+          error: e instanceof InclusionListGossipError ? e.type.code : "NOT_INCLUSION_LIST_ERROR",
+        });
+        logger[logLevel]("Error receiving inclusion list", {slot: inclusionList.slot, peer: peerIdStr}, e as Error);
         chain.seenGossipBlockInput.prune();
       });
   }
@@ -480,7 +550,10 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
       }
 
       const blockInput = await validateInclusionList(inclusionList, serializedData, peerIdStr, seenTimestampSec);
-      if (blockInput.block !== null) {
+      handleValidInclusionList(inclusionList, peerIdStr, seenTimestampSec);
+      if (blockInput === null) {
+        return;
+      } else if (blockInput.block !== null) {
         // we can just queue up the blockInput in the processor, but block gossip handler would have already
         // queued it up.
         //

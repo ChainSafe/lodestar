@@ -32,6 +32,7 @@ type GossipedBlockInput =
     };
 
 type BlockInputCacheType = {
+  fork: ForkName;
   block?: allForks.SignedBeaconBlock;
   blockBytes?: Uint8Array | null;
   cachedData?: CachedData;
@@ -55,9 +56,13 @@ const MAX_GOSSIPINPUT_CACHE = 5;
  */
 export class SeenGossipBlockInput {
   private blockInputCache = new Map<RootHex, BlockInputCacheType>();
+  private seenILsByParentHash = new Map<RootHex, electra.NewInclusionListRequest>();
+  private blockInputRootByParentHash = new Map<RootHex, RootHex>();
 
   prune(): void {
     pruneSetToMax(this.blockInputCache, MAX_GOSSIPINPUT_CACHE);
+    pruneSetToMax(this.seenILsByParentHash, MAX_GOSSIPINPUT_CACHE);
+    pruneSetToMax(this.blockInputRootByParentHash, MAX_GOSSIPINPUT_CACHE);
   }
 
   hasBlock(blockRoot: RootHex): boolean {
@@ -76,13 +81,23 @@ export class SeenGossipBlockInput {
     | {
         blockInput: NullBlockInput;
         blockInputMeta: {pending: GossipedInputType.block; haveBlobs: number; expectedBlobs: null};
-      } {
+      }
+    | null {
     let blockHex;
     let blockCache;
     let fork;
 
     if (gossipedInput.type === GossipedInputType.ilist) {
-      throw Error("Inclusion list gossip handling not implemented");
+      const {inclusionList} = gossipedInput;
+      const parentBlockHashHex = toHexString(inclusionList.parentBlockHash);
+      this.seenILsByParentHash.set(parentBlockHashHex, inclusionList);
+
+      blockHex = this.blockInputRootByParentHash.get(parentBlockHashHex);
+      blockCache = blockHex ? this.blockInputCache.get(blockHex) : undefined;
+      if (blockHex === undefined || blockCache === undefined) {
+        return null;
+      }
+      fork = blockCache.fork;
     } else if (gossipedInput.type === GossipedInputType.block) {
       const {signedBlock, blockBytes} = gossipedInput;
       fork = config.getForkName(signedBlock.message.slot);
@@ -214,7 +229,7 @@ function getEmptyBlockInputCacheEntry(fork: ForkName): BlockInputCacheType {
   }
 
   if (!isForkBlobs(fork)) {
-    return {blockInputPromise, resolveBlockInput};
+    return {fork, blockInputPromise, resolveBlockInput};
   }
   const blobsCache = new Map();
 
@@ -229,7 +244,7 @@ function getEmptyBlockInputCacheEntry(fork: ForkName): BlockInputCacheType {
       throw Error("Promise Constructor was not executed immediately");
     }
     const cachedData: CachedData = {fork, blobsCache, availabilityPromise, resolveAvailability};
-    return {blockInputPromise, resolveBlockInput, cachedData};
+    return {fork, blockInputPromise, resolveBlockInput, cachedData};
   } else {
     // il availability (with blobs)
     let resolveAvailability: ((blobs: BlockInputDataIls) => void) | null = null;
@@ -241,6 +256,6 @@ function getEmptyBlockInputCacheEntry(fork: ForkName): BlockInputCacheType {
       throw Error("Promise Constructor was not executed immediately");
     }
     const cachedData: CachedData = {fork, blobsCache, availabilityPromise, resolveAvailability, inclusionLists: []};
-    return {blockInputPromise, resolveBlockInput, cachedData};
+    return {fork, blockInputPromise, resolveBlockInput, cachedData};
   }
 }
