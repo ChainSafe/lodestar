@@ -16,7 +16,7 @@ import {
 import type {AddressManager, ConnectionManager, Registrar, TransportManager} from "@libp2p/interface-internal";
 import type {Datastore} from "interface-datastore";
 import {Identify} from "@chainsafe/libp2p-identify";
-import {Slot, SlotRootHex, allForks, altair, capella, deneb, phase0} from "@lodestar/types";
+import {Slot, SlotRootHex, allForks, altair, capella, deneb, electra, phase0} from "@lodestar/types";
 import {PeerIdStr} from "../util/peerId.js";
 import {INetworkEventBus} from "./events.js";
 import {INetworkCorePublic} from "./core/types.js";
@@ -61,6 +61,7 @@ export interface INetwork extends INetworkCorePublic {
   // Gossip
   publishBeaconBlock(signedBlock: allForks.SignedBeaconBlock): Promise<number>;
   publishBlobSidecar(blobSidecar: deneb.BlobSidecar): Promise<number>;
+  publishInclusionList(inclusionList: electra.NewInclusionListRequest): Promise<number>;
   publishBeaconAggregateAndProof(aggregateAndProof: phase0.SignedAggregateAndProof): Promise<number>;
   publishBeaconAttestation(attestation: phase0.Attestation, subnet: number): Promise<number>;
   publishVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<number>;

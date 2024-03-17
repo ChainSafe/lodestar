@@ -5,7 +5,7 @@ import {BeaconConfig} from "@lodestar/config";
 import {sleep} from "@lodestar/utils";
 import {LoggerNode} from "@lodestar/logger/node";
 import {computeStartSlotAtEpoch, computeTimeAtSlot} from "@lodestar/state-transition";
-import {phase0, allForks, deneb, altair, Root, capella, SlotRootHex} from "@lodestar/types";
+import {phase0, allForks, deneb, electra, altair, Root, capella, SlotRootHex} from "@lodestar/types";
 import {routes} from "@lodestar/api";
 import {ResponseIncoming} from "@lodestar/reqresp";
 import {ForkSeq, MAX_BLOBS_PER_BLOCK} from "@lodestar/params";
@@ -298,6 +298,13 @@ export class Network implements INetwork {
     const index = blobSidecar.index;
 
     return this.publishGossip<GossipType.blob_sidecar>({type: GossipType.blob_sidecar, fork, index}, blobSidecar, {
+      ignoreDuplicatePublishError: true,
+    });
+  }
+
+  async publishInclusionList(inclusionList: electra.NewInclusionListRequest): Promise<number> {
+    const fork = this.config.getForkName(inclusionList.slot);
+    return this.publishGossip<GossipType.inclusion_list>({type: GossipType.inclusion_list, fork}, inclusionList, {
       ignoreDuplicatePublishError: true,
     });
   }
