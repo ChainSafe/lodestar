@@ -10,7 +10,6 @@ import {ForkSeq, SLOTS_PER_EPOCH, ForkExecution} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
 import {Logger, sleep, fromHex, isErrorAborted} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
-import {UpdateHeadOpt} from "@lodestar/fork-choice";
 import {GENESIS_SLOT, ZERO_HASH_HEX} from "../constants/constants.js";
 import {Metrics} from "../metrics/index.js";
 import {ClockEvent} from "../util/clock.js";

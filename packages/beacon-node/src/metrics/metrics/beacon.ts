@@ -203,6 +203,6 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
     weakHeadDetected: register.gauge({
       name: "beacon_weak_head_detected",
       help: "Detected current head block is weak. May reorg it out when proposing next slot. See proposer boost reorg for more",
-    })
+    }),
   };
 }

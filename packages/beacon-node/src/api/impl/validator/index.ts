@@ -34,7 +34,7 @@ import {
   isBlockContents,
   phase0,
 } from "@lodestar/types";
-import {ExecutionStatus, UpdateHeadOpt} from "@lodestar/fork-choice";
+import {ExecutionStatus} from "@lodestar/fork-choice";
 import {toHex, resolveOrRacePromises, prettyWeiToEth} from "@lodestar/utils";
 import {
   AttestationError,

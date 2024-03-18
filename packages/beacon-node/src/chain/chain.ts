@@ -43,7 +43,14 @@ import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {ChainEventEmitter, ChainEvent} from "./emitter.js";
-import {IBeaconChain, ProposerPreparationData, BlockHash, StateGetOpts, CommonBlockBody, FindHeadFnName} from "./interface.js";
+import {
+  IBeaconChain,
+  ProposerPreparationData,
+  BlockHash,
+  StateGetOpts,
+  CommonBlockBody,
+  FindHeadFnName,
+} from "./interface.js";
 import {IChainOptions} from "./options.js";
 import {QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
 import {initializeForkChoice} from "./forkChoice/index.js";
@@ -688,7 +695,7 @@ export class BeaconChain implements IBeaconChain {
       timer?.();
     }
   }
- 
+
   /**
    * Returns Promise that resolves either on block found or once 1 slot passes.
    * Used to handle unknown block root for both unaggregated and aggregated attestations.
