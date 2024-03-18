@@ -150,10 +150,7 @@ export class PrepareNextSlotScheduler {
 
         if (feeRecipient) {
           // If we are proposing next slot, we need to predict if we can proposer-boost-reorg or not
-          const {slot: proposerHeadSlot, blockRoot: proposerHeadRoot} = this.chain.recomputeForkChoiceHead(
-            UpdateHeadOpt.GetPredictedProposerHead,
-            clockSlot
-          );
+          const {slot: proposerHeadSlot, blockRoot: proposerHeadRoot} = this.chain.predictProposerHead(clockSlot);
 
           // If we predict we can reorg, update prepareState with proposer head block
           if (proposerHeadRoot !== headRoot || proposerHeadSlot !== headSlot) {

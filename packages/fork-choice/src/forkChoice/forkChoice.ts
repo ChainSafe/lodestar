@@ -55,6 +55,13 @@ export enum UpdateHeadOpt {
   GetPredictedProposerHead, // With predictProposerHead
 }
 
+export type UpdateAndGetHeadOpt = 
+  | {mode: UpdateHeadOpt.GetCanonicialHead}
+  | {mode: UpdateHeadOpt.GetProposerHead; slot: Slot}
+  | {mode: UpdateHeadOpt.GetPredictedProposerHead; slot: Slot};
+
+
+
 /**
  * Provides an implementation of "Ethereum Consensus -- Beacon Chain Fork Choice":
  *
@@ -170,17 +177,15 @@ export class ForkChoice implements IForkChoice {
    *    Proposing in the current slot: updateHead() -> getProposerHead()
    *    Others eg. initializing forkchoice, importBlock: updateHead()
    */
-  updateAndGetHead(mode: UpdateHeadOpt = UpdateHeadOpt.GetCanonicialHead, slot?: Slot): ProtoBlock {
+  updateAndGetHead(opt: UpdateAndGetHeadOpt): ProtoBlock {
+    const { mode } = opt;
+
     const canonicialHeadBlock = mode === UpdateHeadOpt.GetPredictedProposerHead ? this.getHead() : this.updateHead();
     switch (mode) {
       case UpdateHeadOpt.GetPredictedProposerHead:
-        return this.predictProposerHead(canonicialHeadBlock, slot);
+        return this.predictProposerHead(canonicialHeadBlock, opt.slot);
       case UpdateHeadOpt.GetProposerHead:
-        if (slot !== undefined) {
-          return this.getProposerHead(canonicialHeadBlock, slot);
-        } else {
-          throw Error("Calling updateAndGetHead with GetProposerHead must provide a slot");
-        }
+        return this.getProposerHead(canonicialHeadBlock, opt.slot);
       case UpdateHeadOpt.GetCanonicialHead:
       default:
         return canonicialHeadBlock;

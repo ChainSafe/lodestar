@@ -647,12 +647,12 @@ export class BeaconChain implements IBeaconChain {
     };
   }
 
-  recomputeForkChoiceHead(mode: UpdateHeadOpt = UpdateHeadOpt.GetCanonicialHead, slot?: Slot): ProtoBlock {
+  recomputeForkChoiceHead(): ProtoBlock {
     this.metrics?.forkChoice.requests.inc();
     const timer = this.metrics?.forkChoice.findHead.startTimer();
 
     try {
-      return this.forkChoice.updateAndGetHead(mode, slot);
+      return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetCanonicialHead});
     } catch (e) {
       this.metrics?.forkChoice.errors.inc();
       throw e;
@@ -661,6 +661,34 @@ export class BeaconChain implements IBeaconChain {
     }
   }
 
+  predictProposerHead(slot: Slot): ProtoBlock {
+    this.metrics?.forkChoice.requests.inc();
+    const timer = this.metrics?.forkChoice.findHead.startTimer();
+
+    try {
+      return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetPredictedProposerHead, slot});
+    } catch (e) {
+      this.metrics?.forkChoice.errors.inc();
+      throw e;
+    } finally {
+      timer?.();
+    }
+  }
+
+  getProposerHead(slot: Slot): ProtoBlock {
+    this.metrics?.forkChoice.requests.inc();
+    const timer = this.metrics?.forkChoice.findHead.startTimer();
+
+    try {
+      return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetProposerHead, slot});
+    } catch (e) {
+      this.metrics?.forkChoice.errors.inc();
+      throw e;
+    } finally {
+      timer?.();
+    }
+  }
+ 
   /**
    * Returns Promise that resolves either on block found or once 1 slot passes.
    * Used to handle unknown block root for both unaggregated and aggregated attestations.

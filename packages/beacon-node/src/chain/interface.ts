@@ -178,7 +178,13 @@ export interface IBeaconChain {
 
   getStatus(): phase0.Status;
 
-  recomputeForkChoiceHead(mode?: UpdateHeadOpt, slot?: Slot): ProtoBlock;
+  recomputeForkChoiceHead(): ProtoBlock;
+
+  /** TODO: Add comment */
+  predictProposerHead(slot: Slot): ProtoBlock;
+
+  /** TODO: Add comment */
+  getProposerHead(slot: Slot): ProtoBlock;
 
   waitForBlock(slot: Slot, root: RootHex): Promise<boolean>;
 
