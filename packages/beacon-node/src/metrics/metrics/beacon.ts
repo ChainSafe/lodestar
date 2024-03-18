@@ -57,10 +57,11 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
     // Non-spec'ed
 
     forkChoice: {
-      findHead: register.histogram({
+      findHead: register.histogram<{entrypoint: string}>({
         name: "beacon_fork_choice_find_head_seconds",
         help: "Time taken to find head in seconds",
         buckets: [0.1, 1, 10],
+        labelNames: ["entrypoint"],
       }),
       requests: register.gauge({
         name: "beacon_fork_choice_requests_total",
@@ -198,5 +199,10 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       name: "beacon_clock_epoch",
       help: "Current clock epoch",
     }),
+
+    weakHeadDetected: register.gauge({
+      name: "beacon_weak_head_detected",
+      help: "Detected current head block is weak. May reorg it out when proposing next slot. See proposer boost reorg for more",
+    })
   };
 }

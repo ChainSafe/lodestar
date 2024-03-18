@@ -158,6 +158,7 @@ export class PrepareNextSlotScheduler {
               proposerHeadSlot,
               proposerHeadRoot,
             });
+            this.metrics?.weakHeadDetected.inc();
             updatedPrepareState = (await this.chain.regen.getBlockSlotState(
               proposerHeadRoot,
               prepareSlot,
