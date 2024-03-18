@@ -4,7 +4,7 @@ Lodestar has the ability to send client stats to a remote service for collection
 At the moment, the main service offering remote monitoring is [beaconcha.in](https://beaconcha.in/).
 
 Instructions for setting up client monitoring with _beaconcha.in_ can be found in their docs about
-[Mobile App &lt&gt; Node Monitoring](https://kb.beaconcha.in/beaconcha.in-explorer/mobile-app-less-than-greater-than-beacon-node)
+[Mobile App &lt;&gt; Node Monitoring](https://kb.beaconcha.in/beaconcha.in-explorer/mobile-app-less-than-greater-than-beacon-node)
 and in your [account settings](https://beaconcha.in/user/settings#app).
 
 ## Configuration

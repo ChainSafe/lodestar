@@ -48,7 +48,9 @@ docs/pages/lightclient-prover/lightclient.md
 docs/pages/lightclient-prover/prover.md
 docs/pages/api/api-reference.md
 docs/pages/contribution/getting-started.md
-docs/site
+## Docusaurus
+docs/.docusaurus/
+docs/build/
 
 # Testnet artifacts
 .lodestar
@@ -77,7 +79,3 @@ packages/cli/.git-data.json
 dictionary.dic
 
 temp/
-
-# Docusaurus
-.docusaurus
-build/
