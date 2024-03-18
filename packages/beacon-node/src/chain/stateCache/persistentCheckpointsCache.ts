@@ -723,7 +723,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       if (bufferWithKey) {
         const stateBytes = bufferWithKey.buffer;
         const dataView = new DataView(stateBytes.buffer, stateBytes.byteOffset, stateBytes.byteLength);
-        state.type.tree_serializeToBytes({uint8Array: stateBytes, dataView}, 0, state.node);
+        state.serializeToBytes({uint8Array: stateBytes, dataView}, 0);
         return bufferWithKey;
       }
     }
