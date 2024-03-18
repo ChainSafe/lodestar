@@ -2,11 +2,11 @@ import {
   BitListType,
   BitVectorType,
   ContainerType,
-  ContainerNodeStructType,
   ListBasicType,
   ListCompositeType,
   VectorBasicType,
   VectorCompositeType,
+  ListUintNum64Type,
 } from "@chainsafe/ssz";
 import {
   ATTESTATION_SUBNET_COUNT,
@@ -28,15 +28,14 @@ import {
   VALIDATOR_REGISTRY_LIMIT,
 } from "@lodestar/params";
 import * as primitiveSsz from "../primitive/sszTypes.js";
+import {ValidatorNodeStruct} from "./validator.js";
 
 const {
-  Boolean,
   Bytes32,
   UintNum64,
   UintBn64,
   Slot,
   Epoch,
-  EpochInf,
   CommitteeIndex,
   ValidatorIndex,
   Root,
@@ -225,27 +224,13 @@ export const HistoricalBatchRoots = new ContainerType(
   {typeName: "HistoricalBatchRoots", jsonCase: "eth2"}
 );
 
-export const ValidatorContainer = new ContainerType(
-  {
-    pubkey: BLSPubkey,
-    withdrawalCredentials: Bytes32,
-    effectiveBalance: UintNum64,
-    slashed: Boolean,
-    activationEligibilityEpoch: EpochInf,
-    activationEpoch: EpochInf,
-    exitEpoch: EpochInf,
-    withdrawableEpoch: EpochInf,
-  },
-  {typeName: "Validator", jsonCase: "eth2"}
-);
-
-export const ValidatorNodeStruct = new ContainerNodeStructType(ValidatorContainer.fields, ValidatorContainer.opts);
 // The main Validator type is the 'ContainerNodeStructType' version
 export const Validator = ValidatorNodeStruct;
 
 // Export as stand-alone for direct tree optimizations
 export const Validators = new ListCompositeType(ValidatorNodeStruct, VALIDATOR_REGISTRY_LIMIT);
-export const Balances = new ListBasicType(UintNum64, VALIDATOR_REGISTRY_LIMIT);
+// export const Balances = new ListBasicType(UintNum64, VALIDATOR_REGISTRY_LIMIT);
+export const Balances = new ListUintNum64Type(VALIDATOR_REGISTRY_LIMIT);
 export const RandaoMixes = new VectorCompositeType(Bytes32, EPOCHS_PER_HISTORICAL_VECTOR);
 /**
  * This is initially a Gwei (BigInt) vector, however since Nov 2023 it's converted to UintNum64 (number) vector in the state transition because:
