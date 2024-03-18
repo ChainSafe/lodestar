@@ -650,8 +650,8 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
                 this.metrics?.persistedStateAllocCount.inc();
                 stateBytes = state.serialize();
               }
-              persistedKey = await this.datastore.write(cpPersist, stateBytes);
               timer?.();
+              persistedKey = await this.datastore.write(cpPersist, stateBytes);
             }
             persistCount++;
             this.logger.verbose("Pruned checkpoint state from memory and persisted to disk", {
@@ -709,8 +709,6 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     });
   }
 
-  private persistToDisk = false;
-
   /*
    * It's not sustainable to allocate ~240MB for each state every epoch, so we use buffer pool to reuse the memory.
    * As monitored on holesky as of Jan 2024:
@@ -727,11 +725,6 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
         const stateBytes = bufferWithKey.buffer;
         const dataView = new DataView(stateBytes.buffer, stateBytes.byteOffset, stateBytes.byteLength);
         state.serializeToBytes({uint8Array: stateBytes, dataView}, 0);
-        if (!this.persistToDisk) {
-          fs.writeFileSync(`/home/devops/beacon/cp_state_${state.slot}.ssz`, stateBytes);
-          this.logger.info("@@@ Persisted state to disk", {slot: state.slot});
-          this.persistToDisk = true;
-        }
         return bufferWithKey;
       }
     }
