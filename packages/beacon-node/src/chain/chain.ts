@@ -12,6 +12,7 @@ import {
   Index2PubkeyCache,
   PubkeyIndexMap,
   EpochShuffling,
+  computeEndSlotAtEpoch,
 } from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
 import {
@@ -82,6 +83,7 @@ import {StateContextCache} from "./stateCache/stateContextCache.js";
 import {SeenGossipBlockInput} from "./seenCache/index.js";
 import {CheckpointStateCache} from "./stateCache/stateContextCheckpointsCache.js";
 import {SyncCommitteeRewards, computeSyncCommitteeRewards} from "./rewards/syncCommitteeRewards.js";
+import {AttestationsRewards, computeAttestationsRewards} from "./rewards/attestationsRewards.js";
 
 /**
  * Arbitrary constants, blobs and payloads should be consumed immediately in the same slot
@@ -1004,6 +1006,32 @@ export class BeaconChain implements IBeaconChain {
     const postState = this.regen.getStateSync(toHexString(block.stateRoot)) ?? undefined;
 
     return computeBlockRewards(block, preState.clone(), postState?.clone());
+  }
+
+  async getAttestationsRewards(
+    epoch: Epoch,
+    validatorIds?: (ValidatorIndex | string)[]
+  ): Promise<{rewards: AttestationsRewards; executionOptimistic: boolean}> {
+    // We use end slot of (epoch + 1) to ensure we have seen all attestations. On-time or late. Any late attestation beyond this slot is not considered
+    const slot = computeEndSlotAtEpoch(epoch + 1);
+    const stateResult = await this.getStateBySlot(slot, {allowRegen: false}); // No regen if state not in cache
+
+    if (stateResult === null) {
+      throw Error(`State is unavailable for slot ${slot}`);
+    }
+
+    const {executionOptimistic} = stateResult;
+    const stateRoot = toHexString(stateResult.state.hashTreeRoot());
+
+    const cachedState = this.regen.getStateSync(stateRoot);
+
+    if (cachedState === null) {
+      throw Error(`State is not in cache for slot ${slot}`);
+    }
+
+    const rewards = await computeAttestationsRewards(epoch, cachedState, this.config, validatorIds);
+
+    return {rewards, executionOptimistic};
   }
 
   async getSyncCommitteeRewards(
