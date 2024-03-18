@@ -728,7 +728,8 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
         const dataView = new DataView(stateBytes.buffer, stateBytes.byteOffset, stateBytes.byteLength);
         state.serializeToBytes({uint8Array: stateBytes, dataView}, 0);
         if (!this.persistToDisk) {
-          fs.writeFileSync(`/usr/src/lodestar/beacon/cp_state_${state.slot}.ssz`, stateBytes);
+          fs.writeFileSync(`/home/devops/beacon/cp_state_${state.slot}.ssz`, stateBytes);
+          this.logger.info("@@@ Persisted state to disk", {slot: state.slot});
           this.persistToDisk = true;
         }
         return bufferWithKey;
