@@ -50,7 +50,8 @@ const config: Config = {
   },
   themes: [
     '@docusaurus/theme-mermaid',
-    '@easyops-cn/docusaurus-search-local'
+    ['@easyops-cn/docusaurus-search-local',
+     {"docsRouteBasePath": '/'}]
   ],
 
   themeConfig:
