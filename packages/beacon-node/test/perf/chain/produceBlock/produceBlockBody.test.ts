@@ -29,7 +29,7 @@ describe("produceBlockBody", () => {
     chain = new BeaconChain(
       {
         proposerBoostEnabled: true,
-        proposerBoostReorgEnabled: true,
+        proposerBoostReorgEnabled: false,
         computeUnrealized: false,
         safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
         disableArchiveOnCheckpoint: true,
