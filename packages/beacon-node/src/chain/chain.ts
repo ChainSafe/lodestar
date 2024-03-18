@@ -5,7 +5,7 @@ import {
   CachedBeaconStateAllForks,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
-  createCachedBeaconState,
+  createFinalizedCachedBeaconState,
   EffectiveBalanceIncrements,
   getEffectiveBalanceIncrementsZeroInactive,
   isCachedBeaconState,
@@ -131,8 +131,8 @@ export class BeaconChain implements IBeaconChain {
   readonly seenBlockAttesters = new SeenBlockAttesters();
 
   // Global state caches
-  readonly pubkey2index: PubkeyIndexMap;
-  readonly index2pubkey: Index2PubkeyCache;
+  readonly finalizedPubkey2index: PubkeyIndexMap;
+  readonly finalizedIndex2pubkey: Index2PubkeyCache;
 
   readonly beaconProposerCache: BeaconProposerCache;
   readonly checkpointBalancesCache: CheckpointBalancesCache;
@@ -226,18 +226,18 @@ export class BeaconChain implements IBeaconChain {
     const cachedState =
       isCachedBeaconState(anchorState) && opts.skipCreateStateCacheIfAvailable
         ? anchorState
-        : createCachedBeaconState(anchorState, {
+        : createFinalizedCachedBeaconState(anchorState, {
             config,
-            pubkey2index: new PubkeyIndexMap(),
-            index2pubkey: [],
+            finalizedPubkey2index: new PubkeyIndexMap(),
+            finalizedIndex2pubkey: [],
           });
     this.shufflingCache.processState(cachedState, cachedState.epochCtx.previousShuffling.epoch);
     this.shufflingCache.processState(cachedState, cachedState.epochCtx.currentShuffling.epoch);
     this.shufflingCache.processState(cachedState, cachedState.epochCtx.nextShuffling.epoch);
 
     // Persist single global instance of state caches
-    this.pubkey2index = cachedState.epochCtx.pubkey2index;
-    this.index2pubkey = cachedState.epochCtx.index2pubkey;
+    this.finalizedPubkey2index = cachedState.epochCtx.finalizedPubkey2index;
+    this.finalizedIndex2pubkey = cachedState.epochCtx.finalizedIndex2pubkey;
 
     const stateCache = new StateContextCache({metrics});
     const checkpointStateCache = new CheckpointStateCache({metrics});
@@ -531,7 +531,7 @@ export class BeaconChain implements IBeaconChain {
     );
     const parentBlockRoot = fromHexString(head.blockRoot);
     const proposerIndex = state.epochCtx.getBeaconProposer(slot);
-    const proposerPubKey = state.epochCtx.index2pubkey[proposerIndex].toBytes();
+    const proposerPubKey = state.epochCtx.finalizedIndex2pubkey[proposerIndex].toBytes();
 
     const {body, blobs, executionPayloadValue, shouldOverrideBuilder} = await produceBlockBody.call(
       this,

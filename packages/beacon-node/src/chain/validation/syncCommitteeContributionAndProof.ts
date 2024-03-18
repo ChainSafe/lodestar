@@ -74,7 +74,7 @@ export async function validateSyncCommitteeGossipContributionAndProof(
   // > Checked in validateGossipSyncCommitteeExceptSig()
 
   const participantPubkeys = syncCommitteeParticipantIndices.map(
-    (validatorIndex) => headState.epochCtx.index2pubkey[validatorIndex]
+    (validatorIndex) => headState.epochCtx.finalizedIndex2pubkey[validatorIndex]
   );
   const signatureSets = [
     // [REJECT] The contribution_and_proof.selection_proof is a valid signature of the SyncAggregatorSelectionData
@@ -104,7 +104,7 @@ export async function validateSyncCommitteeGossipContributionAndProof(
 /**
  * Retrieve pubkeys in contribution aggregate using epochCtx:
  * - currSyncCommitteeIndexes cache
- * - index2pubkey cache
+ * - finalizedIndex2pubkey cache
  */
 function getContributionIndices(
   state: CachedBeaconStateAltair,

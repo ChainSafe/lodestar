@@ -74,7 +74,7 @@ type BeaconStateCacheMutable = Mutable<BeaconStateCache>;
  * - Micro-optimizations (TODO):
  *   - Keep also the root of the node above pubkey and withdrawal creds. Will never change
  *   - Keep pubkey + withdrawal creds in the same Uint8Array
- *   - Have a global pubkey + withdrawal creds Uint8Array global cache, like with the index2pubkey cache
+ *   - Have a global pubkey + withdrawal creds Uint8Array global cache, like with the finalizedIndex2pubkey cache
  *
  * ------------------
  *
@@ -138,9 +138,9 @@ export type CachedBeaconStateAllForks = CachedBeaconState<BeaconStateAllForks>;
 export type CachedBeaconStateExecutions = CachedBeaconState<BeaconStateExecutions>;
 /**
  * Create CachedBeaconState computing a new EpochCache instance
- * TODO ELECTRA: rename this to createFinalizedCachedBeaconState() as it's intended for finalized state only
+ * Note: this is intended for finalized state only
  */
-export function createCachedBeaconState<T extends BeaconStateAllForks>(
+export function createFinalizedCachedBeaconState<T extends BeaconStateAllForks>(
   state: T,
   immutableData: EpochCacheImmutableData,
   opts?: EpochCacheOpts
@@ -162,9 +162,9 @@ export function createCachedBeaconState<T extends BeaconStateAllForks>(
  * Create a CachedBeaconState given a cached seed state and state bytes
  * This guarantees that the returned state shares the same tree with the seed state
  * Check loadState() api for more details
- * // TODO: rename to loadUnfinalizedCachedBeaconState() due to ELECTRA
+ * Note: This only loads unfinalized beacon state
  */
-export function loadCachedBeaconState<T extends BeaconStateAllForks & BeaconStateCache>(
+export function loadUnfinalizedCachedBeaconState<T extends BeaconStateAllForks & BeaconStateCache>(
   cachedSeedState: T,
   stateBytes: Uint8Array,
   opts?: EpochCacheOpts,
@@ -176,22 +176,22 @@ export function loadCachedBeaconState<T extends BeaconStateAllForks & BeaconStat
     stateBytes,
     seedValidatorsBytes
   );
-  const {pubkey2index, index2pubkey} = cachedSeedState.epochCtx;
+  const {finalizedPubkey2index, finalizedIndex2pubkey} = cachedSeedState.epochCtx;
   // Get the validators sub tree once for all the loop
   const validators = migratedState.validators;
   for (const validatorIndex of modifiedValidators) {
     const validator = validators.getReadonly(validatorIndex);
     const pubkey = validator.pubkey;
-    pubkey2index.set(pubkey, validatorIndex);
-    index2pubkey[validatorIndex] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian);
+    finalizedPubkey2index.set(pubkey, validatorIndex);
+    finalizedIndex2pubkey[validatorIndex] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian);
   }
 
-  return createCachedBeaconState(
+  return createFinalizedCachedBeaconState(
     migratedState,
     {
       config: cachedSeedState.config,
-      pubkey2index,
-      index2pubkey,
+      finalizedPubkey2index,
+      finalizedIndex2pubkey,
     },
     {...(opts ?? {}), ...{skipSyncPubkeys: true}}
   ) as T;

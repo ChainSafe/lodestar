@@ -5,7 +5,7 @@ import {BeaconStateAllForks, beforeProcessEpoch} from "@lodestar/state-transitio
 import {getRewardsAndPenalties} from "@lodestar/state-transition/epoch";
 import {ssz} from "@lodestar/types";
 import {ACTIVE_PRESET} from "@lodestar/params";
-import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
+import {createFinalizedCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {getConfig} from "../../utils/config.js";
 import {RunnerType, TestRunnerFn} from "../utils/types.js";
@@ -21,7 +21,7 @@ const rewards: TestRunnerFn<RewardTestCase, Deltas> = (fork) => {
   return {
     testFunction: (testcase) => {
       const config = getConfig(fork);
-      const wrappedState = createCachedBeaconStateTest(testcase.pre, config);
+      const wrappedState = createFinalizedCachedBeaconStateTest(testcase.pre, config);
       const epochTransitionCache = beforeProcessEpoch(wrappedState, {assertCorrectProgressiveBalances});
 
       // To debug this test and get granular results you can tweak inputs to get more granular results

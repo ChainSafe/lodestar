@@ -11,7 +11,7 @@ import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 import {bnToNum} from "@lodestar/utils";
 import {config} from "@lodestar/config/default";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
-import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
+import {createFinalizedCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {RunnerType, TestRunnerFn} from "../utils/types.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
@@ -51,7 +51,7 @@ const transition =
         const forkEpoch = bnToNum(meta.fork_epoch);
         const testConfig = createChainForkConfig(getTransitionConfig(forkNext, forkEpoch));
 
-        let state = createCachedBeaconStateTest(testcase.pre, testConfig);
+        let state = createFinalizedCachedBeaconStateTest(testcase.pre, testConfig);
         for (let i = 0; i < meta.blocks_count; i++) {
           const signedBlock = testcase[`blocks_${i}`] as allForks.SignedBeaconBlock;
           state = stateTransition(state, signedBlock, {

@@ -12,7 +12,7 @@ import {phase0, ssz} from "@lodestar/types";
 import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 import {createChainForkConfig, ChainForkConfig} from "@lodestar/config";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
-import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
+import {createFinalizedCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {RunnerType, TestRunnerFn} from "../utils/types.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
@@ -23,7 +23,7 @@ const fork: TestRunnerFn<ForkStateCase, BeaconStateAllForks> = (forkNext) => {
 
   return {
     testFunction: (testcase) => {
-      const preState = createCachedBeaconStateTest(testcase.pre, config);
+      const preState = createFinalizedCachedBeaconStateTest(testcase.pre, config);
 
       switch (forkNext) {
         case ForkName.phase0:

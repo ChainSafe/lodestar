@@ -13,7 +13,7 @@ import {ssz, phase0, altair, bellatrix, capella, electra} from "@lodestar/types"
 import {InputType} from "@lodestar/spec-test-util";
 import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 
-import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
+import {createFinalizedCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {getConfig} from "../../utils/config.js";
 import {BaseSpecTest, RunnerType, shouldVerify, TestRunnerFn} from "../utils/types.js";
@@ -111,7 +111,7 @@ const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork,
     testFunction: (testcase) => {
       const state = testcase.pre.clone();
       const epoch = (state.fork as phase0.Fork).epoch;
-      const cachedState = createCachedBeaconStateTest(state, getConfig(fork, epoch));
+      const cachedState = createFinalizedCachedBeaconStateTest(state, getConfig(fork, epoch));
 
       operationFn(cachedState, testcase);
       state.commit();

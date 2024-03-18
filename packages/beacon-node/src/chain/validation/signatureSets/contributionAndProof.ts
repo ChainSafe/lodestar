@@ -20,7 +20,7 @@ export function getContributionAndProofSignatureSet(
   const signingData = signedContributionAndProof.message;
   return {
     type: SignatureSetType.single,
-    pubkey: epochCtx.index2pubkey[signedContributionAndProof.message.aggregatorIndex],
+    pubkey: epochCtx.finalizedIndex2pubkey[signedContributionAndProof.message.aggregatorIndex],
     signingRoot: computeSigningRoot(ssz.altair.ContributionAndProof, signingData, domain),
     signature: signedContributionAndProof.signature,
   };

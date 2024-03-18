@@ -19,7 +19,7 @@ import {generateState} from "../../../utils/state.js";
 import {validateGossipBlsToExecutionChange} from "../../../../src/chain/validation/blsToExecutionChange.js";
 import {BlsToExecutionChangeErrorCode} from "../../../../src/chain/errors/blsToExecutionChangeError.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
-import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState.js";
+import {createFinalizedCachedBeaconStateTest} from "../../../utils/cachedBeaconState.js";
 
 describe("validate bls to execution change", () => {
   let chainStub: MockedBeaconChain;
@@ -70,7 +70,7 @@ describe("validate bls to execution change", () => {
   // Generate the state
   const _state = generateState(stateEmpty, defaultConfig);
   const config = createBeaconConfig(defaultConfig, _state.genesisValidatorsRoot);
-  const state = createCachedBeaconStateTest(_state, config);
+  const state = createFinalizedCachedBeaconStateTest(_state, config);
 
   // Gen a valid blsToExecutionChange for first val
   const blsToExecutionChange = {

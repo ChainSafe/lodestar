@@ -3,7 +3,7 @@ import {phase0, Epoch, RootHex} from "@lodestar/types";
 import {CachedBeaconStateAllForks, computeStartSlotAtEpoch, getBlockRootAtSlot} from "@lodestar/state-transition";
 import {Logger, MapDef, sleep} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
-import {loadCachedBeaconState} from "@lodestar/state-transition";
+import {loadUnfinalizedCachedBeaconState} from "@lodestar/state-transition";
 import {INTERVALS_PER_SLOT} from "@lodestar/params";
 import {Metrics} from "../../metrics/index.js";
 import {IClock} from "../../util/clock.js";
@@ -214,7 +214,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       }
       sszTimer?.();
       const timer = this.metrics?.stateReloadDuration.startTimer();
-      const newCachedState = loadCachedBeaconState(
+      const newCachedState = loadUnfinalizedCachedBeaconState(
         seedState,
         stateBytes,
         {

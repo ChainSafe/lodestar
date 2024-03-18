@@ -23,7 +23,7 @@ export function processSyncCommitteeUpdates(state: CachedBeaconStateAltair): voi
       effectiveBalanceIncrements
     );
 
-    // Using the index2pubkey cache is slower because it needs the serialized pubkey.
+    // Using the finalizedIndex2pubkey cache is slower because it needs the serialized pubkey.
     const nextSyncCommitteePubkeys = nextSyncCommitteeIndices.map(
       (index) => state.validators.getReadonly(index).pubkey
     );

@@ -25,7 +25,7 @@ export function getNextSyncCommittee(
 ): {indices: ValidatorIndex[]; syncCommittee: altair.SyncCommittee} {
   const indices = getNextSyncCommitteeIndices(state, activeValidatorIndices, effectiveBalanceIncrements);
 
-  // Using the index2pubkey cache is slower because it needs the serialized pubkey.
+  // Using the finalizedIndex2pubkey cache is slower because it needs the serialized pubkey.
   const pubkeys = indices.map((index) => state.validators.getReadonly(index).pubkey);
 
   return {

@@ -25,7 +25,7 @@ export function getBlockProposerSignatureSet(
 
   return {
     type: SignatureSetType.single,
-    pubkey: epochCtx.index2pubkey[signedBlock.message.proposerIndex],
+    pubkey: epochCtx.finalizedIndex2pubkey[signedBlock.message.proposerIndex],
     signingRoot: computeSigningRoot(blockType, signedBlock.message, domain),
     signature: signedBlock.signature,
   };
@@ -40,7 +40,7 @@ export function getBlockHeaderProposerSignatureSet(
 
   return {
     type: SignatureSetType.single,
-    pubkey: epochCtx.index2pubkey[signedBlockHeader.message.proposerIndex],
+    pubkey: epochCtx.finalizedIndex2pubkey[signedBlockHeader.message.proposerIndex],
     signingRoot: computeSigningRoot(ssz.phase0.BeaconBlockHeader, signedBlockHeader.message, domain),
     signature: signedBlockHeader.signature,
   };

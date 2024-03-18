@@ -145,7 +145,7 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
       ? new BlsSingleThreadVerifier({metrics: null})
       : new BlsMultiThreadWorkerPool({}, {logger: testLogger(), metrics: null}),
     waitForBlock: () => Promise.resolve(false),
-    index2pubkey: state.epochCtx.index2pubkey,
+    finalizedIndex2pubkey: state.epochCtx.finalizedIndex2pubkey,
     shufflingCache,
     opts: defaultChainOptions,
   } as Partial<IBeaconChain> as IBeaconChain;

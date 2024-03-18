@@ -179,10 +179,10 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       ForkSeq[fork] >= ForkSeq.electra
         ? "engine_newPayloadV6110"
         : ForkSeq[fork] >= ForkSeq.deneb
-        ? "engine_newPayloadV3"
-        : ForkSeq[fork] >= ForkSeq.capella
-          ? "engine_newPayloadV2"
-          : "engine_newPayloadV1";
+          ? "engine_newPayloadV3"
+          : ForkSeq[fork] >= ForkSeq.capella
+            ? "engine_newPayloadV2"
+            : "engine_newPayloadV1";
 
     const serializedExecutionPayload = serializeExecutionPayload(fork, executionPayload);
 
@@ -375,10 +375,10 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       ForkSeq[fork] >= ForkSeq.electra
         ? "engine_getPayloadV6110"
         : ForkSeq[fork] >= ForkSeq.deneb
-        ? "engine_getPayloadV3"
-        : ForkSeq[fork] >= ForkSeq.capella
-          ? "engine_getPayloadV2"
-          : "engine_getPayloadV1";
+          ? "engine_getPayloadV3"
+          : ForkSeq[fork] >= ForkSeq.capella
+            ? "engine_getPayloadV2"
+            : "engine_getPayloadV1";
     const payloadResponse = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]

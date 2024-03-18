@@ -12,7 +12,7 @@ import {
   processSlots,
 } from "../../src/index.js";
 import {getInfuraBeaconUrl} from "../utils/infura.js";
-import {createCachedBeaconStateTest} from "../utils/state.js";
+import {createFinalizedCachedBeaconStateTest} from "../utils/state.js";
 import {csvAppend, readCsv} from "./csv.js";
 
 // Understand the real network characteristics regarding epoch transitions to accurately produce performance test data.
@@ -97,7 +97,7 @@ async function analyzeEpochs(network: NetworkName, fromEpoch?: number): Promise<
     const preEpoch = computeEpochAtSlot(state.slot);
     const nextEpochSlot = computeStartSlotAtEpoch(preEpoch + 1);
     const stateTB = ssz.phase0.BeaconState.toViewDU(state as phase0.BeaconState);
-    const postState = createCachedBeaconStateTest(stateTB, config);
+    const postState = createFinalizedCachedBeaconStateTest(stateTB, config);
 
     const cache = beforeProcessEpoch(postState);
     processSlots(postState, nextEpochSlot);

@@ -32,8 +32,8 @@ describe("updateUnfinalizedPubkeys perf tests", function () {
       id: `updateUnfinalizedPubkeys - updating ${numPubkeysToBeFinalized} pubkeys`,
       beforeEach: async () => {
         baseState.epochCtx.unfinalizedPubkey2index = Map(unfinalizedPubkey2Index.map);
-        baseState.epochCtx.pubkey2index = new PubkeyIndexMap();
-        baseState.epochCtx.index2pubkey = [];
+        baseState.epochCtx.finalizedPubkey2index = new PubkeyIndexMap();
+        baseState.epochCtx.finalizedIndex2pubkey = [];
 
         checkpointStateCache = new CheckpointStateCache({});
         stateCache = new StateContextCache({});

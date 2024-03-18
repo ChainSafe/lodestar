@@ -3,12 +3,12 @@ import {ssz} from "@lodestar/types";
 import {createChainForkConfig} from "@lodestar/config";
 import {MAX_DEPOSITS} from "@lodestar/params";
 import {CachedBeaconStateElectra, getEth1DepositCount} from "../../../src/index.js";
-import {createCachedBeaconStateTest} from "../../utils/state.js";
+import {createFinalizedCachedBeaconStateTest} from "../../utils/state.js";
 
 describe("getEth1DepositCount", () => {
   it("Pre Electra", () => {
     const stateView = ssz.altair.BeaconState.defaultViewDU();
-    const preElectraState = createCachedBeaconStateTest(stateView);
+    const preElectraState = createFinalizedCachedBeaconStateTest(stateView);
 
     if (preElectraState.epochCtx.isAfterElectra()) {
       throw Error("Not a pre-Electra state");
@@ -26,7 +26,7 @@ describe("getEth1DepositCount", () => {
   });
   it("Post Electra with eth1 deposit", () => {
     const stateView = ssz.electra.BeaconState.defaultViewDU();
-    const postElectraState = createCachedBeaconStateTest(
+    const postElectraState = createFinalizedCachedBeaconStateTest(
       stateView,
       createChainForkConfig({
         /* eslint-disable @typescript-eslint/naming-convention */
@@ -60,7 +60,7 @@ describe("getEth1DepositCount", () => {
   });
   it("Post Electra without eth1 deposit", () => {
     const stateView = ssz.electra.BeaconState.defaultViewDU();
-    const postElectraState = createCachedBeaconStateTest(
+    const postElectraState = createFinalizedCachedBeaconStateTest(
       stateView,
       createChainForkConfig({
         /* eslint-disable @typescript-eslint/naming-convention */

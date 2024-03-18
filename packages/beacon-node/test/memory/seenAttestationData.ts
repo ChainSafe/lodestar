@@ -29,7 +29,7 @@ function getRandomSeenAttestationDatas(n: number): SeenAttestationDatas {
   for (let i = 0; i < n; i++) {
     const attDataBytes = crypto.randomBytes(128);
     const key = Buffer.from(attDataBytes).toString("base64");
-    // skip index2pubkey and committeeIndices as they are shared
+    // skip finalizedIndex2pubkey and committeeIndices as they are shared
     const attDataCacheEntry = {
       signingRoot: crypto.randomBytes(32),
       attDataRootHex: toHexString(crypto.randomBytes(32)),

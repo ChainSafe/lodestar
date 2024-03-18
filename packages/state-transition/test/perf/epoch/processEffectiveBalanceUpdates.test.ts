@@ -5,7 +5,7 @@ import {beforeProcessEpoch, CachedBeaconStateAllForks, EpochTransitionCache} fro
 import {processEffectiveBalanceUpdates} from "../../../src/epoch/processEffectiveBalanceUpdates.js";
 import {numValidators} from "../util.js";
 import {StateEpoch} from "../types.js";
-import {createCachedBeaconStateTest} from "../../utils/state.js";
+import {createFinalizedCachedBeaconStateTest} from "../../utils/state.js";
 
 // PERF: Cost 'proportional' to $VALIDATOR_COUNT, to iterate over all balances. Then cost is proportional to the amount
 // of validators whose effectiveBalance changed. Worst case is a massive network leak or a big slashing event which
@@ -74,7 +74,7 @@ function getEffectiveBalanceTestData(
 
   stateTree.commit();
 
-  const cachedBeaconState = createCachedBeaconStateTest(stateTree, config, {skipSyncPubkeys: true});
+  const cachedBeaconState = createFinalizedCachedBeaconStateTest(stateTree, config, {skipSyncPubkeys: true});
   const cache = beforeProcessEpoch(cachedBeaconState);
   cache.balances = balances;
 

@@ -15,7 +15,7 @@ export function getSyncCommitteeSignatureSet(
 
   return {
     type: SignatureSetType.single,
-    pubkey: state.epochCtx.index2pubkey[syncCommittee.validatorIndex],
+    pubkey: state.epochCtx.finalizedIndex2pubkey[syncCommittee.validatorIndex],
     signingRoot: computeSigningRoot(ssz.Root, syncCommittee.beaconBlockRoot, domain),
     signature: syncCommittee.signature,
   };

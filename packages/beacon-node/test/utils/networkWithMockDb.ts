@@ -8,7 +8,7 @@ import {GossipHandlers, Network, NetworkInitModules, getReqRespHandlers} from ".
 import {NetworkOptions, defaultNetworkOptions} from "../../src/network/options.js";
 import {GetReqRespHandlerFn} from "../../src/network/reqresp/types.js";
 import {getMockedBeaconDb} from "../mocks/mockedBeaconDb.js";
-import {createCachedBeaconStateTest} from "./cachedBeaconState.js";
+import {createFinalizedCachedBeaconStateTest} from "./cachedBeaconState.js";
 import {ClockStatic} from "./clock.js";
 import {testLogger} from "./logger.js";
 import {generateState} from "./state.js";
@@ -64,7 +64,7 @@ export async function getNetworkForTest(
       // mock timer does not work on worker thread
       clock: new ClockStatic(startSlot, Math.floor(Date.now() / 1000) - startSlot * beaconConfig.SECONDS_PER_SLOT),
       metrics: null,
-      anchorState: createCachedBeaconStateTest(state, beaconConfig),
+      anchorState: createFinalizedCachedBeaconStateTest(state, beaconConfig),
       eth1: new Eth1ForBlockProductionDisabled(),
       executionEngine: new ExecutionEngineDisabled(),
     }

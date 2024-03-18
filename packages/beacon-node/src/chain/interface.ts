@@ -88,8 +88,8 @@ export interface IBeaconChain {
   readonly regen: IStateRegenerator;
   readonly lightClientServer: LightClientServer;
   readonly reprocessController: ReprocessController;
-  readonly pubkey2index: PubkeyIndexMap;
-  readonly index2pubkey: Index2PubkeyCache;
+  readonly finalizedPubkey2index: PubkeyIndexMap;
+  readonly finalizedIndex2pubkey: Index2PubkeyCache;
 
   // Ops pool
   readonly attestationPool: AttestationPool;

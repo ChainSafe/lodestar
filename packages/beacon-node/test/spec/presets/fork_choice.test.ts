@@ -11,7 +11,7 @@ import {ACTIVE_PRESET, ForkSeq, isForkBlobs} from "@lodestar/params";
 import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
 import {ClockEvent} from "../../../src/util/clock.js";
 import {computeInclusionProof} from "../../../src/util/blobs.js";
-import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
+import {createFinalizedCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {testLogger} from "../../utils/logger.js";
 import {getConfig} from "../../utils/config.js";
 import {RunnerType, TestRunnerFn} from "../utils/types.js";
@@ -60,7 +60,7 @@ const forkChoiceTest =
         const {steps, anchorState} = testcase;
         const currentSlot = anchorState.slot;
         const config = getConfig(fork);
-        const state = createCachedBeaconStateTest(anchorState, config);
+        const state = createFinalizedCachedBeaconStateTest(anchorState, config);
 
         /** This is to track test's tickTime to be used in proposer boost */
         let tickTime = 0;

@@ -16,7 +16,7 @@ import {generateState} from "../../../utils/state.js";
 import {validateGossipVoluntaryExit} from "../../../../src/chain/validation/voluntaryExit.js";
 import {VoluntaryExitErrorCode} from "../../../../src/chain/errors/voluntaryExitError.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
-import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState.js";
+import {createFinalizedCachedBeaconStateTest} from "../../../utils/cachedBeaconState.js";
 
 describe("validate voluntary exit", () => {
   let chainStub: MockedBeaconChain;
@@ -58,7 +58,7 @@ describe("validate voluntary exit", () => {
     signedVoluntaryExit = {message: voluntaryExit, signature: sk.sign(signingRoot).toBytes()};
     const _state = generateState(stateEmpty, config);
 
-    state = createCachedBeaconStateTest(_state, createBeaconConfig(config, _state.genesisValidatorsRoot));
+    state = createFinalizedCachedBeaconStateTest(_state, createBeaconConfig(config, _state.genesisValidatorsRoot));
   });
 
   beforeEach(() => {
