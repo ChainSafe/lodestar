@@ -1,3 +1,7 @@
+---
+title: Quick Start
+---
+
 ## Lodestar Quickstart
 
 In order to make things easy for users to onboard and try the Ethereum **Proof of Stake** we have come up with [Lodestar quick start](https://github.com/ChainSafe/lodestar-quickstart) scripts!

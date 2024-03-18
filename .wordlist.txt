@@ -18,6 +18,7 @@ DVs
 Discv
 DockerHub
 Dockerized
+Docusaurus
 EIP
 EIPs
 EL
@@ -39,6 +40,7 @@ Geth
 Github
 Gossipsub
 Grafana
+HTTPS
 HackMD
 Homebrew
 IPFS
@@ -91,6 +93,7 @@ api
 async
 backfill
 beaconcha
+blockRoot
 blockchain
 bootnode
 bootnodes

@@ -1,3 +1,7 @@
+---
+title: Core Dumps
+---
+
 # Core Dump Analysis
 
 Core dump analysis is some ninja level stuff. Once you get the hang of it you will feel like you have super powers. It will up your game to a whole new level because you will be able to debug issues that seemed impossible before. Post-crash analysis is a very powerful tool to have in your tool belt. A core dump has all of the objects in memory as well as all of the stack frame information at the exact moment the dump was taken, usually when a hard crash occurs.
