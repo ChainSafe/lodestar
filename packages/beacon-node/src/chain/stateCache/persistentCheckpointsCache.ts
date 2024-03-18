@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {phase0, Epoch, RootHex} from "@lodestar/types";
 import {CachedBeaconStateAllForks, computeStartSlotAtEpoch, getBlockRootAtSlot} from "@lodestar/state-transition";
@@ -708,6 +709,8 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     });
   }
 
+  private persistToDisk = false;
+
   /*
    * It's not sustainable to allocate ~240MB for each state every epoch, so we use buffer pool to reuse the memory.
    * As monitored on holesky as of Jan 2024:
@@ -724,6 +727,10 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
         const stateBytes = bufferWithKey.buffer;
         const dataView = new DataView(stateBytes.buffer, stateBytes.byteOffset, stateBytes.byteLength);
         state.serializeToBytes({uint8Array: stateBytes, dataView}, 0);
+        if (!this.persistToDisk) {
+          fs.writeFileSync(`/usr/src/lodestar/beacon/cp_state_${state.slot}.ssz`, stateBytes);
+          this.persistToDisk = true;
+        }
         return bufferWithKey;
       }
     }
