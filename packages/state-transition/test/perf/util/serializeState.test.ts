@@ -1,20 +1,20 @@
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {ssz} from "@lodestar/types";
-import {generatePerfTestCachedStateAltair} from "../util.js";
+import {cachedStateAltairPopulateCaches, generatePerfTestCachedStateAltair} from "../util.js";
 
 /**
  * This shows different statistics between allocating memory once vs every time.
  * Due to gc, the test is not consistent so skipping it for CI.
  */
-describe.skip("serialize state and validators", function () {
+describe("serialize state and validators", function () {
   this.timeout(0);
 
   setBenchOpts({
     // increasing this may have different statistics due to gc time
-    minMs: 60_000,
+    minMs: 10_000,
   });
-  const valicatorCount = 1_500_000;
-  const seedState = generatePerfTestCachedStateAltair({vc: 1_500_000, goBackOneSlot: false});
+  const valicatorCount = 1_700_000;
+  const seedState = generatePerfTestCachedStateAltair({vc: valicatorCount, goBackOneSlot: false});
 
   /**
    * Allocate memory every time, on a Mac M1:
@@ -32,6 +32,17 @@ describe.skip("serialize state and validators", function () {
     fn: () => {
       stateBytes.fill(0);
       stateType.tree_serializeToBytes({uint8Array: stateBytes, dataView: stateDataView}, 0, rootNode);
+    },
+  });
+
+  // now cache nodes
+  cachedStateAltairPopulateCaches(seedState);
+
+  itBench.only({
+    id: `serialize state ${valicatorCount} validators using new serializeToBytes() method`,
+    fn: () => {
+      stateBytes.fill(0);
+      seedState.serializeToBytes({uint8Array: stateBytes, dataView: stateDataView}, 0);
     },
   });
 
@@ -68,10 +79,10 @@ describe.skip("serialize state and validators", function () {
   /**
    * Allocate memory every time, this takes 640ms to more than 1s on a Mac M1.
    */
-  itBench({
+  itBench.only({
     id: `serialize state validators ${valicatorCount} validators`,
     fn: () => {
-      seedState.validators.serialize();
+      seedState.validators.serializeToBytes({uint8Array: validatorsBytes, dataView: validatorsDataView}, 0);
     },
   });
 
@@ -80,11 +91,11 @@ describe.skip("serialize state and validators", function () {
    * this is 3x faster than the previous approach.
    */
   const NUMBER_2_POW_32 = 2 ** 32;
-  const output = new Uint8Array(121 * 1_500_000);
+  const output = new Uint8Array(121 * valicatorCount);
   const dataView = new DataView(output.buffer, output.byteOffset, output.byteLength);
   // this caches validators nodes which is what happen after we run a state transition
   const validators = seedState.validators.getAllReadonlyValues();
-  itBench({
+  itBench.only({
     id: `serialize ${valicatorCount} validators manually`,
     fn: () => {
       let offset = 0;
@@ -117,6 +128,13 @@ describe.skip("serialize state and validators", function () {
         dataView.setUint32(offset, (withdrawableEpoch / NUMBER_2_POW_32) & 0xffffffff, true);
         offset += 4;
       }
+    },
+  });
+
+  itBench.only({
+    id: "serialize state validators using new way",
+    fn: () => {
+      seedState.validators.serializeToBytes({uint8Array: output, dataView}, 0);
     },
   });
 });
