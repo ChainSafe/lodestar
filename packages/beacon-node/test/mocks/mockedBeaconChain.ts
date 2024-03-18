@@ -133,6 +133,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       beaconProposerCache: new BeaconProposerCache(),
       shufflingCache: new ShufflingCache(),
       produceCommonBlockBody: vi.fn(),
+      getProposerHead: vi.fn(),
       produceBlock: vi.fn(),
       produceBlindedBlock: vi.fn(),
       getCanonicalBlockAtSlot: vi.fn(),
