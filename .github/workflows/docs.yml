@@ -14,7 +14,7 @@ on:
 
 jobs:
   docs:
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: ubuntu-latest
     env:
       DEPLOY_REF: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.ref || 'stable' }}
     steps:
