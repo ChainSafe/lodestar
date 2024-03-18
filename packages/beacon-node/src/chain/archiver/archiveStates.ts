@@ -95,8 +95,9 @@ export class StatesArchiver {
       await this.db.stateArchive.putBinary(slot, finalizedStateOrBytes);
       this.logger.verbose("Archived finalized state bytes", {epoch: finalized.epoch, slot, root: rootHex});
     } else {
-      // state
-      await this.db.stateArchive.put(finalizedStateOrBytes.slot, finalizedStateOrBytes);
+      // state, use ViewDU.serialize() has better performance
+      const stateBytes = finalizedStateOrBytes.serialize();
+      await this.db.stateArchive.putBinary(finalizedStateOrBytes.slot, stateBytes);
       // don't delete states before the finalized state, auto-prune will take care of it
       this.logger.verbose("Archived finalized state", {
         epoch: finalized.epoch,

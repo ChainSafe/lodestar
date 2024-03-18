@@ -739,7 +739,6 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
    * TODO: consider serializing validators manually like in `serializeState.test.ts` perf test, this could be 3x faster than this
    */
   private serializeStateValidators(state: CachedBeaconStateAllForks): BufferWithKey | null {
-    // const validatorsSszTimer = this.metrics?.stateReloadValidatorsSszDuration.startTimer();
     const type = state.type.fields.validators;
     const size = type.tree_serializedSize(state.validators.node);
     if (this.bufferPool) {
@@ -747,7 +746,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       if (bufferWithKey) {
         const validatorsBytes = bufferWithKey.buffer;
         const dataView = new DataView(validatorsBytes.buffer, validatorsBytes.byteOffset, validatorsBytes.byteLength);
-        type.tree_serializeToBytes({uint8Array: validatorsBytes, dataView}, 0, state.validators.node);
+        state.validators.serializeToBytes({uint8Array: validatorsBytes, dataView}, 0);
         return bufferWithKey;
       }
     }
