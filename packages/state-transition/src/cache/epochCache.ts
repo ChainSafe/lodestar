@@ -300,11 +300,7 @@ export class EpochCache {
    */
   static createFromState(
     state: BeaconStateAllForks,
-    {
-      config,
-      finalizedPubkey2index,
-      finalizedIndex2pubkey,
-    }: EpochCacheImmutableData,
+    {config, finalizedPubkey2index, finalizedIndex2pubkey}: EpochCacheImmutableData,
     opts?: EpochCacheOpts
   ): EpochCache {
     // syncPubkeys here to ensure EpochCacheImmutableData is popualted before computing the rest of caches

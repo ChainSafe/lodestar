@@ -40,7 +40,10 @@ export async function getNetworkCachedState(
 
   if (fs.existsSync(filepath)) {
     const stateSsz = fs.readFileSync(filepath);
-    return createFinalizedCachedBeaconStateTest(config.getForkTypes(slot).BeaconState.deserializeToViewDU(stateSsz), config);
+    return createFinalizedCachedBeaconStateTest(
+      config.getForkTypes(slot).BeaconState.deserializeToViewDU(stateSsz),
+      config
+    );
   } else {
     const stateSsz = await tryEach([
       () => downloadTestFile(fileId),
@@ -59,7 +62,10 @@ export async function getNetworkCachedState(
     ]);
 
     fs.writeFileSync(filepath, stateSsz);
-    return createFinalizedCachedBeaconStateTest(config.getForkTypes(slot).BeaconState.deserializeToViewDU(stateSsz), config);
+    return createFinalizedCachedBeaconStateTest(
+      config.getForkTypes(slot).BeaconState.deserializeToViewDU(stateSsz),
+      config
+    );
   }
 }
 

@@ -14,7 +14,7 @@ describe("get proposers api impl", function () {
   let api: ReturnType<typeof getValidatorApi>;
   let modules: ApiTestModules;
   let state: BeaconStateAllForks;
-  let cachedState: ReturnType<typeof createCachedBeaconStateTest>;
+  let cachedState: ReturnType<typeof createFinalizedCachedBeaconStateTest>;
 
   beforeEach(function () {
     vi.useFakeTimers({now: 0});
