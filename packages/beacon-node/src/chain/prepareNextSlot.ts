@@ -146,6 +146,7 @@ export class PrepareNextSlotScheduler {
         const proposerIndex = prepareState.epochCtx.getBeaconProposer(prepareSlot);
         const feeRecipient = this.chain.beaconProposerCache.get(proposerIndex);
         let updatedPrepareState = prepareState;
+        let updatedHeadRoot = headRoot;
 
         if (feeRecipient) {
           // If we are proposing next slot, we need to predict if we can proposer-boost-reorg or not
@@ -166,6 +167,7 @@ export class PrepareNextSlotScheduler {
               {dontTransferCache: !isEpochTransition},
               RegenCaller.precomputeEpoch
             )) as CachedBeaconStateExecutions;
+            updatedHeadRoot = proposerHeadRoot;
           }
 
           // Update the builder status, if enabled shoot an api call to check status
@@ -190,7 +192,7 @@ export class PrepareNextSlotScheduler {
             this.chain,
             this.logger,
             fork as ForkExecution, // State is of execution type
-            fromHex(headRoot),
+            fromHex(updatedHeadRoot),
             safeBlockHash,
             finalizedBlockHash,
             updatedPrepareState,
