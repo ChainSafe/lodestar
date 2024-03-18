@@ -1,6 +1,6 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {phase0, Epoch, RootHex} from "@lodestar/types";
-import {CachedBeaconStateAllForks, CachedBeaconStateAltair, computeStartSlotAtEpoch, getBlockRootAtSlot} from "@lodestar/state-transition";
+import {CachedBeaconStateAllForks, computeStartSlotAtEpoch, getBlockRootAtSlot} from "@lodestar/state-transition";
 import {Logger, MapDef, sleep} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
 import {loadCachedBeaconState} from "@lodestar/state-transition";
@@ -723,16 +723,6 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       if (bufferWithKey) {
         const stateBytes = bufferWithKey.buffer;
         const dataView = new DataView(stateBytes.buffer, stateBytes.byteOffset, stateBytes.byteLength);
-        // begin Test populate caches
-        state.blockRoots.getAllReadonly();
-        state.eth1DataVotes.getAllReadonly();
-        state.validators.getAllReadonly();
-        state.balances.getAll();
-        (state as CachedBeaconStateAltair).previousEpochParticipation.getAll();
-        (state as CachedBeaconStateAltair).currentEpochParticipation.getAll();
-        (state as CachedBeaconStateAltair).inactivityScores.getAll();
-        // end Test populate caches
-
         state.serializeToBytes({uint8Array: stateBytes, dataView}, 0);
         return bufferWithKey;
       }
