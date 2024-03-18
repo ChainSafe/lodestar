@@ -352,7 +352,7 @@ export function getValidatorApi({
       // forkChoice.updateTime() might have already been called by the onSlot clock
       // handler, in which case this should just return.
       chain.forkChoice.updateTime(slot);
-      chain.getProposerHead(slot);
+      chain.recomputeForkChoiceHead();
     }
 
     let timer;
@@ -409,7 +409,7 @@ export function getValidatorApi({
       // forkChoice.updateTime() might have already been called by the onSlot clock
       // handler, in which case this should just return.
       chain.forkChoice.updateTime(slot);
-      chain.getProposerHead(slot);
+      chain.recomputeForkChoiceHead();
     }
 
     let timer;
@@ -484,7 +484,7 @@ export function getValidatorApi({
       // forkChoice.updateTime() might have already been called by the onSlot clock
       // handler, in which case this should just return.
       chain.forkChoice.updateTime(slot);
-      chain.getProposerHead(slot);
+      chain.recomputeForkChoiceHead();
 
       const fork = config.getForkName(slot);
       // set some sensible opts
@@ -529,10 +529,13 @@ export function getValidatorApi({
       };
 
       logger.verbose("Assembling block with produceEngineOrBuilderBlock", loggerContext);
+      const proposerHead = chain.getProposerHead(slot);
+
       const commonBlockBody = await chain.produceCommonBlockBody({
         slot,
         randaoReveal,
         graffiti: toGraffitiBuffer(graffiti || ""),
+        proposerHead,
       });
       logger.debug("Produced common block body", loggerContext);
 

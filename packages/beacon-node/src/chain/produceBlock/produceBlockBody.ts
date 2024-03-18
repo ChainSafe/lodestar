@@ -35,6 +35,7 @@ import {IEth1ForBlockProduction} from "../../eth1/index.js";
 import {numToQuantity} from "../../eth1/provider/utils.js";
 import {CommonBlockBody} from "../interface.js";
 import {validateBlobsAndKzgCommitments} from "./validateBlobsAndKzgCommitments.js";
+import { ProtoBlock } from "@lodestar/fork-choice";
 
 // Time to provide the EL to generate a payload from new payload id
 const PAYLOAD_GENERATION_TIME_MS = 500;
@@ -65,6 +66,7 @@ export type BlockAttributes = {
   graffiti: Bytes32;
   slot: Slot;
   feeRecipient?: string;
+  proposerHead?: ProtoBlock;
 };
 
 export enum BlockType {

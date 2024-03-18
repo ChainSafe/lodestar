@@ -477,7 +477,7 @@ export class BeaconChain implements IBeaconChain {
 
   async produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody> {
     const {slot} = blockAttributes;
-    const head = this.forkChoice.getHead();
+    const head = blockAttributes.proposerHead ?? this.forkChoice.getHead();
     const state = await this.regen.getBlockSlotState(
       head.blockRoot,
       slot,
