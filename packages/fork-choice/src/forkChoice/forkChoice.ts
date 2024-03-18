@@ -308,7 +308,8 @@ export class ForkChoice implements IForkChoice {
 
     // Reorg if all above checks fail
     this.logger?.info("Will perform single-slot reorg to reorg out current weak head");
-    return (this.head = parentBlock);
+
+    return parentBlock;
   }
 
   /**
