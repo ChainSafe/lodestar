@@ -34,7 +34,7 @@ export class ValidatorNodeStructType extends ContainerNodeStructType<typeof Vali
     output.set(validator.withdrawalCredentials, offset);
     offset += 32;
     const {effectiveBalance, activationEligibilityEpoch, activationEpoch, exitEpoch, withdrawableEpoch} = validator;
-    // TODO: writeUintNum64?
+    // effectiveBalance is UintNum64
     dataView.setUint32(offset, effectiveBalance & 0xffffffff, true);
     offset += 4;
     dataView.setUint32(offset, (effectiveBalance / NUMBER_2_POW_32) & 0xffffffff, true);
