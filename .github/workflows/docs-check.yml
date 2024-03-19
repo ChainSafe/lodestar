@@ -38,6 +38,9 @@ jobs:
       - name: Check wordlist is sorted
         run: scripts/wordlist_sort_check.sh
 
+      - name: Spellcheck
+        uses: rojopolis/spellcheck-github-actions@0.32.0
+
       - name: Build and collect docs
         run: yarn docs:build
 
@@ -45,7 +48,3 @@ jobs:
       # deployed version so this will fail if not "fixable"
       - name: Check docs format
         run: yarn docs:lint:fix
-
-      # Run spellcheck AFTER building docs, in case the CLI reference has issues
-      - name: Spellcheck
-        uses: rojopolis/spellcheck-github-actions@0.32.0
