@@ -3,7 +3,16 @@ import * as primitiveSsz from "../primitive/sszTypes.js";
 
 const {Boolean, Bytes32, UintNum64, BLSPubkey, EpochInf} = primitiveSsz;
 
+// this is to work with uint32, see https://github.com/ChainSafe/ssz/blob/ssz-v0.15.1/packages/ssz/src/type/uint.ts
 const NUMBER_2_POW_32 = 2 ** 32;
+
+/**
+ * Below constants are respective to their ssz type in `ValidatorType`.
+ */
+const UINT32_SIZE = 4;
+const PUBKEY_SIZE = 48;
+const WITHDRAWAL_CREDENTIALS_SIZE = 32;
+const SLASHED_SIZE = 1;
 
 export const ValidatorType = {
   pubkey: BLSPubkey,
@@ -30,17 +39,17 @@ export class ValidatorNodeStructType extends ContainerNodeStructType<typeof Vali
     validator: ValueOfFields<typeof ValidatorType>
   ): number {
     output.set(validator.pubkey, offset);
-    offset += 48;
+    offset += PUBKEY_SIZE;
     output.set(validator.withdrawalCredentials, offset);
-    offset += 32;
+    offset += WITHDRAWAL_CREDENTIALS_SIZE;
     const {effectiveBalance, activationEligibilityEpoch, activationEpoch, exitEpoch, withdrawableEpoch} = validator;
     // effectiveBalance is UintNum64
     dataView.setUint32(offset, effectiveBalance & 0xffffffff, true);
-    offset += 4;
+    offset += UINT32_SIZE;
     dataView.setUint32(offset, (effectiveBalance / NUMBER_2_POW_32) & 0xffffffff, true);
-    offset += 4;
+    offset += UINT32_SIZE;
     output[offset] = validator.slashed ? 1 : 0;
-    offset += 1;
+    offset += SLASHED_SIZE;
     offset = writeEpochInf(dataView, offset, activationEligibilityEpoch);
     offset = writeEpochInf(dataView, offset, activationEpoch);
     offset = writeEpochInf(dataView, offset, exitEpoch);
@@ -53,14 +62,14 @@ export class ValidatorNodeStructType extends ContainerNodeStructType<typeof Vali
 function writeEpochInf(dataView: DataView, offset: number, value: number): number {
   if (value === Infinity) {
     dataView.setUint32(offset, 0xffffffff, true);
-    offset += 4;
+    offset += UINT32_SIZE;
     dataView.setUint32(offset, 0xffffffff, true);
-    offset += 4;
+    offset += UINT32_SIZE;
   } else {
     dataView.setUint32(offset, value & 0xffffffff, true);
-    offset += 4;
+    offset += UINT32_SIZE;
     dataView.setUint32(offset, (value / NUMBER_2_POW_32) & 0xffffffff, true);
-    offset += 4;
+    offset += UINT32_SIZE;
   }
   return offset;
 }
