@@ -7,7 +7,6 @@ import {
   VectorBasicType,
   ListUintNum64Type,
   VectorCompositeType,
-  ListUintNum64Type,
 } from "@chainsafe/ssz";
 import {
   ATTESTATION_SUBNET_COUNT,
