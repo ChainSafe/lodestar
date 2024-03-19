@@ -649,8 +649,8 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
                 this.metrics?.persistedStateAllocCount.inc();
                 stateBytes = state.serialize();
               }
-              persistedKey = await this.datastore.write(cpPersist, stateBytes);
               timer?.();
+              persistedKey = await this.datastore.write(cpPersist, stateBytes);
             }
             persistCount++;
             this.logger.verbose("Pruned checkpoint state from memory and persisted to disk", {
@@ -723,7 +723,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       if (bufferWithKey) {
         const stateBytes = bufferWithKey.buffer;
         const dataView = new DataView(stateBytes.buffer, stateBytes.byteOffset, stateBytes.byteLength);
-        state.type.tree_serializeToBytes({uint8Array: stateBytes, dataView}, 0, state.node);
+        state.serializeToBytes({uint8Array: stateBytes, dataView}, 0);
         return bufferWithKey;
       }
     }
@@ -736,10 +736,8 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
    *   - As monitored on holesky as of Jan 2024, it helps save ~500ms state reload time (4.3s vs 3.8s)
    *   - Also `serializeState.test.ts` perf test shows a lot of differences allocating validators bytes once vs every time,
    * This is 2x - 3x faster than allocating memory every time.
-   * TODO: consider serializing validators manually like in `serializeState.test.ts` perf test, this could be 3x faster than this
    */
   private serializeStateValidators(state: CachedBeaconStateAllForks): BufferWithKey | null {
-    // const validatorsSszTimer = this.metrics?.stateReloadValidatorsSszDuration.startTimer();
     const type = state.type.fields.validators;
     const size = type.tree_serializedSize(state.validators.node);
     if (this.bufferPool) {
@@ -747,7 +745,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       if (bufferWithKey) {
         const validatorsBytes = bufferWithKey.buffer;
         const dataView = new DataView(validatorsBytes.buffer, validatorsBytes.byteOffset, validatorsBytes.byteLength);
-        type.tree_serializeToBytes({uint8Array: validatorsBytes, dataView}, 0, state.validators.node);
+        state.validators.serializeToBytes({uint8Array: validatorsBytes, dataView}, 0);
         return bufferWithKey;
       }
     }
