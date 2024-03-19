@@ -214,6 +214,7 @@ export function initializeBeaconStateFromEth1(
     | typeof ssz.bellatrix.ExecutionPayloadHeader
     | typeof ssz.capella.ExecutionPayloadHeader
     | typeof ssz.deneb.ExecutionPayloadHeader
+    | typeof ssz.electra.ExecutionPayloadHeader
   >
 ): CachedBeaconStateAllForks {
   const stateView = getGenesisBeaconState(
@@ -282,6 +283,15 @@ export function initializeBeaconStateFromEth1(
     stateDeneb.latestExecutionPayloadHeader =
       (executionPayloadHeader as CompositeViewDU<typeof ssz.deneb.ExecutionPayloadHeader>) ??
       ssz.deneb.ExecutionPayloadHeader.defaultViewDU();
+  }
+
+  if (GENESIS_SLOT >= config.ELECTRA_FORK_EPOCH) {
+    const stateElectra = state as CompositeViewDU<typeof ssz.electra.BeaconState>;
+    stateElectra.fork.previousVersion = config.ELECTRA_FORK_VERSION;
+    stateElectra.fork.currentVersion = config.ELECTRA_FORK_VERSION;
+    stateElectra.latestExecutionPayloadHeader =
+      (executionPayloadHeader as CompositeViewDU<typeof ssz.electra.ExecutionPayloadHeader>) ??
+      ssz.electra.ExecutionPayloadHeader.defaultViewDU();
   }
 
   state.commit();
