@@ -125,7 +125,7 @@ export const defaultOptions = {
   defaultGasLimit: 30_000_000,
   builderSelection: routes.validator.BuilderSelection.ExecutionOnly,
   builderAliasSelection: routes.validator.BuilderSelection.MaxProfit,
-  builderBoostFactor: BigInt(100),
+  builderBoostFactor: BigInt(90),
   // spec asks for gossip validation by default
   broadcastValidation: routes.beacon.BroadcastValidation.gossip,
   // should request fetching the locally produced block in blinded format
