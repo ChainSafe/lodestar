@@ -484,7 +484,6 @@ export function getValidatorApi({
       // forkChoice.updateTime() might have already been called by the onSlot clock
       // handler, in which case this should just return.
       chain.forkChoice.updateTime(slot);
-      chain.recomputeForkChoiceHead();
 
       const fork = config.getForkName(slot);
       // set some sensible opts
