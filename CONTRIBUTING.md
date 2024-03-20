@@ -250,7 +250,7 @@ node scripts/download_dashboards.mjs
 
 ## Contributing to Documentation
 
-When submitting PRs for documentation updates, build and run the documentation locally to ensure functionality before submission. First generate the CLI documentation with `yarn docs:build`. Then in the `docs` folder, build the documentation locally with `yarn install` and serve with `yarn start`.
+When submitting PRs for documentation updates, build and run the documentation locally to ensure functionality before submission. First generate the CLI documentation with `yarn docs:build`. Build and serve the documentation locally with `yarn docs:serve`.
 
 Your locally served documentation will then be accessible at http://localhost:3000/lodestar/.
 

@@ -21,6 +21,7 @@
     "check-types": "lerna run check-types",
     "check-spelling": "pyspelling -c .pyspelling.yml -v",
     "docs:build": "lerna run check-readme && lerna run docs:build && ./scripts/prepare-docs.sh",
+    "docs:serve": "yarn --cwd docs install && yarn --cwd docs start",
     "docs:lint": "prettier '**/*.md' --check",
     "docs:lint:fix": "prettier '**/*.md' --write",
     "test": "lerna run test --concurrency 1",
