@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import {capella} from "@lodestar/types";
 import {ApiError} from "@lodestar/api";
 import {MAX_WITHDRAWALS_PER_PAYLOAD} from "@lodestar/params";
@@ -23,12 +22,11 @@ export function createWithdrawalAssertions<T extends string>(
     },
     async capture({block, node, slot}) {
       const withdrawals = (block as capella.SignedBeaconBlock).message.body.executionPayload.withdrawals;
-      let withdrawalCount = 0;
+      const withdrawalCount = withdrawals.length;
       let withdrawalAmount = BigInt(0);
       const validators: WithdrawalsData["validators"] = {};
 
       for (const withdrawal of withdrawals) {
-        withdrawalCount++;
         withdrawalAmount += withdrawal.amount;
         const validatorDataLastSlot = await node.beacon.api.beacon.getStateValidator(
           slot - 1,
