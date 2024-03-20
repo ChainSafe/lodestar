@@ -19,6 +19,7 @@ import {mergeAssertion} from "../utils/simulation/assertions/mergeAssertion.js";
 import {createForkAssertion} from "../utils/simulation/assertions/forkAssertion.js";
 import {createAccountBalanceAssertion} from "../utils/simulation/assertions/accountBalanceAssertion.js";
 import {createExecutionHeadAssertion} from "../utils/simulation/assertions/executionHeadAssertion.js";
+import {createWithdrawalAssertions} from "../utils/simulation/assertions/withdrawalsAssertion.js";
 
 const altairForkEpoch = 2;
 const bellatrixForkEpoch = 4;
@@ -152,6 +153,8 @@ env.tracker.register(
     checkForSlot: [env.clock.getLastSlotOfEpoch(bellatrixForkEpoch + 1) - 1],
   })
 );
+
+env.tracker.register(createWithdrawalAssertions(env.nodes[0].id));
 
 await env.start({runTimeoutMs: estimatedTimeoutMs});
 await connectAllNodes(env.nodes);
