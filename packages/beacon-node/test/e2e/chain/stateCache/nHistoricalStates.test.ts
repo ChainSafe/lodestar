@@ -94,7 +94,7 @@ describe(
         skip: true,
       },
       /**
-       * Block slot 28 has parent slot 23, block slot 824 25 26 and 27 are reorged
+       * Block slot 28 has parent slot 23, block slot 24 25 26 and 27 are reorged
        *                                   --------------------------|---
        *                                 / |            ^  ^         ^  ^
        *                                /  |           28  29       32  33
@@ -154,7 +154,7 @@ describe(
         skip: true,
       },
       /**
-       * Block slot 28 has parent slot 23, block slot 824 25 26 and 27 are reorged
+       * Block slot 28 has parent slot 23, block slot 24 25 26 and 27 are reorged
        *                                   --------------------------|---
        *                                 / |            ^  ^         ^  ^
        *                                /  |           28  29       32  33
@@ -186,7 +186,7 @@ describe(
         skip: true,
       },
       /**
-       * Block slot 28 has parent slot 23, block slot 824 25 26 and 27 are reorged
+       * Block slot 28 has parent slot 23, block slot 24 25 26 and 27 are reorged
        *                             --------------------------------|---
        *                            /      |            ^  ^         ^  ^
        *                           /       |           28  29       32  33
@@ -218,7 +218,7 @@ describe(
         skip: true,
       },
       /**
-       * Block slot 28 has parent slot 23, block slot 824 25 26 and 27 are reorged
+       * Block slot 28 has parent slot 23, block slot 24 25 26 and 27 are reorged
        *                 --------------------------------------------|---
        *                /                  |            ^  ^         ^  ^
        *               /                   |           28  29       32  33

@@ -7,7 +7,7 @@ import {
   ForkChoiceStore,
   ExecutionStatus,
   JustifiedBalancesGetter,
-  ForkChoiceOpts as RealForkChoiceOpts,
+  ForkChoiceOpts as RawForkChoiceOpts,
 } from "@lodestar/fork-choice";
 import {
   CachedBeaconStateAllForks,
@@ -21,7 +21,7 @@ import {ChainEventEmitter} from "../emitter.js";
 import {ChainEvent} from "../emitter.js";
 import {GENESIS_SLOT} from "../../constants/index.js";
 
-export type ForkChoiceOpts = RealForkChoiceOpts & {
+export type ForkChoiceOpts = RawForkChoiceOpts & {
   // for testing only
   forkchoiceConstructor?: typeof ForkChoice;
 };
