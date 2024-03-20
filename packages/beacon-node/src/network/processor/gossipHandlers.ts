@@ -1,7 +1,7 @@
 import {toHexString} from "@chainsafe/ssz";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {LogLevel, Logger, prettyBytes} from "@lodestar/utils";
-import {Root, Slot, ssz, allForks, deneb, UintNum64} from "@lodestar/types";
+import {Root, Slot, ssz, allForks, deneb, electra, UintNum64} from "@lodestar/types";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {routes} from "@lodestar/api";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
@@ -15,6 +15,8 @@ import {
   BlockGossipError,
   BlobSidecarErrorCode,
   BlobSidecarGossipError,
+  InclusionListGossipError,
+  InclusionListErrorCode,
   GossipAction,
   GossipActionError,
   SyncCommitteeError,
@@ -46,6 +48,7 @@ import {PeerAction} from "../peers/index.js";
 import {validateLightClientFinalityUpdate} from "../../chain/validation/lightClientFinalityUpdate.js";
 import {validateLightClientOptimisticUpdate} from "../../chain/validation/lightClientOptimisticUpdate.js";
 import {validateGossipBlobSidecar} from "../../chain/validation/blobSidecar.js";
+import {validateGossipInclusionList} from "../../chain/validation/inclusionList.js";
 import {
   BlockInput,
   GossipedInputType,
@@ -135,6 +138,10 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
       },
       metrics
     );
+    if (blockInputRes === null) {
+      throw Error("Invalid blockInputRes=null returned for gossip block in cache processing");
+    }
+
     const blockInput = blockInputRes.blockInput;
     // blockInput can't be returned null, improve by enforcing via return types
     if (blockInput.block === null) {
@@ -199,7 +206,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
     const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
     const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
 
-    const {blockInput, blockInputMeta} = chain.seenGossipBlockInput.getGossipBlockInput(
+    const blockInputRes = chain.seenGossipBlockInput.getGossipBlockInput(
       config,
       {
         type: GossipedInputType.blob,
@@ -208,7 +215,11 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
       },
       metrics
     );
+    if (blockInputRes === null) {
+      throw Error("Invalid blockInputRes=null returned for gossip blob in cache processing");
+    }
 
+    const {blockInput, blockInputMeta} = blockInputRes;
     try {
       await validateGossipBlobSidecar(chain, blobSidecar, gossipIndex);
       const recvToValidation = Date.now() / 1000 - seenTimestampSec;
@@ -245,6 +256,64 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
             blobSidecar,
             `gossip_reject_slot_${slot}_index_${blobSidecar.index}`
           );
+        }
+      }
+
+      throw e;
+    }
+  }
+
+  async function validateInclusionList(
+    inclusionList: electra.NewInclusionListRequest,
+    inclusionListBytes: Uint8Array,
+    peerIdStr: string,
+    seenTimestampSec: number
+  ): Promise<BlockInput | NullBlockInput | null> {
+    const slot = inclusionList.slot;
+    const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
+    const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
+
+    const blockInputRes = chain.seenGossipBlockInput.getGossipBlockInput(
+      config,
+      {
+        type: GossipedInputType.ilist,
+        inclusionList,
+        inclusionListBytes,
+      },
+      metrics
+    );
+
+    const blockInput = blockInputRes?.blockInput ?? null;
+    try {
+      const blockInputMeta = blockInputRes?.blockInputMeta ?? {};
+      await validateGossipInclusionList(chain, inclusionList);
+      const recvToValidation = Date.now() / 1000 - seenTimestampSec;
+      const validationTime = recvToValidation - recvToValLatency;
+
+      metrics?.gossipBlob.recvToValidation.observe(recvToValidation);
+      metrics?.gossipBlob.validationTime.observe(validationTime);
+
+      logger.debug("Received inclusion list", {
+        curentSlot: chain.clock.currentSlot,
+        peerId: peerIdStr,
+        delaySec,
+        ...blockInputMeta,
+        recvToValLatency,
+        recvToValidation,
+        validationTime,
+      });
+
+      return blockInput;
+    } catch (e) {
+      if (e instanceof BlobSidecarGossipError) {
+        // Don't trigger this yet if full block and blobs haven't arrived yet
+        if (e.type.code === BlobSidecarErrorCode.PARENT_UNKNOWN && blockInput !== null && blockInput.block !== null) {
+          logger.debug("Gossip inclusion list has error", {code: e.type.code});
+          events.emit(NetworkEvent.unknownBlockParent, {blockInput, peer: peerIdStr});
+        }
+
+        if (e.action === GossipAction.REJECT) {
+          chain.persistInvalidSszValue(ssz.electra.NewInclusionListRequest, inclusionList, "gossip_reject_slot");
         }
       }
 
@@ -331,6 +400,64 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
       });
   }
 
+  function handleValidInclusionList(
+    inclusionList: electra.NewInclusionListRequest,
+    peerIdStr: string,
+    seenTimestampSec: number
+  ): void {
+    // Handler - MUST NOT `await`, to allow validation result to be propagated
+
+    // metrics?.registerInclusionList(OpSource.gossip, seenTimestampSec, inclusionList);
+    // if blobs are not yet fully available start an aggressive blob pull
+
+    chain
+      .processInclusionList(inclusionList, {
+        // block may be downloaded and processed by UnknownBlockSync
+        ignoreIfKnown: true,
+        // proposer signature already checked in validateBeaconBlock()
+        validProposerSignature: true,
+        blsVerifyOnMainThread: true,
+        // to track block process steps
+        seenTimestampSec,
+      })
+      .then(() => {
+        // Returns the delay between the start of `block.slot` and `current time`
+        const delaySec = chain.clock.secFromSlot(inclusionList.slot);
+        metrics?.gossipBlock.elapsedTimeTillProcessed.observe(delaySec);
+        chain.seenGossipBlockInput.prune();
+      })
+      .catch((e) => {
+        // Adjust verbosity based on error type
+        let logLevel: LogLevel;
+
+        if (e instanceof InclusionListGossipError) {
+          switch (e.type.code) {
+            // ALREADY_KNOWN should not happen with ignoreIfKnown=true above
+            // PARENT_UNKNOWN should not happen, we handled this in validateBeaconBlock() function above
+            case InclusionListErrorCode.ALREADY_KNOWN:
+            case InclusionListErrorCode.PARENT_UNKNOWN:
+            case InclusionListErrorCode.EXECUTION_ENGINE_ERROR:
+              // Errors might indicate an issue with our node or the connected EL client
+              logLevel = LogLevel.error;
+              break;
+            default:
+              // TODO: Should it use PeerId or string?
+              core.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadGossipInclusionList");
+              // Misbehaving peer, but could highlight an issue in another client
+              logLevel = LogLevel.warn;
+          }
+        } else {
+          // Any unexpected error
+          logLevel = LogLevel.error;
+        }
+        metrics?.gossipInclusionList.processInclusionListErrors.inc({
+          error: e instanceof InclusionListGossipError ? e.type.code : "NOT_INCLUSION_LIST_ERROR",
+        });
+        logger[logLevel]("Error receiving inclusion list", {slot: inclusionList.slot, peer: peerIdStr}, e as Error);
+        chain.seenGossipBlockInput.prune();
+      });
+  }
+
   return {
     [GossipType.beacon_block]: async ({
       gossipData,
@@ -403,6 +530,60 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
           }
         } else {
           chain.logger.debug("Block not available till BLOCK_AVAILABILITY_CUTOFF_MS", {blobSlot, index});
+          events.emit(NetworkEvent.unknownBlockInput, {blockInput, peer: peerIdStr});
+        }
+      }
+    },
+
+    [GossipType.inclusion_list]: async ({
+      gossipData,
+      topic,
+      peerIdStr,
+      seenTimestampSec,
+    }: GossipHandlerParamGeneric<GossipType.inclusion_list>) => {
+      const {serializedData} = gossipData;
+      const inclusionList = sszDeserialize(topic, serializedData);
+      const ilSlot = inclusionList.slot;
+
+      if (config.getForkSeq(ilSlot) < ForkSeq.electra) {
+        throw new GossipActionError(GossipAction.REJECT, {code: "PRE_ELECTRA_IL"});
+      }
+
+      const blockInput = await validateInclusionList(inclusionList, serializedData, peerIdStr, seenTimestampSec);
+      handleValidInclusionList(inclusionList, peerIdStr, seenTimestampSec);
+      if (blockInput === null) {
+        return;
+      } else if (blockInput.block !== null) {
+        // we can just queue up the blockInput in the processor, but block gossip handler would have already
+        // queued it up.
+        //
+        // handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
+      } else {
+        // wait for the block to arrive till some cutoff else emit unknownBlockInput event
+        chain.logger.debug("Block not yet available, racing with cutoff", {ilSlot});
+        const normalBlockInput = await raceWithCutoff(
+          chain,
+          ilSlot,
+          blockInput.blockInputPromise,
+          BLOCK_AVAILABILITY_CUTOFF_MS
+        ).catch((_e) => {
+          return null;
+        });
+
+        if (normalBlockInput !== null) {
+          chain.logger.debug("Block corresponding to inclusion list is now available for processing", {ilSlot});
+          // we can directly send it for processing but block gossip handler will queue it up anyway
+          // if we see any issues later, we can send it to handleValidBeaconBlock
+          //
+          // handleValidBeaconBlock(normalBlockInput, peerIdStr, seenTimestampSec);
+          //
+          // however we can emit the event which will atleast add the peer to the list of peers to pull
+          // data from
+          if (normalBlockInput.type === BlockInputType.blobsPromise) {
+            events.emit(NetworkEvent.unknownBlockInput, {blockInput: normalBlockInput, peer: peerIdStr});
+          }
+        } else {
+          chain.logger.debug("Block not available till BLOCK_AVAILABILITY_CUTOFF_MS", {ilSlot});
           events.emit(NetworkEvent.unknownBlockInput, {blockInput, peer: peerIdStr});
         }
       }

@@ -1,4 +1,5 @@
-import {Root, RootHex, allForks, Wei} from "@lodestar/types";
+import {toHexString} from "@chainsafe/ssz";
+import {Root, RootHex, allForks, Wei, electra} from "@lodestar/types";
 import {SLOTS_PER_EPOCH, ForkName, ForkSeq} from "@lodestar/params";
 import {Logger} from "@lodestar/logger";
 import {
@@ -142,6 +143,12 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     this.rpc.emitter.on(JsonRpcHttpClientEvent.RESPONSE, () => {
       this.updateEngineState(getExecutionEngineState({targetState: ExecutionEngineState.ONLINE, oldState: this.state}));
     });
+  }
+
+  async notifyNewInclusionList(inclusionList: electra.NewInclusionListRequest): Promise<ExecutePayloadResponse> {
+    // return dummy status, don't use latestValidHash anyway
+    const latestValidHash = toHexString(inclusionList.parentBlockHash);
+    return {status: ExecutionPayloadStatus.VALID, latestValidHash, validationError: null};
   }
 
   /**

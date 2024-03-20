@@ -1,6 +1,7 @@
 import {computeTimeAtSlot, DataAvailableStatus} from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
 import {deneb, UintNum64} from "@lodestar/types";
+import {ForkName} from "@lodestar/params";
 import {Logger} from "@lodestar/utils";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {validateBlobSidecars} from "../validation/blobSidecar.js";
@@ -78,12 +79,21 @@ async function maybeValidateBlobs(
       const {block} = blockInput;
       const blockSlot = block.message.slot;
 
-      const blobsData =
-        blockInput.type === BlockInputType.postDeneb
-          ? blockInput
-          : await raceWithCutoff(chain, blockInput, blockInput.availabilityPromise);
-      const {blobs} = blobsData;
+      let blockData;
+      if (blockInput.type === BlockInputType.postDeneb) {
+        blockData = blockInput.blockData;
+      } else {
+        const {cachedData} = blockInput;
+        // weird that typescript is getting confused doing the same thing but with
+        // differing promise types, need to separate the case out
+        if (cachedData.fork === ForkName.deneb) {
+          blockData = await raceWithCutoff(chain, blockInput, cachedData.availabilityPromise);
+        } else {
+          blockData = await raceWithCutoff(chain, blockInput, cachedData.availabilityPromise);
+        }
+      }
 
+      const {blobs} = blockData;
       const {blobKzgCommitments} = (block as deneb.SignedBeaconBlock).message.body;
       const beaconBlockRoot = chain.config.getForkTypes(blockSlot).BeaconBlock.hashTreeRoot(block.message);
 

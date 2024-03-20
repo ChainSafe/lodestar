@@ -25,6 +25,7 @@ import {
   Epoch,
   ValidatorIndex,
   deneb,
+  electra,
   Wei,
   bellatrix,
   isBlindedBeaconBlock,
@@ -655,6 +656,10 @@ export class BeaconChain implements IBeaconChain {
 
   async processChainSegment(blocks: BlockInput[], opts?: ImportBlockOpts): Promise<void> {
     return this.blockProcessor.processBlocksJob(blocks, opts);
+  }
+
+  async processInclusionList(inclusionList: electra.NewInclusionListRequest, _opts?: ImportBlockOpts): Promise<void> {
+    await this.executionEngine.notifyNewInclusionList(inclusionList);
   }
 
   getStatus(): phase0.Status {

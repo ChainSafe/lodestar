@@ -1,9 +1,9 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {routes, ServerApi, ResponseFormat} from "@lodestar/api";
 import {computeTimeAtSlot, reconstructFullBlockOrContents} from "@lodestar/state-transition";
-import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {SLOTS_PER_HISTORICAL_ROOT, isForkBlobs, isForkILs} from "@lodestar/params";
 import {sleep, toHex} from "@lodestar/utils";
-import {allForks, deneb, isSignedBlockContents, ProducedBlockSource} from "@lodestar/types";
+import {allForks, deneb, electra, isSignedBlockContents, ProducedBlockSource, ssz} from "@lodestar/types";
 import {BlockSource, getBlockInput, ImportBlockOpts, BlockInput} from "../../../../chain/blocks/types.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
@@ -42,23 +42,39 @@ export function getBeaconBlockApi({
     opts: PublishBlockOpts = {}
   ) => {
     const seenTimestampSec = Date.now() / 1000;
-    let blockForImport: BlockInput, signedBlock: allForks.SignedBeaconBlock, blobSidecars: deneb.BlobSidecars;
+    const signedBlock = isSignedBlockContents(signedBlockOrContents)
+      ? signedBlockOrContents.signedBlock
+      : signedBlockOrContents;
+    // if block is locally produced, full or blinded, it already is 'consensus' validated as it went through
+    // state transition to produce the stateRoot
+    const slot = signedBlock.message.slot;
+    const fork = config.getForkName(slot);
 
+    let blockForImport: BlockInput, blobSidecars: deneb.BlobSidecars, inclusionLists: electra.NewInclusionListRequest[];
     if (isSignedBlockContents(signedBlockOrContents)) {
-      ({signedBlock} = signedBlockOrContents);
       blobSidecars = computeBlobSidecars(config, signedBlock, signedBlockOrContents);
-      blockForImport = getBlockInput.postDeneb(
-        config,
-        signedBlock,
-        BlockSource.api,
-        blobSidecars,
-        // don't bundle any bytes for block and blobs
-        null,
-        blobSidecars.map(() => null)
-      );
+      let blockData;
+      if (!isForkBlobs(fork)) {
+        throw Error(`Invalid fork=${fork} for publishing signedBlockOrContents`);
+      } else if (!isForkILs(fork)) {
+        inclusionLists = [];
+        blockData = {fork, blobs: blobSidecars, blobsBytes: [null]};
+      } else {
+        // stub the values
+        const ilSummary = ssz.electra.ILSummary.defaultValue();
+        const ilTransactions = [ssz.electra.ILTransactions.defaultValue()];
+        inclusionLists = [ssz.electra.NewInclusionListRequest.defaultValue()];
+        inclusionLists[0].slot = slot;
+        inclusionLists[0].parentBlockHash = (
+          signedBlock as electra.SignedBeaconBlock
+        ).message.body.executionPayload.parentHash;
+        blockData = {fork, blobs: blobSidecars, blobsBytes: [null], ilSummary, inclusionLists: ilTransactions};
+      }
+
+      blockForImport = getBlockInput.postDeneb(config, signedBlock, null, blockData, BlockSource.api);
     } else {
-      signedBlock = signedBlockOrContents;
       blobSidecars = [];
+      inclusionLists = [];
       // TODO: Once API supports submitting data as SSZ, replace null with blockBytes
       blockForImport = getBlockInput.preDeneb(config, signedBlock, BlockSource.api, null);
     }
@@ -66,10 +82,6 @@ export function getBeaconBlockApi({
     // check what validations have been requested before broadcasting and publishing the block
     // TODO: add validation time to metrics
     const broadcastValidation = opts.broadcastValidation ?? routes.beacon.BroadcastValidation.gossip;
-    // if block is locally produced, full or blinded, it already is 'consensus' validated as it went through
-    // state transition to produce the stateRoot
-    const slot = signedBlock.message.slot;
-    const fork = config.getForkName(slot);
     const blockRoot = toHex(chain.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
     // bodyRoot should be the same to produced block
     const bodyRoot = toHex(chain.config.getForkTypes(slot).BeaconBlockBody.hashTreeRoot(signedBlock.message.body));
@@ -193,6 +205,8 @@ export function getBeaconBlockApi({
       //     b) they might require more hops to reach recipients in peerDAS kind of setup where
       //        blobs might need to hop between nodes because of partial subnet subscription
       ...blobSidecars.map((blobSidecar) => () => network.publishBlobSidecar(blobSidecar)),
+      // republish the inclusion list even though it might have been already published
+      ...inclusionLists.map((inclusionList) => () => network.publishInclusionList(inclusionList)),
       () => network.publishBeaconBlock(signedBlock) as Promise<unknown>,
       () =>
         // there is no rush to persist block since we published it to gossip anyway

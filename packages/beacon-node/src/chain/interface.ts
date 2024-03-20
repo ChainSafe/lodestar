@@ -12,6 +12,7 @@ import {
   Wei,
   capella,
   altair,
+  electra,
 } from "@lodestar/types";
 import {
   BeaconStateAllForks,
@@ -177,6 +178,7 @@ export interface IBeaconChain {
   processBlock(block: BlockInput, opts?: ImportBlockOpts): Promise<void>;
   /** Process a chain of blocks until complete */
   processChainSegment(blocks: BlockInput[], opts?: ImportBlockOpts): Promise<void>;
+  processInclusionList(inclusionList: electra.NewInclusionListRequest, opts?: ImportBlockOpts): Promise<void>;
 
   getStatus(): phase0.Status;
 

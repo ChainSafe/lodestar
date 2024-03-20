@@ -2,7 +2,7 @@ import {EpochTransitionStep, StateCloneSource, StateHashTreeRootSource} from "@l
 import {allForks} from "@lodestar/types";
 import {BlockSource} from "../../chain/blocks/types.js";
 import {JobQueueItemType} from "../../chain/bls/index.js";
-import {BlockErrorCode} from "../../chain/errors/index.js";
+import {BlockErrorCode, InclusionListErrorCode} from "../../chain/errors/index.js";
 import {InsertOutcome} from "../../chain/opPools/types.js";
 import {RegenCaller, RegenFnName} from "../../chain/regen/interface.js";
 import {ReprocessStatus} from "../../chain/reprocess.js";
@@ -775,6 +775,23 @@ export function createLodestarMetrics(
         name: "lodestar_gossip_blob_gossip_validate_time",
         help: "Time elapsed for blob validation",
         buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
+      }),
+    },
+    gossipInclusionList: {
+      recvToValidation: register.histogram({
+        name: "lodestar_gossip_inclusion_list_received_to_gossip_validate",
+        help: "Time elapsed between inclusion list received and validation",
+        buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
+      }),
+      validationTime: register.histogram({
+        name: "lodestar_gossip_inclusion_list_gossip_validate_time",
+        help: "Time elapsed for inclusion list validation",
+        buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
+      }),
+      processInclusionListErrors: register.gauge<{error: InclusionListErrorCode | "NOT_INCLUSION_LIST_ERROR"}>({
+        name: "lodestar_gossip_inclusion_list_process_errors",
+        help: "Count of errors, by error type, while processing inclusionlist",
+        labelNames: ["error"],
       }),
     },
     importBlock: {

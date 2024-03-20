@@ -7,6 +7,10 @@ export class ExecutionEngineDisabled implements IExecutionEngine {
     throw Error("Execution engine disabled");
   }
 
+  async notifyNewInclusionList(): Promise<never> {
+    throw Error("Execution engine disabled");
+  }
+
   async notifyForkchoiceUpdate(): Promise<never> {
     throw Error("Execution engine disabled");
   }

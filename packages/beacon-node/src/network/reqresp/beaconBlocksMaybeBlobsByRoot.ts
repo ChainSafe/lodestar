@@ -1,7 +1,7 @@
 import {fromHexString} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {phase0, deneb} from "@lodestar/types";
-import {ForkSeq} from "@lodestar/params";
+import {ForkSeq, ForkName} from "@lodestar/params";
 import {
   BlockInput,
   BlockInputType,
@@ -62,17 +62,21 @@ export async function unavailableBeaconBlobsByRoot(
   }
 
   // resolve the block if thats unavailable
-  let block, blobsCache, blockBytes, resolveAvailability;
+  let block, blockBytes, cachedData;
   if (unavailableBlockInput.block === null) {
     const allBlocks = await network.sendBeaconBlocksByRoot(peerId, [fromHexString(unavailableBlockInput.blockRootHex)]);
     block = allBlocks[0].data;
     blockBytes = allBlocks[0].bytes;
-    ({blobsCache, resolveAvailability} = unavailableBlockInput);
+    cachedData = unavailableBlockInput.cachedData;
   } else {
-    ({block, blobsCache, resolveAvailability, blockBytes} = unavailableBlockInput);
+    ({block, cachedData, blockBytes} = unavailableBlockInput);
+    if (cachedData === undefined) {
+      throw Error("Missing cachedData for deneb+ unavailable BlockInput");
+    }
   }
 
   // resolve missing blobs
+  const {blobsCache} = cachedData;
   const blobIdentifiers: deneb.BlobIdentifier[] = [];
   const slot = block.message.slot;
   const blockRoot = config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message);
@@ -98,13 +102,19 @@ export async function unavailableBeaconBlobsByRoot(
 
   // check and see if all blobs are now available and in that case resolve availability
   // if not this will error and the leftover blobs will be tried from another peer
-  const allBlobs = getBlockInputBlobs(blobsCache);
-  const {blobs, blobsBytes} = allBlobs;
+  const blobsData = getBlockInputBlobs(blobsCache);
+  const {blobs, blobsBytes} = blobsData;
   if (blobs.length !== blobKzgCommitmentsLen) {
     throw Error(`Not all blobs fetched missingBlobs=${blobKzgCommitmentsLen - blobs.length}`);
   }
 
-  resolveAvailability(allBlobs);
-  metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.UNKNOWN_SYNC});
-  return getBlockInput.postDeneb(config, block, BlockSource.byRoot, blobs, blockBytes, blobsBytes);
+  if (cachedData.fork === ForkName.deneb) {
+    const blockData = {fork: cachedData.fork, blobs, blobsBytes};
+
+    cachedData.resolveAvailability(blockData);
+    metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.UNKNOWN_SYNC});
+    return getBlockInput.postDeneb(config, block, blockBytes, blockData, BlockSource.byRoot);
+  } else {
+    throw Error("electra resolution not implemented");
+  }
 }

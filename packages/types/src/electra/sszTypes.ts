@@ -1,97 +1,62 @@
-import {ContainerType, ListCompositeType, ByteVectorType, VectorCompositeType} from "@chainsafe/ssz";
+import {ContainerType, ListCompositeType} from "@chainsafe/ssz";
 import {
-  HISTORICAL_ROOTS_LIMIT,
-  MAX_BLOB_COMMITMENTS_PER_BLOCK,
-  FIELD_ELEMENTS_PER_BLOB,
-  MAX_REQUEST_BLOB_SIDECARS,
-  BYTES_PER_FIELD_ELEMENT,
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
   SLOTS_PER_EPOCH,
-  KZG_COMMITMENT_INCLUSION_PROOF_DEPTH,
+  HISTORICAL_ROOTS_LIMIT,
+  MAX_TRANSACTIONS_PER_INCLUSION_LIST,
 } from "@lodestar/params";
 import {ssz as primitiveSsz} from "../primitive/index.js";
 import {ssz as phase0Ssz} from "../phase0/index.js";
 import {ssz as altairSsz} from "../altair/index.js";
 import {ssz as bellatrixSsz} from "../bellatrix/index.js";
 import {ssz as capellaSsz} from "../capella/index.js";
+import {ssz as denebSsz} from "../deneb/index.js";
 
-const {UintNum64, Slot, Root, BLSSignature, UintBn64, UintBn256, Bytes32, Bytes48, Bytes96, BLSPubkey, BlobIndex} =
-  primitiveSsz;
+const {BLSSignature, ExecutionAddress, Root, UintBn256, BLSPubkey, ValidatorIndex, Slot, UintNum64} = primitiveSsz;
 
-// Polynomial commitments
-// https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/polynomial-commitments.md
+export const ILSummary = new ListCompositeType(ExecutionAddress, MAX_TRANSACTIONS_PER_INCLUSION_LIST);
+export const ILTransactions = new ListCompositeType(bellatrixSsz.Transaction, MAX_TRANSACTIONS_PER_INCLUSION_LIST);
 
-// Custom types
-// https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/polynomial-commitments.md#custom-types
-export const G1Point = Bytes48;
-export const G2Point = Bytes96;
-export const BLSFieldElement = Bytes32;
-export const KZGCommitment = Bytes48;
-export const KZGProof = Bytes48;
-
-// Beacon chain
-
-// Custom types
-// https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#custom-types
-
-export const Blob = new ByteVectorType(BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB);
-export const Blobs = new ListCompositeType(Blob, MAX_BLOB_COMMITMENTS_PER_BLOCK);
-export const BlindedBlob = Bytes32;
-export const BlindedBlobs = new ListCompositeType(BlindedBlob, MAX_BLOB_COMMITMENTS_PER_BLOCK);
-
-export const VersionedHash = Bytes32;
-export const BlobKzgCommitments = new ListCompositeType(KZGCommitment, MAX_BLOB_COMMITMENTS_PER_BLOCK);
-export const KZGProofs = new ListCompositeType(KZGProof, MAX_BLOB_COMMITMENTS_PER_BLOCK);
-
-// ReqResp types
-// =============
-
-export const BlobSidecarsByRangeRequest = new ContainerType(
+export const SignedInclusionListSummary = new ContainerType(
   {
-    startSlot: Slot,
-    count: UintNum64,
+    summary: ILSummary,
+    signature: BLSSignature,
   },
-  {typeName: "BlobSidecarsByRangeRequest", jsonCase: "eth2"}
+  {typeName: "SignedInclusionListSummary", jsonCase: "eth2"}
 );
 
-export const BlobIdentifier = new ContainerType(
+export const NewInclusionListRequest = new ContainerType(
   {
-    blockRoot: Root,
-    index: BlobIndex,
+    slot: Slot,
+    inclusionList: ILTransactions,
+    summary: ILSummary,
+    parentBlockHash: Root,
   },
-  {typeName: "BlobIdentifier", jsonCase: "eth2"}
+  {typeName: "NewInclusionListRequest", jsonCase: "eth2"}
 );
-
-export const BlobSidecarsByRootRequest = new ListCompositeType(BlobIdentifier, MAX_REQUEST_BLOB_SIDECARS);
-
-// Beacon Chain types
-// https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#containers
 
 export const ExecutionPayload = new ContainerType(
   {
-    ...capellaSsz.ExecutionPayload.fields,
-    blobGasUsed: UintBn64, // New in DENEB
-    excessBlobGas: UintBn64, // New in DENEB
+    ...denebSsz.ExecutionPayload.fields,
+    previousInclusionListSummary: SignedInclusionListSummary,
   },
   {typeName: "ExecutionPayload", jsonCase: "eth2"}
 );
 
 export const ExecutionPayloadHeader = new ContainerType(
   {
-    ...capellaSsz.ExecutionPayloadHeader.fields,
-    blobGasUsed: UintBn64, // New in DENEB
-    excessBlobGas: UintBn64, // New in DENEB
+    ...denebSsz.ExecutionPayloadHeader.fields,
+    previousInclusionListSummaryRoot: Root,
   },
   {typeName: "ExecutionPayloadHeader", jsonCase: "eth2"}
 );
 
-// We have to preserve Fields ordering while changing the type of ExecutionPayload
 export const BeaconBlockBody = new ContainerType(
   {
     ...altairSsz.BeaconBlockBody.fields,
-    executionPayload: ExecutionPayload, // Modified in DENEB
+    executionPayload: ExecutionPayload, // Modified in ELECTRA
     blsToExecutionChanges: capellaSsz.BeaconBlockBody.fields.blsToExecutionChanges,
-    blobKzgCommitments: BlobKzgCommitments, // New in DENEB
+    blobKzgCommitments: denebSsz.BlobKzgCommitments,
   },
   {typeName: "BeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
@@ -99,50 +64,25 @@ export const BeaconBlockBody = new ContainerType(
 export const BeaconBlock = new ContainerType(
   {
     ...phase0Ssz.BeaconBlock.fields,
-    body: BeaconBlockBody, // Modified in DENEB
+    body: BeaconBlockBody, // Modified in ELECTRA
   },
   {typeName: "BeaconBlock", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
 export const SignedBeaconBlock = new ContainerType(
   {
-    message: BeaconBlock, // Modified in DENEB
+    message: BeaconBlock,
     signature: BLSSignature,
   },
   {typeName: "SignedBeaconBlock", jsonCase: "eth2"}
 );
 
-export const KzgCommitmentInclusionProof = new VectorCompositeType(Bytes32, KZG_COMMITMENT_INCLUSION_PROOF_DEPTH);
-
-export const BlobSidecar = new ContainerType(
-  {
-    index: BlobIndex,
-    blob: Blob,
-    kzgCommitment: KZGCommitment,
-    kzgProof: KZGProof,
-    signedBlockHeader: phase0Ssz.SignedBeaconBlockHeader,
-    kzgCommitmentInclusionProof: KzgCommitmentInclusionProof,
-  },
-  {typeName: "BlobSidecar", jsonCase: "eth2"}
-);
-
-export const BlobSidecars = new ListCompositeType(BlobSidecar, MAX_BLOB_COMMITMENTS_PER_BLOCK);
-
-export const BlobsBundle = new ContainerType(
-  {
-    commitments: BlobKzgCommitments,
-    proofs: KZGProofs,
-    blobs: Blobs,
-  },
-  {typeName: "BlobsBundle", jsonCase: "eth2"}
-);
-
 export const BlindedBeaconBlockBody = new ContainerType(
   {
     ...altairSsz.BeaconBlockBody.fields,
-    executionPayloadHeader: ExecutionPayloadHeader, // Modified in DENEB
+    executionPayloadHeader: ExecutionPayloadHeader, // Modified in ELECTRA
     blsToExecutionChanges: capellaSsz.BeaconBlockBody.fields.blsToExecutionChanges,
-    blobKzgCommitments: BlobKzgCommitments, // New in DENEB
+    blobKzgCommitments: denebSsz.BlobKzgCommitments,
   },
   {typeName: "BlindedBeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
@@ -150,14 +90,14 @@ export const BlindedBeaconBlockBody = new ContainerType(
 export const BlindedBeaconBlock = new ContainerType(
   {
     ...bellatrixSsz.BlindedBeaconBlock.fields,
-    body: BlindedBeaconBlockBody, // Modified in DENEB
+    body: BlindedBeaconBlockBody, // Modified in ELECTRA
   },
   {typeName: "BlindedBeaconBlock", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
 export const SignedBlindedBeaconBlock = new ContainerType(
   {
-    message: BlindedBeaconBlock, // Modified in DENEB
+    message: BlindedBeaconBlock,
     signature: BLSSignature,
   },
   {typeName: "SignedBlindedBeaconBlock", jsonCase: "eth2"}
@@ -166,11 +106,19 @@ export const SignedBlindedBeaconBlock = new ContainerType(
 export const BuilderBid = new ContainerType(
   {
     header: ExecutionPayloadHeader,
-    blobKzgCommitments: BlobKzgCommitments,
+    blobKzgCommitments: denebSsz.BlobKzgCommitments,
     value: UintBn256,
     pubkey: BLSPubkey,
   },
   {typeName: "BuilderBid", jsonCase: "eth2"}
+);
+
+export const ExecutionPayloadAndBlobsBundle = new ContainerType(
+  {
+    executionPayload: ExecutionPayload,
+    blobsBundle: denebSsz.BlobsBundle,
+  },
+  {typeName: "ExecutionPayloadAndBlobsBundle", jsonCase: "eth2"}
 );
 
 export const SignedBuilderBid = new ContainerType(
@@ -179,14 +127,6 @@ export const SignedBuilderBid = new ContainerType(
     signature: BLSSignature,
   },
   {typeName: "SignedBuilderBid", jsonCase: "eth2"}
-);
-
-export const ExecutionPayloadAndBlobsBundle = new ContainerType(
-  {
-    executionPayload: ExecutionPayload,
-    blobsBundle: BlobsBundle,
-  },
-  {typeName: "ExecutionPayloadAndBlobsBundle", jsonCase: "eth2"}
 );
 
 // We don't spread capella.BeaconState fields since we need to replace
@@ -227,12 +167,14 @@ export const BeaconState = new ContainerType(
     currentSyncCommittee: altairSsz.SyncCommittee,
     nextSyncCommittee: altairSsz.SyncCommittee,
     // Execution
-    latestExecutionPayloadHeader: ExecutionPayloadHeader, // Modified in DENEB
+    latestExecutionPayloadHeader: ExecutionPayloadHeader, // Modified in ELECTRA
     // Withdrawals
     nextWithdrawalIndex: capellaSsz.BeaconState.fields.nextWithdrawalIndex,
     nextWithdrawalValidatorIndex: capellaSsz.BeaconState.fields.nextWithdrawalValidatorIndex,
     // Deep history valid from Capella onwards
     historicalSummaries: capellaSsz.BeaconState.fields.historicalSummaries,
+    // Inclusion list validation
+    previousProposerIndex: ValidatorIndex, // New in Electra
   },
   {typeName: "BeaconState", jsonCase: "eth2"}
 );
@@ -301,6 +243,7 @@ export const PayloadAttributes = new ContainerType(
   {
     ...capellaSsz.PayloadAttributes.fields,
     parentBeaconBlockRoot: Root,
+    previousInclusionListSummary: SignedInclusionListSummary,
   },
   {typeName: "PayloadAttributes", jsonCase: "eth2"}
 );

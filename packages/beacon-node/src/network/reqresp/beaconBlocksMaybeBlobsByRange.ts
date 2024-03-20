@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {deneb, Epoch, phase0, allForks, Slot} from "@lodestar/types";
-import {ForkSeq} from "@lodestar/params";
+import {ForkSeq, ForkName} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 
 import {BlockInput, BlockSource, getBlockInput} from "../../chain/blocks/types.js";
@@ -99,10 +99,13 @@ export function matchBlockWithBlobs(
         getBlockInput.postDeneb(
           config,
           block.data,
-          blockSource,
-          blobSidecars,
           null,
-          Array.from({length: blobKzgCommitmentsLen}, () => null)
+          {
+            fork: "deneb" as ForkName.deneb,
+            blobs: blobSidecars,
+            blobsBytes: Array.from({length: blobKzgCommitmentsLen}, () => null),
+          },
+          blockSource
         )
       );
     }
