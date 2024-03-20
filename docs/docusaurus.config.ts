@@ -1,8 +1,8 @@
 // There are various equivalent ways to declare your Docusaurus config.
 // See: https://docusaurus.io/docs/api/docusaurus-config
 
-import type {Config} from '@docusaurus/types';
-import type * as Preset from '@docusaurus/preset-classic';
+import type {Config} from "@docusaurus/types";
+import type * as Preset from "@docusaurus/preset-classic";
 import {themes as prismThemes} from "prism-react-renderer";
 
 const config: Config = {
@@ -48,62 +48,60 @@ const config: Config = {
   markdown: {
     mermaid: true,
   },
-  themes: [
-    '@docusaurus/theme-mermaid',
-    ['@easyops-cn/docusaurus-search-local',
-     {"docsRouteBasePath": '/'}]
-  ],
+  themes: ["@docusaurus/theme-mermaid", ["@easyops-cn/docusaurus-search-local", {docsRouteBasePath: "/"}]],
 
-  themeConfig:
-    {
-      navbar: {
-        title: "Lodestar Documentation",
-        logo: {
-          alt: "Lodestar Logo",
-          src: "img/logo.png",
+  themeConfig: {
+    navbar: {
+      title: "Lodestar Documentation",
+      logo: {
+        alt: "Lodestar Logo",
+        src: "img/logo.png",
+      },
+      items: [
+        {
+          href: "https://github.com/ChainSafe/lodestar",
+          label: "GitHub",
+          position: "right",
         },
-        items: [
-          {
-            href: "https://github.com/ChainSafe/lodestar",
-            label: "GitHub",
-            position: "right",
-          },
-        ],
-      },
-      footer: {
-        style: "dark",
-        links: [
-          {
-            title: "Docs",
-            items: [
-              {
-                label: "Introduction",
-                to: "/introduction",
-              },
-            ],
-          },
-          {
-            title: "Community",
-            items: [
-              {
-                label: "Discord",
-                href: "https://discord.com/invite/yjyvFRP",
-              },
-              {
-                label: "Twitter",
-                href: "https://twitter.com/lodestar_eth",
-              },
-            ],
-          },
-        ],
-        copyright: `Copyright © ${new Date().getFullYear()} ChainSafe, Inc.`,
-      },
-      prism: {
-        additionalLanguages: ['bash', 'diff', 'json'],
-        theme: prismThemes.github,
-        darkTheme: prismThemes.dracula,
-      },
-    } satisfies Preset.ThemeConfig,
+      ],
+    },
+    footer: {
+      style: "dark",
+      links: [
+        {
+          title: "Docs",
+          items: [
+            {
+              label: "Introduction",
+              to: "/introduction",
+            },
+          ],
+        },
+        {
+          title: "Community",
+          items: [
+            {
+              label: "Discord",
+              href: "https://discord.com/invite/yjyvFRP",
+            },
+            {
+              label: "Twitter",
+              href: "https://twitter.com/lodestar_eth",
+            },
+          ],
+        },
+      ],
+      copyright: `Copyright © ${new Date().getFullYear()} ChainSafe, Inc.`,
+    },
+    colorMode: {
+      respectPrefersColorScheme: false,
+    },
+    prism: {
+      additionalLanguages: ["bash", "diff", "json"],
+      theme: prismThemes.vsLight,
+      darkTheme: prismThemes.vsDark,
+    },
+  } satisfies Preset.ThemeConfig,
 };
 
 export default config;
