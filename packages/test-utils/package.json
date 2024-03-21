@@ -1,7 +1,7 @@
 {
   "name": "@lodestar/test-utils",
   "private": true,
-  "version": "1.17.0",
+  "version": "1.17.1",
   "description": "Test utilities reused across other packages",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",
@@ -59,8 +59,8 @@
   "dependencies": {
     "@chainsafe/bls": "7.1.3",
     "@chainsafe/bls-keystore": "^3.0.1",
-    "@lodestar/params": "^1.17.0",
-    "@lodestar/utils": "^1.17.0",
+    "@lodestar/params": "^1.17.1",
+    "@lodestar/utils": "^1.17.1",
     "axios": "^1.3.4",
     "testcontainers": "^10.2.1",
     "tmp": "^0.2.1",
