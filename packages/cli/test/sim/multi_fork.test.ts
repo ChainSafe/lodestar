@@ -24,13 +24,15 @@ import {createWithdrawalAssertions} from "../utils/simulation/assertions/withdra
 const altairForkEpoch = 2;
 const bellatrixForkEpoch = 4;
 const capellaForkEpoch = 6;
-const runTillEpoch = 8;
+const denebForkEpoch = 8;
+const runTillEpoch = 10;
 const syncWaitEpoch = 2;
 
 const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
   ALTAIR_FORK_EPOCH: altairForkEpoch,
   BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
   CAPELLA_FORK_EPOCH: capellaForkEpoch,
+  DENEB_FORK_EPOCH: denebForkEpoch,
   runTillEpoch: runTillEpoch + syncWaitEpoch,
   initialNodes: 5,
 });

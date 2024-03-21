@@ -49,7 +49,7 @@ export const testData: GenericServerTestCases<Api> = {
       32000,
       randaoReveal,
       graffiti,
-      undefined,
+      false,
       {
         feeRecipient,
         builderSelection: undefined,
@@ -65,7 +65,7 @@ export const testData: GenericServerTestCases<Api> = {
       32000,
       randaoReveal,
       graffiti,
-      undefined,
+      false,
       {
         feeRecipient,
         builderSelection: undefined,
@@ -109,7 +109,7 @@ export const testData: GenericServerTestCases<Api> = {
       32000,
       randaoReveal,
       graffiti,
-      undefined,
+      false,
       {
         feeRecipient,
         builderSelection: undefined,
