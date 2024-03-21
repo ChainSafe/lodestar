@@ -550,26 +550,19 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
   );
 
   const produceBlockV3: ReqSerializers<Api, ReqTypes>["produceBlockV3"] = {
-    writeReq(slot, randaoReveal, graffiti, skipRandaoVerification, opts) {
-      const query: ReqTypes["produceBlockV3"]["query"] = {
+    writeReq: (slot, randaoReveal, graffiti, skipRandaoVerification, opts) => ({
+      params: {slot},
+      query: {
         randao_reveal: toHexString(randaoReveal),
         graffiti: toGraffitiHex(graffiti),
         fee_recipient: opts?.feeRecipient,
+        ...(skipRandaoVerification && {skip_randao_verification: ""}),
         builder_selection: opts?.builderSelection,
         builder_boost_factor: opts?.builderBoostFactor?.toString(),
         strict_fee_recipient_check: opts?.strictFeeRecipientCheck,
         blinded_local: opts?.blindedLocal,
-      };
-
-      if (skipRandaoVerification) {
-        query["skip_randao_verification"] = "";
-      }
-
-      return {
-        params: {slot},
-        query,
-      };
-    },
+      },
+    }),
     parseReq: ({params, query}) => [
       params.slot,
       fromHexString(query.randao_reveal),
