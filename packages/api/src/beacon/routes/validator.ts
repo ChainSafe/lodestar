@@ -486,7 +486,7 @@ export type ReqTypes = {
     query: {
       randao_reveal: string;
       graffiti: string;
-      skip_randao_verification?: boolean;
+      skip_randao_verification?: string;
       fee_recipient?: string;
       builder_selection?: string;
       builder_boost_factor?: string;
@@ -550,24 +550,31 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
   );
 
   const produceBlockV3: ReqSerializers<Api, ReqTypes>["produceBlockV3"] = {
-    writeReq: (slot, randaoReveal, graffiti, skipRandaoVerification, opts) => ({
-      params: {slot},
-      query: {
+    writeReq(slot, randaoReveal, graffiti, skipRandaoVerification, opts) {
+      const query: ReqTypes["produceBlockV3"]["query"] = {
         randao_reveal: toHexString(randaoReveal),
         graffiti: toGraffitiHex(graffiti),
         fee_recipient: opts?.feeRecipient,
-        skip_randao_verification: skipRandaoVerification,
         builder_selection: opts?.builderSelection,
         builder_boost_factor: opts?.builderBoostFactor?.toString(),
         strict_fee_recipient_check: opts?.strictFeeRecipientCheck,
         blinded_local: opts?.blindedLocal,
-      },
-    }),
+      };
+
+      if (skipRandaoVerification) {
+        query["skip_randao_verification"] = "";
+      }
+
+      return {
+        params: {slot},
+        query,
+      };
+    },
     parseReq: ({params, query}) => [
       params.slot,
       fromHexString(query.randao_reveal),
       fromGraffitiHex(query.graffiti),
-      query.skip_randao_verification,
+      parseSkipRandaoVerification(query.skip_randao_verification),
       {
         feeRecipient: query.fee_recipient,
         builderSelection: query.builder_selection as BuilderSelection,
@@ -794,4 +801,8 @@ export function getReturnTypes(): ReturnTypes<Api> {
 
 function parseBuilderBoostFactor(builderBoostFactorInput?: string | number | bigint): bigint | undefined {
   return builderBoostFactorInput !== undefined ? BigInt(builderBoostFactorInput) : undefined;
+}
+
+function parseSkipRandaoVerification(skipRandaoVerification?: string): boolean {
+  return skipRandaoVerification !== undefined && ["", "true"].includes(skipRandaoVerification) ? true : false;
 }
