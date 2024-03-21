@@ -254,7 +254,7 @@ export function renderCommandPage(
   globalOptions: CliCommandOptions<Record<never, never>>,
   lodestarCommand?: string
 ): string {
-  const page = [`---\ntitle: CLI Reference\ntoc_min_heading_level: 2\ntoc_max_heading_level: 5\n---\n\n# \`${cmd.command}\` CLI Command`, cmd.describe];
+  const page = [`---\ntitle: CLI Reference\n---\n\n# \`${cmd.command}\` CLI Command`, cmd.describe];
 
   const subCommands = (cmd.subcommands ?? []).map((sub) => getSubCommands(cmd.command, sub)).flat();
   if (subCommands.length > 0) {
