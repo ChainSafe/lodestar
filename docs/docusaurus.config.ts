@@ -38,6 +38,10 @@ const config: Config = {
           editUrl: "https://github.com/ChainSafe/lodestar/tree/unstable/docs/",
           routeBasePath: "/",
         },
+        gtag: {
+          trackingID: 'G-N21J5PWW5X',
+          anonymizeIP: true,
+        },
         theme: {
           customCss: "./src/css/custom.css",
         },
