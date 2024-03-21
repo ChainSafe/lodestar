@@ -1,8 +1,10 @@
 import {describe, it, expect, beforeEach, afterEach, vi} from "vitest";
+import {toHexString} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {ProtoBlock} from "@lodestar/fork-choice";
 import {ApiTestModules, getApiTestModules} from "../../../../utils/api.js";
 import {SyncState} from "../../../../../src/sync/interface.js";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
@@ -82,6 +84,8 @@ describe("api/validator - produceBlockV3", function () {
 
         vi.spyOn(modules.chain.clock, "currentSlot", "get").mockReturnValue(currentSlot);
         vi.spyOn(modules.sync, "state", "get").mockReturnValue(SyncState.Synced);
+
+        modules.chain.getProposerHead.mockReturnValue({blockRoot: toHexString(fullBlock.parentRoot)} as ProtoBlock);
 
         if (enginePayloadValue !== null) {
           const commonBlockBody: CommonBlockBody = {
