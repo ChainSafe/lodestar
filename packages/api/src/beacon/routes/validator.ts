@@ -797,5 +797,5 @@ function parseBuilderBoostFactor(builderBoostFactorInput?: string | number | big
 }
 
 function parseSkipRandaoVerification(skipRandaoVerification?: string): boolean {
-  return skipRandaoVerification !== undefined && ["", "true"].includes(skipRandaoVerification) ? true : false;
+  return skipRandaoVerification !== undefined && skipRandaoVerification === "";
 }
