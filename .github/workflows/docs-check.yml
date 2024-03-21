@@ -46,5 +46,6 @@ jobs:
       - name: Check docs format
         run: yarn docs:lint:fix
 
+      # Run spellcheck AFTER building docs, in case the CLI reference has issues
       - name: Spellcheck
         uses: rojopolis/spellcheck-github-actions@0.32.0
