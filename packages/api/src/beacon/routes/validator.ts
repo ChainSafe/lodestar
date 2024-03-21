@@ -589,7 +589,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
         randao_reveal: Schema.StringRequired,
         graffiti: Schema.String,
         fee_recipient: Schema.String,
-        skip_randao_verification: Schema.Boolean,
+        skip_randao_verification: Schema.String,
         builder_selection: Schema.String,
         builder_boost_factor: Schema.String,
         strict_fee_recipient_check: Schema.Boolean,
