@@ -16,7 +16,6 @@ import {PeerManager} from "../peers/peerManager.js";
 import {ReqRespBeaconNode} from "../reqresp/ReqRespBeaconNode.js";
 import {OutgoingRequestArgs, GetReqRespHandlerFn} from "../reqresp/types.js";
 import {Eth2Gossipsub, getCoreTopicsAtFork} from "../gossip/index.js";
-import {AttnetsService} from "../subnets/attnetsService.js";
 import {SyncnetsService} from "../subnets/syncnetsService.js";
 import {FORK_EPOCH_LOOKAHEAD, getActiveForks} from "../forks.js";
 import {NetworkOptions} from "../options.js";
@@ -197,9 +196,7 @@ export class NetworkCore implements INetworkCore {
 
     const enr = opts.discv5?.enr;
     const nodeId = enr ? fromHexString(ENR.decodeTxt(enr).nodeId) : null;
-    const attnetsService = opts.deterministicLongLivedAttnets
-      ? new DLLAttnetsService(config, clock, gossip, metadata, logger, metrics, nodeId, opts)
-      : new AttnetsService(config, clock, gossip, metadata, logger, metrics, opts);
+    const attnetsService = new DLLAttnetsService(config, clock, gossip, metadata, logger, metrics, nodeId, opts)
     const syncnetsService = new SyncnetsService(config, clock, gossip, metadata, logger, metrics, opts);
 
     const peerManager = await PeerManager.init(
