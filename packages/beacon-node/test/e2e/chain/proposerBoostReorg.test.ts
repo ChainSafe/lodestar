@@ -42,6 +42,10 @@ describe(
      *                reorgSlot
      *              /
      * reorgSlot - 1 ------------ reorgSlot + 1
+     *
+     * Note that in additional of being not timely, there are other criterion that
+     * the block needs to satisfied before being re-orged out. This test assumes
+     * other criterion are satisfied except timeliness.
      */
     it(`should reorg a late block at slot ${reorgSlot}`, async () => {
       // the node needs time to transpile/initialize bls worker threads
