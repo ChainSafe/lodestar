@@ -9,7 +9,7 @@ proposer_config:
     fee_recipient: '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
     builder:
       gas_limit: "35000000"
-      selection: "maxprofit"
+      selection: "default"
       boost_factor: "18446744073709551616"
 default_config:
   graffiti: 'default graffiti'
@@ -18,4 +18,4 @@ default_config:
   builder:
     gas_limit: "30000000"
     selection: "builderalways"
-    boost_factor: "100"
+    boost_factor: "90"

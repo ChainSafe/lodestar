@@ -78,11 +78,11 @@ You may choose to use the `--strictFeeRecipientCheck` flag to enable a strict ch
 
 If you are running a beacon node with connected builder relays, you may use these validator configurations to signal which block (builder vs. local execution) the beacon node should produce.
 
-With produceBlockV3 (enabled automatically after the Deneb hard fork), the `--builder.boostFactor` is a percentage multiplier the block producing beacon node must apply to boost (&gt;100) or dampen (&lt;100) builder block value for selection against execution block. The multiplier is ignored if `--builder.selection` is set to anything other than `maxprofit`. Even though this is set on the validator client, the calculation is requested and applied on the beacon node itself. For more information, see the [produceBlockV3 Beacon API](https://ethereum.github.io/beacon-APIs/#/ValidatorRequiredApi/produceBlockV3).
+With produceBlockV3 (enabled automatically after the Deneb hard fork), the `--builder.boostFactor` is a percentage multiplier the block producing beacon node must apply to boost (&gt;100) or dampen (&lt;100) builder block value for selection against execution block. The multiplier is ignored if `--builder.selection` is set to anything other than `default`. Even though this is set on the validator client, the calculation is requested and applied on the beacon node itself. For more information, see the [produceBlockV3 Beacon API](https://ethereum.github.io/beacon-APIs/#/ValidatorRequiredApi/produceBlockV3).
 
 With Lodestar's `--builder.selection` validator options, you can select:
 
-- `maxprofit`: Default setting for Lodestar set at `--builder.boostFactor=100`. This default setting will always choose the more profitable block. Using this option, you may customize your `--builder.boostFactor` to your preference. Examples of its usage are below.
+- `default`: Default setting for Lodestar set at `--builder.boostFactor=90`. This default setting will have a local block boost of ~10%. Using this option, you may customize your `--builder.boostFactor` to your preference. Examples of its usage are below.
 - `executionalways`: An alias of `--builder.boostFactor=0`, which will select the local execution block, unless it fails to produce due to an error or a delay in the response from the execution client.
 - `executiononly`: Beacon node will be requested to produce local execution block even if builder relays are configured. This option will always select the local execution block and will error if it couldn't produce one.
 - `builderalways`: An alias of `--builder.boostFactor=18446744073709551615` (2**64 - 1), which will select the builder block, unless the builder block fails to produce. The builder block may fail to produce if it's not available, not timely or there is an indication of censorship via `shouldOverrideBuilder` from the execution payload response.
@@ -100,7 +100,7 @@ Therefore, `--builder.boostFactor=80`.
 
 Example 2: Setting a `--builder.boostFactor=0` will always prefer the local execution block, but will produce an available builder block if the local execution block fails.
 
-Example 3: Setting a `--builder.boostFactor=100` is the same as signaling `--builder.selection maxprofit` where the validator will always select the most profitable block between the local execution engine and the builder block from the relay.
+Example 3: Setting a `--builder.boostFactor=100` will always select the most profitable block between the local execution engine and the builder block from the relay.
 
 ### Submit a validator deposit
 

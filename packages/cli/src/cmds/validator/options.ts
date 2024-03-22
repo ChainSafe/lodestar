@@ -244,7 +244,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
   "builder.selection": {
     type: "string",
     description:
-      "Builder block selection strategy `maxprofit`, `builderalways`, `builderonly`, `executionalways`, or `executiononly`",
+      "Builder block selection strategy `default`, `builderalways`, `builderonly`, `executionalways`, or `executiononly`",
     defaultDescription: `${defaultOptions.builderSelection}`,
     group: "builder",
   },
@@ -252,7 +252,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
   "builder.boostFactor": {
     type: "string",
     description:
-      "Percentage multiplier the block producing beacon node must apply to boost (>100) or dampen (<100) builder block value for selection against execution block. The multiplier is ignored if `--builder.selection` is set to anything other than `maxprofit`",
+      "Percentage multiplier the block producing beacon node must apply to boost (>100) or dampen (<100) builder block value for selection against execution block. The multiplier is ignored if `--builder.selection` is set to anything other than `default`",
     defaultDescription: `${defaultOptions.builderBoostFactor}`,
     group: "builder",
   },

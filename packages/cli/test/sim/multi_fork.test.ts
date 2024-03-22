@@ -53,7 +53,7 @@ const env = await SimulationEnvironment.initWithDefaults(
           // return with engine full block and publish via publishBlockV2
           clientOptions: {
             useProduceBlockV3: true,
-            "builder.selection": "maxprofit",
+            "builder.selection": "default",
           },
         },
       },
@@ -71,7 +71,7 @@ const env = await SimulationEnvironment.initWithDefaults(
           // builder is attached to beacon, and publish via publishBlindedBlockV2
           clientOptions: {
             useProduceBlockV3: true,
-            "builder.selection": "maxprofit",
+            "builder.selection": "default",
             blindedLocal: true,
           },
         },
@@ -106,7 +106,7 @@ const env = await SimulationEnvironment.initWithDefaults(
           // of local block and subsequent publishing via publishBlindedBlock
           clientOptions: {
             useProduceBlockV3: false,
-            "builder.selection": "maxprofit",
+            "builder.selection": "default",
           },
         },
       },
