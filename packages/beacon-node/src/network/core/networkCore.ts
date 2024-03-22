@@ -196,7 +196,7 @@ export class NetworkCore implements INetworkCore {
 
     const enr = opts.discv5?.enr;
     const nodeId = enr ? fromHexString(ENR.decodeTxt(enr).nodeId) : null;
-    const attnetsService = new DLLAttnetsService(config, clock, gossip, metadata, logger, metrics, nodeId, opts)
+    const attnetsService = new DLLAttnetsService(config, clock, gossip, metadata, logger, metrics, nodeId, opts);
     const syncnetsService = new SyncnetsService(config, clock, gossip, metadata, logger, metrics, opts);
 
     const peerManager = await PeerManager.init(
