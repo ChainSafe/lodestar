@@ -1,5 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
-import {fromHex} from "@lodestar/utils";
+import {Logger, fromHex} from "@lodestar/utils";
 import {SLOTS_PER_HISTORICAL_ROOT, SLOTS_PER_EPOCH, INTERVALS_PER_SLOT} from "@lodestar/params";
 import {bellatrix, Slot, ValidatorIndex, phase0, allForks, ssz, RootHex, Epoch, Root} from "@lodestar/types";
 import {
@@ -45,8 +45,20 @@ import {IForkChoiceStore, CheckpointWithHex, toCheckpointWithHex, JustifiedBalan
 
 export type ForkChoiceOpts = {
   proposerBoostEnabled?: boolean;
+  proposerBoostReorgEnabled?: boolean;
   computeUnrealized?: boolean;
 };
+
+export enum UpdateHeadOpt {
+  GetCanonicialHead, // Skip getProposerHead
+  GetProposerHead, // With getProposerHead
+  GetPredictedProposerHead, // With predictProposerHead
+}
+
+export type UpdateAndGetHeadOpt =
+  | {mode: UpdateHeadOpt.GetCanonicialHead}
+  | {mode: UpdateHeadOpt.GetProposerHead; slot: Slot}
+  | {mode: UpdateHeadOpt.GetPredictedProposerHead; slot: Slot};
 
 /**
  * Provides an implementation of "Ethereum Consensus -- Beacon Chain Fork Choice":
@@ -107,6 +119,7 @@ export class ForkChoice implements IForkChoice {
     private readonly fcStore: IForkChoiceStore,
     /** The underlying representation of the block DAG. */
     private readonly protoArray: ProtoArray,
+    private readonly logger?: Logger,
     private readonly opts?: ForkChoiceOpts
   ) {
     this.head = this.updateHead();
@@ -155,10 +168,146 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
+   *
+   * A multiplexer to wrap around the traditional `updateHead()` according to the scenario
+   * Scenarios as follow:
+   *    Prepare to propose in the next slot: getHead() -> predictProposerHead()
+   *    Proposing in the current slot: updateHead() -> getProposerHead()
+   *    Others eg. initializing forkchoice, importBlock: updateHead()
+   */
+  updateAndGetHead(opt: UpdateAndGetHeadOpt): ProtoBlock {
+    const {mode} = opt;
+
+    const canonicialHeadBlock = mode === UpdateHeadOpt.GetPredictedProposerHead ? this.getHead() : this.updateHead();
+    switch (mode) {
+      case UpdateHeadOpt.GetPredictedProposerHead:
+        return this.predictProposerHead(canonicialHeadBlock, opt.slot);
+      case UpdateHeadOpt.GetProposerHead:
+        return this.getProposerHead(canonicialHeadBlock, opt.slot);
+      case UpdateHeadOpt.GetCanonicialHead:
+      default:
+        return canonicialHeadBlock;
+    }
+  }
+
+  /**
    * Get the proposer boost root
    */
   getProposerBoostRoot(): RootHex {
     return this.proposerBoostRoot ?? HEX_ZERO_HASH;
+  }
+
+  /**
+   * To predict the proposer head of the next slot. That is, to predict if proposer-boost-reorg could happen.
+   * Reason why we can't be certain is because information of the head block is not fully available yet
+   * since the current slot hasn't ended especially the attesters' votes.
+   *
+   * There is a chance we mispredict.
+   *
+   * By calling this function, we assume we are the proposer of next slot
+   *
+   * https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/bellatrix/fork-choice.md#should_override_forkchoice_update
+   */
+  predictProposerHead(headBlock: ProtoBlock, currentSlot?: Slot): ProtoBlock {
+    // Skip re-org attempt if proposer boost (reorg) are disabled
+    if (!this.opts?.proposerBoostEnabled || !this.opts?.proposerBoostReorgEnabled) {
+      this.logger?.verbose("No proposer boot reorg prediction since the related flags are disabled");
+      return headBlock;
+    }
+
+    const parentBlock = this.protoArray.getBlock(headBlock.parentRoot);
+    const proposalSlot = headBlock.slot + 1;
+    currentSlot = currentSlot ?? this.fcStore.currentSlot;
+
+    // No reorg if parentBlock isn't available
+    if (parentBlock === undefined) {
+      return headBlock;
+    }
+
+    const prelimProposerHeadBlock = this.getPreliminaryProposerHead(headBlock, parentBlock, proposalSlot);
+
+    if (prelimProposerHeadBlock === headBlock) {
+      return headBlock;
+    }
+
+    const currentTimeOk = headBlock.slot === currentSlot;
+    if (!currentTimeOk) {
+      return headBlock;
+    }
+
+    this.logger?.info("Current head is weak. Predicting next block to be built on parent of head");
+    return parentBlock;
+  }
+
+  /**
+   *
+   * This function takes in the canonical head block and determine the proposer head (canonical head block or its parent)
+   * https://github.com/ethereum/consensus-specs/pull/3034 for info about proposer boost reorg
+   * This function should only be called during block proposal and only be called after `updateHead()` in `updateAndGetHead()`
+   *
+   * Same as https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#get_proposer_head
+   */
+  getProposerHead(headBlock: ProtoBlock, slot: Slot): ProtoBlock {
+    // Skip re-org attempt if proposer boost (reorg) are disabled
+    if (!this.opts?.proposerBoostEnabled || !this.opts?.proposerBoostReorgEnabled) {
+      this.logger?.verbose("No proposer boot reorg attempt since the related flags are disabled");
+      return headBlock;
+    }
+
+    const parentBlock = this.protoArray.getBlock(headBlock.parentRoot);
+
+    // No reorg if parentBlock isn't available
+    if (parentBlock === undefined) {
+      return headBlock;
+    }
+
+    const prelimProposerHeadBlock = this.getPreliminaryProposerHead(headBlock, parentBlock, slot);
+
+    if (prelimProposerHeadBlock === headBlock) {
+      return headBlock;
+    }
+
+    // No reorg if attempted reorg is more than a single slot
+    // Half of single_slot_reorg check in the spec is done in getPreliminaryProposerHead()
+    const currentTimeOk = headBlock.slot + 1 === slot;
+    if (!currentTimeOk) {
+      return headBlock;
+    }
+
+    // No reorg if proposer boost is still in effect
+    const isProposerBoostWornOff = this.proposerBoostRoot !== headBlock.blockRoot;
+    if (!isProposerBoostWornOff) {
+      return headBlock;
+    }
+
+    // No reorg if headBlock is "not weak" ie. headBlock's weight exceeds (REORG_HEAD_WEIGHT_THRESHOLD = 20)% of total attester weight
+    // https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_head_weak
+    const reorgThreshold = getCommitteeFraction(this.fcStore.justified.totalBalance, {
+      slotsPerEpoch: SLOTS_PER_EPOCH,
+      committeePercent: this.config.REORG_HEAD_WEIGHT_THRESHOLD,
+    });
+    const headNode = this.protoArray.getNode(headBlock.blockRoot);
+    // If headNode is unavailable, give up reorg
+    if (headNode === undefined || headNode.weight >= reorgThreshold) {
+      return headBlock;
+    }
+
+    // No reorg if parentBlock is "not strong" ie. parentBlock's weight is less than or equal to (REORG_PARENT_WEIGHT_THRESHOLD = 160)% of total attester weight
+    // https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/fork-choice.md#is_parent_strong
+    const parentThreshold = getCommitteeFraction(this.fcStore.justified.totalBalance, {
+      slotsPerEpoch: SLOTS_PER_EPOCH,
+      committeePercent: this.config.REORG_PARENT_WEIGHT_THRESHOLD,
+    });
+    const parentNode = this.protoArray.getNode(parentBlock.blockRoot);
+    // If parentNode is unavailable, give up reorg
+    if (parentNode === undefined || parentNode.weight <= parentThreshold) {
+      return headBlock;
+    }
+
+    // Reorg if all above checks fail
+    this.logger?.info("Will perform single-slot reorg to reorg out current weak head");
+
+    return parentBlock;
   }
 
   /**
@@ -201,9 +350,9 @@ export class ForkChoice implements IForkChoice {
     if (this.opts?.proposerBoostEnabled && this.proposerBoostRoot) {
       const proposerBoostScore =
         this.justifiedProposerBoostScore ??
-        getProposerScore(this.fcStore.justified.totalBalance, {
+        getCommitteeFraction(this.fcStore.justified.totalBalance, {
           slotsPerEpoch: SLOTS_PER_EPOCH,
-          proposerScoreBoost: this.config.PROPOSER_SCORE_BOOST,
+          committeePercent: this.config.PROPOSER_SCORE_BOOST,
         });
       proposerBoost = {root: this.proposerBoostRoot, score: proposerBoostScore};
       this.justifiedProposerBoostScore = proposerBoostScore;
@@ -352,12 +501,13 @@ export class ForkChoice implements IForkChoice {
     const blockRoot = this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block);
     const blockRootHex = toHexString(blockRoot);
 
-    // Add proposer score boost if the block is timely
+    // Assign proposer score boost if the block is timely
     // before attesting interval = before 1st interval
+    const isBeforeAttestingInterval = blockDelaySec < this.config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT;
+    const isTimely = this.fcStore.currentSlot === slot && isBeforeAttestingInterval;
     if (
       this.opts?.proposerBoostEnabled &&
-      this.fcStore.currentSlot === slot &&
-      blockDelaySec < this.config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT &&
+      isTimely &&
       // only boost the first block we see
       this.proposerBoostRoot === null
     ) {
@@ -451,6 +601,7 @@ export class ForkChoice implements IForkChoice {
       parentRoot: parentRootHex,
       targetRoot: toHexString(targetRoot),
       stateRoot: toHexString(block.stateRoot),
+      timeliness: isTimely,
 
       justifiedEpoch: stateJustifiedEpoch,
       justifiedRoot: toHexString(state.currentJustifiedCheckpoint.root),
@@ -1202,6 +1353,57 @@ export class ForkChoice implements IForkChoice {
       () => this.fcStore.unrealizedJustified.balances
     );
   }
+
+  /**
+   *
+   * Common logic of get_proposer_head() and should_override_forkchoice_update()
+   * No one should be calling this function except these two
+   *
+   */
+  private getPreliminaryProposerHead(headBlock: ProtoBlock, parentBlock: ProtoBlock, slot: Slot): ProtoBlock {
+    // No reorg if headBlock is on time
+    // https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_head_late
+    const isHeadLate = !headBlock.timeliness;
+    if (!isHeadLate) {
+      return headBlock;
+    }
+
+    // No reorg if we are at epoch boundary where proposer shuffling could change
+    // https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_shuffling_stable
+    const isShufflingStable = slot % SLOTS_PER_EPOCH !== 0;
+    if (!isShufflingStable) {
+      return headBlock;
+    }
+
+    // No reorg if headBlock and parentBlock are not ffg competitive
+    // https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_ffg_competitive
+    const {unrealizedJustifiedEpoch: headBlockCpEpoch, unrealizedJustifiedRoot: headBlockCpRoot} = headBlock;
+    const {unrealizedJustifiedEpoch: parentBlockCpEpoch, unrealizedJustifiedRoot: parentBlockCpRoot} = parentBlock;
+    const isFFGCompetitive = headBlockCpEpoch === parentBlockCpEpoch && headBlockCpRoot === parentBlockCpRoot;
+    if (!isFFGCompetitive) {
+      return headBlock;
+    }
+
+    // No reorg if chain is not finalizing within REORG_MAX_EPOCHS_SINCE_FINALIZATION
+    // https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_finalization_ok
+    const epochsSinceFinalization = computeEpochAtSlot(slot) - this.getFinalizedCheckpoint().epoch;
+    const isFinalizationOk = epochsSinceFinalization <= this.config.REORG_MAX_EPOCHS_SINCE_FINALIZATION;
+    if (!isFinalizationOk) {
+      return headBlock;
+    }
+
+    // -No reorg if we are not proposing on time.-
+    // Note: Skipping this check as store.time in Lodestar is stored in slot and not unix time
+    // https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_proposing_on_time
+
+    // No reorg if this reorg spans more than a single slot
+    const parentSlotOk = parentBlock.slot + 1 === headBlock.slot;
+    if (!parentSlotOk) {
+      return headBlock;
+    }
+
+    return parentBlock;
+  }
 }
 
 /**
@@ -1261,11 +1463,12 @@ export function assertValidTerminalPowBlock(
     }
   }
 }
-
-export function getProposerScore(
+// Approximate https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/fork-choice.md#calculate_committee_fraction
+// Calculates proposer boost score when committeePercent = config.PROPOSER_SCORE_BOOST
+export function getCommitteeFraction(
   justifiedTotalActiveBalanceByIncrement: number,
-  config: {slotsPerEpoch: number; proposerScoreBoost: number}
+  config: {slotsPerEpoch: number; committeePercent: number}
 ): number {
   const committeeWeight = Math.floor(justifiedTotalActiveBalanceByIncrement / config.slotsPerEpoch);
-  return Math.floor((committeeWeight * config.proposerScoreBoost) / 100);
+  return Math.floor((committeeWeight * config.committeePercent) / 100);
 }

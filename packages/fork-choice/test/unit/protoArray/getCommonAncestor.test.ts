@@ -40,6 +40,8 @@ describe("getCommonAncestor", () => {
       unrealizedFinalizedEpoch: 0,
       unrealizedFinalizedRoot: "-",
 
+      timeliness: false,
+
       ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
     },
     0
@@ -62,6 +64,8 @@ describe("getCommonAncestor", () => {
         unrealizedJustifiedRoot: "-",
         unrealizedFinalizedEpoch: 0,
         unrealizedFinalizedRoot: "-",
+
+        timeliness: false,
 
         ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
       },

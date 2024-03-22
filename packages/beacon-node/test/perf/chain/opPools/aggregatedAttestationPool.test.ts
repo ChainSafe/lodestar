@@ -64,6 +64,8 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
         unrealizedFinalizedRoot: toHexString(finalizedCheckpoint.root),
         executionPayloadBlockHash: null,
         executionStatus: ExecutionStatus.PreMerge,
+
+        timeliness: false,
       },
       originalState.slot
     );
@@ -87,6 +89,7 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
           unrealizedFinalizedRoot: toHexString(finalizedCheckpoint.root),
           executionPayloadBlockHash: null,
           executionStatus: ExecutionStatus.PreMerge,
+          timeliness: false,
         },
         slot
       );
@@ -159,7 +162,7 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
         return {state, pool};
       },
       fn: ({state, pool}) => {
-        pool.getAttestationsForBlock(state.config.getForkName(state.slot), forkchoice, state);
+        pool.getAttestationsForBlock(forkchoice, state);
       },
     });
   }
