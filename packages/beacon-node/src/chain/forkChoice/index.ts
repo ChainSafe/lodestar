@@ -16,6 +16,7 @@ import {
   isMergeTransitionComplete,
 } from "@lodestar/state-transition";
 
+import {Logger} from "@lodestar/utils";
 import {computeAnchorCheckpoint} from "../initState.js";
 import {ChainEventEmitter} from "../emitter.js";
 import {ChainEvent} from "../emitter.js";
@@ -35,7 +36,8 @@ export function initializeForkChoice(
   currentSlot: Slot,
   state: CachedBeaconStateAllForks,
   opts: ForkChoiceOpts,
-  justifiedBalancesGetter: JustifiedBalancesGetter
+  justifiedBalancesGetter: JustifiedBalancesGetter,
+  logger?: Logger
 ): ForkChoice {
   const {blockHeader, checkpoint} = computeAnchorCheckpoint(config, state);
   const finalizedCheckpoint = {...checkpoint};
@@ -75,6 +77,7 @@ export function initializeForkChoice(
         parentRoot: toHexString(blockHeader.parentRoot),
         stateRoot: toHexString(blockHeader.stateRoot),
         blockRoot: toHexString(checkpoint.root),
+        timeliness: true, // Optimisitcally assume is timely
 
         justifiedEpoch: justifiedCheckpoint.epoch,
         justifiedRoot: toHexString(justifiedCheckpoint.root),
@@ -95,7 +98,7 @@ export function initializeForkChoice(
       },
       currentSlot
     ),
-
+    logger,
     opts
   );
 }

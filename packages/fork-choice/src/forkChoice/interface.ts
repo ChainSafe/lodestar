@@ -3,7 +3,6 @@ import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {Epoch, Slot, ValidatorIndex, phase0, allForks, Root, RootHex} from "@lodestar/types";
 import {ProtoBlock, MaybeValidExecutionStatus, LVHExecResponse, ProtoNode} from "../protoArray/interface.js";
 import {CheckpointWithHex} from "./store.js";
-import {UpdateAndGetHeadOpt} from "./forkChoice.js";
 
 export type CheckpointHex = {
   epoch: Epoch;
@@ -78,7 +77,6 @@ export interface IForkChoice {
   getHeadRoot(): RootHex;
   getHead(): ProtoBlock;
   updateHead(): ProtoBlock;
-  updateAndGetHead(mode: UpdateAndGetHeadOpt): ProtoBlock;
   /**
    * Retrieves all possible chain heads (leaves of fork choice tree).
    */
