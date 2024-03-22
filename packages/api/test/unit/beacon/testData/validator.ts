@@ -55,7 +55,7 @@ export const testData: GenericServerTestCases<Api> = {
         builderSelection: undefined,
         strictFeeRecipientCheck: undefined,
         blindedLocal: undefined,
-        builderBoostFactor: 100n,
+        builderBoostFactor: 90n,
       },
     ] as unknown as GenericServerTestCases<Api>["produceBlock"]["args"],
     res: {data: ssz.phase0.BeaconBlock.defaultValue()},
@@ -71,7 +71,7 @@ export const testData: GenericServerTestCases<Api> = {
         builderSelection: undefined,
         strictFeeRecipientCheck: undefined,
         blindedLocal: undefined,
-        builderBoostFactor: 100n,
+        builderBoostFactor: 90n,
       },
     ] as unknown as GenericServerTestCases<Api>["produceBlockV2"]["args"],
     res: {
@@ -92,7 +92,7 @@ export const testData: GenericServerTestCases<Api> = {
         builderSelection: undefined,
         strictFeeRecipientCheck: undefined,
         blindedLocal: undefined,
-        builderBoostFactor: 100n,
+        builderBoostFactor: 90n,
       },
     ],
     res: {
@@ -115,7 +115,7 @@ export const testData: GenericServerTestCases<Api> = {
         builderSelection: undefined,
         strictFeeRecipientCheck: undefined,
         blindedLocal: undefined,
-        builderBoostFactor: 100n,
+        builderBoostFactor: 90n,
       },
     ] as unknown as GenericServerTestCases<Api>["produceBlindedBlock"]["args"],
     res: {

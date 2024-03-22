@@ -38,7 +38,7 @@ const testValue = {
     builder: {
       gasLimit: 30000000,
       selection: routes.validator.BuilderSelection.BuilderAlways,
-      boostFactor: BigInt(100),
+      boostFactor: BigInt(90),
     },
   },
 };
