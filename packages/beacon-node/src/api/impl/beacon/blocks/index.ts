@@ -1,7 +1,7 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {routes, ServerApi, ResponseFormat} from "@lodestar/api";
 import {computeTimeAtSlot, reconstructFullBlockOrContents} from "@lodestar/state-transition";
-import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {ForkName, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {sleep, toHex} from "@lodestar/utils";
 import {allForks, deneb, isSignedBlockContents, ProducedBlockSource} from "@lodestar/types";
 import {BlockSource, getBlockInput, ImportBlockOpts, BlockInput} from "../../../../chain/blocks/types.js";
@@ -17,7 +17,10 @@ import {verifyBlocksInEpoch} from "../../../../chain/blocks/verifyBlock.js";
 import {BeaconChain} from "../../../../chain/chain.js";
 import {resolveBlockId, toBeaconHeaderResponse} from "./utils.js";
 
-type PublishBlockOpts = ImportBlockOpts & {broadcastValidation?: routes.beacon.BroadcastValidation};
+type PublishBlockOpts = ImportBlockOpts & {
+  version?: ForkName;
+  broadcastValidation?: routes.beacon.BroadcastValidation;
+};
 
 /**
  * Validator clock may be advanced from beacon's clock. If the validator requests a resource in a
@@ -69,7 +72,7 @@ export function getBeaconBlockApi({
     // if block is locally produced, full or blinded, it already is 'consensus' validated as it went through
     // state transition to produce the stateRoot
     const slot = signedBlock.message.slot;
-    const fork = config.getForkName(slot);
+    const fork = opts.version ?? config.getForkName(slot);
     const blockRoot = toHex(chain.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
     // bodyRoot should be the same to produced block
     const bodyRoot = toHex(chain.config.getForkTypes(slot).BeaconBlockBody.hashTreeRoot(signedBlock.message.body));

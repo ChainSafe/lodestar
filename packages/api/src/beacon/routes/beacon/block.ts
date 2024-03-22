@@ -187,7 +187,7 @@ export type Api = {
 
   publishBlockV2(
     blockOrContents: allForks.SignedBeaconBlockOrContents,
-    opts?: {broadcastValidation?: BroadcastValidation}
+    opts?: {broadcastValidation?: BroadcastValidation; version?: ForkName}
   ): Promise<
     ApiClientResponse<
       {
@@ -271,7 +271,11 @@ export type ReqTypes = {
   getBlockHeaders: {query: {slot?: number; parent_root?: string}};
   getBlockRoot: BlockIdOnlyReq;
   publishBlock: {body: unknown};
-  publishBlockV2: {body: unknown; query: {broadcast_validation?: string}};
+  publishBlockV2: {
+    body: unknown;
+    query: {broadcast_validation?: string};
+    headers: {"eth-consensus-version"?: ForkName};
+  };
   publishBlindedBlock: {body: unknown};
   publishBlindedBlockV2: {body: unknown; query: {broadcast_validation?: string}};
   getBlobSidecars: {params: {block_id: string}; query: {indices?: number[]}};
@@ -293,21 +297,26 @@ export function getReqSerializers(config: ChainForkConfig): ReqSerializers<Api, 
     schema: {params: {block_id: Schema.StringRequired}},
   };
 
-  // Compute block type from JSON payload. See https://github.com/ethereum/eth2.0-APIs/pull/142
-  const getSignedBeaconBlockType = (data: allForks.SignedBeaconBlock): allForks.AllForksSSZTypes["SignedBeaconBlock"] =>
-    config.getForkTypes(data.message.slot).SignedBeaconBlock;
+  // Compute block type from JSON payload, if a `ForkName` is not provided. See https://github.com/ethereum/eth2.0-APIs/pull/142
+  const getSignedBeaconBlockType = (
+    fork: ForkName | undefined,
+    data: allForks.SignedBeaconBlock
+  ): allForks.AllForksSSZTypes["SignedBeaconBlock"] =>
+    ssz.allForks[fork ?? config.getForkName(data.message.slot)].SignedBeaconBlock;
 
-  const AllForksSignedBlockOrContents: TypeJson<allForks.SignedBeaconBlockOrContents> = {
-    toJson: (data) =>
-      isSignedBlockContents(data)
-        ? allForksSignedBlockContentsReqSerializer(getSignedBeaconBlockType).toJson(data)
-        : getSignedBeaconBlockType(data).toJson(data),
+  function createAllForksSignedBlockOrContents(fork?: ForkName): TypeJson<allForks.SignedBeaconBlockOrContents> {
+    return {
+      toJson: (data) =>
+        isSignedBlockContents(data)
+          ? allForksSignedBlockContentsReqSerializer((data) => getSignedBeaconBlockType(fork, data)).toJson(data)
+          : getSignedBeaconBlockType(fork, data).toJson(data),
 
-    fromJson: (data) =>
-      (data as {signed_block: unknown}).signed_block !== undefined
-        ? allForksSignedBlockContentsReqSerializer(getSignedBeaconBlockType).fromJson(data)
-        : getSignedBeaconBlockType(data as allForks.SignedBeaconBlock).fromJson(data),
-  };
+      fromJson: (data) =>
+        (data as {signed_block: unknown}).signed_block !== undefined
+          ? allForksSignedBlockContentsReqSerializer((data) => getSignedBeaconBlockType(fork, data)).fromJson(data)
+          : getSignedBeaconBlockType(fork, data as allForks.SignedBeaconBlock).fromJson(data),
+    };
+  }
 
   const getSignedBlindedBeaconBlockType = (
     data: allForks.SignedBlindedBeaconBlock
@@ -330,16 +339,23 @@ export function getReqSerializers(config: ChainForkConfig): ReqSerializers<Api, 
       schema: {query: {slot: Schema.Uint, parent_root: Schema.String}},
     },
     getBlockRoot: blockIdOnlyReq,
-    publishBlock: reqOnlyBody(AllForksSignedBlockOrContents, Schema.Object),
+    publishBlock: reqOnlyBody(createAllForksSignedBlockOrContents(), Schema.Object),
     publishBlockV2: {
-      writeReq: (item, {broadcastValidation} = {}) => ({
-        body: AllForksSignedBlockOrContents.toJson(item),
+      writeReq: (item, {broadcastValidation, version} = {}) => ({
+        body: createAllForksSignedBlockOrContents(version).toJson(item),
         query: {broadcast_validation: broadcastValidation},
+        headers: {"eth-consensus-version": version},
       }),
-      parseReq: ({body, query}) => [
-        AllForksSignedBlockOrContents.fromJson(body),
-        {broadcastValidation: query.broadcast_validation as BroadcastValidation},
-      ],
+      parseReq: ({body, query, headers}) => {
+        const version = headers["eth-consensus-version"];
+        return [
+          createAllForksSignedBlockOrContents(version).fromJson(body),
+          {
+            broadcastValidation: query.broadcast_validation as BroadcastValidation,
+            version,
+          },
+        ];
+      },
       schema: {
         body: Schema.Object,
         query: {broadcast_validation: Schema.String},

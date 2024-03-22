@@ -60,7 +60,10 @@ export const testData: GenericServerTestCases<Api> = {
     res: undefined,
   },
   publishBlockV2: {
-    args: [ssz.phase0.SignedBeaconBlock.defaultValue(), {broadcastValidation: BroadcastValidation.consensus}],
+    args: [
+      ssz.phase0.SignedBeaconBlock.defaultValue(),
+      {broadcastValidation: BroadcastValidation.consensus, version: ForkName.phase0},
+    ],
     res: undefined,
   },
   publishBlindedBlock: {
