@@ -341,11 +341,17 @@ export function getReqSerializers(config: ChainForkConfig): ReqSerializers<Api, 
     getBlockRoot: blockIdOnlyReq,
     publishBlock: reqOnlyBody(createAllForksSignedBlockOrContents(), Schema.Object),
     publishBlockV2: {
-      writeReq: (item, {broadcastValidation, version} = {}) => ({
-        body: createAllForksSignedBlockOrContents(version).toJson(item),
-        query: {broadcast_validation: broadcastValidation},
-        headers: {"eth-consensus-version": version},
-      }),
+      writeReq: (item, {broadcastValidation, version} = {}) => {
+        const req = {
+          body: createAllForksSignedBlockOrContents(version).toJson(item),
+          query: {broadcast_validation: broadcastValidation},
+        };
+        const headers = version !== undefined ? {"eth-consensus-version": version} : {};
+        return {
+          ...req,
+          ...{headers},
+        };
+      },
       parseReq: ({body, query, headers}) => {
         const version = headers["eth-consensus-version"];
         return [
