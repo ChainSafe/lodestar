@@ -28,7 +28,6 @@ import {ChainForkConfig} from "@lodestar/config";
 import {ForkSeq, ForkExecution, isForkExecution} from "@lodestar/params";
 import {toHex, sleep, Logger} from "@lodestar/utils";
 
-import {ProtoBlock} from "@lodestar/fork-choice";
 import type {BeaconChain} from "../chain.js";
 import {PayloadId, IExecutionEngine, IExecutionBuilder, PayloadAttributes} from "../../execution/index.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
@@ -65,8 +64,8 @@ export type BlockAttributes = {
   randaoReveal: BLSSignature;
   graffiti: Bytes32;
   slot: Slot;
+  parentBlockRoot: Root;
   feeRecipient?: string;
-  proposerHead?: ProtoBlock;
 };
 
 export enum BlockType {
@@ -97,7 +96,6 @@ export async function produceBlockBody<T extends BlockType>(
   currentState: CachedBeaconStateAllForks,
   blockAttr: BlockAttributes & {
     parentSlot: Slot;
-    parentBlockRoot: Root;
     proposerIndex: ValidatorIndex;
     proposerPubKey: BLSPubkey;
     commonBlockBody?: CommonBlockBody;
@@ -582,7 +580,6 @@ export async function produceCommonBlockBody<T extends BlockType>(
     parentBlockRoot,
   }: BlockAttributes & {
     parentSlot: Slot;
-    parentBlockRoot: Root;
   }
 ): Promise<CommonBlockBody> {
   const stepsMetrics =

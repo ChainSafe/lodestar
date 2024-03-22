@@ -75,9 +75,9 @@ describe("produceBlockBody", () => {
       await produceBlockBody.call(chain, BlockType.Full, state, {
         parentSlot: slot,
         slot: slot + 1,
+        parentBlockRoot: fromHexString(head.blockRoot),
         graffiti: Buffer.alloc(32),
         randaoReveal: Buffer.alloc(96),
-        parentBlockRoot: fromHexString(head.blockRoot),
         proposerIndex,
         proposerPubKey,
       });

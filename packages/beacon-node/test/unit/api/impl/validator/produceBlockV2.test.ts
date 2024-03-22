@@ -1,4 +1,4 @@
-import {fromHexString} from "@chainsafe/ssz";
+import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {describe, it, expect, beforeEach, afterEach, vi} from "vitest";
 import {ssz} from "@lodestar/types";
 import {ProtoBlock} from "@lodestar/fork-choice";
@@ -43,9 +43,12 @@ describe("api/validator - produceBlockV2", function () {
     // Set the node's state to way back from current slot
     const slot = 100000;
     const randaoReveal = fullBlock.body.randaoReveal;
+    const parentBlockRoot = fullBlock.parentRoot;
     const graffiti = "a".repeat(32);
     const feeRecipient = "0xcccccccccccccccccccccccccccccccccccccccc";
 
+    // mock whatever value as we also mock produceBlock below
+    modules.chain["getProposerHead"].mockReturnValue(generateProtoBlock({blockRoot: toHexString(parentBlockRoot)}));
     modules.chain.produceBlock.mockResolvedValue({
       block: fullBlock,
       executionPayloadValue,
@@ -58,6 +61,7 @@ describe("api/validator - produceBlockV2", function () {
       randaoReveal,
       graffiti: toGraffitiBuffer(graffiti),
       slot,
+      parentBlockRoot,
       feeRecipient,
     });
 
@@ -68,6 +72,7 @@ describe("api/validator - produceBlockV2", function () {
       randaoReveal,
       graffiti: toGraffitiBuffer(graffiti),
       slot,
+      parentBlockRoot,
       feeRecipient: undefined,
     });
   });
@@ -81,7 +86,7 @@ describe("api/validator - produceBlockV2", function () {
     const feeRecipient = "0xccccccccccccccccccccccccccccccccccccccaa";
 
     const headSlot = 0;
-    modules.forkChoice.getHead.mockReturnValue(generateProtoBlock({slot: headSlot}));
+    modules.chain["getProposerHead"].mockReturnValue(generateProtoBlock({slot: headSlot}));
 
     modules.chain["opPool"].getSlashingsAndExits.mockReturnValue([[], [], [], []]);
     modules.chain["aggregatedAttestationPool"].getAttestationsForBlock.mockReturnValue([]);
