@@ -82,7 +82,7 @@ import {BlockRewards, computeBlockRewards} from "./rewards/blockRewards.js";
 import {ShufflingCache} from "./shufflingCache.js";
 import {StateContextCache} from "./stateCache/stateContextCache.js";
 import {SeenGossipBlockInput} from "./seenCache/index.js";
-import {InMemoryCheckpointStateCache} from "./stateCache/stateContextCheckpointsCache.js";
+import {InMemoryCheckpointStateCache} from "./stateCache/inMemoryCheckpointsCache.js";
 import {FIFOBlockStateCache} from "./stateCache/fifoBlockStateCache.js";
 import {PersistentCheckpointStateCache} from "./stateCache/persistentCheckpointsCache.js";
 import {DbCPStateDatastore} from "./stateCache/datastore/db.js";
@@ -461,6 +461,19 @@ export class BeaconChain implements IBeaconChain {
 
     const data = await this.db.stateArchive.getByRoot(fromHexString(stateRoot));
     return data && {state: data, executionOptimistic: false};
+  }
+
+  getStateByCheckpoint(
+    checkpoint: CheckpointWithHex
+  ): {state: BeaconStateAllForks; executionOptimistic: boolean} | null {
+    // TODO: this is not guaranteed to work with new state caches, should work on this before we turn n-historical state on
+    const cachedStateCtx = this.regen.getCheckpointStateSync(checkpoint);
+    if (cachedStateCtx) {
+      const block = this.forkChoice.getBlock(cachedStateCtx.latestBlockHeader.hashTreeRoot());
+      return {state: cachedStateCtx, executionOptimistic: block != null && isOptimisticBlock(block)};
+    }
+
+    return null;
   }
 
   async getCanonicalBlockAtSlot(

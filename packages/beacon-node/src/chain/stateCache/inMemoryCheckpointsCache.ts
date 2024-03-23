@@ -21,11 +21,15 @@ export class InMemoryCheckpointStateCache implements CheckpointStateCache {
   private readonly cache: MapTracker<string, CachedBeaconStateAllForks>;
   /** Epoch -> Set<blockRoot> */
   private readonly epochIndex = new MapDef<Epoch, Set<string>>(() => new Set<string>());
+  /**
+   * Max number of epochs allowed in the cache
+   */
+  private readonly maxEpochs: number;
   private readonly metrics: Metrics["cpStateCache"] | null | undefined;
   private preComputedCheckpoint: string | null = null;
   private preComputedCheckpointHits: number | null = null;
 
-  constructor({metrics}: {metrics?: Metrics | null}) {
+  constructor({maxEpochs = MAX_EPOCHS, metrics}: {maxEpochs?: number; metrics?: Metrics | null}) {
     this.cache = new MapTracker(metrics?.cpStateCache);
     if (metrics) {
       this.metrics = metrics.cpStateCache;
@@ -36,6 +40,7 @@ export class InMemoryCheckpointStateCache implements CheckpointStateCache {
         metrics.cpStateCache.epochSize.set({type: CacheItemType.inMemory}, this.epochIndex.size)
       );
     }
+    this.maxEpochs = maxEpochs;
   }
 
   async getOrReload(cp: CheckpointHex, opts?: StateCloneOpts): Promise<CachedBeaconStateAllForks | null> {
@@ -130,8 +135,8 @@ export class InMemoryCheckpointStateCache implements CheckpointStateCache {
     const epochs = Array.from(this.epochIndex.keys()).filter(
       (epoch) => epoch !== finalizedEpoch && epoch !== justifiedEpoch
     );
-    if (epochs.length > MAX_EPOCHS) {
-      for (const epoch of epochs.slice(0, epochs.length - MAX_EPOCHS)) {
+    if (epochs.length > this.maxEpochs) {
+      for (const epoch of epochs.slice(0, epochs.length - this.maxEpochs)) {
         this.deleteAllEpochItems(epoch);
       }
     }
