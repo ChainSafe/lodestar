@@ -90,7 +90,7 @@ function renderExamplesSection(examples: CliExample[], sectionTitle?: string, lo
 function renderOption(optionName: string, option: CliOptionDefinition): string | undefined {
   if (option.hidden) return;
 
-  const commandOption = [`### --${optionName} {#-${optionName}}`];
+  const commandOption = [`### \`--${optionName}\` {#-${optionName}}`];
   if (option.description) commandOption.push(`description: ${sanitizeDescription(option.description)}`);
 
   if (option.demandOption === true) {
