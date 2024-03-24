@@ -106,7 +106,7 @@ export async function getSignersFromArgs(
 
   // Remote keys are declared manually or will be fetched from external signer
   else if (args["externalSigner.pubkeys"] || args["externalSigner.fetch"]) {
-    return getRemoteSigners(args);
+    return getRemoteSigners(args, logger as Logger);
   }
 
   // Read keys from local account manager
@@ -155,7 +155,7 @@ export function getSignerPubkeyHex(signer: Signer): string {
   }
 }
 
-async function getRemoteSigners(args: IValidatorCliArgs & GlobalArgs): Promise<Signer[]> {
+async function getRemoteSigners(args: IValidatorCliArgs & GlobalArgs, logger?: Logger): Promise<Signer[]> {
   const externalSignerUrl = args["externalSigner.url"];
   if (!externalSignerUrl) {
     throw new YargsError(
@@ -171,7 +171,7 @@ async function getRemoteSigners(args: IValidatorCliArgs & GlobalArgs): Promise<S
     throw new YargsError("externalSigner.pubkeys is set to an empty list");
   }
 
-  const pubkeys = args["externalSigner.pubkeys"] ?? (await externalSignerGetKeys(externalSignerUrl));
+  const pubkeys = args["externalSigner.pubkeys"] ?? (await externalSignerGetKeys(externalSignerUrl, logger));
   assertValidPubkeysHex(pubkeys);
 
   return pubkeys.map((pubkey) => ({type: SignerType.Remote, pubkey, url: externalSignerUrl}));

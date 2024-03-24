@@ -7,6 +7,7 @@ import {BeaconConfig} from "@lodestar/config";
 import {computeEpochAtSlot, blindedOrFullBlockToHeader} from "@lodestar/state-transition";
 import {allForks, Epoch, Root, RootHex, Slot, ssz} from "@lodestar/types";
 import {PubkeyHex} from "../types.js";
+import {Logger} from "@lodestar/utils";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -104,13 +105,13 @@ type Web3SignerSerializedRequest = {
 /**
  * Return public keys from the server.
  */
-export async function externalSignerGetKeys(externalSignerUrl: string): Promise<string[]> {
+export async function externalSignerGetKeys(externalSignerUrl: string, logger?: Logger): Promise<string[]> {
   const res = await fetch(`${externalSignerUrl}/api/v1/eth2/publicKeys`, {
     method: "GET",
     headers: {"Content-Type": "application/json"},
   });
 
-  return handlerExternalSignerResponse<string[]>(res);
+  return handlerExternalSignerGetKeysResponse(res, logger);
 }
 
 /**
@@ -122,7 +123,8 @@ export async function externalSignerPostSignature(
   pubkeyHex: PubkeyHex,
   signingRoot: Root,
   signingSlot: Slot,
-  signableMessage: SignableMessage
+  signableMessage: SignableMessage,
+  logger?: Logger
 ): Promise<string> {
   const requestObj = serializerSignableMessagePayload(config, signableMessage) as Web3SignerSerializedRequest;
 
@@ -147,7 +149,7 @@ export async function externalSignerPostSignature(
     body: JSON.stringify(requestObj),
   });
 
-  const data = await handlerExternalSignerResponse<{signature: string}>(res);
+  const data = await handlerExternalSignerPostSignatureResponse(res, logger);
   return data.signature;
 }
 
@@ -160,17 +162,68 @@ export async function externalSignerUpCheck(remoteUrl: string): Promise<boolean>
     headers: {"Content-Type": "application/json"},
   });
 
-  const data = await handlerExternalSignerResponse<{status: string}>(res);
+  const data = await handlerExternalSignerUpCheckResponse(res);
   return data.status === "OK";
 }
 
-async function handlerExternalSignerResponse<T>(res: Response): Promise<T> {
+async function handlerExternalSignerGetKeysResponse<T>(res: Response, logger?: Logger): Promise<string[]> {
   if (!res.ok) {
     const errBody = await res.text();
+    logger?.debug("External signer GetKeys error", {body: errBody});
     throw Error(`${errBody}`);
   }
 
-  return JSON.parse(await res.text()) as T;
+  const resBody = await res.text();
+  const resContentType = res.headers.get("Content-Type");
+
+  logger?.debug("External signer GetKeys response", {contentType: resContentType, body: resBody});
+
+  if(resContentType?.startsWith("application/json")) {
+    return JSON.parse(resBody) as string[];
+  }
+  else {
+    return resBody.split(",");
+  }
+}
+
+async function handlerExternalSignerPostSignatureResponse<T>(res: Response, logger?: Logger): Promise<{signature: string}> {
+  if (!res.ok) {
+    const errBody = await res.text();
+    logger?.debug("External signer PostSignature error", {body: errBody});
+    throw Error(`${errBody}`);
+  }
+
+  const resBody = await res.text();
+  const resContentType = res.headers.get("Content-Type");
+
+  logger?.debug("External signer PostSignature response", {contentType: resContentType, body: resBody});
+
+  if(resContentType?.startsWith("application/json")) {
+    return JSON.parse(resBody) as {signature: string};
+  }
+  else {
+    return {signature: resBody};
+  }
+}
+
+async function handlerExternalSignerUpCheckResponse<T>(res: Response, logger?: Logger): Promise<{status: string}> {
+  if (!res.ok) {
+    const errBody = await res.text();
+    logger?.debug("External signer UpCheck error", {body: errBody});
+    throw Error(`${errBody}`);
+  }
+
+  const resBody = await res.text();
+  const resContentType = res.headers.get("Content-Type");
+
+  logger?.debug("External signer UpCheck response", {contentType: resContentType, body: resBody});
+
+  if(resContentType?.startsWith("application/json")) {
+    return JSON.parse(resBody) as {status: string};
+  }
+  else {
+    return {status: resBody};
+  }
 }
 
 function serializerSignableMessagePayload(config: BeaconConfig, payload: SignableMessage): Record<string, unknown> {
