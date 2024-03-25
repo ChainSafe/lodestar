@@ -9,7 +9,6 @@ import {
   ArrayOf,
   Schema,
   WithVersion,
-  reqOnlyBody,
   TypeJson,
   ReqSerializers,
   ReqSerializer,
@@ -319,6 +318,12 @@ export function getReqSerializers(config: ChainForkConfig): ReqSerializers<Api, 
     fromJson: (data) => getSignedBlindedBeaconBlockType(data as allForks.SignedBlindedBeaconBlock).fromJson(data),
   };
 
+  function extractSlot(signedBlockOrContents: allForks.SignedBeaconBlockOrContents): Slot {
+    return isSignedBlockContents(signedBlockOrContents)
+      ? signedBlockOrContents.signedBlock.message.slot
+      : signedBlockOrContents.message.slot;
+  }
+
   return {
     getBlock: getBlockReq,
     getBlockV2: getBlockReq,
@@ -330,11 +335,19 @@ export function getReqSerializers(config: ChainForkConfig): ReqSerializers<Api, 
       schema: {query: {slot: Schema.Uint, parent_root: Schema.String}},
     },
     getBlockRoot: blockIdOnlyReq,
-    publishBlock: reqOnlyBody(AllForksSignedBlockOrContents, Schema.Object),
+    publishBlock: {
+      writeReq: (items) => ({
+        body: AllForksSignedBlockOrContents.toJson(items),
+        headers: {"Eth-Consensus-Version": config.getForkName(extractSlot(items))},
+      }),
+      parseReq: ({body}) => [AllForksSignedBlockOrContents.fromJson(body)],
+      schema: {body: Schema.Object},
+    },
     publishBlockV2: {
       writeReq: (item, {broadcastValidation} = {}) => ({
         body: AllForksSignedBlockOrContents.toJson(item),
         query: {broadcast_validation: broadcastValidation},
+        headers: {"Eth-Consensus-Version": config.getForkName(extractSlot(item))},
       }),
       parseReq: ({body, query}) => [
         AllForksSignedBlockOrContents.fromJson(body),
@@ -345,11 +358,19 @@ export function getReqSerializers(config: ChainForkConfig): ReqSerializers<Api, 
         query: {broadcast_validation: Schema.String},
       },
     },
-    publishBlindedBlock: reqOnlyBody(AllForksSignedBlindedBlock, Schema.Object),
+    publishBlindedBlock: {
+      writeReq: (items) => ({
+        body: AllForksSignedBlindedBlock.toJson(items),
+        headers: {"Eth-Consensus-Version": config.getForkName(extractSlot(items))},
+      }),
+      parseReq: ({body}) => [AllForksSignedBlindedBlock.fromJson(body)],
+      schema: {body: Schema.Object},
+    },
     publishBlindedBlockV2: {
       writeReq: (item, {broadcastValidation}) => ({
         body: AllForksSignedBlindedBlock.toJson(item),
         query: {broadcast_validation: broadcastValidation},
+        headers: {"Eth-Consensus-Version": config.getForkName(extractSlot(item))},
       }),
       parseReq: ({body, query}) => [
         AllForksSignedBlindedBlock.fromJson(body),
