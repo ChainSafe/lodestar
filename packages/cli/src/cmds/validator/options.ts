@@ -79,7 +79,7 @@ export type IValidatorCliArgs = AccountValidatorArgs &
 export type KeymanagerArgs = {
   keymanager?: boolean;
   "keymanager.auth"?: boolean;
-  "keymanager.token"?: string;
+  "keymanager.tokenFile"?: string;
   "keymanager.port"?: number;
   "keymanager.address"?: string;
   "keymanager.cors"?: string;
@@ -101,7 +101,7 @@ export const keymanagerOptions: CliCommandOptions<KeymanagerArgs> = {
     default: true,
     group: "keymanager",
   },
-  "keymanager.token": {
+  "keymanager.tokenFile": {
     type: "string",
     description: "Path to file containing bearer token used for key manager API authentication",
     group: "keymanager",

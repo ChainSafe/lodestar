@@ -203,7 +203,7 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
         isAuthEnabled: args["keymanager.auth"],
         headerLimit: args["keymanager.headerLimit"],
         bodyLimit: args["keymanager.bodyLimit"],
-        tokenFile: args["keymanager.token"],
+        tokenFile: args["keymanager.tokenFile"],
         tokenDir: dbPath,
       },
       {config, logger, api: keymanagerApi, metrics: metrics ? metrics.keymanagerApiRest : null}
