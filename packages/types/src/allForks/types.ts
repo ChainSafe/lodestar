@@ -4,12 +4,14 @@ import {ts as altair} from "../altair/index.js";
 import {ts as bellatrix} from "../bellatrix/index.js";
 import {ts as capella} from "../capella/index.js";
 import {ts as deneb} from "../deneb/index.js";
+import {ts as electra} from "../electra/index.js";
 
 import {ssz as phase0Ssz} from "../phase0/index.js";
 import {ssz as altairSsz} from "../altair/index.js";
 import {ssz as bellatrixSsz} from "../bellatrix/index.js";
 import {ssz as capellaSsz} from "../capella/index.js";
 import {ssz as denebSsz} from "../deneb/index.js";
+import {ssz as electraSsz} from "../electra/index.js";
 
 // Re-export union types for types that are _known_ to differ
 
@@ -265,6 +267,7 @@ export type AllForksLightClientSSZTypes = {
     | typeof bellatrixSsz.BeaconBlockBody
     | typeof capellaSsz.BeaconBlockBody
     | typeof denebSsz.BeaconBlockBody
+    | typeof electraSsz.BeaconBlockBody
   >;
   LightClientHeader: AllForksTypeOf<
     typeof altairSsz.LightClientHeader | typeof capellaSsz.LightClientHeader | typeof denebSsz.LightClientHeader

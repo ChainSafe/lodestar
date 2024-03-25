@@ -11,6 +11,7 @@ export type {
   CachedBeaconStateBellatrix,
   CachedBeaconStateCapella,
   CachedBeaconStateDeneb,
+  CachedBeaconStateElectra,
   CachedBeaconStateAllForks,
   CachedBeaconStateExecutions,
   // Non-cached states
@@ -19,6 +20,7 @@ export type {
   BeaconStateBellatrix,
   BeaconStateCapella,
   BeaconStateDeneb,
+  BeaconStateElectra,
   BeaconStateAllForks,
   BeaconStateExecutions,
 } from "./types.js";

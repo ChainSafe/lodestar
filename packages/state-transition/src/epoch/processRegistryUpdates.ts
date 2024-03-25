@@ -17,7 +17,7 @@ import { ForkSeq } from "@lodestar/params";
  *   - indicesEligibleForActivationQueue: 0
  *   - indicesToEject: 0
  */
-export function processRegistryUpdates(fork: ForkSeq = ForkSeq.phase0, state: CachedBeaconStateAllForks, cache: EpochTransitionCache): void {
+export function processRegistryUpdates(fork: ForkSeq, state: CachedBeaconStateAllForks, cache: EpochTransitionCache): void {
   const {epochCtx} = state;
 
   // Get the validators sub tree once for all the loop
