@@ -132,7 +132,7 @@ describe("gossip block validation", function () {
     // Returned parent block is latter than proposed block
     forkChoice.getBlockHex.mockReturnValueOnce({slot: clockSlot - 1} as ProtoBlock);
     // Regen not able to get the parent block state
-    regen.getBlockSlotState.mockRejectedValue(undefined);
+    regen.getPreState.mockRejectedValue(undefined);
 
     await expectRejectedWithLodestarError(
       validateGossipBlock(config, chain, job, ForkName.phase0),
@@ -146,7 +146,7 @@ describe("gossip block validation", function () {
     // Returned parent block is latter than proposed block
     forkChoice.getBlockHex.mockReturnValueOnce({slot: clockSlot - 1} as ProtoBlock);
     // Regen returns some state
-    regen.getBlockSlotState.mockResolvedValue(generateCachedState());
+    regen.getPreState.mockResolvedValue(generateCachedState());
     // BLS signature verifier returns invalid
     verifySignature.mockResolvedValue(false);
 
@@ -163,7 +163,7 @@ describe("gossip block validation", function () {
     forkChoice.getBlockHex.mockReturnValueOnce({slot: clockSlot - 1} as ProtoBlock);
     // Regen returns some state
     const state = generateCachedState();
-    regen.getBlockSlotState.mockResolvedValue(state);
+    regen.getPreState.mockResolvedValue(state);
     // BLS signature verifier returns valid
     verifySignature.mockResolvedValue(true);
     // Force proposer shuffling cache to return wrong value
@@ -182,7 +182,7 @@ describe("gossip block validation", function () {
     forkChoice.getBlockHex.mockReturnValueOnce({slot: clockSlot - 1} as ProtoBlock);
     // Regen returns some state
     const state = generateCachedState();
-    regen.getBlockSlotState.mockResolvedValue(state);
+    regen.getPreState.mockResolvedValue(state);
     // BLS signature verifier returns valid
     verifySignature.mockResolvedValue(true);
     // Force proposer shuffling cache to return wrong value

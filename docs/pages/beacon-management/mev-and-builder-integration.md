@@ -1,3 +1,7 @@
+---
+title: MEV and Builder Integration
+---
+
 # MEV & Merge
 
 MEV is a term that refers to the bundling of transactions in one particular order to extract (mostly) arbitrage opportunities on the dApps and decentralized exchanges.

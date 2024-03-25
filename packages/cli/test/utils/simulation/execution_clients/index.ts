@@ -8,7 +8,7 @@ import {
   ExecutionNode,
   ExecutionStartMode,
 } from "../interfaces.js";
-import {getEstimatedShanghaiTime} from "../utils/index.js";
+import {getEstimatedForkTime} from "../utils/index.js";
 import {getGethGenesisBlock} from "../utils/execution_genesis.js";
 import {ensureDirectories} from "../utils/paths.js";
 import {generateGethNode} from "./geth.js";
@@ -28,8 +28,16 @@ export async function createExecutionNode<E extends ExecutionClient>(
     cliqueSealingPeriod: options.cliqueSealingPeriod ?? CLIQUE_SEALING_PERIOD,
     shanghaiTime:
       options.shanghaiTime ??
-      getEstimatedShanghaiTime({
-        capellaForkEpoch: forkConfig.CAPELLA_FORK_EPOCH,
+      getEstimatedForkTime({
+        forkEpoch: forkConfig.CAPELLA_FORK_EPOCH,
+        genesisTime: options.genesisTime,
+        secondsPerSlot: forkConfig.SECONDS_PER_SLOT,
+        additionalSlots: 0,
+      }),
+    cancunTime:
+      options.cancunTime ??
+      getEstimatedForkTime({
+        forkEpoch: forkConfig.DENEB_FORK_EPOCH,
         genesisTime: options.genesisTime,
         secondsPerSlot: forkConfig.SECONDS_PER_SLOT,
         additionalSlots: 0,

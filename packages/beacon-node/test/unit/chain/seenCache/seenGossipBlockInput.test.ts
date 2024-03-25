@@ -3,7 +3,7 @@ import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lo
 import {ssz} from "@lodestar/types";
 
 import {SeenGossipBlockInput} from "../../../../src/chain/seenCache/seenGossipBlockInput.js";
-import {BlockInputType, GossipedInputType} from "../../../../src/chain/blocks/types.js";
+import {BlockInputType, GossipedInputType, BlockInput} from "../../../../src/chain/blocks/types.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 describe("SeenGossipBlockInput", () => {
@@ -120,7 +120,7 @@ describe("SeenGossipBlockInput", () => {
             } else if (expectedResponseType === null) {
               expect(blockInputRes).toBeNull();
             } else {
-              expect(blockInputRes.blockInput?.type).toEqual(expectedResponseType);
+              expect((blockInputRes.blockInput as BlockInput)?.type).toEqual(expectedResponseType);
             }
           } else {
             const index = parseInt(inputEvent.split("blob")[1] ?? "0");
@@ -140,10 +140,10 @@ describe("SeenGossipBlockInput", () => {
             if (expectedResponseType instanceof Error) {
               expect.fail(`expected to fail with error: ${expectedResponseType.message}`);
             } else if (expectedResponseType === null) {
-              expect(blobInputRes.blockInput).toBeNull();
+              expect(blobInputRes.blockInput.block).toBeNull();
               expect(blobInputRes.blockInputMeta.expectedBlobs).toBeNull();
             } else {
-              expect(blobInputRes.blockInput?.type).toEqual(expectedResponseType);
+              expect((blobInputRes.blockInput as BlockInput)?.type).toEqual(expectedResponseType);
             }
           }
         } catch (e) {

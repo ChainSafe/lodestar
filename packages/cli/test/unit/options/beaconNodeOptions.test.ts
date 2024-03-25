@@ -37,6 +37,10 @@ describe("options / beaconNodeOptions", () => {
       "chain.minSameMessageSignatureSetsToBatch": 32,
       "chain.maxShufflingCacheEpochs": 100,
       "chain.archiveBlobEpochs": 10000,
+      "chain.nHistoricalStates": true,
+      "chain.nHistoricalStatesFileDataStore": true,
+      "chain.maxBlockStates": 100,
+      "chain.maxCPStateEpochsInMemory": 100,
       emitPayloadAttributes: false,
 
       eth1: true,
@@ -141,6 +145,10 @@ describe("options / beaconNodeOptions", () => {
         minSameMessageSignatureSetsToBatch: 32,
         maxShufflingCacheEpochs: 100,
         archiveBlobEpochs: 10000,
+        nHistoricalStates: true,
+        nHistoricalStatesFileDataStore: true,
+        maxBlockStates: 100,
+        maxCPStateEpochsInMemory: 100,
       },
       eth1: {
         enabled: true,

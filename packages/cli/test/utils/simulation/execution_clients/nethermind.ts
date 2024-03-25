@@ -15,8 +15,19 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
     throw Error(`EL ENV must be provided, NETHERMIND_DOCKER_IMAGE: ${process.env.NETHERMIND_DOCKER_IMAGE}`);
   }
 
-  const {id, mode, ttd, address, mining, clientOptions, nodeIndex, cliqueSealingPeriod, shanghaiTime, genesisTime} =
-    opts;
+  const {
+    id,
+    mode,
+    ttd,
+    address,
+    mining,
+    clientOptions,
+    nodeIndex,
+    cliqueSealingPeriod,
+    shanghaiTime,
+    cancunTime,
+    genesisTime,
+  } = opts;
   const ports = getNodePorts(nodeIndex);
 
   const {rootDir, rootDirMounted, logFilePath, jwtsecretFilePathMounted} = getNodeMountedPaths(
@@ -48,7 +59,14 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
       await writeFile(
         chainSpecPath,
         JSON.stringify(
-          getNethermindChainSpec(mode, {ttd, cliqueSealingPeriod, shanghaiTime, genesisTime, clientOptions: []})
+          getNethermindChainSpec(mode, {
+            ttd,
+            cliqueSealingPeriod,
+            shanghaiTime,
+            cancunTime,
+            genesisTime,
+            clientOptions: [],
+          })
         )
       );
     },

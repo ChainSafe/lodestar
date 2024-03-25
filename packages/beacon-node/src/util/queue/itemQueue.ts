@@ -93,7 +93,7 @@ export class JobItemQueue<Args extends any[], R> {
     this.runningJobs++;
 
     // If the job, metrics or any code below throws: the job will reject never going stale.
-    // Only downside is the the job promise may be resolved twice, but that's not an issue
+    // Only downside is the job promise may be resolved twice, but that's not an issue
     try {
       const timer = this.metrics?.jobTime.startTimer();
       this.metrics?.jobWaitTime.observe((Date.now() - job.addedTimeMs) / 1000);

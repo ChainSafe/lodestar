@@ -72,7 +72,7 @@ import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices, selectBlockProdu
  * they are 8 epochs apart) and causes an OOM. Research a proper solution once regen and the state
  * caches are better.
  */
-const SYNC_TOLERANCE_EPOCHS = 1;
+export const SYNC_TOLERANCE_EPOCHS = 1;
 
 /**
  * Cutoff time to wait for execution and builder block production apis to resolve
@@ -912,7 +912,7 @@ export function getValidatorApi({
       // TODO: Add a flag to just send 0x00 as pubkeys since the Lodestar validator does not need them.
       const pubkeys = getPubkeysForIndices(state.validators, indexes);
 
-      const startSlot = computeStartSlotAtEpoch(stateEpoch);
+      const startSlot = computeStartSlotAtEpoch(epoch);
       const duties: routes.validator.ProposerDuty[] = [];
       for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
         duties.push({slot: startSlot + i, validatorIndex: indexes[i], pubkey: pubkeys[i]});

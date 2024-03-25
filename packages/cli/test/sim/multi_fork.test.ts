@@ -19,17 +19,20 @@ import {mergeAssertion} from "../utils/simulation/assertions/mergeAssertion.js";
 import {createForkAssertion} from "../utils/simulation/assertions/forkAssertion.js";
 import {createAccountBalanceAssertion} from "../utils/simulation/assertions/accountBalanceAssertion.js";
 import {createExecutionHeadAssertion} from "../utils/simulation/assertions/executionHeadAssertion.js";
+import {createWithdrawalAssertions} from "../utils/simulation/assertions/withdrawalsAssertion.js";
 
 const altairForkEpoch = 2;
 const bellatrixForkEpoch = 4;
 const capellaForkEpoch = 6;
-const runTillEpoch = 8;
+const denebForkEpoch = 8;
+const runTillEpoch = 10;
 const syncWaitEpoch = 2;
 
 const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
   ALTAIR_FORK_EPOCH: altairForkEpoch,
   BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
   CAPELLA_FORK_EPOCH: capellaForkEpoch,
+  DENEB_FORK_EPOCH: denebForkEpoch,
   runTillEpoch: runTillEpoch + syncWaitEpoch,
   initialNodes: 5,
 });
@@ -76,7 +79,7 @@ const env = await SimulationEnvironment.initWithDefaults(
           },
         },
       },
-      execution: ExecutionClient.Nethermind,
+      execution: ExecutionClient.Geth,
       keysCount: 32,
       remote: true,
     },
@@ -93,7 +96,7 @@ const env = await SimulationEnvironment.initWithDefaults(
           },
         },
       },
-      execution: ExecutionClient.Nethermind,
+      execution: ExecutionClient.Geth,
       keysCount: 32,
     },
     {
@@ -110,7 +113,7 @@ const env = await SimulationEnvironment.initWithDefaults(
           },
         },
       },
-      execution: ExecutionClient.Nethermind,
+      execution: ExecutionClient.Geth,
       keysCount: 32,
     },
     {id: "node-5", beacon: BeaconClient.Lighthouse, execution: ExecutionClient.Geth, keysCount: 32},
@@ -152,6 +155,8 @@ env.tracker.register(
     checkForSlot: [env.clock.getLastSlotOfEpoch(bellatrixForkEpoch + 1) - 1],
   })
 );
+
+env.tracker.register(createWithdrawalAssertions(env.nodes[0].id));
 
 await env.start({runTimeoutMs: estimatedTimeoutMs});
 await connectAllNodes(env.nodes);
