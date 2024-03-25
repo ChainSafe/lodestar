@@ -18,6 +18,7 @@ import {
   VersionMeta,
   WithVersion,
 } from "../utils/codecs.js";
+import {toForkName} from "../utils/serdes.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -56,7 +57,7 @@ export type Endpoints = {
   submitBlindedBlock: Endpoint<
     "POST",
     {signedBlindedBlock: allForks.SignedBlindedBeaconBlock},
-    {body: unknown; headers: {"Eth-Consensus-Version": ForkName}},
+    {body: unknown; headers: {"Eth-Consensus-Version": string}},
     allForks.ExecutionPayload | allForks.ExecutionPayloadAndBlobsBundle,
     VersionMeta
   >;
@@ -120,7 +121,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           };
         },
         parseReqJson: ({body, headers}) => {
-          const forkName = headers["Eth-Consensus-Version"]; // TODO validation
+          const forkName = toForkName(headers["Eth-Consensus-Version"]); // TODO validation
           const forkSeq = config.forks[forkName].seq;
           if (forkSeq < ForkSeq.capella) throw new Error("TODO"); // TODO
           return {
@@ -137,7 +138,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           };
         },
         parseReqSsz: ({body, headers}) => {
-          const forkName = headers["Eth-Consensus-Version"]; // TODO validation
+          const forkName = toForkName(headers["Eth-Consensus-Version"]); // TODO error if header does not exist
           const forkSeq = config.forks[forkName].seq;
           if (forkSeq < ForkSeq.capella) throw new Error("TODO"); // TODO
           return {

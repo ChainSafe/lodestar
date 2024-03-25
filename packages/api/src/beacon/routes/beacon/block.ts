@@ -15,6 +15,7 @@ import {
   ExecutionOptimisticMeta,
   WithVersion,
 } from "../../../utils/codecs.js";
+import {toForkName} from "../../../utils/serdes.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -167,7 +168,7 @@ export type Endpoints = {
     //
     "POST",
     {signedBlockOrContents: allForks.SignedBeaconBlockOrContents},
-    {body: unknown; headers: {"Eth-Consensus-Version": ForkName}},
+    {body: unknown; headers: {"Eth-Consensus-Version": string}},
     EmptyResponseData,
     EmptyMeta
   >;
@@ -175,7 +176,7 @@ export type Endpoints = {
   publishBlockV2: Endpoint<
     "POST",
     {signedBlockOrContents: allForks.SignedBeaconBlockOrContents; broadcastValidation?: BroadcastValidation},
-    {body: unknown; headers: {"Eth-Consensus-Version": ForkName}; query: {broadcast_validation?: string}},
+    {body: unknown; headers: {"Eth-Consensus-Version": string}; query: {broadcast_validation?: string}},
     EmptyResponseData,
     EmptyMeta
   >;
@@ -187,7 +188,7 @@ export type Endpoints = {
   publishBlindedBlock: Endpoint<
     "POST",
     {signedBlindedBlock: allForks.SignedBlindedBeaconBlock},
-    {body: unknown; headers: {"Eth-Consensus-Version": ForkName}},
+    {body: unknown; headers: {"Eth-Consensus-Version": string}},
     EmptyResponseData,
     EmptyMeta
   >;
@@ -198,7 +199,7 @@ export type Endpoints = {
       signedBlindedBlock: allForks.SignedBlindedBeaconBlock;
       broadcastValidation?: BroadcastValidation;
     },
-    {body: unknown; headers: {"Eth-Consensus-Version": ForkName}; query: {broadcast_validation?: string}},
+    {body: unknown; headers: {"Eth-Consensus-Version": string}; query: {broadcast_validation?: string}},
     EmptyResponseData,
     EmptyMeta
   >;
@@ -308,7 +309,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           };
         },
         parseReqJson: ({body, headers}) => {
-          const forkName = headers["Eth-Consensus-Version"]; // TODO validation
+          const forkName = toForkName(headers["Eth-Consensus-Version"]); // TODO error if header does not exist
           const forkSeq = config.forks[forkName].seq;
           return {
             signedBlockOrContents:
@@ -334,7 +335,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           };
         },
         parseReqSsz: ({body, headers}) => {
-          const forkName = headers["Eth-Consensus-Version"]; // TODO validation
+          const forkName = toForkName(headers["Eth-Consensus-Version"]); // TODO error if header does not exist
           const forkSeq = config.forks[forkName].seq;
           return {
             signedBlockOrContents:
@@ -372,7 +373,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           };
         },
         parseReqJson: ({body, headers, query}) => {
-          const forkName = headers["Eth-Consensus-Version"]; // TODO validation
+          const forkName = toForkName(headers["Eth-Consensus-Version"]); // TODO error if header does not exist
           const forkSeq = config.forks[forkName].seq;
           return {
             signedBlockOrContents:
@@ -400,7 +401,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           };
         },
         parseReqSsz: ({body, headers, query}) => {
-          const forkName = headers["Eth-Consensus-Version"]; // TODO validation
+          const forkName = toForkName(headers["Eth-Consensus-Version"]); // TODO validation
           const forkSeq = config.forks[forkName].seq;
           return {
             signedBlockOrContents:
@@ -432,7 +433,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           };
         },
         parseReqJson: ({body, headers}) => {
-          const forkName = headers["Eth-Consensus-Version"]; // TODO validation
+          const forkName = toForkName(headers["Eth-Consensus-Version"]); // TODO error if header does not exist
           const forkSeq = config.forks[forkName].seq;
           if (forkSeq < ForkSeq.capella) throw new Error("TODO"); // TODO
           return {
@@ -449,7 +450,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           };
         },
         parseReqSsz: ({body, headers}) => {
-          const forkName = headers["Eth-Consensus-Version"]; // TODO validation
+          const forkName = toForkName(headers["Eth-Consensus-Version"]); // TODO error if header does not exist
           const forkSeq = config.forks[forkName].seq;
           if (forkSeq < ForkSeq.capella) throw new Error("TODO"); // TODO
           return {
@@ -479,7 +480,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           };
         },
         parseReqJson: ({body, headers, query}) => {
-          const forkName = headers["Eth-Consensus-Version"]; // TODO validation
+          const forkName = toForkName(headers["Eth-Consensus-Version"]); // TODO error if header does not exist
           const forkSeq = config.forks[forkName].seq;
           if (forkSeq < ForkSeq.capella) throw new Error("TODO"); // TODO
           return {
@@ -498,7 +499,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           };
         },
         parseReqSsz: ({body, headers, query}) => {
-          const forkName = headers["Eth-Consensus-Version"]; // TODO validation
+          const forkName = toForkName(headers["Eth-Consensus-Version"]); // TODO error if header does not exist
           const forkSeq = config.forks[forkName].seq;
           if (forkSeq < ForkSeq.capella) throw new Error("TODO"); // TODO
           return {
