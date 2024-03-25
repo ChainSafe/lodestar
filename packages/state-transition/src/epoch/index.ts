@@ -100,7 +100,7 @@ export function processEpoch(
   // processRewardsAndPenalties(state, cache);
   {
     const timer = metrics?.epochTransitionStepTime.startTimer({step: EpochTransitionStep.processRegistryUpdates});
-    processRegistryUpdates(state, cache);
+    processRegistryUpdates(fork, state, cache);
     timer?.();
   }
 

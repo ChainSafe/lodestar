@@ -1,5 +1,5 @@
 import {ForkSeq} from "@lodestar/params";
-import {allForks, altair, capella} from "@lodestar/types";
+import {allForks, altair, capella, electra} from "@lodestar/types";
 import {getFullOrBlindedPayload, isExecutionEnabled} from "../util/execution.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateCapella, CachedBeaconStateBellatrix} from "../types.js";
 import {processExecutionPayload} from "./processExecutionPayload.js";
@@ -12,6 +12,7 @@ import {processBlobKzgCommitments} from "./processBlobKzgCommitments.js";
 import {BlockExternalData, DataAvailableStatus} from "./externalData.js";
 import {processWithdrawals} from "./processWithdrawals.js";
 import {ProcessBlockOpts} from "./types.js";
+import { CachedBeaconStateElectra } from "../../lib/types.js";
 
 // Spec tests
 export {
@@ -45,12 +46,21 @@ export function processBlock(
     const fullOrBlindedPayload = getFullOrBlindedPayload(block);
     // TODO Deneb: Allow to disable withdrawals for interop testing
     // https://github.com/ethereum/consensus-specs/blob/b62c9e877990242d63aa17a2a59a49bc649a2f2e/specs/eip4844/beacon-chain.md#disabling-withdrawals
-    if (fork >= ForkSeq.capella) {
+    if (fork === ForkSeq.capella || fork === ForkSeq.deneb) {
       processWithdrawals(
+        fork,
         state as CachedBeaconStateCapella,
         fullOrBlindedPayload as capella.FullOrBlindedExecutionPayload
       );
     }
+    if (fork >= ForkSeq.electra) {
+      processWithdrawals(
+        fork,
+        state as CachedBeaconStateElectra,
+        fullOrBlindedPayload as capella.FullOrBlindedExecutionPayload
+      );
+    }
+
     processExecutionPayload(fork, state as CachedBeaconStateBellatrix, block.body, externalData);
   }
 

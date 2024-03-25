@@ -3,6 +3,7 @@ import {CachedBeaconStateCapella} from "../../../src/index.js";
 import {getExpectedWithdrawals} from "../../../src/block/processWithdrawals.js";
 import {numValidators} from "../util.js";
 import {getExpectedWithdrawalsTestData, WithdrawalOpts} from "../../utils/capella.js";
+import { ForkSeq } from "@lodestar/params";
 
 // PERF: Fixed cost for MAX_WITHDRAWALS_PER_PAYLOAD probes
 //  + cost 'proportional' to $VALIDATOR_COUNT with balances under MAX_EFFECTIVE_BALANCE or
@@ -69,7 +70,7 @@ describe("getExpectedWithdrawals", () => {
         return opts.cache ? state : state.clone(true);
       },
       fn: (state) => {
-        const {sampledValidators} = getExpectedWithdrawals(state);
+        const {sampledValidators} = getExpectedWithdrawals(ForkSeq.capella, state); // TODO Electra: Do test for electra
         if (sampledValidators !== opts.sampled) {
           throw Error(`Wrong sampledValidators ${sampledValidators} != ${opts.sampled}`);
         }

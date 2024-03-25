@@ -236,5 +236,6 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     MAX_CONSOLIDATIONS: electraForkRelevant,
     WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA: electraForkRelevant,
     MAX_PARTIAL_WITHDRAWALS_PER_PAYLOAD: electraForkRelevant,
+    MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT: electraForkRelevant,
   };
 }
