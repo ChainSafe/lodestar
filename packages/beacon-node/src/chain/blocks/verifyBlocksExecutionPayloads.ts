@@ -6,7 +6,7 @@ import {
   isMergeTransitionBlock as isMergeTransitionBlockFn,
   isExecutionEnabled,
 } from "@lodestar/state-transition";
-import {bellatrix, allForks, Slot, deneb} from "@lodestar/types";
+import {bellatrix, allForks, Slot, deneb, electra} from "@lodestar/types";
 import {
   IForkChoice,
   assertValidTerminalPowBlock,
@@ -15,10 +15,11 @@ import {
   MaybeValidExecutionStatus,
   LVHValidResponse,
   LVHInvalidResponse,
+  InclusionListStatus,
 } from "@lodestar/fork-choice";
 import {ChainForkConfig} from "@lodestar/config";
 import {ErrorAborted, Logger} from "@lodestar/utils";
-import {ForkSeq, SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@lodestar/params";
+import {ForkSeq, SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY, isForkILs, ForkName} from "@lodestar/params";
 
 import {IExecutionEngine} from "../../execution/engine/interface.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
@@ -28,7 +29,7 @@ import {BlockProcessOpts} from "../options.js";
 import {ExecutionPayloadStatus} from "../../execution/engine/interface.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
 import {Metrics} from "../../metrics/metrics.js";
-import {ImportBlockOpts} from "./types.js";
+import {BlockInput, BlockInputType, ImportBlockOpts, BlockInputILType} from "./types.js";
 
 export type VerifyBlockExecutionPayloadModules = {
   eth1: IEth1ForBlockProduction;
@@ -68,17 +69,18 @@ type VerifyBlockExecutionResponse =
 export async function verifyBlocksExecutionPayload(
   chain: VerifyBlockExecutionPayloadModules,
   parentBlock: ProtoBlock,
-  blocks: allForks.SignedBeaconBlock[],
+  blocksInput: BlockInput[],
   preState0: CachedBeaconStateAllForks,
   signal: AbortSignal,
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<SegmentExecStatus> {
   const executionStatuses: MaybeValidExecutionStatus[] = [];
+  const blocks = blocksInput.map((blockInput) => blockInput.block);
   let mergeBlockFound: bellatrix.BeaconBlock | null = null;
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
 
   // Error in the same way as verifyBlocksSanityChecks if empty blocks
-  if (blocks.length === 0) {
+  if (blocksInput.length === 0) {
     throw Error("Empty partiallyVerifiedBlocks");
   }
 
@@ -150,8 +152,9 @@ export async function verifyBlocksExecutionPayload(
     parentBlock.executionStatus !== ExecutionStatus.PreMerge ||
     lastBlock.message.slot + safeSlotsToImportOptimistically < currentSlot;
 
-  for (let blockIndex = 0; blockIndex < blocks.length; blockIndex++) {
-    const block = blocks[blockIndex];
+  for (let blockIndex = 0; blockIndex < blocksInput.length; blockIndex++) {
+    const blockInput = blocksInput[blockIndex];
+    const block = blockInput.block;
     // If blocks are invalid in consensus the main promise could resolve before this loop ends.
     // In that case stop sending blocks to execution engine
     if (signal.aborted) {
@@ -159,7 +162,7 @@ export async function verifyBlocksExecutionPayload(
     }
     const verifyResponse = await verifyBlockExecutionPayload(
       chain,
-      block,
+      blockInput,
       preState0,
       opts,
       isOptimisticallySafe,
@@ -274,12 +277,13 @@ export async function verifyBlocksExecutionPayload(
  */
 export async function verifyBlockExecutionPayload(
   chain: VerifyBlockExecutionPayloadModules,
-  block: allForks.SignedBeaconBlock,
+  blockInput: BlockInput,
   preState0: CachedBeaconStateAllForks,
   opts: BlockProcessOpts,
   isOptimisticallySafe: boolean,
   currentSlot: Slot
 ): Promise<VerifyBlockExecutionResponse> {
+  const block = blockInput.block;
   /** Not null if execution is enabled */
   const executionPayloadEnabled =
     isExecutionStateType(preState0) &&
@@ -311,6 +315,24 @@ export async function verifyBlockExecutionPayload(
     versionedHashes,
     parentBlockRoot
   );
+
+  let inclusionList: electra.InclusionList | null = null;
+  if (
+    blockInput.type === BlockInputType.postDeneb &&
+    blockInput.blockData.fork !== ForkName.deneb &&
+    blockInput.blockData.ilType === BlockInputILType.actualIL
+  ) {
+    inclusionList = blockInput.blockData.inclusionList;
+  } else if (blockInput.type === BlockInputType.blobsPromise && blockInput.cachedData.fork !== ForkName.deneb) {
+    inclusionList = blockInput.cachedData.inclusionList ?? null;
+  }
+
+  if (inclusionList !== null) {
+    const ilResult = await chain.executionEngine.notifyNewInclusionList(
+      inclusionList.signedSummary.message,
+      inclusionList.transactions
+    );
+  }
 
   chain.metrics?.engineNotifyNewPayloadResult.inc({result: execResult.status});
 

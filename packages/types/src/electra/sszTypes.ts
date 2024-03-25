@@ -12,33 +12,56 @@ import {ssz as bellatrixSsz} from "../bellatrix/index.js";
 import {ssz as capellaSsz} from "../capella/index.js";
 import {ssz as denebSsz} from "../deneb/index.js";
 
-const {BLSSignature, ExecutionAddress, Root, UintBn256, BLSPubkey, ValidatorIndex, Slot, UintNum64} = primitiveSsz;
+const {BLSSignature, ExecutionAddress, Root, UintBn256, BLSPubkey, Slot, UintNum64, ValidatorIndex} = primitiveSsz;
 
-export const ILSummary = new ListCompositeType(ExecutionAddress, MAX_TRANSACTIONS_PER_INCLUSION_LIST);
+export const InclusionListSummaryEntry = new ContainerType(
+  {
+    address: ExecutionAddress,
+    nonce: UintNum64,
+  },
+  {typeName: "InclusionListSummaryEntry", jsonCase: "eth2"}
+);
+export const ILSummaryEntryList = new ListCompositeType(InclusionListSummaryEntry, MAX_TRANSACTIONS_PER_INCLUSION_LIST);
 export const ILTransactions = new ListCompositeType(bellatrixSsz.Transaction, MAX_TRANSACTIONS_PER_INCLUSION_LIST);
+
+export const InclusionListSummary = new ContainerType(
+  {
+    slot: Slot,
+    proposerIndex: ValidatorIndex,
+    parentHash: Root,
+    summary: ILSummaryEntryList,
+  },
+  {typeName: "InclusionListSummary", jsonCase: "eth2"}
+);
 
 export const SignedInclusionListSummary = new ContainerType(
   {
-    summary: ILSummary,
+    message: InclusionListSummary,
     signature: BLSSignature,
   },
   {typeName: "SignedInclusionListSummary", jsonCase: "eth2"}
 );
 
-export const NewInclusionListRequest = new ContainerType(
+export const InclusionList = new ContainerType(
   {
-    slot: Slot,
-    inclusionList: ILTransactions,
-    summary: ILSummary,
-    parentBlockHash: Root,
+    signedSummary: SignedInclusionListSummary,
+    transactions: ILTransactions,
   },
-  {typeName: "NewInclusionListRequest", jsonCase: "eth2"}
+  {typeName: "InclusionList", jsonCase: "eth2"}
+);
+
+export const SignedInclusionList = new ContainerType(
+  {
+    message: InclusionList,
+    signature: BLSSignature,
+  },
+  {typeName: "SignedInclusionList", jsonCase: "eth2"}
 );
 
 export const ExecutionPayload = new ContainerType(
   {
     ...denebSsz.ExecutionPayload.fields,
-    previousInclusionListSummary: SignedInclusionListSummary,
+    previousInclusionListSummary: InclusionListSummary,
   },
   {typeName: "ExecutionPayload", jsonCase: "eth2"}
 );
@@ -173,8 +196,6 @@ export const BeaconState = new ContainerType(
     nextWithdrawalValidatorIndex: capellaSsz.BeaconState.fields.nextWithdrawalValidatorIndex,
     // Deep history valid from Capella onwards
     historicalSummaries: capellaSsz.BeaconState.fields.historicalSummaries,
-    // Inclusion list validation
-    previousProposerIndex: ValidatorIndex, // New in Electra
   },
   {typeName: "BeaconState", jsonCase: "eth2"}
 );

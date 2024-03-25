@@ -88,7 +88,7 @@ export function getGossipSSZType(topic: GossipTopic) {
     case GossipType.blob_sidecar:
       return ssz.deneb.BlobSidecar;
     case GossipType.inclusion_list:
-      return ssz.electra.NewInclusionListRequest;
+      return ssz.electra.SignedInclusionList;
     case GossipType.beacon_aggregate_and_proof:
       return ssz.phase0.SignedAggregateAndProof;
     case GossipType.beacon_attestation:

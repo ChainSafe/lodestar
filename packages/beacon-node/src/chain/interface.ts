@@ -117,6 +117,10 @@ export interface IBeaconChain {
   readonly producedBlockRoot: Map<RootHex, allForks.ExecutionPayload | null>;
   readonly shufflingCache: ShufflingCache;
   readonly producedBlindedBlockRoot: Set<RootHex>;
+  readonly producedInclusionList: Map<
+    BlockHash,
+    {ilSummary: electra.InclusionListSummary; ilTransactions: electra.ILTransactions}
+  >;
   readonly opts: IChainOptions;
 
   /** Stop beacon chain processing */
@@ -177,7 +181,7 @@ export interface IBeaconChain {
   processBlock(block: BlockInput, opts?: ImportBlockOpts): Promise<void>;
   /** Process a chain of blocks until complete */
   processChainSegment(blocks: BlockInput[], opts?: ImportBlockOpts): Promise<void>;
-  processInclusionList(inclusionList: electra.NewInclusionListRequest, opts?: ImportBlockOpts): Promise<void>;
+  processInclusionList(inclusionList: electra.SignedInclusionList, opts?: ImportBlockOpts): Promise<void>;
 
   getStatus(): phase0.Status;
 

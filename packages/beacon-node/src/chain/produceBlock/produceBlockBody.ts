@@ -1,3 +1,4 @@
+import {toHexString} from "@chainsafe/ssz";
 import {
   Bytes32,
   allForks,
@@ -253,6 +254,18 @@ export async function produceBlockBody<T extends BlockType>(
             // See: https://discord.com/channels/595666850260713488/892088344438255616/1009882079632314469
             await sleep(PAYLOAD_GENERATION_TIME_MS);
           }
+
+          // fetch the IL and cache it, it its not ready by the time of block signing
+          // then once can just proceed with empty IL
+          const parentHashRes = await getExecutionPayloadParentHash(this, currentState as CachedBeaconStateExecutions);
+          if (parentHashRes.isPremerge) {
+            throw Error("Execution builder disabled pre-merge");
+          }
+
+          const {parentHash} = parentHashRes;
+          this.executionEngine.getInclusionList(parentHash).then((ilRes) => {
+            this.producedInclusionList.set(toHexString(parentHash), ilRes);
+          });
 
           const engineRes = await this.executionEngine.getPayload(fork, payloadId);
           const {executionPayload, blobsBundle} = engineRes;

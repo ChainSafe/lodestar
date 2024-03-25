@@ -302,9 +302,10 @@ export class Network implements INetwork {
     });
   }
 
-  async publishInclusionList(inclusionList: electra.NewInclusionListRequest): Promise<number> {
-    const fork = this.config.getForkName(inclusionList.slot);
-    return this.publishGossip<GossipType.inclusion_list>({type: GossipType.inclusion_list, fork}, inclusionList, {
+  async publishInclusionList(signedInclusionList: electra.SignedInclusionList): Promise<number> {
+    const slot = signedInclusionList.message.signedSummary.message.slot;
+    const fork = this.config.getForkName(slot);
+    return this.publishGossip<GossipType.inclusion_list>({type: GossipType.inclusion_list, fork}, signedInclusionList, {
       ignoreDuplicatePublishError: true,
     });
   }

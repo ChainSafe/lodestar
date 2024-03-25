@@ -1,4 +1,4 @@
-import {Epoch, Slot, RootHex, UintNum64} from "@lodestar/types";
+import {Epoch, Slot, RootHex, UintNum64, electra} from "@lodestar/types";
 
 // RootHex is a root as a hex string
 // Used for lightweight and easy comparison
@@ -35,13 +35,44 @@ export type LVHExecResponse = LVHValidResponse | LVHInvalidResponse;
 
 export type MaybeValidExecutionStatus = Exclude<ExecutionStatus, ExecutionStatus.Invalid>;
 
-export type BlockExecution =
+/**
+ * We only track if a valid inclusion list is available or unavail which is
+ * basically syncing. when an EL shows valid status for a block, the IL
+ * is valid for all the ancestors and can be constructed if need be if one
+ * has to propose from the Valid
+ */
+export enum InclusionListStatus {
+  PreIL = "PreIL",
+  Syncing = "Syncing",
+  Valid = "Valid",
+  // valid because there is a valid child/decensant
+  ValidChild = "ValidChild",
+}
+
+export type MayBeValidExecutionPayloadStatuses =
   | {
+      executionStatus: ExecutionStatus.Valid | ExecutionStatus.Syncing;
+      ilStatus: InclusionListStatus.Syncing | InclusionListStatus.PreIL;
+    }
+  | {executionStatus: ExecutionStatus.Valid; ilStatus: InclusionListStatus.ValidChild; validILChild: number}
+  | {
+      executionStatus: ExecutionStatus.Valid;
+      ilStatus: InclusionListStatus.Valid;
+      inclusionList: electra.ILTransactions;
+    };
+
+export type BlockExecution =
+  | ({
       executionPayloadBlockHash: RootHex;
       executionPayloadNumber: UintNum64;
-      executionStatus: Exclude<ExecutionStatus, ExecutionStatus.PreMerge>;
-    }
-  | {executionPayloadBlockHash: null; executionStatus: ExecutionStatus.PreMerge};
+    } & (
+      | {
+          executionStatus: ExecutionStatus.Invalid;
+          ilStatus: InclusionListStatus.Syncing | InclusionListStatus.PreIL;
+        }
+      | MayBeValidExecutionPayloadStatuses
+    ))
+  | {executionPayloadBlockHash: null; executionStatus: ExecutionStatus.PreMerge; ilStatus: InclusionListStatus.PreIL};
 /**
  * A block that is to be applied to the fork choice
  *

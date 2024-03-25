@@ -1,9 +1,16 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {deneb, Epoch, phase0, allForks, Slot} from "@lodestar/types";
-import {ForkSeq, ForkName} from "@lodestar/params";
+import {ForkSeq, isForkBlobs, isForkILs} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 
-import {BlockInput, BlockSource, getBlockInput} from "../../chain/blocks/types.js";
+import {
+  BlockInput,
+  BlockSource,
+  getBlockInput,
+  BlockInputILType,
+  BlockInputDataBlobs,
+  BlockInputDataIls,
+} from "../../chain/blocks/types.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {INetwork, WithBytes} from "../interface.js";
 
@@ -72,7 +79,8 @@ export function matchBlockWithBlobs(
   // Assuming that the blocks and blobs will come in same sorted order
   for (let i = 0; i < allBlocks.length; i++) {
     const block = allBlocks[i];
-    if (config.getForkSeq(block.data.message.slot) < ForkSeq.deneb) {
+    const fork = config.getForkName(block.data.message.slot);
+    if (!isForkBlobs(fork)) {
       blockInputs.push(getBlockInput.preDeneb(config, block.data, blockSource, block.bytes));
     } else {
       const blobSidecars: deneb.BlobSidecar[] = [];
@@ -94,20 +102,21 @@ export function matchBlockWithBlobs(
         );
       }
 
-      // TODO DENEB: instead of null, pass payload in bytes
-      blockInputs.push(
-        getBlockInput.postDeneb(
-          config,
-          block.data,
-          null,
-          {
-            fork: "deneb" as ForkName.deneb,
+      const blockData = isForkILs(fork)
+        ? ({
+            fork,
             blobs: blobSidecars,
             blobsBytes: Array.from({length: blobKzgCommitmentsLen}, () => null),
-          },
-          blockSource
-        )
-      );
+            ilType: BlockInputILType.childBlock,
+          } as BlockInputDataIls)
+        : ({
+            fork,
+            blobs: blobSidecars,
+            blobsBytes: Array.from({length: blobKzgCommitmentsLen}, () => null),
+          } as BlockInputDataBlobs);
+
+      // TODO DENEB: instead of null, pass payload in bytes
+      blockInputs.push(getBlockInput.postDeneb(config, block.data, null, blockData, blockSource));
     }
   }
 

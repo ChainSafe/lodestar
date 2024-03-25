@@ -1,6 +1,6 @@
 import {toHexString} from "@chainsafe/ssz";
-import {capella, ssz, allForks, altair} from "@lodestar/types";
-import {ForkSeq, INTERVALS_PER_SLOT, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {capella, ssz, allForks, altair, electra} from "@lodestar/types";
+import {ForkSeq, INTERVALS_PER_SLOT, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH, isForkILs, ForkName} from "@lodestar/params";
 import {
   CachedBeaconStateAltair,
   computeEpochAtSlot,
@@ -9,7 +9,14 @@ import {
   RootCache,
 } from "@lodestar/state-transition";
 import {routes} from "@lodestar/api";
-import {ForkChoiceError, ForkChoiceErrorCode, EpochDifference, AncestorStatus} from "@lodestar/fork-choice";
+import {
+  ForkChoiceError,
+  ForkChoiceErrorCode,
+  EpochDifference,
+  AncestorStatus,
+  InclusionListStatus,
+  ExecutionStatus,
+} from "@lodestar/fork-choice";
 import {isErrorAborted} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {toCheckpointHex} from "../stateCache/index.js";
@@ -19,7 +26,7 @@ import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {ChainEvent, ReorgEventData} from "../emitter.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
 import type {BeaconChain} from "../chain.js";
-import {FullyVerifiedBlock, ImportBlockOpts, AttestationImportOpt, BlockInputType} from "./types.js";
+import {FullyVerifiedBlock, ImportBlockOpts, AttestationImportOpt, BlockInputType, BlockInputILType} from "./types.js";
 import {getCheckpointFromState} from "./utils/checkpoint.js";
 import {writeBlockInputToDb} from "./writeBlockInputToDb.js";
 
@@ -75,17 +82,43 @@ export async function importBlock(
     await writeBlockInputToDb.call(this, [blockInput]);
   }
 
+  let ilStatus;
+  let inclusionList: electra.InclusionList | undefined = undefined;
+  if (blockInput.type === BlockInputType.preDeneb) {
+    ilStatus = InclusionListStatus.PreIL;
+  } else {
+    const blockData =
+      blockInput.type === BlockInputType.postDeneb
+        ? blockInput.blockData
+        : await blockInput.cachedData.availabilityPromise;
+    if (blockData.fork === ForkName.deneb) {
+      ilStatus = InclusionListStatus.PreIL;
+    } else {
+      if (blockData.ilType === BlockInputILType.childBlock || blockData.ilType === BlockInputILType.syncing) {
+        // if child is valid, the onBlock on protoArray will auto propagate the valid child upwards
+        ilStatus = InclusionListStatus.Syncing;
+      } else if (blockData.ilType === BlockInputILType.actualIL) {
+        // if IL was available and the block is valid, IL can be marked valid as IL would have been validated
+        // in the verification
+        //
+        // TODO : build and bundle te ilStatus in verify execution payload section itself
+        ilStatus = executionStatus === ExecutionStatus.Valid ? InclusionListStatus.Valid : InclusionListStatus.Syncing;
+        inclusionList = blockData.inclusionList;
+      } else {
+        throw Error("Parsing error, il");
+      }
+    }
+  }
+
   // 2. Import block to fork choice
 
   // Should compute checkpoint balances before forkchoice.onBlock
   this.checkpointBalancesCache.processState(blockRootHex, postState);
-  const blockSummary = this.forkChoice.onBlock(
-    block.message,
-    postState,
-    blockDelaySec,
-    this.clock.currentSlot,
-    executionStatus
-  );
+  const blockSummary = this.forkChoice.onBlock(block.message, postState, blockDelaySec, this.clock.currentSlot, {
+    executionStatus,
+    ilStatus,
+    inclusionList,
+  });
 
   // This adds the state necessary to process the next block
   // Some block event handlers require state being in state cache so need to do this before emitting EventType.block

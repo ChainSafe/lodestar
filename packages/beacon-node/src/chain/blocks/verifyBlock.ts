@@ -98,7 +98,7 @@ export async function verifyBlocksInEpoch(
     ] = await Promise.all([
       // Execution payloads
       opts.skipVerifyExecutionPayload !== true
-        ? verifyBlocksExecutionPayload(this, parentBlock, blocks, preState0, abortController.signal, opts)
+        ? verifyBlocksExecutionPayload(this, parentBlock, blocksInput, preState0, abortController.signal, opts)
         : Promise.resolve({
             execAborted: null,
             executionStatuses: blocks.map((_blk) => ExecutionStatus.Syncing),

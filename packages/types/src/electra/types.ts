@@ -1,10 +1,13 @@
 import {ValueOf} from "@chainsafe/ssz";
 import * as ssz from "./sszTypes.js";
 
-export type ILSummary = ValueOf<typeof ssz.ILSummary>;
+export type InclusionListSummaryEntry = ValueOf<typeof ssz.InclusionListSummaryEntry>;
+export type ILSummaryEntryList = ValueOf<typeof ssz.ILSummaryEntryList>;
 export type ILTransactions = ValueOf<typeof ssz.ILTransactions>;
+export type InclusionListSummary = ValueOf<typeof ssz.InclusionListSummary>;
 export type SignedInclusionListSummary = ValueOf<typeof ssz.SignedInclusionListSummary>;
-export type NewInclusionListRequest = ValueOf<typeof ssz.NewInclusionListRequest>;
+export type InclusionList = ValueOf<typeof ssz.InclusionList>;
+export type SignedInclusionList = ValueOf<typeof ssz.SignedInclusionList>;
 
 export type ExecutionPayload = ValueOf<typeof ssz.ExecutionPayload>;
 export type ExecutionPayloadHeader = ValueOf<typeof ssz.ExecutionPayloadHeader>;

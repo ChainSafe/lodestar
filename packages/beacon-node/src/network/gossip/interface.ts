@@ -73,7 +73,7 @@ export type SSZTypeOfGossipTopic<T extends GossipTopic> = T extends {type: infer
 export type GossipTypeMap = {
   [GossipType.beacon_block]: allForks.SignedBeaconBlock;
   [GossipType.blob_sidecar]: deneb.BlobSidecar;
-  [GossipType.inclusion_list]: electra.NewInclusionListRequest;
+  [GossipType.inclusion_list]: electra.SignedInclusionList;
   [GossipType.beacon_aggregate_and_proof]: phase0.SignedAggregateAndProof;
   [GossipType.beacon_attestation]: phase0.Attestation;
   [GossipType.voluntary_exit]: phase0.SignedVoluntaryExit;
@@ -89,7 +89,7 @@ export type GossipTypeMap = {
 export type GossipFnByType = {
   [GossipType.beacon_block]: (signedBlock: allForks.SignedBeaconBlock) => Promise<void> | void;
   [GossipType.blob_sidecar]: (blobSidecar: deneb.BlobSidecar) => Promise<void> | void;
-  [GossipType.inclusion_list]: (inclusionList: electra.NewInclusionListRequest) => Promise<void> | void;
+  [GossipType.inclusion_list]: (inclusionList: electra.SignedInclusionList) => Promise<void> | void;
   [GossipType.beacon_aggregate_and_proof]: (aggregateAndProof: phase0.SignedAggregateAndProof) => Promise<void> | void;
   [GossipType.beacon_attestation]: (attestation: phase0.Attestation) => Promise<void> | void;
   [GossipType.voluntary_exit]: (voluntaryExit: phase0.SignedVoluntaryExit) => Promise<void> | void;

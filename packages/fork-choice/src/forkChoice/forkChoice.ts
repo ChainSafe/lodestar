@@ -1,7 +1,7 @@
 import {toHexString} from "@chainsafe/ssz";
 import {fromHex} from "@lodestar/utils";
 import {SLOTS_PER_HISTORICAL_ROOT, SLOTS_PER_EPOCH, INTERVALS_PER_SLOT} from "@lodestar/params";
-import {bellatrix, Slot, ValidatorIndex, phase0, allForks, ssz, RootHex, Epoch, Root} from "@lodestar/types";
+import {bellatrix, Slot, ValidatorIndex, phase0, allForks, ssz, RootHex, Epoch, Root, electra} from "@lodestar/types";
 import {
   computeSlotsSinceEpochStart,
   computeStartSlotAtEpoch,
@@ -26,6 +26,8 @@ import {
   MaybeValidExecutionStatus,
   LVHExecResponse,
   ProtoNode,
+  InclusionListStatus,
+  MayBeValidExecutionPayloadStatuses,
 } from "../protoArray/interface.js";
 import {ProtoArray} from "../protoArray/protoArray.js";
 import {ProtoArrayError, ProtoArrayErrorCode} from "../protoArray/errors.js";
@@ -290,7 +292,11 @@ export class ForkChoice implements IForkChoice {
     state: CachedBeaconStateAllForks,
     blockDelaySec: number,
     currentSlot: Slot,
-    executionStatus: MaybeValidExecutionStatus
+    payloadStatusesInfo: {
+      executionStatus: MaybeValidExecutionStatus;
+      ilStatus: InclusionListStatus;
+      inclusionList?: electra.InclusionList;
+    }
   ): ProtoBlock {
     const {parentRoot, slot} = block;
     const parentRootHex = toHexString(parentRoot);
@@ -465,9 +471,13 @@ export class ForkChoice implements IForkChoice {
         ? {
             executionPayloadBlockHash: toHexString(block.body.executionPayload.blockHash),
             executionPayloadNumber: block.body.executionPayload.blockNumber,
-            executionStatus: this.getPostMergeExecStatus(executionStatus),
+            ...this.getPostMergeExecStatuses(payloadStatusesInfo),
           }
-        : {executionPayloadBlockHash: null, executionStatus: this.getPreMergeExecStatus(executionStatus)}),
+        : {
+            executionPayloadBlockHash: null,
+            executionStatus: this.getPreMergeExecStatus(payloadStatusesInfo.executionStatus),
+            ilStatus: InclusionListStatus.PreIL,
+          }),
     };
 
     this.protoArray.onBlock(protoBlock, currentSlot);
@@ -905,14 +915,31 @@ export class ForkChoice implements IForkChoice {
     return executionStatus;
   }
 
-  private getPostMergeExecStatus(
-    executionStatus: MaybeValidExecutionStatus
-  ): ExecutionStatus.Valid | ExecutionStatus.Syncing {
+  private getPostMergeExecStatuses({
+    executionStatus,
+    ilStatus,
+    inclusionList,
+  }: {
+    executionStatus: MaybeValidExecutionStatus;
+    ilStatus: InclusionListStatus;
+    inclusionList?: electra.InclusionList;
+  }): MayBeValidExecutionPayloadStatuses {
     if (executionStatus === ExecutionStatus.PreMerge)
       throw Error(
         `Invalid post-merge execution status: expected: ${ExecutionStatus.Syncing} or ${ExecutionStatus.Valid} , got ${executionStatus}`
       );
-    return executionStatus;
+
+    if (ilStatus === InclusionListStatus.ValidChild) {
+      throw Error("ValidChild status can only be marked as exec status propagation");
+    }
+    if ([InclusionListStatus.PreIL, InclusionListStatus.Syncing].includes(ilStatus)) {
+      return {executionStatus, ilStatus} as MayBeValidExecutionPayloadStatuses;
+    } else {
+      if (inclusionList === undefined) {
+        throw Error("Missing inclusionList for valid ilStatus");
+      }
+      return {executionStatus, ilStatus, inclusionList} as MayBeValidExecutionPayloadStatuses;
+    }
   }
 
   /**

@@ -24,7 +24,7 @@ import {logFilesDir} from "./params.js";
 import {shell} from "./shell.js";
 
 // NOTE: How to run
-// DEV_RUN=true EL_BINARY_DIR=g11tech/ethereumjs:devnet6-32aaac EL_SCRIPT_DIR=ethereumjsdocker yarn vitest --run test/sim/4844-interop.test.ts
+// DATA_DIR_PREFIX=mergetests/ DEV_RUN=true EL_BINARY_DIR=ethpandaops/geth:7547-exp EL_SCRIPT_DIR=gethdocker yarn vitest --run test/sim/ils-interop.test.ts
 // ```
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention */
@@ -38,7 +38,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     );
   }
   vi.setConfig({testTimeout: 1000 * 60 * 10, hookTimeout: 1000 * 60 * 10});
-  const dataPath = fs.mkdtempSync(`${process.env.DATA_DIR_PREFIX}lodestar-test-4844`);
+  const dataPath = fs.mkdtempSync(`${process.env.DATA_DIR_PREFIX}lodestar-test-il`);
   const elSetupConfig = {
     elScriptDir: process.env.EL_SCRIPT_DIR,
     elBinaryDir: process.env.EL_BINARY_DIR,
@@ -67,7 +67,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
   it("Post-merge, run for a few blocks", async function () {
     console.log("\n\nPost-merge, run for a few blocks\n\n");
     const {elClient, tearDownCallBack} = await runEL(
-      {...elSetupConfig, mode: ELStartMode.PostMerge, genesisTemplate: "4844.tmpl"},
+      {...elSetupConfig, mode: ELStartMode.PostMerge, genesisTemplate: "il.tmpl"},
       {...elRunOptions, ttd: BigInt(0)},
       controller.signal
     );
@@ -106,7 +106,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     // delay a bit so that test is over the startup cpu surge that can cause timeouts
     // somehow this seems to be dependent on the number of the bns we start which calls
     // for some debugging
-    const genesisSlotsDelay = 30;
+    const genesisSlotsDelay = 4;
 
     // On the emprical runs 11 blobs are processed, leaving 3 blobs marging
     const expectedBlobs = 8;
@@ -142,6 +142,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
         BELLATRIX_FORK_EPOCH: 0,
         CAPELLA_FORK_EPOCH: 0,
         DENEB_FORK_EPOCH: 0,
+        ELECTRA_FORK_EPOCH: 0,
         TERMINAL_TOTAL_DIFFICULTY: ttd,
       },
       options: {
@@ -202,6 +203,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
         BELLATRIX_FORK_EPOCH: 0,
         CAPELLA_FORK_EPOCH: 0,
         DENEB_FORK_EPOCH: 0,
+        ELECTRA_FORK_EPOCH: 0,
         TERMINAL_TOTAL_DIFFICULTY: ttd,
       },
       options: {
@@ -224,6 +226,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     // Start range sync from the bn but using the same execution node
     const loggerNodeC = testLogger("Node-C", {
       ...testLoggerOpts,
+      level: LogLevel.debug,
       file: {
         filepath: `${logFilesDir}/4844-${testName}-C.log`,
         level: LogLevel.debug,
@@ -236,6 +239,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
         BELLATRIX_FORK_EPOCH: 0,
         CAPELLA_FORK_EPOCH: 0,
         DENEB_FORK_EPOCH: 0,
+        ELECTRA_FORK_EPOCH: 0,
         TERMINAL_TOTAL_DIFFICULTY: ttd,
       },
       options: {
@@ -256,21 +260,21 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     });
 
     const blobTxs = getBlobTxsFromFile(blobTxsPath);
-    let blobTxsIdx = 0;
+    const blobTxsIdx = 0;
 
-    bn.chain.clock.on(ClockEvent.slot, (slot) => {
-      // send raw tx every other slot
-      if (slot > 0 && slot % 2 === 1 && blobTxs[blobTxsIdx] !== undefined) {
-        sendRawTransactionBig(ethRpcUrl, blobTxs[blobTxsIdx], `${dataPath}/blobTx-${blobTxsIdx}.json`)
-          .then(() => {
-            // increment if blobTx has been transmitted successfully
-            blobTxsIdx++;
-          })
-          .catch((e) => {
-            loggerNodeA.error("failed to send raw blob tx", {slot, blobTxsIdx}, e);
-          });
-      }
-    });
+    // bn.chain.clock.on(ClockEvent.slot, (slot) => {
+    //   // send raw tx every other slot
+    //   if (slot > 0 && slot % 2 === 1 && blobTxs[blobTxsIdx] !== undefined) {
+    //     sendRawTransactionBig(ethRpcUrl, blobTxs[blobTxsIdx], `${dataPath}/blobTx-${blobTxsIdx}.json`)
+    //       .then(() => {
+    //         // increment if blobTx has been transmitted successfully
+    //         blobTxsIdx++;
+    //       })
+    //       .catch((e) => {
+    //         loggerNodeA.error("failed to send raw blob tx", {slot, blobTxsIdx}, e);
+    //       });
+    //   }4844-i
+    // });
 
     // let bn run for some time and then connect rangeSyncBN
     await new Promise<void>((resolve, _reject) => {

@@ -96,7 +96,21 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       engine_getPayloadV3: this.getPayload.bind(this),
       engine_getPayloadBodiesByHashV1: this.getPayloadBodiesByHash.bind(this),
       engine_getPayloadBodiesByRangeV1: this.getPayloadBodiesByRange.bind(this),
+      engine_newInclusionListV1: this.newInclusionListV1.bind(this),
+      engine_getInclusionListV1: this.getInclusionListV1.bind(this),
     };
+  }
+
+  private newInclusionListV1(
+    ..._args: EngineApiRpcParamTypes["engine_newInclusionListV1"]
+  ): EngineApiRpcReturnTypes["engine_newInclusionListV1"] {
+    throw Error("not implemented");
+  }
+
+  private getInclusionListV1(
+    ..._args: EngineApiRpcParamTypes["engine_getInclusionListV1"]
+  ): EngineApiRpcReturnTypes["engine_getInclusionListV1"] {
+    throw Error("not implemented");
   }
 
   private getPayloadBodiesByHash(

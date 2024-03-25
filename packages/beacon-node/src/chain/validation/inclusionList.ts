@@ -3,5 +3,5 @@ import {IBeaconChain} from "../interface.js";
 
 export async function validateGossipInclusionList(
   _chain: IBeaconChain,
-  _inclusionList: electra.NewInclusionListRequest
+  _inclusionList: electra.SignedInclusionList
 ): Promise<void> {}

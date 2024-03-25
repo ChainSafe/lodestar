@@ -24,20 +24,32 @@ export enum GossipedInputType {
   ilist = "ilist",
 }
 
+export enum BlockInputILType {
+  childBlock = "childBlock",
+  actualIL = "actualIL",
+  syncing = "syncing",
+}
+
 type ForkBlobsInfo = {fork: ForkName.deneb};
 type ForkILsInfo = {fork: ForkILs};
 
 export type BlobsCache = Map<number, {blobSidecar: deneb.BlobSidecar; blobBytes: Uint8Array | null}>;
 
 type BlobsData = {blobs: deneb.BlobSidecars; blobsBytes: (Uint8Array | null)[]};
-type ILsData = BlobsData & {ilSummary: electra.ILSummary; inclusionLists: electra.ILTransactions[]};
+type ILsData = BlobsData &
+  (
+    | {ilType: BlockInputILType.childBlock | BlockInputILType.syncing}
+    | {ilType: BlockInputILType.actualIL; inclusionList: electra.InclusionList}
+  );
 
 export type BlockInputDataBlobs = ForkBlobsInfo & BlobsData;
 export type BlockInputDataIls = ForkILsInfo & ILsData;
 export type BlockInputData = BlockInputDataBlobs | BlockInputDataIls;
 
 type BlobsInputCache = {blobsCache: BlobsCache};
-type ForkILsCache = BlobsInputCache & {ilSummary?: electra.ILSummary; inclusionLists: electra.ILTransactions[]};
+type ForkILsCache = BlobsInputCache & {
+  inclusionList?: electra.InclusionList;
+};
 
 export type BlockInputCacheBlobs = ForkBlobsInfo & BlobsInputCache;
 export type BlockInputCacheILs = ForkILsInfo & ForkILsCache;

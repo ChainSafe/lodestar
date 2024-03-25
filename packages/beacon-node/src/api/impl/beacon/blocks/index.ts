@@ -4,7 +4,15 @@ import {computeTimeAtSlot, reconstructFullBlockOrContents} from "@lodestar/state
 import {SLOTS_PER_HISTORICAL_ROOT, isForkBlobs, isForkILs} from "@lodestar/params";
 import {sleep, toHex} from "@lodestar/utils";
 import {allForks, deneb, electra, isSignedBlockContents, ProducedBlockSource, ssz} from "@lodestar/types";
-import {BlockSource, getBlockInput, ImportBlockOpts, BlockInput} from "../../../../chain/blocks/types.js";
+import {
+  BlockSource,
+  getBlockInput,
+  ImportBlockOpts,
+  BlockInput,
+  BlockInputILType,
+  BlockInputDataBlobs,
+  BlockInputDataIls,
+} from "../../../../chain/blocks/types.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 import {computeBlobSidecars} from "../../../../util/blobs.js";
@@ -50,31 +58,44 @@ export function getBeaconBlockApi({
     const slot = signedBlock.message.slot;
     const fork = config.getForkName(slot);
 
-    let blockForImport: BlockInput, blobSidecars: deneb.BlobSidecars, inclusionLists: electra.NewInclusionListRequest[];
+    let blockForImport: BlockInput,
+      blobSidecars: deneb.BlobSidecars,
+      signedInclusionList: electra.SignedInclusionList | null;
     if (isSignedBlockContents(signedBlockOrContents)) {
       blobSidecars = computeBlobSidecars(config, signedBlock, signedBlockOrContents);
       let blockData;
       if (!isForkBlobs(fork)) {
         throw Error(`Invalid fork=${fork} for publishing signedBlockOrContents`);
       } else if (!isForkILs(fork)) {
-        inclusionLists = [];
-        blockData = {fork, blobs: blobSidecars, blobsBytes: [null]};
+        signedInclusionList = null;
+        blockData = {fork, blobs: blobSidecars, blobsBytes: [null]} as BlockInputDataBlobs;
       } else {
-        // stub the values
-        const ilSummary = ssz.electra.ILSummary.defaultValue();
-        const ilTransactions = [ssz.electra.ILTransactions.defaultValue()];
-        inclusionLists = [ssz.electra.NewInclusionListRequest.defaultValue()];
-        inclusionLists[0].slot = slot;
-        inclusionLists[0].parentBlockHash = (
-          signedBlock as electra.SignedBeaconBlock
-        ).message.body.executionPayload.parentHash;
-        blockData = {fork, blobs: blobSidecars, blobsBytes: [null], ilSummary, inclusionLists: ilTransactions};
+        // pick the IL withsout signing anything for now
+        signedInclusionList = ssz.electra.SignedInclusionList.defaultValue();
+        const blockHash = toHexString(
+          (signedBlock as electra.SignedBeaconBlock).message.body.executionPayload.blockHash
+        );
+        const producedList = chain.producedInclusionList.get(blockHash);
+        if (producedList === undefined) {
+          throw Error("No Inclusion List produced for the block");
+        }
+
+        signedInclusionList.message.signedSummary.message = producedList.ilSummary;
+        signedInclusionList.message.transactions = producedList.ilTransactions;
+
+        blockData = {
+          fork,
+          blobs: blobSidecars,
+          blobsBytes: [null],
+          ilType: BlockInputILType.actualIL,
+          inclusionList: signedInclusionList.message,
+        } as BlockInputDataIls;
       }
 
       blockForImport = getBlockInput.postDeneb(config, signedBlock, null, blockData, BlockSource.api);
     } else {
       blobSidecars = [];
-      inclusionLists = [];
+      signedInclusionList = null;
       // TODO: Once API supports submitting data as SSZ, replace null with blockBytes
       blockForImport = getBlockInput.preDeneb(config, signedBlock, BlockSource.api, null);
     }
@@ -206,7 +227,7 @@ export function getBeaconBlockApi({
       //        blobs might need to hop between nodes because of partial subnet subscription
       ...blobSidecars.map((blobSidecar) => () => network.publishBlobSidecar(blobSidecar)),
       // republish the inclusion list even though it might have been already published
-      ...inclusionLists.map((inclusionList) => () => network.publishInclusionList(inclusionList)),
+      () => (signedInclusionList !== null ? network.publishInclusionList(signedInclusionList) : Promise.resolve(0)),
       () => network.publishBeaconBlock(signedBlock) as Promise<unknown>,
       () =>
         // there is no rush to persist block since we published it to gossip anyway

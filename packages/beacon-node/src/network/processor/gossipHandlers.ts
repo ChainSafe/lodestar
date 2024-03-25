@@ -264,12 +264,12 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
   }
 
   async function validateInclusionList(
-    inclusionList: electra.NewInclusionListRequest,
+    signedInclusionList: electra.SignedInclusionList,
     inclusionListBytes: Uint8Array,
     peerIdStr: string,
     seenTimestampSec: number
   ): Promise<BlockInput | NullBlockInput | null> {
-    const slot = inclusionList.slot;
+    const slot = signedInclusionList.message.signedSummary.message.slot;
     const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
     const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
 
@@ -277,7 +277,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
       config,
       {
         type: GossipedInputType.ilist,
-        inclusionList,
+        signedInclusionList,
         inclusionListBytes,
       },
       metrics
@@ -286,7 +286,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
     const blockInput = blockInputRes?.blockInput ?? null;
     try {
       const blockInputMeta = blockInputRes?.blockInputMeta ?? {};
-      await validateGossipInclusionList(chain, inclusionList);
+      await validateGossipInclusionList(chain, signedInclusionList);
       const recvToValidation = Date.now() / 1000 - seenTimestampSec;
       const validationTime = recvToValidation - recvToValLatency;
 
@@ -313,7 +313,11 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
         }
 
         if (e.action === GossipAction.REJECT) {
-          chain.persistInvalidSszValue(ssz.electra.NewInclusionListRequest, inclusionList, "gossip_reject_slot");
+          chain.persistInvalidSszValue(
+            ssz.electra.SignedInclusionList,
+            signedInclusionList,
+            `gossip_reject_slot_${slot}`
+          );
         }
       }
 
@@ -401,7 +405,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
   }
 
   function handleValidInclusionList(
-    inclusionList: electra.NewInclusionListRequest,
+    signedInclusionList: electra.SignedInclusionList,
     peerIdStr: string,
     seenTimestampSec: number
   ): void {
@@ -409,9 +413,10 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
 
     // metrics?.registerInclusionList(OpSource.gossip, seenTimestampSec, inclusionList);
     // if blobs are not yet fully available start an aggressive blob pull
+    const slot = signedInclusionList.message.signedSummary.message.slot;
 
     chain
-      .processInclusionList(inclusionList, {
+      .processInclusionList(signedInclusionList, {
         // block may be downloaded and processed by UnknownBlockSync
         ignoreIfKnown: true,
         // proposer signature already checked in validateBeaconBlock()
@@ -422,7 +427,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
       })
       .then(() => {
         // Returns the delay between the start of `block.slot` and `current time`
-        const delaySec = chain.clock.secFromSlot(inclusionList.slot);
+        const delaySec = chain.clock.secFromSlot(slot);
         metrics?.gossipBlock.elapsedTimeTillProcessed.observe(delaySec);
         chain.seenGossipBlockInput.prune();
       })
@@ -453,7 +458,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
         metrics?.gossipInclusionList.processInclusionListErrors.inc({
           error: e instanceof InclusionListGossipError ? e.type.code : "NOT_INCLUSION_LIST_ERROR",
         });
-        logger[logLevel]("Error receiving inclusion list", {slot: inclusionList.slot, peer: peerIdStr}, e as Error);
+        logger[logLevel]("Error receiving inclusion list", {slot, peer: peerIdStr}, e as Error);
         chain.seenGossipBlockInput.prune();
       });
   }
@@ -542,15 +547,15 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
       seenTimestampSec,
     }: GossipHandlerParamGeneric<GossipType.inclusion_list>) => {
       const {serializedData} = gossipData;
-      const inclusionList = sszDeserialize(topic, serializedData);
-      const ilSlot = inclusionList.slot;
+      const signedInclusionList = sszDeserialize(topic, serializedData);
+      const slot = signedInclusionList.message.signedSummary.message.slot;
 
-      if (config.getForkSeq(ilSlot) < ForkSeq.electra) {
+      if (config.getForkSeq(slot) < ForkSeq.electra) {
         throw new GossipActionError(GossipAction.REJECT, {code: "PRE_ELECTRA_IL"});
       }
 
-      const blockInput = await validateInclusionList(inclusionList, serializedData, peerIdStr, seenTimestampSec);
-      handleValidInclusionList(inclusionList, peerIdStr, seenTimestampSec);
+      const blockInput = await validateInclusionList(signedInclusionList, serializedData, peerIdStr, seenTimestampSec);
+      handleValidInclusionList(signedInclusionList, peerIdStr, seenTimestampSec);
       if (blockInput === null) {
         return;
       } else if (blockInput.block !== null) {
@@ -560,10 +565,10 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
         // handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
       } else {
         // wait for the block to arrive till some cutoff else emit unknownBlockInput event
-        chain.logger.debug("Block not yet available, racing with cutoff", {ilSlot});
+        chain.logger.debug("Block not yet available for seen inclusion list, racing with cutoff", {slot});
         const normalBlockInput = await raceWithCutoff(
           chain,
-          ilSlot,
+          slot,
           blockInput.blockInputPromise,
           BLOCK_AVAILABILITY_CUTOFF_MS
         ).catch((_e) => {
@@ -571,7 +576,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
         });
 
         if (normalBlockInput !== null) {
-          chain.logger.debug("Block corresponding to inclusion list is now available for processing", {ilSlot});
+          chain.logger.debug("Block corresponding to inclusion list is now available for processing", {slot});
           // we can directly send it for processing but block gossip handler will queue it up anyway
           // if we see any issues later, we can send it to handleValidBeaconBlock
           //
@@ -583,7 +588,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
             events.emit(NetworkEvent.unknownBlockInput, {blockInput: normalBlockInput, peer: peerIdStr});
           }
         } else {
-          chain.logger.debug("Block not available till BLOCK_AVAILABILITY_CUTOFF_MS", {ilSlot});
+          chain.logger.debug("Inclusion list seen but block not available till BLOCK_AVAILABILITY_CUTOFF_MS", {slot});
           events.emit(NetworkEvent.unknownBlockInput, {blockInput, peer: peerIdStr});
         }
       }

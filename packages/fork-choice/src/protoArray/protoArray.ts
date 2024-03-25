@@ -4,7 +4,14 @@ import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-trans
 import {GENESIS_EPOCH} from "@lodestar/params";
 
 import {ForkChoiceError, ForkChoiceErrorCode} from "../forkChoice/errors.js";
-import {ProtoBlock, ProtoNode, HEX_ZERO_HASH, ExecutionStatus, LVHExecResponse} from "./interface.js";
+import {
+  ProtoBlock,
+  ProtoNode,
+  HEX_ZERO_HASH,
+  ExecutionStatus,
+  LVHExecResponse,
+  InclusionListStatus,
+} from "./interface.js";
 import {ProtoArrayError, ProtoArrayErrorCode, LVHExecError, LVHExecErrorCode} from "./errors.js";
 
 export const DEFAULT_PRUNE_THRESHOLD = 0;
@@ -312,13 +319,15 @@ export class ProtoArray {
 
   private propagateValidExecutionStatusByIndex(validNodeIndex: number): void {
     let nodeIndex: number | undefined = validNodeIndex;
+    let childNodeIndex: number | undefined = undefined;
     // propagate till we keep encountering syncing status
     while (nodeIndex !== undefined) {
       const node = this.getNodeFromIndex(nodeIndex);
       if (node.executionStatus === ExecutionStatus.PreMerge || node.executionStatus === ExecutionStatus.Valid) {
         break;
       }
-      this.validateNodeByIndex(nodeIndex);
+      this.validateNodeByIndex(nodeIndex, childNodeIndex);
+      childNodeIndex = nodeIndex;
       nodeIndex = node.parent;
     }
   }
@@ -419,7 +428,7 @@ export class ProtoArray {
     return invalidNode;
   }
 
-  private validateNodeByIndex(nodeIndex: number): ProtoNode {
+  private validateNodeByIndex(nodeIndex: number, validChildIndex?: number): ProtoNode {
     const validNode = this.getNodeFromIndex(nodeIndex);
     if (validNode.executionStatus === ExecutionStatus.Invalid) {
       this.lvhError = {
@@ -433,6 +442,9 @@ export class ProtoArray {
       });
     } else if (validNode.executionStatus === ExecutionStatus.Syncing) {
       validNode.executionStatus = ExecutionStatus.Valid;
+      if (validChildIndex !== undefined && validNode.ilStatus === InclusionListStatus.Syncing) {
+        Object.assign(validNode, {ilStatus: InclusionListStatus.ValidChild, validILChild: validChildIndex});
+      }
     }
     return validNode;
   }

@@ -12,7 +12,7 @@ import {
 import {Metrics} from "../../metrics/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {EPOCHS_PER_BATCH} from "../../sync/constants.js";
-import {numToQuantity} from "../../eth1/provider/utils.js";
+import {bytesToData, dataToBytes, numToQuantity} from "../../eth1/provider/utils.js";
 import {
   ExecutionPayloadStatus,
   ExecutePayloadResponse,
@@ -22,6 +22,7 @@ import {
   BlobsBundle,
   VersionedHashes,
   ExecutionEngineState,
+  InclusionListResponse,
 } from "./interface.js";
 import {PayloadIdCache} from "./payloadIdCache.js";
 import {
@@ -35,6 +36,8 @@ import {
   ExecutionPayloadBody,
   assertReqSizeLimit,
   deserializeExecutionPayloadBody,
+  serializeInclusionListSummary,
+  parseInclusionListSummary,
 } from "./types.js";
 import {getExecutionEngineState} from "./utils.js";
 
@@ -86,8 +89,10 @@ const QUEUE_MAX_LENGTH = EPOCHS_PER_BATCH * SLOTS_PER_EPOCH * 2;
 
 // Define static options once to prevent extra allocations
 const notifyNewPayloadOpts: ReqOpts = {routeId: "notifyNewPayload"};
+const notifyInclusionListOpts: ReqOpts = {routeId: "notifyInclusionList"};
 const forkchoiceUpdatedV1Opts: ReqOpts = {routeId: "forkchoiceUpdated"};
 const getPayloadOpts: ReqOpts = {routeId: "getPayload"};
+const getInclusionListOpts: ReqOpts = {routeId: "getInclusionList"};
 
 /**
  * based on Ethereum JSON-RPC API and inherits the following properties of this standard:
@@ -145,10 +150,51 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     });
   }
 
-  async notifyNewInclusionList(inclusionList: electra.NewInclusionListRequest): Promise<ExecutePayloadResponse> {
-    // return dummy status, don't use latestValidHash anyway
-    const latestValidHash = toHexString(inclusionList.parentBlockHash);
-    return {status: ExecutionPayloadStatus.VALID, latestValidHash, validationError: null};
+  async notifyNewInclusionList(
+    inclusionListSummary: electra.InclusionListSummary,
+    transactions: electra.ILTransactions
+  ): Promise<InclusionListResponse> {
+    const method = "engine_newInclusionListV1";
+    const serializedSummary = serializeInclusionListSummary(inclusionListSummary);
+    const serializedTransactions = transactions.map((trans) => bytesToData(trans));
+    const engineRequest = {
+      method,
+      params: [serializedSummary, serializedTransactions] as EngineApiRpcParamTypes[typeof method],
+      methodOpts: notifyInclusionListOpts,
+    } as EngineRequest;
+
+    const {status, validationError} = await (
+      this.rpcFetchQueue.push(engineRequest) as Promise<EngineApiRpcReturnTypes[typeof method]>
+    ).catch((e: Error) => {
+      if (e instanceof HttpRpcError || e instanceof ErrorJsonRpcResponse) {
+        return {status: ExecutionPayloadStatus.ELERROR, validationError: e.message};
+      } else {
+        return {status: ExecutionPayloadStatus.UNAVAILABLE, validationError: e.message};
+      }
+    });
+
+    switch (status) {
+      case ExecutionPayloadStatus.SYNCING:
+      case ExecutionPayloadStatus.ACCEPTED:
+      case ExecutionPayloadStatus.VALID:
+        return {status, validationError: null};
+
+      case ExecutionPayloadStatus.INVALID:
+        return {status, validationError};
+
+      case ExecutionPayloadStatus.UNAVAILABLE:
+      case ExecutionPayloadStatus.ELERROR:
+        return {
+          status,
+          validationError: validationError ?? "Unknown ELERROR",
+        };
+
+      default:
+        return {
+          status: ExecutionPayloadStatus.ELERROR,
+          validationError: `Invalid EL status on executePayload: ${status}`,
+        };
+    }
   }
 
   /**
@@ -393,6 +439,29 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       getPayloadOpts
     );
     return parseExecutionPayload(fork, payloadResponse);
+  }
+
+  async getInclusionList(
+    parentHash: Root
+  ): Promise<{ilSummary: electra.InclusionListSummary; ilTransactions: electra.ILTransactions}> {
+    const method = "engine_getInclusionListV1";
+    const parentHashData = bytesToData(parentHash);
+
+    const {inclusionListSummary, inclusionListTransactions} = await this.rpc.fetchWithRetries<
+      EngineApiRpcReturnTypes[typeof method],
+      EngineApiRpcParamTypes[typeof method]
+    >(
+      {
+        method,
+        params: [parentHashData],
+      },
+      getInclusionListOpts
+    );
+
+    const ilSummary = parseInclusionListSummary(inclusionListSummary);
+    const ilTransactions = inclusionListTransactions.map((trans) => dataToBytes(trans, null));
+
+    return {ilSummary, ilTransactions};
   }
 
   async prunePayloadIdCache(): Promise<void> {

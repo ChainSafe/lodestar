@@ -2,7 +2,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {deneb, electra, RootHex, ssz, allForks} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {pruneSetToMax} from "@lodestar/utils";
-import {BLOBSIDECAR_FIXED_SIZE, ForkSeq, ForkName, isForkBlobs, isForkILs} from "@lodestar/params";
+import {BLOBSIDECAR_FIXED_SIZE, ForkName, isForkBlobs, isForkILs} from "@lodestar/params";
 
 import {
   BlockInput,
@@ -14,6 +14,7 @@ import {
   GossipedInputType,
   getBlockInputBlobs,
   BlockInputDataIls,
+  BlockInputILType,
 } from "../blocks/types.js";
 import {Metrics} from "../../metrics/index.js";
 
@@ -27,7 +28,7 @@ type GossipedBlockInput =
   | {type: GossipedInputType.blob; blobSidecar: deneb.BlobSidecar; blobBytes: Uint8Array | null}
   | {
       type: GossipedInputType.ilist;
-      inclusionList: electra.NewInclusionListRequest;
+      signedInclusionList: electra.SignedInclusionList;
       inclusionListBytes: Uint8Array | null;
     };
 
@@ -56,7 +57,7 @@ const MAX_GOSSIPINPUT_CACHE = 5;
  */
 export class SeenGossipBlockInput {
   private blockInputCache = new Map<RootHex, BlockInputCacheType>();
-  private seenILsByParentHash = new Map<RootHex, electra.NewInclusionListRequest>();
+  private seenILsByParentHash = new Map<RootHex, electra.SignedInclusionList>();
   private blockInputRootByParentHash = new Map<RootHex, RootHex>();
 
   prune(): void {
@@ -76,7 +77,11 @@ export class SeenGossipBlockInput {
   ):
     | {
         blockInput: BlockInput;
-        blockInputMeta: {pending: GossipedInputType.blob | null; haveBlobs: number; expectedBlobs: number};
+        blockInputMeta: {
+          pending: GossipedInputType.blob | GossipedInputType.ilist | null;
+          haveBlobs: number;
+          expectedBlobs: number;
+        };
       }
     | {
         blockInput: NullBlockInput;
@@ -88,9 +93,9 @@ export class SeenGossipBlockInput {
     let fork;
 
     if (gossipedInput.type === GossipedInputType.ilist) {
-      const {inclusionList} = gossipedInput;
-      const parentBlockHashHex = toHexString(inclusionList.parentBlockHash);
-      this.seenILsByParentHash.set(parentBlockHashHex, inclusionList);
+      const {signedInclusionList} = gossipedInput;
+      const parentBlockHashHex = toHexString(signedInclusionList.message.signedSummary.message.parentHash);
+      this.seenILsByParentHash.set(parentBlockHashHex, signedInclusionList);
 
       blockHex = this.blockInputRootByParentHash.get(parentBlockHashHex);
       blockCache = blockHex ? this.blockInputCache.get(blockHex) : undefined;
@@ -132,15 +137,15 @@ export class SeenGossipBlockInput {
     const {block: signedBlock, blockBytes, blockInputPromise, resolveBlockInput, cachedData} = blockCache;
 
     if (signedBlock !== undefined) {
-      if (ForkSeq[fork] < ForkSeq.deneb) {
+      if (!isForkBlobs(fork)) {
         return {
           blockInput: getBlockInput.preDeneb(config, signedBlock, BlockSource.gossip, blockBytes ?? null),
           blockInputMeta: {pending: null, haveBlobs: 0, expectedBlobs: 0},
         };
       }
 
-      if (cachedData === undefined) {
-        throw Error("Missing cached Data for deneb+ block");
+      if (cachedData === undefined || !isForkBlobs(cachedData.fork)) {
+        throw Error("Missing or Invalid fork cached Data for deneb+ block");
       }
       const {blobsCache} = cachedData;
 
@@ -157,26 +162,42 @@ export class SeenGossipBlockInput {
 
       if (blobKzgCommitments.length === blobsCache.size) {
         const allBlobs = getBlockInputBlobs(blobsCache);
-        const blockData = {fork: ForkName.deneb, ...allBlobs} as BlockInputDataBlobs;
+        const {blobs} = allBlobs;
+        let blockInput;
+
+        let blockData;
         if (cachedData.fork === ForkName.deneb) {
+          blockData = {fork: cachedData.fork, ...allBlobs} as BlockInputDataBlobs;
           cachedData.resolveAvailability(blockData);
         } else {
-          throw Error("il availability not implemented");
+          const parentBlockHash = toHexString(
+            (signedBlock as electra.SignedBeaconBlock).message.body.executionPayload.parentHash
+          );
+          const signedIL = this.seenILsByParentHash.get(parentBlockHash);
+          if (signedIL === undefined) {
+            blockData = {fork: cachedData.fork, ...allBlobs, ilType: BlockInputILType.syncing} as BlockInputDataIls;
+          } else {
+            blockData = {
+              fork: cachedData.fork,
+              ...allBlobs,
+              ilType: BlockInputILType.actualIL,
+              inclusionList: signedIL.message,
+            } as BlockInputDataIls;
+            cachedData.resolveAvailability(blockData);
+          }
         }
+
         metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.GOSSIP});
-        const {blobs} = allBlobs;
-        const blockInput = getBlockInput.postDeneb(
-          config,
-          signedBlock,
-          blockBytes ?? null,
-          blockData,
-          BlockSource.gossip
-        );
+        blockInput = getBlockInput.postDeneb(config, signedBlock, blockBytes ?? null, blockData, BlockSource.gossip);
 
         resolveBlockInput(blockInput);
         return {
           blockInput,
-          blockInputMeta: {pending: null, haveBlobs: blobs.length, expectedBlobs: blobKzgCommitments.length},
+          blockInputMeta: {
+            pending: GossipedInputType.ilist,
+            haveBlobs: blobsCache.size,
+            expectedBlobs: blobKzgCommitments.length,
+          },
         };
       } else {
         const blockInput = getBlockInput.blobsPromise(
@@ -255,7 +276,7 @@ function getEmptyBlockInputCacheEntry(fork: ForkName): BlockInputCacheType {
     if (resolveAvailability === null) {
       throw Error("Promise Constructor was not executed immediately");
     }
-    const cachedData: CachedData = {fork, blobsCache, availabilityPromise, resolveAvailability, inclusionLists: []};
+    const cachedData: CachedData = {fork, blobsCache, availabilityPromise, resolveAvailability};
     return {fork, blockInputPromise, resolveBlockInput, cachedData};
   }
 }

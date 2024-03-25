@@ -8,6 +8,7 @@ import {
   ExecutionStatus,
   JustifiedBalancesGetter,
   ForkChoiceOpts,
+  InclusionListStatus,
 } from "@lodestar/fork-choice";
 import {
   CachedBeaconStateAllForks,
@@ -83,8 +84,13 @@ export function initializeForkChoice(
               executionPayloadBlockHash: toHexString(state.latestExecutionPayloadHeader.blockHash),
               executionPayloadNumber: state.latestExecutionPayloadHeader.blockNumber,
               executionStatus: blockHeader.slot === GENESIS_SLOT ? ExecutionStatus.Valid : ExecutionStatus.Syncing,
+              ilStatus: InclusionListStatus.PreIL,
             }
-          : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
+          : {
+              executionPayloadBlockHash: null,
+              executionStatus: ExecutionStatus.PreMerge,
+              ilStatus: InclusionListStatus.PreIL,
+            }),
       },
       currentSlot
     ),

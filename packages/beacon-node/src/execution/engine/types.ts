@@ -1,4 +1,4 @@
-import {allForks, capella, deneb, Wei, bellatrix, Root} from "@lodestar/types";
+import {allForks, capella, deneb, electra, Wei, bellatrix, Root, ssz} from "@lodestar/types";
 import {
   BYTES_PER_LOGS_BLOOM,
   FIELD_ELEMENTS_PER_BLOB,
@@ -18,6 +18,13 @@ import {
 } from "../../eth1/provider/utils.js";
 import {ExecutionPayloadStatus, BlobsBundle, PayloadAttributes, VersionedHashes} from "./interface.js";
 import {WithdrawalV1} from "./payloadIdCache.js";
+
+type InclusionListSummaryV1 = {
+  slot: QUANTITY;
+  proposerIndex: QUANTITY;
+  parentHash: DATA;
+  summary: {address: DATA; nonce: QUANTITY}[];
+};
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -62,11 +69,22 @@ export type EngineApiRpcParamTypes = {
    *  2. count: QUANTITY, 64 bits - Number of blocks to return
    */
   engine_getPayloadBodiesByRangeV1: [start: QUANTITY, count: QUANTITY];
+
+  engine_newInclusionListV1: [
+    inclusionListSummary: InclusionListSummaryV1,
+    inclusionListTransactions: ExecutionPayloadRpc["transactions"],
+  ];
+  engine_getInclusionListV1: [DATA];
 };
 
 export type PayloadStatus = {
   status: ExecutionPayloadStatus;
   latestValidHash: DATA | null;
+  validationError: string | null;
+};
+
+export type InclusionListStatus = {
+  status: ExecutionPayloadStatus;
   validationError: string | null;
 };
 
@@ -100,6 +118,12 @@ export type EngineApiRpcReturnTypes = {
   engine_getPayloadBodiesByHashV1: (ExecutionPayloadBodyRpc | null)[];
 
   engine_getPayloadBodiesByRangeV1: (ExecutionPayloadBodyRpc | null)[];
+
+  engine_newInclusionListV1: InclusionListStatus;
+  engine_getInclusionListV1: {
+    inclusionListSummary: InclusionListSummaryV1;
+    inclusionListTransactions: ExecutionPayloadRpc["transactions"];
+  };
 };
 
 type ExecutionPayloadRpcWithValue = {
@@ -134,6 +158,7 @@ export type ExecutionPayloadRpc = {
   blobGasUsed?: QUANTITY; // DENEB
   excessBlobGas?: QUANTITY; // DENEB
   parentBeaconBlockRoot?: QUANTITY; // DENEB
+  previousInclusionListSummary?: InclusionListSummaryV1;
 };
 
 export type WithdrawalRpc = {
@@ -199,6 +224,30 @@ export function serializeExecutionPayload(fork: ForkName, data: allForks.Executi
 
 export function serializeVersionedHashes(vHashes: VersionedHashes): VersionedHashesRpc {
   return vHashes.map(bytesToData);
+}
+
+export function serializeInclusionListSummary(ilSummary: electra.InclusionListSummary): InclusionListSummaryV1 {
+  return {
+    slot: numToQuantity(ilSummary.slot),
+    proposerIndex: numToQuantity(ilSummary.proposerIndex),
+    parentHash: bytesToData(ilSummary.parentHash),
+    summary: ilSummary.summary.map(({address, nonce}) => ({
+      address: bytesToData(address),
+      nonce: numToQuantity(nonce),
+    })),
+  };
+}
+
+export function parseInclusionListSummary(rpcSummary: InclusionListSummaryV1): electra.InclusionListSummary {
+  return {
+    slot: quantityToNum(rpcSummary.slot),
+    proposerIndex: quantityToNum(rpcSummary.proposerIndex),
+    parentHash: dataToBytes(rpcSummary.parentHash, 32),
+    summary: rpcSummary.summary.map(({address, nonce}) => ({
+      address: dataToBytes(address, 20),
+      nonce: quantityToNum(nonce),
+    })),
+  };
 }
 
 export function hasPayloadValue(response: ExecutionPayloadResponse): response is ExecutionPayloadRpcWithValue {
@@ -277,6 +326,14 @@ export function parseExecutionPayload(
 
     (executionPayload as deneb.ExecutionPayload).blobGasUsed = quantityToBigint(blobGasUsed);
     (executionPayload as deneb.ExecutionPayload).excessBlobGas = quantityToBigint(excessBlobGas);
+  }
+
+  // inject parent summary
+  const {previousInclusionListSummary} = data;
+  if (ForkSeq[fork] >= ForkSeq.electra) {
+    (executionPayload as electra.ExecutionPayload).previousInclusionListSummary = previousInclusionListSummary
+      ? parseInclusionListSummary(previousInclusionListSummary)
+      : ssz.electra.InclusionListSummary.defaultValue();
   }
 
   return {executionPayload, executionPayloadValue, blobsBundle, shouldOverrideBuilder};

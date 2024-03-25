@@ -173,7 +173,7 @@ function getHeadExecutionInfo(
   if (clockEpoch < config.BELLATRIX_FORK_EPOCH) {
     return [];
   } else {
-    const executionStatusStr = headInfo.executionStatus.toLowerCase();
+    const executionStatusStr = `${headInfo.executionStatus.toLowerCase()}-il-${headInfo.ilStatus.toLowerCase()}`;
 
     // Add execution status to notifier only if head is on/post bellatrix
     if (isExecutionCachedStateType(headState)) {

@@ -1,4 +1,4 @@
-import {allForks, bellatrix, capella, deneb, isBlindedBeaconBlockBody, ssz} from "@lodestar/types";
+import {allForks, bellatrix, capella, deneb, electra, isBlindedBeaconBlockBody, ssz} from "@lodestar/types";
 import {ForkSeq} from "@lodestar/params";
 
 import {
@@ -163,11 +163,16 @@ export function executionPayloadToPayloadHeader(
   if (fork >= ForkSeq.deneb) {
     // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#process_execution_payload
     (bellatrixPayloadFields as deneb.ExecutionPayloadHeader).blobGasUsed = (
-      payload as deneb.ExecutionPayloadHeader | deneb.ExecutionPayload
+      payload as deneb.ExecutionPayload
     ).blobGasUsed;
     (bellatrixPayloadFields as deneb.ExecutionPayloadHeader).excessBlobGas = (
-      payload as deneb.ExecutionPayloadHeader | deneb.ExecutionPayload
+      payload as deneb.ExecutionPayload
     ).excessBlobGas;
+  }
+
+  if (fork >= ForkSeq.electra) {
+    (bellatrixPayloadFields as electra.ExecutionPayloadHeader).previousInclusionListSummaryRoot =
+      ssz.electra.InclusionListSummary.hashTreeRoot((payload as electra.ExecutionPayload).previousInclusionListSummary);
   }
 
   return bellatrixPayloadFields;

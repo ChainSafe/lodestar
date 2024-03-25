@@ -146,6 +146,10 @@ export class BeaconChain implements IBeaconChain {
   // actual publish
   readonly producedBlockRoot = new Map<RootHex, allForks.ExecutionPayload | null>();
   readonly producedBlindedBlockRoot = new Set<RootHex>();
+  readonly producedInclusionList = new Map<
+    RootHex,
+    {ilSummary: electra.InclusionListSummary; ilTransactions: electra.ILTransactions}
+  >();
 
   readonly opts: IChainOptions;
 
@@ -631,8 +635,9 @@ export class BeaconChain implements IBeaconChain {
     return this.blockProcessor.processBlocksJob(blocks, opts);
   }
 
-  async processInclusionList(inclusionList: electra.NewInclusionListRequest, _opts?: ImportBlockOpts): Promise<void> {
-    await this.executionEngine.notifyNewInclusionList(inclusionList);
+  async processInclusionList(signedInclusionList: electra.SignedInclusionList, _opts?: ImportBlockOpts): Promise<void> {
+    const inclusionList = signedInclusionList.message;
+    await this.executionEngine.notifyNewInclusionList(inclusionList.signedSummary.message, inclusionList.transactions);
   }
 
   getStatus(): phase0.Status {
@@ -908,6 +913,10 @@ export class BeaconChain implements IBeaconChain {
     if (this.config.getForkSeq(slot) >= ForkSeq.deneb) {
       pruneSetToMax(this.producedContentsCache, this.opts.maxCachedProducedRoots ?? DEFAULT_MAX_CACHED_PRODUCED_ROOTS);
       this.metrics?.blockProductionCaches.producedContentsCache.set(this.producedContentsCache.size);
+    }
+
+    if (this.config.getForkSeq(slot) >= ForkSeq.deneb) {
+      pruneSetToMax(this.producedInclusionList, this.opts.maxCachedProducedRoots ?? DEFAULT_MAX_CACHED_PRODUCED_ROOTS);
     }
 
     const metrics = this.metrics;

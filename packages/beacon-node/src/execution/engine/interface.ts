@@ -55,6 +55,24 @@ export type ExecutePayloadResponse =
       validationError: string;
     };
 
+export type InclusionListResponse =
+  | {
+      status:
+        | ExecutionPayloadStatus.ACCEPTED
+        | ExecutionPayloadStatus.INVALID
+        | ExecutionPayloadStatus.SYNCING
+        | ExecutionPayloadStatus.VALID;
+      validationError: null;
+    }
+  | {
+      status: ExecutionPayloadStatus.INVALID;
+      validationError: string;
+    }
+  | {
+      status: ExecutionPayloadStatus.ELERROR | ExecutionPayloadStatus.UNAVAILABLE;
+      validationError: string;
+    };
+
 export type ForkChoiceUpdateStatus =
   | ExecutionPayloadStatus.VALID
   | ExecutionPayloadStatus.INVALID
@@ -90,7 +108,13 @@ export type VersionedHashes = Uint8Array[];
  */
 export interface IExecutionEngine {
   payloadIdCache: PayloadIdCache;
-  notifyNewInclusionList(InclusionList: electra.NewInclusionListRequest): Promise<ExecutePayloadResponse>;
+  notifyNewInclusionList(
+    InclusionListSummary: electra.InclusionListSummary,
+    transactions: electra.ILTransactions
+  ): Promise<InclusionListResponse>;
+  getInclusionList(
+    parentHash: Root
+  ): Promise<{ilSummary: electra.InclusionListSummary; ilTransactions: electra.ILTransactions}>;
   /**
    * A state transition function which applies changes to the self.execution_state.
    * Returns ``True`` iff ``execution_payload`` is valid with respect to ``self.execution_state``.
