@@ -102,6 +102,6 @@ export const chainConfig: ChainConfig = {
 
 
   // Electra
-  // 2**7 * 10**9 (= 128,000,000,000)
-  MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA: 128000000000,
+  // 2**8 * 10**9 (= 256,000,000,000)
+  MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT: 256000000000,
 };

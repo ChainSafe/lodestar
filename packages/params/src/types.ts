@@ -92,6 +92,8 @@ export type BeaconPreset = {
   PENDING_PARTIAL_WITHDRAWALS_LIMIT: number;
   PENDING_CONSOLIDATIONS_LIMIT: number;
   MAX_CONSOLIDATIONS: number;
+  WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA: number;
+  MAX_PARTIAL_WITHDRAWALS_PER_PAYLOAD: number;
 };
 
 /**
@@ -187,6 +189,8 @@ export const beaconPresetTypes: BeaconPresetTypes = {
   PENDING_PARTIAL_WITHDRAWALS_LIMIT: "number",
   PENDING_CONSOLIDATIONS_LIMIT: "number",
   MAX_CONSOLIDATIONS: "number",
+  WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA: "number",
+  MAX_PARTIAL_WITHDRAWALS_PER_PAYLOAD: "number",
 };
 
 type BeaconPresetTypes = {

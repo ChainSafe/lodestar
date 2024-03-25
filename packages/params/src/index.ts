@@ -101,6 +101,8 @@ export const {
   PENDING_CONSOLIDATIONS_LIMIT,
   MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA,
   MAX_CONSOLIDATIONS,
+  WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA,
+  MAX_PARTIAL_WITHDRAWALS_PER_PAYLOAD,
 } = activePreset;
 
 ////////////
@@ -122,6 +124,7 @@ export const JUSTIFICATION_BITS_LENGTH = 4;
 // Since the prefixes are just 1 byte, we define and use them as number
 export const BLS_WITHDRAWAL_PREFIX = 0;
 export const ETH1_ADDRESS_WITHDRAWAL_PREFIX = 1;
+export const COMPOUNDING_WITHDRAWAL_PREFIX = 2;
 
 // Domain types
 
@@ -136,7 +139,7 @@ export const DOMAIN_SYNC_COMMITTEE = Uint8Array.from([7, 0, 0, 0]);
 export const DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF = Uint8Array.from([8, 0, 0, 0]);
 export const DOMAIN_CONTRIBUTION_AND_PROOF = Uint8Array.from([9, 0, 0, 0]);
 export const DOMAIN_BLS_TO_EXECUTION_CHANGE = Uint8Array.from([10, 0, 0, 0]);
-export const DOMAIN_BLOB_SIDECAR = Uint8Array.from([11, 0, 0, 0]);
+export const DOMAIN_CONSOLIDATION = Uint8Array.from([11, 0, 0, 0]);
 
 // Application specific domains
 
