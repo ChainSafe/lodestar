@@ -234,5 +234,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     PENDING_PARTIAL_WITHDRAWALS_LIMIT: electraForkRelevant,
     PENDING_CONSOLIDATIONS_LIMIT: electraForkRelevant,
     MAX_CONSOLIDATIONS: electraForkRelevant,
+    WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA: electraForkRelevant,
+    MAX_PARTIAL_WITHDRAWALS_PER_PAYLOAD: electraForkRelevant,
   };
 }
