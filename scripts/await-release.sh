@@ -29,7 +29,7 @@ while [[ "$VERSION_EXPECTED" != "$VERSION_LATEST" ]]; do
 
     # Allow the CI to timeout
     if (( $TIME >= $TIMEOUT )); then
-        echo "WARN: Timehout $TIME >= $TIMEOUT before finding correct version, NPM might fail..."
+        echo "WARN: Timeout $TIME >= $TIMEOUT before finding correct version, NPM might fail..."
         break; # We don't want to exit yet, let the CI fail on NPM later
     fi
     sleep $SLEEP
