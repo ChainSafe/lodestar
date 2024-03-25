@@ -1,4 +1,4 @@
-import type { SidebarsConfig } from '@docusaurus/plugin-content-docs';
+import type {SidebarsConfig} from "@docusaurus/plugin-content-docs";
 
 const sidebars: SidebarsConfig = {
   tutorialSidebar: [
@@ -70,7 +70,7 @@ const sidebars: SidebarsConfig = {
       label: "Advanced Topics",
       items: ["advanced-topics/setting-up-a-testnet"],
     },
-    "faqs"
+    "faqs",
   ],
 };
 

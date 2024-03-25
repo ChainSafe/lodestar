@@ -39,7 +39,7 @@ const config: Config = {
           routeBasePath: "/",
         },
         gtag: {
-          trackingID: 'G-N21J5PWW5X',
+          trackingID: "G-N21J5PWW5X",
           anonymizeIP: true,
         },
         theme: {
