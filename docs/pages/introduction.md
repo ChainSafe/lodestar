@@ -10,7 +10,7 @@ In Ethereum's Proof of Stake (PoS) model, validators replace miners from the Pro
 
 In an effort to promote client diversity there are several beacon-nodes being developed. Each is programmed in a different language and by a different team. The following is a list of the current beacon-node clients:
 
-- [Lodestar](https://chainsafe.io/lodestar.html)
+- [Lodestar](https://lodestar.chainsafe.io/)
 - [Prysm](https://prysmaticlabs.com/)
 - [Lighthouse](https://lighthouse.sigmaprime.io/)
 - [Teku](https://consensys.net/knowledge-base/ethereum-2/teku/)

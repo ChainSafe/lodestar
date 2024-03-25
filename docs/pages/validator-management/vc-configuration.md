@@ -94,7 +94,7 @@ To calculate the builder boost factor setting, you need to know what percentage 
 
 Example 1: I will only accept a builder block with 25% more value than the local execution block.
 
-```
+```ts
 10000/(100+25) = 80
 ```
 
