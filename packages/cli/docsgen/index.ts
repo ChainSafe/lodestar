@@ -21,5 +21,5 @@ for (const cmd of cmds) {
   const docstring = renderCommandPage(cmd, globalOptions, LODESTAR_COMMAND);
   const folder = path.join(DOCS_PAGES_FOLDER, cmd.docsFolder ?? "");
   if (!fs.existsSync(folder)) fs.mkdirSync(folder, {recursive: true});
-  fs.writeFileSync(path.join(folder, `${cmd.command}-cli.md`), docstring);
+  fs.writeFileSync(path.join(folder, `${cmd.command}-cli.mdx`), docstring);
 }

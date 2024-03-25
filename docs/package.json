@@ -14,10 +14,11 @@
     "write-heading-ids": "docusaurus write-heading-ids"
   },
   "dependencies": {
-    "@docusaurus/core": "3.1.1",
-    "@docusaurus/preset-classic": "3.1.1",
-    "@docusaurus/theme-mermaid": "^3.1.1",
+    "@docusaurus/core": "0.0.0-5872",
+    "@docusaurus/preset-classic": "0.0.0-5872",
+    "@docusaurus/theme-mermaid": "0.0.0-5872",
     "@easyops-cn/docusaurus-search-local": "^0.40.1",
+    "@lodestar/light-client": "^1.17.0",
     "@mdx-js/react": "^3.0.0",
     "clsx": "^2.0.0",
     "prism-react-renderer": "^2.3.0",
@@ -25,8 +26,8 @@
     "react-dom": "^18.0.0"
   },
   "devDependencies": {
-    "@docusaurus/module-type-aliases": "3.1.1",
-    "@docusaurus/types": "3.1.1"
+    "@docusaurus/module-type-aliases": "0.0.0-5872",
+    "@docusaurus/types": "0.0.0-5872"
   },
   "browserslist": {
     "production": [

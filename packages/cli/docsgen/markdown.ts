@@ -249,6 +249,31 @@ function getSubCommands(rootCommand: string, sub: CliCommand<unknown, unknown, u
   return subCommands;
 }
 
+type TOCElement = {
+  value: string;
+  id: string;
+  level: number;
+};
+
+function createOptionTOC(name: string, option: CliOptionDefinition, level: number): TOCElement {
+  return {
+    value: `--${name}`,
+    id: `-${name}`,
+    level,
+  };
+}
+
+function createTOC(cmd: CliCommand<unknown, unknown, unknown>, level: number = 2): TOCElement[] {
+  const commandTOC = [{value: cmd.command, id: cmd.command, level}];
+  const optionsTOC = [...Object.entries(cmd.options || {})?.map(([name, def]) => createOptionTOC(name, def as CliOptionDefinition, level + 1))];
+  const subcommandsTOC = cmd.subcommands?.map(cmd => createTOC(cmd, level + 1)).flat() ?? [];
+  return [
+    ...commandTOC,
+    ...optionsTOC,
+    ...subcommandsTOC
+  ];
+}
+
 export function renderCommandPage(
   cmd: CliCommand<unknown, unknown, unknown>,
   globalOptions: CliCommandOptions<Record<never, never>>,
@@ -275,5 +300,8 @@ export function renderCommandPage(
     }
   }
 
+  page.push(`export const toc = ${JSON.stringify(createTOC(cmd))};`);
+
   return page.join(LINE_BREAK.concat(DEFAULT_SEPARATOR));
 }
+
