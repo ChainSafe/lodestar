@@ -98,6 +98,7 @@ export function createFastifyHandler<E extends Endpoint>(
           if (onlySupport !== undefined && onlySupport !== WireFormat.json) {
             throw new ServerError(415, `Endpoint only supports ${onlySupport} requests`);
           }
+          // TODO: make sure to catch all parsing errors and return 400 here as it's likely related to invalid data from client
           response = await method((definition.req as JsonRequestMethods<E>).parseReqJson(req as JsonPostRequestData));
           break;
         case WireFormat.ssz:
