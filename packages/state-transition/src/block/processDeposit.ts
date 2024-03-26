@@ -142,7 +142,6 @@ function addValidatorToRegistry(
       stateElectra.pendingBalanceDeposits.push(pendingBalanceDeposit);
     }
   } else {
-
     if (fork < ForkSeq.electra) {
       // increase balance by deposit amount right away pre-electra
       increaseBalance(state, cachedIndex, amount);

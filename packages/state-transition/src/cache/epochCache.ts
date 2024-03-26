@@ -588,7 +588,7 @@ export class EpochCache {
     );
 
     // Maybe advance exitQueueEpoch at the end of the epoch if there haven't been any exists for a while
-    const exitQueueEpoch = computeActivationExitEpoch(currEpoch);  // TODO Electra: New exit epoch calculation
+    const exitQueueEpoch = computeActivationExitEpoch(currEpoch); // TODO Electra: New exit epoch calculation
     if (exitQueueEpoch > this.exitQueueEpoch) {
       this.exitQueueEpoch = exitQueueEpoch;
       this.exitQueueChurn = 0;

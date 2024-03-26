@@ -10,7 +10,7 @@ import {
   TIMELY_TARGET_FLAG_INDEX,
 } from "@lodestar/params";
 import {EpochTransitionCache, CachedBeaconStateAllForks, BeaconStateAltair} from "../types.js";
-import { hasCompoundingWithdrawalCredential } from "../util/capella.js";
+import {hasCompoundingWithdrawalCredential} from "../util/capella.js";
 
 /** Same to https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/beacon-chain.md#has_flag */
 const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;
@@ -24,7 +24,11 @@ const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;
  * - On normal mainnet conditions 0 validators change their effective balance
  * - In case of big innactivity event a medium portion of validators may have their effectiveBalance updated
  */
-export function processEffectiveBalanceUpdates(fork: ForkSeq, state: CachedBeaconStateAllForks, cache: EpochTransitionCache): void {
+export function processEffectiveBalanceUpdates(
+  fork: ForkSeq,
+  state: CachedBeaconStateAllForks,
+  cache: EpochTransitionCache
+): void {
   const HYSTERESIS_INCREMENT = EFFECTIVE_BALANCE_INCREMENT / HYSTERESIS_QUOTIENT;
   const DOWNWARD_THRESHOLD = HYSTERESIS_INCREMENT * HYSTERESIS_DOWNWARD_MULTIPLIER;
   const UPWARD_THRESHOLD = HYSTERESIS_INCREMENT * HYSTERESIS_UPWARD_MULTIPLIER;
@@ -59,8 +63,11 @@ export function processEffectiveBalanceUpdates(fork: ForkSeq, state: CachedBeaco
 
       if (fork < ForkSeq.electra) {
         effectiveBalanceLimit = MAX_EFFECTIVE_BALANCE;
-      } else { // Electra or after
-        effectiveBalanceLimit = hasCompoundingWithdrawalCredential(validator.withdrawalCredentials) ? MAX_EFFECTIVE_BALANCE_ELECTRA : MIN_ACTIVATION_BALANCE;
+      } else {
+        // Electra or after
+        effectiveBalanceLimit = hasCompoundingWithdrawalCredential(validator.withdrawalCredentials)
+          ? MAX_EFFECTIVE_BALANCE_ELECTRA
+          : MIN_ACTIVATION_BALANCE;
       }
 
       effectiveBalance = Math.min(balance - (balance % EFFECTIVE_BALANCE_INCREMENT), effectiveBalanceLimit);

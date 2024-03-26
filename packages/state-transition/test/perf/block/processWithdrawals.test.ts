@@ -1,9 +1,9 @@
 import {itBench} from "@dapplion/benchmark";
+import {ForkSeq} from "@lodestar/params";
 import {CachedBeaconStateCapella} from "../../../src/index.js";
 import {getExpectedWithdrawals} from "../../../src/block/processWithdrawals.js";
 import {numValidators} from "../util.js";
 import {getExpectedWithdrawalsTestData, WithdrawalOpts} from "../../utils/capella.js";
-import { ForkSeq } from "@lodestar/params";
 
 // PERF: Fixed cost for MAX_WITHDRAWALS_PER_PAYLOAD probes
 //  + cost 'proportional' to $VALIDATOR_COUNT with balances under MAX_EFFECTIVE_BALANCE or

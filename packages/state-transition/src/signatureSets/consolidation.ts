@@ -1,7 +1,12 @@
 import {DOMAIN_CONSOLIDATION, ForkName} from "@lodestar/params";
 import {electra, ssz} from "@lodestar/types";
 
-import {computeSigningRoot, createAggregateSignatureSetFromComponents, ISignatureSet, SignatureSetType, verifySignatureSet} from "../util/index.js";
+import {
+  computeSigningRoot,
+  createAggregateSignatureSetFromComponents,
+  ISignatureSet,
+  verifySignatureSet,
+} from "../util/index.js";
 import {CachedBeaconStateElectra} from "../types.js";
 
 export function verifyConsolidationSignature(
@@ -16,7 +21,7 @@ export function verifyConsolidationSignature(
  */
 export function getConsolidationSignatureSet(
   state: CachedBeaconStateElectra,
-  signedConsolidation: electra.SignedConsolidation,
+  signedConsolidation: electra.SignedConsolidation
 ): ISignatureSet {
   const {config} = state;
   const {index2pubkey} = state.epochCtx; // TODO Electra: Use 6110 pubkey cache
@@ -28,12 +33,19 @@ export function getConsolidationSignatureSet(
   const signatureFork = ForkName.phase0;
   const domain = config.getDomainAtFork(signatureFork, DOMAIN_CONSOLIDATION);
   const signingRoot = computeSigningRoot(ssz.electra.Consolidation, signedConsolidation.message, domain);
-  
-  return createAggregateSignatureSetFromComponents([sourcePubkey, targetPubkey], signingRoot, signedConsolidation.signature);
+
+  return createAggregateSignatureSetFromComponents(
+    [sourcePubkey, targetPubkey],
+    signingRoot,
+    signedConsolidation.signature
+  );
 }
 
-export function getConsolidationSignatureSets(state: CachedBeaconStateElectra, signedBlock: electra.SignedBeaconBlock): ISignatureSet[] {
-  return signedBlock.message.body.consolidations.map((consolidation) => 
+export function getConsolidationSignatureSets(
+  state: CachedBeaconStateElectra,
+  signedBlock: electra.SignedBeaconBlock
+): ISignatureSet[] {
+  return signedBlock.message.body.consolidations.map((consolidation) =>
     getConsolidationSignatureSet(state, consolidation)
   );
 }
