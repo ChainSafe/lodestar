@@ -11,6 +11,7 @@ import {
   CachedBeaconStateAltair,
   CachedBeaconStatePhase0,
   EpochTransitionCache,
+  CachedBeaconStateElectra,
 } from "../types.js";
 import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {processEffectiveBalanceUpdates} from "./processEffectiveBalanceUpdates.js";
@@ -27,6 +28,8 @@ import {processRewardsAndPenalties} from "./processRewardsAndPenalties.js";
 import {processSlashings} from "./processSlashings.js";
 import {processSlashingsReset} from "./processSlashingsReset.js";
 import {processSyncCommitteeUpdates} from "./processSyncCommitteeUpdates.js";
+import { processPendingBalanceDeposits } from "./processPendingBalanceDeposits.js";
+import { processPendingConsolidations } from "./processPendingConsolidations.js";
 
 // For spec tests
 export {getRewardsAndPenalties} from "./processRewardsAndPenalties.js";
@@ -45,6 +48,8 @@ export {
   processParticipationFlagUpdates,
   processSyncCommitteeUpdates,
   processHistoricalSummariesUpdate,
+  processPendingBalanceDeposits,
+  processPendingConsolidations,
 };
 
 export {computeUnrealizedCheckpoints} from "./computeUnrealizedCheckpoints.js";
@@ -121,8 +126,10 @@ export function processEpoch(
   processEth1DataReset(state, cache);
 
   if (fork >= ForkSeq.electra) {
-    // TODO Electra: processPendingBalanceDeposits
-    // TODO Electra: processPendingConsolidations
+    const stateElectra = state as CachedBeaconStateElectra
+    // TODO Electra: Add timer
+    processPendingBalanceDeposits(stateElectra);
+    processPendingConsolidations(stateElectra);
   }
 
   {
