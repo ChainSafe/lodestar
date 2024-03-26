@@ -7,13 +7,6 @@
       "pluginId": "prometheus",
       "pluginName": "Prometheus",
       "type": "datasource"
-    },
-    {
-      "description": "",
-      "label": "Beacon node job name",
-      "name": "VAR_BEACON_JOB",
-      "type": "constant",
-      "value": "beacon"
     }
   ],
   "annotations": {
@@ -2083,6 +2076,86 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 90
+      },
+      "id": 537,
+      "options": {
+        "calculate": false,
+        "cellGap": 1,
+        "cellValues": {},
+        "color": {
+          "exponent": 0.5,
+          "fill": "dark-orange",
+          "mode": "scheme",
+          "reverse": false,
+          "scale": "exponential",
+          "scheme": "Magma",
+          "steps": 64
+        },
+        "exemplars": {
+          "color": "rgba(255,0,255,0.7)"
+        },
+        "filterValues": {
+          "le": 1e-9
+        },
+        "legend": {
+          "show": true
+        },
+        "rowsFrame": {
+          "layout": "auto"
+        },
+        "tooltip": {
+          "show": true,
+          "yHistogram": false
+        },
+        "yAxis": {
+          "axisPlacement": "left",
+          "reverse": false
+        }
+      },
+      "pluginVersion": "10.1.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(lodestar_stfn_hash_tree_root_seconds_bucket[$rate_interval])",
+          "format": "heatmap",
+          "instant": false,
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "State hash_tree_root by bucket",
+      "type": "heatmap"
+    },
+    {
       "collapsed": false,
       "datasource": {
         "type": "prometheus",
@@ -2092,7 +2165,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 90
+        "y": 98
       },
       "id": 92,
       "panels": [],
@@ -2117,7 +2190,7 @@
         "h": 3,
         "w": 24,
         "x": 0,
-        "y": 91
+        "y": 99
       },
       "id": 154,
       "options": {
@@ -2196,7 +2269,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 94
+        "y": 102
       },
       "id": 94,
       "options": {
@@ -2276,7 +2349,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 94
+        "y": 102
       },
       "id": 519,
       "options": {
@@ -2359,7 +2432,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 102
+        "y": 110
       },
       "id": 151,
       "options": {
@@ -2446,7 +2519,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 102
+        "y": 110
       },
       "id": 96,
       "options": {
@@ -2533,7 +2606,7 @@
         "h": 5,
         "w": 12,
         "x": 0,
-        "y": 110
+        "y": 118
       },
       "id": 150,
       "options": {
@@ -2620,7 +2693,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 110
+        "y": 118
       },
       "id": 95,
       "options": {
@@ -2708,7 +2781,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 115
+        "y": 123
       },
       "id": 148,
       "options": {
@@ -2805,7 +2878,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 118
+        "y": 126
       },
       "id": 147,
       "options": {
@@ -2892,7 +2965,7 @@
         "h": 5,
         "w": 12,
         "x": 0,
-        "y": 121
+        "y": 129
       },
       "id": 98,
       "options": {
@@ -2991,7 +3064,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 125
+        "y": 133
       },
       "id": 153,
       "options": {
@@ -3087,7 +3160,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 126
+        "y": 134
       },
       "id": 97,
       "options": {
@@ -3129,7 +3202,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 132
+        "y": 140
       },
       "id": 309,
       "panels": [],
@@ -3225,7 +3298,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 133
+        "y": 141
       },
       "id": 305,
       "options": {
@@ -3322,7 +3395,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 133
+        "y": 141
       },
       "id": 307,
       "options": {
@@ -3414,7 +3487,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 141
+        "y": 149
       },
       "id": 335,
       "options": {
@@ -3506,7 +3579,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 141
+        "y": 149
       },
       "id": 334,
       "options": {
@@ -3587,7 +3660,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 149
+        "y": 157
       },
       "id": 535,
       "options": {
@@ -3629,7 +3702,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 157
+        "y": 165
       },
       "id": 136,
       "panels": [],
@@ -3697,7 +3770,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 158
+        "y": 166
       },
       "id": 130,
       "options": {
@@ -3797,7 +3870,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 158
+        "y": 166
       },
       "id": 140,
       "options": {
@@ -3899,7 +3972,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 166
+        "y": 174
       },
       "id": 132,
       "options": {
@@ -4027,7 +4100,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 166
+        "y": 174
       },
       "id": 138,
       "options": {
@@ -4149,7 +4222,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 174
+        "y": 182
       },
       "id": 531,
       "options": {
@@ -4265,7 +4338,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 174
+        "y": 182
       },
       "id": 533,
       "options": {
@@ -4432,14 +4505,14 @@
       {
         "current": {
           "selected": false,
-          "text": "${VAR_BEACON_JOB}",
-          "value": "${VAR_BEACON_JOB}"
+          "text": "beacon",
+          "value": "beacon"
         },
         "description": "Job name used in Prometheus config to scrape Beacon node",
         "hide": 2,
         "label": "Beacon node job name",
         "name": "beacon_job",
-        "query": "${VAR_BEACON_JOB}",
+        "query": "beacon",
         "skipUrlSync": false,
         "type": "constant"
       }
