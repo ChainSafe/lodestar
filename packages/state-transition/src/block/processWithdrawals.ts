@@ -11,13 +11,14 @@ import {
 } from "@lodestar/params";
 
 import {CachedBeaconStateCapella, CachedBeaconStateElectra} from "../types.js";
-import {decreaseBalance, getValidatorExcessBalance, hasCompoundingWithdrawalCredential, hasEth1WithdrawalCredential, isCapellaPayloadHeader, isFullyWithdrawableValidator, isPartiallyWithdrawableValidator} from "../util/index.js";
+import {decreaseBalance, getValidatorExcessBalance, hasCompoundingWithdrawalCredential, hasEth1WithdrawalCredential, hasExecutionWithdrawalCredential, isCapellaPayloadHeader, isFullyWithdrawableValidator, isPartiallyWithdrawableValidator} from "../util/index.js";
 
 export function processWithdrawals(
   fork: ForkSeq,
   state: CachedBeaconStateCapella | CachedBeaconStateElectra,
   payload: capella.FullOrBlindedExecutionPayload
 ): void {
+  // const {withdrawals: expectedWithdrawals, partialWithdrawalsCount} = getExpectedWithdrawals(fork, state);
   const {withdrawals: expectedWithdrawals} = getExpectedWithdrawals(fork, state);
   const numWithdrawals = expectedWithdrawals.length;
 
@@ -123,7 +124,7 @@ export function getExpectedWithdrawals(fork: ForkSeq, state: CachedBeaconStateCa
     if ((fork === ForkSeq.capella || fork === ForkSeq.deneb) && !hasEth1WithdrawalCredential(validator.withdrawalCredentials)) {
       continue;
     }
-    if (fork === ForkSeq.electra && (!hasEth1WithdrawalCredential(validator.withdrawalCredentials) && !hasCompoundingWithdrawalCredential(validator.withdrawalCredentials))) {
+    if (fork === ForkSeq.electra && !hasExecutionWithdrawalCredential(validator.withdrawalCredentials)) {
       continue;
     }
 
