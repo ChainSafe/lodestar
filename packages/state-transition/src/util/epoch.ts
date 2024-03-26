@@ -1,5 +1,7 @@
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, GENESIS_EPOCH, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {allForks, Epoch, Slot, SyncPeriod} from "@lodestar/types";
+import {allForks, electra, Epoch, Gwei, Slot, SyncPeriod} from "@lodestar/types";
+import { getActivationExitChurnLimit } from "./validator";
+import { CachedBeaconStateElectra } from "../types";
 
 /**
  * Return the epoch number at the given slot.
@@ -39,9 +41,32 @@ export function computeActivationExitEpoch(epoch: Epoch): Epoch {
   return epoch + 1 + MAX_SEED_LOOKAHEAD;
 }
 
-/**
- * TODO Electra: compute_exit_epoch_and_update_churn()
- */
+export function computeExitEpochAndUpdateChurn(state: CachedBeaconStateElectra, exitBalance: Gwei) {
+  const earliestExitEpoch = computeActivationExitEpoch(state.epochCtx.epoch);
+  const perEpochChurn = getActivationExitChurnLimit(state);
+
+  // New epoch for exits.
+  if (state.earliestExitEpoch < earliestExitEpoch) {
+    state.earliestExitEpoch = earliestExitEpoch;
+    state.exitBalanceToConsume = BigInt(perEpochChurn);
+  }
+
+  if (exitBalance <= state.exitBalanceToConsume) {
+    // Exit fits in the current earliest epoch.
+    state.exitBalanceToConsume -= exitBalance;
+  } else {
+    // Exit doesn't fit in the current earliest epoch.
+    const balanceToProcess = exitBalance - state.exitBalanceToConsume;
+    const additionalEpochs = balanceToProcess / BigInt(perEpochChurn);
+    const remainder = balanceToProcess % BigInt(perEpochChurn);
+
+    state.earliestExitEpoch += Number(additionalEpochs);
+    state.exitBalanceToConsume = BigInt(perEpochChurn) - remainder;
+    
+  }
+
+  return state.earliestExitEpoch;
+}
 
 /**
  * Return the current epoch of the given state.

@@ -1,8 +1,8 @@
 import {Epoch, phase0, ValidatorIndex} from "@lodestar/types";
 import {intDiv} from "@lodestar/utils";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkSeq} from "@lodestar/params";
-import {BeaconStateAllForks} from "../types.js";
+import {EFFECTIVE_BALANCE_INCREMENT, ForkSeq} from "@lodestar/params";
+import {BeaconStateAllForks, CachedBeaconStateElectra} from "../types.js";
 
 /**
  * Check if [[validator]] is active
@@ -44,6 +44,22 @@ export function getActivationChurnLimit(config: ChainForkConfig, fork: ForkSeq, 
   }
 }
 
+export function getActivationExitChurnLimit(state: CachedBeaconStateElectra): number {
+  return Math.min(state.config.MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT, getActivationExitConsolidationChurnLimit(state));
+}
+
+export function getConsolidationChurnLimit(state: CachedBeaconStateElectra): number {
+  return getActivationExitConsolidationChurnLimit(state) - getActivationExitChurnLimit(state);
+}
+
+export function getActivationExitConsolidationChurnLimit(state: CachedBeaconStateElectra): number {
+  const churnLimitByTotalActiveBalance = Math.floor((state.epochCtx.totalActiveBalanceIncrements / state.config.CHURN_LIMIT_QUOTIENT) * EFFECTIVE_BALANCE_INCREMENT); // TODO Electra: verify calculation
+
+  const churn = Math.max(churnLimitByTotalActiveBalance, state.config.MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT_ELECTRA);
+
+  return churn - churn % EFFECTIVE_BALANCE_INCREMENT;
+}
+ 
 export function getChurnLimit(config: ChainForkConfig, activeValidatorCount: number): number {
   return Math.max(config.MIN_PER_EPOCH_CHURN_LIMIT, intDiv(activeValidatorCount, config.CHURN_LIMIT_QUOTIENT));
 }

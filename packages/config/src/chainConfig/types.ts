@@ -59,6 +59,7 @@ export type ChainConfig = {
   MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT: number;
   CHURN_LIMIT_QUOTIENT: number;
   MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT: number;
+  MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA: number;
 
   // Fork choice
   PROPOSER_SCORE_BOOST: number;
@@ -120,6 +121,7 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT: "number",
   CHURN_LIMIT_QUOTIENT: "number",
   MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT: "number",
+  MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA: "number",
 
   // Fork choice
   PROPOSER_SCORE_BOOST: "number",

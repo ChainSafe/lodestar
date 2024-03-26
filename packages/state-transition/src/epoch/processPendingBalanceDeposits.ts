@@ -1,11 +1,12 @@
 import {CachedBeaconStateElectra} from "../types.js";
 import { increaseBalance } from "../util/balance.js";
+import { getActivationExitChurnLimit } from "../util/validator.js";
 
 /**
  * TODO Electra: jdoc
  */
 export function processPendingBalanceDeposits(state: CachedBeaconStateElectra): void {
-  const availableForProcessing = state.depositBalanceToConsume + 0n; // TODO Electra: get_activation_exit_churn_limit
+  const availableForProcessing = state.depositBalanceToConsume + BigInt(getActivationExitChurnLimit(state));
   let processedAmount = 0n;
   let nextDepositIndex = 0;
 
