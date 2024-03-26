@@ -7,6 +7,13 @@
       "pluginId": "prometheus",
       "pluginName": "Prometheus",
       "type": "datasource"
+    },
+    {
+      "description": "",
+      "label": "Beacon node job name",
+      "name": "VAR_BEACON_JOB",
+      "type": "constant",
+      "value": "beacon"
     }
   ],
   "annotations": {
@@ -4505,14 +4512,14 @@
       {
         "current": {
           "selected": false,
-          "text": "beacon",
-          "value": "beacon"
+          "text": "${VAR_BEACON_JOB}",
+          "value": "${VAR_BEACON_JOB}"
         },
         "description": "Job name used in Prometheus config to scrape Beacon node",
         "hide": 2,
         "label": "Beacon node job name",
         "name": "beacon_job",
-        "query": "beacon",
+        "query": "${VAR_BEACON_JOB}",
         "skipUrlSync": false,
         "type": "constant"
       }
