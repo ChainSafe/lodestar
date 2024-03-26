@@ -9,6 +9,7 @@ import {
   ArrayOf,
   Schema,
   WithVersion,
+  reqOnlyBody,
   TypeJson,
   ReqSerializers,
   ReqSerializer,
@@ -335,14 +336,7 @@ export function getReqSerializers(config: ChainForkConfig): ReqSerializers<Api, 
       schema: {query: {slot: Schema.Uint, parent_root: Schema.String}},
     },
     getBlockRoot: blockIdOnlyReq,
-    publishBlock: {
-      writeReq: (items) => ({
-        body: AllForksSignedBlockOrContents.toJson(items),
-        headers: {"Eth-Consensus-Version": config.getForkName(extractSlot(items))},
-      }),
-      parseReq: ({body}) => [AllForksSignedBlockOrContents.fromJson(body)],
-      schema: {body: Schema.Object},
-    },
+    publishBlock: reqOnlyBody(AllForksSignedBlockOrContents, Schema.Object),
     publishBlockV2: {
       writeReq: (item, {broadcastValidation} = {}) => ({
         body: AllForksSignedBlockOrContents.toJson(item),
@@ -358,14 +352,7 @@ export function getReqSerializers(config: ChainForkConfig): ReqSerializers<Api, 
         query: {broadcast_validation: Schema.String},
       },
     },
-    publishBlindedBlock: {
-      writeReq: (items) => ({
-        body: AllForksSignedBlindedBlock.toJson(items),
-        headers: {"Eth-Consensus-Version": config.getForkName(extractSlot(items))},
-      }),
-      parseReq: ({body}) => [AllForksSignedBlindedBlock.fromJson(body)],
-      schema: {body: Schema.Object},
-    },
+    publishBlindedBlock: reqOnlyBody(AllForksSignedBlindedBlock, Schema.Object),
     publishBlindedBlockV2: {
       writeReq: (item, {broadcastValidation}) => ({
         body: AllForksSignedBlindedBlock.toJson(item),
