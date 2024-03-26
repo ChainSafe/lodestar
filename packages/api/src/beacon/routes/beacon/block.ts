@@ -357,7 +357,7 @@ export function getReqSerializers(config: ChainForkConfig): ReqSerializers<Api, 
       writeReq: (item, {broadcastValidation}) => ({
         body: AllForksSignedBlindedBlock.toJson(item),
         query: {broadcast_validation: broadcastValidation},
-        headers: {"Eth-Consensus-Version": config.getForkName(extractSlot(item))},
+        headers: {"Eth-Consensus-Version": config.getForkName(item.message.slot)},
       }),
       parseReq: ({body, query}) => [
         AllForksSignedBlindedBlock.fromJson(body),
