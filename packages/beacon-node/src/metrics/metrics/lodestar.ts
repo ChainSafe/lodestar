@@ -1195,9 +1195,9 @@ export function createLodestarMetrics(
         help: "Histogram of cloned count per state every time state.clone() is called",
         buckets: [1, 2, 5, 10, 50, 250],
       }),
-      statePersistDuration: register.histogram({
-        name: "lodestar_cp_state_cache_state_persist_seconds",
-        help: "Histogram of time to persist state to db",
+      stateSszDuration: register.histogram({
+        name: "lodestar_cp_state_cache_state_ssz_seconds",
+        help: "Histogram of time to serialize state to db",
         buckets: [0.1, 0.5, 1, 2, 3, 4],
       }),
       statePruneFromMemoryCount: register.gauge({

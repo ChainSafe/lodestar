@@ -7,18 +7,25 @@ const ValidatorContainer = new ContainerType(ValidatorType, {typeName: "Validato
 
 describe("Validator ssz types", function () {
   it("should serialize to the same value", () => {
-    const validator = ValidatorContainer.defaultValue();
-    validator.activationEligibilityEpoch = 10;
-    validator.activationEpoch = 11;
-    validator.exitEpoch = Infinity;
-    validator.slashed = false;
-    validator.effectiveBalance = 31000000000;
-    validator.withdrawableEpoch = 13;
-    validator.pubkey = Buffer.alloc(48, 100);
-    validator.withdrawalCredentials = Buffer.alloc(32, 100);
+    const seedValidator = {
+      activationEligibilityEpoch: 10,
+      activationEpoch: 11,
+      exitEpoch: Infinity,
+      slashed: false,
+      withdrawableEpoch: 13,
+      pubkey: Buffer.alloc(48, 100),
+      withdrawalCredentials: Buffer.alloc(32, 100),
+    };
 
-    const serialized = ValidatorContainer.serialize(validator);
-    const serialized2 = ssz.phase0.Validator.serialize(validator);
-    expect(serialized).toEqual(serialized2);
+    const validators = [
+      {...seedValidator, effectiveBalance: 31000000000, slashed: false},
+      {...seedValidator, effectiveBalance: 32000000000, slashed: true},
+    ];
+
+    for (const validator of validators) {
+      const serialized = ValidatorContainer.serialize(validator);
+      const serialized2 = ssz.phase0.Validator.serialize(validator);
+      expect(serialized).toEqual(serialized2);
+    }
   });
 });

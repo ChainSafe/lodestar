@@ -640,7 +640,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
             this.metrics?.statePersistSecFromSlot.observe(this.clock?.secFromSlot(this.clock?.currentSlot ?? 0) ?? 0);
             const cpPersist = {epoch: epoch, root: epochBoundaryRoot};
             {
-              const timer = this.metrics?.statePersistDuration.startTimer();
+              const timer = this.metrics?.stateSszDuration.startTimer();
               // automatically free the buffer pool after this scope
               using stateBytesWithKey = this.serializeState(state);
               let stateBytes = stateBytesWithKey?.buffer;

@@ -6,7 +6,7 @@ const {Boolean, Bytes32, UintNum64, BLSPubkey, EpochInf} = primitiveSsz;
 // this is to work with uint32, see https://github.com/ChainSafe/ssz/blob/ssz-v0.15.1/packages/ssz/src/type/uint.ts
 const NUMBER_2_POW_32 = 2 ** 32;
 
-/**
+/*
  * Below constants are respective to their ssz type in `ValidatorType`.
  */
 const UINT32_SIZE = 4;

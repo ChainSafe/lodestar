@@ -13,7 +13,7 @@ describe.skip("serialize state and validators", function () {
     // increasing this may have different statistics due to gc time
     minMs: 60_000,
   });
-  // change to 170_000 for holesky size
+  // change to 1_700_000 for holesky size
   const valicatorCount = 20_000;
   const seedState = generatePerfTestCachedStateAltair({vc: valicatorCount, goBackOneSlot: false});
 
