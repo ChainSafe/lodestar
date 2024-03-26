@@ -1,26 +1,30 @@
-import {toHexString, byteArrayEquals} from "@chainsafe/ssz";
-import {digest} from "@chainsafe/as-sha256";
-import {Epoch, capella, electra, phase0, ssz} from "@lodestar/types";
-import {BLS_WITHDRAWAL_PREFIX, ETH1_ADDRESS_WITHDRAWAL_PREFIX, FAR_FUTURE_EPOCH, MIN_ACTIVATION_BALANCE, PENDING_PARTIAL_WITHDRAWALS_LIMIT} from "@lodestar/params";
-import {verifyBlsToExecutionChangeSignature} from "../signatureSets/index.js";
+import {toHexString} from "@chainsafe/ssz";
+import { electra, phase0, ssz} from "@lodestar/types";
+import {
+  FAR_FUTURE_EPOCH,
+  MIN_ACTIVATION_BALANCE,
+  PENDING_PARTIAL_WITHDRAWALS_LIMIT,
+} from "@lodestar/params";
 
 import {CachedBeaconStateElectra} from "../types.js";
-import { hasCompoundingWithdrawalCredential, hasEth1WithdrawalCredential, hasExecutionWithdrawalCredential } from "../util/capella.js";
-import { isActiveValidator } from "../util/validator.js";
-import { initiateValidatorExit } from "./initiateValidatorExit.js";
-import { computeExitEpochAndUpdateChurn } from "../util/epoch.js";
+import {
+  hasCompoundingWithdrawalCredential,
+  hasExecutionWithdrawalCredential,
+} from "../util/capella.js";
+import {isActiveValidator} from "../util/validator.js";
+import {computeExitEpochAndUpdateChurn} from "../util/epoch.js";
+import {initiateValidatorExit} from "./initiateValidatorExit.js";
 
 export function processExecutionLayerWithdrawRequest(
   state: CachedBeaconStateElectra,
-  executionLayerWithdrawRequest: electra.ExecutionLayerWithdrawRequest,
+  executionLayerWithdrawRequest: electra.ExecutionLayerWithdrawRequest
 ): void {
-
   const amount = Number(executionLayerWithdrawRequest.amount);
   const {pendingPartialWithdrawals, validators, epochCtx} = state;
   const {pubkey2index, config} = epochCtx; // TODO Electra: Use finalized+unfinalized pubkey cache from 6110
   const isFullExitRequest = amount === 0;
 
-  // If partial withdrawal queue is full, only full exits are processed 
+  // If partial withdrawal queue is full, only full exits are processed
   if (pendingPartialWithdrawals.length >= PENDING_PARTIAL_WITHDRAWALS_LIMIT && !isFullExitRequest) {
     return;
   }
@@ -28,7 +32,11 @@ export function processExecutionLayerWithdrawRequest(
   const validatorIndex = pubkey2index.get(executionLayerWithdrawRequest.validatorPubkey);
 
   if (validatorIndex === undefined) {
-    throw new Error(`Can't find validator index from ExecutionLayerWithdrawRequest : pubkey=${toHexString(executionLayerWithdrawRequest.validatorPubkey)}`);
+    throw new Error(
+      `Can't find validator index from ExecutionLayerWithdrawRequest : pubkey=${toHexString(
+        executionLayerWithdrawRequest.validatorPubkey
+      )}`
+    );
   }
 
   const validator = state.validators.getReadonly(validatorIndex);
@@ -42,7 +50,10 @@ export function processExecutionLayerWithdrawRequest(
   }
 
   // TODO Electra: Consider caching pendingPartialWithdrawals
-  const pendingBalanceToWithdraw = state.pendingPartialWithdrawals.getAllReadonly().filter(item => item.index === validatorIndex).reduce((total, item) => total + Number(item.amount), 0);
+  const pendingBalanceToWithdraw = state.pendingPartialWithdrawals
+    .getAllReadonly()
+    .filter((item) => item.index === validatorIndex)
+    .reduce((total, item) => total + Number(item.amount), 0);
   const validatorBalance = state.balances.get(validatorIndex);
 
   // only exit validator if it has no pending withdrawals in the queue
@@ -61,22 +72,23 @@ export function processExecutionLayerWithdrawRequest(
 
     state.pendingPartialWithdrawals.push(pendingPartialWithdrawal);
   }
-
 }
 
-function isValidValidator(validator: phase0.Validator, sourceAddress: Uint8Array, state: CachedBeaconStateElectra): boolean {
+function isValidValidator(
+  validator: phase0.Validator,
+  sourceAddress: Uint8Array,
+  state: CachedBeaconStateElectra
+): boolean {
   const {withdrawalCredentials} = validator;
   const addressStr = toHexString(withdrawalCredentials.slice(12));
   const sourceAddressStr = toHexString(sourceAddress);
   const {epoch: currentEpoch, config} = state.epochCtx;
 
-  return hasExecutionWithdrawalCredential(withdrawalCredentials)
-    &&
-    addressStr === sourceAddressStr
-    &&
-    isActiveValidator(validator, currentEpoch)
-    &&
-    validator.exitEpoch === FAR_FUTURE_EPOCH
-    &&
-    currentEpoch >= validator.activationEpoch + config.SHARD_COMMITTEE_PERIOD;
+  return (
+    hasExecutionWithdrawalCredential(withdrawalCredentials) &&
+    addressStr === sourceAddressStr &&
+    isActiveValidator(validator, currentEpoch) &&
+    validator.exitEpoch === FAR_FUTURE_EPOCH &&
+    currentEpoch >= validator.activationEpoch + config.SHARD_COMMITTEE_PERIOD
+  );
 }

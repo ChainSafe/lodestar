@@ -71,7 +71,6 @@ export type ChainConfig = {
 
   // Networking
   MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: number;
-
 };
 
 export const chainConfigTypes: SpecTypes<ChainConfig> = {

@@ -1,8 +1,7 @@
-import {COMPOUNDING_WITHDRAWAL_PREFIX, EPOCHS_PER_ETH1_VOTING_PERIOD} from "@lodestar/params";
-import {phase0, ssz} from "@lodestar/types";
-import {EpochTransitionCache, CachedBeaconStateAllForks, CachedBeaconStateElectra} from "../types.js";
-import { decreaseBalance, increaseBalance } from "../util/balance.js";
-import { hasEth1WithdrawalCredential } from "../util/capella.js";
+import {COMPOUNDING_WITHDRAWAL_PREFIX} from "@lodestar/params";
+import { CachedBeaconStateElectra} from "../types.js";
+import {decreaseBalance, increaseBalance} from "../util/balance.js";
+import {hasEth1WithdrawalCredential} from "../util/capella.js";
 
 /**
  * TODO Electra: jdoc
@@ -15,11 +14,11 @@ export function processPendingConsolidations(state: CachedBeaconStateElectra): v
     const sourceValidator = state.validators.getReadonly(sourceIndex);
 
     if (sourceValidator.slashed) {
-      nextPendingConsolidation ++;
+      nextPendingConsolidation++;
       continue;
     }
 
-    if (sourceValidator.withdrawableEpoch > state.epochCtx.epoch){
+    if (sourceValidator.withdrawableEpoch > state.epochCtx.epoch) {
       break;
     }
 

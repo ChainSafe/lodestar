@@ -1,7 +1,12 @@
 import {ForkSeq} from "@lodestar/params";
-import {allForks, altair, capella, electra} from "@lodestar/types";
+import {allForks, altair, capella} from "@lodestar/types";
 import {getFullOrBlindedPayload, isExecutionEnabled} from "../util/execution.js";
-import {CachedBeaconStateAllForks, CachedBeaconStateCapella, CachedBeaconStateBellatrix, CachedBeaconStateElectra} from "../types.js";
+import {
+  CachedBeaconStateAllForks,
+  CachedBeaconStateCapella,
+  CachedBeaconStateBellatrix,
+  CachedBeaconStateElectra,
+} from "../types.js";
 import {processExecutionPayload} from "./processExecutionPayload.js";
 import {processSyncAggregate} from "./processSyncCommittee.js";
 import {processBlockHeader} from "./processBlockHeader.js";

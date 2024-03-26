@@ -1,9 +1,14 @@
 import {ContainerType, ListCompositeType} from "@chainsafe/ssz";
+import {
+  MAX_CONSOLIDATIONS,
+  PENDING_BALANCE_DEPOSITS_LIMIT,
+  PENDING_CONSOLIDATIONS_LIMIT,
+  PENDING_PARTIAL_WITHDRAWALS_LIMIT,
+} from "@lodestar/params";
 import {ssz as primitiveSsz} from "../primitive/index.js";
 import {ssz as altairSsz} from "../altair/index.js";
 import {ssz as capellaSsz} from "../capella/index.js";
 import {ssz as denebSsz} from "../deneb/index.js";
-import { MAX_CONSOLIDATIONS, PENDING_BALANCE_DEPOSITS_LIMIT, PENDING_CONSOLIDATIONS_LIMIT, PENDING_PARTIAL_WITHDRAWALS_LIMIT } from "@lodestar/params";
 
 const {BLSSignature, Epoch, Gwei, ValidatorIndex, ExecutionAddress, BLSPubkey} = primitiveSsz;
 
@@ -163,7 +168,6 @@ export const BeaconState = new ContainerType(
     pendingBalanceDeposits: new ListCompositeType(PendingBalanceDeposit, PENDING_BALANCE_DEPOSITS_LIMIT), // [New in Electra]
     pendingPartialWithdrawals: new ListCompositeType(PartialWithdrawal, PENDING_PARTIAL_WITHDRAWALS_LIMIT), // [New in Electra]
     pendingConsolidations: new ListCompositeType(PendingConsolidation, PENDING_CONSOLIDATIONS_LIMIT), // [New in Electra]
-
   },
   {typeName: "BeaconState", jsonCase: "eth2"}
 );

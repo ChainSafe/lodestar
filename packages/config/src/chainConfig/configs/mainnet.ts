@@ -100,7 +100,6 @@ export const chainConfig: ChainConfig = {
   // `2**12` (= 4096 epochs, ~18 days)
   MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: 4096,
 
-
   // Electra
   // 2**8 * 10**9 (= 256,000,000,000)
   MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT: 256000000000,

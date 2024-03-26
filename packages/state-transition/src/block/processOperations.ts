@@ -9,8 +9,8 @@ import {processDeposit} from "./processDeposit.js";
 import {processVoluntaryExit} from "./processVoluntaryExit.js";
 import {processBlsToExecutionChange} from "./processBlsToExecutionChange.js";
 import {ProcessBlockOpts} from "./types.js";
-import { processExecutionLayerWithdrawRequest } from "./processExecutionLayerWithdrawRequest.js";
-import { processConsolidation } from "./processConsolidation.js";
+import {processExecutionLayerWithdrawRequest} from "./processExecutionLayerWithdrawRequest.js";
+import {processConsolidation} from "./processConsolidation.js";
 
 export {
   processProposerSlashing,
@@ -58,7 +58,6 @@ export function processOperations(
   }
 
   if (fork >= ForkSeq.electra) {
-
     const stateElectra = state as CachedBeaconStateElectra;
     const bodyElectra = body as electra.BeaconBlockBody;
 

@@ -1,7 +1,7 @@
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, GENESIS_EPOCH, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {allForks, electra, Epoch, Gwei, Slot, SyncPeriod} from "@lodestar/types";
-import { getActivationExitChurnLimit } from "./validator";
-import { CachedBeaconStateElectra } from "../types";
+import {allForks, Epoch, Gwei, Slot, SyncPeriod} from "@lodestar/types";
+import {CachedBeaconStateElectra} from "../types.js";
+import {getActivationExitChurnLimit} from "./validator.js";
 
 /**
  * Return the epoch number at the given slot.
@@ -41,7 +41,7 @@ export function computeActivationExitEpoch(epoch: Epoch): Epoch {
   return epoch + 1 + MAX_SEED_LOOKAHEAD;
 }
 
-export function computeExitEpochAndUpdateChurn(state: CachedBeaconStateElectra, exitBalance: Gwei) {
+export function computeExitEpochAndUpdateChurn(state: CachedBeaconStateElectra, exitBalance: Gwei): number {
   const earliestExitEpoch = computeActivationExitEpoch(state.epochCtx.epoch);
   const perEpochChurn = getActivationExitChurnLimit(state);
 
@@ -62,7 +62,6 @@ export function computeExitEpochAndUpdateChurn(state: CachedBeaconStateElectra, 
 
     state.earliestExitEpoch += Number(additionalEpochs);
     state.exitBalanceToConsume = BigInt(perEpochChurn) - remainder;
-    
   }
 
   return state.earliestExitEpoch;

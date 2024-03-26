@@ -1,7 +1,7 @@
+import {ForkSeq} from "@lodestar/params";
 import {computeActivationExitEpoch} from "../util/index.js";
 import {initiateValidatorExit} from "../block/index.js";
 import {EpochTransitionCache, CachedBeaconStateAllForks} from "../types.js";
-import { ForkSeq } from "@lodestar/params";
 
 /**
  * Update validator registry for validators that activate + exit
@@ -17,7 +17,11 @@ import { ForkSeq } from "@lodestar/params";
  *   - indicesEligibleForActivationQueue: 0
  *   - indicesToEject: 0
  */
-export function processRegistryUpdates(fork: ForkSeq, state: CachedBeaconStateAllForks, cache: EpochTransitionCache): void {
+export function processRegistryUpdates(
+  fork: ForkSeq,
+  state: CachedBeaconStateAllForks,
+  cache: EpochTransitionCache
+): void {
   const {epochCtx} = state;
 
   // Get the validators sub tree once for all the loop
@@ -34,7 +38,6 @@ export function processRegistryUpdates(fork: ForkSeq, state: CachedBeaconStateAl
 
   // TODO Electra: New logic to set validator.activation_epoch
   if (fork >= ForkSeq.electra) {
-
   }
 
   // set new activation eligibilities

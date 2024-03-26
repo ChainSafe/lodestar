@@ -60,7 +60,7 @@ export function slashValidator(
   decreaseBalance(state, slashedIndex, Math.floor(effectiveBalance / minSlashingPenaltyQuotient));
 
   // apply proposer and whistleblower rewards
-  const whistleblowerReward = 
+  const whistleblowerReward =
     fork <= ForkSeq.deneb
       ? Math.floor(effectiveBalance / WHISTLEBLOWER_REWARD_QUOTIENT)
       : Math.floor(effectiveBalance / WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA);

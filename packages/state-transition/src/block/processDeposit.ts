@@ -66,7 +66,8 @@ export function processDeposit(fork: ForkSeq, state: CachedBeaconStateAllForks, 
     }
 
     // add validator and balance entries
-    const effectiveBalance = fork < ForkSeq.electra ? Math.min(amount - (amount % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE) : 0;
+    const effectiveBalance =
+      fork < ForkSeq.electra ? Math.min(amount - (amount % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE) : 0;
     validators.push(
       ssz.phase0.Validator.toViewDU({
         pubkey,
@@ -114,7 +115,6 @@ export function processDeposit(fork: ForkSeq, state: CachedBeaconStateAllForks, 
       stateElectra.pendingBalanceDeposits.push(pendingBalanceDeposit);
     }
   } else {
-
     if (fork < ForkSeq.electra) {
       // increase balance by deposit amount right away pre-electra
       increaseBalance(state, cachedIndex, amount);

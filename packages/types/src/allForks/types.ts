@@ -44,10 +44,18 @@ export type BeaconState =
 export type Metadata = phase0.Metadata | altair.Metadata;
 
 // For easy reference in the assemble block for building payloads
-export type ExecutionBlockBody = bellatrix.BeaconBlockBody | capella.BeaconBlockBody | deneb.BeaconBlockBody | electra.BeaconBlockBody;
+export type ExecutionBlockBody =
+  | bellatrix.BeaconBlockBody
+  | capella.BeaconBlockBody
+  | deneb.BeaconBlockBody
+  | electra.BeaconBlockBody;
 
 // These two additional types will also change bellatrix forward
-export type ExecutionPayload = bellatrix.ExecutionPayload | capella.ExecutionPayload | deneb.ExecutionPayload | electra.ExecutionPayload;
+export type ExecutionPayload =
+  | bellatrix.ExecutionPayload
+  | capella.ExecutionPayload
+  | deneb.ExecutionPayload
+  | electra.ExecutionPayload;
 export type ExecutionPayloadHeader =
   | bellatrix.ExecutionPayloadHeader
   | capella.ExecutionPayloadHeader

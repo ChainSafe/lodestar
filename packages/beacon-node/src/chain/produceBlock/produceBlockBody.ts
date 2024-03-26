@@ -575,7 +575,6 @@ function preparePayloadAttributes(
     ).withdrawals;
   }
 
-  
   return payloadAttributes;
 }
 
