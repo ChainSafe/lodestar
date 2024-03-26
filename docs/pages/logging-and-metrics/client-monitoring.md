@@ -29,6 +29,7 @@ When sending data to a remote service you should be conscious about security:
   and associate your validators, IP address and other personal information.
 - Always use a HTTPS connection (i.e. a URL starting with `https://`) to prevent the traffic
   from being intercepted in transit and leaking information.
+
 :::
 
 More details about the data sent to the remote service can be found in the [specification](https://docs.google.com/document/d/1qPWAVRjPCENlyAjUBwGkHMvz9qLdd_6u9DPZcNxDBpc).

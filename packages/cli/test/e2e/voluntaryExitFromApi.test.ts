@@ -35,7 +35,7 @@ describe("voluntary exit from api", function () {
         "--keymanager",
         `--keymanager.port=${keymanagerPort}`,
         // Disable bearer token auth to simplify testing
-        "--keymanager.authEnabled=false",
+        "--keymanager.auth=false",
       ],
       {pipeStdioToParent: false, logPrefix: "dev", testContext: {beforeEach, afterEach, afterAll}}
     );

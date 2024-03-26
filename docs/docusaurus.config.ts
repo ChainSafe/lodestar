@@ -39,7 +39,7 @@ const config: Config = {
           routeBasePath: "/",
         },
         gtag: {
-          trackingID: 'G-N21J5PWW5X',
+          trackingID: "G-N21J5PWW5X",
           anonymizeIP: true,
         },
         theme: {
@@ -104,6 +104,10 @@ const config: Config = {
       additionalLanguages: ["bash", "diff", "json"],
       theme: prismThemes.vsLight,
       darkTheme: prismThemes.vsDark,
+    },
+    tableOfContents: {
+      minHeadingLevel: 2,
+      maxHeadingLevel: 5,
     },
   } satisfies Preset.ThemeConfig,
 };

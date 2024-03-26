@@ -2,7 +2,7 @@
 
 Syncing an Ethereum node involves obtaining a copy of the blockchain data from other peers in the network to reach a consistent state. This process is crucial for new nodes or nodes that have been offline and need to catch up with the network's current state. Syncing can be performed for both the execution layer and the beacon chain, although the focus here will be primarily on the beacon chain.
 
-Lodestar allows for several methods of syncing however the recommended method is `checkpoint sync` as it is the fastest and least resource intensive. It is generally a good idea to sync via a [`--checkpointSyncUrl`](./beacon-cli.md#-checkpointsyncurl). If starting at a specific point is necessary specify the [`--checkpointState`](./beacon-cli.md#-checkpointstate) that should be where the sync begins.
+Lodestar allows for several methods of syncing however the recommended method is `checkpoint sync` as it is the fastest and least resource intensive. It is generally a good idea to sync via a [`--checkpointSyncUrl`](./beacon-cli#--checkpointsyncurl). If starting at a specific point is necessary specify the [`--checkpointState`](./beacon-cli#--checkpointstate) that should be where the sync begins.
 
 ## Weak Subjectivity
 
@@ -36,7 +36,7 @@ The implementation of the different syncing styles in Lodestar are actually one 
 
 There are several flags that can be used to configure the sync process.
 
-- [`--checkpointSyncUrl`](./beacon-cli.md#-checkpointsyncurl)
-- [`--checkpointState`](./beacon-cli.md#-checkpointstate)
-- [`--wssCheckpoint`](./beacon-cli.md#-wsscheckpoint)
-- [`--forceCheckpointSync`](./beacon-cli.md#-forcecheckpointsync)
+- [`--checkpointSyncUrl`](./beacon-cli#--checkpointsyncurl)
+- [`--checkpointState`](./beacon-cli#--checkpointstate)
+- [`--wssCheckpoint`](./beacon-cli#--wsscheckpoint)
+- [`--forceCheckpointSync`](./beacon-cli#--forcecheckpointsync)
