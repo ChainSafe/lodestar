@@ -20,13 +20,15 @@ export type BeaconBlockBody =
   | altair.BeaconBlockBody
   | bellatrix.BeaconBlockBody
   | capella.BeaconBlockBody
-  | deneb.BeaconBlockBody;
+  | deneb.BeaconBlockBody
+  | electra.BeaconBlockBody;
 export type BeaconBlock =
   | phase0.BeaconBlock
   | altair.BeaconBlock
   | bellatrix.BeaconBlock
   | capella.BeaconBlock
-  | deneb.BeaconBlock;
+  | deneb.BeaconBlock
+  | electra.BeaconBlock;
 export type SignedBeaconBlock =
   | phase0.SignedBeaconBlock
   | altair.SignedBeaconBlock
@@ -42,10 +44,10 @@ export type BeaconState =
 export type Metadata = phase0.Metadata | altair.Metadata;
 
 // For easy reference in the assemble block for building payloads
-export type ExecutionBlockBody = bellatrix.BeaconBlockBody | capella.BeaconBlockBody | deneb.BeaconBlockBody;
+export type ExecutionBlockBody = bellatrix.BeaconBlockBody | capella.BeaconBlockBody | deneb.BeaconBlockBody | electra.BeaconBlockBody;
 
 // These two additional types will also change bellatrix forward
-export type ExecutionPayload = bellatrix.ExecutionPayload | capella.ExecutionPayload | deneb.ExecutionPayload;
+export type ExecutionPayload = bellatrix.ExecutionPayload | capella.ExecutionPayload | deneb.ExecutionPayload | electra.ExecutionPayload;
 export type ExecutionPayloadHeader =
   | bellatrix.ExecutionPayloadHeader
   | capella.ExecutionPayloadHeader
@@ -201,6 +203,7 @@ export type AllForksSSZTypes = {
     | typeof bellatrixSsz.BeaconState
     | typeof capellaSsz.BeaconState
     | typeof denebSsz.BeaconState
+    | typeof electraSsz.BeaconState
   >;
   Metadata: AllForksTypeOf<typeof phase0Ssz.Metadata | typeof altairSsz.Metadata>;
 };
@@ -261,6 +264,7 @@ export type AllForksLightClientSSZTypes = {
     | typeof bellatrixSsz.BeaconBlock
     | typeof capellaSsz.BeaconBlock
     | typeof denebSsz.BeaconBlock
+    | typeof electraSsz.BeaconBlock
   >;
   BeaconBlockBody: AllForksTypeOf<
     | typeof altairSsz.BeaconBlockBody

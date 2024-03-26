@@ -1,13 +1,25 @@
 import {ContainerType, ListCompositeType} from "@chainsafe/ssz";
 import {ssz as primitiveSsz} from "../primitive/index.js";
+import {ssz as altairSsz} from "../altair/index.js";
+import {ssz as capellaSsz} from "../capella/index.js";
 import {ssz as denebSsz} from "../deneb/index.js";
 import { MAX_CONSOLIDATIONS, PENDING_BALANCE_DEPOSITS_LIMIT, PENDING_CONSOLIDATIONS_LIMIT, PENDING_PARTIAL_WITHDRAWALS_LIMIT } from "@lodestar/params";
 
 const {BLSSignature, Epoch, Gwei, ValidatorIndex, ExecutionAddress, BLSPubkey} = primitiveSsz;
 
+export const ExecutionLayerWithdrawRequest = new ContainerType(
+  {
+    sourceAddress: ExecutionAddress,
+    validatorPubkey: BLSPubkey,
+    amount: Gwei,
+  },
+  {typeName: "ExecutionLayerWithdrawRequest", jsonCase: "eth2"}
+);
+
 export const ExecutionPayload = new ContainerType(
   {
     ...denebSsz.ExecutionPayload.fields,
+    withdrawaRequests: new ListCompositeType(ExecutionLayerWithdrawRequest, 16), // TODO Electra: Pending finalizing the naming of this field and length limit
   },
   {typeName: "ExecutionPayload", jsonCase: "eth2"}
 );
@@ -38,7 +50,10 @@ export const SignedConsolidation = new ContainerType(
 
 export const BeaconBlockBody = new ContainerType(
   {
-    ...denebSsz.BeaconBlockBody.fields,
+    ...altairSsz.BeaconBlockBody.fields,
+    executionPayload: ExecutionPayload, // Modified in ELECTRA
+    blsToExecutionChanges: capellaSsz.BeaconBlockBody.fields.blsToExecutionChanges,
+    blobKzgCommitments: denebSsz.BlobKzgCommitments,
     consolidations: new ListCompositeType(SignedConsolidation, MAX_CONSOLIDATIONS), // [New in Electra]
   },
   {typeName: "BeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
@@ -47,6 +62,7 @@ export const BeaconBlockBody = new ContainerType(
 export const BeaconBlock = new ContainerType(
   {
     ...denebSsz.BeaconBlock.fields,
+    body: BeaconBlockBody, // Modified in ELECTRA
   },
   {typeName: "BeaconBlock", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
@@ -199,13 +215,4 @@ export const SSEPayloadAttributes = new ContainerType(
     ...denebSsz.SSEPayloadAttributes.fields,
   },
   {typeName: "SSEPayloadAttributes", jsonCase: "eth2"}
-);
-
-export const ExecutionLayerWithdrawRequest = new ContainerType(
-  {
-    sourceAddress: ExecutionAddress,
-    validatorPubkey: BLSPubkey,
-    amount: Gwei,
-  },
-  {typeName: "ExecutionLayerWithdrawRequest", jsonCase: "eth2"}
 );
