@@ -12,6 +12,7 @@ import {
   TIMELY_TARGET_FLAG_INDEX,
   WEIGHT_DENOMINATOR,
   WHISTLEBLOWER_REWARD_QUOTIENT,
+  WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA,
 } from "@lodestar/params";
 
 import {decreaseBalance, increaseBalance} from "../util/index.js";
@@ -59,7 +60,10 @@ export function slashValidator(
   decreaseBalance(state, slashedIndex, Math.floor(effectiveBalance / minSlashingPenaltyQuotient));
 
   // apply proposer and whistleblower rewards
-  const whistleblowerReward = Math.floor(effectiveBalance / WHISTLEBLOWER_REWARD_QUOTIENT);
+  const whistleblowerReward = 
+    fork <= ForkSeq.deneb
+      ? Math.floor(effectiveBalance / WHISTLEBLOWER_REWARD_QUOTIENT)
+      : Math.floor(effectiveBalance / WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA);
   const proposerReward =
     fork === ForkSeq.phase0
       ? Math.floor(whistleblowerReward / PROPOSER_REWARD_QUOTIENT)
