@@ -1,10 +1,10 @@
 import {toHexString} from "@chainsafe/ssz";
 import {electra, ssz} from "@lodestar/types";
-import {FAR_FUTURE_EPOCH, PENDING_CONSOLIDATIONS_LIMIT} from "@lodestar/params";
+import {FAR_FUTURE_EPOCH, MIN_ACTIVATION_BALANCE, PENDING_CONSOLIDATIONS_LIMIT} from "@lodestar/params";
 import {verifyConsolidationSignature} from "../signatureSets/index.js";
 
 import {CachedBeaconStateElectra} from "../types.js";
-import { isActiveValidator } from "../util/validator.js";
+import { getConsolidationChurnLimit, isActiveValidator } from "../util/validator.js";
 import { hasExecutionWithdrawalCredential } from "../util/capella.js";
 
 export function processConsolidation(
@@ -40,6 +40,9 @@ function assertValidConsolidation(state: CachedBeaconStateElectra, signedConsoli
 
   // If there is too little available consolidation churn limit, no consolidations are allowed in the block
   // assert get_consolidation_churn_limit(state) > MIN_ACTIVATION_BALANCE
+  if (getConsolidationChurnLimit(state) <= MIN_ACTIVATION_BALANCE) {
+    throw new Error(`Consolidation churn limit too low. consolidationChurnLimit=${getConsolidationChurnLimit(state)}`);
+  }
 
 
   const consolidation = signedConsolidation.message;

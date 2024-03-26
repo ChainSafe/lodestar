@@ -8,6 +8,7 @@ import {CachedBeaconStateElectra} from "../types.js";
 import { hasCompoundingWithdrawalCredential, hasEth1WithdrawalCredential, hasExecutionWithdrawalCredential } from "../util/capella.js";
 import { isActiveValidator } from "../util/validator.js";
 import { initiateValidatorExit } from "./initiateValidatorExit.js";
+import { computeExitEpochAndUpdateChurn } from "../util/epoch.js";
 
 export function processExecutionLayerWithdrawRequest(
   state: CachedBeaconStateElectra,
@@ -49,7 +50,7 @@ export function processExecutionLayerWithdrawRequest(
     initiateValidatorExit(state, validator);
   } else if (validatorBalance > MIN_ACTIVATION_BALANCE + pendingBalanceToWithdraw) {
     const amountToWithdraw = Math.min(validatorBalance - MIN_ACTIVATION_BALANCE - pendingBalanceToWithdraw, amount);
-    const exitQueueEpoch = 0; // TODO Electra: compute_exit_epoch_and_update_churn()
+    const exitQueueEpoch = computeExitEpochAndUpdateChurn(state, BigInt(amountToWithdraw));
     const withdrawableEpoch = exitQueueEpoch + config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY;
 
     const pendingPartialWithdrawal = ssz.electra.PartialWithdrawal.toViewDU({
