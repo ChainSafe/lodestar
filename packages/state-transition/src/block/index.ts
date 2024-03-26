@@ -1,7 +1,7 @@
 import {ForkSeq} from "@lodestar/params";
 import {allForks, altair, capella, electra} from "@lodestar/types";
 import {getFullOrBlindedPayload, isExecutionEnabled} from "../util/execution.js";
-import {CachedBeaconStateAllForks, CachedBeaconStateCapella, CachedBeaconStateBellatrix} from "../types.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateCapella, CachedBeaconStateBellatrix, CachedBeaconStateElectra} from "../types.js";
 import {processExecutionPayload} from "./processExecutionPayload.js";
 import {processSyncAggregate} from "./processSyncCommittee.js";
 import {processBlockHeader} from "./processBlockHeader.js";
@@ -12,7 +12,6 @@ import {processBlobKzgCommitments} from "./processBlobKzgCommitments.js";
 import {BlockExternalData, DataAvailableStatus} from "./externalData.js";
 import {processWithdrawals} from "./processWithdrawals.js";
 import {ProcessBlockOpts} from "./types.js";
-import { CachedBeaconStateElectra } from "../../lib/types.js";
 
 // Spec tests
 export {

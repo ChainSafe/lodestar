@@ -1,7 +1,7 @@
-import {allForks, capella} from "@lodestar/types";
+import {allForks, capella, electra} from "@lodestar/types";
 import {ForkSeq, MAX_DEPOSITS} from "@lodestar/params";
 
-import {CachedBeaconStateAllForks, CachedBeaconStateCapella} from "../types.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateCapella, CachedBeaconStateElectra} from "../types.js";
 import {processAttestations} from "./processAttestations.js";
 import {processProposerSlashing} from "./processProposerSlashing.js";
 import {processAttesterSlashing} from "./processAttesterSlashing.js";
@@ -9,6 +9,7 @@ import {processDeposit} from "./processDeposit.js";
 import {processVoluntaryExit} from "./processVoluntaryExit.js";
 import {processBlsToExecutionChange} from "./processBlsToExecutionChange.js";
 import {ProcessBlockOpts} from "./types.js";
+import { processExecutionLayerWithdrawRequest } from "./processExecutionLayerWithdrawRequest.js";
 import { processConsolidation } from "./processConsolidation.js";
 
 export {
@@ -60,6 +61,10 @@ export function processOperations(
 
     const stateElectra = state as CachedBeaconStateElectra;
     const bodyElectra = body as electra.BeaconBlockBody;
+
+    for (const withdrawRequest of bodyElectra.executionPayload.withdrawaRequests) {
+      processExecutionLayerWithdrawRequest(stateElectra, withdrawRequest);
+    }
 
     for (const consolidation of bodyElectra.consolidations) {
       processConsolidation(stateElectra, consolidation);
