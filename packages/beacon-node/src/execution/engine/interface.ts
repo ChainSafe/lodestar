@@ -3,10 +3,10 @@ import {KZGCommitment, Blob, KZGProof} from "@lodestar/types/deneb";
 import {Root, RootHex, allForks, capella, Wei} from "@lodestar/types";
 
 import {DATA} from "../../eth1/provider/utils.js";
-import {PayloadIdCache, PayloadId, WithdrawalV1} from "./payloadIdCache.js";
+import {PayloadIdCache, PayloadId, WithdrawalV1, DepositReceiptV1} from "./payloadIdCache.js";
 import {ExecutionPayloadBody} from "./types.js";
 
-export {PayloadIdCache, type PayloadId, type WithdrawalV1};
+export {PayloadIdCache, type PayloadId, type WithdrawalV1, type DepositReceiptV1};
 
 export enum ExecutionPayloadStatus {
   /** given payload is valid */

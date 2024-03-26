@@ -69,7 +69,8 @@
     "@lodestar/types": "^1.17.0",
     "@lodestar/utils": "^1.17.0",
     "bigint-buffer": "^1.1.5",
-    "buffer-xor": "^2.0.2"
+    "buffer-xor": "^2.0.2",
+    "immutable": "^4.3.2"
   },
   "devDependencies": {
     "@types/buffer-xor": "^2.0.0"

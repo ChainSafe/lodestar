@@ -57,7 +57,6 @@ const coveredTestRunners = [
 // ],
 // ```
 export const defaultSkipOpts: SkipOpts = {
-  skippedForks: ["eip6110"],
   // TODO: capella
   // BeaconBlockBody proof in lightclient is the new addition in v1.3.0-rc.2-hotfix
   // Skip them for now to enable subsequently

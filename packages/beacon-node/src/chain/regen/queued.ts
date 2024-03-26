@@ -1,7 +1,7 @@
 import {toHexString} from "@chainsafe/ssz";
 import {phase0, Slot, allForks, RootHex, Epoch} from "@lodestar/types";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
+import {CachedBeaconStateAllForks, UnfinalizedPubkeyIndexMap, computeEpochAtSlot} from "@lodestar/state-transition";
 import {Logger} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
 import {CheckpointHex, toCheckpointHex} from "../stateCache/index.js";
@@ -192,6 +192,54 @@ export class QueuedStateRegenerator implements IStateRegenerator {
 
   updatePreComputedCheckpoint(rootHex: RootHex, epoch: Epoch): number | null {
     return this.checkpointStateCache.updatePreComputedCheckpoint(rootHex, epoch);
+  }
+
+  /**
+   * Remove `validators` from all unfinalized cache's epochCtx.UnfinalizedPubkey2Index,
+   * and add them to epochCtx.pubkey2index and epochCtx.index2pubkey
+   */
+  updateUnfinalizedPubkeys(validators: UnfinalizedPubkeyIndexMap): void {
+    let numStatesUpdated = 0;
+    const states = this.stateCache.getStates();
+    const cpStates = this.checkpointStateCache.getStates();
+
+    // Add finalized pubkeys to all states.
+    const addTimer = this.metrics?.regenFnAddPubkeyTime.startTimer();
+
+    // We only need to add pubkeys to any one of the states since the finalized caches is shared globally across all states
+    const firstState = (states.next().value ?? cpStates.next().value) as CachedBeaconStateAllForks | undefined;
+
+    if (firstState !== undefined) {
+      firstState.epochCtx.addFinalizedPubkeys(validators, this.metrics?.epochCache ?? undefined);
+    } else {
+      this.logger.warn("Attempt to delete finalized pubkey from unfinalized pubkey cache. But no state is available");
+    }
+
+    addTimer?.();
+
+    // Delete finalized pubkeys from unfinalized pubkey cache for all states
+    const deleteTimer = this.metrics?.regenFnDeletePubkeyTime.startTimer();
+    const pubkeysToDelete = Array.from(validators.keys());
+
+    for (const s of states) {
+      s.epochCtx.deleteUnfinalizedPubkeys(pubkeysToDelete);
+      numStatesUpdated++;
+    }
+
+    for (const s of cpStates) {
+      s.epochCtx.deleteUnfinalizedPubkeys(pubkeysToDelete);
+      numStatesUpdated++;
+    }
+
+    // Since first state is consumed from the iterator. Will need to perform delete explicitly
+    if (firstState !== undefined) {
+      firstState?.epochCtx.deleteUnfinalizedPubkeys(pubkeysToDelete);
+      numStatesUpdated++;
+    }
+
+    deleteTimer?.();
+
+    this.metrics?.regenFnNumStatesUpdated.observe(numStatesUpdated);
   }
 
   /**

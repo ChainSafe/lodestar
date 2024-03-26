@@ -62,6 +62,11 @@ export interface IEth1ForBlockProduction {
    * - head state not isMergeTransitionComplete
    */
   startPollingMergeBlock(): void;
+
+  /**
+   * Should stop polling eth1Data after a Electra block is finalized AND deposit_receipts_start_index is reached
+   */
+  stopPollingEth1Data(): void;
 }
 
 /** Different Eth1Block from phase0.Eth1Block with blockHash */

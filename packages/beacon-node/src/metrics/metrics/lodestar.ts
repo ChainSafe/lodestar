@@ -374,6 +374,17 @@ export function createLodestarMetrics(
       help: "Total count state.validators nodesPopulated is false on stfn for post state",
     }),
 
+    epochCache: {
+      finalizedPubkeyDuplicateInsert: register.gauge({
+        name: "lodestar_epoch_cache_finalized_pubkey_duplicate_insert",
+        help: "Total count of duplicate insert of finalized pubkeys",
+      }),
+      newUnFinalizedPubkey: register.gauge({
+        name: "lodestar_epoch_cache_new_unfinalized_pubkey",
+        help: "Total count of unfinalized pubkeys added",
+      }),
+    },
+
     // BLS verifier thread pool and queue
 
     bls: {
@@ -1195,6 +1206,11 @@ export function createLodestarMetrics(
         help: "Histogram of cloned count per state every time state.clone() is called",
         buckets: [1, 2, 5, 10, 50, 250],
       }),
+      numStatesUpdated: register.histogram({
+        name: "lodestar_cp_state_cache_state_updated_count",
+        help: "Histogram of number of state cache items updated every time removing and adding pubkeys to pubkey cache",
+        buckets: [1, 2, 5, 10, 50, 250],
+      }),
       statePersistDuration: register.histogram({
         name: "lodestar_cp_state_cache_state_persist_seconds",
         help: "Histogram of time to persist state to db",
@@ -1367,6 +1383,21 @@ export function createLodestarMetrics(
       name: "lodestar_regen_fn_errors_total",
       help: "regen function total errors",
       labelNames: ["entrypoint", "caller"],
+    }),
+    regenFnAddPubkeyTime: register.histogram({
+      name: "lodestar_regen_fn_add_pubkey_time_seconds",
+      help: "Historgram of time spent on adding pubkeys to all state cache items in seconds",
+      buckets: [0.01, 0.1, 0.5, 1, 2, 5],
+    }),
+    regenFnDeletePubkeyTime: register.histogram({
+      name: "lodestar_regen_fn_delete_pubkey_time_seconds",
+      help: "Histrogram of time spent on deleting pubkeys from all state cache items in seconds",
+      buckets: [0.01, 0.1, 0.5, 1, 2, 5],
+    }),
+    regenFnNumStatesUpdated: register.histogram({
+      name: "lodestar_regen_state_cache_state_updated_count",
+      help: "Histogram of number of state cache items updated every time removing pubkeys from unfinalized cache",
+      buckets: [1, 2, 5, 10, 50, 250],
     }),
     unhandledPromiseRejections: register.gauge({
       name: "lodestar_unhandled_promise_rejections_total",

@@ -1,8 +1,7 @@
 import {describe, it, expect, beforeEach} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
-import {EpochShuffling} from "@lodestar/state-transition";
+import {EpochShuffling, CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {CachedBeaconStateAllForks} from "@lodestar/state-transition/src/types.js";
 import {FIFOBlockStateCache} from "../../../../src/chain/stateCache/index.js";
 import {generateCachedState} from "../../../utils/state.js";
 

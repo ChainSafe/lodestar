@@ -24,6 +24,11 @@ export type BeaconStateTransitionMetrics = {
   registerValidatorStatuses: (currentEpoch: Epoch, statuses: AttesterStatus[], balances?: number[]) => void;
 };
 
+export type EpochCacheMetrics = {
+  finalizedPubkeyDuplicateInsert: Gauge;
+  newUnFinalizedPubkey: Gauge;
+};
+
 export function onStateCloneMetrics(
   state: CachedBeaconStateAllForks,
   metrics: BeaconStateTransitionMetrics,
