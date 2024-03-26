@@ -9,6 +9,7 @@ import {processDeposit} from "./processDeposit.js";
 import {processVoluntaryExit} from "./processVoluntaryExit.js";
 import {processBlsToExecutionChange} from "./processBlsToExecutionChange.js";
 import {ProcessBlockOpts} from "./types.js";
+import { processConsolidation } from "./processConsolidation.js";
 
 export {
   processProposerSlashing,
@@ -56,7 +57,12 @@ export function processOperations(
   }
 
   if (fork >= ForkSeq.electra) {
-    // TODO Electra: add process_execution_layer_withdraw_request
-    // TODO Electra: add process_consolidation
+
+    const stateElectra = state as CachedBeaconStateElectra;
+    const bodyElectra = body as electra.BeaconBlockBody;
+
+    for (const consolidation of bodyElectra.consolidations) {
+      processConsolidation(stateElectra, consolidation);
+    }
   }
 }
