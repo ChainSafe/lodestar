@@ -12,6 +12,7 @@ import {processExecutionLayerWithdrawalRequest} from "./processExecutionLayerWit
 import {processBlsToExecutionChange} from "./processBlsToExecutionChange.js";
 import {processDepositReceipt} from "./processDepositReceipt.js";
 import {ProcessBlockOpts} from "./types.js";
+import { processConsolidation } from "./processConsolidation.js";
 
 export {
   processProposerSlashing,
@@ -67,10 +68,15 @@ export function processOperations(
   }
 
   if (fork >= ForkSeq.electra) {
-    for (const depositReceipt of (body as electra.BeaconBlockBody).executionPayload.depositReceipts) {
-      processDepositReceipt(fork, state as CachedBeaconStateElectra, depositReceipt);
+    const stateElectra = state as CachedBeaconStateElectra;
+    const bodyElectra = body as electra.BeaconBlockBody;
+    for (const depositReceipt of bodyElectra.executionPayload.depositReceipts) {
+      processDepositReceipt(fork, stateElectra, depositReceipt);
     }
-    // TODO Electra: add process_execution_layer_withdraw_request
-    // TODO Electra: add process_consolidation
+
+
+    for (const consolidation of bodyElectra.consolidations) {
+      processConsolidation(stateElectra, consolidation);
+    }
   }
 }
