@@ -14,7 +14,7 @@ import {
 
 import {ZERO_HASH} from "../constants/index.js";
 import {computeDomain, computeSigningRoot, increaseBalance} from "../util/index.js";
-import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../types.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStateElectra} from "../types.js";
 
 /**
  * Process a Deposit operation. Potentially adds a new validator to the registry. Mutates the validators and balances
@@ -66,7 +66,7 @@ export function processDeposit(fork: ForkSeq, state: CachedBeaconStateAllForks, 
     }
 
     // add validator and balance entries
-    const effectiveBalance = Math.min(amount - (amount % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE);
+    const effectiveBalance = fork < ForkSeq.electra ? Math.min(amount - (amount % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE) : 0;
     validators.push(
       ssz.phase0.Validator.toViewDU({
         pubkey,
@@ -79,9 +79,9 @@ export function processDeposit(fork: ForkSeq, state: CachedBeaconStateAllForks, 
         slashed: false,
       })
     );
-    state.balances.push(amount);
 
     const validatorIndex = validators.length - 1;
+    // TODO Electra: Review this
     // Updating here is better than updating at once on epoch transition
     // - Simplify genesis fn applyDeposits(): effectiveBalanceIncrements is populated immediately
     // - Keep related code together to reduce risk of breaking this cache
@@ -101,8 +101,30 @@ export function processDeposit(fork: ForkSeq, state: CachedBeaconStateAllForks, 
       stateAltair.previousEpochParticipation.push(0);
       stateAltair.currentEpochParticipation.push(0);
     }
+
+    if (fork < ForkSeq.electra) {
+      state.balances.push(amount);
+    } else if (fork >= ForkSeq.electra) {
+      state.balances.push(0);
+      const stateElectra = state as CachedBeaconStateElectra;
+      const pendingBalanceDeposit = ssz.electra.PendingBalanceDeposit.toViewDU({
+        index: validatorIndex,
+        amount: BigInt(amount),
+      });
+      stateElectra.pendingBalanceDeposits.push(pendingBalanceDeposit);
+    }
   } else {
-    // increase balance by deposit amount
-    increaseBalance(state, cachedIndex, amount);
+
+    if (fork < ForkSeq.electra) {
+      // increase balance by deposit amount right away pre-electra
+      increaseBalance(state, cachedIndex, amount);
+    } else if (fork >= ForkSeq.electra) {
+      const stateElectra = state as CachedBeaconStateElectra;
+      const pendingBalanceDeposit = ssz.electra.PendingBalanceDeposit.toViewDU({
+        index: cachedIndex,
+        amount: BigInt(amount),
+      });
+      stateElectra.pendingBalanceDeposits.push(pendingBalanceDeposit);
+    }
   }
 }

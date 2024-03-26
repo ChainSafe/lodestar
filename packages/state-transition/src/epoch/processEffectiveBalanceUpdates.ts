@@ -5,9 +5,12 @@ import {
   HYSTERESIS_QUOTIENT,
   HYSTERESIS_UPWARD_MULTIPLIER,
   MAX_EFFECTIVE_BALANCE,
+  MAX_EFFECTIVE_BALANCE_ELECTRA,
+  MIN_ACTIVATION_BALANCE,
   TIMELY_TARGET_FLAG_INDEX,
 } from "@lodestar/params";
 import {EpochTransitionCache, CachedBeaconStateAllForks, BeaconStateAltair} from "../types.js";
+import { hasCompoundingWithdrawalCredential } from "../util/capella.js";
 
 /** Same to https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/beacon-chain.md#has_flag */
 const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;
@@ -21,7 +24,7 @@ const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;
  * - On normal mainnet conditions 0 validators change their effective balance
  * - In case of big innactivity event a medium portion of validators may have their effectiveBalance updated
  */
-export function processEffectiveBalanceUpdates(state: CachedBeaconStateAllForks, cache: EpochTransitionCache): void {
+export function processEffectiveBalanceUpdates(fork: ForkSeq, state: CachedBeaconStateAllForks, cache: EpochTransitionCache): void {
   const HYSTERESIS_INCREMENT = EFFECTIVE_BALANCE_INCREMENT / HYSTERESIS_QUOTIENT;
   const DOWNWARD_THRESHOLD = HYSTERESIS_INCREMENT * HYSTERESIS_DOWNWARD_MULTIPLIER;
   const UPWARD_THRESHOLD = HYSTERESIS_INCREMENT * HYSTERESIS_UPWARD_MULTIPLIER;
@@ -42,6 +45,7 @@ export function processEffectiveBalanceUpdates(state: CachedBeaconStateAllForks,
     // PERF: It's faster to access to get() every single element (4ms) than to convert to regular array then loop (9ms)
     let effectiveBalanceIncrement = effectiveBalanceIncrements[i];
     let effectiveBalance = effectiveBalanceIncrement * EFFECTIVE_BALANCE_INCREMENT;
+    let effectiveBalanceLimit;
 
     if (
       // Too big
@@ -49,10 +53,17 @@ export function processEffectiveBalanceUpdates(state: CachedBeaconStateAllForks,
       // Too small. Check effectiveBalance < MAX_EFFECTIVE_BALANCE to prevent unnecessary updates
       (effectiveBalance < MAX_EFFECTIVE_BALANCE && effectiveBalance < balance - UPWARD_THRESHOLD)
     ) {
-      effectiveBalance = Math.min(balance - (balance % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE); // TODO Electra: Minimum is now dictated by EFFECTIVE_BALANCE_LIMIT instead of MAX_EB
       // Update the state tree
       // Should happen rarely, so it's fine to update the tree
       const validator = validators.get(i);
+
+      if (fork < ForkSeq.electra) {
+        effectiveBalanceLimit = MAX_EFFECTIVE_BALANCE;
+      } else { // Electra or after
+        effectiveBalanceLimit = hasCompoundingWithdrawalCredential(validator.withdrawalCredentials) ? MAX_EFFECTIVE_BALANCE_ELECTRA : MIN_ACTIVATION_BALANCE;
+      }
+
+      effectiveBalance = Math.min(balance - (balance % EFFECTIVE_BALANCE_INCREMENT), effectiveBalanceLimit);
       validator.effectiveBalance = effectiveBalance;
       // Also update the fast cached version
       const newEffectiveBalanceIncrement = Math.floor(effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);

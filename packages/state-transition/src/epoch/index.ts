@@ -129,7 +129,7 @@ export function processEpoch(
     const timer = metrics?.epochTransitionStepTime.startTimer({
       step: EpochTransitionStep.processEffectiveBalanceUpdates,
     });
-    processEffectiveBalanceUpdates(state, cache);
+    processEffectiveBalanceUpdates(fork, state, cache);
     timer?.();
   }
 

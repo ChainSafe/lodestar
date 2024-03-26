@@ -559,6 +559,7 @@ function preparePayloadAttributes(
 
   if (ForkSeq[fork] === ForkSeq.capella || ForkSeq[fork] === ForkSeq.electra) {
     (payloadAttributes as capella.SSEPayloadAttributes["payloadAttributes"]).withdrawals = getExpectedWithdrawals(
+      ForkSeq[fork],
       prepareState as CachedBeaconStateCapella
     ).withdrawals;
   }
@@ -569,6 +570,7 @@ function preparePayloadAttributes(
 
   if (ForkSeq[fork] >= ForkSeq.electra) {
     (payloadAttributes as electra.SSEPayloadAttributes["payloadAttributes"]).withdrawals = getExpectedWithdrawals(
+      ForkSeq[fork],
       prepareState as CachedBeaconStateElectra
     ).withdrawals;
   }
