@@ -591,10 +591,6 @@ export function getValidatorApi({
         throw Error("Builder and engine both failed to produce the block within timeout");
       }
 
-      if (builder.status === "rejected" && engine.status === "rejected") {
-        throw Error("Builder and engine both failed to produce the block");
-      }
-
       if (engine.status === "rejected" && isEngineEnabled) {
         logger.warn(
           "Engine failed to produce the block",
@@ -615,6 +611,10 @@ export function getValidatorApi({
           },
           builder.reason
         );
+      }
+
+      if (builder.status === "rejected" && engine.status === "rejected") {
+        throw Error("Builder and engine both failed to produce the block");
       }
 
       // handle shouldOverrideBuilder separately
