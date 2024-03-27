@@ -616,7 +616,9 @@ export function getValidatorApi({
       }
 
       if (builder.status === "rejected" && engine.status === "rejected") {
-        throw Error("Builder and engine both failed to produce the block");
+        const failureSource =
+          isEngineEnabled && isBuilderEnabled ? "Builder and engine both" : isEngineEnabled ? "Engine" : "Builder";
+        throw Error(`${failureSource} failed to produce the block`);
       }
 
       // handle shouldOverrideBuilder separately
