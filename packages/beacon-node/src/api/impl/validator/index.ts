@@ -588,7 +588,9 @@ export function getValidatorApi({
       });
 
       if (builder.status === "pending" && engine.status === "pending") {
-        throw Error("Builder and engine both failed to produce the block within timeout");
+        const failureSource =
+          isEngineEnabled && isBuilderEnabled ? "Builder and engine both" : isEngineEnabled ? "Engine" : "Builder";
+        throw Error(`${failureSource} both failed to produce the block within timeout`);
       }
 
       if (engine.status === "rejected" && isEngineEnabled) {
