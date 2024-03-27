@@ -115,7 +115,7 @@ export async function externalSignerGetKeys(externalSignerUrl: string, logger?: 
 
   if (!res.ok) {
     const errBody = await res.text();
-    throw Error(`External signer GetKeys error: ${{statusCode: res.status, errorBody: errBody}}`);
+    throw Error(`External signer GetKeys: statusCode=${res.status}, errorBody=${errBody}`);
   }
 
   const resBody = await res.text();
@@ -168,7 +168,7 @@ export async function externalSignerPostSignature(
 
   if (!res.ok) {
     const errBody = await res.text();
-    throw Error(`External signer PostSignature error: ${{statusCode: res.status, errorBody: errBody}}`);
+    throw Error(`External signer PostSignature: statusCode=${res.status}, errorBody=${errBody}`);
   }
 
   const resBody = await res.text();
@@ -199,7 +199,7 @@ export async function externalSignerUpCheck(remoteUrl: string, logger?: MinimalL
 
   if (!res.ok) {
     const errBody = await res.text();
-    throw Error(`External signer UpCheck error: ${{statusCode: res.status, errorBody: errBody}}`);
+    throw Error(`External signer UpCheck: statusCode=${res.status}, errorBody=${errBody}`);
   }
 
   const resBody = await res.text();
