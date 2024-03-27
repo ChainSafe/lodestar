@@ -14,4 +14,5 @@ GENESIS_TIME=$(date +%s)
   --metrics \
   --logLevel debug \
   --eth1 false \
-  --network.rateLimitMultiplier 0
+  --network.rateLimitMultiplier 0 \
+  $@
