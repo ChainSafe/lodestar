@@ -41,7 +41,11 @@ export async function writeHeapSnapshot(prefix: string, dirpath: string): Promis
   const snapshotStream = v8.getHeapSnapshot();
   const filepath = `${dirpath}/${prefix}_${new Date().toISOString()}.heapsnapshot`;
   const fileStream = fs.createWriteStream(filepath);
-  return new Promise<string>((resolve) => {
+  return new Promise<string>((resolve, reject) => {
+    fileStream.on("error", (err) => {
+      reject(err);
+    });
+
     snapshotStream.pipe(fileStream);
     snapshotStream.on("end", () => {
       resolve(filepath);
