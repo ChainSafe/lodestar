@@ -399,10 +399,10 @@ describe(
           )?.value
         ).toEqual(reloadCount);
 
-        const stateSszMetricValues = await (followupBn.metrics?.cpStateCache.stateSszDuration as Histogram).get();
+        const stateSszMetricValues = await (followupBn.metrics?.cpStateCache.stateSerializeDuration as Histogram).get();
         expect(
           stateSszMetricValues?.values.find(
-            (value) => value.metricName === "lodestar_cp_state_cache_state_ssz_seconds_count"
+            (value) => value.metricName === "lodestar_cp_state_cache_state_serialize_seconds_count"
           )?.value
         ).toEqual(persistCount);
 
