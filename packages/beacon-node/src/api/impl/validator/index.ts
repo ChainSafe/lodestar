@@ -588,9 +588,7 @@ export function getValidatorApi({
       });
 
       if (builder.status === "pending" && engine.status === "pending") {
-        const failureSource =
-          isEngineEnabled && isBuilderEnabled ? "Builder and engine both" : isEngineEnabled ? "Engine" : "Builder";
-        throw Error(`${failureSource} both failed to produce the block within timeout`);
+        throw Error("Builder and engine both failed to produce the block within timeout");
       }
 
       if (engine.status === "rejected" && isEngineEnabled) {
@@ -616,9 +614,9 @@ export function getValidatorApi({
       }
 
       if (builder.status === "rejected" && engine.status === "rejected") {
-        const failureSource =
-          isEngineEnabled && isBuilderEnabled ? "Builder and engine both" : isEngineEnabled ? "Engine" : "Builder";
-        throw Error(`${failureSource} failed to produce the block`);
+        throw Error(
+          `${isBuilderEnabled && isEngineEnabled ? "Builder and engine both" : isBuilderEnabled ? "Builder" : "Engine"} failed to produce the block`
+        );
       }
 
       // handle shouldOverrideBuilder separately
