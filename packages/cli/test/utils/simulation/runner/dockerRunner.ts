@@ -69,8 +69,9 @@ export class DockerRunner implements RunnerEnv<RunnerType.Docker> {
 
     // Pass ENV variables
     if (jobOption.cli.env && Object.keys(jobOption.cli.env).length > 0) {
-      jobArgs.push("-e");
-      jobArgs.push(Object.keys(jobOption.cli.env).filter(Boolean).join(" "));
+      for (const [key, value] of Object.entries(jobOption.cli.env)) {
+        jobArgs.push("-e", `${key}=${value}`);
+      }
     }
 
     // Expose ports
