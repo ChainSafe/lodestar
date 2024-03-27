@@ -14,12 +14,12 @@ import {Clock, IClock} from "../../../../src/util/clock.js";
 import {Eth2Gossipsub} from "../../../../src/network/gossip/gossipsub.js";
 import {MetadataController} from "../../../../src/network/metadata.js";
 import {testLogger} from "../../../utils/logger.js";
-import {AttnetsService} from "../../../../src/network/subnets/attnetsService.js";
+import {DLLAttnetsService} from "../../../../src/network/subnets/dllAttnetsService.js";
 import {CommitteeSubscription} from "../../../../src/network/subnets/interface.js";
 
 vi.mock("../../../../src/network/gossip/gossipsub.js");
 
-describe("AttnetsService", () => {
+describe("DLLAttnetsService", () => {
   const nodeId = bigIntToBytes(
     BigInt("88752428858350697756262172400162263450541348766581994718383409852729519486397"),
     32,
@@ -29,7 +29,7 @@ describe("AttnetsService", () => {
   // eslint-disable-next-line @typescript-eslint/naming-convention
   const config = createBeaconConfig({ALTAIR_FORK_EPOCH}, ZERO_HASH);
   // const {SECONDS_PER_SLOT} = config;
-  let service: AttnetsService;
+  let service: DLLAttnetsService;
   let gossipStub: MockedObject<Eth2Gossipsub>;
   let metadata: MetadataController;
 
@@ -52,7 +52,7 @@ describe("AttnetsService", () => {
     // load getCurrentSlot first, vscode not able to debug without this
     getCurrentSlot(config, Math.floor(Date.now() / 1000));
     metadata = new MetadataController({}, {config, onSetValue: () => null});
-    service = new AttnetsService(config, clock, gossipStub, metadata, logger, null, nodeId, {
+    service = new DLLAttnetsService(config, clock, gossipStub, metadata, logger, null, nodeId, {
       slotsToSubscribeBeforeAggregatorDuty: 2,
     });
   });

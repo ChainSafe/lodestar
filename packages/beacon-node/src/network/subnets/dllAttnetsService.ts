@@ -20,7 +20,7 @@ import {computeSubscribedSubnet} from "./util.js";
 
 const gossipType = GossipType.beacon_attestation;
 
-export enum SubnetSource {
+export enum DLLSubnetSource {
   committee = "committee",
   longLived = "long_lived",
 }
@@ -40,7 +40,7 @@ const NOT_ABLE_TO_FORM_STABLE_MESH_SEC = -1;
  * - Network call addCommitteeSubscriptions() from API calls
  * - Gossip handler checks shouldProcess to know if validator is aggregator
  */
-export class AttnetsService implements IAttnetsService {
+export class DLLAttnetsService implements IAttnetsService {
   /** Committee subnets - PeerManager must find peers for those */
   private committeeSubnets = new SubnetMap();
   /**
@@ -179,7 +179,7 @@ export class AttnetsService implements IAttnetsService {
         if (dutiedSlot === clockSlot + this.opts.slotsToSubscribeBeforeAggregatorDuty) {
           // Trigger gossip subscription first, in batch
           if (dutiedInfo.size > 0) {
-            this.subscribeToSubnets(Array.from(dutiedInfo.keys()), SubnetSource.committee);
+            this.subscribeToSubnets(Array.from(dutiedInfo.keys()), DLLSubnetSource.committee);
           }
           // Then, register the subscriptions
           for (const subnet of dutiedInfo.keys()) {
@@ -276,7 +276,7 @@ export class AttnetsService implements IAttnetsService {
     }
 
     // First, tell gossip to subscribe to the subnets if not connected already
-    this.subscribeToSubnets(newSubnets, SubnetSource.longLived);
+    this.subscribeToSubnets(newSubnets, DLLSubnetSource.longLived);
 
     // then update longLivedSubscriptions
     for (const subnet of toRemoveSubnets) {
@@ -289,7 +289,7 @@ export class AttnetsService implements IAttnetsService {
     }
 
     // Only tell gossip to unsubsribe last, longLivedSubscriptions has the latest state
-    this.unsubscribeSubnets(toRemoveSubnets, this.clock.currentSlot, SubnetSource.longLived);
+    this.unsubscribeSubnets(toRemoveSubnets, this.clock.currentSlot, DLLSubnetSource.longLived);
     this.updateMetadata();
   }
 
@@ -300,7 +300,7 @@ export class AttnetsService implements IAttnetsService {
   private unsubscribeExpiredCommitteeSubnets(slot: Slot): void {
     const expired = this.shortLivedSubscriptions.getExpired(slot);
     if (expired.length > 0) {
-      this.unsubscribeSubnets(expired, slot, SubnetSource.committee);
+      this.unsubscribeSubnets(expired, slot, DLLSubnetSource.committee);
     }
   }
 
@@ -333,7 +333,7 @@ export class AttnetsService implements IAttnetsService {
    * Trigger a gossip subcription only if not already subscribed
    * shortLivedSubscriptions or longLivedSubscriptions should be updated right AFTER this called
    **/
-  private subscribeToSubnets(subnets: number[], src: SubnetSource): void {
+  private subscribeToSubnets(subnets: number[], src: DLLSubnetSource): void {
     const forks = getActiveForks(this.config, this.clock.currentEpoch);
     for (const subnet of subnets) {
       if (!this.shortLivedSubscriptions.has(subnet) && !this.longLivedSubscriptions.has(subnet)) {
@@ -349,7 +349,7 @@ export class AttnetsService implements IAttnetsService {
    * Trigger a gossip un-subscription only if no-one is still subscribed
    * If unsubscribe long lived subnets, longLivedSubscriptions should be updated right BEFORE this called
    **/
-  private unsubscribeSubnets(subnets: number[], slot: Slot, src: SubnetSource): void {
+  private unsubscribeSubnets(subnets: number[], slot: Slot, src: DLLSubnetSource): void {
     // No need to unsubscribeTopic(). Return early to prevent repetitive extra work
     if (this.opts.subscribeAllSubnets) return;
 
