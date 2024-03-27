@@ -591,10 +591,6 @@ export function getValidatorApi({
         throw Error("Builder and engine both failed to produce the block within timeout");
       }
 
-      if (builder.status === "rejected" && engine.status === "rejected") {
-        throw Error("Builder and engine both failed to produce the block");
-      }
-
       if (engine.status === "rejected" && isEngineEnabled) {
         logger.warn(
           "Engine failed to produce the block",
@@ -614,6 +610,12 @@ export function getValidatorApi({
             durationMs: builder.durationMs,
           },
           builder.reason
+        );
+      }
+
+      if (builder.status === "rejected" && engine.status === "rejected") {
+        throw Error(
+          `${isBuilderEnabled && isEngineEnabled ? "Builder and engine both" : isBuilderEnabled ? "Builder" : "Engine"} failed to produce the block`
         );
       }
 
