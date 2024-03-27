@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import path from "node:path";
+import Web3 from "web3";
 import {bellatrix} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
 import {activePreset} from "@lodestar/params";
@@ -15,12 +16,13 @@ import {
 import {defineSimTestConfig, logFilesDir} from "../utils/simulation/utils/index.js";
 import {connectAllNodes, waitForSlot} from "../utils/simulation/utils/network.js";
 import {getNodePorts} from "../utils/simulation/utils/ports.js";
+import {EL_GENESIS_ACCOUNT} from "../utils/simulation/constants.js";
 
 const runTillEpoch = 6;
 // All assertions are tracked w.r.t. fee recipient by attaching different fee recipient to
 // execution and builder
 const feeRecipientEngine = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
-const feeRecipientMevBoost = "0xcccccccccccccccccccccccccccccccccccccccc";
+const feeRecipientBuilder = "0xcccccccccccccccccccccccccccccccccccccccc";
 
 // The builder gets activated post middle of epoch because of circuit breaker
 // In a perfect run expected builder = 16, expected engine = 16
@@ -87,8 +89,8 @@ const env = await SimulationEnvironment.initWithDefaults(
         },
       },
       execution: ExecutionClient.Geth,
-      keysCount: activePreset.SLOTS_PER_EPOCH,
-      mining: true,
+      keysCount: activePreset.SLOTS_PER_EPOCH / 2,
+      mining: false,
     },
     {
       id: "builder",
@@ -98,7 +100,7 @@ const env = await SimulationEnvironment.initWithDefaults(
           clientOptions: {
             builder: true,
             eth1: true,
-            suggestedFeeRecipient: feeRecipientMevBoost,
+            suggestedFeeRecipient: feeRecipientBuilder,
             "builder.allowedFaults": 0,
             "builder.faultInspectionWindow": activePreset.SLOTS_PER_EPOCH,
             "builder.url": "http://127.0.0.1:8888",
@@ -111,7 +113,7 @@ const env = await SimulationEnvironment.initWithDefaults(
           clientOptions: {
             builder: true,
             useProduceBlockV3: true,
-            suggestedFeeRecipient: feeRecipientMevBoost,
+            suggestedFeeRecipient: feeRecipientBuilder,
             "builder.selection": "builderalways",
           },
         },
@@ -123,11 +125,15 @@ const env = await SimulationEnvironment.initWithDefaults(
             builder: {
               beaconEndpoints: [`http://host.docker.internal:${getNodePorts(1).beacon.httpPort}`],
               listenAddress: "0.0.0.0:8888",
+              bellatrixForkVersion: toHexString(forkConfig.BELLATRIX_FORK_VERSION),
+              genesisForkVersion: toHexString(forkConfig.GENESIS_FORK_VERSION),
+              secondsInSlot: forkConfig.SECONDS_PER_SLOT,
+              slotsInEpoch: activePreset.SLOTS_PER_EPOCH,
             },
           },
         },
       },
-      keysCount: activePreset.SLOTS_PER_EPOCH,
+      keysCount: activePreset.SLOTS_PER_EPOCH / 2,
       mining: false,
     },
   ]
@@ -147,7 +153,7 @@ env.tracker.register({
     );
     console.log({blockFeeRecipient});
     return {
-      builder: blockFeeRecipient === feeRecipientMevBoost,
+      builder: blockFeeRecipient === feeRecipientBuilder,
       engine: blockFeeRecipient === feeRecipientEngine,
     };
   },
@@ -180,5 +186,45 @@ env.tracker.register({
 await env.start({runTimeoutMs: estimatedTimeoutMs});
 await connectAllNodes(env.nodes);
 
+const web3 = new Web3(env.nodes[1].execution.ethRpcPublicUrl);
+
+const nonce = 0;
+const internal = setInterval(async () => {
+  const accountNonce = await web3.eth.getTransactionCount(EL_GENESIS_ACCOUNT, "latest");
+  const blockNumber = await web3.eth.getBlockNumber();
+  console.log("Account", {accountNonce, nonce, blockNumber});
+
+  // if (accountNonce < BigInt(nonce)) {
+  //   return;
+  // }
+
+  if (accountNonce < BigInt(nonce)) {
+    nonce++;
+  }
+
+  const signedTransaction = await web3.eth.signTransaction({
+    to: "0x4675C7e5BaAFBFFbca748158bEcBA61ef3b0a263",
+    from: EL_GENESIS_ACCOUNT,
+    gas: "0x76c0",
+    gasPrice: "0x9184e72a000",
+    value: `0x${(4444444).toString(16)}`,
+    nonce: `0x${nonce.toString(16)}`,
+  });
+
+  console.log("Sending bundle", {accountNonce, nonce, blockNumber});
+
+  await env.nodes[1].execution.provider?.getRpc().fetch({
+    method: "eth_sendBundle",
+    params: [
+      {
+        txs: [signedTransaction.raw],
+        blockNumber: `0x${(blockNumber + BigInt(1)).toString(16)}`,
+      },
+    ],
+  });
+}, 3000);
+
 await waitForSlot(env.clock.getLastSlotOfEpoch(runTillEpoch), env.nodes, {env});
+
+clearInterval(internal);
 await env.stop();

@@ -68,11 +68,15 @@ export type ExecutionClientsOptions = {
   [ExecutionClient.Geth]: string[];
   [ExecutionClient.Builder]: {
     [key: string]: unknown;
-    builder?: {
+    builder: {
       beaconEndpoints?: string[];
       cancellations?: boolean;
       listenAddress?: string;
       algo?: "mev-geth" | "greedy" | "greedy-buckets";
+      bellatrixForkVersion: string;
+      genesisForkVersion: string;
+      slotsInEpoch: number;
+      secondsInSlot: number;
     };
   };
   [ExecutionClient.Nethermind]: string[];

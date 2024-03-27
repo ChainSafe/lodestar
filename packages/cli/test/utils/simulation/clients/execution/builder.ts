@@ -3,7 +3,6 @@ import {writeFile} from "node:fs/promises";
 import path from "node:path";
 import got from "got";
 import {ZERO_HASH} from "@lodestar/state-transition";
-import {activePreset} from "@lodestar/params";
 import {
   EL_GENESIS_ACCOUNT,
   EL_GENESIS_PASSWORD,
@@ -12,7 +11,7 @@ import {
   SIM_ENV_NETWORK_ID,
 } from "../constants.js";
 import {Eth1ProviderWithAdmin} from "../Eth1ProviderWithAdmin.js";
-import {ExecutionClient, ExecutionNodeGenerator, ExecutionStartMode, JobOptions, RunnerType} from "../interfaces.js";
+import {ExecutionClient, ExecutionNodeGenerator, JobOptions, RunnerType} from "../interfaces.js";
 import {getNodeMountedPaths} from "../utils/paths.js";
 import {getNodePorts} from "../utils/ports.js";
 
@@ -112,6 +111,7 @@ export const generateBuilderNode: ExecutionNodeGenerator<ExecutionClient.Builder
     `extip:${address}`,
     "--authrpc.jwtsecret",
     jwtsecretFilePathMounted,
+    "--nodiscover",
     "--datadir",
     rootDirMounted,
     "--allow-insecure-unlock",
@@ -127,15 +127,24 @@ export const generateBuilderNode: ExecutionNodeGenerator<ExecutionClient.Builder
     "--verbosity",
     "5",
     ...(mining ? ["--mine", "--miner.etherbase", EL_GENESIS_ACCOUNT] : []),
-    ...(mode == ExecutionStartMode.PreMerge ? ["--nodiscover"] : []),
   ];
 
   startJobArgs.push(
     "--builder",
     "--builder.local_relay",
     "--builder.slots_in_epoch",
-    activePreset.SLOTS_PER_EPOCH.toString()
+    opts.clientOptions.builder.slotsInEpoch.toString(),
+    "--builder.seconds_in_slot",
+    opts.clientOptions.builder.secondsInSlot.toString(),
+    "--builder.bellatrix_fork_version",
+    opts.clientOptions.builder?.bellatrixForkVersion ?? "0x00000000",
+    "--builder.genesis_fork_version",
+    opts.clientOptions.builder?.genesisForkVersion ?? "0x00000000",
+    "--builder.genesis_validators_root",
+    "0x05d79a31a8e69ecd78114c50ce73116be33027d8431b82fff6c0b3cd9c2cbb1f"
   );
+
+  const exposePorts = [ports.execution.enginePort, ports.execution.httpPort, ports.execution.p2pPort];
 
   if (clientOptions?.builder?.beaconEndpoints) {
     startJobArgs.push("--builder.beacon_endpoints", clientOptions.builder.beaconEndpoints.join(","));
@@ -147,6 +156,7 @@ export const generateBuilderNode: ExecutionNodeGenerator<ExecutionClient.Builder
 
   if (clientOptions?.builder?.listenAddress) {
     startJobArgs.push("--builder.listen_addr", clientOptions.builder.listenAddress);
+    exposePorts.push(Number(clientOptions.builder.listenAddress.split(":")[1]));
   }
 
   if (clientOptions?.builder?.algo) {
@@ -159,13 +169,16 @@ export const generateBuilderNode: ExecutionNodeGenerator<ExecutionClient.Builder
     options: {
       image: process.env.BUILDER_DOCKER_IMAGE as string,
       mounts: [[rootDir, rootDirMounted]],
-      exposePorts: [ports.execution.enginePort, ports.execution.httpPort, ports.execution.p2pPort],
+      exposePorts,
       dockerNetworkIp: address,
     },
     cli: {
       command: "",
       args: startJobArgs,
-      env: {},
+      env: {
+        BUILDER_SECRET_KEY: "0x3ac12ae741f29701f8e30f5de6350766c020cb80768a0ff01e6838ffd2322f39",
+        BUILDER_TX_SIGNING_KEY: "0x4ca12ae741f29701f8e30f5de6350766c020cb80768a0ff01e6838ffd2569e67",
+      },
     },
     logs: {
       stdoutFilePath: logFilePath,
