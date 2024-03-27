@@ -7,7 +7,7 @@ import {BeaconConfig} from "@lodestar/config";
 import {computeEpochAtSlot, blindedOrFullBlockToHeader} from "@lodestar/state-transition";
 import {allForks, Epoch, Root, RootHex, Slot, ssz} from "@lodestar/types";
 import {PubkeyHex} from "../types.js";
-import {Logger} from "@lodestar/utils";
+import {Logger, LogLevel} from "@lodestar/utils";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -25,6 +25,8 @@ export enum SignableMessageType {
   VALIDATOR_REGISTRATION = "VALIDATOR_REGISTRATION",
   BLS_TO_EXECUTION_CHANGE = "BLS_TO_EXECUTION_CHANGE",
 }
+
+type MinamalLogger = Pick<Logger, LogLevel.info | LogLevel.warn | LogLevel.debug>;
 
 const AggregationSlotType = new ContainerType({
   slot: ssz.Slot,
@@ -105,7 +107,7 @@ type Web3SignerSerializedRequest = {
 /**
  * Return public keys from the server.
  */
-export async function externalSignerGetKeys(externalSignerUrl: string, logger?: Logger): Promise<string[]> {
+export async function externalSignerGetKeys(externalSignerUrl: string, logger?: MinamalLogger): Promise<string[]> {
   const res = await fetch(`${externalSignerUrl}/api/v1/eth2/publicKeys`, {
     method: "GET",
     headers: {"Content-Type": "application/json"},
@@ -124,7 +126,7 @@ export async function externalSignerPostSignature(
   signingRoot: Root,
   signingSlot: Slot,
   signableMessage: SignableMessage,
-  logger?: Logger
+  logger?: MinamalLogger
 ): Promise<string> {
   const requestObj = serializerSignableMessagePayload(config, signableMessage) as Web3SignerSerializedRequest;
 
@@ -166,7 +168,7 @@ export async function externalSignerUpCheck(remoteUrl: string): Promise<boolean>
   return data.status === "OK";
 }
 
-async function handlerExternalSignerGetKeysResponse<T>(res: Response, logger?: Logger): Promise<string[]> {
+async function handlerExternalSignerGetKeysResponse<T>(res: Response, logger?: MinamalLogger): Promise<string[]> {
   if (!res.ok) {
     const errBody = await res.text();
     logger?.debug("External signer GetKeys error", {body: errBody});
@@ -186,7 +188,7 @@ async function handlerExternalSignerGetKeysResponse<T>(res: Response, logger?: L
   }
 }
 
-async function handlerExternalSignerPostSignatureResponse<T>(res: Response, logger?: Logger): Promise<{signature: string}> {
+async function handlerExternalSignerPostSignatureResponse<T>(res: Response, logger?: MinamalLogger): Promise<{signature: string}> {
   if (!res.ok) {
     const errBody = await res.text();
     logger?.debug("External signer PostSignature error", {body: errBody});
@@ -206,7 +208,7 @@ async function handlerExternalSignerPostSignatureResponse<T>(res: Response, logg
   }
 }
 
-async function handlerExternalSignerUpCheckResponse<T>(res: Response, logger?: Logger): Promise<{status: string}> {
+async function handlerExternalSignerUpCheckResponse<T>(res: Response, logger?: MinamalLogger): Promise<{status: string}> {
   if (!res.ok) {
     const errBody = await res.text();
     logger?.debug("External signer UpCheck error", {body: errBody});

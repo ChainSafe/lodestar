@@ -16,6 +16,8 @@ import {importKeystoreDefinitionsFromExternalDir, readPassphraseOrPrompt} from "
 
 const KEYSTORE_IMPORT_PROGRESS_MS = 10000;
 
+type MinamalLogger = Pick<Logger, LogLevel.info | LogLevel.warn | LogLevel.debug>;
+
 /**
  * Options processing hierarchy
  * --interopIndexes
@@ -44,7 +46,7 @@ const KEYSTORE_IMPORT_PROGRESS_MS = 10000;
 export async function getSignersFromArgs(
   args: IValidatorCliArgs & GlobalArgs,
   network: string,
-  {logger, signal}: {logger: Pick<Logger, LogLevel.info | LogLevel.warn | LogLevel.debug>; signal: AbortSignal}
+  {logger, signal}: {logger: MinamalLogger; signal: AbortSignal}
 ): Promise<Signer[]> {
   const accountPaths = getAccountPaths(args, network);
 
@@ -106,7 +108,7 @@ export async function getSignersFromArgs(
 
   // Remote keys are declared manually or will be fetched from external signer
   else if (args["externalSigner.pubkeys"] || args["externalSigner.fetch"]) {
-    return getRemoteSigners(args, logger as Logger);
+    return getRemoteSigners(args, logger);
   }
 
   // Read keys from local account manager
@@ -155,7 +157,7 @@ export function getSignerPubkeyHex(signer: Signer): string {
   }
 }
 
-async function getRemoteSigners(args: IValidatorCliArgs & GlobalArgs, logger?: Logger): Promise<Signer[]> {
+async function getRemoteSigners(args: IValidatorCliArgs & GlobalArgs, logger?: MinamalLogger): Promise<Signer[]> {
   const externalSignerUrl = args["externalSigner.url"];
   if (!externalSignerUrl) {
     throw new YargsError(
