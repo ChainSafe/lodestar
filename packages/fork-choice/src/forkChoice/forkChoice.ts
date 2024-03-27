@@ -503,8 +503,7 @@ export class ForkChoice implements IForkChoice {
 
     // Assign proposer score boost if the block is timely
     // before attesting interval = before 1st interval
-    const isBeforeAttestingInterval = blockDelaySec < this.config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT;
-    const isTimely = this.fcStore.currentSlot === slot && isBeforeAttestingInterval;
+    const isTimely = this.isBlockTimely(block, blockDelaySec);
     if (
       this.opts?.proposerBoostEnabled &&
       isTimely &&
@@ -1048,6 +1047,15 @@ export class ForkChoice implements IForkChoice {
     }
 
     throw Error(`Not found dependent root for block slot ${block.slot}, epoch difference ${epochDifference}`);
+  }
+
+  /**
+   * Return true if the block is timely for the current slot.
+   * Child class can overwrite this for testing purpose.
+   */
+  protected isBlockTimely(block: allForks.BeaconBlock, blockDelaySec: number): boolean {
+    const isBeforeAttestingInterval = blockDelaySec < this.config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT;
+    return this.fcStore.currentSlot === block.slot && isBeforeAttestingInterval;
   }
 
   private getPreMergeExecStatus(executionStatus: MaybeValidExecutionStatus): ExecutionStatus.PreMerge {
