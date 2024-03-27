@@ -16,7 +16,7 @@ import {importKeystoreDefinitionsFromExternalDir, readPassphraseOrPrompt} from "
 
 const KEYSTORE_IMPORT_PROGRESS_MS = 10000;
 
-type MinamalLogger = Pick<Logger, LogLevel.info | LogLevel.warn | LogLevel.debug>;
+type MinimalLogger = Pick<Logger, LogLevel.info | LogLevel.warn | LogLevel.debug>;
 
 /**
  * Options processing hierarchy
@@ -46,7 +46,7 @@ type MinamalLogger = Pick<Logger, LogLevel.info | LogLevel.warn | LogLevel.debug
 export async function getSignersFromArgs(
   args: IValidatorCliArgs & GlobalArgs,
   network: string,
-  {logger, signal}: {logger: MinamalLogger; signal: AbortSignal}
+  {logger, signal}: {logger: MinimalLogger; signal: AbortSignal}
 ): Promise<Signer[]> {
   const accountPaths = getAccountPaths(args, network);
 
@@ -157,7 +157,7 @@ export function getSignerPubkeyHex(signer: Signer): string {
   }
 }
 
-async function getRemoteSigners(args: IValidatorCliArgs & GlobalArgs, logger?: MinamalLogger): Promise<Signer[]> {
+async function getRemoteSigners(args: IValidatorCliArgs & GlobalArgs, logger?: MinimalLogger): Promise<Signer[]> {
   const externalSignerUrl = args["externalSigner.url"];
   if (!externalSignerUrl) {
     throw new YargsError(

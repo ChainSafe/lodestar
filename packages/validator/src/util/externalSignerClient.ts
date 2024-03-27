@@ -26,7 +26,7 @@ export enum SignableMessageType {
   BLS_TO_EXECUTION_CHANGE = "BLS_TO_EXECUTION_CHANGE",
 }
 
-type MinamalLogger = Pick<Logger, LogLevel.info | LogLevel.warn | LogLevel.debug>;
+type MinimalLogger = Pick<Logger, LogLevel.info | LogLevel.warn | LogLevel.debug>;
 
 const AggregationSlotType = new ContainerType({
   slot: ssz.Slot,
@@ -107,13 +107,28 @@ type Web3SignerSerializedRequest = {
 /**
  * Return public keys from the server.
  */
-export async function externalSignerGetKeys(externalSignerUrl: string, logger?: MinamalLogger): Promise<string[]> {
+export async function externalSignerGetKeys(externalSignerUrl: string, logger?: MinimalLogger): Promise<string[]> {
   const res = await fetch(`${externalSignerUrl}/api/v1/eth2/publicKeys`, {
     method: "GET",
     headers: {"Content-Type": "application/json"},
   });
 
-  return handlerExternalSignerGetKeysResponse(res, logger);
+  if (!res.ok) {
+    const errBody = await res.text();
+    throw Error(`External signer GetKeys error: ${{statusCode: res.status, errorBody: errBody}}`);
+  }
+
+  const resBody = await res.text();
+  const resContentType = res.headers?.get("Content-Type")?.split(";", 1)[0].trim().toLowerCase();
+
+  logger?.debug("External signer GetKeys response", {contentType: resContentType, body: resBody});
+
+  if(resContentType === "application/json") {
+    return JSON.parse(resBody) as string[];
+  }
+  else {
+    throw Error(`External signer GetKeys: content type ${resContentType} not supported`);
+  }
 }
 
 /**
@@ -126,7 +141,7 @@ export async function externalSignerPostSignature(
   signingRoot: Root,
   signingSlot: Slot,
   signableMessage: SignableMessage,
-  logger?: MinamalLogger
+  logger?: MinimalLogger
 ): Promise<string> {
   const requestObj = serializerSignableMessagePayload(config, signableMessage) as Web3SignerSerializedRequest;
 
@@ -151,80 +166,56 @@ export async function externalSignerPostSignature(
     body: JSON.stringify(requestObj),
   });
 
-  const data = await handlerExternalSignerPostSignatureResponse(res, logger);
-  return data.signature;
+  if (!res.ok) {
+    const errBody = await res.text();
+    throw Error(`External signer PostSignature error: ${{statusCode: res.status, errorBody: errBody}}`);
+  }
+
+  const resBody = await res.text();
+  const resContentType = res.headers?.get("Content-Type")?.split(";", 1)[0].trim().toLowerCase();
+
+  logger?.debug("External signer PostSignature response", {contentType: resContentType, body: resBody});
+
+  if(resContentType === "application/json") {
+    const data = JSON.parse(resBody) as {signature: string};
+    return data.signature;
+  }
+  else if (resContentType === "text/plain") {
+    return resBody;
+  }
+  else {
+    throw Error(`External signer PostSignature: content type ${resContentType} not supported`);
+  }
 }
 
 /**
  * Return upcheck status from server.
  */
-export async function externalSignerUpCheck(remoteUrl: string): Promise<boolean> {
+export async function externalSignerUpCheck(remoteUrl: string, logger?: MinimalLogger): Promise<boolean> {
   const res = await fetch(`${remoteUrl}/upcheck`, {
     method: "GET",
     headers: {"Content-Type": "application/json"},
   });
 
-  const data = await handlerExternalSignerUpCheckResponse(res);
-  return data.status === "OK";
-}
-
-async function handlerExternalSignerGetKeysResponse<T>(res: Response, logger?: MinamalLogger): Promise<string[]> {
   if (!res.ok) {
     const errBody = await res.text();
-    logger?.debug("External signer GetKeys error", {body: errBody});
-    throw Error(`${errBody}`);
+    throw Error(`External signer UpCheck error: ${{statusCode: res.status, errorBody: errBody}}`);
   }
 
   const resBody = await res.text();
-  const resContentType = res.headers.get("Content-Type");
-
-  logger?.debug("External signer GetKeys response", {contentType: resContentType, body: resBody});
-
-  if(resContentType?.startsWith("application/json")) {
-    return JSON.parse(resBody) as string[];
-  }
-  else {
-    return resBody.split(",");
-  }
-}
-
-async function handlerExternalSignerPostSignatureResponse<T>(res: Response, logger?: MinamalLogger): Promise<{signature: string}> {
-  if (!res.ok) {
-    const errBody = await res.text();
-    logger?.debug("External signer PostSignature error", {body: errBody});
-    throw Error(`${errBody}`);
-  }
-
-  const resBody = await res.text();
-  const resContentType = res.headers.get("Content-Type");
-
-  logger?.debug("External signer PostSignature response", {contentType: resContentType, body: resBody});
-
-  if(resContentType?.startsWith("application/json")) {
-    return JSON.parse(resBody) as {signature: string};
-  }
-  else {
-    return {signature: resBody};
-  }
-}
-
-async function handlerExternalSignerUpCheckResponse<T>(res: Response, logger?: MinamalLogger): Promise<{status: string}> {
-  if (!res.ok) {
-    const errBody = await res.text();
-    logger?.debug("External signer UpCheck error", {body: errBody});
-    throw Error(`${errBody}`);
-  }
-
-  const resBody = await res.text();
-  const resContentType = res.headers.get("Content-Type");
+  const resContentType = res.headers?.get("Content-Type")?.split(";", 1)[0].trim().toLowerCase();
 
   logger?.debug("External signer UpCheck response", {contentType: resContentType, body: resBody});
 
-  if(resContentType?.startsWith("application/json")) {
-    return JSON.parse(resBody) as {status: string};
+  if(resContentType === "application/json") {
+    const data = JSON.parse(resBody) as {status: string};
+    return data.status === "OK";
   }
-  else {
-    return {status: resBody};
+  else if (resContentType === "text/plain") {
+    return resBody === "OK";
+  }
+  else{
+    throw Error(`External signer UpCheck: content type ${resContentType} not supported`);
   }
 }
 
