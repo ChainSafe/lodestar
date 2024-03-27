@@ -19,4 +19,5 @@ GENESIS_TIME=$(curl -s http://localhost:9596/eth/v1/beacon/genesis | jq -r .data
   --port 9001 \
   --rest.port 9597 \
   --network.connectToDiscv5Bootnodes true \
-  --bootnodes $ENR
+  --bootnodes $ENR \
+  $@
