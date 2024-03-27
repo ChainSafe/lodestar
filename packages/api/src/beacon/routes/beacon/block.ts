@@ -319,6 +319,12 @@ export function getReqSerializers(config: ChainForkConfig): ReqSerializers<Api, 
     fromJson: (data) => getSignedBlindedBeaconBlockType(data as allForks.SignedBlindedBeaconBlock).fromJson(data),
   };
 
+  function extractSlot(signedBlockOrContents: allForks.SignedBeaconBlockOrContents): Slot {
+    return isSignedBlockContents(signedBlockOrContents)
+      ? signedBlockOrContents.signedBlock.message.slot
+      : signedBlockOrContents.message.slot;
+  }
+
   return {
     getBlock: getBlockReq,
     getBlockV2: getBlockReq,
@@ -335,6 +341,7 @@ export function getReqSerializers(config: ChainForkConfig): ReqSerializers<Api, 
       writeReq: (item, {broadcastValidation} = {}) => ({
         body: AllForksSignedBlockOrContents.toJson(item),
         query: {broadcast_validation: broadcastValidation},
+        headers: {"Eth-Consensus-Version": config.getForkName(extractSlot(item))},
       }),
       parseReq: ({body, query}) => [
         AllForksSignedBlockOrContents.fromJson(body),
@@ -350,6 +357,7 @@ export function getReqSerializers(config: ChainForkConfig): ReqSerializers<Api, 
       writeReq: (item, {broadcastValidation}) => ({
         body: AllForksSignedBlindedBlock.toJson(item),
         query: {broadcast_validation: broadcastValidation},
+        headers: {"Eth-Consensus-Version": config.getForkName(item.message.slot)},
       }),
       parseReq: ({body, query}) => [
         AllForksSignedBlindedBlock.fromJson(body),
