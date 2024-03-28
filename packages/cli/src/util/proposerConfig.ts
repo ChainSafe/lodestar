@@ -107,7 +107,7 @@ export function readProposerConfigDir(filepath: string, filename: string): Propo
 export function parseBuilderSelection(builderSelection?: string): routes.validator.BuilderSelection | undefined {
   if (builderSelection) {
     switch (builderSelection) {
-      case "maxprofit":
+      case "default":
         break;
       case "builderalways":
         break;

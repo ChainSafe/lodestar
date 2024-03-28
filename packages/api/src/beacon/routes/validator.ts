@@ -44,7 +44,7 @@ import {ExecutionOptimistic} from "./beacon/block.js";
 export enum BuilderSelection {
   BuilderAlways = "builderalways",
   ExecutionAlways = "executionalways",
-  MaxProfit = "maxprofit",
+  Default = "default",
   /** Only activate builder flow for DVT block proposal protocols */
   BuilderOnly = "builderonly",
   /** Only builds execution block*/

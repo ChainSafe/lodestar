@@ -488,10 +488,10 @@ export function getValidatorApi({
 
       const fork = config.getForkName(slot);
       // set some sensible opts
-      // builderSelection will be deprecated and will run in mode MaxProfit if builder is enabled
+      // builderSelection will be deprecated and will run in mode Default if builder is enabled
       // and the actual selection will be determined using builderBoostFactor passed by the validator
-      builderSelection = builderSelection ?? routes.validator.BuilderSelection.MaxProfit;
-      builderBoostFactor = builderBoostFactor ?? BigInt(100);
+      builderSelection = builderSelection ?? routes.validator.BuilderSelection.Default;
+      builderBoostFactor = builderBoostFactor ?? BigInt(90);
       if (builderBoostFactor > MAX_BUILDER_BOOST_FACTOR) {
         throw new ApiError(400, `Invalid builderBoostFactor=${builderBoostFactor} > MAX_BUILDER_BOOST_FACTOR`);
       }
