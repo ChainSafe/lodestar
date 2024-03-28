@@ -111,7 +111,8 @@ export async function externalSignerGetKeys(externalSignerUrl: string): Promise<
   });
 
   if (!res.ok) {
-    throw Error(`${await res.text()??res.statusText}`);
+    const errBody = await res.text();
+    throw Error(`${errBody != undefined && errBody !== "" ? errBody : res.statusText}`);
   }
 
   ensureCorrectWireFormat(res, WireFormat.json)
@@ -153,7 +154,8 @@ export async function externalSignerPostSignature(
   });
 
   if (!res.ok) {
-    throw Error(`${await res.text()??res.statusText}`);
+    const errBody = await res.text();
+    throw Error(`${errBody != undefined && errBody !== "" ? errBody : res.statusText}`);
   }
 
   const resBody = await res.text();
@@ -177,7 +179,8 @@ export async function externalSignerUpCheck(remoteUrl: string): Promise<boolean>
   });
 
   if (!res.ok) {
-    throw Error(`${await res.text()??res.statusText}`);
+    const errBody = await res.text();
+    throw Error(`${errBody != undefined && errBody !== "" ? errBody : res.statusText}`);
   }
 
   const resBody = await res.text();
