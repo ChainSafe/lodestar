@@ -203,13 +203,13 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
 
     try {
       // 80% of validators serialization time comes from memory allocation, this is to avoid it
-      const sszTimer = this.metrics?.stateReloadValidatorsSszDuration.startTimer();
+      const sszTimer = this.metrics?.stateReloadValidatorsSerializeDuration.startTimer();
       // automatically free the buffer pool after this scope
       using validatorsBytesWithKey = this.serializeStateValidators(seedState);
       let validatorsBytes = validatorsBytesWithKey?.buffer;
       if (validatorsBytes == null) {
         // fallback logic in case we can't use the buffer pool
-        this.metrics?.stateReloadValidatorsSszAllocCount.inc();
+        this.metrics?.stateReloadValidatorsSerializeAllocCount.inc();
         validatorsBytes = seedState.validators.serialize();
       }
       sszTimer?.();
