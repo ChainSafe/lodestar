@@ -1,10 +1,10 @@
 import path from "node:path";
 import {writeFile} from "node:fs/promises";
-import got, {RequestError} from "got";
 import yaml from "js-yaml";
 import {getClient as keyManagerGetClient} from "@lodestar/api/keymanager";
 import {chainConfigToJson} from "@lodestar/config";
-import {RunnerType, ValidatorClient, ValidatorNodeGenerator} from "../interfaces.js";
+import {fetch} from "@lodestar/api";
+import {HealthStatus, RunnerType, ValidatorClient, ValidatorNodeGenerator} from "../interfaces.js";
 import {updateKeystoresPath} from "../utils/keys.js";
 import {getNodeMountedPaths} from "../utils/paths.js";
 import {getNodePorts} from "../utils/ports.js";
@@ -82,12 +82,8 @@ export const generateLighthouseValidatorNode: ValidatorNodeGenerator<ValidatorCl
       },
       health: async () => {
         try {
-          await got.get(`http://127.0.0.1:${ports.validator.keymanagerPort}/lighthouse/health`);
-          return {ok: true};
+          return (await fetch(`http://127.0.0.1:${ports.validator.keymanagerPort}/lighthouse/health`)) as HealthStatus;
         } catch (err) {
-          if (err instanceof RequestError) {
-            return {ok: true};
-          }
           return {ok: false, reason: (err as Error).message, checkId: "/lighthouse/health query"};
         }
       },

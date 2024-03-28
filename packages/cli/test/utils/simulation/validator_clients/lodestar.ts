@@ -1,15 +1,15 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {writeFile} from "node:fs/promises";
 import path from "node:path";
-import got from "got";
 import {getClient as keyManagerGetClient} from "@lodestar/api/keymanager";
 import {chainConfigToJson} from "@lodestar/config";
 import {LogLevel} from "@lodestar/utils";
 import {defaultOptions} from "@lodestar/validator";
+import {fetch} from "@lodestar/api";
 import {IValidatorCliArgs} from "../../../../src/cmds/validator/options.js";
 import {GlobalArgs} from "../../../../src/options/globalOptions.js";
 import {LODESTAR_BINARY_PATH} from "../constants.js";
-import {RunnerType, ValidatorClient, ValidatorNodeGenerator} from "../interfaces.js";
+import {HealthStatus, RunnerType, ValidatorClient, ValidatorNodeGenerator} from "../interfaces.js";
 import {getNodePorts} from "../utils/ports.js";
 
 export const generateLodestarValidatorNode: ValidatorNodeGenerator<ValidatorClient.Lodestar> = (opts, runner) => {
@@ -70,8 +70,7 @@ export const generateLodestarValidatorNode: ValidatorNodeGenerator<ValidatorClie
       },
       health: async () => {
         try {
-          await got.get(`http://127.0.0.1:${ports.validator.keymanagerPort}/eth/v1/keystores`);
-          return {ok: true};
+          return (await fetch(`http://127.0.0.1:${ports.validator.keymanagerPort}/eth/v1/keystores`)) as HealthStatus;
         } catch (err) {
           return {ok: false, reason: (err as Error).message, checkId: "eth/v1/keystores query"};
         }

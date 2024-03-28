@@ -1,8 +1,7 @@
 import fs from "node:fs";
-import got from "got";
 import {ENR} from "@chainsafe/enr";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {ApiError, getClient} from "@lodestar/api";
+import {ApiError, getClient, fetch} from "@lodestar/api";
 import {getStateTypeFromBytes} from "@lodestar/beacon-node";
 import {ChainConfig, ChainForkConfig} from "@lodestar/config";
 import {Checkpoint} from "@lodestar/types/phase0";
@@ -102,13 +101,20 @@ export function getGenesisFileUrl(network: NetworkName): string | null {
  * Fetches the latest list of bootnodes for a network
  * Bootnodes file is expected to contain bootnode ENR's concatenated by newlines
  */
-export async function fetchBootnodes(network: NetworkName): Promise<string[]> {
+
+class FetchBootFileError extends Error {}
+
+async function fetchBootnodes(network: NetworkName): Promise<string[]> {
   const bootnodesFileUrl = getNetworkData(network).bootnodesFileUrl;
   if (bootnodesFileUrl === null) {
     return [];
   }
-
-  const bootnodesFile = await got.get(bootnodesFileUrl).text();
+  //const res = await fetch(bootnodesFileUrl);
+  const res = await fetch("https://example-example-e.com/notfound");
+  if (!res.ok) {
+    throw new FetchBootFileError(`Error fetching bootnodes file: Status Code ${res.status} (${res.statusText})`);
+  }
+  const bootnodesFile = await res.text();
   return parseBootnodesFile(bootnodesFile);
 }
 
@@ -121,8 +127,13 @@ export async function getNetworkBootnodes(network: NetworkName): Promise<string[
       const bootEnrs = await fetchBootnodes(network);
       bootnodes.push(...bootEnrs);
     } catch (e) {
-      // eslint-disable-next-line no-console
-      console.error(`Error fetching latest bootnodes: ${(e as Error).stack}`);
+      if (e instanceof FetchBootFileError) {
+        // eslint-disable-next-line no-console
+        console.error(`${(e as Error).stack}`);
+      } else {
+        // eslint-disable-next-line no-console
+        console.error(`Error fetching latest bootnodes: ${(e as Error).stack}`);
+      }
     }
   }
 

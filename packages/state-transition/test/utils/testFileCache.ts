@@ -1,7 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import got from "got";
-import {ApiError, getClient} from "@lodestar/api";
+import {ApiError, getClient, fetch} from "@lodestar/api";
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
 import {createChainForkConfig, ChainForkConfig} from "@lodestar/config";
 import {allForks} from "@lodestar/types";
@@ -103,12 +102,11 @@ async function downloadTestFile(fileId: string): Promise<Buffer> {
   const fileUrl = `${TEST_FILES_BASE_URL}/${fileId}`;
   // eslint-disable-next-line no-console
   console.log(`Downloading file ${fileUrl}`);
-
-  const res = await got(fileUrl, {responseType: "buffer"}).catch((e: Error) => {
+  const res = await fetch(fileUrl).catch((e: Error) => {
     e.message = `Error downloading ${fileUrl}: ${e.message}`;
     throw e;
   });
-  return res.body;
+  return Buffer.from(await res.arrayBuffer());
 }
 
 async function tryEach<T>(promises: (() => Promise<T>)[]): Promise<T> {

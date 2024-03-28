@@ -1,14 +1,14 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {writeFile} from "node:fs/promises";
 import path from "node:path";
-import got from "got";
 import {getClient} from "@lodestar/api/beacon";
 import {chainConfigToJson} from "@lodestar/config";
 import {LogLevel} from "@lodestar/utils";
+import {fetch} from "@lodestar/api";
 import {BeaconArgs} from "../../../../src/cmds/beacon/options.js";
 import {GlobalArgs} from "../../../../src/options/globalOptions.js";
 import {LODESTAR_BINARY_PATH} from "../constants.js";
-import {BeaconClient, BeaconNodeGenerator, RunnerType} from "../interfaces.js";
+import {BeaconClient, BeaconNodeGenerator, HealthStatus, RunnerType} from "../interfaces.js";
 import {getNodePorts} from "../utils/ports.js";
 
 export const generateLodestarBeaconNode: BeaconNodeGenerator<BeaconClient.Lodestar> = (opts, runner) => {
@@ -96,8 +96,7 @@ export const generateLodestarBeaconNode: BeaconNodeGenerator<BeaconClient.Lodest
       },
       health: async () => {
         try {
-          await got.get(`http://${address}:${ports.beacon.httpPort}/eth/v1/node/health`);
-          return {ok: true};
+          return (await fetch(`http://${address}:${ports.beacon.httpPort}/eth/v1/node/health`)) as HealthStatus;
         } catch (err) {
           return {ok: false, reason: (err as Error).message, checkId: "eth/v1/node/health query"};
         }

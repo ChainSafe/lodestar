@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-import {ApiError} from "@lodestar/api";
+import {ApiError, fetch} from "@lodestar/api";
 import {Slot, allForks} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {BeaconClient, BeaconNode, ExecutionClient, ExecutionNode, NodePair} from "../interfaces.js";
@@ -167,4 +167,19 @@ export async function fetchBlock(
   }
 
   return;
+}
+
+export async function postEthRpc(url: string): Promise<Response> {
+  return fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      method: "net_version",
+      params: [],
+      id: 67,
+    }),
+  });
 }

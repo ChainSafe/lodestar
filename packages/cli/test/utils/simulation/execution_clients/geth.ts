@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {writeFile} from "node:fs/promises";
 import path from "node:path";
-import got from "got";
 import {ZERO_HASH} from "@lodestar/state-transition";
 import {
   EL_GENESIS_ACCOUNT,
@@ -11,9 +10,17 @@ import {
   SIM_ENV_NETWORK_ID,
 } from "../constants.js";
 import {Eth1ProviderWithAdmin} from "../Eth1ProviderWithAdmin.js";
-import {ExecutionClient, ExecutionNodeGenerator, ExecutionStartMode, JobOptions, RunnerType} from "../interfaces.js";
+import {
+  ExecutionClient,
+  ExecutionNodeGenerator,
+  ExecutionStartMode,
+  HealthStatus,
+  JobOptions,
+  RunnerType,
+} from "../interfaces.js";
 import {getNodeMountedPaths} from "../utils/paths.js";
 import {getNodePorts} from "../utils/ports.js";
+import {postEthRpc} from "../utils/network.js";
 
 export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (opts, runner) => {
   if (!process.env.GETH_BINARY_DIR && !process.env.GETH_DOCKER_IMAGE) {
@@ -156,8 +163,7 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
     },
     health: async () => {
       try {
-        await got.post(ethRpcPublicUrl, {json: {jsonrpc: "2.0", method: "net_version", params: [], id: 67}});
-        return {ok: true};
+        return (await postEthRpc(ethRpcPublicUrl)) as HealthStatus;
       } catch (err) {
         return {ok: false, reason: (err as Error).message, checkId: "JSON RPC query net_version"};
       }

@@ -1,9 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import stream from "node:stream";
-import {promisify} from "node:util";
-import got from "got";
 import yaml from "js-yaml";
+import {fetch} from "@lodestar/api";
 const {load, dump, FAILSAFE_SCHEMA, Type} = yaml;
 
 import {mkdir} from "./fs.js";
@@ -112,36 +110,13 @@ export function readFileIfExists<T>(filepath: string, acceptedFormats?: string[]
 }
 
 /**
- * Download from URL or copy from local filesystem
- * @param urlOrPathSrc "/path/to/file.szz" | "https://url.to/file.szz"
- */
-export async function downloadOrCopyFile(pathDest: string, urlOrPathSrc: string): Promise<void> {
-  if (isUrl(urlOrPathSrc)) {
-    await downloadFile(pathDest, urlOrPathSrc);
-  } else {
-    mkdir(path.dirname(pathDest));
-    await fs.promises.copyFile(urlOrPathSrc, pathDest);
-  }
-}
-
-/**
- * Downloads a genesis file per network if it does not exist
- */
-export async function downloadFile(pathDest: string, url: string): Promise<void> {
-  if (!fs.existsSync(pathDest)) {
-    mkdir(path.dirname(pathDest));
-    await promisify(stream.pipeline)(got.stream(url), fs.createWriteStream(pathDest));
-  }
-}
-
-/**
  * Download from URL to memory or load from local filesystem
  * @param urlOrPathSrc "/path/to/file.szz" | "https://url.to/file.szz"
  */
 export async function downloadOrLoadFile(pathOrUrl: string): Promise<Uint8Array> {
   if (isUrl(pathOrUrl)) {
-    const res = await got.get(pathOrUrl, {encoding: "binary"});
-    return res.rawBody;
+    const res = await fetch(pathOrUrl);
+    return new Uint8Array(await res.arrayBuffer());
   } else {
     return fs.promises.readFile(pathOrUrl);
   }
