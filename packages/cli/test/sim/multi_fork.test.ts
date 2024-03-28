@@ -245,8 +245,10 @@ await checkpointSync.execution.job.stop();
 // Unknown block sync
 // ========================================================
 const headForUnknownBlockSync = await env.nodes[0].beacon.api.beacon.getBlockV2("head");
-const blobsForUnknownBlockSync = await env.nodes[0].beacon.api.beacon.getBlobSidecars("head");
 ApiError.assert(headForUnknownBlockSync);
+const blobsForUnknownBlockSync = await env.nodes[0].beacon.api.beacon.getBlobSidecars(
+  headForUnknownBlockSync.response.data.message.slot
+);
 ApiError.assert(blobsForUnknownBlockSync);
 const unknownBlockSync = await env.createNodePair({
   id: "unknown-block-sync-node",
