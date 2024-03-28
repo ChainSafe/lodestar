@@ -106,6 +106,8 @@ function setupForkChoice(): ProtoArray {
         unrealizedFinalizedEpoch: 0,
         unrealizedFinalizedRoot: "-",
 
+        timeliness: false,
+
         ...executionData,
       },
       block.slot

@@ -40,6 +40,7 @@ export const testData: GenericServerTestCases<Api> = {
           weight: 1,
           bestChild: "1",
           bestDescendant: "1",
+          timeliness: false,
         },
       ],
     },
