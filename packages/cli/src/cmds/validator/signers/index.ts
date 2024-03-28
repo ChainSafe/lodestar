@@ -16,8 +16,6 @@ import {importKeystoreDefinitionsFromExternalDir, readPassphraseOrPrompt} from "
 
 const KEYSTORE_IMPORT_PROGRESS_MS = 10000;
 
-type MinimalLogger = Pick<Logger, LogLevel.info | LogLevel.warn | LogLevel.debug>;
-
 /**
  * Options processing hierarchy
  * --interopIndexes
@@ -46,7 +44,7 @@ type MinimalLogger = Pick<Logger, LogLevel.info | LogLevel.warn | LogLevel.debug
 export async function getSignersFromArgs(
   args: IValidatorCliArgs & GlobalArgs,
   network: string,
-  {logger, signal}: {logger: MinimalLogger; signal: AbortSignal}
+  {logger, signal}: {logger: Pick<Logger, LogLevel.info | LogLevel.warn | LogLevel.debug>; signal: AbortSignal}
 ): Promise<Signer[]> {
   const accountPaths = getAccountPaths(args, network);
 
@@ -108,7 +106,7 @@ export async function getSignersFromArgs(
 
   // Remote keys are declared manually or will be fetched from external signer
   else if (args["externalSigner.pubkeys"] || args["externalSigner.fetch"]) {
-    return getRemoteSigners(args, logger);
+    return getRemoteSigners(args);
   }
 
   // Read keys from local account manager
@@ -157,7 +155,7 @@ export function getSignerPubkeyHex(signer: Signer): string {
   }
 }
 
-async function getRemoteSigners(args: IValidatorCliArgs & GlobalArgs, logger?: MinimalLogger): Promise<Signer[]> {
+async function getRemoteSigners(args: IValidatorCliArgs & GlobalArgs): Promise<Signer[]> {
   const externalSignerUrl = args["externalSigner.url"];
   if (!externalSignerUrl) {
     throw new YargsError(
@@ -173,7 +171,7 @@ async function getRemoteSigners(args: IValidatorCliArgs & GlobalArgs, logger?: M
     throw new YargsError("externalSigner.pubkeys is set to an empty list");
   }
 
-  const pubkeys = args["externalSigner.pubkeys"] ?? (await externalSignerGetKeys(externalSignerUrl, logger));
+  const pubkeys = args["externalSigner.pubkeys"] ?? (await externalSignerGetKeys(externalSignerUrl));
   assertValidPubkeysHex(pubkeys);
 
   return pubkeys.map((pubkey) => ({type: SignerType.Remote, pubkey, url: externalSignerUrl}));

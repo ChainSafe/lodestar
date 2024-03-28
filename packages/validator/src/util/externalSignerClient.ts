@@ -7,7 +7,6 @@ import {BeaconConfig} from "@lodestar/config";
 import {computeEpochAtSlot, blindedOrFullBlockToHeader} from "@lodestar/state-transition";
 import {allForks, Epoch, Root, RootHex, Slot, ssz} from "@lodestar/types";
 import {PubkeyHex} from "../types.js";
-import {Logger, LogLevel} from "@lodestar/utils";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -25,8 +24,6 @@ export enum SignableMessageType {
   VALIDATOR_REGISTRATION = "VALIDATOR_REGISTRATION",
   BLS_TO_EXECUTION_CHANGE = "BLS_TO_EXECUTION_CHANGE",
 }
-
-type MinimalLogger = Pick<Logger, LogLevel.info | LogLevel.warn | LogLevel.debug>;
 
 const AggregationSlotType = new ContainerType({
   slot: ssz.Slot,
@@ -107,7 +104,7 @@ type Web3SignerSerializedRequest = {
 /**
  * Return public keys from the server.
  */
-export async function externalSignerGetKeys(externalSignerUrl: string, logger?: MinimalLogger): Promise<string[]> {
+export async function externalSignerGetKeys(externalSignerUrl: string): Promise<string[]> {
   const res = await fetch(`${externalSignerUrl}/api/v1/eth2/publicKeys`, {
     method: "GET",
     headers: {"Content-Type": "application/json"},
@@ -118,17 +115,8 @@ export async function externalSignerGetKeys(externalSignerUrl: string, logger?: 
     throw Error(`External signer GetKeys: statusCode=${res.status}, errorBody=${errBody}`);
   }
 
-  const resBody = await res.text();
-  const resContentType = res.headers?.get("Content-Type")?.split(";", 1)[0].trim().toLowerCase();
-
-  logger?.debug("External signer GetKeys response", {contentType: resContentType, body: resBody});
-
-  if(resContentType === "application/json") {
-    return JSON.parse(resBody) as string[];
-  }
-  else {
-    throw Error(`External signer GetKeys: content type ${resContentType} not supported`);
-  }
+  ensureCorrectWireFormat(res, WireFormat.json)
+  return JSON.parse(await res.text()) as string[];
 }
 
 /**
@@ -140,8 +128,7 @@ export async function externalSignerPostSignature(
   pubkeyHex: PubkeyHex,
   signingRoot: Root,
   signingSlot: Slot,
-  signableMessage: SignableMessage,
-  logger?: MinimalLogger
+  signableMessage: SignableMessage
 ): Promise<string> {
   const requestObj = serializerSignableMessagePayload(config, signableMessage) as Web3SignerSerializedRequest;
 
@@ -172,26 +159,20 @@ export async function externalSignerPostSignature(
   }
 
   const resBody = await res.text();
-  const resContentType = res.headers?.get("Content-Type")?.split(";", 1)[0].trim().toLowerCase();
 
-  logger?.debug("External signer PostSignature response", {contentType: resContentType, body: resBody});
-
-  if(resContentType === "application/json") {
-    const data = JSON.parse(resBody) as {signature: string};
-    return data.signature;
-  }
-  else if (resContentType === "text/plain") {
-    return resBody;
-  }
-  else {
-    throw Error(`External signer PostSignature: content type ${resContentType} not supported`);
+  switch (ensureCorrectWireFormat(res)) {
+    case WireFormat.json:
+      const data = JSON.parse(resBody) as {signature: string};
+      return data.signature;
+    case WireFormat.text:
+      return resBody;
   }
 }
 
 /**
  * Return upcheck status from server.
  */
-export async function externalSignerUpCheck(remoteUrl: string, logger?: MinimalLogger): Promise<boolean> {
+export async function externalSignerUpCheck(remoteUrl: string): Promise<boolean> {
   const res = await fetch(`${remoteUrl}/upcheck`, {
     method: "GET",
     headers: {"Content-Type": "application/json"},
@@ -203,20 +184,69 @@ export async function externalSignerUpCheck(remoteUrl: string, logger?: MinimalL
   }
 
   const resBody = await res.text();
-  const resContentType = res.headers?.get("Content-Type")?.split(";", 1)[0].trim().toLowerCase();
 
-  logger?.debug("External signer UpCheck response", {contentType: resContentType, body: resBody});
+  switch (ensureCorrectWireFormat(res)) {
+    case WireFormat.json:
+      const data = JSON.parse(resBody) as {status: string};
+      return data.status === "OK";
+    case WireFormat.text:
+      return resBody === "OK";
+  }
+}
 
-  if(resContentType === "application/json") {
-    const data = JSON.parse(resBody) as {status: string};
-    return data.status === "OK";
+function ensureCorrectWireFormat(response: Response, onlySupport? : WireFormat) : WireFormat{
+    const contentType = response.headers.get("content-type");
+    if (contentType === null) {
+      throw Error("No Content-Type header found in response");
+    }
+
+    const mediaType = parseContentTypeHeader(contentType);
+    if (mediaType === null) {
+      throw Error(`Unsupported response media type: ${contentType.split(";", 1)[0]}`);
+    }
+
+    const wireFormat = getWireFormat(mediaType);
+
+    if (onlySupport !== undefined && wireFormat !== onlySupport) {
+      throw Error(`Method only supports ${onlySupport} responses`);
+    }
+
+    return wireFormat;
+}
+
+enum WireFormat {
+  json = "json",
+  text = "text",
+}
+
+enum MediaType {
+  json = "application/json",
+  text = "text/plain",
+}
+
+function getWireFormat(mediaType: MediaType): WireFormat {
+  switch (mediaType) {
+      case MediaType.json:
+          return WireFormat.json;
+      case MediaType.text:
+          return WireFormat.text;
   }
-  else if (resContentType === "text/plain") {
-    return resBody === "OK";
+}
+
+const supportedMediaTypes = Object.values(MediaType);
+
+function isSupportedMediaType(mediaType: string | null): mediaType is MediaType {
+  return mediaType !== null && supportedMediaTypes.includes(mediaType as MediaType);
+}
+
+function parseContentTypeHeader(contentType?: string): MediaType | null {
+  if (!contentType) {
+      return null;
   }
-  else{
-    throw Error(`External signer UpCheck: content type ${resContentType} not supported`);
-  }
+
+  const mediaType = contentType.split(";", 1)[0].trim().toLowerCase();
+
+  return isSupportedMediaType(mediaType) ? mediaType : null;
 }
 
 function serializerSignableMessagePayload(config: BeaconConfig, payload: SignableMessage): Record<string, unknown> {
