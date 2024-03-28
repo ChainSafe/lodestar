@@ -246,6 +246,10 @@ await checkpointSync.execution.job.stop();
 // ========================================================
 const headForUnknownBlockSync = await env.nodes[0].beacon.api.beacon.getBlockV2("head");
 ApiError.assert(headForUnknownBlockSync);
+const blobsForUnknownBlockSync = await env.nodes[0].beacon.api.beacon.getBlobSidecars(
+  headForUnknownBlockSync.response.data.message.slot
+);
+ApiError.assert(blobsForUnknownBlockSync);
 const unknownBlockSync = await env.createNodePair({
   id: "unknown-block-sync-node",
   beacon: {
@@ -277,9 +281,16 @@ await sleep(5000);
 
 try {
   ApiError.assert(
-    await unknownBlockSync.beacon.api.beacon.publishBlockV2(headForUnknownBlockSync.response.data, {
-      broadcastValidation: routes.beacon.BroadcastValidation.none,
-    })
+    await unknownBlockSync.beacon.api.beacon.publishBlockV2(
+      {
+        signedBlock: headForUnknownBlockSync.response.data,
+        blobs: blobsForUnknownBlockSync.response.data.map((b) => b.blob),
+        kzgProofs: blobsForUnknownBlockSync.response.data.map((b) => b.kzgProof),
+      },
+      {
+        broadcastValidation: routes.beacon.BroadcastValidation.none,
+      }
+    )
   );
 
   env.tracker.record({
