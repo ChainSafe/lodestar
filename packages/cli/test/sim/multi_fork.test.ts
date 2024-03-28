@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import path from "node:path";
-import {sleep, toHex, toHexString} from "@lodestar/utils";
+import {fromHex, sleep, toHex, toHexString} from "@lodestar/utils";
 import {ApiError, routes} from "@lodestar/api";
 import {AssertionMatch, BeaconClient, ExecutionClient, ValidatorClient} from "../utils/simulation/interfaces.js";
 import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
@@ -244,11 +244,10 @@ await checkpointSync.execution.job.stop();
 
 // Unknown block sync
 // ========================================================
-const headForUnknownBlockSync = await env.nodes[0].beacon.api.beacon.getBlockV2(
-  // Post deneb we check fork version before broadcast validations, so use a pre-deneb bloc here.
-  env.clock.getLastSlotOfEpoch(forkConfig.CAPELLA_FORK_EPOCH)
-);
+const headForUnknownBlockSync = await env.nodes[0].beacon.api.beacon.getBlockV2("head");
+const blobsForUnknownBlockSync = await env.nodes[0].beacon.api.beacon.getBlobSidecars("head");
 ApiError.assert(headForUnknownBlockSync);
+ApiError.assert(blobsForUnknownBlockSync);
 const unknownBlockSync = await env.createNodePair({
   id: "unknown-block-sync-node",
   beacon: {
@@ -280,9 +279,16 @@ await sleep(5000);
 
 try {
   ApiError.assert(
-    await unknownBlockSync.beacon.api.beacon.publishBlockV2(headForUnknownBlockSync.response.data, {
-      broadcastValidation: routes.beacon.BroadcastValidation.none,
-    })
+    await unknownBlockSync.beacon.api.beacon.publishBlockV2(
+      {
+        signedBlock: headForUnknownBlockSync.response.data,
+        blobs: blobsForUnknownBlockSync.response.data.map((b) => b.blob),
+        kzgProofs: blobsForUnknownBlockSync.response.data.map((b) => b.kzgProof),
+      },
+      {
+        broadcastValidation: routes.beacon.BroadcastValidation.none,
+      }
+    )
   );
 
   env.tracker.record({
