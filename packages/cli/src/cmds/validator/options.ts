@@ -102,6 +102,7 @@ export const keymanagerOptions: CliCommandOptions<KeymanagerArgs> = {
     group: "keymanager",
   },
   "keymanager.tokenFile": {
+    alias: ["tokenFile"],
     type: "string",
     description: "Path to file containing bearer token used for key manager API authentication",
     group: "keymanager",
