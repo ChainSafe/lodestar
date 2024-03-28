@@ -244,7 +244,10 @@ await checkpointSync.execution.job.stop();
 
 // Unknown block sync
 // ========================================================
-const headForUnknownBlockSync = await env.nodes[0].beacon.api.beacon.getBlockV2("head");
+const headForUnknownBlockSync = await env.nodes[0].beacon.api.beacon.getBlockV2(
+  // Post deneb we check fork version before broadcast validations, so use a pre-deneb bloc here.
+  env.clock.getLastSlotOfEpoch(forkConfig.CAPELLA_FORK_EPOCH)
+);
 ApiError.assert(headForUnknownBlockSync);
 const unknownBlockSync = await env.createNodePair({
   id: "unknown-block-sync-node",
