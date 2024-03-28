@@ -110,7 +110,12 @@ export async function externalSignerGetKeys(externalSignerUrl: string): Promise<
     headers: {"Content-Type": "application/json"},
   });
 
-  return handlerExternalSignerResponse<string[]>(res);
+  if (!res.ok) {
+    throw Error(`${await res.text()??res.statusText}`);
+  }
+
+  ensureCorrectWireFormat(res, WireFormat.json)
+  return JSON.parse(await res.text()) as string[];
 }
 
 /**
@@ -147,8 +152,19 @@ export async function externalSignerPostSignature(
     body: JSON.stringify(requestObj),
   });
 
-  const data = await handlerExternalSignerResponse<{signature: string}>(res);
-  return data.signature;
+  if (!res.ok) {
+    throw Error(`${await res.text()??res.statusText}`);
+  }
+
+  const resBody = await res.text();
+
+  switch (ensureCorrectWireFormat(res)) {
+    case WireFormat.json:
+      const data = JSON.parse(resBody) as {signature: string};
+      return data.signature;
+    case WireFormat.text:
+      return resBody;
+  }
 }
 
 /**
@@ -160,17 +176,74 @@ export async function externalSignerUpCheck(remoteUrl: string): Promise<boolean>
     headers: {"Content-Type": "application/json"},
   });
 
-  const data = await handlerExternalSignerResponse<{status: string}>(res);
-  return data.status === "OK";
-}
-
-async function handlerExternalSignerResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
-    const errBody = await res.text();
-    throw Error(`${errBody}`);
+    throw Error(`${await res.text()??res.statusText}`);
   }
 
-  return JSON.parse(await res.text()) as T;
+  const resBody = await res.text();
+
+  switch (ensureCorrectWireFormat(res)) {
+    case WireFormat.json:
+      const data = JSON.parse(resBody) as {status: string};
+      return data.status === "OK";
+    case WireFormat.text:
+      return resBody === "OK";
+  }
+}
+
+function ensureCorrectWireFormat(response: Response, onlySupport? : WireFormat) : WireFormat{
+    const contentType = response.headers.get("content-type");
+    if (contentType === null) {
+      throw Error("No Content-Type header found in response");
+    }
+
+    const mediaType = parseContentTypeHeader(contentType);
+    if (mediaType === null) {
+      throw Error(`Unsupported response media type: ${contentType.split(";", 1)[0]}`);
+    }
+
+    const wireFormat = getWireFormat(mediaType);
+
+    if (onlySupport !== undefined && wireFormat !== onlySupport) {
+      throw Error(`Method only supports ${onlySupport} responses`);
+    }
+
+    return wireFormat;
+}
+
+enum WireFormat {
+  json = "json",
+  text = "text",
+}
+
+enum MediaType {
+  json = "application/json",
+  text = "text/plain",
+}
+
+function getWireFormat(mediaType: MediaType): WireFormat {
+  switch (mediaType) {
+      case MediaType.json:
+          return WireFormat.json;
+      case MediaType.text:
+          return WireFormat.text;
+  }
+}
+
+const supportedMediaTypes = Object.values(MediaType);
+
+function isSupportedMediaType(mediaType: string | null): mediaType is MediaType {
+  return mediaType !== null && supportedMediaTypes.includes(mediaType as MediaType);
+}
+
+function parseContentTypeHeader(contentType?: string): MediaType | null {
+  if (!contentType) {
+      return null;
+  }
+
+  const mediaType = contentType.split(";", 1)[0].trim().toLowerCase();
+
+  return isSupportedMediaType(mediaType) ? mediaType : null;
 }
 
 function serializerSignableMessagePayload(config: BeaconConfig, payload: SignableMessage): Record<string, unknown> {
