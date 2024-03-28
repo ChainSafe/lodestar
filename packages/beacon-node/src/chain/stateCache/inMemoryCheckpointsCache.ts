@@ -29,7 +29,7 @@ export class InMemoryCheckpointStateCache implements CheckpointStateCache {
   private preComputedCheckpoint: string | null = null;
   private preComputedCheckpointHits: number | null = null;
 
-  constructor({maxEpochs = MAX_EPOCHS, metrics}: {maxEpochs?: number; metrics?: Metrics | null}) {
+  constructor({metrics = null}: {metrics?: Metrics | null}, {maxEpochs = MAX_EPOCHS}: {maxEpochs?: number} = {}) {
     this.cache = new MapTracker(metrics?.cpStateCache);
     if (metrics) {
       this.metrics = metrics.cpStateCache;

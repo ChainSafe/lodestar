@@ -82,7 +82,7 @@ describe("InMemoryCheckpointStateCache", function () {
   });
 
   beforeEach(() => {
-    cache = new InMemoryCheckpointStateCache({maxEpochs: 0});
+    cache = new InMemoryCheckpointStateCache({}, {maxEpochs: 0});
     cache.add(cp0a, states["cp0a"]);
     cache.add(cp0b, states["cp0b"]);
     cache.add(cp1, states["cp1"]);
