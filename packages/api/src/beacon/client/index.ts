@@ -11,6 +11,7 @@ import * as lodestar from "./lodestar.js";
 import * as node from "./node.js";
 import * as proof from "./proof.js";
 import * as validator from "./validator.js";
+import * as builder from "./builder.js";
 
 type ClientModules = HttpClientModules & {
   config: ChainForkConfig;
@@ -34,5 +35,6 @@ export function getClient(opts: HttpClientOptions, modules: ClientModules): Api 
     node: node.getClient(config, httpClient),
     proof: proof.getClient(config, httpClient),
     validator: validator.getClient(config, httpClient),
+    builder: builder.getClient(config, httpClient),
   };
 }
