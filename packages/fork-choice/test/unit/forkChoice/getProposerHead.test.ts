@@ -5,6 +5,7 @@ import {Slot} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ForkChoice, IForkChoiceStore, ProtoArray, ExecutionStatus, ProtoBlock} from "../../../src/index.js";
+import {NotReorgedReason} from "../../../src/forkChoice/interface.js";
 import {getBlockRoot, getStateRoot} from "./forkChoice.test.js";
 
 type ProtoBlockWithWeight = ProtoBlock & {weight: number}; // weight of the block itself
@@ -119,6 +120,7 @@ describe("Forkchoice / GetProposerHead", function () {
     headBlock: ProtoBlockWithWeight;
     expectReorg: boolean;
     currentSlot?: Slot;
+    expectedNotReorgedReason?: NotReorgedReason;
   }[] = [
     {
       id: "Case that meets all conditions to be re-orged",
@@ -131,6 +133,7 @@ describe("Forkchoice / GetProposerHead", function () {
       parentBlock: {...baseParentHeadBlock},
       headBlock: {...baseHeadBlock, timeliness: true},
       expectReorg: false,
+      expectedNotReorgedReason: NotReorgedReason.HeadBlockIsTimely,
     },
     {
       id: "No reorg when currenSlot is at epoch boundary",
@@ -138,18 +141,21 @@ describe("Forkchoice / GetProposerHead", function () {
       headBlock: {...baseHeadBlock},
       expectReorg: false,
       currentSlot: SLOTS_PER_EPOCH * 2,
+      expectedNotReorgedReason: NotReorgedReason.NotShufflingStable,
     },
     {
       id: "No reorg when the blocks are not ffg competitive",
       parentBlock: {...baseParentHeadBlock},
       headBlock: {...baseHeadBlock, unrealizedJustifiedEpoch: 1},
       expectReorg: false,
+      expectedNotReorgedReason: NotReorgedReason.NotFFGCompetitive,
     },
     {
       id: "No reorg when the blocks are not ffg competitive 2",
       parentBlock: {...baseParentHeadBlock},
       headBlock: {...baseHeadBlock, unrealizedJustifiedRoot: "-"},
       expectReorg: false,
+      expectedNotReorgedReason: NotReorgedReason.NotFFGCompetitive,
     },
     {
       id: "No reorg if long unfinality",
@@ -157,12 +163,14 @@ describe("Forkchoice / GetProposerHead", function () {
       headBlock: {...baseHeadBlock},
       expectReorg: false,
       currentSlot: (genesisEpoch + 2) * SLOTS_PER_EPOCH + 1,
+      expectedNotReorgedReason: NotReorgedReason.ReorgMoreThanOneSlot, // TODO: To make it such that it returns NotReorgedReason.ChainLongUnfinality
     },
     {
       id: "No reorg if reorg spans more than a single slot",
       parentBlock: {...baseParentHeadBlock},
       headBlock: {...baseHeadBlock, slot: headSlot + 1},
       expectReorg: false,
+      expectedNotReorgedReason: NotReorgedReason.ParentBlockDistanceMoreThanOneSlot,
     },
     {
       id: "No reorg if current slot is more than one slot from head block",
@@ -170,18 +178,21 @@ describe("Forkchoice / GetProposerHead", function () {
       headBlock: {...baseHeadBlock},
       expectReorg: false,
       currentSlot: headSlot + 2,
+      expectedNotReorgedReason: NotReorgedReason.ReorgMoreThanOneSlot,
     },
     {
       id: "No reorg if head is strong",
       parentBlock: {...baseParentHeadBlock},
       headBlock: {...baseHeadBlock, weight: 30},
       expectReorg: false,
+      expectedNotReorgedReason: NotReorgedReason.HeadBlockNotWeak,
     },
     {
       id: "No reorg if parent is weak",
       parentBlock: {...baseParentHeadBlock, weight: 211},
       headBlock: {...baseHeadBlock},
       expectReorg: false,
+      expectedNotReorgedReason: NotReorgedReason.ParentBlockIsStrong,
     },
   ];
 
@@ -189,7 +200,14 @@ describe("Forkchoice / GetProposerHead", function () {
     protoArr = ProtoArray.initialize(genesisBlock, genesisSlot);
   });
 
-  for (const {id, parentBlock, headBlock, expectReorg, currentSlot: proposalSlot} of testCases) {
+  for (const {
+    id,
+    parentBlock,
+    headBlock,
+    expectReorg,
+    currentSlot: proposalSlot,
+    expectedNotReorgedReason,
+  } of testCases) {
     it(`${id}`, async () => {
       protoArr.onBlock(parentBlock, parentBlock.slot);
       protoArr.onBlock(headBlock, headBlock.slot);
@@ -207,11 +225,13 @@ describe("Forkchoice / GetProposerHead", function () {
 
       const forkChoice = new ForkChoice(config, fcStore, protoArr, undefined, {
         proposerBoostEnabled: true,
-        proposerBoostReorgEnabled: true,
+        // proposerBoostReorgEnabled: true,
       });
 
-      const proposerHead = forkChoice.getProposerHead(headBlock, currentSlot);
+      const {proposerHead, isHeadTimely, notReorgedReason} = forkChoice.getProposerHead(headBlock, currentSlot);
 
+      expect(isHeadTimely).toBe(headBlock.timeliness);
+      expect(notReorgedReason).toBe(expectedNotReorgedReason);
       expect(proposerHead.blockRoot).toBe(expectReorg ? parentBlock.blockRoot : headBlock.blockRoot);
     });
   }

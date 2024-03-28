@@ -41,6 +41,21 @@ export type AncestorResult =
   | {code: AncestorStatus.NoCommonAncenstor}
   | {code: AncestorStatus.BlockUnknown};
 
+// Reason for not proposer boost reorging
+export enum NotReorgedReason {
+  HeadBlockIsTimely,
+  ParentBlockNotAvailable,
+  ProposerBoostReorgDisabled,
+  NotShufflingStable,
+  NotFFGCompetitive,
+  ChainLongUnfinality,
+  ParentBlockDistanceMoreThanOneSlot,
+  ReorgMoreThanOneSlot,
+  ProposerBoostNotWornOff,
+  HeadBlockNotWeak,
+  ParentBlockIsStrong,
+}
+
 export type ForkChoiceMetrics = {
   votes: number;
   queuedAttestations: number;

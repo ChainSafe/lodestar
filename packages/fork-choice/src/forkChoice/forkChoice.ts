@@ -40,6 +40,7 @@ import {
   AncestorResult,
   AncestorStatus,
   ForkChoiceMetrics,
+  NotReorgedReason,
 } from "./interface.js";
 import {IForkChoiceStore, CheckpointWithHex, toCheckpointWithHex, JustifiedBalances} from "./store.js";
 
@@ -189,9 +190,9 @@ export class ForkChoice implements IForkChoice {
       return headBlock;
     }
 
-    const prelimProposerHeadBlock = this.getPreliminaryProposerHead(headBlock, parentBlock, proposalSlot);
+    const {prelimProposerHead} = this.getPreliminaryProposerHead(headBlock, parentBlock, proposalSlot);
 
-    if (prelimProposerHeadBlock === headBlock) {
+    if (prelimProposerHead === headBlock) {
       return headBlock;
     }
 
@@ -212,37 +213,43 @@ export class ForkChoice implements IForkChoice {
    *
    * Same as https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#get_proposer_head
    */
-  getProposerHead(headBlock: ProtoBlock, slot: Slot): ProtoBlock {
+  getProposerHead(
+    headBlock: ProtoBlock,
+    slot: Slot
+  ): {proposerHead: ProtoBlock; isHeadTimely: boolean; notReorgedReason?: NotReorgedReason} {
+    const isHeadTimely = headBlock.timeliness;
+    let proposerHead = headBlock;
+
     // Skip re-org attempt if proposer boost (reorg) are disabled
     if (!this.opts?.proposerBoostEnabled) {
       this.logger?.verbose("No proposer boot reorg attempt since the related flags are disabled");
-      return headBlock;
+      return {proposerHead, isHeadTimely, notReorgedReason: NotReorgedReason.ProposerBoostReorgDisabled};
     }
 
     const parentBlock = this.protoArray.getBlock(headBlock.parentRoot);
 
     // No reorg if parentBlock isn't available
     if (parentBlock === undefined) {
-      return headBlock;
+      return {proposerHead, isHeadTimely, notReorgedReason: NotReorgedReason.ParentBlockNotAvailable};
     }
 
-    const prelimProposerHeadBlock = this.getPreliminaryProposerHead(headBlock, parentBlock, slot);
+    const {prelimProposerHead, prelimNotReorgedReason} = this.getPreliminaryProposerHead(headBlock, parentBlock, slot);
 
-    if (prelimProposerHeadBlock === headBlock) {
-      return headBlock;
+    if (prelimProposerHead === headBlock && prelimNotReorgedReason !== undefined) {
+      return {proposerHead, isHeadTimely, notReorgedReason: prelimNotReorgedReason};
     }
 
     // No reorg if attempted reorg is more than a single slot
     // Half of single_slot_reorg check in the spec is done in getPreliminaryProposerHead()
     const currentTimeOk = headBlock.slot + 1 === slot;
     if (!currentTimeOk) {
-      return headBlock;
+      return {proposerHead, isHeadTimely, notReorgedReason: NotReorgedReason.ReorgMoreThanOneSlot};
     }
 
     // No reorg if proposer boost is still in effect
     const isProposerBoostWornOff = this.proposerBoostRoot !== headBlock.blockRoot;
     if (!isProposerBoostWornOff) {
-      return headBlock;
+      return {proposerHead, isHeadTimely, notReorgedReason: NotReorgedReason.ProposerBoostNotWornOff};
     }
 
     // No reorg if headBlock is "not weak" ie. headBlock's weight exceeds (REORG_HEAD_WEIGHT_THRESHOLD = 20)% of total attester weight
@@ -254,7 +261,7 @@ export class ForkChoice implements IForkChoice {
     const headNode = this.protoArray.getNode(headBlock.blockRoot);
     // If headNode is unavailable, give up reorg
     if (headNode === undefined || headNode.weight >= reorgThreshold) {
-      return headBlock;
+      return {proposerHead, isHeadTimely, notReorgedReason: NotReorgedReason.HeadBlockNotWeak};
     }
 
     // No reorg if parentBlock is "not strong" ie. parentBlock's weight is less than or equal to (REORG_PARENT_WEIGHT_THRESHOLD = 160)% of total attester weight
@@ -266,13 +273,14 @@ export class ForkChoice implements IForkChoice {
     const parentNode = this.protoArray.getNode(parentBlock.blockRoot);
     // If parentNode is unavailable, give up reorg
     if (parentNode === undefined || parentNode.weight <= parentThreshold) {
-      return headBlock;
+      return {proposerHead, isHeadTimely, notReorgedReason: NotReorgedReason.ParentBlockIsStrong};
     }
 
     // Reorg if all above checks fail
     this.logger?.info("Will perform single-slot reorg to reorg out current weak head");
+    proposerHead = parentBlock;
 
-    return parentBlock;
+    return {proposerHead, isHeadTimely};
   }
 
   /**
@@ -1333,19 +1341,24 @@ export class ForkChoice implements IForkChoice {
    * No one should be calling this function except these two
    *
    */
-  private getPreliminaryProposerHead(headBlock: ProtoBlock, parentBlock: ProtoBlock, slot: Slot): ProtoBlock {
+  private getPreliminaryProposerHead(
+    headBlock: ProtoBlock,
+    parentBlock: ProtoBlock,
+    slot: Slot
+  ): {prelimProposerHead: ProtoBlock; prelimNotReorgedReason?: NotReorgedReason} {
+    let prelimProposerHead = headBlock;
     // No reorg if headBlock is on time
     // https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_head_late
     const isHeadLate = !headBlock.timeliness;
     if (!isHeadLate) {
-      return headBlock;
+      return {prelimProposerHead, prelimNotReorgedReason: NotReorgedReason.HeadBlockIsTimely};
     }
 
     // No reorg if we are at epoch boundary where proposer shuffling could change
     // https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_shuffling_stable
     const isShufflingStable = slot % SLOTS_PER_EPOCH !== 0;
     if (!isShufflingStable) {
-      return headBlock;
+      return {prelimProposerHead, prelimNotReorgedReason: NotReorgedReason.NotShufflingStable};
     }
 
     // No reorg if headBlock and parentBlock are not ffg competitive
@@ -1354,7 +1367,7 @@ export class ForkChoice implements IForkChoice {
     const {unrealizedJustifiedEpoch: parentBlockCpEpoch, unrealizedJustifiedRoot: parentBlockCpRoot} = parentBlock;
     const isFFGCompetitive = headBlockCpEpoch === parentBlockCpEpoch && headBlockCpRoot === parentBlockCpRoot;
     if (!isFFGCompetitive) {
-      return headBlock;
+      return {prelimProposerHead, prelimNotReorgedReason: NotReorgedReason.NotFFGCompetitive};
     }
 
     // No reorg if chain is not finalizing within REORG_MAX_EPOCHS_SINCE_FINALIZATION
@@ -1362,7 +1375,7 @@ export class ForkChoice implements IForkChoice {
     const epochsSinceFinalization = computeEpochAtSlot(slot) - this.getFinalizedCheckpoint().epoch;
     const isFinalizationOk = epochsSinceFinalization <= this.config.REORG_MAX_EPOCHS_SINCE_FINALIZATION;
     if (!isFinalizationOk) {
-      return headBlock;
+      return {prelimProposerHead, prelimNotReorgedReason: NotReorgedReason.ChainLongUnfinality};
     }
 
     // -No reorg if we are not proposing on time.-
@@ -1372,10 +1385,12 @@ export class ForkChoice implements IForkChoice {
     // No reorg if this reorg spans more than a single slot
     const parentSlotOk = parentBlock.slot + 1 === headBlock.slot;
     if (!parentSlotOk) {
-      return headBlock;
+      return {prelimProposerHead, prelimNotReorgedReason: NotReorgedReason.ParentBlockDistanceMoreThanOneSlot};
     }
 
-    return parentBlock;
+    prelimProposerHead = parentBlock;
+
+    return {prelimProposerHead};
   }
 }
 
