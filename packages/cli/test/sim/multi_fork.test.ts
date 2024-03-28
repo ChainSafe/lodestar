@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import path from "node:path";
-import {fromHex, sleep, toHex, toHexString} from "@lodestar/utils";
+import {sleep, toHex, toHexString} from "@lodestar/utils";
 import {ApiError, routes} from "@lodestar/api";
 import {AssertionMatch, BeaconClient, ExecutionClient, ValidatorClient} from "../utils/simulation/interfaces.js";
 import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
