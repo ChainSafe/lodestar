@@ -234,7 +234,12 @@ export class ForkChoice implements IForkChoice {
       return {proposerHead, isHeadTimely, notReorgedReason: NotReorgedReason.ParentBlockNotAvailable};
     }
 
-    const {prelimProposerHead, prelimNotReorgedReason} = this.getPreliminaryProposerHead(headBlock, parentBlock, secFromSlot, slot);
+    const {prelimProposerHead, prelimNotReorgedReason} = this.getPreliminaryProposerHead(
+      headBlock,
+      parentBlock,
+      secFromSlot,
+      slot
+    );
 
     if (prelimProposerHead === headBlock && prelimNotReorgedReason !== undefined) {
       return {proposerHead, isHeadTimely, notReorgedReason: prelimNotReorgedReason};

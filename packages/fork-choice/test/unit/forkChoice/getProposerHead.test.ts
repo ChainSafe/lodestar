@@ -200,9 +200,9 @@ describe("Forkchoice / GetProposerHead", function () {
       parentBlock: {...baseParentHeadBlock, weight: 211},
       headBlock: {...baseHeadBlock},
       expectReorg: false,
-      secFromSlot: (config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT / 2) + 1,
+      secFromSlot: config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT / 2 + 1,
       expectedNotReorgedReason: NotReorgedReason.NotProposingOnTime,
-    }
+    },
   ];
 
   beforeEach(() => {
@@ -239,7 +239,11 @@ describe("Forkchoice / GetProposerHead", function () {
         // proposerBoostReorgEnabled: true,
       });
 
-      const {proposerHead, isHeadTimely, notReorgedReason} = forkChoice.getProposerHead(headBlock, currentSecFromSlot, currentSlot);
+      const {proposerHead, isHeadTimely, notReorgedReason} = forkChoice.getProposerHead(
+        headBlock,
+        currentSecFromSlot,
+        currentSlot
+      );
 
       expect(isHeadTimely).toBe(headBlock.timeliness);
       expect(notReorgedReason).toBe(expectedNotReorgedReason);
