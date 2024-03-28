@@ -108,8 +108,8 @@ export class ForkChoice implements IForkChoice {
     private readonly fcStore: IForkChoiceStore,
     /** The underlying representation of the block DAG. */
     private readonly protoArray: ProtoArray,
-    private readonly logger?: Logger,
-    private readonly opts?: ForkChoiceOpts
+    private readonly opts?: ForkChoiceOpts,
+    private readonly logger?: Logger
   ) {
     this.head = this.updateHead();
     this.balances = this.fcStore.justified.balances;

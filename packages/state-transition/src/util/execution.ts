@@ -114,7 +114,6 @@ export function isExecutionPayload(
   payload: allForks.FullOrBlindedExecutionPayload
 ): payload is allForks.ExecutionPayload {
   return (payload as allForks.ExecutionPayload).transactions !== undefined;
-
 }
 
 export function isCapellaPayload(

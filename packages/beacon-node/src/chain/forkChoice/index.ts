@@ -98,7 +98,7 @@ export function initializeForkChoice(
       },
       currentSlot
     ),
+    opts,
     logger,
-    opts
   );
 }
