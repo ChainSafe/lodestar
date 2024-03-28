@@ -54,6 +54,7 @@ export enum NotReorgedReason {
   ProposerBoostNotWornOff,
   HeadBlockNotWeak,
   ParentBlockIsStrong,
+  NotProposingOnTime,
 }
 
 export type ForkChoiceMetrics = {
