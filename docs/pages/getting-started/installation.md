@@ -4,11 +4,10 @@
 
 The [`chainsafe/lodestar`](https://hub.docker.com/r/chainsafe/lodestar) Docker Hub repository is maintained actively. It contains the `lodestar` CLI preinstalled.
 
-<!-- prettier-ignore-start -->
-!!! info
-    The Docker Hub image tagged as `chainsafe/lodestar:next` is run on CI every commit on our `unstable` branch.
-    For `stable` releases, the image is tagged as `chainsafe/lodestar:latest`.
-<!-- prettier-ignore-end -->
+:::info
+The Docker Hub image tagged as `chainsafe/lodestar:next` is run on CI every commit on our `unstable` branch.
+For `stable` releases, the image is tagged as `chainsafe/lodestar:latest`.
+:::
 
 Ensure you have Docker installed by issuing the command:
 
@@ -25,10 +24,9 @@ docker pull chainsafe/lodestar
 docker run chainsafe/lodestar --help
 ```
 
-<!-- prettier-ignore-start -->
-!!! info
-    Docker is the recommended setup for Lodestar. Use our [Lodestar Quickstart scripts](https://github.com/ChainSafe/lodestar-quickstart) with Docker for detailed instructions.
-<!-- prettier-ignore-end -->
+:::info
+Docker is the recommended setup for Lodestar. Use our [Lodestar Quickstart scripts](https://github.com/ChainSafe/lodestar-quickstart) with Docker for detailed instructions.
+:::
 
 ## Build from Source
 
@@ -36,14 +34,14 @@ docker run chainsafe/lodestar --help
 
 Make sure to have [Yarn installed](https://classic.yarnpkg.com/en/docs/install). It is also recommended to [install NVM (Node Version Manager)](https://github.com/nvm-sh/nvm) and use the LTS version (currently v20) of [NodeJS](https://nodejs.org/en/).
 
-<!-- prettier-ignore-start -->
-!!! info
-    NodeJS versions older than the current LTS are not supported by Lodestar. We recommend running the latest Node LTS.
-    It is important to make sure the NodeJS version is not changed after reboot by setting a default `nvm alias default <version> && nvm use default`.
+:::info
+NodeJS versions older than the current LTS are not supported by Lodestar. We recommend running the latest Node LTS.
+It is important to make sure the NodeJS version is not changed after reboot by setting a default `nvm alias default <version> && nvm use default`.
+:::
 
-!!! note
-    Node Version Manager (NVM) will only install NodeJS for use with the active user. If you intend on setting up Lodestar to run under another user, we recommend using [NodeSource's source for NodeJS](https://github.com/nodesource/distributions/blob/master/README.md#installation-instructions) so you can install NodeJS globally.
-<!-- prettier-ignore-end -->
+:::note
+Node Version Manager (NVM) will only install NodeJS for use with the active user. If you intend on setting up Lodestar to run under another user, we recommend using [NodeSource's source for NodeJS](https://github.com/nodesource/distributions/blob/master/README.md#installation-instructions) so you can install NodeJS globally.
+:::
 
 ### Clone repository
 
@@ -87,7 +85,6 @@ See [Command Line Reference](./../reference/cli.md) for further information.
 
 ## Install from NPM [not recommended]
 
-<!-- prettier-ignore-start -->
-!!! danger
-    For mainnet (production) usage, we only recommend installing with docker due to [NPM supply chain attacks](https://hackaday.com/2021/10/22/supply-chain-attack-npm-library-used-by-facebook-and-others-was-compromised/). Until a [safer installation method has been found](https://github.com/ChainSafe/lodestar/issues/3596), do not use this install method except for experimental purposes only.
-<!-- prettier-ignore-end -->
+:::danger
+For mainnet (production) usage, we only recommend installing with docker due to [NPM supply chain attacks](https://hackaday.com/2021/10/22/supply-chain-attack-npm-library-used-by-facebook-and-others-was-compromised/). Until a [safer installation method has been found](https://github.com/ChainSafe/lodestar/issues/3596), do not use this install method except for experimental purposes only.
+:::

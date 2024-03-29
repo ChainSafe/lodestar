@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
-import {ssz} from "@lodestar/types";
+import {Epoch, ssz} from "@lodestar/types";
 
 import {Schema, Endpoint, RouteDefinitions} from "../../../utils/index.js";
-import {ExecutionOptimisticCodec, ExecutionOptimisticMeta, JsonOnlyReq} from "../../../utils/codecs.js";
+import {ArrayOf, ExecutionOptimisticCodec, ExecutionOptimisticMeta, JsonOnlyReq} from "../../../utils/codecs.js";
 import {BlockId} from "./block.js";
 import {ValidatorId} from "./state.js";
 
@@ -27,6 +27,46 @@ const BlockRewardsType = new ContainerType(
   {jsonCase: "eth2"}
 );
 
+const AttestationsRewardType = new ContainerType(
+  {
+    /** Reward for head vote. Could be negative to indicate penalty */
+    head: ssz.UintNum64,
+    /** Reward for target vote. Could be negative to indicate penalty */
+    target: ssz.UintNum64,
+    /** Reward for source vote. Could be negative to indicate penalty */
+    source: ssz.UintNum64,
+    /** Inclusion delay reward (phase0 only) */
+    inclusionDelay: ssz.UintNum64,
+    /** Inactivity penalty. Should be a negative number to indicate penalty */
+    inactivity: ssz.UintNum64,
+  },
+  {jsonCase: "eth2"}
+);
+
+const IdealAttestationsRewardsType = new ContainerType(
+  {
+    ...AttestationsRewardType.fields,
+    effectiveBalance: ssz.UintNum64,
+  },
+  {jsonCase: "eth2"}
+);
+
+const TotalAttestationsRewardsType = new ContainerType(
+  {
+    ...AttestationsRewardType.fields,
+    validatorIndex: ssz.ValidatorIndex,
+  },
+  {jsonCase: "eth2"}
+);
+
+const AttestationsRewardsType = new ContainerType(
+  {
+    idealRewards: ArrayOf(IdealAttestationsRewardsType),
+    totalRewards: ArrayOf(TotalAttestationsRewardsType),
+  },
+  {jsonCase: "eth2"}
+);
+
 const SyncCommitteeRewardsType = new ContainerType(
   {
     validatorIndex: ssz.ValidatorIndex,
@@ -39,6 +79,24 @@ const SyncCommitteeRewardsType = new ContainerType(
  * Rewards info for a single block. Every reward value is in Gwei.
  */
 export type BlockRewards = ValueOf<typeof BlockRewardsType>;
+
+/**
+ * Rewards for a single set of (ideal or actual depending on usage) attestations. Reward value is in Gwei
+ */
+export type AttestationsReward = ValueOf<typeof AttestationsRewardType>;
+
+/**
+ * Rewards info for ideal attestations ie. Maximum rewards could be earned by making timely head, target and source vote.
+ * `effectiveBalance` is in Gwei
+ */
+export type IdealAttestationsReward = ValueOf<typeof IdealAttestationsRewardsType>;
+
+/**
+ * Rewards info for actual attestations
+ */
+export type TotalAttestationsReward = ValueOf<typeof TotalAttestationsRewardsType>;
+
+export type AttestationsRewards = ValueOf<typeof AttestationsRewardsType>;
 
 /**
  * Rewards info for sync committee participation. Every reward value is in Gwei.
@@ -61,6 +119,21 @@ export type Endpoints = {
     {blockId: BlockId},
     {params: {block_id: string}},
     BlockRewards,
+    ExecutionOptimisticMeta
+  >;
+
+  /**
+   * Get attestations rewards
+   * Negative values indicate penalties. `inactivity` can only be either 0 or negative number since it is penalty only
+   *
+   * @param epoch The epoch to get rewards info from
+   * @param validatorIds List of validator indices or pubkeys to filter in
+   */
+  getAttestationsRewards: Endpoint<
+    "POST",
+    {epoch: Epoch; validatorIds?: ValidatorId[]},
+    {params: {epoch: number}; body: ValidatorId[]},
+    AttestationsRewards,
     ExecutionOptimisticMeta
   >;
 
@@ -92,6 +165,28 @@ export const definitions: RouteDefinitions<Endpoints> = {
     },
     resp: {
       data: BlockRewardsType,
+      meta: ExecutionOptimisticCodec,
+    },
+  },
+  getAttestationsRewards: {
+    url: "/eth/v1/beacon/rewards/attestations/{epoch}",
+    method: "POST",
+    req: JsonOnlyReq({
+      writeReqJson: ({epoch, validatorIds}) => ({
+        params: {epoch},
+        body: validatorIds || [],
+      }),
+      parseReqJson: ({params, body}) => ({
+        epoch: params.epoch,
+        validatorIds: body,
+      }),
+      schema: {
+        params: {epoch: Schema.UintRequired},
+        body: Schema.UintOrStringArray,
+      },
+    }),
+    resp: {
+      data: AttestationsRewardsType,
       meta: ExecutionOptimisticCodec,
     },
   },

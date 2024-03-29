@@ -9,6 +9,7 @@ import {Logger} from "@lodestar/utils";
 import {LCTransport, RootProviderInitOptions} from "../interfaces.js";
 import {assertLightClient} from "../utils/assertion.js";
 import {
+  fetchBlock,
   getExecutionPayloads,
   getGenesisData,
   getSyncCheckpoint,
@@ -112,20 +113,20 @@ export class ProofProvider {
       endSlot: end,
       logger: this.logger,
     });
-    for (const payload of Object.values(payloads)) {
-      this.store.set(payload, false);
+    for (const [slot, payload] of payloads.entries()) {
+      this.store.set(payload, slot, false);
     }
 
     // Load the finalized payload from the CL
     const finalizedSlot = this.lightClient.getFinalized().beacon.slot;
     this.logger.debug("Getting finalized slot from lightclient", {finalizedSlot});
-    const finalizedPayload = await getExecutionPayloads({
-      api: this.opts.api,
-      startSlot: finalizedSlot,
-      endSlot: finalizedSlot,
-      logger: this.logger,
-    });
-    this.store.set(finalizedPayload[finalizedSlot], true);
+    const block = await fetchBlock(this.opts.api, finalizedSlot);
+    if (block) {
+      this.store.set(block.message.body.executionPayload, finalizedSlot, true);
+    } else {
+      this.logger.error("Failed to fetch finalized block", finalizedSlot);
+    }
+
     this.logger.info("Proof provider ready");
   }
 

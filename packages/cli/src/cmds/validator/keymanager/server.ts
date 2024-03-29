@@ -13,6 +13,8 @@ import {writeFile600Perm} from "../../../util/index.js";
 export type KeymanagerRestApiServerOpts = RestApiServerOpts & {
   isAuthEnabled: boolean;
   tokenDir?: string;
+  // Takes precedence over `tokenDir`
+  tokenFile?: string;
 };
 
 export const keymanagerRestApiServerOptsDefault: KeymanagerRestApiServerOpts = {
@@ -44,7 +46,9 @@ export class KeymanagerRestApiServer extends RestApiServer {
       ...Object.fromEntries(Object.entries(optsArg).filter(([_, v]) => v != null)),
     };
 
-    const apiTokenPath = path.join(opts.tokenDir ?? ".", apiTokenFileName);
+    const apiTokenPath = opts.tokenFile
+      ? path.resolve(opts.tokenFile)
+      : path.join(opts.tokenDir ?? ".", apiTokenFileName);
     let bearerToken: string | undefined;
 
     if (opts.isAuthEnabled) {

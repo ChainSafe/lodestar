@@ -45,7 +45,7 @@ Based on the parameters passed to `SimulationEnvironment.initWithDefaults` the f
         # Contains all validators definition with relative path
         validator_definitions.yml
         /secrets
-          # Public key prefixed password for keystore decrypiton
+          # Public key prefixed password for keystore decryption
           0x18302981aadffccc123313.txt
         /keystores
           # Public key prefixed with 0x, EIP-2335 keystore file

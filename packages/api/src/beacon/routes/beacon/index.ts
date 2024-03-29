@@ -18,7 +18,13 @@ export * as state from "./state.js";
 export * as rewards from "./rewards.js";
 export {BroadcastValidation} from "./block.js";
 export type {BlockId, BlockHeaderResponse} from "./block.js";
-export type {BlockRewards, SyncCommitteeRewards} from "./rewards.js";
+export type {
+  BlockRewards,
+  AttestationsRewards,
+  IdealAttestationsReward,
+  TotalAttestationsReward,
+  SyncCommitteeRewards,
+} from "./rewards.js";
 // TODO: Review if re-exporting all these types is necessary
 export type {
   StateId,

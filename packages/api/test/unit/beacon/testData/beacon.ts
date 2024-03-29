@@ -175,7 +175,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
     res: {data: {validators: [1300], validatorAggregates: [[1300]]}, meta: {executionOptimistic: true}},
   },
 
-  // reward
+  // rewards
 
   getBlockRewards: {
     args: {blockId: "head"},
@@ -187,6 +187,34 @@ export const testData: GenericServerTestCases<Endpoints> = {
         syncAggregate: 4,
         proposerSlashings: 2,
         attesterSlashings: 1,
+      },
+      meta: {executionOptimistic: true},
+    },
+  },
+  getAttestationsRewards: {
+    args: {epoch: 10, validatorIds: ["1300"]},
+    res: {
+      data: {
+        idealRewards: [
+          {
+            head: 0,
+            target: 10,
+            source: 20,
+            inclusionDelay: 30,
+            inactivity: 40,
+            effectiveBalance: 50,
+          },
+        ],
+        totalRewards: [
+          {
+            head: 0,
+            target: 10,
+            source: 20,
+            inclusionDelay: 30,
+            inactivity: 40,
+            validatorIndex: 50,
+          },
+        ],
       },
       meta: {executionOptimistic: true},
     },

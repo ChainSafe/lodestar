@@ -19,17 +19,20 @@ import {mergeAssertion} from "../utils/simulation/assertions/mergeAssertion.js";
 import {createForkAssertion} from "../utils/simulation/assertions/forkAssertion.js";
 import {createAccountBalanceAssertion} from "../utils/simulation/assertions/accountBalanceAssertion.js";
 import {createExecutionHeadAssertion} from "../utils/simulation/assertions/executionHeadAssertion.js";
+import {createWithdrawalAssertions} from "../utils/simulation/assertions/withdrawalsAssertion.js";
 
 const altairForkEpoch = 2;
 const bellatrixForkEpoch = 4;
 const capellaForkEpoch = 6;
-const runTillEpoch = 8;
+const denebForkEpoch = 8;
+const runTillEpoch = 10;
 const syncWaitEpoch = 2;
 
 const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
   ALTAIR_FORK_EPOCH: altairForkEpoch,
   BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
   CAPELLA_FORK_EPOCH: capellaForkEpoch,
+  DENEB_FORK_EPOCH: denebForkEpoch,
   runTillEpoch: runTillEpoch + syncWaitEpoch,
   initialNodes: 5,
 });
@@ -153,6 +156,8 @@ env.tracker.register(
   })
 );
 
+env.tracker.register(createWithdrawalAssertions(env.nodes[0].id));
+
 await env.start({runTimeoutMs: estimatedTimeoutMs});
 await connectAllNodes(env.nodes);
 
@@ -241,6 +246,10 @@ await checkpointSync.execution.job.stop();
 // ========================================================
 const headForUnknownBlockSync = await env.nodes[0].beacon.api.beacon.getBlockV2("head");
 ApiError.assert(headForUnknownBlockSync);
+const blobsForUnknownBlockSync = await env.nodes[0].beacon.api.beacon.getBlobSidecars(
+  headForUnknownBlockSync.response.data.message.slot
+);
+ApiError.assert(blobsForUnknownBlockSync);
 const unknownBlockSync = await env.createNodePair({
   id: "unknown-block-sync-node",
   beacon: {
@@ -272,9 +281,16 @@ await sleep(5000);
 
 try {
   ApiError.assert(
-    await unknownBlockSync.beacon.api.beacon.publishBlockV2(headForUnknownBlockSync.response.data, {
-      broadcastValidation: routes.beacon.BroadcastValidation.none,
-    })
+    await unknownBlockSync.beacon.api.beacon.publishBlockV2(
+      {
+        signedBlock: headForUnknownBlockSync.response.data,
+        blobs: blobsForUnknownBlockSync.response.data.map((b) => b.blob),
+        kzgProofs: blobsForUnknownBlockSync.response.data.map((b) => b.kzgProof),
+      },
+      {
+        broadcastValidation: routes.beacon.BroadcastValidation.none,
+      }
+    )
   );
 
   env.tracker.record({

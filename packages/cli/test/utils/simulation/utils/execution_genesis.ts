@@ -5,7 +5,7 @@ export const getGethGenesisBlock = (
   mode: ExecutionStartMode,
   options: ExecutionGenesisOptions
 ): Record<string, unknown> => {
-  const {ttd, cliqueSealingPeriod, shanghaiTime, genesisTime} = options;
+  const {ttd, cliqueSealingPeriod, shanghaiTime, genesisTime, cancunTime} = options;
 
   const genesis = {
     config: {
@@ -24,6 +24,7 @@ export const getGethGenesisBlock = (
       berlinBlock: 0,
       londonBlock: 0,
       shanghaiTime,
+      cancunTime,
       terminalTotalDifficulty: Number(ttd as bigint),
       clique: {period: cliqueSealingPeriod, epoch: 30000},
     },

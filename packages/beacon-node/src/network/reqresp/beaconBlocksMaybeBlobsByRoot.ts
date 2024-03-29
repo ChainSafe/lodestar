@@ -1,7 +1,15 @@
+import {fromHexString} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {phase0, deneb} from "@lodestar/types";
 import {ForkSeq} from "@lodestar/params";
-import {BlockInput, BlockInputType, BlockSource, getBlockInputBlobs, getBlockInput} from "../../chain/blocks/types.js";
+import {
+  BlockInput,
+  BlockInputType,
+  BlockSource,
+  getBlockInputBlobs,
+  getBlockInput,
+  NullBlockInput,
+} from "../../chain/blocks/types.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {INetwork} from "../interface.js";
 import {BlockInputAvailabilitySource} from "../../chain/seenCache/seenGossipBlockInput.js";
@@ -46,16 +54,26 @@ export async function unavailableBeaconBlobsByRoot(
   config: ChainForkConfig,
   network: INetwork,
   peerId: PeerIdStr,
-  unavailableBlockInput: BlockInput,
+  unavailableBlockInput: BlockInput | NullBlockInput,
   metrics: Metrics | null
 ): Promise<BlockInput> {
-  if (unavailableBlockInput.type !== BlockInputType.blobsPromise) {
-    return unavailableBlockInput;
+  if (unavailableBlockInput.block !== null && unavailableBlockInput.type !== BlockInputType.blobsPromise) {
+    return unavailableBlockInput as BlockInput;
   }
 
-  const blobIdentifiers: deneb.BlobIdentifier[] = [];
-  const {block, blobsCache, resolveAvailability, blockBytes} = unavailableBlockInput;
+  // resolve the block if thats unavailable
+  let block, blobsCache, blockBytes, resolveAvailability;
+  if (unavailableBlockInput.block === null) {
+    const allBlocks = await network.sendBeaconBlocksByRoot(peerId, [fromHexString(unavailableBlockInput.blockRootHex)]);
+    block = allBlocks[0].data;
+    blockBytes = allBlocks[0].bytes;
+    ({blobsCache, resolveAvailability} = unavailableBlockInput);
+  } else {
+    ({block, blobsCache, resolveAvailability, blockBytes} = unavailableBlockInput);
+  }
 
+  // resolve missing blobs
+  const blobIdentifiers: deneb.BlobIdentifier[] = [];
   const slot = block.message.slot;
   const blockRoot = config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message);
 

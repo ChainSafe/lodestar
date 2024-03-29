@@ -23,7 +23,7 @@ import {
 import {BeaconConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
 
-import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {CheckpointWithHex, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
 import {IExecutionEngine, IExecutionBuilder} from "../execution/index.js";
 import {Metrics} from "../metrics/metrics.js";
@@ -53,6 +53,7 @@ import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {SeenGossipBlockInput} from "./seenCache/index.js";
 import {ShufflingCache} from "./shufflingCache.js";
 import {BlockRewards} from "./rewards/blockRewards.js";
+import {AttestationsRewards} from "./rewards/attestationsRewards.js";
 import {SyncCommitteeRewards} from "./rewards/syncCommitteeRewards.js";
 
 export {BlockType, type AssembledBlockType};
@@ -143,6 +144,10 @@ export interface IBeaconChain {
     stateRoot: RootHex,
     opts?: StateGetOpts
   ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean} | null>;
+  /** Returns a cached state by checkpoint */
+  getStateByCheckpoint(
+    checkpoint: CheckpointWithHex
+  ): {state: BeaconStateAllForks; executionOptimistic: boolean} | null;
 
   /**
    * Since we can have multiple parallel chains,
@@ -202,6 +207,10 @@ export interface IBeaconChain {
   blsThreadPoolCanAcceptWork(): boolean;
 
   getBlockRewards(blockRef: allForks.FullOrBlindedBeaconBlock): Promise<BlockRewards>;
+  getAttestationsRewards(
+    epoch: Epoch,
+    validatorIds?: (ValidatorIndex | string)[]
+  ): Promise<{rewards: AttestationsRewards; executionOptimistic: boolean}>;
   getSyncCommitteeRewards(
     blockRef: allForks.FullOrBlindedBeaconBlock,
     validatorIds?: (ValidatorIndex | string)[]

@@ -11,6 +11,10 @@ export function getBeaconRewardsApi({
       const data = await chain.getBlockRewards(block.message);
       return {data, meta: {executionOptimistic}};
     },
+    async getAttestationsRewards({epoch, validatorIds}) {
+      const {rewards, executionOptimistic} = await chain.getAttestationsRewards(epoch, validatorIds);
+      return {data: rewards, meta: {executionOptimistic}};
+    },
     async getSyncCommitteeRewards({blockId, validatorIds}) {
       const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
       const data = await chain.getSyncCommitteeRewards(block.message, validatorIds);

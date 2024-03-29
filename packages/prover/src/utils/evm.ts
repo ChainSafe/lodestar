@@ -167,12 +167,13 @@ export async function executeVMCall({
   network: NetworkName;
 }): Promise<RunTxResult["execResult"]> {
   const {from, to, gas, gasPrice, maxPriorityFeePerGas, value, data, input} = tx;
-  const {result: block} = await rpc.request("eth_getBlockByHash", [bufferToHex(executionPayload.blockHash), true], {
+  const blockHash = bufferToHex(executionPayload.blockHash);
+  const {result: block} = await rpc.request("eth_getBlockByHash", [blockHash, true], {
     raiseError: true,
   });
 
   if (!block) {
-    throw new Error(`Block not found: ${bufferToHex(executionPayload.blockHash)}`);
+    throw new Error(`Block not found: ${blockHash}`);
   }
 
   const {execResult} = await vm.evm.runCall({

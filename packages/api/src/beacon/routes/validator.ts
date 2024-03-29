@@ -306,7 +306,7 @@ export type Endpoints = {
       query: {
         randao_reveal: string;
         graffiti: string;
-        skip_randao_verification?: boolean;
+        skip_randao_verification?: string;
         fee_recipient?: string;
         builder_selection?: string;
         strict_fee_recipient_check?: boolean;
@@ -337,7 +337,7 @@ export type Endpoints = {
       query: {
         randao_reveal: string;
         graffiti: string;
-        skip_randao_verification?: boolean;
+        skip_randao_verification?: string;
         fee_recipient?: string;
         builder_selection?: string;
         builder_boost_factor?: string;
@@ -643,7 +643,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
         query: {
           randao_reveal: toHexString(randaoReveal),
           graffiti: toGraffitiHex(graffiti),
-          skip_randao_verification: skipRandaoVerification,
+          ...(skipRandaoVerification && {skip_randao_verification: ""}),
           fee_recipient: feeRecipient,
           builder_selection: builderSelection,
           strict_fee_recipient_check: strictFeeRecipientCheck,
@@ -653,7 +653,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
         slot: params.slot,
         randaoReveal: fromHexString(query.randao_reveal),
         graffiti: fromGraffitiHex(query.graffiti),
-        skipRandaoVerification: query.skip_randao_verification,
+        skipRandaoVerification: parseSkipRandaoVerification(query.skip_randao_verification),
         feeRecipient: query.fee_recipient,
         builderSelection: query.builder_selection as BuilderSelection,
         strictFeeRecipientCheck: query.strict_fee_recipient_check,
@@ -663,7 +663,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
         query: {
           randao_reveal: Schema.StringRequired,
           graffiti: Schema.String,
-          skip_randao_verification: Schema.Boolean,
+          skip_randao_verification: Schema.String,
           fee_recipient: Schema.String,
           builder_selection: Schema.String,
           strict_fee_recipient_check: Schema.Boolean,
@@ -697,7 +697,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
         query: {
           randao_reveal: toHexString(randaoReveal),
           graffiti: toGraffitiHex(graffiti),
-          skip_randao_verification: skipRandaoVerification,
+          ...(skipRandaoVerification && {skip_randao_verification: ""}),
           fee_recipient: feeRecipient,
           builder_selection: builderSelection,
           builder_boost_factor: builderBoostFactor?.toString(),
@@ -709,7 +709,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
         slot: params.slot,
         randaoReveal: fromHexString(query.randao_reveal),
         graffiti: fromGraffitiHex(query.graffiti),
-        skipRandaoVerification: query.skip_randao_verification,
+        skipRandaoVerification: parseSkipRandaoVerification(query.skip_randao_verification),
         feeRecipient: query.fee_recipient,
         builderSelection: query.builder_selection as BuilderSelection,
         builderBoostFactor: parseBuilderBoostFactor(query.builder_boost_factor),
@@ -721,7 +721,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
         query: {
           randao_reveal: Schema.StringRequired,
           graffiti: Schema.String,
-          skip_randao_verification: Schema.Boolean,
+          skip_randao_verification: Schema.String,
           fee_recipient: Schema.String,
           builder_selection: Schema.String,
           builder_boost_factor: Schema.String,
@@ -1006,4 +1006,8 @@ export const definitions: RouteDefinitions<Endpoints> = {
 
 function parseBuilderBoostFactor(builderBoostFactorInput?: string | number | bigint): bigint | undefined {
   return builderBoostFactorInput !== undefined ? BigInt(builderBoostFactorInput) : undefined;
+}
+
+function parseSkipRandaoVerification(skipRandaoVerification?: string): boolean {
+  return skipRandaoVerification !== undefined && skipRandaoVerification === "";
 }

@@ -139,11 +139,11 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
     const groupBySlot = arrayGroupBy(errors, (e) => String(e.slot as number));
 
     for (const [slot, slotErrors] of Object.entries(groupBySlot)) {
-      if (slotErrors.length > 0) this.options.logger.info(`├─ Slot: ${slot}`);
+      if (slotErrors.length > 0) this.options.logger.error(`├─ Slot: ${slot}`);
       const groupByAssertion = arrayGroupBy(slotErrors, (e) => e.assertionId);
 
       for (const [assertionId, assertionErrors] of Object.entries(groupByAssertion)) {
-        if (assertionErrors.length > 0) this.options.logger.info(`├── Assertion: ${assertionId}`);
+        if (assertionErrors.length > 0) this.options.logger.error(`├── Assertion: ${assertionId}`);
 
         for (const error of assertionErrors) {
           this.options.logger.error(
