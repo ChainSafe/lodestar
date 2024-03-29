@@ -111,10 +111,10 @@ export async function externalSignerGetKeys(externalSignerUrl: string): Promise<
   });
 
   if (!res.ok) {
-    throw Error(`${await res.text() || res.statusText}`);
+    throw Error(`${(await res.text()) || res.statusText}`);
   }
 
-  ensureCorrectWireFormat(res, WireFormat.json)
+  ensureCorrectWireFormat(res, WireFormat.json);
   return JSON.parse(await res.text()) as string[];
 }
 
@@ -153,15 +153,16 @@ export async function externalSignerPostSignature(
   });
 
   if (!res.ok) {
-    throw Error(`${await res.text() || res.statusText}`);
+    throw Error(`${(await res.text()) || res.statusText}`);
   }
 
   const resBody = await res.text();
 
   switch (ensureCorrectWireFormat(res)) {
-    case WireFormat.json:
+    case WireFormat.json: {
       const data = JSON.parse(resBody) as {signature: string};
       return data.signature;
+    }
     case WireFormat.text:
       return resBody;
   }
@@ -177,38 +178,39 @@ export async function externalSignerUpCheck(remoteUrl: string): Promise<boolean>
   });
 
   if (!res.ok) {
-    throw Error(`${await res.text() || res.statusText}`);
+    throw Error(`${(await res.text()) || res.statusText}`);
   }
 
   const resBody = await res.text();
 
   switch (ensureCorrectWireFormat(res)) {
-    case WireFormat.json:
+    case WireFormat.json: {
       const data = JSON.parse(resBody) as {status: string};
       return data.status === "OK";
+    }
     case WireFormat.text:
       return resBody === "OK";
   }
 }
 
-function ensureCorrectWireFormat(response: Response, onlySupport? : WireFormat) : WireFormat{
-    const contentType = response.headers.get("content-type");
-    if (contentType === null) {
-      throw Error("No Content-Type header found in response");
-    }
+function ensureCorrectWireFormat(response: Response, onlySupport?: WireFormat): WireFormat {
+  const contentType = response.headers.get("content-type");
+  if (contentType === null) {
+    throw Error("No Content-Type header found in response");
+  }
 
-    const mediaType = parseContentTypeHeader(contentType);
-    if (mediaType === null) {
-      throw Error(`Unsupported response media type: ${contentType.split(";", 1)[0]}`);
-    }
+  const mediaType = parseContentTypeHeader(contentType);
+  if (mediaType === null) {
+    throw Error(`Unsupported response media type: ${contentType.split(";", 1)[0]}`);
+  }
 
-    const wireFormat = getWireFormat(mediaType);
+  const wireFormat = getWireFormat(mediaType);
 
-    if (onlySupport !== undefined && wireFormat !== onlySupport) {
-      throw Error(`Method only supports ${onlySupport} responses`);
-    }
+  if (onlySupport !== undefined && wireFormat !== onlySupport) {
+    throw Error(`Method only supports ${onlySupport} responses`);
+  }
 
-    return wireFormat;
+  return wireFormat;
 }
 
 enum WireFormat {
@@ -223,10 +225,10 @@ enum MediaType {
 
 function getWireFormat(mediaType: MediaType): WireFormat {
   switch (mediaType) {
-      case MediaType.json:
-          return WireFormat.json;
-      case MediaType.text:
-          return WireFormat.text;
+    case MediaType.json:
+      return WireFormat.json;
+    case MediaType.text:
+      return WireFormat.text;
   }
 }
 
@@ -238,7 +240,7 @@ function isSupportedMediaType(mediaType: string | null): mediaType is MediaType 
 
 function parseContentTypeHeader(contentType?: string): MediaType | null {
   if (!contentType) {
-      return null;
+    return null;
   }
 
   const mediaType = contentType.split(";", 1)[0].trim().toLowerCase();
