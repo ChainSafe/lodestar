@@ -87,8 +87,10 @@ export const DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY = 2;
  * ╚════════════════════════════════════╝═══════════════╝
  *
  * The "in memory" checkpoint states are similar to the old implementation: we have both Previous Root Checkpoint State and Current Root Checkpoint State per epoch.
- * However in the "persisted to db or fs" part, we usually only persist 1 checkpoint state per epoch, the one that could potentially be justified/finalized later
- * based on the view of blocks.
+ * However in the "persisted to db or fs" part
+ *   - if there is no reorg, we only store 1 checkpoint state per epoch, the one that could potentially be justified/finalized later based on the view of the state
+ *   - if there is reorg, we may store >=2 checkpoint states per epoch, including any checkpoints with unknown roots to the processed state
+ *   - the goal is to make sure we can regen any states later if needed, and we have the checkpoint state that could be justified/finalized later
  */
 export class PersistentCheckpointStateCache implements CheckpointStateCache {
   private readonly cache: MapTracker<CacheKey, CacheItem>;
@@ -101,6 +103,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   private preComputedCheckpoint: string | null = null;
   private preComputedCheckpointHits: number | null = null;
   private readonly maxEpochsInMemory: number;
+  // only for testing, default false for production
   private readonly processLateBlock: boolean;
   private readonly datastore: CPStateDatastore;
   private readonly shufflingCache: ShufflingCache;
@@ -476,9 +479,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
    * - 1 then we'll persist {root: b1, epoch n-1} checkpoint state to disk. Note that at epoch n there is both {root: b0, epoch: n} and {root: c0, epoch: n} checkpoint states in memory
    * - 2 then we'll persist {root: b2, epoch n-2} checkpoint state to disk, there are also 2 checkpoint states in memory at epoch n, same to the above (maxEpochsInMemory=1)
    *
-   * As of Jan 2024, it takes 1.2s to persist a holesky state on fast server. TODO:
-   * - improve state serialization time
-   * - or research how to only store diff against the finalized state
+   * As of Mar 2024, it takes <=350ms to persist a holesky state on fast server
    */
   async processState(blockRootHex: RootHex, state: CachedBeaconStateAllForks): Promise<number> {
     let persistCount = 0;
@@ -602,7 +603,28 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   }
 
   /**
-   * Prune or persist checkpoint states in an epoch, see the description in `processState()` function
+   * Prune or persist checkpoint states in an epoch
+   * 1) If there is single checkpoint state in an epoch, persist it. This is when there is skipped slot at block 0 of epoch
+   *     slot:                           n
+   *             |-----------------------|-----------------------|
+   *     root                          |
+   *
+   * 2) If there are any roots that unknown to this state, persist its cp state. This is to handle the current block is reorged later
+   *
+   * 3) If there are 2 checkpoint states, PRCS and CRCS and both roots are known to this state, persist CRCS. If the block is reorged,
+   * PRCS is regen and populated to this cache again.
+   *     slot:                           n
+   *             |-----------------------|-----------------------|
+   *     root                          |
+   *     root                            |
+   *
+   * 4) (derived from above) If there are 2 checkpoint states, PRCS and an unknown root, persist both.
+   *   - PRCS is the checkpoint state that could be justified/finalized later based on the view of the state
+   *   - unknown root checkpoint state is persisted to handle the reorg back to that branch later
+   *
+   * Performance note:
+   *   - In normal condition, we persist 1 checkpoint state per epoch.
+   *   - In reorged condition, we may persist >=2 (most likely 2) checkpoint states per epoch.
    */
   private async processPastEpoch(
     blockRootHex: RootHex,
@@ -615,13 +637,36 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       epochBoundarySlot === state.slot ? fromHexString(blockRootHex) : getBlockRootAtSlot(state, epochBoundarySlot);
     const epochBoundaryHex = toHexString(epochBoundaryRoot);
 
-    // for each epoch, usually there are 2 rootHex respective to the 2 checkpoint states: Previous Root Checkpoint State and Current Root Checkpoint State
+    // for each epoch, usually there are 2 rootHexes respective to the 2 checkpoint states: Previous Root Checkpoint State and Current Root Checkpoint State
+    const cpRootHexes = new Set(this.epochIndex.get(epoch) ?? []);
+    const persistedRootHexes = new Set<RootHex>();
+    if (cpRootHexes.size === 1) {
+      // the slot at block 0 of epoch is skipped
+      persistedRootHexes.add(cpRootHexes.values().next().value);
+    } else if (cpRootHexes.size > 1) {
+      const prevEpochRoot = toHexString(getBlockRootAtSlot(state, epochBoundarySlot - 1));
+      for (const rootHex of cpRootHexes) {
+        // rootHex is unknown to this state, persist it
+        if (rootHex !== epochBoundaryHex && rootHex !== prevEpochRoot) {
+          persistedRootHexes.add(rootHex);
+        }
+      }
+
+      // if there are PRCS and CRCS, persist CRCS
+      if (prevEpochRoot !== epochBoundaryHex && cpRootHexes.has(prevEpochRoot) && cpRootHexes.has(epochBoundaryHex)) {
+        persistedRootHexes.add(epochBoundaryHex);
+      }
+
+      // if there is no CRCS, persist PRCS (unknown root checkpoint state is persisted above)
+      if (prevEpochRoot === epochBoundaryHex && cpRootHexes.has(prevEpochRoot)) {
+        persistedRootHexes.add(prevEpochRoot);
+      }
+    }
     for (const rootHex of this.epochIndex.get(epoch) ?? []) {
       const cpKey = toCacheKey({epoch: epoch, rootHex});
       const cacheItem = this.cache.get(cpKey);
 
       if (cacheItem !== undefined && isInMemoryCacheItem(cacheItem)) {
-        // this is state in memory, we don't care if the checkpoint state is already persisted
         let {persistedKey} = cacheItem;
         const {state} = cacheItem;
         const logMeta = {
@@ -631,14 +676,14 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
           persistedKey: persistedKey ? toHexString(persistedKey) : "",
         };
 
-        if (rootHex === epochBoundaryHex) {
+        if (persistedRootHexes.has(rootHex)) {
           if (persistedKey) {
-            // no need to persist
+            // we don't care if the checkpoint state is already persisted
             this.logger.verbose("Pruned checkpoint state from memory but no need to persist", logMeta);
           } else {
             // persist and do not update epochIndex
             this.metrics?.statePersistSecFromSlot.observe(this.clock?.secFromSlot(this.clock?.currentSlot ?? 0) ?? 0);
-            const cpPersist = {epoch: epoch, root: epochBoundaryRoot};
+            const cpPersist = {epoch: epoch, root: fromHexString(rootHex)};
             {
               const timer = this.metrics?.stateSerializeDuration.startTimer();
               // automatically free the buffer pool after this scope
