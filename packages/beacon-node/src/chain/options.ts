@@ -21,6 +21,7 @@ export type IChainOptions = BlockProcessOpts &
     blsPoolType?: BlsPoolType;
     blsVerifyAllMainThread?: boolean;
     blsVerifyAllMultiThread?: boolean;
+    blsAddVerificationRandomness?: boolean;
     persistProducedBlocks?: boolean;
     persistInvalidSszObjects?: boolean;
     persistInvalidSszObjectsDir?: string;
@@ -97,6 +98,7 @@ export const defaultChainOptions: IChainOptions = {
   blsPoolType: BlsPoolType.libuv,
   blsVerifyAllMainThread: false,
   blsVerifyAllMultiThread: false,
+  blsAddVerificationRandomness: true,
   disableBlsBatchVerify: false,
   proposerBoostEnabled: true,
   computeUnrealized: true,

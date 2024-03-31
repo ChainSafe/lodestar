@@ -20,6 +20,7 @@ describe("options / beaconNodeOptions", () => {
 
       "chain.blsVerifyAllMultiThread": true,
       "chain.blsVerifyAllMainThread": true,
+      "chain.blsAddVerificationRandomness": true,
       "chain.disableBlsBatchVerify": true,
       "chain.persistProducedBlocks": true,
       "chain.persistInvalidSszObjects": true,
@@ -126,6 +127,7 @@ describe("options / beaconNodeOptions", () => {
       chain: {
         blsVerifyAllMultiThread: true,
         blsVerifyAllMainThread: true,
+        blsAddVerificationRandomness: true,
         disableBlsBatchVerify: true,
         persistProducedBlocks: true,
         persistInvalidSszObjects: true,

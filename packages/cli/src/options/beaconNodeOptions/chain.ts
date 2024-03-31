@@ -8,6 +8,7 @@ export type ChainArgs = {
   "chain.blsPoolType"?: BlsPoolType;
   "chain.blsVerifyAllMultiThread"?: boolean;
   "chain.blsVerifyAllMainThread"?: boolean;
+  "chain.blsAddVerificationRandomness"?: boolean;
   "chain.disableBlsBatchVerify"?: boolean;
   "chain.persistProducedBlocks"?: boolean;
   "chain.persistInvalidSszObjects"?: boolean;
@@ -41,6 +42,7 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     blsPoolType: args["chain.blsPoolType"],
     blsVerifyAllMultiThread: args["chain.blsVerifyAllMultiThread"],
     blsVerifyAllMainThread: args["chain.blsVerifyAllMainThread"],
+    blsAddVerificationRandomness: args["chain.blsAddVerificationRandomness"],
     disableBlsBatchVerify: args["chain.disableBlsBatchVerify"],
     persistProducedBlocks: args["chain.persistProducedBlocks"],
     persistInvalidSszObjects: args["chain.persistInvalidSszObjects"],
@@ -107,6 +109,14 @@ export const options: CliCommandOptions<ChainArgs> = {
     type: "boolean",
     description: "Always use main threads for BLS verification",
     defaultDescription: String(defaultOptions.chain.blsVerifyAllMainThread),
+    group: "chain",
+  },
+
+  "chain.blsAddVerificationRandomness": {
+    hidden: true,
+    type: "boolean",
+    description: "Add a random value, through point multiplication to sameMessage sets",
+    defaultDescription: String(defaultOptions.chain.blsAddVerificationRandomness),
     group: "chain",
   },
 
