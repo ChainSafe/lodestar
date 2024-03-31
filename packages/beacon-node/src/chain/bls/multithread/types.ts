@@ -1,5 +1,5 @@
 import {PublicKey, Signature} from "@chainsafe/bls/types";
-import {VerifySignatureOpts} from "../interface.js";
+import {QueuedVerificationOpts} from "../interface.js";
 
 export enum BlsPoolType {
   workers = "workers",
@@ -32,7 +32,7 @@ export type DeserializedSet = {
 export type WorkRequestSet = SerializedSet | DeserializedKeySet | DeserializedSet;
 
 export type BlsWorkReq = {
-  opts: VerifySignatureOpts;
+  opts: QueuedVerificationOpts;
   sets: WorkRequestSet[];
 };
 

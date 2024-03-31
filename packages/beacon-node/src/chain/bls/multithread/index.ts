@@ -274,7 +274,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
               resolve,
               reject,
               addedTimeMs: Date.now(),
-              opts,
+              opts: {...opts, addVerificationRandomness: this.blsAddVerificationRandomness},
               sets: setsChunk,
               message,
             });

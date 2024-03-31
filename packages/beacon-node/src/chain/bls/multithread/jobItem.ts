@@ -1,11 +1,12 @@
 import bls from "@chainsafe/bls";
 import {CoordType, PointFormat, PublicKey} from "@chainsafe/bls/types";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
-import {VerifySignatureOpts} from "../interface.js";
+import {QueuedVerificationOpts} from "../interface.js";
 import {getAggregatedPubkey} from "../utils.js";
 import {LinkedList} from "../../../util/array.js";
 import {Metrics} from "../../../metrics/metrics.js";
 import {BlsWorkReq, WorkRequestSet} from "./types.js";
+import {randomBytesNonZero} from "./utils.js";
 
 export type JobQueueItem = JobQueueItemDefault | JobQueueItemSameMessage;
 
@@ -14,7 +15,7 @@ export type JobQueueItemDefault = {
   resolve: (result: boolean) => void;
   reject: (error?: Error) => void;
   addedTimeMs: number;
-  opts: VerifySignatureOpts;
+  opts: QueuedVerificationOpts;
   sets: ISignatureSet[];
 };
 
@@ -23,7 +24,7 @@ export type JobQueueItemSameMessage = {
   resolve: (result: boolean[]) => void;
   reject: (error?: Error) => void;
   addedTimeMs: number;
-  opts: VerifySignatureOpts;
+  opts: QueuedVerificationOpts;
   sets: {publicKey: PublicKey; signature: Uint8Array}[];
   message: Uint8Array;
 };
@@ -85,13 +86,39 @@ export function jobItemWorkReq(
       // and not a problem in the near future
       // this is monitored on v1.11.0 https://github.com/ChainSafe/lodestar/pull/5912#issuecomment-1700320307
       const timer = metrics?.blsThreadPool.signatureDeserializationMainThreadDuration.startTimer();
-      const signatures = job.sets.map((set) => bls.Signature.fromBytes(set.signature, CoordType.affine, true));
+      const signatures = job.sets.map(function sigMap(set) {
+        return bls.Signature.fromBytes(set.signature, CoordType.affine, true);
+      });
       timer?.();
+
+      // adding verification randomness is swig specific. must not attempt with herumi until
+      // @chainsafe/bls is updated to support it with herumi
+      if (job.opts.addVerificationRandomness) {
+        const randomness: Uint8Array[] = [];
+        for (let i = 0; i < job.sets.length; i++) {
+          randomness.push(randomBytesNonZero(8));
+        }
+        return {
+          opts: job.opts,
+          sets: [
+            {
+              message: job.message,
+              publicKey: bls.PublicKey.aggregate(
+                job.sets.map((set, i) => set.publicKey.multiplyBy(randomness[i]))
+              ).toBytes(format),
+              signature: bls.Signature.aggregate(signatures.map((sig, i) => sig.multiplyBy(randomness[i]))).toBytes(
+                format
+              ),
+            },
+          ],
+        };
+      }
 
       const publicKey = bls.PublicKey.aggregate(job.sets.map((set) => set.publicKey));
       // TODO: verify this is correct!!
       // @tuyennhv why should this not be done in the verification try/catch.  can throw for malformed signature
       const signature = bls.Signature.aggregate(signatures);
+
       return {
         opts: job.opts,
         sets: [
