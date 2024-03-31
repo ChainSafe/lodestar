@@ -105,12 +105,11 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     /**
      * Help users ensure that thread pool is large enough for optimal performance
      *
-     * Node reports available CPUs - 1 to allow for the main thread to not interfere with the
-     * thread pool. There is enough idle time on the main and network threads that setting
-     * UV_THREADPOOL_SIZE to $(nproc) provides the best performance. Recommend this value to
-     * consumers
+     * Node reports available CPUs. There is enough idle time on the main and
+     * network threads that setting UV_THREADPOOL_SIZE to $(nproc) provides the
+     * best performance. Recommend this value to consumers
      */
-    const availableParallelism = os.availableParallelism() + 1;
+    const availableParallelism = os.availableParallelism();
     if (uvThreadpoolSize < availableParallelism) {
       this.logger.warn(
         `UV_THREADPOOL_SIZE is less than available CPUs: ${availableParallelism}. This will cause performance degradation.`
