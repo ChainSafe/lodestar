@@ -4,7 +4,7 @@ import {CoordType} from "@chainsafe/bls/types";
 import {ISignatureSet} from "@lodestar/state-transition";
 import {Metrics} from "../../metrics/index.js";
 import {IBlsVerifier} from "./interface.js";
-import {verifySignatureSetsMaybeBatch} from "./maybeBatch.js";
+import {verifySets} from "./verifySets.js";
 import {getAggregatedPubkey, getAggregatedPubkeysCount} from "./utils.js";
 
 export class BlsSingleThreadVerifier implements IBlsVerifier {
@@ -25,7 +25,7 @@ export class BlsSingleThreadVerifier implements IBlsVerifier {
 
     // Count time after aggregating
     const timer = this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.startTimer();
-    const isValid = verifySignatureSetsMaybeBatch(setsAggregated);
+    const isValid = verifySets(setsAggregated);
 
     // Don't use a try/catch, only count run without exceptions
     if (timer) {

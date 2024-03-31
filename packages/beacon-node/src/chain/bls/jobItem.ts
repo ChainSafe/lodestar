@@ -1,10 +1,10 @@
 import bls from "@chainsafe/bls";
 import {CoordType, PointFormat, PublicKey} from "@chainsafe/bls/types";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
-import {QueuedVerificationOpts} from "../interface.js";
-import {getAggregatedPubkey} from "../utils.js";
-import {LinkedList} from "../../../util/array.js";
-import {Metrics} from "../../../metrics/metrics.js";
+import {LinkedList} from "../../util/array.js";
+import {Metrics} from "../../metrics/metrics.js";
+import {QueuedVerificationOpts} from "./interface.js";
+import {getAggregatedPubkey} from "./utils.js";
 import {BlsWorkReq} from "./types.js";
 import {randomBytesNonZero} from "./utils.js";
 
@@ -57,7 +57,7 @@ export function jobItemWorkReq(job: JobQueueItem, format: PointFormat, metrics: 
         opts: job.opts,
         sets: job.sets.map((set) => ({
           // this can throw, handled in the consumer code
-          publicKey: getAggregatedPubkey(set, metrics).toBytes(format),
+          publicKey: getAggregatedPubkey(set, metrics),
           signature: set.signature,
           message: set.signingRoot,
         })),
@@ -86,12 +86,8 @@ export function jobItemWorkReq(job: JobQueueItem, format: PointFormat, metrics: 
           sets: [
             {
               message: job.message,
-              publicKey: bls.PublicKey.aggregate(
-                job.sets.map((set, i) => set.publicKey.multiplyBy(randomness[i]))
-              ).toBytes(format),
-              signature: bls.Signature.aggregate(signatures.map((sig, i) => sig.multiplyBy(randomness[i]))).toBytes(
-                format
-              ),
+              publicKey: bls.PublicKey.aggregate(job.sets.map((set, i) => set.publicKey.multiplyBy(randomness[i]))),
+              signature: bls.Signature.aggregate(signatures.map((sig, i) => sig.multiplyBy(randomness[i]))),
             },
           ],
         };
@@ -101,8 +97,8 @@ export function jobItemWorkReq(job: JobQueueItem, format: PointFormat, metrics: 
         opts: job.opts,
         sets: [
           {
-            publicKey: bls.PublicKey.aggregate(job.sets.map((set) => set.publicKey)).toBytes(format),
-            signature: bls.Signature.aggregate(signatures).toBytes(format),
+            publicKey: bls.PublicKey.aggregate(job.sets.map((set) => set.publicKey)),
+            signature: bls.Signature.aggregate(signatures),
             message: job.message,
           },
         ],

@@ -2,7 +2,7 @@ import {describe, it, beforeAll, expect, beforeEach, afterEach} from "vitest";
 import bls from "@chainsafe/bls";
 import {PublicKey} from "@chainsafe/bls/types";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
-import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/multithread/index.js";
+import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/index.js";
 import {testLogger} from "../../../utils/logger.js";
 import {VerifySignatureOpts} from "../../../../src/chain/bls/interface.js";
 
@@ -50,8 +50,6 @@ describe("chain / bls / multithread queue", function () {
     const pool = new BlsMultiThreadWorkerPool({}, {logger, metrics: null});
     // await terminating all workers
     afterEachCallbacks.push(() => pool.close());
-    // Wait until initialized
-    await pool["waitTillInitialized"]();
     return pool;
   }
 

@@ -3,7 +3,7 @@ import {CoordType, PublicKey} from "@chainsafe/bls/types";
 import {describe, it, expect, beforeEach} from "vitest";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {BlsSingleThreadVerifier} from "../../../../src/chain/bls/singleThread.js";
-import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/multithread/index.js";
+import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/index.js";
 import {testLogger} from "../../../utils/logger.js";
 
 describe("BlsVerifier ", function () {
