@@ -4,4 +4,5 @@
 #
 # ./lodestar.sh beacon --network mainnet
 
+export UV_THREADPOOL_SIZE=$(nproc);
 node --trace-deprecation --max-old-space-size=8192 ./packages/cli/bin/lodestar.js "$@"
