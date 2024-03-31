@@ -1,4 +1,4 @@
-import {VerifySignatureOpts} from "../interface.js";
+import {QueuedVerificationOpts} from "../interface.js";
 
 export type WorkerData = {
   implementation: "herumi" | "blst-native";
@@ -12,7 +12,7 @@ export type SerializedSet = {
 };
 
 export type BlsWorkReq = {
-  opts: VerifySignatureOpts;
+  opts: QueuedVerificationOpts;
   sets: SerializedSet[];
 };
 
