@@ -127,7 +127,7 @@ export function createFastifyHandler<E extends Endpoint>(
     switch (responseWireFormat) {
       case WireFormat.json: {
         const metaHeaders = definition.resp.meta.toHeadersObject(response?.meta);
-        metaHeaders["content-type"] = "application/json";
+        metaHeaders["content-type"] = MediaType.json;
         void resp.headers(metaHeaders);
         const data =
           response?.data instanceof Uint8Array
@@ -146,7 +146,7 @@ export function createFastifyHandler<E extends Endpoint>(
       }
       case WireFormat.ssz: {
         const metaHeaders = definition.resp.meta.toHeadersObject(response?.meta);
-        metaHeaders["content-type"] = "application/octet-stream";
+        metaHeaders["content-type"] = MediaType.ssz;
         void resp.headers(metaHeaders);
         const data =
           response?.data instanceof Uint8Array
@@ -195,7 +195,7 @@ export function addSszContentTypeParser(server: fastify.FastifyInstance): void {
   let bodySchemaSymbol: symbol | undefined;
 
   server.addContentTypeParser(
-    "application/octet-stream",
+    MediaType.ssz,
     {parseAs: "buffer"},
     async (request: fastify.FastifyRequest, payload: Buffer) => {
       if (bodySchemaSymbol === undefined) {

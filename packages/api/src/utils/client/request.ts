@@ -1,4 +1,4 @@
-import {WireFormat, mergeHeaders, setAuthorizationHeader} from "../headers.js";
+import {MediaType, WireFormat, mergeHeaders, setAuthorizationHeader} from "../headers.js";
 import {
   Endpoint,
   GetRequestCodec,
@@ -48,11 +48,11 @@ export function createApiRequest<E extends Endpoint>(
       case WireFormat.json:
         req = (definition.req as JsonRequestMethods<E>).writeReqJson(args);
         req.body = req.body ? JSON.stringify(req.body) : undefined; // TODO: default to `{}`?
-        headers.set("content-type", "application/json");
+        headers.set("content-type", MediaType.json);
         break;
       case WireFormat.ssz:
         req = (definition.req as SszRequestMethods<E>).writeReqSsz(args);
-        headers.set("content-type", "application/octet-stream");
+        headers.set("content-type", MediaType.ssz);
         break;
     }
   }
@@ -65,19 +65,19 @@ export function createApiRequest<E extends Endpoint>(
   if (definition.resp.onlySupport !== undefined) {
     switch (definition.resp.onlySupport) {
       case WireFormat.json:
-        headers.set("accept", "application/json");
+        headers.set("accept", MediaType.json);
         break;
       case WireFormat.ssz:
-        headers.set("accept", "application/octet-stream");
+        headers.set("accept", MediaType.ssz);
         break;
     }
   } else {
     switch (init.responseWireFormat) {
       case WireFormat.json:
-        headers.set("accept", "application/json;q=1,application/octet-stream;q=0.9");
+        headers.set("accept", `${MediaType.json};q=1,${MediaType.ssz};q=0.9`);
         break;
       case WireFormat.ssz:
-        headers.set("accept", "application/octet-stream;q=1,application/json;q=0.9");
+        headers.set("accept", `${MediaType.ssz};q=1,${MediaType.json};q=0.9`);
         break;
     }
   }
