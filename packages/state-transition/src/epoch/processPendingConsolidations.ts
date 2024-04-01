@@ -2,6 +2,7 @@ import {COMPOUNDING_WITHDRAWAL_PREFIX} from "@lodestar/params";
 import {CachedBeaconStateElectra} from "../types.js";
 import {decreaseBalance, increaseBalance} from "../util/balance.js";
 import {hasEth1WithdrawalCredential} from "../util/capella.js";
+import { getActiveBalance } from "../util/validator.js";
 
 /**
  * TODO Electra: jdoc
@@ -23,7 +24,7 @@ export function processPendingConsolidations(state: CachedBeaconStateElectra): v
     }
 
     // Move active balance to target. Excess balance is withdrawable.
-    const activeBalance = 0; // TODO Electra: get_active_balance()
+    const activeBalance = getActiveBalance(state, sourceIndex);
     decreaseBalance(state, sourceIndex, activeBalance);
     increaseBalance(state, targetIndex, activeBalance);
 

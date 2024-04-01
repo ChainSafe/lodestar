@@ -4,8 +4,9 @@ import {FAR_FUTURE_EPOCH, MIN_ACTIVATION_BALANCE, PENDING_CONSOLIDATIONS_LIMIT} 
 import {verifyConsolidationSignature} from "../signatureSets/index.js";
 
 import {CachedBeaconStateElectra} from "../types.js";
-import {getConsolidationChurnLimit, isActiveValidator} from "../util/validator.js";
+import {getActiveBalance, getConsolidationChurnLimit, isActiveValidator} from "../util/validator.js";
 import {hasExecutionWithdrawalCredential} from "../util/capella.js";
+import { computeConsolidationEpochAndUpdateChurn } from "../util/epoch.js";
 
 export function processConsolidation(
   state: CachedBeaconStateElectra,
@@ -15,10 +16,10 @@ export function processConsolidation(
 
   // Initiate source validator exit and append pending consolidation
   const {sourceIndex, targetIndex} = signedConsolidation.message;
-  const activeBalance = 0; // TODO Electra: get_active_balance()
+  const activeBalance = getActiveBalance(state, sourceIndex);
   const sourceValidator = state.validators.get(sourceIndex);
 
-  const exitEpoch = 0; // TODO Electra: compute_consolidation_epoch_and_update_churn
+  const exitEpoch = computeConsolidationEpochAndUpdateChurn(state, BigInt(activeBalance));
   sourceValidator.exitEpoch = exitEpoch;
   sourceValidator.withdrawableEpoch = exitEpoch + state.config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY;
 

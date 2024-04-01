@@ -1,7 +1,7 @@
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, GENESIS_EPOCH, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {allForks, Epoch, Gwei, Slot, SyncPeriod} from "@lodestar/types";
 import {CachedBeaconStateElectra} from "../types.js";
-import {getActivationExitChurnLimit} from "./validator.js";
+import {getActivationExitChurnLimit, getConsolidationChurnLimit} from "./validator.js";
 
 /**
  * Return the epoch number at the given slot.
@@ -60,13 +60,34 @@ export function computeExitEpochAndUpdateChurn(state: CachedBeaconStateElectra, 
     const additionalEpochs = balanceToProcess / BigInt(perEpochChurn);
     const remainder = balanceToProcess % BigInt(perEpochChurn);
 
-    state.earliestExitEpoch += Number(additionalEpochs);
+    state.earliestExitEpoch += Number(additionalEpochs) + 1;
     state.exitBalanceToConsume = BigInt(perEpochChurn) - remainder;
   }
 
   return state.earliestExitEpoch;
 }
 
+export function computeConsolidationEpochAndUpdateChurn(state: CachedBeaconStateElectra, consolidationBalance: Gwei): number {
+  const earliestConsolidationEpoch = computeActivationExitEpoch(state.epochCtx.epoch);
+  const perEpochConsolidationChurn = getConsolidationChurnLimit(state);
+
+  // New epoch for consolidations
+  if (state.earliestConsolidationEpoch < earliestConsolidationEpoch) {
+    state.earliestConsolidationEpoch = earliestConsolidationEpoch;
+    state.consolidationBalanceToConsume = BigInt(perEpochConsolidationChurn);
+  } else {
+    // Consolidation doesn't fit in the current earliest epoch.
+    const balanceToProcess = consolidationBalance - state.consolidationBalanceToConsume;
+    const additionalEpochs = balanceToProcess / BigInt(perEpochConsolidationChurn);
+    const remainder = balanceToProcess % BigInt(perEpochConsolidationChurn);
+
+    state.earliestConsolidationEpoch += Number(additionalEpochs) + 1;
+    state.exitBalanceToConsume = BigInt(perEpochConsolidationChurn) - remainder;
+  }
+
+  return state.earliestConsolidationEpoch;
+}
+ 
 /**
  * Return the current epoch of the given state.
  */
