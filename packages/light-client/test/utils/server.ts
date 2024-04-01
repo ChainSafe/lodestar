@@ -1,7 +1,7 @@
 import {parse as parseQueryString} from "qs";
-import {FastifyInstance, FastifyRequest, fastify} from "fastify";
+import {FastifyInstance, fastify} from "fastify";
 import {fastifyCors} from "@fastify/cors";
-import {Api, ServerApi} from "@lodestar/api";
+import {ApplicationMethods, Endpoints, addSszContentTypeParser} from "@lodestar/api";
 import {registerRoutes} from "@lodestar/api/beacon/server";
 import {ChainForkConfig} from "@lodestar/config";
 
@@ -13,7 +13,7 @@ export type ServerOpts = {
 export async function startServer(
   opts: ServerOpts,
   config: ChainForkConfig,
-  api: {[K in keyof Api]: ServerApi<Api[K]>}
+  methods: {[K in keyof Endpoints]: ApplicationMethods<Endpoints[K]>}
 ): Promise<FastifyInstance> {
   const server = fastify({
     logger: false,
@@ -21,15 +21,9 @@ export async function startServer(
     querystringParser: (str) => parseQueryString(str, {comma: true, parseArrays: false}),
   });
 
-  server.addContentTypeParser(
-    "application/octet-stream",
-    {parseAs: "buffer"},
-    async (_request: FastifyRequest, payload: Buffer) => {
-      return payload;
-    }
-  );
+  addSszContentTypeParser(server);
 
-  registerRoutes(server, config, api, ["lightclient", "proof", "events"]);
+  registerRoutes(server, config, methods, ["lightclient", "proof", "events"]);
 
   void server.register(fastifyCors, {origin: "*"});
 

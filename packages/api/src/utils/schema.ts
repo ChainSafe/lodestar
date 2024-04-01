@@ -92,7 +92,7 @@ export function getFastifySchema<T extends Endpoint["request"]>(schemaDef: Schem
   }
 
   if (schemaDef.params) {
-    schema.params = {type: "object", required: [] as string[], properties: {}};
+    schema.params = {type: "object", required: [], properties: {}};
 
     for (const [key, def] of Object.entries<Schema>(schemaDef.params)) {
       schema.params.properties[key] = getJsonSchemaItem(def);
@@ -103,7 +103,7 @@ export function getFastifySchema<T extends Endpoint["request"]>(schemaDef: Schem
   }
 
   if (schemaDef.query) {
-    schema.querystring = {type: "object", required: [] as string[], properties: {}};
+    schema.querystring = {type: "object", required: [], properties: {}};
 
     for (const [key, def] of Object.entries<Schema>(schemaDef.query)) {
       schema.querystring.properties[key] = getJsonSchemaItem(def);
@@ -114,7 +114,7 @@ export function getFastifySchema<T extends Endpoint["request"]>(schemaDef: Schem
   }
 
   if (schemaDef.headers) {
-    schema.headers = {type: "object", required: [] as string[], properties: {}};
+    schema.headers = {type: "object", required: [], properties: {}};
 
     for (const [key, def] of Object.entries<Schema>(schemaDef.headers)) {
       schema.headers.properties[key] = getJsonSchemaItem(def);

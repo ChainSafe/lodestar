@@ -1,9 +1,9 @@
 import {MockedObject, vi} from "vitest";
 import {parse as parseQueryString} from "qs";
-import {FastifyInstance, FastifyRequest, fastify} from "fastify";
+import {FastifyInstance, fastify} from "fastify";
 import {mapValues} from "@lodestar/utils";
 import {Endpoint} from "../../src/utils/index.js";
-import {ApplicationMethods} from "../../src/utils/server.js";
+import {ApplicationMethods, addSszContentTypeParser} from "../../src/utils/server.js";
 
 export function getTestServer(): {server: FastifyInstance; start: () => Promise<string>} {
   const server = fastify({
@@ -11,15 +11,7 @@ export function getTestServer(): {server: FastifyInstance; start: () => Promise<
     querystringParser: (str) => parseQueryString(str, {comma: true, parseArrays: false}),
   });
 
-  // TODO: why is json schema validation called for octet-stream body?
-  // https://github.com/fastify/help/issues/1012
-  server.addContentTypeParser(
-    "application/octet-stream",
-    {parseAs: "buffer"},
-    async (_request: FastifyRequest, payload: Buffer) => {
-      return payload;
-    }
-  );
+  addSszContentTypeParser(server);
 
   server.addHook("onError", (_request, _reply, error, done) => {
     // eslint-disable-next-line no-console

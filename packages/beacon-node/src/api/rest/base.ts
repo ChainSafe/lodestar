@@ -1,7 +1,8 @@
 import {parse as parseQueryString} from "qs";
-import {FastifyInstance, FastifyRequest, fastify} from "fastify";
+import {FastifyInstance, fastify} from "fastify";
 import {fastifyCors} from "@fastify/cors";
 import bearerAuthPlugin from "@fastify/bearer-auth";
+import {addSszContentTypeParser} from "@lodestar/api";
 import {FastifyRouteConfig} from "@lodestar/api/beacon/server";
 import {ErrorAborted, Gauge, Histogram, Logger} from "@lodestar/utils";
 import {isLocalhostIP} from "../../util/ip.js";
@@ -60,13 +61,7 @@ export class RestApiServer {
       http: {maxHeaderSize: opts.headerLimit},
     });
 
-    server.addContentTypeParser(
-      "application/octet-stream",
-      {parseAs: "buffer"},
-      async (_request: FastifyRequest, payload: Buffer) => {
-        return payload;
-      }
-    );
+    addSszContentTypeParser(server);
 
     this.activeSockets = new HttpActiveSocketsTracker(server.server, metrics);
 

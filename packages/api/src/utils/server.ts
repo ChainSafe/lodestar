@@ -189,3 +189,25 @@ export function createFastifyRoutes<Es extends Record<string, Endpoint>>(
     createFastifyRoute(definition, methods[operationId], operationId as string)
   );
 }
+
+export function addSszContentTypeParser(server: fastify.FastifyInstance): void {
+  // Cache body schema symbol, does not change per request
+  let bodySchemaSymbol: symbol | undefined;
+
+  server.addContentTypeParser(
+    "application/octet-stream",
+    {parseAs: "buffer"},
+    async (request: fastify.FastifyRequest, payload: Buffer) => {
+      if (bodySchemaSymbol === undefined) {
+        // Get body schema symbol to be able to access validation function
+        // https://github.com/fastify/fastify/blob/af2ccb5ff681c1d0ac22eb7314c6fa803f73c873/lib/symbols.js#L25
+        bodySchemaSymbol = Object.getOwnPropertySymbols(request.context).find((s) => s.description === "body-schema");
+      }
+      // JSON schema validation will be applied to `Buffer` object, it is required to override validation function
+      // See https://github.com/fastify/help/issues/1012, it is not possible right now to define a schema per content type
+      (request.context as unknown as Record<symbol, unknown>)[bodySchemaSymbol as symbol] = () => true;
+
+      return payload;
+    }
+  );
+}
