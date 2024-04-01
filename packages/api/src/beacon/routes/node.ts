@@ -258,13 +258,9 @@ export const definitions: RouteDefinitions<Endpoints> = {
       },
       meta: {
         toJson: (d) => d,
-        fromJson: (d) => d as {count: number},
-        toHeadersObject: () => {
-          throw new Error("Not implemented");
-        },
-        fromHeaders: () => {
-          throw new Error("Not implemented");
-        },
+        fromJson: (d) => ({count: (d as {count: number}).count}),
+        toHeadersObject: () => ({}),
+        fromHeaders: () => ({}) as {count: number},
       },
     },
   },

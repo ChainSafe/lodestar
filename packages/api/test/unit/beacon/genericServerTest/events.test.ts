@@ -16,7 +16,7 @@ describe("beacon / events", () => {
   beforeAll(async () => {
     const res = getTestServer();
     server = res.server;
-    for (const route of Object.values(getRoutes(mockApi))) {
+    for (const route of Object.values(getRoutes(config, mockApi))) {
       server.route(route);
     }
 
