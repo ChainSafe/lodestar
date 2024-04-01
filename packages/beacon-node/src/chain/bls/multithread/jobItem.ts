@@ -60,22 +60,21 @@ export function jobItemWorkReq(
     case JobQueueItemType.default:
       return {
         opts: job.opts,
-        sets: job.sets.map(
-          (set) =>
-            ({
-              // this can throw, but likely keys will not unless there is a code error
-              // so handled in the consumer code
-              //
-              // only serialize the keys to cross the worker boundary. signatures stay
-              // serialized until inside try/catch with verification functions as they
-              // come across the network and are not trusted
-              publicKey: deserialized
-                ? getAggregatedPubkey(set, metrics)
-                : getAggregatedPubkey(set, metrics).toBytes(format),
-              signature: set.signature,
-              message: set.signingRoot,
-            }) as WorkRequestSet
-        ),
+        sets: job.sets.map(function setMapDefault(set) {
+          return {
+            // this can throw, but likely keys will not unless there is a code error
+            // so handled in the consumer code
+            //
+            // only serialize the keys to cross the worker boundary. signatures stay
+            // serialized until inside try/catch with verification functions as they
+            // come across the network and are not trusted
+            publicKey: deserialized
+              ? getAggregatedPubkey(set, metrics)
+              : getAggregatedPubkey(set, metrics).toBytes(format),
+            signature: set.signature,
+            message: set.signingRoot,
+          } as WorkRequestSet;
+        }),
       };
     case JobQueueItemType.sameMessage: {
       // validate signature = true, this is slow code on main thread so should only run with network thread mode (useWorker=true)
@@ -86,7 +85,7 @@ export function jobItemWorkReq(
       // and not a problem in the near future
       // this is monitored on v1.11.0 https://github.com/ChainSafe/lodestar/pull/5912#issuecomment-1700320307
       const timer = metrics?.blsThreadPool.signatureDeserializationMainThreadDuration.startTimer();
-      const signatures = job.sets.map(function sigMap(set) {
+      const signatures = job.sets.map(function sigMapSameMessage(set) {
         return bls.Signature.fromBytes(set.signature, CoordType.affine, true);
       });
       timer?.();
