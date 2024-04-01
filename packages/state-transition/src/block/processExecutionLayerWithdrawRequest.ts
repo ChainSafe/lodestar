@@ -49,8 +49,13 @@ export function processExecutionLayerWithdrawRequest(
     .reduce((total, item) => total + Number(item.amount), 0);
   const validatorBalance = state.balances.get(validatorIndex);
 
+  // If pending balance is non zero, ignore
+  if (isFullExitRequest && pendingBalanceToWithdraw > 0) {
+    return;
+  }
+
   // only exit validator if it has no pending withdrawals in the queue
-  if (isFullExitRequest && pendingBalanceToWithdraw === 0) {
+  if (isFullExitRequest) {
     initiateValidatorExit(state, validator);
   } else if (validatorBalance > MIN_ACTIVATION_BALANCE + pendingBalanceToWithdraw) {
     const amountToWithdraw = Math.min(validatorBalance - MIN_ACTIVATION_BALANCE - pendingBalanceToWithdraw, amount);
