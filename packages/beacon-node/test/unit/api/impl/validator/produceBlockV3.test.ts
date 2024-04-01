@@ -4,6 +4,7 @@ import {ssz} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {ProtoBlock} from "@lodestar/fork-choice";
 import {ApiTestModules, getApiTestModules} from "../../../../utils/api.js";
 import {SyncState} from "../../../../../src/sync/interface.js";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
