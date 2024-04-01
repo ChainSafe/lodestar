@@ -64,14 +64,14 @@ export function randomBytesNonZero(bytesCount: number): Uint8Array {
   return rand;
 }
 
+/**
+ * Fully deserializes a signature set that may have a serialized signature
+ * NOTE: This can throw for invalid signature and should be wrapped in a try/catch
+ */
 export function deserializeSet(set: WorkRequestSet): SignatureSet {
   return {
     message: set.message,
-    publicKey:
-      set.publicKey instanceof bls.PublicKey
-        ? set.publicKey
-        : // no need to validate key, is validated when deserialized from state at startup
-          bls.PublicKey.fromBytes(set.publicKey, CoordType.affine),
+    publicKey: set.publicKey,
     signature:
       set.signature instanceof bls.Signature
         ? set.signature
