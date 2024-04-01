@@ -452,10 +452,12 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
           "exemplar": false,
           "expr": "lodestar_cp_state_cache_size{}",
           "interval": "",
-          "legendFormat": "states",
+          "legendFormat": "states_{{type}}",
+          "range": true,
           "refId": "A"
         },
         {
@@ -463,11 +465,13 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
           "exemplar": false,
           "expr": "lodestar_cp_state_epoch_size",
           "hide": false,
           "interval": "",
-          "legendFormat": "epochs",
+          "legendFormat": "epochs_{{type}}",
+          "range": true,
           "refId": "B"
         }
       ],
