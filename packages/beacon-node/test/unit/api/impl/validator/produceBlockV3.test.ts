@@ -1,4 +1,5 @@
 import {describe, it, expect, beforeEach, afterEach, vi} from "vitest";
+import {toHexString} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {routes} from "@lodestar/api";
@@ -82,6 +83,9 @@ describe("api/validator - produceBlockV3", function () {
 
         vi.spyOn(modules.chain.clock, "currentSlot", "get").mockReturnValue(currentSlot);
         vi.spyOn(modules.sync, "state", "get").mockReturnValue(SyncState.Synced);
+        modules.chain.recomputeForkChoiceHead.mockReturnValue({
+          blockRoot: toHexString(fullBlock.parentRoot),
+        } as ProtoBlock);
 
         if (enginePayloadValue !== null) {
           const commonBlockBody: CommonBlockBody = {

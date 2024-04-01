@@ -516,22 +516,19 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody> {
-    const {slot} = blockAttributes;
-    const head = this.forkChoice.getHead();
+    const {slot, parentBlockRoot} = blockAttributes;
     const state = await this.regen.getBlockSlotState(
-      head.blockRoot,
+      toHexString(parentBlockRoot),
       slot,
       {dontTransferCache: true},
       RegenCaller.produceBlock
     );
-    const parentBlockRoot = fromHexString(head.blockRoot);
 
     // TODO: To avoid breaking changes for metric define this attribute
     const blockType = BlockType.Full;
 
     return produceCommonBlockBody.call(this, blockType, state, {
       ...blockAttributes,
-      parentBlockRoot,
       parentSlot: slot - 1,
     });
   }
@@ -555,21 +552,26 @@ export class BeaconChain implements IBeaconChain {
 
   async produceBlockWrapper<T extends BlockType>(
     blockType: T,
-    {randaoReveal, graffiti, slot, feeRecipient, commonBlockBody}: BlockAttributes & {commonBlockBody?: CommonBlockBody}
+    {
+      randaoReveal,
+      graffiti,
+      slot,
+      feeRecipient,
+      commonBlockBody,
+      parentBlockRoot,
+    }: BlockAttributes & {commonBlockBody?: CommonBlockBody}
   ): Promise<{
     block: AssembledBlockType<T>;
     executionPayloadValue: Wei;
     consensusBlockValue: Wei;
     shouldOverrideBuilder?: boolean;
   }> {
-    const head = this.forkChoice.getHead();
     const state = await this.regen.getBlockSlotState(
-      head.blockRoot,
+      toHexString(parentBlockRoot),
       slot,
       {dontTransferCache: true},
       RegenCaller.produceBlock
     );
-    const parentBlockRoot = fromHexString(head.blockRoot);
     const proposerIndex = state.epochCtx.getBeaconProposer(slot);
     const proposerPubKey = state.epochCtx.index2pubkey[proposerIndex].toBytes();
 
