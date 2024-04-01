@@ -17,9 +17,6 @@ export const testData: GenericServerTestCases<Endpoints> = {
       },
       meta: {version: ForkName.altair},
     },
-    query: {
-      format: "0x00000000",
-    },
   },
   getBlockProof: {
     args: {blockId: "head", descriptor},
@@ -30,9 +27,6 @@ export const testData: GenericServerTestCases<Endpoints> = {
         leaves: [root, root, root, root],
       },
       meta: {version: ForkName.altair},
-    },
-    query: {
-      format: "0x00000000",
     },
   },
 };
