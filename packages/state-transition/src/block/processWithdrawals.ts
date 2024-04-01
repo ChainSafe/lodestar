@@ -150,7 +150,7 @@ export function getExpectedWithdrawals(
         amount: BigInt(balance),
       });
       withdrawalIndex++;
-    } else if (isPartiallyWithdrawableValidator(fork, validator, balance, epoch)) {
+    } else if (isPartiallyWithdrawableValidator(fork, validator, balance)) {
       withdrawals.push({
         index: withdrawalIndex,
         validatorIndex,

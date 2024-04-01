@@ -59,7 +59,7 @@ export function isFullyWithdrawableValidator(
 export function isPartiallyWithdrawableValidator(
   fork: ForkSeq,
   validatorCredential: ValidatorInfo,
-  balance: number,
+  balance: number
 ): boolean {
   const {effectiveBalance, withdrawalCredentials: withdrawalCredential} = validatorCredential;
   if (fork === ForkSeq.capella || fork === ForkSeq.deneb) {

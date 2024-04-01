@@ -29,7 +29,10 @@ export function processConsolidation(
   state.pendingConsolidations.push(pendingConsolidation);
 }
 
-function assertValidConsolidation(state: CachedBeaconStateElectra, signedConsolidation: electra.SignedConsolidation): void {
+function assertValidConsolidation(
+  state: CachedBeaconStateElectra,
+  signedConsolidation: electra.SignedConsolidation
+): void {
   // If the pending consolidations queue is full, no consolidations are allowed in the block
   if (state.pendingConsolidations.length >= PENDING_CONSOLIDATIONS_LIMIT) {
     throw new Error("Pending consolidation queue is full");

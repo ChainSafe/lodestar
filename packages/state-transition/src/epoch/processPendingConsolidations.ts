@@ -1,5 +1,5 @@
 import {COMPOUNDING_WITHDRAWAL_PREFIX} from "@lodestar/params";
-import { CachedBeaconStateElectra} from "../types.js";
+import {CachedBeaconStateElectra} from "../types.js";
 import {decreaseBalance, increaseBalance} from "../util/balance.js";
 import {hasEth1WithdrawalCredential} from "../util/capella.js";
 

@@ -80,8 +80,17 @@ export function applyDeposit(
     }
     addValidatorToRegistry(fork, state, pubkey, withdrawalCredentials, amount);
   } else {
-    // increase balance by deposit amount
-    increaseBalance(state, cachedIndex, amount);
+    if (fork < ForkSeq.electra) {
+      // increase balance by deposit amount right away pre-electra
+      increaseBalance(state, cachedIndex, amount);
+    } else if (fork >= ForkSeq.electra) {
+      const stateElectra = state as CachedBeaconStateElectra;
+      const pendingBalanceDeposit = ssz.electra.PendingBalanceDeposit.toViewDU({
+        index: cachedIndex,
+        amount: BigInt(amount),
+      });
+      stateElectra.pendingBalanceDeposits.push(pendingBalanceDeposit);
+    }
   }
 }
 
@@ -94,7 +103,8 @@ function addValidatorToRegistry(
 ): void {
   const {validators, epochCtx} = state;
   // add validator and balance entries
-  const effectiveBalance = fork < ForkSeq.electra ? Math.min(amount - (amount % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE) : 0;
+  const effectiveBalance =
+    fork < ForkSeq.electra ? Math.min(amount - (amount % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE) : 0;
   validators.push(
     ssz.phase0.Validator.toViewDU({
       pubkey,
@@ -108,13 +118,13 @@ function addValidatorToRegistry(
     })
   );
 
-    const validatorIndex = validators.length - 1;
-    // TODO Electra: Review this
-    // Updating here is better than updating at once on epoch transition
-    // - Simplify genesis fn applyDeposits(): effectiveBalanceIncrements is populated immediately
-    // - Keep related code together to reduce risk of breaking this cache
-    // - Should have equal performance since it sets a value in a flat array
-    epochCtx.effectiveBalanceIncrementsSet(validatorIndex, effectiveBalance);
+  const validatorIndex = validators.length - 1;
+  // TODO Electra: Review this
+  // Updating here is better than updating at once on epoch transition
+  // - Simplify genesis fn applyDeposits(): effectiveBalanceIncrements is populated immediately
+  // - Keep related code together to reduce risk of breaking this cache
+  // - Should have equal performance since it sets a value in a flat array
+  epochCtx.effectiveBalanceIncrementsSet(validatorIndex, effectiveBalance);
 
   // now that there is a new validator, update the epoch context with the new pubkey
   epochCtx.addPubkey(validatorIndex, pubkey);
@@ -125,33 +135,20 @@ function addValidatorToRegistry(
 
     stateAltair.inactivityScores.push(0);
 
-      // add participation caches
-      stateAltair.previousEpochParticipation.push(0);
-      stateAltair.currentEpochParticipation.push(0);
-    }
+    // add participation caches
+    stateAltair.previousEpochParticipation.push(0);
+    stateAltair.currentEpochParticipation.push(0);
+  }
 
-    if (fork < ForkSeq.electra) {
-      state.balances.push(amount);
-    } else if (fork >= ForkSeq.electra) {
-      state.balances.push(0);
-      const stateElectra = state as CachedBeaconStateElectra;
-      const pendingBalanceDeposit = ssz.electra.PendingBalanceDeposit.toViewDU({
-        index: validatorIndex,
-        amount: BigInt(amount),
-      });
-      stateElectra.pendingBalanceDeposits.push(pendingBalanceDeposit);
-    }
-  } else {
-    if (fork < ForkSeq.electra) {
-      // increase balance by deposit amount right away pre-electra
-      increaseBalance(state, cachedIndex, amount);
-    } else if (fork >= ForkSeq.electra) {
-      const stateElectra = state as CachedBeaconStateElectra;
-      const pendingBalanceDeposit = ssz.electra.PendingBalanceDeposit.toViewDU({
-        index: cachedIndex,
-        amount: BigInt(amount),
-      });
-      stateElectra.pendingBalanceDeposits.push(pendingBalanceDeposit);
-    }
+  if (fork < ForkSeq.electra) {
+    state.balances.push(amount);
+  } else if (fork >= ForkSeq.electra) {
+    state.balances.push(0);
+    const stateElectra = state as CachedBeaconStateElectra;
+    const pendingBalanceDeposit = ssz.electra.PendingBalanceDeposit.toViewDU({
+      index: validatorIndex,
+      amount: BigInt(amount),
+    });
+    stateElectra.pendingBalanceDeposits.push(pendingBalanceDeposit);
   }
 }

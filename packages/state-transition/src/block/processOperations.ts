@@ -1,5 +1,5 @@
 import {allForks, capella, electra} from "@lodestar/types";
-import {ForkSeq, MAX_DEPOSITS} from "@lodestar/params";
+import {ForkSeq} from "@lodestar/params";
 
 import {CachedBeaconStateAllForks, CachedBeaconStateCapella, CachedBeaconStateElectra} from "../types.js";
 import {getEth1DepositCount} from "../util/deposit.js";
@@ -74,7 +74,6 @@ export function processOperations(
     for (const depositReceipt of bodyElectra.executionPayload.depositReceipts) {
       processDepositReceipt(fork, stateElectra, depositReceipt);
     }
-
 
     for (const withdrawRequest of bodyElectra.executionPayload.withdrawaRequests) {
       processExecutionLayerWithdrawRequest(stateElectra, withdrawRequest);

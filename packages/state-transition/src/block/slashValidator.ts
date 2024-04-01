@@ -53,10 +53,10 @@ export function slashValidator(
     fork === ForkSeq.phase0
       ? MIN_SLASHING_PENALTY_QUOTIENT
       : fork === ForkSeq.altair
-      ? MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR
-      : fork === ForkSeq.bellatrix
-      ? MIN_SLASHING_PENALTY_QUOTIENT_BELLATRIX
-      : MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA;
+        ? MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR
+        : fork === ForkSeq.bellatrix
+          ? MIN_SLASHING_PENALTY_QUOTIENT_BELLATRIX
+          : MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA;
   decreaseBalance(state, slashedIndex, Math.floor(effectiveBalance / minSlashingPenaltyQuotient));
 
   // apply proposer and whistleblower rewards
