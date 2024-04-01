@@ -52,10 +52,9 @@
   ],
   "dependencies": {
     "@chainsafe/as-sha256": "^0.4.1",
-    "@chainsafe/bls": "ChainSafe/bls#e8bbc1a2dd803294c24a4db2ed2c9e05b714b92d",
+    "@chainsafe/bls": "ChainSafe/bls#c40e3e8736a8203684652dfeac6c7b23e1f1f6fd",
     "@chainsafe/bls-keygen": "^0.4.0",
     "@chainsafe/bls-keystore": "^3.0.1",
-    "@chainsafe/blst": "^0.2.10",
     "@chainsafe/discv5": "^9.0.0",
     "@chainsafe/enr": "^3.0.0",
     "@chainsafe/persistent-merkle-tree": "^0.7.1",
