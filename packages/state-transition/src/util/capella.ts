@@ -7,6 +7,7 @@ import {
   MIN_ACTIVATION_BALANCE,
 } from "@lodestar/params";
 import {phase0} from "@lodestar/types";
+import { getValidatorMaxEffectiveBalance } from "./validator";
 
 type ValidatorInfo = Pick<phase0.Validator, "effectiveBalance" | "withdrawableEpoch" | "withdrawalCredentials">;
 
@@ -25,17 +26,6 @@ export function hasExecutionWithdrawalCredential(withdrawalCredentials: Uint8Arr
   return (
     hasCompoundingWithdrawalCredential(withdrawalCredentials) || hasEth1WithdrawalCredential(withdrawalCredentials)
   );
-}
-
-export function getValidatorExcessBalance(withdrawalCredentials: Uint8Array, validatorBalance: number): number {
-  // Compounding withdrawal credential only available since Electra
-  if (hasCompoundingWithdrawalCredential(withdrawalCredentials)) {
-    return validatorBalance - MAX_EFFECTIVE_BALANCE_ELECTRA;
-  } else if (hasEth1WithdrawalCredential(withdrawalCredentials)) {
-    return validatorBalance - MIN_ACTIVATION_BALANCE;
-  }
-
-  return 0;
 }
 
 export function isFullyWithdrawableValidator(
@@ -62,20 +52,19 @@ export function isPartiallyWithdrawableValidator(
   balance: number
 ): boolean {
   const {effectiveBalance, withdrawalCredentials: withdrawalCredential} = validatorCredential;
-  if (fork === ForkSeq.capella || fork === ForkSeq.deneb) {
-    return (
-      hasEth1WithdrawalCredential(withdrawalCredential) &&
-      effectiveBalance === MAX_EFFECTIVE_BALANCE &&
-      balance > MAX_EFFECTIVE_BALANCE
-    );
+
+  if (fork < ForkSeq.capella) {
+    throw new Error(`Unsupported fork`);
   }
 
-  if (fork === ForkSeq.electra) {
-    return (
-      hasExecutionWithdrawalCredential(withdrawalCredential) &&
-      getValidatorExcessBalance(withdrawalCredential, balance) > 0
-    );
-  }
+  const validatorMaxEffectiveBalance = (fork === ForkSeq.capella || fork === ForkSeq.deneb) ? MAX_EFFECTIVE_BALANCE : getValidatorMaxEffectiveBalance(withdrawalCredential);
+  const hasMaxEffectiveBalance = effectiveBalance === validatorMaxEffectiveBalance;
+  const hasExcessBalance = balance > validatorMaxEffectiveBalance;
 
-  return false;
+  return (
+    hasEth1WithdrawalCredential(withdrawalCredential) &&
+    hasMaxEffectiveBalance &&
+    hasExcessBalance
+  );
+
 }

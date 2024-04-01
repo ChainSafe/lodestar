@@ -12,7 +12,7 @@ import {
 import {CachedBeaconStateCapella, CachedBeaconStateElectra} from "../types.js";
 import {
   decreaseBalance,
-  getValidatorExcessBalance,
+  getValidatorMaxEffectiveBalance,
   hasEth1WithdrawalCredential,
   hasExecutionWithdrawalCredential,
   isCapellaPayloadHeader,
@@ -155,7 +155,7 @@ export function getExpectedWithdrawals(
         index: withdrawalIndex,
         validatorIndex,
         address: validator.withdrawalCredentials.slice(12),
-        amount: BigInt(getValidatorExcessBalance(validator.withdrawalCredentials, balance)),
+        amount: BigInt(balance - getValidatorMaxEffectiveBalance(validator.withdrawalCredentials)),
       });
       withdrawalIndex++;
     }

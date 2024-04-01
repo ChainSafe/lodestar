@@ -1,8 +1,9 @@
 import {Epoch, phase0, ValidatorIndex} from "@lodestar/types";
 import {intDiv} from "@lodestar/utils";
 import {ChainForkConfig} from "@lodestar/config";
-import {EFFECTIVE_BALANCE_INCREMENT, ForkSeq} from "@lodestar/params";
+import {EFFECTIVE_BALANCE_INCREMENT, ForkSeq, MAX_EFFECTIVE_BALANCE_ELECTRA, MIN_ACTIVATION_BALANCE} from "@lodestar/params";
 import {BeaconStateAllForks, CachedBeaconStateElectra} from "../types.js";
+import { hasCompoundingWithdrawalCredential, hasEth1WithdrawalCredential } from "./capella.js";
 
 /**
  * Check if [[validator]] is active
@@ -67,4 +68,19 @@ export function getActivationExitConsolidationChurnLimit(state: CachedBeaconStat
 
 export function getChurnLimit(config: ChainForkConfig, activeValidatorCount: number): number {
   return Math.max(config.MIN_PER_EPOCH_CHURN_LIMIT, intDiv(activeValidatorCount, config.CHURN_LIMIT_QUOTIENT));
+}
+
+export function getValidatorMaxEffectiveBalance(withdrawalCredentials: Uint8Array): number {
+  // Compounding withdrawal credential only available since Electra
+  if (hasCompoundingWithdrawalCredential(withdrawalCredentials)) {
+    return MAX_EFFECTIVE_BALANCE_ELECTRA;
+  } else {
+    return MIN_ACTIVATION_BALANCE;
+  }
+}
+
+export function getActiveBalance(state: CachedBeaconStateElectra, validatorIndex: ValidatorIndex) {
+  const validatorMaxEffectiveBalance = getValidatorMaxEffectiveBalance(state.validators.getReadonly(validatorIndex).withdrawalCredentials);
+
+  return Math.min(state.balances.get(validatorIndex), validatorMaxEffectiveBalance);
 }
