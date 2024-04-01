@@ -582,6 +582,22 @@ export class EpochCache {
   }
 
   /**
+   * TODO: (matthewkeil) consumers:
+   * - extractParticipationPhase0 in beacon-node/src/chain/opPools/aggregatedAttestationPool.ts
+   * - generateIndexedAttestations in beacon-node/test/fixtures/phase0.ts
+   * - getAttestationsForBlock in beacon-node/test/perf/chain/opPools/aggregatedAttestationPool.test.ts
+   * - getAggregatedAttestationPool in beacon-node/test/perf/chain/opPools/aggregatedAttestationPool.test.ts
+   * - unit test "AggregatedAttestationPool" in beacon-node/test/unit/chain/opPools/aggregatedAttestationPool.test.ts
+   * - getAttestationValidData in beacon-node/test/utils/validationData/attestation.ts
+   * - validateAttestation in state-transition/src/block/processAttestationPhase0.ts
+   * - processAttestationsAltair in state-transition/src/block/processAttestationsAltair.ts
+   * - getIndexedAttestation
+   * - processPendingAttestations in state-transition/src/epoch/processPendingAttestations.ts
+   * - translateParticipation in state-transition/src/slot/upgradeStateToAltair.ts
+   * - getBlockPhase0 in state-transition/test/perf/block/util.ts
+   * - getBlockAltair in state-transition/test/perf/block/util.ts
+   */
+  /**
    * Return the beacon committee at slot for index.
    */
   getBeaconCommittee(slot: Slot, index: CommitteeIndex): Uint32Array {
@@ -596,10 +612,24 @@ export class EpochCache {
     return slotCommittees[index];
   }
 
+  /**
+   * TODO: (matthewkeil) consumers:
+   * - generateIndexedAttestations in beacon-node/test/fixtures/phase0.ts
+   * - perf test "getAttestationsForBlock" in beacon-node/test/perf/chain/opPools/aggregatedAttestationPool.test.ts
+   * - getAggregatedAttestationPool in beacon-node/test/perf/chain/opPools/aggregatedAttestationPool.test.ts
+   * - validateAttestation in state-transition/src/block/processAttestationPhase0.ts
+   * - getBlockPhase0 in state-transition/test/perf/block/util.ts
+   */
   getCommitteeCountPerSlot(epoch: Epoch): number {
     return this.getShufflingAtEpoch(epoch).committeesPerSlot;
   }
 
+  /**
+   * TODO: (matthewkeil) consumers:
+   * - Logic is duplicated in in beacon-node/src/chain/validation/attestation.ts
+   *   and used locally in that file in validateGossipAttestationNoSignatureCheck()??
+   * - getAttestationValidData in beacon-node/test/utils/validationData/attestation.ts
+   */
   /**
    * Compute the correct subnet for a slot/committee index
    */
@@ -610,6 +640,10 @@ export class EpochCache {
     return (committeesSinceEpochStart + committeeIndex) % ATTESTATION_SUBNET_COUNT;
   }
 
+  /**
+   * TODO: (matthewkeil) consumers:
+   * - getProposerDuties in beacon-node/src/api/impl/validator/index.ts
+   */
   getBeaconProposer(slot: Slot): ValidatorIndex {
     const epoch = computeEpochAtSlot(slot);
     if (epoch !== this.currentShuffling.epoch) {
@@ -622,10 +656,18 @@ export class EpochCache {
     return this.proposers[slot % SLOTS_PER_EPOCH];
   }
 
+  /**
+   * TODO: (matthewkeil) consumers:
+   * - getProposerDuties in beacon-node/src/api/impl/validator/index.ts
+   */
   getBeaconProposers(): ValidatorIndex[] {
     return this.proposers;
   }
 
+  /**
+   * TODO: (matthewkeil) consumers:
+   * - getProposerDuties in beacon-node/src/api/impl/validator/index.ts
+   */
   /**
    * We allow requesting proposal duties 1 epoch in the future as in normal network conditions it's possible to predict
    * the correct shuffling with high probability. While knowing the proposers in advance is not useful for consensus,
@@ -677,6 +719,12 @@ export class EpochCache {
   }
 
   /**
+   * TODO: (matthewkeil) consumers:
+   * - importBlock in beacon-node/src/chain/blocks/importBlock.ts
+   * - processAttestationPhase0 in state-transition/src/block/processAttestationPhase0.ts
+   * - getAttestationsSignatureSets in state-transition/src/signatureSets/indexedAttestation.ts
+   */
+  /**
    * Return the indexed attestation corresponding to ``attestation``.
    */
   getIndexedAttestation(attestation: phase0.Attestation): phase0.IndexedAttestation {
@@ -693,6 +741,10 @@ export class EpochCache {
     };
   }
 
+  /**
+   * TODO: (matthewkeil) consumers:
+   * - getAttesterDuties in beacon-node/src/api/impl/validator/index.ts
+   */
   getCommitteeAssignments(
     epoch: Epoch,
     requestedValidatorIndices: ValidatorIndex[]
@@ -724,6 +776,10 @@ export class EpochCache {
   }
 
   /**
+   * TODO: (matthewkeil) consumers:
+   * - not used anywhere in codebase??
+   */
+  /**
    * Return the committee assignment in the ``epoch`` for ``validator_index``.
    * ``assignment`` returned is a tuple of the following form:
    * ``assignment[0]`` is the list of validators in the committee
@@ -731,50 +787,70 @@ export class EpochCache {
    * ``assignment[2]`` is the slot at which the committee is assigned
    * Return null if no assignment..
    */
-  getCommitteeAssignment(epoch: Epoch, validatorIndex: ValidatorIndex): phase0.CommitteeAssignment | null {
-    if (epoch > this.currentShuffling.epoch + 1) {
-      throw Error(
-        `Requesting committee assignment for more than 1 epoch ahead: ${epoch} > ${this.currentShuffling.epoch} + 1`
-      );
-    }
+  // getCommitteeAssignment(epoch: Epoch, validatorIndex: ValidatorIndex): phase0.CommitteeAssignment | null {
+  //   if (epoch > this.currentShuffling.epoch + 1) {
+  //     throw Error(
+  //       `Requesting committee assignment for more than 1 epoch ahead: ${epoch} > ${this.currentShuffling.epoch} + 1`
+  //     );
+  //   }
 
-    const epochStartSlot = computeStartSlotAtEpoch(epoch);
-    const committeeCountPerSlot = this.getCommitteeCountPerSlot(epoch);
-    for (let slot = epochStartSlot; slot < epochStartSlot + SLOTS_PER_EPOCH; slot++) {
-      for (let i = 0; i < committeeCountPerSlot; i++) {
-        const committee = this.getBeaconCommittee(slot, i);
-        if (committee.includes(validatorIndex)) {
-          return {
-            validators: Array.from(committee),
-            committeeIndex: i,
-            slot,
-          };
-        }
-      }
-    }
-    return null;
-  }
+  //   const epochStartSlot = computeStartSlotAtEpoch(epoch);
+  //   const committeeCountPerSlot = this.getCommitteeCountPerSlot(epoch);
+  //   for (let slot = epochStartSlot; slot < epochStartSlot + SLOTS_PER_EPOCH; slot++) {
+  //     for (let i = 0; i < committeeCountPerSlot; i++) {
+  //       const committee = this.getBeaconCommittee(slot, i);
+  //       if (committee.includes(validatorIndex)) {
+  //         return {
+  //           validators: Array.from(committee),
+  //           committeeIndex: i,
+  //           slot,
+  //         };
+  //       }
+  //     }
+  //   }
+  //   return null;
+  // }
 
-  isAggregator(slot: Slot, index: CommitteeIndex, slotSignature: BLSSignature): boolean {
-    const committee = this.getBeaconCommittee(slot, index);
-    return isAggregatorFromCommitteeLength(committee.length, slotSignature);
-  }
+  /**
+   * TODO: (matthewkeil) consumers:
+   * - not used anywhere in codebase??
+   */
+  // isAggregator(slot: Slot, index: CommitteeIndex, slotSignature: BLSSignature): boolean {
+  //   const committee = this.getBeaconCommittee(slot, index);
+  //   return isAggregatorFromCommitteeLength(committee.length, slotSignature);
+  // }
 
   addPubkey(index: ValidatorIndex, pubkey: Uint8Array): void {
     this.pubkey2index.set(pubkey, index);
     this.index2pubkey[index] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian); // Optimize for aggregation
   }
 
+  /**
+   * TODO: (matthewkeil) consumers:
+   * - getBeaconCommittee
+   */
   getShufflingAtSlot(slot: Slot): EpochShuffling {
     const epoch = computeEpochAtSlot(slot);
     return this.getShufflingAtEpoch(epoch);
   }
 
-  getShufflingAtSlotOrNull(slot: Slot): EpochShuffling | null {
-    const epoch = computeEpochAtSlot(slot);
-    return this.getShufflingAtEpochOrNull(epoch);
-  }
+  /**
+   * TODO: (matthewkeil) consumers:
+   * - not used anywhere in codebase??
+   */
+  // getShufflingAtSlotOrNull(slot: Slot): EpochShuffling | null {
+  //   const epoch = computeEpochAtSlot(slot);
+  //   return this.getShufflingAtEpochOrNull(epoch);
+  // }
 
+  /**
+   * TODO: (matthewkeil) consumers:
+   * - getEpochCommittees in beacon-node/src/api/impl/beacon/state/index.ts
+   * - getAttestationsForBlock in beacon-node/src/chain/opPools/aggregatedAttestationPool.ts
+   * - getCommitteeCountPerSlot
+   * - getCommitteeAssignments
+   * - getShufflingAtSlot
+   */
   getShufflingAtEpoch(epoch: Epoch): EpochShuffling {
     const shuffling = this.getShufflingAtEpochOrNull(epoch);
     if (shuffling === null) {
@@ -787,7 +863,11 @@ export class EpochCache {
 
     return shuffling;
   }
-
+  /**
+   * TODO: (matthewkeil) consumers:
+   * - getShufflingAtSlotOrNull
+   * - getShufflingAtEpoch
+   */
   getShufflingAtEpochOrNull(epoch: Epoch): EpochShuffling | null {
     if (epoch === this.previousShuffling.epoch) {
       return this.previousShuffling;
@@ -801,6 +881,14 @@ export class EpochCache {
   }
 
   /**
+   * TODO: (matthewkeil) consumers:
+   * - submitPoolSyncCommitteeSignatures in beacon-node/src/api/impl/beacon/pool/index.ts
+   * - getEpochSyncCommittees in beacon-node/src/api/impl/beacon/state/index.ts
+   * - getSyncCommitteeDuties in beacon-node/src/api/impl/validator/index.ts
+   * - getIndexInSubcommittee in beacon-node/src/chain/validation/syncCommittee.ts
+   * - getContributionIndices in beacon-node/src/chain/validation/syncCommitteeContributionAndProof.ts
+   */
+  /**
    * Note: The range of slots a validator has to perform duties is off by one.
    * The previous slot wording means that if your validator is in a sync committee for a period that runs from slot
    * 100 to 200,then you would actually produce signatures in slot 99 - 199.
@@ -810,6 +898,12 @@ export class EpochCache {
     return this.getIndexedSyncCommitteeAtEpoch(computeEpochAtSlot(slot + 1));
   }
 
+  /**
+   * TODO: (matthewkeil) consumers:
+   * - getIndexedSyncCommittee
+   * - getSyncCommitteeDuties in beacon-node/src/api/impl/validator/index.ts
+   * - getEpochSyncCommittees in beacon-node/src/api/impl/beacon/state/index.ts
+   */
   /**
    * **DO NOT USE FOR GOSSIP VALIDATION**: Sync committee duties are offset by one slot. @see {@link EpochCache.getIndexedSyncCommittee}
    *
