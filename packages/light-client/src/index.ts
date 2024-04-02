@@ -160,19 +160,24 @@ export class Lightclient {
   }
 
   /**
-   * @returns a `Promise` that will resolve once `LightclientEvent.statusChange` with `RunStatusCode.started` value is emitted
+   * @returns a `Promise` that will resolve once `runStatus` equals `RunStatusCode.started`
    */
   start(): Promise<void> {
     const startPromise = new Promise<void>((resolve) => {
-      const lightclientStarted = (status: RunStatusCode): void => {
+      const resolveAndStopListening = (status: RunStatusCode): void => {
         if (status === RunStatusCode.started) {
-          this.emitter.off(LightclientEvent.statusChange, lightclientStarted);
+          this.emitter.off(LightclientEvent.statusChange, resolveAndStopListening);
           resolve();
         }
       };
-      this.emitter.on(LightclientEvent.statusChange, lightclientStarted);
+      this.emitter.on(LightclientEvent.statusChange, resolveAndStopListening);
+
+      // If already started, resolve immediately
+      // Checking after the event registration to remove potential for race conditions
+      resolveAndStopListening(this.runStatus.code);
     });
 
+    // Do not block the event loop
     void this.runLoop();
 
     return startPromise;
@@ -272,17 +277,14 @@ export class Lightclient {
       }
 
       // Wait for the next epoch
-      if (this.runStatus.code !== RunStatusCode.started) {
-        return;
-      } else {
-        try {
-          await sleep(timeUntilNextEpoch(this.config, this.genesisTime), this.runStatus.controller.signal);
-        } catch (e) {
-          if (isErrorAborted(e)) {
-            return;
-          }
-          throw e;
+      try {
+        const runStatus = this.runStatus as {code: RunStatusCode.started; controller: AbortController}; // At this point, client is started
+        await sleep(timeUntilNextEpoch(this.config, this.genesisTime), runStatus.controller.signal);
+      } catch (e) {
+        if (isErrorAborted(e)) {
+          return;
         }
+        throw e;
       }
     }
   }
