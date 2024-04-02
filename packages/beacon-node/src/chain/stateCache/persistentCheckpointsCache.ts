@@ -604,27 +604,40 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
 
   /**
    * Prune or persist checkpoint states in an epoch
-   * 1) If there is single checkpoint state in an epoch, persist it. This is when there is skipped slot at block 0 of epoch
+   * 1) If there is 1 checkpoint state with known root, persist it. This is when there is skipped slot at block 0 of epoch
    *     slot:                           n
    *             |-----------------------|-----------------------|
-   *     root                          |
+   *     PRCS root                      |
    *
-   * 2) If there are any roots that unknown to this state, persist its cp state. This is to handle the current block is reorged later
-   *
-   * 3) If there are 2 checkpoint states, PRCS and CRCS and both roots are known to this state, persist CRCS. If the block is reorged,
+   * 2) If there are 2 checkpoint states, PRCS and CRCS and both roots are known to this state, persist CRCS. If the block is reorged,
    * PRCS is regen and populated to this cache again.
    *     slot:                           n
    *             |-----------------------|-----------------------|
-   *     root                          |
-   *     root                            |
+   *     PRCS root - prune              |
+   *     CRCS root - persist             |
+   *
+   * 3) If there are any roots that unknown to this state, persist their cp state. This is to handle the current block is reorged later
    *
    * 4) (derived from above) If there are 2 checkpoint states, PRCS and an unknown root, persist both.
+   *      - In the example below block slot (n + 1) reorged n
+   *      - If we process state n + 1, CRCS is unknown to it
+   *      - we need to also store CRCS to handle the case (n+2) switches to n again
+   *
+   *                     PRCS - persist
+   *                       |  processState()
+   *                       |       |
+   *                 -------------n+1
+   *               /       |
+   *             n-1 ------n------------n+2
+   *                       |
+   *                     CRCS - persist
+   *
    *   - PRCS is the checkpoint state that could be justified/finalized later based on the view of the state
    *   - unknown root checkpoint state is persisted to handle the reorg back to that branch later
    *
    * Performance note:
    *   - In normal condition, we persist 1 checkpoint state per epoch.
-   *   - In reorged condition, we may persist >=2 (most likely 2) checkpoint states per epoch.
+   *   - In reorged condition, we may persist multiple (most likely 2) checkpoint states per epoch.
    */
   private async processPastEpoch(
     blockRootHex: RootHex,
@@ -636,32 +649,24 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     const epochBoundaryRoot =
       epochBoundarySlot === state.slot ? fromHexString(blockRootHex) : getBlockRootAtSlot(state, epochBoundarySlot);
     const epochBoundaryHex = toHexString(epochBoundaryRoot);
+    const prevEpochRoot = toHexString(getBlockRootAtSlot(state, epochBoundarySlot - 1));
 
     // for each epoch, usually there are 2 rootHexes respective to the 2 checkpoint states: Previous Root Checkpoint State and Current Root Checkpoint State
     const cpRootHexes = new Set(this.epochIndex.get(epoch) ?? []);
     const persistedRootHexes = new Set<RootHex>();
-    if (cpRootHexes.size === 1) {
-      // the slot at block 0 of epoch is skipped
-      persistedRootHexes.add(cpRootHexes.values().next().value);
-    } else if (cpRootHexes.size > 1) {
-      const prevEpochRoot = toHexString(getBlockRootAtSlot(state, epochBoundarySlot - 1));
-      for (const rootHex of cpRootHexes) {
-        // rootHex is unknown to this state, persist it
-        if (rootHex !== epochBoundaryHex && rootHex !== prevEpochRoot) {
-          persistedRootHexes.add(rootHex);
-        }
-      }
 
-      // if there are PRCS and CRCS, persist CRCS
-      if (prevEpochRoot !== epochBoundaryHex && cpRootHexes.has(prevEpochRoot) && cpRootHexes.has(epochBoundaryHex)) {
-        persistedRootHexes.add(epochBoundaryHex);
-      }
+    // 1) if there is no CRCS, persist PRCS (block 0 of epoch is skipped). In this case prevEpochRoot === epochBoundaryHex
+    // 2) if there are PRCS and CRCS, persist CRCS => persist CRCS
+    // => this is simplified to always persist epochBoundaryHex
+    persistedRootHexes.add(epochBoundaryHex);
 
-      // if there is no CRCS, persist PRCS (unknown root checkpoint state is persisted above)
-      if (prevEpochRoot === epochBoundaryHex && cpRootHexes.has(prevEpochRoot)) {
-        persistedRootHexes.add(prevEpochRoot);
+    // 3) persist any states with unknown roots to this state
+    for (const rootHex of cpRootHexes) {
+      if (rootHex !== epochBoundaryHex && rootHex !== prevEpochRoot) {
+        persistedRootHexes.add(rootHex);
       }
     }
+
     for (const rootHex of this.epochIndex.get(epoch) ?? []) {
       const cpKey = toCacheKey({epoch: epoch, rootHex});
       const cacheItem = this.cache.get(cpKey);
