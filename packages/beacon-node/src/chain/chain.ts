@@ -235,6 +235,7 @@ export class BeaconChain implements IBeaconChain {
         ? anchorState
         : createCachedBeaconState(anchorState, {
             config,
+            shufflingCache: this.shufflingCache,
             pubkey2index: new PubkeyIndexMap(),
             index2pubkey: [],
           });

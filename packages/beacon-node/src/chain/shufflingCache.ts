@@ -1,5 +1,10 @@
 import {toHexString} from "@chainsafe/ssz";
-import {CachedBeaconStateAllForks, EpochShuffling, getShufflingDecisionBlock} from "@lodestar/state-transition";
+import {
+  CachedBeaconStateAllForks,
+  EpochShuffling,
+  getShufflingDecisionBlock,
+  IShufflingCache,
+} from "@lodestar/state-transition";
 import {Epoch, RootHex, ssz} from "@lodestar/types";
 import {MapDef, pruneSetToMax} from "@lodestar/utils";
 import {GENESIS_SLOT} from "@lodestar/params";
@@ -48,7 +53,7 @@ export type ShufflingCacheOpts = {
  * - if a shuffling is not available (which does not happen with default chain option of maxSkipSlots = 32), track a promise to make sure we don't compute the same shuffling twice
  * - skip computing shuffling when loading state bytes from disk
  */
-export class ShufflingCache {
+export class ShufflingCache implements IShufflingCache {
   /** LRU cache implemented as a map, pruned every time we add an item */
   private readonly itemsByDecisionRootByEpoch: MapDef<Epoch, Map<RootHex, CacheItem>> = new MapDef(
     () => new Map<RootHex, CacheItem>()

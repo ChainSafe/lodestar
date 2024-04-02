@@ -217,6 +217,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       const newCachedState = loadCachedBeaconState(
         seedState,
         stateBytes,
+        this.shufflingCache,
         {
           shufflingGetter: (shufflingEpoch, decisionRootHex) => {
             const shuffling = this.shufflingCache.getSync(shufflingEpoch, decisionRootHex);

@@ -5,6 +5,7 @@ import {createEmptyEpochCacheImmutableData} from "@lodestar/state-transition";
 import {ForkName, GENESIS_SLOT} from "@lodestar/params";
 
 import {DepositTree} from "../../../db/repositories/depositDataRoot.js";
+import {ShufflingCache} from "../../../chain/shufflingCache.js";
 
 export const INTEROP_BLOCK_HASH = Buffer.alloc(32, "B");
 export const INTEROP_TIMESTAMP = Math.pow(2, 40);
@@ -45,7 +46,7 @@ export function getInteropState(
   latestPayloadHeader.baseFeePerGas = GENESIS_BASE_FEE_PER_GAS;
   const state = initializeBeaconStateFromEth1(
     config,
-    createEmptyEpochCacheImmutableData(config, {genesisValidatorsRoot: Buffer.alloc(32, 0)}),
+    createEmptyEpochCacheImmutableData(config, new ShufflingCache(), {genesisValidatorsRoot: Buffer.alloc(32, 0)}),
     eth1BlockHash,
     eth1Timestamp,
     deposits,

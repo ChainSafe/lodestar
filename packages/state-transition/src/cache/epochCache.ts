@@ -26,7 +26,12 @@ import {
   computeProposers,
   getActivationChurnLimit,
 } from "../util/index.js";
-import {computeEpochShuffling, EpochShuffling, getShufflingDecisionBlock} from "../util/epochShuffling.js";
+import {
+  computeEpochShuffling,
+  EpochShuffling,
+  getShufflingDecisionBlock,
+  IShufflingCache,
+} from "../util/epochShuffling.js";
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
 import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
 import {getTotalSlashingsByIncrement} from "../epoch/processSlashings.js";
@@ -45,6 +50,7 @@ export const PROPOSER_WEIGHT_FACTOR = PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PR
 
 export type EpochCacheImmutableData = {
   config: BeaconConfig;
+  shufflingCache: IShufflingCache;
   pubkey2index: PubkeyIndexMap;
   index2pubkey: Index2PubkeyCache;
 };
@@ -82,6 +88,7 @@ type ProposersDeferred = {computed: false; seed: Uint8Array} | {computed: true; 
  **/
 export class EpochCache {
   config: BeaconConfig;
+  shufflingCache: IShufflingCache;
   /**
    * Unique globally shared pubkey registry. There should only exist one for the entire application.
    *
@@ -215,6 +222,7 @@ export class EpochCache {
 
   constructor(data: {
     config: BeaconConfig;
+    shufflingCache: IShufflingCache;
     pubkey2index: PubkeyIndexMap;
     index2pubkey: Index2PubkeyCache;
     proposers: number[];
@@ -244,6 +252,7 @@ export class EpochCache {
     syncPeriod: SyncPeriod;
   }) {
     this.config = data.config;
+    this.shufflingCache = data.shufflingCache;
     this.pubkey2index = data.pubkey2index;
     this.index2pubkey = data.index2pubkey;
     this.proposers = data.proposers;
@@ -281,7 +290,7 @@ export class EpochCache {
    */
   static createFromState(
     state: BeaconStateAllForks,
-    {config, pubkey2index, index2pubkey}: EpochCacheImmutableData,
+    {config, shufflingCache, pubkey2index, index2pubkey}: EpochCacheImmutableData,
     opts?: EpochCacheOpts
   ): EpochCache {
     // syncPubkeys here to ensure EpochCacheImmutableData is popualted before computing the rest of caches
@@ -444,6 +453,7 @@ export class EpochCache {
 
     return new EpochCache({
       config,
+      shufflingCache,
       pubkey2index,
       index2pubkey,
       proposers,
@@ -484,6 +494,7 @@ export class EpochCache {
     // All data is completely replaced, or only-appended
     return new EpochCache({
       config: this.config,
+      shufflingCache: this.shufflingCache,
       // Common append-only structures shared with all states, no need to clone
       pubkey2index: this.pubkey2index,
       index2pubkey: this.index2pubkey,
@@ -928,10 +939,12 @@ export class EpochCacheError extends LodestarError<EpochCacheErrorType> {}
 
 export function createEmptyEpochCacheImmutableData(
   chainConfig: ChainConfig,
-  state: Pick<BeaconStateAllForks, "genesisValidatorsRoot">
+  shufflingCache: IShufflingCache,
+  state: Pick<BeaconStateAllForks, "genesisValidatorsRoot">,
 ): EpochCacheImmutableData {
   return {
     config: createBeaconConfig(chainConfig, state.genesisValidatorsRoot),
+    shufflingCache,
     // This is a test state, there's no need to have a global shared cache of keys
     pubkey2index: new PubkeyIndexMap(),
     index2pubkey: [],

@@ -7,11 +7,18 @@ import {
   SLOTS_PER_EPOCH,
   TARGET_COMMITTEE_SIZE,
 } from "@lodestar/params";
-import {BeaconStateAllForks} from "../types.js";
+import {BeaconStateAllForks, CachedBeaconStateAllForks} from "../types.js";
 import {getSeed} from "./seed.js";
 import {unshuffleList} from "./shuffle.js";
 import {computeStartSlotAtEpoch} from "./epoch.js";
 import {getBlockRootAtSlot} from "./blockRoot.js";
+
+export interface IShufflingCache {
+  processState(state: CachedBeaconStateAllForks, shufflingEpoch: Epoch): EpochShuffling;
+  insertPromise(shufflingEpoch: Epoch, decisionRootHex: RootHex): void;
+  get(shufflingEpoch: Epoch, decisionRootHex: RootHex): Promise<EpochShuffling | null>;
+  getSync(shufflingEpoch: Epoch, decisionRootHex: RootHex): EpochShuffling | null;
+}
 
 /**
  * Readonly interface for EpochShuffling.

@@ -19,6 +19,7 @@ import {IEth1Provider} from "../../eth1/index.js";
 import {IEth1StreamParams} from "../../eth1/interface.js";
 import {getDepositsAndBlockStreamForGenesis, getDepositsStream} from "../../eth1/stream.js";
 import {DepositTree} from "../../db/repositories/depositDataRoot.js";
+import {ShufflingCache} from "../shufflingCache.js";
 import {IGenesisBuilder, GenesisResult} from "./interface.js";
 
 export type GenesisBuilderKwargs = {
@@ -86,7 +87,10 @@ export class GenesisBuilder implements IGenesisBuilder {
     }
 
     // TODO - PENDING: Ensure EpochCacheImmutableData is created only once
-    this.state = createCachedBeaconState(stateView, createEmptyEpochCacheImmutableData(config, stateView));
+    this.state = createCachedBeaconState(
+      stateView,
+      createEmptyEpochCacheImmutableData(config, new ShufflingCache(), stateView)
+    );
     this.config = this.state.config;
     this.activatedValidatorCount = getActiveValidatorIndices(stateView, GENESIS_EPOCH).length;
   }
