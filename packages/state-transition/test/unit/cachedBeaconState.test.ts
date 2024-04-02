@@ -9,6 +9,7 @@ import {createCachedBeaconState, loadCachedBeaconState} from "../../src/cache/st
 import {interopPubkeysCached} from "../utils/interop.js";
 import {modifyStateSameValidator, newStateWithValidators} from "../utils/capella.js";
 import {EpochShuffling, getShufflingDecisionBlock} from "../../src/util/epochShuffling.js";
+import {MockShufflingCache} from "../mocks/mockShufflingCache.js";
 
 describe("CachedBeaconState", () => {
   it("Clone and mutate", () => {
@@ -63,6 +64,7 @@ describe("CachedBeaconState", () => {
       stateView,
       {
         config,
+        shufflingCache: new MockShufflingCache(),
         pubkey2index: new PubkeyIndexMap(),
         index2pubkey: [],
       },
@@ -129,7 +131,9 @@ describe("CachedBeaconState", () => {
 
         // confirm loadState() result
         const stateBytes = state.serialize();
-        const newCachedState = loadCachedBeaconState(seedState, stateBytes, {skipSyncCommitteeCache: true});
+        const newCachedState = loadCachedBeaconState(seedState, stateBytes, new MockShufflingCache(), {
+          skipSyncCommitteeCache: true,
+        });
         const newStateBytes = newCachedState.serialize();
         expect(newStateBytes).toEqual(stateBytes);
         expect(newCachedState.hashTreeRoot()).toEqual(state.hashTreeRoot());
@@ -161,6 +165,7 @@ describe("CachedBeaconState", () => {
           state,
           {
             config,
+            shufflingCache: new MockShufflingCache(),
             pubkey2index: new PubkeyIndexMap(),
             index2pubkey: [],
           },

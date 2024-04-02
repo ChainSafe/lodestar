@@ -12,6 +12,7 @@ import {config} from "@lodestar/config/default";
 import {createBeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {ZERO_HASH} from "../../src/constants/index.js";
 import {newZeroedArray} from "../../src/util/index.js";
+import {MockShufflingCache} from "../mocks/mockShufflingCache.js";
 
 import {
   BeaconStatePhase0,
@@ -91,6 +92,7 @@ export function generateCachedState(
   const state = generateState(opts);
   return createCachedBeaconState(state, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
+    shufflingCache: new MockShufflingCache(),
     // This is a test state, there's no need to have a global shared cache of keys
     pubkey2index: new PubkeyIndexMap(),
     index2pubkey: [],
@@ -106,6 +108,7 @@ export function createCachedBeaconStateTest<T extends BeaconStateAllForks>(
     state,
     {
       config: createBeaconConfig(configCustom, state.genesisValidatorsRoot),
+      shufflingCache: new MockShufflingCache(),
       // This is a test state, there's no need to have a global shared cache of keys
       pubkey2index: new PubkeyIndexMap(),
       index2pubkey: [],

@@ -7,6 +7,7 @@ import {config as chainConfig} from "@lodestar/config/default";
 import {upgradeStateToDeneb} from "../../src/slot/upgradeStateToDeneb.js";
 import {createCachedBeaconState} from "../../src/cache/stateCache.js";
 import {PubkeyIndexMap} from "../../src/cache/pubkeyCache.js";
+import {MockShufflingCache} from "../mocks/mockShufflingCache.js";
 
 describe("upgradeState", () => {
   it("upgradeStateToDeneb", () => {
@@ -16,6 +17,7 @@ describe("upgradeState", () => {
       capellaState,
       {
         config: createBeaconConfig(config, capellaState.genesisValidatorsRoot),
+        shufflingCache: new MockShufflingCache(),
         pubkey2index: new PubkeyIndexMap(),
         index2pubkey: [],
       },

@@ -32,6 +32,7 @@ import {interopPubkeysCached} from "../utils/interop.js";
 import {getNextSyncCommittee} from "../../src/util/syncCommittee.js";
 import {getEffectiveBalanceIncrements} from "../../src/cache/effectiveBalanceIncrements.js";
 import {processSlots} from "../../src/index.js";
+import {MockShufflingCache} from "../mocks/mockShufflingCache.js";
 
 let phase0State: BeaconStatePhase0 | null = null;
 let phase0CachedState23637: CachedBeaconStatePhase0 | null = null;
@@ -127,6 +128,7 @@ export function generatePerfTestCachedStatePhase0(opts?: {goBackOneSlot: boolean
     state.slot -= 1;
     phase0CachedState23637 = createCachedBeaconState(state, {
       config: createBeaconConfig(config, state.genesisValidatorsRoot),
+      shufflingCache: new MockShufflingCache(),
       pubkey2index,
       index2pubkey,
     });
@@ -232,6 +234,7 @@ export function generatePerfTestCachedStateAltair(opts?: {
     state.slot -= 1;
     altairCachedState23637 = createCachedBeaconState(state, {
       config: createBeaconConfig(altairConfig, state.genesisValidatorsRoot),
+      shufflingCache: new MockShufflingCache(),
       pubkey2index,
       index2pubkey,
     });
@@ -435,6 +438,7 @@ export function generateTestCachedBeaconStateOnlyValidators({
     state,
     {
       config: createBeaconConfig(config, state.genesisValidatorsRoot),
+      shufflingCache: new MockShufflingCache(),
       pubkey2index,
       index2pubkey,
     },

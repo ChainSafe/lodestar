@@ -14,6 +14,7 @@ import {FAR_FUTURE_EPOCH, ForkName, ForkSeq, MAX_EFFECTIVE_BALANCE, SYNC_COMMITT
 
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ZERO_HASH_HEX} from "../../src/constants/constants.js";
+import {getMockedShufflingCache} from "../mocks/shufflingMock.js";
 import {generateValidator, generateValidators} from "./validator.js";
 import {getConfig} from "./config.js";
 
@@ -103,6 +104,7 @@ export function generateCachedState(opts?: TestBeaconState): CachedBeaconStateAl
   const state = generateState(opts, config);
   return createCachedBeaconState(state, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
+    shufflingCache: getMockedShufflingCache(),
     // This is a performance test, there's no need to have a global shared cache of keys
     pubkey2index: new PubkeyIndexMap(),
     index2pubkey: [],
@@ -117,6 +119,7 @@ export function generateCachedAltairState(opts?: TestBeaconState, altairForkEpoc
   const state = generateState(opts, config);
   return createCachedBeaconState(state, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
+    shufflingCache: getMockedShufflingCache(),
     // This is a performance test, there's no need to have a global shared cache of keys
     pubkey2index: new PubkeyIndexMap(),
     index2pubkey: [],
@@ -131,6 +134,7 @@ export function generateCachedBellatrixState(opts?: TestBeaconState): CachedBeac
   const state = generateState(opts, config);
   return createCachedBeaconState(state as BeaconStateBellatrix, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
+    shufflingCache: getMockedShufflingCache(),
     // This is a performance test, there's no need to have a global shared cache of keys
     pubkey2index: new PubkeyIndexMap(),
     index2pubkey: [],
