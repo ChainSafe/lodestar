@@ -128,7 +128,7 @@ export class Network implements INetwork {
     const events = new NetworkEventBus();
     const aggregatorTracker = new AggregatorTracker();
 
-    const activeValidatorCount = chain.getHeadState().epochCtx.currentShuffling.activeIndices.length;
+    const activeValidatorCount = chain.getHeadState().epochCtx.currentActiveIndices.length;
     const initialStatus = chain.getStatus();
 
     if (opts.useWorker) {

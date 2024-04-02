@@ -71,7 +71,7 @@ export function upgradeStateToAltair(statePhase0: CachedBeaconStatePhase0): Cach
 
   const {syncCommittee, indices} = getNextSyncCommittee(
     stateAltair,
-    stateAltair.epochCtx.nextShuffling.activeIndices,
+    stateAltair.epochCtx.nextActiveIndices,
     stateAltair.epochCtx.effectiveBalanceIncrements
   );
   const syncCommitteeView = ssz.altair.SyncCommittee.toViewDU(syncCommittee);

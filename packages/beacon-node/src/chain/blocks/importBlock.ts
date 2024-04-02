@@ -366,7 +366,7 @@ export async function importBlock(
     // Note: in-lined code from previos handler of ChainEvent.checkpoint
     this.logger.verbose("Checkpoint processed", toCheckpointHex(cp));
 
-    const activeValidatorsCount = checkpointState.epochCtx.currentShuffling.activeIndices.length;
+    const activeValidatorsCount = checkpointState.epochCtx.currentActiveIndices.length;
     this.metrics?.currentActiveValidators.set(activeValidatorsCount);
     this.metrics?.currentValidators.set({status: "active"}, activeValidatorsCount);
 
