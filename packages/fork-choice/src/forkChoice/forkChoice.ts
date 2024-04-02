@@ -174,7 +174,7 @@ export class ForkChoice implements IForkChoice {
    *
    * https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/bellatrix/fork-choice.md#should_override_forkchoice_update
    */
-  predictProposerHead(headBlock: ProtoBlock, secFromSlot: number, currentSlot?: Slot): ProtoBlock {
+  predictProposerHead(headBlock: ProtoBlock, currentSlot?: Slot): ProtoBlock {
     // Skip re-org attempt if proposer boost (reorg) are disabled
     if (!this.opts?.proposerBoostEnabled) {
       this.logger?.verbose("No proposer boot reorg prediction since the related flags are disabled");
@@ -190,7 +190,7 @@ export class ForkChoice implements IForkChoice {
       return headBlock;
     }
 
-    const {prelimProposerHead} = this.getPreliminaryProposerHead(headBlock, parentBlock, secFromSlot, proposalSlot);
+    const {prelimProposerHead} = this.getPreliminaryProposerHead(headBlock, parentBlock, proposalSlot);
 
     if (prelimProposerHead === headBlock) {
       return headBlock;
@@ -234,15 +234,19 @@ export class ForkChoice implements IForkChoice {
       return {proposerHead, isHeadTimely, notReorgedReason: NotReorgedReason.ParentBlockNotAvailable};
     }
 
-    const {prelimProposerHead, prelimNotReorgedReason} = this.getPreliminaryProposerHead(
-      headBlock,
-      parentBlock,
-      secFromSlot,
-      slot
-    );
+    const {prelimProposerHead, prelimNotReorgedReason} = this.getPreliminaryProposerHead(headBlock, parentBlock, slot);
 
     if (prelimProposerHead === headBlock && prelimNotReorgedReason !== undefined) {
       return {proposerHead, isHeadTimely, notReorgedReason: prelimNotReorgedReason};
+    }
+
+    // -No reorg if we are not proposing on time.-
+    // Note: Skipping this check as store.time in Lodestar is stored in slot and not unix time
+    // https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_proposing_on_time
+    const proposerReorgCutoff = this.config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT / 2;
+    const isProposingOnTime = secFromSlot <= proposerReorgCutoff;
+    if (!isProposingOnTime) {
+      return {proposerHead, isHeadTimely, notReorgedReason: NotReorgedReason.NotProposingOnTime};
     }
 
     // No reorg if attempted reorg is more than a single slot
@@ -1350,7 +1354,6 @@ export class ForkChoice implements IForkChoice {
   private getPreliminaryProposerHead(
     headBlock: ProtoBlock,
     parentBlock: ProtoBlock,
-    secFromSlot: number,
     slot: Slot
   ): {prelimProposerHead: ProtoBlock; prelimNotReorgedReason?: NotReorgedReason} {
     let prelimProposerHead = headBlock;
@@ -1383,15 +1386,6 @@ export class ForkChoice implements IForkChoice {
     const isFinalizationOk = epochsSinceFinalization <= this.config.REORG_MAX_EPOCHS_SINCE_FINALIZATION;
     if (!isFinalizationOk) {
       return {prelimProposerHead, prelimNotReorgedReason: NotReorgedReason.ChainLongUnfinality};
-    }
-
-    // -No reorg if we are not proposing on time.-
-    // Note: Skipping this check as store.time in Lodestar is stored in slot and not unix time
-    // https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_proposing_on_time
-    const proposerReorgCutoff = this.config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT / 2;
-    const isProposingOnTime = secFromSlot <= proposerReorgCutoff;
-    if (!isProposingOnTime) {
-      return {prelimProposerHead, prelimNotReorgedReason: NotReorgedReason.NotProposingOnTime};
     }
 
     // No reorg if this reorg spans more than a single slot
