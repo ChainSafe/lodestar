@@ -118,7 +118,12 @@ describe("altair processAttestation - CachedEpochParticipation.setStatus", () =>
         const numAttesters = Math.floor((state.epochCtx.currentActiveIndices.length * ratio) / SLOTS_PER_EPOCH);
         // just get committees of slot 10
         let count = 0;
-        for (const committees of state.epochCtx.currentShuffling.committees[10]) {
+        const currentShuffling = state.epochCtx.shufflingCache.getSync(
+          state.epochCtx.epoch,
+          state.epochCtx.currentShufflingDecisionRoot
+        );
+        if (!currentShuffling) throw Error("currentShuffling not found");
+        for (const committees of currentShuffling.committees[10]) {
           for (const committee of committees) {
             currentEpochParticipation.set(committee, 0b111);
             count++;
