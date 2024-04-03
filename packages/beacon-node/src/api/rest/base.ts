@@ -98,7 +98,7 @@ export class RestApiServer {
     server.addHook("onResponse", async (req, res) => {
       const operationId = req.routeSchema.operationId as string;
       this.logger.debug(`Res ${req.id} ${operationId} - ${res.raw.statusCode}`);
-      metrics?.responseTime.observe({operationId}, res.getResponseTime() / 1000);
+      metrics?.responseTime.observe({operationId}, res.elapsedTime / 1000);
     });
 
     server.addHook("onError", async (req, _res, err) => {
