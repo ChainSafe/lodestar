@@ -76,9 +76,12 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   private readonly logger: Logger;
   private readonly metrics: Metrics | null;
 
+  private readonly format = PointFormat.uncompressed;
   private readonly blsAddVerificationRandomness: boolean;
 
-  private readonly format = PointFormat.uncompressed;
+  private blsPoolSize: number;
+  private workersBusy = 0;
+
   private readonly jobs = new LinkedList<JobQueueItem>();
   private bufferedJobs: {
     jobs: LinkedList<JobQueueItem>;
@@ -100,8 +103,8 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     this.blsAddVerificationRandomness = options.blsAddVerificationRandomness ?? true;
 
     const UV_THREADPOOL_SIZE_ENV = Number(process.env.UV_THREADPOOL_SIZE);
-    const uvThreadpoolSize = isNaN(UV_THREADPOOL_SIZE_ENV) ? 4 : UV_THREADPOOL_SIZE_ENV;
-    this.logger.info(`BLS libuv pool size: ${uvThreadpoolSize}`);
+    this.blsPoolSize = isNaN(UV_THREADPOOL_SIZE_ENV) ? 4 : UV_THREADPOOL_SIZE_ENV;
+    this.logger.info(`BLS libuv pool size: ${this.blsPoolSize}`);
     /**
      * Help users ensure that thread pool is large enough for optimal performance
      *
@@ -110,7 +113,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
      * best performance. Recommend this value to consumers
      */
     const availableParallelism = os.availableParallelism();
-    if (uvThreadpoolSize < availableParallelism) {
+    if (this.blsPoolSize < availableParallelism) {
       this.logger.warn(
         `UV_THREADPOOL_SIZE is less than available CPUs: ${availableParallelism}. This will cause performance degradation.`
       );
@@ -126,7 +129,11 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   }
 
   canAcceptWork(): boolean {
-    return this.jobs.length < MAX_JOBS_CAN_ACCEPT_WORK;
+    return (
+      this.workersBusy < this.blsPoolSize &&
+      // TODO: Should also bound the jobs queue?
+      this.jobs.length < MAX_JOBS_CAN_ACCEPT_WORK
+    );
   }
 
   async verifySignatureSets(sets: ISignatureSet[], opts: VerifySignatureOpts = {}): Promise<boolean> {
@@ -277,6 +284,8 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       return;
     }
 
+    this.workersBusy++;
+
     try {
       let startedJobsDefault = 0;
       let startedJobsSameMessage = 0;
@@ -403,6 +412,8 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
         job.reject(e as Error);
       }
     }
+
+    this.workersBusy--;
 
     // Potentially run a new job
     setTimeout(this.runJob, 0);
