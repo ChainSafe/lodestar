@@ -1,10 +1,11 @@
 import {toHexString} from "@chainsafe/ssz";
-import {phase0, Epoch, RootHex, ssz} from "@lodestar/types";
+import {phase0, Epoch, RootHex, ssz, ValidatorIndex} from "@lodestar/types";
 import {MapDef, pruneSetToMax} from "@lodestar/utils";
 import {GENESIS_SLOT} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "../../src/types.js";
 import {
+  computeEpochShuffling,
   EpochShuffling,
   IShufflingCache,
   blockToHeader,
@@ -72,16 +73,16 @@ export class MockShufflingCache implements IShufflingCache {
    */
   processState(state: CachedBeaconStateAllForks, shufflingEpoch: Epoch): EpochShuffling {
     const decisionBlockHex = getDecisionBlock(state, shufflingEpoch);
-    let shuffling: EpochShuffling;
+    let shuffling!: EpochShuffling;
     switch (shufflingEpoch) {
       case state.epochCtx.nextEpoch:
-        shuffling = state.epochCtx.nextShuffling;
+        // shuffling = state.epochCtx.nextShuffling;
         break;
       case state.epochCtx.epoch:
-        shuffling = state.epochCtx.currentShuffling;
+        // shuffling = state.epochCtx.currentShuffling;
         break;
       case state.epochCtx.previousEpoch:
-        shuffling = state.epochCtx.previousShuffling;
+        // shuffling = state.epochCtx.previousShuffling;
         break;
       default:
         throw new Error(`Shuffling not found from state ${state.slot} for epoch ${shufflingEpoch}`);
@@ -179,6 +180,27 @@ export class MockShufflingCache implements IShufflingCache {
   private add(shufflingEpoch: Epoch, decisionBlock: RootHex, cacheItem: CacheItem): void {
     this.itemsByDecisionRootByEpoch.getOrDefault(shufflingEpoch).set(decisionBlock, cacheItem);
     pruneSetToMax(this.itemsByDecisionRootByEpoch, this.maxEpochs);
+  }
+
+  async build(
+    epoch: Epoch,
+    decisionBlock: RootHex,
+    state: BeaconStateAllForks,
+    activeIndices: ArrayLike<ValidatorIndex>
+  ): Promise<EpochShuffling> {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    return this.buildSync(epoch, decisionBlock, state, activeIndices);
+  }
+
+  buildSync(
+    epoch: Epoch,
+    decisionBlock: RootHex,
+    state: BeaconStateAllForks,
+    activeIndices: ArrayLike<ValidatorIndex>
+  ): EpochShuffling {
+    const shuffling = computeEpochShuffling(state, activeIndices, epoch);
+    this.add(epoch, decisionBlock, {type: CacheItemType.shuffling, shuffling});
+    return shuffling;
   }
 }
 

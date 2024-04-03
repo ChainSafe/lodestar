@@ -174,6 +174,14 @@ export class ShufflingCache implements IShufflingCache {
     }
   }
 
+  async getOrError(shufflingEpoch: Epoch, decisionRootHex: RootHex): Promise<EpochShuffling> {
+    const shuffling = await this.get(shufflingEpoch, decisionRootHex);
+    if (!shuffling) {
+      throw new Error();
+    }
+    return shuffling;
+  }
+
   /**
    * Same to get() function but synchronous.
    */
@@ -231,7 +239,7 @@ function isPromiseCacheItem(item: CacheItem): item is PromiseCacheItem {
  *   - Special case close to genesis block, return the genesis block root
  *   - This is similar to forkchoice.getDependentRoot() function, otherwise we cannot get cached shuffing in attestation verification when syncing from genesis.
  */
-function getDecisionBlock(state: CachedBeaconStateAllForks, epoch: Epoch): RootHex {
+export function getDecisionBlock(state: CachedBeaconStateAllForks, epoch: Epoch): RootHex {
   return state.slot > GENESIS_SLOT
     ? getShufflingDecisionBlock(state, epoch)
     : toHexString(ssz.phase0.BeaconBlockHeader.hashTreeRoot(computeAnchorCheckpoint(state.config, state).blockHeader));
