@@ -18,6 +18,18 @@ export interface IShufflingCache {
   insertPromise(shufflingEpoch: Epoch, decisionRootHex: RootHex): void;
   get(shufflingEpoch: Epoch, decisionRootHex: RootHex): Promise<EpochShuffling | null>;
   getSync(shufflingEpoch: Epoch, decisionRootHex: RootHex): EpochShuffling | null;
+  build(
+    epoch: Epoch,
+    decisionBlock: RootHex,
+    state: BeaconStateAllForks,
+    activeIndices: ArrayLike<ValidatorIndex>
+  ): Promise<EpochShuffling>;
+  buildSync(
+    epoch: Epoch,
+    decisionBlock: RootHex,
+    state: BeaconStateAllForks,
+    activeIndices: ArrayLike<ValidatorIndex>
+  ): EpochShuffling;
 }
 
 /**

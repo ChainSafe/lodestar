@@ -1,11 +1,13 @@
 import {toHexString} from "@chainsafe/ssz";
 import {
+  BeaconStateAllForks,
   CachedBeaconStateAllForks,
+  computeEpochShuffling,
   EpochShuffling,
   getShufflingDecisionBlock,
   IShufflingCache,
 } from "@lodestar/state-transition";
-import {Epoch, RootHex, ssz} from "@lodestar/types";
+import {Epoch, RootHex, ssz, ValidatorIndex} from "@lodestar/types";
 import {MapDef, pruneSetToMax} from "@lodestar/utils";
 import {GENESIS_SLOT} from "@lodestar/params";
 import {Metrics} from "../metrics/metrics.js";
@@ -187,6 +189,27 @@ export class ShufflingCache implements IShufflingCache {
 
     // ignore promise
     return null;
+  }
+
+  async build(
+    epoch: Epoch,
+    decisionBlock: RootHex,
+    state: BeaconStateAllForks,
+    activeIndices: ArrayLike<ValidatorIndex>
+  ): Promise<EpochShuffling> {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    return this.buildSync(epoch, decisionBlock, state, activeIndices);
+  }
+
+  buildSync(
+    epoch: Epoch,
+    decisionBlock: RootHex,
+    state: BeaconStateAllForks,
+    activeIndices: ArrayLike<ValidatorIndex>
+  ): EpochShuffling {
+    const shuffling = computeEpochShuffling(state, activeIndices, epoch);
+    this.add(epoch, decisionBlock, {type: CacheItemType.shuffling, shuffling});
+    return shuffling;
   }
 
   private add(shufflingEpoch: Epoch, decisionBlock: RootHex, cacheItem: CacheItem): void {
