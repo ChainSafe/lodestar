@@ -2,7 +2,6 @@ import {parse as parseQueryString} from "qs";
 import {FastifyInstance, fastify} from "fastify";
 import {fastifyCors} from "@fastify/cors";
 import bearerAuthPlugin from "@fastify/bearer-auth";
-import {RouteConfig} from "@lodestar/api/beacon/server";
 import {ErrorAborted, Gauge, Histogram, Logger} from "@lodestar/utils";
 import {isLocalhostIP} from "../../util/ip.js";
 import {ApiError, NodeIsSyncing} from "../impl/errors.js";
