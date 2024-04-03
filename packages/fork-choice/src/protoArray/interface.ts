@@ -78,6 +78,9 @@ export type ProtoBlock = BlockExecution & {
   unrealizedJustifiedRoot: RootHex;
   unrealizedFinalizedEpoch: Epoch;
   unrealizedFinalizedRoot: RootHex;
+
+  // Indicate whether block arrives in a timely manner ie. before the 4 second mark
+  timeliness: boolean;
 };
 
 /**

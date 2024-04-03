@@ -75,6 +75,8 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
 
       executionPayloadBlockHash: null,
       executionStatus: ExecutionStatus.PreMerge,
+
+      timeliness: false,
     };
 
     protoArr.onBlock(block, block.slot);
