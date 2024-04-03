@@ -137,30 +137,6 @@ describe("CachedBeaconState", () => {
         const newStateBytes = newCachedState.serialize();
         expect(newStateBytes).toEqual(stateBytes);
         expect(newCachedState.hashTreeRoot()).toEqual(state.hashTreeRoot());
-        const shufflingGetter = (shufflingEpoch: Epoch, dependentRoot: RootHex): EpochShuffling | null => {
-          if (
-            shufflingEpoch === seedState.epochCtx.epoch - 1 &&
-            dependentRoot === getShufflingDecisionBlock(seedState, shufflingEpoch)
-          ) {
-            return seedState.epochCtx.previousShuffling;
-          }
-
-          if (
-            shufflingEpoch === seedState.epochCtx.epoch &&
-            dependentRoot === getShufflingDecisionBlock(seedState, shufflingEpoch)
-          ) {
-            return seedState.epochCtx.currentShuffling;
-          }
-
-          if (
-            shufflingEpoch === seedState.epochCtx.epoch + 1 &&
-            dependentRoot === getShufflingDecisionBlock(seedState, shufflingEpoch)
-          ) {
-            return seedState.epochCtx.nextShuffling;
-          }
-
-          return null;
-        };
         const cachedState = createCachedBeaconState(
           state,
           {
@@ -169,7 +145,7 @@ describe("CachedBeaconState", () => {
             pubkey2index: new PubkeyIndexMap(),
             index2pubkey: [],
           },
-          {skipSyncCommitteeCache: true, shufflingGetter}
+          {skipSyncCommitteeCache: true}
         );
         // validatorCountDelta < 0 is unrealistic and shuffling computation results in a different result
         if (validatorCountDelta >= 0) {

@@ -21,5 +21,3 @@ export type BeaconStateAllForks =
   | BeaconStateDeneb;
 
 export type BeaconStateExecutions = BeaconStateBellatrix | BeaconStateCapella | BeaconStateDeneb;
-
-export type ShufflingGetter = (shufflingEpoch: Epoch, dependentRoot: RootHex) => EpochShuffling | null;
