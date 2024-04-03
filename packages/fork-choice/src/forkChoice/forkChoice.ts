@@ -240,8 +240,6 @@ export class ForkChoice implements IForkChoice {
       return {proposerHead, isHeadTimely, notReorgedReason: prelimNotReorgedReason};
     }
 
-    // -No reorg if we are not proposing on time.-
-    // Note: Skipping this check as store.time in Lodestar is stored in slot and not unix time
     // https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_proposing_on_time
     const proposerReorgCutoff = this.config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT / 2;
     const isProposingOnTime = secFromSlot <= proposerReorgCutoff;
