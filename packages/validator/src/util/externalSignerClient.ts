@@ -169,10 +169,6 @@ export async function externalSignerUpCheck(remoteUrl: string): Promise<boolean>
     headers: {Accept: MediaType.json},
   });
 
-  if (!res.ok) {
-    throw Error(`${(await res.text()) || res.statusText}`);
-  }
-
   const data = await handleExternalSignerResponse<{status: string}>(res);
   return data.status === "OK";
 }
