@@ -9,6 +9,7 @@ import {
   getBlockInputBlobs,
   getBlockInput,
   NullBlockInput,
+  BlobSource,
 } from "../../chain/blocks/types.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {INetwork} from "../interface.js";
@@ -47,7 +48,7 @@ export async function beaconBlocksMaybeBlobsByRoot(
 
   // The last arg is to provide slot to which all blobs should be exausted in matching
   // and here it should be infinity since all bobs should match
-  return matchBlockWithBlobs(config, allBlocks, allBlobSidecars, Infinity, BlockSource.byRoot);
+  return matchBlockWithBlobs(config, allBlocks, allBlobSidecars, Infinity, BlockSource.byRoot, BlobSource.byRoot);
 }
 
 export async function unavailableBeaconBlobsByRoot(
@@ -106,5 +107,5 @@ export async function unavailableBeaconBlobsByRoot(
 
   resolveAvailability(allBlobs);
   metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.UNKNOWN_SYNC});
-  return getBlockInput.postDeneb(config, block, BlockSource.byRoot, blobs, blockBytes, blobsBytes);
+  return getBlockInput.postDeneb(config, block, BlockSource.byRoot, blobs, BlobSource.byRoot, blockBytes, blobsBytes);
 }

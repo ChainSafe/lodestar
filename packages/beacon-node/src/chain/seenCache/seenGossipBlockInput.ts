@@ -13,6 +13,7 @@ import {
   BlobsCache,
   GossipedInputType,
   getBlockInputBlobs,
+  BlobSource,
 } from "../blocks/types.js";
 import {Metrics} from "../../metrics/index.js";
 
@@ -143,6 +144,7 @@ export class SeenGossipBlockInput {
           signedBlock,
           BlockSource.gossip,
           blobs,
+          BlobSource.gossip,
           blockBytes ?? null,
           blobsBytes
         );

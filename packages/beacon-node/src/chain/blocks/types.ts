@@ -18,6 +18,14 @@ export enum BlockSource {
   byRoot = "req_resp_by_root",
 }
 
+/** Enum to represent where blobs come from */
+export enum BlobSource {
+  gossip = "gossip",
+  api = "api",
+  byRange = "req_resp_by_range",
+  byRoot = "req_resp_by_root",
+}
+
 export enum GossipedInputType {
   block = "block",
   blob = "blob",
@@ -33,7 +41,7 @@ type CachedBlobs = {
 
 export type BlockInput = {block: allForks.SignedBeaconBlock; source: BlockSource; blockBytes: Uint8Array | null} & (
   | {type: BlockInputType.preDeneb}
-  | ({type: BlockInputType.postDeneb} & BlockInputBlobs)
+  | ({type: BlockInputType.postDeneb} & {blobSource: BlobSource} & BlockInputBlobs)
   | ({type: BlockInputType.blobsPromise} & CachedBlobs)
 );
 export type NullBlockInput = {block: null; blockRootHex: RootHex; blockInputPromise: Promise<BlockInput>} & CachedBlobs;
@@ -69,6 +77,7 @@ export const getBlockInput = {
     block: allForks.SignedBeaconBlock,
     source: BlockSource,
     blobs: deneb.BlobSidecars,
+    blobSource: BlobSource,
     blockBytes: Uint8Array | null,
     blobsBytes: (Uint8Array | null)[]
   ): BlockInput {
@@ -80,6 +89,7 @@ export const getBlockInput = {
       block,
       source,
       blobs,
+      blobSource,
       blockBytes,
       blobsBytes,
     };

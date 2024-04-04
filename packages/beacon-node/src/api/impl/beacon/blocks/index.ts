@@ -4,7 +4,7 @@ import {computeEpochAtSlot, computeTimeAtSlot, reconstructFullBlockOrContents} f
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {sleep, toHex} from "@lodestar/utils";
 import {allForks, deneb, isSignedBlockContents, ProducedBlockSource} from "@lodestar/types";
-import {BlockSource, getBlockInput, ImportBlockOpts, BlockInput} from "../../../../chain/blocks/types.js";
+import {BlockSource, getBlockInput, ImportBlockOpts, BlockInput, BlobSource} from "../../../../chain/blocks/types.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 import {computeBlobSidecars} from "../../../../util/blobs.js";
@@ -52,6 +52,7 @@ export function getBeaconBlockApi({
         signedBlock,
         BlockSource.api,
         blobSidecars,
+        BlobSource.api,
         // don't bundle any bytes for block and blobs
         null,
         blobSidecars.map(() => null)

@@ -103,6 +103,8 @@ export async function importBlock(
     });
 
     if (blockInput.type === BlockInputType.postDeneb) {
+      const {blobSource} = blockInput;
+      this.metrics?.importBlock.blobBySource.inc({blobSource});
       for (const blobSidecar of blockInput.blobs) {
         const {index, kzgCommitment} = blobSidecar;
         this.emitter.emit(routes.events.EventType.blobSidecar, {
