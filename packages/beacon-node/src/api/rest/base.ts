@@ -2,7 +2,6 @@ import {parse as parseQueryString} from "qs";
 import {FastifyInstance, fastify} from "fastify";
 import {fastifyCors} from "@fastify/cors";
 import bearerAuthPlugin from "@fastify/bearer-auth";
-import {RouteConfig} from "@lodestar/api/beacon/server";
 import {ErrorAborted, Gauge, Histogram, Logger} from "@lodestar/utils";
 import {isLocalhostIP} from "../../util/ip.js";
 import {ApiError, NodeIsSyncing} from "../impl/errors.js";
@@ -84,21 +83,21 @@ export class RestApiServer {
     // Log all incoming request to debug (before parsing). TODO: Should we hook latter in the lifecycle? https://www.fastify.io/docs/latest/Lifecycle/
     // Note: Must be an async method so fastify can continue the release lifecycle. Otherwise we must call done() or the request stalls
     server.addHook("onRequest", async (req, _res) => {
-      const {operationId} = req.routeConfig as RouteConfig;
-      this.logger.debug(`Req ${req.id as string} ${req.ip} ${operationId}`);
+      const operationId = req.routeSchema.operationId as string;
+      this.logger.debug(`Req ${req.id} ${req.ip} ${operationId}`);
       metrics?.requests.inc({operationId});
     });
 
     server.addHook("preHandler", async (req, _res) => {
-      const {operationId} = req.routeConfig as RouteConfig;
-      this.logger.debug(`Exec ${req.id as string} ${req.ip} ${operationId}`);
+      const operationId = req.routeSchema.operationId as string;
+      this.logger.debug(`Exec ${req.id} ${req.ip} ${operationId}`);
     });
 
     // Log after response
     server.addHook("onResponse", async (req, res) => {
-      const {operationId} = req.routeConfig as RouteConfig;
-      this.logger.debug(`Res ${req.id as string} ${operationId} - ${res.raw.statusCode}`);
-      metrics?.responseTime.observe({operationId}, res.getResponseTime() / 1000);
+      const operationId = req.routeSchema.operationId as string;
+      this.logger.debug(`Res ${req.id} ${operationId} - ${res.raw.statusCode}`);
+      metrics?.responseTime.observe({operationId}, res.elapsedTime / 1000);
     });
 
     server.addHook("onError", async (req, _res, err) => {
@@ -106,12 +105,12 @@ export class RestApiServer {
       // Don't log NodeISSyncing errors, they happen very frequently while syncing and the validator polls duties
       if (err instanceof ErrorAborted || err instanceof NodeIsSyncing) return;
 
-      const {operationId} = req.routeConfig as RouteConfig;
+      const operationId = req.routeSchema.operationId as string;
 
       if (err instanceof ApiError) {
-        this.logger.warn(`Req ${req.id as string} ${operationId} failed`, {reason: err.message});
+        this.logger.warn(`Req ${req.id} ${operationId} failed`, {reason: err.message});
       } else {
-        this.logger.error(`Req ${req.id as string} ${operationId} error`, {}, err);
+        this.logger.error(`Req ${req.id} ${operationId} error`, {}, err);
       }
       metrics?.errors.inc({operationId});
     });
