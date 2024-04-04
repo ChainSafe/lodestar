@@ -101,21 +101,22 @@ type Web3SignerSerializedRequest = {
   signingRoot: RootHex;
 };
 
+enum MediaType {
+  json = "application/json",
+}
+
+const supportedMediaTypes = Object.values(MediaType);
+
 /**
  * Return public keys from the server.
  */
 export async function externalSignerGetKeys(externalSignerUrl: string): Promise<string[]> {
   const res = await fetch(`${externalSignerUrl}/api/v1/eth2/publicKeys`, {
     method: "GET",
-    headers: {"Content-Type": "application/json"},
+    headers: {Accept: MediaType.json},
   });
 
-  if (!res.ok) {
-    throw Error(`${(await res.text()) || res.statusText}`);
-  }
-
-  ensureCorrectWireFormat(res, WireFormat.json);
-  return JSON.parse(await res.text()) as string[];
+  return handleExternalSignerResponse<string[]>(res);
 }
 
 /**
@@ -148,24 +149,15 @@ export async function externalSignerPostSignature(
 
   const res = await fetch(`${externalSignerUrl}/api/v1/eth2/sign/${pubkeyHex}`, {
     method: "POST",
-    headers: {"Content-Type": "application/json"},
+    headers: {
+      Accept: MediaType.json,
+      "Content-Type": MediaType.json,
+    },
     body: JSON.stringify(requestObj),
   });
 
-  if (!res.ok) {
-    throw Error(`${(await res.text()) || res.statusText}`);
-  }
-
-  const resBody = await res.text();
-
-  switch (ensureCorrectWireFormat(res)) {
-    case WireFormat.json: {
-      const data = JSON.parse(resBody) as {signature: string};
-      return data.signature;
-    }
-    case WireFormat.text:
-      return resBody;
-  }
+  const data = await handleExternalSignerResponse<{signature: string}>(res);
+  return data.signature;
 }
 
 /**
@@ -174,78 +166,38 @@ export async function externalSignerPostSignature(
 export async function externalSignerUpCheck(remoteUrl: string): Promise<boolean> {
   const res = await fetch(`${remoteUrl}/upcheck`, {
     method: "GET",
-    headers: {"Content-Type": "application/json"},
+    headers: {Accept: MediaType.json},
   });
 
   if (!res.ok) {
     throw Error(`${(await res.text()) || res.statusText}`);
   }
 
-  const resBody = await res.text();
-
-  switch (ensureCorrectWireFormat(res)) {
-    case WireFormat.json: {
-      const data = JSON.parse(resBody) as {status: string};
-      return data.status === "OK";
-    }
-    case WireFormat.text:
-      return resBody === "OK";
-  }
+  const data = await handleExternalSignerResponse<{status: string}>(res);
+  return data.status === "OK";
 }
 
-function ensureCorrectWireFormat(response: Response, onlySupport?: WireFormat): WireFormat {
-  const contentType = response.headers.get("content-type");
+async function handleExternalSignerResponse<T>(res: Response): Promise<T> {
+  if (!res.ok) {
+    throw Error(`${(await res.text()) || res.statusText}`);
+  }
+
+  const contentType = res.headers.get("content-type");
   if (contentType === null) {
     throw Error("No Content-Type header found in response");
   }
 
-  const mediaType = parseContentTypeHeader(contentType);
-  if (mediaType === null) {
-    throw Error(`Unsupported response media type: ${contentType.split(";", 1)[0]}`);
-  }
-
-  const wireFormat = getWireFormat(mediaType);
-
-  if (onlySupport !== undefined && wireFormat !== onlySupport) {
-    throw Error(`Method only supports ${onlySupport} responses`);
-  }
-
-  return wireFormat;
-}
-
-enum WireFormat {
-  json = "json",
-  text = "text",
-}
-
-enum MediaType {
-  json = "application/json",
-  text = "text/plain",
-}
-
-function getWireFormat(mediaType: MediaType): WireFormat {
-  switch (mediaType) {
-    case MediaType.json:
-      return WireFormat.json;
-    case MediaType.text:
-      return WireFormat.text;
-  }
-}
-
-const supportedMediaTypes = Object.values(MediaType);
-
-function isSupportedMediaType(mediaType: string | null): mediaType is MediaType {
-  return mediaType !== null && supportedMediaTypes.includes(mediaType as MediaType);
-}
-
-function parseContentTypeHeader(contentType?: string): MediaType | null {
-  if (!contentType) {
-    return null;
-  }
-
   const mediaType = contentType.split(";", 1)[0].trim().toLowerCase();
 
-  return isSupportedMediaType(mediaType) ? mediaType : null;
+  if (!supportedMediaTypes.includes(mediaType as MediaType)) {
+    throw Error(`Unsupported response media type: ${mediaType}`);
+  }
+
+  try {
+    return JSON.parse(await res.text()) as T;
+  } catch {
+    throw Error("Invalid json response");
+  }
 }
 
 function serializerSignableMessagePayload(config: BeaconConfig, payload: SignableMessage): Record<string, unknown> {
