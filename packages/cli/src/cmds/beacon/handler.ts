@@ -1,3 +1,4 @@
+import os from "node:os";
 import path from "node:path";
 import {Registry} from "prom-client";
 import {ErrorAborted} from "@lodestar/utils";
@@ -33,6 +34,7 @@ const HOURS_TO_MS = 3600 * 1000;
  * Runs a beacon node.
  */
 export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void> {
+  process.env.UV_THREADPOOL_SIZE = os.availableParallelism().toString();
   const {config, options, beaconPaths, network, version, commit, peerId, logger} = await beaconHandlerInit(args);
 
   // initialize directories
