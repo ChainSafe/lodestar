@@ -105,8 +105,6 @@ enum MediaType {
   json = "application/json",
 }
 
-const supportedMediaTypes = Object.values(MediaType);
-
 /**
  * Return public keys from the server.
  */
@@ -185,7 +183,7 @@ async function handleExternalSignerResponse<T>(res: Response): Promise<T> {
 
   const mediaType = contentType.split(";", 1)[0].trim().toLowerCase();
 
-  if (!supportedMediaTypes.includes(mediaType as MediaType)) {
+  if (mediaType !== MediaType.json) {
     throw Error(`Unsupported response media type: ${mediaType}`);
   }
 
