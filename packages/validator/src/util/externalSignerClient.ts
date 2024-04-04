@@ -188,9 +188,9 @@ async function handleExternalSignerResponse<T>(res: Response): Promise<T> {
   }
 
   try {
-    return JSON.parse(await res.text()) as T;
-  } catch {
-    throw Error("Invalid json response");
+    return JSON.parse(await res.json()) as T;
+  } catch (e) {
+    throw Error(`Invalid json response: ${(e as Error).message}`);
   }
 }
 
