@@ -12,7 +12,7 @@ import {phase0, Slot, ssz, ValidatorIndex} from "@lodestar/types";
 import {getTemporaryBlockHeader, processSlots} from "@lodestar/state-transition";
 import {ChainEventEmitter, computeAnchorCheckpoint, initializeForkChoice} from "../../../../src/chain/index.js";
 import {generateSignedBlockAtSlot} from "../../../utils/typeGenerator.js";
-import {createFinalizedCachedBeaconStateTest} from "../../../utils/cachedBeaconState.js";
+import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState.js";
 import {generateState} from "../../../utils/state.js";
 import {generateValidators} from "../../../utils/validator.js";
 
@@ -21,7 +21,7 @@ vi.unmock("@lodestar/fork-choice");
 
 describe("LodestarForkChoice", function () {
   let forkChoice: ForkChoice;
-  const anchorState = createFinalizedCachedBeaconStateTest(
+  const anchorState = createCachedBeaconStateTest(
     generateState(
       {
         slot: 0,
@@ -53,7 +53,7 @@ describe("LodestarForkChoice", function () {
   let state: CachedBeaconStateAllForks;
 
   beforeAll(() => {
-    state = createFinalizedCachedBeaconStateTest(anchorState, config);
+    state = createCachedBeaconStateTest(anchorState, config);
   });
 
   beforeEach(() => {

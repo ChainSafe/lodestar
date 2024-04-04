@@ -8,7 +8,7 @@ import {
   SLOTS_PER_HISTORICAL_ROOT,
 } from "@lodestar/params";
 import {BeaconStateCapella, CachedBeaconStateCapella} from "../../src/index.js";
-import {createFinalizedCachedBeaconStateTest} from "./state.js";
+import {createCachedBeaconStateTest} from "./state.js";
 import {mulberry32} from "./rand.js";
 import {interopPubkeysCached} from "./interop.js";
 
@@ -63,11 +63,11 @@ export function getExpectedWithdrawalsTestData(vc: number, opts: WithdrawalOpts)
 
   state.commit();
 
-  return createFinalizedCachedBeaconStateTest(state, config, {skipSyncPubkeys: true});
+  return createCachedBeaconStateTest(state, config, {skipSyncPubkeys: true});
 }
 
 export function newStateWithValidators(numValidator: number): BeaconStateCapella {
-  // use real pubkeys to test loadUnfinalizedCachedBeaconState api
+  // use real pubkeys to test loadCachedBeaconState api
   const pubkeys = interopPubkeysCached(numValidator);
   const capellaStateType = ssz.capella.BeaconState;
   const stateView = capellaStateType.defaultViewDU();

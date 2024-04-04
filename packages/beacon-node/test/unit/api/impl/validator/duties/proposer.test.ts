@@ -7,14 +7,14 @@ import {FAR_FUTURE_EPOCH} from "../../../../../../src/constants/index.js";
 import {SYNC_TOLERANCE_EPOCHS, getValidatorApi} from "../../../../../../src/api/impl/validator/index.js";
 import {generateState, zeroProtoBlock} from "../../../../../utils/state.js";
 import {generateValidators} from "../../../../../utils/validator.js";
-import {createFinalizedCachedBeaconStateTest} from "../../../../../utils/cachedBeaconState.js";
+import {createCachedBeaconStateTest} from "../../../../../utils/cachedBeaconState.js";
 import {SyncState} from "../../../../../../src/sync/interface.js";
 
 describe("get proposers api impl", function () {
   let api: ReturnType<typeof getValidatorApi>;
   let modules: ApiTestModules;
   let state: BeaconStateAllForks;
-  let cachedState: ReturnType<typeof createFinalizedCachedBeaconStateTest>;
+  let cachedState: ReturnType<typeof createCachedBeaconStateTest>;
 
   beforeEach(function () {
     vi.useFakeTimers({now: 0});
@@ -33,7 +33,7 @@ describe("get proposers api impl", function () {
       },
       config
     );
-    cachedState = createFinalizedCachedBeaconStateTest(state, config);
+    cachedState = createCachedBeaconStateTest(state, config);
 
     modules.chain.getHeadStateAtCurrentEpoch.mockResolvedValue(cachedState);
     modules.forkChoice.getHead.mockReturnValue(zeroProtoBlock);

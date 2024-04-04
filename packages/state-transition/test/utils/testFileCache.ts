@@ -7,7 +7,7 @@ import {createChainForkConfig, ChainForkConfig} from "@lodestar/config";
 import {allForks} from "@lodestar/types";
 import {CachedBeaconStateAllForks, computeEpochAtSlot} from "../../src/index.js";
 import {testCachePath} from "../cache.js";
-import {createFinalizedCachedBeaconStateTest} from "../utils/state.js";
+import {createCachedBeaconStateTest} from "../utils/state.js";
 import {getInfuraBeaconUrl} from "./infura.js";
 
 /**
@@ -40,10 +40,7 @@ export async function getNetworkCachedState(
 
   if (fs.existsSync(filepath)) {
     const stateSsz = fs.readFileSync(filepath);
-    return createFinalizedCachedBeaconStateTest(
-      config.getForkTypes(slot).BeaconState.deserializeToViewDU(stateSsz),
-      config
-    );
+    return createCachedBeaconStateTest(config.getForkTypes(slot).BeaconState.deserializeToViewDU(stateSsz), config);
   } else {
     const stateSsz = await tryEach([
       () => downloadTestFile(fileId),
@@ -62,10 +59,7 @@ export async function getNetworkCachedState(
     ]);
 
     fs.writeFileSync(filepath, stateSsz);
-    return createFinalizedCachedBeaconStateTest(
-      config.getForkTypes(slot).BeaconState.deserializeToViewDU(stateSsz),
-      config
-    );
+    return createCachedBeaconStateTest(config.getForkTypes(slot).BeaconState.deserializeToViewDU(stateSsz), config);
   }
 }
 

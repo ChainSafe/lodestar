@@ -6,14 +6,14 @@ import {config as chainConfig} from "@lodestar/config/default";
 
 import {upgradeStateToDeneb} from "../../src/slot/upgradeStateToDeneb.js";
 import {upgradeStateToElectra} from "../../src/slot/upgradeStateToElectra.js";
-import {createFinalizedCachedBeaconState} from "../../src/cache/stateCache.js";
+import {createCachedBeaconState} from "../../src/cache/stateCache.js";
 import {PubkeyIndexMap} from "../../src/cache/pubkeyCache.js";
 
 describe("upgradeState", () => {
   it("upgradeStateToDeneb", () => {
     const capellaState = ssz.capella.BeaconState.defaultViewDU();
     const config = getConfig(ForkName.capella);
-    const stateView = createFinalizedCachedBeaconState(
+    const stateView = createCachedBeaconState(
       capellaState,
       {
         config: createBeaconConfig(config, capellaState.genesisValidatorsRoot),
@@ -28,7 +28,7 @@ describe("upgradeState", () => {
   it("upgradeStateToElectra", () => {
     const denebState = ssz.deneb.BeaconState.defaultViewDU();
     const config = getConfig(ForkName.deneb);
-    const stateView = createFinalizedCachedBeaconState(
+    const stateView = createCachedBeaconState(
       denebState,
       {
         config: createBeaconConfig(config, denebState.genesisValidatorsRoot),

@@ -1,14 +1,14 @@
 import {
   BeaconStateAllForks,
   BeaconStateCache,
-  createFinalizedCachedBeaconState,
+  createCachedBeaconState,
   createEmptyEpochCacheImmutableData,
 } from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
 
-export function createFinalizedCachedBeaconStateTest<T extends BeaconStateAllForks>(
+export function createCachedBeaconStateTest<T extends BeaconStateAllForks>(
   state: T,
   chainConfig: ChainForkConfig
 ): T & BeaconStateCache {
-  return createFinalizedCachedBeaconState<T>(state, createEmptyEpochCacheImmutableData(chainConfig, state));
+  return createCachedBeaconState<T>(state, createEmptyEpochCacheImmutableData(chainConfig, state));
 }

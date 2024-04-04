@@ -2,7 +2,7 @@ import bls from "@chainsafe/bls";
 import {CoordType} from "@chainsafe/bls/types";
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {loadState} from "../../../../src/util/loadState/loadState.js";
-import {createFinalizedCachedBeaconState} from "../../../../src/cache/stateCache.js";
+import {createCachedBeaconState} from "../../../../src/cache/stateCache.js";
 import {Index2PubkeyCache, PubkeyIndexMap} from "../../../../src/cache/pubkeyCache.js";
 import {generatePerfTestCachedStateAltair} from "../../util.js";
 
@@ -83,7 +83,7 @@ describe("loadState", function () {
         // skip computimg shuffling in performance test because in reality we have a ShufflingCache
         // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
         const shufflingGetter = () => seedState.epochCtx.currentShuffling;
-        createFinalizedCachedBeaconState(
+        createCachedBeaconState(
           migratedState,
           {
             config: seedState.config,
