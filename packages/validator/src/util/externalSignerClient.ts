@@ -174,7 +174,7 @@ export async function externalSignerUpCheck(remoteUrl: string): Promise<boolean>
 async function handleExternalSignerResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const errBody = await res.text();
-    throw Error(errBody || res.statusText);
+    throw Error(errBody ? getErrorMessage(errBody) : res.statusText);
   }
 
   const contentType = res.headers.get("content-type");
@@ -192,6 +192,19 @@ async function handleExternalSignerResponse<T>(res: Response): Promise<T> {
     return (await res.json()) as T;
   } catch (e) {
     throw Error(`Invalid json response: ${(e as Error).message}`);
+  }
+}
+
+function getErrorMessage(errBody: string): string {
+  try {
+    const errJson = JSON.parse(errBody) as {message: string};
+    if (errJson.message) {
+      return errJson.message;
+    } else {
+      return errBody;
+    }
+  } catch (e) {
+    return errBody;
   }
 }
 
