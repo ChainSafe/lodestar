@@ -196,12 +196,8 @@ async function handleExternalSignerResponse<T>(res: Response): Promise<T> {
 
 function getErrorMessage(errBody: string): string {
   try {
-    const errJson = JSON.parse(errBody) as {message: string};
-    if (errJson.message) {
-      return errJson.message;
-    } else {
-      return errBody;
-    }
+    const errJson = JSON.parse(errBody) as {message?: string};
+    return errJson.message ?? errBody;
   } catch (e) {
     return errBody;
   }
