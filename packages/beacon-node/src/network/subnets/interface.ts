@@ -27,7 +27,6 @@ export type RandBetweenFn = (min: number, max: number) => number;
 export type ShuffleFn = <T>(arr: T[]) => T[];
 
 export type SubnetsServiceOpts = {
-  deterministicLongLivedAttnets?: boolean;
   subscribeAllSubnets?: boolean;
   slotsToSubscribeBeforeAggregatorDuty: number;
 };

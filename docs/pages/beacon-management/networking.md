@@ -14,7 +14,6 @@ Some of the important Lodestar flags related to networking are:
 - [`--port6`](./beacon-cli#--port6)
 - [`--discoveryPort6`](./beacon-cli#--discoveryport6)
 - [`--bootnodes`](./beacon-cli#--bootnodes)
-- [`--deterministicLongLivedAttnets`](./beacon-cli#--deterministiclonglivedattnets)
 - [`--subscribeAllSubnets`](./beacon-cli#--subscribeallsubnets)
 - [`--disablePeerScoring`](./beacon-cli#--disablepeerscoring)
 - [`--enr.ip`](./beacon-cli#--enrip)

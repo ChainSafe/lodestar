@@ -38,15 +38,13 @@ async function resolveStateIdOrNull(
   }
 
   if (stateId === "finalized") {
-    const block = chain.forkChoice.getFinalizedBlock();
-    const state = await chain.getStateByStateRoot(block.stateRoot, opts);
-    return state && {state: state.state, executionOptimistic: isOptimisticBlock(block)};
+    const checkpoint = chain.forkChoice.getFinalizedCheckpoint();
+    return chain.getStateByCheckpoint(checkpoint);
   }
 
   if (stateId === "justified") {
-    const block = chain.forkChoice.getJustifiedBlock();
-    const state = await chain.getStateByStateRoot(block.stateRoot, opts);
-    return state && {state: state.state, executionOptimistic: isOptimisticBlock(block)};
+    const checkpoint = chain.forkChoice.getJustifiedCheckpoint();
+    return chain.getStateByCheckpoint(checkpoint);
   }
 
   if (typeof stateId === "string" && stateId.startsWith("0x")) {

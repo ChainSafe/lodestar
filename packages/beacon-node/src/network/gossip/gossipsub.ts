@@ -99,7 +99,8 @@ export class Eth2Gossipsub extends GossipSub {
       fanoutTTL: 60 * 1000,
       mcacheLength: 6,
       mcacheGossip: 3,
-      seenTTL: config.SECONDS_PER_SLOT * SLOTS_PER_EPOCH * 2,
+      // this should be in ms
+      seenTTL: config.SECONDS_PER_SLOT * SLOTS_PER_EPOCH * 2 * 1000,
       scoreParams,
       scoreThresholds: gossipScoreThresholds,
       // For a single stream, await processing each RPC before processing the next
@@ -125,6 +126,8 @@ export class Eth2Gossipsub extends GossipSub {
       asyncValidation: true,
 
       maxOutboundBufferSize: MAX_OUTBOUND_BUFFER_SIZE,
+      // serialize message once and send to all peers when publishing
+      batchPublish: true,
     });
     this.scoreParams = scoreParams;
     this.config = config;
