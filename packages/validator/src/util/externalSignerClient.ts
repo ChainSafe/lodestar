@@ -183,7 +183,6 @@ async function handleExternalSignerResponse<T>(res: Response): Promise<T> {
   }
 
   const mediaType = contentType.split(";", 1)[0].trim().toLowerCase();
-
   if (mediaType !== MediaType.json) {
     throw Error(`Unsupported response media type: ${mediaType}`);
   }
