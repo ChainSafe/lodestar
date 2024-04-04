@@ -94,6 +94,7 @@
     "@types/got": "^9.6.12",
     "@types/inquirer": "^9.0.3",
     "@types/proper-lockfile": "^4.1.4",
-    "@types/yargs": "^17.0.24"
+    "@types/yargs": "^17.0.24",
+    "fastify": "^4.26.2"
   }
 }
