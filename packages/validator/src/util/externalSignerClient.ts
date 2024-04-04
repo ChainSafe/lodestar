@@ -173,7 +173,8 @@ export async function externalSignerUpCheck(remoteUrl: string): Promise<boolean>
 
 async function handleExternalSignerResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
-    throw Error(`${(await res.text()) || res.statusText}`);
+    const errBody = await res.text();
+    throw Error(errBody || res.statusText);
   }
 
   const contentType = res.headers.get("content-type");
