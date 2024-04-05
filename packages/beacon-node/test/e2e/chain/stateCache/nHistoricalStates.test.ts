@@ -57,8 +57,10 @@ describe(
       maxBlockStates: number;
       maxCPStateEpochsInMemory: number;
       reloadCount: number;
+      // total persist count, to compare to metrics
       persistCount: number;
       numStatesInMemory: number;
+      // number of states persisted at the end of test
       numStatesPersisted: number;
       numEpochsInMemory: number;
       numEpochsPersisted: number;
@@ -162,7 +164,7 @@ describe(
        *                 16             ^  ^  ^  ^  ^
        *                               23 24 25 26  27
        *                                   ^
-       *                               PRCS at epoch 3 is persisted, CRCS is pruned
+       *                               both PRCS and CRCS are persisted
        */
       {
         name: "maxCPStateEpochsInMemory=1, reorg last slot of previous epoch",
@@ -172,12 +174,12 @@ describe(
         maxCPStateEpochsInMemory: 1,
         // PRCS at epoch 3 is available in memory so no need to reload
         reloadCount: 0,
-        // 1 cp state for epoch 0 1 2 3
-        persistCount: 4,
+        // {root0, epoch: 0} {root8, epoch: 1} {root16, epoch: 2} {root23, epoch: 3} {root24, epoch: 3}
+        persistCount: 5,
         // epoch 4, one for Current Root Checkpoint State and one for Previous Root Checkpoint State
         numStatesInMemory: 2,
-        // chain is not finalized, epoch 4 is in-memory so CP state at epoch 0 1 2 3 are persisted
-        numStatesPersisted: 4,
+        // chain is not finalized, same to persistCount
+        numStatesPersisted: 5,
         // epoch 4
         numEpochsInMemory: 1,
         // chain is not finalized, epoch 4 is in-memory so CP state at epoch 0 1 2 3 are persisted
@@ -186,7 +188,7 @@ describe(
         skip: true,
       },
       /**
-       * Block slot 28 has parent slot 23, block slot 24 25 26 and 27 are reorged
+       * Block slot 28 has parent slot 19, block slot 24 25 26 and 27 are reorged
        *                             --------------------------------|---
        *                            /      |            ^  ^         ^  ^
        *                           /       |           28  29       32  33
@@ -194,7 +196,7 @@ describe(
        *                 16        ^    ^  ^  ^  ^  ^
        *                          19   23 24 25 26  27
        *                                   ^
-       *                               PRCS at epoch 3 is persisted, CRCS is pruned
+       *                               both PRCS and CRCS are persisted since their roots are unknown to block state 33
        */
       {
         name: "maxCPStateEpochsInMemory=1, reorg middle slot of previous epoch",
@@ -204,12 +206,12 @@ describe(
         maxCPStateEpochsInMemory: 1,
         // reload CP state epoch 2 (slot = 16)
         reloadCount: 1,
-        // 1 cp state for epoch 0 1 2 3
-        persistCount: 4,
+        // {root0, epoch: 0} {root8, epoch: 1} {root16, epoch: 2} {root23, epoch: 3} {root24, epoch: 3} {root19, epoch: 3}
+        persistCount: 6,
         // epoch 4, one for Current Root Checkpoint State and one for Previous Root Checkpoint State
         numStatesInMemory: 2,
-        // chain is not finalized, epoch 4 is in-memory so CP state at epoch 0 1 2 3 are persisted
-        numStatesPersisted: 4,
+        // chain is not finalized, same to persist count
+        numStatesPersisted: 6,
         // epoch 4
         numEpochsInMemory: 1,
         // chain is not finalized, epoch 4 is in-memory so CP state at epoch 0 1 2 3 are persisted
@@ -218,15 +220,15 @@ describe(
         skip: true,
       },
       /**
-       * Block slot 28 has parent slot 23, block slot 24 25 26 and 27 are reorged
+       * Block slot 28 has parent slot 15, block slot 24 25 26 and 27 are reorged
        *                 --------------------------------------------|---
        *                /                  |            ^  ^         ^  ^
        *               /                   |           28  29       32  33
-       * |----------------|----------------|----------
-       * ^            ^  16        ^    ^  ^  ^  ^  ^
+       * |----------------|----------------|----------                  ^
+       * ^            ^  16        ^    ^  ^  ^  ^  ^                test end
        * 8           15           19   23 24 25 26  27
        *reload                             ^
-       *                               PRCS at epoch 3 is persisted, CRCS is pruned
+       *                               both PRCS and CRCS are persisted because roots are unknown to block 28
        */
       {
         name: "maxCPStateEpochsInMemory=1, reorg 2 epochs",
@@ -236,12 +238,12 @@ describe(
         maxCPStateEpochsInMemory: 1,
         // reload CP state epoch 2 (slot = 16)
         reloadCount: 1,
-        // 1 cp state for epoch 0 1, 2 CP states for epoch 2, 1 cp state for epoch 3
-        persistCount: 5,
+        // {root0, epoch: 0} {root8, epoch: 1} {root16, epoch: 2} {root15, epoch: 2} {root23, epoch: 3} {root24, epoch: 3} {root15, epoch: 3}
+        persistCount: 7,
         // epoch 4, one for Current Root Checkpoint State and one for Previous Root Checkpoint State
         numStatesInMemory: 2,
-        // chain is not finalized, epoch 4 is in-memory so CP state at epoch 0 1 2 3 are persisted, epoch 2 has 2 CP states
-        numStatesPersisted: 5,
+        // chain is not finalized, so same number to persistCount
+        numStatesPersisted: 7,
         // epoch 4
         numEpochsInMemory: 1,
         // chain is not finalized, epoch 4 is in-memory so CP state at epoch 0 1 2 3 are persisted
