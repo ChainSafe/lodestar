@@ -45,7 +45,7 @@ export async function connectNewCLNode(newNode: BeaconNode, nodes: BeaconNode[])
 }
 
 export async function connectNewELNode(newNode: ExecutionNode, nodes: ExecutionNode[]): Promise<void> {
-  const elIdentity = newNode.web3 === null ? null : await newNode.web3?.admin.nodeInfo();
+  const elIdentity = newNode.provider === null ? null : await newNode.provider?.admin.nodeInfo();
   if (elIdentity && !elIdentity.enode) return;
 
   for (const node of nodes) {
@@ -53,9 +53,9 @@ export async function connectNewELNode(newNode: ExecutionNode, nodes: ExecutionN
 
     // Nethermind had a bug in admin_addPeer RPC call
     // https://github.com/NethermindEth/nethermind/issues/4876
-    if (node.web3 !== null && node.client !== ExecutionClient.Nethermind && elIdentity) {
+    if (node.provider !== null && node.client !== ExecutionClient.Nethermind && elIdentity) {
       // `web3.admin` here refers to the Web3 plugin `Web3AdminPlugin`
-      await node.web3.admin.addPeer(elIdentity.enode);
+      await node.provider.admin.addPeer(elIdentity.enode);
     }
   }
 }

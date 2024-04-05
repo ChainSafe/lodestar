@@ -21,7 +21,7 @@ export const generateMockNode: ExecutionNodeGenerator<ExecutionClient.Mock> = (o
     ethRpcPrivateUrl,
     ttd,
     jwtSecretHex: SHARED_JWT_SECRET,
-    web3: null,
+    provider: null,
     job,
   };
 };
