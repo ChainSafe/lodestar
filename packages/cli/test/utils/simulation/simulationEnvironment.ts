@@ -13,10 +13,10 @@ import {getNodeLogger, LoggerNode} from "@lodestar/logger/node";
 import {EpochClock, MS_IN_SEC} from "./epochClock.js";
 import {ExternalSignerServer} from "./externalSignerServer.js";
 import {SimulationTracker} from "./simulationTracker.js";
-import {createBeaconNode} from "./beacon_clients/index.js";
-import {createValidatorNode, getValidatorForBeaconNode} from "./validator_clients/index.js";
+import {createBeaconNode} from "./clients/beacon/index.js";
+import {createValidatorNode, getValidatorForBeaconNode} from "./clients/validator/index.js";
 import {MOCK_ETH1_GENESIS_HASH} from "./constants.js";
-import {createExecutionNode} from "./execution_clients/index.js";
+import {createExecutionNode} from "./clients/execution/index.js";
 import {
   BeaconClient,
   ValidatorClientKeys,
