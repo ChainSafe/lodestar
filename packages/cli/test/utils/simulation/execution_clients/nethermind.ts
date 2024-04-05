@@ -2,8 +2,8 @@
 import {writeFile} from "node:fs/promises";
 import path from "node:path";
 import got from "got";
-import {ZERO_HASH} from "@lodestar/state-transition";
-import {Eth1ProviderWithAdmin} from "../Eth1ProviderWithAdmin.js";
+import {Web3} from "web3";
+import {registerWeb3Plugins} from "../Web3Plugins.js";
 import {ExecutionClient, ExecutionNodeGenerator, JobOptions, RunnerType} from "../interfaces.js";
 import {getNethermindChainSpec} from "../utils/execution_genesis.js";
 import {getNodeMountedPaths} from "../utils/paths.js";
@@ -130,11 +130,8 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
 
   const job = runner.create([startJobOptions]);
 
-  const provider = new Eth1ProviderWithAdmin(
-    {DEPOSIT_CONTRACT_ADDRESS: ZERO_HASH},
-    // To allow admin_* RPC methods had to add "ethRpcUrl"
-    {providerUrls: [ethRpcPublicUrl, engineRpcPublicUrl], jwtSecretHex: SHARED_JWT_SECRET}
-  );
+  const web3 = new Web3(ethRpcPublicUrl);
+  registerWeb3Plugins(web3);
 
   return {
     client: ExecutionClient.Nethermind,
@@ -145,7 +142,7 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
     ethRpcPrivateUrl,
     ttd,
     jwtSecretHex: SHARED_JWT_SECRET,
-    provider,
+    web3,
     job,
   };
 };

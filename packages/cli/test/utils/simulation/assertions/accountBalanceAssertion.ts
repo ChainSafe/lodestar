@@ -1,14 +1,6 @@
 import {EL_GENESIS_ACCOUNT} from "../constants.js";
 import {AssertionMatch, AssertionResult, NodePair, SimulationAssertion} from "../interfaces.js";
 
-function hexToBigInt(num: string): bigint {
-  return num.startsWith("0x") ? BigInt(num) : BigInt(`0x${num}`);
-}
-
-function bigIntToHex(num: bigint): string {
-  return `0x${num.toString(16)}`;
-}
-
 const transactionAmount = BigInt(2441406250);
 
 export function createAccountBalanceAssertion({
@@ -30,17 +22,12 @@ export function createAccountBalanceAssertion({
       return AssertionMatch.None;
     },
     async capture({node}) {
-      await node.execution.provider?.getRpc().fetch({
-        method: "eth_sendTransaction",
-        params: [
-          {
-            to: address,
-            from: EL_GENESIS_ACCOUNT,
-            gas: "0x76c0",
-            gasPrice: "0x9184e72a000",
-            value: bigIntToHex(transactionAmount),
-          },
-        ],
+      await node.execution.web3?.eth.sendTransaction({
+        to: address,
+        from: EL_GENESIS_ACCOUNT,
+        gas: "0x76c0",
+        gasPrice: "0x9184e72a000",
+        value: transactionAmount,
       });
 
       // Capture the value transferred to account
@@ -57,10 +44,7 @@ export function createAccountBalanceAssertion({
         expectedBalanceAtCurrentSlot += BigInt(store[captureSlot]);
       }
 
-      const balance = hexToBigInt(
-        (await node.execution.provider?.getRpc().fetch({method: "eth_getBalance", params: [address, "latest"]})) ??
-          "0x0"
-      );
+      const balance = await node.execution.web3?.eth.getBalance(address, "latest");
 
       if (balance !== expectedBalanceAtCurrentSlot) {
         errors.push(
