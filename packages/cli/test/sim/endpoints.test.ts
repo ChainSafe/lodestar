@@ -38,7 +38,7 @@ const env = await SimulationEnvironment.initWithDefaults(
 await env.start({runTimeoutMs: estimatedTimeoutMs});
 
 const node = env.nodes[0].beacon;
-await waitForSlot(2, env.nodes, {env, silent: true});
+await waitForSlot("Wait for 2 slots before checking endpoints", {env, slot: 2});
 
 const res = await node.api.beacon.getStateValidators("head");
 ApiError.assert(res);

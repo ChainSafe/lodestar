@@ -56,8 +56,10 @@ export async function assertRangeSync(env: SimulationEnvironment): Promise<void>
 export async function assertCheckpointSync(env: SimulationEnvironment): Promise<void> {
   if (env.clock.currentEpoch <= 4) {
     // First checkpoint finalized is at least 4 epochs
-    await waitForSlot(env.clock.getFirstSlotOfEpoch(4), [env.nodes[0]], {
+    await waitForSlot("Waiting for 4th epoch to pass, to get first finalized checkpoint", {
       env,
+      slot: env.clock.getFirstSlotOfEpoch(4),
+      nodes: [env.nodes[0]],
     });
   }
 
