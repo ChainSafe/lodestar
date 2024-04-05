@@ -1,6 +1,12 @@
 import {Web3PluginBase, Web3} from "web3";
 
 class Web3AdminPlugin extends Web3PluginBase {
+  /**
+   * The admin plugin as available via the provider object
+   * like in the example below.
+   *
+   * await node.web3.admin.addPeer(elIdentity.enode);
+   */
   pluginNamespace = "admin";
 
   async nodeInfo(): Promise<{
@@ -36,6 +42,6 @@ declare module "web3" {
   }
 }
 
-export function registerWeb3Plugins(web3: Web3): void {
+export function registerWeb3JsPlugins(web3: Web3): void {
   web3.registerPlugin(new Web3AdminPlugin());
 }

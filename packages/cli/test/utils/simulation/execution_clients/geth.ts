@@ -165,7 +165,7 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
 
   const job = runner.create([{...initJobOptions, children: [{...importJobOptions, children: [startJobOptions]}]}]);
 
-  const web3 = new Web3(ethRpcPublicUrl);
+  const provider = new Web3(ethRpcPublicUrl);
   registerWeb3Plugins(web3);
 
   return {
