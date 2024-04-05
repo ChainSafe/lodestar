@@ -256,6 +256,8 @@ export function getBeaconBlockApi({
 
       // If one block in the response contains an optimistic block, mark the entire response as optimistic
       let executionOptimistic = false;
+      // If one block in the response is non finalized, mark the entire response as unfinalized
+      let finalized = true;
 
       const result: routes.beacon.BlockHeaderResponse[] = [];
       if (filters.parentRoot) {
@@ -275,12 +277,14 @@ export function getBeaconBlockApi({
                 if (isOptimisticBlock(canonical)) {
                   executionOptimistic = true;
                 }
+                finalized = false;
               }
             }
           })
         );
         return {
           executionOptimistic,
+          finalized,
           data: result.filter(
             (item) =>
               // skip if no slot filter
@@ -297,18 +301,21 @@ export function getBeaconBlockApi({
       if (filters.slot !== undefined) {
         // future slot
         if (filters.slot > headSlot) {
-          return {executionOptimistic: false, data: []};
+          return {executionOptimistic: false, finalized: false, data: []};
         }
 
         const canonicalBlock = await chain.getCanonicalBlockAtSlot(filters.slot);
         // skip slot
         if (!canonicalBlock) {
-          return {executionOptimistic: false, data: []};
+          return {executionOptimistic: false, finalized: false, data: []};
         }
         const canonicalRoot = config
           .getForkTypes(canonicalBlock.block.message.slot)
           .BeaconBlock.hashTreeRoot(canonicalBlock.block.message);
         result.push(toBeaconHeaderResponse(config, canonicalBlock.block, true));
+        if (!canonicalBlock.finalized) {
+          finalized = false;
+        }
 
         // fork blocks
         // TODO: What is this logic?
@@ -317,6 +324,7 @@ export function getBeaconBlockApi({
             if (isOptimisticBlock(summary)) {
               executionOptimistic = true;
             }
+            finalized = false;
 
             if (summary.blockRoot !== toHexString(canonicalRoot)) {
               const block = await db.block.get(fromHexString(summary.blockRoot));
@@ -330,14 +338,16 @@ export function getBeaconBlockApi({
 
       return {
         executionOptimistic,
+        finalized,
         data: result,
       };
     },
 
     async getBlockHeader(blockId) {
-      const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
+      const {block, executionOptimistic, finalized} = await resolveBlockId(chain, blockId);
       return {
         executionOptimistic,
+        finalized,
         data: toBeaconHeaderResponse(config, block, true),
       };
     },
@@ -353,21 +363,23 @@ export function getBeaconBlockApi({
     },
 
     async getBlockV2(blockId, format?: ResponseFormat) {
-      const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
+      const {block, executionOptimistic, finalized} = await resolveBlockId(chain, blockId);
       if (format === "ssz") {
         return config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block);
       }
       return {
         executionOptimistic,
+        finalized,
         data: block,
         version: config.getForkName(block.message.slot),
       };
     },
 
     async getBlockAttestations(blockId) {
-      const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
+      const {block, executionOptimistic, finalized} = await resolveBlockId(chain, blockId);
       return {
         executionOptimistic,
+        finalized,
         data: Array.from(block.message.body.attestations),
       };
     },
@@ -381,6 +393,7 @@ export function getBeaconBlockApi({
         if (slot === head.slot) {
           return {
             executionOptimistic: isOptimisticBlock(head),
+            finalized: false,
             data: {root: fromHexString(head.blockRoot)},
           };
         }
@@ -389,6 +402,7 @@ export function getBeaconBlockApi({
           const state = chain.getHeadState();
           return {
             executionOptimistic: isOptimisticBlock(head),
+            finalized: head.slot <= chain.forkChoice.getFinalizedBlock().slot,
             data: {root: state.blockRoots.get(slot % SLOTS_PER_HISTORICAL_ROOT)},
           };
         }
@@ -396,14 +410,16 @@ export function getBeaconBlockApi({
         const head = chain.forkChoice.getHead();
         return {
           executionOptimistic: isOptimisticBlock(head),
+          finalized: false,
           data: {root: fromHexString(head.blockRoot)},
         };
       }
 
       // Slow path
-      const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
+      const {block, executionOptimistic, finalized} = await resolveBlockId(chain, blockId);
       return {
         executionOptimistic,
+        finalized,
         data: {root: config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)},
       };
     },
@@ -420,7 +436,7 @@ export function getBeaconBlockApi({
     },
 
     async getBlobSidecars(blockId, indices) {
-      const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
+      const {block, executionOptimistic, finalized} = await resolveBlockId(chain, blockId);
       const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
 
       let {blobSidecars} = (await db.blobSidecars.get(blockRoot)) ?? {};
@@ -434,6 +450,7 @@ export function getBeaconBlockApi({
 
       return {
         executionOptimistic,
+        finalized,
         data: indices ? blobSidecars.filter(({index}) => indices.includes(index)) : blobSidecars,
       };
     },

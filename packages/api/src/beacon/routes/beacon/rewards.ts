@@ -8,6 +8,7 @@ import {
   ReqSerializers,
   ContainerDataExecutionOptimistic,
   ArrayOf,
+  WithFinalized,
 } from "../../../utils/index.js";
 import {HttpStatusCode} from "../../../utils/client/httpStatusCode.js";
 import {ApiClientResponse} from "../../../interfaces.js";
@@ -21,6 +22,11 @@ import {ValidatorId} from "./state.js";
  * a later time. If the field is not present, assume the False value.
  */
 export type ExecutionOptimistic = boolean;
+
+/**
+ * True if the response references the finalized history of the chain, as determined by fork choice.
+ */
+export type Finalized = boolean;
 
 /**
  * Rewards info for a single block. Every reward value is in Gwei.
@@ -88,11 +94,15 @@ export type Api = {
    * @param blockId Block identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
    */
-  getBlockRewards(
-    blockId: BlockId
-  ): Promise<
+  getBlockRewards(blockId: BlockId): Promise<
     ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: BlockRewards; executionOptimistic: ExecutionOptimistic}},
+      {
+        [HttpStatusCode.OK]: {
+          data: BlockRewards;
+          executionOptimistic: ExecutionOptimistic;
+          finalized: Finalized;
+        };
+      },
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
     >
   >;
@@ -108,7 +118,13 @@ export type Api = {
     validatorIds?: ValidatorId[]
   ): Promise<
     ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: AttestationsRewards; executionOptimistic: ExecutionOptimistic}},
+      {
+        [HttpStatusCode.OK]: {
+          data: AttestationsRewards;
+          executionOptimistic: ExecutionOptimistic;
+          finalized: Finalized;
+        };
+      },
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
     >
   >;
@@ -126,7 +142,13 @@ export type Api = {
     validatorIds?: ValidatorId[]
   ): Promise<
     ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: SyncCommitteeRewards; executionOptimistic: ExecutionOptimistic}},
+      {
+        [HttpStatusCode.OK]: {
+          data: SyncCommitteeRewards;
+          executionOptimistic: ExecutionOptimistic;
+          finalized: Finalized;
+        };
+      },
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
     >
   >;
@@ -228,8 +250,8 @@ export function getReturnTypes(): ReturnTypes<Api> {
   );
 
   return {
-    getBlockRewards: ContainerDataExecutionOptimistic(BlockRewardsResponse),
-    getAttestationsRewards: ContainerDataExecutionOptimistic(AttestationsRewardsResponse),
-    getSyncCommitteeRewards: ContainerDataExecutionOptimistic(ArrayOf(SyncCommitteeRewardsResponse)),
+    getBlockRewards: WithFinalized(ContainerDataExecutionOptimistic(BlockRewardsResponse)),
+    getAttestationsRewards: WithFinalized(ContainerDataExecutionOptimistic(AttestationsRewardsResponse)),
+    getSyncCommitteeRewards: WithFinalized(ContainerDataExecutionOptimistic(ArrayOf(SyncCommitteeRewardsResponse))),
   };
 }

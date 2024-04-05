@@ -12,7 +12,7 @@ export async function resolveStateId(
   chain: IBeaconChain,
   stateId: routes.beacon.StateId,
   opts?: StateGetOpts
-): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean}> {
+): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean}> {
   const stateRes = await resolveStateIdOrNull(chain, stateId, opts);
   if (!stateRes) {
     throw new ApiError(404, `No state found for id '${stateId}'`);
@@ -25,12 +25,12 @@ async function resolveStateIdOrNull(
   chain: IBeaconChain,
   stateId: routes.beacon.StateId,
   opts?: StateGetOpts
-): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean} | null> {
+): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean} | null> {
   if (stateId === "head") {
     // TODO: This is not OK, head and headState must be fetched atomically
     const head = chain.forkChoice.getHead();
     const headState = chain.getHeadState();
-    return {state: headState, executionOptimistic: isOptimisticBlock(head)};
+    return {state: headState, executionOptimistic: isOptimisticBlock(head), finalized: false};
   }
 
   if (stateId === "genesis") {

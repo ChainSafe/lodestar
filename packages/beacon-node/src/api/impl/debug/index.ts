@@ -37,24 +37,24 @@ export function getDebugApi({chain, config}: Pick<ApiModules, "chain" | "config"
     },
 
     async getState(stateId: string | number, format?: ResponseFormat) {
-      const {state} = await resolveStateId(chain, stateId, {allowRegen: true});
+      const {state, executionOptimistic, finalized} = await resolveStateId(chain, stateId, {allowRegen: true});
       if (format === "ssz") {
         // Casting to any otherwise Typescript doesn't like the multi-type return
         // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
         return state.serialize() as any;
       } else {
-        return {data: state.toValue()};
+        return {data: state.toValue(), executionOptimistic, finalized};
       }
     },
 
     async getStateV2(stateId: string | number, format?: ResponseFormat) {
-      const {state} = await resolveStateId(chain, stateId, {allowRegen: true});
+      const {state, executionOptimistic, finalized} = await resolveStateId(chain, stateId, {allowRegen: true});
       if (format === "ssz") {
         // Casting to any otherwise Typescript doesn't like the multi-type return
         // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
         return state.serialize() as any;
       } else {
-        return {data: state.toValue(), version: config.getForkName(state.slot)};
+        return {data: state.toValue(), version: config.getForkName(state.slot), executionOptimistic, finalized};
       }
     },
   };

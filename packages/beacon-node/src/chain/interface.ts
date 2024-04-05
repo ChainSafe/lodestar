@@ -138,16 +138,16 @@ export interface IBeaconChain {
   getStateBySlot(
     slot: Slot,
     opts?: StateGetOpts
-  ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean} | null>;
+  ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean} | null>;
   /** Returns a local state by state root */
   getStateByStateRoot(
     stateRoot: RootHex,
     opts?: StateGetOpts
-  ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean} | null>;
+  ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean} | null>;
   /** Returns a cached state by checkpoint */
   getStateByCheckpoint(
     checkpoint: CheckpointWithHex
-  ): {state: BeaconStateAllForks; executionOptimistic: boolean} | null;
+  ): {state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean} | null;
 
   /**
    * Since we can have multiple parallel chains,
@@ -156,11 +156,13 @@ export interface IBeaconChain {
    */
   getCanonicalBlockAtSlot(
     slot: Slot
-  ): Promise<{block: allForks.SignedBeaconBlock; executionOptimistic: boolean} | null>;
+  ): Promise<{block: allForks.SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null>;
   /**
    * Get local block by root, does not fetch from the network
    */
-  getBlockByRoot(root: RootHex): Promise<{block: allForks.SignedBeaconBlock; executionOptimistic: boolean} | null>;
+  getBlockByRoot(
+    root: RootHex
+  ): Promise<{block: allForks.SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null>;
 
   getContents(beaconBlock: deneb.BeaconBlock): deneb.Contents;
 
@@ -210,7 +212,7 @@ export interface IBeaconChain {
   getAttestationsRewards(
     epoch: Epoch,
     validatorIds?: (ValidatorIndex | string)[]
-  ): Promise<{rewards: AttestationsRewards; executionOptimistic: boolean}>;
+  ): Promise<{rewards: AttestationsRewards; executionOptimistic: boolean; finalized: boolean}>;
   getSyncCommitteeRewards(
     blockRef: allForks.FullOrBlindedBeaconBlock,
     validatorIds?: (ValidatorIndex | string)[]

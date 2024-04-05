@@ -68,6 +68,8 @@ await env.tracker.assert(
     ApiError.assert(res);
 
     assert.equal(res.response.data.length, 1);
+    assert.equal(res.response.executionOptimistic, false);
+    assert.equal(res.response.finalized, false);
   }
 );
 
