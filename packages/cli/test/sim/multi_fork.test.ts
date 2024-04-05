@@ -161,7 +161,8 @@ for (const fork of env.forkConfig.forksAscendingEpochOrder) {
   env.tracker.register(createForkAssertion(fork.name, fork.epoch));
 }
 
-await waitForSlot(env.clock.getLastSlotOfEpoch(lastForkEpoch + 1), env.nodes, {
+await waitForSlot("Waiting for last forks to pass", {
+  slot: env.clock.getLastSlotOfEpoch(lastForkEpoch + 1),
   env,
 });
 

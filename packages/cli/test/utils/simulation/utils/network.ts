@@ -120,16 +120,16 @@ export async function waitForHead(
 }
 
 export async function waitForSlot(
-  slot: Slot,
-  nodes: NodePair[],
-  {silent, env}: {silent?: boolean; env: SimulationEnvironment}
+  message: string,
+  {env, slot, nodes}: {env: SimulationEnvironment; slot: Slot; nodes?: NodePair[]}
 ): Promise<void> {
-  if (!silent) {
-    console.log(`\nWaiting for slot on "${nodes.map((n) => n.beacon.id).join(",")}"`, {
-      target: slot,
-      current: env.clock.currentSlot,
-    });
-  }
+  nodes = nodes ?? env.nodes;
+
+  console.log(`\n${message}`, {
+    target: slot,
+    current: env.clock.currentSlot,
+    nodes: nodes.map((n) => n.beacon.id).join(","),
+  });
 
   await Promise.all(
     nodes.map(
