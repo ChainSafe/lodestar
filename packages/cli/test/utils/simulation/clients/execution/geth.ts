@@ -9,11 +9,11 @@ import {
   EL_GENESIS_SECRET_KEY,
   SHARED_JWT_SECRET,
   SIM_ENV_NETWORK_ID,
-} from "../constants.js";
-import {Eth1ProviderWithAdmin} from "../Eth1ProviderWithAdmin.js";
-import {ExecutionClient, ExecutionNodeGenerator, ExecutionStartMode, JobOptions, RunnerType} from "../interfaces.js";
-import {getNodeMountedPaths} from "../utils/paths.js";
-import {getNodePorts} from "../utils/ports.js";
+} from "../../constants.js";
+import {Eth1ProviderWithAdmin} from "../../eth1ProviderWithAdmin.js";
+import {ExecutionClient, ExecutionNodeGenerator, ExecutionStartMode, JobOptions, RunnerType} from "../../interfaces.js";
+import {getNodeMountedPaths} from "../../utils/paths.js";
+import {getNodePorts} from "../../utils/ports.js";
 
 export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (opts, runner) => {
   if (!process.env.GETH_BINARY_DIR && !process.env.GETH_DOCKER_IMAGE) {

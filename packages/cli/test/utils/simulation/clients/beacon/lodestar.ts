@@ -5,11 +5,11 @@ import got from "got";
 import {getClient} from "@lodestar/api/beacon";
 import {chainConfigToJson} from "@lodestar/config";
 import {LogLevel} from "@lodestar/utils";
-import {BeaconArgs} from "../../../../src/cmds/beacon/options.js";
-import {GlobalArgs} from "../../../../src/options/globalOptions.js";
-import {LODESTAR_BINARY_PATH} from "../constants.js";
-import {BeaconClient, BeaconNodeGenerator, RunnerType} from "../interfaces.js";
-import {getNodePorts} from "../utils/ports.js";
+import {BeaconArgs} from "../../../../../src/cmds/beacon/options.js";
+import {GlobalArgs} from "../../../../../src/options/globalOptions.js";
+import {LODESTAR_BINARY_PATH} from "../../constants.js";
+import {BeaconClient, BeaconNodeGenerator, RunnerType} from "../../interfaces.js";
+import {getNodePorts} from "../../utils/ports.js";
 
 export const generateLodestarBeaconNode: BeaconNodeGenerator<BeaconClient.Lodestar> = (opts, runner) => {
   const {

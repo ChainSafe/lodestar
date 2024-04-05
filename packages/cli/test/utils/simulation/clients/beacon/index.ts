@@ -1,9 +1,9 @@
 import {writeFile} from "node:fs/promises";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
-import {EL_ENGINE_BASE_PORT, SHARED_JWT_SECRET} from "../constants.js";
-import {AtLeast, BeaconClient, BeaconGeneratorOptions, BeaconNode} from "../interfaces.js";
-import {makeUniqueArray} from "../utils/index.js";
-import {ensureDirectories} from "../utils/paths.js";
+import {EL_ENGINE_BASE_PORT, SHARED_JWT_SECRET} from "../../constants.js";
+import {AtLeast, BeaconClient, BeaconGeneratorOptions, BeaconNode} from "../../interfaces.js";
+import {makeUniqueArray} from "../../utils/index.js";
+import {ensureDirectories} from "../../utils/paths.js";
 import {generateLighthouseBeaconNode} from "./lighthouse.js";
 import {generateLodestarBeaconNode} from "./lodestar.js";
 

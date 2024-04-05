@@ -7,7 +7,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {Epoch, Slot} from "@lodestar/types";
 import {LoggerNode} from "@lodestar/logger/node";
 import {isNullish} from "../../utils.js";
-import {EpochClock} from "./EpochClock.js";
+import {EpochClock} from "./epochClock.js";
 import {
   AssertionMatch,
   AtLeast,
@@ -20,7 +20,7 @@ import {
   StoreTypes,
 } from "./interfaces.js";
 import {defaultAssertions} from "./assertions/defaults/index.js";
-import {TableReporter} from "./TableReporter.js";
+import {TableReporter} from "./tableReporter.js";
 import {fetchBlock} from "./utils/network.js";
 
 const debug = createDebug("lodestar:sim:tracker");

@@ -3,12 +3,12 @@ import {writeFile} from "node:fs/promises";
 import path from "node:path";
 import got from "got";
 import {ZERO_HASH} from "@lodestar/state-transition";
-import {Eth1ProviderWithAdmin} from "../Eth1ProviderWithAdmin.js";
-import {ExecutionClient, ExecutionNodeGenerator, JobOptions, RunnerType} from "../interfaces.js";
-import {getNethermindChainSpec} from "../utils/execution_genesis.js";
-import {getNodeMountedPaths} from "../utils/paths.js";
-import {SHARED_JWT_SECRET} from "../constants.js";
-import {getNodePorts} from "../utils/ports.js";
+import {Eth1ProviderWithAdmin} from "../../eth1ProviderWithAdmin.js";
+import {ExecutionClient, ExecutionNodeGenerator, JobOptions, RunnerType} from "../../interfaces.js";
+import {getNethermindChainSpec} from "../../utils/executionGenesis.js";
+import {getNodeMountedPaths} from "../../utils/paths.js";
+import {SHARED_JWT_SECRET} from "../../constants.js";
+import {getNodePorts} from "../../utils/ports.js";
 
 export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Nethermind> = (opts, runner) => {
   if (!process.env.NETHERMIND_DOCKER_IMAGE) {

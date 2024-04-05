@@ -10,9 +10,9 @@ import {BeaconStateAllForks, interopSecretKey} from "@lodestar/state-transition"
 import {prettyMsToTime} from "@lodestar/utils";
 import {LogLevel, TimestampFormatCode} from "@lodestar/logger";
 import {getNodeLogger, LoggerNode} from "@lodestar/logger/node";
-import {EpochClock, MS_IN_SEC} from "./EpochClock.js";
-import {ExternalSignerServer} from "./ExternalSignerServer.js";
-import {SimulationTracker} from "./SimulationTracker.js";
+import {EpochClock, MS_IN_SEC} from "./epochClock.js";
+import {ExternalSignerServer} from "./externalSignerServer.js";
+import {SimulationTracker} from "./simulationTracker.js";
 import {createBeaconNode} from "./beacon_clients/index.js";
 import {createValidatorNode, getValidatorForBeaconNode} from "./validator_clients/index.js";
 import {MOCK_ETH1_GENESIS_HASH} from "./constants.js";
