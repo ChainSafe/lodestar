@@ -652,7 +652,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     const prevEpochRoot = toHexString(getBlockRootAtSlot(state, epochBoundarySlot - 1));
 
     // for each epoch, usually there are 2 rootHexes respective to the 2 checkpoint states: Previous Root Checkpoint State and Current Root Checkpoint State
-    const cpRootHexes = new Set(this.epochIndex.get(epoch) ?? []);
+    const cpRootHexes = this.epochIndex.get(epoch) ?? [];
     const persistedRootHexes = new Set<RootHex>();
 
     // 1) if there is no CRCS, persist PRCS (block 0 of epoch is skipped). In this case prevEpochRoot === epochBoundaryHex
@@ -667,7 +667,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       }
     }
 
-    for (const rootHex of this.epochIndex.get(epoch) ?? []) {
+    for (const rootHex of cpRootHexes) {
       const cpKey = toCacheKey({epoch: epoch, rootHex});
       const cacheItem = this.cache.get(cpKey);
 
