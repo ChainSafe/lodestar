@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {ChildProcess} from "node:child_process";
 import type {SecretKey} from "@chainsafe/bls/types";
-import Web3 from "web3";
+import {Web3} from "web3";
 import {Api} from "@lodestar/api";
 import {Api as KeyManagerApi} from "@lodestar/api/keymanager";
 import {ChainForkConfig} from "@lodestar/config";
@@ -208,7 +208,7 @@ export interface ExecutionNode<E extends ExecutionClient = ExecutionClient> {
    */
   readonly ethRpcPrivateUrl: string;
   readonly jwtSecretHex: string;
-  readonly web3: E extends ExecutionClient.Mock ? null : Web3;
+  readonly provider: E extends ExecutionClient.Mock ? null : Web3;
   readonly job: Job;
 }
 

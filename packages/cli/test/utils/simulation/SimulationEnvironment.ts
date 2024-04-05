@@ -317,7 +317,7 @@ export class SimulationEnvironment {
       const el = this.nodes[i].execution;
 
       // If eth1 is mock then genesis hash would be empty
-      const eth1Genesis = el.web3 === null ? {hash: MOCK_ETH1_GENESIS_HASH} : await el.web3?.eth.getBlock(0);
+      const eth1Genesis = el.provider === null ? {hash: MOCK_ETH1_GENESIS_HASH} : await el.provider?.eth.getBlock(0);
 
       if (!eth1Genesis.hash) {
         throw new Error(`Eth1 genesis not found for node "${this.nodes[i].id}"`);

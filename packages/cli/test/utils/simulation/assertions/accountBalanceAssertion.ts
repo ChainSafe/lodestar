@@ -22,7 +22,7 @@ export function createAccountBalanceAssertion({
       return AssertionMatch.None;
     },
     async capture({node}) {
-      await node.execution.web3?.eth.sendTransaction({
+      await node.execution.provider?.eth.sendTransaction({
         to: address,
         from: EL_GENESIS_ACCOUNT,
         gas: "0x76c0",
@@ -44,7 +44,7 @@ export function createAccountBalanceAssertion({
         expectedBalanceAtCurrentSlot += BigInt(store[captureSlot]);
       }
 
-      const balance = await node.execution.web3?.eth.getBalance(address, "latest");
+      const balance = await node.execution.provider?.eth.getBalance(address, "latest");
 
       if (balance !== expectedBalanceAtCurrentSlot) {
         errors.push(

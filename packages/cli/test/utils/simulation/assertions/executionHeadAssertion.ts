@@ -18,9 +18,9 @@ export function createExecutionHeadAssertion({
       return AssertionMatch.None;
     },
     async capture({node}) {
-      const blockNumber = await node.execution.web3?.eth.getBlockNumber();
+      const blockNumber = await node.execution.provider?.eth.getBlockNumber();
       if (blockNumber == null) throw new Error("Execution provider not available");
-      const executionHeadBlock = await node.execution.web3?.eth.getBlock(blockNumber);
+      const executionHeadBlock = await node.execution.provider?.eth.getBlock(blockNumber);
 
       const consensusHead = await node.beacon.api.beacon.getBlockV2("head");
       ApiError.assert(consensusHead);

@@ -2,7 +2,7 @@ import {writeFile} from "node:fs/promises";
 import path from "node:path";
 import got from "got";
 import {Web3} from "web3";
-import {registerWeb3Plugins} from "../Web3Plugins.js";
+import {registerWeb3JsPlugins} from "../Web3JsPlugins.js";
 import {ExecutionClient, ExecutionNodeGenerator, JobOptions, RunnerType} from "../interfaces.js";
 import {getNethermindChainSpec} from "../utils/execution_genesis.js";
 import {getNodeMountedPaths} from "../utils/paths.js";
@@ -129,8 +129,8 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
 
   const job = runner.create([startJobOptions]);
 
-  const web3 = new Web3(ethRpcPublicUrl);
-  registerWeb3Plugins(web3);
+  const provider = new Web3(ethRpcPublicUrl);
+  registerWeb3JsPlugins(provider);
 
   return {
     client: ExecutionClient.Nethermind,
@@ -141,7 +141,7 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
     ethRpcPrivateUrl,
     ttd,
     jwtSecretHex: SHARED_JWT_SECRET,
-    web3,
+    provider,
     job,
   };
 };

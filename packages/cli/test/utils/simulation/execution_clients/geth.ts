@@ -9,7 +9,7 @@ import {
   SHARED_JWT_SECRET,
   SIM_ENV_NETWORK_ID,
 } from "../constants.js";
-import {registerWeb3Plugins} from "../Web3Plugins.js";
+import {registerWeb3JsPlugins} from "../Web3JsPlugins.js";
 import {ExecutionClient, ExecutionNodeGenerator, ExecutionStartMode, JobOptions, RunnerType} from "../interfaces.js";
 import {getNodeMountedPaths} from "../utils/paths.js";
 import {getNodePorts} from "../utils/ports.js";
@@ -166,7 +166,7 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
   const job = runner.create([{...initJobOptions, children: [{...importJobOptions, children: [startJobOptions]}]}]);
 
   const provider = new Web3(ethRpcPublicUrl);
-  registerWeb3Plugins(web3);
+  registerWeb3JsPlugins(provider);
 
   return {
     client: ExecutionClient.Geth,
@@ -177,7 +177,7 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
     ethRpcPrivateUrl,
     ttd,
     jwtSecretHex: SHARED_JWT_SECRET,
-    web3,
+    provider,
     job,
   };
 };
