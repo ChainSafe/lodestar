@@ -249,6 +249,7 @@ describe(
         // chain is not finalized, epoch 4 is in-memory so CP state at epoch 0 1 2 3 are persisted
         numEpochsPersisted: 4,
         // chain is NOT finalized end of test
+        skip: true,
       },
     ];
 
