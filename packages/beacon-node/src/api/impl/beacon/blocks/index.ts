@@ -1,6 +1,6 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {routes, ServerApi, ResponseFormat} from "@lodestar/api";
-import {computeTimeAtSlot, reconstructFullBlockOrContents} from "@lodestar/state-transition";
+import {computeEpochAtSlot, computeTimeAtSlot, reconstructFullBlockOrContents} from "@lodestar/state-transition";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {sleep, toHex} from "@lodestar/utils";
 import {allForks, deneb, isSignedBlockContents, ProducedBlockSource} from "@lodestar/types";
@@ -400,10 +400,11 @@ export function getBeaconBlockApi({
 
         if (slot < head.slot && head.slot <= slot + SLOTS_PER_HISTORICAL_ROOT) {
           const state = chain.getHeadState();
+          const rootSlot = slot % SLOTS_PER_HISTORICAL_ROOT;
           return {
             executionOptimistic: isOptimisticBlock(head),
-            finalized: head.slot <= chain.forkChoice.getFinalizedBlock().slot,
-            data: {root: state.blockRoots.get(slot % SLOTS_PER_HISTORICAL_ROOT)},
+            finalized: computeEpochAtSlot(rootSlot) <= chain.forkChoice.getFinalizedCheckpoint().epoch,
+            data: {root: state.blockRoots.get(rootSlot)},
           };
         }
       } else if (blockId === "head") {
