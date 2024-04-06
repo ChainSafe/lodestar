@@ -1,7 +1,6 @@
 import fs from "node:fs";
 import {describe, it, vi, afterAll, afterEach} from "vitest";
-/* eslint-disable @typescript-eslint/naming-convention */
-import _ from "lodash";
+
 import {LogLevel, sleep} from "@lodestar/utils";
 import {ForkName, SLOTS_PER_EPOCH, UNSET_DEPOSIT_RECEIPTS_START_INDEX} from "@lodestar/params";
 import {electra, Epoch, Slot} from "@lodestar/types";
@@ -225,7 +224,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     }
 
     const actualDepositReceipt = payload.depositReceipts[0];
-    if (!_.isEqual(actualDepositReceipt, depositReceiptB)) {
+    if (actualDepositReceipt !== depositReceiptB) {
       throw Error(
         `Deposit receipts mismatched. Expected: ${JSON.stringify(depositReceiptB)}, actual: ${JSON.stringify(
           actualDepositReceipt
