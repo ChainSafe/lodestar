@@ -3,7 +3,7 @@ import {intDiv} from "@lodestar/utils";
 import {ChainForkConfig} from "@lodestar/config";
 import {EFFECTIVE_BALANCE_INCREMENT, ForkSeq, MAX_EFFECTIVE_BALANCE_ELECTRA, MIN_ACTIVATION_BALANCE} from "@lodestar/params";
 import {BeaconStateAllForks, CachedBeaconStateElectra} from "../types.js";
-import { hasCompoundingWithdrawalCredential, hasEth1WithdrawalCredential } from "./capella.js";
+import { hasCompoundingWithdrawalCredential} from "./electra.js";
 
 /**
  * Check if [[validator]] is active

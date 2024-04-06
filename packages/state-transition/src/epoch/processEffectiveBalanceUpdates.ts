@@ -10,7 +10,7 @@ import {
   TIMELY_TARGET_FLAG_INDEX,
 } from "@lodestar/params";
 import {EpochTransitionCache, CachedBeaconStateAllForks, BeaconStateAltair} from "../types.js";
-import {hasCompoundingWithdrawalCredential} from "../util/capella.js";
+import {hasCompoundingWithdrawalCredential} from "../util/electra.js";
 
 /** Same to https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/beacon-chain.md#has_flag */
 const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;

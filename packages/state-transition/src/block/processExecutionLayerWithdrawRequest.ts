@@ -3,7 +3,7 @@ import {electra, phase0, ssz} from "@lodestar/types";
 import {FAR_FUTURE_EPOCH, MIN_ACTIVATION_BALANCE, PENDING_PARTIAL_WITHDRAWALS_LIMIT} from "@lodestar/params";
 
 import {CachedBeaconStateElectra} from "../types.js";
-import {hasCompoundingWithdrawalCredential, hasExecutionWithdrawalCredential} from "../util/capella.js";
+import {hasCompoundingWithdrawalCredential, hasExecutionWithdrawalCredential} from "../util/electra.js";
 import {isActiveValidator} from "../util/validator.js";
 import {computeExitEpochAndUpdateChurn} from "../util/epoch.js";
 import {initiateValidatorExit} from "./initiateValidatorExit.js";

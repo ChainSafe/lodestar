@@ -3,6 +3,7 @@ import {CachedBeaconStateElectra} from "../types.js";
 import {decreaseBalance, increaseBalance} from "../util/balance.js";
 import {hasEth1WithdrawalCredential} from "../util/capella.js";
 import { getActiveBalance } from "../util/validator.js";
+import { switchToCompoundingValidator } from "../util/electra.js";
 
 /**
  * TODO Electra: jdoc
@@ -22,7 +23,8 @@ export function processPendingConsolidations(state: CachedBeaconStateElectra): v
     if (sourceValidator.withdrawableEpoch > state.epochCtx.epoch) {
       break;
     }
-
+    // Churn any target excess active balance of target and raise its max
+    switchToCompoundingValidator(state, targetIndex);
     // Move active balance to target. Excess balance is withdrawable.
     const activeBalance = getActiveBalance(state, sourceIndex);
     decreaseBalance(state, sourceIndex, activeBalance);
