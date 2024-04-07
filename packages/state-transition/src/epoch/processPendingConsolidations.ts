@@ -6,7 +6,16 @@ import { getActiveBalance } from "../util/validator.js";
 import { switchToCompoundingValidator } from "../util/electra.js";
 
 /**
- * TODO Electra: jdoc
+ * Starting from Electra:
+ * Process every `pendingConsolidation` in `state.pendingConsolidations`.
+ * Churn limit was applied when enqueueing so we don't care about the limit here
+ * 
+ * For each valid `pendingConsolidation`, update withdrawal credential of target
+ * validator to compounding, decrease balance of source validator and increase balance
+ * of target validator. 
+ * 
+ * Set `state.pendingConsolidation` to empty list at the end
+ * 
  */
 export function processPendingConsolidations(state: CachedBeaconStateElectra): void {
   let nextPendingConsolidation = 0;
@@ -30,10 +39,6 @@ export function processPendingConsolidations(state: CachedBeaconStateElectra): v
     decreaseBalance(state, sourceIndex, activeBalance);
     increaseBalance(state, targetIndex, activeBalance);
 
-    const targetValidator = state.validators.get(targetIndex);
-    if (hasEth1WithdrawalCredential(targetValidator.withdrawalCredentials)) {
-      targetValidator.withdrawalCredentials[0] = COMPOUNDING_WITHDRAWAL_PREFIX;
-    }
     nextPendingConsolidation++;
   }
 

@@ -70,6 +70,8 @@ export enum EpochTransitionStep {
   processEffectiveBalanceUpdates = "processEffectiveBalanceUpdates",
   processParticipationFlagUpdates = "processParticipationFlagUpdates",
   processSyncCommitteeUpdates = "processSyncCommitteeUpdates",
+  processPendingBalanceDeposits = "processPendingBalanceDeposits",
+  processPendingConsolidations = "processPendingConsolidations",
 }
 
 export function processEpoch(
@@ -127,9 +129,17 @@ export function processEpoch(
 
   if (fork >= ForkSeq.electra) {
     const stateElectra = state as CachedBeaconStateElectra;
-    // TODO Electra: Add timer
-    processPendingBalanceDeposits(stateElectra);
-    processPendingConsolidations(stateElectra);
+    {
+      const timer = metrics?.epochTransitionStepTime.startTimer({step: EpochTransitionStep.processPendingBalanceDeposits});
+      processPendingBalanceDeposits(stateElectra);
+      timer?.();
+    }
+
+    {
+      const timer = metrics?.epochTransitionStepTime.startTimer({step: EpochTransitionStep.processPendingConsolidations});
+      processPendingConsolidations(stateElectra);
+      timer?.();
+    }
   }
 
   {
