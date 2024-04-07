@@ -125,7 +125,7 @@ export const defaultOptions = {
   defaultGasLimit: 30_000_000,
   builderSelection: routes.validator.BuilderSelection.ExecutionOnly,
   builderAliasSelection: routes.validator.BuilderSelection.Default,
-  builderBoostFactor: BigInt(90),
+  builderBoostFactor: BigInt(100),
   // spec asks for gossip validation by default
   broadcastValidation: routes.beacon.BroadcastValidation.gossip,
   // should request fetching the locally produced block in blinded format
@@ -268,12 +268,12 @@ export class ValidatorStore {
     let boostFactor;
     switch (selection) {
       case routes.validator.BuilderSelection.Default:
-        boostFactor =
-          (this.validators.get(pubkeyHex)?.builder || {}).boostFactor ?? this.defaultProposerConfig.builder.boostFactor;
+        boostFactor = BigInt(90);
         break;
 
       case routes.validator.BuilderSelection.MaxProfit:
-        boostFactor = (this.validators.get(pubkeyHex)?.builder || {}).boostFactor ?? BigInt(100);
+        boostFactor =
+          (this.validators.get(pubkeyHex)?.builder || {}).boostFactor ?? this.defaultProposerConfig.builder.boostFactor;
         break;
 
       case routes.validator.BuilderSelection.BuilderAlways:

@@ -64,8 +64,8 @@ describe("BlockDutiesService", function () {
       signature: signedBlock.signature,
     }));
     validatorStore.getBuilderSelectionParams.mockReturnValue({
-      selection: routes.validator.BuilderSelection.Default,
-      boostFactor: BigInt(90),
+      selection: routes.validator.BuilderSelection.MaxProfit,
+      boostFactor: BigInt(100),
     });
     validatorStore.getGraffiti.mockReturnValue("aaaa");
     validatorStore.getFeeRecipient.mockReturnValue("0x00");
@@ -107,10 +107,10 @@ describe("BlockDutiesService", function () {
       false,
       {
         feeRecipient: "0x00",
-        builderSelection: routes.validator.BuilderSelection.Default,
+        builderSelection: routes.validator.BuilderSelection.MaxProfit,
         strictFeeRecipientCheck: false,
         blindedLocal: false,
-        builderBoostFactor: BigInt(90),
+        builderBoostFactor: BigInt(100),
       },
     ]);
   });

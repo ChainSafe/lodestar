@@ -37,8 +37,8 @@ const testValue = {
     feeRecipient: "0xcccccccccccccccccccccccccccccccccccccccc",
     builder: {
       gasLimit: 30000000,
-      selection: routes.validator.BuilderSelection.Default,
-      boostFactor: BigInt(90),
+      selection: routes.validator.BuilderSelection.MaxProfit,
+      boostFactor: BigInt(50),
     },
   },
 };
