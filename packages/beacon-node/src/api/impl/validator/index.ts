@@ -33,6 +33,7 @@ import {
   isBlindedBeaconBlock,
   isBlockContents,
   phase0,
+  RootHex,
 } from "@lodestar/types";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {toHex, resolveOrRacePromises, prettyWeiToEth} from "@lodestar/utils";
@@ -303,10 +304,10 @@ export function getValidatorApi({
    *   is still in flux and will be updated as and when other CL's figure this out.
    */
 
-  function notOnOptimisticBlockRoot(beaconBlockRoot: Root): void {
-    const protoBeaconBlock = chain.forkChoice.getBlock(beaconBlockRoot);
+  function notOnOptimisticBlockRoot(beaconBlockRoot: RootHex): void {
+    const protoBeaconBlock = chain.forkChoice.getBlockHex(beaconBlockRoot);
     if (!protoBeaconBlock) {
-      throw new ApiError(400, "Block not in forkChoice");
+      throw new ApiError(404, `Block not in forkChoice blockRoot=${beaconBlockRoot}`);
     }
 
     if (protoBeaconBlock.executionStatus === ExecutionStatus.Syncing)
@@ -837,7 +838,7 @@ export function getValidatorApi({
 
       // Check the execution status as validator shouldn't vote on an optimistic head
       // Check on target is sufficient as a valid target would imply a valid source
-      notOnOptimisticBlockRoot(targetRoot);
+      notOnOptimisticBlockRoot(toHexString(targetRoot));
 
       // To get the correct source we must get a state in the same epoch as the attestation's epoch.
       // An epoch transition may change state.currentJustifiedCheckpoint
@@ -870,14 +871,14 @@ export function getValidatorApi({
       // when a validator is configured with multiple beacon node urls, this beaconBlockRoot may come from another beacon node
       // and it hasn't been in our forkchoice since we haven't seen / processing that block
       // see https://github.com/ChainSafe/lodestar/issues/5063
-      if (!chain.forkChoice.hasBlock(beaconBlockRoot)) {
+      if (!chain.forkChoice.hasBlockHex(blockRootHex)) {
         network.searchUnknownSlotRoot({slot, root: blockRootHex});
         // if result of this call is false, i.e. block hasn't seen after 1 slot then the below notOnOptimisticBlockRoot call will throw error
         await chain.waitForBlock(slot, blockRootHex);
       }
 
       // Check the execution status as validator shouldn't contribute on an optimistic head
-      notOnOptimisticBlockRoot(beaconBlockRoot);
+      notOnOptimisticBlockRoot(blockRootHex);
 
       const contribution = chain.syncCommitteeMessagePool.getContribution(subcommitteeIndex, slot, blockRootHex);
       if (!contribution) {
