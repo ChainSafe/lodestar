@@ -35,13 +35,13 @@ describe("api/validator - produceBlockV3", function () {
   });
 
   const testCases: [routes.validator.BuilderSelection, number | null, number | null, number, boolean, string][] = [
-    [routes.validator.BuilderSelection.Default, 1, 0, 0, false, "builder"],
-    [routes.validator.BuilderSelection.Default, 1, 2, 1, false, "engine"],
-    [routes.validator.BuilderSelection.Default, null, 0, 0, false, "engine"],
-    [routes.validator.BuilderSelection.Default, 0, null, 1, false, "builder"],
-    [routes.validator.BuilderSelection.Default, 0, null, 1, true, "builder"],
-    [routes.validator.BuilderSelection.Default, 1, 1, 1, true, "engine"],
-    [routes.validator.BuilderSelection.Default, 2, 1, 1, true, "engine"],
+    [routes.validator.BuilderSelection.MaxProfit, 1, 0, 0, false, "builder"],
+    [routes.validator.BuilderSelection.MaxProfit, 1, 2, 1, false, "engine"],
+    [routes.validator.BuilderSelection.MaxProfit, null, 0, 0, false, "engine"],
+    [routes.validator.BuilderSelection.MaxProfit, 0, null, 1, false, "builder"],
+    [routes.validator.BuilderSelection.MaxProfit, 0, null, 1, true, "builder"],
+    [routes.validator.BuilderSelection.MaxProfit, 1, 1, 1, true, "engine"],
+    [routes.validator.BuilderSelection.MaxProfit, 2, 1, 1, true, "engine"],
 
     [routes.validator.BuilderSelection.BuilderAlways, 1, 2, 0, false, "builder"],
     [routes.validator.BuilderSelection.BuilderAlways, 1, 0, 1, false, "builder"],

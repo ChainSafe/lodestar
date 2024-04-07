@@ -61,8 +61,9 @@ export function selectBlockProductionSource({
       return ProducedBlockSource.engine;
 
     case routes.validator.BuilderSelection.Default:
+    case routes.validator.BuilderSelection.MaxProfit:
       return builderBoostFactor !== MAX_BUILDER_BOOST_FACTOR &&
-        (builderBoostFactor === BigInt(0) || engineBlockValue >= (builderBlockValue * builderBoostFactor) / BigInt(90))
+        (builderBoostFactor === BigInt(0) || engineBlockValue >= (builderBlockValue * builderBoostFactor) / BigInt(100))
         ? ProducedBlockSource.engine
         : ProducedBlockSource.builder;
 

@@ -272,6 +272,10 @@ export class ValidatorStore {
           (this.validators.get(pubkeyHex)?.builder || {}).boostFactor ?? this.defaultProposerConfig.builder.boostFactor;
         break;
 
+      case routes.validator.BuilderSelection.MaxProfit:
+        boostFactor = (this.validators.get(pubkeyHex)?.builder || {}).boostFactor ?? BigInt(100);
+        break;
+
       case routes.validator.BuilderSelection.BuilderAlways:
       case routes.validator.BuilderSelection.BuilderOnly:
         boostFactor = MAX_BUILDER_BOOST_FACTOR;

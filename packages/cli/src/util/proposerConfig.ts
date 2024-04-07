@@ -109,6 +109,8 @@ export function parseBuilderSelection(builderSelection?: string): routes.validat
     switch (builderSelection) {
       case "default":
         break;
+      case "maxprofit":
+        break;
       case "builderalways":
         break;
       case "builderonly":
