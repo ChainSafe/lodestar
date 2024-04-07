@@ -9,13 +9,15 @@ import {connectAllNodes, waitForSlot} from "../utils/simulation/utils/network.js
 const altairForkEpoch = 2;
 const bellatrixForkEpoch = 4;
 const capellaForkEpoch = 6;
-const runTillEpoch = 8;
+const denebForkEpoch = 8;
+const runTillEpoch = 10;
 const syncWaitEpoch = 2;
 
 const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
   ALTAIR_FORK_EPOCH: altairForkEpoch,
   BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
   CAPELLA_FORK_EPOCH: capellaForkEpoch,
+  DENEB_FORK_EPOCH: denebForkEpoch,
   runTillEpoch: runTillEpoch + syncWaitEpoch,
   initialNodes: 2,
 });
@@ -41,18 +43,11 @@ const env = await SimulationEnvironment.initWithDefaults(
       keysCount: 32,
       remote: true,
       beacon: BeaconClient.Lighthouse,
-      // for cross client make sure lodestar doesn't use v3 for now untill lighthouse supports
       validator: {
         type: ValidatorClient.Lodestar,
         options: {
           clientOptions: {
-            useProduceBlockV3: false,
-            // this should cause usage of produceBlockV2
-            //
-            // but if blinded production is enabled in lighthouse beacon then this should cause
-            // usage of produce blinded block which should return execution block in blinded format
-            // but only enable that after testing lighthouse beacon
-            "builder.selection": "executiononly",
+            useProduceBlockV3: true,
           },
         },
       },
@@ -71,6 +66,9 @@ await env.start({runTimeoutMs: estimatedTimeoutMs});
 await connectAllNodes(env.nodes);
 
 // Stopping at last slot usually cause assertion to fail because of missing data as node are shutting down
-await waitForSlot(env.clock.getLastSlotOfEpoch(capellaForkEpoch + 1) + 2, env.nodes, {env, silent: true});
+await waitForSlot("Waiting for the one additional epoch for capellaFork", {
+  slot: env.clock.getLastSlotOfEpoch(capellaForkEpoch + 1) + 2,
+  env,
+});
 
 await env.stop();

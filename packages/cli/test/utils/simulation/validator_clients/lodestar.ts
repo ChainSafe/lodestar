@@ -30,7 +30,7 @@ export const generateLodestarValidatorNode: ValidatorNodeGenerator<ValidatorClie
     dataDir: rootDir,
     server: beaconUrls,
     keymanager: true,
-    "keymanager.authEnabled": false,
+    "keymanager.auth": false,
     "keymanager.address": "127.0.0.1",
     "keymanager.port": ports.validator.keymanagerPort,
     logPrefix: id,

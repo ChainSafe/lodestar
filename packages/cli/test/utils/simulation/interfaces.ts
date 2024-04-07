@@ -128,6 +128,7 @@ export interface ExecutionGenesisOptions<E extends ExecutionClient = ExecutionCl
   ttd: bigint;
   cliqueSealingPeriod: number;
   shanghaiTime: number;
+  cancunTime: number;
   genesisTime: number;
   clientOptions: ExecutionClientsOptions[E];
 }

@@ -2,7 +2,6 @@ import {
   BitListType,
   BitVectorType,
   ContainerType,
-  ContainerNodeStructType,
   ListBasicType,
   ListCompositeType,
   VectorBasicType,
@@ -29,15 +28,14 @@ import {
   VALIDATOR_REGISTRY_LIMIT,
 } from "@lodestar/params";
 import * as primitiveSsz from "../primitive/sszTypes.js";
+import {ValidatorNodeStruct} from "./validator.js";
 
 const {
-  Boolean,
   Bytes32,
   UintNum64,
   UintBn64,
   Slot,
   Epoch,
-  EpochInf,
   CommitteeIndex,
   ValidatorIndex,
   Root,
@@ -226,21 +224,6 @@ export const HistoricalBatchRoots = new ContainerType(
   {typeName: "HistoricalBatchRoots", jsonCase: "eth2"}
 );
 
-export const ValidatorContainer = new ContainerType(
-  {
-    pubkey: BLSPubkey,
-    withdrawalCredentials: Bytes32,
-    effectiveBalance: UintNum64,
-    slashed: Boolean,
-    activationEligibilityEpoch: EpochInf,
-    activationEpoch: EpochInf,
-    exitEpoch: EpochInf,
-    withdrawableEpoch: EpochInf,
-  },
-  {typeName: "Validator", jsonCase: "eth2"}
-);
-
-export const ValidatorNodeStruct = new ContainerNodeStructType(ValidatorContainer.fields, ValidatorContainer.opts);
 // The main Validator type is the 'ContainerNodeStructType' version
 export const Validator = ValidatorNodeStruct;
 

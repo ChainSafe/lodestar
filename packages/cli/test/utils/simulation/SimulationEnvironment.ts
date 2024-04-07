@@ -108,7 +108,7 @@ export class SimulationEnvironment {
     this.logger.info(
       `Starting simulation environment "${this.options.id}". currentTime=${new Date(
         currentTime
-      ).toISOString()} simulationTimeout=${prettyMsToTime(opts.runTimeoutMs)}`
+      ).toISOString()} simulationTimeout=${prettyMsToTime(opts.runTimeoutMs)} rootDir=${this.options.rootDir}`
     );
 
     if (opts.runTimeoutMs > 0) {
@@ -326,6 +326,7 @@ export class SimulationEnvironment {
       const genesisState = nodeUtils.initDevState(this.forkConfig, this.keysCount, {
         genesisTime: this.options.genesisTime + this.forkConfig.GENESIS_DELAY,
         eth1BlockHash: fromHexString(eth1Genesis.hash),
+        withEth1Credentials: true,
       }).state;
 
       this.genesisState = genesisState;

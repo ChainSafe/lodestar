@@ -90,7 +90,7 @@ function renderExamplesSection(examples: CliExample[], sectionTitle?: string, lo
 function renderOption(optionName: string, option: CliOptionDefinition): string | undefined {
   if (option.hidden) return;
 
-  const commandOption = [`<h3 id='-${optionName}'><code>--${optionName}</code><a href="#-${optionName}" class="hash-link" title="--${optionName}"></a></h3>`];
+  const commandOption = [`#### \`--${optionName}\``];
   if (option.description) commandOption.push(`description: ${sanitizeDescription(option.description)}`);
 
   if (option.demandOption === true) {
@@ -254,7 +254,7 @@ export function renderCommandPage(
   globalOptions: CliCommandOptions<Record<never, never>>,
   lodestarCommand?: string
 ): string {
-  const page = [`---\ntitle: CLI Reference\ntoc_min_heading_level: 2\ntoc_max_heading_level: 5\n---\n\n# \`${cmd.command}\` CLI Command`, cmd.describe];
+  const page = [`---\ntitle: CLI Reference\n---\n\n# \`${cmd.command}\` CLI Command`, cmd.describe];
 
   const subCommands = (cmd.subcommands ?? []).map((sub) => getSubCommands(cmd.command, sub)).flat();
   if (subCommands.length > 0) {

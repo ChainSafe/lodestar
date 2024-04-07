@@ -35,8 +35,6 @@ export const defaultNetworkOptions: NetworkOptions = {
   useWorker: true,
   // default set via research in https://github.com/ChainSafe/lodestar/issues/2115
   maxYoungGenerationSizeMb: 152,
-  // subscribe to 2 subnets per node since v1.10
-  deterministicLongLivedAttnets: true,
   // subscribe 2 slots before aggregator dutied slot to get stable mesh peers as monitored on goerli
   slotsToSubscribeBeforeAggregatorDuty: 2,
   // this should only be set to true if useWorker is true

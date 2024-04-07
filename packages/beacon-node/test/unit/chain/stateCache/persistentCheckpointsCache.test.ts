@@ -867,6 +867,11 @@ describe("PersistentCheckpointStateCache", function () {
         expect(await cache.getStateOrBytes(cp0aHex)).toBeNull();
       });
 
+      // Real mainnet scenario: root1b reorg root1a, and later on it's reorged back to root1a
+      // processState is skipped for root1a because it's late, it's only called for root1b
+      // we should persist both checkpoint states {0a, 20} and {0b, 20} in order to have finalized checkpoint states later
+      //    - {0a, 20} is persisted because it's the view of root1b state
+      //    - {0b, 20} is persisted because it's unknown in root1b state
       //     epoch: 19         20           21         22          23
       //            |-----------|-----------|-----------|-----------|
       //                       ^^     ^    ^
@@ -874,7 +879,46 @@ describe("PersistentCheckpointStateCache", function () {
       //                       |0b --root1a|
       //                       |           |
       //                       0a---------root1b
-      it("reorg 1 epoch", async () => {
+      it("reorg 1 epoch, processState once", async () => {
+        fileApisBuffer = new Map();
+        const datastore = getTestDatastore(fileApisBuffer);
+        cache = new PersistentCheckpointStateCache(
+          {datastore, logger: testLogger(), shufflingCache: new ShufflingCache()},
+          {maxCPStateEpochsInMemory: 0, processLateBlock: true}
+        );
+
+        const root1a = Buffer.alloc(32, 100);
+        const state1a = states["cp0b"].clone();
+        state1a.slot = 20 * SLOTS_PER_EPOCH + SLOTS_PER_EPOCH + 3;
+        state1a.blockRoots.set(state1a.slot % SLOTS_PER_HISTORICAL_ROOT, root1a);
+        // state transition add to cache
+        cache.add(cp0b, states["cp0b"]);
+        // do not processState root1a because it's late
+
+        // no need to reload cp0b because it's available in block state
+        const root1b = Buffer.alloc(32, 101);
+        const state1b = states["cp0a"].clone();
+        state1b.slot = state1a.slot + 1;
+        state1b.blockRoots.set(state1b.slot % SLOTS_PER_HISTORICAL_ROOT, root1b);
+        // state transition add to cache
+        cache.add(cp0a, states["cp0a"]);
+
+        // need to persist 2 checkpoint states
+        expect(await cache.processState(toHexString(root1b), state1b)).toEqual(2);
+        // both are persisited
+        expect(await cache.getStateOrBytes(cp0bHex)).toEqual(stateBytes["cp0b"]);
+        expect(await cache.getStateOrBytes(cp0aHex)).toEqual(stateBytes["cp0a"]);
+      });
+
+      // Same to above, but we processState for both root1a and root1b
+      //     epoch: 19         20           21         22          23
+      //            |-----------|-----------|-----------|-----------|
+      //                       ^^     ^    ^
+      //                       ||     |    |
+      //                       |0b --root1a|
+      //                       |           |
+      //                       0a---------root1b
+      it("reorg 1 epoch, processState twice", async () => {
         expect(await cache.processState(toHexString(root0b), states["cp0b"])).toEqual(1);
         await assertPersistedCheckpointState([cp0b], [stateBytes["cp0b"]]);
         expect(await cache.getStateOrBytes(cp0aHex)).toBeNull();

@@ -323,10 +323,20 @@ export function getValidatorApi({
     {
       skipHeadChecksAndUpdate,
       commonBlockBody,
-    }: Omit<routes.validator.ExtraProduceBlockOps, "builderSelection"> & {
-      skipHeadChecksAndUpdate?: boolean;
-      commonBlockBody?: CommonBlockBody;
-    } = {}
+      parentBlockRoot: inParentBlockRoot,
+    }: Omit<routes.validator.ExtraProduceBlockOps, "builderSelection"> &
+      (
+        | {
+            skipHeadChecksAndUpdate: true;
+            commonBlockBody: CommonBlockBody;
+            parentBlockRoot: Root;
+          }
+        | {
+            skipHeadChecksAndUpdate?: false | undefined;
+            commonBlockBody?: undefined;
+            parentBlockRoot?: undefined;
+          }
+      ) = {}
   ): Promise<routes.validator.ProduceBlindedBlockRes> {
     const version = config.getForkName(slot);
     if (!isForkExecution(version)) {
@@ -344,6 +354,7 @@ export function getValidatorApi({
       throw Error("Execution builder disabled");
     }
 
+    let parentBlockRoot: Root;
     if (skipHeadChecksAndUpdate !== true) {
       notWhileSyncing();
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
@@ -352,7 +363,9 @@ export function getValidatorApi({
       // forkChoice.updateTime() might have already been called by the onSlot clock
       // handler, in which case this should just return.
       chain.forkChoice.updateTime(slot);
-      chain.recomputeForkChoiceHead();
+      parentBlockRoot = fromHexString(chain.recomputeForkChoiceHead().blockRoot);
+    } else {
+      parentBlockRoot = inParentBlockRoot;
     }
 
     let timer;
@@ -360,6 +373,7 @@ export function getValidatorApi({
       timer = metrics?.blockProductionTime.startTimer();
       const {block, executionPayloadValue, consensusBlockValue} = await chain.produceBlindedBlock({
         slot,
+        parentBlockRoot,
         randaoReveal,
         graffiti: toGraffitiBuffer(graffiti || ""),
         commonBlockBody,
@@ -393,14 +407,21 @@ export function getValidatorApi({
       strictFeeRecipientCheck,
       skipHeadChecksAndUpdate,
       commonBlockBody,
-    }: Omit<routes.validator.ExtraProduceBlockOps, "builderSelection"> & {
-      skipHeadChecksAndUpdate?: boolean;
-      commonBlockBody?: CommonBlockBody;
-    } = {}
+      parentBlockRoot: inParentBlockRoot,
+    }: Omit<routes.validator.ExtraProduceBlockOps, "builderSelection"> &
+      (
+        | {
+            skipHeadChecksAndUpdate: true;
+            commonBlockBody: CommonBlockBody;
+            parentBlockRoot: Root;
+          }
+        | {skipHeadChecksAndUpdate?: false | undefined; commonBlockBody?: undefined; parentBlockRoot?: undefined}
+      ) = {}
   ): Promise<routes.validator.ProduceBlockOrContentsRes & {shouldOverrideBuilder?: boolean}> {
     const source = ProducedBlockSource.engine;
     metrics?.blockProductionRequests.inc({source});
 
+    let parentBlockRoot: Root;
     if (skipHeadChecksAndUpdate !== true) {
       notWhileSyncing();
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
@@ -409,7 +430,9 @@ export function getValidatorApi({
       // forkChoice.updateTime() might have already been called by the onSlot clock
       // handler, in which case this should just return.
       chain.forkChoice.updateTime(slot);
-      chain.recomputeForkChoiceHead();
+      parentBlockRoot = fromHexString(chain.recomputeForkChoiceHead().blockRoot);
+    } else {
+      parentBlockRoot = inParentBlockRoot;
     }
 
     let timer;
@@ -417,6 +440,7 @@ export function getValidatorApi({
       timer = metrics?.blockProductionTime.startTimer();
       const {block, executionPayloadValue, consensusBlockValue, shouldOverrideBuilder} = await chain.produceBlock({
         slot,
+        parentBlockRoot,
         randaoReveal,
         graffiti: toGraffitiBuffer(graffiti || ""),
         feeRecipient,
@@ -484,7 +508,7 @@ export function getValidatorApi({
       // forkChoice.updateTime() might have already been called by the onSlot clock
       // handler, in which case this should just return.
       chain.forkChoice.updateTime(slot);
-      chain.recomputeForkChoiceHead();
+      const parentBlockRoot = fromHexString(chain.recomputeForkChoiceHead().blockRoot);
 
       const fork = config.getForkName(slot);
       // set some sensible opts
@@ -531,6 +555,7 @@ export function getValidatorApi({
       logger.verbose("Assembling block with produceEngineOrBuilderBlock", loggerContext);
       const commonBlockBody = await chain.produceCommonBlockBody({
         slot,
+        parentBlockRoot,
         randaoReveal,
         graffiti: toGraffitiBuffer(graffiti || ""),
       });
@@ -555,6 +580,7 @@ export function getValidatorApi({
             // skip checking and recomputing head in these individual produce calls
             skipHeadChecksAndUpdate: true,
             commonBlockBody,
+            parentBlockRoot,
           })
         : Promise.reject(new Error("Builder disabled"));
 
@@ -565,6 +591,7 @@ export function getValidatorApi({
             // skip checking and recomputing head in these individual produce calls
             skipHeadChecksAndUpdate: true,
             commonBlockBody,
+            parentBlockRoot,
           }).then((engineBlock) => {
             // Once the engine returns a block, in the event of either:
             // - suspected builder censorship
@@ -591,10 +618,6 @@ export function getValidatorApi({
         throw Error("Builder and engine both failed to produce the block within timeout");
       }
 
-      if (builder.status === "rejected" && engine.status === "rejected") {
-        throw Error("Builder and engine both failed to produce the block");
-      }
-
       if (engine.status === "rejected" && isEngineEnabled) {
         logger.warn(
           "Engine failed to produce the block",
@@ -614,6 +637,12 @@ export function getValidatorApi({
             durationMs: builder.durationMs,
           },
           builder.reason
+        );
+      }
+
+      if (builder.status === "rejected" && engine.status === "rejected") {
+        throw Error(
+          `${isBuilderEnabled && isEngineEnabled ? "Builder and engine both" : isBuilderEnabled ? "Builder" : "Engine"} failed to produce the block`
         );
       }
 

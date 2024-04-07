@@ -70,7 +70,7 @@ In case execution-layer clients are available at different locations, use `--exe
 Immediately you should see confirmation that the node has started
 
 ```txt
-pr-20 15:12:45.274[]                 info: Lodestar network=mainnet, version=v1.7.2, commit=
+Apr-20 15:12:45.274[]                 info: Lodestar network=mainnet, version=v1.7.2, commit=
 Apr-20 15:12:45.327[]                 info: Connected to LevelDB database path=/data/mt1/chain-db
 Apr-20 15:12:57.747[]                 info: Initializing beacon from a valid db state slot=6264480, epoch=195765, stateRoot=0x8133cd4d0be59c3e94405f902fe0ad68ffaa5013b525dddb6285b91ad79716f6, isWithinWeakSubjectivityPeriod=true
 Apr-20 15:13:18.077[network]          info: PeerId 16Uiu2HAmDsGet67va6VCnaW2Tu1Ae2yujiDMnmURMMWNvssER7ZQ, Multiaddrs /ip4/127.0.0.1/tcp/9000/p2p/16Uiu2HAmDsGet67va6VCnaW2Tu1Ae2yujiDMnmURMMWNvssER7ZQ,/ip4/10.244.0.199/tcp/9000/p2p/16Uiu2HAmDsGet67va6VCnaW2Tu1Ae2yujiDMnmURMMWNvssER7ZQ

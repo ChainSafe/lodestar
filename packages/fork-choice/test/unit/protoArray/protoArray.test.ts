@@ -30,6 +30,8 @@ describe("ProtoArray", () => {
         unrealizedFinalizedEpoch: genesisEpoch,
         unrealizedFinalizedRoot: stateRoot,
 
+        timeliness: false,
+
         ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
       },
       genesisSlot
@@ -53,6 +55,8 @@ describe("ProtoArray", () => {
         unrealizedFinalizedEpoch: genesisEpoch,
         unrealizedFinalizedRoot: stateRoot,
 
+        timeliness: false,
+
         ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
       },
       genesisSlot + 1
@@ -75,6 +79,8 @@ describe("ProtoArray", () => {
         unrealizedJustifiedRoot: stateRoot,
         unrealizedFinalizedEpoch: genesisEpoch,
         unrealizedFinalizedRoot: stateRoot,
+
+        timeliness: false,
 
         ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
       },

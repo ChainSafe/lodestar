@@ -18,7 +18,9 @@ export default defineConfig({
       path.join(__dirname, "./scripts/vitest/setupFiles/customMatchers.ts"),
       path.join(__dirname, "./scripts/vitest/setupFiles/dotenv.ts"),
     ],
-    reporters: ["default", "hanging-process"],
+    reporters: process.env.GITHUB_ACTIONS
+      ? ["verbose", "hanging-process", "github-actions"]
+      : ["verbose", "hanging-process"],
     coverage: {
       enabled: process.env.CI === "true",
       clean: true,

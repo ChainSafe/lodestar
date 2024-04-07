@@ -5,7 +5,6 @@ import {
   SpawnChildProcessOptions,
   execChildProcess,
   spawnChildProcess,
-  stopChildProcess,
   ChildProcessResolve,
 } from "@lodestar/test-utils";
 import {Job, JobOptions, RunnerEnv, RunnerType} from "../interfaces.js";
@@ -119,7 +118,9 @@ export class DockerRunner implements RunnerEnv<RunnerType.Docker> {
         if (childProcess === undefined) {
           return;
         }
-        await stopChildProcess(childProcess);
+        // TODO: Debug why stopping the process was not killing the container
+        // await stopChildProcess(childProcess);
+        await execChildProcess(`docker stop ${jobOption.id} --time 2 || true`, {pipeStdioToParent: true});
       },
     };
   }

@@ -6,7 +6,7 @@ import {routes} from "@lodestar/api";
 import {Metrics} from "../../metrics/index.js";
 import {StateCloneOpts} from "../regen/interface.js";
 import {MapTracker} from "./mapMetrics.js";
-import {CheckpointStateCache as CheckpointStateCacheInterface, CacheItemType} from "./types.js";
+import {CheckpointStateCache, CacheItemType} from "./types.js";
 
 export type CheckpointHex = {epoch: Epoch; rootHex: RootHex};
 const MAX_EPOCHS = 10;
@@ -16,17 +16,20 @@ const MAX_EPOCHS = 10;
  * belonging to checkpoint
  *
  * Similar API to Repository
- * TODO: rename to MemoryCheckpointStateCache in the next PR of n-historical states
  */
-export class CheckpointStateCache implements CheckpointStateCacheInterface {
+export class InMemoryCheckpointStateCache implements CheckpointStateCache {
   private readonly cache: MapTracker<string, CachedBeaconStateAllForks>;
   /** Epoch -> Set<blockRoot> */
   private readonly epochIndex = new MapDef<Epoch, Set<string>>(() => new Set<string>());
+  /**
+   * Max number of epochs allowed in the cache
+   */
+  private readonly maxEpochs: number;
   private readonly metrics: Metrics["cpStateCache"] | null | undefined;
   private preComputedCheckpoint: string | null = null;
   private preComputedCheckpointHits: number | null = null;
 
-  constructor({metrics}: {metrics?: Metrics | null}) {
+  constructor({metrics = null}: {metrics?: Metrics | null}, {maxEpochs = MAX_EPOCHS}: {maxEpochs?: number} = {}) {
     this.cache = new MapTracker(metrics?.cpStateCache);
     if (metrics) {
       this.metrics = metrics.cpStateCache;
@@ -37,6 +40,7 @@ export class CheckpointStateCache implements CheckpointStateCacheInterface {
         metrics.cpStateCache.epochSize.set({type: CacheItemType.inMemory}, this.epochIndex.size)
       );
     }
+    this.maxEpochs = maxEpochs;
   }
 
   async getOrReload(cp: CheckpointHex, opts?: StateCloneOpts): Promise<CachedBeaconStateAllForks | null> {
@@ -131,8 +135,8 @@ export class CheckpointStateCache implements CheckpointStateCacheInterface {
     const epochs = Array.from(this.epochIndex.keys()).filter(
       (epoch) => epoch !== finalizedEpoch && epoch !== justifiedEpoch
     );
-    if (epochs.length > MAX_EPOCHS) {
-      for (const epoch of epochs.slice(0, epochs.length - MAX_EPOCHS)) {
+    if (epochs.length > this.maxEpochs) {
+      for (const epoch of epochs.slice(0, epochs.length - this.maxEpochs)) {
         this.deleteAllEpochItems(epoch);
       }
     }
