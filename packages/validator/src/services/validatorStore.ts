@@ -268,6 +268,8 @@ export class ValidatorStore {
     let boostFactor;
     switch (selection) {
       case routes.validator.BuilderSelection.Default:
+        // Default value slightly favors local block to improve censorship resistance
+        // The people have spoken and so it shall be https://x.com/lodestar_eth/status/1772679499928191044
         boostFactor = BigInt(90);
         break;
 
