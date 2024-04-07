@@ -5,8 +5,8 @@ import {verifyConsolidationSignature} from "../signatureSets/index.js";
 
 import {CachedBeaconStateElectra} from "../types.js";
 import {getActiveBalance, getConsolidationChurnLimit, isActiveValidator} from "../util/validator.js";
-import {hasExecutionWithdrawalCredential} from "../util/capella.js";
-import { computeConsolidationEpochAndUpdateChurn } from "../util/epoch.js";
+import {hasExecutionWithdrawalCredential} from "../util/electra.js";
+import {computeConsolidationEpochAndUpdateChurn} from "../util/epoch.js";
 
 export function processConsolidation(
   state: CachedBeaconStateElectra,

@@ -130,13 +130,17 @@ export function processEpoch(
   if (fork >= ForkSeq.electra) {
     const stateElectra = state as CachedBeaconStateElectra;
     {
-      const timer = metrics?.epochTransitionStepTime.startTimer({step: EpochTransitionStep.processPendingBalanceDeposits});
+      const timer = metrics?.epochTransitionStepTime.startTimer({
+        step: EpochTransitionStep.processPendingBalanceDeposits,
+      });
       processPendingBalanceDeposits(stateElectra);
       timer?.();
     }
 
     {
-      const timer = metrics?.epochTransitionStepTime.startTimer({step: EpochTransitionStep.processPendingConsolidations});
+      const timer = metrics?.epochTransitionStepTime.startTimer({
+        step: EpochTransitionStep.processPendingConsolidations,
+      });
       processPendingConsolidations(stateElectra);
       timer?.();
     }

@@ -67,7 +67,10 @@ export function computeExitEpochAndUpdateChurn(state: CachedBeaconStateElectra, 
   return state.earliestExitEpoch;
 }
 
-export function computeConsolidationEpochAndUpdateChurn(state: CachedBeaconStateElectra, consolidationBalance: Gwei): number {
+export function computeConsolidationEpochAndUpdateChurn(
+  state: CachedBeaconStateElectra,
+  consolidationBalance: Gwei
+): number {
   const earliestConsolidationEpoch = computeActivationExitEpoch(state.epochCtx.epoch);
   const perEpochConsolidationChurn = getConsolidationChurnLimit(state);
 
@@ -87,7 +90,7 @@ export function computeConsolidationEpochAndUpdateChurn(state: CachedBeaconState
 
   return state.earliestConsolidationEpoch;
 }
- 
+
 /**
  * Return the current epoch of the given state.
  */

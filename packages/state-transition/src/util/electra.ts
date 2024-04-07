@@ -1,15 +1,8 @@
-import {
-  COMPOUNDING_WITHDRAWAL_PREFIX,
-  ETH1_ADDRESS_WITHDRAWAL_PREFIX,
-  ForkSeq,
-  MAX_EFFECTIVE_BALANCE,
-  MAX_EFFECTIVE_BALANCE_ELECTRA,
-  MIN_ACTIVATION_BALANCE,
-} from "@lodestar/params";
+import {COMPOUNDING_WITHDRAWAL_PREFIX, ForkSeq, MAX_EFFECTIVE_BALANCE, MIN_ACTIVATION_BALANCE} from "@lodestar/params";
 import {ValidatorIndex, phase0, ssz} from "@lodestar/types";
-import { getValidatorMaxEffectiveBalance } from "./validator";
-import { hasEth1WithdrawalCredential } from "./capella";
-import { CachedBeaconStateElectra } from "../types";
+import {CachedBeaconStateElectra} from "../types.js";
+import {getValidatorMaxEffectiveBalance} from "./validator.js";
+import {hasEth1WithdrawalCredential} from "./capella.js";
 
 type ValidatorInfo = Pick<phase0.Validator, "effectiveBalance" | "withdrawableEpoch" | "withdrawalCredentials">;
 
@@ -49,19 +42,17 @@ export function isPartiallyWithdrawableValidator(
   const {effectiveBalance, withdrawalCredentials: withdrawalCredential} = validatorCredential;
 
   if (fork < ForkSeq.capella) {
-    throw new Error(`Unsupported fork`);
+    throw new Error("Unsupported fork");
   }
 
-  const validatorMaxEffectiveBalance = (fork === ForkSeq.capella || fork === ForkSeq.deneb) ? MAX_EFFECTIVE_BALANCE : getValidatorMaxEffectiveBalance(withdrawalCredential);
+  const validatorMaxEffectiveBalance =
+    fork === ForkSeq.capella || fork === ForkSeq.deneb
+      ? MAX_EFFECTIVE_BALANCE
+      : getValidatorMaxEffectiveBalance(withdrawalCredential);
   const hasMaxEffectiveBalance = effectiveBalance === validatorMaxEffectiveBalance;
   const hasExcessBalance = balance > validatorMaxEffectiveBalance;
 
-  return (
-    hasEth1WithdrawalCredential(withdrawalCredential) &&
-    hasMaxEffectiveBalance &&
-    hasExcessBalance
-  );
-
+  return hasEth1WithdrawalCredential(withdrawalCredential) && hasMaxEffectiveBalance && hasExcessBalance;
 }
 
 export function switchToCompoundingValidator(state: CachedBeaconStateElectra, index: ValidatorIndex): void {

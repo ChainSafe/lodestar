@@ -14,10 +14,17 @@ import {
 
 import {DepositData} from "@lodestar/types/lib/phase0/types.js";
 import {DepositReceipt} from "@lodestar/types/lib/electra/types.js";
+import {BeaconConfig} from "@lodestar/config";
 import {ZERO_HASH} from "../constants/index.js";
-import {computeDomain, computeSigningRoot, hasCompoundingWithdrawalCredential, hasEth1WithdrawalCredential, increaseBalance, switchToCompoundingValidator} from "../util/index.js";
+import {
+  computeDomain,
+  computeSigningRoot,
+  hasCompoundingWithdrawalCredential,
+  hasEth1WithdrawalCredential,
+  increaseBalance,
+  switchToCompoundingValidator,
+} from "../util/index.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStateElectra} from "../types.js";
-import { BeaconConfig } from "@lodestar/config";
 
 /**
  * Process a Deposit operation. Potentially adds a new validator to the registry. Mutates the validators and balances
@@ -60,7 +67,6 @@ export function applyDeposit(
 
   const cachedIndex = epochCtx.getValidatorIndex(pubkey);
   if (cachedIndex === undefined || !Number.isSafeInteger(cachedIndex) || cachedIndex >= validators.length) {
-
     if (isValidDepositSignature(config, pubkey, withdrawalCredentials, amount, deposit.signature)) {
       addValidatorToRegistry(fork, state, pubkey, withdrawalCredentials, amount);
     }
@@ -76,9 +82,10 @@ export function applyDeposit(
       });
       stateElectra.pendingBalanceDeposits.push(pendingBalanceDeposit);
 
-      if (hasCompoundingWithdrawalCredential(withdrawalCredentials) 
-        && hasEth1WithdrawalCredential(validators.getReadonly(cachedIndex).withdrawalCredentials)
-        && isValidDepositSignature(config, pubkey, withdrawalCredentials, amount, deposit.signature)
+      if (
+        hasCompoundingWithdrawalCredential(withdrawalCredentials) &&
+        hasEth1WithdrawalCredential(validators.getReadonly(cachedIndex).withdrawalCredentials) &&
+        isValidDepositSignature(config, pubkey, withdrawalCredentials, amount, deposit.signature)
       ) {
         switchToCompoundingValidator(stateElectra, cachedIndex);
       }
@@ -145,7 +152,13 @@ function addValidatorToRegistry(
   }
 }
 
-function isValidDepositSignature(config: BeaconConfig, pubkey: Uint8Array, withdrawalCredentials: Uint8Array, amount: number, depositSignature: Uint8Array): boolean {
+function isValidDepositSignature(
+  config: BeaconConfig,
+  pubkey: Uint8Array,
+  withdrawalCredentials: Uint8Array,
+  amount: number,
+  depositSignature: Uint8Array
+): boolean {
   // verify the deposit signature (proof of posession) which is not checked by the deposit contract
   const depositMessage = {
     pubkey,

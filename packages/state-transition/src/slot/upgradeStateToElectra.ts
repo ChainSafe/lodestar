@@ -2,7 +2,7 @@ import {ssz} from "@lodestar/types";
 import {UNSET_DEPOSIT_RECEIPTS_START_INDEX} from "@lodestar/params";
 import {CachedBeaconStateDeneb} from "../types.js";
 import {CachedBeaconStateElectra, getCachedBeaconState} from "../cache/stateCache.js";
-import { hasCompoundingWithdrawalCredential, queueExcessActiveBalance } from "../util/electra.js";
+import {hasCompoundingWithdrawalCredential, queueExcessActiveBalance} from "../util/electra.js";
 
 /**
  * Upgrade a state from Capella to Deneb.
@@ -34,7 +34,6 @@ export function upgradeStateToElectra(stateDeneb: CachedBeaconStateDeneb): Cache
       queueExcessActiveBalance(stateElectra, i);
     }
   }
-
 
   // Commit new added fields ViewDU to the root node
   stateElectra.commit();

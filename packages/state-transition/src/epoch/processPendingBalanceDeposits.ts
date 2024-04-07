@@ -3,8 +3,8 @@ import {increaseBalance} from "../util/balance.js";
 import {getActivationExitChurnLimit} from "../util/validator.js";
 
 /**
- * Starting from Electra: 
- * Process pending balance deposits from state subject to churn limit.
+ * Starting from Electra:
+ * Process pending balance deposits from state subject to churn limit and depsoitBalanceToConsume.
  * For each eligible `deposit`, call `increaseBalance()`.
  * Remove the processed deposits from `state.pendingBalanceDeposits`.
  * Update `state.depositBalanceToConsume` for the next epoch
