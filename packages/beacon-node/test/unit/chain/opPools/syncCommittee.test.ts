@@ -40,7 +40,8 @@ describe("chain / opPools / SyncCommitteeMessagePool", function () {
 
   it("should propagate SyncCommitteeContribution", () => {
     clockStub.secFromSlot.mockReturnValue(0);
-    let contribution = cache.getContribution(subcommitteeIndex, syncCommittee.slot, syncCommittee.beaconBlockRoot);
+    const blockRootHex = toHexString(syncCommittee.beaconBlockRoot);
+    let contribution = cache.getContribution(subcommitteeIndex, syncCommittee.slot, blockRootHex);
     expect(contribution).not.toBeNull();
     const newSecretKey = bls.SecretKey.fromBytes(Buffer.alloc(32, 2));
     const newSyncCommittee: altair.SyncCommitteeMessage = {
@@ -52,7 +53,7 @@ describe("chain / opPools / SyncCommitteeMessagePool", function () {
     };
     const newIndicesInSubSyncCommittee = [1];
     cache.add(subcommitteeIndex, newSyncCommittee, newIndicesInSubSyncCommittee[0]);
-    contribution = cache.getContribution(subcommitteeIndex, syncCommittee.slot, syncCommittee.beaconBlockRoot);
+    contribution = cache.getContribution(subcommitteeIndex, syncCommittee.slot, blockRootHex);
     expect(contribution).not.toBeNull();
     if (contribution) {
       expect(contribution.slot).toBe(syncCommittee.slot);

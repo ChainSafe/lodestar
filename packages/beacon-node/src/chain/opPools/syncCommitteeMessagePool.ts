@@ -2,7 +2,7 @@ import {PointFormat, Signature} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
 import {BitArray, toHexString} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
-import {altair, Root, Slot, SubcommitteeIndex} from "@lodestar/types";
+import {altair, RootHex, Slot, SubcommitteeIndex} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
 import {IClock} from "../../util/clock.js";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
@@ -99,8 +99,12 @@ export class SyncCommitteeMessagePool {
   /**
    * This is for the aggregator to produce ContributionAndProof.
    */
-  getContribution(subnet: SubcommitteeIndex, slot: Slot, prevBlockRoot: Root): altair.SyncCommitteeContribution | null {
-    const contribution = this.contributionsByRootBySubnetBySlot.get(slot)?.get(subnet)?.get(toHexString(prevBlockRoot));
+  getContribution(
+    subnet: SubcommitteeIndex,
+    slot: Slot,
+    prevBlockRoot: RootHex
+  ): altair.SyncCommitteeContribution | null {
+    const contribution = this.contributionsByRootBySubnetBySlot.get(slot)?.get(subnet)?.get(prevBlockRoot);
     if (!contribution) {
       return null;
     }

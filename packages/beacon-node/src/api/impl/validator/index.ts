@@ -866,21 +866,26 @@ export function getValidatorApi({
      * @param beaconBlockRoot The block root for which to produce the contribution.
      */
     async produceSyncCommitteeContribution(slot, subcommitteeIndex, beaconBlockRoot) {
+      const blockRootHex = toHexString(beaconBlockRoot);
       // when a validator is configured with multiple beacon node urls, this beaconBlockRoot may come from another beacon node
       // and it hasn't been in our forkchoice since we haven't seen / processing that block
       // see https://github.com/ChainSafe/lodestar/issues/5063
       if (!chain.forkChoice.hasBlock(beaconBlockRoot)) {
-        const rootHex = toHexString(beaconBlockRoot);
-        network.searchUnknownSlotRoot({slot, root: rootHex});
+        network.searchUnknownSlotRoot({slot, root: blockRootHex});
         // if result of this call is false, i.e. block hasn't seen after 1 slot then the below notOnOptimisticBlockRoot call will throw error
-        await chain.waitForBlock(slot, rootHex);
+        await chain.waitForBlock(slot, blockRootHex);
       }
 
       // Check the execution status as validator shouldn't contribute on an optimistic head
       notOnOptimisticBlockRoot(beaconBlockRoot);
 
-      const contribution = chain.syncCommitteeMessagePool.getContribution(subcommitteeIndex, slot, beaconBlockRoot);
-      if (!contribution) throw new ApiError(500, "No contribution available");
+      const contribution = chain.syncCommitteeMessagePool.getContribution(subcommitteeIndex, slot, blockRootHex);
+      if (!contribution) {
+        throw new ApiError(
+          404,
+          `No sync committee contribution for slot=${slot}, subnet=${subcommitteeIndex}, blockRoot=${blockRootHex}`
+        );
+      }
 
       metrics?.production.producedSyncContributionParticipants.observe(
         contribution.aggregationBits.getTrueBitIndexes().length
