@@ -17,6 +17,7 @@ import {DepositReceipt} from "@lodestar/types/lib/electra/types.js";
 import {ZERO_HASH} from "../constants/index.js";
 import {computeDomain, computeSigningRoot, hasCompoundingWithdrawalCredential, hasEth1WithdrawalCredential, increaseBalance, switchToCompoundingValidator} from "../util/index.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStateElectra} from "../types.js";
+import { BeaconConfig } from "@lodestar/config";
 
 /**
  * Process a Deposit operation. Potentially adds a new validator to the registry. Mutates the validators and balances
@@ -59,26 +60,10 @@ export function applyDeposit(
 
   const cachedIndex = epochCtx.getValidatorIndex(pubkey);
   if (cachedIndex === undefined || !Number.isSafeInteger(cachedIndex) || cachedIndex >= validators.length) {
-    // verify the deposit signature (proof of posession) which is not checked by the deposit contract
-    const depositMessage = {
-      pubkey,
-      withdrawalCredentials,
-      amount,
-    };
-    // fork-agnostic domain since deposits are valid across forks
-    const domain = computeDomain(DOMAIN_DEPOSIT, config.GENESIS_FORK_VERSION, ZERO_HASH);
-    const signingRoot = computeSigningRoot(ssz.phase0.DepositMessage, depositMessage, domain);
-    try {
-      // Pubkeys must be checked for group + inf. This must be done only once when the validator deposit is processed
-      const publicKey = bls.PublicKey.fromBytes(pubkey, CoordType.affine, true);
-      const signature = bls.Signature.fromBytes(deposit.signature, CoordType.affine, true);
-      if (!signature.verify(publicKey, signingRoot)) {
-        return;
-      }
-    } catch (e) {
-      return; // Catch all BLS errors: failed key validation, failed signature validation, invalid signature
+
+    if (isValidDepositSignature(config, pubkey, withdrawalCredentials, amount, deposit.signature)) {
+      addValidatorToRegistry(fork, state, pubkey, withdrawalCredentials, amount);
     }
-    addValidatorToRegistry(fork, state, pubkey, withdrawalCredentials, amount);
   } else {
     if (fork < ForkSeq.electra) {
       // increase balance by deposit amount right away pre-electra
@@ -93,7 +78,7 @@ export function applyDeposit(
 
       if (hasCompoundingWithdrawalCredential(withdrawalCredentials) 
         && hasEth1WithdrawalCredential(validators.getReadonly(cachedIndex).withdrawalCredentials)
-        // TODO Electra: is_valid_deposit_signature
+        && isValidDepositSignature(config, pubkey, withdrawalCredentials, amount, deposit.signature)
       ) {
         switchToCompoundingValidator(stateElectra, cachedIndex);
       }
@@ -157,5 +142,26 @@ function addValidatorToRegistry(
       amount: BigInt(amount),
     });
     stateElectra.pendingBalanceDeposits.push(pendingBalanceDeposit);
+  }
+}
+
+function isValidDepositSignature(config: BeaconConfig, pubkey: Uint8Array, withdrawalCredentials: Uint8Array, amount: number, depositSignature: Uint8Array): boolean {
+  // verify the deposit signature (proof of posession) which is not checked by the deposit contract
+  const depositMessage = {
+    pubkey,
+    withdrawalCredentials,
+    amount,
+  };
+  // fork-agnostic domain since deposits are valid across forks
+  const domain = computeDomain(DOMAIN_DEPOSIT, config.GENESIS_FORK_VERSION, ZERO_HASH);
+  const signingRoot = computeSigningRoot(ssz.phase0.DepositMessage, depositMessage, domain);
+  try {
+    // Pubkeys must be checked for group + inf. This must be done only once when the validator deposit is processed
+    const publicKey = bls.PublicKey.fromBytes(pubkey, CoordType.affine, true);
+    const signature = bls.Signature.fromBytes(depositSignature, CoordType.affine, true);
+
+    return signature.verify(publicKey, signingRoot);
+  } catch (e) {
+    return false; // Catch all BLS errors: failed key validation, failed signature validation, invalid signature
   }
 }
