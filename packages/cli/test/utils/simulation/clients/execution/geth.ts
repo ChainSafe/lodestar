@@ -1,8 +1,7 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import {writeFile} from "node:fs/promises";
 import path from "node:path";
 import got from "got";
-import {ZERO_HASH} from "@lodestar/state-transition";
+import {Web3} from "web3";
 import {
   EL_GENESIS_ACCOUNT,
   EL_GENESIS_PASSWORD,
@@ -10,7 +9,7 @@ import {
   SHARED_JWT_SECRET,
   SIM_ENV_NETWORK_ID,
 } from "../../constants.js";
-import {Eth1ProviderWithAdmin} from "../../eth1ProviderWithAdmin.js";
+import {registerWeb3JsPlugins} from "../../web3JsPlugins.js";
 import {ExecutionClient, ExecutionNodeGenerator, ExecutionStartMode, JobOptions, RunnerType} from "../../interfaces.js";
 import {getNodeMountedPaths} from "../../utils/paths.js";
 import {getNodePorts} from "../../utils/ports.js";
@@ -166,11 +165,8 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
 
   const job = runner.create([{...initJobOptions, children: [{...importJobOptions, children: [startJobOptions]}]}]);
 
-  const provider = new Eth1ProviderWithAdmin(
-    {DEPOSIT_CONTRACT_ADDRESS: ZERO_HASH},
-    // To allow admin_* RPC methods had to add "ethRpcUrl"
-    {providerUrls: [ethRpcPublicUrl, engineRpcPublicUrl], jwtSecretHex: SHARED_JWT_SECRET}
-  );
+  const provider = new Web3(ethRpcPublicUrl);
+  registerWeb3JsPlugins(provider);
 
   return {
     client: ExecutionClient.Geth,

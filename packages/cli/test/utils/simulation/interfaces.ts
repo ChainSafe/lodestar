@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {ChildProcess} from "node:child_process";
 import type {SecretKey} from "@chainsafe/bls/types";
+import {Web3} from "web3";
 import {Api} from "@lodestar/api";
 import {Api as KeyManagerApi} from "@lodestar/api/keymanager";
 import {ChainForkConfig} from "@lodestar/config";
@@ -11,7 +12,6 @@ import {BeaconArgs} from "../../../src/cmds/beacon/options.js";
 import {IValidatorCliArgs} from "../../../src/cmds/validator/options.js";
 import {GlobalArgs} from "../../../src/options/index.js";
 import {EpochClock} from "./epochClock.js";
-import {Eth1ProviderWithAdmin} from "./eth1ProviderWithAdmin.js";
 
 export type NodeId = string;
 
@@ -208,7 +208,7 @@ export interface ExecutionNode<E extends ExecutionClient = ExecutionClient> {
    */
   readonly ethRpcPrivateUrl: string;
   readonly jwtSecretHex: string;
-  readonly provider: E extends ExecutionClient.Mock ? null : Eth1ProviderWithAdmin;
+  readonly provider: E extends ExecutionClient.Mock ? null : Web3;
   readonly job: Job;
 }
 
