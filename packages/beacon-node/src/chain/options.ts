@@ -96,6 +96,7 @@ export const defaultChainOptions: IChainOptions = {
   blsVerifyAllMultiThread: false,
   disableBlsBatchVerify: false,
   proposerBoostEnabled: true,
+  proposerBoostReorgEnabled: false,
   computeUnrealized: true,
   safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
   suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,

@@ -29,7 +29,7 @@ import {
   bellatrix,
   isBlindedBeaconBlock,
 } from "@lodestar/types";
-import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {Logger, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toHex} from "@lodestar/utils";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -279,7 +279,8 @@ export class BeaconChain implements IBeaconChain {
       clock.currentSlot,
       cachedState,
       opts,
-      this.justifiedBalancesGetter.bind(this)
+      this.justifiedBalancesGetter.bind(this),
+      logger
     );
     const regen = new QueuedStateRegenerator({
       config,
@@ -691,10 +692,38 @@ export class BeaconChain implements IBeaconChain {
 
   recomputeForkChoiceHead(): ProtoBlock {
     this.metrics?.forkChoice.requests.inc();
-    const timer = this.metrics?.forkChoice.findHead.startTimer();
+    const timer = this.metrics?.forkChoice.findHead.startTimer({entrypoint: FindHeadFnName.recomputeForkChoiceHead});
 
     try {
-      return this.forkChoice.updateHead();
+      return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetCanonicialHead});
+    } catch (e) {
+      this.metrics?.forkChoice.errors.inc();
+      throw e;
+    } finally {
+      timer?.();
+    }
+  }
+
+  predictProposerHead(slot: Slot): ProtoBlock {
+    this.metrics?.forkChoice.requests.inc();
+    const timer = this.metrics?.forkChoice.findHead.startTimer({entrypoint: FindHeadFnName.predictProposerHead});
+
+    try {
+      return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetPredictedProposerHead, slot});
+    } catch (e) {
+      this.metrics?.forkChoice.errors.inc();
+      throw e;
+    } finally {
+      timer?.();
+    }
+  }
+
+  getProposerHead(slot: Slot): ProtoBlock {
+    this.metrics?.forkChoice.requests.inc();
+    const timer = this.metrics?.forkChoice.findHead.startTimer({entrypoint: FindHeadFnName.getProposerHead});
+
+    try {
+      return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetProposerHead, slot});
     } catch (e) {
       this.metrics?.forkChoice.errors.inc();
       throw e;

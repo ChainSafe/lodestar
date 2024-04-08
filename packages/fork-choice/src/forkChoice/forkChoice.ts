@@ -46,8 +46,20 @@ import {IForkChoiceStore, CheckpointWithHex, toCheckpointWithHex, JustifiedBalan
 
 export type ForkChoiceOpts = {
   proposerBoostEnabled?: boolean;
+  proposerBoostReorgEnabled?: boolean;
   computeUnrealized?: boolean;
 };
+
+export enum UpdateHeadOpt {
+  GetCanonicialHead, // Skip getProposerHead
+  GetProposerHead, // With getProposerHead
+  GetPredictedProposerHead, // With predictProposerHead
+}
+
+export type UpdateAndGetHeadOpt =
+  | {mode: UpdateHeadOpt.GetCanonicialHead}
+  | {mode: UpdateHeadOpt.GetProposerHead; slot: Slot}
+  | {mode: UpdateHeadOpt.GetPredictedProposerHead; slot: Slot};
 
 /**
  * Provides an implementation of "Ethereum Consensus -- Beacon Chain Fork Choice":
@@ -157,6 +169,29 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
+   *
+   * A multiplexer to wrap around the traditional `updateHead()` according to the scenario
+   * Scenarios as follow:
+   *    Prepare to propose in the next slot: getHead() -> predictProposerHead()
+   *    Proposing in the current slot: updateHead() -> getProposerHead()
+   *    Others eg. initializing forkchoice, importBlock: updateHead()
+   */
+  updateAndGetHead(opt: UpdateAndGetHeadOpt): ProtoBlock {
+    const {mode} = opt;
+
+    const canonicialHeadBlock = mode === UpdateHeadOpt.GetPredictedProposerHead ? this.getHead() : this.updateHead();
+    switch (mode) {
+      case UpdateHeadOpt.GetPredictedProposerHead:
+        return this.predictProposerHead(canonicialHeadBlock, opt.slot);
+      case UpdateHeadOpt.GetProposerHead:
+        return this.getProposerHead(canonicialHeadBlock, opt.slot);
+      case UpdateHeadOpt.GetCanonicialHead:
+      default:
+        return canonicialHeadBlock;
+    }
+  }
+
+  /**
    * Get the proposer boost root
    */
   getProposerBoostRoot(): RootHex {
@@ -176,7 +211,7 @@ export class ForkChoice implements IForkChoice {
    */
   predictProposerHead(headBlock: ProtoBlock, currentSlot?: Slot): ProtoBlock {
     // Skip re-org attempt if proposer boost (reorg) are disabled
-    if (!this.opts?.proposerBoostEnabled) {
+    if (!this.opts?.proposerBoostEnabled || !this.opts?.proposerBoostReorgEnabled) {
       this.logger?.verbose("No proposer boot reorg prediction since the related flags are disabled");
       return headBlock;
     }
@@ -209,7 +244,7 @@ export class ForkChoice implements IForkChoice {
    *
    * This function takes in the canonical head block and determine the proposer head (canonical head block or its parent)
    * https://github.com/ethereum/consensus-specs/pull/3034 for info about proposer boost reorg
-   * This function should only be called during block proposal and only be called after `updateHead()`
+   * This function should only be called during block proposal and only be called after `updateHead()` in `updateAndGetHead()`
    *
    * Same as https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#get_proposer_head
    */
@@ -222,7 +257,7 @@ export class ForkChoice implements IForkChoice {
     let proposerHead = headBlock;
 
     // Skip re-org attempt if proposer boost (reorg) are disabled
-    if (!this.opts?.proposerBoostEnabled) {
+    if (!this.opts?.proposerBoostEnabled || !this.opts?.proposerBoostReorgEnabled) {
       this.logger?.verbose("No proposer boot reorg attempt since the related flags are disabled");
       return {proposerHead, isHeadTimely, notReorgedReason: NotReorgedReason.ProposerBoostReorgDisabled};
     }

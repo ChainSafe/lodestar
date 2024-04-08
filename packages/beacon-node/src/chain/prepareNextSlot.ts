@@ -2,6 +2,7 @@ import {
   computeEpochAtSlot,
   isExecutionStateType,
   computeTimeAtSlot,
+  CachedBeaconStateExecutions,
   StateHashTreeRootSource,
 } from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
@@ -144,7 +145,29 @@ export class PrepareNextSlotScheduler {
       if (isExecutionStateType(prepareState)) {
         const proposerIndex = prepareState.epochCtx.getBeaconProposer(prepareSlot);
         const feeRecipient = this.chain.beaconProposerCache.get(proposerIndex);
+        let updatedPrepareState = prepareState;
+        let updatedHeadRoot = headRoot;
+
         if (feeRecipient) {
+          // If we are proposing next slot, we need to predict if we can proposer-boost-reorg or not
+          const {slot: proposerHeadSlot, blockRoot: proposerHeadRoot} = this.chain.predictProposerHead(clockSlot);
+
+          // If we predict we can reorg, update prepareState with proposer head block
+          if (proposerHeadRoot !== headRoot || proposerHeadSlot !== headSlot) {
+            this.logger.verbose("Weak head detected. May build on this block instead:", {
+              proposerHeadSlot,
+              proposerHeadRoot,
+            });
+            this.metrics?.weakHeadDetected.inc();
+            updatedPrepareState = (await this.chain.regen.getBlockSlotState(
+              proposerHeadRoot,
+              prepareSlot,
+              {dontTransferCache: !isEpochTransition},
+              RegenCaller.precomputeEpoch
+            )) as CachedBeaconStateExecutions;
+            updatedHeadRoot = proposerHeadRoot;
+          }
+
           // Update the builder status, if enabled shoot an api call to check status
           this.chain.updateBuilderStatus(clockSlot);
           if (this.chain.executionBuilder?.status) {
@@ -167,10 +190,10 @@ export class PrepareNextSlotScheduler {
             this.chain,
             this.logger,
             fork as ForkExecution, // State is of execution type
-            fromHex(headRoot),
+            fromHex(updatedHeadRoot),
             safeBlockHash,
             finalizedBlockHash,
-            prepareState,
+            updatedPrepareState,
             feeRecipient
           );
           this.logger.verbose("PrepareNextSlotScheduler prepared new payload", {
@@ -183,7 +206,7 @@ export class PrepareNextSlotScheduler {
         // If emitPayloadAttributes is true emit a SSE payloadAttributes event
         if (this.chain.opts.emitPayloadAttributes === true) {
           const data = await getPayloadAttributesForSSE(fork as ForkExecution, this.chain, {
-            prepareState,
+            prepareState: updatedPrepareState,
             prepareSlot,
             parentBlockRoot: fromHex(headRoot),
             // The likely consumers of this API are builders and will anyway ignore the
