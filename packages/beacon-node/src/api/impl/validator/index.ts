@@ -1067,7 +1067,13 @@ export function getValidatorApi({
 
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
-      const aggregate = chain.attestationPool.getAggregate(slot, attestationDataRoot);
+      const dataRootHex = toHexString(attestationDataRoot);
+      const aggregate = chain.attestationPool.getAggregate(slot, dataRootHex);
+
+      if (!aggregate) {
+        throw new ApiError(404, `No aggregated attestation for slot=${slot}, dataRoot=${dataRootHex}`);
+      }
+
       metrics?.production.producedAggregateParticipants.observe(aggregate.aggregationBits.getTrueBitIndexes().length);
 
       return {
