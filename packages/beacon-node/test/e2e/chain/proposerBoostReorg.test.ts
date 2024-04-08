@@ -46,8 +46,8 @@ describe(
      * Note that in additional of being not timely, there are other criterion that
      * the block needs to satisfied before being re-orged out. This test assumes
      * other criterion are satisfied except timeliness.
-     * Note that in additional of being not timely, there are other criterion that 
-     * the block needs to satisfy before being re-orged out. This test assumes 
+     * Note that in additional of being not timely, there are other criterion that
+     * the block needs to satisfy before being re-orged out. This test assumes
      * other criterion are already satisfied
      */
     it(`should reorg a late block at slot ${reorgSlot}`, async () => {

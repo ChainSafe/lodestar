@@ -58,7 +58,7 @@ export enum UpdateHeadOpt {
 
 export type UpdateAndGetHeadOpt =
   | {mode: UpdateHeadOpt.GetCanonicialHead}
-  | {mode: UpdateHeadOpt.GetProposerHead; slot: Slot}
+  | {mode: UpdateHeadOpt.GetProposerHead; secFromSlot: number; slot: Slot}
   | {mode: UpdateHeadOpt.GetPredictedProposerHead; slot: Slot};
 
 /**
@@ -175,19 +175,31 @@ export class ForkChoice implements IForkChoice {
    *    Prepare to propose in the next slot: getHead() -> predictProposerHead()
    *    Proposing in the current slot: updateHead() -> getProposerHead()
    *    Others eg. initializing forkchoice, importBlock: updateHead()
+   *
+   * Only `GetProposerHead` returns additional field `isHeadTimely` and `notReorgedReason` for metrics purpose
    */
-  updateAndGetHead(opt: UpdateAndGetHeadOpt): ProtoBlock {
+  updateAndGetHead(opt: UpdateAndGetHeadOpt): {
+    head: ProtoBlock;
+    isHeadTimely?: boolean;
+    notReorgedReason?: NotReorgedReason;
+  } {
     const {mode} = opt;
 
     const canonicialHeadBlock = mode === UpdateHeadOpt.GetPredictedProposerHead ? this.getHead() : this.updateHead();
     switch (mode) {
       case UpdateHeadOpt.GetPredictedProposerHead:
-        return this.predictProposerHead(canonicialHeadBlock, opt.slot);
-      case UpdateHeadOpt.GetProposerHead:
-        return this.getProposerHead(canonicialHeadBlock, opt.slot);
+        return {head: this.predictProposerHead(canonicialHeadBlock, opt.slot)};
+      case UpdateHeadOpt.GetProposerHead: {
+        const {
+          proposerHead: head,
+          isHeadTimely,
+          notReorgedReason,
+        } = this.getProposerHead(canonicialHeadBlock, opt.secFromSlot, opt.slot);
+        return {head, isHeadTimely, notReorgedReason};
+      }
       case UpdateHeadOpt.GetCanonicialHead:
       default:
-        return canonicialHeadBlock;
+        return {head: canonicialHeadBlock};
     }
   }
 

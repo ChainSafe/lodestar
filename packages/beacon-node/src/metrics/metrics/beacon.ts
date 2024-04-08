@@ -110,6 +110,14 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         name: "beacon_fork_choice_indices_count",
         help: "Current count of indices in fork choice data structures",
       }),
+      isBlockTimely: register.gauge({
+        name: "beacon_fork_choice_is_block_timely",
+        help: "Whether the current head (or original head if re-orged out because it is late) is timely or not",
+      }),
+      notReorgedReason: register.gauge({
+        name: "beacon_fork_choice_not_reorged_reason",
+        help: "Reason why the current head is not re-orged out",
+      }),
     },
 
     parentBlockDistance: register.histogram({

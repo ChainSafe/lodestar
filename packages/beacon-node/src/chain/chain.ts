@@ -45,7 +45,14 @@ import {isOptimisticBlock} from "../util/forkChoice.js";
 import {BufferPool} from "../util/bufferPool.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {ChainEventEmitter, ChainEvent} from "./emitter.js";
-import {IBeaconChain, ProposerPreparationData, BlockHash, StateGetOpts, CommonBlockBody} from "./interface.js";
+import {
+  IBeaconChain,
+  ProposerPreparationData,
+  BlockHash,
+  StateGetOpts,
+  CommonBlockBody,
+  FindHeadFnName,
+} from "./interface.js";
 import {IChainOptions} from "./options.js";
 import {QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
 import {initializeForkChoice} from "./forkChoice/index.js";
@@ -695,7 +702,7 @@ export class BeaconChain implements IBeaconChain {
     const timer = this.metrics?.forkChoice.findHead.startTimer({entrypoint: FindHeadFnName.recomputeForkChoiceHead});
 
     try {
-      return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetCanonicialHead});
+      return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetCanonicialHead}).head;
     } catch (e) {
       this.metrics?.forkChoice.errors.inc();
       throw e;
@@ -709,7 +716,7 @@ export class BeaconChain implements IBeaconChain {
     const timer = this.metrics?.forkChoice.findHead.startTimer({entrypoint: FindHeadFnName.predictProposerHead});
 
     try {
-      return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetPredictedProposerHead, slot});
+      return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetPredictedProposerHead, slot}).head;
     } catch (e) {
       this.metrics?.forkChoice.errors.inc();
       throw e;
@@ -721,9 +728,19 @@ export class BeaconChain implements IBeaconChain {
   getProposerHead(slot: Slot): ProtoBlock {
     this.metrics?.forkChoice.requests.inc();
     const timer = this.metrics?.forkChoice.findHead.startTimer({entrypoint: FindHeadFnName.getProposerHead});
+    const secFromSlot = this.clock.secFromSlot(slot);
 
     try {
-      return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetProposerHead, slot});
+      const {head, isHeadTimely, notReorgedReason} = this.forkChoice.updateAndGetHead({
+        mode: UpdateHeadOpt.GetProposerHead,
+        secFromSlot,
+        slot,
+      });
+      this.metrics?.forkChoice.isBlockTimely.set(isHeadTimely ? 1 : 0);
+      if (notReorgedReason !== undefined) {
+        this.metrics?.forkChoice.notReorgedReason.set(notReorgedReason);
+      }
+      return head;
     } catch (e) {
       this.metrics?.forkChoice.errors.inc();
       throw e;
