@@ -4,6 +4,7 @@ import path from "node:path";
 import tmp from "tmp";
 import {fromHexString} from "@chainsafe/ssz";
 import {nodeUtils} from "@lodestar/beacon-node";
+import {loadEthereumTrustedSetup, initCKZG} from "@lodestar/beacon-node/util";
 import {ChainForkConfig} from "@lodestar/config";
 import {activePreset} from "@lodestar/params";
 import {BeaconStateAllForks, interopSecretKey} from "@lodestar/state-transition";
@@ -85,7 +86,7 @@ export class SimulationEnvironment {
   }
 
   static async initWithDefaults(
-    {forkConfig, logsDir, id}: SimulationInitOptions,
+    {forkConfig, logsDir, id, trustedSetup}: SimulationInitOptions,
     clients: NodePairDefinition[]
   ): Promise<SimulationEnvironment> {
     const env = new SimulationEnvironment(forkConfig, {
@@ -93,6 +94,7 @@ export class SimulationEnvironment {
       id,
       genesisTime: Math.floor(Date.now() / 1000),
       controller: new AbortController(),
+      trustedSetup,
       rootDir: path.join(tmp.dirSync({unsafeCleanup: true, tmpdir: "/tmp", template: "sim-XXXXXX"}).name, id),
     });
 
@@ -110,6 +112,11 @@ export class SimulationEnvironment {
         currentTime
       ).toISOString()} simulationTimeout=${prettyMsToTime(opts.runTimeoutMs)} rootDir=${this.options.rootDir}`
     );
+
+    if (this.options.trustedSetup) {
+      await initCKZG();
+      loadEthereumTrustedSetup();
+    }
 
     if (opts.runTimeoutMs > 0) {
       this.runTimeout = setTimeout(() => {
