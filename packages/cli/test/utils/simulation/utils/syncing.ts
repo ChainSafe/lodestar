@@ -1,7 +1,7 @@
 import {ApiError, routes} from "@lodestar/api";
 import {Slot} from "@lodestar/types";
 import {sleep, toHex} from "@lodestar/utils";
-import type {SimulationEnvironment} from "../SimulationEnvironment.js";
+import type {SimulationEnvironment} from "../simulationEnvironment.js";
 import {BeaconClient, ExecutionClient, NodePair} from "../interfaces.js";
 import {connectNewCLNode, connectNewELNode, connectNewNode, waitForHead, waitForSlot} from "./network.js";
 

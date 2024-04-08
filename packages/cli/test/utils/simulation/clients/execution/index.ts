@@ -1,5 +1,5 @@
 import {writeFile} from "node:fs/promises";
-import {SHARED_JWT_SECRET, CLIQUE_SEALING_PERIOD} from "../constants.js";
+import {SHARED_JWT_SECRET, CLIQUE_SEALING_PERIOD} from "../../constants.js";
 import {
   AtLeast,
   ExecutionClient,
@@ -7,10 +7,10 @@ import {
   ExecutionGenesisOptions,
   ExecutionNode,
   ExecutionStartMode,
-} from "../interfaces.js";
-import {getEstimatedForkTime} from "../utils/index.js";
-import {getGethGenesisBlock} from "../utils/execution_genesis.js";
-import {ensureDirectories} from "../utils/paths.js";
+} from "../../interfaces.js";
+import {getEstimatedForkTime} from "../../utils/index.js";
+import {getGethGenesisBlock} from "../../utils/executionGenesis.js";
+import {ensureDirectories} from "../../utils/paths.js";
 import {generateGethNode} from "./geth.js";
 import {generateMockNode} from "./mock.js";
 import {generateNethermindNode} from "./nethermind.js";

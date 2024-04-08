@@ -3,8 +3,8 @@ import {ApiError} from "@lodestar/api";
 import {Slot, allForks} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {BeaconClient, BeaconNode, ExecutionClient, ExecutionNode, NodePair} from "../interfaces.js";
-import {SimulationEnvironment} from "../SimulationEnvironment.js";
-import {SimulationTrackerEvent} from "../SimulationTracker.js";
+import {SimulationEnvironment} from "../simulationEnvironment.js";
+import {SimulationTrackerEvent} from "../simulationTracker.js";
 
 export async function connectAllNodes(nodes: NodePair[]): Promise<void> {
   for (const node of nodes) {

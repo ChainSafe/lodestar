@@ -9,7 +9,7 @@ import {
   SIM_ENV_NETWORK_ID,
   SIM_TESTS_SECONDS_PER_SLOT,
 } from "../constants.js";
-import {SimulationEnvironment} from "../SimulationEnvironment.js";
+import {SimulationEnvironment} from "../simulationEnvironment.js";
 
 export const logFilesDir = "test-logs";
 

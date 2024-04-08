@@ -10,8 +10,8 @@ import {Logger} from "@lodestar/logger";
 import {BeaconArgs} from "../../../src/cmds/beacon/options.js";
 import {IValidatorCliArgs} from "../../../src/cmds/validator/options.js";
 import {GlobalArgs} from "../../../src/options/index.js";
-import {EpochClock} from "./EpochClock.js";
-import {Eth1ProviderWithAdmin} from "./Eth1ProviderWithAdmin.js";
+import {EpochClock} from "./epochClock.js";
+import {Eth1ProviderWithAdmin} from "./eth1ProviderWithAdmin.js";
 
 export type NodeId = string;
 

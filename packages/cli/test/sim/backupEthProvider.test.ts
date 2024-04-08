@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import path from "node:path";
 import {activePreset} from "@lodestar/params";
-import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
+import {SimulationEnvironment} from "../utils/simulation/simulationEnvironment.js";
 import {nodeAssertion} from "../utils/simulation/assertions/nodeAssertion.js";
 import {AssertionMatch, BeaconClient, ExecutionClient} from "../utils/simulation/interfaces.js";
 import {defineSimTestConfig, logFilesDir, replaceIpFromUrl} from "../utils/simulation/utils/index.js";
