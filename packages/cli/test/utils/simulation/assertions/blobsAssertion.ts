@@ -4,7 +4,7 @@ import {fromHex, toHex} from "@lodestar/utils";
 import {SimulationAssertion, AssertionMatch, AssertionResult, NodePair} from "../interfaces.js";
 import {EL_GENESIS_ACCOUNT, EL_GENESIS_SECRET_KEY, SIM_ENV_CHAIN_ID} from "../constants.js";
 import {generateBlobsForTransaction} from "../utils/blobs.js";
-import {BlobsEIP4844Transaction} from "../Web3Plugins.js";
+import {BlobsEIP4844Transaction} from "../web3JsPlugins.js";
 
 const numberOfBlobs = 6;
 
