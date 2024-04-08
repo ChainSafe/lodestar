@@ -3,7 +3,7 @@ import {isNullish} from "../../utils.js";
 import {HeadSummary} from "./assertions/defaults/headAssertion.js";
 import {defaultAssertions} from "./assertions/defaults/index.js";
 import {SimulationReporter} from "./interfaces.js";
-import {TableRenderer} from "./TableRenderer.js";
+import {TableRenderer} from "./tableRenderer.js";
 import {arrayGroupBy, avg, isSingletonArray} from "./utils/index.js";
 
 export class TableReporter extends SimulationReporter<typeof defaultAssertions> {

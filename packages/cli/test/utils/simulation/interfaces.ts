@@ -11,7 +11,7 @@ import {Logger} from "@lodestar/logger";
 import {BeaconArgs} from "../../../src/cmds/beacon/options.js";
 import {IValidatorCliArgs} from "../../../src/cmds/validator/options.js";
 import {GlobalArgs} from "../../../src/options/index.js";
-import {EpochClock} from "./EpochClock.js";
+import {EpochClock} from "./epochClock.js";
 
 export type NodeId = string;
 

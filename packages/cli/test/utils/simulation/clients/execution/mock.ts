@@ -1,6 +1,6 @@
-import {SHARED_JWT_SECRET} from "../constants.js";
-import {ExecutionClient, ExecutionNodeGenerator} from "../interfaces.js";
-import {getNodePorts} from "../utils/ports.js";
+import {SHARED_JWT_SECRET} from "../../constants.js";
+import {ExecutionClient, ExecutionNodeGenerator} from "../../interfaces.js";
+import {getNodePorts} from "../../utils/ports.js";
 
 export const generateMockNode: ExecutionNodeGenerator<ExecutionClient.Mock> = (opts, runner) => {
   const {id, ttd, nodeIndex} = opts;

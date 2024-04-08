@@ -8,11 +8,11 @@ import {
   EL_GENESIS_SECRET_KEY,
   SHARED_JWT_SECRET,
   SIM_ENV_NETWORK_ID,
-} from "../constants.js";
-import {registerWeb3JsPlugins} from "../Web3JsPlugins.js";
-import {ExecutionClient, ExecutionNodeGenerator, ExecutionStartMode, JobOptions, RunnerType} from "../interfaces.js";
-import {getNodeMountedPaths} from "../utils/paths.js";
-import {getNodePorts} from "../utils/ports.js";
+} from "../../constants.js";
+import {registerWeb3JsPlugins} from "../../Web3JsPlugins.js";
+import {ExecutionClient, ExecutionNodeGenerator, ExecutionStartMode, JobOptions, RunnerType} from "../../interfaces.js";
+import {getNodeMountedPaths} from "../../utils/paths.js";
+import {getNodePorts} from "../../utils/ports.js";
 
 export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (opts, runner) => {
   if (!process.env.GETH_BINARY_DIR && !process.env.GETH_DOCKER_IMAGE) {

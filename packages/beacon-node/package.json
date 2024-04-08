@@ -46,6 +46,9 @@
     },
     "./sync": {
       "import": "./lib/sync/index.js"
+    },
+    "./util": {
+      "import": "./lib/util/index.js"
     }
   },
   "typesVersions": {
