@@ -6,11 +6,11 @@ import {getClient as keyManagerGetClient} from "@lodestar/api/keymanager";
 import {chainConfigToJson} from "@lodestar/config";
 import {LogLevel} from "@lodestar/utils";
 import {defaultOptions} from "@lodestar/validator";
-import {IValidatorCliArgs} from "../../../../src/cmds/validator/options.js";
-import {GlobalArgs} from "../../../../src/options/globalOptions.js";
-import {LODESTAR_BINARY_PATH} from "../constants.js";
-import {RunnerType, ValidatorClient, ValidatorNodeGenerator} from "../interfaces.js";
-import {getNodePorts} from "../utils/ports.js";
+import {IValidatorCliArgs} from "../../../../../src/cmds/validator/options.js";
+import {GlobalArgs} from "../../../../../src/options/globalOptions.js";
+import {LODESTAR_BINARY_PATH} from "../../constants.js";
+import {RunnerType, ValidatorClient, ValidatorNodeGenerator} from "../../interfaces.js";
+import {getNodePorts} from "../../utils/ports.js";
 
 export const generateLodestarValidatorNode: ValidatorNodeGenerator<ValidatorClient.Lodestar> = (opts, runner) => {
   const {paths, id, keys, forkConfig, genesisTime, nodeIndex, beaconUrls, clientOptions} = opts;

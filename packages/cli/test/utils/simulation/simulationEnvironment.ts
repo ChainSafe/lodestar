@@ -10,13 +10,13 @@ import {BeaconStateAllForks, interopSecretKey} from "@lodestar/state-transition"
 import {prettyMsToTime} from "@lodestar/utils";
 import {LogLevel, TimestampFormatCode} from "@lodestar/logger";
 import {getNodeLogger, LoggerNode} from "@lodestar/logger/node";
-import {EpochClock, MS_IN_SEC} from "./EpochClock.js";
-import {ExternalSignerServer} from "./ExternalSignerServer.js";
-import {SimulationTracker} from "./SimulationTracker.js";
-import {createBeaconNode} from "./beacon_clients/index.js";
-import {createValidatorNode, getValidatorForBeaconNode} from "./validator_clients/index.js";
+import {EpochClock, MS_IN_SEC} from "./epochClock.js";
+import {ExternalSignerServer} from "./externalSignerServer.js";
+import {SimulationTracker} from "./simulationTracker.js";
+import {createBeaconNode} from "./clients/beacon/index.js";
+import {createValidatorNode, getValidatorForBeaconNode} from "./clients/validator/index.js";
 import {MOCK_ETH1_GENESIS_HASH} from "./constants.js";
-import {createExecutionNode} from "./execution_clients/index.js";
+import {createExecutionNode} from "./clients/execution/index.js";
 import {
   BeaconClient,
   ValidatorClientKeys,
@@ -317,9 +317,9 @@ export class SimulationEnvironment {
       const el = this.nodes[i].execution;
 
       // If eth1 is mock then genesis hash would be empty
-      const eth1Genesis = el.provider === null ? {hash: MOCK_ETH1_GENESIS_HASH} : await el.provider.getBlockByNumber(0);
+      const eth1Genesis = el.provider === null ? {hash: MOCK_ETH1_GENESIS_HASH} : await el.provider?.eth.getBlock(0);
 
-      if (!eth1Genesis) {
+      if (!eth1Genesis.hash) {
         throw new Error(`Eth1 genesis not found for node "${this.nodes[i].id}"`);
       }
 
