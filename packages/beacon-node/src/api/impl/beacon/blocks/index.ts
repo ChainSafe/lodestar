@@ -277,6 +277,7 @@ export function getBeaconBlockApi({
                 if (isOptimisticBlock(canonical)) {
                   executionOptimistic = true;
                 }
+                // Block from hot db which only contains unfinalized blocks
                 finalized = false;
               }
             }
