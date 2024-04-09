@@ -79,6 +79,7 @@ export async function runBlsWorkReq(workReqArr: BlsWorkReq[]): Promise<BlsWorkRe
 
   const [workerEndSec, workerEndNs] = process.hrtime();
 
+  // TODO: (@matthewkeil) all of these metrics need to be revisited
   return {
     batchRetries,
     batchSigsSuccess,
