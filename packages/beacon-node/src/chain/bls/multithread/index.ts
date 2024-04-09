@@ -45,7 +45,7 @@ export type BlsMultiThreadWorkerPoolModules = {
 export type BlsMultiThreadWorkerPoolOptions = {
   blsPoolType?: BlsPoolType;
   blsVerifyAllMultiThread?: boolean;
-  blsAddVerificationRandomness?: boolean;
+  disableSameMessageVerificationRandomness?: boolean;
 };
 
 export type {JobQueueItemType};
@@ -126,7 +126,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
 
   private readonly blsPoolType: BlsPoolType;
   private readonly blsPoolSize: number;
-  private readonly blsAddVerificationRandomness: boolean;
+  private readonly disableSameMessageVerificationRandomness: boolean;
 
   private readonly format: PointFormat;
   private readonly workers: WorkerDescriptor[] = [];
@@ -155,16 +155,16 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
         this.logger.info("Herumi BLS implementation selected.  Using Worker pool instead of libuv pool.");
         options.blsPoolType = BlsPoolType.workers;
       }
-      if (options.blsAddVerificationRandomness === true) {
+      if (options.disableSameMessageVerificationRandomness !== true) {
         // mult not implemented by base herumi library
         this.logger.info(
           "Herumi BLS implementation selected. Added verification randomness not implemented by base library."
         );
-        options.blsAddVerificationRandomness = false;
+        options.disableSameMessageVerificationRandomness = true;
       }
     }
     this.blsPoolType = options.blsPoolType ?? BlsPoolType.libuv;
-    this.blsAddVerificationRandomness = options.blsAddVerificationRandomness ?? true;
+    this.disableSameMessageVerificationRandomness = options.disableSameMessageVerificationRandomness ?? false;
 
     // Use compressed for herumi for now.
     // THe worker is not able to deserialize from uncompressed
@@ -274,7 +274,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
               resolve,
               reject,
               addedTimeMs: Date.now(),
-              opts: {...opts, addVerificationRandomness: this.blsAddVerificationRandomness},
+              opts: {...opts, disableSameMessageVerificationRandomness: this.disableSameMessageVerificationRandomness},
               sets: setsChunk,
               message,
             });

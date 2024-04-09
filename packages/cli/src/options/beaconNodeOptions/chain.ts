@@ -8,7 +8,7 @@ export type ChainArgs = {
   "chain.blsPoolType"?: BlsPoolType;
   "chain.blsVerifyAllMultiThread"?: boolean;
   "chain.blsVerifyAllMainThread"?: boolean;
-  "chain.blsAddVerificationRandomness"?: boolean;
+  "chain.disableSameMessageVerificationRandomness"?: boolean;
   "chain.disableBlsBatchVerify"?: boolean;
   "chain.persistProducedBlocks"?: boolean;
   "chain.persistInvalidSszObjects"?: boolean;
@@ -42,7 +42,7 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     blsPoolType: args["chain.blsPoolType"],
     blsVerifyAllMultiThread: args["chain.blsVerifyAllMultiThread"],
     blsVerifyAllMainThread: args["chain.blsVerifyAllMainThread"],
-    blsAddVerificationRandomness: args["chain.blsAddVerificationRandomness"],
+    disableSameMessageVerificationRandomness: args["chain.disableSameMessageVerificationRandomness"],
     disableBlsBatchVerify: args["chain.disableBlsBatchVerify"],
     persistProducedBlocks: args["chain.persistProducedBlocks"],
     persistInvalidSszObjects: args["chain.persistInvalidSszObjects"],
@@ -112,11 +112,11 @@ export const options: CliCommandOptions<ChainArgs> = {
     group: "chain",
   },
 
-  "chain.blsAddVerificationRandomness": {
+  "chain.disableSameMessageVerificationRandomness": {
     hidden: true,
     type: "boolean",
-    description: "Add a random value, through point multiplication to sameMessage sets",
-    defaultDescription: String(defaultOptions.chain.blsAddVerificationRandomness),
+    description: "When enabled, add a random value, through point multiplication to sameMessage sets",
+    defaultDescription: String(defaultOptions.chain.disableSameMessageVerificationRandomness),
     group: "chain",
   },
 

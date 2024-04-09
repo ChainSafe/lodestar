@@ -90,42 +90,33 @@ export function jobItemWorkReq(
       });
       timer?.();
 
-      // adding verification randomness is swig specific. must not attempt with herumi until
-      // @chainsafe/bls is updated to support it with herumi
-      if (job.opts.addVerificationRandomness) {
-        const randomness: Uint8Array[] = [];
-        for (let i = 0; i < job.sets.length; i++) {
-          randomness.push(randomBytesNonZero(8));
-        }
+      if (job.opts.disableSameMessageVerificationRandomness) {
         return {
           opts: job.opts,
           sets: [
             {
+              publicKey: bls.PublicKey.aggregate(job.sets.map((set) => set.publicKey)),
+              signature: bls.Signature.aggregate(signatures),
               message: job.message,
-              publicKey: bls.PublicKey.aggregate(
-                job.sets.map((set, i) => set.publicKey.multiplyBy(randomness[i]))
-              ).toBytes(format),
-              signature: bls.Signature.aggregate(signatures.map((sig, i) => sig.multiplyBy(randomness[i]))).toBytes(
-                format
-              ),
             },
           ],
         };
       }
 
-      const publicKey = bls.PublicKey.aggregate(job.sets.map((set) => set.publicKey));
-      // TODO: verify this is correct!!
-      // @tuyennhv why should this not be done in the verification try/catch.  can throw for malformed signature
-      const signature = bls.Signature.aggregate(signatures);
-
+      // adding verification randomness is napi specific. must not attempt with herumi until
+      // @chainsafe/bls is updated to support it with herumi
+      const randomness: Uint8Array[] = [];
+      for (let i = 0; i < job.sets.length; i++) {
+        randomness.push(randomBytesNonZero(8));
+      }
       return {
         opts: job.opts,
         sets: [
           {
-            publicKey: deserialized ? publicKey : publicKey.toBytes(format),
-            signature: deserialized ? signature : signature.toBytes(format),
             message: job.message,
-          } as WorkRequestSet,
+            publicKey: bls.PublicKey.aggregate(job.sets.map((set, i) => set.publicKey.multiplyBy(randomness[i]))),
+            signature: bls.Signature.aggregate(signatures.map((sig, i) => sig.multiplyBy(randomness[i]))),
+          },
         ],
       };
     }
