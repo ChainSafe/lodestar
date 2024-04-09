@@ -158,12 +158,20 @@ export const testData: GenericServerTestCases<Api> = {
     args: ["head", {id: [pubkeyHex, "1300"], status: ["active_ongoing"]}],
     res: {executionOptimistic: true, finalized: false, data: [validatorResponse]},
   },
+  postStateValidators: {
+    args: ["head", {id: [pubkeyHex, 1300], status: ["active_ongoing"]}],
+    res: {executionOptimistic: true, finalized: false, data: [validatorResponse]},
+  },
   getStateValidator: {
     args: ["head", pubkeyHex],
     res: {executionOptimistic: true, finalized: false, data: validatorResponse},
   },
   getStateValidatorBalances: {
     args: ["head", ["1300"]],
+    res: {executionOptimistic: true, finalized: false, data: [{index: 1300, balance}]},
+  },
+  postStateValidatorBalances: {
+    args: ["head", [1300]],
     res: {executionOptimistic: true, finalized: false, data: [{index: 1300, balance}]},
   },
   getEpochCommittees: {

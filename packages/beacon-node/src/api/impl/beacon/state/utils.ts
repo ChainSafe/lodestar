@@ -138,28 +138,32 @@ export function getStateValidatorIndex(
 ): StateValidatorIndexResponse {
   let validatorIndex: ValidatorIndex | undefined;
   if (typeof id === "string") {
+    // mutate `id` and fallthrough to below
     if (id.startsWith("0x")) {
-      // mutate `id` and fallthrough to below
       try {
         id = fromHexString(id);
       } catch (e) {
         return {valid: false, code: 400, reason: "Invalid pubkey hex encoding"};
       }
     } else {
-      validatorIndex = Number(id);
-      // validator is invalid or added later than given stateId
-      if (!Number.isSafeInteger(validatorIndex)) {
-        return {valid: false, code: 400, reason: "Invalid validator index"};
-      }
-      if (validatorIndex >= state.validators.length) {
-        return {valid: false, code: 404, reason: "Validator index from future state"};
-      }
-      return {valid: true, validatorIndex};
+      id = Number(id);
     }
   }
 
+  if (typeof id === "number") {
+    validatorIndex = id;
+    // validator is invalid or added later than given stateId
+    if (!Number.isSafeInteger(validatorIndex)) {
+      return {valid: false, code: 400, reason: "Invalid validator index"};
+    }
+    if (validatorIndex >= state.validators.length) {
+      return {valid: false, code: 404, reason: "Validator index from future state"};
+    }
+    return {valid: true, validatorIndex};
+  }
+
   // typeof id === Uint8Array
-  validatorIndex = pubkey2index.get(id as BLSPubkey);
+  validatorIndex = pubkey2index.get(id);
   if (validatorIndex === undefined) {
     return {valid: false, code: 404, reason: "Validator pubkey not found in state"};
   }
