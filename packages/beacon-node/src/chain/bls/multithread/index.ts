@@ -566,6 +566,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
         }
       }
 
+      // TODO: (@matthewkeil) all of these metrics need to be revisited
       const workerJobTimeSec = workerEndSec - workerStartSec + (workerEndNs - workerStartNs) / 1e9;
       const latencyToWorkerSec = workerStartSec - jobStartSec + (workerStartNs - jobStartNs) / 1e9;
       const latencyFromWorkerSec = jobEndSec - workerEndSec + Number(jobEndNs - workerEndNs) / 1e9;

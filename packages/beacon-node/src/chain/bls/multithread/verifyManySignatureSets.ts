@@ -80,6 +80,7 @@ export function verifyManySignatureSets(workerId: number, workReqArr: BlsWorkReq
 
   const [workerEndSec, workerEndNs] = process.hrtime();
 
+  // TODO: (@matthewkeil) all of these metrics need to be revisited
   return {
     workerId,
     batchRetries,
@@ -167,6 +168,7 @@ export async function asyncVerifyManySignatureSets(workReqArr: BlsWorkReq[]): Pr
 
   const [workerEndSec, workerEndNs] = process.hrtime();
 
+  // TODO: (@matthewkeil) all of these metrics need to be revisited
   return {
     batchRetries,
     batchSigsSuccess,
