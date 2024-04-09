@@ -27,7 +27,7 @@ export interface QueuedVerificationOpts extends VerifySignatureOpts {
    * Include multiplying in randomization factor for verification. Only applicable for verification
    * of same message batches.  Applied via the worker pool options
    */
-  addVerificationRandomness?: boolean;
+  disableSameMessageVerificationRandomness?: boolean;
 }
 
 export interface IBlsVerifier {

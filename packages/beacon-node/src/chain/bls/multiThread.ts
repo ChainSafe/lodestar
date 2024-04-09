@@ -28,7 +28,7 @@ export type BlsMultiThreadWorkerPoolModules = {
 
 export type BlsMultiThreadWorkerPoolOptions = {
   blsVerifyAllMultiThread?: boolean;
-  blsAddVerificationRandomness?: boolean;
+  disableSameMessageVerificationRandomness?: boolean;
 };
 
 /**
@@ -77,7 +77,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   private readonly metrics: Metrics | null;
 
   private readonly format = PointFormat.uncompressed;
-  private readonly blsAddVerificationRandomness: boolean;
+  private readonly disableSameMessageVerificationRandomness: boolean;
 
   private blsPoolSize: number;
   private workersBusy = 0;
@@ -100,7 +100,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
 
     this.logger = modules.logger;
     this.blsVerifyAllMultiThread = options.blsVerifyAllMultiThread ?? false;
-    this.blsAddVerificationRandomness = options.blsAddVerificationRandomness ?? true;
+    this.disableSameMessageVerificationRandomness = options.disableSameMessageVerificationRandomness ?? true;
 
     const UV_THREADPOOL_SIZE_ENV = Number(process.env.UV_THREADPOOL_SIZE);
     this.blsPoolSize = isNaN(UV_THREADPOOL_SIZE_ENV) ? 4 : UV_THREADPOOL_SIZE_ENV;
@@ -204,7 +204,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
               resolve,
               reject,
               addedTimeMs: Date.now(),
-              opts: {...opts, addVerificationRandomness: this.blsAddVerificationRandomness},
+              opts: {...opts, disableSameMessageVerificationRandomness: this.disableSameMessageVerificationRandomness},
               sets: setsChunk,
               message,
             });

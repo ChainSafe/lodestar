@@ -74,32 +74,32 @@ export function jobItemWorkReq(job: JobQueueItem, format: PointFormat, metrics: 
       const signatures = job.sets.map((set) => bls.Signature.fromBytes(set.signature, CoordType.affine, true));
       timer?.();
 
-      // adding verification randomness is swig specific. must not attempt with herumi until
-      // @chainsafe/bls is updated to support it with herumi
-      if (job.opts.addVerificationRandomness) {
-        const randomness: Uint8Array[] = [];
-        for (let i = 0; i < job.sets.length; i++) {
-          randomness.push(randomBytesNonZero(8));
-        }
+      if (job.opts.disableSameMessageVerificationRandomness) {
         return {
           opts: job.opts,
           sets: [
             {
+              publicKey: bls.PublicKey.aggregate(job.sets.map((set) => set.publicKey)),
+              signature: bls.Signature.aggregate(signatures),
               message: job.message,
-              publicKey: bls.PublicKey.aggregate(job.sets.map((set, i) => set.publicKey.multiplyBy(randomness[i]))),
-              signature: bls.Signature.aggregate(signatures.map((sig, i) => sig.multiplyBy(randomness[i]))),
             },
           ],
         };
       }
 
+      // adding verification randomness is napi specific. must not attempt with herumi until
+      // @chainsafe/bls is updated to support it with herumi
+      const randomness: Uint8Array[] = [];
+      for (let i = 0; i < job.sets.length; i++) {
+        randomness.push(randomBytesNonZero(8));
+      }
       return {
         opts: job.opts,
         sets: [
           {
-            publicKey: bls.PublicKey.aggregate(job.sets.map((set) => set.publicKey)),
-            signature: bls.Signature.aggregate(signatures),
             message: job.message,
+            publicKey: bls.PublicKey.aggregate(job.sets.map((set, i) => set.publicKey.multiplyBy(randomness[i]))),
+            signature: bls.Signature.aggregate(signatures.map((sig, i) => sig.multiplyBy(randomness[i]))),
           },
         ],
       };
