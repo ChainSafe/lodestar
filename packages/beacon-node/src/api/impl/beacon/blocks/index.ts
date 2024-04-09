@@ -401,11 +401,10 @@ export function getBeaconBlockApi({
 
         if (slot < head.slot && head.slot <= slot + SLOTS_PER_HISTORICAL_ROOT) {
           const state = chain.getHeadState();
-          const rootSlot = slot % SLOTS_PER_HISTORICAL_ROOT;
           return {
             executionOptimistic: isOptimisticBlock(head),
-            finalized: computeEpochAtSlot(rootSlot) <= chain.forkChoice.getFinalizedCheckpoint().epoch,
-            data: {root: state.blockRoots.get(rootSlot)},
+            finalized: computeEpochAtSlot(slot) <= chain.forkChoice.getFinalizedCheckpoint().epoch,
+            data: {root: state.blockRoots.get(slot % SLOTS_PER_HISTORICAL_ROOT)},
           };
         }
       } else if (blockId === "head") {
