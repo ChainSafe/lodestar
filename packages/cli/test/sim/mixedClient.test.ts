@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import path from "node:path";
-import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
+import {SimulationEnvironment} from "../utils/simulation/simulationEnvironment.js";
 import {nodeAssertion} from "../utils/simulation/assertions/nodeAssertion.js";
 import {AssertionMatch, BeaconClient, ExecutionClient, ValidatorClient} from "../utils/simulation/interfaces.js";
 import {defineSimTestConfig, logFilesDir} from "../utils/simulation/utils/index.js";

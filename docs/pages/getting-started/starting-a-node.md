@@ -115,6 +115,7 @@ In case you really trust `checkpointSyncUrl` then you may skip providing `wssChe
 :::warning
 Please use this option very carefully (and at your own risk), a malicious server URL can put you on the wrong chain with a danger of you losing your funds by social engineering.
 If possible, validate your `wssCheckpoint` from multiple places (e.g. different client distributions) or from other trusted sources. This will highly reduce the risk of starting off on a malicious chain.
+This list of [public endpoints](https://eth-clients.github.io/checkpoint-sync-endpoints/) maintained by the Ethereum community may be used for reference.
 :::
 
 **Taking too long to sync?**
