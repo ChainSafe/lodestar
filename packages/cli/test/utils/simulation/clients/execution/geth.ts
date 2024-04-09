@@ -9,7 +9,7 @@ import {
   SHARED_JWT_SECRET,
   SIM_ENV_NETWORK_ID,
 } from "../../constants.js";
-import {registerWeb3JsPlugins} from "../../web3JsPlugins.js";
+import {registerWeb3JsPlugins} from "../../web3js/plugins/index.js";
 import {ExecutionClient, ExecutionNodeGenerator, ExecutionStartMode, JobOptions, RunnerType} from "../../interfaces.js";
 import {getNodeMountedPaths} from "../../utils/paths.js";
 import {getNodePorts} from "../../utils/ports.js";
