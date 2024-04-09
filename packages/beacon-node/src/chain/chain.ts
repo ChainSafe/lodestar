@@ -417,7 +417,7 @@ export class BeaconChain implements IBeaconChain {
           {dontTransferCache: true},
           RegenCaller.restApi
         );
-        return {state, executionOptimistic: isOptimisticBlock(block), finalized: false};
+        return {state, executionOptimistic: isOptimisticBlock(block), finalized: slot === finalizedBlock.slot};
       } else {
         // Just check if state is already in the cache. If it's not dialed to the correct slot,
         // do not bother in advancing the state. restApiCanTriggerRegen == false means do no work
@@ -427,7 +427,7 @@ export class BeaconChain implements IBeaconChain {
         }
 
         const state = this.regen.getStateSync(block.stateRoot);
-        return state && {state, executionOptimistic: isOptimisticBlock(block), finalized: false};
+        return state && {state, executionOptimistic: isOptimisticBlock(block), finalized: slot === finalizedBlock.slot};
       }
     } else {
       // request for finalized state
