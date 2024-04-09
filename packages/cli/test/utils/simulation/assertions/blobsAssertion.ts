@@ -12,7 +12,7 @@ const sentBlobs: string[] = [];
 export function createBlobsAssertion(
   nodes: NodePair[],
   {sendBlobsAtSlot, validateBlobsAt}: {sendBlobsAtSlot: number; validateBlobsAt: number}
-): SimulationAssertion<string, string[]> {
+): SimulationAssertion<string, Uint8Array[]> {
   return {
     id: `blobs-${nodes.map((n) => n.id).join("-")}`,
     match: ({slot}) => {
@@ -52,13 +52,13 @@ export function createBlobsAssertion(
       const blobSideCars = await node.beacon.api.beacon.getBlobSidecars(slot);
       ApiError.assert(blobSideCars);
 
-      return blobSideCars.response.data.map((b) => toHex(b.blob));
+      return blobSideCars.response.data.map((b) => b.blob);
     },
 
     assert: async ({store}) => {
       const errors: AssertionResult[] = [];
 
-      const blobs: string[] = [];
+      const blobs: Uint8Array[] = [];
 
       for (let slot = sendBlobsAtSlot; slot <= validateBlobsAt; slot++) {
         blobs.push(...(store[slot] ?? []));
@@ -75,7 +75,7 @@ export function createBlobsAssertion(
       }
 
       for (let i = 0; i < blobs.length; i++) {
-        if (blobs[i] !== sentBlobs[i]) {
+        if (!Buffer.from(blobs[i]).equals(Buffer.from(sentBlobs[i]))) {
           errors.push([
             "Node does not have the right blobs",
             {
