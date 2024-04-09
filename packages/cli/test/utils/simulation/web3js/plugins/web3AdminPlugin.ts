@@ -35,3 +35,9 @@ export class Web3AdminPlugin extends Web3PluginBase {
     return this.requestManager.send({method: "admin_addPeer", params: [enode]});
   }
 }
+
+declare module "web3" {
+  interface Web3Context {
+    admin: Web3AdminPlugin;
+  }
+}
