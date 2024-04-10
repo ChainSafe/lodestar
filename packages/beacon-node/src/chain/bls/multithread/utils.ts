@@ -1,6 +1,6 @@
 import bls from "@chainsafe/bls";
-import {CoordType, SignatureSet} from "@chainsafe/bls/types";
-import {WorkRequestSet, WorkResultError} from "./types.js";
+import {CoordType} from "@chainsafe/bls/types";
+import {DeserializedSet, WorkRequestSet, WorkResultError} from "./types.js";
 
 /**
  * Splits an array into an array of arrays maximizing the size of the smallest chunk.
@@ -22,7 +22,7 @@ export function chunkifyMaximizeChunkSize<T>(arr: T[], minPerChunk: number): T[]
   return arrArr;
 }
 
-export function deserializeSet(set: WorkRequestSet): SignatureSet {
+export function deserializeSet(set: WorkRequestSet): DeserializedSet {
   return {
     message: set.message,
     publicKey:
