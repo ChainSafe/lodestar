@@ -81,13 +81,13 @@ jobs:
 
       - name: Create Release
         id: create_release
-        uses: actions/create-release@v1
+        uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ needs.tag.outputs.tag }}
           body_path: "CHANGELOG.md"
-          release_name: Release ${{ needs.tag.outputs.tag }}
+          name: Release ${{ needs.tag.outputs.tag }}
           prerelease: true
 
       - name: Change and commit version
