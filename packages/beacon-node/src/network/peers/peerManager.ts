@@ -509,7 +509,7 @@ export class PeerManager {
       for (const peerIdStr of this.connectedPeers.keys()) {
         if (!actualConnectedPeerIds.has(peerIdStr)) {
           this.connectedPeers.delete(peerIdStr);
-          this.metrics?.leakedConnectionCount.inc();
+          this.metrics?.leakedConnectionsCount.inc();
         }
       }
     }

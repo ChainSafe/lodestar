@@ -112,7 +112,7 @@ export function createNetworkCoreMetrics(register: RegistryMetricCreator) {
         buckets: [0.001, 0.01, 0.1, 1],
       }),
     },
-    leakedConnectionCount: register.gauge({
+    leakedConnectionsCount: register.gauge({
       name: "lodestar_peer_manager_leaked_connections_count",
       help: "Total libp2p leaked connections detected by lodestar",
     }),
