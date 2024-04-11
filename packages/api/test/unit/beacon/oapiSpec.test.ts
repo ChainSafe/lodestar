@@ -86,9 +86,6 @@ const testDatas = {
 
 const ignoredOperations = [
   /* missing route */
-  /* https://github.com/ChainSafe/lodestar/issues/6058 */
-  "postStateValidators",
-  "postStateValidatorBalances",
   "getDepositSnapshot", // Won't fix for now, see https://github.com/ChainSafe/lodestar/issues/5697
   "getBlindedBlock", // https://github.com/ChainSafe/lodestar/issues/5699
   "getNextWithdrawals", // https://github.com/ChainSafe/lodestar/issues/5696
