@@ -504,11 +504,12 @@ export class PeerManager {
 
     // Prune connectedPeers map in case it leaks. It has happen in previous nodes,
     // disconnect is not always called for all peers
-    if (this.connectedPeers.size > connectedPeers.length * 2) {
+    if (this.connectedPeers.size > connectedPeers.length * 1.1) {
       const actualConnectedPeerIds = new Set(connectedPeers.map((peerId) => peerId.toString()));
       for (const peerIdStr of this.connectedPeers.keys()) {
         if (!actualConnectedPeerIds.has(peerIdStr)) {
           this.connectedPeers.delete(peerIdStr);
+          this.metrics?.leakedConnectionsCount.inc();
         }
       }
     }
