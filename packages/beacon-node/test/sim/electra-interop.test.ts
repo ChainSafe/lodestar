@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import assert from "node:assert";
 import {describe, it, vi, afterAll, afterEach} from "vitest";
 
 import {LogLevel, sleep} from "@lodestar/utils";
@@ -224,13 +225,13 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     }
 
     const actualDepositReceipt = payload.depositReceipts[0];
-    if (actualDepositReceipt !== depositReceiptB) {
-      throw Error(
-        `Deposit receipts mismatched. Expected: ${JSON.stringify(depositReceiptB)}, actual: ${JSON.stringify(
-          actualDepositReceipt
-        )}`
-      );
-    }
+    assert.deepStrictEqual(
+      actualDepositReceipt,
+      depositReceiptB,
+      `Deposit receipts mismatched. Expected: ${JSON.stringify(depositReceiptB)}, actual: ${JSON.stringify(
+        actualDepositReceipt
+      )}`
+    );
   });
 
   it("Post-merge, run for a few blocks", async function () {
