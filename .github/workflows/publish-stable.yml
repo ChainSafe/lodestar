@@ -54,33 +54,13 @@ jobs:
     needs: tag
     if: needs.tag.outputs.is_stable == 'true'
     steps:
-      # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Needs full depth for changelog generation
-      - uses: actions/setup-node@v4
+
+      - uses: "./.github/actions/setup-and-build"
         with:
-          node-version: 20
-          check-latest: true
-          cache: yarn          
-      - name: Node.js version
-        id: node
-        run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT
-      - name: Restore dependencies
-        uses: actions/cache@master
-        id: cache-deps
-        with:
-          path: |
-            node_modules
-            packages/*/node_modules
-          key: ${{ runner.os }}-${{ steps.node.outputs.v8CppApiVersion }}-${{ hashFiles('**/yarn.lock', '**/package.json') }}
-      - name: Install & build
-        if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: yarn install --frozen-lockfile && yarn build
-      - name: Build
-        run: yarn build
-        if: steps.cache-deps.outputs.cache-hit == 'true'
-      # </common-build>
+          node: 20
 
       - name: Generate changelog
         run: node scripts/generate_changelog.mjs ${{ needs.tag.outputs.prev_tag }} ${{ needs.tag.outputs.tag }} CHANGELOG.md
