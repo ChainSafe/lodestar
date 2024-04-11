@@ -124,7 +124,7 @@ export const defaultOptions = {
   suggestedFeeRecipient: "0x0000000000000000000000000000000000000000",
   defaultGasLimit: 30_000_000,
   builderSelection: routes.validator.BuilderSelection.ExecutionOnly,
-  builderAliasSelection: routes.validator.BuilderSelection.MaxProfit,
+  builderAliasSelection: routes.validator.BuilderSelection.Default,
   builderBoostFactor: BigInt(100),
   // spec asks for gossip validation by default
   broadcastValidation: routes.beacon.BroadcastValidation.gossip,
@@ -267,6 +267,12 @@ export class ValidatorStore {
 
     let boostFactor;
     switch (selection) {
+      case routes.validator.BuilderSelection.Default:
+        // Default value slightly favors local block to improve censorship resistance of Ethereum
+        // The people have spoken and so it shall be https://x.com/lodestar_eth/status/1772679499928191044
+        boostFactor = BigInt(90);
+        break;
+
       case routes.validator.BuilderSelection.MaxProfit:
         boostFactor =
           (this.validators.get(pubkeyHex)?.builder || {}).boostFactor ?? this.defaultProposerConfig.builder.boostFactor;

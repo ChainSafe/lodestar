@@ -58,6 +58,9 @@ export type ChainConfig = {
 
   // Fork choice
   PROPOSER_SCORE_BOOST: number;
+  REORG_HEAD_WEIGHT_THRESHOLD: number;
+  REORG_PARENT_WEIGHT_THRESHOLD: number;
+  REORG_MAX_EPOCHS_SINCE_FINALIZATION: number;
 
   // Deposit contract
   DEPOSIT_CHAIN_ID: number;
@@ -114,6 +117,9 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
 
   // Fork choice
   PROPOSER_SCORE_BOOST: "number",
+  REORG_HEAD_WEIGHT_THRESHOLD: "number",
+  REORG_PARENT_WEIGHT_THRESHOLD: "number",
+  REORG_MAX_EPOCHS_SINCE_FINALIZATION: "number",
 
   // Deposit contract
   DEPOSIT_CHAIN_ID: "number",

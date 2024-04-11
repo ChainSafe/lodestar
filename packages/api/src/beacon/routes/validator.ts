@@ -42,6 +42,7 @@ import {allForksBlockContentsResSerializer} from "../../utils/routes.js";
 import {ExecutionOptimistic} from "./beacon/block.js";
 
 export enum BuilderSelection {
+  Default = "default",
   BuilderAlways = "builderalways",
   ExecutionAlways = "executionalways",
   MaxProfit = "maxprofit",

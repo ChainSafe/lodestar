@@ -78,6 +78,9 @@ export const chainConfig: ChainConfig = {
   // ---------------------------------------------------------------
   // 40%
   PROPOSER_SCORE_BOOST: 40,
+  REORG_HEAD_WEIGHT_THRESHOLD: 20,
+  REORG_PARENT_WEIGHT_THRESHOLD: 160,
+  REORG_MAX_EPOCHS_SINCE_FINALIZATION: 2,
 
   // Deposit contract
   // ---------------------------------------------------------------

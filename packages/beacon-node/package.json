@@ -46,6 +46,9 @@
     },
     "./sync": {
       "import": "./lib/sync/index.js"
+    },
+    "./util": {
+      "import": "./lib/util/index.js"
     }
   },
   "typesVersions": {
@@ -133,7 +136,7 @@
     "datastore-core": "^9.1.1",
     "datastore-level": "^10.1.1",
     "deepmerge": "^4.3.1",
-    "fastify": "^4.19.0",
+    "fastify": "^4.26.2",
     "interface-datastore": "^8.2.7",
     "it-all": "^3.0.4",
     "it-pipe": "^3.0.1",

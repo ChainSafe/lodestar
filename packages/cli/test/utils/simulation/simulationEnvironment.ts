@@ -4,19 +4,20 @@ import path from "node:path";
 import tmp from "tmp";
 import {fromHexString} from "@chainsafe/ssz";
 import {nodeUtils} from "@lodestar/beacon-node";
+import {loadEthereumTrustedSetup, initCKZG} from "@lodestar/beacon-node/util";
 import {ChainForkConfig} from "@lodestar/config";
 import {activePreset} from "@lodestar/params";
 import {BeaconStateAllForks, interopSecretKey} from "@lodestar/state-transition";
 import {prettyMsToTime} from "@lodestar/utils";
 import {LogLevel, TimestampFormatCode} from "@lodestar/logger";
 import {getNodeLogger, LoggerNode} from "@lodestar/logger/node";
-import {EpochClock, MS_IN_SEC} from "./EpochClock.js";
-import {ExternalSignerServer} from "./ExternalSignerServer.js";
-import {SimulationTracker} from "./SimulationTracker.js";
-import {createBeaconNode} from "./beacon_clients/index.js";
-import {createValidatorNode, getValidatorForBeaconNode} from "./validator_clients/index.js";
+import {EpochClock, MS_IN_SEC} from "./epochClock.js";
+import {ExternalSignerServer} from "./externalSignerServer.js";
+import {SimulationTracker} from "./simulationTracker.js";
+import {createBeaconNode} from "./clients/beacon/index.js";
+import {createValidatorNode, getValidatorForBeaconNode} from "./clients/validator/index.js";
 import {MOCK_ETH1_GENESIS_HASH} from "./constants.js";
-import {createExecutionNode} from "./execution_clients/index.js";
+import {createExecutionNode} from "./clients/execution/index.js";
 import {
   BeaconClient,
   ValidatorClientKeys,
@@ -85,7 +86,7 @@ export class SimulationEnvironment {
   }
 
   static async initWithDefaults(
-    {forkConfig, logsDir, id}: SimulationInitOptions,
+    {forkConfig, logsDir, id, trustedSetup}: SimulationInitOptions,
     clients: NodePairDefinition[]
   ): Promise<SimulationEnvironment> {
     const env = new SimulationEnvironment(forkConfig, {
@@ -93,6 +94,7 @@ export class SimulationEnvironment {
       id,
       genesisTime: Math.floor(Date.now() / 1000),
       controller: new AbortController(),
+      trustedSetup,
       rootDir: path.join(tmp.dirSync({unsafeCleanup: true, tmpdir: "/tmp", template: "sim-XXXXXX"}).name, id),
     });
 
@@ -110,6 +112,11 @@ export class SimulationEnvironment {
         currentTime
       ).toISOString()} simulationTimeout=${prettyMsToTime(opts.runTimeoutMs)} rootDir=${this.options.rootDir}`
     );
+
+    if (this.options.trustedSetup) {
+      await initCKZG();
+      loadEthereumTrustedSetup();
+    }
 
     if (opts.runTimeoutMs > 0) {
       this.runTimeout = setTimeout(() => {
@@ -317,9 +324,9 @@ export class SimulationEnvironment {
       const el = this.nodes[i].execution;
 
       // If eth1 is mock then genesis hash would be empty
-      const eth1Genesis = el.provider === null ? {hash: MOCK_ETH1_GENESIS_HASH} : await el.provider.getBlockByNumber(0);
+      const eth1Genesis = el.provider === null ? {hash: MOCK_ETH1_GENESIS_HASH} : await el.provider?.eth.getBlock(0);
 
-      if (!eth1Genesis) {
+      if (!eth1Genesis.hash) {
         throw new Error(`Eth1 genesis not found for node "${this.nodes[i].id}"`);
       }
 

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import path from "node:path";
-import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
+import {SimulationEnvironment} from "../utils/simulation/simulationEnvironment.js";
 import {nodeAssertion} from "../utils/simulation/assertions/nodeAssertion.js";
 import {AssertionMatch, BeaconClient, ExecutionClient, ValidatorClient} from "../utils/simulation/interfaces.js";
 import {defineSimTestConfig, logFilesDir} from "../utils/simulation/utils/index.js";
@@ -66,6 +66,9 @@ await env.start({runTimeoutMs: estimatedTimeoutMs});
 await connectAllNodes(env.nodes);
 
 // Stopping at last slot usually cause assertion to fail because of missing data as node are shutting down
-await waitForSlot(env.clock.getLastSlotOfEpoch(capellaForkEpoch + 1) + 2, env.nodes, {env, silent: true});
+await waitForSlot("Waiting for the one additional epoch for capellaFork", {
+  slot: env.clock.getLastSlotOfEpoch(capellaForkEpoch + 1) + 2,
+  env,
+});
 
 await env.stop();

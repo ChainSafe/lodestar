@@ -40,6 +40,8 @@ export function generateProtoBlock(overrides: Partial<ProtoBlock> = {}): ProtoBl
     unrealizedFinalizedEpoch: 0,
     unrealizedFinalizedRoot: ZERO_HASH_HEX,
 
+    timeliness: false,
+
     ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
 
     ...overrides,
