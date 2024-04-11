@@ -402,7 +402,7 @@ export class BeaconChain implements IBeaconChain {
   async getStateBySlot(
     slot: Slot,
     opts?: StateGetOpts
-  ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean} | null> {
+  ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean} | null> {
     const finalizedBlock = this.forkChoice.getFinalizedBlock();
 
     if (slot >= finalizedBlock.slot) {
@@ -417,7 +417,7 @@ export class BeaconChain implements IBeaconChain {
           {dontTransferCache: true},
           RegenCaller.restApi
         );
-        return {state, executionOptimistic: isOptimisticBlock(block)};
+        return {state, executionOptimistic: isOptimisticBlock(block), finalized: slot === finalizedBlock.slot};
       } else {
         // Just check if state is already in the cache. If it's not dialed to the correct slot,
         // do not bother in advancing the state. restApiCanTriggerRegen == false means do no work
@@ -427,25 +427,29 @@ export class BeaconChain implements IBeaconChain {
         }
 
         const state = this.regen.getStateSync(block.stateRoot);
-        return state && {state, executionOptimistic: isOptimisticBlock(block)};
+        return state && {state, executionOptimistic: isOptimisticBlock(block), finalized: slot === finalizedBlock.slot};
       }
     } else {
       // request for finalized state
 
       // do not attempt regen, just check if state is already in DB
       const state = await this.db.stateArchive.get(slot);
-      return state && {state, executionOptimistic: false};
+      return state && {state, executionOptimistic: false, finalized: true};
     }
   }
 
   async getStateByStateRoot(
     stateRoot: RootHex,
     opts?: StateGetOpts
-  ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean} | null> {
+  ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean} | null> {
     if (opts?.allowRegen) {
       const state = await this.regen.getState(stateRoot, RegenCaller.restApi);
       const block = this.forkChoice.getBlock(state.latestBlockHeader.hashTreeRoot());
-      return {state, executionOptimistic: block != null && isOptimisticBlock(block)};
+      return {
+        state,
+        executionOptimistic: block != null && isOptimisticBlock(block),
+        finalized: state.epochCtx.epoch <= this.forkChoice.getFinalizedCheckpoint().epoch,
+      };
     }
 
     // TODO: This can only fulfill requests for a very narrow set of roots.
@@ -456,21 +460,29 @@ export class BeaconChain implements IBeaconChain {
     const cachedStateCtx = this.regen.getStateSync(stateRoot);
     if (cachedStateCtx) {
       const block = this.forkChoice.getBlock(cachedStateCtx.latestBlockHeader.hashTreeRoot());
-      return {state: cachedStateCtx, executionOptimistic: block != null && isOptimisticBlock(block)};
+      return {
+        state: cachedStateCtx,
+        executionOptimistic: block != null && isOptimisticBlock(block),
+        finalized: cachedStateCtx.epochCtx.epoch <= this.forkChoice.getFinalizedCheckpoint().epoch,
+      };
     }
 
     const data = await this.db.stateArchive.getByRoot(fromHexString(stateRoot));
-    return data && {state: data, executionOptimistic: false};
+    return data && {state: data, executionOptimistic: false, finalized: true};
   }
 
   getStateByCheckpoint(
     checkpoint: CheckpointWithHex
-  ): {state: BeaconStateAllForks; executionOptimistic: boolean} | null {
+  ): {state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean} | null {
     // TODO: this is not guaranteed to work with new state caches, should work on this before we turn n-historical state on
     const cachedStateCtx = this.regen.getCheckpointStateSync(checkpoint);
     if (cachedStateCtx) {
       const block = this.forkChoice.getBlock(cachedStateCtx.latestBlockHeader.hashTreeRoot());
-      return {state: cachedStateCtx, executionOptimistic: block != null && isOptimisticBlock(block)};
+      return {
+        state: cachedStateCtx,
+        executionOptimistic: block != null && isOptimisticBlock(block),
+        finalized: cachedStateCtx.epochCtx.epoch <= this.forkChoice.getFinalizedCheckpoint().epoch,
+      };
     }
 
     return null;
@@ -478,7 +490,7 @@ export class BeaconChain implements IBeaconChain {
 
   async getCanonicalBlockAtSlot(
     slot: Slot
-  ): Promise<{block: allForks.SignedBeaconBlock; executionOptimistic: boolean} | null> {
+  ): Promise<{block: allForks.SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null> {
     const finalizedBlock = this.forkChoice.getFinalizedBlock();
     if (slot > finalizedBlock.slot) {
       // Unfinalized slot, attempt to find in fork-choice
@@ -486,7 +498,7 @@ export class BeaconChain implements IBeaconChain {
       if (block) {
         const data = await this.db.block.get(fromHexString(block.blockRoot));
         if (data) {
-          return {block: data, executionOptimistic: isOptimisticBlock(block)};
+          return {block: data, executionOptimistic: isOptimisticBlock(block), finalized: false};
         }
       }
       // A non-finalized slot expected to be found in the hot db, could be archived during
@@ -495,24 +507,24 @@ export class BeaconChain implements IBeaconChain {
     }
 
     const data = await this.db.blockArchive.get(slot);
-    return data && {block: data, executionOptimistic: false};
+    return data && {block: data, executionOptimistic: false, finalized: true};
   }
 
   async getBlockByRoot(
     root: string
-  ): Promise<{block: allForks.SignedBeaconBlock; executionOptimistic: boolean} | null> {
+  ): Promise<{block: allForks.SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null> {
     const block = this.forkChoice.getBlockHex(root);
     if (block) {
       const data = await this.db.block.get(fromHexString(root));
       if (data) {
-        return {block: data, executionOptimistic: isOptimisticBlock(block)};
+        return {block: data, executionOptimistic: isOptimisticBlock(block), finalized: false};
       }
       // If block is not found in hot db, try cold db since there could be an archive cycle happening
       // TODO: Add a lock to the archiver to have deterministic behavior on where are blocks
     }
 
     const data = await this.db.blockArchive.getByRoot(fromHexString(root));
-    return data && {block: data, executionOptimistic: false};
+    return data && {block: data, executionOptimistic: false, finalized: true};
   }
 
   async produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody> {
@@ -1051,7 +1063,7 @@ export class BeaconChain implements IBeaconChain {
   async getAttestationsRewards(
     epoch: Epoch,
     validatorIds?: (ValidatorIndex | string)[]
-  ): Promise<{rewards: AttestationsRewards; executionOptimistic: boolean}> {
+  ): Promise<{rewards: AttestationsRewards; executionOptimistic: boolean; finalized: boolean}> {
     // We use end slot of (epoch + 1) to ensure we have seen all attestations. On-time or late. Any late attestation beyond this slot is not considered
     const slot = computeEndSlotAtEpoch(epoch + 1);
     const stateResult = await this.getStateBySlot(slot, {allowRegen: false}); // No regen if state not in cache
@@ -1060,7 +1072,7 @@ export class BeaconChain implements IBeaconChain {
       throw Error(`State is unavailable for slot ${slot}`);
     }
 
-    const {executionOptimistic} = stateResult;
+    const {executionOptimistic, finalized} = stateResult;
     const stateRoot = toHexString(stateResult.state.hashTreeRoot());
 
     const cachedState = this.regen.getStateSync(stateRoot);
@@ -1071,7 +1083,7 @@ export class BeaconChain implements IBeaconChain {
 
     const rewards = await computeAttestationsRewards(epoch, cachedState, this.config, validatorIds);
 
-    return {rewards, executionOptimistic};
+    return {rewards, executionOptimistic, finalized};
   }
 
   async getSyncCommitteeRewards(
