@@ -89,10 +89,7 @@ describe("chain / rewards / blockRewards", () => {
       // Populate tree root caches of the state
       state.hashTreeRoot();
       cachedStateAltairPopulateCaches(state);
-      const calculatedBlockReward = await computeBlockRewards(
-        block.message,
-        state as unknown as CachedBeaconStateAllForks
-      );
+      const calculatedBlockReward = await computeBlockRewards(block.message, state as CachedBeaconStateAllForks);
       const {proposerIndex, total, attestations, syncAggregate, proposerSlashings, attesterSlashings} =
         calculatedBlockReward;
 
@@ -112,7 +109,7 @@ describe("chain / rewards / blockRewards", () => {
         expect(attesterSlashings).toBe(0);
       }
 
-      const postState = stateTransition(state as unknown as CachedBeaconStateAllForks, block, {
+      const postState = stateTransition(state as CachedBeaconStateAllForks, block, {
         executionPayloadStatus: ExecutionPayloadStatus.valid,
         dataAvailableStatus: DataAvailableStatus.available,
         verifyProposer: false,
@@ -140,7 +137,7 @@ describe("chain / rewards / blockRewards", () => {
     preState.hashTreeRoot();
     cachedStateAltairPopulateCaches(preState);
 
-    const postState = stateTransition(preState as unknown as CachedBeaconStateAllForks, block, {
+    const postState = stateTransition(preState as CachedBeaconStateAllForks, block, {
       executionPayloadStatus: ExecutionPayloadStatus.valid,
       dataAvailableStatus: DataAvailableStatus.available,
       verifyProposer: false,
@@ -154,7 +151,7 @@ describe("chain / rewards / blockRewards", () => {
 
     const calculatedBlockReward = await computeBlockRewards(
       block.message,
-      preState as unknown as CachedBeaconStateAllForks,
+      preState as CachedBeaconStateAllForks,
       postState
     );
     const {proposerIndex, total, attestations, syncAggregate, proposerSlashings, attesterSlashings} =
