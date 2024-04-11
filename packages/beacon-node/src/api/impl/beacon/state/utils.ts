@@ -129,14 +129,15 @@ export function filterStateValidatorsByStatus(
   return responses;
 }
 
-type StateValidatorIndexResponse = {valid: true; validatorIndex: number} | {valid: false; code: number; reason: string};
+type StateValidatorIndexResponse =
+  | {valid: true; validatorIndex: ValidatorIndex}
+  | {valid: false; code: number; reason: string};
 
 export function getStateValidatorIndex(
   id: routes.beacon.ValidatorId | BLSPubkey,
   state: BeaconStateAllForks,
   pubkey2index: PubkeyIndexMap
 ): StateValidatorIndexResponse {
-  let validatorIndex: ValidatorIndex | undefined;
   if (typeof id === "string") {
     // mutate `id` and fallthrough to below
     if (id.startsWith("0x")) {
@@ -151,7 +152,7 @@ export function getStateValidatorIndex(
   }
 
   if (typeof id === "number") {
-    validatorIndex = id;
+    const validatorIndex = id;
     // validator is invalid or added later than given stateId
     if (!Number.isSafeInteger(validatorIndex)) {
       return {valid: false, code: 400, reason: "Invalid validator index"};
@@ -163,7 +164,7 @@ export function getStateValidatorIndex(
   }
 
   // typeof id === Uint8Array
-  validatorIndex = pubkey2index.get(id);
+  const validatorIndex = pubkey2index.get(id);
   if (validatorIndex === undefined) {
     return {valid: false, code: 404, reason: "Validator pubkey not found in state"};
   }
