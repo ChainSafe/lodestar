@@ -166,6 +166,12 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     this.blsPoolType = options.blsPoolType ?? BlsPoolType.libuv;
     this.disableSameMessageVerificationRandomness = options.disableSameMessageVerificationRandomness ?? false;
 
+    if (this.disableSameMessageVerificationRandomness) {
+      this.logger.warn(
+        "Same message verification randomness is turned off. For optimum safety this should be turned on. Note, there are no reasons that this should be off "
+      );
+    }
+
     // Use compressed for herumi for now.
     // THe worker is not able to deserialize from uncompressed
     // `Error: err _wrapDeserialize`
