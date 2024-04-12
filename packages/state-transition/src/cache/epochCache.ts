@@ -226,7 +226,7 @@ export class EpochCache {
    * eg. latest epoch = 105, latest finalized cp state epoch = 102
    * then the list will be (in terms of epoch) [103, 104, 105]
    */
-  private historicalValidatorLengths: immutable.List<number>;
+  historicalValidatorLengths: immutable.List<number>;
 
   constructor(data: {
     config: BeaconConfig;
