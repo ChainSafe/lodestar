@@ -20,7 +20,7 @@ export const generateBuilderNode: ExecutionNodeGenerator<ExecutionClient.Builder
     throw new Error("BUILDER_DOCKER_IMAGE must be provided");
   }
 
-  const {id, mode, ttd, address, mining, clientOptions, nodeIndex} = opts;
+  const {id, ttd, address, mining, clientOptions, nodeIndex} = opts;
   const ports = getNodePorts(nodeIndex);
 
   const {rootDir, rootDirMounted, genesisFilePathMounted, logFilePath, jwtsecretFilePathMounted} = getNodeMountedPaths(
@@ -132,6 +132,8 @@ export const generateBuilderNode: ExecutionNodeGenerator<ExecutionClient.Builder
   startJobArgs.push(
     "--builder",
     "--builder.local_relay",
+    "--builder.algotype",
+    clientOptions.builder.algo ?? "greedy",
     "--builder.slots_in_epoch",
     opts.clientOptions.builder.slotsInEpoch.toString(),
     "--builder.seconds_in_slot",
@@ -159,10 +161,6 @@ export const generateBuilderNode: ExecutionNodeGenerator<ExecutionClient.Builder
     exposePorts.push(Number(clientOptions.builder.listenAddress.split(":")[1]));
   }
 
-  if (clientOptions?.builder?.algo) {
-    startJobArgs.push("--builder.algotype", clientOptions.builder.algo);
-  }
-
   const startJobOptions: JobOptions = {
     id,
     type: RunnerType.Docker,
@@ -176,8 +174,7 @@ export const generateBuilderNode: ExecutionNodeGenerator<ExecutionClient.Builder
       command: "",
       args: startJobArgs,
       env: {
-        BUILDER_SECRET_KEY: "0x3ac12ae741f29701f8e30f5de6350766c020cb80768a0ff01e6838ffd2322f39",
-        BUILDER_TX_SIGNING_KEY: "0x4ca12ae741f29701f8e30f5de6350766c020cb80768a0ff01e6838ffd2569e67",
+        BUILDER_TX_SIGNING_KEY: `0x${EL_GENESIS_SECRET_KEY}`,
       },
     },
     logs: {
