@@ -51,7 +51,7 @@ jobs:
   npm:
     name: Publish to NPM & Github
     runs-on: buildjet-4vcpu-ubuntu-2204
-    needs: tag
+    needs: [tag, binaries, binary-arm64]
     if: needs.tag.outputs.is_stable == 'true'
     steps:
       - uses: actions/checkout@v4
@@ -65,12 +65,20 @@ jobs:
       - name: Generate changelog
         run: node scripts/generate_changelog.mjs ${{ needs.tag.outputs.prev_tag }} ${{ needs.tag.outputs.tag }} CHANGELOG.md
 
+      - name: Get binaries
+        uses: actions/download-artifact@v4
+        with:
+          path: dist/
+          merge-multiple: true
+
       - name: Create Release
         id: create_release
         uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          files: dist/*
+          fail_on_unmatched_files: true
           tag_name: ${{ needs.tag.outputs.tag }}
           body_path: "CHANGELOG.md"
           name: Release ${{ needs.tag.outputs.tag }}
@@ -152,3 +160,63 @@ jobs:
           --file ./docker/prometheus/Dockerfile
           --tag chainsafe/lodestar-prometheus:${{ needs.tag.outputs.tag }}
           --platform linux/amd64,linux/arm64
+
+  binaries:
+    name: Build lodestar binaries
+    needs: tag
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            build: |
+              npx caxa -D -p "yarn install --production" --input . --output "lodestar" -- "{{caxa}}/node_modules/.bin/node" "--max-old-space-size=4096" "{{caxa}}/node_modules/.bin/lodestar"
+              tar -czf "dist/lodestar-linux-${{ needs.tag.outputs.tag }}.tgz" "lodestar"
+    runs-on: ${{matrix.os}}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: "./.github/actions/setup-and-build"
+        with:
+          node: 20
+      - run: |
+          mkdir -p dist
+          yarn global add caxa@3.0.1
+          ${{ matrix.build }}
+      - name: Upload binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries-${{ matrix.os }}
+          path: dist/
+          if-no-files-found: error
+
+  binary-arm64:
+    name: Build Lodestar arm64 binary
+    runs-on: buildjet-4vcpu-ubuntu-2204
+    needs: tag
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          check-latest: true
+          cache: yarn
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+      - name: Build arm64 Binding, Run Tests and Copy Build Artifact to Host
+        run: |
+          docker buildx build --build-arg NODE_VERSION=20 --platform linux/arm64 -t lodestar-temp-armbuild:20 --load --progress=plain .
+          docker create --name temp-container lodestar-temp-armbuild:20
+          docker cp temp-container:/usr/app/node_modules ./node_modules
+      - run: |
+          mkdir -p dist
+          yarn global add caxa@3.0.1
+          npx caxa -D -p "yarn install --production" --input . --output "lodestar" -- "{{caxa}}/node_modules/.bin/node" "--max-old-space-size=4096" "{{caxa}}/node_modules/.bin/lodestar"
+          tar -czf "dist/lodestar-linux-arm64-${{ needs.tag.outputs.tag }}.tgz" "lodestar"
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries-linux-arm64
+          path: dist/
+          if-no-files-found: error
