@@ -1,6 +1,11 @@
 import {toHexString} from "@chainsafe/ssz";
 import {electra, phase0, ssz} from "@lodestar/types";
-import {FAR_FUTURE_EPOCH, MIN_ACTIVATION_BALANCE, PENDING_PARTIAL_WITHDRAWALS_LIMIT, FULL_EXIT_REQUEST_AMOUNT} from "@lodestar/params";
+import {
+  FAR_FUTURE_EPOCH,
+  MIN_ACTIVATION_BALANCE,
+  PENDING_PARTIAL_WITHDRAWALS_LIMIT,
+  FULL_EXIT_REQUEST_AMOUNT,
+} from "@lodestar/params";
 
 import {CachedBeaconStateElectra} from "../types.js";
 import {hasCompoundingWithdrawalCredential, hasExecutionWithdrawalCredential} from "../util/electra.js";
@@ -51,14 +56,20 @@ export function processExecutionLayerWithdrawRequest(
       // TODO Electra: add log here
     }
     return;
-  } 
+  }
 
   const hasSufficientEffectiveBalance = validator.effectiveBalance >= MIN_ACTIVATION_BALANCE;
   const hasExcessBalance = validatorBalance > MIN_ACTIVATION_BALANCE + pendingBalanceToWithdraw;
 
   // Only allow partial withdrawals with compounding withdrawal credentials
-  if (hasCompoundingWithdrawalCredential(validator.withdrawalCredentials) && hasSufficientEffectiveBalance && hasExcessBalance) {
-    const amountToWithdraw = BigInt(Math.min(validatorBalance - MIN_ACTIVATION_BALANCE - pendingBalanceToWithdraw, amount));
+  if (
+    hasCompoundingWithdrawalCredential(validator.withdrawalCredentials) &&
+    hasSufficientEffectiveBalance &&
+    hasExcessBalance
+  ) {
+    const amountToWithdraw = BigInt(
+      Math.min(validatorBalance - MIN_ACTIVATION_BALANCE - pendingBalanceToWithdraw, amount)
+    );
     const exitQueueEpoch = computeExitEpochAndUpdateChurn(state, amountToWithdraw);
     const withdrawableEpoch = exitQueueEpoch + config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY;
 
@@ -68,7 +79,7 @@ export function processExecutionLayerWithdrawRequest(
       withdrawableEpoch,
     });
     state.pendingPartialWithdrawals.push(pendingPartialWithdrawal);
-  }  
+  }
 }
 
 function isValidValidator(

@@ -4,7 +4,7 @@ import {FAR_FUTURE_EPOCH, MIN_ACTIVATION_BALANCE, PENDING_CONSOLIDATIONS_LIMIT} 
 import {verifyConsolidationSignature} from "../signatureSets/index.js";
 
 import {CachedBeaconStateElectra} from "../types.js";
-import {getActiveBalance, getConsolidationChurnLimit, isActiveValidator} from "../util/validator.js";
+import {getConsolidationChurnLimit, isActiveValidator} from "../util/validator.js";
 import {hasExecutionWithdrawalCredential} from "../util/electra.js";
 import {computeConsolidationEpochAndUpdateChurn} from "../util/epoch.js";
 

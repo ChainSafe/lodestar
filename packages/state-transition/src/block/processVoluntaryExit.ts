@@ -16,7 +16,12 @@ export function processVoluntaryExit(
   signedVoluntaryExit: phase0.SignedVoluntaryExit,
   verifySignature = true
 ): void {
-  if (!isValidVoluntaryExit(fork, state, signedVoluntaryExit, verifySignature)) {
+  const isAfterElectra = fork >= ForkSeq.electra;
+  if (
+    (!isAfterElectra && !isValidVoluntaryExit(state, signedVoluntaryExit, verifySignature)) ||
+    (isAfterElectra &&
+      !isValidVoluntaryExitElectra(state as CachedBeaconStateElectra, signedVoluntaryExit, verifySignature))
+  ) {
     throw Error("Invalid voluntary exit");
   }
 
@@ -25,7 +30,6 @@ export function processVoluntaryExit(
 }
 
 export function isValidVoluntaryExit(
-  fork: ForkSeq,
   state: CachedBeaconStateAllForks,
   signedVoluntaryExit: phase0.SignedVoluntaryExit,
   verifySignature = true
@@ -34,7 +38,6 @@ export function isValidVoluntaryExit(
   const voluntaryExit = signedVoluntaryExit.message;
   const validator = state.validators.get(voluntaryExit.validatorIndex);
   const currentEpoch = epochCtx.epoch;
-  const isAfterElectra = fork >= ForkSeq.electra;
 
   return (
     // verify the validator is active
@@ -45,9 +48,18 @@ export function isValidVoluntaryExit(
     currentEpoch >= voluntaryExit.epoch &&
     // verify the validator had been active long enough
     currentEpoch >= validator.activationEpoch + config.SHARD_COMMITTEE_PERIOD &&
-    // only exit validator if it has no pending withdrawals in the queue (post-Electra only)
-    isAfterElectra ? getPendingBalanceToWithdraw(state as CachedBeaconStateElectra, voluntaryExit.validatorIndex) === 0 : true &&
     // verify signature
     (!verifySignature || verifyVoluntaryExitSignature(state, signedVoluntaryExit))
   );
+}
+
+function isValidVoluntaryExitElectra(
+  state: CachedBeaconStateElectra,
+  signedVoluntaryExit: phase0.SignedVoluntaryExit,
+  verifySignature = true
+): boolean {
+  const isValidPreElectra = isValidVoluntaryExit(state, signedVoluntaryExit, verifySignature);
+
+  // only exit validator if it has no pending withdrawals in the queue (post-Electra only)
+  return isValidPreElectra && getPendingBalanceToWithdraw(state, signedVoluntaryExit.message.validatorIndex) === 0;
 }
