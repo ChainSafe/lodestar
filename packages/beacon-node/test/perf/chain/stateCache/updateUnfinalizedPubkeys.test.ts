@@ -7,7 +7,7 @@ import bls from "@chainsafe/bls";
 import {ssz} from "@lodestar/types";
 import {type CachedBeaconStateAllForks, PubkeyIndexMap} from "@lodestar/state-transition";
 import {bytesToBigInt, intToBytes} from "@lodestar/utils";
-import {CheckpointStateCache, StateContextCache} from "../../../../src/chain/stateCache/index.js";
+import {InMemoryCheckpointStateCache, StateContextCache} from "../../../../src/chain/stateCache/index.js";
 import {generateCachedElectraState} from "../../../utils/state.js";
 
 // Benchmark date from Mon Nov 21 2023 - Intel Core i7-9750H @ 2.60Ghz
@@ -21,7 +21,7 @@ describe("updateUnfinalizedPubkeys perf tests", function () {
   const numCheckpointStateCache = 8;
   const numStateCache = 3 * 32;
 
-  let checkpointStateCache: CheckpointStateCache;
+  let checkpointStateCache: InMemoryCheckpointStateCache;
   let stateCache: StateContextCache;
 
   const unfinalizedPubkey2Index = generatePubkey2Index(0, Math.max.apply(null, numPubkeysToBeFinalizedCases));
@@ -35,7 +35,7 @@ describe("updateUnfinalizedPubkeys perf tests", function () {
         baseState.epochCtx.pubkey2index = new PubkeyIndexMap();
         baseState.epochCtx.index2pubkey = [];
 
-        checkpointStateCache = new CheckpointStateCache({});
+        checkpointStateCache = new InMemoryCheckpointStateCache({});
         stateCache = new StateContextCache({});
 
         for (let i = 0; i < numCheckpointStateCache; i++) {
