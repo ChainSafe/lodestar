@@ -100,7 +100,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
 
     this.logger = modules.logger;
     this.blsVerifyAllMultiThread = options.blsVerifyAllMultiThread ?? false;
-    this.disableSameMessageVerificationRandomness = options.disableSameMessageVerificationRandomness ?? true;
+    this.disableSameMessageVerificationRandomness = options.disableSameMessageVerificationRandomness ?? false;
 
     const UV_THREADPOOL_SIZE_ENV = Number(process.env.UV_THREADPOOL_SIZE);
     this.blsPoolSize = isNaN(UV_THREADPOOL_SIZE_ENV) ? 4 : UV_THREADPOOL_SIZE_ENV;
