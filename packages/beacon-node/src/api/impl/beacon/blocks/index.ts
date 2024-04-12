@@ -75,7 +75,7 @@ export function getBeaconBlockApi({
     const bodyRoot = toHex(chain.config.getForkTypes(slot).BeaconBlockBody.hashTreeRoot(signedBlock.message.body));
     const blockLocallyProduced =
       chain.producedBlockRoot.has(blockRoot) || chain.producedBlindedBlockRoot.has(blockRoot);
-    const valLogMeta = {broadcastValidation, blockRoot, bodyRoot, blockLocallyProduced, slot};
+    const valLogMeta = {slot, blockRoot, bodyRoot, broadcastValidation, blockLocallyProduced};
 
     switch (broadcastValidation) {
       case routes.beacon.BroadcastValidation.gossip: {
@@ -227,18 +227,18 @@ export function getBeaconBlockApi({
     const executionPayload = chain.producedBlockRoot.get(blockRoot);
     if (executionPayload !== undefined) {
       const source = ProducedBlockSource.engine;
-      chain.logger.debug("Reconstructing  signedBlockOrContents", {blockRoot, slot, source});
+      chain.logger.debug("Reconstructing  signedBlockOrContents", {slot, blockRoot, source});
 
       const contents = executionPayload
         ? chain.producedContentsCache.get(toHex(executionPayload.blockHash)) ?? null
         : null;
       const signedBlockOrContents = reconstructFullBlockOrContents(signedBlindedBlock, {executionPayload, contents});
 
-      chain.logger.info("Publishing assembled block", {blockRoot, slot, source});
+      chain.logger.info("Publishing assembled block", {slot, blockRoot, source});
       return publishBlock(signedBlockOrContents, opts);
     } else {
       const source = ProducedBlockSource.builder;
-      chain.logger.debug("Reconstructing  signedBlockOrContents", {blockRoot, slot, source});
+      chain.logger.debug("Reconstructing  signedBlockOrContents", {slot, blockRoot, source});
 
       const signedBlockOrContents = await reconstructBuilderBlockOrContents(chain, signedBlindedBlock);
 
@@ -246,7 +246,7 @@ export function getBeaconBlockApi({
       // by gossip
       //
       // see: https://github.com/ChainSafe/lodestar/issues/5404
-      chain.logger.info("Publishing assembled block", {blockRoot, slot, source});
+      chain.logger.info("Publishing assembled block", {slot, blockRoot, source});
       return publishBlock(signedBlockOrContents, {...opts, ignoreIfKnown: true});
     }
   };
