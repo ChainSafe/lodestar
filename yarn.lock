@@ -293,13 +293,13 @@
     ethereum-cryptography "^2.0.0"
     uuid "^9.0.0"
 
-"@chainsafe/bls@ChainSafe/bls#c40e3e8736a8203684652dfeac6c7b23e1f1f6fd":
-  version "7.1.2"
-  resolved "https://codeload.github.com/ChainSafe/bls/tar.gz/c40e3e8736a8203684652dfeac6c7b23e1f1f6fd"
+"@chainsafe/bls@^8.0.0":
+  version "8.0.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/bls/-/bls-8.0.0.tgz#fe6f15a0b18c6a708874ea59d303643ac1807406"
+  integrity sha512-LsN2MtETXDUo3yVgyjXWk6Sy7W2Uj2eAl9ZGNFTsTn7wfDxVSGr9A2qo1+P+ZSO2mlQCGu5RECZ3b4AzzW7WLw==
   dependencies:
     "@chainsafe/bls-keygen" "^0.4.0"
-    bls-eth-wasm "^0.4.8"
-    randombytes "^2.1.0"
+    bls-eth-wasm "^1.1.1"
 
 "@chainsafe/discv5@^9.0.0":
   version "9.0.0"
@@ -4106,10 +4106,10 @@ bl@^5.0.0:
     inherits "^2.0.4"
     readable-stream "^3.4.0"
 
-bls-eth-wasm@^0.4.8:
-  version "0.4.8"
-  resolved "https://registry.npmjs.org/bls-eth-wasm/-/bls-eth-wasm-0.4.8.tgz"
-  integrity sha512-ye7+G6KFLb3i9xSrLASAoYqOUK5WLB6XA5DD8Sh0UQpZ3T999ylsYbFdoOJpmvTDuBuMi23Vy8Jm0pn/GF01CA==
+bls-eth-wasm@^1.1.1:
+  version "1.2.1"
+  resolved "https://registry.yarnpkg.com/bls-eth-wasm/-/bls-eth-wasm-1.2.1.tgz#85f165c17d8f16000f46695b56f72bf6af386825"
+  integrity sha512-hl4oBzZQmPGNb9Wt5GI+oEuHM6twGc5HzXCzNZMVLMMg+dltsOuvuioRyLolpDFbncC0BJbGPzP1ZTysUGkksw==
 
 bluebird@~3.4.1:
   version "3.4.7"
