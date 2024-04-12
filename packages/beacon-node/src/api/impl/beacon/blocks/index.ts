@@ -183,6 +183,7 @@ export function getBeaconBlockApi({
 
     // TODO: Validate block
     metrics?.registerBeaconBlock(OpSource.api, seenTimestampSec, blockForImport.block.message);
+    chain.logger.info("Publishing block", valLogMeta);
     const publishPromises = [
       // Send the block, regardless of whether or not it is valid. The API
       // specification is very clear that this is the desired behaviour.
