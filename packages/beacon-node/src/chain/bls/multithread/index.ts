@@ -422,7 +422,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     }
 
     if (this.blsPoolType === BlsPoolType.libuv) {
-      await this._runJob();
+      void this._runJob();
     } else {
       // Find idle worker
       const worker = this.workers.find((worker) => worker.status.code === WorkerStatusCode.idle);
@@ -448,7 +448,9 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   };
 
   /**
-   * Potentially submit jobs to an idle worker, only if there's a worker and jobs
+   * TODO: (@matthewkeil) Functions runJob and _runJob can be cleaned up once workers are removed
+   *
+   * Potentially submit jobs to libuv or an idle worker, only if there's a worker and jobs
    */
   private _runJob = async (worker?: WorkerDescriptor): Promise<void> => {
     // Prepare work package

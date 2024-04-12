@@ -30,6 +30,10 @@ export function verifySignatureSetsMaybeBatch(sets: WorkRequestSet[]): boolean {
   }
 }
 
+/**
+ * Async libuv verify signatures sets with batch verification or regular core verify depending on the set count.
+ * Abstracted in a separate file to be consumed by the threaded pool and the main thread implementation.
+ */
 export async function asyncVerifySignatureSetsMaybeBatch(sets: WorkRequestSet[]): Promise<boolean> {
   try {
     const deserialized = sets.map(deserializeSet);
