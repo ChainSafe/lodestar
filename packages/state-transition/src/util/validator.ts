@@ -91,3 +91,10 @@ export function getActiveBalance(state: CachedBeaconStateElectra, validatorIndex
 
   return Math.min(state.balances.get(validatorIndex), validatorMaxEffectiveBalance);
 }
+
+export function getPendingBalanceToWithdraw(state: CachedBeaconStateElectra, validatorIndex: ValidatorIndex): number {
+  return state.pendingPartialWithdrawals
+    .getAllReadonly()
+    .filter((item) => item.index === validatorIndex)
+    .reduce((total, item) => total + Number(item.amount), 0);
+}

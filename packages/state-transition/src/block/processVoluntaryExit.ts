@@ -1,7 +1,7 @@
-import {FAR_FUTURE_EPOCH} from "@lodestar/params";
+import {FAR_FUTURE_EPOCH, ForkSeq} from "@lodestar/params";
 import {phase0} from "@lodestar/types";
-import {isActiveValidator} from "../util/index.js";
-import {CachedBeaconStateAllForks} from "../types.js";
+import {getPendingBalanceToWithdraw, isActiveValidator} from "../util/index.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateElectra} from "../types.js";
 import {verifyVoluntaryExitSignature} from "../signatureSets/index.js";
 import {initiateValidatorExit} from "./index.js";
 
@@ -11,11 +11,12 @@ import {initiateValidatorExit} from "./index.js";
  * PERF: Work depends on number of VoluntaryExit per block. On regular networks the average is 0 / block.
  */
 export function processVoluntaryExit(
+  fork: ForkSeq,
   state: CachedBeaconStateAllForks,
   signedVoluntaryExit: phase0.SignedVoluntaryExit,
   verifySignature = true
 ): void {
-  if (!isValidVoluntaryExit(state, signedVoluntaryExit, verifySignature)) {
+  if (!isValidVoluntaryExit(fork, state, signedVoluntaryExit, verifySignature)) {
     throw Error("Invalid voluntary exit");
   }
 
@@ -24,6 +25,7 @@ export function processVoluntaryExit(
 }
 
 export function isValidVoluntaryExit(
+  fork: ForkSeq,
   state: CachedBeaconStateAllForks,
   signedVoluntaryExit: phase0.SignedVoluntaryExit,
   verifySignature = true
@@ -32,6 +34,7 @@ export function isValidVoluntaryExit(
   const voluntaryExit = signedVoluntaryExit.message;
   const validator = state.validators.get(voluntaryExit.validatorIndex);
   const currentEpoch = epochCtx.epoch;
+  const isAfterElectra = fork >= ForkSeq.electra;
 
   return (
     // verify the validator is active
@@ -42,6 +45,8 @@ export function isValidVoluntaryExit(
     currentEpoch >= voluntaryExit.epoch &&
     // verify the validator had been active long enough
     currentEpoch >= validator.activationEpoch + config.SHARD_COMMITTEE_PERIOD &&
+    // only exit validator if it has no pending withdrawals in the queue (post-Electra only)
+    isAfterElectra ? getPendingBalanceToWithdraw(state as CachedBeaconStateElectra, voluntaryExit.validatorIndex) === 0 : true &&
     // verify signature
     (!verifySignature || verifyVoluntaryExitSignature(state, signedVoluntaryExit))
   );

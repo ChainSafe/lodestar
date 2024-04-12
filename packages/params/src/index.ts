@@ -263,3 +263,4 @@ export const BLOBSIDECAR_FIXED_SIZE = ACTIVE_PRESET === PresetName.minimal ? 131
 
 // Electra Misc
 export const UNSET_DEPOSIT_RECEIPTS_START_INDEX = 2n ** 64n - 1n;
+export const FULL_EXIT_REQUEST_AMOUNT = 0;

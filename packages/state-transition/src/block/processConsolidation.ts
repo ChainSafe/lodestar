@@ -16,10 +16,9 @@ export function processConsolidation(
 
   // Initiate source validator exit and append pending consolidation
   const {sourceIndex, targetIndex} = signedConsolidation.message;
-  const activeBalance = getActiveBalance(state, sourceIndex);
   const sourceValidator = state.validators.get(sourceIndex);
 
-  const exitEpoch = computeConsolidationEpochAndUpdateChurn(state, BigInt(activeBalance));
+  const exitEpoch = computeConsolidationEpochAndUpdateChurn(state, BigInt(sourceValidator.effectiveBalance));
   sourceValidator.exitEpoch = exitEpoch;
   sourceValidator.withdrawableEpoch = exitEpoch + state.config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY;
 
@@ -96,8 +95,8 @@ function assertValidConsolidation(
   }
 
   // Verify the same withdrawal address
-  const sourceWithdrawalAddress = toHexString(sourceValidator.withdrawalCredentials.slice(1));
-  const targetWithdrawalAddress = toHexString(targetValidator.withdrawalCredentials.slice(1));
+  const sourceWithdrawalAddress = toHexString(sourceValidator.withdrawalCredentials.slice(12));
+  const targetWithdrawalAddress = toHexString(targetValidator.withdrawalCredentials.slice(12));
 
   if (sourceWithdrawalAddress !== targetWithdrawalAddress) {
     throw new Error(
