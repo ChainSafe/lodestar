@@ -2,7 +2,7 @@ import {writeFile} from "node:fs/promises";
 import path from "node:path";
 import got from "got";
 import {Web3} from "web3";
-import {registerWeb3JsPlugins} from "../../web3JsPlugins.js";
+import {registerWeb3JsPlugins} from "../../web3js/plugins/index.js";
 import {ExecutionClient, ExecutionNodeGenerator, JobOptions, RunnerType} from "../../interfaces.js";
 import {getNethermindChainSpec} from "../../utils/executionGenesis.js";
 import {getNodeMountedPaths} from "../../utils/paths.js";

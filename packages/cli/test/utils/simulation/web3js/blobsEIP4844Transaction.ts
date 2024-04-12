@@ -1,4 +1,3 @@
-import {Web3PluginBase, Web3} from "web3";
 import {RLP} from "@ethereumjs/rlp";
 import {keccak256} from "ethereum-cryptography/keccak.js";
 import {
@@ -157,64 +156,4 @@ export class BlobsEIP4844Transaction extends FeeMarketEIP1559Transaction {
       this.txOptions
     );
   }
-}
-
-class Web3AdminPlugin extends Web3PluginBase {
-  /**
-   * The admin plugin as available via the provider object
-   * like in the example below.
-   *
-   * await node.web3.admin.addPeer(elIdentity.enode);
-   */
-  pluginNamespace = "admin";
-
-  async nodeInfo(): Promise<{
-    enode: string;
-    id: string;
-    ip: string;
-    listenAddr: string;
-    name: string;
-    ports: {
-      discovery: number;
-      listener: number;
-    };
-    protocols: {
-      eth: {
-        difficulty: number;
-        genesis: string;
-        head: string;
-        network: number;
-      };
-    };
-  }> {
-    return this.requestManager.send({method: "admin_nodeInfo", params: []});
-  }
-
-  async addPeer(enode: string): Promise<boolean> {
-    return this.requestManager.send({method: "admin_addPeer", params: [enode]});
-  }
-}
-
-class Web3ExtendedEthPlugin extends Web3PluginBase {
-  pluginNamespace = "extended";
-
-  async sendRawTransaction(tx: string): Promise<string> {
-    return this.requestManager.send({method: "eth_sendRawTransaction", params: [tx]});
-  }
-
-  async sendPlainTransaction(...params: unknown[]): Promise<string> {
-    return this.requestManager.send({method: "eth_sendTransaction", params: [...params]});
-  }
-}
-
-declare module "web3" {
-  interface Web3Context {
-    admin: Web3AdminPlugin;
-    extended: Web3ExtendedEthPlugin;
-  }
-}
-
-export function registerWeb3JsPlugins(web3: Web3): void {
-  web3.registerPlugin(new Web3AdminPlugin());
-  web3.registerPlugin(new Web3ExtendedEthPlugin());
 }

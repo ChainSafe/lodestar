@@ -4,14 +4,15 @@ import {fromHex, toHex} from "@lodestar/utils";
 import {SimulationAssertion, AssertionMatch, AssertionResult, NodePair} from "../interfaces.js";
 import {EL_GENESIS_ACCOUNT, EL_GENESIS_SECRET_KEY, SIM_ENV_CHAIN_ID} from "../constants.js";
 import {generateBlobsForTransaction} from "../utils/blobs.js";
-import {BlobsEIP4844Transaction} from "../web3JsPlugins.js";
+import {BlobsEIP4844Transaction} from "../web3js/blobsEIP4844Transaction.js";
 
 const numberOfBlobs = 6;
+const sentBlobs: Uint8Array[] = [];
 
 export function createBlobsAssertion(
   nodes: NodePair[],
   {sendBlobsAtSlot, validateBlobsAt}: {sendBlobsAtSlot: number; validateBlobsAt: number}
-): SimulationAssertion<string, number> {
+): SimulationAssertion<string, Uint8Array[]> {
   return {
     id: `blobs-${nodes.map((n) => n.id).join("-")}`,
     match: ({slot}) => {
@@ -45,33 +46,60 @@ export function createBlobsAssertion(
         });
         const signedTx = tx.sign(fromHex(`0x${EL_GENESIS_SECRET_KEY}`));
         await node.execution.provider?.extended.sendRawTransaction(toHex(signedTx.serialize()));
+
+        sentBlobs.push(...blobs.map((b) => fromHex(b)));
       }
 
       const blobSideCars = await node.beacon.api.beacon.getBlobSidecars(slot);
       ApiError.assert(blobSideCars);
 
-      return blobSideCars.response.data.length;
+      return blobSideCars.response.data.map((b) => b.blob);
     },
 
     assert: async ({store}) => {
       const errors: AssertionResult[] = [];
 
-      let eip4844Blobs = 0;
+      const blobs: Uint8Array[] = [];
+
       for (let slot = sendBlobsAtSlot; slot <= validateBlobsAt; slot++) {
-        eip4844Blobs += store[slot] ?? 0;
+        blobs.push(...(store[slot] ?? []));
       }
 
-      if (eip4844Blobs !== numberOfBlobs) {
+      if (blobs.length !== numberOfBlobs) {
         errors.push([
           "Node does not have right number of blobs",
           {
             expectedBlobs: numberOfBlobs,
-            currentBlobs: eip4844Blobs,
+            currentBlobs: blobs.length,
           },
         ]);
       }
 
+      for (let i = 0; i < blobs.length; i++) {
+        if (!Buffer.from(blobs[i]).equals(Buffer.from(sentBlobs[i]))) {
+          errors.push(["Node does not have the correct blobs", {index: i}]);
+        }
+      }
       return errors;
+    },
+
+    async dump({store, nodes}) {
+      const result: Record<string, string> = {
+        "expectedBlobs.txt": sentBlobs.map(toHex).join("\n"),
+      };
+
+      for (const node of nodes) {
+        const blobs: Uint8Array[] = [];
+        for (let slot = sendBlobsAtSlot; slot <= validateBlobsAt; slot++) {
+          if (store[node.beacon.id] !== undefined) {
+            blobs.push(...(store[node.beacon.id][slot] ?? []));
+          }
+        }
+
+        result[`blobs-${node.beacon.id}.txt`] = blobs.map(toHex).join("\n");
+      }
+
+      return result;
     },
   };
 }
