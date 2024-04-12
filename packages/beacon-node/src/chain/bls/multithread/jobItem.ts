@@ -85,13 +85,17 @@ export function jobItemWorkReq(
       // and not a problem in the near future
       // this is monitored on v1.11.0 https://github.com/ChainSafe/lodestar/pull/5912#issuecomment-1700320307
       const timer = metrics?.blsThreadPool.signatureDeserializationMainThreadDuration.startTimer();
-      const signatures = job.sets.map(function sigMapSameMessage(set) {
+      const signatures = job.sets.map(function sameMessageSigMap(set) {
         return bls.Signature.fromBytes(set.signature, CoordType.affine, true);
       });
       timer?.();
 
       if (job.opts.disableSameMessageVerificationRandomness) {
-        const pk = bls.PublicKey.aggregate(job.sets.map((set) => set.publicKey));
+        const pk = bls.PublicKey.aggregate(
+          job.sets.map(function sameMessagePkMap(set) {
+            return set.publicKey;
+          })
+        );
         const sig = bls.Signature.aggregate(signatures);
         return {
           opts: job.opts,
@@ -117,8 +121,16 @@ export function jobItemWorkReq(
       for (let i = 0; i < job.sets.length; i++) {
         randomness.push(randomBytesNonZero(8));
       }
-      const pk = bls.PublicKey.aggregate(job.sets.map((set, i) => set.publicKey.multiplyBy(randomness[i])));
-      const sig = bls.Signature.aggregate(signatures.map((sig, i) => sig.multiplyBy(randomness[i])));
+      const pk = bls.PublicKey.aggregate(
+        job.sets.map(function sameMessagePkMapRandomness(set, i) {
+          return set.publicKey.multiplyBy(randomness[i]);
+        })
+      );
+      const sig = bls.Signature.aggregate(
+        signatures.map(function sameMessageSigMapRandomness(sig, i) {
+          return sig.multiplyBy(randomness[i]);
+        })
+      );
       return {
         opts: job.opts,
         sets: [
