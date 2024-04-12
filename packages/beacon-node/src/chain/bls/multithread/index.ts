@@ -98,19 +98,19 @@ enum WorkerStatusCode {
   running,
 }
 
+type WorkerRunningStatus = {code: WorkerStatusCode.running; workerApi: WorkerApi};
+
 type WorkerStatus =
   | {code: WorkerStatusCode.notInitialized}
   | {code: WorkerStatusCode.initializing; initPromise: Promise<WorkerApi>}
   | {code: WorkerStatusCode.initializationError; error: Error}
   | {code: WorkerStatusCode.idle; workerApi: WorkerApi}
-  | {code: WorkerStatusCode.running; workerApi: WorkerApi};
+  | WorkerRunningStatus;
 
 type WorkerDescriptor = {
   worker: Worker;
   status: WorkerStatus;
 };
-
-type WorkRequestHandler = (workReqs: BlsWorkReq[]) => Promise<BlsWorkResult>;
 
 /**
  * Wraps "threads" library thread pool queue system with the goals:
@@ -420,54 +420,43 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     if (this.closed) {
       return;
     }
-    // Prepare work package
-    const prepared = this.prepareWork();
-    if (prepared.length === 0) {
-      return;
-    }
 
-    if (this.blsPoolType === BlsPoolType.workers) {
-      await this.runJobWorkerPool(prepared);
+    if (this.blsPoolType === BlsPoolType.libuv) {
+      await this._runJob();
     } else {
-      await this.runJobLibuv(prepared);
+      // Find idle worker
+      const worker = this.workers.find((worker) => worker.status.code === WorkerStatusCode.idle);
+      if (!worker || worker.status.code !== WorkerStatusCode.idle) {
+        return;
+      }
+
+      // TODO: After sending the work to the worker the main thread can drop the job arguments
+      // and free-up memory, only needs to keep the job's Promise handlers.
+      // Maybe it's not useful since all data referenced in jobs is likely referenced by others
+      const workerApi = worker.status.workerApi;
+      worker.status = {code: WorkerStatusCode.running, workerApi};
+      this.workersBusy++;
+
+      await this._runJob(worker);
+
+      worker.status = {code: WorkerStatusCode.idle, workerApi};
+      this.workersBusy--;
     }
 
     // Potentially run a new job
     setTimeout(this.runJob, 0);
   };
 
-  private runJobLibuv = async (jobs: JobQueueItem[]): Promise<void> => {
-    await this._runJob(jobs, asyncVerifyManySignatureSets);
-  };
-
   /**
    * Potentially submit jobs to an idle worker, only if there's a worker and jobs
    */
-  private runJobWorkerPool = async (jobs: JobQueueItem[]): Promise<void> => {
-    // Find idle worker
-    const worker = this.workers.find((worker) => worker.status.code === WorkerStatusCode.idle);
-    if (!worker || worker.status.code !== WorkerStatusCode.idle) {
+  private _runJob = async (worker?: WorkerDescriptor): Promise<void> => {
+    // Prepare work package
+    const jobsInput = this.prepareWork();
+    if (jobsInput.length === 0) {
       return;
     }
 
-    // TODO: After sending the work to the worker the main thread can drop the job arguments
-    // and free-up memory, only needs to keep the job's Promise handlers.
-    // Maybe it's not useful since all data referenced in jobs is likely referenced by others
-
-    const workerApi = worker.status.workerApi;
-    worker.status = {code: WorkerStatusCode.running, workerApi};
-    this.workersBusy++;
-
-    await this._runJob(jobs, workerApi.verifyManySignatureSets);
-
-    worker.status = {code: WorkerStatusCode.idle, workerApi};
-    this.workersBusy--;
-  };
-
-  /**
-   * Potentially submit jobs to an idle worker, only if there's a worker and jobs
-   */
-  private _runJob = async (jobsInput: JobQueueItem[], runWorkRequests: WorkRequestHandler): Promise<void> => {
     try {
       let startedJobsDefault = 0;
       let startedJobsSameMessage = 0;
@@ -528,7 +517,9 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       // Only downside is the job promise may be resolved twice, but that's not an issue
 
       const [jobStartSec, jobStartNs] = process.hrtime();
-      const workResult = await runWorkRequests(workReqs);
+      const workResult = worker
+        ? await (worker.status as WorkerRunningStatus).workerApi.verifyManySignatureSets(workReqs)
+        : await asyncVerifyManySignatureSets(workReqs);
       const [jobEndSec, jobEndNs] = process.hrtime();
       const {workerId, batchRetries, batchSigsSuccess, workerStartTime, workerEndTime, results} = workResult;
 
