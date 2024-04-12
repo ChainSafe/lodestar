@@ -231,6 +231,8 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
             signature: set.signature,
           }))
         );
+      } catch {
+        return false;
       } finally {
         if (timer) timer();
       }
@@ -388,6 +390,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
         };
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       job.opts.priority ? this.bufferedJobs.prioritizedJobs.push(job) : this.bufferedJobs.jobs.push(job);
 
       this.bufferedJobs.sigCount += jobItemSigSets(job);
@@ -639,7 +642,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
 
   private retryJobItemSameMessage(job: JobQueueItemSameMessage): void {
     // Create new jobs for each pubkey set, and Promise.all all the results
-    for (const j of jobItemSameMessageToMultiSet(this.blsPoolType === BlsPoolType.libuv, job)) {
+    for (const j of jobItemSameMessageToMultiSet(job)) {
       if (j.opts.priority) {
         this.jobs.unshift(j);
       } else {

@@ -5,7 +5,7 @@ import {QueuedVerificationOpts} from "../interface.js";
 import {getAggregatedPubkey} from "../utils.js";
 import {LinkedList} from "../../../util/array.js";
 import {Metrics} from "../../../metrics/metrics.js";
-import {BlsWorkReq, WorkRequestSet} from "./types.js";
+import {BlsWorkReq, LibuvSafeSet, WorkRequestSet, WorkerSafeSet} from "./types.js";
 import {randomBytesNonZero} from "./utils.js";
 
 export type JobQueueItem = JobQueueItemDefault | JobQueueItemSameMessage;
@@ -91,14 +91,22 @@ export function jobItemWorkReq(
       timer?.();
 
       if (job.opts.disableSameMessageVerificationRandomness) {
+        const pk = bls.PublicKey.aggregate(job.sets.map((set) => set.publicKey));
+        const sig = bls.Signature.aggregate(signatures);
         return {
           opts: job.opts,
           sets: [
-            {
-              publicKey: bls.PublicKey.aggregate(job.sets.map((set) => set.publicKey)),
-              signature: bls.Signature.aggregate(signatures),
-              message: job.message,
-            },
+            deserialized
+              ? ({
+                  publicKey: pk,
+                  signature: sig,
+                  message: job.message,
+                } as LibuvSafeSet)
+              : ({
+                  publicKey: pk.toBytes(),
+                  signature: sig.toBytes(),
+                  message: job.message,
+                } as WorkerSafeSet),
           ],
         };
       }
@@ -109,14 +117,22 @@ export function jobItemWorkReq(
       for (let i = 0; i < job.sets.length; i++) {
         randomness.push(randomBytesNonZero(8));
       }
+      const pk = bls.PublicKey.aggregate(job.sets.map((set, i) => set.publicKey.multiplyBy(randomness[i])));
+      const sig = bls.Signature.aggregate(signatures.map((sig, i) => sig.multiplyBy(randomness[i])));
       return {
         opts: job.opts,
         sets: [
-          {
-            message: job.message,
-            publicKey: bls.PublicKey.aggregate(job.sets.map((set, i) => set.publicKey.multiplyBy(randomness[i]))),
-            signature: bls.Signature.aggregate(signatures.map((sig, i) => sig.multiplyBy(randomness[i]))),
-          },
+          deserialized
+            ? ({
+                publicKey: pk,
+                signature: sig,
+                message: job.message,
+              } as LibuvSafeSet)
+            : ({
+                publicKey: pk.toBytes(),
+                signature: sig.toBytes(),
+                message: job.message,
+              } as WorkerSafeSet),
         ],
       };
     }
@@ -126,10 +142,7 @@ export function jobItemWorkReq(
 /**
  * Convert a JobQueueItemSameMessage into multiple JobQueueItemDefault linked to the original promise
  */
-export function jobItemSameMessageToMultiSet(
-  deserialized: boolean,
-  job: JobQueueItemSameMessage
-): LinkedList<JobQueueItemDefault> {
+export function jobItemSameMessageToMultiSet(job: JobQueueItemSameMessage): LinkedList<JobQueueItemDefault> {
   // Retry each individually
   // Create new jobs for each pubkey set, and Promise.all all the results
   const promises: Promise<boolean>[] = [];
@@ -147,8 +160,6 @@ export function jobItemSameMessageToMultiSet(
           sets: [
             {
               type: SignatureSetType.single,
-              // TODO: verify this is correct!!
-              // @tuyennhv this is not a serialized pubkey for crossing the worker thread?
               pubkey: set.publicKey,
               signature: set.signature,
               signingRoot: job.message,

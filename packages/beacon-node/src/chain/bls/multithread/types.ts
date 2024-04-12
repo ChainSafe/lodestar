@@ -29,7 +29,11 @@ export type DeserializedSet = {
   signature: Signature;
 };
 
-export type WorkRequestSet = SerializedSet | DeserializedKeySet | DeserializedSet;
+export type WorkerSafeSet = SerializedSet;
+
+export type LibuvSafeSet = DeserializedKeySet | DeserializedSet;
+
+export type WorkRequestSet = WorkerSafeSet | LibuvSafeSet;
 
 export type BlsWorkReq = {
   opts: QueuedVerificationOpts;
