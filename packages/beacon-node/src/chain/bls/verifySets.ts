@@ -10,9 +10,8 @@ const MIN_SET_COUNT_TO_BATCH = 2;
  */
 export function verifySets(sets: WorkRequestSet[]): boolean {
   try {
-    const deserialized = sets.map(deserializeSet);
     if (sets.length >= MIN_SET_COUNT_TO_BATCH) {
-      return bls.Signature.verifyMultipleSignatures(deserialized);
+      return bls.verifyMultipleSignatures(sets);
     }
 
     // .every on an empty array returns true
@@ -21,7 +20,7 @@ export function verifySets(sets: WorkRequestSet[]): boolean {
     }
 
     // If too few signature sets verify them without batching
-    return deserialized.every(({message, publicKey, signature}) => signature.verify(publicKey, message));
+    return sets.every(({message, publicKey, signature}) => bls.verify(publicKey, message, signature));
   } catch (_) {
     // A signature could be malformed, in that case fromBytes throws error
     // blst-ts `verifyMultipleSignatures` is also a fallible operation if mul_n_aggregate fails
@@ -32,9 +31,8 @@ export function verifySets(sets: WorkRequestSet[]): boolean {
 
 export async function asyncVerifySets(sets: WorkRequestSet[]): Promise<boolean> {
   try {
-    const deserialized = sets.map(deserializeSet);
     if (sets.length >= MIN_SET_COUNT_TO_BATCH) {
-      return await bls.asyncVerifyMultipleSignatures(deserialized);
+      return await bls.asyncVerifyMultipleSignatures(sets);
     }
 
     // .every on an empty array returns true
@@ -43,7 +41,7 @@ export async function asyncVerifySets(sets: WorkRequestSet[]): Promise<boolean> 
     }
 
     const promises = await Promise.all(
-      deserialized.map(({message, publicKey, signature}) => bls.asyncVerify(message, publicKey, signature))
+      sets.map(({message, publicKey, signature}) => bls.asyncVerify(publicKey, message, signature))
     );
     // If too few signature sets verify them without batching
     return promises.every((isValid) => isValid);
