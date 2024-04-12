@@ -101,6 +101,11 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     this.logger = modules.logger;
     this.blsVerifyAllMultiThread = options.blsVerifyAllMultiThread ?? false;
     this.disableSameMessageVerificationRandomness = options.disableSameMessageVerificationRandomness ?? false;
+    if (this.disableSameMessageVerificationRandomness) {
+      this.logger.warn(
+        "Same message verification randomness is turned off. For optimum safety this should be turned on. Note, there are no reasons that this should be off "
+      );
+    }
 
     const UV_THREADPOOL_SIZE_ENV = Number(process.env.UV_THREADPOOL_SIZE);
     this.blsPoolSize = isNaN(UV_THREADPOOL_SIZE_ENV) ? 4 : UV_THREADPOOL_SIZE_ENV;
