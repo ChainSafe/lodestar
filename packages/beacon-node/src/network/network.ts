@@ -408,7 +408,7 @@ export class Network implements INetwork {
     };
     const sentPeers = await this.core.publishGossip(topicStr, messageData, opts);
 
-    this.logger.verbose("Publish to topic", {topic: topicStr, sentPeers});
+    this.logger.verbose("Publish to topic", {topic: topicStr, sentPeers, slot: this.clock.currentSlot});
     return sentPeers;
   }
 
