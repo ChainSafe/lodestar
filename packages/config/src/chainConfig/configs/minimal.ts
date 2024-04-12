@@ -72,8 +72,8 @@ export const chainConfig: ChainConfig = {
   EJECTION_BALANCE: 16000000000,
   // 2**2 (= 4)
   MIN_PER_EPOCH_CHURN_LIMIT: 2,
-  // 2**7 * 10**9 (= 128,000,000,000)
-  MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT: 128000000000,
+  // [customized]
+  MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT: 4,
   // [customized] scale queue churn at much lower validator counts for testing
   CHURN_LIMIT_QUOTIENT: 32,
 
