@@ -95,7 +95,7 @@ export type SeenCacheOpts = {
 export const defaultChainOptions: IChainOptions = {
   blsVerifyAllMainThread: false,
   blsVerifyAllMultiThread: false,
-  disableSameMessageVerificationRandomness: true,
+  disableSameMessageVerificationRandomness: false,
   disableBlsBatchVerify: false,
   proposerBoostEnabled: true,
   computeUnrealized: true,
