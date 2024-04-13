@@ -68,11 +68,26 @@ export class OrderedMap<K, V> {
     return this.get(firstKey) as V;
   }
 
-  size(): number {
+  get size(): number {
     return this._set.size;
   }
 
   has(key: K): boolean {
     return this.map.has(key);
+  }
+}
+
+export class OrderedMapDef<K, V> extends OrderedMap<K, V> {
+  constructor(private readonly getDefault: () => V) {
+    super();
+  }
+
+  getOrDefault(key: K): V {
+    let value = super.get(key);
+    if (value === undefined) {
+      value = this.getDefault();
+      this.set(key, value);
+    }
+    return value;
   }
 }

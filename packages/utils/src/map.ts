@@ -79,11 +79,17 @@ export class Map2dArr<K1, V> {
   }
 }
 
+export type PruneableSet<T> = {
+  size: number;
+  keys(): IterableIterator<T>;
+  delete(value: T, searchFromHead?: boolean): boolean;
+};
+
 /**
  * Prune an arbitrary set removing the first keys to have a set.size === maxItems.
  * Returns the count of deleted items.
  */
-export function pruneSetToMax<T>(set: Set<T> | Map<T, unknown>, maxItems: number): number {
+export function pruneSetToMax<T>(set: PruneableSet<T>, maxItems: number): number {
   let itemsToDelete = set.size - maxItems;
   const deletedItems = Math.max(0, itemsToDelete);
 

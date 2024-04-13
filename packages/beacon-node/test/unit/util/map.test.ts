@@ -38,7 +38,7 @@ describe("OrderedMap", () => {
   it("should return the correct size", () => {
     orderedMap.set("test1", 1);
     orderedMap.set("test2", 2);
-    expect(orderedMap.size()).toBe(2);
+    expect(orderedMap.size).toBe(2);
   });
 
   it("should return the first and last keys correctly", () => {
