@@ -15,6 +15,10 @@ const MAX_SLOTS_CACHED = SLOTS_PER_EPOCH * 2;
 export class AggregatorTracker {
   private subnetAggregatorsBySlot = new OrderedMapDef<Slot, Set<SubnetId>>(() => new Set());
 
+  get maxSlotsCached(): number {
+    return MAX_SLOTS_CACHED;
+  }
+
   addAggregator(subnet: SubnetId, slot: Slot): void {
     this.subnetAggregatorsBySlot.getOrDefault(slot).add(subnet);
 
