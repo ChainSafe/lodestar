@@ -38,6 +38,7 @@ describe("AggregatorTracker", () => {
     // This should prune the first two slots
     aggregatorTracker.addAggregator(subnet, lastSlot + 1);
     aggregatorTracker.addAggregator(subnet, lastSlot + 2);
+    aggregatorTracker.prune();
 
     expect(aggregatorTracker.shouldAggregate(subnet, firstSlot)).toBe(false);
     expect(aggregatorTracker.shouldAggregate(subnet, firstSlot + 1)).toBe(false);

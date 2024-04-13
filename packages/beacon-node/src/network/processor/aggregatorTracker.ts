@@ -20,16 +20,18 @@ export class AggregatorTracker {
 
   addAggregator(subnet: SubnetId, slot: Slot): void {
     this.subnetAggregatorsBySlot.getOrDefault(slot).add(subnet);
+  }
 
+  shouldAggregate(subnet: SubnetId, slot: Slot): boolean {
+    return this.subnetAggregatorsBySlot.get(slot)?.has(subnet) === true;
+  }
+
+  prune(): void {
     pruneSetToMax(
       this.subnetAggregatorsBySlot,
       MAX_SLOTS_CACHED,
       // Prune the oldest slots first
       (a, b) => a - b
     );
-  }
-
-  shouldAggregate(subnet: SubnetId, slot: Slot): boolean {
-    return this.subnetAggregatorsBySlot.get(slot)?.has(subnet) === true;
   }
 }
