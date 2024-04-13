@@ -1,5 +1,4 @@
 import {describe, it, expect, beforeEach} from "vitest";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {AggregatorTracker} from "../../../../src/network/processor/aggregatorTracker.js";
 
 describe("AggregatorTracker", () => {
@@ -19,11 +18,11 @@ describe("AggregatorTracker", () => {
   });
 
   it("should prune the oldest slots first when maximum cache size is reached", () => {
-    const maxSlots = SLOTS_PER_EPOCH * 2;
+    const {maxSlotsCached} = aggregatorTracker;
     const firstSlot = 0;
-    const lastSlot = firstSlot + maxSlots - 1;
+    const lastSlot = firstSlot + maxSlotsCached - 1;
     const subnet = 1;
-    const slots = Array.from({length: maxSlots}, (_, i) => firstSlot + i);
+    const slots = Array.from({length: maxSlotsCached}, (_, i) => firstSlot + i);
 
     // Slots should be inserted in random order
     for (let i = slots.length - 1; i > 0; i--) {
