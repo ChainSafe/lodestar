@@ -542,9 +542,9 @@ export function getValidatorApi({
       }
 
       const loggerContext = {
+        slot,
         fork,
         builderSelection,
-        slot,
         isBuilderEnabled,
         isEngineEnabled,
         strictFeeRecipientCheck,
