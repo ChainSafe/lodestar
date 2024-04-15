@@ -422,7 +422,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     }
 
     if (this.blsPoolType === BlsPoolType.libuv) {
-      void this._runJob();
+      await this._runJob();
     } else {
       // Find idle worker
       const worker = this.workers.find((worker) => worker.status.code === WorkerStatusCode.idle);

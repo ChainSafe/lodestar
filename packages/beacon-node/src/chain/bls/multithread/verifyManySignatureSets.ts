@@ -12,7 +12,7 @@ import {chunkifyMaximizeChunkSize} from "./utils.js";
 const BATCHABLE_MIN_PER_CHUNK = 16;
 
 /**
- * Sync version used in Workers.  Will be used in workers and deprecated once workers are removed. 
+ * Sync version used in Workers.  Will be used in workers and deprecated once workers are removed.
  */
 export function verifyManySignatureSets(workerId: number, workReqArr: BlsWorkReq[]): BlsWorkResult {
   const [startSec, startNs] = process.hrtime();
