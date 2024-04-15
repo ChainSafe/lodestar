@@ -424,14 +424,14 @@ async function validateGossipAttestationNoSignatureCheck(
   if (attestationOrCache.cache) {
     // there could be up to 6% of cpu time to compute signing root if we don't clone the signature set
     signatureSet = createSingleSignatureSetFromComponents(
-      chain.index2pubkey[validatorIndex],
+      chain.finalizedIndex2pubkey[validatorIndex],
       attestationOrCache.cache.signingRoot,
       signature
     );
     attDataRootHex = attestationOrCache.cache.attDataRootHex;
   } else {
     signatureSet = createSingleSignatureSetFromComponents(
-      chain.index2pubkey[validatorIndex],
+      chain.finalizedIndex2pubkey[validatorIndex],
       getSigningRoot(),
       signature
     );

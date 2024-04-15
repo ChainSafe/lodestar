@@ -92,8 +92,8 @@ export function generateCachedState(
   return createCachedBeaconState(state, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
     // This is a test state, there's no need to have a global shared cache of keys
-    pubkey2index: new PubkeyIndexMap(),
-    index2pubkey: [],
+    finalizedPubkey2index: new PubkeyIndexMap(),
+    finalizedIndex2pubkey: [],
   });
 }
 
@@ -107,8 +107,8 @@ export function createCachedBeaconStateTest<T extends BeaconStateAllForks>(
     {
       config: createBeaconConfig(configCustom, state.genesisValidatorsRoot),
       // This is a test state, there's no need to have a global shared cache of keys
-      pubkey2index: new PubkeyIndexMap(),
-      index2pubkey: [],
+      finalizedPubkey2index: new PubkeyIndexMap(),
+      finalizedIndex2pubkey: [],
     },
     opts
   );

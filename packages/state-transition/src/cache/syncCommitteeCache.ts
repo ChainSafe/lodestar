@@ -37,9 +37,9 @@ export function getSyncCommitteeCache(validatorIndices: ValidatorIndex[]): SyncC
 
 export function computeSyncCommitteeCache(
   syncCommittee: CompositeViewDU<typeof ssz.altair.SyncCommittee>,
-  pubkey2index: PubkeyIndexMap
+  finalizedPubkey2index: PubkeyIndexMap
 ): SyncCommitteeCache {
-  const validatorIndices = computeSyncCommitteeIndices(syncCommittee, pubkey2index);
+  const validatorIndices = computeSyncCommitteeIndices(syncCommittee, finalizedPubkey2index);
   const validatorIndexMap = computeSyncComitteeMap(validatorIndices);
   return {
     validatorIndices,
@@ -75,12 +75,12 @@ export function computeSyncComitteeMap(syncCommitteeIndexes: ValidatorIndex[]): 
  */
 function computeSyncCommitteeIndices(
   syncCommittee: CompositeViewDU<typeof ssz.altair.SyncCommittee>,
-  pubkey2index: PubkeyIndexMap
+  finalizedPubkey2index: PubkeyIndexMap
 ): ValidatorIndex[] {
   const validatorIndices: ValidatorIndex[] = [];
   const pubkeys = syncCommittee.pubkeys.getAllReadonly();
   for (const pubkey of pubkeys) {
-    const validatorIndex = pubkey2index.get(pubkey);
+    const validatorIndex = finalizedPubkey2index.get(pubkey);
     if (validatorIndex === undefined) {
       throw Error(`SyncCommittee pubkey is unknown ${toHexString(pubkey)}`);
     }

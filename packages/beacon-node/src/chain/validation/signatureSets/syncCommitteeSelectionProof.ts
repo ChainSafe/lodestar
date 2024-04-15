@@ -20,7 +20,7 @@ export function getSyncCommitteeSelectionProofSignatureSet(
   };
   return {
     type: SignatureSetType.single,
-    pubkey: epochCtx.index2pubkey[contributionAndProof.aggregatorIndex],
+    pubkey: epochCtx.finalizedIndex2pubkey[contributionAndProof.aggregatorIndex],
     signingRoot: computeSigningRoot(ssz.altair.SyncAggregatorSelectionData, signingData, domain),
     signature: contributionAndProof.selectionProof,
   };

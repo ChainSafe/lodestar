@@ -72,13 +72,13 @@ describe("loadState", function () {
         migratedState.hashTreeRoot();
         // Get the validators sub tree once for all the loop
         const validators = migratedState.validators;
-        const pubkey2index = new PubkeyIndexMap();
-        const index2pubkey: Index2PubkeyCache = [];
+        const finalizedPubkey2index = new PubkeyIndexMap();
+        const finalizedIndex2pubkey: Index2PubkeyCache = [];
         for (const validatorIndex of modifiedValidators) {
           const validator = validators.getReadonly(validatorIndex);
           const pubkey = validator.pubkey;
-          pubkey2index.set(pubkey, validatorIndex);
-          index2pubkey[validatorIndex] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian);
+          finalizedPubkey2index.set(pubkey, validatorIndex);
+          finalizedIndex2pubkey[validatorIndex] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian);
         }
         // skip computimg shuffling in performance test because in reality we have a ShufflingCache
         // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
@@ -87,8 +87,8 @@ describe("loadState", function () {
           migratedState,
           {
             config: seedState.config,
-            pubkey2index,
-            index2pubkey,
+            finalizedPubkey2index,
+            finalizedIndex2pubkey,
           },
           {skipSyncPubkeys: true, skipSyncCommitteeCache: true, shufflingGetter}
         );

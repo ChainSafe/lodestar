@@ -1,5 +1,3 @@
-import bls from "@chainsafe/bls";
-import {CoordType} from "@chainsafe/bls/types";
 import {BeaconConfig} from "@lodestar/config";
 import {loadState} from "../util/loadState/loadState.js";
 import {EpochCache, EpochCacheImmutableData, EpochCacheOpts} from "./epochCache.js";
@@ -74,7 +72,7 @@ type BeaconStateCacheMutable = Mutable<BeaconStateCache>;
  * - Micro-optimizations (TODO):
  *   - Keep also the root of the node above pubkey and withdrawal creds. Will never change
  *   - Keep pubkey + withdrawal creds in the same Uint8Array
- *   - Have a global pubkey + withdrawal creds Uint8Array global cache, like with the index2pubkey cache
+ *   - Have a global pubkey + withdrawal creds Uint8Array global cache, like with the finalizedIndex2pubkey cache
  *
  * ------------------
  *
@@ -176,25 +174,26 @@ export function loadCachedBeaconState<T extends BeaconStateAllForks & BeaconStat
     stateBytes,
     seedValidatorsBytes
   );
-  const {pubkey2index, index2pubkey} = cachedSeedState.epochCtx;
+
+  const state = createCachedBeaconState(
+    migratedState,
+    {
+      config: cachedSeedState.config,
+      finalizedPubkey2index: cachedSeedState.epochCtx.finalizedPubkey2index,
+      finalizedIndex2pubkey: cachedSeedState.epochCtx.finalizedIndex2pubkey,
+    },
+    {...(opts ?? {}), ...{skipSyncPubkeys: true}}
+  ) as T;
+
   // Get the validators sub tree once for all the loop
   const validators = migratedState.validators;
   for (const validatorIndex of modifiedValidators) {
     const validator = validators.getReadonly(validatorIndex);
     const pubkey = validator.pubkey;
-    pubkey2index.set(pubkey, validatorIndex);
-    index2pubkey[validatorIndex] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian);
+    state.epochCtx.addUnFinalizedPubkey(validatorIndex, pubkey);
   }
 
-  return createCachedBeaconState(
-    migratedState,
-    {
-      config: cachedSeedState.config,
-      pubkey2index,
-      index2pubkey,
-    },
-    {...(opts ?? {}), ...{skipSyncPubkeys: true}}
-  ) as T;
+  return state;
 }
 
 /**

@@ -123,8 +123,8 @@ describe("CachedBeaconState", () => {
       stateView,
       {
         config,
-        pubkey2index: new PubkeyIndexMap(),
-        index2pubkey: [],
+        finalizedPubkey2index: new PubkeyIndexMap(),
+        finalizedIndex2pubkey: [],
       },
       {skipSyncCommitteeCache: true}
     );
@@ -221,8 +221,8 @@ describe("CachedBeaconState", () => {
           state,
           {
             config,
-            pubkey2index: new PubkeyIndexMap(),
-            index2pubkey: [],
+            finalizedPubkey2index: new PubkeyIndexMap(),
+            finalizedIndex2pubkey: [],
           },
           {skipSyncCommitteeCache: true, shufflingGetter}
         );
@@ -233,8 +233,8 @@ describe("CachedBeaconState", () => {
 
         // confirm loadCachedBeaconState() result
         for (let i = 0; i < newCachedState.validators.length; i++) {
-          expect(newCachedState.epochCtx.pubkey2index.get(newCachedState.validators.get(i).pubkey)).toBe(i);
-          expect(newCachedState.epochCtx.index2pubkey[i].toBytes()).toEqual(pubkeys[i]);
+          expect(newCachedState.epochCtx.finalizedPubkey2index.get(newCachedState.validators.get(i).pubkey)).toBe(i);
+          expect(newCachedState.epochCtx.finalizedIndex2pubkey[i].toBytes()).toEqual(pubkeys[i]);
         }
       });
     }

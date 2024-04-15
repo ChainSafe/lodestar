@@ -18,7 +18,7 @@ export async function computeSyncCommitteeRewards(
 
   const altairBlock = block as altair.BeaconBlock;
   const preStateAltair = preState as CachedBeaconStateAltair;
-  const {index2pubkey} = preStateAltair.epochCtx;
+  const {finalizedIndex2pubkey} = preStateAltair.epochCtx;
 
   // Bound committeeIndices in case it goes beyond SYNC_COMMITTEE_SIZE just to be safe
   const committeeIndices = preStateAltair.epochCtx.currentSyncCommitteeIndexed.validatorIndices.slice(
@@ -49,7 +49,8 @@ export async function computeSyncCommitteeRewards(
   if (validatorIds !== undefined) {
     const filtersSet = new Set(validatorIds);
     return rewards.filter(
-      (reward) => filtersSet.has(reward.validatorIndex) || filtersSet.has(index2pubkey[reward.validatorIndex].toHex())
+      (reward) =>
+        filtersSet.has(reward.validatorIndex) || filtersSet.has(finalizedIndex2pubkey[reward.validatorIndex].toHex())
     );
   } else {
     return rewards;

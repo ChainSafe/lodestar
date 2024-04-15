@@ -28,7 +28,7 @@ export function getVoluntaryExitSignatureSet(
 
   return {
     type: SignatureSetType.single,
-    pubkey: epochCtx.index2pubkey[signedVoluntaryExit.message.validatorIndex],
+    pubkey: epochCtx.finalizedIndex2pubkey[signedVoluntaryExit.message.validatorIndex],
     signingRoot: computeSigningRoot(ssz.phase0.VoluntaryExit, signedVoluntaryExit.message, domain),
     signature: signedVoluntaryExit.signature,
   };

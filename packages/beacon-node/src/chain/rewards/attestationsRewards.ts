@@ -143,7 +143,7 @@ function computeTotalAttestationsRewardsAltair(
   const {statuses} = transitionCache;
   const {epochCtx, config} = state;
   const validatorIndices = validatorIds
-    ?.map((id) => (typeof id === "number" ? id : epochCtx.pubkey2index.get(id)))
+    ?.map((id) => (typeof id === "number" ? id : epochCtx.finalizedPubkey2index.get(id)))
     .filter((index) => index !== undefined); // Validator indices to include in the result
 
   const inactivityPenaltyDenominator = config.INACTIVITY_SCORE_BIAS * INACTIVITY_PENALTY_QUOTIENT_ALTAIR;
