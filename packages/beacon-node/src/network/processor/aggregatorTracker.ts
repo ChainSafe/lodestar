@@ -28,7 +28,7 @@ export class AggregatorTracker {
 
   prune(): void {
     // We could also `pruneBySlot` as items before current slot are no longer
-    // relevant but due to small cache size (64), the simplest approach is to
+    // relevant but due to small cache size (64), the best approach is to
     // just prune the cache after a batch of subnet subscriptions is processed.
     pruneSetToMax(
       this.subnetAggregatorsBySlot,
