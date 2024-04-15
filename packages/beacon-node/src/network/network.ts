@@ -219,6 +219,8 @@ export class Network implements INetwork {
         this.aggregatorTracker.addAggregator(subscription.subnet, subscription.slot);
       }
     }
+    this.aggregatorTracker.prune();
+
     return this.core.prepareBeaconCommitteeSubnets(subscriptions);
   }
 

@@ -82,13 +82,20 @@ export class Map2dArr<K1, V> {
 /**
  * Prune an arbitrary set removing the first keys to have a set.size === maxItems.
  * Returns the count of deleted items.
+ *
+ * Keys can be sorted by `compareFn` to get more control over which items to prune first
  */
-export function pruneSetToMax<T>(set: Set<T> | Map<T, unknown>, maxItems: number): number {
+export function pruneSetToMax<T>(
+  set: Set<T> | Map<T, unknown>,
+  maxItems: number,
+  compareFn?: (a: T, b: T) => number
+): number {
   let itemsToDelete = set.size - maxItems;
   const deletedItems = Math.max(0, itemsToDelete);
 
   if (itemsToDelete > 0) {
-    for (const key of set.keys()) {
+    const keys = compareFn ? Array.from(set.keys()).sort(compareFn) : set.keys();
+    for (const key of keys) {
       set.delete(key);
       itemsToDelete--;
       if (itemsToDelete <= 0) {
