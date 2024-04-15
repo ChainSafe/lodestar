@@ -43,7 +43,8 @@
     "any-signal": "3.0.1",
     "bigint-buffer": "^1.1.5",
     "case": "^1.6.3",
-    "js-yaml": "^4.1.0"
+    "js-yaml": "^4.1.0",
+    "yargs": "^17.7.1"
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.5",
