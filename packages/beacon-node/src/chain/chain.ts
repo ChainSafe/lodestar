@@ -736,9 +736,9 @@ export class BeaconChain implements IBeaconChain {
         secFromSlot,
         slot,
       });
-      this.metrics?.forkChoice.isBlockTimely.set(isHeadTimely ? 1 : 0);
-      if (notReorgedReason !== undefined) {
-        this.metrics?.forkChoice.notReorgedReason.set(notReorgedReason);
+
+      if (isHeadTimely && notReorgedReason !== undefined) {
+        this.metrics?.forkChoice.notReorgedReason.inc({reason: notReorgedReason});
       }
       return head;
     } catch (e) {
