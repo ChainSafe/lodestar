@@ -64,21 +64,6 @@ export function randomBytesNonZero(bytesCount: number): Uint8Array {
   return rand;
 }
 
-/**
- * Fully deserializes a signature set that may have a serialized signature
- * NOTE: This can throw for invalid signature and should be wrapped in a try/catch
- */
-export function deserializeSet(set: WorkRequestSet): SignatureSet {
-  return {
-    message: set.message,
-    publicKey: set.publicKey,
-    signature:
-      set.signature instanceof bls.Signature
-        ? set.signature
-        : bls.Signature.fromBytes(set.signature, CoordType.affine, true),
-  };
-}
-
 export function getJobResultError(jobResult: WorkResultError | null, i: number): Error {
   const workerError = jobResult ? Error(jobResult.error.message) : Error(`No jobResult for index ${i}`);
   if (jobResult?.error?.stack) workerError.stack = jobResult.error.stack;

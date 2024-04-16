@@ -1,6 +1,5 @@
 import bls from "@chainsafe/bls";
 import {WorkRequestSet} from "./types.js";
-import {deserializeSet} from "./utils.js";
 
 const MIN_SET_COUNT_TO_BATCH = 2;
 
