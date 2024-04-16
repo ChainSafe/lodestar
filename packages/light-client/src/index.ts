@@ -7,7 +7,7 @@ import {isErrorAborted, sleep} from "@lodestar/utils";
 import {getCurrentSlot, slotWithFutureTolerance, timeUntilNextEpoch} from "./utils/clock.js";
 import {chunkifyInclusiveRange} from "./utils/chunkify.js";
 import {LightclientEmitter, LightclientEvent} from "./events.js";
-import {getLcLoggerConsole, ILcLogger} from "./utils/logger.js";
+import {getConsoleLogger, ILcLogger} from "./utils/logger.js";
 import {computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot, computeEpochAtSlot} from "./utils/clock.js";
 import {LightclientSpec} from "./spec/index.js";
 import {validateLightClientBootstrap} from "./spec/validateLightClientBootstrap.js";
@@ -114,7 +114,7 @@ export class Lightclient {
         : genesisData.genesisValidatorsRoot;
 
     this.config = createBeaconConfig(config, this.genesisValidatorsRoot);
-    this.logger = logger ?? getLcLoggerConsole();
+    this.logger = logger ?? getConsoleLogger();
     this.transport = transport;
     this.runStatus = {code: RunStatusCode.uninitialized};
 

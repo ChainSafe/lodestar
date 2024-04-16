@@ -13,7 +13,7 @@ export type ILcLogger = {
 /**
  * With `console` module and ignoring debug logs
  */
-export function getLcLoggerConsole(opts?: {logDebug?: boolean}): ILcLogger {
+export function getConsoleLogger(opts?: {logDebug?: boolean}): ILcLogger {
   return {
     error: console.error,
     warn: console.warn,
@@ -21,3 +21,8 @@ export function getLcLoggerConsole(opts?: {logDebug?: boolean}): ILcLogger {
     debug: opts?.logDebug ? console.log : () => {},
   };
 }
+
+/**
+ * @deprecated - Use `getConsoleLogger` instead.
+ */
+export const getLcLoggerConsole = getConsoleLogger;
