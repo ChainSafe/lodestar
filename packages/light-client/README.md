@@ -48,19 +48,22 @@ lodestar lightclient \
 
 ## Light-Client Programmatic Example
 
-For this example we will assume there is a running beacon node at `https://beacon-node.your-domain.com`
+For this example we will assume there is a running beacon node at `https://lodestar-mainnet.chainsafe.io`
 
 ```ts
-import {getClient} from "@lodestar/api";
-import {createChainForkConfig} from "@lodestar/config";
-import {networksChainConfig} from "@lodestar/config/networks";
 import {Lightclient, LightclientEvent} from "@lodestar/light-client";
 import {LightClientRestTransport} from "@lodestar/light-client/transport";
-import {getFinalizedSyncCheckpoint, getGenesisData, getLcLoggerConsole} from "@lodestar/light-client/utils";
+import {
+  getFinalizedSyncCheckpoint,
+  getGenesisData,
+  getConsoleLogger,
+  getApiFromUrl,
+  getChainForkConfigFromNetwork,
+} from "@lodestar/light-client/utils";
 
-const config = createChainForkConfig(networksChainConfig.mainnet);
-const logger = getLcLoggerConsole({logDebug: Boolean(process.env.DEBUG)});
-const api = getClient({urls: ["https://beacon-node.your-domain.com"]}, {config});
+const config = getChainForkConfigFromNetwork("mainnet");
+const logger = getConsoleLogger({logDebug: Boolean(process.env.DEBUG)});
+const api = getApiFromUrl({urls: ["https://lodestar-mainnet.chainsafe.io"]}, {config});
 
 const lightclient = await Lightclient.initializeFromCheckpointRoot({
   config,
@@ -86,6 +89,31 @@ lightclient.emitter.on(LightclientEvent.lightClientFinalityHeader, async (finali
 lightclient.emitter.on(LightclientEvent.lightClientOptimisticHeader, async (optimisticUpdate) => {
   logger.info(optimisticUpdate);
 });
+```
+
+## Browser Integration
+
+If you want to use Lightclient in browser and facing some issues in building it with bundlers like webpack, vite. We suggest to use our distribution build. The support for single distribution build is started from `1.18.0` version.
+
+Directly link the dist build with the `<script />` tag with tools like unpkg or other. e.g.
+
+```html
+<script src="https://www.unpkg.com/@lodestar/light-client@1.18.0/dist/lightclient.es.min.js" type="module">
+```
+
+Then the lightclient package will be exposed to `globalThis`, incase of browser environment that will be `window`. You can access the package as `window.lodestar.lightclient`. All named exports will also be available from this interface. e.g. `window.window.lodestar.lightclient.transport`.
+
+NOTE: Due to `top-level-await` used in one of dependent library, the package will not be available right after the load. You have to use a hack to clear up that await from the event loop.
+
+```html
+<script>
+  window.addEventListener("DOMContentLoaded", () => {
+    setTimeout(function () {
+      // here you can access the Lightclient
+      // window.lodestar.lightclient
+    }, 50); 
+  });
+</script>
 ```
 
 ## Contributors
