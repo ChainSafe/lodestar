@@ -1,4 +1,4 @@
-import {phase0, ssz} from "@lodestar/types";
+import {allForks, phase0, ssz} from "@lodestar/types";
 import {ForkDigestContext} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
@@ -87,7 +87,7 @@ export function getGossipSSZType(topic: GossipTopic) {
     case GossipType.blob_sidecar:
       return ssz.deneb.BlobSidecar;
     case GossipType.beacon_aggregate_and_proof:
-      return ssz.phase0.SignedAggregateAndProof;
+      return ssz.phase0.SignedAggregateAndProof; // TODO Electra: Add new type of SignedAggregateAndProof
     case GossipType.beacon_attestation:
       return ssz.phase0.Attestation;
     case GossipType.proposer_slashing:
@@ -128,9 +128,9 @@ export function sszDeserialize<T extends GossipTopic>(topic: T, serializedData: 
 /**
  * Deserialize a gossip serialized data into an Attestation object.
  */
-export function sszDeserializeAttestation(serializedData: Uint8Array): phase0.Attestation {
+export function sszDeserializeAttestation(serializedData: Uint8Array): allForks.Attestation {
   try {
-    return ssz.phase0.Attestation.deserialize(serializedData);
+    return ssz.phase0.Attestation.deserialize(serializedData); // TODO Electra: Handle electra deserialization
   } catch (e) {
     throw new GossipActionError(GossipAction.REJECT, {code: GossipErrorCode.INVALID_SERIALIZED_BYTES_ERROR_CODE});
   }

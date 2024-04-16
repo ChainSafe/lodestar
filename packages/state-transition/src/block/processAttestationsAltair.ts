@@ -1,5 +1,5 @@
 import {byteArrayEquals} from "@chainsafe/ssz";
-import {Epoch, phase0} from "@lodestar/types";
+import {Epoch, allForks, phase0} from "@lodestar/types";
 import {intSqrt} from "@lodestar/utils";
 
 import {
@@ -32,7 +32,7 @@ const SLOTS_PER_EPOCH_SQRT = intSqrt(SLOTS_PER_EPOCH);
 export function processAttestationsAltair(
   fork: ForkSeq,
   state: CachedBeaconStateAltair,
-  attestations: phase0.Attestation[],
+  attestations: allForks.Attestation[],
   verifySignature = true
 ): void {
   const {epochCtx} = state;

@@ -50,7 +50,7 @@ export async function validateGossipAggregateAndProof(
 async function validateAggregateAndProof(
   fork: ForkName,
   chain: IBeaconChain,
-  signedAggregateAndProof: phase0.SignedAggregateAndProof,
+  signedAggregateAndProof: phase0.SignedAggregateAndProof, // TODO Electra: Handle new attestation format
   serializedData: Uint8Array | null = null,
   opts: {skipValidationKnownAttesters: boolean; prioritizeBls: boolean} = {
     skipValidationKnownAttesters: false,
@@ -188,6 +188,10 @@ async function validateAggregateAndProof(
   if (!committeeIndices.includes(aggregateAndProof.aggregatorIndex)) {
     throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.AGGREGATOR_NOT_IN_COMMITTEE});
   }
+
+  // TODO Electra:
+  // [REJECT] `len(committee_indices) == 1`, where `committee_indices = get_committee_indices(aggregate)`.
+  // [REJECT] `aggregate.data.index == 0`
 
   // [REJECT] The aggregate_and_proof.selection_proof is a valid signature of the aggregate.data.slot
   // by the validator with index aggregate_and_proof.aggregator_index.

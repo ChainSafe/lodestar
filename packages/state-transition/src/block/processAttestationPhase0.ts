@@ -1,5 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
-import {Slot, phase0, ssz} from "@lodestar/types";
+import {Slot, allForks, electra, phase0, ssz} from "@lodestar/types";
 
 import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH, ForkSeq} from "@lodestar/params";
 import {computeEpochAtSlot} from "../util/index.js";
@@ -59,7 +59,7 @@ export function processAttestationPhase0(
 export function validateAttestation(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,
-  attestation: phase0.Attestation
+  attestation: allForks.Attestation // TODO Electra: Validate electra attestation
 ): void {
   const {epochCtx} = state;
   const slot = state.slot;
