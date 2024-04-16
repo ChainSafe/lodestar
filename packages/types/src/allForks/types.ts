@@ -162,6 +162,7 @@ export type AllForksTypes = {
   BeaconBlock: BeaconBlock;
   SignedBeaconBlock: SignedBeaconBlock;
   BeaconState: BeaconState;
+  Attestation: Attestation;
   Metadata: Metadata;
   ExecutionPayload: ExecutionPayload;
   ExecutionPayloadHeader: ExecutionPayloadHeader;

@@ -43,7 +43,7 @@ export type AttestationValidationResult = {
 export type AttestationOrBytes = ApiAttestation | GossipAttestation;
 
 /** attestation from api */
-export type ApiAttestation = {attestation: phase0.Attestation; serializedData: null};
+export type ApiAttestation = {attestation: phase0.Attestation; serializedData: null}; // TODO Electra: add new attestation type
 
 /** attestation from gossip */
 export type GossipAttestation = {
@@ -285,6 +285,10 @@ async function validateGossipAttestationNoSignatureCheck(
     {caller: RegenCaller.validateGossipAttestation},
     chain.clock.currentSlot - attSlot
   );
+
+  // TODO Electra:
+  // [REJECT] `len(committee_indices) == 1`, where `committee_indices = get_committee_indices(attestation)`.
+  // [REJECT] `attestation.data.index == 0`
 
   if (!attestationOrCache.cache) {
     // [REJECT] The attestation's epoch matches its target -- i.e. attestation.data.target.epoch == compute_epoch_at_slot(attestation.data.slot)

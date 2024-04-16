@@ -222,7 +222,7 @@ export class OpPool {
         if (isSlashableAtEpoch(validator, stateEpoch)) {
           slashableIndices.add(index);
         }
-        if (attesterSlashings.length >= MAX_ATTESTER_SLASHINGS) {
+        if (attesterSlashings.length >= MAX_ATTESTER_SLASHINGS) { // TODO Electra: MAX_ATTESTER_SLASHINGS_ELECTRA
           break attesterSlashing;
         }
       }
