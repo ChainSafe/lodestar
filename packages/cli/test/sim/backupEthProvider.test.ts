@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import path from "node:path";
 import {activePreset} from "@lodestar/params";
-import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
+import {SimulationEnvironment} from "../utils/simulation/simulationEnvironment.js";
 import {nodeAssertion} from "../utils/simulation/assertions/nodeAssertion.js";
 import {AssertionMatch, BeaconClient, ExecutionClient} from "../utils/simulation/interfaces.js";
 import {defineSimTestConfig, logFilesDir, replaceIpFromUrl} from "../utils/simulation/utils/index.js";
@@ -67,15 +67,15 @@ env.nodes.push(node3);
 await env.start({runTimeoutMs: estimatedTimeoutMs});
 await connectAllNodes(env.nodes);
 
-await waitForSlot(env.clock.getLastSlotOfEpoch(1), env.nodes, {silent: true, env});
+await waitForSlot("Waiting for two epochs to pass", {env, slot: env.clock.getLastSlotOfEpoch(1)});
 
 // Stop node2, node3 EL, so the only way they produce blocks is via node1 EL
 await node2.execution.job.stop();
 await node3.execution.job.stop();
 
 // node2 and node3 will successfully reach TTD if they can communicate to an EL on node1
-await waitForSlot(env.clock.getLastSlotOfEpoch(bellatrixForkEpoch) + activePreset.SLOTS_PER_EPOCH / 2, env.nodes, {
-  silent: true,
+await waitForSlot("Wait half additional epoch to bellatrix fork epoch", {
+  slot: env.clock.getLastSlotOfEpoch(bellatrixForkEpoch) + activePreset.SLOTS_PER_EPOCH / 2,
   env,
 });
 

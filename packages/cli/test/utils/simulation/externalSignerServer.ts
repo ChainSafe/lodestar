@@ -1,6 +1,6 @@
-import {fastify} from "fastify";
-import {fromHexString} from "@chainsafe/ssz";
 import type {SecretKey} from "@chainsafe/bls/types";
+import {fromHexString} from "@chainsafe/ssz";
+import {fastify, FastifyInstance} from "fastify";
 import {EXTERNAL_SIGNER_BASE_PORT} from "./constants.js";
 
 /* eslint-disable no-console */
@@ -11,7 +11,7 @@ export class ExternalSignerServer {
   readonly address: string = "127.0.0.1";
   readonly port: number;
 
-  private server: ReturnType<typeof fastify>;
+  private server: FastifyInstance;
   private secretKeyMap = new Map<string, SecretKey>();
 
   constructor(secretKeys: SecretKey[]) {

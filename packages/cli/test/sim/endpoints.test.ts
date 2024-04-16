@@ -3,7 +3,7 @@ import path from "node:path";
 import assert from "node:assert";
 import {toHexString} from "@chainsafe/ssz";
 import {ApiError, routes} from "@lodestar/api";
-import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
+import {SimulationEnvironment} from "../utils/simulation/simulationEnvironment.js";
 import {BeaconClient, ExecutionClient} from "../utils/simulation/interfaces.js";
 import {defineSimTestConfig, logFilesDir} from "../utils/simulation/utils/index.js";
 import {waitForSlot} from "../utils/simulation/utils/network.js";
@@ -38,7 +38,7 @@ const env = await SimulationEnvironment.initWithDefaults(
 await env.start({runTimeoutMs: estimatedTimeoutMs});
 
 const node = env.nodes[0].beacon;
-await waitForSlot(2, env.nodes, {env, silent: true});
+await waitForSlot("Wait for 2 slots before checking endpoints", {env, slot: 2});
 
 const res = await node.api.beacon.getStateValidators("head");
 ApiError.assert(res);
@@ -68,6 +68,8 @@ await env.tracker.assert(
     ApiError.assert(res);
 
     assert.equal(res.response.data.length, 1);
+    assert.equal(res.response.executionOptimistic, false);
+    assert.equal(res.response.finalized, false);
   }
 );
 

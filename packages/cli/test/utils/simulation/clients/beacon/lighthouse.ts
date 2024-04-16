@@ -5,9 +5,9 @@ import yaml from "js-yaml";
 import {HttpClient} from "@lodestar/api";
 import {getClient} from "@lodestar/api/beacon";
 import {chainConfigToJson} from "@lodestar/config";
-import {BeaconClient, BeaconNodeGenerator, LighthouseAPI, RunnerType} from "../interfaces.js";
-import {getNodeMountedPaths} from "../utils/paths.js";
-import {getNodePorts} from "../utils/ports.js";
+import {BeaconClient, BeaconNodeGenerator, LighthouseAPI, RunnerType} from "../../interfaces.js";
+import {getNodeMountedPaths} from "../../utils/paths.js";
+import {getNodePorts} from "../../utils/ports.js";
 
 export const generateLighthouseBeaconNode: BeaconNodeGenerator<BeaconClient.Lighthouse> = (opts, runner) => {
   if (!process.env.LIGHTHOUSE_BINARY_PATH && !process.env.LIGHTHOUSE_DOCKER_IMAGE) {

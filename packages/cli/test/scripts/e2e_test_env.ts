@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import path from "node:path";
 import {BeaconClient, ExecutionClient} from "../utils/simulation/interfaces.js";
-import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
+import {SimulationEnvironment} from "../utils/simulation/simulationEnvironment.js";
 import {defineSimTestConfig, logFilesDir} from "../utils/simulation/utils/index.js";
 import {connectAllNodes} from "../utils/simulation/utils/network.js";
 

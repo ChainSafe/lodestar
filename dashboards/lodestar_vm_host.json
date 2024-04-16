@@ -291,7 +291,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum by (space) ({__name__=~\"nodejs_heap_space_size_used_bytes|network_worker_nodejs_heap_space_size_used_bytes|discv5_worker_nodejs_heap_space_size_used_bytes\")",
+          "expr": "sum by (space) ({__name__=~\"nodejs_heap_space_size_used_bytes|network_worker_nodejs_heap_space_size_used_bytes|discv5_worker_nodejs_heap_space_size_used_bytes\"})",
           "hide": false,
           "interval": "",
           "legendFormat": "{{space}}",

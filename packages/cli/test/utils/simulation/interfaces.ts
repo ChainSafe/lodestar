@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {ChildProcess} from "node:child_process";
 import type {SecretKey} from "@chainsafe/bls/types";
+import {Web3} from "web3";
 import {Api} from "@lodestar/api";
 import {Api as KeyManagerApi} from "@lodestar/api/keymanager";
 import {ChainForkConfig} from "@lodestar/config";
@@ -10,8 +11,7 @@ import {Logger} from "@lodestar/logger";
 import {BeaconArgs} from "../../../src/cmds/beacon/options.js";
 import {IValidatorCliArgs} from "../../../src/cmds/validator/options.js";
 import {GlobalArgs} from "../../../src/options/index.js";
-import {EpochClock} from "./EpochClock.js";
-import {Eth1ProviderWithAdmin} from "./Eth1ProviderWithAdmin.js";
+import {EpochClock} from "./epochClock.js";
 
 export type NodeId = string;
 
@@ -19,6 +19,7 @@ export type SimulationInitOptions = {
   id: string;
   logsDir: string;
   forkConfig: ChainForkConfig;
+  trustedSetup?: boolean;
 };
 
 export type SimulationOptions = {
@@ -27,6 +28,7 @@ export type SimulationOptions = {
   rootDir: string;
   controller: AbortController;
   genesisTime: number;
+  trustedSetup?: boolean;
 };
 
 export enum BeaconClient {
@@ -208,7 +210,7 @@ export interface ExecutionNode<E extends ExecutionClient = ExecutionClient> {
    */
   readonly ethRpcPrivateUrl: string;
   readonly jwtSecretHex: string;
-  readonly provider: E extends ExecutionClient.Mock ? null : Eth1ProviderWithAdmin;
+  readonly provider: E extends ExecutionClient.Mock ? null : Web3;
   readonly job: Job;
 }
 

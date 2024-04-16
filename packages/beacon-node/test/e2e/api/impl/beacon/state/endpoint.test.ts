@@ -47,9 +47,11 @@ describe("beacon state api", function () {
     it("should return all committees for the given state", async () => {
       const res = await client.getEpochCommittees("head");
       ApiError.assert(res);
-      const epochCommittees = res.response.data;
+      const {data: epochCommittees, executionOptimistic, finalized} = res.response;
 
       expect(epochCommittees).toHaveLength(committeeCount);
+      expect(executionOptimistic).toBe(false);
+      expect(finalized).toBe(false);
 
       const slotCount: Record<string, number> = {};
       const indexCount: Record<string, number> = {};

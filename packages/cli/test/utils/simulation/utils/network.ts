@@ -3,8 +3,8 @@ import {ApiError} from "@lodestar/api";
 import {Slot, allForks} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {BeaconClient, BeaconNode, ExecutionClient, ExecutionNode, NodePair} from "../interfaces.js";
-import {SimulationEnvironment} from "../SimulationEnvironment.js";
-import {SimulationTrackerEvent} from "../SimulationTracker.js";
+import {SimulationEnvironment} from "../simulationEnvironment.js";
+import {SimulationTrackerEvent} from "../simulationTracker.js";
 
 export async function connectAllNodes(nodes: NodePair[]): Promise<void> {
   for (const node of nodes) {
@@ -45,7 +45,7 @@ export async function connectNewCLNode(newNode: BeaconNode, nodes: BeaconNode[])
 }
 
 export async function connectNewELNode(newNode: ExecutionNode, nodes: ExecutionNode[]): Promise<void> {
-  const elIdentity = newNode.provider === null ? null : await newNode.provider.admin.nodeInfo();
+  const elIdentity = newNode.provider === null ? null : await newNode.provider?.admin.nodeInfo();
   if (elIdentity && !elIdentity.enode) return;
 
   for (const node of nodes) {
@@ -54,6 +54,7 @@ export async function connectNewELNode(newNode: ExecutionNode, nodes: ExecutionN
     // Nethermind had a bug in admin_addPeer RPC call
     // https://github.com/NethermindEth/nethermind/issues/4876
     if (node.provider !== null && node.client !== ExecutionClient.Nethermind && elIdentity) {
+      // `web3.admin` here refers to the Web3 plugin `Web3AdminPlugin`
       await node.provider.admin.addPeer(elIdentity.enode);
     }
   }
@@ -120,16 +121,16 @@ export async function waitForHead(
 }
 
 export async function waitForSlot(
-  slot: Slot,
-  nodes: NodePair[],
-  {silent, env}: {silent?: boolean; env: SimulationEnvironment}
+  message: string,
+  {env, slot, nodes}: {env: SimulationEnvironment; slot: Slot; nodes?: NodePair[]}
 ): Promise<void> {
-  if (!silent) {
-    console.log(`\nWaiting for slot on "${nodes.map((n) => n.beacon.id).join(",")}"`, {
-      target: slot,
-      current: env.clock.currentSlot,
-    });
-  }
+  nodes = nodes ?? env.nodes;
+
+  console.log(`\n${message}`, {
+    target: slot,
+    current: env.clock.currentSlot,
+    nodes: nodes.map((n) => n.beacon.id).join(","),
+  });
 
   await Promise.all(
     nodes.map(

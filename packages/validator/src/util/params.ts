@@ -123,6 +123,9 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
 
     // Fork choice
     PROPOSER_SCORE_BOOST: false, // Ignored as it's changing https://github.com/ethereum/consensus-specs/pull/2895
+    REORG_HEAD_WEIGHT_THRESHOLD: false, // Non-critical since proposer boost reorg is optional feature
+    REORG_PARENT_WEIGHT_THRESHOLD: false, // Non-critical since proposer boost reorg is optional feature
+    REORG_MAX_EPOCHS_SINCE_FINALIZATION: false, // Non-critical since proposer boost reorg is optional feature
 
     // Deposit contract
     DEPOSIT_CHAIN_ID: false, // Non-critical

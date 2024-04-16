@@ -32,11 +32,11 @@
     "lint:fix": "yarn run lint --fix",
     "test:unit": "vitest --run --dir test/unit/",
     "test:e2e": "vitest --run --config vitest.e2e.config.ts --dir test/e2e/",
-    "test:sim:multifork": "LODESTAR_PRESET=minimal DOTENV_CONFIG_PATH=../../.env.test node -r dotenv/config --loader ts-node/esm test/sim/multi_fork.test.ts",
-    "test:sim:mixedclient": "LODESTAR_PRESET=minimal DOTENV_CONFIG_PATH=../../.env.test node -r dotenv/config --loader ts-node/esm test/sim/mixed_client.test.ts",
+    "test:sim:multifork": "LODESTAR_PRESET=minimal DOTENV_CONFIG_PATH=../../.env.test node -r dotenv/config --loader ts-node/esm test/sim/multiFork.test.ts",
+    "test:sim:mixedclient": "LODESTAR_PRESET=minimal DOTENV_CONFIG_PATH=../../.env.test node -r dotenv/config --loader ts-node/esm test/sim/mixedClient.test.ts",
     "test:sim:endpoints": "LODESTAR_PRESET=minimal DOTENV_CONFIG_PATH=../../.env.test node -r dotenv/config --loader ts-node/esm test/sim/endpoints.test.ts",
     "test:sim:deneb": "LODESTAR_PRESET=minimal DOTENV_CONFIG_PATH=../../.env.test node -r dotenv/config --loader ts-node/esm test/sim/deneb.test.ts",
-    "test:sim:backup_eth_provider": "LODESTAR_PRESET=minimal DOTENV_CONFIG_PATH=../../.env.test node -r dotenv/config --loader ts-node/esm test/sim/backup_eth_provider.test.ts",
+    "test:sim:backup_eth_provider": "LODESTAR_PRESET=minimal DOTENV_CONFIG_PATH=../../.env.test node -r dotenv/config --loader ts-node/esm test/sim/backupEthProvider.test.ts",
     "test": "yarn test:unit && yarn test:e2e",
     "check-readme": "typescript-docs-verifier"
   },
@@ -93,6 +93,7 @@
     "@types/got": "^9.6.12",
     "@types/inquirer": "^9.0.3",
     "@types/proper-lockfile": "^4.1.4",
-    "@types/yargs": "^17.0.24"
+    "@types/yargs": "^17.0.24",
+    "fastify": "^4.26.2"
   }
 }
