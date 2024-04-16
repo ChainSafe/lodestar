@@ -417,7 +417,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
    * Prepare work and send to either workerpool or to libuv threadpool
    */
   private runJob = async (): Promise<void> => {
-    if (this.closed) {
+    if (this.closed || this.jobs.length === 0) {
       return;
     }
 
