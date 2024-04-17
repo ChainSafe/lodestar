@@ -111,7 +111,7 @@ NOTE: Due to `top-level-await` used in one of dependent library, the package wil
     setTimeout(function () {
       // here you can access the Lightclient
       // window.lodestar.lightclient
-    }, 50); 
+    }, 50);
   });
 </script>
 ```
