@@ -119,6 +119,7 @@ describe("chain / lightclient", function () {
         config: bn.config,
         logger: loggerLC,
         transport: new LightClientRestTransport(api),
+        blsImplementation: "herumi",
         genesisData: {
           genesisTime: bn.chain.genesisTime,
           genesisValidatorsRoot: bn.chain.genesisValidatorsRoot,
