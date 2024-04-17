@@ -1,8 +1,8 @@
 import bls from "@chainsafe/bls";
-import {CoordType, SignatureSet, PublicKey} from "@chainsafe/bls/types";
+import {PublicKey} from "@chainsafe/bls/types";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {Metrics} from "../../metrics/metrics.js";
-import {WorkRequestSet, WorkResultError} from "./types.js";
+import {WorkResultError} from "./types.js";
 
 export function getAggregatedPubkey(signatureSet: ISignatureSet, metrics: Metrics | null = null): PublicKey {
   switch (signatureSet.type) {
