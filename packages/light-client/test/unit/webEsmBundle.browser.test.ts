@@ -3,6 +3,8 @@ import {expect, describe, it, beforeEach, vi} from "vitest";
 import "../../dist/lightclient.min.mjs";
 
 describe("web bundle for lightclient", () => {
+  vi.setConfig({testTimeout: 10_000});
+  
   let lightclient: any;
 
   beforeEach(() => {
@@ -27,8 +29,6 @@ describe("web bundle for lightclient", () => {
   });
 
   it("should start the lightclient and sync", async () => {
-    vi.setConfig({testTimeout: 10_000});
-    
     const {Lightclient, LightclientEvent, transport, utils} = lightclient;
 
     const logger = utils.getConsoleLogger({logDebug: true});
