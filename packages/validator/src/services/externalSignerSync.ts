@@ -46,7 +46,7 @@ export function pollExternalSignerPubkeys(
       for (const pubkey of externalPubkeys) {
         if (!localPubkeysSet.has(pubkey)) {
           await validatorStore.addSigner({type: SignerType.Remote, pubkey, url: externalSignerUrl});
-          logger.info("Added remote signer for newly discovered public key", {url: printableUrl, pubkey});
+          logger.info("Added newly discovered public key from external signer", {url: printableUrl, pubkey});
         }
       }
 
@@ -54,7 +54,7 @@ export function pollExternalSignerPubkeys(
       for (const pubkey of localPubkeys) {
         if (!externalPubkeysSet.has(pubkey)) {
           validatorStore.removeSigner(pubkey);
-          logger.info("Removed remote signer for no longer present public key", {url: printableUrl, pubkey});
+          logger.info("Removed public key no longer present on external signer", {url: printableUrl, pubkey});
         }
       }
     } catch (e) {
