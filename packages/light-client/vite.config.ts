@@ -3,8 +3,10 @@ import {nodePolyfills} from "vite-plugin-node-polyfills";
 import topLevelAwait from "vite-plugin-top-level-await";
 import {visualizer} from "rollup-plugin-visualizer";
 import {blsBrowserPlugin} from "../../scripts/vitest/plugins/blsBrowserPlugin.js";
+
 import pkgJSON from "./package.json";
 
+// TODO: Investigate why this banner is not appended to the build header.
 const banner =
   `/* ${pkgJSON.description}\n` +
   " * \n" +
@@ -23,14 +25,20 @@ export default defineConfig({
       globals: {Buffer: true, process: true},
       protocolImports: true,
     }),
-    visualizer(),
+    ...(process.env.CI ? [] : [visualizer()]),
   ],
+  mode: "production",
+  appType: "custom",
+  esbuild: {
+    banner,
+    legalComments: "none",
+  },
   build: {
     // "modules" refer to ['es2020', 'edge88', 'firefox78', 'chrome87', 'safari14']
     target: "modules",
     outDir: "dist",
     sourcemap: true,
-    minify: true,
+    minify: false,
     manifest: "manifest.json",
     ssr: false,
     ssrManifest: false,
@@ -38,13 +46,20 @@ export default defineConfig({
     lib: {
       entry: "src/index.browser.ts",
       formats: ["es"],
-      name: "lightclient",
-      fileName: (format) => `lightclient.${format}.min.js`,
+      name: "LightClient",
+      fileName: (format) => {
+        if (format === "esm" || format === "es") {
+          return "lightclient.min.mjs";
+        } else if (format === "cjs") {
+          return "lightclient.min.cjs";
+        } else {
+          return `lightclient.min.${format}.js`;
+        }
+      },
     },
     rollupOptions: {
       output: {
         inlineDynamicImports: true,
-        banner,
         footer: `
         globalThis.lodestar = globalThis.lodestar === undefined ? {} : globalThis.lodestar;
         globalThis.lodestar.lightclient = {

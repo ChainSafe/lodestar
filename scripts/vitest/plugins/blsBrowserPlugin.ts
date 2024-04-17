@@ -1,6 +1,5 @@
 import path from "node:path";
 import {UserConfig, ConfigEnv, Plugin} from "vite";
-
 const __dirname = new URL(".", import.meta.url).pathname;
 const polyfillsDir = path.join(__dirname, "../polyfills");
 
