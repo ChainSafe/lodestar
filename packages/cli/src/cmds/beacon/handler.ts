@@ -1,4 +1,3 @@
-import os from "node:os";
 import path from "node:path";
 import {Registry} from "prom-client";
 import {ErrorAborted} from "@lodestar/utils";
@@ -26,6 +25,7 @@ import {BeaconArgs} from "./options.js";
 import {getBeaconPaths} from "./paths.js";
 import {initBeaconState} from "./initBeaconState.js";
 import {initPeerIdAndEnr} from "./initPeerIdAndEnr.js";
+import {setThreadPoolSize} from "./setThreadPoolSize.js";
 
 const DEFAULT_RETENTION_SSZ_OBJECTS_HOURS = 15 * 24;
 const HOURS_TO_MS = 3600 * 1000;
@@ -34,7 +34,8 @@ const HOURS_TO_MS = 3600 * 1000;
  * Runs a beacon node.
  */
 export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void> {
-  process.env.UV_THREADPOOL_SIZE = os.availableParallelism().toString();
+  // must be EARLY in startup. see `setThreadPoolSize.ts` for more info
+  setThreadPoolSize();
   const {config, options, beaconPaths, network, version, commit, peerId, logger} = await beaconHandlerInit(args);
 
   // initialize directories
