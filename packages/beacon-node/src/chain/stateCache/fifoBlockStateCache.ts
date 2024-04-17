@@ -73,14 +73,14 @@ export class FIFOBlockStateCache implements BlockStateCache {
    */
   getSeedState(): CachedBeaconStateAllForks {
     const firstValue = this.cache.values().next();
-    if (!firstValue.done) {
-      const firstState = firstValue.value;
-      // don't transfer cache because consumer only use this cache to reload another state from disc
-      return firstState.clone(true);
-    } else {
+    if (firstValue.done) {
       // should not happen
       throw Error("No state in FIFOBlockStateCache");
     }
+
+    const firstState = firstValue.value;
+    // don't transfer cache because consumer only use this cache to reload another state from disc
+    return firstState.clone(true);
   }
 
   /**
