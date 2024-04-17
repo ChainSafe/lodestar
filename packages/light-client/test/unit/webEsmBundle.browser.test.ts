@@ -4,7 +4,7 @@ import "../../dist/lightclient.min.mjs";
 
 describe("web bundle for lightclient", () => {
   vi.setConfig({testTimeout: 10_000});
-  
+
   let lightclient: any;
 
   beforeEach(() => {
