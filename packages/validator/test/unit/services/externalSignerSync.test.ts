@@ -14,7 +14,7 @@ import {loggerVc} from "../../utils/logger.js";
 
 vi.mock("../../../src/util/externalSignerClient.js");
 
-describe("External signer sync", function () {
+describe("External signer sync", () => {
   const config = createChainForkConfig({});
   const api = getApiClientStub();
 
@@ -55,7 +55,7 @@ describe("External signer sync", function () {
     vi.useRealTimers();
   });
 
-  it("should add remote signer for newly discovered public key from external signer", async function () {
+  it("should add remote signer for newly discovered public key from external signer", async () => {
     const pubkey = pubkeys[0];
     externalSignerGetKeysStub.mockResolvedValueOnce([pubkey]);
 
@@ -71,7 +71,7 @@ describe("External signer sync", function () {
     });
   });
 
-  it("should remove remote signer for no longer present public key on external signer", async function () {
+  it("should remove remote signer for no longer present public key on external signer", async () => {
     const pubkey = pubkeys[0];
     await validatorStore.addSigner({type: SignerType.Remote, pubkey: pubkey, url: externalSignerUrl});
     expect(validatorStore.hasSomeValidators()).toBe(true);
@@ -86,7 +86,7 @@ describe("External signer sync", function () {
     expect(validatorStore.getSigner(pubkey)).toBeUndefined();
   });
 
-  it("should add / remove remote signers to match public keys on external signer", async function () {
+  it("should add / remove remote signers to match public keys on external signer", async () => {
     const existingPubkeys = pubkeys.slice(0, 2);
     for (const pubkey of existingPubkeys) {
       await validatorStore.addSigner({type: SignerType.Remote, pubkey, url: externalSignerUrl});
@@ -109,7 +109,7 @@ describe("External signer sync", function () {
     expect(validatorStore.votingPubkeys()).toEqual(externalPubkeys);
   });
 
-  it("should not modify signers if public keys did not change on external signer", async function () {
+  it("should not modify signers if public keys did not change on external signer", async () => {
     for (const pubkey of pubkeys) {
       await validatorStore.addSigner({type: SignerType.Remote, pubkey, url: externalSignerUrl});
     }
@@ -126,7 +126,7 @@ describe("External signer sync", function () {
     expect(validatorStore.votingPubkeys()).toEqual(pubkeys);
   });
 
-  it("should not remove local signer if public key is not present on external signer", async function () {
+  it("should not remove local signer if public key is not present on external signer", async () => {
     const localPubkey = pubkeys[0];
     await validatorStore.addSigner({type: SignerType.Local, secretKey: secretKeys[0]});
     expect(validatorStore.hasVotingPubkey(localPubkey)).toBe(true);
@@ -140,7 +140,7 @@ describe("External signer sync", function () {
     expect(validatorStore.hasVotingPubkey(localPubkey)).toBe(true);
   });
 
-  it("should not remove remote signer with a different url as configured external signer", async function () {
+  it("should not remove remote signer with a different url as configured external signer", async () => {
     const diffUrlPubkey = pubkeys[0];
     await validatorStore.addSigner({type: SignerType.Remote, pubkey: diffUrlPubkey, url: "http://differentSigner"});
     expect(validatorStore.hasVotingPubkey(diffUrlPubkey)).toBe(true);
@@ -154,7 +154,7 @@ describe("External signer sync", function () {
     expect(validatorStore.hasVotingPubkey(diffUrlPubkey)).toBe(true);
   });
 
-  it("should not add remote signer if public key fetched from external signer is invalid", async function () {
+  it("should not add remote signer if public key fetched from external signer is invalid", async () => {
     const invalidPubkey = "0x1234";
     externalSignerGetKeysStub.mockResolvedValueOnce([invalidPubkey]);
 
@@ -165,7 +165,7 @@ describe("External signer sync", function () {
     expect(validatorStore.hasSomeValidators()).toBe(false);
   });
 
-  it("should not add remote signers if fetching public keys from external signer is disabled", async function () {
+  it("should not add remote signers if fetching public keys from external signer is disabled", async () => {
     externalSignerGetKeysStub.mockResolvedValueOnce(pubkeys);
 
     pollExternalSignerPubkeys(config, loggerVc, controller.signal, validatorStore, {...opts, fetch: false});
