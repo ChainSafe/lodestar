@@ -17,14 +17,12 @@ export function blsBrowserPlugin(): Plugin {
         resolve: {
           alias: {
             "@chainsafe/bls": "@chainsafe/bls/herumi",
+            // This is just used to generate `privateKey` which is not used in the browser.
+            "@chainsafe/bls-keygen": path.join(polyfillsDir, "bls-keygen.js"),
             "@chainsafe/blst": emptyModulePath,
             "@chainsafe/bls-hd-key": emptyModulePath,
-            "@chainsafe/bls-keygen": path.join(polyfillsDir, "bls-keygen.js"),
-            // "@chainsafe/persistent-merkle-tree/lib/hasher/index": emptyModulePath,
-            // "@chainsafe/persistent-merkle-tree": path.join(polyfillsDir, "persistent-merkle-tree.js"),
             crypto: emptyModulePath,
             "node:crypto": emptyModulePath,
-            // "@chainsafe/bls/lib/blst-native"
           },
         },
       };
