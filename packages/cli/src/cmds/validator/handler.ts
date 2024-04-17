@@ -108,7 +108,7 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
         );
       }
       throw new YargsError(
-        "No local keystores and remote keys found with current args, start with --keymanager if intending to add them later (via keymanager)"
+        "No local keystores or remote keys found with current args, start with --keymanager if intending to add them later via keymanager"
       );
     }
   }
