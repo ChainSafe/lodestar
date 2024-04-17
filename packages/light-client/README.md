@@ -76,7 +76,7 @@ const lightclient = await Lightclient.initializeFromCheckpointRoot({
   checkpointRoot: await getFinalizedSyncCheckpoint(api),
   // if you have installed blst you can specify "blst-native" for
   // multi-threaded node bindings
-  blsImplementation: "herumi" 
+  blsImplementation: "herumi", 
   opts: {
     allowForcedUpdates: true,
     updateHeadersOnForcedUpdate: true,
