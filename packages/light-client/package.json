@@ -47,7 +47,10 @@
     "*.d.ts",
     "*.js",
     "dist/**/*.js",
+    "dist/**/*.mjs",
+    "dist/**/*.cjs",
     "dist/**/*.map",
+    "dist/**/*.json",
     "dist/**/*.d.ts"
   ],
   "scripts": {
