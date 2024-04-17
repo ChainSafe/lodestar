@@ -101,7 +101,7 @@ Directly link the dist build with the `<script />` tag with tools like unpkg or 
 <script src="https://www.unpkg.com/@lodestar/light-client@1.18.0/dist/lightclient.es.min.js" type="module">
 ```
 
-Then the lightclient package will be exposed to `globalThis`, incase of browser environment that will be `window`. You can access the package as `window.lodestar.lightclient`. All named exports will also be available from this interface. e.g. `window.lodestar.lightclient.transport`.
+Then the lightclient package will be exposed to `globalThis`, in case of browser environment that will be `window`. You can access the package as `window.lodestar.lightclient`. All named exports will also be available from this interface. e.g. `window.lodestar.lightclient.transport`.
 
 NOTE: Due to `top-level-await` used in one of dependent library, the package will not be available right after the load. You have to use a hack to clear up that await from the event loop.
 
