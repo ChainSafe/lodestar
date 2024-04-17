@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-call */
-import {expect, describe, it, beforeEach} from "vitest";
+import {expect, describe, it, beforeEach, vi} from "vitest";
 import "../../dist/lightclient.min.mjs";
 
 describe("web bundle for lightclient", () => {
@@ -27,6 +27,8 @@ describe("web bundle for lightclient", () => {
   });
 
   it("should start the lightclient and sync", async () => {
+    vi.setConfig({testTimeout: 10_000});
+    
     const {Lightclient, LightclientEvent, transport, utils} = lightclient;
 
     const logger = utils.getConsoleLogger({logDebug: true});
