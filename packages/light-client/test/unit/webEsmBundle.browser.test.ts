@@ -5,7 +5,7 @@ describe("web bundle for lightclient", () => {
   let lightclient: any;
 
   beforeEach(() => {
-    lightclient = window["lodestar"]["lightclient"];
+    lightclient = (window as any)["lodestar"]["lightclient"];
   });
 
   it("should have a global interface", () => {
