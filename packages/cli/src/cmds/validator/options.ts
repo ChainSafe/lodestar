@@ -338,7 +338,8 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
 
   "externalSigner.fetchInterval": {
     implies: ["externalSigner.fetch"],
-    description: "Interval in milliseconds between syncing keys from external signer, once per epoch by default",
+    description:
+      "Interval in milliseconds between fetching the list of public keys from external signer, once per epoch by default",
     type: "number",
     group: "externalSigner",
   },

@@ -28,49 +28,47 @@ export function pollExternalSignerPubkeys(
     return; // Disabled
   }
 
-  async function syncExternalSignerPubkeys(): Promise<void> {
+  async function fetchExternalSignerPubkeys(): Promise<void> {
     // External signer URL is already validated earlier
     const externalSignerUrl = externalSigner.url as string;
     const printableUrl = toSafePrintableUrl(externalSignerUrl);
 
     try {
-      logger.debug("Syncing keys from external signer", {url: printableUrl});
+      logger.debug("Fetching public keys from external signer", {url: printableUrl});
       const externalPubkeys = await externalSignerGetKeys(externalSignerUrl);
       assertValidPubkeysHex(externalPubkeys);
-      logger.debug("Retrieved public keys from external signer", {url: printableUrl, count: externalPubkeys.length});
+      logger.debug("Received public keys from external signer", {url: printableUrl, count: externalPubkeys.length});
 
       const localPubkeys = validatorStore.getRemoteSignerPubkeys(externalSignerUrl);
       logger.debug("Local public keys stored for external signer", {url: printableUrl, count: localPubkeys.length});
 
-      // Add newly discovered public keys to remote signers
       const localPubkeysSet = new Set(localPubkeys);
       for (const pubkey of externalPubkeys) {
         if (!localPubkeysSet.has(pubkey)) {
           await validatorStore.addSigner({type: SignerType.Remote, pubkey, url: externalSignerUrl});
-          logger.info("Added remote signer", {url: printableUrl, pubkey});
+          logger.info("Added remote signer for newly discovered public key", {url: printableUrl, pubkey});
         }
       }
 
-      // Remove remote signers that are no longer present on external signer
       const externalPubkeysSet = new Set(externalPubkeys);
       for (const pubkey of localPubkeys) {
         if (!externalPubkeysSet.has(pubkey)) {
           validatorStore.removeSigner(pubkey);
-          logger.info("Removed remote signer", {url: printableUrl, pubkey});
+          logger.info("Removed remote signer no longer present on external signer", {url: printableUrl, pubkey});
         }
       }
     } catch (e) {
-      logger.error("Failed to sync keys from external signer", {url: printableUrl}, e as Error);
+      logger.error("Failed to fetch public keys from external signer", {url: printableUrl}, e as Error);
     }
   }
 
-  const syncInterval = setInterval(
-    syncExternalSignerPubkeys,
+  const interval = setInterval(
+    fetchExternalSignerPubkeys,
     externalSigner?.fetchInterval ??
       // Once per epoch by default
       SLOTS_PER_EPOCH * config.SECONDS_PER_SLOT * 1000
   );
-  signal.addEventListener("abort", () => clearInterval(syncInterval), {once: true});
+  signal.addEventListener("abort", () => clearInterval(interval), {once: true});
 }
 
 function assertValidPubkeysHex(pubkeysHex: string[]): void {
