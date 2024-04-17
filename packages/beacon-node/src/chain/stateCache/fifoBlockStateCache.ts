@@ -69,7 +69,9 @@ export class FIFOBlockStateCache implements BlockStateCache {
   }
 
   /**
-   * Get a seed state for state reload.
+   * Get a seed state for state reload, this could be any states. The goal is to have the same
+   * base merkle tree for all BeaconState objects across application.
+   * See packages/state-transition/src/util/loadState/loadState.ts for more detail
    */
   getSeedState(): CachedBeaconStateAllForks {
     const firstValue = this.cache.values().next();
