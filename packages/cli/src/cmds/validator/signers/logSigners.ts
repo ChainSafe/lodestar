@@ -26,8 +26,8 @@ export function logSigners(logger: Pick<Logger, LogLevel.info>, signers: Signer[
     }
   }
 
-  for (const {url, pubkeys} of groupExternalSignersByUrl(remoteSigners)) {
-    logger.info(`External signers on URL: ${toSafePrintableUrl(url)}`);
+  for (const {url, pubkeys} of groupRemoteSignersByUrl(remoteSigners)) {
+    logger.info(`Remote signers on URL: ${toSafePrintableUrl(url)}`);
     for (const pubkey of pubkeys) {
       logger.info(pubkey);
     }
@@ -37,16 +37,16 @@ export function logSigners(logger: Pick<Logger, LogLevel.info>, signers: Signer[
 /**
  * Only used for logging remote signers grouped by URL
  */
-function groupExternalSignersByUrl(externalSigners: SignerRemote[]): {url: string; pubkeys: string[]}[] {
+function groupRemoteSignersByUrl(remoteSigners: SignerRemote[]): {url: string; pubkeys: string[]}[] {
   const byUrl = new Map<string, {url: string; pubkeys: string[]}>();
 
-  for (const externalSigner of externalSigners) {
-    let x = byUrl.get(externalSigner.url);
+  for (const remoteSigner of remoteSigners) {
+    let x = byUrl.get(remoteSigner.url);
     if (!x) {
-      x = {url: externalSigner.url, pubkeys: []};
-      byUrl.set(externalSigner.url, x);
+      x = {url: remoteSigner.url, pubkeys: []};
+      byUrl.set(remoteSigner.url, x);
     }
-    x.pubkeys.push(externalSigner.pubkey);
+    x.pubkeys.push(remoteSigner.pubkey);
   }
 
   return Array.from(byUrl.values());

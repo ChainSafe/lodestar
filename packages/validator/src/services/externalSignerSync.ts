@@ -54,7 +54,7 @@ export function pollExternalSignerPubkeys(
       for (const pubkey of localPubkeys) {
         if (!externalPubkeysSet.has(pubkey)) {
           validatorStore.removeSigner(pubkey);
-          logger.info("Removed remote signer no longer present on external signer", {url: printableUrl, pubkey});
+          logger.info("Removed remote signer for no longer present public key", {url: printableUrl, pubkey});
         }
       }
     } catch (e) {
