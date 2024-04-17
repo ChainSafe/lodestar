@@ -1,7 +1,7 @@
 import bls from "@chainsafe/bls";
 import {CoordType} from "@chainsafe/bls/types";
 import {fromHexString} from "@chainsafe/ssz";
-import {BeaconConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {toSafePrintableUrl} from "@lodestar/utils";
 
@@ -16,13 +16,13 @@ import {SignerType, ValidatorStore} from "./validatorStore.js";
  * and removing no longer present keys on external signer from the validator store.
  */
 export function pollExternalSignerPubkeys(
-  config: BeaconConfig,
+  config: ChainForkConfig,
   logger: LoggerVc,
   signal: AbortSignal,
   validatorStore: ValidatorStore,
-  opts: ValidatorOptions
+  opts: ValidatorOptions["externalSigner"]
 ): void {
-  const {externalSigner = {}} = opts;
+  const externalSigner = opts ?? {};
 
   if (!externalSigner.url || !externalSigner.fetch) {
     return; // Disabled

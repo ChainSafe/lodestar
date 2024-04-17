@@ -206,7 +206,7 @@ export class Validator {
     );
     pollPrepareBeaconProposer(config, loggerVc, api, clock, validatorStore, metrics);
     pollBuilderValidatorRegistration(config, loggerVc, api, clock, validatorStore, metrics);
-    pollExternalSignerPubkeys(config, loggerVc, controller.signal, validatorStore, opts);
+    pollExternalSignerPubkeys(config, loggerVc, controller.signal, validatorStore, opts.externalSigner);
 
     const emitter = new ValidatorEventEmitter();
     // Validator event emitter can have more than 10 listeners in a normal course of operation
