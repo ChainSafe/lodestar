@@ -12,7 +12,7 @@ import {BufferPool, BufferWithKey} from "../../util/bufferPool.js";
 import {StateCloneOpts} from "../regen/interface.js";
 import {MapTracker} from "./mapMetrics.js";
 import {CPStateDatastore, DatastoreKey, datastoreKeyToCheckpoint} from "./datastore/index.js";
-import {CheckpointHex, CacheItemType, CheckpointStateCache} from "./types.js";
+import {CheckpointHex, CacheItemType, CheckpointStateCache, BlockStateCache} from "./types.js";
 
 export type PersistentCheckpointStateCacheOpts = {
   /** Keep max n states in memory, persist the rest to disk */
@@ -21,8 +21,6 @@ export type PersistentCheckpointStateCacheOpts = {
   processLateBlock?: boolean;
 };
 
-type GetHeadStateFn = () => CachedBeaconStateAllForks;
-
 type PersistentCheckpointStateCacheModules = {
   metrics?: Metrics | null;
   logger: Logger;
@@ -30,7 +28,7 @@ type PersistentCheckpointStateCacheModules = {
   signal?: AbortSignal;
   shufflingCache: ShufflingCache;
   datastore: CPStateDatastore;
-  getHeadState?: GetHeadStateFn;
+  blockStateCache: BlockStateCache;
   bufferPool?: BufferPool;
 };
 
@@ -107,7 +105,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
   private readonly processLateBlock: boolean;
   private readonly datastore: CPStateDatastore;
   private readonly shufflingCache: ShufflingCache;
-  private readonly getHeadState?: GetHeadStateFn;
+  private readonly blockStateCache: BlockStateCache;
   private readonly bufferPool?: BufferPool;
 
   constructor(
@@ -118,7 +116,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       signal,
       shufflingCache,
       datastore,
-      getHeadState,
+      blockStateCache,
       bufferPool,
     }: PersistentCheckpointStateCacheModules,
     opts: PersistentCheckpointStateCacheOpts
@@ -158,7 +156,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     // Specify different datastore for testing
     this.datastore = datastore;
     this.shufflingCache = shufflingCache;
-    this.getHeadState = getHeadState;
+    this.blockStateCache = blockStateCache;
     this.bufferPool = bufferPool;
   }
 
@@ -197,10 +195,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     const logMeta = {persistedKey: toHexString(persistedKey)};
     this.logger.debug("Reload: read state successful", logMeta);
     this.metrics?.stateReloadSecFromSlot.observe(this.clock?.secFromSlot(this.clock?.currentSlot ?? 0) ?? 0);
-    const seedState = this.findSeedStateToReload(cp) ?? this.getHeadState?.();
-    if (seedState == null) {
-      throw new Error("No seed state found for cp " + toCacheKey(cp));
-    }
+    const seedState = this.findSeedStateToReload(cp);
     this.metrics?.stateReloadEpochDiff.observe(Math.abs(seedState.epochCtx.epoch - cp.epoch));
     this.logger.debug("Reload: found seed state", {...logMeta, seedSlot: seedState.slot});
 
@@ -537,9 +532,9 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
    *
    * we always reload an epoch in the past. We'll start with epoch n then (n+1) prioritizing ones with the same view of `reloadedCp`.
    *
-   * This could return null and we should get head state in that case.
+   * Use seed state from the block cache if cannot find any seed states within this cache.
    */
-  findSeedStateToReload(reloadedCp: CheckpointHex): CachedBeaconStateAllForks | null {
+  findSeedStateToReload(reloadedCp: CheckpointHex): CachedBeaconStateAllForks {
     const maxEpoch = Math.max(...Array.from(this.epochIndex.keys()));
     const reloadedCpSlot = computeStartSlotAtEpoch(reloadedCp.epoch);
     let firstState: CachedBeaconStateAllForks | null = null;
@@ -574,7 +569,9 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       }
     }
 
-    return firstState;
+    const seedBlockState = this.blockStateCache.getSeedState();
+    this.logger.verbose("Reload: use block state as seed state", {slot: seedBlockState.slot});
+    return seedBlockState;
   }
 
   clear(): void {
