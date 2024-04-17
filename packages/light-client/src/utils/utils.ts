@@ -3,9 +3,9 @@ import {BitArray} from "@chainsafe/ssz";
 import {Api, ApiError} from "@lodestar/api";
 import {altair, Bytes32, Root, ssz} from "@lodestar/types";
 import {BeaconBlockHeader} from "@lodestar/types/phase0";
-import {getBls} from "../../src/utils/index.js";
 import {GenesisData} from "../index.js";
 import {SyncCommitteeFast} from "../types.js";
+import {getBls} from "./bls.js";
 
 export function sumBits(bits: BitArray): number {
   return bits.getTrueBitIndexes().length;

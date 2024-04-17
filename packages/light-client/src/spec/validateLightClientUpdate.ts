@@ -10,7 +10,7 @@ import {
   DOMAIN_SYNC_COMMITTEE,
   GENESIS_SLOT,
 } from "@lodestar/params";
-import {getBls} from "../../src/utils/index.js";
+import {getBls} from "../utils/bls.js";
 import {getParticipantPubkeys, sumBits} from "../utils/utils.js";
 import {isValidMerkleBranch} from "../utils/index.js";
 import {SyncCommitteeFast} from "../types.js";
