@@ -87,9 +87,9 @@ UID
 UPnP
 UTF
 VM
+VSCode
 Vitalik
 Vitest
-VSCode
 Wagyu
 api
 async
