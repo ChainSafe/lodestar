@@ -1,4 +1,3 @@
-import bls from "@chainsafe/bls";
 import {PointFormat, PublicKey, SecretKey} from "@chainsafe/bls/types";
 import {hasher, Tree} from "@chainsafe/persistent-merkle-tree";
 import {BitArray, fromHexString} from "@chainsafe/ssz";
@@ -15,6 +14,7 @@ import {altair, phase0, Slot, ssz, SyncPeriod, allForks} from "@lodestar/types";
 import {SyncCommitteeFast} from "../../src/types.js";
 import {computeSigningRoot} from "../../src/utils/domain.js";
 import {getLcLoggerConsole} from "../../src/utils/logger.js";
+import {getBls} from "../../src/utils/bls.js";
 
 const CURRENT_SYNC_COMMITTEE_INDEX = 22;
 const CURRENT_SYNC_COMMITTEE_DEPTH = 5;
@@ -32,7 +32,7 @@ export const SOME_HASH = Buffer.alloc(32, 0xaa);
 
 export function signAndAggregate(message: Uint8Array, sks: SecretKey[]): altair.SyncAggregate {
   const sigs = sks.map((sk) => sk.sign(message));
-  const aggSig = bls.Signature.aggregate(sigs).toBytes();
+  const aggSig = getBls().Signature.aggregate(sigs).toBytes();
   return {
     syncCommitteeBits: BitArray.fromBoolArray(sks.map(() => true)),
     syncCommitteeSignature: aggSig,
@@ -67,19 +67,19 @@ export type SyncCommitteeKeys = {
 export function getInteropSyncCommittee(period: SyncPeriod): SyncCommitteeKeys {
   const skBytes = Buffer.alloc(32, 0);
   skBytes.writeInt32BE(1 + period);
-  const sk = bls.SecretKey.fromBytes(skBytes);
+  const sk = getBls().SecretKey.fromBytes(skBytes);
   const pk = sk.toPublicKey();
   const pks = Array.from({length: SYNC_COMMITTEE_SIZE}, () => pk);
 
   const pkBytes = pk.toBytes(PointFormat.compressed);
   const pksBytes = Array.from({length: SYNC_COMMITTEE_SIZE}, () => pkBytes);
 
-  const aggPk = bls.PublicKey.aggregate(pks);
+  const aggPk = getBls().PublicKey.aggregate(pks);
 
   function signAndAggregate(message: Uint8Array): altair.SyncAggregate {
     const sig = sk.sign(message);
     const sigs = Array.from({length: SYNC_COMMITTEE_SIZE}, () => sig);
-    const aggSig = bls.Signature.aggregate(sigs).toBytes();
+    const aggSig = getBls().Signature.aggregate(sigs).toBytes();
     return {
       syncCommitteeBits: BitArray.fromBoolArray(sigs.map(() => true)),
       syncCommitteeSignature: aggSig,

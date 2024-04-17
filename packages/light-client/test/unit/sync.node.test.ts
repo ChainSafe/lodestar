@@ -1,4 +1,4 @@
-import {describe, it, expect, afterEach, vi} from "vitest";
+import {describe, it, expect, afterEach, vi, beforeAll} from "vitest";
 import {JsonPath, toHexString} from "@chainsafe/ssz";
 import {computeDescriptor, TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -22,6 +22,7 @@ import {
 import {startServer, ServerOpts} from "../utils/server.js";
 import {computeSyncPeriodAtSlot} from "../../src/utils/clock.js";
 import {LightClientRestTransport} from "../../src/transport/rest.js";
+import {initBls} from "../../src/utils/bls.js";
 
 const SOME_HASH = Buffer.alloc(32, 0xff);
 
@@ -29,6 +30,9 @@ describe("sync", () => {
   vi.setConfig({testTimeout: 30_000});
   const afterEachCbs: (() => Promise<unknown> | unknown)[] = [];
 
+  beforeAll(async () => {
+    await initBls("herumi");
+  });
   afterEach(async () => {
     await Promise.all(afterEachCbs);
     afterEachCbs.length = 0;
