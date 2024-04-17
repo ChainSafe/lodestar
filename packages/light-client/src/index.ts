@@ -1,5 +1,6 @@
 import mitt from "mitt";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {Implementation} from "@chainsafe/bls/types";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD} from "@lodestar/params";
 import {phase0, RootHex, Slot, SyncPeriod, allForks} from "@lodestar/types";
 import {createBeaconConfig, BeaconConfig, ChainForkConfig} from "@lodestar/config";
@@ -8,6 +9,7 @@ import {getCurrentSlot, slotWithFutureTolerance, timeUntilNextEpoch} from "./uti
 import {chunkifyInclusiveRange} from "./utils/chunkify.js";
 import {LightclientEmitter, LightclientEvent} from "./events.js";
 import {getLcLoggerConsole, ILcLogger} from "./utils/logger.js";
+import {initBls} from "./utils/bls.js";
 import {computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot, computeEpochAtSlot} from "./utils/clock.js";
 import {LightclientSpec} from "./spec/index.js";
 import {validateLightClientBootstrap} from "./spec/validateLightClientBootstrap.js";
@@ -33,6 +35,7 @@ export type LightclientInitArgs = {
   genesisData: GenesisData;
   transport: LightClientTransport;
   bootstrap: allForks.LightClientBootstrap;
+  blsImplementation?: Implementation;
 };
 
 /** Provides some protection against a server client sending header updates too far away in the future */
@@ -100,13 +103,14 @@ export class Lightclient {
   readonly logger: ILcLogger;
   readonly genesisValidatorsRoot: Uint8Array;
   readonly genesisTime: number;
+  readonly blsImplementation?: Implementation;
   private readonly transport: LightClientTransport;
 
   private readonly lightclientSpec: LightclientSpec;
 
   private runStatus: RunStatus = {code: RunStatusCode.stopped};
 
-  constructor({config, logger, genesisData, bootstrap, transport}: LightclientInitArgs) {
+  constructor({config, logger, genesisData, bootstrap, transport, blsImplementation}: LightclientInitArgs) {
     this.genesisTime = genesisData.genesisTime;
     this.genesisValidatorsRoot =
       typeof genesisData.genesisValidatorsRoot === "string"
@@ -116,6 +120,7 @@ export class Lightclient {
     this.config = createBeaconConfig(config, this.genesisValidatorsRoot);
     this.logger = logger ?? getLcLoggerConsole();
     this.transport = transport;
+    this.blsImplementation = blsImplementation;
     this.runStatus = {code: RunStatusCode.uninitialized};
 
     this.lightclientSpec = new LightclientSpec(
@@ -180,7 +185,7 @@ export class Lightclient {
     // Do not block the event loop
     void this.runLoop();
 
-    return startPromise;
+    return initBls(this.blsImplementation).then(() => startPromise);
   }
 
   stop(): void {
