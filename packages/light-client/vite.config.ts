@@ -2,7 +2,7 @@ import {defineConfig} from "vite";
 import {nodePolyfills} from "vite-plugin-node-polyfills";
 import topLevelAwait from "vite-plugin-top-level-await";
 import {visualizer} from "rollup-plugin-visualizer";
-import {blsBrowserPlugin} from "../../scripts/vitest/plugins/blsBrowserPlugin.js";
+import {blsBrowserPlugin} from "../../scripts/vite/plugins/blsBrowserPlugin.js";
 
 import pkgJSON from "./package.json";
 
