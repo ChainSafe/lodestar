@@ -16,6 +16,7 @@ export function blsBrowserPlugin(): Plugin {
         },
         resolve: {
           alias: {
+            "@chainsafe/bls/types": "@chainsafe/bls/types",
             "@chainsafe/bls": "@chainsafe/bls/herumi",
             // This is just used to generate `privateKey` which is not used in the browser.
             "@chainsafe/bls-keygen": path.join(polyfillsDir, "bls-keygen.js"),
