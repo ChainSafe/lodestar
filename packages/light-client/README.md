@@ -50,6 +50,12 @@ lodestar lightclient \
 
 For this example we will assume there is a running beacon node at `https://beacon-node.your-domain.com`
 
+If you are running light-client on a server/node environment there is a faster version of bls that can help with performance. It is a peerDependency and needs to be installed separately by the consumer of this package.  This was done so that for browser situations there is not a hard requirement for node-only code that will cause bundling errors.
+
+```sh
+npm i -S @chainsafe/blst
+```
+
 ```ts
 import {getClient} from "@lodestar/api";
 import {createChainForkConfig} from "@lodestar/config";
@@ -68,6 +74,9 @@ const lightclient = await Lightclient.initializeFromCheckpointRoot({
   transport: new LightClientRestTransport(api),
   genesisData: await getGenesisData(api),
   checkpointRoot: await getFinalizedSyncCheckpoint(api),
+  // if you have installed blst you can specify "blst-native" for
+  // multi-threaded node bindings
+  blsImplementation: "herumi" 
   opts: {
     allowForcedUpdates: true,
     updateHeadersOnForcedUpdate: true,
