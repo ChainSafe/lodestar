@@ -1,11 +1,6 @@
 import {PublicKey, Signature} from "@chainsafe/bls/types";
 import {VerifySignatureOpts} from "./interface.js";
 
-export type WorkerData = {
-  implementation: "herumi" | "blst-native";
-  workerId: number;
-};
-
 export type DeserializedKeySet = {
   publicKey: PublicKey;
   message: Uint8Array;
