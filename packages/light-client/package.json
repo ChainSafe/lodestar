@@ -82,6 +82,14 @@
     "qs": "^6.11.1",
     "uint8arrays": "^5.0.1"
   },
+  "peerDependencies": {
+    "@chainsafe/blst": "^1.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@chainsafe/blst": {
+      "optional": true
+    }
+  },
   "keywords": [
     "ethereum",
     "eth-consensus",
