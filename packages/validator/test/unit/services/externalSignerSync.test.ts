@@ -154,6 +154,17 @@ describe("External signer sync", function () {
     expect(validatorStore.hasVotingPubkey(diffUrlPubkey)).toBe(true);
   });
 
+  it("should not add remote signer if public key fetched from external signer is invalid", async function () {
+    const invalidPubkey = "0x1234";
+    externalSignerGetKeysStub.mockResolvedValueOnce([invalidPubkey]);
+
+    pollExternalSignerPubkeys(config, loggerVc, controller.signal, validatorStore, opts);
+
+    await waitForFetchInterval();
+
+    expect(validatorStore.hasSomeValidators()).toBe(false);
+  });
+
   it("should not add remote signers if fetching public keys from external signer is disabled", async function () {
     externalSignerGetKeysStub.mockResolvedValueOnce(pubkeys);
 
