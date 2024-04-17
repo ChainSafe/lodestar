@@ -77,6 +77,14 @@ export class StateContextCache implements BlockStateCache {
     }
   }
 
+  /**
+   * Get a seed state for state reload.
+   * This is to conform to the api only as this cache is not used in n-historical state.
+   */
+  getSeedState(): CachedBeaconStateAllForks {
+    throw Error("Not implemented for StateContextCache");
+  }
+
   clear(): void {
     this.cache.clear();
     this.epochIndex.clear();

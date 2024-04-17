@@ -69,6 +69,21 @@ export class FIFOBlockStateCache implements BlockStateCache {
   }
 
   /**
+   * Get a seed state for state reload.
+   */
+  getSeedState(): CachedBeaconStateAllForks {
+    const firstValue = this.cache.values().next();
+    if (!firstValue.done) {
+      const firstState = firstValue.value;
+      // don't transfer cache because consumer only use this cache to reload another state from disc
+      return firstState.clone(true);
+    } else {
+      // should not happen
+      throw Error("No state in FIFOBlockStateCache");
+    }
+  }
+
+  /**
    * Get a state from this cache given a state root hex.
    */
   get(rootHex: RootHex, opts?: StateCloneOpts): CachedBeaconStateAllForks | null {
