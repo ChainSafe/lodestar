@@ -22,14 +22,6 @@ export type VerifySignatureOpts = {
   priority?: boolean;
 };
 
-export interface QueuedVerificationOpts extends VerifySignatureOpts {
-  /**
-   * Include multiplying in randomization factor for verification. Only applicable for verification
-   * of same message batches.  Applied via the worker pool options
-   */
-  disableSameMessageVerificationRandomness?: boolean;
-}
-
 export interface IBlsVerifier {
   /**
    * Verify 1 or more signature sets. Sets may be verified on batch or not depending on their count
@@ -52,7 +44,7 @@ export interface IBlsVerifier {
    * Signatures have already been checked for subgroup
    * Signature checks above could be done here for convienence as well
    */
-  verifySignatureSets(sets: ISignatureSet[], opts?: QueuedVerificationOpts): Promise<boolean>;
+  verifySignatureSets(sets: ISignatureSet[], opts?: VerifySignatureOpts): Promise<boolean>;
 
   /**
    * Similar to verifySignatureSets but:
@@ -63,7 +55,7 @@ export interface IBlsVerifier {
   verifySignatureSetsSameMessage(
     sets: {publicKey: PublicKey; signature: Uint8Array}[],
     messsage: Uint8Array,
-    opts?: Omit<QueuedVerificationOpts, "verifyOnMainThread">
+    opts?: Omit<VerifySignatureOpts, "verifyOnMainThread">
   ): Promise<boolean[]>;
 
   /** For multithread pool awaits terminating all workers */

@@ -1,5 +1,5 @@
 import {PublicKey, Signature} from "@chainsafe/bls/types";
-import {QueuedVerificationOpts} from "./interface.js";
+import {VerifySignatureOpts} from "./interface.js";
 
 export type WorkerData = {
   implementation: "herumi" | "blst-native";
@@ -21,7 +21,7 @@ export type DeserializedSet = {
 export type WorkRequestSet = DeserializedKeySet | DeserializedSet;
 
 export type BlsWorkReq = {
-  opts: QueuedVerificationOpts;
+  opts: VerifySignatureOpts;
   sets: WorkRequestSet[];
 };
 

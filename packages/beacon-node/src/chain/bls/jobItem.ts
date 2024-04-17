@@ -3,7 +3,7 @@ import {CoordType, PointFormat, PublicKey} from "@chainsafe/bls/types";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {LinkedList} from "../../util/array.js";
 import {Metrics} from "../../metrics/metrics.js";
-import {QueuedVerificationOpts} from "./interface.js";
+import {VerifySignatureOpts} from "./interface.js";
 import {getAggregatedPubkey} from "./utils.js";
 import {BlsWorkReq} from "./types.js";
 import {randomBytesNonZero} from "./utils.js";
@@ -15,7 +15,7 @@ export type JobQueueItemDefault = {
   resolve: (result: boolean) => void;
   reject: (error?: Error) => void;
   addedTimeMs: number;
-  opts: QueuedVerificationOpts;
+  opts: VerifySignatureOpts;
   sets: ISignatureSet[];
 };
 
@@ -24,7 +24,7 @@ export type JobQueueItemSameMessage = {
   resolve: (result: boolean[]) => void;
   reject: (error?: Error) => void;
   addedTimeMs: number;
-  opts: QueuedVerificationOpts;
+  opts: VerifySignatureOpts;
   sets: {publicKey: PublicKey; signature: Uint8Array}[];
   message: Uint8Array;
 };
@@ -73,19 +73,6 @@ export function jobItemWorkReq(job: JobQueueItem, format: PointFormat, metrics: 
       const timer = metrics?.blsThreadPool.signatureDeserializationMainThreadDuration.startTimer();
       const signatures = job.sets.map((set) => bls.Signature.fromBytes(set.signature, CoordType.affine, true));
       timer?.();
-
-      if (job.opts.disableSameMessageVerificationRandomness) {
-        return {
-          opts: job.opts,
-          sets: [
-            {
-              publicKey: bls.PublicKey.aggregate(job.sets.map((set) => set.publicKey)),
-              signature: bls.Signature.aggregate(signatures),
-              message: job.message,
-            },
-          ],
-        };
-      }
 
       // adding verification randomness is napi specific. must not attempt with herumi until
       // @chainsafe/bls is updated to support it with herumi
