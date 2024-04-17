@@ -110,7 +110,7 @@ export class Lightclient {
 
   private runStatus: RunStatus = {code: RunStatusCode.stopped};
 
-  constructor({config, logger, genesisData, bootstrap, transport, blsImplementation}: LightclientInitArgs) {
+  private constructor({config, logger, genesisData, bootstrap, transport, blsImplementation}: LightclientInitArgs) {
     this.genesisTime = genesisData.genesisTime;
     this.genesisValidatorsRoot =
       typeof genesisData.genesisValidatorsRoot === "string"
@@ -154,8 +154,9 @@ export class Lightclient {
       checkpointRoot: phase0.Checkpoint["root"];
     }
   ): Promise<Lightclient> {
-    const {transport, checkpointRoot} = args;
+    const {transport, checkpointRoot, blsImplementation} = args;
 
+    await initBls(blsImplementation);
     // Fetch bootstrap state with proof at the trusted block root
     const {data: bootstrap} = await transport.getBootstrap(toHexString(checkpointRoot));
 
@@ -185,7 +186,7 @@ export class Lightclient {
     // Do not block the event loop
     void this.runLoop();
 
-    return initBls(this.blsImplementation).then(() => startPromise);
+    return startPromise;
   }
 
   stop(): void {
