@@ -33,7 +33,7 @@ export function processRegistryUpdates(
   for (const index of cache.indicesToEject) {
     // set validator exit epoch and withdrawable epoch
     // TODO: Figure out a way to quickly set properties on the validators tree
-    initiateValidatorExit(state, validators.get(index));
+    initiateValidatorExit(fork, state, validators.get(index));
   }
 
   // TODO Electra: New logic to set validator.activation_epoch

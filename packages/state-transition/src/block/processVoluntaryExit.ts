@@ -26,7 +26,7 @@ export function processVoluntaryExit(
   }
 
   const validator = state.validators.get(signedVoluntaryExit.message.validatorIndex);
-  initiateValidatorExit(state, validator);
+  initiateValidatorExit(fork, state, validator);
 }
 
 export function isValidVoluntaryExit(

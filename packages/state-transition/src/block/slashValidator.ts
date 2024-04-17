@@ -33,7 +33,7 @@ export function slashValidator(
   const validator = state.validators.get(slashedIndex);
 
   // TODO: Bellatrix initiateValidatorExit validators.update() with the one below
-  initiateValidatorExit(state, validator);
+  initiateValidatorExit(fork, state, validator);
 
   validator.slashed = true;
   validator.withdrawableEpoch = Math.max(validator.withdrawableEpoch, epoch + EPOCHS_PER_SLASHINGS_VECTOR);

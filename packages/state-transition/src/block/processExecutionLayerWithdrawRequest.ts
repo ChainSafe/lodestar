@@ -5,6 +5,7 @@ import {
   MIN_ACTIVATION_BALANCE,
   PENDING_PARTIAL_WITHDRAWALS_LIMIT,
   FULL_EXIT_REQUEST_AMOUNT,
+  ForkSeq,
 } from "@lodestar/params";
 
 import {CachedBeaconStateElectra} from "../types.js";
@@ -50,7 +51,7 @@ export function processExecutionLayerWithdrawRequest(
   if (isFullExitRequest) {
     // only exit validator if it has no pending withdrawals in the queue
     if (pendingBalanceToWithdraw === 0) {
-      initiateValidatorExit(state, validator);
+      initiateValidatorExit(ForkSeq.electra, state, validator);
     } else {
       // Full request can't be fulfilled because still has pending withdrawals.
       // TODO Electra: add log here
