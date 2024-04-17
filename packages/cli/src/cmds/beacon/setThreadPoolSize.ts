@@ -11,7 +11,7 @@ import os from "node:os";
  * condition are async reading files from the OS.  Some network operations and
  * any native modules that utilize async work (like @chainsafe/blst-ts).
  *
- * Setting this value higher than the number of cores will not be a benefit
+ * Setting this value higher than the number of logical cores will not be a benefit
  * because the kernel will need to do context switching to parallelize the work
  * on a number of cores that is less than the number of requested threads.
  *
