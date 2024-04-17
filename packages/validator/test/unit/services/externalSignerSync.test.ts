@@ -4,11 +4,10 @@ import bls from "@chainsafe/bls";
 import {SecretKey} from "@chainsafe/bls/types";
 import {createChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
-import {pollExternalSignerPubkeys} from "../../../src/services/externalSignerSync.js";
+import {ExternalSignerOptions, pollExternalSignerPubkeys} from "../../../src/services/externalSignerSync.js";
 import {SignerRemote, SignerType, ValidatorStore} from "../../../src/services/validatorStore.js";
 import {externalSignerGetKeys} from "../../../src/util/externalSignerClient.js";
 import {initValidatorStore} from "../../utils/validatorStore.js";
-import {ValidatorOptions} from "../../../src/validator.js";
 import {getApiClientStub} from "../../utils/apiStub.js";
 import {loggerVc} from "../../utils/logger.js";
 
@@ -19,7 +18,7 @@ describe("External signer sync", () => {
   const api = getApiClientStub();
 
   const externalSignerUrl = "http://localhost";
-  const opts: Required<NonNullable<ValidatorOptions["externalSigner"]>> = {
+  const opts: Required<ExternalSignerOptions> = {
     url: externalSignerUrl,
     fetch: true,
     fetchInterval: 100,

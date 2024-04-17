@@ -7,8 +7,13 @@ import {toSafePrintableUrl} from "@lodestar/utils";
 
 import {LoggerVc} from "../util/index.js";
 import {externalSignerGetKeys} from "../util/externalSignerClient.js";
-import {ValidatorOptions} from "../validator.js";
 import {SignerType, ValidatorStore} from "./validatorStore.js";
+
+export type ExternalSignerOptions = {
+  url?: string;
+  fetch?: boolean;
+  fetchInterval?: number;
+};
 
 /**
  * This service is responsible for keeping the keys managed by the connected
@@ -20,7 +25,7 @@ export function pollExternalSignerPubkeys(
   logger: LoggerVc,
   signal: AbortSignal,
   validatorStore: ValidatorStore,
-  opts: ValidatorOptions["externalSigner"]
+  opts?: ExternalSignerOptions
 ): void {
   const externalSigner = opts ?? {};
 
@@ -64,7 +69,7 @@ export function pollExternalSignerPubkeys(
 
   const interval = setInterval(
     fetchExternalSignerPubkeys,
-    externalSigner?.fetchInterval ??
+    externalSigner.fetchInterval ??
       // Once per epoch by default
       SLOTS_PER_EPOCH * config.SECONDS_PER_SLOT * 1000
   );

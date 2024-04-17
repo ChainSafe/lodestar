@@ -12,7 +12,7 @@ import {AttestationService} from "./services/attestation.js";
 import {IndicesService} from "./services/indices.js";
 import {SyncCommitteeService} from "./services/syncCommittee.js";
 import {pollPrepareBeaconProposer, pollBuilderValidatorRegistration} from "./services/prepareBeaconProposer.js";
-import {pollExternalSignerPubkeys} from "./services/externalSignerSync.js";
+import {ExternalSignerOptions, pollExternalSignerPubkeys} from "./services/externalSignerSync.js";
 import {Interchange, InterchangeFormatVersion, ISlashingProtection} from "./slashingProtection/index.js";
 import {assertEqualParams, getLoggerVc, NotEqualParamsError} from "./util/index.js";
 import {ChainHeaderTracker} from "./services/chainHeaderTracker.js";
@@ -60,11 +60,7 @@ export type ValidatorOptions = {
   useProduceBlockV3?: boolean;
   broadcastValidation?: routes.beacon.BroadcastValidation;
   blindedLocal?: boolean;
-  externalSigner?: {
-    url?: string;
-    fetch?: boolean;
-    fetchInterval?: number;
-  };
+  externalSigner?: ExternalSignerOptions;
 };
 
 // TODO: Extend the timeout, and let it be customizable
