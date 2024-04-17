@@ -1,6 +1,6 @@
 import {Epoch, ValidatorIndex} from "@lodestar/types";
 import {intDiv} from "@lodestar/utils";
-import {EPOCHS_PER_SLASHINGS_VECTOR, FAR_FUTURE_EPOCH, ForkSeq, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
+import {EPOCHS_PER_SLASHINGS_VECTOR, FAR_FUTURE_EPOCH, ForkSeq, MAX_EFFECTIVE_BALANCE, MIN_ACTIVATION_BALANCE} from "@lodestar/params";
 
 import {
   AttesterStatus,
@@ -248,7 +248,7 @@ export function beforeProcessEpoch(
     // ```
     if (
       validator.activationEligibilityEpoch === FAR_FUTURE_EPOCH &&
-      validator.effectiveBalance >= MAX_EFFECTIVE_BALANCE
+      validator.effectiveBalance >= MIN_ACTIVATION_BALANCE
     ) {
       indicesEligibleForActivationQueue.push(i);
     }

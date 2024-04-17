@@ -180,7 +180,7 @@ export function applyDeposits(
     }
 
     const balance = balancesArr[i];
-    const effectiveBalance = Math.min(balance - (balance % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE); // TODO Electra: Double check if we use MIN_ACTIVATION_BALANCE
+    const effectiveBalance = Math.min(balance - (balance % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE);
 
     validator.effectiveBalance = effectiveBalance;
     epochCtx.effectiveBalanceIncrementsSet(i, effectiveBalance);
