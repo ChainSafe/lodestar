@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-call */
 import {expect, describe, it, beforeEach} from "vitest";
 import "../../dist/lightclient.min.mjs";
 
