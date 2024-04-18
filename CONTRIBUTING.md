@@ -47,6 +47,10 @@ Contributing to tests:
   - Do not pull unpinned versions from DockerHub (use deterministic tag) or Github (checkout commit not branch).
   - Carefully design tests that depend on timing sensitive events like p2p network e2e tests. Consider that Github runners are significantly less powerful than your development environment.
 
+## Devcontainer
+
+A [devcontainer](https://containers.dev/) [configuration](.devcontainer/devcontainer.json) is provided to help speed up linux based development environment setup. It will be used by [GitHub Codespaces](https://github.com/features/codespaces) or directly inside VS Code via your local through this [extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers).
+
 ### Common Issues
 
 **Error: [vitest] Cannot mock "../../src/db/repositories/index.js" because it is already loaded by "src/db/beacon.ts"**
