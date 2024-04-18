@@ -11,7 +11,6 @@ export function blsBrowserPlugin(): Plugin {
     config(_config: UserConfig, _env: ConfigEnv) {
       return {
         optimizeDeps: {
-          exclude: ["@chainsafe/bls-keygen"],
           force: true,
         },
         resolve: {
