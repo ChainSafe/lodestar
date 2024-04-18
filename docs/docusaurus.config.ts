@@ -38,10 +38,6 @@ const config: Config = {
           editUrl: "https://github.com/ChainSafe/lodestar/tree/unstable/docs/",
           routeBasePath: "/",
         },
-        gtag: {
-          trackingID: "G-N21J5PWW5X",
-          anonymizeIP: true,
-        },
         theme: {
           customCss: "./src/css/custom.css",
         },
@@ -109,6 +105,9 @@ const config: Config = {
       minHeadingLevel: 2,
       maxHeadingLevel: 5,
     },
+    scripts: [
+      {src: "https://plausible.io/js/script.js", defer: true, "data-domain": "https://chainsafe.github.io/lodestar/"},
+    ],
   } satisfies Preset.ThemeConfig,
 };
 
