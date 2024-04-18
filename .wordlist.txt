@@ -87,7 +87,6 @@ UID
 UPnP
 UTF
 VM
-VSCode
 Vitalik
 Vitest
 Wagyu
