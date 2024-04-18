@@ -57,7 +57,7 @@ function groupRemoteSignersByUrl(remoteSigners: SignerRemote[]): {url: string; p
 /**
  * Notify user if there are no signers at startup, this might be intended but could also be due to
  * misconfiguration. It is possible that signers are added later via keymanager or if an external signer
- * is connected with fetching enabled, but otherwise exit the process and suggest a possible configuration.
+ * is connected with fetching enabled, but otherwise exit the process and suggest a different configuration.
  */
 export function warnOrExitNoSigners(args: IValidatorCliArgs, logger: Pick<Logger, LogLevel.warn>): void {
   if (args["keymanager"] && !args["externalSigner.fetch"]) {
