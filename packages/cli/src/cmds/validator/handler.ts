@@ -26,7 +26,7 @@ import {parseBuilderSelection, parseBuilderBoostFactor} from "../../util/propose
 import {getAccountPaths, getValidatorPaths} from "./paths.js";
 import {IValidatorCliArgs, validatorMetricsDefaultOptions, validatorMonitoringDefaultOptions} from "./options.js";
 import {getSignersFromArgs} from "./signers/index.js";
-import {logSigners} from "./signers/logSigners.js";
+import {logSigners, warnOrExitNoSigners} from "./signers/logSigners.js";
 import {KeymanagerApi} from "./keymanager/impl.js";
 import {PersistedKeysBackend} from "./keymanager/persistedKeys.js";
 import {IPersistedKeysBackend} from "./keymanager/interface.js";
@@ -93,24 +93,7 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
 
   // Ensure the validator has at least one key
   if (signers.length === 0) {
-    if (args["keymanager"] && !args["externalSigner.fetch"]) {
-      logger.warn("No local keystores or remote keys found with current args, expecting to be added via keymanager");
-    } else if (!args["keymanager"] && args["externalSigner.fetch"]) {
-      logger.warn("No remote keys found with current args, expecting to be added to external signer and fetched later");
-    } else if (args["keymanager"] && args["externalSigner.fetch"]) {
-      logger.warn(
-        "No local keystores or remote keys found with current args, expecting to be added via keymanager or fetched from external signer later"
-      );
-    } else {
-      if (args["externalSigner.url"]) {
-        throw new YargsError(
-          "No remote keys found with current args, start with --externalSigner.fetch to automatically fetch from external signer"
-        );
-      }
-      throw new YargsError(
-        "No local keystores or remote keys found with current args, start with --keymanager if intending to add them later via keymanager"
-      );
-    }
+    warnOrExitNoSigners(args, logger);
   }
 
   logSigners(logger, signers);
