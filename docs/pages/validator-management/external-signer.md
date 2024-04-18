@@ -2,7 +2,7 @@
 
 Lodestar supports connecting an external signing server like [Web3Signer](https://docs.web3signer.consensys.io/), [Diva](https://docs.shamirlabs.org/),
 or any other service implementing the [remote signing specification](https://github.com/ethereum/remote-signing-api). This allows the validator client
-to operate without storing any validator private keys locally by delegating the signing of messages (e.g Attestations, BeaconBlocks) to the external signer
+to operate without storing any validator private keys locally by delegating the signing of messages (e.g. attestations, beacon blocks) to the external signer
 which is accessed through a [REST API](https://ethereum.github.io/remote-signing-api/) via HTTP(S). This API should not be exposed directly to the public
 Internet and appropriate firewall rules should be in place to restrict access only from the validator client.
 
