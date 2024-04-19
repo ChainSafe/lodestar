@@ -51,7 +51,7 @@ jobs:
   npm:
     name: Publish to NPM & Github
     runs-on: buildjet-4vcpu-ubuntu-2204
-    needs: [tag, binaries, binary-arm64]
+    needs: [tag, build-binaries]
     if: needs.tag.outputs.is_stable == 'true'
     steps:
       - uses: actions/checkout@v4
