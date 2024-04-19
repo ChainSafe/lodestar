@@ -93,7 +93,7 @@ lightclient.emitter.on(LightclientEvent.lightClientOptimisticHeader, async (opti
 
 ## Browser Integration
 
-If you want to use Lightclient in browser and facing some issues in building it with bundlers like webpack, vite. We suggest to use our distribution build. The support for single distribution build is started from `1.18.0` version.
+If you want to use Lightclient in browser and facing some issues in building it with bundlers like webpack, vite. We suggest to use our distribution build. The support for single distribution build is started from `1.19.0` version.
 
 Directly link the dist build with the `<script />` tag with tools like unpkg or other. e.g.
 
