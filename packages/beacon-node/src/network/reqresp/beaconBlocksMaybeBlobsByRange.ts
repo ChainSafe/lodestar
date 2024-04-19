@@ -3,7 +3,7 @@ import {deneb, Epoch, phase0, allForks, Slot} from "@lodestar/types";
 import {ForkSeq} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 
-import {BlobSource, BlockInput, BlockSource, getBlockInput} from "../../chain/blocks/types.js";
+import {BlobsSource, BlockInput, BlockSource, getBlockInput} from "../../chain/blocks/types.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {INetwork, WithBytes} from "../interface.js";
 
@@ -43,7 +43,7 @@ export async function beaconBlocksMaybeBlobsByRange(
       network.sendBlobSidecarsByRange(peerId, request),
     ]);
 
-    return matchBlockWithBlobs(config, allBlocks, allBlobSidecars, endSlot, BlockSource.byRange, BlobSource.byRange);
+    return matchBlockWithBlobs(config, allBlocks, allBlobSidecars, endSlot, BlockSource.byRange, BlobsSource.byRange);
   }
 
   // Post Deneb but old blobs
@@ -59,7 +59,7 @@ export function matchBlockWithBlobs(
   allBlobSidecars: deneb.BlobSidecar[],
   endSlot: Slot,
   blockSource: BlockSource,
-  blobSource: BlobSource
+  blobsSource: BlobsSource
 ): BlockInput[] {
   const blockInputs: BlockInput[] = [];
   let blobSideCarIndex = 0;
@@ -102,7 +102,7 @@ export function matchBlockWithBlobs(
           block.data,
           blockSource,
           blobSidecars,
-          blobSource,
+          blobsSource,
           null,
           Array.from({length: blobKzgCommitmentsLen}, () => null)
         )

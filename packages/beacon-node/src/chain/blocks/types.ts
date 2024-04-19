@@ -19,7 +19,7 @@ export enum BlockSource {
 }
 
 /** Enum to represent where blobs come from */
-export enum BlobSource {
+export enum BlobsSource {
   gossip = "gossip",
   api = "api",
   byRange = "req_resp_by_range",
@@ -32,7 +32,7 @@ export enum GossipedInputType {
 }
 
 export type BlobsCache = Map<number, {blobSidecar: deneb.BlobSidecar; blobBytes: Uint8Array | null}>;
-export type BlockInputBlobs = {blobs: deneb.BlobSidecars; blobsBytes: (Uint8Array | null)[]};
+export type BlockInputBlobs = {blobs: deneb.BlobSidecars; blobsBytes: (Uint8Array | null)[]; blobsSource: BlobsSource};
 type CachedBlobs = {
   blobsCache: BlobsCache;
   availabilityPromise: Promise<BlockInputBlobs>;
@@ -41,7 +41,8 @@ type CachedBlobs = {
 
 export type BlockInput = {block: allForks.SignedBeaconBlock; source: BlockSource; blockBytes: Uint8Array | null} & (
   | {type: BlockInputType.preDeneb}
-  | ({type: BlockInputType.postDeneb} & {blobSource: BlobSource} & BlockInputBlobs)
+  | ({type: BlockInputType.postDeneb} & BlockInputBlobs)
+  // the blobsSource here is added to BlockInputBlobs when availability is resolved
   | ({type: BlockInputType.blobsPromise} & CachedBlobs)
 );
 export type NullBlockInput = {block: null; blockRootHex: RootHex; blockInputPromise: Promise<BlockInput>} & CachedBlobs;
@@ -77,7 +78,7 @@ export const getBlockInput = {
     block: allForks.SignedBeaconBlock,
     source: BlockSource,
     blobs: deneb.BlobSidecars,
-    blobSource: BlobSource,
+    blobsSource: BlobsSource,
     blockBytes: Uint8Array | null,
     blobsBytes: (Uint8Array | null)[]
   ): BlockInput {
@@ -89,7 +90,7 @@ export const getBlockInput = {
       block,
       source,
       blobs,
-      blobSource,
+      blobsSource,
       blockBytes,
       blobsBytes,
     };
@@ -119,7 +120,7 @@ export const getBlockInput = {
   },
 };
 
-export function getBlockInputBlobs(blobsCache: BlobsCache): BlockInputBlobs {
+export function getBlockInputBlobs(blobsCache: BlobsCache, blobsSource: BlobsSource): BlockInputBlobs {
   const blobs = [];
   const blobsBytes = [];
 
@@ -132,7 +133,7 @@ export function getBlockInputBlobs(blobsCache: BlobsCache): BlockInputBlobs {
     blobs.push(blobSidecar);
     blobsBytes.push(blobBytes);
   }
-  return {blobs, blobsBytes};
+  return {blobs, blobsBytes, blobsSource};
 }
 
 export enum AttestationImportOpt {

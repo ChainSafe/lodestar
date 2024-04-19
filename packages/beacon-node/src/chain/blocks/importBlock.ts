@@ -95,17 +95,20 @@ export async function importBlock(
   this.logger.verbose("Added block to forkchoice and state cache", {slot: blockSlot, root: blockRootHex});
 
   // We want to import block asap so call all event handler in the next event loop
-  setTimeout(() => {
+  setTimeout(async () => {
     this.emitter.emit(routes.events.EventType.block, {
       block: blockRootHex,
       slot: blockSlot,
       executionOptimistic: blockSummary != null && isOptimisticBlock(blockSummary),
     });
 
-    if (blockInput.type === BlockInputType.postDeneb) {
-      const {blobSource} = blockInput;
-      this.metrics?.importBlock.blobBySource.inc({blobSource});
-      for (const blobSidecar of blockInput.blobs) {
+    if (blockInput.type === BlockInputType.postDeneb || blockInput.type === BlockInputType.blobsPromise) {
+      const blobsData =
+        blockInput.type === BlockInputType.postDeneb ? blockInput : await blockInput.availabilityPromise;
+      const {blobsSource, blobs} = blobsData;
+
+      this.metrics?.importBlock.blobBySource.inc({blobsSource});
+      for (const blobSidecar of blobs) {
         const {index, kzgCommitment} = blobSidecar;
         this.emitter.emit(routes.events.EventType.blobSidecar, {
           blockRoot: blockRootHex,

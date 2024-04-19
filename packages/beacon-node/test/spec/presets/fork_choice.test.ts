@@ -27,7 +27,7 @@ import {
   AttestationImportOpt,
   BlockSource,
   BlobSidecarValidation,
-  BlobSource,
+  BlobsSource,
 } from "../../../src/chain/blocks/types.js";
 import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
 import {PowMergeBlock} from "../../../src/eth1/interface.js";
@@ -215,7 +215,7 @@ const forkChoiceTest =
                     signedBlock,
                     BlockSource.gossip,
                     blobSidecars,
-                    BlobSource.gossip,
+                    BlobsSource.gossip,
                     null,
                     [null]
                   );

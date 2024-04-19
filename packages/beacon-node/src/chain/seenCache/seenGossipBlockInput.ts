@@ -13,7 +13,7 @@ import {
   BlobsCache,
   GossipedInputType,
   getBlockInputBlobs,
-  BlobSource,
+  BlobsSource,
 } from "../blocks/types.js";
 import {Metrics} from "../../metrics/index.js";
 
@@ -135,16 +135,16 @@ export class SeenGossipBlockInput {
       }
 
       if (blobKzgCommitments.length === blobsCache.size) {
-        const allBlobs = getBlockInputBlobs(blobsCache);
+        const allBlobs = getBlockInputBlobs(blobsCache, BlobsSource.gossip);
         resolveAvailability(allBlobs);
         metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.GOSSIP});
-        const {blobs, blobsBytes} = allBlobs;
+        const {blobs, blobsBytes, blobsSource} = allBlobs;
         const blockInput = getBlockInput.postDeneb(
           config,
           signedBlock,
           BlockSource.gossip,
           blobs,
-          BlobSource.gossip,
+          blobsSource,
           blockBytes ?? null,
           blobsBytes
         );
