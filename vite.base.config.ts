@@ -46,7 +46,7 @@ export function getBaseViteConfig(
       target: "modules",
       outDir: "dist",
       sourcemap: true,
-      minify: false,
+      minify: true,
       manifest: "manifest.json",
       ssr: false,
       ssrManifest: false,
