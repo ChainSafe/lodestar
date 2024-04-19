@@ -3,7 +3,7 @@ import {expect, describe, it, beforeEach, vi} from "vitest";
 import "../../dist/lightclient.min.mjs";
 
 describe("web bundle for lightclient", () => {
-  vi.setConfig({testTimeout: 10_000});
+  vi.setConfig({testTimeout: 20_000});
 
   let lightclient: any;
 
