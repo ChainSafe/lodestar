@@ -318,3 +318,8 @@ export class Lightclient {
     this.emitter.emit(LightclientEvent.statusChange, this.runStatus.code);
   }
 }
+
+// To export these name spaces to the bundle JS
+export * as utils from "./utils.js";
+export * as validation from "./validation.js";
+export * as transport from "./transport.js";

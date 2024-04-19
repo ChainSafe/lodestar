@@ -4,7 +4,7 @@ import {getBaseViteConfig} from "../../vite.base.config.js";
 import pkgJSON from "./package.json";
 
 export default mergeConfig(
-  getBaseViteConfig(pkgJSON, {libName: "LightClient", entry: "src/index.browser.ts"}),
+  getBaseViteConfig(pkgJSON, {libName: "LightClient", entry: "src/index.ts"}),
   defineConfig({
     build: {
       rollupOptions: {
@@ -17,8 +17,8 @@ export default mergeConfig(
           RunStatusCode,
           upgradeLightClientFinalityUpdate,
           upgradeLightClientOptimisticUpdate,
-          utils: index$1,
-          transport: index,
+          utils,
+          transport,
           validation
         };
         `,
