@@ -121,10 +121,9 @@ NOTE: Due to `top-level-await` used in one of dependent library, the package wil
   });
 </script>
 
-**Typescript support**
-
-The web bundle comes with the types support. Unfortunately due to following [issue](https://github.com/microsoft/rushstack/issues/1128#issuecomment-2066257538) we can't bundle all types. A workaround would be to add `@chainsafe/as-sha256` as a devDependency to your project. 
-
+**Typescript support** The web bundle comes with the types support. Unfortunately due to following
+[issue](https://github.com/microsoft/rushstack/issues/1128#issuecomment-2066257538) we can't bundle all types. A
+workaround would be to add `@chainsafe/as-sha256` as a devDependency to your project.
 ```
 
 ## Contributors
