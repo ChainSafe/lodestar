@@ -1,4 +1,4 @@
-import {allForks, phase0, ssz} from "@lodestar/types";
+import {allForks, ssz} from "@lodestar/types";
 import {ForkDigestContext} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,

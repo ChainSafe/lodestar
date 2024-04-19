@@ -51,7 +51,7 @@ export function processAttestationPhase0(
     state.previousEpochAttestations.push(pendingAttestation);
   }
 
-  if (!isValidIndexedAttestation(state, epochCtx.getIndexedAttestation(attestation), verifySignature)) {
+  if (!isValidIndexedAttestation(state, epochCtx.getIndexedAttestation(ForkSeq.phase0, attestation), verifySignature)) {
     throw new Error("Attestation is not valid");
   }
 }
