@@ -8,7 +8,6 @@ import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {Epoch, phase0} from "@lodestar/types";
-import {withTimeout} from "@lodestar/utils";
 import {ForkName} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
 import {Libp2p} from "../interface.js";
@@ -265,10 +264,7 @@ export class NetworkCore implements INetworkCore {
     this.logger.debug("network reqResp closed");
     this.attnetsService.close();
     this.syncnetsService.close();
-    // In some cases, `libp2p.stop` never resolves, it is required
-    // to wrap the call with a timeout to allow for a timely shutdown
-    // See https://github.com/ChainSafe/lodestar/issues/6053
-    await withTimeout(async () => this.libp2p.stop(), 5000);
+    await this.libp2p.stop();
     this.logger.debug("network lib2p closed");
 
     this.closed = true;
