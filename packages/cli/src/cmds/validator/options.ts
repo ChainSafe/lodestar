@@ -58,6 +58,7 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     "externalSigner.url"?: string;
     "externalSigner.pubkeys"?: string[];
     "externalSigner.fetch"?: boolean;
+    "externalSigner.fetchInterval"?: number;
 
     distributed?: boolean;
 
@@ -303,15 +304,16 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     type: "boolean",
   },
 
-  // Remote signer
+  // External signer
 
   "externalSigner.url": {
     description: "URL to connect to an external signing server",
     type: "string",
-    group: "externalSignerUrl",
+    group: "externalSigner",
   },
 
   "externalSigner.pubkeys": {
+    implies: ["externalSigner.url"],
     description:
       "List of validator public keys used by an external signer. May also provide a single string of comma-separated public keys",
     type: "array",
@@ -322,15 +324,24 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
         .map((item) => item.split(","))
         .flat(1)
         .map(ensure0xPrefix),
-    group: "externalSignerUrl",
+    group: "externalSigner",
   },
 
   "externalSigner.fetch": {
+    implies: ["externalSigner.url"],
     conflicts: ["externalSigner.pubkeys"],
     description:
       "Fetch the list of public keys to validate from an external signer. Cannot be used in combination with `--externalSigner.pubkeys`",
     type: "boolean",
-    group: "externalSignerUrl",
+    group: "externalSigner",
+  },
+
+  "externalSigner.fetchInterval": {
+    implies: ["externalSigner.fetch"],
+    description:
+      "Interval in milliseconds between fetching the list of public keys from external signer, once per epoch by default",
+    type: "number",
+    group: "externalSigner",
   },
 
   // Distributed validator
