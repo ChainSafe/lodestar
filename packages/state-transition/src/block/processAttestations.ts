@@ -1,4 +1,4 @@
-import {allForks, phase0} from "@lodestar/types";
+import {allForks} from "@lodestar/types";
 import {ForkSeq} from "@lodestar/params";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStatePhase0} from "../types.js";
 import {processAttestationPhase0} from "./processAttestationPhase0.js";
