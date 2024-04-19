@@ -59,19 +59,14 @@ export function processAttestationPhase0(
 export function validateAttestation(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,
-  attestation: allForks.Attestation // TODO Electra: Validate electra attestation
+  attestation: allForks.Attestation
 ): void {
   const {epochCtx} = state;
   const slot = state.slot;
   const data = attestation.data;
   const computedEpoch = computeEpochAtSlot(data.slot);
   const committeeCount = epochCtx.getCommitteeCountPerSlot(computedEpoch);
-  if (!(data.index < committeeCount)) {
-    throw new Error(
-      "Attestation committee index not within current committee count: " +
-        `committeeIndex=${data.index} committeeCount=${committeeCount}`
-    );
-  }
+
   if (!(data.target.epoch === epochCtx.previousShuffling.epoch || data.target.epoch === epochCtx.epoch)) {
     throw new Error(
       "Attestation target epoch not in previous or current epoch: " +
@@ -93,12 +88,49 @@ export function validateAttestation(
     );
   }
 
-  const committee = epochCtx.getBeaconCommittee(data.slot, data.index);
-  if (attestation.aggregationBits.bitLen !== committee.length) {
-    throw new Error(
-      "Attestation aggregation bits length does not match committee length: " +
-        `aggregationBitsLength=${attestation.aggregationBits.bitLen} committeeLength=${committee.length}`
+  if (fork >= ForkSeq.electra) {
+    if (data.index !== 0) {
+      throw new Error(`AttestationData.index must be zero: index=${data.index}`);
+    }
+    const attestationElectra = attestation as electra.Attestation;
+    const committeeBitsLength = attestationElectra.committeeBits.bitLen;
+
+    if (committeeBitsLength > committeeCount) {
+      throw new Error(
+        `Attestation committee bits length are longer than number of committees: committeeBitsLength=${committeeBitsLength} numCommittees=${committeeCount}`
+      );
+    }
+
+    // TODO Electra: this should be obsolete soon when we switch to committeeIndices
+    const committeeIndices = attestationElectra.committeeBits.intersectValues(
+      Array.from({length: committeeBitsLength}, (_, i) => i)
     );
+
+    // Get total number of attestation participant of every committee specified
+    const participantCount = committeeIndices
+      .map((committeeIndex) => epochCtx.getBeaconCommittee(data.slot, committeeIndex).length)
+      .reduce((acc, committeeSize) => acc + committeeSize, 0);
+
+    if (attestationElectra.aggregationBits.bitLen !== participantCount) {
+      throw new Error(
+        `Attestation aggregation bits length does not match total number of committee participant aggregationBitsLength=${attestation.aggregationBits.bitLen} participantCount=${participantCount}`
+      );
+    }
+  } else {
+    if (!(data.index < committeeCount)) {
+      throw new Error(
+        "Attestation committee index not within current committee count: " +
+          `committeeIndex=${data.index} committeeCount=${committeeCount}`
+      );
+    }
+
+    const committee = epochCtx.getBeaconCommittee(data.slot, data.index);
+    if (attestation.aggregationBits.bitLen !== committee.length) {
+      throw new Error(
+        "Attestation aggregation bits length does not match committee length: " +
+          `aggregationBitsLength=${attestation.aggregationBits.bitLen} committeeLength=${committee.length}`
+      );
+    }
   }
 }
 
