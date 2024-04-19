@@ -11,17 +11,11 @@ export default mergeConfig(
   defineConfig({
     plugins: [
       dts({
-        entryRoot: "src",
-        // It would be better to rollup all types into one file, But the current package.json.types field
-        // is pointing to other file that conflict with the entry file for bundle. If we decide to use one
-        // entry file for both package and bundle then this issue could be resolved
-        //
-        rollupTypes: false,
-        bundledPackages: ["@lodestar/*", "@chainsafe/*"],
-        exclude: ["test/**/*", "*.config.ts"],
+        rollupTypes: true,
+        bundledPackages: ["@lodestar/*", "@chainsafe/persistent-merkle-tree", "@chainsafe/bls", "@chainsafe/ssz"],
         async afterBuild() {
           await fs.rename(
-            path.join(import.meta.dirname, "dist", "index.browser.d.ts"),
+            path.join(import.meta.dirname, "dist", "index.d.ts"),
             path.join(import.meta.dirname, "dist", "lightclient.min.d.mts")
           );
         },
