@@ -1,6 +1,11 @@
 name: Build binaries
 
 on:
+  workflow_dispatch:
+    inputs:
+      version:
+        required: true
+        type: string
   workflow_call:
     inputs:
       version:
