@@ -228,7 +228,7 @@ export function createLodestarMetrics(
         help: "REST API time to fulfill a request by operationId",
         labelNames: ["operationId"],
         // Request times range between 1ms to 100ms in normal conditions. Can get to 1-5 seconds if overloaded
-        buckets: [0.01, 0.1, 0.25, 0.5, 0.75, 1],
+        buckets: [0.01, 0.1, 0.25, 0.5, 0.75, 1, 2, 3, 5],
       }),
       requests: register.gauge<{operationId: string}>({
         name: "lodestar_api_rest_requests_total",
