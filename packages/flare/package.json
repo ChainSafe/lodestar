@@ -58,7 +58,7 @@
     "blockchain"
   ],
   "dependencies": {
-    "@chainsafe/bls": "^8.0.0",
+    "@chainsafe/bls": "ChainSafe/bls#705ec506a224b9683ec385115d1c10d3a1caa5b8",
     "@chainsafe/blst": "^1.0.0",
     "@chainsafe/bls-keygen": "^0.4.0",
     "@lodestar/api": "^1.17.0",

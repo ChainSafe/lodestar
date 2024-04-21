@@ -65,7 +65,7 @@
     "check-readme": "typescript-docs-verifier"
   },
   "dependencies": {
-    "@chainsafe/bls": "^8.0.0",
+    "@chainsafe/bls": "ChainSafe/bls#705ec506a224b9683ec385115d1c10d3a1caa5b8",
     "@chainsafe/persistent-merkle-tree": "^0.7.1",
     "@chainsafe/ssz": "^0.15.1",
     "@lodestar/api": "^1.17.0",
