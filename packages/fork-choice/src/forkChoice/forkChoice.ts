@@ -26,6 +26,7 @@ import {
   MaybeValidExecutionStatus,
   LVHExecResponse,
   ProtoNode,
+  DataAvailabilityStatus,
 } from "../protoArray/interface.js";
 import {ProtoArray} from "../protoArray/protoArray.js";
 import {ProtoArrayError, ProtoArrayErrorCode} from "../protoArray/errors.js";
@@ -420,7 +421,8 @@ export class ForkChoice implements IForkChoice {
     state: CachedBeaconStateAllForks,
     blockDelaySec: number,
     currentSlot: Slot,
-    executionStatus: MaybeValidExecutionStatus
+    executionStatus: MaybeValidExecutionStatus,
+    dataAvailabilityStatus: DataAvailabilityStatus
   ): ProtoBlock {
     const {parentRoot, slot} = block;
     const parentRootHex = toHexString(parentRoot);
@@ -597,8 +599,13 @@ export class ForkChoice implements IForkChoice {
             executionPayloadBlockHash: toHexString(block.body.executionPayload.blockHash),
             executionPayloadNumber: block.body.executionPayload.blockNumber,
             executionStatus: this.getPostMergeExecStatus(executionStatus),
+            dataAvailabilityStatus,
           }
-        : {executionPayloadBlockHash: null, executionStatus: this.getPreMergeExecStatus(executionStatus)}),
+        : {
+            executionPayloadBlockHash: null,
+            executionStatus: this.getPreMergeExecStatus(executionStatus),
+            dataAvailabilityStatus: this.getPreMergeDataStatus(dataAvailabilityStatus),
+          }),
     };
 
     this.protoArray.onBlock(protoBlock, currentSlot);
@@ -1043,6 +1050,14 @@ export class ForkChoice implements IForkChoice {
     if (executionStatus !== ExecutionStatus.PreMerge)
       throw Error(`Invalid pre-merge execution status: expected: ${ExecutionStatus.PreMerge}, got ${executionStatus}`);
     return executionStatus;
+  }
+
+  private getPreMergeDataStatus(dataAvailabilityStatus: DataAvailabilityStatus): DataAvailabilityStatus.PreData {
+    if (dataAvailabilityStatus !== DataAvailabilityStatus.PreData)
+      throw Error(
+        `Invalid pre-merge data status: expected: ${DataAvailabilityStatus.PreData}, got ${dataAvailabilityStatus}`
+      );
+    return dataAvailabilityStatus;
   }
 
   private getPostMergeExecStatus(

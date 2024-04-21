@@ -13,6 +13,7 @@ import {createBeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {FAR_FUTURE_EPOCH, ForkName, ForkSeq, MAX_EFFECTIVE_BALANCE, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {DataAvailabilityStatus} from "@lodestar/fork-choice/src/index.js";
 import {ZERO_HASH_HEX} from "../../src/constants/constants.js";
 import {generateValidator, generateValidators} from "./validator.js";
 import {getConfig} from "./config.js";
@@ -156,4 +157,5 @@ export const zeroProtoBlock: ProtoBlock = {
   timeliness: false,
 
   ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
+  dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 };

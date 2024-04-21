@@ -4,11 +4,12 @@ import {ssz} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {ProtoBlock} from "@lodestar/fork-choice";
+import {ProtoBlock, DataAvailabilityStatus} from "@lodestar/fork-choice";
 import {ApiTestModules, getApiTestModules} from "../../../../utils/api.js";
 import {SyncState} from "../../../../../src/sync/interface.js";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {CommonBlockBody} from "../../../../../src/chain/interface.js";
+import {zeroProtoBlock} from "../../../../utils/state.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 describe("api/validator - produceBlockV3", function () {
@@ -87,6 +88,7 @@ describe("api/validator - produceBlockV3", function () {
         modules.chain.recomputeForkChoiceHead.mockReturnValue({
           blockRoot: toHexString(fullBlock.parentRoot),
         } as ProtoBlock);
+        modules.chain.forkChoice.getBlock.mockReturnValue(zeroProtoBlock as ProtoBlock);
 
         if (enginePayloadValue !== null) {
           const commonBlockBody: CommonBlockBody = {

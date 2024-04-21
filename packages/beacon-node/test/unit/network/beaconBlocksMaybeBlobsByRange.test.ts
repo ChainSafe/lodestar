@@ -1,9 +1,10 @@
 import {describe, it, expect, beforeAll} from "vitest";
 import {ssz, deneb} from "@lodestar/types";
+import {ForkName} from "@lodestar/params";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 
 import {beaconBlocksMaybeBlobsByRange} from "../../../src/network/reqresp/index.js";
-import {BlockInputType, BlockSource, BlobsSource} from "../../../src/chain/blocks/types.js";
+import {BlockInputType, BlockSource, BlobsSource, getBlockInput} from "../../../src/chain/blocks/types.js";
 import {initCKZG, loadEthereumTrustedSetup} from "../../../src/util/kzg.js";
 import {INetwork} from "../../../src/network/interface.js";
 import {ZERO_HASH} from "../../../src/constants/constants.js";
@@ -99,15 +100,7 @@ describe("beaconBlocksMaybeBlobsByRange", () => {
 
       const expectedResponse = blocksWithBlobs.map(([block, blobSidecars]) => {
         const blobs = blobSidecars !== undefined ? blobSidecars : [];
-        return {
-          type: BlockInputType.postDeneb,
-          block,
-          source: BlockSource.byRange,
-          blobs,
-          blobsSource: BlobsSource.byRange,
-          blockBytes: null,
-          blobsBytes: blobs.map(() => null),
-        };
+        return getBlockInput.availableData(config, block, BlockSource.byRange, null, {fork:ForkName.deneb, blobs,blobsSource: BlobsSource.byRange, blobsBytes: blobs.map(() => null)})
       });
 
       const network = {

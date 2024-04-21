@@ -10,6 +10,7 @@ import {
   getBlockInput,
   NullBlockInput,
   BlobsSource,
+  BlockInputDataBlobs,
 } from "../../chain/blocks/types.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {INetwork} from "../interface.js";
@@ -58,19 +59,21 @@ export async function unavailableBeaconBlobsByRoot(
   unavailableBlockInput: BlockInput | NullBlockInput,
   metrics: Metrics | null
 ): Promise<BlockInput> {
-  if (unavailableBlockInput.block !== null && unavailableBlockInput.type !== BlockInputType.blobsPromise) {
-    return unavailableBlockInput as BlockInput;
+  if (unavailableBlockInput.block !== null && unavailableBlockInput.type !== BlockInputType.dataPromise) {
+    return unavailableBlockInput;
   }
 
   // resolve the block if thats unavailable
-  let block, blobsCache, blockBytes, resolveAvailability;
+  let block, blobsCache, blockBytes, resolveAvailability, cachedData;
   if (unavailableBlockInput.block === null) {
     const allBlocks = await network.sendBeaconBlocksByRoot(peerId, [fromHexString(unavailableBlockInput.blockRootHex)]);
     block = allBlocks[0].data;
     blockBytes = allBlocks[0].bytes;
-    ({blobsCache, resolveAvailability} = unavailableBlockInput);
+    cachedData = unavailableBlockInput.cachedData;
+    ({blobsCache, resolveAvailability} = cachedData);
   } else {
-    ({block, blobsCache, resolveAvailability, blockBytes} = unavailableBlockInput);
+    ({block, cachedData, blockBytes} = unavailableBlockInput);
+    ({blobsCache, resolveAvailability} = cachedData);
   }
 
   // resolve missing blobs
@@ -100,12 +103,12 @@ export async function unavailableBeaconBlobsByRoot(
   // check and see if all blobs are now available and in that case resolve availability
   // if not this will error and the leftover blobs will be tried from another peer
   const allBlobs = getBlockInputBlobs(blobsCache);
-  const {blobs, blobsBytes} = allBlobs;
+  const {blobs} = allBlobs;
   if (blobs.length !== blobKzgCommitmentsLen) {
     throw Error(`Not all blobs fetched missingBlobs=${blobKzgCommitmentsLen - blobs.length}`);
   }
-
-  resolveAvailability({...allBlobs, blobsSource: BlobsSource.byRoot});
+  const blockData = {fork: cachedData.fork, ...allBlobs} as BlockInputDataBlobs;
+  resolveAvailability(blockData);
   metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.UNKNOWN_SYNC});
-  return getBlockInput.postDeneb(config, block, BlockSource.byRoot, blobs, BlobsSource.byRoot, blockBytes, blobsBytes);
+  return getBlockInput.availableData(config, block, BlockSource.byRoot, blockBytes, blockData);
 }

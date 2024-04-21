@@ -57,7 +57,7 @@ export async function importBlock(
   fullyVerifiedBlock: FullyVerifiedBlock,
   opts: ImportBlockOpts
 ): Promise<void> {
-  const {blockInput, postState, parentBlockSlot, executionStatus} = fullyVerifiedBlock;
+  const {blockInput, postState, parentBlockSlot, executionStatus, dataAvailabilityStatus} = fullyVerifiedBlock;
   const {block, source} = blockInput;
   const {slot: blockSlot} = block.message;
   const blockRoot = this.config.getForkTypes(blockSlot).BeaconBlock.hashTreeRoot(block.message);
@@ -89,7 +89,8 @@ export async function importBlock(
     postState,
     blockDelaySec,
     this.clock.currentSlot,
-    executionStatus
+    executionStatus,
+    dataAvailabilityStatus
   );
 
   // This adds the state necessary to process the next block
@@ -110,8 +111,8 @@ export async function importBlock(
     // blobsPromise will not end up here, but preDeneb could. In future we might also allow syncing
     // out of data range blocks and import then in forkchoice although one would not be able to
     // attest and propose with such head similar to optimistic sync
-    if (blockInput.type === BlockInputType.postDeneb) {
-      const {blobsSource, blobs} = blockInput;
+    if (blockInput.type === BlockInputType.availableData) {
+      const {blobsSource, blobs} = blockInput.blockData;
 
       this.metrics?.importBlock.blobsBySource.inc({blobsSource});
       for (const blobSidecar of blobs) {

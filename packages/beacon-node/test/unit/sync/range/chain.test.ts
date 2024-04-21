@@ -83,7 +83,7 @@ describe("sync / range / chain", () => {
           const shouldReject = badBlocks?.has(i);
           if (shouldReject) badBlocks?.delete(i);
           blocks.push(
-            getBlockInput.preDeneb(
+            getBlockInput.preData(
               config,
               {
                 message: generateEmptyBlock(i),
@@ -128,7 +128,7 @@ describe("sync / range / chain", () => {
       const blocks: BlockInput[] = [];
       for (let i = request.startSlot; i < request.startSlot + request.count; i += request.step) {
         blocks.push(
-          getBlockInput.preDeneb(
+          getBlockInput.preData(
             config,
             {
               message: generateEmptyBlock(i),

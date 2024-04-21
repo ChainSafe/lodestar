@@ -65,7 +65,7 @@ export function getUnknownAndAncestorBlocks(blocks: Map<RootHex, PendingBlock>):
     const parentHex = block.parentBlockRootHex;
     if (
       block.status === PendingBlockStatus.pending &&
-      (block.blockInput?.block == null || block.blockInput?.type === BlockInputType.blobsPromise) &&
+      (block.blockInput?.block == null || block.blockInput?.type === BlockInputType.dataPromise) &&
       parentHex == null
     ) {
       unknowns.push(block);

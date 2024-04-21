@@ -87,9 +87,8 @@ export async function processBlocks(
         postState: postStates[i],
         parentBlockSlot: parentSlots[i],
         executionStatus: executionStatuses[i],
-        // Currently dataAvailableStatus is not used upstream but that can change if we
         // start supporting optimistic syncing/processing
-        dataAvailableStatus: dataAvailabilityStatuses[i],
+        dataAvailabilityStatus: dataAvailabilityStatuses[i],
         proposerBalanceDelta: proposerBalanceDeltas[i],
         // TODO: Make this param mandatory and capture in gossip
         seenTimestampSec: opts.seenTimestampSec ?? Math.floor(Date.now() / 1000),

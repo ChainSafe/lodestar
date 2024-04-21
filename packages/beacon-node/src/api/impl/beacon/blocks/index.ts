@@ -4,7 +4,14 @@ import {computeEpochAtSlot, computeTimeAtSlot, reconstructFullBlockOrContents} f
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {sleep, toHex} from "@lodestar/utils";
 import {allForks, deneb, isSignedBlockContents, ProducedBlockSource} from "@lodestar/types";
-import {BlockSource, getBlockInput, ImportBlockOpts, BlockInput, BlobsSource} from "../../../../chain/blocks/types.js";
+import {
+  BlockSource,
+  getBlockInput,
+  ImportBlockOpts,
+  BlockInput,
+  BlobsSource,
+  BlockInputDataBlobs,
+} from "../../../../chain/blocks/types.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 import {computeBlobSidecars} from "../../../../util/blobs.js";
@@ -47,21 +54,25 @@ export function getBeaconBlockApi({
     if (isSignedBlockContents(signedBlockOrContents)) {
       ({signedBlock} = signedBlockOrContents);
       blobSidecars = computeBlobSidecars(config, signedBlock, signedBlockOrContents);
-      blockForImport = getBlockInput.postDeneb(
+      const blockData = {
+        fork: config.getForkName(signedBlock.message.slot),
+        blobs: blobSidecars,
+        blobsSource: BlobsSource.api,
+        blobsBytes: blobSidecars.map(() => null),
+      } as BlockInputDataBlobs;
+      blockForImport = getBlockInput.availableData(
         config,
         signedBlock,
         BlockSource.api,
-        blobSidecars,
-        BlobsSource.api,
         // don't bundle any bytes for block and blobs
         null,
-        blobSidecars.map(() => null)
+        blockData
       );
     } else {
       signedBlock = signedBlockOrContents;
       blobSidecars = [];
       // TODO: Once API supports submitting data as SSZ, replace null with blockBytes
-      blockForImport = getBlockInput.preDeneb(config, signedBlock, BlockSource.api, null);
+      blockForImport = getBlockInput.preData(config, signedBlock, BlockSource.api, null);
     }
 
     // check what validations have been requested before broadcasting and publishing the block

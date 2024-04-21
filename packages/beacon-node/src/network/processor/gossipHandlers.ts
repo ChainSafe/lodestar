@@ -259,7 +259,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
 
     metrics?.registerBeaconBlock(OpSource.gossip, seenTimestampSec, signedBlock.message);
     // if blobs are not yet fully available start an aggressive blob pull
-    if (blockInput.type === BlockInputType.blobsPromise) {
+    if (blockInput.type === BlockInputType.dataPromise) {
       events.emit(NetworkEvent.unknownBlockInput, {blockInput, peer: peerIdStr});
     }
 
@@ -398,7 +398,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
           //
           // however we can emit the event which will atleast add the peer to the list of peers to pull
           // data from
-          if (normalBlockInput.type === BlockInputType.blobsPromise) {
+          if (normalBlockInput.type === BlockInputType.dataPromise) {
             events.emit(NetworkEvent.unknownBlockInput, {blockInput: normalBlockInput, peer: peerIdStr});
           }
         } else {

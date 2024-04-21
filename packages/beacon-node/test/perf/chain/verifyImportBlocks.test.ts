@@ -112,7 +112,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
     },
     fn: async (chain) => {
       const blocksImport = blocks.value.map((block) =>
-        getBlockInput.preDeneb(chain.config, block, BlockSource.byRange, null)
+        getBlockInput.preData(chain.config, block, BlockSource.byRange, null)
       );
 
       await chain.processChainSegment(blocksImport, {

@@ -34,7 +34,7 @@ import {
   isBlockContents,
   phase0,
 } from "@lodestar/types";
-import {ExecutionStatus} from "@lodestar/fork-choice";
+import {ExecutionStatus, DataAvailabilityStatus} from "@lodestar/fork-choice";
 import {toHex, resolveOrRacePromises, prettyWeiToEth} from "@lodestar/utils";
 import {
   AttestationError,
@@ -315,6 +315,16 @@ export function getValidatorApi({
       );
   }
 
+  function notOnOutOfRangeData(beaconBlockRoot: Root): void {
+    const protoBeaconBlock = chain.forkChoice.getBlock(beaconBlockRoot);
+    if (!protoBeaconBlock) {
+      throw new ApiError(400, "Block not in forkChoice");
+    }
+
+    if (protoBeaconBlock.dataAvailabilityStatus === DataAvailabilityStatus.OutOfRange)
+      throw new NodeIsSyncing("Block's data is out of range and not validated");
+  }
+
   const produceBuilderBlindedBlock = async function produceBuilderBlindedBlock(
     slot: Slot,
     randaoReveal: BLSSignature,
@@ -367,6 +377,7 @@ export function getValidatorApi({
     } else {
       parentBlockRoot = inParentBlockRoot;
     }
+    notOnOutOfRangeData(parentBlockRoot);
 
     let timer;
     try {
@@ -434,6 +445,7 @@ export function getValidatorApi({
     } else {
       parentBlockRoot = inParentBlockRoot;
     }
+    notOnOutOfRangeData(parentBlockRoot);
 
     let timer;
     try {
@@ -509,6 +521,7 @@ export function getValidatorApi({
       // handler, in which case this should just return.
       chain.forkChoice.updateTime(slot);
       const parentBlockRoot = fromHexString(chain.recomputeForkChoiceHead().blockRoot);
+      notOnOutOfRangeData(parentBlockRoot);
 
       const fork = config.getForkName(slot);
       // set some sensible opts
@@ -838,10 +851,13 @@ export function getValidatorApi({
       // Check the execution status as validator shouldn't vote on an optimistic head
       // Check on target is sufficient as a valid target would imply a valid source
       notOnOptimisticBlockRoot(targetRoot);
+      notOnOutOfRangeData(targetRoot);
 
       // To get the correct source we must get a state in the same epoch as the attestation's epoch.
       // An epoch transition may change state.currentJustifiedCheckpoint
       const attEpochState = await chain.getHeadStateAtEpoch(attEpoch, RegenCaller.produceAttestationData);
+
+      notOnOutOfRangeData(attEpochState.currentJustifiedCheckpoint.root);
 
       return {
         data: {
@@ -878,6 +894,7 @@ export function getValidatorApi({
 
       // Check the execution status as validator shouldn't contribute on an optimistic head
       notOnOptimisticBlockRoot(beaconBlockRoot);
+      notOnOutOfRangeData(beaconBlockRoot);
 
       const contribution = chain.syncCommitteeMessagePool.getContribution(subcommitteeIndex, slot, beaconBlockRoot);
       if (!contribution) throw new ApiError(500, "No contribution available");
