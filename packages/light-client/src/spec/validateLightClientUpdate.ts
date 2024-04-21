@@ -1,3 +1,4 @@
+import bls from "@chainsafe/bls";
 import type {PublicKey, Signature} from "@chainsafe/bls/types";
 import {Root, ssz, allForks} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
@@ -10,7 +11,6 @@ import {
   DOMAIN_SYNC_COMMITTEE,
   GENESIS_SLOT,
 } from "@lodestar/params";
-import {getBls} from "../utils/bls.js";
 import {getParticipantPubkeys, sumBits} from "../utils/utils.js";
 import {isValidMerkleBranch} from "../utils/index.js";
 import {SyncCommitteeFast} from "../types.js";
@@ -127,7 +127,7 @@ export function validateLightClientUpdate(
 function isValidBlsAggregate(publicKeys: PublicKey[], message: Uint8Array, signature: Uint8Array): boolean {
   let aggPubkey: PublicKey;
   try {
-    aggPubkey = getBls().PublicKey.aggregate(publicKeys);
+    aggPubkey = bls.PublicKey.aggregate(publicKeys);
   } catch (e) {
     (e as Error).message = `Error aggregating pubkeys: ${(e as Error).message}`;
     throw e;
@@ -135,7 +135,7 @@ function isValidBlsAggregate(publicKeys: PublicKey[], message: Uint8Array, signa
 
   let sig: Signature;
   try {
-    sig = getBls().Signature.fromBytes(signature, undefined, true);
+    sig = bls.Signature.fromBytes(signature, undefined, true);
   } catch (e) {
     (e as Error).message = `Error deserializing signature: ${(e as Error).message}`;
     throw e;

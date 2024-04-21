@@ -44,7 +44,6 @@ export default defineConfig({
   resolve: {
     alias: {
       "node:perf_hooks": path.join(__dirname, "scripts/vitest/polyfills/perf_hooks.js"),
-      "@chainsafe/blst": path.join(__dirname, "scripts/vitest/polyfills/emptyModule.js"),
     },
   },
 });
