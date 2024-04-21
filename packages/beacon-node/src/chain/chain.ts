@@ -257,7 +257,7 @@ export class BeaconChain implements IBeaconChain {
             logger,
             clock,
             shufflingCache: this.shufflingCache,
-            getHeadState: this.getHeadState.bind(this),
+            blockStateCache: stateCache,
             bufferPool: new BufferPool(anchorState.type.tree_serializedSize(anchorState.node), metrics),
             datastore: fileDataStore
               ? // debug option if we want to investigate any issues with the DB
