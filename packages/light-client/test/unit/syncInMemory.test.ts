@@ -42,8 +42,7 @@ describe("syncInMemory", function () {
     );
   });
 
-  beforeAll(async () => {
-    await initBls("herumi");
+  beforeAll(() => {
     // Create a state that has as nextSyncCommittee the committee 2
     const finalizedBlockSlot = SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1;
     const headerBlockSlot = finalizedBlockSlot + 1;
