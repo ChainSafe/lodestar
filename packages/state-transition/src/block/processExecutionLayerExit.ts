@@ -7,7 +7,8 @@ import {CachedBeaconStateElectra} from "../types.js";
 import {initiateValidatorExit} from "./index.js";
 
 /**
- * Validate execution Layer Exit, If a valid Exit is returned from isValidExecutionLayerExit Initiate the exit of the validator.
+ * Process execution layer exit messages and initiate exit incase they belong to a valid active validator
+ * otherwise silent ignore.
  */
 export function processExecutionLayerExit(state: CachedBeaconStateElectra, exit: electra.ExecutionLayerExit): void {
   const validator = isValidExecutionLayerExit(state, exit);
