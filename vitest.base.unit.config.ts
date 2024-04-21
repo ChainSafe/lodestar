@@ -42,9 +42,4 @@ export default defineConfig({
       ],
     },
   },
-  resolve: {
-    alias: {
-      "@chainsafe/blst": path.join(__dirname, "scripts/vitest/polyfills/emptyModule.js"),
-    },
-  },
 });
