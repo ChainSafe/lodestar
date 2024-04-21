@@ -7,5 +7,8 @@ export default mergeConfig(
     test: {
       globalSetup: ["./test/globalSetup.ts"],
     },
+    optimizeDeps: {
+      exclude: ["@chainsafe/blst"],
+    },
   })
 );
