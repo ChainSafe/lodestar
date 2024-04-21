@@ -149,9 +149,8 @@ export class Lightclient {
       checkpointRoot: phase0.Checkpoint["root"];
     }
   ): Promise<Lightclient> {
-    const {transport, checkpointRoot, blsImplementation} = args;
+    const {transport, checkpointRoot} = args;
 
-    await initBls(blsImplementation);
     // Fetch bootstrap state with proof at the trusted block root
     const {data: bootstrap} = await transport.getBootstrap(toHexString(checkpointRoot));
 
