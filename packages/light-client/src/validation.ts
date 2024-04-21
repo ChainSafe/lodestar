@@ -1,3 +1,4 @@
+import bls from "@chainsafe/bls";
 import type {PublicKey, Signature} from "@chainsafe/bls/types";
 import {altair, Root, Slot, ssz, allForks} from "@lodestar/types";
 import {
@@ -9,7 +10,6 @@ import {
   DOMAIN_SYNC_COMMITTEE,
 } from "@lodestar/params";
 import {BeaconConfig} from "@lodestar/config";
-import {getBls} from "../src/utils/index.js";
 import {isValidMerkleBranch} from "./utils/verifyMerkleBranch.js";
 import {assertZeroHashes, getParticipantPubkeys, isEmptyHeader} from "./utils/utils.js";
 import {SyncCommitteeFast} from "./types.js";
@@ -154,7 +154,7 @@ export function assertValidSignedHeader(
 function isValidBlsAggregate(publicKeys: PublicKey[], message: Uint8Array, signature: Uint8Array): boolean {
   let aggPubkey: PublicKey;
   try {
-    aggPubkey = getBls().PublicKey.aggregate(publicKeys);
+    aggPubkey = bls.PublicKey.aggregate(publicKeys);
   } catch (e) {
     (e as Error).message = `Error aggregating pubkeys: ${(e as Error).message}`;
     throw e;
@@ -162,7 +162,7 @@ function isValidBlsAggregate(publicKeys: PublicKey[], message: Uint8Array, signa
 
   let sig: Signature;
   try {
-    sig = getBls().Signature.fromBytes(signature, undefined, true);
+    sig = bls.Signature.fromBytes(signature, undefined, true);
   } catch (e) {
     (e as Error).message = `Error deserializing signature: ${(e as Error).message}`;
     throw e;

@@ -1,4 +1,5 @@
 import {describe, it, expect, beforeAll, vi} from "vitest";
+import bls from "@chainsafe/bls";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {altair, ssz} from "@lodestar/types";
 import {chainConfig} from "@lodestar/config/default";
@@ -10,7 +11,6 @@ import {
   SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SIZE,
 } from "@lodestar/params";
-import {getBls, initBls} from "../../src/utils/bls.js";
 import {assertValidLightClientUpdate} from "../../src/validation.js";
 import {LightClientSnapshotFast, SyncCommitteeFast} from "../../src/types.js";
 import {defaultBeaconBlockHeader, getSyncAggregateSigningRoot, signAndAggregate} from "../utils/utils.js";
@@ -26,8 +26,7 @@ describe("validation", function () {
   let update: altair.LightClientUpdate;
   let snapshot: LightClientSnapshotFast;
 
-  beforeAll(async function () {
-    await initBls("herumi");
+  beforeAll(function () {
     // Update slot must > snapshot slot
     // attestedHeaderSlot must == updateHeaderSlot + 1
     const snapshotHeaderSlot = 1;
@@ -40,14 +39,14 @@ describe("validation", function () {
       buffer.writeInt16BE(i + 1, 30); // Offset to ensure the SK is less than the order
       skBytes.push(buffer);
     }
-    const sks = skBytes.map((skBytes) => getBls().SecretKey.fromBytes(skBytes));
+    const sks = skBytes.map((skBytes) => bls.SecretKey.fromBytes(skBytes));
     const pks = sks.map((sk) => sk.toPublicKey());
     const pubkeys = pks.map((pk) => pk.toBytes());
 
     // Create a sync committee with the keys that will sign the `syncAggregate`
     const nextSyncCommittee: altair.SyncCommittee = {
       pubkeys,
-      aggregatePubkey: getBls().aggregatePublicKeys(pubkeys),
+      aggregatePubkey: bls.aggregatePublicKeys(pubkeys),
     };
 
     const finalizedState = ssz.altair.BeaconState.defaultViewDU();
@@ -79,7 +78,7 @@ describe("validation", function () {
 
     const syncCommittee: SyncCommitteeFast = {
       pubkeys: pks,
-      aggregatePubkey: getBls().PublicKey.fromBytes(getBls().aggregatePublicKeys(pubkeys)),
+      aggregatePubkey: bls.PublicKey.fromBytes(bls.aggregatePublicKeys(pubkeys)),
     };
 
     update = {

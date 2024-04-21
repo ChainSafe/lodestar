@@ -1,4 +1,5 @@
 import {describe, it, expect, beforeAll, vi} from "vitest";
+import bls from "@chainsafe/bls";
 import {createBeaconConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -8,7 +9,6 @@ import {BeaconChainLcMock} from "../mocks/BeaconChainLcMock.js";
 import {processLightClientUpdate} from "../utils/naive/update.js";
 import {IBeaconChainLc, prepareUpdateNaive} from "../utils/prepareUpdateNaive.js";
 import {getInteropSyncCommittee, getSyncAggregateSigningRoot, SyncCommitteeKeys} from "../utils/utils.js";
-import {getBls, initBls} from "../../src/utils/bls.js";
 
 function getSyncCommittee(
   syncCommitteesKeys: Map<SyncPeriod, SyncCommitteeKeys>,
@@ -34,9 +34,8 @@ describe("syncInMemory", function () {
   let updateData: {chain: IBeaconChainLc; blockWithSyncAggregate: altair.BeaconBlock};
   let update: altair.LightClientUpdate;
 
-  beforeAll(async () => {
-    await initBls("herumi");
-    const sk = getBls().SecretKey.fromBytes(Buffer.alloc(32, 1));
+  beforeAll(() => {
+    const sk = bls.SecretKey.fromBytes(Buffer.alloc(32, 1));
     expect(sk.toPublicKey().toHex()).toBe(
       "0xaa1a1c26055a329817a5759d877a2795f9499b97d6056edde0eea39512f24e8bc874b4471f0501127abb1ea0d9f68ac1"
     );
