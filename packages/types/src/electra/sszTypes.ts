@@ -28,7 +28,7 @@ export const DepositReceipt = new ContainerType(
   {typeName: "DepositReceipt", jsonCase: "eth2"}
 );
 
-export const DepositReceipts = new ListCompositeType(DepositReceipt, MAX_EXECUTION_LAYER_EXITS);
+export const DepositReceipts = new ListCompositeType(DepositReceipt, MAX_DEPOSIT_RECEIPTS_PER_PAYLOAD);
 
 export const ExecutionLayerExit = new ContainerType(
   {
@@ -37,7 +37,7 @@ export const ExecutionLayerExit = new ContainerType(
   },
   {typeName: "ExecutionLayerExit", jsonCase: "eth2"}
 );
-export const ExecutionLayerExits = new ListCompositeType(ExecutionLayerExit, MAX_DEPOSIT_RECEIPTS_PER_PAYLOAD);
+export const ExecutionLayerExits = new ListCompositeType(ExecutionLayerExit, MAX_EXECUTION_LAYER_EXITS);
 
 export const ExecutionPayload = new ContainerType(
   {

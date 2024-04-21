@@ -1,50 +1,55 @@
-import {byteArrayEquals} from "@chainsafe/ssz";
-import {electra} from "@lodestar/types";
+import {CompositeViewDU} from "@chainsafe/ssz";
+import {electra, ssz} from "@lodestar/types";
 import {ETH1_ADDRESS_WITHDRAWAL_PREFIX, FAR_FUTURE_EPOCH} from "@lodestar/params";
 
 import {isActiveValidator} from "../util/index.js";
 import {CachedBeaconStateElectra} from "../types.js";
 import {initiateValidatorExit} from "./index.js";
 
+/**
+ * Validate execution Layer Exit, If a valid Exit is returned from isValidExecutionLayerExit Initiate the exit of the validator.
+ */
 export function processExecutionLayerExit(state: CachedBeaconStateElectra, exit: electra.ExecutionLayerExit): void {
-  if (!isValidExecutionLayerExit(state, exit)) {
+  const validator = isValidExecutionLayerExit(state, exit);
+  if (validator === null) {
     return;
   }
 
-  const {epochCtx} = state;
-  const validatorIndex = epochCtx.getValidatorIndex(exit.validatorPubkey);
-  const validator = validatorIndex !== undefined ? state.validators.get(validatorIndex) : undefined;
-  if (validator === undefined) {
-    throw Error("Internal error validator=undefined for a valid execution layer exit");
-  }
   initiateValidatorExit(state, validator);
 }
 
-export function isValidExecutionLayerExit(state: CachedBeaconStateElectra, exit: electra.ExecutionLayerExit): boolean {
+export function isValidExecutionLayerExit(
+  state: CachedBeaconStateElectra,
+  exit: electra.ExecutionLayerExit
+): CompositeViewDU<typeof ssz.phase0.Validator> | null {
   const {config, epochCtx} = state;
   const validatorIndex = epochCtx.getValidatorIndex(exit.validatorPubkey);
   const validator = validatorIndex !== undefined ? state.validators.getReadonly(validatorIndex) : undefined;
   if (validator === undefined) {
-    return false;
+    return null;
   }
 
   const {withdrawalCredentials} = validator;
   if (withdrawalCredentials[0] !== ETH1_ADDRESS_WITHDRAWAL_PREFIX) {
-    return false;
+    return null;
   }
 
-  const executionAddress = withdrawalCredentials.slice(12, 32);
-  if (!byteArrayEquals(executionAddress, exit.sourceAddress)) {
-    return false;
+  const executionAddress = withdrawalCredentials.subarray(12, 32);
+  if (Buffer.compare(executionAddress, exit.sourceAddress) !== 0) {
+    return null;
   }
 
   const currentEpoch = epochCtx.epoch;
-  return (
+  if (
     // verify the validator is active
     isActiveValidator(validator, currentEpoch) &&
     // verify exit has not been initiated
     validator.exitEpoch === FAR_FUTURE_EPOCH &&
     // verify the validator had been active long enough
     currentEpoch >= validator.activationEpoch + config.SHARD_COMMITTEE_PERIOD
-  );
+  ) {
+    return validator;
+  } else {
+    return null;
+  }
 }
