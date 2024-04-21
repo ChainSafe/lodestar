@@ -5,7 +5,7 @@ import {
   computeStartSlotAtEpoch,
   getShufflingDecisionBlock,
 } from "@lodestar/state-transition";
-import {ProtoBlock, IForkChoice, ExecutionStatus} from "@lodestar/fork-choice";
+import {ProtoBlock, IForkChoice, ExecutionStatus, DataAvailabilityStatus} from "@lodestar/fork-choice";
 import {DOMAIN_BEACON_ATTESTER} from "@lodestar/params";
 import {phase0, Slot, ssz} from "@lodestar/types";
 import {
@@ -78,6 +78,7 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
     timeliness: false,
 
     ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
+    dataAvailabilityStatus: DataAvailabilityStatus.PreData,
   };
 
   const shufflingCache = new ShufflingCache();

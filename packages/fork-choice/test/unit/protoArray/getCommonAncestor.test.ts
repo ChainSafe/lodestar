@@ -1,5 +1,5 @@
 import {describe, it, expect} from "vitest";
-import {ProtoArray, ExecutionStatus} from "../../../src/index.js";
+import {ProtoArray, ExecutionStatus, DataAvailabilityStatus} from "../../../src/index.js";
 
 describe("getCommonAncestor", () => {
   const blocks: {slot: number; root: string; parent: string}[] = [
@@ -43,6 +43,7 @@ describe("getCommonAncestor", () => {
       timeliness: false,
 
       ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
+      dataAvailabilityStatus: DataAvailabilityStatus.PreData,
     },
     0
   );
@@ -68,6 +69,7 @@ describe("getCommonAncestor", () => {
         timeliness: false,
 
         ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
+        dataAvailabilityStatus: DataAvailabilityStatus.PreData,
       },
       block.slot
     );

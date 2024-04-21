@@ -7,7 +7,7 @@ import {
 } from "@lodestar/state-transition";
 import {bellatrix, deneb} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
-import {ProtoBlock, ExecutionStatus} from "@lodestar/fork-choice";
+import {ProtoBlock, ExecutionStatus, DataAvailabilityStatus} from "@lodestar/fork-choice";
 import {ChainForkConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
@@ -44,7 +44,7 @@ export async function verifyBlocksInEpoch(
   postStates: CachedBeaconStateAllForks[];
   proposerBalanceDeltas: number[];
   segmentExecStatus: SegmentExecStatus;
-  dataAvailabilityStatuses: DataAvailableStatus[];
+  dataAvailabilityStatuses: DataAvailabilityStatus[];
   availableBlockInputs: BlockInput[];
 }> {
   const blocks = blocksInput.map(({block}) => block);
@@ -169,7 +169,7 @@ export async function verifyBlocksInEpoch(
         blocksInput.length === 1 &&
         // gossip blocks have seenTimestampSec
         opts.seenTimestampSec !== undefined &&
-        blocksInput[0].type !== BlockInputType.preDeneb &&
+        blocksInput[0].type !== BlockInputType.preData &&
         executionStatuses[0] === ExecutionStatus.Valid
       ) {
         // Find the max time when the block was actually verified

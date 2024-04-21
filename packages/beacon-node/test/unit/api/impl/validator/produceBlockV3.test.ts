@@ -9,6 +9,7 @@ import {ApiTestModules, getApiTestModules} from "../../../../utils/api.js";
 import {SyncState} from "../../../../../src/sync/interface.js";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {CommonBlockBody} from "../../../../../src/chain/interface.js";
+import {zeroProtoBlock} from "../../../../utils/state.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 describe("api/validator - produceBlockV3", function () {
@@ -88,6 +89,7 @@ describe("api/validator - produceBlockV3", function () {
           blockRoot: toHexString(fullBlock.parentRoot),
         } as ProtoBlock);
         modules.chain.getProposerHead.mockReturnValue({blockRoot: toHexString(fullBlock.parentRoot)} as ProtoBlock);
+        modules.chain.forkChoice.getBlock.mockReturnValue(zeroProtoBlock);
 
         if (enginePayloadValue !== null) {
           const commonBlockBody: CommonBlockBody = {

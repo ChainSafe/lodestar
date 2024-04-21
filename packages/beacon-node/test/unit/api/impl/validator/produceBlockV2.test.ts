@@ -51,6 +51,7 @@ describe("api/validator - produceBlockV2", function () {
     modules.chain.recomputeForkChoiceHead.mockReturnValue(
       generateProtoBlock({blockRoot: toHexString(parentBlockRoot)})
     );
+    modules.chain.forkChoice.getBlock.mockReturnValue(generateProtoBlock({blockRoot: toHexString(parentBlockRoot)}));
     modules.chain.produceBlock.mockResolvedValue({
       block: fullBlock,
       executionPayloadValue,

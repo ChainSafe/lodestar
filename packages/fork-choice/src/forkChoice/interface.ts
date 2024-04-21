@@ -1,7 +1,13 @@
 import {EffectiveBalanceIncrements} from "@lodestar/state-transition";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {Epoch, Slot, ValidatorIndex, phase0, allForks, Root, RootHex} from "@lodestar/types";
-import {ProtoBlock, MaybeValidExecutionStatus, LVHExecResponse, ProtoNode} from "../protoArray/interface.js";
+import {
+  ProtoBlock,
+  MaybeValidExecutionStatus,
+  LVHExecResponse,
+  ProtoNode,
+  DataAvailabilityStatus,
+} from "../protoArray/interface.js";
 import {CheckpointWithHex} from "./store.js";
 import {UpdateAndGetHeadOpt} from "./forkChoice.js";
 
@@ -129,7 +135,8 @@ export interface IForkChoice {
     state: CachedBeaconStateAllForks,
     blockDelaySec: number,
     currentSlot: Slot,
-    executionStatus: MaybeValidExecutionStatus
+    executionStatus: MaybeValidExecutionStatus,
+    dataAvailabilityStatus: DataAvailabilityStatus
   ): ProtoBlock;
   /**
    * Register `attestation` with the fork choice DAG so that it may influence future calls to `getHead`.

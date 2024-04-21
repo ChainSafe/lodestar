@@ -402,9 +402,9 @@ export class SyncChain {
         batch.downloadingSuccess(res.result);
         let hasPostDenebBlocks = false;
         const blobs = res.result.reduce((acc, blockInput) => {
-          hasPostDenebBlocks ||= blockInput.type === BlockInputType.postDeneb;
+          hasPostDenebBlocks ||= blockInput.type === BlockInputType.availableData;
           return hasPostDenebBlocks
-            ? acc + (blockInput.type === BlockInputType.postDeneb ? blockInput.blobs.length : 0)
+            ? acc + (blockInput.type === BlockInputType.availableData ? blockInput.blockData.blobs.length : 0)
             : 0;
         }, 0);
         const downloadInfo = {blocks: res.result.length};
