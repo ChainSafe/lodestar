@@ -6,7 +6,6 @@ import {altair, Bytes32, Root, ssz} from "@lodestar/types";
 import {BeaconBlockHeader} from "@lodestar/types/phase0";
 import {GenesisData} from "../index.js";
 import {SyncCommitteeFast} from "../types.js";
-import {getBls} from "./bls.js";
 
 export function sumBits(bits: BitArray): number {
   return bits.getTrueBitIndexes().length;
