@@ -95,6 +95,7 @@ export const {
   KZG_COMMITMENT_INCLUSION_PROOF_DEPTH,
 
   MAX_DEPOSIT_RECEIPTS_PER_PAYLOAD,
+  MAX_EXECUTION_LAYER_EXITS,
 } = activePreset;
 
 ////////////
