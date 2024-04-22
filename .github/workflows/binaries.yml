@@ -20,8 +20,7 @@ jobs:
         include:
           - os: ubuntu-latest
             build: |
-              npx caxa -D -p "yarn install --production" --input . --output "lodestar" -- "{{caxa}}/node_modules/.bin/node" "--max-old-space-size=8192" "{{caxa}}/node_modules/.bin/lodestar"
-              rm -rf .github/ assets/ audit/ dashboards/ docs/ docker/ scripts/
+              npx caxa -e "dashboards/" -e "docs/" -D -p "yarn install --production" --input . --output "lodestar" -- "{{caxa}}/node_modules/.bin/node" "--max-old-space-size=8192" "{{caxa}}/node_modules/.bin/lodestar"
               tar -czf "dist/lodestar-${{ inputs.version }}-linux-amd64.tgz" "lodestar"
     runs-on: ${{matrix.os}}
     steps:
