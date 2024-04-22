@@ -51,7 +51,7 @@ jobs:
   npm:
     name: Publish to NPM & Github
     runs-on: buildjet-4vcpu-ubuntu-2204
-    needs: [tag, build-binaries]
+    needs: [tag, binaries]
     if: needs.tag.outputs.is_stable == 'true'
     steps:
       - uses: actions/checkout@v4
@@ -161,7 +161,7 @@ jobs:
           --tag chainsafe/lodestar-prometheus:${{ needs.tag.outputs.tag }}
           --platform linux/amd64,linux/arm64
 
-  build-binaries:
+  binaries:
     name: Build lodestar binaries
     uses: ./.github/workflows/binaries.yml
     needs: tag

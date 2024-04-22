@@ -21,7 +21,8 @@ jobs:
           - os: ubuntu-latest
             build: |
               npx caxa -D -p "yarn install --production" --input . --output "lodestar" -- "{{caxa}}/node_modules/.bin/node" "--max-old-space-size=8192" "{{caxa}}/node_modules/.bin/lodestar"
-              tar -czf "dist/lodestar-linux-${{ inputs.version }}.tgz" "lodestar"
+              rm -rf .github/ assets/ audit/ dashboards/ docs/ docker/ scripts/
+              tar -czf "dist/lodestar-${{ inputs.version }}-linux-amd64.tgz" "lodestar"
     runs-on: ${{matrix.os}}
     steps:
       - uses: actions/checkout@v4
@@ -42,7 +43,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            exec.exec('./lodestar beacon');
+            exec.exec('./lodestar dev');
             await new Promise(resolve => setTimeout(resolve, 30000));
             const resp = await fetch('http://127.0.0.1:9596/eth/v1/node/version').catch(err => {
               core.setFailed(`Error accessing the API ${err}`);
