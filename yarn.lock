@@ -293,10 +293,10 @@
     ethereum-cryptography "^2.0.0"
     uuid "^9.0.0"
 
-"@chainsafe/bls@^8.0.0":
-  version "8.0.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/bls/-/bls-8.0.0.tgz#fe6f15a0b18c6a708874ea59d303643ac1807406"
-  integrity sha512-LsN2MtETXDUo3yVgyjXWk6Sy7W2Uj2eAl9ZGNFTsTn7wfDxVSGr9A2qo1+P+ZSO2mlQCGu5RECZ3b4AzzW7WLw==
+"@chainsafe/bls@^8.1.0":
+  version "8.1.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/bls/-/bls-8.1.0.tgz#d0680ce1e8c10461f7c4c1b7be228a968d77efcb"
+  integrity sha512-C4a1gUpFHYzJG7aaik4w+7QTeJ4pGCDTZ28YUwAWOFaWgAJSK+769ib6CNBu5Txb3PpvcC5GuhICQaDopIgEHg==
   dependencies:
     "@chainsafe/bls-keygen" "^0.4.0"
     bls-eth-wasm "^1.1.1"
