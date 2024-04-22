@@ -85,6 +85,7 @@ export type BeaconPreset = {
 
   // ELECTRA
   MAX_DEPOSIT_RECEIPTS_PER_PAYLOAD: number;
+  MAX_EXECUTION_LAYER_EXITS: number;
 };
 
 /**
@@ -173,6 +174,7 @@ export const beaconPresetTypes: BeaconPresetTypes = {
 
   // ELECTRA
   MAX_DEPOSIT_RECEIPTS_PER_PAYLOAD: "number",
+  MAX_EXECUTION_LAYER_EXITS: "number",
 };
 
 type BeaconPresetTypes = {

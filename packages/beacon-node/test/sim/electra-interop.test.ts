@@ -173,6 +173,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       blockHash: dataToBytes(newPayloadBlockHash, 32),
       receiptsRoot: dataToBytes("0x79ee3424eb720a3ad4b1c5a372bb8160580cbe4d893778660f34213c685627a9", 32),
       blobGasUsed: 0n,
+      exits: [],
     };
     const parentBeaconBlockRoot = dataToBytes("0x0000000000000000000000000000000000000000000000000000000000000000", 32);
     const payloadResult = await executionEngine.notifyNewPayload(
