@@ -26,6 +26,11 @@ export type DepositReceiptV1 = {
   index: QUANTITY;
 };
 
+export type ExecutionLayerExitV1 = {
+  sourceAddress: DATA;
+  validatorPubkey: DATA;
+};
+
 type FcuAttributes = {headBlockHash: DATA; finalizedBlockHash: DATA} & Omit<PayloadAttributesRpc, "withdrawals">;
 
 export class PayloadIdCache {
