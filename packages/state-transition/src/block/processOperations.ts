@@ -8,6 +8,7 @@ import {processProposerSlashing} from "./processProposerSlashing.js";
 import {processAttesterSlashing} from "./processAttesterSlashing.js";
 import {processDeposit} from "./processDeposit.js";
 import {processVoluntaryExit} from "./processVoluntaryExit.js";
+import {processExecutionLayerExit} from "./processExecutionLayerExit.js";
 import {processBlsToExecutionChange} from "./processBlsToExecutionChange.js";
 import {processDepositReceipt} from "./processDepositReceipt.js";
 import {ProcessBlockOpts} from "./types.js";
@@ -18,6 +19,7 @@ export {
   processAttestations,
   processDeposit,
   processVoluntaryExit,
+  processExecutionLayerExit,
   processBlsToExecutionChange,
   processDepositReceipt,
 };
@@ -48,8 +50,14 @@ export function processOperations(
   for (const deposit of body.deposits) {
     processDeposit(fork, state, deposit);
   }
+
   for (const voluntaryExit of body.voluntaryExits) {
     processVoluntaryExit(state, voluntaryExit, opts.verifySignatures);
+  }
+  if (fork >= ForkSeq.electra) {
+    for (const elExit of (body as electra.BeaconBlockBody).executionPayload.exits) {
+      processExecutionLayerExit(state as CachedBeaconStateElectra, elExit);
+    }
   }
 
   if (fork >= ForkSeq.capella) {

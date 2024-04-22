@@ -82,8 +82,8 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
   };
 
   const shufflingCache = new ShufflingCache();
-  shufflingCache.processState(state as unknown as CachedBeaconStateAllForks, state.epochCtx.currentShuffling.epoch);
-  shufflingCache.processState(state as unknown as CachedBeaconStateAllForks, state.epochCtx.nextShuffling.epoch);
+  shufflingCache.processState(state as CachedBeaconStateAllForks, state.epochCtx.currentShuffling.epoch);
+  shufflingCache.processState(state as CachedBeaconStateAllForks, state.epochCtx.nextShuffling.epoch);
   const dependentRoot = getShufflingDecisionBlock(state, state.epochCtx.currentShuffling.epoch);
 
   const forkChoice = {
