@@ -20,7 +20,7 @@ jobs:
         include:
           - os: ubuntu-latest
             build: |
-              npx caxa -D -p "yarn install --production" --input . --output "lodestar" -- "{{caxa}}/node_modules/.bin/node" "--max-old-space-size=4096" "{{caxa}}/node_modules/.bin/lodestar"
+              npx caxa -D -p "yarn install --production" --input . --output "lodestar" -- "{{caxa}}/node_modules/.bin/node" "--max-old-space-size=8192" "{{caxa}}/node_modules/.bin/lodestar"
               tar -czf "dist/lodestar-linux-${{ inputs.version }}.tgz" "lodestar"
     runs-on: ${{matrix.os}}
     steps:
