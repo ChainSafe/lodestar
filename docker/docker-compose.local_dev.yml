@@ -1,5 +1,3 @@
-version: "3.4"
-
 # Configuration to work with a local non-dockerized Lodestar node
 # For local testing and quick debugging
 #
@@ -12,26 +10,28 @@ services:
     build:
       context: prometheus
     environment:
-      # Linux:  http://localhost:8008
-      # MacOSX: http://host.docker.internal:8008
-      BEACON_URL: localhost:8008
-      VC_URL: localhost:5064
+      BEACON_URL: http://host.docker.internal:8008
+      VC_URL: http://host.docker.internal:5064
     restart: always
-    network_mode: host
     volumes:
       - "prometheus:/prometheus"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "9090:9090"
 
   grafana:
     build: grafana_dev
     restart: always
-    network_mode: host
     volumes:
       - "grafana:/var/lib/grafana"
       - "grafana-dashboards:/dashboards"
     environment:
-      # Linux:  http://localhost:9090
-      # MacOSX: http://host.docker.internal:9090
-      PROMETHEUS_URL: http://localhost:9090
+      PROMETHEUS_URL: http://host.docker.internal:9090
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "3000:3000"
 
 volumes:
   prometheus:
