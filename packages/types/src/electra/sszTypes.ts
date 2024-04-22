@@ -5,6 +5,7 @@ import {
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
   SLOTS_PER_EPOCH,
   MAX_DEPOSIT_RECEIPTS_PER_PAYLOAD,
+  MAX_EXECUTION_LAYER_EXITS,
 } from "@lodestar/params";
 import {ssz as primitiveSsz} from "../primitive/index.js";
 import {ssz as phase0Ssz} from "../phase0/index.js";
@@ -13,7 +14,8 @@ import {ssz as bellatrixSsz} from "../bellatrix/index.js";
 import {ssz as capellaSsz} from "../capella/index.js";
 import {ssz as denebSsz} from "../deneb/index.js";
 
-const {UintNum64, Slot, Root, BLSSignature, UintBn256, Bytes32, BLSPubkey, DepositIndex, UintBn64} = primitiveSsz;
+const {UintNum64, Slot, Root, BLSSignature, UintBn256, Bytes32, BLSPubkey, DepositIndex, UintBn64, ExecutionAddress} =
+  primitiveSsz;
 
 export const DepositReceipt = new ContainerType(
   {
@@ -28,10 +30,20 @@ export const DepositReceipt = new ContainerType(
 
 export const DepositReceipts = new ListCompositeType(DepositReceipt, MAX_DEPOSIT_RECEIPTS_PER_PAYLOAD);
 
+export const ExecutionLayerExit = new ContainerType(
+  {
+    sourceAddress: ExecutionAddress,
+    validatorPubkey: BLSPubkey,
+  },
+  {typeName: "ExecutionLayerExit", jsonCase: "eth2"}
+);
+export const ExecutionLayerExits = new ListCompositeType(ExecutionLayerExit, MAX_EXECUTION_LAYER_EXITS);
+
 export const ExecutionPayload = new ContainerType(
   {
     ...denebSsz.ExecutionPayload.fields,
     depositReceipts: DepositReceipts, // New in ELECTRA
+    exits: ExecutionLayerExits, // New in ELECTRA
   },
   {typeName: "ExecutionPayload", jsonCase: "eth2"}
 );
@@ -40,6 +52,7 @@ export const ExecutionPayloadHeader = new ContainerType(
   {
     ...denebSsz.ExecutionPayloadHeader.fields,
     depositReceiptsRoot: Root, // New in ELECTRA
+    exitsRoot: Root, // New in ELECTRA
   },
   {typeName: "ExecutionPayloadHeader", jsonCase: "eth2"}
 );
