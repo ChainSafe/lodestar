@@ -4,6 +4,9 @@ import * as ssz from "./sszTypes.js";
 export type DepositReceipt = ValueOf<typeof ssz.DepositReceipt>;
 export type DepositReceipts = ValueOf<typeof ssz.DepositReceipts>;
 
+export type ExecutionLayerExit = ValueOf<typeof ssz.ExecutionLayerExit>;
+export type ExecutionLayerExits = ValueOf<typeof ssz.ExecutionLayerExits>;
+
 export type ExecutionPayload = ValueOf<typeof ssz.ExecutionPayload>;
 export type ExecutionPayloadHeader = ValueOf<typeof ssz.ExecutionPayloadHeader>;
 

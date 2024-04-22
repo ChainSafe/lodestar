@@ -121,4 +121,5 @@ export const mainnetPreset: BeaconPreset = {
 
   // ELECTRA
   MAX_DEPOSIT_RECEIPTS_PER_PAYLOAD: 8192,
+  MAX_EXECUTION_LAYER_EXITS: 16,
 };

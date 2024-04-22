@@ -17,7 +17,7 @@ import {
   quantityToBigint,
 } from "../../eth1/provider/utils.js";
 import {ExecutionPayloadStatus, BlobsBundle, PayloadAttributes, VersionedHashes} from "./interface.js";
-import {WithdrawalV1, DepositReceiptV1} from "./payloadIdCache.js";
+import {WithdrawalV1, DepositReceiptV1, ExecutionLayerExitV1} from "./payloadIdCache.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -126,12 +126,14 @@ export type ExecutionPayloadBodyRpc = {
   transactions: DATA[];
   withdrawals: WithdrawalV1[] | null | undefined;
   depositReceipts: DepositReceiptV1[] | null | undefined;
+  exits: ExecutionLayerExitV1[] | null | undefined;
 };
 
 export type ExecutionPayloadBody = {
   transactions: bellatrix.Transaction[];
   withdrawals: capella.Withdrawals | null;
   depositReceipts: electra.DepositReceipts | null;
+  exits: electra.ExecutionLayerExits | null;
 };
 
 export type ExecutionPayloadRpc = {
@@ -154,6 +156,7 @@ export type ExecutionPayloadRpc = {
   excessBlobGas?: QUANTITY; // DENEB
   parentBeaconBlockRoot?: QUANTITY; // DENEB
   depositReceipts?: DepositReceiptRpc[]; // ELECTRA
+  exits?: ExecutionLayerExitRpc[]; // ELECTRA
 };
 
 export type WithdrawalRpc = {
@@ -163,13 +166,8 @@ export type WithdrawalRpc = {
   amount: QUANTITY;
 };
 
-export type DepositReceiptRpc = {
-  pubkey: DATA;
-  withdrawalCredentials: DATA;
-  amount: QUANTITY;
-  signature: DATA;
-  index: QUANTITY;
-};
+export type DepositReceiptRpc = DepositReceiptV1;
+export type ExecutionLayerExitRpc = ExecutionLayerExitV1;
 
 export type VersionedHashesRpc = DATA[];
 
@@ -235,8 +233,9 @@ export function serializeExecutionPayload(fork: ForkName, data: ExecutionPayload
 
   // ELECTRA adds depositReceipts to the ExecutionPayload
   if (ForkSeq[fork] >= ForkSeq.electra) {
-    const {depositReceipts} = data as electra.ExecutionPayload;
+    const {depositReceipts, exits} = data as electra.ExecutionPayload;
     payload.depositReceipts = depositReceipts.map(serializeDepositReceipt);
+    payload.exits = exits.map(serializeExecutionLayerExit);
   }
 
   return payload;
@@ -325,14 +324,21 @@ export function parseExecutionPayload(
   }
 
   if (ForkSeq[fork] >= ForkSeq.electra) {
-    const {depositReceipts} = data;
+    const {depositReceipts, exits} = data;
     // Geth can also reply with null
     if (depositReceipts == null) {
       throw Error(
         `depositReceipts missing for ${fork} >= electra executionPayload number=${executionPayload.blockNumber} hash=${data.blockHash}`
       );
     }
-    (executionPayload as electra.ExecutionPayload).depositReceipts = depositReceipts.map(deserializeDepositReceipts);
+    (executionPayload as electra.ExecutionPayload).depositReceipts = depositReceipts.map(deserializeDepositReceipt);
+
+    if (exits == null) {
+      throw Error(
+        `exits missing for ${fork} >= electra executionPayload number=${executionPayload.blockNumber} hash=${data.blockHash}`
+      );
+    }
+    (executionPayload as electra.ExecutionPayload).exits = exits.map(deserializeExecutionLayerExit);
   }
 
   return {executionPayload, executionPayloadValue, blobsBundle, shouldOverrideBuilder};
@@ -411,7 +417,7 @@ export function serializeDepositReceipt(depositReceipt: electra.DepositReceipt):
   };
 }
 
-export function deserializeDepositReceipts(serialized: DepositReceiptRpc): electra.DepositReceipt {
+export function deserializeDepositReceipt(serialized: DepositReceiptRpc): electra.DepositReceipt {
   return {
     pubkey: dataToBytes(serialized.pubkey, 48),
     withdrawalCredentials: dataToBytes(serialized.withdrawalCredentials, 32),
@@ -421,12 +427,27 @@ export function deserializeDepositReceipts(serialized: DepositReceiptRpc): elect
   } as electra.DepositReceipt;
 }
 
+export function serializeExecutionLayerExit(exit: electra.ExecutionLayerExit): ExecutionLayerExitRpc {
+  return {
+    sourceAddress: bytesToData(exit.sourceAddress),
+    validatorPubkey: bytesToData(exit.validatorPubkey),
+  };
+}
+
+export function deserializeExecutionLayerExit(exit: ExecutionLayerExitRpc): electra.ExecutionLayerExit {
+  return {
+    sourceAddress: dataToBytes(exit.sourceAddress, 20),
+    validatorPubkey: dataToBytes(exit.validatorPubkey, 48),
+  };
+}
+
 export function deserializeExecutionPayloadBody(data: ExecutionPayloadBodyRpc | null): ExecutionPayloadBody | null {
   return data
     ? {
         transactions: data.transactions.map((tran) => dataToBytes(tran, null)),
         withdrawals: data.withdrawals ? data.withdrawals.map(deserializeWithdrawal) : null,
-        depositReceipts: data.depositReceipts ? data.depositReceipts.map(deserializeDepositReceipts) : null,
+        depositReceipts: data.depositReceipts ? data.depositReceipts.map(deserializeDepositReceipt) : null,
+        exits: data.exits ? data.exits.map(deserializeExecutionLayerExit) : null,
       }
     : null;
 }
@@ -437,6 +458,7 @@ export function serializeExecutionPayloadBody(data: ExecutionPayloadBody | null)
         transactions: data.transactions.map((tran) => bytesToData(tran)),
         withdrawals: data.withdrawals ? data.withdrawals.map(serializeWithdrawal) : null,
         depositReceipts: data.depositReceipts ? data.depositReceipts.map(serializeDepositReceipt) : null,
+        exits: data.exits ? data.exits.map(serializeExecutionLayerExit) : null,
       }
     : null;
 }
