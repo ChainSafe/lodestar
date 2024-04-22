@@ -122,4 +122,5 @@ export const minimalPreset: BeaconPreset = {
 
   // ELECTRA
   MAX_DEPOSIT_RECEIPTS_PER_PAYLOAD: 4,
+  MAX_EXECUTION_LAYER_EXITS: 16,
 };
