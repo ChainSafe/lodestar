@@ -208,7 +208,10 @@ export function addSszContentTypeParser(server: fastify.FastifyInstance): void {
       // See https://github.com/fastify/help/issues/1012, it is not possible right now to define a schema per content type
       (request.context as unknown as Record<symbol, unknown>)[bodySchemaSymbol as symbol] = () => true;
 
-      return payload;
+      // We could just return the `Buffer` here which is a subclass of `Uint8Array` but downstream code does not require it
+      // and it's better to convert it here to avoid unexpected behavior such as `Buffer.prototype.slice` not copying memory
+      // See https://github.com/nodejs/node/issues/41588#issuecomment-1016269584
+      return new Uint8Array(payload.buffer, payload.byteOffset, payload.byteLength);
     }
   );
 }
