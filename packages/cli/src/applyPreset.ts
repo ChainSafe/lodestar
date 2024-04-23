@@ -89,37 +89,13 @@ else if (process.argv[2] === "dev") {
  * Empirical testing has shown that sizing the worker pool to be as large as
  * the number of logical cores is optimal but this may change in the future.
  */
-const defaultThreadpoolSize = os.availableParallelism();
 if (uvThreadpoolSize) {
   process.env.UV_THREADPOOL_SIZE = uvThreadpoolSize;
 } else if (process.env.UV_THREADPOOL_SIZE) {
   /* no-op let user-set value carry through */
 } else {
-  process.env.UV_THREADPOOL_SIZE = defaultThreadpoolSize.toString();
+  process.env.UV_THREADPOOL_SIZE = os.availableParallelism().toString();
 }
-
-if (isNaN(parseInt(`${process.env.UV_THREADPOOL_SIZE}`))) {
-  // eslint-disable-next-line no-console
-  console.warn(`UV_THREADPOOL_SIZE must be a number. Using default value of ${defaultThreadpoolSize}`);
-  process.env.UV_THREADPOOL_SIZE = defaultThreadpoolSize.toString();
-}
-
-/**
- * Help users ensure that thread pool is large enough for optimal performance
- *
- * Node reports available CPUs. There is enough idle time on the main and
- * network threads that setting UV_THREADPOOL_SIZE to $(nproc) provides the
- * best performance. Recommend this value to consumers
- */
-if (parseInt(process.env.UV_THREADPOOL_SIZE) < defaultThreadpoolSize) {
-  // eslint-disable-next-line no-console
-  console.warn(
-    `UV_THREADPOOL_SIZE is less than available CPUs: ${defaultThreadpoolSize}. This will cause performance degradation.`
-  );
-}
-
-// eslint-disable-next-line no-console
-console.log(`BLS libuv pool size: ${process.env.UV_THREADPOOL_SIZE}`);
 
 if (presetFile) {
   // Override the active preset with custom values from file

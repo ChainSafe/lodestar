@@ -1,3 +1,4 @@
+import os from "node:os";
 import path from "node:path";
 import {Registry} from "prom-client";
 import {ErrorAborted} from "@lodestar/utils";
@@ -44,6 +45,27 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
   const abortController = new AbortController();
 
   logger.info("Lodestar", {network, version, commit});
+
+  const defaultThreadpoolSize = os.availableParallelism();
+  logger.info(`BLS libuv pool size: ${process.env.UV_THREADPOOL_SIZE}`);
+  if (isNaN(parseInt(`${process.env.UV_THREADPOOL_SIZE}`))) {
+    logger.warn(`UV_THREADPOOL_SIZE must be a number. Using default value of ${defaultThreadpoolSize}`);
+    process.env.UV_THREADPOOL_SIZE = defaultThreadpoolSize.toString();
+  }
+  /**
+   * Help users ensure that thread pool is large enough for optimal performance
+   *
+   * Node reports available CPUs. There is enough idle time on the main and
+   * network threads that setting UV_THREADPOOL_SIZE to $(nproc) provides the
+   * best performance. Recommend this value to consumers
+   */
+  if (parseInt(`${process.env.UV_THREADPOOL_SIZE}`) < defaultThreadpoolSize) {
+    logger.warn(
+      `UV_THREADPOOL_SIZE is less than available CPUs: ${defaultThreadpoolSize}. This will cause performance degradation.`
+    );
+  }
+
+
   // Callback for beacon to request forced exit, for e.g. in case of irrecoverable
   // forkchoice errors
   const processShutdownCallback: ProcessShutdownCallback = (err) => {
