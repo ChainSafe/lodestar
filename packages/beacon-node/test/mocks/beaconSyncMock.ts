@@ -8,7 +8,9 @@ vi.mock("../../src/sync/index.js", async (importActual) => {
   const mod = await importActual<typeof import("../../src/sync/index.js")>();
 
   const BeaconSync = vi.fn().mockImplementation(() => {
-    const sync = {};
+    const sync = {
+      isSynced: vi.fn(),
+    };
     Object.defineProperty(sync, "state", {value: undefined, configurable: true});
 
     return sync;

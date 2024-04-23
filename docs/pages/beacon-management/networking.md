@@ -6,29 +6,28 @@ Lodestar will automatically connect to peers on the network. Peers are found thr
 
 Some of the important Lodestar flags related to networking are:
 
-- [`--discv5`](./beacon-cli.md#-discv5)
-- [`--listenAddress`](./beacon-cli.md#-listenaddress)
-- [`--port`](./beacon-cli.md#-port)
-- [`--discoveryPort`](./beacon-cli.md#-discoveryport)
-- [`--listenAddress6`](./beacon-cli.md#-listenaddress6)
-- [`--port6`](./beacon-cli.md#-port6)
-- [`--discoveryPort6`](./beacon-cli.md#-discoveryport6)
-- [`--bootnodes`](./beacon-cli.md#-bootnodes)
-- [`--deterministicLongLivedAttnets`](./beacon-cli.md#-deterministiclonglivedattnets)
-- [`--subscribeAllSubnets`](./beacon-cli.md#-subscribeallsubnets)
-- [`--disablePeerScoring`](./beacon-cli.md#-disablepeerscoring)
-- [`--enr.ip`](./beacon-cli.md#-enrip)
-- [`--enr.tcp`](./beacon-cli.md#-enrtcp)
-- [`--enr.udp`](./beacon-cli.md#-enrudp)
-- [`--enr.ip6`](./beacon-cli.md#-enrip6)
-- [`--enr.tcp6`](./beacon-cli.md#-enrtcp6)
-- [`--enr.udp6`](./beacon-cli.md#-enrudp6)
-- [`--nat`](./beacon-cli.md#-nat)
-- [`--private`](./beacon-cli.md#`-private`)
+- [`--discv5`](./beacon-cli#--discv5)
+- [`--listenAddress`](./beacon-cli#--listenaddress)
+- [`--port`](./beacon-cli#--port)
+- [`--discoveryPort`](./beacon-cli#--discoveryport)
+- [`--listenAddress6`](./beacon-cli#--listenaddress6)
+- [`--port6`](./beacon-cli#--port6)
+- [`--discoveryPort6`](./beacon-cli#--discoveryport6)
+- [`--bootnodes`](./beacon-cli#--bootnodes)
+- [`--subscribeAllSubnets`](./beacon-cli#--subscribeallsubnets)
+- [`--disablePeerScoring`](./beacon-cli#--disablepeerscoring)
+- [`--enr.ip`](./beacon-cli#--enrip)
+- [`--enr.tcp`](./beacon-cli#--enrtcp)
+- [`--enr.udp`](./beacon-cli#--enrudp)
+- [`--enr.ip6`](./beacon-cli#--enrip6)
+- [`--enr.tcp6`](./beacon-cli#--enrtcp6)
+- [`--enr.udp6`](./beacon-cli#--enrudp6)
+- [`--nat`](./beacon-cli#--nat)
+- [`--private`](./beacon-cli#--private)
 
 ## Peer Discovery (Discv5)
 
-In Ethereum, discv5 plays a pivotal role in the peer discovery process, facilitating nodes to find and locate each other in order to form the peer-to-peer network​. The process begins with an interaction between new nodes and bootnodes at start-up. Bootnodes are nodes with hard-coded addresses, or can be overridden via the cli flag [`--bootnodes`](./beacon-cli.md#-bootnodes), to bootstrap the discovery process​. Through a method called FINDNODE-NODES, a new node establishes a bond with each bootnode, and it returns a list of peers for the new node to connect to. Following this trail, the new node engages through FINDNODE-NODES with the provided peers to further establish a web of connections​.
+In Ethereum, discv5 plays a pivotal role in the peer discovery process, facilitating nodes to find and locate each other in order to form the peer-to-peer network​. The process begins with an interaction between new nodes and bootnodes at start-up. Bootnodes are nodes with hard-coded addresses, or can be overridden via the cli flag [`--bootnodes`](./beacon-cli#--bootnodes), to bootstrap the discovery process​. Through a method called FINDNODE-NODES, a new node establishes a bond with each bootnode, and it returns a list of peers for the new node to connect to. Following this trail, the new node engages through FINDNODE-NODES with the provided peers to further establish a web of connections​.
 
 Discv5 operates as a peer advertisement medium in this network, where nodes can act as both providers and consumers of data. Every participating node in the Discv5 protocol discovers peer data from other nodes and later relays it, making the discovery process dynamic and efficient​.
 

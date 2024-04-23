@@ -16,6 +16,7 @@ import {
   ContainerDataExecutionOptimistic,
   WithExecutionOptimistic,
   ContainerData,
+  WithFinalized,
 } from "../../../utils/index.js";
 import {HttpStatusCode} from "../../../utils/client/httpStatusCode.js";
 import {parseAcceptHeader, writeAcceptHeader} from "../../../utils/acceptHeader.js";
@@ -31,6 +32,11 @@ export type BlockId = RootHex | Slot | "head" | "genesis" | "finalized";
  * a later time. If the field is not present, assume the False value.
  */
 export type ExecutionOptimistic = boolean;
+
+/**
+ * True if the response references the finalized history of the chain, as determined by fork choice.
+ */
+export type Finalized = boolean;
 
 export type BlockHeaderResponse = {
   root: Root;
@@ -66,6 +72,7 @@ export type BlockV2Response<T extends ResponseFormat = "json"> = T extends "ssz"
         [HttpStatusCode.OK]: {
           data: allForks.SignedBeaconBlock;
           executionOptimistic: ExecutionOptimistic;
+          finalized: Finalized;
           version: ForkName;
         };
       },
@@ -103,6 +110,7 @@ export type Api = {
         [HttpStatusCode.OK]: {
           data: phase0.Attestation[];
           executionOptimistic: ExecutionOptimistic;
+          finalized: Finalized;
         };
       },
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
@@ -121,6 +129,7 @@ export type Api = {
         [HttpStatusCode.OK]: {
           data: BlockHeaderResponse;
           executionOptimistic: ExecutionOptimistic;
+          finalized: Finalized;
         };
       },
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
@@ -139,6 +148,7 @@ export type Api = {
         [HttpStatusCode.OK]: {
           data: BlockHeaderResponse[];
           executionOptimistic: ExecutionOptimistic;
+          finalized: Finalized;
         };
       },
       HttpStatusCode.BAD_REQUEST
@@ -157,6 +167,7 @@ export type Api = {
         [HttpStatusCode.OK]: {
           data: {root: Root};
           executionOptimistic: ExecutionOptimistic;
+          finalized: Finalized;
         };
       },
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
@@ -236,7 +247,11 @@ export type Api = {
     indices?: number[]
   ): Promise<
     ApiClientResponse<{
-      [HttpStatusCode.OK]: {executionOptimistic: ExecutionOptimistic; data: deneb.BlobSidecars};
+      [HttpStatusCode.OK]: {
+        data: deneb.BlobSidecars;
+        executionOptimistic: ExecutionOptimistic;
+        finalized: Finalized;
+      };
     }>
   >;
 };
@@ -319,6 +334,12 @@ export function getReqSerializers(config: ChainForkConfig): ReqSerializers<Api, 
     fromJson: (data) => getSignedBlindedBeaconBlockType(data as allForks.SignedBlindedBeaconBlock).fromJson(data),
   };
 
+  function extractSlot(signedBlockOrContents: allForks.SignedBeaconBlockOrContents): Slot {
+    return isSignedBlockContents(signedBlockOrContents)
+      ? signedBlockOrContents.signedBlock.message.slot
+      : signedBlockOrContents.message.slot;
+  }
+
   return {
     getBlock: getBlockReq,
     getBlockV2: getBlockReq,
@@ -335,6 +356,7 @@ export function getReqSerializers(config: ChainForkConfig): ReqSerializers<Api, 
       writeReq: (item, {broadcastValidation} = {}) => ({
         body: AllForksSignedBlockOrContents.toJson(item),
         query: {broadcast_validation: broadcastValidation},
+        headers: {"Eth-Consensus-Version": config.getForkName(extractSlot(item))},
       }),
       parseReq: ({body, query}) => [
         AllForksSignedBlockOrContents.fromJson(body),
@@ -350,6 +372,7 @@ export function getReqSerializers(config: ChainForkConfig): ReqSerializers<Api, 
       writeReq: (item, {broadcastValidation}) => ({
         body: AllForksSignedBlindedBlock.toJson(item),
         query: {broadcast_validation: broadcastValidation},
+        headers: {"Eth-Consensus-Version": config.getForkName(item.message.slot)},
       }),
       parseReq: ({body, query}) => [
         AllForksSignedBlindedBlock.fromJson(body),
@@ -387,11 +410,11 @@ export function getReturnTypes(): ReturnTypes<Api> {
 
   return {
     getBlock: ContainerData(ssz.phase0.SignedBeaconBlock),
-    getBlockV2: WithExecutionOptimistic(WithVersion((fork) => ssz[fork].SignedBeaconBlock)),
-    getBlockAttestations: ContainerDataExecutionOptimistic(ArrayOf(ssz.phase0.Attestation)),
-    getBlockHeader: ContainerDataExecutionOptimistic(BeaconHeaderResType),
-    getBlockHeaders: ContainerDataExecutionOptimistic(ArrayOf(BeaconHeaderResType)),
-    getBlockRoot: ContainerDataExecutionOptimistic(RootContainer),
-    getBlobSidecars: ContainerDataExecutionOptimistic(ssz.deneb.BlobSidecars),
+    getBlockV2: WithFinalized(WithExecutionOptimistic(WithVersion((fork) => ssz[fork].SignedBeaconBlock))),
+    getBlockAttestations: WithFinalized(ContainerDataExecutionOptimistic(ArrayOf(ssz.phase0.Attestation))),
+    getBlockHeader: WithFinalized(ContainerDataExecutionOptimistic(BeaconHeaderResType)),
+    getBlockHeaders: WithFinalized(ContainerDataExecutionOptimistic(ArrayOf(BeaconHeaderResType))),
+    getBlockRoot: WithFinalized(ContainerDataExecutionOptimistic(RootContainer)),
+    getBlobSidecars: WithFinalized(ContainerDataExecutionOptimistic(ssz.deneb.BlobSidecars)),
   };
 }

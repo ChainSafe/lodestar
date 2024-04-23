@@ -25,7 +25,7 @@ export function toBeaconHeaderResponse(
 export async function resolveBlockId(
   chain: IBeaconChain,
   blockId: routes.beacon.BlockId
-): Promise<{block: allForks.SignedBeaconBlock; executionOptimistic: boolean}> {
+): Promise<{block: allForks.SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean}> {
   const res = await resolveBlockIdOrNull(chain, blockId);
   if (!res) {
     throw new ApiError(404, `No block found for id '${blockId}'`);
@@ -37,7 +37,7 @@ export async function resolveBlockId(
 async function resolveBlockIdOrNull(
   chain: IBeaconChain,
   blockId: routes.beacon.BlockId
-): Promise<{block: allForks.SignedBeaconBlock; executionOptimistic: boolean} | null> {
+): Promise<{block: allForks.SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null> {
   blockId = String(blockId).toLowerCase();
   if (blockId === "head") {
     return chain.getBlockByRoot(chain.forkChoice.getHead().blockRoot);

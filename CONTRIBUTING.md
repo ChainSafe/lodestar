@@ -47,11 +47,15 @@ Contributing to tests:
   - Do not pull unpinned versions from DockerHub (use deterministic tag) or Github (checkout commit not branch).
   - Carefully design tests that depend on timing sensitive events like p2p network e2e tests. Consider that Github runners are significantly less powerful than your development environment.
 
+## Devcontainer
+
+A [devcontainer](https://containers.dev/) [configuration](.devcontainer/devcontainer.json) is provided to help speed up linux based development environment setup. It will be used by [GitHub Codespaces](https://github.com/features/codespaces) or directly inside VS Code via your local through this [extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers).
+
 ### Common Issues
 
 **Error: [vitest] Cannot mock "../../src/db/repositories/index.js" because it is already loaded by "src/db/beacon.ts"**
 
-If you observe any error in tests with matching to above error message, that implies you are loading the mocks in the wrong order. The correct order is to import the mocks first and then the actual module. We suggest to import the mocks on very top before any local modules. 
+If you observe any error in tests with matching to above error message, that implies you are loading the mocks in the wrong order. The correct order is to import the mocks first and then the actual module. We suggest to import the mocks on very top before any local modules.
 
 **✖ Error: Cannot find package 'async_hooks' imported from**
 
@@ -250,15 +254,9 @@ node scripts/download_dashboards.mjs
 
 ## Contributing to Documentation
 
-When submitting PRs for documentation updates, build and run the documentation locally to ensure functionality before submission. For first time documentation contributors, install the python dependencies with `yarn docs:install`. Build the documentation locally with `yarn docs:build` and serve with `yarn docs:serve`
+When submitting PRs for documentation updates, build and run the documentation locally to ensure functionality before submission. First generate the CLI documentation with `yarn docs:build`. Then build and serve the documentation locally with `yarn docs:serve`.
 
-Your locally served documentation will then be accessible at http://localhost:8000.
-
-If you run into build issues due to circular dependencies, branch switching or other incompatibilities, try cleaning your modules and rebuild your dependencies with:
-
-```sh
-yarn clean && yarn clean:nm && yarn && yarn build
-```
+Your locally served documentation will then be accessible at http://localhost:3000/lodestar/.
 
 We also use a spelling [word list](https://github.com/ChainSafe/lodestar/blob/unstable/.wordlist.txt) as part of our documentation checks. If using unrecognized words or abbreviations, please extend the word list to pass checks. Make sure the list is sorted with `./scripts/wordlist_sort.sh` and checked with `./scripts/wordlist_sort_check.sh` for sorting and duplicates.
 

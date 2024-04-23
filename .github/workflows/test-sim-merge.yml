@@ -71,51 +71,6 @@ jobs:
           ENGINE_PORT: 8551
           ETH_PORT: 8661
 
-      - name: Pull geth withdrawals
-        run: docker pull $GETH_WITHDRAWALS_IMAGE
-
-      - name: Test Lodestar <> geth withdrawals
-        run: yarn test:sim:withdrawals
-        working-directory: packages/beacon-node
-        env:
-          EL_BINARY_DIR: ${{ env.GETH_WITHDRAWALS_IMAGE }}
-          EL_SCRIPT_DIR: gethdocker
-
-      - name: Pull ethereumjs withdrawals
-        run: docker pull $ETHEREUMJS_WITHDRAWALS_IMAGE
-
-      - name: Test Lodestar <> ethereumjs withdrawals
-        run: yarn test:sim:withdrawals
-        working-directory: packages/beacon-node
-        env:
-          EL_BINARY_DIR: ${{ env.ETHEREUMJS_WITHDRAWALS_IMAGE }}
-          EL_SCRIPT_DIR: ethereumjsdocker
-
-      # Disable nethermind build as the withdrawal test config seems to be no
-      # longer available, enable after grabbing a build which has one
-      #
-      # - name: Pull nethermind withdrawals
-      #   run: docker pull $NETHERMIND_WITHDRAWALS_IMAGE
-
-      # - name: Test Lodestar <> nethermind withdrawals
-      #   run: yarn test:sim:withdrawals
-      #   working-directory: packages/beacon-node
-      #   env:
-      #     EL_BINARY_DIR: ${{ env.NETHERMIND_WITHDRAWALS_IMAGE }}
-      #     EL_SCRIPT_DIR: netherminddocker
-
-      # Enable the blob sims when stable images
-      # - name: Pull ethereumjs blobs
-      #   run: docker pull $ETHEREUMJS_BLOBS_IMAGE
-
-      # - name: Test Lodestar <> ethereumjs blobs
-      #   run: yarn test:sim:blobs
-      #   working-directory: packages/beacon-node
-      #   env:
-      #     EL_BINARY_DIR: ${{ env.ETHEREUMJS_BLOBS_IMAGE }}
-      #     EL_SCRIPT_DIR: ethereumjsdocker
-      #     DEV_RUN: true
-
       - name: Upload debug log test files
         if: ${{ always() }}
         uses: actions/upload-artifact@v4

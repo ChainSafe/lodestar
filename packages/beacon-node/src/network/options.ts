@@ -25,8 +25,8 @@ export interface NetworkOptions
 }
 
 export const defaultNetworkOptions: NetworkOptions = {
-  maxPeers: 55, // Allow some room above targetPeers for new inbound peers
-  targetPeers: 50,
+  maxPeers: 110, // Allow some room above targetPeers for new inbound peers
+  targetPeers: 100,
   localMultiaddrs: ["/ip4/0.0.0.0/tcp/9000"],
   bootMultiaddrs: [],
   /** disabled by default */
@@ -35,8 +35,6 @@ export const defaultNetworkOptions: NetworkOptions = {
   useWorker: true,
   // default set via research in https://github.com/ChainSafe/lodestar/issues/2115
   maxYoungGenerationSizeMb: 152,
-  // subscribe to 2 subnets per node since v1.10
-  deterministicLongLivedAttnets: true,
   // subscribe 2 slots before aggregator dutied slot to get stable mesh peers as monitored on goerli
   slotsToSubscribeBeforeAggregatorDuty: 2,
   // this should only be set to true if useWorker is true

@@ -16,7 +16,6 @@ import {PeerManager} from "../peers/peerManager.js";
 import {ReqRespBeaconNode} from "../reqresp/ReqRespBeaconNode.js";
 import {OutgoingRequestArgs, GetReqRespHandlerFn} from "../reqresp/types.js";
 import {Eth2Gossipsub, getCoreTopicsAtFork} from "../gossip/index.js";
-import {AttnetsService} from "../subnets/attnetsService.js";
 import {SyncnetsService} from "../subnets/syncnetsService.js";
 import {FORK_EPOCH_LOOKAHEAD, getActiveForks} from "../forks.js";
 import {NetworkOptions} from "../options.js";
@@ -33,7 +32,7 @@ import {Discv5Worker} from "../discv5/index.js";
 import {LocalStatusCache} from "../statusCache.js";
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {peerIdFromString, peerIdToString} from "../../util/peerId.js";
-import {DLLAttnetsService} from "../subnets/dllAttnetsService.js";
+import {AttnetsService} from "../subnets/attnetsService.js";
 import {NetworkCoreMetrics, createNetworkCoreMetrics} from "./metrics.js";
 import {INetworkCore, MultiaddrStr, PeerIdStr} from "./types.js";
 
@@ -192,14 +191,12 @@ export class NetworkCore implements INetworkCore {
     await libp2p.start();
 
     await reqResp.start();
-    // should be called before DLLAttnetsService constructor so that node subscribe to deterministic attnet topics
+    // should be called before AttnetsService constructor so that node subscribe to deterministic attnet topics
     await gossip.start();
 
     const enr = opts.discv5?.enr;
     const nodeId = enr ? fromHexString(ENR.decodeTxt(enr).nodeId) : null;
-    const attnetsService = opts.deterministicLongLivedAttnets
-      ? new DLLAttnetsService(config, clock, gossip, metadata, logger, metrics, nodeId, opts)
-      : new AttnetsService(config, clock, gossip, metadata, logger, metrics, opts);
+    const attnetsService = new AttnetsService(config, clock, gossip, metadata, logger, metrics, nodeId, opts);
     const syncnetsService = new SyncnetsService(config, clock, gossip, metadata, logger, metrics, opts);
 
     const peerManager = await PeerManager.init(

@@ -24,29 +24,31 @@ export function getBeaconStateApi({
 }: Pick<ApiModules, "chain" | "config">): ServerApi<routes.beacon.state.Api> {
   async function getState(
     stateId: routes.beacon.StateId
-  ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean}> {
+  ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean}> {
     return resolveStateId(chain, stateId);
   }
 
   return {
     async getStateRoot(stateId) {
-      const {state, executionOptimistic} = await getState(stateId);
+      const {state, executionOptimistic, finalized} = await getState(stateId);
       return {
         executionOptimistic,
+        finalized,
         data: {root: state.hashTreeRoot()},
       };
     },
 
     async getStateFork(stateId) {
-      const {state, executionOptimistic} = await getState(stateId);
+      const {state, executionOptimistic, finalized} = await getState(stateId);
       return {
         executionOptimistic,
+        finalized,
         data: state.fork,
       };
     },
 
     async getStateRandao(stateId, epoch) {
-      const {state, executionOptimistic} = await getState(stateId);
+      const {state, executionOptimistic, finalized} = await getState(stateId);
       const stateEpoch = computeEpochAtSlot(state.slot);
       const usedEpoch = epoch ?? stateEpoch;
 
@@ -58,6 +60,7 @@ export function getBeaconStateApi({
 
       return {
         executionOptimistic,
+        finalized,
         data: {
           randao,
         },
@@ -65,9 +68,10 @@ export function getBeaconStateApi({
     },
 
     async getStateFinalityCheckpoints(stateId) {
-      const {state, executionOptimistic} = await getState(stateId);
+      const {state, executionOptimistic, finalized} = await getState(stateId);
       return {
         executionOptimistic,
+        finalized,
         data: {
           currentJustified: state.currentJustifiedCheckpoint,
           previousJustified: state.previousJustifiedCheckpoint,
@@ -77,7 +81,7 @@ export function getBeaconStateApi({
     },
 
     async getStateValidators(stateId, filters) {
-      const {state, executionOptimistic} = await resolveStateId(chain, stateId);
+      const {state, executionOptimistic, finalized} = await resolveStateId(chain, stateId);
       const currentEpoch = getCurrentEpoch(state);
       const {validators, balances} = state; // Get the validators sub tree once for all the loop
       const {pubkey2index} = chain.getHeadState().epochCtx;
@@ -103,12 +107,14 @@ export function getBeaconStateApi({
         }
         return {
           executionOptimistic,
+          finalized,
           data: validatorResponses,
         };
       } else if (filters?.status) {
         const validatorsByStatus = filterStateValidatorsByStatus(filters.status, state, pubkey2index, currentEpoch);
         return {
           executionOptimistic,
+          finalized,
           data: validatorsByStatus,
         };
       }
@@ -123,12 +129,17 @@ export function getBeaconStateApi({
 
       return {
         executionOptimistic,
+        finalized,
         data: resp,
       };
     },
 
+    async postStateValidators(stateId, filters) {
+      return this.getStateValidators(stateId, filters);
+    },
+
     async getStateValidator(stateId, validatorId) {
-      const {state, executionOptimistic} = await resolveStateId(chain, stateId);
+      const {state, executionOptimistic, finalized} = await resolveStateId(chain, stateId);
       const {pubkey2index} = chain.getHeadState().epochCtx;
 
       const resp = getStateValidatorIndex(validatorId, state, pubkey2index);
@@ -139,6 +150,7 @@ export function getBeaconStateApi({
       const validatorIndex = resp.validatorIndex;
       return {
         executionOptimistic,
+        finalized,
         data: toValidatorResponse(
           validatorIndex,
           state.validators.getReadonly(validatorIndex),
@@ -149,7 +161,7 @@ export function getBeaconStateApi({
     },
 
     async getStateValidatorBalances(stateId, indices) {
-      const {state, executionOptimistic} = await resolveStateId(chain, stateId);
+      const {state, executionOptimistic, finalized} = await resolveStateId(chain, stateId);
 
       if (indices) {
         const headState = chain.getHeadState();
@@ -169,6 +181,7 @@ export function getBeaconStateApi({
         }
         return {
           executionOptimistic,
+          finalized,
           data: balances,
         };
       }
@@ -181,12 +194,17 @@ export function getBeaconStateApi({
       }
       return {
         executionOptimistic,
+        finalized,
         data: resp,
       };
     },
 
+    async postStateValidatorBalances(stateId, indices) {
+      return this.getStateValidatorBalances(stateId, indices);
+    },
+
     async getEpochCommittees(stateId, filters) {
-      const {state, executionOptimistic} = await resolveStateId(chain, stateId);
+      const {state, executionOptimistic, finalized} = await resolveStateId(chain, stateId);
 
       const stateCached = state as CachedBeaconStateAltair;
       if (stateCached.epochCtx === undefined) {
@@ -218,6 +236,7 @@ export function getBeaconStateApi({
 
       return {
         executionOptimistic,
+        finalized,
         data: committeesFlat,
       };
     },
@@ -228,7 +247,7 @@ export function getBeaconStateApi({
      */
     async getEpochSyncCommittees(stateId, epoch) {
       // TODO: Should pick a state with the provided epoch too
-      const {state, executionOptimistic} = await resolveStateId(chain, stateId);
+      const {state, executionOptimistic, finalized} = await resolveStateId(chain, stateId);
 
       // TODO: If possible compute the syncCommittees in advance of the fork and expose them here.
       // So the validators can prepare and potentially attest the first block. Not critical tho, it's very unlikely
@@ -246,6 +265,7 @@ export function getBeaconStateApi({
 
       return {
         executionOptimistic,
+        finalized,
         data: {
           validators: syncCommitteeCache.validatorIndices,
           // TODO: This is not used by the validator and will be deprecated soon

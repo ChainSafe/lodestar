@@ -1,18 +1,20 @@
-import EventEmitter from "events";
-import {type StrictEventEmitter} from "strict-event-emitter-types";
+import mitt from "mitt";
 import {type allForks, type SyncPeriod} from "@lodestar/types";
 import {type Api, ApiError, routes} from "@lodestar/api";
 import {type ForkName} from "@lodestar/params";
+import {MittEmitter} from "../events.js";
 import {type LightClientTransport} from "./interface.js";
 
 export type LightClientRestEvents = {
-  [routes.events.EventType.lightClientFinalityUpdate]: allForks.LightClientFinalityUpdate;
-  [routes.events.EventType.lightClientOptimisticUpdate]: allForks.LightClientOptimisticUpdate;
+  [routes.events.EventType.lightClientFinalityUpdate]: (update: allForks.LightClientFinalityUpdate) => void;
+  [routes.events.EventType.lightClientOptimisticUpdate]: (update: allForks.LightClientOptimisticUpdate) => void;
 };
+
+export type LightClientRestEmitter = MittEmitter<LightClientRestEvents>;
 
 export class LightClientRestTransport implements LightClientTransport {
   private controller = new AbortController();
-  private readonly eventEmitter: StrictEventEmitter<EventEmitter, LightClientRestEvents> = new EventEmitter();
+  private readonly eventEmitter: LightClientRestEmitter = mitt();
   private subscribedEventstream = false;
 
   constructor(private readonly api: Api) {}

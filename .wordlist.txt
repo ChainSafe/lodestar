@@ -12,12 +12,14 @@ CTRL
 Casper
 Chai
 ChainSafe
+Codespaces
 Customizations
 DPoS
 DVs
 Discv
 DockerHub
 Dockerized
+Docusaurus
 EIP
 EIPs
 EL
@@ -39,6 +41,7 @@ Geth
 Github
 Gossipsub
 Grafana
+HTTPS
 HackMD
 Homebrew
 IPFS
@@ -91,6 +94,7 @@ api
 async
 backfill
 beaconcha
+blockRoot
 blockchain
 bootnode
 bootnodes
@@ -114,6 +118,7 @@ ddos
 decrypt
 deserialization
 dev
+devcontainer
 devnet
 devnets
 devtools

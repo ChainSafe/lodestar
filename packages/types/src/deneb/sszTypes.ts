@@ -5,7 +5,6 @@ import {
   FIELD_ELEMENTS_PER_BLOB,
   MAX_REQUEST_BLOB_SIDECARS,
   BYTES_PER_FIELD_ELEMENT,
-  BLOCK_BODY_EXECUTION_PAYLOAD_DEPTH as EXECUTION_PAYLOAD_DEPTH,
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
   SLOTS_PER_EPOCH,
   KZG_COMMITMENT_INCLUSION_PROOF_DEPTH,
@@ -242,7 +241,7 @@ export const LightClientHeader = new ContainerType(
   {
     beacon: phase0Ssz.BeaconBlockHeader,
     execution: ExecutionPayloadHeader,
-    executionBranch: new VectorCompositeType(Bytes32, EXECUTION_PAYLOAD_DEPTH),
+    executionBranch: capellaSsz.LightClientHeader.fields.executionBranch,
   },
   {typeName: "LightClientHeader", jsonCase: "eth2"}
 );

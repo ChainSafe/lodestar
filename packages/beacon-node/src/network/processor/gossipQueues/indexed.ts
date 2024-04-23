@@ -18,7 +18,7 @@ const MINIMUM_WAIT_TIME_MS = 50;
  * This implementation tries to get the most items with same key:
  *   - index items by indexFn using a map
  *   - store keys with at least minChunkSize
- *   - on next, pick the the last key with minChunkSize, pop up to maxChunkSize items
+ *   - on next, pick the last key with minChunkSize, pop up to maxChunkSize items
  *   - on delete, pick the 1st key in the map and delete the 1st item in the list
  * Although it does not strictly follow LIFO, it tries to have that behavior:
  *   - On delete, get the first key and the first item of respective list

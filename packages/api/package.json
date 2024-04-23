@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.17.0",
+  "version": "1.18.0",
   "type": "module",
   "exports": {
     ".": {
@@ -67,12 +67,12 @@
     "check-readme": "typescript-docs-verifier"
   },
   "dependencies": {
-    "@chainsafe/persistent-merkle-tree": "^0.6.1",
-    "@chainsafe/ssz": "^0.14.3",
-    "@lodestar/config": "^1.17.0",
-    "@lodestar/params": "^1.17.0",
-    "@lodestar/types": "^1.17.0",
-    "@lodestar/utils": "^1.17.0",
+    "@chainsafe/persistent-merkle-tree": "^0.7.1",
+    "@chainsafe/ssz": "^0.15.1",
+    "@lodestar/config": "^1.18.0",
+    "@lodestar/params": "^1.18.0",
+    "@lodestar/types": "^1.18.0",
+    "@lodestar/utils": "^1.18.0",
     "eventsource": "^2.0.2",
     "qs": "^6.11.1"
   },
@@ -80,7 +80,7 @@
     "@types/eventsource": "^1.1.11",
     "@types/qs": "^6.9.7",
     "ajv": "^8.12.0",
-    "fastify": "^4.19.0"
+    "fastify": "^4.26.2"
   },
   "keywords": [
     "ethereum",

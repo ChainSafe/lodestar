@@ -1,8 +1,10 @@
+---
+title: Starting a Node
+---
+
 # Beacon management
 
 The following instructions are required to setup and run a Lodestar beacon node.
-
-[TOC]
 
 ## Connect to mainnet or a public testnet
 
@@ -22,10 +24,9 @@ To select a known testnet or mainnet, use the `--network` flag. `mainnet` is sel
 
 Post-Merge Ethereum will require [secure authentication with the Engine API](https://github.com/ethereum/execution-apis/blob/main/src/engine/authentication.md) connection on your chosen Execution node.
 
-<!-- prettier-ignore-start -->
-!!! info
-    Post-Merge Ethereum **requires** a secure, authenticated connection to the Execution client on port 8551. We recommend setting this up now to ensure a proper configuration before the Merge.
-<!-- prettier-ignore-end -->
+:::info
+Post-Merge Ethereum **requires** a secure, authenticated connection to the Execution client on port 8551. We recommend setting this up now to ensure a proper configuration before the Merge.
+:::
 
 ### Generate a secret key
 
@@ -69,7 +70,7 @@ In case execution-layer clients are available at different locations, use `--exe
 Immediately you should see confirmation that the node has started
 
 ```txt
-pr-20 15:12:45.274[]                 info: Lodestar network=mainnet, version=v1.7.2, commit=
+Apr-20 15:12:45.274[]                 info: Lodestar network=mainnet, version=v1.7.2, commit=
 Apr-20 15:12:45.327[]                 info: Connected to LevelDB database path=/data/mt1/chain-db
 Apr-20 15:12:57.747[]                 info: Initializing beacon from a valid db state slot=6264480, epoch=195765, stateRoot=0x8133cd4d0be59c3e94405f902fe0ad68ffaa5013b525dddb6285b91ad79716f6, isWithinWeakSubjectivityPeriod=true
 Apr-20 15:13:18.077[network]          info: PeerId 16Uiu2HAmDsGet67va6VCnaW2Tu1Ae2yujiDMnmURMMWNvssER7ZQ, Multiaddrs /ip4/127.0.0.1/tcp/9000/p2p/16Uiu2HAmDsGet67va6VCnaW2Tu1Ae2yujiDMnmURMMWNvssER7ZQ,/ip4/10.244.0.199/tcp/9000/p2p/16Uiu2HAmDsGet67va6VCnaW2Tu1Ae2yujiDMnmURMMWNvssER7ZQ
@@ -85,19 +86,17 @@ Apr-20 15:15:01.446[sync]             info: Subscribed gossip core topics
 Apr-20 15:15:05.000[]                 info: Synced - slot: 6264973 - head: 0x90ea…c655 - exec-block: valid(17088521 0xca9b…) - finalized: 0x6981…682f:195778 - peers: 6
 ```
 
-<!-- prettier-ignore-start -->
-!!! info
-    If your node is stuck with `Searching for peers` review your network configuration to make sure your ports are open.
-<!-- prettier-ignore-end -->
+:::info
+If your node is stuck with `Searching for peers` review your network configuration to make sure your ports are open.
+:::
 
 By default, Lodestar stores all configuration and chain data at the path `$XDG_DATA_HOME/lodestar/$NETWORK_NAME`.
 
 A young testnet should take a few hours to sync. If you see multiple or consistent errors in the logs, please open a [Github issue](https://github.com/ChainSafe/lodestar/issues/new) or reach out to us in [Discord](https://discord.gg/yjyvFRP). Just by reporting anomalies you are helping accelerate the progress of Ethereum Consensus, thanks for contributing!
 
-<!-- prettier-ignore-start -->
-!!! warning
-    It is dangerous to expose your Beacon APIs publicly as there is no default authentication mechanism provided. Ensure your beacon node host is not exposing ports 8545 or 9596 outside of your internal network.
-<!-- prettier-ignore-end -->
+:::warning
+It is dangerous to expose your Beacon APIs publicly as there is no default authentication mechanism provided. Ensure your beacon node host is not exposing ports 8545 or 9596 outside of your internal network.
+:::
 
 ### Checkpoint Sync
 
@@ -113,11 +112,11 @@ Just supply these **extra arguments** to your beacon node command:
 
 In case you really trust `checkpointSyncUrl` then you may skip providing `wssCheckpoint`, which will then result into your beacon node syncing and starting off the recently finalized state from the trusted URL.
 
-<!-- prettier-ignore-start -->
-!!! warning
-    Please use this option very carefully (and at your own risk), a malicious server URL can put you on the wrong chain with a danger of you losing your funds by social engineering.
+:::warning
+Please use this option very carefully (and at your own risk), a malicious server URL can put you on the wrong chain with a danger of you losing your funds by social engineering.
 If possible, validate your `wssCheckpoint` from multiple places (e.g. different client distributions) or from other trusted sources. This will highly reduce the risk of starting off on a malicious chain.
-<!-- prettier-ignore-end -->
+This list of [public endpoints](https://eth-clients.github.io/checkpoint-sync-endpoints/) maintained by the Ethereum community may be used for reference.
+:::
 
 **Taking too long to sync?**
 

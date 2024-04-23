@@ -1,5 +1,7 @@
 import {Signer, SignerLocal, SignerRemote, SignerType} from "@lodestar/validator";
 import {LogLevel, Logger, toSafePrintableUrl} from "@lodestar/utils";
+import {YargsError} from "../../../util/errors.js";
+import {IValidatorCliArgs} from "../options.js";
 
 /**
  * Log each pubkeys for auditing out keys are loaded from the logs
@@ -26,8 +28,8 @@ export function logSigners(logger: Pick<Logger, LogLevel.info>, signers: Signer[
     }
   }
 
-  for (const {url, pubkeys} of groupExternalSignersByUrl(remoteSigners)) {
-    logger.info(`External signers on URL: ${toSafePrintableUrl(url)}`);
+  for (const {url, pubkeys} of groupRemoteSignersByUrl(remoteSigners)) {
+    logger.info(`Remote signers on URL: ${toSafePrintableUrl(url)}`);
     for (const pubkey of pubkeys) {
       logger.info(pubkey);
     }
@@ -37,17 +39,43 @@ export function logSigners(logger: Pick<Logger, LogLevel.info>, signers: Signer[
 /**
  * Only used for logging remote signers grouped by URL
  */
-function groupExternalSignersByUrl(externalSigners: SignerRemote[]): {url: string; pubkeys: string[]}[] {
+function groupRemoteSignersByUrl(remoteSigners: SignerRemote[]): {url: string; pubkeys: string[]}[] {
   const byUrl = new Map<string, {url: string; pubkeys: string[]}>();
 
-  for (const externalSigner of externalSigners) {
-    let x = byUrl.get(externalSigner.url);
+  for (const remoteSigner of remoteSigners) {
+    let x = byUrl.get(remoteSigner.url);
     if (!x) {
-      x = {url: externalSigner.url, pubkeys: []};
-      byUrl.set(externalSigner.url, x);
+      x = {url: remoteSigner.url, pubkeys: []};
+      byUrl.set(remoteSigner.url, x);
     }
-    x.pubkeys.push(externalSigner.pubkey);
+    x.pubkeys.push(remoteSigner.pubkey);
   }
 
   return Array.from(byUrl.values());
+}
+
+/**
+ * Notify user if there are no signers at startup, this might be intended but could also be due to
+ * misconfiguration. It is possible that signers are added later via keymanager or if an external signer
+ * is connected with fetching enabled, but otherwise exit the process and suggest a different configuration.
+ */
+export function warnOrExitNoSigners(args: IValidatorCliArgs, logger: Pick<Logger, LogLevel.warn>): void {
+  if (args["keymanager"] && !args["externalSigner.fetch"]) {
+    logger.warn("No local keystores or remote keys found with current args, expecting to be added via keymanager");
+  } else if (!args["keymanager"] && args["externalSigner.fetch"]) {
+    logger.warn("No remote keys found with current args, expecting to be added to external signer and fetched later");
+  } else if (args["keymanager"] && args["externalSigner.fetch"]) {
+    logger.warn(
+      "No local keystores or remote keys found with current args, expecting to be added via keymanager or fetched from external signer later"
+    );
+  } else {
+    if (args["externalSigner.url"]) {
+      throw new YargsError(
+        "No remote keys found with current args, start with --externalSigner.fetch to automatically fetch from external signer"
+      );
+    }
+    throw new YargsError(
+      "No local keystores or remote keys found with current args, start with --keymanager if intending to add them later via keymanager"
+    );
+  }
 }

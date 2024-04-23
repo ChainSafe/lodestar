@@ -3,7 +3,7 @@ import {SignaturePolicy, TopicStr} from "@chainsafe/libp2p-gossipsub/types";
 import {PeerScoreParams} from "@chainsafe/libp2p-gossipsub/score";
 import {MetricsRegister, TopicLabel, TopicStrToLabel} from "@chainsafe/libp2p-gossipsub/metrics";
 import {BeaconConfig} from "@lodestar/config";
-import {ATTESTATION_SUBNET_COUNT, ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
+import {ATTESTATION_SUBNET_COUNT, ForkName, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {Logger, Map2d, Map2dArr} from "@lodestar/utils";
 
 import {RegistryMetricCreator} from "../../metrics/index.js";
@@ -99,7 +99,8 @@ export class Eth2Gossipsub extends GossipSub {
       fanoutTTL: 60 * 1000,
       mcacheLength: 6,
       mcacheGossip: 3,
-      seenTTL: 550 * GOSSIPSUB_HEARTBEAT_INTERVAL,
+      // this should be in ms
+      seenTTL: config.SECONDS_PER_SLOT * SLOTS_PER_EPOCH * 2 * 1000,
       scoreParams,
       scoreThresholds: gossipScoreThresholds,
       // For a single stream, await processing each RPC before processing the next
@@ -125,6 +126,8 @@ export class Eth2Gossipsub extends GossipSub {
       asyncValidation: true,
 
       maxOutboundBufferSize: MAX_OUTBOUND_BUFFER_SIZE,
+      // serialize message once and send to all peers when publishing
+      batchPublish: true,
     });
     this.scoreParams = scoreParams;
     this.config = config;

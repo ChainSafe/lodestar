@@ -2,8 +2,8 @@ import {EventEmitter} from "node:events";
 import path from "node:path";
 import {Logger} from "@lodestar/logger";
 import {IRunner, Job, JobOptions, RunnerEvent, RunnerType} from "../interfaces.js";
-import {ChildProcessRunner} from "./ChildProcessRunner.js";
-import {DockerRunner} from "./DockerRunner.js";
+import {ChildProcessRunner} from "./childProcessRunner.js";
+import {DockerRunner} from "./dockerRunner.js";
 
 export class Runner implements IRunner {
   readonly logger: Logger;

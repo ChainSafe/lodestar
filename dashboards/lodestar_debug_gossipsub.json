@@ -1150,6 +1150,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1233,6 +1234,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1315,6 +1317,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1408,6 +1411,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1517,6 +1521,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1596,6 +1601,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1677,6 +1683,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1773,6 +1780,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1988,6 +1996,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -2069,6 +2078,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -2085,7 +2095,8 @@
               "mode": "off"
             }
           },
-          "mappings": []
+          "mappings": [],
+          "unit": "percentunit"
         },
         "overrides": []
       },
@@ -2116,7 +2127,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "(sum(rate(gossipsub_msg_received_status_total{status=\"duplicate\",topic!~\"light.*\"} [32m])) by (topic))\n/\n(sum(rate(gossipsub_msg_received_status_total{status=\"valid\",topic!~\"light.*\"} [32m])) by (topic))",
+          "expr": "(sum(rate(gossipsub_pre_validation_duplicate_total{topic!~\"light.*\"} [32m])) by (topic))\n/\n(sum(rate(gossipsub_msg_received_prevalidation_total{topic!~\"light.*\"} [32m])) by (topic))",
           "interval": "",
           "legendFormat": "{{topic}} {{status}}",
           "range": true,
@@ -2150,6 +2161,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -2197,10 +2209,12 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
           "exemplar": false,
-          "expr": "rate(gossipsub_msg_received_status_total{status=\"valid\"} [$rate_interval])",
+          "expr": "rate(gossipsub_pre_validation_valid_total [$rate_interval])",
           "interval": "",
           "legendFormat": "{{topic}}",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -2231,6 +2245,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -2278,10 +2293,12 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
           "exemplar": false,
-          "expr": "(sum(rate(gossipsub_msg_received_prevalidation_total [32m])) by (topic))\n/\n(sum(rate(gossipsub_msg_received_status_total{status=\"valid\"} [32m])) by (topic))",
+          "expr": "(sum(rate(gossipsub_msg_received_prevalidation_total [32m])) by (topic))\n/\n(sum(rate(gossipsub_pre_validation_valid_total [32m])) by (topic))",
           "interval": "",
           "legendFormat": "{{topic}}",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -2312,6 +2329,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -2359,10 +2377,12 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
           "exemplar": false,
-          "expr": "rate(gossipsub_msg_received_invalid_total[$rate_interval])",
+          "expr": "rate(gossipsub_pre_validation_invalid_total[$rate_interval])",
           "interval": "",
           "legendFormat": "{{topic}}",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -2393,6 +2413,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -2475,6 +2496,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -2584,6 +2606,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -2683,7 +2706,7 @@
         "content": "<center><strong>\nPublish / Forwarded messages\n</strong>\n</center>",
         "mode": "html"
       },
-      "pluginVersion": "9.3.2",
+      "pluginVersion": "10.1.1",
       "type": "text"
     },
     {
@@ -2710,6 +2733,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -2789,6 +2813,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -2869,6 +2894,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -2950,6 +2976,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -3030,6 +3057,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -3110,6 +3138,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,

@@ -438,7 +438,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
 
       // Send work package to the worker
       // If the job, metrics or any code below throws: the job will reject never going stale.
-      // Only downside is the the job promise may be resolved twice, but that's not an issue
+      // Only downside is the job promise may be resolved twice, but that's not an issue
 
       const [jobStartSec, jobStartNs] = process.hrtime();
       const workResult = await workerApi.verifyManySignatureSets(workReqs);

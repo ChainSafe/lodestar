@@ -24,6 +24,10 @@ export interface BlockStateCache {
   get(rootHex: RootHex, opts?: StateCloneOpts): CachedBeaconStateAllForks | null;
   add(item: CachedBeaconStateAllForks): void;
   setHeadState(item: CachedBeaconStateAllForks | null): void;
+  /**
+   * Get a seed state for state reload.
+   */
+  getSeedState(): CachedBeaconStateAllForks;
   clear(): void;
   size: number;
   prune(headStateRootHex: RootHex): void;

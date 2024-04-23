@@ -1195,9 +1195,9 @@ export function createLodestarMetrics(
         help: "Histogram of cloned count per state every time state.clone() is called",
         buckets: [1, 2, 5, 10, 50, 250],
       }),
-      statePersistDuration: register.histogram({
-        name: "lodestar_cp_state_cache_state_persist_seconds",
-        help: "Histogram of time to persist state to db",
+      stateSerializeDuration: register.histogram({
+        name: "lodestar_cp_state_cache_state_serialize_seconds",
+        help: "Histogram of time to serialize state to db",
         buckets: [0.1, 0.5, 1, 2, 3, 4],
       }),
       statePruneFromMemoryCount: register.gauge({
@@ -1209,13 +1209,13 @@ export function createLodestarMetrics(
         help: "Histogram of time to persist state to db since the clock slot",
         buckets: [0, 2, 4, 6, 8, 10, 12],
       }),
-      stateReloadValidatorsSszDuration: register.histogram({
-        name: "lodestar_cp_state_cache_state_reload_validators_ssz_seconds",
+      stateReloadValidatorsSerializeDuration: register.histogram({
+        name: "lodestar_cp_state_cache_state_reload_validators_serialize_seconds",
         help: "Histogram of time to serialize validators",
         buckets: [0.1, 0.2, 0.5, 1],
       }),
-      stateReloadValidatorsSszAllocCount: register.counter({
-        name: "lodestar_cp_state_cache_state_reload_validators_ssz_alloc_count",
+      stateReloadValidatorsSerializeAllocCount: register.counter({
+        name: "lodestar_cp_state_cache_state_reload_validators_serialize_alloc_count",
         help: "Total number time to allocate memory for validators serialization",
       }),
       stateReloadShufflingCacheMiss: register.counter({

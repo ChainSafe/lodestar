@@ -1,6 +1,6 @@
 import {CachedBeaconStateAllForks, computeEpochAtSlot, DataAvailableStatus} from "@lodestar/state-transition";
 import {MaybeValidExecutionStatus} from "@lodestar/fork-choice";
-import {allForks, deneb, Slot} from "@lodestar/types";
+import {allForks, deneb, Slot, RootHex} from "@lodestar/types";
 import {ForkSeq} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
 
@@ -25,17 +25,18 @@ export enum GossipedInputType {
 
 export type BlobsCache = Map<number, {blobSidecar: deneb.BlobSidecar; blobBytes: Uint8Array | null}>;
 export type BlockInputBlobs = {blobs: deneb.BlobSidecars; blobsBytes: (Uint8Array | null)[]};
+type CachedBlobs = {
+  blobsCache: BlobsCache;
+  availabilityPromise: Promise<BlockInputBlobs>;
+  resolveAvailability: (blobs: BlockInputBlobs) => void;
+};
 
 export type BlockInput = {block: allForks.SignedBeaconBlock; source: BlockSource; blockBytes: Uint8Array | null} & (
   | {type: BlockInputType.preDeneb}
   | ({type: BlockInputType.postDeneb} & BlockInputBlobs)
-  | {
-      type: BlockInputType.blobsPromise;
-      blobsCache: BlobsCache;
-      availabilityPromise: Promise<BlockInputBlobs>;
-      resolveAvailability: (blobs: BlockInputBlobs) => void;
-    }
+  | ({type: BlockInputType.blobsPromise} & CachedBlobs)
 );
+export type NullBlockInput = {block: null; blockRootHex: RootHex; blockInputPromise: Promise<BlockInput>} & CachedBlobs;
 
 export function blockRequiresBlobs(config: ChainForkConfig, blockSlot: Slot, clockSlot: Slot): boolean {
   return (

@@ -56,7 +56,7 @@ describe("AttestationDutiesService", function () {
       validator: {...defaultValidator.validator, pubkey: pubkeys[0]},
     };
     api.beacon.getStateValidators.mockResolvedValue({
-      response: {data: [validatorResponse], executionOptimistic: false},
+      response: {data: [validatorResponse], executionOptimistic: false, finalized: false},
       ok: true,
       status: HttpStatusCode.OK,
     });
@@ -122,7 +122,7 @@ describe("AttestationDutiesService", function () {
       validator: {...defaultValidator.validator, pubkey: pubkeys[0]},
     };
     api.beacon.getStateValidators.mockResolvedValue({
-      response: {data: [validatorResponse], executionOptimistic: false},
+      response: {data: [validatorResponse], executionOptimistic: false, finalized: false},
       ok: true,
       status: HttpStatusCode.OK,
     });

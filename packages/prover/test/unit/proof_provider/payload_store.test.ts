@@ -9,6 +9,7 @@ import {ForkName} from "@lodestar/params";
 import {PayloadStore} from "../../../src/proof_provider/payload_store.js";
 import {MAX_PAYLOAD_HISTORY} from "../../../src/constants.js";
 
+const slotNumber = 10;
 const createHash = (input: string): Uint8Array => hash(Buffer.from(input, "utf8"));
 
 const buildPayload = ({blockNumber}: {blockNumber: number}): allForks.ExecutionPayload =>
@@ -50,6 +51,7 @@ const buildBlockResponse = ({
   response: {
     version: ForkName.altair,
     executionOptimistic: true,
+    finalized: false,
     data: buildBlock({slot, blockNumber}),
   },
 });
@@ -71,14 +73,14 @@ describe("proof_provider/payload_store", function () {
     });
 
     it("should return undefined if no finalized block", () => {
-      store.set(buildPayload({blockNumber: 10}), false);
+      store.set(buildPayload({blockNumber: 10}), slotNumber, false);
 
       expect(store.finalized).toBeUndefined();
     });
 
     it("should return finalized payload", () => {
       const payload = buildPayload({blockNumber: 10});
-      store.set(payload, true);
+      store.set(payload, slotNumber, true);
 
       expect(store.finalized).toEqual(payload);
     });
@@ -86,8 +88,8 @@ describe("proof_provider/payload_store", function () {
     it("should return highest finalized payload", () => {
       const payload1 = buildPayload({blockNumber: 10});
       const payload2 = buildPayload({blockNumber: 11});
-      store.set(payload1, true);
-      store.set(payload2, true);
+      store.set(payload1, slotNumber, true);
+      store.set(payload2, slotNumber, true);
 
       expect(store.finalized).toEqual(payload2);
     });
@@ -101,8 +103,8 @@ describe("proof_provider/payload_store", function () {
     it("should return latest payload if finalized", () => {
       const payload1 = buildPayload({blockNumber: 10});
       const payload2 = buildPayload({blockNumber: 11});
-      store.set(payload1, true);
-      store.set(payload2, true);
+      store.set(payload1, slotNumber, true);
+      store.set(payload2, slotNumber, true);
 
       expect(store.latest).toEqual(payload2);
     });
@@ -110,8 +112,8 @@ describe("proof_provider/payload_store", function () {
     it("should return latest payload if not finalized", () => {
       const payload1 = buildPayload({blockNumber: 10});
       const payload2 = buildPayload({blockNumber: 11});
-      store.set(payload1, false);
-      store.set(payload2, false);
+      store.set(payload1, slotNumber, false);
+      store.set(payload2, slotNumber, false);
 
       expect(store.latest).toEqual(payload2);
     });
@@ -124,14 +126,14 @@ describe("proof_provider/payload_store", function () {
 
     it("should return undefined for non existing block id", async () => {
       const payload1 = buildPayload({blockNumber: 10});
-      store.set(payload1, false);
+      store.set(payload1, slotNumber, false);
 
       await expect(store.get(11)).resolves.toBeUndefined();
     });
 
     it("should return undefined for non existing block hash", async () => {
       const payload1 = buildPayload({blockNumber: 10});
-      store.set(payload1, false);
+      store.set(payload1, slotNumber, false);
       const nonExistingBlockHash = createHash("non-existing-block-hash");
 
       await expect(store.get(toHexString(nonExistingBlockHash))).resolves.toBeUndefined();
@@ -140,7 +142,7 @@ describe("proof_provider/payload_store", function () {
     describe("block hash as blockId", () => {
       it("should return payload for a block hash", async () => {
         const payload1 = buildPayload({blockNumber: 10});
-        store.set(payload1, false);
+        store.set(payload1, slotNumber, false);
 
         await expect(store.get(toHexString(payload1.blockHash))).resolves.toEqual(payload1);
       });
@@ -149,7 +151,7 @@ describe("proof_provider/payload_store", function () {
     describe("block number as blockId", () => {
       it("should throw error to use block hash for un-finalized blocks", async () => {
         const finalizedPayload = buildPayload({blockNumber: 10});
-        store.set(finalizedPayload, true);
+        store.set(finalizedPayload, slotNumber, true);
 
         await expect(store.get(11)).rejects.toThrow(
           "Block number 11 is higher than the latest finalized block number. We recommend to use block hash for unfinalized blocks."
@@ -158,28 +160,28 @@ describe("proof_provider/payload_store", function () {
 
       it("should return undefined if payload exists but not-finalized", async () => {
         const payload1 = buildPayload({blockNumber: 10});
-        store.set(payload1, false);
+        store.set(payload1, slotNumber, false);
 
         await expect(store.get(10)).resolves.toBeUndefined();
       });
 
       it("should return payload for a block number in hex", async () => {
         const payload1 = buildPayload({blockNumber: 10});
-        store.set(payload1, true);
+        store.set(payload1, slotNumber, true);
 
         await expect(store.get(`0x${payload1.blockNumber.toString(16)}`)).resolves.toEqual(payload1);
       });
 
       it("should return payload for a block number as string", async () => {
         const payload1 = buildPayload({blockNumber: 10});
-        store.set(payload1, true);
+        store.set(payload1, slotNumber, true);
 
         await expect(store.get(payload1.blockNumber.toString())).resolves.toEqual(payload1);
       });
 
       it("should return payload for a block number as integer", async () => {
         const payload1 = buildPayload({blockNumber: 10});
-        store.set(payload1, true);
+        store.set(payload1, slotNumber, true);
 
         await expect(store.get(10)).resolves.toEqual(payload1);
       });
@@ -199,7 +201,7 @@ describe("proof_provider/payload_store", function () {
           .calledWith(unavailableBlockNumber)
           .thenResolve(buildBlockResponse({blockNumber: unavailableBlockNumber, slot: unavailableBlockNumber}));
 
-        store.set(availablePayload, true);
+        store.set(availablePayload, slotNumber, true);
 
         const result = await store.get(unavailablePayload.blockNumber);
 
@@ -214,7 +216,7 @@ describe("proof_provider/payload_store", function () {
   describe("set", () => {
     it("should set the payload for non-finalized blocks", async () => {
       const payload1 = buildPayload({blockNumber: 10});
-      store.set(payload1, false);
+      store.set(payload1, slotNumber, false);
 
       // Unfinalized blocks are not indexed by block hash
       await expect(store.get(toHexString(payload1.blockHash))).resolves.toEqual(payload1);
@@ -223,7 +225,7 @@ describe("proof_provider/payload_store", function () {
 
     it("should set the payload for finalized blocks", async () => {
       const payload1 = buildPayload({blockNumber: 10});
-      store.set(payload1, true);
+      store.set(payload1, slotNumber, true);
 
       await expect(store.get(payload1.blockNumber.toString())).resolves.toEqual(payload1);
       expect(store.finalized).toEqual(payload1);
@@ -324,7 +326,7 @@ describe("proof_provider/payload_store", function () {
       const numberOfPayloads = MAX_PAYLOAD_HISTORY + 2;
 
       for (let i = 1; i <= numberOfPayloads; i++) {
-        store.set(buildPayload({blockNumber: i}), true);
+        store.set(buildPayload({blockNumber: i}), slotNumber, true);
       }
 
       expect(store["payloads"].size).toEqual(numberOfPayloads);
@@ -338,7 +340,7 @@ describe("proof_provider/payload_store", function () {
       const numberOfPayloads = MAX_PAYLOAD_HISTORY;
 
       for (let i = 1; i <= numberOfPayloads; i++) {
-        store.set(buildPayload({blockNumber: i}), true);
+        store.set(buildPayload({blockNumber: i}), slotNumber, true);
       }
 
       expect(store["payloads"].size).toEqual(MAX_PAYLOAD_HISTORY);
@@ -352,7 +354,7 @@ describe("proof_provider/payload_store", function () {
       const numberOfPayloads = MAX_PAYLOAD_HISTORY - 1;
 
       for (let i = 1; i <= numberOfPayloads; i++) {
-        store.set(buildPayload({blockNumber: i}), true);
+        store.set(buildPayload({blockNumber: i}), slotNumber, true);
       }
 
       expect(store["payloads"].size).toEqual(numberOfPayloads);
@@ -366,7 +368,7 @@ describe("proof_provider/payload_store", function () {
       const numberOfPayloads = MAX_PAYLOAD_HISTORY + 2;
 
       for (let i = 1; i <= numberOfPayloads; i++) {
-        store.set(buildPayload({blockNumber: i}), true);
+        store.set(buildPayload({blockNumber: i}), slotNumber, true);
       }
 
       expect(store["finalizedRoots"].size).toEqual(numberOfPayloads);

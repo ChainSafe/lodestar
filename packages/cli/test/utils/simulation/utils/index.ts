@@ -9,7 +9,7 @@ import {
   SIM_ENV_NETWORK_ID,
   SIM_TESTS_SECONDS_PER_SLOT,
 } from "../constants.js";
-import {SimulationEnvironment} from "../SimulationEnvironment.js";
+import {SimulationEnvironment} from "../simulationEnvironment.js";
 
 export const logFilesDir = "test-logs";
 
@@ -125,20 +125,20 @@ export const getEstimatedTTD = ({
   return BigInt(Math.ceil(secondsTillBellatrix / cliqueSealingPeriod) * ETH_TTD_INCREMENT);
 };
 
-export const getEstimatedShanghaiTime = ({
+export const getEstimatedForkTime = ({
   genesisTime,
   secondsPerSlot,
-  capellaForkEpoch,
+  forkEpoch,
   additionalSlots,
 }: {
   genesisTime: number;
   secondsPerSlot: number;
-  capellaForkEpoch: number;
+  forkEpoch: number;
   additionalSlots: number;
 }): number => {
-  const secondsTillCapella = capellaForkEpoch * activePreset.SLOTS_PER_EPOCH * secondsPerSlot;
+  const secondsTillFork = forkEpoch * activePreset.SLOTS_PER_EPOCH * secondsPerSlot;
 
-  return genesisTime + secondsTillCapella + additionalSlots * secondsPerSlot;
+  return genesisTime + secondsTillFork + additionalSlots * secondsPerSlot;
 };
 
 export const squeezeString = (val: string, length: number, sep = "..."): string => {

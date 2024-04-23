@@ -41,7 +41,7 @@ If no `pubkeys` are provided, it will exit all validators that have been importe
       command:
         "validator voluntary-exit --network goerli --externalSigner.url http://signer:9000 --externalSigner.fetch --pubkeys 0xF00",
       description:
-        "Perform a voluntary exit for the validator who has a public key 0xF00 and its secret key is on a remote signer",
+        "Perform a voluntary exit for the validator who has a public key 0xF00 and its secret key is on an external signer",
     },
   ],
 
@@ -92,7 +92,7 @@ If no `pubkeys` are provided, it will exit all validators that have been importe
       throw new YargsError(`No validators to exit found with current args.
    Ensure --dataDir and --network match values used when importing keys via validator import
    or alternatively, import keys by providing --importKeystores arg to voluntary-exit command.
-   If attempting to exit validators on a remote signer, make sure values are provided for
+   If attempting to exit validators on an external signer, make sure values are provided for
    the necessary --externalSigner options.
     `);
     }

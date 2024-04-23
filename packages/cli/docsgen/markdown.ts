@@ -2,7 +2,11 @@ import {CliOptionDefinition, CliCommand, CliExample, CliCommandOptions} from "@l
 import {toKebab} from "./changeCase.js";
 
 const DEFAULT_SEPARATOR = "\n\n";
-const LINE_BREAK = "\n\n<br />";
+const LINE_BREAK = "\n\n";
+
+function sanitizeDescription(description: string): string {
+  return description.replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("{", "&#123;").replaceAll("}", "&#125;");
+}
 
 function renderExampleBody(example: CliExample, lodestarCommand?: string): string {
   const cliExample = [
@@ -12,7 +16,7 @@ ${lodestarCommand ? `${lodestarCommand} ` : ""}${example.command}
   ];
 
   if (example.description) {
-    cliExample.unshift(example.description);
+    cliExample.unshift(sanitizeDescription(example.description));
   }
 
   return cliExample.join(DEFAULT_SEPARATOR);
@@ -31,7 +35,7 @@ ${lodestarCommand ? `${lodestarCommand} ` : ""}${example.command}
  * -------------------
  */
 function renderCommandExample(example: CliExample, lodestarCommand?: string): string {
-  const title = example.title ? `#### ${example.title}${DEFAULT_SEPARATOR}` : "";
+  const title = example.title ? `### ${example.title}${DEFAULT_SEPARATOR}` : "";
   return title.concat(renderExampleBody(example, lodestarCommand));
 }
 
@@ -87,7 +91,7 @@ function renderOption(optionName: string, option: CliOptionDefinition): string |
   if (option.hidden) return;
 
   const commandOption = [`#### \`--${optionName}\``];
-  if (option.description) commandOption.push(`description: ${option.description}`);
+  if (option.description) commandOption.push(`${sanitizeDescription(option.description)}`);
 
   if (option.demandOption === true) {
     commandOption.push("required: true");
@@ -198,7 +202,7 @@ function renderSubCommand(sub: SubCommandDefinition, lodestarCommand?: string): 
       renderOptions(
         sub.options,
         `### \`${sub.command}\` Options`,
-        "_Supports all parent command options plus the following:_\n\n<br>"
+        "_Supports all parent command options plus the following:_\n\n"
       )
     );
   }
@@ -250,7 +254,7 @@ export function renderCommandPage(
   globalOptions: CliCommandOptions<Record<never, never>>,
   lodestarCommand?: string
 ): string {
-  const page = [`# \`${cmd.command}\` CLI Command`, cmd.describe];
+  const page = [`---\ntitle: CLI Reference\n---\n\n# \`${cmd.command}\` CLI Command`, cmd.describe];
 
   const subCommands = (cmd.subcommands ?? []).map((sub) => getSubCommands(cmd.command, sub)).flat();
   if (subCommands.length > 0) {

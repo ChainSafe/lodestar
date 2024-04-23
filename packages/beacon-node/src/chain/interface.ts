@@ -23,7 +23,7 @@ import {
 import {BeaconConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
 
-import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {CheckpointWithHex, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
 import {IExecutionEngine, IExecutionBuilder} from "../execution/index.js";
 import {Metrics} from "../metrics/metrics.js";
@@ -53,6 +53,7 @@ import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {SeenGossipBlockInput} from "./seenCache/index.js";
 import {ShufflingCache} from "./shufflingCache.js";
 import {BlockRewards} from "./rewards/blockRewards.js";
+import {AttestationsRewards} from "./rewards/attestationsRewards.js";
 import {SyncCommitteeRewards} from "./rewards/syncCommitteeRewards.js";
 
 export {BlockType, type AssembledBlockType};
@@ -137,12 +138,16 @@ export interface IBeaconChain {
   getStateBySlot(
     slot: Slot,
     opts?: StateGetOpts
-  ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean} | null>;
+  ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean} | null>;
   /** Returns a local state by state root */
   getStateByStateRoot(
     stateRoot: RootHex,
     opts?: StateGetOpts
-  ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean} | null>;
+  ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean} | null>;
+  /** Returns a cached state by checkpoint */
+  getStateByCheckpoint(
+    checkpoint: CheckpointWithHex
+  ): {state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean} | null;
 
   /**
    * Since we can have multiple parallel chains,
@@ -151,11 +156,13 @@ export interface IBeaconChain {
    */
   getCanonicalBlockAtSlot(
     slot: Slot
-  ): Promise<{block: allForks.SignedBeaconBlock; executionOptimistic: boolean} | null>;
+  ): Promise<{block: allForks.SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null>;
   /**
    * Get local block by root, does not fetch from the network
    */
-  getBlockByRoot(root: RootHex): Promise<{block: allForks.SignedBeaconBlock; executionOptimistic: boolean} | null>;
+  getBlockByRoot(
+    root: RootHex
+  ): Promise<{block: allForks.SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null>;
 
   getContents(beaconBlock: deneb.BeaconBlock): deneb.Contents;
 
@@ -202,6 +209,10 @@ export interface IBeaconChain {
   blsThreadPoolCanAcceptWork(): boolean;
 
   getBlockRewards(blockRef: allForks.FullOrBlindedBeaconBlock): Promise<BlockRewards>;
+  getAttestationsRewards(
+    epoch: Epoch,
+    validatorIds?: (ValidatorIndex | string)[]
+  ): Promise<{rewards: AttestationsRewards; executionOptimistic: boolean; finalized: boolean}>;
   getSyncCommitteeRewards(
     blockRef: allForks.FullOrBlindedBeaconBlock,
     validatorIds?: (ValidatorIndex | string)[]

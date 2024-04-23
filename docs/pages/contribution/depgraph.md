@@ -1,9 +1,14 @@
+---
+title: Dependency Graph
+---
+
 ## Lodestar monorepo dependency graph
 
 This is a diagram of the various `lodestar-*` packages in the Lodestar monorepo and how they fit together:
 
-!!! info
+:::info
 note: this dependency graph only applies to dependencies as they are used in the `src/` folders of each package, not in `test/`
+:::
 
 ```mermaid
 graph TD

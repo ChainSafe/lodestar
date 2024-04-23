@@ -63,15 +63,15 @@ const logger = getLcLoggerConsole({logDebug: Boolean(process.env.DEBUG)});
 const api = getClient({urls: ["https://beacon-node.your-domain.com"]}, {config});
 
 const lightclient = await Lightclient.initializeFromCheckpointRoot({
-    config,
-    logger,
-    transport: new LightClientRestTransport(api),
-    genesisData: await getGenesisData(api),
-    checkpointRoot: await getFinalizedSyncCheckpoint(api),
-    opts: {
-        allowForcedUpdates: true,
-        updateHeadersOnForcedUpdate: true,
-    }
+  config,
+  logger,
+  transport: new LightClientRestTransport(api),
+  genesisData: await getGenesisData(api),
+  checkpointRoot: await getFinalizedSyncCheckpoint(api),
+  opts: {
+    allowForcedUpdates: true,
+    updateHeadersOnForcedUpdate: true,
+  },
 });
 
 // Wait for the lightclient to start
@@ -80,11 +80,11 @@ await lightclient.start();
 logger.info("Lightclient synced");
 
 lightclient.emitter.on(LightclientEvent.lightClientFinalityHeader, async (finalityUpdate) => {
-    logger.info(finalityUpdate);
+  logger.info(finalityUpdate);
 });
 
 lightclient.emitter.on(LightclientEvent.lightClientOptimisticHeader, async (optimisticUpdate) => {
-    logger.info(optimisticUpdate);
+  logger.info(optimisticUpdate);
 });
 ```
 

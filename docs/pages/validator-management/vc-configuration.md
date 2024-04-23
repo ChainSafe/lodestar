@@ -1,8 +1,10 @@
+---
+title: Configuration
+---
+
 # Validator Configuration
 
 The following instructions are for stakers utilizing the Lodestar validator client.
-
-[TOC]
 
 ## Setup your validator
 
@@ -14,10 +16,9 @@ To create a keystore, we recommend using the official [Staking Deposit CLI](http
 
 Alternatively, for a graphical user interface, you can use the [Stakehouse Wagyu Key Generator](https://wagyu.gg/) developed by members of the EthStaker community.
 
-<!-- prettier-ignore-start -->
-!!! warning
-    These tools will generate keystore files for staking validators as well as the important mnemonic. This mnemonic must be handled and stored securely.
-<!-- prettier-ignore-end -->
+:::warning
+These tools will generate keystore files for staking validators as well as the important mnemonic. This mnemonic must be handled and stored securely.
+:::
 
 ### Import a validator keystore to Lodestar
 
@@ -43,12 +44,11 @@ _Plaintext passphrase file import_
 ./lodestar validator import --importKeystores ./validator_keys --importKeystoresPassword ./password.txt
 ```
 
-<!-- prettier-ignore-start -->
-!!! info
-    The interactive passphrase import method will prompt every keystore in the `validator_keys` folder for import and will ask for the individual password for each keystore. **This method will allow you to import multiple keystores with different passwords.**
+:::info
+The interactive passphrase import method will prompt every keystore in the `validator_keys` folder for import and will ask for the individual password for each keystore. **This method will allow you to import multiple keystores with different passwords.**
 
-    The plaintext passphrase file import method will allow you to import all keystores in the `validator_keys` folder encrypted with the same password contained in `password.txt` for efficiency. 
-<!-- prettier-ignore-end -->
+The plaintext passphrase file import method will allow you to import all keystores in the `validator_keys` folder encrypted with the same password contained in `password.txt` for efficiency.
+:::
 
 Once imported with either method, these keystores will be automatically loaded when you start the validator. To list the imported keystores, use the `validator list` command.
 
@@ -62,10 +62,9 @@ To import keys when you start the validator specify the `--importKeystores` and 
 ./lodestar validator --importKeystores ./validator_keys --importKeystoresPassword ./password.txt
 ```
 
-<!-- prettier-ignore-start -->
-!!! warning
-    If you import keys using `--importKeystores` at runtime (Option 2) any keys loaded to the keystores folder from Option 1 will be ignored.
-<!-- prettier-ignore-end -->
+:::warning
+If you import keys using `--importKeystores` at runtime (Option 2) any keys loaded to the keystores folder from Option 1 will be ignored.
+:::
 
 ### Configuring the fee recipient address
 
@@ -79,14 +78,15 @@ You may choose to use the `--strictFeeRecipientCheck` flag to enable a strict ch
 
 If you are running a beacon node with connected builder relays, you may use these validator configurations to signal which block (builder vs. local execution) the beacon node should produce.
 
-With produceBlockV3 (enabled automatically after the Deneb hard fork), the `--builder.boostFactor` is a percentage multiplier the block producing beacon node must apply to boost (>100) or dampen (<100) builder block value for selection against execution block. The multiplier is ignored if `--builder.selection` is set to anything other than `maxprofit`. Even though this is set on the validator client, the calculation is requested and applied on the beacon node itself. For more information, see the [produceBlockV3 Beacon API](https://ethereum.github.io/beacon-APIs/#/ValidatorRequiredApi/produceBlockV3).
+With produceBlockV3 (enabled automatically after the Deneb hard fork), the `--builder.boostFactor` is a percentage multiplier the block producing beacon node must apply to boost (&gt;100) or dampen (&lt;100) builder block value for selection against execution block. The multiplier is ignored if `--builder.selection` is set to anything other than `maxprofit`. Even though this is set on the validator client, the calculation is requested and applied on the beacon node itself. For more information, see the [produceBlockV3 Beacon API](https://ethereum.github.io/beacon-APIs/#/ValidatorRequiredApi/produceBlockV3).
 
 With Lodestar's `--builder.selection` validator options, you can select:
 
-- `maxprofit`: Default setting for Lodestar set at `--builder.boostFactor=100`. This default setting will always choose the more profitable block. Using this option, you may customize your `--builder.boostFactor` to your preference. Examples of its usage are below.
+- `default`: Default setting for Lodestar set at `--builder.boostFactor=90`. This default setting will have a local block boost of ~10%. Note that this value might change in the future depending on what we think is the most appropriate value to help improve censorship resistance of Ethereum.
+- `maxprofit`: An alias of `--builder.boostFactor=100`, which will always choose the more profitable block. Using this option, you may customize your `--builder.boostFactor` to your preference. Examples of its usage are below.
 - `executionalways`: An alias of `--builder.boostFactor=0`, which will select the local execution block, unless it fails to produce due to an error or a delay in the response from the execution client.
 - `executiononly`: Beacon node will be requested to produce local execution block even if builder relays are configured. This option will always select the local execution block and will error if it couldn't produce one.
-- `builderalways`: An alias of `--builder.boostFactor=18446744073709551615` (2**64 - 1), which will select the builder block, unless the builder block fails to produce. The builder block may fail to produce if it's not available, not timely or there is an indication of censorship via `shouldOverrideBuilder` from the execution payload response.
+- `builderalways`: An alias of `--builder.boostFactor=18446744073709551615` (2\*\*64 - 1), which will select the builder block, unless the builder block fails to produce. The builder block may fail to produce if it's not available, not timely or there is an indication of censorship via `shouldOverrideBuilder` from the execution payload response.
 - `builderonly`: Generally used for distributed validators (DVs). No execution block production will be triggered. Therefore, if a builder block is not produced, the API will fail and _no block will be produced_.
 
 #### Calculating builder boost factor with examples
@@ -94,9 +94,11 @@ With Lodestar's `--builder.selection` validator options, you can select:
 To calculate the builder boost factor setting, you need to know what percentage you will accept a builder block for against a local execution block using the following formula: `100*100/(100+percentage)`. The value passed to `--builder.boostFactor` must be a valid number without decimals.
 
 Example 1: I will only accept a builder block with 25% more value than the local execution block.
-```
+
+```ts
 10000/(100+25) = 80
 ```
+
 Therefore, `--builder.boostFactor=80`.
 
 Example 2: Setting a `--builder.boostFactor=0` will always prefer the local execution block, but will produce an available builder block if the local execution block fails.
@@ -108,14 +110,17 @@ Example 3: Setting a `--builder.boostFactor=100` is the same as signaling `--bui
 Please use the official Ethereum Launchpad to perform your deposits. Ensure your deposits are sent to the proper beacon chain deposit address on the correct network.
 
 #### Mainnet
+
 - [Ethereum Mainnet Launchpad](https://launchpad.ethereum.org)
 - [Beacon Chain Deposit Contract](https://etherscan.io/address/0x00000000219ab540356cbb839cbe05303d7705fa) `0x00000000219ab540356cBB839Cbe05303d7705Fa`
 
 #### Holesky Testnet
+
 - [Ethereum Holesky Testnet Launchpad](https://holesky.launchpad.ethereum.org)
 - [Holesky Beacon Chain Deposit Contract](https://holesky.etherscan.io/address/0x4242424242424242424242424242424242424242) `0x4242424242424242424242424242424242424242`
 
 #### Ephemery Testnet
+
 - [Ethereum Ephemery Testnet Launchpad](https://launchpad.ephemery.dev/)
 - [Ephemeral Testnet Resources](https://ephemery.dev/)
 

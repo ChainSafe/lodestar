@@ -7,7 +7,7 @@ import {
   ForkChoiceStore,
   ExecutionStatus,
   JustifiedBalancesGetter,
-  ForkChoiceOpts,
+  ForkChoiceOpts as RawForkChoiceOpts,
 } from "@lodestar/fork-choice";
 import {
   CachedBeaconStateAllForks,
@@ -16,12 +16,16 @@ import {
   isMergeTransitionComplete,
 } from "@lodestar/state-transition";
 
+import {Logger} from "@lodestar/utils";
 import {computeAnchorCheckpoint} from "../initState.js";
 import {ChainEventEmitter} from "../emitter.js";
 import {ChainEvent} from "../emitter.js";
 import {GENESIS_SLOT} from "../../constants/index.js";
 
-export type {ForkChoiceOpts};
+export type ForkChoiceOpts = RawForkChoiceOpts & {
+  // for testing only
+  forkchoiceConstructor?: typeof ForkChoice;
+};
 
 /**
  * Fork Choice extended with a ChainEventEmitter
@@ -32,7 +36,8 @@ export function initializeForkChoice(
   currentSlot: Slot,
   state: CachedBeaconStateAllForks,
   opts: ForkChoiceOpts,
-  justifiedBalancesGetter: JustifiedBalancesGetter
+  justifiedBalancesGetter: JustifiedBalancesGetter,
+  logger?: Logger
 ): ForkChoice {
   const {blockHeader, checkpoint} = computeAnchorCheckpoint(config, state);
   const finalizedCheckpoint = {...checkpoint};
@@ -47,7 +52,11 @@ export function initializeForkChoice(
 
   const justifiedBalances = getEffectiveBalanceIncrementsZeroInactive(state);
 
-  return new ForkChoice(
+  // forkchoiceConstructor is only used for some test cases
+  // production code use ForkChoice constructor directly
+  const forkchoiceConstructor = opts.forkchoiceConstructor ?? ForkChoice;
+
+  return new forkchoiceConstructor(
     config,
 
     new ForkChoiceStore(
@@ -68,6 +77,7 @@ export function initializeForkChoice(
         parentRoot: toHexString(blockHeader.parentRoot),
         stateRoot: toHexString(blockHeader.stateRoot),
         blockRoot: toHexString(checkpoint.root),
+        timeliness: true, // Optimisitcally assume is timely
 
         justifiedEpoch: justifiedCheckpoint.epoch,
         justifiedRoot: toHexString(justifiedCheckpoint.root),
@@ -88,7 +98,7 @@ export function initializeForkChoice(
       },
       currentSlot
     ),
-
-    opts
+    opts,
+    logger
   );
 }
