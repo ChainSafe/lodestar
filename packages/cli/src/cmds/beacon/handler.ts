@@ -34,18 +34,6 @@ const HOURS_TO_MS = 3600 * 1000;
  * Runs a beacon node.
  */
 export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void> {
-  // must be EARLY in startup because may change UV_THREADPOOL_SIZE
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let invalidPoolSizeValue: any;
-  let poolSizeIsNanWarn = false;
-  const defaultThreadpoolSize = os.availableParallelism();
-  let uvPoolSize = parseInt(`${process.env.UV_THREADPOOL_SIZE}`);
-  if (isNaN(uvPoolSize)) {
-    poolSizeIsNanWarn = true;
-    invalidPoolSizeValue = uvPoolSize;
-    process.env.UV_THREADPOOL_SIZE = `${(uvPoolSize = defaultThreadpoolSize)}`;
-  }
-
   const {config, options, beaconPaths, network, version, commit, peerId, logger} = await beaconHandlerInit(args);
 
   // initialize directories
@@ -56,11 +44,9 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
   const abortController = new AbortController();
 
   logger.info("Lodestar", {network, version, commit});
-  if (poolSizeIsNanWarn) {
-    logger.warn(
-      `UV_THREADPOOL_SIZE=${invalidPoolSizeValue}, but must be set to a number. Using default value of ${defaultThreadpoolSize}`
-    );
-  }
+
+  const defaultThreadpoolSize = os.availableParallelism();
+  const uvPoolSize = parseInt(`${process.env.UV_THREADPOOL_SIZE}`);
   logger.info(`BLS libuv pool size: ${uvPoolSize}`);
   /**
    * Help users ensure that thread pool is large enough for optimal performance
