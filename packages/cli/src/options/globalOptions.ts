@@ -48,7 +48,7 @@ const globalSingleOptions: CliCommandOptions<GlobalSingleArgs> = {
 
   uvThreadpoolSize: {
     hidden: true,
-    description: "Setting for the number of worker threads libuv should create",
+    description: "Set the number of worker threads libuv should create",
     type: "number",
   },
 };
