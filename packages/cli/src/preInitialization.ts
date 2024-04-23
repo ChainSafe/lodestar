@@ -100,10 +100,9 @@ if (uvThreadpoolSize) {
 
 if (isNaN(parseInt(`${process.env.UV_THREADPOOL_SIZE}`))) {
   // eslint-disable-next-line no-console
-  console.warn(
+  throw new Error(
     `UV_THREADPOOL_SIZE=${process.env.UV_THREADPOOL_SIZE}, but must be set to a number. Using default value of ${defaultThreadpoolSize}`
   );
-  process.env.UV_THREADPOOL_SIZE = defaultThreadpoolSize.toString();
 }
 
 if (presetFile) {
