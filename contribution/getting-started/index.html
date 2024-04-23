@@ -1,2077 +1,111 @@
-
 <!doctype html>
-<html lang="en" class="no-js">
-  <head>
-    
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width,initial-scale=1">
-      
-        <meta name="description" content="Lodestar Documentation - Typescript Ethereum Consensus client">
-      
-      
-      
-        <link rel="canonical" href="https://chainsafe.github.io/lodestar/contribution/getting-started/">
-      
-      
-        <link rel="prev" href="../../supporting-libraries/">
-      
-      
-        <link rel="next" href="../depgraph/">
-      
-      
-      <link rel="icon" href="../../assets/round-icon.ico">
-      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.9">
-    
-    
-      
-        <title>Getting Started - Lodestar Documentation</title>
-      
-    
-    
-      <link rel="stylesheet" href="../../assets/stylesheets/main.f2e4d321.min.css">
-      
-        
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
-      
-      
-
-
-    
-    
-      
-    
-    
-      
-        
-        
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
-        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
-      
-    
-    
-      <link rel="stylesheet" href="../../stylesheets/extras.css">
-    
-    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
-    
-      
-
-    
-    
-    
-  </head>
-  
-  
-    
-    
-      
-    
-    
-    
-    
-    <body dir="ltr" data-md-color-scheme="preference" data-md-color-primary="black" data-md-color-accent="deep-purple">
-  
-    
-    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
-    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
-    <label class="md-overlay" for="__drawer"></label>
-    <div data-md-component="skip">
-      
-        
-        <a href="#contribution-guidelines" class="md-skip">
-          Skip to content
-        </a>
-      
-    </div>
-    <div data-md-component="announce">
-      
-    </div>
-    
-    
-      
-
-  
-
-<header class="md-header md-header--shadow" data-md-component="header">
-  <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../.." title="Lodestar Documentation" class="md-header__button md-logo" aria-label="Lodestar Documentation" data-md-component="logo">
-      
-  <img src="../../assets/lodestar_icon_300.png" alt="logo">
-
-    </a>
-    <label class="md-header__button md-icon" for="__drawer">
-      
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
-    </label>
-    <div class="md-header__title" data-md-component="header-title">
-      <div class="md-header__ellipsis">
-        <div class="md-header__topic">
-          <span class="md-ellipsis">
-            Lodestar Documentation
-          </span>
-        </div>
-        <div class="md-header__topic" data-md-component="header-topic">
-          <span class="md-ellipsis">
-            
-              Getting Started
-            
-          </span>
-        </div>
-      </div>
-    </div>
-    
-      
-        <form class="md-header__option" data-md-component="palette">
-  
-    
-    
-    
-    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="preference" data-md-color-primary="black" data-md-color-accent="deep-purple"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
-    
-      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3 3.19.09m3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95 2.06.05m-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31Z"/></svg>
-      </label>
-    
-  
-    
-    
-    
-    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="deep-purple"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
-    
-      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5c-.84 0-1.65.15-2.39.42L12 2M3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29L3.34 7m.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14L3.36 17M20.65 7l-1.77 3.79a7.023 7.023 0 0 0-2.38-4.15l4.15.36m-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29L20.64 17M12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44L12 22Z"/></svg>
-      </label>
-    
-  
-</form>
-      
-    
-    
-      <script>var media,input,key,value,palette=__md_get("__palette");if(palette&&palette.color){"(prefers-color-scheme)"===palette.color.media&&(media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']"),palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent"));for([key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
-    
-    
-    
-      <label class="md-header__button md-icon" for="__search">
-        
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
-      </label>
-      <div class="md-search" data-md-component="search" role="dialog">
-  <label class="md-search__overlay" for="__search"></label>
-  <div class="md-search__inner" role="search">
-    <form class="md-search__form" name="search">
-      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
-      <label class="md-search__icon md-icon" for="__search">
-        
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
-        
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
-      </label>
-      <nav class="md-search__options" aria-label="Search">
-        
-        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
-          
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
-        </button>
-      </nav>
-      
-    </form>
-    <div class="md-search__output">
-      <div class="md-search__scrollwrap" data-md-scrollfix>
-        <div class="md-search-result" data-md-component="search-result">
-          <div class="md-search-result__meta">
-            Initializing search
-          </div>
-          <ol class="md-search-result__list" role="presentation"></ol>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-    
-    
-      <div class="md-header__source">
-        <a href="https://github.com/chainsafe/lodestar" title="Go to repository" class="md-source" data-md-component="source">
-  <div class="md-source__icon md-icon">
-    
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
-  </div>
-  <div class="md-source__repository">
-    chainsafe/lodestar
-  </div>
-</a>
-      </div>
-    
-  </nav>
-  
-</header>
-    
-    <div class="md-container" data-md-component="container">
-      
-      
-        
-          
-        
-      
-      <main class="md-main" data-md-component="main">
-        <div class="md-main__inner md-grid">
-          
-            
-              
-              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
-                <div class="md-sidebar__scrollwrap">
-                  <div class="md-sidebar__inner">
-                    
-
-
-
-<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
-  <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="Lodestar Documentation" class="md-nav__button md-logo" aria-label="Lodestar Documentation" data-md-component="logo">
-      
-  <img src="../../assets/lodestar_icon_300.png" alt="logo">
-
-    </a>
-    Lodestar Documentation
-  </label>
-  
-    <div class="md-nav__source">
-      <a href="https://github.com/chainsafe/lodestar" title="Go to repository" class="md-source" data-md-component="source">
-  <div class="md-source__icon md-icon">
-    
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
-  </div>
-  <div class="md-source__repository">
-    chainsafe/lodestar
-  </div>
-</a>
-    </div>
-  
-  <ul class="md-nav__list" data-md-scrollfix>
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../.." class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Home
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../introduction/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Introduction
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../security/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Security
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
-        
-          
-          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
-            
-  
-  <span class="md-ellipsis">
-    Getting Started
-  </span>
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4">
-            <span class="md-nav__icon md-icon"></span>
-            Getting Started
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../getting-started/quick-start/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Quick Start
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../getting-started/installation/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Installation
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../getting-started/starting-a-node/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Starting a Node
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../data-retention/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Data Retention
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
-        
-          
-          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
-            
-  
-  <span class="md-ellipsis">
-    Beacon Node
-  </span>
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_6">
-            <span class="md-nav__icon md-icon"></span>
-            Beacon Node
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../beacon-management/beacon-cli/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    CLI Reference
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../beacon-management/networking/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Networking
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../beacon-management/mev-and-builder-integration/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    MEV and Builder Integration
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../beacon-management/syncing/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Syncing
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
-        
-          
-          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
-            
-  
-  <span class="md-ellipsis">
-    Validator
-  </span>
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_7">
-            <span class="md-nav__icon md-icon"></span>
-            Validator
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../validator-management/vc-configuration/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Configuration
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../validator-management/validator-cli/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    CLI Reference
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
-        
-          
-          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
-            
-  
-  <span class="md-ellipsis">
-    Bootnode
-  </span>
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_8">
-            <span class="md-nav__icon md-icon"></span>
-            Bootnode
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../bootnode/bootnode-cli/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    CLI Reference
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
-        
-          
-          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
-            
-  
-  <span class="md-ellipsis">
-    Light Client and Prover
-  </span>
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_9">
-            <span class="md-nav__icon md-icon"></span>
-            Light Client and Prover
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../lightclient-prover/lightclient/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Light Client
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../lightclient-prover/lightclient-cli/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Light Client CLI Reference
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../lightclient-prover/prover/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Prover
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
-        
-          
-          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
-            
-  
-  <span class="md-ellipsis">
-    Logging and Metrics
-  </span>
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_10">
-            <span class="md-nav__icon md-icon"></span>
-            Logging and Metrics
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../logging-and-metrics/prometheus-grafana/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Prometheus and Grafana
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../logging-and-metrics/client-monitoring/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Client Monitoring
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../supporting-libraries/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Supporting Libraries
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-    
-  
-  
-  
-    
-    
-    
-    
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12" checked>
-        
-          
-          <label class="md-nav__link" for="__nav_12" id="__nav_12_label" tabindex="0">
-            
-  
-  <span class="md-ellipsis">
-    Contributing
-  </span>
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_12_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_12">
-            <span class="md-nav__icon md-icon"></span>
-            Contributing
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-    
-  
-  
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  <span class="md-ellipsis">
-    Getting Started
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
-        
-  
-  <span class="md-ellipsis">
-    Getting Started
-  </span>
-  
-
-      </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#prerequisites" class="md-nav__link">
-    <span class="md-ellipsis">
-      Prerequisites
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Prerequisites">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#macos-specifics" class="md-nav__link">
-    <span class="md-ellipsis">
-      MacOS Specifics
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#getting-started" class="md-nav__link">
-    <span class="md-ellipsis">
-      Getting Started
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#tests" class="md-nav__link">
-    <span class="md-ellipsis">
-      Tests
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Tests">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#common-issues" class="md-nav__link">
-    <span class="md-ellipsis">
-      Common Issues
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#debugging-spec-tests" class="md-nav__link">
-    <span class="md-ellipsis">
-      Debugging Spec Tests
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#docker" class="md-nav__link">
-    <span class="md-ellipsis">
-      Docker
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Docker">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#beacon-node-only" class="md-nav__link">
-    <span class="md-ellipsis">
-      Beacon node only
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#beacon-node-and-validator" class="md-nav__link">
-    <span class="md-ellipsis">
-      Beacon node and validator
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#dockerized-metrics-local-beacon-node" class="md-nav__link">
-    <span class="md-ellipsis">
-      Dockerized metrics + local beacon node
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#first-time-contributor" class="md-nav__link">
-    <span class="md-ellipsis">
-      First Time Contributor?
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#reporting-a-bug" class="md-nav__link">
-    <span class="md-ellipsis">
-      Reporting A Bug?
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#contribution-process" class="md-nav__link">
-    <span class="md-ellipsis">
-      Contribution Process
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#github-style-guide" class="md-nav__link">
-    <span class="md-ellipsis">
-      Github Style Guide
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#lodestar-monorepo" class="md-nav__link">
-    <span class="md-ellipsis">
-      Lodestar Monorepo
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#style-guide" class="md-nav__link">
-    <span class="md-ellipsis">
-      Style Guide
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#tests-style-guide" class="md-nav__link">
-    <span class="md-ellipsis">
-      Tests style guide
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#logging-policy" class="md-nav__link">
-    <span class="md-ellipsis">
-      Logging policy
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Logging policy">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#logging-levels" class="md-nav__link">
-    <span class="md-ellipsis">
-      Logging Levels
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#logging-guidelines" class="md-nav__link">
-    <span class="md-ellipsis">
-      Logging guidelines
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#contributing-to-grafana-dashboards" class="md-nav__link">
-    <span class="md-ellipsis">
-      Contributing to Grafana dashboards
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Contributing to Grafana dashboards">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#using-download-script" class="md-nav__link">
-    <span class="md-ellipsis">
-      Using Download Script
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#contributing-to-documentation" class="md-nav__link">
-    <span class="md-ellipsis">
-      Contributing to Documentation
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#label-guide" class="md-nav__link">
-    <span class="md-ellipsis">
-      Label Guide
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Label Guide">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#status-issues-and-pull-request-status" class="md-nav__link">
-    <span class="md-ellipsis">
-      status.* Issues and Pull Request Status
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#scope-scope-indicator" class="md-nav__link">
-    <span class="md-ellipsis">
-      scope.* Scope Indicator
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#prio-prioritization-indicator" class="md-nav__link">
-    <span class="md-ellipsis">
-      prio.* Prioritization Indicator
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#spec-ethereum-consensus-spec-version-target" class="md-nav__link">
-    <span class="md-ellipsis">
-      spec.* Ethereum Consensus Spec Version Target
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#community" class="md-nav__link">
-    <span class="md-ellipsis">
-      Community
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../depgraph/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Dependency Graph
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../dev-cli/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Dev CLI Reference
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12_4" >
-        
-          
-          <label class="md-nav__link" for="__nav_12_4" id="__nav_12_4_label" tabindex="0">
-            
-  
-  <span class="md-ellipsis">
-    Testing
-  </span>
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_12_4_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_12_4">
-            <span class="md-nav__icon md-icon"></span>
-            Testing
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../testing/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Overview
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../testing/simulation-tests/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Simulation Tests
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_13" >
-        
-          
-          <label class="md-nav__link" for="__nav_13" id="__nav_13_label" tabindex="0">
-            
-  
-  <span class="md-ellipsis">
-    Tools
-  </span>
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_13_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_13">
-            <span class="md-nav__icon md-icon"></span>
-            Tools
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../tools/flamegraphs/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Flame Graphs
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../tools/heap-dumps/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Heap Dumps
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../tools/core-dumps/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Core Dumps
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_14" >
-        
-          
-          <label class="md-nav__link" for="__nav_14" id="__nav_14_label" tabindex="0">
-            
-  
-  <span class="md-ellipsis">
-    Advanced Topics
-  </span>
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_14_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_14">
-            <span class="md-nav__icon md-icon"></span>
-            Advanced Topics
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../advanced-topics/setting-up-a-testnet/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Setting Up a Testnet
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../faqs/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Frequently Asked Questions
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-    
-  </ul>
-</nav>
-                  </div>
-                </div>
-              </div>
-            
-            
-              
-              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
-                <div class="md-sidebar__scrollwrap">
-                  <div class="md-sidebar__inner">
-                    
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#prerequisites" class="md-nav__link">
-    <span class="md-ellipsis">
-      Prerequisites
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Prerequisites">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#macos-specifics" class="md-nav__link">
-    <span class="md-ellipsis">
-      MacOS Specifics
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#getting-started" class="md-nav__link">
-    <span class="md-ellipsis">
-      Getting Started
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#tests" class="md-nav__link">
-    <span class="md-ellipsis">
-      Tests
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Tests">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#common-issues" class="md-nav__link">
-    <span class="md-ellipsis">
-      Common Issues
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#debugging-spec-tests" class="md-nav__link">
-    <span class="md-ellipsis">
-      Debugging Spec Tests
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#docker" class="md-nav__link">
-    <span class="md-ellipsis">
-      Docker
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Docker">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#beacon-node-only" class="md-nav__link">
-    <span class="md-ellipsis">
-      Beacon node only
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#beacon-node-and-validator" class="md-nav__link">
-    <span class="md-ellipsis">
-      Beacon node and validator
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#dockerized-metrics-local-beacon-node" class="md-nav__link">
-    <span class="md-ellipsis">
-      Dockerized metrics + local beacon node
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#first-time-contributor" class="md-nav__link">
-    <span class="md-ellipsis">
-      First Time Contributor?
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#reporting-a-bug" class="md-nav__link">
-    <span class="md-ellipsis">
-      Reporting A Bug?
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#contribution-process" class="md-nav__link">
-    <span class="md-ellipsis">
-      Contribution Process
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#github-style-guide" class="md-nav__link">
-    <span class="md-ellipsis">
-      Github Style Guide
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#lodestar-monorepo" class="md-nav__link">
-    <span class="md-ellipsis">
-      Lodestar Monorepo
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#style-guide" class="md-nav__link">
-    <span class="md-ellipsis">
-      Style Guide
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#tests-style-guide" class="md-nav__link">
-    <span class="md-ellipsis">
-      Tests style guide
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#logging-policy" class="md-nav__link">
-    <span class="md-ellipsis">
-      Logging policy
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Logging policy">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#logging-levels" class="md-nav__link">
-    <span class="md-ellipsis">
-      Logging Levels
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#logging-guidelines" class="md-nav__link">
-    <span class="md-ellipsis">
-      Logging guidelines
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#contributing-to-grafana-dashboards" class="md-nav__link">
-    <span class="md-ellipsis">
-      Contributing to Grafana dashboards
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Contributing to Grafana dashboards">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#using-download-script" class="md-nav__link">
-    <span class="md-ellipsis">
-      Using Download Script
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#contributing-to-documentation" class="md-nav__link">
-    <span class="md-ellipsis">
-      Contributing to Documentation
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#label-guide" class="md-nav__link">
-    <span class="md-ellipsis">
-      Label Guide
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Label Guide">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#status-issues-and-pull-request-status" class="md-nav__link">
-    <span class="md-ellipsis">
-      status.* Issues and Pull Request Status
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#scope-scope-indicator" class="md-nav__link">
-    <span class="md-ellipsis">
-      scope.* Scope Indicator
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#prio-prioritization-indicator" class="md-nav__link">
-    <span class="md-ellipsis">
-      prio.* Prioritization Indicator
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#spec-ethereum-consensus-spec-version-target" class="md-nav__link">
-    <span class="md-ellipsis">
-      spec.* Ethereum Consensus Spec Version Target
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#community" class="md-nav__link">
-    <span class="md-ellipsis">
-      Community
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-                  </div>
-                </div>
-              </div>
-            
-          
-          
-            <div class="md-content" data-md-component="content">
-              <article class="md-content__inner md-typeset">
-                
-                  
-
-  
-  
-
-
-<h1 id="contribution-guidelines">Contribution Guidelines<a class="headerlink" href="#contribution-guidelines" title="Permanent link">&para;</a></h1>
-<p>Thanks for your interest in contributing to Lodestar. It's people like you that push the Ethereum ecosystem forward.</p>
-<h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
+<html lang="en" dir="ltr" class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-contribution/getting-started" data-has-hydrated="false">
+<head>
+<meta charset="UTF-8">
+<meta name="generator" content="Docusaurus v3.2.0">
+<title data-rh="true">Lodestar Documentation</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://chainsafe.github.io/lodestar/contribution/getting-started"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="Contribution Guidelines | Lodestar"><meta data-rh="true" name="description" content="Thanks for your interest in contributing to Lodestar. It&#x27;s people like you that push the Ethereum ecosystem forward."><meta data-rh="true" property="og:description" content="Thanks for your interest in contributing to Lodestar. It&#x27;s people like you that push the Ethereum ecosystem forward."><link data-rh="true" rel="icon" href="/lodestar/img/favicon.ico"><link data-rh="true" rel="canonical" href="https://chainsafe.github.io/lodestar/contribution/getting-started"><link data-rh="true" rel="alternate" href="https://chainsafe.github.io/lodestar/contribution/getting-started" hreflang="en"><link data-rh="true" rel="alternate" href="https://chainsafe.github.io/lodestar/contribution/getting-started" hreflang="x-default"><link rel="stylesheet" href="/lodestar/assets/css/styles.79b491cb.css">
+<script src="/lodestar/assets/js/runtime~main.58755d79.js" defer="defer"></script>
+<script src="/lodestar/assets/js/main.e3c609ac.js" defer="defer"></script>
+</head>
+<body class="navigation-with-keyboard">
+<script>!function(){function t(t){document.documentElement.setAttribute("data-theme",t)}var e=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return localStorage.getItem("theme")}catch(t){}}();t(null!==e?e:"light")}(),function(){try{const c=new URLSearchParams(window.location.search).entries();for(var[t,e]of c)if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id="__docusaurus"><div role="region" aria-label="Skip to main content"><a class="skipToContent_fXgn" href="#__docusaurus_skipToContent_fallback">Skip to main content</a></div><nav aria-label="Main" class="navbar navbar--fixed-top"><div class="navbar__inner"><div class="navbar__items"><button aria-label="Toggle navigation bar" aria-expanded="false" class="navbar__toggle clean-btn" type="button"><svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><path stroke="currentColor" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M4 7h22M4 15h22M4 23h22"></path></svg></button><a class="navbar__brand" href="/lodestar/"><div class="navbar__logo"><img src="/lodestar/img/logo.png" alt="Lodestar Logo" class="themedComponent_mlkZ themedComponent--light_NVdE"><img src="/lodestar/img/logo.png" alt="Lodestar Logo" class="themedComponent_mlkZ themedComponent--dark_xIcU"></div><b class="navbar__title text--truncate">Lodestar Documentation</b></a></div><div class="navbar__items navbar__items--right"><a href="https://github.com/ChainSafe/lodestar" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width="13.5" height="13.5" aria-hidden="true" viewBox="0 0 24 24" class="iconExternalLink_nPIU"><path fill="currentColor" d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"></path></svg></a><div class="toggle_vylO colorModeToggle_DEke"><button class="clean-btn toggleButton_gllP toggleButtonDisabled_aARS" type="button" disabled="" title="Switch between dark and light mode (currently light mode)" aria-label="Switch between dark and light mode (currently light mode)" aria-live="polite"><svg viewBox="0 0 24 24" width="24" height="24" class="lightToggleIcon_pyhR"><path fill="currentColor" d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"></path></svg><svg viewBox="0 0 24 24" width="24" height="24" class="darkToggleIcon_wfgR"><path fill="currentColor" d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"></path></svg></button></div><div class="navbarSearchContainer_Bca1"><div class="navbar__search searchBarContainer_NW3z"><input placeholder="Search" aria-label="Search" class="navbar__search-input"><div class="loadingRing_RJI3 searchBarLoadingRing_YnHq"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role="presentation" class="navbar-sidebar__backdrop"></div></nav><div id="__docusaurus_skipToContent_fallback" class="main-wrapper mainWrapper_z2l0"><div class="docsWrapper_hBAB"><button aria-label="Scroll back to top" class="clean-btn theme-back-to-top-button backToTopButton_sjWU" type="button"></button><div class="docRoot_UBD9"><main class="docMainContainer_TBSr docMainContainerEnhanced_lQrH"><div class="container padding-top--md padding-bottom--lg"><div class="row"><div class="col docItemCol_VOVn"><div class="docItemContainer_Djhp"><article><div class="tocCollapsible_ETCw theme-doc-toc-mobile tocMobile_ITEo"><button type="button" class="clean-btn tocCollapsibleButton_TO0P">On this page</button></div><div class="theme-doc-markdown markdown"><h1>Contribution Guidelines</h1>
+<p>Thanks for your interest in contributing to Lodestar. It&#x27;s people like you that push the Ethereum ecosystem forward.</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="prerequisites">Prerequisites<a href="#prerequisites" class="hash-link" aria-label="Direct link to Prerequisites" title="Direct link to Prerequisites">​</a></h2>
 <ul>
-<li><img alt="⚙" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/2699.svg" title=":gear:" /> <a href="https://nodejs.org/">NodeJS</a> (LTS)</li>
-<li><img alt="🧰" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/1f9f0.svg" title=":toolbox:" /> <a href="https://classic.yarnpkg.com/lang/en/">Yarn</a></li>
+<li>⚙<!-- --> <a href="https://nodejs.org/" target="_blank" rel="noopener noreferrer">NodeJS</a> (LTS)</li>
+<li>🧰<!-- --> <a href="https://classic.yarnpkg.com/lang/en/" target="_blank" rel="noopener noreferrer">Yarn</a></li>
 </ul>
-<h3 id="macos-specifics">MacOS Specifics<a class="headerlink" href="#macos-specifics" title="Permanent link">&para;</a></h3>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="macos-specifics">MacOS Specifics<a href="#macos-specifics" class="hash-link" aria-label="Direct link to MacOS Specifics" title="Direct link to MacOS Specifics">​</a></h3>
 <p>When using MacOS, there are a couple of extra prerequisites that are required.</p>
 <ul>
 <li>python</li>
 <li>coreutils (e.g. via <code>brew install coreutils</code>)</li>
 </ul>
-<h2 id="getting-started">Getting Started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h2>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="getting-started">Getting Started<a href="#getting-started" class="hash-link" aria-label="Direct link to Getting Started" title="Direct link to Getting Started">​</a></h2>
 <ul>
-<li><img alt="⚙" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/2699.svg" title=":gear:" /> Run <code>yarn</code> to install dependencies.</li>
-<li><img alt="⚙" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/2699.svg" title=":gear:" /> Run <code>yarn build</code> to build lib from source.</li>
-<li><img alt="📦" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/1f4e6.svg" title=":package:" /> A <code>lodestar</code> binary will be bundled in <code>./packages/cli/bin</code>.</li>
-<li><img alt="💻" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/1f4bb.svg" title=":computer:" /> Run <code>./lodestar --help</code> to get a list of available commands and arguments.</li>
+<li>⚙<!-- --> Run <code>yarn</code> to install dependencies.</li>
+<li>⚙<!-- --> Run <code>yarn build</code> to build lib from source.</li>
+<li>📦<!-- --> A <code>lodestar</code> binary will be bundled in <code>./packages/cli/bin</code>.</li>
+<li>💻<!-- --> Run <code>./lodestar --help</code> to get a list of available commands and arguments.</li>
 </ul>
-<h2 id="tests">Tests<a class="headerlink" href="#tests" title="Permanent link">&para;</a></h2>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="tests">Tests<a href="#tests" class="hash-link" aria-label="Direct link to Tests" title="Direct link to Tests">​</a></h2>
 <p>To run tests:</p>
 <ul>
-<li><img alt="🧪" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/1f9ea.svg" title=":test_tube:" /> Run <code>yarn test:unit</code> for unit tests.</li>
-<li><img alt="🧪" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/1f9ea.svg" title=":test_tube:" /> Run <code>yarn test:e2e</code> for end-to-end tests.</li>
-<li><img alt="🧪" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/1f9ea.svg" title=":test_tube:" /> Run <code>yarn test:spec</code> for spec tests.</li>
-<li><img alt="🧪" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/1f9ea.svg" title=":test_tube:" /> Run <code>yarn test</code> to run all tests.</li>
-<li><img alt="🧪" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/1f9ea.svg" title=":test_tube:" /> Run <code>yarn check-types</code> to check TypeScript types.</li>
-<li><img alt="🧪" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/1f9ea.svg" title=":test_tube:" /> Run <code>yarn lint</code> to run the linter (ESLint).</li>
+<li>🧪<!-- --> Run <code>yarn test:unit</code> for unit tests.</li>
+<li>🧪<!-- --> Run <code>yarn test:e2e</code> for end-to-end tests.</li>
+<li>🧪<!-- --> Run <code>yarn test:spec</code> for spec tests.</li>
+<li>🧪<!-- --> Run <code>yarn test</code> to run all tests.</li>
+<li>🧪<!-- --> Run <code>yarn check-types</code> to check TypeScript types.</li>
+<li>🧪<!-- --> Run <code>yarn lint</code> to run the linter (ESLint).</li>
 </ul>
 <p>Note that to run <code>test:e2e</code>, first ensure that the environment is correctly setup by running the <code>run_e2e_env.sh</code> script. This script requires a running docker engine.</p>
-<div class="highlight"><pre><span></span><code>./scripts/run_e2e_env.sh<span class="w"> </span>start
-</code></pre></div>
+<div class="language-sh codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#000000;--prism-background-color:#ffffff"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-sh codeBlock_bY9V thin-scrollbar" style="color:#000000;background-color:#ffffff"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#000000"><span class="token plain">./scripts/run_e2e_env.sh start</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="Copy code to clipboard" title="Copy" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
 <p>Similarly, run <code>yarn download-spec-tests</code> before running <code>yarn test:spec</code>.</p>
 <p>Contributing to tests:</p>
 <ul>
-<li>Test must not depend on external live resources, such that running tests for a commit must be deterministic:</li>
+<li>Test must not depend on external live resources, such that running tests for a commit must be deterministic:<!-- -->
+<ul>
 <li>Do not pull data from external APIs like execution JSON RPC (instead run a local node).</li>
 <li>Do not pull unpinned versions from DockerHub (use deterministic tag) or Github (checkout commit not branch).</li>
 <li>Carefully design tests that depend on timing sensitive events like p2p network e2e tests. Consider that Github runners are significantly less powerful than your development environment.</li>
 </ul>
-<h3 id="common-issues">Common Issues<a class="headerlink" href="#common-issues" title="Permanent link">&para;</a></h3>
-<p><strong>Error: [vitest] Cannot mock "../../src/db/repositories/index.js" because it is already loaded by "src/db/beacon.ts"</strong></p>
-<p>If you observe any error in tests with matching to above error message, that implies you are loading the mocks in the wrong order. The correct order is to import the mocks first and then the actual module. We suggest to import the mocks on very top before any local modules. </p>
-<p><strong>✖ Error: Cannot find package 'async_hooks' imported from</strong></p>
+</li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="devcontainer">Devcontainer<a href="#devcontainer" class="hash-link" aria-label="Direct link to Devcontainer" title="Direct link to Devcontainer">​</a></h2>
+<p>A <a href="https://containers.dev/" target="_blank" rel="noopener noreferrer">devcontainer</a> <a href="/lodestar/contribution/.devcontainer/devcontainer.json">configuration</a> is provided to help speed up linux based development environment setup. It will be used by <a href="https://github.com/features/codespaces" target="_blank" rel="noopener noreferrer">GitHub Codespaces</a> or directly inside VS Code via your local through this <a href="https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers" target="_blank" rel="noopener noreferrer">extension</a>.</p>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="common-issues">Common Issues<a href="#common-issues" class="hash-link" aria-label="Direct link to Common Issues" title="Direct link to Common Issues">​</a></h3>
+<p><strong>Error: [vitest] Cannot mock &quot;../../src/db/repositories/index.js&quot; because it is already loaded by &quot;src/db/beacon.ts&quot;</strong></p>
+<p>If you observe any error in tests with matching to above error message, that implies you are loading the mocks in the wrong order. The correct order is to import the mocks first and then the actual module. We suggest to import the mocks on very top before any local modules.</p>
+<p><strong>✖ Error: Cannot find package &#x27;async_hooks&#x27; imported from</strong></p>
 <p>If you observe following error running any of the test files that means you are running a file which itself or any dependency of that file imports <code>vitest</code>, but you are not running that file with <code>vitest</code> runner. Try running it with <code>yarn vitest</code> command, not with <code>node</code> command.</p>
-<h3 id="debugging-spec-tests">Debugging Spec Tests<a class="headerlink" href="#debugging-spec-tests" title="Permanent link">&para;</a></h3>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="debugging-spec-tests">Debugging Spec Tests<a href="#debugging-spec-tests" class="hash-link" aria-label="Direct link to Debugging Spec Tests" title="Direct link to Debugging Spec Tests">​</a></h3>
 <ul>
 <li>To fix errors always focus on passing all minimal tests first without running mainnet tests.</li>
 <li>Spec tests often compare full expected vs actual states in JSON format.</li>
-<li>A single logical error can cause many spec tests to fail. To focus on a single test at a time you can use vitest's option <code>--bail 1</code> to stop at the first failed test</li>
-<li>To then run only that failed test you can run against a specific file as use vitest's filters option <code>-t &lt;pattern&gt;</code> to run only one case</li>
+<li>A single logical error can cause many spec tests to fail. To focus on a single test at a time you can use vitest&#x27;s option <code>--bail 1</code> to stop at the first failed test</li>
+<li>To then run only that failed test you can run against a specific file as use vitest&#x27;s filters option <code>-t &lt;pattern&gt;</code> to run only one case</li>
 <li>Before running the tests, make sure to switch to the package directory (e.g. <code>packages/beacon-node</code>) to speed up test execution</li>
 </ul>
-<div class="highlight"><pre><span></span><code><span class="nv">LODESTAR_PRESET</span><span class="o">=</span>minimal<span class="w"> </span>yarn<span class="w"> </span>vitest<span class="w"> </span>--run<span class="w"> </span>--bail<span class="w"> </span><span class="m">1</span><span class="w"> </span>--config<span class="w"> </span>vitest.spec.config.ts<span class="w"> </span>test/spec/presets/sanity.test.ts<span class="w"> </span>-t<span class="w"> </span>attester_slashing
-</code></pre></div>
-<h2 id="docker">Docker<a class="headerlink" href="#docker" title="Permanent link">&para;</a></h2>
+<div class="language-sh codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#000000;--prism-background-color:#ffffff"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-sh codeBlock_bY9V thin-scrollbar" style="color:#000000;background-color:#ffffff"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#000000"><span class="token assign-left variable" style="color:rgb(9, 134, 88)">LODESTAR_PRESET</span><span class="token operator" style="color:rgb(0, 0, 0)">=</span><span class="token plain">minimal </span><span class="token function" style="color:rgb(0, 0, 255)">yarn</span><span class="token plain"> vitest </span><span class="token parameter variable" style="color:rgb(9, 134, 88)">--run</span><span class="token plain"> </span><span class="token parameter variable" style="color:rgb(9, 134, 88)">--bail</span><span class="token plain"> </span><span class="token number" style="color:rgb(9, 134, 88)">1</span><span class="token plain"> </span><span class="token parameter variable" style="color:rgb(9, 134, 88)">--config</span><span class="token plain"> vitest.spec.config.ts test/spec/presets/sanity.test.ts </span><span class="token parameter variable" style="color:rgb(9, 134, 88)">-t</span><span class="token plain"> attester_slashing</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="Copy code to clipboard" title="Copy" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="docker">Docker<a href="#docker" class="hash-link" aria-label="Direct link to Docker" title="Direct link to Docker">​</a></h2>
 <p>The docker-compose file requires that a <code>.env</code> file be present in this directory. The <code>default.env</code> file provides a template and can be copied <code>.env</code>:</p>
-<div class="highlight"><pre><span></span><code>cp<span class="w"> </span>default.env<span class="w"> </span>.env
-</code></pre></div>
-<h6 id="beacon-node-only">Beacon node only<a class="headerlink" href="#beacon-node-only" title="Permanent link">&para;</a></h6>
-<div class="highlight"><pre><span></span><code>docker-compose<span class="w"> </span>up<span class="w"> </span>-d
-</code></pre></div>
-<h6 id="beacon-node-and-validator">Beacon node and validator<a class="headerlink" href="#beacon-node-and-validator" title="Permanent link">&para;</a></h6>
+<div class="language-sh codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#000000;--prism-background-color:#ffffff"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-sh codeBlock_bY9V thin-scrollbar" style="color:#000000;background-color:#ffffff"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#000000"><span class="token function" style="color:rgb(0, 0, 255)">cp</span><span class="token plain"> default.env .env</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="Copy code to clipboard" title="Copy" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
+<h6 class="anchor anchorWithStickyNavbar_LWe7" id="beacon-node-only">Beacon node only<a href="#beacon-node-only" class="hash-link" aria-label="Direct link to Beacon node only" title="Direct link to Beacon node only">​</a></h6>
+<div class="language-sh codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#000000;--prism-background-color:#ffffff"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-sh codeBlock_bY9V thin-scrollbar" style="color:#000000;background-color:#ffffff"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#000000"><span class="token function" style="color:rgb(0, 0, 255)">docker-compose</span><span class="token plain"> up </span><span class="token parameter variable" style="color:rgb(9, 134, 88)">-d</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="Copy code to clipboard" title="Copy" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
+<h6 class="anchor anchorWithStickyNavbar_LWe7" id="beacon-node-and-validator">Beacon node and validator<a href="#beacon-node-and-validator" class="hash-link" aria-label="Direct link to Beacon node and validator" title="Direct link to Beacon node and validator">​</a></h6>
 <p>First, you must have keystores and their secrets available locally at <code>./keystores</code> and your <code>password.txt</code> in <code>./secrets</code></p>
-<div class="highlight"><pre><span></span><code>docker-compose<span class="w"> </span>-f<span class="w"> </span>docker-compose.yml<span class="w"> </span>-f<span class="w"> </span>docker-compose.validator.yml<span class="w"> </span>up<span class="w"> </span>-d
-</code></pre></div>
-<h6 id="dockerized-metrics-local-beacon-node">Dockerized metrics + local beacon node<a class="headerlink" href="#dockerized-metrics-local-beacon-node" title="Permanent link">&para;</a></h6>
+<div class="language-sh codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#000000;--prism-background-color:#ffffff"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-sh codeBlock_bY9V thin-scrollbar" style="color:#000000;background-color:#ffffff"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#000000"><span class="token function" style="color:rgb(0, 0, 255)">docker-compose</span><span class="token plain"> </span><span class="token parameter variable" style="color:rgb(9, 134, 88)">-f</span><span class="token plain"> docker-compose.yml </span><span class="token parameter variable" style="color:rgb(9, 134, 88)">-f</span><span class="token plain"> docker-compose.validator.yml up </span><span class="token parameter variable" style="color:rgb(9, 134, 88)">-d</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="Copy code to clipboard" title="Copy" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
+<h6 class="anchor anchorWithStickyNavbar_LWe7" id="dockerized-metrics--local-beacon-node">Dockerized metrics + local beacon node<a href="#dockerized-metrics--local-beacon-node" class="hash-link" aria-label="Direct link to Dockerized metrics + local beacon node" title="Direct link to Dockerized metrics + local beacon node">​</a></h6>
 <p>Run a local beacon with <code>--metrics</code> enabled. Then start Prometheus + Grafana with all dashboards in <code>./dashboards</code> automatically loaded running:</p>
-<div class="highlight"><pre><span></span><code>./docker/docker-compose.local_dev.sh
-</code></pre></div>
-<h2 id="first-time-contributor">First Time Contributor?<a class="headerlink" href="#first-time-contributor" title="Permanent link">&para;</a></h2>
+<div class="language-sh codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#000000;--prism-background-color:#ffffff"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-sh codeBlock_bY9V thin-scrollbar" style="color:#000000;background-color:#ffffff"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#000000"><span class="token plain">./docker/docker-compose.local_dev.sh</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="Copy code to clipboard" title="Copy" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="first-time-contributor">First Time Contributor?<a href="#first-time-contributor" class="hash-link" aria-label="Direct link to First Time Contributor?" title="Direct link to First Time Contributor?">​</a></h2>
 <p>Unsure where to begin contributing to Lodestar? Here are some ideas!</p>
 <ul>
-<li><img alt="✏" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/270f.svg" title=":pencil2:" /> See any typos? See any verbiage that should be changed or updated? Go for it! Github makes it easy to make contributions right from the browser.</li>
-<li><img alt="🔎" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/1f50e.svg" title=":mag_right:" /> Look through our <a href="https://github.com/ChainSafe/lodestar/issues?q=is%3Aopen+is%3Aissue+no%3Aassignee">outstanding unassigned issues</a>. (Hint: look for issues labeled <code>good first issue</code> or <code>help-wanted</code>!)</li>
-<li><img alt="💬" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/1f4ac.svg" title=":speech_balloon:" /> Join our <a href="https://discord.gg/aMxzVcr">Discord chat</a>!
-  <a href="https://discord.gg/aMxzVcr"><img alt="Discord" src="https://img.shields.io/discord/593655374469660673.svg?label=Discord&amp;logo=discord" /></a></li>
+<li>✏️<!-- --> See any typos? See any verbiage that should be changed or updated? Go for it! Github makes it easy to make contributions right from the browser.</li>
+<li>🔎<!-- --> Look through our <a href="https://github.com/ChainSafe/lodestar/issues?q=is%3Aopen+is%3Aissue+no%3Aassignee" target="_blank" rel="noopener noreferrer">outstanding unassigned issues</a>. (Hint: look for issues labeled <code>good first issue</code> or <code>help-wanted</code>!)</li>
+<li>💬<!-- --> Join our <a href="https://discord.gg/aMxzVcr" target="_blank" rel="noopener noreferrer">Discord chat</a>!
+<a href="https://discord.gg/aMxzVcr" target="_blank" rel="noopener noreferrer"><img decoding="async" loading="lazy" src="https://img.shields.io/discord/593655374469660673.svg?label=Discord&amp;logo=discord" alt="Discord" class="img_ev3q"></a></li>
 </ul>
-<h2 id="reporting-a-bug">Reporting A Bug?<a class="headerlink" href="#reporting-a-bug" title="Permanent link">&para;</a></h2>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="reporting-a-bug">Reporting A Bug?<a href="#reporting-a-bug" class="hash-link" aria-label="Direct link to Reporting A Bug?" title="Direct link to Reporting A Bug?">​</a></h2>
 <ul>
-<li>:spiral_notepad: <a href="https://github.com/ChainSafe/lodestar/issues/new/choose">Create a new issue!</a> Select the type of issue that best fits, and please fill out as much of the information as you can.</li>
+<li>🗒<!-- --> <a href="https://github.com/ChainSafe/lodestar/issues/new/choose" target="_blank" rel="noopener noreferrer">Create a new issue!</a> Select the type of issue that best fits, and please fill out as much of the information as you can.</li>
 </ul>
-<h2 id="contribution-process">Contribution Process<a class="headerlink" href="#contribution-process" title="Permanent link">&para;</a></h2>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="contribution-process">Contribution Process<a href="#contribution-process" class="hash-link" aria-label="Direct link to Contribution Process" title="Direct link to Contribution Process">​</a></h2>
 <ol>
-<li>Make sure you're familiar with our contribution guidelines <em>(this document)</em>!</li>
-<li>Create your <a href="https://github.com/ChainSafe/lodestar/fork">own fork</a> of this repository.</li>
+<li>Make sure you&#x27;re familiar with our contribution guidelines <em>(this document)</em>!</li>
+<li>Create your <a href="https://github.com/ChainSafe/lodestar/fork" target="_blank" rel="noopener noreferrer">own fork</a> of this repository.</li>
 <li>Make your changes in your local fork.</li>
-<li>If you've made a code change, make sure to lint and test your changes (<code>yarn lint</code> and <code>yarn test:unit</code>).</li>
-<li>Make an open pull request when you're ready for it to be reviewed. We review PRs on a regular basis. See Pull request etiquette for more information.</li>
+<li>If you&#x27;ve made a code change, make sure to lint and test your changes (<code>yarn lint</code> and <code>yarn test:unit</code>).</li>
+<li>Make an open pull request when you&#x27;re ready for it to be reviewed. We review PRs on a regular basis. See Pull request etiquette for more information.</li>
 <li>You may be asked to sign a Contributor License Agreement (CLA). We make it relatively painless with CLA-bot.</li>
 </ol>
-<h2 id="github-style-guide">Github Style Guide<a class="headerlink" href="#github-style-guide" title="Permanent link">&para;</a></h2>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="github-style-guide">Github Style Guide<a href="#github-style-guide" class="hash-link" aria-label="Direct link to Github Style Guide" title="Direct link to Github Style Guide">​</a></h2>
 <p><strong>Branch Naming</strong></p>
 <p>If you are contributing from this repository prefix the branch name with your Github username (i.e. <code>myusername/short-description</code>)</p>
 <p><strong>Pull Request Naming</strong></p>
 <p>Pull request titles must be:</p>
 <ul>
-<li>Adhering to the <a href="https://www.conventionalcommits.org/en/v1.0.0/#summary">conventional commits</a> spec</li>
+<li>Adhering to the <a href="https://www.conventionalcommits.org/en/v1.0.0/#summary" target="_blank" rel="noopener noreferrer">conventional commits</a> spec</li>
 <li>Short and descriptive summary</li>
 <li>Written in imperative present tense</li>
 <li>Not end with a period</li>
@@ -2084,49 +118,74 @@
 </ul>
 <p><strong>Pull Request Etiquette</strong></p>
 <ul>
-<li>Pull requests should remain as drafts when they are not ready for review by maintainers. Open pull requests signal to the maintainers that it's ready for review.</li>
+<li>Pull requests should remain as drafts when they are not ready for review by maintainers. Open pull requests signal to the maintainers that it&#x27;s ready for review.</li>
 <li>If your pull request is no longer applicable or validated to fix an issue, close your pull request.</li>
-<li>If your pull request is fixable and needs additional changes or commits within a short period of time, switch your pull request into a draft until it's ready.</li>
-<li>Otherwise, close your pull request and <a href="https://github.com/ChainSafe/lodestar/issues/new/choose">create a new issue instead.</a></li>
+<li>If your pull request is fixable and needs additional changes or commits within a short period of time, switch your pull request into a draft until it&#x27;s ready.</li>
+<li>Otherwise, close your pull request and <a href="https://github.com/ChainSafe/lodestar/issues/new/choose" target="_blank" rel="noopener noreferrer">create a new issue instead.</a></li>
 </ul>
-<h2 id="lodestar-monorepo">Lodestar Monorepo<a class="headerlink" href="#lodestar-monorepo" title="Permanent link">&para;</a></h2>
-<p>We're currently experimenting with hosting the majority of lodestar packages and support packages in this repository as a <a href="https://en.wikipedia.org/wiki/Monorepo">monorepo</a>. We're using <a href="https://lerna.js.org/">Lerna</a> to manage the packages. See <a href="https://github.com/ChainSafe/lodestar/tree/unstable/packages">packages/</a> for a list of packages hosted in this repository.</p>
-<h2 id="style-guide">Style Guide<a class="headerlink" href="#style-guide" title="Permanent link">&para;</a></h2>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="lodestar-monorepo">Lodestar Monorepo<a href="#lodestar-monorepo" class="hash-link" aria-label="Direct link to Lodestar Monorepo" title="Direct link to Lodestar Monorepo">​</a></h2>
+<p>We&#x27;re currently experimenting with hosting the majority of lodestar packages and support packages in this repository as a <a href="https://en.wikipedia.org/wiki/Monorepo" target="_blank" rel="noopener noreferrer">monorepo</a>. We&#x27;re using <a href="https://lerna.js.org/" target="_blank" rel="noopener noreferrer">Lerna</a> to manage the packages. See <a href="https://github.com/ChainSafe/lodestar/tree/unstable/packages" target="_blank" rel="noopener noreferrer">packages/</a> for a list of packages hosted in this repository.</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="style-guide">Style Guide<a href="#style-guide" class="hash-link" aria-label="Direct link to Style Guide" title="Direct link to Style Guide">​</a></h2>
 <ul>
 <li>Lodestar has migrated to using ES modules.</li>
-<li>Many module class constructors have the following signature: <code>(options, dependencies)</code></li>
+<li>Many module class constructors have the following signature: <code>(options, dependencies)</code>
+<ul>
 <li>e.g.: <code>public constructor(opts: IExampleOptions, {db, logger}: IExampleModules)</code></li>
-<li>Modules should be designed to <em>"do one thing and do it well!"</em></li>
+</ul>
+</li>
+<li>Modules should be designed to <em>&quot;do one thing and do it well!&quot;</em>
+<ul>
 <li>Consider the interface of a module -- events included, and make sure it is coherent</li>
-<li>Make sure your code is properly linted</li>
+</ul>
+</li>
+<li>Make sure your code is properly linted<!-- -->
+<ul>
 <li>use an IDE that will show linter errors/warnings</li>
 <li>run <code>yarn lint</code> from the command line</li>
-<li>common rules:<ul>
-<li>Functions and variables should be <a href="https://en.wikipedia.org/wiki/Camel_case"><code>camelCase</code></a>, classes should be <a href="http://wiki.c2.com/?PascalCase"><code>PascalCase</code></a>, constants should be <code>UPPERCASE_WITH_UNDERSCORES</code>.</li>
-<li>Use <code>"</code> instead of <code>'</code></li>
+<li>common rules:<!-- -->
+<ul>
+<li>Functions and variables should be <a href="https://en.wikipedia.org/wiki/Camel_case" target="_blank" rel="noopener noreferrer"><code>camelCase</code></a>, classes should be <a href="http://wiki.c2.com/?PascalCase" target="_blank" rel="noopener noreferrer"><code>PascalCase</code></a>, constants should be <code>UPPERCASE_WITH_UNDERSCORES</code>.</li>
+<li>Use <code>&quot;</code> instead of <code>&#x27;</code></li>
 <li>All functions should have types declared for all parameters and return value</li>
-<li>You shouldn't be using TypeScript type <code>any</code></li>
-<li>Private class properties should not be prefixed with a <code>_</code></li>
+<li>You shouldn&#x27;t be using TypeScript type <code>any</code></li>
+<li>Private class properties should not be prefixed with a <code>_</code>
+<ul>
 <li>e.g.: <code>private dirty;</code>, not <code>private _dirty;</code></li>
 </ul>
 </li>
-<li>Make sure that your code is properly type checked:</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Make sure that your code is properly type checked:<!-- -->
+<ul>
 <li>use an IDE that will show type errors</li>
 <li>run <code>yarn check-types</code> from the command line</li>
-<li>Make sure that the tests are still passing:</li>
+</ul>
+</li>
+<li>Make sure that the tests are still passing:<!-- -->
+<ul>
 <li>run <code>yarn test:unit</code> from the command line</li>
-<li>Commenting: If your code does something that is not obvious or deviates from standards, leave a comment for other developers to explain your logic and reasoning.</li>
-<li>Use <code>//</code> commenting format unless it's a comment you want people to see in their IDE.</li>
+</ul>
+</li>
+<li>Commenting: If your code does something that is not obvious or deviates from standards, leave a comment for other developers to explain your logic and reasoning.<!-- -->
+<ul>
+<li>Use <code>//</code> commenting format unless it&#x27;s a comment you want people to see in their IDE.</li>
 <li>Use <code>/** */</code> commenting format for documenting a function/variable.</li>
+</ul>
+</li>
 <li>Code white space can be helpful for reading complex code, please add some.</li>
 <li>For unit tests, we forbid import stubbing when other approaches are feasible.</li>
-<li>Metrics are a <a href="https://www.youtube.com/watch?v=49_qQDbLjGU">critical part of Lodestar</a>, every large feature should be documented with metrics</li>
-<li>Metrics need to follow the <a href="https://prometheus.io/docs/practices/naming/">Prometheus Best Practices</a></li>
+<li>Metrics are a <a href="https://www.youtube.com/watch?v=49_qQDbLjGU" target="_blank" rel="noopener noreferrer">critical part of Lodestar</a>, every large feature should be documented with metrics<!-- -->
+<ul>
+<li>Metrics need to follow the <a href="https://prometheus.io/docs/practices/naming/" target="_blank" rel="noopener noreferrer">Prometheus Best Practices</a></li>
 <li>For metric names, make sure to add the unit as suffix, e.g. <code>_seconds</code> or <code>_bytes</code></li>
 <li>Metric code variables on the other hand should not be suffixed, i.e. <code>Sec</code>-suffix should be omitted</li>
 <li>Time-based metrics must use seconds as the unit</li>
 </ul>
-<h2 id="tests-style-guide">Tests style guide<a class="headerlink" href="#tests-style-guide" title="Permanent link">&para;</a></h2>
+</li>
+</ul>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="tests-style-guide">Tests style guide<a href="#tests-style-guide" class="hash-link" aria-label="Direct link to Tests style guide" title="Direct link to Tests style guide">​</a></h2>
 <p>Test must not depend on external live resources, such that running tests for a commit must be deterministic:</p>
 <ul>
 <li>Do not pull data from external APIs like execution JSON RPC (instead run a local node).</li>
@@ -2134,28 +193,25 @@
 <li>Carefully design tests that depend on timing sensitive events like p2p network e2e tests. Consider that Github runners are significantly less powerful than your development environment.</li>
 </ul>
 <p>Add assertion messages where possible to ease fixing tests if they fail. If an assertion message is called from multiple times with the same stack trace, you <strong>MUST</strong> include an assertion message. For example, if an assertion is inside a for loop add some metadata to be able to locate the error source:</p>
-<div class="highlight"><pre><span></span><code><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kd">const</span><span class="w"> </span><span class="nx">blockResult</span><span class="w"> </span><span class="k">of</span><span class="w"> </span><span class="nx">blocksResult</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="nx">expect</span><span class="p">(</span><span class="nx">blockResult</span><span class="p">.</span><span class="nx">status</span><span class="p">).</span><span class="nx">equals</span><span class="p">(</span><span class="s2">&quot;processed&quot;</span><span class="p">,</span><span class="w"> </span><span class="sb">`wrong block </span><span class="si">${</span><span class="nx">blockResult</span><span class="p">.</span><span class="nx">id</span><span class="si">}</span><span class="sb"> result status`</span><span class="p">);</span>
-<span class="p">}</span>
-</code></pre></div>
-<h2 id="logging-policy">Logging policy<a class="headerlink" href="#logging-policy" title="Permanent link">&para;</a></h2>
-<h3 id="logging-levels">Logging Levels<a class="headerlink" href="#logging-levels" title="Permanent link">&para;</a></h3>
+<div class="language-ts codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#000000;--prism-background-color:#ffffff"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-ts codeBlock_bY9V thin-scrollbar" style="color:#000000;background-color:#ffffff"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#000000"><span class="token keyword" style="color:rgb(0, 0, 255)">for</span><span class="token plain"> </span><span class="token punctuation" style="color:rgb(4, 81, 165)">(</span><span class="token keyword" style="color:rgb(0, 0, 255)">const</span><span class="token plain"> blockResult </span><span class="token keyword" style="color:rgb(0, 0, 255)">of</span><span class="token plain"> blocksResult</span><span class="token punctuation" style="color:rgb(4, 81, 165)">)</span><span class="token plain"> </span><span class="token punctuation" style="color:rgb(4, 81, 165)">{</span><span class="token plain"></span><br></span><span class="token-line" style="color:#000000"><span class="token plain">  </span><span class="token function" style="color:rgb(0, 0, 255)">expect</span><span class="token punctuation" style="color:rgb(4, 81, 165)">(</span><span class="token plain">blockResult</span><span class="token punctuation" style="color:rgb(4, 81, 165)">.</span><span class="token plain">status</span><span class="token punctuation" style="color:rgb(4, 81, 165)">)</span><span class="token punctuation" style="color:rgb(4, 81, 165)">.</span><span class="token function" style="color:rgb(0, 0, 255)">equals</span><span class="token punctuation" style="color:rgb(4, 81, 165)">(</span><span class="token string" style="color:rgb(163, 21, 21)">&quot;processed&quot;</span><span class="token punctuation" style="color:rgb(4, 81, 165)">,</span><span class="token plain"> </span><span class="token template-string template-punctuation string" style="color:rgb(163, 21, 21)">`</span><span class="token template-string string" style="color:rgb(163, 21, 21)">wrong block </span><span class="token template-string interpolation interpolation-punctuation punctuation" style="color:rgb(4, 81, 165)">${</span><span class="token template-string interpolation">blockResult</span><span class="token template-string interpolation punctuation" style="color:rgb(4, 81, 165)">.</span><span class="token template-string interpolation">id</span><span class="token template-string interpolation interpolation-punctuation punctuation" style="color:rgb(4, 81, 165)">}</span><span class="token template-string string" style="color:rgb(163, 21, 21)"> result status</span><span class="token template-string template-punctuation string" style="color:rgb(163, 21, 21)">`</span><span class="token punctuation" style="color:rgb(4, 81, 165)">)</span><span class="token punctuation" style="color:rgb(4, 81, 165)">;</span><span class="token plain"></span><br></span><span class="token-line" style="color:#000000"><span class="token plain"></span><span class="token punctuation" style="color:rgb(4, 81, 165)">}</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="Copy code to clipboard" title="Copy" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="logging-policy">Logging policy<a href="#logging-policy" class="hash-link" aria-label="Direct link to Logging policy" title="Direct link to Logging policy">​</a></h2>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="logging-levels">Logging Levels<a href="#logging-levels" class="hash-link" aria-label="Direct link to Logging Levels" title="Direct link to Logging Levels">​</a></h3>
 <p>Contributors must choose the log level carefully to ensure a consistent experience for every type of user:</p>
 <ul>
 <li><code>error</code>: Critical issues that prevent the application from functioning correctly or cause significant disruption to users. Examples include failed network connections, crashes, or data corruption.</li>
 <li><code>warn</code>: Situations that may lead to critical issues if not addressed but do not prevent the application from functioning. Examples include configuration issues, deprecated features, or temporary network disruptions.</li>
-<li><code>info</code>: General sporadic informational about the node's state. Examples include initialization messages, infrequent periodic status updates, or high-level progress reports.</li>
+<li><code>info</code>: General sporadic informational about the node&#x27;s state. Examples include initialization messages, infrequent periodic status updates, or high-level progress reports.</li>
 <li><code>debug</code>: Detailed diagnostic information that can help developers or users troubleshoot specific issues. Examples include individual request logs for every REST API, networking interactions, or internal components status changes. Alias to <code>verbose</code>.</li>
 </ul>
-<h3 id="logging-guidelines">Logging guidelines<a class="headerlink" href="#logging-guidelines" title="Permanent link">&para;</a></h3>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="logging-guidelines">Logging guidelines<a href="#logging-guidelines" class="hash-link" aria-label="Direct link to Logging guidelines" title="Direct link to Logging guidelines">​</a></h3>
 <ul>
 <li>Avoid excessive logging. Log messages should be clear and concise, providing enough information to understand the context and severity of the issue.</li>
 <li>Do not log sensitive data, such as private keys, user credentials, or personal information.</li>
 <li>Do not log arbitrary data from the network as ASCII or UTF8 at levels higher or equal to <code>info</code>.</li>
-<li>Use clear and concise language. Prefer to log variables in JSON format <code>log.debug("Action", {slot})</code> instead of formatting the text yourself <code>log.debug('slot=${slot}')</code>.</li>
+<li>Use clear and concise language. Prefer to log variables in JSON format <code>log.debug(&quot;Action&quot;, {slot})</code> instead of formatting the text yourself <code>log.debug(&#x27;slot=${slot}&#x27;)</code>.</li>
 <li>Include only relevant context in log messages, sufficient to debug the issue or action it refers to.</li>
 </ul>
-<h2 id="contributing-to-grafana-dashboards">Contributing to Grafana dashboards<a class="headerlink" href="#contributing-to-grafana-dashboards" title="Permanent link">&para;</a></h2>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="contributing-to-grafana-dashboards">Contributing to Grafana dashboards<a href="#contributing-to-grafana-dashboards" class="hash-link" aria-label="Direct link to Contributing to Grafana dashboards" title="Direct link to Contributing to Grafana dashboards">​</a></h2>
 <p>To edit or extend an existing Grafana dashboard with minimal diff:</p>
 <ol>
 <li>Grab the <code>.json</code> dashboard file from current unstable</li>
@@ -2166,22 +222,16 @@
 <li>Run download script, see <a href="#using-download-script">below</a> on how to use it</li>
 <li>Check git diff of updated dashboards, commit, push and open your PR</li>
 </ol>
-<h3 id="using-download-script">Using Download Script<a class="headerlink" href="#using-download-script" title="Permanent link">&para;</a></h3>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="using-download-script">Using Download Script<a href="#using-download-script" class="hash-link" aria-label="Direct link to Using Download Script" title="Direct link to Using Download Script">​</a></h3>
 <p>Create a file <code>.secrets.env</code> with envs</p>
-<div class="highlight"><pre><span></span><code><span class="nv">GRAFANA_API_KEY</span><span class="o">=</span><span class="nv">$token</span>
-<span class="nv">GRAFANA_URL</span><span class="o">=</span>https://yourgrafanaapi.io
-</code></pre></div>
+<div class="language-sh codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#000000;--prism-background-color:#ffffff"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-sh codeBlock_bY9V thin-scrollbar" style="color:#000000;background-color:#ffffff"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#000000"><span class="token assign-left variable" style="color:rgb(9, 134, 88)">GRAFANA_API_KEY</span><span class="token operator" style="color:rgb(0, 0, 0)">=</span><span class="token variable" style="color:rgb(9, 134, 88)">$token</span><span class="token plain"></span><br></span><span class="token-line" style="color:#000000"><span class="token plain"></span><span class="token assign-left variable" style="color:rgb(9, 134, 88)">GRAFANA_URL</span><span class="token operator" style="color:rgb(0, 0, 0)">=</span><span class="token plain">https://yourgrafanaapi.io</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="Copy code to clipboard" title="Copy" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
 <p>Run script to download dashboards to <code>./dashboards</code> folder</p>
-<div class="highlight"><pre><span></span><code>node<span class="w"> </span>scripts/download_dashboards.mjs
-</code></pre></div>
-<h2 id="contributing-to-documentation">Contributing to Documentation<a class="headerlink" href="#contributing-to-documentation" title="Permanent link">&para;</a></h2>
-<p>When submitting PRs for documentation updates, build and run the documentation locally to ensure functionality before submission. For first time documentation contributors, install the python dependencies with <code>yarn docs:install</code>. Build the documentation locally with <code>yarn docs:build</code> and serve with <code>yarn docs:serve</code></p>
-<p>Your locally served documentation will then be accessible at http://localhost:8000.</p>
-<p>If you run into build issues due to circular dependencies, branch switching or other incompatibilities, try cleaning your modules and rebuild your dependencies with:</p>
-<div class="highlight"><pre><span></span><code>yarn<span class="w"> </span>clean<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>yarn<span class="w"> </span>clean:nm<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>yarn<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>yarn<span class="w"> </span>build
-</code></pre></div>
-<p>We also use a spelling <a href="https://github.com/ChainSafe/lodestar/blob/unstable/.wordlist.txt">word list</a> as part of our documentation checks. If using unrecognized words or abbreviations, please extend the word list to pass checks. Make sure the list is sorted with <code>./scripts/wordlist_sort.sh</code> and checked with <code>./scripts/wordlist_sort_check.sh</code> for sorting and duplicates.</p>
-<h2 id="label-guide">Label Guide<a class="headerlink" href="#label-guide" title="Permanent link">&para;</a></h2>
+<div class="language-sh codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#000000;--prism-background-color:#ffffff"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-sh codeBlock_bY9V thin-scrollbar" style="color:#000000;background-color:#ffffff"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#000000"><span class="token function" style="color:rgb(0, 0, 255)">node</span><span class="token plain"> scripts/download_dashboards.mjs</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="Copy code to clipboard" title="Copy" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="contributing-to-documentation">Contributing to Documentation<a href="#contributing-to-documentation" class="hash-link" aria-label="Direct link to Contributing to Documentation" title="Direct link to Contributing to Documentation">​</a></h2>
+<p>When submitting PRs for documentation updates, build and run the documentation locally to ensure functionality before submission. First generate the CLI documentation with <code>yarn docs:build</code>. Then build and serve the documentation locally with <code>yarn docs:serve</code>.</p>
+<p>Your locally served documentation will then be accessible at <a href="http://localhost:3000/lodestar/" target="_blank" rel="noopener noreferrer">http://localhost:3000/lodestar/</a>.</p>
+<p>We also use a spelling <a href="https://github.com/ChainSafe/lodestar/blob/unstable/.wordlist.txt" target="_blank" rel="noopener noreferrer">word list</a> as part of our documentation checks. If using unrecognized words or abbreviations, please extend the word list to pass checks. Make sure the list is sorted with <code>./scripts/wordlist_sort.sh</code> and checked with <code>./scripts/wordlist_sort_check.sh</code> for sorting and duplicates.</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="label-guide">Label Guide<a href="#label-guide" class="hash-link" aria-label="Direct link to Label Guide" title="Direct link to Label Guide">​</a></h2>
 <p>Issues and pull requests are subject to the following labeling guidelines.</p>
 <ul>
 <li>PRs may have a status label to indicate deviation from the normal process such as <code>status-blocked</code> or <code>status-do-not-merge</code></li>
@@ -2189,115 +239,15 @@
 <li>All other labels allow for further evaluation and organization.</li>
 </ul>
 <p>Label descriptions can be found below.</p>
-<h6 id="status-issues-and-pull-request-status"><code>status.*</code> Issues and Pull Request Status<a class="headerlink" href="#status-issues-and-pull-request-status" title="Permanent link">&para;</a></h6>
+<h6 class="anchor anchorWithStickyNavbar_LWe7" id="status-issues-and-pull-request-status"><code>status.*</code> Issues and Pull Request Status<a href="#status-issues-and-pull-request-status" class="hash-link" aria-label="Direct link to status-issues-and-pull-request-status" title="Direct link to status-issues-and-pull-request-status">​</a></h6>
 <p>Status labels apply to issues and pull requests which deviate from normal processes.</p>
-<h6 id="scope-scope-indicator"><code>scope.*</code> Scope Indicator<a class="headerlink" href="#scope-scope-indicator" title="Permanent link">&para;</a></h6>
+<h6 class="anchor anchorWithStickyNavbar_LWe7" id="scope-scope-indicator"><code>scope.*</code> Scope Indicator<a href="#scope-scope-indicator" class="hash-link" aria-label="Direct link to scope-scope-indicator" title="Direct link to scope-scope-indicator">​</a></h6>
 <p>Scope is comparable to Module labels but less strict with the definition of components. It applies to both, issues and pull requests.</p>
-<h6 id="prio-prioritization-indicator"><code>prio.*</code> Prioritization Indicator<a class="headerlink" href="#prio-prioritization-indicator" title="Permanent link">&para;</a></h6>
+<h6 class="anchor anchorWithStickyNavbar_LWe7" id="prio-prioritization-indicator"><code>prio.*</code> Prioritization Indicator<a href="#prio-prioritization-indicator" class="hash-link" aria-label="Direct link to prio-prioritization-indicator" title="Direct link to prio-prioritization-indicator">​</a></h6>
 <p>A simple indicator of issue prioritization. It mainly applies to issues.</p>
-<h6 id="spec-ethereum-consensus-spec-version-target"><code>spec.*</code> Ethereum Consensus Spec Version Target<a class="headerlink" href="#spec-ethereum-consensus-spec-version-target" title="Permanent link">&para;</a></h6>
+<h6 class="anchor anchorWithStickyNavbar_LWe7" id="spec-ethereum-consensus-spec-version-target"><code>spec.*</code> Ethereum Consensus Spec Version Target<a href="#spec-ethereum-consensus-spec-version-target" class="hash-link" aria-label="Direct link to spec-ethereum-consensus-spec-version-target" title="Direct link to spec-ethereum-consensus-spec-version-target">​</a></h6>
 <p>Issues that target a specific version of the Ethereum consensus spec, shall be tagged accordingly.</p>
-<h2 id="community">Community<a class="headerlink" href="#community" title="Permanent link">&para;</a></h2>
-<p>Come chat with us on <a href="https://discord.gg/aMxzVcr">Discord</a> and join our public weekly planning meetings!</p>
-
-
-
-
-
-
-
-
-
-
-
-
-                
-              </article>
-            </div>
-          
-          
-<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
-        </div>
-        
-      </main>
-      
-        <footer class="md-footer">
-  
-  <div class="md-footer-meta md-typeset">
-    <div class="md-footer-meta__inner md-grid">
-      <div class="md-copyright">
-  
-  
-    Made with
-    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
-      Material for MkDocs
-    </a>
-  
-</div>
-      
-        <div class="md-social">
-  
-    
-    
-    
-    
-      
-      
-    
-    <a href="https://github.com/ChainSafe/lodestar" target="_blank" rel="noopener" title="github.com" class="md-social__link">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
-    </a>
-  
-    
-    
-    
-    
-      
-      
-    
-    <a href="https://twitter.com/lodestar_eth" target="_blank" rel="noopener" title="twitter.com" class="md-social__link">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M389.2 48h70.6L305.6 224.2 487 464H345L233.7 318.6 106.5 464H35.8l164.9-188.5L26.8 48h145.6l100.5 132.9L389.2 48zm-24.8 373.8h39.1L151.1 88h-42l255.3 333.8z"/></svg>
-    </a>
-  
-    
-    
-    
-    
-      
-      
-    
-    <a href="https://discord.gg/yjyvFRP" target="_blank" rel="noopener" title="discord.gg" class="md-social__link">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M524.531 69.836a1.5 1.5 0 0 0-.764-.7A485.065 485.065 0 0 0 404.081 32.03a1.816 1.816 0 0 0-1.923.91 337.461 337.461 0 0 0-14.9 30.6 447.848 447.848 0 0 0-134.426 0 309.541 309.541 0 0 0-15.135-30.6 1.89 1.89 0 0 0-1.924-.91 483.689 483.689 0 0 0-119.688 37.107 1.712 1.712 0 0 0-.788.676C39.068 183.651 18.186 294.69 28.43 404.354a2.016 2.016 0 0 0 .765 1.375 487.666 487.666 0 0 0 146.825 74.189 1.9 1.9 0 0 0 2.063-.676A348.2 348.2 0 0 0 208.12 430.4a1.86 1.86 0 0 0-1.019-2.588 321.173 321.173 0 0 1-45.868-21.853 1.885 1.885 0 0 1-.185-3.126 251.047 251.047 0 0 0 9.109-7.137 1.819 1.819 0 0 1 1.9-.256c96.229 43.917 200.41 43.917 295.5 0a1.812 1.812 0 0 1 1.924.233 234.533 234.533 0 0 0 9.132 7.16 1.884 1.884 0 0 1-.162 3.126 301.407 301.407 0 0 1-45.89 21.83 1.875 1.875 0 0 0-1 2.611 391.055 391.055 0 0 0 30.014 48.815 1.864 1.864 0 0 0 2.063.7A486.048 486.048 0 0 0 610.7 405.729a1.882 1.882 0 0 0 .765-1.352c12.264-126.783-20.532-236.912-86.934-334.541ZM222.491 337.58c-28.972 0-52.844-26.587-52.844-59.239s23.409-59.241 52.844-59.241c29.665 0 53.306 26.82 52.843 59.239 0 32.654-23.41 59.241-52.843 59.241Zm195.38 0c-28.971 0-52.843-26.587-52.843-59.239s23.409-59.241 52.843-59.241c29.667 0 53.307 26.82 52.844 59.239 0 32.654-23.177 59.241-52.844 59.241Z"/></svg>
-    </a>
-  
-    
-    
-    
-    
-      
-      
-    
-    <a href="https://blog.chainsafe.io" target="_blank" rel="noopener" title="blog.chainsafe.io" class="md-social__link">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M180.5 74.262C80.813 74.262 0 155.633 0 256s80.819 181.738 180.5 181.738S361 356.373 361 256 280.191 74.262 180.5 74.262Zm288.25 10.646c-49.845 0-90.245 76.619-90.245 171.095s40.406 171.1 90.251 171.1 90.251-76.619 90.251-171.1H559c0-94.503-40.4-171.095-90.248-171.095Zm139.506 17.821c-17.526 0-31.735 68.628-31.735 153.274s14.2 153.274 31.735 153.274S640 340.631 640 256c0-84.649-14.215-153.271-31.742-153.271Z"/></svg>
-    </a>
-  
-</div>
-      
-    </div>
-  </div>
-</footer>
-      
-    </div>
-    <div class="md-dialog" data-md-component="dialog">
-      <div class="md-dialog__inner md-typeset"></div>
-    </div>
-    
-    
-    <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
-    
-    
-      <script src="../../assets/javascripts/bundle.8fd75fb4.min.js"></script>
-      
-    
-  </body>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="community">Community<a href="#community" class="hash-link" aria-label="Direct link to Community" title="Direct link to Community">​</a></h2>
+<p>Come chat with us on <a href="https://discord.gg/aMxzVcr" target="_blank" rel="noopener noreferrer">Discord</a> and join our public weekly planning meetings!</p></div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col"><a href="https://github.com/ChainSafe/lodestar/tree/unstable/docs/pages/contribution/getting-started.md" target="_blank" rel="noopener noreferrer" class="theme-edit-this-page"><svg fill="currentColor" height="20" width="20" viewBox="0 0 40 40" class="iconEdit_Z9Sw" aria-hidden="true"><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"></path></g></svg>Edit this page</a></div><div class="col lastUpdated_JAkA"></div></div></footer></article><nav class="pagination-nav docusaurus-mt-lg" aria-label="Docs pages"></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#prerequisites" class="table-of-contents__link toc-highlight">Prerequisites</a><ul><li><a href="#macos-specifics" class="table-of-contents__link toc-highlight">MacOS Specifics</a></li></ul></li><li><a href="#getting-started" class="table-of-contents__link toc-highlight">Getting Started</a></li><li><a href="#tests" class="table-of-contents__link toc-highlight">Tests</a></li><li><a href="#devcontainer" class="table-of-contents__link toc-highlight">Devcontainer</a><ul><li><a href="#common-issues" class="table-of-contents__link toc-highlight">Common Issues</a></li><li><a href="#debugging-spec-tests" class="table-of-contents__link toc-highlight">Debugging Spec Tests</a></li></ul></li><li><a href="#docker" class="table-of-contents__link toc-highlight">Docker</a></li><li><a href="#first-time-contributor" class="table-of-contents__link toc-highlight">First Time Contributor?</a></li><li><a href="#reporting-a-bug" class="table-of-contents__link toc-highlight">Reporting A Bug?</a></li><li><a href="#contribution-process" class="table-of-contents__link toc-highlight">Contribution Process</a></li><li><a href="#github-style-guide" class="table-of-contents__link toc-highlight">Github Style Guide</a></li><li><a href="#lodestar-monorepo" class="table-of-contents__link toc-highlight">Lodestar Monorepo</a></li><li><a href="#style-guide" class="table-of-contents__link toc-highlight">Style Guide</a></li><li><a href="#tests-style-guide" class="table-of-contents__link toc-highlight">Tests style guide</a></li><li><a href="#logging-policy" class="table-of-contents__link toc-highlight">Logging policy</a><ul><li><a href="#logging-levels" class="table-of-contents__link toc-highlight">Logging Levels</a></li><li><a href="#logging-guidelines" class="table-of-contents__link toc-highlight">Logging guidelines</a></li></ul></li><li><a href="#contributing-to-grafana-dashboards" class="table-of-contents__link toc-highlight">Contributing to Grafana dashboards</a><ul><li><a href="#using-download-script" class="table-of-contents__link toc-highlight">Using Download Script</a></li></ul></li><li><a href="#contributing-to-documentation" class="table-of-contents__link toc-highlight">Contributing to Documentation</a></li><li><a href="#label-guide" class="table-of-contents__link toc-highlight">Label Guide</a></li><li><a href="#community" class="table-of-contents__link toc-highlight">Community</a></li></ul></div></div></div></div></main></div></div></div><footer class="footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="col footer__col"><div class="footer__title">Docs</div><ul class="footer__items clean-list"><li class="footer__item"><a class="footer__link-item" href="/lodestar/introduction">Introduction</a></li></ul></div><div class="col footer__col"><div class="footer__title">Community</div><ul class="footer__items clean-list"><li class="footer__item"><a href="https://discord.com/invite/yjyvFRP" target="_blank" rel="noopener noreferrer" class="footer__link-item">Discord<svg width="13.5" height="13.5" aria-hidden="true" viewBox="0 0 24 24" class="iconExternalLink_nPIU"><path fill="currentColor" d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"></path></svg></a></li><li class="footer__item"><a href="https://twitter.com/lodestar_eth" target="_blank" rel="noopener noreferrer" class="footer__link-item">Twitter<svg width="13.5" height="13.5" aria-hidden="true" viewBox="0 0 24 24" class="iconExternalLink_nPIU"><path fill="currentColor" d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"></path></svg></a></li></ul></div></div><div class="footer__bottom text--center"><div class="footer__copyright">Copyright © 2024 ChainSafe, Inc.</div></div></div></footer></div>
+</body>
 </html>
