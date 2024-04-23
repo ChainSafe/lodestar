@@ -1,4 +1,3 @@
-import os from "node:os";
 import bls from "@chainsafe/bls";
 import {PointFormat, PublicKey} from "@chainsafe/bls/types";
 import {Logger} from "@lodestar/utils";
