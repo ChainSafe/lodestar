@@ -15,12 +15,12 @@ import {
   ValidatorIndex,
   ProducedBlockSource,
   stringType,
+  Wei,
 } from "@lodestar/types";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
-import {fromGraffitiHex, toForkName, toGraffitiHex} from "../../utils/serdes.js";
+import {fromGraffitiHex, toBoolean, toForkName, toGraffitiHex} from "../../utils/serdes.js";
 import {
   ArrayOf,
-  BlockValuesMeta,
   EmptyMeta,
   EmptyMetaCodec,
   EmptyResponseCodec,
@@ -29,12 +29,14 @@ import {
   ExecutionOptimisticAndDependentRootMeta,
   ExecutionOptimisticCodec,
   ExecutionOptimisticMeta,
+  JsonOnlyReq,
   VersionCodec,
   VersionMeta,
-  WithBlockValues,
   WithMeta,
   WithVersion,
 } from "../../utils/codecs.js";
+
+// See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
 export enum BuilderSelection {
   BuilderAlways = "builderalways",
@@ -47,21 +49,20 @@ export enum BuilderSelection {
 }
 
 /** Lodestar-specific (non-standardized) options */
-export type ExtraProduceBlockOps = {
+export type ExtraProduceBlockOpts = {
   feeRecipient?: string;
   builderSelection?: BuilderSelection;
-  builderBoostFactor?: UintBn64;
   strictFeeRecipientCheck?: boolean;
   blindedLocal?: boolean;
 };
 
-export type ProduceBlockMeta = VersionMeta & BlockValuesMeta;
-export type ProduceBlockV3Meta = ProduceBlockMeta & {
+export type ProduceBlockV3Meta = VersionMeta & {
   executionPayloadBlinded: boolean;
+  executionPayloadValue: Wei;
+  consensusBlockValue: Wei;
+  /** Lodestar-specific (non-standardized) value */
   executionPayloadSource: ProducedBlockSource;
 };
-
-// See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
 export const BlockContentsType = new ContainerType(
   {
@@ -299,21 +300,19 @@ export type Endpoints = {
       slot: Slot;
       randaoReveal: BLSSignature;
       graffiti: string;
-      skipRandaoVerification?: boolean;
-    } & ExtraProduceBlockOps,
+    } & Omit<ExtraProduceBlockOpts, "blindedLocal">,
     {
       params: {slot: number};
       query: {
         randao_reveal: string;
         graffiti: string;
-        skip_randao_verification?: string;
         fee_recipient?: string;
         builder_selection?: string;
         strict_fee_recipient_check?: boolean;
       };
     },
     allForks.BeaconBlockOrContents,
-    ProduceBlockMeta
+    VersionMeta
   >;
 
   /**
@@ -331,7 +330,8 @@ export type Endpoints = {
       randaoReveal: BLSSignature;
       graffiti: string;
       skipRandaoVerification?: boolean;
-    } & ExtraProduceBlockOps,
+      builderBoostFactor?: UintBn64;
+    } & ExtraProduceBlockOpts,
     {
       params: {slot: number};
       query: {
@@ -358,7 +358,7 @@ export type Endpoints = {
     },
     {params: {slot: number}; query: {randao_reveal: string; graffiti: string}},
     allForks.BlindedBeaconBlock,
-    ProduceBlockMeta
+    VersionMeta
   >;
 
   /**
@@ -630,20 +630,11 @@ export const definitions: RouteDefinitions<Endpoints> = {
     url: "/eth/v2/validator/blocks/{slot}",
     method: "GET",
     req: {
-      writeReq: ({
-        slot,
-        randaoReveal,
-        graffiti,
-        skipRandaoVerification,
-        feeRecipient,
-        builderSelection,
-        strictFeeRecipientCheck,
-      }) => ({
+      writeReq: ({slot, randaoReveal, graffiti, feeRecipient, builderSelection, strictFeeRecipientCheck}) => ({
         params: {slot},
         query: {
           randao_reveal: toHexString(randaoReveal),
           graffiti: toGraffitiHex(graffiti),
-          ...(skipRandaoVerification && {skip_randao_verification: ""}),
           fee_recipient: feeRecipient,
           builder_selection: builderSelection,
           strict_fee_recipient_check: strictFeeRecipientCheck,
@@ -653,7 +644,6 @@ export const definitions: RouteDefinitions<Endpoints> = {
         slot: params.slot,
         randaoReveal: fromHexString(query.randao_reveal),
         graffiti: fromGraffitiHex(query.graffiti),
-        skipRandaoVerification: parseSkipRandaoVerification(query.skip_randao_verification),
         feeRecipient: query.fee_recipient,
         builderSelection: query.builder_selection as BuilderSelection,
         strictFeeRecipientCheck: query.strict_fee_recipient_check,
@@ -663,7 +653,6 @@ export const definitions: RouteDefinitions<Endpoints> = {
         query: {
           randao_reveal: Schema.StringRequired,
           graffiti: Schema.String,
-          skip_randao_verification: Schema.String,
           fee_recipient: Schema.String,
           builder_selection: Schema.String,
           strict_fee_recipient_check: Schema.Boolean,
@@ -675,7 +664,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
         (fork) =>
           (isForkBlobs(fork) ? BlockContentsType : ssz[fork].BeaconBlock) as Type<allForks.BeaconBlockOrContents>
       ),
-      meta: WithBlockValues(VersionCodec),
+      meta: VersionCodec,
     },
   },
   produceBlockV3: {
@@ -697,7 +686,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
         query: {
           randao_reveal: toHexString(randaoReveal),
           graffiti: toGraffitiHex(graffiti),
-          ...(skipRandaoVerification && {skip_randao_verification: ""}),
+          skip_randao_verification: writeSkipRandaoVerification(skipRandaoVerification),
           fee_recipient: feeRecipient,
           builder_selection: builderSelection,
           builder_boost_factor: builderBoostFactor?.toString(),
@@ -739,16 +728,18 @@ export const definitions: RouteDefinitions<Endpoints> = {
               ? BlockContentsType
               : ssz[version].BeaconBlock) as Type<allForks.FullOrBlindedBeaconBlockOrContents>
       ),
-      meta: WithBlockValues({
+      meta: {
         toJson: (meta) => ({
           version: meta.version,
           execution_payload_blinded: meta.executionPayloadBlinded,
           execution_payload_source: meta.executionPayloadSource,
+          execution_payload_value: meta.executionPayloadValue.toString(),
+          consensus_block_value: meta.consensusBlockValue.toString(),
         }),
         fromJson: (val) => {
           const executionPayloadBlinded = (val as {execution_payload_blinded: boolean}).execution_payload_blinded;
 
-          // extract source from the data and assign defaults in the spec complaint manner if not present in response
+          // Extract source from the data and assign defaults in the spec compliant manner if not present in response
           const executionPayloadSource =
             (val as {execution_payload_source: ProducedBlockSource}).execution_payload_source ??
             (executionPayloadBlinded === true ? ProducedBlockSource.builder : ProducedBlockSource.engine);
@@ -757,17 +748,21 @@ export const definitions: RouteDefinitions<Endpoints> = {
             version: toForkName((val as {version: string}).version),
             executionPayloadBlinded,
             executionPayloadSource,
+            executionPayloadValue: BigInt((val as {execution_payload_value: string}).execution_payload_value),
+            consensusBlockValue: BigInt((val as {consensus_block_value: string}).consensus_block_value),
           };
         },
         toHeadersObject: (meta) => ({
           "Eth-Consensus-Version": meta.version,
-          "Eth-Execution-Payload-Blinded": String(meta.executionPayloadBlinded),
-          "Eth-Execution-Payload-Source": String(meta.executionPayloadSource),
+          "Eth-Execution-Payload-Blinded": meta.executionPayloadBlinded.toString(),
+          "Eth-Execution-Payload-Source": meta.executionPayloadSource.toString(),
+          "Eth-Execution-Payload-Value": meta.executionPayloadValue.toString(),
+          "Eth-Consensus-Block-Value": meta.consensusBlockValue.toString(),
         }),
         fromHeaders: (headers) => {
-          const executionPayloadBlinded = Boolean(headers.get("Eth-Execution-Payload-Blinded")!);
+          const executionPayloadBlinded = toBoolean(headers.get("Eth-Execution-Payload-Blinded")!);
 
-          // extract source from the data and assign defaults in a spec complaint manner if not present in response
+          // Extract source from the headers and assign defaults in a spec compliant manner if not present in response
           const executionPayloadSource =
             (headers.get("Eth-Execution-Payload-Source") as ProducedBlockSource) ??
             (executionPayloadBlinded === true ? ProducedBlockSource.builder : ProducedBlockSource.engine);
@@ -776,9 +771,11 @@ export const definitions: RouteDefinitions<Endpoints> = {
             version: toForkName(headers.get("Eth-Consensus-Version")!),
             executionPayloadBlinded,
             executionPayloadSource,
+            executionPayloadValue: BigInt(headers.get("Eth-Execution-Payload-Value")!),
+            consensusBlockValue: BigInt(headers.get("Eth-Consensus-Block-Value")!),
           };
         },
-      }),
+      },
     },
   },
   produceBlindedBlock: {
@@ -804,7 +801,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
     },
     resp: {
       data: WithVersion((fork) => ssz.allForksBlinded[isForkExecution(fork) ? fork : ForkName.bellatrix].BeaconBlock),
-      meta: WithBlockValues(VersionCodec),
+      meta: VersionCodec,
     },
   },
   produceAttestationData: {
@@ -927,13 +924,11 @@ export const definitions: RouteDefinitions<Endpoints> = {
   prepareBeaconProposer: {
     url: "/eth/v1/validator/prepare_beacon_proposer",
     method: "POST",
-    req: {
+    req: JsonOnlyReq({
       writeReqJson: ({proposers}) => ({body: ProposerPreparationDataListType.toJson(proposers)}),
       parseReqJson: ({body}) => ({proposers: ProposerPreparationDataListType.fromJson(body)}),
-      writeReqSsz: ({proposers}) => ({body: ProposerPreparationDataListType.serialize(proposers)}),
-      parseReqSsz: ({body}) => ({proposers: ProposerPreparationDataListType.deserialize(body)}),
       schema: {body: Schema.ObjectArray},
-    },
+    }),
     resp: EmptyResponseCodec,
   },
   submitBeaconCommitteeSelections: {
@@ -1006,6 +1001,10 @@ export const definitions: RouteDefinitions<Endpoints> = {
 
 function parseBuilderBoostFactor(builderBoostFactorInput?: string | number | bigint): bigint | undefined {
   return builderBoostFactorInput !== undefined ? BigInt(builderBoostFactorInput) : undefined;
+}
+
+function writeSkipRandaoVerification(skipRandaoVerification?: boolean): string | undefined {
+  return skipRandaoVerification === true ? "" : undefined;
 }
 
 function parseSkipRandaoVerification(skipRandaoVerification?: string): boolean {

@@ -178,7 +178,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
     url: "/eth/v1/debug/beacon/states/{state_id}",
     method: "GET",
     req: {
-      writeReq: ({stateId}) => ({params: {state_id: String(stateId)}}),
+      writeReq: ({stateId}) => ({params: {state_id: stateId.toString()}}),
       parseReq: ({params}) => ({stateId: params.state_id}),
       schema: {
         params: {state_id: Schema.StringRequired},
@@ -193,7 +193,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
     url: "/eth/v2/debug/beacon/states/{state_id}",
     method: "GET",
     req: {
-      writeReq: ({stateId}) => ({params: {state_id: String(stateId)}}),
+      writeReq: ({stateId}) => ({params: {state_id: stateId.toString()}}),
       parseReq: ({params}) => ({stateId: params.state_id}),
       schema: {
         params: {state_id: Schema.StringRequired},

@@ -223,7 +223,7 @@ export type Endpoints = {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const blockIdOnlyReq: RequestCodec<Endpoint<"GET", {blockId: BlockId}, {params: {block_id: string}}, any, any>> = {
-  writeReq: ({blockId}) => ({params: {block_id: String(blockId)}}),
+  writeReq: ({blockId}) => ({params: {block_id: blockId.toString()}}),
   parseReq: ({params}) => ({blockId: params.block_id}),
   schema: {params: {block_id: Schema.StringRequired}},
 };
@@ -519,7 +519,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       url: "/eth/v1/beacon/blob_sidecars/{block_id}",
       method: "GET",
       req: {
-        writeReq: ({blockId, indices}) => ({params: {block_id: String(blockId)}, query: {indices}}),
+        writeReq: ({blockId, indices}) => ({params: {block_id: blockId.toString()}, query: {indices}}),
         parseReq: ({params, query}) => ({blockId: params.block_id, indices: query.indices}),
         schema: {params: {block_id: Schema.StringRequired}, query: {indices: Schema.UintArray}},
       },

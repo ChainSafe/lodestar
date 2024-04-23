@@ -210,7 +210,7 @@ export type Endpoints = {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const stateIdOnlyReq: RequestCodec<Endpoint<"GET", {stateId: StateId}, {params: {state_id: string}}, any, any>> = {
-  writeReq: (state_id) => ({params: {state_id: String(state_id)}}),
+  writeReq: ({stateId}) => ({params: {state_id: stateId.toString()}}),
   parseReq: ({params}) => ({stateId: params.state_id}),
   schema: {params: {state_id: Schema.StringRequired}},
 };
@@ -220,7 +220,10 @@ export const definitions: RouteDefinitions<Endpoints> = {
     url: "/eth/v1/beacon/states/{state_id}/committees",
     method: "GET",
     req: {
-      writeReq: ({stateId, epoch, index, slot}) => ({params: {state_id: String(stateId)}, query: {epoch, index, slot}}),
+      writeReq: ({stateId, epoch, index, slot}) => ({
+        params: {state_id: stateId.toString()},
+        query: {epoch, index, slot},
+      }),
       parseReq: ({params, query}) => ({
         stateId: params.state_id,
         epoch: query.epoch,
@@ -241,7 +244,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
     url: "/eth/v1/beacon/states/{state_id}/sync_committees",
     method: "GET",
     req: {
-      writeReq: ({stateId, epoch}) => ({params: {state_id: String(stateId)}, query: {epoch}}),
+      writeReq: ({stateId, epoch}) => ({params: {state_id: stateId.toString()}, query: {epoch}}),
       parseReq: ({params, query}) => ({stateId: params.state_id, epoch: query.epoch}),
       schema: {
         params: {state_id: Schema.StringRequired},
@@ -284,7 +287,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
     url: "/eth/v1/beacon/states/{state_id}/randao",
     method: "GET",
     req: {
-      writeReq: ({stateId, epoch}) => ({params: {state_id: String(stateId)}, query: {epoch}}),
+      writeReq: ({stateId, epoch}) => ({params: {state_id: stateId.toString()}, query: {epoch}}),
       parseReq: ({params, query}) => ({stateId: params.state_id, epoch: query.epoch}),
       schema: {
         params: {state_id: Schema.StringRequired},
@@ -300,7 +303,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
     url: "/eth/v1/beacon/states/{state_id}/validators/{validator_id}",
     method: "GET",
     req: {
-      writeReq: ({stateId, validatorId}) => ({params: {state_id: String(stateId), validator_id: validatorId}}),
+      writeReq: ({stateId, validatorId}) => ({params: {state_id: stateId.toString(), validator_id: validatorId}}),
       parseReq: ({params}) => ({stateId: params.state_id, validatorId: params.validator_id}),
       schema: {
         params: {state_id: Schema.StringRequired, validator_id: Schema.StringRequired},
@@ -315,7 +318,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
     url: "/eth/v1/beacon/states/{state_id}/validators",
     method: "GET",
     req: {
-      writeReq: ({stateId, id, status}) => ({params: {state_id: String(stateId)}, query: {id, status}}),
+      writeReq: ({stateId, id, status}) => ({params: {state_id: stateId.toString()}, query: {id, status}}),
       parseReq: ({params, query}) => ({stateId: params.state_id, id: query.id, status: query.status}),
       schema: {
         params: {state_id: Schema.StringRequired},
@@ -331,7 +334,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
     url: "/eth/v1/beacon/states/{state_id}/validator_balances",
     method: "GET",
     req: {
-      writeReq: ({stateId, indices}) => ({params: {state_id: String(stateId)}, query: {id: indices}}),
+      writeReq: ({stateId, indices}) => ({params: {state_id: stateId.toString()}, query: {id: indices}}),
       parseReq: ({params, query}) => ({stateId: params.state_id, indices: query.id}),
       schema: {
         params: {state_id: Schema.StringRequired},

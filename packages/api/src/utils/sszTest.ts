@@ -97,12 +97,12 @@ export const definitions: RouteDefinitions<TestEndpoints> = {
     url: "/eth/v2/debug/beacon/states/{state_id}",
     method: "GET",
     req: {
-      writeReq: ({stateId}) => ({params: {state_id: String(stateId)}}),
+      writeReq: ({stateId}) => ({params: {state_id: stateId.toString()}}),
       parseReq: ({params}) => ({stateId: params.state_id}),
       schema: {params: {state_id: Schema.StringRequired}},
     },
     resp: {
-      // this is an example where respones metadata informs interpretation of the response data
+      // this is an example where responses metadata informs interpretation of the response data
       data: WithVersion((forkName) => ssz[forkName].BeaconState as Type<allForks.BeaconState>),
       meta: ExecutionOptimisticAndVersionCodec,
     },

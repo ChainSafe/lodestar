@@ -38,32 +38,27 @@ export const testData: GenericServerTestCases<Endpoints> = {
   getSyncCommitteeDuties: {
     args: {epoch: 1000, indices: [1, 2, 3]},
     res: {
-      data: [{pubkey: Uint8Array.from(Buffer.alloc(48, 1)), validatorIndex: 2, validatorSyncCommitteeIndices: [3]}],
+      data: [{pubkey: new Uint8Array(48).fill(1), validatorIndex: 2, validatorSyncCommitteeIndices: [3]}],
       meta: {executionOptimistic: true},
     },
   },
   produceBlock: {
     args: {slot: 32000, randaoReveal, graffiti},
-    res: {data: ssz.phase0.BeaconBlock.defaultValue(), meta: {version: ForkName.altair}},
+    res: {data: ssz.phase0.BeaconBlock.defaultValue(), meta: {version: ForkName.phase0}},
   },
   produceBlockV2: {
     args: {
       slot: 32000,
       randaoReveal,
       graffiti,
-      skipRandaoVerification: true,
       feeRecipient,
       builderSelection: BuilderSelection.ExecutionAlways,
       strictFeeRecipientCheck: true,
-      blindedLocal: true,
-      builderBoostFactor: 100n,
     },
     res: {
       data: ssz.altair.BeaconBlock.defaultValue(),
       meta: {
         version: ForkName.altair,
-        executionPayloadValue: ssz.Wei.defaultValue(),
-        consensusBlockValue: ssz.Wei.defaultValue(),
       },
     },
   },
@@ -73,11 +68,11 @@ export const testData: GenericServerTestCases<Endpoints> = {
       randaoReveal,
       graffiti,
       skipRandaoVerification: true,
+      builderBoostFactor: 0n,
       feeRecipient,
       builderSelection: BuilderSelection.ExecutionAlways,
       strictFeeRecipientCheck: true,
-      blindedLocal: true,
-      builderBoostFactor: 100n,
+      blindedLocal: false,
     },
     res: {
       data: ssz.altair.BeaconBlock.defaultValue(),
@@ -96,8 +91,6 @@ export const testData: GenericServerTestCases<Endpoints> = {
       data: ssz.bellatrix.BlindedBeaconBlock.defaultValue(),
       meta: {
         version: ForkName.bellatrix,
-        executionPayloadValue: ssz.Wei.defaultValue(),
-        consensusBlockValue: ssz.Wei.defaultValue(),
       },
     },
   },

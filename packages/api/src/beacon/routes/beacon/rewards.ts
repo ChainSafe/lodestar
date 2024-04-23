@@ -159,7 +159,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
     url: "/eth/v1/beacon/rewards/blocks/{block_id}",
     method: "GET",
     req: {
-      writeReq: ({blockId}) => ({params: {block_id: String(blockId)}}),
+      writeReq: ({blockId}) => ({params: {block_id: blockId.toString()}}),
       parseReq: ({params}) => ({blockId: params.block_id}),
       schema: {params: {block_id: Schema.StringRequired}},
     },
@@ -195,7 +195,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
     method: "POST",
     req: JsonOnlyReq({
       writeReqJson: ({blockId, validatorIds}) => ({
-        params: {block_id: String(blockId)},
+        params: {block_id: blockId.toString()},
         body: validatorIds || [],
       }),
       parseReqJson: ({params, body}) => ({
