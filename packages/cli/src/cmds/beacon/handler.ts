@@ -34,7 +34,18 @@ const HOURS_TO_MS = 3600 * 1000;
  * Runs a beacon node.
  */
 export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void> {
-  // must be EARLY in startup. see `setThreadPoolSize.ts` for more info
+  // must be EARLY in startup because may change UV_THREADPOOL_SIZE
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let invalidPoolSizeValue: any;
+  let poolSizeIsNanWarn = false;
+  const defaultThreadpoolSize = os.availableParallelism();
+  let uvPoolSize = parseInt(`${process.env.UV_THREADPOOL_SIZE}`);
+  if (isNaN(uvPoolSize)) {
+    poolSizeIsNanWarn = true;
+    invalidPoolSizeValue = uvPoolSize;
+    process.env.UV_THREADPOOL_SIZE = `${(uvPoolSize = defaultThreadpoolSize)}`;
+  }
+
   const {config, options, beaconPaths, network, version, commit, peerId, logger} = await beaconHandlerInit(args);
 
   // initialize directories
@@ -45,13 +56,12 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
   const abortController = new AbortController();
 
   logger.info("Lodestar", {network, version, commit});
-
-  const defaultThreadpoolSize = os.availableParallelism();
-  logger.info(`BLS libuv pool size: ${process.env.UV_THREADPOOL_SIZE}`);
-  if (isNaN(parseInt(`${process.env.UV_THREADPOOL_SIZE}`))) {
-    logger.warn(`UV_THREADPOOL_SIZE must be a number. Using default value of ${defaultThreadpoolSize}`);
-    process.env.UV_THREADPOOL_SIZE = defaultThreadpoolSize.toString();
+  if (poolSizeIsNanWarn) {
+    logger.warn(
+      `UV_THREADPOOL_SIZE=${invalidPoolSizeValue}, but must be set to a number. Using default value of ${defaultThreadpoolSize}`
+    );
   }
+  logger.info(`BLS libuv pool size: ${uvPoolSize}`);
   /**
    * Help users ensure that thread pool is large enough for optimal performance
    *
@@ -59,12 +69,11 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
    * network threads that setting UV_THREADPOOL_SIZE to $(nproc) provides the
    * best performance. Recommend this value to consumers
    */
-  if (parseInt(`${process.env.UV_THREADPOOL_SIZE}`) < defaultThreadpoolSize) {
+  if (uvPoolSize < defaultThreadpoolSize) {
     logger.warn(
-      `UV_THREADPOOL_SIZE is less than available CPUs: ${defaultThreadpoolSize}. This will cause performance degradation.`
+      `UV_THREADPOOL_SIZE=${uvPoolSize} which is less than available CPUs: ${defaultThreadpoolSize}. This will cause performance degradation.`
     );
   }
-
 
   // Callback for beacon to request forced exit, for e.g. in case of irrecoverable
   // forkchoice errors
