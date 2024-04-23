@@ -1,7 +1,15 @@
 #!/usr/bin/env node
 
-// MUST import first to apply preset from args and set ssz hasher
+/**
+ * MUST import first!!
+ * - applies preset
+ * - sets ssz hasher
+ * - sets libuv thread pool size
+ */
 import "./preInitialization.js";
+/**
+ * Everything else must be after!!
+ */
 import {YargsError} from "./util/index.js";
 import {getLodestarCli, yarg} from "./cli.js";
 import "source-map-support/register.js";
