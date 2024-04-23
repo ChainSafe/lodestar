@@ -41,7 +41,7 @@ export type BlockHeadersResponse = ValueOf<typeof BlockHeadersResponseType>;
 export type RootResponse = ValueOf<typeof RootResponseType>;
 export type SignedBlockContents = ValueOf<typeof SignedBlockContentsType>;
 
-export type BlockId = RootHex | Slot | "head" | "genesis" | "finalized";
+export type BlockId = RootHex | Slot | "head" | "genesis" | "finalized" | "justified";
 
 /**
  * True if the response references an unverified execution payload. Optimistic information may be invalidated at
