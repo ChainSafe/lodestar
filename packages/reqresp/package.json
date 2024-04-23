@@ -53,7 +53,7 @@
   },
   "dependencies": {
     "@chainsafe/fast-crc32c": "^4.1.1",
-    "@libp2p/interface": "^1.2.0",
+    "@libp2p/interface": "^1.1.1",
     "@lodestar/config": "^1.17.0",
     "@lodestar/params": "^1.17.0",
     "@lodestar/utils": "^1.17.0",
