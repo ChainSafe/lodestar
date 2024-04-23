@@ -48,6 +48,13 @@ jobs:
       tag: ${{ steps.get_tag.outputs.tag }}
       prev_tag: ${{ steps.get_prev_tag.outputs.prev_tag }}
 
+  binaries:
+    name: Build lodestar binaries
+    uses: ./.github/workflows/binaries.yml
+    needs: tag
+    with:
+      version: ${{ needs.tag.outputs.tag }}
+
   npm:
     name: Publish to NPM & Github
     runs-on: buildjet-4vcpu-ubuntu-2204
@@ -160,10 +167,3 @@ jobs:
           --file ./docker/prometheus/Dockerfile
           --tag chainsafe/lodestar-prometheus:${{ needs.tag.outputs.tag }}
           --platform linux/amd64,linux/arm64
-
-  binaries:
-    name: Build lodestar binaries
-    uses: ./.github/workflows/binaries.yml
-    needs: tag
-    with:
-      version: ${{ needs.tag.outputs.tag }}
