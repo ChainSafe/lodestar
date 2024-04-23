@@ -4,7 +4,7 @@ import {ForkName} from "@lodestar/params";
 import {Endpoints} from "../../../../src/beacon/routes/lightclient.js";
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 
-const root = Uint8Array.from(Buffer.alloc(32, 1));
+const root = new Uint8Array(32).fill(1);
 
 const lightClientUpdate = ssz.altair.LightClientUpdate.defaultValue();
 const syncAggregate = ssz.altair.SyncAggregate.defaultValue();
@@ -46,6 +46,6 @@ export const testData: GenericServerTestCases<Endpoints> = {
   },
   getCommitteeRoot: {
     args: {startPeriod: 1, count: 2},
-    res: {data: [Uint8Array.from(Buffer.alloc(32, 0)), Uint8Array.from(Buffer.alloc(32, 1))]},
+    res: {data: [new Uint8Array(32), new Uint8Array(32).fill(1)]},
   },
 };

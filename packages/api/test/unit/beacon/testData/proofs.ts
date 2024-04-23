@@ -3,7 +3,7 @@ import {ForkName} from "@lodestar/params";
 import {Endpoints} from "../../../../src/beacon/routes/proof.js";
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 
-const root = Uint8Array.from(Buffer.alloc(32, 1));
+const root = new Uint8Array(32).fill(1);
 const descriptor = Uint8Array.from([0, 0, 0, 0]);
 
 export const testData: GenericServerTestCases<Endpoints> = {
