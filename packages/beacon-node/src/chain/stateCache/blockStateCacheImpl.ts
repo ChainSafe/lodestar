@@ -10,11 +10,11 @@ import {BlockStateCache} from "./types.js";
 const MAX_STATES = 3 * 32;
 
 /**
- * Old implementation of StateCache
+ * Old implementation of StateCache (used to call `StateContextCache`)
  * - Prune per checkpoint so number of states ranges from 96 to 128
  * - Keep a separate head state to make sure it is always available
  */
-export class StateContextCache implements BlockStateCache {
+export class BlockStateCacheImpl implements BlockStateCache {
   /**
    * Max number of states allowed in the cache
    */
@@ -83,7 +83,7 @@ export class StateContextCache implements BlockStateCache {
    * See ./fifoBlockStateCache.ts for implementation
    */
   getSeedState(): CachedBeaconStateAllForks {
-    throw Error("Not implemented for StateContextCache");
+    throw Error("Not implemented for BlockStateCacheImpl");
   }
 
   clear(): void {

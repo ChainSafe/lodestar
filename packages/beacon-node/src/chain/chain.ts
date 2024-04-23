@@ -80,7 +80,7 @@ import {BlockInput} from "./blocks/types.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {BlockRewards, computeBlockRewards} from "./rewards/blockRewards.js";
 import {ShufflingCache} from "./shufflingCache.js";
-import {StateContextCache} from "./stateCache/stateContextCache.js";
+import {BlockStateCacheImpl} from "./stateCache/blockStateCacheImpl.js";
 import {SeenGossipBlockInput} from "./seenCache/index.js";
 import {InMemoryCheckpointStateCache} from "./stateCache/inMemoryCheckpointsCache.js";
 import {FIFOBlockStateCache} from "./stateCache/fifoBlockStateCache.js";
@@ -247,9 +247,9 @@ export class BeaconChain implements IBeaconChain {
     this.index2pubkey = cachedState.epochCtx.index2pubkey;
 
     const fileDataStore = opts.nHistoricalStatesFileDataStore ?? false;
-    const stateCache = this.opts.nHistoricalStates
+    const blockStateCache = this.opts.nHistoricalStates
       ? new FIFOBlockStateCache(this.opts, {metrics})
-      : new StateContextCache({metrics});
+      : new BlockStateCacheImpl({metrics});
     const checkpointStateCache = this.opts.nHistoricalStates
       ? new PersistentCheckpointStateCache(
           {
@@ -257,7 +257,7 @@ export class BeaconChain implements IBeaconChain {
             logger,
             clock,
             shufflingCache: this.shufflingCache,
-            blockStateCache: stateCache,
+            blockStateCache,
             bufferPool: new BufferPool(anchorState.type.tree_serializedSize(anchorState.node), metrics),
             datastore: fileDataStore
               ? // debug option if we want to investigate any issues with the DB
@@ -269,8 +269,8 @@ export class BeaconChain implements IBeaconChain {
         )
       : new InMemoryCheckpointStateCache({metrics});
     const {checkpoint} = computeAnchorCheckpoint(config, anchorState);
-    stateCache.add(cachedState);
-    stateCache.setHeadState(cachedState);
+    blockStateCache.add(cachedState);
+    blockStateCache.setHeadState(cachedState);
     checkpointStateCache.add(checkpoint, cachedState);
 
     const forkChoice = initializeForkChoice(
@@ -284,7 +284,7 @@ export class BeaconChain implements IBeaconChain {
     const regen = new QueuedStateRegenerator({
       config,
       forkChoice,
-      stateCache,
+      blockStateCache,
       checkpointStateCache,
       db,
       metrics,

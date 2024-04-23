@@ -98,7 +98,7 @@ export type Api = {
   getRegenQueueItems(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: RegenQueueItem[]}}>>;
   /** Dump all items in the block processor queue */
   getBlockProcessorQueueItems(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: BlockProcessorQueueItem[]}}>>;
-  /** Dump a summary of the states in the StateContextCache */
+  /** Dump a summary of the states in the block state cache and checkpoint state cache */
   getStateCacheItems(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: StateCacheItem[]}}>>;
   /** Dump peer gossip stats by peer */
   getGossipPeerScoreStats(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: GossipPeerScoreStat[]}}>>;
