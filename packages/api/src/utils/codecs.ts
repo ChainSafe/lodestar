@@ -135,7 +135,7 @@ export const ExecutionOptimisticCodec: ResponseMetadataCodec<ExecutionOptimistic
     "Eth-Execution-Optimistic": val.executionOptimistic.toString(),
   }),
   fromHeaders: (headers) => ({
-    executionOptimistic: toBoolean(headers.get("Eth-Execution-Optimistic")),
+    executionOptimistic: toBoolean(headers.get("Eth-Execution-Optimistic")!),
   }),
 };
 
@@ -166,7 +166,7 @@ export const ExecutionOptimisticAndVersionCodec: ResponseMetadataCodec<Execution
     "Eth-Consensus-Version": val.version,
   }),
   fromHeaders: (headers) => ({
-    executionOptimistic: toBoolean(headers.get("Eth-Execution-Optimistic")),
+    executionOptimistic: toBoolean(headers.get("Eth-Execution-Optimistic")!),
     version: toForkName(headers.get("Eth-Consensus-Version")!),
   }),
 };
@@ -186,7 +186,7 @@ export const ExecutionOptimisticAndDependentRootCodec: ResponseMetadataCodec<Exe
       "Eth-Consensus-Dependent-Root": toHex(val.dependentRoot),
     }),
     fromHeaders: (headers) => ({
-      executionOptimistic: toBoolean(headers.get("Eth-Execution-Optimistic")),
+      executionOptimistic: toBoolean(headers.get("Eth-Execution-Optimistic")!),
       dependentRoot: fromHex(headers.get("Eth-Consensus-Dependent-Root")!),
     }),
   };
