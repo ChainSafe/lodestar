@@ -1,8 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-
 import {ArrayType, ListBasicType, ListCompositeType, Type, isBasicType, isCompositeType} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
-import {Root, Wei} from "@lodestar/types";
+import {Root} from "@lodestar/types";
 import {fromHex, objectToExpectedCase, toHex} from "@lodestar/utils";
 import {ExecutionOptimistic} from "../beacon/routes/beacon/block.js";
 import {
@@ -16,7 +15,7 @@ import {
   JsonRequestMethods,
 } from "./types.js";
 import {WireFormat} from "./headers.js";
-import {toForkName} from "./serdes.js";
+import {toBoolean, toForkName} from "./serdes.js";
 
 // Utility types / codecs
 
@@ -29,7 +28,6 @@ export type ExecutionOptimisticMeta = {executionOptimistic: ExecutionOptimistic}
 export type VersionMeta = {version: ForkName};
 export type ExecutionOptimisticAndVersionMeta = ExecutionOptimisticMeta & VersionMeta;
 export type ExecutionOptimisticAndDependentRootMeta = {executionOptimistic: ExecutionOptimistic; dependentRoot: Root};
-export type BlockValuesMeta = {executionPayloadValue: Wei; consensusBlockValue: Wei};
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export type AnyEndpoint = Endpoint<any, any, any, any, any>;
@@ -127,100 +125,71 @@ export function WithVersion<T, M extends {version: ForkName}>(
 }
 
 export const ExecutionOptimisticCodec: ResponseMetadataCodec<ExecutionOptimisticMeta> = {
-  toJson: ({executionOptimistic}) => ({
-    execution_optimistic: executionOptimistic,
+  toJson: (val) => ({
+    execution_optimistic: val.executionOptimistic,
   }),
   fromJson: (val) => ({
     executionOptimistic: (val as {execution_optimistic: boolean}).execution_optimistic,
   }),
   toHeadersObject: (val) => ({
-    "Eth-Execution-Optimistic": String(val.executionOptimistic),
+    "Eth-Execution-Optimistic": val.executionOptimistic.toString(),
   }),
-  fromHeaders: (val) => ({
-    executionOptimistic: Boolean(val.get("Eth-Execution-Optimistic")),
+  fromHeaders: (headers) => ({
+    executionOptimistic: toBoolean(headers.get("Eth-Execution-Optimistic")),
   }),
 };
 
 export const VersionCodec: ResponseMetadataCodec<VersionMeta> = {
-  toJson: (val) => val,
+  toJson: (val) => ({version: val.version}),
   fromJson: (val) => ({
     version: toForkName((val as {version: string}).version),
   }),
   toHeadersObject: (val) => ({
     "Eth-Consensus-Version": val.version,
   }),
-  fromHeaders: (val) => ({
-    version: toForkName(val.get("Eth-Consensus-Version")!),
+  fromHeaders: (headers) => ({
+    version: toForkName(headers.get("Eth-Consensus-Version")!),
   }),
 };
 
 export const ExecutionOptimisticAndVersionCodec: ResponseMetadataCodec<ExecutionOptimisticAndVersionMeta> = {
-  toJson: ({executionOptimistic, version}) => ({
-    execution_optimistic: executionOptimistic,
-    version,
+  toJson: (val) => ({
+    execution_optimistic: val.executionOptimistic,
+    version: val.version,
   }),
   fromJson: (val) => ({
     executionOptimistic: (val as {execution_optimistic: boolean}).execution_optimistic,
     version: toForkName((val as {version: string}).version),
   }),
   toHeadersObject: (val) => ({
-    "Eth-Execution-Optimistic": String(val.executionOptimistic),
+    "Eth-Execution-Optimistic": val.executionOptimistic.toString(),
     "Eth-Consensus-Version": val.version,
   }),
-  fromHeaders: (val) => ({
-    executionOptimistic: Boolean(val.get("Eth-Execution-Optimistic")),
-    version: toForkName(val.get("Eth-Consensus-Version")!),
+  fromHeaders: (headers) => ({
+    executionOptimistic: toBoolean(headers.get("Eth-Execution-Optimistic")),
+    version: toForkName(headers.get("Eth-Consensus-Version")!),
   }),
 };
 
 export const ExecutionOptimisticAndDependentRootCodec: ResponseMetadataCodec<ExecutionOptimisticAndDependentRootMeta> =
   {
-    toJson: ({executionOptimistic, dependentRoot}) => ({
-      execution_optimistic: executionOptimistic,
-      dependent_root: toHex(dependentRoot),
+    toJson: (val) => ({
+      execution_optimistic: val.executionOptimistic,
+      dependent_root: toHex(val.dependentRoot),
     }),
     fromJson: (val) => ({
       executionOptimistic: (val as {execution_optimistic: boolean}).execution_optimistic,
       dependentRoot: fromHex((val as {dependent_root: string}).dependent_root),
     }),
     toHeadersObject: (val) => ({
-      "Eth-Execution-Optimistic": String(val.executionOptimistic),
+      "Eth-Execution-Optimistic": val.executionOptimistic.toString(),
       "Eth-Consensus-Dependent-Root": toHex(val.dependentRoot),
     }),
-    fromHeaders: (val) => ({
-      executionOptimistic: Boolean(val.get("Eth-Execution-Optimistic")),
-      dependentRoot: fromHex(val.get("Eth-Consensus-Dependent-Root")!),
+    fromHeaders: (headers) => ({
+      executionOptimistic: toBoolean(headers.get("Eth-Execution-Optimistic")),
+      dependentRoot: fromHex(headers.get("Eth-Consensus-Dependent-Root")!),
     }),
   };
-
-export function WithBlockValues<M extends Record<string, unknown>>(
-  meta: ResponseMetadataCodec<Omit<M, keyof BlockValuesMeta>>
-): ResponseMetadataCodec<M & BlockValuesMeta> {
-  return {
-    toJson: (val) => ({
-      ...(meta.toJson(val) as Record<string, unknown>),
-      execution_payload_value: val.executionPayloadValue.toString(),
-      consensus_block_value: val.consensusBlockValue.toString(),
-    }),
-    fromJson: (val) => ({
-      ...(meta.fromJson(val) as M),
-      // For cross client usage where beacon or validator are of separate clients, executionPayloadValue could be missing
-      executionPayloadValue: BigInt((val as {execution_payload_value: string}).execution_payload_value ?? "0"),
-      consensusBlockValue: BigInt((val as {consensus_block_value: string}).consensus_block_value ?? "0"),
-    }),
-    toHeadersObject: (val) => ({
-      ...meta.toHeadersObject(val),
-      "Eth-Execution-Payload-Value": val.executionPayloadValue.toString(),
-      "Eth-Consensus-Block-Value": val.consensusBlockValue.toString(),
-    }),
-    fromHeaders: (val) => ({
-      ...(meta.fromHeaders(val) as M),
-      // For cross client usage where beacon or validator are of separate clients, executionPayloadValue could be missing
-      executionPayloadValue: BigInt(val.get("Eth-Execution-Payload-Value") ?? "0"),
-      consensusBlockValue: BigInt(val.get("Eth-Consensus-Block-Value") ?? "0"),
-    }),
-  };
-}
 
 export const EmptyResponseCodec: ResponseCodec<EmptyResponseEndpoint> = {
   data: EmptyResponseDataCodec,

@@ -104,3 +104,9 @@ export function toForkName(version: string): ForkName {
 
   return version as ForkName;
 }
+
+export function toBoolean(value: string): boolean {
+  // TODO: validation?
+
+  return value.toLowerCase() === "true";
+}

@@ -118,7 +118,7 @@ export type ResponseMetadataCodec<T> = {
   toJson: (val: T) => unknown; // server
   fromJson: (val: unknown) => T; // client
   toHeadersObject: (val: T) => Record<string, string>; // server
-  fromHeaders: (val: Headers) => T; // server
+  fromHeaders: (headers: Headers) => T; // server
 };
 
 export type ResponseCodec<E extends Endpoint> = {
