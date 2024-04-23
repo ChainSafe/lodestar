@@ -21,7 +21,7 @@ jobs:
           - os: ubuntu-latest
             build: |
               npx caxa -e "dashboards/**" -e "docs/**" -D -p "yarn install --production" --input . --output "lodestar" -- "{{caxa}}/node_modules/.bin/node" "--max-old-space-size=8192" "{{caxa}}/node_modules/.bin/lodestar"
-              tar -czf "dist/lodestar-${{ inputs.version }}-linux-amd64.tgz" "lodestar"
+              tar -czf "dist/lodestar-${{ inputs.version }}-linux-amd64.tar.gz" "lodestar"
     runs-on: ${{matrix.os}}
     steps:
       - uses: actions/checkout@v4
