@@ -1,4 +1,5 @@
 // MUST import this file first before anything and not import any Lodestar code.
+import os from "node:os";
 
 // eslint-disable-next-line no-restricted-imports
 import {hasher} from "@chainsafe/persistent-merkle-tree/lib/hasher/as-sha256.js";
@@ -29,6 +30,7 @@ import {readFile} from "./util/file.js";
 const network = valueOfArg("network");
 const preset = valueOfArg("preset");
 const presetFile = valueOfArg("presetFile");
+const uvThreadpoolSize = valueOfArg("uvThreadpoolSize");
 
 // Apply preset flag if present
 if (preset) {
@@ -60,6 +62,64 @@ else if (process.argv[2] === "dev") {
   // eslint-disable-next-line @typescript-eslint/naming-convention
   setActivePreset(PresetName.minimal, {FIELD_ELEMENTS_PER_BLOB: 4096});
 }
+
+/**
+ * Sets the libuv thread pool size for worker threads.  This is a critical
+ * component for effective node operations.  Setting the environment variable
+ * must happen almost at the beginning of startup, BEFORE the worker pool is
+ * created by libuv.
+ *
+ * The trigger for creation of the libuv worker pool is scheduling async work
+ * that will queue for a worker.  An example of things that can trigger that
+ * condition are async reading files from the OS.  Some network operations and
+ * any native modules that utilize async work (like @chainsafe/blst-ts).
+ *
+ * Setting this value higher than the number of logical cores will not be a benefit
+ * because the kernel will need to do context switching to parallelize the work
+ * on a number of cores that is less than the number of requested threads.
+ *
+ * Setting this number lower than then number of cores will reduce the amount of
+ * bls work that can be concurrently done.  Something like 70% of the work the
+ * cpu does to keep up with the chain is blst validation.
+ *
+ * There is a considerable amount of idle process time on both the main thread
+ * and network thread and setting this value to overlap that work will allow the
+ * kernel to utilize the idle time for additional bls verification.
+ *
+ * Empirical testing has shown that sizing the worker pool to be as large as
+ * the number of logical cores is optimal but this may change in the future.
+ */
+const defaultThreadpoolSize = os.availableParallelism();
+if (uvThreadpoolSize) {
+  process.env.UV_THREADPOOL_SIZE = uvThreadpoolSize;
+} else if (process.env.UV_THREADPOOL_SIZE) {
+  /* no-op let user-set value carry through */
+} else {
+  process.env.UV_THREADPOOL_SIZE = defaultThreadpoolSize.toString();
+}
+
+if (isNaN(parseInt(`${process.env.UV_THREADPOOL_SIZE}`))) {
+  // eslint-disable-next-line no-console
+  console.warn(`UV_THREADPOOL_SIZE must be a number. Using default value of ${defaultThreadpoolSize}`);
+  process.env.UV_THREADPOOL_SIZE = defaultThreadpoolSize.toString();
+}
+
+/**
+ * Help users ensure that thread pool is large enough for optimal performance
+ *
+ * Node reports available CPUs. There is enough idle time on the main and
+ * network threads that setting UV_THREADPOOL_SIZE to $(nproc) provides the
+ * best performance. Recommend this value to consumers
+ */
+if (parseInt(process.env.UV_THREADPOOL_SIZE) < defaultThreadpoolSize) {
+  // eslint-disable-next-line no-console
+  console.warn(
+    `UV_THREADPOOL_SIZE is less than available CPUs: ${defaultThreadpoolSize}. This will cause performance degradation.`
+  );
+}
+
+// eslint-disable-next-line no-console
+console.log(`BLS libuv pool size: ${process.env.UV_THREADPOOL_SIZE}`);
 
 if (presetFile) {
   // Override the active preset with custom values from file

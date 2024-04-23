@@ -98,23 +98,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
 
     this.logger = modules.logger;
     this.blsVerifyAllMultiThread = options.blsVerifyAllMultiThread ?? false;
-
-    const UV_THREADPOOL_SIZE_ENV = Number(process.env.UV_THREADPOOL_SIZE);
-    this.blsPoolSize = isNaN(UV_THREADPOOL_SIZE_ENV) ? 4 : UV_THREADPOOL_SIZE_ENV;
-    this.logger.info(`BLS libuv pool size: ${this.blsPoolSize}`);
-    /**
-     * Help users ensure that thread pool is large enough for optimal performance
-     *
-     * Node reports available CPUs. There is enough idle time on the main and
-     * network threads that setting UV_THREADPOOL_SIZE to $(nproc) provides the
-     * best performance. Recommend this value to consumers
-     */
-    const availableParallelism = os.availableParallelism();
-    if (this.blsPoolSize < availableParallelism) {
-      this.logger.warn(
-        `UV_THREADPOOL_SIZE is less than available CPUs: ${availableParallelism}. This will cause performance degradation.`
-      );
-    }
+    this.blsPoolSize = Number(process.env.UV_THREADPOOL_SIZE_ENV);
 
     const {metrics} = modules;
     this.metrics = metrics;
