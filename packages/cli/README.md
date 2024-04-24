@@ -19,13 +19,13 @@ Command line tool for Lodestar
 We have an experimental new CLI called `lodestar` which currently provides a subset of the `lodestar` CLI functionality.
 
 Here's a quick list of the available CLI commands:
-| Command                    | Description                                                                              |
-| -------------------------- | ---------------------------------------------------------------------------------------- |
-| `./bin/lodestar init`      | Write a configuration and network identity to disk, by default `./.lodestar`             |
-| `./bin/lodestar beacon`    | Run a beacon node using a configuration from disk, by default `./.lodestar`              |
-| `./bin/lodestar account`   | Run various sub-commands for creating/managing Ethereum Consensus accounts               |
-| `./bin/lodestar validator` | Run one or more validator clients                                                        |
-| `./bin/lodestar dev`       | Quickly bootstrap a beacon node and multiple validators. Use for development and testing |
+| Command | Description |
+| - | - |
+| `./bin/lodestar init` | Write a configuration and network identity to disk, by default `./.lodestar`|
+|`./bin/lodestar beacon` | Run a beacon node using a configuration from disk, by default `./.lodestar`|
+|`./bin/lodestar account` | Run various sub-commands for creating/managing Ethereum Consensus accounts|
+|`./bin/lodestar validator` | Run one or more validator clients|
+|`./bin/lodestar dev` | Quickly bootstrap a beacon node and multiple validators. Use for development and testing|
 Append `--help` to any of these commands to print out all options for each command.
 
 For full documentation on cli commands and options, see the [Command Line Reference](https://chainsafe.github.io/lodestar/reference/cli/)
