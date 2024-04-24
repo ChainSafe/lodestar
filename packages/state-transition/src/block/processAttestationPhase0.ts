@@ -102,9 +102,7 @@ export function validateAttestation(
     }
 
     // TODO Electra: this should be obsolete soon when we switch to committeeIndices
-    const committeeIndices = attestationElectra.committeeBits.intersectValues(
-      Array.from({length: committeeBitsLength}, (_, i) => i)
-    );
+    const committeeIndices = attestationElectra.committeeBits.getTrueBitIndexes();
 
     // Get total number of attestation participant of every committee specified
     const participantCount = committeeIndices

@@ -87,7 +87,7 @@ export function getGossipSSZType(topic: GossipTopic) {
     case GossipType.blob_sidecar:
       return ssz.deneb.BlobSidecar;
     case GossipType.beacon_aggregate_and_proof:
-      return ssz.phase0.SignedAggregateAndProof; // TODO Electra: Add new type of SignedAggregateAndProof
+      return ssz.allForks[topic.fork].SignedAggregateAndProof;
     case GossipType.beacon_attestation:
       return ssz.phase0.Attestation;
     case GossipType.proposer_slashing:

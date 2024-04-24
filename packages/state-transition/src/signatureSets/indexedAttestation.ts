@@ -42,6 +42,6 @@ export function getAttestationsSignatureSets(
   signedBlock: allForks.SignedBeaconBlock
 ): ISignatureSet[] {
   return signedBlock.message.body.attestations.map((attestation) =>
-    getIndexedAttestationSignatureSet(state, state.epochCtx.getIndexedAttestation(attestation))
+    getIndexedAttestationSignatureSet(state, state.epochCtx.getIndexedAttestation(state.epochCtx.config.getForkSeq(signedBlock.message.slot), attestation))
   );
 }
