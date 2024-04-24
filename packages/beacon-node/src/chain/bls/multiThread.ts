@@ -99,7 +99,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     this.logger = modules.logger;
     this.blsVerifyAllMultiThread = options.blsVerifyAllMultiThread ?? false;
 
-    this.blsPoolSize = Number(process.env.UV_THREADPOOL_SIZE_ENV);
+    this.blsPoolSize = Number(process.env.UV_THREADPOOL_SIZE);
     const defaultThreadpoolSize = os.availableParallelism();
     this.logger.info(`BLS libuv pool size: ${this.blsPoolSize}`);
     /**
