@@ -163,6 +163,7 @@ orchestrator
 osx
 overriden
 params
+peerDependency
 pid
 plaintext
 pre
