@@ -1,4 +1,5 @@
 import path from "node:path";
+import os from "node:os";
 import {Registry} from "prom-client";
 import {ErrorAborted} from "@lodestar/utils";
 import {LevelDbController} from "@lodestar/db";
@@ -43,6 +44,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
   const abortController = new AbortController();
 
   logger.info("Lodestar", {network, version, commit});
+  logger.info("availableParallelism: ", os.availableParallelism());
   // Callback for beacon to request forced exit, for e.g. in case of irrecoverable
   // forkchoice errors
   const processShutdownCallback: ProcessShutdownCallback = (err) => {
