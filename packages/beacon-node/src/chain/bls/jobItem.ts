@@ -1,5 +1,4 @@
-import bls from "@chainsafe/bls";
-import {CoordType, PointFormat, PublicKey} from "@chainsafe/bls/types";
+import {CoordType, Signature, PublicKey, aggregatePublicKeys, aggregateSignatures} from "@chainsafe/blst";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {LinkedList} from "../../util/array.js";
 import {Metrics} from "../../metrics/metrics.js";
@@ -50,7 +49,7 @@ export function jobItemSigSets(job: JobQueueItem): number {
  * Prepare BlsWorkReq from JobQueueItem
  * WARNING: May throw with untrusted user input
  */
-export function jobItemWorkReq(job: JobQueueItem, format: PointFormat, metrics: Metrics | null): BlsWorkReq {
+export function jobItemWorkReq(job: JobQueueItem, metrics: Metrics | null): BlsWorkReq {
   switch (job.type) {
     case JobQueueItemType.default:
       return {
@@ -71,7 +70,11 @@ export function jobItemWorkReq(job: JobQueueItem, format: PointFormat, metrics: 
       // and not a problem in the near future
       // this is monitored on v1.11.0 https://github.com/ChainSafe/lodestar/pull/5912#issuecomment-1700320307
       const timer = metrics?.blsThreadPool.signatureDeserializationMainThreadDuration.startTimer();
-      const signatures = job.sets.map((set) => bls.Signature.fromBytes(set.signature, CoordType.affine, true));
+      const signatures = job.sets.map((set) => {
+        const sig = Signature.deserialize(set.signature, CoordType.affine);
+        sig.sigValidate();
+        return sig;
+      });
       timer?.();
 
       // adding verification randomness is napi specific. must not attempt with herumi until
@@ -85,8 +88,8 @@ export function jobItemWorkReq(job: JobQueueItem, format: PointFormat, metrics: 
         sets: [
           {
             message: job.message,
-            publicKey: bls.PublicKey.aggregate(job.sets.map((set, i) => set.publicKey.multiplyBy(randomness[i]))),
-            signature: bls.Signature.aggregate(signatures.map((sig, i) => sig.multiplyBy(randomness[i]))),
+            publicKey: aggregatePublicKeys(job.sets.map((set, i) => set.publicKey.multiplyBy(randomness[i]))),
+            signature: aggregateSignatures(signatures.map((sig, i) => sig.multiplyBy(randomness[i]))),
           },
         ],
       };

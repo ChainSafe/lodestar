@@ -1,5 +1,4 @@
-import bls from "@chainsafe/bls";
-import {CoordType} from "@chainsafe/bls/types";
+import {CoordType, PublicKey} from "@chainsafe/blst";
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {loadState} from "../../../../src/util/loadState/loadState.js";
 import {createCachedBeaconState} from "../../../../src/cache/stateCache.js";
@@ -78,7 +77,7 @@ describe("loadState", function () {
           const validator = validators.getReadonly(validatorIndex);
           const pubkey = validator.pubkey;
           pubkey2index.set(pubkey, validatorIndex);
-          index2pubkey[validatorIndex] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian);
+          index2pubkey[validatorIndex] = PublicKey.deserialize(pubkey, CoordType.jacobian);
         }
         // skip computimg shuffling in performance test because in reality we have a ShufflingCache
         // eslint-disable-next-line @typescript-eslint/explicit-function-return-type

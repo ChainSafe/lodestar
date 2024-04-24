@@ -95,7 +95,6 @@
   },
   "dependencies": {
     "@chainsafe/as-sha256": "^0.4.1",
-    "@chainsafe/bls": "^8.1.0",
     "@chainsafe/blst": "^1.0.0",
     "@chainsafe/discv5": "^9.0.0",
     "@chainsafe/enr": "^3.0.0",

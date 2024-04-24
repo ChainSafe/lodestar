@@ -1,6 +1,6 @@
 import {describe, it, expect, beforeAll, vi, Mocked, beforeEach, afterEach} from "vitest";
 import {toBufferBE} from "bigint-buffer";
-import bls from "@chainsafe/bls";
+import {SecretKey} from "@chainsafe/blst";
 import {toHexString} from "@chainsafe/ssz";
 import {chainConfig} from "@lodestar/config/default";
 import {HttpStatusCode, routes} from "@lodestar/api";
@@ -37,8 +37,8 @@ describe("AttestationDutiesService", function () {
   };
 
   beforeAll(async () => {
-    const secretKeys = [bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32))];
-    pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
+    const secretKeys = [SecretKey.deserialize(toBufferBE(BigInt(98), 32))];
+    pubkeys = secretKeys.map((sk) => sk.toPublicKey().serialize());
     validatorStore = await initValidatorStore(secretKeys, api, chainConfig);
   });
 

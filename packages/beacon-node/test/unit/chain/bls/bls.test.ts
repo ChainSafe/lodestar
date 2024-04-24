@@ -1,5 +1,4 @@
-import bls from "@chainsafe/bls";
-import {CoordType, PublicKey} from "@chainsafe/bls/types";
+import {CoordType, PublicKey, SecretKey, Signature} from "@chainsafe/blst";
 import {describe, it, expect, beforeEach} from "vitest";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {BlsSingleThreadVerifier} from "../../../../src/chain/bls/singleThread.js";
@@ -9,7 +8,7 @@ import {testLogger} from "../../../utils/logger.js";
 describe("BlsVerifier ", function () {
   // take time for creating thread pool
   const numKeys = 3;
-  const secretKeys = Array.from({length: numKeys}, (_, i) => bls.SecretKey.fromKeygen(Buffer.alloc(32, i)));
+  const secretKeys = Array.from({length: numKeys}, (_, i) => SecretKey.fromKeygen(Buffer.alloc(32, i)));
   const verifiers = [
     new BlsSingleThreadVerifier({metrics: null}),
     new BlsMultiThreadWorkerPool({}, {metrics: null, logger: testLogger()}),
@@ -27,7 +26,7 @@ describe("BlsVerifier ", function () {
             type: SignatureSetType.single,
             pubkey: secretKey.toPublicKey(),
             signingRoot,
-            signature: secretKey.sign(signingRoot).toBytes(),
+            signature: secretKey.sign(signingRoot).serialize(),
           };
         });
       });
@@ -45,7 +44,10 @@ describe("BlsVerifier ", function () {
       it("should return false if at least one signature is malformed", async () => {
         // signature is malformed
         const malformedSignature = Buffer.alloc(96, 10);
-        expect(() => bls.Signature.fromBytes(malformedSignature, CoordType.affine, true)).toThrow();
+        expect(() => {
+          const sig = Signature.deserialize(malformedSignature, CoordType.affine);
+          sig.sigValidate();
+        }).toThrow();
         sets[1].signature = malformedSignature;
         expect(await verifier.verifySignatureSets(sets)).toBe(false);
       });
@@ -60,7 +62,7 @@ describe("BlsVerifier ", function () {
         sets = secretKeys.map((secretKey) => {
           return {
             publicKey: secretKey.toPublicKey(),
-            signature: secretKey.sign(signingRoot).toBytes(),
+            signature: secretKey.sign(signingRoot).serialize(),
           };
         });
       });
@@ -71,14 +73,17 @@ describe("BlsVerifier ", function () {
 
       it("should return false for invalid signature", async () => {
         // signature is valid but not respective to the signing root
-        sets[1].signature = secretKeys[1].sign(Buffer.alloc(32)).toBytes();
+        sets[1].signature = secretKeys[1].sign(Buffer.alloc(32)).serialize();
         expect(await verifier.verifySignatureSetsSameMessage(sets, signingRoot)).toEqual([true, false, true]);
       });
 
       it("should return false for malformed signature", async () => {
         // signature is malformed
         const malformedSignature = Buffer.alloc(96, 10);
-        expect(() => bls.Signature.fromBytes(malformedSignature, CoordType.affine, true)).toThrow();
+        expect(() => {
+          const sig = Signature.deserialize(malformedSignature, CoordType.affine);
+          sig.sigValidate();
+        }).toThrow();
         sets[1].signature = malformedSignature;
         expect(await verifier.verifySignatureSetsSameMessage(sets, signingRoot)).toEqual([true, false, true]);
       });
