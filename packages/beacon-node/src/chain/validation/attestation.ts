@@ -1,5 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
-import {phase0, Epoch, Root, Slot, RootHex, ssz} from "@lodestar/types";
+import {phase0, Epoch, Root, Slot, RootHex, ssz, allForks} from "@lodestar/types";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, ForkName, ForkSeq, DOMAIN_BEACON_ATTESTER} from "@lodestar/params";
 import {
@@ -248,7 +248,7 @@ async function validateGossipAttestationNoSignatureCheck(
   // Run the checks that happen before an indexed attestation is constructed.
 
   let attestationOrCache:
-    | {attestation: phase0.Attestation; cache: null}
+    | {attestation: allForks.Attestation; cache: null}
     | {attestation: null; cache: AttestationDataCacheEntry; serializedData: Uint8Array};
   let attDataBase64: AttDataBase64 | null = null;
   if (attestationOrBytes.serializedData) {
@@ -276,10 +276,31 @@ async function validateGossipAttestationNoSignatureCheck(
     ? attestationOrCache.attestation.data
     : attestationOrCache.cache.attestationData;
   const attSlot = attData.slot;
-  const attIndex = attData.index;
   const attEpoch = computeEpochAtSlot(attSlot);
   const attTarget = attData.target;
   const targetEpoch = attTarget.epoch;
+  const isAfterElectra = chain.config.getForkSeq(attSlot) >= ForkSeq.electra;
+
+  let attIndex;
+  if (isAfterElectra) {
+    // const committeeBits = attestationOrCache.attestation
+    // ? attestationOrCache.attestation.aggregationBits
+    // : getAggregationBitsFromAttestationSerialized(attestationOrCache.serializedData);
+    // const attIndices = committeeBits.getTrueBitIndexes();
+    // [REJECT] len(committee_indices) == 1, where committee_indices = get_committee_indices(aggregate)
+    // if (attIndices.length !== 1) {
+    //   throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.NOT_EXACTLY_ONE_COMMITTEE_BIT_SET});
+    // }
+    // attIndex = attIndices[0];
+
+    // [REJECT] aggregate.data.index == 0
+    if (attData.index === 0) {
+      throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.NON_ZERO_ATTESTATION_DATA_INDEX});
+    }
+    attIndex = 0;
+  } else {
+    attIndex = attData.index;
+  }
 
   chain.metrics?.gossipAttestation.attestationSlotToClockSlot.observe(
     {caller: RegenCaller.validateGossipAttestation},
@@ -702,6 +723,10 @@ function verifyAttestationTargetRoot(headBlock: ProtoBlock, targetRoot: Root, at
   }
 }
 
+/**
+ * Get a list of indices of validators in the given committee
+ * attestationIndex - Index of the committee in shuffling.committees
+ */
 export function getCommitteeIndices(
   shuffling: EpochShuffling,
   attestationSlot: Slot,
