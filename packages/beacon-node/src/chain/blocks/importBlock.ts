@@ -102,10 +102,8 @@ export async function importBlock(
       executionOptimistic: blockSummary != null && isOptimisticBlock(blockSummary),
     });
 
-    if (blockInput.type === BlockInputType.postDeneb || blockInput.type === BlockInputType.blobsPromise) {
-      const blobsData =
-        blockInput.type === BlockInputType.postDeneb ? blockInput : await blockInput.availabilityPromise;
-      const {blobsSource, blobs} = blobsData;
+    if (blockInput.type === BlockInputType.postDeneb) {
+      const {blobsSource, blobs} = blockInput;
 
       this.metrics?.importBlock.blobBySource.inc({blobsSource});
       for (const blobSidecar of blobs) {

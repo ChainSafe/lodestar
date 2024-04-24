@@ -100,12 +100,12 @@ export async function unavailableBeaconBlobsByRoot(
   // check and see if all blobs are now available and in that case resolve availability
   // if not this will error and the leftover blobs will be tried from another peer
   const allBlobs = getBlockInputBlobs(blobsCache, BlobsSource.byRoot);
-  const {blobs, blobsBytes, blobsSource} = allBlobs;
+  const {blobs, blobsBytes} = allBlobs;
   if (blobs.length !== blobKzgCommitmentsLen) {
     throw Error(`Not all blobs fetched missingBlobs=${blobKzgCommitmentsLen - blobs.length}`);
   }
 
   resolveAvailability(allBlobs);
   metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.UNKNOWN_SYNC});
-  return getBlockInput.postDeneb(config, block, BlockSource.byRoot, blobs, blobsSource, blockBytes, blobsBytes);
+  return getBlockInput.postDeneb(config, block, BlockSource.byRoot, blobs, BlobsSource.byRoot, blockBytes, blobsBytes);
 }

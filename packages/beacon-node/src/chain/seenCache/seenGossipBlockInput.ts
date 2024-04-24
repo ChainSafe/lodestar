@@ -138,13 +138,13 @@ export class SeenGossipBlockInput {
         const allBlobs = getBlockInputBlobs(blobsCache, BlobsSource.gossip);
         resolveAvailability(allBlobs);
         metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.GOSSIP});
-        const {blobs, blobsBytes, blobsSource} = allBlobs;
+        const {blobs, blobsBytes} = allBlobs;
         const blockInput = getBlockInput.postDeneb(
           config,
           signedBlock,
           BlockSource.gossip,
           blobs,
-          blobsSource,
+          BlobsSource.gossip,
           blockBytes ?? null,
           blobsBytes
         );

@@ -5,7 +5,14 @@ import {Logger} from "@lodestar/utils";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {validateBlobSidecars} from "../validation/blobSidecar.js";
 import {Metrics} from "../../metrics/metrics.js";
-import {BlockInput, BlockInputType, ImportBlockOpts, BlobSidecarValidation} from "./types.js";
+import {
+  BlockInput,
+  BlockInputType,
+  ImportBlockOpts,
+  BlobSidecarValidation,
+  getBlockInput,
+  BlobsSource,
+} from "./types.js";
 
 // we can now wait for full 12 seconds because unavailable block sync will try pulling
 // the blobs from the network anyway after 500ms of seeing the block
@@ -27,7 +34,11 @@ export async function verifyBlocksDataAvailability(
   chain: {config: ChainForkConfig; genesisTime: UintNum64; logger: Logger; metrics: Metrics | null},
   blocks: BlockInput[],
   opts: ImportBlockOpts
-): Promise<{dataAvailabilityStatuses: DataAvailableStatus[]; availableTime: number}> {
+): Promise<{
+  dataAvailabilityStatuses: DataAvailableStatus[];
+  availableTime: number;
+  availableBlockInputs: BlockInput[];
+}> {
   if (blocks.length === 0) {
     throw Error("Empty partiallyVerifiedBlocks");
   }
@@ -35,11 +46,14 @@ export async function verifyBlocksDataAvailability(
   const dataAvailabilityStatuses: DataAvailableStatus[] = [];
   const seenTime = opts.seenTimestampSec !== undefined ? opts.seenTimestampSec * 1000 : Date.now();
 
+  const availableBlockInputs: BlockInput[] = [];
+
   for (const blockInput of blocks) {
     // Validate status of only not yet finalized blocks, we don't need yet to propogate the status
     // as it is not used upstream anywhere
-    const dataAvailabilityStatus = await maybeValidateBlobs(chain, blockInput, opts);
+    const {dataAvailabilityStatus, availableBlockInput} = await maybeValidateBlobs(chain, blockInput, opts);
     dataAvailabilityStatuses.push(dataAvailabilityStatus);
+    availableBlockInputs.push(availableBlockInput);
   }
 
   const availableTime = blocks[blocks.length - 1].type === BlockInputType.blobsPromise ? Date.now() : seenTime;
@@ -55,21 +69,21 @@ export async function verifyBlocksDataAvailability(
     });
   }
 
-  return {dataAvailabilityStatuses, availableTime};
+  return {dataAvailabilityStatuses, availableTime, availableBlockInputs};
 }
 
 async function maybeValidateBlobs(
   chain: {config: ChainForkConfig; genesisTime: UintNum64; logger: Logger},
   blockInput: BlockInput,
   opts: ImportBlockOpts
-): Promise<DataAvailableStatus> {
+): Promise<{dataAvailabilityStatus: DataAvailableStatus; availableBlockInput: BlockInput}> {
   switch (blockInput.type) {
     case BlockInputType.preDeneb:
-      return DataAvailableStatus.preDeneb;
+      return {dataAvailabilityStatus: DataAvailableStatus.preDeneb, availableBlockInput: blockInput};
 
     case BlockInputType.postDeneb:
       if (opts.validBlobSidecars === BlobSidecarValidation.Full) {
-        return DataAvailableStatus.available;
+        return {dataAvailabilityStatus: DataAvailableStatus.available, availableBlockInput: blockInput};
       }
 
     // eslint-disable-next-line no-fallthrough
@@ -82,7 +96,7 @@ async function maybeValidateBlobs(
         blockInput.type === BlockInputType.postDeneb
           ? blockInput
           : await raceWithCutoff(chain, blockInput, blockInput.availabilityPromise);
-      const {blobs} = blobsData;
+      const {blobs, blobsBytes} = blobsData;
 
       const {blobKzgCommitments} = (block as deneb.SignedBeaconBlock).message.body;
       const beaconBlockRoot = chain.config.getForkTypes(blockSlot).BeaconBlock.hashTreeRoot(block.message);
@@ -92,7 +106,16 @@ async function maybeValidateBlobs(
       const skipProofsCheck = opts.validBlobSidecars === BlobSidecarValidation.Individual;
       validateBlobSidecars(blockSlot, beaconBlockRoot, blobKzgCommitments, blobs, {skipProofsCheck});
 
-      return DataAvailableStatus.available;
+      const availableBlockInput = getBlockInput.postDeneb(
+        chain.config,
+        blockInput.block,
+        blockInput.source,
+        blobs,
+        BlobsSource.gossip,
+        blockInput.blockBytes,
+        blobsBytes
+      );
+      return {dataAvailabilityStatus: DataAvailableStatus.available, availableBlockInput: availableBlockInput};
     }
   }
 }
