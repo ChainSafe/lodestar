@@ -120,7 +120,7 @@ export const getBlockInput = {
   },
 };
 
-export function getBlockInputBlobs(blobsCache: BlobsCache, blobsSource: BlobsSource): BlockInputBlobs {
+export function getBlockInputBlobs(blobsCache: BlobsCache): Omit<BlockInputBlobs, "blobsSource"> {
   const blobs = [];
   const blobsBytes = [];
 
@@ -133,7 +133,7 @@ export function getBlockInputBlobs(blobsCache: BlobsCache, blobsSource: BlobsSou
     blobs.push(blobSidecar);
     blobsBytes.push(blobBytes);
   }
-  return {blobs, blobsBytes, blobsSource};
+  return {blobs, blobsBytes};
 }
 
 export enum AttestationImportOpt {

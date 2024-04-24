@@ -135,8 +135,8 @@ export class SeenGossipBlockInput {
       }
 
       if (blobKzgCommitments.length === blobsCache.size) {
-        const allBlobs = getBlockInputBlobs(blobsCache, BlobsSource.gossip);
-        resolveAvailability(allBlobs);
+        const allBlobs = getBlockInputBlobs(blobsCache);
+        resolveAvailability({...allBlobs, blobsSource: BlobsSource.gossip});
         metrics?.syncUnknownBlock.resolveAvailabilitySource.inc({source: BlockInputAvailabilitySource.GOSSIP});
         const {blobs, blobsBytes} = allBlobs;
         const blockInput = getBlockInput.postDeneb(
