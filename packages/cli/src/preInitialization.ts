@@ -89,13 +89,12 @@ else if (process.argv[2] === "dev") {
  * Empirical testing has shown that sizing the worker pool to be as large as
  * the number of logical cores is optimal but this may change in the future.
  */
-const defaultThreadpoolSize = os.availableParallelism();
 if (uvThreadpoolSize) {
   process.env.UV_THREADPOOL_SIZE = uvThreadpoolSize;
 } else if (process.env.UV_THREADPOOL_SIZE) {
   /* no-op let user-set value carry through */
 } else {
-  process.env.UV_THREADPOOL_SIZE = defaultThreadpoolSize.toString();
+  process.env.UV_THREADPOOL_SIZE = os.availableParallelism().toString();
 }
 
 if (isNaN(parseInt(`${process.env.UV_THREADPOOL_SIZE}`))) {
