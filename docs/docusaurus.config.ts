@@ -8,7 +8,7 @@ import {themes as prismThemes} from "prism-react-renderer";
 const config: Config = {
   title: "Lodestar",
   tagline: "TypeScript Implementation of Ethereum Consensus",
-  favicon: "img/favicon.ico",
+  favicon: "images/favicon.ico",
 
   // Set the production url of your site here
   url: "https://chainsafe.github.io/",
@@ -55,7 +55,7 @@ const config: Config = {
       title: "Lodestar Documentation",
       logo: {
         alt: "Lodestar Logo",
-        src: "img/logo.png",
+        src: "images/logo.png",
       },
       items: [
         {
