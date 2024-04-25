@@ -105,8 +105,8 @@ const config: Config = {
       minHeadingLevel: 2,
       maxHeadingLevel: 5,
     },
-    scripts: [{src: "https://plausible.io/js/script.js", defer: true, "data-domain": "chainsafe.github.io/lodestar/"}],
   } satisfies Preset.ThemeConfig,
+  scripts: [{src: "https://plausible.io/js/script.js", defer: true, "data-domain": "chainsafe.github.io/lodestar/"}],
 };
 
 export default config;
