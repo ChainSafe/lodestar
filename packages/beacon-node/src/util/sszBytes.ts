@@ -130,7 +130,7 @@ export function getCommitteeBitsFromAttestationSerialized(data: Uint8Array): Bit
 
   return new BitArray(uint8Array, MAX_COMMITTEES_PER_SLOT);
 }
-
+ 
 //
 // class SignedAggregateAndProof(Container):
 //    message: AggregateAndProof - offset 4

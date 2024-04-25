@@ -310,10 +310,6 @@ async function validateGossipAttestationNoSignatureCheck(
     chain.clock.currentSlot - attSlot
   );
 
-  // TODO Electra:
-  // [REJECT] `len(committee_indices) == 1`, where `committee_indices = get_committee_indices(attestation)`.
-  // [REJECT] `attestation.data.index == 0`
-
   if (!attestationOrCache.cache) {
     // [REJECT] The attestation's epoch matches its target -- i.e. attestation.data.target.epoch == compute_epoch_at_slot(attestation.data.slot)
     if (targetEpoch !== attEpoch) {
