@@ -108,11 +108,11 @@ yarn dev
 
 Then navigate in a browser to `http://localhost:8080` and begin analyzing the data.
 
-<img src="../images/flamescope/home-screen.png" alt="flamescope home screen" width="1024"/>
-<img src="../images/flamescope/time-series-view.png" alt="flamescope home screen" width="1024"/>
-<img src="../images/flamescope/selecting-series.png" alt="flamescope home screen" width="1024"/>
-<img src="../images/flamescope/unfiltered-flamegraph.png" alt="flamescope home screen" width="1024"/>
-<img src="../images/flamescope/zoom-in.png" alt="flamescope home screen" width="1024"/>
+![flamescope home screen](/images/flamescope/home-screen.png)
+![flamescope time series view](/images/flamescope/time-series-view.png)
+![flamescope selecting series](/images/flamescope/selecting-series.png)
+![flamescope unfiltered flamegraph](/images/flamescope/unfiltered-flamegraph.png)
+![flamescope zoom in](/images/flamescope/zoom-in.png)
 
 ## Filtering Results
 
@@ -124,11 +124,11 @@ sed -r -e "/( __libc_start| uv_| LazyCompile | v8::internal::| node::| Builtins_
 
 ### Unfiltered
 
-<img src="../images/flamescope/unfiltered-flamegraph.png" alt="flamescope home screen" width="1024"/>
+![flamescope unfiltered flamegraph](/images/flamescope/unfiltered-flamegraph.png)
 
 ### Filtered
 
-<img src="../images/flamescope/filtered-flamegraph.png" alt="flamescope home screen" width="1024"/>
+![flamescope filtered flamegraph](/images/flamescope/filtered-flamegraph.png)
 
 ## References
 
