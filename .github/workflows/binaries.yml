@@ -27,6 +27,8 @@ jobs:
     runs-on: ${{matrix.os}}
     steps:
       - uses: actions/checkout@v4
+      # Install yarn for arm64 as currently it's not part of the provided image
+      # See https://github.com/github-early-access/arm-runners-beta/issues/5
       - name: Install yarn
         if: matrix.arch == 'arm64'
         run: |-
