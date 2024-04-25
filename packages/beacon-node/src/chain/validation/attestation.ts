@@ -1,5 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
-import {phase0, Epoch, Root, Slot, RootHex, ssz, allForks} from "@lodestar/types";
+import {phase0, Epoch, Root, Slot, RootHex, ssz, allForks, electra} from "@lodestar/types";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, ForkName, ForkSeq, DOMAIN_BEACON_ATTESTER} from "@lodestar/params";
 import {
@@ -20,6 +20,7 @@ import {
   AttDataBase64,
   getAggregationBitsFromAttestationSerialized,
   getAttDataBase64FromAttestationSerialized,
+  getCommitteeBitsFromAttestationSerialized,
   getSignatureFromAttestationSerialized,
 } from "../../util/sszBytes.js";
 import {AttestationDataCacheEntry} from "../seenCache/seenAttestationData.js";
@@ -34,8 +35,8 @@ export type BatchResult = {
 };
 
 export type AttestationValidationResult = {
-  attestation: phase0.Attestation;
-  indexedAttestation: phase0.IndexedAttestation;
+  attestation: allForks.Attestation;
+  indexedAttestation: allForks.IndexedAttestation;
   subnet: number;
   attDataRootHex: RootHex;
 };
@@ -260,7 +261,7 @@ async function validateGossipAttestationNoSignatureCheck(
       attestationOrBytes.attDataBase64 ?? getAttDataBase64FromAttestationSerialized(attestationOrBytes.serializedData);
     const cachedAttData = attDataBase64 !== null ? chain.seenAttestationDatas.get(attSlot, attDataBase64) : null;
     if (cachedAttData === null) {
-      const attestation = sszDeserializeAttestation(attestationOrBytes.serializedData);
+      const attestation = sszDeserializeAttestation(fork, attestationOrBytes.serializedData);
       // only deserialize on the first AttestationData that's not cached
       attestationOrCache = {attestation, cache: null};
     } else {
@@ -279,25 +280,26 @@ async function validateGossipAttestationNoSignatureCheck(
   const attEpoch = computeEpochAtSlot(attSlot);
   const attTarget = attData.target;
   const targetEpoch = attTarget.epoch;
-  const isAfterElectra = chain.config.getForkSeq(attSlot) >= ForkSeq.electra;
 
   let attIndex;
-  if (isAfterElectra) {
-    // const committeeBits = attestationOrCache.attestation
-    // ? attestationOrCache.attestation.aggregationBits
-    // : getAggregationBitsFromAttestationSerialized(attestationOrCache.serializedData);
-    // const attIndices = committeeBits.getTrueBitIndexes();
+  if (ForkSeq[fork] >= ForkSeq.electra) {
+    const committeeBits = attestationOrCache.attestation ? (attestationOrCache.attestation as electra.Attestation).committeeBits : 
+      getCommitteeBitsFromAttestationSerialized(attestationOrCache.serializedData);
+
+    if (committeeBits === null) {
+      throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_SERIALIZED_BYTES});
+    }
+
+    attIndex = committeeBits.getSingleTrueBit();
     // [REJECT] len(committee_indices) == 1, where committee_indices = get_committee_indices(aggregate)
-    // if (attIndices.length !== 1) {
-    //   throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.NOT_EXACTLY_ONE_COMMITTEE_BIT_SET});
-    // }
-    // attIndex = attIndices[0];
+    if (attIndex === null) {
+      throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.NOT_EXACTLY_ONE_COMMITTEE_BIT_SET});
+    }
 
     // [REJECT] aggregate.data.index == 0
     if (attData.index === 0) {
       throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.NON_ZERO_ATTESTATION_DATA_INDEX});
     }
-    attIndex = 0;
   } else {
     attIndex = attData.index;
   }
@@ -306,10 +308,6 @@ async function validateGossipAttestationNoSignatureCheck(
     {caller: RegenCaller.validateGossipAttestation},
     chain.clock.currentSlot - attSlot
   );
-
-  // TODO Electra:
-  // [REJECT] `len(committee_indices) == 1`, where `committee_indices = get_committee_indices(attestation)`.
-  // [REJECT] `attestation.data.index == 0`
 
   if (!attestationOrCache.cache) {
     // [REJECT] The attestation's epoch matches its target -- i.e. attestation.data.target.epoch == compute_epoch_at_slot(attestation.data.slot)
@@ -477,13 +475,16 @@ async function validateGossipAttestationNoSignatureCheck(
   }
 
   // no signature check, leave that for step1
-  const indexedAttestation: phase0.IndexedAttestation = {
+  const indexedAttestationContent = {
     attestingIndices,
     data: attData,
     signature,
   };
+  const indexedAttestation = ForkSeq[fork] >= ForkSeq.electra ? indexedAttestationContent as electra.IndexedAttestation : indexedAttestationContent as phase0.IndexedAttestation;
 
-  const attestation: phase0.Attestation = attestationOrCache.attestation
+ 
+
+  const attestation: allForks.Attestation = attestationOrCache.attestation
     ? attestationOrCache.attestation
     : {
         aggregationBits,

@@ -14,7 +14,7 @@ import {RootHex, allForks, altair, deneb} from "@lodestar/types";
 import {ChainConfig, ChainForkConfig} from "@lodestar/config";
 import {ForkSeq, INTERVALS_PER_SLOT, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Epoch, Slot, ValidatorIndex} from "@lodestar/types";
-import {IndexedAttestation, SignedAggregateAndProof} from "@lodestar/types/phase0";
+import {IndexedAttestation, SignedAggregateAndProof} from "@lodestar/types/allForks";
 import {GENESIS_SLOT} from "../constants/constants.js";
 import {LodestarMetrics} from "./metrics/lodestar.js";
 
