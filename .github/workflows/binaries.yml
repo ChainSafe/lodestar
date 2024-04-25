@@ -19,9 +19,11 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            build: |
-              npx caxa -m "Unpacking Lodestar binary, please wait..." -e "dashboards/**" -e "docs/**" -D -p "yarn install --frozen-lockfile --production" --input . --output "lodestar" -- "{{caxa}}/node_modules/.bin/node" "--max-old-space-size=8192" "{{caxa}}/node_modules/.bin/lodestar"
-              tar -czf "dist/lodestar-${{ inputs.version }}-linux-amd64.tar.gz" "lodestar"
+            platform: linux
+            arch: amd64
+          - os: lodestar-arm64-runner
+            platform: linux
+            arch: arm64
     runs-on: ${{matrix.os}}
     steps:
       - uses: actions/checkout@v4
@@ -31,7 +33,8 @@ jobs:
       - run: |
           mkdir -p dist
           yarn global add caxa@3.0.1
-          ${{ matrix.build }}
+          npx caxa -m "Unpacking Lodestar binary, please wait..." -e "dashboards/**" -e "docs/**" -D -p "yarn install --frozen-lockfile --production" --input . --output "lodestar" -- "{{caxa}}/node_modules/.bin/node" "--max-old-space-size=8192" "{{caxa}}/node_modules/.bin/lodestar"
+          tar -czf "dist/lodestar-${{ inputs.version }}-${{ matrix.platform }}-${{ matrix.arch }}.tar.gz" "lodestar"
       - name: Upload binaries
         uses: actions/upload-artifact@v4
         with:
