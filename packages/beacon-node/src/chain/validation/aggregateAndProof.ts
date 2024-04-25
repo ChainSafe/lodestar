@@ -157,7 +157,7 @@ async function validateAggregateAndProof(
     ? cachedAttData.committeeIndices
     : getCommitteeIndices(shuffling, attSlot, attIndex);
 
-  // [IGNORE] The number of aggregation bits matches the committee size
+  // [REJECT] The number of aggregation bits matches the committee size
   // -- i.e. `len(aggregation_bits) == len(get_beacon_committee(state, aggregate.data.slot, index))`.
   if (aggregate.aggregationBits.bitLen !== committeeIndices.length) {
     throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS});
