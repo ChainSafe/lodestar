@@ -5,14 +5,7 @@ import {Logger} from "@lodestar/utils";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {validateBlobSidecars} from "../validation/blobSidecar.js";
 import {Metrics} from "../../metrics/metrics.js";
-import {
-  BlockInput,
-  BlockInputType,
-  ImportBlockOpts,
-  BlobSidecarValidation,
-  getBlockInput,
-  BlobsSource,
-} from "./types.js";
+import {BlockInput, BlockInputType, ImportBlockOpts, BlobSidecarValidation, getBlockInput} from "./types.js";
 
 // we can now wait for full 12 seconds because unavailable block sync will try pulling
 // the blobs from the network anyway after 500ms of seeing the block
@@ -96,7 +89,7 @@ async function maybeValidateBlobs(
         blockInput.type === BlockInputType.postDeneb
           ? blockInput
           : await raceWithCutoff(chain, blockInput, blockInput.availabilityPromise);
-      const {blobs, blobsBytes} = blobsData;
+      const {blobs, blobsBytes, blobsSource} = blobsData;
 
       const {blobKzgCommitments} = (block as deneb.SignedBeaconBlock).message.body;
       const beaconBlockRoot = chain.config.getForkTypes(blockSlot).BeaconBlock.hashTreeRoot(block.message);
@@ -111,7 +104,7 @@ async function maybeValidateBlobs(
         blockInput.block,
         blockInput.source,
         blobs,
-        BlobsSource.gossip,
+        blobsSource,
         blockInput.blockBytes,
         blobsBytes
       );

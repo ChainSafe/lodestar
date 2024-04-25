@@ -800,8 +800,8 @@ export function createLodestarMetrics(
         help: "Total number of imported blocks by source",
         labelNames: ["source"],
       }),
-      blobBySource: register.gauge<{blobsSource: BlobsSource}>({
-        name: "lodestar_import_blob_by_source_total",
+      blobsBySource: register.gauge<{blobsSource: BlobsSource}>({
+        name: "lodestar_import_blobs_by_source_total",
         help: "Total number of imported blobs by source",
         labelNames: ["blobsSource"],
       }),
