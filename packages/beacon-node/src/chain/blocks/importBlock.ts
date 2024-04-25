@@ -69,6 +69,11 @@ export async function importBlock(
   const blockDelaySec = (fullyVerifiedBlock.seenTimestampSec - postState.genesisTime) % this.config.SECONDS_PER_SLOT;
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
 
+  // this is just a type assertion since blockinput with blobsPromise type will not end up here
+  if (blockInput.type === BlockInputType.blobsPromise) {
+    throw Error("Unavailable block can not be imported in forkchoice");
+  }
+
   // 1. Persist block to hot DB (pre-emptively)
   // If eagerPersistBlock = true we do that in verifyBlocksInEpoch to batch all I/O operations to save block time to head
   if (!opts.eagerPersistBlock) {
@@ -102,6 +107,9 @@ export async function importBlock(
       executionOptimistic: blockSummary != null && isOptimisticBlock(blockSummary),
     });
 
+    // blobsPromise will not end up here, but preDeneb could. In future we might also allow syncing
+    // out of data range blocks and import then in forkchoice although one would not be able to
+    // attest and propose with such head similar to optimistic sync
     if (blockInput.type === BlockInputType.postDeneb) {
       const {blobsSource, blobs} = blockInput;
 
