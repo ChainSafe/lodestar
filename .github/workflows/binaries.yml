@@ -27,15 +27,18 @@ jobs:
     runs-on: ${{matrix.os}}
     steps:
       - uses: actions/checkout@v4
-      # Install yarn for arm64 as currently it's not part of the provided image
-      # See https://github.com/github-early-access/arm-runners-beta/issues/5
-      - name: Install yarn
+      - name: Install arm64 specifics
         if: matrix.arch == 'arm64'
         run: |-
+          # Install missing yarn
+          # See https://github.com/github-early-access/arm-runners-beta/issues/5
           curl -fsSL --create-dirs -o $HOME/bin/yarn \
           https://github.com/yarnpkg/yarn/releases/download/v1.22.22/yarn-1.22.22.js
           chmod +x $HOME/bin/yarn
           echo "$HOME/bin" >> $GITHUB_PATH
+          # Install missing build-essential
+          sudo apt-get update
+          sudo apt-get install -y build-essential
       - uses: "./.github/actions/setup-and-build"
         with:
           node: 20
