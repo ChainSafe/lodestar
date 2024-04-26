@@ -1,5 +1,4 @@
 import {toBase64} from "@lodestar/utils";
-import {ServerError} from "./error.js";
 
 export enum WireFormat {
   json = "json",
