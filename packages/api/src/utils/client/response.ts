@@ -138,7 +138,7 @@ export class ApiResponse<E extends Endpoint> extends Response {
 
 function getErrorMessage(errBody: string): string {
   try {
-    const errJson = JSON.parse(errBody) as {message: string};
+    const errJson = JSON.parse(errBody) as {message?: string};
     if (errJson.message) {
       return errJson.message;
     } else {

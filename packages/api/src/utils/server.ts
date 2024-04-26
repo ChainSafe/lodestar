@@ -118,7 +118,11 @@ export function createFastifyHandler<E extends Endpoint>(
     }
 
     const mediaType = parseAcceptHeader(acceptHeader);
+    // TODO: default to json, or configured default if accept header is missing or `Accept: */*`
     if (mediaType === null) {
+      // TODO: throw 406 if client only support unaccepted content types, and set appropriate headers
+      // See https://developer.mozilla.org/en-US/docs/Web/HTTP/Content_negotiation#server-driven_negotiation
+      // and https://stackoverflow.com/a/3294546/10577550
       throw new ServerError(415, `Only unsupported media types are accepted: ${acceptHeader}`);
     }
 
