@@ -189,6 +189,7 @@ export function getTypeByEvent(): {[K in EventType]: TypeJson<EventData[K]>} {
   };
 
   const getLightClientType = (fork: ForkName): allForks.AllForksLightClientSSZTypes => {
+    // TODO: reuse these across all routes
     if (!isForkLightClient(fork)) {
       throw Error(`Invalid fork=${fork} for lightclient fork types`);
     }

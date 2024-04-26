@@ -3,6 +3,7 @@ import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {phase0, CommitteeIndex, Slot, Epoch, ssz, RootHex, StringType} from "@lodestar/types";
 import {Endpoint, RequestCodec, RouteDefinitions, Schema} from "../../../utils/index.js";
 import {ArrayOf, ExecutionOptimisticCodec, ExecutionOptimisticMeta} from "../../../utils/codecs.js";
+import {WireFormat} from "../../../utils/headers.js";
 import {RootResponse, RootResponseType} from "./block.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
@@ -310,6 +311,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
       },
     },
     resp: {
+      onlySupport: WireFormat.json,
       data: ValidatorResponseType,
       meta: ExecutionOptimisticCodec,
     },
@@ -326,6 +328,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
       },
     },
     resp: {
+      onlySupport: WireFormat.json,
       data: ValidatorResponseListType,
       meta: ExecutionOptimisticCodec,
     },

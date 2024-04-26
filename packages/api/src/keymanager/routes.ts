@@ -578,6 +578,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
       },
     },
     resp: {
+      onlySupport: WireFormat.json,
       data: new ContainerType(
         {
           pubkey: stringType,

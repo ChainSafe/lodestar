@@ -290,7 +290,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
       }),
       parseReqSsz: ({body}) => ({changes: SignedBLSToExecutionChangeListType.deserialize(body)}),
       schema: {
-        body: Schema.Object,
+        body: Schema.ObjectArray,
       },
     },
     resp: EmptyResponseCodec,
@@ -304,7 +304,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
       writeReqSsz: ({signatures}) => ({body: SyncCommitteeMessageListType.serialize(signatures)}),
       parseReqSsz: ({body}) => ({signatures: SyncCommitteeMessageListType.deserialize(body)}),
       schema: {
-        body: Schema.AnyArray,
+        body: Schema.ObjectArray,
       },
     },
     resp: EmptyResponseCodec,
