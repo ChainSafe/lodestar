@@ -418,6 +418,16 @@ export class ValidatorStore {
     return this.validators.has(pubkeyHex);
   }
 
+  getRemoteSignerPubkeys(signerUrl: string): PubkeyHex[] {
+    const pubkeysHex = [];
+    for (const {signer} of this.validators.values()) {
+      if (signer.type === SignerType.Remote && signer.url === signerUrl) {
+        pubkeysHex.push(signer.pubkey);
+      }
+    }
+    return pubkeysHex;
+  }
+
   async signBlock(
     pubkey: BLSPubkey,
     blindedOrFull: allForks.FullOrBlindedBeaconBlock,

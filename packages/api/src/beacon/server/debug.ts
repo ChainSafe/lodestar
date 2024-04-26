@@ -39,7 +39,7 @@ export function getRoutes(config: ChainForkConfig, api: ServerApi<Api>): ServerR
           const version = config.getForkName(slot);
           void res.header("Eth-Consensus-Version", version);
           // Fastify 3.x.x will automatically add header `Content-Type: application/octet-stream` if Buffer
-          return Buffer.from(response);
+          return Buffer.from(response.buffer, response.byteOffset, response.byteLength);
         } else {
           void res.header("Eth-Consensus-Version", response.version);
           return returnTypes.getStateV2.toJson(response);

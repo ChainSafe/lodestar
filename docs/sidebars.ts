@@ -23,7 +23,11 @@ const sidebars: SidebarsConfig = {
     {
       type: "category",
       label: "Validator",
-      items: ["validator-management/validator-cli", "validator-management/vc-configuration"],
+      items: [
+        "validator-management/validator-cli",
+        "validator-management/vc-configuration",
+        "validator-management/external-signer",
+      ],
     },
     {
       type: "category",

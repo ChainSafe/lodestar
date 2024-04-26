@@ -3,12 +3,12 @@ import {describe, it, expect, beforeEach} from "vitest";
 import {EpochShuffling} from "@lodestar/state-transition";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Root} from "@lodestar/types";
-import {StateContextCache} from "../../../../src/chain/stateCache/index.js";
+import {BlockStateCacheImpl} from "../../../../src/chain/stateCache/index.js";
 import {generateCachedState} from "../../../utils/state.js";
 import {ZERO_HASH} from "../../../../src/constants/index.js";
 
-describe("StateContextCache", function () {
-  let cache: StateContextCache;
+describe("BlockStateCacheImpl", function () {
+  let cache: BlockStateCacheImpl;
   let key1: Root, key2: Root;
   const shuffling: EpochShuffling = {
     epoch: 0,
@@ -20,7 +20,7 @@ describe("StateContextCache", function () {
 
   beforeEach(function () {
     // max 2 items
-    cache = new StateContextCache({maxStates: 2});
+    cache = new BlockStateCacheImpl({maxStates: 2});
     const state1 = generateCachedState({slot: 0});
     key1 = state1.hashTreeRoot();
     state1.epochCtx.currentShuffling = {...shuffling, epoch: 0};

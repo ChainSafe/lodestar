@@ -8,7 +8,7 @@ import {themes as prismThemes} from "prism-react-renderer";
 const config: Config = {
   title: "Lodestar",
   tagline: "TypeScript Implementation of Ethereum Consensus",
-  favicon: "img/favicon.ico",
+  favicon: "images/favicon.ico",
 
   // Set the production url of your site here
   url: "https://chainsafe.github.io/",
@@ -38,10 +38,6 @@ const config: Config = {
           editUrl: "https://github.com/ChainSafe/lodestar/tree/unstable/docs/",
           routeBasePath: "/",
         },
-        gtag: {
-          trackingID: "G-N21J5PWW5X",
-          anonymizeIP: true,
-        },
         theme: {
           customCss: "./src/css/custom.css",
         },
@@ -59,7 +55,7 @@ const config: Config = {
       title: "Lodestar Documentation",
       logo: {
         alt: "Lodestar Logo",
-        src: "img/logo.png",
+        src: "images/logo.png",
       },
       items: [
         {
@@ -110,6 +106,7 @@ const config: Config = {
       maxHeadingLevel: 5,
     },
   } satisfies Preset.ThemeConfig,
+  scripts: [{src: "https://plausible.io/js/script.js", defer: true, "data-domain": "chainsafe.github.io/lodestar/"}],
 };
 
 export default config;

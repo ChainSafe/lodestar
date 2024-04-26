@@ -12,6 +12,7 @@ CTRL
 Casper
 Chai
 ChainSafe
+Codespaces
 Customizations
 DPoS
 DVs
@@ -118,6 +119,7 @@ ddos
 decrypt
 deserialization
 dev
+devcontainer
 devnet
 devnets
 devtools
@@ -162,6 +164,7 @@ orchestrator
 osx
 overriden
 params
+peerDependency
 pid
 plaintext
 pre

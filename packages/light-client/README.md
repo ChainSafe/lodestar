@@ -9,7 +9,7 @@ The evolution of light clients is emblematic of the broader trajectory of Ethere
 ## Prerequisites
 
 [![Discord](https://img.shields.io/discord/593655374469660673.svg?label=Discord&logo=discord)](https://discord.gg/aMxzVcr)
-[![Eth Consensus Spec v1.1.10](https://img.shields.io/badge/ETH%20consensus--spec-1.1.10-blue)](https://github.com/ethereum/consensus-specs/releases/tag/v1.1.10)
+[![Eth Consensus Spec v1.4.0](https://img.shields.io/badge/ETH%20consensus--spec-1.4.0-blue)](https://github.com/ethereum/consensus-specs/releases/tag/v1.4.0)
 ![ES Version](https://img.shields.io/badge/ES-2021-yellow)
 ![Node Version](https://img.shields.io/badge/node-16.x-green)
 ![Yarn](https://img.shields.io/badge/yarn-%232C8EBB.svg?style=for-the-badge&logo=yarn&logoColor=white)
@@ -49,6 +49,12 @@ lodestar lightclient \
 ## Light-Client Programmatic Example
 
 For this example we will assume there is a running beacon node at `https://lodestar-mainnet.chainsafe.io`
+
+If you are running light-client on a server/node environment there is a faster version of bls that can help with performance. It is a peerDependency and needs to be installed separately by the consumer of this package. This was done so that for browser situations there is not a hard requirement for node-only code that will cause bundling errors. On startup, if running in a node environment, and `@chainsafe/blst` is installed the LightClient will automatically use the faster bls bindings.
+
+```sh
+npm i -S @chainsafe/blst
+```
 
 ```ts
 import {Lightclient, LightclientEvent} from "@lodestar/light-client";
