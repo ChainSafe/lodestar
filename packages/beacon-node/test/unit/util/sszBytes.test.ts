@@ -16,7 +16,6 @@ import {
   getSlotFromBlobSidecarSerialized,
   getCommitteeBitsFromAttestationSerialized,
 } from "../../../src/util/sszBytes.js";
-import { ForkName } from "@lodestar/params";
 
 describe("attestation SSZ serialized picking", () => {
   const testCases: allForks.Attestation[] = [

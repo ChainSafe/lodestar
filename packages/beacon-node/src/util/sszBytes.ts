@@ -130,7 +130,7 @@ export function getCommitteeBitsFromAttestationSerialized(data: Uint8Array): Bit
 
   return new BitArray(uint8Array, MAX_COMMITTEES_PER_SLOT);
 }
- 
+
 //
 // class SignedAggregateAndProof(Container):
 //    message: AggregateAndProof - offset 4
@@ -178,7 +178,6 @@ export function getBlockRootFromSignedAggregateAndProofSerialized(data: Uint8Arr
 /**
  * Extract attestation data base64 from signed aggregate and proof serialized bytes.
  * Return null if data is not long enough to extract attestation data.
- * TODO Electra: Handle serialized electra.SignedAggregateAndProof
  */
 export function getAttDataBase64FromSignedAggregateAndProofSerialized(data: Uint8Array): AttDataBase64 | null {
   if (data.length < SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET + ATTESTATION_DATA_SIZE) {
