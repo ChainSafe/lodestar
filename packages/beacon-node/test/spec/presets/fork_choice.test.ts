@@ -27,6 +27,7 @@ import {
   AttestationImportOpt,
   BlockSource,
   BlobSidecarValidation,
+  BlobsSource,
 } from "../../../src/chain/blocks/types.js";
 import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
 import {PowMergeBlock} from "../../../src/eth1/interface.js";
@@ -209,9 +210,15 @@ const forkChoiceTest =
                     };
                   });
 
-                  blockImport = getBlockInput.postDeneb(config, signedBlock, BlockSource.gossip, blobSidecars, null, [
+                  blockImport = getBlockInput.postDeneb(
+                    config,
+                    signedBlock,
+                    BlockSource.gossip,
+                    blobSidecars,
+                    BlobsSource.gossip,
                     null,
-                  ]);
+                    [null]
+                  );
                 } else {
                   blockImport = getBlockInput.preDeneb(config, signedBlock, BlockSource.gossip, null);
                 }

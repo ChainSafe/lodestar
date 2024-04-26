@@ -18,13 +18,21 @@ export enum BlockSource {
   byRoot = "req_resp_by_root",
 }
 
+/** Enum to represent where blobs come from */
+export enum BlobsSource {
+  gossip = "gossip",
+  api = "api",
+  byRange = "req_resp_by_range",
+  byRoot = "req_resp_by_root",
+}
+
 export enum GossipedInputType {
   block = "block",
   blob = "blob",
 }
 
 export type BlobsCache = Map<number, {blobSidecar: deneb.BlobSidecar; blobBytes: Uint8Array | null}>;
-export type BlockInputBlobs = {blobs: deneb.BlobSidecars; blobsBytes: (Uint8Array | null)[]};
+export type BlockInputBlobs = {blobs: deneb.BlobSidecars; blobsBytes: (Uint8Array | null)[]; blobsSource: BlobsSource};
 type CachedBlobs = {
   blobsCache: BlobsCache;
   availabilityPromise: Promise<BlockInputBlobs>;
@@ -34,6 +42,7 @@ type CachedBlobs = {
 export type BlockInput = {block: allForks.SignedBeaconBlock; source: BlockSource; blockBytes: Uint8Array | null} & (
   | {type: BlockInputType.preDeneb}
   | ({type: BlockInputType.postDeneb} & BlockInputBlobs)
+  // the blobsSource here is added to BlockInputBlobs when availability is resolved
   | ({type: BlockInputType.blobsPromise} & CachedBlobs)
 );
 export type NullBlockInput = {block: null; blockRootHex: RootHex; blockInputPromise: Promise<BlockInput>} & CachedBlobs;
@@ -69,6 +78,7 @@ export const getBlockInput = {
     block: allForks.SignedBeaconBlock,
     source: BlockSource,
     blobs: deneb.BlobSidecars,
+    blobsSource: BlobsSource,
     blockBytes: Uint8Array | null,
     blobsBytes: (Uint8Array | null)[]
   ): BlockInput {
@@ -80,6 +90,7 @@ export const getBlockInput = {
       block,
       source,
       blobs,
+      blobsSource,
       blockBytes,
       blobsBytes,
     };
@@ -109,7 +120,7 @@ export const getBlockInput = {
   },
 };
 
-export function getBlockInputBlobs(blobsCache: BlobsCache): BlockInputBlobs {
+export function getBlockInputBlobs(blobsCache: BlobsCache): Omit<BlockInputBlobs, "blobsSource"> {
   const blobs = [];
   const blobsBytes = [];
 
