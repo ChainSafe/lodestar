@@ -126,7 +126,7 @@ export type ResponseCodec<E extends Endpoint> = {
   meta: ResponseMetadataCodec<E["meta"]>;
   /** Occasionally, json responses require an extra transformation to separate the data from metadata */
   transform?: {
-    toResponse: (data: E["return"], meta: E["meta"]) => unknown;
+    toResponse: (data: unknown, meta: unknown) => unknown;
     fromResponse: (resp: unknown) => {
       data: E["return"];
     } & (E["meta"] extends EmptyMeta ? {meta?: never} : {meta: E["meta"]});

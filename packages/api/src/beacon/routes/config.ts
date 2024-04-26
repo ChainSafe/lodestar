@@ -101,7 +101,10 @@ export const definitions: RouteDefinitions<Endpoints> = {
       transform: {
         toResponse: (data) => {
           // TODO: shouldn't this be wrapped inside `{data: ...}`?
-          return data.reduce((json, {key, value}) => ((json[key] = value), json), {} as Record<string, string>);
+          return (data as {key: string; value: string}[]).reduce(
+            (json, {key, value}) => ((json[key] = value), json),
+            {} as Record<string, string>
+          );
         },
         fromResponse: (resp) => {
           return {data: Object.entries(resp as Record<string, string>).map(([key, value]) => ({key, value}))};

@@ -392,7 +392,13 @@ export const definitions: RouteDefinitions<Endpoints> = {
       data: JsonOnlyResponseCodec.data,
       meta: EmptyMetaCodec,
       transform: {
-        toResponse: (data) => ({data: data.statuses, slashing_protection: data.slashingProtection}),
+        toResponse: (data) => {
+          const {statuses, slashing_protection} = data as {
+            statuses: ResponseStatus<DeletionStatus>[];
+            slashing_protection: SlashingProtectionData;
+          };
+          return {data: statuses, slashing_protection};
+        },
         fromResponse: (resp) => {
           const {data, slashing_protection} = resp as {
             data: ResponseStatus<DeletionStatus>[];
