@@ -1,7 +1,7 @@
 import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
 import {ForkName, ForkSeq, MAX_ATTESTATIONS, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {phase0, Epoch, Slot, ssz, ValidatorIndex, RootHex} from "@lodestar/types";
+import {phase0, Epoch, Slot, ssz, ValidatorIndex, RootHex, allForks} from "@lodestar/types";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStatePhase0,
@@ -20,7 +20,7 @@ type DataRootHex = string;
 
 type CommitteeIndex = number;
 
-type AttestationWithScore = {attestation: phase0.Attestation; score: number};
+type AttestationWithScore = {attestation: allForks.Attestation; score: number};
 
 /**
  * This function returns not seen participation for a given epoch and committee.
@@ -76,7 +76,7 @@ export class AggregatedAttestationPool {
   }
 
   add(
-    attestation: phase0.Attestation,
+    attestation: allForks.Attestation,
     dataRootHex: RootHex,
     attestingIndicesCount: number,
     committee: Uint32Array
@@ -121,7 +121,7 @@ export class AggregatedAttestationPool {
     fork: ForkName,
     forkChoice: IForkChoice,
     state: CachedBeaconStateAllForks
-  ): phase0.Attestation[] {
+  ): allForks.Attestation[] {
     const stateSlot = state.slot;
     const stateEpoch = state.epochCtx.epoch;
     const statePrevEpoch = stateEpoch - 1;
@@ -221,13 +221,13 @@ export class AggregatedAttestationPool {
     }
 
     const sortedAttestationsByScore = attestationsByScore.sort((a, b) => b.score - a.score);
-    const attestationsForBlock: phase0.Attestation[] = [];
+    const attestationsForBlock: allForks.Attestation[] = [];
     for (const [i, attestationWithScore] of sortedAttestationsByScore.entries()) {
       if (i >= MAX_ATTESTATIONS) {
         break;
       }
       // attestations could be modified in this op pool, so we need to clone for block
-      attestationsForBlock.push(ssz.phase0.Attestation.clone(attestationWithScore.attestation));
+      attestationsForBlock.push(ssz.allForks[fork].Attestation.clone(attestationWithScore.attestation));
     }
     return attestationsForBlock;
   }
@@ -236,7 +236,7 @@ export class AggregatedAttestationPool {
    * Get all attestations optionally filtered by `attestation.data.slot`
    * @param bySlot slot to filter, `bySlot === attestation.data.slot`
    */
-  getAll(bySlot?: Slot): phase0.Attestation[] {
+  getAll(bySlot?: Slot): allForks.Attestation[] {
     let attestationGroupsArr: Map<DataRootHex, MatchingDataAttestationGroup>[];
     if (bySlot === undefined) {
       attestationGroupsArr = Array.from(this.attestationGroupByDataHashByIndexBySlot.values()).flatMap((byIndex) =>
@@ -248,7 +248,7 @@ export class AggregatedAttestationPool {
       attestationGroupsArr = Array.from(attestationGroupsByIndex.values());
     }
 
-    const attestations: phase0.Attestation[] = [];
+    const attestations: allForks.Attestation[] = [];
     for (const attestationGroups of attestationGroupsArr) {
       for (const attestationGroup of attestationGroups.values()) {
         attestations.push(...attestationGroup.getAttestations());
@@ -259,12 +259,12 @@ export class AggregatedAttestationPool {
 }
 
 interface AttestationWithIndex {
-  attestation: phase0.Attestation;
+  attestation: allForks.Attestation;
   trueBitsCount: number;
 }
 
 type AttestationNonParticipant = {
-  attestation: phase0.Attestation;
+  attestation: allForks.Attestation;
   // this is <= attestingIndices.count since some attesters may be seen by the chain
   // this is only updated and used in removeBySeenValidators function
   notSeenAttesterCount: number;
@@ -372,7 +372,7 @@ export class MatchingDataAttestationGroup {
   }
 
   /** Get attestations for API. */
-  getAttestations(): phase0.Attestation[] {
+  getAttestations(): allForks.Attestation[] {
     return this.attestations.map((attestation) => attestation.attestation);
   }
 }

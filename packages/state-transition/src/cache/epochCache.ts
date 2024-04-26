@@ -803,8 +803,11 @@ export class EpochCache {
     } else {
       const {aggregationBits, committeeBits, data} = attestation as electra.Attestation;
 
-      const committeeBitsLength = committeeBits.bitLen;
-      const committeeIndices = committeeBits.intersectValues(Array.from({length: committeeBitsLength}, (_, i) => i));
+      // There is a naming conflict on the term `committeeIndices`
+      // In Lodestar it usually means a list of validator indices of participants in a committee
+      // In the spec it means a list of committee indices according to committeeBits
+      // This `committeeIndices` refers to the latter
+      const committeeIndices = committeeBits.getTrueBitIndexes();
 
       const validatorIndices = this.getBeaconCommittees(data.slot, committeeIndices);
 
