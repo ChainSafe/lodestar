@@ -102,6 +102,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       },
       resp: {
         data: WithVersion((fork: ForkName) =>
+          // TODO: rather throw error here, defaulting to a different work type just cases ambiguous errors
           isForkExecution(fork) ? ssz.allForksExecution[fork].SignedBuilderBid : ssz.bellatrix.SignedBuilderBid
         ),
         meta: VersionCodec,
@@ -122,10 +123,9 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         },
         parseReqJson: ({body, headers}) => {
           const forkName = toForkName(headers["Eth-Consensus-Version"]); // TODO validation
-          const forkSeq = config.forks[forkName].seq;
-          if (forkSeq < ForkSeq.capella) throw new Error("TODO"); // TODO
+          if (!isForkExecution(forkName)) throw new Error("TODO"); // TODO
           return {
-            signedBlindedBlock: ssz[forkName as "capella"].SignedBlindedBeaconBlock.fromJson(body),
+            signedBlindedBlock: ssz[forkName].SignedBlindedBeaconBlock.fromJson(body),
           };
         },
         writeReqSsz: (args) => {
@@ -140,9 +140,9 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         parseReqSsz: ({body, headers}) => {
           const forkName = toForkName(headers["Eth-Consensus-Version"]); // TODO error if header does not exist
           const forkSeq = config.forks[forkName].seq;
-          if (forkSeq < ForkSeq.capella) throw new Error("TODO"); // TODO
+          if (forkSeq < ForkSeq.bellatrix) throw new Error("TODO"); // TODO
           return {
-            signedBlindedBlock: ssz[forkName as "capella"].SignedBlindedBeaconBlock.deserialize(body),
+            signedBlindedBlock: ssz[forkName as "bellatrix"].SignedBlindedBeaconBlock.deserialize(body),
           };
         },
         schema: {
