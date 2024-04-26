@@ -16,6 +16,7 @@ import {
   WithVersion,
 } from "../../../utils/codecs.js";
 import {toForkName} from "../../../utils/serdes.js";
+import {fromRequestHeaders} from "../../../utils/headers.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -309,7 +310,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           };
         },
         parseReqJson: ({body, headers}) => {
-          const forkName = toForkName(headers["Eth-Consensus-Version"]); // TODO error if header does not exist
+          const forkName = toForkName(fromRequestHeaders(headers, "Eth-Consensus-Version"));
           const forkSeq = config.forks[forkName].seq;
           return {
             signedBlockOrContents:
@@ -335,7 +336,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           };
         },
         parseReqSsz: ({body, headers}) => {
-          const forkName = toForkName(headers["Eth-Consensus-Version"]); // TODO error if header does not exist
+          const forkName = toForkName(fromRequestHeaders(headers, "Eth-Consensus-Version"));
           const forkSeq = config.forks[forkName].seq;
           return {
             signedBlockOrContents:
@@ -373,7 +374,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           };
         },
         parseReqJson: ({body, headers, query}) => {
-          const forkName = toForkName(headers["Eth-Consensus-Version"]); // TODO error if header does not exist
+          const forkName = toForkName(fromRequestHeaders(headers, "Eth-Consensus-Version"));
           const forkSeq = config.forks[forkName].seq;
           return {
             signedBlockOrContents:
@@ -401,7 +402,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           };
         },
         parseReqSsz: ({body, headers, query}) => {
-          const forkName = toForkName(headers["Eth-Consensus-Version"]); // TODO validation
+          const forkName = toForkName(fromRequestHeaders(headers, "Eth-Consensus-Version")); // TODO validation
           const forkSeq = config.forks[forkName].seq;
           return {
             signedBlockOrContents:
@@ -433,11 +434,11 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           };
         },
         parseReqJson: ({body, headers}) => {
-          const forkName = toForkName(headers["Eth-Consensus-Version"]); // TODO error if header does not exist
+          const forkName = toForkName(fromRequestHeaders(headers, "Eth-Consensus-Version"));
           const forkSeq = config.forks[forkName].seq;
-          if (forkSeq < ForkSeq.capella) throw new Error("TODO"); // TODO
+          if (forkSeq < ForkSeq.bellatrix) throw new Error("TODO"); // TODO
           return {
-            signedBlindedBlock: ssz[forkName as "capella"].SignedBlindedBeaconBlock.fromJson(body),
+            signedBlindedBlock: ssz[forkName as "bellatrix"].SignedBlindedBeaconBlock.fromJson(body),
           };
         },
         writeReqSsz: ({signedBlindedBlock}) => {
@@ -450,11 +451,11 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           };
         },
         parseReqSsz: ({body, headers}) => {
-          const forkName = toForkName(headers["Eth-Consensus-Version"]); // TODO error if header does not exist
+          const forkName = toForkName(fromRequestHeaders(headers, "Eth-Consensus-Version"));
           const forkSeq = config.forks[forkName].seq;
-          if (forkSeq < ForkSeq.capella) throw new Error("TODO"); // TODO
+          if (forkSeq < ForkSeq.bellatrix) throw new Error("TODO"); // TODO
           return {
-            signedBlindedBlock: ssz[forkName as "capella"].SignedBlindedBeaconBlock.deserialize(body),
+            signedBlindedBlock: ssz[forkName as "bellatrix"].SignedBlindedBeaconBlock.deserialize(body),
           };
         },
         schema: {
@@ -480,11 +481,11 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           };
         },
         parseReqJson: ({body, headers, query}) => {
-          const forkName = toForkName(headers["Eth-Consensus-Version"]); // TODO error if header does not exist
+          const forkName = toForkName(fromRequestHeaders(headers, "Eth-Consensus-Version"));
           const forkSeq = config.forks[forkName].seq;
-          if (forkSeq < ForkSeq.capella) throw new Error("TODO"); // TODO
+          if (forkSeq < ForkSeq.bellatrix) throw new Error("TODO"); // TODO
           return {
-            signedBlindedBlock: ssz[forkName as "capella"].SignedBlindedBeaconBlock.fromJson(body),
+            signedBlindedBlock: ssz[forkName as "bellatrix"].SignedBlindedBeaconBlock.fromJson(body),
             broadcastValidation: query.broadcast_validation as BroadcastValidation,
           };
         },
@@ -499,11 +500,11 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           };
         },
         parseReqSsz: ({body, headers, query}) => {
-          const forkName = toForkName(headers["Eth-Consensus-Version"]); // TODO error if header does not exist
+          const forkName = toForkName(fromRequestHeaders(headers, "Eth-Consensus-Version"));
           const forkSeq = config.forks[forkName].seq;
-          if (forkSeq < ForkSeq.capella) throw new Error("TODO"); // TODO
+          if (forkSeq < ForkSeq.bellatrix) throw new Error("TODO"); // TODO
           return {
-            signedBlindedBlock: ssz[forkName as "capella"].SignedBlindedBeaconBlock.deserialize(body),
+            signedBlindedBlock: ssz[forkName as "bellatrix"].SignedBlindedBeaconBlock.deserialize(body),
             broadcastValidation: query.broadcast_validation as BroadcastValidation,
           };
         },
