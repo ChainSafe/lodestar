@@ -98,6 +98,7 @@ blockRoot
 blockchain
 bootnode
 bootnodes
+bundlers
 chainConfig
 chainsafe
 chiado
@@ -193,11 +194,14 @@ testnets
 todo
 typesafe
 udp
+unpkg
 util
 utils
 validator
 validators
+vite
 vitest
+webpack
 wip
 xcode
 yaml

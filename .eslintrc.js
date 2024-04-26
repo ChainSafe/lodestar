@@ -194,7 +194,14 @@ module.exports = {
   },
   overrides: [
     {
-      files: ["**/*.config.js", "**/*.config.mjs", "**/*.config.cjs", "**/*.config.ts"],
+      files: [
+        "**/*.config.js",
+        "**/*.config.mjs",
+        "**/*.config.cjs",
+        "**/*.config.ts",
+        "scripts/vitest/**/*.ts",
+        "scripts/vite/**/*.ts",
+      ],
       rules: {
         "@typescript-eslint/naming-convention": "off",
         // Allow require in CJS modules

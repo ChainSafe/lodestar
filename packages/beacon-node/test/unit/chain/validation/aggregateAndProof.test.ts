@@ -1,4 +1,4 @@
-import {toHexString} from "@chainsafe/ssz";
+import {BitArray, toHexString} from "@chainsafe/ssz";
 import {describe, it} from "vitest";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {phase0, ssz} from "@lodestar/types";
@@ -136,6 +136,18 @@ describe("chain / validation / aggregateAndProof", () => {
     signedAggregateAndProof.message.aggregate.data.index = attIndex - 1;
 
     await expectError(chain, signedAggregateAndProof, AttestationErrorCode.AGGREGATOR_NOT_IN_COMMITTEE);
+  });
+
+  it("WRONG_NUMBER_OF_AGGREGATION_BITS", async () => {
+    const attIndex = 1;
+    const {chain, signedAggregateAndProof} = getValidData({attIndex});
+    const {aggregationBits} = signedAggregateAndProof.message.aggregate;
+    signedAggregateAndProof.message.aggregate.aggregationBits = new BitArray(
+      aggregationBits.uint8Array,
+      aggregationBits.bitLen + 1
+    );
+
+    await expectError(chain, signedAggregateAndProof, AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS);
   });
 
   it("INVALID_SIGNATURE - selection proof sig", async () => {
