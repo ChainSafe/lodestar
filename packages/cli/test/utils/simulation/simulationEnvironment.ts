@@ -8,7 +8,7 @@ import {loadEthereumTrustedSetup, initCKZG} from "@lodestar/beacon-node/util";
 import {ChainForkConfig} from "@lodestar/config";
 import {activePreset} from "@lodestar/params";
 import {BeaconStateAllForks, interopSecretKey} from "@lodestar/state-transition";
-import {prettyMsToTime} from "@lodestar/utils";
+import {prettyMsToTime, sleep} from "@lodestar/utils";
 import {LogLevel, TimestampFormatCode} from "@lodestar/logger";
 import {getNodeLogger, LoggerNode} from "@lodestar/logger/node";
 import {EpochClock, MS_IN_SEC} from "./epochClock.js";
@@ -33,6 +33,8 @@ import {
 import {Runner} from "./runner/index.js";
 import {registerProcessHandler, replaceIpFromUrl} from "./utils/index.js";
 import {getNodePaths} from "./utils/paths.js";
+import {prefundAccounts} from "./utils/executionGenesis.js";
+import {connectAllNodes, waitForSlot} from "./utils/network.js";
 
 interface StartOpts {
   runTimeoutMs: number;
@@ -187,6 +189,14 @@ export class SimulationEnvironment {
       this.logger.info("Starting the simulation tracker");
       await this.tracker.start();
       await Promise.all(this.nodes.map((node) => this.tracker.track(node)));
+
+      await connectAllNodes(this.nodes);
+
+      if (this.nodes[0].execution.provider) {
+        await sleep(10000);
+        this.logger.info("Transferring funds to pre-funded accounts");
+        await prefundAccounts(this.nodes[0].execution.provider);
+      }
     } catch (error) {
       await this.stop(1, `Error in startup. ${(error as Error).stack}`);
     } finally {

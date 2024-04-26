@@ -1,19 +1,20 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {writeFile} from "node:fs/promises";
 import path from "node:path";
+import {Web3} from "web3";
 import got from "got";
-import {ZERO_HASH} from "@lodestar/state-transition";
 import {
   EL_GENESIS_ACCOUNT,
   EL_GENESIS_PASSWORD,
   EL_GENESIS_SECRET_KEY,
+  PRE_FUNDED_WALLETS,
   SHARED_JWT_SECRET,
   SIM_ENV_NETWORK_ID,
-} from "../constants.js";
-import {Eth1ProviderWithAdmin} from "../Eth1ProviderWithAdmin.js";
-import {ExecutionClient, ExecutionNodeGenerator, JobOptions, RunnerType} from "../interfaces.js";
-import {getNodeMountedPaths} from "../utils/paths.js";
-import {getNodePorts} from "../utils/ports.js";
+} from "../../constants.js";
+import {ExecutionClient, ExecutionNodeGenerator, JobOptions, RunnerType} from "../../interfaces.js";
+import {getNodeMountedPaths} from "../../utils/paths.js";
+import {getNodePorts} from "../../utils/ports.js";
+import {registerWeb3JsPlugins} from "../../web3JsPlugins.js";
 
 export const generateBuilderNode: ExecutionNodeGenerator<ExecutionClient.Builder> = (opts, runner) => {
   if (!process.env.BUILDER_DOCKER_IMAGE) {
@@ -174,7 +175,7 @@ export const generateBuilderNode: ExecutionNodeGenerator<ExecutionClient.Builder
       command: "",
       args: startJobArgs,
       env: {
-        BUILDER_TX_SIGNING_KEY: `0x${EL_GENESIS_SECRET_KEY}`,
+        BUILDER_TX_SIGNING_KEY: PRE_FUNDED_WALLETS[0].privateKey,
       },
     },
     logs: {
@@ -192,11 +193,8 @@ export const generateBuilderNode: ExecutionNodeGenerator<ExecutionClient.Builder
 
   const job = runner.create([{...initJobOptions, children: [{...importJobOptions, children: [startJobOptions]}]}]);
 
-  const provider = new Eth1ProviderWithAdmin(
-    {DEPOSIT_CONTRACT_ADDRESS: ZERO_HASH},
-    // To allow admin_* RPC methods had to add "ethRpcUrl"
-    {providerUrls: [ethRpcPublicUrl, engineRpcPublicUrl], jwtSecretHex: SHARED_JWT_SECRET}
-  );
+  const provider = new Web3(ethRpcPublicUrl);
+  registerWeb3JsPlugins(provider);
 
   return {
     client: ExecutionClient.Builder,

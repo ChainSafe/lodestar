@@ -1,10 +1,12 @@
+import path from "node:path";
+import {fileURLToPath} from "node:url";
+import {Web3} from "Web3";
+import {create} from "web3-eth-accounts";
+
 // Global variable __dirname no longer available in ES6 modules.
 // Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-import path from "node:path";
-import {fileURLToPath} from "node:url";
 
 export const FAR_FUTURE_EPOCH = 10 ** 12;
 export const BN_P2P_BASE_PORT = 4000;
@@ -26,3 +28,6 @@ export const SHARED_VALIDATOR_PASSWORD = "password";
 export const EL_GENESIS_SECRET_KEY = "45a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065ff2d8";
 export const EL_GENESIS_PASSWORD = "12345678";
 export const EL_GENESIS_ACCOUNT = "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b";
+export const PRE_FUNDED_WALLETS_COUNT = 10;
+export const PRE_FUNDED_AMOUNT = Web3.utils.toWei("1000", "ether");
+export const PRE_FUNDED_WALLETS = Array.from({length: PRE_FUNDED_WALLETS_COUNT}, () => create());

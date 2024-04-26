@@ -1,4 +1,12 @@
-import {SIM_ENV_CHAIN_ID, SIM_ENV_NETWORK_ID} from "../constants.js";
+import {Web3} from "web3";
+import {sleep} from "@lodestar/utils";
+import {
+  EL_GENESIS_ACCOUNT,
+  PRE_FUNDED_AMOUNT,
+  PRE_FUNDED_WALLETS,
+  SIM_ENV_CHAIN_ID,
+  SIM_ENV_NETWORK_ID,
+} from "../constants.js";
 import {ExecutionGenesisOptions, ExecutionStartMode, Eth1GenesisBlock} from "../interfaces.js";
 
 export const getGethGenesisBlock = (
@@ -118,3 +126,10 @@ export const getNethermindChainSpec = (
     genesis: genesis,
   };
 };
+
+export async function prefundAccounts(provider: Web3): Promise<void> {
+  for (const wallet of PRE_FUNDED_WALLETS) {
+    await provider.eth.sendTransaction({from: EL_GENESIS_ACCOUNT, to: wallet.address, value: PRE_FUNDED_AMOUNT});
+    await sleep(500);
+  }
+}

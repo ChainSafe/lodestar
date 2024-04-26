@@ -1,10 +1,9 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import path from "node:path";
-import Web3 from "web3";
 import {bellatrix} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
 import {activePreset} from "@lodestar/params";
-import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
+import {SimulationEnvironment} from "../utils/simulation/simulationEnvironment.js";
 import {
   AssertionMatch,
   AssertionResult,
@@ -14,9 +13,9 @@ import {
   ValidatorClient,
 } from "../utils/simulation/interfaces.js";
 import {defineSimTestConfig, logFilesDir} from "../utils/simulation/utils/index.js";
-import {connectAllNodes, waitForSlot} from "../utils/simulation/utils/network.js";
+import {waitForSlot} from "../utils/simulation/utils/network.js";
 import {getNodePorts} from "../utils/simulation/utils/ports.js";
-import {EL_GENESIS_ACCOUNT} from "../utils/simulation/constants.js";
+import {PRE_FUNDED_WALLETS} from "../utils/simulation/constants.js";
 
 const runTillEpoch = 6;
 // All assertions are tracked w.r.t. fee recipient by attaching different fee recipient to
@@ -184,14 +183,15 @@ env.tracker.register({
 } as SimulationAssertion<"builderVsEngineCount", {builder: boolean; engine: boolean} | undefined>);
 
 await env.start({runTimeoutMs: estimatedTimeoutMs});
-await connectAllNodes(env.nodes);
-
-const web3 = new Web3(env.nodes[1].execution.ethRpcPublicUrl);
+await waitForSlot("Wait for genesis", {slot: 0, env});
 
 const nonce = 0;
 const internal = setInterval(async () => {
-  const accountNonce = await web3.eth.getTransactionCount(EL_GENESIS_ACCOUNT, "latest");
-  const blockNumber = await web3.eth.getBlockNumber();
+  const accountNonce = await env.nodes[1].execution.provider?.eth.getTransactionCount(
+    PRE_FUNDED_WALLETS[0].address,
+    "latest"
+  );
+  const blockNumber = await env.nodes[1].execution.provider?.eth.getBlockNumber();
   console.log("Account", {accountNonce, nonce, blockNumber});
 
   // if (accountNonce < BigInt(nonce)) {
@@ -202,9 +202,9 @@ const internal = setInterval(async () => {
     nonce++;
   }
 
-  const signedTransaction = await web3.eth.signTransaction({
+  const signedTransaction = await env.nodes[1].execution.provider?.eth.signTransaction({
     to: "0x4675C7e5BaAFBFFbca748158bEcBA61ef3b0a263",
-    from: EL_GENESIS_ACCOUNT,
+    from: PRE_FUNDED_WALLETS[0].address,
     gas: "0x76c0",
     gasPrice: "0x9184e72a000",
     value: `0x${(4444444).toString(16)}`,
@@ -213,7 +213,7 @@ const internal = setInterval(async () => {
 
   console.log("Sending bundle", {accountNonce, nonce, blockNumber});
 
-  await env.nodes[1].execution.provider?.getRpc().fetch({
+  await env.nodes[1].execution.provider?.requestManager.send({
     method: "eth_sendBundle",
     params: [
       {
@@ -224,7 +224,7 @@ const internal = setInterval(async () => {
   });
 }, 3000);
 
-await waitForSlot(env.clock.getLastSlotOfEpoch(runTillEpoch), env.nodes, {env});
+await waitForSlot("Waiting for the run to complete", {slot: env.clock.getLastSlotOfEpoch(runTillEpoch), env});
 
 clearInterval(internal);
 await env.stop();
