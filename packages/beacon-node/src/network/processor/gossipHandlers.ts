@@ -422,7 +422,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
         validationResult = await validateGossipAggregateAndProof(fork, chain, signedAggregateAndProof, serializedData);
       } catch (e) {
         if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
-          chain.persistInvalidSszValue(ssz.phase0.SignedAggregateAndProof, signedAggregateAndProof, "gossip_reject");
+          chain.persistInvalidSszValue(ssz.allForks[fork].SignedAggregateAndProof, signedAggregateAndProof, "gossip_reject");
         }
         throw e;
       }
