@@ -23,6 +23,12 @@ import {fromRequestHeaders} from "../utils/headers.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
+// Relays might not return any data if there are no bids from builders or min-bid threshold was not reached.
+// In this case, we receive a success response (204) which is not handled as an error. The generic response
+// handler already checks the status code and will not attempt to parse the body, but it will return no value.
+// It is important that this type indicates that there might be no value to ensure it is properly handled downstream.
+type MaybeSignedBuilderBid = allForks.SignedBuilderBid | undefined;
+
 const RegistrationsType = ArrayOf(ssz.bellatrix.SignedValidatorRegistrationV1);
 
 export type Endpoints = {
@@ -51,7 +57,7 @@ export type Endpoints = {
       proposerPubkey: BLSPubkey;
     },
     {params: {slot: Slot; parent_hash: string; pubkey: string}},
-    allForks.SignedBuilderBid,
+    MaybeSignedBuilderBid,
     VersionMeta
   >;
 
@@ -102,10 +108,11 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         },
       },
       resp: {
-        data: WithVersion((fork: ForkName) =>
-          // TODO: rather throw error here, defaulting to a different work type just cases ambiguous errors
-          isForkExecution(fork) ? ssz.allForksExecution[fork].SignedBuilderBid : ssz.bellatrix.SignedBuilderBid
-        ),
+        data: WithVersion<MaybeSignedBuilderBid, VersionMeta>((fork: ForkName) => {
+          if (!isForkExecution(fork)) throw new Error("TODO"); // TODO
+
+          return ssz.allForksExecution[fork].SignedBuilderBid;
+        }),
         meta: VersionCodec,
       },
     },
