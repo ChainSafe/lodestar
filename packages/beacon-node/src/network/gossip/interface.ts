@@ -86,7 +86,9 @@ export type GossipTypeMap = {
 export type GossipFnByType = {
   [GossipType.beacon_block]: (signedBlock: allForks.SignedBeaconBlock) => Promise<void> | void;
   [GossipType.blob_sidecar]: (blobSidecar: deneb.BlobSidecar) => Promise<void> | void;
-  [GossipType.beacon_aggregate_and_proof]: (aggregateAndProof: allForks.SignedAggregateAndProof) => Promise<void> | void;
+  [GossipType.beacon_aggregate_and_proof]: (
+    aggregateAndProof: allForks.SignedAggregateAndProof
+  ) => Promise<void> | void;
   [GossipType.beacon_attestation]: (attestation: allForks.Attestation) => Promise<void> | void;
   [GossipType.voluntary_exit]: (voluntaryExit: phase0.SignedVoluntaryExit) => Promise<void> | void;
   [GossipType.proposer_slashing]: (proposerSlashing: phase0.ProposerSlashing) => Promise<void> | void;

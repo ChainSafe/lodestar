@@ -283,8 +283,9 @@ async function validateGossipAttestationNoSignatureCheck(
 
   let attIndex;
   if (ForkSeq[fork] >= ForkSeq.electra) {
-    const committeeBits = attestationOrCache.attestation ? (attestationOrCache.attestation as electra.Attestation).committeeBits : 
-      getCommitteeBitsFromAttestationSerialized(attestationOrCache.serializedData);
+    const committeeBits = attestationOrCache.attestation
+      ? (attestationOrCache.attestation as electra.Attestation).committeeBits
+      : getCommitteeBitsFromAttestationSerialized(attestationOrCache.serializedData);
 
     if (committeeBits === null) {
       throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_SERIALIZED_BYTES});
@@ -480,9 +481,10 @@ async function validateGossipAttestationNoSignatureCheck(
     data: attData,
     signature,
   };
-  const indexedAttestation = ForkSeq[fork] >= ForkSeq.electra ? indexedAttestationContent as electra.IndexedAttestation : indexedAttestationContent as phase0.IndexedAttestation;
-
- 
+  const indexedAttestation =
+    ForkSeq[fork] >= ForkSeq.electra
+      ? (indexedAttestationContent as electra.IndexedAttestation)
+      : (indexedAttestationContent as phase0.IndexedAttestation);
 
   const attestation: allForks.Attestation = attestationOrCache.attestation
     ? attestationOrCache.attestation

@@ -89,7 +89,7 @@ export type EventData = {
     block: RootHex;
     executionOptimistic: boolean;
   };
-  [EventType.attestation]: phase0.Attestation;
+  [EventType.attestation]: {version: ForkName; data: allForks.Attestation};
   [EventType.voluntaryExit]: phase0.SignedVoluntaryExit;
   [EventType.proposerSlashing]: phase0.ProposerSlashing;
   [EventType.attesterSlashing]: phase0.AttesterSlashing;
@@ -180,7 +180,7 @@ export function getTypeByEvent(): {[K in EventType]: TypeJson<EventData[K]>} {
       {jsonCase: "eth2"}
     ),
 
-    [EventType.attestation]: ssz.phase0.Attestation,
+    [EventType.attestation]: WithVersion((fork) => ssz.allForks[fork].Attestation),
     [EventType.voluntaryExit]: ssz.phase0.SignedVoluntaryExit,
     [EventType.proposerSlashing]: ssz.phase0.ProposerSlashing,
     [EventType.attesterSlashing]: ssz.phase0.AttesterSlashing,
