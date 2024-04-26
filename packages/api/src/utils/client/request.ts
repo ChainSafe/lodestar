@@ -56,9 +56,9 @@ export function createApiRequest<E extends Endpoint>(
         break;
     }
   }
+  const queryString = req.query ? stringifyQuery(req.query) : "";
   const url = new URL(
-    urlJoin(init.baseUrl, definition.urlFormatter(req.params ?? {})) +
-      (req.query ? "?" + stringifyQuery(req.query) : "")
+    urlJoin(init.baseUrl, definition.urlFormatter(req.params ?? {})) + (queryString ? `?${queryString}` : "")
   );
   setAuthorizationHeader(url, headers, init);
 
