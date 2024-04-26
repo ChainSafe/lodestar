@@ -41,14 +41,14 @@ It is possible to start up the light-client as a standalone process.
 
 ```bash
 lodestar lightclient \
-    --network mainnet \
-    --beacon-api-url https://beacon-node.your-domain.com \
+    --network sepolia \
+    --beacon-api-url https://lodestar-sepolia.chainsafe.io \
     --checkpoint-root "0xccaff4b99986a7b05e06738f1828a32e40799b277fd9f9ff069be55341fe0229"
 ```
 
 ## Light-Client Programmatic Example
 
-For this example we will assume there is a running beacon node at `https://lodestar-mainnet.chainsafe.io`
+For this example we will assume there is a running beacon node at `https://lodestar-sepolia.chainsafe.io`
 
 If you are running light-client on a server/node environment there is a faster version of bls that can help with performance. It is a peerDependency and needs to be installed separately by the consumer of this package. This was done so that for browser situations there is not a hard requirement for node-only code that will cause bundling errors. On startup, if running in a node environment, and `@chainsafe/blst` is installed the LightClient will automatically use the faster bls bindings.
 
@@ -67,9 +67,9 @@ import {
   getChainForkConfigFromNetwork,
 } from "@lodestar/light-client/utils";
 
-const config = getChainForkConfigFromNetwork("mainnet");
+const config = getChainForkConfigFromNetwork("sepolia");
 const logger = getConsoleLogger({logDebug: Boolean(process.env.DEBUG)});
-const api = getApiFromUrl({urls: ["https://lodestar-mainnet.chainsafe.io"]}, {config});
+const api = getApiFromUrl({urls: ["https://lodestar-sepolia.chainsafe.io"]}, {config});
 
 const lightclient = await Lightclient.initializeFromCheckpointRoot({
   config,
