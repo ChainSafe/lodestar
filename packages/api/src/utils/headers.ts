@@ -122,7 +122,10 @@ export function mergeHeaders(a: HeadersInit | undefined, b: HeadersInit | undefi
   return headers;
 }
 
-export function fromHeaders<T extends Record<string, string>>(headers: T, name: Extract<keyof T, string>): string {
+export function fromRequestHeaders<T extends Record<string, string>>(
+  headers: T,
+  name: Extract<keyof T, string>
+): string {
   // Fastify converts all headers to lower case
   const header = headers[name.toLowerCase()];
 
