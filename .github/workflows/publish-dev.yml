@@ -8,6 +8,10 @@ on:
   push:
     branches:
       - unstable
+    paths-ignore:
+      - 'assets/**'
+      - 'dashboards/**'
+      - 'docs/**'
 
 jobs:
   npm:

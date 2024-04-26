@@ -13,10 +13,18 @@ on:
       - stable
       - unstable
       - benchmark # For debugging
+    paths-ignore:
+      - 'assets/**'
+      - 'dashboards/**'
+      - 'docs/**'
   pull_request:
     branches:
       - stable
       - unstable
+    paths-ignore:
+      - 'assets/**'
+      - 'dashboards/**'
+      - 'docs/**'
   workflow_dispatch:
 
 jobs:
