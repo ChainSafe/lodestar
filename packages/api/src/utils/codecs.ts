@@ -194,6 +194,7 @@ export const ExecutionOptimisticAndDependentRootCodec: ResponseMetadataCodec<Exe
 export const EmptyResponseCodec: ResponseCodec<EmptyResponseEndpoint> = {
   data: EmptyResponseDataCodec,
   meta: EmptyMetaCodec,
+  isEmpty: true,
 };
 
 export const JsonOnlyResponseCodec: ResponseCodec<AnyEndpoint> = {

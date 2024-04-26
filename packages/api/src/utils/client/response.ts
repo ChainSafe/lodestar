@@ -1,13 +1,17 @@
 import {ApiError} from "../error.js";
 import {WireFormat, getWireFormat, parseContentTypeHeader} from "../headers.js";
+import {HttpStatusCode} from "../httpStatusCode.js";
 import {Endpoint} from "../types.js";
 import {RouteDefinitionExtra} from "./request.js";
 
-export type RawBody = {type: WireFormat.json; value: unknown} | {type: WireFormat.ssz; value: Uint8Array};
+export type RawBody =
+  | {type: WireFormat.json; value: unknown}
+  | {type: WireFormat.ssz; value: Uint8Array}
+  | {type?: never; value?: never};
 
 export class ApiResponse<E extends Endpoint> extends Response {
   private definition: RouteDefinitionExtra<E>;
-  private _wireFormat?: WireFormat;
+  private _wireFormat?: WireFormat | null;
   private _rawBody?: RawBody;
   private _errorBody?: string;
   private _meta?: E["meta"];
@@ -18,11 +22,19 @@ export class ApiResponse<E extends Endpoint> extends Response {
     this.definition = definition;
   }
 
-  wireFormat(): WireFormat {
+  wireFormat(): WireFormat | null {
     if (this._wireFormat === undefined) {
+      if (this.definition.resp.isEmpty) {
+        return (this._wireFormat = null);
+      }
+
       const contentType = this.headers.get("content-type");
       if (contentType === null) {
-        throw Error("No Content-Type header found in response");
+        if (this.status === HttpStatusCode.NO_CONTENT) {
+          return (this._wireFormat = null);
+        } else {
+          throw Error("Content-Type header is required in response");
+        }
       }
 
       const mediaType = parseContentTypeHeader(contentType);
@@ -61,6 +73,8 @@ export class ApiResponse<E extends Endpoint> extends Response {
             value: new Uint8Array(await this.arrayBuffer()),
           };
           break;
+        default:
+          this._rawBody = {};
       }
     }
     return this._rawBody;
@@ -93,7 +107,7 @@ export class ApiResponse<E extends Endpoint> extends Response {
         case WireFormat.json: {
           const dataJson = this.definition.resp.transform
             ? this.definition.resp.transform.fromResponse(rawBody.value).data
-            : (rawBody.value as Record<string, unknown>)?.["data"];
+            : (rawBody.value as Record<string, unknown>)?.data;
           this._value = this.definition.resp.data.fromJson(dataJson, meta);
           break;
         }
@@ -112,6 +126,8 @@ export class ApiResponse<E extends Endpoint> extends Response {
         return rawBody.value;
       case WireFormat.ssz:
         return this.definition.resp.data.toJson(await this.value(), await this.meta());
+      default:
+        return {};
     }
   }
 
@@ -122,6 +138,8 @@ export class ApiResponse<E extends Endpoint> extends Response {
         return this.definition.resp.data.serialize(await this.value(), await this.meta());
       case WireFormat.ssz:
         return rawBody.value;
+      default:
+        return new Uint8Array();
     }
   }
 

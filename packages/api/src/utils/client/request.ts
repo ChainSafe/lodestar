@@ -47,7 +47,7 @@ export function createApiRequest<E extends Endpoint>(
     switch (requestWireFormat) {
       case WireFormat.json:
         req = (definition.req as JsonRequestMethods<E>).writeReqJson(args);
-        req.body = req.body ? JSON.stringify(req.body) : undefined; // TODO: default to `{}`?
+        req.body = JSON.stringify(req.body ?? {});
         headers.set("content-type", MediaType.json);
         break;
       case WireFormat.ssz:
@@ -62,7 +62,9 @@ export function createApiRequest<E extends Endpoint>(
   );
   setAuthorizationHeader(url, headers, init);
 
-  if (definition.resp.onlySupport !== undefined) {
+  if (definition.resp.isEmpty) {
+    // Do not set Accept header
+  } else if (definition.resp.onlySupport !== undefined) {
     switch (definition.resp.onlySupport) {
       case WireFormat.json:
         headers.set("accept", MediaType.json);

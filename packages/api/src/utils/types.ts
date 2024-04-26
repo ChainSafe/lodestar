@@ -133,6 +133,8 @@ export type ResponseCodec<E extends Endpoint> = {
   };
   /** Support ssz-only or json-only responses */
   onlySupport?: WireFormat;
+  /** Indicator used to handle empty responses */
+  isEmpty?: true;
 };
 
 /**

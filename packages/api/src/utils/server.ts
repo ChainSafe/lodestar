@@ -112,6 +112,15 @@ export function createFastifyHandler<E extends Endpoint>(
       }
     }
 
+    if (response?.status !== undefined || definition.statusOk !== undefined) {
+      resp.statusCode = response?.status ?? (definition.statusOk as number);
+    }
+
+    if (definition.resp.isEmpty) {
+      // Send response without body
+      return;
+    }
+
     const acceptHeader = req.headers.accept;
     if (acceptHeader === undefined) {
       throw new ServerError(415, "No Accept header found in request");
@@ -161,9 +170,7 @@ export function createFastifyHandler<E extends Endpoint>(
         wireResponse = data;
       }
     }
-    if (response?.status !== undefined || definition.statusOk !== undefined) {
-      resp.statusCode = response?.status ?? (definition.statusOk as number);
-    }
+
     return wireResponse;
   };
 }
