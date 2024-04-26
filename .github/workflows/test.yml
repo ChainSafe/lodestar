@@ -10,13 +10,9 @@ on:
     # We intentionally don't run push on feature branches. See PR for rational.
     branches: [unstable, stable]
     paths-ignore:
-      - 'assets/**'
-      - 'dashboards/**'
       - 'docs/**'
   pull_request:
     paths-ignore:
-      - 'assets/**'
-      - 'dashboards/**'
       - 'docs/**'
   workflow_dispatch:
 

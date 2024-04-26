@@ -9,7 +9,6 @@ on:
     branches:
       - unstable
     paths-ignore:
-      - 'assets/**'
       - 'dashboards/**'
       - 'docs/**'
 

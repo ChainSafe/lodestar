@@ -14,7 +14,6 @@ on:
       - unstable
       - benchmark # For debugging
     paths-ignore:
-      - 'assets/**'
       - 'dashboards/**'
       - 'docs/**'
   pull_request:
@@ -22,7 +21,6 @@ on:
       - stable
       - unstable
     paths-ignore:
-      - 'assets/**'
       - 'dashboards/**'
       - 'docs/**'
   workflow_dispatch:
