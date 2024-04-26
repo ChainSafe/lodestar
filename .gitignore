@@ -1,6 +1,7 @@
 .__testdb*
 node_modules/
 lib
+dist
 .nyc_output/
 coverage/**
 .DS_Store
@@ -21,6 +22,7 @@ validators
 **/coverage
 **/node_modules
 **/lib
+**/dist
 **/.nyc_output
 .tmp
 .vscode
