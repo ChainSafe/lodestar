@@ -51,6 +51,7 @@ const buildBlockResponse = ({
   response: {
     version: ForkName.altair,
     executionOptimistic: true,
+    finalized: false,
     data: buildBlock({slot, blockNumber}),
   },
 });

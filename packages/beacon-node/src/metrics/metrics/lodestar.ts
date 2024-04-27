@@ -1,6 +1,6 @@
 import {EpochTransitionStep, StateCloneSource, StateHashTreeRootSource} from "@lodestar/state-transition";
 import {allForks} from "@lodestar/types";
-import {BlockSource} from "../../chain/blocks/types.js";
+import {BlockSource, BlobsSource} from "../../chain/blocks/types.js";
 import {JobQueueItemType} from "../../chain/bls/index.js";
 import {BlockErrorCode} from "../../chain/errors/index.js";
 import {InsertOutcome} from "../../chain/opPools/types.js";
@@ -799,6 +799,11 @@ export function createLodestarMetrics(
         name: "lodestar_import_block_by_source_total",
         help: "Total number of imported blocks by source",
         labelNames: ["source"],
+      }),
+      blobsBySource: register.gauge<{blobsSource: BlobsSource}>({
+        name: "lodestar_import_blobs_by_source_total",
+        help: "Total number of imported blobs by source",
+        labelNames: ["blobsSource"],
       }),
     },
     engineNotifyNewPayloadResult: register.gauge<{result: ExecutionPayloadStatus}>({

@@ -4,7 +4,7 @@ import {computeTimeAtSlot, reconstructFullBlockOrContents} from "@lodestar/state
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {sleep, toHex} from "@lodestar/utils";
 import {allForks, deneb, isSignedBlockContents, ProducedBlockSource} from "@lodestar/types";
-import {BlockSource, getBlockInput, ImportBlockOpts, BlockInput} from "../../../../chain/blocks/types.js";
+import {BlockSource, getBlockInput, ImportBlockOpts, BlockInput, BlobsSource} from "../../../../chain/blocks/types.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 import {computeBlobSidecars} from "../../../../util/blobs.js";
@@ -55,6 +55,7 @@ export function getBeaconBlockApi({
         signedBlock,
         BlockSource.api,
         blobSidecars,
+        BlobsSource.api,
         // don't bundle any bytes for block and blobs
         null,
         blobSidecars.map(() => null)
@@ -78,7 +79,7 @@ export function getBeaconBlockApi({
     const bodyRoot = toHex(chain.config.getForkTypes(slot).BeaconBlockBody.hashTreeRoot(signedBlock.message.body));
     const blockLocallyProduced =
       chain.producedBlockRoot.has(blockRoot) || chain.producedBlindedBlockRoot.has(blockRoot);
-    const valLogMeta = {broadcastValidation, blockRoot, bodyRoot, blockLocallyProduced, slot};
+    const valLogMeta = {slot, blockRoot, bodyRoot, broadcastValidation, blockLocallyProduced};
 
     switch (broadcastValidation) {
       case routes.beacon.BroadcastValidation.gossip: {
@@ -186,6 +187,7 @@ export function getBeaconBlockApi({
 
     // TODO: Validate block
     metrics?.registerBeaconBlock(OpSource.api, seenTimestampSec, blockForImport.block.message);
+    chain.logger.info("Publishing block", valLogMeta);
     const publishPromises = [
       // Send the block, regardless of whether or not it is valid. The API
       // specification is very clear that this is the desired behaviour.
@@ -229,18 +231,18 @@ export function getBeaconBlockApi({
     const executionPayload = chain.producedBlockRoot.get(blockRoot);
     if (executionPayload !== undefined) {
       const source = ProducedBlockSource.engine;
-      chain.logger.debug("Reconstructing  signedBlockOrContents", {blockRoot, slot, source});
+      chain.logger.debug("Reconstructing  signedBlockOrContents", {slot, blockRoot, source});
 
       const contents = executionPayload
         ? chain.producedContentsCache.get(toHex(executionPayload.blockHash)) ?? null
         : null;
       const signedBlockOrContents = reconstructFullBlockOrContents(signedBlindedBlock, {executionPayload, contents});
 
-      chain.logger.info("Publishing assembled block", {blockRoot, slot, source});
-      return publishBlock(signedBlockOrContents, opts);
+      chain.logger.info("Publishing assembled block", {slot, blockRoot, source});
+      return publishBlock({signedBlockOrContents}, opts);
     } else {
       const source = ProducedBlockSource.builder;
-      chain.logger.debug("Reconstructing  signedBlockOrContents", {blockRoot, slot, source});
+      chain.logger.debug("Reconstructing  signedBlockOrContents", {slot, blockRoot, source});
 
       const signedBlockOrContents = await reconstructBuilderBlockOrContents(chain, signedBlindedBlock);
 
@@ -248,7 +250,7 @@ export function getBeaconBlockApi({
       // by gossip
       //
       // see: https://github.com/ChainSafe/lodestar/issues/5404
-      chain.logger.info("Publishing assembled block", {blockRoot, slot, source});
+      chain.logger.info("Publishing assembled block", {slot, blockRoot, source});
       // TODO: opts are not type safe, add ServerOpts in Endpoint type definition?
       return publishBlock({signedBlockOrContents}, {...opts, ignoreIfKnown: true});
     }
@@ -260,6 +262,8 @@ export function getBeaconBlockApi({
 
       // If one block in the response contains an optimistic block, mark the entire response as optimistic
       let executionOptimistic = false;
+      // If one block in the response is non finalized, mark the entire response as unfinalized
+      let finalized = true;
 
       const result: routes.beacon.BlockHeaderResponse[] = [];
       if (parentRoot) {
@@ -278,6 +282,8 @@ export function getBeaconBlockApi({
                 if (isOptimisticBlock(canonical)) {
                   executionOptimistic = true;
                 }
+                // Block from hot db which only contains unfinalized blocks
+                finalized = false;
               }
             }
           })
@@ -312,6 +318,9 @@ export function getBeaconBlockApi({
           .getForkTypes(canonicalBlock.block.message.slot)
           .BeaconBlock.hashTreeRoot(canonicalBlock.block.message);
         result.push(toBeaconHeaderResponse(config, canonicalBlock.block, true));
+        if (!canonicalBlock.finalized) {
+          finalized = false;
+        }
 
         // fork blocks
         // TODO: What is this logic?
@@ -320,6 +329,7 @@ export function getBeaconBlockApi({
             if (isOptimisticBlock(summary)) {
               executionOptimistic = true;
             }
+            finalized = false;
 
             if (summary.blockRoot !== toHexString(canonicalRoot)) {
               const block = await db.block.get(fromHexString(summary.blockRoot));
@@ -395,7 +405,7 @@ export function getBeaconBlockApi({
       }
 
       // Slow path
-      const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
+      const {block, executionOptimistic, finalized} = await resolveBlockId(chain, blockId);
       return {
         data: {root: config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)},
         meta: {executionOptimistic},

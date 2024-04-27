@@ -219,6 +219,8 @@ export class Network implements INetwork {
         this.aggregatorTracker.addAggregator(subscription.subnet, subscription.slot);
       }
     }
+    this.aggregatorTracker.prune();
+
     return this.core.prepareBeaconCommitteeSubnets(subscriptions);
   }
 
@@ -408,7 +410,7 @@ export class Network implements INetwork {
     };
     const sentPeers = await this.core.publishGossip(topicStr, messageData, opts);
 
-    this.logger.verbose("Publish to topic", {topic: topicStr, sentPeers});
+    this.logger.verbose("Publish to topic", {topic: topicStr, sentPeers, currentSlot: this.clock.currentSlot});
     return sentPeers;
   }
 

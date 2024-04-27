@@ -126,6 +126,8 @@ export class Eth2Gossipsub extends GossipSub {
       asyncValidation: true,
 
       maxOutboundBufferSize: MAX_OUTBOUND_BUFFER_SIZE,
+      // serialize message once and send to all peers when publishing
+      batchPublish: true,
     });
     this.scoreParams = scoreParams;
     this.config = config;

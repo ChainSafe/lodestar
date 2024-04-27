@@ -12,6 +12,7 @@ CTRL
 Casper
 Chai
 ChainSafe
+Codespaces
 Customizations
 DPoS
 DVs
@@ -97,6 +98,7 @@ blockRoot
 blockchain
 bootnode
 bootnodes
+bundlers
 chainConfig
 chainsafe
 chiado
@@ -117,6 +119,7 @@ ddos
 decrypt
 deserialization
 dev
+devcontainer
 devnet
 devnets
 devtools
@@ -161,6 +164,7 @@ orchestrator
 osx
 overriden
 params
+peerDependency
 pid
 plaintext
 pre
@@ -190,11 +194,14 @@ testnets
 todo
 typesafe
 udp
+unpkg
 util
 utils
 validator
 validators
+vite
 vitest
+webpack
 wip
 xcode
 yaml

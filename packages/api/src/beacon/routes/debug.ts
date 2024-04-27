@@ -32,6 +32,7 @@ const ProtoNodeResponseType = new ContainerType(
     parentRoot: stringType,
     stateRoot: stringType,
     targetRoot: stringType,
+    timeliness: ssz.Boolean,
     justifiedEpoch: ssz.Epoch,
     justifiedRoot: stringType,
     finalizedEpoch: ssz.Epoch,

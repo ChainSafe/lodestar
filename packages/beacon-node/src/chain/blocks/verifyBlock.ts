@@ -45,6 +45,7 @@ export async function verifyBlocksInEpoch(
   proposerBalanceDeltas: number[];
   segmentExecStatus: SegmentExecStatus;
   dataAvailabilityStatuses: DataAvailableStatus[];
+  availableBlockInputs: BlockInput[];
 }> {
   const blocks = blocksInput.map(({block}) => block);
   if (blocks.length === 0) {
@@ -92,7 +93,7 @@ export async function verifyBlocksInEpoch(
     // batch all I/O operations to reduce overhead
     const [
       segmentExecStatus,
-      {dataAvailabilityStatuses, availableTime},
+      {dataAvailabilityStatuses, availableTime, availableBlockInputs},
       {postStates, proposerBalanceDeltas, verifyStateTime},
       {verifySignaturesTime},
     ] = await Promise.all([
@@ -190,7 +191,7 @@ export async function verifyBlocksInEpoch(
       }
     }
 
-    return {postStates, dataAvailabilityStatuses, proposerBalanceDeltas, segmentExecStatus};
+    return {postStates, dataAvailabilityStatuses, proposerBalanceDeltas, segmentExecStatus, availableBlockInputs};
   } finally {
     abortController.abort();
   }

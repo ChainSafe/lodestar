@@ -64,6 +64,7 @@ export type BlockAttributes = {
   randaoReveal: BLSSignature;
   graffiti: Bytes32;
   slot: Slot;
+  parentBlockRoot: Root;
   feeRecipient?: string;
 };
 
@@ -95,7 +96,6 @@ export async function produceBlockBody<T extends BlockType>(
   currentState: CachedBeaconStateAllForks,
   blockAttr: BlockAttributes & {
     parentSlot: Slot;
-    parentBlockRoot: Root;
     proposerIndex: ValidatorIndex;
     proposerPubKey: BLSPubkey;
     commonBlockBody?: CommonBlockBody;
@@ -580,7 +580,6 @@ export async function produceCommonBlockBody<T extends BlockType>(
     parentBlockRoot,
   }: BlockAttributes & {
     parentSlot: Slot;
-    parentBlockRoot: Root;
   }
 ): Promise<CommonBlockBody> {
   const stepsMetrics =

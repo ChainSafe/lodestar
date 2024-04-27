@@ -12,6 +12,7 @@ import {AttestationService} from "./services/attestation.js";
 import {IndicesService} from "./services/indices.js";
 import {SyncCommitteeService} from "./services/syncCommittee.js";
 import {pollPrepareBeaconProposer, pollBuilderValidatorRegistration} from "./services/prepareBeaconProposer.js";
+import {ExternalSignerOptions, pollExternalSignerPubkeys} from "./services/externalSignerSync.js";
 import {Interchange, InterchangeFormatVersion, ISlashingProtection} from "./slashingProtection/index.js";
 import {assertEqualParams, getLoggerVc, NotEqualParamsError} from "./util/index.js";
 import {ChainHeaderTracker} from "./services/chainHeaderTracker.js";
@@ -59,6 +60,7 @@ export type ValidatorOptions = {
   useProduceBlockV3?: boolean;
   broadcastValidation?: routes.beacon.BroadcastValidation;
   blindedLocal?: boolean;
+  externalSigner?: ExternalSignerOptions;
 };
 
 // TODO: Extend the timeout, and let it be customizable
@@ -200,6 +202,7 @@ export class Validator {
     );
     pollPrepareBeaconProposer(config, loggerVc, api, clock, validatorStore, metrics);
     pollBuilderValidatorRegistration(config, loggerVc, api, clock, validatorStore, metrics);
+    pollExternalSignerPubkeys(config, loggerVc, controller.signal, validatorStore, opts.externalSigner);
 
     const emitter = new ValidatorEventEmitter();
     // Validator event emitter can have more than 10 listeners in a normal course of operation

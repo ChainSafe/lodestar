@@ -24,7 +24,7 @@ export function getBeaconStateApi({
 }: Pick<ApiModules, "chain" | "config">): ApplicationMethods<routes.beacon.state.Endpoints> {
   async function getState(
     stateId: routes.beacon.StateId
-  ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean}> {
+  ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean}> {
     return resolveStateId(chain, stateId);
   }
 
@@ -226,7 +226,7 @@ export function getBeaconStateApi({
      */
     async getEpochSyncCommittees({stateId, epoch}) {
       // TODO: Should pick a state with the provided epoch too
-      const {state, executionOptimistic} = await resolveStateId(chain, stateId);
+      const {state, executionOptimistic, finalized} = await resolveStateId(chain, stateId);
 
       // TODO: If possible compute the syncCommittees in advance of the fork and expose them here.
       // So the validators can prepare and potentially attest the first block. Not critical tho, it's very unlikely

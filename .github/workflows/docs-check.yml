@@ -4,7 +4,11 @@ on:
   push:
     # We intentionally don't run push on feature branches. See PR for rational.
     branches: [unstable, stable]
+    paths-ignore:
+      - 'dashboards/**'
   pull_request:
+    paths-ignore:
+      - 'dashboards/**'
 
 jobs:
   build:

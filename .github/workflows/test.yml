@@ -9,7 +9,11 @@ on:
   push:
     # We intentionally don't run push on feature branches. See PR for rational.
     branches: [unstable, stable]
+    paths-ignore:
+      - 'docs/**'
   pull_request:
+    paths-ignore:
+      - 'docs/**'
   workflow_dispatch:
 
 jobs:

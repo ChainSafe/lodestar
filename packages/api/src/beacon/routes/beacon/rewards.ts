@@ -78,6 +78,11 @@ const SyncCommitteeRewardsType = ArrayOf(
 );
 
 /**
+ * True if the response references the finalized history of the chain, as determined by fork choice.
+ */
+export type Finalized = boolean;
+
+/**
  * Rewards info for a single block. Every reward value is in Gwei.
  */
 export type BlockRewards = ValueOf<typeof BlockRewardsType>;

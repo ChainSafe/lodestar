@@ -91,7 +91,7 @@ function renderOption(optionName: string, option: CliOptionDefinition): string |
   if (option.hidden) return;
 
   const commandOption = [`#### \`--${optionName}\``];
-  if (option.description) commandOption.push(`description: ${sanitizeDescription(option.description)}`);
+  if (option.description) commandOption.push(`${sanitizeDescription(option.description)}`);
 
   if (option.demandOption === true) {
     commandOption.push("required: true");

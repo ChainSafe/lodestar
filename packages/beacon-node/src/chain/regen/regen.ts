@@ -24,7 +24,7 @@ import {RegenError, RegenErrorCode} from "./errors.js";
 export type RegenModules = {
   db: IBeaconDb;
   forkChoice: IForkChoice;
-  stateCache: BlockStateCache;
+  blockStateCache: BlockStateCache;
   checkpointStateCache: CheckpointStateCache;
   config: ChainForkConfig;
   emitter: ChainEventEmitter;
@@ -150,7 +150,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     allowDiskReload = false
   ): Promise<CachedBeaconStateAllForks> {
     // Trivial case, state at stateRoot is already cached
-    const cachedStateCtx = this.modules.stateCache.get(stateRoot, opts);
+    const cachedStateCtx = this.modules.blockStateCache.get(stateRoot, opts);
     if (cachedStateCtx) {
       return cachedStateCtx;
     }
@@ -167,7 +167,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     const {checkpointStateCache} = this.modules;
     // iterateAncestorBlocks only returns ancestor blocks, not the block itself
     for (const b of this.modules.forkChoice.iterateAncestorBlocks(block.blockRoot)) {
-      state = this.modules.stateCache.get(b.stateRoot, opts);
+      state = this.modules.blockStateCache.get(b.stateRoot, opts);
       if (state) {
         break;
       }
@@ -235,7 +235,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
 
         if (allowDiskReload) {
           // also with allowDiskReload flag, we "reload" it to the state cache too
-          this.modules.stateCache.add(state);
+          this.modules.blockStateCache.add(state);
         }
 
         // this avoids keeping our node busy processing blocks

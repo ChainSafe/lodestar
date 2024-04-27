@@ -42,7 +42,10 @@ export function getMockBeaconApiServer(opts: RestApiServerOpts, apiOpts?: MockBe
 
       // Return empty to never discover the validators
       async getStateValidators() {
-        return {data: [], executionOptimistic: false};
+        return {data: [], executionOptimistic: false, finalized: false};
+      },
+      async postStateValidators() {
+        return {data: [], executionOptimistic: false, finalized: false};
       },
     },
 

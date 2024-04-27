@@ -39,6 +39,7 @@ import {
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
 export enum BuilderSelection {
+  Default = "default",
   BuilderAlways = "builderalways",
   ExecutionAlways = "executionalways",
   MaxProfit = "maxprofit",
