@@ -47,12 +47,6 @@ export type SignedBlockContents = ValueOf<typeof SignedBlockContentsType>;
 
 export type BlockId = RootHex | Slot | "head" | "genesis" | "finalized" | "justified";
 
-/**
- * True if the response references an unverified execution payload. Optimistic information may be invalidated at
- * a later time. If the field is not present, assume the False value.
- */
-export type ExecutionOptimistic = boolean;
-
 export enum BroadcastValidation {
   /* 
   NOTE: The value `none` is not part of the spec. 

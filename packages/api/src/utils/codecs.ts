@@ -3,7 +3,6 @@ import {ArrayType, ListBasicType, ListCompositeType, Type, isBasicType, isCompos
 import {ForkName} from "@lodestar/params";
 import {Root} from "@lodestar/types";
 import {fromHex, objectToExpectedCase, toHex} from "@lodestar/utils";
-import {ExecutionOptimistic} from "../beacon/routes/beacon/block.js";
 import {
   GetRequestCodec,
   PostRequestCodec,
@@ -24,10 +23,16 @@ export type EmptyRequest = Record<string, void>;
 export type EmptyResponseData = void;
 
 export type EmptyMeta = void;
-export type ExecutionOptimisticMeta = {executionOptimistic: ExecutionOptimistic};
 export type VersionMeta = {version: ForkName};
+export type ExecutionOptimisticMeta = {
+  /**
+   * True if the response references an unverified execution payload.
+   * Optimistic information may be invalidated at a later time.
+   */
+  executionOptimistic: boolean;
+};
 export type ExecutionOptimisticAndVersionMeta = ExecutionOptimisticMeta & VersionMeta;
-export type ExecutionOptimisticAndDependentRootMeta = {executionOptimistic: ExecutionOptimistic; dependentRoot: Root};
+export type ExecutionOptimisticAndDependentRootMeta = ExecutionOptimisticMeta & {dependentRoot: Root};
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export type AnyEndpoint = Endpoint<any, any, any, any, any>;
