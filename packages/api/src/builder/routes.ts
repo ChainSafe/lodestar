@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {ssz, allForks, bellatrix, Slot, Root, BLSPubkey} from "@lodestar/types";
-import {ForkName, isForkExecution, isForkBlobs, ForkSeq} from "@lodestar/params";
+import {ForkName, isForkExecution, isForkBlobs} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
 
 import {Endpoint, RouteDefinitions, Schema} from "../utils/index.js";
