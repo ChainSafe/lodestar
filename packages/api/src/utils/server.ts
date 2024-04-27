@@ -56,10 +56,6 @@ export type FastifyHandler<E extends Endpoint> = fastify.RouteHandlerMethod<
   fastify.ContextConfigDefault
 >;
 
-export type FastifyRouteConfig = fastify.FastifyContextConfig & {
-  operationId: string;
-};
-
 export type FastifySchema = fastify.FastifySchema & {
   operationId: string;
   tags?: string[];
@@ -70,7 +66,6 @@ export type FastifyRoute<E extends Endpoint> = {
   method: fastify.HTTPMethods;
   handler: FastifyHandler<E>;
   schema: FastifySchema;
-  config: FastifyRouteConfig;
 };
 export type FastifyRoutes<Es extends Record<string, Endpoint>> = {[K in keyof Es]: FastifyRoute<Es[K]>};
 
@@ -189,7 +184,6 @@ export function createFastifyRoute<E extends Endpoint>(
       ...getFastifySchema(definition.req.schema),
       operationId,
     },
-    config: {url, method: definition.method, operationId},
   };
 }
 

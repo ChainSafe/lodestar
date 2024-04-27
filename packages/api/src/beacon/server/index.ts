@@ -1,7 +1,7 @@
 import type {FastifyInstance} from "fastify";
 import {ChainForkConfig} from "@lodestar/config";
 import {ServerError} from "../../utils/error.js";
-import {ApplicationMethods, FastifyRoute, FastifyRouteConfig} from "../../utils/server.js";
+import {ApplicationMethods, FastifyRoute} from "../../utils/server.js";
 import {Endpoints} from "../routes/index.js";
 
 import * as beacon from "./beacon.js";
@@ -16,9 +16,6 @@ import * as validator from "./validator.js";
 
 // Re-export for usage in beacon-node
 export {ServerError as ApiError};
-
-// Re-export for convenience
-export type {FastifyRouteConfig};
 
 export function registerRoutes(
   server: FastifyInstance,
