@@ -44,7 +44,7 @@ export function getConfigApi({config}: Pick<ApiModules, "config">): ApplicationM
 
     async getSpec() {
       return {
-        data: Object.entries(renderJsonSpec(config)).map(([key, value]) => ({key, value})),
+        data: renderJsonSpec(config),
       };
     },
   };

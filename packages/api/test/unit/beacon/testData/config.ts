@@ -25,6 +25,6 @@ export const testData: GenericServerTestCases<Endpoints> = {
   },
   getSpec: {
     args: undefined,
-    res: {data: Object.entries(jsonSpec).map(([key, value]) => ({key, value}))},
+    res: {data: jsonSpec},
   },
 };

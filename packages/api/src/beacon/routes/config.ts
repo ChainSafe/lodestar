@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
-import {StringType, ssz} from "@lodestar/types";
+import {ssz} from "@lodestar/types";
 import {ArrayOf, EmptyArgs, EmptyGetRequestCodec, EmptyMeta, EmptyMetaCodec, EmptyRequest} from "../../utils/codecs.js";
 import {Endpoint, RouteDefinitions} from "../../utils/index.js";
 import {WireFormat} from "../../utils/headers.js";
@@ -12,18 +12,11 @@ export const DepositContractType = new ContainerType({
   address: ssz.ExecutionAddress,
 });
 
-// TODO: consider dropping this type if we cant support ssz anyways
-export const StringRecordType = ArrayOf(
-  new ContainerType({
-    key: new StringType(),
-    value: new StringType(),
-  })
-);
 export const ForkListType = ArrayOf(ssz.phase0.Fork);
 
 export type DepositContract = ValueOf<typeof DepositContractType>;
-export type StringRecord = ValueOf<typeof StringRecordType>;
 export type ForkList = ValueOf<typeof ForkListType>;
+export type Spec = Record<string, string>;
 
 export type Endpoints = {
   /**
@@ -67,7 +60,7 @@ export type Endpoints = {
     "GET",
     EmptyArgs,
     EmptyRequest,
-    StringRecord,
+    Spec,
     EmptyMeta
   >;
 };
@@ -96,21 +89,18 @@ export const definitions: RouteDefinitions<Endpoints> = {
     method: "GET",
     req: EmptyGetRequestCodec,
     resp: {
-      data: StringRecordType,
-      meta: EmptyMetaCodec,
-      transform: {
-        toResponse: (data) => {
-          // TODO: shouldn't this be wrapped inside `{data: ...}`?
-          return (data as {key: string; value: string}[]).reduce(
-            (json, {key, value}) => ((json[key] = value), json),
-            {} as Record<string, string>
-          );
+      onlySupport: WireFormat.json,
+      data: {
+        toJson: (data) => data,
+        fromJson: (data) => data as Spec,
+        serialize: () => {
+          throw Error("Not implemented");
         },
-        fromResponse: (resp) => {
-          return {data: Object.entries(resp as Record<string, string>).map(([key, value]) => ({key, value}))};
+        deserialize: () => {
+          throw Error("Not implemented");
         },
       },
-      onlySupport: WireFormat.json,
+      meta: EmptyMetaCodec,
     },
   },
 };
