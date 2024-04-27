@@ -3,7 +3,12 @@ import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {Epoch, ssz} from "@lodestar/types";
 
 import {Schema, Endpoint, RouteDefinitions} from "../../../utils/index.js";
-import {ArrayOf, ExecutionOptimisticCodec, ExecutionOptimisticMeta, JsonOnlyReq} from "../../../utils/codecs.js";
+import {
+  ArrayOf,
+  ExecutionOptimisticAndFinalizedCodec,
+  ExecutionOptimisticAndFinalizedMeta,
+  JsonOnlyReq,
+} from "../../../utils/codecs.js";
 import {BlockId} from "./block.js";
 import {ValidatorId} from "./state.js";
 
@@ -78,11 +83,6 @@ const SyncCommitteeRewardsType = ArrayOf(
 );
 
 /**
- * True if the response references the finalized history of the chain, as determined by fork choice.
- */
-export type Finalized = boolean;
-
-/**
  * Rewards info for a single block. Every reward value is in Gwei.
  */
 export type BlockRewards = ValueOf<typeof BlockRewardsType>;
@@ -126,7 +126,7 @@ export type Endpoints = {
     {blockId: BlockId},
     {params: {block_id: string}},
     BlockRewards,
-    ExecutionOptimisticMeta
+    ExecutionOptimisticAndFinalizedMeta
   >;
 
   /**
@@ -141,7 +141,7 @@ export type Endpoints = {
     {epoch: Epoch; validatorIds?: ValidatorId[]},
     {params: {epoch: number}; body: ValidatorId[]},
     AttestationsRewards,
-    ExecutionOptimisticMeta
+    ExecutionOptimisticAndFinalizedMeta
   >;
 
   /**
@@ -157,7 +157,7 @@ export type Endpoints = {
     {blockId: BlockId; validatorIds?: ValidatorId[]},
     {params: {block_id: string}; body: ValidatorId[]},
     SyncCommitteeRewards,
-    ExecutionOptimisticMeta
+    ExecutionOptimisticAndFinalizedMeta
   >;
 };
 
@@ -172,7 +172,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
     },
     resp: {
       data: BlockRewardsType,
-      meta: ExecutionOptimisticCodec,
+      meta: ExecutionOptimisticAndFinalizedCodec,
     },
   },
   getAttestationsRewards: {
@@ -194,7 +194,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
     }),
     resp: {
       data: AttestationsRewardsType,
-      meta: ExecutionOptimisticCodec,
+      meta: ExecutionOptimisticAndFinalizedCodec,
     },
   },
   getSyncCommitteeRewards: {
@@ -216,7 +216,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
     }),
     resp: {
       data: SyncCommitteeRewardsType,
-      meta: ExecutionOptimisticCodec,
+      meta: ExecutionOptimisticAndFinalizedCodec,
     },
   },
 };

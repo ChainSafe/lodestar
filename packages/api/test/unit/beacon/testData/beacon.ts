@@ -39,24 +39,24 @@ export const testData: GenericServerTestCases<Endpoints> = {
     args: {blockId: "head"},
     res: {
       data: ssz.bellatrix.SignedBeaconBlock.defaultValue(),
-      meta: {executionOptimistic: true, version: ForkName.bellatrix},
+      meta: {executionOptimistic: true, finalized: false, version: ForkName.bellatrix},
     },
   },
   getBlockAttestations: {
     args: {blockId: "head"},
-    res: {data: [ssz.phase0.Attestation.defaultValue()], meta: {executionOptimistic: true}},
+    res: {data: [ssz.phase0.Attestation.defaultValue()], meta: {executionOptimistic: true, finalized: false}},
   },
   getBlockHeader: {
     args: {blockId: "head"},
-    res: {data: blockHeaderResponse, meta: {executionOptimistic: true}},
+    res: {data: blockHeaderResponse, meta: {executionOptimistic: true, finalized: false}},
   },
   getBlockHeaders: {
     args: {slot: 1, parentRoot: toHexString(root)},
-    res: {data: [blockHeaderResponse], meta: {executionOptimistic: true}},
+    res: {data: [blockHeaderResponse], meta: {executionOptimistic: true, finalized: false}},
   },
   getBlockRoot: {
     args: {blockId: "head"},
-    res: {data: {root}, meta: {executionOptimistic: true}},
+    res: {data: {root}, meta: {executionOptimistic: true, finalized: false}},
   },
   publishBlock: {
     args: {signedBlockOrContents: ssz.phase0.SignedBeaconBlock.defaultValue()},
@@ -79,7 +79,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
   },
   getBlobSidecars: {
     args: {blockId: "head", indices: [0]},
-    res: {data: ssz.deneb.BlobSidecars.defaultValue(), meta: {executionOptimistic: true}},
+    res: {data: ssz.deneb.BlobSidecars.defaultValue(), meta: {executionOptimistic: true, finalized: false}},
   },
 
   // pool
@@ -133,15 +133,15 @@ export const testData: GenericServerTestCases<Endpoints> = {
 
   getStateRoot: {
     args: {stateId: "head"},
-    res: {data: {root}, meta: {executionOptimistic: true}},
+    res: {data: {root}, meta: {executionOptimistic: true, finalized: false}},
   },
   getStateFork: {
     args: {stateId: "head"},
-    res: {data: ssz.phase0.Fork.defaultValue(), meta: {executionOptimistic: true}},
+    res: {data: ssz.phase0.Fork.defaultValue(), meta: {executionOptimistic: true, finalized: false}},
   },
   getStateRandao: {
     args: {stateId: "head", epoch: 1},
-    res: {data: {randao}, meta: {executionOptimistic: true}},
+    res: {data: {randao}, meta: {executionOptimistic: true, finalized: false}},
   },
   getStateFinalityCheckpoints: {
     args: {stateId: "head"},
@@ -151,28 +151,31 @@ export const testData: GenericServerTestCases<Endpoints> = {
         currentJustified: ssz.phase0.Checkpoint.defaultValue(),
         finalized: ssz.phase0.Checkpoint.defaultValue(),
       },
-      meta: {executionOptimistic: true},
+      meta: {executionOptimistic: true, finalized: false},
     },
   },
   getStateValidators: {
     args: {stateId: "head", id: [pubkeyHex, "1300"], status: ["active_ongoing"]},
-    res: {data: [validatorResponse], meta: {executionOptimistic: true}},
+    res: {data: [validatorResponse], meta: {executionOptimistic: true, finalized: false}},
   },
   getStateValidator: {
     args: {stateId: "head", validatorId: pubkeyHex},
-    res: {data: validatorResponse, meta: {executionOptimistic: true}},
+    res: {data: validatorResponse, meta: {executionOptimistic: true, finalized: false}},
   },
   getStateValidatorBalances: {
     args: {stateId: "head", indices: ["1300"]},
-    res: {data: [{index: 1300, balance}], meta: {executionOptimistic: true}},
+    res: {data: [{index: 1300, balance}], meta: {executionOptimistic: true, finalized: false}},
   },
   getEpochCommittees: {
     args: {stateId: "head", index: 1, slot: 2, epoch: 3},
-    res: {data: [{index: 1, slot: 2, validators: [1300]}], meta: {executionOptimistic: true}},
+    res: {data: [{index: 1, slot: 2, validators: [1300]}], meta: {executionOptimistic: true, finalized: false}},
   },
   getEpochSyncCommittees: {
     args: {stateId: "head", epoch: 1},
-    res: {data: {validators: [1300], validatorAggregates: [[1300]]}, meta: {executionOptimistic: true}},
+    res: {
+      data: {validators: [1300], validatorAggregates: [[1300]]},
+      meta: {executionOptimistic: true, finalized: false},
+    },
   },
 
   // rewards
@@ -188,7 +191,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
         proposerSlashings: 2,
         attesterSlashings: 1,
       },
-      meta: {executionOptimistic: true},
+      meta: {executionOptimistic: true, finalized: false},
     },
   },
   getAttestationsRewards: {
@@ -216,12 +219,12 @@ export const testData: GenericServerTestCases<Endpoints> = {
           },
         ],
       },
-      meta: {executionOptimistic: true},
+      meta: {executionOptimistic: true, finalized: false},
     },
   },
   getSyncCommitteeRewards: {
     args: {blockId: "head", validatorIds: ["1300"]},
-    res: {data: [{validatorIndex: 1300, reward}], meta: {executionOptimistic: true}},
+    res: {data: [{validatorIndex: 1300, reward}], meta: {executionOptimistic: true, finalized: false}},
   },
 
   // -

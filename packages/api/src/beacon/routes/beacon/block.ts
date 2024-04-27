@@ -9,10 +9,10 @@ import {
   EmptyMetaCodec,
   EmptyResponseCodec,
   EmptyResponseData,
-  ExecutionOptimisticAndVersionCodec,
-  ExecutionOptimisticAndVersionMeta,
-  ExecutionOptimisticCodec,
-  ExecutionOptimisticMeta,
+  ExecutionOptimisticAndFinalizedCodec,
+  ExecutionOptimisticAndFinalizedMeta,
+  ExecutionOptimisticFinalizedAndVersionCodec,
+  ExecutionOptimisticFinalizedAndVersionMeta,
   WithVersion,
 } from "../../../utils/codecs.js";
 import {toForkName} from "../../../utils/serdes.js";
@@ -90,7 +90,7 @@ export type Endpoints = {
     {blockId: BlockId},
     {params: {block_id: string}},
     allForks.SignedBeaconBlock,
-    ExecutionOptimisticAndVersionMeta
+    ExecutionOptimisticFinalizedAndVersionMeta
   >;
 
   /**
@@ -105,7 +105,7 @@ export type Endpoints = {
     {blockId: BlockId},
     {params: {block_id: string}},
     allForks.BeaconBlockBody["attestations"],
-    ExecutionOptimisticMeta
+    ExecutionOptimisticAndFinalizedMeta
   >;
 
   /**
@@ -120,7 +120,7 @@ export type Endpoints = {
     {blockId: BlockId},
     {params: {block_id: string}},
     BlockHeaderResponse,
-    ExecutionOptimisticMeta
+    ExecutionOptimisticAndFinalizedMeta
   >;
 
   /**
@@ -132,7 +132,7 @@ export type Endpoints = {
     {slot?: Slot; parentRoot?: string},
     {query: {slot?: number; parent_root?: string}},
     BlockHeaderResponse[],
-    ExecutionOptimisticMeta
+    ExecutionOptimisticAndFinalizedMeta
   >;
 
   /**
@@ -147,7 +147,7 @@ export type Endpoints = {
     {blockId: BlockId},
     {params: {block_id: string}},
     RootResponse,
-    ExecutionOptimisticMeta
+    ExecutionOptimisticAndFinalizedMeta
   >;
 
   /**
@@ -215,7 +215,7 @@ export type Endpoints = {
     {blockId: BlockId; indices?: number[]},
     {params: {block_id: string}; query: {indices?: number[]}},
     deneb.BlobSidecars,
-    ExecutionOptimisticMeta
+    ExecutionOptimisticAndFinalizedMeta
   >;
 };
 
@@ -243,7 +243,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       req: blockIdOnlyReq,
       resp: {
         data: WithVersion((fork) => ssz[fork].SignedBeaconBlock),
-        meta: ExecutionOptimisticAndVersionCodec,
+        meta: ExecutionOptimisticFinalizedAndVersionCodec,
       },
     },
     getBlockAttestations: {
@@ -252,7 +252,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       req: blockIdOnlyReq,
       resp: {
         data: ssz.phase0.BeaconBlockBody.fields.attestations,
-        meta: ExecutionOptimisticCodec,
+        meta: ExecutionOptimisticAndFinalizedCodec,
       },
     },
     getBlockHeader: {
@@ -261,7 +261,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       req: blockIdOnlyReq,
       resp: {
         data: BlockHeaderResponseType,
-        meta: ExecutionOptimisticCodec,
+        meta: ExecutionOptimisticAndFinalizedCodec,
       },
     },
     getBlockHeaders: {
@@ -274,7 +274,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       },
       resp: {
         data: BlockHeadersResponseType,
-        meta: ExecutionOptimisticCodec,
+        meta: ExecutionOptimisticAndFinalizedCodec,
       },
     },
     getBlockRoot: {
@@ -283,7 +283,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       req: blockIdOnlyReq,
       resp: {
         data: RootResponseType,
-        meta: ExecutionOptimisticCodec,
+        meta: ExecutionOptimisticAndFinalizedCodec,
       },
     },
     publishBlock: {
@@ -523,7 +523,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       },
       resp: {
         data: ssz.deneb.BlobSidecars,
-        meta: ExecutionOptimisticCodec,
+        meta: ExecutionOptimisticAndFinalizedCodec,
       },
     },
   };

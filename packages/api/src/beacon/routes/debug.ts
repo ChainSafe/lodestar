@@ -8,10 +8,10 @@ import {
   EmptyMeta,
   EmptyMetaCodec,
   EmptyRequest,
-  ExecutionOptimisticAndVersionCodec,
-  ExecutionOptimisticAndVersionMeta,
-  ExecutionOptimisticCodec,
-  ExecutionOptimisticMeta,
+  ExecutionOptimisticFinalizedAndVersionCodec,
+  ExecutionOptimisticFinalizedAndVersionMeta,
+  ExecutionOptimisticAndFinalizedCodec,
+  ExecutionOptimisticAndFinalizedMeta,
   WithVersion,
 } from "../../utils/codecs.js";
 import {Endpoint, RouteDefinitions} from "../../utils/types.js";
@@ -123,7 +123,7 @@ export type Endpoints = {
     {stateId: StateId},
     {params: {state_id: string}},
     phase0.BeaconState,
-    ExecutionOptimisticMeta
+    ExecutionOptimisticAndFinalizedMeta
   >;
 
   /**
@@ -140,7 +140,7 @@ export type Endpoints = {
     {stateId: StateId},
     {params: {state_id: string}},
     allForks.BeaconState,
-    ExecutionOptimisticAndVersionMeta
+    ExecutionOptimisticFinalizedAndVersionMeta
   >;
 };
 
@@ -187,7 +187,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
     },
     resp: {
       data: ssz.phase0.BeaconState,
-      meta: ExecutionOptimisticCodec,
+      meta: ExecutionOptimisticAndFinalizedCodec,
     },
   },
   getStateV2: {
@@ -202,7 +202,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
     },
     resp: {
       data: WithVersion((fork) => ssz[fork].BeaconState as Type<allForks.BeaconState>),
-      meta: ExecutionOptimisticAndVersionCodec,
+      meta: ExecutionOptimisticFinalizedAndVersionCodec,
     },
   },
 };

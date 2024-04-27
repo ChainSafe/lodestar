@@ -2,7 +2,11 @@
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {phase0, CommitteeIndex, Slot, Epoch, ssz, RootHex, StringType} from "@lodestar/types";
 import {Endpoint, RequestCodec, RouteDefinitions, Schema} from "../../../utils/index.js";
-import {ArrayOf, ExecutionOptimisticCodec, ExecutionOptimisticMeta} from "../../../utils/codecs.js";
+import {
+  ArrayOf,
+  ExecutionOptimisticAndFinalizedCodec,
+  ExecutionOptimisticAndFinalizedMeta,
+} from "../../../utils/codecs.js";
 import {WireFormat} from "../../../utils/headers.js";
 import {RootResponse, RootResponseType} from "./block.js";
 
@@ -88,7 +92,7 @@ export type Endpoints = {
     {stateId: StateId},
     {params: {state_id: string}},
     RootResponse,
-    ExecutionOptimisticMeta
+    ExecutionOptimisticAndFinalizedMeta
   >;
 
   /**
@@ -104,7 +108,7 @@ export type Endpoints = {
     {stateId: StateId},
     {params: {state_id: string}},
     phase0.Fork,
-    ExecutionOptimisticMeta
+    ExecutionOptimisticAndFinalizedMeta
   >;
 
   /**
@@ -119,7 +123,7 @@ export type Endpoints = {
     {stateId: StateId; epoch?: Epoch},
     {params: {state_id: string}; query: {epoch?: number}},
     RandaoResponse,
-    ExecutionOptimisticMeta
+    ExecutionOptimisticAndFinalizedMeta
   >;
 
   /**
@@ -135,7 +139,7 @@ export type Endpoints = {
     {stateId: StateId},
     {params: {state_id: string}},
     FinalityCheckpoints,
-    ExecutionOptimisticMeta
+    ExecutionOptimisticAndFinalizedMeta
   >;
 
   /**
@@ -151,7 +155,7 @@ export type Endpoints = {
     {stateId: StateId; validatorId: ValidatorId},
     {params: {state_id: string; validator_id: ValidatorId}},
     ValidatorResponse,
-    ExecutionOptimisticMeta
+    ExecutionOptimisticAndFinalizedMeta
   >;
 
   /**
@@ -168,7 +172,7 @@ export type Endpoints = {
     {stateId: StateId; id?: ValidatorId[]; status?: ValidatorStatus[]},
     {params: {state_id: string}; query: {id?: ValidatorId[]; status?: ValidatorStatus[]}},
     ValidatorResponseList,
-    ExecutionOptimisticMeta
+    ExecutionOptimisticAndFinalizedMeta
   >;
 
   /**
@@ -184,7 +188,7 @@ export type Endpoints = {
     {stateId: StateId; indices?: ValidatorId[]},
     {params: {state_id: string}; query: {id?: ValidatorId[]}},
     ValidatorBalanceList,
-    ExecutionOptimisticMeta
+    ExecutionOptimisticAndFinalizedMeta
   >;
 
   /**
@@ -202,7 +206,7 @@ export type Endpoints = {
     {stateId: StateId; epoch?: Epoch; index?: CommitteeIndex; slot?: Slot},
     {params: {state_id: string}; query: {slot?: number; epoch?: number; index?: number}},
     EpochCommitteeResponseList,
-    ExecutionOptimisticMeta
+    ExecutionOptimisticAndFinalizedMeta
   >;
 
   getEpochSyncCommittees: Endpoint<
@@ -211,7 +215,7 @@ export type Endpoints = {
     {stateId: StateId; epoch?: Epoch},
     {params: {state_id: string}; query: {epoch?: number}},
     EpochSyncCommitteeResponse,
-    ExecutionOptimisticMeta
+    ExecutionOptimisticAndFinalizedMeta
   >;
 };
 
@@ -244,7 +248,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
     },
     resp: {
       data: EpochCommitteeResponseListType,
-      meta: ExecutionOptimisticCodec,
+      meta: ExecutionOptimisticAndFinalizedCodec,
     },
   },
   getEpochSyncCommittees: {
@@ -260,7 +264,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
     },
     resp: {
       data: EpochSyncCommitteeResponseType,
-      meta: ExecutionOptimisticCodec,
+      meta: ExecutionOptimisticAndFinalizedCodec,
     },
   },
   getStateFinalityCheckpoints: {
@@ -269,7 +273,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
     req: stateIdOnlyReq,
     resp: {
       data: FinalityCheckpointsType,
-      meta: ExecutionOptimisticCodec,
+      meta: ExecutionOptimisticAndFinalizedCodec,
     },
   },
   getStateFork: {
@@ -278,7 +282,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
     req: stateIdOnlyReq,
     resp: {
       data: ssz.phase0.Fork,
-      meta: ExecutionOptimisticCodec,
+      meta: ExecutionOptimisticAndFinalizedCodec,
     },
   },
   getStateRoot: {
@@ -287,7 +291,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
     req: stateIdOnlyReq,
     resp: {
       data: RootResponseType,
-      meta: ExecutionOptimisticCodec,
+      meta: ExecutionOptimisticAndFinalizedCodec,
     },
   },
   getStateRandao: {
@@ -303,7 +307,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
     },
     resp: {
       data: RandaoResponseType,
-      meta: ExecutionOptimisticCodec,
+      meta: ExecutionOptimisticAndFinalizedCodec,
     },
   },
   getStateValidator: {
@@ -319,7 +323,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
     resp: {
       onlySupport: WireFormat.json,
       data: ValidatorResponseType,
-      meta: ExecutionOptimisticCodec,
+      meta: ExecutionOptimisticAndFinalizedCodec,
     },
   },
   getStateValidators: {
@@ -336,7 +340,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
     resp: {
       onlySupport: WireFormat.json,
       data: ValidatorResponseListType,
-      meta: ExecutionOptimisticCodec,
+      meta: ExecutionOptimisticAndFinalizedCodec,
     },
   },
   getStateValidatorBalances: {
@@ -352,7 +356,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
     },
     resp: {
       data: ValidatorBalanceListType,
-      meta: ExecutionOptimisticCodec,
+      meta: ExecutionOptimisticAndFinalizedCodec,
     },
   },
 };

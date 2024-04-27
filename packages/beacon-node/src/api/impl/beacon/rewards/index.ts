@@ -7,18 +7,18 @@ export function getBeaconRewardsApi({
 }: Pick<ApiModules, "chain">): ApplicationMethods<routes.beacon.rewards.Endpoints> {
   return {
     async getBlockRewards({blockId}) {
-      const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
+      const {block, executionOptimistic, finalized} = await resolveBlockId(chain, blockId);
       const data = await chain.getBlockRewards(block.message);
-      return {data, meta: {executionOptimistic}};
+      return {data, meta: {executionOptimistic, finalized}};
     },
     async getAttestationsRewards({epoch, validatorIds}) {
-      const {rewards, executionOptimistic} = await chain.getAttestationsRewards(epoch, validatorIds);
-      return {data: rewards, meta: {executionOptimistic}};
+      const {rewards, executionOptimistic, finalized} = await chain.getAttestationsRewards(epoch, validatorIds);
+      return {data: rewards, meta: {executionOptimistic, finalized}};
     },
     async getSyncCommitteeRewards({blockId, validatorIds}) {
-      const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
+      const {block, executionOptimistic, finalized} = await resolveBlockId(chain, blockId);
       const data = await chain.getSyncCommitteeRewards(block.message, validatorIds);
-      return {data, meta: {executionOptimistic}};
+      return {data, meta: {executionOptimistic, finalized}};
     },
   };
 }

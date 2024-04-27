@@ -30,23 +30,23 @@ export function getBeaconStateApi({
 
   return {
     async getStateRoot({stateId}) {
-      const {state, executionOptimistic} = await getState(stateId);
+      const {state, executionOptimistic, finalized} = await getState(stateId);
       return {
         data: {root: state.hashTreeRoot()},
-        meta: {executionOptimistic},
+        meta: {executionOptimistic, finalized},
       };
     },
 
     async getStateFork({stateId}) {
-      const {state, executionOptimistic} = await getState(stateId);
+      const {state, executionOptimistic, finalized} = await getState(stateId);
       return {
         data: state.fork,
-        meta: {executionOptimistic},
+        meta: {executionOptimistic, finalized},
       };
     },
 
     async getStateRandao({stateId, epoch}) {
-      const {state, executionOptimistic} = await getState(stateId);
+      const {state, executionOptimistic, finalized} = await getState(stateId);
       const stateEpoch = computeEpochAtSlot(state.slot);
       const usedEpoch = epoch ?? stateEpoch;
 
@@ -58,24 +58,24 @@ export function getBeaconStateApi({
 
       return {
         data: {randao},
-        meta: {executionOptimistic},
+        meta: {executionOptimistic, finalized},
       };
     },
 
     async getStateFinalityCheckpoints({stateId}) {
-      const {state, executionOptimistic} = await getState(stateId);
+      const {state, executionOptimistic, finalized} = await getState(stateId);
       return {
         data: {
           currentJustified: state.currentJustifiedCheckpoint,
           previousJustified: state.previousJustifiedCheckpoint,
           finalized: state.finalizedCheckpoint,
         },
-        meta: {executionOptimistic},
+        meta: {executionOptimistic, finalized},
       };
     },
 
     async getStateValidators({stateId, ...filters}) {
-      const {state, executionOptimistic} = await resolveStateId(chain, stateId);
+      const {state, executionOptimistic, finalized} = await resolveStateId(chain, stateId);
       const currentEpoch = getCurrentEpoch(state);
       const {validators, balances} = state; // Get the validators sub tree once for all the loop
       const {pubkey2index} = chain.getHeadState().epochCtx;
@@ -101,13 +101,13 @@ export function getBeaconStateApi({
         }
         return {
           data: validatorResponses,
-          meta: {executionOptimistic},
+          meta: {executionOptimistic, finalized},
         };
       } else if (filters.status) {
         const validatorsByStatus = filterStateValidatorsByStatus(filters.status, state, pubkey2index, currentEpoch);
         return {
           data: validatorsByStatus,
-          meta: {executionOptimistic},
+          meta: {executionOptimistic, finalized},
         };
       }
 
@@ -121,12 +121,12 @@ export function getBeaconStateApi({
 
       return {
         data: resp,
-        meta: {executionOptimistic},
+        meta: {executionOptimistic, finalized},
       };
     },
 
     async getStateValidator({stateId, validatorId}) {
-      const {state, executionOptimistic} = await resolveStateId(chain, stateId);
+      const {state, executionOptimistic, finalized} = await resolveStateId(chain, stateId);
       const {pubkey2index} = chain.getHeadState().epochCtx;
 
       const resp = getStateValidatorIndex(validatorId, state, pubkey2index);
@@ -142,12 +142,12 @@ export function getBeaconStateApi({
           state.balances.get(validatorIndex),
           getCurrentEpoch(state)
         ),
-        meta: {executionOptimistic},
+        meta: {executionOptimistic, finalized},
       };
     },
 
     async getStateValidatorBalances({stateId, indices}) {
-      const {state, executionOptimistic} = await resolveStateId(chain, stateId);
+      const {state, executionOptimistic, finalized} = await resolveStateId(chain, stateId);
 
       if (indices) {
         const headState = chain.getHeadState();
@@ -167,7 +167,7 @@ export function getBeaconStateApi({
         }
         return {
           data: balances,
-          meta: {executionOptimistic},
+          meta: {executionOptimistic, finalized},
         };
       }
 
@@ -179,12 +179,12 @@ export function getBeaconStateApi({
       }
       return {
         data: resp,
-        meta: {executionOptimistic},
+        meta: {executionOptimistic, finalized},
       };
     },
 
     async getEpochCommittees({stateId, ...filters}) {
-      const {state, executionOptimistic} = await resolveStateId(chain, stateId);
+      const {state, executionOptimistic, finalized} = await resolveStateId(chain, stateId);
 
       const stateCached = state as CachedBeaconStateAltair;
       if (stateCached.epochCtx === undefined) {
@@ -216,7 +216,7 @@ export function getBeaconStateApi({
 
       return {
         data: committeesFlat,
-        meta: {executionOptimistic},
+        meta: {executionOptimistic, finalized},
       };
     },
 
@@ -248,7 +248,7 @@ export function getBeaconStateApi({
           // TODO: This is not used by the validator and will be deprecated soon
           validatorAggregates: [],
         },
-        meta: {executionOptimistic},
+        meta: {executionOptimistic, finalized},
       };
     },
   };

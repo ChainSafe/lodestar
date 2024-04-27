@@ -23,7 +23,12 @@ export type EmptyRequest = Record<string, void>;
 export type EmptyResponseData = void;
 
 export type EmptyMeta = void;
-export type VersionMeta = {version: ForkName};
+export type VersionMeta = {
+  /**
+   * Fork code name
+   */
+  version: ForkName;
+};
 export type ExecutionOptimisticMeta = {
   /**
    * True if the response references an unverified execution payload.
@@ -31,8 +36,20 @@ export type ExecutionOptimisticMeta = {
    */
   executionOptimistic: boolean;
 };
+export type ExecutionOptimisticAndFinalizedMeta = ExecutionOptimisticMeta & {
+  /**
+   * True if the response references the finalized history of the chain, as determined by fork choice
+   */
+  finalized: boolean;
+};
 export type ExecutionOptimisticAndVersionMeta = ExecutionOptimisticMeta & VersionMeta;
-export type ExecutionOptimisticAndDependentRootMeta = ExecutionOptimisticMeta & {dependentRoot: Root};
+export type ExecutionOptimisticFinalizedAndVersionMeta = ExecutionOptimisticAndFinalizedMeta & VersionMeta;
+export type ExecutionOptimisticAndDependentRootMeta = ExecutionOptimisticMeta & {
+  /**
+   * The block root that this response is dependent on
+   */
+  dependentRoot: Root;
+};
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export type AnyEndpoint = Endpoint<any, any, any, any, any>;
@@ -175,6 +192,49 @@ export const ExecutionOptimisticAndVersionCodec: ResponseMetadataCodec<Execution
     version: toForkName(headers.get("Eth-Consensus-Version")!),
   }),
 };
+
+export const ExecutionOptimisticAndFinalizedCodec: ResponseMetadataCodec<ExecutionOptimisticAndFinalizedMeta> = {
+  toJson: (val) => ({
+    execution_optimistic: val.executionOptimistic,
+    finalized: val.finalized,
+  }),
+  fromJson: (val) => ({
+    executionOptimistic: (val as {execution_optimistic: boolean}).execution_optimistic,
+    finalized: (val as {finalized: boolean}).finalized,
+  }),
+  toHeadersObject: (val) => ({
+    "Eth-Execution-Optimistic": val.executionOptimistic.toString(),
+    "Eth-Execution-Finalized": val.finalized.toString(),
+  }),
+  fromHeaders: (headers) => ({
+    executionOptimistic: toBoolean(headers.get("Eth-Execution-Optimistic")!),
+    finalized: toBoolean(headers.get("Eth-Execution-Finalized")!),
+  }),
+};
+
+export const ExecutionOptimisticFinalizedAndVersionCodec: ResponseMetadataCodec<ExecutionOptimisticFinalizedAndVersionMeta> =
+  {
+    toJson: (val) => ({
+      execution_optimistic: val.executionOptimistic,
+      finalized: val.finalized,
+      version: val.version,
+    }),
+    fromJson: (val) => ({
+      executionOptimistic: (val as {execution_optimistic: boolean}).execution_optimistic,
+      finalized: (val as {finalized: boolean}).finalized,
+      version: toForkName((val as {version: string}).version),
+    }),
+    toHeadersObject: (val) => ({
+      "Eth-Execution-Optimistic": val.executionOptimistic.toString(),
+      "Eth-Execution-Finalized": val.finalized.toString(),
+      "Eth-Consensus-Version": val.version,
+    }),
+    fromHeaders: (headers) => ({
+      executionOptimistic: toBoolean(headers.get("Eth-Execution-Optimistic")!),
+      finalized: toBoolean(headers.get("Eth-Execution-Finalized")!),
+      version: toForkName(headers.get("Eth-Consensus-Version")!),
+    }),
+  };
 
 export const ExecutionOptimisticAndDependentRootCodec: ResponseMetadataCodec<ExecutionOptimisticAndDependentRootMeta> =
   {
