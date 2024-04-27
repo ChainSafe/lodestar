@@ -142,7 +142,7 @@ export type Endpoints = {
     BlockProcessorQueueItem[],
     EmptyMeta
   >;
-  /** Dump a summary of the states in the StateContextCache */
+  /** Dump a summary of the states in the block state cache and checkpoint state cache */
   getStateCacheItems: Endpoint<
     //
     "GET",
