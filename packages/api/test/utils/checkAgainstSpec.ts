@@ -127,10 +127,15 @@ export function runTestCheckAgainstSpec<Es extends Record<string, Endpoint>>(
           const data = routeDef.resp.data.toJson(testData.res?.data, testData.res?.meta);
           const metaJson = routeDef.resp.meta.toJson(testData.res?.meta);
 
-          const resJson = {
-            data,
-            ...(metaJson as object),
-          };
+          let resJson: unknown;
+          if (routeDef.resp.transform) {
+            resJson = routeDef.resp.transform.toResponse(data, metaJson);
+          } else {
+            resJson = {
+              data,
+              ...(metaJson as object),
+            };
+          }
 
           const ignoredProperties = ignoredProperty?.response;
           if (ignoredProperties) {

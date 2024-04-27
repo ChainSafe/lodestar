@@ -31,11 +31,14 @@ export const BlockHeadersResponseType = new ListCompositeType(BlockHeaderRespons
 export const RootResponseType = new ContainerType({
   root: ssz.Root,
 });
-export const SignedBlockContentsType = new ContainerType({
-  signedBlock: ssz.deneb.SignedBeaconBlock,
-  kzgProofs: ssz.deneb.KZGProofs,
-  blobs: ssz.deneb.Blobs,
-});
+export const SignedBlockContentsType = new ContainerType(
+  {
+    signedBlock: ssz.deneb.SignedBeaconBlock,
+    kzgProofs: ssz.deneb.KZGProofs,
+    blobs: ssz.deneb.Blobs,
+  },
+  {jsonCase: "eth2"}
+);
 
 export type BlockHeaderResponse = ValueOf<typeof BlockHeaderResponseType>;
 export type BlockHeadersResponse = ValueOf<typeof BlockHeadersResponseType>;

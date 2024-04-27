@@ -67,12 +67,14 @@ const AttestationsRewardsType = new ContainerType(
   {jsonCase: "eth2"}
 );
 
-const SyncCommitteeRewardsType = new ContainerType(
-  {
-    validatorIndex: ssz.ValidatorIndex,
-    reward: ssz.UintNum64,
-  },
-  {jsonCase: "eth2"}
+const SyncCommitteeRewardsType = ArrayOf(
+  new ContainerType(
+    {
+      validatorIndex: ssz.ValidatorIndex,
+      reward: ssz.UintNum64,
+    },
+    {jsonCase: "eth2"}
+  )
 );
 
 /**

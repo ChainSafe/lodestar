@@ -67,6 +67,8 @@ export type NodePeer = {
   direction: PeerDirection | null;
 };
 
+export type PeersMeta = {count: number};
+
 export type PeerCount = {
   disconnected: number;
   connecting: number;
@@ -128,7 +130,7 @@ export type Endpoints = {
     FilterGetPeers,
     {query: {state?: PeerState[]; direction?: PeerDirection[]}},
     NodePeer[],
-    {count: number}
+    PeersMeta
   >;
 
   /**
@@ -206,23 +208,23 @@ export const definitions: RouteDefinitions<Endpoints> = {
       onlySupport: WireFormat.json,
       data: {
         toJson: (data) => ({
-          peerId: data.peerId,
+          peer_id: data.peerId,
           enr: data.enr,
-          p2pAddresses: data.p2pAddresses,
-          discoveryAddresses: data.discoveryAddresses,
+          p2p_addresses: data.p2pAddresses,
+          discovery_addresses: data.discoveryAddresses,
           metadata: ssz.altair.Metadata.toJson(data.metadata as altair.Metadata),
         }),
         // TODO validation
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         fromJson: (data: any) => ({
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-          peerId: data.peerId,
+          peerId: data.peer_id,
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
           enr: data.enr,
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-          p2pAddresses: data.p2pAddresses,
+          p2pAddresses: data.p2p_addresses,
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-          discoveryAddresses: data.discoveryAddresses,
+          discoveryAddresses: data.discovery_addresses,
           // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
           metadata: ssz.altair.Metadata.fromJson(data.metadata),
         }),
@@ -245,22 +247,16 @@ export const definitions: RouteDefinitions<Endpoints> = {
       schema: {query: {state: Schema.StringArray, direction: Schema.StringArray}},
     },
     resp: {
-      onlySupport: WireFormat.json,
-      data: {
-        toJson: (data) => data,
-        fromJson: (data) => data as NodePeer[],
-        serialize: () => {
-          throw new Error("Not implemented");
-        },
-        deserialize: () => {
-          throw new Error("Not implemented");
-        },
-      },
+      ...JsonOnlyResponseCodec,
       meta: {
         toJson: (d) => d,
-        fromJson: (d) => ({count: (d as {count: number}).count}),
+        fromJson: (d) => ({count: (d as PeersMeta).count}),
         toHeadersObject: () => ({}),
-        fromHeaders: () => ({}) as {count: number},
+        fromHeaders: () => ({}) as PeersMeta,
+      },
+      transform: {
+        toResponse: (data, meta) => ({data, meta}),
+        fromResponse: (resp) => resp as {data: NodePeer[]; meta: PeersMeta},
       },
     },
   },
@@ -278,7 +274,10 @@ export const definitions: RouteDefinitions<Endpoints> = {
     url: "/eth/v1/node/peer_count",
     method: "GET",
     req: EmptyGetRequestCodec,
-    resp: JsonOnlyResponseCodec,
+    resp: {
+      data: PeerCountType,
+      meta: EmptyMetaCodec,
+    },
   },
   getNodeVersion: {
     url: "/eth/v1/node/version",

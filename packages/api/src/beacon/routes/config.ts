@@ -7,10 +7,13 @@ import {WireFormat} from "../../utils/headers.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
-export const DepositContractType = new ContainerType({
-  chainId: ssz.UintNum64,
-  address: ssz.ExecutionAddress,
-});
+export const DepositContractType = new ContainerType(
+  {
+    chainId: ssz.UintNum64,
+    address: ssz.ExecutionAddress,
+  },
+  {jsonCase: "eth2"}
+);
 
 export const ForkListType = ArrayOf(ssz.phase0.Fork);
 

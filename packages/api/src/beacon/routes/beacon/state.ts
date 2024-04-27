@@ -26,11 +26,14 @@ export type ValidatorStatus =
 export const RandaoResponseType = new ContainerType({
   randao: ssz.Root,
 });
-export const FinalityCheckpointsType = new ContainerType({
-  previousJustified: ssz.phase0.Checkpoint,
-  currentJustified: ssz.phase0.Checkpoint,
-  finalized: ssz.phase0.Checkpoint,
-});
+export const FinalityCheckpointsType = new ContainerType(
+  {
+    previousJustified: ssz.phase0.Checkpoint,
+    currentJustified: ssz.phase0.Checkpoint,
+    finalized: ssz.phase0.Checkpoint,
+  },
+  {jsonCase: "eth2"}
+);
 export const ValidatorResponseType = new ContainerType({
   index: ssz.ValidatorIndex,
   balance: ssz.UintNum64,
@@ -46,13 +49,16 @@ export const ValidatorBalanceType = new ContainerType({
   index: ssz.ValidatorIndex,
   balance: ssz.UintNum64,
 });
-export const EpochSyncCommitteeResponseType = new ContainerType({
-  /** all of the validator indices in the current sync committee */
-  validators: ArrayOf(ssz.ValidatorIndex),
-  // TODO: This property will likely be deprecated
-  /** Subcommittee slices of the current sync committee */
-  validatorAggregates: ArrayOf(ArrayOf(ssz.ValidatorIndex)),
-});
+export const EpochSyncCommitteeResponseType = new ContainerType(
+  {
+    /** all of the validator indices in the current sync committee */
+    validators: ArrayOf(ssz.ValidatorIndex),
+    // TODO: This property will likely be deprecated
+    /** Subcommittee slices of the current sync committee */
+    validatorAggregates: ArrayOf(ArrayOf(ssz.ValidatorIndex)),
+  },
+  {jsonCase: "eth2"}
+);
 export const ValidatorResponseListType = ArrayOf(ValidatorResponseType);
 export const EpochCommitteeResponseListType = ArrayOf(EpochCommitteeResponseType);
 export const ValidatorBalanceListType = ArrayOf(ValidatorBalanceType);

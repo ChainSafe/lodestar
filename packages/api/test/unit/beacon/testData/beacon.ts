@@ -221,7 +221,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
   },
   getSyncCommitteeRewards: {
     args: {blockId: "head", validatorIds: ["1300"]},
-    res: {data: {validatorIndex: 1300, reward}, meta: {executionOptimistic: true}},
+    res: {data: [{validatorIndex: 1300, reward}], meta: {executionOptimistic: true}},
   },
 
   // -
