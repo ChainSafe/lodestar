@@ -51,6 +51,9 @@ export function getDebugApi({
     async getStateV2({stateId}) {
       const {state, executionOptimistic, finalized} = await resolveStateId(chain, stateId, {allowRegen: true});
       return {
+        // TODO: We ideally want to return bytes here if client requests ssz payload
+        // Need to forward that information to server impl, likely best as 2nd arg (`context`)
+        // And 3rd arg would be generic options, used by server impl internally
         data: state.toValue(),
         meta: {
           version: config.getForkName(state.slot),
