@@ -119,7 +119,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
     submitBlindedBlock: {
       url: "/eth/v1/builder/blinded_blocks",
       method: "POST",
-      req: {
+      req: JsonOnlyReq({
         writeReqJson: (args) => {
           const slot = args.signedBlindedBlock.message.slot;
           return {
@@ -136,28 +136,11 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
             signedBlindedBlock: ssz[forkName].SignedBlindedBeaconBlock.fromJson(body),
           };
         },
-        writeReqSsz: (args) => {
-          const slot = args.signedBlindedBlock.message.slot;
-          return {
-            body: config.getBlindedForkTypes(slot).SignedBeaconBlock.serialize(args.signedBlindedBlock),
-            headers: {
-              "Eth-Consensus-Version": config.getForkName(slot),
-            },
-          };
-        },
-        parseReqSsz: ({body, headers}) => {
-          const forkName = toForkName(fromRequestHeaders(headers, "Eth-Consensus-Version"));
-          const forkSeq = config.forks[forkName].seq;
-          if (forkSeq < ForkSeq.bellatrix) throw new Error("TODO"); // TODO
-          return {
-            signedBlindedBlock: ssz[forkName as "bellatrix"].SignedBlindedBeaconBlock.deserialize(body),
-          };
-        },
         schema: {
           body: Schema.Object,
           headers: {"Eth-Consensus-Version": Schema.StringRequired},
         },
-      },
+      }),
       resp: {
         data: WithVersion<allForks.ExecutionPayload | allForks.ExecutionPayloadAndBlobsBundle, {version: ForkName}>(
           (fork: ForkName) =>
