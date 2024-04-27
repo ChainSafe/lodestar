@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
+import {MAX_VALIDATORS_PER_COMMITTEE} from "@lodestar/params";
 import {phase0, CommitteeIndex, Slot, Epoch, ssz, RootHex, StringType} from "@lodestar/types";
 import {Endpoint, RequestCodec, RouteDefinitions, Schema} from "../../../utils/index.js";
 import {
@@ -47,7 +48,7 @@ export const ValidatorResponseType = new ContainerType({
 export const EpochCommitteeResponseType = new ContainerType({
   index: ssz.CommitteeIndex,
   slot: ssz.Slot,
-  validators: ArrayOf(ssz.ValidatorIndex),
+  validators: ArrayOf(ssz.ValidatorIndex, MAX_VALIDATORS_PER_COMMITTEE),
 });
 export const ValidatorBalanceType = new ContainerType({
   index: ssz.ValidatorIndex,

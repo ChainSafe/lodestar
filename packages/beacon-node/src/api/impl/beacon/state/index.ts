@@ -8,6 +8,7 @@ import {
   getRandaoMix,
 } from "@lodestar/state-transition";
 import {EPOCHS_PER_HISTORICAL_VECTOR} from "@lodestar/params";
+import {ValidatorIndex} from "@lodestar/types";
 import {ApiError} from "../../errors.js";
 import {ApiModules} from "../../types.js";
 import {
@@ -208,7 +209,8 @@ export function getBeaconStateApi({
             {
               index: committeeIndex,
               slot,
-              validators: committee,
+              // TODO: `ArrayType` in @chainsafe/ssz has to be relaxed to be `ArrayLike` to fix this
+              validators: committee as unknown as ValidatorIndex[],
             },
           ];
         });
