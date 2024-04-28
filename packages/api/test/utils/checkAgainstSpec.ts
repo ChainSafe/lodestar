@@ -1,5 +1,6 @@
 import Ajv, {ErrorObject} from "ajv";
 import {expect, describe, beforeAll, it} from "vitest";
+import {WireFormat} from "../../src/utils/headers.js";
 import {Endpoint, GetRequestCodec, PostRequestCodec, RouteDefinitions} from "../../src/utils/types.js";
 import {applyRecursively, JsonSchema, OpenApiJson, parseOpenApiSpec} from "./parseOpenApiSpec.js";
 import {GenericServerTestCases} from "./genericServerTest.js";
@@ -119,6 +120,19 @@ export function runTestCheckAgainstSpec<Es extends Record<string, Endpoint>>(
 
           // Validate request
           validateSchema(routeSpec.requestSchema, reqJson, "request");
+
+          // Verify that request supports ssz if required by spec
+          if (routeSpec.requestSszRequired) {
+            try {
+              const reqCodec = routeDef.req as PostRequestCodec<Es[string]>;
+              const reqSsz = reqCodec.writeReqSsz(testData.args);
+
+              expect(reqSsz.body).toBeInstanceOf(Uint8Array);
+              expect(reqCodec.onlySupport).not.toBe(WireFormat.json);
+            } catch {
+              throw Error("Must support ssz request body");
+            }
+          }
         });
       }
 
@@ -126,6 +140,7 @@ export function runTestCheckAgainstSpec<Es extends Record<string, Endpoint>>(
         it(`${operationId}_response`, function () {
           const data = routeDef.resp.data.toJson(testData.res?.data, testData.res?.meta);
           const metaJson = routeDef.resp.meta.toJson(testData.res?.meta);
+          const headers = parseHeaders(routeDef.resp.meta.toHeadersObject(testData.res?.meta));
 
           let resJson: unknown;
           if (routeDef.resp.transform) {
@@ -145,7 +160,19 @@ export function runTestCheckAgainstSpec<Es extends Record<string, Endpoint>>(
             }
           }
           // Validate response
-          validateSchema(responseOkSchema, resJson, "response");
+          validateSchema(responseOkSchema, {headers, body: resJson}, "response");
+
+          // Verify that response supports ssz if required by spec
+          if (routeSpec.responseSszRequired) {
+            try {
+              const sszBytes = routeDef.resp.data.serialize(testData.res?.data, testData.res?.meta);
+
+              expect(sszBytes).toBeInstanceOf(Uint8Array);
+              expect(routeDef.resp.onlySupport).not.toBe(WireFormat.json);
+            } catch {
+              throw Error("Must support ssz response body");
+            }
+          }
         });
       }
     });
@@ -207,4 +234,16 @@ function stringifyProperties(obj: Record<string, unknown>): Record<string, unkno
   }
 
   return obj;
+}
+/**
+ * Parse headers before schema validation, the spec expects `{schema: type: boolean}` for
+ * headers with boolean values but values are converted to string when setting the headers
+ */
+function parseHeaders(headers: Record<string, string>): Record<string, string | boolean> {
+  const parsed: Record<string, string | boolean> = {};
+  for (const key of Object.keys(headers)) {
+    const value = headers[key];
+    parsed[key] = /true|false/.test(value) ? value === "true" : value;
+  }
+  return parsed;
 }
