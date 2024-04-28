@@ -156,6 +156,12 @@ export class ApiResponse<E extends Endpoint> extends Response {
     }
     return new ApiError(getErrorMessage(this._errorBody), this.status, this.definition.operationId);
   }
+
+  async assertOk(): Promise<void> {
+    if (!this.ok) {
+      throw await this.error();
+    }
+  }
 }
 
 function getErrorMessage(errBody: string): string {
