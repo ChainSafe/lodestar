@@ -98,8 +98,6 @@ export function parseOpenApiSpec(openApiJson: OpenApiJson): Map<OperationId, Rou
   for (const [routeUrl, routesByMethod] of Object.entries(openApiJson.paths)) {
     for (const [httpMethod, routeDefinition] of Object.entries(routesByMethod)) {
       const responseOkSchema = buildRespSchema(routeDefinition);
-      const responseSszRequired =
-        routeDefinition.responses[StatusCode.ok]?.content?.[ContentType.ssz]?.schema !== undefined;
 
       // Force all properties to have required, else ajv won't validate missing properties
       try {
@@ -109,6 +107,8 @@ export function parseOpenApiSpec(openApiJson: OpenApiJson): Map<OperationId, Rou
         console.log(responseOkSchema);
         throw e;
       }
+      const responseSszRequired =
+        routeDefinition.responses[StatusCode.ok]?.content?.[ContentType.ssz]?.schema !== undefined;
 
       const requestSchema = buildReqSchema(routeDefinition);
       preprocessSchema(requestSchema);
@@ -229,6 +229,8 @@ function buildReqSchema(routeDefinition: RouteDefinition): JsonSchema {
 function buildRespSchema(routeDefinition: RouteDefinition): JsonSchema {
   const respSchema: RespSchema = {};
 
+  const responseOk = routeDefinition.responses[StatusCode.ok];
+
   // "headers": {
   //   "Eth-Consensus-Version": {
   //     "required": true,
@@ -239,8 +241,6 @@ function buildRespSchema(routeDefinition: RouteDefinition): JsonSchema {
   //     },
   //   },
   // },
-
-  const responseOk = routeDefinition.responses[StatusCode.ok];
 
   if (responseOk.headers) {
     Object.entries(responseOk.headers).map(([header, {schema}]) => {
