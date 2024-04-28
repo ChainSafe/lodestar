@@ -12,15 +12,15 @@ const header = ssz.altair.LightClientHeader.defaultValue();
 const signatureSlot = ssz.Slot.defaultValue();
 
 export const testData: GenericServerTestCases<Endpoints> = {
-  getUpdates: {
+  getLightClientUpdatesByRange: {
     args: {startPeriod: 1, count: 2},
     res: {data: [lightClientUpdate], meta: {version: [ForkName.bellatrix]}},
   },
-  getOptimisticUpdate: {
+  getLightClientOptimisticUpdate: {
     args: undefined,
     res: {data: {syncAggregate, attestedHeader: header, signatureSlot}, meta: {version: ForkName.bellatrix}},
   },
-  getFinalityUpdate: {
+  getLightClientFinalityUpdate: {
     args: undefined,
     res: {
       data: {
@@ -33,7 +33,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
       meta: {version: ForkName.bellatrix},
     },
   },
-  getBootstrap: {
+  getLightClientBootstrap: {
     args: {blockRoot: toHexString(root)},
     res: {
       data: {
@@ -44,7 +44,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
       meta: {version: ForkName.bellatrix},
     },
   },
-  getCommitteeRoot: {
+  getLightClientCommitteeRoot: {
     args: {startPeriod: 1, count: 2},
     res: {data: [new Uint8Array(32), new Uint8Array(32).fill(1)]},
   },

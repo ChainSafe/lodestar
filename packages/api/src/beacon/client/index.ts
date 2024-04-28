@@ -23,13 +23,12 @@ type ClientModules = HttpClientModules & {
   httpClient?: IHttpClient;
 };
 
+export type ApiClient = {[K in keyof Endpoints]: ApiClientMethods<Endpoints[K]>};
+
 /**
  * REST HTTP client for all routes
  */
-export function getClient(
-  opts: HttpClientOptions,
-  modules: ClientModules
-): {[K in keyof Endpoints]: ApiClientMethods<Endpoints[K]>} {
+export function getClient(opts: HttpClientOptions, modules: ClientModules): ApiClient {
   const {config} = modules;
   const httpClient = modules.httpClient ?? new HttpClient(opts, modules);
 

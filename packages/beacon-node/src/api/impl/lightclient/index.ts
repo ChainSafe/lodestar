@@ -10,7 +10,7 @@ export function getLightclientApi({
   config,
 }: Pick<ApiModules, "chain" | "config">): ApplicationMethods<routes.lightclient.Endpoints> {
   return {
-    async getUpdates({startPeriod, count}) {
+    async getLightClientUpdatesByRange({startPeriod, count}) {
       const maxAllowedCount = Math.min(MAX_REQUEST_LIGHT_CLIENT_UPDATES, count);
       const periods = Array.from({length: maxAllowedCount}, (_ignored, i) => i + startPeriod);
       const updates = await Promise.all(periods.map((period) => chain.lightClientServer.getUpdate(period)));
@@ -20,7 +20,7 @@ export function getLightclientApi({
       };
     },
 
-    async getOptimisticUpdate() {
+    async getLightClientOptimisticUpdate() {
       const update = chain.lightClientServer.getOptimisticUpdate();
       if (update === null) {
         throw Error("No optimistic update available");
@@ -28,7 +28,7 @@ export function getLightclientApi({
       return {data: update, meta: {version: config.getForkName(update.attestedHeader.beacon.slot)}};
     },
 
-    async getFinalityUpdate() {
+    async getLightClientFinalityUpdate() {
       const update = chain.lightClientServer.getFinalityUpdate();
       if (update === null) {
         throw Error("No finality update available");
@@ -36,12 +36,12 @@ export function getLightclientApi({
       return {data: update, meta: {version: config.getForkName(update.attestedHeader.beacon.slot)}};
     },
 
-    async getBootstrap({blockRoot}) {
+    async getLightClientBootstrap({blockRoot}) {
       const bootstrapProof = await chain.lightClientServer.getBootstrap(fromHexString(blockRoot));
       return {data: bootstrapProof, meta: {version: config.getForkName(bootstrapProof.header.beacon.slot)}};
     },
 
-    async getCommitteeRoot({startPeriod, count}) {
+    async getLightClientCommitteeRoot({startPeriod, count}) {
       const maxAllowedCount = Math.min(MAX_REQUEST_LIGHT_CLIENT_COMMITTEE_HASHES, count);
       const periods = Array.from({length: maxAllowedCount}, (_ignored, i) => i + startPeriod);
       const committeeHashes = await Promise.all(

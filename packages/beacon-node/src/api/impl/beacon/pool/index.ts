@@ -46,7 +46,7 @@ export function getBeaconPoolApi({
       return {data: chain.opPool.getAllVoluntaryExits()};
     },
 
-    async getPoolBlsToExecutionChanges() {
+    async getPoolBLSToExecutionChanges() {
       return {data: chain.opPool.getAllBlsToExecutionChanges().map(({data}) => data)};
     },
 
@@ -126,7 +126,7 @@ export function getBeaconPoolApi({
       await network.publishVoluntaryExit(exit);
     },
 
-    async submitPoolBlsToExecutionChange({changes}) {
+    async submitPoolBLSToExecutionChange({changes}) {
       const errors: Error[] = [];
 
       await Promise.all(
@@ -145,7 +145,7 @@ export function getBeaconPoolApi({
           } catch (e) {
             errors.push(e as Error);
             logger.error(
-              `Error on submitPoolBlsToExecutionChange [${i}]`,
+              `Error on submitPoolBLSToExecutionChange [${i}]`,
               {validatorIndex: blsToExecutionChange.message.validatorIndex},
               e as Error
             );
@@ -154,7 +154,7 @@ export function getBeaconPoolApi({
       );
 
       if (errors.length > 1) {
-        throw Error("Multiple errors on submitPoolBlsToExecutionChange\n" + errors.map((e) => e.message).join("\n"));
+        throw Error("Multiple errors on submitPoolBLSToExecutionChange\n" + errors.map((e) => e.message).join("\n"));
       } else if (errors.length === 1) {
         throw errors[0];
       }

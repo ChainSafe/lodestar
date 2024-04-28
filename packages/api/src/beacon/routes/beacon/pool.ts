@@ -85,7 +85,7 @@ export type Endpoints = {
    * Get SignedBLSToExecutionChange from operations pool
    * Retrieves BLSToExecutionChange known by the node but not necessarily incorporated into any block
    */
-  getPoolBlsToExecutionChanges: Endpoint<
+  getPoolBLSToExecutionChanges: Endpoint<
     //
     "GET",
     EmptyArgs,
@@ -150,7 +150,7 @@ export type Endpoints = {
    * Submit SignedBLSToExecutionChange objects to node's pool
    * Submits SignedBLSToExecutionChange objects to node's pool and if passes validation node MUST broadcast it to network.
    */
-  submitPoolBlsToExecutionChange: Endpoint<
+  submitPoolBLSToExecutionChange: Endpoint<
     "POST",
     {changes: capella.SignedBLSToExecutionChange[]},
     {body: unknown},
@@ -212,7 +212,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
       meta: EmptyMetaCodec,
     },
   },
-  getPoolBlsToExecutionChanges: {
+  getPoolBLSToExecutionChanges: {
     url: "/eth/v1/beacon/pool/bls_to_execution_changes",
     method: "GET",
     req: EmptyGetRequestCodec,
@@ -277,7 +277,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
     },
     resp: EmptyResponseCodec,
   },
-  submitPoolBlsToExecutionChange: {
+  submitPoolBLSToExecutionChange: {
     url: "/eth/v1/beacon/pool/bls_to_execution_changes",
     method: "POST",
     req: {

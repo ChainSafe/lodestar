@@ -28,7 +28,7 @@ export type Endpoints = {
    * - Has most bits
    * - Oldest update
    */
-  getUpdates: Endpoint<
+  getLightClientUpdatesByRange: Endpoint<
     "GET",
     {
       startPeriod: SyncPeriod;
@@ -45,7 +45,7 @@ export type Endpoints = {
    * Returns the latest optimistic head update available. Clients should use the SSE type `light_client_optimistic_update`
    * unless to get the very first head update after syncing, or if SSE are not supported by the server.
    */
-  getOptimisticUpdate: Endpoint<
+  getLightClientOptimisticUpdate: Endpoint<
     //
     "GET",
     EmptyArgs,
@@ -54,7 +54,7 @@ export type Endpoints = {
     VersionMeta
   >;
 
-  getFinalityUpdate: Endpoint<
+  getLightClientFinalityUpdate: Endpoint<
     //
     "GET",
     EmptyArgs,
@@ -68,7 +68,7 @@ export type Endpoints = {
    * The trusted block root should be fetched with similar means to a weak subjectivity checkpoint.
    * Only block roots for checkpoints are guaranteed to be available.
    */
-  getBootstrap: Endpoint<
+  getLightClientBootstrap: Endpoint<
     "GET",
     {blockRoot: string},
     {params: {block_root: string}},
@@ -79,7 +79,7 @@ export type Endpoints = {
   /**
    * Returns an array of sync committee hashes based on the provided period and count
    */
-  getCommitteeRoot: Endpoint<
+  getLightClientCommitteeRoot: Endpoint<
     "GET",
     {startPeriod: SyncPeriod; count: number},
     {query: {start_period: number; count: number}},
@@ -104,7 +104,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
   let beaconConfig: BeaconConfig | undefined;
 
   return {
-    getUpdates: {
+    getLightClientUpdatesByRange: {
       url: "/eth/v1/beacon/light_client/updates",
       method: "GET",
       req: {
@@ -205,7 +205,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         },
       },
     },
-    getOptimisticUpdate: {
+    getLightClientOptimisticUpdate: {
       url: "/eth/v1/beacon/light_client/optimistic_update",
       method: "GET",
       req: EmptyGetRequestCodec,
@@ -214,7 +214,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         meta: VersionCodec,
       },
     },
-    getFinalityUpdate: {
+    getLightClientFinalityUpdate: {
       url: "/eth/v1/beacon/light_client/finality_update",
       method: "GET",
       req: EmptyGetRequestCodec,
@@ -223,7 +223,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         meta: VersionCodec,
       },
     },
-    getBootstrap: {
+    getLightClientBootstrap: {
       url: "/eth/v1/beacon/light_client/bootstrap/{block_root}",
       method: "GET",
       req: {
@@ -236,7 +236,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         meta: VersionCodec,
       },
     },
-    getCommitteeRoot: {
+    getLightClientCommitteeRoot: {
       url: "/eth/v0/beacon/light_client/committee_root",
       method: "GET",
       req: {

@@ -60,13 +60,6 @@ const ignoredOperations = [
   "getBlindedBlock", // https://github.com/ChainSafe/lodestar/issues/5699
   "getNextWithdrawals", // https://github.com/ChainSafe/lodestar/issues/5696
   "getDebugForkChoice", // https://github.com/ChainSafe/lodestar/issues/5700
-  /* Ensure operationId matches spec value, blocked by https://github.com/ChainSafe/lodestar/pull/6080 */
-  "getLightClientBootstrap",
-  "getLightClientUpdatesByRange",
-  "getLightClientFinalityUpdate",
-  "getLightClientOptimisticUpdate",
-  "getPoolBLSToExecutionChanges",
-  "submitPoolBLSToExecutionChange",
 ];
 
 const ignoredProperties: Record<string, IgnoredProperty> = {

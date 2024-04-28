@@ -2,7 +2,7 @@ import {parse as parseQueryString} from "qs";
 import {FastifyInstance, fastify} from "fastify";
 import {fastifyCors} from "@fastify/cors";
 import {ApplicationMethods, Endpoints, addSszContentTypeParser} from "@lodestar/api";
-import {registerRoutes} from "@lodestar/api/beacon/server";
+import {AllBeaconMethods, registerRoutes} from "@lodestar/api/beacon/server";
 import {ChainForkConfig} from "@lodestar/config";
 
 export type ServerOpts = {
@@ -10,10 +10,12 @@ export type ServerOpts = {
   host: string;
 };
 
+export type LightClientEndpoints = Pick<Endpoints, "lightclient" | "proof" | "events">;
+
 export async function startServer(
   opts: ServerOpts,
   config: ChainForkConfig,
-  methods: {[K in keyof Endpoints]: ApplicationMethods<Endpoints[K]>}
+  methods: {[K in keyof LightClientEndpoints]: ApplicationMethods<LightClientEndpoints[K]>}
 ): Promise<FastifyInstance> {
   const server = fastify({
     logger: false,
@@ -23,7 +25,7 @@ export async function startServer(
 
   addSszContentTypeParser(server);
 
-  registerRoutes(server, config, methods, ["lightclient", "proof", "events"]);
+  registerRoutes(server, config, methods as AllBeaconMethods, ["lightclient", "proof", "events"]);
 
   void server.register(fastifyCors, {origin: "*"});
 

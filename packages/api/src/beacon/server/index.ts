@@ -17,10 +17,12 @@ import * as validator from "./validator.js";
 // Re-export for usage in beacon-node
 export {ServerError as ApiError};
 
+export type AllBeaconMethods = {[K in keyof Endpoints]: ApplicationMethods<Endpoints[K]>};
+
 export function registerRoutes(
   server: FastifyInstance,
   config: ChainForkConfig,
-  methods: {[K in keyof Endpoints]: ApplicationMethods<Endpoints[K]>},
+  methods: AllBeaconMethods,
   enabledNamespaces: (keyof Endpoints)[]
 ): void {
   const routesByNamespace: {

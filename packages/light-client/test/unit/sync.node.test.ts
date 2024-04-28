@@ -1,10 +1,10 @@
 import {describe, it, expect, afterEach, vi} from "vitest";
 import {JsonPath, toHexString} from "@chainsafe/ssz";
-import {computeDescriptor, TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
+import {CompactMultiProof, computeDescriptor} from "@chainsafe/persistent-merkle-tree";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateAllForks, BeaconStateAltair} from "@lodestar/state-transition";
 import {altair, ssz} from "@lodestar/types";
-import {routes, Api, getClient, ServerApi, ApiError} from "@lodestar/api";
+import {routes, getClient, ApiClient} from "@lodestar/api";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {createBeaconConfig, ChainConfig} from "@lodestar/config";
 import {Lightclient, LightclientEvent} from "../../src/index.js";
@@ -61,7 +61,7 @@ describe("sync", () => {
       lightclient: lightclientServerApi,
       events: eventsServerApi,
       proof: proofServerApi,
-    } as Partial<{[K in keyof Api]: ServerApi<Api[K]>}> as {[K in keyof Api]: ServerApi<Api[K]>});
+    });
 
     // Populate initial snapshot
     const {snapshot, checkpointRoot} = computeLightClientSnapshot(initialPeriod);
@@ -177,18 +177,17 @@ describe("sync", () => {
 // TODO: Re-incorporate for REST-only light-client
 async function getHeadStateProof(
   lightclient: Lightclient,
-  api: Api,
+  api: ApiClient,
   paths: JsonPath[]
-): Promise<{proof: TreeOffsetProof; header: altair.LightClientHeader}> {
+): Promise<{proof: CompactMultiProof; header: altair.LightClientHeader}> {
   const header = lightclient.getHead();
   const stateId = toHexString(header.beacon.stateRoot);
   const gindices = paths.map((path) => ssz.bellatrix.BeaconState.getPathInfo(path).gindex);
   const descriptor = computeDescriptor(gindices);
-  const res = await api.proof.getStateProof(stateId, descriptor);
-  ApiError.assert(res);
+  const res = await api.proof.getStateProof({stateId, descriptor});
 
   return {
-    proof: res.response.data as TreeOffsetProof,
+    proof: await res.value(),
     header,
   };
 }
