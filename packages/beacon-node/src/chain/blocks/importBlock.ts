@@ -68,7 +68,7 @@ export async function importBlock(
   const prevFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
   const blockDelaySec = (fullyVerifiedBlock.seenTimestampSec - postState.genesisTime) % this.config.SECONDS_PER_SLOT;
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
-  const fork = postState.config.getForkSeq(blockSlot);
+  const fork = this.config.getForkSeq(blockSlot);
 
   // this is just a type assertion since blockinput with blobsPromise type will not end up here
   if (blockInput.type === BlockInputType.blobsPromise) {
@@ -425,7 +425,10 @@ export async function importBlock(
     }
     if (this.emitter.listenerCount(routes.events.EventType.attestation)) {
       for (const attestation of block.message.body.attestations) {
-        this.emitter.emit(routes.events.EventType.attestation, attestation);
+        this.emitter.emit(routes.events.EventType.attestation, {
+          version: this.config.getForkName(blockSlot),
+          data: attestation,
+        });
       }
     }
     if (this.emitter.listenerCount(routes.events.EventType.attesterSlashing)) {
