@@ -9,7 +9,7 @@ import {
   ExecutionOptimisticAndFinalizedMeta,
   JsonOnlyReq,
 } from "../../../utils/codecs.js";
-import {fromU64Str, toU64Str} from "../../../utils/serdes.js";
+import {fromValidatorIdsStr, toValidatorIdsStr} from "../../../utils/serdes.js";
 import {WireFormat} from "../../../utils/headers.js";
 import {RootResponse, RootResponseType} from "./block.js";
 
@@ -389,13 +389,13 @@ export const definitions: RouteDefinitions<Endpoints> = {
       writeReqJson: ({stateId, validatorIds, statuses}) => ({
         params: {state_id: stateId.toString()},
         body: {
-          ids: validatorIds?.map((id) => (typeof id === "string" ? id : toU64Str(id))),
+          ids: toValidatorIdsStr(validatorIds),
           statuses,
         },
       }),
-      parseReqJson: ({params, body}) => ({
+      parseReqJson: ({params, body = {}}) => ({
         stateId: params.state_id,
-        validatorIds: body.ids?.map((id) => (typeof id === "string" && id.startsWith("0x") ? id : fromU64Str(id))),
+        validatorIds: fromValidatorIdsStr(body.ids),
         statuses: body.statuses,
       }),
       schema: {
@@ -431,11 +431,11 @@ export const definitions: RouteDefinitions<Endpoints> = {
     req: JsonOnlyReq({
       writeReqJson: ({stateId, validatorIds}) => ({
         params: {state_id: stateId.toString()},
-        body: validatorIds?.map((id) => (typeof id === "string" ? id : toU64Str(id))) || [],
+        body: toValidatorIdsStr(validatorIds) || [],
       }),
       parseReqJson: ({params, body = []}) => ({
         stateId: params.state_id,
-        validatorIds: body.map((id) => (typeof id === "string" && id.startsWith("0x") ? id : fromU64Str(id))),
+        validatorIds: fromValidatorIdsStr(body),
       }),
       schema: {
         params: {state_id: Schema.StringRequired},

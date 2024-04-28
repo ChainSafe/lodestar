@@ -203,7 +203,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
     },
   },
   getAttestationsRewards: {
-    args: {epoch: 10, validatorIds: ["1300"]},
+    args: {epoch: 10, validatorIds: [1300]},
     res: {
       data: {
         idealRewards: [
@@ -231,7 +231,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
     },
   },
   getSyncCommitteeRewards: {
-    args: {blockId: "head", validatorIds: ["1300"]},
+    args: {blockId: "head", validatorIds: [1300]},
     res: {data: [{validatorIndex: 1300, reward}], meta: {executionOptimistic: true, finalized: false}},
   },
 

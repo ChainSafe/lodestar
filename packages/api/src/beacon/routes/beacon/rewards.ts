@@ -3,6 +3,7 @@ import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {Epoch, ssz} from "@lodestar/types";
 
 import {Schema, Endpoint, RouteDefinitions} from "../../../utils/index.js";
+import {fromValidatorIdsStr, toValidatorIdsStr} from "../../../utils/serdes.js";
 import {
   ArrayOf,
   ExecutionOptimisticAndFinalizedCodec,
@@ -139,7 +140,7 @@ export type Endpoints = {
   getAttestationsRewards: Endpoint<
     "POST",
     {epoch: Epoch; validatorIds?: ValidatorId[]},
-    {params: {epoch: number}; body: ValidatorId[]},
+    {params: {epoch: number}; body: string[]},
     AttestationsRewards,
     ExecutionOptimisticAndFinalizedMeta
   >;
@@ -155,7 +156,7 @@ export type Endpoints = {
   getSyncCommitteeRewards: Endpoint<
     "POST",
     {blockId: BlockId; validatorIds?: ValidatorId[]},
-    {params: {block_id: string}; body: ValidatorId[]},
+    {params: {block_id: string}; body: string[]},
     SyncCommitteeRewards,
     ExecutionOptimisticAndFinalizedMeta
   >;
@@ -181,11 +182,11 @@ export const definitions: RouteDefinitions<Endpoints> = {
     req: JsonOnlyReq({
       writeReqJson: ({epoch, validatorIds}) => ({
         params: {epoch},
-        body: validatorIds || [],
+        body: toValidatorIdsStr(validatorIds) || [],
       }),
       parseReqJson: ({params, body}) => ({
         epoch: params.epoch,
-        validatorIds: body,
+        validatorIds: fromValidatorIdsStr(body),
       }),
       schema: {
         params: {epoch: Schema.UintRequired},
@@ -203,11 +204,11 @@ export const definitions: RouteDefinitions<Endpoints> = {
     req: JsonOnlyReq({
       writeReqJson: ({blockId, validatorIds}) => ({
         params: {block_id: blockId.toString()},
-        body: validatorIds || [],
+        body: toValidatorIdsStr(validatorIds) || [],
       }),
       parseReqJson: ({params, body}) => ({
         blockId: params.block_id,
-        validatorIds: body,
+        validatorIds: fromValidatorIdsStr(body),
       }),
       schema: {
         params: {block_id: Schema.StringRequired},

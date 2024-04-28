@@ -68,6 +68,14 @@ export function toU64StrOpt(u64: U64 | undefined): U64Str | undefined {
   return u64 !== undefined ? toU64Str(u64) : undefined;
 }
 
+export function toValidatorIdsStr(ids?: (string | number)[]): string[] | undefined {
+  return ids?.map((id) => (typeof id === "string" ? id : toU64Str(id)));
+}
+
+export function fromValidatorIdsStr(ids?: string[]): (string | number)[] | undefined {
+  return ids?.map((id) => (typeof id === "string" && id.startsWith("0x") ? id : fromU64Str(id)));
+}
+
 const GRAFFITI_HEX_LENGTH = 66;
 
 export function toGraffitiHex(utf8: string): string {
