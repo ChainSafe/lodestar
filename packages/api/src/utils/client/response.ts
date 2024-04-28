@@ -81,6 +81,10 @@ export class ApiResponse<E extends Endpoint> extends Response {
   }
 
   async meta(): Promise<E["meta"]> {
+    if (!this.ok) {
+      throw await this.error();
+    }
+
     if (!this._meta) {
       switch (this.wireFormat()) {
         case WireFormat.json: {
