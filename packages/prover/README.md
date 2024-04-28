@@ -58,50 +58,50 @@ lodestar-prover proxy \
 
 | Group             | Method                                  | Status | Version |
 | ----------------- | --------------------------------------- | ------ | ------- |
-| Block             | eth_getBlockByHash                      | ✅      | v0      |
-|                   | eth_getBlockByNumber                    | ✅      | v0      |
-|                   | eth_getBlockTransactionCountByHash      | ⌛      | v2      |
-|                   | eth_getBlockTransactionCountByNumber    | ⌛      | v2      |
-|                   | eth_getUncleCountByBlockHash            | ⌛      | v2      |
-|                   | eth_getUncleCountByBlockNumber          | ⌛      | v2      |
-| Chain/Network     | eth_chainId                             | ➡️      |
-|                   | eth_syncing                             | ⌛      | v1      |
-|                   | eth_coinbase                            | ⌛      | v2      |
-|                   | eth_accounts                            | ➡️      |
-|                   | eth_blockNumber                         | ➡️      |
-| Call and Estimate | eth_call                                | ✅      | v0      |
-|                   | eth_estimateGas                         | ✅      | v0      |
-|                   | eth_createAccessList                    | ⌛      | v2      |
-|                   | eth_gasPrice                            | ⌛      | v1      |
-|                   | eth_maxPriorityFeePerGas                | ⌛      | v1      |
-|                   | eth_feeHistory                          | ⌛      | v2      |
-| Filters           | eth_newFilter                           | ⌛      | v2      |
-|                   | eth_newBlockFilter                      | ⌛      | v2      |
-|                   | eth_newPendingTransactionFilter         | ⌛      | v2      |
-|                   | eth_uninstallFilter                     | ⌛      | v2      |
-|                   | eth_getFilterChanges                    | ⌛      | v2      |
-|                   | eth_getFilterLogs                       | ⌛      | v2      |
-|                   | eth_getLogs                             | ⌛      | v1      |
-| Mining            | eth_mining                              | ➡️      |
-|                   | eth_hashrate                            | ➡️      |
-|                   | eth_getWork                             | ➡️      |
-|                   | eth_submitWork                          | ➡️      |
-|                   | eth_submitHashrate                      | ➡️      |
-| Signing           | eth_sign                                | ➡️      |
-|                   | eth_signTransaction                     | ➡️      |
-| State             | eth_getBalance                          | ✅      | v0      |
-|                   | eth_getStorageAt                        | ⌛      | v1      |
-|                   | eth_getTransactionCount                 | ⌛      | v2      |
-|                   | eth_getCode                             | ✅      | v0      |
-|                   | eth_getProof                            | ❇️      | v0      |
-| Transactions      | eth_sendTransaction                     | ➡️      |
-|                   | eth_sendRawTransaction                  | ➡️      |
-|                   | eth_getTransactionByHash                | ⌛      | v2      |
-|                   | eth_getTransactionByBlockHashAndIndex   | ⌛      | v2      |
-|                   | eth_getTransactionByBlockNumberAndIndex | ⌛      | v2      |
-|                   | eth_getTransactionReceipt               | ⌛      | v2      |
-| Events            | eth_subscribe                           | ❇️      | v0      |
-|                   | eth_unsubscribe                         | ❇️      | v0      |
+| Block             | eth_getBlockByHash                      | ✅     | v0      |
+|                   | eth_getBlockByNumber                    | ✅     | v0      |
+|                   | eth_getBlockTransactionCountByHash      | ⌛     | v2      |
+|                   | eth_getBlockTransactionCountByNumber    | ⌛     | v2      |
+|                   | eth_getUncleCountByBlockHash            | ⌛     | v2      |
+|                   | eth_getUncleCountByBlockNumber          | ⌛     | v2      |
+| Chain/Network     | eth_chainId                             | ➡️     |
+|                   | eth_syncing                             | ⌛     | v1      |
+|                   | eth_coinbase                            | ⌛     | v2      |
+|                   | eth_accounts                            | ➡️     |
+|                   | eth_blockNumber                         | ➡️     |
+| Call and Estimate | eth_call                                | ✅     | v0      |
+|                   | eth_estimateGas                         | ✅     | v0      |
+|                   | eth_createAccessList                    | ⌛     | v2      |
+|                   | eth_gasPrice                            | ⌛     | v1      |
+|                   | eth_maxPriorityFeePerGas                | ⌛     | v1      |
+|                   | eth_feeHistory                          | ⌛     | v2      |
+| Filters           | eth_newFilter                           | ⌛     | v2      |
+|                   | eth_newBlockFilter                      | ⌛     | v2      |
+|                   | eth_newPendingTransactionFilter         | ⌛     | v2      |
+|                   | eth_uninstallFilter                     | ⌛     | v2      |
+|                   | eth_getFilterChanges                    | ⌛     | v2      |
+|                   | eth_getFilterLogs                       | ⌛     | v2      |
+|                   | eth_getLogs                             | ⌛     | v1      |
+| Mining            | eth_mining                              | ➡️     |
+|                   | eth_hashrate                            | ➡️     |
+|                   | eth_getWork                             | ➡️     |
+|                   | eth_submitWork                          | ➡️     |
+|                   | eth_submitHashrate                      | ➡️     |
+| Signing           | eth_sign                                | ➡️     |
+|                   | eth_signTransaction                     | ➡️     |
+| State             | eth_getBalance                          | ✅     | v0      |
+|                   | eth_getStorageAt                        | ⌛     | v1      |
+|                   | eth_getTransactionCount                 | ⌛     | v2      |
+|                   | eth_getCode                             | ✅     | v0      |
+|                   | eth_getProof                            | ❇️     | v0      |
+| Transactions      | eth_sendTransaction                     | ➡️     |
+|                   | eth_sendRawTransaction                  | ➡️     |
+|                   | eth_getTransactionByHash                | ⌛     | v2      |
+|                   | eth_getTransactionByBlockHashAndIndex   | ⌛     | v2      |
+|                   | eth_getTransactionByBlockNumberAndIndex | ⌛     | v2      |
+|                   | eth_getTransactionReceipt               | ⌛     | v2      |
+| Events            | eth_subscribe                           | ❇️     | v0      |
+|                   | eth_unsubscribe                         | ❇️     | v0      |
 
 ## Non-supported features
 
