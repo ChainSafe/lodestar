@@ -155,7 +155,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
     },
   },
   getStateValidators: {
-    args: {stateId: "head", id: [pubkeyHex, "1300"], status: ["active_ongoing"]},
+    args: {stateId: "head", validatorIds: [pubkeyHex, "1300"], statuses: ["active_ongoing"]},
     res: {data: [validatorResponse], meta: {executionOptimistic: true, finalized: false}},
   },
   postStateValidators: {
@@ -167,7 +167,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
     res: {data: validatorResponse, meta: {executionOptimistic: true, finalized: false}},
   },
   getStateValidatorBalances: {
-    args: {stateId: "head", indices: ["1300"]},
+    args: {stateId: "head", validatorIds: ["1300"]},
     res: {data: [{index: 1300, balance}], meta: {executionOptimistic: true, finalized: false}},
   },
   postStateValidatorBalances: {

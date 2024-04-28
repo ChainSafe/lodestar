@@ -172,7 +172,7 @@ export type Endpoints = {
   getStateValidators: Endpoint<
     //
     "GET",
-    {stateId: StateId; id?: ValidatorId[]; status?: ValidatorStatus[]},
+    {stateId: StateId; validatorIds?: ValidatorId[]; statuses?: ValidatorStatus[]},
     {params: {state_id: string}; query: {id?: ValidatorId[]; status?: ValidatorStatus[]}},
     ValidatorResponseList,
     ExecutionOptimisticAndFinalizedMeta
@@ -205,7 +205,7 @@ export type Endpoints = {
   getStateValidatorBalances: Endpoint<
     //
     "GET",
-    {stateId: StateId; indices?: ValidatorId[]},
+    {stateId: StateId; validatorIds?: ValidatorId[]},
     {params: {state_id: string}; query: {id?: ValidatorId[]}},
     ValidatorBalanceList,
     ExecutionOptimisticAndFinalizedMeta
@@ -366,8 +366,11 @@ export const definitions: RouteDefinitions<Endpoints> = {
     url: "/eth/v1/beacon/states/{state_id}/validators",
     method: "GET",
     req: {
-      writeReq: ({stateId, id, status}) => ({params: {state_id: stateId.toString()}, query: {id, status}}),
-      parseReq: ({params, query}) => ({stateId: params.state_id, id: query.id, status: query.status}),
+      writeReq: ({stateId, validatorIds: id, statuses}) => ({
+        params: {state_id: stateId.toString()},
+        query: {id, status: statuses},
+      }),
+      parseReq: ({params, query}) => ({stateId: params.state_id, validatorIds: query.id, statuses: query.status}),
       schema: {
         params: {state_id: Schema.StringRequired},
         query: {id: Schema.UintOrStringArray, status: Schema.StringArray},
@@ -410,8 +413,8 @@ export const definitions: RouteDefinitions<Endpoints> = {
     url: "/eth/v1/beacon/states/{state_id}/validator_balances",
     method: "GET",
     req: {
-      writeReq: ({stateId, indices}) => ({params: {state_id: stateId.toString()}, query: {id: indices}}),
-      parseReq: ({params, query}) => ({stateId: params.state_id, indices: query.id}),
+      writeReq: ({stateId, validatorIds}) => ({params: {state_id: stateId.toString()}, query: {id: validatorIds}}),
+      parseReq: ({params, query}) => ({stateId: params.state_id, validatorIds: query.id}),
       schema: {
         params: {state_id: Schema.StringRequired},
         query: {id: Schema.UintOrStringArray},
