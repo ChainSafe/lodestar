@@ -79,7 +79,10 @@ export const testData: GenericServerTestCases<Endpoints> = {
   },
   getBlobSidecars: {
     args: {blockId: "head", indices: [0]},
-    res: {data: ssz.deneb.BlobSidecars.defaultValue(), meta: {executionOptimistic: true, finalized: false}},
+    res: {
+      data: [ssz.deneb.BlobSidecar.defaultValue()],
+      meta: {executionOptimistic: true, finalized: false, version: ForkName.deneb},
+    },
   },
 
   // pool

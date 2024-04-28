@@ -215,7 +215,7 @@ export type Endpoints = {
     {blockId: BlockId; indices?: number[]},
     {params: {block_id: string}; query: {indices?: number[]}},
     deneb.BlobSidecars,
-    ExecutionOptimisticAndFinalizedMeta
+    ExecutionOptimisticFinalizedAndVersionMeta
   >;
 };
 
@@ -523,7 +523,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       },
       resp: {
         data: ssz.deneb.BlobSidecars,
-        meta: ExecutionOptimisticAndFinalizedCodec,
+        meta: ExecutionOptimisticFinalizedAndVersionCodec,
       },
     },
   };
