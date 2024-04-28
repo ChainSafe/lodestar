@@ -125,6 +125,10 @@ export function getBeaconStateApi({
       };
     },
 
+    async postStateValidators(stateId, filters) {
+      return this.getStateValidators(stateId, filters);
+    },
+
     async getStateValidator({stateId, validatorId}) {
       const {state, executionOptimistic, finalized} = await resolveStateId(chain, stateId);
       const {pubkey2index} = chain.getHeadState().epochCtx;
@@ -181,6 +185,10 @@ export function getBeaconStateApi({
         data: resp,
         meta: {executionOptimistic, finalized},
       };
+    },
+
+    async postStateValidatorBalances(stateId, indices) {
+      return this.getStateValidatorBalances(stateId, indices);
     },
 
     async getEpochCommittees({stateId, ...filters}) {

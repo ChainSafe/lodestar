@@ -7,7 +7,9 @@ import {
   ArrayOf,
   ExecutionOptimisticAndFinalizedCodec,
   ExecutionOptimisticAndFinalizedMeta,
+  JsonOnlyReq,
 } from "../../../utils/codecs.js";
+import {fromU64Str, toU64Str} from "../../../utils/serdes.js";
 import {WireFormat} from "../../../utils/headers.js";
 import {RootResponse, RootResponseType} from "./block.js";
 
@@ -177,6 +179,23 @@ export type Endpoints = {
   >;
 
   /**
+   * Get validators from state
+   * Returns filterable list of validators with their balance, status and index.
+   * @param stateId State identifier.
+   * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", "justified", \<slot\>, \<hex encoded stateRoot with 0x prefix\>.
+   * @param id Either hex encoded public key (with 0x prefix) or validator index
+   * @param status [Validator status specification](https://hackmd.io/ofFJ5gOmQpu1jjHilHbdQQ)
+   */
+  postStateValidators: Endpoint<
+    //
+    "POST",
+    {stateId: StateId; validatorIds?: ValidatorId[]; statuses?: ValidatorStatus[]},
+    {params: {state_id: string}; body: {ids?: string[]; statuses?: ValidatorStatus[]}},
+    ValidatorResponseList,
+    ExecutionOptimisticAndFinalizedMeta
+  >;
+
+  /**
    * Get validator balances from state
    * Returns filterable list of validator balances.
    * @param stateId State identifier.
@@ -188,6 +207,22 @@ export type Endpoints = {
     "GET",
     {stateId: StateId; indices?: ValidatorId[]},
     {params: {state_id: string}; query: {id?: ValidatorId[]}},
+    ValidatorBalanceList,
+    ExecutionOptimisticAndFinalizedMeta
+  >;
+
+  /**
+   * Get validator balances from state
+   * Returns filterable list of validator balances.
+   * @param stateId State identifier.
+   * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", "justified", \<slot\>, \<hex encoded stateRoot with 0x prefix\>.
+   * @param id Either hex encoded public key (with 0x prefix) or validator index
+   */
+  postStateValidatorBalances: Endpoint<
+    //
+    "POST",
+    {stateId: StateId; validatorIds?: ValidatorId[]},
+    {params: {state_id: string}; body: string[]},
     ValidatorBalanceList,
     ExecutionOptimisticAndFinalizedMeta
   >;
@@ -344,6 +379,33 @@ export const definitions: RouteDefinitions<Endpoints> = {
       meta: ExecutionOptimisticAndFinalizedCodec,
     },
   },
+  postStateValidators: {
+    url: "/eth/v1/beacon/states/{state_id}/validators",
+    method: "POST",
+    req: JsonOnlyReq({
+      writeReqJson: ({stateId, validatorIds, statuses}) => ({
+        params: {state_id: stateId.toString()},
+        body: {
+          ids: validatorIds?.map((id) => (typeof id === "string" ? id : toU64Str(id))),
+          statuses,
+        },
+      }),
+      parseReqJson: ({params, body}) => ({
+        stateId: params.state_id,
+        validatorIds: body.ids?.map((id) => (typeof id === "string" && id.startsWith("0x") ? id : fromU64Str(id))),
+        statuses: body.statuses,
+      }),
+      schema: {
+        params: {state_id: Schema.StringRequired},
+        body: Schema.Object,
+      },
+    }),
+    resp: {
+      onlySupport: WireFormat.json,
+      data: ValidatorResponseListType,
+      meta: ExecutionOptimisticAndFinalizedCodec,
+    },
+  },
   getStateValidatorBalances: {
     url: "/eth/v1/beacon/states/{state_id}/validator_balances",
     method: "GET",
@@ -355,6 +417,28 @@ export const definitions: RouteDefinitions<Endpoints> = {
         query: {id: Schema.UintOrStringArray},
       },
     },
+    resp: {
+      data: ValidatorBalanceListType,
+      meta: ExecutionOptimisticAndFinalizedCodec,
+    },
+  },
+  postStateValidatorBalances: {
+    url: "/eth/v1/beacon/states/{state_id}/validator_balances",
+    method: "POST",
+    req: JsonOnlyReq({
+      writeReqJson: ({stateId, validatorIds}) => ({
+        params: {state_id: stateId.toString()},
+        body: validatorIds?.map((id) => (typeof id === "string" ? id : toU64Str(id))) || [],
+      }),
+      parseReqJson: ({params, body = []}) => ({
+        stateId: params.state_id,
+        validatorIds: body.map((id) => (typeof id === "string" && id.startsWith("0x") ? id : fromU64Str(id))),
+      }),
+      schema: {
+        params: {state_id: Schema.StringRequired},
+        body: Schema.UintOrStringArray,
+      },
+    }),
     resp: {
       data: ValidatorBalanceListType,
       meta: ExecutionOptimisticAndFinalizedCodec,
