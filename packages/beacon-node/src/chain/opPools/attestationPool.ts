@@ -23,11 +23,15 @@ const SLOTS_RETAINED = 3;
  */
 const MAX_ATTESTATIONS_PER_SLOT = 16_384;
 
-type AggregateFast = {
+type AggregateFastPhase0 = {
   data: allForks.Attestation["data"];
   aggregationBits: BitArray;
   signature: Signature;
 };
+
+type AggregateFastElectra = AggregateFastPhase0 & {committeeBits: BitArray};
+
+type AggregateFast = AggregateFastPhase0 | AggregateFastElectra;
 
 /** Hex string of DataRoot `TODO` */
 type DataRootHex = string;
@@ -186,6 +190,26 @@ function aggregateAttestationInto(aggregate: AggregateFast, attestation: allFork
     throw Error("Invalid attestation not exactly one bit set");
   }
 
+  if ("committeeBits" in attestation && !("committeeBits" in aggregate)) {
+    throw Error("Attempt to aggregate electra attestation into phase0 attestation");
+  }
+
+  if (!("committeeBits" in attestation) && "committeeBits" in aggregate) {
+    throw Error("Attempt to aggregate phase0 attestation into electra attestation");
+  }
+
+  if ("committeeBits" in attestation) {
+    // We assume attestation.committeeBits should already be validated in api and gossip handler and should be non-null
+    const attestationCommitteeIndex = attestation.committeeBits.getSingleTrueBit();
+    const aggregateCommitteeIndex = (aggregate as AggregateFastElectra).committeeBits.getSingleTrueBit();
+
+    if (attestationCommitteeIndex !== aggregateCommitteeIndex) {
+      throw Error(
+        `Committee index mismatched: attestation ${attestationCommitteeIndex} aggregate ${aggregateCommitteeIndex}`
+      );
+    }
+  }
+
   if (aggregate.aggregationBits.get(bitIndex) === true) {
     return InsertOutcome.AlreadyKnown;
   }
@@ -202,6 +226,15 @@ function aggregateAttestationInto(aggregate: AggregateFast, attestation: allFork
  * Format `contribution` into an efficient `aggregate` to add more contributions in with aggregateContributionInto()
  */
 function attestationToAggregate(attestation: allForks.Attestation): AggregateFast {
+  if ("committeeBits" in attestation) {
+    return {
+      data: attestation.data,
+      // clone because it will be mutated
+      aggregationBits: attestation.aggregationBits.clone(),
+      committeeBits: attestation.committeeBits,
+      signature: signatureFromBytesNoCheck(attestation.signature),
+    };
+  }
   return {
     data: attestation.data,
     // clone because it will be mutated
@@ -214,9 +247,18 @@ function attestationToAggregate(attestation: allForks.Attestation): AggregateFas
  * Unwrap AggregateFast to phase0.Attestation
  */
 function fastToAttestation(aggFast: AggregateFast): allForks.Attestation {
-  return {
-    data: aggFast.data,
-    aggregationBits: aggFast.aggregationBits,
-    signature: aggFast.signature.toBytes(PointFormat.compressed),
-  };
+  if ("committeeBits" in aggFast) {
+    return {
+      data: aggFast.data,
+      aggregationBits: aggFast.aggregationBits,
+      committeeBits: aggFast.committeeBits,
+      signature: aggFast.signature.toBytes(PointFormat.compressed),
+    };
+  } else {
+    return {
+      data: aggFast.data,
+      aggregationBits: aggFast.aggregationBits,
+      signature: aggFast.signature.toBytes(PointFormat.compressed),
+    };
+  }
 }

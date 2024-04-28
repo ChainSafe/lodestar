@@ -1,7 +1,14 @@
 import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
-import {ForkName, ForkSeq, MAX_ATTESTATIONS, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {phase0, Epoch, Slot, ssz, ValidatorIndex, RootHex, allForks} from "@lodestar/types";
+import {
+  ForkName,
+  ForkSeq,
+  MAX_ATTESTATIONS,
+  MAX_ATTESTATIONS_ELECTRA,
+  MIN_ATTESTATION_INCLUSION_DELAY,
+  SLOTS_PER_EPOCH,
+} from "@lodestar/params";
+import {phase0, Epoch, Slot, ssz, ValidatorIndex, RootHex, allForks, electra} from "@lodestar/types";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStatePhase0,
@@ -39,7 +46,7 @@ type ValidateAttestationDataFn = (attData: phase0.AttestationData) => boolean;
 const MAX_RETAINED_ATTESTATIONS_PER_GROUP = 4;
 
 /**
- * On mainnet, each slot has 64 committees, and each block has 128 attestations max so in average
+ * On mainnet, each slot has 64 committees, and each block has 128 (8 in electra) attestations max so in average
  * we get 2 attestation per groups.
  * Starting from Jan 2024, we have a performance issue getting attestations for a block. Based on the
  * fact that lot of groups will have only 1 attestation since it's full of participation increase this number
@@ -220,16 +227,34 @@ export class AggregatedAttestationPool {
       }
     }
 
-    const sortedAttestationsByScore = attestationsByScore.sort((a, b) => b.score - a.score);
-    const attestationsForBlock: allForks.Attestation[] = [];
-    for (const [i, attestationWithScore] of sortedAttestationsByScore.entries()) {
-      if (i >= MAX_ATTESTATIONS) {
-        break;
+    if (ForkSeq[fork] >= ForkSeq.electra) {
+      // In Electra, we further pack attestations with same attestationData from different committee
+      const sortedAttestationsByScore = this.aggregateAttestationsByScore(attestationsByScore).sort(
+        (a, b) => b.score - a.score
+      );
+      const attestationsForBlock: electra.Attestation[] = [];
+      for (const [i, attestationWithScore] of sortedAttestationsByScore.entries()) {
+        if (i >= MAX_ATTESTATIONS_ELECTRA) {
+          break;
+        }
+        // attestations could be modified in this op pool, so we need to clone for block
+        attestationsForBlock.push(
+          ssz.electra.Attestation.clone(attestationWithScore.attestation as electra.Attestation)
+        );
       }
-      // attestations could be modified in this op pool, so we need to clone for block
-      attestationsForBlock.push(ssz.allForks[fork].Attestation.clone(attestationWithScore.attestation));
+      return attestationsForBlock;
+    } else {
+      const sortedAttestationsByScore = attestationsByScore.sort((a, b) => b.score - a.score);
+      const attestationsForBlock: phase0.Attestation[] = [];
+      for (const [i, attestationWithScore] of sortedAttestationsByScore.entries()) {
+        if (i >= MAX_ATTESTATIONS) {
+          break;
+        }
+        // attestations could be modified in this op pool, so we need to clone for block
+        attestationsForBlock.push(ssz.phase0.Attestation.clone(attestationWithScore.attestation));
+      }
+      return attestationsForBlock;
     }
-    return attestationsForBlock;
   }
 
   /**
@@ -255,6 +280,16 @@ export class AggregatedAttestationPool {
       }
     }
     return attestations;
+  }
+
+  /**
+   * Electra and after: Block proposer consolidates attestations with the same
+   * attestation data from different committee into a single attestation
+   * https://github.com/ethereum/consensus-specs/blob/aba6345776aa876dad368cab27fbbb23fae20455/specs/_features/eip7549/validator.md?plain=1#L39
+   * TODO Electra: implement this or consider other strategy
+   */
+  private aggregateAttestationsByScore(attestationsByScore: AttestationWithScore[]): AttestationWithScore[] {
+    return attestationsByScore;
   }
 }
 

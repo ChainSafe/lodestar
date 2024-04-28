@@ -819,6 +819,7 @@ export function getValidatorApi({
       const attEpoch = computeEpochAtSlot(slot);
       const headBlockRootHex = chain.forkChoice.getHead().blockRoot;
       const headBlockRoot = fromHexString(headBlockRootHex);
+      const fork = config.getForkSeq(slot);
 
       const beaconBlockRoot =
         slot >= headSlot
@@ -846,7 +847,7 @@ export function getValidatorApi({
       return {
         data: {
           slot,
-          index: committeeIndex,
+          index: fork >= ForkSeq.electra ? 0 : committeeIndex,
           beaconBlockRoot,
           source: attEpochState.currentJustifiedCheckpoint,
           target: {epoch: attEpoch, root: targetRoot},
@@ -1078,6 +1079,7 @@ export function getValidatorApi({
 
       return {
         data: aggregate,
+        version: config.getForkName(slot),
       };
     },
 

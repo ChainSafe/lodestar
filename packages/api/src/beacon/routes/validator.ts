@@ -341,7 +341,7 @@ export type Api = {
     slot: Slot
   ): Promise<
     ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: phase0.Attestation}},
+      {[HttpStatusCode.OK]: {data: allForks.Attestation; version: ForkName}},
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
     >
   >;
@@ -354,7 +354,7 @@ export type Api = {
    * @throws ApiError
    */
   publishAggregateAndProofs(
-    signedAggregateAndProofs: phase0.SignedAggregateAndProof[]
+    signedAggregateAndProofs: allForks.SignedAggregateAndProof[] // TODO Electra: Add version
   ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.BAD_REQUEST>>;
 
   publishContributionAndProofs(
@@ -786,7 +786,7 @@ export function getReturnTypes(): ReturnTypes<Api> {
 
     produceAttestationData: ContainerData(ssz.phase0.AttestationData),
     produceSyncCommitteeContribution: ContainerData(ssz.altair.SyncCommitteeContribution),
-    getAggregatedAttestation: ContainerData(ssz.phase0.Attestation),
+    getAggregatedAttestation: WithVersion((fork) => ssz.allForks[fork].Attestation),
     submitBeaconCommitteeSelections: ContainerData(ArrayOf(BeaconCommitteeSelection)),
     submitSyncCommitteeSelections: ContainerData(ArrayOf(SyncCommitteeSelection)),
     getLiveness: jsonType("snake"),
