@@ -16,6 +16,7 @@ import {
   MAX_COMMITTEES_PER_SLOT,
   MAX_ATTESTATIONS_ELECTRA,
   MAX_ATTESTER_SLASHINGS_ELECTRA,
+  MAX_EXECUTION_LAYER_EXITS,
 } from "@lodestar/params";
 import {ssz as primitiveSsz} from "../primitive/index.js";
 import {ssz as phase0Ssz} from "../phase0/index.js";

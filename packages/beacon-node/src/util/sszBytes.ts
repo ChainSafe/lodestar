@@ -1,15 +1,21 @@
 import {BitArray, deserializeUint8ArrayBitListFromBytes} from "@chainsafe/ssz";
 import {BLSSignature, RootHex, Slot} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
-import {BYTES_PER_FIELD_ELEMENT, FIELD_ELEMENTS_PER_BLOB, ForkName, ForkSeq} from "@lodestar/params";
+import {
+  BYTES_PER_FIELD_ELEMENT,
+  FIELD_ELEMENTS_PER_BLOB,
+  ForkName,
+  ForkSeq,
+  MAX_COMMITTEES_PER_SLOT,
+} from "@lodestar/params";
 
 export type BlockRootHex = RootHex;
 export type AttDataBase64 = string;
 
 // class Attestation(Container):
-//   aggregation_bits: Bitlist[MAX_VALIDATORS_PER_COMMITTEE] - offset 4
+//   aggregation_bits: Bitlist[MAX_VALIDATORS_PER_COMMITTEE] (BitList[MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT]) - offset 4
 //   data: AttestationData - target data - 128
-//   committee_bits: BitVector[MAX_COMMITTEES_PER_SLOT] - Electra only: 8
+//   committee_bits: BitVector[MAX_COMMITTEES_PER_SLOT] - Electra only: 8 (mainnet)
 //   signature: BLSSignature - 96
 //
 // class AttestationData(Container): 128 bytes fixed size
@@ -24,7 +30,7 @@ const ATTESTATION_BEACON_BLOCK_ROOT_OFFSET = VARIABLE_FIELD_OFFSET + 8 + 8;
 const ROOT_SIZE = 32;
 const SLOT_SIZE = 8;
 const ATTESTATION_DATA_SIZE = 128;
-const COMMITTEE_BITS_SIZE = 8;
+const COMMITTEE_BITS_SIZE = Math.max(Math.floor(MAX_COMMITTEES_PER_SLOT / 8), 1);
 const SIGNATURE_SIZE = 96;
 
 /**
