@@ -28,7 +28,7 @@ export const keymanagerRestApiServerOptsDefault: KeymanagerRestApiServerOpts = {
 
 export type KeymanagerRestApiServerModules = RestApiServerModules & {
   config: ChainForkConfig;
-  methods: ApplicationMethods<Endpoints>;
+  api: ApplicationMethods<Endpoints>;
 };
 
 export const apiTokenFileName = "api-token.txt";
@@ -60,7 +60,7 @@ export class KeymanagerRestApiServer extends RestApiServer {
     super({...opts, bearerToken}, modules);
 
     // Instantiate and register the keymanager routes
-    registerRoutes(this.server, modules.config, modules.methods);
+    registerRoutes(this.server, modules.config, modules.api);
 
     this.apiTokenPath = apiTokenPath;
     this.isAuthEnabled = opts.isAuthEnabled;

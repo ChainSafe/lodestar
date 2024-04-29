@@ -205,7 +205,7 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
         tokenFile: args["keymanager.tokenFile"],
         tokenDir: dbPath,
       },
-      {config, logger, methods: keymanagerApi, metrics: metrics ? metrics.keymanagerApiRest : null}
+      {config, logger, api: keymanagerApi, metrics: metrics ? metrics.keymanagerApiRest : null}
     );
     onGracefulShutdownCbs.push(() => keymanagerServer.close());
     await keymanagerServer.listen();
