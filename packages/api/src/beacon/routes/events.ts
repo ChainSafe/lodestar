@@ -92,7 +92,7 @@ export type EventData = {
   [EventType.attestation]: {version: ForkName; data: allForks.Attestation};
   [EventType.voluntaryExit]: phase0.SignedVoluntaryExit;
   [EventType.proposerSlashing]: phase0.ProposerSlashing;
-  [EventType.attesterSlashing]: phase0.AttesterSlashing;
+  [EventType.attesterSlashing]: {version: ForkName; data: allForks.AttesterSlashing};
   [EventType.blsToExecutionChange]: capella.SignedBLSToExecutionChange;
   [EventType.finalizedCheckpoint]: {
     block: RootHex;
@@ -183,7 +183,7 @@ export function getTypeByEvent(): {[K in EventType]: TypeJson<EventData[K]>} {
     [EventType.attestation]: WithVersion((fork) => ssz.allForks[fork].Attestation),
     [EventType.voluntaryExit]: ssz.phase0.SignedVoluntaryExit,
     [EventType.proposerSlashing]: ssz.phase0.ProposerSlashing,
-    [EventType.attesterSlashing]: ssz.phase0.AttesterSlashing,
+    [EventType.attesterSlashing]: WithVersion((fork) => ssz.allForks[fork].AttesterSlashing),
     [EventType.blsToExecutionChange]: ssz.capella.SignedBLSToExecutionChange,
 
     [EventType.finalizedCheckpoint]: new ContainerType(

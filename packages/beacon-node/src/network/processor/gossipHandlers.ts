@@ -530,7 +530,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
         logger.error("Error adding attesterSlashing to pool", {}, e as Error);
       }
 
-      chain.emitter.emit(routes.events.EventType.attesterSlashing, attesterSlashing);
+      chain.emitter.emit(routes.events.EventType.attesterSlashing, {version: topic.fork, data: attesterSlashing});
     },
 
     [GossipType.proposer_slashing]: async ({

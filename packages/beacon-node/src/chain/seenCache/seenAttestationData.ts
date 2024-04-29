@@ -40,7 +40,6 @@ const DEFAULT_CACHE_SLOT_DISTANCE = 2;
 /**
  * As of April 2023, validating gossip attestation takes ~12% of cpu time for a node subscribing to all subnets on mainnet.
  * Having this cache help saves a lot of cpu time since most of the gossip attestations are on the same slot.
- * TODO Electra: Handle electra attestations
  */
 export class SeenAttestationDatas {
   private cacheEntryByAttDataBase64BySlot = new MapDef<Slot, Map<AttDataBase64, AttestationDataCacheEntry>>(
