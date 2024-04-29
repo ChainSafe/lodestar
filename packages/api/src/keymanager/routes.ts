@@ -461,7 +461,6 @@ export const definitions: RouteDefinitions<Endpoints> = {
       },
     }),
     resp: EmptyResponseCodec,
-    statusOk: 202,
   },
   deleteFeeRecipient: {
     url: "/eth/v1/validator/{pubkey}/feerecipient",
@@ -474,7 +473,6 @@ export const definitions: RouteDefinitions<Endpoints> = {
       },
     }),
     resp: EmptyResponseCodec,
-    statusOk: 204,
   },
 
   listGraffiti: {
@@ -501,7 +499,6 @@ export const definitions: RouteDefinitions<Endpoints> = {
       },
     }),
     resp: EmptyResponseCodec,
-    statusOk: 202,
   },
   deleteGraffiti: {
     url: "/eth/v1/validator/{pubkey}/graffiti",
@@ -514,7 +511,6 @@ export const definitions: RouteDefinitions<Endpoints> = {
       },
     }),
     resp: EmptyResponseCodec,
-    statusOk: 204,
   },
 
   getGasLimit: {
@@ -551,7 +547,6 @@ export const definitions: RouteDefinitions<Endpoints> = {
       },
     }),
     resp: EmptyResponseCodec,
-    statusOk: 202,
   },
   deleteGasLimit: {
     url: "/eth/v1/validator/{pubkey}/gas_limit",
@@ -564,7 +559,6 @@ export const definitions: RouteDefinitions<Endpoints> = {
       },
     }),
     resp: EmptyResponseCodec,
-    statusOk: 204,
   },
 
   getBuilderBoostFactor: {
@@ -607,7 +601,6 @@ export const definitions: RouteDefinitions<Endpoints> = {
       },
     }),
     resp: EmptyResponseCodec,
-    statusOk: 202,
   },
   deleteBuilderBoostFactor: {
     url: "/eth/v1/validator/{pubkey}/builder_boost_factor",
@@ -620,7 +613,6 @@ export const definitions: RouteDefinitions<Endpoints> = {
       },
     }),
     resp: EmptyResponseCodec,
-    statusOk: 204,
   },
 
   signVoluntaryExit: {

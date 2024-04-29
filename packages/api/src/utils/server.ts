@@ -16,12 +16,14 @@ import {
   SszRequestMethods,
 } from "./types.js";
 import {MediaType, WireFormat, getWireFormat, parseAcceptHeader, parseContentTypeHeader} from "./headers.js";
+import {HttpSuccessCodes} from "./httpStatusCode.js";
 import {toColonNotationPath} from "./urlFormat.js";
 import {getFastifySchema} from "./schema.js";
 import {EmptyMeta, EmptyResponseData} from "./codecs.js";
 
 type ApplicationResponseObject<E extends Endpoint> = {
-  status?: number;
+  /** Set non-200 success status code */
+  status?: HttpSuccessCodes;
 } & (E["return"] extends EmptyResponseData
   ? {data?: never}
   : {data: E["return"] | (E["return"] extends undefined ? undefined : Uint8Array)}) &
@@ -107,8 +109,9 @@ export function createFastifyHandler<E extends Endpoint>(
       }
     }
 
-    if (response?.status !== undefined || definition.statusOk !== undefined) {
-      resp.statusCode = response?.status ?? (definition.statusOk as number);
+    if (response?.status !== undefined) {
+      // Allow server implementation to
+      resp.statusCode = response.status;
     }
 
     if (definition.resp.isEmpty) {

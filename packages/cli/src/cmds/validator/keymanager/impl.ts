@@ -47,32 +47,36 @@ export class KeymanagerApi implements Api {
     return {data: {pubkey, ethaddress: this.validator.validatorStore.getFeeRecipient(pubkey)}};
   }
 
-  async setFeeRecipient({pubkey, ethaddress}: FeeRecipientData): Promise<void> {
+  async setFeeRecipient({pubkey, ethaddress}: FeeRecipientData): ReturnType<Api["setFeeRecipient"]> {
     this.checkIfProposerWriteEnabled();
     this.validator.validatorStore.setFeeRecipient(pubkey, parseFeeRecipient(ethaddress));
     this.persistedKeysBackend.writeProposerConfig(pubkey, this.validator.validatorStore.getProposerConfig(pubkey));
+    return {status: 202};
   }
 
-  async deleteFeeRecipient({pubkey}: {pubkey: PubkeyHex}): Promise<void> {
+  async deleteFeeRecipient({pubkey}: {pubkey: PubkeyHex}): ReturnType<Api["deleteFeeRecipient"]> {
     this.checkIfProposerWriteEnabled();
     this.validator.validatorStore.deleteFeeRecipient(pubkey);
     this.persistedKeysBackend.writeProposerConfig(pubkey, this.validator.validatorStore.getProposerConfig(pubkey));
+    return {status: 204};
   }
 
   async listGraffiti({pubkey}: {pubkey: PubkeyHex}): ReturnType<Api["listGraffiti"]> {
     return {data: {pubkey, graffiti: this.validator.validatorStore.getGraffiti(pubkey)}};
   }
 
-  async setGraffiti({pubkey, graffiti}: GraffitiData): Promise<void> {
+  async setGraffiti({pubkey, graffiti}: GraffitiData): ReturnType<Api["setGraffiti"]> {
     this.checkIfProposerWriteEnabled();
     this.validator.validatorStore.setGraffiti(pubkey, graffiti);
     this.persistedKeysBackend.writeProposerConfig(pubkey, this.validator.validatorStore.getProposerConfig(pubkey));
+    return {status: 202};
   }
 
-  async deleteGraffiti({pubkey}: {pubkey: PubkeyHex}): Promise<void> {
+  async deleteGraffiti({pubkey}: {pubkey: PubkeyHex}): ReturnType<Api["deleteGraffiti"]> {
     this.checkIfProposerWriteEnabled();
     this.validator.validatorStore.deleteGraffiti(pubkey);
     this.persistedKeysBackend.writeProposerConfig(pubkey, this.validator.validatorStore.getProposerConfig(pubkey));
+    return {status: 204};
   }
 
   async getGasLimit({pubkey}: {pubkey: PubkeyHex}): ReturnType<Api["getGasLimit"]> {
@@ -80,16 +84,18 @@ export class KeymanagerApi implements Api {
     return {data: {pubkey, gasLimit}};
   }
 
-  async setGasLimit({pubkey, gasLimit}: GasLimitData): Promise<void> {
+  async setGasLimit({pubkey, gasLimit}: GasLimitData): ReturnType<Api["setGasLimit"]> {
     this.checkIfProposerWriteEnabled();
     this.validator.validatorStore.setGasLimit(pubkey, gasLimit);
     this.persistedKeysBackend.writeProposerConfig(pubkey, this.validator.validatorStore.getProposerConfig(pubkey));
+    return {status: 202};
   }
 
-  async deleteGasLimit({pubkey}: {pubkey: PubkeyHex}): Promise<void> {
+  async deleteGasLimit({pubkey}: {pubkey: PubkeyHex}): ReturnType<Api["deleteGasLimit"]> {
     this.checkIfProposerWriteEnabled();
     this.validator.validatorStore.deleteGasLimit(pubkey);
     this.persistedKeysBackend.writeProposerConfig(pubkey, this.validator.validatorStore.getProposerConfig(pubkey));
+    return {status: 204};
   }
 
   /**
@@ -390,16 +396,21 @@ export class KeymanagerApi implements Api {
     return {data: {pubkey, builderBoostFactor}};
   }
 
-  async setBuilderBoostFactor({pubkey, builderBoostFactor}: BuilderBoostFactorData): Promise<void> {
+  async setBuilderBoostFactor({
+    pubkey,
+    builderBoostFactor,
+  }: BuilderBoostFactorData): ReturnType<Api["setBuilderBoostFactor"]> {
     this.checkIfProposerWriteEnabled();
     this.validator.validatorStore.setBuilderBoostFactor(pubkey, builderBoostFactor);
     this.persistedKeysBackend.writeProposerConfig(pubkey, this.validator.validatorStore.getProposerConfig(pubkey));
+    return {status: 202};
   }
 
-  async deleteBuilderBoostFactor({pubkey}: {pubkey: PubkeyHex}): Promise<void> {
+  async deleteBuilderBoostFactor({pubkey}: {pubkey: PubkeyHex}): ReturnType<Api["deleteBuilderBoostFactor"]> {
     this.checkIfProposerWriteEnabled();
     this.validator.validatorStore.deleteBuilderBoostFactor(pubkey);
     this.persistedKeysBackend.writeProposerConfig(pubkey, this.validator.validatorStore.getProposerConfig(pubkey));
+    return {status: 204};
   }
 
   /**

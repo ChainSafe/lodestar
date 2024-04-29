@@ -146,8 +146,6 @@ export type ResponseCodec<E extends Endpoint> = {
 export type RouteDefinition<E extends Endpoint> = {
   url: string;
   method: E["method"];
-  // TODO remove?
-  statusOk?: number; // only used for keymanager to set non-200 ok
   req: RequestCodec<E>;
   resp: ResponseCodec<E>;
 };
