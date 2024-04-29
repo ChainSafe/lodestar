@@ -143,12 +143,13 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       }),
       resp: {
         data: WithVersion<allForks.ExecutionPayload | allForks.ExecutionPayloadAndBlobsBundle, {version: ForkName}>(
-          (fork: ForkName) =>
-            isForkBlobs(fork)
+          (fork: ForkName) => {
+            if (!isForkExecution(fork)) throw new Error("TODO"); // TODO
+
+            return isForkBlobs(fork)
               ? ssz.allForksBlobs[fork].ExecutionPayloadAndBlobsBundle
-              : isForkExecution(fork)
-                ? ssz.allForksExecution[fork].ExecutionPayload
-                : ssz.bellatrix.ExecutionPayload
+              : ssz.allForksExecution[fork].ExecutionPayload;
+          }
         ),
         meta: VersionCodec,
       },
