@@ -39,5 +39,5 @@ export type Attestation = ValueOf<typeof ssz.Attestation>;
 export type IndexedAttestation = ValueOf<typeof ssz.IndexedAttestation>;
 export type AggregateAndProof = ValueOf<typeof ssz.AggregateAndProof>;
 export type SignedAggregateAndProof = ValueOf<typeof ssz.SignedAggregateAndProof>;
-export type AttesterSlashing = ValueOf<typeof ssz.AttesterSlashing>
-export type IndexedAttestationBigint = ValueOf<typeof ssz.IndexedAttestationBigint>
+export type AttesterSlashing = ValueOf<typeof ssz.AttesterSlashing>;
+export type IndexedAttestationBigint = ValueOf<typeof ssz.IndexedAttestationBigint>;

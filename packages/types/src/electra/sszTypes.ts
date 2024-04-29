@@ -25,8 +25,19 @@ import {ssz as bellatrixSsz} from "../bellatrix/index.js";
 import {ssz as capellaSsz} from "../capella/index.js";
 import {ssz as denebSsz} from "../deneb/index.js";
 
-const {UintNum64, Slot, Root, BLSSignature, UintBn256, Bytes32, BLSPubkey, DepositIndex, UintBn64, ExecutionAddress, ValidatorIndex} =
-  primitiveSsz;
+const {
+  UintNum64,
+  Slot,
+  Root,
+  BLSSignature,
+  UintBn256,
+  Bytes32,
+  BLSPubkey,
+  DepositIndex,
+  UintBn64,
+  ExecutionAddress,
+  ValidatorIndex,
+} = primitiveSsz;
 
 export const AggregationBits = new BitListType(MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT);
 
