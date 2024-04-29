@@ -14,8 +14,7 @@ VOLUME /dashboards
 ENV GF_SECURITY_ADMIN_USER=admin
 ENV GF_SECURITY_ADMIN_PASSWORD=admin
 
-# Modified datasource to work with a network_mode: host
-ENV PROMETHEUS_URL=http://prometheus:9090
+ENV PROMETHEUS_URL=host.docker.internal:9090
 ENV DASHBOARDS_DIR=/dashboards
 
 CMD [ \
