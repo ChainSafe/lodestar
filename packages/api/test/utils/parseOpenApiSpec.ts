@@ -52,10 +52,12 @@ type RouteDefinition = {
   }[];
   responses: {
     /** `"200"` | `"500"` */
-    [statusCode: string]: {
-      headers?: Record<string, {schema: JsonSchema}>;
-      content?: Content;
-    };
+    [statusCode: string]:
+      | {
+          headers?: Record<string, {schema: JsonSchema}>;
+          content?: Content;
+        }
+      | undefined;
   };
   requestBody?: {
     content?: Content;
@@ -242,7 +244,7 @@ function buildRespSchema(routeDefinition: RouteDefinition): JsonSchema {
   //   },
   // },
 
-  if (responseOk.headers) {
+  if (responseOk?.headers) {
     Object.entries(responseOk.headers).map(([header, {schema}]) => {
       if (!respSchema.headers) respSchema.headers = {type: "object", properties: {}};
       if (!respSchema.headers.properties) respSchema.headers.properties = {};

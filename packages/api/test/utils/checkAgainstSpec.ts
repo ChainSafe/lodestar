@@ -235,6 +235,7 @@ function stringifyProperties(obj: Record<string, unknown>): Record<string, unkno
 
   return obj;
 }
+
 /**
  * Parse headers before schema validation, the spec expects `{schema: type: boolean}` for
  * headers with boolean values but values are converted to string when setting the headers
