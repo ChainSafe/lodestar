@@ -1,11 +1,21 @@
-import {ContainerType, ListCompositeType, VectorCompositeType} from "@chainsafe/ssz";
+import {
+  BitListType,
+  BitVectorType,
+  ContainerType,
+  ListBasicType,
+  ListCompositeType,
+  VectorCompositeType,
+} from "@chainsafe/ssz";
 import {
   HISTORICAL_ROOTS_LIMIT,
   BLOCK_BODY_EXECUTION_PAYLOAD_DEPTH as EXECUTION_PAYLOAD_DEPTH,
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
   SLOTS_PER_EPOCH,
   MAX_DEPOSIT_RECEIPTS_PER_PAYLOAD,
-  MAX_EXECUTION_LAYER_EXITS,
+  MAX_VALIDATORS_PER_COMMITTEE,
+  MAX_COMMITTEES_PER_SLOT,
+  MAX_ATTESTATIONS_ELECTRA,
+  MAX_ATTESTER_SLASHINGS_ELECTRA,
 } from "@lodestar/params";
 import {ssz as primitiveSsz} from "../primitive/index.js";
 import {ssz as phase0Ssz} from "../phase0/index.js";
@@ -14,8 +24,54 @@ import {ssz as bellatrixSsz} from "../bellatrix/index.js";
 import {ssz as capellaSsz} from "../capella/index.js";
 import {ssz as denebSsz} from "../deneb/index.js";
 
-const {UintNum64, Slot, Root, BLSSignature, UintBn256, Bytes32, BLSPubkey, DepositIndex, UintBn64, ExecutionAddress} =
+const {UintNum64, Slot, Root, BLSSignature, UintBn256, Bytes32, BLSPubkey, DepositIndex, UintBn64, ExecutionAddress, ValidatorIndex} =
   primitiveSsz;
+
+export const AggregationBits = new BitListType(MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT);
+
+export const CommitteeBits = new BitVectorType(MAX_COMMITTEES_PER_SLOT);
+
+export const AttestingIndices = new ListBasicType(
+  ValidatorIndex,
+  MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT
+);
+
+export const Attestation = new ContainerType(
+  {
+    aggregationBits: AggregationBits,
+    data: phase0Ssz.AttestationData,
+    committeeBits: CommitteeBits,
+    signature: BLSSignature,
+  },
+  {typeName: "Attestation", jsonCase: "eth2"}
+);
+
+export const IndexedAttestation = new ContainerType(
+  {
+    attestingIndices: AttestingIndices,
+    data: phase0Ssz.AttestationData,
+    signature: BLSSignature,
+  },
+  {typeName: "IndexedAttestation", jsonCase: "eth2"}
+);
+
+/** Same as `IndexedAttestation` but epoch, slot and index are not bounded and must be a bigint */
+export const IndexedAttestationBigint = new ContainerType(
+  {
+    attestingIndices: AttestingIndices,
+    data: phase0Ssz.AttestationDataBigint,
+    signature: BLSSignature,
+  },
+  {typeName: "IndexedAttestation", jsonCase: "eth2"}
+);
+
+export const AttesterSlashing = new ContainerType(
+  {
+    attestation1: IndexedAttestationBigint,
+    attestation2: IndexedAttestationBigint,
+  },
+  {typeName: "AttesterSlashing", jsonCase: "eth2"}
+);
 
 export const DepositReceipt = new ContainerType(
   {
@@ -60,7 +116,15 @@ export const ExecutionPayloadHeader = new ContainerType(
 // We have to preserve Fields ordering while changing the type of ExecutionPayload
 export const BeaconBlockBody = new ContainerType(
   {
-    ...altairSsz.BeaconBlockBody.fields,
+    randaoReveal: phase0Ssz.BeaconBlockBody.fields.randaoReveal,
+    eth1Data: phase0Ssz.BeaconBlockBody.fields.eth1Data,
+    graffiti: phase0Ssz.BeaconBlockBody.fields.graffiti,
+    proposerSlashings: phase0Ssz.BeaconBlockBody.fields.proposerSlashings,
+    attesterSlashings: new ListCompositeType(AttesterSlashing, MAX_ATTESTER_SLASHINGS_ELECTRA), // Modified in ELECTRA
+    attestations: new ListCompositeType(Attestation, MAX_ATTESTATIONS_ELECTRA), // Modified in ELECTRA
+    deposits: phase0Ssz.BeaconBlockBody.fields.deposits,
+    voluntaryExits: phase0Ssz.BeaconBlockBody.fields.voluntaryExits,
+    syncAggregate: altairSsz.BeaconBlockBody.fields.syncAggregate,
     executionPayload: ExecutionPayload, // Modified in ELECTRA
     blsToExecutionChanges: capellaSsz.BeaconBlockBody.fields.blsToExecutionChanges,
     blobKzgCommitments: denebSsz.BeaconBlockBody.fields.blobKzgCommitments,
@@ -86,7 +150,15 @@ export const SignedBeaconBlock = new ContainerType(
 
 export const BlindedBeaconBlockBody = new ContainerType(
   {
-    ...altairSsz.BeaconBlockBody.fields,
+    randaoReveal: phase0Ssz.BeaconBlockBody.fields.randaoReveal,
+    eth1Data: phase0Ssz.BeaconBlockBody.fields.eth1Data,
+    graffiti: phase0Ssz.BeaconBlockBody.fields.graffiti,
+    proposerSlashings: phase0Ssz.BeaconBlockBody.fields.proposerSlashings,
+    attesterSlashings: new ListCompositeType(AttesterSlashing, MAX_ATTESTER_SLASHINGS_ELECTRA), // Modified in ELECTRA
+    attestations: new ListCompositeType(Attestation, MAX_ATTESTATIONS_ELECTRA), // Modified in ELECTRA
+    deposits: phase0Ssz.BeaconBlockBody.fields.deposits,
+    voluntaryExits: phase0Ssz.BeaconBlockBody.fields.voluntaryExits,
+    syncAggregate: altairSsz.SyncAggregate,
     executionPayloadHeader: ExecutionPayloadHeader, // Modified in ELECTRA
     blsToExecutionChanges: capellaSsz.BeaconBlockBody.fields.blsToExecutionChanges,
     blobKzgCommitments: denebSsz.BeaconBlockBody.fields.blobKzgCommitments,
@@ -259,4 +331,21 @@ export const SSEPayloadAttributes = new ContainerType(
     payloadAttributes: PayloadAttributes,
   },
   {typeName: "SSEPayloadAttributes", jsonCase: "eth2"}
+);
+
+export const AggregateAndProof = new ContainerType(
+  {
+    aggregatorIndex: ValidatorIndex,
+    aggregate: Attestation,
+    selectionProof: BLSSignature,
+  },
+  {typeName: "AggregateAndProof", jsonCase: "eth2", cachePermanentRootStruct: true}
+);
+
+export const SignedAggregateAndProof = new ContainerType(
+  {
+    message: AggregateAndProof,
+    signature: BLSSignature,
+  },
+  {typeName: "SignedAggregateAndProof", jsonCase: "eth2"}
 );
