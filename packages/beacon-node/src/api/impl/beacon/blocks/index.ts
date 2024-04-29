@@ -445,7 +445,11 @@ export function getBeaconBlockApi({
 
       return {
         data: indices ? blobSidecars.filter(({index}) => indices.includes(index)) : blobSidecars,
-        meta: {executionOptimistic, finalized},
+        meta: {
+          executionOptimistic,
+          finalized,
+          version: config.getForkName(block.message.slot),
+        },
       };
     },
   };
