@@ -110,7 +110,6 @@ export function createFastifyHandler<E extends Endpoint>(
     }
 
     if (response?.status !== undefined) {
-      // Allow server implementation to
       resp.statusCode = response.status;
     }
 
