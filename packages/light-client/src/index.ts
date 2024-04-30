@@ -320,6 +320,7 @@ export class Lightclient {
 }
 
 // To export these name spaces to the bundle JS
-export * as utils from "./utils.js";
-export * as validation from "./validation.js";
-export * as transport from "./transport.js";
+import * as utils from "./utils.js";
+import * as validation from "./validation.js";
+import * as transport from "./transport.js";
+export {utils, validation, transport};
