@@ -116,7 +116,7 @@ export type Endpoints = {
    */
   submitPoolAttesterSlashings: Endpoint<
     "POST",
-    {slashing: phase0.AttesterSlashing},
+    {attesterSlashing: phase0.AttesterSlashing},
     {body: unknown},
     EmptyResponseData,
     EmptyMeta
@@ -128,7 +128,7 @@ export type Endpoints = {
    */
   submitPoolProposerSlashings: Endpoint<
     "POST",
-    {slashing: phase0.ProposerSlashing},
+    {proposerSlashing: phase0.ProposerSlashing},
     {body: unknown},
     EmptyResponseData,
     EmptyMeta
@@ -140,7 +140,7 @@ export type Endpoints = {
    */
   submitPoolVoluntaryExit: Endpoint<
     "POST",
-    {exit: phase0.SignedVoluntaryExit},
+    {signedVoluntaryExit: phase0.SignedVoluntaryExit},
     {body: unknown},
     EmptyResponseData,
     EmptyMeta
@@ -152,7 +152,7 @@ export type Endpoints = {
    */
   submitPoolBLSToExecutionChange: Endpoint<
     "POST",
-    {changes: capella.SignedBLSToExecutionChange[]},
+    {blsToExecutionChanges: capella.SignedBLSToExecutionChange[]},
     {body: unknown},
     EmptyResponseData,
     EmptyMeta
@@ -239,10 +239,10 @@ export const definitions: RouteDefinitions<Endpoints> = {
     url: "/eth/v1/beacon/pool/attester_slashings",
     method: "POST",
     req: {
-      writeReqJson: ({slashing}) => ({body: ssz.phase0.AttesterSlashing.toJson(slashing)}),
-      parseReqJson: ({body}) => ({slashing: ssz.phase0.AttesterSlashing.fromJson(body)}),
-      writeReqSsz: ({slashing}) => ({body: ssz.phase0.AttesterSlashing.serialize(slashing)}),
-      parseReqSsz: ({body}) => ({slashing: ssz.phase0.AttesterSlashing.deserialize(body)}),
+      writeReqJson: ({attesterSlashing}) => ({body: ssz.phase0.AttesterSlashing.toJson(attesterSlashing)}),
+      parseReqJson: ({body}) => ({attesterSlashing: ssz.phase0.AttesterSlashing.fromJson(body)}),
+      writeReqSsz: ({attesterSlashing}) => ({body: ssz.phase0.AttesterSlashing.serialize(attesterSlashing)}),
+      parseReqSsz: ({body}) => ({attesterSlashing: ssz.phase0.AttesterSlashing.deserialize(body)}),
       schema: {
         body: Schema.Object,
       },
@@ -253,10 +253,10 @@ export const definitions: RouteDefinitions<Endpoints> = {
     url: "/eth/v1/beacon/pool/proposer_slashings",
     method: "POST",
     req: {
-      writeReqJson: ({slashing}) => ({body: ssz.phase0.ProposerSlashing.toJson(slashing)}),
-      parseReqJson: ({body}) => ({slashing: ssz.phase0.ProposerSlashing.fromJson(body)}),
-      writeReqSsz: ({slashing}) => ({body: ssz.phase0.ProposerSlashing.serialize(slashing)}),
-      parseReqSsz: ({body}) => ({slashing: ssz.phase0.ProposerSlashing.deserialize(body)}),
+      writeReqJson: ({proposerSlashing}) => ({body: ssz.phase0.ProposerSlashing.toJson(proposerSlashing)}),
+      parseReqJson: ({body}) => ({proposerSlashing: ssz.phase0.ProposerSlashing.fromJson(body)}),
+      writeReqSsz: ({proposerSlashing}) => ({body: ssz.phase0.ProposerSlashing.serialize(proposerSlashing)}),
+      parseReqSsz: ({body}) => ({proposerSlashing: ssz.phase0.ProposerSlashing.deserialize(body)}),
       schema: {
         body: Schema.Object,
       },
@@ -267,10 +267,10 @@ export const definitions: RouteDefinitions<Endpoints> = {
     url: "/eth/v1/beacon/pool/voluntary_exits",
     method: "POST",
     req: {
-      writeReqJson: ({exit}) => ({body: ssz.phase0.SignedVoluntaryExit.toJson(exit)}),
-      parseReqJson: ({body}) => ({exit: ssz.phase0.SignedVoluntaryExit.fromJson(body)}),
-      writeReqSsz: ({exit}) => ({body: ssz.phase0.SignedVoluntaryExit.serialize(exit)}),
-      parseReqSsz: ({body}) => ({exit: ssz.phase0.SignedVoluntaryExit.deserialize(body)}),
+      writeReqJson: ({signedVoluntaryExit}) => ({body: ssz.phase0.SignedVoluntaryExit.toJson(signedVoluntaryExit)}),
+      parseReqJson: ({body}) => ({signedVoluntaryExit: ssz.phase0.SignedVoluntaryExit.fromJson(body)}),
+      writeReqSsz: ({signedVoluntaryExit}) => ({body: ssz.phase0.SignedVoluntaryExit.serialize(signedVoluntaryExit)}),
+      parseReqSsz: ({body}) => ({signedVoluntaryExit: ssz.phase0.SignedVoluntaryExit.deserialize(body)}),
       schema: {
         body: Schema.Object,
       },
@@ -281,14 +281,14 @@ export const definitions: RouteDefinitions<Endpoints> = {
     url: "/eth/v1/beacon/pool/bls_to_execution_changes",
     method: "POST",
     req: {
-      writeReqJson: ({changes}) => ({
-        body: SignedBLSToExecutionChangeListType.toJson(changes),
+      writeReqJson: ({blsToExecutionChanges}) => ({
+        body: SignedBLSToExecutionChangeListType.toJson(blsToExecutionChanges),
       }),
-      parseReqJson: ({body}) => ({changes: SignedBLSToExecutionChangeListType.fromJson(body)}),
-      writeReqSsz: ({changes}) => ({
-        body: SignedBLSToExecutionChangeListType.serialize(changes),
+      parseReqJson: ({body}) => ({blsToExecutionChanges: SignedBLSToExecutionChangeListType.fromJson(body)}),
+      writeReqSsz: ({blsToExecutionChanges}) => ({
+        body: SignedBLSToExecutionChangeListType.serialize(blsToExecutionChanges),
       }),
-      parseReqSsz: ({body}) => ({changes: SignedBLSToExecutionChangeListType.deserialize(body)}),
+      parseReqSsz: ({body}) => ({blsToExecutionChanges: SignedBLSToExecutionChangeListType.deserialize(body)}),
       schema: {
         body: Schema.ObjectArray,
       },

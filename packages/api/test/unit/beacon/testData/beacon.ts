@@ -112,19 +112,19 @@ export const testData: GenericServerTestCases<Endpoints> = {
     res: undefined,
   },
   submitPoolAttesterSlashings: {
-    args: {slashing: ssz.phase0.AttesterSlashing.defaultValue()},
+    args: {attesterSlashing: ssz.phase0.AttesterSlashing.defaultValue()},
     res: undefined,
   },
   submitPoolProposerSlashings: {
-    args: {slashing: ssz.phase0.ProposerSlashing.defaultValue()},
+    args: {proposerSlashing: ssz.phase0.ProposerSlashing.defaultValue()},
     res: undefined,
   },
   submitPoolVoluntaryExit: {
-    args: {exit: ssz.phase0.SignedVoluntaryExit.defaultValue()},
+    args: {signedVoluntaryExit: ssz.phase0.SignedVoluntaryExit.defaultValue()},
     res: undefined,
   },
   submitPoolBLSToExecutionChange: {
-    args: {changes: [ssz.capella.SignedBLSToExecutionChange.defaultValue()]},
+    args: {blsToExecutionChanges: [ssz.capella.SignedBLSToExecutionChange.defaultValue()]},
     res: undefined,
   },
   submitPoolSyncCommitteeSignatures: {

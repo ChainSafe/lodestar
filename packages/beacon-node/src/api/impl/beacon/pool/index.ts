@@ -107,30 +107,30 @@ export function getBeaconPoolApi({
       }
     },
 
-    async submitPoolAttesterSlashings({slashing}) {
-      await validateApiAttesterSlashing(chain, slashing);
-      chain.opPool.insertAttesterSlashing(slashing);
-      await network.publishAttesterSlashing(slashing);
+    async submitPoolAttesterSlashings({attesterSlashing}) {
+      await validateApiAttesterSlashing(chain, attesterSlashing);
+      chain.opPool.insertAttesterSlashing(attesterSlashing);
+      await network.publishAttesterSlashing(attesterSlashing);
     },
 
-    async submitPoolProposerSlashings({slashing}) {
-      await validateApiProposerSlashing(chain, slashing);
-      chain.opPool.insertProposerSlashing(slashing);
-      await network.publishProposerSlashing(slashing);
+    async submitPoolProposerSlashings({proposerSlashing}) {
+      await validateApiProposerSlashing(chain, proposerSlashing);
+      chain.opPool.insertProposerSlashing(proposerSlashing);
+      await network.publishProposerSlashing(proposerSlashing);
     },
 
-    async submitPoolVoluntaryExit({exit}) {
-      await validateApiVoluntaryExit(chain, exit);
-      chain.opPool.insertVoluntaryExit(exit);
-      chain.emitter.emit(routes.events.EventType.voluntaryExit, exit);
-      await network.publishVoluntaryExit(exit);
+    async submitPoolVoluntaryExit({signedVoluntaryExit}) {
+      await validateApiVoluntaryExit(chain, signedVoluntaryExit);
+      chain.opPool.insertVoluntaryExit(signedVoluntaryExit);
+      chain.emitter.emit(routes.events.EventType.voluntaryExit, signedVoluntaryExit);
+      await network.publishVoluntaryExit(signedVoluntaryExit);
     },
 
-    async submitPoolBLSToExecutionChange({changes}) {
+    async submitPoolBLSToExecutionChange({blsToExecutionChanges}) {
       const errors: Error[] = [];
 
       await Promise.all(
-        changes.map(async (blsToExecutionChange, i) => {
+        blsToExecutionChanges.map(async (blsToExecutionChange, i) => {
           try {
             // Ignore even if the change exists and reprocess
             await validateApiBlsToExecutionChange(chain, blsToExecutionChange);
