@@ -1,11 +1,17 @@
-import {CoordType, Signature, PublicKey, aggregatePublicKeys, aggregateSignatures} from "@chainsafe/blst";
+import {
+  CoordType,
+  Signature,
+  PublicKey,
+  aggregatePublicKeys,
+  aggregateSignatures,
+  randomBytesNonZero,
+} from "@chainsafe/blst";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {LinkedList} from "../../util/array.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {VerifySignatureOpts} from "./interface.js";
 import {getAggregatedPubkey} from "./utils.js";
 import {BlsWorkReq} from "./types.js";
-import {randomBytesNonZero} from "./utils.js";
 
 export type JobQueueItem = JobQueueItemDefault | JobQueueItemSameMessage;
 
@@ -77,8 +83,6 @@ export function jobItemWorkReq(job: JobQueueItem, metrics: Metrics | null): BlsW
       });
       timer?.();
 
-      // adding verification randomness is napi specific. must not attempt with herumi until
-      // @chainsafe/bls is updated to support it with herumi
       const randomness: Uint8Array[] = [];
       for (let i = 0; i < job.sets.length; i++) {
         randomness.push(randomBytesNonZero(8));
