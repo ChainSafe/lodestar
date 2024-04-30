@@ -57,7 +57,7 @@ const coveredTestRunners = [
 // ],
 // ```
 export const defaultSkipOpts: SkipOpts = {
-  skippedForks: ["eip6110"],
+  skippedForks: ["eip7594"],
   // TODO: capella
   // BeaconBlockBody proof in lightclient is the new addition in v1.3.0-rc.2-hotfix
   // Skip them for now to enable subsequently
@@ -65,7 +65,7 @@ export const defaultSkipOpts: SkipOpts = {
     "capella/light_client/single_merkle_proof/BeaconBlockBody",
     "deneb/light_client/single_merkle_proof/BeaconBlockBody",
   ],
-  skippedRunners: ["merkle_proof"],
+  skippedRunners: ["merkle_proof", "networking"],
 };
 
 /**
