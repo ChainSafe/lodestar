@@ -8,15 +8,16 @@ import {Api as NodeApi} from "./node.js";
 import {Api as ProofApi} from "./proof.js";
 import {Api as ValidatorApi} from "./validator.js";
 
-export * as beacon from "./beacon/index.js";
-export * as config from "./config.js";
-export * as debug from "./debug.js";
-export * as events from "./events.js";
-export * as lightclient from "./lightclient.js";
-export * as lodestar from "./lodestar.js";
-export * as node from "./node.js";
-export * as proof from "./proof.js";
-export * as validator from "./validator.js";
+import * as beacon from "./beacon/index.js";
+import * as config from "./config.js";
+import * as debug from "./debug.js";
+import * as events from "./events.js";
+import * as lightclient from "./lightclient.js";
+import * as lodestar from "./lodestar.js";
+import * as node from "./node.js";
+import * as proof from "./proof.js";
+import * as validator from "./validator.js";
+export {beacon, config, debug, events, lightclient, lodestar, node, proof, validator};
 
 export type Api = {
   beacon: BeaconApi;

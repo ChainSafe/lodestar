@@ -12,11 +12,7 @@ import * as rewards from "./rewards.js";
 
 // NOTE: We choose to split the block, pool, and state namespaces so the files are not too big.
 // However, for a consumer all these methods are within the same service "beacon"
-
-export * as block from "./block.js";
-export * as pool from "./pool.js";
-export * as state from "./state.js";
-export * as rewards from "./rewards.js";
+export {block, pool, state, rewards};
 export {BroadcastValidation} from "./block.js";
 export type {BlockId, BlockHeaderResponse} from "./block.js";
 export type {AttestationFilters} from "./pool.js";

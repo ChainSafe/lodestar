@@ -1,21 +1,16 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-call */
-import {expect, describe, it, beforeEach, vi} from "vitest";
-import "../../dist/lightclient.min.mjs";
+import {expect, describe, it, vi} from "vitest";
+import {Lightclient, LightclientEvent, utils, transport} from "../../dist/lightclient.min.mjs";
 
 describe("web bundle for lightclient", () => {
   vi.setConfig({testTimeout: 20_000});
 
-  let lightclient: any;
-
-  beforeEach(() => {
-    lightclient = (window as any)["lodestar"]["lightclient"];
-  });
-
   it("should have a global interface", () => {
-    expect(lightclient).toBeDefined();
+    expect((window as any)["lodestar"]["lightclient"]).toBeDefined();
   });
 
   it("should have all relevant exports", () => {
+    const lightclient = (window as any)["lodestar"]["lightclient"];
     expect(lightclient).toHaveProperty("Lightclient");
     expect(lightclient).toHaveProperty("LightclientEvent");
     expect(lightclient).toHaveProperty("RunStatusCode");
@@ -29,8 +24,6 @@ describe("web bundle for lightclient", () => {
   });
 
   it("should start the lightclient and sync", async () => {
-    const {Lightclient, LightclientEvent, transport, utils} = lightclient;
-
     const logger = utils.getConsoleLogger({logDebug: true});
     const config = utils.getChainForkConfigFromNetwork("mainnet");
 
