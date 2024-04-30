@@ -50,19 +50,6 @@ export function chunkifyMaximizeChunkSize<T>(arr: T[], minPerChunk: number): T[]
   return arrArr;
 }
 
-/**
- * `rand` must not be exactly zero. Otherwise it would allow the verification of invalid signatures
- * See https://github.com/ChainSafe/blst-ts/issues/45
- */
-export function randomBytesNonZero(bytesCount: number): Uint8Array {
-  const rand = crypto.getRandomValues(new Uint8Array(bytesCount));
-  for (let i = 0; i < bytesCount; i++) {
-    if (rand[i] !== 0) return rand;
-  }
-  rand[0] = 1;
-  return rand;
-}
-
 export function getJobResultError(jobResult: WorkResultError | null, i: number): Error {
   const workerError = jobResult ? Error(jobResult.error.message) : Error(`No jobResult for index ${i}`);
   if (jobResult?.error?.stack) workerError.stack = jobResult.error.stack;
