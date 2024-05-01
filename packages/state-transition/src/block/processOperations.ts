@@ -12,7 +12,7 @@ import {processExecutionLayerWithdrawalRequest} from "./processExecutionLayerWit
 import {processBlsToExecutionChange} from "./processBlsToExecutionChange.js";
 import {processDepositReceipt} from "./processDepositReceipt.js";
 import {ProcessBlockOpts} from "./types.js";
-import {processExecutionLayerWithdrawRequest} from "./processExecutionLayerWithdrawRequest.js";
+import {processExecutionLayerWithdrawalRequest} from "./processExecutionLayerWithdrawalRequest.js";
 import {processConsolidation} from "./processConsolidation.js";
 
 export {
@@ -75,8 +75,8 @@ export function processOperations(
       processDepositReceipt(fork, stateElectra, depositReceipt);
     }
 
-    for (const withdrawRequest of bodyElectra.executionPayload.withdrawalRequests) {
-      processExecutionLayerWithdrawRequest(stateElectra, withdrawRequest);
+    for (const withdrawalRequest of bodyElectra.executionPayload.withdrawalRequests) {
+      processExecutionLayerWithdrawalRequest(stateElectra, withdrawalRequest);
     }
 
     for (const consolidation of bodyElectra.consolidations) {

@@ -14,11 +14,11 @@ import {getPendingBalanceToWithdraw, isActiveValidator} from "../util/validator.
 import {computeExitEpochAndUpdateChurn} from "../util/epoch.js";
 import {initiateValidatorExit} from "./initiateValidatorExit.js";
 
-export function processExecutionLayerWithdrawRequest(
+export function processExecutionLayerWithdrawalRequest(
   state: CachedBeaconStateElectra,
-  executionLayerWithdrawRequest: electra.ExecutionLayerWithdrawRequest
+  executionLayerWithdrawalRequest: electra.ExecutionLayerWithdrawalRequest
 ): void {
-  const amount = Number(executionLayerWithdrawRequest.amount);
+  const amount = Number(executionLayerWithdrawalRequest.amount);
   const {pendingPartialWithdrawals, validators, epochCtx} = state;
   const {pubkey2index, config} = epochCtx; // TODO Electra: Use finalized+unfinalized pubkey cache from 6110
   const isFullExitRequest = amount === FULL_EXIT_REQUEST_AMOUNT;
@@ -28,19 +28,19 @@ export function processExecutionLayerWithdrawRequest(
     return;
   }
 
-  const validatorIndex = pubkey2index.get(executionLayerWithdrawRequest.validatorPubkey);
+  const validatorIndex = pubkey2index.get(executionLayerWithdrawalRequest.validatorPubkey);
 
   if (validatorIndex === undefined) {
     throw new Error(
-      `Can't find validator index from ExecutionLayerWithdrawRequest : pubkey=${toHexString(
-        executionLayerWithdrawRequest.validatorPubkey
+      `Can't find validator index from ExecutionLayerWithdrawalRequest : pubkey=${toHexString(
+        executionLayerWithdrawalRequest.validatorPubkey
       )}`
     );
   }
 
   const validator = validators.getReadonly(validatorIndex);
 
-  if (!isValidValidator(validator, executionLayerWithdrawRequest.sourceAddress, state)) {
+  if (!isValidValidator(validator, executionLayerWithdrawalRequest.sourceAddress, state)) {
     return;
   }
 
