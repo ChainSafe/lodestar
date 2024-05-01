@@ -58,7 +58,7 @@ export function processOperations(
   }
   if (fork >= ForkSeq.electra) {
     for (const elWithdrawalRequest of (body as electra.BeaconBlockBody).executionPayload.withdrawalRequests) {
-      processExecutionLayerWithdrawalRequest(state as CachedBeaconStateElectra, elWithdrawalRequest);
+      processExecutionLayerWithdrawalRequest(fork ,state as CachedBeaconStateElectra, elWithdrawalRequest);
     }
   }
 
@@ -75,7 +75,7 @@ export function processOperations(
       processDepositReceipt(fork, stateElectra, depositReceipt);
     }
 
-    for (const withdrawRequest of bodyElectra.executionPayload.withdrawaRequests) {
+    for (const withdrawRequest of bodyElectra.executionPayload.withdrawalRequests) {
       processExecutionLayerWithdrawRequest(stateElectra, withdrawRequest);
     }
 

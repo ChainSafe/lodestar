@@ -1,6 +1,6 @@
 import {CompositeViewDU} from "@chainsafe/ssz";
 import {electra, ssz} from "@lodestar/types";
-import {ETH1_ADDRESS_WITHDRAWAL_PREFIX, FAR_FUTURE_EPOCH} from "@lodestar/params";
+import {ETH1_ADDRESS_WITHDRAWAL_PREFIX, FAR_FUTURE_EPOCH, ForkSeq} from "@lodestar/params";
 
 import {isActiveValidator} from "../util/index.js";
 import {CachedBeaconStateElectra} from "../types.js";
@@ -12,6 +12,7 @@ const FULL_EXIT_REQUEST_AMOUNT = 0;
  * otherwise silent ignore.
  */
 export function processExecutionLayerWithdrawalRequest(
+  fork: ForkSeq,
   state: CachedBeaconStateElectra,
   withdrawalRequest: electra.ExecutionLayerWithdrawalRequest
 ): void {
@@ -23,7 +24,7 @@ export function processExecutionLayerWithdrawalRequest(
       return;
     }
 
-    initiateValidatorExit(state, validator);
+    initiateValidatorExit(fork, state, validator);
   } else {
     // partial withdral request add codeblock
   }
