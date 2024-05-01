@@ -1,5 +1,5 @@
 import {ApiError} from "../error.js";
-import {WireFormat, getWireFormat, parseContentTypeHeader} from "../headers.js";
+import {HttpHeader, WireFormat, getWireFormat, parseContentTypeHeader} from "../headers.js";
 import {HttpStatusCode} from "../httpStatusCode.js";
 import {Endpoint} from "../types.js";
 import {RouteDefinitionExtra} from "./request.js";
@@ -28,7 +28,7 @@ export class ApiResponse<E extends Endpoint> extends Response {
         return (this._wireFormat = null);
       }
 
-      const contentType = this.headers.get("content-type");
+      const contentType = this.headers.get(HttpHeader.ContentType);
       if (contentType === null) {
         if (this.status === HttpStatusCode.NO_CONTENT) {
           return (this._wireFormat = null);
@@ -55,9 +55,7 @@ export class ApiResponse<E extends Endpoint> extends Response {
   }
 
   async rawBody(): Promise<RawBody> {
-    if (!this.ok) {
-      throw await this.error();
-    }
+    this.assertOk();
 
     if (!this._rawBody) {
       switch (this.wireFormat()) {
@@ -80,15 +78,13 @@ export class ApiResponse<E extends Endpoint> extends Response {
     return this._rawBody;
   }
 
-  async meta(): Promise<E["meta"]> {
-    if (!this.ok) {
-      throw await this.error();
-    }
+  meta(): E["meta"] {
+    this.assertOk();
 
     if (!this._meta) {
       switch (this.wireFormat()) {
         case WireFormat.json: {
-          const rawBody = await this.rawBody();
+          const rawBody = this.resolvedRawBody();
           const metaJson = this.definition.resp.transform
             ? this.definition.resp.transform.fromResponse(rawBody.value).meta
             : rawBody.value;
@@ -103,10 +99,12 @@ export class ApiResponse<E extends Endpoint> extends Response {
     return this._meta;
   }
 
-  async value(): Promise<E["return"]> {
+  value(): E["return"] {
+    this.assertOk();
+
     if (!this._value) {
-      const rawBody = await this.rawBody();
-      const meta = await this.meta();
+      const rawBody = this.resolvedRawBody();
+      const meta = this.meta();
       switch (rawBody.type) {
         case WireFormat.json: {
           const dataJson = this.definition.resp.transform
@@ -123,23 +121,13 @@ export class ApiResponse<E extends Endpoint> extends Response {
     return this._value;
   }
 
-  async json(): Promise<unknown> {
-    const rawBody = await this.rawBody();
-    switch (rawBody.type) {
-      case WireFormat.json:
-        return rawBody.value;
-      case WireFormat.ssz:
-        return this.definition.resp.data.toJson(await this.value(), await this.meta());
-      default:
-        return {};
-    }
-  }
+  ssz(): Uint8Array {
+    this.assertOk();
 
-  async ssz(): Promise<Uint8Array> {
-    const rawBody = await this.rawBody();
+    const rawBody = this.resolvedRawBody();
     switch (rawBody.type) {
       case WireFormat.json:
-        return this.definition.resp.data.serialize(await this.value(), await this.meta());
+        return this.definition.resp.data.serialize(this.value(), this.meta());
       case WireFormat.ssz:
         return rawBody.value;
       default:
@@ -147,20 +135,40 @@ export class ApiResponse<E extends Endpoint> extends Response {
     }
   }
 
-  async error(): Promise<ApiError | null> {
+  assertOk(): void {
+    if (!this.ok) {
+      throw this.error();
+    }
+  }
+
+  error(): ApiError | null {
     if (this.ok) {
       return null;
     }
+
+    return new ApiError(getErrorMessage(this.resolvedErrorBody()), this.status, this.definition.operationId);
+  }
+
+  async errorBody(): Promise<string> {
     if (!this._errorBody) {
       this._errorBody = await this.text();
     }
-    return new ApiError(getErrorMessage(this._errorBody), this.status, this.definition.operationId);
+    return this._errorBody;
   }
 
-  async assertOk(): Promise<void> {
-    if (!this.ok) {
-      throw await this.error();
+  private resolvedRawBody(): RawBody {
+    if (!this._rawBody) {
+      throw Error("rawBody() must be called first");
     }
+    return this._rawBody;
+  }
+
+  private resolvedErrorBody(): string {
+    if (!this._errorBody) {
+      throw Error("errorBody() must be called first");
+    }
+
+    return this._errorBody;
   }
 }
 

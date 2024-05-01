@@ -128,7 +128,7 @@ export class HttpClient implements IHttpClient {
         async (attempt) => {
           const res = await this.requestWithFallbacks(definition, args, localInit);
           if (!res.ok && attempt <= retries) {
-            throw await res.error();
+            throw res.error();
           }
           return res;
         },
@@ -199,8 +199,7 @@ export class HttpClient implements IHttpClient {
                   if (++errorCount >= requestCount) {
                     resolve(res);
                   } else {
-                    const err = await res.error();
-                    this.logger?.debug("Request error, retrying", {routeId, baseUrl}, err as Error);
+                    this.logger?.debug("Request error, retrying", {routeId, baseUrl}, res.error() as Error);
                   }
                 }
               },
@@ -273,6 +272,7 @@ export class HttpClient implements IHttpClient {
       const apiResponse = new ApiResponse(definition, response.body, response);
 
       if (!apiResponse.ok) {
+        await apiResponse.errorBody();
         this.logger?.debug("API response error", {routeId});
         this.metrics?.requestErrors.inc({routeId, baseUrl: init.baseUrl});
         return apiResponse;
