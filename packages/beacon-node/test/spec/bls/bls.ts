@@ -40,7 +40,11 @@ export const testFnByType: Record<string, "skip" | ((data: any) => any)> = {
  */
 function aggregate_verify(input: {pubkeys: string[]; messages: string[]; signature: string}): boolean {
   const {pubkeys, messages, signature} = input;
-  return aggregateVerify(messages.map(fromHexString), pubkeys.map(fromHexString), fromHexString(signature));
+  try {
+    return aggregateVerify(messages.map(fromHexString), pubkeys.map(fromHexString), fromHexString(signature));
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -142,7 +146,11 @@ function sign(input: {privkey: string; message: string}): string | null {
  */
 function verify(input: {pubkey: string; message: string; signature: string}): boolean {
   const {pubkey, message, signature} = input;
-  return _verify(fromHexString(message), fromHexString(pubkey), fromHexString(signature));
+  try {
+    return _verify(fromHexString(message), fromHexString(pubkey), fromHexString(signature));
+  } catch {
+    return false;
+  }
 }
 
 /**
