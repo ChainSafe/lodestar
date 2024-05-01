@@ -182,7 +182,7 @@ export function createFastifyRoute<E extends Endpoint>(
   return {
     url,
     method: definition.method,
-    handler: createFastifyHandler(definition, method.bind(thisArg), operationId),
+    handler: createFastifyHandler(definition, method?.bind(thisArg), operationId),
     schema: {
       ...getFastifySchema(definition.req.schema),
       operationId,
@@ -195,7 +195,7 @@ export function createFastifyRoutes<Es extends Record<string, Endpoint>>(
   methods: ApplicationMethods<Es>
 ): FastifyRoutes<Es> {
   return mapValues(definitions, (definition, operationId) =>
-    createFastifyRoute(definition, methods[operationId], operationId as string, methods)
+    createFastifyRoute(definition, methods?.[operationId], operationId as string, methods)
   );
 }
 
