@@ -25,6 +25,10 @@ const SLOT_SIZE = 8;
 const ATTESTATION_DATA_SIZE = 128;
 const SIGNATURE_SIZE = 96;
 
+function toBuffer(x: Uint8Array): Buffer {
+  return Buffer.from(x.buffer, x.byteOffset, x.byteLength);
+}
+
 /**
  * Extract slot from attestation serialized bytes.
  * Return null if data is not long enough to extract slot.
@@ -59,9 +63,7 @@ export function getAttDataBase64FromAttestationSerialized(data: Uint8Array): Att
   }
 
   // base64 is a bit efficient than hex
-  return Buffer.from(data.slice(VARIABLE_FIELD_OFFSET, VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE)).toString(
-    "base64"
-  );
+  return toBuffer(data.slice(VARIABLE_FIELD_OFFSET, VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE)).toString("base64");
 }
 
 /**
@@ -150,7 +152,7 @@ export function getAttDataBase64FromSignedAggregateAndProofSerialized(data: Uint
   }
 
   // base64 is a bit efficient than hex
-  return Buffer.from(
+  return toBuffer(
     data.slice(SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET, SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET + ATTESTATION_DATA_SIZE)
   ).toString("base64");
 }

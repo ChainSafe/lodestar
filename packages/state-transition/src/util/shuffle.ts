@@ -101,7 +101,7 @@ function innerShuffleList(input: Shuffleable, seed: Bytes32, dir: boolean): void
 
   // Seed is always the first 32 bytes of the hash input, we never have to change this part of the buffer.
   const _seed = seed;
-  Buffer.from(_seed).copy(buf, 0, 0, _SHUFFLE_H_SEED_SIZE);
+  buf.set(_seed.subarray(0, _SHUFFLE_H_SEED_SIZE), 0);
 
   // initial values here are not used: overwritten first within the inner for loop.
   let source = seed; // just setting it to a Bytes32
