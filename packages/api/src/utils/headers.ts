@@ -10,6 +10,12 @@ export enum MediaType {
   ssz = "application/octet-stream",
 }
 
+export enum HttpHeader {
+  ContentType = "content-type",
+  Accept = "accept",
+  Authorization = "authorization",
+}
+
 export function getWireFormat(mediaType: MediaType): WireFormat {
   switch (mediaType) {
     case MediaType.json:
@@ -85,12 +91,12 @@ export function parseAcceptHeader(accept?: string): MediaType | null {
 }
 
 export function setAuthorizationHeader(url: URL, headers: Headers, {bearerToken}: {bearerToken?: string}): void {
-  if (bearerToken && !headers.has("Authorization")) {
-    headers.set("Authorization", `Bearer ${bearerToken}`);
+  if (bearerToken && !headers.has(HttpHeader.Authorization)) {
+    headers.set(HttpHeader.Authorization, `Bearer ${bearerToken}`);
   }
   if (url.username || url.password) {
-    if (!headers.has("Authorization")) {
-      headers.set("Authorization", `Basic ${toBase64(decodeURIComponent(`${url.username}:${url.password}`))}`);
+    if (!headers.has(HttpHeader.Authorization)) {
+      headers.set(HttpHeader.Authorization, `Basic ${toBase64(decodeURIComponent(`${url.username}:${url.password}`))}`);
     }
     // Remove the username and password from the URL
     url.username = "";

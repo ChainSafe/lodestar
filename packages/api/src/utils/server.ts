@@ -15,7 +15,14 @@ import {
   SszPostRequestData,
   SszRequestMethods,
 } from "./types.js";
-import {MediaType, WireFormat, getWireFormat, parseAcceptHeader, parseContentTypeHeader} from "./headers.js";
+import {
+  HttpHeader,
+  MediaType,
+  WireFormat,
+  getWireFormat,
+  parseAcceptHeader,
+  parseContentTypeHeader,
+} from "./headers.js";
 import {HttpSuccessCodes} from "./httpStatusCode.js";
 import {toColonNotationPath} from "./urlFormat.js";
 import {getFastifySchema} from "./schema.js";
@@ -81,15 +88,11 @@ export function createFastifyHandler<E extends Endpoint>(
     if (definition.method === "GET") {
       response = await method((definition.req as GetRequestCodec<E>).parseReq(req as GetRequestData));
     } else {
-      // const contentType = req.headers["content-type"];
-      const mediaType = parseContentTypeHeader(req.headers["content-type"]);
-      // TODO: We might not need to validate request media types as this is already handled by Fastify
-      // if (mediaType === null) {
-      //   throw new ServerError(415, `Unsupported request media type: ${contentType?.split(";", 1)[0]}`);
-      // }
+      // Media type is already validated by Fastify before calling handler
+      const mediaType = parseContentTypeHeader(req.headers[HttpHeader.ContentType]) as MediaType;
 
       const {onlySupport} = definition.req as PostRequestCodec<E>;
-      const requestWireFormat = getWireFormat(mediaType as MediaType);
+      const requestWireFormat = getWireFormat(mediaType);
       switch (requestWireFormat) {
         case WireFormat.json:
           if (onlySupport !== undefined && onlySupport !== WireFormat.json) {
@@ -118,18 +121,18 @@ export function createFastifyHandler<E extends Endpoint>(
       return;
     }
 
-    const acceptHeader = req.headers.accept;
-    if (acceptHeader === undefined) {
-      throw new ServerError(415, "No Accept header found in request");
-    }
+    let mediaType: MediaType | null;
 
-    const mediaType = parseAcceptHeader(acceptHeader);
-    // TODO: default to json, or configured default if accept header is missing or `Accept: */*`
-    if (mediaType === null) {
-      // TODO: throw 406 if client only support unaccepted content types, and set appropriate headers
-      // See https://developer.mozilla.org/en-US/docs/Web/HTTP/Content_negotiation#server-driven_negotiation
-      // and https://stackoverflow.com/a/3294546/10577550
-      throw new ServerError(415, `Only unsupported media types are accepted: ${acceptHeader}`);
+    const acceptHeader = req.headers.accept;
+    if (acceptHeader === undefined || acceptHeader === "*/*") {
+      // Default to json to not force user to set header, e.g. when using curl
+      mediaType = MediaType.json;
+    } else {
+      mediaType = parseAcceptHeader(acceptHeader);
+
+      if (mediaType === null) {
+        throw new ServerError(406, `Accepted media types are not supported: ${acceptHeader}`);
+      }
     }
 
     const responseWireFormat = definition.resp.onlySupport ?? getWireFormat(mediaType);
@@ -137,7 +140,7 @@ export function createFastifyHandler<E extends Endpoint>(
     switch (responseWireFormat) {
       case WireFormat.json: {
         const metaHeaders = definition.resp.meta.toHeadersObject(response?.meta);
-        metaHeaders["content-type"] = MediaType.json;
+        metaHeaders[HttpHeader.ContentType] = MediaType.json;
         void resp.headers(metaHeaders);
         const data =
           response?.data instanceof Uint8Array
@@ -156,7 +159,7 @@ export function createFastifyHandler<E extends Endpoint>(
       }
       case WireFormat.ssz: {
         const metaHeaders = definition.resp.meta.toHeadersObject(response?.meta);
-        metaHeaders["content-type"] = MediaType.ssz;
+        metaHeaders[HttpHeader.ContentType] = MediaType.ssz;
         void resp.headers(metaHeaders);
         const data =
           response?.data instanceof Uint8Array
@@ -178,9 +181,8 @@ export function createFastifyRoute<E extends Endpoint>(
   operationId: string,
   thisArg: unknown
 ): FastifyRoute<E> {
-  const url = toColonNotationPath(definition.url);
   return {
-    url,
+    url: toColonNotationPath(definition.url),
     method: definition.method,
     handler: createFastifyHandler(definition, method?.bind(thisArg), operationId),
     schema: {
