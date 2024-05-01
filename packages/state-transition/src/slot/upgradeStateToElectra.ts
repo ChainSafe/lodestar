@@ -1,8 +1,12 @@
 import {ssz} from "@lodestar/types";
-import {UNSET_DEPOSIT_RECEIPTS_START_INDEX} from "@lodestar/params";
+import {FAR_FUTURE_EPOCH, UNSET_DEPOSIT_RECEIPTS_START_INDEX} from "@lodestar/params";
 import {CachedBeaconStateDeneb} from "../types.js";
 import {CachedBeaconStateElectra, getCachedBeaconState} from "../cache/stateCache.js";
-import {hasCompoundingWithdrawalCredential, queueExcessActiveBalance} from "../util/electra.js";
+import {
+  hasCompoundingWithdrawalCredential,
+  queueEntireBalanceAndResetValidator,
+  queueExcessActiveBalance,
+} from "../util/electra.js";
 
 /**
  * Upgrade a state from Capella to Deneb.
@@ -25,11 +29,18 @@ export function upgradeStateToElectra(stateDeneb: CachedBeaconStateDeneb): Cache
   // default value of depositReceiptsStartIndex is UNSET_DEPOSIT_RECEIPTS_START_INDEX
   stateElectra.depositReceiptsStartIndex = UNSET_DEPOSIT_RECEIPTS_START_INDEX;
 
-  // [EIP-7251]: Ensure early adopters of compounding credentials go through the activation churn
   const validatorsArr = stateElectra.validators.getAllReadonly();
 
   for (let i = 0; i < validatorsArr.length; i++) {
-    const withdrawalCredential = validatorsArr[i].withdrawalCredentials;
+    const validator = validatorsArr[i];
+
+    // [EIP-7251]: add validators that are not yet active to pending balance deposits
+    if (validator.activationEligibilityEpoch === FAR_FUTURE_EPOCH) {
+      queueEntireBalanceAndResetValidator(stateElectra, i);
+    }
+
+    // [EIP-7251]: Ensure early adopters of compounding credentials go through the activation churn
+    const withdrawalCredential = validator.withdrawalCredentials;
     if (hasCompoundingWithdrawalCredential(withdrawalCredential)) {
       queueExcessActiveBalance(stateElectra, i);
     }

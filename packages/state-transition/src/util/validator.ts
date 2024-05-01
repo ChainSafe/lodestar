@@ -61,6 +61,9 @@ export function getConsolidationChurnLimit(state: CachedBeaconStateElectra): num
   return getActivationExitConsolidationChurnLimit(state) - getActivationExitChurnLimit(state);
 }
 
+/**
+ * Get combined churn limit of activation-exit and consolidation
+ */
 export function getActivationExitConsolidationChurnLimit(state: CachedBeaconStateElectra): number {
   const churnLimitByTotalActiveBalance = Math.floor(
     (state.epochCtx.totalActiveBalanceIncrements / state.config.CHURN_LIMIT_QUOTIENT) * EFFECTIVE_BALANCE_INCREMENT

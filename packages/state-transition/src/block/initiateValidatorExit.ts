@@ -2,7 +2,7 @@ import {CompositeViewDU} from "@chainsafe/ssz";
 import {FAR_FUTURE_EPOCH, ForkSeq} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {CachedBeaconStateAllForks, CachedBeaconStateElectra} from "../types.js";
-import { computeExitEpochAndUpdateChurn } from "../util/epoch.js";
+import {computeExitEpochAndUpdateChurn} from "../util/epoch.js";
 
 /**
  * Initiate the exit of the validator with index ``index``.
@@ -53,7 +53,10 @@ export function initiateValidatorExit(
   } else {
     // set validator exit epoch
     // Note we don't use epochCtx.exitQueueChurn and exitQueueEpoch anymore
-    validator.exitEpoch = computeExitEpochAndUpdateChurn(state as CachedBeaconStateElectra, BigInt(validator.effectiveBalance));
+    validator.exitEpoch = computeExitEpochAndUpdateChurn(
+      state as CachedBeaconStateElectra,
+      BigInt(validator.effectiveBalance)
+    );
   }
   validator.withdrawableEpoch = validator.exitEpoch + config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY;
 }

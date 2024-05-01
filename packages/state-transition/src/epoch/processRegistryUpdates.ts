@@ -45,7 +45,7 @@ export function processRegistryUpdates(
   let indicesEligibleForActivation;
   if (fork < ForkSeq.electra) {
     // dequeue validators for activation up to churn limit
-    indicesEligibleForActivation = cache.indicesEligibleForActivation.slice(0, epochCtx.activationChurnLimit)
+    indicesEligibleForActivation = cache.indicesEligibleForActivation.slice(0, epochCtx.activationChurnLimit);
   } else {
     // no churn limit post-electra
     indicesEligibleForActivation = cache.indicesEligibleForActivation;

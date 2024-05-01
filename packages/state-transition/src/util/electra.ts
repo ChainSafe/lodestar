@@ -1,4 +1,10 @@
-import {COMPOUNDING_WITHDRAWAL_PREFIX, ForkSeq, MAX_EFFECTIVE_BALANCE, MIN_ACTIVATION_BALANCE} from "@lodestar/params";
+import {
+  COMPOUNDING_WITHDRAWAL_PREFIX,
+  FAR_FUTURE_EPOCH,
+  ForkSeq,
+  MAX_EFFECTIVE_BALANCE,
+  MIN_ACTIVATION_BALANCE,
+} from "@lodestar/params";
 import {ValidatorIndex, phase0, ssz} from "@lodestar/types";
 import {CachedBeaconStateElectra} from "../types.js";
 import {getValidatorMaxEffectiveBalance} from "./validator.js";
@@ -76,4 +82,19 @@ export function queueExcessActiveBalance(state: CachedBeaconStateElectra, index:
     });
     state.pendingBalanceDeposits.push(pendingBalanceDeposit);
   }
+}
+
+export function queueEntireBalanceAndResetValidator(state: CachedBeaconStateElectra, index: ValidatorIndex): void {
+  const balance = state.balances.get(index);
+  state.balances.set(index, 0);
+
+  const validator = state.validators.get(index);
+  validator.effectiveBalance = 0;
+  validator.activationEligibilityEpoch = FAR_FUTURE_EPOCH;
+
+  const pendingBalanceDeposit = ssz.electra.PendingBalanceDeposit.toViewDU({
+    index,
+    amount: BigInt(balance),
+  });
+  state.pendingBalanceDeposits.push(pendingBalanceDeposit);
 }

@@ -1,68 +1,104 @@
-import {CompositeViewDU} from "@chainsafe/ssz";
-import {electra, ssz} from "@lodestar/types";
-import {ETH1_ADDRESS_WITHDRAWAL_PREFIX, FAR_FUTURE_EPOCH, ForkSeq} from "@lodestar/params";
+import {toHexString} from "@chainsafe/ssz";
+import {electra, phase0, ssz} from "@lodestar/types";
+import {
+  FAR_FUTURE_EPOCH,
+  MIN_ACTIVATION_BALANCE,
+  PENDING_PARTIAL_WITHDRAWALS_LIMIT,
+  FULL_EXIT_REQUEST_AMOUNT,
+  ForkSeq,
+} from "@lodestar/params";
 
-import {isActiveValidator} from "../util/index.js";
 import {CachedBeaconStateElectra} from "../types.js";
-import {initiateValidatorExit} from "./index.js";
+import {hasCompoundingWithdrawalCredential, hasExecutionWithdrawalCredential} from "../util/electra.js";
+import {getPendingBalanceToWithdraw, isActiveValidator} from "../util/validator.js";
+import {computeExitEpochAndUpdateChurn} from "../util/epoch.js";
+import {initiateValidatorExit} from "./initiateValidatorExit.js";
 
-const FULL_EXIT_REQUEST_AMOUNT = 0;
-/**
- * Process execution layer exit messages and initiate exit incase they belong to a valid active validator
- * otherwise silent ignore.
- */
 export function processExecutionLayerWithdrawalRequest(
   fork: ForkSeq,
   state: CachedBeaconStateElectra,
-  withdrawalRequest: electra.ExecutionLayerWithdrawalRequest
+  executionLayerWithdrawalRequest: electra.ExecutionLayerWithdrawalRequest
 ): void {
-  const isFullExitRequest = withdrawalRequest.amount === FULL_EXIT_REQUEST_AMOUNT;
+  const amount = Number(executionLayerWithdrawalRequest.amount);
+  const {pendingPartialWithdrawals, validators, epochCtx} = state;
+  const {pubkey2index, config} = epochCtx; // TODO Electra: Use finalized+unfinalized pubkey cache from 6110
+  const isFullExitRequest = amount === FULL_EXIT_REQUEST_AMOUNT;
+
+  // If partial withdrawal queue is full, only full exits are processed
+  if (pendingPartialWithdrawals.length >= PENDING_PARTIAL_WITHDRAWALS_LIMIT && !isFullExitRequest) {
+    return;
+  }
+
+  const validatorIndex = pubkey2index.get(executionLayerWithdrawalRequest.validatorPubkey);
+
+  if (validatorIndex === undefined) {
+    throw new Error(
+      `Can't find validator index from ExecutionLayerWithdrawalRequest : pubkey=${toHexString(
+        executionLayerWithdrawalRequest.validatorPubkey
+      )}`
+    );
+  }
+
+  const validator = validators.getReadonly(validatorIndex);
+
+  if (!isValidValidator(validator, executionLayerWithdrawalRequest.sourceAddress, state)) {
+    return;
+  }
+
+  // TODO Electra: Consider caching pendingPartialWithdrawals
+  const pendingBalanceToWithdraw = getPendingBalanceToWithdraw(state, validatorIndex);
+  const validatorBalance = state.balances.get(validatorIndex);
 
   if (isFullExitRequest) {
-    const validator = isValidExecutionLayerExit(state, withdrawalRequest);
-    if (validator === null) {
-      return;
+    // only exit validator if it has no pending withdrawals in the queue
+    if (pendingBalanceToWithdraw === 0) {
+      initiateValidatorExit(fork, state, validator);
+    } else {
+      // Full request can't be fulfilled because still has pending withdrawals.
+      // TODO Electra: add log here
     }
+    return;
+  }
 
-    initiateValidatorExit(fork, state, validator);
-  } else {
-    // partial withdral request add codeblock
+  const hasSufficientEffectiveBalance = validator.effectiveBalance >= MIN_ACTIVATION_BALANCE;
+  const hasExcessBalance = validatorBalance > MIN_ACTIVATION_BALANCE + pendingBalanceToWithdraw;
+
+  // Only allow partial withdrawals with compounding withdrawal credentials
+  if (
+    hasCompoundingWithdrawalCredential(validator.withdrawalCredentials) &&
+    hasSufficientEffectiveBalance &&
+    hasExcessBalance
+  ) {
+    const amountToWithdraw = BigInt(
+      Math.min(validatorBalance - MIN_ACTIVATION_BALANCE - pendingBalanceToWithdraw, amount)
+    );
+    const exitQueueEpoch = computeExitEpochAndUpdateChurn(state, amountToWithdraw);
+    const withdrawableEpoch = exitQueueEpoch + config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY;
+
+    const pendingPartialWithdrawal = ssz.electra.PartialWithdrawal.toViewDU({
+      index: validatorIndex,
+      amount: amountToWithdraw,
+      withdrawableEpoch,
+    });
+    state.pendingPartialWithdrawals.push(pendingPartialWithdrawal);
   }
 }
 
-// TODO electra : add pending withdrawal check before exit
-export function isValidExecutionLayerExit(
-  state: CachedBeaconStateElectra,
-  exit: electra.ExecutionLayerWithdrawalRequest
-): CompositeViewDU<typeof ssz.phase0.Validator> | null {
-  const {config, epochCtx} = state;
-  const validatorIndex = epochCtx.getValidatorIndex(exit.validatorPubkey);
-  const validator = validatorIndex !== undefined ? state.validators.getReadonly(validatorIndex) : undefined;
-  if (validator === undefined) {
-    return null;
-  }
-
+function isValidValidator(
+  validator: phase0.Validator,
+  sourceAddress: Uint8Array,
+  state: CachedBeaconStateElectra
+): boolean {
   const {withdrawalCredentials} = validator;
-  if (withdrawalCredentials[0] !== ETH1_ADDRESS_WITHDRAWAL_PREFIX) {
-    return null;
-  }
+  const addressStr = toHexString(withdrawalCredentials.slice(12));
+  const sourceAddressStr = toHexString(sourceAddress);
+  const {epoch: currentEpoch, config} = state.epochCtx;
 
-  const executionAddress = withdrawalCredentials.subarray(12, 32);
-  if (Buffer.compare(executionAddress, exit.sourceAddress) !== 0) {
-    return null;
-  }
-
-  const currentEpoch = epochCtx.epoch;
-  if (
-    // verify the validator is active
+  return (
+    hasExecutionWithdrawalCredential(withdrawalCredentials) &&
+    addressStr === sourceAddressStr &&
     isActiveValidator(validator, currentEpoch) &&
-    // verify exit has not been initiated
     validator.exitEpoch === FAR_FUTURE_EPOCH &&
-    // verify the validator had been active long enough
     currentEpoch >= validator.activationEpoch + config.SHARD_COMMITTEE_PERIOD
-  ) {
-    return validator;
-  } else {
-    return null;
-  }
+  );
 }

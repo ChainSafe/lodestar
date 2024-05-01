@@ -4,7 +4,7 @@ import {
   MAX_WITHDRAWALS_PER_PAYLOAD,
   MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP,
   ForkSeq,
-  MAX_PARTIAL_WITHDRAWALS_PER_PAYLOAD,
+  MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP,
   FAR_FUTURE_EPOCH,
   MIN_ACTIVATION_BALANCE,
 } from "@lodestar/params";
@@ -99,7 +99,7 @@ export function getExpectedWithdrawals(
     const stateElectra = state as CachedBeaconStateElectra;
 
     for (const withdrawal of stateElectra.pendingPartialWithdrawals.getAllReadonly()) {
-      if (withdrawal.withdrawableEpoch > epoch || withdrawals.length === MAX_PARTIAL_WITHDRAWALS_PER_PAYLOAD) {
+      if (withdrawal.withdrawableEpoch > epoch || withdrawals.length === MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP) {
         break;
       }
 

@@ -56,11 +56,6 @@ export function processOperations(
   for (const voluntaryExit of body.voluntaryExits) {
     processVoluntaryExit(fork, state, voluntaryExit, opts.verifySignatures);
   }
-  if (fork >= ForkSeq.electra) {
-    for (const elWithdrawalRequest of (body as electra.BeaconBlockBody).executionPayload.withdrawalRequests) {
-      processExecutionLayerWithdrawalRequest(fork ,state as CachedBeaconStateElectra, elWithdrawalRequest);
-    }
-  }
 
   if (fork >= ForkSeq.capella) {
     for (const blsToExecutionChange of (body as capella.BeaconBlockBody).blsToExecutionChanges) {
@@ -75,8 +70,8 @@ export function processOperations(
       processDepositReceipt(fork, stateElectra, depositReceipt);
     }
 
-    for (const withdrawalRequest of bodyElectra.executionPayload.withdrawalRequests) {
-      processExecutionLayerWithdrawalRequest(stateElectra, withdrawalRequest);
+    for (const elWithdrawalRequest of bodyElectra.executionPayload.withdrawalRequests) {
+      processExecutionLayerWithdrawalRequest(fork ,state as CachedBeaconStateElectra, elWithdrawalRequest);
     }
 
     for (const consolidation of bodyElectra.consolidations) {
