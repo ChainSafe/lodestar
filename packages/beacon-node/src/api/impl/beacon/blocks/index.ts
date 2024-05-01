@@ -1,8 +1,7 @@
-import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {ApplicationMethods, routes} from "@lodestar/api";
 import {computeEpochAtSlot, computeTimeAtSlot, reconstructFullBlockOrContents} from "@lodestar/state-transition";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
-import {sleep, toHex} from "@lodestar/utils";
+import {sleep, fromHex, toHex} from "@lodestar/utils";
 import {allForks, deneb, isSignedBlockContents, ProducedBlockSource} from "@lodestar/types";
 import {BlockSource, getBlockInput, ImportBlockOpts, BlockInput, BlobsSource} from "../../../../chain/blocks/types.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
@@ -124,7 +123,7 @@ export function getBeaconBlockApi({
             );
             throw new BlockError(signedBlock, {
               code: BlockErrorCode.PARENT_UNKNOWN,
-              parentRoot: toHexString(signedBlock.message.parentRoot),
+              parentRoot: toHex(signedBlock.message.parentRoot),
             });
           }
 
@@ -267,14 +266,14 @@ export function getBeaconBlockApi({
 
       const result: routes.beacon.BlockHeaderResponse[] = [];
       if (parentRoot) {
-        const finalizedBlock = await db.blockArchive.getByParentRoot(fromHexString(parentRoot));
+        const finalizedBlock = await db.blockArchive.getByParentRoot(fromHex(parentRoot));
         if (finalizedBlock) {
           result.push(toBeaconHeaderResponse(config, finalizedBlock, true));
         }
         const nonFinalizedBlocks = chain.forkChoice.getBlockSummariesByParentRoot(parentRoot);
         await Promise.all(
           nonFinalizedBlocks.map(async (summary) => {
-            const block = await db.block.get(fromHexString(summary.blockRoot));
+            const block = await db.block.get(fromHex(summary.blockRoot));
             if (block) {
               const canonical = chain.forkChoice.getCanonicalBlockAtSlot(block.message.slot);
               if (canonical) {
@@ -331,8 +330,8 @@ export function getBeaconBlockApi({
             }
             finalized = false;
 
-            if (summary.blockRoot !== toHexString(canonicalRoot)) {
-              const block = await db.block.get(fromHexString(summary.blockRoot));
+            if (summary.blockRoot !== toHex(canonicalRoot)) {
+              const block = await db.block.get(fromHex(summary.blockRoot));
               if (block) {
                 result.push(toBeaconHeaderResponse(config, block));
               }
@@ -388,7 +387,7 @@ export function getBeaconBlockApi({
 
         if (slot === head.slot) {
           return {
-            data: {root: fromHexString(head.blockRoot)},
+            data: {root: fromHex(head.blockRoot)},
             meta: {executionOptimistic: isOptimisticBlock(head), finalized: false},
           };
         }
@@ -406,7 +405,7 @@ export function getBeaconBlockApi({
       } else if (blockId === "head") {
         const head = chain.forkChoice.getHead();
         return {
-          data: {root: fromHexString(head.blockRoot)},
+          data: {root: fromHex(head.blockRoot)},
           meta: {executionOptimistic: isOptimisticBlock(head), finalized: false},
         };
       }
@@ -440,7 +439,7 @@ export function getBeaconBlockApi({
       }
 
       if (!blobSidecars) {
-        throw Error(`blobSidecars not found in db for slot=${block.message.slot} root=${toHexString(blockRoot)}`);
+        throw Error(`blobSidecars not found in db for slot=${block.message.slot} root=${toHex(blockRoot)}`);
       }
 
       return {

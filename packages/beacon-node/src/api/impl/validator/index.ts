@@ -1,4 +1,4 @@
-import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {fromHexString} from "@chainsafe/ssz";
 import {ApplicationMethods, routes} from "@lodestar/api";
 import {
   CachedBeaconStateAllForks,
@@ -403,7 +403,7 @@ export function getValidatorApi({
         slot,
         executionPayloadValue,
         consensusBlockValue,
-        root: toHexString(config.getBlindedForkTypes(slot).BeaconBlock.hashTreeRoot(block)),
+        root: toHex(config.getBlindedForkTypes(slot).BeaconBlock.hashTreeRoot(block)),
       });
 
       if (chain.opts.persistProducedBlocks) {
@@ -466,7 +466,7 @@ export function getValidatorApi({
       });
       const version = config.getForkName(block.slot);
       if (strictFeeRecipientCheck && feeRecipient && isForkExecution(version)) {
-        const blockFeeRecipient = toHexString((block as bellatrix.BeaconBlock).body.executionPayload.feeRecipient);
+        const blockFeeRecipient = toHex((block as bellatrix.BeaconBlock).body.executionPayload.feeRecipient);
         if (blockFeeRecipient !== feeRecipient) {
           throw Error(`Invalid feeRecipient set in engine block expected=${feeRecipient} actual=${blockFeeRecipient}`);
         }
@@ -478,7 +478,7 @@ export function getValidatorApi({
         slot,
         executionPayloadValue,
         consensusBlockValue,
-        root: toHexString(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block)),
+        root: toHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block)),
       });
       if (chain.opts.persistProducedBlocks) {
         void chain.persistBlock(block, "produced_engine_block");
@@ -857,7 +857,7 @@ export function getValidatorApi({
       // and it hasn't been in our forkchoice since we haven't seen / processing that block
       // see https://github.com/ChainSafe/lodestar/issues/5063
       if (!chain.forkChoice.hasBlock(beaconBlockRoot)) {
-        const rootHex = toHexString(beaconBlockRoot);
+        const rootHex = toHex(beaconBlockRoot);
         network.searchUnknownSlotRoot({slot, root: rootHex});
         // if result of this call is false, i.e. block hasn't seen after 1 slot then the below notOnOptimisticBlockRoot call will throw error
         await chain.waitForBlock(slot, rootHex);
@@ -941,7 +941,7 @@ export function getValidatorApi({
       return {
         data: duties,
         meta: {
-          dependentRoot: toHexString(dependentRoot),
+          dependentRoot: toHex(dependentRoot),
           executionOptimistic: isOptimisticBlock(head),
         },
       };
@@ -993,7 +993,7 @@ export function getValidatorApi({
       return {
         data: duties,
         meta: {
-          dependentRoot: toHexString(dependentRoot),
+          dependentRoot: toHex(dependentRoot),
           executionOptimistic: isOptimisticBlock(head),
         },
       };
@@ -1058,7 +1058,7 @@ export function getValidatorApi({
 
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
-      const dataRootHex = toHexString(attestationDataRoot);
+      const dataRootHex = toHex(attestationDataRoot);
       const aggregate = chain.attestationPool.getAggregate(slot, dataRootHex);
 
       if (!aggregate) {

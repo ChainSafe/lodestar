@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import {toHexString} from "@chainsafe/ssz";
 import {ApplicationMethods, routes} from "@lodestar/api";
 import {Repository} from "@lodestar/db";
 import {toHex} from "@lodestar/utils";
@@ -202,7 +201,7 @@ function regenRequestToJson(config: ChainForkConfig, regenRequest: RegenRequest)
     case "getPreState": {
       const slot = regenRequest.args[0].slot;
       return {
-        root: toHexString(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(regenRequest.args[0])),
+        root: toHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(regenRequest.args[0])),
         slot,
       };
     }

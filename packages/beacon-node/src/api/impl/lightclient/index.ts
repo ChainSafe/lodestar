@@ -1,4 +1,4 @@
-import {fromHexString} from "@chainsafe/ssz";
+import {fromHex} from "@lodestar/utils";
 import {ApplicationMethods, routes} from "@lodestar/api";
 import {MAX_REQUEST_LIGHT_CLIENT_UPDATES, MAX_REQUEST_LIGHT_CLIENT_COMMITTEE_HASHES} from "@lodestar/params";
 import {ApiModules} from "../types.js";
@@ -37,7 +37,7 @@ export function getLightclientApi({
     },
 
     async getLightClientBootstrap({blockRoot}) {
-      const bootstrapProof = await chain.lightClientServer.getBootstrap(fromHexString(blockRoot));
+      const bootstrapProof = await chain.lightClientServer.getBootstrap(fromHex(blockRoot));
       return {data: bootstrapProof, meta: {version: config.getForkName(bootstrapProof.header.beacon.slot)}};
     },
 
