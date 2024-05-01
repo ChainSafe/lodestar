@@ -16,6 +16,7 @@ jobs:
   binaries:
     name: Build lodestar binaries
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest

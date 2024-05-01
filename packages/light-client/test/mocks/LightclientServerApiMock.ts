@@ -1,4 +1,4 @@
-import {concat} from "uint8arrays";
+import {concat} from "uint8arrays/concat";
 import {digest} from "@chainsafe/as-sha256";
 import {CompactMultiProof, createProof, ProofType} from "@chainsafe/persistent-merkle-tree";
 import {ApplicationMethods, routes} from "@lodestar/api";
