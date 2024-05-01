@@ -1,6 +1,6 @@
 import {fromHexString} from "@chainsafe/ssz";
 import {Epoch, ValidatorIndex} from "@lodestar/types";
-import {Api, ApiError, routes} from "@lodestar/api";
+import {ApiClient, routes} from "@lodestar/api";
 import {Logger, sleep, truncBytes} from "@lodestar/utils";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ISlashingProtection} from "../slashingProtection/index.js";
@@ -43,7 +43,7 @@ export class DoppelgangerService {
   constructor(
     private readonly logger: Logger,
     private readonly clock: IClock,
-    private readonly api: Api,
+    private readonly api: ApiClient,
     private readonly indicesService: IndicesService,
     private readonly slashingProtection: ISlashingProtection,
     private readonly processShutdownCallback: ProcessShutdownCallback,
@@ -170,16 +170,12 @@ export class DoppelgangerService {
       return {epoch, responses: []};
     }
 
-    const res = await this.api.validator.getLiveness(epoch, indicesToCheck);
+    const res = await this.api.validator.getLiveness({epoch, indices: indicesToCheck});
     if (!res.ok) {
-      this.logger.error(
-        `Error getting liveness data for epoch ${epoch}`,
-        {},
-        new ApiError(res.error.message ?? "", res.error.code, "validator.getLiveness")
-      );
+      this.logger.error(`Error getting liveness data for epoch ${epoch}`, {}, res.error() as Error);
       return {epoch, responses: []};
     }
-    return {epoch, responses: res.response.data};
+    return {epoch, responses: res.value()};
   }
 
   private detectDoppelganger(

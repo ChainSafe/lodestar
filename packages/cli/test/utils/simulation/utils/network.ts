@@ -1,5 +1,4 @@
 /* eslint-disable no-console */
-import {ApiError} from "@lodestar/api";
 import {Slot, allForks} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {BeaconClient, BeaconNode, ExecutionClient, ExecutionNode, NodePair} from "../interfaces.js";
@@ -24,22 +23,22 @@ export async function connectNewNode(newNode: NodePair, nodes: NodePair[]): Prom
 }
 
 export async function connectNewCLNode(newNode: BeaconNode, nodes: BeaconNode[]): Promise<void> {
-  const res = await newNode.api.node.getNetworkIdentity();
-  ApiError.assert(res);
-  const clIdentity = res.response.data;
+  const clIdentity = (await newNode.api.node.getNetworkIdentity()).value();
   if (!clIdentity.peerId) return;
 
   for (const node of nodes) {
     if (node === newNode) continue;
 
     if (node.client === BeaconClient.Lodestar) {
-      const res = await (node as BeaconNode<BeaconClient.Lodestar>).api.lodestar.connectPeer(
-        clIdentity.peerId,
+      const res = await (node as BeaconNode<BeaconClient.Lodestar>).api.lodestar.connectPeer({
+        peerId: clIdentity.peerId,
         // As the lodestar is always running on host
         // convert the address to local host to connect the container node
-        clIdentity.p2pAddresses.map((str) => str.replace(/(\/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\/)/, "/127.0.0.1/"))
-      );
-      ApiError.assert(res);
+        multiaddrs: clIdentity.p2pAddresses.map((str) =>
+          str.replace(/(\/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\/)/, "/127.0.0.1/")
+        ),
+      });
+      res.assertOk();
     }
   }
 }
@@ -76,9 +75,8 @@ export async function waitForNodeSync(
 export async function waitForNodeSyncStatus(env: SimulationEnvironment, node: NodePair): Promise<void> {
   // eslint-disable-next-line no-constant-condition
   while (true) {
-    const result = await node.beacon.api.node.getSyncingStatus();
-    ApiError.assert(result);
-    if (!result.response.data.isSyncing) {
+    const result = (await node.beacon.api.node.getSyncingStatus()).value();
+    if (!result.isSyncing) {
       break;
     } else {
       await sleep(1000, env.options.controller.signal);
@@ -158,13 +156,13 @@ export async function fetchBlock(
   {tries, delay, slot, signal}: {slot: number; tries: number; delay: number; signal?: AbortSignal}
 ): Promise<allForks.SignedBeaconBlock | undefined> {
   for (let i = 0; i < tries; i++) {
-    const res = await node.beacon.api.beacon.getBlockV2(slot);
+    const res = await node.beacon.api.beacon.getBlockV2({blockId: slot});
     if (!res.ok) {
       await sleep(delay, signal);
       continue;
     }
 
-    return res.response.data;
+    return res.value();
   }
 
   return;

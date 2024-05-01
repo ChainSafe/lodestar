@@ -1,6 +1,6 @@
 import {RestApiServer, RestApiServerOpts, RestApiServerModules} from "@lodestar/beacon-node";
 import {registerRoutes} from "@lodestar/api/beacon/server";
-import {Api as ClientApi, allNamespaces, ServerApi} from "@lodestar/api";
+import {Endpoints, allNamespaces, ApplicationMethods} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
@@ -10,7 +10,7 @@ import {testLogger} from "../../../beacon-node/test/utils/logger.js";
 
 const ZERO_HASH_HEX = toHex(Buffer.alloc(32, 0));
 
-type Api = {[K in keyof ClientApi]: ServerApi<ClientApi[K]>};
+type Api = {[K in keyof Endpoints]: ApplicationMethods<Endpoints[K]>};
 type DeepPartial<T> = {
   [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K];
 };

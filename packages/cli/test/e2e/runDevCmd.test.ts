@@ -1,5 +1,5 @@
 import {describe, it, vi, beforeEach, afterEach, afterAll} from "vitest";
-import {ApiError, getClient} from "@lodestar/api";
+import {getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {retry} from "@lodestar/utils";
 import {spawnCliCommand} from "@lodestar/test-utils";
@@ -26,10 +26,10 @@ describe("Run dev command", function () {
     const beaconUrl = `http://127.0.0.1:${beaconPort}`;
     // To cleanup the event stream connection
     const httpClientController = new AbortController();
-    const client = getClient({baseUrl: beaconUrl, getAbortSignal: () => httpClientController.signal}, {config});
+    const client = getClient({baseUrl: beaconUrl, globalInit: {signal: httpClientController.signal}}, {config});
 
     // Wrap in retry since the API may not be listening yet
-    await retry(() => client.node.getHealth().then((res) => ApiError.assert(res)), {retryDelay: 1000, retries: 60});
+    await retry(() => client.node.getHealth().then((res) => res.assertOk()), {retryDelay: 1000, retries: 60});
     httpClientController.abort();
 
     // The process will exit when the test finishes

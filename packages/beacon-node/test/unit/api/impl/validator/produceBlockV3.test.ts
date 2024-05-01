@@ -130,13 +130,19 @@ describe("api/validator - produceBlockV3", function () {
           feeRecipient,
         };
 
-        const block = await api.produceBlockV3(slot, randaoReveal, graffiti, _skipRandaoVerification, produceBlockOpts);
+        const block = await api.produceBlockV3({
+          slot,
+          randaoReveal,
+          graffiti,
+          skipRandaoVerification: _skipRandaoVerification,
+          ...produceBlockOpts,
+        });
 
         const expectedBlock = finalSelection === "builder" ? blindedBlock : fullBlock;
         const expectedExecution = finalSelection === "builder" ? true : false;
 
         expect(block.data).toEqual(expectedBlock);
-        expect(block.executionPayloadBlinded).toEqual(expectedExecution);
+        expect(block.meta.executionPayloadBlinded).toEqual(expectedExecution);
 
         // check call counts
         if (builderSelection === routes.validator.BuilderSelection.ExecutionOnly) {

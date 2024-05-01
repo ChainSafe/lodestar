@@ -1,11 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import got from "got";
-import {ApiError, getClient} from "@lodestar/api";
+import {WireFormat, getClient} from "@lodestar/api";
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
 import {createChainForkConfig, ChainForkConfig} from "@lodestar/config";
 import {allForks} from "@lodestar/types";
-import {CachedBeaconStateAllForks, computeEpochAtSlot} from "../../src/index.js";
+import {CachedBeaconStateAllForks} from "../../src/index.js";
 import {testCachePath} from "../cache.js";
 import {createCachedBeaconStateTest} from "../utils/state.js";
 import {getInfuraBeaconUrl} from "./infura.js";
@@ -45,16 +45,13 @@ export async function getNetworkCachedState(
     const stateSsz = await tryEach([
       () => downloadTestFile(fileId),
       () => {
-        const client = getClient({baseUrl: getInfuraBeaconUrl(network), timeoutMs: timeout ?? 300_000}, {config});
-        return computeEpochAtSlot(slot) < config.ALTAIR_FORK_EPOCH
-          ? client.debug.getState(String(slot), "ssz").then((r) => {
-              ApiError.assert(r);
-              return r.response;
-            })
-          : client.debug.getStateV2(String(slot), "ssz").then((r) => {
-              ApiError.assert(r);
-              return r.response;
-            });
+        const client = getClient(
+          {baseUrl: getInfuraBeaconUrl(network), globalInit: {timeoutMs: timeout ?? 300_000}},
+          {config}
+        );
+        return client.debug.getStateV2({stateId: slot}, {responseWireFormat: WireFormat.ssz}).then((r) => {
+          return r.ssz();
+        });
       },
     ]);
 
@@ -83,14 +80,12 @@ export async function getNetworkCachedBlock(
     const blockSsz = await tryEach([
       () => downloadTestFile(fileId),
       async () => {
-        const client = getClient({baseUrl: getInfuraBeaconUrl(network), timeoutMs: timeout ?? 300_000}, {config});
+        const client = getClient(
+          {baseUrl: getInfuraBeaconUrl(network), globalInit: {timeoutMs: timeout ?? 300_000}},
+          {config}
+        );
 
-        const res =
-          computeEpochAtSlot(slot) < config.ALTAIR_FORK_EPOCH
-            ? await client.beacon.getBlock(String(slot))
-            : await client.beacon.getBlockV2(String(slot));
-        ApiError.assert(res);
-        return config.getForkTypes(slot).SignedBeaconBlock.serialize(res.response.data);
+        return (await client.beacon.getBlockV2({blockId: slot})).ssz();
       },
     ]);
 

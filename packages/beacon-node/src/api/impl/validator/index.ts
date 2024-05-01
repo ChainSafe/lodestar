@@ -941,7 +941,7 @@ export function getValidatorApi({
       return {
         data: duties,
         meta: {
-          dependentRoot,
+          dependentRoot: toHexString(dependentRoot),
           executionOptimistic: isOptimisticBlock(head),
         },
       };
@@ -993,7 +993,7 @@ export function getValidatorApi({
       return {
         data: duties,
         meta: {
-          dependentRoot,
+          dependentRoot: toHexString(dependentRoot),
           executionOptimistic: isOptimisticBlock(head),
         },
       };

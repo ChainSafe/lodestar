@@ -1,6 +1,5 @@
 import type {SecretKey} from "@chainsafe/bls/types";
 import {routes} from "@lodestar/api/beacon";
-import {ApiError} from "@lodestar/api";
 import {AssertionResult, ValidatorClientKeys, SimulationAssertion, ValidatorClient} from "../interfaces.js";
 import {arrayEquals} from "../utils/index.js";
 import {neverMatcher} from "./matchers.js";
@@ -20,9 +19,8 @@ export const nodeAssertion: SimulationAssertion<"node", {health: number; keyMana
     if (node.validator.client == ValidatorClient.Lighthouse || getAllKeys(node.validator.keys).length === 0) {
       keyManagerKeys = [];
     } else {
-      const res = await node.validator.keyManager.listKeys();
-      ApiError.assert(res);
-      keyManagerKeys = res.response.data.map((k) => k.validatingPubkey);
+      const keys = (await node.validator.keyManager.listKeys()).value();
+      keyManagerKeys = keys.map((k) => k.validatingPubkey);
     }
 
     return {health, keyManagerKeys};

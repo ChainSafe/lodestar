@@ -1,7 +1,7 @@
 import {toHexString} from "@chainsafe/ssz";
 import {ValidatorIndex} from "@lodestar/types";
 import {Logger, MapDef} from "@lodestar/utils";
-import {Api, ApiError, routes} from "@lodestar/api";
+import {ApiClient, routes} from "@lodestar/api";
 import {batchItems} from "../util/index.js";
 import {Metrics} from "../metrics.js";
 
@@ -48,7 +48,7 @@ export class IndicesService {
 
   constructor(
     private readonly logger: Logger,
-    private readonly api: Api,
+    private readonly api: ApiClient,
     private readonly metrics: Metrics | null
   ) {
     if (metrics) {
@@ -126,14 +126,15 @@ export class IndicesService {
   }
 
   private async fetchValidatorIndices(pubkeysHex: string[]): Promise<ValidatorIndex[]> {
-    const res = await this.api.beacon.getStateValidators("head", {id: pubkeysHex});
-    ApiError.assert(res, "Can not fetch state validators from beacon node");
+    const stateValidators = (
+      await this.api.beacon.getStateValidators({stateId: "head", validatorIds: pubkeysHex})
+    ).value();
 
     const newIndices = [];
 
     const allValidatorStatuses = new MapDef<SimpleValidatorStatus, number>(() => 0);
 
-    for (const validatorState of res.response.data) {
+    for (const validatorState of stateValidators) {
       // Group all validators by status
       const status = statusToSimpleStatusMapping(validatorState.status);
       allValidatorStatuses.set(status, allValidatorStatuses.getOrDefault(status) + 1);
@@ -151,7 +152,7 @@ export class IndicesService {
     }
 
     // The number of validators that are not in the beacon chain
-    const pendingCount = pubkeysHex.length - res.response.data.length;
+    const pendingCount = pubkeysHex.length - stateValidators.length;
 
     allValidatorStatuses.set("pending", allValidatorStatuses.getOrDefault("pending") + pendingCount);
 

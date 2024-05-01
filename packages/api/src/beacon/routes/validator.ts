@@ -210,11 +210,17 @@ export type SyncDuty = ValueOf<typeof SyncDutyType>;
 export type SyncDutyList = ValueOf<typeof SyncDutyListType>;
 export type SignedAggregateAndProofList = ValueOf<typeof SignedAggregateAndProofListType>;
 export type SignedContributionAndProofList = ValueOf<typeof SignedContributionAndProofListType>;
+export type BeaconCommitteeSubscription = ValueOf<typeof BeaconCommitteeSubscriptionType>;
 export type BeaconCommitteeSubscriptionList = ValueOf<typeof BeaconCommitteeSubscriptionListType>;
+export type SyncCommitteeSubscription = ValueOf<typeof SyncCommitteeSubscriptionType>;
 export type SyncCommitteeSubscriptionList = ValueOf<typeof SyncCommitteeSubscriptionListType>;
+export type ProposerPreparationData = ValueOf<typeof ProposerPreparationDataType>;
 export type ProposerPreparationDataList = ValueOf<typeof ProposerPreparationDataListType>;
+export type BeaconCommitteeSelection = ValueOf<typeof BeaconCommitteeSelectionType>;
 export type BeaconCommitteeSelectionList = ValueOf<typeof BeaconCommitteeSelectionListType>;
+export type SyncCommitteeSelection = ValueOf<typeof SyncCommitteeSelectionType>;
 export type SyncCommitteeSelectionList = ValueOf<typeof SyncCommitteeSelectionListType>;
+export type LivenessResponseData = ValueOf<typeof LivenessResponseDataType>;
 export type LivenessResponseDataList = ValueOf<typeof LivenessResponseDataListType>;
 export type SignedValidatorRegistrationV1List = ValueOf<typeof SignedValidatorRegistrationV1ListType>;
 

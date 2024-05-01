@@ -1,6 +1,6 @@
 import {describe, it, expect, beforeEach, vi, MockedObject} from "vitest";
 import {when} from "vitest-when";
-import {Api, HttpStatusCode, routes} from "@lodestar/api";
+import {ApiClient, ApiResponse, HttpStatusCode, routes} from "@lodestar/api";
 import {hash} from "@lodestar/utils";
 import {Logger} from "@lodestar/logger";
 import {allForks, capella} from "@lodestar/types";
@@ -45,24 +45,21 @@ const buildBlockResponse = ({
 }: {
   slot: number;
   blockNumber: number;
-}): routes.beacon.block.BlockV2Response<"json"> => ({
-  ok: true,
-  status: HttpStatusCode.OK,
-  response: {
-    version: ForkName.altair,
-    executionOptimistic: true,
-    finalized: false,
-    data: buildBlock({slot, blockNumber}),
-  },
-});
+}): ApiResponse<routes.beacon.Endpoints["getBlockV2"]> => {
+  const response = new Response(null, {status: HttpStatusCode.OK});
+  const apiResponse = new ApiResponse<routes.beacon.Endpoints["getBlockV2"]>({} as any, null, response);
+  apiResponse.value = () => buildBlock({slot, blockNumber});
+  apiResponse.meta = () => ({version: ForkName.altair, executionOptimistic: true, finalized: false});
+  return apiResponse;
+};
 
 describe("proof_provider/payload_store", function () {
-  let api: Api & {beacon: MockedObject<Api["beacon"]>};
+  let api: ApiClient & {beacon: MockedObject<ApiClient["beacon"]>};
   let logger: Logger;
   let store: PayloadStore;
 
   beforeEach(() => {
-    api = {beacon: {getBlockV2: vi.fn()}} as unknown as Api & {beacon: MockedObject<Api["beacon"]>};
+    api = {beacon: {getBlockV2: vi.fn()}} as unknown as ApiClient & {beacon: MockedObject<ApiClient["beacon"]>};
     logger = console as unknown as Logger;
     store = new PayloadStore({api, logger});
   });
@@ -194,11 +191,11 @@ describe("proof_provider/payload_store", function () {
         const unavailablePayload = buildPayload({blockNumber: unavailableBlockNumber});
 
         when(api.beacon.getBlockV2)
-          .calledWith(blockNumber)
+          .calledWith({blockId: blockNumber})
           .thenResolve(buildBlockResponse({blockNumber, slot: blockNumber}));
 
         when(api.beacon.getBlockV2)
-          .calledWith(unavailableBlockNumber)
+          .calledWith({blockId: unavailableBlockNumber})
           .thenResolve(buildBlockResponse({blockNumber: unavailableBlockNumber, slot: unavailableBlockNumber}));
 
         store.set(availablePayload, slotNumber, true);
@@ -206,8 +203,8 @@ describe("proof_provider/payload_store", function () {
         const result = await store.get(unavailablePayload.blockNumber);
 
         expect(api.beacon.getBlockV2).toHaveBeenCalledTimes(2);
-        expect(api.beacon.getBlockV2).toHaveBeenCalledWith(blockNumber);
-        expect(api.beacon.getBlockV2).toHaveBeenCalledWith(unavailableBlockNumber);
+        expect(api.beacon.getBlockV2).toHaveBeenCalledWith({blockId: blockNumber});
+        expect(api.beacon.getBlockV2).toHaveBeenCalledWith({blockId: unavailableBlockNumber});
         expect(result).toEqual(unavailablePayload);
       });
     });
@@ -243,14 +240,13 @@ describe("proof_provider/payload_store", function () {
         const slot = 20;
         const header = buildLCHeader({slot, blockNumber});
         const blockResponse = buildBlockResponse({blockNumber, slot});
-        const executionPayload = (blockResponse.response?.data as capella.SignedBeaconBlock).message.body
-          .executionPayload;
+        const executionPayload = (blockResponse.value() as capella.SignedBeaconBlock).message.body.executionPayload;
         api.beacon.getBlockV2.mockResolvedValue(blockResponse);
 
         await store.processLCHeader(header, true);
 
         expect(api.beacon.getBlockV2).toHaveBeenCalledOnce();
-        expect(api.beacon.getBlockV2).toHaveBeenCalledWith(20);
+        expect(api.beacon.getBlockV2).toHaveBeenCalledWith({blockId: 20});
         expect(store.finalized).toEqual(executionPayload);
       });
 
@@ -259,8 +255,7 @@ describe("proof_provider/payload_store", function () {
         const slot = 20;
         const header = buildLCHeader({slot, blockNumber});
         const blockResponse = buildBlockResponse({blockNumber, slot});
-        const executionPayload = (blockResponse.response?.data as capella.SignedBeaconBlock).message.body
-          .executionPayload;
+        const executionPayload = (blockResponse.value() as capella.SignedBeaconBlock).message.body.executionPayload;
         api.beacon.getBlockV2.mockResolvedValue(blockResponse);
         expect(store.finalized).toBeUndefined();
         // First process as unfinalized
@@ -284,7 +279,7 @@ describe("proof_provider/payload_store", function () {
       await store.processLCHeader(header);
 
       expect(api.beacon.getBlockV2).toHaveBeenCalledOnce();
-      expect(api.beacon.getBlockV2).toHaveBeenCalledWith(20);
+      expect(api.beacon.getBlockV2).toHaveBeenCalledWith({blockId: 20});
     });
 
     it("should not fetch existing payload for lightclient header", async () => {
@@ -300,7 +295,7 @@ describe("proof_provider/payload_store", function () {
 
       // The network fetch should be done once
       expect(api.beacon.getBlockV2).toHaveBeenCalledOnce();
-      expect(api.beacon.getBlockV2).toHaveBeenCalledWith(20);
+      expect(api.beacon.getBlockV2).toHaveBeenCalledWith({blockId: 20});
     });
 
     it("should prune the existing payloads", async () => {
@@ -383,7 +378,7 @@ describe("proof_provider/payload_store", function () {
 
       for (let i = 1; i <= numberOfPayloads; i++) {
         when(api.beacon.getBlockV2)
-          .calledWith(i)
+          .calledWith({blockId: i})
           .thenResolve(buildBlockResponse({blockNumber: 500 + i, slot: i}));
 
         await store.processLCHeader(buildLCHeader({blockNumber: 500 + i, slot: i}), false);

@@ -1,4 +1,4 @@
-import {Api} from "@lodestar/api";
+import {ApiClient} from "@lodestar/api";
 import {allForks, capella} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {MAX_PAYLOAD_HISTORY} from "../constants.js";
@@ -32,7 +32,7 @@ export class PayloadStore {
 
   private latestBlockRoot: BlockELRoot | null = null;
 
-  constructor(private opts: {api: Api; logger: Logger}) {}
+  constructor(private opts: {api: ApiClient; logger: Logger}) {}
 
   get finalized(): allForks.ExecutionPayload | undefined {
     const maxBlockNumberForFinalized = this.finalizedRoots.max;

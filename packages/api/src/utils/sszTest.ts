@@ -2,7 +2,6 @@
 import {ContainerType, ListBasicType, ListCompositeType, Type, ValueOf} from "@chainsafe/ssz";
 import {Epoch, StringType, allForks, ssz} from "@lodestar/types";
 import {StateId} from "../beacon/routes/beacon/index.js";
-import {AttesterDuty} from "../beacon/routes/validator.js";
 import {NodeHealthOptions} from "../beacon/routes/node.js";
 import {Schema} from "./schema.js";
 import {Endpoint, RouteDefinitions} from "./types.js";
@@ -161,7 +160,7 @@ const resp = await testMethods.getAttesterDuties(args, {
   timeoutMs: 5000,
 });
 
-const _duties = await resp.value();
+const _duties = resp.value();
 
 const res = await testMethods.getHealth();
-await res.value();
+res.value();

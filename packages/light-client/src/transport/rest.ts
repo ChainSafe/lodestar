@@ -29,29 +29,29 @@ export class LightClientRestTransport implements LightClientTransport {
     }[]
   > {
     const res = await this.api.lightclient.getLightClientUpdatesByRange({startPeriod, count});
-    const updates = await res.value();
-    const meta = await res.meta();
+    const updates = res.value();
+    const meta = res.meta();
     return updates.map((data, i) => ({data, version: meta.version[i]}));
   }
 
   async getOptimisticUpdate(): Promise<{version: ForkName; data: allForks.LightClientOptimisticUpdate}> {
     const res = await this.api.lightclient.getLightClientOptimisticUpdate();
-    return {version: (await res.meta()).version, data: await res.value()};
+    return {version: res.meta().version, data: res.value()};
   }
 
   async getFinalityUpdate(): Promise<{version: ForkName; data: allForks.LightClientFinalityUpdate}> {
     const res = await this.api.lightclient.getLightClientFinalityUpdate();
-    return {version: (await res.meta()).version, data: await res.value()};
+    return {version: res.meta().version, data: res.value()};
   }
 
   async getBootstrap(blockRoot: string): Promise<{version: ForkName; data: allForks.LightClientBootstrap}> {
     const res = await this.api.lightclient.getLightClientBootstrap({blockRoot});
-    return {version: (await res.meta()).version, data: await res.value()};
+    return {version: res.meta().version, data: res.value()};
   }
 
   async fetchBlock(blockRootAsString: string): Promise<{version: ForkName; data: allForks.SignedBeaconBlock}> {
     const res = await this.api.beacon.getBlockV2({blockId: blockRootAsString});
-    return {version: (await res.meta()).version, data: await res.value()};
+    return {version: res.meta().version, data: res.value()};
   }
 
   onOptimisticUpdate(handler: (optimisticUpdate: allForks.LightClientOptimisticUpdate) => void): void {

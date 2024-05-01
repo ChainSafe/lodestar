@@ -4,7 +4,7 @@ import {BuilderSelection, Endpoints} from "../../../../src/beacon/routes/validat
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 
 const ZERO_HASH = new Uint8Array(32);
-// const ZERO_HASH_HEX = "0x" + Buffer.from(ZERO_HASH).toString("hex"); TODO: remove if not needed
+const ZERO_HASH_HEX = "0x" + Buffer.from(ZERO_HASH).toString("hex");
 const randaoReveal = new Uint8Array(96).fill(1);
 const selectionProof = new Uint8Array(96).fill(1);
 const graffiti = "a".repeat(32);
@@ -25,14 +25,14 @@ export const testData: GenericServerTestCases<Endpoints> = {
           slot: 7,
         },
       ],
-      meta: {executionOptimistic: true, dependentRoot: ZERO_HASH},
+      meta: {executionOptimistic: true, dependentRoot: ZERO_HASH_HEX},
     },
   },
   getProposerDuties: {
     args: {epoch: 1000},
     res: {
       data: [{slot: 1, validatorIndex: 2, pubkey: new Uint8Array(48).fill(3)}],
-      meta: {executionOptimistic: true, dependentRoot: ZERO_HASH},
+      meta: {executionOptimistic: true, dependentRoot: ZERO_HASH_HEX},
     },
   },
   getSyncCommitteeDuties: {

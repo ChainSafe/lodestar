@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import {digest} from "@chainsafe/as-sha256";
-import {ApiError, getClient} from "@lodestar/api";
+import {getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {newZeroedArray} from "@lodestar/state-transition";
 
@@ -112,12 +112,9 @@ async function writePubkeys(): Promise<void> {
 
   const client = getClient({baseUrl}, {config});
 
-  const res = await client.debug.getStateV2("finalized");
-  ApiError.assert(res);
+  const res = await client.debug.getStateV2({stateId: "finalized"});
 
-  const pubkeys = Array.from(res.response.data.validators).map((validator) =>
-    Buffer.from(validator.pubkey).toString("hex")
-  );
+  const pubkeys = Array.from(res.value().validators).map((validator) => Buffer.from(validator.pubkey).toString("hex"));
 
   fs.writeFileSync("mainnet_pubkeys.csv", pubkeys.join("\n"));
 }

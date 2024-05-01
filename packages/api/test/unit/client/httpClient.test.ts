@@ -34,7 +34,7 @@ describe("httpClient json client", () => {
     method: testRoute.method,
     req: EmptyGetRequestCodec,
     resp: EmptyResponseCodec,
-    operationId: "test",
+    operationId: "testRoute",
     urlFormatter: compileRouteUrlFormater(testRoute.url),
   };
 
@@ -80,13 +80,13 @@ describe("httpClient json client", () => {
     const httpClient = await getServerWithClient({
       url,
       method: "GET",
-      handler: async () => ({test: 1}),
+      handler: async () => ({data: {test: 1}}),
     });
 
-    const {body: resBody, status} = await httpClient.request(testGetDefinition, undefined);
+    const res = await httpClient.request(testGetDefinition, undefined);
 
-    expect(status).toBe(HttpStatusCode.OK);
-    expect(resBody).toEqual({test: 1});
+    expect(res.status).toBe(HttpStatusCode.OK);
+    expect(res.value()).toEqual({test: 1});
   });
 
   it("should handle successful POST request correctly", async () => {
@@ -127,14 +127,14 @@ describe("httpClient json client", () => {
       handler: async (req) => {
         queryReceived = req.query;
         bodyReceived = req.body;
-        return resBody;
+        return {data: resBody};
       },
     });
 
-    const {body: resBodyReceived, status} = await httpClient.request(testPostDefinition, {...query, ...body});
+    const res = await httpClient.request(testPostDefinition, {...query, ...body});
 
-    expect(status).toBe(HttpStatusCode.OK);
-    expect(resBodyReceived).toEqual(resBody);
+    expect(res.status).toBe(HttpStatusCode.OK);
+    expect(res.value()).toEqual(resBody);
     expect(queryReceived).toEqual(query);
     expect(bodyReceived).toEqual(body);
   });
@@ -151,8 +151,7 @@ describe("httpClient json client", () => {
     expect(res.ok).toBe(false);
     expect(res.status).toBe(404);
 
-    const err = await res.error();
-    expect(err?.message).toBe("Not Found: Route GET:/test-route not found");
+    expect(res.error()?.message).toBe("testRoute failed with status 404: Route GET:/test-route not found");
   });
 
   it("should handle http status code 500 correctly", async () => {
@@ -168,8 +167,7 @@ describe("httpClient json client", () => {
     expect(res.ok).toBe(false);
     expect(res.status).toBe(500);
 
-    const err = await res.error();
-    expect(err?.message).toBe("Internal Server Error: Test error");
+    expect(res.error()?.message).toBe("testRoute failed with status 500: Test error");
   });
 
   it("should handle http status with custom code 503", async () => {
@@ -185,8 +183,7 @@ describe("httpClient json client", () => {
     expect(res.ok).toBe(false);
     expect(res.status).toBe(503);
 
-    const err = await res.error();
-    expect(err?.message).toBe("Service Unavailable: Node is syncing");
+    expect(res.error()?.message).toBe("testRoute failed with status 503: Node is syncing");
   });
 
   it("should set user credentials in URL as Authorization header", async () => {

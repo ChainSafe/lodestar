@@ -59,12 +59,12 @@ like to choose for BLS To Execution Change.",
     // submitting the signed message
     const {config: chainForkConfig} = getBeaconConfigFromArgs(args);
     const client = getClient({urls: args.beaconNodes}, {config: chainForkConfig});
-    const genesisRes = await client.beacon.getGenesis();
-    const {genesisValidatorsRoot} = await genesisRes.value();
+    const {genesisValidatorsRoot} = (await client.beacon.getGenesis()).value();
     const config = createBeaconConfig(chainForkConfig, genesisValidatorsRoot);
 
-    const stateValidatorRes = await client.beacon.getStateValidators({stateId: "head", validatorIds: [publicKey]});
-    const stateValidators = await stateValidatorRes.value();
+    const stateValidators = (
+      await client.beacon.getStateValidators({stateId: "head", validatorIds: [publicKey]})
+    ).value();
     const stateValidator = stateValidators[0];
     if (stateValidator === undefined) {
       throw new Error(`Validator pubkey ${publicKey} not found in state`);
@@ -87,8 +87,11 @@ like to choose for BLS To Execution Change.",
       signature: blsPrivkey.sign(signingRoot).toBytes(),
     };
 
-    const res = await client.beacon.submitPoolBLSToExecutionChange({changes: [signedBLSToExecutionChange]});
-    await res.assertOk();
+    (
+      await client.beacon.submitPoolBLSToExecutionChange({
+        blsToExecutionChanges: [signedBLSToExecutionChange],
+      })
+    ).assertOk();
 
     console.log(`Submitted bls to execution change for ${publicKey}`);
   },

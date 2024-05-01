@@ -48,7 +48,7 @@ describe("beacon / debug", () => {
         const stateSerialized = ssz.phase0.BeaconState.serialize(state);
         mockApi[method].mockResolvedValue({
           data: stateSerialized,
-          meta: {version: ForkName.phase0, executionOptimistic: false},
+          meta: {version: ForkName.phase0, executionOptimistic: false, finalized: false},
         });
 
         const httpClient = new HttpClient({baseUrl});
@@ -59,7 +59,7 @@ describe("beacon / debug", () => {
         expect(res.ok).toBe(true);
 
         if (res.ok) {
-          expect(toHexString(await res.ssz())).toBe(toHexString(stateSerialized));
+          expect(toHexString(res.ssz())).toBe(toHexString(stateSerialized));
         }
       });
     }

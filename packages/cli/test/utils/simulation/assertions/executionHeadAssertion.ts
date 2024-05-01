@@ -1,4 +1,3 @@
-import {ApiError} from "@lodestar/api";
 import {toHex} from "@lodestar/utils";
 import {bellatrix} from "@lodestar/types";
 import {AssertionMatch, AssertionResult, SimulationAssertion} from "../interfaces.js";
@@ -22,16 +21,13 @@ export function createExecutionHeadAssertion({
       if (blockNumber == null) throw new Error("Execution provider not available");
       const executionHeadBlock = await node.execution.provider?.eth.getBlock(blockNumber);
 
-      const consensusHead = await node.beacon.api.beacon.getBlockV2("head");
-      ApiError.assert(consensusHead);
+      const consensusHead = (await node.beacon.api.beacon.getBlockV2({blockId: "head"})).value();
 
       return {
         executionHead: {hash: executionHeadBlock?.hash ?? "0x0"},
         consensusHead: {
           executionPayload: {
-            blockHash: toHex(
-              (consensusHead.response.data.message as bellatrix.BeaconBlock).body.executionPayload.blockHash
-            ),
+            blockHash: toHex((consensusHead.message as bellatrix.BeaconBlock).body.executionPayload.blockHash),
           },
         },
       };

@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {ArrayType, ListBasicType, ListCompositeType, Type, isBasicType, isCompositeType} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
-import {Root} from "@lodestar/types";
-import {fromHex, objectToExpectedCase, toHex} from "@lodestar/utils";
+import {RootHex} from "@lodestar/types";
+import {objectToExpectedCase} from "@lodestar/utils";
 import {
   GetRequestCodec,
   PostRequestCodec,
@@ -48,7 +48,7 @@ export type ExecutionOptimisticAndDependentRootMeta = ExecutionOptimisticMeta & 
   /**
    * The block root that this response is dependent on
    */
-  dependentRoot: Root;
+  dependentRoot: RootHex;
 };
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -240,19 +240,19 @@ export const ExecutionOptimisticAndDependentRootCodec: ResponseMetadataCodec<Exe
   {
     toJson: (val) => ({
       execution_optimistic: val.executionOptimistic,
-      dependent_root: toHex(val.dependentRoot),
+      dependent_root: val.dependentRoot,
     }),
     fromJson: (val) => ({
       executionOptimistic: (val as {execution_optimistic: boolean}).execution_optimistic,
-      dependentRoot: fromHex((val as {dependent_root: string}).dependent_root),
+      dependentRoot: (val as {dependent_root: string}).dependent_root,
     }),
     toHeadersObject: (val) => ({
       "Eth-Execution-Optimistic": val.executionOptimistic.toString(),
-      "Eth-Consensus-Dependent-Root": toHex(val.dependentRoot),
+      "Eth-Consensus-Dependent-Root": val.dependentRoot,
     }),
     fromHeaders: (headers) => ({
       executionOptimistic: toBoolean(headers.get("Eth-Execution-Optimistic")!),
-      dependentRoot: fromHex(headers.get("Eth-Consensus-Dependent-Root")!),
+      dependentRoot: headers.get("Eth-Consensus-Dependent-Root")!,
     }),
   };
 

@@ -434,19 +434,23 @@ export class SimulationTracker {
     signal?: AbortSignal
   ): void {
     debug("event stream initialized for", node.beacon.id);
-    void node.beacon.api.events.eventstream(events, signal ?? this.signal, async (event) => {
-      switch (event.type) {
-        case routes.events.EventType.block:
-          debug(`block received node=${node.beacon.id} slot=${event.message.slot}`);
-          await this.processOnBlock(event.message, node);
-          return;
-        case routes.events.EventType.head:
-          await this.processOnHead(event.message, node);
-          return;
-        case routes.events.EventType.finalizedCheckpoint:
-          this.processOnFinalizedCheckpoint(event.message, node);
-          return;
-      }
+    void node.beacon.api.events.eventstream({
+      topics: events,
+      signal: signal ?? this.signal,
+      onEvent: async (event) => {
+        switch (event.type) {
+          case routes.events.EventType.block:
+            debug(`block received node=${node.beacon.id} slot=${event.message.slot}`);
+            await this.processOnBlock(event.message, node);
+            return;
+          case routes.events.EventType.head:
+            await this.processOnHead(event.message, node);
+            return;
+          case routes.events.EventType.finalizedCheckpoint:
+            this.processOnFinalizedCheckpoint(event.message, node);
+            return;
+        }
+      },
     });
   }
 }

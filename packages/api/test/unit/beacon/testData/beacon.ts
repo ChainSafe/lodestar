@@ -108,7 +108,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
     res: {data: [ssz.capella.SignedBLSToExecutionChange.defaultValue()]},
   },
   submitPoolAttestations: {
-    args: {attestations: [ssz.phase0.Attestation.defaultValue()]},
+    args: {signedAttestations: [ssz.phase0.Attestation.defaultValue()]},
     res: undefined,
   },
   submitPoolAttesterSlashings: {

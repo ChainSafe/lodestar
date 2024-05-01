@@ -100,7 +100,7 @@ describe("eventstream event data", () => {
   //     "value": "event: head\ndata: {\"slot\":\"10\", \"block\":\"0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf\", \"state\":\"0x600e852a08c1200654ddf11025f1ceacb3c2e74bdd5c630cde0838b2591b69f9\", \"epoch_transition\":false, \"previous_duty_dependent_root\":\"0x5e0043f107cb57913498fbf2f99ff55e730bf1e151f02f221e977c91a90a0e91\", \"current_duty_dependent_root\":\"0x5e0043f107cb57913498fbf2f99ff55e730bf1e151f02f221e977c91a90a0e91\", \"execution_optimistic\": false}\n"
   //   }, ... }
   const eventstreamExamples =
-    openApiJson.paths["/eth/v1/events"]["get"].responses["200"].content?.["text/event-stream"].examples;
+    openApiJson.paths["/eth/v1/events"]["get"].responses["200"]?.content?.["text/event-stream"].examples;
 
   beforeAll(() => {
     if (!eventstreamExamples) {

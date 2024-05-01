@@ -1,6 +1,5 @@
-import {getClient, ApiError} from "@lodestar/api";
+import {getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
-import {allForks} from "@lodestar/types";
 import {getInfuraBeaconUrl} from "../utils/infura.js";
 
 // Analyze how Ethereum Consensus blocks are in a target network to prepare accurate performance states and blocks
@@ -20,9 +19,7 @@ const network = "mainnet";
 const client = getClient({baseUrl: getInfuraBeaconUrl(network)}, {config});
 
 async function run(): Promise<void> {
-  const res = await client.beacon.getBlockHeader("head");
-  ApiError.assert(res);
-  const headBlock = res.response.data;
+  const headBlock = (await client.beacon.getBlockHeader({blockId: "head"})).value();
 
   // Count operations
   let blocks = 0;
@@ -40,9 +37,9 @@ async function run(): Promise<void> {
   const batchSize = 32;
 
   for (let slot = startSlot; slot > 0; slot -= batchSize) {
-    const blockPromises: ReturnType<typeof client.beacon.getBlock>[] = [];
+    const blockPromises: ReturnType<typeof client.beacon.getBlockV2>[] = [];
     for (let s = slot - batchSize; s < slot; s++) {
-      blockPromises.push(client.beacon.getBlock(s));
+      blockPromises.push(client.beacon.getBlockV2({blockId: s}));
     }
 
     const results = await Promise.allSettled(blockPromises);
@@ -51,9 +48,8 @@ async function run(): Promise<void> {
         // Missed block
         continue;
       }
-      ApiError.assert(result.value);
 
-      const block = (result.value.response as {data: allForks.SignedBeaconBlock}).data;
+      const block = result.value.value();
 
       blocks++;
       attestations += block.message.body.attestations.length;

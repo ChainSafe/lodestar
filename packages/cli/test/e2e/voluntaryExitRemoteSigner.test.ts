@@ -1,7 +1,7 @@
 import path from "node:path";
 import {describe, it, beforeAll, afterAll, beforeEach, afterEach, vi} from "vitest";
 import {retry} from "@lodestar/utils";
-import {ApiError, getClient} from "@lodestar/api";
+import {getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {interopSecretKey, interopSecretKeys} from "@lodestar/state-transition";
 import {
@@ -66,9 +66,8 @@ describe("voluntaryExit using remote signer", function () {
     // Wait for beacon node API to be available + genesis
     await retry(
       async () => {
-        const head = await client.beacon.getBlockHeader("head");
-        ApiError.assert(head);
-        if (head.response.data.header.message.slot < 1) throw Error("pre-genesis");
+        const head = (await client.beacon.getBlockHeader({blockId: "head"})).value();
+        if (head.header.message.slot < 1) throw Error("pre-genesis");
       },
       {retryDelay: 1000, retries: 20}
     );
@@ -94,13 +93,12 @@ describe("voluntaryExit using remote signer", function () {
     for (const pubkey of pubkeysToExit) {
       await retry(
         async () => {
-          const res = await client.beacon.getStateValidator("head", pubkey);
-          ApiError.assert(res);
-          if (res.response.data.status !== "active_exiting") {
+          const validator = (await client.beacon.getStateValidator({stateId: "head", validatorId: pubkey})).value();
+          if (validator.status !== "active_exiting") {
             throw Error("Validator not exiting");
           } else {
             // eslint-disable-next-line no-console
-            console.log(`Confirmed validator ${pubkey} = ${res.response.data.status}`);
+            console.log(`Confirmed validator ${pubkey} = ${validator.status}`);
           }
         },
         {retryDelay: 1000, retries: 20}

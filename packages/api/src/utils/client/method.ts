@@ -36,7 +36,7 @@ export function createApiClientMethod<E extends Endpoint>(
     }) as ApiClientMethod<E>;
   }
   return async (args?: E["args"], init?: ApiRequestInit) => {
-    return client.request(definitionExtended, args, init);
+    return client.request(definitionExtended, args ?? {}, init);
   };
 }
 

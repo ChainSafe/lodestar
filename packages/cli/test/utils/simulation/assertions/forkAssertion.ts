@@ -1,4 +1,3 @@
-import {ApiError} from "@lodestar/api";
 import {ForkName} from "@lodestar/params";
 import {Epoch} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
@@ -15,10 +14,9 @@ export function createForkAssertion(fork: ForkName, epoch: Epoch): SimulationAss
     assert: async ({node, slot, forkConfig}) => {
       const errors: AssertionResult[] = [];
 
-      const res = await node.beacon.api.debug.getStateV2("head");
-      ApiError.assert(res);
+      const state = (await node.beacon.api.debug.getStateV2({stateId: "head"})).value();
       const expectedForkVersion = toHexString(forkConfig.getForkInfo(slot).version);
-      const currentForkVersion = toHexString(res.response.data.fork.currentVersion);
+      const currentForkVersion = toHexString(state.fork.currentVersion);
 
       if (expectedForkVersion !== currentForkVersion) {
         errors.push([

@@ -27,6 +27,8 @@ export type {
   BuilderBoostFactorData,
 } from "./routes.js";
 
+export type ApiClient = ApiClientMethods<Endpoints>;
+
 type ClientModules = HttpClientModules & {
   config: ChainForkConfig;
   httpClient?: IHttpClient;
@@ -35,7 +37,7 @@ type ClientModules = HttpClientModules & {
 /**
  * REST HTTP client for keymanager routes
  */
-export function getClient(opts: HttpClientOptions, modules: ClientModules): ApiClientMethods<Endpoints> {
+export function getClient(opts: HttpClientOptions, modules: ClientModules): ApiClient {
   const {config} = modules;
   const httpClient = modules.httpClient ?? new HttpClient(opts, modules);
 

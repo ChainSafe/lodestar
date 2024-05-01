@@ -104,7 +104,7 @@ export type Endpoints = {
    */
   submitPoolAttestations: Endpoint<
     "POST",
-    {attestations: AttestationList},
+    {signedAttestations: AttestationList},
     {body: unknown},
     EmptyResponseData,
     EmptyMeta
@@ -225,10 +225,10 @@ export const definitions: RouteDefinitions<Endpoints> = {
     url: "/eth/v1/beacon/pool/attestations",
     method: "POST",
     req: {
-      writeReqJson: ({attestations}) => ({body: AttestationListType.toJson(attestations)}),
-      parseReqJson: ({body}) => ({attestations: AttestationListType.fromJson(body)}),
-      writeReqSsz: ({attestations}) => ({body: AttestationListType.serialize(attestations)}),
-      parseReqSsz: ({body}) => ({attestations: AttestationListType.deserialize(body)}),
+      writeReqJson: ({signedAttestations: attestations}) => ({body: AttestationListType.toJson(attestations)}),
+      parseReqJson: ({body}) => ({signedAttestations: AttestationListType.fromJson(body)}),
+      writeReqSsz: ({signedAttestations: attestations}) => ({body: AttestationListType.serialize(attestations)}),
+      parseReqSsz: ({body}) => ({signedAttestations: AttestationListType.deserialize(body)}),
       schema: {
         body: Schema.ObjectArray,
       },

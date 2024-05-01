@@ -50,12 +50,12 @@ export function getBeaconPoolApi({
       return {data: chain.opPool.getAllBlsToExecutionChanges().map(({data}) => data)};
     },
 
-    async submitPoolAttestations({attestations}) {
+    async submitPoolAttestations({signedAttestations}) {
       const seenTimestampSec = Date.now() / 1000;
       const errors: Error[] = [];
 
       await Promise.all(
-        attestations.map(async (attestation, i) => {
+        signedAttestations.map(async (attestation, i) => {
           try {
             const fork = chain.config.getForkName(chain.clock.currentSlot);
             // eslint-disable-next-line @typescript-eslint/explicit-function-return-type

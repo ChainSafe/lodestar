@@ -173,12 +173,12 @@ export class SimulationEnvironment {
         for (const node of this.nodes) {
           if (node.validator?.keys.type === "remote") {
             this.externalSigner.addKeys(node.validator?.keys.secretKeys);
-            await node.validator.keyManager.importRemoteKeys(
-              node.validator.keys.secretKeys.map((sk) => ({
+            await node.validator.keyManager.importRemoteKeys({
+              remoteSigners: node.validator.keys.secretKeys.map((sk) => ({
                 pubkey: sk.toPublicKey().toHex(),
                 url: this.externalSigner.url,
-              }))
-            );
+              })),
+            });
             this.logger.info(`Imported remote keys for node ${node.id}`);
           }
         }

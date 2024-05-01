@@ -65,8 +65,8 @@ export function runGenericServerTest<Es extends Record<string, Endpoint>>(
         expect(mockApi[routeId]).toHaveBeenCalledWith(testCase.args);
 
         // Assert returned value and metadata is correct
-        expect(await res.value()).toEqual(testCase.res?.data);
-        expect(await res.meta()).toEqual(testCase.res?.meta);
+        expect(res.value()).toEqual(testCase.res?.data);
+        expect(res.meta()).toEqual(testCase.res?.meta);
       });
     });
   });

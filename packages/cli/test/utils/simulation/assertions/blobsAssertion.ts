@@ -1,5 +1,4 @@
 import {randomBytes} from "node:crypto";
-import {ApiError} from "@lodestar/api";
 import {fromHex, toHex} from "@lodestar/utils";
 import {SimulationAssertion, AssertionMatch, AssertionResult, NodePair} from "../interfaces.js";
 import {EL_GENESIS_ACCOUNT, EL_GENESIS_SECRET_KEY, SIM_ENV_CHAIN_ID} from "../constants.js";
@@ -50,10 +49,9 @@ export function createBlobsAssertion(
         sentBlobs.push(...blobs.map((b) => fromHex(b)));
       }
 
-      const blobSideCars = await node.beacon.api.beacon.getBlobSidecars(slot);
-      ApiError.assert(blobSideCars);
+      const blobSideCars = (await node.beacon.api.beacon.getBlobSidecars({blockId: slot})).value();
 
-      return blobSideCars.response.data.map((b) => b.blob);
+      return blobSideCars.map((b) => b.blob);
     },
 
     assert: async ({store}) => {

@@ -3,7 +3,7 @@ import type {SecretKey} from "@chainsafe/bls/types";
 import {LevelDbController} from "@lodestar/db";
 import {interopSecretKey} from "@lodestar/state-transition";
 import {SlashingProtection, Validator, Signer, SignerType, ValidatorProposerConfig} from "@lodestar/validator";
-import {ServerApi, Api, HttpStatusCode, APIServerHandler} from "@lodestar/api";
+import {ApiClient, ApiError, Endpoints, HttpStatusCode, ApplicationMethods, ApiResponse} from "@lodestar/api";
 import {mapValues} from "@lodestar/utils";
 import {BeaconNode} from "../../../src/index.js";
 import {testLogger, TestLoggerOpts} from "../logger.js";
@@ -87,38 +87,32 @@ export async function getAndInitDevValidators({
   };
 }
 
-export function getApiFromServerHandlers(api: {[K in keyof Api]: ServerApi<Api[K]>}): Api {
+export function getApiFromServerHandlers(api: {
+  [K in keyof Endpoints]: ApplicationMethods<Endpoints[K]>;
+}): ApiClient {
   return mapValues(api, (apiModule) =>
-    mapValues(apiModule, (api: APIServerHandler) => {
-      return async (...args: any) => {
-        let code: HttpStatusCode = HttpStatusCode.OK;
+    mapValues(apiModule, (api: (args: unknown) => PromiseLike<{data: unknown; meta: unknown}>) => {
+      return async (args: unknown) => {
         try {
-          const response = await api(
-            ...args,
-            // request object
-            {},
-            // response object
-            {
-              code: (i: number) => {
-                code = i;
-              },
-            }
-          );
-          return {response, ok: true, status: code};
+          const apiResponse = new ApiResponse({} as any, null, new Response(null, {status: HttpStatusCode.OK}));
+          const result = await api(args);
+          apiResponse.value = () => result.data;
+          apiResponse.meta = () => result.meta;
+          return apiResponse;
         } catch (err) {
-          return {
-            ok: false,
-            status: code ?? HttpStatusCode.INTERNAL_SERVER_ERROR,
-            error: {
-              code: code ?? HttpStatusCode.INTERNAL_SERVER_ERROR,
-              message: (err as Error).message,
-              operationId: api.name,
-            },
+          const apiResponse = new ApiResponse(
+            {} as any,
+            null,
+            new Response(null, {status: HttpStatusCode.INTERNAL_SERVER_ERROR})
+          );
+          apiResponse.error = () => {
+            return new ApiError((err as Error).message, HttpStatusCode.INTERNAL_SERVER_ERROR, api.name);
           };
+          return apiResponse;
         }
       };
     })
-  ) as Api;
+  ) as ApiClient;
 }
 
 export function getNodeApiUrl(node: BeaconNode): string {
