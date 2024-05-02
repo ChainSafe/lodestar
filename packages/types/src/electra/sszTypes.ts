@@ -41,6 +41,8 @@ const {
 
 export const AggregationBits = new BitListType(MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT);
 
+// This CommitteeBits serves a different purpose than CommitteeBits in phase0
+// TODO Electra: Rename phase0.CommitteeBits to ParticipationBits to avoid confusion
 export const CommitteeBits = new BitVectorType(MAX_COMMITTEES_PER_SLOT);
 
 export const AttestingIndices = new ListBasicType(
@@ -83,6 +85,23 @@ export const AttesterSlashing = new ContainerType(
     attestation2: IndexedAttestationBigint,
   },
   {typeName: "AttesterSlashing", jsonCase: "eth2"}
+);
+
+export const AggregateAndProof = new ContainerType(
+  {
+    aggregatorIndex: ValidatorIndex,
+    aggregate: Attestation,
+    selectionProof: BLSSignature,
+  },
+  {typeName: "AggregateAndProof", jsonCase: "eth2", cachePermanentRootStruct: true}
+);
+
+export const SignedAggregateAndProof = new ContainerType(
+  {
+    message: AggregateAndProof,
+    signature: BLSSignature,
+  },
+  {typeName: "SignedAggregateAndProof", jsonCase: "eth2"}
 );
 
 export const DepositReceipt = new ContainerType(
@@ -343,21 +362,4 @@ export const SSEPayloadAttributes = new ContainerType(
     payloadAttributes: PayloadAttributes,
   },
   {typeName: "SSEPayloadAttributes", jsonCase: "eth2"}
-);
-
-export const AggregateAndProof = new ContainerType(
-  {
-    aggregatorIndex: ValidatorIndex,
-    aggregate: Attestation,
-    selectionProof: BLSSignature,
-  },
-  {typeName: "AggregateAndProof", jsonCase: "eth2", cachePermanentRootStruct: true}
-);
-
-export const SignedAggregateAndProof = new ContainerType(
-  {
-    message: AggregateAndProof,
-    signature: BLSSignature,
-  },
-  {typeName: "SignedAggregateAndProof", jsonCase: "eth2"}
 );

@@ -1,6 +1,14 @@
 import {ValueOf} from "@chainsafe/ssz";
 import * as ssz from "./sszTypes.js";
 
+export type Attestation = ValueOf<typeof ssz.Attestation>;
+export type IndexedAttestation = ValueOf<typeof ssz.IndexedAttestation>;
+export type IndexedAttestationBigint = ValueOf<typeof ssz.IndexedAttestationBigint>;
+export type AttesterSlashing = ValueOf<typeof ssz.AttesterSlashing>;
+
+export type AggregateAndProof = ValueOf<typeof ssz.AggregateAndProof>;
+export type SignedAggregateAndProof = ValueOf<typeof ssz.SignedAggregateAndProof>;
+
 export type DepositReceipt = ValueOf<typeof ssz.DepositReceipt>;
 export type DepositReceipts = ValueOf<typeof ssz.DepositReceipts>;
 
@@ -34,10 +42,3 @@ export type LightClientUpdate = ValueOf<typeof ssz.LightClientUpdate>;
 export type LightClientFinalityUpdate = ValueOf<typeof ssz.LightClientFinalityUpdate>;
 export type LightClientOptimisticUpdate = ValueOf<typeof ssz.LightClientOptimisticUpdate>;
 export type LightClientStore = ValueOf<typeof ssz.LightClientStore>;
-
-export type Attestation = ValueOf<typeof ssz.Attestation>;
-export type IndexedAttestation = ValueOf<typeof ssz.IndexedAttestation>;
-export type AggregateAndProof = ValueOf<typeof ssz.AggregateAndProof>;
-export type SignedAggregateAndProof = ValueOf<typeof ssz.SignedAggregateAndProof>;
-export type AttesterSlashing = ValueOf<typeof ssz.AttesterSlashing>;
-export type IndexedAttestationBigint = ValueOf<typeof ssz.IndexedAttestationBigint>;
