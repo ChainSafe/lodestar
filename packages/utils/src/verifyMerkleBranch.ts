@@ -23,5 +23,5 @@ export function verifyMerkleBranch(
       value = digest64(Buffer.concat([value, proof[i]]));
     }
   }
-  return Buffer.from(value).equals(root);
+  return Buffer.from(value.buffer, value.byteOffset, value.byteLength).equals(root);
 }
