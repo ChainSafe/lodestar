@@ -82,31 +82,37 @@ export function createFastifyHandler<E extends Endpoint>(
 ): FastifyHandler<E> {
   return async (req, resp) => {
     let response: ApplicationResponse<E>;
-    if (definition.method === "GET") {
-      response = await method((definition.req as GetRequestCodec<E>).parseReq(req as GetRequestData));
-    } else {
-      // Media type is already validated by Fastify before calling handler
-      const mediaType = parseContentTypeHeader(req.headers[HttpHeader.ContentType]) as MediaType;
 
-      const {onlySupport} = definition.req as PostRequestCodec<E>;
-      const requestWireFormat = getWireFormat(mediaType);
-      switch (requestWireFormat) {
-        case WireFormat.json:
-          if (onlySupport !== undefined && onlySupport !== WireFormat.json) {
-            throw new ServerError(415, `Endpoint only supports ${onlySupport} requests`);
-          }
-          // TODO: make sure to catch all parsing errors and return 400 here as it's likely related to invalid data from client
-          response = await method((definition.req as JsonRequestMethods<E>).parseReqJson(req as JsonPostRequestData));
-          break;
-        case WireFormat.ssz:
-          if (onlySupport !== undefined && onlySupport !== WireFormat.ssz) {
-            throw new ServerError(415, `Endpoint only supports ${onlySupport} requests`);
-          }
-          response = await method(
-            (definition.req as SszRequestMethods<E>).parseReqSsz(req as SszPostRequestData<E["request"]>)
-          );
-          break;
+    try {
+      if (definition.method === "GET") {
+        response = await method((definition.req as GetRequestCodec<E>).parseReq(req as GetRequestData));
+      } else {
+        // Media type is already validated by Fastify before calling handler
+        const mediaType = parseContentTypeHeader(req.headers[HttpHeader.ContentType]) as MediaType;
+
+        const {onlySupport} = definition.req as PostRequestCodec<E>;
+        const requestWireFormat = getWireFormat(mediaType);
+        switch (requestWireFormat) {
+          case WireFormat.json:
+            if (onlySupport !== undefined && onlySupport !== WireFormat.json) {
+              throw new ServerError(415, `Endpoint only supports ${onlySupport} requests`);
+            }
+            response = await method((definition.req as JsonRequestMethods<E>).parseReqJson(req as JsonPostRequestData));
+            break;
+          case WireFormat.ssz:
+            if (onlySupport !== undefined && onlySupport !== WireFormat.ssz) {
+              throw new ServerError(415, `Endpoint only supports ${onlySupport} requests`);
+            }
+            response = await method(
+              (definition.req as SszRequestMethods<E>).parseReqSsz(req as SszPostRequestData<E["request"]>)
+            );
+            break;
+        }
       }
+    } catch (e) {
+      if (e instanceof ServerError) throw e;
+      // Errors related to parsing should return 400 status code
+      throw new ServerError(400, (e as Error).message);
     }
 
     if (response?.status !== undefined) {
