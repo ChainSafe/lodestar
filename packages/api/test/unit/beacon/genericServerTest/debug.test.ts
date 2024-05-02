@@ -32,7 +32,6 @@ describe("beacon / debug", () => {
       const res = getTestServer();
       server = res.server;
       for (const route of Object.values(getRoutes(config, mockApi))) {
-        // TODO: investigate type issue
         server.route(route as FastifyRoute<AnyEndpoint>);
       }
       baseUrl = await res.start();

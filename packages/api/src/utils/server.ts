@@ -41,9 +41,6 @@ export type ApplicationResponse<E extends Endpoint> =
     ? ApplicationResponseObject<E> | void
     : ApplicationResponseObject<E>;
 
-// TODO: what's the purpose of this?
-// export type ApplicationError = ApiError | Error;
-
 type GenericOptions = Record<string, unknown>;
 
 export type ApplicationMethod<E extends Endpoint> = (

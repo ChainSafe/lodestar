@@ -16,7 +16,6 @@ export function registerRoutes(
   const routes = getRoutes(config, methods);
 
   for (const route of Object.values(routes)) {
-    // TODO: investigate type issue
     server.route(route as FastifyRoute<AnyEndpoint>);
   }
 }
