@@ -115,8 +115,8 @@ function innerShuffleList(input: Shuffleable, seed: Bytes32, dir: boolean): void
     buf[_SHUFFLE_H_SEED_SIZE] = r;
     // Seed is already in place, now just hash the correct part of the buffer, and take a uint64 from it,
     //  and modulo it to get a pivot within range.
-    const h = digest(buf.slice(0, _SHUFFLE_H_PIVOT_VIEW_SIZE));
-    const pivot = Number(bytesToBigInt(h.slice(0, 8)) % BigInt(listSize)) >>> 0;
+    const h = digest(buf.subarray(0, _SHUFFLE_H_PIVOT_VIEW_SIZE));
+    const pivot = Number(bytesToBigInt(h.subarray(0, 8)) % BigInt(listSize)) >>> 0;
 
     // Split up the for-loop in two:
     //  1. Handle the part from 0 (incl) to pivot (incl). This is mirrored around (pivot / 2)
