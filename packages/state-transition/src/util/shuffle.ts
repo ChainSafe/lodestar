@@ -90,6 +90,8 @@ function innerShuffleList(input: Shuffleable, seed: Bytes32, dir: boolean): void
   const listSize = input.length >>> 0;
   // check if list size fits in uint32
   assert.equal(listSize, input.length, "input length does not fit uint32");
+  // check that the seed is 32 bytes
+  assert.equal(seed.length, 32, "seed length is not 32 bytes");
 
   const buf = Buffer.alloc(_SHUFFLE_H_TOTAL_SIZE);
   let r = 0;
@@ -100,8 +102,7 @@ function innerShuffleList(input: Shuffleable, seed: Bytes32, dir: boolean): void
   }
 
   // Seed is always the first 32 bytes of the hash input, we never have to change this part of the buffer.
-  const _seed = seed;
-  buf.set(_seed.subarray(0, _SHUFFLE_H_SEED_SIZE), 0);
+  buf.set(seed, 0);
 
   // initial values here are not used: overwritten first within the inner for loop.
   let source = seed; // just setting it to a Bytes32
