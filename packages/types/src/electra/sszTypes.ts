@@ -52,9 +52,9 @@ export const AttestingIndices = new ListBasicType(
 
 export const Attestation = new ContainerType(
   {
-    aggregationBits: AggregationBits,
+    aggregationBits: AggregationBits, // Modified in ELECTRA
     data: phase0Ssz.AttestationData,
-    committeeBits: CommitteeBits,
+    committeeBits: CommitteeBits, // New in ELECTRA
     signature: BLSSignature,
   },
   {typeName: "Attestation", jsonCase: "eth2"}
@@ -62,7 +62,7 @@ export const Attestation = new ContainerType(
 
 export const IndexedAttestation = new ContainerType(
   {
-    attestingIndices: AttestingIndices,
+    attestingIndices: AttestingIndices, // Modified in ELECTRA
     data: phase0Ssz.AttestationData,
     signature: BLSSignature,
   },
@@ -72,7 +72,7 @@ export const IndexedAttestation = new ContainerType(
 /** Same as `IndexedAttestation` but epoch, slot and index are not bounded and must be a bigint */
 export const IndexedAttestationBigint = new ContainerType(
   {
-    attestingIndices: AttestingIndices,
+    attestingIndices: AttestingIndices, // Modified in ELECTRA
     data: phase0Ssz.AttestationDataBigint,
     signature: BLSSignature,
   },
@@ -81,8 +81,8 @@ export const IndexedAttestationBigint = new ContainerType(
 
 export const AttesterSlashing = new ContainerType(
   {
-    attestation1: IndexedAttestationBigint,
-    attestation2: IndexedAttestationBigint,
+    attestation1: IndexedAttestationBigint, // Modified in ELECTRA
+    attestation2: IndexedAttestationBigint, // Modified in ELECTRA
   },
   {typeName: "AttesterSlashing", jsonCase: "eth2"}
 );
@@ -90,7 +90,7 @@ export const AttesterSlashing = new ContainerType(
 export const AggregateAndProof = new ContainerType(
   {
     aggregatorIndex: ValidatorIndex,
-    aggregate: Attestation,
+    aggregate: Attestation, // Modified in ELECTRA
     selectionProof: BLSSignature,
   },
   {typeName: "AggregateAndProof", jsonCase: "eth2", cachePermanentRootStruct: true}
@@ -98,7 +98,7 @@ export const AggregateAndProof = new ContainerType(
 
 export const SignedAggregateAndProof = new ContainerType(
   {
-    message: AggregateAndProof,
+    message: AggregateAndProof, // Modified in ELECTRA
     signature: BLSSignature,
   },
   {typeName: "SignedAggregateAndProof", jsonCase: "eth2"}
