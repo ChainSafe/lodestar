@@ -2,7 +2,7 @@ import {HttpErrorCodes} from "./httpStatusCode.js";
 
 export class ApiError extends Error {
   status: number;
-  operationId?: string;
+  operationId: string;
 
   constructor(message: string, status: number, operationId: string) {
     super(`${operationId} failed with status ${status}: ${message}`);
