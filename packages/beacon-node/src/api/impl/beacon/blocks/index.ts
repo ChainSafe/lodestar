@@ -251,7 +251,6 @@ export function getBeaconBlockApi({
       //
       // see: https://github.com/ChainSafe/lodestar/issues/5404
       chain.logger.info("Publishing assembled block", {slot, blockRoot, source});
-      // TODO: opts are not type safe, add ServerOpts in Endpoint type definition?
       return publishBlock({signedBlockOrContents}, context, {...opts, ignoreIfKnown: true});
     }
   };
