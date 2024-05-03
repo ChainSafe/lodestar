@@ -19,7 +19,7 @@ import {
   BuilderBoostFactorData,
 } from "@lodestar/api/keymanager";
 import {Interchange, SignerType, Validator} from "@lodestar/validator";
-import {ApplicationMethods} from "@lodestar/api/server";
+import {ApiError, ApplicationMethods} from "@lodestar/api/server";
 import {Epoch} from "@lodestar/types";
 import {isValidHttpUrl} from "@lodestar/utils";
 import {getPubkeyHexFromKeystore, isValidatePubkeyHex} from "../../../util/format.js";
@@ -154,7 +154,7 @@ export class KeymanagerApi implements Api {
         const keystoreStr = keystores[i];
         const password = passwords[i];
         if (password === undefined) {
-          throw Error(`No password for keystores[${i}]`);
+          throw new ApiError(400, `No password for keystores[${i}]`);
         }
 
         const keystore = Keystore.parse(keystoreStr);
@@ -232,7 +232,7 @@ export class KeymanagerApi implements Api {
         const pubkeyHex = pubkeys[i];
 
         if (!isValidatePubkeyHex(pubkeyHex)) {
-          throw Error(`Invalid pubkey ${pubkeyHex}`);
+          throw new ApiError(400, `Invalid pubkey ${pubkeyHex}`);
         }
 
         // Skip unknown keys or remote signers
@@ -318,10 +318,10 @@ export class KeymanagerApi implements Api {
     const importPromises = remoteSigners.map(async ({pubkey, url}): Promise<ResponseStatus<ImportRemoteKeyStatus>> => {
       try {
         if (!isValidatePubkeyHex(pubkey)) {
-          throw Error(`Invalid pubkey ${pubkey}`);
+          throw new ApiError(400, `Invalid pubkey ${pubkey}`);
         }
         if (!isValidHttpUrl(url)) {
-          throw Error(`Invalid URL ${url}`);
+          throw new ApiError(400, `Invalid URL ${url}`);
         }
 
         // Check if key exists
@@ -361,7 +361,7 @@ export class KeymanagerApi implements Api {
     const results = pubkeys.map((pubkeyHex): ResponseStatus<DeleteRemoteKeyStatus> => {
       try {
         if (!isValidatePubkeyHex(pubkeyHex)) {
-          throw Error(`Invalid pubkey ${pubkeyHex}`);
+          throw new ApiError(400, `Invalid pubkey ${pubkeyHex}`);
         }
 
         const signer = this.validator.validatorStore.getSigner(pubkeyHex);
@@ -418,7 +418,7 @@ export class KeymanagerApi implements Api {
    */
   async signVoluntaryExit({pubkey, epoch}: {pubkey: PubkeyHex; epoch?: Epoch}): ReturnType<Api["signVoluntaryExit"]> {
     if (!isValidatePubkeyHex(pubkey)) {
-      throw Error(`Invalid pubkey ${pubkey}`);
+      throw new ApiError(400, `Invalid pubkey ${pubkey}`);
     }
     return {data: await this.validator.signVoluntaryExit(pubkey, epoch)};
   }
