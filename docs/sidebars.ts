@@ -5,6 +5,11 @@ const sidebars: SidebarsConfig = {
     "index",
     "introduction",
     {
+      type: "doc",
+      label: "Security",
+      id: "security",
+    },
+    {
       type: "category",
       label: "Getting Started",
       items: ["getting-started/quick-start", "getting-started/installation", "getting-started/starting-a-node"],
@@ -37,7 +42,19 @@ const sidebars: SidebarsConfig = {
     {
       type: "category",
       label: "Light Client and Prover",
-      items: ["lightclient-prover/lightclient-cli", "lightclient-prover/lightclient", "lightclient-prover/prover"],
+      items: [
+        "lightclient-prover/lightclient-cli",
+        {
+          type: "doc",
+          label: "Light Client",
+          id: "lightclient-prover/lightclient",
+        },
+        {
+          type: "doc",
+          label: "Prover",
+          id: "lightclient-prover/prover",
+        },
+      ],
     },
     {
       type: "category",
@@ -49,7 +66,17 @@ const sidebars: SidebarsConfig = {
       type: "category",
       label: "Contributing",
       items: [
+        {
+          type: "doc",
+          label: "Getting Started",
+          id: "contribution/getting-started",
+        },
         "contribution/depgraph",
+        {
+          type: "doc",
+          label: "Dev CLI Reference",
+          id: "contribution/dev-cli",
+        },
         {
           type: "category",
           label: "Testing",
