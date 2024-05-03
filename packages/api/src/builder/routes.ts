@@ -23,7 +23,7 @@ import {fromRequestHeaders} from "../utils/headers.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
-// Relays might not return any data if there are no bids from builders or min-bid threshold was not reached.
+// Mev-boost might not return any data if there are no bids from builders or min-bid threshold was not reached.
 // In this case, we receive a success response (204) which is not handled as an error. The generic response
 // handler already checks the status code and will not attempt to parse the body, but it will return no value.
 // It is important that this type indicates that there might be no value to ensure it is properly handled downstream.
