@@ -1,5 +1,5 @@
 import {describe, it, expect} from "vitest";
-import {allForks, deneb, Epoch, phase0, RootHex, Slot, ssz} from "@lodestar/types";
+import {allForks, deneb, Epoch, isElectraAttestation, phase0, RootHex, Slot, ssz} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
 import {ForkName} from "@lodestar/params";
 import {
@@ -29,7 +29,7 @@ describe("attestation SSZ serialized picking", () => {
 
   for (const [i, attestation] of testCases.entries()) {
     it(`attestation ${i}`, () => {
-      const isElectra = "committeeBits" in attestation;
+      const isElectra = isElectraAttestation(attestation);
       const bytes = isElectra
         ? ssz.electra.Attestation.serialize(attestation)
         : ssz.phase0.Attestation.serialize(attestation);
