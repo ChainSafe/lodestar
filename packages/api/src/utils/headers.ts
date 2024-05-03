@@ -114,6 +114,9 @@ export function mergeHeaders(a: HeadersInit | undefined, b: HeadersInit | undefi
   return headers;
 }
 
+/**
+ * Get required header from request headers
+ */
 export function fromHeaders<T extends Record<string, string>>(
   headers: T,
   name: Extract<keyof T, string>
@@ -130,7 +133,14 @@ export function fromHeaders<T extends Record<string, string>>(
 }
 
 export type HeadersExtra = Headers & {
+  /**
+   * Get required header from response headers
+   */
   getRequired(name: string): string;
+  /**
+   * Get optional header from response headers.
+   * Return default value if it does not exist
+   */
   getOrDefault(name: string, defaultValue: string): string;
 };
 
