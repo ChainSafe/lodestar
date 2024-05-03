@@ -3,7 +3,7 @@ import {NetworkName} from "@lodestar/config/networks";
 import {Logger, LogLevel} from "@lodestar/utils";
 import {ProofProvider} from "./proof_provider/proof_provider.js";
 import {JsonRpcRequest, JsonRpcRequestOrBatch, JsonRpcResponse, JsonRpcResponseOrBatch} from "./types.js";
-import {ELRpc} from "./utils/rpc.js";
+import {ELRpcProvider} from "./utils/rpc_provider.js";
 
 export type {NetworkName} from "@lodestar/config/networks";
 export enum LCTransport {
@@ -37,7 +37,7 @@ export type Web3Provider = object;
 
 export type ELVerifiedRequestHandlerOpts<Params = unknown[]> = {
   payload: JsonRpcRequest<Params>;
-  rpc: ELRpc;
+  rpc: ELRpcProvider;
   proofProvider: ProofProvider;
   logger: Logger;
 };
@@ -85,6 +85,6 @@ export type AnyWeb3Provider = object;
 export interface Web3ProviderType<T extends AnyWeb3Provider> {
   name: string;
   matched: (provider: AnyWeb3Provider) => provider is T;
-  handler(provider: T): ELRpc["handler"];
-  mutateProvider(provider: T, newHandler: ELRpc["handler"]): void;
+  handler(provider: T): ELRpcProvider["handler"];
+  mutateProvider(provider: T, newHandler: ELRpcProvider["handler"]): void;
 }

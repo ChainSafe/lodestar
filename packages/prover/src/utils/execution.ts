@@ -2,11 +2,14 @@ import {Common, CustomChain, Hardfork} from "@ethereumjs/common";
 import {ELApiParams, ELApiReturn, ELTransaction} from "../types.js";
 import {isValidResponse} from "./json_rpc.js";
 import {isBlockNumber, isPresent} from "./validation.js";
-import {ELRpc} from "./rpc.js";
+import {ELRpcProvider} from "./rpc_provider.js";
 
 export type Optional<T, K extends keyof T> = Omit<T, K> & {[P in keyof T]?: T[P] | undefined};
 
-export async function getELCode(rpc: ELRpc, args: ELApiParams["eth_getCode"]): Promise<ELApiReturn["eth_getCode"]> {
+export async function getELCode(
+  rpc: ELRpcProvider,
+  args: ELApiParams["eth_getCode"]
+): Promise<ELApiReturn["eth_getCode"]> {
   const codeResult = await rpc.request("eth_getCode", args, {raiseError: false});
 
   if (!isValidResponse(codeResult)) {
@@ -16,7 +19,10 @@ export async function getELCode(rpc: ELRpc, args: ELApiParams["eth_getCode"]): P
   return codeResult.result;
 }
 
-export async function getELProof(rpc: ELRpc, args: ELApiParams["eth_getProof"]): Promise<ELApiReturn["eth_getProof"]> {
+export async function getELProof(
+  rpc: ELRpcProvider,
+  args: ELApiParams["eth_getProof"]
+): Promise<ELApiReturn["eth_getProof"]> {
   const proof = await rpc.request("eth_getProof", args, {raiseError: false});
   if (!isValidResponse(proof)) {
     throw new Error(`Can not find proof for address=${args[0]}`);
@@ -25,7 +31,7 @@ export async function getELProof(rpc: ELRpc, args: ELApiParams["eth_getProof"]):
 }
 
 export async function getELBlock(
-  rpc: ELRpc,
+  rpc: ELRpcProvider,
   args: ELApiParams["eth_getBlockByNumber"]
 ): Promise<ELApiReturn["eth_getBlockByNumber"]> {
   const block = await rpc.request(isBlockNumber(args[0]) ? "eth_getBlockByNumber" : "eth_getBlockByHash", args, {

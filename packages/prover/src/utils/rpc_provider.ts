@@ -23,7 +23,7 @@ import {isNullish} from "./validation.js";
 
 export type Optional<T, K extends keyof T> = Omit<T, K> & {[P in keyof T]?: T[P] | undefined};
 
-export class ELRpc {
+export class ELRpcProvider {
   private handler: ELRequestHandler;
   private logger: Logger;
 

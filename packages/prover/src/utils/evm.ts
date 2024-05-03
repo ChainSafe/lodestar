@@ -13,7 +13,7 @@ import {bufferToHex, chunkIntoN, cleanObject, hexToBigInt, hexToBuffer, numberTo
 import {getChainCommon, getTxType} from "./execution.js";
 import {isValidResponse} from "./json_rpc.js";
 import {isNullish, isValidAccount, isValidCodeHash, isValidStorageKeys} from "./validation.js";
-import {ELRpc} from "./rpc.js";
+import {ELRpcProvider} from "./rpc_provider.js";
 
 export async function createVM({proofProvider}: {proofProvider: ProofProvider}): Promise<VM> {
   const common = getChainCommon(proofProvider.config.PRESET_BASE as string);
@@ -39,7 +39,7 @@ export async function getVMWithState({
   vm,
   logger,
 }: {
-  rpc: ELRpc;
+  rpc: ELRpcProvider;
   vm: VM;
   executionPayload: allForks.ExecutionPayload;
   tx: ELTransaction;
@@ -160,7 +160,7 @@ export async function executeVMCall({
   executionPayload,
   network,
 }: {
-  rpc: ELRpc;
+  rpc: ELRpcProvider;
   tx: ELTransaction;
   vm: VM;
   executionPayload: allForks.ExecutionPayload;
@@ -202,7 +202,7 @@ export async function executeVMTx({
   executionPayload,
   network,
 }: {
-  rpc: ELRpc;
+  rpc: ELRpcProvider;
   tx: ELTransaction;
   vm: VM;
   executionPayload: allForks.ExecutionPayload;

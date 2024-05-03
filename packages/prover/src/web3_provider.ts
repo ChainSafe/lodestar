@@ -3,7 +3,7 @@ import {getBrowserLogger} from "@lodestar/logger/browser";
 import {Logger} from "@lodestar/utils";
 import {AnyWeb3Provider, ELRequestHandler, VerifiedExecutionInitOptions} from "./interfaces.js";
 import {ProofProvider} from "./proof_provider/proof_provider.js";
-import {ELRpc} from "./utils/rpc.js";
+import {ELRpcProvider} from "./utils/rpc_provider.js";
 import {Web3ProviderInspector} from "./web3_provider_inspector.js";
 import {processAndVerifyRequest} from "./utils/process.js";
 
@@ -11,12 +11,12 @@ export type Web3ProviderTypeHandler<T extends AnyWeb3Provider> = (
   provider: T,
   proofProvider: ProofProvider,
   logger: Logger
-) => {provider: T; handler: ELRpc["handler"]};
+) => {provider: T; handler: ELRpcProvider["handler"]};
 
 export function createVerifiedExecutionProvider<
   T extends AnyWeb3Provider,
   Mutate extends undefined | boolean = true,
-  Return = {provider: Mutate extends undefined | true ? T : ELRpc; proofProvider: ProofProvider},
+  Return = {provider: Mutate extends undefined | true ? T : ELRpcProvider; proofProvider: ProofProvider},
 >(provider: T, opts: VerifiedExecutionInitOptions<Mutate>): Return {
   const signal = opts.signal ?? new AbortController().signal;
   const logger = opts.logger ?? getBrowserLogger({level: opts.logLevel ?? LogLevel.info});
@@ -37,7 +37,7 @@ export function createVerifiedExecutionProvider<
   });
 
   const nonVerifiedHandler = providerType.handler(provider);
-  const nonVerifiedRpc = new ELRpc(nonVerifiedHandler, logger);
+  const nonVerifiedRpc = new ELRpcProvider(nonVerifiedHandler, logger);
 
   nonVerifiedRpc.verifyCompatibility().catch((err) => {
     logger.error(err);
@@ -54,5 +54,5 @@ export function createVerifiedExecutionProvider<
   }
 
   // Verified RPC
-  return {provider: new ELRpc(verifiedHandler, logger), proofProvider} as Return;
+  return {provider: new ELRpcProvider(verifiedHandler, logger), proofProvider} as Return;
 }
