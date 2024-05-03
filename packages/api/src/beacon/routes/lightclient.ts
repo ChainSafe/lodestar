@@ -10,6 +10,7 @@ import {
   EmptyMeta,
   EmptyMetaCodec,
   EmptyRequest,
+  MetaHeader,
   VersionCodec,
   VersionMeta,
   WithVersion,
@@ -181,9 +182,12 @@ export function definitions(config: ChainForkConfig): RouteDefinitions<Endpoints
           toJson: (meta) => meta,
           fromJson: (val) => val as {version: ForkName[]},
           toHeadersObject: (meta) => ({
-            "Eth-Consensus-Version": meta.version.join(","),
+            [MetaHeader.Version]: meta.version.join(","),
           }),
-          fromHeaders: (headers) => ({version: headers.get("Eth-Consensus-Version")!.split(",") as ForkName[]}),
+          fromHeaders: (headers) => ({
+            // TODO: this header format is not spec compliant, do we care?
+            version: headers.getRequired(MetaHeader.Version).split(",") as ForkName[],
+          }),
         },
         transform: {
           toResponse: (data, meta) => {

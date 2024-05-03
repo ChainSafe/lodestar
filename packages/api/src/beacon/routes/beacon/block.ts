@@ -13,10 +13,11 @@ import {
   ExecutionOptimisticAndFinalizedMeta,
   ExecutionOptimisticFinalizedAndVersionCodec,
   ExecutionOptimisticFinalizedAndVersionMeta,
+  MetaHeader,
   WithVersion,
 } from "../../../utils/codecs.js";
 import {toForkName} from "../../../utils/serdes.js";
-import {fromRequestHeaders} from "../../../utils/headers.js";
+import {fromHeaders} from "../../../utils/headers.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -166,7 +167,7 @@ export type Endpoints = {
     //
     "POST",
     {signedBlockOrContents: allForks.SignedBeaconBlockOrContents},
-    {body: unknown; headers: {"Eth-Consensus-Version": string}},
+    {body: unknown; headers: {[MetaHeader.Version]: string}},
     EmptyResponseData,
     EmptyMeta
   >;
@@ -174,7 +175,7 @@ export type Endpoints = {
   publishBlockV2: Endpoint<
     "POST",
     {signedBlockOrContents: allForks.SignedBeaconBlockOrContents; broadcastValidation?: BroadcastValidation},
-    {body: unknown; headers: {"Eth-Consensus-Version": string}; query: {broadcast_validation?: string}},
+    {body: unknown; headers: {[MetaHeader.Version]: string}; query: {broadcast_validation?: string}},
     EmptyResponseData,
     EmptyMeta
   >;
@@ -186,7 +187,7 @@ export type Endpoints = {
   publishBlindedBlock: Endpoint<
     "POST",
     {signedBlindedBlock: allForks.SignedBlindedBeaconBlock},
-    {body: unknown; headers: {"Eth-Consensus-Version": string}},
+    {body: unknown; headers: {[MetaHeader.Version]: string}},
     EmptyResponseData,
     EmptyMeta
   >;
@@ -197,7 +198,7 @@ export type Endpoints = {
       signedBlindedBlock: allForks.SignedBlindedBeaconBlock;
       broadcastValidation?: BroadcastValidation;
     },
-    {body: unknown; headers: {"Eth-Consensus-Version": string}; query: {broadcast_validation?: string}},
+    {body: unknown; headers: {[MetaHeader.Version]: string}; query: {broadcast_validation?: string}},
     EmptyResponseData,
     EmptyMeta
   >;
@@ -302,12 +303,12 @@ export function definitions(config: ChainForkConfig): RouteDefinitions<Endpoints
                     .SignedBeaconBlock.toJson(signedBlockOrContents as allForks.SignedBeaconBlock)
                 : SignedBlockContentsType.toJson(signedBlockOrContents as SignedBlockContents),
             headers: {
-              "Eth-Consensus-Version": config.getForkName(slot),
+              [MetaHeader.Version]: config.getForkName(slot),
             },
           };
         },
         parseReqJson: ({body, headers}) => {
-          const forkName = toForkName(fromRequestHeaders(headers, "Eth-Consensus-Version"));
+          const forkName = toForkName(fromHeaders(headers, MetaHeader.Version));
           const forkSeq = config.forks[forkName].seq;
           return {
             signedBlockOrContents:
@@ -328,12 +329,12 @@ export function definitions(config: ChainForkConfig): RouteDefinitions<Endpoints
                     .SignedBeaconBlock.serialize(signedBlockOrContents as allForks.SignedBeaconBlock)
                 : SignedBlockContentsType.serialize(signedBlockOrContents as SignedBlockContents),
             headers: {
-              "Eth-Consensus-Version": config.getForkName(slot),
+              [MetaHeader.Version]: config.getForkName(slot),
             },
           };
         },
         parseReqSsz: ({body, headers}) => {
-          const forkName = toForkName(fromRequestHeaders(headers, "Eth-Consensus-Version"));
+          const forkName = toForkName(fromHeaders(headers, MetaHeader.Version));
           const forkSeq = config.forks[forkName].seq;
           return {
             signedBlockOrContents:
@@ -344,7 +345,7 @@ export function definitions(config: ChainForkConfig): RouteDefinitions<Endpoints
         },
         schema: {
           body: Schema.Object,
-          headers: {"Eth-Consensus-Version": Schema.StringRequired},
+          headers: {[MetaHeader.Version]: Schema.StringRequired},
         },
       },
       resp: EmptyResponseCodec,
@@ -365,13 +366,13 @@ export function definitions(config: ChainForkConfig): RouteDefinitions<Endpoints
                     .SignedBeaconBlock.toJson(signedBlockOrContents as allForks.SignedBeaconBlock)
                 : SignedBlockContentsType.toJson(signedBlockOrContents as SignedBlockContents),
             headers: {
-              "Eth-Consensus-Version": config.getForkName(slot),
+              [MetaHeader.Version]: config.getForkName(slot),
             },
             query: {broadcast_validation: broadcastValidation},
           };
         },
         parseReqJson: ({body, headers, query}) => {
-          const forkName = toForkName(fromRequestHeaders(headers, "Eth-Consensus-Version"));
+          const forkName = toForkName(fromHeaders(headers, MetaHeader.Version));
           const forkSeq = config.forks[forkName].seq;
           return {
             signedBlockOrContents:
@@ -393,13 +394,13 @@ export function definitions(config: ChainForkConfig): RouteDefinitions<Endpoints
                     .SignedBeaconBlock.serialize(signedBlockOrContents as allForks.SignedBeaconBlock)
                 : SignedBlockContentsType.serialize(signedBlockOrContents as SignedBlockContents),
             headers: {
-              "Eth-Consensus-Version": config.getForkName(slot),
+              [MetaHeader.Version]: config.getForkName(slot),
             },
             query: {broadcast_validation: broadcastValidation},
           };
         },
         parseReqSsz: ({body, headers, query}) => {
-          const forkName = toForkName(fromRequestHeaders(headers, "Eth-Consensus-Version")); // TODO validation
+          const forkName = toForkName(fromHeaders(headers, MetaHeader.Version)); // TODO validation
           const forkSeq = config.forks[forkName].seq;
           return {
             signedBlockOrContents:
@@ -412,7 +413,7 @@ export function definitions(config: ChainForkConfig): RouteDefinitions<Endpoints
         schema: {
           body: Schema.Object,
           query: {broadcast_validation: Schema.String},
-          headers: {"Eth-Consensus-Version": Schema.StringRequired},
+          headers: {[MetaHeader.Version]: Schema.StringRequired},
         },
       },
       resp: EmptyResponseCodec,
@@ -426,12 +427,12 @@ export function definitions(config: ChainForkConfig): RouteDefinitions<Endpoints
           return {
             body: config.getBlindedForkTypes(slot).SignedBeaconBlock.toJson(signedBlindedBlock),
             headers: {
-              "Eth-Consensus-Version": config.getForkName(slot),
+              [MetaHeader.Version]: config.getForkName(slot),
             },
           };
         },
         parseReqJson: ({body, headers}) => {
-          const forkName = toForkName(fromRequestHeaders(headers, "Eth-Consensus-Version"));
+          const forkName = toForkName(fromHeaders(headers, MetaHeader.Version));
           const forkSeq = config.forks[forkName].seq;
           if (forkSeq < ForkSeq.bellatrix) throw new Error("TODO"); // TODO
           return {
@@ -443,12 +444,12 @@ export function definitions(config: ChainForkConfig): RouteDefinitions<Endpoints
           return {
             body: config.getBlindedForkTypes(slot).SignedBeaconBlock.serialize(signedBlindedBlock),
             headers: {
-              "Eth-Consensus-Version": config.getForkName(slot),
+              [MetaHeader.Version]: config.getForkName(slot),
             },
           };
         },
         parseReqSsz: ({body, headers}) => {
-          const forkName = toForkName(fromRequestHeaders(headers, "Eth-Consensus-Version"));
+          const forkName = toForkName(fromHeaders(headers, MetaHeader.Version));
           const forkSeq = config.forks[forkName].seq;
           if (forkSeq < ForkSeq.bellatrix) throw new Error("TODO"); // TODO
           return {
@@ -457,7 +458,7 @@ export function definitions(config: ChainForkConfig): RouteDefinitions<Endpoints
         },
         schema: {
           body: Schema.Object,
-          headers: {"Eth-Consensus-Version": Schema.StringRequired},
+          headers: {[MetaHeader.Version]: Schema.StringRequired},
         },
       },
       resp: EmptyResponseCodec,
@@ -472,13 +473,13 @@ export function definitions(config: ChainForkConfig): RouteDefinitions<Endpoints
             body: config.getBlindedForkTypes(slot).SignedBeaconBlock.toJson(signedBlindedBlock),
 
             headers: {
-              "Eth-Consensus-Version": config.getForkName(slot),
+              [MetaHeader.Version]: config.getForkName(slot),
             },
             query: {broadcast_validation: broadcastValidation},
           };
         },
         parseReqJson: ({body, headers, query}) => {
-          const forkName = toForkName(fromRequestHeaders(headers, "Eth-Consensus-Version"));
+          const forkName = toForkName(fromHeaders(headers, MetaHeader.Version));
           const forkSeq = config.forks[forkName].seq;
           if (forkSeq < ForkSeq.bellatrix) throw new Error("TODO"); // TODO
           return {
@@ -491,13 +492,13 @@ export function definitions(config: ChainForkConfig): RouteDefinitions<Endpoints
           return {
             body: config.getBlindedForkTypes(slot).SignedBeaconBlock.serialize(signedBlindedBlock),
             headers: {
-              "Eth-Consensus-Version": config.getForkName(slot),
+              [MetaHeader.Version]: config.getForkName(slot),
             },
             query: {broadcast_validation: broadcastValidation},
           };
         },
         parseReqSsz: ({body, headers, query}) => {
-          const forkName = toForkName(fromRequestHeaders(headers, "Eth-Consensus-Version"));
+          const forkName = toForkName(fromHeaders(headers, MetaHeader.Version));
           const forkSeq = config.forks[forkName].seq;
           if (forkSeq < ForkSeq.bellatrix) throw new Error("TODO"); // TODO
           return {
@@ -508,7 +509,7 @@ export function definitions(config: ChainForkConfig): RouteDefinitions<Endpoints
         schema: {
           body: Schema.Object,
           query: {broadcast_validation: Schema.String},
-          headers: {"Eth-Consensus-Version": Schema.StringRequired},
+          headers: {[MetaHeader.Version]: Schema.StringRequired},
         },
       },
       resp: EmptyResponseCodec,

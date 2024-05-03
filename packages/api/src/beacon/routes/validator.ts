@@ -30,6 +30,7 @@ import {
   ExecutionOptimisticCodec,
   ExecutionOptimisticMeta,
   JsonOnlyReq,
+  MetaHeader,
   VersionCodec,
   VersionMeta,
   WithMeta,
@@ -760,26 +761,26 @@ export const definitions: RouteDefinitions<Endpoints> = {
           };
         },
         toHeadersObject: (meta) => ({
-          "Eth-Consensus-Version": meta.version,
-          "Eth-Execution-Payload-Blinded": meta.executionPayloadBlinded.toString(),
-          "Eth-Execution-Payload-Source": meta.executionPayloadSource.toString(),
-          "Eth-Execution-Payload-Value": meta.executionPayloadValue.toString(),
-          "Eth-Consensus-Block-Value": meta.consensusBlockValue.toString(),
+          [MetaHeader.Version]: meta.version,
+          [MetaHeader.ExecutionPayloadBlinded]: meta.executionPayloadBlinded.toString(),
+          [MetaHeader.ExecutionPayloadSource]: meta.executionPayloadSource.toString(),
+          [MetaHeader.ExecutionPayloadValue]: meta.executionPayloadValue.toString(),
+          [MetaHeader.ConsensusBlockValue]: meta.consensusBlockValue.toString(),
         }),
         fromHeaders: (headers) => {
-          const executionPayloadBlinded = toBoolean(headers.get("Eth-Execution-Payload-Blinded")!);
+          const executionPayloadBlinded = toBoolean(headers.getRequired(MetaHeader.ExecutionPayloadBlinded));
 
           // Extract source from the headers and assign defaults in a spec compliant manner if not present in response
           const executionPayloadSource =
-            (headers.get("Eth-Execution-Payload-Source") as ProducedBlockSource) ??
+            (headers.get(MetaHeader.ExecutionPayloadSource) as ProducedBlockSource) ??
             (executionPayloadBlinded === true ? ProducedBlockSource.builder : ProducedBlockSource.engine);
 
           return {
-            version: toForkName(headers.get("Eth-Consensus-Version")!),
+            version: toForkName(headers.getRequired(MetaHeader.Version)),
             executionPayloadBlinded,
             executionPayloadSource,
-            executionPayloadValue: BigInt(headers.get("Eth-Execution-Payload-Value")!),
-            consensusBlockValue: BigInt(headers.get("Eth-Consensus-Block-Value")!),
+            executionPayloadValue: BigInt(headers.getRequired(MetaHeader.ExecutionPayloadValue)),
+            consensusBlockValue: BigInt(headers.getRequired(MetaHeader.ConsensusBlockValue)),
           };
         },
       },

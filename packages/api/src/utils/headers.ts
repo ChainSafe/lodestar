@@ -114,9 +114,10 @@ export function mergeHeaders(a: HeadersInit | undefined, b: HeadersInit | undefi
   return headers;
 }
 
-export function fromRequestHeaders<T extends Record<string, string>>(
+export function fromHeaders<T extends Record<string, string>>(
   headers: T,
   name: Extract<keyof T, string>
+  // All request headers are required, no need for default value
 ): string {
   // Fastify converts all headers to lower case
   const header = headers[name.toLowerCase()];
@@ -126,4 +127,29 @@ export function fromRequestHeaders<T extends Record<string, string>>(
   }
 
   return header;
+}
+
+export type HeadersExtra = Headers & {
+  getRequired(name: string): string;
+  getOrDefault(name: string, defaultValue: string): string;
+};
+
+export function toHeadersExtra(headers: Headers): HeadersExtra {
+  return {
+    ...headers,
+
+    getRequired(name) {
+      const header = headers.get(name);
+
+      if (header === null) {
+        throw Error(`${name} header is required in response`);
+      }
+
+      return header;
+    },
+
+    getOrDefault(name, defaultValue) {
+      return headers.get(name) ?? defaultValue;
+    },
+  };
 }

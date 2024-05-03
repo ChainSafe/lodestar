@@ -14,12 +14,13 @@ import {
   EmptyResponseCodec,
   EmptyResponseData,
   JsonOnlyReq,
+  MetaHeader,
   VersionCodec,
   VersionMeta,
   WithVersion,
 } from "../utils/codecs.js";
 import {toForkName} from "../utils/serdes.js";
-import {fromRequestHeaders} from "../utils/headers.js";
+import {fromHeaders} from "../utils/headers.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -64,7 +65,7 @@ export type Endpoints = {
   submitBlindedBlock: Endpoint<
     "POST",
     {signedBlindedBlock: allForks.SignedBlindedBeaconBlock},
-    {body: unknown; headers: {"Eth-Consensus-Version": string}},
+    {body: unknown; headers: {[MetaHeader.Version]: string}},
     allForks.ExecutionPayload | allForks.ExecutionPayloadAndBlobsBundle,
     VersionMeta
   >;
@@ -125,12 +126,12 @@ export function definitions(config: ChainForkConfig): RouteDefinitions<Endpoints
           return {
             body: config.getBlindedForkTypes(slot).SignedBeaconBlock.toJson(args.signedBlindedBlock),
             headers: {
-              "Eth-Consensus-Version": config.getForkName(slot),
+              [MetaHeader.Version]: config.getForkName(slot),
             },
           };
         },
         parseReqJson: ({body, headers}) => {
-          const forkName = toForkName(fromRequestHeaders(headers, "Eth-Consensus-Version"));
+          const forkName = toForkName(fromHeaders(headers, MetaHeader.Version));
           if (!isForkExecution(forkName)) throw new Error("TODO"); // TODO
           return {
             signedBlindedBlock: ssz[forkName].SignedBlindedBeaconBlock.fromJson(body),
@@ -138,7 +139,7 @@ export function definitions(config: ChainForkConfig): RouteDefinitions<Endpoints
         },
         schema: {
           body: Schema.Object,
-          headers: {"Eth-Consensus-Version": Schema.StringRequired},
+          headers: {[MetaHeader.Version]: Schema.StringRequired},
         },
       }),
       resp: {
