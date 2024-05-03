@@ -30,46 +30,10 @@ export type ELRequestHandler<Params = unknown[], Response = unknown> = (
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type ELRequestHandlerAny = ELRequestHandler<any, any>;
 
-// Modern providers uses this structure e.g. Web3 4.x
-export interface EIP1193Provider {
-  request: (payload: JsonRpcRequestOrBatch) => Promise<JsonRpcResponseOrBatch>;
-}
-
-export interface Web3jsProvider {
-  request: (payload: JsonRpcRequest) => Promise<JsonRpcResponse>;
-}
-
-// Some providers uses `request` instead of the `send`. e.g. Ganache
-export interface RequestProvider {
-  request(
-    payload: JsonRpcRequestOrBatch,
-    callback: (err: Error | undefined, response: JsonRpcResponseOrBatch) => void
-  ): void;
-}
-
-// The legacy Web3 1.x use this structure
-export interface SendProvider {
-  send(payload: JsonRpcRequest, callback: (err?: Error | null, response?: JsonRpcResponse) => void): void;
-}
-
-// Ethers provider uses this structure
-export interface EthersProvider {
-  // Ethers provider does not have a public interface for batch requests
-  send(method: string, params: Array<unknown>): Promise<JsonRpcResponse>;
-}
-
-// Some legacy providers use this very old structure
-export interface SendAsyncProvider {
-  sendAsync(payload: JsonRpcRequestOrBatch): Promise<JsonRpcResponseOrBatch>;
-}
-
-export type Web3Provider =
-  | SendProvider
-  | EthersProvider
-  | SendAsyncProvider
-  | RequestProvider
-  | EIP1193Provider
-  | Web3jsProvider;
+/**
+ * @deprecated Kept for backward compatibility. Use `AnyWeb3Provider` type instead.
+ */
+export type Web3Provider = object;
 
 export type ELVerifiedRequestHandlerOpts<Params = unknown[]> = {
   payload: JsonRpcRequest<Params>;
@@ -96,4 +60,31 @@ export type RootProviderOptions = {
   unverifiedWhitelist?: string[];
 };
 
-export type VerifiedExecutionInitOptions = LogOptions & ConsensusNodeOptions & NetworkOrConfig & RootProviderOptions;
+export type ProviderTypeOptions<T extends boolean | undefined> = {
+  /**
+   * If user specify custom provider types we will register those at the start in given order.
+   * So if you provider [custom1, custom2] and we already have [web3js, ethers] then final order
+   * of providers will be [custom1, custom2, web3js, ethers]
+   */
+  providerTypes?: Web3ProviderType<AnyWeb3Provider>[];
+  /**
+   * To keep the backward compatible behavior if this option is not set we consider `true` as default.
+   * In coming breaking release we may set this option default to `false`.
+   */
+  mutateProvider?: T;
+};
+
+export type VerifiedExecutionInitOptions<T extends boolean | undefined> = LogOptions &
+  ConsensusNodeOptions &
+  NetworkOrConfig &
+  RootProviderOptions &
+  ProviderTypeOptions<T>;
+
+export type AnyWeb3Provider = object;
+
+export interface Web3ProviderType<T extends AnyWeb3Provider> {
+  name: string;
+  matched: (provider: AnyWeb3Provider) => provider is T;
+  handler(provider: T): ELRpc["handler"];
+  mutateProvider(provider: T, newHandler: ELRpc["handler"]): void;
+}
