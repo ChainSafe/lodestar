@@ -92,6 +92,6 @@
     "dns-over-http-resolver": "^2.1.1",
     "loupe": "^2.3.6",
     "vite": "^5.2.10",
-    "testcontainers/**/cpu-features": "git+ssh://git@github.com/mscdex/cpu-features.git#76160ec"
+    "testcontainers/**/nan": "^2.19.0"
   }
 }
