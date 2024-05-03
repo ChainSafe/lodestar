@@ -184,10 +184,10 @@ async function getHeadStateProof(
   const stateId = toHexString(header.beacon.stateRoot);
   const gindices = paths.map((path) => ssz.bellatrix.BeaconState.getPathInfo(path).gindex);
   const descriptor = computeDescriptor(gindices);
-  const res = await api.proof.getStateProof({stateId, descriptor});
+  const proof = (await api.proof.getStateProof({stateId, descriptor})).value();
 
   return {
-    proof: await res.value(),
+    proof,
     header,
   };
 }

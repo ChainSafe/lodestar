@@ -2,7 +2,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {Slot, CommitteeIndex, altair, Root, BLSSignature} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {computeEpochAtSlot, isSyncCommitteeAggregator} from "@lodestar/state-transition";
-import {ApiClient, ApiError, routes} from "@lodestar/api";
+import {ApiClient, routes} from "@lodestar/api";
 import {IClock, LoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
@@ -124,7 +124,7 @@ export class SyncCommitteeService {
 
     const blockRoot: Uint8Array =
       this.chainHeaderTracker.getCurrentChainHead(slot) ??
-      (await (await this.api.beacon.getBlockRoot({blockId: "head"})).value()).root;
+      (await this.api.beacon.getBlockRoot({blockId: "head"})).value().root;
 
     const signatures: altair.SyncCommitteeMessage[] = [];
 
@@ -192,7 +192,7 @@ export class SyncCommitteeService {
 
     this.logger.verbose("Producing SyncCommitteeContribution", logCtx);
     const res = await this.api.validator.produceSyncCommitteeContribution({slot, subcommitteeIndex, beaconBlockRoot});
-    const contribution = await res.value();
+    const contribution = res.value();
 
     const signedContributions: altair.SignedContributionAndProof[] = [];
 
@@ -274,7 +274,7 @@ export class SyncCommitteeService {
       throw new Error("Failed to receive combined selection proofs before 2/3 of slot");
     }
 
-    const combinedSelections = await res.value();
+    const combinedSelections = res.value();
     this.logger.debug("Received combined sync committee selection proofs", {slot, count: combinedSelections.length});
 
     for (const dutyAndProofs of duties) {

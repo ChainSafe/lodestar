@@ -3,7 +3,7 @@ import {fileURLToPath} from "node:url";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 
 import {OpenApiFile} from "../../utils/parseOpenApiSpec.js";
-import {definitions} from "../../../src/builder/routes.js";
+import {definitions as getDefinitions} from "../../../src/builder/routes.js";
 import {runTestCheckAgainstSpec} from "../../utils/checkAgainstSpec.js";
 import {fetchOpenApiSpec} from "../../utils/fetchOpenApiSpec.js";
 import {testData} from "./testData.js";
@@ -22,7 +22,7 @@ const openApiFile: OpenApiFile = {
   version: RegExp(/.*/),
 };
 
-const definitions = definitions(
+const definitions = getDefinitions(
   // eslint-disable-next-line @typescript-eslint/naming-convention
   createChainForkConfig({...defaultChainConfig, ALTAIR_FORK_EPOCH: 0, BELLATRIX_FORK_EPOCH: 0})
 );
