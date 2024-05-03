@@ -26,8 +26,14 @@ describe("attestation SSZ serialized picking", () => {
       200_00,
       "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeffffffffffffffffffffffffffffffff"
     ),
+    ssz.electra.Attestation.defaultValue(),
     {
-      ...ssz.electra.Attestation.defaultValue(),
+      ...attestationFromValues(
+        4_000_000,
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        200_00,
+        "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeffffffffffffffffffffffffffffffff"
+      ),
       committeeBits: BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, 3),
     },
   ];
