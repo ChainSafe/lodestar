@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.build.json",
+  "include": ["src"],
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "target": "ESNext",
+    "outDir": "./lib/cjs"
+  }
+}

@@ -3,43 +3,12 @@
   "version": "1.18.0",
   "description": "Spec test suite generator from yaml test files",
   "author": "ChainSafe Systems",
-  "license": "Apache-2.0",
-  "bugs": {
-    "url": "https://github.com/ChainSafe/lodestar/issues"
-  },
-  "homepage": "https://github.com/ChainSafe/lodestar#readme",
-  "type": "module",
-  "exports": {
-    ".": {
-      "import": "./lib/index.js"
-    },
-    "./downloadTests": {
-      "import": "./lib/downloadTests.js"
-    }
-  },
-  "types": "lib/index.d.ts",
-  "typesVersions": {
-    "*": {
-      "*": [
-        "*",
-        "lib/*",
-        "lib/*/index"
-      ]
-    }
-  },
-  "files": [
-    "lib/**/*.js",
-    "lib/**/*.js.map",
-    "lib/**/*.d.ts",
-    "*.d.ts",
-    "*.js"
-  ],
-  "bin": {
-    "eth2-spec-test-download": "lib/downloadTestsCli.js"
-  },
   "scripts": {
     "clean": "rm -rf lib && rm -f *.tsbuildinfo",
-    "build": "tsc -p tsconfig.build.json",
+    "build:esm": "tsc -p tsconfig.esm.json",
+    "build:cjs": "tsc -p tsconfig.cjs.json",
+    "build": "yarn build:esm && yarn build:cjs",
+    "postbuild": "node ../../scripts/prepare_cjs_modules.mjs spec-test-util",
     "build:release": "yarn clean && yarn build",
     "build:watch": "yarn run build --watch",
     "check-build": "node -e \"(async function() { await import('./lib/downloadTests.js') })()\"",
@@ -51,16 +20,6 @@
     "test:e2e": "vitest --run --config vitest.e2e.config.ts --dir test/e2e/",
     "check-readme": "typescript-docs-verifier"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com:ChainSafe/lodestar.git"
-  },
-  "keywords": [
-    "ethereum",
-    "eth-consensus",
-    "beacon",
-    "blockchain"
-  ],
   "dependencies": {
     "@lodestar/utils": "^1.18.0",
     "axios": "^1.3.4",
@@ -70,9 +29,63 @@
     "vitest": "^1.2.1"
   },
   "devDependencies": {
-    "@types/tar": "^6.1.4"
+    "@types/tar": "^6.1.4",
+    "@types/snappyjs": "^0.7.0"
   },
   "peerDependencies": {
     "vitest": "^1.2.1"
+  },
+  "type": "module",
+  "bin": {
+    "eth2-spec-test-download": "lib/downloadTestsCli.mjs"
+  },
+  "main": "./lib/cjs/index.cjs",
+  "module": "./lib/esm/index.js",
+  "types": "./lib/esm/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./lib/esm/index.js",
+      "require": "./lib/cjs/index.cjs"
+    },
+    "./downloadTests": {
+      "import": "./lib/esm/downloadTests.js",
+      "require": "./lib/cjs/downloadTests.cjs"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "*": [
+        "*",
+        "lib/esm/*",
+        "lib/esm/*/index"
+      ]
+    }
+  },
+  "files": [
+    "*.map",
+    "*.cjs",
+    "*.d.cts",
+    "*.js",
+    "*.d.mts",
+    "lib/**/*.map",
+    "lib/esm/**/*.js",
+    "lib/esm/**/*.d.ts",
+    "lib/cjs/**/*.cjs",
+    "lib/cjs/**/*.d.cts"
+  ],
+  "keywords": [
+    "ethereum",
+    "eth-consensus",
+    "beacon",
+    "blockchain"
+  ],
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/ChainSafe/lodestar#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com:ChainSafe/lodestar.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ChainSafe/lodestar/issues"
   }
 }
