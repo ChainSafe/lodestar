@@ -34,12 +34,23 @@ export class ELRpc {
     this.logger = logger;
   }
 
+  /**
+   * Request the EL RPC Provider
+   *
+   * @template K
+   * @template E
+   * @param {K} method - RPC Method
+   * @param {ELApiParams[K]} params - RPC Params
+   * @param {{raiseError?: E}} [opts]
+   * @return {*}  {Promise<E extends false ? JsonRpcResponse<ELApiReturn[K]> : JsonRpcResponseWithResultPayload<ELApiReturn[K]>>}
+   * @memberof ELRpc
+   */
   async request<K extends keyof ELApi, E extends boolean>(
     method: K,
     params: ELApiParams[K],
-    opts: {raiseError: E}
+    opts?: {raiseError?: E}
   ): Promise<E extends false ? JsonRpcResponse<ELApiReturn[K]> : JsonRpcResponseWithResultPayload<ELApiReturn[K]>> {
-    const {raiseError} = opts;
+    const {raiseError} = opts ?? {raiseError: true};
 
     const payload: JsonRpcRequest = {jsonrpc: "2.0", method, params, id: this.getRequestId()};
     logRequest(payload, this.logger);
