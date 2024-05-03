@@ -15,7 +15,7 @@ export type Web3ProviderTypeHandler<T extends AnyWeb3Provider> = (
 
 export function createVerifiedExecutionProvider<
   T extends AnyWeb3Provider,
-  Mutate extends undefined | boolean,
+  Mutate extends undefined | boolean = true,
   Return = {provider: Mutate extends undefined | true ? T : ELRpc; proofProvider: ProofProvider},
 >(provider: T, opts: VerifiedExecutionInitOptions<Mutate>): Return {
   const signal = opts.signal ?? new AbortController().signal;

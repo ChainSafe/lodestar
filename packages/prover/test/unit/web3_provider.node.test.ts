@@ -69,14 +69,14 @@ describe("web3_provider", () => {
     });
 
     describe("custom provider type", () => {
-      it.only("should be able to detect and use the custom provider", async () => {
+      it("should be able to detect and use the custom provider", async () => {
         type CustomProvider = {myrequest: (payload: JsonRpcRequest) => Promise<JsonRpcResponse>};
 
         const customProviderType: Web3ProviderType<CustomProvider> = {
+          name: "custom",
           matched(provider): provider is CustomProvider {
             return true;
           },
-
           handler(provider) {
             const handler = provider.myrequest.bind(provider);
 
