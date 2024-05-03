@@ -226,7 +226,7 @@ const blockIdOnlyReq: RequestCodec<Endpoint<"GET", {blockId: BlockId}, {params: 
   schema: {params: {block_id: Schema.StringRequired}},
 };
 
-export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoints> {
+export function definitions(config: ChainForkConfig): RouteDefinitions<Endpoints> {
   return {
     getBlock: {
       url: "/eth/v1/beacon/blocks/{block_id}",

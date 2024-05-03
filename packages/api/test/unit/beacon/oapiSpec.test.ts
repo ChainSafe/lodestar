@@ -32,11 +32,11 @@ const openApiFile: OpenApiFile = {
 const config = createChainForkConfig({...defaultChainConfig, ALTAIR_FORK_EPOCH: 1, BELLATRIX_FORK_EPOCH: 2});
 
 const definitions = {
-  ...routes.beacon.getDefinitions(config),
+  ...routes.beacon.definitions(config),
   ...routes.config.definitions,
   ...routes.debug.definitions,
   ...routes.events.definitions,
-  ...routes.lightclient.getDefinitions(config),
+  ...routes.lightclient.definitions(config),
   ...routes.node.definitions,
   ...routes.proof.definitions,
   ...routes.validator.definitions,
