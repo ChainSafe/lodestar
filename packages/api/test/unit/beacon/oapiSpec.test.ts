@@ -32,7 +32,6 @@ const openApiFile: OpenApiFile = {
 const config = createChainForkConfig({...defaultChainConfig, ALTAIR_FORK_EPOCH: 1, BELLATRIX_FORK_EPOCH: 2});
 
 const definitions = {
-  // TODO: unify interface, always use getDefinitions?
   ...routes.beacon.getDefinitions(config),
   ...routes.config.definitions,
   ...routes.debug.definitions,
