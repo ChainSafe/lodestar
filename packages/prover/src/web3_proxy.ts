@@ -12,7 +12,7 @@ import {fetchRequestPayload, fetchResponseBody} from "./utils/req_resp.js";
 import {processAndVerifyRequest} from "./utils/process.js";
 import {ELRpc} from "./utils/rpc.js";
 
-export type VerifiedProxyOptions = VerifiedExecutionInitOptions & {
+export type VerifiedProxyOptions = Exclude<VerifiedExecutionInitOptions<false>, "mutateProvider" | "providerTypes"> & {
   executionRpcUrl: string;
   requestTimeout: number;
 };
