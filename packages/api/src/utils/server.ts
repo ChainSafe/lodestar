@@ -29,7 +29,9 @@ import {getFastifySchema} from "./schema.js";
 import {EmptyMeta, EmptyResponseData} from "./codecs.js";
 
 type ApplicationResponseObject<E extends Endpoint> = {
-  /** Set non-200 success status code */
+  /**
+   * Set non-200 success status code
+   */
   status?: HttpSuccessCodes;
 } & (E["return"] extends EmptyResponseData
   ? {data?: never}
@@ -41,10 +43,22 @@ export type ApplicationResponse<E extends Endpoint> =
     ? ApplicationResponseObject<E> | void
     : ApplicationResponseObject<E>;
 
+export type ApiContext = {
+  /**
+   * Raw ssz bytes from request payload, only available for ssz requests
+   */
+  sszBytes?: Uint8Array | null;
+  /**
+   * Informs application method about preferable return type to avoid unnecessary serialization
+   */
+  returnBytes?: boolean;
+};
+
 type GenericOptions = Record<string, unknown>;
 
 export type ApplicationMethod<E extends Endpoint> = (
   args: E["args"],
+  context?: ApiContext,
   opts?: GenericOptions
 ) => Promise<ApplicationResponse<E>>;
 export type ApplicationMethods<Es extends Record<string, Endpoint>> = {[K in keyof Es]: ApplicationMethod<Es[K]>};
@@ -81,30 +95,63 @@ export function createFastifyHandler<E extends Endpoint>(
   _operationId: string
 ): FastifyHandler<E> {
   return async (req, resp) => {
-    let response: ApplicationResponse<E>;
+    // Determine response wire format first to inform application method
+    // about the preferable return type to avoid unnecessary serialization
+    let responseMediaType: MediaType | null;
 
+    const acceptHeader = req.headers.accept;
+    if (definition.resp.isEmpty) {
+      // Ignore Accept header, the response will be sent without body
+      responseMediaType = null;
+    } else if (acceptHeader === undefined || acceptHeader === "*/*") {
+      // Default to json to not force user to set header, e.g. when using curl
+      responseMediaType = MediaType.json;
+    } else {
+      responseMediaType = parseAcceptHeader(acceptHeader);
+
+      if (responseMediaType === null) {
+        throw new ServerError(406, `Accepted media types are not supported: ${acceptHeader}`);
+      }
+    }
+    const responseWireFormat =
+      definition.resp.onlySupport ?? (responseMediaType !== null ? getWireFormat(responseMediaType) : null);
+
+    let response: ApplicationResponse<E>;
     try {
       if (definition.method === "GET") {
-        response = await method((definition.req as GetRequestCodec<E>).parseReq(req as GetRequestData));
+        response = await method((definition.req as GetRequestCodec<E>).parseReq(req as GetRequestData), {
+          sszBytes: null,
+          returnBytes: responseWireFormat === WireFormat.ssz,
+        });
       } else {
         // Media type is already validated by Fastify before calling handler
-        const mediaType = parseContentTypeHeader(req.headers[HttpHeader.ContentType]) as MediaType;
+        const requestMediaType = parseContentTypeHeader(req.headers[HttpHeader.ContentType]) as MediaType;
 
         const {onlySupport} = definition.req as PostRequestCodec<E>;
-        const requestWireFormat = getWireFormat(mediaType);
+        const requestWireFormat = getWireFormat(requestMediaType);
         switch (requestWireFormat) {
           case WireFormat.json:
             if (onlySupport !== undefined && onlySupport !== WireFormat.json) {
               throw new ServerError(415, `Endpoint only supports ${onlySupport} requests`);
             }
-            response = await method((definition.req as JsonRequestMethods<E>).parseReqJson(req as JsonPostRequestData));
+            response = await method(
+              (definition.req as JsonRequestMethods<E>).parseReqJson(req as JsonPostRequestData),
+              {
+                sszBytes: null,
+                returnBytes: responseWireFormat === WireFormat.ssz,
+              }
+            );
             break;
           case WireFormat.ssz:
             if (onlySupport !== undefined && onlySupport !== WireFormat.ssz) {
               throw new ServerError(415, `Endpoint only supports ${onlySupport} requests`);
             }
             response = await method(
-              (definition.req as SszRequestMethods<E>).parseReqSsz(req as SszPostRequestData<E["request"]>)
+              (definition.req as SszRequestMethods<E>).parseReqSsz(req as SszPostRequestData<E["request"]>),
+              {
+                sszBytes: req.body as Uint8Array,
+                returnBytes: responseWireFormat === WireFormat.ssz,
+              }
             );
             break;
         }
@@ -119,27 +166,6 @@ export function createFastifyHandler<E extends Endpoint>(
       resp.statusCode = response.status;
     }
 
-    if (definition.resp.isEmpty) {
-      // Send response without body
-      return;
-    }
-
-    let mediaType: MediaType | null;
-
-    const acceptHeader = req.headers.accept;
-    if (acceptHeader === undefined || acceptHeader === "*/*") {
-      // Default to json to not force user to set header, e.g. when using curl
-      mediaType = MediaType.json;
-    } else {
-      mediaType = parseAcceptHeader(acceptHeader);
-
-      if (mediaType === null) {
-        throw new ServerError(406, `Accepted media types are not supported: ${acceptHeader}`);
-      }
-    }
-
-    const responseWireFormat = definition.resp.onlySupport ?? getWireFormat(mediaType);
-    let wireResponse;
     switch (responseWireFormat) {
       case WireFormat.json: {
         const metaHeaders = definition.resp.meta.toHeadersObject(response?.meta);
@@ -151,14 +177,12 @@ export function createFastifyHandler<E extends Endpoint>(
             : definition.resp.data.toJson(response?.data, response?.meta);
         const metaJson = definition.resp.meta.toJson(response?.meta);
         if (definition.resp.transform) {
-          wireResponse = definition.resp.transform.toResponse(data, metaJson);
-        } else {
-          wireResponse = {
-            data,
-            ...(metaJson as object),
-          };
+          return definition.resp.transform.toResponse(data, metaJson);
         }
-        break;
+        return {
+          data,
+          ...(metaJson as object),
+        };
       }
       case WireFormat.ssz: {
         const metaHeaders = definition.resp.meta.toHeadersObject(response?.meta);
@@ -170,11 +194,12 @@ export function createFastifyHandler<E extends Endpoint>(
             : definition.resp.data.serialize(response?.data, response?.meta);
         // Fastify supports returning `Uint8Array` from handler and will efficiently
         // convert it to a `Buffer` internally without copying the underlying `ArrayBuffer`
-        wireResponse = data;
+        return data;
       }
+      case null:
+        // Send response without body
+        return;
     }
-
-    return wireResponse;
   };
 }
 

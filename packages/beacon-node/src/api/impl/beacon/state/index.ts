@@ -125,8 +125,8 @@ export function getBeaconStateApi({
       };
     },
 
-    async postStateValidators(args) {
-      return this.getStateValidators(args);
+    async postStateValidators(args, context) {
+      return this.getStateValidators(args, context);
     },
 
     async getStateValidator({stateId, validatorId}) {
@@ -187,8 +187,8 @@ export function getBeaconStateApi({
       };
     },
 
-    async postStateValidatorBalances(args) {
-      return this.getStateValidatorBalances(args);
+    async postStateValidatorBalances(args, context) {
+      return this.getStateValidatorBalances(args, context);
     },
 
     async getEpochCommittees({stateId, ...filters}) {

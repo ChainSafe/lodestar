@@ -91,11 +91,11 @@ export function getApiFromServerHandlers(api: {
   [K in keyof Endpoints]: ApplicationMethods<Endpoints[K]>;
 }): ApiClient {
   return mapValues(api, (apiModule) =>
-    mapValues(apiModule, (api: (args: unknown) => PromiseLike<{data: unknown; meta: unknown}>) => {
+    mapValues(apiModule, (api: (args: unknown, context: unknown) => PromiseLike<{data: unknown; meta: unknown}>) => {
       return async (args: unknown) => {
         try {
           const apiResponse = new ApiResponse({} as any, null, new Response(null, {status: HttpStatusCode.OK}));
-          const result = await api(args);
+          const result = await api(args, {});
           apiResponse.value = () => result.data;
           apiResponse.meta = () => result.meta;
           return apiResponse;

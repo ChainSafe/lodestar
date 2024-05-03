@@ -40,21 +40,18 @@ export function getDebugApi({
       return {data: nodes};
     },
 
-    async getState({stateId}) {
+    async getState({stateId}, context = {}) {
       const {state, executionOptimistic, finalized} = await resolveStateId(chain, stateId, {allowRegen: true});
       return {
-        data: state.toValue() as phase0.BeaconState,
+        data: context.returnBytes ? state.serialize() : (state.toValue() as phase0.BeaconState),
         meta: {executionOptimistic, finalized},
       };
     },
 
-    async getStateV2({stateId}) {
+    async getStateV2({stateId}, context = {}) {
       const {state, executionOptimistic, finalized} = await resolveStateId(chain, stateId, {allowRegen: true});
       return {
-        // TODO: We ideally want to return bytes here if client requests ssz payload
-        // Need to forward that information to server impl, likely best as 2nd arg (`context`)
-        // And 3rd arg would be generic options, used by server impl internally
-        data: state.toValue(),
+        data: context.returnBytes ? state.serialize() : state.toValue(),
         meta: {
           version: config.getForkName(state.slot),
           executionOptimistic,

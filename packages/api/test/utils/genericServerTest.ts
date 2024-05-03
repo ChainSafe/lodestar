@@ -62,7 +62,7 @@ export function runGenericServerTest<Es extends Record<string, Endpoint>>(
 
         // Assert server handler called with correct args
         expect(mockApi[routeId]).toHaveBeenCalledTimes(1);
-        expect(mockApi[routeId]).toHaveBeenCalledWith(testCase.args);
+        expect(mockApi[routeId]).toHaveBeenCalledWith(testCase.args, expect.any(Object));
 
         // Assert returned value and metadata is correct
         expect(res.value()).toEqual(testCase.res?.data);

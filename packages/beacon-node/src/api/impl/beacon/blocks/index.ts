@@ -41,6 +41,7 @@ export function getBeaconBlockApi({
 >): ApplicationMethods<routes.beacon.block.Endpoints> {
   const publishBlock: ApplicationMethods<routes.beacon.block.Endpoints>["publishBlockV2"] = async (
     {signedBlockOrContents, broadcastValidation},
+    context = {},
     opts: PublishBlockOpts = {}
   ) => {
     const seenTimestampSec = Date.now() / 1000;
@@ -62,8 +63,7 @@ export function getBeaconBlockApi({
     } else {
       signedBlock = signedBlockOrContents;
       blobSidecars = [];
-      // TODO: Once API supports submitting data as SSZ, replace null with blockBytes
-      blockForImport = getBlockInput.preDeneb(config, signedBlock, BlockSource.api, null);
+      blockForImport = getBlockInput.preDeneb(config, signedBlock, BlockSource.api, context.sszBytes ?? null);
     }
 
     // check what validations have been requested before broadcasting and publishing the block
@@ -215,6 +215,7 @@ export function getBeaconBlockApi({
 
   const publishBlindedBlock: ApplicationMethods<routes.beacon.block.Endpoints>["publishBlindedBlock"] = async (
     {signedBlindedBlock},
+    context,
     opts: PublishBlockOpts = {}
   ) => {
     const slot = signedBlindedBlock.message.slot;
@@ -238,7 +239,7 @@ export function getBeaconBlockApi({
       const signedBlockOrContents = reconstructFullBlockOrContents(signedBlindedBlock, {executionPayload, contents});
 
       chain.logger.info("Publishing assembled block", {slot, blockRoot, source});
-      return publishBlock({signedBlockOrContents}, opts);
+      return publishBlock({signedBlockOrContents}, context, opts);
     } else {
       const source = ProducedBlockSource.builder;
       chain.logger.debug("Reconstructing  signedBlockOrContents", {slot, blockRoot, source});
@@ -251,7 +252,7 @@ export function getBeaconBlockApi({
       // see: https://github.com/ChainSafe/lodestar/issues/5404
       chain.logger.info("Publishing assembled block", {slot, blockRoot, source});
       // TODO: opts are not type safe, add ServerOpts in Endpoint type definition?
-      return publishBlock({signedBlockOrContents}, {...opts, ignoreIfKnown: true});
+      return publishBlock({signedBlockOrContents}, context, {...opts, ignoreIfKnown: true});
     }
   };
 
