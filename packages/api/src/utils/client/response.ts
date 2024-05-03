@@ -1,7 +1,8 @@
-import {ApiError} from "../error.js";
-import {HttpHeader, WireFormat, getWireFormat, parseContentTypeHeader} from "../headers.js";
+import {HttpHeader, parseContentTypeHeader} from "../headers.js";
 import {HttpStatusCode} from "../httpStatusCode.js";
 import {Endpoint} from "../types.js";
+import {WireFormat, getWireFormat} from "../wireFormat.js";
+import {ApiError} from "./error.js";
 import {RouteDefinitionExtra} from "./request.js";
 
 export type RawBody =

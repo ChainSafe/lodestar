@@ -6,7 +6,8 @@ import {BeaconConfig} from "@lodestar/config";
 import {phase0} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import type {LoggerNode} from "@lodestar/logger/node";
-import {ApplicationMethods, Endpoints} from "@lodestar/api";
+import {Endpoints} from "@lodestar/api";
+import {ApplicationMethods} from "@lodestar/api/server";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 

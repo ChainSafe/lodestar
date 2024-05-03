@@ -3,7 +3,7 @@ import {parse as parseQueryString} from "qs";
 import {FastifyInstance, fastify} from "fastify";
 import {mapValues} from "@lodestar/utils";
 import {Endpoint} from "../../src/utils/index.js";
-import {ApplicationMethods, addSszContentTypeParser} from "../../src/utils/server.js";
+import {ApplicationMethods, addSszContentTypeParser} from "../../src/utils/server/index.js";
 
 export function getTestServer(): {server: FastifyInstance; start: () => Promise<string>} {
   const server = fastify({

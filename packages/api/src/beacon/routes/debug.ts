@@ -15,7 +15,7 @@ import {
   WithVersion,
 } from "../../utils/codecs.js";
 import {Endpoint, RouteDefinitions} from "../../utils/types.js";
-import {WireFormat} from "../../utils/headers.js";
+import {WireFormat} from "../../utils/wireFormat.js";
 import {Schema} from "../../utils/schema.js";
 import {StateId} from "./beacon/state.js";
 

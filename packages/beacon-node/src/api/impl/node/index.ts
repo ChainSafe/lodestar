@@ -1,4 +1,5 @@
-import {ApplicationMethods, routes} from "@lodestar/api";
+import {routes} from "@lodestar/api";
+import {ApplicationMethods} from "@lodestar/api/server";
 import {ApiError} from "../errors.js";
 import {ApiModules} from "../types.js";
 import {ApiOptions} from "../../options.js";

@@ -1,6 +1,7 @@
 import {ErrorAborted, Logger, TimeoutError, isValidHttpUrl, retry} from "@lodestar/utils";
-import {WireFormat, mergeHeaders} from "../headers.js";
+import {mergeHeaders} from "../headers.js";
 import {Endpoint} from "../types.js";
+import {WireFormat} from "../wireFormat.js";
 import {ApiRequestInit, ApiRequestInitRequired, RouteDefinitionExtra, createApiRequest} from "./request.js";
 import {ApiResponse} from "./response.js";
 import {Metrics} from "./metrics.js";

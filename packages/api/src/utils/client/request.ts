@@ -1,4 +1,4 @@
-import {HttpHeader, MediaType, WireFormat, mergeHeaders, setAuthorizationHeader} from "../headers.js";
+import {HttpHeader, MediaType, mergeHeaders, setAuthorizationHeader} from "../headers.js";
 import {
   Endpoint,
   GetRequestCodec,
@@ -7,6 +7,7 @@ import {
   RouteDefinition,
   SszRequestMethods,
 } from "../types.js";
+import {WireFormat} from "../wireFormat.js";
 import {stringifyQuery, urlJoin} from "./format.js";
 
 export type ExtraRequestInit = {

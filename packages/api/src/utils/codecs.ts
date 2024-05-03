@@ -13,8 +13,8 @@ import {
   SszRequestMethods,
   JsonRequestMethods,
 } from "./types.js";
-import {WireFormat} from "./headers.js";
 import {toBoolean, toForkName} from "./serdes.js";
+import {WireFormat} from "./wireFormat.js";
 
 // Utility types / codecs
 

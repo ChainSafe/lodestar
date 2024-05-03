@@ -1,7 +1,8 @@
 import {parse as parseQueryString} from "qs";
 import {FastifyInstance, fastify} from "fastify";
 import {fastifyCors} from "@fastify/cors";
-import {ApplicationMethods, Endpoints, addSszContentTypeParser} from "@lodestar/api";
+import {Endpoints} from "@lodestar/api";
+import {ApplicationMethods, addSszContentTypeParser} from "@lodestar/api/server";
 import {AllBeaconMethods, registerRoutes} from "@lodestar/api/beacon/server";
 import {ChainForkConfig} from "@lodestar/config";
 

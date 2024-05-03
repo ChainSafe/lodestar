@@ -1,6 +1,6 @@
 import type {FastifyInstance} from "fastify";
 import {ChainForkConfig} from "@lodestar/config";
-import {ApplicationMethods, FastifyRoute, FastifyRoutes, createFastifyRoutes} from "../../utils/server.js";
+import {ApplicationMethods, FastifyRoute, FastifyRoutes, createFastifyRoutes} from "../../utils/server/index.js";
 import {Endpoints, getDefinitions} from "../routes.js";
 import {AnyEndpoint} from "../../utils/codecs.js";
 

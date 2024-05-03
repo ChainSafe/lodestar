@@ -3,7 +3,7 @@ import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
 import {ArrayOf, EmptyArgs, EmptyGetRequestCodec, EmptyMeta, EmptyMetaCodec, EmptyRequest} from "../../utils/codecs.js";
 import {Endpoint, RouteDefinitions} from "../../utils/index.js";
-import {WireFormat} from "../../utils/headers.js";
+import {WireFormat} from "../../utils/wireFormat.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 

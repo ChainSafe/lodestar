@@ -1,6 +1,7 @@
 import {RestApiServer, RestApiServerOpts, RestApiServerModules} from "@lodestar/beacon-node";
 import {registerRoutes} from "@lodestar/api/beacon/server";
-import {Endpoints, allNamespaces, ApplicationMethods} from "@lodestar/api";
+import {Endpoints, allNamespaces} from "@lodestar/api";
+import {ApplicationMethods} from "@lodestar/api/server";
 import {ChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";

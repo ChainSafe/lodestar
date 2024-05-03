@@ -11,9 +11,9 @@ import {runGenericServerTest} from "../../../utils/genericServerTest.js";
 import {getMockApi, getTestServer} from "../../../utils/utils.js";
 import {HttpClient} from "../../../../src/utils/client/httpClient.js";
 import {testData} from "../testData/debug.js";
-import {FastifyRoute} from "../../../../src/index.js";
+import {FastifyRoute} from "../../../../src/utils/server/index.js";
 import {AnyEndpoint} from "../../../../src/utils/codecs.js";
-import {WireFormat} from "../../../../src/utils/headers.js";
+import {WireFormat} from "../../../../src/utils/wireFormat.js";
 
 describe("beacon / debug", () => {
   // Extend timeout since states are very big

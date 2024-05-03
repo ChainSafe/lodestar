@@ -19,7 +19,7 @@ import {
   BuilderBoostFactorData,
 } from "@lodestar/api/keymanager";
 import {Interchange, SignerType, Validator} from "@lodestar/validator";
-import {ApplicationMethods} from "@lodestar/api";
+import {ApplicationMethods} from "@lodestar/api/server";
 import {Epoch} from "@lodestar/types";
 import {isValidHttpUrl} from "@lodestar/utils";
 import {getPubkeyHexFromKeystore, isValidatePubkeyHex} from "../../../util/format.js";

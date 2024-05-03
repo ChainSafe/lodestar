@@ -10,7 +10,7 @@ import {
   JsonOnlyReq,
 } from "../../../utils/codecs.js";
 import {fromValidatorIdsStr, toValidatorIdsStr} from "../../../utils/serdes.js";
-import {WireFormat} from "../../../utils/headers.js";
+import {WireFormat} from "../../../utils/wireFormat.js";
 import {RootResponse, RootResponseType} from "./block.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes

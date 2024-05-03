@@ -1,5 +1,6 @@
 import {fromHex} from "@lodestar/utils";
-import {ApplicationMethods, routes} from "@lodestar/api";
+import {routes} from "@lodestar/api";
+import {ApplicationMethods} from "@lodestar/api/server";
 import {MAX_REQUEST_LIGHT_CLIENT_UPDATES, MAX_REQUEST_LIGHT_CLIENT_COMMITTEE_HASHES} from "@lodestar/params";
 import {ApiModules} from "../types.js";
 

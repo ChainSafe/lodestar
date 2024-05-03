@@ -2,8 +2,8 @@ import {it, expect, describe, beforeAll, afterAll, MockInstance} from "vitest";
 import {FastifyInstance} from "fastify";
 import {ChainForkConfig} from "@lodestar/config";
 import {Endpoint} from "../../src/utils/index.js";
-import {WireFormat} from "../../src/utils/headers.js";
-import {ApplicationMethods, ApplicationResponse, FastifyRoutes} from "../../src/utils/server.js";
+import {WireFormat} from "../../src/utils/wireFormat.js";
+import {ApplicationMethods, ApplicationResponse, FastifyRoutes} from "../../src/utils/server/index.js";
 import {ApiClientMethods, ApiRequestInit, HttpClient, IHttpClient} from "../../src/utils/client/index.js";
 import {getMockApi, getTestServer} from "./utils.js";
 

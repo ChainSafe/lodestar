@@ -1,5 +1,6 @@
 import {fromHexString} from "@chainsafe/ssz";
-import {ApplicationMethods, routes} from "@lodestar/api";
+import {routes} from "@lodestar/api";
+import {ApplicationMethods} from "@lodestar/api/server";
 import {
   CachedBeaconStateAllForks,
   computeStartSlotAtEpoch,

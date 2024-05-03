@@ -1,4 +1,5 @@
-import {ApplicationMethods, routes} from "@lodestar/api";
+import {routes} from "@lodestar/api";
+import {ApplicationMethods} from "@lodestar/api/server";
 import {Epoch, ssz} from "@lodestar/types";
 import {SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {validateApiAttestation} from "../../../../chain/validation/index.js";

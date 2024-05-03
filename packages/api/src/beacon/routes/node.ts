@@ -14,7 +14,7 @@ import {
   JsonOnlyResponseCodec,
 } from "../../utils/codecs.js";
 import {HttpStatusCode} from "../../utils/httpStatusCode.js";
-import {WireFormat} from "../../utils/headers.js";
+import {WireFormat} from "../../utils/wireFormat.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 

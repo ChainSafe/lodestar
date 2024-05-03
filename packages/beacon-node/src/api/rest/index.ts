@@ -1,4 +1,5 @@
-import {Endpoints, ApplicationMethods} from "@lodestar/api";
+import {Endpoints} from "@lodestar/api";
+import {ApplicationMethods} from "@lodestar/api/server";
 import {registerRoutes} from "@lodestar/api/beacon/server";
 import {ErrorAborted, Logger} from "@lodestar/utils";
 import {ChainForkConfig} from "@lodestar/config";

@@ -6,8 +6,7 @@ import {RestApiServer, RestApiServerOpts, RestApiServerModules} from "@lodestar/
 import {Endpoints} from "@lodestar/api/keymanager";
 import {registerRoutes} from "@lodestar/api/keymanager/server";
 import {ChainForkConfig} from "@lodestar/config";
-
-import {ApplicationMethods} from "@lodestar/api";
+import {ApplicationMethods} from "@lodestar/api/server";
 import {writeFile600Perm} from "../../../util/index.js";
 
 export type KeymanagerRestApiServerOpts = RestApiServerOpts & {

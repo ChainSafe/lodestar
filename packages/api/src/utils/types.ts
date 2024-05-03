@@ -1,6 +1,6 @@
 import {EmptyMeta} from "./codecs.js";
-import {WireFormat} from "./headers.js";
 import {SchemaDefinition} from "./schema.js";
+import {WireFormat} from "./wireFormat.js";
 
 export type HasOnlyOptionalProps<T> = {
   [K in keyof T]-?: object extends Pick<T, K> ? never : K;

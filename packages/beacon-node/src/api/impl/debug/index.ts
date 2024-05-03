@@ -1,4 +1,5 @@
-import {ApplicationMethods, routes} from "@lodestar/api";
+import {routes} from "@lodestar/api";
+import {ApplicationMethods} from "@lodestar/api/server";
 import {phase0} from "@lodestar/types";
 import {resolveStateId} from "../beacon/state/utils.js";
 import {ApiModules} from "../types.js";

@@ -1,4 +1,5 @@
-import {ApplicationMethods, routes} from "@lodestar/api";
+import {routes} from "@lodestar/api";
+import {ApplicationMethods} from "@lodestar/api/server";
 import {chainConfigToJson, ChainConfig, specValuesToJson} from "@lodestar/config";
 import {activePreset, presetToJson} from "@lodestar/params";
 import {ApiModules} from "../types.js";

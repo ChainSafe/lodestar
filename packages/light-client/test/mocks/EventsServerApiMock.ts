@@ -1,4 +1,5 @@
-import {routes, ApplicationMethods} from "@lodestar/api";
+import {routes} from "@lodestar/api";
+import {ApplicationMethods} from "@lodestar/api/server";
 
 type OnEvent = (event: routes.events.BeaconEvent) => void;
 

@@ -1,4 +1,5 @@
-import {ApplicationMethods, routes} from "@lodestar/api";
+import {routes} from "@lodestar/api";
+import {ApplicationMethods} from "@lodestar/api/server";
 import {computeEpochAtSlot, computeTimeAtSlot, reconstructFullBlockOrContents} from "@lodestar/state-transition";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {sleep, fromHex, toHex} from "@lodestar/utils";

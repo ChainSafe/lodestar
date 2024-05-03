@@ -17,6 +17,9 @@
     ".": {
       "import": "./lib/index.js"
     },
+    "./server": {
+      "import": "./lib/server/index.js"
+    },
     "./beacon": {
       "import": "./lib/beacon/index.js"
     },

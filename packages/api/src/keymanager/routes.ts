@@ -2,6 +2,7 @@
 import {ContainerType} from "@chainsafe/ssz";
 import {Epoch, phase0, ssz, stringType} from "@lodestar/types";
 import {Schema, Endpoint, RouteDefinitions} from "../utils/index.js";
+import {WireFormat} from "../utils/wireFormat.js";
 import {
   EmptyArgs,
   EmptyGetRequestCodec,
@@ -13,7 +14,6 @@ import {
   JsonOnlyReq,
   JsonOnlyResponseCodec,
 } from "../utils/codecs.js";
-import {WireFormat} from "../utils/headers.js";
 
 export enum ImportStatus {
   /** Keystore successfully decrypted and imported to keymanager permanent storage */

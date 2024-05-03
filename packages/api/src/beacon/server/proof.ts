@@ -1,6 +1,6 @@
 // import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
 import {ChainForkConfig} from "@lodestar/config";
-import {ApplicationMethods, FastifyRoutes, createFastifyRoutes} from "../../utils/server.js";
+import {ApplicationMethods, FastifyRoutes, createFastifyRoutes} from "../../utils/server/index.js";
 import {Endpoints, definitions} from "../routes/proof.js";
 
 // TODO: revisit, do we need still need to override handlers?

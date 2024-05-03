@@ -1,4 +1,5 @@
-import {ApplicationMethods, Endpoints} from "@lodestar/api";
+import {Endpoints} from "@lodestar/api";
+import {ApplicationMethods} from "@lodestar/api/server";
 import {ApiOptions} from "../options.js";
 import {ApiModules} from "./types.js";
 import {getBeaconApi} from "./beacon/index.js";

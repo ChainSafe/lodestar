@@ -1,7 +1,6 @@
 import type {FastifyInstance} from "fastify";
 import {ChainForkConfig} from "@lodestar/config";
-import {ServerError} from "../../utils/error.js";
-import {ApplicationMethods, FastifyRoute} from "../../utils/server.js";
+import {ApiError, ApplicationMethods, FastifyRoute} from "../../utils/server/index.js";
 import {Endpoints} from "../routes/index.js";
 
 import * as beacon from "./beacon.js";
@@ -15,7 +14,7 @@ import * as proof from "./proof.js";
 import * as validator from "./validator.js";
 
 // Re-export for usage in beacon-node
-export {ServerError as ApiError};
+export {ApiError};
 
 export type AllBeaconMethods = {[K in keyof Endpoints]: ApplicationMethods<Endpoints[K]>};
 

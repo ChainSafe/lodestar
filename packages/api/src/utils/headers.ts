@@ -1,10 +1,5 @@
 import {toBase64} from "@lodestar/utils";
 
-export enum WireFormat {
-  json = "json",
-  ssz = "ssz",
-}
-
 export enum MediaType {
   json = "application/json",
   ssz = "application/octet-stream",
@@ -14,15 +9,6 @@ export enum HttpHeader {
   ContentType = "content-type",
   Accept = "accept",
   Authorization = "authorization",
-}
-
-export function getWireFormat(mediaType: MediaType): WireFormat {
-  switch (mediaType) {
-    case MediaType.json:
-      return WireFormat.json;
-    case MediaType.ssz:
-      return WireFormat.ssz;
-  }
 }
 
 export const supportedMediaTypes = Object.values(MediaType);
