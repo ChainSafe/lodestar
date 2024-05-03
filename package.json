@@ -2,7 +2,7 @@
   "name": "root",
   "private": true,
   "engines": {
-    "node": ">=20.1.0 <21"
+    "node": ">=22.0.0 <23"
   },
   "workspaces": [
     "packages/*"
@@ -48,7 +48,7 @@
     "@chainsafe/eslint-plugin-node": "^11.2.3",
     "@dapplion/benchmark": "^0.2.4",
     "@types/mocha": "^10.0.6",
-    "@types/node": "^20.11.28",
+    "@types/node": "^20.12.8",
     "@typescript-eslint/eslint-plugin": "^7.2.0",
     "@typescript-eslint/parser": "^7.2.0",
     "@vitest/coverage-v8": "^1.5.3",

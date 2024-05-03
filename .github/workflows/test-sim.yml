@@ -37,7 +37,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: "./.github/actions/setup-and-build"
         with:
-          node: 20
+          node: 22
 
   sim-test-multifork:
     name: Multifork sim test
@@ -48,7 +48,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: "./.github/actions/setup-and-build"
         with:
-          node: 20
+          node: 22
       - name: Load env variables
         uses: ./.github/actions/dotenv
       - name: Download required docker images before running tests
@@ -77,7 +77,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: "./.github/actions/setup-and-build"
         with:
-          node: 20
+          node: 22
       - name: Load env variables
         uses: ./.github/actions/dotenv
       - name: Download required docker images before running tests
@@ -106,7 +106,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: "./.github/actions/setup-and-build"
         with:
-          node: 20
+          node: 22
       - name: Load env variables
         uses: ./.github/actions/dotenv
       - name: Download required docker images before running tests
@@ -135,7 +135,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: "./.github/actions/setup-and-build"
         with:
-          node: 20
+          node: 22
       - name: Load env variables
         uses: ./.github/actions/dotenv
       - name: Download required docker images before running tests
@@ -164,7 +164,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: "./.github/actions/setup-and-build"
         with:
-          node: 20
+          node: 22
       - name: Load env variables
         uses: ./.github/actions/dotenv
       - name: Download required docker images before running tests
