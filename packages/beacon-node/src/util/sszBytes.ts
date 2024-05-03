@@ -120,7 +120,7 @@ export function getCommitteeBitsFromAttestationSerialized(data: Uint8Array): Bit
 
   const uint8Array = data.subarray(committeeBitsStartIndex, committeeBitsStartIndex + COMMITTEE_BITS_SIZE);
 
-  return new BitArray(uint8Array, uint8Array.byteLength * 8);
+  return new BitArray(uint8Array, MAX_COMMITTEES_PER_SLOT);
 }
 
 //

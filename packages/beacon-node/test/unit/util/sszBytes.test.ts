@@ -1,7 +1,8 @@
 import {describe, it, expect} from "vitest";
+import {BitArray} from "@chainsafe/ssz";
 import {allForks, deneb, Epoch, isElectraAttestation, phase0, RootHex, Slot, ssz} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
-import {ForkName} from "@lodestar/params";
+import {ForkName, MAX_COMMITTEES_PER_SLOT} from "@lodestar/params";
 import {
   getAttDataBase64FromAttestationSerialized,
   getAttDataBase64FromSignedAggregateAndProofSerialized,
@@ -13,6 +14,7 @@ import {
   getSignatureFromAttestationSerialized,
   getSlotFromSignedBeaconBlockSerialized,
   getSlotFromBlobSidecarSerialized,
+  getCommitteeBitsFromAttestationSerialized,
 } from "../../../src/util/sszBytes.js";
 
 describe("attestation SSZ serialized picking", () => {
@@ -24,7 +26,10 @@ describe("attestation SSZ serialized picking", () => {
       200_00,
       "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeffffffffffffffffffffffffffffffff"
     ),
-    ssz.electra.Attestation.defaultValue(),
+    {
+      ...ssz.electra.Attestation.defaultValue(),
+      committeeBits: BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, 3),
+    },
   ];
 
   for (const [i, attestation] of testCases.entries()) {
@@ -41,6 +46,7 @@ describe("attestation SSZ serialized picking", () => {
         expect(getAggregationBitsFromAttestationSerialized(ForkName.electra, bytes)?.toBoolArray()).toEqual(
           attestation.aggregationBits.toBoolArray()
         );
+        expect(getCommitteeBitsFromAttestationSerialized(bytes)).toEqual(attestation.committeeBits);
         expect(getSignatureFromAttestationSerialized(ForkName.electra, bytes)).toEqual(attestation.signature);
       } else {
         expect(getAggregationBitsFromAttestationSerialized(ForkName.phase0, bytes)?.toBoolArray()).toEqual(
