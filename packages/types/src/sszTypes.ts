@@ -20,7 +20,7 @@ const typesByFork = {
   [ForkName.bellatrix]: {...phase0, ...altair, ...bellatrix},
   [ForkName.capella]: {...phase0, ...altair, ...bellatrix, ...capella},
   [ForkName.deneb]: {...phase0, ...altair, ...bellatrix, ...capella, ...deneb},
-  [ForkName.deneb]: {...phase0, ...altair, ...bellatrix, ...capella, ...deneb, ...electra},
+  [ForkName.electra]: {...phase0, ...altair, ...bellatrix, ...capella, ...deneb, ...electra},
 };
 
 /**
