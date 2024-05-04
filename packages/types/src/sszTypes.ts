@@ -21,6 +21,7 @@ const typesByFork = {
     BeaconState: phase0.BeaconState,
     SignedBeaconBlock: phase0.SignedBeaconBlock,
     Metadata: phase0.Metadata,
+    Attestation: phase0.Attestation,
   },
   [ForkName.altair]: {
     BeaconBlock: altair.BeaconBlock,
@@ -34,6 +35,7 @@ const typesByFork = {
     LightClientFinalityUpdate: altair.LightClientFinalityUpdate,
     LightClientOptimisticUpdate: altair.LightClientOptimisticUpdate,
     LightClientStore: altair.LightClientStore,
+    Attestation: phase0.Attestation,
   },
   [ForkName.bellatrix]: {
     BeaconBlock: bellatrix.BeaconBlock,
@@ -55,6 +57,7 @@ const typesByFork = {
     BuilderBid: bellatrix.BuilderBid,
     SignedBuilderBid: bellatrix.SignedBuilderBid,
     SSEPayloadAttributes: bellatrix.SSEPayloadAttributes,
+    Attestation: phase0.Attestation,
   },
   [ForkName.capella]: {
     BeaconBlock: capella.BeaconBlock,
@@ -76,6 +79,7 @@ const typesByFork = {
     BuilderBid: capella.BuilderBid,
     SignedBuilderBid: capella.SignedBuilderBid,
     SSEPayloadAttributes: capella.SSEPayloadAttributes,
+    Attestation: phase0.Attestation,
   },
   [ForkName.deneb]: {
     BeaconBlock: deneb.BeaconBlock,
@@ -98,6 +102,7 @@ const typesByFork = {
     SignedBuilderBid: deneb.SignedBuilderBid,
     SSEPayloadAttributes: deneb.SSEPayloadAttributes,
     ExecutionPayloadAndBlobsBundle: deneb.ExecutionPayloadAndBlobsBundle,
+    Attestation: phase0.Attestation,
   },
   [ForkName.electra]: {
     BeaconBlock: electra.BeaconBlock,
@@ -120,6 +125,7 @@ const typesByFork = {
     SignedBuilderBid: electra.SignedBuilderBid,
     SSEPayloadAttributes: electra.SSEPayloadAttributes,
     ExecutionPayloadAndBlobsBundle: electra.ExecutionPayloadAndBlobsBundle,
+    Attestation: electra.Attestation,
   },
 };
 
