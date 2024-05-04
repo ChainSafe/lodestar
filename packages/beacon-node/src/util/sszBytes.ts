@@ -12,12 +12,20 @@ import {
 export type BlockRootHex = RootHex;
 export type AttDataBase64 = string;
 
+// pre-electra
 // class Attestation(Container):
-//   aggregation_bits: Bitlist[MAX_VALIDATORS_PER_COMMITTEE] (BitList[MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT]) - offset 4
+//   aggregation_bits: Bitlist[MAX_VALIDATORS_PER_COMMITTEE] - offset 4
 //   data: AttestationData - target data - 128
-//   committee_bits: BitVector[MAX_COMMITTEES_PER_SLOT] - Electra only: 8 (mainnet)
+//   signature: BLSSignature - 96
+
+// electra
+// class Attestation(Container):
+//   aggregation_bits: BitList[MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT] - offset 4
+//   data: AttestationData - target data - 128
+//   committee_bits: BitVector[MAX_COMMITTEES_PER_SLOT]
 //   signature: BLSSignature - 96
 //
+// for all forks
 // class AttestationData(Container): 128 bytes fixed size
 //   slot: Slot                - data 8
 //   index: CommitteeIndex     - data 8
