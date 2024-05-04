@@ -16,7 +16,7 @@ import {
   MAX_COMMITTEES_PER_SLOT,
   MAX_ATTESTATIONS_ELECTRA,
   MAX_ATTESTER_SLASHINGS_ELECTRA,
-  MAX_EXECUTION_LAYER_EXITS,
+  MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD,
 } from "@lodestar/params";
 import {ssz as primitiveSsz} from "../primitive/index.js";
 import {ssz as phase0Ssz} from "../phase0/index.js";
@@ -117,20 +117,21 @@ export const DepositReceipt = new ContainerType(
 
 export const DepositReceipts = new ListCompositeType(DepositReceipt, MAX_DEPOSIT_RECEIPTS_PER_PAYLOAD);
 
-export const ExecutionLayerExit = new ContainerType(
+export const ExecutionLayerWithdrawalRequest = new ContainerType(
   {
     sourceAddress: ExecutionAddress,
     validatorPubkey: BLSPubkey,
+    amount: UintNum64,
   },
-  {typeName: "ExecutionLayerExit", jsonCase: "eth2"}
+  {typeName: "ExecutionLayerWithdrawalRequest", jsonCase: "eth2"}
 );
-export const ExecutionLayerExits = new ListCompositeType(ExecutionLayerExit, MAX_EXECUTION_LAYER_EXITS);
+export const Withdrawal = new ListCompositeType(ExecutionLayerWithdrawalRequest, MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD);
 
 export const ExecutionPayload = new ContainerType(
   {
     ...denebSsz.ExecutionPayload.fields,
     depositReceipts: DepositReceipts, // New in ELECTRA
-    exits: ExecutionLayerExits, // New in ELECTRA
+    withdrawalRequests: ExecutionLayerWithdrawalRequest, // New in ELECTRA
   },
   {typeName: "ExecutionPayload", jsonCase: "eth2"}
 );
