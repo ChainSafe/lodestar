@@ -85,7 +85,7 @@ describe("AggregatedAttestationPool", function () {
     // previousEpochParticipation and currentEpochParticipation is created inside generateCachedState
     // 0 and 1 are fully participated
     const notSeenValidatorFn = getNotSeenValidatorsFn(altairState);
-    const participation = notSeenValidatorFn(currentEpoch, committee);
+    const participation = notSeenValidatorFn(currentEpoch, currentSlot, committeeIndex);
     // seen attesting indices are 0, 1 => not seen are 2, 3
     expect(participation).toEqual(
       // {
@@ -280,6 +280,7 @@ describe("MatchingDataAttestationGroup.getAttestationsForBlock", () => {
         }
       }
       const attestationsForBlock = attestationGroup.getAttestationsForBlock(
+        ForkName.phase0,
         // notSeenValidatorIndices,
         notSeenAttestingIndices
       );
