@@ -213,7 +213,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
    */
   updateUnfinalizedPubkeys(validators: UnfinalizedPubkeyIndexMap): void {
     let numStatesUpdated = 0;
-    const states = this.stateCache.getStates();
+    const states = this.blockStateCache.getStates();
     const cpStates = this.checkpointStateCache.getStates();
 
     // Add finalized pubkeys to all states.
