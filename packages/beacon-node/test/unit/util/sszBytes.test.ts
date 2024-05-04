@@ -1,6 +1,8 @@
 import {describe, it, expect} from "vitest";
-import {deneb, Epoch, phase0, RootHex, Slot, ssz} from "@lodestar/types";
+import {BitArray} from "@chainsafe/ssz";
+import {allForks, deneb, Epoch, isElectraAttestation, phase0, RootHex, Slot, ssz} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
+import {ForkName, MAX_COMMITTEES_PER_SLOT} from "@lodestar/params";
 import {
   getAttDataBase64FromAttestationSerialized,
   getAttDataBase64FromSignedAggregateAndProofSerialized,
@@ -12,10 +14,11 @@ import {
   getSignatureFromAttestationSerialized,
   getSlotFromSignedBeaconBlockSerialized,
   getSlotFromBlobSidecarSerialized,
+  getCommitteeBitsFromAttestationSerialized,
 } from "../../../src/util/sszBytes.js";
 
 describe("attestation SSZ serialized picking", () => {
-  const testCases: phase0.Attestation[] = [
+  const testCases: allForks.Attestation[] = [
     ssz.phase0.Attestation.defaultValue(),
     attestationFromValues(
       4_000_000,
@@ -23,18 +26,40 @@ describe("attestation SSZ serialized picking", () => {
       200_00,
       "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeffffffffffffffffffffffffffffffff"
     ),
+    ssz.electra.Attestation.defaultValue(),
+    {
+      ...attestationFromValues(
+        4_000_000,
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        200_00,
+        "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeffffffffffffffffffffffffffffffff"
+      ),
+      committeeBits: BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, 3),
+    },
   ];
 
   for (const [i, attestation] of testCases.entries()) {
     it(`attestation ${i}`, () => {
-      const bytes = ssz.phase0.Attestation.serialize(attestation);
+      const isElectra = isElectraAttestation(attestation);
+      const bytes = isElectra
+        ? ssz.electra.Attestation.serialize(attestation)
+        : ssz.phase0.Attestation.serialize(attestation);
 
       expect(getSlotFromAttestationSerialized(bytes)).toBe(attestation.data.slot);
       expect(getBlockRootFromAttestationSerialized(bytes)).toBe(toHex(attestation.data.beaconBlockRoot));
-      expect(getAggregationBitsFromAttestationSerialized(bytes)?.toBoolArray()).toEqual(
-        attestation.aggregationBits.toBoolArray()
-      );
-      expect(getSignatureFromAttestationSerialized(bytes)).toEqual(attestation.signature);
+
+      if (isElectra) {
+        expect(getAggregationBitsFromAttestationSerialized(ForkName.electra, bytes)?.toBoolArray()).toEqual(
+          attestation.aggregationBits.toBoolArray()
+        );
+        expect(getCommitteeBitsFromAttestationSerialized(bytes)).toEqual(attestation.committeeBits);
+        expect(getSignatureFromAttestationSerialized(ForkName.electra, bytes)).toEqual(attestation.signature);
+      } else {
+        expect(getAggregationBitsFromAttestationSerialized(ForkName.phase0, bytes)?.toBoolArray()).toEqual(
+          attestation.aggregationBits.toBoolArray()
+        );
+        expect(getSignatureFromAttestationSerialized(ForkName.phase0, bytes)).toEqual(attestation.signature);
+      }
 
       const attDataBase64 = ssz.phase0.AttestationData.serialize(attestation.data);
       expect(getAttDataBase64FromAttestationSerialized(bytes)).toBe(Buffer.from(attDataBase64).toString("base64"));
@@ -65,14 +90,16 @@ describe("attestation SSZ serialized picking", () => {
   it("getAggregateionBitsFromAttestationSerialized - invalid data", () => {
     const invalidAggregationBitsDataSizes = [0, 4, 100, 128, 227];
     for (const size of invalidAggregationBitsDataSizes) {
-      expect(getAggregationBitsFromAttestationSerialized(Buffer.alloc(size))).toBeNull();
+      expect(getAggregationBitsFromAttestationSerialized(ForkName.phase0, Buffer.alloc(size))).toBeNull();
+      expect(getAggregationBitsFromAttestationSerialized(ForkName.electra, Buffer.alloc(size))).toBeNull();
     }
   });
 
   it("getSignatureFromAttestationSerialized - invalid data", () => {
     const invalidSignatureDataSizes = [0, 4, 100, 128, 227];
     for (const size of invalidSignatureDataSizes) {
-      expect(getSignatureFromAttestationSerialized(Buffer.alloc(size))).toBeNull();
+      expect(getSignatureFromAttestationSerialized(ForkName.phase0, Buffer.alloc(size))).toBeNull();
+      expect(getSignatureFromAttestationSerialized(ForkName.electra, Buffer.alloc(size))).toBeNull();
     }
   });
 });
@@ -86,6 +113,7 @@ describe("aggregateAndProof SSZ serialized picking", () => {
       200_00,
       "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeffffffffffffffffffffffffffffffff"
     ),
+    ssz.electra.SignedAggregateAndProof.defaultValue(),
   ];
 
   for (const [i, signedAggregateAndProof] of testCases.entries()) {

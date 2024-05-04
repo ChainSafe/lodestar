@@ -16,6 +16,9 @@ export const allForks = {
     SignedBeaconBlock: phase0.SignedBeaconBlock,
     BeaconState: phase0.BeaconState,
     Metadata: phase0.Metadata,
+    SignedAggregateAndProof: phase0.SignedAggregateAndProof,
+    Attestation: phase0.Attestation,
+    AttesterSlashing: phase0.AttesterSlashing,
   },
   altair: {
     BeaconBlockBody: altair.BeaconBlockBody,
@@ -23,6 +26,9 @@ export const allForks = {
     SignedBeaconBlock: altair.SignedBeaconBlock,
     BeaconState: altair.BeaconState,
     Metadata: altair.Metadata,
+    SignedAggregateAndProof: phase0.SignedAggregateAndProof,
+    Attestation: phase0.Attestation,
+    AttesterSlashing: phase0.AttesterSlashing,
   },
   bellatrix: {
     BeaconBlockBody: bellatrix.BeaconBlockBody,
@@ -30,6 +36,9 @@ export const allForks = {
     SignedBeaconBlock: bellatrix.SignedBeaconBlock,
     BeaconState: bellatrix.BeaconState,
     Metadata: altair.Metadata,
+    SignedAggregateAndProof: phase0.SignedAggregateAndProof,
+    Attestation: phase0.Attestation,
+    AttesterSlashing: phase0.AttesterSlashing,
   },
   capella: {
     BeaconBlockBody: capella.BeaconBlockBody,
@@ -37,6 +46,9 @@ export const allForks = {
     SignedBeaconBlock: capella.SignedBeaconBlock,
     BeaconState: capella.BeaconState,
     Metadata: altair.Metadata,
+    SignedAggregateAndProof: phase0.SignedAggregateAndProof,
+    Attestation: phase0.Attestation,
+    AttesterSlashing: phase0.AttesterSlashing,
   },
   deneb: {
     BeaconBlockBody: deneb.BeaconBlockBody,
@@ -44,6 +56,9 @@ export const allForks = {
     SignedBeaconBlock: deneb.SignedBeaconBlock,
     BeaconState: deneb.BeaconState,
     Metadata: altair.Metadata,
+    SignedAggregateAndProof: phase0.SignedAggregateAndProof,
+    Attestation: phase0.Attestation,
+    AttesterSlashing: phase0.AttesterSlashing,
   },
   electra: {
     BeaconBlockBody: electra.BeaconBlockBody,
@@ -51,6 +66,9 @@ export const allForks = {
     SignedBeaconBlock: electra.SignedBeaconBlock,
     BeaconState: electra.BeaconState,
     Metadata: altair.Metadata,
+    SignedAggregateAndProof: electra.SignedAggregateAndProof,
+    Attestation: electra.Attestation,
+    AttesterSlashing: electra.AttesterSlashing,
   },
 };
 

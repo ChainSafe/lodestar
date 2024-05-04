@@ -14,6 +14,7 @@ import {
   ExecutionPayload,
   ExecutionPayloadAndBlobsBundle,
 } from "../allForks/types.js";
+import {allForks, electra} from "../types.js";
 
 export function isBlindedExecution(payload: FullOrBlindedExecutionPayload): payload is ExecutionPayloadHeader {
   // we just check transactionsRoot for determinging as it the base field
@@ -48,4 +49,8 @@ export function isExecutionPayloadAndBlobsBundle(
   data: ExecutionPayload | ExecutionPayloadAndBlobsBundle
 ): data is ExecutionPayloadAndBlobsBundle {
   return (data as ExecutionPayloadAndBlobsBundle).blobsBundle !== undefined;
+}
+
+export function isElectraAttestation(attestation: allForks.Attestation): attestation is electra.Attestation {
+  return (attestation as electra.Attestation).committeeBits !== undefined;
 }
