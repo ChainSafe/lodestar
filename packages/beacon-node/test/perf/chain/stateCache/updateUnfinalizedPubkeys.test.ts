@@ -7,7 +7,8 @@ import bls from "@chainsafe/bls";
 import {ssz} from "@lodestar/types";
 import {type CachedBeaconStateAllForks, PubkeyIndexMap} from "@lodestar/state-transition";
 import {bytesToBigInt, intToBytes} from "@lodestar/utils";
-import {InMemoryCheckpointStateCache, StateContextCache} from "../../../../src/chain/stateCache/index.js";
+import {InMemoryCheckpointStateCache, BlockStateCacheImpl} from "../../../../src/chain/stateCache/index.js";
+import {BlockStateCache} from "../../../../src/chain/stateCache/types.js";
 import {generateCachedElectraState} from "../../../utils/state.js";
 
 // Benchmark date from Mon Nov 21 2023 - Intel Core i7-9750H @ 2.60Ghz
@@ -22,7 +23,7 @@ describe("updateUnfinalizedPubkeys perf tests", function () {
   const numStateCache = 3 * 32;
 
   let checkpointStateCache: InMemoryCheckpointStateCache;
-  let stateCache: StateContextCache;
+  let stateCache: BlockStateCache;
 
   const unfinalizedPubkey2Index = generatePubkey2Index(0, Math.max.apply(null, numPubkeysToBeFinalizedCases));
   const baseState = generateCachedElectraState();
@@ -36,7 +37,7 @@ describe("updateUnfinalizedPubkeys perf tests", function () {
         baseState.epochCtx.index2pubkey = [];
 
         checkpointStateCache = new InMemoryCheckpointStateCache({});
-        stateCache = new StateContextCache({});
+        stateCache = new BlockStateCacheImpl({});
 
         for (let i = 0; i < numCheckpointStateCache; i++) {
           const clonedState = baseState.clone();
