@@ -36,6 +36,7 @@ type TypesByFork = {
     BeaconState: phase0.BeaconState;
     SignedBeaconBlock: phase0.SignedBeaconBlock;
     Metadata: phase0.Metadata;
+    Attestation: phase0.Attestation;
   };
   [ForkName.altair]: {
     BeaconBlockHeader: phase0.BeaconBlockHeader;
@@ -53,6 +54,7 @@ type TypesByFork = {
     LightClientStore: altair.LightClientStore;
     SyncCommittee: altair.SyncCommittee;
     SyncAggregate: altair.SyncAggregate;
+    Attestation: phase0.Attestation;
   };
   [ForkName.bellatrix]: {
     BeaconBlockHeader: phase0.BeaconBlockHeader;
@@ -78,6 +80,7 @@ type TypesByFork = {
     SSEPayloadAttributes: bellatrix.SSEPayloadAttributes;
     SyncCommittee: altair.SyncCommittee;
     SyncAggregate: altair.SyncAggregate;
+    Attestation: phase0.Attestation;
   };
   [ForkName.capella]: {
     BeaconBlockHeader: phase0.BeaconBlockHeader;
@@ -103,6 +106,7 @@ type TypesByFork = {
     SSEPayloadAttributes: capella.SSEPayloadAttributes;
     SyncCommittee: altair.SyncCommittee;
     SyncAggregate: altair.SyncAggregate;
+    Attestation: phase0.Attestation;
   };
   [ForkName.deneb]: {
     BeaconBlockHeader: phase0.BeaconBlockHeader;
@@ -133,6 +137,7 @@ type TypesByFork = {
     Contents: deneb.Contents;
     SyncCommittee: altair.SyncCommittee;
     SyncAggregate: altair.SyncAggregate;
+    Attestation: phase0.Attestation;
   };
   [ForkName.electra]: {
     BeaconBlockHeader: phase0.BeaconBlockHeader;
@@ -167,6 +172,7 @@ type TypesByFork = {
     Contents: deneb.Contents;
     SyncCommittee: altair.SyncCommittee;
     SyncAggregate: altair.SyncAggregate;
+    Attestation: electra.Attestation;
   };
 };
 
@@ -225,3 +231,5 @@ export type Metadata<F extends ForkName = ForkAll> = TypesByFork[F]["Metadata"];
 export type BuilderBid<F extends ForkExecution = ForkExecution> = TypesByFork[F]["BuilderBid"];
 export type SignedBuilderBid<F extends ForkExecution = ForkExecution> = TypesByFork[F]["SignedBuilderBid"];
 export type SSEPayloadAttributes<F extends ForkExecution = ForkExecution> = TypesByFork[F]["SSEPayloadAttributes"];
+
+export type Attestation<F extends ForkName = ForkAll> = TypesByFork[F]["Attestation"];
