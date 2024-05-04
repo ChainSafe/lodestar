@@ -43,6 +43,12 @@ export type BeaconState =
   | capella.BeaconState
   | deneb.BeaconState
   | electra.BeaconState;
+export type Attestation = phase0.Attestation | electra.Attestation;
+export type AggregateAndProof = phase0.AggregateAndProof | electra.AggregateAndProof;
+export type SignedAggregateAndProof = phase0.SignedAggregateAndProof | electra.SignedAggregateAndProof;
+export type IndexedAttestation = phase0.IndexedAttestation | electra.IndexedAttestation;
+export type IndexedAttestationBigint = phase0.IndexedAttestationBigint | electra.IndexedAttestationBigint;
+export type AttesterSlashing = phase0.AttesterSlashing | electra.AttesterSlashing;
 export type Metadata = phase0.Metadata | altair.Metadata;
 
 // For easy reference in the assemble block for building payloads
