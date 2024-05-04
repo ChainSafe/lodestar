@@ -1,6 +1,6 @@
 {
-  "version": "1.18.0",
   "name": "@lodestar/utils",
+  "version": "1.18.0",
   "description": "Utilities required across multiple lodestar packages",
   "author": "ChainSafe Systems",
   "scripts": {
@@ -8,10 +8,10 @@
     "build:esm": "tsc -p tsconfig.esm.json",
     "build:cjs": "tsc -p tsconfig.cjs.json",
     "build": "yarn build:esm && yarn build:cjs",
-    "postbuild": "node ../../scripts/prepare_cjs_modules.mjs utils",
+    "postbuild": "node ../../scripts/fix_dual_modules_lib.mjs utils",
     "build:watch": "yarn run build --watch",
     "build:release": "yarn clean && yarn build",
-    "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\"",
+    "check-build": "node -e \"(async function() { await import('./lib/esm/index.mjs') })()\"",
     "check-types": "tsc && vitest --run --typecheck --dir test/types/",
     "lint": "eslint --color --ext .ts src/ test/",
     "lint:fix": "yarn run lint --fix",
@@ -36,11 +36,11 @@
   },
   "type": "module",
   "main": "./lib/cjs/index.cjs",
-  "module": "./lib/esm/index.js",
-  "types": "./lib/esm/index.d.ts",
+  "module": "./lib/esm/index.mjs",
+  "types": "./lib/esm/index.d.mts",
   "exports": {
     ".": {
-      "import": "./lib/esm/index.js",
+      "import": "./lib/esm/index.mjs",
       "require": "./lib/cjs/index.cjs"
     }
   },
@@ -57,11 +57,11 @@
     "*.map",
     "*.cjs",
     "*.d.cts",
-    "*.js",
-    "*.d.ts",
+    "*.mjs",
+    "*.d.mts",
     "lib/**/*.map",
-    "lib/esm/**/*.js",
-    "lib/esm/**/*.d.ts",
+    "lib/esm/**/*.mjs",
+    "lib/esm/**/*.d.mts",
     "lib/cjs/**/*.cjs",
     "lib/cjs/**/*.d.cts"
   ],

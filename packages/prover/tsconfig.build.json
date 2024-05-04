@@ -2,6 +2,8 @@
   "extends": "../../tsconfig.build.json",
   "include": ["src"],
   "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "outDir": "lib",
     // Had to add it because compiling error `Duplicate identifier 'Buffer'`
     "skipLibCheck": true

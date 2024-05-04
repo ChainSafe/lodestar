@@ -8,10 +8,10 @@
     "build:esm": "tsc -p tsconfig.esm.json",
     "build:cjs": "tsc -p tsconfig.cjs.json",
     "build": "yarn build:esm && yarn build:cjs",
-    "postbuild": "node ../../scripts/prepare_cjs_modules.mjs spec-test-util",
+    "postbuild": "node ../../scripts/fix_dual_modules_lib.mjs spec-test-util",
     "build:release": "yarn clean && yarn build",
     "build:watch": "yarn run build --watch",
-    "check-build": "node -e \"(async function() { await import('./lib/downloadTests.js') })()\"",
+    "check-build": "node -e \"(async function() { await import('./lib/esm/downloadTests.mjs') })()\"",
     "check-types": "tsc",
     "lint": "eslint --color --ext .ts src/ test/",
     "lint:fix": "yarn run lint --fix",
@@ -40,15 +40,15 @@
     "eth2-spec-test-download": "lib/downloadTestsCli.mjs"
   },
   "main": "./lib/cjs/index.cjs",
-  "module": "./lib/esm/index.js",
-  "types": "./lib/esm/index.d.ts",
+  "module": "./lib/esm/index.mjs",
+  "types": "./lib/esm/index.d.mts",
   "exports": {
     ".": {
-      "import": "./lib/esm/index.js",
+      "import": "./lib/esm/index.mjs",
       "require": "./lib/cjs/index.cjs"
     },
     "./downloadTests": {
-      "import": "./lib/esm/downloadTests.js",
+      "import": "./lib/esm/downloadTests.mjs",
       "require": "./lib/cjs/downloadTests.cjs"
     }
   },
@@ -65,11 +65,11 @@
     "*.map",
     "*.cjs",
     "*.d.cts",
-    "*.js",
+    "*.mjs",
     "*.d.mts",
     "lib/**/*.map",
-    "lib/esm/**/*.js",
-    "lib/esm/**/*.d.ts",
+    "lib/esm/**/*.mjs",
+    "lib/esm/**/*.d.mts",
     "lib/cjs/**/*.cjs",
     "lib/cjs/**/*.d.cts"
   ],

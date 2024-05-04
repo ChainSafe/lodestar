@@ -8,6 +8,7 @@ import {userSelectedPreset, userOverrides} from "./setPreset.js";
 export type {BeaconPreset} from "./types.js";
 export * from "./forkName.js";
 export {presetToJson} from "./json.js";
+export {setActivePreset, presetFromJson} from "./setPreset.js";
 export {PresetName};
 
 const presets = {
