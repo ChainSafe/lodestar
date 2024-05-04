@@ -85,7 +85,7 @@ const MAX_ATTESTATIONS_PER_GROUP = 3;
  * Note that we want to remove attestations with attesters that were included in the chain.
  */
 export class AggregatedAttestationPool {
-  // per electra, different committees could have the same AttData hash
+  // per electra, different committees could have the same AttData hex
   private readonly attestationGroupByIndexByDataHashBySlot = new MapDef<
     Slot,
     Map<DataRootHex, Map<CommitteeIndex, MatchingDataAttestationGroup>>

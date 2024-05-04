@@ -16,7 +16,7 @@ export function getAttesterSlashingsSignatureSets(
 /** Get signature sets from a single AttesterSlashing object */
 export function getAttesterSlashingSignatureSets(
   state: CachedBeaconStateAllForks,
-  attesterSlashing: allForks.AttesterSlashing,
+  attesterSlashing: allForks.AttesterSlashing
 ): ISignatureSet[] {
   return [attesterSlashing.attestation1, attesterSlashing.attestation2].map((attestation) =>
     getIndexedAttestationBigintSignatureSet(state, attestation)
