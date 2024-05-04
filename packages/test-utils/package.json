@@ -1,61 +1,24 @@
 {
   "name": "@lodestar/test-utils",
-  "private": true,
   "version": "1.18.0",
   "description": "Test utilities reused across other packages",
   "author": "ChainSafe Systems",
-  "license": "Apache-2.0",
-  "bugs": {
-    "url": "https://github.com/ChainSafe/lodestar/issues"
-  },
-  "homepage": "https://github.com/ChainSafe/lodestar#readme",
-  "type": "module",
-  "exports": {
-    ".": {
-      "import": "./lib/index.js"
-    },
-    "./doubles": {
-      "import": "./lib/doubles.js"
-    }
-  },
-  "typesVersions": {
-    "*": {
-      "*": [
-        "*",
-        "lib/*",
-        "lib/*/index"
-      ]
-    }
-  },
-  "types": "lib/index.d.ts",
-  "files": [
-    "lib/**/*.js",
-    "lib/**/*.js.map",
-    "lib/**/*.d.ts",
-    "*.d.ts",
-    "*.js"
-  ],
   "scripts": {
     "clean": "rm -rf lib && rm -f *.tsbuildinfo",
-    "build": "tsc -p tsconfig.build.json",
+    "build:esm": "tsc -p tsconfig.esm.json",
+    "prebuild:cjs": "node ../../scripts/fix_dirname_and_filename.mjs pre test-utils",
+    "build:cjs": "tsc -p tsconfig.cjs.json",
+    "postbuild:cjs": "node ../../scripts/fix_dirname_and_filename.mjs post test-utils",
+    "build": "yarn build:cjs && yarn build:esm",
+    "postbuild": "node ../../scripts/fix_dual_modules_lib.mjs test-utils",
     "build:release": "yarn clean && yarn build",
     "build:watch": "yarn run build --watch",
-    "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\"",
+    "check-build": "node -e \"(async function() { await import('./lib/esm/index.mjs') })()\"",
     "check-types": "tsc",
     "lint": "eslint --color --ext .ts src/",
     "lint:fix": "yarn run lint --fix",
     "check-readme": "typescript-docs-verifier"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com:ChainSafe/lodestar.git"
-  },
-  "keywords": [
-    "ethereum",
-    "eth-consensus",
-    "beacon",
-    "blockchain"
-  ],
   "dependencies": {
     "@chainsafe/bls": "^8.1.0",
     "@chainsafe/bls-keystore": "^3.0.1",
@@ -71,5 +34,55 @@
   },
   "peerDependencies": {
     "vitest": "^1.2.1"
+  },
+  "type": "module",
+  "main": "./lib/cjs/index.cjs",
+  "module": "./lib/esm/index.mjs",
+  "types": "./lib/esm/index.d.mts",
+  "exports": {
+    ".": {
+      "import": "./lib/esm/index.mjs",
+      "require": "./lib/cjs/index.cjs"
+    },
+    "./doubles": {
+      "import": "./lib/esm/doubles.mjs",
+      "require": "./lib/cjs/doubles.cjs"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "*": [
+        "*",
+        "lib/esm/*",
+        "lib/esm/*/index"
+      ]
+    }
+  },
+  "files": [
+    "*.map",
+    "*.cjs",
+    "*.d.cts",
+    "*.mjs",
+    "*.d.mts",
+    "lib/**/*.map",
+    "lib/esm/**/*.mjs",
+    "lib/esm/**/*.d.mts",
+    "lib/cjs/**/*.cjs",
+    "lib/cjs/**/*.d.cts"
+  ],
+  "keywords": [
+    "ethereum",
+    "eth-consensus",
+    "beacon",
+    "blockchain"
+  ],
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/ChainSafe/lodestar#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com:ChainSafe/lodestar.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ChainSafe/lodestar/issues"
   }
 }
