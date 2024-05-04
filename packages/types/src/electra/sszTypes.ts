@@ -125,7 +125,7 @@ export const ExecutionLayerWithdrawalRequest = new ContainerType(
   },
   {typeName: "ExecutionLayerWithdrawalRequest", jsonCase: "eth2"}
 );
-export const Withdrawal = new ListCompositeType(ExecutionLayerWithdrawalRequest, MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD);
+export const ExecutionLayerWithdrawalsRequest = new ListCompositeType(ExecutionLayerWithdrawalRequest, MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD);
 
 export const ExecutionPayload = new ContainerType(
   {
