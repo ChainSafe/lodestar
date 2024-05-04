@@ -225,5 +225,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     // ELECTRA
     MAX_DEPOSIT_RECEIPTS_PER_PAYLOAD: electraForkRelevant,
     MAX_EXECUTION_LAYER_EXITS: electraForkRelevant,
+    MAX_ATTESTER_SLASHINGS_ELECTRA: electraForkRelevant,
+    MAX_ATTESTATIONS_ELECTRA: electraForkRelevant,
   };
 }

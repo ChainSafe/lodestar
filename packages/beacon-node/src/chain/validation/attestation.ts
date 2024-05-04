@@ -305,7 +305,7 @@ async function validateGossipAttestationNoSignatureCheck(
   // > TODO: Do this check **before** getting the target state but don't recompute zipIndexes
   const aggregationBits = attestationOrCache.attestation
     ? attestationOrCache.attestation.aggregationBits
-    : getAggregationBitsFromAttestationSerialized(attestationOrCache.serializedData);
+    : getAggregationBitsFromAttestationSerialized(fork, attestationOrCache.serializedData);
   if (aggregationBits === null) {
     throw new AttestationError(GossipAction.REJECT, {
       code: AttestationErrorCode.INVALID_SERIALIZED_BYTES,
@@ -414,7 +414,7 @@ async function validateGossipAttestationNoSignatureCheck(
   let attDataRootHex: RootHex;
   const signature = attestationOrCache.attestation
     ? attestationOrCache.attestation.signature
-    : getSignatureFromAttestationSerialized(attestationOrCache.serializedData);
+    : getSignatureFromAttestationSerialized(fork, attestationOrCache.serializedData);
   if (signature === null) {
     throw new AttestationError(GossipAction.REJECT, {
       code: AttestationErrorCode.INVALID_SERIALIZED_BYTES,
