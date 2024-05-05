@@ -125,13 +125,16 @@ export const ExecutionLayerWithdrawalRequest = new ContainerType(
   },
   {typeName: "ExecutionLayerWithdrawalRequest", jsonCase: "eth2"}
 );
-export const ExecutionLayerWithdrawalsRequest = new ListCompositeType(ExecutionLayerWithdrawalRequest, MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD);
+export const ExecutionLayerWithdrawalRequests = new ListCompositeType(
+  ExecutionLayerWithdrawalRequest,
+  MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD
+);
 
 export const ExecutionPayload = new ContainerType(
   {
     ...denebSsz.ExecutionPayload.fields,
     depositReceipts: DepositReceipts, // New in ELECTRA
-    withdrawalRequests: ExecutionLayerWithdrawalRequest, // New in ELECTRA
+    withdrawalRequests: ExecutionLayerWithdrawalRequests, // New in ELECTRA
   },
   {typeName: "ExecutionPayload", jsonCase: "eth2"}
 );

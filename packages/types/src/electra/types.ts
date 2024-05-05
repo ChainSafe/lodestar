@@ -13,7 +13,7 @@ export type DepositReceipt = ValueOf<typeof ssz.DepositReceipt>;
 export type DepositReceipts = ValueOf<typeof ssz.DepositReceipts>;
 
 export type ExecutionLayerWithdrawalRequest = ValueOf<typeof ssz.ExecutionLayerWithdrawalRequest>;
-export type ExecutionLayerWithdrawalsRequest = ValueOf<typeof ssz.ExecutionLayerWithdrawalsRequest>;
+export type ExecutionLayerWithdrawalRequests = ValueOf<typeof ssz.ExecutionLayerWithdrawalRequests>;
 
 export type ExecutionPayload = ValueOf<typeof ssz.ExecutionPayload>;
 export type ExecutionPayloadHeader = ValueOf<typeof ssz.ExecutionPayloadHeader>;
