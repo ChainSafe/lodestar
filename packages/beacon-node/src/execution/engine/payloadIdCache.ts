@@ -26,9 +26,10 @@ export type DepositReceiptV1 = {
   index: QUANTITY;
 };
 
-export type ExecutionLayerExitV1 = {
+export type ExecutionLayerWithdrawalRequestV1 = {
   sourceAddress: DATA;
   validatorPubkey: DATA;
+  amount: QUANTITY;
 };
 
 type FcuAttributes = {headBlockHash: DATA; finalizedBlockHash: DATA} & Omit<PayloadAttributesRpc, "withdrawals">;
