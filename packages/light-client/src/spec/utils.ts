@@ -117,8 +117,8 @@ export function upgradeLightClientHeader(
     case ForkName.electra:
       (upgradedHeader as LightClientHeader<ForkName.electra>).execution.depositReceiptsRoot =
         ssz.electra.LightClientHeader.fields.execution.fields.depositReceiptsRoot.defaultValue();
-      (upgradedHeader as electra.LightClientHeader).execution.exitsRoot =
-        ssz.electra.LightClientHeader.fields.execution.fields.exitsRoot.defaultValue();
+      (upgradedHeader as electra.LightClientHeader).execution.withdrawalRequestsRoot =
+        ssz.electra.LightClientHeader.fields.execution.fields.withdrawalRequestsRoot.defaultValue();
 
       // Break if no further upgrades is required else fall through
       if (ForkSeq[targetFork] <= ForkSeq.electra) break;
@@ -158,7 +158,7 @@ export function isValidLightClientHeader(config: ChainForkConfig, header: LightC
   if (epoch < config.ELECTRA_FORK_EPOCH) {
     if (
       (header as LightClientHeader<ForkName.electra>).execution.depositReceiptsRoot !== undefined ||
-      (header as LightClientHeader<ForkName.electra>).execution.exitsRoot !== undefined
+      (header as LightClientHeader<ForkName.electra>).execution.withdrawalRequestsRoot !== undefined
     ) {
       return false;
     }
