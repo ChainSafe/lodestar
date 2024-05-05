@@ -12,8 +12,8 @@ export type SignedAggregateAndProof = ValueOf<typeof ssz.SignedAggregateAndProof
 export type DepositReceipt = ValueOf<typeof ssz.DepositReceipt>;
 export type DepositReceipts = ValueOf<typeof ssz.DepositReceipts>;
 
-export type ExecutionLayerExit = ValueOf<typeof ssz.ExecutionLayerExit>;
-export type ExecutionLayerExits = ValueOf<typeof ssz.ExecutionLayerExits>;
+export type ExecutionLayerWithdrawalRequest = ValueOf<typeof ssz.ExecutionLayerWithdrawalRequest>;
+export type ExecutionLayerWithdrawalRequests = ValueOf<typeof ssz.ExecutionLayerWithdrawalRequests>;
 
 export type ExecutionPayload = ValueOf<typeof ssz.ExecutionPayload>;
 export type ExecutionPayloadHeader = ValueOf<typeof ssz.ExecutionPayloadHeader>;
