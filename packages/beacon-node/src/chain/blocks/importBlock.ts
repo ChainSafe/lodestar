@@ -68,6 +68,7 @@ export async function importBlock(
   const prevFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
   const blockDelaySec = (fullyVerifiedBlock.seenTimestampSec - postState.genesisTime) % this.config.SECONDS_PER_SLOT;
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
+  const fork = this.config.getForkSeq(blockSlot);
 
   // this is just a type assertion since blockinput with blobsPromise type will not end up here
   if (blockInput.type === BlockInputType.blobsPromise) {
@@ -146,7 +147,7 @@ export async function importBlock(
 
     for (const attestation of attestations) {
       try {
-        const indexedAttestation = postState.epochCtx.getIndexedAttestation(attestation);
+        const indexedAttestation = postState.epochCtx.getIndexedAttestation(fork, attestation);
         const {target, beaconBlockRoot} = attestation.data;
 
         const attDataRoot = toHexString(ssz.phase0.AttestationData.hashTreeRoot(indexedAttestation.data));
