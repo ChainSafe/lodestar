@@ -17,7 +17,7 @@ import {
   quantityToBigint,
 } from "../../eth1/provider/utils.js";
 import {ExecutionPayloadStatus, BlobsBundle, PayloadAttributes, VersionedHashes} from "./interface.js";
-import {WithdrawalV1, DepositReceiptV1, ExecutionLayerExitV1} from "./payloadIdCache.js";
+import {WithdrawalV1, DepositReceiptV1, ExecutionLayerWithdrawalRequestV1} from "./payloadIdCache.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -119,14 +119,14 @@ export type ExecutionPayloadBodyRpc = {
   transactions: DATA[];
   withdrawals: WithdrawalV1[] | null | undefined;
   depositReceipts: DepositReceiptV1[] | null | undefined;
-  exits: ExecutionLayerExitV1[] | null | undefined;
+  withdrawalRequests: ExecutionLayerWithdrawalRequestV1[] | null | undefined;
 };
 
 export type ExecutionPayloadBody = {
   transactions: bellatrix.Transaction[];
   withdrawals: capella.Withdrawals | null;
   depositReceipts: electra.DepositReceipts | null;
-  exits: electra.ExecutionLayerExits | null;
+  withdrawalRequests: electra.ExecutionLayerWithdrawalRequests | null;
 };
 
 export type ExecutionPayloadRpc = {
@@ -149,7 +149,7 @@ export type ExecutionPayloadRpc = {
   excessBlobGas?: QUANTITY; // DENEB
   parentBeaconBlockRoot?: QUANTITY; // DENEB
   depositReceipts?: DepositReceiptRpc[]; // ELECTRA
-  exits?: ExecutionLayerExitRpc[]; // ELECTRA
+  withdrawalRequests?: ExecutionLayerWithdrawalRequestRpc[]; // ELECTRA
 };
 
 export type WithdrawalRpc = {
@@ -160,7 +160,7 @@ export type WithdrawalRpc = {
 };
 
 export type DepositReceiptRpc = DepositReceiptV1;
-export type ExecutionLayerExitRpc = ExecutionLayerExitV1;
+export type ExecutionLayerWithdrawalRequestRpc = ExecutionLayerWithdrawalRequestV1;
 
 export type VersionedHashesRpc = DATA[];
 
@@ -215,9 +215,9 @@ export function serializeExecutionPayload(fork: ForkName, data: allForks.Executi
 
   // ELECTRA adds depositReceipts to the ExecutionPayload
   if (ForkSeq[fork] >= ForkSeq.electra) {
-    const {depositReceipts, exits} = data as electra.ExecutionPayload;
+    const {depositReceipts, withdrawalRequests} = data as electra.ExecutionPayload;
     payload.depositReceipts = depositReceipts.map(serializeDepositReceipt);
-    payload.exits = exits.map(serializeExecutionLayerExit);
+    payload.withdrawalRequests = withdrawalRequests.map(serializeExecutionLayerWithdrawalRequest);
   }
 
   return payload;
@@ -306,7 +306,7 @@ export function parseExecutionPayload(
   }
 
   if (ForkSeq[fork] >= ForkSeq.electra) {
-    const {depositReceipts, exits} = data;
+    const {depositReceipts, withdrawalRequests} = data;
     // Geth can also reply with null
     if (depositReceipts == null) {
       throw Error(
@@ -315,12 +315,14 @@ export function parseExecutionPayload(
     }
     (executionPayload as electra.ExecutionPayload).depositReceipts = depositReceipts.map(deserializeDepositReceipt);
 
-    if (exits == null) {
+    if (withdrawalRequests == null) {
       throw Error(
-        `exits missing for ${fork} >= electra executionPayload number=${executionPayload.blockNumber} hash=${data.blockHash}`
+        `withdrawalRequests missing for ${fork} >= electra executionPayload number=${executionPayload.blockNumber} hash=${data.blockHash}`
       );
     }
-    (executionPayload as electra.ExecutionPayload).exits = exits.map(deserializeExecutionLayerExit);
+    (executionPayload as electra.ExecutionPayload).withdrawalRequests = withdrawalRequests.map(
+      deserializeExecutionLayerWithdrawalRequest
+    );
   }
 
   return {executionPayload, executionPayloadValue, blobsBundle, shouldOverrideBuilder};
@@ -409,17 +411,23 @@ export function deserializeDepositReceipt(serialized: DepositReceiptRpc): electr
   } as electra.DepositReceipt;
 }
 
-export function serializeExecutionLayerExit(exit: electra.ExecutionLayerExit): ExecutionLayerExitRpc {
+export function serializeExecutionLayerWithdrawalRequest(
+  withdrawalRequest: electra.ExecutionLayerWithdrawalRequest
+): ExecutionLayerWithdrawalRequestRpc {
   return {
-    sourceAddress: bytesToData(exit.sourceAddress),
-    validatorPubkey: bytesToData(exit.validatorPubkey),
+    sourceAddress: bytesToData(withdrawalRequest.sourceAddress),
+    validatorPubkey: bytesToData(withdrawalRequest.validatorPubkey),
+    amount: numToQuantity(withdrawalRequest.amount),
   };
 }
 
-export function deserializeExecutionLayerExit(exit: ExecutionLayerExitRpc): electra.ExecutionLayerExit {
+export function deserializeExecutionLayerWithdrawalRequest(
+  withdrawalRequest: ExecutionLayerWithdrawalRequestRpc
+): electra.ExecutionLayerWithdrawalRequest {
   return {
-    sourceAddress: dataToBytes(exit.sourceAddress, 20),
-    validatorPubkey: dataToBytes(exit.validatorPubkey, 48),
+    sourceAddress: dataToBytes(withdrawalRequest.sourceAddress, 20),
+    validatorPubkey: dataToBytes(withdrawalRequest.validatorPubkey, 48),
+    amount: quantityToNum(withdrawalRequest.amount),
   };
 }
 
@@ -429,7 +437,9 @@ export function deserializeExecutionPayloadBody(data: ExecutionPayloadBodyRpc | 
         transactions: data.transactions.map((tran) => dataToBytes(tran, null)),
         withdrawals: data.withdrawals ? data.withdrawals.map(deserializeWithdrawal) : null,
         depositReceipts: data.depositReceipts ? data.depositReceipts.map(deserializeDepositReceipt) : null,
-        exits: data.exits ? data.exits.map(deserializeExecutionLayerExit) : null,
+        withdrawalRequests: data.withdrawalRequests
+          ? data.withdrawalRequests.map(deserializeExecutionLayerWithdrawalRequest)
+          : null,
       }
     : null;
 }
@@ -440,7 +450,9 @@ export function serializeExecutionPayloadBody(data: ExecutionPayloadBody | null)
         transactions: data.transactions.map((tran) => bytesToData(tran)),
         withdrawals: data.withdrawals ? data.withdrawals.map(serializeWithdrawal) : null,
         depositReceipts: data.depositReceipts ? data.depositReceipts.map(serializeDepositReceipt) : null,
-        exits: data.exits ? data.exits.map(serializeExecutionLayerExit) : null,
+        withdrawalRequests: data.withdrawalRequests
+          ? data.withdrawalRequests.map(serializeExecutionLayerWithdrawalRequest)
+          : null,
       }
     : null;
 }
