@@ -10,7 +10,10 @@ import {initiateValidatorExit} from "./index.js";
  * Process execution layer exit messages and initiate exit incase they belong to a valid active validator
  * otherwise silent ignore.
  */
-export function processExecutionLayerExit(state: CachedBeaconStateElectra, exit: electra.ExecutionLayerExit): void {
+export function processExecutionLayerExit(
+  state: CachedBeaconStateElectra,
+  exit: electra.ExecutionLayerWithdrawalRequest
+): void {
   const validator = isValidExecutionLayerExit(state, exit);
   if (validator === null) {
     return;
@@ -21,7 +24,7 @@ export function processExecutionLayerExit(state: CachedBeaconStateElectra, exit:
 
 export function isValidExecutionLayerExit(
   state: CachedBeaconStateElectra,
-  exit: electra.ExecutionLayerExit
+  exit: electra.ExecutionLayerWithdrawalRequest
 ): CompositeViewDU<typeof ssz.phase0.Validator> | null {
   const {config, epochCtx} = state;
   const validatorIndex = epochCtx.getValidatorIndex(exit.validatorPubkey);

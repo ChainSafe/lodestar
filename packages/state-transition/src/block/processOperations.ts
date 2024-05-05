@@ -55,7 +55,7 @@ export function processOperations(
     processVoluntaryExit(state, voluntaryExit, opts.verifySignatures);
   }
   if (fork >= ForkSeq.electra) {
-    for (const elExit of (body as electra.BeaconBlockBody).executionPayload.exits) {
+    for (const elExit of (body as electra.BeaconBlockBody).executionPayload.withdrawalRequests) {
       processExecutionLayerExit(state as CachedBeaconStateElectra, elExit);
     }
   }

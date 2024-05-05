@@ -143,7 +143,7 @@ export const ExecutionPayloadHeader = new ContainerType(
   {
     ...denebSsz.ExecutionPayloadHeader.fields,
     depositReceiptsRoot: Root, // New in ELECTRA
-    exitsRoot: Root, // New in ELECTRA
+    withdrawalRequestsRoot: Root, // New in ELECTRA
   },
   {typeName: "ExecutionPayloadHeader", jsonCase: "eth2"}
 );
