@@ -85,7 +85,7 @@ export type BeaconPreset = {
 
   // ELECTRA
   MAX_DEPOSIT_RECEIPTS_PER_PAYLOAD: number;
-  MAX_EXECUTION_LAYER_EXITS: number;
+  MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD: number;
   MAX_ATTESTER_SLASHINGS_ELECTRA: number;
   MAX_ATTESTATIONS_ELECTRA: number;
 };
@@ -176,7 +176,7 @@ export const beaconPresetTypes: BeaconPresetTypes = {
 
   // ELECTRA
   MAX_DEPOSIT_RECEIPTS_PER_PAYLOAD: "number",
-  MAX_EXECUTION_LAYER_EXITS: "number",
+  MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD: "number",
   MAX_ATTESTER_SLASHINGS_ELECTRA: "number",
   MAX_ATTESTATIONS_ELECTRA: "number",
 };

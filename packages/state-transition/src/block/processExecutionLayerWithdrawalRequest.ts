@@ -6,22 +6,33 @@ import {isActiveValidator} from "../util/index.js";
 import {CachedBeaconStateElectra} from "../types.js";
 import {initiateValidatorExit} from "./index.js";
 
+const FULL_EXIT_REQUEST_AMOUNT = 0;
 /**
  * Process execution layer exit messages and initiate exit incase they belong to a valid active validator
  * otherwise silent ignore.
  */
-export function processExecutionLayerExit(state: CachedBeaconStateElectra, exit: electra.ExecutionLayerExit): void {
-  const validator = isValidExecutionLayerExit(state, exit);
-  if (validator === null) {
-    return;
-  }
+export function processExecutionLayerWithdrawalRequest(
+  state: CachedBeaconStateElectra,
+  withdrawalRequest: electra.ExecutionLayerWithdrawalRequest
+): void {
+  const isFullExitRequest = withdrawalRequest.amount === FULL_EXIT_REQUEST_AMOUNT;
 
-  initiateValidatorExit(state, validator);
+  if (isFullExitRequest) {
+    const validator = isValidExecutionLayerExit(state, withdrawalRequest);
+    if (validator === null) {
+      return;
+    }
+
+    initiateValidatorExit(state, validator);
+  } else {
+    // partial withdral request add codeblock
+  }
 }
 
+// TODO electra : add pending withdrawal check before exit
 export function isValidExecutionLayerExit(
   state: CachedBeaconStateElectra,
-  exit: electra.ExecutionLayerExit
+  exit: electra.ExecutionLayerWithdrawalRequest
 ): CompositeViewDU<typeof ssz.phase0.Validator> | null {
   const {config, epochCtx} = state;
   const validatorIndex = epochCtx.getValidatorIndex(exit.validatorPubkey);
