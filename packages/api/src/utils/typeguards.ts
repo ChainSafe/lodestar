@@ -1,7 +1,7 @@
-import {Endpoint, GetRequestCodec, RouteDefinition} from "./types.js";
+import {Endpoint, RequestWithoutBodyCodec, RouteDefinition} from "./types.js";
 
 export function isRequestWithoutBody<E extends Endpoint>(
   definition: RouteDefinition<E>
-): definition is RouteDefinition<E> & {req: GetRequestCodec<E>} {
+): definition is RouteDefinition<E> & {req: RequestWithoutBodyCodec<E>} {
   return definition.method === "GET" || definition.req.schema.body === undefined;
 }

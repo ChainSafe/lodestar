@@ -5,7 +5,7 @@ import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {
   ArrayOf,
   EmptyArgs,
-  EmptyGetRequestCodec,
+  EmptyRequestCodec,
   EmptyMeta,
   EmptyMetaCodec,
   EmptyRequest,
@@ -203,7 +203,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
   getNetworkIdentity: {
     url: "/eth/v1/node/identity",
     method: "GET",
-    req: EmptyGetRequestCodec,
+    req: EmptyRequestCodec,
     resp: {
       onlySupport: WireFormat.json,
       data: {
@@ -273,7 +273,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
   getPeerCount: {
     url: "/eth/v1/node/peer_count",
     method: "GET",
-    req: EmptyGetRequestCodec,
+    req: EmptyRequestCodec,
     resp: {
       data: PeerCountType,
       meta: EmptyMetaCodec,
@@ -282,13 +282,13 @@ export const definitions: RouteDefinitions<Endpoints> = {
   getNodeVersion: {
     url: "/eth/v1/node/version",
     method: "GET",
-    req: EmptyGetRequestCodec,
+    req: EmptyRequestCodec,
     resp: JsonOnlyResponseCodec,
   },
   getSyncingStatus: {
     url: "/eth/v1/node/syncing",
     method: "GET",
-    req: EmptyGetRequestCodec,
+    req: EmptyRequestCodec,
     resp: JsonOnlyResponseCodec,
   },
   getHealth: {

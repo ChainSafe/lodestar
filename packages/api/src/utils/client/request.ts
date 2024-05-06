@@ -1,6 +1,6 @@
 import {HttpHeader, MediaType, mergeHeaders, setAuthorizationHeader} from "../headers.js";
 import {isRequestWithoutBody} from "../typeguards.js";
-import {Endpoint, JsonRequestMethods, PostRequestCodec, RouteDefinition, SszRequestMethods} from "../types.js";
+import {Endpoint, JsonRequestMethods, RequestWithBodyCodec, RouteDefinition, SszRequestMethods} from "../types.js";
 import {WireFormat} from "../wireFormat.js";
 import {stringifyQuery, urlJoin} from "./format.js";
 
@@ -38,7 +38,7 @@ export function createApiRequest<E extends Endpoint>(
   if (isRequestWithoutBody(definition)) {
     req = definition.req.writeReq(args);
   } else {
-    const requestWireFormat = (definition.req as PostRequestCodec<E>).onlySupport ?? init.requestWireFormat;
+    const requestWireFormat = (definition.req as RequestWithBodyCodec<E>).onlySupport ?? init.requestWireFormat;
     switch (requestWireFormat) {
       case WireFormat.json:
         req = (definition.req as JsonRequestMethods<E>).writeReqJson(args);

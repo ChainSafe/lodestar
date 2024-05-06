@@ -4,7 +4,7 @@ import {allForks, ssz, StringType, phase0} from "@lodestar/types";
 import {
   ArrayOf,
   EmptyArgs,
-  EmptyGetRequestCodec,
+  EmptyRequestCodec,
   EmptyMeta,
   EmptyMetaCodec,
   EmptyRequest,
@@ -149,7 +149,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
   getDebugChainHeads: {
     url: "/eth/v1/debug/beacon/heads",
     method: "GET",
-    req: EmptyGetRequestCodec,
+    req: EmptyRequestCodec,
     resp: {
       data: SlotRootListType,
       meta: EmptyMetaCodec,
@@ -159,7 +159,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
   getDebugChainHeadsV2: {
     url: "/eth/v2/debug/beacon/heads",
     method: "GET",
-    req: EmptyGetRequestCodec,
+    req: EmptyRequestCodec,
     resp: {
       data: SlotRootExecutionOptimisticListType,
       meta: EmptyMetaCodec,
@@ -169,7 +169,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
   getProtoArrayNodes: {
     url: "/eth/v0/debug/forkchoice",
     method: "GET",
-    req: EmptyGetRequestCodec,
+    req: EmptyRequestCodec,
     resp: {
       data: ProtoNodeResponseListType,
       meta: EmptyMetaCodec,

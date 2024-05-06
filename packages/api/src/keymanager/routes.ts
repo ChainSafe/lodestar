@@ -5,7 +5,7 @@ import {Schema, Endpoint, RouteDefinitions} from "../utils/index.js";
 import {WireFormat} from "../utils/wireFormat.js";
 import {
   EmptyArgs,
-  EmptyGetRequestCodec,
+  EmptyRequestCodec,
   EmptyMeta,
   EmptyMetaCodec,
   EmptyRequest,
@@ -360,7 +360,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
   listKeys: {
     url: "/eth/v1/keystores",
     method: "GET",
-    req: EmptyGetRequestCodec,
+    req: EmptyRequestCodec,
     resp: JsonOnlyResponseCodec,
   },
   importKeystores: {
@@ -413,7 +413,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
   listRemoteKeys: {
     url: "/eth/v1/remotekeys",
     method: "GET",
-    req: EmptyGetRequestCodec,
+    req: EmptyRequestCodec,
     resp: JsonOnlyResponseCodec,
   },
   importRemoteKeys: {

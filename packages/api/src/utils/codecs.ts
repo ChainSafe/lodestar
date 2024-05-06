@@ -3,8 +3,8 @@ import {ArrayType, ListBasicType, ListCompositeType, Type, isBasicType, isCompos
 import {ForkName} from "@lodestar/params";
 import {objectToExpectedCase} from "@lodestar/utils";
 import {
-  GetRequestCodec,
-  PostRequestCodec,
+  RequestWithoutBodyCodec,
+  RequestWithBodyCodec,
   ResponseCodec,
   ResponseDataCodec,
   ResponseMetadataCodec,
@@ -18,7 +18,7 @@ import {WireFormat} from "./wireFormat.js";
 // Utility types / codecs
 
 export type EmptyArgs = void;
-export type EmptyRequest = Record<string, void>;
+export type EmptyRequest = Record<never, never>;
 export type EmptyResponseData = void;
 export type EmptyMeta = void;
 
@@ -30,22 +30,15 @@ export type EmptyRequestEndpoint = Endpoint<any, EmptyArgs, EmptyRequest, any, a
 export type EmptyResponseEndpoint = Endpoint<any, any, any, EmptyResponseData, EmptyMeta>;
 
 /** Shortcut for routes that have no params, query */
-export const EmptyGetRequestCodec: GetRequestCodec<EmptyRequestEndpoint> = {
+export const EmptyRequestCodec: RequestWithoutBodyCodec<EmptyRequestEndpoint> = {
   writeReq: () => ({}),
   parseReq: () => {},
   schema: {},
 };
-export const EmptyPostRequestCodec: PostRequestCodec<EmptyRequestEndpoint> = {
-  writeReqJson: () => ({}),
-  parseReqJson: () => {},
-  writeReqSsz: () => ({}),
-  parseReqSsz: () => {},
-  schema: {},
-};
 
 export function JsonOnlyReq<E extends Endpoint>(
-  req: Omit<PostRequestCodec<E>, keyof SszRequestMethods<E>>
-): PostRequestCodec<E> {
+  req: Omit<RequestWithBodyCodec<E>, keyof SszRequestMethods<E>>
+): RequestWithBodyCodec<E> {
   return {
     ...req,
     writeReqSsz: () => {
@@ -59,8 +52,8 @@ export function JsonOnlyReq<E extends Endpoint>(
 }
 
 export function SszOnlyReq<E extends Endpoint>(
-  req: Omit<PostRequestCodec<E>, keyof JsonRequestMethods<E>>
-): PostRequestCodec<E> {
+  req: Omit<RequestWithBodyCodec<E>, keyof JsonRequestMethods<E>>
+): RequestWithBodyCodec<E> {
   return {
     ...req,
     writeReqJson: () => {

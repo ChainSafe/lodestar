@@ -72,7 +72,7 @@ export type Endpoint<
 // Request codec
 
 /** Encode / decode requests to & from function params, as well as schema definitions */
-export type GetRequestCodec<E extends Endpoint> = {
+export type RequestWithoutBodyCodec<E extends Endpoint> = {
   writeReq: (p: E["args"]) => E["request"]; // client
   parseReq: (r: E["request"]) => E["args"]; // server
   schema: SchemaDefinition<E["request"]>;
@@ -88,13 +88,12 @@ export type SszRequestMethods<E extends Endpoint> = {
   parseReqSsz: (r: SszPostRequestData<E["request"]>) => E["args"]; // server
 };
 
-export type RequestMethods<E extends Endpoint> = JsonRequestMethods<E> & SszRequestMethods<E>;
-
-export type PostRequestCodec<E extends Endpoint> = RequestMethods<E> & {
-  schema: SchemaDefinition<E["request"]>;
-  /** Support ssz-only or json-only requests */
-  onlySupport?: WireFormat;
-};
+export type RequestWithBodyCodec<E extends Endpoint> = JsonRequestMethods<E> &
+  SszRequestMethods<E> & {
+    schema: SchemaDefinition<E["request"]>;
+    /** Support ssz-only or json-only requests */
+    onlySupport?: WireFormat;
+  };
 
 /**
  * Previously called ReqSerializer
@@ -105,10 +104,10 @@ export type PostRequestCodec<E extends Endpoint> = RequestMethods<E> & {
  * Taking this idea to the extreme, Each group of endpoints would have definitions split into three files for nice treeshaking (types, client, server)
  */
 export type RequestCodec<E extends Endpoint> = E["method"] extends "GET"
-  ? GetRequestCodec<E>
+  ? RequestWithoutBodyCodec<E>
   : "body" extends keyof E["request"]
-    ? PostRequestCodec<E>
-    : GetRequestCodec<E>;
+    ? RequestWithBodyCodec<E>
+    : RequestWithoutBodyCodec<E>;
 
 // Response codec
 

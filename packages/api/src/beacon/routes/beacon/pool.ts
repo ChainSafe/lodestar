@@ -5,7 +5,7 @@ import {Schema, Endpoint, RouteDefinitions} from "../../../utils/index.js";
 import {
   ArrayOf,
   EmptyArgs,
-  EmptyGetRequestCodec,
+  EmptyRequestCodec,
   EmptyMeta,
   EmptyMetaCodec,
   EmptyRequest,
@@ -188,7 +188,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
   getPoolAttesterSlashings: {
     url: "/eth/v1/beacon/pool/attester_slashings",
     method: "GET",
-    req: EmptyGetRequestCodec,
+    req: EmptyRequestCodec,
     resp: {
       data: AttesterSlashingListType,
       meta: EmptyMetaCodec,
@@ -197,7 +197,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
   getPoolProposerSlashings: {
     url: "/eth/v1/beacon/pool/proposer_slashings",
     method: "GET",
-    req: EmptyGetRequestCodec,
+    req: EmptyRequestCodec,
     resp: {
       data: ProposerSlashingListType,
       meta: EmptyMetaCodec,
@@ -206,7 +206,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
   getPoolVoluntaryExits: {
     url: "/eth/v1/beacon/pool/voluntary_exits",
     method: "GET",
-    req: EmptyGetRequestCodec,
+    req: EmptyRequestCodec,
     resp: {
       data: SignedVoluntaryExitListType,
       meta: EmptyMetaCodec,
@@ -215,7 +215,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
   getPoolBLSToExecutionChanges: {
     url: "/eth/v1/beacon/pool/bls_to_execution_changes",
     method: "GET",
-    req: EmptyGetRequestCodec,
+    req: EmptyRequestCodec,
     resp: {
       data: SignedBLSToExecutionChangeListType,
       meta: EmptyMetaCodec,

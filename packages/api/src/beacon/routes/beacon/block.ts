@@ -395,7 +395,7 @@ export function definitions(config: ChainForkConfig): RouteDefinitions<Endpoints
           };
         },
         parseReqSsz: ({body, headers, query}) => {
-          const forkName = toForkName(fromHeaders(headers, MetaHeader.Version)); // TODO validation
+          const forkName = toForkName(fromHeaders(headers, MetaHeader.Version));
           const forkSeq = config.forks[forkName].seq;
           return {
             signedBlockOrContents:

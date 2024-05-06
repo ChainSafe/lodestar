@@ -1,7 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {phase0, ssz} from "@lodestar/types";
 import {Endpoint, RouteDefinitions} from "../../../utils/types.js";
-import {EmptyArgs, EmptyGetRequestCodec, EmptyMeta, EmptyMetaCodec, EmptyRequest} from "../../../utils/codecs.js";
+import {EmptyArgs, EmptyRequestCodec, EmptyMeta, EmptyMetaCodec, EmptyRequest} from "../../../utils/codecs.js";
 import * as block from "./block.js";
 import * as pool from "./pool.js";
 import * as state from "./state.js";
@@ -52,7 +52,7 @@ export function definitions(config: ChainForkConfig): RouteDefinitions<Endpoints
     getGenesis: {
       url: "/eth/v1/beacon/genesis",
       method: "GET",
-      req: EmptyGetRequestCodec,
+      req: EmptyRequestCodec,
       resp: {
         data: ssz.phase0.Genesis,
         meta: EmptyMetaCodec,

@@ -7,7 +7,7 @@ import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {MetaHeader, VersionCodec, VersionMeta} from "../../utils/metadata.js";
 import {
   EmptyArgs,
-  EmptyGetRequestCodec,
+  EmptyRequestCodec,
   EmptyMeta,
   EmptyMetaCodec,
   EmptyRequest,
@@ -210,7 +210,7 @@ export function definitions(config: ChainForkConfig): RouteDefinitions<Endpoints
     getLightClientOptimisticUpdate: {
       url: "/eth/v1/beacon/light_client/optimistic_update",
       method: "GET",
-      req: EmptyGetRequestCodec,
+      req: EmptyRequestCodec,
       resp: {
         data: WithVersion((fork) => ssz[getLCFork(fork)].LightClientOptimisticUpdate),
         meta: VersionCodec,
@@ -219,7 +219,7 @@ export function definitions(config: ChainForkConfig): RouteDefinitions<Endpoints
     getLightClientFinalityUpdate: {
       url: "/eth/v1/beacon/light_client/finality_update",
       method: "GET",
-      req: EmptyGetRequestCodec,
+      req: EmptyRequestCodec,
       resp: {
         data: WithVersion((fork) => ssz[getLCFork(fork)].LightClientFinalityUpdate),
         meta: VersionCodec,

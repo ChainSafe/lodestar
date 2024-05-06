@@ -756,7 +756,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
         fromJson: (val) => {
           const {executionPayloadBlinded, ...meta} = ProduceBlockV3MetaType.fromJson(val);
 
-          // Extract source from the data and assign defaults in the spec compliant manner if not present in response
+          // Extract source from the data and assign defaults in the spec compliant manner if not present
           const executionPayloadSource =
             (val as {execution_payload_source: ProducedBlockSource}).execution_payload_source ??
             (executionPayloadBlinded === true ? ProducedBlockSource.builder : ProducedBlockSource.engine);
@@ -773,7 +773,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
         fromHeaders: (headers) => {
           const executionPayloadBlinded = toBoolean(headers.getRequired(MetaHeader.ExecutionPayloadBlinded));
 
-          // Extract source from the headers and assign defaults in a spec compliant manner if not present in response
+          // Extract source from the headers and assign defaults in a spec compliant manner if not present
           const executionPayloadSource =
             (headers.get(MetaHeader.ExecutionPayloadSource) as ProducedBlockSource) ??
             (executionPayloadBlinded === true ? ProducedBlockSource.builder : ProducedBlockSource.engine);

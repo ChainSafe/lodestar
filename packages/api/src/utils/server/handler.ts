@@ -6,7 +6,7 @@ import {
   GetRequestData,
   JsonPostRequestData,
   JsonRequestMethods,
-  PostRequestCodec,
+  RequestWithBodyCodec,
   RouteDefinition,
   SszPostRequestData,
   SszRequestMethods,
@@ -67,7 +67,7 @@ export function createFastifyHandler<E extends Endpoint>(
         // Media type is already validated by Fastify before calling handler
         const requestMediaType = parseContentTypeHeader(req.headers[HttpHeader.ContentType]) as MediaType;
 
-        const {onlySupport} = definition.req as PostRequestCodec<E>;
+        const {onlySupport} = definition.req as RequestWithBodyCodec<E>;
         const requestWireFormat = getWireFormat(requestMediaType);
         switch (requestWireFormat) {
           case WireFormat.json:

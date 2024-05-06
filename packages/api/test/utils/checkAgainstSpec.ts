@@ -1,7 +1,7 @@
 import Ajv, {ErrorObject} from "ajv";
 import {expect, describe, beforeAll, it} from "vitest";
 import {WireFormat} from "../../src/utils/wireFormat.js";
-import {Endpoint, PostRequestCodec, RouteDefinitions} from "../../src/utils/types.js";
+import {Endpoint, RequestWithBodyCodec, RouteDefinitions} from "../../src/utils/types.js";
 import {isRequestWithoutBody} from "../../src/utils/typeguards.js";
 import {applyRecursively, JsonSchema, OpenApiJson, parseOpenApiSpec} from "./parseOpenApiSpec.js";
 import {GenericServerTestCases} from "./genericServerTest.js";
@@ -103,7 +103,7 @@ export function runTestCheckAgainstSpec<Es extends Record<string, Endpoint>>(
         it(`${operationId}_request`, function () {
           const reqJson = isRequestWithoutBody(routeDef)
             ? routeDef.req.writeReq(testData.args)
-            : (routeDef.req as PostRequestCodec<Es[string]>).writeReqJson(testData.args);
+            : (routeDef.req as RequestWithBodyCodec<Es[string]>).writeReqJson(testData.args);
 
           // Stringify param and query to simulate rendering in HTTP query
           // TODO: Review conversions in fastify and other servers
@@ -124,7 +124,7 @@ export function runTestCheckAgainstSpec<Es extends Record<string, Endpoint>>(
           // Verify that request supports ssz if required by spec
           if (routeSpec.requestSszRequired) {
             try {
-              const reqCodec = routeDef.req as PostRequestCodec<Es[string]>;
+              const reqCodec = routeDef.req as RequestWithBodyCodec<Es[string]>;
               const reqSsz = reqCodec.writeReqSsz(testData.args);
 
               expect(reqSsz.body).toBeInstanceOf(Uint8Array);

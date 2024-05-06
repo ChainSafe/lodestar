@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
-import {ArrayOf, EmptyArgs, EmptyGetRequestCodec, EmptyMeta, EmptyMetaCodec, EmptyRequest} from "../../utils/codecs.js";
+import {ArrayOf, EmptyArgs, EmptyRequestCodec, EmptyMeta, EmptyMetaCodec, EmptyRequest} from "../../utils/codecs.js";
 import {Endpoint, RouteDefinitions} from "../../utils/index.js";
 import {WireFormat} from "../../utils/wireFormat.js";
 
@@ -72,7 +72,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
   getDepositContract: {
     url: "/eth/v1/config/deposit_contract",
     method: "GET",
-    req: EmptyGetRequestCodec,
+    req: EmptyRequestCodec,
     resp: {
       data: DepositContractType,
       meta: EmptyMetaCodec,
@@ -81,7 +81,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
   getForkSchedule: {
     url: "/eth/v1/config/fork_schedule",
     method: "GET",
-    req: EmptyGetRequestCodec,
+    req: EmptyRequestCodec,
     resp: {
       data: ForkListType,
       meta: EmptyMetaCodec,
@@ -90,7 +90,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
   getSpec: {
     url: "/eth/v1/config/spec",
     method: "GET",
-    req: EmptyGetRequestCodec,
+    req: EmptyRequestCodec,
     resp: {
       onlySupport: WireFormat.json,
       data: {

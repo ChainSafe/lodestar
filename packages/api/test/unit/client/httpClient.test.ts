@@ -7,7 +7,7 @@ import {HttpStatusCode} from "../../../src/utils/httpStatusCode.js";
 import {
   AnyEndpoint,
   EmptyArgs,
-  EmptyGetRequestCodec,
+  EmptyRequestCodec,
   EmptyMeta,
   EmptyRequest,
   EmptyResponseCodec,
@@ -32,7 +32,7 @@ describe("httpClient json client", () => {
   const testDefinition: RouteDefinitionExtra<AnyEndpoint> = {
     url: testRoute.url,
     method: testRoute.method,
-    req: EmptyGetRequestCodec,
+    req: EmptyRequestCodec,
     resp: EmptyResponseCodec,
     operationId: "testRoute",
     urlFormatter: compileRouteUrlFormater(testRoute.url),
@@ -71,7 +71,7 @@ describe("httpClient json client", () => {
     const testGetDefinition: RouteDefinitionExtra<TestGetEndpoint> = {
       url,
       method: "GET",
-      req: EmptyGetRequestCodec,
+      req: EmptyRequestCodec,
       resp: JsonOnlyResponseCodec,
       operationId: "testGet",
       urlFormatter: compileRouteUrlFormater(url),

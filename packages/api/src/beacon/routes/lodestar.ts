@@ -2,9 +2,8 @@ import {Epoch, RootHex, Slot} from "@lodestar/types";
 import {Schema, Endpoint, RouteDefinitions} from "../../utils/index.js";
 import {
   EmptyArgs,
-  EmptyGetRequestCodec,
+  EmptyRequestCodec,
   EmptyMeta,
-  EmptyPostRequestCodec,
   EmptyRequest,
   EmptyResponseCodec,
   EmptyResponseData,
@@ -276,13 +275,13 @@ export const definitions: RouteDefinitions<Endpoints> = {
   getLatestWeakSubjectivityCheckpointEpoch: {
     url: "/eth/v1/lodestar/ws_epoch",
     method: "GET",
-    req: EmptyGetRequestCodec,
+    req: EmptyRequestCodec,
     resp: JsonOnlyResponseCodec,
   },
   getSyncChainsDebugState: {
     url: "/eth/v1/lodestar/sync_chains_debug_state",
     method: "GET",
-    req: EmptyGetRequestCodec,
+    req: EmptyRequestCodec,
     resp: JsonOnlyResponseCodec,
   },
   getGossipQueueItems: {
@@ -298,43 +297,43 @@ export const definitions: RouteDefinitions<Endpoints> = {
   getRegenQueueItems: {
     url: "/eth/v1/lodestar/regen_queue_items",
     method: "GET",
-    req: EmptyGetRequestCodec,
+    req: EmptyRequestCodec,
     resp: JsonOnlyResponseCodec,
   },
   getBlockProcessorQueueItems: {
     url: "/eth/v1/lodestar/block_processor_queue_items",
     method: "GET",
-    req: EmptyGetRequestCodec,
+    req: EmptyRequestCodec,
     resp: JsonOnlyResponseCodec,
   },
   getStateCacheItems: {
     url: "/eth/v1/lodestar/state_cache_items",
     method: "GET",
-    req: EmptyGetRequestCodec,
+    req: EmptyRequestCodec,
     resp: JsonOnlyResponseCodec,
   },
   getGossipPeerScoreStats: {
     url: "/eth/v1/lodestar/gossip_peer_score_stats",
     method: "GET",
-    req: EmptyGetRequestCodec,
+    req: EmptyRequestCodec,
     resp: JsonOnlyResponseCodec,
   },
   getLodestarPeerScoreStats: {
     url: "/eth/v1/lodestar/lodestar_peer_score_stats",
     method: "GET",
-    req: EmptyGetRequestCodec,
+    req: EmptyRequestCodec,
     resp: JsonOnlyResponseCodec,
   },
   runGC: {
     url: "/eth/v1/lodestar/gc",
     method: "POST",
-    req: EmptyPostRequestCodec,
+    req: EmptyRequestCodec,
     resp: EmptyResponseCodec,
   },
   dropStateCache: {
     url: "/eth/v1/lodestar/drop_state_cache",
     method: "POST",
-    req: EmptyPostRequestCodec,
+    req: EmptyRequestCodec,
     resp: EmptyResponseCodec,
   },
   connectPeer: {
@@ -370,7 +369,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
   discv5GetKadValues: {
     url: "/eth/v1/debug/discv5_kad_values",
     method: "GET",
-    req: EmptyGetRequestCodec,
+    req: EmptyRequestCodec,
     resp: JsonOnlyResponseCodec,
   },
   dumpDbBucketKeys: {
@@ -386,7 +385,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
   dumpDbStateIndex: {
     url: "/eth/v1/debug/dump_db_state_index",
     method: "GET",
-    req: EmptyGetRequestCodec,
+    req: EmptyRequestCodec,
     resp: JsonOnlyResponseCodec,
   },
 };

@@ -1,6 +1,6 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {HttpClient, RouteDefinitionExtra, fetch} from "../../../src/utils/client/index.js";
-import {AnyEndpoint, EmptyGetRequestCodec, EmptyResponseCodec} from "../../../src/utils/codecs.js";
+import {AnyEndpoint, EmptyRequestCodec, EmptyResponseCodec} from "../../../src/utils/codecs.js";
 import {compileRouteUrlFormater} from "../../../src/utils/urlFormat.js";
 
 describe("httpClient fallback", () => {
@@ -8,7 +8,7 @@ describe("httpClient fallback", () => {
   const testDefinition: RouteDefinitionExtra<AnyEndpoint> = {
     url,
     method: "GET",
-    req: EmptyGetRequestCodec,
+    req: EmptyRequestCodec,
     resp: EmptyResponseCodec,
     operationId: "test",
     urlFormatter: compileRouteUrlFormater(url),

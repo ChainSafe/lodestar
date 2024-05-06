@@ -9,7 +9,7 @@ import {MetaHeader, VersionCodec, VersionMeta} from "../utils/metadata.js";
 import {
   ArrayOf,
   EmptyArgs,
-  EmptyGetRequestCodec,
+  EmptyRequestCodec,
   EmptyMeta,
   EmptyRequest,
   EmptyResponseCodec,
@@ -77,7 +77,7 @@ export function definitions(config: ChainForkConfig): RouteDefinitions<Endpoints
     status: {
       url: "/eth/v1/builder/status",
       method: "GET",
-      req: EmptyGetRequestCodec,
+      req: EmptyRequestCodec,
       resp: EmptyResponseCodec,
     },
     registerValidator: {
