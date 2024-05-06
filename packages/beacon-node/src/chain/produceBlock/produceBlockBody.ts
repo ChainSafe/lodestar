@@ -11,13 +11,11 @@ import {
   capella,
   deneb,
   Wei,
-  electra,
 } from "@lodestar/types";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStateCapella,
   CachedBeaconStateBellatrix,
-  CachedBeaconStateElectra,
   CachedBeaconStateExecutions,
   computeEpochAtSlot,
   computeTimeAtSlot,
@@ -557,7 +555,8 @@ function preparePayloadAttributes(
     suggestedFeeRecipient: feeRecipient,
   };
 
-  if (ForkSeq[fork] === ForkSeq.capella || ForkSeq[fork] === ForkSeq.electra) {
+  if (ForkSeq[fork] >= ForkSeq.capella) {
+    // withdrawals logic is now fork aware as it changes on electra fork post capella
     (payloadAttributes as capella.SSEPayloadAttributes["payloadAttributes"]).withdrawals = getExpectedWithdrawals(
       ForkSeq[fork],
       prepareState as CachedBeaconStateCapella
@@ -566,13 +565,6 @@ function preparePayloadAttributes(
 
   if (ForkSeq[fork] >= ForkSeq.deneb) {
     (payloadAttributes as deneb.SSEPayloadAttributes["payloadAttributes"]).parentBeaconBlockRoot = parentBlockRoot;
-  }
-
-  if (ForkSeq[fork] >= ForkSeq.electra) {
-    (payloadAttributes as electra.SSEPayloadAttributes["payloadAttributes"]).withdrawals = getExpectedWithdrawals(
-      ForkSeq[fork],
-      prepareState as CachedBeaconStateElectra
-    ).withdrawals;
   }
 
   return payloadAttributes;

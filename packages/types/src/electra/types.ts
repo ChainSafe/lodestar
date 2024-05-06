@@ -49,5 +49,3 @@ export type SignedConsolidation = ValueOf<typeof ssz.SignedConsolidation>;
 export type PendingBalanceDeposit = ValueOf<typeof ssz.PendingBalanceDeposit>;
 export type PartialWithdrawal = ValueOf<typeof ssz.PartialWithdrawal>;
 export type PendingConsolidation = ValueOf<typeof ssz.PendingConsolidation>;
-
-export type ExecutionLayerWithdrawalRequest = ValueOf<typeof ssz.ExecutionLayerWithdrawalRequest>;

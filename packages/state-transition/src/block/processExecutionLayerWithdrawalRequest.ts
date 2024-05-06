@@ -21,7 +21,8 @@ export function processExecutionLayerWithdrawalRequest(
 ): void {
   const amount = Number(executionLayerWithdrawalRequest.amount);
   const {pendingPartialWithdrawals, validators, epochCtx} = state;
-  const {pubkey2index, config} = epochCtx; // TODO Electra: Use finalized+unfinalized pubkey cache from 6110
+  // no need to use unfinalized pubkey cache from 6110 as validator won't be active anyway
+  const {pubkey2index, config} = epochCtx;
   const isFullExitRequest = amount === FULL_EXIT_REQUEST_AMOUNT;
 
   // If partial withdrawal queue is full, only full exits are processed
@@ -29,19 +30,15 @@ export function processExecutionLayerWithdrawalRequest(
     return;
   }
 
+  // bail out if validator is not in beacon state
+  // note that we don't need to check for 6110 unfinalized vals as they won't be eligible for withdraw/exit anyway
   const validatorIndex = pubkey2index.get(executionLayerWithdrawalRequest.validatorPubkey);
-
   if (validatorIndex === undefined) {
-    throw new Error(
-      `Can't find validator index from ExecutionLayerWithdrawalRequest : pubkey=${toHexString(
-        executionLayerWithdrawalRequest.validatorPubkey
-      )}`
-    );
+    return;
   }
 
   const validator = validators.getReadonly(validatorIndex);
-
-  if (!isValidValidator(validator, executionLayerWithdrawalRequest.sourceAddress, state)) {
+  if (!isValidatorEligibleForWithdrawOrExit(validator, executionLayerWithdrawalRequest.sourceAddress, state)) {
     return;
   }
 
@@ -53,13 +50,11 @@ export function processExecutionLayerWithdrawalRequest(
     // only exit validator if it has no pending withdrawals in the queue
     if (pendingBalanceToWithdraw === 0) {
       initiateValidatorExit(fork, state, validator);
-    } else {
-      // Full request can't be fulfilled because still has pending withdrawals.
-      // TODO Electra: add log here
     }
     return;
   }
 
+  // partial withdrawal request
   const hasSufficientEffectiveBalance = validator.effectiveBalance >= MIN_ACTIVATION_BALANCE;
   const hasExcessBalance = validatorBalance > MIN_ACTIVATION_BALANCE + pendingBalanceToWithdraw;
 
@@ -84,7 +79,7 @@ export function processExecutionLayerWithdrawalRequest(
   }
 }
 
-function isValidValidator(
+function isValidatorEligibleForWithdrawOrExit(
   validator: phase0.Validator,
   sourceAddress: Uint8Array,
   state: CachedBeaconStateElectra

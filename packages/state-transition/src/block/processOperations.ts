@@ -8,11 +8,10 @@ import {processProposerSlashing} from "./processProposerSlashing.js";
 import {processAttesterSlashing} from "./processAttesterSlashing.js";
 import {processDeposit} from "./processDeposit.js";
 import {processVoluntaryExit} from "./processVoluntaryExit.js";
-import {processExecutionLayerWithdrawalRequest} from "./processExecutionLayerWithdrawalRequest.js";
 import {processBlsToExecutionChange} from "./processBlsToExecutionChange.js";
+import {processExecutionLayerWithdrawalRequest} from "./processExecutionLayerWithdrawalRequest.js";
 import {processDepositReceipt} from "./processDepositReceipt.js";
 import {ProcessBlockOpts} from "./types.js";
-import {processExecutionLayerWithdrawalRequest} from "./processExecutionLayerWithdrawalRequest.js";
 import {processConsolidation} from "./processConsolidation.js";
 
 export {
@@ -66,12 +65,13 @@ export function processOperations(
   if (fork >= ForkSeq.electra) {
     const stateElectra = state as CachedBeaconStateElectra;
     const bodyElectra = body as electra.BeaconBlockBody;
-    for (const depositReceipt of bodyElectra.executionPayload.depositReceipts) {
-      processDepositReceipt(fork, stateElectra, depositReceipt);
-    }
 
     for (const elWithdrawalRequest of bodyElectra.executionPayload.withdrawalRequests) {
-      processExecutionLayerWithdrawalRequest(fork ,state as CachedBeaconStateElectra, elWithdrawalRequest);
+      processExecutionLayerWithdrawalRequest(fork, state as CachedBeaconStateElectra, elWithdrawalRequest);
+    }
+
+    for (const depositReceipt of bodyElectra.executionPayload.depositReceipts) {
+      processDepositReceipt(fork, stateElectra, depositReceipt);
     }
 
     for (const consolidation of bodyElectra.consolidations) {

@@ -57,7 +57,7 @@ export function processWithdrawals(
   }
 
   if (fork >= ForkSeq.electra) {
-    const stateElectra = state as CachedBeaconStateElectra;
+    const _stateElectra = state as CachedBeaconStateElectra;
     // TODO Electra: stateElectra.pendingPartialWithdrawals need to implement slicing mechanism for ListCompositeTreeViewDU
   }
 

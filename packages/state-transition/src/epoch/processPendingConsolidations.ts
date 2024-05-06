@@ -17,14 +17,14 @@ import {switchToCompoundingValidator} from "../util/electra.js";
  *
  */
 export function processPendingConsolidations(state: CachedBeaconStateElectra): void {
-  let nextPendingConsolidation = 0;
+  let _nextPendingConsolidation = 0;
 
   for (const pendingConsolidation of state.pendingConsolidations.getAllReadonly()) {
     const {sourceIndex, targetIndex} = pendingConsolidation;
     const sourceValidator = state.validators.getReadonly(sourceIndex);
 
     if (sourceValidator.slashed) {
-      nextPendingConsolidation++;
+      _nextPendingConsolidation++;
       continue;
     }
 
@@ -38,7 +38,7 @@ export function processPendingConsolidations(state: CachedBeaconStateElectra): v
     decreaseBalance(state, sourceIndex, activeBalance);
     increaseBalance(state, targetIndex, activeBalance);
 
-    nextPendingConsolidation++;
+    _nextPendingConsolidation++;
   }
 
   // TODO Electra: impl slicing for ssz

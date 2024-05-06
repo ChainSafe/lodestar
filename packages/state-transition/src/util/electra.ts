@@ -29,15 +29,13 @@ export function isFullyWithdrawableValidator(
   epoch: number
 ): boolean {
   const {withdrawableEpoch, withdrawalCredentials: withdrawalCredential} = validatorCredential;
-  if (fork === ForkSeq.capella || fork === ForkSeq.deneb) {
-    return hasEth1WithdrawalCredential(withdrawalCredential) && withdrawableEpoch <= epoch && balance > 0;
-  }
-
-  if (fork === ForkSeq.electra) {
+  if (fork >= ForkSeq.electra) {
     return hasExecutionWithdrawalCredential(withdrawalCredential) && withdrawableEpoch <= epoch && balance > 0;
+  } else if (fork >= ForkSeq.capella) {
+    return hasEth1WithdrawalCredential(withdrawalCredential) && withdrawableEpoch <= epoch && balance > 0;
+  } else {
+    return false;
   }
-
-  return false;
 }
 
 export function isPartiallyWithdrawableValidator(
@@ -48,7 +46,7 @@ export function isPartiallyWithdrawableValidator(
   const {effectiveBalance, withdrawalCredentials: withdrawalCredential} = validatorCredential;
 
   if (fork < ForkSeq.capella) {
-    throw new Error("Unsupported fork");
+    throw new Error(`isPartiallyWithdrawableValidator not supported at forkSeq=${fork} < ForkSeq.capella`);
   }
 
   const validatorMaxEffectiveBalance =

@@ -12,7 +12,7 @@ import {getActivationExitChurnLimit} from "../util/validator.js";
 export function processPendingBalanceDeposits(state: CachedBeaconStateElectra): void {
   const availableForProcessing = state.depositBalanceToConsume + BigInt(getActivationExitChurnLimit(state));
   let processedAmount = 0n;
-  let nextDepositIndex = 0;
+  let _nextDepositIndex = 0;
 
   for (const deposit of state.pendingBalanceDeposits.getAllReadonly()) {
     const {amount} = deposit;
@@ -21,7 +21,7 @@ export function processPendingBalanceDeposits(state: CachedBeaconStateElectra): 
     }
     increaseBalance(state, deposit.index, Number(amount));
     processedAmount = processedAmount + amount;
-    nextDepositIndex++;
+    _nextDepositIndex++;
   }
 
   // TODO Electra: Impl slicing for ssz

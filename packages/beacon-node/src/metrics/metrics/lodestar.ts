@@ -1211,15 +1211,15 @@ export function createLodestarMetrics(
         help: "Histogram of cloned count per state every time state.clone() is called",
         buckets: [1, 2, 5, 10, 50, 250],
       }),
-      numStatesUpdated: register.histogram({
-        name: "lodestar_cp_state_cache_state_updated_count",
-        help: "Histogram of number of state cache items updated every time removing and adding pubkeys to pubkey cache",
-        buckets: [1, 2, 5, 10, 50, 250],
-      }),
       stateSerializeDuration: register.histogram({
         name: "lodestar_cp_state_cache_state_serialize_seconds",
         help: "Histogram of time to serialize state to db",
         buckets: [0.1, 0.5, 1, 2, 3, 4],
+      }),
+      numStatesUpdated: register.histogram({
+        name: "lodestar_cp_state_cache_state_updated_count",
+        help: "Histogram of number of state cache items updated every time removing and adding pubkeys to pubkey cache",
+        buckets: [1, 2, 5, 10, 50, 250],
       }),
       statePruneFromMemoryCount: register.gauge({
         name: "lodestar_cp_state_cache_state_prune_from_memory_count",

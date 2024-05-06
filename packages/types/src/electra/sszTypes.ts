@@ -21,7 +21,6 @@ import {
   PENDING_BALANCE_DEPOSITS_LIMIT,
   PENDING_CONSOLIDATIONS_LIMIT,
   PENDING_PARTIAL_WITHDRAWALS_LIMIT,
-  MAX_WITHDRAWALS_PER_PAYLOAD,
 } from "@lodestar/params";
 import {ssz as primitiveSsz} from "../primitive/index.js";
 import {ssz as phase0Ssz} from "../phase0/index.js";
@@ -135,15 +134,6 @@ export const ExecutionLayerWithdrawalRequest = new ContainerType(
 export const ExecutionLayerWithdrawalRequests = new ListCompositeType(
   ExecutionLayerWithdrawalRequest,
   MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD
-);
-
-export const ExecutionLayerWithdrawalRequest = new ContainerType(
-  {
-    sourceAddress: ExecutionAddress,
-    validatorPubkey: BLSPubkey,
-    amount: Gwei,
-  },
-  {typeName: "ExecutionLayerWithdrawalRequest", jsonCase: "eth2"}
 );
 
 export const ExecutionPayload = new ContainerType(
