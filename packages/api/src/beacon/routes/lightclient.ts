@@ -4,15 +4,13 @@ import {ssz, SyncPeriod, allForks, deneb} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 import {BeaconConfig, ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
+import {MetaHeader, VersionCodec, VersionMeta} from "../../utils/metadata.js";
 import {
   EmptyArgs,
   EmptyGetRequestCodec,
   EmptyMeta,
   EmptyMetaCodec,
   EmptyRequest,
-  MetaHeader,
-  VersionCodec,
-  VersionMeta,
   WithVersion,
 } from "../../utils/codecs.js";
 

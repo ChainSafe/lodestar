@@ -3,12 +3,8 @@ import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {MAX_VALIDATORS_PER_COMMITTEE} from "@lodestar/params";
 import {phase0, CommitteeIndex, Slot, Epoch, ssz, RootHex, StringType} from "@lodestar/types";
 import {Endpoint, RequestCodec, RouteDefinitions, Schema} from "../../../utils/index.js";
-import {
-  ArrayOf,
-  ExecutionOptimisticAndFinalizedCodec,
-  ExecutionOptimisticAndFinalizedMeta,
-  JsonOnlyReq,
-} from "../../../utils/codecs.js";
+import {ArrayOf, JsonOnlyReq} from "../../../utils/codecs.js";
+import {ExecutionOptimisticAndFinalizedCodec, ExecutionOptimisticAndFinalizedMeta} from "../../../utils/metadata.js";
 import {fromValidatorIdsStr, toValidatorIdsStr} from "../../../utils/serdes.js";
 import {WireFormat} from "../../../utils/wireFormat.js";
 import {RootResponse, RootResponseType} from "./block.js";
@@ -90,7 +86,6 @@ export type Endpoints = {
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", "justified", \<slot\>, \<hex encoded stateRoot with 0x prefix\>.
    */
   getStateRoot: Endpoint<
-    //
     "GET",
     {stateId: StateId},
     {params: {state_id: string}},
@@ -106,7 +101,6 @@ export type Endpoints = {
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", "justified", \<slot\>, \<hex encoded stateRoot with 0x prefix\>.
    */
   getStateFork: Endpoint<
-    //
     "GET",
     {stateId: StateId},
     {params: {state_id: string}},
@@ -137,7 +131,6 @@ export type Endpoints = {
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", "justified", \<slot\>, \<hex encoded stateRoot with 0x prefix\>.
    */
   getStateFinalityCheckpoints: Endpoint<
-    //
     "GET",
     {stateId: StateId},
     {params: {state_id: string}},
@@ -153,7 +146,6 @@ export type Endpoints = {
    * @param validatorId Either hex encoded public key (with 0x prefix) or validator index
    */
   getStateValidator: Endpoint<
-    //
     "GET",
     {stateId: StateId; validatorId: ValidatorId},
     {params: {state_id: string; validator_id: ValidatorId}},
@@ -170,7 +162,6 @@ export type Endpoints = {
    * @param status [Validator status specification](https://hackmd.io/ofFJ5gOmQpu1jjHilHbdQQ)
    */
   getStateValidators: Endpoint<
-    //
     "GET",
     {stateId: StateId; validatorIds?: ValidatorId[]; statuses?: ValidatorStatus[]},
     {params: {state_id: string}; query: {id?: ValidatorId[]; status?: ValidatorStatus[]}},
@@ -187,7 +178,6 @@ export type Endpoints = {
    * @param status [Validator status specification](https://hackmd.io/ofFJ5gOmQpu1jjHilHbdQQ)
    */
   postStateValidators: Endpoint<
-    //
     "POST",
     {stateId: StateId; validatorIds?: ValidatorId[]; statuses?: ValidatorStatus[]},
     {params: {state_id: string}; body: {ids?: string[]; statuses?: ValidatorStatus[]}},
@@ -203,7 +193,6 @@ export type Endpoints = {
    * @param id Either hex encoded public key (with 0x prefix) or validator index
    */
   getStateValidatorBalances: Endpoint<
-    //
     "GET",
     {stateId: StateId; validatorIds?: ValidatorId[]},
     {params: {state_id: string}; query: {id?: ValidatorId[]}},
@@ -219,7 +208,6 @@ export type Endpoints = {
    * @param id Either hex encoded public key (with 0x prefix) or validator index
    */
   postStateValidatorBalances: Endpoint<
-    //
     "POST",
     {stateId: StateId; validatorIds?: ValidatorId[]},
     {params: {state_id: string}; body: string[]},
@@ -237,7 +225,6 @@ export type Endpoints = {
    * @param slot Restrict returned values to those matching the supplied slot.
    */
   getEpochCommittees: Endpoint<
-    //
     "GET",
     {stateId: StateId; epoch?: Epoch; index?: CommitteeIndex; slot?: Slot},
     {params: {state_id: string}; query: {slot?: number; epoch?: number; index?: number}},
@@ -246,7 +233,6 @@ export type Endpoints = {
   >;
 
   getEpochSyncCommittees: Endpoint<
-    //
     "GET",
     {stateId: StateId; epoch?: Epoch},
     {params: {state_id: string}; query: {epoch?: number}},

@@ -25,17 +25,19 @@ import {
   EmptyMetaCodec,
   EmptyResponseCodec,
   EmptyResponseData,
+  JsonOnlyReq,
+  WithMeta,
+  WithVersion,
+} from "../../utils/codecs.js";
+import {
   ExecutionOptimisticAndDependentRootCodec,
   ExecutionOptimisticAndDependentRootMeta,
   ExecutionOptimisticCodec,
   ExecutionOptimisticMeta,
-  JsonOnlyReq,
   MetaHeader,
   VersionCodec,
   VersionMeta,
-  WithMeta,
-  WithVersion,
-} from "../../utils/codecs.js";
+} from "../../utils/metadata.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 

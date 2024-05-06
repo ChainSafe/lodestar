@@ -5,6 +5,7 @@ import {ForkName, isForkExecution, isForkBlobs} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
 
 import {Endpoint, RouteDefinitions, Schema} from "../utils/index.js";
+import {MetaHeader, VersionCodec, VersionMeta} from "../utils/metadata.js";
 import {
   ArrayOf,
   EmptyArgs,
@@ -14,9 +15,6 @@ import {
   EmptyResponseCodec,
   EmptyResponseData,
   JsonOnlyReq,
-  MetaHeader,
-  VersionCodec,
-  VersionMeta,
   WithVersion,
 } from "../utils/codecs.js";
 import {toForkName} from "../utils/serdes.js";

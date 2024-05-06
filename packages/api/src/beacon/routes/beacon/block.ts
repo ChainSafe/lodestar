@@ -4,18 +4,14 @@ import {ChainForkConfig} from "@lodestar/config";
 import {allForks, Slot, ssz, RootHex, deneb, phase0, isSignedBlockContents} from "@lodestar/types";
 import {ForkSeq} from "@lodestar/params";
 import {Endpoint, RequestCodec, RouteDefinitions, Schema} from "../../../utils/index.js";
+import {EmptyMeta, EmptyMetaCodec, EmptyResponseCodec, EmptyResponseData, WithVersion} from "../../../utils/codecs.js";
 import {
-  EmptyMeta,
-  EmptyMetaCodec,
-  EmptyResponseCodec,
-  EmptyResponseData,
   ExecutionOptimisticAndFinalizedCodec,
   ExecutionOptimisticAndFinalizedMeta,
   ExecutionOptimisticFinalizedAndVersionCodec,
   ExecutionOptimisticFinalizedAndVersionMeta,
   MetaHeader,
-  WithVersion,
-} from "../../../utils/codecs.js";
+} from "../../../utils/metadata.js";
 import {toForkName} from "../../../utils/serdes.js";
 import {fromHeaders} from "../../../utils/headers.js";
 
@@ -164,7 +160,6 @@ export type Endpoints = {
    * returns The block was validated successfully and has been broadcast. It has also been integrated into the beacon node's database.
    */
   publishBlock: Endpoint<
-    //
     "POST",
     {signedBlockOrContents: allForks.SignedBeaconBlockOrContents},
     {body: unknown; headers: {[MetaHeader.Version]: string}},

@@ -8,12 +8,14 @@ import {
   EmptyMeta,
   EmptyMetaCodec,
   EmptyRequest,
+  WithVersion,
+} from "../../utils/codecs.js";
+import {
   ExecutionOptimisticFinalizedAndVersionCodec,
   ExecutionOptimisticFinalizedAndVersionMeta,
   ExecutionOptimisticAndFinalizedCodec,
   ExecutionOptimisticAndFinalizedMeta,
-  WithVersion,
-} from "../../utils/codecs.js";
+} from "../../utils/metadata.js";
 import {Endpoint, RouteDefinitions} from "../../utils/types.js";
 import {WireFormat} from "../../utils/wireFormat.js";
 import {Schema} from "../../utils/schema.js";
@@ -118,7 +120,6 @@ export type Endpoints = {
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", "justified", \<slot\>, \<hex encoded stateRoot with 0x prefix\>.
    */
   getState: Endpoint<
-    //
     "GET",
     {stateId: StateId},
     {params: {state_id: string}},

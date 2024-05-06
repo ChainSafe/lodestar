@@ -208,7 +208,6 @@ export type Endpoints = {
   >;
   /** Same to node api with new fields */
   getPeers: Endpoint<
-    //
     "GET",
     FilterGetPeers,
     {query: {state?: PeerState[]; direction?: PeerDirection[]}},

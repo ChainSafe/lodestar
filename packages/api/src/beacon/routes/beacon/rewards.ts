@@ -4,12 +4,8 @@ import {Epoch, ssz} from "@lodestar/types";
 
 import {Schema, Endpoint, RouteDefinitions} from "../../../utils/index.js";
 import {fromValidatorIdsStr, toValidatorIdsStr} from "../../../utils/serdes.js";
-import {
-  ArrayOf,
-  ExecutionOptimisticAndFinalizedCodec,
-  ExecutionOptimisticAndFinalizedMeta,
-  JsonOnlyReq,
-} from "../../../utils/codecs.js";
+import {ArrayOf, JsonOnlyReq} from "../../../utils/codecs.js";
+import {ExecutionOptimisticAndFinalizedCodec, ExecutionOptimisticAndFinalizedMeta} from "../../../utils/metadata.js";
 import {BlockId} from "./block.js";
 import {ValidatorId} from "./state.js";
 

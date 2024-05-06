@@ -3,7 +3,8 @@ import {CompactMultiProof, ProofType} from "@chainsafe/persistent-merkle-tree";
 import {ByteListType, ContainerType, fromHexString, toHexString} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
-import {ArrayOf, VersionCodec, VersionMeta} from "../../utils/codecs.js";
+import {ArrayOf} from "../../utils/codecs.js";
+import {VersionCodec, VersionMeta} from "../../utils/metadata.js";
 
 export const CompactMultiProofType = new ContainerType({
   // TODO ensure limit of all lists is sane
