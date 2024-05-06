@@ -86,4 +86,4 @@ if (!packageName) {
 }
 
 postBuildUpdates(path.resolve(__dirname, "..", "packages", packageName, "lib", "cjs"), getSwapPairs("c"));
-postBuildUpdates(path.resolve(__dirname, "..", "packages", packageName, "lib", "esm"), getSwapPairs("m"));
+// postBuildUpdates(path.resolve(__dirname, "..", "packages", packageName, "lib", "esm"), getSwapPairs("m"));

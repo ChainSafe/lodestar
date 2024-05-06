@@ -40,15 +40,15 @@
     "eth2-spec-test-download": "lib/downloadTestsCli.mjs"
   },
   "main": "./lib/cjs/index.cjs",
-  "module": "./lib/esm/index.mjs",
-  "types": "./lib/esm/index.d.mts",
+  "module": "./lib/esm/index.js",
+  "types": "./lib/esm/index.d.ts",
   "exports": {
     ".": {
-      "import": "./lib/esm/index.mjs",
+      "import": "./lib/esm/index.js",
       "require": "./lib/cjs/index.cjs"
     },
     "./downloadTests": {
-      "import": "./lib/esm/downloadTests.mjs",
+      "import": "./lib/esm/downloadTests.js",
       "require": "./lib/cjs/downloadTests.cjs"
     }
   },

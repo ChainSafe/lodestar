@@ -3,7 +3,7 @@
 
 // 1. Import from not only @lodestar/params/setPreset will trigger an error
 import "../../lib/index.js";
-import {setActivePreset, PresetName} from "../../lib/setPreset.js";
+import {setActivePreset, PresetName} from "../../lib/esm/setPreset.js";
 // This line should throw
 // eslint-disable-next-line @typescript-eslint/naming-convention
 setActivePreset(PresetName.minimal, {SLOTS_PER_EPOCH: 2});

@@ -31,27 +31,32 @@
   },
   "type": "module",
   "main": "./lib/cjs/index.cjs",
-  "module": "./lib/esm/index.mjs",
-  "types": "./lib/esm/index.d.mts",
+  "module": "./lib/esm/index.js",
+  "types": "./lib/esm/index.d.ts",
   "exports": {
     ".": {
-      "import": "./lib/esm/index.mjs",
+      "import": "./lib/esm/index.js",
+      "types": "./lib/esm/index.d.ts",
       "require": "./lib/cjs/index.cjs"
     },
     "./presets/mainnet": {
-      "import": "./lib/esm/presets/mainnet.mjs",
+      "import": "./lib/esm/presets/mainnet.js",
+      "types": "./lib/esm/presets/mainnet.d.ts",
       "require": "./lib/cjs/presets/mainnet.cjs"
     },
     "./presets/minimal": {
-      "import": "./lib/esm/presets/minimal.mjs",
+      "import": "./lib/esm/presets/minimal.js",
+      "types": "./lib/esm/presets/minimal.d.ts",
       "require": "./lib/cjs/presets/minimal.cjs"
     },
     "./presets/gnosis": {
-      "import": "./lib/esm/presets/gnosis.mjs",
+      "import": "./lib/esm/presets/gnosis.js",
+      "types": "./lib/esm/presets/gnosis.d.ts",
       "require": "./lib/cjs/presets/gnosis.cjs"
     },
     "./setPreset": {
-      "import": "./lib/esm/setPreset.mjs",
+      "import": "./lib/esm/setPreset.js",
+      "types": "./lib/esm/setPreset.d.ts",
       "require": "./lib/cjs/setPreset.cjs"
     }
   },

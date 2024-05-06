@@ -37,16 +37,17 @@
   },
   "type": "module",
   "main": "./lib/cjs/index.cjs",
-  "module": "./lib/esm/index.mjs",
-  "types": "./lib/esm/index.d.mts",
+  "module": "./lib/esm/index.js",
+  "types": "./lib/esm/index.d.ts",
   "exports": {
     ".": {
-      "import": "./lib/esm/index.mjs",
+      "import": "./lib/esm/index.js",
       "require": "./lib/cjs/index.cjs"
     },
     "./doubles": {
-      "import": "./lib/esm/doubles.mjs",
-      "require": "./lib/cjs/doubles.cjs"
+      "import": "./lib/esm/doubles.js",
+      "require": "./lib/cjs/doubles.cjs",
+      "types": "./lib/esm/doubles.d.mts"
     }
   },
   "typesVersions": {
