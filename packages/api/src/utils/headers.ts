@@ -1,14 +1,14 @@
 import {toBase64} from "@lodestar/utils";
 
-export enum MediaType {
-  json = "application/json",
-  ssz = "application/octet-stream",
-}
-
 export enum HttpHeader {
   ContentType = "content-type",
   Accept = "accept",
   Authorization = "authorization",
+}
+
+export enum MediaType {
+  json = "application/json",
+  ssz = "application/octet-stream",
 }
 
 export const supportedMediaTypes = Object.values(MediaType);
@@ -132,6 +132,9 @@ export function fromHeaders<T extends Record<string, string>>(
   return header;
 }
 
+/**
+ * Extension of Headers object returned by Fetch API
+ */
 export class HeadersExtra extends Headers {
   /**
    * Get required header from response headers

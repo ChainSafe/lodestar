@@ -3,7 +3,6 @@ import type * as fastify from "fastify";
 import {HttpHeader, MediaType, parseAcceptHeader, parseContentTypeHeader} from "../headers.js";
 import {
   Endpoint,
-  GetRequestCodec,
   GetRequestData,
   JsonPostRequestData,
   JsonRequestMethods,
@@ -13,6 +12,7 @@ import {
   SszRequestMethods,
 } from "../types.js";
 import {WireFormat, getWireFormat} from "../wireFormat.js";
+import {isRequestWithoutBody} from "../typeguards.js";
 import {ApiError} from "./error.js";
 import {ApplicationMethod, ApplicationResponse} from "./method.js";
 
@@ -58,8 +58,8 @@ export function createFastifyHandler<E extends Endpoint>(
 
     let response: ApplicationResponse<E>;
     try {
-      if (definition.method === "GET" || definition.req.schema.body === undefined) {
-        response = await method((definition.req as GetRequestCodec<E>).parseReq(req as GetRequestData), {
+      if (isRequestWithoutBody(definition)) {
+        response = await method(definition.req.parseReq(req as GetRequestData), {
           sszBytes: null,
           returnBytes: responseWireFormat === WireFormat.ssz,
         });

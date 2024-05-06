@@ -1,7 +1,8 @@
 import Ajv, {ErrorObject} from "ajv";
 import {expect, describe, beforeAll, it} from "vitest";
 import {WireFormat} from "../../src/utils/wireFormat.js";
-import {Endpoint, GetRequestCodec, PostRequestCodec, RouteDefinitions} from "../../src/utils/types.js";
+import {Endpoint, PostRequestCodec, RouteDefinitions} from "../../src/utils/types.js";
+import {isRequestWithoutBody} from "../../src/utils/typeguards.js";
 import {applyRecursively, JsonSchema, OpenApiJson, parseOpenApiSpec} from "./parseOpenApiSpec.js";
 import {GenericServerTestCases} from "./genericServerTest.js";
 
@@ -100,10 +101,9 @@ export function runTestCheckAgainstSpec<Es extends Record<string, Endpoint>>(
 
       if (requestSchema != null) {
         it(`${operationId}_request`, function () {
-          const reqJson =
-            routeDef.method === "GET" || routeDef.req.schema.body === undefined
-              ? (routeDef.req as GetRequestCodec<Es[string]>).writeReq(testData.args)
-              : (routeDef.req as PostRequestCodec<Es[string]>).writeReqJson(testData.args);
+          const reqJson = isRequestWithoutBody(routeDef)
+            ? routeDef.req.writeReq(testData.args)
+            : (routeDef.req as PostRequestCodec<Es[string]>).writeReqJson(testData.args);
 
           // Stringify param and query to simulate rendering in HTTP query
           // TODO: Review conversions in fastify and other servers
