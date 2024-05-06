@@ -15,7 +15,6 @@ import {
   ValidatorIndex,
   ProducedBlockSource,
   stringType,
-  Wei,
 } from "@lodestar/types";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {fromGraffitiHex, toBoolean, toForkName, toGraffitiHex} from "../../utils/serdes.js";
@@ -37,6 +36,7 @@ import {
   MetaHeader,
   VersionCodec,
   VersionMeta,
+  VersionType,
 } from "../../utils/metadata.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
@@ -60,10 +60,20 @@ export type ExtraProduceBlockOpts = {
   blindedLocal?: boolean;
 };
 
-export type ProduceBlockV3Meta = VersionMeta & {
-  executionPayloadBlinded: boolean;
-  executionPayloadValue: Wei;
-  consensusBlockValue: Wei;
+export const ProduceBlockV3MetaType = new ContainerType(
+  {
+    ...VersionType.fields,
+    /** Specifies whether the response contains full or blinded block */
+    executionPayloadBlinded: ssz.Boolean,
+    /** Execution payload value in Wei */
+    executionPayloadValue: ssz.UintBn64,
+    /** Consensus rewards paid to the proposer for this block, in Wei */
+    consensusBlockValue: ssz.UintBn64,
+  },
+  {jsonCase: "eth2"}
+);
+
+export type ProduceBlockV3Meta = ValueOf<typeof ProduceBlockV3MetaType> & {
   /** Lodestar-specific (non-standardized) value */
   executionPayloadSource: ProducedBlockSource;
 };
@@ -740,27 +750,18 @@ export const definitions: RouteDefinitions<Endpoints> = {
       ),
       meta: {
         toJson: (meta) => ({
-          version: meta.version,
-          execution_payload_blinded: meta.executionPayloadBlinded,
+          ...ProduceBlockV3MetaType.toJson(meta),
           execution_payload_source: meta.executionPayloadSource,
-          execution_payload_value: meta.executionPayloadValue.toString(),
-          consensus_block_value: meta.consensusBlockValue.toString(),
         }),
         fromJson: (val) => {
-          const executionPayloadBlinded = (val as {execution_payload_blinded: boolean}).execution_payload_blinded;
+          const {executionPayloadBlinded, ...meta} = ProduceBlockV3MetaType.fromJson(val);
 
           // Extract source from the data and assign defaults in the spec compliant manner if not present in response
           const executionPayloadSource =
             (val as {execution_payload_source: ProducedBlockSource}).execution_payload_source ??
             (executionPayloadBlinded === true ? ProducedBlockSource.builder : ProducedBlockSource.engine);
 
-          return {
-            version: toForkName((val as {version: string}).version),
-            executionPayloadBlinded,
-            executionPayloadSource,
-            executionPayloadValue: BigInt((val as {execution_payload_value: string}).execution_payload_value),
-            consensusBlockValue: BigInt((val as {consensus_block_value: string}).consensus_block_value),
-          };
+          return {...meta, executionPayloadBlinded, executionPayloadSource};
         },
         toHeadersObject: (meta) => ({
           [MetaHeader.Version]: meta.version,
