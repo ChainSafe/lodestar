@@ -48,12 +48,16 @@ export function createApiRequest<E extends Endpoint>(
     switch (requestWireFormat) {
       case WireFormat.json:
         req = (definition.req as JsonRequestMethods<E>).writeReqJson(args);
-        req.body = JSON.stringify(req.body ?? {});
-        headers.set(HttpHeader.ContentType, MediaType.json);
+        if (req.body) {
+          req.body = JSON.stringify(req.body);
+          headers.set(HttpHeader.ContentType, MediaType.json);
+        }
         break;
       case WireFormat.ssz:
         req = (definition.req as SszRequestMethods<E>).writeReqSsz(args);
-        headers.set(HttpHeader.ContentType, MediaType.ssz);
+        if (req.body) {
+          headers.set(HttpHeader.ContentType, MediaType.ssz);
+        }
         break;
     }
   }
