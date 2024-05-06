@@ -41,7 +41,7 @@ export function createApiRequest<E extends Endpoint>(
 
   let req: E["request"];
 
-  if (definition.method === "GET") {
+  if (definition.method === "GET" || definition.req.schema.body === undefined) {
     req = (definition.req as GetRequestCodec<E>).writeReq(args);
   } else {
     const requestWireFormat = (definition.req as PostRequestCodec<E>).onlySupport ?? init.requestWireFormat;

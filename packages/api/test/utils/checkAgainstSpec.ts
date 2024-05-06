@@ -101,7 +101,7 @@ export function runTestCheckAgainstSpec<Es extends Record<string, Endpoint>>(
       if (requestSchema != null) {
         it(`${operationId}_request`, function () {
           const reqJson =
-            routeDef.method === "GET"
+            routeDef.method === "GET" || routeDef.req.schema.body === undefined
               ? (routeDef.req as GetRequestCodec<Es[string]>).writeReq(testData.args)
               : (routeDef.req as PostRequestCodec<Es[string]>).writeReqJson(testData.args);
 

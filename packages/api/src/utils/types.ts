@@ -104,7 +104,11 @@ export type PostRequestCodec<E extends Endpoint> = RequestMethods<E> & {
  * For separate consumption by client and server.
  * Taking this idea to the extreme, Each group of endpoints would have definitions split into three files for nice treeshaking (types, client, server)
  */
-export type RequestCodec<E extends Endpoint> = E["method"] extends "GET" ? GetRequestCodec<E> : PostRequestCodec<E>;
+export type RequestCodec<E extends Endpoint> = E["method"] extends "GET"
+  ? GetRequestCodec<E>
+  : "body" extends keyof E["request"]
+    ? PostRequestCodec<E>
+    : GetRequestCodec<E>;
 
 // Response codec
 

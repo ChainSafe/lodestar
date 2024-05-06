@@ -465,13 +465,13 @@ export const definitions: RouteDefinitions<Endpoints> = {
   deleteFeeRecipient: {
     url: "/eth/v1/validator/{pubkey}/feerecipient",
     method: "DELETE",
-    req: JsonOnlyReq({
-      writeReqJson: ({pubkey}) => ({params: {pubkey}}),
-      parseReqJson: ({params: {pubkey}}) => ({pubkey}),
+    req: {
+      writeReq: ({pubkey}) => ({params: {pubkey}}),
+      parseReq: ({params: {pubkey}}) => ({pubkey}),
       schema: {
         params: {pubkey: Schema.StringRequired},
       },
-    }),
+    },
     resp: EmptyResponseCodec,
   },
 
@@ -503,13 +503,13 @@ export const definitions: RouteDefinitions<Endpoints> = {
   deleteGraffiti: {
     url: "/eth/v1/validator/{pubkey}/graffiti",
     method: "DELETE",
-    req: JsonOnlyReq({
-      writeReqJson: ({pubkey}) => ({params: {pubkey}}),
-      parseReqJson: ({params: {pubkey}}) => ({pubkey}),
+    req: {
+      writeReq: ({pubkey}) => ({params: {pubkey}}),
+      parseReq: ({params: {pubkey}}) => ({pubkey}),
       schema: {
         params: {pubkey: Schema.StringRequired},
       },
-    }),
+    },
     resp: EmptyResponseCodec,
   },
 
@@ -551,13 +551,13 @@ export const definitions: RouteDefinitions<Endpoints> = {
   deleteGasLimit: {
     url: "/eth/v1/validator/{pubkey}/gas_limit",
     method: "DELETE",
-    req: JsonOnlyReq({
-      writeReqJson: ({pubkey}) => ({params: {pubkey}}),
-      parseReqJson: ({params: {pubkey}}) => ({pubkey}),
+    req: {
+      writeReq: ({pubkey}) => ({params: {pubkey}}),
+      parseReq: ({params: {pubkey}}) => ({pubkey}),
       schema: {
         params: {pubkey: Schema.StringRequired},
       },
-    }),
+    },
     resp: EmptyResponseCodec,
   },
 
@@ -605,27 +605,27 @@ export const definitions: RouteDefinitions<Endpoints> = {
   deleteBuilderBoostFactor: {
     url: "/eth/v1/validator/{pubkey}/builder_boost_factor",
     method: "DELETE",
-    req: JsonOnlyReq({
-      writeReqJson: ({pubkey}) => ({params: {pubkey}}),
-      parseReqJson: ({params: {pubkey}}) => ({pubkey}),
+    req: {
+      writeReq: ({pubkey}) => ({params: {pubkey}}),
+      parseReq: ({params: {pubkey}}) => ({pubkey}),
       schema: {
         params: {pubkey: Schema.StringRequired},
       },
-    }),
+    },
     resp: EmptyResponseCodec,
   },
 
   signVoluntaryExit: {
     url: "/eth/v1/validator/{pubkey}/voluntary_exit",
     method: "POST",
-    req: JsonOnlyReq({
-      writeReqJson: ({pubkey, epoch}) => ({params: {pubkey}, query: epoch !== undefined ? {epoch} : {}}),
-      parseReqJson: ({params: {pubkey}, query: {epoch}}) => ({pubkey, epoch}),
+    req: {
+      writeReq: ({pubkey, epoch}) => ({params: {pubkey}, query: epoch !== undefined ? {epoch} : {}}),
+      parseReq: ({params: {pubkey}, query: {epoch}}) => ({pubkey, epoch}),
       schema: {
         params: {pubkey: Schema.StringRequired},
         query: {epoch: Schema.Uint},
       },
-    }),
+    },
     resp: {
       data: ssz.phase0.SignedVoluntaryExit,
       meta: EmptyMetaCodec,

@@ -8,7 +8,6 @@ import {
   EmptyRequest,
   EmptyResponseCodec,
   EmptyResponseData,
-  JsonOnlyReq,
   JsonOnlyResponseCodec,
 } from "../../utils/codecs.js";
 import {FilterGetPeers, NodePeer, PeerDirection, PeerState} from "./node.js";
@@ -257,21 +256,21 @@ export const definitions: RouteDefinitions<Endpoints> = {
   writeHeapdump: {
     url: "/eth/v1/lodestar/write_heapdump",
     method: "POST",
-    req: JsonOnlyReq({
-      writeReqJson: ({thread, dirpath}) => ({query: {thread, dirpath}}),
-      parseReqJson: ({query}) => ({thread: query.thread, dirpath: query.dirpath}),
+    req: {
+      writeReq: ({thread, dirpath}) => ({query: {thread, dirpath}}),
+      parseReq: ({query}) => ({thread: query.thread, dirpath: query.dirpath}),
       schema: {query: {thread: Schema.String, dirpath: Schema.String}},
-    }),
+    },
     resp: JsonOnlyResponseCodec,
   },
   writeProfile: {
     url: "/eth/v1/lodestar/write_profile",
     method: "POST",
-    req: JsonOnlyReq({
-      writeReqJson: ({thread, duration, dirpath}) => ({query: {thread, duration, dirpath}}),
-      parseReqJson: ({query}) => ({thread: query.thread, duration: query.duration, dirpath: query.dirpath}),
+    req: {
+      writeReq: ({thread, duration, dirpath}) => ({query: {thread, duration, dirpath}}),
+      parseReq: ({query}) => ({thread: query.thread, duration: query.duration, dirpath: query.dirpath}),
       schema: {query: {thread: Schema.String, duration: Schema.Uint, dirpath: Schema.String}},
-    }),
+    },
     resp: JsonOnlyResponseCodec,
   },
   getLatestWeakSubjectivityCheckpointEpoch: {
@@ -341,21 +340,19 @@ export const definitions: RouteDefinitions<Endpoints> = {
   connectPeer: {
     url: "/eth/v1/lodestar/connect_peer",
     method: "POST",
-    req: JsonOnlyReq({
-      writeReqJson: ({peerId, multiaddrs}) => ({query: {peerId, multiaddr: multiaddrs}}),
-      parseReqJson: ({query}) => ({peerId: query.peerId, multiaddrs: query.multiaddr}),
+    req: {
+      writeReq: ({peerId, multiaddrs}) => ({query: {peerId, multiaddr: multiaddrs}}),
+      parseReq: ({query}) => ({peerId: query.peerId, multiaddrs: query.multiaddr}),
       schema: {query: {peerId: Schema.StringRequired, multiaddr: Schema.StringArray}},
-    }),
+    },
     resp: EmptyResponseCodec,
   },
   disconnectPeer: {
     url: "/eth/v1/lodestar/disconnect_peer",
     method: "POST",
     req: {
-      writeReqJson: ({peerId}) => ({query: {peerId}}),
-      parseReqJson: ({query}) => ({peerId: query.peerId}),
-      writeReqSsz: ({peerId}) => ({query: {peerId}}),
-      parseReqSsz: ({query}) => ({peerId: query.peerId}),
+      writeReq: ({peerId}) => ({query: {peerId}}),
+      parseReq: ({query}) => ({peerId: query.peerId}),
       schema: {query: {peerId: Schema.StringRequired}},
     },
     resp: EmptyResponseCodec,

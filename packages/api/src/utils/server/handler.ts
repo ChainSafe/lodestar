@@ -58,7 +58,7 @@ export function createFastifyHandler<E extends Endpoint>(
 
     let response: ApplicationResponse<E>;
     try {
-      if (definition.method === "GET") {
+      if (definition.method === "GET" || definition.req.schema.body === undefined) {
         response = await method((definition.req as GetRequestCodec<E>).parseReq(req as GetRequestData), {
           sszBytes: null,
           returnBytes: responseWireFormat === WireFormat.ssz,
