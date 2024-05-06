@@ -1,4 +1,4 @@
-import {HttpHeader, parseContentTypeHeader, toHeadersExtra} from "../headers.js";
+import {HeadersExtra, HttpHeader, parseContentTypeHeader} from "../headers.js";
 import {HttpStatusCode} from "../httpStatusCode.js";
 import {Endpoint} from "../types.js";
 import {WireFormat, getWireFormat} from "../wireFormat.js";
@@ -93,7 +93,7 @@ export class ApiResponse<E extends Endpoint> extends Response {
           break;
         }
         case WireFormat.ssz:
-          this._meta = this.definition.resp.meta.fromHeaders(toHeadersExtra(this.headers));
+          this._meta = this.definition.resp.meta.fromHeaders(new HeadersExtra(this.headers));
           break;
       }
     }

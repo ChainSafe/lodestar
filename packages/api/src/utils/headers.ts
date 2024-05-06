@@ -132,34 +132,25 @@ export function fromHeaders<T extends Record<string, string>>(
   return header;
 }
 
-export type HeadersExtra = Headers & {
+export class HeadersExtra extends Headers {
   /**
    * Get required header from response headers
    */
-  getRequired(name: string): string;
+  getRequired(name: string): string {
+    const header = this.get(name);
+
+    if (header === null) {
+      throw Error(`${name} header is required in response`);
+    }
+
+    return header;
+  }
+
   /**
    * Get optional header from response headers.
    * Return default value if it does not exist
    */
-  getOrDefault(name: string, defaultValue: string): string;
-};
-
-export function toHeadersExtra(headers: Headers): HeadersExtra {
-  return {
-    ...headers,
-
-    getRequired(name) {
-      const header = headers.get(name);
-
-      if (header === null) {
-        throw Error(`${name} header is required in response`);
-      }
-
-      return header;
-    },
-
-    getOrDefault(name, defaultValue) {
-      return headers.get(name) ?? defaultValue;
-    },
-  };
+  getOrDefault(name: string, defaultValue: string): string {
+    return this.get(name) ?? defaultValue;
+  }
 }
