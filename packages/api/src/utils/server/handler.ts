@@ -3,12 +3,12 @@ import type * as fastify from "fastify";
 import {HttpHeader, MediaType, parseAcceptHeader, parseContentTypeHeader} from "../headers.js";
 import {
   Endpoint,
-  GetRequestData,
-  JsonPostRequestData,
+  RequestData,
+  JsonRequestData,
   JsonRequestMethods,
   RequestWithBodyCodec,
   RouteDefinition,
-  SszPostRequestData,
+  SszRequestData,
   SszRequestMethods,
 } from "../types.js";
 import {WireFormat, getWireFormat} from "../wireFormat.js";
@@ -21,7 +21,7 @@ export type FastifyHandler<E extends Endpoint> = fastify.RouteHandlerMethod<
   fastify.RawRequestDefaultExpression<fastify.RawServerDefault>,
   fastify.RawReplyDefaultExpression<fastify.RawServerDefault>,
   {
-    Body: E["request"] extends JsonPostRequestData ? E["request"]["body"] : undefined;
+    Body: E["request"] extends JsonRequestData ? E["request"]["body"] : undefined;
     Querystring: E["request"]["query"];
     Params: E["request"]["params"];
     Headers: E["request"]["headers"];
@@ -59,7 +59,7 @@ export function createFastifyHandler<E extends Endpoint>(
     let response: ApplicationResponse<E>;
     try {
       if (isRequestWithoutBody(definition)) {
-        response = await method(definition.req.parseReq(req as GetRequestData), {
+        response = await method(definition.req.parseReq(req as RequestData), {
           sszBytes: null,
           returnBytes: responseWireFormat === WireFormat.ssz,
         });
@@ -74,20 +74,17 @@ export function createFastifyHandler<E extends Endpoint>(
             if (onlySupport !== undefined && onlySupport !== WireFormat.json) {
               throw new ApiError(415, `Endpoint only supports ${onlySupport} requests`);
             }
-            response = await method(
-              (definition.req as JsonRequestMethods<E>).parseReqJson(req as JsonPostRequestData),
-              {
-                sszBytes: null,
-                returnBytes: responseWireFormat === WireFormat.ssz,
-              }
-            );
+            response = await method((definition.req as JsonRequestMethods<E>).parseReqJson(req as JsonRequestData), {
+              sszBytes: null,
+              returnBytes: responseWireFormat === WireFormat.ssz,
+            });
             break;
           case WireFormat.ssz:
             if (onlySupport !== undefined && onlySupport !== WireFormat.ssz) {
               throw new ApiError(415, `Endpoint only supports ${onlySupport} requests`);
             }
             response = await method(
-              (definition.req as SszRequestMethods<E>).parseReqSsz(req as SszPostRequestData<E["request"]>),
+              (definition.req as SszRequestMethods<E>).parseReqSsz(req as SszRequestData<E["request"]>),
               {
                 sszBytes: req.body as Uint8Array,
                 returnBytes: responseWireFormat === WireFormat.ssz,

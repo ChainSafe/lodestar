@@ -13,7 +13,7 @@ export type PathParams = Record<string, string | number>;
 export type QueryParams = Record<string, string | number | boolean | (string | number)[]>;
 export type HeaderParams = Record<string, string>;
 
-export type GetRequestData<
+export type RequestData<
   P extends PathParams = PathParams,
   Q extends QueryParams = QueryParams,
   H extends HeaderParams = HeaderParams,
@@ -23,16 +23,16 @@ export type GetRequestData<
   headers?: H;
 };
 
-export type JsonPostRequestData<
+export type JsonRequestData<
   B = unknown,
   P extends PathParams = PathParams,
   Q extends QueryParams = QueryParams,
   H extends HeaderParams = HeaderParams,
-> = GetRequestData<P, Q, H> & {
+> = RequestData<P, Q, H> & {
   body?: B;
 };
 
-export type SszPostRequestData<P extends JsonPostRequestData> = Omit<P, "body"> &
+export type SszRequestData<P extends JsonRequestData> = Omit<P, "body"> &
   ("body" extends keyof P ? (P["body"] extends void ? {body?: never} : {body: Uint8Array}) : {body?: never});
 
 export type HttpMethod = "GET" | "POST" | "DELETE";
@@ -54,7 +54,7 @@ export type HttpMethod = "GET" | "POST" | "DELETE";
 export type Endpoint<
   Method extends HttpMethod = HttpMethod,
   ArgsType = unknown,
-  RequestType extends Method extends "GET" ? GetRequestData : JsonPostRequestData = JsonPostRequestData,
+  RequestType extends Method extends "GET" ? RequestData : JsonRequestData = JsonRequestData,
   ReturnType = unknown,
   Meta = unknown,
 > = {
@@ -84,8 +84,8 @@ export type JsonRequestMethods<E extends Endpoint> = {
 };
 
 export type SszRequestMethods<E extends Endpoint> = {
-  writeReqSsz: (p: E["args"]) => SszPostRequestData<E["request"]>; // client
-  parseReqSsz: (r: SszPostRequestData<E["request"]>) => E["args"]; // server
+  writeReqSsz: (p: E["args"]) => SszRequestData<E["request"]>; // client
+  parseReqSsz: (r: SszRequestData<E["request"]>) => E["args"]; // server
 };
 
 export type RequestWithBodyCodec<E extends Endpoint> = JsonRequestMethods<E> &
