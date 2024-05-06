@@ -103,11 +103,9 @@ export type RequestWithBodyCodec<E extends Endpoint> = JsonRequestMethods<E> &
  * For separate consumption by client and server.
  * Taking this idea to the extreme, Each group of endpoints would have definitions split into three files for nice treeshaking (types, client, server)
  */
-export type RequestCodec<E extends Endpoint> = E["method"] extends "GET"
-  ? RequestWithoutBodyCodec<E>
-  : "body" extends keyof E["request"]
-    ? RequestWithBodyCodec<E>
-    : RequestWithoutBodyCodec<E>;
+export type RequestCodec<E extends Endpoint> = "body" extends keyof E["request"]
+  ? RequestWithBodyCodec<E>
+  : RequestWithoutBodyCodec<E>;
 
 // Response codec
 
