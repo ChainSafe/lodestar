@@ -11,6 +11,7 @@
 import fs from "node:fs";
 import url from "node:url";
 import path from "node:path";
+import {getFilenameRecursively} from "./utils/get_filenames_recursively.mjs";
 
 function getSwapPairs(prefix) {
   return {
@@ -22,33 +23,8 @@ function getSwapPairs(prefix) {
 }
 
 /**
- * Recursively walk directories and get list of all files in a folder
- */
-function getAllFilesInFolder(dirname) {
-  if (!fs.existsSync(dirname)) {
-    throw new Error(`No folder found at ${dirname}`);
-  }
-
-  const pathList = [];
-  for (const filename of fs.readdirSync(dirname)) {
-    const itemPath = path.resolve(dirname, filename);
-    const stat = fs.statSync(itemPath);
-    if (stat.isSymbolicLink()) {
-      continue;
-    }
-    if (stat.isDirectory()) {
-      pathList.push(...getAllFilesInFolder(itemPath));
-    }
-    if (stat.isFile()) {
-      pathList.push(itemPath);
-    }
-  }
-
-  return pathList;
-}
-
-/**
- * Update internal references in map files for updated filenames
+ * Update internal references in map files for updated filenames.  Allows code
+ * reference click-through, and intellisense, to work correctly
  */
 function rewriteMapReferences(filepath, swapPairs) {
   if (!filepath.endsWith(".map")) return;
@@ -61,15 +37,17 @@ function rewriteMapReferences(filepath, swapPairs) {
   fs.writeFileSync(filepath, JSON.stringify(data));
 }
 
-function rewriteRequireStatements(filepath) {
-  let data = fs.readFileSync(filepath, "utf8");
-  if (filepath.endsWith(".js")) {
-    data = data.replace(/.js"\)/gi, '.cjs")');
-  } else if (filepath.endsWith("d.ts")) {
-    data = data.replace(/.js";/gi, '.cjs";');
-  } else {
+/**
+ * Updates import and require statements in types and runtime files to end with
+ * *.mjs or *.cjs to reference updated filenames
+ */
+function rewriteRequireStatements(filepath, swapPairs) {
+  if (!(filepath.endsWith(".js") || filepath.endsWith("d.ts"))) {
     return;
   }
+  let data = fs.readFileSync(filepath, "utf8");
+  data = data.replace(/.js"\)/gi, `${swapPairs[".js"]}")`);
+  data = data.replace(/.js";/gi, `${swapPairs[".js"]}";`);
   fs.writeFileSync(filepath, data);
 }
 
@@ -86,10 +64,10 @@ function rewriteFileName(filepath, swapPairs) {
   }
 }
 
-function updateDistribution(dirname, swapPairs) {
-  const filepaths = getAllFilesInFolder(dirname);
+function postBuildUpdates(dirname, swapPairs) {
+  const filepaths = getFilenameRecursively(dirname);
   for (const filepath of filepaths) {
-    rewriteRequireStatements(filepath);
+    rewriteRequireStatements(filepath, swapPairs);
     rewriteMapReferences(filepath, swapPairs);
     rewriteFileName(filepath, swapPairs);
   }
@@ -104,8 +82,8 @@ const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
 const packageName = process.argv[2];
 if (!packageName) {
-  throw new Error("Must pass packageName as positional param after calling script");
+  throw new Error("Must pass packageName as first positional param after calling script");
 }
 
-updateDistribution(path.resolve(__dirname, "..", "packages", packageName, "lib", "cjs"), getSwapPairs("c"));
-updateDistribution(path.resolve(__dirname, "..", "packages", packageName, "lib", "esm"), getSwapPairs("m"));
+postBuildUpdates(path.resolve(__dirname, "..", "packages", packageName, "lib", "cjs"), getSwapPairs("c"));
+postBuildUpdates(path.resolve(__dirname, "..", "packages", packageName, "lib", "esm"), getSwapPairs("m"));
