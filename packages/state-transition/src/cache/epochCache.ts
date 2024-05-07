@@ -180,6 +180,7 @@ export class EpochCache {
    * initiateValidatorExit(). This value may vary on each fork of the state.
    *
    * NOTE: Changes block to block
+   * NOTE: No longer used by initiateValidatorExit post-electra
    */
   exitQueueEpoch: Epoch;
   /**
@@ -187,6 +188,7 @@ export class EpochCache {
    * initiateValidatorExit(). This value may vary on each fork of the state.
    *
    * NOTE: Changes block to block
+   * NOTE: No longer used by initiateValidatorExit post-electra
    */
   exitQueueChurn: number;
 
