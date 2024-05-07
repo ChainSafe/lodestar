@@ -32,7 +32,7 @@ Docker is the recommended setup for Lodestar. Use our [Lodestar Quickstart scrip
 
 ### Prerequisites
 
-Make sure to have [Yarn installed](https://classic.yarnpkg.com/en/docs/install). It is also recommended to [install NVM (Node Version Manager)](https://github.com/nvm-sh/nvm) and use the LTS version (currently v20) of [NodeJS](https://nodejs.org/en/).
+Make sure to have [Yarn installed](https://classic.yarnpkg.com/en/docs/install). It is also recommended to [install NVM (Node Version Manager)](https://github.com/nvm-sh/nvm) and use the LTS version (currently v22) of [NodeJS](https://nodejs.org/en/).
 
 :::info
 NodeJS versions older than the current LTS are not supported by Lodestar. We recommend running the latest Node LTS.
