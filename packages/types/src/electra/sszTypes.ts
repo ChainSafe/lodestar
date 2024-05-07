@@ -367,20 +367,3 @@ export const SSEPayloadAttributes = new ContainerType(
   },
   {typeName: "SSEPayloadAttributes", jsonCase: "eth2"}
 );
-
-export const AggregateAndProof = new ContainerType(
-  {
-    aggregatorIndex: ValidatorIndex,
-    aggregate: Attestation,
-    selectionProof: BLSSignature,
-  },
-  {typeName: "AggregateAndProof", jsonCase: "eth2", cachePermanentRootStruct: true}
-);
-
-export const SignedAggregateAndProof = new ContainerType(
-  {
-    message: AggregateAndProof,
-    signature: BLSSignature,
-  },
-  {typeName: "SignedAggregateAndProof", jsonCase: "eth2"}
-);
