@@ -1,0 +1,25 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "type": "node",
+        "request": "launch",
+        "name": "Beacon",
+        "skipFiles": ["<node_internals>/**"],
+        "smartStep": true,
+        "program": "${workspaceFolder}/packages/cli/bin/lodestar.js",
+        "args": ["beacon"],
+        "console": "integratedTerminal"
+      },
+      {
+        "type": "node",
+        "request": "launch",
+        "name": "Dev",
+        "skipFiles": ["<node_internals>/**"],
+        "smartStep": true,
+        "program": "${workspaceFolder}/packages/cli/bin/lodestar.js",
+        "args": ["dev"],
+        "console": "integratedTerminal"
+      }
+    ]
+  }
