@@ -382,7 +382,6 @@ describe("aggregateConsolidation", function () {
         );
         const aggAttestation = {
           ...attestationSeed,
-          // aggregationBits: BitArray.fromBoolArray(aggregationBitsArr[i]),
           aggregationBits: new BitArray(new Uint8Array(aggregationBitsArr[i]), 3),
           committeeBits: commiteeBits,
           signature: sigArr[i].toBytes(),

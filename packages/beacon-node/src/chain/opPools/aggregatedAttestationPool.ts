@@ -182,7 +182,7 @@ export class AggregatedAttestationPool {
     fork: ForkName,
     forkChoice: IForkChoice,
     state: CachedBeaconStateAllForks
-  ): allForks.Attestation[] {
+  ): phase0.Attestation[] {
     const stateSlot = state.slot;
     const stateEpoch = state.epochCtx.epoch;
     const statePrevEpoch = stateEpoch - 1;
@@ -291,7 +291,7 @@ export class AggregatedAttestationPool {
     fork: ForkName,
     forkChoice: IForkChoice,
     state: CachedBeaconStateAllForks
-  ): allForks.Attestation[] {
+  ): electra.Attestation[] {
     const stateSlot = state.slot;
     const stateEpoch = state.epochCtx.epoch;
     const statePrevEpoch = stateEpoch - 1;
@@ -358,7 +358,6 @@ export class AggregatedAttestationPool {
           // These properties should not change after being validate in gossip
           // IF they have to be validated, do it only with one attestation per group since same data
           // The committeeCountPerSlot can be precomputed once per slot
-          // for (const [i, {attestation, notSeenAttesterCount}] of attestationGroup
           for (const [i, attestationNonParticipation] of attestationGroup
             .getAttestationsForBlock(fork, notSeenAttestingIndices)
             .entries()) {
