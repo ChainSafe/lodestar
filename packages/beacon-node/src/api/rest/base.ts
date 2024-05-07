@@ -159,6 +159,5 @@ export class RestApiServer {
 }
 
 function getOperationId(req: FastifyRequest): string {
-  // Note: `schema` will be `undefined` if route is not defined
   return req.routeOptions.schema?.operationId ?? "unknown";
 }

@@ -85,7 +85,7 @@
   "devDependencies": {
     "@chainsafe/as-sha256": "^0.4.1",
     "@types/qs": "^6.9.7",
-    "fastify": "^4.26.2",
+    "fastify": "^4.27.0",
     "qs": "^6.11.1",
     "uint8arrays": "^5.0.1"
   },
