@@ -118,7 +118,7 @@ export function WithVersion<T, M extends {version: ForkName}>(
 export const JsonOnlyResponseCodec: ResponseCodec<AnyEndpoint> = {
   data: {
     toJson: (data: Record<string, unknown>) => {
-      // JSON fields use snake case across all existing APIs
+      // JSON fields use snake case across all existing routes
       return objectToExpectedCase(data, "snake");
     },
     fromJson: (data) => {
