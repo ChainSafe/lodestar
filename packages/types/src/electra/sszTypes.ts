@@ -19,8 +19,8 @@ import {
   MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD,
   MAX_CONSOLIDATIONS,
   PENDING_BALANCE_DEPOSITS_LIMIT,
-  PENDING_CONSOLIDATIONS_LIMIT,
   PENDING_PARTIAL_WITHDRAWALS_LIMIT,
+  PENDING_CONSOLIDATIONS_LIMIT,
 } from "@lodestar/params";
 import {ssz as primitiveSsz} from "../primitive/index.js";
 import {ssz as phase0Ssz} from "../phase0/index.js";
@@ -336,14 +336,14 @@ export const BeaconState = new ContainerType(
     // Deep history valid from Capella onwards
     historicalSummaries: capellaSsz.BeaconState.fields.historicalSummaries,
     depositReceiptsStartIndex: UintBn64, // New in ELECTRA
-    depositBalanceToConsume: Gwei, // [New in Electra]
-    exitBalanceToConsume: Gwei, // [New in Electra]
-    earliestExitEpoch: Epoch, // [New in Electra]
-    consolidationBalanceToConsume: Gwei, // [New in Electra]
-    earliestConsolidationEpoch: Epoch, // [New in Electra]
-    pendingBalanceDeposits: new ListCompositeType(PendingBalanceDeposit, PENDING_BALANCE_DEPOSITS_LIMIT), // [New in Electra]
-    pendingPartialWithdrawals: new ListCompositeType(PartialWithdrawal, PENDING_PARTIAL_WITHDRAWALS_LIMIT), // [New in Electra]
-    pendingConsolidations: new ListCompositeType(PendingConsolidation, PENDING_CONSOLIDATIONS_LIMIT), // [New in Electra]
+    depositBalanceToConsume: Gwei, // New in Electra:EIP7251
+    exitBalanceToConsume: Gwei, // New in Electra:EIP7251
+    earliestExitEpoch: Epoch, // New in Electra:EIP7251
+    consolidationBalanceToConsume: Gwei, // New in Electra:EIP7251
+    earliestConsolidationEpoch: Epoch, // New in Electra:EIP7251
+    pendingBalanceDeposits: new ListCompositeType(PendingBalanceDeposit, Number(PENDING_BALANCE_DEPOSITS_LIMIT)), // new in electra:eip7251
+    pendingPartialWithdrawals: new ListCompositeType(PartialWithdrawal, Number(PENDING_PARTIAL_WITHDRAWALS_LIMIT)), // New in Electra:EIP7251
+    pendingConsolidations: new ListCompositeType(PendingConsolidation, Number(PENDING_CONSOLIDATIONS_LIMIT)), // new in electra:eip7251
   },
   {typeName: "BeaconState", jsonCase: "eth2"}
 );
