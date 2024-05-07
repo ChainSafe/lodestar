@@ -54,14 +54,14 @@ export function slashValidator(
       ? MIN_SLASHING_PENALTY_QUOTIENT
       : fork === ForkSeq.altair
         ? MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR
-        : fork === ForkSeq.bellatrix
+        : fork < ForkSeq.electra // no change from bellatrix to deneb
           ? MIN_SLASHING_PENALTY_QUOTIENT_BELLATRIX
           : MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA;
   decreaseBalance(state, slashedIndex, Math.floor(effectiveBalance / minSlashingPenaltyQuotient));
 
   // apply proposer and whistleblower rewards
   const whistleblowerReward =
-    fork <= ForkSeq.deneb
+    fork < ForkSeq.electra
       ? Math.floor(effectiveBalance / WHISTLEBLOWER_REWARD_QUOTIENT)
       : Math.floor(effectiveBalance / WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA);
   const proposerReward =
