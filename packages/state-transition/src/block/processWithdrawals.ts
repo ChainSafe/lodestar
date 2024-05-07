@@ -1,20 +1,30 @@
 import {byteArrayEquals} from "@chainsafe/ssz";
 import {ssz, capella} from "@lodestar/types";
 import {
-  MAX_EFFECTIVE_BALANCE,
   MAX_WITHDRAWALS_PER_PAYLOAD,
   MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP,
+  ForkSeq,
+  MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP,
+  FAR_FUTURE_EPOCH,
+  MIN_ACTIVATION_BALANCE,
 } from "@lodestar/params";
 
 import {toRootHex} from "@lodestar/utils";
-import {CachedBeaconStateCapella} from "../types.js";
-import {decreaseBalance, hasEth1WithdrawalCredential, isCapellaPayloadHeader} from "../util/index.js";
+import {CachedBeaconStateCapella, CachedBeaconStateElectra} from "../types.js";
+import {
+  decreaseBalance,
+  getValidatorMaxEffectiveBalance,
+  isCapellaPayloadHeader,
+  isFullyWithdrawableValidator,
+  isPartiallyWithdrawableValidator,
+} from "../util/index.js";
 
 export function processWithdrawals(
-  state: CachedBeaconStateCapella,
+  fork: ForkSeq,
+  state: CachedBeaconStateCapella | CachedBeaconStateElectra,
   payload: capella.FullOrBlindedExecutionPayload
 ): void {
-  const {withdrawals: expectedWithdrawals} = getExpectedWithdrawals(state);
+  const {withdrawals: expectedWithdrawals, partialWithdrawalsCount} = getExpectedWithdrawals(fork, state);
   const numWithdrawals = expectedWithdrawals.length;
 
   if (isCapellaPayloadHeader(payload)) {
@@ -44,6 +54,11 @@ export function processWithdrawals(
     decreaseBalance(state, withdrawal.validatorIndex, Number(withdrawal.amount));
   }
 
+  if (fork >= ForkSeq.electra) {
+    const stateElectra = state as CachedBeaconStateElectra;
+    stateElectra.pendingPartialWithdrawals = stateElectra.pendingPartialWithdrawals.sliceFrom(partialWithdrawalsCount);
+  }
+
   // Update the nextWithdrawalIndex
   if (expectedWithdrawals.length > 0) {
     const latestWithdrawal = expectedWithdrawals[expectedWithdrawals.length - 1];
@@ -63,46 +78,80 @@ export function processWithdrawals(
   }
 }
 
-export function getExpectedWithdrawals(state: CachedBeaconStateCapella): {
+export function getExpectedWithdrawals(
+  fork: ForkSeq,
+  state: CachedBeaconStateCapella | CachedBeaconStateElectra
+): {
   withdrawals: capella.Withdrawal[];
   sampledValidators: number;
+  partialWithdrawalsCount: number;
 } {
   const epoch = state.epochCtx.epoch;
   let withdrawalIndex = state.nextWithdrawalIndex;
   const {validators, balances, nextWithdrawalValidatorIndex} = state;
-  const bound = Math.min(validators.length, MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP);
-
-  let n = 0;
 
   const withdrawals: capella.Withdrawal[] = [];
+
+  if (fork >= ForkSeq.electra) {
+    const stateElectra = state as CachedBeaconStateElectra;
+
+    for (const withdrawal of stateElectra.pendingPartialWithdrawals.getAllReadonly()) {
+      if (withdrawal.withdrawableEpoch > epoch || withdrawals.length === MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP) {
+        break;
+      }
+
+      const validator = validators.getReadonly(withdrawal.index);
+
+      if (
+        validator.exitEpoch === FAR_FUTURE_EPOCH &&
+        validator.effectiveBalance >= MIN_ACTIVATION_BALANCE &&
+        balances.get(withdrawalIndex) > MIN_ACTIVATION_BALANCE
+      ) {
+        const balanceOverMinActivationBalance = BigInt(balances.get(withdrawalIndex) - MIN_ACTIVATION_BALANCE);
+        const withdrawableBalance =
+          balanceOverMinActivationBalance < withdrawal.amount ? balanceOverMinActivationBalance : withdrawal.amount;
+        withdrawals.push({
+          index: withdrawalIndex,
+          validatorIndex: withdrawal.index,
+          address: validator.withdrawalCredentials.subarray(12),
+          amount: withdrawableBalance,
+        });
+        withdrawalIndex++;
+      }
+    }
+  }
+
+  const partialWithdrawalsCount = withdrawals.length;
+  const bound = Math.min(validators.length, MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP);
+  let n = 0;
   // Just run a bounded loop max iterating over all withdrawals
   // however breaks out once we have MAX_WITHDRAWALS_PER_PAYLOAD
   for (n = 0; n < bound; n++) {
     // Get next validator in turn
     const validatorIndex = (nextWithdrawalValidatorIndex + n) % validators.length;
 
-    // It's most likely for validators to not have set eth1 credentials, than having 0 balance
     const validator = validators.getReadonly(validatorIndex);
-    if (!hasEth1WithdrawalCredential(validator.withdrawalCredentials)) {
+    const balance = balances.get(validatorIndex);
+    // early skip for balance = 0 as its now more likely that validator has exited/slahed with
+    // balance zero than not have withdrawal credentials set
+    if (balance === 0) {
       continue;
     }
 
-    const balance = balances.get(validatorIndex);
-
-    if (balance > 0 && validator.withdrawableEpoch <= epoch) {
+    if (isFullyWithdrawableValidator(fork, validator, balance, epoch)) {
       withdrawals.push({
         index: withdrawalIndex,
         validatorIndex,
-        address: validator.withdrawalCredentials.slice(12),
+        address: validator.withdrawalCredentials.subarray(12),
         amount: BigInt(balance),
       });
       withdrawalIndex++;
-    } else if (validator.effectiveBalance === MAX_EFFECTIVE_BALANCE && balance > MAX_EFFECTIVE_BALANCE) {
+    } else if (isPartiallyWithdrawableValidator(fork, validator, balance)) {
       withdrawals.push({
         index: withdrawalIndex,
         validatorIndex,
-        address: validator.withdrawalCredentials.slice(12),
-        amount: BigInt(balance - MAX_EFFECTIVE_BALANCE),
+        address: validator.withdrawalCredentials.subarray(12),
+        amount: BigInt(balance - getValidatorMaxEffectiveBalance(validator.withdrawalCredentials)),
       });
       withdrawalIndex++;
     }
@@ -113,5 +162,5 @@ export function getExpectedWithdrawals(state: CachedBeaconStateCapella): {
     }
   }
 
-  return {withdrawals, sampledValidators: n};
+  return {withdrawals, sampledValidators: n, partialWithdrawalsCount};
 }
