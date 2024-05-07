@@ -82,12 +82,12 @@ describe("import keystores from api, test DefaultProposerConfig", function () {
 
     //////////////// Graffiti
 
-    let graffiti0 = (await keymanagerClient.listGraffiti({pubkey: pubkeys[0]})).value();
+    let graffiti0 = (await keymanagerClient.getGraffiti({pubkey: pubkeys[0]})).value();
     expectDeepEquals(graffiti0, {pubkey: pubkeys[0], graffiti: defaultOptions.graffiti}, "Graffiti Check default");
 
     // Set Graffiti to updatedOptions
     (await keymanagerClient.setGraffiti({pubkey: pubkeys[0], graffiti: updatedOptions.graffiti})).assertOk();
-    graffiti0 = (await keymanagerClient.listGraffiti({pubkey: pubkeys[0]})).value();
+    graffiti0 = (await keymanagerClient.getGraffiti({pubkey: pubkeys[0]})).value();
     expectDeepEquals(graffiti0, {pubkey: pubkeys[0], graffiti: updatedOptions.graffiti}, "FeeRecipient Check updated");
 
     /////////// GasLimit
@@ -124,7 +124,7 @@ describe("import keystores from api, test DefaultProposerConfig", function () {
     );
 
     // graffiti persists
-    let graffiti0 = (await keymanagerClient.listGraffiti({pubkey: pubkeys[0]})).value();
+    let graffiti0 = (await keymanagerClient.getGraffiti({pubkey: pubkeys[0]})).value();
     expectDeepEquals(
       graffiti0,
       {pubkey: pubkeys[0], graffiti: updatedOptions.graffiti},
@@ -133,7 +133,7 @@ describe("import keystores from api, test DefaultProposerConfig", function () {
 
     // after deletion  graffiti restored to default
     (await keymanagerClient.deleteGraffiti({pubkey: pubkeys[0]})).assertOk();
-    graffiti0 = (await keymanagerClient.listGraffiti({pubkey: pubkeys[0]})).value();
+    graffiti0 = (await keymanagerClient.getGraffiti({pubkey: pubkeys[0]})).value();
     expectDeepEquals(
       graffiti0,
       {pubkey: pubkeys[0], graffiti: defaultOptions.graffiti},
@@ -170,7 +170,7 @@ describe("import keystores from api, test DefaultProposerConfig", function () {
     );
 
     (await keymanagerClient.deleteGraffiti({pubkey: pubkeys[0]})).assertOk();
-    const graffiti0 = (await keymanagerClient.listGraffiti({pubkey: pubkeys[0]})).value();
+    const graffiti0 = (await keymanagerClient.getGraffiti({pubkey: pubkeys[0]})).value();
     expectDeepEquals(
       graffiti0,
       {pubkey: pubkeys[0], graffiti: defaultOptions.graffiti},

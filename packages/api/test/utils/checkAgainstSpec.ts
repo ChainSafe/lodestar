@@ -1,8 +1,7 @@
 import Ajv, {ErrorObject} from "ajv";
 import {expect, describe, beforeAll, it} from "vitest";
 import {WireFormat} from "../../src/utils/wireFormat.js";
-import {Endpoint, RequestWithBodyCodec, RouteDefinitions} from "../../src/utils/types.js";
-import {isRequestWithoutBody} from "../../src/utils/typeguards.js";
+import {Endpoint, RequestWithBodyCodec, RouteDefinitions, isRequestWithoutBody} from "../../src/utils/types.js";
 import {applyRecursively, JsonSchema, OpenApiJson, parseOpenApiSpec} from "./parseOpenApiSpec.js";
 import {GenericServerTestCases} from "./genericServerTest.js";
 

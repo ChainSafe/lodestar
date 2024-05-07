@@ -1,10 +1,10 @@
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {Epoch, phase0, capella, Slot, ssz, StringType, RootHex, altair, UintNum64, allForks} from "@lodestar/types";
-import {isForkExecution, ForkName, isForkLightClient} from "@lodestar/params";
+import {ForkName} from "@lodestar/params";
 
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {EmptyMeta, EmptyResponseCodec, EmptyResponseData} from "../../utils/codecs.js";
-import {toForkName} from "../../utils/serdes.js";
+import {getExecutionForkTypes, getLightClientForkTypes, toForkName} from "../../utils/fork.js";
 
 const stringType = new StringType();
 export const blobSidecarSSE = new ContainerType(
@@ -188,21 +188,6 @@ export function getTypeByEvent(): {[K in EventType]: TypeJson<EventData[K]>} {
     };
   };
 
-  const getLightClientType = (fork: ForkName): allForks.AllForksLightClientSSZTypes => {
-    // TODO: reuse these across all routes
-    if (!isForkLightClient(fork)) {
-      throw Error(`Invalid fork=${fork} for lightclient fork types`);
-    }
-    return ssz.allForksLightClient[fork];
-  };
-
-  const getExecutionType = (fork: ForkName): allForks.AllForksExecutionSSZTypes => {
-    if (!isForkExecution(fork)) {
-      throw Error(`Invalid fork=${fork} for execution fork types`);
-    }
-    return ssz.allForksExecution[fork];
-  };
-
   return {
     [EventType.head]: new ContainerType(
       {
@@ -257,13 +242,15 @@ export function getTypeByEvent(): {[K in EventType]: TypeJson<EventData[K]>} {
     ),
 
     [EventType.contributionAndProof]: ssz.altair.SignedContributionAndProof,
-    [EventType.payloadAttributes]: WithVersion((fork) => getExecutionType(fork).SSEPayloadAttributes),
+    [EventType.payloadAttributes]: WithVersion((fork) => getExecutionForkTypes(fork).SSEPayloadAttributes),
     [EventType.blobSidecar]: blobSidecarSSE,
 
     [EventType.lightClientOptimisticUpdate]: WithVersion(
-      (fork) => getLightClientType(fork).LightClientOptimisticUpdate
+      (fork) => getLightClientForkTypes(fork).LightClientOptimisticUpdate
     ),
-    [EventType.lightClientFinalityUpdate]: WithVersion((fork) => getLightClientType(fork).LightClientFinalityUpdate),
+    [EventType.lightClientFinalityUpdate]: WithVersion(
+      (fork) => getLightClientForkTypes(fork).LightClientFinalityUpdate
+    ),
   };
 }
 

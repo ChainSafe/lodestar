@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import {ContainerType} from "@chainsafe/ssz";
+import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {Epoch, phase0, ssz, stringType} from "@lodestar/types";
 import {Schema, Endpoint, RouteDefinitions} from "../utils/index.js";
 import {WireFormat} from "../utils/wireFormat.js";
@@ -62,22 +62,39 @@ export type ResponseStatus<Status> = {
   message?: string;
 };
 
-export type FeeRecipientData = {
-  pubkey: PubkeyHex;
-  ethaddress: EthAddress;
-};
-export type GraffitiData = {
-  pubkey: PubkeyHex;
-  graffiti: Graffiti;
-};
-export type GasLimitData = {
-  pubkey: PubkeyHex;
-  gasLimit: number;
-};
-export type BuilderBoostFactorData = {
-  pubkey: PubkeyHex;
-  builderBoostFactor: bigint;
-};
+export const FeeRecipientDataType = new ContainerType(
+  {
+    pubkey: stringType,
+    ethaddress: stringType,
+  },
+  {jsonCase: "eth2"}
+);
+export const GraffitiDataType = new ContainerType(
+  {
+    pubkey: stringType,
+    graffiti: stringType,
+  },
+  {jsonCase: "eth2"}
+);
+export const GasLimitDataType = new ContainerType(
+  {
+    pubkey: stringType,
+    gasLimit: ssz.UintNum64,
+  },
+  {jsonCase: "eth2"}
+);
+export const BuilderBoostFactorDataType = new ContainerType(
+  {
+    pubkey: stringType,
+    builderBoostFactor: ssz.UintBn64,
+  },
+  {jsonCase: "eth2"}
+);
+
+export type FeeRecipientData = ValueOf<typeof FeeRecipientDataType>;
+export type GraffitiData = ValueOf<typeof GraffitiDataType>;
+export type GasLimitData = ValueOf<typeof GasLimitDataType>;
+export type BuilderBoostFactorData = ValueOf<typeof BuilderBoostFactorDataType>;
 
 export type SignerDefinition = {
   pubkey: PubkeyHex;
@@ -263,7 +280,7 @@ export type Endpoints = {
     EmptyMeta
   >;
 
-  listGraffiti: Endpoint<
+  getGraffiti: Endpoint<
     //
     "GET",
     {pubkey: PubkeyHex},
@@ -447,7 +464,11 @@ export const definitions: RouteDefinitions<Endpoints> = {
         params: {pubkey: Schema.StringRequired},
       },
     },
-    resp: JsonOnlyResponseCodec,
+    resp: {
+      onlySupport: WireFormat.json,
+      data: FeeRecipientDataType,
+      meta: EmptyMetaCodec,
+    },
   },
   setFeeRecipient: {
     url: "/eth/v1/validator/{pubkey}/feerecipient",
@@ -475,7 +496,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
     resp: EmptyResponseCodec,
   },
 
-  listGraffiti: {
+  getGraffiti: {
     url: "/eth/v1/validator/{pubkey}/graffiti",
     method: "GET",
     req: {
@@ -485,7 +506,11 @@ export const definitions: RouteDefinitions<Endpoints> = {
         params: {pubkey: Schema.StringRequired},
       },
     },
-    resp: JsonOnlyResponseCodec,
+    resp: {
+      onlySupport: WireFormat.json,
+      data: GraffitiDataType,
+      meta: EmptyMetaCodec,
+    },
   },
   setGraffiti: {
     url: "/eth/v1/validator/{pubkey}/graffiti",
@@ -525,13 +550,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
     },
     resp: {
       onlySupport: WireFormat.json,
-      data: new ContainerType(
-        {
-          pubkey: stringType,
-          gasLimit: ssz.UintNum64,
-        },
-        {jsonCase: "eth2"}
-      ),
+      data: GasLimitDataType,
       meta: EmptyMetaCodec,
     },
   },
@@ -573,13 +592,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
     },
     resp: {
       onlySupport: WireFormat.json,
-      data: new ContainerType(
-        {
-          pubkey: stringType,
-          builderBoostFactor: ssz.UintBn64,
-        },
-        {jsonCase: "eth2"}
-      ),
+      data: BuilderBoostFactorDataType,
       meta: EmptyMetaCodec,
     },
   },
@@ -619,7 +632,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
     url: "/eth/v1/validator/{pubkey}/voluntary_exit",
     method: "POST",
     req: {
-      writeReq: ({pubkey, epoch}) => ({params: {pubkey}, query: epoch !== undefined ? {epoch} : {}}),
+      writeReq: ({pubkey, epoch}) => ({params: {pubkey}, query: {epoch}}),
       parseReq: ({params: {pubkey}, query: {epoch}}) => ({pubkey, epoch}),
       schema: {
         params: {pubkey: Schema.StringRequired},

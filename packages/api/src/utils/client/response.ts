@@ -47,7 +47,7 @@ export class ApiResponse<E extends Endpoint> extends Response {
 
       const {onlySupport} = this.definition.resp;
       if (onlySupport !== undefined && wireFormat !== onlySupport) {
-        throw Error(`Method only supports ${onlySupport} responses`);
+        throw Error(`Method only supports ${onlySupport.toUpperCase()} responses`);
       }
 
       this._wireFormat = wireFormat;

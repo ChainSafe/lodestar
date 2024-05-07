@@ -5,6 +5,7 @@ import {ForkName} from "@lodestar/params";
 import {BeaconConfig, ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {MetaHeader, VersionCodec, VersionMeta} from "../../utils/metadata.js";
+import {getLightClientForkTypes} from "../../utils/fork.js";
 import {
   EmptyArgs,
   EmptyRequestCodec,
@@ -87,17 +88,6 @@ export type Endpoints = {
   >;
 };
 
-function getLCFork(fork: ForkName): ForkName.altair | ForkName.capella | ForkName.deneb {
-  switch (fork) {
-    case ForkName.altair:
-    case ForkName.capella:
-    case ForkName.deneb:
-      return fork;
-    default:
-      return ForkName.altair;
-  }
-}
-
 export function definitions(config: ChainForkConfig): RouteDefinitions<Endpoints> {
   // this beacon config will be stored here in this closure so fork digests don't need to be recomputed
   let beaconConfig: BeaconConfig | undefined;
@@ -128,7 +118,7 @@ export function definitions(config: ChainForkConfig): RouteDefinitions<Endpoints
             }
             const json: unknown[] = [];
             for (const [i, version] of meta.version.entries()) {
-              json.push(ssz[getLCFork(version)].LightClientUpdate.toJson(data[i] as deneb.LightClientUpdate));
+              json.push(getLightClientForkTypes(version).LightClientUpdate.toJson(data[i] as deneb.LightClientUpdate));
             }
             return json;
           },
@@ -136,7 +126,7 @@ export function definitions(config: ChainForkConfig): RouteDefinitions<Endpoints
             const value: allForks.LightClientUpdate[] = [];
             for (let i = 0; i < meta.version.length; i++) {
               const version = meta.version[i];
-              value.push(ssz[getLCFork(version)].LightClientUpdate.fromJson((data as unknown[])[i]));
+              value.push(getLightClientForkTypes(version).LightClientUpdate.fromJson((data as unknown[])[i]));
             }
             return value;
           },
@@ -150,7 +140,7 @@ export function definitions(config: ChainForkConfig): RouteDefinitions<Endpoints
             const bufs: Uint8Array[] = [];
             for (const [i, version] of meta.version.entries()) {
               const forkDigest = beaconConfig.forkName2ForkDigest(version);
-              const serialized = ssz[getLCFork(version)].LightClientUpdate.serialize(
+              const serialized = getLightClientForkTypes(version).LightClientUpdate.serialize(
                 data[i] as deneb.LightClientUpdate
               );
               const length = ssz.UintNum64.serialize(4 + serialized.length);
@@ -169,7 +159,9 @@ export function definitions(config: ChainForkConfig): RouteDefinitions<Endpoints
               const forkDigest = ssz.ForkDigest.deserialize(data.subarray(offset + 8, offset + 12));
               const version = beaconConfig.forkDigest2ForkName(forkDigest);
               value.push(
-                ssz[getLCFork(version)].LightClientUpdate.deserialize(data.subarray(offset + 12, offset + length))
+                getLightClientForkTypes(version).LightClientUpdate.deserialize(
+                  data.subarray(offset + 12, offset + length)
+                )
               );
               offset += length;
             }
@@ -212,7 +204,7 @@ export function definitions(config: ChainForkConfig): RouteDefinitions<Endpoints
       method: "GET",
       req: EmptyRequestCodec,
       resp: {
-        data: WithVersion((fork) => ssz[getLCFork(fork)].LightClientOptimisticUpdate),
+        data: WithVersion((fork) => getLightClientForkTypes(fork).LightClientOptimisticUpdate),
         meta: VersionCodec,
       },
     },
@@ -221,7 +213,7 @@ export function definitions(config: ChainForkConfig): RouteDefinitions<Endpoints
       method: "GET",
       req: EmptyRequestCodec,
       resp: {
-        data: WithVersion((fork) => ssz[getLCFork(fork)].LightClientFinalityUpdate),
+        data: WithVersion((fork) => getLightClientForkTypes(fork).LightClientFinalityUpdate),
         meta: VersionCodec,
       },
     },
@@ -234,7 +226,7 @@ export function definitions(config: ChainForkConfig): RouteDefinitions<Endpoints
         schema: {params: {block_root: Schema.StringRequired}},
       },
       resp: {
-        data: WithVersion((fork) => ssz[getLCFork(fork)].LightClientBootstrap),
+        data: WithVersion((fork) => getLightClientForkTypes(fork).LightClientBootstrap),
         meta: VersionCodec,
       },
     },

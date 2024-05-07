@@ -12,7 +12,6 @@ import {
   SszRequestMethods,
   JsonRequestMethods,
 } from "./types.js";
-import {toForkName} from "./serdes.js";
 import {WireFormat} from "./wireFormat.js";
 
 // Utility types / codecs
@@ -99,9 +98,9 @@ export function ArrayOf<T>(elementType: Type<T>, limit = Infinity): ArrayType<Ty
 export function WithMeta<T, M extends {version: ForkName}>(getType: (m: M) => Type<T>): ResponseDataCodec<T, M> {
   return {
     toJson: (data, meta: M) => getType(meta).toJson(data),
-    fromJson: (data, meta: M) => getType({...meta, version: toForkName(meta.version)}).fromJson(data),
+    fromJson: (data, meta: M) => getType(meta).fromJson(data),
     serialize: (data, meta: M) => getType(meta).serialize(data),
-    deserialize: (data, meta: M) => getType({...meta, version: toForkName(meta.version)}).deserialize(data),
+    deserialize: (data, meta: M) => getType(meta).deserialize(data),
   };
 }
 
@@ -110,17 +109,25 @@ export function WithVersion<T, M extends {version: ForkName}>(
 ): ResponseDataCodec<T, M> {
   return {
     toJson: (data, meta: M) => getType(meta.version).toJson(data),
-    fromJson: (data, meta: M) => getType(toForkName(meta.version)).fromJson(data),
+    fromJson: (data, meta: M) => getType(meta.version).fromJson(data),
     serialize: (data, meta: M) => getType(meta.version).serialize(data),
-    deserialize: (data, meta: M) => getType(toForkName(meta.version)).deserialize(data),
+    deserialize: (data, meta: M) => getType(meta.version).deserialize(data),
   };
 }
 
-// TODO: check on unstable, refactor? We should probably drop this and add ssz types for everything, to get some field level validation
 export const JsonOnlyResponseCodec: ResponseCodec<AnyEndpoint> = {
   data: {
-    toJson: (d) => objectToExpectedCase(d as Record<string, unknown>, "snake"),
-    fromJson: (d) => objectToExpectedCase(d as Record<string, unknown>, "camel"),
+    toJson: (data: Record<string, unknown>) => {
+      // JSON fields use snake case across all existing APIs
+      return objectToExpectedCase(data, "snake");
+    },
+    fromJson: (data) => {
+      if (typeof data !== "object" || data === null) {
+        throw Error("JSON must be of type object");
+      }
+      // All JSON inside the JS code must be camel case
+      return objectToExpectedCase(data as Record<string, unknown>, "camel");
+    },
     serialize: () => {
       throw Error("Not implemented");
     },

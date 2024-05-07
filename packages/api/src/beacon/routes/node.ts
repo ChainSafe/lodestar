@@ -27,6 +27,8 @@ export const NetworkIdentityType = new ContainerType(
     discoveryAddresses: ArrayOf(byteListType),
     metadata: new ContainerType({
       ...ssz.phase0.Metadata.fields,
+      // TODO: optional type does not really map to a field that can be `undefined` / missing
+      // the container would throw an error if JSON key is not defined, it rather maps to `type | null`
       syncnets: new OptionalType(ssz.altair.Metadata.fields.syncnets),
     }),
   },

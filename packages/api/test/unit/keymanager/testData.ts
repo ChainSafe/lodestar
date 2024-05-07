@@ -71,7 +71,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
     res: undefined,
   },
 
-  listGraffiti: {
+  getGraffiti: {
     args: {pubkey: pubkeyRand},
     res: {data: {pubkey: pubkeyRand, graffiti: graffitiRandUtf8}},
   },

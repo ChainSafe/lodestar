@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {ssz, allForks, bellatrix, Slot, Root, BLSPubkey} from "@lodestar/types";
-import {ForkName, isForkExecution, isForkBlobs} from "@lodestar/params";
+import {ForkName, isForkBlobs} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
 
 import {Endpoint, RouteDefinitions, Schema} from "../utils/index.js";
@@ -17,7 +17,7 @@ import {
   JsonOnlyReq,
   WithVersion,
 } from "../utils/codecs.js";
-import {toForkName} from "../utils/serdes.js";
+import {getBlindedForkTypes, getExecutionForkTypes, toForkName} from "../utils/fork.js";
 import {fromHeaders} from "../utils/headers.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
@@ -107,11 +107,9 @@ export function definitions(config: ChainForkConfig): RouteDefinitions<Endpoints
         },
       },
       resp: {
-        data: WithVersion<MaybeSignedBuilderBid, VersionMeta>((fork: ForkName) => {
-          if (!isForkExecution(fork)) throw new Error("TODO"); // TODO
-
-          return ssz.allForksExecution[fork].SignedBuilderBid;
-        }),
+        data: WithVersion<MaybeSignedBuilderBid, VersionMeta>(
+          (fork: ForkName) => getExecutionForkTypes(fork).SignedBuilderBid
+        ),
         meta: VersionCodec,
       },
     },
@@ -119,20 +117,19 @@ export function definitions(config: ChainForkConfig): RouteDefinitions<Endpoints
       url: "/eth/v1/builder/blinded_blocks",
       method: "POST",
       req: JsonOnlyReq({
-        writeReqJson: (args) => {
-          const slot = args.signedBlindedBlock.message.slot;
+        writeReqJson: ({signedBlindedBlock}) => {
+          const fork = config.getForkName(signedBlindedBlock.message.slot);
           return {
-            body: config.getBlindedForkTypes(slot).SignedBeaconBlock.toJson(args.signedBlindedBlock),
+            body: getBlindedForkTypes(fork).SignedBeaconBlock.toJson(signedBlindedBlock),
             headers: {
-              [MetaHeader.Version]: config.getForkName(slot),
+              [MetaHeader.Version]: fork,
             },
           };
         },
         parseReqJson: ({body, headers}) => {
-          const forkName = toForkName(fromHeaders(headers, MetaHeader.Version));
-          if (!isForkExecution(forkName)) throw new Error("TODO"); // TODO
+          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
           return {
-            signedBlindedBlock: ssz[forkName].SignedBlindedBeaconBlock.fromJson(body),
+            signedBlindedBlock: getBlindedForkTypes(fork).SignedBeaconBlock.fromJson(body),
           };
         },
         schema: {
@@ -141,13 +138,11 @@ export function definitions(config: ChainForkConfig): RouteDefinitions<Endpoints
         },
       }),
       resp: {
-        data: WithVersion<allForks.ExecutionPayload | allForks.ExecutionPayloadAndBlobsBundle, {version: ForkName}>(
+        data: WithVersion<allForks.ExecutionPayload | allForks.ExecutionPayloadAndBlobsBundle, VersionMeta>(
           (fork: ForkName) => {
-            if (!isForkExecution(fork)) throw new Error("TODO"); // TODO
-
             return isForkBlobs(fork)
               ? ssz.allForksBlobs[fork].ExecutionPayloadAndBlobsBundle
-              : ssz.allForksExecution[fork].ExecutionPayload;
+              : getExecutionForkTypes(fork).ExecutionPayload;
           }
         ),
         meta: VersionCodec,

@@ -95,7 +95,12 @@ export const definitions: RouteDefinitions<Endpoints> = {
       onlySupport: WireFormat.json,
       data: {
         toJson: (data) => data,
-        fromJson: (data) => data as Spec,
+        fromJson: (data) => {
+          if (typeof data !== "object" || data === null) {
+            throw Error("JSON must be of type object");
+          }
+          return data as Spec;
+        },
         serialize: () => {
           throw Error("Not implemented");
         },

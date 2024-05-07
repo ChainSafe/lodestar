@@ -1,6 +1,6 @@
 import {mapValues} from "@lodestar/utils";
 import {Endpoint, HasOnlyOptionalProps, RouteDefinition, RouteDefinitions} from "../types.js";
-import {compileRouteUrlFormater} from "../urlFormat.js";
+import {compileRouteUrlFormatter} from "../urlFormat.js";
 import {IHttpClient} from "./httpClient.js";
 import {ApiRequestInit} from "./request.js";
 import {ApiResponse} from "./response.js";
@@ -18,7 +18,7 @@ export function createApiClientMethod<E extends Endpoint>(
   client: IHttpClient,
   operationId: string
 ): ApiClientMethod<E> {
-  const urlFormatter = compileRouteUrlFormater(definition.url);
+  const urlFormatter = compileRouteUrlFormatter(definition.url);
   const definitionExtended = {
     ...definition,
     urlFormatter,

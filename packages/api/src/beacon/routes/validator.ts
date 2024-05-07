@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {ContainerType, fromHexString, toHexString, Type, ValueOf} from "@chainsafe/ssz";
-import {ForkName, isForkBlobs, isForkExecution} from "@lodestar/params";
+import {isForkBlobs} from "@lodestar/params";
 import {
   allForks,
   altair,
@@ -17,7 +17,8 @@ import {
   stringType,
 } from "@lodestar/types";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
-import {fromGraffitiHex, toBoolean, toForkName, toGraffitiHex} from "../../utils/serdes.js";
+import {fromGraffitiHex, toBoolean, toGraffitiHex} from "../../utils/serdes.js";
+import {getBlindedForkTypes, toForkName} from "../../utils/fork.js";
 import {
   ArrayOf,
   EmptyMeta,
@@ -743,7 +744,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
       data: WithMeta(
         ({version, executionPayloadBlinded}) =>
           (executionPayloadBlinded
-            ? ssz.allForksBlinded[isForkExecution(version) ? version : ForkName.bellatrix].BeaconBlock
+            ? getBlindedForkTypes(version).BeaconBlock
             : isForkBlobs(version)
               ? BlockContentsType
               : ssz[version].BeaconBlock) as Type<allForks.FullOrBlindedBeaconBlockOrContents>
@@ -811,7 +812,7 @@ export const definitions: RouteDefinitions<Endpoints> = {
       },
     },
     resp: {
-      data: WithVersion((fork) => ssz.allForksBlinded[isForkExecution(fork) ? fork : ForkName.bellatrix].BeaconBlock),
+      data: WithVersion((fork) => getBlindedForkTypes(fork).BeaconBlock),
       meta: VersionCodec,
     },
   },

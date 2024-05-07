@@ -10,9 +10,9 @@ import {
   RouteDefinition,
   SszRequestData,
   SszRequestMethods,
+  isRequestWithoutBody,
 } from "../types.js";
 import {WireFormat, getWireFormat} from "../wireFormat.js";
-import {isRequestWithoutBody} from "../typeguards.js";
 import {ApiError} from "./error.js";
 import {ApplicationMethod, ApplicationResponse} from "./method.js";
 
@@ -72,7 +72,7 @@ export function createFastifyHandler<E extends Endpoint>(
         switch (requestWireFormat) {
           case WireFormat.json:
             if (onlySupport !== undefined && onlySupport !== WireFormat.json) {
-              throw new ApiError(415, `Endpoint only supports ${onlySupport} requests`);
+              throw new ApiError(415, `Endpoint only supports ${onlySupport.toUpperCase()} requests`);
             }
             response = await method((definition.req as JsonRequestMethods<E>).parseReqJson(req as JsonRequestData), {
               sszBytes: null,
@@ -81,7 +81,7 @@ export function createFastifyHandler<E extends Endpoint>(
             break;
           case WireFormat.ssz:
             if (onlySupport !== undefined && onlySupport !== WireFormat.ssz) {
-              throw new ApiError(415, `Endpoint only supports ${onlySupport} requests`);
+              throw new ApiError(415, `Endpoint only supports ${onlySupport.toUpperCase()} requests`);
             }
             response = await method(
               (definition.req as SszRequestMethods<E>).parseReqSsz(req as SszRequestData<E["request"]>),

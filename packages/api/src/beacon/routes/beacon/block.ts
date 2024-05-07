@@ -12,7 +12,7 @@ import {
   ExecutionOptimisticFinalizedAndVersionMeta,
   MetaHeader,
 } from "../../../utils/metadata.js";
-import {toForkName} from "../../../utils/serdes.js";
+import {getBlindedForkTypes, toForkName} from "../../../utils/fork.js";
 import {fromHeaders} from "../../../utils/headers.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
@@ -418,37 +418,33 @@ export function definitions(config: ChainForkConfig): RouteDefinitions<Endpoints
       method: "POST",
       req: {
         writeReqJson: ({signedBlindedBlock}) => {
-          const slot = signedBlindedBlock.message.slot;
+          const fork = config.getForkName(signedBlindedBlock.message.slot);
           return {
-            body: config.getBlindedForkTypes(slot).SignedBeaconBlock.toJson(signedBlindedBlock),
+            body: getBlindedForkTypes(fork).SignedBeaconBlock.toJson(signedBlindedBlock),
             headers: {
-              [MetaHeader.Version]: config.getForkName(slot),
+              [MetaHeader.Version]: fork,
             },
           };
         },
         parseReqJson: ({body, headers}) => {
-          const forkName = toForkName(fromHeaders(headers, MetaHeader.Version));
-          const forkSeq = config.forks[forkName].seq;
-          if (forkSeq < ForkSeq.bellatrix) throw new Error("TODO"); // TODO
+          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
           return {
-            signedBlindedBlock: ssz[forkName as "bellatrix"].SignedBlindedBeaconBlock.fromJson(body),
+            signedBlindedBlock: getBlindedForkTypes(fork).SignedBeaconBlock.fromJson(body),
           };
         },
         writeReqSsz: ({signedBlindedBlock}) => {
-          const slot = signedBlindedBlock.message.slot;
+          const fork = config.getForkName(signedBlindedBlock.message.slot);
           return {
-            body: config.getBlindedForkTypes(slot).SignedBeaconBlock.serialize(signedBlindedBlock),
+            body: getBlindedForkTypes(fork).SignedBeaconBlock.serialize(signedBlindedBlock),
             headers: {
-              [MetaHeader.Version]: config.getForkName(slot),
+              [MetaHeader.Version]: fork,
             },
           };
         },
         parseReqSsz: ({body, headers}) => {
-          const forkName = toForkName(fromHeaders(headers, MetaHeader.Version));
-          const forkSeq = config.forks[forkName].seq;
-          if (forkSeq < ForkSeq.bellatrix) throw new Error("TODO"); // TODO
+          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
           return {
-            signedBlindedBlock: ssz[forkName as "bellatrix"].SignedBlindedBeaconBlock.deserialize(body),
+            signedBlindedBlock: getBlindedForkTypes(fork).SignedBeaconBlock.deserialize(body),
           };
         },
         schema: {
@@ -463,41 +459,37 @@ export function definitions(config: ChainForkConfig): RouteDefinitions<Endpoints
       method: "POST",
       req: {
         writeReqJson: ({signedBlindedBlock, broadcastValidation}) => {
-          const slot = signedBlindedBlock.message.slot;
+          const fork = config.getForkName(signedBlindedBlock.message.slot);
           return {
-            body: config.getBlindedForkTypes(slot).SignedBeaconBlock.toJson(signedBlindedBlock),
+            body: getBlindedForkTypes(fork).SignedBeaconBlock.toJson(signedBlindedBlock),
 
             headers: {
-              [MetaHeader.Version]: config.getForkName(slot),
+              [MetaHeader.Version]: fork,
             },
             query: {broadcast_validation: broadcastValidation},
           };
         },
         parseReqJson: ({body, headers, query}) => {
-          const forkName = toForkName(fromHeaders(headers, MetaHeader.Version));
-          const forkSeq = config.forks[forkName].seq;
-          if (forkSeq < ForkSeq.bellatrix) throw new Error("TODO"); // TODO
+          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
           return {
-            signedBlindedBlock: ssz[forkName as "bellatrix"].SignedBlindedBeaconBlock.fromJson(body),
+            signedBlindedBlock: getBlindedForkTypes(fork).SignedBeaconBlock.fromJson(body),
             broadcastValidation: query.broadcast_validation as BroadcastValidation,
           };
         },
         writeReqSsz: ({signedBlindedBlock, broadcastValidation}) => {
-          const slot = signedBlindedBlock.message.slot;
+          const fork = config.getForkName(signedBlindedBlock.message.slot);
           return {
-            body: config.getBlindedForkTypes(slot).SignedBeaconBlock.serialize(signedBlindedBlock),
+            body: getBlindedForkTypes(fork).SignedBeaconBlock.serialize(signedBlindedBlock),
             headers: {
-              [MetaHeader.Version]: config.getForkName(slot),
+              [MetaHeader.Version]: fork,
             },
             query: {broadcast_validation: broadcastValidation},
           };
         },
         parseReqSsz: ({body, headers, query}) => {
-          const forkName = toForkName(fromHeaders(headers, MetaHeader.Version));
-          const forkSeq = config.forks[forkName].seq;
-          if (forkSeq < ForkSeq.bellatrix) throw new Error("TODO"); // TODO
+          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
           return {
-            signedBlindedBlock: ssz[forkName as "bellatrix"].SignedBlindedBeaconBlock.deserialize(body),
+            signedBlindedBlock: getBlindedForkTypes(fork).SignedBeaconBlock.deserialize(body),
             broadcastValidation: query.broadcast_validation as BroadcastValidation,
           };
         },

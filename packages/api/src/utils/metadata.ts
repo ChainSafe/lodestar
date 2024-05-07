@@ -3,7 +3,8 @@ import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
 import {StringType, ssz, stringType} from "@lodestar/types";
 import {ResponseMetadataCodec} from "./types.js";
-import {toBoolean, toForkName} from "./serdes.js";
+import {toBoolean} from "./serdes.js";
+import {toForkName} from "./fork.js";
 
 export const VersionType = new ContainerType({
   /**

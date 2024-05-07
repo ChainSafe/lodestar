@@ -61,7 +61,7 @@ export class KeymanagerApi implements Api {
     return {status: 204};
   }
 
-  async listGraffiti({pubkey}: {pubkey: PubkeyHex}): ReturnType<Api["listGraffiti"]> {
+  async getGraffiti({pubkey}: {pubkey: PubkeyHex}): ReturnType<Api["getGraffiti"]> {
     return {data: {pubkey, graffiti: this.validator.validatorStore.getGraffiti(pubkey)}};
   }
 

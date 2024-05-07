@@ -1,5 +1,4 @@
 import {fromHexString, JsonPath, toHexString} from "@chainsafe/ssz";
-import {ForkName} from "@lodestar/params";
 
 /**
  * Serialize proof path to JSON.
@@ -101,16 +100,6 @@ export function fromGraffitiHex(hex: string): string {
     // allow malformed graffiti hex string
     return hex;
   }
-}
-
-export function toForkName(version: string): ForkName {
-  // Teku returns fork as UPPERCASE
-  version = version.toLowerCase();
-
-  // Un-safe external data, validate version is known ForkName value
-  if (!(version in ForkName)) throw Error(`Invalid version ${version}`);
-
-  return version as ForkName;
 }
 
 export function toBoolean(value: string): boolean {

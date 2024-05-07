@@ -1,6 +1,12 @@
 import {HttpHeader, MediaType, mergeHeaders, setAuthorizationHeader} from "../headers.js";
-import {isRequestWithoutBody} from "../typeguards.js";
-import {Endpoint, JsonRequestMethods, RequestWithBodyCodec, RouteDefinition, SszRequestMethods} from "../types.js";
+import {
+  Endpoint,
+  JsonRequestMethods,
+  RequestWithBodyCodec,
+  RouteDefinition,
+  SszRequestMethods,
+  isRequestWithoutBody,
+} from "../types.js";
 import {WireFormat} from "../wireFormat.js";
 import {stringifyQuery, urlJoin} from "./format.js";
 

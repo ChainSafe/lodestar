@@ -225,9 +225,9 @@ export const definitions: RouteDefinitions<Endpoints> = {
     url: "/eth/v1/beacon/pool/attestations",
     method: "POST",
     req: {
-      writeReqJson: ({signedAttestations: attestations}) => ({body: AttestationListType.toJson(attestations)}),
+      writeReqJson: ({signedAttestations}) => ({body: AttestationListType.toJson(signedAttestations)}),
       parseReqJson: ({body}) => ({signedAttestations: AttestationListType.fromJson(body)}),
-      writeReqSsz: ({signedAttestations: attestations}) => ({body: AttestationListType.serialize(attestations)}),
+      writeReqSsz: ({signedAttestations}) => ({body: AttestationListType.serialize(signedAttestations)}),
       parseReqSsz: ({body}) => ({signedAttestations: AttestationListType.deserialize(body)}),
       schema: {
         body: Schema.ObjectArray,

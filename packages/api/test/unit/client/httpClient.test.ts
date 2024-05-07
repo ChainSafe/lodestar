@@ -14,7 +14,7 @@ import {
   JsonOnlyReq,
   JsonOnlyResponseCodec,
 } from "../../../src/utils/codecs.js";
-import {compileRouteUrlFormater} from "../../../src/utils/urlFormat.js";
+import {compileRouteUrlFormatter} from "../../../src/utils/urlFormat.js";
 import {Endpoint, Schema} from "../../../src/utils/index.js";
 
 /* eslint-disable @typescript-eslint/return-await */
@@ -35,7 +35,7 @@ describe("httpClient json client", () => {
     req: EmptyRequestCodec,
     resp: EmptyResponseCodec,
     operationId: "testRoute",
-    urlFormatter: compileRouteUrlFormater(testRoute.url),
+    urlFormatter: compileRouteUrlFormatter(testRoute.url),
   };
 
   async function getServer(opts: RouteOptions): Promise<{baseUrl: string}> {
@@ -74,7 +74,7 @@ describe("httpClient json client", () => {
       req: EmptyRequestCodec,
       resp: JsonOnlyResponseCodec,
       operationId: "testGet",
-      urlFormatter: compileRouteUrlFormater(url),
+      urlFormatter: compileRouteUrlFormatter(url),
     };
 
     const httpClient = await getServerWithClient({
@@ -118,7 +118,7 @@ describe("httpClient json client", () => {
       }),
       resp: JsonOnlyResponseCodec,
       operationId: "testPost",
-      urlFormatter: compileRouteUrlFormater(url),
+      urlFormatter: compileRouteUrlFormatter(url),
     };
 
     const httpClient = await getServerWithClient({
