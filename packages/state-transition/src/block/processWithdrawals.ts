@@ -25,8 +25,7 @@ export function processWithdrawals(
   state: CachedBeaconStateCapella | CachedBeaconStateElectra,
   payload: capella.FullOrBlindedExecutionPayload
 ): void {
-  // const {withdrawals: expectedWithdrawals, partialWithdrawalsCount} = getExpectedWithdrawals(fork, state);
-  const {withdrawals: expectedWithdrawals} = getExpectedWithdrawals(fork, state);
+  const {withdrawals: expectedWithdrawals, partialWithdrawalsCount} = getExpectedWithdrawals(fork, state);
   const numWithdrawals = expectedWithdrawals.length;
 
   if (isCapellaPayloadHeader(payload)) {
@@ -57,8 +56,8 @@ export function processWithdrawals(
   }
 
   if (fork >= ForkSeq.electra) {
-    const _stateElectra = state as CachedBeaconStateElectra;
-    // TODO Electra: stateElectra.pendingPartialWithdrawals need to implement slicing mechanism for ListCompositeTreeViewDU
+    const stateElectra = state as CachedBeaconStateElectra;
+    stateElectra.pendingPartialWithdrawals = stateElectra.pendingPartialWithdrawals.sliceFrom(partialWithdrawalsCount);
   }
 
   // Update the nextWithdrawalIndex
