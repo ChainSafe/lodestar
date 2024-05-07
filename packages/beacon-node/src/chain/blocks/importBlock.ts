@@ -1,6 +1,6 @@
 import {toHexString} from "@chainsafe/ssz";
 import {capella, ssz, allForks, altair} from "@lodestar/types";
-import {ForkName, ForkSeq, INTERVALS_PER_SLOT, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkSeq, INTERVALS_PER_SLOT, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   CachedBeaconStateAltair,
   computeEpochAtSlot,
@@ -434,7 +434,10 @@ export async function importBlock(
     }
     if (this.emitter.listenerCount(routes.events.EventType.attesterSlashing)) {
       for (const attesterSlashing of block.message.body.attesterSlashings) {
-        this.emitter.emit(routes.events.EventType.attesterSlashing, {version: this.config.getForkName(blockSlot), data: attesterSlashing});
+        this.emitter.emit(routes.events.EventType.attesterSlashing, {
+          version: this.config.getForkName(blockSlot),
+          data: attesterSlashing,
+        });
       }
     }
     if (this.emitter.listenerCount(routes.events.EventType.proposerSlashing)) {
