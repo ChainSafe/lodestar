@@ -137,7 +137,10 @@ const forkChoiceTest =
               if (!attestation) throw Error(`No attestation ${step.attestation}`);
               const headState = chain.getHeadState();
               const attDataRootHex = toHexString(ssz.phase0.AttestationData.hashTreeRoot(attestation.data));
-              chain.forkChoice.onAttestation(headState.epochCtx.getIndexedAttestation(attestation), attDataRootHex);
+              chain.forkChoice.onAttestation(
+                headState.epochCtx.getIndexedAttestation(ForkSeq[fork], attestation),
+                attDataRootHex
+              );
             }
 
             // attester slashing step
