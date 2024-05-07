@@ -14,7 +14,7 @@ const ARTIFACT_FILENAMES = new Set([
 ]);
 
 export interface SkipOpts {
-  skippedPrefixes?: string[];
+  skippedMatches?: RegExp[];
   skippedForks?: string[];
   skippedRunners?: string[];
   skippedHandlers?: string[];
@@ -57,13 +57,15 @@ const coveredTestRunners = [
 // ],
 // ```
 export const defaultSkipOpts: SkipOpts = {
-  skippedForks: ["electra", "eip7594"],
+  skippedForks: ["eip7594"],
   // TODO: capella
   // BeaconBlockBody proof in lightclient is the new addition in v1.3.0-rc.2-hotfix
   // Skip them for now to enable subsequently
-  skippedPrefixes: [
-    "capella/light_client/single_merkle_proof/BeaconBlockBody",
-    "deneb/light_client/single_merkle_proof/BeaconBlockBody",
+  skippedMatches: [
+    /^capella\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
+    /^deneb\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
+    // /^electra\/(?!operations\/attestations)(?!operations\/attester_slashing)/,
+    /^electra\/(?!operations\/attestation)/,
   ],
   skippedRunners: ["merkle_proof", "networking"],
 };
@@ -100,7 +102,10 @@ export function specTestIterator(
   opts: SkipOpts = defaultSkipOpts
 ): void {
   for (const forkStr of readdirSyncSpec(configDirpath)) {
-    if (opts?.skippedForks?.includes(forkStr)) {
+    if (
+      opts?.skippedForks?.includes(forkStr) ||
+      (process.env.SPEC_FILTER_FORK && forkStr !== process.env.SPEC_FILTER_FORK)
+    ) {
       continue;
     }
     const fork = forkStr as ForkName;
@@ -134,7 +139,7 @@ export function specTestIterator(
         for (const testSuite of readdirSyncSpec(testHandlerDirpath)) {
           const testId = `${fork}/${testRunnerName}/${testHandler}/${testSuite}`;
 
-          if (opts?.skippedPrefixes?.some((skippedPrefix) => testId.startsWith(skippedPrefix))) {
+          if (opts?.skippedMatches?.some((skippedPrefix) => testId.match(skippedPrefix))) {
             displaySkipTest(testId);
           } else if (fork === undefined) {
             displayFailTest(testId, `Unknown fork ${forkStr}`);
