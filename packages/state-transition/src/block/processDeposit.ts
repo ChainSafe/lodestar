@@ -13,9 +13,17 @@ import {
 
 import {DepositData} from "@lodestar/types/lib/phase0/types.js";
 import {DepositReceipt} from "@lodestar/types/lib/electra/types.js";
+import {BeaconConfig} from "@lodestar/config";
 import {ZERO_HASH} from "../constants/index.js";
-import {computeDomain, computeSigningRoot, increaseBalance} from "../util/index.js";
-import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../types.js";
+import {
+  computeDomain,
+  computeSigningRoot,
+  hasCompoundingWithdrawalCredential,
+  hasEth1WithdrawalCredential,
+  increaseBalance,
+  switchToCompoundingValidator,
+} from "../util/index.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStateElectra} from "../types.js";
 
 /**
  * Process a Deposit operation. Potentially adds a new validator to the registry. Mutates the validators and balances
@@ -58,29 +66,29 @@ export function applyDeposit(
 
   const cachedIndex = epochCtx.getValidatorIndex(pubkey);
   if (cachedIndex === undefined || !Number.isSafeInteger(cachedIndex) || cachedIndex >= validators.length) {
-    // verify the deposit signature (proof of posession) which is not checked by the deposit contract
-    const depositMessage = {
-      pubkey,
-      withdrawalCredentials,
-      amount,
-    };
-    // fork-agnostic domain since deposits are valid across forks
-    const domain = computeDomain(DOMAIN_DEPOSIT, config.GENESIS_FORK_VERSION, ZERO_HASH);
-    const signingRoot = computeSigningRoot(ssz.phase0.DepositMessage, depositMessage, domain);
-    try {
-      // Pubkeys must be checked for group + inf. This must be done only once when the validator deposit is processed
-      const publicKey = PublicKey.fromBytes(pubkey, true);
-      const signature = Signature.fromBytes(deposit.data.signature, true);
-      if (!verify(signingRoot, publicKey, signature)) {
-        return;
-      }
-    } catch (e) {
-      return; // Catch all BLS errors: failed key validation, failed signature validation, invalid signature
+    if (isValidDepositSignature(config, pubkey, withdrawalCredentials, amount, deposit.signature)) {
+      addValidatorToRegistry(fork, state, pubkey, withdrawalCredentials, amount);
     }
-    addValidatorToRegistry(fork, state, pubkey, withdrawalCredentials, amount);
   } else {
-    // increase balance by deposit amount
-    increaseBalance(state, cachedIndex, amount);
+    if (fork < ForkSeq.electra) {
+      // increase balance by deposit amount right away pre-electra
+      increaseBalance(state, cachedIndex, amount);
+    } else if (fork >= ForkSeq.electra) {
+      const stateElectra = state as CachedBeaconStateElectra;
+      const pendingBalanceDeposit = ssz.electra.PendingBalanceDeposit.toViewDU({
+        index: cachedIndex,
+        amount: BigInt(amount),
+      });
+      stateElectra.pendingBalanceDeposits.push(pendingBalanceDeposit);
+
+      if (
+        hasCompoundingWithdrawalCredential(withdrawalCredentials) &&
+        hasEth1WithdrawalCredential(validators.getReadonly(cachedIndex).withdrawalCredentials) &&
+        isValidDepositSignature(config, pubkey, withdrawalCredentials, amount, deposit.signature)
+      ) {
+        switchToCompoundingValidator(stateElectra, cachedIndex);
+      }
+    }
   }
 }
 
@@ -93,7 +101,8 @@ function addValidatorToRegistry(
 ): void {
   const {validators, epochCtx} = state;
   // add validator and balance entries
-  const effectiveBalance = Math.min(amount - (amount % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE);
+  const effectiveBalance =
+    fork < ForkSeq.electra ? Math.min(amount - (amount % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE) : 0;
   validators.push(
     ssz.phase0.Validator.toViewDU({
       pubkey,
@@ -106,9 +115,9 @@ function addValidatorToRegistry(
       slashed: false,
     })
   );
-  state.balances.push(amount);
 
   const validatorIndex = validators.length - 1;
+  // TODO Electra: Review this
   // Updating here is better than updating at once on epoch transition
   // - Simplify genesis fn applyDeposits(): effectiveBalanceIncrements is populated immediately
   // - Keep related code together to reduce risk of breaking this cache
@@ -127,5 +136,44 @@ function addValidatorToRegistry(
     // add participation caches
     stateAltair.previousEpochParticipation.push(0);
     stateAltair.currentEpochParticipation.push(0);
+  }
+
+  if (fork < ForkSeq.electra) {
+    state.balances.push(amount);
+  } else if (fork >= ForkSeq.electra) {
+    state.balances.push(0);
+    const stateElectra = state as CachedBeaconStateElectra;
+    const pendingBalanceDeposit = ssz.electra.PendingBalanceDeposit.toViewDU({
+      index: validatorIndex,
+      amount: BigInt(amount),
+    });
+    stateElectra.pendingBalanceDeposits.push(pendingBalanceDeposit);
+  }
+}
+
+function isValidDepositSignature(
+  config: BeaconConfig,
+  pubkey: Uint8Array,
+  withdrawalCredentials: Uint8Array,
+  amount: number,
+  depositSignature: Uint8Array
+): boolean {
+  // verify the deposit signature (proof of posession) which is not checked by the deposit contract
+  const depositMessage = {
+    pubkey,
+    withdrawalCredentials,
+    amount,
+  };
+  // fork-agnostic domain since deposits are valid across forks
+  const domain = computeDomain(DOMAIN_DEPOSIT, config.GENESIS_FORK_VERSION, ZERO_HASH);
+  const signingRoot = computeSigningRoot(ssz.phase0.DepositMessage, depositMessage, domain);
+  try {
+    // Pubkeys must be checked for group + inf. This must be done only once when the validator deposit is processed
+    const publicKey = PublicKey.fromBytes(pubkey, true);
+    const signature = Signature.fromBytes(depositSignature, true);
+
+    return verify(signingRoot, publicKey, signature)
+  } catch (e) {
+    return false; // Catch all BLS errors: failed key validation, failed signature validation, invalid signature
   }
 }

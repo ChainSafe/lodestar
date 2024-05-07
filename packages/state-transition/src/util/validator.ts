@@ -1,8 +1,14 @@
 import {Epoch, phase0, ValidatorIndex} from "@lodestar/types";
 import {intDiv} from "@lodestar/utils";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkSeq} from "@lodestar/params";
-import {BeaconStateAllForks} from "../types.js";
+import {
+  EFFECTIVE_BALANCE_INCREMENT,
+  ForkSeq,
+  MAX_EFFECTIVE_BALANCE_ELECTRA,
+  MIN_ACTIVATION_BALANCE,
+} from "@lodestar/params";
+import {BeaconStateAllForks, CachedBeaconStateElectra} from "../types.js";
+import {hasCompoundingWithdrawalCredential} from "./electra.js";
 
 /**
  * Check if [[validator]] is active
@@ -46,4 +52,49 @@ export function getActivationChurnLimit(config: ChainForkConfig, fork: ForkSeq, 
 
 export function getChurnLimit(config: ChainForkConfig, activeValidatorCount: number): number {
   return Math.max(config.MIN_PER_EPOCH_CHURN_LIMIT, intDiv(activeValidatorCount, config.CHURN_LIMIT_QUOTIENT));
+}
+
+/**
+ * Get combined churn limit of activation-exit and consolidation
+ */
+export function getBalanceChurnLimit(state: CachedBeaconStateElectra): number {
+  const churnLimitByTotalActiveBalance = Math.floor(
+    (state.epochCtx.totalActiveBalanceIncrements / state.config.CHURN_LIMIT_QUOTIENT) * EFFECTIVE_BALANCE_INCREMENT
+  ); // TODO Electra: verify calculation
+
+  const churn = Math.max(churnLimitByTotalActiveBalance, state.config.MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA);
+
+  return churn - (churn % EFFECTIVE_BALANCE_INCREMENT);
+}
+
+export function getActivationExitChurnLimit(state: CachedBeaconStateElectra): number {
+  return Math.min(state.config.MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT, getBalanceChurnLimit(state));
+}
+
+export function getConsolidationChurnLimit(state: CachedBeaconStateElectra): number {
+  return getBalanceChurnLimit(state) - getActivationExitChurnLimit(state);
+}
+
+export function getValidatorMaxEffectiveBalance(withdrawalCredentials: Uint8Array): number {
+  // Compounding withdrawal credential only available since Electra
+  if (hasCompoundingWithdrawalCredential(withdrawalCredentials)) {
+    return MAX_EFFECTIVE_BALANCE_ELECTRA;
+  } else {
+    return MIN_ACTIVATION_BALANCE;
+  }
+}
+
+export function getActiveBalance(state: CachedBeaconStateElectra, validatorIndex: ValidatorIndex): number {
+  const validatorMaxEffectiveBalance = getValidatorMaxEffectiveBalance(
+    state.validators.getReadonly(validatorIndex).withdrawalCredentials
+  );
+
+  return Math.min(state.balances.get(validatorIndex), validatorMaxEffectiveBalance);
+}
+
+export function getPendingBalanceToWithdraw(state: CachedBeaconStateElectra, validatorIndex: ValidatorIndex): number {
+  return state.pendingPartialWithdrawals
+    .getAllReadonly()
+    .filter((item) => item.index === validatorIndex)
+    .reduce((total, item) => total + Number(item.amount), 0);
 }

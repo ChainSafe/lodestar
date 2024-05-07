@@ -8,10 +8,11 @@ import {processProposerSlashing} from "./processProposerSlashing.js";
 import {processAttesterSlashing} from "./processAttesterSlashing.js";
 import {processDeposit} from "./processDeposit.js";
 import {processVoluntaryExit} from "./processVoluntaryExit.js";
-import {processExecutionLayerWithdrawalRequest} from "./processExecutionLayerWithdrawalRequest.js";
 import {processBlsToExecutionChange} from "./processBlsToExecutionChange.js";
+import {processExecutionLayerWithdrawalRequest} from "./processExecutionLayerWithdrawalRequest.js";
 import {processDepositReceipt} from "./processDepositReceipt.js";
 import {ProcessBlockOpts} from "./types.js";
+import {processConsolidation} from "./processConsolidation.js";
 
 export {
   processProposerSlashing,
@@ -52,12 +53,7 @@ export function processOperations(
   }
 
   for (const voluntaryExit of body.voluntaryExits) {
-    processVoluntaryExit(state, voluntaryExit, opts.verifySignatures);
-  }
-  if (fork >= ForkSeq.electra) {
-    for (const elWithdrawalRequest of (body as electra.BeaconBlockBody).executionPayload.withdrawalRequests) {
-      processExecutionLayerWithdrawalRequest(state as CachedBeaconStateElectra, elWithdrawalRequest);
-    }
+    processVoluntaryExit(fork, state, voluntaryExit, opts.verifySignatures);
   }
 
   if (fork >= ForkSeq.capella) {
@@ -67,8 +63,19 @@ export function processOperations(
   }
 
   if (fork >= ForkSeq.electra) {
-    for (const depositReceipt of (body as electra.BeaconBlockBody).executionPayload.depositReceipts) {
-      processDepositReceipt(fork, state as CachedBeaconStateElectra, depositReceipt);
+    const stateElectra = state as CachedBeaconStateElectra;
+    const bodyElectra = body as electra.BeaconBlockBody;
+
+    for (const elWithdrawalRequest of bodyElectra.executionPayload.withdrawalRequests) {
+      processExecutionLayerWithdrawalRequest(fork, state as CachedBeaconStateElectra, elWithdrawalRequest);
+    }
+
+    for (const depositReceipt of bodyElectra.executionPayload.depositReceipts) {
+      processDepositReceipt(fork, stateElectra, depositReceipt);
+    }
+
+    for (const consolidation of bodyElectra.consolidations) {
+      processConsolidation(stateElectra, consolidation);
     }
   }
 }
