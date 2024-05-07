@@ -1,5 +1,7 @@
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, GENESIS_EPOCH, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {allForks, Epoch, Slot, SyncPeriod} from "@lodestar/types";
+import {allForks, Epoch, Gwei, Slot, SyncPeriod} from "@lodestar/types";
+import {CachedBeaconStateElectra} from "../types.js";
+import {getActivationExitChurnLimit, getConsolidationChurnLimit} from "./validator.js";
 
 /**
  * Return the epoch number at the given slot.
@@ -37,6 +39,60 @@ export function computeEndSlotAtEpoch(epoch: Epoch): Slot {
  */
 export function computeActivationExitEpoch(epoch: Epoch): Epoch {
   return epoch + 1 + MAX_SEED_LOOKAHEAD;
+}
+
+export function computeExitEpochAndUpdateChurn(state: CachedBeaconStateElectra, exitBalance: Gwei): number {
+  let earliestExitEpoch = Math.max(state.earliestExitEpoch, computeActivationExitEpoch(state.epochCtx.epoch));
+  const perEpochChurn = getActivationExitChurnLimit(state);
+
+  // New epoch for exits.
+  let exitBalanceToConsume =
+    state.earliestExitEpoch < earliestExitEpoch ? perEpochChurn : Number(state.exitBalanceToConsume);
+
+  // Exit doesn't fit in the current earliest epoch.
+  if (exitBalance > exitBalanceToConsume) {
+    const balanceToProcess = Number(exitBalance) - exitBalanceToConsume;
+    const additionalEpochs = Math.floor((balanceToProcess - 1) / (perEpochChurn + 1));
+    earliestExitEpoch += additionalEpochs;
+    exitBalanceToConsume += additionalEpochs * perEpochChurn;
+  }
+
+  // Consume the balance and update state variables.
+  state.exitBalanceToConsume = BigInt(exitBalanceToConsume) - exitBalance;
+  state.earliestExitEpoch = earliestExitEpoch;
+
+  return state.earliestExitEpoch;
+}
+
+export function computeConsolidationEpochAndUpdateChurn(
+  state: CachedBeaconStateElectra,
+  consolidationBalance: Gwei
+): number {
+  let earliestConsolidationEpoch = Math.max(
+    state.earliestConsolidationEpoch,
+    computeActivationExitEpoch(state.epochCtx.epoch)
+  );
+  const perEpochConsolidationChurn = getConsolidationChurnLimit(state);
+
+  // New epoch for consolidations
+  let consolidationBalanceToConsume =
+    state.earliestConsolidationEpoch < earliestConsolidationEpoch
+      ? perEpochConsolidationChurn
+      : Number(state.consolidationBalanceToConsume);
+
+  // Consolidation doesn't fit in the current earliest epoch.
+  if (consolidationBalance > consolidationBalanceToConsume) {
+    const balanceToProcess = Number(consolidationBalance) - consolidationBalanceToConsume;
+    const additionalEpochs = Math.floor((balanceToProcess - 1) / (perEpochConsolidationChurn + 1));
+    earliestConsolidationEpoch += additionalEpochs;
+    consolidationBalanceToConsume += additionalEpochs * perEpochConsolidationChurn;
+  }
+
+  // Consume the balance and update state variables.
+  state.consolidationBalanceToConsume = BigInt(consolidationBalanceToConsume) - consolidationBalance;
+  state.earliestConsolidationEpoch = earliestConsolidationEpoch;
+
+  return state.earliestConsolidationEpoch;
 }
 
 /**

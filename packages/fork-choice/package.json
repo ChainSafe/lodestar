@@ -36,7 +36,7 @@
     "check-readme": "typescript-docs-verifier"
   },
   "dependencies": {
-    "@chainsafe/ssz": "^0.15.1",
+    "@chainsafe/ssz": "^0.16.0",
     "@lodestar/config": "^1.18.1",
     "@lodestar/params": "^1.18.1",
     "@lodestar/state-transition": "^1.18.1",
