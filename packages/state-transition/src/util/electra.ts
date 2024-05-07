@@ -29,13 +29,16 @@ export function isFullyWithdrawableValidator(
   epoch: number
 ): boolean {
   const {withdrawableEpoch, withdrawalCredentials: withdrawalCredential} = validatorCredential;
-  if (fork >= ForkSeq.electra) {
-    return hasExecutionWithdrawalCredential(withdrawalCredential) && withdrawableEpoch <= epoch && balance > 0;
-  } else if (fork >= ForkSeq.capella) {
-    return hasEth1WithdrawalCredential(withdrawalCredential) && withdrawableEpoch <= epoch && balance > 0;
-  } else {
-    return false;
+
+  if (fork < ForkSeq.capella) {
+    throw new Error(`isFullyWithdrawableValidator not supported at forkSeq=${fork} < ForkSeq.capella`);
   }
+  const hasWithdrawableCredentials =
+    fork >= ForkSeq.electra
+      ? hasExecutionWithdrawalCredential(withdrawalCredential)
+      : hasEth1WithdrawalCredential(withdrawalCredential);
+
+  return hasWithdrawableCredentials && withdrawableEpoch <= epoch && balance > 0;
 }
 
 export function isPartiallyWithdrawableValidator(
@@ -48,15 +51,17 @@ export function isPartiallyWithdrawableValidator(
   if (fork < ForkSeq.capella) {
     throw new Error(`isPartiallyWithdrawableValidator not supported at forkSeq=${fork} < ForkSeq.capella`);
   }
+  const hasWithdrawableCredentials =
+    fork >= ForkSeq.electra
+      ? hasExecutionWithdrawalCredential(withdrawalCredential)
+      : hasEth1WithdrawalCredential(withdrawalCredential);
 
   const validatorMaxEffectiveBalance =
-    fork === ForkSeq.capella || fork === ForkSeq.deneb
-      ? MAX_EFFECTIVE_BALANCE
-      : getValidatorMaxEffectiveBalance(withdrawalCredential);
+    fork >= ForkSeq.electra ? getValidatorMaxEffectiveBalance(withdrawalCredential) : MAX_EFFECTIVE_BALANCE;
   const hasMaxEffectiveBalance = effectiveBalance === validatorMaxEffectiveBalance;
   const hasExcessBalance = balance > validatorMaxEffectiveBalance;
 
-  return hasEth1WithdrawalCredential(withdrawalCredential) && hasMaxEffectiveBalance && hasExcessBalance;
+  return hasWithdrawableCredentials && hasMaxEffectiveBalance && hasExcessBalance;
 }
 
 export function switchToCompoundingValidator(state: CachedBeaconStateElectra, index: ValidatorIndex): void {

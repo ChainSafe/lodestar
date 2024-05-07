@@ -13,8 +13,6 @@ import {CachedBeaconStateCapella, CachedBeaconStateElectra} from "../types.js";
 import {
   decreaseBalance,
   getValidatorMaxEffectiveBalance,
-  hasEth1WithdrawalCredential,
-  hasExecutionWithdrawalCredential,
   isCapellaPayloadHeader,
   isFullyWithdrawableValidator,
   isPartiallyWithdrawableValidator,
@@ -90,7 +88,6 @@ export function getExpectedWithdrawals(
   const epoch = state.epochCtx.epoch;
   let withdrawalIndex = state.nextWithdrawalIndex;
   const {validators, balances, nextWithdrawalValidatorIndex} = state;
-  const bound = Math.min(validators.length, MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP);
 
   const withdrawals: capella.Withdrawal[] = [];
 
@@ -115,7 +112,7 @@ export function getExpectedWithdrawals(
         withdrawals.push({
           index: withdrawalIndex,
           validatorIndex: withdrawal.index,
-          address: validator.withdrawalCredentials.slice(12),
+          address: validator.withdrawalCredentials.subarray(12),
           amount: withdrawableBalance,
         });
         withdrawalIndex++;
@@ -124,6 +121,7 @@ export function getExpectedWithdrawals(
   }
 
   const partialWithdrawalsCount = withdrawals.length;
+  const bound = Math.min(validators.length, MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP);
   let n = 0;
   // Just run a bounded loop max iterating over all withdrawals
   // however breaks out once we have MAX_WITHDRAWALS_PER_PAYLOAD
@@ -131,19 +129,13 @@ export function getExpectedWithdrawals(
     // Get next validator in turn
     const validatorIndex = (nextWithdrawalValidatorIndex + n) % validators.length;
 
-    // It's most likely for validators to not have set eth1 credentials, than having 0 balance
     const validator = validators.getReadonly(validatorIndex);
-    if (
-      (fork === ForkSeq.capella || fork === ForkSeq.deneb) &&
-      !hasEth1WithdrawalCredential(validator.withdrawalCredentials)
-    ) {
-      continue;
-    }
-    if (fork === ForkSeq.electra && !hasExecutionWithdrawalCredential(validator.withdrawalCredentials)) {
-      continue;
-    }
-
     const balance = balances.get(validatorIndex);
+    // early skip for balance = 0 as its now more likely that validator has exited/slahed with
+    // balance zero than not have withdrawal credentials set
+    if (balance === 0) {
+      continue;
+    }
 
     if (isFullyWithdrawableValidator(fork, validator, balance, epoch)) {
       withdrawals.push({
