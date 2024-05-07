@@ -16,13 +16,12 @@ export function processVoluntaryExit(
   signedVoluntaryExit: phase0.SignedVoluntaryExit,
   verifySignature = true
 ): void {
-  const isAfterElectra = fork >= ForkSeq.electra;
-  if (
-    (!isAfterElectra && !isValidVoluntaryExit(state, signedVoluntaryExit, verifySignature)) ||
-    (isAfterElectra &&
-      !isValidVoluntaryExitElectra(state as CachedBeaconStateElectra, signedVoluntaryExit, verifySignature))
-  ) {
-    throw Error("Invalid voluntary exit");
+  const isValidExit =
+    fork >= ForkSeq.electra
+      ? isValidVoluntaryExitElectra(state as CachedBeaconStateElectra, signedVoluntaryExit, verifySignature)
+      : isValidVoluntaryExit(state, signedVoluntaryExit, verifySignature);
+  if (!isValidExit) {
+    throw Error(`Invalid voluntary exit at forkSeq=${fork}`);
   }
 
   const validator = state.validators.get(signedVoluntaryExit.message.validatorIndex);
