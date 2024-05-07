@@ -1,5 +1,5 @@
 import {byteArrayEquals} from "@chainsafe/ssz";
-import {Epoch, phase0} from "@lodestar/types";
+import {Epoch, allForks, phase0} from "@lodestar/types";
 import {intSqrt} from "@lodestar/utils";
 
 import {
@@ -32,7 +32,7 @@ const SLOTS_PER_EPOCH_SQRT = intSqrt(SLOTS_PER_EPOCH);
 export function processAttestationsAltair(
   fork: ForkSeq,
   state: CachedBeaconStateAltair,
-  attestations: phase0.Attestation[],
+  attestations: allForks.Attestation[],
   verifySignature = true
 ): void {
   const {epochCtx} = state;
@@ -49,8 +49,7 @@ export function processAttestationsAltair(
     validateAttestation(fork, state, attestation);
 
     // Retrieve the validator indices from the attestation participation bitfield
-    const committeeIndices = epochCtx.getBeaconCommittee(data.slot, data.index);
-    const attestingIndices = attestation.aggregationBits.intersectValues(committeeIndices);
+    const attestingIndices = epochCtx.getAttestingIndices(fork, attestation);
 
     // this check is done last because its the most expensive (if signature verification is toggled on)
     // TODO: Why should we verify an indexed attestation that we just created? If it's just for the signature

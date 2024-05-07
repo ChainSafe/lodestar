@@ -1,7 +1,17 @@
 import {PublicKey} from "@chainsafe/blst";
 import * as immutable from "immutable";
 import {fromHexString} from "@chainsafe/ssz";
-import {BLSSignature, CommitteeIndex, Epoch, Slot, ValidatorIndex, phase0, SyncPeriod} from "@lodestar/types";
+import {
+  BLSSignature,
+  CommitteeIndex,
+  Epoch,
+  Slot,
+  ValidatorIndex,
+  phase0,
+  SyncPeriod,
+  allForks,
+  electra,
+} from "@lodestar/types";
 import {createBeaconConfig, BeaconConfig, ChainConfig} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
@@ -651,15 +661,47 @@ export class EpochCache {
    * Return the beacon committee at slot for index.
    */
   getBeaconCommittee(slot: Slot, index: CommitteeIndex): Uint32Array {
-    const slotCommittees = this.getShufflingAtSlot(slot).committees[slot % SLOTS_PER_EPOCH];
-    if (index >= slotCommittees.length) {
-      throw new EpochCacheError({
-        code: EpochCacheErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE,
-        index,
-        maxIndex: slotCommittees.length,
-      });
+    return this.getBeaconCommittees(slot, [index]);
+  }
+
+  /**
+   * Return a single Uint32Array representing concatted committees of indices
+   */
+  getBeaconCommittees(slot: Slot, indices: CommitteeIndex[]): Uint32Array {
+    if (indices.length === 0) {
+      throw new Error("Attempt to get committees without providing CommitteeIndex");
     }
-    return slotCommittees[index];
+
+    const slotCommittees = this.getShufflingAtSlot(slot).committees[slot % SLOTS_PER_EPOCH];
+    const committees = [];
+
+    for (const index of indices) {
+      if (index >= slotCommittees.length) {
+        throw new EpochCacheError({
+          code: EpochCacheErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE,
+          index,
+          maxIndex: slotCommittees.length,
+        });
+      }
+      committees.push(slotCommittees[index]);
+    }
+
+    // Early return if only one index
+    if (committees.length === 1) {
+      return committees[0];
+    }
+
+    // Create a new Uint32Array to flatten `committees`
+    const totalLength = committees.reduce((acc, curr) => acc + curr.length, 0);
+    const result = new Uint32Array(totalLength);
+
+    let offset = 0;
+    for (const committee of committees) {
+      result.set(committee, offset);
+      offset += committee.length;
+    }
+
+    return result;
   }
 
   getCommitteeCountPerSlot(epoch: Epoch): number {
@@ -745,10 +787,9 @@ export class EpochCache {
   /**
    * Return the indexed attestation corresponding to ``attestation``.
    */
-  getIndexedAttestation(attestation: phase0.Attestation): phase0.IndexedAttestation {
-    const {aggregationBits, data} = attestation;
-    const committeeIndices = this.getBeaconCommittee(data.slot, data.index);
-    const attestingIndices = aggregationBits.intersectValues(committeeIndices);
+  getIndexedAttestation(fork: ForkSeq, attestation: allForks.Attestation): allForks.IndexedAttestation {
+    const {data} = attestation;
+    const attestingIndices = this.getAttestingIndices(fork, attestation);
 
     // sort in-place
     attestingIndices.sort((a, b) => a - b);
@@ -757,6 +798,31 @@ export class EpochCache {
       data: data,
       signature: attestation.signature,
     };
+  }
+
+  /**
+   * Return indices of validators who attestested in `attestation`
+   */
+  getAttestingIndices(fork: ForkSeq, attestation: allForks.Attestation): number[] {
+    if (fork < ForkSeq.electra) {
+      const {aggregationBits, data} = attestation;
+      const validatorIndices = this.getBeaconCommittee(data.slot, data.index);
+
+      return aggregationBits.intersectValues(validatorIndices);
+    } else {
+      const {aggregationBits, committeeBits, data} = attestation as electra.Attestation;
+
+      // There is a naming conflict on the term `committeeIndices`
+      // In Lodestar it usually means a list of validator indices of participants in a committee
+      // In the spec it means a list of committee indices according to committeeBits
+      // This `committeeIndices` refers to the latter
+      // TODO Electra: resolve the naming conflicts
+      const committeeIndices = committeeBits.getTrueBitIndexes();
+
+      const validatorIndices = this.getBeaconCommittees(data.slot, committeeIndices);
+
+      return aggregationBits.intersectValues(validatorIndices);
+    }
   }
 
   getCommitteeAssignments(
