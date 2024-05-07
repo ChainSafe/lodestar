@@ -141,7 +141,7 @@ export function getExpectedWithdrawals(
       withdrawals.push({
         index: withdrawalIndex,
         validatorIndex,
-        address: validator.withdrawalCredentials.slice(12),
+        address: validator.withdrawalCredentials.subarray(12),
         amount: BigInt(balance),
       });
       withdrawalIndex++;
@@ -149,7 +149,7 @@ export function getExpectedWithdrawals(
       withdrawals.push({
         index: withdrawalIndex,
         validatorIndex,
-        address: validator.withdrawalCredentials.slice(12),
+        address: validator.withdrawalCredentials.subarray(12),
         amount: BigInt(balance - getValidatorMaxEffectiveBalance(validator.withdrawalCredentials)),
       });
       withdrawalIndex++;
