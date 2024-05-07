@@ -660,7 +660,6 @@ export class EpochCache {
    * Return a single Uint32Array representing concatted committees of indices
    */
   getBeaconCommittees(slot: Slot, indices: CommitteeIndex[]): Uint32Array {
-
     if (indices.length === 0) {
       throw new Error("Attempt to get committees without providing CommitteeIndex");
     }
@@ -809,13 +808,12 @@ export class EpochCache {
       // In Lodestar it usually means a list of validator indices of participants in a committee
       // In the spec it means a list of committee indices according to committeeBits
       // This `committeeIndices` refers to the latter
+      // TODO Electra: resolve the naming conflicts
       const committeeIndices = committeeBits.getTrueBitIndexes();
 
       const validatorIndices = this.getBeaconCommittees(data.slot, committeeIndices);
 
-      const attestingIndices = new Set(aggregationBits.intersectValues(validatorIndices));
-
-      return Array.from(attestingIndices);
+      return aggregationBits.intersectValues(validatorIndices);
     }
   }
 

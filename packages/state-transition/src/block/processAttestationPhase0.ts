@@ -2,6 +2,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {Slot, allForks, electra, phase0, ssz} from "@lodestar/types";
 
 import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH, ForkSeq} from "@lodestar/params";
+import {assert} from "@lodestar/utils";
 import {computeEpochAtSlot} from "../util/index.js";
 import {CachedBeaconStatePhase0, CachedBeaconStateAllForks} from "../types.js";
 import {isValidIndexedAttestation} from "./index.js";
@@ -89,9 +90,7 @@ export function validateAttestation(
   }
 
   if (fork >= ForkSeq.electra) {
-    if (data.index !== 0) {
-      throw new Error(`AttestationData.index must be zero: index=${data.index}`);
-    }
+    assert.equal(data.index, 0, `AttestationData.index must be zero: index=${data.index}`);
     const attestationElectra = attestation as electra.Attestation;
     const committeeBitsLength = attestationElectra.committeeBits.bitLen;
 
@@ -109,11 +108,11 @@ export function validateAttestation(
       .map((committeeIndex) => epochCtx.getBeaconCommittee(data.slot, committeeIndex).length)
       .reduce((acc, committeeSize) => acc + committeeSize, 0);
 
-    if (attestationElectra.aggregationBits.bitLen !== participantCount) {
-      throw new Error(
-        `Attestation aggregation bits length does not match total number of committee participant aggregationBitsLength=${attestation.aggregationBits.bitLen} participantCount=${participantCount}`
-      );
-    }
+    assert.equal(
+      attestationElectra.aggregationBits.bitLen,
+      participantCount,
+      `Attestation aggregation bits length does not match total number of committee participant aggregationBitsLength=${attestation.aggregationBits.bitLen} participantCount=${participantCount}`
+    );
   } else {
     if (!(data.index < committeeCount)) {
       throw new Error(

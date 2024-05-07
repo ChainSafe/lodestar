@@ -147,6 +147,7 @@ export async function importBlock(
 
     for (const attestation of attestations) {
       try {
+        // TODO Electra: figure out how to reuse the attesting indices computed from state transition
         const indexedAttestation = postState.epochCtx.getIndexedAttestation(fork, attestation);
         const {target, beaconBlockRoot} = attestation.data;
 
