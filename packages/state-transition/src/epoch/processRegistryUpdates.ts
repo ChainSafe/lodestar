@@ -1,3 +1,4 @@
+import {ForkSeq} from "@lodestar/params";
 import {computeActivationExitEpoch} from "../util/index.js";
 import {initiateValidatorExit} from "../block/index.js";
 import {EpochTransitionCache, CachedBeaconStateAllForks} from "../types.js";
@@ -16,7 +17,11 @@ import {EpochTransitionCache, CachedBeaconStateAllForks} from "../types.js";
  *   - indicesEligibleForActivationQueue: 0
  *   - indicesToEject: 0
  */
-export function processRegistryUpdates(state: CachedBeaconStateAllForks, cache: EpochTransitionCache): void {
+export function processRegistryUpdates(
+  fork: ForkSeq,
+  state: CachedBeaconStateAllForks,
+  cache: EpochTransitionCache
+): void {
   const {epochCtx} = state;
 
   // Get the validators sub tree once for all the loop
@@ -28,7 +33,7 @@ export function processRegistryUpdates(state: CachedBeaconStateAllForks, cache: 
   for (const index of cache.indicesToEject) {
     // set validator exit epoch and withdrawable epoch
     // TODO: Figure out a way to quickly set properties on the validators tree
-    initiateValidatorExit(state, validators.get(index));
+    initiateValidatorExit(fork, state, validators.get(index));
   }
 
   // set new activation eligibilities
@@ -37,8 +42,15 @@ export function processRegistryUpdates(state: CachedBeaconStateAllForks, cache: 
   }
 
   const finalityEpoch = state.finalizedCheckpoint.epoch;
-  // dequeue validators for activation up to churn limit
-  for (const index of cache.indicesEligibleForActivation.slice(0, epochCtx.activationChurnLimit)) {
+  let indicesEligibleForActivation;
+  if (fork < ForkSeq.electra) {
+    // dequeue validators for activation up to churn limit
+    indicesEligibleForActivation = cache.indicesEligibleForActivation.slice(0, epochCtx.activationChurnLimit);
+  } else {
+    // no churn limit post-electra
+    indicesEligibleForActivation = cache.indicesEligibleForActivation;
+  }
+  for (const index of indicesEligibleForActivation) {
     const validator = validators.get(index);
     // placement in queue is finalized
     if (validator.activationEligibilityEpoch > finalityEpoch) {
