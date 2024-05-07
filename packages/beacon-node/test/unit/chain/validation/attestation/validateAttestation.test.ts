@@ -10,7 +10,7 @@ import {
   ApiAttestation,
   GossipAttestation,
   validateApiAttestation,
-validateAttestation,
+  validateAttestation,
 } from "../../../../../src/chain/validation/index.js";
 import {getAttDataBase64FromAttestationSerialized} from "../../../../../src/util/sszBytes.js";
 import {memoOnce} from "../../../../utils/cache.js";
