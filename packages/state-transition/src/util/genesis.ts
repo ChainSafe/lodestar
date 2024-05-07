@@ -185,7 +185,7 @@ export function applyDeposits(
     validator.effectiveBalance = effectiveBalance;
     epochCtx.effectiveBalanceIncrementsSet(i, effectiveBalance);
 
-    if (validator.effectiveBalance === MAX_EFFECTIVE_BALANCE) {
+    if (validator.effectiveBalance >= MAX_EFFECTIVE_BALANCE) {
       validator.activationEligibilityEpoch = GENESIS_EPOCH;
       validator.activationEpoch = GENESIS_EPOCH;
       activatedValidatorCount++;
