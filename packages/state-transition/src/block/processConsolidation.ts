@@ -95,8 +95,8 @@ function assertValidConsolidation(
   }
 
   // Verify the same withdrawal address
-  const sourceWithdrawalAddress = toHexString(sourceValidator.withdrawalCredentials.slice(12));
-  const targetWithdrawalAddress = toHexString(targetValidator.withdrawalCredentials.slice(12));
+  const sourceWithdrawalAddress = toHexString(sourceValidator.withdrawalCredentials.subarray(12));
+  const targetWithdrawalAddress = toHexString(targetValidator.withdrawalCredentials.subarray(12));
 
   if (sourceWithdrawalAddress !== targetWithdrawalAddress) {
     throw new Error(

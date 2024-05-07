@@ -50,21 +50,14 @@ export function getActivationChurnLimit(config: ChainForkConfig, fork: ForkSeq, 
   }
 }
 
-export function getActivationExitChurnLimit(state: CachedBeaconStateElectra): number {
-  return Math.min(
-    state.config.MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT,
-    getActivationExitConsolidationChurnLimit(state)
-  );
-}
-
-export function getConsolidationChurnLimit(state: CachedBeaconStateElectra): number {
-  return getActivationExitConsolidationChurnLimit(state) - getActivationExitChurnLimit(state);
+export function getChurnLimit(config: ChainForkConfig, activeValidatorCount: number): number {
+  return Math.max(config.MIN_PER_EPOCH_CHURN_LIMIT, intDiv(activeValidatorCount, config.CHURN_LIMIT_QUOTIENT));
 }
 
 /**
  * Get combined churn limit of activation-exit and consolidation
  */
-export function getActivationExitConsolidationChurnLimit(state: CachedBeaconStateElectra): number {
+export function getBalanceChurnLimit(state: CachedBeaconStateElectra): number {
   const churnLimitByTotalActiveBalance = Math.floor(
     (state.epochCtx.totalActiveBalanceIncrements / state.config.CHURN_LIMIT_QUOTIENT) * EFFECTIVE_BALANCE_INCREMENT
   ); // TODO Electra: verify calculation
@@ -74,8 +67,12 @@ export function getActivationExitConsolidationChurnLimit(state: CachedBeaconStat
   return churn - (churn % EFFECTIVE_BALANCE_INCREMENT);
 }
 
-export function getChurnLimit(config: ChainForkConfig, activeValidatorCount: number): number {
-  return Math.max(config.MIN_PER_EPOCH_CHURN_LIMIT, intDiv(activeValidatorCount, config.CHURN_LIMIT_QUOTIENT));
+export function getActivationExitChurnLimit(state: CachedBeaconStateElectra): number {
+  return Math.min(state.config.MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT, getBalanceChurnLimit(state));
+}
+
+export function getConsolidationChurnLimit(state: CachedBeaconStateElectra): number {
+  return getBalanceChurnLimit(state) - getActivationExitChurnLimit(state);
 }
 
 export function getValidatorMaxEffectiveBalance(withdrawalCredentials: Uint8Array): number {

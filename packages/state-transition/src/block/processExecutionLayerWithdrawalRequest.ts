@@ -85,7 +85,7 @@ function isValidatorEligibleForWithdrawOrExit(
   state: CachedBeaconStateElectra
 ): boolean {
   const {withdrawalCredentials} = validator;
-  const addressStr = toHexString(withdrawalCredentials.slice(12));
+  const addressStr = toHexString(withdrawalCredentials.subarray(12));
   const sourceAddressStr = toHexString(sourceAddress);
   const {epoch: currentEpoch, config} = state.epochCtx;
 
