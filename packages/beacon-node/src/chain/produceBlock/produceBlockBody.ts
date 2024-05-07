@@ -558,7 +558,9 @@ function preparePayloadAttributes(
   };
 
   if (ForkSeq[fork] >= ForkSeq.capella) {
+    // withdrawals logic is now fork aware as it changes on electra fork post capella
     (payloadAttributes as capella.SSEPayloadAttributes["payloadAttributes"]).withdrawals = getExpectedWithdrawals(
+      ForkSeq[fork],
       prepareState as CachedBeaconStateCapella
     ).withdrawals;
   }

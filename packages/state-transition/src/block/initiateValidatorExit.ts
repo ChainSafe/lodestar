@@ -1,7 +1,8 @@
 import {CompositeViewDU} from "@chainsafe/ssz";
-import {FAR_FUTURE_EPOCH} from "@lodestar/params";
+import {FAR_FUTURE_EPOCH, ForkSeq} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {CachedBeaconStateAllForks} from "../types.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateElectra} from "../types.js";
+import {computeExitEpochAndUpdateChurn} from "../util/epoch.js";
 
 /**
  * Initiate the exit of the validator with index ``index``.
@@ -24,6 +25,7 @@ import {CachedBeaconStateAllForks} from "../types.js";
  * Forcing consumers to pass the SubTree of `validator` directly mitigates this issue.
  */
 export function initiateValidatorExit(
+  fork: ForkSeq,
   state: CachedBeaconStateAllForks,
   validator: CompositeViewDU<typeof ssz.phase0.Validator>
 ): void {
@@ -34,18 +36,27 @@ export function initiateValidatorExit(
     return;
   }
 
-  // Limits the number of validators that can exit on each epoch.
-  // Expects all state.validators to follow this rule, i.e. no validator.exitEpoch is greater than exitQueueEpoch.
-  // If there the churnLimit is reached at this current exitQueueEpoch, advance epoch and reset churn.
-  if (epochCtx.exitQueueChurn >= epochCtx.churnLimit) {
-    epochCtx.exitQueueEpoch += 1;
-    epochCtx.exitQueueChurn = 1; // = 1 to account for this validator with exitQueueEpoch
-  } else {
-    // Add this validator to the current exitQueueEpoch churn
-    epochCtx.exitQueueChurn += 1;
-  }
+  if (fork < ForkSeq.electra) {
+    // Limits the number of validators that can exit on each epoch.
+    // Expects all state.validators to follow this rule, i.e. no validator.exitEpoch is greater than exitQueueEpoch.
+    // If there the churnLimit is reached at this current exitQueueEpoch, advance epoch and reset churn.
+    if (epochCtx.exitQueueChurn >= epochCtx.churnLimit) {
+      epochCtx.exitQueueEpoch += 1;
+      epochCtx.exitQueueChurn = 1; // = 1 to account for this validator with exitQueueEpoch
+    } else {
+      // Add this validator to the current exitQueueEpoch churn
+      epochCtx.exitQueueChurn += 1;
+    }
 
-  // set validator exit epoch and withdrawable epoch
-  validator.exitEpoch = epochCtx.exitQueueEpoch;
-  validator.withdrawableEpoch = epochCtx.exitQueueEpoch + config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY;
+    // set validator exit epoch
+    validator.exitEpoch = epochCtx.exitQueueEpoch;
+  } else {
+    // set validator exit epoch
+    // Note we don't use epochCtx.exitQueueChurn and exitQueueEpoch anymore
+    validator.exitEpoch = computeExitEpochAndUpdateChurn(
+      state as CachedBeaconStateElectra,
+      BigInt(validator.effectiveBalance)
+    );
+  }
+  validator.withdrawableEpoch = validator.exitEpoch + config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY;
 }
