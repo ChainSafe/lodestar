@@ -43,9 +43,9 @@ type CommitteeIndex = number;
 type AttestationWithScore = {attestation: allForks.Attestation; score: number};
 /**
  * for electra, this is to consolidate aggregated attestations of the same attestation data into a single attestation to be included in block
- * note that this is not validator consolidation
+ * note that this is local definition in this file and it's NOT validator consolidation
  */
-type AttestationsConsolidation = {
+export type AttestationsConsolidation = {
   byCommittee: Map<CommitteeIndex, AttestationNonParticipant>;
   attData: phase0.AttestationData;
   totalNotSeenCount: number;
@@ -393,7 +393,7 @@ export class AggregatedAttestationPool {
       .sort((a, b) => b.score - a.score)
       .slice(0, MAX_ATTESTATIONS_ELECTRA);
     // on chain aggregation is expensive, only do it after all
-    return sortedConsolidationsByScore.map(consolidationToAttestation);
+    return sortedConsolidationsByScore.map(aggregateConsolidation);
   }
 
   /**
@@ -556,7 +556,7 @@ export function aggregateInto(attestation1: AttestationWithIndex, attestation2: 
  * attestation data from different committee into a single attestation
  * https://github.com/ethereum/consensus-specs/blob/aba6345776aa876dad368cab27fbbb23fae20455/specs/_features/eip7549/validator.md?plain=1#L39
  */
-export function consolidationToAttestation({byCommittee, attData}: AttestationsConsolidation): electra.Attestation {
+export function aggregateConsolidation({byCommittee, attData}: AttestationsConsolidation): electra.Attestation {
   const committeeBits = BitArray.fromBitLen(MAX_COMMITTEES_PER_SLOT);
   // TODO: can we improve this?
   let aggregationBits: boolean[] = [];
