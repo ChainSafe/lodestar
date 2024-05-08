@@ -25,9 +25,9 @@ export function upgradeStateToElectra(stateDeneb: CachedBeaconStateDeneb): Cache
     epoch: stateDeneb.epochCtx.epoch,
   });
 
-  // latestExecutionPayloadHeader's depositReceiptsRoot and withdrawalRequestsRoot set to zeros by default
-  // default value of depositReceiptsStartIndex is UNSET_DEPOSIT_RECEIPTS_START_INDEX
-  stateElectra.depositReceiptsStartIndex = UNSET_DEPOSIT_RECEIPTS_START_INDEX;
+  // latestExecutionPayloadHeader's depositRequestsRoot and withdrawalRequestsRoot set to zeros by default
+  // default value of depositRequestsStartIndex is UNSET_DEPOSIT_RECEIPTS_START_INDEX
+  stateElectra.depositRequestsStartIndex = UNSET_DEPOSIT_RECEIPTS_START_INDEX;
 
   const validatorsArr = stateElectra.validators.getAllReadonly();
 
