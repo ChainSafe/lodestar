@@ -17,7 +17,7 @@ import {
   quantityToBigint,
 } from "../../eth1/provider/utils.js";
 import {ExecutionPayloadStatus, BlobsBundle, PayloadAttributes, VersionedHashes} from "./interface.js";
-import {WithdrawalV1, DepositReceiptV1, ExecutionLayerWithdrawalRequestV1} from "./payloadIdCache.js";
+import {WithdrawalV1, DepositRequestV1, ExecutionLayerWithdrawalRequestV1} from "./payloadIdCache.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -127,14 +127,14 @@ export type ExecutionPayloadBodyRpc = {
   withdrawals: WithdrawalV1[] | null | undefined;
   // currently there is a discepancy between EL and CL field name references for deposit requests
   // its likely CL receipt will be renamed to requests
-  depositRequests: DepositReceiptV1[] | null | undefined;
+  depositRequests: DepositRequestV1[] | null | undefined;
   withdrawalRequests: ExecutionLayerWithdrawalRequestV1[] | null | undefined;
 };
 
 export type ExecutionPayloadBody = {
   transactions: bellatrix.Transaction[];
   withdrawals: capella.Withdrawals | null;
-  depositReceipts: electra.DepositReceipts | null;
+  depositRequests: electra.DepositRequests | null;
   withdrawalRequests: electra.ExecutionLayerWithdrawalRequests | null;
 };
 
@@ -157,7 +157,7 @@ export type ExecutionPayloadRpc = {
   blobGasUsed?: QUANTITY; // DENEB
   excessBlobGas?: QUANTITY; // DENEB
   parentBeaconBlockRoot?: QUANTITY; // DENEB
-  depositRequests?: DepositReceiptRpc[]; // ELECTRA
+  depositRequests?: DepositRequestRpc[]; // ELECTRA
   withdrawalRequests?: ExecutionLayerWithdrawalRequestRpc[]; // ELECTRA
 };
 
@@ -168,7 +168,7 @@ export type WithdrawalRpc = {
   amount: QUANTITY;
 };
 
-export type DepositReceiptRpc = DepositReceiptV1;
+export type DepositRequestRpc = DepositRequestV1;
 export type ExecutionLayerWithdrawalRequestRpc = ExecutionLayerWithdrawalRequestV1;
 
 export type VersionedHashesRpc = DATA[];
@@ -233,10 +233,10 @@ export function serializeExecutionPayload(fork: ForkName, data: ExecutionPayload
     payload.excessBlobGas = numToQuantity(excessBlobGas);
   }
 
-  // ELECTRA adds depositReceipts/depositRequests to the ExecutionPayload
+  // ELECTRA adds depositRequests/depositRequests to the ExecutionPayload
   if (ForkSeq[fork] >= ForkSeq.electra) {
-    const {depositReceipts, withdrawalRequests} = data as electra.ExecutionPayload;
-    payload.depositRequests = depositReceipts.map(serializeDepositReceipt);
+    const {depositRequests, withdrawalRequests} = data as electra.ExecutionPayload;
+    payload.depositRequests = depositRequests.map(serializeDepositRequest);
     payload.withdrawalRequests = withdrawalRequests.map(serializeExecutionLayerWithdrawalRequest);
   }
 
@@ -326,7 +326,7 @@ export function parseExecutionPayload(
   }
 
   if (ForkSeq[fork] >= ForkSeq.electra) {
-    // electra adds depositRequests/depositReceipts
+    // electra adds depositRequests/depositRequests
     const {depositRequests, withdrawalRequests} = data;
     // Geth can also reply with null
     if (depositRequests == null) {
@@ -334,7 +334,7 @@ export function parseExecutionPayload(
         `depositRequests missing for ${fork} >= electra executionPayload number=${executionPayload.blockNumber} hash=${data.blockHash}`
       );
     }
-    (executionPayload as electra.ExecutionPayload).depositReceipts = depositRequests.map(deserializeDepositReceipt);
+    (executionPayload as electra.ExecutionPayload).depositRequests = depositRequests.map(deserializeDepositRequest);
 
     if (withdrawalRequests == null) {
       throw Error(
@@ -412,24 +412,24 @@ export function deserializeWithdrawal(serialized: WithdrawalRpc): capella.Withdr
   } as capella.Withdrawal;
 }
 
-export function serializeDepositReceipt(depositReceipt: electra.DepositReceipt): DepositReceiptRpc {
+export function serializeDepositRequest(depositRequest: electra.DepositRequest): DepositRequestRpc {
   return {
-    pubkey: bytesToData(depositReceipt.pubkey),
-    withdrawalCredentials: bytesToData(depositReceipt.withdrawalCredentials),
-    amount: numToQuantity(depositReceipt.amount),
-    signature: bytesToData(depositReceipt.signature),
-    index: numToQuantity(depositReceipt.index),
+    pubkey: bytesToData(depositRequest.pubkey),
+    withdrawalCredentials: bytesToData(depositRequest.withdrawalCredentials),
+    amount: numToQuantity(depositRequest.amount),
+    signature: bytesToData(depositRequest.signature),
+    index: numToQuantity(depositRequest.index),
   };
 }
 
-export function deserializeDepositReceipt(serialized: DepositReceiptRpc): electra.DepositReceipt {
+export function deserializeDepositRequest(serialized: DepositRequestRpc): electra.DepositRequest {
   return {
     pubkey: dataToBytes(serialized.pubkey, 48),
     withdrawalCredentials: dataToBytes(serialized.withdrawalCredentials, 32),
     amount: quantityToNum(serialized.amount),
     signature: dataToBytes(serialized.signature, 96),
     index: quantityToNum(serialized.index),
-  } as electra.DepositReceipt;
+  } as electra.DepositRequest;
 }
 
 export function serializeExecutionLayerWithdrawalRequest(
@@ -457,7 +457,7 @@ export function deserializeExecutionPayloadBody(data: ExecutionPayloadBodyRpc | 
     ? {
         transactions: data.transactions.map((tran) => dataToBytes(tran, null)),
         withdrawals: data.withdrawals ? data.withdrawals.map(deserializeWithdrawal) : null,
-        depositReceipts: data.depositRequests ? data.depositRequests.map(deserializeDepositReceipt) : null,
+        depositRequests: data.depositRequests ? data.depositRequests.map(deserializeDepositRequest) : null,
         withdrawalRequests: data.withdrawalRequests
           ? data.withdrawalRequests.map(deserializeExecutionLayerWithdrawalRequest)
           : null,
@@ -470,7 +470,7 @@ export function serializeExecutionPayloadBody(data: ExecutionPayloadBody | null)
     ? {
         transactions: data.transactions.map((tran) => bytesToData(tran)),
         withdrawals: data.withdrawals ? data.withdrawals.map(serializeWithdrawal) : null,
-        depositRequests: data.depositReceipts ? data.depositReceipts.map(serializeDepositReceipt) : null,
+        depositRequests: data.depositRequests ? data.depositRequests.map(serializeDepositRequest) : null,
         withdrawalRequests: data.withdrawalRequests
           ? data.withdrawalRequests.map(serializeExecutionLayerWithdrawalRequest)
           : null,
