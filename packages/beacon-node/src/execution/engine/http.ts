@@ -177,7 +177,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   ): Promise<ExecutePayloadResponse> {
     const method =
       ForkSeq[fork] >= ForkSeq.electra
-        ? "engine_newPayloadV6110"
+        ? "engine_newPayloadV4"
         : ForkSeq[fork] >= ForkSeq.deneb
           ? "engine_newPayloadV3"
           : ForkSeq[fork] >= ForkSeq.capella
@@ -198,7 +198,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       const serializedVersionedHashes = serializeVersionedHashes(versionedHashes);
       const parentBeaconBlockRoot = serializeBeaconBlockRoot(parentBlockRoot);
 
-      const method = ForkSeq[fork] >= ForkSeq.electra ? "engine_newPayloadV6110" : "engine_newPayloadV3";
+      const method = ForkSeq[fork] >= ForkSeq.electra ? "engine_newPayloadV4" : "engine_newPayloadV3";
       engineRequest = {
         method,
         params: [serializedExecutionPayload, serializedVersionedHashes, parentBeaconBlockRoot],
@@ -373,7 +373,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   }> {
     const method =
       ForkSeq[fork] >= ForkSeq.electra
-        ? "engine_getPayloadV6110"
+        ? "engine_getPayloadV4"
         : ForkSeq[fork] >= ForkSeq.deneb
           ? "engine_getPayloadV3"
           : ForkSeq[fork] >= ForkSeq.capella
