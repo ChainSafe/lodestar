@@ -338,7 +338,8 @@ export type Api = {
    */
   getAggregatedAttestation(
     attestationDataRoot: Root,
-    slot: Slot
+    slot: Slot,
+    index: CommitteeIndex
   ): Promise<
     ApiClientResponse<
       {[HttpStatusCode.OK]: {data: allForks.Attestation; version: ForkName}},
@@ -498,7 +499,7 @@ export type ReqTypes = {
   produceBlindedBlock: {params: {slot: number}; query: {randao_reveal: string; graffiti: string}};
   produceAttestationData: {query: {slot: number; committee_index: number}};
   produceSyncCommitteeContribution: {query: {slot: number; subcommittee_index: number; beacon_block_root: string}};
-  getAggregatedAttestation: {query: {attestation_data_root: string; slot: number}};
+  getAggregatedAttestation: {query: {attestation_data_root: string; slot: number; index: number}};
   publishAggregateAndProofs: {body: unknown};
   publishContributionAndProofs: {body: unknown};
   prepareBeaconCommitteeSubnet: {body: unknown};
@@ -647,10 +648,10 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
     },
 
     getAggregatedAttestation: {
-      writeReq: (root, slot) => ({query: {attestation_data_root: toHexString(root), slot}}),
-      parseReq: ({query}) => [fromHexString(query.attestation_data_root), query.slot],
+      writeReq: (root, slot, index) => ({query: {attestation_data_root: toHexString(root), slot, index}}),
+      parseReq: ({query}) => [fromHexString(query.attestation_data_root), query.slot, query.index],
       schema: {
-        query: {attestation_data_root: Schema.StringRequired, slot: Schema.UintRequired},
+        query: {attestation_data_root: Schema.StringRequired, slot: Schema.UintRequired, index: Schema.UintRequired},
       },
     },
 

@@ -1,7 +1,7 @@
 import {PointFormat, Signature} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
 import {BitArray} from "@chainsafe/ssz";
-import {Slot, RootHex, allForks} from "@lodestar/types";
+import {Slot, RootHex, allForks, isElectraAttestation} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
 import {IClock} from "../../util/clock.js";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
@@ -36,6 +36,8 @@ type AggregateFast = AggregateFastPhase0 | AggregateFastElectra;
 /** Hex string of DataRoot `TODO` */
 type DataRootHex = string;
 
+type CommitteeIndex = number;
+
 /**
  * A pool of `Attestation` that is specially designed to store "unaggregated" attestations from
  * the native aggregation scheme.
@@ -60,8 +62,8 @@ type DataRootHex = string;
  * receives and it can be triggered manually.
  */
 export class AttestationPool {
-  private readonly attestationByRootBySlot = new MapDef<Slot, Map<DataRootHex, AggregateFast>>(
-    () => new Map<DataRootHex, AggregateFast>()
+  private readonly attestationByRootBySlot = new MapDef<Slot, Map<DataRootHex, Map<CommitteeIndex, AggregateFast>>>(
+    () => new Map<DataRootHex, Map<CommitteeIndex, AggregateFast>>()
   );
   private lowestPermissibleSlot = 0;
 
@@ -117,14 +119,28 @@ export class AttestationPool {
       throw new OpPoolError({code: OpPoolErrorCode.REACHED_MAX_PER_SLOT});
     }
 
+    const committeeIndex = isElectraAttestation(attestation)
+      ? // this attestation is added to pool after validation
+        attestation.committeeBits.getSingleTrueBit()
+      : attestation.data.index;
+    if (committeeIndex === null) {
+      // this should not happen because attestation should be validated before reaching this
+      throw Error(`Invalid attestation slot=${slot} committeeIndex=${committeeIndex}`);
+    }
+
     // Pre-aggregate the contribution with existing items
-    const aggregate = aggregateByRoot.get(attDataRootHex);
+    let aggregateByIndex = aggregateByRoot.get(attDataRootHex);
+    if (aggregateByIndex === undefined) {
+      aggregateByIndex = new Map<CommitteeIndex, AggregateFast>();
+      aggregateByRoot.set(attDataRootHex, aggregateByIndex);
+    }
+    const aggregate = aggregateByIndex.get(committeeIndex);
     if (aggregate) {
       // Aggregate mutating
       return aggregateAttestationInto(aggregate, attestation);
     } else {
       // Create new aggregate
-      aggregateByRoot.set(attDataRootHex, attestationToAggregate(attestation));
+      aggregateByIndex.set(committeeIndex, attestationToAggregate(attestation));
       return InsertOutcome.NewData;
     }
   }
@@ -132,8 +148,8 @@ export class AttestationPool {
   /**
    * For validator API to get an aggregate
    */
-  getAggregate(slot: Slot, dataRootHex: RootHex): allForks.Attestation | null {
-    const aggregate = this.attestationByRootBySlot.get(slot)?.get(dataRootHex);
+  getAggregate(slot: Slot, committeeIndex: CommitteeIndex, dataRootHex: RootHex): allForks.Attestation | null {
+    const aggregate = this.attestationByRootBySlot.get(slot)?.get(dataRootHex)?.get(committeeIndex);
     if (!aggregate) {
       // TODO: Add metric for missing aggregates
       return null;
@@ -166,8 +182,10 @@ export class AttestationPool {
 
     for (const aggregateByRoot of aggregateByRoots) {
       if (aggregateByRoot) {
-        for (const aggFast of aggregateByRoot.values()) {
-          attestations.push(fastToAttestation(aggFast));
+        for (const aggFastByIndex of aggregateByRoot.values()) {
+          for (const aggFast of aggFastByIndex.values()) {
+            attestations.push(fastToAttestation(aggFast));
+          }
         }
       }
     }
@@ -180,7 +198,7 @@ export class AttestationPool {
 // - Insert attestations coming from gossip and API
 
 /**
- * Aggregate a new contribution into `aggregate` mutating it
+ * Aggregate a new attestation into `aggregate` mutating it
  */
 function aggregateAttestationInto(aggregate: AggregateFast, attestation: allForks.Attestation): InsertOutcome {
   const bitIndex = attestation.aggregationBits.getSingleTrueBit();
@@ -188,26 +206,6 @@ function aggregateAttestationInto(aggregate: AggregateFast, attestation: allFork
   // Should never happen, attestations are verified against this exact condition before
   if (bitIndex === null) {
     throw Error("Invalid attestation not exactly one bit set");
-  }
-
-  if ("committeeBits" in attestation && !("committeeBits" in aggregate)) {
-    throw Error("Attempt to aggregate electra attestation into phase0 attestation");
-  }
-
-  if (!("committeeBits" in attestation) && "committeeBits" in aggregate) {
-    throw Error("Attempt to aggregate phase0 attestation into electra attestation");
-  }
-
-  if ("committeeBits" in attestation) {
-    // We assume attestation.committeeBits should already be validated in api and gossip handler and should be non-null
-    const attestationCommitteeIndex = attestation.committeeBits.getSingleTrueBit();
-    const aggregateCommitteeIndex = (aggregate as AggregateFastElectra).committeeBits.getSingleTrueBit();
-
-    if (attestationCommitteeIndex !== aggregateCommitteeIndex) {
-      throw Error(
-        `Committee index mismatched: attestation ${attestationCommitteeIndex} aggregate ${aggregateCommitteeIndex}`
-      );
-    }
   }
 
   if (aggregate.aggregationBits.get(bitIndex) === true) {
@@ -226,7 +224,7 @@ function aggregateAttestationInto(aggregate: AggregateFast, attestation: allFork
  * Format `contribution` into an efficient `aggregate` to add more contributions in with aggregateContributionInto()
  */
 function attestationToAggregate(attestation: allForks.Attestation): AggregateFast {
-  if ("committeeBits" in attestation) {
+  if (isElectraAttestation(attestation)) {
     return {
       data: attestation.data,
       // clone because it will be mutated
@@ -247,18 +245,5 @@ function attestationToAggregate(attestation: allForks.Attestation): AggregateFas
  * Unwrap AggregateFast to phase0.Attestation
  */
 function fastToAttestation(aggFast: AggregateFast): allForks.Attestation {
-  if ("committeeBits" in aggFast) {
-    return {
-      data: aggFast.data,
-      aggregationBits: aggFast.aggregationBits,
-      committeeBits: aggFast.committeeBits,
-      signature: aggFast.signature.toBytes(PointFormat.compressed),
-    };
-  } else {
-    return {
-      data: aggFast.data,
-      aggregationBits: aggFast.aggregationBits,
-      signature: aggFast.signature.toBytes(PointFormat.compressed),
-    };
-  }
+  return {...aggFast, signature: aggFast.signature.toBytes(PointFormat.compressed)};
 }

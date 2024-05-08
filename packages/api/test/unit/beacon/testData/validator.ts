@@ -134,8 +134,11 @@ export const testData: GenericServerTestCases<Api> = {
     res: {data: ssz.altair.SyncCommitteeContribution.defaultValue()},
   },
   getAggregatedAttestation: {
-    args: [ZERO_HASH, 32000],
-    res: {data: ssz.phase0.Attestation.defaultValue()},
+    args: [ZERO_HASH, 32000, 2],
+    res: {
+      data: ssz.phase0.Attestation.defaultValue(),
+      version: ForkName.altair,
+    },
   },
   publishAggregateAndProofs: {
     args: [[ssz.phase0.SignedAggregateAndProof.defaultValue()]],
