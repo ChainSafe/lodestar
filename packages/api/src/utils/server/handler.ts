@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import type * as fastify from "fastify";
-import {HttpHeader, MediaType, parseAcceptHeader, parseContentTypeHeader} from "../headers.js";
+import {HttpHeader, MediaType, SUPPORTED_MEDIA_TYPES, parseAcceptHeader, parseContentTypeHeader} from "../headers.js";
 import {
   Endpoint,
   RequestData,
@@ -12,7 +12,7 @@ import {
   SszRequestMethods,
   isRequestWithoutBody,
 } from "../types.js";
-import {WireFormat, getWireFormat} from "../wireFormat.js";
+import {WireFormat, fromWireFormat, getWireFormat} from "../wireFormat.js";
 import {ApiError} from "./error.js";
 import {ApplicationMethod, ApplicationResponse} from "./method.js";
 
@@ -47,14 +47,15 @@ export function createFastifyHandler<E extends Endpoint>(
       // Default to json to not force user to set header, e.g. when using curl
       responseMediaType = MediaType.json;
     } else {
-      responseMediaType = parseAcceptHeader(acceptHeader);
+      const {onlySupport} = definition.resp;
+      const supportedMediaTypes = onlySupport !== undefined ? [fromWireFormat(onlySupport)] : SUPPORTED_MEDIA_TYPES;
+      responseMediaType = parseAcceptHeader(acceptHeader, supportedMediaTypes);
 
       if (responseMediaType === null) {
         throw new ApiError(406, `Accepted media types are not supported: ${acceptHeader}`);
       }
     }
-    const responseWireFormat =
-      definition.resp.onlySupport ?? (responseMediaType !== null ? getWireFormat(responseMediaType) : null);
+    const responseWireFormat = responseMediaType !== null ? getWireFormat(responseMediaType) : null;
 
     let response: ApplicationResponse<E>;
     try {
@@ -66,23 +67,21 @@ export function createFastifyHandler<E extends Endpoint>(
       } else {
         // Media type is already validated by Fastify before calling handler
         const requestMediaType = parseContentTypeHeader(req.headers[HttpHeader.ContentType]) as MediaType;
+        const requestWireFormat = getWireFormat(requestMediaType);
 
         const {onlySupport} = definition.req as RequestWithBodyCodec<E>;
-        const requestWireFormat = getWireFormat(requestMediaType);
+        if (onlySupport !== undefined && onlySupport !== requestWireFormat) {
+          throw new ApiError(415, `Endpoint only supports ${onlySupport.toUpperCase()} requests`);
+        }
+
         switch (requestWireFormat) {
           case WireFormat.json:
-            if (onlySupport !== undefined && onlySupport !== WireFormat.json) {
-              throw new ApiError(415, `Endpoint only supports ${onlySupport.toUpperCase()} requests`);
-            }
             response = await method((definition.req as JsonRequestMethods<E>).parseReqJson(req as JsonRequestData), {
               sszBytes: null,
               returnBytes: responseWireFormat === WireFormat.ssz,
             });
             break;
           case WireFormat.ssz:
-            if (onlySupport !== undefined && onlySupport !== WireFormat.ssz) {
-              throw new ApiError(415, `Endpoint only supports ${onlySupport.toUpperCase()} requests`);
-            }
             response = await method(
               (definition.req as SszRequestMethods<E>).parseReqSsz(req as SszRequestData<E["request"]>),
               {

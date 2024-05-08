@@ -11,10 +11,10 @@ export enum MediaType {
   ssz = "application/octet-stream",
 }
 
-export const supportedMediaTypes = Object.values(MediaType);
+export const SUPPORTED_MEDIA_TYPES = Object.values(MediaType);
 
-function isSupportedMediaType(mediaType: string | null): mediaType is MediaType {
-  return mediaType !== null && supportedMediaTypes.includes(mediaType as MediaType);
+function isSupportedMediaType(mediaType: string | null, supported: MediaType[]): mediaType is MediaType {
+  return mediaType !== null && supported.includes(mediaType as MediaType);
 }
 
 export function parseContentTypeHeader(contentType?: string): MediaType | null {
@@ -24,10 +24,10 @@ export function parseContentTypeHeader(contentType?: string): MediaType | null {
 
   const mediaType = contentType.split(";", 1)[0].trim().toLowerCase();
 
-  return isSupportedMediaType(mediaType) ? mediaType : null;
+  return isSupportedMediaType(mediaType, SUPPORTED_MEDIA_TYPES) ? mediaType : null;
 }
 
-export function parseAcceptHeader(accept?: string): MediaType | null {
+export function parseAcceptHeader(accept?: string, supported = SUPPORTED_MEDIA_TYPES): MediaType | null {
   if (!accept) {
     return null;
   }
@@ -47,7 +47,7 @@ export function parseAcceptHeader(accept?: string): MediaType | null {
         const mediaType = quality[0].trim();
 
         // If the mime type isn't acceptable, move on to the next entry
-        if (!isSupportedMediaType(mediaType)) {
+        if (!isSupportedMediaType(mediaType, supported)) {
           return best;
         }
 

@@ -13,3 +13,12 @@ export function getWireFormat(mediaType: MediaType): WireFormat {
       return WireFormat.ssz;
   }
 }
+
+export function fromWireFormat(wireFormat: WireFormat): MediaType {
+  switch (wireFormat) {
+    case WireFormat.json:
+      return MediaType.json;
+    case WireFormat.ssz:
+      return MediaType.ssz;
+  }
+}

@@ -1,5 +1,5 @@
 import {describe, it, expect} from "vitest";
-import {MediaType, parseAcceptHeader} from "../../../src/utils/headers.js";
+import {MediaType, SUPPORTED_MEDIA_TYPES, parseAcceptHeader} from "../../../src/utils/headers.js";
 
 describe("utils / headers", () => {
   describe("parseAcceptHeader", () => {
@@ -29,7 +29,7 @@ describe("utils / headers", () => {
     ];
 
     it.each(testCases)("should correctly parse the header $header", ({header, expected}) => {
-      expect(parseAcceptHeader(header)).toBe(expected);
+      expect(parseAcceptHeader(header, SUPPORTED_MEDIA_TYPES)).toBe(expected);
     });
   });
 });
