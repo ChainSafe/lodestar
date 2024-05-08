@@ -13,7 +13,7 @@ import {
 } from "@lodestar/params";
 
 import {DepositData} from "@lodestar/types/lib/phase0/types.js";
-import {DepositReceipt} from "@lodestar/types/lib/electra/types.js";
+import {DepositRequest} from "@lodestar/types/lib/electra/types.js";
 import {BeaconConfig} from "@lodestar/config";
 import {ZERO_HASH} from "../constants/index.js";
 import {
@@ -54,13 +54,13 @@ export function processDeposit(fork: ForkSeq, state: CachedBeaconStateAllForks, 
 
 /**
  * Adds a new validator into the registry. Or increase balance if already exist.
- * Follows applyDeposit() in consensus spec. Will be used by processDeposit() and processDepositReceipt()
+ * Follows applyDeposit() in consensus spec. Will be used by processDeposit() and processDepositRequest()
  *
  */
 export function applyDeposit(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,
-  deposit: DepositData | DepositReceipt
+  deposit: DepositData | DepositRequest
 ): void {
   const {config, validators, epochCtx} = state;
   const {pubkey, withdrawalCredentials, amount} = deposit;
