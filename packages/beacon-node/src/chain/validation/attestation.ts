@@ -44,7 +44,7 @@ export type AttestationValidationResult = {
 export type AttestationOrBytes = ApiAttestation | GossipAttestation;
 
 /** attestation from api */
-export type ApiAttestation = {attestation: phase0.Attestation; serializedData: null}; // TODO Electra: add new attestation type
+export type ApiAttestation = {attestation: phase0.Attestation; serializedData: null};
 
 /** attestation from gossip */
 export type GossipAttestation = {

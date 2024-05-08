@@ -180,7 +180,7 @@ export class AggregatedAttestationPool {
     fork: ForkName,
     forkChoice: IForkChoice,
     state: CachedBeaconStateAllForks
-  ): allForks.Attestation[] {
+  ): phase0.Attestation[] {
     const stateSlot = state.slot;
     const stateEpoch = state.epochCtx.epoch;
     const statePrevEpoch = stateEpoch - 1;
@@ -271,13 +271,13 @@ export class AggregatedAttestationPool {
     }
 
     const sortedAttestationsByScore = attestationsByScore.sort((a, b) => b.score - a.score);
-    const attestationsForBlock: allForks.Attestation[] = [];
+    const attestationsForBlock: phase0.Attestation[] = [];
     for (const [i, attestationWithScore] of sortedAttestationsByScore.entries()) {
       if (i >= MAX_ATTESTATIONS) {
         break;
       }
       // attestations could be modified in this op pool, so we need to clone for block
-      attestationsForBlock.push(ssz.allForks[fork].Attestation.clone(attestationWithScore.attestation));
+      attestationsForBlock.push(ssz.phase0.Attestation.clone(attestationWithScore.attestation));
     }
     return attestationsForBlock;
   }
