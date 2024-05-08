@@ -20,6 +20,7 @@ import {
   DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF,
   DOMAIN_APPLICATION_BUILDER,
   ForkSeq,
+  MAX_COMMITTEES_PER_SLOT,
 } from "@lodestar/params";
 import {
   altair,
@@ -531,7 +532,7 @@ export class ValidatorStore {
       return {
         aggregationBits: BitArray.fromSingleBit(duty.committeeLength, duty.validatorCommitteeIndex),
         data: attestationData,
-        committeeBits: BitArray.fromSingleBit(duty.committeesAtSlot, duty.committeeIndex),
+        committeeBits: BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, duty.committeeIndex),
         signature: await this.getSignature(duty.pubkey, signingRoot, signingSlot, signableMessage),
       } as electra.Attestation;
     } else {

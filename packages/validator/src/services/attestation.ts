@@ -139,7 +139,7 @@ export class AttestationService {
 
     // Then download, sign and publish a `SignedAggregateAndProof` for each
     // validator that is elected to aggregate for this `slot` and `committeeIndex`.
-    await this.produceAndPublishAggregates(attestation, dutiesSameCommittee);
+    await this.produceAndPublishAggregates(attestation, index, dutiesSameCommittee);
   }
 
   private async runAttestationTasksGrouped(
@@ -165,7 +165,7 @@ export class AttestationService {
     await Promise.all(
       Array.from(dutiesByCommitteeIndex.entries()).map(([index, dutiesSameCommittee]) => {
         const attestationData: phase0.AttestationData = {...attestationNoCommittee, index};
-        return this.produceAndPublishAggregates(attestationData, dutiesSameCommittee);
+        return this.produceAndPublishAggregates(attestationData, index, dutiesSameCommittee);
       })
     );
   }
@@ -256,9 +256,10 @@ export class AttestationService {
    */
   private async produceAndPublishAggregates(
     attestation: phase0.AttestationData,
+    committeeIndex: number,
     duties: AttDutyAndProof[]
   ): Promise<void> {
-    const logCtx = {slot: attestation.slot, index: attestation.index};
+    const logCtx = {slot: attestation.slot, index: committeeIndex};
 
     // No validator is aggregator, skip
     if (duties.every(({selectionProof}) => selectionProof === null)) {
@@ -269,6 +270,7 @@ export class AttestationService {
     const res = await this.api.validator.getAggregatedAttestation({
       attestationDataRoot: ssz.phase0.AttestationData.hashTreeRoot(attestation),
       slot: attestation.slot,
+      committeeIndex,
     });
     const aggregate = res.value();
     this.metrics?.numParticipantsInAggregate.observe(aggregate.aggregationBits.getTrueBitIndexes().length);
