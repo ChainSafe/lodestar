@@ -316,7 +316,7 @@ export class Network implements INetwork {
     });
   }
 
-  async publishBeaconAggregateAndProof(aggregateAndProof: phase0.SignedAggregateAndProof): Promise<number> {
+  async publishBeaconAggregateAndProof(aggregateAndProof: allForks.SignedAggregateAndProof): Promise<number> {
     const fork = this.config.getForkName(aggregateAndProof.message.aggregate.data.slot);
     return this.publishGossip<GossipType.beacon_aggregate_and_proof>(
       {type: GossipType.beacon_aggregate_and_proof, fork},

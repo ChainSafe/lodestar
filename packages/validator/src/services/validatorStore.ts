@@ -19,6 +19,7 @@ import {
   DOMAIN_SYNC_COMMITTEE,
   DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF,
   DOMAIN_APPLICATION_BUILDER,
+  ForkSeq,
 } from "@lodestar/params";
 import {
   altair,
@@ -27,6 +28,7 @@ import {
   BlindedBeaconBlock,
   BLSPubkey,
   BLSSignature,
+  electra,
   Epoch,
   phase0,
   Root,
@@ -493,7 +495,7 @@ export class ValidatorStore {
     duty: routes.validator.AttesterDuty,
     attestationData: phase0.AttestationData,
     currentEpoch: Epoch
-  ): Promise<phase0.Attestation> {
+  ): Promise<allForks.Attestation> {
     // Make sure the target epoch is not higher than the current epoch to avoid potential attacks.
     if (attestationData.target.epoch > currentEpoch) {
       throw Error(
@@ -525,21 +527,30 @@ export class ValidatorStore {
       data: attestationData,
     };
 
-    return {
-      aggregationBits: BitArray.fromSingleBit(duty.committeeLength, duty.validatorCommitteeIndex),
-      data: attestationData,
-      signature: await this.getSignature(duty.pubkey, signingRoot, signingSlot, signableMessage),
-    };
+    if (this.config.getForkSeq(duty.slot) >= ForkSeq.electra) {
+      return {
+        aggregationBits: BitArray.fromSingleBit(duty.committeeLength, duty.validatorCommitteeIndex),
+        data: attestationData,
+        committeeBits: BitArray.fromSingleBit(duty.committeesAtSlot, duty.committeeIndex),
+        signature: await this.getSignature(duty.pubkey, signingRoot, signingSlot, signableMessage),
+      } as electra.Attestation;
+    } else {
+      return {
+        aggregationBits: BitArray.fromSingleBit(duty.committeeLength, duty.validatorCommitteeIndex),
+        data: attestationData,
+        signature: await this.getSignature(duty.pubkey, signingRoot, signingSlot, signableMessage),
+      } as phase0.Attestation;
+    }
   }
 
   async signAggregateAndProof(
     duty: routes.validator.AttesterDuty,
     selectionProof: BLSSignature,
-    aggregate: phase0.Attestation
-  ): Promise<phase0.SignedAggregateAndProof> {
+    aggregate: allForks.Attestation
+  ): Promise<allForks.SignedAggregateAndProof> {
     this.validateAttestationDuty(duty, aggregate.data);
 
-    const aggregateAndProof: phase0.AggregateAndProof = {
+    const aggregateAndProof: allForks.AggregateAndProof = {
       aggregate,
       aggregatorIndex: duty.validatorIndex,
       selectionProof,
@@ -547,7 +558,10 @@ export class ValidatorStore {
 
     const signingSlot = aggregate.data.slot;
     const domain = this.config.getDomain(signingSlot, DOMAIN_AGGREGATE_AND_PROOF);
-    const signingRoot = computeSigningRoot(ssz.phase0.AggregateAndProof, aggregateAndProof, domain);
+    const signingRoot =
+      this.config.getForkSeq(duty.slot) >= ForkSeq.electra
+        ? computeSigningRoot(ssz.electra.AggregateAndProof, aggregateAndProof, domain)
+        : computeSigningRoot(ssz.phase0.AggregateAndProof, aggregateAndProof, domain);
 
     const signableMessage: SignableMessage = {
       type: SignableMessageType.AGGREGATE_AND_PROOF,
@@ -787,6 +801,9 @@ export class ValidatorStore {
       throw Error(
         `Inconsistent duties during signing: duty.committeeIndex ${duty.committeeIndex} != att.committeeIndex ${data.index}`
       );
+    }
+    if (this.config.getForkSeq(duty.slot) >= ForkSeq.electra && data.index !== 0) {
+      throw Error(`Attestataion data index must be 0 post electra: index ${data.index}`);
     }
   }
 

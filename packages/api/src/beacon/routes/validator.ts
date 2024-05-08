@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {ContainerType, fromHexString, toHexString, Type, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {isForkBlobs} from "@lodestar/params";
+import {isForkBlobs, ForkSeq} from "@lodestar/params";
 import {
   altair,
   BLSSignature,
@@ -208,7 +208,8 @@ export const ValidatorIndicesType = ArrayOf(ssz.ValidatorIndex);
 export const AttesterDutyListType = ArrayOf(AttesterDutyType);
 export const ProposerDutyListType = ArrayOf(ProposerDutyType);
 export const SyncDutyListType = ArrayOf(SyncDutyType);
-export const SignedAggregateAndProofListType = ArrayOf(ssz.phase0.SignedAggregateAndProof);
+export const SignedAggregateAndProofListPhase0Type = ArrayOf(ssz.phase0.SignedAggregateAndProof);
+export const SignedAggregateAndProofListElectaType = ArrayOf(ssz.electra.SignedAggregateAndProof);
 export const SignedContributionAndProofListType = ArrayOf(ssz.altair.SignedContributionAndProof);
 export const BeaconCommitteeSubscriptionListType = ArrayOf(BeaconCommitteeSubscriptionType);
 export const SyncCommitteeSubscriptionListType = ArrayOf(SyncCommitteeSubscriptionType);
@@ -225,7 +226,9 @@ export type ProposerDuty = ValueOf<typeof ProposerDutyType>;
 export type ProposerDutyList = ValueOf<typeof ProposerDutyListType>;
 export type SyncDuty = ValueOf<typeof SyncDutyType>;
 export type SyncDutyList = ValueOf<typeof SyncDutyListType>;
-export type SignedAggregateAndProofList = ValueOf<typeof SignedAggregateAndProofListType>;
+export type SignedAggregateAndProofListPhase0 = ValueOf<typeof SignedAggregateAndProofListPhase0Type>;
+export type SignedAggregateAndProofListElecta = ValueOf<typeof SignedAggregateAndProofListElectaType>;
+export type SignedAggregateAndProofList = SignedAggregateAndProofListPhase0 | SignedAggregateAndProofListElecta;
 export type SignedContributionAndProofList = ValueOf<typeof SignedContributionAndProofListType>;
 export type BeaconCommitteeSubscription = ValueOf<typeof BeaconCommitteeSubscriptionType>;
 export type BeaconCommitteeSubscriptionList = ValueOf<typeof BeaconCommitteeSubscriptionListType>;
@@ -406,10 +409,11 @@ export type Endpoints = {
       /** HashTreeRoot of AttestationData that validator want's aggregated */
       attestationDataRoot: Root;
       slot: Slot;
+      index: number;
     },
-    {query: {attestation_data_root: string; slot: number}},
-    phase0.Attestation,
-    EmptyMeta
+    {query: {attestation_data_root: string; slot: number; index: number}},
+    allForks.Attestation,
+    VersionMeta
   >;
 
   /**
@@ -419,7 +423,7 @@ export type Endpoints = {
   publishAggregateAndProofs: Endpoint<
     "POST",
     {signedAggregateAndProofs: SignedAggregateAndProofList},
-    {body: unknown},
+    {body: unknown; headers: {[MetaHeader.Version]: string}},
     EmptyResponseData,
     EmptyMeta
   >;
@@ -536,7 +540,7 @@ export type Endpoints = {
   >;
 };
 
-export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpoints> {
+export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoints> {
   return {
     getAttesterDuties: {
       url: "/eth/v1/validator/duties/attester/{epoch}",
@@ -801,33 +805,78 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       url: "/eth/v1/validator/aggregate_attestation",
       method: "GET",
       req: {
-        writeReq: ({attestationDataRoot, slot}) => ({
-          query: {attestation_data_root: toHexString(attestationDataRoot), slot},
+        writeReq: ({attestationDataRoot, slot, index}) => ({
+          query: {attestation_data_root: toHexString(attestationDataRoot), slot, index},
         }),
-        parseReq: ({query}) => ({attestationDataRoot: fromHexString(query.attestation_data_root), slot: query.slot}),
+        parseReq: ({query}) => ({
+          attestationDataRoot: fromHexString(query.attestation_data_root),
+          slot: query.slot,
+          index: query.slot,
+        }),
         schema: {
-          query: {attestation_data_root: Schema.StringRequired, slot: Schema.UintRequired},
+          query: {attestation_data_root: Schema.StringRequired, slot: Schema.UintRequired, index: Schema.UintRequired},
         },
       },
       resp: {
-        data: ssz.phase0.Attestation,
-        meta: EmptyMetaCodec,
+        data: WithVersion((fork) =>
+          ForkSeq[fork] >= ForkSeq.electra ? ssz.electra.Attestation : ssz.phase0.Attestation
+        ),
+        meta: VersionCodec,
       },
     },
     publishAggregateAndProofs: {
       url: "/eth/v1/validator/aggregate_and_proofs",
       method: "POST",
       req: {
-        writeReqJson: ({signedAggregateAndProofs}) => ({
-          body: SignedAggregateAndProofListType.toJson(signedAggregateAndProofs),
-        }),
-        parseReqJson: ({body}) => ({signedAggregateAndProofs: SignedAggregateAndProofListType.fromJson(body)}),
-        writeReqSsz: ({signedAggregateAndProofs}) => ({
-          body: SignedAggregateAndProofListType.serialize(signedAggregateAndProofs),
-        }),
-        parseReqSsz: ({body}) => ({signedAggregateAndProofs: SignedAggregateAndProofListType.deserialize(body)}),
+        writeReqJson: ({signedAggregateAndProofs}) => {
+          const fork = config.getForkName(signedAggregateAndProofs[0].message.aggregate.data.slot);
+          return {
+            body:
+              ForkSeq[fork] >= ForkSeq.electra
+                ? SignedAggregateAndProofListElectaType.toJson(
+                    signedAggregateAndProofs as SignedAggregateAndProofListElecta
+                  )
+                : SignedAggregateAndProofListPhase0Type.toJson(
+                    signedAggregateAndProofs as SignedAggregateAndProofListPhase0
+                  ),
+            headers: {[MetaHeader.Version]: fork},
+          };
+        },
+        parseReqJson: ({body, headers}) => {
+          const fork = toForkName(headers[MetaHeader.Version]);
+          return {
+            signedAggregateAndProofs:
+              ForkSeq[fork] >= ForkSeq.electra
+                ? SignedAggregateAndProofListElectaType.fromJson(body)
+                : SignedAggregateAndProofListPhase0Type.fromJson(body),
+          };
+        },
+        writeReqSsz: ({signedAggregateAndProofs}) => {
+          const fork = config.getForkName(signedAggregateAndProofs[0].message.aggregate.data.slot);
+          return {
+            body:
+              ForkSeq[fork] >= ForkSeq.electra
+                ? SignedAggregateAndProofListElectaType.serialize(
+                    signedAggregateAndProofs as SignedAggregateAndProofListElecta
+                  )
+                : SignedAggregateAndProofListPhase0Type.serialize(
+                    signedAggregateAndProofs as SignedAggregateAndProofListPhase0
+                  ),
+            headers: {[MetaHeader.Version]: fork},
+          };
+        },
+        parseReqSsz: ({body, headers}) => {
+          const fork = toForkName(headers[MetaHeader.Version]);
+          return {
+            signedAggregateAndProofs:
+              ForkSeq[fork] >= ForkSeq.electra
+                ? SignedAggregateAndProofListElectaType.deserialize(body)
+                : SignedAggregateAndProofListPhase0Type.deserialize(body),
+          };
+        },
         schema: {
           body: Schema.ObjectArray,
+          headers: {[MetaHeader.Version]: Schema.String},
         },
       },
       resp: EmptyResponseCodec,
