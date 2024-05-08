@@ -10,7 +10,7 @@ import {processDeposit} from "./processDeposit.js";
 import {processVoluntaryExit} from "./processVoluntaryExit.js";
 import {processBlsToExecutionChange} from "./processBlsToExecutionChange.js";
 import {processExecutionLayerWithdrawalRequest} from "./processExecutionLayerWithdrawalRequest.js";
-import {processDepositReceipt} from "./processDepositReceipt.js";
+import {processDepositRequest} from "./processDepositRequest.js";
 import {ProcessBlockOpts} from "./types.js";
 import {processConsolidation} from "./processConsolidation.js";
 
@@ -22,7 +22,7 @@ export {
   processVoluntaryExit,
   processExecutionLayerWithdrawalRequest,
   processBlsToExecutionChange,
-  processDepositReceipt,
+  processDepositRequest,
 };
 
 export function processOperations(
@@ -70,8 +70,8 @@ export function processOperations(
       processExecutionLayerWithdrawalRequest(fork, state as CachedBeaconStateElectra, elWithdrawalRequest);
     }
 
-    for (const depositReceipt of bodyElectra.executionPayload.depositReceipts) {
-      processDepositReceipt(fork, stateElectra, depositReceipt);
+    for (const depositRequest of bodyElectra.executionPayload.depositRequests) {
+      processDepositRequest(fork, stateElectra, depositRequest);
     }
 
     for (const consolidation of bodyElectra.consolidations) {

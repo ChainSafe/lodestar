@@ -18,7 +18,7 @@ export type WithdrawalV1 = {
   amount: QUANTITY;
 };
 
-export type DepositReceiptV1 = {
+export type DepositRequestV1 = {
   pubkey: DATA;
   withdrawalCredentials: DATA;
   amount: QUANTITY;
