@@ -171,8 +171,8 @@ export function executionPayloadToPayloadHeader(
   }
 
   if (fork >= ForkSeq.electra) {
-    (bellatrixPayloadFields as electra.ExecutionPayloadHeader).depositReceiptsRoot =
-      ssz.electra.DepositReceipts.hashTreeRoot((payload as electra.ExecutionPayload).depositReceipts);
+    (bellatrixPayloadFields as electra.ExecutionPayloadHeader).depositRequestsRoot =
+      ssz.electra.DepositRequests.hashTreeRoot((payload as electra.ExecutionPayload).depositRequests);
     (bellatrixPayloadFields as electra.ExecutionPayloadHeader).withdrawalRequestsRoot =
       ssz.electra.ExecutionLayerWithdrawalRequests.hashTreeRoot(
         (payload as electra.ExecutionPayload).withdrawalRequests
