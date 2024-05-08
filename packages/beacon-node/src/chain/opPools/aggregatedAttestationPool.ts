@@ -1,6 +1,26 @@
 import {aggregateSignatures} from "@chainsafe/blst";
-import {ForkName, ForkSeq, MAX_ATTESTATIONS, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {phase0, Epoch, Slot, ssz, ValidatorIndex, RootHex} from "@lodestar/types";
+import {Signature} from "@chainsafe/bls/types";
+import {BitArray, toHexString} from "@chainsafe/ssz";
+import {
+  ForkName,
+  ForkSeq,
+  MAX_ATTESTATIONS,
+  MAX_ATTESTATIONS_ELECTRA,
+  MAX_COMMITTEES_PER_SLOT,
+  MIN_ATTESTATION_INCLUSION_DELAY,
+  SLOTS_PER_EPOCH,
+} from "@lodestar/params";
+import {
+  phase0,
+  Epoch,
+  Slot,
+  ssz,
+  ValidatorIndex,
+  RootHex,
+  allForks,
+  electra,
+  isElectraAttestation,
+} from "@lodestar/types";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStatePhase0,
@@ -19,13 +39,24 @@ type DataRootHex = string;
 
 type CommitteeIndex = number;
 
-type AttestationWithScore = {attestation: phase0.Attestation; score: number};
+// for pre-electra
+type AttestationWithScore = {attestation: allForks.Attestation; score: number};
+/**
+ * for electra, this is to consolidate aggregated attestations of the same attestation data into a single attestation to be included in block
+ * note that this is local definition in this file and it's NOT validator consolidation
+ */
+export type AttestationsConsolidation = {
+  byCommittee: Map<CommitteeIndex, AttestationNonParticipant>;
+  attData: phase0.AttestationData;
+  totalNotSeenCount: number;
+  score: number;
+};
 
 /**
- * This function returns not seen participation for a given epoch and committee.
+ * This function returns not seen participation for a given epoch and slot and committe index.
  * Return null if all validators are seen or no info to check.
  */
-type GetNotSeenValidatorsFn = (epoch: Epoch, committee: Uint32Array) => Set<number> | null;
+type GetNotSeenValidatorsFn = (epoch: Epoch, slot: Slot, committeeIndex: number) => Set<number> | null;
 
 type ValidateAttestationDataFn = (attData: phase0.AttestationData) => boolean;
 
@@ -38,13 +69,20 @@ type ValidateAttestationDataFn = (attData: phase0.AttestationData) => boolean;
 const MAX_RETAINED_ATTESTATIONS_PER_GROUP = 4;
 
 /**
- * On mainnet, each slot has 64 committees, and each block has 128 attestations max so in average
+ * Pre-electra, each slot has 64 committees, and each block has 128 attestations max so in average
  * we get 2 attestation per groups.
  * Starting from Jan 2024, we have a performance issue getting attestations for a block. Based on the
- * fact that lot of groups will have only 1 attestation since it's full of participation increase this number
+ * fact that lot of groups will have only 1 full participation attestation, increase this number
  * a bit higher than average. This also help decrease number of slots to search for attestations.
  */
 const MAX_ATTESTATIONS_PER_GROUP = 3;
+
+/**
+ * For electra, each block has up to 8 aggregated attestations, assuming there are 3 for the "best"
+ * attestation data, there are still 5 for other attestation data so this constant is still good.
+ * We should separate to 2 constant based on conditions of different networks
+ */
+const MAX_ATTESTATIONS_PER_GROUP_ELECTRA = 3;
 
 /**
  * Maintain a pool of aggregated attestations. Attestations can be retrieved for inclusion in a block
@@ -53,20 +91,25 @@ const MAX_ATTESTATIONS_PER_GROUP = 3;
  * Note that we want to remove attestations with attesters that were included in the chain.
  */
 export class AggregatedAttestationPool {
-  private readonly attestationGroupByDataHashByIndexBySlot = new MapDef<
+  /**
+   * post electra, different committees could have the same AttData and we have to consolidate attestations of the same
+   * data to be included in block, so we should group by data before index
+   * // TODO: make sure it does not affect performance for pre electra forks
+   */
+  private readonly attestationGroupByIndexByDataHexBySlot = new MapDef<
     Slot,
-    Map<CommitteeIndex, Map<DataRootHex, MatchingDataAttestationGroup>>
-  >(() => new Map<CommitteeIndex, Map<DataRootHex, MatchingDataAttestationGroup>>());
+    Map<DataRootHex, Map<CommitteeIndex, MatchingDataAttestationGroup>>
+  >(() => new Map<DataRootHex, Map<CommitteeIndex, MatchingDataAttestationGroup>>());
   private lowestPermissibleSlot = 0;
 
   /** For metrics to track size of the pool */
   getAttestationCount(): {attestationCount: number; attestationDataCount: number} {
     let attestationCount = 0;
     let attestationDataCount = 0;
-    for (const attestationGroupByDataByIndex of this.attestationGroupByDataHashByIndexBySlot.values()) {
-      for (const attestationGroupByData of attestationGroupByDataByIndex.values()) {
-        attestationDataCount += attestationGroupByData.size;
-        for (const attestationGroup of attestationGroupByData.values()) {
+    for (const attestationGroupByIndexByDataHex of this.attestationGroupByIndexByDataHexBySlot.values()) {
+      for (const attestationGroupByIndex of attestationGroupByIndexByDataHex.values()) {
+        attestationDataCount += attestationGroupByIndex.size;
+        for (const attestationGroup of attestationGroupByIndex.values()) {
           attestationCount += attestationGroup.getAttestationCount();
         }
       }
@@ -75,7 +118,7 @@ export class AggregatedAttestationPool {
   }
 
   add(
-    attestation: phase0.Attestation,
+    attestation: allForks.Attestation,
     dataRootHex: RootHex,
     attestingIndicesCount: number,
     committee: Uint32Array
@@ -88,16 +131,24 @@ export class AggregatedAttestationPool {
       return InsertOutcome.Old;
     }
 
-    const attestationGroupByDataHashByIndex = this.attestationGroupByDataHashByIndexBySlot.getOrDefault(slot);
-    let attestationGroupByDataHash = attestationGroupByDataHashByIndex.get(attestation.data.index);
-    if (!attestationGroupByDataHash) {
-      attestationGroupByDataHash = new Map<DataRootHex, MatchingDataAttestationGroup>();
-      attestationGroupByDataHashByIndex.set(attestation.data.index, attestationGroupByDataHash);
+    const attestationGroupByIndexByDataHash = this.attestationGroupByIndexByDataHexBySlot.getOrDefault(slot);
+    let attestationGroupByIndex = attestationGroupByIndexByDataHash.get(dataRootHex);
+    if (!attestationGroupByIndex) {
+      attestationGroupByIndex = new Map<CommitteeIndex, MatchingDataAttestationGroup>();
+      attestationGroupByIndexByDataHash.set(dataRootHex, attestationGroupByIndex);
     }
-    let attestationGroup = attestationGroupByDataHash.get(dataRootHex);
+    const committeeIndex = isElectraAttestation(attestation)
+      ? // this attestation is added to pool after validation
+        attestation.committeeBits.getSingleTrueBit()
+      : attestation.data.index;
+    if (committeeIndex === null) {
+      // this should not happen because attestation should be validated before reaching this
+      throw Error(`Invalid attestation slot=${slot} committeeIndex=${committeeIndex}`);
+    }
+    let attestationGroup = attestationGroupByIndex.get(committeeIndex);
     if (!attestationGroup) {
       attestationGroup = new MatchingDataAttestationGroup(committee, attestation.data);
-      attestationGroupByDataHash.set(dataRootHex, attestationGroup);
+      attestationGroupByIndex.set(committeeIndex, attestationGroup);
     }
 
     return attestationGroup.add({
@@ -109,14 +160,25 @@ export class AggregatedAttestationPool {
   /** Remove attestations which are too old to be included in a block. */
   prune(clockSlot: Slot): void {
     // Only retain SLOTS_PER_EPOCH slots
-    pruneBySlot(this.attestationGroupByDataHashByIndexBySlot, clockSlot, SLOTS_PER_EPOCH);
+    pruneBySlot(this.attestationGroupByIndexByDataHexBySlot, clockSlot, SLOTS_PER_EPOCH);
     this.lowestPermissibleSlot = Math.max(clockSlot - SLOTS_PER_EPOCH, 0);
   }
 
-  /**
-   * Get attestations to be included in a block. Returns $MAX_ATTESTATIONS items
-   */
   getAttestationsForBlock(
+    fork: ForkName,
+    forkChoice: IForkChoice,
+    state: CachedBeaconStateAllForks
+  ): allForks.Attestation[] {
+    const forkSeq = ForkSeq[fork];
+    return forkSeq >= ForkSeq.electra
+      ? this.getAttestationsForBlockElectra(fork, forkChoice, state)
+      : this.getAttestationsForBlockPreElectra(fork, forkChoice, state);
+  }
+
+  /**
+   * Get attestations to be included in a block pre-electra. Returns up to $MAX_ATTESTATIONS items
+   */
+  getAttestationsForBlockPreElectra(
     fork: ForkName,
     forkChoice: IForkChoice,
     state: CachedBeaconStateAllForks
@@ -130,14 +192,14 @@ export class AggregatedAttestationPool {
 
     const attestationsByScore: AttestationWithScore[] = [];
 
-    const slots = Array.from(this.attestationGroupByDataHashByIndexBySlot.keys()).sort((a, b) => b - a);
+    const slots = Array.from(this.attestationGroupByIndexByDataHexBySlot.keys()).sort((a, b) => b - a);
     let minScore = Number.MAX_SAFE_INTEGER;
     let slotCount = 0;
     slot: for (const slot of slots) {
       slotCount++;
-      const attestationGroupByDataHashByIndex = this.attestationGroupByDataHashByIndexBySlot.get(slot);
+      const attestationGroupByIndexByDataHash = this.attestationGroupByIndexByDataHexBySlot.get(slot);
       // should not happen
-      if (!attestationGroupByDataHashByIndex) {
+      if (!attestationGroupByIndexByDataHash) {
         throw Error(`No aggregated attestation pool for slot=${slot}`);
       }
 
@@ -158,35 +220,25 @@ export class AggregatedAttestationPool {
       }
 
       const slotDelta = stateSlot - slot;
-      const shuffling = state.epochCtx.getShufflingAtEpoch(epoch);
-      const slotCommittees = shuffling.committees[slot % SLOTS_PER_EPOCH];
-      for (const [committeeIndex, attestationGroupByData] of attestationGroupByDataHashByIndex.entries()) {
-        // all attestations will be validated against the state in next step so we can get committee from the state
-        // this is an improvement to save the notSeenValidatorsFn call for the same slot/index instead of the same attestation data
-        if (committeeIndex > slotCommittees.length) {
-          // invalid index, should not happen
-          continue;
-        }
+      for (const attestationGroupByIndex of attestationGroupByIndexByDataHash.values()) {
+        for (const [committeeIndex, attestationGroup] of attestationGroupByIndex.entries()) {
+          const notSeenAttestingIndices = notSeenValidatorsFn(epoch, slot, committeeIndex);
+          if (notSeenAttestingIndices === null || notSeenAttestingIndices.size === 0) {
+            continue;
+          }
 
-        const committee = slotCommittees[committeeIndex];
-        const notSeenAttestingIndices = notSeenValidatorsFn(epoch, committee);
-        if (notSeenAttestingIndices === null || notSeenAttestingIndices.size === 0) {
-          continue;
-        }
+          if (
+            slotCount > 2 &&
+            attestationsByScore.length >= MAX_ATTESTATIONS &&
+            notSeenAttestingIndices.size / slotDelta < minScore
+          ) {
+            // after 2 slots, there are a good chance that we have 2 * MAX_ATTESTATIONS attestations and break the for loop early
+            // if not, we may have to scan all slots in the pool
+            // if we have enough attestations and the max possible score is lower than scores of `attestationsByScore`, we should skip
+            // otherwise it takes time to check attestation, add it and remove it later after the sort by score
+            continue;
+          }
 
-        if (
-          slotCount > 2 &&
-          attestationsByScore.length >= MAX_ATTESTATIONS &&
-          notSeenAttestingIndices.size / slotDelta < minScore
-        ) {
-          // after 2 slots, there are a good chance that we have 2 * MAX_ATTESTATIONS attestations and break the for loop early
-          // if not, we may have to scan all slots in the pool
-          // if we have enough attestations and the max possible score is lower than scores of `attestationsByScore`, we should skip
-          // otherwise it takes time to check attestation, add it and remove it later after the sort by score
-          continue;
-        }
-
-        for (const attestationGroup of attestationGroupByData.values()) {
           if (!validateAttestationDataFn(attestationGroup.data)) {
             continue;
           }
@@ -199,6 +251,7 @@ export class AggregatedAttestationPool {
           // IF they have to be validated, do it only with one attestation per group since same data
           // The committeeCountPerSlot can be precomputed once per slot
           for (const {attestation, notSeenAttesterCount} of attestationGroup.getAttestationsForBlock(
+            fork,
             notSeenAttestingIndices
           )) {
             const score = notSeenAttesterCount / slotDelta;
@@ -232,22 +285,133 @@ export class AggregatedAttestationPool {
   }
 
   /**
+   * Get attestations to be included in an electra block. Returns up to $MAX_ATTESTATIONS_ELECTRA items
+   */
+  getAttestationsForBlockElectra(
+    fork: ForkName,
+    forkChoice: IForkChoice,
+    state: CachedBeaconStateAllForks
+  ): electra.Attestation[] {
+    const stateSlot = state.slot;
+    const stateEpoch = state.epochCtx.epoch;
+    const statePrevEpoch = stateEpoch - 1;
+
+    const notSeenValidatorsFn = getNotSeenValidatorsFn(state);
+    const validateAttestationDataFn = getValidateAttestationDataFn(forkChoice, state);
+
+    const slots = Array.from(this.attestationGroupByIndexByDataHexBySlot.keys()).sort((a, b) => b - a);
+    const consolidations: AttestationsConsolidation[] = [];
+    let minScore = Number.MAX_SAFE_INTEGER;
+    let slotCount = 0;
+    slot: for (const slot of slots) {
+      slotCount++;
+      const attestationGroupByIndexByDataHash = this.attestationGroupByIndexByDataHexBySlot.get(slot);
+      // should not happen
+      if (!attestationGroupByIndexByDataHash) {
+        throw Error(`No aggregated attestation pool for slot=${slot}`);
+      }
+
+      const epoch = computeEpochAtSlot(slot);
+      // validateAttestation condition: Attestation target epoch not in previous or current epoch
+      if (!(epoch === stateEpoch || epoch === statePrevEpoch)) {
+        continue; // Invalid attestations
+      }
+      // validateAttestation condition: Attestation slot not within inclusion window
+      if (!(slot + MIN_ATTESTATION_INCLUSION_DELAY <= stateSlot)) {
+        continue; // Invalid attestations
+      }
+
+      const slotDelta = stateSlot - slot;
+      // CommitteeIndex    0           1            2    ...   Consolidation
+      // Attestations    att00  ---   att10  ---  att20  ---   0 (att 00 10 20)
+      //                 att01  ---     -    ---  att21  ---   1 (att 01 __ 21)
+      //                   -    ---     -    ---  att22  ---   2 (att __ __ 22)
+      for (const attestationGroupByIndex of attestationGroupByIndexByDataHash.values()) {
+        // sameAttDataCons could be up to MAX_ATTESTATIONS_PER_GROUP_ELECTRA
+        const sameAttDataCons: AttestationsConsolidation[] = [];
+        for (const [committeeIndex, attestationGroup] of attestationGroupByIndex.entries()) {
+          const notSeenAttestingIndices = notSeenValidatorsFn(epoch, slot, committeeIndex);
+          if (notSeenAttestingIndices === null || notSeenAttestingIndices.size === 0) {
+            continue;
+          }
+
+          if (
+            slotCount > 2 &&
+            consolidations.length >= MAX_ATTESTATIONS_ELECTRA &&
+            notSeenAttestingIndices.size / slotDelta < minScore
+          ) {
+            // after 2 slots, there are a good chance that we have 2 * MAX_ATTESTATIONS_ELECTRA attestations and break the for loop early
+            // if not, we may have to scan all slots in the pool
+            // if we have enough attestations and the max possible score is lower than scores of `attestationsByScore`, we should skip
+            // otherwise it takes time to check attestation, add it and remove it later after the sort by score
+            continue;
+          }
+
+          if (!validateAttestationDataFn(attestationGroup.data)) {
+            continue;
+          }
+
+          // TODO: Is it necessary to validateAttestation for:
+          // - Attestation committee index not within current committee count
+          // - Attestation aggregation bits length does not match committee length
+          //
+          // These properties should not change after being validate in gossip
+          // IF they have to be validated, do it only with one attestation per group since same data
+          // The committeeCountPerSlot can be precomputed once per slot
+          for (const [i, attestationNonParticipation] of attestationGroup
+            .getAttestationsForBlock(fork, notSeenAttestingIndices)
+            .entries()) {
+            if (sameAttDataCons[i] === undefined) {
+              sameAttDataCons[i] = {
+                byCommittee: new Map(),
+                attData: attestationNonParticipation.attestation.data,
+                totalNotSeenCount: 0,
+                // only update score after we have full data
+                score: 0,
+              };
+            }
+            sameAttDataCons[i].byCommittee.set(committeeIndex, attestationNonParticipation);
+            sameAttDataCons[i].totalNotSeenCount += attestationNonParticipation.notSeenAttesterCount;
+          }
+          for (const consolidation of sameAttDataCons) {
+            const score = consolidation.totalNotSeenCount / slotDelta;
+            if (score < minScore) {
+              minScore = score;
+            }
+            consolidations.push({...consolidation, score});
+            // Stop accumulating attestations there are enough that may have good scoring
+            if (consolidations.length >= MAX_ATTESTATIONS_ELECTRA * 2) {
+              break slot;
+            }
+          }
+        }
+      }
+    }
+
+    const sortedConsolidationsByScore = consolidations
+      .sort((a, b) => b.score - a.score)
+      .slice(0, MAX_ATTESTATIONS_ELECTRA);
+    // on chain aggregation is expensive, only do it after all
+    return sortedConsolidationsByScore.map(aggregateConsolidation);
+  }
+
+  /**
    * Get all attestations optionally filtered by `attestation.data.slot`
    * @param bySlot slot to filter, `bySlot === attestation.data.slot`
    */
-  getAll(bySlot?: Slot): phase0.Attestation[] {
-    let attestationGroupsArr: Map<DataRootHex, MatchingDataAttestationGroup>[];
+  getAll(bySlot?: Slot): allForks.Attestation[] {
+    let attestationGroupsArr: Map<CommitteeIndex, MatchingDataAttestationGroup>[];
     if (bySlot === undefined) {
-      attestationGroupsArr = Array.from(this.attestationGroupByDataHashByIndexBySlot.values()).flatMap((byIndex) =>
+      attestationGroupsArr = Array.from(this.attestationGroupByIndexByDataHexBySlot.values()).flatMap((byIndex) =>
         Array.from(byIndex.values())
       );
     } else {
-      const attestationGroupsByIndex = this.attestationGroupByDataHashByIndexBySlot.get(bySlot);
+      const attestationGroupsByIndex = this.attestationGroupByIndexByDataHexBySlot.get(bySlot);
       if (!attestationGroupsByIndex) throw Error(`No attestations for slot ${bySlot}`);
       attestationGroupsArr = Array.from(attestationGroupsByIndex.values());
     }
 
-    const attestations: phase0.Attestation[] = [];
+    const attestations: allForks.Attestation[] = [];
     for (const attestationGroups of attestationGroupsArr) {
       for (const attestationGroup of attestationGroups.values()) {
         attestations.push(...attestationGroup.getAttestations());
@@ -258,12 +422,12 @@ export class AggregatedAttestationPool {
 }
 
 interface AttestationWithIndex {
-  attestation: phase0.Attestation;
+  attestation: allForks.Attestation;
   trueBitsCount: number;
 }
 
 type AttestationNonParticipant = {
-  attestation: phase0.Attestation;
+  attestation: allForks.Attestation;
   // this is <= attestingIndices.count since some attesters may be seen by the chain
   // this is only updated and used in removeBySeenValidators function
   notSeenAttesterCount: number;
@@ -345,8 +509,9 @@ export class MatchingDataAttestationGroup {
    * @param notSeenAttestingIndices not seen attestting indices, i.e. indices in the same committee
    * @returns an array of AttestationNonParticipant
    */
-  getAttestationsForBlock(notSeenAttestingIndices: Set<number>): AttestationNonParticipant[] {
+  getAttestationsForBlock(fork: ForkName, notSeenAttestingIndices: Set<number>): AttestationNonParticipant[] {
     const attestations: AttestationNonParticipant[] = [];
+    const forkSeq = ForkSeq[fork];
     for (const {attestation} of this.attestations) {
       let notSeenAttesterCount = 0;
       const {aggregationBits} = attestation;
@@ -356,22 +521,22 @@ export class MatchingDataAttestationGroup {
         }
       }
 
-      if (notSeenAttesterCount > 0) {
+      // if fork >= electra, should return electra-only attestations
+      if (notSeenAttesterCount > 0 && (forkSeq < ForkSeq.electra || isElectraAttestation(attestation))) {
         attestations.push({attestation, notSeenAttesterCount});
       }
     }
 
-    if (attestations.length <= MAX_ATTESTATIONS_PER_GROUP) {
+    const maxAttestation = forkSeq >= ForkSeq.electra ? MAX_ATTESTATIONS_PER_GROUP_ELECTRA : MAX_ATTESTATIONS_PER_GROUP;
+    if (attestations.length <= maxAttestation) {
       return attestations;
     } else {
-      return attestations
-        .sort((a, b) => b.notSeenAttesterCount - a.notSeenAttesterCount)
-        .slice(0, MAX_ATTESTATIONS_PER_GROUP);
+      return attestations.sort((a, b) => b.notSeenAttesterCount - a.notSeenAttesterCount).slice(0, maxAttestation);
     }
   }
 
   /** Get attestations for API. */
-  getAttestations(): phase0.Attestation[] {
+  getAttestations(): allForks.Attestation[] {
     return this.attestations.map((attestation) => attestation.attestation);
   }
 }
@@ -383,6 +548,34 @@ export function aggregateInto(attestation1: AttestationWithIndex, attestation2: 
   const signature1 = signatureFromBytesNoCheck(attestation1.attestation.signature);
   const signature2 = signatureFromBytesNoCheck(attestation2.attestation.signature);
   attestation1.attestation.signature = aggregateSignatures([signature1, signature2]).toBytes();
+}
+
+/**
+ * Electra and after: Block proposer consolidates attestations with the same
+ * attestation data from different committee into a single attestation
+ * https://github.com/ethereum/consensus-specs/blob/aba6345776aa876dad368cab27fbbb23fae20455/specs/_features/eip7549/validator.md?plain=1#L39
+ */
+export function aggregateConsolidation({byCommittee, attData}: AttestationsConsolidation): electra.Attestation {
+  const committeeBits = BitArray.fromBitLen(MAX_COMMITTEES_PER_SLOT);
+  // TODO: can we improve this?
+  let aggregationBits: boolean[] = [];
+  const signatures: Signature[] = [];
+  const sortedCommittees = Array.from(byCommittee.keys()).sort((a, b) => a - b);
+  for (const committeeIndex of sortedCommittees) {
+    const attestationNonParticipation = byCommittee.get(committeeIndex);
+    if (attestationNonParticipation !== undefined) {
+      const {attestation} = attestationNonParticipation;
+      committeeBits.set(committeeIndex, true);
+      aggregationBits = [...aggregationBits, ...attestation.aggregationBits.toBoolArray()];
+      signatures.push(signatureFromBytesNoCheck(attestation.signature));
+    }
+  }
+  return {
+    aggregationBits: BitArray.fromBoolArray(aggregationBits),
+    data: attData,
+    committeeBits,
+    signature: aggregateSignatures(signatures).toBytes(),
+  };
 }
 
 /**
@@ -407,12 +600,13 @@ export function getNotSeenValidatorsFn(state: CachedBeaconStateAllForks): GetNot
       state
     );
 
-    return (epoch: Epoch, committee: Uint32Array) => {
+    return (epoch: Epoch, slot: Slot, committeeIndex: number) => {
       const participants =
         epoch === stateEpoch ? currentEpochParticipants : epoch === stateEpoch - 1 ? previousEpochParticipants : null;
       if (participants === null) {
         return null;
       }
+      const committee = state.epochCtx.getBeaconCommittee(slot, committeeIndex);
 
       const notSeenAttestingIndices = new Set<number>();
       for (const [i, validatorIndex] of committee.entries()) {
@@ -434,22 +628,32 @@ export function getNotSeenValidatorsFn(state: CachedBeaconStateAllForks): GetNot
     const previousParticipation = altairState.previousEpochParticipation.getAll();
     const currentParticipation = altairState.currentEpochParticipation.getAll();
     const stateEpoch = computeEpochAtSlot(state.slot);
+    // this function could be called multiple times with same slot + committeeIndex
+    const cachedNotSeenValidators = new Map<string, Set<number>>();
 
-    return (epoch: Epoch, committee: Uint32Array) => {
+    return (epoch: Epoch, slot: Slot, committeeIndex: number) => {
       const participationStatus =
         epoch === stateEpoch ? currentParticipation : epoch === stateEpoch - 1 ? previousParticipation : null;
 
       if (participationStatus === null) {
         return null;
       }
+      const cacheKey = slot + "_" + committeeIndex;
+      let notSeenAttestingIndices = cachedNotSeenValidators.get(cacheKey);
+      if (notSeenAttestingIndices != null) {
+        // if all validators are seen then return null, we don't need to check for any attestations of same committee again
+        return notSeenAttestingIndices.size === 0 ? null : notSeenAttestingIndices;
+      }
 
-      const notSeenAttestingIndices = new Set<number>();
+      const committee = state.epochCtx.getBeaconCommittee(slot, committeeIndex);
+      notSeenAttestingIndices = new Set<number>();
       for (const [i, validatorIndex] of committee.entries()) {
         // no need to check flagIsTimelySource as if validator is not seen, it's participation status is 0
         if (participationStatus[validatorIndex] === 0) {
           notSeenAttestingIndices.add(i);
         }
       }
+      cachedNotSeenValidators.set(cacheKey, notSeenAttestingIndices);
       // if all validators are seen then return null, we don't need to check for any attestations of same committee again
       return notSeenAttestingIndices.size === 0 ? null : notSeenAttestingIndices;
     };
