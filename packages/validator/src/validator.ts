@@ -241,6 +241,7 @@ export class Validator {
       chainHeaderTracker,
       syncingStatusTracker,
       metrics,
+      config,
       {
         afterBlockDelaySlotFraction: opts.afterBlockDelaySlotFraction,
         disableAttestationGrouping: opts.disableAttestationGrouping || opts.distributed,

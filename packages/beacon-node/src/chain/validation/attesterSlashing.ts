@@ -9,7 +9,7 @@ import {AttesterSlashingError, AttesterSlashingErrorCode, GossipAction} from "..
 
 export async function validateApiAttesterSlashing(
   chain: IBeaconChain,
-  attesterSlashing: phase0.AttesterSlashing
+  attesterSlashing: phase0.AttesterSlashing // TODO Electra: Handle electra.AttesterSlashing
 ): Promise<void> {
   const prioritizeBls = true;
   return validateAttesterSlashing(chain, attesterSlashing, prioritizeBls);
