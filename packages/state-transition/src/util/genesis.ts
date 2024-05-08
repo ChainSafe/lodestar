@@ -293,7 +293,7 @@ export function initializeBeaconStateFromEth1(
     stateElectra.latestExecutionPayloadHeader =
       (executionPayloadHeader as CompositeViewDU<typeof ssz.electra.ExecutionPayloadHeader>) ??
       ssz.electra.ExecutionPayloadHeader.defaultViewDU();
-    stateElectra.depositReceiptsStartIndex = UNSET_DEPOSIT_RECEIPTS_START_INDEX;
+    stateElectra.depositRequestsStartIndex = UNSET_DEPOSIT_RECEIPTS_START_INDEX;
   }
 
   state.commit();

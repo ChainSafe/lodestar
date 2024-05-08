@@ -1093,7 +1093,7 @@ export class BeaconChain implements IBeaconChain {
     // Will resolve this later
     // if (cpEpoch >= (this.config.ELECTRA_FORK_EPOCH ?? Infinity)) {
     //   // finalizedState can be safely casted to Electra state since cp is already post-Electra
-    //   if (finalizedState.eth1DepositIndex >= (finalizedState as CachedBeaconStateElectra).depositReceiptsStartIndex) {
+    //   if (finalizedState.eth1DepositIndex >= (finalizedState as CachedBeaconStateElectra).depositRequestsStartIndex) {
     //     // Signal eth1 to stop polling eth1Data
     //     this.eth1.stopPollingEth1Data();
     //   }
