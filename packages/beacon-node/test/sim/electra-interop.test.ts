@@ -72,7 +72,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     }
   });
 
-  it("Send and get payloads with depositReceipts to/from EL", async () => {
+  it("Send and get payloads with depositRequests to/from EL", async () => {
     const {elClient, tearDownCallBack} = await runEL(
       {...elSetupConfig, mode: ELStartMode.PostMerge, genesisTemplate: "electra.tmpl"},
       {...elRunOptions, ttd: BigInt(0)},
@@ -111,7 +111,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     // 2. Send raw deposit transaction A and B. tx A is to be imported via newPayload, tx B is to be included in payload via getPayload
     const depositTransactionA =
       "0x02f9021c8217de808459682f008459682f0e830271009442424242424242424242424242424242424242428901bc16d674ec800000b901a422895118000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000120749715de5d1226545c6b3790f515d551a5cc5bf1d49c87a696860554d2fc4f14000000000000000000000000000000000000000000000000000000000000003096a96086cff07df17668f35f7418ef8798079167e3f4f9b72ecde17b28226137cf454ab1dd20ef5d924786ab3483c2f9000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020003f5102dabe0a27b1746098d1dc17a5d3fbd478759fea9287e4e419b3c3cef20000000000000000000000000000000000000000000000000000000000000060b1acdb2c4d3df3f1b8d3bfd33421660df358d84d78d16c4603551935f4b67643373e7eb63dcb16ec359be0ec41fee33b03a16e80745f2374ff1d3c352508ac5d857c6476d3c3bcf7e6ca37427c9209f17be3af5264c0e2132b3dd1156c28b4e9c080a09f597089338d7f44f5c59f8230bb38f243849228a8d4e9d2e2956e6050f5b2c7a076486996c7e62802b8f95eee114783e4b403fd11093ba96286ff42c595f24452";
-    const depositReceiptA = {
+    const depositRequestA = {
       amount: 32000000000,
       index: 0,
       pubkey: dataToBytes(
@@ -127,7 +127,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
     const depositTransactionB =
       "0x02f9021c8217de018459682f008459682f0e830271009442424242424242424242424242424242424242428901bc16d674ec800000b901a422895118000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000120a18b4c7cab0afa273ea9504904521ea8421a4e32740b7611bd3d5095ca99f0cb0000000000000000000000000000000000000000000000000000000000000030a5c85a60ba2905c215f6a12872e62b1ee037051364244043a5f639aa81b04a204c55e7cc851f29c7c183be253ea1510b000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020001db70c485b6264692f26b8aeaab5b0c384180df8e2184a21a808a3ec8e86ca00000000000000000000000000000000000000000000000000000000000000609561731785b48cf1886412234531e4940064584463e96ac63a1a154320227e333fb51addc4a89b7e0d3f862d7c1fd4ea03bd8eb3d8806f1e7daf591cbbbb92b0beb74d13c01617f22c5026b4f9f9f294a8a7c32db895de3b01bee0132c9209e1c001a0644e0a763a34b4bfb9f56a677857b57fcf15e3db57e2f57060e92084f75f3d82a018ba8eaacbd8e6f6917675b1d0362b12ca82850ca8ef9c010430760c2b2e0cb5";
-    const depositReceiptB = {
+    const depositRequestB = {
       amount: 32000000000,
       index: 1,
       pubkey: dataToBytes(
@@ -168,7 +168,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       excessBlobGas: 0n,
       transactions: [dataToBytes(depositTransactionA, null)],
       withdrawals: [],
-      depositReceipts: [depositReceiptA],
+      depositRequests: [depositRequestA],
       blockNumber: 1,
       blockHash: dataToBytes(newPayloadBlockHash, 32),
       receiptsRoot: dataToBytes("0x79ee3424eb720a3ad4b1c5a372bb8160580cbe4d893778660f34213c685627a9", 32),
@@ -205,7 +205,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     );
     if (!payloadId2) throw Error("InvalidPayloadId");
 
-    // 5. Get the payload.  Check depositReceipts field contains deposit
+    // 5. Get the payload.  Check depositRequests field contains deposit
     // Wait a bit first for besu to pick up tx from the tx pool.
     await sleep(1000);
     const payloadAndBlockValue = await executionEngine.getPayload(ForkName.electra, payloadId2);
@@ -221,16 +221,16 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       }
     }
 
-    if (payload.depositReceipts.length !== 1) {
-      throw Error(`Number of depositReceipts mismatched. Expected: 1, actual: ${payload.depositReceipts.length}`);
+    if (payload.depositRequests.length !== 1) {
+      throw Error(`Number of depositRequests mismatched. Expected: 1, actual: ${payload.depositRequests.length}`);
     }
 
-    const actualDepositReceipt = payload.depositReceipts[0];
+    const actualDepositRequest = payload.depositRequests[0];
     assert.deepStrictEqual(
-      actualDepositReceipt,
-      depositReceiptB,
-      `Deposit receipts mismatched. Expected: ${JSON.stringify(depositReceiptB)}, actual: ${JSON.stringify(
-        actualDepositReceipt
+      actualDepositRequest,
+      depositRequestB,
+      `Deposit receipts mismatched. Expected: ${JSON.stringify(depositRequestB)}, actual: ${JSON.stringify(
+        actualDepositRequest
       )}`
     );
   });
@@ -432,8 +432,8 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       throw Error("Historical validator length for epoch 1 or 2 is not dropped properly");
     }
 
-    if (headState.depositReceiptsStartIndex === UNSET_DEPOSIT_RECEIPTS_START_INDEX) {
-      throw Error("state.depositReceiptsStartIndex is not set upon processing new deposit receipt");
+    if (headState.depositRequestsStartIndex === UNSET_DEPOSIT_RECEIPTS_START_INDEX) {
+      throw Error("state.depositRequestsStartIndex is not set upon processing new deposit receipt");
     }
 
     // wait for 1 slot to print current epoch stats

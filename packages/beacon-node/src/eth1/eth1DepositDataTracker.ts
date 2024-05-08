@@ -129,9 +129,9 @@ export class Eth1DepositDataTracker {
   async getEth1DataAndDeposits(state: CachedBeaconStateAllForks): Promise<Eth1DataAndDeposits> {
     if (
       state.epochCtx.isAfterElectra() &&
-      state.eth1DepositIndex >= (state as CachedBeaconStateElectra).depositReceiptsStartIndex
+      state.eth1DepositIndex >= (state as CachedBeaconStateElectra).depositRequestsStartIndex
     ) {
-      // No need to poll eth1Data since Electra deprecates the mechanism after depositReceiptsStartIndex is reached
+      // No need to poll eth1Data since Electra deprecates the mechanism after depositRequestsStartIndex is reached
       return {eth1Data: state.eth1Data, deposits: []};
     }
     const eth1Data = this.forcedEth1DataVote ?? (await this.getEth1Data(state));
