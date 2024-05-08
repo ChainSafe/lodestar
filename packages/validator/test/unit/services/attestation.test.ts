@@ -3,6 +3,8 @@ import {toHexString} from "@chainsafe/ssz";
 import {SecretKey} from "@chainsafe/blst";
 import {ssz} from "@lodestar/types";
 import {routes} from "@lodestar/api";
+import {createChainForkConfig} from "@lodestar/config";
+import {config} from "@lodestar/config/default";
 import {AttestationService, AttestationServiceOpts} from "../../../src/services/attestation.js";
 import {AttDutyAndProof} from "../../../src/services/attestationDuties.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
@@ -68,6 +70,7 @@ describe("AttestationService", function () {
           chainHeadTracker,
           syncingStatusTracker,
           null,
+          createChainForkConfig(config),
           opts
         );
 
