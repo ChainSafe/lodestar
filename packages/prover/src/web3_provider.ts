@@ -20,7 +20,7 @@ export function createVerifiedExecutionProvider<
 >(provider: T, opts: VerifiedExecutionInitOptions<Mutate>): Return {
   const signal = opts.signal ?? new AbortController().signal;
   const logger = opts.logger ?? getBrowserLogger({level: opts.logLevel ?? LogLevel.info});
-  const mutateProvider = opts.mutateProvider === undefined ? true : false;
+  const mutateProvider = opts.mutateProvider === undefined;
   const customProviderTypes = opts.providerTypes ?? [];
 
   const providerInspector = Web3ProviderInspector.initWithDefault({logger});
