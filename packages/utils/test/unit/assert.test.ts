@@ -31,7 +31,7 @@ describe("assert", () => {
   });
 
   const cases: {
-    op: keyof Omit<typeof assert, "true">;
+    op: keyof Omit<typeof assert, "true" | "notNull">;
     args: [number, number];
     ok: boolean;
   }[] = [
