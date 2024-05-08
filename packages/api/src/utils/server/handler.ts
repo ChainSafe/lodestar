@@ -52,7 +52,7 @@ export function createFastifyHandler<E extends Endpoint>(
       responseMediaType = parseAcceptHeader(acceptHeader, supportedMediaTypes);
 
       if (responseMediaType === null) {
-        throw new ApiError(406, `Accepted media types are not supported: ${acceptHeader}`);
+        throw new ApiError(406, `Accepted media types not supported: ${acceptHeader}`);
       }
     }
     const responseWireFormat = responseMediaType !== null ? getWireFormat(responseMediaType) : null;
