@@ -9,8 +9,8 @@ export type AttesterSlashing = ValueOf<typeof ssz.AttesterSlashing>;
 export type AggregateAndProof = ValueOf<typeof ssz.AggregateAndProof>;
 export type SignedAggregateAndProof = ValueOf<typeof ssz.SignedAggregateAndProof>;
 
-export type DepositReceipt = ValueOf<typeof ssz.DepositReceipt>;
-export type DepositReceipts = ValueOf<typeof ssz.DepositReceipts>;
+export type DepositRequest = ValueOf<typeof ssz.DepositRequest>;
+export type DepositRequests = ValueOf<typeof ssz.DepositRequests>;
 
 export type ExecutionLayerWithdrawalRequest = ValueOf<typeof ssz.ExecutionLayerWithdrawalRequest>;
 export type ExecutionLayerWithdrawalRequests = ValueOf<typeof ssz.ExecutionLayerWithdrawalRequests>;
