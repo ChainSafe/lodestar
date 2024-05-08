@@ -1063,23 +1063,26 @@ export function getValidatorApi({
       };
     },
 
-    async getAggregatedAttestation({attestationDataRoot, slot}) {
+    async getAggregatedAttestation({attestationDataRoot, slot, committeeIndex}) {
       notWhileSyncing();
 
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
       const dataRootHex = toHex(attestationDataRoot);
-      const aggregate = chain.attestationPool.getAggregate(slot, dataRootHex);
+      const aggregate = chain.attestationPool.getAggregate(slot, committeeIndex, dataRootHex);
 
       if (!aggregate) {
-        throw new ApiError(404, `No aggregated attestation for slot=${slot}, dataRoot=${dataRootHex}`);
+        throw new ApiError(
+          404,
+          `No aggregated attestation for slot=${slot} committeeIndex=${committeeIndex}, dataRoot=${dataRootHex}`
+        );
       }
 
       metrics?.production.producedAggregateParticipants.observe(aggregate.aggregationBits.getTrueBitIndexes().length);
 
       return {
         data: aggregate,
-        version: config.getForkName(slot),
+        meta: {version: config.getForkName(slot)},
       };
     },
 
