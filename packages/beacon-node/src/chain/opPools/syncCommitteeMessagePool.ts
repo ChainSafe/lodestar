@@ -2,10 +2,10 @@ import {Signature, aggregateSignatures} from "@chainsafe/blst";
 import {BitArray, toHexString} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {altair, Root, Slot, SubcommitteeIndex} from "@lodestar/types";
-import {MapDef} from "@lodestar/utils";
+import {MapDef, signatureFromBytesNoCheck} from "@lodestar/utils";
 import {IClock} from "../../util/clock.js";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
-import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
+import {pruneBySlot} from "./utils.js";
 
 /**
  * SyncCommittee signatures are only useful during a single slot according to our peer's clocks

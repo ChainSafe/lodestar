@@ -1,10 +1,10 @@
 import {Signature, aggregateSignatures} from "@chainsafe/blst";
 import {BitArray} from "@chainsafe/ssz";
 import {phase0, Slot, RootHex} from "@lodestar/types";
-import {MapDef} from "@lodestar/utils";
+import {MapDef, signatureFromBytesNoCheck} from "@lodestar/utils";
 import {IClock} from "../../util/clock.js";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
-import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
+import {pruneBySlot} from "./utils.js";
 
 /**
  * The number of slots that will be stored in the pool.

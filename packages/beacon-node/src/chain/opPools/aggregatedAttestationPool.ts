@@ -11,9 +11,9 @@ import {
   getBlockRootAtSlot,
 } from "@lodestar/state-transition";
 import {IForkChoice, EpochDifference} from "@lodestar/fork-choice";
-import {toHex, MapDef} from "@lodestar/utils";
+import {toHex, MapDef, signatureFromBytesNoCheck} from "@lodestar/utils";
 import {intersectUint8Arrays, IntersectResult} from "../../util/bitArray.js";
-import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
+import {pruneBySlot} from "./utils.js";
 import {InsertOutcome} from "./types.js";
 
 type DataRootHex = string;

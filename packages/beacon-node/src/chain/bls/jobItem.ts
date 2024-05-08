@@ -1,11 +1,5 @@
-import {
-  CoordType,
-  Signature,
-  PublicKey,
-  aggregatePublicKeys,
-  aggregateSignatures,
-  randomBytesNonZero,
-} from "@chainsafe/blst";
+import {PublicKey, aggregatePublicKeys, aggregateSignatures, randomBytesNonZero} from "@chainsafe/blst";
+import {signatureFromBytes} from "@lodestar/utils";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {LinkedList} from "../../util/array.js";
 import {Metrics} from "../../metrics/metrics.js";
@@ -76,11 +70,7 @@ export function jobItemWorkReq(job: JobQueueItem, metrics: Metrics | null): BlsW
       // and not a problem in the near future
       // this is monitored on v1.11.0 https://github.com/ChainSafe/lodestar/pull/5912#issuecomment-1700320307
       const timer = metrics?.blsThreadPool.signatureDeserializationMainThreadDuration.startTimer();
-      const signatures = job.sets.map((set) => {
-        const sig = Signature.deserialize(set.signature, CoordType.affine);
-        sig.sigValidate();
-        return sig;
-      });
+      const signatures = job.sets.map((set) => signatureFromBytes(set.signature));
       timer?.();
 
       const randomness: Uint8Array[] = [];
