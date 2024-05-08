@@ -1,6 +1,6 @@
 import {toHexString} from "@chainsafe/ssz";
-import {ForkName} from "@lodestar/params";
-import {phase0, RootHex, ssz} from "@lodestar/types";
+import {ForkName, ForkSeq} from "@lodestar/params";
+import {allForks, electra, phase0, RootHex, ssz} from "@lodestar/types";
 import {
   computeEpochAtSlot,
   isAggregatorFromCommitteeLength,
@@ -20,7 +20,7 @@ import {
 } from "./attestation.js";
 
 export type AggregateAndProofValidationResult = {
-  indexedAttestation: phase0.IndexedAttestation;
+  indexedAttestation: allForks.IndexedAttestation;
   committeeIndices: Uint32Array;
   attDataRootHex: RootHex;
 };
@@ -41,7 +41,7 @@ export async function validateApiAggregateAndProof(
 export async function validateGossipAggregateAndProof(
   fork: ForkName,
   chain: IBeaconChain,
-  signedAggregateAndProof: phase0.SignedAggregateAndProof,
+  signedAggregateAndProof: allForks.SignedAggregateAndProof,
   serializedData: Uint8Array
 ): Promise<AggregateAndProofValidationResult> {
   return validateAggregateAndProof(fork, chain, signedAggregateAndProof, serializedData);
@@ -50,7 +50,7 @@ export async function validateGossipAggregateAndProof(
 async function validateAggregateAndProof(
   fork: ForkName,
   chain: IBeaconChain,
-  signedAggregateAndProof: phase0.SignedAggregateAndProof,
+  signedAggregateAndProof: allForks.SignedAggregateAndProof,
   serializedData: Uint8Array | null = null,
   opts: {skipValidationKnownAttesters: boolean; prioritizeBls: boolean} = {
     skipValidationKnownAttesters: false,
@@ -74,7 +74,21 @@ async function validateAggregateAndProof(
   const attDataBase64 = serializedData ? getAttDataBase64FromSignedAggregateAndProofSerialized(serializedData) : null;
   const cachedAttData = attDataBase64 ? chain.seenAttestationDatas.get(attSlot, attDataBase64) : null;
 
-  const attIndex = attData.index;
+  let attIndex;
+  if (ForkSeq[fork] >= ForkSeq.electra) {
+    attIndex = (aggregate as electra.Attestation).committeeBits.getSingleTrueBit();
+    // [REJECT] len(committee_indices) == 1, where committee_indices = get_committee_indices(aggregate)
+    if (attIndex === null) {
+      throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.NOT_EXACTLY_ONE_COMMITTEE_BIT_SET});
+    }
+    // [REJECT] aggregate.data.index == 0
+    if (attData.index === 0) {
+      throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.NON_ZERO_ATTESTATION_DATA_INDEX});
+    }
+  } else {
+    attIndex = attData.index;
+  }
+
   const attEpoch = computeEpochAtSlot(attSlot);
   const attTarget = attData.target;
   const targetEpoch = attTarget.epoch;
@@ -163,11 +177,16 @@ async function validateAggregateAndProof(
     throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS});
   }
   const attestingIndices = aggregate.aggregationBits.intersectValues(committeeIndices);
-  const indexedAttestation: phase0.IndexedAttestation = {
+
+  const indexedAttestationContent = {
     attestingIndices,
     data: attData,
     signature: aggregate.signature,
   };
+  const indexedAttestation =
+    ForkSeq[fork] >= ForkSeq.electra
+      ? (indexedAttestationContent as electra.IndexedAttestation)
+      : (indexedAttestationContent as phase0.IndexedAttestation);
 
   // TODO: Check this before regen
   // [REJECT] The attestation has participants -- that is,

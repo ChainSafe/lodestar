@@ -162,6 +162,7 @@ export type AllForksTypes = {
   BeaconBlock: BeaconBlock;
   SignedBeaconBlock: SignedBeaconBlock;
   BeaconState: BeaconState;
+  Attestation: Attestation;
   Metadata: Metadata;
   ExecutionPayload: ExecutionPayload;
   ExecutionPayloadHeader: ExecutionPayloadHeader;
@@ -263,6 +264,11 @@ export type AllForksSSZTypes = {
     | typeof electraSsz.BeaconState
   >;
   Metadata: AllForksTypeOf<typeof phase0Ssz.Metadata | typeof altairSsz.Metadata>;
+  SignedAggregateAndProof: AllForksTypeOf<
+    typeof phase0Ssz.SignedAggregateAndProof | typeof electraSsz.SignedAggregateAndProof
+  >;
+  Attestation: AllForksTypeOf<typeof phase0Ssz.Attestation | typeof electraSsz.Attestation>;
+  AttesterSlashing: AllForksTypeOf<typeof phase0Ssz.AttesterSlashing | typeof electraSsz.AttesterSlashing>;
 };
 
 export type AllForksExecutionSSZTypes = {
