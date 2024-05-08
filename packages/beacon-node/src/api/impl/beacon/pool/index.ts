@@ -27,12 +27,13 @@ export function getBeaconPoolApi({
     async getPoolAttestations({slot, committeeIndex}) {
       // Already filtered by slot
       let attestations = chain.aggregatedAttestationPool.getAll(slot);
+      const fork = chain.config.getForkName(slot ?? attestations[0].data.slot) ?? ForkName.phase0;
 
       if (committeeIndex !== undefined) {
         attestations = attestations.filter((attestation) => committeeIndex === attestation.data.index);
       }
 
-      return {data: attestations};
+      return {data: attestations, meta: {version: fork}};
     },
 
     async getPoolAttesterSlashings() {

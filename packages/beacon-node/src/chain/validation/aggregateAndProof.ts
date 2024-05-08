@@ -82,7 +82,7 @@ async function validateAggregateAndProof(
       throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.NOT_EXACTLY_ONE_COMMITTEE_BIT_SET});
     }
     // [REJECT] aggregate.data.index == 0
-    if (attData.index === 0) {
+    if (attData.index !== 0) {
       throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.NON_ZERO_ATTESTATION_DATA_INDEX});
     }
   } else {

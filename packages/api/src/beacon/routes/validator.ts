@@ -409,9 +409,9 @@ export type Endpoints = {
       /** HashTreeRoot of AttestationData that validator want's aggregated */
       attestationDataRoot: Root;
       slot: Slot;
-      index: number;
+      committeeIndex: number;
     },
-    {query: {attestation_data_root: string; slot: number; index: number}},
+    {query: {attestation_data_root: string; slot: number; committeeIndex: number}},
     allForks.Attestation,
     VersionMeta
   >;
@@ -805,16 +805,20 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       url: "/eth/v1/validator/aggregate_attestation",
       method: "GET",
       req: {
-        writeReq: ({attestationDataRoot, slot, index}) => ({
-          query: {attestation_data_root: toHexString(attestationDataRoot), slot, index},
+        writeReq: ({attestationDataRoot, slot, committeeIndex}) => ({
+          query: {attestation_data_root: toHexString(attestationDataRoot), slot, committeeIndex},
         }),
         parseReq: ({query}) => ({
           attestationDataRoot: fromHexString(query.attestation_data_root),
           slot: query.slot,
-          index: query.slot,
+          committeeIndex: query.slot,
         }),
         schema: {
-          query: {attestation_data_root: Schema.StringRequired, slot: Schema.UintRequired, index: Schema.UintRequired},
+          query: {
+            attestation_data_root: Schema.StringRequired,
+            slot: Schema.UintRequired,
+            committeeIndex: Schema.UintRequired,
+          },
         },
       },
       resp: {
