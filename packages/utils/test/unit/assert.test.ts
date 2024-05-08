@@ -20,6 +20,16 @@ describe("assert", () => {
     });
   });
 
+  describe("notNull with custom message", () => {
+    it("Should not throw error with not null value", () => {
+      expect(() => assert.notNull(0)).not.toThrow();
+      expect(() => assert.notNull("")).not.toThrow();
+    });
+    it("Should throw with null value", () => {
+      expect(() => assert.notNull(null, "something must not be null")).toThrow("something must not be null");
+    });
+  });
+
   const cases: {
     op: keyof Omit<typeof assert, "true">;
     args: [number, number];

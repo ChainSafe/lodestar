@@ -2,7 +2,7 @@ import {PointFormat, Signature} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
 import {BitArray} from "@chainsafe/ssz";
 import {Slot, RootHex, allForks, isElectraAttestation} from "@lodestar/types";
-import {MapDef} from "@lodestar/utils";
+import {MapDef, assert} from "@lodestar/utils";
 import {IClock} from "../../util/clock.js";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
 import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
@@ -123,10 +123,8 @@ export class AttestationPool {
       ? // this attestation is added to pool after validation
         attestation.committeeBits.getSingleTrueBit()
       : attestation.data.index;
-    if (committeeIndex === null) {
-      // this should not happen because attestation should be validated before reaching this
-      throw Error(`Invalid attestation slot=${slot} committeeIndex=${committeeIndex}`);
-    }
+    // this should not happen because attestation should be validated before reaching this
+    assert.notNull(committeeIndex, "Committee index should not be null in attestation pool");
 
     // Pre-aggregate the contribution with existing items
     let aggregateByIndex = aggregateByRoot.get(attDataRootHex);
@@ -204,9 +202,7 @@ function aggregateAttestationInto(aggregate: AggregateFast, attestation: allFork
   const bitIndex = attestation.aggregationBits.getSingleTrueBit();
 
   // Should never happen, attestations are verified against this exact condition before
-  if (bitIndex === null) {
-    throw Error("Invalid attestation not exactly one bit set");
-  }
+  assert.notNull(bitIndex, "Invalid attestation in pool, not exactly one bit set");
 
   if (aggregate.aggregationBits.get(bitIndex) === true) {
     return InsertOutcome.AlreadyKnown;
