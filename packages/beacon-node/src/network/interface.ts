@@ -71,7 +71,7 @@ export interface INetwork extends INetworkCorePublic {
   // Gossip
   publishBeaconBlock(signedBlock: SignedBeaconBlock): Promise<number>;
   publishBlobSidecar(blobSidecar: deneb.BlobSidecar): Promise<number>;
-  publishBeaconAggregateAndProof(aggregateAndProof: phase0.SignedAggregateAndProof): Promise<number>;
+  publishBeaconAggregateAndProof(aggregateAndProof: allForks.SignedAggregateAndProof): Promise<number>;
   publishBeaconAttestation(attestation: phase0.Attestation, subnet: number): Promise<number>;
   publishVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<number>;
   publishBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange): Promise<number>;
