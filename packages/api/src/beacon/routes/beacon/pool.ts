@@ -1,4 +1,4 @@
-import {phase0, altair, capella, CommitteeIndex, Slot, ssz} from "@lodestar/types";
+import {phase0, altair, capella, CommitteeIndex, Slot, ssz, allForks} from "@lodestar/types";
 import {ApiClientResponse} from "../../../interfaces.js";
 import {HttpStatusCode} from "../../../utils/client/httpStatusCode.js";
 import {
@@ -80,7 +80,7 @@ export type Api = {
    * @throws ApiError
    */
   submitPoolAttestations(
-    attestations: phase0.Attestation[]
+    attestations: allForks.Attestation[]
   ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.BAD_REQUEST>>;
 
   /**
