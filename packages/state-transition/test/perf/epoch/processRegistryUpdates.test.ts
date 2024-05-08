@@ -1,4 +1,5 @@
 import {itBench} from "@dapplion/benchmark";
+import {ForkSeq} from "@lodestar/params";
 import {beforeProcessEpoch, CachedBeaconStateAllForks, EpochTransitionCache} from "../../../src/index.js";
 import {processRegistryUpdates} from "../../../src/epoch/processRegistryUpdates.js";
 import {generatePerfTestCachedStatePhase0, numValidators} from "../util.js";
@@ -62,7 +63,7 @@ describe("phase0 processRegistryUpdates", () => {
       noThreshold: notTrack,
       before: () => getRegistryUpdatesTestData(vc, lengths),
       beforeEach: async ({state, cache}) => ({state: state.clone(), cache}),
-      fn: ({state, cache}) => processRegistryUpdates(state, cache),
+      fn: ({state, cache}) => processRegistryUpdates(ForkSeq.phase0, state, cache),
     });
   }
 });
