@@ -25,14 +25,6 @@ export function pruneBySlot(map: Map<Slot, unknown>, slot: Slot, slotsRetained: 
 }
 
 /**
- * De-serialize bytes into Signature.
- * No need to verify Signature is valid, already run sig-verify = false
- */
-export function signatureFromBytesNoCheck(signature: Uint8Array): Signature {
-  return Signature.deserialize(signature, CoordType.affine);
-}
-
-/**
  * Ensures that a SignedBLSToExecutionChange object is _still_ valid for block inclusion. An object valid for the pool,
  * can become invalid for certain forks.
  */
