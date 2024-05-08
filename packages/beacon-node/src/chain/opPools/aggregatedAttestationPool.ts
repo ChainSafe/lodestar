@@ -30,7 +30,7 @@ import {
   getBlockRootAtSlot,
 } from "@lodestar/state-transition";
 import {IForkChoice, EpochDifference} from "@lodestar/fork-choice";
-import {MapDef, toRootHex} from "@lodestar/utils";
+import {MapDef, toRootHex, assert} from "@lodestar/utils";
 import {intersectUint8Arrays, IntersectResult} from "../../util/bitArray.js";
 import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
 import {InsertOutcome} from "./types.js";
@@ -141,10 +141,8 @@ export class AggregatedAttestationPool {
       ? // this attestation is added to pool after validation
         attestation.committeeBits.getSingleTrueBit()
       : attestation.data.index;
-    if (committeeIndex === null) {
-      // this should not happen because attestation should be validated before reaching this
-      throw Error(`Invalid attestation slot=${slot} committeeIndex=${committeeIndex}`);
-    }
+    // this should not happen because attestation should be validated before reaching this
+    assert.notNull(committeeIndex, "Committee index should not be null in aggregated attestation pool");
     let attestationGroup = attestationGroupByIndex.get(committeeIndex);
     if (!attestationGroup) {
       attestationGroup = new MatchingDataAttestationGroup(committee, attestation.data);
