@@ -91,16 +91,19 @@ export function validateAttestation(
   if (fork >= ForkSeq.electra) {
     assert.equal(data.index, 0, `AttestationData.index must be zero: index=${data.index}`);
     const attestationElectra = attestation as electra.Attestation;
-    const committeeBitsLength = attestationElectra.committeeBits.bitLen;
-
-    if (committeeBitsLength > committeeCount) {
-      throw new Error(
-        `Attestation committee bits length are longer than number of committees: committeeBitsLength=${committeeBitsLength} numCommittees=${committeeCount}`
-      );
-    }
-
     // TODO Electra: this should be obsolete soon when the spec switches to committeeIndices
     const committeeIndices = attestationElectra.committeeBits.getTrueBitIndexes();
+
+    if (committeeIndices.length === 0) {
+      throw Error("Attestation should have at least one committee bit set");
+    } else {
+      const lastCommitteeIndex = committeeIndices[committeeIndices.length - 1];
+      if (lastCommitteeIndex >= committeeCount) {
+        throw new Error(
+          `Attestation committee index exceeds committee count: lastCommitteeIndex=${lastCommitteeIndex} numCommittees=${committeeCount}`
+        );
+      }
+    }
 
     // Get total number of attestation participant of every committee specified
     const participantCount = committeeIndices
