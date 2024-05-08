@@ -118,7 +118,9 @@ type ExecutionPayloadResponse = ExecutionPayloadRpc | ExecutionPayloadRpcWithVal
 export type ExecutionPayloadBodyRpc = {
   transactions: DATA[];
   withdrawals: WithdrawalV1[] | null | undefined;
-  depositReceipts: DepositReceiptV1[] | null | undefined;
+  // currently there is a discepancy between EL and CL field name references for deposit requests
+  // its likely CL receipt will be renamed to requests
+  depositRequests: DepositReceiptV1[] | null | undefined;
   withdrawalRequests: ExecutionLayerWithdrawalRequestV1[] | null | undefined;
 };
 
@@ -148,7 +150,7 @@ export type ExecutionPayloadRpc = {
   blobGasUsed?: QUANTITY; // DENEB
   excessBlobGas?: QUANTITY; // DENEB
   parentBeaconBlockRoot?: QUANTITY; // DENEB
-  depositReceipts?: DepositReceiptRpc[]; // ELECTRA
+  depositRequests?: DepositReceiptRpc[]; // ELECTRA
   withdrawalRequests?: ExecutionLayerWithdrawalRequestRpc[]; // ELECTRA
 };
 
@@ -213,10 +215,10 @@ export function serializeExecutionPayload(fork: ForkName, data: allForks.Executi
     payload.excessBlobGas = numToQuantity(excessBlobGas);
   }
 
-  // ELECTRA adds depositReceipts to the ExecutionPayload
+  // ELECTRA adds depositReceipts/depositRequests to the ExecutionPayload
   if (ForkSeq[fork] >= ForkSeq.electra) {
     const {depositReceipts, withdrawalRequests} = data as electra.ExecutionPayload;
-    payload.depositReceipts = depositReceipts.map(serializeDepositReceipt);
+    payload.depositRequests = depositReceipts.map(serializeDepositReceipt);
     payload.withdrawalRequests = withdrawalRequests.map(serializeExecutionLayerWithdrawalRequest);
   }
 
@@ -306,14 +308,15 @@ export function parseExecutionPayload(
   }
 
   if (ForkSeq[fork] >= ForkSeq.electra) {
-    const {depositReceipts, withdrawalRequests} = data;
+    // electra adds depositRequests/depositReceipts
+    const {depositRequests, withdrawalRequests} = data;
     // Geth can also reply with null
-    if (depositReceipts == null) {
+    if (depositRequests == null) {
       throw Error(
-        `depositReceipts missing for ${fork} >= electra executionPayload number=${executionPayload.blockNumber} hash=${data.blockHash}`
+        `depositRequests missing for ${fork} >= electra executionPayload number=${executionPayload.blockNumber} hash=${data.blockHash}`
       );
     }
-    (executionPayload as electra.ExecutionPayload).depositReceipts = depositReceipts.map(deserializeDepositReceipt);
+    (executionPayload as electra.ExecutionPayload).depositReceipts = depositRequests.map(deserializeDepositReceipt);
 
     if (withdrawalRequests == null) {
       throw Error(
@@ -436,7 +439,7 @@ export function deserializeExecutionPayloadBody(data: ExecutionPayloadBodyRpc | 
     ? {
         transactions: data.transactions.map((tran) => dataToBytes(tran, null)),
         withdrawals: data.withdrawals ? data.withdrawals.map(deserializeWithdrawal) : null,
-        depositReceipts: data.depositReceipts ? data.depositReceipts.map(deserializeDepositReceipt) : null,
+        depositReceipts: data.depositRequests ? data.depositRequests.map(deserializeDepositReceipt) : null,
         withdrawalRequests: data.withdrawalRequests
           ? data.withdrawalRequests.map(deserializeExecutionLayerWithdrawalRequest)
           : null,
@@ -449,7 +452,7 @@ export function serializeExecutionPayloadBody(data: ExecutionPayloadBody | null)
     ? {
         transactions: data.transactions.map((tran) => bytesToData(tran)),
         withdrawals: data.withdrawals ? data.withdrawals.map(serializeWithdrawal) : null,
-        depositReceipts: data.depositReceipts ? data.depositReceipts.map(serializeDepositReceipt) : null,
+        depositRequests: data.depositReceipts ? data.depositReceipts.map(serializeDepositReceipt) : null,
         withdrawalRequests: data.withdrawalRequests
           ? data.withdrawalRequests.map(serializeExecutionLayerWithdrawalRequest)
           : null,
