@@ -1,8 +1,9 @@
 import {toHexString} from "@chainsafe/ssz";
-import {BLSSignature, phase0, Slot, ssz} from "@lodestar/types";
+import {allForks, BLSSignature, phase0, Slot, ssz} from "@lodestar/types";
 import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@lodestar/state-transition";
 import {sleep} from "@lodestar/utils";
 import {Api, ApiError, routes} from "@lodestar/api";
+import {ChainForkConfig} from "@lodestar/config";
 import {IClock, LoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
@@ -41,6 +42,7 @@ export class AttestationService {
     private readonly emitter: ValidatorEventEmitter,
     chainHeadTracker: ChainHeaderTracker,
     private readonly metrics: Metrics | null,
+    private readonly config: ChainForkConfig,
     private readonly opts?: AttestationServiceOpts
   ) {
     this.dutiesService = new AttestationDutiesService(logger, api, clock, validatorStore, chainHeadTracker, metrics, {
@@ -263,7 +265,7 @@ export class AttestationService {
     const aggregate = res.response;
     this.metrics?.numParticipantsInAggregate.observe(aggregate.data.aggregationBits.getTrueBitIndexes().length);
 
-    const signedAggregateAndProofs: phase0.SignedAggregateAndProof[] = [];
+    const signedAggregateAndProofs: allForks.SignedAggregateAndProof[] = [];
 
     await Promise.all(
       duties.map(async ({duty, selectionProof}) => {
