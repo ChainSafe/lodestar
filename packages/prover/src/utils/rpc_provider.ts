@@ -48,7 +48,7 @@ export class ELRpcProvider {
   async request<K extends keyof ELApi, E extends boolean>(
     method: K,
     params: ELApiParams[K],
-    opts?: {raiseError?: E} = {raiseError: true}
+    opts?: {raiseError?: E}
   ): Promise<E extends false ? JsonRpcResponse<ELApiReturn[K]> : JsonRpcResponseWithResultPayload<ELApiReturn[K]>> {
     const {raiseError} = opts ?? {raiseError: true};
 
