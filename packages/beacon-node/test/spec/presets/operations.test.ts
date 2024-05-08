@@ -57,9 +57,9 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
     blockFns.processDeposit(fork, state, testCase.deposit);
   },
 
-  deposit_receipt: (state, testCase: {deposit_receipt: electra.DepositReceipt}) => {
+  deposit_receipt: (state, testCase: {deposit_receipt: electra.DepositRequest}) => {
     const fork = state.config.getForkSeq(state.slot);
-    blockFns.processDepositReceipt(fork, state as CachedBeaconStateElectra, testCase.deposit_receipt);
+    blockFns.processDepositRequest(fork, state as CachedBeaconStateElectra, testCase.deposit_receipt);
   },
 
   proposer_slashing: (state, testCase: {proposer_slashing: phase0.ProposerSlashing}) => {
@@ -127,7 +127,7 @@ const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork,
         block: ssz[fork].BeaconBlock,
         body: ssz[fork].BeaconBlockBody,
         deposit: ssz.phase0.Deposit,
-        deposit_receipt: ssz.electra.DepositReceipt,
+        deposit_receipt: ssz.electra.DepositRequest,
         proposer_slashing: ssz.phase0.ProposerSlashing,
         voluntary_exit: ssz.phase0.SignedVoluntaryExit,
         // Altair
