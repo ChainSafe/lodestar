@@ -240,6 +240,7 @@ export class Validator {
       emitter,
       chainHeaderTracker,
       metrics,
+      config,
       {
         afterBlockDelaySlotFraction: opts.afterBlockDelaySlotFraction,
         disableAttestationGrouping: opts.disableAttestationGrouping || opts.distributed,

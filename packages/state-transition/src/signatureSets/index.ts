@@ -33,6 +33,9 @@ export function getBlockSignatureSets(
     skipProposerSignature?: boolean;
   }
 ): ISignatureSet[] {
+  // fork based validations
+  const fork = state.config.getForkSeq(signedBlock.message.slot);
+
   const signatureSets = [
     getRandaoRevealSignatureSet(state, signedBlock.message),
     ...getProposerSlashingsSignatureSets(state, signedBlock),
@@ -44,9 +47,6 @@ export function getBlockSignatureSets(
   if (!opts?.skipProposerSignature) {
     signatureSets.push(getBlockProposerSignatureSet(state, signedBlock));
   }
-
-  // fork based validations
-  const fork = state.config.getForkSeq(signedBlock.message.slot);
 
   // Only after altair fork, validate tSyncCommitteeSignature
   if (fork >= ForkSeq.altair) {
