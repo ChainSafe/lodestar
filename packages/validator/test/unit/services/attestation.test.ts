@@ -5,6 +5,7 @@ import {ssz} from "@lodestar/types";
 import {HttpStatusCode, routes} from "@lodestar/api";
 import {createChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
+import {ForkName} from "@lodestar/params";
 import {AttestationService, AttestationServiceOpts} from "../../../src/services/attestation.js";
 import {AttDutyAndProof} from "../../../src/services/attestationDuties.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
@@ -109,7 +110,7 @@ describe("AttestationService", function () {
           status: HttpStatusCode.OK,
         });
         api.validator.getAggregatedAttestation.mockResolvedValue({
-          response: {data: attestation},
+          response: {version: ForkName.phase0, data: attestation},
           ok: true,
           status: HttpStatusCode.OK,
         });

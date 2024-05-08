@@ -44,7 +44,7 @@ export type AttestationValidationResult = {
 export type AttestationOrBytes = ApiAttestation | GossipAttestation;
 
 /** attestation from api */
-export type ApiAttestation = {attestation: phase0.Attestation; serializedData: null}; // TODO Electra: add new attestation type
+export type ApiAttestation = {attestation: phase0.Attestation; serializedData: null};
 
 /** attestation from gossip */
 export type GossipAttestation = {
@@ -298,7 +298,7 @@ async function validateGossipAttestationNoSignatureCheck(
     }
 
     // [REJECT] aggregate.data.index == 0
-    if (attData.index === 0) {
+    if (attData.index !== 0) {
       throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.NON_ZERO_ATTESTATION_DATA_INDEX});
     }
   } else {
