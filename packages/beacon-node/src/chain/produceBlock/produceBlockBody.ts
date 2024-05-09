@@ -11,6 +11,7 @@ import {
   capella,
   deneb,
   Wei,
+  electra,
 } from "@lodestar/types";
 import {
   CachedBeaconStateAllForks,
@@ -337,6 +338,10 @@ export async function produceBlockBody<T extends BlockType>(
         withdrawals: (blockBody as capella.BeaconBlockBody).executionPayload.withdrawals.length,
       });
     }
+  }
+
+  if (ForkSeq[fork] >= ForkSeq.electra) {
+    (blockBody as electra.BeaconBlockBody).consolidations = [];
   }
 
   Object.assign(logMeta, {executionPayloadValue});
