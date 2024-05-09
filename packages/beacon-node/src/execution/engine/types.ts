@@ -16,7 +16,7 @@ import {
   QUANTITY,
   quantityToBigint,
 } from "../../eth1/provider/utils.js";
-import {ExecutionPayloadStatus, BlobsBundle, PayloadAttributes, VersionedHashes} from "./interface.js";
+import {ExecutionPayloadStatus, BlobsBundle, PayloadAttributes, VersionedHashes, ClientVersion} from "./interface.js";
 import {WithdrawalV1} from "./payloadIdCache.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -62,6 +62,11 @@ export type EngineApiRpcParamTypes = {
    *  2. count: QUANTITY, 64 bits - Number of blocks to return
    */
   engine_getPayloadBodiesByRangeV1: [start: QUANTITY, count: QUANTITY];
+
+  /**
+   * TODO Electra: add comment
+   */
+  engine_getClientVersionV1: [ClientVersionRpc];
 };
 
 export type PayloadStatus = {
@@ -100,6 +105,8 @@ export type EngineApiRpcReturnTypes = {
   engine_getPayloadBodiesByHashV1: (ExecutionPayloadBodyRpc | null)[];
 
   engine_getPayloadBodiesByRangeV1: (ExecutionPayloadBodyRpc | null)[];
+
+  engine_getClientVersionV1: ClientVersionRpc[];
 };
 
 type ExecutionPayloadRpcWithValue = {
@@ -156,6 +163,14 @@ export type PayloadAttributesRpc = {
   /** DATA, 32 Bytes - value for the parentBeaconBlockRoot to be used for building block */
   parentBeaconBlockRoot?: DATA;
 };
+
+// TODO Electra: add comment
+export type ClientVersionRpc = {
+  code: DATA;
+  name: DATA;
+  version: DATA;
+  commit: DATA;
+}
 
 export interface BlobsBundleRpc {
   commitments: DATA[]; // each 48 bytes

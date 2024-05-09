@@ -11,7 +11,7 @@ import {
 import {Metrics} from "../../metrics/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {EPOCHS_PER_BATCH} from "../../sync/constants.js";
-import {numToQuantity} from "../../eth1/provider/utils.js";
+import {bytesToData, dataToBytes, numToQuantity} from "../../eth1/provider/utils.js";
 import {
   ExecutionPayloadStatus,
   ExecutePayloadResponse,
@@ -21,6 +21,8 @@ import {
   BlobsBundle,
   VersionedHashes,
   ExecutionEngineState,
+  ClientVersion,
+  ClientCode,
 } from "./interface.js";
 import {PayloadIdCache} from "./payloadIdCache.js";
 import {
@@ -419,6 +421,22 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
   getState(): ExecutionEngineState {
     return this.state;
+  }
+
+  async getClientVersion(clientVersion: ClientVersion): Promise<ClientVersion[]> {
+    const method = "engine_getClientVersionV1";
+    const serializedClientVersion = {...clientVersion, commit: bytesToData(clientVersion.commit).slice(0, 4)}
+
+    const response = await this.rpc.fetchWithRetries<
+      EngineApiRpcReturnTypes[typeof method],
+      EngineApiRpcParamTypes[typeof method]
+    >({method, params: [serializedClientVersion]});
+
+    return response.map((cv) => {
+      const commit = dataToBytes(cv.commit, 4);
+      const code = (cv.code in ClientCode) ? ClientCode[cv.code as keyof typeof ClientCode] : ClientCode.XX;
+      return {code, name: cv.name, version: cv.version, commit};
+    });
   }
 
   private updateEngineState(newState: ExecutionEngineState): void {

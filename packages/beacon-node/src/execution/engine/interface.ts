@@ -38,6 +38,22 @@ export enum ExecutionEngineState {
   AUTH_FAILED = "AUTH_FAILED",
 }
 
+export enum ClientCode {
+  BU = "besu",
+  EJ = "ethereumJS",
+  EG = "erigon",
+  GE = "go-ethereum",
+  GR = "grandine",
+  LH = "lighthouse",
+  LS = "lodestar",
+  NM = "nethermind",
+  NB = "nimbus",
+  TK = "teku",
+  PM = "prysm",
+  RH = "reth",
+  XX = "unknown",
+}
+
 export type ExecutePayloadResponse =
   | {
       status: ExecutionPayloadStatus.SYNCING | ExecutionPayloadStatus.ACCEPTED;
@@ -79,6 +95,13 @@ export type BlobsBundle = {
   blobs: Blob[];
   proofs: KZGProof[];
 };
+
+export type ClientVersion = {
+  code: ClientCode,
+  name: string,
+  version: string,
+  commit: Uint8Array,
+}
 
 export type VersionedHashes = Uint8Array[];
 
@@ -148,4 +171,6 @@ export interface IExecutionEngine {
   getPayloadBodiesByRange(start: number, count: number): Promise<(ExecutionPayloadBody | null)[]>;
 
   getState(): ExecutionEngineState;
+
+  getClientVersion(clientVersion: ClientVersion): Promise<ClientVersion[]>;
 }
