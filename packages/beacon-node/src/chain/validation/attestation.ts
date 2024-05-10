@@ -44,7 +44,7 @@ export type AttestationValidationResult = {
 export type AttestationOrBytes = ApiAttestation | GossipAttestation;
 
 /** attestation from api */
-export type ApiAttestation = {attestation: phase0.Attestation; serializedData: null};
+export type ApiAttestation = {attestation: allForks.Attestation; serializedData: null};
 
 /** attestation from gossip */
 export type GossipAttestation = {
@@ -248,6 +248,8 @@ async function validateGossipAttestationNoSignatureCheck(
   // verify_early_checks
   // Run the checks that happen before an indexed attestation is constructed.
 
+  console.log("validateGossipAttestationNoSignatureCheck", "fork", fork);
+
   let attestationOrCache:
     | {attestation: allForks.Attestation; cache: null}
     | {attestation: null; cache: AttestationDataCacheEntry; serializedData: Uint8Array};
@@ -261,10 +263,12 @@ async function validateGossipAttestationNoSignatureCheck(
       attestationOrBytes.attDataBase64 ?? getAttDataBase64FromAttestationSerialized(attestationOrBytes.serializedData);
     const cachedAttData = attDataBase64 !== null ? chain.seenAttestationDatas.get(attSlot, attDataBase64) : null;
     if (cachedAttData === null) {
+      console.log("No cache", fork, attestationOrBytes.serializedData);
       const attestation = sszDeserializeAttestation(fork, attestationOrBytes.serializedData);
       // only deserialize on the first AttestationData that's not cached
       attestationOrCache = {attestation, cache: null};
     } else {
+      console.log("Cached", cachedAttData);
       attestationOrCache = {attestation: null, cache: cachedAttData, serializedData: attestationOrBytes.serializedData};
     }
   } else {
@@ -283,9 +287,12 @@ async function validateGossipAttestationNoSignatureCheck(
 
   let attIndex;
   if (ForkSeq[fork] >= ForkSeq.electra) {
+    console.log("electra", fork, attestationOrCache.attestation);
     const committeeBits = attestationOrCache.attestation
       ? (attestationOrCache.attestation as electra.Attestation).committeeBits
       : getCommitteeBitsFromAttestationSerialized(attestationOrCache.serializedData);
+
+    console.log("committeeBits", committeeBits);
 
     if (committeeBits === null) {
       throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_SERIALIZED_BYTES});

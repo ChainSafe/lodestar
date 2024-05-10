@@ -33,6 +33,7 @@ import {
   isBlindedBeaconBlock,
   isBlockContents,
   phase0,
+  electra,
 } from "@lodestar/types";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {toHex, resolveOrRacePromises, prettyWeiToEth} from "@lodestar/utils";
@@ -1098,7 +1099,7 @@ export function getValidatorApi({
           try {
             // TODO: Validate in batch
             // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-            const validateFn = () => validateApiAggregateAndProof(fork, chain, signedAggregateAndProof);
+            const validateFn = () => validateApiAggregateAndProof(fork, chain, signedAggregateAndProof as electra.SignedAggregateAndProof);
             const {slot, beaconBlockRoot} = signedAggregateAndProof.message.aggregate.data;
             // when a validator is configured with multiple beacon node urls, this attestation may come from another beacon node
             // and the block hasn't been in our forkchoice since we haven't seen / processing that block

@@ -57,6 +57,7 @@ export function getBeaconPoolApi({
       await Promise.all(
         attestations.map(async (attestation, i) => {
           try {
+            console.log("incoming attestation", attestation);
             const fork = chain.config.getForkName(chain.clock.currentSlot);
             // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
             const validateFn = () => validateApiAttestation(fork, chain, {attestation, serializedData: null});

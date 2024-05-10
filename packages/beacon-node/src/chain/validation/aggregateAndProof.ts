@@ -28,7 +28,7 @@ export type AggregateAndProofValidationResult = {
 export async function validateApiAggregateAndProof(
   fork: ForkName,
   chain: IBeaconChain,
-  signedAggregateAndProof: phase0.SignedAggregateAndProof
+  signedAggregateAndProof: electra.SignedAggregateAndProof
 ): Promise<AggregateAndProofValidationResult> {
   const skipValidationKnownAttesters = true;
   const prioritizeBls = true;
@@ -66,6 +66,7 @@ async function validateAggregateAndProof(
   // - do late checks w/ a valid signature
 
   const aggregateAndProof = signedAggregateAndProof.message;
+  console.log("aggreaget ANd proof", aggregateAndProof);
   const aggregate = aggregateAndProof.aggregate;
   const {aggregationBits} = aggregate;
   const attData = aggregate.data;
