@@ -1,4 +1,4 @@
-import {MAX_COMMITTEES_PER_SLOT, MAX_VALIDATORS_PER_COMMITTEE} from "@lodestar/params";
+import {ForkSeq, MAX_COMMITTEES_PER_SLOT, MAX_VALIDATORS_PER_COMMITTEE} from "@lodestar/params";
 import {phase0} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "../types.js";
 import {verifySignatureSet} from "../util/index.js";
@@ -45,7 +45,7 @@ export function isValidIndexedAttestationBigint(
 export function isValidIndexedAttestationIndices(state: CachedBeaconStateAllForks, indices: number[]): boolean {
   // verify max number of indices
   const maxIndices =
-    state.fork.epoch >= state.config.ELECTRA_FORK_EPOCH
+    state.config.getForkSeq(state.slot) >= ForkSeq.electra
       ? MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT
       : MAX_VALIDATORS_PER_COMMITTEE;
   if (!(indices.length > 0 && indices.length <= maxIndices)) {
