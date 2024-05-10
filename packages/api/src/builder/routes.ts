@@ -134,7 +134,7 @@ export function definitions(config: ChainForkConfig): RouteDefinitions<Endpoints
         },
         schema: {
           body: Schema.Object,
-          headers: {[MetaHeader.Version]: Schema.StringRequired},
+          headers: {[MetaHeader.Version]: Schema.String},
         },
       }),
       resp: {
