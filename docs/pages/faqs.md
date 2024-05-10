@@ -11,9 +11,10 @@ Lodestar beacon node requires at least 8GB of heap space. While the `lodestar` s
 
 The simplest way to achieve this is via the `NODE_OPTIONS` environment variable or by passing [`--max-old-space-size`](https://nodejs.org/api/cli.html#--max-old-space-sizesize-in-megabytes) directly to the node binary
 
-```
+```bash
 NODE_OPTIONS: --max-old-space-size=8192
 ```
+
 :::
 
 ### Using Kubernetes
