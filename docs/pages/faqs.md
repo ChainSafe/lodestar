@@ -9,7 +9,7 @@ This section of the documentation will cover common questions and encounters oft
 :::note "Heap memory limit"
 Lodestar beacon node requires at least 8GB of heap space. While the `lodestar` script and the official docker image correctly sets the appropriate value, it might be necessary to manually set it for some specific scenario.
 
-The simplest way to achieve this is via the `NODE_OPTIONS` environment variable.
+The simplest way to achieve this is via the `NODE_OPTIONS` environment variable or by passing [`--max-old-space-size`](https://nodejs.org/api/cli.html#--max-old-space-sizesize-in-megabytes) directly to the node binary
 
 ```
 NODE_OPTIONS: --max-old-space-size=8192
