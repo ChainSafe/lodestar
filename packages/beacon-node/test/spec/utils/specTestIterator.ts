@@ -65,8 +65,7 @@ export const defaultSkipOpts: SkipOpts = {
   skippedTestSuites: [
     /^capella\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
     /^deneb\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
-    // /^electra\/(?!operations\/attestations)(?!operations\/attester_slashing)/,
-    /^electra\/(?!operations\/attestation)/,
+    /^electra\/(?!operations\/attestations)(?!operations\/attester_slashing)/,
   ],
   skippedTests: [],
   skippedRunners: ["merkle_proof", "networking"],
