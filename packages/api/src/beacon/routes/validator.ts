@@ -20,6 +20,7 @@ import {
   SubcommitteeIndex,
   Wei,
   ProducedBlockSource,
+  electra,
 } from "@lodestar/types";
 import {ApiClientResponse} from "../../interfaces.js";
 import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
@@ -350,12 +351,13 @@ export type Api = {
   /**
    * Publish multiple aggregate and proofs
    * Verifies given aggregate and proofs and publishes them on appropriate gossipsub topic.
+   * TODO: support both phase0 + electra
    * @param requestBody
    * @returns any Successful response
    * @throws ApiError
    */
   publishAggregateAndProofs(
-    signedAggregateAndProofs: allForks.SignedAggregateAndProof[] // TODO Electra: Add version
+    signedAggregateAndProofs: electra.SignedAggregateAndProof[] // TODO Electra: Add version
   ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.BAD_REQUEST>>;
 
   publishContributionAndProofs(
@@ -655,7 +657,8 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       },
     },
 
-    publishAggregateAndProofs: reqOnlyBody(ArrayOf(ssz.phase0.SignedAggregateAndProof), Schema.ObjectArray),
+    // TODO: support both phase0 + electra
+    publishAggregateAndProofs: reqOnlyBody(ArrayOf(ssz.electra.SignedAggregateAndProof), Schema.ObjectArray),
     publishContributionAndProofs: reqOnlyBody(ArrayOf(ssz.altair.SignedContributionAndProof), Schema.ObjectArray),
     prepareBeaconCommitteeSubnet: reqOnlyBody(ArrayOf(BeaconCommitteeSubscription), Schema.ObjectArray),
     prepareSyncCommitteeSubnets: reqOnlyBody(ArrayOf(SyncCommitteeSubscription), Schema.ObjectArray),

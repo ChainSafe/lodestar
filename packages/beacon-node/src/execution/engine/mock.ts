@@ -93,10 +93,10 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       engine_forkchoiceUpdatedV1: this.notifyForkchoiceUpdate.bind(this),
       engine_forkchoiceUpdatedV2: this.notifyForkchoiceUpdate.bind(this),
       engine_forkchoiceUpdatedV3: this.notifyForkchoiceUpdate.bind(this),
-      engine_getPayloadV1: this.getPayload.bind(this),
-      engine_getPayloadV2: this.getPayload.bind(this),
-      engine_getPayloadV3: this.getPayload.bind(this),
-      engine_getPayloadV4: this.getPayload.bind(this),
+      engine_getPayloadV1: this.getPayloadV1.bind(this),
+      engine_getPayloadV2: this.getPayloadV2.bind(this),
+      engine_getPayloadV3: this.getPayloadV2.bind(this),
+      engine_getPayloadV4: this.getPayloadV2.bind(this),
       engine_getPayloadBodiesByHashV1: this.getPayloadBodiesByHash.bind(this),
       engine_getPayloadBodiesByRangeV1: this.getPayloadBodiesByRange.bind(this),
     };
@@ -313,18 +313,25 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       const proofs: deneb.KZGProof[] = [];
 
       // if post deneb, add between 0 and 2 blob transactions
-      if (ForkSeq[fork] >= ForkSeq.deneb) {
-        const denebTxCount = Math.round(2 * Math.random());
-        for (let i = 0; i < denebTxCount; i++) {
-          const blob = generateRandomBlob();
-          const commitment = ckzg.blobToKzgCommitment(blob);
-          const proof = ckzg.computeBlobKzgProof(blob, commitment);
-          executionPayload.transactions.push(transactionForKzgCommitment(commitment));
-          commitments.push(commitment);
-          blobs.push(blob);
-          proofs.push(proof);
-        }
-      }
+      // TODO:
+      //       Eph 0/1 0.056[FinalizedSync-Node-A/api] warn: Engine failed to produce the block slot=1, fork=electra, builderSelection=executiononly, isBuilderEnabled=false, isEngineEnabled=true, strictFeeRecipientCheck=false, builderBoostFactor=0, durationMs=18 - Invalid hex string: Wrong data length 131072 expected 48
+      // Error: Invalid hex string: Wrong data length 131072 expected 48
+      //     at Module.dataToBytes (/Users/tuyennguyen/Projects/lodestar/packages/beacon-node/src/eth1/provider/utils.ts:113:13)
+      //     at /Users/tuyennguyen/Projects/lodestar/packages/beacon-node/src/execution/engine/types.ts:365:46
+      //     at Array.map (<anonymous>)
+      //     at parseBlobsBundle (/Users/tuyennguyen/Projects/lodestar/packages/beacon-node/src/execution/engine/types.ts:365:33)
+      // if (ForkSeq[fork] >= ForkSeq.deneb) {
+      //   const denebTxCount = Math.round(2 * Math.random());
+      //   for (let i = 0; i < denebTxCount; i++) {
+      //     const blob = generateRandomBlob();
+      //     const commitment = ckzg.blobToKzgCommitment(blob);
+      //     const proof = ckzg.computeBlobKzgProof(blob, commitment);
+      //     executionPayload.transactions.push(transactionForKzgCommitment(commitment));
+      //     commitments.push(commitment);
+      //     blobs.push(blob);
+      //     proofs.push(proof);
+      //   }
+      // }
 
       this.preparingPayloads.set(payloadId, {
         executionPayload: serializeExecutionPayload(fork, executionPayload),
@@ -361,7 +368,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
    * 2. The call MUST be responded with 5: Unavailable payload error if the building process identified by the payloadId doesn't exist.
    * 3. Client software MAY stop the corresponding building process after serving this call.
    */
-  private getPayload(
+  private getPayloadV1(
     payloadId: EngineApiRpcParamTypes["engine_getPayloadV1"][0]
   ): EngineApiRpcReturnTypes["engine_getPayloadV1"] {
     // 1. Given the payloadId client software MUST return the most recent version of the payload that is available in
@@ -387,6 +394,34 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
     this.payloadsForDeletion.set(payloadIdNbr, now);
 
     return payload.executionPayload;
+  }
+
+  private getPayloadV2(
+    payloadId: EngineApiRpcParamTypes["engine_getPayloadV2"][0]
+  ): EngineApiRpcReturnTypes["engine_getPayloadV2"] {
+    // 1. Given the payloadId client software MUST return the most recent version of the payload that is available in
+    //    the corresponding build process at the time of receiving the call.
+    const payloadIdNbr = Number(payloadId);
+    const payload = this.preparingPayloads.get(payloadIdNbr);
+
+    // 2. The call MUST return -38001: Unknown payload error if the build process identified by the payloadId does not
+    //    exist.
+    if (!payload) {
+      throw Error(`Unknown payloadId ${payloadId}`);
+    }
+
+    // 3. Client software MAY stop the corresponding build process after serving this call.
+    // Do after a while to allow getBlobsBundle()
+    const now = Date.now();
+    for (const [oldPayloadId, addedTimestampMs] of this.payloadsForDeletion.entries()) {
+      if (addedTimestampMs < now - PRUNE_PAYLOAD_ID_AFTER_MS) {
+        this.preparingPayloads.delete(oldPayloadId);
+        this.payloadsForDeletion.delete(oldPayloadId);
+      }
+    }
+    this.payloadsForDeletion.set(payloadIdNbr, now);
+
+    return {...payload, blockValue: "999"};
   }
 
   private timestampToFork(timestamp: number): ForkExecution {

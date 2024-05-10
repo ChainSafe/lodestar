@@ -8,7 +8,7 @@ import {
 } from "@lodestar/state-transition";
 import * as epochFns from "@lodestar/state-transition/epoch";
 import {ssz} from "@lodestar/types";
-import {ACTIVE_PRESET} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkSeq} from "@lodestar/params";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {getConfig} from "../../utils/config.js";
@@ -17,7 +17,11 @@ import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
 
-export type EpochTransitionFn = (state: CachedBeaconStateAllForks, epochTransitionCache: EpochTransitionCache) => void;
+export type EpochTransitionFn = (
+  fork: ForkSeq,
+  state: CachedBeaconStateAllForks,
+  epochTransitionCache: EpochTransitionCache
+) => void;
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

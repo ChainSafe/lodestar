@@ -7,21 +7,41 @@ import {TimestampFormatCode} from "@lodestar/logger";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {routes} from "@lodestar/api";
 import {EventData, EventType} from "@lodestar/api/lib/beacon/routes/events.js";
+import {toHex} from "@lodestar/utils";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {waitForEvent} from "../../utils/events/resolver.js";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
 import {ChainEvent} from "../../../src/chain/index.js";
 import {connect, onPeerConnect} from "../../utils/network.js";
 import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger.js";
+import {INTEROP_BLOCK_HASH} from "../../../src/node/utils/interop/state.js";
 
 describe("sync / finalized sync", function () {
   // chain is finalized at slot 32, plus 4 slots for genesis delay => ~72s it should sync pretty fast
   vi.setConfig({testTimeout: 90_000});
 
   const validatorCount = 8;
-  const testParams: Pick<ChainConfig, "SECONDS_PER_SLOT"> = {
+  const testParams: Pick<
+    ChainConfig,
+    | "SECONDS_PER_SLOT"
+    | "ELECTRA_FORK_EPOCH"
+    | "DENEB_FORK_EPOCH"
+    | "BELLATRIX_FORK_EPOCH"
+    | "CAPELLA_FORK_EPOCH"
+    | "ALTAIR_FORK_EPOCH"
+  > = {
     // eslint-disable-next-line @typescript-eslint/naming-convention
     SECONDS_PER_SLOT: 2,
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    ELECTRA_FORK_EPOCH: 0,
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    DENEB_FORK_EPOCH: 0,
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    CAPELLA_FORK_EPOCH: 0,
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    BELLATRIX_FORK_EPOCH: 0,
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    ALTAIR_FORK_EPOCH: 0,
   };
 
   const afterEachCallbacks: (() => Promise<unknown> | void)[] = [];
@@ -56,6 +76,7 @@ describe("sync / finalized sync", function () {
         sync: {isSingleNode: true},
         network: {allowPublishToZeroPeers: true, useWorker: false},
         chain: {blsVerifyAllMainThread: true},
+        executionEngine: {mode: "mock", genesisBlockHash: toHex(INTEROP_BLOCK_HASH), electraForkTimestamp: genesisTime},
       },
       validatorCount,
       genesisTime,
@@ -70,7 +91,7 @@ describe("sync / finalized sync", function () {
       validatorsPerClient: validatorCount,
       validatorClientCount: 1,
       startIndex: 0,
-      useRestApi: false,
+      useRestApi: true,
       testLoggerOpts,
     });
 
@@ -88,6 +109,7 @@ describe("sync / finalized sync", function () {
         api: {rest: {enabled: false}},
         network: {useWorker: false},
         chain: {blsVerifyAllMainThread: true},
+        executionEngine: {mode: "mock", genesisBlockHash: toHex(INTEROP_BLOCK_HASH), electraForkTimestamp: genesisTime},
       },
       validatorCount,
       genesisTime,

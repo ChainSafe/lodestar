@@ -20,6 +20,7 @@ import {getActiveValidatorIndices} from "./validator.js";
 import {getTemporaryBlockHeader} from "./blockRoot.js";
 import {newFilledArray} from "./array.js";
 import {getNextSyncCommittee} from "./syncCommittee.js";
+import { increaseBalance } from "./balance.js";
 
 type DepositDataRootListType = ListCompositeType<typeof ssz.Root>;
 type DepositDataRootViewDU = CompositeViewDU<DepositDataRootListType>;
@@ -162,6 +163,16 @@ export function applyDeposits(
 
     const fork = config.getForkSeq(GENESIS_SLOT);
     processDeposit(fork, state, deposit);
+  }
+
+  // Process deposit balance updates
+  if (GENESIS_SLOT >= config.ELECTRA_FORK_EPOCH) {
+    const stateElectra = state as CompositeViewDU<typeof ssz.electra.BeaconState>;
+    // avoid "Must commit changes before reading all nodes"
+    stateElectra.commit();
+    for (const deposit of stateElectra.pendingBalanceDeposits.getAllReadonly()) {
+      increaseBalance(stateElectra, deposit.index, Number(deposit.amount));
+    }
   }
 
   // Process activations

@@ -1,4 +1,4 @@
-import {phase0, altair, capella, CommitteeIndex, Slot, ssz, allForks} from "@lodestar/types";
+import {phase0, altair, capella, CommitteeIndex, Slot, ssz, allForks, electra} from "@lodestar/types";
 import {ApiClientResponse} from "../../../interfaces.js";
 import {HttpStatusCode} from "../../../utils/client/httpStatusCode.js";
 import {
@@ -80,7 +80,7 @@ export type Api = {
    * @throws ApiError
    */
   submitPoolAttestations(
-    attestations: allForks.Attestation[]
+    attestations: electra.Attestation[]
   ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.BAD_REQUEST>>;
 
   /**
@@ -178,7 +178,8 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
     getPoolProposerSlashings: reqEmpty,
     getPoolVoluntaryExits: reqEmpty,
     getPoolBlsToExecutionChanges: reqEmpty,
-    submitPoolAttestations: reqOnlyBody(ArrayOf(ssz.phase0.Attestation), Schema.ObjectArray),
+    // TODO: need to handle both electra and phase0 attestations
+    submitPoolAttestations: reqOnlyBody(ArrayOf(ssz.electra.Attestation), Schema.ObjectArray),
     submitPoolAttesterSlashings: reqOnlyBody(ssz.phase0.AttesterSlashing, Schema.Object),
     submitPoolProposerSlashings: reqOnlyBody(ssz.phase0.ProposerSlashing, Schema.Object),
     submitPoolVoluntaryExit: reqOnlyBody(ssz.phase0.SignedVoluntaryExit, Schema.Object),

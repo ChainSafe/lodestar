@@ -1,5 +1,5 @@
 import type {PublicKey} from "@chainsafe/bls/types";
-import {DOMAIN_AGGREGATE_AND_PROOF} from "@lodestar/params";
+import {DOMAIN_AGGREGATE_AND_PROOF, ForkSeq} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {Epoch, phase0} from "@lodestar/types";
 import {
@@ -21,7 +21,8 @@ export function getAggregateAndProofSigningRoot(
   const slot = computeStartSlotAtEpoch(epoch);
   const fork = config.getForkName(slot);
   const aggregatorDomain = config.getDomainAtFork(fork, DOMAIN_AGGREGATE_AND_PROOF);
-  return computeSigningRoot(ssz.phase0.AggregateAndProof, aggregateAndProof.message, aggregatorDomain);
+  const sszType = ForkSeq[fork] >= ForkSeq.electra ? ssz.electra.AggregateAndProof : ssz.phase0.AggregateAndProof;
+  return computeSigningRoot(sszType, aggregateAndProof.message, aggregatorDomain);
 }
 
 export function getAggregateAndProofSignatureSet(
