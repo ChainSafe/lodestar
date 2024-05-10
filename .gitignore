@@ -25,7 +25,6 @@ validators
 **/dist
 **/.nyc_output
 .tmp
-.vscode
 .npmrc
 
 # Tests artifacts
