@@ -52,6 +52,7 @@ export function computeExitEpochAndUpdateChurn(state: CachedBeaconStateElectra, 
   // Exit doesn't fit in the current earliest epoch.
   if (exitBalance > exitBalanceToConsume) {
     const balanceToProcess = Number(exitBalance) - exitBalanceToConsume;
+    // We want exit later if there is small balance left so using Math.ceil
     const additionalEpochs = Math.ceil((balanceToProcess - 1) / (perEpochChurn + 1));
     earliestExitEpoch += additionalEpochs;
     exitBalanceToConsume += additionalEpochs * perEpochChurn;
