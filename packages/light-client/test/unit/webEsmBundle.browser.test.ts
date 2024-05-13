@@ -1,6 +1,6 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-member-access */
 import {expect, describe, it, vi} from "vitest";
-import {Lightclient, LightclientEvent, utils, transport} from "../../dist/lightclient.min.mjs";
+import {Lightclient, LightclientEvent, utils, transport} from "../../src/index.js";
 
 describe("web bundle for lightclient", () => {
   vi.setConfig({testTimeout: 20_000});
