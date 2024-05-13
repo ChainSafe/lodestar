@@ -170,6 +170,7 @@ export function applyDeposits(
   // Process deposit balance updates
   if (fork >= ForkSeq.electra) {
     const stateElectra = state as CachedBeaconStateElectra;
+    stateElectra.commit();
     for (const {index: validatorIndex, amount} of stateElectra.pendingBalanceDeposits.getAllReadonly()) {
       increaseBalance(state, validatorIndex, Number(amount));
     }
@@ -271,7 +272,7 @@ export function initializeBeaconStateFromEth1(
   state.commit();
   const activeValidatorIndices = getActiveValidatorIndices(state, computeEpochAtSlot(GENESIS_SLOT));
 
-  if (fork === ForkSeq.altair) {
+  if (fork >= ForkSeq.altair) {
     const {syncCommittee} = getNextSyncCommittee(
       state,
       activeValidatorIndices,
@@ -284,7 +285,7 @@ export function initializeBeaconStateFromEth1(
     stateAltair.nextSyncCommittee = ssz.altair.SyncCommittee.toViewDU(syncCommittee);
   }
 
-  if (fork === ForkSeq.bellatrix) {
+  if (fork >= ForkSeq.bellatrix) {
     const stateBellatrix = state as CompositeViewDU<typeof ssz.bellatrix.BeaconState>;
     stateBellatrix.fork.previousVersion = config.BELLATRIX_FORK_VERSION;
     stateBellatrix.fork.currentVersion = config.BELLATRIX_FORK_VERSION;
@@ -293,7 +294,7 @@ export function initializeBeaconStateFromEth1(
       ssz.bellatrix.ExecutionPayloadHeader.defaultViewDU();
   }
 
-  if (fork === ForkSeq.capella) {
+  if (fork >= ForkSeq.capella) {
     const stateCapella = state as CompositeViewDU<typeof ssz.capella.BeaconState>;
     stateCapella.fork.previousVersion = config.CAPELLA_FORK_VERSION;
     stateCapella.fork.currentVersion = config.CAPELLA_FORK_VERSION;
@@ -302,7 +303,7 @@ export function initializeBeaconStateFromEth1(
       ssz.capella.ExecutionPayloadHeader.defaultViewDU();
   }
 
-  if (fork === ForkSeq.deneb) {
+  if (fork >= ForkSeq.deneb) {
     const stateDeneb = state as CompositeViewDU<typeof ssz.deneb.BeaconState>;
     stateDeneb.fork.previousVersion = config.DENEB_FORK_VERSION;
     stateDeneb.fork.currentVersion = config.DENEB_FORK_VERSION;
@@ -311,7 +312,7 @@ export function initializeBeaconStateFromEth1(
       ssz.deneb.ExecutionPayloadHeader.defaultViewDU();
   }
 
-  if (fork === ForkSeq.electra) {
+  if (fork >= ForkSeq.electra) {
     const stateElectra = state as CompositeViewDU<typeof ssz.electra.BeaconState>;
     stateElectra.fork.previousVersion = config.ELECTRA_FORK_VERSION;
     stateElectra.fork.currentVersion = config.ELECTRA_FORK_VERSION;
