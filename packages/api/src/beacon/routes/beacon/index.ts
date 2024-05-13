@@ -61,7 +61,7 @@ export function getReqSerializers(config: ChainForkConfig) {
   return {
     getGenesis: reqEmpty,
     ...block.getReqSerializers(config),
-    ...pool.getReqSerializers(),
+    ...pool.getReqSerializers(config),
     ...state.getReqSerializers(),
     ...rewards.getReqSerializers(),
   };
