@@ -5,8 +5,8 @@ import {IHttpClient, generateGenericJsonClient} from "../../utils/client/index.j
 /**
  * REST HTTP client for validator routes
  */
-export function getClient(_config: ChainForkConfig, httpClient: IHttpClient): Api {
-  const reqSerializers = getReqSerializers();
+export function getClient(config: ChainForkConfig, httpClient: IHttpClient): Api {
+  const reqSerializers = getReqSerializers(config);
   const returnTypes = getReturnTypes();
   // All routes return JSON, use a client auto-generator
   return generateGenericJsonClient<Api, ReqTypes>(routesData, reqSerializers, returnTypes, httpClient);

@@ -4,7 +4,7 @@ import {ServerRoutes, getGenericJsonServer} from "../../utils/server/index.js";
 import {ServerApi} from "../../interfaces.js";
 
 export function getRoutes(config: ChainForkConfig, api: ServerApi<Api>): ServerRoutes<Api, ReqTypes> {
-  const reqSerializers = getReqSerializers();
+  const reqSerializers = getReqSerializers(config);
   const returnTypes = getReturnTypes();
 
   // Most of routes return JSON, use a server auto-generator

@@ -1,3 +1,5 @@
+import {ChainForkConfig} from "@lodestar/config";
+import {ForkName} from "@lodestar/params";
 import {phase0, altair, capella, CommitteeIndex, Slot, ssz, allForks} from "@lodestar/types";
 import {ApiClientResponse} from "../../../interfaces.js";
 import {HttpStatusCode} from "../../../utils/client/httpStatusCode.js";
@@ -159,7 +161,7 @@ export type ReqTypes = {
   getPoolProposerSlashings: ReqEmpty;
   getPoolVoluntaryExits: ReqEmpty;
   getPoolBlsToExecutionChanges: ReqEmpty;
-  submitPoolAttestations: {body: unknown};
+  submitPoolAttestations: {body: unknown; headers: {"eth-consensus-version": ForkName}};
   submitPoolAttesterSlashings: {body: unknown};
   submitPoolProposerSlashings: {body: unknown};
   submitPoolVoluntaryExit: {body: unknown};
@@ -167,7 +169,7 @@ export type ReqTypes = {
   submitPoolSyncCommitteeSignatures: {body: unknown};
 };
 
-export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
+export function getReqSerializers(config: ChainForkConfig): ReqSerializers<Api, ReqTypes> {
   return {
     getPoolAttestations: {
       writeReq: (filters) => ({query: {slot: filters?.slot, committee_index: filters?.committeeIndex}}),
@@ -178,7 +180,19 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
     getPoolProposerSlashings: reqEmpty,
     getPoolVoluntaryExits: reqEmpty,
     getPoolBlsToExecutionChanges: reqEmpty,
-    submitPoolAttestations: reqOnlyBody(ArrayOf(ssz.phase0.Attestation), Schema.ObjectArray),
+    submitPoolAttestations: {
+      writeReq: (attestations) => {
+        const fork = config.getForkName(attestations[0].data.slot);
+        return {
+          body: ArrayOf(ssz.allForks[fork].Attestation).toJson(attestations),
+          headers: {"eth-consensus-version": fork},
+        };
+      },
+      parseReq: ({body, headers}) => [
+        ArrayOf(ssz.allForks[headers["eth-consensus-version"]].Attestation).fromJson(body),
+      ],
+      schema: {body: Schema.ObjectArray},
+    },
     submitPoolAttesterSlashings: reqOnlyBody(ssz.phase0.AttesterSlashing, Schema.Object),
     submitPoolProposerSlashings: reqOnlyBody(ssz.phase0.ProposerSlashing, Schema.Object),
     submitPoolVoluntaryExit: reqOnlyBody(ssz.phase0.SignedVoluntaryExit, Schema.Object),

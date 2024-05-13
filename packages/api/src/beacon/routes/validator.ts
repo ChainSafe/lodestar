@@ -1,4 +1,5 @@
 import {ContainerType, fromHexString, toHexString, Type} from "@chainsafe/ssz";
+import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, ForkBlobs, isForkBlobs, isForkExecution, ForkPreBlobs, ForkExecution} from "@lodestar/params";
 import {
   allForks,
@@ -500,7 +501,7 @@ export type ReqTypes = {
   produceAttestationData: {query: {slot: number; committee_index: number}};
   produceSyncCommitteeContribution: {query: {slot: number; subcommittee_index: number; beacon_block_root: string}};
   getAggregatedAttestation: {query: {attestation_data_root: string; slot: number; index: number}};
-  publishAggregateAndProofs: {body: unknown};
+  publishAggregateAndProofs: {body: unknown; headers: {"eth-consensus-version": ForkName}};
   publishContributionAndProofs: {body: unknown};
   prepareBeaconCommitteeSubnet: {body: unknown};
   prepareSyncCommitteeSubnets: {body: unknown};
@@ -530,7 +531,7 @@ const SyncCommitteeSelection = new ContainerType(
   {jsonCase: "eth2"}
 );
 
-export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
+export function getReqSerializers(config: ChainForkConfig): ReqSerializers<Api, ReqTypes> {
   const BeaconCommitteeSubscription = new ContainerType(
     {
       validatorIndex: ssz.ValidatorIndex,
@@ -655,7 +656,19 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       },
     },
 
-    publishAggregateAndProofs: reqOnlyBody(ArrayOf(ssz.phase0.SignedAggregateAndProof), Schema.ObjectArray),
+    publishAggregateAndProofs: {
+      writeReq: (signedAggregateAndProofs) => {
+        const fork = config.getForkName(signedAggregateAndProofs[0].message.aggregate.data.slot);
+        return {
+          body: ArrayOf(ssz.allForks[fork].SignedAggregateAndProof).toJson(signedAggregateAndProofs),
+          headers: {"eth-consensus-version": fork},
+        };
+      },
+      parseReq: ({body, headers}) => [
+        ArrayOf(ssz.allForks[headers["eth-consensus-version"]].SignedAggregateAndProof).fromJson(body),
+      ],
+      schema: {body: Schema.ObjectArray},
+    },
     publishContributionAndProofs: reqOnlyBody(ArrayOf(ssz.altair.SignedContributionAndProof), Schema.ObjectArray),
     prepareBeaconCommitteeSubnet: reqOnlyBody(ArrayOf(BeaconCommitteeSubscription), Schema.ObjectArray),
     prepareSyncCommitteeSubnets: reqOnlyBody(ArrayOf(SyncCommitteeSubscription), Schema.ObjectArray),
