@@ -36,6 +36,10 @@ import {
   SYNC_COMMITTEE_SUBNET_COUNT,
   BLOB_TX_TYPE,
   VERSIONED_HASH_VERSION_KZG,
+  COMPOUNDING_WITHDRAWAL_PREFIX,
+  DOMAIN_CONSOLIDATION,
+  UNSET_DEPOSIT_RECEIPTS_START_INDEX,
+  FULL_EXIT_REQUEST_AMOUNT,
 } from "@lodestar/params";
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -57,6 +61,7 @@ export const specConstants = {
   // ## Withdrawal prefixes
   BLS_WITHDRAWAL_PREFIX,
   ETH1_ADDRESS_WITHDRAWAL_PREFIX,
+  COMPOUNDING_WITHDRAWAL_PREFIX,
   // ## Domain types
   DOMAIN_BEACON_PROPOSER,
   DOMAIN_BEACON_ATTESTER,
@@ -66,6 +71,7 @@ export const specConstants = {
   DOMAIN_SELECTION_PROOF,
   DOMAIN_AGGREGATE_AND_PROOF,
   DOMAIN_APPLICATION_BUILDER,
+  DOMAIN_CONSOLIDATION,
 
   // phase0/validator.md
   TARGET_AGGREGATORS_PER_COMMITTEE,
@@ -100,4 +106,8 @@ export const specConstants = {
   // Deneb types
   BLOB_TX_TYPE,
   VERSIONED_HASH_VERSION_KZG,
+
+  // electra
+  UNSET_DEPOSIT_RECEIPTS_START_INDEX,
+  FULL_EXIT_REQUEST_AMOUNT,
 };
