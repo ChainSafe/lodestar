@@ -313,7 +313,6 @@ export class ForkChoice implements IForkChoice {
     // No need to cache the head anymore
 
     // Check if scores need to be calculated/updated
-    console.log("updateHead");
     const oldBalances = this.balances;
     const newBalances = this.fcStore.justified.balances;
     const deltas = computeDeltas(
