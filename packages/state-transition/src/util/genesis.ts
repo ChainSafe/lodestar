@@ -4,6 +4,7 @@ import {
   EFFECTIVE_BALANCE_INCREMENT,
   EPOCHS_PER_HISTORICAL_VECTOR,
   ForkName,
+  ForkSeq,
   GENESIS_EPOCH,
   GENESIS_SLOT,
   MAX_EFFECTIVE_BALANCE,
@@ -11,10 +12,11 @@ import {
 } from "@lodestar/params";
 import {Bytes32, phase0, Root, ssz, TimeSeconds} from "@lodestar/types";
 
-import {CachedBeaconStateAllForks, BeaconStateAllForks} from "../types.js";
+import {CachedBeaconStateAllForks, BeaconStateAllForks, CachedBeaconStateElectra} from "../types.js";
 import {createCachedBeaconState} from "../cache/stateCache.js";
 import {EpochCacheImmutableData} from "../cache/epochCache.js";
 import {processDeposit} from "../block/processDeposit.js";
+import {increaseBalance} from "../index.js";
 import {computeEpochAtSlot} from "./epoch.js";
 import {getActiveValidatorIndices} from "./validator.js";
 import {getTemporaryBlockHeader} from "./blockRoot.js";
@@ -127,6 +129,7 @@ export function applyTimestamp(config: ChainForkConfig, state: CachedBeaconState
  * @returns active validator indices
  */
 export function applyDeposits(
+  fork: ForkSeq,
   config: ChainForkConfig,
   state: CachedBeaconStateAllForks,
   newDeposits: phase0.Deposit[],
@@ -162,6 +165,15 @@ export function applyDeposits(
 
     const fork = config.getForkSeq(GENESIS_SLOT);
     processDeposit(fork, state, deposit);
+  }
+
+  // Process deposit balance updates
+  if (fork >= ForkSeq.electra) {
+    const stateElectra = state as CachedBeaconStateElectra;
+    for (const {index: validatorIndex, amount} of stateElectra.pendingBalanceDeposits.getAllReadonly()) {
+      increaseBalance(state, validatorIndex, Number(amount));
+    }
+    stateElectra.pendingBalanceDeposits = ssz.electra.PendingBalanceDeposits.defaultViewDU();
   }
 
   // Process activations
@@ -240,7 +252,7 @@ export function initializeBeaconStateFromEth1(
   applyEth1BlockHash(state, eth1BlockHash);
 
   // Process deposits
-  applyDeposits(config, state, deposits, fullDepositDataRootList);
+  applyDeposits(ForkSeq.phase0, config, state, deposits, fullDepositDataRootList);
 
   // Commit before reading all validators in `getActiveValidatorIndices()`
   state.commit();
@@ -287,6 +299,7 @@ export function initializeBeaconStateFromEth1(
   }
 
   if (GENESIS_SLOT >= config.ELECTRA_FORK_EPOCH) {
+    applyDeposits(ForkSeq.electra, config, state, deposits, fullDepositDataRootList);
     const stateElectra = state as CompositeViewDU<typeof ssz.electra.BeaconState>;
     stateElectra.fork.previousVersion = config.ELECTRA_FORK_VERSION;
     stateElectra.fork.currentVersion = config.ELECTRA_FORK_VERSION;

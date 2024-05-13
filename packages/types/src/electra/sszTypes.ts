@@ -275,6 +275,11 @@ export const PendingBalanceDeposit = new ContainerType(
   {typeName: "PendingBalanceDeposit", jsonCase: "eth2"}
 );
 
+export const PendingBalanceDeposits = new ListCompositeType(
+  PendingBalanceDeposit,
+  Number(PENDING_BALANCE_DEPOSITS_LIMIT)
+);
+
 export const PartialWithdrawal = new ContainerType(
   {
     index: ValidatorIndex,
@@ -341,7 +346,7 @@ export const BeaconState = new ContainerType(
     earliestExitEpoch: Epoch, // New in Electra:EIP7251
     consolidationBalanceToConsume: Gwei, // New in Electra:EIP7251
     earliestConsolidationEpoch: Epoch, // New in Electra:EIP7251
-    pendingBalanceDeposits: new ListCompositeType(PendingBalanceDeposit, Number(PENDING_BALANCE_DEPOSITS_LIMIT)), // new in electra:eip7251
+    pendingBalanceDeposits: PendingBalanceDeposits, // new in electra:eip7251
     pendingPartialWithdrawals: new ListCompositeType(PartialWithdrawal, Number(PENDING_PARTIAL_WITHDRAWALS_LIMIT)), // New in Electra:EIP7251
     pendingConsolidations: new ListCompositeType(PendingConsolidation, Number(PENDING_CONSOLIDATIONS_LIMIT)), // new in electra:eip7251
   },
