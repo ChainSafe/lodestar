@@ -234,21 +234,21 @@ describe("executionEngine / ExecutionEngineHttp", function () {
   });
 
   // TODO: get this post merge run working
-  // it("Post-merge, run for a few blocks", async function () {
-  //   console.log("\n\nPost-merge, run for a few blocks\n\n");
-  //   const {elClient, tearDownCallBack} = await runEL(
-  //     {...elSetupConfig, mode: ELStartMode.PostMerge, genesisTemplate: "electra.tmpl"},
-  //     {...elRunOptions, ttd: BigInt(0)},
-  //     controller.signal
-  //   );
-  //   afterEachCallbacks.push(() => tearDownCallBack());
+  it.skip("Post-merge, run for a few blocks", async function () {
+    console.log("\n\nPost-merge, run for a few blocks\n\n");
+    const {elClient, tearDownCallBack} = await runEL(
+      {...elSetupConfig, mode: ELStartMode.PostMerge, genesisTemplate: "electra.tmpl"},
+      {...elRunOptions, ttd: BigInt(0)},
+      controller.signal
+    );
+    afterEachCallbacks.push(() => tearDownCallBack());
 
-  //   await runNodeWithEL({
-  //     elClient,
-  //     electraEpoch: 0,
-  //     testName: "post-merge",
-  //   });
-  // });
+    await runNodeWithEL({
+      elClient,
+      electraEpoch: 0,
+      testName: "post-merge",
+    });
+  });
 
   /**
    * Want to test two things:
