@@ -51,7 +51,7 @@
     "blockchain"
   ],
   "dependencies": {
-    "@chainsafe/blst": "^1.0.1",
+    "@chainsafe/blst": "ChainSafe/blst-ts#a84801544fc2ae6c6b0c6b12e55f3da68deab0e1",
     "@chainsafe/bls-keygen": "^0.4.0",
     "@chainsafe/bls-keystore": "^3.0.1",
     "@chainsafe/discv5": "^9.0.0",
