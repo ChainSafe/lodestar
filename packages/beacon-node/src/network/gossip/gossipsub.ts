@@ -131,7 +131,7 @@ export class Eth2Gossipsub extends GossipSub {
       batchPublish: true,
       // if this is false, only publish to mesh peers. If there is not enough GOSSIP_D mesh peers,
       // publish to some more topic peers to make sure we always publish to at least GOSSIP_D peers
-      floodPublish: !(opts?.disableFloodPublish ?? false),
+      floodPublish: !opts?.disableFloodPublish,
     });
     this.scoreParams = scoreParams;
     this.config = config;

@@ -364,7 +364,7 @@ export const options: CliCommandOptions<NetworkArgs> = {
 
   "network.disableFloodPublish": {
     hidden: true,
-    description: "Disable gossipsub flood publish or not.",
+    description: "Disable gossipsub flood publish",
     type: "boolean",
     group: "network",
   },
