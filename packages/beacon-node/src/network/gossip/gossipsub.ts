@@ -53,6 +53,7 @@ export type Eth2GossipsubOpts = {
   gossipsubDLow?: number;
   gossipsubDHigh?: number;
   gossipsubAwaitHandler?: boolean;
+  disableFloodPublish?: boolean;
   skipParamsLog?: boolean;
 };
 
@@ -128,6 +129,9 @@ export class Eth2Gossipsub extends GossipSub {
       maxOutboundBufferSize: MAX_OUTBOUND_BUFFER_SIZE,
       // serialize message once and send to all peers when publishing
       batchPublish: true,
+      // if this is false, only publish to mesh peers. If there is not enough GOSSIP_D mesh peers,
+      // publish to some more topic peers to make sure we always publish to at least GOSSIP_D peers
+      floodPublish: !opts?.disableFloodPublish,
     });
     this.scoreParams = scoreParams;
     this.config = config;
