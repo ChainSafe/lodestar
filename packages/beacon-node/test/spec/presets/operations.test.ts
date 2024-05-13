@@ -71,7 +71,8 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
   sync_aggregate_random: sync_aggregate,
 
   voluntary_exit: (state, testCase: {voluntary_exit: phase0.SignedVoluntaryExit}) => {
-    blockFns.processVoluntaryExit(state, testCase.voluntary_exit);
+    const fork = state.config.getForkSeq(state.slot);
+    blockFns.processVoluntaryExit(fork, state, testCase.voluntary_exit);
   },
 
   execution_payload: (state, testCase: {body: bellatrix.BeaconBlockBody; execution: {execution_valid: boolean}}) => {
