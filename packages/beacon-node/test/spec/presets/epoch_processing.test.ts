@@ -8,7 +8,7 @@ import {
 } from "@lodestar/state-transition";
 import * as epochFns from "@lodestar/state-transition/epoch";
 import {ssz} from "@lodestar/types";
-import {ACTIVE_PRESET} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkSeq} from "@lodestar/params";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
 import {getConfig} from "../../utils/config.js";
@@ -18,11 +18,15 @@ import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
 
 export type EpochTransitionFn = (state: CachedBeaconStateAllForks, epochTransitionCache: EpochTransitionCache) => void;
+export type EpochTransitionFnForkSensitive = (
+  fork: ForkSeq,
+  state: CachedBeaconStateAllForks,
+  epochTransitionCache: EpochTransitionCache
+) => void;
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
 const epochTransitionFns: Record<string, EpochTransitionFn> = {
-  effective_balance_updates: epochFns.processEffectiveBalanceUpdates,
   eth1_data_reset: epochFns.processEth1DataReset,
   historical_roots_update: epochFns.processHistoricalRootsUpdate,
   inactivity_updates: epochFns.processInactivityUpdates as EpochTransitionFn,
@@ -30,12 +34,16 @@ const epochTransitionFns: Record<string, EpochTransitionFn> = {
   participation_flag_updates: epochFns.processParticipationFlagUpdates as EpochTransitionFn,
   participation_record_updates: epochFns.processParticipationRecordUpdates as EpochTransitionFn,
   randao_mixes_reset: epochFns.processRandaoMixesReset,
-  registry_updates: epochFns.processRegistryUpdates,
   rewards_and_penalties: epochFns.processRewardsAndPenalties,
   slashings: epochFns.processSlashings,
   slashings_reset: epochFns.processSlashingsReset,
   sync_committee_updates: epochFns.processSyncCommitteeUpdates as EpochTransitionFn,
   historical_summaries_update: epochFns.processHistoricalSummariesUpdate as EpochTransitionFn,
+};
+
+const epochTransitionFnsForkSensitive: Record<string, EpochTransitionFnForkSensitive> = {
+  effective_balance_updates: epochFns.processEffectiveBalanceUpdates,
+  registry_updates: epochFns.processRegistryUpdates,
 };
 
 /**
@@ -56,7 +64,11 @@ const epochProcessing =
   (fork, testName) => {
     const config = getConfig(fork);
 
-    const epochTransitionFn = epochTransitionFns[testName];
+    const isForkSensitive = testName in epochTransitionFnsForkSensitive;
+    const epochTransitionFn = isForkSensitive
+      ? epochTransitionFnsForkSensitive[testName]
+      : epochTransitionFns[testName];
+
     if (epochTransitionFn === undefined) {
       throw Error(`No epochTransitionFn for ${testName}`);
     }
@@ -71,9 +83,21 @@ const epochProcessing =
         if (testcase.post === undefined) {
           // If post.ssz_snappy is not value, the sub-transition processing is aborted
           // https://github.com/ethereum/consensus-specs/blob/dev/tests/formats/epoch_processing/README.md#postssz_snappy
-          expect(() => epochTransitionFn(state, epochTransitionCache)).toThrow();
+          expect(() =>
+            {
+              if (isForkSensitive) {
+                (epochTransitionFn as EpochTransitionFnForkSensitive)(ForkSeq[fork], state, epochTransitionCache);
+              } else {
+                (epochTransitionFn as EpochTransitionFn)(state, epochTransitionCache);
+              }
+            }
+          ).toThrow();
         } else {
-          epochTransitionFn(state, epochTransitionCache);
+          if (isForkSensitive) {
+            (epochTransitionFn as EpochTransitionFnForkSensitive)(ForkSeq[fork], state, epochTransitionCache);
+          } else {
+            (epochTransitionFn as EpochTransitionFn)(state, epochTransitionCache);
+          }
         }
 
         state.commit();
