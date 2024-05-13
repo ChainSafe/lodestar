@@ -239,18 +239,7 @@ export function initializeBeaconStateFromEth1(
     getTemporaryBlockHeader(config, config.getForkTypes(GENESIS_SLOT).BeaconBlock.defaultValue())
   );
 
-  const fork: ForkSeq =
-    GENESIS_SLOT >= config.ELECTRA_FORK_EPOCH
-      ? ForkSeq.electra
-      : GENESIS_SLOT >= config.DENEB_FORK_EPOCH
-        ? ForkSeq.deneb
-        : GENESIS_SLOT >= config.CAPELLA_FORK_EPOCH
-          ? ForkSeq.capella
-          : GENESIS_SLOT >= config.BELLATRIX_FORK_EPOCH
-            ? ForkSeq.bellatrix
-            : GENESIS_SLOT >= config.ALTAIR_FORK_EPOCH
-              ? ForkSeq.altair
-              : ForkSeq.phase0;
+  const fork = config.getForkSeq(GENESIS_SLOT);
 
   // We need a CachedBeaconState to run processDeposit() which uses various caches.
   // However at this point the state's syncCommittees are not known.
