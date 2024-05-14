@@ -43,6 +43,9 @@ export function processEffectiveBalanceUpdates(
   // It defaults to `state.balances.getAll()` to make Typescript happy and for spec tests
   const balances = state.balances.getAll();
 
+  // TODO: (@matthewkeil) This was causing additional failures but should not.  Check the EpochTransitionCache for why
+  // const balances = cache.balances ?? state.balances.getAll();
+
   for (let i = 0, len = balances.length; i < len; i++) {
     const balance = balances[i];
 
