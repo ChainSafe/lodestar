@@ -331,8 +331,8 @@ const forkChoiceTest =
           [BLOCK_FILE_NAME]: ssz[fork].SignedBeaconBlock,
           [BLOBS_FILE_NAME]: ssz.deneb.Blobs,
           [POW_BLOCK_FILE_NAME]: ssz.bellatrix.PowBlock,
-          [ATTESTATION_FILE_NAME]: ssz.phase0.Attestation,
-          [ATTESTER_SLASHING_FILE_NAME]: ssz.phase0.AttesterSlashing,
+          [ATTESTATION_FILE_NAME]: ssz.allForks[fork].Attestation,
+          [ATTESTER_SLASHING_FILE_NAME]: ssz.allForks[fork].AttesterSlashing,
         },
         mapToTestCase: (t: Record<string, any>) => {
           // t has input file name as key
