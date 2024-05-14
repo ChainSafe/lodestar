@@ -4,6 +4,7 @@ import {
   EFFECTIVE_BALANCE_INCREMENT,
   EPOCHS_PER_HISTORICAL_VECTOR,
   ForkName,
+  ForkSeq,
   GENESIS_EPOCH,
   GENESIS_SLOT,
   MAX_EFFECTIVE_BALANCE,
@@ -11,10 +12,11 @@ import {
 } from "@lodestar/params";
 import {Bytes32, phase0, Root, ssz, TimeSeconds} from "@lodestar/types";
 
-import {CachedBeaconStateAllForks, BeaconStateAllForks} from "../types.js";
+import {CachedBeaconStateAllForks, BeaconStateAllForks, CachedBeaconStateElectra} from "../types.js";
 import {createCachedBeaconState} from "../cache/stateCache.js";
 import {EpochCacheImmutableData} from "../cache/epochCache.js";
 import {processDeposit} from "../block/processDeposit.js";
+import {increaseBalance} from "../index.js";
 import {computeEpochAtSlot} from "./epoch.js";
 import {getActiveValidatorIndices} from "./validator.js";
 import {getTemporaryBlockHeader} from "./blockRoot.js";
@@ -127,6 +129,7 @@ export function applyTimestamp(config: ChainForkConfig, state: CachedBeaconState
  * @returns active validator indices
  */
 export function applyDeposits(
+  fork: ForkSeq,
   config: ChainForkConfig,
   state: CachedBeaconStateAllForks,
   newDeposits: phase0.Deposit[],
@@ -162,6 +165,16 @@ export function applyDeposits(
 
     const fork = config.getForkSeq(GENESIS_SLOT);
     processDeposit(fork, state, deposit);
+  }
+
+  // Process deposit balance updates
+  if (fork >= ForkSeq.electra) {
+    const stateElectra = state as CachedBeaconStateElectra;
+    stateElectra.commit();
+    for (const {index: validatorIndex, amount} of stateElectra.pendingBalanceDeposits.getAllReadonly()) {
+      increaseBalance(state, validatorIndex, Number(amount));
+    }
+    stateElectra.pendingBalanceDeposits = ssz.electra.PendingBalanceDeposits.defaultViewDU();
   }
 
   // Process activations
@@ -226,6 +239,8 @@ export function initializeBeaconStateFromEth1(
     getTemporaryBlockHeader(config, config.getForkTypes(GENESIS_SLOT).BeaconBlock.defaultValue())
   );
 
+  const fork = config.getForkSeq(GENESIS_SLOT);
+
   // We need a CachedBeaconState to run processDeposit() which uses various caches.
   // However at this point the state's syncCommittees are not known.
   // This function can be called by:
@@ -240,13 +255,13 @@ export function initializeBeaconStateFromEth1(
   applyEth1BlockHash(state, eth1BlockHash);
 
   // Process deposits
-  applyDeposits(config, state, deposits, fullDepositDataRootList);
+  applyDeposits(fork, config, state, deposits, fullDepositDataRootList);
 
   // Commit before reading all validators in `getActiveValidatorIndices()`
   state.commit();
   const activeValidatorIndices = getActiveValidatorIndices(state, computeEpochAtSlot(GENESIS_SLOT));
 
-  if (GENESIS_SLOT >= config.ALTAIR_FORK_EPOCH) {
+  if (fork >= ForkSeq.altair) {
     const {syncCommittee} = getNextSyncCommittee(
       state,
       activeValidatorIndices,
@@ -259,7 +274,7 @@ export function initializeBeaconStateFromEth1(
     stateAltair.nextSyncCommittee = ssz.altair.SyncCommittee.toViewDU(syncCommittee);
   }
 
-  if (GENESIS_SLOT >= config.BELLATRIX_FORK_EPOCH) {
+  if (fork >= ForkSeq.bellatrix) {
     const stateBellatrix = state as CompositeViewDU<typeof ssz.bellatrix.BeaconState>;
     stateBellatrix.fork.previousVersion = config.BELLATRIX_FORK_VERSION;
     stateBellatrix.fork.currentVersion = config.BELLATRIX_FORK_VERSION;
@@ -268,7 +283,7 @@ export function initializeBeaconStateFromEth1(
       ssz.bellatrix.ExecutionPayloadHeader.defaultViewDU();
   }
 
-  if (GENESIS_SLOT >= config.CAPELLA_FORK_EPOCH) {
+  if (fork >= ForkSeq.capella) {
     const stateCapella = state as CompositeViewDU<typeof ssz.capella.BeaconState>;
     stateCapella.fork.previousVersion = config.CAPELLA_FORK_VERSION;
     stateCapella.fork.currentVersion = config.CAPELLA_FORK_VERSION;
@@ -277,7 +292,7 @@ export function initializeBeaconStateFromEth1(
       ssz.capella.ExecutionPayloadHeader.defaultViewDU();
   }
 
-  if (GENESIS_SLOT >= config.DENEB_FORK_EPOCH) {
+  if (fork >= ForkSeq.deneb) {
     const stateDeneb = state as CompositeViewDU<typeof ssz.deneb.BeaconState>;
     stateDeneb.fork.previousVersion = config.DENEB_FORK_VERSION;
     stateDeneb.fork.currentVersion = config.DENEB_FORK_VERSION;
@@ -286,7 +301,7 @@ export function initializeBeaconStateFromEth1(
       ssz.deneb.ExecutionPayloadHeader.defaultViewDU();
   }
 
-  if (GENESIS_SLOT >= config.ELECTRA_FORK_EPOCH) {
+  if (fork >= ForkSeq.electra) {
     const stateElectra = state as CompositeViewDU<typeof ssz.electra.BeaconState>;
     stateElectra.fork.previousVersion = config.ELECTRA_FORK_VERSION;
     stateElectra.fork.currentVersion = config.ELECTRA_FORK_VERSION;
