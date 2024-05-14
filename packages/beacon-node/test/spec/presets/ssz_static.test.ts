@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import {it, vi} from "vitest";
+import {expect, it, vi} from "vitest";
 import {Type} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
 import {ACTIVE_PRESET, ForkName, ForkLightClient, ForkExecution} from "@lodestar/params";
@@ -56,9 +56,9 @@ const sszStatic =
       (ssz.bellatrix as Types)[typeName] ||
       (ssz.altair as Types)[typeName] ||
       (ssz.phase0 as Types)[typeName];
-    if (!sszType) {
-      throw Error(`No type for ${typeName}`);
-    }
+    it(`SSZ type for ${typeName}`, function () {
+      expect(sszType).toBeDefined();
+    });
 
     const sszTypeNoUint = replaceUintTypeWithUintBigintType(sszType);
 
