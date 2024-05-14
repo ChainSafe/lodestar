@@ -653,8 +653,8 @@ export class EpochCache {
 
   beforeEpochTransition(): void {
     // Clone (copy) before being mutated in processEffectiveBalanceUpdates
-    // NOTE: Force to use Uint8Array.slice (copy) instead of Buffer.call (not copy)
-    this.effectiveBalanceIncrements = Uint8Array.prototype.slice.call(this.effectiveBalanceIncrements, 0);
+    // NOTE: Force to use Uint16Array.slice (copy) instead of Buffer.call (not copy)
+    this.effectiveBalanceIncrements = Uint16Array.prototype.slice.call(this.effectiveBalanceIncrements, 0);
   }
 
   /**
@@ -1048,13 +1048,13 @@ export class EpochCache {
       const newLength =
         index >= this.effectiveBalanceIncrements.length ? index + 1 : this.effectiveBalanceIncrements.length;
       const effectiveBalanceIncrements = this.effectiveBalanceIncrements;
-      this.effectiveBalanceIncrements = new Uint8Array(newLength);
+      this.effectiveBalanceIncrements = new Uint16Array(newLength);
       this.effectiveBalanceIncrements.set(effectiveBalanceIncrements, 0);
     } else {
       if (index >= this.effectiveBalanceIncrements.length) {
         // Clone and extend effectiveBalanceIncrements
         const effectiveBalanceIncrements = this.effectiveBalanceIncrements;
-        this.effectiveBalanceIncrements = new Uint8Array(getEffectiveBalanceIncrementsByteLen(index + 1));
+        this.effectiveBalanceIncrements = new Uint16Array(getEffectiveBalanceIncrementsByteLen(index + 1));
         this.effectiveBalanceIncrements.set(effectiveBalanceIncrements, 0);
       }
     }
