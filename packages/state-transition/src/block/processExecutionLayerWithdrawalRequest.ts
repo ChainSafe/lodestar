@@ -37,7 +37,7 @@ export function processExecutionLayerWithdrawalRequest(
     return;
   }
 
-  const validator = validators.getReadonly(validatorIndex);
+  const validator = validators.get(validatorIndex);
   if (!isValidatorEligibleForWithdrawOrExit(validator, executionLayerWithdrawalRequest.sourceAddress, state)) {
     return;
   }
