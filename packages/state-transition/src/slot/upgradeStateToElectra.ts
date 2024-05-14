@@ -57,7 +57,7 @@ export function upgradeStateToElectra(stateDeneb: CachedBeaconStateDeneb): Cache
   stateElectraView.nextWithdrawalValidatorIndex = stateDeneb.nextWithdrawalValidatorIndex;
   stateElectraView.historicalSummaries = stateElectraCloned.historicalSummaries;
 
-  // latestExecutionPayloadHeader's depositRequestsRoot and withdrawalRequestsRoot set to zeros by default
+  // latestExecutionPayloadHeader's depositReceiptsRoot and withdrawalRequestsRoot set to zeros by default
   // default value of depositReceiptsStartIndex is UNSET_DEPOSIT_RECEIPTS_START_INDEX
   stateElectraView.depositReceiptsStartIndex = UNSET_DEPOSIT_RECEIPTS_START_INDEX;
   stateElectraView.depositBalanceToConsume = BigInt(0);
