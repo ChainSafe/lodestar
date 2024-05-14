@@ -11,7 +11,7 @@ import {fetch, isFetchError} from "./fetch.js";
 const DEFAULT_TIMEOUT_MS = 60_000;
 const DEFAULT_RETRIES = 0;
 const DEFAULT_RETRY_DELAY = 200;
-const DEFAULT_REQUEST_WIRE_FORMAT = WireFormat.json;
+const DEFAULT_REQUEST_WIRE_FORMAT = WireFormat.ssz;
 const DEFAULT_RESPONSE_WIRE_FORMAT = WireFormat.ssz;
 
 const URL_SCORE_DELTA_SUCCESS = 1;
