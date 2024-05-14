@@ -225,7 +225,7 @@ function attestationToAggregate(attestation: allForks.Attestation): AggregateFas
       data: attestation.data,
       // clone because it will be mutated
       aggregationBits: attestation.aggregationBits.clone(),
-      committeeBits: attestation.committeeBits,
+      committeeBits: attestation.committeeBits.clone(),
       signature: signatureFromBytesNoCheck(attestation.signature),
     };
   }
@@ -238,7 +238,7 @@ function attestationToAggregate(attestation: allForks.Attestation): AggregateFas
 }
 
 /**
- * Unwrap AggregateFast to phase0.Attestation
+ * Unwrap AggregateFast to Attestation
  */
 function fastToAttestation(aggFast: AggregateFast): allForks.Attestation {
   return {...aggFast, signature: aggFast.signature.toBytes(PointFormat.compressed)};

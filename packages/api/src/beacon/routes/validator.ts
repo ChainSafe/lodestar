@@ -356,7 +356,7 @@ export type Api = {
    * @throws ApiError
    */
   publishAggregateAndProofs(
-    signedAggregateAndProofs: allForks.SignedAggregateAndProof[] // TODO Electra: Add version
+    signedAggregateAndProofs: allForks.SignedAggregateAndProof[]
   ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.BAD_REQUEST>>;
 
   publishContributionAndProofs(
