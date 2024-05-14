@@ -431,8 +431,8 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       throw Error("Historical validator length for epoch 1 or 2 is not dropped properly");
     }
 
-    if (headState.depositRequestsStartIndex === UNSET_DEPOSIT_RECEIPTS_START_INDEX) {
-      throw Error("state.depositRequestsStartIndex is not set upon processing new deposit receipt");
+    if (headState.depositReceiptsStartIndex === UNSET_DEPOSIT_RECEIPTS_START_INDEX) {
+      throw Error("state.depositReceiptsStartIndex is not set upon processing new deposit receipt");
     }
 
     // wait for 1 slot to print current epoch stats
