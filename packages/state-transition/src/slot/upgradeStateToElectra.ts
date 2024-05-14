@@ -1,4 +1,4 @@
-import {ssz} from "@lodestar/types";
+import {Epoch, ValidatorIndex, ssz} from "@lodestar/types";
 import {FAR_FUTURE_EPOCH, UNSET_DEPOSIT_RECEIPTS_START_INDEX} from "@lodestar/params";
 import {CachedBeaconStateDeneb} from "../types.js";
 import {CachedBeaconStateElectra, getCachedBeaconState} from "../cache/stateCache.js";
@@ -7,6 +7,8 @@ import {
   queueEntireBalanceAndResetValidator,
   queueExcessActiveBalance,
 } from "../util/electra.js";
+import {computeActivationExitEpoch} from "../util/epoch.js";
+import {getActivationExitChurnLimit, getConsolidationChurnLimit} from "../util/validator.js";
 
 /**
  * Upgrade a state from Capella to Deneb.
@@ -55,19 +57,54 @@ export function upgradeStateToElectra(stateDeneb: CachedBeaconStateDeneb): Cache
   stateElectraView.nextWithdrawalValidatorIndex = stateDeneb.nextWithdrawalValidatorIndex;
   stateElectraView.historicalSummaries = stateElectraCloned.historicalSummaries;
 
-  // latestExecutionPayloadHeader's depositReceiptsRoot and withdrawalRequestsRoot set to zeros by default
-  // default value of depositReceiptsStartIndex is UNSET_DEPOSIT_RECEIPTS_START_INDEX
-  stateElectraView.depositReceiptsStartIndex = UNSET_DEPOSIT_RECEIPTS_START_INDEX;
+  // latestExecutionPayloadHeader's depositRequestsRoot and withdrawalRequestsRoot set to zeros by default
+  // default value of depositRequestsStartIndex is UNSET_DEPOSIT_RECEIPTS_START_INDEX
+  stateElectraView.depositRequestsStartIndex = UNSET_DEPOSIT_RECEIPTS_START_INDEX;
+  stateElectraView.depositBalanceToConsume = BigInt(0);
+  stateElectraView.exitBalanceToConsume = BigInt(0);
 
   const validatorsArr = stateElectraView.validators.getAllReadonly();
+  const exitEpochs: Epoch[] = [];
+
+  // [EIP-7251]: add validators that are not yet active to pending balance deposits
+  const preActivation: ValidatorIndex[] = [];
+  for (let validatorIndex = 0; validatorIndex < validatorsArr.length; validatorIndex++) {
+    const {activationEpoch, exitEpoch} = validatorsArr[validatorIndex];
+    if (activationEpoch === FAR_FUTURE_EPOCH) {
+      preActivation.push(validatorIndex);
+    }
+    if (exitEpoch !== FAR_FUTURE_EPOCH) {
+      exitEpochs.push(exitEpoch);
+    }
+  }
+
+  const currentEpochPre = stateDeneb.epochCtx.epoch;
+
+  if (exitEpochs.length === 0) {
+    exitEpochs.push(currentEpochPre);
+  }
+  stateElectraView.earliestExitEpoch = Math.max(...exitEpochs) + 1;
+  stateElectraView.consolidationBalanceToConsume = BigInt(0);
+  stateElectraView.earliestConsolidationEpoch = computeActivationExitEpoch(currentEpochPre);
+  // stateElectraView.pendingBalanceDeposits = ssz.electra.PendingBalanceDeposits.defaultViewDU();
+  // pendingBalanceDeposits, pendingPartialWithdrawals, pendingConsolidations are default  values
+  // TODO-electra: can we improve this?
+  stateElectraView.commit();
+  const tmpElectraState = getCachedBeaconState(stateElectraView, stateDeneb);
+  stateElectraView.exitBalanceToConsume = BigInt(getActivationExitChurnLimit(tmpElectraState));
+  stateElectraView.consolidationBalanceToConsume = BigInt(getConsolidationChurnLimit(tmpElectraState));
+
+  preActivation.sort((i0, i1) => {
+    const res = validatorsArr[i0].activationEligibilityEpoch - validatorsArr[i1].activationEligibilityEpoch;
+    return res !== 0 ? res : i0 - i1;
+  });
+
+  for (const validatorIndex of preActivation) {
+    queueEntireBalanceAndResetValidator(stateElectraView as CachedBeaconStateElectra, validatorIndex);
+  }
 
   for (let i = 0; i < validatorsArr.length; i++) {
     const validator = validatorsArr[i];
-
-    // [EIP-7251]: add validators that are not yet active to pending balance deposits
-    if (validator.activationEligibilityEpoch === FAR_FUTURE_EPOCH) {
-      queueEntireBalanceAndResetValidator(stateElectraView as CachedBeaconStateElectra, i);
-    }
 
     // [EIP-7251]: Ensure early adopters of compounding credentials go through the activation churn
     const withdrawalCredential = validator.withdrawalCredentials;
