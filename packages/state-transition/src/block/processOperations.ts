@@ -23,6 +23,7 @@ export {
   processExecutionLayerWithdrawalRequest,
   processBlsToExecutionChange,
   processDepositRequest,
+  processConsolidation,
 };
 
 export function processOperations(
