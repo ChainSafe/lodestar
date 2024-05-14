@@ -41,7 +41,10 @@ export function processEffectiveBalanceUpdates(
 
   // epochTransitionCache.balances is set in processRewardsAndPenalties(), so it's recycled here for performance.
   // It defaults to `state.balances.getAll()` to make Typescript happy and for spec tests
-  const balances = cache.balances ?? state.balances.getAll();
+  const balances = state.balances.getAll();
+
+  // TODO: (@matthewkeil) This was causing additional failures but should not.  Check the EpochTransitionCache for why
+  // const balances = cache.balances ?? state.balances.getAll();
 
   for (let i = 0, len = balances.length; i < len; i++) {
     const balance = balances[i];
@@ -55,7 +58,7 @@ export function processEffectiveBalanceUpdates(
       // Too big
       effectiveBalance > balance + DOWNWARD_THRESHOLD ||
       // Too small. Check effectiveBalance < MAX_EFFECTIVE_BALANCE to prevent unnecessary updates
-      (effectiveBalance < MAX_EFFECTIVE_BALANCE && effectiveBalance < balance - UPWARD_THRESHOLD)
+      effectiveBalance + UPWARD_THRESHOLD < balance
     ) {
       // Update the state tree
       // Should happen rarely, so it's fine to update the tree
