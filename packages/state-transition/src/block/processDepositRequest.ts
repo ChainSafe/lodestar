@@ -9,8 +9,8 @@ export function processDepositRequest(
   state: CachedBeaconStateElectra,
   depositRequest: electra.DepositRequest
 ): void {
-  if (state.depositRequestsStartIndex === UNSET_DEPOSIT_RECEIPTS_START_INDEX) {
-    state.depositRequestsStartIndex = BigInt(depositRequest.index);
+  if (state.depositReceiptsStartIndex === UNSET_DEPOSIT_RECEIPTS_START_INDEX) {
+    state.depositReceiptsStartIndex = BigInt(depositRequest.index);
   }
 
   applyDeposit(fork, state, depositRequest);

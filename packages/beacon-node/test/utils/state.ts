@@ -97,7 +97,7 @@ export function generateState(
 
   if (forkSeq >= ForkSeq.electra) {
     const stateElectra = state as electra.BeaconState;
-    stateElectra.depositRequestsStartIndex = 2023n;
+    stateElectra.depositReceiptsStartIndex = 2023n;
     stateElectra.latestExecutionPayloadHeader = ssz.electra.ExecutionPayloadHeader.defaultValue();
   }
 

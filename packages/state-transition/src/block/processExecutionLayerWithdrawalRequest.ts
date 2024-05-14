@@ -70,7 +70,7 @@ export function processExecutionLayerWithdrawalRequest(
     const exitQueueEpoch = computeExitEpochAndUpdateChurn(state, amountToWithdraw);
     const withdrawableEpoch = exitQueueEpoch + config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY;
 
-    const pendingPartialWithdrawal = ssz.electra.PartialWithdrawal.toViewDU({
+    const pendingPartialWithdrawal = ssz.electra.PendingPartialWithdrawal.toViewDU({
       index: validatorIndex,
       amount: amountToWithdraw,
       withdrawableEpoch,
