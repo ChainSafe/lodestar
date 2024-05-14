@@ -50,8 +50,14 @@ export function processEffectiveBalanceUpdates(
     const balance = balances[i];
 
     // PERF: It's faster to access to get() every single element (4ms) than to convert to regular array then loop (9ms)
-    let effectiveBalanceIncrement = effectiveBalanceIncrements[i];
-    let effectiveBalance = effectiveBalanceIncrement * EFFECTIVE_BALANCE_INCREMENT;
+    // TODO-electra: figure out why effectiveBalanceIncrements and cache.balances above are not populated correctly
+    // let effectiveBalanceIncrement = effectiveBalanceIncrements[i];
+    // let effectiveBalance = effectiveBalanceIncrement * EFFECTIVE_BALANCE_INCREMENT;
+    // Update the state tree
+    // Should happen rarely, so it's fine to update the tree
+    const validator = validators.get(i);
+    let effectiveBalance = validator.effectiveBalance;
+    let effectiveBalanceIncrement = Math.floor(effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
     let effectiveBalanceLimit;
 
     if (
@@ -60,10 +66,6 @@ export function processEffectiveBalanceUpdates(
       // Too small. Check effectiveBalance < MAX_EFFECTIVE_BALANCE to prevent unnecessary updates
       effectiveBalance + UPWARD_THRESHOLD < balance
     ) {
-      // Update the state tree
-      // Should happen rarely, so it's fine to update the tree
-      const validator = validators.get(i);
-
       if (fork < ForkSeq.electra) {
         effectiveBalanceLimit = MAX_EFFECTIVE_BALANCE;
       } else {
