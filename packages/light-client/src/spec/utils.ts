@@ -115,8 +115,8 @@ export function upgradeLightClientHeader(
 
     // eslint-disable-next-line no-fallthrough
     case ForkName.electra:
-      (upgradedHeader as LightClientHeader<ForkName.electra>).execution.depositRequestsRoot =
-        ssz.electra.LightClientHeader.fields.execution.fields.depositRequestsRoot.defaultValue();
+      (upgradedHeader as LightClientHeader<ForkName.electra>).execution.depositReceiptsRoot =
+        ssz.electra.LightClientHeader.fields.execution.fields.depositReceiptsRoot.defaultValue();
       (upgradedHeader as LightClientHeader<ForkName.electra>).execution.withdrawalRequestsRoot =
         ssz.electra.LightClientHeader.fields.execution.fields.withdrawalRequestsRoot.defaultValue();
 
@@ -157,7 +157,7 @@ export function isValidLightClientHeader(config: ChainForkConfig, header: LightC
 
   if (epoch < config.ELECTRA_FORK_EPOCH) {
     if (
-      (header as LightClientHeader<ForkName.electra>).execution.depositRequestsRoot !== undefined ||
+      (header as LightClientHeader<ForkName.electra>).execution.depositReceiptsRoot !== undefined ||
       (header as LightClientHeader<ForkName.electra>).execution.withdrawalRequestsRoot !== undefined
     ) {
       return false;
