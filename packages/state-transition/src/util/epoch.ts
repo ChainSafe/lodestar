@@ -83,7 +83,7 @@ export function computeConsolidationEpochAndUpdateChurn(
   // Consolidation doesn't fit in the current earliest epoch.
   if (consolidationBalance > consolidationBalanceToConsume) {
     const balanceToProcess = Number(consolidationBalance) - consolidationBalanceToConsume;
-    const additionalEpochs = Math.floor((balanceToProcess - 1) / (perEpochConsolidationChurn + 1));
+    const additionalEpochs = Math.floor((balanceToProcess - 1) / perEpochConsolidationChurn) + 1;
     earliestConsolidationEpoch += additionalEpochs;
     consolidationBalanceToConsume += additionalEpochs * perEpochConsolidationChurn;
   }
