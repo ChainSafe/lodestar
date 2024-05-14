@@ -56,23 +56,26 @@ const sszStatic =
       (ssz.bellatrix as Types)[typeName] ||
       (ssz.altair as Types)[typeName] ||
       (ssz.phase0 as Types)[typeName];
-    it(`SSZ type for ${typeName}`, function () {
-      expect(sszType).toBeDefined();
-    });
 
-    const sszTypeNoUint = replaceUintTypeWithUintBigintType(sszType);
+    if (!sszType) {
+      expect.fail(
+        `Missing SSZ type definition for ${typeName}; this will prevent associated ssz_static tests to be executed`
+      );
+    } else {
+      const sszTypeNoUint = replaceUintTypeWithUintBigintType(sszType);
 
-    for (const testCase of fs.readdirSync(testSuiteDirpath)) {
-      // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
-      it(testCase, function () {
-        // Mainnet must deal with big full states and hash each one multiple times
-        if (ACTIVE_PRESET === "mainnet") {
-          vi.setConfig({testTimeout: 30 * 1000});
-        }
+      for (const testCase of fs.readdirSync(testSuiteDirpath)) {
+        // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
+        it(testCase, function () {
+          // Mainnet must deal with big full states and hash each one multiple times
+          if (ACTIVE_PRESET === "mainnet") {
+            vi.setConfig({testTimeout: 30 * 1000});
+          }
 
-        const testData = parseSszStaticTestcase(path.join(testSuiteDirpath, testCase));
-        runValidSszTest(sszTypeNoUint, testData);
-      });
+          const testData = parseSszStaticTestcase(path.join(testSuiteDirpath, testCase));
+          runValidSszTest(sszTypeNoUint, testData);
+        });
+      }
     }
   };
 
