@@ -42,6 +42,8 @@ const epochTransitionFns: Record<string, EpochTransitionFn> = {
   slashings_reset: epochFns.processSlashingsReset,
   sync_committee_updates: epochFns.processSyncCommitteeUpdates as EpochTransitionFn,
   historical_summaries_update: epochFns.processHistoricalSummariesUpdate as EpochTransitionFn,
+  pending_balance_deposits: epochFns.processPendingBalanceDeposits as EpochTransitionFn,
+  pending_consolidations: epochFns.processPendingConsolidations as EpochTransitionFn,
 };
 
 /**

@@ -91,6 +91,21 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
   withdrawals: (state, testCase: {execution_payload: capella.ExecutionPayload}) => {
     blockFns.processWithdrawals(ForkSeq.capella, state as CachedBeaconStateCapella, testCase.execution_payload);
   },
+
+  consolidation: (state, testCase: {consolidation: electra.SignedConsolidation}) => {
+    blockFns.processConsolidation(state as CachedBeaconStateElectra, testCase.consolidation);
+  },
+
+  execution_layer_withdrawal_request: (
+    state,
+    testCase: {execution_layer_withdrawal_request: electra.ExecutionLayerWithdrawalRequest}
+  ) => {
+    blockFns.processExecutionLayerWithdrawalRequest(
+      ForkSeq.electra,
+      state as CachedBeaconStateElectra,
+      testCase.execution_layer_withdrawal_request
+    );
+  },
 };
 
 export type BlockProcessFn<T extends CachedBeaconStateAllForks> = (state: T, testCase: any) => void;
@@ -140,6 +155,8 @@ const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork,
             : ssz.bellatrix.ExecutionPayload,
         // Capella
         address_change: ssz.capella.SignedBLSToExecutionChange,
+        consolidation: ssz.electra.SignedConsolidation,
+        execution_layer_withdrawal_request: ssz.electra.ExecutionLayerWithdrawalRequest,
       },
       shouldError: (testCase) => testCase.post === undefined,
       getExpected: (testCase) => testCase.post,
