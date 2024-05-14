@@ -21,6 +21,8 @@ import {
   PENDING_BALANCE_DEPOSITS_LIMIT,
   PENDING_PARTIAL_WITHDRAWALS_LIMIT,
   PENDING_CONSOLIDATIONS_LIMIT,
+  FINALIZED_ROOT_DEPTH_ELECTRA,
+  NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA,
 } from "@lodestar/params";
 import {ssz as primitiveSsz} from "../primitive/index.js";
 import {ssz as phase0Ssz} from "../phase0/index.js";
@@ -110,7 +112,7 @@ export const SignedAggregateAndProof = new ContainerType(
   {typeName: "SignedAggregateAndProof", jsonCase: "eth2"}
 );
 
-export const DepositRequest = new ContainerType(
+export const DepositReceipt = new ContainerType(
   {
     pubkey: BLSPubkey,
     withdrawalCredentials: Bytes32,
@@ -118,10 +120,10 @@ export const DepositRequest = new ContainerType(
     signature: BLSSignature,
     index: DepositIndex,
   },
-  {typeName: "DepositRequest", jsonCase: "eth2"}
+  {typeName: "DepositReceipt", jsonCase: "eth2"}
 );
 
-export const DepositRequests = new ListCompositeType(DepositRequest, MAX_DEPOSIT_RECEIPTS_PER_PAYLOAD);
+export const DepositReceipts = new ListCompositeType(DepositReceipt, MAX_DEPOSIT_RECEIPTS_PER_PAYLOAD);
 
 export const ExecutionLayerWithdrawalRequest = new ContainerType(
   {
@@ -139,7 +141,7 @@ export const ExecutionLayerWithdrawalRequests = new ListCompositeType(
 export const ExecutionPayload = new ContainerType(
   {
     ...denebSsz.ExecutionPayload.fields,
-    depositRequests: DepositRequests, // New in ELECTRA
+    depositReceipts: DepositReceipts, // New in ELECTRA
     withdrawalRequests: ExecutionLayerWithdrawalRequests, // New in ELECTRA
   },
   {typeName: "ExecutionPayload", jsonCase: "eth2"}
@@ -148,7 +150,7 @@ export const ExecutionPayload = new ContainerType(
 export const ExecutionPayloadHeader = new ContainerType(
   {
     ...denebSsz.ExecutionPayloadHeader.fields,
-    depositRequestsRoot: Root, // New in ELECTRA
+    depositReceiptsRoot: Root, // New in ELECTRA
     withdrawalRequestsRoot: Root, // New in ELECTRA
   },
   {typeName: "ExecutionPayloadHeader", jsonCase: "eth2"}
@@ -280,13 +282,13 @@ export const PendingBalanceDeposits = new ListCompositeType(
   Number(PENDING_BALANCE_DEPOSITS_LIMIT)
 );
 
-export const PartialWithdrawal = new ContainerType(
+export const PendingPartialWithdrawal = new ContainerType(
   {
     index: ValidatorIndex,
     amount: Gwei,
     withdrawableEpoch: Epoch,
   },
-  {typeName: "PartialWithdrawal", jsonCase: "eth2"}
+  {typeName: "PendingPartialWithdrawal", jsonCase: "eth2"}
 );
 
 export const PendingConsolidation = new ContainerType(
@@ -340,14 +342,14 @@ export const BeaconState = new ContainerType(
     nextWithdrawalValidatorIndex: capellaSsz.BeaconState.fields.nextWithdrawalValidatorIndex,
     // Deep history valid from Capella onwards
     historicalSummaries: capellaSsz.BeaconState.fields.historicalSummaries,
-    depositRequestsStartIndex: UintBn64, // New in ELECTRA:EIP6110
+    depositReceiptsStartIndex: UintBn64, // New in ELECTRA:EIP6110
     depositBalanceToConsume: Gwei, // New in Electra:EIP7251
     exitBalanceToConsume: Gwei, // New in Electra:EIP7251
     earliestExitEpoch: Epoch, // New in Electra:EIP7251
     consolidationBalanceToConsume: Gwei, // New in Electra:EIP7251
     earliestConsolidationEpoch: Epoch, // New in Electra:EIP7251
     pendingBalanceDeposits: PendingBalanceDeposits, // new in electra:eip7251
-    pendingPartialWithdrawals: new ListCompositeType(PartialWithdrawal, Number(PENDING_PARTIAL_WITHDRAWALS_LIMIT)), // New in Electra:EIP7251
+    pendingPartialWithdrawals: new ListCompositeType(PendingPartialWithdrawal, Number(PENDING_PARTIAL_WITHDRAWALS_LIMIT)), // New in Electra:EIP7251
     pendingConsolidations: new ListCompositeType(PendingConsolidation, Number(PENDING_CONSOLIDATIONS_LIMIT)), // new in electra:eip7251
   },
   {typeName: "BeaconState", jsonCase: "eth2"}
@@ -366,7 +368,7 @@ export const LightClientBootstrap = new ContainerType(
   {
     header: LightClientHeader,
     currentSyncCommittee: altairSsz.SyncCommittee,
-    currentSyncCommitteeBranch: altairSsz.LightClientBootstrap.fields.currentSyncCommitteeBranch,
+    currentSyncCommitteeBranch: new VectorCompositeType(Bytes32, NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA),
   },
   {typeName: "LightClientBootstrap", jsonCase: "eth2"}
 );
@@ -375,9 +377,9 @@ export const LightClientUpdate = new ContainerType(
   {
     attestedHeader: LightClientHeader,
     nextSyncCommittee: altairSsz.SyncCommittee,
-    nextSyncCommitteeBranch: altairSsz.LightClientUpdate.fields.nextSyncCommitteeBranch,
+    nextSyncCommitteeBranch: new VectorCompositeType(Bytes32, NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA),
     finalizedHeader: LightClientHeader,
-    finalityBranch: altairSsz.LightClientUpdate.fields.finalityBranch,
+    finalityBranch: new VectorCompositeType(Bytes32, FINALIZED_ROOT_DEPTH_ELECTRA),
     syncAggregate: altairSsz.SyncAggregate,
     signatureSlot: Slot,
   },
@@ -388,7 +390,7 @@ export const LightClientFinalityUpdate = new ContainerType(
   {
     attestedHeader: LightClientHeader,
     finalizedHeader: LightClientHeader,
-    finalityBranch: altairSsz.LightClientFinalityUpdate.fields.finalityBranch,
+    finalityBranch: new VectorCompositeType(Bytes32, FINALIZED_ROOT_DEPTH_ELECTRA),
     syncAggregate: altairSsz.SyncAggregate,
     signatureSlot: Slot,
   },

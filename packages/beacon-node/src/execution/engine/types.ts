@@ -235,8 +235,8 @@ export function serializeExecutionPayload(fork: ForkName, data: ExecutionPayload
 
   // ELECTRA adds depositRequests/depositRequests to the ExecutionPayload
   if (ForkSeq[fork] >= ForkSeq.electra) {
-    const {depositRequests, withdrawalRequests} = data as electra.ExecutionPayload;
-    payload.depositRequests = depositRequests.map(serializeDepositRequest);
+    const {depositReceipts, withdrawalRequests} = data as electra.ExecutionPayload;
+    payload.depositRequests = depositReceipts.map(serializeDepositRequest);
     payload.withdrawalRequests = withdrawalRequests.map(serializeExecutionLayerWithdrawalRequest);
   }
 
@@ -334,7 +334,7 @@ export function parseExecutionPayload(
         `depositRequests missing for ${fork} >= electra executionPayload number=${executionPayload.blockNumber} hash=${data.blockHash}`
       );
     }
-    (executionPayload as electra.ExecutionPayload).depositRequests = depositRequests.map(deserializeDepositRequest);
+    (executionPayload as electra.ExecutionPayload).depositReceipts = depositRequests.map(deserializeDepositRequest);
 
     if (withdrawalRequests == null) {
       throw Error(
