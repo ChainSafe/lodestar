@@ -138,12 +138,12 @@ const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork,
       sszTypes: {
         pre: ssz[fork].BeaconState,
         post: ssz[fork].BeaconState,
-        attestation: fork === ForkName.electra ? ssz.electra.Attestation : ssz.phase0.Attestation,
-        attester_slashing: fork === ForkName.electra ? ssz.electra.AttesterSlashing : ssz.phase0.AttesterSlashing,
+        attestation: ssz.allForks[fork].Attestation,
+        attester_slashing: ssz.allForks[fork].AttesterSlashing,
         block: ssz[fork].BeaconBlock,
         body: ssz[fork].BeaconBlockBody,
         deposit: ssz.phase0.Deposit,
-        deposit_receipt: ssz.electra.DepositRequest,
+        deposit_receipt: ssz.electra.DepositReceipt,
         proposer_slashing: ssz.phase0.ProposerSlashing,
         voluntary_exit: ssz.phase0.SignedVoluntaryExit,
         // Altair
@@ -155,6 +155,7 @@ const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork,
             : ssz.bellatrix.ExecutionPayload,
         // Capella
         address_change: ssz.capella.SignedBLSToExecutionChange,
+        // Electra
         consolidation: ssz.electra.SignedConsolidation,
         execution_layer_withdrawal_request: ssz.electra.ExecutionLayerWithdrawalRequest,
       },
