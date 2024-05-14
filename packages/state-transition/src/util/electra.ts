@@ -93,6 +93,7 @@ export function queueEntireBalanceAndResetValidator(state: CachedBeaconStateElec
 
   const validator = state.validators.get(index);
   validator.effectiveBalance = 0;
+  state.epochCtx.effectiveBalanceIncrementsSet(index, 0);
   validator.activationEligibilityEpoch = FAR_FUTURE_EPOCH;
 
   const pendingBalanceDeposit = ssz.electra.PendingBalanceDeposit.toViewDU({
