@@ -2,6 +2,13 @@
 
 Testing is critical to the Lodestar project and there are many types of tests that are run to build a product that is both effective AND efficient. This page will help to break down the different types of tests you will find in the Lodestar repo.
 
+There are few flags you can set through env variables to override behavior of testing and it's output.
+
+| ENV variable | Effect | Impact |
+| --- | --- | --- |
+| TEST_COMPACT_DIFF | All | Will stipe down the object difference rendered during test failures. Very useful for large object matching. |
+| SPEC_FILTER_FORK | Spec Tests | Given the fork name, will filter out and run only that specific fork tests. |
+
 ### Unit Tests
 
 This is the most fundamental type of test in most code bases. In all instances mocks, stubs and other forms of isolation are used to test code on a functional, unit level. See the [Unit Tests](./unit-tests.md) page for more information.
