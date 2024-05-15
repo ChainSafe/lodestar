@@ -69,10 +69,10 @@ export const AttestingIndices = new ListBasicType(
 
 export const Attestation = new SimpleVariantType(
   {
-    aggregationBits: AggregationBits, // Modified in ELECTRA
     data: phase0Ssz.AttestationData,
-    committeeBits: CommitteeBits, // New in ELECTRA
     signature: BLSSignature,
+    aggregationBits: AggregationBits, // Modified in ELECTRA
+    committeeBits: CommitteeBits, // New in ELECTRA
   },
   initTrueBits(MAX_ATTESTATION_FIELDS, 4),
   {typeName: "Attestation", jsonCase: "eth2"}
@@ -80,9 +80,9 @@ export const Attestation = new SimpleVariantType(
 
 export const IndexedAttestation = new SimpleVariantType(
   {
-    attestingIndices: AttestingIndices, // Modified in ELECTRA
     data: phase0Ssz.AttestationData,
     signature: BLSSignature,
+    attestingIndices: AttestingIndices, // Modified in ELECTRA
   },
   initTrueBits(MAX_INDEXED_ATTESTATION_FIELDS, 3),
   {typeName: "IndexedAttestation", jsonCase: "eth2"}
@@ -91,9 +91,9 @@ export const IndexedAttestation = new SimpleVariantType(
 /** Same as `IndexedAttestation` but epoch, slot and index are not bounded and must be a bigint */
 export const IndexedAttestationBigint = new SimpleVariantType(
   {
-    attestingIndices: AttestingIndices, // Modified in ELECTRA
     data: phase0Ssz.AttestationDataBigint,
     signature: BLSSignature,
+    attestingIndices: AttestingIndices, // Modified in ELECTRA
   },
   initTrueBits(MAX_INDEXED_ATTESTATION_FIELDS, 3),
   {typeName: "IndexedAttestation", jsonCase: "eth2"}
