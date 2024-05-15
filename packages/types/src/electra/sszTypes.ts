@@ -223,6 +223,7 @@ export const BlindedBeaconBlockBody = new ContainerType(
     executionPayloadHeader: ExecutionPayloadHeader, // Modified in ELECTRA
     blsToExecutionChanges: capellaSsz.BeaconBlockBody.fields.blsToExecutionChanges,
     blobKzgCommitments: denebSsz.BeaconBlockBody.fields.blobKzgCommitments,
+    consolidations: new ListCompositeType(SignedConsolidation, MAX_CONSOLIDATIONS), // [New in Electra]
   },
   {typeName: "BlindedBeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
