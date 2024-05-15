@@ -7,7 +7,6 @@ There are few flags you can set through env variables to override behavior of te
 | ENV variable | Effect | Impact |
 | --- | --- | --- |
 | TEST_COMPACT_DIFF | All | Will stipe down the object difference rendered during test failures. Very useful for large object matching. |
-| SPEC_FILTER_FORK | Spec Tests | Given the fork name, will filter out and run only that specific fork tests. |
 
 ### Unit Tests
 
