@@ -4,9 +4,9 @@ Testing is critical to the Lodestar project and there are many types of tests th
 
 There are few flags you can set through env variables to override behavior of testing and it's output.
 
-| ENV variable | Effect | Impact |
-| --- | --- | --- |
-| TEST_COMPACT_DIFF | All | Will stipe down the object difference rendered during test failures. Very useful for large object matching. |
+| ENV variable      | Effect | Impact                                                                                                      |
+| ----------------- | ------ | ----------------------------------------------------------------------------------------------------------- |
+| TEST_COMPACT_DIFF | All    | Will stipe down the object difference rendered during test failures. Very useful for large object matching. |
 
 ### Unit Tests
 
