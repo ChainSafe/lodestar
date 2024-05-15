@@ -1,4 +1,4 @@
-import {CompositeType, ContainerType, ValueOf, CompositeView, CompositeViewDU} from "@chainsafe/ssz";
+import {CompositeType, ContainerType, ValueOf, CompositeView, CompositeViewDU, SimpleVariantType} from "@chainsafe/ssz";
 import {ts as phase0} from "../phase0/index.js";
 import {ts as altair} from "../altair/index.js";
 import {ts as bellatrix} from "../bellatrix/index.js";
@@ -217,7 +217,7 @@ export type AllForksExecution = {
  * ```
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AllForksTypeOf<UnionOfForkTypes extends ContainerType<any>> = CompositeType<
+type AllForksTypeOf<UnionOfForkTypes extends ContainerType<any> | SimpleVariantType<any>> = CompositeType<
   ValueOf<UnionOfForkTypes>,
   CompositeView<UnionOfForkTypes>,
   CompositeViewDU<UnionOfForkTypes>

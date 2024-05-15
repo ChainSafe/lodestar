@@ -64,7 +64,7 @@
     "blockchain"
   ],
   "dependencies": {
-    "@chainsafe/ssz": "^0.16.0",
+    "@chainsafe/ssz": "https://github.com/ChainSafe/ssz/raw/cayman/stable-container/packages/ssz/package.tgz",
     "@lodestar/params": "^1.18.0",
     "@lodestar/types": "^1.18.0"
   }

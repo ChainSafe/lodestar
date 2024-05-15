@@ -36,7 +36,7 @@
     "check-readme": "typescript-docs-verifier"
   },
   "dependencies": {
-    "@chainsafe/ssz": "^0.16.0",
+    "@chainsafe/ssz": "https://github.com/ChainSafe/ssz/raw/cayman/stable-container/packages/ssz/package.tgz",
     "@lodestar/config": "^1.18.0",
     "@lodestar/params": "^1.18.0",
     "@lodestar/state-transition": "^1.18.0",
