@@ -4,6 +4,7 @@ import {
   ContainerType,
   ListBasicType,
   ListCompositeType,
+  SimpleVariantType,
   VectorCompositeType,
 } from "@chainsafe/ssz";
 import {
@@ -24,6 +25,14 @@ import {
   FINALIZED_ROOT_DEPTH_ELECTRA,
   NEXT_SYNC_COMMITTEE_DEPTH_ELECTRA,
 } from "@lodestar/params";
+import {
+  MAX_ATTESTATION_FIELDS,
+  MAX_BEACON_BLOCK_BODY_FIELDS,
+  MAX_BEACON_STATE_FIELDS,
+  MAX_EXECUTION_PAYLOAD_FIELDS,
+  MAX_INDEXED_ATTESTATION_FIELDS,
+} from "../constants.js";
+import {initTrueBits} from "../utils/bitvector.js";
 import {ssz as primitiveSsz} from "../primitive/index.js";
 import {ssz as phase0Ssz} from "../phase0/index.js";
 import {ssz as altairSsz} from "../altair/index.js";
@@ -58,32 +67,35 @@ export const AttestingIndices = new ListBasicType(
   MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT
 );
 
-export const Attestation = new ContainerType(
+export const Attestation = new SimpleVariantType(
   {
     aggregationBits: AggregationBits, // Modified in ELECTRA
     data: phase0Ssz.AttestationData,
     signature: BLSSignature,
     committeeBits: CommitteeBits, // New in ELECTRA
   },
+  initTrueBits(MAX_ATTESTATION_FIELDS, 4),
   {typeName: "Attestation", jsonCase: "eth2"}
 );
 
-export const IndexedAttestation = new ContainerType(
+export const IndexedAttestation = new SimpleVariantType(
   {
     attestingIndices: AttestingIndices, // Modified in ELECTRA
     data: phase0Ssz.AttestationData,
     signature: BLSSignature,
   },
+  initTrueBits(MAX_INDEXED_ATTESTATION_FIELDS, 3),
   {typeName: "IndexedAttestation", jsonCase: "eth2"}
 );
 
 /** Same as `IndexedAttestation` but epoch, slot and index are not bounded and must be a bigint */
-export const IndexedAttestationBigint = new ContainerType(
+export const IndexedAttestationBigint = new SimpleVariantType(
   {
     attestingIndices: AttestingIndices, // Modified in ELECTRA
     data: phase0Ssz.AttestationDataBigint,
     signature: BLSSignature,
   },
+  initTrueBits(MAX_INDEXED_ATTESTATION_FIELDS, 3),
   {typeName: "IndexedAttestation", jsonCase: "eth2"}
 );
 
@@ -147,28 +159,30 @@ export const ConsolidationRequests = new ListCompositeType(
   MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD
 );
 
-export const ExecutionPayload = new ContainerType(
+export const ExecutionPayload = new SimpleVariantType(
   {
     ...denebSsz.ExecutionPayload.fields,
     depositRequests: DepositRequests, // New in ELECTRA
     withdrawalRequests: WithdrawalRequests, // New in ELECTRA
     consolidationRequests: ConsolidationRequests, // New in ELECTRA
   },
+  initTrueBits(MAX_EXECUTION_PAYLOAD_FIELDS, Object.keys(denebSsz.ExecutionPayload.fields).length + 2),
   {typeName: "ExecutionPayload", jsonCase: "eth2"}
 );
 
-export const ExecutionPayloadHeader = new ContainerType(
+export const ExecutionPayloadHeader = new SimpleVariantType(
   {
     ...denebSsz.ExecutionPayloadHeader.fields,
     depositRequestsRoot: Root, // New in ELECTRA
     withdrawalRequestsRoot: Root, // New in ELECTRA
     consolidationRequestsRoot: Root, // New in ELECTRA
   },
+  initTrueBits(MAX_EXECUTION_PAYLOAD_FIELDS, Object.keys(denebSsz.ExecutionPayloadHeader.fields).length + 2),
   {typeName: "ExecutionPayloadHeader", jsonCase: "eth2"}
 );
 
 // We have to preserve Fields ordering while changing the type of ExecutionPayload
-export const BeaconBlockBody = new ContainerType(
+export const BeaconBlockBody = new SimpleVariantType(
   {
     randaoReveal: phase0Ssz.BeaconBlockBody.fields.randaoReveal,
     eth1Data: phase0Ssz.BeaconBlockBody.fields.eth1Data,
@@ -183,6 +197,7 @@ export const BeaconBlockBody = new ContainerType(
     blsToExecutionChanges: capellaSsz.BeaconBlockBody.fields.blsToExecutionChanges,
     blobKzgCommitments: denebSsz.BeaconBlockBody.fields.blobKzgCommitments,
   },
+  initTrueBits(MAX_BEACON_BLOCK_BODY_FIELDS, 13),
   {typeName: "BeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
@@ -202,7 +217,7 @@ export const SignedBeaconBlock = new ContainerType(
   {typeName: "SignedBeaconBlock", jsonCase: "eth2"}
 );
 
-export const BlindedBeaconBlockBody = new ContainerType(
+export const BlindedBeaconBlockBody = new SimpleVariantType(
   {
     randaoReveal: phase0Ssz.BeaconBlockBody.fields.randaoReveal,
     eth1Data: phase0Ssz.BeaconBlockBody.fields.eth1Data,
@@ -217,6 +232,7 @@ export const BlindedBeaconBlockBody = new ContainerType(
     blsToExecutionChanges: capellaSsz.BeaconBlockBody.fields.blsToExecutionChanges,
     blobKzgCommitments: denebSsz.BeaconBlockBody.fields.blobKzgCommitments,
   },
+  initTrueBits(MAX_BEACON_BLOCK_BODY_FIELDS, 13),
   {typeName: "BlindedBeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
@@ -290,7 +306,7 @@ export const PendingConsolidation = new ContainerType(
 );
 
 // In EIP-7251, we spread deneb fields as new fields are appended at the end
-export const BeaconState = new ContainerType(
+export const BeaconState = new SimpleVariantType(
   {
     genesisTime: UintNum64,
     genesisValidatorsRoot: Root,
@@ -342,6 +358,7 @@ export const BeaconState = new ContainerType(
     pendingPartialWithdrawals: new ListCompositeType(PendingPartialWithdrawal, PENDING_PARTIAL_WITHDRAWALS_LIMIT), // New in ELECTRA:EIP7251
     pendingConsolidations: new ListCompositeType(PendingConsolidation, PENDING_CONSOLIDATIONS_LIMIT), // New in ELECTRA:EIP7251
   },
+  initTrueBits(MAX_BEACON_STATE_FIELDS, 37),
   {typeName: "BeaconState", jsonCase: "eth2"}
 );
 
