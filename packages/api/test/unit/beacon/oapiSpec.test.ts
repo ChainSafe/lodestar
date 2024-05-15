@@ -60,7 +60,7 @@ const reqSerializers = {
   ...routes.lightclient.getReqSerializers(),
   ...routes.node.getReqSerializers(),
   ...routes.proof.getReqSerializers(),
-  ...routes.validator.getReqSerializers(),
+  ...routes.validator.getReqSerializers(config),
 };
 
 const returnTypes = {
