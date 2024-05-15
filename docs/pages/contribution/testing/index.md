@@ -6,7 +6,7 @@ There are few flags you can set through env variables to override behavior of te
 
 | ENV variable | Effect | Impact |
 | --- | --- | --- |
-| TEST_COMPACT_DIFF | All | Will stipe down the object difference rendered during test failures. Very useful for large object matching. |
+| TEST_COMPACT_DIFF | All | Will strip down the object difference rendered during test failures. Very useful for large object matching. |
 
 ### Unit Tests
 
