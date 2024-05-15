@@ -28,6 +28,18 @@ docker run chainsafe/lodestar --help
 Docker is the recommended setup for Lodestar. Use our [Lodestar Quickstart scripts](https://github.com/ChainSafe/lodestar-quickstart) with Docker for detailed instructions.
 :::
 
+Speed improvements can be achieved during docker image build by relying on yarn [offline mirror](https://classic.yarnpkg.com/blog/2016/11/24/offline-mirror/).
+To configure this, run the following commands:
+
+```bash
+yarn config set yarn-offline-mirror .yarn/yarn-offline-mirror
+mv ~/.yarnrc ./ # `yarn config` commands are always global, make `.yarnrc` specific to this project
+# When run for the first time on an existing setup, run the following extra commands
+# rm -rf node_modules/ && yarn install
+```
+
+Those files will then be copied during the Docker build process and used to remove the need to download dependencies.
+
 ## Build from Source
 
 ### Prerequisites

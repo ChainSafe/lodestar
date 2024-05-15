@@ -13,6 +13,8 @@ keys/
 keystores/
 test-db
 yarn-error.log
+.yarnrc
+.yarn/
 package-lock.json
 LodestarValidatorDB/
 *.log
