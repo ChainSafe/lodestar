@@ -9,7 +9,11 @@ import {
 } from "@lodestar/params";
 
 export type BlockRootHex = RootHex;
+export type SeenAttDataKey = AttDataBase64 | AttDataCommitteeBitsBase64;
+// pre-electra, AttestationData is used to cache attestations
 export type AttDataBase64 = string;
+// electra, AttestationData + CommitteeBits are used to cache attestations
+export type AttDataCommitteeBitsBase64 = string;
 
 // pre-electra
 // class Attestation(Container):
@@ -72,10 +76,32 @@ export function getBlockRootFromAttestationSerialized(data: Uint8Array): BlockRo
 }
 
 /**
- * Extract attestation data base64 from attestation serialized bytes.
+ * Extract attestation data key from an attestation Uint8Array in order to index gossip queue and cache later in SeenAttestationDatas
+ */
+export function getSeenAttDataKey(forkSeq: ForkSeq, data: Uint8Array): SeenAttDataKey | null {
+  return forkSeq >= ForkSeq.electra ? getSeenAttDataKeyElectra(data) : getSeenAttDataKeyPhase0(data);
+}
+
+/**
+ * Extract attestation data + committeeBits base64 from electra attestation serialized bytes.
  * Return null if data is not long enough to extract attestation data.
  */
-export function getAttDataBase64FromAttestationSerialized(data: Uint8Array): AttDataBase64 | null {
+export function getSeenAttDataKeyElectra(electraAttestationBytes: Uint8Array): AttDataCommitteeBitsBase64 | null {
+  const startIndex = VARIABLE_FIELD_OFFSET;
+  const seenKeyLength = ATTESTATION_DATA_SIZE + COMMITTEE_BITS_SIZE;
+
+  if (electraAttestationBytes.length < startIndex + seenKeyLength) {
+    return null;
+  }
+
+  return Buffer.from(electraAttestationBytes.subarray(startIndex, startIndex + seenKeyLength)).toString("base64");
+}
+
+/**
+ * Extract attestation data base64 from phase0 attestation serialized bytes.
+ * Return null if data is not long enough to extract attestation data.
+ */
+export function getSeenAttDataKeyPhase0(data: Uint8Array): AttDataBase64 | null {
   if (data.length < VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE) {
     return null;
   }
