@@ -62,7 +62,7 @@ export function getBeaconPoolApi({
               indexInData: attestation.data.index,
               slot: attestation.data.slot,
               committeeBits: isElectraAttestation(attestation)
-                ? Buffer.from(attestation.committeeBits.uint8Array).toString("base64")
+                ? attestation.committeeBits.toBoolArray().join(",")
                 : "undefined",
             });
             // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
