@@ -1,5 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
-import {allForks, BLSSignature, electra, phase0, Slot, ssz} from "@lodestar/types";
+import {allForks, BLSSignature, electra, isElectraAttestation, phase0, Slot, ssz} from "@lodestar/types";
 import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@lodestar/state-transition";
 import {sleep} from "@lodestar/utils";
 import {Api, ApiError, routes} from "@lodestar/api";
@@ -227,13 +227,18 @@ export class AttestationService {
       ...(this.opts?.disableAttestationGrouping && {index: attestationNoCommittee.index}),
     };
     try {
-      const firstAttestation = signedAttestations[0] as electra.Attestation;
-      const logCtx2 = {
-        slot: firstAttestation.data.slot,
-        indexInData: firstAttestation.data.index,
-        committeeBits: firstAttestation.committeeBits.toBoolArray().join(",") ?? "undefinedd",
-      };
-      this.logger.info("@@@ vc submitPoolAttestations", logCtx2);
+      for (const [i, firstAttestation] of signedAttestations.entries()) {
+        const logCtx2 = {
+          i,
+          slot: firstAttestation.data.slot,
+          indexInData: firstAttestation.data.index,
+          committeeBits: isElectraAttestation(firstAttestation)
+            ? firstAttestation.committeeBits.toBoolArray().join(",")
+            : "undefinedd",
+        };
+        this.logger.info("@@@ vc submitPoolAttestations", logCtx2);
+      }
+      this.logger.info("@@@ duties", {duties: duties.map((duty) => duty.duty.committeeIndex).join(",")});
       ApiError.assert(await this.api.beacon.submitPoolAttestations(signedAttestations));
       this.logger.info("Published attestations", {...logCtx, count: signedAttestations.length});
       this.metrics?.publishedAttestations.inc(signedAttestations.length);
