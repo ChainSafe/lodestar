@@ -1,30 +1,34 @@
 import {describe, it, expect} from "vitest";
-import {ContainerType} from "@chainsafe/ssz";
+import {ForkName, isForkExecution} from "@lodestar/params";
 import {ssz} from "../../src/index.js";
 
-describe("blinded datastructures", function () {
+describe("blinded data structures", function () {
   it("should have the same number of fields as non-blinded", () => {
     const blindedTypes = [
-      {a: "BlindedBeaconBlockBody", b: "BeaconBlockBody"},
-      {a: "ExecutionPayloadHeader", b: "ExecutionPayload"},
+      {a: "BlindedBeaconBlockBody" as const, b: "BeaconBlockBody" as const},
+      {a: "ExecutionPayloadHeader" as const, b: "ExecutionPayload" as const},
     ];
 
     for (const {a, b} of blindedTypes) {
-      for (const fork of Object.keys(ssz.allForks) as (keyof typeof ssz.allForks)[]) {
-        // @ts-expect-error generic string typenames used across forks
-        const blindedType = ssz[fork][a] as ContainerType<any> | undefined;
-        // @ts-expect-error generic string typenames used across forks
-        const type = ssz[fork][b] as ContainerType<any> | undefined;
-
-        if (!blindedType || !type) {
+      for (const fork of Object.keys(ssz.allForks) as ForkName[]) {
+        if (!isForkExecution(fork)) {
           continue;
         }
 
-        expect(
-          Object.keys(blindedType.fields).length,
-          // eslint-disable-next-line vitest/valid-expect
+        const blindedType = ssz[fork][a];
+        if (blindedType === undefined) {
+          expect.fail(`fork: ${fork}, type ${a} is undefined`);
+        }
+
+        const type = ssz[fork][b];
+        if (type === undefined) {
+          expect.fail(`fork: ${fork}, type ${b} is undefined`);
+        }
+
+        expect(Object.keys(blindedType.fields).length).toBeWithMessage(
+          Object.keys(type.fields).length,
           `fork: ${fork}, types ${a} and ${b} have different number of fields`
-        ).toBe(Object.keys(type.fields).length);
+        );
       }
     }
   });
