@@ -61,9 +61,10 @@ type CommitteeIndex = number;
  * receives and it can be triggered manually.
  */
 export class AttestationPool {
-  private readonly attestationByRootBySlot = new MapDef<Slot, Map<DataRootHex, Map<CommitteeIndex, AggregateFast>>>(
-    () => new Map<DataRootHex, Map<CommitteeIndex, AggregateFast>>()
-  );
+  private readonly aggregateByIndexByRootBySlot = new MapDef<
+    Slot,
+    Map<DataRootHex, Map<CommitteeIndex, AggregateFast>>
+  >(() => new Map<DataRootHex, Map<CommitteeIndex, AggregateFast>>());
   private lowestPermissibleSlot = 0;
 
   constructor(
@@ -75,8 +76,10 @@ export class AttestationPool {
   /** Returns current count of pre-aggregated attestations with unique data */
   getAttestationCount(): number {
     let attestationCount = 0;
-    for (const attestationByRoot of this.attestationByRootBySlot.values()) {
-      attestationCount += attestationByRoot.size;
+    for (const attestationByIndexByRoot of this.aggregateByIndexByRootBySlot.values()) {
+      for (const attestationByIndex of attestationByIndexByRoot.values()) {
+        attestationCount += attestationByIndex.size;
+      }
     }
     return attestationCount;
   }
@@ -98,7 +101,7 @@ export class AttestationPool {
    * - Valid committeeIndex
    * - Valid data
    */
-  add(attestation: allForks.Attestation, attDataRootHex: RootHex): InsertOutcome {
+  add(committeeIndex: CommitteeIndex, attestation: allForks.Attestation, attDataRootHex: RootHex): InsertOutcome {
     const slot = attestation.data.slot;
     const lowestPermissibleSlot = this.lowestPermissibleSlot;
 
@@ -113,15 +116,11 @@ export class AttestationPool {
     }
 
     // Limit object per slot
-    const aggregateByRoot = this.attestationByRootBySlot.getOrDefault(slot);
+    const aggregateByRoot = this.aggregateByIndexByRootBySlot.getOrDefault(slot);
     if (aggregateByRoot.size >= MAX_ATTESTATIONS_PER_SLOT) {
       throw new OpPoolError({code: OpPoolErrorCode.REACHED_MAX_PER_SLOT});
     }
 
-    const committeeIndex = isElectraAttestation(attestation)
-      ? // this attestation is added to pool after validation
-        attestation.committeeBits.getSingleTrueBit()
-      : attestation.data.index;
     // this should not happen because attestation should be validated before reaching this
     assert.notNull(committeeIndex, "Committee index should not be null in attestation pool");
 
@@ -146,7 +145,7 @@ export class AttestationPool {
    * For validator API to get an aggregate
    */
   getAggregate(slot: Slot, committeeIndex: CommitteeIndex, dataRootHex: RootHex): allForks.Attestation | null {
-    const aggregate = this.attestationByRootBySlot.get(slot)?.get(dataRootHex)?.get(committeeIndex);
+    const aggregate = this.aggregateByIndexByRootBySlot.get(slot)?.get(dataRootHex)?.get(committeeIndex);
     if (!aggregate) {
       // TODO: Add metric for missing aggregates
       return null;
@@ -160,7 +159,7 @@ export class AttestationPool {
    * By default, not interested in attestations in old slots, we only preaggregate attestations for the current slot.
    */
   prune(clockSlot: Slot): void {
-    pruneBySlot(this.attestationByRootBySlot, clockSlot, SLOTS_RETAINED);
+    pruneBySlot(this.aggregateByIndexByRootBySlot, clockSlot, SLOTS_RETAINED);
     // by default preaggregateSlotDistance is 0, i.e only accept attestations in the same clock slot.
     this.lowestPermissibleSlot = Math.max(clockSlot - this.preaggregateSlotDistance, 0);
   }
@@ -174,8 +173,8 @@ export class AttestationPool {
 
     const aggregateByRoots =
       bySlot === undefined
-        ? Array.from(this.attestationByRootBySlot.values())
-        : [this.attestationByRootBySlot.get(bySlot)];
+        ? Array.from(this.aggregateByIndexByRootBySlot.values())
+        : [this.aggregateByIndexByRootBySlot.get(bySlot)];
 
     for (const aggregateByRoot of aggregateByRoots) {
       if (aggregateByRoot) {
