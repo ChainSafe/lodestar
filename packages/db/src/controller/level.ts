@@ -1,5 +1,5 @@
 import {Level} from "level";
-import type {ClassicLevel} from "classic-level";
+import {ClassicLevel} from "classic-level";
 import {Logger} from "@lodestar/utils";
 import {DbReqOpts, DatabaseController, DatabaseOptions, FilterOptions, KeyValue} from "./interface.js";
 import {LevelDbControllerMetrics} from "./metrics.js";
@@ -220,6 +220,10 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
         this.logger.debug("Error approximating db size", {}, e);
       })
       .finally(timer);
+  }
+
+  static async destroy(location: string): Promise<void> {
+    return ClassicLevel.destroy(location);
   }
 }
 

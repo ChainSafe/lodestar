@@ -38,6 +38,7 @@
     "@chainsafe/ssz": "^0.15.1",
     "@lodestar/config": "^1.18.1",
     "@lodestar/utils": "^1.18.1",
+    "classic-level": "^1.4.1",
     "it-all": "^3.0.4",
     "level": "^8.0.0"
   },
