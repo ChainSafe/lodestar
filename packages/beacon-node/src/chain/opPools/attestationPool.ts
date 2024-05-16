@@ -77,8 +77,10 @@ export class AttestationPool {
   /** Returns current count of pre-aggregated attestations with unique data */
   getAttestationCount(): number {
     let attestationCount = 0;
-    for (const attestationByRoot of this.aggregateByIndexByRootBySlot.values()) {
-      attestationCount += attestationByRoot.size;
+    for (const attestationByIndexByRoot of this.aggregateByIndexByRootBySlot.values()) {
+      for (const attestationByIndex of attestationByIndexByRoot.values()) {
+        attestationCount += attestationByIndex.size;
+      }
     }
     return attestationCount;
   }
