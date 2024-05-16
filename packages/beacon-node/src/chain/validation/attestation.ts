@@ -482,7 +482,9 @@ async function validateGossipAttestationNoSignatureCheck(
     // add cached attestation data before verifying signature
     attDataRootHex = toHexString(ssz.phase0.AttestationData.hashTreeRoot(attData));
     // if attestation is phase0 the committeeBits is undefined anyway
-    committeeBits = (attestationOrCache.attestation as electra.Attestation).committeeBits.clone();
+    committeeBits = isElectraAttestation(attestationOrCache.attestation)
+      ? attestationOrCache.attestation.committeeBits.clone()
+      : undefined;
     if (attDataKey) {
       chain.seenAttestationDatas.add(attSlot, attDataKey, {
         committeeValidatorIndices,
