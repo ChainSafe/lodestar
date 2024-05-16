@@ -4,7 +4,7 @@ import {allForks, deneb, Epoch, isElectraAttestation, phase0, RootHex, Slot, ssz
 import {fromHex, toHex} from "@lodestar/utils";
 import {ForkName, MAX_COMMITTEES_PER_SLOT} from "@lodestar/params";
 import {
-  getAttDataBase64FromAttestationSerialized,
+  getSeenAttDataKeyPhase0,
   getAttDataBase64FromSignedAggregateAndProofSerialized,
   getAggregationBitsFromAttestationSerialized as getAggregationBitsFromAttestationSerialized,
   getBlockRootFromAttestationSerialized,
@@ -62,7 +62,7 @@ describe("attestation SSZ serialized picking", () => {
       }
 
       const attDataBase64 = ssz.phase0.AttestationData.serialize(attestation.data);
-      expect(getAttDataBase64FromAttestationSerialized(bytes)).toBe(Buffer.from(attDataBase64).toString("base64"));
+      expect(getSeenAttDataKeyPhase0(bytes)).toBe(Buffer.from(attDataBase64).toString("base64"));
     });
   }
 
@@ -83,7 +83,7 @@ describe("attestation SSZ serialized picking", () => {
   it("getAttDataBase64FromAttestationSerialized - invalid data", () => {
     const invalidAttDataBase64DataSizes = [0, 4, 100, 128, 131];
     for (const size of invalidAttDataBase64DataSizes) {
-      expect(getAttDataBase64FromAttestationSerialized(Buffer.alloc(size))).toBeNull();
+      expect(getSeenAttDataKeyPhase0(Buffer.alloc(size))).toBeNull();
     }
   });
 
