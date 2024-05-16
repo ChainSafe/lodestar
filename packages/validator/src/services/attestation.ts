@@ -231,7 +231,7 @@ export class AttestationService {
       const logCtx2 = {
         slot: firstAttestation.data.slot,
         indexInData: firstAttestation.data.index,
-        committeeBits: firstAttestation.committeeBits.uint8Array.toString() ?? "undefinedd",
+        committeeBits: firstAttestation.committeeBits.toBoolArray().join(",") ?? "undefinedd",
       };
       this.logger.info("@@@ vc submitPoolAttestations", logCtx2);
       ApiError.assert(await this.api.beacon.submitPoolAttestations(signedAttestations));
