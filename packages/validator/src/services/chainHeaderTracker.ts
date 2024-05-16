@@ -38,7 +38,7 @@ export class ChainHeaderTracker {
         signal,
         onEvent: this.onHeadUpdate,
         onError: (e) => {
-          this.logger.error("Failed to receive head event", {}, e);
+          this.logger.verbose("Failed to receive head event", {}, e);
         },
         onClose: () => {
           this.logger.verbose("Closed stream for head event", {});
