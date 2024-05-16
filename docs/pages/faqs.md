@@ -2,6 +2,21 @@
 
 This section of the documentation will cover common questions and encounters often asked by users and developers.
 
+## Tooling
+
+:::note "Incorrect yarn version"
+
+Lodestar is using [yarn classic](https://classic.yarnpkg.com/lang/en/). Using more recent versions will lead to issues (e.g. spurious insertion of `packageManager` field in `package.json`).
+
+To set yarn to the right version globally, use the following command:
+
+```bash
+# Get latest classic version from https://classic.yarnpkg.com/lang/en/
+yarn policies set-version $LATEST_CLASSIC_VERSION
+```
+
+:::
+
 ## Troubleshooting Lodestar
 
 ### Running a beacon node
