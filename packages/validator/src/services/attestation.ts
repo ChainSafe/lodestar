@@ -1,5 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
-import {allForks, BLSSignature, phase0, Slot, ssz} from "@lodestar/types";
+import {allForks, BLSSignature, electra, phase0, Slot, ssz} from "@lodestar/types";
 import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@lodestar/state-transition";
 import {sleep} from "@lodestar/utils";
 import {Api, ApiError, routes} from "@lodestar/api";
@@ -184,7 +184,7 @@ export class AttestationService {
     attestationNoCommittee: phase0.AttestationData,
     duties: AttDutyAndProof[]
   ): Promise<void> {
-    const signedAttestations: phase0.Attestation[] = [];
+    const signedAttestations: allForks.Attestation[] = [];
     const headRootHex = toHexString(attestationNoCommittee.beaconBlockRoot);
     const currentEpoch = computeEpochAtSlot(slot);
     const isAfterElectra = currentEpoch >= this.config.ELECTRA_FORK_EPOCH;
@@ -227,6 +227,13 @@ export class AttestationService {
       ...(this.opts?.disableAttestationGrouping && {index: attestationNoCommittee.index}),
     };
     try {
+      const firstAttestation = signedAttestations[0] as electra.Attestation;
+      const logCtx2 = {
+        slot: firstAttestation.data.slot,
+        indexInData: firstAttestation.data.index,
+        committeeBits: firstAttestation.committeeBits.uint8Array.toString() ?? "undefinedd",
+      };
+      this.logger.info("@@@ vc submitPoolAttestations", logCtx2);
       ApiError.assert(await this.api.beacon.submitPoolAttestations(signedAttestations));
       this.logger.info("Published attestations", {...logCtx, count: signedAttestations.length});
       this.metrics?.publishedAttestations.inc(signedAttestations.length);
