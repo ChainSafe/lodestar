@@ -633,7 +633,14 @@ export function createValidatorMonitor(
       }
 
       // Compute summaries of previous epoch attestation performance
-      const prevEpoch = Math.max(0, computeEpochAtSlot(headState.slot) - 1);
+      const prevEpoch = computeEpochAtSlot(headState.slot) - 1;
+
+      // During the end of first epoch, the prev epoch with be -1
+      // Skip this as there is no attestation and block proposal summary in epoch -1
+      if (prevEpoch === -1) {
+        return;
+      }
+
       const rootCache = new RootHexCache(headState);
 
       if (config.getForkSeq(headState.slot) >= ForkSeq.altair) {
