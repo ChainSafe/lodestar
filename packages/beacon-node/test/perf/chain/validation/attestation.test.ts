@@ -5,7 +5,7 @@ import {ssz} from "@lodestar/types";
 import {generateTestCachedBeaconStateOnlyValidators} from "../../../../../state-transition/test/perf/util.js";
 import {validateAttestation, validateGossipAttestationsSameAttData} from "../../../../src/chain/validation/index.js";
 import {getAttestationValidData} from "../../../utils/validationData/attestation.js";
-import {getAttDataBase64FromAttestationSerialized} from "../../../../src/util/sszBytes.js";
+import {getSeenAttDataKeyPhase0} from "../../../../src/util/sszBytes.js";
 
 describe("validate gossip attestation", () => {
   setBenchOpts({
@@ -42,7 +42,7 @@ describe("validate gossip attestation", () => {
           attestation: null,
           serializedData,
           attSlot,
-          attDataBase64: getAttDataBase64FromAttestationSerialized(serializedData),
+          seenAttestationDataKey: getSeenAttDataKeyPhase0(serializedData),
         },
         subnet0
       );
@@ -67,7 +67,7 @@ describe("validate gossip attestation", () => {
         attestation: null,
         serializedData,
         attSlot,
-        attDataBase64: getAttDataBase64FromAttestationSerialized(serializedData),
+        attDataBase64: getSeenAttDataKeyPhase0(serializedData),
       };
     });
 

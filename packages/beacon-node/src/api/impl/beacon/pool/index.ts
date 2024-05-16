@@ -1,5 +1,5 @@
 import {routes, ServerApi} from "@lodestar/api";
-import {Epoch, ssz} from "@lodestar/types";
+import {CommitteeIndex, Epoch, isElectraAttestation, ssz} from "@lodestar/types";
 import {ForkName, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {validateApiAttestation} from "../../../../chain/validation/index.js";
 import {validateApiAttesterSlashing} from "../../../../chain/validation/attesterSlashing.js";
@@ -64,7 +64,7 @@ export function getBeaconPoolApi({
             // when a validator is configured with multiple beacon node urls, this attestation data may come from another beacon node
             // and the block hasn't been in our forkchoice since we haven't seen / processing that block
             // see https://github.com/ChainSafe/lodestar/issues/5098
-            const {indexedAttestation, subnet, attDataRootHex} = await validateGossipFnRetryUnknownRoot(
+            const {indexedAttestation, subnet, attDataRootHex, committeeIndex} = await validateGossipFnRetryUnknownRoot(
               validateFn,
               network,
               chain,
@@ -73,7 +73,7 @@ export function getBeaconPoolApi({
             );
 
             if (network.shouldAggregate(subnet, slot)) {
-              const insertOutcome = chain.attestationPool.add(attestation, attDataRootHex);
+              const insertOutcome = chain.attestationPool.add(committeeIndex, attestation, attDataRootHex);
               metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
             }
 
