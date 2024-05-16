@@ -28,7 +28,7 @@ export type DepositRequestV1 = {
 
 export type ExecutionLayerWithdrawalRequestV1 = {
   sourceAddress: DATA;
-  validatorPubkey: DATA;
+  validatorPublicKey: DATA;
   amount: QUANTITY;
 };
 
