@@ -184,7 +184,7 @@ export class AttestationService {
     attestationNoCommittee: phase0.AttestationData,
     duties: AttDutyAndProof[]
   ): Promise<void> {
-    const signedAttestations: phase0.Attestation[] = [];
+    const signedAttestations: allForks.Attestation[] = [];
     const headRootHex = toHexString(attestationNoCommittee.beaconBlockRoot);
     const currentEpoch = computeEpochAtSlot(slot);
     const isAfterElectra = currentEpoch >= this.config.ELECTRA_FORK_EPOCH;

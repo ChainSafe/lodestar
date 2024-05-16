@@ -1,6 +1,6 @@
 import {routes, ServerApi} from "@lodestar/api";
-import {Epoch, ssz} from "@lodestar/types";
-import {ForkName, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
+import {electra, Epoch, isElectraAttestation, ssz} from "@lodestar/types";
+import {ForkName, ForkSeq, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {validateApiAttestation} from "../../../../chain/validation/index.js";
 import {validateApiAttesterSlashing} from "../../../../chain/validation/attesterSlashing.js";
 import {validateApiProposerSlashing} from "../../../../chain/validation/proposerSlashing.js";
@@ -61,6 +61,7 @@ export function getBeaconPoolApi({
             // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
             const validateFn = () => validateApiAttestation(fork, chain, {attestation, serializedData: null});
             const {slot, beaconBlockRoot} = attestation.data;
+            console.log(`submitPoolAttestation api indexInData=${i}, slot=${slot}, committeeBits=${(attestation as electra.Attestation).committeeBits}`);
             // when a validator is configured with multiple beacon node urls, this attestation data may come from another beacon node
             // and the block hasn't been in our forkchoice since we haven't seen / processing that block
             // see https://github.com/ChainSafe/lodestar/issues/5098
@@ -77,7 +78,11 @@ export function getBeaconPoolApi({
               metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
             }
 
-            chain.emitter.emit(routes.events.EventType.attestation, {data: attestation, version: ForkName.phase0});
+            if (isElectraAttestation(attestation)) {
+              chain.emitter.emit(routes.events.EventType.attestation, {data: attestation as electra.Attestation, version: ForkName.electra});
+            } else {
+              chain.emitter.emit(routes.events.EventType.attestation, {data: attestation, version: ForkName.phase0});
+            }
 
             const sentPeers = await network.publishBeaconAttestation(attestation, subnet);
             metrics?.onPoolSubmitUnaggregatedAttestation(seenTimestampSec, indexedAttestation, subnet, sentPeers);

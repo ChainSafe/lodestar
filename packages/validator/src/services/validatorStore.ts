@@ -526,6 +526,8 @@ export class ValidatorStore {
     };
 
     if (this.config.getForkSeq(duty.slot) >= ForkSeq.electra) {
+      console.log(`duty committeeIndex: ${duty.committeeIndex}`);
+      console.log(`committee bits: ${BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, duty.committeeIndex)}`);
       return {
         aggregationBits: BitArray.fromSingleBit(duty.committeeLength, duty.validatorCommitteeIndex),
         data: attestationData,

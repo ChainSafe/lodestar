@@ -313,7 +313,7 @@ export class Network implements INetwork {
     );
   }
 
-  async publishBeaconAttestation(attestation: phase0.Attestation, subnet: number): Promise<number> {
+  async publishBeaconAttestation(attestation: allForks.Attestation, subnet: number): Promise<number> {
     const fork = this.config.getForkName(attestation.data.slot);
     return this.publishGossip<GossipType.beacon_attestation>(
       {type: GossipType.beacon_attestation, fork, subnet},
