@@ -252,7 +252,8 @@ export class AttestationService {
     committeeIndex: number,
     duties: AttDutyAndProof[]
   ): Promise<void> {
-    const logCtx = {slot: attestation.slot, index: committeeIndex};
+    // const logCtx = {slot: attestation.slot, index: committeeIndex};
+    const logCtx = {slot: attestation.slot, index: committeeIndex, indexInData: attestation.index};
 
     // No validator is aggregator, skip
     if (duties.every(({selectionProof}) => selectionProof === null)) {
@@ -260,6 +261,7 @@ export class AttestationService {
     }
 
     this.logger.verbose("Aggregating attestations", logCtx);
+    this.logger.info("@@@ Aggregating attestations", logCtx);
     const res = await this.api.validator.getAggregatedAttestation(
       ssz.phase0.AttestationData.hashTreeRoot(attestation),
       attestation.slot,
