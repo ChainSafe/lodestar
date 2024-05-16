@@ -128,7 +128,7 @@ export const DepositReceipts = new ListCompositeType(DepositReceipt, MAX_DEPOSIT
 export const ExecutionLayerWithdrawalRequest = new ContainerType(
   {
     sourceAddress: ExecutionAddress,
-    validatorPublicKey: BLSPubkey,
+    validatorPubkey: BLSPubkey,
     amount: UintNum64,
   },
   {typeName: "ExecutionLayerWithdrawalRequest", jsonCase: "eth2"}
