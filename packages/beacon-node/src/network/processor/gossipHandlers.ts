@@ -496,7 +496,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
         // but don't add to attestation pool, to save CPU and RAM
         if (aggregatorTracker.shouldAggregate(subnet, indexedAttestation.data.slot)) {
           const insertOutcome = chain.attestationPool.add(committeeIndex, attestation, attDataRootHex);
-          logger.info("@@@ added attestations to pool", {
+          logger.info("@@@ added attestations to pool from gossip", {
             slot: attestation.data.slot,
             index: committeeIndex,
             attDataRootHex,
