@@ -299,6 +299,7 @@ async function validateGossipAttestationNoSignatureCheck(
     if (isElectraAttestation(attestationOrCache.attestation)) {
       // api or first time validation of a gossip attestation
       const {committeeBits} = attestationOrCache.attestation;
+      // throw in both in case of undefined and null
       if (committeeBits == null) {
         throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_SERIALIZED_BYTES});
       }
@@ -315,7 +316,7 @@ async function validateGossipAttestationNoSignatureCheck(
       }
     } else {
       // phase0 attestation
-      committeeIndex = attestationOrCache.attestation.data.index;
+      committeeIndex = attData.index;
     }
   } else {
     // found a seen AttestationData

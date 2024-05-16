@@ -80,15 +80,15 @@ export function getSeenAttDataKey(forkSeq: ForkSeq, data: Uint8Array): SeenAttDa
  * Extract attestation data + committeeBits base64 from electra attestation serialized bytes.
  * Return null if data is not long enough to extract attestation data.
  */
-export function getSeenAttDataKeyElectra(electraAttData: Uint8Array): AttDataCommitteeBitsBase64 | null {
+export function getSeenAttDataKeyElectra(electraAttestationBytes: Uint8Array): AttDataCommitteeBitsBase64 | null {
   const startIndex = VARIABLE_FIELD_OFFSET;
   const seenKeyLength = ATTESTATION_DATA_SIZE + COMMITTEE_BITS_SIZE;
 
-  if (electraAttData.length < startIndex + seenKeyLength) {
+  if (electraAttestationBytes.length < startIndex + seenKeyLength) {
     return null;
   }
 
-  return Buffer.from(electraAttData.subarray(startIndex, startIndex + seenKeyLength)).toString("base64");
+  return Buffer.from(electraAttestationBytes.subarray(startIndex, startIndex + seenKeyLength)).toString("base64");
 }
 
 /**
