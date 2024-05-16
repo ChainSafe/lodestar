@@ -802,7 +802,7 @@ export class ValidatorStore {
         `Inconsistent duties during signing: duty.committeeIndex ${duty.committeeIndex} != att.committeeIndex ${data.index}`
       );
     }
-    if (isAfterElectra && data.index === 0) {
+    if (isAfterElectra && data.index !== 0) {
       throw Error(
         `Non-zero committy index post-electra during signing: att.committeeIndex ${data.index}`
       );
