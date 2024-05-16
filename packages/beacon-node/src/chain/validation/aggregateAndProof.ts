@@ -168,7 +168,7 @@ async function validateAggregateAndProof(
   // [REJECT] The committee index is within the expected range
   // -- i.e. data.index < get_committee_count_per_slot(state, data.target.epoch)
   const committeeIndices = cachedAttData
-    ? cachedAttData.committeeIndices
+    ? cachedAttData.committeeValidatorIndices
     : getCommitteeIndices(shuffling, attSlot, attIndex);
 
   // [REJECT] The number of aggregation bits matches the committee size
