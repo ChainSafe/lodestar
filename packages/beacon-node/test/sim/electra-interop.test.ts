@@ -219,11 +219,11 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       }
     }
 
-    if (payload.depositRequests.length !== 1) {
-      throw Error(`Number of depositRequests mismatched. Expected: 1, actual: ${payload.depositRequests.length}`);
+    if (payload.depositReceipts.length !== 1) {
+      throw Error(`Number of depositRequests mismatched. Expected: 1, actual: ${payload.depositReceipts.length}`);
     }
 
-    const actualDepositRequest = payload.depositRequests[0];
+    const actualDepositRequest = payload.depositReceipts[0];
     assert.deepStrictEqual(
       actualDepositRequest,
       depositRequestB,
