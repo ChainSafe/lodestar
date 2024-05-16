@@ -55,7 +55,7 @@ export type AttestationValidationResult = {
 export type AttestationOrBytes = ApiAttestation | GossipAttestation;
 
 /** attestation from api */
-export type ApiAttestation = {attestation: phase0.Attestation; serializedData: null};
+export type ApiAttestation = {attestation: allForks.Attestation; serializedData: null};
 
 /** attestation from gossip */
 export type GossipAttestation = {

@@ -58,6 +58,13 @@ export function getBeaconPoolApi({
         attestations.map(async (attestation, i) => {
           try {
             const fork = chain.config.getForkName(chain.clock.currentSlot);
+            logger.info("@@@ submitPoolAttestation api", {
+              indexInData: attestation.data.index,
+              slot: attestation.data.slot,
+              committeeBits: isElectraAttestation(attestation)
+                ? Buffer.from(attestation.committeeBits.uint8Array).toString("base64")
+                : "undefined",
+            });
             // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
             const validateFn = () => validateApiAttestation(fork, chain, {attestation, serializedData: null});
             const {slot, beaconBlockRoot} = attestation.data;
