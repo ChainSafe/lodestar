@@ -1,5 +1,5 @@
 import {routes, ServerApi} from "@lodestar/api";
-import {Epoch, ssz} from "@lodestar/types";
+import {CommitteeIndex, Epoch, isElectraAttestation, ssz} from "@lodestar/types";
 import {ForkName, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {validateApiAttestation} from "../../../../chain/validation/index.js";
 import {validateApiAttesterSlashing} from "../../../../chain/validation/attesterSlashing.js";
@@ -73,7 +73,15 @@ export function getBeaconPoolApi({
             );
 
             if (network.shouldAggregate(subnet, slot)) {
-              const insertOutcome = chain.attestationPool.add(attestation, attDataRootHex);
+              const committeeIndex = isElectraAttestation(attestation)
+                ? attestation.committeeBits.getSingleTrueBit()
+                : attestation.data.index;
+              // this attestation is added to pool after validation so below cast is fine
+              const insertOutcome = chain.attestationPool.add(
+                committeeIndex as CommitteeIndex,
+                attestation,
+                attDataRootHex
+              );
               metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
             }
 
