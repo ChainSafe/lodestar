@@ -437,7 +437,7 @@ export function serializeExecutionLayerWithdrawalRequest(
 ): ExecutionLayerWithdrawalRequestRpc {
   return {
     sourceAddress: bytesToData(withdrawalRequest.sourceAddress),
-    validatorPublicKey: bytesToData(withdrawalRequest.validatorPublicKey),
+    validatorPublicKey: bytesToData(withdrawalRequest.validatorPubkey),
     amount: numToQuantity(withdrawalRequest.amount),
   };
 }
@@ -447,7 +447,7 @@ export function deserializeExecutionLayerWithdrawalRequest(
 ): electra.ExecutionLayerWithdrawalRequest {
   return {
     sourceAddress: dataToBytes(withdrawalRequest.sourceAddress, 20),
-    validatorPublicKey: dataToBytes(withdrawalRequest.validatorPublicKey, 48),
+    validatorPubkey: dataToBytes(withdrawalRequest.validatorPublicKey, 48),
     amount: quantityToNum(withdrawalRequest.amount),
   };
 }
