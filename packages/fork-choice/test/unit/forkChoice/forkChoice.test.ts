@@ -50,16 +50,16 @@ describe("Forkchoice", function () {
     currentSlot: genesisSlot + 1,
     justified: {
       checkpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
-      balances: new Uint8Array([32]),
+      balances: new Uint16Array([32]),
       totalBalance: 32,
     },
     unrealizedJustified: {
       checkpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
-      balances: new Uint8Array([32]),
+      balances: new Uint16Array([32]),
     },
     finalizedCheckpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
     unrealizedFinalizedCheckpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
-    justifiedBalancesGetter: () => new Uint8Array([32]),
+    justifiedBalancesGetter: () => new Uint16Array([32]),
     equivocatingIndices: new Set(),
   };
 

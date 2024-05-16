@@ -1,7 +1,7 @@
 import type {PublicKey} from "@chainsafe/bls/types";
 import {DOMAIN_AGGREGATE_AND_PROOF, ForkSeq} from "@lodestar/params";
 import {allForks, ssz} from "@lodestar/types";
-import {Epoch, phase0} from "@lodestar/types";
+import {Epoch} from "@lodestar/types";
 import {
   computeSigningRoot,
   computeStartSlotAtEpoch,

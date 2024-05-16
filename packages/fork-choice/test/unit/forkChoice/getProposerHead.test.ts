@@ -92,12 +92,12 @@ describe("Forkchoice / GetProposerHead", function () {
     currentSlot: genesisSlot + 1,
     justified: {
       checkpoint: {epoch: genesisEpoch, root: fromHexString(genesisBlock.blockRoot), rootHex: genesisBlock.blockRoot},
-      balances: new Uint8Array(Array(32).fill(150)),
+      balances: new Uint16Array(Array(32).fill(150)),
       totalBalance: 32 * 150,
     },
     unrealizedJustified: {
       checkpoint: {epoch: genesisEpoch, root: fromHexString(genesisBlock.blockRoot), rootHex: genesisBlock.blockRoot},
-      balances: new Uint8Array(Array(32).fill(150)),
+      balances: new Uint16Array(Array(32).fill(150)),
     },
     finalizedCheckpoint: {
       epoch: genesisEpoch,
@@ -109,7 +109,7 @@ describe("Forkchoice / GetProposerHead", function () {
       root: fromHexString(genesisBlock.blockRoot),
       rootHex: genesisBlock.blockRoot,
     },
-    justifiedBalancesGetter: () => new Uint8Array(Array(32).fill(150)),
+    justifiedBalancesGetter: () => new Uint16Array(Array(32).fill(150)),
     equivocatingIndices: new Set(),
   };
 
