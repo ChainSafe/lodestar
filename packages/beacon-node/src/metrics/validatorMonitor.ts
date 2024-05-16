@@ -563,7 +563,7 @@ export function createValidatorMonitor(
           }
 
           summary.attestationCorrectHead = correctHead;
-
+          console.log(`registerAttestationInBlock pushing index ${index} get ${indexedAttestation.data.target.epoch} get ${indexedAttestation.data.target.root} to push slot ${inclusionBlockSlot} and root ${inclusionBlockRoot}`);
           validator.attestations
             .getOrDefault(indexedAttestation.data.target.epoch)
             .getOrDefault(toHex(indexedAttestation.data.target.root))
@@ -644,6 +644,7 @@ export function createValidatorMonitor(
         // Check attestation performance
         for (const [index, validator] of validators.entries()) {
           const flags = parseParticipationFlags(previousEpochParticipation.get(index));
+          console.log(`validator monitor getting index: ${index} prevEpoch: ${prevEpoch} prevEpochTargetRoot: ${prevEpochTargetRoot}`);
           const attestationSummary = validator.attestations.get(prevEpoch)?.get(prevEpochTargetRoot);
           const summary = renderAttestationSummary(config, rootCache, attestationSummary, flags);
           metrics.validatorMonitor.prevEpochAttestationSummary.inc({summary});
@@ -813,6 +814,8 @@ function renderAttestationSummary(
       return "unexpected_timely_target_without_summary";
     }
 
+    console.log(`blockInclusions in summary: ${summary.blockInclusions.map(block => block.blockSlot)}`)
+
     const canonicalBlockInclusion = summary.blockInclusions.find((block) => isCanonical(rootCache, block));
     if (!canonicalBlockInclusion) {
       // Should never happen, because for a state to exist that registers a validator's participation this specific
@@ -870,6 +873,7 @@ function renderAttestationSummary(
       return "no_submission";
     }
 
+    console.log(`blockInclusions in summary: ${summary.blockInclusions.map(block => block.blockSlot)}`)
     const canonicalBlockInclusion = summary.blockInclusions.find((block) => isCanonical(rootCache, block));
     if (canonicalBlockInclusion) {
       // Canonical block inclusion with no participation flags set means wrong target + late source
