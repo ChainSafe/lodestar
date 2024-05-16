@@ -17,11 +17,11 @@ RUN yarn install --non-interactive --frozen-lockfile && \
 # the terminal and in the logs; which is very useful to track tests better.
 RUN cd packages/cli && GIT_COMMIT=${COMMIT} yarn write-git-data
 
-
 # Copy built src + node_modules to build native packages for archs different than host.
 # Note: This step is redundant for the host arch
 FROM node:22 as build_deps
 WORKDIR /usr/app
+RUN apk update && apk add --no-cache g++ make python3 && rm -rf /var/cache/apk/*
 
 COPY --from=build_src /usr/app .
 
@@ -36,6 +36,8 @@ RUN cd node_modules/classic-level && yarn rebuild
 FROM node:22-alpine
 WORKDIR /usr/app
 COPY --from=build_deps /usr/app .
+# Explicitly remove yarn offline mirror. Can't be added in .dockerignore as it's used in previous build stages
+RUN rm -fr /usr/app/.yarn/
 
 # NodeJS applications have a default memory limit of 4GB on most machines.
 # This limit is bit tight for a Mainnet node, it is recommended to raise the limit
