@@ -227,18 +227,6 @@ export class AttestationService {
       ...(this.opts?.disableAttestationGrouping && {index: attestationNoCommittee.index}),
     };
     try {
-      for (const [i, firstAttestation] of signedAttestations.entries()) {
-        const logCtx2 = {
-          i,
-          slot: firstAttestation.data.slot,
-          indexInData: firstAttestation.data.index,
-          committeeBits: isElectraAttestation(firstAttestation)
-            ? firstAttestation.committeeBits.toBoolArray().join(",")
-            : "undefinedd",
-        };
-        this.logger.info("@@@ vc submitPoolAttestations", logCtx2);
-      }
-      this.logger.info("@@@ duties", {duties: duties.map((duty) => duty.duty.committeeIndex).join(",")});
       ApiError.assert(await this.api.beacon.submitPoolAttestations(signedAttestations));
       this.logger.info("Published attestations", {...logCtx, count: signedAttestations.length});
       this.metrics?.publishedAttestations.inc(signedAttestations.length);
@@ -264,8 +252,7 @@ export class AttestationService {
     committeeIndex: number,
     duties: AttDutyAndProof[]
   ): Promise<void> {
-    // const logCtx = {slot: attestation.slot, index: committeeIndex};
-    const logCtx = {slot: attestation.slot, index: committeeIndex, indexInData: attestation.index};
+    const logCtx = {slot: attestation.slot, index: committeeIndex};
 
     // No validator is aggregator, skip
     if (duties.every(({selectionProof}) => selectionProof === null)) {
@@ -273,7 +260,6 @@ export class AttestationService {
     }
 
     this.logger.verbose("Aggregating attestations", logCtx);
-    this.logger.info("@@@ Aggregating attestations", logCtx);
     const res = await this.api.validator.getAggregatedAttestation(
       ssz.phase0.AttestationData.hashTreeRoot(attestation),
       attestation.slot,
