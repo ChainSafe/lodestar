@@ -534,7 +534,7 @@ export class ValidatorStore {
         data: attestationData,
         committeeBits: BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, duty.committeeIndex),
         signature: await this.getSignature(duty.pubkey, signingRoot, signingSlot, signableMessage),
-      } as electra.Attestation;
+      };
     } else {
       return {
         aggregationBits: BitArray.fromSingleBit(duty.committeeLength, duty.validatorCommitteeIndex),

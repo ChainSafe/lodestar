@@ -1,7 +1,8 @@
 import {mapValues} from "@lodestar/utils";
+import {ForkSeq} from "@lodestar/params";
 import {GossipType} from "../../gossip/interface.js";
 import {PendingGossipsubMessage} from "../types.js";
-import {getAttDataBase64FromAttestationSerialized} from "../../../util/sszBytes.js";
+import {getSeenAttDataKey} from "../../../util/sszBytes.js";
 import {LinearGossipQueue} from "./linear.js";
 import {
   DropType,
@@ -86,7 +87,10 @@ const indexedGossipQueueOpts: {
 } = {
   [GossipType.beacon_attestation]: {
     maxLength: 24576,
-    indexFn: (item: PendingGossipsubMessage) => getAttDataBase64FromAttestationSerialized(item.msg.data),
+    indexFn: (item: PendingGossipsubMessage) => {
+      const {topic, msg} = item;
+      return getSeenAttDataKey(ForkSeq[topic.fork], msg.data);
+    },
     minChunkSize: MIN_SIGNATURE_SETS_TO_BATCH_VERIFY,
     maxChunkSize: MAX_GOSSIP_ATTESTATION_BATCH_SIZE,
   },
