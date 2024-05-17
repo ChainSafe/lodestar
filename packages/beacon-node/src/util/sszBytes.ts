@@ -42,7 +42,8 @@ const ATTESTATION_BEACON_BLOCK_ROOT_OFFSET = VARIABLE_FIELD_OFFSET + 8 + 8;
 const ROOT_SIZE = 32;
 const SLOT_SIZE = 8;
 const ATTESTATION_DATA_SIZE = 128;
-const COMMITTEE_BITS_BYTE_SIZE = Math.max(Math.ceil(MAX_COMMITTEES_PER_SLOT / 8), 1);
+// MAX_COMMITTEES_PER_SLOT is in bit, need to convert to byte
+const COMMITTEE_BITS_SIZE = Math.max(Math.ceil(MAX_COMMITTEES_PER_SLOT / 8), 1);
 const SIGNATURE_SIZE = 96;
 
 /**
@@ -82,7 +83,7 @@ export function getSeenAttDataKey(forkSeq: ForkSeq, data: Uint8Array): SeenAttDa
  */
 export function getSeenAttDataKeyElectra(electraAttestationBytes: Uint8Array): AttDataCommitteeBitsBase64 | null {
   const startIndex = VARIABLE_FIELD_OFFSET;
-  const seenKeyLength = ATTESTATION_DATA_SIZE + COMMITTEE_BITS_BYTE_SIZE;
+  const seenKeyLength = ATTESTATION_DATA_SIZE + COMMITTEE_BITS_SIZE;
 
   if (electraAttestationBytes.length < startIndex + seenKeyLength) {
     return null;
@@ -113,7 +114,7 @@ export function getSeenAttDataKeyPhase0(data: Uint8Array): AttDataBase64 | null 
 export function getAggregationBitsFromAttestationSerialized(fork: ForkName, data: Uint8Array): BitArray | null {
   const aggregationBitsStartIndex =
     ForkSeq[fork] >= ForkSeq.electra
-      ? VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE + COMMITTEE_BITS_BYTE_SIZE + SIGNATURE_SIZE
+      ? VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE + COMMITTEE_BITS_SIZE + SIGNATURE_SIZE
       : VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE + SIGNATURE_SIZE;
 
   if (data.length < aggregationBitsStartIndex) {
@@ -131,7 +132,7 @@ export function getAggregationBitsFromAttestationSerialized(fork: ForkName, data
 export function getSignatureFromAttestationSerialized(fork: ForkName, data: Uint8Array): BLSSignature | null {
   const signatureStartIndex =
     ForkSeq[fork] >= ForkSeq.electra
-      ? VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE + COMMITTEE_BITS_BYTE_SIZE
+      ? VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE + COMMITTEE_BITS_SIZE
       : VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE;
 
   if (data.length < signatureStartIndex + SIGNATURE_SIZE) {
@@ -148,11 +149,11 @@ export function getSignatureFromAttestationSerialized(fork: ForkName, data: Uint
 export function getCommitteeBitsFromAttestationSerialized(data: Uint8Array): BitArray | null {
   const committeeBitsStartIndex = VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE;
 
-  if (data.length < committeeBitsStartIndex + COMMITTEE_BITS_BYTE_SIZE) {
+  if (data.length < committeeBitsStartIndex + COMMITTEE_BITS_SIZE) {
     return null;
   }
 
-  const uint8Array = data.subarray(committeeBitsStartIndex, committeeBitsStartIndex + COMMITTEE_BITS_BYTE_SIZE);
+  const uint8Array = data.subarray(committeeBitsStartIndex, committeeBitsStartIndex + COMMITTEE_BITS_SIZE);
 
   return new BitArray(uint8Array, MAX_COMMITTEES_PER_SLOT);
 }
@@ -221,7 +222,7 @@ export function getSeenAttDataKeyFromSignedAggregateAndProof(
  */
 export function getSeenAttDataKeyFromSignedAggregateAndProofElectra(data: Uint8Array): SeenAttDataKey | null {
   const startIndex = SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET;
-  const endIndex = startIndex + ATTESTATION_DATA_SIZE + COMMITTEE_BITS_BYTE_SIZE;
+  const endIndex = startIndex + ATTESTATION_DATA_SIZE + COMMITTEE_BITS_SIZE;
 
   if (data.length < endIndex) {
     return null;
