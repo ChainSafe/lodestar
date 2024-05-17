@@ -9,7 +9,9 @@ import {toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "..";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
 import {RegenCaller} from "../regen/index.js";
-import {getAttDataBase64FromSignedAggregateAndProofSerialized} from "../../util/sszBytes.js";
+import {
+  getSeenAttDataKeyFromSignedAggregateAndProof,
+} from "../../util/sszBytes.js";
 import {getSelectionProofSignatureSet, getAggregateAndProofSignatureSet} from "./signatureSets/index.js";
 import {
   getAttestationDataSigningRoot,
@@ -71,8 +73,10 @@ async function validateAggregateAndProof(
   const attData = aggregate.data;
   const attSlot = attData.slot;
 
-  const attDataBase64 = serializedData ? getAttDataBase64FromSignedAggregateAndProofSerialized(serializedData) : null;
-  const cachedAttData = attDataBase64 ? chain.seenAttestationDatas.get(attSlot, attDataBase64) : null;
+  const seenAttDataKey = serializedData
+    ? getSeenAttDataKeyFromSignedAggregateAndProof(ForkSeq[fork], serializedData)
+    : null;
+  const cachedAttData = seenAttDataKey ? chain.seenAttestationDatas.get(attSlot, seenAttDataKey) : null;
 
   let attIndex;
   if (ForkSeq[fork] >= ForkSeq.electra) {
