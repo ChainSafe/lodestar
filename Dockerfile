@@ -26,18 +26,18 @@ RUN apk update && apk add --no-cache g++ make python3 && rm -rf /var/cache/apk/*
 COPY --from=build_src /usr/app .
 
 # Do yarn --force to trigger a rebuild of the native packages
-# Emmulates `yarn rebuild` which is not available in v1 https://yarnpkg.com/cli/rebuild 
+# Emulates `yarn rebuild` which is not available in v1 https://yarnpkg.com/cli/rebuild 
 RUN yarn install --non-interactive --frozen-lockfile --production --force
 # Rebuild leveldb bindings (required for arm64 build)
 RUN cd node_modules/classic-level && yarn rebuild
+# Explicitly remove yarn offline mirror. Can't be added in .dockerignore as it's used in previous build stages
+RUN rm -fr /usr/app/.yarn/
 
 # Copy built src + node_modules to a new layer to prune unnecessary fs
 # Previous layer weights 7.25GB, while this final 488MB (as of Oct 2020)
 FROM node:22-alpine
 WORKDIR /usr/app
 COPY --from=build_deps /usr/app .
-# Explicitly remove yarn offline mirror. Can't be added in .dockerignore as it's used in previous build stages
-RUN rm -fr /usr/app/.yarn/
 
 # NodeJS applications have a default memory limit of 4GB on most machines.
 # This limit is bit tight for a Mainnet node, it is recommended to raise the limit
