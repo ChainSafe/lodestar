@@ -4,7 +4,7 @@ import type {Libp2p} from "libp2p";
 import {Logger, MetricsRegister} from "@lodestar/utils";
 import {getMetrics, Metrics} from "./metrics.js";
 import {RequestError, RequestErrorCode, sendRequest, SendRequestOpts} from "./request/index.js";
-import {handleRequest} from "./response/index.js";
+import {sendResponse} from "./response/index.js";
 import {
   DialOnlyProtocol,
   Encoding,
@@ -16,6 +16,12 @@ import {
 } from "./types.js";
 import {formatProtocolID} from "./utils/protocolId.js";
 import {ReqRespRateLimiter} from "./rate_limiter/ReqRespRateLimiter.js";
+import {
+  DEFAULT_DIAL_TIMEOUT,
+  DEFAULT_REQUEST_TIMEOUT,
+  DEFAULT_RESP_TIMEOUT,
+  DEFAULT_TTFB_TIMEOUT,
+} from "./constants.js";
 
 type ProtocolID = string;
 
@@ -62,7 +68,12 @@ export class ReqResp {
 
   constructor(
     modules: ReqRespProtocolModules,
-    private readonly opts: ReqRespOpts = {}
+    private readonly opts: ReqRespOpts = {
+      requestTimeoutMs: DEFAULT_REQUEST_TIMEOUT,
+      ttfbTimeoutMs: DEFAULT_TTFB_TIMEOUT,
+      respTimeoutMs: DEFAULT_RESP_TIMEOUT,
+      dialTimeoutMs: DEFAULT_DIAL_TIMEOUT,
+    }
   ) {
     this.libp2p = modules.libp2p;
     this.logger = modules.logger;
@@ -173,16 +184,14 @@ export class ReqResp {
     }
 
     try {
-      yield* sendRequest(
-        {logger: this.logger, libp2p: this.libp2p, metrics: this.metrics, peerClient},
-        peerId,
+      yield* sendRequest(peerId, protocolIDs, {
+        ...this.opts,
+        requestBody: body,
+        modules: {logger: this.logger, libp2p: this.libp2p, metrics: this.metrics, peerClient},
         protocols,
-        protocolIDs,
-        body,
-        this.controller.signal,
-        this.opts,
-        this.reqCount++
-      );
+        signal: this.controller.signal,
+        requestId: this.reqCount++,
+      });
     } catch (e) {
       this.metrics?.outgoingErrors.inc({method});
 
@@ -216,17 +225,18 @@ export class ReqResp {
       this.onIncomingRequest?.(peerId, protocol);
 
       try {
-        await handleRequest({
-          logger: this.logger,
-          metrics: this.metrics,
+        await sendResponse(peerId, protocolID, {
+          modules: {
+            logger: this.logger,
+            metrics: this.metrics,
+            rateLimiter: this.rateLimiter,
+            peerClient,
+          },
           stream,
-          peerId,
           protocol: protocol as Protocol,
-          protocolID,
-          rateLimiter: this.rateLimiter,
           signal: this.controller.signal,
           requestId: this.reqCount++,
-          peerClient,
+
           requestTimeoutMs: this.opts.requestTimeoutMs,
         });
         // TODO: Do success peer scoring here

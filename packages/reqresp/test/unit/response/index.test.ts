@@ -4,12 +4,13 @@ import {LodestarError, fromHex} from "@lodestar/utils";
 import {getEmptyLogger} from "@lodestar/logger/empty";
 import {Protocol, RespStatus} from "../../../src/index.js";
 import {ReqRespRateLimiter} from "../../../src/rate_limiter/ReqRespRateLimiter.js";
-import {handleRequest} from "../../../src/response/index.js";
+import {sendResponse} from "../../../src/response/index.js";
 import {sszSnappyPing} from "../../fixtures/messages.js";
 import {expectRejectedWithLodestarError} from "../../utils/errors.js";
 import {MockLibP2pStream, expectEqualByteChunks} from "../../utils/index.js";
 import {getValidPeerId} from "../../utils/peer.js";
 import {pingProtocol} from "../../fixtures/protocols.js";
+import {DEFAULT_REQUEST_TIMEOUT} from "../../../src/constants.js";
 
 const testCases: {
   id: string;
@@ -58,15 +59,12 @@ describe("response / handleRequest", () => {
     const stream = new MockLibP2pStream(requestChunks as any);
     const rateLimiter = new ReqRespRateLimiter({rateLimitMultiplier: 0});
 
-    const resultPromise = handleRequest({
-      logger,
-      metrics: null,
+    const resultPromise = sendResponse(peerId, protocol.method, {
+      modules: {logger, metrics: null, rateLimiter},
       protocol,
-      protocolID: protocol.method,
       stream,
-      peerId,
       signal: controller.signal,
-      rateLimiter,
+      requestTimeoutMs: DEFAULT_REQUEST_TIMEOUT,
     });
 
     // Make sure the test error-ed with expected error, otherwise it's hard to debug with responseChunks
