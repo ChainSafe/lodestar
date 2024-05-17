@@ -89,7 +89,7 @@ export function getSeenAttDataKeyElectra(electraAttestationBytes: Uint8Array): A
     return null;
   }
 
-  return Buffer.from(electraAttestationBytes.subarray(startIndex, startIndex + seenKeyLength)).toString("base64");
+  return toBase64(electraAttestationBytes.subarray(startIndex, startIndex + seenKeyLength));
 }
 
 /**
@@ -102,9 +102,7 @@ export function getSeenAttDataKeyPhase0(data: Uint8Array): AttDataBase64 | null 
   }
 
   // base64 is a bit efficient than hex
-  return Buffer.from(data.subarray(VARIABLE_FIELD_OFFSET, VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE)).toString(
-    "base64"
-  );
+  return toBase64(data.subarray(VARIABLE_FIELD_OFFSET, VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE));
 }
 
 /**
@@ -229,7 +227,7 @@ export function getSeenAttDataKeyFromSignedAggregateAndProofElectra(data: Uint8A
   }
 
   // base64 is a bit efficient than hex
-  return Buffer.from(data.subarray(startIndex, endIndex)).toString("base64");
+  return toBase64(data.subarray(startIndex, endIndex));
 }
 
 /**
@@ -242,12 +240,12 @@ export function getSeenAttDataKeyFromSignedAggregateAndProofPhase0(data: Uint8Ar
   }
 
   // base64 is a bit efficient than hex
-  return Buffer.from(
+  return toBase64(
     data.subarray(
       SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET,
       SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET + ATTESTATION_DATA_SIZE
     )
-  ).toString("base64");
+  );
 }
 
 /**
@@ -300,4 +298,8 @@ function getSlotFromOffset(data: Uint8Array, offset: number): Slot {
   const dv = new DataView(data.buffer, data.byteOffset, data.byteLength);
   // Read only the first 4 bytes of Slot, max value is 4,294,967,295 will be reached 1634 years after genesis
   return dv.getUint32(offset, true);
+}
+
+function toBase64(data: Uint8Array): string {
+  return Buffer.from(data.buffer, data.byteOffset, data.byteLength).toString("base64");
 }
