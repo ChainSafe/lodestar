@@ -14,7 +14,19 @@ import {responseEncode} from "../../utils/response.js";
 import {RespStatus} from "../../../src/interface.js";
 import {expectRejectedWithLodestarError} from "../../utils/errors.js";
 import {pingProtocol} from "../../fixtures/protocols.js";
-import {DEFAULT_TIMEOUTS} from "../../../src/constants.js";
+import {
+  DEFAULT_DIAL_TIMEOUT,
+  DEFAULT_REQUEST_TIMEOUT,
+  DEFAULT_RESP_TIMEOUT,
+  DEFAULT_TTFB_TIMEOUT,
+} from "../../../src/constants.js";
+
+const DEFAULT_TIMEOUTS = {
+  requestTimeoutMs: DEFAULT_REQUEST_TIMEOUT,
+  dialTimeoutMs: DEFAULT_DIAL_TIMEOUT,
+  ttfbTimeoutMs: DEFAULT_TTFB_TIMEOUT,
+  respTimeoutMs: DEFAULT_RESP_TIMEOUT,
+};
 
 describe("request / sendRequest", () => {
   const logger = getEmptyLogger();
