@@ -340,6 +340,8 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
     }: GossipHandlerParamGeneric<GossipType.beacon_block>) => {
       const {serializedData} = gossipData;
 
+      logger?.info("Raw gossip block", {slot: gossipData.msgSlot, data: Buffer.from(serializedData).toString("hex")});
+
       const signedBlock = sszDeserialize(topic, serializedData);
       const blockInput = await validateBeaconBlock(
         signedBlock,
