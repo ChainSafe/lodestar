@@ -18,8 +18,8 @@ Customizations
 DPoS
 DVs
 Discv
-Dockerfile
 DockerHub
+Dockerfile
 Dockerized
 Docusaurus
 EIP
