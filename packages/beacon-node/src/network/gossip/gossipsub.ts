@@ -32,7 +32,7 @@ const GOSSIPSUB_HEARTBEAT_INTERVAL = 0.7 * 1000;
 const MAX_OUTBOUND_BUFFER_SIZE = 2 ** 24; // 16MB
 
 /** Yield to the macro queue every Xms */
-const GOSSIP_YIELD_MS = 10;
+const GOSSIP_YIELD_MS = 5;
 
 export type Eth2Context = {
   activeValidatorCount: number;
