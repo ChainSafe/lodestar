@@ -31,6 +31,9 @@ const GOSSIPSUB_HEARTBEAT_INTERVAL = 0.7 * 1000;
 
 const MAX_OUTBOUND_BUFFER_SIZE = 2 ** 24; // 16MB
 
+/** Yield to the macro queue every Xms */
+const GOSSIP_YIELD_MS = 10;
+
 export type Eth2Context = {
   activeValidatorCount: number;
   currentSlot: number;
@@ -79,6 +82,7 @@ export class Eth2Gossipsub extends GossipSub {
 
   // Internal caches
   private readonly gossipTopicCache: GossipTopicCache;
+  private lastYieldedTime: number = 0;
 
   constructor(opts: Eth2GossipsubOpts, modules: Eth2GossipsubModules) {
     const {allowPublishToZeroPeers, gossipsubD, gossipsubDLow, gossipsubDHigh} = opts;
@@ -278,17 +282,18 @@ export class Eth2Gossipsub extends GossipSub {
 
   private onGossipsubMessage(event: GossipsubEvents["gossipsub:message"]): void {
     const {propagationSource, msgId, msg} = event.detail;
+    const now = Date.now();
 
     // Also validates that the topicStr is known
     const topic = this.gossipTopicCache.getTopic(msg.topic);
 
     // Get seenTimestamp before adding the message to the queue or add async delays
-    const seenTimestampSec = Date.now() / 1000;
+    const seenTimestampSec = now / 1000;
 
     // Use setTimeout to yield to the macro queue
     // Without this we'll have huge event loop lag
     // See https://github.com/ChainSafe/lodestar/issues/5604
-    setTimeout(() => {
+    const emit = (): void => {
       this.events.emit(NetworkEvent.pendingGossipsubMessage, {
         topic,
         msg,
@@ -298,16 +303,30 @@ export class Eth2Gossipsub extends GossipSub {
         seenTimestampSec,
         startProcessUnixSec: null,
       });
-    }, 0);
+    };
+
+    if (now - this.lastYieldedTime > GOSSIP_YIELD_MS) {
+      this.lastYieldedTime = now;
+      setTimeout(emit, 0);
+    } else {
+      emit();
+    }
   }
 
   private onValidationResult(data: NetworkEventData[NetworkEvent.gossipMessageValidationResult]): void {
     // Use setTimeout to yield to the macro queue
     // Without this we'll have huge event loop lag
     // See https://github.com/ChainSafe/lodestar/issues/5604
-    setTimeout(() => {
+    const now = Date.now();
+    const report = (): void => {
       this.reportMessageValidationResult(data.msgId, data.propagationSource, data.acceptance);
-    }, 0);
+    };
+    if (now - this.lastYieldedTime > GOSSIP_YIELD_MS) {
+      this.lastYieldedTime = now;
+      setTimeout(report, 0);
+    } else {
+      report();
+    }
   }
 }
 
