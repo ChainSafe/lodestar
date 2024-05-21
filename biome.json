@@ -1,10 +1,6 @@
 {
   "$schema": "https://biomejs.dev/schemas/1.7.3/schema.json",
-  "vcs": {
-    "enabled": true,
-    "clientKind": "git",
-    "useIgnoreFile": true
-  },
+  "vcs": {"clientKind": "git", "enabled": true, "useIgnoreFile": true},
   "formatter": {
     "enabled": true,
     "formatWithErrors": false,
@@ -19,7 +15,7 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true,
+      "recommended": false,
       "complexity": {
         "noForEach": "off",
         "noStaticOnlyClass": "off",
@@ -27,39 +23,58 @@
         "noUselessConstructor": "off",
         "noUselessEmptyExport": "off",
         "noUselessSwitchCase": "off",
+        "noUselessTernary": "off",
         "noUselessTypeConstraint": "off",
+        "useArrowFunction": "off",
         "useFlatMap": "off",
         "useLiteralKeys": "off",
         "useOptionalChain": "off",
-        "useRegexLiterals": "off",
-        "useArrowFunction": "off",
-        "noUselessTernary": "off"
+        "useRegexLiterals": "off"
       },
-      "correctness": {"noVoidTypeReturn": "off", "noPrecisionLoss": "off", "useYield": "off"},
+      "correctness": {
+        "noInvalidConstructorSuper": "off",
+        "noInvalidUseBeforeDeclaration": "off",
+        "noPrecisionLoss": "error",
+        "noUnusedVariables": "error",
+        "noVoidTypeReturn": "off",
+        "useYield": "off"
+      },
       "performance": {"noAccumulatingSpread": "off", "noDelete": "off"},
       "style": {
         "noCommaOperator": "off",
         "noInferrableTypes": "off",
+        "noNonNullAssertion": "error",
         "noParameterAssign": "off",
+        "noRestrictedGlobals": {
+          "level": "error",
+          "options": {"deniedGlobals": ["fetch"]}
+        },
+        "noUnusedTemplateLiteral": "off",
         "noUselessElse": "off",
-        "useConst": "off",
+        "noVar": "error",
+        "useConst": "error",
         "useEnumInitializers": "off",
         "useExponentiationOperator": "off",
         "useExportType": "off",
         "useImportType": "off",
         "useLiteralEnumMembers": "off",
+        "useNamingConvention": {
+          "level": "error",
+          "options": {"strictCase": false}
+        },
         "useNumberNamespace": "off",
         "useSingleVarDeclarator": "off",
-        "useTemplate": "off",
-        "noUnusedTemplateLiteral": "off",
-        "noNonNullAssertion": "off"
+        "useTemplate": "off"
       },
       "suspicious": {
-        "noAssignInExpressions": "off",
+        "noAssignInExpressions": "error",
         "noAsyncPromiseExecutor": "off",
         "noConfusingVoidType": "off",
+        "noConsoleLog": "error",
         "noDoubleEquals": "off",
-        "noExplicitAny": "off",
+        "noDuplicateTestHooks": "off",
+        "noExplicitAny": "error",
+        "noExportsInTest": "off",
         "noFallthroughSwitchClause": "off",
         "noGlobalIsFinite": "off",
         "noGlobalIsNan": "off",
@@ -68,23 +83,10 @@
         "noRedundantUseStrict": "off",
         "noShadowRestrictedNames": "off",
         "useDefaultSwitchClauseLast": "off",
-        "useGetterReturn": "off",
-        "noExportsInTest": "off",
-        "noDuplicateTestHooks": "off",
-        "noConsoleLog": "error"
+        "useGetterReturn": "off"
       }
     }
   },
-  "overrides": [
-    {
-      "include": ["packages/*/test/**/*.ts", "packages/*/test/**/*.js"],
-      "linter": {"rules": {"suspicious": {"noConsoleLog": "off"}}}
-    },
-    {
-      "include": ["packages/cli/src/", "packages/test-utils/src", "packages/flare/src"],
-      "linter": {"rules": {"suspicious": {"noConsoleLog": "off"}}}
-    }
-  ],
   "javascript": {
     "formatter": {
       "jsxQuoteStyle": "double",
@@ -96,6 +98,52 @@
       "bracketSameLine": false,
       "quoteStyle": "double",
       "attributePosition": "auto"
+    },
+    "globals": ["BigInt"]
+  },
+  "overrides": [
+    {
+      "include": ["packages/cli/src/", "packages/test-utils/src", "packages/flare/src"],
+      "linter": {"rules": {"suspicious": {"noConsoleLog": "off"}}}
+    },
+    {
+      "include": [
+        "**/*.config.js",
+        "**/*.config.mjs",
+        "**/*.config.cjs",
+        "**/*.config.ts",
+        "scripts/vitest/**/*.ts",
+        "scripts/vite/**/*.ts"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": {
+              "level": "off",
+              "options": {"strictCase": false}
+            }
+          }
+        }
+      }
+    },
+    {
+      "include": ["**/test/**/*.ts", "packages/*/test/**/*.js"],
+      "linter": {"rules": {"suspicious": {"noExplicitAny": "off", "noConsoleLog": "off"}}}
+    },
+    {"include": ["**/perf/**/*.ts"], "linter": {"rules": {}}},
+    {"include": ["**/test/**/*.test.ts"], "linter": {"rules": {}}},
+    {
+      "include": ["**/types/**/*.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": {
+              "level": "off",
+              "options": {"strictCase": false}
+            }
+          }
+        }
+      }
     }
-  }
+  ]
 }
