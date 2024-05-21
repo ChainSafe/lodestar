@@ -60,6 +60,7 @@ LTS
 Lerna
 MEV
 MacOS
+Metamask
 Monorepo
 NPM
 NVM
@@ -129,6 +130,7 @@ enum
 env
 envs
 ephemery
+ethers
 flamegraph
 flamegraphs
 getNetworkIdentity
