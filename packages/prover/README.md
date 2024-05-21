@@ -17,17 +17,14 @@ You can use the `@lodestar/prover` in two ways, as a Web3 Provider and as proxy.
 import Web3 from "web3";
 import {createVerifiedExecutionProvider, LCTransport} from "@lodestar/prover";
 
-const httpProvider = new Web3.providers.HttpProvider("https://lodestar-sepoliarpc.chainsafe.io")
+const httpProvider = new Web3.providers.HttpProvider("https://lodestar-sepoliarpc.chainsafe.io");
 
-const {provider, proofProvider} = createVerifiedExecutionProvider(
-  httpProvider,
-  {
-    transport: LCTransport.Rest,
-    urls: ["https://lodestar-sepolia.chainsafe.io"],
-    network: "sepolia",
-    wsCheckpoint: "trusted-checkpoint",
-  }
-);
+const {provider, proofProvider} = createVerifiedExecutionProvider(httpProvider, {
+  transport: LCTransport.Rest,
+  urls: ["https://lodestar-sepolia.chainsafe.io"],
+  network: "sepolia",
+  wsCheckpoint: "trusted-checkpoint",
+});
 
 const web3 = new Web3(provider);
 
@@ -44,18 +41,15 @@ For some scenarios when you don't want to mutate the provider you can pass an op
 import Web3 from "web3";
 import {createVerifiedExecutionProvider, LCTransport} from "@lodestar/prover";
 
-const httpProvider = new Web3.providers.HttpProvider("https://lodestar-sepoliarpc.chainsafe.io")
+const httpProvider = new Web3.providers.HttpProvider("https://lodestar-sepoliarpc.chainsafe.io");
 
-const {provider, proofProvider} = createVerifiedExecutionProvider(
-  httpProvider,
-  {
-    transport: LCTransport.Rest,
-    urls: ["https://lodestar-sepolia.chainsafe.io"],
-    network: "sepolia",
-    wsCheckpoint: "trusted-checkpoint",
-    mutateProvider: false
-  }
-);
+const {provider, proofProvider} = createVerifiedExecutionProvider(httpProvider, {
+  transport: LCTransport.Rest,
+  urls: ["https://lodestar-sepolia.chainsafe.io"],
+  network: "sepolia",
+  wsCheckpoint: "trusted-checkpoint",
+  mutateProvider: false,
+});
 
 const web3 = new Web3(provider);
 
