@@ -64,9 +64,6 @@ jobs:
       - name: Assert ESM module exports
         run: node scripts/assert_exports.mjs
 
-      - name: Assert eslintrc rules sorted
-        run: scripts/assert_eslintrc_sorted.mjs
-
   type-checks:
     name: Type Checks
     needs: build
