@@ -642,7 +642,9 @@ export function getValidatorApi({
 
       if (builder.status === "rejected" && engine.status === "rejected") {
         throw Error(
-          `${isBuilderEnabled && isEngineEnabled ? "Builder and engine both" : isBuilderEnabled ? "Builder" : "Engine"} failed to produce the block`
+          `${
+            isBuilderEnabled && isEngineEnabled ? "Builder and engine both" : isBuilderEnabled ? "Builder" : "Engine"
+          } failed to produce the block`
         );
       }
 

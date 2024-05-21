@@ -9,8 +9,6 @@ import {ServerRoute} from "./types.js";
 
 // See /packages/api/src/routes/index.ts for reasoning
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 export type ServerRoutes<
   Api extends Record<string, APIServerHandler>,
   ReqTypes extends {[K in keyof Api]: ReqGeneric},

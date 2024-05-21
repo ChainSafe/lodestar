@@ -273,8 +273,6 @@ export const routesData: RoutesData<Api> = {
   getBlobSidecars: {url: "/eth/v1/beacon/blob_sidecars/{block_id}", method: "GET"},
 };
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 type GetBlockReq = {params: {block_id: string}; headers: {accept?: string}};
 type BlockIdOnlyReq = {params: {block_id: string}};
 

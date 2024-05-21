@@ -10,7 +10,6 @@ describe("builder", () => {
   runGenericServerTest<Api, ReqTypes>(
     createChainForkConfig({
       ...defaultChainConfig,
-      /* eslint-disable @typescript-eslint/naming-convention */
       ALTAIR_FORK_EPOCH: 0,
       BELLATRIX_FORK_EPOCH: 0,
       DENEB_FORK_EPOCH: 0,

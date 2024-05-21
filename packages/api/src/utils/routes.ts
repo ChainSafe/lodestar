@@ -3,8 +3,6 @@ import {ForkBlobs} from "@lodestar/params";
 
 import {TypeJson} from "./types.js";
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 export function allForksSignedBlockContentsReqSerializer(
   blockSerializer: (data: allForks.SignedBeaconBlock) => TypeJson<allForks.SignedBeaconBlock>
 ): TypeJson<allForks.SignedBlockContents> {

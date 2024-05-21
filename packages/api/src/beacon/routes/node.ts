@@ -145,8 +145,6 @@ export const routesData: RoutesData<Api> = {
   getHealth: {url: "/eth/v1/node/health", method: "GET"},
 };
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 export type ReqTypes = {
   getNetworkIdentity: ReqEmpty;
   getPeers: {query: {state?: PeerState[]; direction?: PeerDirection[]}};

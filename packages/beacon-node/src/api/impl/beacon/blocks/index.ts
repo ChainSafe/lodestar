@@ -198,15 +198,17 @@ export function getBeaconBlockApi({
       () => network.publishBeaconBlock(signedBlock) as Promise<unknown>,
       () =>
         // there is no rush to persist block since we published it to gossip anyway
-        chain.processBlock(blockForImport, {...opts, eagerPersistBlock: false}).catch((e) => {
-          if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
-            network.events.emit(NetworkEvent.unknownBlockParent, {
-              blockInput: blockForImport,
-              peer: IDENTITY_PEER_ID,
-            });
-          }
-          throw e;
-        }),
+        chain
+          .processBlock(blockForImport, {...opts, eagerPersistBlock: false})
+          .catch((e) => {
+            if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
+              network.events.emit(NetworkEvent.unknownBlockParent, {
+                blockInput: blockForImport,
+                peer: IDENTITY_PEER_ID,
+              });
+            }
+            throw e;
+          }),
     ];
     await promiseAllMaybeAsync(publishPromises);
   };

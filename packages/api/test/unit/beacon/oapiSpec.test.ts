@@ -20,7 +20,6 @@ import {testData as validatorTestData} from "./testData/validator.js";
 
 // Global variable __dirname no longer available in ES6 modules.
 // Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
-// eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const version = "v2.5.0";
@@ -50,7 +49,6 @@ const getEventsReqSerializers = (): ReqSerializers<routes.events.Api, routes.eve
   },
 });
 
-// eslint-disable-next-line @typescript-eslint/naming-convention
 const config = createChainForkConfig({...defaultChainConfig, ALTAIR_FORK_EPOCH: 1, BELLATRIX_FORK_EPOCH: 2});
 const reqSerializers = {
   ...routes.beacon.getReqSerializers(config),

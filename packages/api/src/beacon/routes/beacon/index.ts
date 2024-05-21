@@ -56,7 +56,6 @@ export type ReqTypes = {
   [K in keyof ReturnType<typeof getReqSerializers>]: ReturnType<ReturnType<typeof getReqSerializers>[K]["writeReq"]>;
 };
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function getReqSerializers(config: ChainForkConfig) {
   return {
     getGenesis: reqEmpty,

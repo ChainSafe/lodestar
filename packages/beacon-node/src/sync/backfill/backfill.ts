@@ -1,4 +1,4 @@
-import {EventEmitter} from "events";
+import {EventEmitter} from "node:events";
 import {StrictEventEmitter} from "strict-event-emitter-types";
 import {toHexString} from "@chainsafe/ssz";
 import {BeaconStateAllForks, blockToHeader} from "@lodestar/state-transition";

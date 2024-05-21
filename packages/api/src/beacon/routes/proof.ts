@@ -33,7 +33,6 @@ export const routesData: RoutesData<Api> = {
   getBlockProof: {url: "/eth/v0/beacon/proof/block/{block_id}", method: "GET"},
 };
 
-/* eslint-disable @typescript-eslint/naming-convention */
 export type ReqTypes = {
   getStateProof: {params: {state_id: string}; query: {format: string}};
   getBlockProof: {params: {block_id: string}; query: {format: string}};

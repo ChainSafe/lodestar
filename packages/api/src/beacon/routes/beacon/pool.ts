@@ -152,7 +152,6 @@ export const routesData: RoutesData<Api> = {
   submitPoolSyncCommitteeSignatures: {url: "/eth/v1/beacon/pool/sync_committees", method: "POST"},
 };
 
-/* eslint-disable @typescript-eslint/naming-convention */
 export type ReqTypes = {
   getPoolAttestations: {query: {slot?: number; committee_index?: number}};
   getPoolAttesterSlashings: ReqEmpty;

@@ -5,8 +5,6 @@ import {APIClientHandler} from "../../interfaces.js";
 import {FetchOpts, HttpError, IHttpClient} from "./httpClient.js";
 import {HttpStatusCode} from "./httpStatusCode.js";
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 type ExtraOpts = {retries?: number};
 type ParametersWithOptionalExtraOpts<T extends (...args: any) => any> = [...Parameters<T>, ExtraOpts] | Parameters<T>;
 
@@ -20,7 +18,6 @@ export type ApiWithExtraOpts<T extends Record<string, APIClientHandler>> = {
  * Format FetchFn opts from Fn arguments given a route definition and request serializer.
  * For routes that return only JSOn use @see getGenericJsonClient
  */
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function getFetchOptsSerializer<Fn extends (...args: any) => any, ReqType extends ReqGeneric>(
   routeDef: RouteDef,
   reqSerializer: ReqSerializer<Fn, ReqType>,
@@ -44,7 +41,6 @@ export function getFetchOptsSerializer<Fn extends (...args: any) => any, ReqType
 /**
  * Generate `getFetchOptsSerializer()` functions for all routes in `Api`
  */
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function getFetchOptsSerializers<
   Api extends Record<string, APIClientHandler>,
   ReqTypes extends {[K in keyof Api]: ReqGeneric},
@@ -87,7 +83,6 @@ export function generateGenericJsonClient<
             ...extraOpts,
             ...fetchOptsSerializer(...(args as Parameters<Api[keyof Api]>)),
           });
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/return-await
           return {ok: true, response: returnType.fromJson(res.body), status: res.status} as ReturnType<Api[keyof Api]>;
         } else {
           // We need to avoid parsing the response as the servers might just
@@ -98,7 +93,6 @@ export function generateGenericJsonClient<
             ...fetchOptsSerializer(...(args as Parameters<Api[keyof Api]>)),
           });
 
-          // eslint-disable-next-line @typescript-eslint/return-await
           return {ok: true, response: undefined, status: res.status} as ReturnType<Api[keyof Api]>;
         }
       } catch (err) {

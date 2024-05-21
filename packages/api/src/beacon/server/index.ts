@@ -29,7 +29,6 @@ export function registerRoutes(
     // Enforces that we are declaring routes for every routeId in `Api`
     [K in keyof Api]: () => {
       // The ReqTypes are enforced in each getRoutes return type
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       [K2 in keyof Api[K]]: ServerRoute<any>;
     };
   } = {

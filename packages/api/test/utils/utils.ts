@@ -11,7 +11,6 @@ export function getTestServer(): {server: FastifyInstance; start: () => Promise<
   });
 
   server.addHook("onError", (request, reply, error, done) => {
-    // eslint-disable-next-line no-console
     console.log(`onError: ${error.toString()}`);
     done();
   });

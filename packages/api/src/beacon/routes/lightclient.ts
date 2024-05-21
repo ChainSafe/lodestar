@@ -94,7 +94,6 @@ export const routesData: RoutesData<Api> = {
   getCommitteeRoot: {url: "/eth/v0/beacon/light_client/committee_root", method: "GET"},
 };
 
-/* eslint-disable @typescript-eslint/naming-convention */
 export type ReqTypes = {
   getUpdates: {query: {start_period: number; count: number}};
   getOptimisticUpdate: ReqEmpty;

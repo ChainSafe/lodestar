@@ -475,7 +475,6 @@ export const routesData: RoutesData<Api> = {
   registerValidator: {url: "/eth/v1/validator/register_validator", method: "POST"},
 };
 
-/* eslint-disable @typescript-eslint/naming-convention */
 export type ReqTypes = {
   getAttesterDuties: {params: {epoch: Epoch}; body: U64Str[]};
   getProposerDuties: {params: {epoch: Epoch}};
@@ -688,7 +687,6 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 export function getReturnTypes(): ReturnTypes<Api> {
   const rootHexType = new StringType();
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   const WithDependentRootExecutionOptimistic = <T>(dataType: Type<T>) =>
     new ContainerType(
       {

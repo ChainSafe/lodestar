@@ -343,8 +343,6 @@ export const routesData: RoutesData<Api> = {
   postStateValidatorBalances: {url: "/eth/v1/beacon/states/{state_id}/validator_balances", method: "POST"},
 };
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 type StateIdOnlyReq = {params: {state_id: string}};
 
 export type ReqTypes = {

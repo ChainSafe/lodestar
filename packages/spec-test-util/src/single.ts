@@ -101,7 +101,7 @@ export function describeDirectorySpecTest<TestCase extends {meta?: any}, Result>
     throw new Error(`${testCaseDirectoryPath} is not directory`);
   }
 
-  describe(name, function () {
+  describe(name, () => {
     if (options.timeout !== undefined) {
       vi.setConfig({testTimeout: options.timeout ?? 10 * 60 * 1000});
     }
@@ -114,7 +114,7 @@ export function describeDirectorySpecTest<TestCase extends {meta?: any}, Result>
 
       // Use full path here, not just `testSubDirname` to allow usage of `vitest -t`
       const testName = `${name}/${testSubDirname}`;
-      it(testName, async function (context) {
+      it(testName, async (context) => {
         // some tests require to load meta.yaml first in order to know respective ssz types.
         const metaFilePath = path.join(testSubDirPath, "meta.yaml");
         const meta: TestCase["meta"] = fs.existsSync(metaFilePath)

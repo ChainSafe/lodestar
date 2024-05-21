@@ -72,7 +72,9 @@ export async function assertCheckpointSync(env: Simulation): Promise<void> {
       type: BeaconClient.Lodestar,
       options: {
         clientOptions: {
-          wssCheckpoint: `${toHex(finalizedCheckpoint.response.data.finalized.root)}:${finalizedCheckpoint.response.data.finalized.epoch}`,
+          wssCheckpoint: `${toHex(finalizedCheckpoint.response.data.finalized.root)}:${
+            finalizedCheckpoint.response.data.finalized.epoch
+          }`,
         },
       },
     },
@@ -149,7 +151,9 @@ export async function assertUnknownBlockSync(env: Simulation): Promise<void> {
   } catch (error) {
     if (!(error as Error).message.includes("BLOCK_ERROR_PARENT_UNKNOWN")) {
       env.tracker.record({
-        message: `Publishing unknown block should return "BLOCK_ERROR_PARENT_UNKNOWN" got "${(error as Error).message}"`,
+        message: `Publishing unknown block should return "BLOCK_ERROR_PARENT_UNKNOWN" got "${
+          (error as Error).message
+        }"`,
         slot: env.clock.currentSlot,
         assertionId: "unknownBlockParent",
       });

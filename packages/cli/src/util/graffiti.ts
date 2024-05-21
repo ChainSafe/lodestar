@@ -11,7 +11,6 @@ export function getDefaultGraffiti(): string {
     const {version} = getVersionData();
     return `${lodestarPackageName}-${version}`;
   } catch (e) {
-    // eslint-disable-next-line no-console
     console.error("Error guessing lodestar version", e as Error);
     return lodestarPackageName;
   }

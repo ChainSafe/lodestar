@@ -7,8 +7,6 @@ import {Schema, SchemaDefinition} from "./schema.js";
 
 // See /packages/api/src/routes/index.ts for reasoning
 
-/* eslint-disable @typescript-eslint/naming-convention, @typescript-eslint/no-explicit-any */
-
 /** All JSON inside the JS code must be camel case */
 const codeCase = "camel" as const;
 

@@ -164,7 +164,6 @@ export const routesData: RoutesData<Api> = {
 };
 
 export type ReqTypes = {
-  /* eslint-disable @typescript-eslint/naming-convention */
   getBlockRewards: {params: {block_id: string}};
   getAttestationsRewards: {params: {epoch: number}; body: ValidatorId[]};
   getSyncCommitteeRewards: {params: {block_id: string}; body: ValidatorId[]};

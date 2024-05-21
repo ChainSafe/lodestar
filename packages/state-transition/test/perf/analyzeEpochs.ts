@@ -127,7 +127,6 @@ async function analyzeEpochs(network: NetworkName, fromEpoch?: number): Promise<
 
     const {previousEpochAttestations, currentEpochAttestations} = state as phase0.BeaconState;
 
-    // eslint-disable-next-line no-console
     console.log(`Processed epoch ${epoch}`);
     writeToCsv({
       epoch,
@@ -183,7 +182,6 @@ if (!network) {
 }
 
 analyzeEpochs(network as NetworkName, fromEpoch).catch((e: Error) => {
-  // eslint-disable-next-line no-console
   console.error(e);
   process.exit(1);
 });

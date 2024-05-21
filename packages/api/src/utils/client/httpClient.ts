@@ -38,7 +38,6 @@ export class ApiError extends Error {
     this.operationId = operationId;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   static assert(res: ApiClientResponse, message?: string): asserts res is ApiClientSuccessResponse<any, unknown> {
     if (!res.ok) {
       throw new ApiError(
@@ -241,7 +240,6 @@ export class HttpClient implements IHttpClient {
               this.logger?.debug("Requesting fallback URL", {routeId, baseUrl, score: this.urlsScore[i]});
             }
 
-            // eslint-disable-next-line @typescript-eslint/naming-convention
             const i_ = i; // Keep local copy of i variable to index urlScore after requestWithBody() resolves
 
             this.requestWithBody(urlOpts, opts, getBody).then(

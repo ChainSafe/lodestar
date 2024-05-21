@@ -57,7 +57,6 @@ export const routesData: RoutesData<Api> = {
   submitBlindedBlock: {url: "/eth/v1/builder/blinded_blocks", method: "POST"},
 };
 
-/* eslint-disable @typescript-eslint/naming-convention */
 export type ReqTypes = {
   status: ReqEmpty;
   registerValidator: {body: unknown};

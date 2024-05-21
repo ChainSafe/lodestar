@@ -85,7 +85,6 @@ describe("voluntary exit from api", function () {
         if (res.response.data.status !== "active_exiting") {
           throw Error("Validator not exiting");
         } else {
-          // eslint-disable-next-line no-console
           console.log(`Confirmed validator ${pubkeyToExit} = ${res.response.data.status}`);
         }
       },

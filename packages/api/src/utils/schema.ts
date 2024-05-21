@@ -4,7 +4,6 @@ import {ReqGeneric} from "./types.js";
 // The enums exposed here are very feature incomplete but cover the minimum necessary for
 // the existing routes. Since the arguments for Ethereum Consensus server routes are very simple it suffice.
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type JsonSchema = Record<string, any>;
 type JsonSchemaObj = {
   type: "object";

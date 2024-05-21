@@ -1,11 +1,6 @@
 import {ServerInstance, RouteConfig, ServerRoute} from "./types.js";
 
-export function registerRoute(
-  server: ServerInstance,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  route: ServerRoute<any>,
-  namespace?: string
-): void {
+export function registerRoute(server: ServerInstance, route: ServerRoute<any>, namespace?: string): void {
   server.route({
     url: route.url,
     method: route.method,

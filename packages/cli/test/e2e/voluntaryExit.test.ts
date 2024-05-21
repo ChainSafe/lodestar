@@ -84,7 +84,6 @@ describe("voluntaryExit cmd", function () {
           if (res.response.data.status !== "active_exiting") {
             throw Error("Validator not exiting");
           } else {
-            // eslint-disable-next-line no-console
             console.log(`Confirmed validator ${pubkey} = ${res.response.data.status}`);
           }
         },

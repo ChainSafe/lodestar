@@ -223,7 +223,6 @@ export function getTypeByEvent(): {[K in EventType]: TypeJson<EventData[K]>} {
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function getEventSerdes() {
   const typeByEvent = getTypeByEvent();
 

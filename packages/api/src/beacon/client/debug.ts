@@ -22,8 +22,6 @@ export function getClient(_config: ChainForkConfig, httpClient: IHttpClient): Ap
   return {
     ...client,
 
-    // TODO: Debug the type issue
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-expect-error
     async getState(stateId: string, format?: ResponseFormat) {
       if (format === "ssz") {
@@ -40,8 +38,6 @@ export function getClient(_config: ChainForkConfig, httpClient: IHttpClient): Ap
       return client.getState(stateId, format);
     },
 
-    // TODO: Debug the type issue
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-expect-error
     async getStateV2(stateId: StateId, format?: ResponseFormat) {
       if (format === "ssz") {

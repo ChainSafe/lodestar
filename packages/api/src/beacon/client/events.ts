@@ -13,7 +13,6 @@ export function getClient(baseUrl: string): Api {
     eventstream: async (topics, signal, onEvent) => {
       const query = stringifyQuery({topics});
       const url = `${urlJoin(baseUrl, routesData.eventstream.url)}?${query}`;
-      // eslint-disable-next-line @typescript-eslint/naming-convention
       const EventSource = await getEventSource();
       const eventSource = new EventSource(url);
 

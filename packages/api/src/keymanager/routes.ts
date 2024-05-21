@@ -322,8 +322,6 @@ export const routesData: RoutesData<Api> = {
   signVoluntaryExit: {url: "/eth/v1/validator/{pubkey}/voluntary_exit", method: "POST"},
 };
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 export type ReqTypes = {
   listKeys: ReqEmpty;
   importKeystores: {

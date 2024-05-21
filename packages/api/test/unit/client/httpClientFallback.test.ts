@@ -64,7 +64,6 @@ describe("httpClient fallback", () => {
 
     fetchStub.mockClear();
 
-    // eslint-disable-next-line no-console
     if (DEBUG_LOGS) console.log("completed assertions step", step);
   }
 

@@ -123,7 +123,7 @@ describe.skip("doppelganger / doppelganger test", function () {
       doppelgangerProtection: true,
     });
 
-    const {beaconNode: bn2, validators: validators} = await createBNAndVC({
+    const {beaconNode: bn2, validators} = await createBNAndVC({
       genesisTime: bn.chain.getHeadState().genesisTime,
     });
 
@@ -202,7 +202,7 @@ describe.skip("doppelganger / doppelganger test", function () {
       doppelgangerProtection,
     });
 
-    const {beaconNode: bn2, validators: validators} = await createBNAndVC({
+    const {beaconNode: bn2, validators} = await createBNAndVC({
       genesisTime: bn.chain.getHeadState().genesisTime,
       doppelgangerProtection: false,
     });

@@ -66,7 +66,6 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
   return mapValues(routesData, () => reqEmpty);
 }
 
-/* eslint-disable @typescript-eslint/naming-convention */
 export function getReturnTypes(): ReturnTypes<Api> {
   const DepositContract = new ContainerType(
     {

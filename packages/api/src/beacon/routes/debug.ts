@@ -149,8 +149,6 @@ export const routesData: RoutesData<Api> = {
   getStateV2: {url: "/eth/v2/debug/beacon/states/{state_id}", method: "GET"},
 };
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 export type ReqTypes = {
   getDebugChainHeads: ReqEmpty;
   getDebugChainHeadsV2: ReqEmpty;
