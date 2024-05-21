@@ -6,8 +6,6 @@ import {getRoutes} from "../../../../src/beacon/server/config.js";
 import {runGenericServerTest} from "../../../utils/genericServerTest.js";
 import {testData} from "../testData/config.js";
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 describe("beacon / config", () => {
   runGenericServerTest<Endpoints>(config, getClient, getRoutes, testData);
 

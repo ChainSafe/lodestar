@@ -14,7 +14,6 @@ describe.skip("bit opts", function () {
     }
     const to = process.hrtime.bigint();
     const diffMs = Number(to - from) / 1e6;
-    // eslint-disable-next-line no-console
     console.log(`Time spent on OR in getAttestationDeltas: ${diffMs * ((orOptsPerRun * validators) / opsRun)} ms`);
   });
 });
