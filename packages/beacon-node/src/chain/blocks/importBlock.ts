@@ -10,7 +10,7 @@ import {
 } from "@lodestar/state-transition";
 import {routes} from "@lodestar/api";
 import {ForkChoiceError, ForkChoiceErrorCode, EpochDifference, AncestorStatus} from "@lodestar/fork-choice";
-import {isErrorAborted} from "@lodestar/utils";
+import {isErrorAborted, scheduleCallbackNextTimerPhase} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {toCheckpointHex} from "../stateCache/index.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
@@ -100,7 +100,7 @@ export async function importBlock(
   this.logger.verbose("Added block to forkchoice and state cache", {slot: blockSlot, root: blockRootHex});
 
   // We want to import block asap so call all event handler in the next event loop
-  setTimeout(async () => {
+  scheduleCallbackNextTimerPhase(async () => {
     this.emitter.emit(routes.events.EventType.block, {
       block: blockRootHex,
       slot: blockSlot,
@@ -125,7 +125,7 @@ export async function importBlock(
         });
       }
     }
-  }, 0);
+  });
 
   // 3. Import attestations to fork choice
   //
@@ -301,7 +301,7 @@ export async function importBlock(
     // - Use block's syncAggregate
     if (blockEpoch >= this.config.ALTAIR_FORK_EPOCH) {
       // we want to import block asap so do this in the next event loop
-      setTimeout(() => {
+      scheduleCallbackNextTimerPhase(() => {
         try {
           this.lightClientServer.onImportBlockHead(
             block.message as allForks.AllForksLightClient["BeaconBlock"],
@@ -311,7 +311,7 @@ export async function importBlock(
         } catch (e) {
           this.logger.verbose("Error lightClientServer.onImportBlock", {slot: blockSlot}, e as Error);
         }
-      }, 0);
+      });
     }
   }
 
@@ -455,9 +455,9 @@ export async function importBlock(
 
   // Gossip blocks need to be imported as soon as possible, waiting attestations could be processed
   // in the next event loop. See https://github.com/ChainSafe/lodestar/issues/4789
-  setTimeout(() => {
+  scheduleCallbackNextTimerPhase(() => {
     this.reprocessController.onBlockImported({slot: blockSlot, root: blockRootHex}, advancedSlot);
-  }, 0);
+  });
 
   if (opts.seenTimestampSec !== undefined) {
     const recvToValidation = Date.now() / 1000 - opts.seenTimestampSec;

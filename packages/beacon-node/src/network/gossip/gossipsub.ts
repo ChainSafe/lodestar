@@ -4,7 +4,7 @@ import {PeerScoreParams} from "@chainsafe/libp2p-gossipsub/score";
 import {MetricsRegister, TopicLabel, TopicStrToLabel} from "@chainsafe/libp2p-gossipsub/metrics";
 import {BeaconConfig} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, ForkName, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
-import {Logger, Map2d, Map2dArr} from "@lodestar/utils";
+import {Logger, Map2d, Map2dArr, scheduleCallbackNextTimerPhase} from "@lodestar/utils";
 
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {PeersData} from "../peers/peersData.js";
@@ -284,7 +284,7 @@ export class Eth2Gossipsub extends GossipSub {
     // Use setTimeout to yield to the macro queue
     // Without this we'll have huge event loop lag
     // See https://github.com/ChainSafe/lodestar/issues/5604
-    setTimeout(() => {
+    scheduleCallbackNextTimerPhase(() => {
       this.events.emit(NetworkEvent.pendingGossipsubMessage, {
         topic,
         msg,
@@ -294,16 +294,16 @@ export class Eth2Gossipsub extends GossipSub {
         seenTimestampSec,
         startProcessUnixSec: null,
       });
-    }, 0);
+    });
   }
 
   private onValidationResult(data: NetworkEventData[NetworkEvent.gossipMessageValidationResult]): void {
     // Use setTimeout to yield to the macro queue
     // Without this we'll have huge event loop lag
     // See https://github.com/ChainSafe/lodestar/issues/5604
-    setTimeout(() => {
+    scheduleCallbackNextTimerPhase(() => {
       this.reportMessageValidationResult(data.msgId, data.propagationSource, data.acceptance);
-    }, 0);
+    });
   }
 }
 

@@ -1,6 +1,6 @@
 import winston from "winston";
 import Transport from "winston-transport";
-import {LogLevel, Logger} from "@lodestar/utils";
+import {LogLevel, Logger, scheduleCallbackNextTimerPhase} from "@lodestar/utils";
 import {createWinstonLogger} from "./winston.js";
 import {LEVEL, MESSAGE, TimestampFormat, WinstonLogInfo} from "./interface.js";
 
@@ -61,9 +61,9 @@ class BrowserConsole extends Transport {
   }
 
   log(info: WinstonLogInfo, callback: () => void): void {
-    setTimeout(() => {
+    scheduleCallbackNextTimerPhase(() => {
       this.emit("logged", info);
-    }, 0);
+    });
 
     const val = this.levels[info[LEVEL]];
     const mappedMethod = this.methods[info[LEVEL]];

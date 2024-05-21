@@ -1,7 +1,7 @@
 import os from "node:os";
 import bls from "@chainsafe/bls";
 import {PointFormat, PublicKey} from "@chainsafe/bls/types";
-import {Logger} from "@lodestar/utils";
+import {Logger, scheduleCallbackNextTimerPhase} from "@lodestar/utils";
 import {ISignatureSet} from "@lodestar/state-transition";
 import {QueueError, QueueErrorCode} from "../../util/queue/index.js";
 import {Metrics} from "../../metrics/index.js";
@@ -262,7 +262,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       } else {
         this.jobs.push(job);
       }
-      setTimeout(this.runJob, 0);
+      scheduleCallbackNextTimerPhase(this.runJob);
     }
   }
 
@@ -413,7 +413,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     this.workersBusy--;
 
     // Potentially run a new job
-    setTimeout(this.runJob, 0);
+    scheduleCallbackNextTimerPhase(this.runJob);
   };
 
   /**
@@ -448,7 +448,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
         this.jobs.unshift(job);
       }
       this.bufferedJobs = null;
-      setTimeout(this.runJob, 0);
+      scheduleCallbackNextTimerPhase(this.runJob);
     }
   };
 

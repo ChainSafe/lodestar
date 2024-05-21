@@ -42,3 +42,12 @@ export function scheduleNextTimerPhase(): Promise<void> {
   // Say https://nodejs.org/api/timers.html#settimeoutcallback-delay-args
   return sleep(1);
 }
+
+/**
+ * Schedules in 1ms a callback for execution during the next `timers` phase.
+ */
+export function scheduleCallbackNextTimerPhase(callback: () => void): void {
+  // `setTimeout` delay is at least 1ms
+  // Say https://nodejs.org/api/timers.html#settimeoutcallback-delay-args
+  setTimeout(callback, 1);
+}

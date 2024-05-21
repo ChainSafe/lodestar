@@ -1,4 +1,4 @@
-import {scheduleNextTimerPhase} from "@lodestar/utils";
+import {scheduleCallbackNextTimerPhase, scheduleNextTimerPhase} from "@lodestar/utils";
 import {LinkedList} from "../array.js";
 import {QueueError, QueueErrorCode} from "./errors.js";
 import {defaultQueueOpts, QueueMetrics, JobQueueOpts, QueueType} from "./options.js";
@@ -66,7 +66,7 @@ export class JobItemQueue<Args extends any[], R> {
       if (this.jobs.length === 1 && this.opts.noYieldIfOneItem) {
         void this.runJob();
       } else if (this.runningJobs < this.opts.maxConcurrency) {
-        setTimeout(this.runJob, 0);
+        scheduleCallbackNextTimerPhase(this.runJob);
       }
     });
   }

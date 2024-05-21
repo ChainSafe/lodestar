@@ -1,4 +1,4 @@
-import {Logger, MapDef, mapValues, sleep} from "@lodestar/utils";
+import {Logger, MapDef, mapValues, scheduleCallbackNextTimerPhase, sleep} from "@lodestar/utils";
 import {RootHex, Slot, SlotRootHex} from "@lodestar/types";
 import {routes} from "@lodestar/api";
 import {pruneSetToMax} from "@lodestar/utils";
@@ -452,22 +452,22 @@ export class NetworkProcessor {
 
     if (Array.isArray(messageOrArray)) {
       for (const [i, msg] of messageOrArray.entries()) {
-        setTimeout(() => {
+        scheduleCallbackNextTimerPhase(() => {
           this.events.emit(NetworkEvent.gossipMessageValidationResult, {
             msgId: msg.msgId,
             propagationSource: msg.propagationSource,
             acceptance: acceptanceArr[i],
           });
-        }, 0);
+        });
       }
     } else {
-      setTimeout(() => {
+      scheduleCallbackNextTimerPhase(() => {
         this.events.emit(NetworkEvent.gossipMessageValidationResult, {
           msgId: messageOrArray.msgId,
           propagationSource: messageOrArray.propagationSource,
           acceptance: acceptanceArr[0],
         });
-      }, 0);
+      });
     }
   }
 
