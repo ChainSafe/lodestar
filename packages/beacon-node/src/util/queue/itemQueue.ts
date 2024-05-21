@@ -1,4 +1,4 @@
-import {sleep} from "@lodestar/utils";
+import {scheduleNextTimerPhase} from "@lodestar/utils";
 import {LinkedList} from "../array.js";
 import {QueueError, QueueErrorCode} from "./errors.js";
 import {defaultQueueOpts, QueueMetrics, JobQueueOpts, QueueType} from "./options.js";
@@ -106,7 +106,7 @@ export class JobItemQueue<Args extends any[], R> {
       // Yield to the macro queue
       if (Date.now() - this.lastYield > this.opts.yieldEveryMs) {
         this.lastYield = Date.now();
-        await sleep(0);
+        await scheduleNextTimerPhase();
       }
     } catch (e) {
       job.reject(e as Error);

@@ -30,3 +30,15 @@ export async function sleep(ms: number, signal?: AbortSignal): Promise<void> {
     };
   });
 }
+
+/**
+ * Schedules in 1ms a Promise to be resolved during the `timers` phase.
+ * Awaiting this Promise will force the whole event queue to be executed.
+ *
+ * Caution: as the execution of the event queue might lead to new enqueuing, this might take significant time.
+ */
+export function scheduleNextTimerPhase(): Promise<void> {
+  // `setTimeout` delay is at least 1ms
+  // Say https://nodejs.org/api/timers.html#settimeoutcallback-delay-args
+  return sleep(1);
+}
