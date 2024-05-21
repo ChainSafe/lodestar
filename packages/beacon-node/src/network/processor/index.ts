@@ -452,22 +452,22 @@ export class NetworkProcessor {
 
     if (Array.isArray(messageOrArray)) {
       for (const [i, msg] of messageOrArray.entries()) {
-        setTimeout(() => {
+        setImmediate(() => {
           this.events.emit(NetworkEvent.gossipMessageValidationResult, {
             msgId: msg.msgId,
             propagationSource: msg.propagationSource,
             acceptance: acceptanceArr[i],
           });
-        }, 0);
+        });
       }
     } else {
-      setTimeout(() => {
+      setImmediate(() => {
         this.events.emit(NetworkEvent.gossipMessageValidationResult, {
           msgId: messageOrArray.msgId,
           propagationSource: messageOrArray.propagationSource,
           acceptance: acceptanceArr[0],
         });
-      }, 0);
+      });
     }
   }
 
