@@ -147,6 +147,7 @@ export type ELStorageProof = Pick<ELProof, "storageHash" | "storageProof">;
 
 /* eslint-disable @typescript-eslint/naming-convention */
 export type ELApi = {
+  eth_getBalance: (address: string, block?: number | string) => string;
   eth_createAccessList: (transaction: ELTransaction, block?: ELBlockNumberOrTag) => ELAccessListResponse;
   eth_call: (transaction: ELTransaction, block?: ELBlockNumberOrTag) => HexString;
   eth_estimateGas: (transaction: ELTransaction, block?: ELBlockNumberOrTag) => HexString;
