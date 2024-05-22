@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import path from "node:path";
-import {AssertionMatch, BeaconClient, ExecutionClient, ValidatorClient} from "../utils/crucible/interfaces.js";
+import {Match, BeaconClient, ExecutionClient, ValidatorClient} from "../utils/crucible/interfaces.js";
 import {Simulation} from "../utils/crucible/simulation.js";
 import {defineSimTestConfig, logFilesDir} from "../utils/crucible/utils/index.js";
 import {connectAllNodes, waitForSlot} from "../utils/crucible/utils/network.js";
@@ -114,7 +114,7 @@ const env = await Simulation.initWithDefaults(
 env.tracker.register({
   ...nodeAssertion,
   match: ({slot}) => {
-    return slot === 1 ? AssertionMatch.Assert | AssertionMatch.Capture | AssertionMatch.Remove : AssertionMatch.None;
+    return slot === 1 ? Match.Assert | Match.Capture | Match.Remove : Match.None;
   },
 });
 
@@ -123,8 +123,8 @@ env.tracker.register({
   match: ({slot}) => {
     // Check at the end of bellatrix fork, merge should happen by then
     return slot === env.clock.getLastSlotOfEpoch(bellatrixForkEpoch)
-      ? AssertionMatch.Assert | AssertionMatch.Remove
-      : AssertionMatch.None;
+      ? Match.Assert | Match.Remove
+      : Match.None;
   },
 });
 

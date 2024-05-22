@@ -1,7 +1,7 @@
 import {randomBytes} from "node:crypto";
 import {ApiError} from "@lodestar/api";
 import {fromHex, toHex} from "@lodestar/utils";
-import {SimulationAssertion, AssertionMatch, AssertionResult, NodePair} from "../interfaces.js";
+import {Assertion, Match, AssertionResult, NodePair} from "../interfaces.js";
 import {EL_GENESIS_ACCOUNT, EL_GENESIS_SECRET_KEY, SIM_ENV_CHAIN_ID} from "../constants.js";
 import {generateBlobsForTransaction} from "../utils/blobs.js";
 import {BlobsEIP4844Transaction} from "../web3js/blobsEIP4844Transaction.js";
@@ -12,16 +12,16 @@ const sentBlobs: Uint8Array[] = [];
 export function createBlobsAssertion(
   nodes: NodePair[],
   {sendBlobsAtSlot, validateBlobsAt}: {sendBlobsAtSlot: number; validateBlobsAt: number}
-): SimulationAssertion<string, Uint8Array[]> {
+): Assertion<string, Uint8Array[]> {
   return {
     id: `blobs-${nodes.map((n) => n.id).join("-")}`,
     match: ({slot}) => {
       // Run capture every sendBlobsAtSlot -> validateBlobsAt and validate only at validateBlobsAt
       return slot === validateBlobsAt
-        ? AssertionMatch.Capture | AssertionMatch.Assert
+        ? Match.Capture | Match.Assert
         : slot >= sendBlobsAtSlot && slot <= validateBlobsAt
-          ? AssertionMatch.Capture
-          : AssertionMatch.None;
+          ? Match.Capture
+          : Match.None;
     },
 
     async capture({slot, node}) {

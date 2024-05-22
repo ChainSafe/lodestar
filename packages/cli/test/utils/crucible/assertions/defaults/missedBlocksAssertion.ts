@@ -1,12 +1,12 @@
 import {isNullish} from "../../../../utils.js";
-import {AssertionMatch, AssertionResult, SimulationAssertion} from "../../interfaces.js";
+import {Match, AssertionResult, Assertion} from "../../interfaces.js";
 import {arrayEquals} from "../../utils/index.js";
 import {headAssertion} from "./headAssertion.js";
 
-export const missedBlocksAssertion: SimulationAssertion<"missedBlocks", number[], [typeof headAssertion]> = {
+export const missedBlocksAssertion: Assertion<"missedBlocks", number[], [typeof headAssertion]> = {
   id: "missedBlocks",
   match: ({clock, slot}) => {
-    return clock.isLastSlotOfEpoch(slot) ? AssertionMatch.Capture | AssertionMatch.Assert : AssertionMatch.None;
+    return clock.isLastSlotOfEpoch(slot) ? Match.Capture | Match.Assert : Match.None;
   },
   dependencies: [headAssertion],
   async capture({node, epoch, slot, dependantStores, clock}) {

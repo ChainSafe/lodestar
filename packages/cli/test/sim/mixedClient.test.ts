@@ -2,7 +2,7 @@
 import path from "node:path";
 import {Simulation} from "../utils/crucible/simulation.js";
 import {nodeAssertion} from "../utils/crucible/assertions/nodeAssertion.js";
-import {AssertionMatch, BeaconClient, ExecutionClient, ValidatorClient} from "../utils/crucible/interfaces.js";
+import {Match, BeaconClient, ExecutionClient, ValidatorClient} from "../utils/crucible/interfaces.js";
 import {defineSimTestConfig, logFilesDir} from "../utils/crucible/utils/index.js";
 import {connectAllNodes, waitForSlot} from "../utils/crucible/utils/network.js";
 
@@ -58,7 +58,7 @@ const env = await Simulation.initWithDefaults(
 env.tracker.register({
   ...nodeAssertion,
   match: ({slot}) => {
-    return slot === 1 ? AssertionMatch.Assert | AssertionMatch.Capture | AssertionMatch.Remove : AssertionMatch.None;
+    return slot === 1 ? Match.Assert | Match.Capture | Match.Remove : Match.None;
   },
 });
 

@@ -1,16 +1,15 @@
-import {AssertionMatch, AssertionMatcher} from "../interfaces.js";
+import {Match, Matcher} from "../interfaces.js";
 
-export const everySlotMatcher: AssertionMatcher = ({slot}) =>
-  slot >= 0 ? AssertionMatch.Capture | AssertionMatch.Assert : AssertionMatch.None;
+export const everySlotMatcher: Matcher = ({slot}) => (slot >= 0 ? Match.Capture | Match.Assert : Match.None);
 
-export const everyEpochMatcher: AssertionMatcher = ({slot, clock}) =>
-  clock.isLastSlotOfEpoch(slot) ? AssertionMatch.Capture | AssertionMatch.Assert : AssertionMatch.Capture;
+export const everyEpochMatcher: Matcher = ({slot, clock}) =>
+  clock.isLastSlotOfEpoch(slot) ? Match.Capture | Match.Assert : Match.Capture;
 
-export const neverMatcher: AssertionMatcher = () => AssertionMatch.None;
+export const neverMatcher: Matcher = () => Match.None;
 
 export const onceOnSlotMatcher =
-  (userSlot: number): AssertionMatcher =>
+  (userSlot: number): Matcher =>
   ({slot}) =>
-    slot === userSlot ? AssertionMatch.Capture | AssertionMatch.Assert : AssertionMatch.None;
+    slot === userSlot ? Match.Capture | Match.Assert : Match.None;
 
 export const onceOnStartupMatcher = onceOnSlotMatcher(1);
