@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import path from "node:path";
 import {AssertionMatch, BeaconClient, ExecutionClient, ValidatorClient} from "../utils/crucible/interfaces.js";
-import {SimulationEnvironment} from "../utils/crucible/simulationEnvironment.js";
+import {Simulation} from "../utils/crucible/simulation.js";
 import {defineSimTestConfig, logFilesDir} from "../utils/crucible/utils/index.js";
 import {connectAllNodes, waitForSlot} from "../utils/crucible/utils/network.js";
 import {nodeAssertion} from "../utils/crucible/assertions/nodeAssertion.js";
@@ -28,7 +28,7 @@ const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
   initialNodes: 5,
 });
 
-const env = await SimulationEnvironment.initWithDefaults(
+const env = await Simulation.initWithDefaults(
   {
     id: "multi-fork",
     logsDir: path.join(logFilesDir, "multi-fork"),

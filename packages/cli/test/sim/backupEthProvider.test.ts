@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import path from "node:path";
 import {activePreset} from "@lodestar/params";
-import {SimulationEnvironment} from "../utils/crucible/simulationEnvironment.js";
+import {Simulation} from "../utils/crucible/simulation.js";
 import {nodeAssertion} from "../utils/crucible/assertions/nodeAssertion.js";
 import {AssertionMatch, BeaconClient, ExecutionClient} from "../utils/crucible/interfaces.js";
 import {defineSimTestConfig, logFilesDir, replaceIpFromUrl} from "../utils/crucible/utils/index.js";
@@ -19,7 +19,7 @@ const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
   initialNodes: 3,
 });
 
-const env = await SimulationEnvironment.initWithDefaults(
+const env = await Simulation.initWithDefaults(
   {
     id: "backup-eth-provider",
     logsDir: path.join(logFilesDir, "backup-eth-provider"),

@@ -3,7 +3,7 @@ import path from "node:path";
 import assert from "node:assert";
 import {toHexString} from "@chainsafe/ssz";
 import {ApiError, routes} from "@lodestar/api";
-import {SimulationEnvironment} from "../utils/crucible/simulationEnvironment.js";
+import {Simulation} from "../utils/crucible/simulation.js";
 import {BeaconClient, ExecutionClient} from "../utils/crucible/interfaces.js";
 import {defineSimTestConfig, logFilesDir} from "../utils/crucible/utils/index.js";
 import {waitForSlot} from "../utils/crucible/utils/network.js";
@@ -19,7 +19,7 @@ const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
   initialNodes: 1,
 });
 
-const env = await SimulationEnvironment.initWithDefaults(
+const env = await Simulation.initWithDefaults(
   {
     id: "beacon-endpoints",
     logsDir: path.join(logFilesDir, "beacon-endpoints"),

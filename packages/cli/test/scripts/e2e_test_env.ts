@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import path from "node:path";
 import {BeaconClient, ExecutionClient} from "../utils/crucible/interfaces.js";
-import {SimulationEnvironment} from "../utils/crucible/simulationEnvironment.js";
+import {Simulation} from "../utils/crucible/simulation.js";
 import {defineSimTestConfig, logFilesDir} from "../utils/crucible/utils/index.js";
 import {connectAllNodes} from "../utils/crucible/utils/network.js";
 
@@ -17,7 +17,7 @@ const {forkConfig} = defineSimTestConfig({
   initialNodes: 2,
 });
 
-const env = await SimulationEnvironment.initWithDefaults(
+const env = await Simulation.initWithDefaults(
   {
     id: "e2e-test-env",
     logsDir: path.join(logFilesDir, "e2e-test-env"),

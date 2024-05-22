@@ -38,7 +38,7 @@ interface StartOpts {
   runTimeoutMs: number;
 }
 
-export class SimulationEnvironment {
+export class Simulation {
   readonly nodes: NodePair[] = [];
   readonly clock: EpochClock;
   readonly tracker: SimulationTracker;
@@ -88,8 +88,8 @@ export class SimulationEnvironment {
   static async initWithDefaults(
     {forkConfig, logsDir, id, trustedSetup}: SimulationInitOptions,
     clients: NodePairDefinition[]
-  ): Promise<SimulationEnvironment> {
-    const env = new SimulationEnvironment(forkConfig, {
+  ): Promise<Simulation> {
+    const env = new Simulation(forkConfig, {
       logsDir,
       id,
       genesisTime: Math.floor(Date.now() / 1000),

@@ -1,11 +1,11 @@
 import {ApiError, routes} from "@lodestar/api";
 import {Slot} from "@lodestar/types";
 import {sleep, toHex} from "@lodestar/utils";
-import type {SimulationEnvironment} from "../simulationEnvironment.js";
+import type {Simulation} from "../simulation.js";
 import {BeaconClient, ExecutionClient, NodePair} from "../interfaces.js";
 import {connectNewCLNode, connectNewELNode, connectNewNode, waitForHead, waitForSlot} from "./network.js";
 
-export async function assertRangeSync(env: SimulationEnvironment): Promise<void> {
+export async function assertRangeSync(env: Simulation): Promise<void> {
   const currentHead = await env.nodes[0].beacon.api.beacon.getBlockHeader("head");
   ApiError.assert(currentHead);
 
@@ -53,7 +53,7 @@ export async function assertRangeSync(env: SimulationEnvironment): Promise<void>
   await rangeSync.execution.job.stop();
 }
 
-export async function assertCheckpointSync(env: SimulationEnvironment): Promise<void> {
+export async function assertCheckpointSync(env: Simulation): Promise<void> {
   if (env.clock.currentEpoch <= 4) {
     // First checkpoint finalized is at least 4 epochs
     await waitForSlot("Waiting for 4th epoch to pass, to get first finalized checkpoint", {
@@ -93,7 +93,7 @@ export async function assertCheckpointSync(env: SimulationEnvironment): Promise<
   await checkpointSync.execution.job.stop();
 }
 
-export async function assertUnknownBlockSync(env: SimulationEnvironment): Promise<void> {
+export async function assertUnknownBlockSync(env: Simulation): Promise<void> {
   const currentHead = await env.nodes[0].beacon.api.beacon.getBlockV2("head");
   ApiError.assert(currentHead);
   const currentSidecars = await env.nodes[0].beacon.api.beacon.getBlobSidecars(currentHead.response.data.message.slot);
@@ -170,7 +170,7 @@ export async function assertUnknownBlockSync(env: SimulationEnvironment): Promis
 }
 
 export async function waitForNodeSync(
-  env: SimulationEnvironment,
+  env: Simulation,
   node: NodePair,
   options?: {head: string; slot: Slot}
 ): Promise<void> {
@@ -182,7 +182,7 @@ export async function waitForNodeSync(
   return waitForNodeSyncStatus(env, node);
 }
 
-export async function waitForNodeSyncStatus(env: SimulationEnvironment, node: NodePair): Promise<void> {
+export async function waitForNodeSyncStatus(env: Simulation, node: NodePair): Promise<void> {
   // eslint-disable-next-line no-constant-condition
   while (true) {
     const result = await node.beacon.api.node.getSyncingStatus();
