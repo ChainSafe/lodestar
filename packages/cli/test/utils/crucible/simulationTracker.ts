@@ -114,7 +114,7 @@ export class SimulationTracker {
     });
   }
 
-  static initWithDefaultAssertions(opts: SimulationTrackerInitOptions): SimulationTracker {
+  static initWithDefaults(opts: SimulationTrackerInitOptions): SimulationTracker {
     const tracker = new SimulationTracker(opts);
 
     for (const assertion of defaultAssertions) {

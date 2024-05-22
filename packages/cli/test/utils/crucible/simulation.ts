@@ -75,7 +75,7 @@ export class Simulation {
 
     this.externalSigner = new ExternalSignerServer([]);
     this.runner = new Runner({logsDir: this.options.logsDir, logger: this.logger.child({module: "runner"})});
-    this.tracker = SimulationTracker.initWithDefaultAssertions({
+    this.tracker = SimulationTracker.initWithDefaults({
       logsDir: options.logsDir,
       logger: this.logger,
       nodes: [],
