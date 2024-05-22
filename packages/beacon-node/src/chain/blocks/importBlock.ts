@@ -10,7 +10,7 @@ import {
 } from "@lodestar/state-transition";
 import {routes} from "@lodestar/api";
 import {ForkChoiceError, ForkChoiceErrorCode, EpochDifference, AncestorStatus} from "@lodestar/fork-choice";
-import {isErrorAborted, scheduleCallbackNextTimerPhase} from "@lodestar/utils";
+import {isErrorAborted} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {toCheckpointHex} from "../stateCache/index.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
@@ -19,6 +19,7 @@ import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {ChainEvent, ReorgEventData} from "../emitter.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
 import type {BeaconChain} from "../chain.js";
+import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {FullyVerifiedBlock, ImportBlockOpts, AttestationImportOpt, BlockInputType} from "./types.js";
 import {getCheckpointFromState} from "./utils/checkpoint.js";
 import {writeBlockInputToDb} from "./writeBlockInputToDb.js";
@@ -100,7 +101,7 @@ export async function importBlock(
   this.logger.verbose("Added block to forkchoice and state cache", {slot: blockSlot, root: blockRootHex});
 
   // We want to import block asap so call all event handler in the next event loop
-  scheduleCallbackNextTimerPhase(async () => {
+  callInNextEventLoop(async () => {
     this.emitter.emit(routes.events.EventType.block, {
       block: blockRootHex,
       slot: blockSlot,
@@ -301,7 +302,7 @@ export async function importBlock(
     // - Use block's syncAggregate
     if (blockEpoch >= this.config.ALTAIR_FORK_EPOCH) {
       // we want to import block asap so do this in the next event loop
-      scheduleCallbackNextTimerPhase(() => {
+      callInNextEventLoop(() => {
         try {
           this.lightClientServer.onImportBlockHead(
             block.message as allForks.AllForksLightClient["BeaconBlock"],
@@ -455,7 +456,7 @@ export async function importBlock(
 
   // Gossip blocks need to be imported as soon as possible, waiting attestations could be processed
   // in the next event loop. See https://github.com/ChainSafe/lodestar/issues/4789
-  scheduleCallbackNextTimerPhase(() => {
+  callInNextEventLoop(() => {
     this.reprocessController.onBlockImported({slot: blockSlot, root: blockRootHex}, advancedSlot);
   });
 

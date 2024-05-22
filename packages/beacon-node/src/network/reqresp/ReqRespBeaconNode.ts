@@ -14,13 +14,14 @@ import {
   ResponseOutgoing,
 } from "@lodestar/reqresp";
 import {allForks, phase0, ssz} from "@lodestar/types";
-import {Logger, scheduleCallbackNextTimerPhase} from "@lodestar/utils";
+import {Logger} from "@lodestar/utils";
 import {INetworkEventBus, NetworkEvent} from "../events.js";
 import {MetadataController} from "../metadata.js";
 import {PeersData} from "../peers/peersData.js";
 import {IPeerRpcScoreStore, PeerAction} from "../peers/score/index.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";
 import {StatusCache} from "../statusCache.js";
+import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {onOutgoingReqRespError} from "./score.js";
 import {
   GetReqRespHandlerFn,
@@ -259,7 +260,7 @@ export class ReqRespBeaconNode extends ReqResp {
     // Allow onRequest to return and close the stream
     // For Goodbye there may be a race condition where the listener of `receivedGoodbye`
     // disconnects in the same synchronous call, preventing the stream from ending cleanly
-    scheduleCallbackNextTimerPhase(() => this.networkEventBus.emit(NetworkEvent.reqRespRequest, {request, peer}));
+    callInNextEventLoop(() => this.networkEventBus.emit(NetworkEvent.reqRespRequest, {request, peer}));
   }
 
   protected onIncomingRequest(peerId: PeerId, protocol: ProtocolDescriptor): void {

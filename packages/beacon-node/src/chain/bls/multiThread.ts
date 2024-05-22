@@ -1,11 +1,12 @@
 import os from "node:os";
 import bls from "@chainsafe/bls";
 import {PointFormat, PublicKey} from "@chainsafe/bls/types";
-import {Logger, scheduleCallbackNextTimerPhase} from "@lodestar/utils";
+import {Logger} from "@lodestar/utils";
 import {ISignatureSet} from "@lodestar/state-transition";
 import {QueueError, QueueErrorCode} from "../../util/queue/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {LinkedList} from "../../util/array.js";
+import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {IBlsVerifier, VerifySignatureOpts} from "./interface.js";
 import {getAggregatedPubkey, getAggregatedPubkeysCount, getJobResultError} from "./utils.js";
 import {verifySets} from "./verifySets.js";
@@ -262,7 +263,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       } else {
         this.jobs.push(job);
       }
-      scheduleCallbackNextTimerPhase(this.runJob);
+      callInNextEventLoop(this.runJob);
     }
   }
 
@@ -413,7 +414,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     this.workersBusy--;
 
     // Potentially run a new job
-    scheduleCallbackNextTimerPhase(this.runJob);
+    callInNextEventLoop(this.runJob);
   };
 
   /**
@@ -448,7 +449,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
         this.jobs.unshift(job);
       }
       this.bufferedJobs = null;
-      scheduleCallbackNextTimerPhase(this.runJob);
+      callInNextEventLoop(this.runJob);
     }
   };
 

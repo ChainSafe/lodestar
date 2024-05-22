@@ -1,9 +1,10 @@
 import {CachedBeaconStateAllForks, getBlockSignatureSets} from "@lodestar/state-transition";
 import {allForks} from "@lodestar/types";
-import {Logger, scheduleNextTimerPhase} from "@lodestar/utils";
+import {Logger} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {IBlsVerifier} from "../bls/index.js";
 import {BlockError, BlockErrorCode} from "../errors/blockError.js";
+import {nextEventLoop} from "../../util/eventLoop.js";
 import {ImportBlockOpts} from "./types.js";
 
 /**
@@ -43,7 +44,7 @@ export async function verifyBlocksSignatures(
     // segments it will block the event loop for 1400 ms, which is too much. This call will allow the event loop to
     // yield, which will cause one block's state transition to run. However, the tradeoff is okay and doesn't slow sync
     if ((i + 1) % 8 === 0) {
-      await scheduleNextTimerPhase();
+      await nextEventLoop();
     }
   }
 

@@ -3,7 +3,7 @@ import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD} from "@lodestar/params";
 import {phase0, RootHex, Slot, SyncPeriod, allForks} from "@lodestar/types";
 import {createBeaconConfig, BeaconConfig, ChainForkConfig} from "@lodestar/config";
-import {isErrorAborted, scheduleCallbackNextTimerPhase, sleep} from "@lodestar/utils";
+import {isErrorAborted, sleep} from "@lodestar/utils";
 import {getCurrentSlot, slotWithFutureTolerance, timeUntilNextEpoch} from "./utils/clock.js";
 import {chunkifyInclusiveRange} from "./utils/chunkify.js";
 import {LightclientEmitter, LightclientEvent} from "./events.js";
@@ -209,7 +209,7 @@ export class Lightclient {
         this.logger.debug("processed sync update", {slot: update.data.attestedHeader.beacon.slot});
 
         // Yield to the macro queue, verifying updates is somewhat expensive and we want responsiveness
-        await new Promise((r) => scheduleCallbackNextTimerPhase(() => r(undefined)));
+        await new Promise((r) => setTimeout(() => r(undefined), 0));
       }
     }
   }
