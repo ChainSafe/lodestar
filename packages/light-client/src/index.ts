@@ -209,7 +209,7 @@ export class Lightclient {
         this.logger.debug("processed sync update", {slot: update.data.attestedHeader.beacon.slot});
 
         // Yield to the macro queue, verifying updates is somewhat expensive and we want responsiveness
-        await new Promise((r) => setTimeout(() => r(undefined), 0));
+        await new Promise((r) => setTimeout(r, 0));
       }
     }
   }
