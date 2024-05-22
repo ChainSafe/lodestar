@@ -1,16 +1,16 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import path from "node:path";
-import {AssertionMatch, BeaconClient, ExecutionClient, ValidatorClient} from "../utils/simulation/interfaces.js";
-import {SimulationEnvironment} from "../utils/simulation/simulationEnvironment.js";
-import {defineSimTestConfig, logFilesDir} from "../utils/simulation/utils/index.js";
-import {connectAllNodes, waitForSlot} from "../utils/simulation/utils/network.js";
-import {nodeAssertion} from "../utils/simulation/assertions/nodeAssertion.js";
-import {mergeAssertion} from "../utils/simulation/assertions/mergeAssertion.js";
-import {createForkAssertion} from "../utils/simulation/assertions/forkAssertion.js";
-import {createAccountBalanceAssertion} from "../utils/simulation/assertions/accountBalanceAssertion.js";
-import {createExecutionHeadAssertion} from "../utils/simulation/assertions/executionHeadAssertion.js";
-import {createWithdrawalAssertions} from "../utils/simulation/assertions/withdrawalsAssertion.js";
-import {assertCheckpointSync, assertRangeSync, assertUnknownBlockSync} from "../utils/simulation/utils/syncing.js";
+import {AssertionMatch, BeaconClient, ExecutionClient, ValidatorClient} from "../utils/crucible/interfaces.js";
+import {SimulationEnvironment} from "../utils/crucible/simulationEnvironment.js";
+import {defineSimTestConfig, logFilesDir} from "../utils/crucible/utils/index.js";
+import {connectAllNodes, waitForSlot} from "../utils/crucible/utils/network.js";
+import {nodeAssertion} from "../utils/crucible/assertions/nodeAssertion.js";
+import {mergeAssertion} from "../utils/crucible/assertions/mergeAssertion.js";
+import {createForkAssertion} from "../utils/crucible/assertions/forkAssertion.js";
+import {createAccountBalanceAssertion} from "../utils/crucible/assertions/accountBalanceAssertion.js";
+import {createExecutionHeadAssertion} from "../utils/crucible/assertions/executionHeadAssertion.js";
+import {createWithdrawalAssertions} from "../utils/crucible/assertions/withdrawalsAssertion.js";
+import {assertCheckpointSync, assertRangeSync, assertUnknownBlockSync} from "../utils/crucible/utils/syncing.js";
 
 const altairForkEpoch = 2;
 const bellatrixForkEpoch = 4;

@@ -3,10 +3,10 @@ import path from "node:path";
 import assert from "node:assert";
 import {toHexString} from "@chainsafe/ssz";
 import {ApiError, routes} from "@lodestar/api";
-import {SimulationEnvironment} from "../utils/simulation/simulationEnvironment.js";
-import {BeaconClient, ExecutionClient} from "../utils/simulation/interfaces.js";
-import {defineSimTestConfig, logFilesDir} from "../utils/simulation/utils/index.js";
-import {waitForSlot} from "../utils/simulation/utils/network.js";
+import {SimulationEnvironment} from "../utils/crucible/simulationEnvironment.js";
+import {BeaconClient, ExecutionClient} from "../utils/crucible/interfaces.js";
+import {defineSimTestConfig, logFilesDir} from "../utils/crucible/utils/index.js";
+import {waitForSlot} from "../utils/crucible/utils/network.js";
 
 const altairForkEpoch = 2;
 const bellatrixForkEpoch = 4;

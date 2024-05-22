@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import path from "node:path";
-import {SimulationEnvironment} from "../utils/simulation/simulationEnvironment.js";
-import {BeaconClient, ExecutionClient, ValidatorClient} from "../utils/simulation/interfaces.js";
-import {defineSimTestConfig, logFilesDir} from "../utils/simulation/utils/index.js";
-import {connectAllNodes, waitForSlot} from "../utils/simulation/utils/network.js";
-import {createBlobsAssertion} from "../utils/simulation/assertions/blobsAssertion.js";
-import {assertCheckpointSync, assertRangeSync} from "../utils/simulation/utils/syncing.js";
+import {SimulationEnvironment} from "../utils/crucible/simulationEnvironment.js";
+import {BeaconClient, ExecutionClient, ValidatorClient} from "../utils/crucible/interfaces.js";
+import {defineSimTestConfig, logFilesDir} from "../utils/crucible/utils/index.js";
+import {connectAllNodes, waitForSlot} from "../utils/crucible/utils/network.js";
+import {createBlobsAssertion} from "../utils/crucible/assertions/blobsAssertion.js";
+import {assertCheckpointSync, assertRangeSync} from "../utils/crucible/utils/syncing.js";
 
 const runTillEpoch = 6;
 const syncWaitEpoch = 2;

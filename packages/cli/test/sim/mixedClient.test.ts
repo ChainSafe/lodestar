@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import path from "node:path";
-import {SimulationEnvironment} from "../utils/simulation/simulationEnvironment.js";
-import {nodeAssertion} from "../utils/simulation/assertions/nodeAssertion.js";
-import {AssertionMatch, BeaconClient, ExecutionClient, ValidatorClient} from "../utils/simulation/interfaces.js";
-import {defineSimTestConfig, logFilesDir} from "../utils/simulation/utils/index.js";
-import {connectAllNodes, waitForSlot} from "../utils/simulation/utils/network.js";
+import {SimulationEnvironment} from "../utils/crucible/simulationEnvironment.js";
+import {nodeAssertion} from "../utils/crucible/assertions/nodeAssertion.js";
+import {AssertionMatch, BeaconClient, ExecutionClient, ValidatorClient} from "../utils/crucible/interfaces.js";
+import {defineSimTestConfig, logFilesDir} from "../utils/crucible/utils/index.js";
+import {connectAllNodes, waitForSlot} from "../utils/crucible/utils/network.js";
 
 const altairForkEpoch = 2;
 const bellatrixForkEpoch = 4;
