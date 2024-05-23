@@ -9,7 +9,7 @@ import {
   SIM_ENV_NETWORK_ID,
   SIM_TESTS_SECONDS_PER_SLOT,
 } from "../constants.js";
-import {SimulationEnvironment} from "../simulationEnvironment.js";
+import {Simulation} from "../simulation.js";
 
 export const logFilesDir = "test-logs";
 
@@ -174,7 +174,7 @@ export const replaceIpFromUrl = (url: string, ip: string): string => url.replace
 
 export const makeUniqueArray = <T>(arr: T[]): T[] => [...new Set(arr)];
 
-export const registerProcessHandler = (env: SimulationEnvironment): void => {
+export const registerProcessHandler = (env: Simulation): void => {
   process.on("unhandledRejection", async (reason, promise) => {
     console.error("Unhandled Rejection at:", promise, "reason:", reason);
     await env.stop(1, "Unhandled promise rejection");

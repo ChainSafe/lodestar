@@ -1,5 +1,5 @@
 import {EL_GENESIS_ACCOUNT} from "../constants.js";
-import {AssertionMatch, AssertionResult, NodePair, SimulationAssertion} from "../interfaces.js";
+import {Match, AssertionResult, NodePair, Assertion} from "../interfaces.js";
 
 const transactionAmount = BigInt(2441406250);
 
@@ -13,13 +13,13 @@ export function createAccountBalanceAssertion({
   sendTransactionsAtSlot: number[];
   validateTotalBalanceAt: number[];
   targetNode: NodePair;
-}): SimulationAssertion<`accountBalance_${typeof address}`, bigint> {
+}): Assertion<`accountBalance_${typeof address}`, bigint> {
   return {
     id: `accountBalance_${address}`,
     match({slot, node}) {
-      if (sendTransactionsAtSlot.includes(slot) && node.id === targetNode.id) return AssertionMatch.Capture;
-      if (validateTotalBalanceAt.includes(slot) && node.id === targetNode.id) return AssertionMatch.Assert;
-      return AssertionMatch.None;
+      if (sendTransactionsAtSlot.includes(slot) && node.id === targetNode.id) return Match.Capture;
+      if (validateTotalBalanceAt.includes(slot) && node.id === targetNode.id) return Match.Assert;
+      return Match.None;
     },
     async capture({node}) {
       await node.execution.provider?.eth.sendTransaction({

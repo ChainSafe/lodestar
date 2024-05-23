@@ -317,24 +317,23 @@ export interface AssertionInput {
   node: NodePair;
 }
 
-export interface SimulationCaptureInput<D extends Record<string, unknown>> extends AssertionInput {
+export interface CaptureInput<D extends Record<string, unknown>> extends AssertionInput {
   block: allForks.SignedBeaconBlock;
   dependantStores: D;
 }
 
-export interface SimulationAssertionInput<T, D extends Record<string, unknown> = Record<string, never>>
-  extends AssertionInput {
+export interface AssertInput<T, D extends Record<string, unknown> = Record<string, never>> extends AssertionInput {
   nodes: NodePair[];
   store: Record<Slot, T>;
   dependantStores: D;
 }
 
-export interface SimulationDumpInput<T> extends Omit<AssertionInput, "node"> {
+export interface DumpInput<T> extends Omit<AssertionInput, "node"> {
   nodes: NodePair[];
   store: Record<NodeId, Record<Slot, T>>;
 }
 
-export type SimulationMatcherInput = AssertionInput;
+export type MatcherInput = AssertionInput;
 
 /**
  * Bitwise flag to indicate what to do with the assertion
@@ -345,45 +344,42 @@ export type SimulationMatcherInput = AssertionInput;
  * @example
  * Capture and assert: `AssertionMatch.Capture | AssertionMatch.Assert`
  */
-export enum AssertionMatch {
+export enum Match {
   None = 0,
   Capture = 1 << 0,
   Assert = 1 << 1,
   Remove = 1 << 2,
 }
-export type AssertionMatcher = (input: SimulationMatcherInput) => AssertionMatch;
-export type ExtractAssertionType<T, I> =
-  T extends SimulationAssertion<infer A, infer B> ? (A extends I ? B : never) : never;
-export type ExtractAssertionId<T> = T extends SimulationAssertion<infer A, any> ? A : never;
+export type Matcher = (input: MatcherInput) => Match;
+export type ExtractAssertionType<T, I> = T extends Assertion<infer A, infer B> ? (A extends I ? B : never) : never;
+export type ExtractAssertionId<T> = T extends Assertion<infer A, any> ? A : never;
 export type StoreType<AssertionId extends string, Value = unknown> = Record<
   AssertionId,
   Record<NodeId, Record<Slot, Value>>
 >;
-export type StoreTypes<T extends SimulationAssertion[], IDs extends string = ExtractAssertionId<T[number]>> = {
+export type StoreTypes<T extends Assertion[], IDs extends string = ExtractAssertionId<T[number]>> = {
   [Id in IDs]: Record<NodeId, Record<Slot, ExtractAssertionType<T[number], Id> | undefined>>;
 };
-export interface SimulationAssertion<
+export interface Assertion<
   IdType extends string = string,
   ValueType = unknown,
-  Dependencies extends SimulationAssertion[] = SimulationAssertion<string, unknown, any[]>[],
+  Dependencies extends Assertion[] = Assertion<string, unknown, any[]>[],
 > {
   readonly id: IdType;
-  capture?(
-    input: SimulationCaptureInput<StoreTypes<Dependencies> & StoreType<IdType, ValueType>>
-  ): Promise<ValueType | null>;
-  match: AssertionMatcher;
+  capture?(input: CaptureInput<StoreTypes<Dependencies> & StoreType<IdType, ValueType>>): Promise<ValueType | null>;
+  match: Matcher;
   assert(
-    input: SimulationAssertionInput<ValueType, StoreTypes<Dependencies> & StoreType<IdType, ValueType>>
+    input: AssertInput<ValueType, StoreTypes<Dependencies> & StoreType<IdType, ValueType>>
   ): Promise<AssertionResult[] | never>;
   dependencies?: Dependencies;
   // Use to dump the data to CSV files, as each assertion implementation knows
   // how to make the dump more readable, so we define it in assertion
   // Return object as key-value pair for file name as dump data
-  dump?(input: SimulationDumpInput<ValueType>): Promise<Record<string, string>>;
+  dump?(input: DumpInput<ValueType>): Promise<Record<string, string>>;
 }
 export type AssertionResult = string | [string, Record<string, unknown>];
 
-export interface SimulationAssertionError {
+export interface AssertionError {
   slot: Slot;
   epoch: Epoch;
   assertionId: string;
@@ -402,14 +398,14 @@ export type Eth1GenesisBlock = {
   alloc: Record<string, {balance: string}>;
 };
 
-export abstract class SimulationReporter<T extends SimulationAssertion[]> {
+export abstract class SimulationReporter<T extends Assertion[]> {
   constructor(
     protected options: {
       clock: EpochClock;
       forkConfig: ChainForkConfig;
       stores: StoreTypes<T>;
       nodes: NodePair[];
-      errors: SimulationAssertionError[];
+      errors: AssertionError[];
       logger: Logger;
     }
   ) {}

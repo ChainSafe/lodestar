@@ -1,18 +1,18 @@
 import {ForkName} from "@lodestar/params";
 import {altair} from "@lodestar/types";
-import {AssertionMatch, AssertionResult, SimulationAssertion} from "../../interfaces.js";
+import {Match, AssertionResult, Assertion} from "../../interfaces.js";
 import {avg} from "../../utils/index.js";
 
 // Until we identity and fix the following issue, reducing the expected sync committee participation rate from 0.9 to 0.75
 // https://github.com/ChainSafe/lodestar/issues/6432
 export const expectedMinSyncParticipationRate = 0.75;
 
-export const syncCommitteeParticipationAssertion: SimulationAssertion<"syncCommitteeParticipation", number> = {
+export const syncCommitteeParticipationAssertion: Assertion<"syncCommitteeParticipation", number> = {
   id: "syncCommitteeParticipation",
   match: ({slot, clock, fork}) => {
-    if (fork === ForkName.phase0) return AssertionMatch.None;
+    if (fork === ForkName.phase0) return Match.None;
 
-    return clock.isLastSlotOfEpoch(slot) ? AssertionMatch.Capture | AssertionMatch.Assert : AssertionMatch.Capture;
+    return clock.isLastSlotOfEpoch(slot) ? Match.Capture | Match.Assert : Match.Capture;
   },
 
   async capture({block}) {

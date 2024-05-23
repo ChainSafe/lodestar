@@ -1,21 +1,21 @@
 import {ApiError} from "@lodestar/api";
 import {toHex} from "@lodestar/utils";
 import {bellatrix} from "@lodestar/types";
-import {AssertionMatch, AssertionResult, SimulationAssertion} from "../interfaces.js";
+import {Match, AssertionResult, Assertion} from "../interfaces.js";
 
 export function createExecutionHeadAssertion({
   checkForSlot,
 }: {
   checkForSlot: number[];
-}): SimulationAssertion<
+}): Assertion<
   "executionHead",
   {executionHead: {hash: string}; consensusHead: {executionPayload: {blockHash: string}}}
 > {
   return {
     id: "executionHead",
     match({slot}) {
-      if (checkForSlot.includes(slot)) return AssertionMatch.Capture | AssertionMatch.Assert;
-      return AssertionMatch.None;
+      if (checkForSlot.includes(slot)) return Match.Capture | Match.Assert;
+      return Match.None;
     },
     async capture({node}) {
       const blockNumber = await node.execution.provider?.eth.getBlockNumber();

@@ -2,7 +2,7 @@ import {ApiError} from "@lodestar/api";
 import {TIMELY_HEAD_FLAG_INDEX, TIMELY_SOURCE_FLAG_INDEX, TIMELY_TARGET_FLAG_INDEX} from "@lodestar/params";
 import {isActiveValidator} from "@lodestar/state-transition";
 import {altair} from "@lodestar/types";
-import {AssertionMatch, AssertionResult, SimulationAssertion} from "../../interfaces.js";
+import {Match, AssertionResult, Assertion} from "../../interfaces.js";
 
 const TIMELY_HEAD = 1 << TIMELY_HEAD_FLAG_INDEX;
 const TIMELY_SOURCE = 1 << TIMELY_SOURCE_FLAG_INDEX;
@@ -10,7 +10,7 @@ const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;
 
 const expectedMinParticipationRate = 0.8;
 
-export const attestationParticipationAssertion: SimulationAssertion<
+export const attestationParticipationAssertion: Assertion<
   "attestationParticipation",
   {head: number; source: number; target: number}
 > = {
@@ -19,10 +19,10 @@ export const attestationParticipationAssertion: SimulationAssertion<
     // Capture data only when epoch and one extra slot passed
     // Only assert at first slot of an epoch
     if (epoch >= forkConfig.ALTAIR_FORK_EPOCH && clock.isFirstSlotOfEpoch(slot)) {
-      return AssertionMatch.Capture | AssertionMatch.Assert;
+      return Match.Capture | Match.Assert;
     }
 
-    return AssertionMatch.None;
+    return Match.None;
   },
 
   async capture({node, epoch}) {

@@ -1,9 +1,9 @@
 import {ApiError} from "@lodestar/api";
 import {BeaconStateAllForks, isExecutionStateType, isMergeTransitionComplete} from "@lodestar/state-transition";
-import {AssertionResult, SimulationAssertion} from "../interfaces.js";
+import {AssertionResult, Assertion} from "../interfaces.js";
 import {neverMatcher} from "./matchers.js";
 
-export const mergeAssertion: SimulationAssertion<"merge", string> = {
+export const mergeAssertion: Assertion<"merge", string> = {
   id: "merge",
   // Include into particular test with custom condition
   match: neverMatcher,

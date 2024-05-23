@@ -3,7 +3,7 @@ import {ApiError} from "@lodestar/api";
 import {Slot, allForks} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {BeaconClient, BeaconNode, ExecutionClient, ExecutionNode, NodePair} from "../interfaces.js";
-import {SimulationEnvironment} from "../simulationEnvironment.js";
+import {Simulation} from "../simulation.js";
 import {SimulationTrackerEvent} from "../simulationTracker.js";
 
 export async function connectAllNodes(nodes: NodePair[]): Promise<void> {
@@ -61,7 +61,7 @@ export async function connectNewELNode(newNode: ExecutionNode, nodes: ExecutionN
 }
 
 export async function waitForNodeSync(
-  env: SimulationEnvironment,
+  env: Simulation,
   node: NodePair,
   options?: {head: string; slot: Slot}
 ): Promise<void> {
@@ -73,7 +73,7 @@ export async function waitForNodeSync(
   return waitForNodeSyncStatus(env, node);
 }
 
-export async function waitForNodeSyncStatus(env: SimulationEnvironment, node: NodePair): Promise<void> {
+export async function waitForNodeSyncStatus(env: Simulation, node: NodePair): Promise<void> {
   // eslint-disable-next-line no-constant-condition
   while (true) {
     const result = await node.beacon.api.node.getSyncingStatus();
@@ -87,7 +87,7 @@ export async function waitForNodeSyncStatus(env: SimulationEnvironment, node: No
 }
 
 export async function waitForHead(
-  env: SimulationEnvironment,
+  env: Simulation,
   node: NodePair,
   options: {slot: Slot; head: string; silent?: boolean}
 ): Promise<void> {
@@ -122,7 +122,7 @@ export async function waitForHead(
 
 export async function waitForSlot(
   message: string,
-  {env, slot, nodes}: {env: SimulationEnvironment; slot: Slot; nodes?: NodePair[]}
+  {env, slot, nodes}: {env: Simulation; slot: Slot; nodes?: NodePair[]}
 ): Promise<void> {
   nodes = nodes ?? env.nodes;
 

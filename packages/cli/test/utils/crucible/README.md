@@ -1,4 +1,6 @@
-# Lodestar Simulation Test
+# Crucible by Lodestar
+
+> a test of faith, patience, or strength
 
 Lodestar simulation tests allows to setup a small, local devnet for the variety of Consensus and Execution Layer clients. We use the `minimal` preset for all CL clients. Following clients are currently supported.
 

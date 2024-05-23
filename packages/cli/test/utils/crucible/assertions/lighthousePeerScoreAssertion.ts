@@ -1,12 +1,12 @@
 import {ApiError} from "@lodestar/api";
-import {AssertionResult, BeaconClient, LighthouseAPI, NodePair, SimulationAssertion} from "../interfaces.js";
+import {AssertionResult, BeaconClient, LighthouseAPI, NodePair, Assertion} from "../interfaces.js";
 import {neverMatcher} from "./matchers.js";
 
 const MIN_GOSSIPSUB_SCORE = 10;
 
 let peersIdMapCache: Record<string, string>;
 
-export const lighthousePeerScoreAssertion: SimulationAssertion<"lighthousePeerScore", {gossipsubScore: number}> = {
+export const lighthousePeerScoreAssertion: Assertion<"lighthousePeerScore", {gossipsubScore: number}> = {
   id: "lighthousePeerScore",
   match: neverMatcher,
   async assert({nodes, node}) {

@@ -1,16 +1,16 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import path from "node:path";
-import {AssertionMatch, BeaconClient, ExecutionClient, ValidatorClient} from "../utils/simulation/interfaces.js";
-import {SimulationEnvironment} from "../utils/simulation/simulationEnvironment.js";
-import {defineSimTestConfig, logFilesDir} from "../utils/simulation/utils/index.js";
-import {connectAllNodes, waitForSlot} from "../utils/simulation/utils/network.js";
-import {nodeAssertion} from "../utils/simulation/assertions/nodeAssertion.js";
-import {mergeAssertion} from "../utils/simulation/assertions/mergeAssertion.js";
-import {createForkAssertion} from "../utils/simulation/assertions/forkAssertion.js";
-import {createAccountBalanceAssertion} from "../utils/simulation/assertions/accountBalanceAssertion.js";
-import {createExecutionHeadAssertion} from "../utils/simulation/assertions/executionHeadAssertion.js";
-import {createWithdrawalAssertions} from "../utils/simulation/assertions/withdrawalsAssertion.js";
-import {assertCheckpointSync, assertRangeSync, assertUnknownBlockSync} from "../utils/simulation/utils/syncing.js";
+import {Match, BeaconClient, ExecutionClient, ValidatorClient} from "../utils/crucible/interfaces.js";
+import {Simulation} from "../utils/crucible/simulation.js";
+import {defineSimTestConfig, logFilesDir} from "../utils/crucible/utils/index.js";
+import {connectAllNodes, waitForSlot} from "../utils/crucible/utils/network.js";
+import {nodeAssertion} from "../utils/crucible/assertions/nodeAssertion.js";
+import {mergeAssertion} from "../utils/crucible/assertions/mergeAssertion.js";
+import {createForkAssertion} from "../utils/crucible/assertions/forkAssertion.js";
+import {createAccountBalanceAssertion} from "../utils/crucible/assertions/accountBalanceAssertion.js";
+import {createExecutionHeadAssertion} from "../utils/crucible/assertions/executionHeadAssertion.js";
+import {createWithdrawalAssertions} from "../utils/crucible/assertions/withdrawalsAssertion.js";
+import {assertCheckpointSync, assertRangeSync, assertUnknownBlockSync} from "../utils/crucible/utils/syncing.js";
 
 const altairForkEpoch = 2;
 const bellatrixForkEpoch = 4;
@@ -28,7 +28,7 @@ const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
   initialNodes: 5,
 });
 
-const env = await SimulationEnvironment.initWithDefaults(
+const env = await Simulation.initWithDefaults(
   {
     id: "multi-fork",
     logsDir: path.join(logFilesDir, "multi-fork"),
@@ -114,7 +114,7 @@ const env = await SimulationEnvironment.initWithDefaults(
 env.tracker.register({
   ...nodeAssertion,
   match: ({slot}) => {
-    return slot === 1 ? AssertionMatch.Assert | AssertionMatch.Capture | AssertionMatch.Remove : AssertionMatch.None;
+    return slot === 1 ? Match.Assert | Match.Capture | Match.Remove : Match.None;
   },
 });
 
@@ -122,9 +122,7 @@ env.tracker.register({
   ...mergeAssertion,
   match: ({slot}) => {
     // Check at the end of bellatrix fork, merge should happen by then
-    return slot === env.clock.getLastSlotOfEpoch(bellatrixForkEpoch)
-      ? AssertionMatch.Assert | AssertionMatch.Remove
-      : AssertionMatch.None;
+    return slot === env.clock.getLastSlotOfEpoch(bellatrixForkEpoch) ? Match.Assert | Match.Remove : Match.None;
   },
 });
 
