@@ -5,11 +5,12 @@ import {
   DataAvailableStatus,
   StateHashTreeRootSource,
 } from "@lodestar/state-transition";
-import {ErrorAborted, Logger, sleep} from "@lodestar/utils";
+import {ErrorAborted, Logger} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {byteArrayEquals} from "../../util/bytes.js";
+import {nextEventLoop} from "../../util/eventLoop.js";
 import {BlockInput, ImportBlockOpts} from "./types.js";
 
 /**
@@ -90,7 +91,7 @@ export async function verifyBlocksStateTransitionOnly(
 
     // this avoids keeping our node busy processing blocks
     if (i < blocks.length - 1) {
-      await sleep(0);
+      await nextEventLoop();
     }
   }
 
