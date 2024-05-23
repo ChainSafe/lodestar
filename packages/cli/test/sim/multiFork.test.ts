@@ -122,9 +122,7 @@ env.tracker.register({
   ...mergeAssertion,
   match: ({slot}) => {
     // Check at the end of bellatrix fork, merge should happen by then
-    return slot === env.clock.getLastSlotOfEpoch(bellatrixForkEpoch)
-      ? Match.Assert | Match.Remove
-      : Match.None;
+    return slot === env.clock.getLastSlotOfEpoch(bellatrixForkEpoch) ? Match.Assert | Match.Remove : Match.None;
   },
 });
 
