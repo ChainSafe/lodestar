@@ -17,15 +17,39 @@ You can use the `@lodestar/prover` in two ways, as a Web3 Provider and as proxy.
 import Web3 from "web3";
 import {createVerifiedExecutionProvider, LCTransport} from "@lodestar/prover";
 
-const {provider, proofProvider} = createVerifiedExecutionProvider(
-  new Web3.providers.HttpProvider("https://lodestar-sepoliarpc.chainsafe.io"),
-  {
-    transport: LCTransport.Rest,
-    urls: ["https://lodestar-sepolia.chainsafe.io"],
-    network: "sepolia",
-    wsCheckpoint: "trusted-checkpoint",
-  }
-);
+const httpProvider = new Web3.providers.HttpProvider("https://lodestar-sepoliarpc.chainsafe.io");
+
+const {provider, proofProvider} = createVerifiedExecutionProvider(httpProvider, {
+  transport: LCTransport.Rest,
+  urls: ["https://lodestar-sepolia.chainsafe.io"],
+  network: "sepolia",
+  wsCheckpoint: "trusted-checkpoint",
+});
+
+const web3 = new Web3(provider);
+
+const address = "0xf97e180c050e5Ab072211Ad2C213Eb5AEE4DF134";
+const balance = await web3.eth.getBalance(address, "latest");
+console.log({balance, address});
+```
+
+In this scenario the actual provider is mutated to handle the RPC requests and verify those. So here if you use `provider` or `httpProvider` both are the same objects. This behavior is useful when you already have an application and usage of any provider across the code space and don't want to change the code. So you mutate the provider during startup.
+
+For some scenarios when you don't want to mutate the provider you can pass an option `mutateProvider` as `false`. In this scenario the object `httpProvider` is not mutated and you get a new object `provider`. This is useful when your provider object does not allow mutation, e.g. Metamask provider accessible through `window.ethereum`. If not provided `mutateProvider` is considered as `true` by default. In coming releases we will switch its default behavior to `false`.
+
+```ts
+import Web3 from "web3";
+import {createVerifiedExecutionProvider, LCTransport} from "@lodestar/prover";
+
+const httpProvider = new Web3.providers.HttpProvider("https://lodestar-sepoliarpc.chainsafe.io");
+
+const {provider, proofProvider} = createVerifiedExecutionProvider(httpProvider, {
+  transport: LCTransport.Rest,
+  urls: ["https://lodestar-sepolia.chainsafe.io"],
+  network: "sepolia",
+  wsCheckpoint: "trusted-checkpoint",
+  mutateProvider: false,
+});
 
 const web3 = new Web3(provider);
 
@@ -45,6 +69,12 @@ lodestar-prover proxy \
   --beaconUrls https://lodestar-sepolia.chainsafe.io \
   --port 8080
 ```
+
+## How to detect a web3 provider
+
+There can be different implementations of the web3 providers and each can handle the RPC request differently. We call those different provider types. We had provided builtin support for common providers e.g. web3.js, ethers or any eip1193 compatible providers. We inspect given provider instance at runtime to detect the correct provider type.
+
+If your project is using some provider type which is not among above list, you have the option to register a custom provider type with the `createVerifiedExecutionProvider` with the option `providerTypes` which will be an array of your supported provider types. Your custom provider types will have higher priority than default provider types. Please see [existing provide types implementations](./src/provider_types/) to know how to implement your own if needed.
 
 ## Supported Web3 Methods
 

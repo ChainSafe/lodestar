@@ -94,7 +94,7 @@ const sidebars: SidebarsConfig = {
     {
       type: "category",
       label: "Tools",
-      items: ["tools/flamegraphs", "tools/heap-dumps", "tools/core-dumps"],
+      items: ["tools/debugging", "tools/flamegraphs", "tools/heap-dumps", "tools/core-dumps"],
     },
     {
       type: "category",

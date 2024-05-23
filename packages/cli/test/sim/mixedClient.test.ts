@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import path from "node:path";
-import {SimulationEnvironment} from "../utils/simulation/simulationEnvironment.js";
-import {nodeAssertion} from "../utils/simulation/assertions/nodeAssertion.js";
-import {AssertionMatch, BeaconClient, ExecutionClient, ValidatorClient} from "../utils/simulation/interfaces.js";
-import {defineSimTestConfig, logFilesDir} from "../utils/simulation/utils/index.js";
-import {connectAllNodes, waitForSlot} from "../utils/simulation/utils/network.js";
+import {Simulation} from "../utils/crucible/simulation.js";
+import {nodeAssertion} from "../utils/crucible/assertions/nodeAssertion.js";
+import {Match, BeaconClient, ExecutionClient, ValidatorClient} from "../utils/crucible/interfaces.js";
+import {defineSimTestConfig, logFilesDir} from "../utils/crucible/utils/index.js";
+import {connectAllNodes, waitForSlot} from "../utils/crucible/utils/network.js";
 
 const altairForkEpoch = 2;
 const bellatrixForkEpoch = 4;
@@ -22,7 +22,7 @@ const {estimatedTimeoutMs, forkConfig} = defineSimTestConfig({
   initialNodes: 2,
 });
 
-const env = await SimulationEnvironment.initWithDefaults(
+const env = await Simulation.initWithDefaults(
   {
     id: "mixed-clients",
     logsDir: path.join(logFilesDir, "mixed-clients"),
@@ -58,7 +58,7 @@ const env = await SimulationEnvironment.initWithDefaults(
 env.tracker.register({
   ...nodeAssertion,
   match: ({slot}) => {
-    return slot === 1 ? AssertionMatch.Assert | AssertionMatch.Capture | AssertionMatch.Remove : AssertionMatch.None;
+    return slot === 1 ? Match.Assert | Match.Capture | Match.Remove : Match.None;
   },
 });
 
