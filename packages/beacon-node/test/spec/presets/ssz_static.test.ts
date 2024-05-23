@@ -57,8 +57,8 @@ const sszStatic =
       (ssz.altair as Types)[typeName] ||
       (ssz.phase0 as Types)[typeName];
 
-    it(`SSZ type ${typeName} for fork ${fork} is defined`, function () {
-      expect(sszType).toBeDefined();
+    it(`${fork} - ${typeName} type exists`, function () {
+      expect(sszType).toEqualWithMessage(expect.any(Type), `SSZ type ${typeName} for fork ${fork} is not defined`);
     });
 
     if (!sszType) {
