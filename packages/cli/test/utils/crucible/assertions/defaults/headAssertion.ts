@@ -1,7 +1,7 @@
 import {ApiError} from "@lodestar/api";
 import {RootHex, Slot} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
-import {AssertionResult, SimulationAssertion} from "../../interfaces.js";
+import {AssertionResult, Assertion} from "../../interfaces.js";
 import {everySlotMatcher} from "../matchers.js";
 
 export interface HeadSummary {
@@ -9,7 +9,7 @@ export interface HeadSummary {
   slot: Slot;
 }
 
-export const headAssertion: SimulationAssertion<"head", HeadSummary> = {
+export const headAssertion: Assertion<"head", HeadSummary> = {
   id: "head",
   match: everySlotMatcher,
   async capture({node}) {

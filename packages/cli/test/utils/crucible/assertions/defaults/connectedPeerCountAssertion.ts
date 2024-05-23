@@ -1,8 +1,8 @@
 import {ApiError} from "@lodestar/api";
-import {AssertionResult, SimulationAssertion} from "../../interfaces.js";
+import {AssertionResult, Assertion} from "../../interfaces.js";
 import {everySlotMatcher} from "../matchers.js";
 
-export const connectedPeerCountAssertion: SimulationAssertion<"connectedPeerCount", number> = {
+export const connectedPeerCountAssertion: Assertion<"connectedPeerCount", number> = {
   id: "connectedPeerCount",
   match: everySlotMatcher,
   async capture({node}) {

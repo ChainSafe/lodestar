@@ -1,7 +1,7 @@
 import {capella} from "@lodestar/types";
 import {ApiError} from "@lodestar/api";
 import {MAX_WITHDRAWALS_PER_PAYLOAD} from "@lodestar/params";
-import {AssertionMatch, AssertionResult, SimulationAssertion} from "../interfaces.js";
+import {Match, AssertionResult, Assertion} from "../interfaces.js";
 
 type WithdrawalsData = {
   withdrawalCount: number;
@@ -11,14 +11,13 @@ type WithdrawalsData = {
 
 export function createWithdrawalAssertions<T extends string>(
   nodeId: T
-): SimulationAssertion<`withdrawals_${T}`, WithdrawalsData> {
+): Assertion<`withdrawals_${T}`, WithdrawalsData> {
   return {
     id: `withdrawals_${nodeId}`,
     match({forkConfig, epoch, node}) {
-      if (nodeId === node.id && epoch === forkConfig.CAPELLA_FORK_EPOCH)
-        return AssertionMatch.Capture | AssertionMatch.Assert;
+      if (nodeId === node.id && epoch === forkConfig.CAPELLA_FORK_EPOCH) return Match.Capture | Match.Assert;
 
-      return AssertionMatch.None;
+      return Match.None;
     },
     async capture({block, node, slot}) {
       const withdrawals = (block as capella.SignedBeaconBlock).message.body.executionPayload.withdrawals;

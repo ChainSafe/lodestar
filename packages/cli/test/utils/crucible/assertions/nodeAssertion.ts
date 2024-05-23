@@ -1,11 +1,11 @@
 import type {SecretKey} from "@chainsafe/bls/types";
 import {routes} from "@lodestar/api/beacon";
 import {ApiError} from "@lodestar/api";
-import {AssertionResult, ValidatorClientKeys, SimulationAssertion, ValidatorClient} from "../interfaces.js";
+import {AssertionResult, ValidatorClientKeys, Assertion, ValidatorClient} from "../interfaces.js";
 import {arrayEquals} from "../utils/index.js";
 import {neverMatcher} from "./matchers.js";
 
-export const nodeAssertion: SimulationAssertion<"node", {health: number; keyManagerKeys: string[]}> = {
+export const nodeAssertion: Assertion<"node", {health: number; keyManagerKeys: string[]}> = {
   id: "node",
   // Include into particular test with custom condition
   match: neverMatcher,

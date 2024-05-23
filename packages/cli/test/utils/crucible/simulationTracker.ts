@@ -9,12 +9,12 @@ import {LoggerNode} from "@lodestar/logger/node";
 import {isNullish} from "../../utils.js";
 import {EpochClock} from "./epochClock.js";
 import {
-  AssertionMatch,
+  Match,
   AtLeast,
   NodeId,
   NodePair,
-  SimulationAssertion,
-  SimulationAssertionError,
+  Assertion,
+  AssertionError,
   SimulationReporter,
   StoreType,
   StoreTypes,
@@ -54,10 +54,7 @@ const eventStreamEventMap = {
 
 type Stores = StoreTypes<typeof defaultAssertions> & StoreType<string, unknown>;
 
-export function getStoresForAssertions<D extends SimulationAssertion[]>(
-  stores: Stores,
-  dependencies: D
-): StoreTypes<D> {
+export function getStoresForAssertions<D extends Assertion[]>(stores: Stores, dependencies: D): StoreTypes<D> {
   const filterStores: Record<string, unknown> = {};
 
   for (const assertion of dependencies) {
@@ -90,9 +87,9 @@ export class SimulationTracker {
   private forkConfig: ChainForkConfig;
   private running = false;
 
-  private errors: SimulationAssertionError[] = [];
+  private errors: AssertionError[] = [];
   private stores: Stores;
-  private assertions: SimulationAssertion[];
+  private assertions: Assertion[];
   private assertionIdsMap: Record<string, boolean> = {};
   private constructor({signal, nodes, clock, config, logger, logsDir}: SimulationTrackerInitOptions) {
     this.signal = signal;
@@ -103,7 +100,7 @@ export class SimulationTracker {
     this.logger = logger.child({module: "tracker"});
 
     this.stores = {} as StoreTypes<typeof defaultAssertions> & StoreType<string, unknown>;
-    this.assertions = [] as SimulationAssertion[];
+    this.assertions = [] as Assertion[];
     this.reporter = new TableReporter({
       logger: this.logger.child({module: "reporter"}),
       clock: this.clock,
@@ -114,7 +111,7 @@ export class SimulationTracker {
     });
   }
 
-  static initWithDefaultAssertions(opts: SimulationTrackerInitOptions): SimulationTracker {
+  static initWithDefaults(opts: SimulationTrackerInitOptions): SimulationTracker {
     const tracker = new SimulationTracker(opts);
 
     for (const assertion of defaultAssertions) {
@@ -230,7 +227,7 @@ export class SimulationTracker {
     this.emitter.once(`${node.beacon.id}:slot:${slot}`, cb);
   }
 
-  register(assertion: SimulationAssertion): void {
+  register(assertion: Assertion): void {
     if (assertion.id in this.assertionIdsMap) {
       throw new Error(`The assertion "${assertion.id}" is already registered`);
     }
@@ -250,7 +247,7 @@ export class SimulationTracker {
     }
   }
 
-  record(error: AtLeast<SimulationAssertionError, "slot" | "message" | "assertionId">): void {
+  record(error: AtLeast<AssertionError, "slot" | "message" | "assertionId">): void {
     this.errors.push({
       ...error,
       epoch: error.epoch ?? this.clock.getEpochForSlot(error.slot),
@@ -336,7 +333,7 @@ export class SimulationTracker {
         fork: this.forkConfig.getForkName(slot),
       });
 
-      if (match & AssertionMatch.None || !(match & AssertionMatch.Capture)) continue;
+      if (match & Match.None || !(match & Match.Capture)) continue;
 
       if (!assertion.capture) {
         throw new Error(`Assertion "${assertion.id}" has no capture function`);
@@ -383,7 +380,7 @@ export class SimulationTracker {
           fork: this.forkConfig.getForkName(slot),
         });
 
-        if (match & AssertionMatch.None || !(match & AssertionMatch.Assert)) continue;
+        if (match & Match.None || !(match & Match.Assert)) continue;
 
         try {
           const errors = await assertion.assert({

@@ -1,18 +1,14 @@
 import {MAX_COMMITTEES_PER_SLOT} from "@lodestar/params";
-import {AssertionMatch, AssertionResult, SimulationAssertion} from "../../interfaces.js";
+import {Match, AssertionResult, Assertion} from "../../interfaces.js";
 import {inclusionDelayAssertion, expectedMaxInclusionDelay} from "./inclusionDelayAssertion.js";
 
 export const expectedMinAttestationCount = MAX_COMMITTEES_PER_SLOT - 1;
 
-export const attestationsCountAssertion: SimulationAssertion<
-  "attestationsCount",
-  number,
-  [typeof inclusionDelayAssertion]
-> = {
+export const attestationsCountAssertion: Assertion<"attestationsCount", number, [typeof inclusionDelayAssertion]> = {
   id: "attestationsCount",
   match: () => {
     // TODO : Disable the assertion for now as the attestations count could be different per slot.
-    return AssertionMatch.Capture;
+    return Match.Capture;
   },
   dependencies: [inclusionDelayAssertion],
 
