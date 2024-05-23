@@ -41,18 +41,18 @@ export function getDebugApi({
       return {data: nodes};
     },
 
-    async getState({stateId}, context = {}) {
+    async getState({stateId}, context) {
       const {state, executionOptimistic, finalized} = await resolveStateId(chain, stateId, {allowRegen: true});
       return {
-        data: context.returnBytes ? state.serialize() : (state.toValue() as phase0.BeaconState),
+        data: context?.returnBytes ? state.serialize() : (state.toValue() as phase0.BeaconState),
         meta: {executionOptimistic, finalized},
       };
     },
 
-    async getStateV2({stateId}, context = {}) {
+    async getStateV2({stateId}, context) {
       const {state, executionOptimistic, finalized} = await resolveStateId(chain, stateId, {allowRegen: true});
       return {
-        data: context.returnBytes ? state.serialize() : state.toValue(),
+        data: context?.returnBytes ? state.serialize() : state.toValue(),
         meta: {
           version: config.getForkName(state.slot),
           executionOptimistic,

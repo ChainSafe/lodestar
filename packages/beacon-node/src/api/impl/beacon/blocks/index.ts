@@ -42,7 +42,7 @@ export function getBeaconBlockApi({
 >): ApplicationMethods<routes.beacon.block.Endpoints> {
   const publishBlock: ApplicationMethods<routes.beacon.block.Endpoints>["publishBlockV2"] = async (
     {signedBlockOrContents, broadcastValidation},
-    context = {},
+    context,
     opts: PublishBlockOpts = {}
   ) => {
     const seenTimestampSec = Date.now() / 1000;
@@ -64,7 +64,7 @@ export function getBeaconBlockApi({
     } else {
       signedBlock = signedBlockOrContents;
       blobSidecars = [];
-      blockForImport = getBlockInput.preDeneb(config, signedBlock, BlockSource.api, context.sszBytes ?? null);
+      blockForImport = getBlockInput.preDeneb(config, signedBlock, BlockSource.api, context?.sszBytes ?? null);
     }
 
     // check what validations have been requested before broadcasting and publishing the block
