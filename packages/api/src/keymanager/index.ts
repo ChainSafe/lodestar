@@ -1,13 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {} from "../beacon/client/index.js";
-import {
-  IHttpClient,
-  HttpClient,
-  HttpClientModules,
-  HttpClientOptions,
-  ApiClientMethods,
-} from "../utils/client/index.js";
-import {Endpoints} from "./routes.js";
+import {IHttpClient, HttpClient, HttpClientModules, HttpClientOptions} from "../utils/client/index.js";
+import type {ApiClient} from "./client.js";
 import * as keymanager from "./client.js";
 
 // NOTE: Don't export server here so it's not bundled to all consumers
@@ -27,7 +20,7 @@ export type {
   BuilderBoostFactorData,
 } from "./routes.js";
 
-export type ApiClient = ApiClientMethods<Endpoints>;
+export type {ApiClient};
 
 type ClientModules = HttpClientModules & {
   config: ChainForkConfig;
