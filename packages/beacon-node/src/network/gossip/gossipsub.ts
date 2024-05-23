@@ -12,6 +12,7 @@ import {ClientKind} from "../peers/client.js";
 import {GOSSIP_MAX_SIZE, GOSSIP_MAX_SIZE_BELLATRIX} from "../../constants/network.js";
 import {Libp2p} from "../interface.js";
 import {NetworkEvent, NetworkEventBus, NetworkEventData} from "../events.js";
+import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {GossipTopic, GossipType} from "./interface.js";
 import {GossipTopicCache, stringifyGossipTopic, getCoreTopicsAtFork} from "./topic.js";
 import {DataTransformSnappy, fastMsgIdFn, msgIdFn, msgIdToStrFn} from "./encoding.js";
@@ -288,7 +289,7 @@ export class Eth2Gossipsub extends GossipSub {
     // Use setTimeout to yield to the macro queue
     // Without this we'll have huge event loop lag
     // See https://github.com/ChainSafe/lodestar/issues/5604
-    setTimeout(() => {
+    callInNextEventLoop(() => {
       this.events.emit(NetworkEvent.pendingGossipsubMessage, {
         topic,
         msg,
@@ -298,16 +299,16 @@ export class Eth2Gossipsub extends GossipSub {
         seenTimestampSec,
         startProcessUnixSec: null,
       });
-    }, 0);
+    });
   }
 
   private onValidationResult(data: NetworkEventData[NetworkEvent.gossipMessageValidationResult]): void {
     // Use setTimeout to yield to the macro queue
     // Without this we'll have huge event loop lag
     // See https://github.com/ChainSafe/lodestar/issues/5604
-    setTimeout(() => {
+    callInNextEventLoop(() => {
       this.reportMessageValidationResult(data.msgId, data.propagationSource, data.acceptance);
-    }, 0);
+    });
   }
 }
 
