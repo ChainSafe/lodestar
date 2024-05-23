@@ -6,10 +6,12 @@ import {RouteDefinitionExtra} from "../../utils/client/request.js";
 import {ApiResponse} from "../../utils/client/response.js";
 import {BeaconEvent, Endpoints, definitions, getEventSerdes} from "../routes/events.js";
 
+export type ApiClient = ApiClientMethods<Endpoints>;
+
 /**
  * REST HTTP client for events routes
  */
-export function getClient(_config: ChainForkConfig, baseUrl: string): ApiClientMethods<Endpoints> {
+export function getClient(_config: ChainForkConfig, baseUrl: string): ApiClient {
   const eventSerdes = getEventSerdes();
 
   return {
