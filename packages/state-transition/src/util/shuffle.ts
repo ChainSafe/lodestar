@@ -91,7 +91,7 @@ function innerShuffleList(input: Shuffleable, seed: Bytes32, dir: boolean): void
   // check if list size fits in uint32
   assert.equal(listSize, input.length, "input length does not fit uint32");
   // check that the seed is 32 bytes
-  assert.equal(seed.length, 32, "seed length is not 32 bytes");
+  assert.lte(seed.length, 32, "seed length is not lte 32 bytes");
 
   const buf = Buffer.alloc(_SHUFFLE_H_TOTAL_SIZE);
   let r = 0;
