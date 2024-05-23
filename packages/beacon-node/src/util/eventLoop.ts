@@ -9,7 +9,7 @@ import {sleep} from "@lodestar/utils";
 export function nextEventLoop(): Promise<void> {
   // `setTimeout` delay is at least 1ms
   // Say https://nodejs.org/api/timers.html#settimeoutcallback-delay-args
-  return sleep(1);
+  return sleep(0);
 }
 
 /**
@@ -18,5 +18,5 @@ export function nextEventLoop(): Promise<void> {
 export function callInNextEventLoop(callback: () => void): void {
   // `setTimeout` delay is at least 1ms
   // Say https://nodejs.org/api/timers.html#settimeoutcallback-delay-args
-  setTimeout(callback, 1);
+  setTimeout(callback, 0);
 }
