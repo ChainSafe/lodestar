@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
+import {ChainForkConfig} from "@lodestar/config";
 import {Epoch, phase0, ssz, stringType} from "@lodestar/types";
 import {Schema, Endpoint, RouteDefinitions} from "../utils/index.js";
 import {WireFormat} from "../utils/wireFormat.js";
@@ -373,278 +374,280 @@ export type Endpoints = {
   >;
 };
 
-export const definitions: RouteDefinitions<Endpoints> = {
-  listKeys: {
-    url: "/eth/v1/keystores",
-    method: "GET",
-    req: EmptyRequestCodec,
-    resp: JsonOnlyResponseCodec,
-  },
-  importKeystores: {
-    url: "/eth/v1/keystores",
-    method: "POST",
-    req: JsonOnlyReq({
-      writeReqJson: ({keystores, passwords, slashingProtection}) => ({
-        body: {keystores, passwords, slashing_protection: slashingProtection},
+export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpoints> {
+  return {
+    listKeys: {
+      url: "/eth/v1/keystores",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: JsonOnlyResponseCodec,
+    },
+    importKeystores: {
+      url: "/eth/v1/keystores",
+      method: "POST",
+      req: JsonOnlyReq({
+        writeReqJson: ({keystores, passwords, slashingProtection}) => ({
+          body: {keystores, passwords, slashing_protection: slashingProtection},
+        }),
+        parseReqJson: ({body: {keystores, passwords, slashing_protection}}) => ({
+          keystores,
+          passwords,
+          slashingProtection: slashing_protection,
+        }),
+        schema: {body: Schema.Object},
       }),
-      parseReqJson: ({body: {keystores, passwords, slashing_protection}}) => ({
-        keystores,
-        passwords,
-        slashingProtection: slashing_protection,
+      resp: JsonOnlyResponseCodec,
+    },
+    deleteKeys: {
+      url: "/eth/v1/keystores",
+      method: "DELETE",
+      req: JsonOnlyReq({
+        writeReqJson: ({pubkeys}) => ({body: {pubkeys}}),
+        parseReqJson: ({body: {pubkeys}}) => ({pubkeys}),
+        schema: {body: Schema.Object},
       }),
-      schema: {body: Schema.Object},
-    }),
-    resp: JsonOnlyResponseCodec,
-  },
-  deleteKeys: {
-    url: "/eth/v1/keystores",
-    method: "DELETE",
-    req: JsonOnlyReq({
-      writeReqJson: ({pubkeys}) => ({body: {pubkeys}}),
-      parseReqJson: ({body: {pubkeys}}) => ({pubkeys}),
-      schema: {body: Schema.Object},
-    }),
-    resp: {
-      onlySupport: WireFormat.json,
-      data: JsonOnlyResponseCodec.data,
-      meta: EmptyMetaCodec,
-      transform: {
-        toResponse: (data) => {
-          const {statuses, slashing_protection} = data as {
-            statuses: ResponseStatus<DeletionStatus>[];
-            slashing_protection: SlashingProtectionData;
-          };
-          return {data: statuses, slashing_protection};
+      resp: {
+        onlySupport: WireFormat.json,
+        data: JsonOnlyResponseCodec.data,
+        meta: EmptyMetaCodec,
+        transform: {
+          toResponse: (data) => {
+            const {statuses, slashing_protection} = data as {
+              statuses: ResponseStatus<DeletionStatus>[];
+              slashing_protection: SlashingProtectionData;
+            };
+            return {data: statuses, slashing_protection};
+          },
+          fromResponse: (resp) => {
+            const {data, slashing_protection} = resp as {
+              data: ResponseStatus<DeletionStatus>[];
+              slashing_protection: SlashingProtectionData;
+            };
+            return {data: {statuses: data, slashingProtection: slashing_protection}};
+          },
         },
-        fromResponse: (resp) => {
-          const {data, slashing_protection} = resp as {
-            data: ResponseStatus<DeletionStatus>[];
-            slashing_protection: SlashingProtectionData;
-          };
-          return {data: {statuses: data, slashingProtection: slashing_protection}};
+      },
+    },
+
+    listRemoteKeys: {
+      url: "/eth/v1/remotekeys",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: JsonOnlyResponseCodec,
+    },
+    importRemoteKeys: {
+      url: "/eth/v1/remotekeys",
+      method: "POST",
+      req: JsonOnlyReq({
+        writeReqJson: ({remoteSigners}) => ({body: {remote_keys: remoteSigners}}),
+        parseReqJson: ({body: {remote_keys}}) => ({remoteSigners: remote_keys}),
+        schema: {body: Schema.Object},
+      }),
+      resp: JsonOnlyResponseCodec,
+    },
+    deleteRemoteKeys: {
+      url: "/eth/v1/remotekeys",
+      method: "DELETE",
+      req: JsonOnlyReq({
+        writeReqJson: ({pubkeys}) => ({body: {pubkeys}}),
+        parseReqJson: ({body: {pubkeys}}) => ({pubkeys}),
+        schema: {body: Schema.Object},
+      }),
+      resp: JsonOnlyResponseCodec,
+    },
+
+    listFeeRecipient: {
+      url: "/eth/v1/validator/{pubkey}/feerecipient",
+      method: "GET",
+      req: {
+        writeReq: ({pubkey}) => ({params: {pubkey}}),
+        parseReq: ({params: {pubkey}}) => ({pubkey}),
+        schema: {
+          params: {pubkey: Schema.StringRequired},
         },
       },
-    },
-  },
-
-  listRemoteKeys: {
-    url: "/eth/v1/remotekeys",
-    method: "GET",
-    req: EmptyRequestCodec,
-    resp: JsonOnlyResponseCodec,
-  },
-  importRemoteKeys: {
-    url: "/eth/v1/remotekeys",
-    method: "POST",
-    req: JsonOnlyReq({
-      writeReqJson: ({remoteSigners}) => ({body: {remote_keys: remoteSigners}}),
-      parseReqJson: ({body: {remote_keys}}) => ({remoteSigners: remote_keys}),
-      schema: {body: Schema.Object},
-    }),
-    resp: JsonOnlyResponseCodec,
-  },
-  deleteRemoteKeys: {
-    url: "/eth/v1/remotekeys",
-    method: "DELETE",
-    req: JsonOnlyReq({
-      writeReqJson: ({pubkeys}) => ({body: {pubkeys}}),
-      parseReqJson: ({body: {pubkeys}}) => ({pubkeys}),
-      schema: {body: Schema.Object},
-    }),
-    resp: JsonOnlyResponseCodec,
-  },
-
-  listFeeRecipient: {
-    url: "/eth/v1/validator/{pubkey}/feerecipient",
-    method: "GET",
-    req: {
-      writeReq: ({pubkey}) => ({params: {pubkey}}),
-      parseReq: ({params: {pubkey}}) => ({pubkey}),
-      schema: {
-        params: {pubkey: Schema.StringRequired},
+      resp: {
+        onlySupport: WireFormat.json,
+        data: FeeRecipientDataType,
+        meta: EmptyMetaCodec,
       },
     },
-    resp: {
-      onlySupport: WireFormat.json,
-      data: FeeRecipientDataType,
-      meta: EmptyMetaCodec,
-    },
-  },
-  setFeeRecipient: {
-    url: "/eth/v1/validator/{pubkey}/feerecipient",
-    method: "POST",
-    req: JsonOnlyReq({
-      writeReqJson: ({pubkey, ethaddress}) => ({params: {pubkey}, body: {ethaddress}}),
-      parseReqJson: ({params: {pubkey}, body: {ethaddress}}) => ({pubkey, ethaddress}),
-      schema: {
-        params: {pubkey: Schema.StringRequired},
-        body: Schema.Object,
-      },
-    }),
-    resp: EmptyResponseCodec,
-  },
-  deleteFeeRecipient: {
-    url: "/eth/v1/validator/{pubkey}/feerecipient",
-    method: "DELETE",
-    req: {
-      writeReq: ({pubkey}) => ({params: {pubkey}}),
-      parseReq: ({params: {pubkey}}) => ({pubkey}),
-      schema: {
-        params: {pubkey: Schema.StringRequired},
-      },
-    },
-    resp: EmptyResponseCodec,
-  },
-
-  getGraffiti: {
-    url: "/eth/v1/validator/{pubkey}/graffiti",
-    method: "GET",
-    req: {
-      writeReq: ({pubkey}) => ({params: {pubkey}}),
-      parseReq: ({params: {pubkey}}) => ({pubkey}),
-      schema: {
-        params: {pubkey: Schema.StringRequired},
-      },
-    },
-    resp: {
-      onlySupport: WireFormat.json,
-      data: GraffitiDataType,
-      meta: EmptyMetaCodec,
-    },
-  },
-  setGraffiti: {
-    url: "/eth/v1/validator/{pubkey}/graffiti",
-    method: "POST",
-    req: JsonOnlyReq({
-      writeReqJson: ({pubkey, graffiti}) => ({params: {pubkey}, body: {graffiti}}),
-      parseReqJson: ({params: {pubkey}, body: {graffiti}}) => ({pubkey, graffiti}),
-      schema: {
-        params: {pubkey: Schema.StringRequired},
-        body: Schema.Object,
-      },
-    }),
-    resp: EmptyResponseCodec,
-  },
-  deleteGraffiti: {
-    url: "/eth/v1/validator/{pubkey}/graffiti",
-    method: "DELETE",
-    req: {
-      writeReq: ({pubkey}) => ({params: {pubkey}}),
-      parseReq: ({params: {pubkey}}) => ({pubkey}),
-      schema: {
-        params: {pubkey: Schema.StringRequired},
-      },
-    },
-    resp: EmptyResponseCodec,
-  },
-
-  getGasLimit: {
-    url: "/eth/v1/validator/{pubkey}/gas_limit",
-    method: "GET",
-    req: {
-      writeReq: ({pubkey}) => ({params: {pubkey}}),
-      parseReq: ({params: {pubkey}}) => ({pubkey}),
-      schema: {
-        params: {pubkey: Schema.StringRequired},
-      },
-    },
-    resp: {
-      onlySupport: WireFormat.json,
-      data: GasLimitDataType,
-      meta: EmptyMetaCodec,
-    },
-  },
-  setGasLimit: {
-    url: "/eth/v1/validator/{pubkey}/gas_limit",
-    method: "POST",
-    req: JsonOnlyReq({
-      writeReqJson: ({pubkey, gasLimit}) => ({params: {pubkey}, body: {gas_limit: gasLimit.toString(10)}}),
-      parseReqJson: ({params: {pubkey}, body: {gas_limit}}) => ({pubkey, gasLimit: parseGasLimit(gas_limit)}),
-      schema: {
-        params: {pubkey: Schema.StringRequired},
-        body: Schema.Object,
-      },
-    }),
-    resp: EmptyResponseCodec,
-  },
-  deleteGasLimit: {
-    url: "/eth/v1/validator/{pubkey}/gas_limit",
-    method: "DELETE",
-    req: {
-      writeReq: ({pubkey}) => ({params: {pubkey}}),
-      parseReq: ({params: {pubkey}}) => ({pubkey}),
-      schema: {
-        params: {pubkey: Schema.StringRequired},
-      },
-    },
-    resp: EmptyResponseCodec,
-  },
-
-  getBuilderBoostFactor: {
-    url: "/eth/v1/validator/{pubkey}/builder_boost_factor",
-    method: "GET",
-    req: {
-      writeReq: ({pubkey}) => ({params: {pubkey}}),
-      parseReq: ({params: {pubkey}}) => ({pubkey}),
-      schema: {
-        params: {pubkey: Schema.StringRequired},
-      },
-    },
-    resp: {
-      onlySupport: WireFormat.json,
-      data: BuilderBoostFactorDataType,
-      meta: EmptyMetaCodec,
-    },
-  },
-  setBuilderBoostFactor: {
-    url: "/eth/v1/validator/{pubkey}/builder_boost_factor",
-    method: "POST",
-    req: JsonOnlyReq({
-      writeReqJson: ({pubkey, builderBoostFactor}) => ({
-        params: {pubkey},
-        body: {builder_boost_factor: builderBoostFactor.toString(10)},
+    setFeeRecipient: {
+      url: "/eth/v1/validator/{pubkey}/feerecipient",
+      method: "POST",
+      req: JsonOnlyReq({
+        writeReqJson: ({pubkey, ethaddress}) => ({params: {pubkey}, body: {ethaddress}}),
+        parseReqJson: ({params: {pubkey}, body: {ethaddress}}) => ({pubkey, ethaddress}),
+        schema: {
+          params: {pubkey: Schema.StringRequired},
+          body: Schema.Object,
+        },
       }),
-      parseReqJson: ({params: {pubkey}, body: {builder_boost_factor}}) => ({
-        pubkey,
-        builderBoostFactor: BigInt(builder_boost_factor),
-      }),
-      schema: {
-        params: {pubkey: Schema.StringRequired},
-        body: Schema.Object,
-      },
-    }),
-    resp: EmptyResponseCodec,
-  },
-  deleteBuilderBoostFactor: {
-    url: "/eth/v1/validator/{pubkey}/builder_boost_factor",
-    method: "DELETE",
-    req: {
-      writeReq: ({pubkey}) => ({params: {pubkey}}),
-      parseReq: ({params: {pubkey}}) => ({pubkey}),
-      schema: {
-        params: {pubkey: Schema.StringRequired},
-      },
+      resp: EmptyResponseCodec,
     },
-    resp: EmptyResponseCodec,
-  },
+    deleteFeeRecipient: {
+      url: "/eth/v1/validator/{pubkey}/feerecipient",
+      method: "DELETE",
+      req: {
+        writeReq: ({pubkey}) => ({params: {pubkey}}),
+        parseReq: ({params: {pubkey}}) => ({pubkey}),
+        schema: {
+          params: {pubkey: Schema.StringRequired},
+        },
+      },
+      resp: EmptyResponseCodec,
+    },
 
-  signVoluntaryExit: {
-    url: "/eth/v1/validator/{pubkey}/voluntary_exit",
-    method: "POST",
-    req: {
-      writeReq: ({pubkey, epoch}) => ({params: {pubkey}, query: {epoch}}),
-      parseReq: ({params: {pubkey}, query: {epoch}}) => ({pubkey, epoch}),
-      schema: {
-        params: {pubkey: Schema.StringRequired},
-        query: {epoch: Schema.Uint},
+    getGraffiti: {
+      url: "/eth/v1/validator/{pubkey}/graffiti",
+      method: "GET",
+      req: {
+        writeReq: ({pubkey}) => ({params: {pubkey}}),
+        parseReq: ({params: {pubkey}}) => ({pubkey}),
+        schema: {
+          params: {pubkey: Schema.StringRequired},
+        },
+      },
+      resp: {
+        onlySupport: WireFormat.json,
+        data: GraffitiDataType,
+        meta: EmptyMetaCodec,
       },
     },
-    resp: {
-      data: ssz.phase0.SignedVoluntaryExit,
-      meta: EmptyMetaCodec,
+    setGraffiti: {
+      url: "/eth/v1/validator/{pubkey}/graffiti",
+      method: "POST",
+      req: JsonOnlyReq({
+        writeReqJson: ({pubkey, graffiti}) => ({params: {pubkey}, body: {graffiti}}),
+        parseReqJson: ({params: {pubkey}, body: {graffiti}}) => ({pubkey, graffiti}),
+        schema: {
+          params: {pubkey: Schema.StringRequired},
+          body: Schema.Object,
+        },
+      }),
+      resp: EmptyResponseCodec,
     },
-  },
-};
+    deleteGraffiti: {
+      url: "/eth/v1/validator/{pubkey}/graffiti",
+      method: "DELETE",
+      req: {
+        writeReq: ({pubkey}) => ({params: {pubkey}}),
+        parseReq: ({params: {pubkey}}) => ({pubkey}),
+        schema: {
+          params: {pubkey: Schema.StringRequired},
+        },
+      },
+      resp: EmptyResponseCodec,
+    },
+
+    getGasLimit: {
+      url: "/eth/v1/validator/{pubkey}/gas_limit",
+      method: "GET",
+      req: {
+        writeReq: ({pubkey}) => ({params: {pubkey}}),
+        parseReq: ({params: {pubkey}}) => ({pubkey}),
+        schema: {
+          params: {pubkey: Schema.StringRequired},
+        },
+      },
+      resp: {
+        onlySupport: WireFormat.json,
+        data: GasLimitDataType,
+        meta: EmptyMetaCodec,
+      },
+    },
+    setGasLimit: {
+      url: "/eth/v1/validator/{pubkey}/gas_limit",
+      method: "POST",
+      req: JsonOnlyReq({
+        writeReqJson: ({pubkey, gasLimit}) => ({params: {pubkey}, body: {gas_limit: gasLimit.toString(10)}}),
+        parseReqJson: ({params: {pubkey}, body: {gas_limit}}) => ({pubkey, gasLimit: parseGasLimit(gas_limit)}),
+        schema: {
+          params: {pubkey: Schema.StringRequired},
+          body: Schema.Object,
+        },
+      }),
+      resp: EmptyResponseCodec,
+    },
+    deleteGasLimit: {
+      url: "/eth/v1/validator/{pubkey}/gas_limit",
+      method: "DELETE",
+      req: {
+        writeReq: ({pubkey}) => ({params: {pubkey}}),
+        parseReq: ({params: {pubkey}}) => ({pubkey}),
+        schema: {
+          params: {pubkey: Schema.StringRequired},
+        },
+      },
+      resp: EmptyResponseCodec,
+    },
+
+    getBuilderBoostFactor: {
+      url: "/eth/v1/validator/{pubkey}/builder_boost_factor",
+      method: "GET",
+      req: {
+        writeReq: ({pubkey}) => ({params: {pubkey}}),
+        parseReq: ({params: {pubkey}}) => ({pubkey}),
+        schema: {
+          params: {pubkey: Schema.StringRequired},
+        },
+      },
+      resp: {
+        onlySupport: WireFormat.json,
+        data: BuilderBoostFactorDataType,
+        meta: EmptyMetaCodec,
+      },
+    },
+    setBuilderBoostFactor: {
+      url: "/eth/v1/validator/{pubkey}/builder_boost_factor",
+      method: "POST",
+      req: JsonOnlyReq({
+        writeReqJson: ({pubkey, builderBoostFactor}) => ({
+          params: {pubkey},
+          body: {builder_boost_factor: builderBoostFactor.toString(10)},
+        }),
+        parseReqJson: ({params: {pubkey}, body: {builder_boost_factor}}) => ({
+          pubkey,
+          builderBoostFactor: BigInt(builder_boost_factor),
+        }),
+        schema: {
+          params: {pubkey: Schema.StringRequired},
+          body: Schema.Object,
+        },
+      }),
+      resp: EmptyResponseCodec,
+    },
+    deleteBuilderBoostFactor: {
+      url: "/eth/v1/validator/{pubkey}/builder_boost_factor",
+      method: "DELETE",
+      req: {
+        writeReq: ({pubkey}) => ({params: {pubkey}}),
+        parseReq: ({params: {pubkey}}) => ({pubkey}),
+        schema: {
+          params: {pubkey: Schema.StringRequired},
+        },
+      },
+      resp: EmptyResponseCodec,
+    },
+
+    signVoluntaryExit: {
+      url: "/eth/v1/validator/{pubkey}/voluntary_exit",
+      method: "POST",
+      req: {
+        writeReq: ({pubkey, epoch}) => ({params: {pubkey}, query: {epoch}}),
+        parseReq: ({params: {pubkey}, query: {epoch}}) => ({pubkey, epoch}),
+        schema: {
+          params: {pubkey: Schema.StringRequired},
+          query: {epoch: Schema.Uint},
+        },
+      },
+      resp: {
+        data: ssz.phase0.SignedVoluntaryExit,
+        meta: EmptyMetaCodec,
+      },
+    },
+  };
+}
 
 function parseGasLimit(gasLimitInput: string | number): number {
   if ((typeof gasLimitInput !== "string" && typeof gasLimitInput !== "number") || `${gasLimitInput}`.trim() === "") {

@@ -88,7 +88,7 @@ export type Endpoints = {
   >;
 };
 
-export function definitions(config: ChainForkConfig): RouteDefinitions<Endpoints> {
+export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoints> {
   // this beacon config will be stored here in this closure so fork digests don't need to be recomputed
   let beaconConfig: BeaconConfig | undefined;
 

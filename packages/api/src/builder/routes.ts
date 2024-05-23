@@ -69,10 +69,7 @@ export type Endpoints = {
   >;
 };
 
-/**
- * Define javascript values for each route
- */
-export function definitions(config: ChainForkConfig): RouteDefinitions<Endpoints> {
+export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoints> {
   return {
     status: {
       url: "/eth/v1/builder/status",

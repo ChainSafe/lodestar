@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {ContainerType, fromHexString, toHexString, Type, ValueOf} from "@chainsafe/ssz";
+import {ChainForkConfig} from "@lodestar/config";
 import {isForkBlobs} from "@lodestar/params";
 import {
   allForks,
@@ -566,450 +567,449 @@ export type Endpoints = {
   >;
 };
 
-/**
- * Define javascript values for each route
- */
-export const definitions: RouteDefinitions<Endpoints> = {
-  getAttesterDuties: {
-    url: "/eth/v1/validator/duties/attester/{epoch}",
-    method: "POST",
-    req: {
-      writeReqJson: ({epoch, indices}) => ({params: {epoch}, body: ValidatorIndicesType.toJson(indices)}),
-      parseReqJson: ({params, body}) => ({epoch: params.epoch, indices: ValidatorIndicesType.fromJson(body)}),
-      writeReqSsz: ({epoch, indices}) => ({params: {epoch}, body: ValidatorIndicesType.serialize(indices)}),
-      parseReqSsz: ({params, body}) => ({epoch: params.epoch, indices: ValidatorIndicesType.deserialize(body)}),
-      schema: {
-        params: {epoch: Schema.UintRequired},
-        body: Schema.StringArray,
-      },
-    },
-    resp: {
-      data: AttesterDutyListType,
-      meta: ExecutionOptimisticAndDependentRootCodec,
-    },
-  },
-  getProposerDuties: {
-    url: "/eth/v1/validator/duties/proposer/{epoch}",
-    method: "GET",
-    req: {
-      writeReq: ({epoch}) => ({params: {epoch}}),
-      parseReq: ({params}) => ({epoch: params.epoch}),
-      schema: {
-        params: {epoch: Schema.UintRequired},
-      },
-    },
-    resp: {
-      data: ProposerDutyListType,
-      meta: ExecutionOptimisticAndDependentRootCodec,
-    },
-  },
-  getSyncCommitteeDuties: {
-    url: "/eth/v1/validator/duties/sync/{epoch}",
-    method: "POST",
-    req: {
-      writeReqJson: ({epoch, indices}) => ({params: {epoch}, body: ValidatorIndicesType.toJson(indices)}),
-      parseReqJson: ({params, body}) => ({epoch: params.epoch, indices: ValidatorIndicesType.fromJson(body)}),
-      writeReqSsz: ({epoch, indices}) => ({params: {epoch}, body: ValidatorIndicesType.serialize(indices)}),
-      parseReqSsz: ({params, body}) => ({epoch: params.epoch, indices: ValidatorIndicesType.deserialize(body)}),
-      schema: {
-        params: {epoch: Schema.UintRequired},
-        body: Schema.StringArray,
-      },
-    },
-    resp: {
-      data: SyncDutyListType,
-      meta: ExecutionOptimisticCodec,
-    },
-  },
-  produceBlock: {
-    url: "/eth/v1/validator/blocks/{slot}",
-    method: "GET",
-    req: {
-      writeReq: ({slot, randaoReveal, graffiti}) => ({
-        params: {slot},
-        query: {randao_reveal: toHexString(randaoReveal), graffiti: toGraffitiHex(graffiti)},
-      }),
-      parseReq: ({params, query}) => ({
-        slot: params.slot,
-        randaoReveal: fromHexString(query.randao_reveal),
-        graffiti: fromGraffitiHex(query.graffiti),
-      }),
-      schema: {
-        params: {slot: Schema.UintRequired},
-        query: {
-          randao_reveal: Schema.StringRequired,
-          graffiti: Schema.String,
+export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpoints> {
+  return {
+    getAttesterDuties: {
+      url: "/eth/v1/validator/duties/attester/{epoch}",
+      method: "POST",
+      req: {
+        writeReqJson: ({epoch, indices}) => ({params: {epoch}, body: ValidatorIndicesType.toJson(indices)}),
+        parseReqJson: ({params, body}) => ({epoch: params.epoch, indices: ValidatorIndicesType.fromJson(body)}),
+        writeReqSsz: ({epoch, indices}) => ({params: {epoch}, body: ValidatorIndicesType.serialize(indices)}),
+        parseReqSsz: ({params, body}) => ({epoch: params.epoch, indices: ValidatorIndicesType.deserialize(body)}),
+        schema: {
+          params: {epoch: Schema.UintRequired},
+          body: Schema.StringArray,
         },
       },
-    },
-    resp: {
-      data: WithVersion((fork) => ssz[fork].BeaconBlock),
-      meta: VersionCodec,
-    },
-  },
-  produceBlockV2: {
-    url: "/eth/v2/validator/blocks/{slot}",
-    method: "GET",
-    req: {
-      writeReq: ({slot, randaoReveal, graffiti, feeRecipient, builderSelection, strictFeeRecipientCheck}) => ({
-        params: {slot},
-        query: {
-          randao_reveal: toHexString(randaoReveal),
-          graffiti: toGraffitiHex(graffiti),
-          fee_recipient: feeRecipient,
-          builder_selection: builderSelection,
-          strict_fee_recipient_check: strictFeeRecipientCheck,
-        },
-      }),
-      parseReq: ({params, query}) => ({
-        slot: params.slot,
-        randaoReveal: fromHexString(query.randao_reveal),
-        graffiti: fromGraffitiHex(query.graffiti),
-        feeRecipient: query.fee_recipient,
-        builderSelection: query.builder_selection as BuilderSelection,
-        strictFeeRecipientCheck: query.strict_fee_recipient_check,
-      }),
-      schema: {
-        params: {slot: Schema.UintRequired},
-        query: {
-          randao_reveal: Schema.StringRequired,
-          graffiti: Schema.String,
-          fee_recipient: Schema.String,
-          builder_selection: Schema.String,
-          strict_fee_recipient_check: Schema.Boolean,
-        },
+      resp: {
+        data: AttesterDutyListType,
+        meta: ExecutionOptimisticAndDependentRootCodec,
       },
     },
-    resp: {
-      data: WithVersion(
-        (fork) =>
-          (isForkBlobs(fork) ? BlockContentsType : ssz[fork].BeaconBlock) as Type<allForks.BeaconBlockOrContents>
-      ),
-      meta: VersionCodec,
-    },
-  },
-  produceBlockV3: {
-    url: "/eth/v3/validator/blocks/{slot}",
-    method: "GET",
-    req: {
-      writeReq: ({
-        slot,
-        randaoReveal,
-        graffiti,
-        skipRandaoVerification,
-        feeRecipient,
-        builderSelection,
-        builderBoostFactor,
-        strictFeeRecipientCheck,
-        blindedLocal,
-      }) => ({
-        params: {slot},
-        query: {
-          randao_reveal: toHexString(randaoReveal),
-          graffiti: toGraffitiHex(graffiti),
-          skip_randao_verification: writeSkipRandaoVerification(skipRandaoVerification),
-          fee_recipient: feeRecipient,
-          builder_selection: builderSelection,
-          builder_boost_factor: builderBoostFactor?.toString(),
-          strict_fee_recipient_check: strictFeeRecipientCheck,
-          blinded_local: blindedLocal,
-        },
-      }),
-      parseReq: ({params, query}) => ({
-        slot: params.slot,
-        randaoReveal: fromHexString(query.randao_reveal),
-        graffiti: fromGraffitiHex(query.graffiti),
-        skipRandaoVerification: parseSkipRandaoVerification(query.skip_randao_verification),
-        feeRecipient: query.fee_recipient,
-        builderSelection: query.builder_selection as BuilderSelection,
-        builderBoostFactor: parseBuilderBoostFactor(query.builder_boost_factor),
-        strictFeeRecipientCheck: query.strict_fee_recipient_check,
-        blindedLocal: query.blinded_local,
-      }),
-      schema: {
-        params: {slot: Schema.UintRequired},
-        query: {
-          randao_reveal: Schema.StringRequired,
-          graffiti: Schema.String,
-          skip_randao_verification: Schema.String,
-          fee_recipient: Schema.String,
-          builder_selection: Schema.String,
-          builder_boost_factor: Schema.String,
-          strict_fee_recipient_check: Schema.Boolean,
-          blinded_local: Schema.Boolean,
+    getProposerDuties: {
+      url: "/eth/v1/validator/duties/proposer/{epoch}",
+      method: "GET",
+      req: {
+        writeReq: ({epoch}) => ({params: {epoch}}),
+        parseReq: ({params}) => ({epoch: params.epoch}),
+        schema: {
+          params: {epoch: Schema.UintRequired},
         },
       },
+      resp: {
+        data: ProposerDutyListType,
+        meta: ExecutionOptimisticAndDependentRootCodec,
+      },
     },
-    resp: {
-      data: WithMeta(
-        ({version, executionPayloadBlinded}) =>
-          (executionPayloadBlinded
-            ? getBlindedForkTypes(version).BeaconBlock
-            : isForkBlobs(version)
-              ? BlockContentsType
-              : ssz[version].BeaconBlock) as Type<allForks.FullOrBlindedBeaconBlockOrContents>
-      ),
-      meta: {
-        toJson: (meta) => ({
-          ...ProduceBlockV3MetaType.toJson(meta),
-          execution_payload_source: meta.executionPayloadSource,
+    getSyncCommitteeDuties: {
+      url: "/eth/v1/validator/duties/sync/{epoch}",
+      method: "POST",
+      req: {
+        writeReqJson: ({epoch, indices}) => ({params: {epoch}, body: ValidatorIndicesType.toJson(indices)}),
+        parseReqJson: ({params, body}) => ({epoch: params.epoch, indices: ValidatorIndicesType.fromJson(body)}),
+        writeReqSsz: ({epoch, indices}) => ({params: {epoch}, body: ValidatorIndicesType.serialize(indices)}),
+        parseReqSsz: ({params, body}) => ({epoch: params.epoch, indices: ValidatorIndicesType.deserialize(body)}),
+        schema: {
+          params: {epoch: Schema.UintRequired},
+          body: Schema.StringArray,
+        },
+      },
+      resp: {
+        data: SyncDutyListType,
+        meta: ExecutionOptimisticCodec,
+      },
+    },
+    produceBlock: {
+      url: "/eth/v1/validator/blocks/{slot}",
+      method: "GET",
+      req: {
+        writeReq: ({slot, randaoReveal, graffiti}) => ({
+          params: {slot},
+          query: {randao_reveal: toHexString(randaoReveal), graffiti: toGraffitiHex(graffiti)},
         }),
-        fromJson: (val) => {
-          const {executionPayloadBlinded, ...meta} = ProduceBlockV3MetaType.fromJson(val);
-
-          // Extract source from the data and assign defaults in the spec compliant manner if not present
-          const executionPayloadSource =
-            (val as {execution_payload_source: ProducedBlockSource}).execution_payload_source ??
-            (executionPayloadBlinded === true ? ProducedBlockSource.builder : ProducedBlockSource.engine);
-
-          return {...meta, executionPayloadBlinded, executionPayloadSource};
-        },
-        toHeadersObject: (meta) => ({
-          [MetaHeader.Version]: meta.version,
-          [MetaHeader.ExecutionPayloadBlinded]: meta.executionPayloadBlinded.toString(),
-          [MetaHeader.ExecutionPayloadSource]: meta.executionPayloadSource.toString(),
-          [MetaHeader.ExecutionPayloadValue]: meta.executionPayloadValue.toString(),
-          [MetaHeader.ConsensusBlockValue]: meta.consensusBlockValue.toString(),
+        parseReq: ({params, query}) => ({
+          slot: params.slot,
+          randaoReveal: fromHexString(query.randao_reveal),
+          graffiti: fromGraffitiHex(query.graffiti),
         }),
-        fromHeaders: (headers) => {
-          const executionPayloadBlinded = toBoolean(headers.getRequired(MetaHeader.ExecutionPayloadBlinded));
+        schema: {
+          params: {slot: Schema.UintRequired},
+          query: {
+            randao_reveal: Schema.StringRequired,
+            graffiti: Schema.String,
+          },
+        },
+      },
+      resp: {
+        data: WithVersion((fork) => ssz[fork].BeaconBlock),
+        meta: VersionCodec,
+      },
+    },
+    produceBlockV2: {
+      url: "/eth/v2/validator/blocks/{slot}",
+      method: "GET",
+      req: {
+        writeReq: ({slot, randaoReveal, graffiti, feeRecipient, builderSelection, strictFeeRecipientCheck}) => ({
+          params: {slot},
+          query: {
+            randao_reveal: toHexString(randaoReveal),
+            graffiti: toGraffitiHex(graffiti),
+            fee_recipient: feeRecipient,
+            builder_selection: builderSelection,
+            strict_fee_recipient_check: strictFeeRecipientCheck,
+          },
+        }),
+        parseReq: ({params, query}) => ({
+          slot: params.slot,
+          randaoReveal: fromHexString(query.randao_reveal),
+          graffiti: fromGraffitiHex(query.graffiti),
+          feeRecipient: query.fee_recipient,
+          builderSelection: query.builder_selection as BuilderSelection,
+          strictFeeRecipientCheck: query.strict_fee_recipient_check,
+        }),
+        schema: {
+          params: {slot: Schema.UintRequired},
+          query: {
+            randao_reveal: Schema.StringRequired,
+            graffiti: Schema.String,
+            fee_recipient: Schema.String,
+            builder_selection: Schema.String,
+            strict_fee_recipient_check: Schema.Boolean,
+          },
+        },
+      },
+      resp: {
+        data: WithVersion(
+          (fork) =>
+            (isForkBlobs(fork) ? BlockContentsType : ssz[fork].BeaconBlock) as Type<allForks.BeaconBlockOrContents>
+        ),
+        meta: VersionCodec,
+      },
+    },
+    produceBlockV3: {
+      url: "/eth/v3/validator/blocks/{slot}",
+      method: "GET",
+      req: {
+        writeReq: ({
+          slot,
+          randaoReveal,
+          graffiti,
+          skipRandaoVerification,
+          feeRecipient,
+          builderSelection,
+          builderBoostFactor,
+          strictFeeRecipientCheck,
+          blindedLocal,
+        }) => ({
+          params: {slot},
+          query: {
+            randao_reveal: toHexString(randaoReveal),
+            graffiti: toGraffitiHex(graffiti),
+            skip_randao_verification: writeSkipRandaoVerification(skipRandaoVerification),
+            fee_recipient: feeRecipient,
+            builder_selection: builderSelection,
+            builder_boost_factor: builderBoostFactor?.toString(),
+            strict_fee_recipient_check: strictFeeRecipientCheck,
+            blinded_local: blindedLocal,
+          },
+        }),
+        parseReq: ({params, query}) => ({
+          slot: params.slot,
+          randaoReveal: fromHexString(query.randao_reveal),
+          graffiti: fromGraffitiHex(query.graffiti),
+          skipRandaoVerification: parseSkipRandaoVerification(query.skip_randao_verification),
+          feeRecipient: query.fee_recipient,
+          builderSelection: query.builder_selection as BuilderSelection,
+          builderBoostFactor: parseBuilderBoostFactor(query.builder_boost_factor),
+          strictFeeRecipientCheck: query.strict_fee_recipient_check,
+          blindedLocal: query.blinded_local,
+        }),
+        schema: {
+          params: {slot: Schema.UintRequired},
+          query: {
+            randao_reveal: Schema.StringRequired,
+            graffiti: Schema.String,
+            skip_randao_verification: Schema.String,
+            fee_recipient: Schema.String,
+            builder_selection: Schema.String,
+            builder_boost_factor: Schema.String,
+            strict_fee_recipient_check: Schema.Boolean,
+            blinded_local: Schema.Boolean,
+          },
+        },
+      },
+      resp: {
+        data: WithMeta(
+          ({version, executionPayloadBlinded}) =>
+            (executionPayloadBlinded
+              ? getBlindedForkTypes(version).BeaconBlock
+              : isForkBlobs(version)
+                ? BlockContentsType
+                : ssz[version].BeaconBlock) as Type<allForks.FullOrBlindedBeaconBlockOrContents>
+        ),
+        meta: {
+          toJson: (meta) => ({
+            ...ProduceBlockV3MetaType.toJson(meta),
+            execution_payload_source: meta.executionPayloadSource,
+          }),
+          fromJson: (val) => {
+            const {executionPayloadBlinded, ...meta} = ProduceBlockV3MetaType.fromJson(val);
 
-          // Extract source from the headers and assign defaults in a spec compliant manner if not present
-          const executionPayloadSource =
-            (headers.get(MetaHeader.ExecutionPayloadSource) as ProducedBlockSource) ??
-            (executionPayloadBlinded === true ? ProducedBlockSource.builder : ProducedBlockSource.engine);
+            // Extract source from the data and assign defaults in the spec compliant manner if not present
+            const executionPayloadSource =
+              (val as {execution_payload_source: ProducedBlockSource}).execution_payload_source ??
+              (executionPayloadBlinded === true ? ProducedBlockSource.builder : ProducedBlockSource.engine);
 
-          return {
-            version: toForkName(headers.getRequired(MetaHeader.Version)),
-            executionPayloadBlinded,
-            executionPayloadSource,
-            executionPayloadValue: BigInt(headers.getRequired(MetaHeader.ExecutionPayloadValue)),
-            consensusBlockValue: BigInt(headers.getRequired(MetaHeader.ConsensusBlockValue)),
-          };
+            return {...meta, executionPayloadBlinded, executionPayloadSource};
+          },
+          toHeadersObject: (meta) => ({
+            [MetaHeader.Version]: meta.version,
+            [MetaHeader.ExecutionPayloadBlinded]: meta.executionPayloadBlinded.toString(),
+            [MetaHeader.ExecutionPayloadSource]: meta.executionPayloadSource.toString(),
+            [MetaHeader.ExecutionPayloadValue]: meta.executionPayloadValue.toString(),
+            [MetaHeader.ConsensusBlockValue]: meta.consensusBlockValue.toString(),
+          }),
+          fromHeaders: (headers) => {
+            const executionPayloadBlinded = toBoolean(headers.getRequired(MetaHeader.ExecutionPayloadBlinded));
+
+            // Extract source from the headers and assign defaults in a spec compliant manner if not present
+            const executionPayloadSource =
+              (headers.get(MetaHeader.ExecutionPayloadSource) as ProducedBlockSource) ??
+              (executionPayloadBlinded === true ? ProducedBlockSource.builder : ProducedBlockSource.engine);
+
+            return {
+              version: toForkName(headers.getRequired(MetaHeader.Version)),
+              executionPayloadBlinded,
+              executionPayloadSource,
+              executionPayloadValue: BigInt(headers.getRequired(MetaHeader.ExecutionPayloadValue)),
+              consensusBlockValue: BigInt(headers.getRequired(MetaHeader.ConsensusBlockValue)),
+            };
+          },
         },
       },
     },
-  },
-  produceBlindedBlock: {
-    url: "/eth/v1/validator/blinded_blocks/{slot}",
-    method: "GET",
-    req: {
-      writeReq: ({slot, randaoReveal, graffiti}) => ({
-        params: {slot},
-        query: {randao_reveal: toHexString(randaoReveal), graffiti: toGraffitiHex(graffiti)},
-      }),
-      parseReq: ({params, query}) => ({
-        slot: params.slot,
-        randaoReveal: fromHexString(query.randao_reveal),
-        graffiti: fromGraffitiHex(query.graffiti),
-      }),
-      schema: {
-        params: {slot: Schema.UintRequired},
-        query: {
-          randao_reveal: Schema.StringRequired,
-          graffiti: Schema.String,
+    produceBlindedBlock: {
+      url: "/eth/v1/validator/blinded_blocks/{slot}",
+      method: "GET",
+      req: {
+        writeReq: ({slot, randaoReveal, graffiti}) => ({
+          params: {slot},
+          query: {randao_reveal: toHexString(randaoReveal), graffiti: toGraffitiHex(graffiti)},
+        }),
+        parseReq: ({params, query}) => ({
+          slot: params.slot,
+          randaoReveal: fromHexString(query.randao_reveal),
+          graffiti: fromGraffitiHex(query.graffiti),
+        }),
+        schema: {
+          params: {slot: Schema.UintRequired},
+          query: {
+            randao_reveal: Schema.StringRequired,
+            graffiti: Schema.String,
+          },
         },
       },
-    },
-    resp: {
-      data: WithVersion((fork) => getBlindedForkTypes(fork).BeaconBlock),
-      meta: VersionCodec,
-    },
-  },
-  produceAttestationData: {
-    url: "/eth/v1/validator/attestation_data",
-    method: "GET",
-    req: {
-      writeReq: ({committeeIndex, slot}) => ({query: {slot, committee_index: committeeIndex}}),
-      parseReq: ({query}) => ({committeeIndex: query.committee_index, slot: query.slot}),
-      schema: {
-        query: {slot: Schema.UintRequired, committee_index: Schema.UintRequired},
+      resp: {
+        data: WithVersion((fork) => getBlindedForkTypes(fork).BeaconBlock),
+        meta: VersionCodec,
       },
     },
-    resp: {
-      data: ssz.phase0.AttestationData,
-      meta: EmptyMetaCodec,
-    },
-  },
-  produceSyncCommitteeContribution: {
-    url: "/eth/v1/validator/sync_committee_contribution",
-    method: "GET",
-    req: {
-      writeReq: ({slot, subcommitteeIndex, beaconBlockRoot}) => ({
-        query: {slot, subcommittee_index: subcommitteeIndex, beacon_block_root: toHexString(beaconBlockRoot)},
-      }),
-      parseReq: ({query}) => ({
-        slot: query.slot,
-        subcommitteeIndex: query.subcommittee_index,
-        beaconBlockRoot: fromHexString(query.beacon_block_root),
-      }),
-      schema: {
-        query: {
-          slot: Schema.UintRequired,
-          subcommittee_index: Schema.UintRequired,
-          beacon_block_root: Schema.StringRequired,
+    produceAttestationData: {
+      url: "/eth/v1/validator/attestation_data",
+      method: "GET",
+      req: {
+        writeReq: ({committeeIndex, slot}) => ({query: {slot, committee_index: committeeIndex}}),
+        parseReq: ({query}) => ({committeeIndex: query.committee_index, slot: query.slot}),
+        schema: {
+          query: {slot: Schema.UintRequired, committee_index: Schema.UintRequired},
         },
       },
+      resp: {
+        data: ssz.phase0.AttestationData,
+        meta: EmptyMetaCodec,
+      },
     },
-    resp: {
-      data: ssz.altair.SyncCommitteeContribution,
-      meta: EmptyMetaCodec,
+    produceSyncCommitteeContribution: {
+      url: "/eth/v1/validator/sync_committee_contribution",
+      method: "GET",
+      req: {
+        writeReq: ({slot, subcommitteeIndex, beaconBlockRoot}) => ({
+          query: {slot, subcommittee_index: subcommitteeIndex, beacon_block_root: toHexString(beaconBlockRoot)},
+        }),
+        parseReq: ({query}) => ({
+          slot: query.slot,
+          subcommitteeIndex: query.subcommittee_index,
+          beaconBlockRoot: fromHexString(query.beacon_block_root),
+        }),
+        schema: {
+          query: {
+            slot: Schema.UintRequired,
+            subcommittee_index: Schema.UintRequired,
+            beacon_block_root: Schema.StringRequired,
+          },
+        },
+      },
+      resp: {
+        data: ssz.altair.SyncCommitteeContribution,
+        meta: EmptyMetaCodec,
+      },
     },
-  },
-  getAggregatedAttestation: {
-    url: "/eth/v1/validator/aggregate_attestation",
-    method: "GET",
-    req: {
-      writeReq: ({attestationDataRoot, slot}) => ({
-        query: {attestation_data_root: toHexString(attestationDataRoot), slot},
+    getAggregatedAttestation: {
+      url: "/eth/v1/validator/aggregate_attestation",
+      method: "GET",
+      req: {
+        writeReq: ({attestationDataRoot, slot}) => ({
+          query: {attestation_data_root: toHexString(attestationDataRoot), slot},
+        }),
+        parseReq: ({query}) => ({attestationDataRoot: fromHexString(query.attestation_data_root), slot: query.slot}),
+        schema: {
+          query: {attestation_data_root: Schema.StringRequired, slot: Schema.UintRequired},
+        },
+      },
+      resp: {
+        data: ssz.phase0.Attestation,
+        meta: EmptyMetaCodec,
+      },
+    },
+    publishAggregateAndProofs: {
+      url: "/eth/v1/validator/aggregate_and_proofs",
+      method: "POST",
+      req: {
+        writeReqJson: ({signedAggregateAndProofs}) => ({
+          body: SignedAggregateAndProofListType.toJson(signedAggregateAndProofs),
+        }),
+        parseReqJson: ({body}) => ({signedAggregateAndProofs: SignedAggregateAndProofListType.fromJson(body)}),
+        writeReqSsz: ({signedAggregateAndProofs}) => ({
+          body: SignedAggregateAndProofListType.serialize(signedAggregateAndProofs),
+        }),
+        parseReqSsz: ({body}) => ({signedAggregateAndProofs: SignedAggregateAndProofListType.deserialize(body)}),
+        schema: {
+          body: Schema.ObjectArray,
+        },
+      },
+      resp: EmptyResponseCodec,
+    },
+    publishContributionAndProofs: {
+      url: "/eth/v1/validator/contribution_and_proofs",
+      method: "POST",
+      req: {
+        writeReqJson: ({contributionAndProofs}) => ({
+          body: SignedContributionAndProofListType.toJson(contributionAndProofs),
+        }),
+        parseReqJson: ({body}) => ({contributionAndProofs: SignedContributionAndProofListType.fromJson(body)}),
+        writeReqSsz: ({contributionAndProofs}) => ({
+          body: SignedContributionAndProofListType.serialize(contributionAndProofs),
+        }),
+        parseReqSsz: ({body}) => ({contributionAndProofs: SignedContributionAndProofListType.deserialize(body)}),
+        schema: {
+          body: Schema.ObjectArray,
+        },
+      },
+      resp: EmptyResponseCodec,
+    },
+    prepareBeaconCommitteeSubnet: {
+      url: "/eth/v1/validator/beacon_committee_subscriptions",
+      method: "POST",
+      req: {
+        writeReqJson: ({subscriptions}) => ({body: BeaconCommitteeSubscriptionListType.toJson(subscriptions)}),
+        parseReqJson: ({body}) => ({subscriptions: BeaconCommitteeSubscriptionListType.fromJson(body)}),
+        writeReqSsz: ({subscriptions}) => ({body: BeaconCommitteeSubscriptionListType.serialize(subscriptions)}),
+        parseReqSsz: ({body}) => ({subscriptions: BeaconCommitteeSubscriptionListType.deserialize(body)}),
+        schema: {body: Schema.ObjectArray},
+      },
+      resp: EmptyResponseCodec,
+    },
+    prepareSyncCommitteeSubnets: {
+      url: "/eth/v1/validator/sync_committee_subscriptions",
+      method: "POST",
+      req: {
+        writeReqJson: ({subscriptions}) => ({body: SyncCommitteeSubscriptionListType.toJson(subscriptions)}),
+        parseReqJson: ({body}) => ({subscriptions: SyncCommitteeSubscriptionListType.fromJson(body)}),
+        writeReqSsz: ({subscriptions}) => ({body: SyncCommitteeSubscriptionListType.serialize(subscriptions)}),
+        parseReqSsz: ({body}) => ({subscriptions: SyncCommitteeSubscriptionListType.deserialize(body)}),
+        schema: {body: Schema.ObjectArray},
+      },
+      resp: EmptyResponseCodec,
+    },
+    prepareBeaconProposer: {
+      url: "/eth/v1/validator/prepare_beacon_proposer",
+      method: "POST",
+      req: JsonOnlyReq({
+        writeReqJson: ({proposers}) => ({body: ProposerPreparationDataListType.toJson(proposers)}),
+        parseReqJson: ({body}) => ({proposers: ProposerPreparationDataListType.fromJson(body)}),
+        schema: {body: Schema.ObjectArray},
       }),
-      parseReq: ({query}) => ({attestationDataRoot: fromHexString(query.attestation_data_root), slot: query.slot}),
-      schema: {
-        query: {attestation_data_root: Schema.StringRequired, slot: Schema.UintRequired},
+      resp: EmptyResponseCodec,
+    },
+    submitBeaconCommitteeSelections: {
+      url: "/eth/v1/validator/beacon_committee_selections",
+      method: "POST",
+      req: {
+        writeReqJson: ({selections}) => ({body: BeaconCommitteeSelectionListType.toJson(selections)}),
+        parseReqJson: ({body}) => ({selections: BeaconCommitteeSelectionListType.fromJson(body)}),
+        writeReqSsz: ({selections}) => ({body: BeaconCommitteeSelectionListType.serialize(selections)}),
+        parseReqSsz: ({body}) => ({selections: BeaconCommitteeSelectionListType.deserialize(body)}),
+        schema: {
+          body: Schema.ObjectArray,
+        },
+      },
+      resp: {
+        data: BeaconCommitteeSelectionListType,
+        meta: EmptyMetaCodec,
       },
     },
-    resp: {
-      data: ssz.phase0.Attestation,
-      meta: EmptyMetaCodec,
-    },
-  },
-  publishAggregateAndProofs: {
-    url: "/eth/v1/validator/aggregate_and_proofs",
-    method: "POST",
-    req: {
-      writeReqJson: ({signedAggregateAndProofs}) => ({
-        body: SignedAggregateAndProofListType.toJson(signedAggregateAndProofs),
-      }),
-      parseReqJson: ({body}) => ({signedAggregateAndProofs: SignedAggregateAndProofListType.fromJson(body)}),
-      writeReqSsz: ({signedAggregateAndProofs}) => ({
-        body: SignedAggregateAndProofListType.serialize(signedAggregateAndProofs),
-      }),
-      parseReqSsz: ({body}) => ({signedAggregateAndProofs: SignedAggregateAndProofListType.deserialize(body)}),
-      schema: {
-        body: Schema.ObjectArray,
+    submitSyncCommitteeSelections: {
+      url: "/eth/v1/validator/sync_committee_selections",
+      method: "POST",
+      req: {
+        writeReqJson: ({selections}) => ({body: SyncCommitteeSelectionListType.toJson(selections)}),
+        parseReqJson: ({body}) => ({selections: SyncCommitteeSelectionListType.fromJson(body)}),
+        writeReqSsz: ({selections}) => ({body: SyncCommitteeSelectionListType.serialize(selections)}),
+        parseReqSsz: ({body}) => ({selections: SyncCommitteeSelectionListType.deserialize(body)}),
+        schema: {
+          body: Schema.ObjectArray,
+        },
+      },
+      resp: {
+        data: SyncCommitteeSelectionListType,
+        meta: EmptyMetaCodec,
       },
     },
-    resp: EmptyResponseCodec,
-  },
-  publishContributionAndProofs: {
-    url: "/eth/v1/validator/contribution_and_proofs",
-    method: "POST",
-    req: {
-      writeReqJson: ({contributionAndProofs}) => ({
-        body: SignedContributionAndProofListType.toJson(contributionAndProofs),
-      }),
-      parseReqJson: ({body}) => ({contributionAndProofs: SignedContributionAndProofListType.fromJson(body)}),
-      writeReqSsz: ({contributionAndProofs}) => ({
-        body: SignedContributionAndProofListType.serialize(contributionAndProofs),
-      }),
-      parseReqSsz: ({body}) => ({contributionAndProofs: SignedContributionAndProofListType.deserialize(body)}),
-      schema: {
-        body: Schema.ObjectArray,
+    getLiveness: {
+      url: "/eth/v1/validator/liveness/{epoch}",
+      method: "POST",
+      req: {
+        writeReqJson: ({epoch, indices}) => ({params: {epoch}, body: ValidatorIndicesType.toJson(indices)}),
+        parseReqJson: ({params, body}) => ({epoch: params.epoch, indices: ValidatorIndicesType.fromJson(body)}),
+        writeReqSsz: ({epoch, indices}) => ({params: {epoch}, body: ValidatorIndicesType.serialize(indices)}),
+        parseReqSsz: ({params, body}) => ({epoch: params.epoch, indices: ValidatorIndicesType.deserialize(body)}),
+        schema: {
+          params: {epoch: Schema.UintRequired},
+          body: Schema.StringArray,
+        },
+      },
+      resp: {
+        data: LivenessResponseDataListType,
+        meta: EmptyMetaCodec,
       },
     },
-    resp: EmptyResponseCodec,
-  },
-  prepareBeaconCommitteeSubnet: {
-    url: "/eth/v1/validator/beacon_committee_subscriptions",
-    method: "POST",
-    req: {
-      writeReqJson: ({subscriptions}) => ({body: BeaconCommitteeSubscriptionListType.toJson(subscriptions)}),
-      parseReqJson: ({body}) => ({subscriptions: BeaconCommitteeSubscriptionListType.fromJson(body)}),
-      writeReqSsz: ({subscriptions}) => ({body: BeaconCommitteeSubscriptionListType.serialize(subscriptions)}),
-      parseReqSsz: ({body}) => ({subscriptions: BeaconCommitteeSubscriptionListType.deserialize(body)}),
-      schema: {body: Schema.ObjectArray},
-    },
-    resp: EmptyResponseCodec,
-  },
-  prepareSyncCommitteeSubnets: {
-    url: "/eth/v1/validator/sync_committee_subscriptions",
-    method: "POST",
-    req: {
-      writeReqJson: ({subscriptions}) => ({body: SyncCommitteeSubscriptionListType.toJson(subscriptions)}),
-      parseReqJson: ({body}) => ({subscriptions: SyncCommitteeSubscriptionListType.fromJson(body)}),
-      writeReqSsz: ({subscriptions}) => ({body: SyncCommitteeSubscriptionListType.serialize(subscriptions)}),
-      parseReqSsz: ({body}) => ({subscriptions: SyncCommitteeSubscriptionListType.deserialize(body)}),
-      schema: {body: Schema.ObjectArray},
-    },
-    resp: EmptyResponseCodec,
-  },
-  prepareBeaconProposer: {
-    url: "/eth/v1/validator/prepare_beacon_proposer",
-    method: "POST",
-    req: JsonOnlyReq({
-      writeReqJson: ({proposers}) => ({body: ProposerPreparationDataListType.toJson(proposers)}),
-      parseReqJson: ({body}) => ({proposers: ProposerPreparationDataListType.fromJson(body)}),
-      schema: {body: Schema.ObjectArray},
-    }),
-    resp: EmptyResponseCodec,
-  },
-  submitBeaconCommitteeSelections: {
-    url: "/eth/v1/validator/beacon_committee_selections",
-    method: "POST",
-    req: {
-      writeReqJson: ({selections}) => ({body: BeaconCommitteeSelectionListType.toJson(selections)}),
-      parseReqJson: ({body}) => ({selections: BeaconCommitteeSelectionListType.fromJson(body)}),
-      writeReqSsz: ({selections}) => ({body: BeaconCommitteeSelectionListType.serialize(selections)}),
-      parseReqSsz: ({body}) => ({selections: BeaconCommitteeSelectionListType.deserialize(body)}),
-      schema: {
-        body: Schema.ObjectArray,
+    registerValidator: {
+      url: "/eth/v1/validator/register_validator",
+      method: "POST",
+      req: {
+        writeReqJson: ({registrations}) => ({body: SignedValidatorRegistrationV1ListType.toJson(registrations)}),
+        parseReqJson: ({body}) => ({registrations: SignedValidatorRegistrationV1ListType.fromJson(body)}),
+        writeReqSsz: ({registrations}) => ({body: SignedValidatorRegistrationV1ListType.serialize(registrations)}),
+        parseReqSsz: ({body}) => ({registrations: SignedValidatorRegistrationV1ListType.deserialize(body)}),
+        schema: {
+          body: Schema.ObjectArray,
+        },
       },
+      resp: EmptyResponseCodec,
     },
-    resp: {
-      data: BeaconCommitteeSelectionListType,
-      meta: EmptyMetaCodec,
-    },
-  },
-  submitSyncCommitteeSelections: {
-    url: "/eth/v1/validator/sync_committee_selections",
-    method: "POST",
-    req: {
-      writeReqJson: ({selections}) => ({body: SyncCommitteeSelectionListType.toJson(selections)}),
-      parseReqJson: ({body}) => ({selections: SyncCommitteeSelectionListType.fromJson(body)}),
-      writeReqSsz: ({selections}) => ({body: SyncCommitteeSelectionListType.serialize(selections)}),
-      parseReqSsz: ({body}) => ({selections: SyncCommitteeSelectionListType.deserialize(body)}),
-      schema: {
-        body: Schema.ObjectArray,
-      },
-    },
-    resp: {
-      data: SyncCommitteeSelectionListType,
-      meta: EmptyMetaCodec,
-    },
-  },
-  getLiveness: {
-    url: "/eth/v1/validator/liveness/{epoch}",
-    method: "POST",
-    req: {
-      writeReqJson: ({epoch, indices}) => ({params: {epoch}, body: ValidatorIndicesType.toJson(indices)}),
-      parseReqJson: ({params, body}) => ({epoch: params.epoch, indices: ValidatorIndicesType.fromJson(body)}),
-      writeReqSsz: ({epoch, indices}) => ({params: {epoch}, body: ValidatorIndicesType.serialize(indices)}),
-      parseReqSsz: ({params, body}) => ({epoch: params.epoch, indices: ValidatorIndicesType.deserialize(body)}),
-      schema: {
-        params: {epoch: Schema.UintRequired},
-        body: Schema.StringArray,
-      },
-    },
-    resp: {
-      data: LivenessResponseDataListType,
-      meta: EmptyMetaCodec,
-    },
-  },
-  registerValidator: {
-    url: "/eth/v1/validator/register_validator",
-    method: "POST",
-    req: {
-      writeReqJson: ({registrations}) => ({body: SignedValidatorRegistrationV1ListType.toJson(registrations)}),
-      parseReqJson: ({body}) => ({registrations: SignedValidatorRegistrationV1ListType.fromJson(body)}),
-      writeReqSsz: ({registrations}) => ({body: SignedValidatorRegistrationV1ListType.serialize(registrations)}),
-      parseReqSsz: ({body}) => ({registrations: SignedValidatorRegistrationV1ListType.deserialize(body)}),
-      schema: {
-        body: Schema.ObjectArray,
-      },
-    },
-    resp: EmptyResponseCodec,
-  },
-};
+  };
+}
 
 function parseBuilderBoostFactor(builderBoostFactorInput?: string | number | bigint): bigint | undefined {
   return builderBoostFactorInput !== undefined ? BigInt(builderBoostFactorInput) : undefined;

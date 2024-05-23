@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {ContainerType, Type, ValueOf} from "@chainsafe/ssz";
+import {ChainForkConfig} from "@lodestar/config";
 import {allForks, ssz, StringType, phase0} from "@lodestar/types";
 import {
   ArrayOf,
@@ -145,65 +146,67 @@ export type Endpoints = {
   >;
 };
 
-export const definitions: RouteDefinitions<Endpoints> = {
-  getDebugChainHeads: {
-    url: "/eth/v1/debug/beacon/heads",
-    method: "GET",
-    req: EmptyRequestCodec,
-    resp: {
-      data: SlotRootListType,
-      meta: EmptyMetaCodec,
-      onlySupport: WireFormat.json,
-    },
-  },
-  getDebugChainHeadsV2: {
-    url: "/eth/v2/debug/beacon/heads",
-    method: "GET",
-    req: EmptyRequestCodec,
-    resp: {
-      data: SlotRootExecutionOptimisticListType,
-      meta: EmptyMetaCodec,
-      onlySupport: WireFormat.json,
-    },
-  },
-  getProtoArrayNodes: {
-    url: "/eth/v0/debug/forkchoice",
-    method: "GET",
-    req: EmptyRequestCodec,
-    resp: {
-      data: ProtoNodeResponseListType,
-      meta: EmptyMetaCodec,
-      onlySupport: WireFormat.json,
-    },
-  },
-  getState: {
-    url: "/eth/v1/debug/beacon/states/{state_id}",
-    method: "GET",
-    req: {
-      writeReq: ({stateId}) => ({params: {state_id: stateId.toString()}}),
-      parseReq: ({params}) => ({stateId: params.state_id}),
-      schema: {
-        params: {state_id: Schema.StringRequired},
+export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpoints> {
+  return {
+    getDebugChainHeads: {
+      url: "/eth/v1/debug/beacon/heads",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: {
+        data: SlotRootListType,
+        meta: EmptyMetaCodec,
+        onlySupport: WireFormat.json,
       },
     },
-    resp: {
-      data: ssz.phase0.BeaconState,
-      meta: ExecutionOptimisticAndFinalizedCodec,
-    },
-  },
-  getStateV2: {
-    url: "/eth/v2/debug/beacon/states/{state_id}",
-    method: "GET",
-    req: {
-      writeReq: ({stateId}) => ({params: {state_id: stateId.toString()}}),
-      parseReq: ({params}) => ({stateId: params.state_id}),
-      schema: {
-        params: {state_id: Schema.StringRequired},
+    getDebugChainHeadsV2: {
+      url: "/eth/v2/debug/beacon/heads",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: {
+        data: SlotRootExecutionOptimisticListType,
+        meta: EmptyMetaCodec,
+        onlySupport: WireFormat.json,
       },
     },
-    resp: {
-      data: WithVersion((fork) => ssz[fork].BeaconState as Type<allForks.BeaconState>),
-      meta: ExecutionOptimisticFinalizedAndVersionCodec,
+    getProtoArrayNodes: {
+      url: "/eth/v0/debug/forkchoice",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: {
+        data: ProtoNodeResponseListType,
+        meta: EmptyMetaCodec,
+        onlySupport: WireFormat.json,
+      },
     },
-  },
-};
+    getState: {
+      url: "/eth/v1/debug/beacon/states/{state_id}",
+      method: "GET",
+      req: {
+        writeReq: ({stateId}) => ({params: {state_id: stateId.toString()}}),
+        parseReq: ({params}) => ({stateId: params.state_id}),
+        schema: {
+          params: {state_id: Schema.StringRequired},
+        },
+      },
+      resp: {
+        data: ssz.phase0.BeaconState,
+        meta: ExecutionOptimisticAndFinalizedCodec,
+      },
+    },
+    getStateV2: {
+      url: "/eth/v2/debug/beacon/states/{state_id}",
+      method: "GET",
+      req: {
+        writeReq: ({stateId}) => ({params: {state_id: stateId.toString()}}),
+        parseReq: ({params}) => ({stateId: params.state_id}),
+        schema: {
+          params: {state_id: Schema.StringRequired},
+        },
+      },
+      resp: {
+        data: WithVersion((fork) => ssz[fork].BeaconState as Type<allForks.BeaconState>),
+        meta: ExecutionOptimisticFinalizedAndVersionCodec,
+      },
+    },
+  };
+}

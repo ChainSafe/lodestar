@@ -1,4 +1,5 @@
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
+import {ChainForkConfig} from "@lodestar/config";
 import {Epoch, phase0, capella, Slot, ssz, StringType, RootHex, altair, UintNum64, allForks} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 
@@ -147,20 +148,22 @@ export type Endpoints = {
   >;
 };
 
-export const definitions: RouteDefinitions<Endpoints> = {
-  eventstream: {
-    url: "/eth/v1/events",
-    method: "GET",
-    req: {
-      writeReq: ({topics}) => ({query: {topics}}),
-      parseReq: ({query}) => ({topics: query.topics}) as EventstreamArgs,
-      schema: {
-        query: {topics: Schema.StringArray},
+export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpoints> {
+  return {
+    eventstream: {
+      url: "/eth/v1/events",
+      method: "GET",
+      req: {
+        writeReq: ({topics}) => ({query: {topics}}),
+        parseReq: ({query}) => ({topics: query.topics}) as EventstreamArgs,
+        schema: {
+          query: {topics: Schema.StringArray},
+        },
       },
+      resp: EmptyResponseCodec,
     },
-    resp: EmptyResponseCodec,
-  },
-};
+  };
+}
 
 // It doesn't make sense to define a getReqSerializers() here given the exotic argument of eventstream()
 // The request is very simple: (topics) => {query: {topics}}, and the test will ensure compatibility server - client

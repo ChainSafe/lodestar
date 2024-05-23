@@ -4,14 +4,15 @@ import {stringifyQuery, urlJoin} from "../../utils/client/format.js";
 import {ApiClientMethods} from "../../utils/client/method.js";
 import {RouteDefinitionExtra} from "../../utils/client/request.js";
 import {ApiResponse} from "../../utils/client/response.js";
-import {BeaconEvent, Endpoints, definitions, getEventSerdes} from "../routes/events.js";
+import {BeaconEvent, Endpoints, getDefinitions, getEventSerdes} from "../routes/events.js";
 
 export type ApiClient = ApiClientMethods<Endpoints>;
 
 /**
  * REST HTTP client for events routes
  */
-export function getClient(_config: ChainForkConfig, baseUrl: string): ApiClient {
+export function getClient(config: ChainForkConfig, baseUrl: string): ApiClient {
+  const definitions = getDefinitions(config);
   const eventSerdes = getEventSerdes();
 
   return {

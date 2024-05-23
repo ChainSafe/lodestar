@@ -4,7 +4,7 @@ import {FastifyInstance} from "fastify";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {config} from "@lodestar/config/default";
-import {Endpoints, definitions} from "../../../../src/beacon/routes/debug.js";
+import {Endpoints, getDefinitions} from "../../../../src/beacon/routes/debug.js";
 import {getClient} from "../../../../src/beacon/client/debug.js";
 import {getRoutes} from "../../../../src/beacon/server/debug.js";
 import {runGenericServerTest} from "../../../utils/genericServerTest.js";
@@ -24,7 +24,7 @@ describe("beacon / debug", () => {
   // Get state by SSZ
 
   describe("getState() in SSZ format", () => {
-    const mockApi = getMockApi<Endpoints>(definitions);
+    const mockApi = getMockApi<Endpoints>(getDefinitions(config));
     let baseUrl: string;
     let server: FastifyInstance;
 

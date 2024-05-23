@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {ByteListType, ContainerType, OptionalType} from "@chainsafe/ssz";
+import {ChainForkConfig} from "@lodestar/config";
 import {allForks, altair, ssz} from "@lodestar/types";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {
@@ -201,106 +202,108 @@ export type Endpoints = {
   >;
 };
 
-export const definitions: RouteDefinitions<Endpoints> = {
-  getNetworkIdentity: {
-    url: "/eth/v1/node/identity",
-    method: "GET",
-    req: EmptyRequestCodec,
-    resp: {
-      onlySupport: WireFormat.json,
-      data: {
-        toJson: (data) => ({
-          peer_id: data.peerId,
-          enr: data.enr,
-          p2p_addresses: data.p2pAddresses,
-          discovery_addresses: data.discoveryAddresses,
-          metadata: ssz.altair.Metadata.toJson(data.metadata as altair.Metadata),
-        }),
-        // TODO validation
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        fromJson: (data: any) => ({
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-          peerId: data.peer_id,
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-          enr: data.enr,
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-          p2pAddresses: data.p2p_addresses,
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-          discoveryAddresses: data.discovery_addresses,
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-          metadata: ssz.altair.Metadata.fromJson(data.metadata),
-        }),
-        serialize: () => {
-          throw new Error("Not implemented");
+export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpoints> {
+  return {
+    getNetworkIdentity: {
+      url: "/eth/v1/node/identity",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: {
+        onlySupport: WireFormat.json,
+        data: {
+          toJson: (data) => ({
+            peer_id: data.peerId,
+            enr: data.enr,
+            p2p_addresses: data.p2pAddresses,
+            discovery_addresses: data.discoveryAddresses,
+            metadata: ssz.altair.Metadata.toJson(data.metadata as altair.Metadata),
+          }),
+          // TODO validation
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          fromJson: (data: any) => ({
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+            peerId: data.peer_id,
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+            enr: data.enr,
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+            p2pAddresses: data.p2p_addresses,
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+            discoveryAddresses: data.discovery_addresses,
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+            metadata: ssz.altair.Metadata.fromJson(data.metadata),
+          }),
+          serialize: () => {
+            throw new Error("Not implemented");
+          },
+          deserialize: () => {
+            throw new Error("Not implemented");
+          },
         },
-        deserialize: () => {
-          throw new Error("Not implemented");
+        meta: EmptyMetaCodec,
+      },
+    },
+    getPeers: {
+      url: "/eth/v1/node/peers",
+      method: "GET",
+      req: {
+        writeReq: ({state, direction}) => ({query: {state, direction}}),
+        parseReq: ({query}) => ({state: query.state, direction: query.direction}),
+        schema: {query: {state: Schema.StringArray, direction: Schema.StringArray}},
+      },
+      resp: {
+        ...JsonOnlyResponseCodec,
+        meta: {
+          toJson: (d) => d,
+          fromJson: (d) => ({count: (d as PeersMeta).count}),
+          toHeadersObject: () => ({}),
+          fromHeaders: () => ({}) as PeersMeta,
+        },
+        transform: {
+          toResponse: (data, meta) => ({data, meta}),
+          fromResponse: (resp) => resp as {data: NodePeer[]; meta: PeersMeta},
         },
       },
-      meta: EmptyMetaCodec,
     },
-  },
-  getPeers: {
-    url: "/eth/v1/node/peers",
-    method: "GET",
-    req: {
-      writeReq: ({state, direction}) => ({query: {state, direction}}),
-      parseReq: ({query}) => ({state: query.state, direction: query.direction}),
-      schema: {query: {state: Schema.StringArray, direction: Schema.StringArray}},
-    },
-    resp: {
-      ...JsonOnlyResponseCodec,
-      meta: {
-        toJson: (d) => d,
-        fromJson: (d) => ({count: (d as PeersMeta).count}),
-        toHeadersObject: () => ({}),
-        fromHeaders: () => ({}) as PeersMeta,
+    getPeer: {
+      url: "/eth/v1/node/peers/{peer_id}",
+      method: "GET",
+      req: {
+        writeReq: ({peerId}) => ({params: {peer_id: peerId}}),
+        parseReq: ({params}) => ({peerId: params.peer_id}),
+        schema: {params: {peer_id: Schema.StringRequired}},
       },
-      transform: {
-        toResponse: (data, meta) => ({data, meta}),
-        fromResponse: (resp) => resp as {data: NodePeer[]; meta: PeersMeta},
+      resp: JsonOnlyResponseCodec,
+    },
+    getPeerCount: {
+      url: "/eth/v1/node/peer_count",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: {
+        data: PeerCountType,
+        meta: EmptyMetaCodec,
       },
     },
-  },
-  getPeer: {
-    url: "/eth/v1/node/peers/{peer_id}",
-    method: "GET",
-    req: {
-      writeReq: ({peerId}) => ({params: {peer_id: peerId}}),
-      parseReq: ({params}) => ({peerId: params.peer_id}),
-      schema: {params: {peer_id: Schema.StringRequired}},
+    getNodeVersion: {
+      url: "/eth/v1/node/version",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: JsonOnlyResponseCodec,
     },
-    resp: JsonOnlyResponseCodec,
-  },
-  getPeerCount: {
-    url: "/eth/v1/node/peer_count",
-    method: "GET",
-    req: EmptyRequestCodec,
-    resp: {
-      data: PeerCountType,
-      meta: EmptyMetaCodec,
+    getSyncingStatus: {
+      url: "/eth/v1/node/syncing",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: JsonOnlyResponseCodec,
     },
-  },
-  getNodeVersion: {
-    url: "/eth/v1/node/version",
-    method: "GET",
-    req: EmptyRequestCodec,
-    resp: JsonOnlyResponseCodec,
-  },
-  getSyncingStatus: {
-    url: "/eth/v1/node/syncing",
-    method: "GET",
-    req: EmptyRequestCodec,
-    resp: JsonOnlyResponseCodec,
-  },
-  getHealth: {
-    url: "/eth/v1/node/health",
-    method: "GET",
-    req: {
-      writeReq: ({syncingStatus}) => ({query: {syncing_status: syncingStatus}}),
-      parseReq: ({query}) => ({syncingStatus: query.syncing_status}),
-      schema: {query: {syncing_status: Schema.Uint}},
+    getHealth: {
+      url: "/eth/v1/node/health",
+      method: "GET",
+      req: {
+        writeReq: ({syncingStatus}) => ({query: {syncing_status: syncingStatus}}),
+        parseReq: ({query}) => ({syncingStatus: query.syncing_status}),
+        schema: {query: {syncing_status: Schema.Uint}},
+      },
+      resp: EmptyResponseCodec,
     },
-    resp: EmptyResponseCodec,
-  },
-};
+  };
+}

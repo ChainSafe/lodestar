@@ -1,10 +1,10 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ApiError, ApplicationMethods, FastifyRoutes, createFastifyRoutes} from "../../utils/server/index.js";
-import {Endpoints, definitions, eventTypes, getEventSerdes} from "../routes/events.js";
+import {Endpoints, getDefinitions, eventTypes, getEventSerdes} from "../routes/events.js";
 
-export function getRoutes(_config: ChainForkConfig, methods: ApplicationMethods<Endpoints>): FastifyRoutes<Endpoints> {
+export function getRoutes(config: ChainForkConfig, methods: ApplicationMethods<Endpoints>): FastifyRoutes<Endpoints> {
   const eventSerdes = getEventSerdes();
-  const serverRoutes = createFastifyRoutes(definitions, methods);
+  const serverRoutes = createFastifyRoutes(getDefinitions(config), methods);
 
   return {
     // Non-JSON route. Server Sent Events (SSE)

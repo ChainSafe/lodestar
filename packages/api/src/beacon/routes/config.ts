@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
+import {ChainForkConfig} from "@lodestar/config";
 import {ssz} from "@lodestar/types";
 import {ArrayOf, EmptyArgs, EmptyRequestCodec, EmptyMeta, EmptyMetaCodec, EmptyRequest} from "../../utils/codecs.js";
 import {Endpoint, RouteDefinitions} from "../../utils/index.js";
@@ -68,47 +69,49 @@ export type Endpoints = {
   >;
 };
 
-export const definitions: RouteDefinitions<Endpoints> = {
-  getDepositContract: {
-    url: "/eth/v1/config/deposit_contract",
-    method: "GET",
-    req: EmptyRequestCodec,
-    resp: {
-      data: DepositContractType,
-      meta: EmptyMetaCodec,
-    },
-  },
-  getForkSchedule: {
-    url: "/eth/v1/config/fork_schedule",
-    method: "GET",
-    req: EmptyRequestCodec,
-    resp: {
-      data: ForkListType,
-      meta: EmptyMetaCodec,
-    },
-  },
-  getSpec: {
-    url: "/eth/v1/config/spec",
-    method: "GET",
-    req: EmptyRequestCodec,
-    resp: {
-      onlySupport: WireFormat.json,
-      data: {
-        toJson: (data) => data,
-        fromJson: (data) => {
-          if (typeof data !== "object" || data === null) {
-            throw Error("JSON must be of type object");
-          }
-          return data as Spec;
-        },
-        serialize: () => {
-          throw Error("Not implemented");
-        },
-        deserialize: () => {
-          throw Error("Not implemented");
-        },
+export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpoints> {
+  return {
+    getDepositContract: {
+      url: "/eth/v1/config/deposit_contract",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: {
+        data: DepositContractType,
+        meta: EmptyMetaCodec,
       },
-      meta: EmptyMetaCodec,
     },
-  },
-};
+    getForkSchedule: {
+      url: "/eth/v1/config/fork_schedule",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: {
+        data: ForkListType,
+        meta: EmptyMetaCodec,
+      },
+    },
+    getSpec: {
+      url: "/eth/v1/config/spec",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: {
+        onlySupport: WireFormat.json,
+        data: {
+          toJson: (data) => data,
+          fromJson: (data) => {
+            if (typeof data !== "object" || data === null) {
+              throw Error("JSON must be of type object");
+            }
+            return data as Spec;
+          },
+          serialize: () => {
+            throw Error("Not implemented");
+          },
+          deserialize: () => {
+            throw Error("Not implemented");
+          },
+        },
+        meta: EmptyMetaCodec,
+      },
+    },
+  };
+}

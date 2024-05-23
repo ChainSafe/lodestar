@@ -1,12 +1,12 @@
 // import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
 import {ChainForkConfig} from "@lodestar/config";
 import {ApplicationMethods, FastifyRoutes, createFastifyRoutes} from "../../utils/server/index.js";
-import {Endpoints, definitions} from "../routes/proof.js";
+import {Endpoints, getDefinitions} from "../routes/proof.js";
 
 // TODO: revisit, do we need still need to override handlers?
 
-export function getRoutes(_config: ChainForkConfig, methods: ApplicationMethods<Endpoints>): FastifyRoutes<Endpoints> {
-  return createFastifyRoutes(definitions, methods);
+export function getRoutes(config: ChainForkConfig, methods: ApplicationMethods<Endpoints>): FastifyRoutes<Endpoints> {
+  return createFastifyRoutes(getDefinitions(config), methods);
   // const serverRoutes = createFastifyRoutes(definitions, methods);
 
   // return {

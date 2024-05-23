@@ -1,7 +1,8 @@
 import path from "node:path";
 import {fileURLToPath} from "node:url";
+import {config} from "@lodestar/config/default";
 import {OpenApiFile} from "../../utils/parseOpenApiSpec.js";
-import {definitions} from "../../../src/keymanager/routes.js";
+import {getDefinitions} from "../../../src/keymanager/routes.js";
 import {runTestCheckAgainstSpec} from "../../utils/checkAgainstSpec.js";
 import {fetchOpenApiSpec} from "../../utils/fetchOpenApiSpec.js";
 import {testData} from "./testData.js";
@@ -19,4 +20,4 @@ const openApiFile: OpenApiFile = {
 };
 
 const openApiJson = await fetchOpenApiSpec(openApiFile);
-runTestCheckAgainstSpec(openApiJson, definitions, testData);
+runTestCheckAgainstSpec(openApiJson, getDefinitions(config), testData);

@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {CompactMultiProof, ProofType} from "@chainsafe/persistent-merkle-tree";
 import {ByteListType, ContainerType, fromHexString, toHexString} from "@chainsafe/ssz";
+import {ChainForkConfig} from "@lodestar/config";
 import {ssz} from "@lodestar/types";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {ArrayOf} from "../../utils/codecs.js";
@@ -39,41 +40,43 @@ export type Endpoints = {
   >;
 };
 
-export const definitions: RouteDefinitions<Endpoints> = {
-  getStateProof: {
-    url: "/eth/v0/beacon/proof/state/{state_id}",
-    method: "GET",
-    req: {
-      writeReq: ({stateId, descriptor}) => ({params: {state_id: stateId}, query: {format: toHexString(descriptor)}}),
-      parseReq: ({params, query}) => ({stateId: params.state_id, descriptor: fromHexString(query.format)}),
-      schema: {params: {state_id: Schema.StringRequired}, query: {format: Schema.StringRequired}},
-    },
-    resp: {
-      data: {
-        toJson: (data) => CompactMultiProofType.toJson(data),
-        fromJson: (data) => ({...CompactMultiProofType.fromJson(data), type: ProofType.compactMulti}),
-        serialize: (data) => CompactMultiProofType.serialize(data),
-        deserialize: (data) => ({...CompactMultiProofType.deserialize(data), type: ProofType.compactMulti}),
+export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpoints> {
+  return {
+    getStateProof: {
+      url: "/eth/v0/beacon/proof/state/{state_id}",
+      method: "GET",
+      req: {
+        writeReq: ({stateId, descriptor}) => ({params: {state_id: stateId}, query: {format: toHexString(descriptor)}}),
+        parseReq: ({params, query}) => ({stateId: params.state_id, descriptor: fromHexString(query.format)}),
+        schema: {params: {state_id: Schema.StringRequired}, query: {format: Schema.StringRequired}},
       },
-      meta: VersionCodec,
-    },
-  },
-  getBlockProof: {
-    url: "/eth/v0/beacon/proof/block/{block_id}",
-    method: "GET",
-    req: {
-      writeReq: ({blockId, descriptor}) => ({params: {block_id: blockId}, query: {format: toHexString(descriptor)}}),
-      parseReq: ({params, query}) => ({blockId: params.block_id, descriptor: fromHexString(query.format)}),
-      schema: {params: {block_id: Schema.StringRequired}, query: {format: Schema.StringRequired}},
-    },
-    resp: {
-      data: {
-        toJson: (data) => CompactMultiProofType.toJson(data),
-        fromJson: (data) => ({...CompactMultiProofType.fromJson(data), type: ProofType.compactMulti}),
-        serialize: (data) => CompactMultiProofType.serialize(data),
-        deserialize: (data) => ({...CompactMultiProofType.deserialize(data), type: ProofType.compactMulti}),
+      resp: {
+        data: {
+          toJson: (data) => CompactMultiProofType.toJson(data),
+          fromJson: (data) => ({...CompactMultiProofType.fromJson(data), type: ProofType.compactMulti}),
+          serialize: (data) => CompactMultiProofType.serialize(data),
+          deserialize: (data) => ({...CompactMultiProofType.deserialize(data), type: ProofType.compactMulti}),
+        },
+        meta: VersionCodec,
       },
-      meta: VersionCodec,
     },
-  },
-};
+    getBlockProof: {
+      url: "/eth/v0/beacon/proof/block/{block_id}",
+      method: "GET",
+      req: {
+        writeReq: ({blockId, descriptor}) => ({params: {block_id: blockId}, query: {format: toHexString(descriptor)}}),
+        parseReq: ({params, query}) => ({blockId: params.block_id, descriptor: fromHexString(query.format)}),
+        schema: {params: {block_id: Schema.StringRequired}, query: {format: Schema.StringRequired}},
+      },
+      resp: {
+        data: {
+          toJson: (data) => CompactMultiProofType.toJson(data),
+          fromJson: (data) => ({...CompactMultiProofType.fromJson(data), type: ProofType.compactMulti}),
+          serialize: (data) => CompactMultiProofType.serialize(data),
+          deserialize: (data) => ({...CompactMultiProofType.deserialize(data), type: ProofType.compactMulti}),
+        },
+        meta: VersionCodec,
+      },
+    },
+  };
+}

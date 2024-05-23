@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
+import {ChainForkConfig} from "@lodestar/config";
 import {MAX_VALIDATORS_PER_COMMITTEE} from "@lodestar/params";
 import {phase0, CommitteeIndex, Slot, Epoch, ssz, RootHex, StringType} from "@lodestar/types";
 import {Endpoint, RequestCodec, RouteDefinitions, Schema} from "../../../utils/index.js";
@@ -248,189 +249,191 @@ const stateIdOnlyReq: RequestCodec<Endpoint<"GET", {stateId: StateId}, {params: 
   schema: {params: {state_id: Schema.StringRequired}},
 };
 
-export const definitions: RouteDefinitions<Endpoints> = {
-  getEpochCommittees: {
-    url: "/eth/v1/beacon/states/{state_id}/committees",
-    method: "GET",
-    req: {
-      writeReq: ({stateId, epoch, index, slot}) => ({
-        params: {state_id: stateId.toString()},
-        query: {epoch, index, slot},
-      }),
-      parseReq: ({params, query}) => ({
-        stateId: params.state_id,
-        epoch: query.epoch,
-        index: query.index,
-        slot: query.slot,
-      }),
-      schema: {
-        params: {state_id: Schema.StringRequired},
-        query: {slot: Schema.Uint, epoch: Schema.Uint, index: Schema.Uint},
+export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpoints> {
+  return {
+    getEpochCommittees: {
+      url: "/eth/v1/beacon/states/{state_id}/committees",
+      method: "GET",
+      req: {
+        writeReq: ({stateId, epoch, index, slot}) => ({
+          params: {state_id: stateId.toString()},
+          query: {epoch, index, slot},
+        }),
+        parseReq: ({params, query}) => ({
+          stateId: params.state_id,
+          epoch: query.epoch,
+          index: query.index,
+          slot: query.slot,
+        }),
+        schema: {
+          params: {state_id: Schema.StringRequired},
+          query: {slot: Schema.Uint, epoch: Schema.Uint, index: Schema.Uint},
+        },
+      },
+      resp: {
+        data: EpochCommitteeResponseListType,
+        meta: ExecutionOptimisticAndFinalizedCodec,
       },
     },
-    resp: {
-      data: EpochCommitteeResponseListType,
-      meta: ExecutionOptimisticAndFinalizedCodec,
-    },
-  },
-  getEpochSyncCommittees: {
-    url: "/eth/v1/beacon/states/{state_id}/sync_committees",
-    method: "GET",
-    req: {
-      writeReq: ({stateId, epoch}) => ({params: {state_id: stateId.toString()}, query: {epoch}}),
-      parseReq: ({params, query}) => ({stateId: params.state_id, epoch: query.epoch}),
-      schema: {
-        params: {state_id: Schema.StringRequired},
-        query: {epoch: Schema.Uint},
+    getEpochSyncCommittees: {
+      url: "/eth/v1/beacon/states/{state_id}/sync_committees",
+      method: "GET",
+      req: {
+        writeReq: ({stateId, epoch}) => ({params: {state_id: stateId.toString()}, query: {epoch}}),
+        parseReq: ({params, query}) => ({stateId: params.state_id, epoch: query.epoch}),
+        schema: {
+          params: {state_id: Schema.StringRequired},
+          query: {epoch: Schema.Uint},
+        },
+      },
+      resp: {
+        data: EpochSyncCommitteeResponseType,
+        meta: ExecutionOptimisticAndFinalizedCodec,
       },
     },
-    resp: {
-      data: EpochSyncCommitteeResponseType,
-      meta: ExecutionOptimisticAndFinalizedCodec,
-    },
-  },
-  getStateFinalityCheckpoints: {
-    url: "/eth/v1/beacon/states/{state_id}/finality_checkpoints",
-    method: "GET",
-    req: stateIdOnlyReq,
-    resp: {
-      data: FinalityCheckpointsType,
-      meta: ExecutionOptimisticAndFinalizedCodec,
-    },
-  },
-  getStateFork: {
-    url: "/eth/v1/beacon/states/{state_id}/fork",
-    method: "GET",
-    req: stateIdOnlyReq,
-    resp: {
-      data: ssz.phase0.Fork,
-      meta: ExecutionOptimisticAndFinalizedCodec,
-    },
-  },
-  getStateRoot: {
-    url: "/eth/v1/beacon/states/{state_id}/root",
-    method: "GET",
-    req: stateIdOnlyReq,
-    resp: {
-      data: RootResponseType,
-      meta: ExecutionOptimisticAndFinalizedCodec,
-    },
-  },
-  getStateRandao: {
-    url: "/eth/v1/beacon/states/{state_id}/randao",
-    method: "GET",
-    req: {
-      writeReq: ({stateId, epoch}) => ({params: {state_id: stateId.toString()}, query: {epoch}}),
-      parseReq: ({params, query}) => ({stateId: params.state_id, epoch: query.epoch}),
-      schema: {
-        params: {state_id: Schema.StringRequired},
-        query: {epoch: Schema.Uint},
+    getStateFinalityCheckpoints: {
+      url: "/eth/v1/beacon/states/{state_id}/finality_checkpoints",
+      method: "GET",
+      req: stateIdOnlyReq,
+      resp: {
+        data: FinalityCheckpointsType,
+        meta: ExecutionOptimisticAndFinalizedCodec,
       },
     },
-    resp: {
-      data: RandaoResponseType,
-      meta: ExecutionOptimisticAndFinalizedCodec,
-    },
-  },
-  getStateValidator: {
-    url: "/eth/v1/beacon/states/{state_id}/validators/{validator_id}",
-    method: "GET",
-    req: {
-      writeReq: ({stateId, validatorId}) => ({params: {state_id: stateId.toString(), validator_id: validatorId}}),
-      parseReq: ({params}) => ({stateId: params.state_id, validatorId: params.validator_id}),
-      schema: {
-        params: {state_id: Schema.StringRequired, validator_id: Schema.StringRequired},
+    getStateFork: {
+      url: "/eth/v1/beacon/states/{state_id}/fork",
+      method: "GET",
+      req: stateIdOnlyReq,
+      resp: {
+        data: ssz.phase0.Fork,
+        meta: ExecutionOptimisticAndFinalizedCodec,
       },
     },
-    resp: {
-      onlySupport: WireFormat.json,
-      data: ValidatorResponseType,
-      meta: ExecutionOptimisticAndFinalizedCodec,
-    },
-  },
-  getStateValidators: {
-    url: "/eth/v1/beacon/states/{state_id}/validators",
-    method: "GET",
-    req: {
-      writeReq: ({stateId, validatorIds: id, statuses}) => ({
-        params: {state_id: stateId.toString()},
-        query: {id, status: statuses},
-      }),
-      parseReq: ({params, query}) => ({stateId: params.state_id, validatorIds: query.id, statuses: query.status}),
-      schema: {
-        params: {state_id: Schema.StringRequired},
-        query: {id: Schema.UintOrStringArray, status: Schema.StringArray},
+    getStateRoot: {
+      url: "/eth/v1/beacon/states/{state_id}/root",
+      method: "GET",
+      req: stateIdOnlyReq,
+      resp: {
+        data: RootResponseType,
+        meta: ExecutionOptimisticAndFinalizedCodec,
       },
     },
-    resp: {
-      onlySupport: WireFormat.json,
-      data: ValidatorResponseListType,
-      meta: ExecutionOptimisticAndFinalizedCodec,
+    getStateRandao: {
+      url: "/eth/v1/beacon/states/{state_id}/randao",
+      method: "GET",
+      req: {
+        writeReq: ({stateId, epoch}) => ({params: {state_id: stateId.toString()}, query: {epoch}}),
+        parseReq: ({params, query}) => ({stateId: params.state_id, epoch: query.epoch}),
+        schema: {
+          params: {state_id: Schema.StringRequired},
+          query: {epoch: Schema.Uint},
+        },
+      },
+      resp: {
+        data: RandaoResponseType,
+        meta: ExecutionOptimisticAndFinalizedCodec,
+      },
     },
-  },
-  postStateValidators: {
-    url: "/eth/v1/beacon/states/{state_id}/validators",
-    method: "POST",
-    req: JsonOnlyReq({
-      writeReqJson: ({stateId, validatorIds, statuses}) => ({
-        params: {state_id: stateId.toString()},
-        body: {
-          ids: toValidatorIdsStr(validatorIds),
-          statuses,
+    getStateValidator: {
+      url: "/eth/v1/beacon/states/{state_id}/validators/{validator_id}",
+      method: "GET",
+      req: {
+        writeReq: ({stateId, validatorId}) => ({params: {state_id: stateId.toString(), validator_id: validatorId}}),
+        parseReq: ({params}) => ({stateId: params.state_id, validatorId: params.validator_id}),
+        schema: {
+          params: {state_id: Schema.StringRequired, validator_id: Schema.StringRequired},
+        },
+      },
+      resp: {
+        onlySupport: WireFormat.json,
+        data: ValidatorResponseType,
+        meta: ExecutionOptimisticAndFinalizedCodec,
+      },
+    },
+    getStateValidators: {
+      url: "/eth/v1/beacon/states/{state_id}/validators",
+      method: "GET",
+      req: {
+        writeReq: ({stateId, validatorIds: id, statuses}) => ({
+          params: {state_id: stateId.toString()},
+          query: {id, status: statuses},
+        }),
+        parseReq: ({params, query}) => ({stateId: params.state_id, validatorIds: query.id, statuses: query.status}),
+        schema: {
+          params: {state_id: Schema.StringRequired},
+          query: {id: Schema.UintOrStringArray, status: Schema.StringArray},
+        },
+      },
+      resp: {
+        onlySupport: WireFormat.json,
+        data: ValidatorResponseListType,
+        meta: ExecutionOptimisticAndFinalizedCodec,
+      },
+    },
+    postStateValidators: {
+      url: "/eth/v1/beacon/states/{state_id}/validators",
+      method: "POST",
+      req: JsonOnlyReq({
+        writeReqJson: ({stateId, validatorIds, statuses}) => ({
+          params: {state_id: stateId.toString()},
+          body: {
+            ids: toValidatorIdsStr(validatorIds),
+            statuses,
+          },
+        }),
+        parseReqJson: ({params, body = {}}) => ({
+          stateId: params.state_id,
+          validatorIds: fromValidatorIdsStr(body.ids),
+          statuses: body.statuses,
+        }),
+        schema: {
+          params: {state_id: Schema.StringRequired},
+          body: Schema.Object,
         },
       }),
-      parseReqJson: ({params, body = {}}) => ({
-        stateId: params.state_id,
-        validatorIds: fromValidatorIdsStr(body.ids),
-        statuses: body.statuses,
-      }),
-      schema: {
-        params: {state_id: Schema.StringRequired},
-        body: Schema.Object,
-      },
-    }),
-    resp: {
-      onlySupport: WireFormat.json,
-      data: ValidatorResponseListType,
-      meta: ExecutionOptimisticAndFinalizedCodec,
-    },
-  },
-  getStateValidatorBalances: {
-    url: "/eth/v1/beacon/states/{state_id}/validator_balances",
-    method: "GET",
-    req: {
-      writeReq: ({stateId, validatorIds}) => ({params: {state_id: stateId.toString()}, query: {id: validatorIds}}),
-      parseReq: ({params, query}) => ({stateId: params.state_id, validatorIds: query.id}),
-      schema: {
-        params: {state_id: Schema.StringRequired},
-        query: {id: Schema.UintOrStringArray},
+      resp: {
+        onlySupport: WireFormat.json,
+        data: ValidatorResponseListType,
+        meta: ExecutionOptimisticAndFinalizedCodec,
       },
     },
-    resp: {
-      data: ValidatorBalanceListType,
-      meta: ExecutionOptimisticAndFinalizedCodec,
-    },
-  },
-  postStateValidatorBalances: {
-    url: "/eth/v1/beacon/states/{state_id}/validator_balances",
-    method: "POST",
-    req: JsonOnlyReq({
-      writeReqJson: ({stateId, validatorIds}) => ({
-        params: {state_id: stateId.toString()},
-        body: toValidatorIdsStr(validatorIds) || [],
-      }),
-      parseReqJson: ({params, body = []}) => ({
-        stateId: params.state_id,
-        validatorIds: fromValidatorIdsStr(body),
-      }),
-      schema: {
-        params: {state_id: Schema.StringRequired},
-        body: Schema.UintOrStringArray,
+    getStateValidatorBalances: {
+      url: "/eth/v1/beacon/states/{state_id}/validator_balances",
+      method: "GET",
+      req: {
+        writeReq: ({stateId, validatorIds}) => ({params: {state_id: stateId.toString()}, query: {id: validatorIds}}),
+        parseReq: ({params, query}) => ({stateId: params.state_id, validatorIds: query.id}),
+        schema: {
+          params: {state_id: Schema.StringRequired},
+          query: {id: Schema.UintOrStringArray},
+        },
       },
-    }),
-    resp: {
-      data: ValidatorBalanceListType,
-      meta: ExecutionOptimisticAndFinalizedCodec,
+      resp: {
+        data: ValidatorBalanceListType,
+        meta: ExecutionOptimisticAndFinalizedCodec,
+      },
     },
-  },
-};
+    postStateValidatorBalances: {
+      url: "/eth/v1/beacon/states/{state_id}/validator_balances",
+      method: "POST",
+      req: JsonOnlyReq({
+        writeReqJson: ({stateId, validatorIds}) => ({
+          params: {state_id: stateId.toString()},
+          body: toValidatorIdsStr(validatorIds) || [],
+        }),
+        parseReqJson: ({params, body = []}) => ({
+          stateId: params.state_id,
+          validatorIds: fromValidatorIdsStr(body),
+        }),
+        schema: {
+          params: {state_id: Schema.StringRequired},
+          body: Schema.UintOrStringArray,
+        },
+      }),
+      resp: {
+        data: ValidatorBalanceListType,
+        meta: ExecutionOptimisticAndFinalizedCodec,
+      },
+    },
+  };
+}

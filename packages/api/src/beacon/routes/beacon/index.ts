@@ -47,7 +47,7 @@ export type Endpoints = block.Endpoints &
     >;
   };
 
-export function definitions(config: ChainForkConfig): RouteDefinitions<Endpoints> {
+export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoints> {
   return {
     getGenesis: {
       url: "/eth/v1/beacon/genesis",
@@ -58,9 +58,9 @@ export function definitions(config: ChainForkConfig): RouteDefinitions<Endpoints
         meta: EmptyMetaCodec,
       },
     },
-    ...block.definitions(config),
-    ...pool.definitions,
-    ...state.definitions,
-    ...rewards.definitions,
+    ...block.getDefinitions(config),
+    ...pool.getDefinitions(config),
+    ...state.getDefinitions(config),
+    ...rewards.getDefinitions(config),
   };
 }

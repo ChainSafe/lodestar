@@ -2,14 +2,14 @@ import {describe, it, expect, beforeEach, afterEach, beforeAll, afterAll} from "
 import {FastifyInstance} from "fastify";
 import {sleep} from "@lodestar/utils";
 import {config} from "@lodestar/config/default";
-import {Endpoints, definitions, EventType, BeaconEvent} from "../../../../src/beacon/routes/events.js";
+import {Endpoints, getDefinitions, EventType, BeaconEvent} from "../../../../src/beacon/routes/events.js";
 import {getClient} from "../../../../src/beacon/client/events.js";
 import {getRoutes} from "../../../../src/beacon/server/events.js";
 import {getMockApi, getTestServer} from "../../../utils/utils.js";
 import {eventTestData} from "../testData/events.js";
 
 describe("beacon / events", () => {
-  const mockApi = getMockApi<Endpoints>(definitions);
+  const mockApi = getMockApi<Endpoints>(getDefinitions(config));
   let server: FastifyInstance;
   let baseUrl: string;
 

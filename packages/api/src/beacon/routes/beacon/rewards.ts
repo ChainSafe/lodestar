@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
+import {ChainForkConfig} from "@lodestar/config";
 import {Epoch, ssz} from "@lodestar/types";
 
 import {Schema, Endpoint, RouteDefinitions} from "../../../utils/index.js";
@@ -158,62 +159,64 @@ export type Endpoints = {
   >;
 };
 
-export const definitions: RouteDefinitions<Endpoints> = {
-  getBlockRewards: {
-    url: "/eth/v1/beacon/rewards/blocks/{block_id}",
-    method: "GET",
-    req: {
-      writeReq: ({blockId}) => ({params: {block_id: blockId.toString()}}),
-      parseReq: ({params}) => ({blockId: params.block_id}),
-      schema: {params: {block_id: Schema.StringRequired}},
-    },
-    resp: {
-      data: BlockRewardsType,
-      meta: ExecutionOptimisticAndFinalizedCodec,
-    },
-  },
-  getAttestationsRewards: {
-    url: "/eth/v1/beacon/rewards/attestations/{epoch}",
-    method: "POST",
-    req: JsonOnlyReq({
-      writeReqJson: ({epoch, validatorIds}) => ({
-        params: {epoch},
-        body: toValidatorIdsStr(validatorIds) || [],
-      }),
-      parseReqJson: ({params, body}) => ({
-        epoch: params.epoch,
-        validatorIds: fromValidatorIdsStr(body),
-      }),
-      schema: {
-        params: {epoch: Schema.UintRequired},
-        body: Schema.UintOrStringArray,
+export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpoints> {
+  return {
+    getBlockRewards: {
+      url: "/eth/v1/beacon/rewards/blocks/{block_id}",
+      method: "GET",
+      req: {
+        writeReq: ({blockId}) => ({params: {block_id: blockId.toString()}}),
+        parseReq: ({params}) => ({blockId: params.block_id}),
+        schema: {params: {block_id: Schema.StringRequired}},
       },
-    }),
-    resp: {
-      data: AttestationsRewardsType,
-      meta: ExecutionOptimisticAndFinalizedCodec,
-    },
-  },
-  getSyncCommitteeRewards: {
-    url: "/eth/v1/beacon/rewards/sync_committee/{block_id}",
-    method: "POST",
-    req: JsonOnlyReq({
-      writeReqJson: ({blockId, validatorIds}) => ({
-        params: {block_id: blockId.toString()},
-        body: toValidatorIdsStr(validatorIds) || [],
-      }),
-      parseReqJson: ({params, body}) => ({
-        blockId: params.block_id,
-        validatorIds: fromValidatorIdsStr(body),
-      }),
-      schema: {
-        params: {block_id: Schema.StringRequired},
-        body: Schema.UintOrStringArray,
+      resp: {
+        data: BlockRewardsType,
+        meta: ExecutionOptimisticAndFinalizedCodec,
       },
-    }),
-    resp: {
-      data: SyncCommitteeRewardsType,
-      meta: ExecutionOptimisticAndFinalizedCodec,
     },
-  },
-};
+    getAttestationsRewards: {
+      url: "/eth/v1/beacon/rewards/attestations/{epoch}",
+      method: "POST",
+      req: JsonOnlyReq({
+        writeReqJson: ({epoch, validatorIds}) => ({
+          params: {epoch},
+          body: toValidatorIdsStr(validatorIds) || [],
+        }),
+        parseReqJson: ({params, body}) => ({
+          epoch: params.epoch,
+          validatorIds: fromValidatorIdsStr(body),
+        }),
+        schema: {
+          params: {epoch: Schema.UintRequired},
+          body: Schema.UintOrStringArray,
+        },
+      }),
+      resp: {
+        data: AttestationsRewardsType,
+        meta: ExecutionOptimisticAndFinalizedCodec,
+      },
+    },
+    getSyncCommitteeRewards: {
+      url: "/eth/v1/beacon/rewards/sync_committee/{block_id}",
+      method: "POST",
+      req: JsonOnlyReq({
+        writeReqJson: ({blockId, validatorIds}) => ({
+          params: {block_id: blockId.toString()},
+          body: toValidatorIdsStr(validatorIds) || [],
+        }),
+        parseReqJson: ({params, body}) => ({
+          blockId: params.block_id,
+          validatorIds: fromValidatorIdsStr(body),
+        }),
+        schema: {
+          params: {block_id: Schema.StringRequired},
+          body: Schema.UintOrStringArray,
+        },
+      }),
+      resp: {
+        data: SyncCommitteeRewardsType,
+        meta: ExecutionOptimisticAndFinalizedCodec,
+      },
+    },
+  };
+}
