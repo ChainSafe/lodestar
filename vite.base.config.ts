@@ -33,7 +33,7 @@ export function getBaseViteConfig(
         globals: {Buffer: true, process: true},
         protocolImports: true,
       }),
-      ...(process.env.CI ? [] : [visualizer()]),
+      ...(process.env.DEBUG_BUNDLE ? [visualizer()] : []),
     ],
     mode: "production",
     appType: "custom",

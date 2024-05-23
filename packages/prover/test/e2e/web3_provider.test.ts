@@ -43,5 +43,22 @@ describe("web3_provider", function () {
         await expect(provider.send("eth_getProof", [accounts[0].address, [], "latest"])).resolves.toBeDefined();
       });
     });
+
+    describe("ELRpc", () => {
+      it("should connect to the network and and call verified methods only", async () => {
+        const nonVerifiedProvider = new Web3.providers.HttpProvider(rpcUrl);
+        const {provider: verifiedProvider} = createVerifiedExecutionProvider(nonVerifiedProvider, {
+          transport: LCTransport.Rest,
+          urls: [beaconUrl],
+          config,
+          mutateProvider: false,
+        });
+
+        const web3 = new Web3(nonVerifiedProvider);
+        const accounts = await web3.eth.getAccounts();
+
+        await expect(verifiedProvider.request("eth_getBalance", [accounts[0], "latest"])).resolves.toBeDefined();
+      });
+    });
   });
 });
