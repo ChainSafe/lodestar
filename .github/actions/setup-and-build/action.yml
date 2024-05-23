@@ -30,7 +30,7 @@ runs:
           lib/
           packages/*/lib
           packages/*/.git-data.json
-        key: ${{ runner.os }}-node-${{ inputs.node }}-${{ github.sha }}
+        key: ${{ runner.os }}-${{ runner.arch }}-node-${{ inputs.node }}-${{ github.sha }}
 
     - name: Install & build
       if: steps.cache-build-restore.outputs.cache-hit != 'true'
@@ -55,4 +55,4 @@ runs:
           lib/
           packages/*/lib
           packages/*/.git-data.json
-        key: ${{ runner.os }}-node-${{ inputs.node }}-${{ github.sha }}
+        key: ${{ runner.os }}-${{ runner.arch }}-node-${{ inputs.node }}-${{ github.sha }}
