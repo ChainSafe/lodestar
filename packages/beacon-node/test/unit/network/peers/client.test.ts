@@ -29,6 +29,11 @@ describe("clientFromAgentVersion", () => {
       client: ClientKind.Lodestar,
     },
     {
+      name: "grandine",
+      agentVersion: "Grandine/0.4.1-537713d/arm-linux",
+      client: ClientKind.Grandine,
+    },
+    {
       name: "unknown client",
       agentVersion: "strange-client-agent-version",
       client: null,

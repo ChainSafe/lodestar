@@ -1,6 +1,7 @@
 .__testdb*
 node_modules/
 lib
+dist
 .nyc_output/
 coverage/**
 .DS_Store
@@ -21,10 +22,13 @@ validators
 **/coverage
 **/node_modules
 **/lib
+**/dist
 **/.nyc_output
 .tmp
-.vscode
 .npmrc
+.vscode/launch.json
+.vscode/settings.json
+.vscode/tasks.json
 
 # Tests artifacts
 packages/*/spec-tests*

@@ -11,7 +11,7 @@ import {eth_call} from "../verified_requests/eth_call.js";
 import {eth_estimateGas} from "../verified_requests/eth_estimateGas.js";
 import {getResponseForRequest, isBatchRequest, isRequest} from "./json_rpc.js";
 import {isNullish} from "./validation.js";
-import {ELRpc} from "./rpc.js";
+import {ELRpcProvider} from "./rpc_provider.js";
 
 /* eslint-disable @typescript-eslint/naming-convention, @typescript-eslint/no-explicit-any */
 export const verifiableMethodHandlers: Record<string, ELVerifiedRequestHandler<any, any>> = {
@@ -69,7 +69,7 @@ export async function processAndVerifyRequest({
   logger,
 }: {
   payload: JsonRpcRequestOrBatch;
-  rpc: ELRpc;
+  rpc: ELRpcProvider;
   proofProvider: ProofProvider;
   logger: Logger;
 }): Promise<JsonRpcResponseOrBatch | undefined> {

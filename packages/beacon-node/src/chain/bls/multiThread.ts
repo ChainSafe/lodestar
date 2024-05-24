@@ -5,6 +5,7 @@ import {ISignatureSet} from "@lodestar/state-transition";
 import {QueueError, QueueErrorCode} from "../../util/queue/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {LinkedList} from "../../util/array.js";
+import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {IBlsVerifier, VerifySignatureOpts} from "./interface.js";
 import {getAggregatedPubkey, getAggregatedPubkeysCount, getJobResultError} from "./utils.js";
 import {verifySets} from "./verifySets.js";
@@ -255,7 +256,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       } else {
         this.jobs.push(job);
       }
-      setTimeout(this.runJob, 0);
+      callInNextEventLoop(this.runJob);
     }
   }
 
@@ -406,7 +407,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     this.workersBusy--;
 
     // Potentially run a new job
-    setTimeout(this.runJob, 0);
+    callInNextEventLoop(this.runJob);
   };
 
   /**
@@ -441,7 +442,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
         this.jobs.unshift(job);
       }
       this.bufferedJobs = null;
-      setTimeout(this.runJob, 0);
+      callInNextEventLoop(this.runJob);
     }
   };
 

@@ -41,14 +41,14 @@ It is possible to start up the light-client as a standalone process.
 
 ```bash
 lodestar lightclient \
-    --network mainnet \
-    --beacon-api-url https://beacon-node.your-domain.com \
+    --network sepolia \
+    --beacon-api-url https://lodestar-sepolia.chainsafe.io \
     --checkpoint-root "0xccaff4b99986a7b05e06738f1828a32e40799b277fd9f9ff069be55341fe0229"
 ```
 
 ## Light-Client Programmatic Example
 
-For this example we will assume there is a running beacon node at `https://beacon-node.your-domain.com`
+For this example we will assume there is a running beacon node at `https://lodestar-sepolia.chainsafe.io`
 
 If you are running light-client on a server/node environment there is a faster version of bls that can help with performance. It is a peerDependency and needs to be installed separately by the consumer of this package. This was done so that for browser situations there is not a hard requirement for node-only code that will cause bundling errors. On startup, if running in a node environment, and `@chainsafe/blst` is installed the LightClient will automatically use the faster bls bindings.
 
@@ -57,16 +57,19 @@ npm i -S @chainsafe/blst
 ```
 
 ```ts
-import {getClient} from "@lodestar/api";
-import {createChainForkConfig} from "@lodestar/config";
-import {networksChainConfig} from "@lodestar/config/networks";
 import {Lightclient, LightclientEvent} from "@lodestar/light-client";
 import {LightClientRestTransport} from "@lodestar/light-client/transport";
-import {getFinalizedSyncCheckpoint, getGenesisData, getLcLoggerConsole} from "@lodestar/light-client/utils";
+import {
+  getFinalizedSyncCheckpoint,
+  getGenesisData,
+  getConsoleLogger,
+  getApiFromUrl,
+  getChainForkConfigFromNetwork,
+} from "@lodestar/light-client/utils";
 
-const config = createChainForkConfig(networksChainConfig.mainnet);
-const logger = getLcLoggerConsole({logDebug: Boolean(process.env.DEBUG)});
-const api = getClient({urls: ["https://beacon-node.your-domain.com"]}, {config});
+const config = getChainForkConfigFromNetwork("sepolia");
+const logger = getConsoleLogger({logDebug: Boolean(process.env.DEBUG)});
+const api = getApiFromUrl({urls: ["https://lodestar-sepolia.chainsafe.io"]}, {config});
 
 const lightclient = await Lightclient.initializeFromCheckpointRoot({
   config,
@@ -92,6 +95,35 @@ lightclient.emitter.on(LightclientEvent.lightClientFinalityHeader, async (finali
 lightclient.emitter.on(LightclientEvent.lightClientOptimisticHeader, async (optimisticUpdate) => {
   logger.info(optimisticUpdate);
 });
+```
+
+## Browser Integration
+
+If you want to use Lightclient in browser and facing some issues in building it with bundlers like webpack, vite. We suggest to use our distribution build. The support for single distribution build is started from `1.19.0` version.
+
+Directly link the dist build with the `<script />` tag with tools like unpkg or other. e.g.
+
+```html
+<script src="https://www.unpkg.com/@lodestar/light-client@1.18.0/dist/lightclient.es.min.js" type="module">
+```
+
+Then the lightclient package will be exposed to `globalThis`, in case of browser environment that will be `window`. You can access the package as `window.lodestar.lightclient`. All named exports will also be available from this interface. e.g. `window.lodestar.lightclient.transport`.
+
+NOTE: Due to `top-level-await` used in one of dependent library, the package will not be available right after the load. You have to use a hack to clear up that await from the event loop.
+
+```html
+<script>
+  window.addEventListener("DOMContentLoaded", () => {
+    setTimeout(function () {
+      // here you can access the Lightclient
+      // window.lodestar.lightclient
+    }, 50);
+  });
+</script>
+
+**Typescript support** The web bundle comes with the types support. Unfortunately due to following
+[issue](https://github.com/microsoft/rushstack/issues/1128#issuecomment-2066257538) we can't bundle all types. A
+workaround would be to add `@chainsafe/as-sha256` as a devDependency to your project.
 ```
 
 ## Contributors

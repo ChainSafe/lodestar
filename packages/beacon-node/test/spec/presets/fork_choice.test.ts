@@ -27,6 +27,7 @@ import {
   AttestationImportOpt,
   BlockSource,
   BlobSidecarValidation,
+  BlobsSource,
 } from "../../../src/chain/blocks/types.js";
 import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
 import {PowMergeBlock} from "../../../src/eth1/interface.js";
@@ -209,9 +210,15 @@ const forkChoiceTest =
                     };
                   });
 
-                  blockImport = getBlockInput.postDeneb(config, signedBlock, BlockSource.gossip, blobSidecars, null, [
+                  blockImport = getBlockInput.postDeneb(
+                    config,
+                    signedBlock,
+                    BlockSource.gossip,
+                    blobSidecars,
+                    BlobsSource.gossip,
                     null,
-                  ]);
+                    [null]
+                  );
                 } else {
                   blockImport = getBlockInput.preDeneb(config, signedBlock, BlockSource.gossip, null);
                 }
@@ -296,6 +303,19 @@ const forkChoiceTest =
                 expect(toSpecTestCheckpoint(chain.forkChoice.getFinalizedCheckpoint())).toEqualWithMessage(
                   step.checks.finalized_checkpoint,
                   `Invalid finalized checkpoint at step ${i}`
+                );
+              }
+              if (step.checks.get_proposer_head) {
+                const currentSlot = Math.floor(tickTime / config.SECONDS_PER_SLOT);
+                const {proposerHead, notReorgedReason} = (chain.forkChoice as ForkChoice).getProposerHead(
+                  head,
+                  tickTime % config.SECONDS_PER_SLOT,
+                  currentSlot
+                );
+                logger.debug(`Not reorged reason ${notReorgedReason} at step ${i}`);
+                expect(proposerHead.blockRoot).toEqualWithMessage(
+                  step.checks.get_proposer_head,
+                  `Invalid proposer head at step ${i}`
                 );
               }
             }
@@ -458,6 +478,7 @@ type Checks = {
     justified_checkpoint?: SpecTestCheckpoint;
     finalized_checkpoint?: SpecTestCheckpoint;
     proposer_boost_root?: RootHex;
+    get_proposer_head?: string;
   };
 };
 

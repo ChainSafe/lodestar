@@ -41,6 +41,7 @@ Geth
 Github
 Gossipsub
 Grafana
+Grandine
 HTTPS
 HackMD
 Homebrew
@@ -60,6 +61,7 @@ LTS
 Lerna
 MEV
 MacOS
+Metamask
 Monorepo
 NPM
 NVM
@@ -98,6 +100,7 @@ blockRoot
 blockchain
 bootnode
 bootnodes
+bundlers
 chainConfig
 chainsafe
 chiado
@@ -128,6 +131,7 @@ enum
 env
 envs
 ephemery
+ethers
 flamegraph
 flamegraphs
 getNetworkIdentity
@@ -193,11 +197,14 @@ testnets
 todo
 typesafe
 udp
+unpkg
 util
 utils
 validator
 validators
+vite
 vitest
+webpack
 wip
 xcode
 yaml

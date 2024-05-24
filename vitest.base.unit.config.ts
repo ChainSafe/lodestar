@@ -41,5 +41,6 @@ export default defineConfig({
         "**/node_modules/**",
       ],
     },
+    diff: process.env.TEST_COMPACT_DIFF ? path.join(import.meta.dirname, "./scripts/vitest/vitest.diff.ts") : undefined,
   },
 });

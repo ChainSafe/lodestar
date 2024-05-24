@@ -14,7 +14,7 @@ import {
 import {altair, phase0, Slot, ssz, SyncPeriod, allForks} from "@lodestar/types";
 import {SyncCommitteeFast} from "../../src/types.js";
 import {computeSigningRoot} from "../../src/utils/domain.js";
-import {getLcLoggerConsole} from "../../src/utils/logger.js";
+import {getConsoleLogger} from "../../src/utils/logger.js";
 
 const CURRENT_SYNC_COMMITTEE_INDEX = 22;
 const CURRENT_SYNC_COMMITTEE_DEPTH = 5;
@@ -25,7 +25,7 @@ const CURRENT_SYNC_COMMITTEE_DEPTH = 5;
  * DEBUG=true vitest ...
  * ```
  */
-export const testLogger = getLcLoggerConsole({logDebug: Boolean(process.env.DEBUG)});
+export const testLogger = getConsoleLogger({logDebug: Boolean(process.env.DEBUG)});
 
 export const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
 export const SOME_HASH = Buffer.alloc(32, 0xaa);

@@ -2,7 +2,8 @@ import type {Api} from "./routes/index.js";
 
 // NOTE: Don't export server here so it's not bundled to all consumers
 
-export * as routes from "./routes/index.js";
+import * as routes from "./routes/index.js";
+export {routes};
 export {getClient} from "./client/index.js";
 export type {Api};
 

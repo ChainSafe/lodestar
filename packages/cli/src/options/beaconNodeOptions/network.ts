@@ -32,6 +32,7 @@ export type NetworkArgs = {
   "network.gossipsubDLow"?: number;
   "network.gossipsubDHigh"?: number;
   "network.gossipsubAwaitHandler"?: boolean;
+  "network.disableFloodPublish"?: boolean;
   "network.rateLimitMultiplier"?: number;
   "network.maxGossipTopicConcurrency"?: number;
   "network.useWorker"?: boolean;
@@ -149,6 +150,7 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     gossipsubDLow: args["network.gossipsubDLow"],
     gossipsubDHigh: args["network.gossipsubDHigh"],
     gossipsubAwaitHandler: args["network.gossipsubAwaitHandler"],
+    disableFloodPublish: args["network.disableFloodPublish"],
     mdns: args["mdns"],
     rateLimitMultiplier: args["network.rateLimitMultiplier"],
     maxGossipTopicConcurrency: args["network.maxGossipTopicConcurrency"],
@@ -356,6 +358,13 @@ export const options: CliCommandOptions<NetworkArgs> = {
 
   "network.gossipsubAwaitHandler": {
     hidden: true,
+    type: "boolean",
+    group: "network",
+  },
+
+  "network.disableFloodPublish": {
+    hidden: true,
+    description: "Disable gossipsub flood publish",
     type: "boolean",
     group: "network",
   },
