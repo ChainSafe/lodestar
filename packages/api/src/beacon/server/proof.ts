@@ -24,8 +24,8 @@ export function getRoutes(config: ChainForkConfig, api: ServerApi<Api>): ServerR
         for (let i = 0; i < leaves.length; i++) {
           response.set(leaves[i], i * 32);
         }
-        // Fastify 3.x.x will automatically add header `Content-Type: application/octet-stream` if Buffer
-        return Buffer.from(response);
+        // Fastify 4.x.x will automatically add header `Content-Type: application/octet-stream` if TypedArray
+        return response;
       },
     },
     getBlockProof: {
@@ -38,8 +38,8 @@ export function getRoutes(config: ChainForkConfig, api: ServerApi<Api>): ServerR
         for (let i = 0; i < leaves.length; i++) {
           response.set(leaves[i], i * 32);
         }
-        // Fastify 3.x.x will automatically add header `Content-Type: application/octet-stream` if Buffer
-        return Buffer.from(response);
+        // Fastify 4.x.x will automatically add header `Content-Type: application/octet-stream` if TypedArray
+        return response;
       },
     },
   };
