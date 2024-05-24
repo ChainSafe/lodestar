@@ -53,7 +53,7 @@ export enum NotReorgedReason {
   ReorgMoreThanOneSlot,
   ProposerBoostNotWornOff,
   HeadBlockNotWeak,
-  ParentBlockIsStrong,
+  ParentBlockNotStrong,
   NotProposingOnTime,
 }
 
