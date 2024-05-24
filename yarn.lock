@@ -301,9 +301,9 @@
     "@chainsafe/bls-keygen" "^0.4.0"
     bls-eth-wasm "^1.1.1"
 
-"@chainsafe/blst@ChainSafe/blst-ts#a84801544fc2ae6c6b0c6b12e55f3da68deab0e1":
+"@chainsafe/blst@ChainSafe/blst-ts#43d1a696db7a8bc98fe18028ad9fa06fefadb4cd":
   version "1.0.1"
-  resolved "https://codeload.github.com/ChainSafe/blst-ts/tar.gz/a84801544fc2ae6c6b0c6b12e55f3da68deab0e1"
+  resolved "https://codeload.github.com/ChainSafe/blst-ts/tar.gz/43d1a696db7a8bc98fe18028ad9fa06fefadb4cd"
   dependencies:
     node-addon-api "^6.1.0"
     node-gyp "^10.0.1"

@@ -8,6 +8,7 @@
     "packages/*"
   ],
   "scripts": {
+    "postinstall": "./scripts/init-blst.sh",
     "clean": "rm -rf ./packages/*/lib ./packages/*/*.tsbuildinfo",
     "clean:nm": "rm -rf ./packages/*/node_modules ./node_modules",
     "build": "lerna run build",

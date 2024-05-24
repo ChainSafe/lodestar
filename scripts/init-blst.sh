@@ -6,10 +6,8 @@ cd "$SCRIPT_DIR/../node_modules/@chainsafe/blst"
 
 git clone git@github.com:supranational/blst.git
 
-rm -rf prebuild
-
 npm i --ignore-scripts
 
-node_modules/.bin/node-gyp configure
+npm run clean
 
-npm run build:gyp
+npm run build
