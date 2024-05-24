@@ -1,5 +1,4 @@
-import bls from "@chainsafe/bls";
-import {PublicKey} from "@chainsafe/bls/types";
+import {PublicKey, aggregatePublicKeys} from "@chainsafe/blst";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {Metrics} from "../../metrics/metrics.js";
 import {WorkResultError} from "./types.js";
@@ -11,7 +10,7 @@ export function getAggregatedPubkey(signatureSet: ISignatureSet, metrics: Metric
 
     case SignatureSetType.aggregate: {
       const timer = metrics?.blsThreadPool.pubkeysAggregationMainThreadDuration.startTimer();
-      const pubkeys = bls.PublicKey.aggregate(signatureSet.pubkeys);
+      const pubkeys = aggregatePublicKeys(signatureSet.pubkeys);
       timer?.();
       return pubkeys;
     }
@@ -49,19 +48,6 @@ export function chunkifyMaximizeChunkSize<T>(arr: T[], minPerChunk: number): T[]
   }
 
   return arrArr;
-}
-
-/**
- * `rand` must not be exactly zero. Otherwise it would allow the verification of invalid signatures
- * See https://github.com/ChainSafe/blst-ts/issues/45
- */
-export function randomBytesNonZero(bytesCount: number): Uint8Array {
-  const rand = crypto.getRandomValues(new Uint8Array(bytesCount));
-  for (let i = 0; i < bytesCount; i++) {
-    if (rand[i] !== 0) return rand;
-  }
-  rand[0] = 1;
-  return rand;
 }
 
 export function getJobResultError(jobResult: WorkResultError | null, i: number): Error {

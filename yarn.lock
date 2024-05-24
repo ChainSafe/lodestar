@@ -306,10 +306,10 @@
     "@chainsafe/bls-keygen" "^0.4.0"
     bls-eth-wasm "^1.1.1"
 
-"@chainsafe/blst@^1.0.0":
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/blst/-/blst-1.0.0.tgz#0939f5b38389ca8ae00fcc6b6555063113f611a7"
-  integrity sha512-WQDxFvcG+glmusXnWQ3W4g2tvHuTQEK0/cIZz37TskZJqOqAtOogZsK3cD3j+OoxbdCRT6l08QUCOtPMOLe/zA==
+"@chainsafe/blst@^1.0.1":
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/blst/-/blst-1.0.1.tgz#e9bae59aaea9685d84c78846e958a467d5de6e9e"
+  integrity sha512-AURz1KWVg6x04ZfP2Ss+x6l8lX7cF/gXBsbCBId96Z1GiPjtU8CMnaVxY6jPZ6rojSozG/UiFyOTkiTiQRnrBA==
   dependencies:
     node-addon-api "^6.1.0"
     node-gyp "^10.0.1"

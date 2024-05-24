@@ -1,7 +1,6 @@
 import {MockedFunction, afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {toBufferBE} from "bigint-buffer";
-import bls from "@chainsafe/bls";
-import {SecretKey} from "@chainsafe/bls/types";
+import {SecretKey} from "@chainsafe/blst";
 import {createChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {ExternalSignerOptions, pollExternalSignerPubkeys} from "../../../src/services/externalSignerSync.js";
@@ -32,7 +31,7 @@ describe("External signer sync", () => {
 
   beforeAll(() => {
     vi.useFakeTimers();
-    secretKeys = Array.from({length: 3}, (_, i) => bls.SecretKey.fromBytes(toBufferBE(BigInt(i + 1), 32)));
+    secretKeys = Array.from({length: 3}, (_, i) => SecretKey.deserialize(toBufferBE(BigInt(i + 1), 32)));
     pubkeys = secretKeys.map((sk) => sk.toPublicKey().toHex());
     externalSignerGetKeysStub = vi.mocked(externalSignerGetKeys);
   });

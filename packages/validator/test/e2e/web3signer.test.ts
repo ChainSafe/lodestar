@@ -22,7 +22,7 @@ describe("web3signer signature test", function () {
   const subcommitteeIndex = 0;
 
   const secretKey = interopSecretKey(0);
-  const pubkeyBytes = secretKey.toPublicKey().toBytes();
+  const pubkeyBytes = secretKey.toPublicKey().serialize();
 
   let validatorStoreRemote: ValidatorStore;
   let validatorStoreLocal: ValidatorStore;

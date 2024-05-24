@@ -1,4 +1,9 @@
-import bls from "@chainsafe/bls";
+import {
+  asyncVerify,
+  asyncVerifyMultipleAggregateSignatures,
+  verify,
+  verifyMultipleAggregateSignatures,
+} from "@chainsafe/blst";
 import {WorkRequestSet} from "./types.js";
 
 const MIN_SET_COUNT_TO_BATCH = 2;
@@ -10,7 +15,7 @@ const MIN_SET_COUNT_TO_BATCH = 2;
 export function verifySets(sets: WorkRequestSet[]): boolean {
   try {
     if (sets.length >= MIN_SET_COUNT_TO_BATCH) {
-      return bls.verifyMultipleSignatures(sets);
+      return verifyMultipleAggregateSignatures(sets);
     }
 
     // .every on an empty array returns true
@@ -19,7 +24,7 @@ export function verifySets(sets: WorkRequestSet[]): boolean {
     }
 
     // If too few signature sets verify them without batching
-    return sets.every(({message, publicKey, signature}) => bls.verify(publicKey, message, signature));
+    return sets.every(({message, publicKey, signature}) => verify(message, publicKey, signature));
   } catch (_) {
     // A signature could be malformed, in that case fromBytes throws error
     // blst-ts `verifyMultipleSignatures` is also a fallible operation if mul_n_aggregate fails
@@ -31,7 +36,7 @@ export function verifySets(sets: WorkRequestSet[]): boolean {
 export async function asyncVerifySets(sets: WorkRequestSet[]): Promise<boolean> {
   try {
     if (sets.length >= MIN_SET_COUNT_TO_BATCH) {
-      return await bls.asyncVerifyMultipleSignatures(sets);
+      return await asyncVerifyMultipleAggregateSignatures(sets);
     }
 
     // .every on an empty array returns true
@@ -40,7 +45,7 @@ export async function asyncVerifySets(sets: WorkRequestSet[]): Promise<boolean> 
     }
 
     const promises = await Promise.all(
-      sets.map(({message, publicKey, signature}) => bls.asyncVerify(publicKey, message, signature))
+      sets.map(({message, publicKey, signature}) => asyncVerify(message, publicKey, signature))
     );
     // If too few signature sets verify them without batching
     return promises.every((isValid) => isValid);

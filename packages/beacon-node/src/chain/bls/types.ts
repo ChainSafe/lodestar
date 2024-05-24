@@ -1,4 +1,4 @@
-import {PublicKey, Signature} from "@chainsafe/bls/types";
+import {PublicKey, Signature} from "@chainsafe/blst";
 import {VerifySignatureOpts} from "./interface.js";
 
 export type DeserializedKeySet = {

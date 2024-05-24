@@ -1,5 +1,4 @@
-import bls from "@chainsafe/bls";
-import type {PublicKey, SecretKey} from "@chainsafe/bls/types";
+import {PublicKey, SecretKey} from "@chainsafe/blst";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {ForkName} from "@lodestar/params";
 import {SignatureSetType} from "@lodestar/state-transition";
@@ -49,7 +48,7 @@ describe("validateGossipAttestationsSameAttData", () => {
       const bytes = new Uint8Array(32);
       const dataView = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
       dataView.setUint32(0, i + 1, true);
-      const secretKey = bls.SecretKey.fromBytes(bytes);
+      const secretKey = SecretKey.deserialize(bytes);
       const publicKey = secretKey.toPublicKey();
       keypair = {secretKey, publicKey};
       keypairs.set(i, keypair);
@@ -83,12 +82,12 @@ describe("validateGossipAttestationsSameAttData", () => {
           type: SignatureSetType.single,
           pubkey: getKeypair(i).publicKey,
           signingRoot,
-          signature: getKeypair(i).secretKey.sign(signingRoot).toBytes(),
+          signature: getKeypair(i).secretKey.sign(signingRoot).serialize(),
         };
         if (isValid) {
           if (!phase1Result[i]) {
             // invalid signature
-            signatureSet.signature = getKeypair(2023).secretKey.sign(signingRoot).toBytes();
+            signatureSet.signature = getKeypair(2023).secretKey.sign(signingRoot).serialize();
           }
           phase0Results.push(
             Promise.resolve({
