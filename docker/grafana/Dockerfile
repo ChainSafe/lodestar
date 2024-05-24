@@ -14,7 +14,7 @@ VOLUME /dashboards
 ENV GF_SECURITY_ADMIN_USER=admin
 ENV GF_SECURITY_ADMIN_PASSWORD=admin
 
-ENV PROMETHEUS_URL=host.docker.internal:9090
+ENV PROMETHEUS_URL=http://host.docker.internal:9090
 ENV DASHBOARDS_DIR=/dashboards
 
 CMD [ \
