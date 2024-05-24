@@ -1,4 +1,5 @@
 import {CompositeType, ContainerType, ValueOf, CompositeView, CompositeViewDU} from "@chainsafe/ssz";
+import {ForkName} from "@lodestar/params";
 import {ts as phase0} from "../phase0/index.js";
 import {ts as altair} from "../altair/index.js";
 import {ts as bellatrix} from "../bellatrix/index.js";
@@ -11,136 +12,10 @@ import {ssz as bellatrixSsz} from "../bellatrix/index.js";
 import {ssz as capellaSsz} from "../capella/index.js";
 import {ssz as denebSsz} from "../deneb/index.js";
 
-// Re-export union types for types that are _known_ to differ
-
-export type BeaconBlockBody =
-  | phase0.BeaconBlockBody
-  | altair.BeaconBlockBody
-  | bellatrix.BeaconBlockBody
-  | capella.BeaconBlockBody
-  | deneb.BeaconBlockBody;
-export type BeaconBlock =
-  | phase0.BeaconBlock
-  | altair.BeaconBlock
-  | bellatrix.BeaconBlock
-  | capella.BeaconBlock
-  | deneb.BeaconBlock;
-export type SignedBeaconBlock =
-  | phase0.SignedBeaconBlock
-  | altair.SignedBeaconBlock
-  | bellatrix.SignedBeaconBlock
-  | capella.SignedBeaconBlock
-  | deneb.SignedBeaconBlock;
-export type BeaconState =
-  | phase0.BeaconState
-  | altair.BeaconState
-  | bellatrix.BeaconState
-  | capella.BeaconState
-  | deneb.BeaconState;
-export type Metadata = phase0.Metadata | altair.Metadata;
-
-// For easy reference in the assemble block for building payloads
-export type ExecutionBlockBody = bellatrix.BeaconBlockBody | capella.BeaconBlockBody | deneb.BeaconBlockBody;
-
-// These two additional types will also change bellatrix forward
-export type ExecutionPayload = bellatrix.ExecutionPayload | capella.ExecutionPayload | deneb.ExecutionPayload;
-export type ExecutionPayloadHeader =
-  | bellatrix.ExecutionPayloadHeader
-  | capella.ExecutionPayloadHeader
-  | deneb.ExecutionPayloadHeader;
-
-// Blinded types that will change across forks
-export type BlindedBeaconBlockBody =
-  | bellatrix.BlindedBeaconBlockBody
-  | capella.BlindedBeaconBlockBody
-  | deneb.BlindedBeaconBlockBody;
-export type BlindedBeaconBlock = bellatrix.BlindedBeaconBlock | capella.BlindedBeaconBlock | deneb.BlindedBeaconBlock;
-export type SignedBlindedBeaconBlock =
-  | bellatrix.SignedBlindedBeaconBlock
-  | capella.SignedBlindedBeaconBlock
-  | deneb.SignedBlindedBeaconBlock;
-
-// Full or blinded types
-export type FullOrBlindedExecutionPayload =
-  | bellatrix.FullOrBlindedExecutionPayload
-  | capella.FullOrBlindedExecutionPayload;
-export type FullOrBlindedBeaconBlockBody = BeaconBlockBody | BlindedBeaconBlockBody;
-export type FullOrBlindedBeaconBlock = BeaconBlock | BlindedBeaconBlock;
-export type FullOrBlindedSignedBeaconBlock = SignedBeaconBlock | SignedBlindedBeaconBlock;
-
-export type BlockContents = {block: BeaconBlock; kzgProofs: deneb.KZGProofs; blobs: deneb.Blobs};
-export type SignedBlockContents = {
-  signedBlock: SignedBeaconBlock;
-  kzgProofs: deneb.KZGProofs;
-  blobs: deneb.Blobs;
-};
-
-export type BeaconBlockOrContents = BeaconBlock | BlockContents;
-export type SignedBeaconBlockOrContents = SignedBeaconBlock | SignedBlockContents;
-
-export type FullOrBlindedBeaconBlockOrContents = BeaconBlockOrContents | BlindedBeaconBlock;
-
-export type BuilderBid = bellatrix.BuilderBid | capella.BuilderBid | deneb.BuilderBid;
-export type SignedBuilderBid = bellatrix.SignedBuilderBid | capella.SignedBuilderBid | deneb.SignedBuilderBid;
-export type ExecutionPayloadAndBlobsBundle = deneb.ExecutionPayloadAndBlobsBundle;
-
-export type LightClientHeader = altair.LightClientHeader | capella.LightClientHeader | deneb.LightClientHeader;
-export type LightClientBootstrap =
-  | altair.LightClientBootstrap
-  | capella.LightClientBootstrap
-  | deneb.LightClientBootstrap;
-export type LightClientUpdate = altair.LightClientUpdate | capella.LightClientUpdate | deneb.LightClientUpdate;
-export type LightClientFinalityUpdate =
-  | altair.LightClientFinalityUpdate
-  | capella.LightClientFinalityUpdate
-  | deneb.LightClientFinalityUpdate;
-export type LightClientOptimisticUpdate =
-  | altair.LightClientOptimisticUpdate
-  | capella.LightClientOptimisticUpdate
-  | deneb.LightClientOptimisticUpdate;
-export type LightClientStore = altair.LightClientStore | capella.LightClientStore | deneb.LightClientStore;
-
-export type SSEPayloadAttributes =
-  | bellatrix.SSEPayloadAttributes
-  | capella.SSEPayloadAttributes
-  | deneb.SSEPayloadAttributes;
-
-/**
- * Types known to change between forks
- */
-export type AllForksTypes = {
-  BeaconBlockBody: BeaconBlockBody;
-  BeaconBlock: BeaconBlock;
-  SignedBeaconBlock: SignedBeaconBlock;
-  BeaconState: BeaconState;
-  Metadata: Metadata;
-  ExecutionPayload: ExecutionPayload;
-  ExecutionPayloadHeader: ExecutionPayloadHeader;
-  LightClientHeader: LightClientHeader;
-  BuilderBid: BuilderBid;
-  SignedBuilderBid: SignedBuilderBid;
-};
-
-export type AllForksBlindedTypes = {
-  BeaconBlockBody: BlindedBeaconBlockBody;
-  BeaconBlock: BlindedBeaconBlock;
-  SignedBeaconBlock: SignedBlindedBeaconBlock;
-};
-
-export type AllForksLightClient = {
-  BeaconBlock: altair.BeaconBlock | bellatrix.BeaconBlock | capella.BeaconBlock | deneb.BeaconBlock;
-  LightClientHeader: LightClientHeader;
-  LightClientBootstrap: LightClientBootstrap;
-  LightClientUpdate: LightClientUpdate;
-  LightClientFinalityUpdate: LightClientFinalityUpdate;
-  LightClientOptimisticUpdate: LightClientOptimisticUpdate;
-  LightClientStore: LightClientStore;
-};
-
-export type AllForksExecution = {
-  BeaconBlock: bellatrix.BeaconBlock | capella.BeaconBlock | deneb.BeaconBlock;
-  BeaconBlockBody: bellatrix.BeaconBlockBody | capella.BeaconBlockBody | deneb.BeaconBlockBody;
-};
+export type AllForks = ForkName[number];
+export type ExecutionForks = ForkName.bellatrix | ForkName.capella;
+export type LightClientForks = ForkName.altair | ForkName.capella | ForkName.deneb;
+export type BlobsForks = ForkName.deneb;
 
 /**
  * An AllForks type must accept as any parameter the UNION of all fork types.
@@ -296,3 +171,176 @@ export type AllForksBlobsSSZTypes = {
   BlobSidecar: AllForksTypeOf<typeof denebSsz.BlobSidecar>;
   ExecutionPayloadAndBlobsBundle: AllForksTypeOf<typeof denebSsz.ExecutionPayloadAndBlobsBundle>;
 };
+
+type AllForkTypes = {
+  [ForkName.phase0]: {
+    BeaconBlockBody: phase0.BeaconBlockBody;
+    BeaconState: phase0.BeaconState;
+    SignedBeaconBlock: phase0.SignedBeaconBlock;
+    Metadata: phase0.Metadata;
+  };
+  [ForkName.altair]: {
+    BeaconBlockBody: altair.BeaconBlockBody;
+    BeaconState: altair.BeaconState;
+    SignedBeaconBlock: altair.SignedBeaconBlock;
+    Metadata: altair.Metadata;
+  };
+  [ForkName.bellatrix]: {
+    BeaconBlockBody: bellatrix.BeaconBlockBody;
+    BeaconState: bellatrix.BeaconState;
+    SignedBeaconBlock: bellatrix.SignedBeaconBlock;
+    Metadata: altair.Metadata;
+  };
+  [ForkName.capella]: {
+    BeaconBlockBody: capella.BeaconBlockBody;
+    BeaconState: capella.BeaconState;
+    SignedBeaconBlock: capella.SignedBeaconBlock;
+    Metadata: altair.Metadata;
+  };
+  [ForkName.deneb]: {
+    BeaconBlockBody: deneb.BeaconBlockBody;
+    BeaconState: deneb.BeaconState;
+    SignedBeaconBlock: deneb.SignedBeaconBlock;
+    Metadata: altair.Metadata;
+  };
+};
+
+type AltairOnwardForkTypes = {
+  [ForkName.altair]: {
+    LightClientHeader: altair.LightClientHeader;
+    LightClientBootstrap: altair.LightClientBootstrap;
+    LightClientUpdate: altair.LightClientUpdate;
+    LightClientFinalityUpdate: altair.LightClientFinalityUpdate;
+    LightClientStore: altair.LightClientStore;
+  };
+  [ForkName.bellatrix]: {
+    LightClientHeader: altair.LightClientHeader;
+    LightClientBootstrap: altair.LightClientBootstrap;
+    LightClientUpdate: altair.LightClientUpdate;
+    LightClientFinalityUpdate: altair.LightClientFinalityUpdate;
+    LightClientStore: altair.LightClientStore;
+  };
+  [ForkName.capella]: {
+    LightClientHeader: capella.LightClientHeader;
+    LightClientBootstrap: capella.LightClientBootstrap;
+    LightClientUpdate: capella.LightClientUpdate;
+    LightClientFinalityUpdate: capella.LightClientFinalityUpdate;
+    LightClientStore: capella.LightClientStore;
+  };
+  [ForkName.deneb]: {
+    LightClientHeader: deneb.LightClientHeader;
+    LightClientBootstrap: deneb.LightClientBootstrap;
+    LightClientUpdate: deneb.LightClientUpdate;
+    LightClientFinalityUpdate: deneb.LightClientFinalityUpdate;
+    LightClientStore: deneb.LightClientStore;
+  };
+};
+
+type BellatrixOnwardForkTypes = {
+  [ForkName.bellatrix]: {
+    BlindedBeaconBlock: bellatrix.BlindedBeaconBlock;
+    BlindedBeaconBlockBody: bellatrix.BlindedBeaconBlockBody;
+    SignedBlindedBeaconBlock: bellatrix.SignedBlindedBeaconBlock;
+    ExecutionPayload: bellatrix.ExecutionPayload;
+    ExecutionPayloadHeader: bellatrix.ExecutionPayloadHeader;
+    BuilderBid: bellatrix.BuilderBid;
+    SignedBuilderBid: bellatrix.SignedBuilderBid;
+    SSEPayloadAttributes: bellatrix.SSEPayloadAttributes;
+  };
+  [ForkName.capella]: {
+    BlindedBeaconBlock: capella.BlindedBeaconBlock;
+    BlindedBeaconBlockBody: capella.BlindedBeaconBlockBody;
+    SignedBlindedBeaconBlock: capella.SignedBlindedBeaconBlock;
+    ExecutionPayload: capella.ExecutionPayload;
+    ExecutionPayloadHeader: capella.ExecutionPayloadHeader;
+    BuilderBid: capella.BuilderBid;
+    SignedBuilderBid: capella.SignedBuilderBid;
+    SSEPayloadAttributes: capella.SSEPayloadAttributes;
+  };
+  [ForkName.deneb]: {
+    BlindedBeaconBlock: deneb.BlindedBeaconBlock;
+    BlindedBeaconBlockBody: deneb.BlindedBeaconBlockBody;
+    SignedBlindedBeaconBlock: deneb.SignedBlindedBeaconBlock;
+    ExecutionPayload: deneb.ExecutionPayload;
+    ExecutionPayloadHeader: deneb.ExecutionPayloadHeader;
+    BuilderBid: deneb.BuilderBid;
+    SignedBuilderBid: deneb.SignedBuilderBid;
+    SSEPayloadAttributes: deneb.SSEPayloadAttributes;
+  };
+};
+
+type DenebOnwardForkTypes = {
+  [ForkName.deneb]: {
+    BlockContents: {block: BeaconBlock; kzgProofs: deneb.KZGProofs; blobs: deneb.Blobs};
+    SignedBlockContents: {
+      signedBlock: SignedBeaconBlock;
+      kzgProofs: deneb.KZGProofs;
+      blobs: deneb.Blobs;
+    };
+    ExecutionPayloadAndBlobsBundle: deneb.ExecutionPayloadAndBlobsBundle;
+  };
+};
+
+export type BlindedOrFull = "full" | "blinded";
+
+export type BeaconBlockBody<F extends ForkName = ForkName, B extends BlindedOrFull = "full"> = B extends "full"
+  ? AllForkTypes[F]["BeaconBlockBody"]
+  : F extends keyof BellatrixOnwardForkTypes
+    ? BellatrixOnwardForkTypes[F]["BlindedBeaconBlockBody"]
+    : never;
+
+export type BeaconBlock<F extends ForkName = ForkName, B extends BlindedOrFull = "full"> = B extends "full"
+  ? AllForkTypes[F]["BeaconBlockBody"]
+  : F extends keyof BellatrixOnwardForkTypes
+    ? BellatrixOnwardForkTypes[F]["BlindedBeaconBlock"]
+    : never;
+
+export type SignedBeaconBlock<F extends ForkName = ForkName, B extends BlindedOrFull = "full"> = B extends "full"
+  ? AllForkTypes[F]["SignedBeaconBlock"]
+  : F extends keyof BellatrixOnwardForkTypes
+    ? BellatrixOnwardForkTypes[F]["SignedBlindedBeaconBlock"]
+    : never;
+
+export type BeaconState<F extends ForkName> = AllForkTypes[F]["BeaconState"];
+
+export type Metadata<F extends ForkName> = AllForkTypes[F]["Metadata"];
+
+export type ExecutionPayload<F extends keyof BellatrixOnwardForkTypes> =
+  BellatrixOnwardForkTypes[F]["ExecutionPayload"];
+
+export type ExecutionPayloadHeader<F extends keyof BellatrixOnwardForkTypes> =
+  BellatrixOnwardForkTypes[F]["ExecutionPayloadHeader"];
+
+export type BuilderBid<F extends keyof BellatrixOnwardForkTypes, S extends "signed" | "unsigned"> = S extends "signed"
+  ? BellatrixOnwardForkTypes[F]["SignedBuilderBid"]
+  : BellatrixOnwardForkTypes[F]["BuilderBid"];
+
+export type SSEPayloadAttributes<F extends keyof BellatrixOnwardForkTypes> =
+  BellatrixOnwardForkTypes[F]["SSEPayloadAttributes"];
+
+export type LightClientHeader<F extends keyof AltairOnwardForkTypes> = AltairOnwardForkTypes[F]["LightClientHeader"];
+
+export type LightClientBootstrap<F extends keyof AltairOnwardForkTypes> =
+  AltairOnwardForkTypes[F]["LightClientBootstrap"];
+
+export type LightClientUpdate<F extends keyof AltairOnwardForkTypes> = AltairOnwardForkTypes[F]["LightClientUpdate"];
+
+export type LightClientFinalityUpdate<F extends keyof AltairOnwardForkTypes> =
+  AltairOnwardForkTypes[F]["LightClientFinalityUpdate"];
+
+export type LightClientStore<F extends keyof AltairOnwardForkTypes> = AltairOnwardForkTypes[F]["LightClientStore"];
+
+export type BlockContents<F extends keyof DenebOnwardForkTypes, S extends "signed" | "unsigned"> = S extends "signed"
+  ? DenebOnwardForkTypes[F]["SignedBlockContents"]
+  : DenebOnwardForkTypes[F]["BlockContents"];
+
+export type BeaconBlockOrContents<F extends keyof DenebOnwardForkTypes> =
+  | BeaconBlock<F, "full">
+  | BlockContents<F, "unsigned">;
+
+export type SignedBeaconBlockOrContents<F extends keyof DenebOnwardForkTypes> =
+  | SignedBeaconBlock<F, "full">
+  | BlockContents<F, "signed">;
+
+export type ExecutionPayloadAndBlobsBundle<F extends keyof DenebOnwardForkTypes> =
+  DenebOnwardForkTypes[F]["ExecutionPayloadAndBlobsBundle"];
