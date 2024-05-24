@@ -199,7 +199,7 @@ describe("httpClient json client", () => {
     url.password = "password";
     const httpClient = new HttpClient({baseUrl: url.toString()});
 
-    await httpClient.request(testDefinition, {});
+    (await httpClient.request(testDefinition, {})).assertOk();
   });
 
   it("should not URI-encode user credentials in Authorization header", async () => {
@@ -222,7 +222,7 @@ describe("httpClient json client", () => {
 
     const httpClient = new HttpClient({baseUrl: baseUrl});
 
-    await httpClient.request(testDefinition, {});
+    (await httpClient.request(testDefinition, {})).assertOk();
   });
 
   it("should handle aborting request with timeout", async () => {

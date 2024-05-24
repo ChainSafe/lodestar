@@ -25,7 +25,6 @@ export interface IHttpClient {
   readonly baseUrl: string;
 
   request<E extends Endpoint>(
-    // TODO: make http client simpler to use? providing a definition is quite involved
     definition: RouteDefinitionExtra<E>,
     args: E["args"],
     localInit?: ApiRequestInit
@@ -167,7 +166,7 @@ export class HttpClient implements IHttpClient {
     // First loop: retry in sequence, query next URL only after previous errors
     for (; i < this.urlsInits.length; i++) {
       try {
-        return await new Promise<ApiResponse<E>>((resolve, reject) => {
+        const res = await new Promise<ApiResponse<E>>((resolve, reject) => {
           let requestCount = 0;
           let errorCount = 0;
 
@@ -225,6 +224,15 @@ export class HttpClient implements IHttpClient {
             }
           }
         });
+        if (res.ok) {
+          return res;
+        } else {
+          if (i >= this.urlsInits.length - 1) {
+            return res;
+          } else {
+            this.logger?.debug("Request error, retrying", {}, res.error() as Error);
+          }
+        }
       } catch (e) {
         if (i >= this.urlsInits.length - 1) {
           throw e;

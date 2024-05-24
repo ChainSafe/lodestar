@@ -10,7 +10,7 @@ describe("httpClient fallback", () => {
     method: "GET",
     req: EmptyRequestCodec,
     resp: EmptyResponseCodec,
-    operationId: "test",
+    operationId: "testRoute",
     urlFormatter: compileRouteUrlFormatter(url),
   };
   const DEBUG_LOGS = Boolean(process.env.DEBUG);
@@ -51,10 +51,15 @@ describe("httpClient fallback", () => {
       await new Promise((r) => setTimeout(r, 10));
       const i = getServerIndex(url);
       if (serverErrors.get(i)) {
-        // TODO: make sure to test this with {ok: false} and Error
-        throw Error(`test_error_server_${i}`);
+        if (i === 1) {
+          // Simulate one of the servers returning a HTTP error
+          // which is handled differently than network errors
+          return new Response(null, {status: 500});
+        } else {
+          throw Error(`test_error_server_${i}`);
+        }
       } else {
-        return {ok: true} as Response;
+        return new Response(null, {status: 200});
       }
     });
   });
