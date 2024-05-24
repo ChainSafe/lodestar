@@ -50,7 +50,7 @@ export async function isValidAccount({
       storageRoot: proof.storageHash,
       codeHash: proof.codeHash,
     });
-    return account.serialize().equals(expectedAccountRLP ? expectedAccountRLP : emptyAccountSerialize);
+    return Buffer.from(account.serialize()).equals(expectedAccountRLP ? expectedAccountRLP : emptyAccountSerialize);
   } catch (err) {
     logger.error("Error verifying account proof", undefined, err as Error);
     return false;
@@ -82,7 +82,7 @@ export async function isValidStorageKeys({
       // so we need to convert the output of RLP.encode to Buffer first
       const isStorageValid =
         (!expectedStorageRLP && sp.value === "0x0") ||
-        (!!expectedStorageRLP && expectedStorageRLP.equals(Buffer.from(RLP.encode(sp.value))));
+        (!!expectedStorageRLP && Buffer.from(expectedStorageRLP).equals(Buffer.from(RLP.encode(sp.value))));
       if (!isStorageValid) return false;
     } catch (err) {
       logger.error("Error verifying storage keys", undefined, err as Error);
@@ -123,10 +123,10 @@ export async function isValidBlock({
   }
 
   const common = getChainCommon(config.PRESET_BASE);
-  common.setHardforkByBlockNumber(executionPayload.blockNumber, undefined, executionPayload.timestamp);
+  common.setHardforkBy({blockNumber: executionPayload.blockNumber, timestamp: executionPayload.timestamp});
   const blockObject = Block.fromBlockData(blockDataFromELBlock(block), {common});
 
-  if (!(await blockObject.validateTransactionsTrie())) {
+  if (!(await blockObject.transactionsTrieIsValid())) {
     logger.error("Block transactions could not be verified.", {
       blockHash: bufferToHex(blockObject.hash()),
       blockNumber: blockObject.header.number,
