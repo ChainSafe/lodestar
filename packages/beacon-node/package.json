@@ -154,12 +154,10 @@
   },
   "devDependencies": {
     "@types/datastore-level": "^3.0.0",
-    "@types/leveldown": "^4.0.3",
     "@types/qs": "^6.9.7",
     "@types/tmp": "^0.2.3",
     "it-drain": "^3.0.3",
     "it-pair": "^2.0.6",
-    "leveldown": "^6.1.1",
     "rewiremock": "^3.14.5",
     "rimraf": "^4.4.1",
     "tmp": "^0.2.1"
