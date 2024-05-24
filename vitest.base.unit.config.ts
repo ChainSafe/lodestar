@@ -7,6 +7,8 @@ export default defineConfig({
     pool: "threads",
     include: ["**/*.test.ts"],
     exclude: [
+      "**/spec-tests/**",
+      "**/spec-tests-bls/**",
       "**/*.browser.test.ts",
       "**/node_modules/**",
       "**/dist/**",
@@ -39,6 +41,8 @@ export default defineConfig({
         "**/types/**",
         "**/bin/**",
         "**/node_modules/**",
+        "**/spec-tests/**",
+        "**/spec-tests-bls/**",
       ],
     },
     diff: process.env.TEST_COMPACT_DIFF ? path.join(import.meta.dirname, "./scripts/vitest/vitest.diff.ts") : undefined,
