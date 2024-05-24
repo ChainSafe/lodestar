@@ -1,5 +1,5 @@
-import bls from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
+import {SecretKey} from "@chainsafe/blst";
 import {fromHex} from "@lodestar/utils";
 
 /**
@@ -10,7 +10,7 @@ export async function getKeystoresStr(password: string, secretKeys: string[]): P
 
   for (const secretKey of secretKeys) {
     const sk = fromHex(secretKey);
-    const pk = bls.SecretKey.fromBytes(sk).toPublicKey().toBytes();
+    const pk = SecretKey.deserialize(sk).toPublicKey().serialize();
     const keystore = await Keystore.create(password, sk, pk, "");
     keystoresStr.push(keystore.stringify());
   }

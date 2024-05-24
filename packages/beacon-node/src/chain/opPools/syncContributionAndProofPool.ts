@@ -1,12 +1,11 @@
-import type {Signature} from "@chainsafe/bls/types";
-import bls from "@chainsafe/bls";
+import {Signature, aggregateSignatures} from "@chainsafe/blst";
 import {BitArray, toHexString} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {altair, Slot, Root, ssz} from "@lodestar/types";
 import {G2_POINT_AT_INFINITY} from "@lodestar/state-transition";
-import {MapDef} from "@lodestar/utils";
+import {MapDef, signatureFromBytesNoCheck} from "@lodestar/utils";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
-import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
+import {pruneBySlot} from "./utils.js";
 
 /**
  * SyncCommittee aggregates are only useful for the next block they have signed.
@@ -182,6 +181,6 @@ export function aggregate(bestContributionBySubnet: Map<number, SyncContribution
   }
   return {
     syncCommitteeBits,
-    syncCommitteeSignature: bls.Signature.aggregate(signatures).toBytes(),
+    syncCommitteeSignature: aggregateSignatures(signatures).serialize(),
   };
 }
