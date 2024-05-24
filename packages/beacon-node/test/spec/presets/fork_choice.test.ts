@@ -307,7 +307,11 @@ const forkChoiceTest =
               }
               if (step.checks.get_proposer_head) {
                 const currentSlot = Math.floor(tickTime / config.SECONDS_PER_SLOT);
-                const {proposerHead, notReorgedReason} = (chain.forkChoice as ForkChoice).getProposerHead(head, tickTime % config.SECONDS_PER_SLOT, currentSlot);
+                const {proposerHead, notReorgedReason} = (chain.forkChoice as ForkChoice).getProposerHead(
+                  head,
+                  tickTime % config.SECONDS_PER_SLOT,
+                  currentSlot
+                );
                 logger.debug(`Not reorged reason ${notReorgedReason} at step ${i}`);
                 expect(proposerHead.blockRoot).toEqualWithMessage(
                   step.checks.get_proposer_head,
