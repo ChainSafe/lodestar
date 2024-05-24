@@ -2,7 +2,7 @@
   "name": "root",
   "private": true,
   "engines": {
-    "node": ">=20.1.0 <21"
+    "node": ">=20.1.0 <21 || >=22 <23"
   },
   "workspaces": [
     "packages/*"
@@ -48,7 +48,7 @@
     "@chainsafe/eslint-plugin-node": "^11.2.3",
     "@dapplion/benchmark": "^0.2.4",
     "@types/mocha": "^10.0.6",
-    "@types/node": "^20.11.28",
+    "@types/node": "^20.12.8",
     "@typescript-eslint/eslint-plugin": "^7.2.0",
     "@typescript-eslint/parser": "^7.2.0",
     "@vitest/browser": "^1.6.0",
@@ -91,6 +91,7 @@
     "@puppeteer/browsers": "^2.1.0",
     "dns-over-http-resolver": "^2.1.1",
     "loupe": "^2.3.6",
-    "vite": "^5.2.11"
+    "vite": "^5.2.11",
+    "testcontainers/**/nan": "^2.19.0"
   }
 }
