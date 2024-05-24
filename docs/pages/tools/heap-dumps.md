@@ -105,7 +105,7 @@ $ git clone https://github.com/nodejs/node.git
 $ cd node
 
 # Use whichever version of node you prefer
-$ git checkout v20.10.0
+$ git checkout v22.1.0
 $ ./configure --debug
 
 # This command only builds the debug version of node and assumes
