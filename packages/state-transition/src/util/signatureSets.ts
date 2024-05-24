@@ -1,5 +1,6 @@
-import {PublicKey, Signature, fastAggregateVerify, verify} from "@chainsafe/blst";
+import {PublicKey, fastAggregateVerify, verify} from "@chainsafe/blst";
 import {Root} from "@lodestar/types";
+import {signatureFromBytes} from "@lodestar/utils";
 
 export enum SignatureSetType {
   single = "single",
@@ -24,8 +25,7 @@ export type ISignatureSet = SingleSignatureSet | AggregatedSignatureSet;
 
 export function verifySignatureSet(signatureSet: ISignatureSet): boolean {
   // All signatures are not trusted and must be group checked (p2.subgroup_check)
-  const signature = Signature.deserialize(signatureSet.signature, undefined);
-  signature.sigValidate();
+  const signature = signatureFromBytes(signatureSet.signature);
 
   switch (signatureSet.type) {
     case SignatureSetType.single:

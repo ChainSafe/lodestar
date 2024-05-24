@@ -11,7 +11,7 @@ import {
 } from "@chainsafe/blst";
 import {fromHexString} from "@chainsafe/ssz";
 import {InputType} from "@lodestar/spec-test-util";
-import {toHexString} from "@lodestar/utils";
+import {signatureFromBytes, toHexString} from "@lodestar/utils";
 import {TestRunnerFn} from "../utils/types.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -152,8 +152,7 @@ function eth_fast_aggregate_verify(input: {pubkeys: string[]; message: string; s
 function fast_aggregate_verify(input: {pubkeys: string[]; message: string; signature: string}): boolean | null {
   const {pubkeys, message, signature} = input;
   try {
-    const sig = Signature.deserialize(fromHexString(signature), undefined);
-    sig.sigValidate();
+    const sig = signatureFromBytes(fromHexString(signature));
     return fastAggregateVerify(
       fromHexString(message),
       pubkeys.map((hex) => {

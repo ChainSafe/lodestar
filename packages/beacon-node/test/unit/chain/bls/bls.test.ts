@@ -1,6 +1,7 @@
-import {CoordType, PublicKey, SecretKey, Signature} from "@chainsafe/blst";
+import {PublicKey, SecretKey} from "@chainsafe/blst";
 import {describe, it, expect, beforeEach} from "vitest";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
+import {signatureFromBytes} from "@lodestar/utils";
 import {BlsSingleThreadVerifier} from "../../../../src/chain/bls/singleThread.js";
 import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/index.js";
 import {testLogger} from "../../../utils/logger.js";
@@ -45,8 +46,7 @@ describe("BlsVerifier ", function () {
         // signature is malformed
         const malformedSignature = Buffer.alloc(96, 10);
         expect(() => {
-          const sig = Signature.deserialize(malformedSignature, CoordType.affine);
-          sig.sigValidate();
+          signatureFromBytes(malformedSignature);
         }).toThrow();
         sets[1].signature = malformedSignature;
         expect(await verifier.verifySignatureSets(sets)).toBe(false);
@@ -81,8 +81,7 @@ describe("BlsVerifier ", function () {
         // signature is malformed
         const malformedSignature = Buffer.alloc(96, 10);
         expect(() => {
-          const sig = Signature.deserialize(malformedSignature, CoordType.affine);
-          sig.sigValidate();
+          signatureFromBytes(malformedSignature);
         }).toThrow();
         sets[1].signature = malformedSignature;
         expect(await verifier.verifySignatureSetsSameMessage(sets, signingRoot)).toEqual([true, false, true]);

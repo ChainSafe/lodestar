@@ -10,7 +10,7 @@ import {
   verify as _verify,
 } from "@chainsafe/blst";
 import {fromHexString} from "@chainsafe/ssz";
-import {toHexString} from "@lodestar/utils";
+import {signatureFromBytes, toHexString} from "@lodestar/utils";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -71,8 +71,7 @@ function aggregate(input: string[]): string {
 function fast_aggregate_verify(input: {pubkeys: string[]; message: string; signature: string}): boolean | null {
   const {pubkeys, message, signature} = input;
   try {
-    const sig = Signature.deserialize(fromHexString(signature), undefined);
-    sig.sigValidate();
+    const sig = signatureFromBytes(fromHexString(signature));
     return fastAggregateVerify(
       fromHexString(message),
       pubkeys.map((hex) => {
@@ -104,8 +103,7 @@ function batch_verify(input: {pubkeys: string[]; messages: string[]; signatures:
       pubkeys.map((pubkey, i) => {
         const publicKey = PublicKey.deserialize(fromHexString(pubkey), CoordType.jacobian);
         publicKey.keyValidate();
-        const signature = Signature.deserialize(fromHexString(signatures[i]), undefined);
-        signature.sigValidate();
+        const signature = signatureFromBytes(fromHexString(signatures[i]));
         return {
           publicKey,
           message: fromHexString(messages[i]),
@@ -179,8 +177,7 @@ function deserialization_G1(input: {pubkey: string}): boolean {
  */
 function deserialization_G2(input: {signature: string}): boolean {
   try {
-    const sig = Signature.deserialize(fromHexString(input.signature), undefined);
-    sig.sigValidate();
+    signatureFromBytes(fromHexString(input.signature));
     return true;
   } catch (e) {
     return false;

@@ -1,10 +1,11 @@
-import {SecretKey, Signature, fastAggregateVerify} from "@chainsafe/blst";
+import {SecretKey, fastAggregateVerify} from "@chainsafe/blst";
 import {BitArray, fromHexString, toHexString} from "@chainsafe/ssz";
 import {describe, it, expect, beforeEach, beforeAll, afterEach, vi} from "vitest";
 import {CachedBeaconStateAllForks, newFilledArray} from "@lodestar/state-transition";
 import {FAR_FUTURE_EPOCH, ForkName, MAX_EFFECTIVE_BALANCE, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz, phase0} from "@lodestar/types";
 import {CachedBeaconStateAltair} from "@lodestar/state-transition/src/types.js";
+import {signatureFromBytes} from "@lodestar/utils";
 import {MockedForkChoice, getMockedForkChoice} from "../../../mocks/mockedBeaconChain.js";
 import {
   AggregatedAttestationPool,
@@ -314,8 +315,7 @@ describe("MatchingDataAttestationGroup aggregateInto", function () {
     aggregateInto(attWithIndex1, attWithIndex2);
 
     expect(renderBitArray(attWithIndex1.attestation.aggregationBits)).toEqual(renderBitArray(mergedBitArray));
-    const aggregatedSignature = Signature.deserialize(attWithIndex1.attestation.signature, undefined);
-    aggregatedSignature.sigValidate();
+    const aggregatedSignature = signatureFromBytes(attWithIndex1.attestation.signature);
     expect(fastAggregateVerify(attestationDataRoot, [sk1.toPublicKey(), sk2.toPublicKey()], aggregatedSignature)).toBe(
       true
     );

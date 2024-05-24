@@ -10,6 +10,7 @@ import {
   verify,
   verifyMultipleAggregateSignatures,
 } from "@chainsafe/blst";
+import {signatureFromBytes} from "@lodestar/utils";
 import {linspace} from "../../../src/util/numpy.js";
 
 describe("BLS ops", function () {
@@ -93,8 +94,7 @@ describe("BLS ops", function () {
       id: `BLS deserializing ${numValidators} signatures`,
       fn: () => {
         for (const signature of signatures) {
-          const sig = Signature.deserialize(signature, CoordType.affine);
-          sig.sigValidate();
+          signatureFromBytes(signature);
         }
       },
     });

@@ -1,5 +1,6 @@
-import {CoordType, PublicKey, Signature, aggregatePublicKeys, aggregateSignatures, verify} from "@chainsafe/blst";
+import {PublicKey, Signature, aggregatePublicKeys, aggregateSignatures, verify} from "@chainsafe/blst";
 import {ISignatureSet} from "@lodestar/state-transition";
+import {signatureFromBytes} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {IBlsVerifier} from "./interface.js";
 import {verifySets} from "./verifySets.js";
@@ -43,9 +44,7 @@ export class BlsSingleThreadVerifier implements IBlsVerifier {
     // validate signature = true
     const signatures = sets.map((set) => {
       try {
-        const sig = Signature.deserialize(set.signature, CoordType.affine);
-        sig.sigValidate();
-        return sig;
+        return signatureFromBytes(set.signature);
       } catch (_) {
         // at least one set has malformed signature
         isAllValid = false;
