@@ -83,6 +83,16 @@ Lodestar should now be ready for use.
 
 See [Command Line Reference](./../reference/cli.md) for further information.
 
+### Known Issues
+
+**ModuleNotFoundError: No module named 'distutils'**
+
+If you stump upon this issue while running Yarn, it's because Python 3.12 had removed `distutils` package. That package is required for node build tool. You can install it with following command.
+
+```bash
+pip3 install setuptools --force-reinstall --user
+```
+
 ## Install from NPM [not recommended]
 
 :::danger
