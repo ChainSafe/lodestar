@@ -305,12 +305,16 @@ export async function verifyBlockExecutionPayload(
       ? (block.message.body as deneb.BeaconBlockBody).blobKzgCommitments.map(kzgCommitmentToVersionedHash)
       : undefined;
   const parentBlockRoot = ForkSeq[fork] >= ForkSeq.deneb ? block.message.parentRoot : undefined;
+
+  const logCtx = {slot: block.message.slot, executionBlock: executionPayloadEnabled.blockNumber};
+  chain.logger.debug("Call engine api newPayload", logCtx);
   const execResult = await chain.executionEngine.notifyNewPayload(
     fork,
     executionPayloadEnabled,
     versionedHashes,
     parentBlockRoot
   );
+  chain.logger.debug("Receive engine api newPayload result", {...logCtx, status: execResult.status});
 
   chain.metrics?.engineNotifyNewPayloadResult.inc({result: execResult.status});
 
