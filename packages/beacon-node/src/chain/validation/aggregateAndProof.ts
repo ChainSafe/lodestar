@@ -9,9 +9,7 @@ import {toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "..";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
 import {RegenCaller} from "../regen/index.js";
-import {
-  getSeenAttDataKeyFromSignedAggregateAndProof,
-} from "../../util/sszBytes.js";
+import {getSeenAttDataKeyFromSignedAggregateAndProof} from "../../util/sszBytes.js";
 import {getSelectionProofSignatureSet, getAggregateAndProofSignatureSet} from "./signatureSets/index.js";
 import {
   getAttestationDataSigningRoot,
