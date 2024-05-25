@@ -28,7 +28,6 @@ import {
   bellatrix,
   BLSPubkey,
   BLSSignature,
-  electra,
   Epoch,
   phase0,
   Root,
@@ -803,9 +802,7 @@ export class ValidatorStore {
       );
     }
     if (isAfterElectra && data.index !== 0) {
-      throw Error(
-        `Non-zero committee index post-electra during signing: att.committeeIndex ${data.index}`
-      );
+      throw Error(`Non-zero committee index post-electra during signing: att.committeeIndex ${data.index}`);
     }
     if (this.config.getForkSeq(duty.slot) >= ForkSeq.electra && data.index !== 0) {
       throw Error(`Attestataion data index must be 0 post electra: index ${data.index}`);

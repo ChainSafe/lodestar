@@ -42,7 +42,7 @@ describe("validate gossip attestation", () => {
           attestation: null,
           serializedData,
           attSlot,
-          seenAttestationDataKey: getSeenAttDataKeyPhase0(serializedData),
+          seenAttestationKey: getSeenAttDataKeyPhase0(serializedData),
         },
         subnet0
       );
