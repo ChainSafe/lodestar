@@ -1,5 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
-import {allForks, BLSSignature, electra, isElectraAttestation, phase0, Slot, ssz} from "@lodestar/types";
+import {allForks, BLSSignature, phase0, Slot, ssz} from "@lodestar/types";
 import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@lodestar/state-transition";
 import {sleep} from "@lodestar/utils";
 import {ApiClient, routes} from "@lodestar/api";

@@ -52,7 +52,7 @@ describe("validateAttestation", () => {
     const {chain, subnet} = getValidData();
     await expectGossipError(
       chain,
-      {attestation: null, serializedData: Buffer.alloc(0), attSlot: 0, seenAttestationDataKey: "invalid"},
+      {attestation: null, serializedData: Buffer.alloc(0), attSlot: 0, seenAttestationKey: "invalid"},
       subnet,
       GossipErrorCode.INVALID_SERIALIZED_BYTES_ERROR_CODE
     );
@@ -72,7 +72,7 @@ describe("validateAttestation", () => {
         attestation: null,
         serializedData,
         attSlot: attestation.data.slot,
-        seenAttestationDataKey: getSeenAttDataKeyPhase0(serializedData),
+        seenAttestationKey: getSeenAttDataKeyPhase0(serializedData),
       },
       subnet,
       AttestationErrorCode.BAD_TARGET_EPOCH
@@ -91,7 +91,7 @@ describe("validateAttestation", () => {
         attestation: null,
         serializedData,
         attSlot: attestation.data.slot,
-        seenAttestationDataKey: getSeenAttDataKeyPhase0(serializedData),
+        seenAttestationKey: getSeenAttDataKeyPhase0(serializedData),
       },
       subnet,
       AttestationErrorCode.PAST_SLOT
@@ -110,7 +110,7 @@ describe("validateAttestation", () => {
         attestation: null,
         serializedData,
         attSlot: attestation.data.slot,
-        seenAttestationDataKey: getSeenAttDataKeyPhase0(serializedData),
+        seenAttestationKey: getSeenAttDataKeyPhase0(serializedData),
       },
       subnet,
       AttestationErrorCode.FUTURE_SLOT
@@ -135,7 +135,7 @@ describe("validateAttestation", () => {
         attestation: null,
         serializedData,
         attSlot: attestation.data.slot,
-        seenAttestationDataKey: getSeenAttDataKeyPhase0(serializedData),
+        seenAttestationKey: getSeenAttDataKeyPhase0(serializedData),
       },
       subnet,
       AttestationErrorCode.NOT_EXACTLY_ONE_AGGREGATION_BIT_SET
@@ -155,7 +155,7 @@ describe("validateAttestation", () => {
         attestation: null,
         serializedData,
         attSlot: attestation.data.slot,
-        seenAttestationDataKey: getSeenAttDataKeyPhase0(serializedData),
+        seenAttestationKey: getSeenAttDataKeyPhase0(serializedData),
       },
       subnet,
       AttestationErrorCode.NOT_EXACTLY_ONE_AGGREGATION_BIT_SET
@@ -179,7 +179,7 @@ describe("validateAttestation", () => {
         attestation: null,
         serializedData,
         attSlot: attestation.data.slot,
-        seenAttestationDataKey: getSeenAttDataKeyPhase0(serializedData),
+        seenAttestationKey: getSeenAttDataKeyPhase0(serializedData),
       },
       subnet,
       AttestationErrorCode.UNKNOWN_OR_PREFINALIZED_BEACON_BLOCK_ROOT
@@ -199,7 +199,7 @@ describe("validateAttestation", () => {
         attestation: null,
         serializedData,
         attSlot: attestation.data.slot,
-        seenAttestationDataKey: getSeenAttDataKeyPhase0(serializedData),
+        seenAttestationKey: getSeenAttDataKeyPhase0(serializedData),
       },
       subnet,
       AttestationErrorCode.INVALID_TARGET_ROOT
@@ -226,7 +226,7 @@ describe("validateAttestation", () => {
         attestation: null,
         serializedData,
         attSlot: attestation.data.slot,
-        seenAttestationDataKey: getSeenAttDataKeyPhase0(serializedData),
+        seenAttestationKey: getSeenAttDataKeyPhase0(serializedData),
       },
       subnet,
       AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS
@@ -245,7 +245,7 @@ describe("validateAttestation", () => {
         attestation: null,
         serializedData,
         attSlot: attestation.data.slot,
-        seenAttestationDataKey: getSeenAttDataKeyPhase0(serializedData),
+        seenAttestationKey: getSeenAttDataKeyPhase0(serializedData),
       },
       invalidSubnet,
       AttestationErrorCode.INVALID_SUBNET_ID
@@ -265,7 +265,7 @@ describe("validateAttestation", () => {
         attestation: null,
         serializedData,
         attSlot: attestation.data.slot,
-        seenAttestationDataKey: getSeenAttDataKeyPhase0(serializedData),
+        seenAttestationKey: getSeenAttDataKeyPhase0(serializedData),
       },
       subnet,
       AttestationErrorCode.ATTESTATION_ALREADY_KNOWN
@@ -287,7 +287,7 @@ describe("validateAttestation", () => {
         attestation: null,
         serializedData,
         attSlot: attestation.data.slot,
-        seenAttestationDataKey: getSeenAttDataKeyPhase0(serializedData),
+        seenAttestationKey: getSeenAttDataKeyPhase0(serializedData),
       },
       subnet,
       AttestationErrorCode.INVALID_SIGNATURE
