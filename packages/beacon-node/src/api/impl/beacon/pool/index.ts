@@ -1,5 +1,5 @@
 import {routes, ServerApi} from "@lodestar/api";
-import {CommitteeIndex, Epoch, isElectraAttestation, ssz} from "@lodestar/types";
+import {Epoch, ssz} from "@lodestar/types";
 import {ForkName, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {validateApiAttestation} from "../../../../chain/validation/index.js";
 import {validateApiAttesterSlashing} from "../../../../chain/validation/attesterSlashing.js";
