@@ -54,7 +54,7 @@ export class HttpClient implements IHttpClient {
   private readonly urlsScore: number[];
 
   /**
-   * Cache to keep track if SSZ is not supported by the server per route. This cache will only be
+   * Cache to keep track of routes per server that do not support SSZ. This cache will only be
    * populated if we receive a 415 error response from the server after sending a SSZ request body.
    * The request will be retried using a JSON body and all subsequent requests will only use JSON.
    */
