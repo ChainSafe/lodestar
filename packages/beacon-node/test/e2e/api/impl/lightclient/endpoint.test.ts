@@ -89,7 +89,7 @@ describe("lightclient api", function () {
     expect(updates.length).toBe(1);
     // best update could be any slots
     // version is set
-    expect(res.meta().version[0]).toBe(ForkName.altair);
+    expect(res.meta().versions[0]).toBe(ForkName.altair);
   });
 
   it("getLightClientOptimisticUpdate()", async function () {

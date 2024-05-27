@@ -50,7 +50,7 @@ export class LightclientServerApiMock implements LightClientApi {
         updates.push(update);
       }
     }
-    return {data: updates, meta: {version: Array.from({length: updates.length}, () => ForkName.bellatrix)}};
+    return {data: updates, meta: {versions: Array.from({length: updates.length}, () => ForkName.bellatrix)}};
   }
 
   async getLightClientOptimisticUpdate(): ReturnType<LightClientApi["getLightClientOptimisticUpdate"]> {

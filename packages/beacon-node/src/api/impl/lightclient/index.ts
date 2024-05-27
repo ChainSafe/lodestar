@@ -17,7 +17,7 @@ export function getLightclientApi({
       const updates = await Promise.all(periods.map((period) => chain.lightClientServer.getUpdate(period)));
       return {
         data: updates,
-        meta: {version: updates.map((update) => config.getForkName(update.attestedHeader.beacon.slot))},
+        meta: {versions: updates.map((update) => config.getForkName(update.attestedHeader.beacon.slot))},
       };
     },
 

@@ -38,7 +38,7 @@ export type Endpoints = {
     },
     {query: {start_period: number; count: number}},
     allForks.LightClientUpdate[],
-    {version: ForkName[]}
+    {versions: ForkName[]}
   >;
 
   /**
@@ -113,32 +113,32 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       resp: {
         data: {
           toJson: (data, meta) => {
-            if (data.length !== meta.version.length) {
+            if (data.length !== meta.versions.length) {
               throw new Error("TODO"); // TODO
             }
             const json: unknown[] = [];
-            for (const [i, version] of meta.version.entries()) {
+            for (const [i, version] of meta.versions.entries()) {
               json.push(getLightClientForkTypes(version).LightClientUpdate.toJson(data[i] as deneb.LightClientUpdate));
             }
             return json;
           },
           fromJson: (data, meta) => {
             const value: allForks.LightClientUpdate[] = [];
-            for (let i = 0; i < meta.version.length; i++) {
-              const version = meta.version[i];
+            for (let i = 0; i < meta.versions.length; i++) {
+              const version = meta.versions[i];
               value.push(getLightClientForkTypes(version).LightClientUpdate.fromJson((data as unknown[])[i]));
             }
             return value;
           },
           serialize: (data, meta) => {
-            if (data.length !== meta.version.length) {
+            if (data.length !== meta.versions.length) {
               throw new Error("TODO"); // TODO
             }
             if (!beaconConfig) {
               throw new Error("TODO"); // TODO
             }
             const bufs: Uint8Array[] = [];
-            for (const [i, version] of meta.version.entries()) {
+            for (const [i, version] of meta.versions.entries()) {
               const forkDigest = beaconConfig.forkName2ForkDigest(version);
               const serialized = getLightClientForkTypes(version).LightClientUpdate.serialize(
                 data[i] as deneb.LightClientUpdate
@@ -170,29 +170,29 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         },
         meta: {
           toJson: (meta) => meta,
-          fromJson: (val) => val as {version: ForkName[]},
+          fromJson: (val) => val as {versions: ForkName[]},
           toHeadersObject: (meta) => ({
-            [MetaHeader.Version]: meta.version.join(","),
+            [MetaHeader.Version]: meta.versions.join(","),
           }),
           fromHeaders: (headers) => ({
             // TODO: this header format is not spec compliant, do we care?
-            version: headers.getRequired(MetaHeader.Version).split(",") as ForkName[],
+            versions: headers.getRequired(MetaHeader.Version).split(",") as ForkName[],
           }),
         },
         transform: {
           toResponse: (data, meta) => {
             const r: unknown[] = [];
             for (let i = 0; i < (data as unknown[]).length; i++) {
-              r.push({data: (data as unknown[])[i], version: (meta as {version: string[]}).version[i]});
+              r.push({data: (data as unknown[])[i], version: (meta as {versions: string[]}).versions[i]});
             }
             return r;
           },
           fromResponse: (resp) => {
             const d: allForks.LightClientUpdate[] = [];
-            const meta: {version: ForkName[]} = {version: []};
+            const meta: {versions: ForkName[]} = {versions: []};
             for (const {data, version} of resp as {data: allForks.LightClientUpdate; version: ForkName}[]) {
               d.push(data);
-              meta.version.push(version);
+              meta.versions.push(version);
             }
             return {data: d, meta};
           },

@@ -30,8 +30,8 @@ export class LightClientRestTransport implements LightClientTransport {
   > {
     const res = await this.api.lightclient.getLightClientUpdatesByRange({startPeriod, count});
     const updates = res.value();
-    const meta = res.meta();
-    return updates.map((data, i) => ({data, version: meta.version[i]}));
+    const {versions} = res.meta();
+    return updates.map((data, i) => ({data, version: versions[i]}));
   }
 
   async getOptimisticUpdate(): Promise<{version: ForkName; data: allForks.LightClientOptimisticUpdate}> {
