@@ -1,7 +1,8 @@
-import {ErrorAborted, Logger, TimeoutError, isValidHttpUrl, retry} from "@lodestar/utils";
+import {ErrorAborted, Logger, MapDef, TimeoutError, isValidHttpUrl, retry} from "@lodestar/utils";
 import {mergeHeaders} from "../headers.js";
 import {Endpoint} from "../types.js";
 import {WireFormat} from "../wireFormat.js";
+import {HttpStatusCode} from "../httpStatusCode.js";
 import {ApiRequestInit, ApiRequestInitRequired, RouteDefinitionExtra, createApiRequest} from "./request.js";
 import {ApiResponse} from "./response.js";
 import {Metrics} from "./metrics.js";
@@ -51,6 +52,13 @@ export class HttpClient implements IHttpClient {
   private readonly logger: null | Logger;
 
   private readonly urlsScore: number[];
+
+  /**
+   * Cache to keep track if SSZ is supported by the server per route. This cache will only be
+   * populated if we receive a 415 error response from the server after sending a SSZ request body.
+   * The request will be retried using a JSON body and all subsequent requests will only use JSON.
+   */
+  private readonly sszNotSupportedByRouteIdByUrlIndex = new MapDef<number, Map<string, boolean>>(() => new Map());
 
   get baseUrl(): string {
     return this.urlsInits[0].baseUrl;
@@ -146,6 +154,9 @@ export class HttpClient implements IHttpClient {
     }
   }
 
+  /**
+   * Send request to primary server first, retry failed requests on fallbacks
+   */
   private async requestWithFallbacks<E extends Endpoint>(
     definition: RouteDefinitionExtra<E>,
     args: E["args"],
@@ -153,7 +164,7 @@ export class HttpClient implements IHttpClient {
   ): Promise<ApiResponse<E>> {
     // Early return when no fallback URLs are setup
     if (this.urlsInits.length === 1) {
-      return this._request(definition, args, localInit, 0);
+      return this.requestRetryJson(definition, args, localInit, 0);
     }
 
     let i = 0;
@@ -186,7 +197,7 @@ export class HttpClient implements IHttpClient {
             // eslint-disable-next-line @typescript-eslint/naming-convention
             const i_ = i; // Keep local copy of i variable to index urlScore after _request() resolves
 
-            this._request(definition, args, localInit, i).then(
+            this.requestRetryJson(definition, args, localInit, i).then(
               async (res) => {
                 if (res.ok) {
                   this.urlsScore[i_] = Math.min(URL_SCORE_MAX, this.urlsScore[i_] + URL_SCORE_DELTA_SUCCESS);
@@ -245,6 +256,42 @@ export class HttpClient implements IHttpClient {
     throw Error("loop ended without return or rejection");
   }
 
+  /**
+   * Send request to single URL by index, SSZ requests will be retried using JSON
+   * if a 415 error response is returned by the server. All subsequent requests to
+   * this server for the route will always be sent as JSON afterwards.
+   */
+  private async requestRetryJson<E extends Endpoint>(
+    definition: RouteDefinitionExtra<E>,
+    args: E["args"],
+    localInit: ApiRequestInit,
+    urlIndex = 0
+  ): Promise<ApiResponse<E>> {
+    const urlInit = this.urlsInits[urlIndex];
+    const routeId = definition.operationId;
+    let requestWireFormat = localInit.requestWireFormat ?? urlInit.requestWireFormat;
+
+    const sszNotSupportedByRouteId = this.sszNotSupportedByRouteIdByUrlIndex.getOrDefault(urlIndex);
+    if (sszNotSupportedByRouteId.has(routeId)) {
+      requestWireFormat = WireFormat.json;
+    }
+
+    const res = await this._request(definition, args, {...localInit, requestWireFormat}, urlIndex);
+
+    if (res.status === HttpStatusCode.UNSUPPORTED_MEDIA_TYPE && requestWireFormat === WireFormat.ssz) {
+      sszNotSupportedByRouteId.set(routeId, true);
+
+      this.logger?.debug("Request failed with status 415, retrying with JSON body", {routeId, urlIndex});
+
+      return this._request(definition, args, {...localInit, requestWireFormat: WireFormat.json}, urlIndex);
+    }
+
+    return res;
+  }
+
+  /**
+   * Send request to single URL by index
+   */
   private async _request<E extends Endpoint>(
     definition: RouteDefinitionExtra<E>,
     args: E["args"],
@@ -253,7 +300,7 @@ export class HttpClient implements IHttpClient {
   ): Promise<ApiResponse<E>> {
     const urlInit = this.urlsInits[urlIndex];
     if (urlInit === undefined) {
-      throw new Error(`Url at index ${urlIndex} does not exist`);
+      throw Error(`Url at index ${urlIndex} does not exist`);
     }
     const init = {
       ...urlInit,

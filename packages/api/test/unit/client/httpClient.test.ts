@@ -1,6 +1,7 @@
 import {IncomingMessage} from "node:http";
-import {describe, it, afterEach, expect} from "vitest";
+import {describe, it, afterEach, expect, vi} from "vitest";
 import {RouteOptions, fastify} from "fastify";
+import {BooleanType, ContainerType, UintNumberType, ValueOf} from "@chainsafe/ssz";
 import {ErrorAborted, TimeoutError, toBase64} from "@lodestar/utils";
 import {HttpClient, RouteDefinitionExtra} from "../../../src/utils/client/index.js";
 import {HttpStatusCode} from "../../../src/utils/httpStatusCode.js";
@@ -13,9 +14,11 @@ import {
   EmptyResponseCodec,
   JsonOnlyReq,
   JsonOnlyResponseCodec,
+  EmptyResponseData,
 } from "../../../src/utils/codecs.js";
 import {compileRouteUrlFormatter} from "../../../src/utils/urlFormat.js";
 import {Endpoint, Schema} from "../../../src/utils/index.js";
+import {WireFormat} from "../../../src/index.js";
 
 /* eslint-disable @typescript-eslint/return-await */
 
@@ -152,6 +155,71 @@ describe("httpClient json client", () => {
     expect(res.status).toBe(404);
 
     expect(res.error()?.message).toBe("testRoute failed with status 404: Route GET:/test-route not found");
+  });
+
+  it("should handle http status code 415 correctly", async () => {
+    const container = new ContainerType({
+      a: new BooleanType(),
+      b: new UintNumberType(1),
+    });
+
+    type TestEndpoint = Endpoint<
+      "POST",
+      {payload: ValueOf<typeof container>},
+      {body: unknown},
+      EmptyResponseData,
+      EmptyMeta
+    >;
+
+    const url = "/test-unsupported-media-type";
+    const routeId = "testUnsupportedMediaType";
+    const testPostDefinition: RouteDefinitionExtra<TestEndpoint> = {
+      url,
+      method: "POST",
+      req: {
+        writeReqJson: ({payload}) => ({body: container.toJson(payload)}),
+        parseReqJson: ({body}) => ({payload: container.fromJson(body)}),
+        writeReqSsz: ({payload}) => ({body: container.serialize(payload)}),
+        parseReqSsz: ({body}) => ({payload: container.deserialize(body)}),
+        schema: {
+          body: Schema.Object,
+        },
+      },
+      resp: EmptyResponseCodec,
+      operationId: routeId,
+      urlFormatter: compileRouteUrlFormatter(url),
+    };
+
+    const httpClient = await getServerWithClient({
+      url,
+      method: "POST",
+      handler: async () => {
+        // Fastify will return a 415 error response since the server
+        // does not have a content type parser for `application/octet-stream`
+      },
+    });
+    const requestSpy = vi.spyOn(httpClient, "_request" as any);
+
+    const res1 = await httpClient.request(
+      testPostDefinition,
+      {payload: {a: true, b: 1}},
+      {requestWireFormat: WireFormat.ssz}
+    );
+
+    expect(res1.ok).toBe(true);
+    expect(requestSpy).toHaveBeenCalledTimes(2);
+    expect(httpClient["sszNotSupportedByRouteIdByUrlIndex"].get(0)?.has(routeId)).toBe(true);
+
+    // Subsequent requests should always use JSON
+    const res2 = await httpClient.request(
+      testPostDefinition,
+      {payload: {a: true, b: 1}},
+      {requestWireFormat: WireFormat.ssz}
+    );
+
+    expect(res2.ok).toBe(true);
+    // Call count should only be incremented by 1, no retry
+    expect(requestSpy).toHaveBeenCalledTimes(3);
   });
 
   it("should handle http status code 500 correctly", async () => {
