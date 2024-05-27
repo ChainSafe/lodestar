@@ -240,7 +240,7 @@ export function getBeaconBlockApi({
       const signedBlockOrContents = reconstructFullBlockOrContents(signedBlindedBlock, {executionPayload, contents});
 
       chain.logger.info("Publishing assembled block", {slot, blockRoot, source});
-      return publishBlock({signedBlockOrContents}, context, opts);
+      return publishBlock({signedBlockOrContents}, {...context, sszBytes: null}, opts);
     } else {
       const source = ProducedBlockSource.builder;
       chain.logger.debug("Reconstructing  signedBlockOrContents", {slot, blockRoot, source});
@@ -252,7 +252,7 @@ export function getBeaconBlockApi({
       //
       // see: https://github.com/ChainSafe/lodestar/issues/5404
       chain.logger.info("Publishing assembled block", {slot, blockRoot, source});
-      return publishBlock({signedBlockOrContents}, context, {...opts, ignoreIfKnown: true});
+      return publishBlock({signedBlockOrContents}, {...context, sszBytes: null}, {...opts, ignoreIfKnown: true});
     }
   };
 
@@ -422,12 +422,12 @@ export function getBeaconBlockApi({
     publishBlock,
     publishBlindedBlock,
 
-    async publishBlindedBlockV2(signedBlindedBlockOrContents, opts) {
-      await publishBlindedBlock(signedBlindedBlockOrContents, opts);
+    async publishBlindedBlockV2(args, context) {
+      await publishBlindedBlock(args, context);
     },
 
-    async publishBlockV2(signedBlockOrContents, opts) {
-      await publishBlock(signedBlockOrContents, opts);
+    async publishBlockV2(args, context) {
+      await publishBlock(args, context);
     },
 
     async getBlobSidecars({blockId, indices}) {
