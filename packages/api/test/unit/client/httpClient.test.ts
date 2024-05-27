@@ -198,7 +198,8 @@ describe("httpClient json client", () => {
         // does not have a content type parser for `application/octet-stream`
       },
     });
-    const requestSpy = vi.spyOn(httpClient, "_request" as any);
+    const fetchSpy = vi.spyOn(httpClient, "fetch" as any);
+    const sszNotSupportedCache = httpClient["sszNotSupportedByRouteIdByUrlIndex"].getOrDefault(0);
 
     const res1 = await httpClient.request(
       testPostDefinition,
@@ -207,8 +208,8 @@ describe("httpClient json client", () => {
     );
 
     expect(res1.ok).toBe(true);
-    expect(requestSpy).toHaveBeenCalledTimes(2);
-    expect(httpClient["sszNotSupportedByRouteIdByUrlIndex"].get(0)?.has(routeId)).toBe(true);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(sszNotSupportedCache?.has(routeId)).toBe(true);
 
     // Subsequent requests should always use JSON
     const res2 = await httpClient.request(
@@ -219,7 +220,7 @@ describe("httpClient json client", () => {
 
     expect(res2.ok).toBe(true);
     // Call count should only be incremented by 1, no retry
-    expect(requestSpy).toHaveBeenCalledTimes(3);
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
   });
 
   it("should handle http status code 500 correctly", async () => {
