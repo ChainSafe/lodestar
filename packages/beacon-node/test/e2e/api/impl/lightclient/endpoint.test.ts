@@ -101,8 +101,7 @@ describe("lightclient api", function () {
     // at slot 2 we got attestedHeader for slot 1
     expect(update.attestedHeader.beacon.slot).toBe(slot - 1);
     // version is set
-    const meta = res.meta();
-    expect(meta.version[0]).toBe(ForkName.altair);
+    expect(res.meta().version).toBe(ForkName.altair);
   });
 
   it.skip("getLightClientFinalityUpdate()", async function () {
