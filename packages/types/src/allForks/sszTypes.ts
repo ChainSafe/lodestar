@@ -1,3 +1,4 @@
+import {ForkBlobs, ForkExecution, ForkLightClient, ForkName} from "@lodestar/params";
 import {ssz as phase0} from "../phase0/index.js";
 import {ssz as altair} from "../altair/index.js";
 import {ssz as bellatrix} from "../bellatrix/index.js";
@@ -9,152 +10,95 @@ import {ssz as deneb} from "../deneb/index.js";
  * A record of AllForksSSZTypes indexed by fork
  */
 export const allForks = {
-  phase0: {
+  [ForkName.phase0]: {
     BeaconBlockBody: phase0.BeaconBlockBody,
-    BeaconBlock: phase0.BeaconBlock,
-    SignedBeaconBlock: phase0.SignedBeaconBlock,
     BeaconState: phase0.BeaconState,
+    SignedBeaconBlock: phase0.SignedBeaconBlock,
     Metadata: phase0.Metadata,
   },
-  altair: {
+  [ForkName.altair]: {
     BeaconBlockBody: altair.BeaconBlockBody,
-    BeaconBlock: altair.BeaconBlock,
-    SignedBeaconBlock: altair.SignedBeaconBlock,
     BeaconState: altair.BeaconState,
+    SignedBeaconBlock: altair.SignedBeaconBlock,
     Metadata: altair.Metadata,
+    LightClientHeader: altair.LightClientHeader,
+    LightClientBootstrap: altair.LightClientBootstrap,
+    LightClientUpdate: altair.LightClientUpdate,
+    LightClientFinalityUpdate: altair.LightClientFinalityUpdate,
+    LightClientStore: altair.LightClientStore,
   },
-  bellatrix: {
+  [ForkName.bellatrix]: {
     BeaconBlockBody: bellatrix.BeaconBlockBody,
-    BeaconBlock: bellatrix.BeaconBlock,
-    SignedBeaconBlock: bellatrix.SignedBeaconBlock,
     BeaconState: bellatrix.BeaconState,
-    Metadata: altair.Metadata,
-  },
-  capella: {
-    BeaconBlockBody: capella.BeaconBlockBody,
-    BeaconBlock: capella.BeaconBlock,
-    SignedBeaconBlock: capella.SignedBeaconBlock,
-    BeaconState: capella.BeaconState,
-    Metadata: altair.Metadata,
-  },
-  deneb: {
-    BeaconBlockBody: deneb.BeaconBlockBody,
-    BeaconBlock: deneb.BeaconBlock,
-    SignedBeaconBlock: deneb.SignedBeaconBlock,
-    BeaconState: deneb.BeaconState,
-    Metadata: altair.Metadata,
-  },
-};
-
-/**
- * Index the execution ssz types that differ by fork
- * A record of AllForksExecutionSSZTypes indexed by fork
- */
-export const allForksExecution = {
-  bellatrix: {
-    BeaconBlockBody: bellatrix.BeaconBlockBody,
-    BeaconBlock: bellatrix.BeaconBlock,
     SignedBeaconBlock: bellatrix.SignedBeaconBlock,
-    BeaconState: bellatrix.BeaconState,
+    Metadata: altair.Metadata,
+    LightClientHeader: altair.LightClientHeader,
+    LightClientBootstrap: altair.LightClientBootstrap,
+    LightClientUpdate: altair.LightClientUpdate,
+    LightClientFinalityUpdate: altair.LightClientFinalityUpdate,
+    LightClientStore: altair.LightClientStore,
+    BlindedBeaconBlock: bellatrix.BlindedBeaconBlock,
+    BlindedBeaconBlockBody: bellatrix.BlindedBeaconBlockBody,
+    SignedBlindedBeaconBlock: bellatrix.SignedBlindedBeaconBlock,
     ExecutionPayload: bellatrix.ExecutionPayload,
     ExecutionPayloadHeader: bellatrix.ExecutionPayloadHeader,
     BuilderBid: bellatrix.BuilderBid,
     SignedBuilderBid: bellatrix.SignedBuilderBid,
     SSEPayloadAttributes: bellatrix.SSEPayloadAttributes,
   },
-  capella: {
+  [ForkName.capella]: {
     BeaconBlockBody: capella.BeaconBlockBody,
-    BeaconBlock: capella.BeaconBlock,
-    SignedBeaconBlock: capella.SignedBeaconBlock,
     BeaconState: capella.BeaconState,
-    // Not used in phase0 but added for type consitency
+    SignedBeaconBlock: capella.SignedBeaconBlock,
+    Metadata: altair.Metadata,
+    LightClientHeader: capella.LightClientHeader,
+    LightClientBootstrap: capella.LightClientBootstrap,
+    LightClientUpdate: capella.LightClientUpdate,
+    LightClientFinalityUpdate: capella.LightClientFinalityUpdate,
+    LightClientStore: capella.LightClientStore,
+    BlindedBeaconBlock: capella.BlindedBeaconBlock,
+    BlindedBeaconBlockBody: capella.BlindedBeaconBlockBody,
+    SignedBlindedBeaconBlock: capella.SignedBlindedBeaconBlock,
     ExecutionPayload: capella.ExecutionPayload,
     ExecutionPayloadHeader: capella.ExecutionPayloadHeader,
     BuilderBid: capella.BuilderBid,
     SignedBuilderBid: capella.SignedBuilderBid,
     SSEPayloadAttributes: capella.SSEPayloadAttributes,
   },
-  deneb: {
+  [ForkName.deneb]: {
     BeaconBlockBody: deneb.BeaconBlockBody,
-    BeaconBlock: deneb.BeaconBlock,
-    SignedBeaconBlock: deneb.SignedBeaconBlock,
     BeaconState: deneb.BeaconState,
+    SignedBeaconBlock: deneb.SignedBeaconBlock,
+    Metadata: altair.Metadata,
+    LightClientHeader: deneb.LightClientHeader,
+    LightClientBootstrap: deneb.LightClientBootstrap,
+    LightClientUpdate: deneb.LightClientUpdate,
+    LightClientFinalityUpdate: deneb.LightClientFinalityUpdate,
+    LightClientStore: deneb.LightClientStore,
+    BlindedBeaconBlock: deneb.BlindedBeaconBlock,
+    BlindedBeaconBlockBody: deneb.BlindedBeaconBlockBody,
+    SignedBlindedBeaconBlock: deneb.SignedBlindedBeaconBlock,
     ExecutionPayload: deneb.ExecutionPayload,
     ExecutionPayloadHeader: deneb.ExecutionPayloadHeader,
     BuilderBid: deneb.BuilderBid,
     SignedBuilderBid: deneb.SignedBuilderBid,
     SSEPayloadAttributes: deneb.SSEPayloadAttributes,
-  },
-};
-
-/**
- * Index the blinded ssz types that differ by fork
- * A record of AllForksBlindedSSZTypes indexed by fork
- */
-export const allForksBlinded = {
-  bellatrix: {
-    BeaconBlockBody: bellatrix.BlindedBeaconBlockBody,
-    BeaconBlock: bellatrix.BlindedBeaconBlock,
-    SignedBeaconBlock: bellatrix.SignedBlindedBeaconBlock,
-  },
-  capella: {
-    BeaconBlockBody: capella.BlindedBeaconBlockBody,
-    BeaconBlock: capella.BlindedBeaconBlock,
-    SignedBeaconBlock: capella.SignedBlindedBeaconBlock,
-  },
-  deneb: {
-    BeaconBlockBody: deneb.BlindedBeaconBlockBody,
-    BeaconBlock: deneb.BlindedBeaconBlock,
-    SignedBeaconBlock: deneb.SignedBlindedBeaconBlock,
-  },
-};
-
-export const allForksLightClient = {
-  altair: {
-    BeaconBlock: altair.BeaconBlock,
-    BeaconBlockBody: altair.BeaconBlockBody,
-    LightClientHeader: altair.LightClientHeader,
-    LightClientBootstrap: altair.LightClientBootstrap,
-    LightClientUpdate: altair.LightClientUpdate,
-    LightClientFinalityUpdate: altair.LightClientFinalityUpdate,
-    LightClientOptimisticUpdate: altair.LightClientOptimisticUpdate,
-    LightClientStore: altair.LightClientStore,
-  },
-  bellatrix: {
-    BeaconBlock: bellatrix.BeaconBlock,
-    BeaconBlockBody: bellatrix.BeaconBlockBody,
-    LightClientHeader: altair.LightClientHeader,
-    LightClientBootstrap: altair.LightClientBootstrap,
-    LightClientUpdate: altair.LightClientUpdate,
-    LightClientFinalityUpdate: altair.LightClientFinalityUpdate,
-    LightClientOptimisticUpdate: altair.LightClientOptimisticUpdate,
-    LightClientStore: altair.LightClientStore,
-  },
-  capella: {
-    BeaconBlock: capella.BeaconBlock,
-    BeaconBlockBody: capella.BeaconBlockBody,
-    LightClientHeader: capella.LightClientHeader,
-    LightClientBootstrap: capella.LightClientBootstrap,
-    LightClientUpdate: capella.LightClientUpdate,
-    LightClientFinalityUpdate: capella.LightClientFinalityUpdate,
-    LightClientOptimisticUpdate: capella.LightClientOptimisticUpdate,
-    LightClientStore: capella.LightClientStore,
-  },
-  deneb: {
-    BeaconBlock: deneb.BeaconBlock,
-    BeaconBlockBody: deneb.BeaconBlockBody,
-    LightClientHeader: deneb.LightClientHeader,
-    LightClientBootstrap: deneb.LightClientBootstrap,
-    LightClientUpdate: deneb.LightClientUpdate,
-    LightClientFinalityUpdate: deneb.LightClientFinalityUpdate,
-    LightClientOptimisticUpdate: deneb.LightClientOptimisticUpdate,
-    LightClientStore: deneb.LightClientStore,
-  },
-};
-
-export const allForksBlobs = {
-  deneb: {
-    BlobSidecar: deneb.BlobSidecar,
     ExecutionPayloadAndBlobsBundle: deneb.ExecutionPayloadAndBlobsBundle,
   },
 };
+
+const pick = <T extends Record<ForkName, unknown>, K extends keyof T>(obj: T, ...keys: K[]): Pick<T, K> =>
+  Object.fromEntries(keys.filter((key) => key in obj).map((key) => [key, obj[key]])) as Pick<T, K>;
+
+export const executionForks: ForkExecution[] = [ForkName.bellatrix, ForkName.capella, ForkName.deneb];
+export const lightCLientForks: ForkLightClient[] = [
+  ForkName.altair,
+  ForkName.bellatrix,
+  ForkName.capella,
+  ForkName.deneb,
+];
+export const blobsForks: ForkBlobs[] = [ForkName.deneb];
+
+export const allForksExecution = pick(allForks, ...executionForks);
+export const allForksLightClient = pick(allForks, ...lightCLientForks);
+export const allForksBlobs = pick(allForks, ...blobsForks);

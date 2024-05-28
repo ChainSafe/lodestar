@@ -1,51 +1,56 @@
+import {ForkBlobs, ForkExecution, ForkName} from "@lodestar/params";
 import {
-  FullOrBlindedBeaconBlockOrContents,
-  FullOrBlindedBeaconBlock,
-  FullOrBlindedSignedBeaconBlock,
-  FullOrBlindedBeaconBlockBody,
-  FullOrBlindedExecutionPayload,
-  ExecutionPayloadHeader,
-  BlindedBeaconBlockBody,
-  BlindedBeaconBlock,
   BlockContents,
-  SignedBlindedBeaconBlock,
-  SignedBlockContents,
   SignedBeaconBlock,
   ExecutionPayload,
   ExecutionPayloadAndBlobsBundle,
+  FullOrBlinded,
+  BeaconBlock,
+  BeaconBlockBody,
+  BeaconBlockOrContents,
+  SignedBeaconBlockOrContents,
 } from "../allForks/types.js";
 
-export function isBlindedExecution(payload: FullOrBlindedExecutionPayload): payload is ExecutionPayloadHeader {
+export function isBlindedExecution<F extends ForkExecution>(
+  payload: ExecutionPayload<F, FullOrBlinded>
+): payload is ExecutionPayload<F, "blinded"> {
   // we just check transactionsRoot for determinging as it the base field
   // that is present and differs from ExecutionPayload for all forks
-  return (payload as ExecutionPayloadHeader).transactionsRoot !== undefined;
+  return (payload as ExecutionPayload<F, "blinded">).transactionsRoot !== undefined;
 }
 
-export function isBlindedBeaconBlock(block: FullOrBlindedBeaconBlockOrContents): block is BlindedBeaconBlock {
-  const body = (block as FullOrBlindedBeaconBlock).body;
-  return body !== undefined && isBlindedBeaconBlockBody(body);
+export function isBlindedBeaconBlock<F extends ForkName>(
+  block: BeaconBlock<F, FullOrBlinded>
+): block is BeaconBlock<F, "blinded"> {
+  return "body" in block && block.body !== undefined && block.body !== null && isBlindedBeaconBlockBody(block.body);
 }
 
-export function isBlindedBeaconBlockBody(body: FullOrBlindedBeaconBlockBody): body is BlindedBeaconBlockBody {
-  return (body as BlindedBeaconBlockBody).executionPayloadHeader !== undefined;
+export function isBlindedBeaconBlockBody<F extends ForkName>(
+  body: BeaconBlockBody<F, FullOrBlinded>
+): body is BeaconBlockBody<F, "blinded"> {
+  return "executionPayloadHeader" in body && body.executionPayloadHeader !== undefined;
 }
 
-export function isBlindedSignedBeaconBlock(
-  signedBlock: FullOrBlindedSignedBeaconBlock
-): signedBlock is SignedBlindedBeaconBlock {
-  return (signedBlock as SignedBlindedBeaconBlock).message.body.executionPayloadHeader !== undefined;
+export function isBlindedSignedBeaconBlock<F extends ForkName>(
+  signedBlock: SignedBeaconBlock<F, FullOrBlinded>
+): signedBlock is SignedBeaconBlock<F, "blinded"> {
+  return (signedBlock as SignedBeaconBlock<F, "blinded">).message.body.executionPayloadHeader !== undefined;
 }
 
-export function isBlockContents(data: FullOrBlindedBeaconBlockOrContents): data is BlockContents {
-  return (data as BlockContents).kzgProofs !== undefined;
+export function isBlockContents<F extends ForkBlobs>(
+  data: BeaconBlockOrContents<F>
+): data is BlockContents<F, "unsigned"> {
+  return (data as BlockContents<F, "unsigned">).kzgProofs !== undefined;
 }
 
-export function isSignedBlockContents(data: SignedBeaconBlock | SignedBlockContents): data is SignedBlockContents {
-  return (data as SignedBlockContents).kzgProofs !== undefined;
+export function isSignedBlockContents<F extends ForkBlobs>(
+  data: SignedBeaconBlockOrContents<F>
+): data is BlockContents<F, "signed"> {
+  return (data as BlockContents<F, "signed">).kzgProofs !== undefined;
 }
 
-export function isExecutionPayloadAndBlobsBundle(
-  data: ExecutionPayload | ExecutionPayloadAndBlobsBundle
-): data is ExecutionPayloadAndBlobsBundle {
-  return (data as ExecutionPayloadAndBlobsBundle).blobsBundle !== undefined;
+export function isExecutionPayloadAndBlobsBundle<F extends ForkExecution>(
+  data: ExecutionPayload<F, "full"> | ExecutionPayloadAndBlobsBundle<ForkBlobs>
+): data is ExecutionPayloadAndBlobsBundle<ForkBlobs> {
+  return (data as ExecutionPayloadAndBlobsBundle<ForkBlobs>).blobsBundle !== undefined;
 }
