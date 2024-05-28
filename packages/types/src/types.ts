@@ -132,9 +132,9 @@ export type TypesByFork = {
     BuilderBid: deneb.BuilderBid;
     SignedBuilderBid: deneb.SignedBuilderBid;
     SSEPayloadAttributes: deneb.SSEPayloadAttributes;
-    BlockContents: {block: BeaconBlock; kzgProofs: deneb.KZGProofs; blobs: deneb.Blobs};
+    BlockContents: {block: BeaconBlock<ForkBlobs>; kzgProofs: deneb.KZGProofs; blobs: deneb.Blobs};
     SignedBlockContents: {
-      signedBlock: SignedBeaconBlock;
+      signedBlock: SignedBeaconBlock<ForkBlobs>;
       kzgProofs: deneb.KZGProofs;
       blobs: deneb.Blobs;
     };
