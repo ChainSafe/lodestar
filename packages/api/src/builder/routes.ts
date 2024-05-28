@@ -1,7 +1,17 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {ssz, allForks, bellatrix, Slot, Root, BLSPubkey} from "@lodestar/types";
-import {ForkName, isForkBlobs} from "@lodestar/params";
+import {
+  ssz,
+  bellatrix,
+  Slot,
+  Root,
+  BLSPubkey,
+  BuilderBid,
+  SignedBeaconBlock,
+  ExecutionPayload,
+  ExecutionPayloadAndBlobsBundle,
+} from "@lodestar/types";
+import {ForkExecution, ForkName, isForkBlobs} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
 
 import {Endpoint, RouteDefinitions, Schema} from "../utils/index.js";
@@ -26,7 +36,7 @@ import {fromHeaders} from "../utils/headers.js";
 // In this case, we receive a success response (204) which is not handled as an error. The generic response
 // handler already checks the status code and will not attempt to parse the body, but it will return no value.
 // It is important that this type indicates that there might be no value to ensure it is properly handled downstream.
-export type MaybeSignedBuilderBid = allForks.SignedBuilderBid | undefined;
+export type MaybeSignedBuilderBid = BuilderBid<ForkExecution, "signed"> | undefined;
 
 const RegistrationsType = ArrayOf(ssz.bellatrix.SignedValidatorRegistrationV1);
 
@@ -62,9 +72,9 @@ export type Endpoints = {
 
   submitBlindedBlock: Endpoint<
     "POST",
-    {signedBlindedBlock: allForks.SignedBlindedBeaconBlock},
+    {signedBlindedBlock: SignedBeaconBlock<ForkExecution, "blinded">},
     {body: unknown; headers: {[MetaHeader.Version]: string}},
-    allForks.ExecutionPayload | allForks.ExecutionPayloadAndBlobsBundle,
+    ExecutionPayload | ExecutionPayloadAndBlobsBundle,
     VersionMeta
   >;
 };
@@ -138,13 +148,11 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         },
       }),
       resp: {
-        data: WithVersion<allForks.ExecutionPayload | allForks.ExecutionPayloadAndBlobsBundle, VersionMeta>(
-          (fork: ForkName) => {
-            return isForkBlobs(fork)
-              ? ssz.allForksBlobs[fork].ExecutionPayloadAndBlobsBundle
-              : getExecutionForkTypes(fork).ExecutionPayload;
-          }
-        ),
+        data: WithVersion<ExecutionPayload | ExecutionPayloadAndBlobsBundle, VersionMeta>((fork: ForkName) => {
+          return isForkBlobs(fork)
+            ? ssz.allForksBlobs[fork].ExecutionPayloadAndBlobsBundle
+            : getExecutionForkTypes(fork).ExecutionPayload;
+        }),
         meta: VersionCodec,
       },
     },

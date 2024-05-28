@@ -1,8 +1,18 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {ContainerType, ListCompositeType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {allForks, Slot, ssz, RootHex, deneb, phase0, isSignedBlockContents} from "@lodestar/types";
-import {ForkName, ForkSeq} from "@lodestar/params";
+import {
+  Slot,
+  ssz,
+  RootHex,
+  deneb,
+  phase0,
+  isSignedBlockContents,
+  SignedBeaconBlock,
+  BeaconBlockBody,
+  SignedBeaconBlockOrContents,
+} from "@lodestar/types";
+import {ForkAll, ForkName, ForkSeq} from "@lodestar/params";
 import {Endpoint, RequestCodec, RouteDefinitions, Schema} from "../../../utils/index.js";
 import {EmptyMeta, EmptyMetaCodec, EmptyResponseCodec, EmptyResponseData, WithVersion} from "../../../utils/codecs.js";
 import {
@@ -87,7 +97,7 @@ export type Endpoints = {
     "GET",
     BlockArgs,
     {params: {block_id: string}},
-    allForks.SignedBeaconBlock,
+    SignedBeaconBlock,
     ExecutionOptimisticFinalizedAndVersionMeta
   >;
 
@@ -99,7 +109,7 @@ export type Endpoints = {
     "GET",
     BlockArgs,
     {params: {block_id: string}},
-    allForks.BeaconBlockBody["attestations"],
+    BeaconBlockBody["attestations"],
     ExecutionOptimisticAndFinalizedMeta
   >;
 
@@ -152,7 +162,7 @@ export type Endpoints = {
    */
   publishBlock: Endpoint<
     "POST",
-    {signedBlockOrContents: allForks.SignedBeaconBlockOrContents},
+    {signedBlockOrContents: SignedBeaconBlockOrContents},
     {body: unknown; headers: {[MetaHeader.Version]: string}},
     EmptyResponseData,
     EmptyMeta
@@ -161,7 +171,7 @@ export type Endpoints = {
   publishBlockV2: Endpoint<
     "POST",
     {
-      signedBlockOrContents: allForks.SignedBeaconBlockOrContents;
+      signedBlockOrContents: SignedBeaconBlockOrContents;
       broadcastValidation?: BroadcastValidation;
     },
     {body: unknown; headers: {[MetaHeader.Version]: string}; query: {broadcast_validation?: string}},
@@ -175,7 +185,7 @@ export type Endpoints = {
    */
   publishBlindedBlock: Endpoint<
     "POST",
-    {signedBlindedBlock: allForks.SignedBlindedBeaconBlock},
+    {signedBlindedBlock: SignedBeaconBlock<ForkAll, "blinded">},
     {body: unknown; headers: {[MetaHeader.Version]: string}},
     EmptyResponseData,
     EmptyMeta
@@ -184,7 +194,7 @@ export type Endpoints = {
   publishBlindedBlockV2: Endpoint<
     "POST",
     {
-      signedBlindedBlock: allForks.SignedBlindedBeaconBlock;
+      signedBlindedBlock: SignedBeaconBlock<ForkAll, "blinded">;
       broadcastValidation?: BroadcastValidation;
     },
     {body: unknown; headers: {[MetaHeader.Version]: string}; query: {broadcast_validation?: string}},
@@ -289,9 +299,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           return {
             body:
               config.getForkSeq(slot) < ForkSeq.deneb
-                ? config
-                    .getForkTypes(slot)
-                    .SignedBeaconBlock.toJson(signedBlockOrContents as allForks.SignedBeaconBlock)
+                ? config.getForkTypes(slot).SignedBeaconBlock.toJson(signedBlockOrContents as SignedBeaconBlock)
                 : SignedBlockContentsType.toJson(signedBlockOrContents as SignedBlockContents),
             headers: {
               [MetaHeader.Version]: config.getForkName(slot),
@@ -308,8 +316,8 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
             // Determine fork from slot in JSON payload
             forkName = config.getForkName(
               (body as {signed_block: unknown}).signed_block !== undefined
-                ? (body as {signed_block: allForks.SignedBeaconBlock}).signed_block.message.slot
-                : (body as allForks.SignedBeaconBlock).message.slot
+                ? (body as {signed_block: SignedBeaconBlock}).signed_block.message.slot
+                : (body as SignedBeaconBlock).message.slot
             );
           }
           const forkSeq = config.forks[forkName].seq;
@@ -327,9 +335,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           return {
             body:
               config.getForkSeq(slot) < ForkSeq.deneb
-                ? config
-                    .getForkTypes(slot)
-                    .SignedBeaconBlock.serialize(signedBlockOrContents as allForks.SignedBeaconBlock)
+                ? config.getForkTypes(slot).SignedBeaconBlock.serialize(signedBlockOrContents as SignedBeaconBlock)
                 : SignedBlockContentsType.serialize(signedBlockOrContents as SignedBlockContents),
             headers: {
               [MetaHeader.Version]: config.getForkName(slot),
@@ -367,9 +373,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           return {
             body:
               config.getForkSeq(slot) < ForkSeq.deneb
-                ? config
-                    .getForkTypes(slot)
-                    .SignedBeaconBlock.toJson(signedBlockOrContents as allForks.SignedBeaconBlock)
+                ? config.getForkTypes(slot).SignedBeaconBlock.toJson(signedBlockOrContents as SignedBeaconBlock)
                 : SignedBlockContentsType.toJson(signedBlockOrContents as SignedBlockContents),
             headers: {
               [MetaHeader.Version]: config.getForkName(slot),
@@ -395,9 +399,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           return {
             body:
               config.getForkSeq(slot) < ForkSeq.deneb
-                ? config
-                    .getForkTypes(slot)
-                    .SignedBeaconBlock.serialize(signedBlockOrContents as allForks.SignedBeaconBlock)
+                ? config.getForkTypes(slot).SignedBeaconBlock.serialize(signedBlockOrContents as SignedBeaconBlock)
                 : SignedBlockContentsType.serialize(signedBlockOrContents as SignedBlockContents),
             headers: {
               [MetaHeader.Version]: config.getForkName(slot),

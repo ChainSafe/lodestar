@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {ContainerType, Type, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {allForks, ssz, StringType, phase0} from "@lodestar/types";
+import {ssz, StringType, phase0, BeaconState} from "@lodestar/types";
 import {
   ArrayOf,
   EmptyArgs,
@@ -134,7 +134,7 @@ export type Endpoints = {
     "GET",
     StateArgs,
     {params: {state_id: string}},
-    allForks.BeaconState,
+    BeaconState,
     ExecutionOptimisticFinalizedAndVersionMeta
   >;
 };
@@ -203,7 +203,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         },
       },
       resp: {
-        data: WithVersion((fork) => ssz[fork].BeaconState as Type<allForks.BeaconState>),
+        data: WithVersion((fork) => ssz[fork].BeaconState as Type<BeaconState>),
         meta: ExecutionOptimisticFinalizedAndVersionCodec,
       },
       init: {
