@@ -23,6 +23,7 @@ type AllForkTypes = {
     LightClientBootstrap: altair.LightClientBootstrap;
     LightClientUpdate: altair.LightClientUpdate;
     LightClientFinalityUpdate: altair.LightClientFinalityUpdate;
+    LightClientOptimisticUpdate: altair.LightClientOptimisticUpdate;
     LightClientStore: altair.LightClientStore;
   };
   [ForkName.bellatrix]: {
@@ -35,6 +36,7 @@ type AllForkTypes = {
     LightClientBootstrap: altair.LightClientBootstrap;
     LightClientUpdate: altair.LightClientUpdate;
     LightClientFinalityUpdate: altair.LightClientFinalityUpdate;
+    LightClientOptimisticUpdate: altair.LightClientOptimisticUpdate;
     LightClientStore: altair.LightClientStore;
     BlindedBeaconBlock: bellatrix.BlindedBeaconBlock;
     BlindedBeaconBlockBody: bellatrix.BlindedBeaconBlockBody;
@@ -55,6 +57,7 @@ type AllForkTypes = {
     LightClientBootstrap: capella.LightClientBootstrap;
     LightClientUpdate: capella.LightClientUpdate;
     LightClientFinalityUpdate: capella.LightClientFinalityUpdate;
+    LightClientOptimisticUpdate: capella.LightClientOptimisticUpdate;
     LightClientStore: capella.LightClientStore;
     BlindedBeaconBlock: capella.BlindedBeaconBlock;
     BlindedBeaconBlockBody: capella.BlindedBeaconBlockBody;
@@ -75,6 +78,7 @@ type AllForkTypes = {
     LightClientBootstrap: deneb.LightClientBootstrap;
     LightClientUpdate: deneb.LightClientUpdate;
     LightClientFinalityUpdate: deneb.LightClientFinalityUpdate;
+    LightClientOptimisticUpdate: deneb.LightClientOptimisticUpdate;
     LightClientStore: deneb.LightClientStore;
     BlindedBeaconBlock: deneb.BlindedBeaconBlock;
     BlindedBeaconBlockBody: deneb.BlindedBeaconBlockBody;
