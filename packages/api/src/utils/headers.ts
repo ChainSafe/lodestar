@@ -115,21 +115,23 @@ export function mergeHeaders(a: HeadersInit | undefined, b: HeadersInit | undefi
 }
 
 /**
- * Get required header from request headers
+ * Get header from request headers, by default an error will be thrown if the header
+ * is not present. The header can be marked as optional in which case the return value
+ * might be `undefined` and no error will be thrown if header is missing.
  */
-export function fromHeaders<T extends Record<string, string>>(
+export function fromHeaders<T extends Record<string, string | undefined>, R extends boolean = true>(
   headers: T,
-  name: Extract<keyof T, string>
-  // All request headers are required, no need for default value
-): string {
+  name: Extract<keyof T, string>,
+  required: R = true as R
+): R extends true ? string : string | undefined {
   // Fastify converts all headers to lower case
   const header = headers[name.toLowerCase()];
 
-  if (header === undefined) {
+  if (header === undefined && required) {
     throw Error(`${name} header is required`);
   }
 
-  return header;
+  return header as R extends true ? string : string | undefined;
 }
 
 /**

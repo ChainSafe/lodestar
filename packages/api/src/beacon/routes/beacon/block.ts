@@ -2,7 +2,7 @@
 import {ContainerType, ListCompositeType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {allForks, Slot, ssz, RootHex, deneb, phase0, isSignedBlockContents} from "@lodestar/types";
-import {ForkSeq} from "@lodestar/params";
+import {ForkName, ForkSeq} from "@lodestar/params";
 import {Endpoint, RequestCodec, RouteDefinitions, Schema} from "../../../utils/index.js";
 import {EmptyMeta, EmptyMetaCodec, EmptyResponseCodec, EmptyResponseData, WithVersion} from "../../../utils/codecs.js";
 import {
@@ -303,7 +303,19 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           };
         },
         parseReqJson: ({body, headers}) => {
-          const forkName = toForkName(fromHeaders(headers, MetaHeader.Version));
+          let forkName: ForkName;
+          // As per spec, version header is optional for JSON requests
+          const versionHeader = fromHeaders(headers, MetaHeader.Version, false);
+          if (versionHeader !== undefined) {
+            forkName = toForkName(versionHeader);
+          } else {
+            // Determine fork from slot in JSON payload
+            forkName = config.getForkName(
+              (body as {signed_block: unknown}).signed_block !== undefined
+                ? (body as {signed_block: allForks.SignedBeaconBlock}).signed_block.message.slot
+                : (body as allForks.SignedBeaconBlock).message.slot
+            );
+          }
           const forkSeq = config.forks[forkName].seq;
           return {
             signedBlockOrContents:

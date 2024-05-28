@@ -281,7 +281,7 @@ export class HttpClient implements IHttpClient {
     if (res.status === HttpStatusCode.UNSUPPORTED_MEDIA_TYPE && requestWireFormat === WireFormat.ssz) {
       sszNotSupportedByRouteId.set(routeId, true);
 
-      this.logger?.debug("Request failed with status 415, retrying with JSON body", {routeId, urlIndex});
+      this.logger?.debug("SSZ request failed with status 415, retrying with JSON body", {routeId, urlIndex});
 
       return this._request(definition, args, {...localInit, requestWireFormat: WireFormat.json}, urlIndex);
     }
