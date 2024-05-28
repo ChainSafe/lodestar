@@ -1,6 +1,6 @@
 import {ValueOf} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
-import {BlockContents} from "../allForks/types.js";
+import type {BlockContents} from "../types.js";
 import * as ssz from "./sszTypes.js";
 
 export type KZGProof = ValueOf<typeof ssz.KZGProof>;

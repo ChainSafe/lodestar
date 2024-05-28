@@ -9,7 +9,7 @@ import {
   BeaconBlockBody,
   BeaconBlockOrContents,
   SignedBeaconBlockOrContents,
-} from "../allForks/types.js";
+} from "../types.js";
 
 export function isBlindedExecution<F extends ForkExecution>(
   payload: ExecutionPayload<F, FullOrBlinded>
