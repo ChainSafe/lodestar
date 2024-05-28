@@ -1,12 +1,12 @@
 import {CompositeType, CompositeView, CompositeViewDU, ContainerType, ValueOf} from "@chainsafe/ssz";
-import {ForkBlobs, ForkExecution, ForkLightClient, ForkName} from "@lodestar/params";
+import {ForkAll, ForkBlobs, ForkExecution, ForkLightClient, ForkName} from "@lodestar/params";
 import {ts as phase0} from "./phase0/index.js";
 import {ts as altair} from "./altair/index.js";
 import {ts as bellatrix} from "./bellatrix/index.js";
 import {ts as capella} from "./capella/index.js";
 import {ts as deneb} from "./deneb/index.js";
 import {Slot} from "./primitive/types.js";
-import type {AllForksTypes as AllForksSSZTypes} from "./sszTypes.js";
+import {allForks} from "./sszTypes.js";
 
 export * from "./primitive/types.js";
 export {ts as phase0} from "./phase0/index.js";
@@ -49,7 +49,7 @@ type AllForksTypeOf<UnionOfForkTypes extends ContainerType<any>> = CompositeType
   CompositeViewDU<UnionOfForkTypes>
 >;
 
-type AllForkTypes = {
+export type TypesByFork = {
   [ForkName.phase0]: {
     BeaconBlock: phase0.BeaconBlock;
     BeaconBlockBody: phase0.BeaconBlockBody;
@@ -142,35 +142,54 @@ type AllForkTypes = {
   };
 };
 
+export type SSZTypesByFork = {
+  [F in keyof typeof allForks]: {
+    [T in keyof (typeof allForks)[F]]: (typeof allForks)[F][T];
+  };
+};
+
+export type SSZBlindedTypesByFork = {
+  bellatrix: {
+    BeaconBlockBody: (typeof allForks)["bellatrix"]["BlindedBeaconBlockBody"];
+    BeaconBlock: (typeof allForks)["bellatrix"]["BlindedBeaconBlock"];
+    SignedBeaconBlock: (typeof allForks)["bellatrix"]["SignedBlindedBeaconBlock"];
+  };
+  capella: {
+    BeaconBlockBody: (typeof allForks)["capella"]["BlindedBeaconBlockBody"];
+    BeaconBlock: (typeof allForks)["bellatrix"]["BlindedBeaconBlock"];
+    SignedBeaconBlock: (typeof allForks)["bellatrix"]["SignedBlindedBeaconBlock"];
+  };
+  deneb: {
+    BeaconBlockBody: (typeof allForks)["deneb"]["BlindedBeaconBlockBody"];
+    BeaconBlock: (typeof allForks)["deneb"]["BlindedBeaconBlock"];
+    SignedBeaconBlock: (typeof allForks)["deneb"]["SignedBlindedBeaconBlock"];
+  };
+};
+
 export type FullOrBlinded = "full" | "blinded";
 
-export type BeaconBlock<F extends ForkName = ForkName, B extends FullOrBlinded = "full"> = B extends "full"
-  ? AllForkTypes[F]["BeaconBlock"]
+export type BeaconBlock<F extends ForkName = ForkAll, B extends FullOrBlinded = "full"> = B extends "full"
+  ? TypesByFork[F]["BeaconBlock"]
   : F extends ForkExecution
-    ? AllForkTypes[F]["BlindedBeaconBlock"]
+    ? TypesByFork[F]["BlindedBeaconBlock"]
     : never;
-export type BeaconBlockSSZ<F extends ForkName = ForkName> = AllForksTypeOf<AllForksSSZTypes[F]["BeaconBlock"]>;
 
-export type BeaconBlockBody<F extends ForkName = ForkName, B extends FullOrBlinded = "full"> = B extends "full"
-  ? AllForkTypes[F]["BeaconBlockBody"]
+export type BeaconBlockBody<F extends ForkName = ForkAll, B extends FullOrBlinded = "full"> = B extends "full"
+  ? TypesByFork[F]["BeaconBlockBody"]
   : F extends ForkExecution
-    ? AllForkTypes[F]["BlindedBeaconBlockBody"]
+    ? TypesByFork[F]["BlindedBeaconBlockBody"]
     : never;
-export type BeaconBlockBodySSZ<F extends ForkName = ForkName> = AllForksTypeOf<AllForksSSZTypes[F]["BeaconBlockBody"]>;
 
-export type SignedBeaconBlock<F extends ForkName = ForkName, B extends FullOrBlinded = "full"> = B extends "full"
-  ? AllForkTypes[F]["SignedBeaconBlock"]
+export type SignedBeaconBlock<F extends ForkName = ForkAll, B extends FullOrBlinded = "full"> = B extends "full"
+  ? TypesByFork[F]["SignedBeaconBlock"]
   : F extends ForkExecution
-    ? AllForkTypes[F]["SignedBlindedBeaconBlock"]
+    ? TypesByFork[F]["SignedBlindedBeaconBlock"]
     : never;
-export type SignedBeaconBlockSSZ<F extends ForkName = ForkName> = AllForksTypeOf<
-  AllForksSSZTypes[F]["SignedBeaconBlock"]
->;
 
 export type BlockContents<
   F extends ForkBlobs = ForkBlobs,
   S extends "signed" | "unsigned" = "signed",
-> = S extends "signed" ? AllForkTypes[F]["SignedBlockContents"] : AllForkTypes[F]["BlockContents"];
+> = S extends "signed" ? TypesByFork[F]["SignedBlockContents"] : TypesByFork[F]["BlockContents"];
 
 export type BeaconBlockOrContents<F extends ForkBlobs = ForkBlobs> =
   | BeaconBlock<F, "full">
@@ -183,33 +202,32 @@ export type SignedBeaconBlockOrContents<F extends ForkBlobs = ForkBlobs> =
 export type ExecutionPayload<
   F extends ForkExecution = ForkExecution,
   B extends FullOrBlinded = "full",
-> = B extends "full" ? AllForkTypes[F]["ExecutionPayload"] : AllForkTypes[F]["ExecutionPayloadHeader"];
+> = B extends "full" ? TypesByFork[F]["ExecutionPayload"] : TypesByFork[F]["ExecutionPayloadHeader"];
 
-export type BeaconState<F extends ForkName = ForkName> = AllForkTypes[F]["BeaconState"];
-export type BeaconStateSSZ<F extends ForkName = ForkName> = AllForksTypeOf<AllForksSSZTypes[F]["BeaconState"]>;
+export type BeaconState<F extends ForkName = ForkAll> = TypesByFork[F]["BeaconState"];
 
-export type Metadata<F extends ForkName = ForkName> = AllForkTypes[F]["Metadata"];
+export type Metadata<F extends ForkName = ForkAll> = TypesByFork[F]["Metadata"];
 
 export type BuilderBid<
   F extends ForkExecution = ForkExecution,
   S extends "signed" | "unsigned" = "signed",
-> = S extends "signed" ? AllForkTypes[F]["SignedBuilderBid"] : AllForkTypes[F]["BuilderBid"];
+> = S extends "signed" ? TypesByFork[F]["SignedBuilderBid"] : TypesByFork[F]["BuilderBid"];
 
-export type SSEPayloadAttributes<F extends ForkExecution = ForkExecution> = AllForkTypes[F]["SSEPayloadAttributes"];
+export type SSEPayloadAttributes<F extends ForkExecution = ForkExecution> = TypesByFork[F]["SSEPayloadAttributes"];
 
-export type LightClientHeader<F extends ForkLightClient = ForkLightClient> = AllForkTypes[F]["LightClientHeader"];
+export type LightClientHeader<F extends ForkLightClient = ForkLightClient> = TypesByFork[F]["LightClientHeader"];
 
-export type LightClientBootstrap<F extends ForkLightClient = ForkLightClient> = AllForkTypes[F]["LightClientBootstrap"];
+export type LightClientBootstrap<F extends ForkLightClient = ForkLightClient> = TypesByFork[F]["LightClientBootstrap"];
 
-export type LightClientUpdate<F extends ForkLightClient = ForkLightClient> = AllForkTypes[F]["LightClientUpdate"];
+export type LightClientUpdate<F extends ForkLightClient = ForkLightClient> = TypesByFork[F]["LightClientUpdate"];
 
 export type LightClientFinalityUpdate<F extends ForkLightClient = ForkLightClient> =
-  AllForkTypes[F]["LightClientFinalityUpdate"];
+  TypesByFork[F]["LightClientFinalityUpdate"];
 
 export type LightClientOptimisticUpdate<F extends ForkLightClient = ForkLightClient> =
-  AllForkTypes[F]["LightClientOptimisticUpdate"];
+  TypesByFork[F]["LightClientOptimisticUpdate"];
 
-export type LightClientStore<F extends ForkLightClient = ForkLightClient> = AllForkTypes[F]["LightClientStore"];
+export type LightClientStore<F extends ForkLightClient = ForkLightClient> = TypesByFork[F]["LightClientStore"];
 
 export type ExecutionPayloadAndBlobsBundle<F extends ForkBlobs = ForkBlobs> =
-  AllForkTypes[F]["ExecutionPayloadAndBlobsBundle"];
+  TypesByFork[F]["ExecutionPayloadAndBlobsBundle"];

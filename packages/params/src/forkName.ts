@@ -20,6 +20,8 @@ export enum ForkSeq {
   deneb = 4,
 }
 
+export type ForkAll = ForkName;
+
 export type ForkPreLightClient = ForkName.phase0;
 export type ForkLightClient = Exclude<ForkName, ForkPreLightClient>;
 export function isForkLightClient(fork: ForkName): fork is ForkLightClient {

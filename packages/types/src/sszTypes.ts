@@ -99,8 +99,6 @@ export const allForks = {
   },
 };
 
-export type AllForksTypes = typeof allForks;
-
 const pick = <T extends Record<ForkName, unknown>, K extends keyof T>(obj: T, ...keys: K[]): Pick<T, K> =>
   Object.fromEntries(keys.filter((key) => key in obj).map((key) => [key, obj[key]])) as Pick<T, K>;
 
@@ -111,3 +109,24 @@ const blobsForks: ForkBlobs[] = [ForkName.deneb];
 export const allForksExecution = pick(allForks, ...executionForks);
 export const allForksLightClient = pick(allForks, ...lightCLientForks);
 export const allForksBlobs = pick(allForks, ...blobsForks);
+/**
+ * Index the blinded ssz types that differ by fork
+ * A record of AllForksBlindedSSZTypes indexed by fork
+ */
+export const allForksBlinded = {
+  bellatrix: {
+    BeaconBlockBody: bellatrix.BlindedBeaconBlockBody,
+    BeaconBlock: bellatrix.BlindedBeaconBlock,
+    SignedBeaconBlock: bellatrix.SignedBlindedBeaconBlock,
+  },
+  capella: {
+    BeaconBlockBody: capella.BlindedBeaconBlockBody,
+    BeaconBlock: capella.BlindedBeaconBlock,
+    SignedBeaconBlock: capella.SignedBlindedBeaconBlock,
+  },
+  deneb: {
+    BeaconBlockBody: deneb.BlindedBeaconBlockBody,
+    BeaconBlock: deneb.BlindedBeaconBlock,
+    SignedBeaconBlock: deneb.SignedBlindedBeaconBlock,
+  },
+};
