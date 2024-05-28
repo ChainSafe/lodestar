@@ -7,12 +7,14 @@ import {ts as deneb} from "../deneb/index.js";
 
 type AllForkTypes = {
   [ForkName.phase0]: {
+    BeaconBlock: phase0.BeaconBlock;
     BeaconBlockBody: phase0.BeaconBlockBody;
     BeaconState: phase0.BeaconState;
     SignedBeaconBlock: phase0.SignedBeaconBlock;
     Metadata: phase0.Metadata;
   };
   [ForkName.altair]: {
+    BeaconBlock: altair.BeaconBlock;
     BeaconBlockBody: altair.BeaconBlockBody;
     BeaconState: altair.BeaconState;
     SignedBeaconBlock: altair.SignedBeaconBlock;
@@ -24,6 +26,7 @@ type AllForkTypes = {
     LightClientStore: altair.LightClientStore;
   };
   [ForkName.bellatrix]: {
+    BeaconBlock: bellatrix.BeaconBlock;
     BeaconBlockBody: bellatrix.BeaconBlockBody;
     BeaconState: bellatrix.BeaconState;
     SignedBeaconBlock: bellatrix.SignedBeaconBlock;
@@ -43,6 +46,7 @@ type AllForkTypes = {
     SSEPayloadAttributes: bellatrix.SSEPayloadAttributes;
   };
   [ForkName.capella]: {
+    BeaconBlock: capella.BeaconBlock;
     BeaconBlockBody: capella.BeaconBlockBody;
     BeaconState: capella.BeaconState;
     SignedBeaconBlock: capella.SignedBeaconBlock;
@@ -62,6 +66,7 @@ type AllForkTypes = {
     SSEPayloadAttributes: capella.SSEPayloadAttributes;
   };
   [ForkName.deneb]: {
+    BeaconBlock: deneb.BeaconBlock;
     BeaconBlockBody: deneb.BeaconBlockBody;
     BeaconState: deneb.BeaconState;
     SignedBeaconBlock: deneb.SignedBeaconBlock;
@@ -98,7 +103,7 @@ export type BeaconBlockBody<F extends ForkName = ForkName, B extends FullOrBlind
     : never;
 
 export type BeaconBlock<F extends ForkName = ForkName, B extends FullOrBlinded = "full"> = B extends "full"
-  ? AllForkTypes[F]["BeaconBlockBody"]
+  ? AllForkTypes[F]["BeaconBlock"]
   : F extends ForkExecution
     ? AllForkTypes[F]["BlindedBeaconBlock"]
     : never;
