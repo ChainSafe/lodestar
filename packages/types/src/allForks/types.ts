@@ -156,6 +156,9 @@ export type LightClientUpdate<F extends ForkLightClient = ForkLightClient> = All
 export type LightClientFinalityUpdate<F extends ForkLightClient = ForkLightClient> =
   AllForkTypes[F]["LightClientFinalityUpdate"];
 
+export type LightClientOptimisticUpdate<F extends ForkLightClient = ForkLightClient> =
+  AllForkTypes[F]["LightClientOptimisticUpdate"];
+
 export type LightClientStore<F extends ForkLightClient = ForkLightClient> = AllForkTypes[F]["LightClientStore"];
 
 export type ExecutionPayloadAndBlobsBundle<F extends ForkBlobs = ForkBlobs> =
