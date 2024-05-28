@@ -1,9 +1,33 @@
+import {CompositeType, CompositeView, CompositeViewDU, ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ForkBlobs, ForkExecution, ForkLightClient, ForkName} from "@lodestar/params";
 import {ts as phase0} from "../phase0/index.js";
 import {ts as altair} from "../altair/index.js";
 import {ts as bellatrix} from "../bellatrix/index.js";
 import {ts as capella} from "../capella/index.js";
 import {ts as deneb} from "../deneb/index.js";
+import type {AllForksTypes as AllForksSSZTypes} from "./sszTypes.js";
+
+/**
+ * An AllForks type must accept as any parameter the UNION of all fork types.
+ * The generic argument of `AllForksTypeOf` must be the union of the fork types:
+ *
+ *
+ * For example, `allForks.BeaconState.defaultValue()` must return
+ * ```
+ * phase0.BeaconState | altair.BeaconState | bellatrix.BeaconState
+ * ```
+ *
+ * And `allForks.BeaconState.serialize()` must accept as parameter
+ * ```
+ * phase0.BeaconState | altair.BeaconState | bellatrix.BeaconState
+ * ```
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AllForksTypeOf<UnionOfForkTypes extends ContainerType<any>> = CompositeType<
+  ValueOf<UnionOfForkTypes>,
+  CompositeView<UnionOfForkTypes>,
+  CompositeViewDU<UnionOfForkTypes>
+>;
 
 type AllForkTypes = {
   [ForkName.phase0]: {
@@ -100,23 +124,28 @@ type AllForkTypes = {
 
 export type FullOrBlinded = "full" | "blinded";
 
-export type BeaconBlockBody<F extends ForkName = ForkName, B extends FullOrBlinded = "full"> = B extends "full"
-  ? AllForkTypes[F]["BeaconBlockBody"]
-  : F extends ForkExecution
-    ? AllForkTypes[F]["BlindedBeaconBlockBody"]
-    : never;
-
 export type BeaconBlock<F extends ForkName = ForkName, B extends FullOrBlinded = "full"> = B extends "full"
   ? AllForkTypes[F]["BeaconBlock"]
   : F extends ForkExecution
     ? AllForkTypes[F]["BlindedBeaconBlock"]
     : never;
+export type BeaconBlockSSZ<F extends ForkName = ForkName> = AllForksTypeOf<AllForksSSZTypes[F]["BeaconBlock"]>;
+
+export type BeaconBlockBody<F extends ForkName = ForkName, B extends FullOrBlinded = "full"> = B extends "full"
+  ? AllForkTypes[F]["BeaconBlockBody"]
+  : F extends ForkExecution
+    ? AllForkTypes[F]["BlindedBeaconBlockBody"]
+    : never;
+export type BeaconBlockBodySSZ<F extends ForkName = ForkName> = AllForksTypeOf<AllForksSSZTypes[F]["BeaconBlockBody"]>;
 
 export type SignedBeaconBlock<F extends ForkName = ForkName, B extends FullOrBlinded = "full"> = B extends "full"
   ? AllForkTypes[F]["SignedBeaconBlock"]
   : F extends ForkExecution
     ? AllForkTypes[F]["SignedBlindedBeaconBlock"]
     : never;
+export type SignedBeaconBlockSSZ<F extends ForkName = ForkName> = AllForksTypeOf<
+  AllForksSSZTypes[F]["SignedBeaconBlock"]
+>;
 
 export type BlockContents<
   F extends ForkBlobs = ForkBlobs,
@@ -137,6 +166,7 @@ export type ExecutionPayload<
 > = B extends "full" ? AllForkTypes[F]["ExecutionPayload"] : AllForkTypes[F]["ExecutionPayloadHeader"];
 
 export type BeaconState<F extends ForkName = ForkName> = AllForkTypes[F]["BeaconState"];
+export type BeaconStateSSZ<F extends ForkName = ForkName> = AllForksTypeOf<AllForksSSZTypes[F]["BeaconState"]>;
 
 export type Metadata<F extends ForkName = ForkName> = AllForkTypes[F]["Metadata"];
 

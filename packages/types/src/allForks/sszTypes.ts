@@ -11,12 +11,14 @@ import {ssz as deneb} from "../deneb/index.js";
  */
 export const allForks = {
   [ForkName.phase0]: {
+    BeaconBlock: phase0.BeaconBlock,
     BeaconBlockBody: phase0.BeaconBlockBody,
     BeaconState: phase0.BeaconState,
     SignedBeaconBlock: phase0.SignedBeaconBlock,
     Metadata: phase0.Metadata,
   },
   [ForkName.altair]: {
+    BeaconBlock: altair.BeaconBlock,
     BeaconBlockBody: altair.BeaconBlockBody,
     BeaconState: altair.BeaconState,
     SignedBeaconBlock: altair.SignedBeaconBlock,
@@ -29,6 +31,7 @@ export const allForks = {
     LightClientStore: altair.LightClientStore,
   },
   [ForkName.bellatrix]: {
+    BeaconBlock: bellatrix.BeaconBlock,
     BeaconBlockBody: bellatrix.BeaconBlockBody,
     BeaconState: bellatrix.BeaconState,
     SignedBeaconBlock: bellatrix.SignedBeaconBlock,
@@ -49,6 +52,7 @@ export const allForks = {
     SSEPayloadAttributes: bellatrix.SSEPayloadAttributes,
   },
   [ForkName.capella]: {
+    BeaconBlock: capella.BeaconBlock,
     BeaconBlockBody: capella.BeaconBlockBody,
     BeaconState: capella.BeaconState,
     SignedBeaconBlock: capella.SignedBeaconBlock,
@@ -69,6 +73,7 @@ export const allForks = {
     SSEPayloadAttributes: capella.SSEPayloadAttributes,
   },
   [ForkName.deneb]: {
+    BeaconBlock: deneb.BeaconBlock,
     BeaconBlockBody: deneb.BeaconBlockBody,
     BeaconState: deneb.BeaconState,
     SignedBeaconBlock: deneb.SignedBeaconBlock,
@@ -91,17 +96,14 @@ export const allForks = {
   },
 };
 
+export type AllForksTypes = typeof allForks;
+
 const pick = <T extends Record<ForkName, unknown>, K extends keyof T>(obj: T, ...keys: K[]): Pick<T, K> =>
   Object.fromEntries(keys.filter((key) => key in obj).map((key) => [key, obj[key]])) as Pick<T, K>;
 
-export const executionForks: ForkExecution[] = [ForkName.bellatrix, ForkName.capella, ForkName.deneb];
-export const lightCLientForks: ForkLightClient[] = [
-  ForkName.altair,
-  ForkName.bellatrix,
-  ForkName.capella,
-  ForkName.deneb,
-];
-export const blobsForks: ForkBlobs[] = [ForkName.deneb];
+const executionForks: ForkExecution[] = [ForkName.bellatrix, ForkName.capella, ForkName.deneb];
+const lightCLientForks: ForkLightClient[] = [ForkName.altair, ForkName.bellatrix, ForkName.capella, ForkName.deneb];
+const blobsForks: ForkBlobs[] = [ForkName.deneb];
 
 export const allForksExecution = pick(allForks, ...executionForks);
 export const allForksLightClient = pick(allForks, ...lightCLientForks);
