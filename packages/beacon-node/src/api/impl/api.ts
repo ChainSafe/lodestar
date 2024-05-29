@@ -1,5 +1,4 @@
-import {Endpoints} from "@lodestar/api";
-import {ApplicationMethods} from "@lodestar/api/server";
+import {BeaconApiMethods} from "@lodestar/api/beacon/server";
 import {ApiOptions} from "../options.js";
 import {ApiModules} from "./types.js";
 import {getBeaconApi} from "./beacon/index.js";
@@ -12,10 +11,7 @@ import {getNodeApi} from "./node/index.js";
 import {getProofApi} from "./proof/index.js";
 import {getValidatorApi} from "./validator/index.js";
 
-export function getApi(
-  opts: ApiOptions,
-  modules: ApiModules
-): {[K in keyof Endpoints]: ApplicationMethods<Endpoints[K]>} {
+export function getApi(opts: ApiOptions, modules: ApiModules): BeaconApiMethods {
   return {
     beacon: getBeaconApi(modules),
     config: getConfigApi(modules),

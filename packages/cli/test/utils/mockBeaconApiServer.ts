@@ -1,7 +1,6 @@
 import {RestApiServer, RestApiServerOpts, RestApiServerModules} from "@lodestar/beacon-node";
-import {registerRoutes} from "@lodestar/api/beacon/server";
-import {Endpoints, allNamespaces} from "@lodestar/api";
-import {ApplicationMethods} from "@lodestar/api/server";
+import {BeaconApiMethods, registerRoutes} from "@lodestar/api/beacon/server";
+import {allNamespaces} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
@@ -11,7 +10,6 @@ import {testLogger} from "../../../beacon-node/test/utils/logger.js";
 
 const ZERO_HASH_HEX = toHex(Buffer.alloc(32, 0));
 
-type Api = {[K in keyof Endpoints]: ApplicationMethods<Endpoints[K]>};
 type DeepPartial<T> = {
   [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K];
 };
@@ -21,7 +19,12 @@ export type MockBeaconApiOpts = {
 };
 
 class MockBeaconRestApiServer extends RestApiServer {
-  constructor(optsArg: RestApiServerOpts, modules: RestApiServerModules, config: ChainForkConfig, api: Api) {
+  constructor(
+    optsArg: RestApiServerOpts,
+    modules: RestApiServerModules,
+    config: ChainForkConfig,
+    api: BeaconApiMethods
+  ) {
     super(optsArg, modules);
 
     // Instantiate and register the routes with matching namespace in `opts.api`
@@ -71,10 +74,10 @@ export function getMockBeaconApiServer(opts: RestApiServerOpts, apiOpts?: MockBe
         // Do nothing
       },
     },
-  } as DeepPartial<Api>;
+  } as DeepPartial<BeaconApiMethods>;
 
   const logger = testLogger("mock-beacon-api");
-  const restApiServer = new MockBeaconRestApiServer(opts, {logger, metrics: null}, config, api as Api);
+  const restApiServer = new MockBeaconRestApiServer(opts, {logger, metrics: null}, config, api as BeaconApiMethods);
 
   return restApiServer;
 }

@@ -2,7 +2,6 @@ import {SecretKey} from "@chainsafe/blst";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {fromHexString} from "@chainsafe/ssz";
 import {
-  Endpoints,
   DeleteRemoteKeyStatus,
   DeletionStatus,
   ImportStatus,
@@ -18,16 +17,15 @@ import {
   GasLimitData,
   BuilderBoostFactorData,
 } from "@lodestar/api/keymanager";
+import {KeymanagerApiMethods as Api} from "@lodestar/api/keymanager/server";
 import {Interchange, SignerType, Validator} from "@lodestar/validator";
-import {ApiError, ApplicationMethods} from "@lodestar/api/server";
+import {ApiError} from "@lodestar/api/server";
 import {Epoch} from "@lodestar/types";
 import {isValidHttpUrl} from "@lodestar/utils";
 import {getPubkeyHexFromKeystore, isValidatePubkeyHex} from "../../../util/format.js";
 import {parseFeeRecipient} from "../../../util/index.js";
 import {DecryptKeystoresThreadPool} from "./decryptKeystores/index.js";
 import {IPersistedKeysBackend} from "./interface.js";
-
-type Api = ApplicationMethods<Endpoints>;
 
 export class KeymanagerApi implements Api {
   constructor(

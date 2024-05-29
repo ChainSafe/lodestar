@@ -3,10 +3,8 @@ import fs from "node:fs";
 import path from "node:path";
 import {toHexString} from "@chainsafe/ssz";
 import {RestApiServer, RestApiServerOpts, RestApiServerModules} from "@lodestar/beacon-node";
-import {Endpoints} from "@lodestar/api/keymanager";
-import {registerRoutes} from "@lodestar/api/keymanager/server";
+import {KeymanagerApiMethods, registerRoutes} from "@lodestar/api/keymanager/server";
 import {ChainForkConfig} from "@lodestar/config";
-import {ApplicationMethods} from "@lodestar/api/server";
 import {writeFile600Perm} from "../../../util/index.js";
 
 export type KeymanagerRestApiServerOpts = RestApiServerOpts & {
@@ -27,7 +25,7 @@ export const keymanagerRestApiServerOptsDefault: KeymanagerRestApiServerOpts = {
 
 export type KeymanagerRestApiServerModules = RestApiServerModules & {
   config: ChainForkConfig;
-  api: ApplicationMethods<Endpoints>;
+  api: KeymanagerApiMethods;
 };
 
 export const apiTokenFileName = "api-token.txt";

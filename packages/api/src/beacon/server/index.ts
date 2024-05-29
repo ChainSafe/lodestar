@@ -13,12 +13,12 @@ import * as node from "./node.js";
 import * as proof from "./proof.js";
 import * as validator from "./validator.js";
 
-export type AllBeaconMethods = {[K in keyof Endpoints]: ApplicationMethods<Endpoints[K]>};
+export type BeaconApiMethods = {[K in keyof Endpoints]: ApplicationMethods<Endpoints[K]>};
 
 export function registerRoutes(
   server: FastifyInstance,
   config: ChainForkConfig,
-  methods: AllBeaconMethods,
+  methods: BeaconApiMethods,
   enabledNamespaces: (keyof Endpoints)[]
 ): void {
   const routesByNamespace: {

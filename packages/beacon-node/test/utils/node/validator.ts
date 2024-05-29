@@ -3,8 +3,8 @@ import {SecretKey} from "@chainsafe/blst";
 import {LevelDbController} from "@lodestar/db";
 import {interopSecretKey} from "@lodestar/state-transition";
 import {SlashingProtection, Validator, Signer, SignerType, ValidatorProposerConfig} from "@lodestar/validator";
-import {ApiClient, ApiError, Endpoints, HttpStatusCode, ApiResponse} from "@lodestar/api";
-import {ApplicationMethods} from "@lodestar/api/server";
+import {ApiClient, ApiError, HttpStatusCode, ApiResponse} from "@lodestar/api";
+import {BeaconApiMethods} from "@lodestar/api/beacon/server";
 import {mapValues} from "@lodestar/utils";
 import {BeaconNode} from "../../../src/index.js";
 import {testLogger, TestLoggerOpts} from "../logger.js";
@@ -88,9 +88,7 @@ export async function getAndInitDevValidators({
   };
 }
 
-export function getApiFromServerHandlers(api: {
-  [K in keyof Endpoints]: ApplicationMethods<Endpoints[K]>;
-}): ApiClient {
+export function getApiFromServerHandlers(api: BeaconApiMethods): ApiClient {
   return mapValues(api, (apiModule) =>
     mapValues(apiModule, (api: (args: unknown, context: unknown) => PromiseLike<{data: unknown; meta: unknown}>) => {
       return async (args: unknown) => {

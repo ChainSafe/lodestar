@@ -117,7 +117,7 @@ export function mergeHeaders(a: HeadersInit | undefined, b: HeadersInit | undefi
 /**
  * Get header from request headers, by default an error will be thrown if the header
  * is not present. The header can be marked as optional in which case the return value
- * might be `undefined` and no error will be thrown if header is missing.
+ * might be `undefined` but no error will be thrown if header is missing.
  */
 export function fromHeaders<T extends Record<string, string | undefined>, R extends boolean = true>(
   headers: T,

@@ -4,15 +4,13 @@ import {ApplicationMethods, FastifyRoute, FastifyRoutes, createFastifyRoutes} fr
 import {Endpoints, getDefinitions} from "../routes.js";
 import {AnyEndpoint} from "../../utils/codecs.js";
 
-export function getRoutes(config: ChainForkConfig, methods: ApplicationMethods<Endpoints>): FastifyRoutes<Endpoints> {
+export type KeymanagerApiMethods = ApplicationMethods<Endpoints>;
+
+export function getRoutes(config: ChainForkConfig, methods: KeymanagerApiMethods): FastifyRoutes<Endpoints> {
   return createFastifyRoutes(getDefinitions(config), methods);
 }
 
-export function registerRoutes(
-  server: FastifyInstance,
-  config: ChainForkConfig,
-  methods: ApplicationMethods<Endpoints>
-): void {
+export function registerRoutes(server: FastifyInstance, config: ChainForkConfig, methods: KeymanagerApiMethods): void {
   const routes = getRoutes(config, methods);
 
   for (const route of Object.values(routes)) {

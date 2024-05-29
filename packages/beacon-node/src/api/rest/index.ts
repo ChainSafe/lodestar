@@ -1,5 +1,5 @@
 import {Endpoints} from "@lodestar/api";
-import {ApplicationMethods} from "@lodestar/api/server";
+import {BeaconApiMethods} from "@lodestar/api/beacon/server";
 import {registerRoutes} from "@lodestar/api/beacon/server";
 import {ErrorAborted, Logger} from "@lodestar/utils";
 import {ChainForkConfig} from "@lodestar/config";
@@ -28,7 +28,7 @@ export const beaconRestApiServerOpts: BeaconRestApiServerOpts = {
 export type BeaconRestApiServerModules = RestApiServerModules & {
   config: ChainForkConfig;
   logger: Logger;
-  api: {[K in keyof Endpoints]: ApplicationMethods<Endpoints[K]>};
+  api: BeaconApiMethods;
   metrics: RestApiServerMetrics | null;
 };
 

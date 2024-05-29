@@ -6,8 +6,7 @@ import {BeaconConfig} from "@lodestar/config";
 import {phase0} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import type {LoggerNode} from "@lodestar/logger/node";
-import {Endpoints} from "@lodestar/api";
-import {ApplicationMethods} from "@lodestar/api/server";
+import {BeaconApiMethods} from "@lodestar/api/beacon/server";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
@@ -34,7 +33,7 @@ export type BeaconNodeModules = {
   metrics: Metrics | null;
   network: Network;
   chain: IBeaconChain;
-  api: {[K in keyof Endpoints]: ApplicationMethods<Endpoints[K]>};
+  api: BeaconApiMethods;
   sync: IBeaconSync;
   backfillSync: BackfillSync | null;
   metricsServer: HttpMetricsServer | null;
@@ -96,7 +95,7 @@ export class BeaconNode {
   monitoring: MonitoringService | null;
   network: Network;
   chain: IBeaconChain;
-  api: {[K in keyof Endpoints]: ApplicationMethods<Endpoints[K]>};
+  api: BeaconApiMethods;
   restApi?: BeaconRestApiServer;
   sync: IBeaconSync;
   backfillSync: BackfillSync | null;

@@ -3,7 +3,7 @@ import {FastifyInstance, fastify} from "fastify";
 import {fastifyCors} from "@fastify/cors";
 import {Endpoints} from "@lodestar/api";
 import {ApplicationMethods, addSszContentTypeParser} from "@lodestar/api/server";
-import {AllBeaconMethods, registerRoutes} from "@lodestar/api/beacon/server";
+import {BeaconApiMethods, registerRoutes} from "@lodestar/api/beacon/server";
 import {ChainForkConfig} from "@lodestar/config";
 
 export type ServerOpts = {
@@ -26,7 +26,7 @@ export async function startServer(
 
   addSszContentTypeParser(server);
 
-  registerRoutes(server, config, methods as AllBeaconMethods, ["lightclient", "proof", "events"]);
+  registerRoutes(server, config, methods as BeaconApiMethods, ["lightclient", "proof", "events"]);
 
   void server.register(fastifyCors, {origin: "*"});
 
