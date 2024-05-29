@@ -115,6 +115,26 @@ export function WithVersion<T, M extends {version: ForkName}>(
   };
 }
 
+export function JsonOnlyResp<E extends Endpoint>(
+  resp: Omit<ResponseCodec<E>, "data"> & {
+    data: Omit<ResponseCodec<E>["data"], "serialize" | "deserialize">;
+  }
+): ResponseCodec<E> {
+  return {
+    ...resp,
+    data: {
+      ...resp.data,
+      serialize: () => {
+        throw Error("Not implemented");
+      },
+      deserialize: () => {
+        throw Error("Not implemented");
+      },
+    },
+    onlySupport: WireFormat.json,
+  };
+}
+
 export const JsonOnlyResponseCodec: ResponseCodec<AnyEndpoint> = {
   data: {
     toJson: (data: Record<string, unknown>) => {

@@ -2,9 +2,16 @@
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {ssz} from "@lodestar/types";
-import {ArrayOf, EmptyArgs, EmptyRequestCodec, EmptyMeta, EmptyMetaCodec, EmptyRequest} from "../../utils/codecs.js";
+import {
+  ArrayOf,
+  EmptyArgs,
+  EmptyRequestCodec,
+  EmptyMeta,
+  EmptyMetaCodec,
+  EmptyRequest,
+  JsonOnlyResp,
+} from "../../utils/codecs.js";
 import {Endpoint, RouteDefinitions} from "../../utils/index.js";
-import {WireFormat} from "../../utils/wireFormat.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -93,8 +100,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       url: "/eth/v1/config/spec",
       method: "GET",
       req: EmptyRequestCodec,
-      resp: {
-        onlySupport: WireFormat.json,
+      resp: JsonOnlyResp({
         data: {
           toJson: (data) => data,
           fromJson: (data) => {
@@ -103,15 +109,9 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
             }
             return data as Spec;
           },
-          serialize: () => {
-            throw Error("Not implemented");
-          },
-          deserialize: () => {
-            throw Error("Not implemented");
-          },
         },
         meta: EmptyMetaCodec,
-      },
+      }),
     },
   };
 }
