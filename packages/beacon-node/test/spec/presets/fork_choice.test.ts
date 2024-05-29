@@ -263,7 +263,7 @@ const forkChoiceTest =
               logger.debug(`Step ${i}/${stepsLen} check`);
 
               // Forkchoice head is computed lazily only on request
-              const head = chain.forkChoice.updateHead();
+              const head = (chain.forkChoice as ForkChoice).updateHead();
               const proposerBootRoot = (chain.forkChoice as ForkChoice).getProposerBoostRoot();
 
               if (step.checks.head !== undefined) {

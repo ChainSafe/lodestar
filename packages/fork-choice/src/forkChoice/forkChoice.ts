@@ -51,9 +51,9 @@ export type ForkChoiceOpts = {
 };
 
 export enum UpdateHeadOpt {
-  GetCanonicialHead, // Skip getProposerHead
-  GetProposerHead, // With getProposerHead
-  GetPredictedProposerHead, // With predictProposerHead
+  GetCanonicialHead = "getCanonicialHead", // Skip getProposerHead
+  GetProposerHead = "getProposerHead", // With getProposerHead
+  GetPredictedProposerHead = "getPredictedProposerHead", // With predictProposerHead
 }
 
 export type UpdateAndGetHeadOpt =

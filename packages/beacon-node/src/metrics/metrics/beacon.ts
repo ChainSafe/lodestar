@@ -2,6 +2,7 @@ import {ProducedBlockSource} from "@lodestar/types";
 import {NotReorgedReason} from "@lodestar/fork-choice/lib/forkChoice/interface.js";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
 import {BlockProductionStep, PayloadPreparationType} from "../../chain/produceBlock/index.js";
+import { UpdateHeadOpt } from "@lodestar/fork-choice";
 
 export type BeaconMetrics = ReturnType<typeof createBeaconMetrics>;
 
@@ -68,9 +69,10 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         name: "beacon_fork_choice_requests_total",
         help: "Count of occasions where fork choice has tried to find a head",
       }),
-      errors: register.gauge({
+      errors: register.gauge<{entrypoint: UpdateHeadOpt}>({
         name: "beacon_fork_choice_errors_total",
         help: "Count of occasions where fork choice has returned an error when trying to find a head",
+        labelNames: ["entrypoint"]
       }),
       changedHead: register.gauge({
         name: "beacon_fork_choice_changed_head_total",
@@ -207,7 +209,7 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
     }),
 
     weakHeadDetected: register.gauge({
-      name: "beacon_weak_head_detected",
+      name: "beacon_weak_head_detected_total",
       help: "Detected current head block is weak. May reorg it out when proposing next slot. See proposer boost reorg for more",
     }),
   };

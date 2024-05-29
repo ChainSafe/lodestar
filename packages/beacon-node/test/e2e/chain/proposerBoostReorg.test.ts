@@ -44,9 +44,6 @@ describe(
      * reorgSlot - 1 ------------ reorgSlot + 1
      *
      * Note that in addition of being not timely, there are other criterion that
-     * the block needs to satisfied before being re-orged out. This test assumes
-     * other criterion are satisfied except timeliness.
-     * Note that in additional of being not timely, there are other criterion that
      * the block needs to satisfy before being re-orged out. This test assumes
      * other criterion are already satisfied
      */
@@ -69,7 +66,6 @@ describe(
         options: {
           sync: {isSingleNode: true},
           network: {allowPublishToZeroPeers: true, mdns: true, useWorker: false},
-          // run the first bn with ReorgedForkChoice, no nHistoricalStates flag so it does not have to reload
           chain: {
             blsVerifyAllMainThread: true,
             forkchoiceConstructor: TimelinessForkChoice,

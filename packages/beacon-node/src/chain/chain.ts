@@ -704,7 +704,7 @@ export class BeaconChain implements IBeaconChain {
     try {
       return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetCanonicialHead}).head;
     } catch (e) {
-      this.metrics?.forkChoice.errors.inc();
+      this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetCanonicialHead});
       throw e;
     } finally {
       timer?.();
@@ -718,7 +718,7 @@ export class BeaconChain implements IBeaconChain {
     try {
       return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetPredictedProposerHead, slot}).head;
     } catch (e) {
-      this.metrics?.forkChoice.errors.inc();
+      this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetPredictedProposerHead});
       throw e;
     } finally {
       timer?.();
@@ -742,7 +742,7 @@ export class BeaconChain implements IBeaconChain {
       }
       return head;
     } catch (e) {
-      this.metrics?.forkChoice.errors.inc();
+      this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetProposerHead});
       throw e;
     } finally {
       timer?.();

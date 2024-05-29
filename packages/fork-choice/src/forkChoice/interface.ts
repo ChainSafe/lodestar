@@ -44,18 +44,18 @@ export type AncestorResult =
 
 // Reason for not proposer boost reorging
 export enum NotReorgedReason {
-  HeadBlockIsTimely = 0,
-  ParentBlockNotAvailable = 1,
-  ProposerBoostReorgDisabled = 2,
-  NotShufflingStable = 3,
-  NotFFGCompetitive = 4,
-  ChainLongUnfinality = 5,
-  ParentBlockDistanceMoreThanOneSlot = 6,
-  ReorgMoreThanOneSlot = 7,
-  ProposerBoostNotWornOff = 8,
-  HeadBlockNotWeak = 9,
-  ParentBlockIsStrong = 10,
-  NotProposingOnTime = 11,
+  HeadBlockIsTimely = "headBlockIsTimely",
+  ParentBlockNotAvailable = "parentBlockNotAvailable",
+  ProposerBoostReorgDisabled = "proposerBoostReorgDisabled",
+  NotShufflingStable = "notShufflingStable",
+  NotFFGCompetitive = "notFFGCompetitive",
+  ChainLongUnfinality = "chainLongUnfinality",
+  ParentBlockDistanceMoreThanOneSlot = "parentBlockDistanceMoreThanOneSlot",
+  ReorgMoreThanOneSlot = "reorgMoreThanOneSlot",
+  ProposerBoostNotWornOff = "proposerBoostNotWornOff",
+  HeadBlockNotWeak = "headBlockNotWeak",
+  ParentBlockIsStrong = "parentBlockIsStrong",
+  NotProposingOnTime = "notProposingOnTime",
 }
 
 export type ForkChoiceMetrics = {
@@ -93,7 +93,6 @@ export interface IForkChoice {
    */
   getHeadRoot(): RootHex;
   getHead(): ProtoBlock;
-  updateHead(): ProtoBlock;
   updateAndGetHead(mode: UpdateAndGetHeadOpt): {
     head: ProtoBlock;
     isHeadTimely?: boolean;
