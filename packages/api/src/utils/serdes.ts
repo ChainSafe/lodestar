@@ -103,7 +103,11 @@ export function fromGraffitiHex(hex: string): string {
 }
 
 export function toBoolean(value: string): boolean {
-  // TODO: validation?
+  value = value.toLowerCase();
 
-  return value.toLowerCase() === "true";
+  if (value !== "true" && value !== "false") {
+    throw Error(`Invalid boolean ${value}`);
+  }
+
+  return value === "true";
 }
