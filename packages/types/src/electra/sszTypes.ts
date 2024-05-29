@@ -4,7 +4,7 @@ import {
   ContainerType,
   ListBasicType,
   ListCompositeType,
-  SimpleVariantType,
+  ProfileType,
   VectorCompositeType,
 } from "@chainsafe/ssz";
 import {
@@ -67,7 +67,7 @@ export const AttestingIndices = new ListBasicType(
   MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT
 );
 
-export const Attestation = new SimpleVariantType(
+export const Attestation = new ProfileType(
   {
     aggregationBits: AggregationBits, // Modified in ELECTRA
     data: phase0Ssz.AttestationData,
@@ -78,7 +78,7 @@ export const Attestation = new SimpleVariantType(
   {typeName: "Attestation", jsonCase: "eth2"}
 );
 
-export const IndexedAttestation = new SimpleVariantType(
+export const IndexedAttestation = new ProfileType(
   {
     attestingIndices: AttestingIndices, // Modified in ELECTRA
     data: phase0Ssz.AttestationData,
@@ -89,7 +89,7 @@ export const IndexedAttestation = new SimpleVariantType(
 );
 
 /** Same as `IndexedAttestation` but epoch, slot and index are not bounded and must be a bigint */
-export const IndexedAttestationBigint = new SimpleVariantType(
+export const IndexedAttestationBigint = new ProfileType(
   {
     attestingIndices: AttestingIndices, // Modified in ELECTRA
     data: phase0Ssz.AttestationDataBigint,
@@ -159,7 +159,7 @@ export const ConsolidationRequests = new ListCompositeType(
   MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD
 );
 
-export const ExecutionPayload = new SimpleVariantType(
+export const ExecutionPayload = new ProfileType(
   {
     ...denebSsz.ExecutionPayload.fields,
     depositRequests: DepositRequests, // New in ELECTRA
@@ -170,7 +170,7 @@ export const ExecutionPayload = new SimpleVariantType(
   {typeName: "ExecutionPayload", jsonCase: "eth2"}
 );
 
-export const ExecutionPayloadHeader = new SimpleVariantType(
+export const ExecutionPayloadHeader = new ProfileType(
   {
     ...denebSsz.ExecutionPayloadHeader.fields,
     depositRequestsRoot: Root, // New in ELECTRA
@@ -182,7 +182,7 @@ export const ExecutionPayloadHeader = new SimpleVariantType(
 );
 
 // We have to preserve Fields ordering while changing the type of ExecutionPayload
-export const BeaconBlockBody = new SimpleVariantType(
+export const BeaconBlockBody = new ProfileType(
   {
     randaoReveal: phase0Ssz.BeaconBlockBody.fields.randaoReveal,
     eth1Data: phase0Ssz.BeaconBlockBody.fields.eth1Data,
@@ -217,7 +217,7 @@ export const SignedBeaconBlock = new ContainerType(
   {typeName: "SignedBeaconBlock", jsonCase: "eth2"}
 );
 
-export const BlindedBeaconBlockBody = new SimpleVariantType(
+export const BlindedBeaconBlockBody = new ProfileType(
   {
     randaoReveal: phase0Ssz.BeaconBlockBody.fields.randaoReveal,
     eth1Data: phase0Ssz.BeaconBlockBody.fields.eth1Data,
@@ -306,7 +306,7 @@ export const PendingConsolidation = new ContainerType(
 );
 
 // In EIP-7251, we spread deneb fields as new fields are appended at the end
-export const BeaconState = new SimpleVariantType(
+export const BeaconState = new ProfileType(
   {
     genesisTime: UintNum64,
     genesisValidatorsRoot: Root,
