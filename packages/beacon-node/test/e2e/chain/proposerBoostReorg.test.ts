@@ -43,7 +43,7 @@ describe(
      *              /
      * reorgSlot - 1 ------------ reorgSlot + 1
      *
-     * Note that in additional of being not timely, there are other criterion that
+     * Note that in addition of being not timely, there are other criterion that
      * the block needs to satisfied before being re-orged out. This test assumes
      * other criterion are satisfied except timeliness.
      * Note that in additional of being not timely, there are other criterion that
