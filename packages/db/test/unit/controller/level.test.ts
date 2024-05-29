@@ -1,6 +1,7 @@
 import {execSync} from "node:child_process";
 import os from "node:os";
 import {describe, it, expect, beforeAll, afterAll} from "vitest";
+import leveldown from "leveldown";
 import all from "it-all";
 import {getEnvLogger} from "@lodestar/logger/env";
 import {LevelDbController} from "../../../src/controller/index.js";
@@ -15,7 +16,12 @@ describe("LevelDB controller", () => {
 
   afterAll(async () => {
     await db.close();
-    await LevelDbController.destroy(dbLocation);
+    await new Promise<void>((resolve, reject) => {
+      leveldown.destroy(dbLocation, (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
   });
 
   it("test get not found", async () => {

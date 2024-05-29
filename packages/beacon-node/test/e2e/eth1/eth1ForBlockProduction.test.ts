@@ -1,4 +1,6 @@
+import {promisify} from "node:util";
 import {describe, it, beforeAll, afterAll, expect} from "vitest";
+import leveldown from "leveldown";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {sleep} from "@lodestar/utils";
 import {LevelDbController} from "@lodestar/db";
@@ -36,7 +38,7 @@ describe.skip("eth1 / Eth1Provider", function () {
 
   beforeAll(async () => {
     // Nuke DB to make sure it's empty
-    await LevelDbController.destroy(dbLocation);
+    await promisify<string>(leveldown.destroy)(dbLocation);
 
     db = new BeaconDb(config, await LevelDbController.create({name: dbLocation}, {logger}));
   });
@@ -45,7 +47,7 @@ describe.skip("eth1 / Eth1Provider", function () {
     clearInterval(interval);
     controller.abort();
     await db.close();
-    await LevelDbController.destroy(dbLocation);
+    await promisify<string>(leveldown.destroy)(dbLocation);
   });
 
   it("Should fetch real Pyrmont eth1 data for block proposing", async function () {
