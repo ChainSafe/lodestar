@@ -14,6 +14,7 @@ import {
 } from "../../../utils/metadata.js";
 import {getBlindedForkTypes, toForkName} from "../../../utils/fork.js";
 import {fromHeaders} from "../../../utils/headers.js";
+import {WireFormat} from "../../../utils/wireFormat.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -356,6 +357,9 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         },
       },
       resp: EmptyResponseCodec,
+      init: {
+        requestWireFormat: WireFormat.ssz,
+      },
     },
     publishBlockV2: {
       url: "/eth/v2/beacon/blocks",
@@ -424,6 +428,9 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         },
       },
       resp: EmptyResponseCodec,
+      init: {
+        requestWireFormat: WireFormat.ssz,
+      },
     },
     publishBlindedBlock: {
       url: "/eth/v1/beacon/blinded_blocks",
@@ -465,6 +472,9 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         },
       },
       resp: EmptyResponseCodec,
+      init: {
+        requestWireFormat: WireFormat.ssz,
+      },
     },
     publishBlindedBlockV2: {
       url: "/eth/v2/beacon/blinded_blocks",
@@ -512,6 +522,9 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         },
       },
       resp: EmptyResponseCodec,
+      init: {
+        requestWireFormat: WireFormat.ssz,
+      },
     },
     getBlobSidecars: {
       url: "/eth/v1/beacon/blob_sidecars/{block_id}",

@@ -12,7 +12,7 @@ import {fetch, isFetchError} from "./fetch.js";
 const DEFAULT_TIMEOUT_MS = 60_000;
 const DEFAULT_RETRIES = 0;
 const DEFAULT_RETRY_DELAY = 200;
-const DEFAULT_REQUEST_WIRE_FORMAT = WireFormat.ssz;
+const DEFAULT_REQUEST_WIRE_FORMAT = WireFormat.json;
 const DEFAULT_RESPONSE_WIRE_FORMAT = WireFormat.ssz;
 
 const URL_SCORE_DELTA_SUCCESS = 1;
@@ -127,7 +127,11 @@ export class HttpClient implements IHttpClient {
     args: E["args"],
     localInit: ApiRequestInit = {}
   ): Promise<ApiResponse<E>> {
-    const retries = localInit.retries ?? this.globalInit.retries;
+    const {retries, retryDelay, signal} = {
+      ...this.globalInit,
+      ...definition.init,
+      ...localInit,
+    };
 
     if (retries > 0) {
       const routeId = definition.operationId;
@@ -142,8 +146,8 @@ export class HttpClient implements IHttpClient {
         },
         {
           retries,
-          retryDelay: localInit.retryDelay ?? this.globalInit.retryDelay,
-          signal: this.globalInit.signal ?? undefined,
+          retryDelay,
+          signal: signal ?? undefined,
           onRetry: (e, attempt) => {
             this.logger?.debug("Retrying request", {routeId, attempt, lastError: e.message});
           },
@@ -269,7 +273,8 @@ export class HttpClient implements IHttpClient {
   ): Promise<ApiResponse<E>> {
     const urlInit = this.urlsInits[urlIndex];
     const routeId = definition.operationId;
-    let requestWireFormat = localInit.requestWireFormat ?? urlInit.requestWireFormat;
+    let requestWireFormat =
+      localInit.requestWireFormat ?? definition.init?.requestWireFormat ?? urlInit.requestWireFormat;
 
     const sszNotSupportedByRouteId = this.sszNotSupportedByRouteIdByUrlIndex.getOrDefault(urlIndex);
     if (sszNotSupportedByRouteId.has(routeId)) {
@@ -304,6 +309,7 @@ export class HttpClient implements IHttpClient {
     }
     const init = {
       ...urlInit,
+      ...definition.init,
       ...localInit,
       headers: mergeHeaders(urlInit.headers, localInit.headers),
     };
@@ -322,14 +328,18 @@ export class HttpClient implements IHttpClient {
     const timer = this.metrics?.requestTime.startTimer({routeId});
 
     try {
-      this.logger?.debug("API request begin", {routeId});
+      this.logger?.debug("API request", {
+        routeId,
+        requestWireFormat: init.requestWireFormat,
+        responseWireFormat: init.responseWireFormat,
+      });
       const request = createApiRequest(definition, args, init);
       const response = await this.fetch(request.url, request);
       const apiResponse = new ApiResponse(definition, response.body, response);
 
       if (!apiResponse.ok) {
         await apiResponse.errorBody();
-        this.logger?.debug("API response error", {routeId});
+        this.logger?.debug("API response error", {routeId, status: apiResponse.status});
         this.metrics?.requestErrors.inc({routeId, baseUrl: init.baseUrl});
         return apiResponse;
       }
@@ -337,7 +347,11 @@ export class HttpClient implements IHttpClient {
       const streamTimer = this.metrics?.streamTime.startTimer({routeId});
       try {
         await apiResponse.rawBody();
-        this.logger?.debug("API response success", {routeId});
+        this.logger?.debug("API response success", {
+          routeId,
+          status: apiResponse.status,
+          wireFormat: apiResponse.wireFormat(),
+        });
         return apiResponse;
       } finally {
         streamTimer?.();

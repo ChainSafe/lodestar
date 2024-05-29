@@ -1,3 +1,4 @@
+import {ExtraRequestInit} from "./client/request.js";
 import {EmptyMeta} from "./codecs.js";
 import {HeadersExtra} from "./headers.js";
 import {SchemaDefinition} from "./schema.js";
@@ -158,6 +159,7 @@ export type RouteDefinition<E extends Endpoint> = {
   method: E["method"];
   req: RequestCodec<E>;
   resp: ResponseCodec<E>;
+  init?: ExtraRequestInit;
 };
 
 export type RouteDefinitions<Es extends Record<string, Endpoint>> = {[K in keyof Es]: RouteDefinition<Es[K]>};

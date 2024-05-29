@@ -146,6 +146,9 @@ export type Endpoints = {
   >;
 };
 
+// Default timeout is not sufficient to download state as JSON
+const GET_STATE_TIMEOUT_MS = 5 * 60 * 1000;
+
 export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpoints> {
   return {
     getDebugChainHeads: {
@@ -192,6 +195,9 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         data: ssz.phase0.BeaconState,
         meta: ExecutionOptimisticAndFinalizedCodec,
       },
+      init: {
+        timeoutMs: GET_STATE_TIMEOUT_MS,
+      },
     },
     getStateV2: {
       url: "/eth/v2/debug/beacon/states/{state_id}",
@@ -206,6 +212,9 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       resp: {
         data: WithVersion((fork) => ssz[fork].BeaconState as Type<allForks.BeaconState>),
         meta: ExecutionOptimisticFinalizedAndVersionCodec,
+      },
+      init: {
+        timeoutMs: GET_STATE_TIMEOUT_MS,
       },
     },
   };
