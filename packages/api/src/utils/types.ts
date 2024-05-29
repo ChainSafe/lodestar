@@ -60,13 +60,13 @@ export type Endpoint<
   Meta = unknown,
 > = {
   method: Method;
-  /** the parameters the client passes / server app code ingests */
+  /** The parameters the client passes / server app code ingests */
   args: ArgsType;
-  /** the parameters in the http request */
+  /** The parameters in the http request */
   request: RequestType;
-  /** the return data */
+  /** The return data */
   return: ReturnType;
-  /** the return metadata */
+  /** The return metadata */
   meta: Meta;
 };
 
@@ -97,12 +97,7 @@ export type RequestWithBodyCodec<E extends Endpoint> = JsonRequestMethods<E> &
   };
 
 /**
- * Previously called ReqSerializer
- * this handles translating between Endpoint["args"] and Endpoint["request"]
- *
- * TODO: Should this be split into separate serialize and deserialize + schema objects?
- * For separate consumption by client and server.
- * Taking this idea to the extreme, Each group of endpoints would have definitions split into three files for nice treeshaking (types, client, server)
+ * Handles translation between Endpoint["args"] and Endpoint["request"]
  */
 export type RequestCodec<E extends Endpoint> = E["method"] extends "GET"
   ? RequestWithoutBodyCodec<E>

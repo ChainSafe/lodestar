@@ -12,7 +12,17 @@ import {fetch, isFetchError} from "./fetch.js";
 const DEFAULT_TIMEOUT_MS = 60_000;
 const DEFAULT_RETRIES = 0;
 const DEFAULT_RETRY_DELAY = 200;
+/**
+ * Default to JSON to ensure compatibility with other clients, can be overridden
+ * per route in case spec states that SSZ requests must be supported by server.
+ * Alternatively, can be configured via CLI flag to use SSZ for all routes.
+ */
 const DEFAULT_REQUEST_WIRE_FORMAT = WireFormat.json;
+/**
+ * For responses, it is possible to default to SSZ without breaking compatibility with
+ * other clients as we will just be stating a preference to receive a SSZ response from
+ * the server but will still accept a JSON response in case the server does not support it.
+ */
 const DEFAULT_RESPONSE_WIRE_FORMAT = WireFormat.ssz;
 
 const URL_SCORE_DELTA_SUCCESS = 1;
@@ -325,14 +335,11 @@ export class HttpClient implements IHttpClient {
     abortSignals.forEach((s) => s?.addEventListener("abort", onSignalAbort));
 
     const routeId = definition.operationId;
+    const {baseUrl, requestWireFormat, responseWireFormat} = init;
     const timer = this.metrics?.requestTime.startTimer({routeId});
 
     try {
-      this.logger?.debug("API request", {
-        routeId,
-        requestWireFormat: init.requestWireFormat,
-        responseWireFormat: init.responseWireFormat,
-      });
+      this.logger?.debug("API request", {routeId, requestWireFormat, responseWireFormat});
       const request = createApiRequest(definition, args, init);
       const response = await this.fetch(request.url, request);
       const apiResponse = new ApiResponse(definition, response.body, response);
@@ -340,7 +347,7 @@ export class HttpClient implements IHttpClient {
       if (!apiResponse.ok) {
         await apiResponse.errorBody();
         this.logger?.debug("API response error", {routeId, status: apiResponse.status});
-        this.metrics?.requestErrors.inc({routeId, baseUrl: init.baseUrl});
+        this.metrics?.requestErrors.inc({routeId, baseUrl});
         return apiResponse;
       }
 
@@ -357,13 +364,13 @@ export class HttpClient implements IHttpClient {
         streamTimer?.();
       }
     } catch (e) {
-      this.metrics?.requestErrors.inc({routeId, baseUrl: init.baseUrl});
+      this.metrics?.requestErrors.inc({routeId, baseUrl});
 
       if (isAbortedError(e)) {
         if (abortSignals.some((s) => s?.aborted)) {
-          throw new ErrorAborted(`${definition.operationId} request`);
+          throw new ErrorAborted(`${routeId} request`);
         } else if (controller.signal.aborted) {
-          throw new TimeoutError(`${definition.operationId} request`);
+          throw new TimeoutError(`${routeId} request`);
         } else {
           throw Error("Unknown aborted error");
         }
