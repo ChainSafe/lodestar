@@ -11,10 +11,18 @@ import {
   SignedBeaconBlockOrContents,
 } from "../types.js";
 
-export function isBlindedExecution<F extends ForkExecution>(
+export function isExecutionPayload<F extends ForkExecution>(
+  payload: ExecutionPayload<F, FullOrBlinded>
+): payload is ExecutionPayload<F, "full"> {
+  // we just check transactionsRoot for determining as it the base field
+  // that is present and differs from ExecutionPayload for all forks
+  return (payload as ExecutionPayload<F, "full">).transactions !== undefined;
+}
+
+export function isBlindedExecutionPayload<F extends ForkExecution>(
   payload: ExecutionPayload<F, FullOrBlinded>
 ): payload is ExecutionPayload<F, "blinded"> {
-  // we just check transactionsRoot for determinging as it the base field
+  // we just check transactionsRoot for determining as it the base field
   // that is present and differs from ExecutionPayload for all forks
   return (payload as ExecutionPayload<F, "blinded">).transactionsRoot !== undefined;
 }

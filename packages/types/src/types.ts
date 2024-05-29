@@ -49,8 +49,10 @@ type AllForksTypeOf<UnionOfForkTypes extends ContainerType<any>> = CompositeType
   CompositeViewDU<UnionOfForkTypes>
 >;
 
-export type TypesByFork = {
+type TypesByFork = {
   [ForkName.phase0]: {
+    BeaconBlockHeader: phase0.BeaconBlockHeader;
+    SignedBeaconBlockHeader: phase0.SignedBeaconBlockHeader;
     BeaconBlock: phase0.BeaconBlock;
     BeaconBlockBody: phase0.BeaconBlockBody;
     BeaconState: phase0.BeaconState;
@@ -58,6 +60,8 @@ export type TypesByFork = {
     Metadata: phase0.Metadata;
   };
   [ForkName.altair]: {
+    BeaconBlockHeader: phase0.BeaconBlockHeader;
+    SignedBeaconBlockHeader: phase0.SignedBeaconBlockHeader;
     BeaconBlock: altair.BeaconBlock;
     BeaconBlockBody: altair.BeaconBlockBody;
     BeaconState: altair.BeaconState;
@@ -71,6 +75,8 @@ export type TypesByFork = {
     LightClientStore: altair.LightClientStore;
   };
   [ForkName.bellatrix]: {
+    BeaconBlockHeader: phase0.BeaconBlockHeader;
+    SignedBeaconBlockHeader: phase0.SignedBeaconBlockHeader;
     BeaconBlock: bellatrix.BeaconBlock;
     BeaconBlockBody: bellatrix.BeaconBlockBody;
     BeaconState: bellatrix.BeaconState;
@@ -92,6 +98,8 @@ export type TypesByFork = {
     SSEPayloadAttributes: bellatrix.SSEPayloadAttributes;
   };
   [ForkName.capella]: {
+    BeaconBlockHeader: phase0.BeaconBlockHeader;
+    SignedBeaconBlockHeader: phase0.SignedBeaconBlockHeader;
     BeaconBlock: capella.BeaconBlock;
     BeaconBlockBody: capella.BeaconBlockBody;
     BeaconState: capella.BeaconState;
@@ -113,6 +121,8 @@ export type TypesByFork = {
     SSEPayloadAttributes: capella.SSEPayloadAttributes;
   };
   [ForkName.deneb]: {
+    BeaconBlockHeader: phase0.BeaconBlockHeader;
+    SignedBeaconBlockHeader: phase0.SignedBeaconBlockHeader;
     BeaconBlock: deneb.BeaconBlock;
     BeaconBlockBody: deneb.BeaconBlockBody;
     BeaconState: deneb.BeaconState;
@@ -139,16 +149,18 @@ export type TypesByFork = {
       blobs: deneb.Blobs;
     };
     ExecutionPayloadAndBlobsBundle: deneb.ExecutionPayloadAndBlobsBundle;
+    BlobsBundle: deneb.BlobsBundle;
+    Contents: deneb.Contents;
   };
 };
 
-export type SSZTypesByFork = {
+type SSZTypesByFork = {
   [F in keyof typeof allForks]: {
     [T in keyof (typeof allForks)[F]]: (typeof allForks)[F][T];
   };
 };
 
-export type SSZBlindedTypesByFork = {
+type SSZBlindedTypesByFork = {
   bellatrix: {
     BeaconBlockBody: (typeof allForks)["bellatrix"]["BlindedBeaconBlockBody"];
     BeaconBlock: (typeof allForks)["bellatrix"]["BlindedBeaconBlock"];
@@ -166,7 +178,44 @@ export type SSZBlindedTypesByFork = {
   };
 };
 
+export type TypesFor<F extends ForkName, K extends keyof TypesByFork[F] | void = void> = K extends void
+  ? TypesByFork[F]
+  : TypesByFork[F][Exclude<K, void>];
+
+export type SSZTypesFor<F extends ForkName, K extends keyof SSZTypesByFork[F] | void = void> = K extends void
+  ? // It compiles fine, need to debug the error
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-expect-error
+    {[K2 in keyof SSZTypesByFork[F]]: AllForksTypeOf<SSZTypesByFork[F][K2]>}
+  : // It compiles fine, need to debug the error
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-expect-error
+    AllForksTypeOf<SSZTypesByFork[F][Exclude<K, void>]>;
+
+export type SSZInstanceTypesFor<F extends ForkName, K extends keyof SSZTypesByFork[F]> = CompositeViewDU<
+  // It compiles fine, need to debug the error
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-expect-error
+  SSZTypesByFork[F][K]
+>;
+
+export type SSZBlindedTypesFor<
+  F extends ForkExecution,
+  K extends keyof SSZBlindedTypesByFork[F] | void = void,
+> = K extends void
+  ? // It compiles fine, need to debug the error
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-expect-error
+    {[K2 in keyof SSZTypesByFork[F]]: AllForksTypeOf<SSZBlindedTypesByFork[F][K2]>}
+  : // It compiles fine, need to debug the error
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-expect-error
+    AllForksTypeOf<SSZBlindedTypesByFork[F][Exclude<K, void>]>;
+
 export type FullOrBlinded = "full" | "blinded";
+export type SignedUnsigned = "signed" | "unsigned";
+
+export type BeaconBlockHeader<F extends ForkName = ForkAll> = TypesByFork[F]["BeaconBlockHeader"];
 
 export type BeaconBlock<F extends ForkName = ForkAll, B extends FullOrBlinded = "full"> = B extends "full"
   ? TypesByFork[F]["BeaconBlock"]
@@ -180,16 +229,17 @@ export type BeaconBlockBody<F extends ForkName = ForkAll, B extends FullOrBlinde
     ? TypesByFork[F]["BlindedBeaconBlockBody"]
     : never;
 
+export type SignedBeaconBlockHeader<F extends ForkName = ForkAll> = TypesByFork[F]["SignedBeaconBlockHeader"];
+
 export type SignedBeaconBlock<F extends ForkName = ForkAll, B extends FullOrBlinded = "full"> = B extends "full"
   ? TypesByFork[F]["SignedBeaconBlock"]
   : F extends ForkExecution
     ? TypesByFork[F]["SignedBlindedBeaconBlock"]
     : never;
 
-export type BlockContents<
-  F extends ForkBlobs = ForkBlobs,
-  S extends "signed" | "unsigned" = "signed",
-> = S extends "signed" ? TypesByFork[F]["SignedBlockContents"] : TypesByFork[F]["BlockContents"];
+export type BlockContents<F extends ForkBlobs = ForkBlobs, S extends SignedUnsigned = "signed"> = S extends "signed"
+  ? TypesByFork[F]["SignedBlockContents"]
+  : TypesByFork[F]["BlockContents"];
 
 export type BeaconBlockOrContents<F extends ForkBlobs = ForkBlobs> =
   | BeaconBlock<F, "full">
@@ -210,7 +260,7 @@ export type Metadata<F extends ForkName = ForkAll> = TypesByFork[F]["Metadata"];
 
 export type BuilderBid<
   F extends ForkExecution = ForkExecution,
-  S extends "signed" | "unsigned" = "signed",
+  S extends SignedUnsigned = "signed",
 > = S extends "signed" ? TypesByFork[F]["SignedBuilderBid"] : TypesByFork[F]["BuilderBid"];
 
 export type SSEPayloadAttributes<F extends ForkExecution = ForkExecution> = TypesByFork[F]["SSEPayloadAttributes"];
@@ -231,3 +281,7 @@ export type LightClientStore<F extends ForkLightClient = ForkLightClient> = Type
 
 export type ExecutionPayloadAndBlobsBundle<F extends ForkBlobs = ForkBlobs> =
   TypesByFork[F]["ExecutionPayloadAndBlobsBundle"];
+
+export type BlobsBundle<F extends ForkBlobs = ForkBlobs> = TypesByFork[F]["BlobsBundle"];
+
+export type Contents<F extends ForkBlobs = ForkBlobs> = TypesByFork[F]["Contents"];
