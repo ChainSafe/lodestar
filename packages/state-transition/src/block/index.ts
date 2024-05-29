@@ -1,5 +1,5 @@
-import {ForkSeq} from "@lodestar/params";
-import {allForks, altair, capella} from "@lodestar/types";
+import {ForkAll, ForkSeq} from "@lodestar/params";
+import {BeaconBlock, FullOrBlinded, altair, capella} from "@lodestar/types";
 import {getFullOrBlindedPayload, isExecutionEnabled} from "../util/execution.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateCapella, CachedBeaconStateBellatrix} from "../types.js";
 import {processExecutionPayload} from "./processExecutionPayload.js";
@@ -31,7 +31,7 @@ export * from "./externalData.js";
 export function processBlock(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,
-  block: allForks.FullOrBlindedBeaconBlock,
+  block: BeaconBlock<ForkAll, FullOrBlinded>,
   externalData: BlockExternalData & ProcessBlockOpts,
   opts?: ProcessBlockOpts
 ): void {

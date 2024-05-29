@@ -1,10 +1,9 @@
 import {toHexString, byteArrayEquals} from "@chainsafe/ssz";
-import {allForks, deneb} from "@lodestar/types";
-import {ForkSeq, MAX_BLOBS_PER_BLOCK} from "@lodestar/params";
+import {BeaconBlockBody, FullOrBlinded, deneb, isExecutionPayload} from "@lodestar/types";
+import {ForkAll, ForkSeq, MAX_BLOBS_PER_BLOCK} from "@lodestar/params";
 import {CachedBeaconStateBellatrix, CachedBeaconStateCapella} from "../types.js";
 import {getRandaoMix} from "../util/index.js";
 import {
-  isExecutionPayload,
   isMergeTransitionComplete,
   getFullOrBlindedPayloadFromBody,
   executionPayloadToPayloadHeader,
@@ -14,7 +13,7 @@ import {BlockExternalData, ExecutionPayloadStatus} from "./externalData.js";
 export function processExecutionPayload(
   fork: ForkSeq,
   state: CachedBeaconStateBellatrix | CachedBeaconStateCapella,
-  body: allForks.FullOrBlindedBeaconBlockBody,
+  body: BeaconBlockBody<ForkAll, FullOrBlinded>,
   externalData: Omit<BlockExternalData, "dataAvailableStatus">
 ): void {
   const payload = getFullOrBlindedPayloadFromBody(body);

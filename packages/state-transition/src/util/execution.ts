@@ -1,5 +1,16 @@
-import {allForks, bellatrix, capella, deneb, isBlindedBeaconBlockBody, ssz} from "@lodestar/types";
-import {ForkSeq} from "@lodestar/params";
+import {
+  bellatrix,
+  capella,
+  deneb,
+  isBlindedBeaconBlockBody,
+  ssz,
+  BeaconBlock,
+  BeaconBlockBody,
+  ExecutionPayload,
+  isExecutionPayload,
+  FullOrBlinded,
+} from "@lodestar/types";
+import {ForkAll, ForkExecution, ForkName, ForkSeq} from "@lodestar/params";
 
 import {
   BeaconStateBellatrix,
@@ -14,7 +25,7 @@ import {
  * Execution enabled = merge is done.
  * When (A) state has execution data OR (B) block has execution data
  */
-export function isExecutionEnabled(state: BeaconStateExecutions, block: allForks.FullOrBlindedBeaconBlock): boolean {
+export function isExecutionEnabled(state: BeaconStateExecutions, block: BeaconBlock): boolean {
   if (isMergeTransitionComplete(state)) {
     return true;
   }
@@ -85,43 +96,33 @@ export function isExecutionCachedStateType(state: CachedBeaconStateAllForks): st
   return (state as CachedBeaconStateExecutions).latestExecutionPayloadHeader !== undefined;
 }
 
-/** Type guard for allForks.ExecutionBlockBody */
-export function isExecutionBlockBodyType(
-  blockBody: allForks.BeaconBlockBody
-): blockBody is allForks.ExecutionBlockBody {
-  return (blockBody as allForks.ExecutionBlockBody).executionPayload !== undefined;
+/** Type guard for ExecutionBlockBody */
+export function isExecutionBlockBodyType(blockBody: BeaconBlockBody): blockBody is BeaconBlockBody<ForkExecution> {
+  return (blockBody as BeaconBlockBody<ForkExecution>).executionPayload !== undefined;
 }
 
-export function getFullOrBlindedPayload(
-  block: allForks.FullOrBlindedBeaconBlock
-): allForks.FullOrBlindedExecutionPayload {
+export function getFullOrBlindedPayload(block: BeaconBlock): ExecutionPayload<ForkExecution, FullOrBlinded> {
   return getFullOrBlindedPayloadFromBody(block.body);
 }
 
 export function getFullOrBlindedPayloadFromBody(
-  body: allForks.FullOrBlindedBeaconBlockBody
-): allForks.FullOrBlindedExecutionPayload {
+  body: BeaconBlockBody<ForkAll, FullOrBlinded>
+): ExecutionPayload<ForkExecution, FullOrBlinded> {
   if (isBlindedBeaconBlockBody(body)) {
     return body.executionPayloadHeader;
   } else if ((body as bellatrix.BeaconBlockBody).executionPayload !== undefined) {
     return (body as bellatrix.BeaconBlockBody).executionPayload;
   } else {
-    throw Error("Ǹot allForks.FullOrBlindedBeaconBlock");
+    throw Error("Ǹot FullOrBlindedBeaconBlock");
   }
 }
 
-export function isExecutionPayload(
-  payload: allForks.FullOrBlindedExecutionPayload
-): payload is allForks.ExecutionPayload {
-  return (payload as allForks.ExecutionPayload).transactions !== undefined;
-}
-
 export function isCapellaPayload(
-  payload: allForks.FullOrBlindedExecutionPayload
-): payload is capella.FullOrBlindedExecutionPayload {
+  payload: ExecutionPayload<ForkExecution, FullOrBlinded>
+): payload is ExecutionPayload<ForkName.capella, FullOrBlinded> {
   return (
-    (payload as capella.ExecutionPayload).withdrawals !== undefined ||
-    (payload as capella.ExecutionPayloadHeader).withdrawalsRoot !== undefined
+    (payload as ExecutionPayload<ForkName.capella>).withdrawals !== undefined ||
+    (payload as ExecutionPayload<ForkName.capella, "blinded">).withdrawalsRoot !== undefined
   );
 }
 
@@ -133,11 +134,11 @@ export function isCapellaPayloadHeader(
 
 export function executionPayloadToPayloadHeader(
   fork: ForkSeq,
-  payload: allForks.ExecutionPayload
-): allForks.ExecutionPayloadHeader {
+  payload: ExecutionPayload
+): ExecutionPayload<ForkExecution, "blinded"> {
   const transactionsRoot = ssz.bellatrix.Transactions.hashTreeRoot(payload.transactions);
 
-  const bellatrixPayloadFields: allForks.ExecutionPayloadHeader = {
+  const bellatrixPayloadFields: ExecutionPayload<ForkExecution, "blinded"> = {
     parentHash: payload.parentHash,
     feeRecipient: payload.feeRecipient,
     stateRoot: payload.stateRoot,

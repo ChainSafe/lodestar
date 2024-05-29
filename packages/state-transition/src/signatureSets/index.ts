@@ -1,5 +1,5 @@
-import {ForkSeq} from "@lodestar/params";
-import {allForks, altair, capella} from "@lodestar/types";
+import {ForkName, ForkSeq} from "@lodestar/params";
+import {SignedBeaconBlock, capella} from "@lodestar/types";
 import {ISignatureSet} from "../util/index.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../types.js";
 import {getSyncCommitteeSignatureSet} from "../block/processSyncCommittee.js";
@@ -25,7 +25,7 @@ export * from "./blsToExecutionChange.js";
  */
 export function getBlockSignatureSets(
   state: CachedBeaconStateAllForks,
-  signedBlock: allForks.SignedBeaconBlock,
+  signedBlock: SignedBeaconBlock<ForkName.altair>,
   opts?: {
     /** Useful since block proposer signature is verified beforehand on gossip validation */
     skipProposerSignature?: boolean;
@@ -50,7 +50,7 @@ export function getBlockSignatureSets(
   if (fork >= ForkSeq.altair) {
     const syncCommitteeSignatureSet = getSyncCommitteeSignatureSet(
       state as CachedBeaconStateAltair,
-      (signedBlock as altair.SignedBeaconBlock).message
+      signedBlock.message
     );
     // There may be no participants in this syncCommitteeSignature, so it must not be validated
     if (syncCommitteeSignatureSet) {
