@@ -11,7 +11,7 @@ import {
   ForkLightClient,
   ForkBlobs,
 } from "@lodestar/params";
-import {Slot, Version, ssz, SSZTypesByFork, SSZBlindedTypesByFork} from "@lodestar/types";
+import {Slot, Version, ssz, SSZTypesFor, SSZBlindedTypesFor} from "@lodestar/types";
 import {ChainConfig} from "../chainConfig/index.js";
 import {ForkConfig, ForkInfo} from "./types.js";
 
@@ -91,31 +91,31 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     getForkVersion(slot: Slot): Version {
       return this.getForkInfo(slot).version;
     },
-    getForkTypes(slot: Slot): SSZTypesByFork[ForkAll] {
-      return ssz.allForks[this.getForkName(slot)];
+    getForkTypes<F extends ForkName = ForkAll>(slot: Slot): SSZTypesFor<F> {
+      return ssz.allForks[this.getForkName(slot)] as SSZTypesFor<F>;
     },
-    getExecutionForkTypes(slot: Slot): SSZTypesByFork[ForkExecution] {
+    getExecutionForkTypes(slot: Slot): SSZTypesFor<ForkExecution> {
       const forkName = this.getForkName(slot);
       if (!isForkExecution(forkName)) {
         throw Error(`Invalid slot=${slot} fork=${forkName} for execution fork types`);
       }
       return ssz.allForksExecution[forkName];
     },
-    getBlindedForkTypes(slot: Slot): SSZBlindedTypesByFork[ForkExecution] {
+    getBlindedForkTypes(slot: Slot): SSZBlindedTypesFor<ForkExecution> {
       const forkName = this.getForkName(slot);
       if (!isForkExecution(forkName)) {
         throw Error(`Invalid slot=${slot} fork=${forkName} for blinded fork types`);
       }
-      return ssz.allForksBlinded[forkName] as SSZBlindedTypesByFork[ForkExecution];
+      return ssz.allForksBlinded[forkName] as SSZBlindedTypesFor<ForkExecution>;
     },
-    getLightClientForkTypes(slot: Slot): SSZTypesByFork[ForkLightClient] {
+    getLightClientForkTypes(slot: Slot): SSZTypesFor<ForkLightClient> {
       const forkName = this.getForkName(slot);
       if (!isForkLightClient(forkName)) {
         throw Error(`Invalid slot=${slot} fork=${forkName} for lightclient fork types`);
       }
       return ssz.allForksLightClient[forkName];
     },
-    getBlobsForkTypes(slot: Slot): SSZTypesByFork[ForkBlobs] {
+    getBlobsForkTypes(slot: Slot): SSZTypesFor<ForkBlobs> {
       const forkName = this.getForkName(slot);
       if (!isForkBlobs(forkName)) {
         throw Error(`Invalid slot=${slot} fork=${forkName} for blobs fork types`);
