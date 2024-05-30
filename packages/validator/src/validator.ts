@@ -366,12 +366,10 @@ export class Validator {
   private async fetchBeaconHealth(): Promise<BeaconHealth> {
     try {
       const {status: healthCode} = await this.api.node.getHealth();
-      // API always returns http status codes
-      // Need to find a way to return a custom enum type
-      if ((healthCode as unknown as routes.node.NodeHealth) === routes.node.NodeHealth.READY) return BeaconHealth.READY;
-      if ((healthCode as unknown as routes.node.NodeHealth) === routes.node.NodeHealth.SYNCING)
-        return BeaconHealth.SYNCING;
-      if ((healthCode as unknown as routes.node.NodeHealth) === routes.node.NodeHealth.NOT_INITIALIZED_OR_ISSUES)
+
+      if (healthCode === routes.node.NodeHealth.READY) return BeaconHealth.READY;
+      if (healthCode === routes.node.NodeHealth.SYNCING) return BeaconHealth.SYNCING;
+      if (healthCode === routes.node.NodeHealth.NOT_INITIALIZED_OR_ISSUES)
         return BeaconHealth.NOT_INITIALIZED_OR_ISSUES;
       else return BeaconHealth.UNKNOWN;
     } catch (e) {
