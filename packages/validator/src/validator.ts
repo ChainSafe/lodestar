@@ -136,7 +136,10 @@ export class Validator {
 
         this.clock.runEverySlot(() =>
           this.fetchBeaconHealth()
-            .then((health) => metrics.beaconHealth.set(health))
+            .then((health) => {metrics.beaconHealth.set(health);
+                   if(health == 0){ 
+                    this.logger.warn("Node is unhealthy");
+                   }})
             .catch((e) => this.logger.error("Error on fetchBeaconHealth", {}, e))
         );
       }
