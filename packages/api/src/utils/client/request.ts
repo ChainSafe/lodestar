@@ -11,7 +11,6 @@ import {WireFormat} from "../wireFormat.js";
 import {stringifyQuery, urlJoin} from "./format.js";
 
 export type ExtraRequestInit = {
-  baseUrl?: string;
   requestWireFormat?: WireFormat;
   responseWireFormat?: WireFormat;
   timeoutMs?: number;
@@ -23,8 +22,10 @@ export type OptionalRequestInit = {
   bearerToken?: string;
 };
 
+export type UrlInit = ApiRequestInit & {baseUrl?: string};
+export type UrlInitRequired = ApiRequestInit & {urlIndex: number; baseUrl: string};
 export type ApiRequestInit = ExtraRequestInit & OptionalRequestInit & RequestInit;
-export type ApiRequestInitRequired = Required<ExtraRequestInit> & OptionalRequestInit & RequestInit;
+export type ApiRequestInitRequired = Required<ExtraRequestInit> & UrlInitRequired;
 
 /** Route definition with computed extra properties */
 export type RouteDefinitionExtra<E extends Endpoint> = RouteDefinition<E> & {

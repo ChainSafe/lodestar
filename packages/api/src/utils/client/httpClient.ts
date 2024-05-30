@@ -3,7 +3,15 @@ import {mergeHeaders} from "../headers.js";
 import {Endpoint} from "../types.js";
 import {WireFormat} from "../wireFormat.js";
 import {HttpStatusCode} from "../httpStatusCode.js";
-import {ApiRequestInit, ApiRequestInitRequired, RouteDefinitionExtra, createApiRequest} from "./request.js";
+import {
+  ApiRequestInit,
+  ApiRequestInitRequired,
+  ExtraRequestInit,
+  RouteDefinitionExtra,
+  UrlInit,
+  UrlInitRequired,
+  createApiRequest,
+} from "./request.js";
 import {ApiResponse} from "./response.js";
 import {Metrics} from "./metrics.js";
 import {fetch, isFetchError} from "./fetch.js";
@@ -32,6 +40,14 @@ const URL_SCORE_DELTA_ERROR = 2 * URL_SCORE_DELTA_SUCCESS;
 const URL_SCORE_MAX = 10 * URL_SCORE_DELTA_SUCCESS;
 const URL_SCORE_MIN = 0;
 
+const defaultInit: Required<ExtraRequestInit> = {
+  timeoutMs: DEFAULT_TIMEOUT_MS,
+  retries: DEFAULT_RETRIES,
+  retryDelay: DEFAULT_RETRY_DELAY,
+  requestWireFormat: DEFAULT_REQUEST_WIRE_FORMAT,
+  responseWireFormat: DEFAULT_RESPONSE_WIRE_FORMAT,
+};
+
 export interface IHttpClient {
   readonly baseUrl: string;
 
@@ -42,7 +58,7 @@ export interface IHttpClient {
   ): Promise<ApiResponse<E>>;
 }
 
-export type HttpClientOptions = ({baseUrl: string} | {urls: (string | ApiRequestInit)[]}) & {
+export type HttpClientOptions = ({baseUrl: string} | {urls: (string | UrlInit)[]}) & {
   globalInit?: ApiRequestInit;
   /** Override fetch function */
   fetch?: typeof fetch;
@@ -54,9 +70,9 @@ export type HttpClientModules = {
 };
 
 export class HttpClient implements IHttpClient {
-  readonly urlsInits: ApiRequestInitRequired[] = [];
-  readonly globalInit: ApiRequestInitRequired;
+  readonly urlsInits: UrlInitRequired[] = [];
 
+  private readonly signal: null | AbortSignal;
   private readonly fetch: typeof fetch;
   private readonly metrics: null | Metrics;
   private readonly logger: null | Logger;
@@ -76,28 +92,18 @@ export class HttpClient implements IHttpClient {
 
   constructor(opts: HttpClientOptions, {logger, metrics}: HttpClientModules = {}) {
     // Cast to all types optional since they are defined with syntax `HttpClientOptions = A | B`
-    const {baseUrl, urls = []} = opts as {baseUrl?: string; urls?: (string | ApiRequestInit)[]};
-    const defaults: ApiRequestInitRequired = {
-      baseUrl: "",
-      timeoutMs: DEFAULT_TIMEOUT_MS,
-      retries: DEFAULT_RETRIES,
-      retryDelay: DEFAULT_RETRY_DELAY,
-      requestWireFormat: DEFAULT_REQUEST_WIRE_FORMAT,
-      responseWireFormat: DEFAULT_RESPONSE_WIRE_FORMAT,
-    };
-    this.globalInit = {
-      ...defaults,
-      ...opts.globalInit,
-    };
+    const {baseUrl, urls = []} = opts as {baseUrl?: string; urls?: (string | UrlInit)[]};
+    // Do not merge global signal into url inits
+    const {signal, ...globalInit} = opts.globalInit ?? {};
 
     // opts.baseUrl is equivalent to `urls: [{baseUrl}]`
     // unshift opts.baseUrl to urls, without mutating opts.urls
     for (const [i, urlOrInit] of [...(baseUrl ? [baseUrl] : []), ...urls].entries()) {
       const init = typeof urlOrInit === "string" ? {baseUrl: urlOrInit} : urlOrInit;
-      const urlInit: ApiRequestInitRequired = {
-        ...this.globalInit,
+      const urlInit: UrlInit = {
+        ...globalInit,
         ...init,
-        headers: mergeHeaders(this.globalInit.headers, init.headers),
+        headers: mergeHeaders(globalInit.headers, init.headers),
       };
 
       if (!urlInit.baseUrl) {
@@ -108,7 +114,7 @@ export class HttpClient implements IHttpClient {
       }
       // De-duplicate by baseUrl, having two baseUrls with different token or timeouts does not make sense
       if (!this.urlsInits.some((opt) => opt.baseUrl === urlInit.baseUrl)) {
-        this.urlsInits.push(urlInit);
+        this.urlsInits.push({...urlInit, urlIndex: i} as UrlInitRequired);
       }
     }
 
@@ -119,6 +125,7 @@ export class HttpClient implements IHttpClient {
     // Initialize scores to max value to only query first URL on start
     this.urlsScore = this.urlsInits.map(() => URL_SCORE_MAX);
 
+    this.signal = signal ?? null;
     this.fetch = opts.fetch ?? fetch;
     this.metrics = metrics ?? null;
     this.logger = logger ?? null;
@@ -137,32 +144,8 @@ export class HttpClient implements IHttpClient {
     args: E["args"],
     localInit: ApiRequestInit = {}
   ): Promise<ApiResponse<E>> {
-    const {retries, retryDelay, signal} = {
-      ...this.globalInit,
-      ...definition.init,
-      ...localInit,
-    };
-
-    if (retries > 0) {
-      const routeId = definition.operationId;
-
-      return retry(
-        async (attempt) => {
-          const res = await this.requestWithFallbacks(definition, args, localInit);
-          if (!res.ok && attempt <= retries) {
-            throw res.error();
-          }
-          return res;
-        },
-        {
-          retries,
-          retryDelay,
-          signal: signal ?? undefined,
-          onRetry: (e, attempt) => {
-            this.logger?.debug("Retrying request", {routeId, attempt, lastError: e.message});
-          },
-        }
-      );
+    if (this.urlsInits.length === 1) {
+      return this.requestWithRetries(definition, args, localInit, 0);
     } else {
       return this.requestWithFallbacks(definition, args, localInit);
     }
@@ -176,11 +159,6 @@ export class HttpClient implements IHttpClient {
     args: E["args"],
     localInit: ApiRequestInit
   ): Promise<ApiResponse<E>> {
-    // Early return when no fallback URLs are setup
-    if (this.urlsInits.length === 1) {
-      return this.requestRetryJson(definition, args, localInit, 0);
-    }
-
     let i = 0;
 
     // Goals:
@@ -209,9 +187,9 @@ export class HttpClient implements IHttpClient {
             }
 
             // eslint-disable-next-line @typescript-eslint/naming-convention
-            const i_ = i; // Keep local copy of i variable to index urlScore after _request() resolves
+            const i_ = i; // Keep local copy of i variable to index urlScore after requestWithRetries() resolves
 
-            this.requestRetryJson(definition, args, localInit, i).then(
+            this.requestWithRetries(definition, args, localInit, i).then(
               async (res) => {
                 if (res.ok) {
                   this.urlsScore[i_] = Math.min(URL_SCORE_MAX, this.urlsScore[i_] + URL_SCORE_DELTA_SUCCESS);
@@ -271,67 +249,103 @@ export class HttpClient implements IHttpClient {
   }
 
   /**
-   * Send request to single URL by index, SSZ requests will be retried using JSON
-   * if a 415 error response is returned by the server. All subsequent requests to
-   * this server for the route will always be sent as JSON afterwards.
+   * Send request to single URL by index, retry failed requests on same server
    */
-  private async requestRetryJson<E extends Endpoint>(
+  private async requestWithRetries<E extends Endpoint>(
     definition: RouteDefinitionExtra<E>,
     args: E["args"],
     localInit: ApiRequestInit,
-    urlIndex = 0
+    urlIndex: number
   ): Promise<ApiResponse<E>> {
     const urlInit = this.urlsInits[urlIndex];
+    if (urlInit === undefined) {
+      throw Error(`Url at index ${urlIndex} does not exist`);
+    }
+    const init: ApiRequestInitRequired = {
+      ...defaultInit,
+      ...definition.init,
+      ...urlInit,
+      ...localInit,
+      headers: mergeHeaders(urlInit.headers, localInit.headers),
+    };
+
+    const {retries, retryDelay, signal} = init;
+
+    if (retries > 0) {
+      const routeId = definition.operationId;
+
+      return retry(
+        async (attempt) => {
+          const res = await this.requestRetryWithJson(definition, args, init);
+          if (!res.ok && attempt <= retries) {
+            throw res.error();
+          }
+          return res;
+        },
+        {
+          retries,
+          retryDelay,
+          // Local signal takes precedence over global signal
+          signal: signal ?? this.signal ?? undefined,
+          onRetry: (e, attempt) => {
+            this.logger?.debug("Retrying request", {routeId, attempt, lastError: e.message});
+          },
+        }
+      );
+    } else {
+      return this.requestRetryWithJson(definition, args, init);
+    }
+  }
+
+  /**
+   * Send request to single URL, SSZ requests will be retried using JSON
+   * if a 415 error response is returned by the server. All subsequent requests
+   * to this server for the route will always be sent as JSON afterwards.
+   */
+  private async requestRetryWithJson<E extends Endpoint>(
+    definition: RouteDefinitionExtra<E>,
+    args: E["args"],
+    init: ApiRequestInitRequired
+  ): Promise<ApiResponse<E>> {
+    const {urlIndex} = init;
     const routeId = definition.operationId;
-    let requestWireFormat =
-      localInit.requestWireFormat ?? definition.init?.requestWireFormat ?? urlInit.requestWireFormat;
 
     const sszNotSupportedByRouteId = this.sszNotSupportedByRouteIdByUrlIndex.getOrDefault(urlIndex);
     if (sszNotSupportedByRouteId.has(routeId)) {
-      requestWireFormat = WireFormat.json;
+      init.requestWireFormat = WireFormat.json;
     }
 
-    const res = await this._request(definition, args, {...localInit, requestWireFormat}, urlIndex);
+    const res = await this._request(definition, args, init);
 
-    if (res.status === HttpStatusCode.UNSUPPORTED_MEDIA_TYPE && requestWireFormat === WireFormat.ssz) {
+    if (res.status === HttpStatusCode.UNSUPPORTED_MEDIA_TYPE && init.requestWireFormat === WireFormat.ssz) {
       sszNotSupportedByRouteId.set(routeId, true);
+      init.requestWireFormat = WireFormat.json;
 
       this.logger?.debug("SSZ request failed with status 415, retrying with JSON body", {routeId, urlIndex});
 
-      return this._request(definition, args, {...localInit, requestWireFormat: WireFormat.json}, urlIndex);
+      return this._request(definition, args, init);
     }
 
     return res;
   }
 
   /**
-   * Send request to single URL by index
+   * Send request to single URL
    */
   private async _request<E extends Endpoint>(
     definition: RouteDefinitionExtra<E>,
     args: E["args"],
-    localInit: ApiRequestInit,
-    urlIndex = 0
+    init: ApiRequestInitRequired
   ): Promise<ApiResponse<E>> {
-    const urlInit = this.urlsInits[urlIndex];
-    if (urlInit === undefined) {
-      throw Error(`Url at index ${urlIndex} does not exist`);
-    }
-    const init = {
-      ...urlInit,
-      ...definition.init,
-      ...localInit,
-      headers: mergeHeaders(urlInit.headers, localInit.headers),
-    };
+    const abortSignals = [this.signal, init.signal];
 
     // Implement fetch timeout
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), init.timeoutMs);
     init.signal = controller.signal;
 
-    // Attach global/url/local signal to this request's controller
+    // Attach global/local signal to this request's controller
     const onSignalAbort = (): void => controller.abort();
-    const abortSignals = [this.globalInit.signal, urlInit.signal, localInit.signal];
     abortSignals.forEach((s) => s?.addEventListener("abort", onSignalAbort));
 
     const routeId = definition.operationId;
