@@ -19,6 +19,8 @@ import {
 import {compileRouteUrlFormatter} from "../../../src/utils/urlFormat.js";
 import {Endpoint, Schema} from "../../../src/utils/index.js";
 import {WireFormat} from "../../../src/index.js";
+import {HttpHeader, MediaType} from "../../../src/utils/headers.js";
+import {addSszContentTypeParser} from "../../../src/server/index.js";
 
 /* eslint-disable @typescript-eslint/return-await */
 
@@ -44,6 +46,8 @@ describe("httpClient json client", () => {
   async function getServer(opts: RouteOptions): Promise<{baseUrl: string}> {
     const server = fastify({logger: false});
     server.route(opts);
+
+    addSszContentTypeParser(server);
 
     const reqs = new Set<IncomingMessage>();
     server.addHook("onRequest", async (req) => reqs.add(req.raw));
@@ -193,9 +197,10 @@ describe("httpClient json client", () => {
     const httpClient = await getServerWithClient({
       url,
       method: "POST",
-      handler: async () => {
-        // Fastify will return a 415 error response since the server
-        // does not have a content type parser for `application/octet-stream`
+      handler: async (req, res) => {
+        if (req.headers[HttpHeader.ContentType] !== MediaType.json) {
+          void res.status(415);
+        }
       },
     });
     const fetchSpy = vi.spyOn(httpClient, "fetch" as any);
@@ -253,6 +258,100 @@ describe("httpClient json client", () => {
     expect(res.status).toBe(503);
 
     expect(res.error()?.message).toBe("testRoute failed with status 503: Node is syncing");
+  });
+
+  it("should send a SSZ-serialized request if configured as wire format", async () => {
+    const container = new ContainerType({
+      a: new BooleanType(),
+      b: new UintNumberType(1),
+    });
+
+    type TestEndpoint = Endpoint<
+      "POST",
+      {payload: ValueOf<typeof container>},
+      {body: unknown},
+      EmptyResponseData,
+      EmptyMeta
+    >;
+
+    const url = "/test-ssz-wire-format";
+    const routeId = "testSszWireFormat";
+    const testPostDefinition: RouteDefinitionExtra<TestEndpoint> = {
+      url,
+      method: "POST",
+      req: {
+        writeReqJson: ({payload}) => ({body: container.toJson(payload)}),
+        parseReqJson: ({body}) => ({payload: container.fromJson(body)}),
+        writeReqSsz: ({payload}) => ({body: container.serialize(payload)}),
+        parseReqSsz: ({body}) => ({payload: container.deserialize(body)}),
+        schema: {
+          body: Schema.Object,
+        },
+      },
+      resp: EmptyResponseCodec,
+      operationId: routeId,
+      urlFormatter: compileRouteUrlFormatter(url),
+    };
+    const payload = {a: true, b: 1};
+
+    const httpClient = await getServerWithClient({
+      url,
+      method: "POST",
+      handler: async (req) => {
+        expect(req.headers[HttpHeader.ContentType]).toBe(MediaType.ssz);
+        expect(req.body).toBeInstanceOf(Uint8Array);
+        expect(container.deserialize(req.body as Uint8Array)).toEqual(payload);
+      },
+    });
+
+    (await httpClient.request(testPostDefinition, {payload}, {requestWireFormat: WireFormat.ssz})).assertOk();
+  });
+
+  it("should send a JSON-serialized request if configured as wire format", async () => {
+    const container = new ContainerType({
+      a: new BooleanType(),
+      b: new UintNumberType(1),
+    });
+
+    type TestEndpoint = Endpoint<
+      "POST",
+      {payload: ValueOf<typeof container>},
+      {body: unknown},
+      EmptyResponseData,
+      EmptyMeta
+    >;
+
+    const url = "/test-json-wire-format";
+    const routeId = "testJsonWireFormat";
+    const testPostDefinition: RouteDefinitionExtra<TestEndpoint> = {
+      url,
+      method: "POST",
+      req: {
+        writeReqJson: ({payload}) => ({body: container.toJson(payload)}),
+        parseReqJson: ({body}) => ({payload: container.fromJson(body)}),
+        writeReqSsz: ({payload}) => ({body: container.serialize(payload)}),
+        parseReqSsz: ({body}) => ({payload: container.deserialize(body)}),
+        schema: {
+          body: Schema.Object,
+        },
+      },
+      resp: EmptyResponseCodec,
+      operationId: routeId,
+      urlFormatter: compileRouteUrlFormatter(url),
+    };
+    const payload = {a: true, b: 1};
+
+    const httpClient = await getServerWithClient({
+      url,
+      method: "POST",
+      handler: async (req) => {
+        expect(req.headers[HttpHeader.ContentType]).toBe(MediaType.json);
+        expect(req.body).toBeInstanceOf(Object);
+        expect(container.fromJson(req.body)).toEqual(payload);
+      },
+    });
+
+    (await httpClient.request(testPostDefinition, {payload}, {requestWireFormat: WireFormat.json})).assertOk();
   });
 
   it("should set user credentials in URL as Authorization header", async () => {

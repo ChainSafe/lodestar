@@ -150,7 +150,7 @@ export class HttpClient implements IHttpClient {
       if (init.retries > 0) {
         return this.requestWithRetries(definition, args, init);
       } else {
-        return this.requestRetryWithJson(definition, args, init);
+        return this.requestFallbackToJson(definition, args, init);
       }
     } else {
       return this.requestWithFallbacks(definition, args, localInit);
@@ -201,7 +201,7 @@ export class HttpClient implements IHttpClient {
             }
             const init = mergeInits(definition, urlInit, localInit);
 
-            const requestMethod = (init.retries > 0 ? this.requestWithRetries : this.requestRetryWithJson).bind(this);
+            const requestMethod = (init.retries > 0 ? this.requestWithRetries : this.requestFallbackToJson).bind(this);
 
             requestMethod(definition, args, init).then(
               async (res) => {
@@ -275,7 +275,7 @@ export class HttpClient implements IHttpClient {
 
     return retry(
       async (attempt) => {
-        const res = await this.requestRetryWithJson(definition, args, init);
+        const res = await this.requestFallbackToJson(definition, args, init);
         if (!res.ok && attempt <= retries) {
           throw res.error();
         }
@@ -298,7 +298,7 @@ export class HttpClient implements IHttpClient {
    * if a 415 error response is returned by the server. All subsequent requests
    * to this server for the route will always be sent as JSON afterwards.
    */
-  private async requestRetryWithJson<E extends Endpoint>(
+  private async requestFallbackToJson<E extends Endpoint>(
     definition: RouteDefinitionExtra<E>,
     args: E["args"],
     init: ApiRequestInitRequired
@@ -314,10 +314,10 @@ export class HttpClient implements IHttpClient {
     const res = await this._request(definition, args, init);
 
     if (res.status === HttpStatusCode.UNSUPPORTED_MEDIA_TYPE && init.requestWireFormat === WireFormat.ssz) {
+      this.logger?.debug("SSZ request failed with status 415, retrying using JSON", {routeId, urlIndex});
+
       sszNotSupportedByRouteId.set(routeId, true);
       init.requestWireFormat = WireFormat.json;
-
-      this.logger?.debug("SSZ request failed with status 415, retrying with JSON body", {routeId, urlIndex});
 
       return this._request(definition, args, init);
     }
