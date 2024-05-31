@@ -145,7 +145,13 @@ export class HttpClient implements IHttpClient {
     localInit: ApiRequestInit = {}
   ): Promise<ApiResponse<E>> {
     if (this.urlsInits.length === 1) {
-      return this.requestWithRetries(definition, args, localInit, 0);
+      const init = mergeInits(definition, this.urlsInits[0], localInit);
+
+      if (init.retries > 0) {
+        return this.requestWithRetries(definition, args, init);
+      } else {
+        return this.requestRetryWithJson(definition, args, init);
+      }
     } else {
       return this.requestWithFallbacks(definition, args, localInit);
     }
@@ -187,9 +193,17 @@ export class HttpClient implements IHttpClient {
             }
 
             // eslint-disable-next-line @typescript-eslint/naming-convention
-            const i_ = i; // Keep local copy of i variable to index urlScore after requestWithRetries() resolves
+            const i_ = i; // Keep local copy of i variable to index urlScore after requestMethod() resolves
 
-            this.requestWithRetries(definition, args, localInit, i).then(
+            const urlInit = this.urlsInits[i];
+            if (urlInit === undefined) {
+              throw Error(`Url at index ${i} does not exist`);
+            }
+            const init = mergeInits(definition, urlInit, localInit);
+
+            const requestMethod = (init.retries > 0 ? this.requestWithRetries : this.requestRetryWithJson).bind(this);
+
+            requestMethod(definition, args, init).then(
               async (res) => {
                 if (res.ok) {
                   this.urlsScore[i_] = Math.min(URL_SCORE_MAX, this.urlsScore[i_] + URL_SCORE_DELTA_SUCCESS);
@@ -249,52 +263,34 @@ export class HttpClient implements IHttpClient {
   }
 
   /**
-   * Send request to single URL by index, retry failed requests on same server
+   * Send request to single URL, retry failed requests on same server
    */
   private async requestWithRetries<E extends Endpoint>(
     definition: RouteDefinitionExtra<E>,
     args: E["args"],
-    localInit: ApiRequestInit,
-    urlIndex: number
+    init: ApiRequestInitRequired
   ): Promise<ApiResponse<E>> {
-    const urlInit = this.urlsInits[urlIndex];
-    if (urlInit === undefined) {
-      throw Error(`Url at index ${urlIndex} does not exist`);
-    }
-    const init: ApiRequestInitRequired = {
-      ...defaultInit,
-      ...definition.init,
-      ...urlInit,
-      ...localInit,
-      headers: mergeHeaders(urlInit.headers, localInit.headers),
-    };
-
     const {retries, retryDelay, signal} = init;
+    const routeId = definition.operationId;
 
-    if (retries > 0) {
-      const routeId = definition.operationId;
-
-      return retry(
-        async (attempt) => {
-          const res = await this.requestRetryWithJson(definition, args, init);
-          if (!res.ok && attempt <= retries) {
-            throw res.error();
-          }
-          return res;
-        },
-        {
-          retries,
-          retryDelay,
-          // Local signal takes precedence over global signal
-          signal: signal ?? this.signal ?? undefined,
-          onRetry: (e, attempt) => {
-            this.logger?.debug("Retrying request", {routeId, attempt, lastError: e.message});
-          },
+    return retry(
+      async (attempt) => {
+        const res = await this.requestRetryWithJson(definition, args, init);
+        if (!res.ok && attempt <= retries) {
+          throw res.error();
         }
-      );
-    } else {
-      return this.requestRetryWithJson(definition, args, init);
-    }
+        return res;
+      },
+      {
+        retries,
+        retryDelay,
+        // Local signal takes precedence over global signal
+        signal: signal ?? this.signal ?? undefined,
+        onRetry: (e, attempt) => {
+          this.logger?.debug("Retrying request", {routeId, attempt, lastError: e.message});
+        },
+      }
+    );
   }
 
   /**
@@ -398,6 +394,20 @@ export class HttpClient implements IHttpClient {
       abortSignals.forEach((s) => s?.removeEventListener("abort", onSignalAbort));
     }
   }
+}
+
+function mergeInits<E extends Endpoint>(
+  definition: RouteDefinitionExtra<E>,
+  urlInit: UrlInitRequired,
+  localInit: ApiRequestInit
+): ApiRequestInitRequired {
+  return {
+    ...defaultInit,
+    ...definition.init,
+    ...urlInit,
+    ...localInit,
+    headers: mergeHeaders(urlInit.headers, localInit.headers),
+  };
 }
 
 function isAbortedError(e: unknown): boolean {
