@@ -136,6 +136,20 @@ export class ApiResponse<E extends Endpoint> extends Response {
     }
   }
 
+  json(): Awaited<ReturnType<Response["json"]>> {
+    this.assertOk();
+
+    const rawBody = this.resolvedRawBody();
+    switch (rawBody.type) {
+      case WireFormat.json:
+        return rawBody.value;
+      case WireFormat.ssz:
+        return this.definition.resp.data.toJson(this.value(), this.meta());
+      default:
+        return {};
+    }
+  }
+
   assertOk(): void {
     if (!this.ok) {
       throw this.error();
