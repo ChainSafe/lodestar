@@ -157,7 +157,7 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         writeReq: ({topics}) => ({query: {topics}}),
         parseReq: ({query}) => ({topics: query.topics}) as EventstreamArgs,
         schema: {
-          query: {topics: Schema.StringArray},
+          query: {topics: Schema.StringArrayRequired},
         },
       },
       resp: EmptyResponseCodec,
