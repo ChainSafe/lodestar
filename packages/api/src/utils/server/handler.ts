@@ -65,8 +65,14 @@ export function createFastifyHandler<E extends Endpoint>(
           returnBytes: responseWireFormat === WireFormat.ssz,
         });
       } else {
-        // Media type is already validated by Fastify before calling handler
-        const requestMediaType = parseContentTypeHeader(req.headers[HttpHeader.ContentType]) as MediaType;
+        const contentType = req.headers[HttpHeader.ContentType];
+        if (contentType === undefined) {
+          throw new ApiError(400, "Content-Type header is required");
+        }
+        const requestMediaType = parseContentTypeHeader(contentType);
+        if (requestMediaType === null) {
+          throw new ApiError(415, `Unsupported media type: ${contentType.split(";", 1)[0]}`);
+        }
         const requestWireFormat = getWireFormat(requestMediaType);
 
         const {onlySupport} = definition.req as RequestWithBodyCodec<E>;
