@@ -75,7 +75,7 @@ export function getNodeApi(
 
       let healthStatus: number;
 
-      if (sync.getSyncStatus().isSyncing ||  (!sync.getSyncStatus().isSyncing  && syncingStatus.getSyncStatus().isOptimistic)) {
+      if (sync.getSyncStatus().isSyncing ||  syncingStatus.getSyncStatus().isOptimistic) {
         // 206: Node is syncing but can serve incomplete data
         healthStatus = syncingStatus ?? routes.node.NodeHealth.SYNCING;
       } else {

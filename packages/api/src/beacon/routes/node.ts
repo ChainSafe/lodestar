@@ -175,6 +175,25 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
     getPeerCount: reqEmpty,
     getNodeVersion: reqEmpty,
     getSyncingStatus: reqEmpty,
+    /**
+     * Define the request serializers for the `getHealth` route.
+     *
+     * @returns {ReqSerializers<Api, ReqTypes>["getHealth"]} The request serializers for the `getHealth` route.
+     *
+     * @example
+     * // Send a GET request to the "/eth/v1/node/health" endpoint with the `syncing_status` query parameter set to 10.
+     * const response = await client.getHealth({syncingStatus: 10});
+     * // The `response.body` will be the response body.
+/**
+     * Define the request serializers for the `getHealth` route.
+     *
+     * @returns {ReqSerializers<Api, ReqTypes>["getHealth"]} The request serializers for the `getHealth` route.
+     *
+     * @example
+     * // Send a GET request to the "/eth/v1/node/health" endpoint with the `syncing_status` query parameter set to 10.
+     * const response = await client.getHealth({syncingStatus: 10});
+     * // The `response.body` will be the response body.
+     */
     getHealth: {
       writeReq: (options) => ({
         query: options?.syncingStatus !== undefined ? {syncing_status: options.syncingStatus} : {},
@@ -182,7 +201,6 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       parseReq: ({query}) => [{syncingStatus: query.syncing_status}],
       schema: {query: {syncing_status: Schema.Uint}},
     },
-  };
 }
 
 export function getReturnTypes(): ReturnTypes<Api> {
