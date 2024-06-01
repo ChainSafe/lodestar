@@ -201,6 +201,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       parseReq: ({query}) => [{syncingStatus: query.syncing_status}],
       schema: {query: {syncing_status: Schema.Uint}},
     },
+   };
 }
 
 export function getReturnTypes(): ReturnTypes<Api> {
