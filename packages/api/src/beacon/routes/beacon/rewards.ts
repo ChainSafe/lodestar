@@ -7,7 +7,7 @@ import {Schema, Endpoint, RouteDefinitions} from "../../../utils/index.js";
 import {fromValidatorIdsStr, toValidatorIdsStr} from "../../../utils/serdes.js";
 import {ArrayOf, JsonOnlyReq} from "../../../utils/codecs.js";
 import {ExecutionOptimisticAndFinalizedCodec, ExecutionOptimisticAndFinalizedMeta} from "../../../utils/metadata.js";
-import {BlockId} from "./block.js";
+import {BlockArgs} from "./block.js";
 import {ValidatorId} from "./state.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
@@ -115,13 +115,10 @@ export type Endpoints = {
   /**
    * Get block rewards
    * Returns the info of rewards received by the block proposer
-   *
-   * @param blockId Block identifier.
-   * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
    */
   getBlockRewards: Endpoint<
     "GET",
-    {blockId: BlockId},
+    BlockArgs,
     {params: {block_id: string}},
     BlockRewards,
     ExecutionOptimisticAndFinalizedMeta
@@ -130,13 +127,15 @@ export type Endpoints = {
   /**
    * Get attestations rewards
    * Negative values indicate penalties. `inactivity` can only be either 0 or negative number since it is penalty only
-   *
-   * @param epoch The epoch to get rewards info from
-   * @param validatorIds List of validator indices or pubkeys to filter in
    */
   getAttestationsRewards: Endpoint<
     "POST",
-    {epoch: Epoch; validatorIds?: ValidatorId[]},
+    {
+      /** The epoch to get rewards info from */
+      epoch: Epoch;
+      /** List of validator indices or pubkeys to filter in */
+      validatorIds?: ValidatorId[];
+    },
     {params: {epoch: number}; body: string[]},
     AttestationsRewards,
     ExecutionOptimisticAndFinalizedMeta
@@ -145,14 +144,13 @@ export type Endpoints = {
   /**
    * Get sync committee rewards
    * Returns participant reward value for each sync committee member at the given block.
-   *
-   * @param blockId Block identifier.
-   * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
-   * @param validatorIds List of validator indices or pubkeys to filter in
    */
   getSyncCommitteeRewards: Endpoint<
     "POST",
-    {blockId: BlockId; validatorIds?: ValidatorId[]},
+    BlockArgs & {
+      /** List of validator indices or pubkeys to filter in */
+      validatorIds?: ValidatorId[];
+    },
     {params: {block_id: string}; body: string[]},
     SyncCommitteeRewards,
     ExecutionOptimisticAndFinalizedMeta

@@ -32,7 +32,7 @@ const RegistrationsType = ArrayOf(ssz.bellatrix.SignedValidatorRegistrationV1);
 
 export type Endpoints = {
   status: Endpoint<
-    //
+    // ⏎
     "GET",
     EmptyArgs,
     EmptyRequest,

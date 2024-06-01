@@ -16,7 +16,7 @@ import {ApiResponse} from "./response.js";
 import {Metrics} from "./metrics.js";
 import {fetch, isFetchError} from "./fetch.js";
 
-/** A higher default timeout, validator will sets its own shorter timeoutMs */
+/** A higher default timeout, validator will set its own shorter timeoutMs */
 const DEFAULT_TIMEOUT_MS = 60_000;
 const DEFAULT_RETRIES = 0;
 const DEFAULT_RETRY_DELAY = 200;

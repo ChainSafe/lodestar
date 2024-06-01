@@ -48,7 +48,7 @@ export type Endpoints = {
    * Retrieves attester slashings known by the node but not necessarily incorporated into any block
    */
   getPoolAttesterSlashings: Endpoint<
-    //
+    // ⏎
     "GET",
     EmptyArgs,
     EmptyRequest,
@@ -61,7 +61,7 @@ export type Endpoints = {
    * Retrieves proposer slashings known by the node but not necessarily incorporated into any block
    */
   getPoolProposerSlashings: Endpoint<
-    //
+    // ⏎
     "GET",
     EmptyArgs,
     EmptyRequest,
@@ -74,7 +74,7 @@ export type Endpoints = {
    * Retrieves voluntary exits known by the node but not necessarily incorporated into any block
    */
   getPoolVoluntaryExits: Endpoint<
-    //
+    // ⏎
     "GET",
     EmptyArgs,
     EmptyRequest,
@@ -87,7 +87,7 @@ export type Endpoints = {
    * Retrieves BLSToExecutionChange known by the node but not necessarily incorporated into any block
    */
   getPoolBLSToExecutionChanges: Endpoint<
-    //
+    // ⏎
     "GET",
     EmptyArgs,
     EmptyRequest,

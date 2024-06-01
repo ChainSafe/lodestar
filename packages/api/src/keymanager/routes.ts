@@ -176,7 +176,7 @@ export type Endpoints = {
    * Users SHOULD send slashing_protection data associated with the imported pubkeys. MUST follow the format defined in
    * EIP-3076: Slashing Protection Interchange Format.
    *
-   * @returns Status result of each `request.keystores` with same length and order of `request.keystores`
+   * Returns status result of each `request.keystores` with same length and order of `request.keystores`
    *
    * https://github.com/ethereum/keymanager-APIs/blob/0c975dae2ac6053c8245ebdb6a9f27c2f114f407/keymanager-oapi.yaml
    */
@@ -211,7 +211,7 @@ export type Endpoints = {
    * Slashing protection data must only be returned for keys from `request.pubkeys` for which a
    * `deleted` or `not_active` status is returned.
    *
-   * @returns Deletion status of all keys in `request.pubkeys` in the same order.
+   * Returns deletion status of all keys in `request.pubkeys` in the same order.
    *
    * https://github.com/ethereum/keymanager-APIs/blob/0c975dae2ac6053c8245ebdb6a9f27c2f114f407/keymanager-oapi.yaml
    */
@@ -230,7 +230,7 @@ export type Endpoints = {
    * List all remote validating pubkeys known to this validator client binary
    */
   listRemoteKeys: Endpoint<
-    //
+    // ⏎
     "GET",
     EmptyArgs,
     EmptyRequest,
@@ -258,7 +258,7 @@ export type Endpoints = {
   >;
 
   listFeeRecipient: Endpoint<
-    //
+    // ⏎
     "GET",
     {pubkey: PubkeyHex},
     {params: {pubkey: string}},
@@ -273,7 +273,7 @@ export type Endpoints = {
     EmptyMeta
   >;
   deleteFeeRecipient: Endpoint<
-    //
+    // ⏎
     "DELETE",
     {pubkey: PubkeyHex},
     {params: {pubkey: string}},
@@ -282,7 +282,7 @@ export type Endpoints = {
   >;
 
   getGraffiti: Endpoint<
-    //
+    // ⏎
     "GET",
     {pubkey: PubkeyHex},
     {params: {pubkey: string}},
@@ -297,7 +297,7 @@ export type Endpoints = {
     EmptyMeta
   >;
   deleteGraffiti: Endpoint<
-    //
+    // ⏎
     "DELETE",
     {pubkey: PubkeyHex},
     {params: {pubkey: string}},
@@ -306,7 +306,7 @@ export type Endpoints = {
   >;
 
   getGasLimit: Endpoint<
-    //
+    // ⏎
     "GET",
     {pubkey: PubkeyHex},
     {params: {pubkey: string}},
@@ -321,7 +321,7 @@ export type Endpoints = {
     EmptyMeta
   >;
   deleteGasLimit: Endpoint<
-    //
+    // ⏎
     "DELETE",
     {pubkey: PubkeyHex},
     {params: {pubkey: string}},
@@ -356,7 +356,7 @@ export type Endpoints = {
    * client. This endpoint returns a `SignedVoluntaryExit` object, which can be used to initiate voluntary exit via the
    * beacon node's [submitPoolVoluntaryExit](https://ethereum.github.io/beacon-APIs/#/Beacon/submitPoolVoluntaryExit) endpoint.
    *
-   * @returns Signed voluntary exit message
+   * Returns the signed voluntary exit message
    *
    * https://github.com/ethereum/keymanager-APIs/blob/7105e749e11dd78032ea275cc09bf62ecd548fca/keymanager-oapi.yaml
    */

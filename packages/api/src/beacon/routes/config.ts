@@ -35,7 +35,7 @@ export type Endpoints = {
    * Retrieve Eth1 deposit contract address and chain ID.
    */
   getDepositContract: Endpoint<
-    //
+    // ⏎
     "GET",
     EmptyArgs,
     EmptyRequest,
@@ -48,7 +48,7 @@ export type Endpoints = {
    * Retrieve all scheduled upcoming forks this node is aware of.
    */
   getForkSchedule: Endpoint<
-    //
+    // ⏎
     "GET",
     EmptyArgs,
     EmptyRequest,
@@ -67,7 +67,7 @@ export type Endpoints = {
    * - numeric values are returned as a quoted integer
    */
   getSpec: Endpoint<
-    //
+    // ⏎
     "GET",
     EmptyArgs,
     EmptyRequest,

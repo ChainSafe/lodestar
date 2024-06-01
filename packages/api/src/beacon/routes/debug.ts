@@ -20,7 +20,7 @@ import {
 import {Endpoint, RouteDefinitions} from "../../utils/types.js";
 import {WireFormat} from "../../utils/wireFormat.js";
 import {Schema} from "../../utils/schema.js";
-import {StateId} from "./beacon/state.js";
+import {StateArgs} from "./beacon/state.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -80,7 +80,7 @@ export type Endpoints = {
    * Retrieves all possible chain heads (leaves of fork choice tree).
    */
   getDebugChainHeads: Endpoint<
-    //
+    // ⏎
     "GET",
     EmptyArgs,
     EmptyRequest,
@@ -92,7 +92,7 @@ export type Endpoints = {
    * Retrieves all possible chain heads (leaves of fork choice tree).
    */
   getDebugChainHeadsV2: Endpoint<
-    //
+    // ⏎
     "GET",
     EmptyArgs,
     EmptyRequest,
@@ -104,7 +104,7 @@ export type Endpoints = {
    * Dump all ProtoArray's nodes to debug
    */
   getProtoArrayNodes: Endpoint<
-    //
+    // ⏎
     "GET",
     EmptyArgs,
     EmptyRequest,
@@ -116,13 +116,10 @@ export type Endpoints = {
    * Get full BeaconState object
    * Returns full BeaconState object for given stateId.
    * Depending on `Accept` header it can be returned either as json or as bytes serialized by SSZ
-   *
-   * param stateId State identifier.
-   * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", "justified", \<slot\>, \<hex encoded stateRoot with 0x prefix\>.
    */
   getState: Endpoint<
     "GET",
-    {stateId: StateId},
+    StateArgs,
     {params: {state_id: string}},
     phase0.BeaconState,
     ExecutionOptimisticAndFinalizedMeta
@@ -132,14 +129,11 @@ export type Endpoints = {
    * Get full BeaconState object
    * Returns full BeaconState object for given stateId.
    * Depending on `Accept` header it can be returned either as json or as bytes serialized by SSZ
-   *
-   * param stateId State identifier.
-   * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", "justified", \<slot\>, \<hex encoded stateRoot with 0x prefix\>.
    */
   getStateV2: Endpoint<
-    //
+    // ⏎
     "GET",
-    {stateId: StateId},
+    StateArgs,
     {params: {state_id: string}},
     allForks.BeaconState,
     ExecutionOptimisticFinalizedAndVersionMeta

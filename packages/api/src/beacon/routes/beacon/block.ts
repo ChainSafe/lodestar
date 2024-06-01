@@ -18,8 +18,6 @@ import {WireFormat} from "../../../utils/wireFormat.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
-// ssz types
-
 export const BlockHeaderResponseType = new ContainerType({
   root: ssz.Root,
   canonical: ssz.Boolean,
@@ -45,8 +43,16 @@ export type SignedBlockContents = ValueOf<typeof SignedBlockContentsType>;
 
 export type BlockId = RootHex | Slot | "head" | "genesis" | "finalized" | "justified";
 
+export type BlockArgs = {
+  /**
+   * Block identifier.
+   * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", "justified", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
+   */
+  blockId: BlockId;
+};
+
 export enum BroadcastValidation {
-  /* 
+  /**
   NOTE: The value `none` is not part of the spec. 
 
   In case a node is configured only with the unknownBlockSync, it needs to know the unknown parent blocks on the network 
@@ -63,14 +69,11 @@ export type Endpoints = {
   /**
    * Get block
    * Returns the complete `SignedBeaconBlock` for a given block ID.
-   *
-   * param blockId Block identifier.
-   * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
    */
   getBlock: Endpoint<
-    //
+    // ⏎
     "GET",
-    {blockId: BlockId},
+    BlockArgs,
     {params: {block_id: string}},
     phase0.SignedBeaconBlock,
     EmptyMeta
@@ -79,13 +82,10 @@ export type Endpoints = {
   /**
    * Get block
    * Retrieves block details for given block id.
-   *
-   * param blockId Block identifier.
-   * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
    */
   getBlockV2: Endpoint<
     "GET",
-    {blockId: BlockId},
+    BlockArgs,
     {params: {block_id: string}},
     allForks.SignedBeaconBlock,
     ExecutionOptimisticFinalizedAndVersionMeta
@@ -94,13 +94,10 @@ export type Endpoints = {
   /**
    * Get block attestations
    * Retrieves attestation included in requested block.
-   *
-   * param blockId Block identifier.
-   * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
    */
   getBlockAttestations: Endpoint<
     "GET",
-    {blockId: BlockId},
+    BlockArgs,
     {params: {block_id: string}},
     allForks.BeaconBlockBody["attestations"],
     ExecutionOptimisticAndFinalizedMeta
@@ -109,13 +106,10 @@ export type Endpoints = {
   /**
    * Get block header
    * Retrieves block header for given block id.
-   *
-   * param blockId Block identifier.
-   * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
    */
   getBlockHeader: Endpoint<
     "GET",
-    {blockId: BlockId},
+    BlockArgs,
     {params: {block_id: string}},
     BlockHeaderResponse,
     ExecutionOptimisticAndFinalizedMeta
@@ -136,13 +130,10 @@ export type Endpoints = {
   /**
    * Get block root
    * Retrieves hashTreeRoot of BeaconBlock/BeaconBlockHeader
-   *
-   * param blockId Block identifier.
-   * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
    */
   getBlockRoot: Endpoint<
     "GET",
-    {blockId: BlockId},
+    BlockArgs,
     {params: {block_id: string}},
     RootResponse,
     ExecutionOptimisticAndFinalizedMeta
@@ -157,8 +148,7 @@ export type Endpoints = {
    * therefore validate the block internally, however blocks which fail the validation are still
    * broadcast but a different status code is returned (202)
    *
-   * param requestBody The `SignedBeaconBlock` object composed of `BeaconBlock` object (produced by beacon node) and validator signature.
-   * returns The block was validated successfully and has been broadcast. It has also been integrated into the beacon node's database.
+   * Returns if the block was validated successfully and has been broadcast. It has also been integrated into the beacon node's database.
    */
   publishBlock: Endpoint<
     "POST",
@@ -170,7 +160,10 @@ export type Endpoints = {
 
   publishBlockV2: Endpoint<
     "POST",
-    {signedBlockOrContents: allForks.SignedBeaconBlockOrContents; broadcastValidation?: BroadcastValidation},
+    {
+      signedBlockOrContents: allForks.SignedBeaconBlockOrContents;
+      broadcastValidation?: BroadcastValidation;
+    },
     {body: unknown; headers: {[MetaHeader.Version]: string}; query: {broadcast_validation?: string}},
     EmptyResponseData,
     EmptyMeta
@@ -202,14 +195,16 @@ export type Endpoints = {
   /**
    * Get block BlobSidecar
    * Retrieves BlobSidecar included in requested block.
-   *
-   * param blockId Block identifier.
-   * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
-   * indices Array of indices for blob sidecars to request for in the specified block. Returns all blob sidecars in the block if not specified.
    */
   getBlobSidecars: Endpoint<
     "GET",
-    {blockId: BlockId; indices?: number[]},
+    BlockArgs & {
+      /**
+       * Array of indices for blob sidecars to request for in the specified block.
+       * Returns all blob sidecars in the block if not specified.
+       */
+      indices?: number[];
+    },
     {params: {block_id: string}; query: {indices?: number[]}},
     deneb.BlobSidecars,
     ExecutionOptimisticFinalizedAndVersionMeta

@@ -9,7 +9,7 @@ import * as rewards from "./rewards.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
-// NOTE: We choose to split the block, pool, and state namespaces so the files are not too big.
+// NOTE: We choose to split the block, pool, state and rewards namespaces so the files are not too big.
 // However, for a consumer all these methods are within the same service "beacon"
 export {block, pool, state, rewards};
 export {BroadcastValidation} from "./block.js";
@@ -38,7 +38,7 @@ export type Endpoints = block.Endpoints &
   state.Endpoints &
   rewards.Endpoints & {
     getGenesis: Endpoint<
-      //
+      // ⏎
       "GET",
       EmptyArgs,
       EmptyRequest,

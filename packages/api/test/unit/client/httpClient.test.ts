@@ -66,7 +66,7 @@ describe("httpClient json client", () => {
 
   it("should handle successful GET request correctly", async () => {
     type TestGetEndpoint = Endpoint<
-      //
+      // ⏎
       "GET",
       EmptyArgs,
       EmptyRequest,

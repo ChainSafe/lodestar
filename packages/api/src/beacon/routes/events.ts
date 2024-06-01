@@ -5,7 +5,10 @@ import {ForkName} from "@lodestar/params";
 
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {EmptyMeta, EmptyResponseCodec, EmptyResponseData} from "../../utils/codecs.js";
-import {getExecutionForkTypes, getLightClientForkTypes, toForkName} from "../../utils/fork.js";
+import {getExecutionForkTypes, getLightClientForkTypes} from "../../utils/fork.js";
+import {VersionType} from "../../utils/metadata.js";
+
+// See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
 const stringType = new StringType();
 export const blobSidecarSSE = new ContainerType(
@@ -19,8 +22,6 @@ export const blobSidecarSSE = new ContainerType(
   {typeName: "BlobSidecarSSE", jsonCase: "eth2"}
 );
 type BlobSidecarSSE = ValueOf<typeof blobSidecarSSE>;
-
-// See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
 export enum EventType {
   /**
@@ -121,6 +122,7 @@ export type EventData = {
 export type BeaconEvent = {[K in EventType]: {type: K; message: EventData[K]}}[EventType];
 
 type EventstreamArgs = {
+  /** Event types to subscribe to */
   topics: EventType[];
   signal: AbortSignal;
   onEvent: (event: BeaconEvent) => void;
@@ -135,11 +137,10 @@ export type Endpoints = {
    * Consumers should use [eventsource](https://html.spec.whatwg.org/multipage/server-sent-events.html#the-eventsource-interface)
    * implementation to listen on those events.
    *
-   * param topics Event types to subscribe to
-   * returns Opened SSE stream.
+   * Returns if SSE stream has been opened.
    */
   eventstream: Endpoint<
-    //
+    // ⏎
     "GET",
     EventstreamArgs,
     {query: {topics: EventType[]}},
@@ -165,9 +166,6 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
   };
 }
 
-// It doesn't make sense to define a getReqSerializers() here given the exotic argument of eventstream()
-// The request is very simple: (topics) => {query: {topics}}, and the test will ensure compatibility server - client
-
 export type TypeJson<T> = {
   toJson: (data: T) => unknown; // server
   fromJson: (data: unknown) => T; // client
@@ -182,10 +180,10 @@ export function getTypeByEvent(): {[K in EventType]: TypeJson<EventData[K]>} {
         version,
       }),
       fromJson: (val) => {
-        const fork = toForkName((val as {version: string}).version);
+        const {version} = VersionType.fromJson(val);
         return {
-          data: getType(fork).fromJson((val as {data: unknown}).data),
-          version: fork,
+          data: getType(version).fromJson((val as {data: unknown}).data),
+          version,
         };
       },
     };

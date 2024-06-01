@@ -13,6 +13,15 @@ import {RootResponse, RootResponseType} from "./block.js";
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
 export type StateId = RootHex | Slot | "head" | "genesis" | "finalized" | "justified";
+
+export type StateArgs = {
+  /**
+   * State identifier.
+   * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", "justified", \<slot\>, \<hex encoded stateRoot with 0x prefix\>.
+   */
+  stateId: StateId;
+};
+
 export type ValidatorId = string | number;
 
 export type ValidatorStatus =
@@ -55,7 +64,7 @@ export const ValidatorBalanceType = new ContainerType({
 });
 export const EpochSyncCommitteeResponseType = new ContainerType(
   {
-    /** all of the validator indices in the current sync committee */
+    /** All of the validator indices in the current sync committee */
     validators: ArrayOf(ssz.ValidatorIndex),
     // TODO: This property will likely be deprecated
     /** Subcommittee slices of the current sync committee */
@@ -82,13 +91,10 @@ export type Endpoints = {
   /**
    * Get state SSZ HashTreeRoot
    * Calculates HashTreeRoot for state with given 'stateId'. If stateId is root, same value will be returned.
-   *
-   * param stateId State identifier.
-   * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", "justified", \<slot\>, \<hex encoded stateRoot with 0x prefix\>.
    */
   getStateRoot: Endpoint<
     "GET",
-    {stateId: StateId},
+    StateArgs,
     {params: {state_id: string}},
     RootResponse,
     ExecutionOptimisticAndFinalizedMeta
@@ -97,13 +103,10 @@ export type Endpoints = {
   /**
    * Get Fork object for requested state
    * Returns [Fork](https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/beacon-chain.md#fork) object for state with given 'stateId'.
-   *
-   * param stateId State identifier.
-   * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", "justified", \<slot\>, \<hex encoded stateRoot with 0x prefix\>.
    */
   getStateFork: Endpoint<
     "GET",
-    {stateId: StateId},
+    StateArgs,
     {params: {state_id: string}},
     phase0.Fork,
     ExecutionOptimisticAndFinalizedMeta
@@ -111,14 +114,16 @@ export type Endpoints = {
 
   /**
    * Fetch the RANDAO mix for the requested epoch from the state identified by 'stateId'.
-   *
-   * @param stateId State identifier.
-   * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", "justified", \<slot\>, \<hex encoded stateRoot with 0x prefix\>.
-   * @param epoch Fetch randao mix for the given epoch. If an epoch is not specified then the RANDAO mix for the state's current epoch will be returned.
    */
   getStateRandao: Endpoint<
     "GET",
-    {stateId: StateId; epoch?: Epoch},
+    StateArgs & {
+      /**
+       * Fetch randao mix for the given epoch. If an epoch is not specified
+       * then the RANDAO mix for the state's current epoch will be returned.
+       */
+      epoch?: Epoch;
+    },
     {params: {state_id: string}; query: {epoch?: number}},
     RandaoResponse,
     ExecutionOptimisticAndFinalizedMeta
@@ -128,12 +133,10 @@ export type Endpoints = {
    * Get state finality checkpoints
    * Returns finality checkpoints for state with given 'stateId'.
    * In case finality is not yet achieved, checkpoint should return epoch 0 and ZERO_HASH as root.
-   * @param stateId State identifier.
-   * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", "justified", \<slot\>, \<hex encoded stateRoot with 0x prefix\>.
    */
   getStateFinalityCheckpoints: Endpoint<
     "GET",
-    {stateId: StateId},
+    StateArgs,
     {params: {state_id: string}},
     FinalityCheckpoints,
     ExecutionOptimisticAndFinalizedMeta
@@ -142,13 +145,13 @@ export type Endpoints = {
   /**
    * Get validator from state by id
    * Returns validator specified by state and id or public key along with status and balance.
-   * @param stateId State identifier.
-   * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", "justified", \<slot\>, \<hex encoded stateRoot with 0x prefix\>.
-   * @param validatorId Either hex encoded public key (with 0x prefix) or validator index
    */
   getStateValidator: Endpoint<
     "GET",
-    {stateId: StateId; validatorId: ValidatorId},
+    StateArgs & {
+      /** Either hex encoded public key (with 0x prefix) or validator index */
+      validatorId: ValidatorId;
+    },
     {params: {state_id: string; validator_id: ValidatorId}},
     ValidatorResponse,
     ExecutionOptimisticAndFinalizedMeta
@@ -157,14 +160,15 @@ export type Endpoints = {
   /**
    * Get validators from state
    * Returns filterable list of validators with their balance, status and index.
-   * @param stateId State identifier.
-   * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", "justified", \<slot\>, \<hex encoded stateRoot with 0x prefix\>.
-   * @param id Either hex encoded public key (with 0x prefix) or validator index
-   * @param status [Validator status specification](https://hackmd.io/ofFJ5gOmQpu1jjHilHbdQQ)
    */
   getStateValidators: Endpoint<
     "GET",
-    {stateId: StateId; validatorIds?: ValidatorId[]; statuses?: ValidatorStatus[]},
+    StateArgs & {
+      /** Either hex encoded public key (with 0x prefix) or validator index */
+      validatorIds?: ValidatorId[];
+      /** [Validator status specification](https://hackmd.io/ofFJ5gOmQpu1jjHilHbdQQ) */
+      statuses?: ValidatorStatus[];
+    },
     {params: {state_id: string}; query: {id?: ValidatorId[]; status?: ValidatorStatus[]}},
     ValidatorResponseList,
     ExecutionOptimisticAndFinalizedMeta
@@ -173,14 +177,15 @@ export type Endpoints = {
   /**
    * Get validators from state
    * Returns filterable list of validators with their balance, status and index.
-   * @param stateId State identifier.
-   * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", "justified", \<slot\>, \<hex encoded stateRoot with 0x prefix\>.
-   * @param id Either hex encoded public key (with 0x prefix) or validator index
-   * @param status [Validator status specification](https://hackmd.io/ofFJ5gOmQpu1jjHilHbdQQ)
    */
   postStateValidators: Endpoint<
     "POST",
-    {stateId: StateId; validatorIds?: ValidatorId[]; statuses?: ValidatorStatus[]},
+    StateArgs & {
+      /** Either hex encoded public key (with 0x prefix) or validator index */
+      validatorIds?: ValidatorId[];
+      /** [Validator status specification](https://hackmd.io/ofFJ5gOmQpu1jjHilHbdQQ) */
+      statuses?: ValidatorStatus[];
+    },
     {params: {state_id: string}; body: {ids?: string[]; statuses?: ValidatorStatus[]}},
     ValidatorResponseList,
     ExecutionOptimisticAndFinalizedMeta
@@ -189,13 +194,13 @@ export type Endpoints = {
   /**
    * Get validator balances from state
    * Returns filterable list of validator balances.
-   * @param stateId State identifier.
-   * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", "justified", \<slot\>, \<hex encoded stateRoot with 0x prefix\>.
-   * @param id Either hex encoded public key (with 0x prefix) or validator index
    */
   getStateValidatorBalances: Endpoint<
     "GET",
-    {stateId: StateId; validatorIds?: ValidatorId[]},
+    StateArgs & {
+      /** Either hex encoded public key (with 0x prefix) or validator index */
+      validatorIds?: ValidatorId[];
+    },
     {params: {state_id: string}; query: {id?: ValidatorId[]}},
     ValidatorBalanceList,
     ExecutionOptimisticAndFinalizedMeta
@@ -204,13 +209,13 @@ export type Endpoints = {
   /**
    * Get validator balances from state
    * Returns filterable list of validator balances.
-   * @param stateId State identifier.
-   * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", "justified", \<slot\>, \<hex encoded stateRoot with 0x prefix\>.
-   * @param id Either hex encoded public key (with 0x prefix) or validator index
    */
   postStateValidatorBalances: Endpoint<
     "POST",
-    {stateId: StateId; validatorIds?: ValidatorId[]},
+    StateArgs & {
+      /** Either hex encoded public key (with 0x prefix) or validator index */
+      validatorIds?: ValidatorId[];
+    },
     {params: {state_id: string}; body: string[]},
     ValidatorBalanceList,
     ExecutionOptimisticAndFinalizedMeta
@@ -219,15 +224,17 @@ export type Endpoints = {
   /**
    * Get all committees for a state.
    * Retrieves the committees for the given state.
-   * @param stateId State identifier.
-   * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", "justified", \<slot\>, \<hex encoded stateRoot with 0x prefix\>.
-   * @param epoch Fetch committees for the given epoch.  If not present then the committees for the epoch of the state will be obtained.
-   * @param index Restrict returned values to those matching the supplied committee index.
-   * @param slot Restrict returned values to those matching the supplied slot.
    */
   getEpochCommittees: Endpoint<
     "GET",
-    {stateId: StateId; epoch?: Epoch; index?: CommitteeIndex; slot?: Slot},
+    StateArgs & {
+      /** Fetch committees for the given epoch. If not present then the committees for the epoch of the state will be obtained. */
+      epoch?: Epoch;
+      /** Restrict returned values to those matching the supplied committee index. */
+      index?: CommitteeIndex;
+      /** Restrict returned values to those matching the supplied slot. */
+      slot?: Slot;
+    },
     {params: {state_id: string}; query: {slot?: number; epoch?: number; index?: number}},
     EpochCommitteeResponseList,
     ExecutionOptimisticAndFinalizedMeta
@@ -235,7 +242,7 @@ export type Endpoints = {
 
   getEpochSyncCommittees: Endpoint<
     "GET",
-    {stateId: StateId; epoch?: Epoch},
+    StateArgs & {epoch?: Epoch},
     {params: {state_id: string}; query: {epoch?: number}},
     EpochSyncCommitteeResponse,
     ExecutionOptimisticAndFinalizedMeta

@@ -78,7 +78,6 @@ export type LodestarThreadType = "main" | "network" | "discv5";
 export type Endpoints = {
   /** Trigger to write a heapdump to disk at `dirpath`. May take > 1min */
   writeHeapdump: Endpoint<
-    //
     "POST",
     {thread?: LodestarThreadType; dirpath?: string},
     {query: {thread?: LodestarThreadType; dirpath?: string}},
@@ -99,7 +98,7 @@ export type Endpoints = {
   >;
   /** TODO: description */
   getLatestWeakSubjectivityCheckpointEpoch: Endpoint<
-    //
+    // ⏎
     "GET",
     EmptyArgs,
     EmptyRequest,
@@ -108,7 +107,7 @@ export type Endpoints = {
   >;
   /** TODO: description */
   getSyncChainsDebugState: Endpoint<
-    //
+    // ⏎
     "GET",
     EmptyArgs,
     EmptyRequest,
@@ -117,7 +116,7 @@ export type Endpoints = {
   >;
   /** Dump all items in a gossip queue, by gossipType */
   getGossipQueueItems: Endpoint<
-    //
+    // ⏎
     "GET",
     {gossipType: string},
     {params: {gossipType: string}},
@@ -126,7 +125,7 @@ export type Endpoints = {
   >;
   /** Dump all items in the regen queue */
   getRegenQueueItems: Endpoint<
-    //
+    // ⏎
     "GET",
     EmptyArgs,
     EmptyRequest,
@@ -135,7 +134,7 @@ export type Endpoints = {
   >;
   /** Dump all items in the block processor queue */
   getBlockProcessorQueueItems: Endpoint<
-    //
+    // ⏎
     "GET",
     EmptyArgs,
     EmptyRequest,
@@ -144,7 +143,7 @@ export type Endpoints = {
   >;
   /** Dump a summary of the states in the block state cache and checkpoint state cache */
   getStateCacheItems: Endpoint<
-    //
+    // ⏎
     "GET",
     EmptyArgs,
     EmptyRequest,
@@ -153,7 +152,7 @@ export type Endpoints = {
   >;
   /** Dump peer gossip stats by peer */
   getGossipPeerScoreStats: Endpoint<
-    //
+    // ⏎
     "GET",
     EmptyArgs,
     EmptyRequest,
@@ -162,7 +161,7 @@ export type Endpoints = {
   >;
   /** Dump lodestar score stats by peer */
   getLodestarPeerScoreStats: Endpoint<
-    //
+    // ⏎
     "GET",
     EmptyArgs,
     EmptyRequest,
@@ -171,7 +170,7 @@ export type Endpoints = {
   >;
   /** Run GC with `global.gc()` */
   runGC: Endpoint<
-    //
+    // ⏎
     "POST",
     EmptyArgs,
     EmptyRequest,
@@ -180,7 +179,7 @@ export type Endpoints = {
   >;
   /** Drop all states in the state cache */
   dropStateCache: Endpoint<
-    //
+    // ⏎
     "POST",
     EmptyArgs,
     EmptyRequest,
@@ -190,7 +189,7 @@ export type Endpoints = {
 
   /** Connect to peer at this multiaddress */
   connectPeer: Endpoint<
-    //
+    // ⏎
     "POST",
     {peerId: string; multiaddrs: string[]},
     {query: {peerId: string; multiaddr: string[]}},
@@ -199,7 +198,7 @@ export type Endpoints = {
   >;
   /** Disconnect peer */
   disconnectPeer: Endpoint<
-    //
+    // ⏎
     "POST",
     {peerId: string},
     {query: {peerId: string}},
@@ -217,7 +216,7 @@ export type Endpoints = {
 
   /** Dump Discv5 Kad values */
   discv5GetKadValues: Endpoint<
-    //
+    // ⏎
     "GET",
     EmptyArgs,
     EmptyRequest,
@@ -227,12 +226,13 @@ export type Endpoints = {
 
   /**
    * Dump level-db entry keys for a given Bucket declared in code, or for all buckets.
-   * @param bucket must be the string name of a bucket entry: `allForks_blockArchive`
    */
   dumpDbBucketKeys: Endpoint<
-    //
     "GET",
-    {bucket: string},
+    {
+      /** must be the string name of a bucket entry: `allForks_blockArchive` */
+      bucket: string;
+    },
     {params: {bucket: string}},
     string[],
     EmptyMeta
@@ -240,7 +240,7 @@ export type Endpoints = {
 
   /** Return all entries in the StateArchive index with bucket index_stateArchiveRootIndex */
   dumpDbStateIndex: Endpoint<
-    //
+    // ⏎
     "GET",
     EmptyArgs,
     EmptyRequest,

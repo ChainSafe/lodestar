@@ -116,7 +116,7 @@ export type Endpoints = {
    * Retrieves data about the node's network presence
    */
   getNetworkIdentity: Endpoint<
-    //
+    // ⏎
     "GET",
     EmptyArgs,
     EmptyRequest,
@@ -141,7 +141,7 @@ export type Endpoints = {
    * Retrieves data about the given peer
    */
   getPeer: Endpoint<
-    //
+    // ⏎
     "GET",
     {peerId: string},
     {params: {peer_id: string}},
@@ -154,7 +154,7 @@ export type Endpoints = {
    * Retrieves number of known peers.
    */
   getPeerCount: Endpoint<
-    //
+    // ⏎
     "GET",
     EmptyArgs,
     EmptyRequest,
@@ -167,7 +167,7 @@ export type Endpoints = {
    * Requests that the beacon node identify information about its implementation in a format similar to a [HTTP User-Agent](https://tools.ietf.org/html/rfc7231#section-5.5.3) field.
    */
   getNodeVersion: Endpoint<
-    //
+    // ⏎
     "GET",
     EmptyArgs,
     EmptyRequest,
@@ -180,7 +180,7 @@ export type Endpoints = {
    * Requests the beacon node to describe if it's currently syncing or not, and if it is, what block it is up to.
    */
   getSyncingStatus: Endpoint<
-    //
+    // ⏎
     "GET",
     EmptyArgs,
     EmptyRequest,
@@ -193,7 +193,7 @@ export type Endpoints = {
    * Returns node health status in http status codes. Useful for load balancers.
    */
   getHealth: Endpoint<
-    //
+    // ⏎
     "GET",
     NodeHealthOptions,
     {query: {syncing_status?: number}},

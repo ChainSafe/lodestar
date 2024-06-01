@@ -91,18 +91,19 @@ export const BlockContentsType = new ContainerType(
 
 export const AttesterDutyType = new ContainerType(
   {
-    // The validator's public key, uniquely identifying them
+    /** The validator's public key, uniquely identifying them */
     pubkey: ssz.BLSPubkey,
-    // Index of validator in validator registry
+    /** Index of validator in validator registry */
     validatorIndex: ssz.ValidatorIndex,
+    /** Index of the committee */
     committeeIndex: ssz.CommitteeIndex,
-    // Number of validators in committee
+    /** Number of validators in committee */
     committeeLength: ssz.UintNum64,
-    // Number of committees at the provided slot
+    /** Number of committees at the provided slot */
     committeesAtSlot: ssz.UintNum64,
-    // Index of validator in committee
+    /** Index of validator in committee */
     validatorCommitteeIndex: ssz.UintNum64,
-    // The slot at which the validator must attest.
+    /** The slot at which the validator must attest */
     slot: ssz.Slot,
   },
   {jsonCase: "eth2"}
@@ -248,13 +249,13 @@ export type Endpoints = {
    * - event.current_duty_dependent_root when `compute_epoch_at_slot(event.slot) + 1 == epoch`
    * - event.block otherwise
    * The dependent_root value is `get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch - 1) - 1)` or the genesis block root in the case of underflow.
-   * param epoch Should only be allowed 1 epoch ahead
-   * param requestBody An array of the validator indices for which to obtain the duties.
    */
   getAttesterDuties: Endpoint<
     "POST",
     {
+      /** Should only be allowed 1 epoch ahead */
       epoch: Epoch;
+      /** An array of the validator indices for which to obtain the duties */
       indices: ValidatorIndices;
     },
     {params: {epoch: Epoch}; body: unknown},
@@ -292,15 +293,15 @@ export type Endpoints = {
   /**
    * Produce a new block, without signature.
    * Requests a beacon node to produce a valid block, which can then be signed by a validator.
-   * param slot The slot for which the block should be proposed.
-   * param randaoReveal The validator's randao reveal value.
-   * param graffiti Arbitrary data validator wants to include in block.
    */
   produceBlock: Endpoint<
     "GET",
     {
+      /** The slot for which the block should be proposed. */
       slot: Slot;
+      /** The validator's randao reveal value */
       randaoReveal: BLSSignature;
+      /** Arbitrary data validator wants to include in block */
       graffiti: string;
     },
     {params: {slot: number}; query: {randao_reveal: string; graffiti: string}},
@@ -312,15 +313,15 @@ export type Endpoints = {
    * Requests a beacon node to produce a valid block, which can then be signed by a validator.
    * Metadata in the response indicates the type of block produced, and the supported types of block
    * will be added to as forks progress.
-   * param slot The slot for which the block should be proposed.
-   * param randaoReveal The validator's randao reveal value.
-   * param graffiti Arbitrary data validator wants to include in block.
    */
   produceBlockV2: Endpoint<
     "GET",
     {
+      /** The slot for which the block should be proposed */
       slot: Slot;
+      /** The validator's randao reveal value */
       randaoReveal: BLSSignature;
+      /** Arbitrary data validator wants to include in block */
       graffiti: string;
     } & Omit<ExtraProduceBlockOpts, "blindedLocal">,
     {
@@ -341,15 +342,15 @@ export type Endpoints = {
    * Requests a beacon node to produce a valid block, which can then be signed by a validator.
    * Metadata in the response indicates the type of block produced, and the supported types of block
    * will be added to as forks progress.
-   * param slot The slot for which the block should be proposed.
-   * param randaoReveal The validator's randao reveal value.
-   * param graffiti Arbitrary data validator wants to include in block.
    */
   produceBlockV3: Endpoint<
     "GET",
     {
+      /** The slot for which the block should be proposed */
       slot: Slot;
+      /** The validator's randao reveal value */
       randaoReveal: BLSSignature;
+      /** Arbitrary data validator wants to include in block */
       graffiti: string;
       skipRandaoVerification?: boolean;
       builderBoostFactor?: UintBn64;
@@ -386,13 +387,13 @@ export type Endpoints = {
   /**
    * Produce an attestation data
    * Requests that the beacon node produce an AttestationData.
-   * param slot The slot for which an attestation data should be created.
-   * param committeeIndex The committee index for which an attestation data should be created.
    */
   produceAttestationData: Endpoint<
     "GET",
     {
+      /** The committee index for which an attestation data should be created */
       committeeIndex: CommitteeIndex;
+      /** The slot for which an attestation data should be created */
       slot: Slot;
     },
     {query: {slot: number; committee_index: number}},
@@ -415,12 +416,12 @@ export type Endpoints = {
   /**
    * Get aggregated attestation
    * Aggregates all attestations matching given attestation data root and slot
-   * param attestationDataRoot HashTreeRoot of AttestationData that validator want's aggregated
-   * returns aggregated `Attestation` object with same `AttestationData` root.
+   * Returns a aggregated `Attestation` object with same `AttestationData` root.
    */
   getAggregatedAttestation: Endpoint<
     "GET",
     {
+      /** HashTreeRoot of AttestationData that validator want's aggregated */
       attestationDataRoot: Root;
       slot: Slot;
     },
@@ -435,9 +436,7 @@ export type Endpoints = {
    */
   publishAggregateAndProofs: Endpoint<
     "POST",
-    {
-      signedAggregateAndProofs: SignedAggregateAndProofList;
-    },
+    {signedAggregateAndProofs: SignedAggregateAndProofList},
     {body: unknown},
     EmptyResponseData,
     EmptyMeta
@@ -445,9 +444,7 @@ export type Endpoints = {
 
   publishContributionAndProofs: Endpoint<
     "POST",
-    {
-      contributionAndProofs: SignedContributionAndProofList;
-    },
+    {contributionAndProofs: SignedContributionAndProofList},
     {body: unknown},
     EmptyResponseData,
     EmptyMeta
@@ -462,15 +459,13 @@ export type Endpoints = {
    * - announce subnet topic subscription on gossipsub
    * - aggregate attestations received on that subnet
    *
-   * returns any Slot signature is valid and beacon node has prepared the attestation subnet.
+   * Returns if slot signature is valid and beacon node has prepared the attestation subnet.
    *
-   * Note that, we cannot be certain Beacon node will find peers for that subnet for various reasons,"
+   * Note that we cannot be certain the Beacon node will find peers for that subnet for various reasons.
    */
   prepareBeaconCommitteeSubnet: Endpoint<
     "POST",
-    {
-      subscriptions: BeaconCommitteeSubscriptionList;
-    },
+    {subscriptions: BeaconCommitteeSubscriptionList},
     {body: unknown},
     EmptyResponseData,
     EmptyMeta
@@ -478,9 +473,7 @@ export type Endpoints = {
 
   prepareSyncCommitteeSubnets: Endpoint<
     "POST",
-    {
-      subscriptions: SyncCommitteeSubscriptionList;
-    },
+    {subscriptions: SyncCommitteeSubscriptionList},
     {body: unknown},
     EmptyResponseData,
     EmptyMeta
@@ -488,9 +481,7 @@ export type Endpoints = {
 
   prepareBeaconProposer: Endpoint<
     "POST",
-    {
-      proposers: ProposerPreparationDataList;
-    },
+    {proposers: ProposerPreparationDataList},
     {body: unknown},
     EmptyResponseData,
     EmptyMeta
@@ -506,13 +497,12 @@ export type Endpoints = {
    *
    * Note that this endpoint is not implemented by the beacon node and will return a 501 error
    *
-   * @param requestBody An array of partial beacon committee selection proofs
-   * @returns An array of threshold aggregated beacon committee selection proofs
-   * @throws ApiError
+   * Returns an array of threshold aggregated beacon committee selection proofs
    */
   submitBeaconCommitteeSelections: Endpoint<
     "POST",
     {
+      /** An array of partial beacon committee selection proofs */
       selections: BeaconCommitteeSelectionList;
     },
     {body: unknown},
@@ -530,13 +520,12 @@ export type Endpoints = {
    *
    * Note that this endpoint is not implemented by the beacon node and will return a 501 error
    *
-   * @param requestBody An array of partial sync committee selection proofs
-   * @returns An array of threshold aggregated sync committee selection proofs
-   * @throws ApiError
+   * Returns an array of threshold aggregated sync committee selection proofs
    */
   submitSyncCommitteeSelections: Endpoint<
     "POST",
     {
+      /** An array of partial sync committee selection proofs */
       selections: SyncCommitteeSelectionList;
     },
     {body: unknown},
@@ -558,9 +547,7 @@ export type Endpoints = {
 
   registerValidator: Endpoint<
     "POST",
-    {
-      registrations: SignedValidatorRegistrationV1List;
-    },
+    {registrations: SignedValidatorRegistrationV1List},
     {body: unknown},
     EmptyResponseData,
     EmptyMeta

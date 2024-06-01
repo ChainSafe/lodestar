@@ -46,7 +46,7 @@ export type Endpoints = {
    * unless to get the very first head update after syncing, or if SSE are not supported by the server.
    */
   getLightClientOptimisticUpdate: Endpoint<
-    //
+    // ⏎
     "GET",
     EmptyArgs,
     EmptyRequest,
@@ -55,7 +55,7 @@ export type Endpoints = {
   >;
 
   getLightClientFinalityUpdate: Endpoint<
-    //
+    // ⏎
     "GET",
     EmptyArgs,
     EmptyRequest,
