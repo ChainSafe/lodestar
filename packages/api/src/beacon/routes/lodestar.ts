@@ -230,7 +230,7 @@ export type Endpoints = {
   dumpDbBucketKeys: Endpoint<
     "GET",
     {
-      /** must be the string name of a bucket entry: `allForks_blockArchive` */
+      /** Must be the string name of a bucket entry: `allForks_blockArchive` */
       bucket: string;
     },
     {params: {bucket: string}},

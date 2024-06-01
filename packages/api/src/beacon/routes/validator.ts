@@ -416,7 +416,7 @@ export type Endpoints = {
   /**
    * Get aggregated attestation
    * Aggregates all attestations matching given attestation data root and slot
-   * Returns a aggregated `Attestation` object with same `AttestationData` root.
+   * Returns an aggregated `Attestation` object with same `AttestationData` root.
    */
   getAggregatedAttestation: Endpoint<
     "GET",
