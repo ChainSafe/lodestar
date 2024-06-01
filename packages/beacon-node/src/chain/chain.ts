@@ -585,7 +585,7 @@ export class BeaconChain implements IBeaconChain {
       RegenCaller.produceBlock
     );
     const proposerIndex = state.epochCtx.getBeaconProposer(slot);
-    const proposerPubKey = state.epochCtx.index2pubkey[proposerIndex].serialize();
+    const proposerPubKey = state.epochCtx.index2pubkey[proposerIndex].toBytes();
 
     const {body, blobs, executionPayloadValue, shouldOverrideBuilder} = await produceBlockBody.call(
       this,

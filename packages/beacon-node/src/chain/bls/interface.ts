@@ -1,4 +1,4 @@
-import {PublicKey} from "@chainsafe/blst";
+import {PublicKey} from "@chainsafe/bls/types";
 import {ISignatureSet} from "@lodestar/state-transition";
 
 export type VerifySignatureOpts = {
