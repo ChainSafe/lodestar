@@ -50,7 +50,7 @@ export class AttestationByTargetRepository {
     await this.db.batchPut(
       atts.map((att) => ({
         key: this.encodeKey(pubkey, att.targetEpoch),
-        value: this.type.serialize(att),
+        value: Buffer.from(this.type.serialize(att)),
       })),
       this.dbReqOpts
     );
@@ -62,7 +62,7 @@ export class AttestationByTargetRepository {
   }
 
   private encodeKey(pubkey: BLSPubkey, targetEpoch: Epoch): Uint8Array {
-    return encodeKey(this.bucket, Buffer.concat([pubkey, intToBytes(BigInt(targetEpoch), uintLen, "be")]));
+    return encodeKey(this.bucket, Buffer.concat([Buffer.from(pubkey), intToBytes(BigInt(targetEpoch), uintLen, "be")]));
   }
 
   private decodeKey(key: Uint8Array): {pubkey: BLSPubkey; targetEpoch: Epoch} {

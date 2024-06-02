@@ -34,40 +34,4 @@ describe("bytes utils", function () {
       }
     },
   });
-
-  itBench({
-    id: "Buffer.copy",
-    fn: () => {
-      const arr = Buffer.alloc(32 * count);
-      let offset = 0;
-      for (const b of buffers) {
-        b.copy(arr, offset, 0, b.length);
-        offset += b.length;
-      }
-    },
-  });
-
-  itBench({
-    id: "Uint8Array.set - with subarray",
-    fn: () => {
-      const arr = new Uint8Array(32 * count);
-      let offset = 0;
-      for (const b of roots) {
-        arr.set(b.subarray(0, b.length), offset);
-        offset += b.length;
-      }
-    },
-  });
-
-  itBench({
-    id: "Uint8Array.set - without subarray",
-    fn: () => {
-      const arr = new Uint8Array(32 * count);
-      let offset = 0;
-      for (const b of roots) {
-        arr.set(b, offset);
-        offset += b.length;
-      }
-    },
-  });
 });

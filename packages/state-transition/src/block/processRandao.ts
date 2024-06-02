@@ -1,3 +1,4 @@
+import xor from "buffer-xor";
 import {digest} from "@chainsafe/as-sha256";
 import {allForks} from "@lodestar/types";
 import {EPOCHS_PER_HISTORICAL_VECTOR} from "@lodestar/params";
@@ -27,14 +28,6 @@ export function processRandao(
   }
 
   // mix in RANDAO reveal
-  const randaoMix = xor(getRandaoMix(state, epoch), digest(randaoReveal));
+  const randaoMix = xor(Buffer.from(getRandaoMix(state, epoch)), Buffer.from(digest(randaoReveal)));
   state.randaoMixes.set(epoch % EPOCHS_PER_HISTORICAL_VECTOR, randaoMix);
-}
-
-function xor(a: Uint8Array, b: Uint8Array): Uint8Array {
-  const length = Math.min(a.length, b.length);
-  for (let i = 0; i < length; i++) {
-    a[i] = a[i] ^ b[i];
-  }
-  return a;
 }

@@ -35,10 +35,10 @@ export class AttestationLowerBoundRepository {
   }
 
   async set(pubkey: BLSPubkey, value: SlashingProtectionLowerBound): Promise<void> {
-    await this.db.put(this.encodeKey(pubkey), this.type.serialize(value), this.dbReqOpts);
+    await this.db.put(this.encodeKey(pubkey), Buffer.from(this.type.serialize(value)), this.dbReqOpts);
   }
 
   private encodeKey(pubkey: BLSPubkey): Uint8Array {
-    return encodeKey(this.bucket, pubkey);
+    return encodeKey(this.bucket, Buffer.from(pubkey));
   }
 }

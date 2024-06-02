@@ -25,7 +25,7 @@ export class MetaDataRepository {
   }
 
   async setGenesisValidatorsRoot(genesisValidatorsRoot: Root): Promise<void> {
-    await this.db.put(this.encodeKey(GENESIS_VALIDATORS_ROOT), genesisValidatorsRoot, this.dbReqOpts);
+    await this.db.put(this.encodeKey(GENESIS_VALIDATORS_ROOT), Buffer.from(genesisValidatorsRoot), this.dbReqOpts);
   }
 
   async getGenesisTime(): Promise<UintNum64 | null> {
@@ -34,7 +34,7 @@ export class MetaDataRepository {
   }
 
   async setGenesisTime(genesisTime: UintNum64): Promise<void> {
-    await this.db.put(this.encodeKey(GENESIS_TIME), ssz.UintNum64.serialize(genesisTime), this.dbReqOpts);
+    await this.db.put(this.encodeKey(GENESIS_TIME), Buffer.from(ssz.UintNum64.serialize(genesisTime)), this.dbReqOpts);
   }
 
   private encodeKey(key: Uint8Array): Uint8Array {

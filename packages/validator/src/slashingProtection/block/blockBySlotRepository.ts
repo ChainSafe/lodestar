@@ -54,7 +54,7 @@ export class BlockBySlotRepository {
     await this.db.batchPut(
       blocks.map((block) => ({
         key: this.encodeKey(pubkey, block.slot),
-        value: this.type.serialize(block),
+        value: Buffer.from(this.type.serialize(block)),
       })),
       this.dbReqOpts
     );
@@ -66,7 +66,7 @@ export class BlockBySlotRepository {
   }
 
   private encodeKey(pubkey: BLSPubkey, slot: Slot): Uint8Array {
-    return encodeKey(this.bucket, Buffer.concat([pubkey, intToBytes(BigInt(slot), uintLen, "be")]));
+    return encodeKey(this.bucket, Buffer.concat([Buffer.from(pubkey), intToBytes(BigInt(slot), uintLen, "be")]));
   }
 
   private decodeKey(key: Uint8Array): {pubkey: BLSPubkey; slot: Slot} {

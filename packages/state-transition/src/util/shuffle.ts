@@ -90,8 +90,6 @@ function innerShuffleList(input: Shuffleable, seed: Bytes32, dir: boolean): void
   const listSize = input.length >>> 0;
   // check if list size fits in uint32
   assert.equal(listSize, input.length, "input length does not fit uint32");
-  // check that the seed is 32 bytes
-  assert.lte(seed.length, _SHUFFLE_H_SEED_SIZE, `seed length is not lte ${_SHUFFLE_H_SEED_SIZE} bytes`);
 
   const buf = Buffer.alloc(_SHUFFLE_H_TOTAL_SIZE);
   let r = 0;
@@ -102,7 +100,8 @@ function innerShuffleList(input: Shuffleable, seed: Bytes32, dir: boolean): void
   }
 
   // Seed is always the first 32 bytes of the hash input, we never have to change this part of the buffer.
-  buf.set(seed, 0);
+  const _seed = seed;
+  Buffer.from(_seed).copy(buf, 0, 0, _SHUFFLE_H_SEED_SIZE);
 
   // initial values here are not used: overwritten first within the inner for loop.
   let source = seed; // just setting it to a Bytes32
@@ -115,8 +114,8 @@ function innerShuffleList(input: Shuffleable, seed: Bytes32, dir: boolean): void
     buf[_SHUFFLE_H_SEED_SIZE] = r;
     // Seed is already in place, now just hash the correct part of the buffer, and take a uint64 from it,
     //  and modulo it to get a pivot within range.
-    const h = digest(buf.subarray(0, _SHUFFLE_H_PIVOT_VIEW_SIZE));
-    const pivot = Number(bytesToBigInt(h.subarray(0, 8)) % BigInt(listSize)) >>> 0;
+    const h = digest(buf.slice(0, _SHUFFLE_H_PIVOT_VIEW_SIZE));
+    const pivot = Number(bytesToBigInt(h.slice(0, 8)) % BigInt(listSize)) >>> 0;
 
     // Split up the for-loop in two:
     //  1. Handle the part from 0 (incl) to pivot (incl). This is mirrored around (pivot / 2)

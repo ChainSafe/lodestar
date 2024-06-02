@@ -23,8 +23,8 @@ export function getRoutes(config: ChainForkConfig, api: ServerApi<Api>): ServerR
       handler: async (req) => {
         const response = await api.getState(...reqSerializers.getState.parseReq(req));
         if (response instanceof Uint8Array) {
-          // Fastify 4.x.x will automatically add header `Content-Type: application/octet-stream` if TypedArray
-          return response;
+          // Fastify 3.x.x will automatically add header `Content-Type: application/octet-stream` if Buffer
+          return Buffer.from(response);
         } else {
           return returnTypes.getState.toJson(response);
         }
@@ -38,8 +38,8 @@ export function getRoutes(config: ChainForkConfig, api: ServerApi<Api>): ServerR
           const slot = extractSlotFromStateBytes(response);
           const version = config.getForkName(slot);
           void res.header("Eth-Consensus-Version", version);
-          // Fastify 4.x.x will automatically add header `Content-Type: application/octet-stream` if TypedArray
-          return response;
+          // Fastify 3.x.x will automatically add header `Content-Type: application/octet-stream` if Buffer
+          return Buffer.from(response.buffer, response.byteOffset, response.byteLength);
         } else {
           void res.header("Eth-Consensus-Version", response.version);
           return returnTypes.getStateV2.toJson(response);
