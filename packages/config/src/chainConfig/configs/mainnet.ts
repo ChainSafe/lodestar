@@ -48,6 +48,10 @@ export const chainConfig: ChainConfig = {
   // Deneb
   DENEB_FORK_VERSION: b("0x04000000"),
   DENEB_FORK_EPOCH: 269568, // March 13, 2024, 01:55:35pm UTC
+  
+  // EIP-7716
+  EIP7716_FORK_VERSION: b("0x05000000"),
+  EIP7716_FORK_EPOCH: Infinity,
 
   // Time parameters
   // ---------------------------------------------------------------
@@ -98,4 +102,9 @@ export const chainConfig: ChainConfig = {
   // Deneb
   // `2**12` (= 4096 epochs, ~18 days)
   MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: 4096,
+
+  // eip7716
+  PENALTY_ADJUSTMENT_FACTOR: 4096,
+  MAX_PENALTY_FACTOR: 4,
+  PENALTY_RECOVERY_RATE: 1,
 };

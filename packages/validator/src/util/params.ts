@@ -73,6 +73,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
   const bellatrixForkRelevant = localConfig.BELLATRIX_FORK_EPOCH < Infinity;
   const capellaForkRelevant = localConfig.CAPELLA_FORK_EPOCH < Infinity;
   const denebForkRelevant = localConfig.DENEB_FORK_EPOCH < Infinity;
+  const eip7716ForkRelevant = localConfig.EIP7716_FORK_EPOCH < Infinity;
 
   return {
     // # Config
@@ -105,6 +106,9 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     // Deneb
     DENEB_FORK_VERSION: denebForkRelevant,
     DENEB_FORK_EPOCH: denebForkRelevant,
+    // EIP-7716
+    EIP7716_FORK_VERSION: eip7716ForkRelevant,
+    EIP7716_FORK_EPOCH: eip7716ForkRelevant,
 
     // Time parameters
     SECONDS_PER_SLOT: true,
@@ -217,5 +221,10 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     MAX_BLOBS_PER_BLOCK: denebForkRelevant,
     MAX_BLOB_COMMITMENTS_PER_BLOCK: denebForkRelevant,
     KZG_COMMITMENT_INCLUSION_PROOF_DEPTH: denebForkRelevant,
+
+    // EIP-7716
+    PENALTY_ADJUSTMENT_FACTOR: eip7716ForkRelevant,
+    MAX_PENALTY_FACTOR: eip7716ForkRelevant,
+    PENALTY_RECOVERY_RATE: eip7716ForkRelevant,
   };
 }

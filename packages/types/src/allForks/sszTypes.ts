@@ -3,6 +3,7 @@ import {ssz as altair} from "../altair/index.js";
 import {ssz as bellatrix} from "../bellatrix/index.js";
 import {ssz as capella} from "../capella/index.js";
 import {ssz as deneb} from "../deneb/index.js";
+import {ssz as eip7716} from "../eip7716/index.js";
 
 /**
  * Index the ssz types that differ by fork
@@ -43,6 +44,13 @@ export const allForks = {
     SignedBeaconBlock: deneb.SignedBeaconBlock,
     BeaconState: deneb.BeaconState,
     Metadata: altair.Metadata,
+  },
+  eip7716: {
+    BeaconBlockBody: deneb.BeaconBlockBody,
+    BeaconBlock: deneb.BeaconBlock,
+    SignedBeaconBlock: deneb.SignedBeaconBlock,
+    Metadata: altair.Metadata,
+    BeaconState: eip7716.BeaconState,
   },
 };
 
@@ -85,6 +93,17 @@ export const allForksExecution = {
     SignedBuilderBid: deneb.SignedBuilderBid,
     SSEPayloadAttributes: deneb.SSEPayloadAttributes,
   },
+  eip7716: {
+    BeaconBlockBody: deneb.BeaconBlockBody,
+    BeaconBlock: deneb.BeaconBlock,
+    SignedBeaconBlock: deneb.SignedBeaconBlock,
+    ExecutionPayload: deneb.ExecutionPayload,
+    ExecutionPayloadHeader: deneb.ExecutionPayloadHeader,
+    BuilderBid: deneb.BuilderBid,
+    SignedBuilderBid: deneb.SignedBuilderBid,
+    SSEPayloadAttributes: deneb.SSEPayloadAttributes,
+    BeaconState: eip7716.BeaconState,
+  },
 };
 
 /**
@@ -103,6 +122,11 @@ export const allForksBlinded = {
     SignedBeaconBlock: capella.SignedBlindedBeaconBlock,
   },
   deneb: {
+    BeaconBlockBody: deneb.BlindedBeaconBlockBody,
+    BeaconBlock: deneb.BlindedBeaconBlock,
+    SignedBeaconBlock: deneb.SignedBlindedBeaconBlock,
+  },
+  eip7716: {
     BeaconBlockBody: deneb.BlindedBeaconBlockBody,
     BeaconBlock: deneb.BlindedBeaconBlock,
     SignedBeaconBlock: deneb.SignedBlindedBeaconBlock,
@@ -150,10 +174,24 @@ export const allForksLightClient = {
     LightClientOptimisticUpdate: deneb.LightClientOptimisticUpdate,
     LightClientStore: deneb.LightClientStore,
   },
+  eip7716: {
+    BeaconBlock: deneb.BeaconBlock,
+    BeaconBlockBody: deneb.BeaconBlockBody,
+    LightClientHeader: deneb.LightClientHeader,
+    LightClientBootstrap: deneb.LightClientBootstrap,
+    LightClientUpdate: deneb.LightClientUpdate,
+    LightClientFinalityUpdate: deneb.LightClientFinalityUpdate,
+    LightClientOptimisticUpdate: deneb.LightClientOptimisticUpdate,
+    LightClientStore: deneb.LightClientStore,
+  },
 };
 
 export const allForksBlobs = {
   deneb: {
+    BlobSidecar: deneb.BlobSidecar,
+    ExecutionPayloadAndBlobsBundle: deneb.ExecutionPayloadAndBlobsBundle,
+  },
+  eip7716: {
     BlobSidecar: deneb.BlobSidecar,
     ExecutionPayloadAndBlobsBundle: deneb.ExecutionPayloadAndBlobsBundle,
   },
