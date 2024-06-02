@@ -69,6 +69,9 @@ export type Endpoints = {
   >;
 };
 
+// NOTE: Builder API does not support SSZ as per spec, need to keep routes as JSON-only for now
+// See https://github.com/ethereum/builder-specs/issues/53 for more details
+
 export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoints> {
   return {
     status: {

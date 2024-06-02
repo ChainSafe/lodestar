@@ -131,7 +131,6 @@ export type Endpoints = {
    * Depending on `Accept` header it can be returned either as json or as bytes serialized by SSZ
    */
   getStateV2: Endpoint<
-    // ⏎
     "GET",
     StateArgs,
     {params: {state_id: string}},
