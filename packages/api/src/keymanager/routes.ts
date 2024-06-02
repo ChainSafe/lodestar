@@ -249,6 +249,12 @@ export type Endpoints = {
     EmptyMeta
   >;
 
+  /**
+   * DELETE must delete all keys from `request.pubkeys` that are known to the validator client and exist in its
+   * persistent storage.
+   *
+   * DELETE should never return a 404 response, even if all pubkeys from `request.pubkeys` have no existing keystores.
+   */
   deleteRemoteKeys: Endpoint<
     "DELETE",
     {pubkeys: PubkeyHex[]},
